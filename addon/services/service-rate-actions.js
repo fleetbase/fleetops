@@ -6,13 +6,17 @@ import serializePayload from '../utils/serialize-payload';
 export default class ServiceRateActionsService extends ResourceActionService {
     modelNamePath = 'service_name';
 
+    get defaultCurrency() {
+        return this.currentUser?.company?.currency || this.currentUser.currency || 'USD';
+    }
+
     constructor() {
         super(...arguments);
         this.initialize('service-rate', {
             defaultAttributes: {
                 rate_calculation_method: 'per_meter',
                 per_meter_unit: 'm',
-                currency: this.currentUser.currency,
+                currency: this.defaultCurrency,
                 parcel_fees: this.#getDefaultParcelFees(),
             },
         });
@@ -118,12 +122,13 @@ export default class ServiceRateActionsService extends ResourceActionService {
 
         const hasFacilitator = !isNone(order.facilitator);
         const facilitatorServiceType = order.facilitator?.get('service_types.firstObject.key') ?? order.type;
+        const routeSummary = order.route?.summary ?? order.route?.details?.summary ?? {};
 
         try {
             const serviceQuotes = yield this.fetch.post('service-quotes/preliminary', {
                 payload: serializePayload(order.payload),
-                distance: order.route.summary?.totalDistance,
-                time: order.route.summary?.totalTime,
+                distance: routeSummary.totalDistance,
+                time: routeSummary.totalTime,
                 service_type: hasFacilitator ? facilitatorServiceType : order.type,
                 facilitator: order.facilitator?.public_id,
                 scheduled_at: order.scheduled_at,

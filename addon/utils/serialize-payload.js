@@ -5,7 +5,7 @@ export default function serializePayload(payload) {
     const serialized = {
         pickup: serializeModel(payload.pickup),
         dropoff: serializeModel(payload.dropoff),
-        entitities: serializeArray(payload.entities),
+        entities: serializeArray(payload.entities),
         waypoints: serializeArray(payload.waypoints),
     };
 

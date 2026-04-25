@@ -145,6 +145,13 @@ Route::prefix(config('fleetops.api.routing.prefix', null))->namespace('Fleetbase
                 $router->put('{id}', 'ServiceAreaController@update');
                 $router->delete('{id}', 'ServiceAreaController@delete');
             });
+            // geofences routes
+            $router->group(['prefix' => 'geofences'], function () use ($router) {
+                $router->get('events', 'GeofenceController@events');
+                $router->get('inventory', 'GeofenceController@inventory');
+                $router->get('dwell-report', 'GeofenceController@dwellReport');
+                $router->get('driver/{driverUuid}/history', 'GeofenceController@driverHistory');
+            });
             // service-rates routes
             $router->group(['prefix' => 'service-rates'], function () use ($router) {
                 $router->post('/', 'ServiceRateController@create');
@@ -278,6 +285,11 @@ Route::prefix(config('fleetops.api.routing.prefix', null))->namespace('Fleetbase
                                 $router->match(['get', 'post'], 'export', $controller('export'));
                                 $router->delete('bulk-delete', $controller('bulkDelete'));
                                 $router->post('import', $controller('import'));
+                                // Driver scheduling endpoints
+                                $router->get('{id}/schedule-items', $controller('scheduleItems'));
+                                $router->get('{id}/availabilities', $controller('availabilities'));
+                                $router->get('{id}/hos-status', $controller('hosStatus'));
+                                $router->get('{id}/active-shift', $controller('activeShift'));
                             }
                         );
                         $router->fleetbaseRoutes('entities');
@@ -337,6 +349,8 @@ Route::prefix(config('fleetops.api.routing.prefix', null))->namespace('Fleetbase
                                 $router->patch('cancel', $controller('cancel'));
                                 $router->patch('dispatch', $controller('dispatchOrder'));
                                 $router->patch('start', $controller('start'));
+                                // Scheduler: set scheduled_at + driver without triggering dispatch
+                                $router->patch('schedule', $controller('scheduleOrder'));
                                 $router->delete('bulk-delete', $controller('bulkDelete'));
                                 $router->match(['get', 'post'], 'export', $controller('export'));
                             }
@@ -366,6 +380,15 @@ Route::prefix(config('fleetops.api.routing.prefix', null))->namespace('Fleetbase
                             function ($router, $controller) {
                                 $router->match(['get', 'post'], 'export', $controller('export'));
                                 $router->delete('bulk-delete', $controller('bulkDelete'));
+                            }
+                        );
+                        $router->group(
+                            ['prefix' => 'geofences'],
+                            function () use ($router) {
+                                $router->get('events', 'GeofenceController@events');
+                                $router->get('inventory', 'GeofenceController@inventory');
+                                $router->get('dwell-report', 'GeofenceController@dwellReport');
+                                $router->get('driver/{driverUuid}/history', 'GeofenceController@driverHistory');
                             }
                         );
                         $router->fleetbaseRoutes('zones');
@@ -423,10 +446,30 @@ Route::prefix(config('fleetops.api.routing.prefix', null))->namespace('Fleetbase
                             $router->post('{id}/test-connection', $controller('testConnection'));
                             $router->post('{key}/test-credentials', $controller('testCredentials'));
                         });
-                        $router->fleetbaseRoutes('work-orders');
-                        $router->fleetbaseRoutes('maintenance');
-                        $router->fleetbaseRoutes('equipment');
-                        $router->fleetbaseRoutes('parts');
+                        $router->fleetbaseRoutes('maintenance-schedules', function ($router, $controller) {
+                            $router->post('import', $controller('import'));
+                            $router->post('{id}/pause', $controller('pause'));
+                            $router->post('{id}/resume', $controller('resume'));
+                            $router->post('{id}/trigger', $controller('trigger'));
+                            $router->get('calendar-feed', $controller('calendarFeed'));
+                            $router->get('{id}/ical', $controller('ical'));
+                        });
+                        $router->fleetbaseRoutes('work-orders', function ($router, $controller) {
+                            $router->post('import', $controller('import'));
+                            $router->post('{id}/send', $controller('sendEmail'));
+                        });
+                        $router->fleetbaseRoutes('maintenances', function ($router, $controller) {
+                            $router->post('import', $controller('import'));
+                            $router->post('{id}/line-items', $controller('addLineItem'));
+                            $router->put('{id}/line-items/{index}', $controller('updateLineItem'));
+                            $router->delete('{id}/line-items/{index}', $controller('removeLineItem'));
+                        });
+                        $router->fleetbaseRoutes('equipment', function ($router, $controller) {
+                            $router->post('import', $controller('import'));
+                        });
+                        $router->fleetbaseRoutes('parts', function ($router, $controller) {
+                            $router->post('import', $controller('import'));
+                        });
                         $router->fleetbaseRoutes('warranties');
                         $router->group(
                             ['prefix' => 'query'],
@@ -505,12 +548,46 @@ Route::prefix(config('fleetops.api.routing.prefix', null))->namespace('Fleetbase
                                         $router->post('routing-settings', 'SettingController@saveRoutingSettings');
                                         $router->get('map', 'SettingController@getMapSettings');
                                         $router->post('map', 'SettingController@saveMapSettings');
+                                        $router->get('scheduling-settings', 'SettingController@getSchedulingSettings');
+                                        $router->post('scheduling-settings', 'SettingController@saveSchedulingSettings');
+                                        $router->get('orchestrator-settings', 'SettingController@getOrchestratorSettings');
+                                        $router->post('orchestrator-settings', 'SettingController@saveOrchestratorSettings');
+                                        $router->get('orchestrator-card-fields', 'SettingController@getOrchestratorCardFields');
+                                        $router->post('orchestrator-card-fields', 'SettingController@saveOrchestratorCardFields');
                                     }
                                 );
                                 $router->group(
                                     ['prefix' => 'metrics'],
                                     function ($router) {
                                         $router->get('/', 'MetricsController@all');
+                                    }
+                                );
+                                $router->group(
+                                    ['prefix' => 'orchestrator'],
+                                    function ($router) {
+                                        $router->get('orders', 'OrchestrationController@orders');
+                                        $router->post('run', 'OrchestrationController@run');
+                                        $router->post('commit', 'OrchestrationController@commit');
+                                        $router->get('preview', 'OrchestrationController@preview');
+                                        $router->get('engines', 'OrchestrationController@engines');
+                                        $router->post('import-orders', 'OrchestrationController@importOrders');
+                                        $router->get('order-config-fields', 'OrchestrationController@orderConfigFields');
+                                    }
+                                );
+                                $router->group(
+                                    ['prefix' => 'manifests'],
+                                    function ($router) {
+                                        $router->get('/', 'ManifestController@index');
+                                        $router->get('{id}', 'ManifestController@show');
+                                        $router->post('{id}/cancel', 'ManifestController@cancel');
+                                        $router->delete('{id}', 'ManifestController@destroy');
+                                    }
+                                );
+                                $router->group(
+                                    ['prefix' => 'manifest-stops'],
+                                    function ($router) {
+                                        $router->get('{id}', 'ManifestController@showStop');
+                                        $router->patch('{id}', 'ManifestController@updateStop');
                                     }
                                 );
                             }

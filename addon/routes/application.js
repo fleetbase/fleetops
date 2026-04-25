@@ -20,14 +20,14 @@ export default class ApplicationRoute extends Route {
         });
     }
 
-    beforeModel() {
+    async beforeModel() {
         if (this.abilities.cannot('fleet-ops see extension')) {
             this.notifications.warning(this.intl.t('common.unauthorized-access'));
             return this.hostRouter.transitionTo('console');
         }
 
-        this.location.getUserLocation();
-        this.#loadRoutingSettings();
+        await this.location.getUserLocation();
+        await this.#loadRoutingSettings();
     }
 
     async #loadRoutingSettings() {

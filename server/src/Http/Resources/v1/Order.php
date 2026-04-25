@@ -7,6 +7,7 @@ use Fleetbase\Http\Resources\Comment;
 use Fleetbase\Http\Resources\File;
 use Fleetbase\Http\Resources\FleetbaseResource;
 use Fleetbase\Support\Http;
+use Illuminate\Support\Str;
 
 class Order extends FleetbaseResource
 {
@@ -44,7 +45,6 @@ class Order extends FleetbaseResource
             'tracking_number_uuid' => $this->when($isInternal, $this->tracking_number_uuid),
             'driver_assigned_uuid' => $this->when($isInternal, $this->driver_assigned_uuid),
             'vehicle_assigned_uuid'=> $this->when($isInternal, $this->vehicle_assigned_uuid),
-            'service_quote_uuid'   => $this->when($isInternal, $this->service_quote_uuid),
             'has_driver_assigned'  => $this->when($isInternal, $this->has_driver_assigned),
             'is_scheduled'         => $this->when($isInternal, $this->is_scheduled),
             'order_config_uuid'    => $this->when($isInternal, $this->order_config_uuid),
@@ -117,8 +117,9 @@ class Order extends FleetbaseResource
             return $resolved;
         }
 
-        data_set($resolved, 'type', 'customer');
-        data_set($resolved, 'customer_type', 'customer-' . Utils::toEmberResourceType($this->customer_type));
+        $bareSlug = Str::kebab(class_basename($this->customer_type ?? ''));
+        data_set($resolved, 'type', 'customer-' . $bareSlug);
+        data_set($resolved, 'customer_type', 'customer-' . $bareSlug);
 
         return $resolved;
     }
@@ -136,8 +137,9 @@ class Order extends FleetbaseResource
             return $resolved;
         }
 
-        data_set($resolved, 'type', 'facilitator');
-        data_set($resolved, 'facilitator_type', 'facilitator-' . Utils::toEmberResourceType($this->facilitator_type));
+        $bareSlug = Str::kebab(class_basename($this->facilitator_type ?? ''));
+        data_set($resolved, 'type', 'facilitator-' . $bareSlug);
+        data_set($resolved, 'facilitator_type', 'facilitator-' . $bareSlug);
 
         return $resolved;
     }

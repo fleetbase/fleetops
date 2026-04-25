@@ -1,0 +1,351 @@
+<Modal::Default @modalIsOpened={{@modalIsOpened}} @options={{@options}} @confirm={{@onConfirm}} @decline={{@onDecline}}>
+    {{! ── Step tab nav ── }}
+    <nav class="import-step-tabs flex">
+        <div class="import-step-tab {{if (eq this.step 'upload') 'import-step-tab--active' ''}}">
+            <span class="import-step-tab-num {{if (eq this.step 'upload') 'import-step-tab-num--active' ''}}">1</span>
+            <span>{{t "orchestrator.import-step-upload"}}</span>
+        </div>
+        <div class="import-step-tab {{if (eq this.step 'map') 'import-step-tab--active' ''}}">
+            <span class="import-step-tab-num {{if (eq this.step 'map') 'import-step-tab-num--active' ''}}">2</span>
+            <span>{{t "orchestrator.import-step-map"}}</span>
+        </div>
+        <div class="import-step-tab {{if (eq this.step 'preview') 'import-step-tab--active' ''}}">
+            <span class="import-step-tab-num {{if (eq this.step 'preview') 'import-step-tab-num--active' ''}}">3</span>
+            <span>{{t "orchestrator.import-step-preview"}}</span>
+        </div>
+    </nav>
+
+    {{! ── Step content ── }}
+    {{! Outer wrapper is a flex column so the download block can be pushed to the bottom }}
+    <div class="import-step-content text-xs dark:text-gray-100">
+
+        {{! ═══════════════════════════════════════════════════════════════════ }}
+        {{! Step 1: Upload                                                      }}
+        {{! ═══════════════════════════════════════════════════════════════════ }}
+        {{#if (eq this.step "upload")}}
+            <div class="import-upload-content px-4 py-4 grid grid-cols-1 gap-3">
+                {{#let (file-queue name="orchestrator-import" onFileAdded=this.onFileQueued accept=".csv,.xlsx,.xls") as |queue|}}
+                    <FileDropzone @queue={{queue}} class="import-dropzone {{if this.isDraggingFile 'dragging' ''}}" as |dropzone|>
+                        {{#if dropzone.active}}
+                            {{#if dropzone.valid}}
+                                <FaIcon @icon="cloud-upload-alt" @size="2x" class="text-indigo-400 mb-2" />
+                                <p class="text-sm dark:text-gray-300">Drop to upload</p>
+                            {{else}}
+                                <FaIcon @icon="times-circle" @size="2x" class="text-red-400 mb-2" />
+                                <p class="text-sm text-red-400">Invalid file type</p>
+                            {{/if}}
+                        {{else if this.selectedFile}}
+                            <div class="flex flex-col items-center">
+                                <FaIcon @icon="file-excel" @size="2x" class="text-green-400 mb-2" />
+                                <span class="font-medium dark:text-white">{{this.selectedFile.name}}</span>
+                                <span class="text-gray-400 mt-0.5">{{this.formattedFileSize}}</span>
+                                <button type="button" class="mt-2 text-red-400 hover:text-red-300 text-xs" {{on "click" this.clearFile}}>
+                                    {{t "orchestrator.remove-file"}}
+                                </button>
+                            </div>
+                        {{else}}
+                            <FaIcon @icon="cloud-upload-alt" @size="2x" class="text-gray-400 mb-2" />
+                            <p class="text-sm dark:text-gray-300">{{t "orchestrator.drop-file-here"}}</p>
+                            <p class="text-gray-500 my-1">{{t "orchestrator.or"}}</p>
+                            <UploadButton
+                                @buttonText={{t "orchestrator.browse-file"}}
+                                @type="default"
+                                @icon="folder-open"
+                                @name="orchestrator-import"
+                                @for="orchestrator-import"
+                                @accept=".csv,.xlsx,.xls"
+                                @multiple={{false}}
+                                @onFileAdded={{this.onFileQueued}}
+                                class="justify-center"
+                            />
+                            <div class="text-gray-500 mt-2 text-xs">{{t "orchestrator.accepted-formats"}}</div>
+                        {{/if}}
+                    </FileDropzone>
+                {{/let}}
+
+                {{#if this.parseError}}
+                    <div class="px-3 py-2 rounded bg-red-900/30 border border-red-700 text-red-400">
+                        <FaIcon @icon="exclamation-circle" class="mr-1" />
+                        {{this.parseError}}
+                    </div>
+                {{/if}}
+            </div>
+
+            {{! Template download — InfoBlock pinned to the bottom of the upload step }}
+            <InfoBlock
+                @icon="file-spreadsheet"
+                @size="xs"
+                class="import-template-download mx-4 mb-4"
+                @innerWrapperClass="items-center justify-between"
+                @blockContainerClass="ml-0i"
+                @blockClass="flex flex-row justify-between w-full"
+            >
+                <div class="flex-1">
+                    <div class="font-semibold">{{t "orchestrator.download-template"}}</div>
+                    <div class="opacity-80">{{t "orchestrator.download-template-desc"}}</div>
+                </div>
+                <Button @icon="download" @text={{t "orchestrator.download"}} @size="sm" @wrapperClass="self-start" {{on "click" this.downloadTemplate}} />
+            </InfoBlock>
+        {{/if}}
+
+        {{! ═══════════════════════════════════════════════════════════════════ }}
+        {{! Step 2: Column Mapping                                              }}
+        {{! ═══════════════════════════════════════════════════════════════════ }}
+        {{#if (eq this.step "map")}}
+            {{! ── Header bar ── }}
+            <div class="flex items-center justify-between px-4 py-2.5 border-b dark:border-gray-700/60">
+                <div>
+                    <p class="font-medium dark:text-gray-100">{{t "orchestrator.map-columns-title"}}</p>
+                    <p class="text-gray-500 mt-0.5">
+                        {{t "orchestrator.map-columns-desc"}}
+                        <span class="dark:text-gray-300 font-medium">{{this.selectedFile.name}}</span>
+                    </p>
+                </div>
+                <div class="flex items-center gap-1.5 text-gray-400 shrink-0 ml-4">
+                    <FaIcon @icon="check-circle" class="text-green-400" />
+                    <span>{{this.mappedCount}}/{{this.totalFieldCount}} {{t "orchestrator.mapped"}}</span>
+                </div>
+            </div>
+
+            {{! ── Column mapping table header ── }}
+            <div class="import-mapping-header">
+                <div class="import-mapping-col-target">{{t "orchestrator.col-target-field"}}</div>
+                <div class="import-mapping-col-arrow"></div>
+                <div class="import-mapping-col-source">{{t "orchestrator.col-your-spreadsheet"}}</div>
+            </div>
+
+            {{! ── Grouped sections ── }}
+            <div class="import-mapping-body">
+                {{#each this.fieldSections as |section|}}
+                    {{! Section group header }}
+                    <div class="import-mapping-group-header">
+                        <span>{{section.label}}</span>
+                    </div>
+
+                    {{! One row per field }}
+                    {{#each section.fields as |mapping|}}
+                        <div class="import-mapping-row {{if mapping.required 'import-mapping-row--required' ''}} {{if mapping.mappedColumn 'import-mapping-row--mapped' ''}}">
+                            {{! Target field name }}
+                            <div class="import-mapping-col-target">
+                                <span class="import-mapping-field-name">
+                                    {{mapping.label}}
+                                    {{#if mapping.required}}
+                                        <span class="text-red-400 ml-0.5">*</span>
+                                    {{/if}}
+                                </span>
+                                {{#if mapping.hint}}
+                                    <span class="import-mapping-field-hint">{{mapping.hint}}</span>
+                                {{/if}}
+                            </div>
+
+                            {{! Arrow }}
+                            <div class="import-mapping-col-arrow">
+                                {{#if mapping.mappedColumn}}
+                                    <FaIcon @icon="arrow-right" class="text-green-400" />
+                                {{else}}
+                                    <FaIcon @icon="arrow-right" class="text-gray-600" />
+                                {{/if}}
+                            </div>
+
+                            {{! Spreadsheet column selector — native <select> to avoid component rendering issues }}
+                            <div class="import-mapping-col-source">
+                                <select
+                                    class="form-select form-input form-input-sm import-mapping-select
+                                        {{if (and mapping.required (not mapping.mappedColumn)) 'import-mapping-select--error' ''}}"
+                                    {{on "change" (fn this.setColumnMapping mapping.key)}}
+                                >
+                                    <option value="" selected={{not mapping.mappedColumn}}>— skip —</option>
+                                    {{#each this.fileColumns as |col|}}
+                                        <option value={{col}} selected={{eq col mapping.mappedColumn}}>{{col}}</option>
+                                    {{/each}}
+                                </select>
+                            </div>
+                        </div>
+                    {{/each}}
+                {{/each}}
+            </div>
+
+            {{! Required field warning }}
+            {{#unless this.mappingIsValid}}
+                <div class="flex items-center gap-2 px-4 py-2 border-t dark:border-gray-700/60 text-yellow-400 text-xs">
+                    <FaIcon @icon="exclamation-triangle" />
+                    <span>{{t "orchestrator.mapping-required-hint"}}</span>
+                </div>
+            {{/unless}}
+        {{/if}}
+
+        {{! ═══════════════════════════════════════════════════════════════════ }}
+        {{! Step 3: Preview & Confirm                                           }}
+        {{! ═══════════════════════════════════════════════════════════════════ }}
+        {{#if (eq this.step "preview")}}
+            <div class="import-preview-wrap">
+
+                {{! ── Summary bar ── }}
+                <div class="import-preview-summary">
+                    <span class="text-gray-400">{{t "orchestrator.preview-desc" count=this.previewGroups.length}}</span>
+                    {{#if this.validationErrors.length}}
+                        <Badge @status="error" @label={{concat this.validationErrors.length " " (t "orchestrator.errors")}} />
+                    {{else}}
+                        <Badge @status="success" @label={{t "orchestrator.all-rows-valid"}} />
+                    {{/if}}
+                </div>
+
+                {{! ── Preview table ── }}
+                <div class="import-preview-table-wrap">
+                    <table class="import-preview-table">
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>{{t "orchestrator.col-preview-ref"}}</th>
+                                <th>{{t "orchestrator.col-preview-type"}}</th>
+                                <th>{{t "orchestrator.col-pickup"}}</th>
+                                <th>{{t "orchestrator.col-dropoff"}}</th>
+                                <th>{{t "orchestrator.col-customer"}}</th>
+                                <th>{{t "orchestrator.col-preview-facilitator"}}</th>
+                                <th>{{t "orchestrator.col-preview-vehicle"}}</th>
+                                <th>{{t "orchestrator.col-preview-driver"}}</th>
+                                <th>{{t "orchestrator.col-preview-entities"}}</th>
+                                <th>{{t "orchestrator.col-scheduled"}}</th>
+                                <th>{{t "orchestrator.col-status"}}</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {{#each this.previewGroups as |group index|}}
+                                <tr class="{{if group.hasError 'import-preview-row--error' ''}}">
+                                    {{! Row number }}
+                                    <td class="text-gray-500">{{add index 1}}</td>
+
+                                    {{! Order ref / internal ID }}
+                                    <td>
+                                        {{#if group.order_ref}}
+                                            <span class="font-mono text-indigo-400">{{group.order_ref}}</span>
+                                        {{else if group.internal_id}}
+                                            <span class="font-mono text-gray-400">{{group.internal_id}}</span>
+                                        {{else}}
+                                            <span class="text-gray-600">&mdash;</span>
+                                        {{/if}}
+                                    </td>
+
+                                    {{! Order type badge }}
+                                    <td>
+                                        {{#if (eq group.order_type "multi_waypoint")}}
+                                            <span class="import-preview-badge import-preview-badge--blue">
+                                                <FaIcon @icon="route" class="mr-0.5" />
+                                                {{t "orchestrator.col-preview-multi-stop" count=group.waypointCount}}
+                                            </span>
+                                        {{else}}
+                                            <span class="import-preview-badge import-preview-badge--gray">
+                                                <FaIcon @icon="exchange-alt" class="mr-0.5" />
+                                                {{t "orchestrator.col-preview-pickup-dropoff"}}
+                                            </span>
+                                        {{/if}}
+                                    </td>
+
+                                    {{! Pickup }}
+                                    <td class="import-preview-addr">
+                                        {{#if group.pickup_street1}}
+                                            <span class="dark:text-gray-200">{{group.pickup_street1}}</span>
+                                            {{#if group.pickup_city}}<span class="text-gray-500">, {{group.pickup_city}}</span>{{/if}}
+                                        {{else}}
+                                            <span class="text-gray-600">&mdash;</span>
+                                        {{/if}}
+                                    </td>
+
+                                    {{! Dropoff / stops }}
+                                    <td class="import-preview-addr">
+                                        {{#if (eq group.order_type "multi_waypoint")}}
+                                            <span class="text-gray-400 italic">{{t "orchestrator.stops-count" count=group.waypointCount}}</span>
+                                        {{else if group.dropoff_street1}}
+                                            <span class="dark:text-gray-200">{{group.dropoff_street1}}</span>
+                                            {{#if group.dropoff_city}}<span class="text-gray-500">, {{group.dropoff_city}}</span>{{/if}}
+                                        {{else}}
+                                            <span class="text-gray-600">&mdash;</span>
+                                        {{/if}}
+                                    </td>
+
+                                    {{! Customer }}
+                                    <td class="truncate max-w-28">
+                                        {{#if (or group.customer_name group.customer_email)}}
+                                            <span class="dark:text-gray-200">{{or group.customer_name group.customer_email}}</span>
+                                        {{else}}
+                                            <span class="text-gray-600">&mdash;</span>
+                                        {{/if}}
+                                    </td>
+
+                                    {{! Facilitator }}
+                                    <td class="truncate max-w-28">
+                                        {{#if (or group.facilitator_name group.facilitator_email)}}
+                                            <span class="dark:text-gray-200">{{or group.facilitator_name group.facilitator_email}}</span>
+                                        {{else}}
+                                            <span class="text-gray-600">&mdash;</span>
+                                        {{/if}}
+                                    </td>
+
+                                    {{! Vehicle }}
+                                    <td>
+                                        {{#if group.vehicle_plate}}
+                                            <span class="font-mono dark:text-gray-200">{{group.vehicle_plate}}</span>
+                                        {{else}}
+                                            <span class="text-gray-600">&mdash;</span>
+                                        {{/if}}
+                                    </td>
+
+                                    {{! Driver }}
+                                    <td class="truncate max-w-24">
+                                        {{#if (or group.driver_name group.driver_email)}}
+                                            <span class="dark:text-gray-200">{{or group.driver_name group.driver_email}}</span>
+                                        {{else}}
+                                            <span class="text-gray-600">&mdash;</span>
+                                        {{/if}}
+                                    </td>
+
+                                    {{! Entities count }}
+                                    <td>
+                                        {{#if group.entityCount}}
+                                            <span class="import-preview-badge import-preview-badge--green">
+                                                <FaIcon @icon="box" class="mr-0.5" />
+                                                {{group.entityCount}}
+                                            </span>
+                                        {{else}}
+                                            <span class="text-gray-600">&mdash;</span>
+                                        {{/if}}
+                                    </td>
+
+                                    {{! Scheduled at }}
+                                    <td class="whitespace-nowrap">
+                                        {{#if group.scheduled_at}}
+                                            <span class="dark:text-gray-300">{{group.scheduled_at}}</span>
+                                        {{else}}
+                                            <span class="text-gray-600">&mdash;</span>
+                                        {{/if}}
+                                    </td>
+
+                                    {{! Row status }}
+                                    <td>
+                                        {{#if group.hasError}}
+                                            <span class="import-preview-status import-preview-status--error" title={{group.errorMessage}}>
+                                                <FaIcon @icon="exclamation-circle" class="mr-0.5" />{{t "orchestrator.error"}}
+                                            </span>
+                                        {{else}}
+                                            <span class="import-preview-status import-preview-status--ok">
+                                                <FaIcon @icon="check-circle" class="mr-0.5" />{{t "orchestrator.valid"}}
+                                            </span>
+                                        {{/if}}
+                                    </td>
+                                </tr>
+                            {{/each}}
+                        </tbody>
+                    </table>
+                </div>
+
+                {{#if this.validationErrors.length}}
+                    <div class="import-preview-warning">
+                        <FaIcon @icon="exclamation-triangle" class="mr-1" />
+                        {{t "orchestrator.validation-warning" count=this.validationErrors.length}}
+                    </div>
+                {{/if}}
+            </div>
+        {{/if}}
+
+    </div>
+</Modal::Default>

@@ -403,6 +403,18 @@
                     <UnitInput class="w-full" @value={{@resource.cargo_volume}} @unit="L" @placeholder="Cargo Volume" />
                 </InputGroup>
 
+                <InputGroup @name="Payload Volume (m³)" @helpText="The maximum cargo volume this vehicle can carry, in cubic metres.">
+                    <Input @value={{@resource.payload_capacity_volume}} @type="number" class="form-input w-full" placeholder="e.g. 40" disabled={{cannot-write @resource}} />
+                </InputGroup>
+
+                <InputGroup @name="Pallet Capacity" @helpText="The maximum number of standard pallets this vehicle can carry.">
+                    <Input @value={{@resource.payload_capacity_pallets}} @type="number" class="form-input w-full" placeholder="e.g. 20" disabled={{cannot-write @resource}} />
+                </InputGroup>
+
+                <InputGroup @name="Parcel Capacity" @helpText="The maximum number of parcels or packages this vehicle can carry.">
+                    <Input @value={{@resource.payload_capacity_parcels}} @type="number" class="form-input w-full" placeholder="e.g. 200" disabled={{cannot-write @resource}} />
+                </InputGroup>
+
                 <InputGroup @name="Passenger Volume">
                     <UnitInput class="w-full" @value={{@resource.passenger_volume}} @unit="L" @placeholder="Passenger Volume" />
                 </InputGroup>
@@ -538,6 +550,45 @@
                     @placeholder="DD-MM-YYYY"
                     class="filter-date-input w-full flex-1"
                 />
+            </InputGroup>
+        </div>
+    </ContentPanel>
+
+    {{! ORCHESTRATOR CONSTRAINTS }}
+    <ContentPanel @title="Orchestrator Constraints" @open={{true}} @wrapperClass="bordered-top">
+        <div class="grid grid-cols-1 gap-2 lg:grid-cols-2 lg:gap-2 no-input-group-padding text-xs">
+            <div class="col-span-1 lg:col-span-2 text-[11px] uppercase tracking-wide text-gray-500 font-semibold mt-1">
+                Skills & Capabilities
+            </div>
+            <div class="col-span-1 lg:col-span-2">
+                <InputGroup @name="Vehicle Skills" @helpText="Skills this vehicle can fulfil (e.g. refrigerated, hazmat). Used by the Orchestrator for order matching.">
+                    <MultiSelect
+                        @options={{get-fleet-ops-options "vehicleSkills"}}
+                        @selected={{@resource.skills}}
+                        @onChange={{fn (mut @resource.skills)}}
+                        @placeholder="Select skills…"
+                        @triggerClass="form-select form-input"
+                        @disabled={{cannot-write @resource}}
+                        as |option|
+                    >
+                        {{option.label}}
+                    </MultiSelect>
+                </InputGroup>
+            </div>
+            <div class="col-span-1 lg:col-span-2 text-[11px] uppercase tracking-wide text-gray-500 font-semibold mt-3">
+                Availability Window
+            </div>
+            <InputGroup @name="Available From" @helpText="Earliest time this vehicle is available for dispatch (HH:MM).">
+                <Input @value={{@resource.time_window_start}} @type="time" class="form-input w-full" placeholder="HH:MM" disabled={{cannot-write @resource}} />
+            </InputGroup>
+            <InputGroup @name="Available Until" @helpText="Latest time this vehicle should complete its last stop (HH:MM).">
+                <Input @value={{@resource.time_window_end}} @type="time" class="form-input w-full" placeholder="HH:MM" disabled={{cannot-write @resource}} />
+            </InputGroup>
+            <div class="col-span-1 lg:col-span-2 text-[11px] uppercase tracking-wide text-gray-500 font-semibold mt-3">
+                Task Limits
+            </div>
+            <InputGroup @name="Max Tasks" @helpText="Maximum number of stops/orders this vehicle can be assigned per Orchestrator run. Leave blank for no limit.">
+                <Input @value={{@resource.max_tasks}} @type="number" class="form-input w-full" placeholder="e.g. 20" disabled={{cannot-write @resource}} />
             </InputGroup>
         </div>
     </ContentPanel>

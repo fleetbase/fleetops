@@ -1,0 +1,162 @@
+{{! Orchestrator::PhaseBuilder — Compose a multi-phase orchestration run }}
+<div class="phase-builder flex flex-col h-full">
+
+    {{! Header }}
+    <div class="px-3 py-2 border-b dark:border-gray-700 flex items-center justify-between flex-shrink-0 bg-gray-50 dark:bg-gray-800">
+        <div>
+            <h3 class="text-xs font-semibold text-gray-800 dark:text-gray-100">{{t "orchestrator.phases"}}</h3>
+            <p class="text-xs text-gray-400 dark:text-gray-500">{{t "orchestrator.phases-description"}}</p>
+        </div>
+        <Button @icon="plus" @text={{t "orchestrator.add-phase"}} @type="default" @size="xs" @onClick={{this.addPhase}} />
+    </div>
+
+    <div class="flex flex-1 overflow-hidden">
+
+        {{! Phase list }}
+        <div class="w-48 border-r dark:border-gray-700 flex flex-col overflow-y-auto flex-shrink-0">
+            {{#if @phases.length}}
+                {{#each @phases as |phase index|}}
+                    <div
+                        class="flex items-center gap-2 px-2 py-2 border-b dark:border-gray-700 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors
+                            {{if (eq this.editingIndex index) 'bg-indigo-50 dark:bg-indigo-900/20 border-l-2 border-l-indigo-500' ''}}"
+                        {{on "click" (fn this.editPhase index)}}
+                    >
+                        <div class="w-5 h-5 rounded-full bg-indigo-100 dark:bg-indigo-900/40 flex items-center justify-center flex-shrink-0">
+                            <FaIcon @icon={{this.modeIcon phase.mode}} class="text-indigo-600 dark:text-indigo-400" @size="xs" />
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <p class="text-xs font-medium text-gray-800 dark:text-gray-100 truncate">{{phase.label}}</p>
+                            <p class="text-2xs text-gray-400 truncate">{{t "orchestrator.phase-n" n=(add index 1)}}</p>
+                        </div>
+                        <div class="flex flex-col gap-0.5 flex-shrink-0">
+                            <button type="button" class="text-gray-300 hover:text-gray-500 dark:hover:text-gray-200" {{on "click" (fn this.movePhaseUp index)}} title="Move up">
+                                <FaIcon @icon="chevron-up" @size="xs" />
+                            </button>
+                            <button type="button" class="text-gray-300 hover:text-gray-500 dark:hover:text-gray-200" {{on "click" (fn this.movePhaseDown index)}} title="Move down">
+                                <FaIcon @icon="chevron-down" @size="xs" />
+                            </button>
+                        </div>
+                    </div>
+                {{/each}}
+            {{else}}
+                <div class="flex flex-col items-center justify-center flex-1 py-8 text-gray-400 dark:text-gray-600">
+                    <FaIcon @icon="list-ol" class="mb-2 text-xl" />
+                    <p class="text-xs text-center px-2">{{t "orchestrator.no-phases"}}</p>
+                </div>
+            {{/if}}
+        </div>
+
+        {{! Phase editor }}
+        <div class="flex-1 overflow-y-auto">
+            {{#if this.isEditing}}
+                <div class="p-3 space-y-3">
+
+                    {{! Phase label }}
+                    <InputGroup @name={{t "orchestrator.phase-label"}}>
+                        <Input @type="text" @value={{this.draftPhase.label}} class="form-input form-input-sm w-full" {{on "input" this.setDraftLabel}} />
+                    </InputGroup>
+
+                    {{! Mode selection }}
+                    <InputGroup @name={{t "orchestrator.mode"}}>
+                        <div class="grid grid-cols-2 gap-1">
+                            {{#each this.modeOptions as |opt|}}
+                                <button
+                                    type="button"
+                                    class="flex items-center gap-1.5 px-2 py-1.5 rounded border text-xs transition-colors
+                                        {{if
+                                            (eq this.draftPhase.mode opt.value)
+                                            'bg-indigo-50 dark:bg-indigo-900/30 border-indigo-400 dark:border-indigo-600 text-indigo-700 dark:text-indigo-300'
+                                            'border-gray-200 dark:border-gray-600 text-gray-600 dark:text-gray-400 hover:border-gray-300 dark:hover:border-gray-500'
+                                        }}"
+                                    {{on "click" (fn this.setDraftMode opt.value)}}
+                                >
+                                    <FaIcon @icon={{this.modeIcon opt.value}} @size="xs" />
+                                    {{opt.label}}
+                                </button>
+                            {{/each}}
+                        </div>
+                    </InputGroup>
+
+                    {{! Order statuses to include }}
+                    <InputGroup @name={{t "orchestrator.include-order-statuses"}}>
+                        <div class="flex flex-wrap gap-1">
+                            {{#each this.orderStatusOptions as |opt|}}
+                                <button
+                                    type="button"
+                                    class="px-1.5 py-0.5 rounded text-xs border transition-colors
+                                        {{if
+                                            (includes opt.value this.draftPhase.orderStatuses)
+                                            'bg-indigo-100 dark:bg-indigo-900/40 border-indigo-400 text-indigo-700 dark:text-indigo-300'
+                                            'border-gray-200 dark:border-gray-600 text-gray-500 dark:text-gray-400'
+                                        }}"
+                                    {{on "click" (fn this.toggleDraftOrderStatus opt.value)}}
+                                >
+                                    {{opt.label}}
+                                </button>
+                            {{/each}}
+                        </div>
+                    </InputGroup>
+
+                    {{! Engine }}
+                    <InputGroup @name={{t "orchestrator.engine"}}>
+                        <Select
+                            @value={{this.draftPhase.engine}}
+                            @options={{@availableEngines}}
+                            @optionLabel="name"
+                            @optionValue="id"
+                            @onSelect={{this.setDraftEngine}}
+                            class="form-input-sm w-full"
+                        />
+                    </InputGroup>
+
+                    {{! Constraint toggles }}
+                    <InputGroup @name={{t "orchestrator.constraints"}}>
+                        <div class="space-y-1.5">
+                            <div class="flex items-center justify-between">
+                                <span class="text-xs text-gray-600 dark:text-gray-400">{{t "orchestrator.respect-capacity"}}</span>
+                                <Toggle @isToggled={{this.draftPhase.respectCapacity}} @onToggle={{fn this.setDraftOption "respectCapacity"}} />
+                            </div>
+                            <div class="flex items-center justify-between">
+                                <span class="text-xs text-gray-600 dark:text-gray-400">{{t "orchestrator.respect-skills"}}</span>
+                                <Toggle @isToggled={{this.draftPhase.respectSkills}} @onToggle={{fn this.setDraftOption "respectSkills"}} />
+                            </div>
+                            <div class="flex items-center justify-between">
+                                <span class="text-xs text-gray-600 dark:text-gray-400">{{t "orchestrator.balance-workload"}}</span>
+                                <Toggle @isToggled={{this.draftPhase.balanceWorkload}} @onToggle={{fn this.setDraftOption "balanceWorkload"}} />
+                            </div>
+                            <div class="flex items-center justify-between">
+                                <span class="text-xs text-gray-600 dark:text-gray-400">{{t "orchestrator.return-to-depot"}}</span>
+                                <Toggle @isToggled={{this.draftPhase.returnToDepot}} @onToggle={{fn this.setDraftOption "returnToDepot"}} />
+                            </div>
+                            <div class="flex items-center justify-between">
+                                <span class="text-xs text-gray-600 dark:text-gray-400">{{t "orchestrator.auto-commit"}}</span>
+                                <Toggle @isToggled={{this.draftPhase.autoCommit}} @onToggle={{fn this.setDraftOption "autoCommit"}} />
+                            </div>
+                        </div>
+                    </InputGroup>
+
+                    {{! Save / Cancel / Delete }}
+                    <div class="flex items-center gap-2 pt-1 border-t dark:border-gray-700">
+                        <Button @text={{t "orchestrator.save-phase"}} @type="primary" @size="xs" @onClick={{this.saveDraftPhase}} />
+                        <Button @text={{t "orchestrator.cancel"}} @type="default" @size="xs" @onClick={{this.closePhasEditor}} />
+                        <div class="flex-1"></div>
+                        <Button @icon="trash" @type="danger" @size="xs" @onClick={{fn this.removePhase this.editingIndex}} />
+                    </div>
+                </div>
+            {{else}}
+                <div class="flex flex-col items-center justify-center h-full py-12 text-gray-400 dark:text-gray-600">
+                    <FaIcon @icon="hand-pointer" class="mb-2 text-2xl" />
+                    <p class="text-xs">{{t "orchestrator.select-phase-to-edit"}}</p>
+                </div>
+            {{/if}}
+        </div>
+    </div>
+
+    {{! Run all phases button }}
+    {{#if @phases.length}}
+        <div class="px-3 py-2 border-t dark:border-gray-700 flex-shrink-0 bg-gray-50 dark:bg-gray-800">
+            <Button @icon="bolt" @text={{t "orchestrator.run-phases" count=@phases.length}} @type="primary" @size="sm" @onClick={{fn @onRunPhases @phases}} />
+        </div>
+    {{/if}}
+
+</div>

@@ -8,30 +8,11 @@
             <div class="flex-1 space-y-4">
                 <ContentPanel @title={{t "common.details"}} @open={{true}} @panelBodyClass="bg-white dark:bg-gray-800">
                     <div class="grid grid-cols-1 gap-4 lg:grid-cols-2 lg:gap-2">
-                        <InputGroup
-                            @name={{t "common.name"}}
-                            @value={{@options.entity.name}}
-                            @helpText={{t "modals.entity-form.name-text"}}
-                            @wrapperClass="mb-2"
-                        />
-                        <InputGroup
-                            @name={{t "common.internal-id"}}
-                            @value={{@options.entity.internal_id}}
-                            @helpText={{t "modals.entity-form.id-text"}}
-                            @wrapperClass="mb-2"
-                        />
-                        <InputGroup
-                            @name={{t "modals.entity-form.sku"}}
-                            @value={{@options.entity.sku}}
-                            @helpText={{t "modals.entity-form.sku-text"}}
-                            @wrapperClass="mb-2"
-                        />
+                        <InputGroup @name={{t "common.name"}} @value={{@options.entity.name}} @helpText={{t "modals.entity-form.name-text"}} @wrapperClass="mb-2" />
+                        <InputGroup @name={{t "common.internal-id"}} @value={{@options.entity.internal_id}} @helpText={{t "modals.entity-form.id-text"}} @wrapperClass="mb-2" />
+                        <InputGroup @name={{t "modals.entity-form.sku"}} @value={{@options.entity.sku}} @helpText={{t "modals.entity-form.sku-text"}} @wrapperClass="mb-2" />
                         <div></div>
-                        <InputGroup
-                            @name={{t "modals.entity-form.description"}}
-                            @helpText={{t "modals.entity-form.description-text"}}
-                            @wrapperClass="col-span-2 mb-2"
-                        >
+                        <InputGroup @name={{t "modals.entity-form.description"}} @helpText={{t "modals.entity-form.description-text"}} @wrapperClass="col-span-2 mb-2">
                             <Textarea @value={{@options.entity.description}} type="text" class="w-full form-input" placeholder={{t "modals.entity-form.description"}} />
                         </InputGroup>
                     </div>
@@ -48,11 +29,7 @@
                                 @onCurrencyChange={{fn (mut @options.entity.currency)}}
                             />
                         </InputGroup>
-                        <InputGroup
-                            @name={{t "modals.entity-form.sale-price"}}
-                            @helpText={{t "modals.entity-form.sale-price-text"}}
-                            @wrapperClass="mb-2"
-                        >
+                        <InputGroup @name={{t "modals.entity-form.sale-price"}} @helpText={{t "modals.entity-form.sale-price-text"}} @wrapperClass="mb-2">
                             <MoneyInput
                                 class="w-full"
                                 @value={{@options.entity.sale_price}}

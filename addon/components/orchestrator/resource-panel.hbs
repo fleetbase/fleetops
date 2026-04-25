@@ -1,0 +1,301 @@
+{{! Orchestrator::ResourcePanel — right panel: Vehicles + Drivers tabs }}
+<div class="resource-panel flex flex-col h-full overflow-hidden">
+
+    {{! Tab bar — matches original border-bottom underline style }}
+    <div class="flex border-b dark:border-gray-700 flex-shrink-0">
+        <button
+            type="button"
+            class="flex-1 py-2 pl-2 text-xs font-medium transition-colors
+                {{if
+                    (eq this.activeTab 'vehicles')
+                    'text-indigo-500 border-b-2 border-indigo-500 dark:text-indigo-400 dark:border-indigo-400'
+                    'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
+                }}"
+            {{on "click" (fn this.setTab "vehicles")}}
+        >
+            <FaIcon @icon="truck" @size="xs" class="mr-1" />
+            {{t "orchestrator.available-vehicles"}}
+            <span class="ml-1 text-gray-400 tabular-nums">({{this.filteredVehicles.length}})</span>
+        </button>
+        <button
+            type="button"
+            class="flex-1 py-2 text-xs font-medium transition-colors
+                {{if
+                    (eq this.activeTab 'drivers')
+                    'text-indigo-500 border-b-2 border-indigo-500 dark:text-indigo-400 dark:border-indigo-400'
+                    'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
+                }}"
+            {{on "click" (fn this.setTab "drivers")}}
+        >
+            <FaIcon @icon="id-card-alt" @size="xs" class="mr-1" />
+            {{t "orchestrator.available-drivers"}}
+            <span class="ml-1 text-gray-400 tabular-nums">({{this.filteredDrivers.length}})</span>
+        </button>
+    </div>
+
+    {{! Search + filter strip — shared, sits above the scrollable list }}
+    <div class="px-2 py-1.5 border-b dark:border-gray-700 flex-shrink-0 space-y-1">
+        {{! Search input }}
+        <div class="relative">
+            <FaIcon @icon="search" @size="xs" class="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+            {{#if (eq this.activeTab "vehicles")}}
+                <input
+                    type="text"
+                    class="form-input form-input-sm w-full pl-7i pr-2 py-1 text-xs"
+                    placeholder={{t "orchestrator.search-vehicles"}}
+                    value={{this.vehicleSearch}}
+                    {{on "input" this.onVehicleSearchInput}}
+                />
+            {{else}}
+                <input
+                    type="text"
+                    class="form-input form-input-sm w-full pl-7i pr-2 py-1 text-xs"
+                    placeholder={{t "orchestrator.search-drivers"}}
+                    value={{this.driverSearch}}
+                    {{on "input" this.onDriverSearchInput}}
+                />
+            {{/if}}
+        </div>
+        {{! Filter chips }}
+        {{#if (eq this.activeTab "vehicles")}}
+            <div class="flex gap-1 flex-wrap">
+                <button
+                    type="button"
+                    class="px-2 py-0.5 rounded text-xs transition-colors
+                        {{if
+                            (eq this.vehicleFilter 'all')
+                            'bg-indigo-500 text-white'
+                            'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+                        }}"
+                    {{on "click" (fn this.setVehicleFilter "all")}}
+                >{{t "orchestrator.filter-all"}}</button>
+                <button
+                    type="button"
+                    class="px-2 py-0.5 rounded text-xs transition-colors
+                        {{if
+                            (eq this.vehicleFilter 'active')
+                            'bg-indigo-500 text-white'
+                            'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+                        }}"
+                    {{on "click" (fn this.setVehicleFilter "active")}}
+                >{{t "orchestrator.filter-active"}}</button>
+                <button
+                    type="button"
+                    class="px-2 py-0.5 rounded text-xs transition-colors
+                        {{if
+                            (eq this.vehicleFilter 'available')
+                            'bg-indigo-500 text-white'
+                            'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+                        }}"
+                    {{on "click" (fn this.setVehicleFilter "available")}}
+                >{{t "orchestrator.filter-available"}}</button>
+                <button
+                    type="button"
+                    class="px-2 py-0.5 rounded text-xs transition-colors
+                        {{if
+                            (eq this.vehicleFilter 'no-driver')
+                            'bg-indigo-500 text-white'
+                            'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+                        }}"
+                    {{on "click" (fn this.setVehicleFilter "no-driver")}}
+                >{{t "orchestrator.filter-no-driver"}}</button>
+            </div>
+        {{else}}
+            <div class="flex gap-1 flex-wrap">
+                <button
+                    type="button"
+                    class="px-2 py-0.5 rounded text-xs transition-colors
+                        {{if
+                            (eq this.driverFilter 'all')
+                            'bg-indigo-500 text-white'
+                            'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+                        }}"
+                    {{on "click" (fn this.setDriverFilter "all")}}
+                >{{t "orchestrator.filter-all"}}</button>
+                <button
+                    type="button"
+                    class="px-2 py-0.5 rounded text-xs transition-colors
+                        {{if
+                            (eq this.driverFilter 'online')
+                            'bg-indigo-500 text-white'
+                            'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+                        }}"
+                    {{on "click" (fn this.setDriverFilter "online")}}
+                >{{t "orchestrator.filter-online"}}</button>
+                <button
+                    type="button"
+                    class="px-2 py-0.5 rounded text-xs transition-colors
+                        {{if
+                            (eq this.driverFilter 'offline')
+                            'bg-indigo-500 text-white'
+                            'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+                        }}"
+                    {{on "click" (fn this.setDriverFilter "offline")}}
+                >{{t "orchestrator.filter-offline"}}</button>
+                <button
+                    type="button"
+                    class="px-2 py-0.5 rounded text-xs transition-colors
+                        {{if
+                            (eq this.driverFilter 'on-shift')
+                            'bg-indigo-500 text-white'
+                            'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+                        }}"
+                    {{on "click" (fn this.setDriverFilter "on-shift")}}
+                >{{t "orchestrator.filter-on-job"}}</button>
+            </div>
+        {{/if}}
+    </div>
+
+    {{! Tab content }}
+    <div class="flex-1 overflow-y-auto">
+        {{#if @isLoading}}
+            <div class="flex justify-center py-8"><Spinner /></div>
+
+            {{! ── Vehicles tab ── }}
+        {{else if (eq this.activeTab "vehicles")}}
+            {{#if this.filteredVehicles.length}}
+                {{#each this.filteredVehicles as |vehicle|}}
+                    <button
+                        type="button"
+                        class="w-full text-left flex items-start gap-3 px-3 py-2.5 border-b dark:border-gray-700/60 cursor-pointer select-none transition-colors
+                            {{if
+                                (includes vehicle.public_id this.selectedVehicleIdsArray)
+                                'bg-indigo-100 dark:bg-indigo-900/60 hover:bg-indigo-100 dark:hover:bg-indigo-900/60'
+                                'hover:bg-gray-50 dark:hover:bg-gray-800/60'
+                            }}"
+                        {{on "click" (fn @onToggleVehicle vehicle)}}
+                    >
+                        {{! Avatar (photo_url) — driver online dot top-right }}
+                        <div class="relative flex-shrink-0 mt-0.5">
+                            <img
+                                src={{vehicle.photo_url}}
+                                alt={{or vehicle.display_name "Vehicle"}}
+                                class="w-9 h-9 rounded object-cover bg-gray-200 dark:bg-gray-700"
+                                {{fallback-img-src (config "defaultValues.vehicleAvatar")}}
+                            />
+                            <span
+                                class="absolute top-0 left-0 block w-2.5 h-2.5 rounded-full border-2 border-white dark:border-gray-900
+                                    {{if vehicle.driver.online 'bg-green-500' 'bg-gray-400'}}"
+                            ></span>
+                        </div>
+                        {{! All fields — always shown, "-" when absent }}
+                        <div class="flex-1 min-w-0 space-y-0.5">
+                            {{! Name + vehicle status badge }}
+                            <div class="flex items-center justify-between gap-1.5">
+                                <span class="text-xs font-semibold truncate dark:text-white">{{or vehicle.display_name "-"}}</span>
+                                {{#if vehicle.status}}
+                                    <Badge @status={{vehicle.status}}>{{smart-humanize vehicle.status}}</Badge>
+                                {{/if}}
+                            </div>
+                            {{! Assigned driver }}
+                            <div class="flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400">
+                                <FaIcon @icon="id-card-alt" @size="xs" class="w-3 flex-shrink-0" />
+                                <span class="truncate">{{or vehicle.driver.name (t "orchestrator.no-driver-assigned")}}</span>
+                            </div>
+                            {{! Plate number }}
+                            <div class="flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400">
+                                <FaIcon @icon="hashtag" @size="xs" class="w-3 flex-shrink-0" />
+                                <span class="truncate">{{or vehicle.plate_number "-"}}</span>
+                            </div>
+                            {{! Call sign }}
+                            <div class="flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400">
+                                <FaIcon @icon="broadcast-tower" @size="xs" class="w-3 flex-shrink-0" />
+                                <span class="truncate">{{or vehicle.call_sign "-"}}</span>
+                            </div>
+                        </div>
+                    </button>
+                {{/each}}
+            {{else}}
+                <div class="flex flex-col items-center justify-center py-12 text-gray-400 text-xs">
+                    <FaIcon @icon="truck" @size="2x" class="mb-2 opacity-40" />
+                    {{#if this.vehicleSearch}}
+                        {{t "orchestrator.no-search-results"}}
+                    {{else}}
+                        {{t "orchestrator.no-available-vehicles"}}
+                    {{/if}}
+                </div>
+            {{/if}}
+
+            {{! ── Drivers tab ── }}
+        {{else}}
+            {{#if this.filteredDrivers.length}}
+                {{#each this.filteredDrivers as |driver|}}
+                    <button
+                        type="button"
+                        class="w-full text-left flex items-start gap-3 px-3 py-2.5 border-b dark:border-gray-700/60 cursor-pointer select-none transition-colors
+                            {{if
+                                (includes driver.public_id this.selectedDriverIdsArray)
+                                'bg-indigo-100 dark:bg-indigo-900/60 hover:bg-indigo-100 dark:hover:bg-indigo-900/60'
+                                'hover:bg-gray-50 dark:hover:bg-gray-800/60'
+                            }}"
+                        {{on "click" (fn @onToggleDriver driver)}}
+                    >
+                        {{! Avatar — online dot top-right }}
+                        <div class="relative flex-shrink-0 mt-0.5">
+                            <img
+                                src={{driver.photo_url}}
+                                alt={{or driver.name "Driver"}}
+                                class="w-9 h-9 rounded-full object-cover bg-gray-200 dark:bg-gray-700"
+                                {{fallback-img-src (config "defaultValues.driverImage")}}
+                            />
+                            <span
+                                class="absolute top-0 left-0 block w-2.5 h-2.5 rounded-full border-2 border-white dark:border-gray-900 {{if driver.online 'bg-green-500' 'bg-gray-400'}}"
+                            ></span>
+                        </div>
+                        {{! All fields — always shown, "-" when absent }}
+                        <div class="flex-1 min-w-0 space-y-0.5">
+                            <div class="text-xs font-semibold truncate dark:text-white">{{or driver.name "-"}}</div>
+                            {{! Vehicle }}
+                            <div class="flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400">
+                                <FaIcon @icon="truck" @size="xs" class="w-3 flex-shrink-0" />
+                                <span class="truncate">{{or driver.vehicle.display_name (t "orchestrator.no-vehicle-assigned")}}</span>
+                            </div>
+                            {{! Phone }}
+                            <div class="flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400">
+                                <FaIcon @icon="phone" @size="xs" class="w-3 flex-shrink-0" />
+                                <span class="truncate">{{or driver.phone "-"}}</span>
+                            </div>
+                            {{! Email }}
+                            <div class="flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400">
+                                <FaIcon @icon="envelope" @size="xs" class="w-3 flex-shrink-0" />
+                                <span class="truncate">{{or driver.email "-"}}</span>
+                            </div>
+                        </div>
+                    </button>
+                {{/each}}
+            {{else}}
+                <div class="flex flex-col items-center justify-center py-12 text-gray-400 text-xs">
+                    <FaIcon @icon="id-card-alt" @size="2x" class="mb-2 opacity-40" />
+                    {{#if this.driverSearch}}
+                        {{t "orchestrator.no-search-results"}}
+                    {{else}}
+                        {{t "orchestrator.no-available-drivers"}}
+                    {{/if}}
+                </div>
+            {{/if}}
+        {{/if}}
+    </div>
+
+    {{! Selection info bar }}
+    {{#if (or this.selectedDriverIdsArray.length this.selectedVehicleIdsArray.length)}}
+        <div class="px-3 py-2 border-t dark:border-gray-700 bg-indigo-900/20 flex items-center justify-between flex-shrink-0">
+            <span class="text-xs text-indigo-400">
+                {{#if this.selectedVehicleIdsArray.length}}
+                    {{this.selectedVehicleIdsArray.length}}
+                    vehicles selected
+                {{/if}}
+                {{#if (and this.selectedVehicleIdsArray.length this.selectedDriverIdsArray.length)}}
+                    ·
+                {{/if}}
+                {{#if this.selectedDriverIdsArray.length}}
+                    {{this.selectedDriverIdsArray.length}}
+                    {{t "orchestrator.drivers-selected"}}
+                {{/if}}
+            </span>
+            <button type="button" class="text-xs text-gray-400 hover:text-white" {{on "click" this.clearAllSelections}}>
+                {{t "orchestrator.clear-selection"}}
+            </button>
+        </div>
+    {{/if}}
+
+</div>

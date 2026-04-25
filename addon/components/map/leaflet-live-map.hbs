@@ -90,7 +90,8 @@
                                 <div class="text-xs font-semibold">{{driver.name}}</div>
                                 <div class="text-xs">{{t "common.phone"}}: {{n-a driver.phone}}</div>
                                 <div class="text-xs">{{t "resource.vehicle"}}: {{n-a driver.vehicle_name}}</div>
-                                <div class="text-xs">{{t "common.status"}}: <span class="{{if driver.online 'text-green-500' 'text-red-400'}}">{{if driver.online "Online" "Offline"}}</span></div>
+                                <div class="text-xs">{{t "common.status"}}:
+                                    <span class="{{if driver.online 'text-green-500' 'text-red-400'}}">{{if driver.online "Online" "Offline"}}</span></div>
                                 <div class="text-xs truncate">{{t "common.pos"}}: {{point-coordinates driver.location}}</div>
                             </div>
                         </div>

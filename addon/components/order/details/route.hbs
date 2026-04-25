@@ -1,11 +1,7 @@
 <ContentPanel @title={{t "order.fields.route-panel-title"}} @open={{true}} @actionButtons={{this.actionButtons}} @wrapperClass="bordered-top">
     {{#if @resource.payload.isMultiDrop}}
         <div>
-            <RouteList
-                @order={{@resource}}
-                @eta={{@resource.eta}}
-                @waypointActions={{hash viewWaypointLabel=(hash label=(t "order.fields.get-label") fn=this.viewWaypointLabel)}}
-            />
+            <RouteList @order={{@resource}} @eta={{@resource.eta}} @waypointActions={{hash viewWaypointLabel=(hash label=(t "order.fields.get-label") fn=this.viewWaypointLabel)}} />
         </div>
     {{else}}
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-2">

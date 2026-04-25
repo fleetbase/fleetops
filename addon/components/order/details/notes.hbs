@@ -1,12 +1,6 @@
 <ContentPanel @title={{t "order.fields.notes-title"}} @isLoading={{@isLoading}} @open={{true}} @actionButtons={{this.actionButtons}} @wrapperClass="bordered-top">
     {{#if this.isEditing}}
-        <Textarea
-            @value={{@resource.notes}}
-            class="form-input w-full"
-            placeholder={{t "order.fields.notes-placeholder"}}
-            rows={{4}}
-            disabled={{cannot-write @resource}}
-        />
+        <Textarea @value={{@resource.notes}} class="form-input w-full" placeholder={{t "order.fields.notes-placeholder"}} rows={{4}} disabled={{cannot-write @resource}} />
         <div class="flex items-center space-x-2">
             <Button
                 @type="primary"

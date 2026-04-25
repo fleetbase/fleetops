@@ -1,6 +1,6 @@
 {
     "name": "@fleetbase/fleetops-engine",
-    "version": "0.6.38",
+    "version": "0.6.45",
     "description": "Fleet & Transport Management Extension for Fleetbase",
     "fleetbase": {
         "route": "fleet-ops"
@@ -42,9 +42,9 @@
     },
     "dependencies": {
         "@babel/core": "^7.23.2",
-        "@fleetbase/ember-core": "^0.3.17",
-        "@fleetbase/ember-ui": "^0.3.25",
-        "@fleetbase/fleetops-data": "^0.1.25",
+        "@fleetbase/ember-core": "^0.3.18",
+        "@fleetbase/ember-ui": "^0.3.26",
+        "@fleetbase/fleetops-data": "^0.1.30",
         "@fleetbase/leaflet-routing-machine": "^3.2.17",
         "@fortawesome/ember-fontawesome": "^2.0.0",
         "@fortawesome/fontawesome-svg-core": "6.4.0",
@@ -69,7 +69,8 @@
         "ember-tag-input": "^3.1.0",
         "ember-wormhole": "^0.6.0",
         "leaflet-contextmenu": "^1.4.0",
-        "leaflet-draw": "^1.0.4"
+        "leaflet-draw": "^1.0.4",
+        "xlsx": "^0.18.5"
     },
     "devDependencies": {
         "@babel/eslint-parser": "^7.22.15",

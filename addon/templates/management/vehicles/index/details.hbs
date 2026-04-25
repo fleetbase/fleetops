@@ -1,7 +1,7 @@
 <Layout::Resource::Panel
     @resource={{@model}}
     @controller={{this}}
-    @headerComponent={{component "vehicle/panel-header" resource=@model}}
+    @headerComponent={{component "vehicle/panel-header" resource=@model actionButtons=this.actionButtons}}
     @headerTitle={{or @model.displayName}}
     @actionButtons={{this.actionButtons}}
     @onPressCancel={{transition-to "management.vehicles.index"}}

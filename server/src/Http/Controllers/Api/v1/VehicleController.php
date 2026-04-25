@@ -2,17 +2,23 @@
 
 namespace Fleetbase\FleetOps\Http\Controllers\Api\v1;
 
+use Fleetbase\FleetOps\Events\GeofenceEntered;
+use Fleetbase\FleetOps\Events\GeofenceExited;
 use Fleetbase\FleetOps\Events\VehicleLocationChanged;
 use Fleetbase\FleetOps\Http\Requests\CreateVehicleRequest;
 use Fleetbase\FleetOps\Http\Requests\UpdateVehicleRequest;
 use Fleetbase\FleetOps\Http\Resources\v1\DeletedResource;
 use Fleetbase\FleetOps\Http\Resources\v1\Vehicle as VehicleResource;
+use Fleetbase\FleetOps\Jobs\CheckGeofenceDwell;
 use Fleetbase\FleetOps\Models\Driver;
 use Fleetbase\FleetOps\Models\Vehicle;
+use Fleetbase\FleetOps\Support\GeofenceIntersectionService;
 use Fleetbase\FleetOps\Support\Utils;
 use Fleetbase\Http\Controllers\Controller;
 use Fleetbase\LaravelMysqlSpatial\Types\Point;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\DB;
 
 class VehicleController extends Controller
 {
@@ -26,7 +32,15 @@ class VehicleController extends Controller
     public function create(CreateVehicleRequest $request)
     {
         // get request input
-        $input = $request->only(['status', 'make', 'model', 'year', 'trim', 'type', 'plate_number', 'vin', 'meta', 'online', 'location', 'altitude', 'heading', 'speed']);
+        $input = $request->only([
+            'status', 'make', 'model', 'year', 'trim', 'type', 'plate_number', 'vin',
+            'meta', 'online', 'location', 'altitude', 'heading', 'speed',
+            // Capacity
+            'payload_capacity', 'payload_capacity_volume',
+            'payload_capacity_pallets', 'payload_capacity_parcels',
+            // Orchestrator constraints
+            'skills', 'max_tasks', 'time_window_start', 'time_window_end', 'return_to_depot',
+        ]);
 
         // make sure company is set
         $input['company_uuid'] = session('company');
@@ -97,7 +111,15 @@ class VehicleController extends Controller
         }
 
         // get request input
-        $input = $request->only(['status', 'make', 'model', 'year', 'trim', 'type', 'plate_number', 'vin', 'meta', 'location', 'online', 'altitude', 'heading', 'speed']);
+        $input = $request->only([
+            'status', 'make', 'model', 'year', 'trim', 'type', 'plate_number', 'vin',
+            'meta', 'location', 'online', 'altitude', 'heading', 'speed',
+            // Capacity
+            'payload_capacity', 'payload_capacity_volume',
+            'payload_capacity_pallets', 'payload_capacity_parcels',
+            // Orchestrator constraints
+            'skills', 'max_tasks', 'time_window_start', 'time_window_end', 'return_to_depot',
+        ]);
 
         // vendor assignment
         if ($request->has('vendor')) {
@@ -260,6 +282,88 @@ class VehicleController extends Controller
 
         broadcast(new VehicleLocationChanged($vehicle));
 
+        try {
+            $newLocation     = new Point($latitude, $longitude);
+            $geofenceService = app(GeofenceIntersectionService::class);
+            $this->processVehicleGeofenceCrossings($vehicle, $newLocation, $geofenceService->detectVehicleCrossings($vehicle, $newLocation));
+        } catch (\Throwable $geofenceException) {
+            if (app()->bound('sentry')) {
+                app('sentry')->captureException($geofenceException);
+            }
+        }
+
         return new VehicleResource($vehicle);
+    }
+
+    private function processVehicleGeofenceCrossings(Vehicle $vehicle, Point $newLocation, array $crossings): void
+    {
+        foreach ($crossings as $crossing) {
+            $geofence     = $crossing['geofence'];
+            $geofenceType = $crossing['geofence_type'];
+
+            if ($crossing['type'] === 'entered') {
+                if (!$geofence->trigger_on_entry && empty($geofence->dwell_threshold_minutes)) {
+                    continue;
+                }
+
+                DB::table('vehicle_geofence_states')->upsert(
+                    [
+                        'vehicle_uuid'  => $vehicle->uuid,
+                        'geofence_uuid' => $geofence->uuid,
+                        'geofence_type' => $geofenceType,
+                        'is_inside'     => true,
+                        'entered_at'    => now(),
+                        'exited_at'     => null,
+                        'dwell_job_id'  => null,
+                        'created_at'    => now(),
+                        'updated_at'    => now(),
+                    ],
+                    ['vehicle_uuid', 'geofence_uuid'],
+                    ['is_inside', 'entered_at', 'exited_at', 'dwell_job_id', 'updated_at']
+                );
+
+                if ($geofence->trigger_on_entry) {
+                    event(new GeofenceEntered($vehicle, $geofence, $geofenceType, $newLocation));
+                }
+
+                if ($geofence->dwell_threshold_minutes > 0) {
+                    $dwellJob = CheckGeofenceDwell::dispatch(
+                        $vehicle->uuid,
+                        $geofence->uuid,
+                        $geofenceType,
+                        'vehicle'
+                    )->delay(now()->addMinutes($geofence->dwell_threshold_minutes));
+
+                    DB::table('vehicle_geofence_states')
+                        ->where('vehicle_uuid', $vehicle->uuid)
+                        ->where('geofence_uuid', $geofence->uuid)
+                        ->update(['dwell_job_id' => (string) $dwellJob]);
+                }
+            } elseif ($crossing['type'] === 'exited') {
+                $state = DB::table('vehicle_geofence_states')
+                    ->where('vehicle_uuid', $vehicle->uuid)
+                    ->where('geofence_uuid', $geofence->uuid)
+                    ->first();
+
+                $dwellMinutes = null;
+                if ($state && $state->entered_at) {
+                    $dwellMinutes = (int) Carbon::parse($state->entered_at)->diffInMinutes(now());
+                }
+
+                DB::table('vehicle_geofence_states')
+                    ->where('vehicle_uuid', $vehicle->uuid)
+                    ->where('geofence_uuid', $geofence->uuid)
+                    ->update([
+                        'is_inside'    => false,
+                        'exited_at'    => now(),
+                        'dwell_job_id' => null,
+                        'updated_at'   => now(),
+                    ]);
+
+                if ($geofence->trigger_on_exit) {
+                    event(new GeofenceExited($vehicle, $geofence, $geofenceType, $newLocation, $dwellMinutes));
+                }
+            }
+        }
     }
 }

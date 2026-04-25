@@ -4,6 +4,8 @@ namespace Fleetbase\FleetOps\Support;
 
 use Fleetbase\FleetOps\Flow\Activity;
 use Fleetbase\LaravelMysqlSpatial\Types\Point;
+use Fleetbase\Models\Company;
+use Fleetbase\Models\Setting;
 use Fleetbase\Support\Utils as FleetbaseUtils;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\DB;
@@ -19,6 +21,39 @@ class Utils extends FleetbaseUtils
      * @var float
      */
     public const DRIVING_TIME_MULTIPLIER = 7.2;
+
+    /**
+     * Resolve the preferred transaction currency for a company.
+     *
+     * Resolution order:
+     * 1. Organization/company configured currency
+     * 2. Ledger accounting base currency
+     * 3. USD
+     */
+    public static function getCompanyTransactionCurrency(string|Company|null $company = null): string
+    {
+        $companyModel = $company instanceof Company
+            ? $company
+            : (filled($company) ? Company::where('uuid', $company)->first() : null);
+
+        $companyUuid = $companyModel?->uuid ?? (is_string($company) ? $company : null);
+
+        $companyCurrency = data_get($companyModel, 'currency');
+        if (filled($companyCurrency)) {
+            return strtoupper($companyCurrency);
+        }
+
+        if (filled($companyUuid)) {
+            $accountingSettings = Setting::lookup('company.' . $companyUuid . '.ledger.accounting-settings', []);
+            $baseCurrency       = data_get($accountingSettings, 'base_currency');
+
+            if (filled($baseCurrency)) {
+                return strtoupper($baseCurrency);
+            }
+        }
+
+        return 'USD';
+    }
 
     /**
      * Get a formatted string representation of a place's address.

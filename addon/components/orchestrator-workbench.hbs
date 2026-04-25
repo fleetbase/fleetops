@@ -1,0 +1,318 @@
+<div class="orchestrator-workbench flex flex-col h-full overflow-hidden">
+
+    {{! ── Toolbar ── }}
+    <Layout::Section::Header @title={{t "orchestrator.workbench-title"}}>
+        <div class="flex items-center space-x-2">
+
+            {{! Status badges }}
+            {{#if this.hasProposedPlan}}
+                <Badge @status="info">{{t "orchestrator.plan-ready"}}</Badge>
+            {{/if}}
+            {{#if this.isCommitted}}
+                <Badge @status="success">{{t "orchestrator.committed-badge"}}</Badge>
+            {{/if}}
+            {{#if this.hasUnassigned}}
+                <Badge @status="warning">{{this.unassignedAfterRun.length}} {{t "orchestrator.unassigned"}}</Badge>
+            {{/if}}
+            {{#if this.phaseCount}}
+                <Badge @status="info">{{this.phaseCount}} {{t "orchestrator.phases"}}</Badge>
+            {{/if}}
+
+            {{#if (or this.hasProposedPlan this.isCommitted this.hasUnassigned this.phaseCount)}}
+                <div class="w-px h-5 bg-gray-300 dark:bg-gray-600 mx-1"></div>
+            {{/if}}
+
+            {{! Phase builder toggle }}
+            <Button @icon="list-ol" @text={{t "orchestrator.phases"}} @type={{if this.showPhaseBuilder "primary" "default"}} @size="sm" @onClick={{this.togglePhaseBuilder}} />
+
+            {{! Card fields settings toggle }}
+            <Button
+                @icon="table-columns"
+                @text={{t "orchestrator.card-fields"}}
+                @type={{if this.showCardFieldsSettings "primary" "default"}}
+                @size="sm"
+                @onClick={{this.toggleCardFieldsSettings}}
+            />
+
+            <div class="w-px h-5 bg-gray-300 dark:bg-gray-600 mx-1"></div>
+
+            {{! Commit / Discard / Run }}
+            {{#if this.hasProposedPlan}}
+                <Button @icon="check" @text={{t "orchestrator.commit-plan"}} @type="success" @size="sm" @isLoading={{this.commitPlan.isRunning}} @onClick={{perform this.commitPlan}} />
+                <Button @icon="times" @text={{t "orchestrator.discard-plan"}} @type="default" @size="sm" @onClick={{this.discardPlan}} />
+            {{else}}
+                <Button
+                    @icon="bolt"
+                    @text={{if this.phaseCount (t "orchestrator.run-phases" count=this.phaseCount) (t "orchestrator.run-orchestration")}}
+                    @type="primary"
+                    @size="sm"
+                    @isLoading={{this.runOrchestration.isRunning}}
+                    @onClick={{perform this.runOrchestration}}
+                />
+            {{/if}}
+
+            {{! Refresh }}
+            <Button @icon="sync" @type="default" @size="sm" @isLoading={{this.loadData.isRunning}} @onClick={{perform this.loadData}} />
+        </div>
+    </Layout::Section::Header>
+
+    {{! ── Phase builder panel (collapsible, below toolbar) ── }}
+    {{#if this.showPhaseBuilder}}
+        <div class="workbench-phase-panel border-b dark:border-gray-700 bg-white dark:bg-gray-900 flex-shrink-0 h-80">
+            <Orchestrator::PhaseBuilder @phases={{this.phases}} @availableEngines={{this.availableEngines}} @onPhasesChange={{this.onPhasesChange}} @onRunPhases={{this.onRunPhases}} />
+        </div>
+    {{/if}}
+
+    {{! ── Card fields settings panel (collapsible, below toolbar) ── }}
+    {{#if this.showCardFieldsSettings}}
+        <div class="workbench-card-fields-panel border-b dark:border-gray-700 bg-white dark:bg-gray-900 flex-shrink-0 overflow-y-auto max-h-96">
+            <Orchestrator::CardFieldsSettings @onSaved={{this.onCardFieldsSaved}} />
+        </div>
+    {{/if}}
+
+    {{! ── Main 3-Panel Body ── }}
+    <div class="workbench-body flex flex-1 overflow-hidden">
+
+        {{! ── LEFT PANEL: Order Pool ── }}
+        <div
+            class="order-pool-panel flex flex-col border-r dark:border-gray-700 bg-white dark:bg-gray-900 flex-shrink-0 {{if this.leftPanelCollapsed 'w-0 overflow-hidden'}}"
+            style={{if this.leftPanelCollapsed "" (concat "width:" this.leftPanelWidth "px;min-width:200px;max-width:480px;")}}
+        >
+            <Orchestrator::OrderPool
+                @orders={{this.unassignedOrders}}
+                @selectedOrderIds={{this.selectedOrderIds}}
+                @isLoading={{this.loadData.isRunning}}
+                @cardFields={{this.cardFields}}
+                @onToggleSelection={{this.toggleOrderSelection}}
+                @onClearSelection={{this.clearOrderSelection}}
+                @onDragStart={{this.onOrderDragStart}}
+                @onOpenImport={{this.openImportModal}}
+            />
+        </div>
+
+        {{! ── Left panel resize handle + collapse toggle ── }}
+        <div class="flex flex-col flex-shrink-0 relative">
+            {{! Drag resize handle }}
+            <div
+                class="workbench-resize-handle w-1 cursor-col-resize bg-transparent hover:bg-indigo-400 dark:hover:bg-indigo-500 transition-colors h-full absolute left-0 top-0 z-10"
+                {{on "mousedown" this.startLeftResize}}
+            ></div>
+            {{! Collapse toggle bar }}
+            <button
+                type="button"
+                class="workbench-panel-toggle flex items-center justify-center w-4 h-full bg-gray-100 dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+                title={{if this.leftPanelCollapsed (t "orchestrator.expand-panel") (t "orchestrator.collapse-panel")}}
+                {{on "click" this.toggleLeftPanel}}
+            >
+                <FaIcon @icon={{if this.leftPanelCollapsed "chevron-right" "chevron-left"}} @size="xs" class="text-gray-400" />
+            </button>
+        </div>
+
+        {{! ── CENTRE: Map ── }}
+        <div class="map-panel flex-1 relative overflow-hidden">
+            <div class="orchestrator-map-container fleetbase-leaflet-map-container next-map-container w-full h-full">
+                <LeafletMap @lat={{this.mapCenter.lat}} @lng={{this.mapCenter.lng}} @zoom={{this.mapZoom}} @onLoad={{this.onMapLoad}} class="w-full h-full" as |layers|>
+                    <layers.tile @url={{this.tileSourceUrl}} />
+
+                    {{! ── Unassigned order markers ──
+                         Handles both standard pickup/dropoff orders and multi-drop
+                         orders (payload.waypoints). Uses getOrderStops() to normalise
+                         both shapes into a flat [{lat,lng,address,label}] array.
+                         Hidden once a plan is proposed (replaced by numbered stop markers). }}
+                    {{#unless this.hasProposedPlan}}
+                        {{#each this.unassignedOrders as |order|}}
+                            {{#each (this.getOrderStops order) as |stop|}}
+                                <layers.marker
+                                    @lat={{stop.lat}}
+                                    @lng={{stop.lng}}
+                                    @icon={{div-icon
+                                        html=(this.waypointIconHtml stop.label (if (eq stop.label "P") "#22C55E" "#EF4444"))
+                                        className="fleetops-waypoint-marker"
+                                        iconSize=(array 32 32)
+                                        iconAnchor=(array 16 16)
+                                        popupAnchor=(array 0 -20)
+                                    }}
+                                    @riseOnHover={{true}}
+                                    as |marker|
+                                >
+                                    <marker.popup>
+                                        <div class="text-xs min-w-32">
+                                            <div class="font-semibold mb-0.5">{{or order.tracking order.public_id}}</div>
+                                            <div class="text-gray-500">{{stop.address}}</div>
+                                            {{#if order.scheduled_at}}
+                                                <div class="text-blue-500 mt-0.5">{{format-date order.scheduled_at "MMM d, HH:mm"}}</div>
+                                            {{/if}}
+                                        </div>
+                                    </marker.popup>
+                                    <marker.tooltip @permanent={{false}} @sticky={{true}} @direction="top">
+                                        {{or order.tracking order.public_id}}
+                                        —
+                                        {{stop.address}}
+                                    </marker.tooltip>
+                                </layers.marker>
+                            {{/each}}
+                        {{/each}}
+                    {{/unless}}
+
+                    {{! ── Driver location markers ──
+                         Green dot = online, red dot = offline. }}
+                    {{#each this.availableDrivers as |driver|}}
+                        {{#if driver.location}}
+                            <layers.marker
+                                @location={{point-to-coordinates driver.location}}
+                                @icon={{icon iconUrl=driver.vehicle_avatar iconSize=(array 24 24)}}
+                                @riseOnHover={{true}}
+                                as |marker|
+                            >
+                                <marker.popup>
+                                    <div class="flex flex-row p-1">
+                                        <div class="w-12 mr-2">
+                                            <img src={{driver.photoUrl}} alt={{driver.name}} class="rounded-md w-10 h-10 shadow-sm object-cover" />
+                                        </div>
+                                        <div class="flex-1 text-xs">
+                                            <div class="font-semibold">{{driver.name}}</div>
+                                            {{#if driver.vehicle_name}}
+                                                <div class="text-gray-500">{{driver.vehicle_name}}</div>
+                                            {{/if}}
+                                            <div class="mt-0.5 {{if driver.online 'text-green-500' 'text-red-400'}}">
+                                                {{if driver.online (t "common.online") (t "common.offline")}}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </marker.popup>
+                                <marker.tooltip @permanent={{false}} @sticky={{true}} @direction="top">
+                                    <div class="flex items-center space-x-1">
+                                        <span class="font-semibold">{{driver.name}}</span>
+                                        <span>•</span>
+                                        <span class="{{if driver.online 'text-green-400' 'text-red-400'}}">
+                                            {{if driver.online (t "common.online") (t "common.offline")}}
+                                        </span>
+                                    </div>
+                                </marker.tooltip>
+                            </layers.marker>
+                        {{/if}}
+                    {{/each}}
+
+                    {{! ── Planned route numbered stop markers (post-run) ──
+                         Route polylines are drawn by the OSRM routing control
+                         (added imperatively via leafletMapManager.addRoutingControl)
+                         so no <layers.polyline> is needed here.
+                         Each stop gets a numbered marker with a tooltip showing
+                         the tracking number, dropoff address, and estimated arrival. }}
+                    {{#if this.hasProposedPlan}}
+                        {{#each this.planByVehicle as |group|}}
+                            {{! Numbered stop markers — one per stop per order.
+                                 Uses _labelledStops (pre-computed in planByVehicle getter)
+                                 which carries sequential letter labels (A, B, C…) that
+                                 match the route list card labels exactly. }}
+                            {{#each group.orders as |item|}}
+                                {{#each item._labelledStops as |stop|}}
+                                    <layers.marker
+                                        @lat={{stop.lat}}
+                                        @lng={{stop.lng}}
+                                        @icon={{div-icon
+                                            html=(this.waypointIconHtml stop.label group.routeColor)
+                                            className="fleetops-waypoint-marker"
+                                            iconSize=(array 32 32)
+                                            iconAnchor=(array 16 32)
+                                            popupAnchor=(array 0 -32)
+                                        }}
+                                        @riseOnHover={{true}}
+                                        as |marker|
+                                    >
+                                        <marker.tooltip @permanent={{false}} @sticky={{true}} @direction="top">
+                                            <div class="text-xs">
+                                                <div class="font-semibold">{{or item.order.tracking item.order.public_id}}</div>
+                                                <div class="text-gray-500">{{stop.address}}</div>
+                                                {{#if item.arrival}}
+                                                    <div class="text-blue-400">{{this.formatUnixTime item.arrival}}</div>
+                                                {{/if}}
+                                            </div>
+                                        </marker.tooltip>
+                                    </layers.marker>
+                                {{/each}}
+                            {{/each}}
+                        {{/each}}
+                    {{/if}}
+                </LeafletMap>
+            </div>
+
+            {{! Map overlay: engine running indicator }}
+            {{#if this.runOrchestration.isRunning}}
+                <div class="absolute inset-0 bg-gray-900/60 flex flex-col items-center justify-center z-10">
+                    <Spinner @size="lg" class="mb-3" />
+                    <span class="text-sm text-white">{{t "orchestrator.running"}}</span>
+                </div>
+            {{/if}}
+        </div>
+
+        {{! ── Right panel resize handle + collapse toggle ── }}
+        <div class="flex flex-col flex-shrink-0 relative">
+            {{! Drag resize handle }}
+            <div
+                class="workbench-resize-handle w-1 cursor-col-resize bg-transparent hover:bg-indigo-400 dark:hover:bg-indigo-500 transition-colors h-full absolute right-0 top-0 z-10"
+                {{on "mousedown" this.startRightResize}}
+            ></div>
+            {{! Collapse toggle bar }}
+            <button
+                type="button"
+                class="workbench-panel-toggle flex items-center justify-center w-4 h-full bg-gray-100 dark:bg-gray-800 border-l border-gray-200 dark:border-gray-700 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+                title={{if this.rightPanelCollapsed (t "orchestrator.expand-panel") (t "orchestrator.collapse-panel")}}
+                {{on "click" this.toggleRightPanel}}
+            >
+                <FaIcon @icon={{if this.rightPanelCollapsed "chevron-left" "chevron-right"}} @size="xs" class="text-gray-400" />
+            </button>
+        </div>
+
+        {{! ── RIGHT PANEL: Resources (pre-run) or Plan (post-run) ── }}
+        <div
+            class="driver-panel flex flex-col border-l dark:border-gray-700 bg-white dark:bg-gray-900 flex-shrink-0 {{if this.rightPanelCollapsed 'w-0 overflow-hidden'}}"
+            style={{if this.rightPanelCollapsed "" (concat "width:" this.rightPanelWidth "px;min-width:240px;max-width:560px;")}}
+        >
+
+            {{#if this.hasProposedPlan}}
+                {{! Post-run: plan viewer }}
+                <Orchestrator::PlanViewer
+                    @planByVehicle={{this.planByVehicle}}
+                    @unassignedAfterRun={{this.unassignedAfterRun}}
+                    @runMessage={{this.orchestratorRunMessage}}
+                    @hasDriverPhase={{this.hasDriverPhase}}
+                    @onDropOnVehicle={{this.onDropOnVehicle}}
+                    @onDragOver={{this.onDragOver}}
+                    @onAssignedOrderDragStart={{this.onAssignedOrderDragStart}}
+                    @onDismissMessage={{this.dismissRunMessage}}
+                    @formatDuration={{this.formatDuration}}
+                    @formatDistance={{this.formatDistance}}
+                    @formatUnixTime={{this.formatUnixTime}}
+                    @getStopLabel={{this.getStopLabel}}
+                    @formatTimeWindow={{this.formatTimeWindow}}
+                />
+            {{else if this.runError}}
+                {{! Post-run error: no assignments were returned }}
+                <div class="flex flex-col items-center justify-center h-full px-6 text-center">
+                    <FaIcon @icon="triangle-exclamation" class="text-amber-500 mb-3" @size="2x" />
+                    <p class="text-sm font-semibold text-gray-800 dark:text-gray-100 mb-1">{{t "orchestrator.run-failed-title"}}</p>
+                    <p class="text-xs text-gray-500 dark:text-gray-400">{{this.runError}}</p>
+                    <div class="flex flex-col items-center space-y-2 mt-4">
+                        <Button @icon="redo" @text={{t "orchestrator.try-again"}} @type="default" @size="sm" @onClick={{perform this.runOrchestration}} />
+                        <Button @icon="users" @text={{t "orchestrator.change-resources"}} @type="default" @size="sm" @onClick={{this.clearRunError}} />
+                    </div>
+                </div>
+            {{else}}
+                {{! Pre-run: resource panel }}
+                <Orchestrator::ResourcePanel
+                    @vehicles={{this.availableVehicles}}
+                    @drivers={{this.availableDrivers}}
+                    @selectedVehicleIds={{this.selectedVehicleIds}}
+                    @selectedDriverIds={{this.selectedDriverIds}}
+                    @isLoading={{this.loadData.isRunning}}
+                    @onToggleVehicle={{this.toggleVehicleSelection}}
+                    @onToggleDriver={{this.toggleDriverSelection}}
+                    @onClearVehicles={{this.clearVehicleSelection}}
+                    @onClearDrivers={{this.clearDriverSelection}}
+                />
+            {{/if}}
+        </div>
+
+    </div>
+</div>

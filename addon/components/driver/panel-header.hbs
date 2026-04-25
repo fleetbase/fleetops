@@ -2,7 +2,14 @@
     <div class="flex flex-1 flex-row items-start justify-between">
         <div class="flex flex-row space-x-3">
             <div class="flex items-start justify-start rounded-full">
-                <Image src={{@resource.photo_url}} @fallbackSrc={{config "defaultValues.driverImage"}} alt={{@resource.name}} height="48" width="48" class="h-14 w-14 rounded-full shadow-sm" />
+                <Image
+                    src={{@resource.photo_url}}
+                    @fallbackSrc={{config "defaultValues.driverImage"}}
+                    alt={{@resource.name}}
+                    height="48"
+                    width="48"
+                    class="h-14 w-14 rounded-full shadow-sm"
+                />
                 <Attach::Tooltip @class="clean" @animation="scale" @placement="top">
                     <InputInfo @text={{@resource.name}} />
                 </Attach::Tooltip>

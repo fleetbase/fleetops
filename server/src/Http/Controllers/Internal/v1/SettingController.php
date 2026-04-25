@@ -225,12 +225,12 @@ class SettingController extends Controller
     public function getMapSettings()
     {
         $defaults = [
-            'mapProvider'          => 'leaflet',
-            'googleMapsMapType'    => 'roadmap',
+            'mapProvider'            => 'leaflet',
+            'googleMapsMapType'      => 'roadmap',
             'googleMapsTrafficLayer' => false,
             'googleMapsTransitLayer' => false,
-            'leafletTileProvider'  => 'carto-light',
-            'leafletCustomTileUrl' => '',
+            'leafletTileProvider'    => 'carto-light',
+            'leafletCustomTileUrl'   => '',
         ];
 
         $mapSettings = Setting::lookupFromCompany('fleet-ops.map-settings', $defaults);
@@ -251,7 +251,6 @@ class SettingController extends Controller
      * never accepted or stored by this endpoint. Only the provider selection
      * and display preferences are persisted here.
      *
-     * @param  Request  $request
      * @return \Illuminate\Http\JsonResponse
      */
     public function saveMapSettings(Request $request)
@@ -273,6 +272,124 @@ class SettingController extends Controller
         return response()->json([
             'status'  => 'ok',
             'message' => 'Map settings successfully saved.',
+        ]);
+    }
+
+    /**
+     * Retrieve driver scheduling settings for the current company.
+     *
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function getSchedulingSettings()
+    {
+        $defaults = [
+            'horizon_days'                   => 60,
+            'default_shift_duration'         => 8,
+            'hos_daily_limit'                => 11,
+            'hos_weekly_limit'               => 70,
+            'auto_activate_schedule'         => true,
+            'notify_drivers_on_shift_change' => false,
+        ];
+        $settings = Setting::lookupFromCompany('fleet-ops.scheduling-settings', $defaults);
+
+        return response()->json($settings);
+    }
+
+    /**
+     * Save driver scheduling settings for the current company.
+     *
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function saveSchedulingSettings(Request $request)
+    {
+        $settings = [
+            'horizon_days'                   => (int) $request->input('horizon_days', 60),
+            'default_shift_duration'         => (int) $request->input('default_shift_duration', 8),
+            'hos_daily_limit'                => (int) $request->input('hos_daily_limit', 11),
+            'hos_weekly_limit'               => (int) $request->input('hos_weekly_limit', 70),
+            'auto_activate_schedule'         => (bool) $request->input('auto_activate_schedule', true),
+            'notify_drivers_on_shift_change' => (bool) $request->input('notify_drivers_on_shift_change', false),
+        ];
+        Setting::configureCompany('fleet-ops.scheduling-settings', $settings);
+
+        return response()->json($settings);
+    }
+
+    /**
+     * Retrieve order allocation settings for the current company.
+     *
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function getOrchestratorSettings()
+    {
+        $defaults = [
+            'allocation_engine'           => 'vroom',
+            'auto_allocate_on_create'     => false,
+            'auto_reallocate_on_complete' => false,
+            'max_travel_time_seconds'     => 3600,
+            'balance_workload'            => false,
+        ];
+        $settings = Setting::lookupFromCompany('fleet-ops.allocation-settings', $defaults);
+
+        return response()->json($settings);
+    }
+
+    /**
+     * Save order allocation settings for the current company.
+     *
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function saveOrchestratorSettings(Request $request)
+    {
+        $settings = [
+            'allocation_engine'           => $request->input('allocation_engine', 'vroom'),
+            'auto_allocate_on_create'     => (bool) $request->input('auto_allocate_on_create', false),
+            'auto_reallocate_on_complete' => (bool) $request->input('auto_reallocate_on_complete', false),
+            'max_travel_time_seconds'     => (int) $request->input('max_travel_time_seconds', 3600),
+            'balance_workload'            => (bool) $request->input('balance_workload', false),
+        ];
+        Setting::configureCompany('fleet-ops.allocation-settings', $settings);
+
+        return response()->json($settings);
+    }
+
+    /**
+     * Retrieve orchestrator order card field settings for the current company.
+     *
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function getOrchestratorCardFields()
+    {
+        $defaults = [
+            'standard'  => ['tracking', 'status', 'scheduled_at', 'customer', 'dropoff'],
+            'byConfig'  => (object) [],
+            'meta'      => [],
+        ];
+        $settings = Setting::lookupFromCompany('fleet-ops.orchestrator-card-fields', $defaults);
+
+        return response()->json(['settings' => $settings]);
+    }
+
+    /**
+     * Save orchestrator order card field settings for the current company.
+     *
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function saveOrchestratorCardFields(Request $request)
+    {
+        $settings = $request->input('settings', []);
+
+        $normalized = [
+            'standard'  => $settings['standard'] ?? ['tracking', 'status', 'scheduled_at', 'customer', 'dropoff'],
+            'byConfig'  => $settings['byConfig'] ?? [],
+            'meta'      => $settings['meta'] ?? [],
+        ];
+        Setting::configureCompany('fleet-ops.orchestrator-card-fields', $normalized);
+
+        return response()->json([
+            'status'   => 'ok',
+            'message'  => 'Orchestrator card fields saved.',
+            'settings' => $normalized,
         ]);
     }
 }

@@ -126,6 +126,12 @@ class OrderController extends FleetOpsController
                             $input['order_config_uuid'] = $defaultOrderConfig->uuid;
                         }
                     }
+
+                    // Ensure orchestrator_priority is never null — the column is NOT NULL
+                    // and the DB default is bypassed when Eloquent receives an explicit null.
+                    if (!isset($input['orchestrator_priority']) || !is_numeric($input['orchestrator_priority'])) {
+                        $input['orchestrator_priority'] = 50;
+                    }
                 },
                 function (&$request, Order &$order, &$requestInput) {
                     $input                   = $request->input('order');
@@ -1035,5 +1041,47 @@ class OrderController extends FleetOpsController
         $order->eta          = $order->tracker()->eta();
 
         return new OrderResource($order);
+    }
+
+    /**
+     * Schedule an order: set scheduled_at and optionally assign a driver.
+     * This endpoint intentionally does NOT trigger dispatch or change the
+     * order status, so it is safe to call from the scheduler UI.
+     *
+     * @return \Illuminate\Http\Response
+     */
+    public function scheduleOrder(Request $request)
+    {
+        $orderId     = $request->input('order');
+        $scheduledAt = $request->input('scheduled_at');
+        $driverId    = $request->input('driver_id');
+
+        $order = Order::findById($orderId);
+        if (!$order) {
+            return response()->error('No order found to schedule.');
+        }
+
+        if ($scheduledAt) {
+            $order->scheduled_at = \Carbon\Carbon::parse($scheduledAt);
+        }
+
+        if ($driverId) {
+            // Resolve by uuid or public_id
+            $driver = Driver::where('uuid', $driverId)
+                ->orWhere('public_id', $driverId)
+                ->first();
+            if ($driver) {
+                $order->driver_assigned_uuid = $driver->uuid;
+            }
+        }
+
+        $order->saveQuietly();
+
+        return response()->json([
+            'status'       => 'OK',
+            'message'      => 'Order scheduled',
+            'order'        => $order->uuid,
+            'scheduled_at' => $order->scheduled_at,
+        ]);
     }
 }
