@@ -71,14 +71,16 @@ export function describeRoutePoint(routePoint, routeColor) {
 }
 
 export function buildRoutePointMarkerPresentation(routePoint, routeColor, options = {}) {
+    const role = routePoint?.role;
     const place = routePoint?.place;
     const { label, markerColor, title } = describeRoutePoint(routePoint, routeColor);
+    const zIndexOffset = role === 'pickup' ? 2200 : role === 'dropoff' ? 2100 : 1800;
 
     return {
         waypointLabel: label,
         waypointColor: markerColor,
         title,
-        zIndexOffset: options.zIndexOffset ?? 1000,
+        zIndexOffset: options.zIndexOffset ?? zIndexOffset,
         tooltip: buildPlaceAddressTooltip(title, place),
         tooltipOptions: {
             direction: 'top',

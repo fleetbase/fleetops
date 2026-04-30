@@ -228,17 +228,10 @@
 
                                     {{! Order type badge }}
                                     <td>
-                                        {{#if (eq group.order_type "multi_waypoint")}}
-                                            <span class="import-preview-badge import-preview-badge--blue">
-                                                <FaIcon @icon="route" class="mr-0.5" />
-                                                {{t "orchestrator.col-preview-multi-stop" count=group.waypointCount}}
-                                            </span>
-                                        {{else}}
-                                            <span class="import-preview-badge import-preview-badge--gray">
-                                                <FaIcon @icon="exchange-alt" class="mr-0.5" />
-                                                {{t "orchestrator.col-preview-pickup-dropoff"}}
-                                            </span>
-                                        {{/if}}
+                                        <span class="{{group.routeSummary.badgeClass}}">
+                                            <FaIcon @icon={{group.routeSummary.icon}} class="mr-0.5" />
+                                            {{group.routeSummary.label}}
+                                        </span>
                                     </td>
 
                                     {{! Pickup }}

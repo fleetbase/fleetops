@@ -42,12 +42,12 @@ class Payload extends FleetbaseResource
             // Entity count instead of full entities
             'entities_count' => $this->whenLoaded('entities', function () {
                 return $this->entities->count();
-            }),
+            }, $this->entities()->count()),
 
-            // Waypoint count instead of full waypoints
+            // Waypoint count for lightweight route-shape summaries.
             'waypoints_count' => $this->whenLoaded('waypoints', function () {
                 return $this->waypoints->count();
-            }),
+            }, $this->waypoints()->count()),
 
             'type'       => $this->type,
             'created_at' => $this->created_at,

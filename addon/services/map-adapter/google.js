@@ -595,8 +595,10 @@ export default class GoogleMapsAdapter extends MapAdapterInterface {
         }
         const markerIds = [];
 
+        const markerWaypoints = options.markerWaypoints ?? route.waypoints ?? [];
+
         if (!options.suppressMarkers) {
-            for (const [index, waypoint] of route.waypoints.entries()) {
+            for (const [index, waypoint] of markerWaypoints.entries()) {
                 const markerId = `${handleId}:marker:${index}`;
                 const markerOptions = this.#buildRouteMarkerOptions(waypoint, index, route, options);
                 if (markerOptions === null) continue;

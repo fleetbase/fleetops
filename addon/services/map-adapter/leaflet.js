@@ -358,8 +358,10 @@ export default class LeafletAdapter extends MapAdapterInterface {
         }
         const markerIds = [];
 
+        const markerWaypoints = options.markerWaypoints ?? route.waypoints ?? [];
+
         if (!options.suppressMarkers) {
-            route.waypoints.forEach((waypoint, index) => {
+            markerWaypoints.forEach((waypoint, index) => {
                 const markerId = `${handleId}:marker:${index}`;
                 const markerOptions = this.#buildRouteMarkerOptions(waypoint, index, route, options);
                 if (markerOptions === null) return;

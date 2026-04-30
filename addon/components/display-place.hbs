@@ -10,33 +10,37 @@
             </span>
         </div>
     {{else}}
-        <div class="flex flex-row item-center space-x-2 {{if (or this.place.status_code @eta) 'mb-2'}}">
-            {{#if this.place.status_code}}
-                <Badge @status={{this.place.status_code}} />
-            {{/if}}
-            {{#if @eta}}
-                <Badge @status="warning" @hideStatusDot={{true}}><span class="font-bold">{{t "common.eta"}}:</span> {{format-duration @eta}}</Badge>
-            {{/if}}
-            {{#if @waypointActions}}
-                <DropdownButton @iconClass="icon-text-height" @size="xs" @buttonClass="fleetops-btn-xxs" @icon="ellipsis-h" @iconPrefix="fas" @contentClass="dropdown-menu" as |dd|>
-                    <div class="next-dd-menu mt-1 mx-0" aria-labelledby="user-menu">
-                        <div class="px-1">
-                            <div class="text-sm flex flex-row items-center px-3 py-1 rounded-md my-1 text-gray-300">
-                                {{t "order.fields.waypoint-actions"}}
-                            </div>
-                        </div>
-                        <div class="next-dd-menu-seperator"></div>
-                        {{#each-in @waypointActions as |actionId action|}}
+        {{#if (and @waypointActions (not @hideBadges))}}
+            <div class="flex flex-row item-center space-x-2 {{if (or this.place.status_code @eta) 'mb-2'}}">
+                {{#unless @hideBadges}}
+                    {{#if this.place.status_code}}
+                        <Badge @status={{this.place.status_code}} />
+                    {{/if}}
+                    {{#if @eta}}
+                        <Badge @status="warning" @hideStatusDot={{true}}><span class="font-bold">{{t "common.eta"}}:</span> {{format-duration @eta}}</Badge>
+                    {{/if}}
+                {{/unless}}
+                {{#if @waypointActions}}
+                    <DropdownButton @iconClass="icon-text-height" @size="xs" @buttonClass="fleetops-btn-xxs" @icon="ellipsis-h" @iconPrefix="fas" @contentClass="dropdown-menu" as |dd|>
+                        <div class="next-dd-menu mt-1 mx-0" aria-labelledby="user-menu">
                             <div class="px-1">
-                                <a href="javascript:;" class="next-dd-item" disabled={{cannot "fleet-ops view order"}} {{on "click" (dropdown-fn dd action.fn this.place)}}>
-                                    {{action.label}}
-                                </a>
+                                <div class="text-sm flex flex-row items-center px-3 py-1 rounded-md my-1 text-gray-300">
+                                    {{t "order.fields.waypoint-actions"}}
+                                </div>
                             </div>
-                        {{/each-in}}
-                    </div>
-                </DropdownButton>
-            {{/if}}
-        </div>
+                            <div class="next-dd-menu-seperator"></div>
+                            {{#each-in @waypointActions as |actionId action|}}
+                                <div class="px-1">
+                                    <a href="javascript:;" class="next-dd-item" disabled={{cannot "fleet-ops view order"}} {{on "click" (dropdown-fn dd action.fn this.place)}}>
+                                        {{action.label}}
+                                    </a>
+                                </div>
+                            {{/each-in}}
+                        </div>
+                    </DropdownButton>
+                {{/if}}
+            </div>
+        {{/if}}
         <address class={{@addressClass}}>
             {{#if this.name}}
                 <div class="font-semibold">{{this.name}}</div>

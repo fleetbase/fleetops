@@ -2,7 +2,7 @@
     {{#if this.firstStop}}
         <div class="order-route-stop {{@routeStopClass}}">
             <div class="order-route-stop-index {{@routeStopIndexClass}}">
-                <div class="index-count">{{this.firstStop.label}}</div>
+                <div class="index-count fleetops-route-stop-badge" style={{this.firstStop.badgeStyle}}>{{this.firstStop.label}}</div>
             </div>
             <div class="order-route-location {{@routeLocationClass}} dark:text-gray-100">
                 <DisplayPlace @place={{this.firstStop.place}} @eta={{get @eta this.firstStop.place.id}} @waypointActions={{@waypointActions}} />
@@ -10,7 +10,7 @@
         </div>
     {{/if}}
 
-    {{#if this.hasExtraStops}}
+    {{#if this.shouldCollapseWaypoints}}
         <Button class="btn-reset w-full" @wrapperClass="w-full" @onClick={{this.toggleWaypointsCollapse}}>
             <div class="px-3 py-2 w-full bg-yellow-200 text-yellow-900 rounded shadow-sm flex flex-col justify-center items-start mb-3">
                 <div class="flex flex-row items-center">
@@ -24,7 +24,7 @@
             {{#each this.middleStops as |stop|}}
                 <div class="order-route-stop {{@routeStopClass}}">
                     <div class="order-route-stop-index {{@routeStopIndexClass}}">
-                        <div class="index-count">{{stop.label}}</div>
+                        <div class="index-count fleetops-route-stop-badge" style={{stop.badgeStyle}}>{{stop.label}}</div>
                     </div>
                     <div class="order-route-location {{@routeLocationClass}} dark:text-gray-100">
                         <DisplayPlace @place={{stop.place}} @eta={{get @eta stop.place.id}} @waypointActions={{@waypointActions}} />
@@ -32,12 +32,23 @@
                 </div>
             {{/each}}
         {{/unless}}
+    {{else if this.hasExtraStops}}
+        {{#each this.middleStops as |stop|}}
+            <div class="order-route-stop {{@routeStopClass}}">
+                <div class="order-route-stop-index {{@routeStopIndexClass}}">
+                    <div class="index-count fleetops-route-stop-badge" style={{stop.badgeStyle}}>{{stop.label}}</div>
+                </div>
+                <div class="order-route-location {{@routeLocationClass}} dark:text-gray-100">
+                    <DisplayPlace @place={{stop.place}} @eta={{get @eta stop.place.id}} @waypointActions={{@waypointActions}} />
+                </div>
+            </div>
+        {{/each}}
     {{/if}}
 
     {{#if this.lastStop}}
         <div class="order-route-stop {{@routeStopClass}}">
             <div class="order-route-stop-index {{@routeStopIndexClass}}">
-                <div class="index-count">{{this.lastStop.label}}</div>
+                <div class="index-count fleetops-route-stop-badge" style={{this.lastStop.badgeStyle}}>{{this.lastStop.label}}</div>
             </div>
             <div class="order-route-location {{@routeLocationClass}} dark:text-gray-100">
                 <DisplayPlace @place={{this.lastStop.place}} @eta={{get @eta this.lastStop.place.id}} @waypointActions={{@waypointActions}} />

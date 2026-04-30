@@ -219,6 +219,180 @@ body.fleetbase-console .next-content-overlay > .next-content-overlay-panel-conta
     font-size: 0.85rem;
 }
 
+.fleetops-route-stop-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-width: 2px;
+    border-style: solid;
+    border-color: rgb(255 255 255 / 92%);
+    border-radius: 9999px;
+    font-weight: 700;
+    line-height: 1;
+    box-shadow:
+        0 1px 3px 0 rgb(0 0 0 / 15%),
+        0 1px 2px -1px rgb(0 0 0 / 15%);
+    box-sizing: border-box;
+}
+
+.fleetops-route-editor-surface {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.fleetops-route-editor-section {
+    border: 1px solid rgb(55 65 81 / 75%);
+    border-radius: 0.5rem;
+    overflow: visible;
+}
+
+.fleetops-route-editor-section__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 0.75rem 0.9rem;
+    border-bottom: 1px solid rgb(55 65 81 / 75%);
+}
+
+.fleetops-route-editor-section__title-group {
+    display: flex;
+    align-items: center;
+    gap: 0.65rem;
+    min-width: 0;
+}
+
+.fleetops-route-editor-section__title {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: #f3f4f6;
+    line-height: 1.2;
+}
+
+.fleetops-route-editor-section__subtitle {
+    font-size: 0.72rem;
+    color: #9ca3af;
+    margin-top: 0.12rem;
+}
+
+.fleetops-route-editor-section__body {
+    padding: 0.9rem;
+}
+
+.fleetops-route-editor-section__badge {
+    min-width: 1.9rem;
+    height: 1.9rem;
+    font-size: 0.82rem;
+    border-width: 2px;
+    border-radius: 9999px;
+}
+
+.fleetops-route-editor-stop-row {
+    display: grid;
+    grid-template-columns: 18px minmax(72px, 84px) minmax(0, 1fr) auto;
+    align-items: start;
+    gap: 0.75rem;
+    padding: 0.75rem;
+    border: 1px solid rgb(55 65 81 / 75%);
+    border-radius: 0.5rem;
+    background-color: rgb(17 24 39 / 35%);
+    margin-bottom: 0.25rem;
+}
+
+.fleetops-route-editor-stop-row__grip {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #9ca3af;
+    padding-top: 0.25rem;
+}
+
+.fleetops-route-editor-stop-row__label {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 0.5rem;
+    min-width: 0;
+    padding-top: 0.15rem;
+}
+
+.fleetops-route-editor-stop-row__badge {
+    min-width: 1.9rem;
+    height: 1.9rem;
+    width: 1.9rem;
+    font-size: 0.82rem;
+    flex-shrink: 0;
+    border-width: 2px;
+    border-radius: 9999px;
+}
+
+.fleetops-route-editor-stop-row__title {
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: #e5e7eb;
+    line-height: 1.2;
+}
+
+.fleetops-route-editor-stop-row__field {
+    min-width: 0;
+}
+
+.fleetops-route-editor-stop-row__actions {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.5rem;
+}
+
+.fleetops-route-editor-empty-state {
+    border: 1px dashed rgb(75 85 99 / 75%);
+    border-radius: 0.5rem;
+    padding: 0.9rem;
+}
+
+body[data-theme='light'] .fleetops-route-editor-section {
+    border-color: rgb(209 213 219 / 95%);
+}
+
+body[data-theme='light'] .fleetops-route-editor-section__header,
+body[data-theme='light'] .fleetops-route-editor-stop-row {
+    border-color: rgb(209 213 219 / 85%);
+}
+
+body[data-theme='light'] .fleetops-route-editor-section__title,
+body[data-theme='light'] .fleetops-route-editor-stop-row__title {
+    color: #111827;
+}
+
+body[data-theme='light'] .fleetops-route-editor-section__subtitle,
+body[data-theme='light'] .fleetops-route-editor-empty-state .text-xs {
+    color: #6b7280;
+}
+
+body[data-theme='light'] .fleetops-route-editor-empty-state {
+    border-color: rgb(209 213 219 / 95%);
+}
+
+body[data-theme='light'] .fleetops-route-editor-stop-row {
+    background-color: rgb(249 250 251 / 98%);
+}
+
+@media (width <= 991px) {
+    .fleetops-route-editor-section__header {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .fleetops-route-editor-stop-row {
+        grid-template-columns: 18px minmax(64px, 78px) minmax(0, 1fr);
+    }
+
+    .fleetops-route-editor-stop-row__actions {
+        grid-column: 2 / -1;
+        justify-content: flex-end;
+    }
+}
+
 .fleetops-pill-tabs > nav > a.ui-tab.active {
     background-color: #3b82f6;
     border: 1px solid #2563eb;
@@ -3478,6 +3652,61 @@ body[data-theme='light'] .import-preview-table tbody tr:hover td {
 .import-preview-badge--green {
     background: rgba(16, 185, 129, 15%);
     color: #34d399;
+}
+
+.orders-route-type-cell {
+    display: inline-flex;
+    align-items: center;
+    overflow: visible;
+}
+
+.orders-route-type-trigger {
+    display: inline-flex;
+    align-items: center;
+}
+
+.orders-route-type-badge {
+    cursor: default;
+}
+
+.orders-route-type-trigger .orders-route-type-badge {
+    cursor: pointer;
+}
+
+.orders-route-type-preview {
+    width: 20rem;
+    max-width: 20rem;
+}
+
+.orders-route-type-preview__header {
+    display: flex;
+    align-items: center;
+    margin-bottom: 0.75rem;
+    font-size: 0.875rem;
+    font-weight: 600;
+}
+
+.orders-route-type-preview__state {
+    display: flex;
+    align-items: center;
+    color: #9ca3af;
+    font-size: 0.8rem;
+}
+
+.orders-route-type-preview__state--error {
+    color: #fca5a5;
+}
+
+.orders-route-type-preview .order-route-stop + .order-route-stop {
+    margin-top: 0.5rem;
+}
+
+.orders-route-type-preview__location {
+    min-width: 0;
+}
+
+.orders-route-type-preview .display-place-address {
+    word-break: break-word;
 }
 
 /* Row status indicator */

@@ -19,11 +19,11 @@ export default class DisplayPlaceComponent extends Component {
     }
 
     get cityStatePostalCode() {
-        [this.place.city, this.place.province, this.place.postal_code].filter(isBlank).join(', ');
+        return [this.place.city, this.place.province, this.place.postal_code].filter((value) => !isBlank(value)).join(', ');
     }
 
     get neighborhoodDistrictBuilding() {
-        [this.place.neighborhood, this.place.district, this.place.building].filter(isBlank).join(', ');
+        return [this.place.neighborhood, this.place.district, this.place.building].filter((value) => !isBlank(value)).join(', ');
     }
 
     @action setupComponent(element) {

@@ -13,7 +13,23 @@ export default class OrderDetailsPayloadComponent extends Component {
     @service intl;
 
     get actionButtons() {
-        if (this.args.resource.isMultiDrop) return [];
+        if (this.args.resource.hasIntermediateWaypoints) {
+            const places = this.args.resource.places ?? [];
+            return [
+                {
+                    type: 'default',
+                    text: this.intl.t('order.actions.add-entity'),
+                    icon: 'plus',
+                    iconPrefix: 'fas',
+                    permission: 'fleet-ops update order',
+                    disabled: this.args.resource.status === 'canceled',
+                    items: places.map((p) => ({
+                        text: p.address,
+                        onClick: () => this.addEntity.perform(p),
+                    })),
+                },
+            ];
+        }
 
         return [
             {

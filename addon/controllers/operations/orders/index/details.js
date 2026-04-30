@@ -32,6 +32,10 @@ export default class OperationsOrdersIndexDetailsController extends Controller {
         };
     }
 
+    get routeMarkerWaypoints() {
+        return this.routePoints.map(({ place }) => [place.latitude, place.longitude]);
+    }
+
     get routeStatus() {
         return this.model.status ?? 'created';
     }
@@ -144,6 +148,7 @@ export default class OperationsOrdersIndexDetailsController extends Controller {
         this.routingControl = await this.mapManager.addRoutingControl(this.model.routeWaypoints, {
             color: this.routePolylineOptions.color,
             status: this.routeStatus,
+            markerWaypoints: this.routeMarkerWaypoints,
             polylineOptions: this.routePolylineOptions,
             createMarker: this.routeMarkerFactory,
             onRouteFound: () => {
@@ -177,6 +182,7 @@ export default class OperationsOrdersIndexDetailsController extends Controller {
                     this.routingControl = await this.mapManager.replaceRoutingControl(this.model.routeWaypoints, this.routingControl, {
                         color: this.routePolylineOptions.color,
                         status: this.routeStatus,
+                        markerWaypoints: this.routeMarkerWaypoints,
                         polylineOptions: this.routePolylineOptions,
                         createMarker: this.routeMarkerFactory,
                         onRouteFound: () => {

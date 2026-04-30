@@ -2,9 +2,15 @@ import Component from '@glimmer/component';
 import { tracked } from '@glimmer/tracking';
 import { action } from '@ember/object';
 import { inject as service } from '@ember/service';
-import { isArray } from '@ember/array';
 import { task } from 'ember-concurrency';
-import { Point } from '@fleetbase/fleetops-data/utils/geojson';
+import { buildRoutePointsFromPayload, describeRoutePoint } from '../../utils/route-visualization';
+import {
+    applyOptimizedIntermediateWaypoints,
+    buildRouteOptimizationInput,
+    createWaypointRecord,
+    getPayloadIntermediateWaypoints,
+    getPayloadRouteCoordinates,
+} from '../../utils/order-route-editing';
 
 export default class OrderRouteEditorComponent extends Component {
     @service store;
@@ -15,62 +21,108 @@ export default class OrderRouteEditorComponent extends Component {
     @service routeOptimization;
     @tracked route;
 
-    get coordinates() {
-        const payload = this.args.resource.payload;
-        const waypoints = payload ? [payload.pickup, ...this.args.resource.payload.waypoints.map((waypoint) => waypoint.place), payload.dropoff] : [];
-
-        return waypoints.filter((wp) => wp && wp.hasValidCoordinates).map((wp) => [wp.latitude, wp.longitude]);
+    get payload() {
+        return this.args.resource.payload;
     }
 
-    @action toggleMultiDropOrder(isMultiDrop) {
-        const { pickup, dropoff } = this.args.resource.payload;
+    get routePoints() {
+        return buildRoutePointsFromPayload(this.payload);
+    }
 
-        if (isMultiDrop) {
-            // if pickup move it to multipdrop
-            if (pickup) {
-                this.#addWaypointFromExistingPlace(pickup);
-            }
+    get routeStops() {
+        return this.routePoints.map((routePoint) => ({
+            routePoint,
+            place: routePoint.place,
+            badgeStyle: this.badgeStyleForRoutePoint(routePoint),
+            ...describeRoutePoint(routePoint, '#8B5CF6'),
+        }));
+    }
 
-            // if pickup move it to multipdrop
-            if (dropoff) {
-                this.#addWaypointFromExistingPlace(dropoff);
-            }
+    get routeSummary() {
+        const segments = [];
 
-            this.args.resource.payload.setProperties({
-                pickup: null,
-                dropoff: null,
-                return: null,
-                pickup_uuid: null,
-                dropoff_uuid: null,
-                return_uuid: null,
-            });
-        } else {
-            // get pickup from payload waypoints if available
-            const waypoints =
-                typeof this.args.resource.payload.waypoints.toArray === 'function' ? this.args.resource.payload.waypoints.toArray() : Array.from(this.args.resource.payload.waypoints);
-
-            if (waypoints[0]) {
-                const pickup = this.#createPlaceFromWaypoint(waypoints[0]);
-                this.args.resource.payload.set('pickup', pickup);
-            }
-
-            if (waypoints[1]) {
-                const dropoff = this.#createPlaceFromWaypoint(waypoints[1]);
-                this.args.resource.payload.set('dropoff', dropoff);
-            }
-
-            this.args.resource.payload.setProperties({
-                waypoints: [],
-            });
+        if (this.payload?.pickup) {
+            segments.push('Pickup');
         }
 
-        if (typeof this.args.onRouteChanged === 'function') {
-            this.args.onRouteChanged();
+        if (this.intermediateWaypoints.length) {
+            segments.push(`${this.intermediateWaypoints.length} ${this.intermediateWaypoints.length === 1 ? 'Stop' : 'Stops'}`);
         }
+
+        if (this.payload?.dropoff) {
+            segments.push('Dropoff');
+        }
+
+        if (this.payload?.return) {
+            segments.push('Return');
+        }
+
+        return segments.join('  •  ');
+    }
+
+    get pickupStop() {
+        return this.routeStops.find((stop) => stop.routePoint?.role === 'pickup') ?? this.fallbackStop('pickup');
+    }
+
+    get dropoffStop() {
+        return this.routeStops.find((stop) => stop.routePoint?.role === 'dropoff') ?? this.fallbackStop('dropoff');
+    }
+
+    get returnStop() {
+        return {
+            label: 'R',
+            title: 'Return',
+            badgeStyle: this.badgeStyleForColor('#6B7280'),
+        };
+    }
+
+    get stopsSectionBadgeStyle() {
+        return this.badgeStyleForColor('#8B5CF6');
+    }
+
+    get intermediateRouteStops() {
+        return this.routeStops.filter((stop) => stop.routePoint?.role === 'waypoint');
+    }
+
+    get coordinates() {
+        return getPayloadRouteCoordinates(this.payload);
+    }
+
+    get intermediateWaypoints() {
+        return getPayloadIntermediateWaypoints(this.payload);
+    }
+
+    get canOptimizeRoute() {
+        return this.intermediateWaypoints.length >= 2;
+    }
+
+    badgeStyleForRoutePoint(routePoint) {
+        const { markerColor } = describeRoutePoint(routePoint, '#8B5CF6');
+        return this.badgeStyleForColor(markerColor);
+    }
+
+    badgeStyleForColor(color) {
+        const normalizedColor = color?.toLowerCase?.();
+        const isYellow = normalizedColor === '#facc15' || normalizedColor === '#ca8a04';
+        const textColor = isYellow ? '#111827' : '#ffffff';
+
+        return `background-color: ${color}; color: ${textColor};`;
+    }
+
+    fallbackStop(role) {
+        const routePoint = {
+            role,
+            stopNumber: role === 'pickup' ? null : role === 'dropoff' ? null : 1,
+        };
+
+        return {
+            badgeStyle: this.badgeStyleForRoutePoint(routePoint),
+            ...describeRoutePoint(routePoint, '#8B5CF6'),
+        };
     }
 
     @action removeWaypoint(waypoint) {
-        this.args.resource.payload.waypoints.removeObject(waypoint);
+        this.payload.waypoints.removeObject(waypoint);
 
         if (typeof this.args.onWaypointRemoved === 'function') {
             this.args.onWaypointRemoved(waypoint);
@@ -82,23 +134,29 @@ export default class OrderRouteEditorComponent extends Component {
     }
 
     @action addWaypoint() {
-        const location = new Point(0, 0);
-        const place = this.store.createRecord('place', { location });
-        const waypoint = this.store.createRecord('waypoint', { place, location });
-
-        this.args.resource.payload.waypoints.pushObject(waypoint);
+        const waypoint = createWaypointRecord(this.store);
+        this.payload.waypoints.pushObject(waypoint);
 
         if (typeof this.args.onWaypointAdded === 'function') {
             this.args.onWaypointAdded(waypoint);
         }
+
+        if (typeof this.args.onRouteChanged === 'function') {
+            this.args.onRouteChanged();
+        }
     }
 
     @action setWaypointPlace(index, place) {
-        if (isArray(this.args.resource.payload.waypoints) && !this.args.resource.payload.waypoints.objectAt(index)) return;
+        const waypoints = this.intermediateWaypoints;
+        const waypoint = waypoints[index];
 
-        const json = place.serialize();
-        this.args.resource.payload.waypoints.objectAt(index).setProperties({
-            uuid: place.id,
+        if (!waypoint) {
+            return;
+        }
+
+        const json = typeof place?.serialize === 'function' ? place.serialize() : {};
+        waypoint.setProperties({
+            uuid: waypoint.uuid ?? place.id,
             place_uuid: place.id,
             location: place.location,
             place,
@@ -115,11 +173,19 @@ export default class OrderRouteEditorComponent extends Component {
     }
 
     @action setPayloadPlace(prop, place) {
-        this.args.resource.payload.set(prop, place);
+        this.payload.set(prop, place);
 
         if (typeof this.args.onPlaceSelected === 'function') {
             this.args.onPlaceSelected(place);
         }
+
+        if (typeof this.args.onRouteChanged === 'function') {
+            this.args.onRouteChanged();
+        }
+    }
+
+    @action clearPayloadPlace(prop) {
+        this.payload.set(prop, null);
 
         if (typeof this.args.onRouteChanged === 'function') {
             this.args.onRouteChanged();
@@ -140,18 +206,12 @@ export default class OrderRouteEditorComponent extends Component {
     }
 
     @task *optimizeRouteWithService(service) {
-        const order = this.args.resource;
-        const payload = order.payload;
-        const waypoints = this.args.resource.payload.waypoints;
-        const coordinates = this.coordinates.map((coord) => coord.reverse());
+        const optimizationInput = buildRouteOptimizationInput(this.args.resource);
 
         try {
             const result = yield this.routeOptimization.optimize(service, {
                 context: 'edit_order_route',
-                order,
-                payload,
-                waypoints,
-                coordinates,
+                ...optimizationInput,
             });
             this.handleRouteOptimization(result);
         } catch (err) {
@@ -160,43 +220,41 @@ export default class OrderRouteEditorComponent extends Component {
     }
 
     @task *optimizeRoute() {
-        const order = this.args.resource;
-        const payload = order.payload;
-        const waypoints = this.args.resource.payload.waypoints;
-        const coordinates = this.coordinates.map((coord) => coord.reverse());
+        const optimizationInput = buildRouteOptimizationInput(this.args.resource);
         const service = this.routeEngine.getOptimizationEngine('osrm');
 
         try {
             const result = yield this.routeOptimization.optimize(service, {
                 context: 'edit_order_route',
-                order,
-                payload,
-                waypoints,
-                coordinates,
+                ...optimizationInput,
             });
 
             this.handleRouteOptimization(result);
-        } catch (err) {
+        } catch (_err) {
             this.notifications.error(this.intl.t('fleet-ops.operations.orders.index.new.route-error'));
         }
     }
 
     @action handleRouteOptimization({ sortedWaypoints, route, trip, result, engine = 'osrm' }) {
-        // Update controller state
-        this.args.resource.payload.waypoints = sortedWaypoints;
+        applyOptimizedIntermediateWaypoints(this.payload, sortedWaypoints);
+
         if (route) {
-            this.setOptimizedRoute(route, trip, result.waypoints, engine);
+            this.setOptimizedRoute(route, trip, result?.waypoints, engine);
         }
-        // this.previewRoute();
+
         this.args.resource.set('optimized', true);
+
+        if (typeof this.args.onRouteChanged === 'function') {
+            this.args.onRouteChanged();
+        }
     }
 
     @action setOptimizedRoute(route, trip, waypoints, engine = 'osrm') {
-        let summary = {
+        const summary = {
             totalDistance: trip?.distance ?? trip?.totalDistance ?? 0,
             totalTime: trip?.duration ?? trip?.totalTime ?? 0,
         };
-        let payload = {
+        const payload = {
             optimized: true,
             coordinates: route,
             waypoints,
@@ -212,26 +270,5 @@ export default class OrderRouteEditorComponent extends Component {
         const routeModel = this.store.createRecord('route', payload);
         this.args.resource.route = routeModel;
         this.route = payload;
-    }
-
-    #createPlaceFromWaypoint(waypoint) {
-        const json = waypoint.serialize();
-        return this.store.createRecord('place', json);
-    }
-
-    #addWaypointFromExistingPlace(place) {
-        const json = place.serialize();
-        const waypoint = this.store.createRecord('waypoint', {
-            uuid: place.id,
-            place_uuid: place.id,
-            location: place.location,
-            place,
-            ...json,
-        });
-        this.args.resource.payload.waypoints.pushObject(waypoint);
-
-        if (typeof this.args.onWaypointAdded === 'function') {
-            this.args.onWaypointAdded(waypoint);
-        }
     }
 }

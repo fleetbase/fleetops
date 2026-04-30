@@ -176,6 +176,7 @@ export default class OrderFormRouteComponent extends Component {
             status: routeStatus,
             fitOptions,
             places: this.places,
+            markerWaypoints: this.coordinates,
             polylineOptions: {
                 color: statusColor,
                 weight: routeStyles.at(-1)?.weight ?? 4,

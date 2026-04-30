@@ -15,6 +15,6 @@ export default class PlaceAddressComponent extends Component {
     }
 
     get cityStatePostalCode() {
-        [this.place.city, this.place.province, this.place.postal_code].filter(isBlank).join(', ');
+        return [this.place.city, this.place.province, this.place.postal_code].filter((value) => !isBlank(value)).join(', ');
     }
 }

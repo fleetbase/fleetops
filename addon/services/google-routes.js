@@ -72,7 +72,11 @@ export default class GoogleRoutesService extends RouteOptimizationInterfaceServi
             ...options,
             optimizeWaypointOrder: true,
         });
-        const sortedWaypoints = isArray(route.optimizedIntermediateWaypointIndices) ? route.optimizedIntermediateWaypointIndices.map((index) => waypoints[index]).filter(Boolean) : waypoints;
+        let sortedWaypoints = waypoints;
+
+        if (isArray(route.optimizedIntermediateWaypointIndices) && route.optimizedIntermediateWaypointIndices.length > 0) {
+            sortedWaypoints = route.optimizedIntermediateWaypointIndices.map((index) => waypoints[index]).filter(Boolean);
+        }
 
         return {
             sortedWaypoints,
@@ -91,11 +95,25 @@ export default class GoogleRoutesService extends RouteOptimizationInterfaceServi
         const driverPosition = order?.driver_assigned?.location?.coordinates;
         const normalized = (isArray(coordinates) ? coordinates : []).map(([lng, lat]) => [lat, lng]);
 
-        if (isArray(driverPosition) && driverPosition.length >= 2) {
+        if (this.#isValidDriverPosition(driverPosition)) {
             return [[driverPosition[1], driverPosition[0]], ...normalized];
         }
 
         return normalized;
+    }
+
+    #isValidDriverPosition(driverPosition) {
+        if (!isArray(driverPosition) || driverPosition.length < 2) {
+            return false;
+        }
+
+        const [lng, lat] = driverPosition.map(Number);
+
+        if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
+            return false;
+        }
+
+        return lat !== 0 && lng !== 0;
     }
 
     #normalizeWaypoints(waypoints = []) {

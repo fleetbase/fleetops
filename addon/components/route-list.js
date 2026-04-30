@@ -19,6 +19,7 @@ export default class RouteListComponent extends Component {
         return routePoints.map((routePoint) => ({
             routePoint,
             place: routePoint.place,
+            badgeStyle: this.badgeStyleForStop(routePoint),
             ...describeRoutePoint(routePoint, this.routeColor),
         }));
     }
@@ -37,6 +38,18 @@ export default class RouteListComponent extends Component {
 
     get hasExtraStops() {
         return this.routeStops.length > 2;
+    }
+
+    get shouldCollapseWaypoints() {
+        return this.args.isCollapsible !== false && this.hasExtraStops;
+    }
+
+    badgeStyleForStop(routePoint) {
+        const { markerColor } = describeRoutePoint(routePoint, this.routeColor);
+        const isYellow = markerColor?.toLowerCase?.() === '#facc15' || markerColor?.toLowerCase?.() === '#ca8a04';
+        const textColor = isYellow ? '#111827' : '#ffffff';
+
+        return `background-color: ${markerColor}; color: ${textColor};`;
     }
 
     @action toggleWaypointsCollapse() {

@@ -1183,7 +1183,11 @@ class OrderController extends Controller
             })->first();
         }
 
-        $activities = $order->config()->nextActivity($waypoint);
+        $orderConfig = $order->ensureOrderConfig();
+        if (!$orderConfig) {
+            return response()->apiError('No order config found for order.');
+        }
+        $activities = $orderConfig->nextActivity($waypoint);
 
         // If activity is to complete order add proof of delivery properties if required
         // This is a temporary fix until activity is updated to handle POD on it's own

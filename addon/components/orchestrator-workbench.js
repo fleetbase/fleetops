@@ -152,6 +152,17 @@ export default class OrchestratorWorkbenchComponent extends Component {
         this.loadCardFields.perform();
     }
 
+    willDestroy() {
+        super.willDestroy(...arguments);
+
+        // The orchestrator uses a Leaflet-only map, but the shared mapManager
+        // also powers the live map. Restore the configured provider when this
+        // workbench unmounts so visiting the orchestrator does not permanently
+        // flip the rest of FleetOps back to Leaflet.
+        this.mapManager.destroyMap?.();
+        this.mapManager.setActiveProvider?.(this.mapManager.getConfiguredProvider?.() ?? 'leaflet');
+    }
+
     // ── Data loading ──────────────────────────────────────────────────────────
 
     @task *loadData() {

@@ -47,21 +47,22 @@ export default class OsrmService extends RouteOptimizationInterfaceService {
         };
     }
 
-    async optimize({ order, payload, waypoints, coordinates: originalCoords }, options = {}) {
+    async optimize({ order, payload, waypoints, coordinates: originalCoords, preserveEndpoints = false }, options = {}) {
         const driverAssigned = order.driver_assigned;
         const driverPosition = driverAssigned?.location?.coordinates; // [lon,lat] | undefined
-        const coordinates = driverPosition ? [driverPosition, ...originalCoords] : [...originalCoords];
-        const hasDriverStart = Boolean(driverPosition);
+        const hasDriverStart = this.#isValidDriverPosition(driverPosition);
+        const coordinates = hasDriverStart ? [driverPosition, ...originalCoords] : [...originalCoords];
         const source = 'first';
-        const destination = 'any';
+        const destination = preserveEndpoints ? 'last' : 'any';
         const roundtrip = false; // don’t loop back
         const routingHost = getRoutingHost(payload, waypoints);
 
         try {
-            const result = await this.fetch.routing(coordinates, { source, destination, roundtrip, annotations: true }, { host: routingHost, ...options });
+            const result = await this.fetch.routing(coordinates, { source, destination, roundtrip }, { host: routingHost, ...options });
 
             // Pair each OSRM waypoint with its Waypoint model
-            const modelsByInputIndex = hasDriverStart ? [null, ...waypoints] : waypoints;
+            const endpointModels = preserveEndpoints ? [null, ...waypoints, null] : waypoints;
+            const modelsByInputIndex = hasDriverStart ? [null, ...endpointModels] : endpointModels;
             const pairs = result.waypoints.map((wp, idx) => ({
                 model: modelsByInputIndex[idx], // Ember model or null (driver)
                 wp,
@@ -100,5 +101,19 @@ export default class OsrmService extends RouteOptimizationInterfaceService {
             [Math.min(...lats), Math.min(...lngs)],
             [Math.max(...lats), Math.max(...lngs)],
         ];
+    }
+
+    #isValidDriverPosition(driverPosition) {
+        if (!isArray(driverPosition) || driverPosition.length < 2) {
+            return false;
+        }
+
+        const [lng, lat] = driverPosition.map(Number);
+
+        if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
+            return false;
+        }
+
+        return lat !== 0 && lng !== 0;
     }
 }

@@ -116,6 +116,10 @@ export default class OrderActionsService extends ResourceActionService {
                 this.resourceContextPanel.close(saveOptions.overlay.id);
             }
 
+            if (saveOptions?.refresh === true) {
+                yield this.hostRouter.refresh();
+            }
+
             return updatedOrder;
         } catch (error) {
             this.notifications.serverError(error);
@@ -287,6 +291,7 @@ export default class OrderActionsService extends ResourceActionService {
             saveDisabled: false,
             saveOptions: {
                 closePanel: true,
+                refresh: true,
             },
         });
     }
