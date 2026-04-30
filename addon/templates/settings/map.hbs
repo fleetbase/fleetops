@@ -25,7 +25,7 @@
                     >
                         <Select
                             class="w-full flex-1"
-                            @value={{this.selectedMapProvider}}
+                            @value={{this.mapProvider}}
                             @options={{this.mapProviderOptions}}
                             @optionLabel="label"
                             @optionValue="value"
@@ -33,48 +33,6 @@
                             @onSelect={{this.selectMapProvider}}
                         />
                     </InputGroup>
-
-                    {{!-- Google Maps options — only shown when Google Maps is selected --}}
-                    {{#if this.isGoogleMapsSelected}}
-
-                        {{!-- Map type --}}
-                        <InputGroup
-                            @name={{t "settings.map.google-maps-map-type"}}
-                            @helpText={{t "settings.map.google-maps-map-type-help-text"}}
-                        >
-                            <Select
-                                class="w-full flex-1"
-                                @value={{this.selectedGoogleMapType}}
-                                @options={{this.googleMapTypeOptions}}
-                                @optionLabel="label"
-                                @optionValue="value"
-                                @placeholder={{t "settings.map.select-map-type"}}
-                                @onSelect={{this.selectGoogleMapType}}
-                            />
-                        </InputGroup>
-
-                        {{!-- Traffic layer toggle --}}
-                        <InputGroup>
-                            <Toggle
-                                @isToggled={{this.googleMapsTrafficLayer}}
-                                @onToggle={{this.toggleTrafficLayer}}
-                                @label={{t "settings.map.show-traffic-layer"}}
-                                @helpText={{t "settings.map.show-traffic-layer-help-text"}}
-                            />
-                        </InputGroup>
-
-                        {{!-- Transit layer toggle --}}
-                        <InputGroup>
-                            <Toggle
-                                @isToggled={{this.googleMapsTransitLayer}}
-                                @onToggle={{this.toggleTransitLayer}}
-                                @label={{t "settings.map.show-transit-layer"}}
-                                @helpText={{t "settings.map.show-transit-layer-help-text"}}
-                            />
-                        </InputGroup>
-
-                    {{/if}}
-                    {{!-- /Google Maps options --}}
 
                 {{else}}
                     {{!-- Loading state --}}

@@ -11,8 +11,8 @@ export default class OrderRouteEditorComponent extends Component {
     @service intl;
     @service notifications;
     @service placeActions;
+    @service routeEngine;
     @service routeOptimization;
-    @service osrm;
     @tracked route;
 
     get coordinates() {
@@ -164,9 +164,10 @@ export default class OrderRouteEditorComponent extends Component {
         const payload = order.payload;
         const waypoints = this.args.resource.payload.waypoints;
         const coordinates = this.coordinates.map((coord) => coord.reverse());
+        const service = this.routeEngine.getOptimizationEngine('osrm');
 
         try {
-            const result = yield this.osrm.optimize({
+            const result = yield this.routeOptimization.optimize(service, {
                 context: 'edit_order_route',
                 order,
                 payload,
@@ -191,7 +192,10 @@ export default class OrderRouteEditorComponent extends Component {
     }
 
     @action setOptimizedRoute(route, trip, waypoints, engine = 'osrm') {
-        let summary = { totalDistance: trip.distance, totalTime: trip.duration };
+        let summary = {
+            totalDistance: trip?.distance ?? trip?.totalDistance ?? 0,
+            totalTime: trip?.duration ?? trip?.totalTime ?? 0,
+        };
         let payload = {
             optimized: true,
             coordinates: route,

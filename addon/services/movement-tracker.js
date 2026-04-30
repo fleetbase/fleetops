@@ -109,7 +109,7 @@ export class EventBuffer {
             // Resolve marker via adapter (provider-agnostic) or Leaflet fallback
             const markerId = this.#getMarkerId();
             const hasAdapterMarker = markerId && this.mapManager?.hasMarker(markerId);
-            const leafletMarker = !hasAdapterMarker ? (this.model?.leafletLayer || this.model?._layer || this.model?._marker) : null;
+            const leafletMarker = !hasAdapterMarker ? this.model?.leafletLayer || this.model?._layer || this.model?._marker : null;
 
             if (!hasAdapterMarker && (!leafletMarker || !leafletMarker._map)) {
                 debug('No marker or marker not on map yet');

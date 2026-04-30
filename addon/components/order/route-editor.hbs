@@ -47,9 +47,9 @@
                             @query={{hash geo=true latitude=this.latitude longitude=this.longitude}}
                             @renderInPlace={{true}}
                             @onChange={{fn this.setWaypointPlace index}}
-                            as |model|
+                            as |place|
                         >
-                            {{model.address}}
+                            <Place::Address @place={{place}} />
                         </ModelSelect>
 
                         {{#unless waypoint.isNew}}
@@ -90,9 +90,9 @@
                     @query={{hash geo=true latitude=this.latitude longitude=this.longitude}}
                     @renderInPlace={{true}}
                     @onChange={{fn this.setPayloadPlace "pickup"}}
-                    as |model|
+                    as |place|
                 >
-                    {{model.address}}
+                    <Place::Address @place={{place}} />
                 </ModelSelect>
 
                 {{#if @resource.payload.pickup.hasInvalidCoordinates}}
@@ -122,9 +122,9 @@
                     @query={{hash geo=true latitude=this.latitude longitude=this.longitude}}
                     @renderInPlace={{true}}
                     @onChange={{fn this.setPayloadPlace "dropoff"}}
-                    as |model|
+                    as |place|
                 >
-                    {{model.address}}
+                    <Place::Address @place={{place}} />
                 </ModelSelect>
 
                 {{#if @resource.payload.dropoff.hasInvalidCoordinates}}
@@ -154,9 +154,9 @@
                     @query={{hash geo=true latitude=this.latitude longitude=this.longitude}}
                     @renderInPlace={{true}}
                     @onChange={{fn this.setPayloadPlace "return"}}
-                    as |model|
+                    as |place|
                 >
-                    {{model.address}}
+                    <Place::Address @place={{place}} />
                 </ModelSelect>
 
                 {{#if @resource.payload.return.hasInvalidCoordinates}}

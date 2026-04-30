@@ -1,5 +1,6 @@
 import Component from '@glimmer/component';
 import { tracked } from '@glimmer/tracking';
+import { isArray } from '@ember/array';
 import { action } from '@ember/object';
 import { inject as service } from '@ember/service';
 
@@ -157,7 +158,7 @@ export default class OrchestratorOrderPoolComponent extends Component {
             stops.push(payload.pickup.address ?? payload.pickup.street1 ?? payload.pickup.name ?? '—');
         }
 
-        const waypoints = typeof payload.waypoints?.toArray === 'function' ? payload.waypoints.toArray() : Array.isArray(payload.waypoints) ? payload.waypoints : [];
+        const waypoints = typeof payload.waypoints?.toArray === 'function' ? payload.waypoints.toArray() : isArray(payload.waypoints) ? payload.waypoints : [];
 
         for (const wp of waypoints) {
             const place = wp.place ?? wp;
@@ -318,7 +319,7 @@ export default class OrchestratorOrderPoolComponent extends Component {
                 let value = null;
 
                 const cfvCollection = order.custom_field_values ?? order.customFieldValues ?? [];
-                const cfvArray = typeof cfvCollection?.toArray === 'function' ? cfvCollection.toArray() : Array.isArray(cfvCollection) ? cfvCollection : [];
+                const cfvArray = typeof cfvCollection?.toArray === 'function' ? cfvCollection.toArray() : isArray(cfvCollection) ? cfvCollection : [];
 
                 for (const cfv of cfvArray) {
                     const cf = cfv.custom_field ?? (typeof cfv.customField?.get === 'function' ? cfv.customField : null) ?? cfv.customField ?? null;

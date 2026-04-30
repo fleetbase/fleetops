@@ -22,14 +22,19 @@
  */
 import Service from '@ember/service';
 import { tracked } from '@glimmer/tracking';
+import { isArray } from '@ember/array';
 import { inject as service } from '@ember/service';
 import { getOwner } from '@ember/application';
 import { action } from '@ember/object';
 import { debug } from '@ember/debug';
+import { next } from '@ember/runloop';
 
 export default class MapManagerService extends Service {
     @service universe;
     @service notifications;
+    @service mapSettings;
+    @service routeEngine;
+    @service leafletContextmenuManager;
 
     /**
      * The active map provider adapter instance.
@@ -54,6 +59,7 @@ export default class MapManagerService extends Service {
      * @type {boolean}
      */
     @tracked isReady = false;
+    @tracked routeControls = new Map();
 
     /**
      * Internal deferred promise that resolves when the map is ready.
@@ -64,6 +70,7 @@ export default class MapManagerService extends Service {
     constructor() {
         super(...arguments);
         this.#resetReadyDeferred();
+        this.providerName = this.getConfiguredProvider();
     }
 
     // ─── Provider Resolution ───────────────────────────────────────────────────
@@ -78,32 +85,37 @@ export default class MapManagerService extends Service {
     resolveAdapter(provider = 'leaflet') {
         const owner = getOwner(this);
         const lookupName = `service:map-adapter/${provider}`;
+        const previousAdapter = this.adapter;
         let adapter = owner.lookup(lookupName);
+        let resolvedProvider = provider;
 
         if (!adapter) {
             debug(`[MapManager] No adapter found for provider "${provider}", falling back to "leaflet".`);
             adapter = owner.lookup('service:map-adapter/leaflet');
+            resolvedProvider = 'leaflet';
         }
 
         if (!adapter) {
             throw new Error(`[MapManager] Could not resolve any map adapter. Ensure "service:map-adapter/leaflet" is registered.`);
         }
 
+        if (previousAdapter && previousAdapter !== adapter) {
+            previousAdapter.destroyMap?.();
+        }
+
         this.adapter = adapter;
-        this.providerName = provider;
-        debug(`[MapManager] Resolved adapter: ${provider}`);
+        this.providerName = resolvedProvider;
+        debug(`[MapManager] Resolved adapter: ${resolvedProvider}`);
         return adapter;
     }
 
     /**
-     * Determine the configured provider from the environment config.
+     * Determine the configured provider from runtime settings.
      *
      * @returns {string}
      */
     getConfiguredProvider() {
-        const owner = getOwner(this);
-        const config = owner.resolveRegistration('config:environment');
-        return config?.['@fleetbase/fleetops-engine']?.mapProvider ?? config?.mapProvider ?? 'leaflet';
+        return this.mapSettings.mapProvider ?? 'leaflet';
     }
 
     // ─── Lifecycle ─────────────────────────────────────────────────────────────
@@ -122,11 +134,18 @@ export default class MapManagerService extends Service {
             this.resolveAdapter(provider);
         }
 
-        const map = this.adapter.initializeMap(element, options);
-        this.isReady = true;
-        this.#resolveMapReady?.(map);
-        debug('[MapManager] Map initialized');
-        return map;
+        const map = this.adapter.initializeMap(element, {
+            ...options,
+            apiKey: options.apiKey ?? this.mapSettings.googleMapsApiKey,
+            mapId: options.mapId ?? this.mapSettings.googleMapsMapId,
+        });
+
+        return Promise.resolve(map).then((nativeMap) => {
+            this.isReady = true;
+            this.#resolveMapReady?.(nativeMap);
+            debug('[MapManager] Map initialized');
+            return nativeMap;
+        });
     }
 
     /**
@@ -183,6 +202,15 @@ export default class MapManagerService extends Service {
         });
     }
 
+    async ensureInteractive({ timeoutMs = 8000 } = {}) {
+        const map = await this.waitForMap({ timeoutMs });
+        if (typeof this.adapter?.ensureInteractive === 'function') {
+            return this.adapter.ensureInteractive({ timeoutMs, map });
+        }
+
+        return map;
+    }
+
     // ─── Viewport ──────────────────────────────────────────────────────────────
 
     setCenter(lat, lng, zoom) {
@@ -219,6 +247,10 @@ export default class MapManagerService extends Service {
 
     getBounds() {
         return this.adapter?.getBounds();
+    }
+
+    get livemap() {
+        return this._livemap;
     }
 
     // ─── Markers ───────────────────────────────────────────────────────────────
@@ -273,18 +305,118 @@ export default class MapManagerService extends Service {
         return this.adapter?.getOverlay(id) ?? null;
     }
 
+    // ─── Routing Controls ─────────────────────────────────────────────────────
+
+    async addRoutingControl(waypoints, options = {}) {
+        if (!isArray(waypoints) || waypoints.length === 0) return null;
+
+        try {
+            await this.ensureInteractive({ timeoutMs: options.timeoutMs ?? 8000 });
+            const engine = options.engine ?? this.routeEngine.getDisplayEngine('osrm');
+            const route =
+                waypoints.length === 1
+                    ? {
+                          engine: typeof engine === 'string' ? engine : this.routeEngine.getDisplayEngine('osrm'),
+                          waypoints,
+                          coordinates: [],
+                          bounds: null,
+                          summary: { totalDistance: 0, totalTime: 0 },
+                          legs: [],
+                          raw: null,
+                      }
+                    : await this.routeEngine.compute(engine, waypoints, options);
+            const routeControl = await this.adapter?.addRoutingControl?.(route, {
+                ...options,
+                engine,
+            });
+
+            if (routeControl) {
+                this.routeControls.set(routeControl.id, routeControl);
+            }
+
+            if (options.position !== false) {
+                this.positionWaypoints(route.bounds ?? route.waypoints, {
+                    ...(options.fitOptions ?? {}),
+                    isBounds: Boolean(route.bounds),
+                });
+            }
+
+            options.onRouteFound?.(route);
+            return routeControl;
+        } catch (error) {
+            options.onRoutingError?.(error);
+            debug(`[MapManager] Routing control failed: ${error.message}`);
+            return null;
+        }
+    }
+
+    async replaceRoutingControl(waypoints, existingHandle, options = {}) {
+        const removeOptions = options.removeOptions ?? {};
+        if (existingHandle) {
+            await this.removeRoutingControl(existingHandle, removeOptions);
+        }
+
+        return this.addRoutingControl(waypoints, options);
+    }
+
+    removeRoutingControl(handle, options = {}) {
+        const routeControl = typeof handle === 'string' ? this.routeControls.get(handle) : handle;
+        if (!routeControl) return false;
+
+        const removed = this.adapter?.removeRoutingControl?.(routeControl, options) ?? false;
+        this.routeControls.delete(routeControl.id);
+        return removed;
+    }
+
+    clearRoutingControls(filter = null) {
+        for (const handle of this.routeControls.values()) {
+            if (typeof filter === 'function' && filter(handle) === false) {
+                continue;
+            }
+
+            this.removeRoutingControl(handle);
+        }
+    }
+
+    positionWaypoints(waypointsOrBounds, options = {}) {
+        return this.adapter?.positionWaypoints?.(waypointsOrBounds, options);
+    }
+
+    focusResource(record, zoom = 16, options = {}) {
+        if (!record) return null;
+
+        const { paddingBottomRight = [0, 0], moveend } = options;
+        const layer = record?.leafletLayer ?? this.getMarker(record?.id) ?? this.getOverlay(record?.id);
+        const bounds = this.#extractLayerBounds(layer);
+        const point = this.#extractLayerPoint(layer) ?? this.#extractRecordPoint(record);
+
+        if (typeof moveend === 'function') {
+            this.once('moveend', () => next(this, moveend));
+        }
+
+        if (bounds) {
+            return this.fitBounds(bounds, { paddingBottomRight, maxZoom: zoom, animate: true });
+        }
+
+        if (point) {
+            return this.flyTo(point.lat, point.lng, zoom, { animate: true, duration: 0.8 });
+        }
+
+        return null;
+    }
+
     // ─── Drawing Tools ─────────────────────────────────────────────────────────
 
-    enableDrawingMode(type) {
-        return this.adapter?.enableDrawingMode(type);
+    enableDrawingMode(type, options = {}) {
+        return this.adapter?.enableDrawingMode(type, options);
     }
 
     disableDrawingMode() {
         return this.adapter?.disableDrawingMode();
     }
 
-    showDrawControl() {
-        return this.adapter?.showDrawControl();
+    showDrawControl(config = {}) {
+        return this.adapter?.showDrawControl(config);
     }
 
     hideDrawControl() {
@@ -353,7 +485,22 @@ export default class MapManagerService extends Service {
      */
     @action setActiveProvider(provider) {
         if (this.providerName === provider && this.adapter) return;
+        this.isReady = false;
+        this.#resetReadyDeferred();
         this.resolveAdapter(provider);
+    }
+
+    /**
+     * Bind a host-created native map instance to the active adapter.
+     *
+     * @param {*} mapInstance
+     */
+    @action setMapInstance(mapInstance) {
+        this.adapter?.setMapInstance?.(mapInstance);
+        if (mapInstance) {
+            this.isReady = true;
+            this.#resolveMapReady?.(mapInstance);
+        }
     }
 
     /**
@@ -363,7 +510,71 @@ export default class MapManagerService extends Service {
      * @type {boolean}
      */
     get isGoogleMaps() {
-        return this.providerName === 'google';
+        return (this.adapter ? this.providerName : this.getConfiguredProvider()) === 'google';
+    }
+
+    #extractLayerBounds(layer) {
+        if (!layer) return null;
+
+        if (typeof layer.getBounds === 'function') {
+            const bounds = layer.getBounds();
+
+            if (typeof bounds?.getSouth === 'function') {
+                return [
+                    [bounds.getSouth(), bounds.getWest()],
+                    [bounds.getNorth(), bounds.getEast()],
+                ];
+            }
+
+            if (typeof bounds?.getSouthWest === 'function') {
+                const sw = bounds.getSouthWest();
+                const ne = bounds.getNorthEast();
+                return [
+                    [sw.lat(), sw.lng()],
+                    [ne.lat(), ne.lng()],
+                ];
+            }
+        }
+
+        return null;
+    }
+
+    #extractLayerPoint(layer) {
+        if (!layer) return null;
+
+        if (typeof layer.getLatLng === 'function') {
+            const latlng = layer.getLatLng();
+            if (Number.isFinite(latlng?.lat) && Number.isFinite(latlng?.lng)) {
+                return { lat: latlng.lat, lng: latlng.lng };
+            }
+        }
+
+        const position = layer.position ?? layer.getPosition?.();
+        if (position) {
+            const lat = typeof position.lat === 'function' ? position.lat() : position.lat;
+            const lng = typeof position.lng === 'function' ? position.lng() : position.lng;
+            if (Number.isFinite(lat) && Number.isFinite(lng)) {
+                return { lat, lng };
+            }
+        }
+
+        return null;
+    }
+
+    #extractRecordPoint(record) {
+        const coordinates = record?.location?.coordinates;
+        if (isArray(coordinates) && coordinates.length >= 2) {
+            const [lng, lat] = coordinates;
+            if (Number.isFinite(lat) && Number.isFinite(lng)) {
+                return { lat, lng };
+            }
+        }
+
+        if (Number.isFinite(record?.latitude) && Number.isFinite(record?.longitude)) {
+            return { lat: record.latitude, lng: record.longitude };
+        }
+
+        return null;
     }
 
     /**
@@ -371,24 +582,6 @@ export default class MapManagerService extends Service {
      * Called by `Map::GoogleLiveMap` after the map element is initialised.
      *
      * @param {google.maps.Map} mapInstance
-     */
-    setGoogleMapInstance(mapInstance) {
-        if (this.adapter?.setMapInstance) {
-            this.adapter.setMapInstance(mapInstance);
-        }
-        this.isReady = true;
-        this.#resolveMapReady?.(mapInstance);
-    }
-
-    // ─── Registry helpers (used by live-map component) ───────────────────────────────
-
-    /**
-     * Register a native marker object so that movement-tracker and other
-     * services can retrieve it by model id.
-     *
-     * @param {string} id
-     * @param {*} markerObject  Native marker (L.Marker or google.maps.Marker)
-     * @param {Object} [meta={}]
      */
     registerMarker(id, markerObject, meta = {}) {
         return this.adapter?.registerMarker?.(id, markerObject, meta);
@@ -434,7 +627,48 @@ export default class MapManagerService extends Service {
      * @returns {Array}
      */
     getContextMenuItems(target) {
-        return this.adapter?.getContextMenuItems?.(target) ?? [];
+        const registry = this.leafletContextmenuManager.getRegistry(target);
+        const items = registry?.contextmenuItems ?? this.adapter?.getContextMenuItems?.(target) ?? [];
+
+        return items.map((item) => ({
+            ...item,
+            label: item.label ?? item.text,
+            action: item.action ?? item.callback,
+        }));
+    }
+
+    getComposedContextMenuItems(target) {
+        const mapItems = this.getContextMenuItems('map');
+        if (!target || target === 'map') {
+            return mapItems;
+        }
+
+        const targetItems = this.getContextMenuItems(target);
+        if (!targetItems.length) {
+            return mapItems;
+        }
+
+        if (!mapItems.length) {
+            return targetItems;
+        }
+
+        const combinedItems = [...mapItems];
+        const firstTargetItem = targetItems[0];
+
+        if (!firstTargetItem?.separator) {
+            combinedItems.push({ separator: true });
+        }
+
+        combinedItems.push(...targetItems);
+        return combinedItems;
+    }
+
+    showContextMenu(event, items = []) {
+        return this.adapter?.showContextMenu?.(event, items);
+    }
+
+    closeContextMenu() {
+        return this.adapter?.closeContextMenu?.();
     }
 
     // ─── Map control shortcuts ──────────────────────────────────────────────────────
@@ -444,7 +678,12 @@ export default class MapManagerService extends Service {
      * Delegates to the active adapter.
      */
     @action showCoordinates(event) {
-        return this.adapter?.showCoordinates?.(event);
+        const result = this.adapter?.showCoordinates?.(event);
+        if (result && typeof result === 'object' && Number.isFinite(result.lat) && Number.isFinite(result.lng)) {
+            this.notifications.info(`${result.lat}, ${result.lng}`);
+        }
+
+        return result;
     }
 
     /**
@@ -480,7 +719,7 @@ export default class MapManagerService extends Service {
      * @returns {Promise<{ type: 'edited'|'cancel', layer: * }>}
      */
     editPolygon(layer, options = {}) {
-        return this.adapter?.editPolygon?.(layer, options) ?? Promise.resolve({ type: 'cancel' });
+        return this.adapter?.editPolygon?.(layer, options) ?? Promise.resolve({ type: 'unsupported' });
     }
 
     // ─── Layer Visibility (delegated to adapter) ───────────────────────────────
@@ -504,6 +743,10 @@ export default class MapManagerService extends Service {
      */
     hideLayer(layer, options = {}) {
         return this.adapter?.hideLayer?.(layer, options);
+    }
+
+    removeLayer(layer) {
+        return this.adapter?.removeLayer?.(layer);
     }
 
     // ─── Private ───────────────────────────────────────────────────────────────

@@ -1,79 +1,64 @@
 <div {{did-insert this.setupComponent}} ...attributes>
-    {{#let (or @place.place @place) as |place|}}
-        {{#if (is-empty place)}}
-            <div class={{@noAddressClass}}>
-                <span class="text-red-500">
-                    {{#if @type}}
-                        {{t "display-panel.no-address" htmlSafe=true type=@type}}
-                    {{else}}
-                        {{t "display-panel.no-address-message"}}
-                    {{/if}}
-                </span>
-            </div>
-        {{else}}
-            <div class="flex flex-row item-center space-x-2 {{if (or place.status_code @eta) 'mb-2'}}">
-                {{#if place.status_code}}
-                    <Badge @status={{place.status_code}} />
+    {{#if (is-empty this.place)}}
+        <div class={{@noAddressClass}}>
+            <span class="text-red-500">
+                {{#if @type}}
+                    {{t "display-panel.no-address" htmlSafe=true type=@type}}
+                {{else}}
+                    {{t "display-panel.no-address-message"}}
                 {{/if}}
-                {{#if @eta}}
-                    <Badge @status="warning" @hideStatusDot={{true}}><span class="font-bold">{{t "common.eta"}}:</span> {{format-duration @eta}}</Badge>
-                {{/if}}
-                {{#if @waypointActions}}
-                    <DropdownButton @iconClass="icon-text-height" @size="xs" @buttonClass="fleetops-btn-xxs" @icon="ellipsis-h" @iconPrefix="fas" @contentClass="dropdown-menu" as |dd|>
-                        <div class="next-dd-menu mt-1 mx-0" aria-labelledby="user-menu">
-                            <div class="px-1">
-                                <div class="text-sm flex flex-row items-center px-3 py-1 rounded-md my-1 text-gray-300">
-                                    {{t "order.fields.waypoint-actions"}}
-                                </div>
+            </span>
+        </div>
+    {{else}}
+        <div class="flex flex-row item-center space-x-2 {{if (or this.place.status_code @eta) 'mb-2'}}">
+            {{#if this.place.status_code}}
+                <Badge @status={{this.place.status_code}} />
+            {{/if}}
+            {{#if @eta}}
+                <Badge @status="warning" @hideStatusDot={{true}}><span class="font-bold">{{t "common.eta"}}:</span> {{format-duration @eta}}</Badge>
+            {{/if}}
+            {{#if @waypointActions}}
+                <DropdownButton @iconClass="icon-text-height" @size="xs" @buttonClass="fleetops-btn-xxs" @icon="ellipsis-h" @iconPrefix="fas" @contentClass="dropdown-menu" as |dd|>
+                    <div class="next-dd-menu mt-1 mx-0" aria-labelledby="user-menu">
+                        <div class="px-1">
+                            <div class="text-sm flex flex-row items-center px-3 py-1 rounded-md my-1 text-gray-300">
+                                {{t "order.fields.waypoint-actions"}}
                             </div>
-                            <div class="next-dd-menu-seperator"></div>
-                            {{#each-in @waypointActions as |actionId action|}}
-                                <div class="px-1">
-                                    <a href="javascript:;" class="next-dd-item" disabled={{cannot "fleet-ops view order"}} {{on "click" (dropdown-fn dd action.fn place)}}>
-                                        {{action.label}}
-                                    </a>
-                                </div>
-                            {{/each-in}}
                         </div>
-                    </DropdownButton>
-                {{/if}}
-            </div>
-            <address class={{@addressClass}}>
-                {{#if place.name}}
-                    {{place.name}}<br />
-                {{/if}}
-                {{#if place.street1}}
-                    {{place.street1}}<br />
-                {{/if}}
-                {{#if place.street2}}
-                    {{place.street2}}<br />
-                {{/if}}
-                <div class="comma-spans">
-                    {{#if place.city}}
-                        <span>{{place.city}}</span>
-                    {{/if}}
-                    {{#if place.province}}
-                        <span>{{place.province}}</span>
-                    {{/if}}
-                    {{#if place.postal_code}}
-                        <span>{{place.postal_code}}</span>
-                    {{/if}}
-                </div>
-                <div class="comma-spans">
-                    {{#if place.neighborhood}}
-                        <span>{{place.neighborhood}}</span>
-                    {{/if}}
-                    {{#if place.district}}
-                        <span>{{place.district}}</span>
-                    {{/if}}
-                    {{#if (and place.building (not place.street1))}}
-                        <span>{{place.building}}</span>
-                    {{/if}}
-                </div>
-                {{#if place.phone}}
-                    <a href="tel:{{place.phone}}" class="text-blue-500 hover:text-blue-400">{{place.phone}}</a><br />
-                {{/if}}
-            </address>
-        {{/if}}
-    {{/let}}
+                        <div class="next-dd-menu-seperator"></div>
+                        {{#each-in @waypointActions as |actionId action|}}
+                            <div class="px-1">
+                                <a href="javascript:;" class="next-dd-item" disabled={{cannot "fleet-ops view order"}} {{on "click" (dropdown-fn dd action.fn this.place)}}>
+                                    {{action.label}}
+                                </a>
+                            </div>
+                        {{/each-in}}
+                    </div>
+                </DropdownButton>
+            {{/if}}
+        </div>
+        <address class={{@addressClass}}>
+            {{#if this.name}}
+                <div class="font-semibold">{{this.name}}</div>
+                <div>{{this.place.street1}}</div>
+            {{else}}
+                <div class="font-semibold">{{this.place.street1}}</div>
+            {{/if}}
+            {{#if this.place.street2}}
+                <div>{{this.place.street2}}</div>
+            {{/if}}
+            {{#if this.cityStatePostalCode}}
+                <div>{{this.cityStatePostalCode}}</div>
+            {{/if}}
+            {{#if this.neighborhoodDistrictBuilding}}
+                <div>{{this.neighborhoodDistrictBuilding}}</div>
+            {{/if}}
+            {{#if this.place.country}}
+                <div>{{this.place.country_name}}</div>
+            {{/if}}
+            {{#if this.place.phone}}
+                <a href="tel:{{this.place.phone}}" class="text-blue-500 hover:text-blue-400">{{this.place.phone}}</a><br />
+            {{/if}}
+        </address>
+    {{/if}}
 </div>

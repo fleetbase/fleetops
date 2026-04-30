@@ -1,27 +1,9 @@
-{{!
-    Map::GoogleLiveMap
-    ─────────────────────────────────────────────────────────────────────────
-    Google Maps surface component.
-    Rendered by Map::LeafletLiveMap when mapManager.isGoogleMaps === true.
-
-    The map is initialised imperatively via the {{did-insert}} modifier which
-    calls `this.setupMap(element)`.  All marker / polygon management is done
-    in the JS class; this template is intentionally minimal.
-
-    A `{{did-update}}` modifier watches the resource arrays so that markers
-    are re-rendered whenever the parent updates @drivers / @vehicles / etc.
-}}
 <div
     id={{this.id}}
     class="google-live-map-container next-google-container-map {{@mapClass}}"
-    style="width:100%;height:100%"
+    style={{html-safe "width:100%;height:100%"}}
     {{did-insert this.setupMap}}
-    {{did-update this._renderResources @drivers @vehicles @places @serviceAreas}}
+    {{did-update this.syncResources @drivers @vehicles @places @serviceAreas}}
     ...attributes
 >
-    {{!--
-        The Google Maps JS API renders directly into this div.
-        No child components are needed — all overlays (markers, polygons,
-        info-windows, drawing tools) are managed imperatively in google-live-map.js.
-    --}}
 </div>

@@ -42,6 +42,7 @@ export default class PositionPlaybackService extends Service {
     @tracked markerId = null;
     @tracked map = null;
     @tracked callback = null;
+    @tracked lastLatLng = null;
 
     /**
      * Initialize replay session with positions and marker
@@ -56,19 +57,19 @@ export default class PositionPlaybackService extends Service {
      */
     initialize(options = {}) {
         const { subject, leafletLayer, positions = [], speed = 1, callback = null, map = null } = options;
-
-        // Prefer adapter-registered marker (provider-agnostic)
         const subjectId = subject?.id ?? null;
+        const existingLeafletMarker = leafletLayer || subject?.leafletLayer || subject?._layer || subject?._marker;
+
         if (subjectId && this.mapManager?.hasMarker(subjectId)) {
             this.markerId = subjectId;
-            this.marker = null; // adapter handles it
-        } else {
-            // Leaflet backward-compat fallback
+            this.marker = null;
+        } else if (existingLeafletMarker) {
             this.markerId = null;
-            this.marker = leafletLayer || subject?.leafletLayer || subject?._layer || subject?._marker;
-            if (!this.marker) {
-                debug('[PositionPlayback] Warning: No marker found. Provide a subject with a registered marker or leafletLayer property.');
-            }
+            this.marker = existingLeafletMarker;
+        } else {
+            this.markerId = null;
+            this.marker = null;
+            debug('[PositionPlayback] Warning: No marker found. Provide a subject with a registered marker or leafletLayer property.');
         }
 
         this.positions = positions;
@@ -78,6 +79,7 @@ export default class PositionPlaybackService extends Service {
         this.currentIndex = 0;
         this.isPlaying = false;
         this.isPaused = false;
+        this.lastLatLng = this.#resolveCurrentLatLng();
 
         debug(`[PositionPlayback] Initialized with ${positions.length} positions at ${speed}x speed (markerId=${this.markerId ?? 'leaflet-compat'})`);
     }
@@ -266,6 +268,7 @@ export default class PositionPlaybackService extends Service {
         this.map = null;
         this.callback = null;
         this.speed = 1;
+        this.lastLatLng = null;
 
         debug('[PositionPlayback] Reset complete');
     }
@@ -306,9 +309,7 @@ export default class PositionPlaybackService extends Service {
             }
 
             // Calculate animation duration
-            const animationDuration = useAdapter
-                ? this.#calculateAnimationDurationFromAdapter(latLng, position)
-                : this.#calculateAnimationDuration(marker, latLng, position);
+            const animationDuration = useAdapter ? this.#calculateAnimationDurationFromAdapter(latLng, position) : this.#calculateAnimationDuration(marker, latLng, position);
 
             try {
                 if (useAdapter) {
@@ -320,6 +321,7 @@ export default class PositionPlaybackService extends Service {
                     if (this.map || this.mapManager.isReady) {
                         this.mapManager.panTo(latLng[0], latLng[1]);
                     }
+                    this.lastLatLng = latLng;
                 } else {
                     // ── Leaflet backward-compat path ───────────────────────
                     if (typeof marker.setRotationAngle === 'function' && Number.isFinite(position.heading) && position.heading !== -1) {
@@ -334,6 +336,7 @@ export default class PositionPlaybackService extends Service {
                         const targetLatLng = marker._slideToLatLng ?? marker.getLatLng();
                         this.map.panTo(targetLatLng, { animate: true });
                     }
+                    this.lastLatLng = latLng;
                 }
 
                 // Trigger callback
@@ -498,10 +501,10 @@ export default class PositionPlaybackService extends Service {
      * @returns {number}
      */
     #calculateAnimationDurationFromAdapter(nextLatLng, position) {
-        const center = this.mapManager?.getCenter?.();
+        const currentLatLng = this.lastLatLng ?? this.#resolveCurrentLatLng();
         let meters = 0;
-        if (center) {
-            meters = this.mapManager.distanceBetween(center.lat, center.lng, nextLatLng[0], nextLatLng[1]);
+        if (currentLatLng) {
+            meters = this.mapManager.distanceBetween(currentLatLng[0], currentLatLng[1], nextLatLng[0], nextLatLng[1]);
         }
         let mps = Number.isFinite(position.speed) && position.speed > 0 ? position.speed : null;
         if (mps && position.speed_unit === 'kmh') mps = mps / 3.6;
@@ -528,5 +531,29 @@ export default class PositionPlaybackService extends Service {
                 ...metadata,
             });
         }
+    }
+
+    #resolveCurrentLatLng() {
+        if (this.markerId && this.mapManager?.hasMarker?.(this.markerId)) {
+            const marker = this.mapManager.getMarker(this.markerId);
+            const position = marker?.position ?? marker?.getPosition?.();
+
+            if (position) {
+                const lat = typeof position.lat === 'function' ? position.lat() : position.lat;
+                const lng = typeof position.lng === 'function' ? position.lng() : position.lng;
+                if (Number.isFinite(lat) && Number.isFinite(lng)) {
+                    return [lat, lng];
+                }
+            }
+        }
+
+        if (this.marker?.getLatLng) {
+            const latlng = this.marker.getLatLng();
+            if (Number.isFinite(latlng?.lat) && Number.isFinite(latlng?.lng)) {
+                return [latlng.lat, latlng.lng];
+            }
+        }
+
+        return null;
     }
 }

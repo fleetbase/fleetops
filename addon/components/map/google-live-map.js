@@ -1,37 +1,4 @@
-/**
- * Map::GoogleLiveMap
- *
- * Google Maps implementation of the live map surface.
- * This component is rendered by `Map::LeafletLiveMap` when the active provider
- * is set to "google" (i.e. `mapManager.isGoogleMaps === true`).
- *
- * It provides 1-to-1 feature parity with the Leaflet live map:
- *   - Real-time driver / vehicle tracking markers with rotation
- *   - Place markers with info-windows
- *   - Service-area and zone polygon overlays
- *   - Drawing mode for geofence creation / editing
- *   - Right-click context menus (via Google Maps InfoWindow overlay)
- *   - Viewport-aware resource loading (bounds-based)
- *
- * All marker/polygon operations are delegated to the GoogleMapsAdapter via
- * the MapManagerService so that the rest of the application (movement-tracker,
- * position-playback, geofence, etc.) remains provider-agnostic.
- *
- * Usage (automatic — rendered by leaflet-live-map.hbs):
- *   <Map::GoogleLiveMap @latitude=... @longitude=... @zoom=... ... />
- *
- * Direct usage (e.g. in tests or custom layouts):
- *   <Map::GoogleLiveMap
- *       @latitude={{1.369}}
- *       @longitude={{103.886}}
- *       @zoom={{12}}
- *       @drivers={{this.drivers}}
- *       @vehicles={{this.vehicles}}
- *       @places={{this.places}}
- *       @serviceAreas={{this.serviceAreas}}
- *       @onLoad={{this.handleMapLoad}}
- *   />
- */
+/* global google */
 import Component from '@glimmer/component';
 import { tracked } from '@glimmer/tracking';
 import { inject as service } from '@ember/service';
@@ -40,602 +7,439 @@ import { isArray } from '@ember/array';
 import { debug } from '@ember/debug';
 import { guidFor } from '@ember/object/internals';
 
-/**
- * Build a compact HTML string for a driver info-window.
- * Mirrors the content of the Leaflet `<marker.popup>` block.
- *
- * @param {Object} driver
- * @returns {string}
- */
 function buildDriverInfoWindowContent(driver) {
     return `
-        <div class="flex flex-row p-1" style="min-width:200px">
-            <div class="w-12 mr-2">
-                <img src="${driver.photoUrl ?? ''}" alt="${driver.name ?? ''}"
-                     style="border-radius:6px;width:48px;height:48px;object-fit:cover;box-shadow:0 1px 3px rgba(0,0,0,.2)" />
-            </div>
-            <div>
-                <div style="font-size:12px;font-weight:600">${driver.name ?? '-'}</div>
-                <div style="font-size:11px">Phone: ${driver.phone ?? '-'}</div>
-                <div style="font-size:11px">Vehicle: ${driver.vehicle_name ?? '-'}</div>
-                <div style="font-size:11px">Status:
-                    <span style="color:${driver.online ? '#22c55e' : '#f87171'}">
-                        ${driver.online ? 'Online' : 'Offline'}
-                    </span>
+        <div class="fleetops-google-popover fleetops-google-popover--compact">
+            <div class="fleetops-google-popover__row">
+                <img src="${driver.photoUrl ?? ''}" alt="${driver.name ?? ''}" class="fleetops-google-popover__avatar" />
+                <div class="fleetops-google-popover__body">
+                    <div class="fleetops-google-popover__title">${driver.name ?? '-'}</div>
+                    <div class="fleetops-google-popover__meta">Phone: ${driver.phone ?? '-'}</div>
+                    <div class="fleetops-google-popover__meta">Vehicle: ${driver.vehicle_name ?? '-'}</div>
+                    <div class="fleetops-google-popover__meta">Status:
+                        <span class="${driver.online ? 'text-green-500' : 'text-red-400'}">${driver.online ? 'Online' : 'Offline'}</span>
+                    </div>
                 </div>
             </div>
         </div>`;
 }
 
-/**
- * Build a compact HTML string for a vehicle info-window.
- *
- * @param {Object} vehicle
- * @returns {string}
- */
+function buildDriverTooltipContent(driver) {
+    return `
+        <div class="fleetops-google-hover-tooltip__title">${driver.name ?? '-'}</div>
+        <div class="fleetops-google-hover-tooltip__meta ${driver.online ? 'text-green-400' : 'text-red-400'}">${driver.online ? 'Online' : 'Offline'}</div>
+    `;
+}
+
 function buildVehicleInfoWindowContent(vehicle) {
     return `
-        <div class="flex flex-row p-1" style="min-width:200px">
-            <div class="w-14 mr-2">
-                <img src="${vehicle.photo_url ?? ''}" alt="${vehicle.display_name ?? ''}"
-                     style="border-radius:6px;width:56px;height:48px;object-fit:cover;box-shadow:0 1px 3px rgba(0,0,0,.2)" />
-            </div>
-            <div>
-                <div style="font-size:12px;font-weight:600">${vehicle.displayName ?? '-'}</div>
-                <div style="font-size:11px">ID: ${vehicle.public_id ?? '-'}</div>
-                <div style="font-size:11px">Serial: ${vehicle.serial_number ?? vehicle.vin ?? '-'}</div>
-                <div style="font-size:11px">Driver: ${vehicle.driver_name ?? '-'}</div>
-                <div style="font-size:11px">Status:
-                    <span style="color:${vehicle.online ? '#22c55e' : '#f87171'}">
-                        ${vehicle.online ? 'Online' : 'Offline'}
-                    </span>
+        <div class="fleetops-google-popover">
+            <div class="fleetops-google-popover__row">
+                <img src="${vehicle.photo_url ?? ''}" alt="${vehicle.display_name ?? ''}" class="fleetops-google-popover__vehicle" />
+                <div class="fleetops-google-popover__body">
+                    <div class="fleetops-google-popover__title">${vehicle.displayName ?? '-'}</div>
+                    <div class="fleetops-google-popover__meta">ID: ${vehicle.public_id ?? '-'}</div>
+                    <div class="fleetops-google-popover__meta">Serial: ${vehicle.serial_number ?? vehicle.vin ?? '-'}</div>
+                    <div class="fleetops-google-popover__meta">Driver: ${vehicle.driver_name ?? '-'}</div>
+                    <div class="fleetops-google-popover__meta">Status:
+                        <span class="${vehicle.online ? 'text-green-500' : 'text-red-400'}">${vehicle.online ? 'Online' : 'Offline'}</span>
+                    </div>
                 </div>
             </div>
         </div>`;
 }
 
-/**
- * Build a compact HTML string for a place info-window.
- *
- * @param {Object} place
- * @returns {string}
- */
+function buildVehicleTooltipContent(vehicle) {
+    return `
+        <div class="fleetops-google-hover-tooltip__title">${vehicle.displayName ?? '-'}</div>
+        <div class="fleetops-google-hover-tooltip__meta">ID: ${vehicle.public_id ?? '-'}</div>
+        <div class="fleetops-google-hover-tooltip__meta ${vehicle.online ? 'text-green-400' : 'text-red-400'}">${vehicle.online ? 'Online' : 'Offline'}</div>
+    `;
+}
+
 function buildPlaceInfoWindowContent(place) {
     return `
-        <div style="font-size:12px;min-width:160px">
-            <div style="font-weight:600">${place.name ?? place.address ?? '-'}</div>
-            <div>${place.address ?? ''}</div>
+        <div class="fleetops-google-popover fleetops-google-popover--compact">
+            <div class="fleetops-google-popover__body">
+                <div class="fleetops-google-popover__title">${place.name ?? place.address ?? '-'}</div>
+                <div class="fleetops-google-popover__meta">${place.address ?? ''}</div>
+            </div>
         </div>`;
+}
+
+function buildPlaceTooltipContent(place) {
+    return `
+        <div class="fleetops-google-hover-tooltip__title">${place.name ?? place.address ?? '-'}</div>
+        <div class="fleetops-google-hover-tooltip__meta">${place.address ?? ''}</div>
+    `;
 }
 
 export default class MapGoogleLiveMapComponent extends Component {
     @service mapManager;
-    @service universe;
-
-    /** Unique DOM id for the map container element */
     id = guidFor(this);
-
-    /** @type {google.maps.Map|null} Internal Google Maps instance */
-    @tracked _googleMap = null;
-
-    /** @type {Map<string, google.maps.Marker>} markerId → google.maps.Marker */
-    _markers = new Map();
-
-    /** @type {Map<string, google.maps.Polygon>} polygonId → google.maps.Polygon */
-    _polygons = new Map();
-
-    /** @type {Map<string, google.maps.InfoWindow>} markerId → InfoWindow */
+    @tracked map = null;
     _infoWindows = new Map();
 
-    /** @type {google.maps.drawing.DrawingManager|null} */
-    _drawingManager = null;
-
-    /** @type {Function|null} Pending onCreate callback for drawing mode */
-    _drawingOnCreate = null;
-
     willDestroy() {
-        super.willDestroy();
-        this._cleanupMap();
+        super.willDestroy(...arguments);
+        this._closeAllInfoWindows();
+        this._infoWindows.clear();
+        if (this.mapManager.providerName === 'google') {
+            this.mapManager.destroyMap();
+        }
     }
 
-    // ─── Lifecycle ────────────────────────────────────────────────────────────
-
-    /**
-     * Called by the `{{did-insert}}` modifier on the map container div.
-     * Initialises the Google Maps instance and notifies the parent component.
-     *
-     * @param {HTMLElement} element
-     */
     @action async setupMap(element) {
-        // Wait for the Google Maps JS API to be available
-        await this._waitForGoogleMaps();
-
-        const google = window.google;
-        const map = new google.maps.Map(element, {
-            center: { lat: this.args.latitude ?? 1.369, lng: this.args.longitude ?? 103.886 },
+        const map = await this.mapManager.initializeMap(element, {
+            lat: this.args.latitude ?? 1.369,
+            lng: this.args.longitude ?? 103.886,
             zoom: this.args.zoom ?? 12,
-            mapTypeId: google.maps.MapTypeId.ROADMAP,
-            // Disable default UI controls that we replicate ourselves
-            zoomControl: false,
-            mapTypeControl: false,
-            streetViewControl: false,
-            fullscreenControl: false,
-            // Enable right-click context menu support
-            disableDoubleClickZoom: false,
+            disableDefaultUI: true,
+            gestureHandling: 'greedy',
         });
 
-        this._googleMap = map;
-
-        // Register with the adapter
-        this.mapManager.setGoogleMapInstance(map);
-
-        // Viewport-based reload on pan/zoom
-        map.addListener('idle', () => {
-            this.args.onViewportChanged?.();
-        });
-
-        // Right-click context menu
-        map.addListener('rightclick', (event) => {
-            this._showMapContextMenu(event);
-        });
-
-        // Notify parent (mirrors Leaflet's `@onLoad`)
-        this.args.onLoad?.(this.mapManager);
-
-        // Render initial resources
-        this._renderResources();
-
+        this.map = map;
+        this.mapManager.on('moveend', () => this.args.onViewportChanged?.());
+        this.mapManager.on('rightclick', (event) => this._showMapContextMenu(event));
+        this.args.onLoad?.({ target: map });
+        this.syncResources();
         debug('[GoogleLiveMap] Map initialised');
     }
 
-    // ─── Resource rendering ───────────────────────────────────────────────────
-
-    /**
-     * Re-render all resources whenever the tracked args change.
-     * Called after `setupMap` and whenever `@drivers`, `@vehicles`, etc. update.
-     */
-    _renderResources() {
-        if (!this._googleMap) return;
-        this._renderDrivers();
-        this._renderVehicles();
-        this._renderPlaces();
-        this._renderServiceAreas();
+    @action syncResources() {
+        if (!this.map || !this.mapManager.isGoogleMaps) return;
+        this.#syncDrivers();
+        this.#syncVehicles();
+        this.#syncPlaces();
+        this.#syncServiceAreas();
     }
 
-    _renderDrivers() {
+    async #syncDrivers() {
         const drivers = this.args.drivers ?? [];
-        drivers.forEach((driver) => this._upsertDriverMarker(driver));
+
+        for (const driver of drivers) {
+            const coords = this._getCoords(driver.location);
+            if (!coords) continue;
+
+            const marker = this.mapManager.getMarker(driver.id);
+            if (!marker) {
+                const createdMarker = await this.mapManager.addMarker(driver.id, coords.lat, coords.lng, {
+                    iconUrl: driver.vehicle_avatar ?? '/engines-dist/images/driver-marker.png',
+                    iconSize: [24, 24],
+                    title: driver.name,
+                    tooltip: buildDriverTooltipContent(driver),
+                    tooltipOptions: { html: true },
+                    rotationAngle: driver.heading,
+                    onClick: () => this.#openInfoWindow(`driver:${driver.id}`, buildDriverInfoWindowContent(driver), driver.id, () => this.args.onDriverClicked?.(driver)),
+                    onRightClick: (event) => this._showDriverContextMenu(driver, event),
+                });
+
+                this.args.onDriverAdded?.(driver, { target: createdMarker });
+            } else {
+                this.mapManager.updateMarkerPosition(driver.id, coords.lat, coords.lng, false, 0);
+                if (Number.isFinite(driver.heading) && driver.heading !== -1) {
+                    this.mapManager.setMarkerRotation(driver.id, driver.heading);
+                }
+            }
+        }
     }
 
-    _renderVehicles() {
+    async #syncVehicles() {
         const vehicles = this.args.vehicles ?? [];
-        vehicles.forEach((vehicle) => this._upsertVehicleMarker(vehicle));
+
+        for (const vehicle of vehicles) {
+            const coords = this._getCoords(vehicle.location);
+            if (!coords) continue;
+
+            const marker = this.mapManager.getMarker(vehicle.id);
+            if (!marker) {
+                const createdMarker = await this.mapManager.addMarker(vehicle.id, coords.lat, coords.lng, {
+                    iconUrl: vehicle.avatar_url ?? '/engines-dist/images/vehicle-marker.png',
+                    iconSize: [24, 24],
+                    title: vehicle.displayName,
+                    tooltip: buildVehicleTooltipContent(vehicle),
+                    tooltipOptions: { html: true },
+                    rotationAngle: vehicle.heading,
+                    onClick: () => this.#openInfoWindow(`vehicle:${vehicle.id}`, buildVehicleInfoWindowContent(vehicle), vehicle.id, () => this.args.onVehicleClicked?.(vehicle)),
+                    onRightClick: (event) => this._showVehicleContextMenu(vehicle, event),
+                });
+
+                this.args.onVehicleAdded?.(vehicle, { target: createdMarker });
+            } else {
+                this.mapManager.updateMarkerPosition(vehicle.id, coords.lat, coords.lng, false, 0);
+                if (Number.isFinite(vehicle.heading) && vehicle.heading !== -1) {
+                    this.mapManager.setMarkerRotation(vehicle.id, vehicle.heading);
+                }
+            }
+        }
     }
 
-    _renderPlaces() {
+    async #syncPlaces() {
         const places = this.args.places ?? [];
-        places.forEach((place) => this._upsertPlaceMarker(place));
+
+        for (const place of places) {
+            const coords = this._getCoords(place.location);
+            if (!coords) continue;
+
+            const marker = this.mapManager.getMarker(place.id);
+            if (!marker) {
+                const createdMarker = await this.mapManager.addMarker(place.id, coords.lat, coords.lng, {
+                    iconUrl: place.avatar_url ?? '/engines-dist/images/building-marker.png',
+                    iconSize: [16, 16],
+                    title: place.address,
+                    tooltip: buildPlaceTooltipContent(place),
+                    tooltipOptions: { html: true },
+                    onClick: () => this.#openInfoWindow(`place:${place.id}`, buildPlaceInfoWindowContent(place), place.id, () => this.args.onPlaceClicked?.(place)),
+                });
+
+                this.args.onPlaceAdded?.(place, { target: createdMarker });
+            } else {
+                this.mapManager.updateMarkerPosition(place.id, coords.lat, coords.lng, false, 0);
+            }
+        }
+
+        const activeMarkerIds = new Set([
+            ...(this.args.drivers ?? []).map((driver) => driver.id),
+            ...(this.args.vehicles ?? []).map((vehicle) => vehicle.id),
+            ...places.map((place) => place.id),
+        ]);
+
+        this.#removeMarkersNotIn(activeMarkerIds);
     }
 
-    _renderServiceAreas() {
+    #syncServiceAreas() {
         const serviceAreas = this.args.serviceAreas ?? [];
-        serviceAreas.forEach((serviceArea) => {
-            this._upsertServiceAreaPolygon(serviceArea);
-            (serviceArea.zones ?? []).forEach((zone) => this._upsertZonePolygon(zone, serviceArea));
-        });
-    }
+        const overlayIds = new Set();
 
-    // ─── Marker helpers ───────────────────────────────────────────────────────
+        for (const serviceArea of serviceAreas) {
+            const paths =
+                this._coordinatesToGooglePaths(serviceArea?.border?.coordinates, { source: 'geojson' }) ??
+                this._coordinatesToGooglePaths(serviceArea.leafletCoordinates, { source: 'leaflet' });
+            if (!paths) continue;
 
-    /**
-     * Create or update a driver tracking marker.
-     *
-     * @param {Object} driver
-     */
-    _upsertDriverMarker(driver) {
-        const google = window.google;
-        const coords = this._getCoords(driver.location);
-        if (!coords) return;
+            overlayIds.add(serviceArea.id);
+            const polygon = this.mapManager.getOverlay(serviceArea.id);
+            if (!polygon) {
+                const createdPolygon = this.mapManager.addPolygon(serviceArea.id, paths, {
+                    color: serviceArea.stroke_color ?? serviceArea.color ?? '#3388ff',
+                    fillColor: serviceArea.color ?? '#3388ff',
+                    fillOpacity: 0.2,
+                    tooltip: serviceArea.name,
+                    onRightClick: (event) => this._showServiceAreaContextMenu(serviceArea, event),
+                });
+                this.mapManager.hideLayer(createdPolygon);
+                this.args.onServiceAreaLayerAdded?.(serviceArea, { target: createdPolygon });
+            } else {
+                polygon.setPaths(paths);
+                polygon.__labelText = serviceArea.name;
+                polygon.__labelPaths = paths;
+            }
 
-        const existing = this._markers.get(`driver:${driver.id}`);
-        if (existing) {
-            existing.setPosition(coords);
-            return;
+            for (const zone of serviceArea.zones ?? []) {
+                const zonePaths =
+                    this._coordinatesToGooglePaths(zone?.border?.coordinates, { source: 'geojson' }) ?? this._coordinatesToGooglePaths(zone.leafletCoordinates, { source: 'leaflet' });
+                if (!zonePaths) continue;
+
+                overlayIds.add(zone.id);
+                const zonePolygon = this.mapManager.getOverlay(zone.id);
+                if (!zonePolygon) {
+                    const createdZonePolygon = this.mapManager.addPolygon(zone.id, zonePaths, {
+                        color: zone.stroke_color ?? zone.color ?? '#3388ff',
+                        fillColor: zone.color ?? '#3388ff',
+                        fillOpacity: 0.2,
+                        tooltip: zone.name,
+                        onRightClick: (event) => this._showZoneContextMenu(zone, event),
+                    });
+                    this.mapManager.hideLayer(createdZonePolygon);
+                    this.args.onZoneLayerAdd?.(zone, { target: createdZonePolygon });
+                } else {
+                    zonePolygon.setPaths(zonePaths);
+                    zonePolygon.__labelText = zone.name;
+                    zonePolygon.__labelPaths = zonePaths;
+                }
+            }
         }
 
-        const marker = new google.maps.Marker({
-            map: this._googleMap,
-            position: coords,
-            icon: {
-                url: driver.vehicle_avatar ?? '/engines-dist/images/driver-marker.png',
-                scaledSize: new google.maps.Size(24, 24),
-                anchor: new google.maps.Point(12, 12),
-            },
-            title: driver.name,
-            optimized: true,
-        });
+        this.#removeStaleOverlays(overlayIds);
+    }
 
-        // Rotation via SVG icon transform is handled by the adapter
-        if (Number.isFinite(driver.heading) && driver.heading !== -1) {
-            this.mapManager.setMarkerRotation(`driver:${driver.id}`, driver.heading);
+    #removeMarkersNotIn(activeIds) {
+        for (const [markerId] of this.mapManager.adapter?._markers ?? []) {
+            if (this.#isTransientMarker(markerId)) {
+                continue;
+            }
+
+            if (!activeIds.has(markerId)) {
+                this._infoWindows.get(`driver:${markerId}`)?.close();
+                this._infoWindows.delete(`driver:${markerId}`);
+                this._infoWindows.get(`vehicle:${markerId}`)?.close();
+                this._infoWindows.delete(`vehicle:${markerId}`);
+                this._infoWindows.get(`place:${markerId}`)?.close();
+                this._infoWindows.delete(`place:${markerId}`);
+                this.mapManager.removeMarker(markerId);
+            }
         }
-
-        // Info-window (popup equivalent)
-        const infoWindow = new google.maps.InfoWindow({
-            content: buildDriverInfoWindowContent(driver),
-        });
-        this._infoWindows.set(`driver:${driver.id}`, infoWindow);
-
-        marker.addListener('click', () => {
-            this._closeAllInfoWindows();
-            infoWindow.open({ map: this._googleMap, anchor: marker });
-            this.args.onDriverClicked?.(driver);
-        });
-
-        marker.addListener('rightclick', (event) => {
-            this._showDriverContextMenu(driver, marker, event);
-        });
-
-        this._markers.set(`driver:${driver.id}`, marker);
-
-        // Register with the adapter registry so movement-tracker can find it
-        this.mapManager.registerMarker?.(`driver:${driver.id}`, marker, { type: 'driver' });
-        this.mapManager.registerMarker?.(driver.id, marker, { type: 'driver' });
-
-        this.args.onDriverAdded?.(driver, marker);
     }
 
-    /**
-     * Create or update a vehicle tracking marker.
-     *
-     * @param {Object} vehicle
-     */
-    _upsertVehicleMarker(vehicle) {
-        const google = window.google;
-        const coords = this._getCoords(vehicle.location);
-        if (!coords) return;
+    #isTransientMarker(markerId) {
+        return typeof markerId === 'string' && (markerId.startsWith('position-playback:') || markerId.startsWith('position-history:') || markerId.startsWith('route:'));
+    }
 
-        const existing = this._markers.get(`vehicle:${vehicle.id}`);
-        if (existing) {
-            existing.setPosition(coords);
-            return;
+    #removeStaleOverlays(activeIds) {
+        for (const [overlayId, overlay] of this.mapManager.adapter?._overlays ?? []) {
+            if (overlay?.__pinnedByFocus) {
+                continue;
+            }
+
+            if (typeof overlayId === 'string' && overlayId.startsWith('route:')) {
+                continue;
+            }
+
+            if (!activeIds.has(overlayId)) {
+                this.mapManager.removeOverlay(overlayId);
+            }
         }
-
-        const marker = new google.maps.Marker({
-            map: this._googleMap,
-            position: coords,
-            icon: {
-                url: vehicle.avatar_url ?? '/engines-dist/images/vehicle-marker.png',
-                scaledSize: new google.maps.Size(24, 24),
-                anchor: new google.maps.Point(12, 12),
-            },
-            title: vehicle.displayName,
-            optimized: true,
-        });
-
-        if (Number.isFinite(vehicle.heading) && vehicle.heading !== -1) {
-            this.mapManager.setMarkerRotation(`vehicle:${vehicle.id}`, vehicle.heading);
-        }
-
-        const infoWindow = new google.maps.InfoWindow({
-            content: buildVehicleInfoWindowContent(vehicle),
-        });
-        this._infoWindows.set(`vehicle:${vehicle.id}`, infoWindow);
-
-        marker.addListener('click', () => {
-            this._closeAllInfoWindows();
-            infoWindow.open({ map: this._googleMap, anchor: marker });
-            this.args.onVehicleClicked?.(vehicle);
-        });
-
-        marker.addListener('rightclick', (event) => {
-            this._showVehicleContextMenu(vehicle, marker, event);
-        });
-
-        this._markers.set(`vehicle:${vehicle.id}`, marker);
-        this.mapManager.registerMarker?.(`vehicle:${vehicle.id}`, marker, { type: 'vehicle' });
-        this.mapManager.registerMarker?.(vehicle.id, marker, { type: 'vehicle' });
-
-        this.args.onVehicleAdded?.(vehicle, marker);
     }
 
-    /**
-     * Create or update a place marker.
-     *
-     * @param {Object} place
-     */
-    _upsertPlaceMarker(place) {
-        const google = window.google;
-        const coords = this._getCoords(place.location);
-        if (!coords) return;
-
-        const existing = this._markers.get(`place:${place.id}`);
-        if (existing) {
-            existing.setPosition(coords);
-            return;
-        }
-
-        const marker = new google.maps.Marker({
-            map: this._googleMap,
-            position: coords,
-            icon: {
-                url: place.avatar_url ?? '/engines-dist/images/building-marker.png',
-                scaledSize: new google.maps.Size(16, 16),
-                anchor: new google.maps.Point(8, 8),
-            },
-            title: place.address,
-        });
-
-        const infoWindow = new google.maps.InfoWindow({
-            content: buildPlaceInfoWindowContent(place),
-        });
-        this._infoWindows.set(`place:${place.id}`, infoWindow);
-
-        marker.addListener('click', () => {
-            this._closeAllInfoWindows();
-            infoWindow.open({ map: this._googleMap, anchor: marker });
-            this.args.onPlaceClicked?.(place);
-        });
-
-        this._markers.set(`place:${place.id}`, marker);
-        this.mapManager.registerMarker?.(place.id, marker, { type: 'place' });
-
-        this.args.onPlaceAdded?.(place, marker);
-    }
-
-    // ─── Polygon helpers ──────────────────────────────────────────────────────
-
-    /**
-     * Create or update a service-area polygon.
-     *
-     * @param {Object} serviceArea
-     */
-    _upsertServiceAreaPolygon(serviceArea) {
-        const google = window.google;
-        const paths = this._coordinatesToGooglePaths(serviceArea.leafletCoordinates);
-        if (!paths) return;
-
-        const existing = this._polygons.get(`service-area:${serviceArea.id}`);
-        if (existing) {
-            existing.setPaths(paths);
-            return;
-        }
-
-        const polygon = new google.maps.Polygon({
-            map: this._googleMap,
-            paths,
-            fillColor: serviceArea.color ?? '#3388ff',
-            fillOpacity: 0.2,
-            strokeColor: serviceArea.stroke_color ?? serviceArea.color ?? '#3388ff',
-            strokeWeight: 2,
-            visible: false, // hidden by default, same as Leaflet behaviour
-        });
-
-        polygon.addListener('rightclick', (event) => {
-            this._showServiceAreaContextMenu(serviceArea, polygon, event);
-        });
-
-        this._polygons.set(`service-area:${serviceArea.id}`, polygon);
-        this.mapManager.registerPolygon?.(serviceArea.id, polygon, { type: 'service-area' });
-
-        this.args.onServiceAreaLayerAdded?.(serviceArea, polygon);
-    }
-
-    /**
-     * Create or update a zone polygon.
-     *
-     * @param {Object} zone
-     * @param {Object} serviceArea
-     */
-    _upsertZonePolygon(zone, serviceArea) {
-        const google = window.google;
-        const paths = this._coordinatesToGooglePaths(zone.leafletCoordinates);
-        if (!paths) return;
-
-        const existing = this._polygons.get(`zone:${zone.id}`);
-        if (existing) {
-            existing.setPaths(paths);
-            return;
-        }
-
-        const polygon = new google.maps.Polygon({
-            map: this._googleMap,
-            paths,
-            fillColor: zone.color ?? '#3388ff',
-            fillOpacity: 0.2,
-            strokeColor: zone.stroke_color ?? zone.color ?? '#3388ff',
-            strokeWeight: 2,
-            visible: false,
-        });
-
-        polygon.addListener('rightclick', (event) => {
-            this._showZoneContextMenu(zone, polygon, event);
-        });
-
-        this._polygons.set(`zone:${zone.id}`, polygon);
-        this.mapManager.registerPolygon?.(zone.id, polygon, { type: 'zone' });
-
-        this.args.onZoneLayerAdd?.(zone, polygon);
-    }
-
-    // ─── Context menus ────────────────────────────────────────────────────────
-
-    /**
-     * Show a map-level right-click context menu using a floating InfoWindow.
-     *
-     * @param {google.maps.MapMouseEvent} event
-     */
-    _showMapContextMenu(event) {
-        const items = this.mapManager.getContextMenuItems?.('map') ?? [];
-        if (!items.length) return;
-        this._showContextMenuAt(event.latLng, items);
-    }
-
-    /**
-     * Show a driver right-click context menu.
-     */
-    _showDriverContextMenu(driver, marker, event) {
-        const items = this.mapManager.getContextMenuItems?.(`driver:${driver.public_id}`) ?? [];
-        this._showContextMenuAt(event.latLng ?? marker.getPosition(), items);
-    }
-
-    /**
-     * Show a vehicle right-click context menu.
-     */
-    _showVehicleContextMenu(vehicle, marker, event) {
-        const items = this.mapManager.getContextMenuItems?.(`vehicle:${vehicle.public_id}`) ?? [];
-        this._showContextMenuAt(event.latLng ?? marker.getPosition(), items);
-    }
-
-    /**
-     * Show a service-area right-click context menu.
-     */
-    _showServiceAreaContextMenu(serviceArea, polygon, event) {
-        const items = this.mapManager.getContextMenuItems?.(`service-area:${serviceArea.public_id}`) ?? [];
-        this._showContextMenuAt(event.latLng, items);
-    }
-
-    /**
-     * Show a zone right-click context menu.
-     */
-    _showZoneContextMenu(zone, polygon, event) {
-        const items = this.mapManager.getContextMenuItems?.(`zone:${zone.public_id}`) ?? [];
-        this._showContextMenuAt(event.latLng, items);
-    }
-
-    /**
-     * Render a context menu as a floating InfoWindow at the given LatLng.
-     *
-     * @param {google.maps.LatLng} latLng
-     * @param {Array<{ text: string, callback: Function, separator?: boolean }>} items
-     */
-    _showContextMenuAt(latLng, items) {
-        const google = window.google;
+    #openInfoWindow(infoId, content, markerId, callback) {
         this._closeAllInfoWindows();
 
-        const html = items
-            .map((item) => {
-                if (item.separator) return '<hr style="margin:4px 0" />';
-                return `<div class="gm-context-item" style="padding:4px 8px;cursor:pointer;font-size:12px;white-space:nowrap"
-                             data-action="${item.text}">${item.text}</div>`;
-            })
-            .join('');
+        let infoWindow = this._infoWindows.get(infoId);
+        if (!infoWindow) {
+            infoWindow = new google.maps.InfoWindow({ content });
+            this._infoWindows.set(infoId, infoWindow);
+        } else {
+            infoWindow.setContent(content);
+        }
 
-        const container = document.createElement('div');
-        container.style.cssText = 'background:#fff;border-radius:4px;box-shadow:0 2px 8px rgba(0,0,0,.2);padding:4px 0;min-width:140px';
-        container.innerHTML = html;
+        const marker = this.mapManager.getMarker(markerId);
+        if (marker) {
+            infoWindow.open({ map: this.map, anchor: marker });
+        }
 
-        // Wire up click handlers
-        items.forEach((item) => {
-            if (item.separator || !item.text) return;
-            const el = container.querySelector(`[data-action="${item.text}"]`);
-            if (el && typeof item.callback === 'function') {
-                el.addEventListener('click', () => {
-                    item.callback({ latlng: latLng });
-                    ctxMenu.close();
-                });
-                el.addEventListener('mouseover', () => (el.style.background = '#f3f4f6'));
-                el.addEventListener('mouseout', () => (el.style.background = ''));
-            }
-        });
-
-        const ctxMenu = new google.maps.InfoWindow({
-            content: container,
-            position: latLng,
-            disableAutoPan: true,
-        });
-        ctxMenu.open(this._googleMap);
-        this._contextMenu = ctxMenu;
+        callback?.();
     }
 
-    // ─── Utilities ────────────────────────────────────────────────────────────
+    _showMapContextMenu(event) {
+        const items = this.mapManager.getComposedContextMenuItems('map');
+        if (!items.length) return;
+        this.mapManager.showContextMenu(event, items);
+    }
 
-    /**
-     * Close all open info-windows and the context menu.
-     */
+    _showDriverContextMenu(driver, event) {
+        const items = this.mapManager.getComposedContextMenuItems(`driver:${driver.public_id}`);
+        this.mapManager.showContextMenu(event, items);
+    }
+
+    _showVehicleContextMenu(vehicle, event) {
+        const items = this.mapManager.getComposedContextMenuItems(`vehicle:${vehicle.public_id}`);
+        this.mapManager.showContextMenu(event, items);
+    }
+
+    _showServiceAreaContextMenu(serviceArea, event) {
+        const items = this.mapManager.getComposedContextMenuItems(`service-area:${serviceArea.public_id}`);
+        this.mapManager.showContextMenu(event, items);
+    }
+
+    _showZoneContextMenu(zone, event) {
+        const items = this.mapManager.getComposedContextMenuItems(`zone:${zone.public_id}`);
+        this.mapManager.showContextMenu(event, items);
+    }
+
     _closeAllInfoWindows() {
         this._infoWindows.forEach((iw) => iw.close());
-        this._contextMenu?.close();
+        this.mapManager.closeContextMenu();
     }
 
-    /**
-     * Extract { lat, lng } from a GeoJSON Point or [lat, lng] array.
-     *
-     * @param {Object|Array|null} location
-     * @returns {{ lat: number, lng: number }|null}
-     */
     _getCoords(location) {
         if (!location) return null;
-        // GeoJSON Point: { type: 'Point', coordinates: [lng, lat] }
         if (location?.coordinates && isArray(location.coordinates)) {
             const [lng, lat] = location.coordinates;
             if (Number.isFinite(lat) && Number.isFinite(lng)) return { lat, lng };
         }
-        // [lat, lng] array
+
         if (isArray(location) && location.length >= 2) {
             const [lat, lng] = location;
             if (Number.isFinite(lat) && Number.isFinite(lng)) return { lat, lng };
         }
-        // { latitude, longitude } object
+
         if (Number.isFinite(location?.latitude) && Number.isFinite(location?.longitude)) {
             return { lat: location.latitude, lng: location.longitude };
         }
+
         return null;
     }
 
-    /**
-     * Convert Leaflet-style coordinates (LatLngBounds / LatLng[][] / L.LatLng[])
-     * to Google Maps polygon paths (Array<{ lat, lng }>).
-     *
-     * @param {any} leafletCoordinates
-     * @returns {Array<{ lat: number, lng: number }>[]|null}
-     */
-    _coordinatesToGooglePaths(leafletCoordinates) {
-        if (!leafletCoordinates) return null;
+    _coordinatesToGooglePaths(coordinates, options = {}) {
+        if (!coordinates) return null;
+
+        const source = options.source ?? 'leaflet';
+
         try {
-            // ember-leaflet exposes coordinates as L.LatLng[][]
-            const rings = Array.isArray(leafletCoordinates[0]) ? leafletCoordinates : [leafletCoordinates];
-            return rings.map((ring) =>
-                ring.map((pt) => {
-                    if (typeof pt.lat === 'number') return { lat: pt.lat, lng: pt.lng };
-                    if (Array.isArray(pt)) return { lat: pt[0], lng: pt[1] };
-                    return null;
-                }).filter(Boolean)
-            );
+            const rings = this._normalizeCoordinateRings(coordinates, source);
+            const normalizedRings = rings.map((ring) => ring.map((point) => this._pointToGoogleLatLng(point, source)).filter(Boolean)).filter((ring) => ring.length >= 3);
+
+            if (normalizedRings.length === 0) {
+                return null;
+            }
+
+            return normalizedRings.length === 1 ? normalizedRings[0] : normalizedRings;
         } catch {
             return null;
         }
     }
 
-    /**
-     * Wait for `window.google.maps` to be available (loaded via script tag).
-     *
-     * @returns {Promise<void>}
-     */
-    _waitForGoogleMaps() {
-        return new Promise((resolve) => {
-            if (window.google?.maps) return resolve();
-            const interval = setInterval(() => {
-                if (window.google?.maps) {
-                    clearInterval(interval);
-                    resolve();
-                }
-            }, 100);
-        });
+    _normalizeCoordinateRings(coordinates, source = 'leaflet') {
+        if (!isArray(coordinates) || coordinates.length === 0) {
+            return [];
+        }
+
+        if (source === 'geojson') {
+            const [firstPolygon] = coordinates;
+
+            // Polygon coordinates: [ring[point]]
+            if (isArray(firstPolygon) && typeof firstPolygon?.[0]?.[0] === 'number') {
+                return [firstPolygon];
+            }
+
+            // MultiPolygon coordinates: [polygon[ring[point]]]
+            if (isArray(firstPolygon) && isArray(firstPolygon?.[0])) {
+                return coordinates.map((polygon) => (isArray(polygon) ? polygon[0] : null)).filter((ring) => isArray(ring));
+            }
+
+            return [];
+        }
+
+        // Flat leaflet-style ring: [[lat, lng], ...]
+        if (typeof coordinates?.[0]?.[0] === 'number') {
+            return [coordinates];
+        }
+
+        // Nested leaflet-style rings: [[[lat, lng], ...], ...]
+        if (isArray(coordinates?.[0])) {
+            return coordinates.filter((ring) => isArray(ring));
+        }
+
+        return [];
     }
 
-    /**
-     * Remove all map objects and listeners.
-     */
-    _cleanupMap() {
-        this._markers.forEach((m) => m.setMap(null));
-        this._polygons.forEach((p) => p.setMap(null));
-        this._infoWindows.forEach((iw) => iw.close());
-        this._drawingManager?.setMap(null);
-        this._markers.clear();
-        this._polygons.clear();
-        this._infoWindows.clear();
-        this._drawingManager = null;
-        this._googleMap = null;
+    _pointToGoogleLatLng(point, source = 'leaflet') {
+        if (typeof point?.lat === 'number' && typeof point?.lng === 'number') {
+            return { lat: point.lat, lng: point.lng };
+        }
+
+        if (!isArray(point) || point.length < 2) {
+            return null;
+        }
+
+        if (source === 'geojson') {
+            const lng = Number(point[0]);
+            const lat = Number(point[1]);
+            return Number.isFinite(lat) && Number.isFinite(lng) ? { lat, lng } : null;
+        }
+
+        const lat = Number(point[0]);
+        const lng = Number(point[1]);
+        return Number.isFinite(lat) && Number.isFinite(lng) ? { lat, lng } : null;
     }
 }

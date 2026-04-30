@@ -14,6 +14,7 @@
  *
  * @module services/map-adapter-interface
  */
+/* eslint-disable no-unused-vars */
 import Service from '@ember/service';
 
 export default class MapAdapterInterface extends Service {
@@ -38,6 +39,12 @@ export default class MapAdapterInterface extends Service {
      */
     _overlays = new Map();
 
+    /**
+     * Internal routing control registry: id → provider-neutral route handle.
+     * @type {Map<string, Object>}
+     */
+    _routingControls = new Map();
+
     // ─── Lifecycle ─────────────────────────────────────────────────────────────
 
     /**
@@ -56,6 +63,28 @@ export default class MapAdapterInterface extends Service {
      */
     destroyMap() {
         throw new Error(`${this.constructor.name} must implement destroyMap()`);
+    }
+
+    /**
+     * Bind an already-created native map instance to the adapter.
+     * Used by host components that own map creation but still route
+     * all behavior through the provider adapter.
+     *
+     * @param {*} mapInstance
+     */
+    setMapInstance(mapInstance) {
+        this._map = mapInstance;
+        return mapInstance;
+    }
+
+    showContextMenu(event, items = []) {
+        return { event, items };
+    }
+
+    closeContextMenu() {}
+
+    removeLayer(layer) {
+        return layer;
     }
 
     /**
@@ -288,6 +317,37 @@ export default class MapAdapterInterface extends Service {
         return this._overlays.get(id) ?? null;
     }
 
+    // ─── Routing Controls ─────────────────────────────────────────────────────
+
+    addRoutingControl(route, options = {}) {
+        throw new Error(`${this.constructor.name} must implement addRoutingControl(route, options)`);
+    }
+
+    replaceRoutingControl(route, existingHandle, options = {}) {
+        if (existingHandle) {
+            this.removeRoutingControl(existingHandle, options.removeOptions ?? {});
+        }
+
+        return this.addRoutingControl(route, options);
+    }
+
+    removeRoutingControl(handle, options = {}) {
+        throw new Error(`${this.constructor.name} must implement removeRoutingControl(handle, options)`);
+    }
+
+    clearRoutingControls(filter) {
+        for (const handle of this._routingControls.values()) {
+            if (typeof filter === 'function' && filter(handle) === false) {
+                continue;
+            }
+            this.removeRoutingControl(handle);
+        }
+    }
+
+    positionWaypoints(waypointsOrBounds, options = {}) {
+        return { waypointsOrBounds, options };
+    }
+
     // ─── Drawing Tools ─────────────────────────────────────────────────────────
 
     /**
@@ -295,7 +355,7 @@ export default class MapAdapterInterface extends Service {
      *
      * @param {'polygon'|'circle'|'rectangle'|'polyline'|'marker'|null} type
      */
-    enableDrawingMode(type) {
+    enableDrawingMode(type, options = {}) {
         throw new Error(`${this.constructor.name} must implement enableDrawingMode(type)`);
     }
 
@@ -309,7 +369,7 @@ export default class MapAdapterInterface extends Service {
     /**
      * Show the drawing toolbar UI control.
      */
-    showDrawControl() {
+    showDrawControl(config = {}) {
         throw new Error(`${this.constructor.name} must implement showDrawControl()`);
     }
 
@@ -443,5 +503,49 @@ export default class MapAdapterInterface extends Service {
      */
     setTileLayer(url, options = {}) {
         // Optional — providers that don't support custom tiles can no-op this.
+    }
+
+    registerMarker(id, markerObject) {
+        this._markers.set(id, markerObject);
+        return markerObject;
+    }
+
+    registerPolygon(id, polygonObject) {
+        this._overlays.set(id, polygonObject);
+        return polygonObject;
+    }
+
+    showPolygon(id) {
+        const polygon = this.getOverlay(id);
+        if (polygon) {
+            this.showLayer?.(polygon);
+        }
+
+        return polygon ?? null;
+    }
+
+    hidePolygon(id) {
+        const polygon = this.getOverlay(id);
+        if (polygon) {
+            this.hideLayer?.(polygon);
+        }
+
+        return polygon ?? null;
+    }
+
+    getContextMenuItems() {
+        return [];
+    }
+
+    showCoordinates() {}
+
+    centerMap() {}
+
+    toggleDrawControl() {}
+
+    panBy() {}
+
+    editPolygon() {
+        return Promise.resolve({ type: 'unsupported' });
     }
 }

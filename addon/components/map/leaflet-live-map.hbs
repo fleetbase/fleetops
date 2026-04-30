@@ -27,6 +27,7 @@
         @serviceAreas={{this.serviceAreaActions.serviceAreas}}
         @ready={{this.load.isIdle}}
         @onLoad={{this.didLoadGoogleMap}}
+        @onViewportChanged={{perform this.reloadResourcesInViewport}}
         @onDriverAdded={{fn this.trigger "onDriverAdded"}}
         @onDriverClicked={{fn this.trigger "onDriverClicked"}}
         @onVehicleAdded={{fn this.trigger "onVehicleAdded"}}

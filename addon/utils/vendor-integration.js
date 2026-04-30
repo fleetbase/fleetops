@@ -1,4 +1,5 @@
 import apiUrl from '@fleetbase/ember-core/utils/api-url';
+import { isArray } from '@ember/array';
 
 /**
  * Normalize any array-like (EmberArray, Set, arguments) into a plain array.
@@ -8,7 +9,7 @@ import apiUrl from '@fleetbase/ember-core/utils/api-url';
  */
 export function normalizeToArray(input) {
     if (!input) return [];
-    if (Array.isArray(input)) return input;
+    if (isArray(input)) return input;
     if (typeof input.toArray === 'function') return input.toArray();
     try {
         return Array.from(input);

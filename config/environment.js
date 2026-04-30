@@ -8,33 +8,6 @@ module.exports = function (environment) {
         environment,
         mountedEngineRoutePrefix: getMountedEngineRoutePrefix(),
 
-        /**
-         * Map provider configuration
-         * ─────────────────────────────────────────────────────────────────────
-         * mapProvider: 'leaflet' (default) | 'google'
-         *   Controls which map engine is rendered in the live map.
-         *   Can also be changed at runtime via the Settings → Map panel.
-         *
-         * googleMapsApiKey:
-         *   Required when mapProvider is 'google'.
-         *   Set via the GOOGLE_MAPS_API_KEY environment variable or directly
-         *   here for local development.
-         *   The key must have the following APIs enabled in Google Cloud Console:
-         *     • Maps JavaScript API
-         *     • Drawing Library
-         *     • Geometry Library
-         *     • Geocoding API (for server-side geocoding already in use)
-         *     • Places API (optional, for address autocomplete)
-         *
-         * googleMapsLibraries:
-         *   Comma-separated list of additional Google Maps JS API libraries.
-         *   'drawing' is required for geofence creation/editing.
-         *   'geometry' is required for distance calculations.
-         */
-        mapProvider: getenv('MAP_PROVIDER', 'leaflet'),
-        googleMapsApiKey: getenv('GOOGLE_MAPS_API_KEY', null),
-        googleMapsLibraries: getenv('GOOGLE_MAPS_LIBRARIES', 'drawing,geometry,places'),
-
         defaultValues: {
             driverImage: getenv('DEFAULT_DRIVER_IMAGE', 'https://s3.ap-southeast-1.amazonaws.com/flb-assets/static/no-avatar.png'),
             userImage: getenv('DEFAULT_USER_IMAGE', 'https://s3.ap-southeast-1.amazonaws.com/flb-assets/static/no-avatar.png'),

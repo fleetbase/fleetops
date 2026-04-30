@@ -7,14 +7,20 @@ export default class SettingsRoutingController extends Controller {
     @service fetch;
     @service notifications;
     @service currentUser;
-    @service leafletRoutingControl;
-    @tracked routerService = 'osrm';
+    @service routeEngine;
+    @service routeOptimization;
+    @tracked displayEngine = 'osrm';
+    @tracked optimizationEngine = 'osrm';
     @tracked routingUnit = 'km';
     @tracked routingUnitOptions = [
         { label: 'Kilometers', value: 'km' },
         { label: 'Miles', value: 'mi' },
     ];
-    @tracked saveTasks = [];
+    saveTasks = new Map();
+
+    get hasEngineOverrides() {
+        return ['vroom', 'valhalla'].includes(this.displayEngine) || ['vroom', 'valhalla'].includes(this.optimizationEngine);
+    }
 
     constructor() {
         super(...arguments);
@@ -28,10 +34,19 @@ export default class SettingsRoutingController extends Controller {
      */
     @task *saveSettings() {
         try {
-            yield this.fetch.post('fleet-ops/settings/routing-settings', { router: this.routerService, unit: this.routingUnit });
+            yield this.fetch.post('fleet-ops/settings/routing-settings', {
+                display_engine: this.displayEngine,
+                optimization_engine: this.optimizationEngine,
+                unit: this.routingUnit,
+            });
             yield this.performAdditionalSaveTasks();
             // Save in local memory too
-            this.currentUser.setOption('routing', { router: this.routerService, unit: this.routingUnit });
+            this.currentUser.setOption('routing', {
+                router: this.displayEngine,
+                routing_display_engine: this.displayEngine,
+                routing_optimization_engine: this.optimizationEngine,
+                unit: this.routingUnit,
+            });
             this.notifications.success('Routing setting saved.');
         } catch (error) {
             this.notifications.serverError(error);
@@ -45,23 +60,43 @@ export default class SettingsRoutingController extends Controller {
      */
     @task *getSettings() {
         try {
-            const { router, unit } = yield this.fetch.get('fleet-ops/settings/routing-settings');
-            this.routerService = router;
+            const { router, display_engine, optimization_engine, unit } = yield this.fetch.get('fleet-ops/settings/routing-settings');
+            this.displayEngine = display_engine ?? router ?? 'osrm';
+            this.optimizationEngine = optimization_engine ?? display_engine ?? router ?? 'osrm';
             this.routingUnit = unit;
         } catch (error) {
             this.notifications.serverError(error);
         }
     }
 
-    registerSaveTask(task) {
-        this.saveTasks.push(task);
+    registerSaveTask(key, task) {
+        if (!key || typeof task?.perform !== 'function') {
+            return;
+        }
+
+        this.saveTasks.set(key, task);
+    }
+
+    unregisterSaveTask(key) {
+        if (!key) {
+            return;
+        }
+
+        this.saveTasks.delete(key);
     }
 
     async performAdditionalSaveTasks() {
-        for (let i = 0; i < this.saveTasks.length; i++) {
-            const task = this.saveTasks[i];
-            if (typeof task.perform === 'function') {
+        for (const task of this.saveTasks.values()) {
+            try {
                 await task.perform();
+            } catch (error) {
+                // Ignore explicit ember-concurrency task cancellations from components
+                // that may have unmounted during routing-engine selection changes.
+                if (typeof error?.name === 'string' && error.name.includes('TaskCancelation')) {
+                    continue;
+                }
+
+                throw error;
             }
         }
         return true;

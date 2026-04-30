@@ -20,13 +20,16 @@ use Illuminate\Support\Facades\Log;
  *
  * Resolution order for configuration:
  *
- *   1. Company-level setting  — `Setting::lookupCompany('vroom', 'api_key')`
- *      (written by the fleetbase/vroom extension settings page, if installed)
- *   2. Environment variable   — `VROOM_API_KEY`
- *   3. No key                 — requests are sent without an api_key parameter
+ *   1. Company-level setting  — organization override
+ *   2. System-level setting   — admin default
+ *   3. Environment/config fallback
+ *   4. No key                 — requests are sent without an api_key parameter
  *      (works for self-hosted VROOM instances that do not require auth)
  *
- *   Base URI: `config('vroom.base_uri')` → `VROOM_HOST` env → default production URL
+ *   Base URI and endpoint mode follow the same precedence, with endpoint mode
+ *   controlling whether requests are posted to `/solve` or directly to the
+ *   configured binary host.
+ *
  *   Timeout:  `VROOM_TIMEOUT` env (default 30 s)
  *
  * The VROOM HTTP API endpoint used is `POST {base_uri}/solve`, matching the
@@ -101,27 +104,17 @@ class VroomOrchestrationEngine implements OrchestrationEngineInterface
         unset($job);
 
         // ── Resolve connection config ─────────────────────────────────────────
-        // Base URI: prefer the vroom extension config, then VROOM_HOST env, then
-        // the production verso-optim.com hosted service.
-        $baseUri = config('vroom.base_uri', env('VROOM_HOST', 'https://api.verso-optim.com/vrp/v1'));
+        $baseUri = $this->resolveVroomBaseUri();
+        $endpointMode = $this->resolveVroomEndpointMode();
         $timeout = (int) env('VROOM_TIMEOUT', 30);
 
-        // ── Resolve API key ───────────────────────────────────────────────────
-        // 1. Company-level setting (written by fleetbase/vroom extension UI)
-        // 2. VROOM_API_KEY env var
-        // 3. null — no key appended (for self-hosted instances)
-        $apiKey = null;
-        try {
-            $apiKey = Setting::lookupCompany('vroom', ['api_key' => null])['api_key'] ?? null;
-        } catch (\Throwable) {
-            // Setting table may not exist in minimal installs — ignore
-        }
-        if (!$apiKey) {
-            $apiKey = env('VROOM_API_KEY');
-        }
+        $apiKey = $this->resolveVroomApiKey();
 
-        // Build the solve URL — append api_key as query param when present
-        $solveUrl = rtrim($baseUri, '/') . '/solve';
+        // Build the solve URL — append api_key as query param when present.
+        $solveUrl = rtrim($baseUri, '/');
+        if ($endpointMode !== 'binary') {
+            $solveUrl .= '/solve';
+        }
         if ($apiKey) {
             $solveUrl .= '?api_key=' . urlencode($apiKey);
         }
@@ -188,5 +181,48 @@ class VroomOrchestrationEngine implements OrchestrationEngineInterface
             'unassigned'  => array_values($unassigned),
             'summary'     => $vroomResult['summary'] ?? [],
         ];
+    }
+
+    protected function resolveVroomBaseUri(): string
+    {
+        return $this->resolveVroomSetting('api_host', config('vroom.base_uri', env('VROOM_HOST', 'https://api.verso-optim.com/vrp/v1')));
+    }
+
+    protected function resolveVroomApiKey(): ?string
+    {
+        return $this->resolveVroomSetting('api_key', env('VROOM_API_KEY'));
+    }
+
+    protected function resolveVroomEndpointMode(): string
+    {
+        return $this->resolveVroomSetting('endpoint_mode', config('vroom.endpoint_mode', env('VROOM_ENDPOINT_MODE', 'saas')));
+    }
+
+    protected function resolveVroomSetting(string $key, $default = null)
+    {
+        try {
+            $organizationValue = data_get(Setting::lookupCompany('vroom', []), $key);
+            if ($this->hasConfiguredValue($organizationValue)) {
+                return $organizationValue;
+            }
+
+            $systemValue = data_get(Setting::lookup('vroom', []), $key);
+            if ($this->hasConfiguredValue($systemValue)) {
+                return $systemValue;
+            }
+        } catch (\Throwable) {
+            // Setting table may not exist in minimal installs — ignore
+        }
+
+        return $default;
+    }
+
+    protected function hasConfiguredValue($value): bool
+    {
+        if (is_string($value)) {
+            return trim($value) !== '';
+        }
+
+        return $value !== null;
     }
 }

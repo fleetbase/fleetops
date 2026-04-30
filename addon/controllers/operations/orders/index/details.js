@@ -4,19 +4,49 @@ import { inject as service } from '@ember/service';
 import { action } from '@ember/object';
 import { isArray } from '@ember/array';
 import { task } from 'ember-concurrency';
+import { colorForId, routeColorForStatus, routeStyleForStatus } from '../../../../utils/route-colors';
+import { buildRoutePointMarkerPresentation, buildRoutePointsFromPayload } from '../../../../utils/route-visualization';
 
 export default class OperationsOrdersIndexDetailsController extends Controller {
     @controller('operations.orders.index') index;
     @service('universe/menu-service') menuService;
     @service orderActions;
     @service orderSocketEvents;
-    @service leafletMapManager;
+    @service mapManager;
     @service leafletLayerVisibilityManager;
     @service hostRouter;
     @service universe;
     @service sidebar;
     @tracked routingControl;
     @tracked routingCompleted = false;
+
+    get routePoints() {
+        return buildRoutePointsFromPayload(this.model?.payload);
+    }
+
+    get routeMarkerFactory() {
+        const routeColor = colorForId(this.model.public_id ?? this.model.id ?? 'order-route');
+
+        return (_waypoint, index) => {
+            return buildRoutePointMarkerPresentation(this.routePoints[index], routeColor);
+        };
+    }
+
+    get routeStatus() {
+        return this.model.status ?? 'created';
+    }
+
+    get routePolylineOptions() {
+        const color = routeColorForStatus(this.routeStatus);
+        const styles = routeStyleForStatus(this.routeStatus, color);
+
+        return {
+            color,
+            weight: styles.at(-1)?.weight ?? 4,
+            opacity: styles.at(-1)?.opacity ?? 0.85,
+            styles,
+        };
+    }
 
     get tabs() {
         const registeredTabs = this.menuService.getMenuItems('fleet-ops:component:order:details');
@@ -111,7 +141,11 @@ export default class OperationsOrdersIndexDetailsController extends Controller {
         // Change to map layout and display order route
         this.index.changeLayout('map');
         this.routingCompleted = false;
-        this.routingControl = await this.leafletMapManager.addRoutingControl(this.model.routeWaypoints, {
+        this.routingControl = await this.mapManager.addRoutingControl(this.model.routeWaypoints, {
+            color: this.routePolylineOptions.color,
+            status: this.routeStatus,
+            polylineOptions: this.routePolylineOptions,
+            createMarker: this.routeMarkerFactory,
             onRouteFound: () => {
                 this.routingCompleted = true;
             },
@@ -125,6 +159,7 @@ export default class OperationsOrdersIndexDetailsController extends Controller {
         }
 
         // Hide sidebar
+        console.log('called sidebar hideNow');
         this.sidebar.hideNow();
 
         // Show & track driver assigned
@@ -139,7 +174,11 @@ export default class OperationsOrdersIndexDetailsController extends Controller {
                 if (reloadable) {
                     await this.hostRouter.refresh();
                     this.routingCompleted = false;
-                    this.routingControl = await this.leafletMapManager.replaceRoutingControl(this.model.routeWaypoints, this.routingControl, {
+                    this.routingControl = await this.mapManager.replaceRoutingControl(this.model.routeWaypoints, this.routingControl, {
+                        color: this.routePolylineOptions.color,
+                        status: this.routeStatus,
+                        polylineOptions: this.routePolylineOptions,
+                        createMarker: this.routeMarkerFactory,
                         onRouteFound: () => {
                             this.routingCompleted = true;
                         },

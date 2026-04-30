@@ -1,0 +1,15 @@
+<address class="uppercase truncate w-full">
+    {{#if this.name}}
+        <div class="font-semibold">{{this.name}}</div>
+        <div>{{this.place.street1}}</div>
+    {{else}}
+        <div class="font-semibold">{{this.place.street1}}</div>
+    {{/if}}
+    {{#if this.place.street2}}
+        <div>{{this.place.street2}}</div>
+    {{/if}}
+    <div>{{this.cityStatePostalCode}}</div>
+    {{#if this.place.country}}
+        <div>{{this.place.country_name}}</div>
+    {{/if}}
+</address>

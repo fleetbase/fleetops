@@ -11,6 +11,7 @@ import getModelName from '@fleetbase/ember-core/utils/get-model-name';
 const L = window.leaflet || window.L;
 
 export default class MapDrawerPositionListingComponent extends Component {
+    @service mapManager;
     @service leafletMapManager;
     @service store;
     @service fetch;
@@ -26,6 +27,7 @@ export default class MapDrawerPositionListingComponent extends Component {
     @tracked dateFilter = [format(startOfWeek(new Date(), { weekStartsOn: 1 }), 'yyyy-MM-dd'), format(endOfWeek(new Date(), { weekStartsOn: 1 }), 'yyyy-MM-dd')];
     @tracked replaySpeed = '1';
     @tracked positionsLayer = null;
+    @tracked positionOverlayIds = [];
 
     /** Computed properties - read state from service */
     get isReplaying() {
@@ -41,8 +43,8 @@ export default class MapDrawerPositionListingComponent extends Component {
     }
 
     get trackables() {
-        const vehicles = this.leafletMapManager._livemap?.vehicles ?? [];
-        const drivers = this.leafletMapManager._livemap?.drivers ?? [];
+        const vehicles = this.mapManager.livemap?.vehicles ?? [];
+        const drivers = this.mapManager.livemap?.drivers ?? [];
 
         return [...vehicles, ...drivers];
     }
@@ -168,15 +170,16 @@ export default class MapDrawerPositionListingComponent extends Component {
 
         // Clean up replay tracker
         this.positionPlayback.reset();
+        this.#resumeViewportReload();
 
         // Remove our layer group from the map
         this.#clearPositionsLayer(true);
         this.positionsLayer = null;
+        this.positionOverlayIds = [];
     }
 
     @action onResourceSelected(resource) {
         this.resource = resource;
-        this.focusResource(resource);
         this.loadPositions.perform();
     }
 
@@ -219,6 +222,7 @@ export default class MapDrawerPositionListingComponent extends Component {
         }
 
         // Start new replay
+        this.#suspendViewportReload();
         this.#initializeReplay();
         this.positionPlayback.play();
     }
@@ -233,9 +237,11 @@ export default class MapDrawerPositionListingComponent extends Component {
 
     @action stopReplay() {
         this.positionPlayback.stop();
+        this.#resumeViewportReload();
     }
 
     @action stepForward() {
+        this.#suspendViewportReload();
         if (this.isReplaying) {
             this.pauseReplay();
         }
@@ -243,6 +249,7 @@ export default class MapDrawerPositionListingComponent extends Component {
     }
 
     @action stepBackward() {
+        this.#suspendViewportReload();
         if (this.isReplaying) {
             this.pauseReplay();
         }
@@ -256,21 +263,15 @@ export default class MapDrawerPositionListingComponent extends Component {
     }
 
     @action onPositionClicked(position) {
-        if (this.leafletMapManager.map && position.latitude && position.longitude) {
-            this.leafletMapManager.map.setView([position.latitude, position.longitude], 16);
+        if (position.latitude && position.longitude) {
+            this.mapManager.setCenter(position.latitude, position.longitude, 16);
         }
     }
 
     @action focusResource(resource) {
         const hasValidCoordinates = resource?.hasValidCoordinates || (Number.isFinite(resource?.latitude) && Number.isFinite(resource?.longitude));
         if (hasValidCoordinates) {
-            const coordinates = [resource.latitude, resource.longitude];
-
-            // Use flyTo with a zoom level of 18 for a smooth animation
-            this.leafletMapManager.map.flyTo(coordinates, 18, {
-                animate: true,
-                duration: 0.8,
-            });
+            this.mapManager.focusResource(resource, 18);
         }
     }
 
@@ -300,7 +301,11 @@ export default class MapDrawerPositionListingComponent extends Component {
                   })
                 : [];
 
-            this.#renderPositionsOnMap({ fitLast: 5 });
+            if (this.positions.length > 0) {
+                this.#renderPositionsOnMap({ fitLast: 5 });
+            } else if (this.resource) {
+                this.focusResource(this.resource);
+            }
 
             // Reset replay state when positions change
             this.stopReplay();
@@ -331,18 +336,31 @@ export default class MapDrawerPositionListingComponent extends Component {
             subject: this.resource,
             positions: this.positions,
             speed: parseFloat(this.replaySpeed),
-            map: this.leafletMapManager.map,
+            map: this.mapManager.isGoogleMaps ? null : this.leafletMapManager.map,
             callback: (data) => {
                 if (data.type === 'complete') {
                     // Replay completed
+                    this.#resumeViewportReload();
                     this.notifications.success('Replay completed');
                 }
             },
         });
     }
 
+    #suspendViewportReload() {
+        this.mapManager.livemap?.suspendViewportReload?.(`position-playback:${this.id}`);
+    }
+
+    #resumeViewportReload() {
+        this.mapManager.livemap?.resumeViewportReload?.(`position-playback:${this.id}`);
+    }
+
     /** Position Rendering */
     #ensurePositionsLayer() {
+        if (this.mapManager.isGoogleMaps) {
+            return true;
+        }
+
         if (!this.leafletMapManager.map) return null;
 
         if (!this.positionsLayer) {
@@ -353,10 +371,23 @@ export default class MapDrawerPositionListingComponent extends Component {
     }
 
     #clearPositionsLayer(removeFromMap = false) {
+        if (this.mapManager.isGoogleMaps) {
+            for (const overlayId of this.positionOverlayIds) {
+                this.mapManager.removeMarker(overlayId);
+            }
+            this.positionOverlayIds = [];
+            return;
+        }
+
         if (this.positionsLayer) {
-            this.positionsLayer.clearLayers();
             if (removeFromMap && this.leafletMapManager.map) {
                 this.positionsLayer.removeFrom(this.leafletMapManager.map);
+            } else {
+                try {
+                    this.positionsLayer.clearLayers();
+                } catch {
+                    // Ignore teardown race when Leaflet renderer is already gone.
+                }
             }
         }
     }
@@ -366,6 +397,21 @@ export default class MapDrawerPositionListingComponent extends Component {
         const lng = parseFloat(pos.longitude);
         if (!this.#isValidLatLng(lat, lng)) return;
 
+        if (this.mapManager.isGoogleMaps) {
+            const overlayId = `position-history:${this.resource?.id ?? 'resource'}:${index}`;
+            const dot = document.createElement('div');
+            dot.className = 'fleetops-position-history-dot';
+            dot.title = `Position ${index + 1}`;
+
+            this.mapManager.addMarker(overlayId, lat, lng, {
+                content: dot,
+                title: `Position ${index + 1}`,
+                onClick: () => this.onPositionClicked(pos),
+            });
+            this.positionOverlayIds = [...this.positionOverlayIds, overlayId];
+            return;
+        }
+
         const marker = L.circleMarker([lat, lng], {
             radius: 3,
             color: '#3b82f6',
@@ -374,13 +420,13 @@ export default class MapDrawerPositionListingComponent extends Component {
         });
 
         // Popup content (mirrors your template)
-        const html = htmlSafe(`<div class="text-xs">
+        const html = `<div class="text-xs">
         <div><strong>Position ${index + 1}</strong></div>
         <div>Time: ${pos.timestamp ?? ''}</div>
         <div>Speed: ${pos.speedKmh ?? 'N/A'} km/h</div>
         <div>Heading: ${pos.heading ?? 'N/A'}°</div>
         <div>Altitude: ${pos.altitude ?? 'N/A'} m</div>
-        </div>`);
+        </div>`;
 
         marker.bindPopup(html);
 
@@ -395,13 +441,13 @@ export default class MapDrawerPositionListingComponent extends Component {
     }
 
     #renderPositionsOnMap({ fitLast = 0, minZoom = 15, maxZoom = 18 } = {}) {
-        if (!this.leafletMapManager.map || !this.positions?.length) {
+        if ((!this.mapManager.isGoogleMaps && !this.leafletMapManager.map) || !this.positions?.length) {
             this.#clearPositionsLayer(false);
             return;
         }
 
         this.#ensurePositionsLayer();
-        this.positionsLayer.clearLayers();
+        this.#clearPositionsLayer(false);
 
         const latlngs = [];
         this.positions.forEach((pos, i) => {
@@ -417,13 +463,34 @@ export default class MapDrawerPositionListingComponent extends Component {
 
         // choose subset (e.g., last 5 points) to bias the view local
         const slice = fitLast > 0 ? latlngs.slice(-fitLast) : latlngs;
+        const zoomBounds = this.#getReplayViewportZoomBounds({ minZoom, maxZoom });
 
         // Clamp zoom to neighborhood-level
-        this.#fitNeighborhood(slice, { zoom: 16, minZoom, maxZoom, padding: [24, 24], animate: true });
+        this.#fitNeighborhood(slice, { zoom: 16, minZoom: zoomBounds.minZoom, maxZoom: zoomBounds.maxZoom, padding: [24, 24], animate: true });
     }
 
     #fitNeighborhood(latlngs, { zoom = null, minZoom = 15, maxZoom = 18, padding = [16, 16], animate = true } = {}) {
-        if (!this.leafletMapManager.map || !latlngs?.length) return;
+        if (!latlngs?.length) return;
+
+        if (this.mapManager.isGoogleMaps) {
+            if (latlngs.length === 1) {
+                this.mapManager.setCenter(latlngs[0][0], latlngs[0][1], minZoom);
+                return;
+            }
+
+            const lats = latlngs.map(([lat]) => lat);
+            const lngs = latlngs.map(([, lng]) => lng);
+            this.mapManager.fitBounds(
+                [
+                    [Math.min(...lats), Math.min(...lngs)],
+                    [Math.max(...lats), Math.max(...lngs)],
+                ],
+                { paddingBottomRight: padding, animate, maxZoom, minZoom }
+            );
+            return;
+        }
+
+        if (!this.leafletMapManager.map) return;
 
         const map = this.leafletMapManager.map;
 
@@ -451,5 +518,19 @@ export default class MapDrawerPositionListingComponent extends Component {
         // Center on bounds center with clamped zoom
         const center = bounds.getCenter();
         map.setView(center, targetZoom, { animate });
+    }
+
+    #getReplayViewportZoomBounds({ minZoom = 15, maxZoom = 18 } = {}) {
+        if (this.mapManager.isGoogleMaps) {
+            return {
+                minZoom,
+                maxZoom: Math.min(maxZoom, 16),
+            };
+        }
+
+        return {
+            minZoom,
+            maxZoom,
+        };
     }
 }

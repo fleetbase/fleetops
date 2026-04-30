@@ -1,0 +1,15 @@
+<ContentPanel @title="Configure Map" @open={{true}} @wrapperClass="bordered-classic">
+    <InputGroup @name="Google Map ID" @value={{this.googleMapsMapId}} @helpText="Required for Google Advanced Markers and cloud-based map styling." />
+</ContentPanel>
+
+<EmberWormhole @to="next-view-section-subheader-actions">
+    <Button
+        @type="primary"
+        @size="sm"
+        @icon="save"
+        @text="Save Changes"
+        @onClick={{perform this.saveSettings}}
+        @isLoading={{or this.saveSettings.isRunning this.loadSettings.isRunning}}
+        @disabled={{this.saveSettings.isRunning}}
+    />
+</EmberWormhole>

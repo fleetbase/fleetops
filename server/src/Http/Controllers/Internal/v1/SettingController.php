@@ -184,9 +184,17 @@ class SettingController extends Controller
      */
     public function saveRoutingSettings(Request $request)
     {
-        $router = $request->input('router');
-        $unit   = $request->input('unit', 'km');
-        Setting::configureCompany('routing', ['router' => $router, 'unit' => $unit]);
+        $displayEngine      = $request->input('display_engine', $request->input('router', 'osrm'));
+        $optimizationEngine = $request->input('optimization_engine', $displayEngine);
+        $unit               = $request->input('unit', 'km');
+        Setting::configureCompany('routing', [
+            'router'                      => $displayEngine,
+            'display_engine'              => $displayEngine,
+            'optimization_engine'         => $optimizationEngine,
+            'routing_display_engine'      => $displayEngine,
+            'routing_optimization_engine' => $optimizationEngine,
+            'unit'                        => $unit,
+        ]);
 
         return response()->json([
             'status'  => 'ok',
@@ -202,6 +210,14 @@ class SettingController extends Controller
     public function getRoutingSettings()
     {
         $routingSettings = Setting::lookupCompany('routing', ['router' => 'osrm', 'unit' => 'km']);
+
+        $displayEngine = data_get($routingSettings, 'display_engine', data_get($routingSettings, 'routing_display_engine', data_get($routingSettings, 'router', 'osrm')));
+        $optimizationEngine = data_get($routingSettings, 'optimization_engine', data_get($routingSettings, 'routing_optimization_engine', $displayEngine));
+        $routingSettings['router'] = $displayEngine;
+        $routingSettings['display_engine'] = $displayEngine;
+        $routingSettings['optimization_engine'] = $optimizationEngine;
+        $routingSettings['routing_display_engine'] = $displayEngine;
+        $routingSettings['routing_optimization_engine'] = $optimizationEngine;
 
         // always default to km if no unit is set
         if (!isset($routingSettings['unit'])) {
@@ -225,20 +241,17 @@ class SettingController extends Controller
     public function getMapSettings()
     {
         $defaults = [
-            'mapProvider'            => 'leaflet',
-            'googleMapsMapType'      => 'roadmap',
-            'googleMapsTrafficLayer' => false,
-            'googleMapsTransitLayer' => false,
-            'leafletTileProvider'    => 'carto-light',
-            'leafletCustomTileUrl'   => '',
+            'mapProvider' => 'leaflet',
         ];
 
         $mapSettings = Setting::lookupFromCompany('fleet-ops.map-settings', $defaults);
+        $systemMapSettings = Setting::lookup('fleet-ops.map-settings', []);
 
         // Source the Google Maps API key from the system-level services config
         // that is managed by the core-api admin settings panel. This ensures a
         // single source of truth and avoids duplicating key management.
         $mapSettings['googleMapsApiKey'] = config('services.google_maps.api_key', env('GOOGLE_MAPS_API_KEY', ''));
+        $mapSettings['googleMapsMapId'] = data_get($systemMapSettings, 'googleMapsMapId', '');
 
         return response()->json($mapSettings);
     }
@@ -269,10 +282,27 @@ class SettingController extends Controller
 
         Setting::configureCompany('fleet-ops.map-settings', $settings);
 
-        return response()->json([
-            'status'  => 'ok',
-            'message' => 'Map settings successfully saved.',
-        ]);
+        return response()->json($this->getMapSettings()->getData(true));
+    }
+
+    public function getAdminMapSettings()
+    {
+        $defaults = [
+            'googleMapsMapId' => '',
+        ];
+
+        return response()->json(Setting::lookup('fleet-ops.map-settings', $defaults));
+    }
+
+    public function saveAdminMapSettings(Request $request)
+    {
+        $settings = [
+            'googleMapsMapId' => (string) $request->input('googleMapsMapId', ''),
+        ];
+
+        Setting::configure('fleet-ops.map-settings', $settings);
+
+        return response()->json($this->getAdminMapSettings()->getData(true));
     }
 
     /**

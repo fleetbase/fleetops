@@ -15,8 +15,12 @@
  * @module services/map-adapter/leaflet
  */
 import MapAdapterInterface from '../map-adapter-interface';
+import { isArray } from '@ember/array';
 import { debug } from '@ember/debug';
 import { isNone } from '@ember/utils';
+import { next } from '@ember/runloop';
+import { createGeoJsonFromLayer } from '../../utils/leaflet-to-geojson';
+import { waypointIconHtml } from '../../utils/route-colors';
 
 const L = window.leaflet || window.L;
 
@@ -50,6 +54,9 @@ export default class LeafletAdapter extends MapAdapterInterface {
     /** @type {Map<string, Function[]>} Normalized event → [handler, wrappedHandler] pairs */
     _eventHandlers = new Map();
 
+    /** @type {Object|null} */
+    _drawControlConfig = null;
+
     // ─── Lifecycle ─────────────────────────────────────────────────────────────
 
     initializeMap(element, options = {}) {
@@ -78,6 +85,11 @@ export default class LeafletAdapter extends MapAdapterInterface {
         return this._map;
     }
 
+    setMapInstance(mapInstance) {
+        this._map = mapInstance;
+        return mapInstance;
+    }
+
     destroyMap() {
         try {
             this._map?.remove();
@@ -89,9 +101,11 @@ export default class LeafletAdapter extends MapAdapterInterface {
         this._overlays.clear();
         this._popups.clear();
         this._geojsonLayers.clear();
+        this._routingControls.clear();
         this._drawControl = null;
         this._drawFeatureGroup = null;
         this._tileLayer = null;
+        this._eventHandlers.clear();
         debug('[LeafletAdapter] Map destroyed');
     }
 
@@ -140,13 +154,25 @@ export default class LeafletAdapter extends MapAdapterInterface {
     }
 
     getCenter() {
-        const c = this._map?.getCenter();
-        return c ? { lat: c.lat, lng: c.lng } : { lat: 0, lng: 0 };
+        if (!this._map?._loaded) {
+            return { lat: 0, lng: 0 };
+        }
+
+        try {
+            const c = this._map.getCenter();
+            return c ? { lat: c.lat, lng: c.lng } : { lat: 0, lng: 0 };
+        } catch {
+            return { lat: 0, lng: 0 };
+        }
     }
 
     getBounds() {
         const b = this._map?.getBounds();
-        if (!b) return [[0, 0], [0, 0]];
+        if (!b)
+            return [
+                [0, 0],
+                [0, 0],
+            ];
         return [
             [b.getSouth(), b.getWest()],
             [b.getNorth(), b.getEast()],
@@ -165,7 +191,7 @@ export default class LeafletAdapter extends MapAdapterInterface {
                   iconAnchor: options.iconAnchor ?? [12, 12],
                   ...options.iconOptions,
               })
-            : options.icon ?? undefined;
+            : (options.icon ?? undefined);
 
         const markerOptions = {
             title: options.title,
@@ -288,6 +314,134 @@ export default class LeafletAdapter extends MapAdapterInterface {
         }
     }
 
+    addRoutingControl(route, options = {}) {
+        if (!this._map || !route?.waypoints?.length) return null;
+
+        const handleId = options.id ?? `route:${Date.now().toString(36)}:${Math.random().toString(36).slice(2, 8)}`;
+        const routeStyles = options.polylineOptions?.styles ?? null;
+        const polylineIds = [];
+
+        if (route.coordinates?.length) {
+            const polylineLayers = routeStyles?.length
+                ? routeStyles.map((style, index) => ({
+                      id: `${handleId}:polyline:${index}`,
+                      options: {
+                          color: style.color,
+                          weight: style.weight,
+                          opacity: style.opacity,
+                          leafletOptions: {
+                              lineCap: style.lineCap,
+                              lineJoin: style.lineJoin,
+                              dashArray: style.dashArray,
+                              ...(options.polylineOptions?.leafletOptions ?? {}),
+                          },
+                      },
+                  }))
+                : [
+                      {
+                          id: `${handleId}:polyline:0`,
+                          options: {
+                              color: options.polylineOptions?.color ?? options.color ?? '#2563eb',
+                              weight: options.polylineOptions?.weight ?? 4,
+                              opacity: options.polylineOptions?.opacity ?? 0.85,
+                              leafletOptions: options.polylineOptions?.leafletOptions ?? {},
+                          },
+                      },
+                  ];
+
+            polylineLayers.forEach(({ id, options: polylineOptions }) => {
+                const polyline = this.addPolyline(id, route.coordinates, polylineOptions);
+                if (polyline) {
+                    polylineIds.push(id);
+                }
+            });
+        }
+        const markerIds = [];
+
+        if (!options.suppressMarkers) {
+            route.waypoints.forEach((waypoint, index) => {
+                const markerId = `${handleId}:marker:${index}`;
+                const markerOptions = this.#buildRouteMarkerOptions(waypoint, index, route, options);
+                if (markerOptions === null) return;
+
+                this.addMarker(markerId, waypoint[0], waypoint[1], markerOptions);
+                markerIds.push(markerId);
+            });
+        }
+
+        const handle = {
+            id: handleId,
+            engine: route.engine,
+            route,
+            markerIds,
+            polylineIds,
+            tag: options.tag ?? null,
+            raw: route.raw,
+            bounds: route.bounds,
+        };
+
+        this._routingControls.set(handleId, handle);
+        return handle;
+    }
+
+    removeRoutingControl(handle) {
+        const resolvedHandle = typeof handle === 'string' ? this._routingControls.get(handle) : handle;
+        if (!resolvedHandle) return false;
+
+        resolvedHandle.markerIds?.forEach((id) => this.removeMarker(id));
+        resolvedHandle.polylineIds?.forEach((id) => this.removeOverlay(id));
+        this._routingControls.delete(resolvedHandle.id);
+        return true;
+    }
+
+    positionWaypoints(waypointsOrBounds, options = {}) {
+        if (!this._map) return null;
+
+        const isBounds = options.isBounds === true || waypointsOrBounds instanceof L.LatLngBounds;
+        const bounds = isBounds ? waypointsOrBounds : null;
+        const waypoints = isBounds ? null : waypointsOrBounds;
+        const paddingBottomRight = options.paddingBottomRight ?? [300, 0];
+        const singlePointZoom = options.singlePointZoom ?? 18;
+        const maxZoom = options.maxZoom ?? (isArray(waypoints) && waypoints.length === 2 ? 15 : 14);
+        const panBy = options.panBy ?? [0, 0];
+
+        if (isArray(waypoints) && waypoints.length === 1) {
+            this._map.flyTo(waypoints[0], singlePointZoom, { animate: true });
+            this._map.once('moveend', () => this.panBy(panBy[0], panBy[1]));
+            return true;
+        }
+
+        if (bounds || (isArray(waypoints) && waypoints.length > 1)) {
+            this.fitBounds(bounds ?? waypoints, {
+                paddingBottomRight,
+                maxZoom,
+                animate: true,
+            });
+            this._map.once('moveend', () => this.panBy(panBy[0], panBy[1]));
+            return true;
+        }
+
+        return null;
+    }
+
+    removeLayer(layer) {
+        if (!layer) return;
+
+        try {
+            if (typeof layer.remove === 'function') {
+                layer.remove();
+            } else {
+                this._map?.removeLayer?.(layer);
+            }
+        } catch (e) {
+            debug('[LeafletAdapter] Error removing layer: ' + e.message);
+        }
+
+        if (this._drawFeatureGroup?.hasLayer?.(layer)) {
+            this._drawFeatureGroup.removeLayer(layer);
+        }
+    }
+
     // ─── Layer Visibility ──────────────────────────────────────────────────────
 
     showLayer(layer, { soft = false } = {}) {
@@ -305,6 +459,7 @@ export default class LeafletAdapter extends MapAdapterInterface {
         }
         const el = this.#getLayerEl(layer);
         if (el) el.style.display = '';
+        this.#showOverlays(layer);
         layer.__hidden = false;
     }
 
@@ -318,7 +473,64 @@ export default class LeafletAdapter extends MapAdapterInterface {
         }
         const el = this.#getLayerEl(layer);
         if (el) el.style.display = 'none';
+        this.#hideOverlays(layer, true);
         layer.__hidden = true;
+    }
+
+    #hideOverlays(layer, remember = true) {
+        next(() => {
+            const tt = layer.getTooltip?.() ?? layer._tooltip ?? null;
+            const pp = layer.getPopup?.() ?? layer._popup ?? null;
+
+            if (remember) {
+                layer.__hadOpenTooltip = !!(tt && tt.isOpen && tt.isOpen());
+                layer.__hadOpenPopup = !!(pp && pp.isOpen && pp.isOpen());
+            }
+
+            try {
+                if (tt) layer.closeTooltip?.();
+            } catch {
+                // noop
+            }
+            try {
+                if (pp) layer.closePopup?.();
+            } catch {
+                // noop
+            }
+
+            if (tt?._container) tt._container.style.display = 'none';
+            if (pp?._container) pp._container.style.display = 'none';
+        });
+    }
+
+    #showOverlays(layer) {
+        const tt = layer.getTooltip?.() ?? layer._tooltip ?? null;
+        const pp = layer.getPopup?.() ?? layer._popup ?? null;
+
+        if (tt?._container) tt._container.style.display = '';
+        if (pp?._container) pp._container.style.display = '';
+
+        if (tt) {
+            const shouldOpen = layer.__hadOpenTooltip || tt.options?.permanent;
+            if (shouldOpen) {
+                try {
+                    layer.openTooltip?.();
+                } catch {
+                    // noop
+                }
+            }
+        }
+
+        if (pp && layer.__hadOpenPopup) {
+            try {
+                layer.openPopup?.();
+            } catch {
+                // noop
+            }
+        }
+
+        delete layer.__hadOpenTooltip;
+        delete layer.__hadOpenPopup;
     }
 
     isLayerHidden(layer) {
@@ -334,7 +546,7 @@ export default class LeafletAdapter extends MapAdapterInterface {
 
     // ─── Drawing Tools ─────────────────────────────────────────────────────────
 
-    enableDrawingMode(type) {
+    enableDrawingMode(type, options = {}) {
         if (!this._map || !this._drawControl) {
             debug('[LeafletAdapter] enableDrawingMode called before draw control was created');
             return;
@@ -350,6 +562,10 @@ export default class LeafletAdapter extends MapAdapterInterface {
         if (DrawClass) {
             new DrawClass(this._map).enable();
         }
+
+        if (typeof options.onCreate === 'function') {
+            this.once('draw:created', options.onCreate);
+        }
     }
 
     disableDrawingMode() {
@@ -358,16 +574,28 @@ export default class LeafletAdapter extends MapAdapterInterface {
         this._map?.fire('draw:drawstop');
     }
 
-    showDrawControl() {
-        if (!this._drawControl) return;
+    showDrawControl(config = {}) {
+        this._drawControlConfig = config;
+        if (!this._drawControl || !this._map) return;
+        if (!this._drawControl._map) {
+            this._drawControl.addTo(this._map);
+        }
+
         const container = this._drawControl.getContainer?.();
         if (container) container.style.display = '';
+
+        if (config?.defaultMode) {
+            this.enableDrawingMode(config.defaultMode);
+        }
     }
 
     hideDrawControl() {
-        if (!this._drawControl) return;
+        if (!this._drawControl || !this._map) return;
         const container = this._drawControl.getContainer?.();
         if (container) container.style.display = 'none';
+        if (this._drawControl._map) {
+            this._map.removeControl(this._drawControl);
+        }
     }
 
     /**
@@ -379,7 +607,203 @@ export default class LeafletAdapter extends MapAdapterInterface {
      */
     setDrawControl(drawControl, featureGroup) {
         this._drawControl = drawControl;
-        this._drawFeatureGroup = featureGroup;
+        if (featureGroup) {
+            this._drawFeatureGroup = featureGroup;
+        }
+
+        if (this._drawControlConfig) {
+            this.showDrawControl(this._drawControlConfig);
+        }
+    }
+
+    registerMarker(id, markerObject) {
+        return super.registerMarker(id, markerObject);
+    }
+
+    registerPolygon(id, polygonObject) {
+        return super.registerPolygon(id, polygonObject);
+    }
+
+    getContextMenuItems(target) {
+        return target?.contextmenuItems ?? [];
+    }
+
+    showCoordinates(event) {
+        const wrappedLatLng = event?.latlng?.wrap?.() ?? event?.latlng;
+
+        return {
+            lat: wrappedLatLng?.lat,
+            lng: wrappedLatLng?.lng,
+        };
+    }
+
+    centerMap(event) {
+        if (event?.latlng) {
+            this._map?.panTo(event.latlng);
+        }
+    }
+
+    toggleDrawControl() {
+        if (!this._drawControl || !this._map) return;
+
+        if (this._drawControl._map) {
+            this.hideDrawControl();
+            return;
+        }
+
+        this.showDrawControl(this._drawControlConfig ?? {});
+    }
+
+    editPolygon(originalLayer, { focusBounds = null } = {}) {
+        const map = this._map;
+        const draw = this._drawControl;
+        const group = this._drawFeatureGroup;
+        if (!map || !draw || !group || !originalLayer) {
+            return Promise.resolve({ type: 'unsupported' });
+        }
+
+        this.showLayer(originalLayer, { soft: false });
+
+        const latlngs = originalLayer.getLatLngs?.();
+        if (!latlngs || !latlngs.length) {
+            return Promise.reject(new Error('LeafletAdapter editPolygon: layer has no coordinates'));
+        }
+
+        const proxy = L.polygon(latlngs, {
+            color: originalLayer.options?.color || '#3388ff',
+            weight: 3,
+            opacity: 0.9,
+            fill: true,
+            fillOpacity: originalLayer.options?.fillOpacity ?? 0.2,
+        });
+
+        const wasVisible = !originalLayer.__hidden;
+        this.hideLayer(originalLayer, { soft: false });
+        group.addLayer(proxy);
+
+        if (focusBounds) {
+            try {
+                map.fitBounds(focusBounds, { paddingBottomRight: [0, 0], maxZoom: 16, animate: true });
+            } catch {
+                // noop
+            }
+        }
+
+        this.showDrawControl({ allowEdit: true, allowDelete: true });
+        const editHandler = draw?._toolbars?.edit?._modes?.edit?.handler;
+        if (!editHandler) {
+            group.removeLayer(proxy);
+            if (wasVisible) {
+                this.showLayer(originalLayer, { soft: false });
+            }
+            return Promise.reject(new Error('LeafletAdapter editPolygon: edit handler unavailable'));
+        }
+
+        editHandler.enable();
+
+        return new Promise((resolve) => {
+            let settled = false;
+
+            const cleanup = (result) => {
+                if (settled) return;
+                settled = true;
+
+                try {
+                    editHandler.disable();
+                } catch {
+                    // noop
+                }
+
+                try {
+                    group.removeLayer(proxy);
+                } catch {
+                    // noop
+                }
+
+                try {
+                    proxy.remove();
+                } catch {
+                    // noop
+                }
+
+                if (wasVisible) {
+                    this.showLayer(originalLayer, { soft: false });
+                }
+
+                this.hideDrawControl();
+                resolve(result);
+            };
+
+            const onEdited = (evt) => {
+                let geoJson = null;
+                try {
+                    const edited = proxy.getLatLngs?.();
+                    if (edited?.length) {
+                        originalLayer.setLatLngs(edited);
+                        originalLayer.redraw?.();
+                        geoJson = createGeoJsonFromLayer(originalLayer, { layerType: 'polygon' });
+                    }
+                } catch {
+                    // noop
+                }
+
+                cleanup({
+                    type: 'edited',
+                    layer: originalLayer,
+                    proxy,
+                    event: evt,
+                    geoJson,
+                    toGeoJSON: () => geoJson,
+                });
+            };
+
+            const onEditStop = () => cleanup({ type: 'cancel' });
+
+            map.once('draw:edited', onEdited);
+            map.once('draw:editstop', onEditStop);
+        });
+    }
+
+    panBy(x, y = 0) {
+        this._map?.panBy?.([x, y]);
+    }
+
+    #buildRouteMarkerOptions(waypoint, index, route, options) {
+        if (typeof options.createMarker === 'function') {
+            const customOptions = options.createMarker(waypoint, index, route);
+            if (customOptions === null || customOptions === false) {
+                return null;
+            }
+
+            if (customOptions && typeof customOptions === 'object') {
+                if (customOptions.waypointLabel) {
+                    return {
+                        ...customOptions,
+                        icon: L.divIcon({
+                            className: 'fleetops-waypoint-marker',
+                            html: waypointIconHtml(customOptions.waypointLabel, customOptions.waypointColor ?? '#2563eb'),
+                            iconSize: customOptions.iconSize ?? [32, 32],
+                            iconAnchor: customOptions.iconAnchor ?? [16, 16],
+                            popupAnchor: customOptions.popupAnchor ?? [0, -20],
+                        }),
+                    };
+                }
+
+                return customOptions;
+            }
+        }
+
+        return {
+            iconUrl: '/assets/images/marker-icon.png',
+            iconSize: [25, 41],
+            iconAnchor: [12, 41],
+            iconOptions: {
+                iconRetinaUrl: '/assets/images/marker-icon-2x.png',
+                shadowUrl: '/assets/images/marker-shadow.png',
+            },
+            draggable: false,
+            ...options.markerOptions,
+        };
     }
 
     // ─── Popups ────────────────────────────────────────────────────────────────
@@ -444,19 +868,40 @@ export default class LeafletAdapter extends MapAdapterInterface {
     on(event, handler) {
         if (!this._map) return;
         const normalized = this.#normalizeEvent(event);
-        this._map.on(normalized, handler);
+        const wrappedHandler = normalized.startsWith('draw:') ? (payload) => handler(this.#normalizeDrawEvent(event, payload)) : handler;
+
+        this._map.on(normalized, wrappedHandler);
+
+        if (!this._eventHandlers.has(event)) {
+            this._eventHandlers.set(event, []);
+        }
+
+        this._eventHandlers.get(event).push({ handler, wrappedHandler });
     }
 
     off(event, handler) {
         if (!this._map) return;
         const normalized = this.#normalizeEvent(event);
-        this._map.off(normalized, handler);
+        const entries = this._eventHandlers.get(event) ?? [];
+        const entry = entries.find((item) => item.handler === handler);
+        const wrappedHandler = entry?.wrappedHandler ?? handler;
+
+        this._map.off(normalized, wrappedHandler);
+
+        if (entry) {
+            this._eventHandlers.set(
+                event,
+                entries.filter((item) => item !== entry)
+            );
+        }
     }
 
     once(event, handler) {
         if (!this._map) return;
         const normalized = this.#normalizeEvent(event);
-        this._map.once(normalized, handler);
+        const wrappedHandler = normalized.startsWith('draw:') ? (payload) => handler(this.#normalizeDrawEvent(event, payload)) : handler;
+
+        this._map.once(normalized, wrappedHandler);
     }
 
     // ─── Utilities ─────────────────────────────────────────────────────────────
@@ -511,6 +956,27 @@ export default class LeafletAdapter extends MapAdapterInterface {
             'draw:deleted': 'draw:deleted',
         };
         return map[event] ?? event;
+    }
+
+    #normalizeDrawEvent(event, payload) {
+        if (event === 'draw:created' && payload?.layer) {
+            const layerType = payload.layerType ?? payload.type ?? null;
+            const geoJson = createGeoJsonFromLayer(payload.layer, { layerType });
+
+            return {
+                ...payload,
+                type: event,
+                layer: payload.layer,
+                layerType,
+                geoJson,
+                toGeoJSON: () => geoJson,
+            };
+        }
+
+        return {
+            ...payload,
+            type: event,
+        };
     }
 
     /**

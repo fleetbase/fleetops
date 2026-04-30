@@ -20,6 +20,7 @@ export default class OperationsOrdersIndexNewController extends Controller {
     @service orderCreation;
     @service orderValidation;
     @service events;
+    @service sidebar;
     @tracked order = this.orderCreation.newOrder();
     @tracked overlay;
 
@@ -94,9 +95,11 @@ export default class OperationsOrdersIndexNewController extends Controller {
     @action setup() {
         // Change to map layout
         this.index.changeLayout('map');
+        this.sidebar.hide();
     }
 
     reset() {
         this.order = this.orderCreation.newOrder();
+        this.sidebar.show();
     }
 }

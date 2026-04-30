@@ -71,6 +71,9 @@
                                             <div>
                                                 <Input @value={{entity.sku}} @type="text" class="w-full form-input form-input-sm" placeholder={{t "order.fields.sku"}} />
                                             </div>
+                                            <RegistryYield @registry="fleet-ops:component:order:form:payload:entity:form" as |RegistryComponent|>
+                                                <RegistryComponent @entity={{entity}} @order={{@resource}} @controller={{this}} />
+                                            </RegistryYield>
                                             <Button @icon="pencil" @text={{t "order.fields.edit-item"}} @size="sm" @onClick={{fn this.editEntity entity}} />
                                         </div>
                                         <div class="absolute top-0 right-0 p-2">

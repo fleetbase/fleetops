@@ -7,10 +7,10 @@ export default class OperationsOrdersIndexDetailsRoute extends Route {
     @service store;
     @service hostRouter;
     @service orderSocketEvents;
-    @service leafletMapManager;
+    @service mapManager;
     @service abilities;
-    @service universe;
     @service intl;
+    @service sidebar;
 
     @action willTransition(transition) {
         const fromName = transition.from?.name;
@@ -19,22 +19,19 @@ export default class OperationsOrdersIndexDetailsRoute extends Route {
 
         // only cleanup when leaving the order details route tree entirely
         const isLeavingOrderDetails = fromName?.startsWith(orderDetailsRoute) && !toName?.startsWith(orderDetailsRoute);
-
         if (isLeavingOrderDetails) {
             const controller = this.controllerFor('operations.orders.index.details');
             const rc = controller.routingControl;
 
             // Put back sidebar
-            if (this.universe.sidebarContext) {
-                this.universe.sidebarContext.show();
-            }
+            this.sidebar.show();
 
             // stop listening for events
             this.orderSocketEvents.stop(controller.model);
 
             // cleanup guards
             if (rc) {
-                this.leafletMapManager.removeRoutingControl(rc);
+                this.mapManager.removeRoutingControl(rc);
                 controller.routingControl = undefined;
             }
         }

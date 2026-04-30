@@ -10,6 +10,15 @@
  * Colors are chosen for high contrast against both light and dark CartoDB tile layers.
  */
 export const ROUTE_COLOR_PALETTE = ['#0EA5E9', '#8B5CF6', '#F59E0B', '#10B981', '#F97316', '#EC4899', '#06B6D4', '#EF4444', '#84CC16', '#6366F1'];
+export const ORDER_ROUTE_STATUS_COLORS = {
+    created: '#2563EB',
+    dispatched: '#4F46E5',
+    started: '#0891B2',
+    enroute: '#CA8A04',
+    driver_enroute: '#CA8A04',
+    completed: '#16A34A',
+    canceled: '#DC2626',
+};
 
 /**
  * Darken a hex color by a given integer amount (0-255 per channel).
@@ -43,6 +52,23 @@ export function colorForId(id = '') {
     return ROUTE_COLOR_PALETTE[Math.abs(hash) % ROUTE_COLOR_PALETTE.length];
 }
 
+export function normalizeOrderRouteStatus(status = 'created') {
+    switch (status) {
+        case 'pending':
+            return 'created';
+        case 'driver-enroute':
+            return 'driver_enroute';
+        case 'cancelled':
+            return 'canceled';
+        default:
+            return status && ORDER_ROUTE_STATUS_COLORS[status] ? status : 'created';
+    }
+}
+
+export function routeColorForStatus(status = 'created') {
+    return ORDER_ROUTE_STATUS_COLORS[normalizeOrderRouteStatus(status)] ?? ORDER_ROUTE_STATUS_COLORS.created;
+}
+
 /**
  * Return a Leaflet Path options `styles` array for a route polyline
  * based on the order status. Uses a two-layer "cased" approach:
@@ -52,28 +78,33 @@ export function colorForId(id = '') {
  * @param {string} color  - The base hex color for this route
  * @returns {Array<Object>} Array of Leaflet Path options objects
  */
-export function routeStyleForStatus(status, color) {
-    const darker = darkenColor(color, 40);
+export function routeStyleForStatus(status, fallbackColor = null) {
+    const normalizedStatus = normalizeOrderRouteStatus(status);
+    const color = routeColorForStatus(normalizedStatus) ?? fallbackColor ?? ORDER_ROUTE_STATUS_COLORS.created;
+    const darker = darkenColor(color, 36);
 
-    switch (status) {
-        case 'pending':
-            return [{ color: '#9CA3AF', weight: 5, opacity: 0.65, dashArray: '8 14', lineCap: 'round', lineJoin: 'round' }];
-
+    switch (normalizedStatus) {
         case 'canceled':
-            return [{ color: '#EF4444', weight: 4, opacity: 0.4, dashArray: '6 10', lineCap: 'round', lineJoin: 'round' }];
+            return [
+                { color: darkenColor(color, 18), weight: 5, opacity: 0.16, lineCap: 'round', lineJoin: 'round' },
+                { color, weight: 3, opacity: 0.52, lineCap: 'round', lineJoin: 'round' },
+            ];
 
         case 'completed':
             return [
-                { color: darkenColor('#14B8A6', 30), weight: 7, opacity: 0.5, lineCap: 'round', lineJoin: 'round' },
-                { color: '#14B8A6', weight: 4, opacity: 0.5, lineCap: 'round', lineJoin: 'round' },
+                { color: darker, weight: 6, opacity: 0.4, lineCap: 'round', lineJoin: 'round' },
+                { color, weight: 3, opacity: 0.8, lineCap: 'round', lineJoin: 'round' },
             ];
 
-        case 'in_progress':
+        case 'created':
         case 'dispatched':
+        case 'started':
+        case 'enroute':
+        case 'driver_enroute':
         default:
             return [
-                { color: darker, weight: 9, opacity: 0.9, lineCap: 'round', lineJoin: 'round' },
-                { color: color, weight: 5, opacity: 1.0, lineCap: 'round', lineJoin: 'round' },
+                { color: darker, weight: 7, opacity: 0.82, lineCap: 'round', lineJoin: 'round' },
+                { color, weight: 4, opacity: 1, lineCap: 'round', lineJoin: 'round' },
             ];
     }
 }
