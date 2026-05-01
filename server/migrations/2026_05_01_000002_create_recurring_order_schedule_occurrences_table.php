@@ -13,7 +13,7 @@ return new class extends Migration {
             $table->string('_key')->nullable()->index();
             $table->string('public_id', 191)->nullable()->unique()->index();
             $table->foreignUuid('company_uuid')->constrained('companies', 'uuid')->cascadeOnDelete();
-            $table->uuid('recurring_order_schedule_uuid')->index();
+            $table->uuid('recurring_order_schedule_uuid');
             $table->uuid('order_uuid')->nullable()->index();
             $table->dateTime('occurrence_at')->index();
             $table->string('status')->default('generated')->index();
@@ -26,6 +26,7 @@ return new class extends Migration {
 
             $table->unique(['recurring_order_schedule_uuid', 'occurrence_at'], 'roso_schedule_occurrence_unique');
             $table->index(['company_uuid', 'occurrence_at'], 'roso_company_occurrence_idx');
+            $table->index('recurring_order_schedule_uuid', 'roso_schedule_uuid_idx');
         });
     }
 

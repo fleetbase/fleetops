@@ -8,7 +8,6 @@ use Fleetbase\FleetOps\Http\Resources\v1\RecurringOrderSchedule as RecurringOrde
 use Fleetbase\FleetOps\Models\Order;
 use Fleetbase\FleetOps\Models\RecurringOrderSchedule;
 use Fleetbase\FleetOps\Support\RecurringOrderMaterializationService;
-use Fleetbase\Support\Utils;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
@@ -27,41 +26,37 @@ class RecurringOrderScheduleController extends FleetOpsController
 
     public function createRecord(Request $request)
     {
-        $input = $request->input('recurring_order_schedule', $request->all());
-
-        $validator = Validator::make($input, [
-            'name' => ['required', 'string'],
-            'rrule' => ['required', 'string'],
-            'timezone' => ['required', 'string'],
-            'starts_at' => ['required', 'date'],
-            'order' => ['required', 'array'],
-        ]);
-
-        if ($validator->fails()) {
-            return response()->error($validator->errors()->all());
+        $validationError = $this->validateRecurringSchedulePayload($request);
+        if ($validationError) {
+            return $validationError;
         }
 
-        $schedule = RecurringOrderSchedule::create($this->normalizeScheduleInput($input));
-        $this->materializer->materializeSchedule($schedule, now()->addDays((int) config('fleetops.recurring_orders.horizon_days', 60)));
-
-        return ['recurring_order_schedule' => new RecurringOrderScheduleResource($this->loadDetailRecord($schedule))];
+        return parent::createRecord($request);
     }
 
-    public function updateRecord($id, Request $request)
+    public function updateRecord(Request $request, string $id)
     {
-        $input = $request->input('recurring_order_schedule', $request->all());
-        $schedule = RecurringOrderSchedule::where('uuid', $id)->orWhere('public_id', $id)->firstOrFail();
-        $schedule->update($this->normalizeScheduleInput($input, $schedule));
-        $this->materializer->materializeSchedule($schedule->fresh(), now()->addDays((int) config('fleetops.recurring_orders.horizon_days', 60)));
+        $validationError = $this->validateRecurringSchedulePayload($request);
+        if ($validationError) {
+            return $validationError;
+        }
 
-        return ['recurring_order_schedule' => new RecurringOrderScheduleResource($this->loadDetailRecord($schedule->fresh()))];
+        return parent::updateRecord($request, $id);
     }
 
-    public function findRecord($id, Request $request)
+    public function onAfterCreate($request, RecurringOrderSchedule $record, array $input): void
     {
-        $schedule = RecurringOrderSchedule::where('uuid', $id)->orWhere('public_id', $id)->firstOrFail();
+        $this->materializer->materializeSchedule($record, now()->addDays((int) config('fleetops.recurring_orders.horizon_days', 60)));
+    }
 
-        return ['recurring_order_schedule' => new RecurringOrderScheduleResource($this->loadDetailRecord($schedule, (int) $request->input('upcoming_limit', 25)))];
+    public function onAfterUpdate($request, RecurringOrderSchedule $record, array $input): void
+    {
+        $this->materializer->materializeSchedule($record, now()->addDays((int) config('fleetops.recurring_orders.horizon_days', 60)));
+    }
+
+    public function onFindRecord($builder, $request): void
+    {
+        $builder->with(['customer', 'facilitator', 'orderConfig', 'driverAssigned', 'vehicleAssigned', 'serviceRate']);
     }
 
     public function pause(string $id): JsonResponse
@@ -155,97 +150,21 @@ class RecurringOrderScheduleController extends FleetOpsController
         ]);
     }
 
-    protected function normalizeScheduleInput(array $input, ?RecurringOrderSchedule $existing = null): array
+    protected function validateRecurringSchedulePayload(Request $request): ?JsonResponse
     {
-        $order = (array) ($input['order'] ?? []);
-        $payload = (array) data_get($order, 'payload', []);
+        $input = $request->input('recurring_order_schedule', $request->all());
+        $validator = Validator::make($input, [
+            'name' => ['required', 'string'],
+            'rrule' => ['required', 'string'],
+            'timezone' => ['required', 'string'],
+            'starts_at' => ['required', 'date'],
+            'order' => ['required', 'array'],
+        ]);
 
-        return [
-            'name' => data_get($input, 'name', $existing?->name),
-            'description' => data_get($input, 'description', $existing?->description),
-            'status' => data_get($input, 'status', $existing?->status ?? 'active'),
-            'timezone' => data_get($input, 'timezone', $existing?->timezone ?? 'UTC'),
-            'starts_at' => !empty($input['starts_at']) ? Carbon::parse($input['starts_at']) : $existing?->starts_at,
-            'ends_at' => !empty($input['ends_at']) ? Carbon::parse($input['ends_at']) : null,
-            'rrule' => data_get($input, 'rrule', $existing?->rrule),
-            'company_uuid' => session('company', $existing?->company_uuid),
-            'customer_uuid' => data_get($order, 'customer_uuid') ?: data_get($order, 'customer.id'),
-            'customer_type' => data_get($order, 'customer_type'),
-            'facilitator_uuid' => data_get($order, 'facilitator_uuid') ?: data_get($order, 'facilitator.id'),
-            'facilitator_type' => data_get($order, 'facilitator_type'),
-            'order_config_uuid' => data_get($order, 'order_config_uuid') ?: data_get($order, 'order_config.id'),
-            'driver_assigned_uuid' => data_get($order, 'driver_assigned_uuid') ?: data_get($order, 'driver_assigned.id'),
-            'vehicle_assigned_uuid' => data_get($order, 'vehicle_assigned_uuid') ?: data_get($order, 'vehicle_assigned.id'),
-            'service_rate_uuid' => data_get($input, 'service_rate_uuid') ?: data_get($order, 'service_rate_uuid'),
-            'template_order_meta' => [
-                'internal_id' => data_get($order, 'internal_id'),
-                'pod_method' => data_get($order, 'pod_method'),
-                'pod_required' => (bool) data_get($order, 'pod_required', false),
-                'adhoc' => (bool) data_get($order, 'adhoc', false),
-                'adhoc_distance' => data_get($order, 'adhoc_distance'),
-                'notes' => data_get($order, 'notes'),
-                'type' => data_get($order, 'type'),
-                'meta' => data_get($order, 'meta', []),
-                'time_window_start' => data_get($order, 'time_window_start'),
-                'time_window_end' => data_get($order, 'time_window_end'),
-                'required_skills' => data_get($order, 'required_skills', []),
-                'orchestrator_priority' => data_get($order, 'orchestrator_priority', 50),
-            ],
-            'template_payload' => [
-                'pickup' => data_get($payload, 'pickup'),
-                'dropoff' => data_get($payload, 'dropoff'),
-                'return' => data_get($payload, 'return'),
-                'waypoints' => array_values((array) data_get($payload, 'waypoints', [])),
-                'type' => data_get($payload, 'type'),
-                'payment_method' => data_get($payload, 'payment_method'),
-                'cod_amount' => data_get($payload, 'cod_amount'),
-                'cod_currency' => data_get($payload, 'cod_currency'),
-                'cod_payment_method' => data_get($payload, 'cod_payment_method'),
-                'meta' => data_get($payload, 'meta', []),
-            ],
-            'template_entities' => array_values((array) data_get($payload, 'entities', [])),
-            'meta' => array_merge((array) data_get($existing, 'meta', []), (array) data_get($input, 'meta', [])),
-            'updated_by_uuid' => session('user'),
-            'created_by_uuid' => $existing?->created_by_uuid ?: session('user'),
-        ];
-    }
+        if ($validator->fails()) {
+            return response()->error($validator->errors()->all());
+        }
 
-    protected function loadDetailRecord(RecurringOrderSchedule $schedule, int $upcomingLimit = 25): RecurringOrderSchedule
-    {
-        $schedule->load(['customer', 'facilitator', 'orderConfig', 'driverAssigned', 'vehicleAssigned', 'serviceRate']);
-        $meta = (array) ($schedule->meta ?? []);
-        $meta['upcoming_occurrences'] = $this->buildUpcomingOccurrences($schedule, $upcomingLimit);
-        $schedule->meta = $meta;
-
-        return $schedule;
-    }
-
-    protected function buildUpcomingOccurrences(RecurringOrderSchedule $schedule, int $limit = 25): array
-    {
-        $timezone = $schedule->timezone ?: 'UTC';
-        $preview = $schedule->previewOccurrences(now($timezone), now($timezone)->addYears(1), $limit);
-        $states = $schedule->occurrences()
-            ->where('occurrence_at', '>=', now())
-            ->with('order')
-            ->get()
-            ->keyBy(fn ($occurrence) => $occurrence->occurrence_at->toISOString());
-
-        return $preview->map(function (Carbon $occurrence) use ($states) {
-            $occurrenceUtc = $occurrence->copy()->setTimezone('UTC');
-            $state = $states->get($occurrenceUtc->toISOString());
-
-            return [
-                'occurrence_at' => $occurrenceUtc->toISOString(),
-                'occurrence_at_local' => $occurrence->toISOString(),
-                'status' => $state?->status ?? 'scheduled',
-                'reason' => $state?->reason,
-                'order' => $state?->order ? [
-                    'id' => $state->order->public_id,
-                    'public_id' => $state->order->public_id,
-                    'status' => $state->order->status,
-                    'scheduled_at' => $state->order->scheduled_at,
-                ] : null,
-            ];
-        })->values()->all();
+        return null;
     }
 }

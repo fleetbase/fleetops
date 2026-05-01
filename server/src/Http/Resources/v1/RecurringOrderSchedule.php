@@ -42,7 +42,7 @@ class RecurringOrderSchedule extends FleetbaseResource
             'template_order_meta' => $this->template_order_meta ?? [],
             'template_payload' => $this->template_payload ?? [],
             'template_entities' => $this->template_entities ?? [],
-            'upcoming_occurrences' => $this->when($isInternal, $this->meta['upcoming_occurrences'] ?? null),
+            'upcoming_occurrences' => $this->when($isInternal, $this->getUpcomingOccurrences((int) $request->input('upcoming_limit', 25))),
             'next_occurrence_at' => $this->next_occurrence_at,
             'meta' => $this->meta ?? [],
             'created_at' => $this->created_at,

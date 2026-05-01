@@ -56,8 +56,6 @@ export default class RecurringOrderScheduleFormComponent extends Component {
         }
 
         this.selectedServiceRate = resource.service_rate ?? null;
-        resource.service_rate_uuid = resource.service_rate_uuid ?? resource.service_rate?.id ?? null;
-        this.syncRrule();
         this.updatePreview.perform();
     }
 
@@ -73,8 +71,8 @@ export default class RecurringOrderScheduleFormComponent extends Component {
         return this.draftOrder?.payloadCoordinates?.length >= 2;
     }
 
-    syncRrule() {
-        this.args.resource.rrule = buildRrule({
+    get currentRrule() {
+        return buildRrule({
             frequency: this.frequency,
             interval: this.interval,
             weekdays: this.selectedWeekdays,
@@ -84,15 +82,15 @@ export default class RecurringOrderScheduleFormComponent extends Component {
     }
 
     @task *updatePreview() {
-        this.syncRrule();
-
         if (!this.args.resource.starts_at) {
             this.previewOccurrences = [];
             return;
         }
 
         try {
-            const response = yield this.recurringOrderScheduleActions.preview(this.args.resource, 8);
+            const response = yield this.recurringOrderScheduleActions.preview(this.args.resource, 8, {
+                rrule: this.currentRrule,
+            });
             this.previewOccurrences = response?.occurrences ?? [];
         } catch {
             this.previewOccurrences = [];
@@ -116,21 +114,25 @@ export default class RecurringOrderScheduleFormComponent extends Component {
 
     @action updateEndsAt(value) {
         this.args.resource.ends_at = value;
+        this.args.resource.rrule = this.currentRrule;
         this.updatePreview.perform();
     }
 
     @action updateFrequency(option) {
         this.frequency = option.value;
+        this.args.resource.rrule = this.currentRrule;
         this.updatePreview.perform();
     }
 
     @action updateInterval({ target }) {
         this.interval = Number(target.value) || 1;
+        this.args.resource.rrule = this.currentRrule;
         this.updatePreview.perform();
     }
 
     @action updateMonthday({ target }) {
         this.monthday = Number(target.value) || 1;
+        this.args.resource.rrule = this.currentRrule;
         this.updatePreview.perform();
     }
 
@@ -145,6 +147,7 @@ export default class RecurringOrderScheduleFormComponent extends Component {
             this.selectedWeekdays = ['MO'];
         }
 
+        this.args.resource.rrule = this.currentRrule;
         this.updatePreview.perform();
     }
 

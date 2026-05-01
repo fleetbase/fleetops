@@ -11,7 +11,11 @@ export default class RecurringOrderScheduleDetailsComponent extends Component {
     }
 
     @action skipOccurrence(occurrence) {
-        return this.recurringOrderScheduleActions.skipOccurrence(this.args.resource, occurrence.occurrence_at);
+        return this.recurringOrderScheduleActions.skipOccurrence(this.args.resource, occurrence.occurrence_at).then(async () => {
+            if (typeof this.args.resource?.reload === 'function') {
+                await this.args.resource.reload();
+            }
+        });
     }
 
     @action viewOrder(order) {

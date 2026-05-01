@@ -5,6 +5,7 @@ import { action } from '@ember/object';
 
 export default class OperationsOrdersIndexController extends Controller {
     @service orderActions;
+    @service recurringOrderScheduleActions;
     @service orderSocketEvents;
     @service leafletMapManager;
     @service mapDrawer;
@@ -77,10 +78,28 @@ export default class OperationsOrdersIndexController extends Controller {
                 helpText: this.intl.t('common.refresh'),
             },
             {
-                text: this.intl.t('common.new'),
-                type: 'primary',
+                icon: 'calendar-days',
+                wrapperClass: 'hidden md:flex',
+                helpText: 'View recurring order schedules',
+                onClick: () => this.recurringOrderScheduleActions.modal.manage(),
+            },
+            {
                 icon: 'plus',
-                onClick: this.orderActions.transition.create,
+                type: 'primary',
+                text: this.intl.t('common.new'),
+                renderInPlace: true,
+                items: [
+                    {
+                        label: 'Create new order',
+                        icon: 'plus',
+                        onClick: this.orderActions.transition.create,
+                    },
+                    {
+                        label: 'Create recurring schedule',
+                        icon: 'arrows-rotate',
+                        onClick: () => this.recurringOrderScheduleActions.modal.create(),
+                    },
+                ],
             },
             {
                 text: this.intl.t('common.export'),
@@ -377,6 +396,15 @@ export default class OperationsOrdersIndexController extends Controller {
                         fn: this.orderActions.dispatch,
                         permission: 'fleet-ops dispatch order',
                         isVisible: (order) => order.canBeDispatched,
+                    },
+                    {
+                        label: 'Create recurring schedule',
+                        icon: 'arrows-rotate',
+                        fn: (order) => this.recurringOrderScheduleActions.modal.createFromOrder(order),
+                        permission: 'fleet-ops create recurring-order-schedule',
+                    },
+                    {
+                        separator: true,
                     },
                     {
                         label: this.intl.t('common.cancel-resource', { resource: this.intl.t('resource.order') }),

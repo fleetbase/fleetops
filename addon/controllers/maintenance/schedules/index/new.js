@@ -23,6 +23,7 @@ export default class MaintenanceSchedulesIndexNewController extends Controller {
             this.notifications.success(this.intl.t('common.resource-created-success', { resource: this.intl.t('resource.maintenance-schedule') }));
             this.resetForm();
         } catch (err) {
+            console.log(err, err.message);
             this.notifications.serverError(err);
         }
     }

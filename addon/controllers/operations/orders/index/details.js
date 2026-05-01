@@ -9,6 +9,7 @@ export default class OperationsOrdersIndexDetailsController extends Controller {
     @controller('operations.orders.index') index;
     @service('universe/menu-service') menuService;
     @service orderActions;
+    @service recurringOrderScheduleActions;
     @service orderSocketEvents;
     @service leafletMapManager;
     @service leafletLayerVisibilityManager;
@@ -78,10 +79,7 @@ export default class OperationsOrdersIndexDetailsController extends Controller {
                     {
                         text: 'Create recurring schedule',
                         icon: 'arrows-rotate',
-                        fn: () =>
-                            this.hostRouter.transitionTo('console.fleet-ops.operations.recurring-orders.index.new', {
-                                queryParams: { from_order: this.model.public_id },
-                            }),
+                        fn: () => this.recurringOrderScheduleActions.modal.createFromOrder(this.model),
                     },
                     {
                         separator: true,

@@ -19,15 +19,6 @@ export default buildRoutes(function () {
             this.route('index', { path: '/' });
             this.route('fleet-schedule');
         });
-        this.route('recurring-orders', function () {
-            this.route('index', { path: '/' }, function () {
-                this.route('new');
-                this.route('details', { path: '/:public_id' }, function () {
-                    this.route('index', { path: '/' });
-                });
-                this.route('edit', { path: '/edit/:public_id' });
-            });
-        });
         this.route('orders', { path: '/' }, function () {
             this.route('index', { path: '/' }, function () {
                 this.route('new');
