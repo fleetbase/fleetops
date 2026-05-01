@@ -1,0 +1,13 @@
+<Layout::Resource::Tabular
+    @resource="recurring-order-schedule"
+    @title={{t "resource.recurring-order-schedules"}}
+    @searchQuery={{this.query}}
+    @onSearch={{perform this.scheduleActions.controllerSearchTask this}}
+    @data={{@model}}
+    @columns={{this.columns}}
+    @page={{this.page}}
+    @onPageChange={{fn (mut this.page)}}
+    @actionButtons={{this.actionButtons}}
+    @controller={{this}}
+/>
+{{outlet}}

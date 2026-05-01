@@ -73,6 +73,15 @@ export default class LayoutFleetOpsSidebarComponent extends Component {
             },
             {
                 priority: 3,
+                intl: 'menu.recurring-orders',
+                title: this.intl.t('menu.recurring-orders'),
+                icon: 'arrows-rotate',
+                route: 'operations.recurring-orders',
+                permission: 'fleet-ops list recurring-order-schedule',
+                visible: this.abilities.can('fleet-ops see recurring-order-schedule'),
+            },
+            {
+                priority: 4,
                 intl: 'menu.order-config',
                 title: this.intl.t('menu.order-config'),
                 icon: 'diagram-project',
@@ -81,7 +90,7 @@ export default class LayoutFleetOpsSidebarComponent extends Component {
                 visible: this.abilities.can('fleet-ops see order-config'),
             },
             {
-                priority: 4,
+                priority: 5,
                 intl: 'menu.service-rates',
                 title: this.intl.t('menu.service-rates'),
                 icon: 'file-invoice-dollar',

@@ -76,6 +76,14 @@ export default class OperationsOrdersIndexDetailsController extends Controller {
                         fn: () => this.orderActions.viewMetadata(this.model),
                     },
                     {
+                        text: 'Create recurring schedule',
+                        icon: 'arrows-rotate',
+                        fn: () =>
+                            this.hostRouter.transitionTo('console.fleet-ops.operations.recurring-orders.index.new', {
+                                queryParams: { from_order: this.model.public_id },
+                            }),
+                    },
+                    {
                         separator: true,
                     },
                     {

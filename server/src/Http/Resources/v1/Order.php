@@ -45,6 +45,9 @@ class Order extends FleetbaseResource
             'tracking_number_uuid' => $this->when($isInternal, $this->tracking_number_uuid),
             'driver_assigned_uuid' => $this->when($isInternal, $this->driver_assigned_uuid),
             'vehicle_assigned_uuid'=> $this->when($isInternal, $this->vehicle_assigned_uuid),
+            'recurring_order_schedule_uuid' => $this->when($isInternal, $this->recurring_order_schedule_uuid),
+            'recurring_occurrence_at' => $this->when($isInternal, $this->recurring_occurrence_at),
+            'is_recurring_generated' => $this->when($isInternal, $this->is_recurring_generated),
             'has_driver_assigned'  => $this->when($isInternal, $this->has_driver_assigned),
             'is_scheduled'         => $this->when($isInternal, $this->is_scheduled),
             'order_config_uuid'    => $this->when($isInternal, $this->order_config_uuid),
@@ -67,6 +70,9 @@ class Order extends FleetbaseResource
             }),
             'vehicle_assigned'     => $this->whenLoaded('vehicleAssigned', function () {
                 return new Vehicle($this->vehicleAssigned);
+            }),
+            'recurring_order_schedule' => $this->whenLoaded('recurringOrderSchedule', function () {
+                return new RecurringOrderSchedule($this->recurringOrderSchedule);
             }),
             'tracking_number'      => new TrackingNumber($this->trackingNumber),
             'tracking_statuses'    => $this->whenLoaded('trackingStatuses', function () {
