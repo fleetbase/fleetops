@@ -505,6 +505,7 @@ export default class GoogleMapsAdapter extends MapAdapterInterface {
             polygon.__labelText = options.tooltip;
             polygon.__labelPaths = paths;
             polygon.__labelMarker = this.#createOverlayLabel(paths, options.tooltip);
+            polygon.__tooltipCleanup = this.#attachOverlayLabelHover(polygon, polygon.__labelMarker);
         }
 
         this._overlays.set(id, polygon);
@@ -550,9 +551,10 @@ export default class GoogleMapsAdapter extends MapAdapterInterface {
     removeOverlay(id) {
         const overlay = this._overlays.get(id);
         if (overlay) {
+            overlay.__tooltipCleanup?.();
             overlay.setMap(null);
             if (overlay.__labelMarker) {
-                overlay.__labelMarker.map = null;
+                this.#setOverlayLabelMap(overlay.__labelMarker, null);
             }
             this._overlays.delete(id);
         }
@@ -676,6 +678,8 @@ export default class GoogleMapsAdapter extends MapAdapterInterface {
     removeLayer(layer) {
         if (!layer) return;
 
+        layer.__tooltipCleanup?.();
+
         if (typeof layer.setMap === 'function') {
             layer.setMap(null);
         } else if ('map' in layer) {
@@ -700,7 +704,7 @@ export default class GoogleMapsAdapter extends MapAdapterInterface {
         }
         this.#syncOverlayPresentation(layer);
         if (layer.__labelMarker) {
-            layer.__labelMarker.map = this._map;
+            this.#setOverlayLabelMap(layer.__labelMarker, this._map);
         }
         layer.__hidden = false;
     }
@@ -713,8 +717,9 @@ export default class GoogleMapsAdapter extends MapAdapterInterface {
             layer.map = null;
         }
         if (layer.__labelMarker) {
-            layer.__labelMarker.map = null;
+            this.#setOverlayLabelMap(layer.__labelMarker, null);
         }
+        layer.__tooltipCleanup?.hide?.();
         layer.__hidden = true;
     }
 
@@ -1467,34 +1472,128 @@ export default class GoogleMapsAdapter extends MapAdapterInterface {
         const centroid = this.#getPolygonLabelPosition(paths);
         if (!centroid) return null;
 
-        if (!this._supportsAdvancedMarkers || !this._advancedMarkerElementClass) {
-            return new google.maps.Marker({
-                map: null,
-                position: centroid,
-                label: {
-                    text,
-                    color: '#ffffff',
-                    fontSize: '12px',
-                    fontWeight: '700',
-                },
-                icon: {
-                    path: google.maps.SymbolPath.CIRCLE,
-                    scale: 0,
-                },
-                title: text,
-            });
-        }
-
         const content = document.createElement('div');
         content.className = 'fleetops-google-polygon-label';
         content.textContent = text;
 
-        return new this._advancedMarkerElementClass({
-            map: null,
-            position: centroid,
-            content,
-            title: text,
-        });
+        return this.#createOverlayLabelDomOverlay(centroid, content, text);
+    }
+
+    #attachOverlayLabelHover(overlay, labelOverlay) {
+        if (!overlay || !labelOverlay) return null;
+
+        const updateCursorPosition = (event) => {
+            const domEvent = event?.domEvent;
+            if (!domEvent) return;
+
+            const mapDiv = this._map?.getDiv?.();
+            const mapRect = mapDiv?.getBoundingClientRect?.();
+            if (!mapRect) return;
+
+            const cursorOffset = 5;
+            const pointerXWithinMap = domEvent.clientX - mapRect.left;
+            const pointerYWithinMap = domEvent.clientY - mapRect.top;
+            const paneCenterX = mapRect.width / 2;
+            const paneCenterY = mapRect.height / 2;
+
+            labelOverlay.__followCursor = true;
+            labelOverlay.__cursorPoint = {
+                x: pointerXWithinMap - paneCenterX + cursorOffset,
+                y: pointerYWithinMap - paneCenterY + cursorOffset,
+            };
+            labelOverlay.draw?.();
+        };
+
+        const show = (event) => {
+            updateCursorPosition(event);
+        };
+
+        const move = (event) => {
+            updateCursorPosition(event);
+        };
+
+        const hide = () => {
+            labelOverlay.__followCursor = false;
+            labelOverlay.__cursorPoint = null;
+            labelOverlay.draw?.();
+        };
+
+        const mouseOverListener = overlay.addListener('mouseover', show);
+        const mouseMoveListener = overlay.addListener('mousemove', move);
+        const mouseOutListener = overlay.addListener('mouseout', hide);
+
+        const cleanup = () => {
+            google.maps.event.removeListener(mouseOverListener);
+            google.maps.event.removeListener(mouseMoveListener);
+            google.maps.event.removeListener(mouseOutListener);
+        };
+
+        cleanup.hide = hide;
+
+        return cleanup;
+    }
+
+    #createOverlayLabelDomOverlay(position, content, title) {
+        const overlay = new google.maps.OverlayView();
+
+        overlay.position = position;
+        overlay.content = content;
+        overlay.title = title;
+        overlay.__container = null;
+        overlay.__followCursor = false;
+        overlay.__cursorPoint = null;
+
+        overlay.onAdd = () => {
+            const container = document.createElement('div');
+            container.style.position = 'absolute';
+            container.style.transform = 'translate(-50%, -50%)';
+            container.style.pointerEvents = 'none';
+            container.appendChild(overlay.content);
+            overlay.__container = container;
+            overlay.getPanes()?.overlayMouseTarget?.appendChild(container);
+        };
+
+        overlay.draw = () => {
+            const container = overlay.__container;
+            if (!container) return;
+
+            if (overlay.__followCursor && overlay.__cursorPoint) {
+                container.style.position = 'absolute';
+                container.style.transform = 'translate(0, 0)';
+                container.style.left = `${overlay.__cursorPoint.x}px`;
+                container.style.top = `${overlay.__cursorPoint.y}px`;
+                return;
+            }
+
+            const projection = overlay.getProjection?.();
+            if (!projection || !overlay.position) return;
+
+            const point = projection.fromLatLngToDivPixel(new google.maps.LatLng(overlay.position.lat, overlay.position.lng));
+            if (!point) return;
+
+            container.style.position = 'absolute';
+            container.style.transform = 'translate(-50%, -50%)';
+            container.style.left = `${point.x}px`;
+            container.style.top = `${point.y}px`;
+        };
+
+        overlay.onRemove = () => {
+            overlay.__container?.remove();
+            overlay.__container = null;
+        };
+
+        return overlay;
+    }
+
+    #setOverlayLabelMap(label, map) {
+        if (!label) return;
+
+        if (typeof label.setMap === 'function') {
+            label.setMap(map);
+            return;
+        }
+
+        label.map = map;
     }
 
     #syncOverlayPresentation(layer) {
@@ -1521,6 +1620,7 @@ export default class GoogleMapsAdapter extends MapAdapterInterface {
                 const centroid = this.#getPolygonLabelPosition(labelPaths);
                 if (centroid) {
                     layer.__labelMarker.position = centroid;
+                    layer.__labelMarker.draw?.();
                 }
             }
 

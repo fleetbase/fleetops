@@ -244,8 +244,9 @@ class SettingController extends Controller
             'mapProvider' => 'leaflet',
         ];
 
-        $mapSettings = Setting::lookupFromCompany('fleet-ops.map-settings', $defaults);
         $systemMapSettings = Setting::lookup('fleet-ops.map-settings', []);
+        $mapSettings = Setting::lookupFromCompany('fleet-ops.map-settings', $defaults);
+        $mapSettings['mapProvider'] = data_get($mapSettings, 'mapProvider') ?: data_get($systemMapSettings, 'mapProvider', 'leaflet');
 
         // Source the Google Maps API key from the system-level services config
         // that is managed by the core-api admin settings panel. This ensures a
@@ -288,6 +289,7 @@ class SettingController extends Controller
     public function getAdminMapSettings()
     {
         $defaults = [
+            'mapProvider' => 'leaflet',
             'googleMapsMapId' => '',
         ];
 
@@ -296,7 +298,14 @@ class SettingController extends Controller
 
     public function saveAdminMapSettings(Request $request)
     {
+        $allowedProviders = ['leaflet', 'google'];
+        $mapProvider = $request->input('mapProvider', 'leaflet');
+        if (!in_array($mapProvider, $allowedProviders)) {
+            $mapProvider = 'leaflet';
+        }
+
         $settings = [
+            'mapProvider' => $mapProvider,
             'googleMapsMapId' => (string) $request->input('googleMapsMapId', ''),
         ];
 

@@ -13,6 +13,19 @@ export default class OperationsAllocationRoute extends Route {
     @service hostRouter;
     @service abilities;
     @service intl;
+    @service sidebar;
+    @service mapManager;
+
+    activate() {
+        this.sidebar.hide();
+    }
+
+    deactivate() {
+        this.sidebar.show();
+        this.mapManager.setMapInstance?.(null);
+        this.mapManager.setLivemap?.(null);
+        this.mapManager.setActiveProvider?.(this.mapManager.getConfiguredProvider?.() ?? 'leaflet');
+    }
 
     beforeModel() {
         if (this.abilities.cannot('fleet-ops list order')) {

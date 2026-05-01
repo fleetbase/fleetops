@@ -163,10 +163,6 @@ export default class OperationsOrdersIndexDetailsController extends Controller {
             this.routingCompleted = true;
         }
 
-        // Hide sidebar
-        console.log('called sidebar hideNow');
-        this.sidebar.hideNow();
-
         // Show & track driver assigned
         this.leafletLayerVisibilityManager.hideCategory('drivers');
         this.leafletLayerVisibilityManager.showModelLayer(this.model.driver_assigned);

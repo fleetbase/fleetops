@@ -67,15 +67,17 @@ export default class GoogleRoutesService extends RouteOptimizationInterfaceServi
         };
     }
 
-    async optimize({ order, waypoints, coordinates }, options = {}) {
+    async optimize({ order, waypoints, coordinates, preserveEndpoints = false }, options = {}) {
         const route = await this.computeRoute(this.#normalizeOptimizationCoordinates(order, coordinates), {
             ...options,
             optimizeWaypointOrder: true,
         });
         let sortedWaypoints = waypoints;
 
-        if (isArray(route.optimizedIntermediateWaypointIndices) && route.optimizedIntermediateWaypointIndices.length > 0) {
-            sortedWaypoints = route.optimizedIntermediateWaypointIndices.map((index) => waypoints[index]).filter(Boolean);
+        if (isArray(route.waypoints) && route.waypoints.length > 0) {
+            sortedWaypoints = this.#reorderModelsByRouteWaypoints(waypoints, route.waypoints, preserveEndpoints);
+        } else if (isArray(route.optimizedIntermediateWaypointIndices) && route.optimizedIntermediateWaypointIndices.length > 0) {
+            sortedWaypoints = this.#reorderModelWaypoints(waypoints, route.optimizedIntermediateWaypointIndices, preserveEndpoints);
         }
 
         return {
@@ -143,6 +145,83 @@ export default class GoogleRoutesService extends RouteOptimizationInterfaceServi
         const orderedIntermediates = optimizedIndices.map((index) => intermediates[index]).filter(Boolean);
 
         return [start, ...orderedIntermediates, end];
+    }
+
+    #reorderModelWaypoints(waypoints = [], optimizedIndices = [], preserveEndpoints = false) {
+        if (!isArray(optimizedIndices) || optimizedIndices.length === 0 || !isArray(waypoints) || waypoints.length < 3) {
+            return waypoints;
+        }
+
+        if (!preserveEndpoints) {
+            const start = waypoints[0];
+            const end = waypoints[waypoints.length - 1];
+            const intermediates = waypoints.slice(1, -1);
+            const orderedIntermediates = optimizedIndices.map((index) => intermediates[index]).filter(Boolean);
+
+            return [start, ...orderedIntermediates, end];
+        }
+
+        const start = waypoints[0];
+        const end = waypoints[waypoints.length - 1];
+        const intermediates = waypoints.slice(1, -1);
+        const orderedIntermediates = optimizedIndices.map((index) => intermediates[index]).filter(Boolean);
+
+        return [start, ...orderedIntermediates, end];
+    }
+
+    #reorderModelsByRouteWaypoints(waypoints = [], routeWaypoints = [], preserveEndpoints = false) {
+        if (!isArray(waypoints) || !waypoints.length || !isArray(routeWaypoints) || !routeWaypoints.length) {
+            return waypoints;
+        }
+
+        const waypointOrder = preserveEndpoints ? routeWaypoints.slice(1, -1) : routeWaypoints;
+        const buckets = new Map();
+
+        for (const waypoint of waypoints) {
+            const key = this.#modelCoordinateKey(waypoint);
+
+            if (!key) {
+                continue;
+            }
+
+            if (!buckets.has(key)) {
+                buckets.set(key, []);
+            }
+
+            buckets.get(key).push(waypoint);
+        }
+
+        const orderedWaypoints = [];
+        for (const routeWaypoint of waypointOrder) {
+            const key = this.#coordinateKey(routeWaypoint?.lat, routeWaypoint?.lng);
+            const bucket = buckets.get(key);
+
+            if (bucket?.length) {
+                orderedWaypoints.push(bucket.shift());
+            }
+        }
+
+        if (orderedWaypoints.length === waypoints.length) {
+            return orderedWaypoints;
+        }
+
+        return waypoints;
+    }
+
+    #modelCoordinateKey(waypoint) {
+        const place = waypoint?.place ?? waypoint;
+        return this.#coordinateKey(place?.latitude ?? waypoint?.latitude, place?.longitude ?? waypoint?.longitude);
+    }
+
+    #coordinateKey(lat, lng) {
+        const normalizedLat = Number(lat);
+        const normalizedLng = Number(lng);
+
+        if (!Number.isFinite(normalizedLat) || !Number.isFinite(normalizedLng)) {
+            return null;
+        }
+
+        return `${normalizedLat.toFixed(6)}:${normalizedLng.toFixed(6)}`;
     }
 
     #boundsFromCoordinates(coordinates = []) {

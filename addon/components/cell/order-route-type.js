@@ -34,8 +34,8 @@ export default class CellOrderRouteTypeComponent extends Component {
         return buildRouteTypeSummary({
             hasIntermediateWaypoints: this.order?.hasIntermediateWaypoints ?? this.payload?.hasIntermediateWaypoints,
             intermediateStopCount: this.intermediateStopCount,
-            hasPickup: Boolean(this.payload?.pickup_uuid ?? this.payload?.pickup),
-            hasDropoff: Boolean(this.payload?.dropoff_uuid ?? this.payload?.dropoff),
+            hasPickup: Boolean(this.payload?.pickup_uuid),
+            hasDropoff: Boolean(this.payload?.dropoff_uuid),
         });
     }
 

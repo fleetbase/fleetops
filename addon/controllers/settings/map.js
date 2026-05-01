@@ -3,11 +3,7 @@ import { tracked } from '@glimmer/tracking';
 import { inject as service } from '@ember/service';
 import { action } from '@ember/object';
 import { task } from 'ember-concurrency';
-
-const MAP_PROVIDER_OPTIONS = [
-    { label: 'Leaflet', value: 'leaflet' },
-    { label: 'Google Maps', value: 'google' },
-];
+import MAP_PROVIDER_OPTIONS from '../../utils/map-provider-options';
 
 export default class SettingsMapController extends Controller {
     @service fetch;

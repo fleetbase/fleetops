@@ -16,15 +16,17 @@ export default class OperationsOrdersIndexDetailsRoute extends Route {
         const fromName = transition.from?.name;
         const toName = transition.to?.name;
         const orderDetailsRoute = 'console.fleet-ops.operations.orders.index.details';
+        const isRefreshWithinSameDetailsRoute = fromName?.startsWith(orderDetailsRoute) && toName?.startsWith(orderDetailsRoute) && fromName === toName;
+
+        if (isRefreshWithinSameDetailsRoute) {
+            return true;
+        }
 
         // only cleanup when leaving the order details route tree entirely
         const isLeavingOrderDetails = fromName?.startsWith(orderDetailsRoute) && !toName?.startsWith(orderDetailsRoute);
         if (isLeavingOrderDetails) {
             const controller = this.controllerFor('operations.orders.index.details');
             const rc = controller.routingControl;
-
-            // Put back sidebar
-            this.sidebar.show();
 
             // stop listening for events
             this.orderSocketEvents.stop(controller.model);
@@ -42,6 +44,14 @@ export default class OperationsOrdersIndexDetailsRoute extends Route {
     @action error(error) {
         this.notifications.serverError(error);
         return this.hostRouter.transitionTo('console.fleet-ops.operations.orders.index');
+    }
+
+    activate() {
+        this.sidebar.hide();
+    }
+
+    deactivate() {
+        this.sidebar.show();
     }
 
     beforeModel() {

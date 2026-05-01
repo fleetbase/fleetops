@@ -137,6 +137,26 @@ class Payload extends Model
         return $this->hasMany(Waypoint::class)->with(['place']);
     }
 
+    /**
+     * The first waypoint marker for lightweight index fallback.
+     */
+    public function firstWaypointMarker()
+    {
+        return $this->hasOne(Waypoint::class, 'payload_uuid', 'uuid')
+            ->oldestOfMany('order')
+            ->with(['place']);
+    }
+
+    /**
+     * The last waypoint marker for lightweight index fallback.
+     */
+    public function lastWaypointMarker()
+    {
+        return $this->hasOne(Waypoint::class, 'payload_uuid', 'uuid')
+            ->latestOfMany('order')
+            ->with(['place']);
+    }
+
     public function getTotalEntitiesAttribute()
     {
         return $this->entities()->count();
@@ -727,6 +747,34 @@ class Payload extends Model
         }
 
         return null;
+    }
+
+    /**
+     * Get the lightweight pickup fallback for index resources.
+     */
+    public function getIndexPickupPlaceAttribute(): ?Place
+    {
+        if ($this->pickup instanceof Place) {
+            return $this->pickup;
+        }
+
+        $this->loadMissing('firstWaypointMarker.place');
+
+        return data_get($this, 'firstWaypointMarker.place');
+    }
+
+    /**
+     * Get the lightweight dropoff fallback for index resources.
+     */
+    public function getIndexDropoffPlaceAttribute(): ?Place
+    {
+        if ($this->dropoff instanceof Place) {
+            return $this->dropoff;
+        }
+
+        $this->loadMissing('lastWaypointMarker.place');
+
+        return data_get($this, 'lastWaypointMarker.place');
     }
 
     public function getPickupRegion(): string

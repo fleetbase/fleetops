@@ -1,4 +1,15 @@
 <ContentPanel @title="Configure Map" @open={{true}} @wrapperClass="bordered-classic">
+    <InputGroup @name="Default Map Provider" @helpText="Sets the default map provider for all organizations unless they override it in their own FleetOps map settings.">
+        <Select
+            class="w-full flex-1"
+            @value={{this.mapProvider}}
+            @options={{this.mapProviderOptions}}
+            @optionLabel="label"
+            @optionValue="value"
+            @placeholder="Select default map provider"
+            @onSelect={{this.selectMapProvider}}
+        />
+    </InputGroup>
     <InputGroup @name="Google Map ID" @value={{this.googleMapsMapId}} @helpText="Required for Google Advanced Markers and cloud-based map styling." />
 </ContentPanel>
 

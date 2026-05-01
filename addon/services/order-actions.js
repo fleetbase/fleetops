@@ -13,9 +13,14 @@ export default class OrderActionsService extends ResourceActionService {
         this.initialize('order', {
             defaultAttributes: {
                 meta: {},
-                payload: this.store.createRecord('payload'),
             },
         });
+    }
+
+    createNewInstance(attributes = {}) {
+        const payload = attributes.payload ?? this.store.createRecord('payload');
+
+        return super.createNewInstance({ ...attributes, payload });
     }
 
     transition = {

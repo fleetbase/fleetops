@@ -129,8 +129,9 @@ export default class MapManagerService extends Service {
      * @returns {*} The native map instance
      */
     @action initializeMap(element, options = {}) {
-        if (!this.adapter) {
-            const provider = this.getConfiguredProvider();
+        const provider = options.provider ?? this.getConfiguredProvider();
+
+        if (!this.adapter || this.providerName !== provider) {
             this.resolveAdapter(provider);
         }
 

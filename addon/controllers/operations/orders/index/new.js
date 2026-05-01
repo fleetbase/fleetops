@@ -93,13 +93,10 @@ export default class OperationsOrdersIndexNewController extends Controller {
     }
 
     @action setup() {
-        // Change to map layout
         this.index.changeLayout('map');
-        this.sidebar.hide();
     }
 
     reset() {
         this.order = this.orderCreation.newOrder();
-        this.sidebar.show();
     }
 }

@@ -3,6 +3,7 @@ import { inject as service } from '@ember/service';
 import { action } from '@ember/object';
 import { debug } from '@ember/debug';
 import { task } from 'ember-concurrency';
+import placeAddressHtml from '../../../utils/place-address-html';
 
 export default class OrderDetailsPayloadComponent extends Component {
     @service entityActions;
@@ -24,7 +25,7 @@ export default class OrderDetailsPayloadComponent extends Component {
                     permission: 'fleet-ops update order',
                     disabled: this.args.resource.status === 'canceled',
                     items: places.map((p) => ({
-                        text: p.address,
+                        text: placeAddressHtml(p),
                         onClick: () => this.addEntity.perform(p),
                     })),
                 },

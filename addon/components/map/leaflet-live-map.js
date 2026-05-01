@@ -14,6 +14,7 @@ import getModelName from '@fleetbase/ember-core/utils/get-model-name';
 
 export default class MapLeafletLiveMapComponent extends Component {
     @service mapManager;
+    @service mapSettings;
     @service leafletMapManager;
     @service leafletLayerVisibilityManager;
     @service leafletContextmenuManager;
@@ -292,6 +293,10 @@ export default class MapLeafletLiveMapComponent extends Component {
 
     isReady() {
         return this.ready === true;
+    }
+
+    get shouldUseGoogleMaps() {
+        return this.mapSettings.isGoogleMaps;
     }
 
     /**

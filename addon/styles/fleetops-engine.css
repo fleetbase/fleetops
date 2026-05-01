@@ -2588,6 +2588,16 @@ body[data-theme='dark'] .orchestrator-workbench,
     background: #111827; /* gray-900 — dark mode */
 }
 
+.orchestrator-workbench > .next-view-section-subheader {
+    grid-template-columns: 1fr 5fr;
+}
+
+.orchestrator-workbench > .next-view-section-subheader .next-view-section-subheader-title {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
 /* ── Toolbar ── */
 .workbench-toolbar {
     min-height: 44px;
