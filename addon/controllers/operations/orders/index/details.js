@@ -151,10 +151,10 @@ export default class OperationsOrdersIndexDetailsController extends Controller {
             markerWaypoints: this.routeMarkerWaypoints,
             polylineOptions: this.routePolylineOptions,
             createMarker: this.routeMarkerFactory,
-            onRouteFound: () => {
+            onRouteFound: (route) => {
                 this.routingCompleted = true;
             },
-            onRoutingError: () => {
+            onRoutingError: (err) => {
                 this.routingCompleted = true;
             },
         });

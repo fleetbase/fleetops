@@ -82,10 +82,19 @@ export default class OperationsOrdersIndexDetailsRoute extends Route {
         });
     }
 
-    async afterModel(order) {
-        await order.loadTrackingActivity();
-        if (order.meta?._index_resource) {
-            await order.reload();
+    async setupController(controller, model) {
+        super.setupController(...arguments);
+
+        // Change layout to map
+        controller.index?.changeLayout?.('map');
+
+        // load activity and reload order if lightweight payload
+        await model.loadTrackingActivity();
+        if (model.meta?._index_resource) {
+            await model.reload();
         }
+
+        // Setup controller
+        await controller.setup();
     }
 }
