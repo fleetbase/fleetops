@@ -138,7 +138,9 @@ export default class OperationsOrdersIndexDetailsController extends Controller {
     }
 
     @task *refresh() {
-        yield this.hostRouter.refresh();
+        try {
+            yield this.hostRouter.refresh();
+        } catch {}
     }
 
     @action async setup() {
