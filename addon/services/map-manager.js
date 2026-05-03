@@ -379,6 +379,14 @@ export default class MapManagerService extends Service {
         }
     }
 
+    clearRoutingControlsByTag(tag) {
+        if (!tag) {
+            return;
+        }
+
+        this.clearRoutingControls((handle) => handle?.tag === tag);
+    }
+
     positionWaypoints(waypointsOrBounds, options = {}) {
         return this.adapter?.positionWaypoints?.(waypointsOrBounds, options);
     }

@@ -1,7 +1,6 @@
 import Controller, { inject as controller } from '@ember/controller';
 import { tracked } from '@glimmer/tracking';
 import { inject as service } from '@ember/service';
-import { action } from '@ember/object';
 import { isArray } from '@ember/array';
 import { task } from 'ember-concurrency';
 import { colorForId, routeColorForStatus, routeStyleForStatus } from '../../../../utils/route-colors';
@@ -19,6 +18,7 @@ export default class OperationsOrdersIndexDetailsController extends Controller {
     @service sidebar;
     @tracked routingControl;
     @tracked routingCompleted = false;
+    @tracked realtimeOrderPublicId = null;
 
     get routePoints() {
         return buildRoutePointsFromPayload(this.model?.payload);
@@ -49,6 +49,23 @@ export default class OperationsOrdersIndexDetailsController extends Controller {
             weight: styles.at(-1)?.weight ?? 4,
             opacity: styles.at(-1)?.opacity ?? 0.85,
             styles,
+        };
+    }
+
+    get routeControlTag() {
+        return this.model?.public_id ? `order-details:${this.model.public_id}` : null;
+    }
+
+    get routingControlOptions() {
+        return {
+            tag: this.routeControlTag,
+            color: this.routePolylineOptions.color,
+            status: this.routeStatus,
+            markerWaypoints: this.routeMarkerWaypoints,
+            polylineOptions: this.routePolylineOptions,
+            createMarker: this.routeMarkerFactory,
+            onRouteFound: this.handleRoutingComplete,
+            onRoutingError: this.handleRoutingComplete,
         };
     }
 
@@ -140,63 +157,76 @@ export default class OperationsOrdersIndexDetailsController extends Controller {
     @task *refresh() {
         try {
             yield this.hostRouter.refresh();
-        } catch {}
+        } catch (error) {
+            return error;
+        }
     }
 
-    @action async setup() {
-        // Change to map layout and display order route
-        this.index.changeLayout('map');
-        this.routingCompleted = false;
-        this.routingControl = await this.mapManager.addRoutingControl(this.model.routeWaypoints, {
-            color: this.routePolylineOptions.color,
-            status: this.routeStatus,
-            markerWaypoints: this.routeMarkerWaypoints,
-            polylineOptions: this.routePolylineOptions,
-            createMarker: this.routeMarkerFactory,
-            onRouteFound: (route) => {
-                this.routingCompleted = true;
-            },
-            onRoutingError: (err) => {
-                this.routingCompleted = true;
-            },
-        });
+    handleRoutingComplete = () => {
+        this.routingCompleted = true;
+    };
 
-        if (!this.routingControl) {
-            this.routingCompleted = true;
+    async setupRealtime() {
+        const currentOrderPublicId = this.model?.public_id;
+        if (!currentOrderPublicId) {
+            return;
         }
 
-        // Show & track driver assigned
-        this.leafletLayerVisibilityManager.hideCategory('drivers');
-        this.leafletLayerVisibilityManager.showModelLayer(this.model.driver_assigned);
-        // Should we hide places & other vehicles?
+        if (this.realtimeOrderPublicId && this.realtimeOrderPublicId !== currentOrderPublicId) {
+            this.orderSocketEvents.stop({ public_id: this.realtimeOrderPublicId });
+        }
 
-        // Listen for this order events
+        this.realtimeOrderPublicId = currentOrderPublicId;
+
         this.orderSocketEvents.start(
             this.model,
             async (_msg, { reloadable }) => {
                 if (reloadable) {
                     await this.hostRouter.refresh();
-                    this.routingCompleted = false;
-                    this.routingControl = await this.mapManager.replaceRoutingControl(this.model.routeWaypoints, this.routingControl, {
-                        color: this.routePolylineOptions.color,
-                        status: this.routeStatus,
-                        markerWaypoints: this.routeMarkerWaypoints,
-                        polylineOptions: this.routePolylineOptions,
-                        createMarker: this.routeMarkerFactory,
-                        onRouteFound: () => {
-                            this.routingCompleted = true;
-                        },
-                        onRoutingError: () => {
-                            this.routingCompleted = true;
-                        },
-                    });
-
-                    if (!this.routingControl) {
-                        this.routingCompleted = true;
-                    }
                 }
             },
             { debounceMs: 250 }
         );
+    }
+
+    async syncRoutingControl() {
+        this.routingCompleted = false;
+        this.teardownRoutingControls();
+
+        this.routingControl = await this.mapManager.addRoutingControl(this.model.routeWaypoints, this.routingControlOptions);
+
+        if (!this.routingControl) {
+            this.routingCompleted = true;
+        }
+    }
+
+    syncMapContext() {
+        this.leafletLayerVisibilityManager.hideCategory('drivers');
+        this.leafletLayerVisibilityManager.showModelLayer(this.model.driver_assigned);
+    }
+
+    teardownRoutingControls() {
+        if (this.routeControlTag) {
+            this.mapManager.clearRoutingControlsByTag(this.routeControlTag);
+        } else if (this.routingControl) {
+            this.mapManager.removeRoutingControl(this.routingControl);
+        }
+
+        this.routingControl = undefined;
+        this.routingCompleted = false;
+    }
+
+    teardownRealtime() {
+        if (this.realtimeOrderPublicId) {
+            this.orderSocketEvents.stop({ public_id: this.realtimeOrderPublicId });
+            this.realtimeOrderPublicId = null;
+        }
+    }
+
+    async setupDetailsSession() {
+        this.index.changeLayout('map');
+        await this.setupRealtime();
+        await this.syncRoutingControl();
+        this.syncMapContext();
     }
 }

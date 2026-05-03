@@ -26,16 +26,8 @@ export default class OperationsOrdersIndexDetailsRoute extends Route {
         const isLeavingOrderDetails = fromName?.startsWith(orderDetailsRoute) && !toName?.startsWith(orderDetailsRoute);
         if (isLeavingOrderDetails) {
             const controller = this.controllerFor('operations.orders.index.details');
-            const rc = controller.routingControl;
-
-            // stop listening for events
-            this.orderSocketEvents.stop(controller.model);
-
-            // cleanup guards
-            if (rc) {
-                this.mapManager.removeRoutingControl(rc);
-                controller.routingControl = undefined;
-            }
+            controller.teardownRealtime();
+            controller.teardownRoutingControls();
         }
 
         return true;
@@ -94,7 +86,6 @@ export default class OperationsOrdersIndexDetailsRoute extends Route {
             await model.reload();
         }
 
-        // Setup controller
-        await controller.setup();
+        await controller.setupDetailsSession();
     }
 }
