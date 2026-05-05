@@ -8,7 +8,7 @@ module.exports = {
     printWidth: 190,
     overrides: [
         {
-            files: '*.{hbs,js,ts}',
+            files: '*.hbs',
             options: {
                 singleQuote: false,
             },
