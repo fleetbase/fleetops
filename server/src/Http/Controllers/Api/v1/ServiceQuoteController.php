@@ -232,6 +232,7 @@ class ServiceQuoteController extends Controller
 
         // should all be Place like
         $waypoints = collect([$pickup, ...$waypoints, $dropoff])->filter();
+        $endpointCount = (int) ($pickup instanceof Place) + (int) ($dropoff instanceof Place);
 
         // if facilitator is an integrated partner resolve service quotes from bridge
         if ($facilitator && Utils::isIntegratedVendorId($facilitator)) {
@@ -281,7 +282,7 @@ class ServiceQuoteController extends Controller
             $serviceQuotes = collect();
 
             if ($serviceRate) {
-                [$subTotal, $lines] = $serviceRate->quoteFromPreliminaryData($entities, $waypoints, $totalDistance, $totalTime, $isCashOnDelivery);
+                [$subTotal, $lines] = $serviceRate->quoteFromPreliminaryData($entities, $waypoints, $totalDistance, $totalTime, $isCashOnDelivery, $endpointCount);
 
                 $quote = ServiceQuote::create([
                     'request_id'        => $requestId,
@@ -329,7 +330,7 @@ class ServiceQuoteController extends Controller
 
         // calculate quotes
         foreach ($serviceRates as $serviceRate) {
-            [$subTotal, $lines] = $serviceRate->quoteFromPreliminaryData($entities, $waypoints, $totalDistance, $totalTime, $isCashOnDelivery);
+            [$subTotal, $lines] = $serviceRate->quoteFromPreliminaryData($entities, $waypoints, $totalDistance, $totalTime, $isCashOnDelivery, $endpointCount);
 
             $quote = ServiceQuote::create([
                 'request_id'        => $requestId,

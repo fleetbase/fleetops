@@ -1,0 +1,53 @@
+<Layout::Section::Header @title={{t "settings.map.fleet-ops-map-settings"}}>
+    <Button
+        @type="primary"
+        @size="sm"
+        @icon="save"
+        @text={{t "common.save-changes"}}
+        @onClick={{perform this.saveSettings}}
+        @disabled={{this.saveSettings.isRunning}}
+        @isLoading={{or this.saveSettings.isRunning this.getSettings.isRunning}}
+        @permission="fleet-ops update map-settings"
+    />
+</Layout::Section::Header>
+<Layout::Section::Body class="overflow-y-scroll h-full">
+    <div class="container mx-auto h-screen">
+        <div class="max-w-3xl my-10 mx-auto space-y-6">
+
+            {{!-- ─── Map Provider Panel ──────────────────────────────────────────── --}}
+            <ContentPanel @title={{t "settings.map.configure-map"}} @open={{true}} @wrapperClass="bordered-classic">
+                {{#if this.settingsLoaded}}
+
+                    {{!-- Provider selector --}}
+                    <InputGroup
+                        @name={{t "settings.map.map-provider"}}
+                        @helpText={{t "settings.map.map-provider-help-text"}}
+                    >
+                        <Select
+                            class="w-full flex-1"
+                            @value={{this.mapProvider}}
+                            @options={{this.mapProviderOptions}}
+                            @optionLabel="label"
+                            @optionValue="value"
+                            @placeholder={{t "settings.map.select-map-provider"}}
+                            @onSelect={{this.selectMapProvider}}
+                        />
+                    </InputGroup>
+
+                {{else}}
+                    {{!-- Loading state --}}
+                    <div class="flex items-center justify-center py-8">
+                        <Spinner />
+                    </div>
+                {{/if}}
+            </ContentPanel>
+
+            {{!-- Extension point for third-party panels --}}
+            <RegistryYield @registry="fleet-ops:template:settings:map" as |RegistryComponent|>
+                <RegistryComponent @controller={{this}} />
+            </RegistryYield>
+
+        </div>
+    </div>
+    <Spacer @height="600px" />
+</Layout::Section::Body>

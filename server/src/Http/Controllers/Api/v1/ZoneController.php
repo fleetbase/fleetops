@@ -69,6 +69,7 @@ class ZoneController extends Controller
 
         // create the zone
         $zone = Zone::create($input);
+        $zone->refresh();
 
         // response the zone resource
         return new ZoneResource($zone);
@@ -134,6 +135,7 @@ class ZoneController extends Controller
 
         // update the zone
         $zone->update($input);
+        $zone->refresh();
 
         // response the zone resource
         return new ZoneResource($zone);

@@ -109,22 +109,24 @@ class OrderController extends FleetOpsController
                         $input['integrated_vendor_order'] = $integratedVendorOrder;
                     }
 
-                    // if no type is set its default to default
-                    if (!isset($input['type'])) {
-                        $input['type'] = 'default';
+                    // Normalize order config + type onto the company transport
+                    // config when an explicit config was not provided.
+                    $resolvedOrderConfig = null;
+                    if (!empty($input['order_config_uuid']) || !empty($input['type'])) {
+                        $resolvedOrderConfig = OrderConfig::resolveFromIdentifier([$input['order_config_uuid'] ?? null, $input['type'] ?? null]);
+                    }
+                    $resolvedOrderConfig ??= OrderConfig::defaultOrCreate();
+
+                    if ($resolvedOrderConfig) {
+                        $input['order_config_uuid'] = $resolvedOrderConfig->uuid;
+                        $input['type'] = $resolvedOrderConfig->key;
+                    } elseif (!isset($input['type'])) {
+                        $input['type'] = 'transport';
                     }
 
                     // if no status is set its default to `created`
                     if (!isset($input['status'])) {
                         $input['status'] = 'created';
-                    }
-
-                    // Set order config
-                    if (!isset($input['order_config_uuid'])) {
-                        $defaultOrderConfig = OrderConfig::default();
-                        if ($defaultOrderConfig) {
-                            $input['order_config_uuid'] = $defaultOrderConfig->uuid;
-                        }
                     }
 
                     // Ensure orchestrator_priority is never null — the column is NOT NULL
@@ -225,10 +227,14 @@ class OrderController extends FleetOpsController
      */
     public function editOrderRoute(string $id, Request $request)
     {
-        $pickup    = $request->input('pickup');
-        $dropoff   = $request->input('dropoff');
-        $return    = $request->input('return');
-        $waypoints = $request->array('waypoints', []);
+        $pickup            = $request->input('pickup');
+        $dropoff           = $request->input('dropoff');
+        $return            = $request->input('return');
+        $waypoints         = $request->array('waypoints', []);
+        $hasPickupInput    = $request->exists('pickup');
+        $hasDropoffInput   = $request->exists('dropoff');
+        $hasReturnInput    = $request->exists('return');
+        $hasWaypointsInput = $request->exists('waypoints');
 
         // Get the order
         $order = Order::where('uuid', $id)->with(['payload'])->first();
@@ -236,29 +242,50 @@ class OrderController extends FleetOpsController
             return response()->error('Unable to find order to update route for.');
         }
 
-        // Handle update of multiple waypoints
-        if ($waypoints) {
-            $order->payload->updateWaypoints($waypoints);
-            $order->payload->removePlace(['pickup', 'dropoff', 'return'], ['save' => true]);
-        } else {
-            // Update pickup
+        if ($hasPickupInput) {
             if ($pickup) {
                 $order->payload->setPickup($pickup, ['save' => true]);
+            } else {
+                $order->payload->removePlace('pickup', ['save' => true]);
             }
+        }
 
-            // Update dropoff
+        if ($hasDropoffInput) {
             if ($dropoff) {
                 $order->payload->setDropoff($dropoff, ['save' => true]);
+            } else {
+                $order->payload->removePlace('dropoff', ['save' => true]);
             }
+        }
 
-            // Update return
+        if ($hasReturnInput) {
             if ($return) {
-                $order->payload->setDropoff($return, ['save' => true]);
+                $order->payload->setReturn($return, ['save' => true]);
+            } else {
+                $order->payload->removePlace('return', ['save' => true]);
             }
+        }
 
-            // Remove waypoints if any
+        if ($hasWaypointsInput) {
+            if (!empty($waypoints)) {
+                $order->payload->updateWaypoints($waypoints);
+            } else {
+                $order->payload->removeWaypoints();
+            }
+        } elseif ($hasPickupInput || $hasDropoffInput || $hasReturnInput) {
             $order->payload->removeWaypoints();
         }
+
+        $startingDestination = $order->payload->getPickupOrFirstWaypoint();
+        if (!$startingDestination) {
+            $startingDestination = $order->payload->getDropoffOrLastWaypoint();
+        }
+
+        if ($startingDestination instanceof Place || $startingDestination instanceof Waypoint) {
+            $order->payload->setCurrentWaypoint($startingDestination);
+        }
+
+        $order->load(['payload.pickup', 'payload.dropoff', 'payload.return', 'payload.waypoints']);
 
         return ['order' => new $this->resource($order)];
     }
@@ -531,14 +558,10 @@ class OrderController extends FleetOpsController
             return response()->error('No order found to dispatch.');
         }
 
-        // if order has no config set, set default config
-        $order->loadMissing('orderConfig');
-        if (!$order->orderConfig) {
-            $defaultOrderConfig = OrderConfig::default();
-            if ($defaultOrderConfig) {
-                $order->update(['order_config_uuid' => $defaultOrderConfig->uuid]);
-                $order->loadMissing('orderConfig');
-            }
+        // Ensure the order is normalized onto a real order config before
+        // dispatching activities.
+        if (!$order->ensureOrderConfig()) {
+            return response()->error('No order config found for dispatch.');
         }
 
         if (!$order->hasDriverAssigned && !$order->adhoc) {
@@ -711,7 +734,11 @@ class OrderController extends FleetOpsController
         }
 
         $waypoint   = $request->filled('waypoint') ? Waypoint::findByPlace($request->input('waypoint'), $order) : null;
-        $activities = $order->config()->nextActivity($waypoint);
+        $orderConfig = $order->ensureOrderConfig();
+        if (!$orderConfig) {
+            return response()->error('No order config found for order.');
+        }
+        $activities = $orderConfig->nextActivity($waypoint);
 
         // If activity is to complete order add proof of delivery properties if required
         // This is a temporary fix until activity is updated to handle POD on it's own

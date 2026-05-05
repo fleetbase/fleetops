@@ -257,6 +257,7 @@ export default buildRoutes(function () {
         this.route('custom-fields');
         this.route('avatars');
         this.route('routing');
+        this.route('map');
         this.route('orchestrator');
         this.route('scheduling');
         this.route('payments', function () {

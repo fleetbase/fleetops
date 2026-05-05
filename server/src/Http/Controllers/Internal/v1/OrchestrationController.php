@@ -574,12 +574,15 @@ class OrchestrationController extends Controller
 
                 // ── Resolve OrderConfig ───────────────────────────────────────
                 $orderConfigUuid = null;
+                $resolvedOrderConfig = null;
                 if (!empty($firstRow['type'])) {
-                    $orderConfig = OrderConfig::resolveFromIdentifier($firstRow['type']);
-                    if ($orderConfig) {
-                        $orderConfigUuid = $orderConfig->uuid;
+                    $resolvedOrderConfig = OrderConfig::resolveFromIdentifier($firstRow['type']);
+                    if ($resolvedOrderConfig) {
+                        $orderConfigUuid = $resolvedOrderConfig->uuid;
                     }
                 }
+                $resolvedOrderConfig ??= OrderConfig::defaultOrCreate();
+                $orderConfigUuid = $resolvedOrderConfig?->uuid;
 
                 // ── Resolve Customer ─────────────────────────────────────────
                 $customerUuid = null;
@@ -660,7 +663,7 @@ class OrchestrationController extends Controller
                     'driver_assigned_uuid'  => $driverUuid,
                     'internal_id'           => $firstRow['internal_id'] ?? null,
                     'status'                => $firstRow['status'] ?? 'created',
-                    'type'                  => $firstRow['type'] ?? 'default',
+                    'type'                  => $resolvedOrderConfig?->key ?? 'transport',
                     'notes'                 => $firstRow['notes'] ?? null,
                     'scheduled_at'          => !empty($firstRow['scheduled_at'])
                         ? Carbon::parse($firstRow['scheduled_at'])

@@ -6,7 +6,7 @@ import contextComponentCallback from '@fleetbase/ember-core/utils/context-compon
 import applyContextComponentArguments from '@fleetbase/ember-core/utils/apply-context-component-arguments';
 
 export default class RouteOptimizationWizardPanelComponent extends Component {
-    @service universe;
+    @service sidebar;
     @tracked context;
 
     /**
@@ -27,9 +27,8 @@ export default class RouteOptimizationWizardPanelComponent extends Component {
     @action setOverlayContext(overlayContext) {
         this.context = overlayContext;
         // hide sidebar
-        if (this.universe.sidebarContext) {
-            this.universe.sidebarContext.hide();
-        }
+        this.sidebar.hide();
+
         contextComponentCallback(this, 'onLoad', ...arguments);
     }
 

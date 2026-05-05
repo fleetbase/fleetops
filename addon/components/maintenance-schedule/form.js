@@ -1,5 +1,6 @@
 import Component from '@glimmer/component';
 import { tracked } from '@glimmer/tracking';
+import { isArray } from '@ember/array';
 import { action } from '@ember/object';
 
 /**
@@ -116,7 +117,7 @@ export default class MaintenanceScheduleFormComponent extends Component {
                 }
             }
             // Restore reminder_offsets from the resource
-            if (Array.isArray(resource.reminder_offsets)) {
+            if (isArray(resource.reminder_offsets)) {
                 this.reminderOffsets = [...resource.reminder_offsets];
             }
             // Restore interval method from stored interval_method field, or infer from populated fields

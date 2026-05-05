@@ -6,7 +6,7 @@ import { task } from 'ember-concurrency';
 
 export default class LayoutFleetOpsSidebarDriverListingComponent extends Component {
     @service driverActions;
-    @service leafletMapManager;
+    @service mapManager;
     @service store;
     @service universe;
     @service hostRouter;
@@ -133,10 +133,10 @@ export default class LayoutFleetOpsSidebarDriverListingComponent extends Compone
             await this.hostRouter.transitionTo('console.fleet-ops.operations.orders.index', { queryParams: { layout: 'map' } });
         } catch {}
 
-        if (this.leafletMapManager._livemap?.isReady()) {
+        if (this.mapManager.livemap?.isReady?.()) {
             this.focusDriverOnMap(driver);
         } else {
-            this.universe.one('fleet-ops.live-map.on-loaded', () => {
+            this.universe.one('fleet-ops.live-map.loaded', () => {
                 this.focusDriverOnMap(driver);
             });
         }
@@ -147,8 +147,8 @@ export default class LayoutFleetOpsSidebarDriverListingComponent extends Compone
     }
 
     @action async focusDriverOnMap(driver) {
-        await this.leafletMapManager.ensureInteractive({ timeoutMs: 8000 });
-        this.leafletMapManager.flyToRecordLayer(driver, 16, {
+        await this.mapManager.waitForMap({ timeoutMs: 8000 });
+        this.mapManager.focusResource(driver, 16, {
             paddingBottomRight: [300, 200],
             moveend: () => {
                 this.driverActions.panel.view(driver, { closeOnTransition: true });

@@ -128,10 +128,11 @@ class LiveController extends Controller
             ->applyDirectivesForPermissions('fleet-ops list order')
             ->with([
                 'payload.entities',
-                'payload.waypoints',
                 'payload.dropoff',
                 'payload.pickup',
                 'payload.return',
+                'payload.firstWaypointMarker.place',
+                'payload.lastWaypointMarker.place',
                 'trackingNumber',
                 'trackingStatuses',
                 'driverAssigned' => function ($query) {

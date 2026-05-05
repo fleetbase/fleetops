@@ -1,0 +1,46 @@
+<div class="orders-route-type-cell" ...attributes>
+    {{#if this.hasRoutePreview}}
+        <div class="orders-route-type-trigger" {{on "mouseenter" this.ensurePayloadLoaded}} {{on "focusin" this.ensurePayloadLoaded}}>
+            <span class="{{this.summary.badgeClass}} orders-route-type-badge">
+                <FaIcon @icon={{this.summary.icon}} class="mr-0.5" />
+                {{this.summary.label}}
+            </span>
+            <Attach::Tooltip @class="clean orders-route-type-tooltip" @animation="scale" @placement="right">
+                <InputInfo @hideIcon={{true}}>
+                    <div class="orders-route-type-preview">
+                        <div class="orders-route-type-preview__header">
+                            <FaIcon @icon="route" class="mr-2" />
+                            <span>{{t "resource.route"}}</span>
+                        </div>
+                        {{#if this.isLoadingPayload}}
+                            <div class="orders-route-type-preview__state">
+                                <Spinner class="mr-2" />
+                                <span>{{t "common.loading-route"}}</span>
+                            </div>
+                        {{else if this.loadPayloadError}}
+                            <div class="orders-route-type-preview__state orders-route-type-preview__state--error">
+                                {{this.loadPayloadError}}
+                            </div>
+                        {{else if this.hasLoadedWaypointPayload}}
+                            <RouteList
+                                @order={{this.order}}
+                                @isCollapsible={{false}}
+                                @routeStopClass="orders-route-type-preview__stop"
+                                @routeLocationClass="orders-route-type-preview__location"
+                            />
+                        {{else}}
+                            <div class="orders-route-type-preview__state">
+                                {{t "common.hover-to-load-route"}}
+                            </div>
+                        {{/if}}
+                    </div>
+                </InputInfo>
+            </Attach::Tooltip>
+        </div>
+    {{else}}
+        <span class="{{this.summary.badgeClass}} orders-route-type-badge">
+            <FaIcon @icon={{this.summary.icon}} class="mr-0.5" />
+            {{this.summary.label}}
+        </span>
+    {{/if}}
+</div>

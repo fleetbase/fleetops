@@ -5,13 +5,13 @@ import { action } from '@ember/object';
 
 export default class MapDrawerPlaceListingComponent extends Component {
     @service placeActions;
-    @service leafletMapManager;
+    @service mapManager;
     @service hostRouter;
     @service intl;
     @tracked query = '';
 
     get filteredPlaces() {
-        const places = this.leafletMapManager._livemap?.places ?? [];
+        const places = this.mapManager.livemap?.places ?? [];
         const query = this.query?.toLowerCase();
         if (!query) {
             return places;
@@ -91,7 +91,7 @@ export default class MapDrawerPlaceListingComponent extends Component {
     }
 
     @action view(place) {
-        this.leafletMapManager.flyToRecordLayer(place, 16, {
+        this.mapManager.focusResource(place, 16, {
             paddingBottomRight: [300, 200],
             moveend: () => {
                 this.placeActions.panel.view(place);
@@ -100,7 +100,7 @@ export default class MapDrawerPlaceListingComponent extends Component {
     }
 
     @action edit(place) {
-        this.leafletMapManager.flyToRecordLayer(place, 16, {
+        this.mapManager.focusResource(place, 16, {
             paddingBottomRight: [300, 200],
             moveend: () => {
                 this.placeActions.panel.edit(place);
@@ -109,7 +109,7 @@ export default class MapDrawerPlaceListingComponent extends Component {
     }
 
     @action locate(place) {
-        this.leafletMapManager.flyToRecordLayer(place, 18, {
+        this.mapManager.focusResource(place, 18, {
             paddingBottomRight: [300, 200],
         });
     }

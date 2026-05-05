@@ -184,9 +184,17 @@ class SettingController extends Controller
      */
     public function saveRoutingSettings(Request $request)
     {
-        $router = $request->input('router');
-        $unit   = $request->input('unit', 'km');
-        Setting::configureCompany('routing', ['router' => $router, 'unit' => $unit]);
+        $displayEngine      = $request->input('display_engine', $request->input('router', 'osrm'));
+        $optimizationEngine = $request->input('optimization_engine', $displayEngine);
+        $unit               = $request->input('unit', 'km');
+        Setting::configureCompany('routing', [
+            'router'                      => $displayEngine,
+            'display_engine'              => $displayEngine,
+            'optimization_engine'         => $optimizationEngine,
+            'routing_display_engine'      => $displayEngine,
+            'routing_optimization_engine' => $optimizationEngine,
+            'unit'                        => $unit,
+        ]);
 
         return response()->json([
             'status'  => 'ok',
@@ -203,12 +211,107 @@ class SettingController extends Controller
     {
         $routingSettings = Setting::lookupCompany('routing', ['router' => 'osrm', 'unit' => 'km']);
 
+        $displayEngine = data_get($routingSettings, 'display_engine', data_get($routingSettings, 'routing_display_engine', data_get($routingSettings, 'router', 'osrm')));
+        $optimizationEngine = data_get($routingSettings, 'optimization_engine', data_get($routingSettings, 'routing_optimization_engine', $displayEngine));
+        $routingSettings['router'] = $displayEngine;
+        $routingSettings['display_engine'] = $displayEngine;
+        $routingSettings['optimization_engine'] = $optimizationEngine;
+        $routingSettings['routing_display_engine'] = $displayEngine;
+        $routingSettings['routing_optimization_engine'] = $optimizationEngine;
+
         // always default to km if no unit is set
         if (!isset($routingSettings['unit'])) {
             $routingSettings['unit'] = 'km';
         }
 
         return response()->json($routingSettings);
+    }
+
+    /**
+     * Retrieve and return the map provider settings for the current company.
+     *
+     * The Google Maps API key is sourced exclusively from the system-level
+     * services configuration managed by the core-api admin settings panel
+     * (services.google_maps.api_key). FleetOps never stores or manages the
+     * key independently — it simply reads it from the shared system config
+     * and passes it to the frontend so the Google Maps adapter can initialise.
+     *
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function getMapSettings()
+    {
+        $defaults = [
+            'mapProvider' => 'leaflet',
+        ];
+
+        $systemMapSettings = Setting::lookup('fleet-ops.map-settings', []);
+        $mapSettings = Setting::lookupFromCompany('fleet-ops.map-settings', $defaults);
+        $mapSettings['mapProvider'] = data_get($mapSettings, 'mapProvider') ?: data_get($systemMapSettings, 'mapProvider', 'leaflet');
+
+        // Source the Google Maps API key from the system-level services config
+        // that is managed by the core-api admin settings panel. This ensures a
+        // single source of truth and avoids duplicating key management.
+        $mapSettings['googleMapsApiKey'] = config('services.google_maps.api_key', env('GOOGLE_MAPS_API_KEY', ''));
+        $mapSettings['googleMapsMapId'] = data_get($systemMapSettings, 'googleMapsMapId', '');
+
+        return response()->json($mapSettings);
+    }
+
+    /**
+     * Persist the map provider settings for the current company.
+     *
+     * The Google Maps API key is managed entirely through the core-api admin
+     * settings panel (Settings → Services → Google Maps) and is therefore
+     * never accepted or stored by this endpoint. Only the provider selection
+     * and display preferences are persisted here.
+     *
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function saveMapSettings(Request $request)
+    {
+        $settings = $request->input('settings', []);
+
+        // The API key is managed at the system level via core-api — strip it
+        // from the payload in case a client accidentally sends it.
+        unset($settings['googleMapsApiKey']);
+
+        // Validate provider value
+        $allowedProviders = ['leaflet', 'google'];
+        if (isset($settings['mapProvider']) && !in_array($settings['mapProvider'], $allowedProviders)) {
+            $settings['mapProvider'] = 'leaflet';
+        }
+
+        Setting::configureCompany('fleet-ops.map-settings', $settings);
+
+        return response()->json($this->getMapSettings()->getData(true));
+    }
+
+    public function getAdminMapSettings()
+    {
+        $defaults = [
+            'mapProvider' => 'leaflet',
+            'googleMapsMapId' => '',
+        ];
+
+        return response()->json(Setting::lookup('fleet-ops.map-settings', $defaults));
+    }
+
+    public function saveAdminMapSettings(Request $request)
+    {
+        $allowedProviders = ['leaflet', 'google'];
+        $mapProvider = $request->input('mapProvider', 'leaflet');
+        if (!in_array($mapProvider, $allowedProviders)) {
+            $mapProvider = 'leaflet';
+        }
+
+        $settings = [
+            'mapProvider' => $mapProvider,
+            'googleMapsMapId' => (string) $request->input('googleMapsMapId', ''),
+        ];
+
+        Setting::configure('fleet-ops.map-settings', $settings);
+
+        return response()->json($this->getAdminMapSettings()->getData(true));
     }
 
     /**

@@ -8,7 +8,7 @@ export default class LayoutFleetOpsSidebarFleetListingComponent extends Componen
     @service store;
     @service universe;
     @service vehicleActions;
-    @service leafletMapManager;
+    @service mapManager;
     @service hostRouter;
     @service abilities;
     @service notifications;
@@ -86,10 +86,10 @@ export default class LayoutFleetOpsSidebarFleetListingComponent extends Componen
             await this.hostRouter.transitionTo('console.fleet-ops.operations.orders.index', { queryParams: { layout: 'map' } });
         } catch {}
 
-        if (this.leafletMapManager._livemap?.isReady()) {
+        if (this.mapManager.livemap?.isReady?.()) {
             this.focusVehicleOnMap(vehicle);
         } else {
-            this.universe.one('fleet-ops.live-map.on-loaded', () => {
+            this.universe.one('fleet-ops.live-map.loaded', () => {
                 this.focusVehicleOnMap(vehicle);
             });
         }
@@ -100,8 +100,8 @@ export default class LayoutFleetOpsSidebarFleetListingComponent extends Componen
     }
 
     @action async focusVehicleOnMap(vehicle) {
-        await this.leafletMapManager.ensureInteractive({ timeoutMs: 8000 });
-        this.leafletMapManager.flyToRecordLayer(vehicle, 16, {
+        await this.mapManager.waitForMap({ timeoutMs: 8000 });
+        this.mapManager.focusResource(vehicle, 16, {
             paddingBottomRight: [300, 200],
             moveend: () => {
                 this.vehicleActions.panel.view(vehicle, { closeOnTransition: true });

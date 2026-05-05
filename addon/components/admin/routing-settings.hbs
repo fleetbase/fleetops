@@ -1,0 +1,11 @@
+<div class="space-y-6">
+    <InfoBlock @type="info" @icon="circle-info" class="mb-4">
+        Configure system-wide routing engine defaults here. Organizations can optionally override these values from their own routing settings.
+    </InfoBlock>
+
+    <RegistryYield @registry="fleet-ops:component:admin:routing-settings" as |RegistryComponent|>
+        <div>
+            <RegistryComponent />
+        </div>
+    </RegistryYield>
+</div>

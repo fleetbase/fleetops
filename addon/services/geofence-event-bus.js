@@ -1,4 +1,5 @@
 import Service from '@ember/service';
+import { isArray } from '@ember/array';
 import { inject as service } from '@ember/service';
 import { tracked } from '@glimmer/tracking';
 import { action } from '@ember/object';
@@ -154,7 +155,7 @@ export default class GeofenceEventBusService extends Service {
 
     @action
     seedEvents(events = []) {
-        this.events = Array.isArray(events) ? events.slice(0, this.MAX_EVENTS).map((event) => ({ ...event, isNew: false })) : [];
+        this.events = isArray(events) ? events.slice(0, this.MAX_EVENTS).map((event) => ({ ...event, isNew: false })) : [];
     }
 
     /**

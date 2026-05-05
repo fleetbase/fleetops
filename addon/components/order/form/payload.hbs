@@ -71,6 +71,24 @@
                                             <div>
                                                 <Input @value={{entity.sku}} @type="text" class="w-full form-input form-input-sm" placeholder={{t "order.fields.sku"}} />
                                             </div>
+                                            <div class="fleetbase-model-select fleetbase-power-select ember-model-select">
+                                                <PowerSelect
+                                                    @options={{get-fleet-ops-options "entityTypes"}}
+                                                    @selected={{find-by "value" entity.type (get-fleet-ops-options "entityTypes")}}
+                                                    @onChange={{set-model-attr entity "type"}}
+                                                    @placeholder="Select entity type"
+                                                    @triggerClass="form-select"
+                                                    as |type|
+                                                >
+                                                    <div class="text-sm">
+                                                        <div class="font-semibold normalize-in-trigger">{{type.label}}</div>
+                                                        <div class="hide-from-trigger">{{type.description}}</div>
+                                                    </div>
+                                                </PowerSelect>
+                                            </div>
+                                            <RegistryYield @registry="fleet-ops:component:order:form:payload:entity:form" as |RegistryComponent|>
+                                                <RegistryComponent @entity={{entity}} @order={{@resource}} @controller={{this}} />
+                                            </RegistryYield>
                                             <Button @icon="pencil" @text={{t "order.fields.edit-item"}} @size="sm" @onClick={{fn this.editEntity entity}} />
                                         </div>
                                         <div class="absolute top-0 right-0 p-2">
@@ -104,6 +122,21 @@
                                 </div>
                                 <div>
                                     <Input @value={{entity.sku}} @type="text" class="w-full form-input form-input-sm" placeholder={{t "order.fields.sku"}} />
+                                </div>
+                                <div class="fleetbase-model-select fleetbase-power-select ember-model-select">
+                                    <PowerSelect
+                                        @options={{get-fleet-ops-options "entityTypes"}}
+                                        @selected={{find-by "value" entity.type (get-fleet-ops-options "entityTypes")}}
+                                        @onChange={{set-model-attr entity "type"}}
+                                        @placeholder="Select entity type"
+                                        @triggerClass="form-select"
+                                        as |type|
+                                    >
+                                        <div class="text-sm">
+                                            <div class="font-semibold normalize-in-trigger">{{type.label}}</div>
+                                            <div class="hide-from-trigger">{{type.description}}</div>
+                                        </div>
+                                    </PowerSelect>
                                 </div>
                                 <RegistryYield @registry="fleet-ops:component:order:form:payload:entity:form" as |RegistryComponent|>
                                     <RegistryComponent @entity={{entity}} @order={{@resource}} @controller={{this}} />

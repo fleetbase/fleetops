@@ -229,7 +229,7 @@ class ServiceRate extends Model
      */
     public function isAlgorithm(): bool
     {
-        return $this->rate_calculation_method === 'algo';
+        return $this->rate_calculation_method === 'algo' || $this->rate_calculation_method === 'algorithm';
     }
 
     /**
@@ -677,7 +677,7 @@ class ServiceRate extends Model
      *
      * @return array an array containing the calculated quote and line items
      */
-    public function quoteFromPreliminaryData($entities = [], $waypoints = [], ?int $totalDistance = 0, ?int $totalTime = 0, ?bool $isCashOnDelivery = false)
+    public function quoteFromPreliminaryData($entities = [], $waypoints = [], ?int $totalDistance = 0, ?int $totalTime = 0, ?bool $isCashOnDelivery = false, ?int $endpointCount = null)
     {
         $lines    = collect();
         $subTotal = data_get($this, 'base_fee', 0);
@@ -739,6 +739,7 @@ class ServiceRate extends Model
         }
 
         if ($this->isAlgorithm()) {
+            $resolvedEndpointCount = $endpointCount ?? $this->inferEndpointCountFromStops($waypoints);
             $rateFee = $this->normalizeCalculatedMoney(Algo::exec(
                 $this->algorithm,
                 $this->buildAlgorithmVariables(
@@ -746,7 +747,7 @@ class ServiceRate extends Model
                     $waypoints,
                     $totalDistance,
                     $totalTime,
-                    $this->inferEndpointCountFromStops($waypoints)
+                    $resolvedEndpointCount
                 ),
                 true
             ));

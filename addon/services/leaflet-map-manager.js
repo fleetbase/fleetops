@@ -10,6 +10,7 @@ import isUuid from '@fleetbase/ember-core/utils/is-uuid';
 
 export default class LeafletMapManagerService extends Service {
     @service leafletRoutingControl;
+    @service mapManager;
     @service notifications;
     @tracked map;
     @tracked _livemap;
@@ -222,6 +223,10 @@ export default class LeafletMapManagerService extends Service {
     /** routing methods */
     /* eslint-disable no-empty */
     async addRoutingControl(waypoints, options = {}) {
+        if (this.mapManager?.providerName && this.mapManager.providerName !== 'leaflet') {
+            return this.mapManager.addRoutingControl(waypoints, options);
+        }
+
         if (!isArray(waypoints) || waypoints.length === 0) return;
 
         const map = await this.ensureInteractive({ timeoutMs: 8000 });
@@ -280,6 +285,10 @@ export default class LeafletMapManagerService extends Service {
     }
 
     positionWaypoints(waypoints) {
+        if (this.mapManager?.providerName && this.mapManager.providerName !== 'leaflet') {
+            return this.mapManager.positionWaypoints(waypoints);
+        }
+
         if (waypoints.length === 1) {
             this.map.flyTo(waypoints[0], 18);
             this.map.once('moveend', () => this.map.panBy([200, 0]));
@@ -298,6 +307,10 @@ export default class LeafletMapManagerService extends Service {
     }
 
     async replaceRoutingControl(waypoints, routingControl, options = {}) {
+        if (this.mapManager?.providerName && this.mapManager.providerName !== 'leaflet') {
+            return this.mapManager.replaceRoutingControl(waypoints, routingControl, options);
+        }
+
         const removeOptions = options.removeOptions ?? {};
         if (routingControl) {
             await this.removeRoutingControl(routingControl, removeOptions);
@@ -311,6 +324,10 @@ export default class LeafletMapManagerService extends Service {
 
     /* eslint-disable no-empty */
     removeRoutingControl(routingControl, options = {}) {
+        if (this.mapManager?.providerName && this.mapManager.providerName !== 'leaflet') {
+            return Promise.resolve(this.mapManager.removeRoutingControl(routingControl, options));
+        }
+
         return new Promise((resolve) => {
             let removed = false;
 

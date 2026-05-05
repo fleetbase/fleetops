@@ -7,11 +7,20 @@ export default class OperationsOrdersIndexNewRoute extends Route {
     @service hostRouter;
     @service abilities;
     @service intl;
+    @service sidebar;
 
     @action willTransition() {
         if (this.controller) {
             this.controller.reset();
         }
+    }
+
+    activate() {
+        this.sidebar.hide();
+    }
+
+    deactivate() {
+        this.sidebar.show();
     }
 
     beforeModel() {

@@ -4,6 +4,7 @@ import { tracked } from '@glimmer/tracking';
 import { action } from '@ember/object';
 import { task } from 'ember-concurrency';
 import * as XLSX from 'xlsx';
+import { buildRouteTypeSummary } from '../../utils/order-route-summary';
 
 /**
  * Orchestrator Import Modal
@@ -328,7 +329,22 @@ export default class OrchestratorImportComponent extends Component {
             if (!g.scheduled_at && row.scheduled_at) g.scheduled_at = row.scheduled_at;
         });
 
-        return Array.from(groups.values());
+        return Array.from(groups.values()).map((group) => ({
+            ...group,
+            routeSummary: this.routeTypeSummaryForGroup(group),
+        }));
+    }
+
+    routeTypeSummaryForGroup(group) {
+        const baseSummary = buildRouteTypeSummary({
+            hasIntermediateWaypoints: group.order_type === 'multi_waypoint' || group.waypointCount > 0,
+            intermediateStopCount: group.waypointCount,
+        });
+
+        return {
+            ...baseSummary,
+            label: this.intl.t(baseSummary.translationKey, baseSummary.translationOptions),
+        };
     }
 
     // ── Footer action buttons (injected into modal footer via modalsManager) ──

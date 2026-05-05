@@ -100,6 +100,11 @@ class OrderController extends Controller
             $pickup       = data_get($payloadInput, 'pickup');
             $dropoff      = data_get($payloadInput, 'dropoff');
             $return       = data_get($payloadInput, 'return');
+            $hasPickupField = array_key_exists('pickup', $payloadInput);
+            $hasDropoffField = array_key_exists('dropoff', $payloadInput);
+            $hasReturnField = array_key_exists('return', $payloadInput);
+            $hasWaypointsField = array_key_exists('waypoints', $payloadInput);
+            $hasRouteEndpointFields = $hasPickupField || $hasDropoffField || $hasReturnField;
 
             if ($pickup) {
                 $payload->setPickup($pickup, [
@@ -414,12 +419,19 @@ class OrderController extends Controller
             $payload->save();
 
             // set waypoints and entities after payload is saved
-            if ($waypoints) {
+            if ($hasWaypointsField && is_array($waypoints) && count($waypoints)) {
                 $payload->setWaypoints($waypoints);
+            } elseif ($hasWaypointsField || $hasRouteEndpointFields) {
+                $payload->removeWaypoints();
             }
 
             if ($entities) {
                 $payload->setEntities($entities);
+            }
+
+            $firstWaypoint = $payload->getPickupOrFirstWaypoint();
+            if ($firstWaypoint instanceof Place) {
+                $payload->setCurrentWaypoint($firstWaypoint);
             }
 
             $input['payload_uuid'] = $payload->uuid;
@@ -440,6 +452,11 @@ class OrderController extends Controller
             $pickup       = data_get($payloadInput, 'pickup');
             $dropoff      = data_get($payloadInput, 'dropoff');
             $return       = data_get($payloadInput, 'return');
+            $hasPickupField = $request->exists('pickup');
+            $hasDropoffField = $request->exists('dropoff');
+            $hasReturnField = $request->exists('return');
+            $hasWaypointsField = $request->exists('waypoints');
+            $hasRouteEndpointFields = $hasPickupField || $hasDropoffField || $hasReturnField;
 
             // if no pickup and dropoff extract from waypoints
             if (empty($pickup) && empty($dropoff) && count($waypoints)) {
@@ -462,12 +479,19 @@ class OrderController extends Controller
             $payload->save();
 
             // set waypoints and entities after payload is saved
-            if ($waypoints) {
+            if ($hasWaypointsField && is_array($waypoints) && count($waypoints)) {
                 $payload->setWaypoints($waypoints);
+            } elseif ($hasWaypointsField || $hasRouteEndpointFields) {
+                $payload->removeWaypoints();
             }
 
             if ($entities) {
                 $payload->setEntities($entities);
+            }
+
+            $firstWaypoint = $payload->getPickupOrFirstWaypoint();
+            if ($firstWaypoint instanceof Place) {
+                $payload->setCurrentWaypoint($firstWaypoint);
             }
 
             $input['payload_uuid'] = $payload->uuid;
@@ -1159,7 +1183,11 @@ class OrderController extends Controller
             })->first();
         }
 
-        $activities = $order->config()->nextActivity($waypoint);
+        $orderConfig = $order->ensureOrderConfig();
+        if (!$orderConfig) {
+            return response()->apiError('No order config found for order.');
+        }
+        $activities = $orderConfig->nextActivity($waypoint);
 
         // If activity is to complete order add proof of delivery properties if required
         // This is a temporary fix until activity is updated to handle POD on it's own

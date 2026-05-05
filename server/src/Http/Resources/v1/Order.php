@@ -2,6 +2,7 @@
 
 namespace Fleetbase\FleetOps\Http\Resources\v1;
 
+use Fleetbase\FleetOps\Models\Contact as ContactModel;
 use Fleetbase\FleetOps\Support\Utils;
 use Fleetbase\Http\Resources\Comment;
 use Fleetbase\Http\Resources\File;
@@ -56,7 +57,7 @@ class Order extends FleetbaseResource
                 $orderConfigPublicId
             ),
             'customer'             => $this->whenLoaded('customer', function () {
-                return $this->setCustomerType($this->transformMorphResource($this->customer));
+                return $this->setCustomerType($this->transformOrderCustomerResource($this->customer));
             }),
             'payload'              => new Payload($this->payload),
             'facilitator'          => $this->whenLoaded('facilitator', function () {
@@ -167,6 +168,24 @@ class Order extends FleetbaseResource
 
         // Fallback to generic resource
         return (new \Illuminate\Http\Resources\Json\JsonResource($model))->resolve();
+    }
+
+    /**
+     * Transform the order customer resource without nesting the customer's user relationship.
+     *
+     * @param \Illuminate\Database\Eloquent\Model|null $model
+     *
+     * @return array|null
+     */
+    protected function transformOrderCustomerResource($model)
+    {
+        $resolved = $this->transformMorphResource($model);
+
+        if ($model instanceof ContactModel && is_array($resolved)) {
+            unset($resolved['user']);
+        }
+
+        return $resolved;
     }
 
     /**
