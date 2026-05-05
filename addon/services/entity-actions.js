@@ -3,7 +3,7 @@ import ResourceActionService from '@fleetbase/ember-core/services/resource-actio
 export default class EntityActionsService extends ResourceActionService {
     constructor() {
         super(...arguments);
-        this.initialize('entity', { defaultAttributes: {} });
+        this.initialize('entity', { defaultAttributes: { type: 'entity' } });
     }
 
     modal = {

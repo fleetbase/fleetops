@@ -105,15 +105,15 @@ export default class OrderFormRouteComponent extends Component {
 
         const waypoint = this.store.createRecord('waypoint', { ...properties, type: 'dropoff' });
         this.args.resource.payload.waypoints.pushObject(waypoint);
+
         this.previewRoute();
     }
 
     @action setWaypointPlace(index, place) {
-        if (!this.args.resource.payload.waypoints[index]) {
-            return;
-        }
+        if (!this.args.resource.payload.waypoints[index]) return;
 
         this.args.resource.payload.waypoints[index].place = place;
+        this.args.resource.payload.waypoints[index]?.setProperties(place.serialize());
         this.previewRoute();
     }
 

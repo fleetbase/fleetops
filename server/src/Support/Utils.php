@@ -244,6 +244,10 @@ class Utils extends FleetbaseUtils
             $coordinates = $coordinates->getSpatialValue();
         }
 
+        if ($coordinates instanceof \Illuminate\Database\Query\Expression) {
+            $coordinates = static::extractPointWktFromQueryExpression($coordinates) ?? $coordinates;
+        }
+
         if ($coordinates instanceof Point) {
             $latitude  = $coordinates->getLat();
             $longitude = $coordinates->getLng();
@@ -370,6 +374,32 @@ class Utils extends FleetbaseUtils
     }
 
     /**
+     * Attempts to extract a WKT POINT string from a query expression.
+     */
+    protected static function extractPointWktFromQueryExpression(\Illuminate\Database\Query\Expression $expression): ?string
+    {
+        $expressionValue = null;
+
+        if (method_exists($expression, 'getValue')) {
+            try {
+                $expressionValue = $expression->getValue(DB::connection()->getQueryGrammar());
+            } catch (\Throwable $e) {
+                $expressionValue = null;
+            }
+        }
+
+        if (!is_string($expressionValue) || blank($expressionValue)) {
+            return null;
+        }
+
+        if (preg_match("/POINT\\(\\s*([-+]?\\d*\\.?\\d+)\\s+([-+]?\\d*\\.?\\d+)\\s*\\)/i", $expressionValue, $matches)) {
+            return sprintf('POINT(%s %s)', $matches[1], $matches[2]);
+        }
+
+        return null;
+    }
+
+    /**
      * Always return spatial point.
      *
      * @param [type] $mixed
@@ -412,6 +442,10 @@ class Utils extends FleetbaseUtils
     {
         if ($coordinates instanceof \Fleetbase\LaravelMysqlSpatial\Eloquent\SpatialExpression) {
             $coordinates = $coordinates->getSpatialValue();
+        }
+
+        if ($coordinates instanceof \Illuminate\Database\Query\Expression) {
+            $coordinates = static::extractPointWktFromQueryExpression($coordinates) ?? $coordinates;
         }
 
         if ($coordinates instanceof Point) {
