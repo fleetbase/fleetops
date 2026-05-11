@@ -97,6 +97,8 @@ class OrderController extends FleetOpsController
                 function ($request, &$input) {
                     $serviceQuote = ServiceQuote::resolveFromRequest($request);
 
+                    $this->normalizeCustomerType($input);
+
                     // if service quote is applied, resolve it
                     if ($serviceQuote instanceof ServiceQuote && $serviceQuote->fromIntegratedVendor()) {
                         // create order with integrated vendor, then resume fleetbase order creation
@@ -215,6 +217,33 @@ class OrderController extends FleetOpsController
             return response()->error($e->getErrors());
         } catch (\Exception $e) {
             return response()->error($e->getMessage());
+        }
+    }
+
+    /**
+     * Resolve the concrete polymorphic customer type from the submitted UUID.
+     */
+    protected function normalizeCustomerType(array &$input): void
+    {
+        $customerUuid = data_get($input, 'customer_uuid') ?? data_get($input, 'customer.uuid');
+        if (!$customerUuid) {
+            return;
+        }
+
+        $customer = Utils::getUuid(
+            ['contacts', 'vendors'],
+            [
+                'uuid'         => $customerUuid,
+                'company_uuid' => session('company'),
+            ],
+            [
+                'with_table' => true,
+            ]
+        );
+
+        if (is_array($customer)) {
+            $input['customer_uuid'] = Utils::get($customer, 'uuid');
+            $input['customer_type'] = Utils::getModelClassName(Utils::get($customer, 'table'));
         }
     }
 
