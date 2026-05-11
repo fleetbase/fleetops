@@ -43,8 +43,7 @@
                 @renderInPlace={{true}}
                 @allowClear={{true}}
                 @disabled={{or @resource.hasWaypoints (cannot-write @resource)}}
-                @onChange={{fn (mut @resource.customer)}}
-                @onChangeId={{fn (mut @resource.customer_uuid)}}
+                @onChange={{this.selectCustomer}}
                 as |model|
             >
                 <div class="flex items-center">

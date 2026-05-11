@@ -46,7 +46,7 @@ export default class SettingsPaymentsIndexController extends Controller {
     ];
 
     get isStripeEnabled() {
-        return window.stripeInstance !== undefined || !isEmpty(config.stripe.publishableKey);
+        return !isEmpty(config.stripe.publishableKey);
     }
 
     @task *lookupStripeConnectAccount() {

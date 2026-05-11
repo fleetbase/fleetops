@@ -113,7 +113,15 @@ export default class OrderFormRouteComponent extends Component {
         if (!this.args.resource.payload.waypoints[index]) return;
 
         this.args.resource.payload.waypoints[index].place = place;
-        this.args.resource.payload.waypoints[index]?.setProperties(place.serialize());
+        this.args.resource.payload.waypoints[index]?.setProperties({
+            street1: place.street1,
+            street2: place.street2,
+            city: place.city,
+            province: place.province,
+            postal_code: place.postal_code,
+            country: place.country,
+            location: place.location,
+        });
         this.previewRoute();
     }
 
