@@ -548,6 +548,8 @@ Route::prefix(config('fleetops.api.routing.prefix', null))->namespace('Fleetbase
                                         $router->post('routing-settings', 'SettingController@saveRoutingSettings');
                                         $router->get('tracking-settings', 'SettingController@getTrackingSettings');
                                         $router->post('tracking-settings', 'SettingController@saveTrackingSettings');
+                                        $router->get('admin-tracking-settings', 'SettingController@getAdminTrackingSettings');
+                                        $router->post('admin-tracking-settings', 'SettingController@saveAdminTrackingSettings');
                                         $router->get('map', 'SettingController@getMapSettings');
                                         $router->post('map', 'SettingController@saveMapSettings');
                                         $router->get('admin-map', 'SettingController@getAdminMapSettings');

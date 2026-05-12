@@ -12,6 +12,18 @@ export default class SettingsRoutingController extends Controller {
     @tracked displayEngine = 'osrm';
     @tracked optimizationEngine = 'osrm';
     @tracked routingUnit = 'km';
+    @tracked trackingProvider = 'google_routes';
+    @tracked trackingFallbacks = 'osrm,calculated';
+    @tracked trackingTrafficEnabled = true;
+    @tracked trackingCacheTtlSeconds = 60;
+    @tracked trackingRouteCacheTtlSeconds = 600;
+    @tracked trackingStaleLocationThresholdSeconds = 300;
+    @tracked trackingDefaultVehicleSpeedKph = 35;
+    @tracked trackingProviderOptions = [
+        { key: 'google_routes', name: 'Google Routes' },
+        { key: 'osrm', name: 'Osrm' },
+        { key: 'calculated', name: 'Calculated' },
+    ];
     @tracked routingUnitOptions = [
         { label: 'Kilometers', value: 'km' },
         { label: 'Miles', value: 'mi' },
@@ -39,6 +51,8 @@ export default class SettingsRoutingController extends Controller {
                 optimization_engine: this.optimizationEngine,
                 unit: this.routingUnit,
             });
+            const trackingSettings = this.trackingSettingsPayload;
+            yield this.fetch.post('fleet-ops/settings/tracking-settings', trackingSettings);
             yield this.performAdditionalSaveTasks();
             // Save in local memory too
             this.currentUser.setOption('routing', {
@@ -47,7 +61,8 @@ export default class SettingsRoutingController extends Controller {
                 routing_optimization_engine: this.optimizationEngine,
                 unit: this.routingUnit,
             });
-            this.notifications.success('Routing setting saved.');
+            this.currentUser.setOption('tracking', trackingSettings);
+            this.notifications.success('Routing and tracking settings saved.');
         } catch (error) {
             this.notifications.serverError(error);
         }
@@ -64,9 +79,41 @@ export default class SettingsRoutingController extends Controller {
             this.displayEngine = display_engine ?? router ?? 'osrm';
             this.optimizationEngine = optimization_engine ?? display_engine ?? router ?? 'osrm';
             this.routingUnit = unit;
+            const trackingSettings = yield this.fetch.get('fleet-ops/settings/tracking-settings');
+            this.trackingProvider = trackingSettings.provider ?? 'google_routes';
+            this.trackingFallbacks = this.normalizeFallbacks(trackingSettings.fallbacks).join(',');
+            this.trackingTrafficEnabled = trackingSettings.traffic_enabled ?? true;
+            this.trackingCacheTtlSeconds = trackingSettings.cache_ttl_seconds ?? 60;
+            this.trackingRouteCacheTtlSeconds = trackingSettings.route_cache_ttl_seconds ?? 600;
+            this.trackingStaleLocationThresholdSeconds = trackingSettings.stale_location_threshold_seconds ?? 300;
+            this.trackingDefaultVehicleSpeedKph = trackingSettings.default_vehicle_speed_kph ?? 35;
+            this.trackingProviderOptions = trackingSettings.providers ?? this.trackingProviderOptions;
         } catch (error) {
             this.notifications.serverError(error);
         }
+    }
+
+    get trackingSettingsPayload() {
+        return {
+            provider: this.trackingProvider,
+            fallbacks: this.normalizeFallbacks(this.trackingFallbacks),
+            traffic_enabled: this.trackingTrafficEnabled,
+            cache_ttl_seconds: Number(this.trackingCacheTtlSeconds) || 60,
+            route_cache_ttl_seconds: Number(this.trackingRouteCacheTtlSeconds) || 600,
+            stale_location_threshold_seconds: Number(this.trackingStaleLocationThresholdSeconds) || 300,
+            default_vehicle_speed_kph: Number(this.trackingDefaultVehicleSpeedKph) || 35,
+        };
+    }
+
+    normalizeFallbacks(fallbacks) {
+        if (Array.isArray(fallbacks)) {
+            return fallbacks.map((fallback) => String(fallback).trim()).filter(Boolean);
+        }
+
+        return String(fallbacks ?? '')
+            .split(',')
+            .map((fallback) => fallback.trim())
+            .filter(Boolean);
     }
 
     registerSaveTask(key, task) {

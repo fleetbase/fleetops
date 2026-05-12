@@ -4,6 +4,7 @@ namespace Fleetbase\FleetOps\Tracking;
 
 use Fleetbase\FleetOps\Tracking\Contracts\TrackingProviderInterface;
 use Illuminate\Support\Arr;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 
@@ -29,7 +30,7 @@ class TrackingProviderManager
             }
 
             try {
-                $result           = $provider->track($context, $options);
+                $result           = $this->trackWithProviderCache($provider, $context, $options);
                 $result->warnings = array_values(array_unique([...$warnings, ...$result->warnings]));
 
                 if (Str::snake($result->provider) !== Str::snake((string) $options->provider)) {
@@ -65,5 +66,24 @@ class TrackingProviderManager
             ->unique()
             ->values()
             ->all();
+    }
+
+    protected function trackWithProviderCache(TrackingProviderInterface $provider, TrackingContext $context, TrackingOptions $options): TrackingProviderResult
+    {
+        return Cache::remember($this->providerCacheKey($provider, $context, $options), $options->routeCacheTtlSeconds, function () use ($provider, $context, $options) {
+            return $provider->track($context, $options);
+        });
+    }
+
+    protected function providerCacheKey(TrackingProviderInterface $provider, TrackingContext $context, TrackingOptions $options): string
+    {
+        return 'order_tracking_provider_route:' . md5(json_encode([
+            'provider' => $provider->key(),
+            'points'   => array_map(function ($point) {
+                return [$point->getLat(), $point->getLng()];
+            }, $context->routePoints()),
+            'traffic'  => $options->trafficEnabled,
+            'speed'    => $options->defaultVehicleSpeedKph,
+        ]));
     }
 }

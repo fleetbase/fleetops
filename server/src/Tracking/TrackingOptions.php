@@ -12,6 +12,7 @@ class TrackingOptions
         public array $fallbacks = [],
         public bool $trafficEnabled = true,
         public int $cacheTtlSeconds = 60,
+        public int $routeCacheTtlSeconds = 600,
         public int $staleLocationThresholdSeconds = 300,
         public float $defaultVehicleSpeedKph = 35,
         public array $raw = [],
@@ -20,7 +21,8 @@ class TrackingOptions
 
     public static function fromArray(array $options = []): self
     {
-        $config          = config('fleetops.tracking', []);
+        $systemSettings  = Setting::lookup('fleet-ops.tracking-settings', []);
+        $config          = array_merge(config('fleetops.tracking', []), is_array($systemSettings) ? $systemSettings : []);
         $companySettings = [];
         try {
             $companySettings = Setting::lookupCompany('tracking', []);
@@ -38,6 +40,7 @@ class TrackingOptions
             fallbacks: Arr::wrap($fallbacks),
             trafficEnabled: (bool) Arr::get($options, 'traffic_enabled', Arr::get($companySettings, 'traffic_enabled', Arr::get($config, 'traffic_enabled', true))),
             cacheTtlSeconds: (int) Arr::get($options, 'cache_ttl_seconds', Arr::get($companySettings, 'cache_ttl_seconds', Arr::get($config, 'cache_ttl_seconds', 60))),
+            routeCacheTtlSeconds: (int) Arr::get($options, 'route_cache_ttl_seconds', Arr::get($companySettings, 'route_cache_ttl_seconds', Arr::get($config, 'route_cache_ttl_seconds', 600))),
             staleLocationThresholdSeconds: (int) Arr::get($options, 'stale_location_threshold_seconds', Arr::get($companySettings, 'stale_location_threshold_seconds', Arr::get($config, 'stale_location_threshold_seconds', 300))),
             defaultVehicleSpeedKph: (float) Arr::get($options, 'default_vehicle_speed_kph', Arr::get($companySettings, 'default_vehicle_speed_kph', Arr::get($config, 'default_vehicle_speed_kph', 35))),
             raw: $options

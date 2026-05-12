@@ -64,6 +64,7 @@ class TrackingIntelligenceService
                 'online'               => (bool) data_get($context->driver, 'online', false),
             ],
             'progress'          => $progress,
+            'stops'             => $context->stops->map(fn (TrackingStop $stop) => $stop->toArray())->values()->all(),
             'active_stop'       => $context->activeStop?->toArray(),
             'next_stop'         => $context->nextStop?->toArray(),
             'route'             => [
@@ -72,7 +73,7 @@ class TrackingIntelligenceService
                 'duration_in_traffic_s' => $providerResult->durationInTrafficSeconds,
                 'polyline'              => $providerResult->polyline,
                 'coordinates'           => $providerResult->coordinates,
-                'legs'                  => $providerResult->legs,
+                'legs'                  => $this->legs($context, $providerResult),
             ],
             'eta'               => [
                 'active_stop_seconds' => $activeStopSeconds,
@@ -106,6 +107,17 @@ class TrackingIntelligenceService
         ];
     }
 
+    protected function legs(TrackingContext $context, TrackingProviderResult $providerResult): array
+    {
+        return collect($providerResult->legs)->map(function ($leg, $index) use ($context) {
+            $stop = $context->remainingStops->values()->get($index);
+
+            return array_merge($leg, [
+                'stop' => $stop instanceof TrackingStop ? $stop->toArray() : null,
+            ]);
+        })->all();
+    }
+
     protected function capabilitiesFor(string $provider): array
     {
         $registry   = app(TrackingProviderRegistry::class);
@@ -123,9 +135,16 @@ class TrackingIntelligenceService
             'payload_ts' => optional($context->payload?->updated_at)->timestamp,
             'driver'     => optional($context->driver)->uuid,
             'driver_ts'  => optional($context->driver?->updated_at)->timestamp,
+            'stops'      => $context->stateSignature(),
             'provider'   => $options->provider,
             'fallbacks'  => $options->fallbacks,
             'traffic'    => $options->trafficEnabled,
+            'settings'   => [
+                'summary_ttl'     => $options->cacheTtlSeconds,
+                'route_ttl'       => $options->routeCacheTtlSeconds,
+                'stale_threshold' => $options->staleLocationThresholdSeconds,
+                'fallback_speed'  => $options->defaultVehicleSpeedKph,
+            ],
         ]));
     }
 

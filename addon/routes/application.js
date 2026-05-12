@@ -29,12 +29,18 @@ export default class ApplicationRoute extends Route {
 
         await this.location.getUserLocation();
         await this.#loadRoutingSettings();
+        await this.#loadTrackingSettings();
         await this.#loadMapSettings();
     }
 
     async #loadRoutingSettings() {
         const routingSetting = await this.fetch.get('fleet-ops/settings/routing-settings');
         this.currentUser.setOption('routing', routingSetting);
+    }
+
+    async #loadTrackingSettings() {
+        const trackingSettings = await this.fetch.get('fleet-ops/settings/tracking-settings');
+        this.currentUser.setOption('tracking', trackingSettings);
     }
 
     async #loadMapSettings() {

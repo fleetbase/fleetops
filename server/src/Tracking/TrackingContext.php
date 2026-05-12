@@ -46,4 +46,17 @@ class TrackingContext
     {
         return count($this->routePoints()) >= 2;
     }
+
+    public function stateSignature(): string
+    {
+        return md5(json_encode($this->stops->map(function (TrackingStop $stop) {
+            return [
+                'uuid'      => $stop->uuid,
+                'type'      => $stop->type,
+                'status'    => $stop->status,
+                'completed' => $stop->completed,
+                'sequence'  => $stop->sequence,
+            ];
+        })->values()->all()));
+    }
 }

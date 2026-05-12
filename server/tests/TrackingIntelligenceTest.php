@@ -108,3 +108,37 @@ test('third party providers can be registered through the tracking provider cont
     expect($registry->has('tomtom'))->toBeTrue()
         ->and($registry->get('tomtom')?->capabilities()->traffic)->toBeTrue();
 });
+
+test('tracking options include route cache ttl and fallback provider settings', function () {
+    $options = TrackingOptions::fromArray([
+        'provider'                => 'calculated',
+        'fallbacks'               => 'osrm,calculated',
+        'route_cache_ttl_seconds' => 900,
+    ]);
+
+    expect($options->provider)->toBe('calculated')
+        ->and($options->fallbacks)->toBe(['osrm', 'calculated'])
+        ->and($options->routeCacheTtlSeconds)->toBe(900);
+});
+
+test('provider cache key varies by route options', function () {
+    $registry = new TrackingProviderRegistry();
+    $manager  = new TrackingProviderManager($registry);
+    $provider = new FakeTrackingProvider('fake');
+    $context  = (new TrackingContextBuilder())->build(trackingOrderWithStops(), TrackingOptions::fromArray([
+        'provider' => 'fake',
+    ]));
+    $method = new ReflectionMethod($manager, 'providerCacheKey');
+    $method->setAccessible(true);
+
+    $trafficKey = $method->invoke($manager, $provider, $context, TrackingOptions::fromArray([
+        'provider'        => 'fake',
+        'traffic_enabled' => true,
+    ]));
+    $nonTrafficKey = $method->invoke($manager, $provider, $context, TrackingOptions::fromArray([
+        'provider'        => 'fake',
+        'traffic_enabled' => false,
+    ]));
+
+    expect($trafficKey)->not->toBe($nonTrafficKey);
+});

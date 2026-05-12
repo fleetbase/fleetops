@@ -2,6 +2,7 @@
 
 namespace Fleetbase\FleetOps\Http\Controllers\Internal\v1;
 
+use Fleetbase\FleetOps\Tracking\TrackingProviderRegistry;
 use Fleetbase\Http\Controllers\Controller;
 use Fleetbase\Models\Setting;
 use Fleetbase\Support\Auth;
@@ -236,7 +237,7 @@ class SettingController extends Controller
      */
     public function saveTrackingSettings(Request $request)
     {
-        $config    = config('fleetops.tracking', []);
+        $config    = $this->trackingDefaults();
         $fallbacks = $request->input('fallbacks', data_get($config, 'fallbacks', ['osrm', 'calculated']));
         if (is_string($fallbacks)) {
             $fallbacks = array_values(array_filter(array_map('trim', explode(',', $fallbacks))));
@@ -247,6 +248,7 @@ class SettingController extends Controller
             'fallbacks'                        => $fallbacks,
             'traffic_enabled'                  => $request->boolean('traffic_enabled', data_get($config, 'traffic_enabled', true)),
             'cache_ttl_seconds'                => (int) $request->input('cache_ttl_seconds', data_get($config, 'cache_ttl_seconds', 60)),
+            'route_cache_ttl_seconds'          => (int) $request->input('route_cache_ttl_seconds', data_get($config, 'route_cache_ttl_seconds', 600)),
             'stale_location_threshold_seconds' => (int) $request->input('stale_location_threshold_seconds', data_get($config, 'stale_location_threshold_seconds', 300)),
             'default_vehicle_speed_kph'        => (float) $request->input('default_vehicle_speed_kph', data_get($config, 'default_vehicle_speed_kph', 35)),
         ]);
@@ -264,17 +266,47 @@ class SettingController extends Controller
      */
     public function getTrackingSettings()
     {
-        $config           = config('fleetops.tracking', []);
+        $config           = $this->trackingDefaults();
         $trackingSettings = Setting::lookupCompany('tracking', [
             'provider'                         => data_get($config, 'provider', 'google_routes'),
             'fallbacks'                        => data_get($config, 'fallbacks', ['osrm', 'calculated']),
             'traffic_enabled'                  => data_get($config, 'traffic_enabled', true),
             'cache_ttl_seconds'                => data_get($config, 'cache_ttl_seconds', 60),
+            'route_cache_ttl_seconds'          => data_get($config, 'route_cache_ttl_seconds', 600),
             'stale_location_threshold_seconds' => data_get($config, 'stale_location_threshold_seconds', 300),
             'default_vehicle_speed_kph'        => data_get($config, 'default_vehicle_speed_kph', 35),
         ]);
+        $trackingSettings['providers'] = $this->trackingProviderOptions();
 
         return response()->json($trackingSettings);
+    }
+
+    public function getAdminTrackingSettings()
+    {
+        return response()->json(array_merge($this->trackingDefaults(), [
+            'providers' => $this->trackingProviderOptions(),
+        ]));
+    }
+
+    public function saveAdminTrackingSettings(Request $request)
+    {
+        $config    = config('fleetops.tracking', []);
+        $fallbacks = $request->input('fallbacks', data_get($config, 'fallbacks', ['osrm', 'calculated']));
+        if (is_string($fallbacks)) {
+            $fallbacks = array_values(array_filter(array_map('trim', explode(',', $fallbacks))));
+        }
+
+        Setting::configure('fleet-ops.tracking-settings', [
+            'provider'                         => $request->input('provider', data_get($config, 'provider', 'google_routes')),
+            'fallbacks'                        => $fallbacks,
+            'traffic_enabled'                  => $request->boolean('traffic_enabled', data_get($config, 'traffic_enabled', true)),
+            'cache_ttl_seconds'                => (int) $request->input('cache_ttl_seconds', data_get($config, 'cache_ttl_seconds', 60)),
+            'route_cache_ttl_seconds'          => (int) $request->input('route_cache_ttl_seconds', data_get($config, 'route_cache_ttl_seconds', 600)),
+            'stale_location_threshold_seconds' => (int) $request->input('stale_location_threshold_seconds', data_get($config, 'stale_location_threshold_seconds', 300)),
+            'default_vehicle_speed_kph'        => (float) $request->input('default_vehicle_speed_kph', data_get($config, 'default_vehicle_speed_kph', 35)),
+        ]);
+
+        return response()->json($this->getAdminTrackingSettings()->getData(true));
     }
 
     /**
@@ -480,5 +512,26 @@ class SettingController extends Controller
             'message'  => 'Orchestrator card fields saved.',
             'settings' => $normalized,
         ]);
+    }
+
+    protected function trackingDefaults(): array
+    {
+        $config         = config('fleetops.tracking', []);
+        $systemSettings = Setting::lookup('fleet-ops.tracking-settings', []);
+
+        return array_merge($config, is_array($systemSettings) ? $systemSettings : []);
+    }
+
+    protected function trackingProviderOptions(): array
+    {
+        $registry = app(TrackingProviderRegistry::class);
+
+        return collect($registry->all())->map(function ($provider, $key) {
+            return [
+                'key'          => $key,
+                'name'         => str($key)->replace('_', ' ')->title()->toString(),
+                'capabilities' => $provider->capabilities()->toArray(),
+            ];
+        })->values()->all();
     }
 }

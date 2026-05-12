@@ -85,6 +85,7 @@ return [
         'fallbacks'                        => array_filter(explode(',', env('TRACKING_PROVIDER_FALLBACKS', 'osrm,calculated'))),
         'traffic_enabled'                  => env('TRACKING_TRAFFIC_ENABLED', true),
         'cache_ttl_seconds'                => env('TRACKING_CACHE_TTL_SECONDS', 60),
+        'route_cache_ttl_seconds'          => env('TRACKING_ROUTE_CACHE_TTL_SECONDS', 600),
         'stale_location_threshold_seconds' => env('TRACKING_STALE_LOCATION_THRESHOLD_SECONDS', 300),
         'default_vehicle_speed_kph'        => env('TRACKING_DEFAULT_VEHICLE_SPEED_KPH', 35),
     ],

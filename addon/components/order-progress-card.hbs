@@ -21,6 +21,15 @@
             @lastWaypointCompleted={{eq this.order.tracker_data.progress.percentage 100}}
         />
     </div>
+    <div class="flex flex-wrap gap-1 px-1 mt-1">
+        <Badge @status={{if (eq this.order.tracker_data.confidence "high") "success" "warning"}} @hideStatusDot={{true}}>{{smart-humanize this.order.tracker_data.confidence}}</Badge>
+        {{#if this.order.tracker_data.fallback_provider}}
+            <Badge @status="warning" @hideStatusDot={{true}}>Fallback</Badge>
+        {{/if}}
+        {{#if this.order.tracker_data.insights.is_location_stale}}
+            <Badge @status="warning" @hideStatusDot={{true}}>Stale GPS</Badge>
+        {{/if}}
+    </div>
     <div class="order-progress-card-details">
         <div class="order-progress-card-details-address start">
             {{#if this.order.payload.isMultiDrop}}

@@ -1,7 +1,7 @@
 <ContentPanel @title={{t "order.fields.tracking"}} @prefixTitleRight={{@resource.tracking}} @isLoading={{@isLoading}} @open={{true}} @wrapperClass="bordered-top">
     {{#if @resource.tracker_data}}
-        <div class="mb-4">
-            <div class="mb-6">
+        <div class="mb-4 space-y-4">
+            <div>
                 <OrderProgressBar
                     @order={{@resource}}
                     @progress={{@resource.tracker_data.progress.percentage}}
@@ -9,7 +9,28 @@
                     @lastWaypointCompleted={{eq @resource.tracker_data.progress.percentage 100}}
                 />
             </div>
-            <div class="grid grid-cols-2 gap-2">
+
+            <div class="flex flex-wrap items-center gap-2">
+                <Badge @status="info" @hideStatusDot={{true}}>Provider: {{smart-humanize @resource.tracker_data.provider}}</Badge>
+                <Badge @status={{if (eq @resource.tracker_data.confidence "high") "success" "warning"}} @hideStatusDot={{true}}>Confidence:
+                    {{smart-humanize @resource.tracker_data.confidence}}</Badge>
+                {{#if @resource.tracker_data.fallback_provider}}
+                    <Badge @status="warning" @hideStatusDot={{true}}>Fallback: {{smart-humanize @resource.tracker_data.fallback_provider}}</Badge>
+                {{/if}}
+                {{#if @resource.tracker_data.insights.is_location_stale}}
+                    <Badge @status="warning" @hideStatusDot={{true}}>Stale GPS</Badge>
+                {{/if}}
+            </div>
+
+            {{#if @resource.tracker_data.warnings}}
+                <div class="flex flex-wrap gap-2">
+                    {{#each @resource.tracker_data.warnings as |warning|}}
+                        <Badge @status="warning" @hideStatusDot={{true}}>{{smart-humanize warning}}</Badge>
+                    {{/each}}
+                </div>
+            {{/if}}
+
+            <div class="grid grid-cols-2 lg:grid-cols-4 gap-2">
                 <div class="field-info-container space-y-1">
                     <div class="field-name">Current ETA</div>
                     <div class="field-value">{{n-a (format-duration @resource.tracker_data.eta.active_stop_seconds)}}</div>
@@ -22,9 +43,64 @@
                     <div class="field-name">Current Destination</div>
                     <div class="field-value">{{n-a @resource.tracker_data.active_stop.address}}</div>
                 </div>
+                <div class="field-info-container space-y-1">
+                    <div class="field-name">Remaining Distance</div>
+                    <div class="field-value">{{n-a @resource.tracker_data.route.distance_m}} m</div>
+                </div>
+                <div class="field-info-container space-y-1">
+                    <div class="field-name">Remaining Stops</div>
+                    <div class="field-value">{{n-a @resource.tracker_data.progress.remaining_stops}}</div>
+                </div>
+                <div class="field-info-container space-y-1">
+                    <div class="field-name">Driver Location</div>
+                    <div class="field-value">
+                        {{#if @resource.tracker_data.driver.location}}
+                            {{#if @resource.tracker_data.driver.online}}Live{{else}}Offline{{/if}}
+                        {{else}}
+                            Missing
+                        {{/if}}
+                    </div>
+                </div>
+                <div class="field-info-container space-y-1">
+                    <div class="field-name">Generated</div>
+                    <div class="field-value">{{n-a (format-date-fns @resource.tracker_data.generated_at "d MMM HH:mm:ss")}}</div>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                <div class="border border-gray-200 dark:border-gray-700 rounded-md overflow-hidden">
+                    <div class="px-3 py-2 text-xs uppercase tracking-wide font-semibold text-gray-500 dark:text-gray-400 border-b border-gray-200 dark:border-gray-700">Stops</div>
+                    <div class="divide-y divide-gray-100 dark:divide-gray-800">
+                        {{#each @resource.tracker_data.stops as |stop|}}
+                            <div class="px-3 py-2 flex items-center justify-between gap-3">
+                                <div class="min-w-0">
+                                    <div class="text-sm font-semibold truncate">{{n-a stop.address}}</div>
+                                    <div class="text-xs text-gray-500 dark:text-gray-400">{{smart-humanize stop.type}}</div>
+                                </div>
+                                <Badge @status={{if stop.completed "success" "info"}} @hideStatusDot={{true}}>{{if stop.completed "Completed" "Pending"}}</Badge>
+                            </div>
+                        {{/each}}
+                    </div>
+                </div>
+
+                <div class="border border-gray-200 dark:border-gray-700 rounded-md overflow-hidden">
+                    <div class="px-3 py-2 text-xs uppercase tracking-wide font-semibold text-gray-500 dark:text-gray-400 border-b border-gray-200 dark:border-gray-700">Route Legs</div>
+                    <div class="divide-y divide-gray-100 dark:divide-gray-800">
+                        {{#each @resource.tracker_data.route.legs as |leg|}}
+                            <div class="px-3 py-2 grid grid-cols-3 gap-2 text-sm">
+                                <div class="col-span-1 truncate">{{n-a leg.stop.address}}</div>
+                                <div>{{n-a leg.distance_m}} m</div>
+                                <div>{{format-duration (or leg.duration_in_traffic_s leg.duration_s)}}</div>
+                            </div>
+                        {{else}}
+                            <div class="px-3 py-3 text-sm text-gray-500 dark:text-gray-400">No leg data available.</div>
+                        {{/each}}
+                    </div>
+                </div>
             </div>
         </div>
     {{/if}}
+    <div class="text-xs uppercase tracking-wide font-semibold text-gray-500 dark:text-gray-400 mb-2">Labels</div>
     <div class="flex flex-col border border-gray-200 bg-gray-50 dark:bg-gray-900 dark:border-gray-700 rounded-md px-4 py-4 shadow-sm">
         <div class="flex flex-row items-center justify-center space-x-4">
             <div class="rounded-md bg-white p-2">
