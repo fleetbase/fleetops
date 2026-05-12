@@ -3,7 +3,7 @@
 /**
  * -------------------------------------------
  * FleetOps API Configuration
- * -------------------------------------------
+ * -------------------------------------------.
  */
 return [
     /*
@@ -14,17 +14,17 @@ return [
     'api' => [
         'version' => '0.0.1',
         'routing' => [
-            'prefix' => null,
-            'internal_prefix' => 'int'
-        ]
+            'prefix'          => null,
+            'internal_prefix' => 'int',
+        ],
     ],
     'connection' => [
-        'db' => env('DB_CONNECTION', 'mysql')
+        'db' => env('DB_CONNECTION', 'mysql'),
     ],
 
     /*
     |--------------------------------------------------------------------------
-    | Facilitator Fee - This is a percentage fee the system admin takes when 
+    | Facilitator Fee - This is a percentage fee the system admin takes when
     | facilitating any payments in the system.
     | Example: if `10` then 10% fee will be taken on all payments.
     |--------------------------------------------------------------------------
@@ -37,7 +37,7 @@ return [
     |--------------------------------------------------------------------------
     */
     'osrm' => [
-        'host' => env('OSRM_HOST', 'https://router.project-osrm.org')
+        'host' => env('OSRM_HOST', 'https://router.project-osrm.org'),
     ],
 
     /*
@@ -61,12 +61,32 @@ return [
 
     /*
     |--------------------------------------------------------------------------
-    | Distance Matrix Calculator 
+    | Distance Matrix Calculator
     | Options: "calculate", "google", "osrm"
     |--------------------------------------------------------------------------
     */
     'distance_matrix' => [
-        'provider' => env('DISTANCE_MATRIX_PROVIDER', 'calculate')
+        'provider' => env('DISTANCE_MATRIX_PROVIDER', 'calculate'),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Order Tracking Intelligence
+    |--------------------------------------------------------------------------
+    |
+    | Provider-neutral tracking data for active orders. The provider registry
+    | can be extended by third-party packages without editing FleetOps core.
+    |
+    | Built-in providers: "google_routes", "osrm", "calculated"
+    |--------------------------------------------------------------------------
+    */
+    'tracking' => [
+        'provider'                         => env('TRACKING_PROVIDER', 'google_routes'),
+        'fallbacks'                        => array_filter(explode(',', env('TRACKING_PROVIDER_FALLBACKS', 'osrm,calculated'))),
+        'traffic_enabled'                  => env('TRACKING_TRAFFIC_ENABLED', true),
+        'cache_ttl_seconds'                => env('TRACKING_CACHE_TTL_SECONDS', 60),
+        'stale_location_threshold_seconds' => env('TRACKING_STALE_LOCATION_THRESHOLD_SECONDS', 300),
+        'default_vehicle_speed_kph'        => env('TRACKING_DEFAULT_VEHICLE_SPEED_KPH', 35),
     ],
 
     /*
@@ -76,7 +96,7 @@ return [
     */
     'navigator' => [
         'bypass_verification_code' => env('SMS_AUTH_BYPASS_CODE', env('NAVIGATOR_BYPASS_VERIFICATION_CODE')),
-        'app_identifier' => env('NAVIGATOR_APP_IDENTIFIER', 'io.fleetbase.navigator')
+        'app_identifier'           => env('NAVIGATOR_APP_IDENTIFIER', 'io.fleetbase.navigator'),
     ],
 
     /*
@@ -189,5 +209,5 @@ return [
     |--------------------------------------------------------------------------
     */
     'versions' => ['2020-09-30', '2024-03-12'],
-    'version' => '2024-03-12',
+    'version'  => '2024-03-12',
 ];

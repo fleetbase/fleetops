@@ -138,7 +138,7 @@ export default class CustomerOrdersComponent extends Component {
         // start loading order tracking activity
         order.loadTrackingActivity();
         this.urlSearchParams.addParamToCurrentUrl('order', order.public_id);
-        const driverCurrentLocation = order.get('tracker_data.driver_current_location');
+        const driverCurrentLocation = order.get('tracker_data.driver.location');
         if (driverCurrentLocation) {
             this.latitude = driverCurrentLocation.coordinates[1];
             this.longitude = driverCurrentLocation.coordinates[0];

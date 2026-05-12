@@ -211,12 +211,12 @@ class SettingController extends Controller
     {
         $routingSettings = Setting::lookupCompany('routing', ['router' => 'osrm', 'unit' => 'km']);
 
-        $displayEngine = data_get($routingSettings, 'display_engine', data_get($routingSettings, 'routing_display_engine', data_get($routingSettings, 'router', 'osrm')));
-        $optimizationEngine = data_get($routingSettings, 'optimization_engine', data_get($routingSettings, 'routing_optimization_engine', $displayEngine));
-        $routingSettings['router'] = $displayEngine;
-        $routingSettings['display_engine'] = $displayEngine;
-        $routingSettings['optimization_engine'] = $optimizationEngine;
-        $routingSettings['routing_display_engine'] = $displayEngine;
+        $displayEngine                                  = data_get($routingSettings, 'display_engine', data_get($routingSettings, 'routing_display_engine', data_get($routingSettings, 'router', 'osrm')));
+        $optimizationEngine                             = data_get($routingSettings, 'optimization_engine', data_get($routingSettings, 'routing_optimization_engine', $displayEngine));
+        $routingSettings['router']                      = $displayEngine;
+        $routingSettings['display_engine']              = $displayEngine;
+        $routingSettings['optimization_engine']         = $optimizationEngine;
+        $routingSettings['routing_display_engine']      = $displayEngine;
         $routingSettings['routing_optimization_engine'] = $optimizationEngine;
 
         // always default to km if no unit is set
@@ -225,6 +225,56 @@ class SettingController extends Controller
         }
 
         return response()->json($routingSettings);
+    }
+
+    /**
+     * Save order tracking intelligence settings.
+     *
+     * @param Request $request the HTTP request object containing tracking settings
+     *
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function saveTrackingSettings(Request $request)
+    {
+        $config    = config('fleetops.tracking', []);
+        $fallbacks = $request->input('fallbacks', data_get($config, 'fallbacks', ['osrm', 'calculated']));
+        if (is_string($fallbacks)) {
+            $fallbacks = array_values(array_filter(array_map('trim', explode(',', $fallbacks))));
+        }
+
+        Setting::configureCompany('tracking', [
+            'provider'                         => $request->input('provider', data_get($config, 'provider', 'google_routes')),
+            'fallbacks'                        => $fallbacks,
+            'traffic_enabled'                  => $request->boolean('traffic_enabled', data_get($config, 'traffic_enabled', true)),
+            'cache_ttl_seconds'                => (int) $request->input('cache_ttl_seconds', data_get($config, 'cache_ttl_seconds', 60)),
+            'stale_location_threshold_seconds' => (int) $request->input('stale_location_threshold_seconds', data_get($config, 'stale_location_threshold_seconds', 300)),
+            'default_vehicle_speed_kph'        => (float) $request->input('default_vehicle_speed_kph', data_get($config, 'default_vehicle_speed_kph', 35)),
+        ]);
+
+        return response()->json([
+            'status'  => 'ok',
+            'message' => 'Tracking settings succesfully saved.',
+        ]);
+    }
+
+    /**
+     * Retrieve order tracking intelligence settings.
+     *
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function getTrackingSettings()
+    {
+        $config           = config('fleetops.tracking', []);
+        $trackingSettings = Setting::lookupCompany('tracking', [
+            'provider'                         => data_get($config, 'provider', 'google_routes'),
+            'fallbacks'                        => data_get($config, 'fallbacks', ['osrm', 'calculated']),
+            'traffic_enabled'                  => data_get($config, 'traffic_enabled', true),
+            'cache_ttl_seconds'                => data_get($config, 'cache_ttl_seconds', 60),
+            'stale_location_threshold_seconds' => data_get($config, 'stale_location_threshold_seconds', 300),
+            'default_vehicle_speed_kph'        => data_get($config, 'default_vehicle_speed_kph', 35),
+        ]);
+
+        return response()->json($trackingSettings);
     }
 
     /**
@@ -244,15 +294,15 @@ class SettingController extends Controller
             'mapProvider' => 'leaflet',
         ];
 
-        $systemMapSettings = Setting::lookup('fleet-ops.map-settings', []);
-        $mapSettings = Setting::lookupFromCompany('fleet-ops.map-settings', $defaults);
+        $systemMapSettings          = Setting::lookup('fleet-ops.map-settings', []);
+        $mapSettings                = Setting::lookupFromCompany('fleet-ops.map-settings', $defaults);
         $mapSettings['mapProvider'] = data_get($mapSettings, 'mapProvider') ?: data_get($systemMapSettings, 'mapProvider', 'leaflet');
 
         // Source the Google Maps API key from the system-level services config
         // that is managed by the core-api admin settings panel. This ensures a
         // single source of truth and avoids duplicating key management.
         $mapSettings['googleMapsApiKey'] = config('services.google_maps.api_key', env('GOOGLE_MAPS_API_KEY', ''));
-        $mapSettings['googleMapsMapId'] = data_get($systemMapSettings, 'googleMapsMapId', '');
+        $mapSettings['googleMapsMapId']  = data_get($systemMapSettings, 'googleMapsMapId', '');
 
         return response()->json($mapSettings);
     }
@@ -289,7 +339,7 @@ class SettingController extends Controller
     public function getAdminMapSettings()
     {
         $defaults = [
-            'mapProvider' => 'leaflet',
+            'mapProvider'     => 'leaflet',
             'googleMapsMapId' => '',
         ];
 
@@ -299,13 +349,13 @@ class SettingController extends Controller
     public function saveAdminMapSettings(Request $request)
     {
         $allowedProviders = ['leaflet', 'google'];
-        $mapProvider = $request->input('mapProvider', 'leaflet');
+        $mapProvider      = $request->input('mapProvider', 'leaflet');
         if (!in_array($mapProvider, $allowedProviders)) {
             $mapProvider = 'leaflet';
         }
 
         $settings = [
-            'mapProvider' => $mapProvider,
+            'mapProvider'     => $mapProvider,
             'googleMapsMapId' => (string) $request->input('googleMapsMapId', ''),
         ];
 

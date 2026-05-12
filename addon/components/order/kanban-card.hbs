@@ -15,9 +15,9 @@
         <div class="order-listing-row-progress mb-2">
             <OrderProgressBar
                 @card={{@card}}
-                @progress={{@card.tracker_data.progress_percentage}}
-                @firstWaypointCompleted={{@card.tracker_data.first_waypoint_completed}}
-                @lastWaypointCompleted={{@card.tracker_data.last_waypoint_completed}}
+                @progress={{@card.tracker_data.progress.percentage}}
+                @firstWaypointCompleted={{gt @card.tracker_data.progress.completed_stops 0}}
+                @lastWaypointCompleted={{eq @card.tracker_data.progress.percentage 100}}
             />
         </div>
         <div class="order-listing-row-body flex flex-row">

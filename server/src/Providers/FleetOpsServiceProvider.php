@@ -99,6 +99,13 @@ class FleetOpsServiceProvider extends CoreServiceProvider
             \Fleetbase\FleetOps\Orchestration\OrchestrationEngineRegistry::class,
             fn () => new \Fleetbase\FleetOps\Orchestration\OrchestrationEngineRegistry()
         );
+
+        // Register the TrackingProviderRegistry as a singleton so FleetOps core
+        // and third-party extensions can share tracking intelligence providers.
+        $this->app->singleton(
+            \Fleetbase\FleetOps\Tracking\TrackingProviderRegistry::class,
+            fn () => new \Fleetbase\FleetOps\Tracking\TrackingProviderRegistry()
+        );
     }
 
     /**
@@ -134,6 +141,23 @@ class FleetOpsServiceProvider extends CoreServiceProvider
                 }
                 if (!$registry->has('greedy')) {
                     $registry->register(new \Fleetbase\FleetOps\Orchestration\Engines\GreedyOrchestrationEngine());
+                }
+            }
+        );
+
+        // Register built-in tracking providers. Third-party extensions can
+        // register additional providers from their own service providers.
+        $this->app->resolving(
+            \Fleetbase\FleetOps\Tracking\TrackingProviderRegistry::class,
+            function (\Fleetbase\FleetOps\Tracking\TrackingProviderRegistry $registry) {
+                if (!$registry->has('google_routes')) {
+                    $registry->register(new \Fleetbase\FleetOps\Tracking\Providers\GoogleRoutesTrackingProvider());
+                }
+                if (!$registry->has('osrm')) {
+                    $registry->register(new \Fleetbase\FleetOps\Tracking\Providers\OsrmTrackingProvider());
+                }
+                if (!$registry->has('calculated')) {
+                    $registry->register(new \Fleetbase\FleetOps\Tracking\Providers\CalculatedTrackingProvider());
                 }
             }
         );

@@ -4,23 +4,23 @@
             <div class="mb-6">
                 <OrderProgressBar
                     @order={{@resource}}
-                    @progress={{@resource.tracker_data.progress_percentage}}
-                    @firstWaypointCompleted={{@resource.tracker_data.first_waypoint_completed}}
-                    @lastWaypointCompleted={{@resource.tracker_data.last_waypoint_completed}}
+                    @progress={{@resource.tracker_data.progress.percentage}}
+                    @firstWaypointCompleted={{gt @resource.tracker_data.progress.completed_stops 0}}
+                    @lastWaypointCompleted={{eq @resource.tracker_data.progress.percentage 100}}
                 />
             </div>
             <div class="grid grid-cols-2 gap-2">
                 <div class="field-info-container space-y-1">
                     <div class="field-name">Current ETA</div>
-                    <div class="field-value">{{n-a (format-duration @resource.tracker_data.current_destination_eta)}}</div>
+                    <div class="field-value">{{n-a (format-duration @resource.tracker_data.eta.active_stop_seconds)}}</div>
                 </div>
                 <div class="field-info-container space-y-1">
                     <div class="field-name">Current ECT</div>
-                    <div class="field-value">{{n-a @resource.tracker_data.estimated_completion_time_formatted}}</div>
+                    <div class="field-value">{{n-a @resource.tracker_data.eta.completion_at}}</div>
                 </div>
                 <div class="field-info-container space-y-1">
                     <div class="field-name">Current Destination</div>
-                    <div class="field-value">{{n-a @resource.tracker_data.current_destination.address}}</div>
+                    <div class="field-value">{{n-a @resource.tracker_data.active_stop.address}}</div>
                 </div>
             </div>
         </div>

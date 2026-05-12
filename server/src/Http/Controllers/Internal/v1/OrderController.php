@@ -35,7 +35,6 @@ use Fleetbase\Support\TemplateString;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
@@ -121,7 +120,7 @@ class OrderController extends FleetOpsController
 
                     if ($resolvedOrderConfig) {
                         $input['order_config_uuid'] = $resolvedOrderConfig->uuid;
-                        $input['type'] = $resolvedOrderConfig->key;
+                        $input['type']              = $resolvedOrderConfig->key;
                     } elseif (!isset($input['type'])) {
                         $input['type'] = 'transport';
                     }
@@ -762,7 +761,7 @@ class OrderController extends FleetOpsController
             return response()->error('No order found.');
         }
 
-        $waypoint   = $request->filled('waypoint') ? Waypoint::findByPlace($request->input('waypoint'), $order) : null;
+        $waypoint    = $request->filled('waypoint') ? Waypoint::findByPlace($request->input('waypoint'), $order) : null;
         $orderConfig = $order->ensureOrderConfig();
         if (!$orderConfig) {
             return response()->error('No order config found for order.');
@@ -792,33 +791,24 @@ class OrderController extends FleetOpsController
      *
      * @return \Illuminate\Http\Response
      */
-    public function trackerInfo(string $id)
+    public function trackerInfo(Request $request, string $id)
     {
         $order = Order::findById($id);
         if (!$order) {
             return response()->error('No order found.');
         }
 
-        // Cache tracker data for 30 seconds with order-specific key
-        $cacheKey    = "order:{$order->uuid}:tracker";
-        $trackerInfo = Cache::remember($cacheKey, 30, function () use ($order) {
-            return $order->tracker()->toArray();
-        });
-
-        return response()->json($trackerInfo);
+        return response()->json($order->tracker()->toArray($request->only(['provider', 'fallbacks', 'traffic_enabled'])));
     }
 
-    public function waypointEtas(string $id)
+    public function waypointEtas(Request $request, string $id)
     {
         $order = Order::findById($id);
         if (!$order) {
             return response()->error('No order found.');
         }
 
-        // Get order tracker
-        $eta = $order->tracker()->eta();
-
-        return response()->json($eta);
+        return response()->json($order->tracker()->eta($request->only(['provider', 'fallbacks', 'traffic_enabled'])));
     }
 
     /**
