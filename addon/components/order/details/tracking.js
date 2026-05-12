@@ -121,6 +121,25 @@ export default class OrderDetailsTrackingComponent extends Component {
         return this.humanize(this.trackerData?.confidence || 'unknown');
     }
 
+    get confidencePercent() {
+        const score = this.trackerData?.confidence_score ?? this.trackerData?.confidence_percent ?? this.trackerData?.confidence_percentage;
+
+        if (score !== null && score !== undefined && !Number.isNaN(Number(score))) {
+            return Math.max(0, Math.min(100, Math.round(Number(score))));
+        }
+
+        switch (this.trackerData?.confidence) {
+            case 'high':
+                return 92;
+            case 'medium':
+                return 68;
+            case 'low':
+                return 34;
+            default:
+                return 0;
+        }
+    }
+
     get providerLabel() {
         return this.humanize(this.trackerData?.provider);
     }
@@ -192,8 +211,78 @@ export default class OrderDetailsTrackingComponent extends Component {
         return activeStop?.eta_seconds ?? eta?.[activeStop?.id] ?? eta?.[activeStop?.uuid] ?? eta?.[activeStop?.public_id] ?? null;
     }
 
-    get hasReportedEta() {
-        return this.reportedEtaSeconds !== null && this.reportedEtaSeconds !== undefined;
+    get displayedReportedEtaSeconds() {
+        return this.reportedEtaSeconds ?? this.activeEtaSeconds ?? this.trackerData?.route?.duration_in_traffic_s ?? this.trackerData?.route?.duration_s ?? null;
+    }
+
+    get hasDisplayedReportedEta() {
+        return this.displayedReportedEtaSeconds !== null && this.displayedReportedEtaSeconds !== undefined;
+    }
+
+    get isReportedEtaUntrusted() {
+        const trackerData = this.trackerData;
+
+        if (!trackerData) {
+            return false;
+        }
+
+        return !trackerData?.driver?.location || trackerData?.insights?.is_location_stale || trackerData.fallback_provider || (trackerData.confidence && trackerData.confidence !== 'high');
+    }
+
+    get reportedEtaWarning() {
+        if (!this.isReportedEtaUntrusted) {
+            return 'Reported from existing route data';
+        }
+
+        return this.operatorWarning ?? 'Reported ETA may not reflect the latest tracking signal.';
+    }
+
+    get warningsCount() {
+        return (this.trackerData?.warnings ?? []).length;
+    }
+
+    get diagnosticsSummaryLabel() {
+        return this.warningsCount === 1 ? '1 warning' : `${this.warningsCount} warnings`;
+    }
+
+    get totalProgressPercentage() {
+        const percentage = Number(this.trackerData?.progress?.percentage ?? 0);
+
+        return Math.max(0, Math.min(100, Number.isFinite(percentage) ? percentage : 0));
+    }
+
+    get totalProgressStyle() {
+        return `width: ${this.totalProgressPercentage}%;`;
+    }
+
+    get currentLeg() {
+        return this.trackerData?.route?.legs?.[0] ?? null;
+    }
+
+    get hasCurrentLegDistance() {
+        return this.currentLeg?.distance_m !== null && this.currentLeg?.distance_m !== undefined;
+    }
+
+    get currentLegProgressPercentage() {
+        const explicit = Number(this.currentLeg?.progress_percentage ?? this.trackerData?.progress?.active_leg_percentage);
+
+        if (Number.isFinite(explicit)) {
+            return Math.max(0, Math.min(100, explicit));
+        }
+
+        if (this.driverSignal === 'Missing') {
+            return 0;
+        }
+
+        if (this.driverSignal === 'Stale') {
+            return 18;
+        }
+
+        return Math.max(8, Math.min(92, this.totalProgressPercentage));
+    }
+
+    get currentLegProgressStyle() {
+        return `width: ${this.currentLegProgressPercentage}%;`;
     }
 
     get hasWarnings() {

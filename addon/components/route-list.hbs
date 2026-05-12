@@ -15,10 +15,13 @@
                     {{#if this.firstStop.completed}}
                         <Badge @status="success" @hideStatusDot={{true}}>Completed</Badge>
                     {{else if this.firstStop.active}}
-                        <Badge @status="warning" @hideStatusDot={{true}}>Current Stop</Badge>
+                        <span class="route-list-current-stop-badge">Current Stop</span>
                     {{/if}}
                     {{#if this.firstStop.etaSeconds}}
-                        <Badge @status="info" @hideStatusDot={{true}}><span class="font-bold">ETA:</span> {{format-duration this.firstStop.etaSeconds}}</Badge>
+                        <Badge @status="warning" @hideStatusDot={{true}}><span class="font-bold">ETA:</span> {{format-duration this.firstStop.etaSeconds}}</Badge>
+                    {{/if}}
+                    {{#if this.firstStop.routeLeg.distance_m}}
+                        <Badge @status="default" @hideStatusDot={{true}}>{{format-meters this.firstStop.routeLeg.distance_m}}</Badge>
                     {{/if}}
                     {{#if this.firstStop.etaAt}}
                         <Badge @status="default" @hideStatusDot={{true}}>{{format-date-fns this.firstStop.etaAt "d MMM HH:mm"}}</Badge>
@@ -53,10 +56,13 @@
                             {{#if stop.completed}}
                                 <Badge @status="success" @hideStatusDot={{true}}>Completed</Badge>
                             {{else if stop.active}}
-                                <Badge @status="warning" @hideStatusDot={{true}}>Current Stop</Badge>
+                                <span class="route-list-current-stop-badge">Current Stop</span>
                             {{/if}}
                             {{#if stop.etaSeconds}}
-                                <Badge @status="info" @hideStatusDot={{true}}><span class="font-bold">ETA:</span> {{format-duration stop.etaSeconds}}</Badge>
+                                <Badge @status="warning" @hideStatusDot={{true}}><span class="font-bold">ETA:</span> {{format-duration stop.etaSeconds}}</Badge>
+                            {{/if}}
+                            {{#if stop.routeLeg.distance_m}}
+                                <Badge @status="default" @hideStatusDot={{true}}>{{format-meters stop.routeLeg.distance_m}}</Badge>
                             {{/if}}
                             {{#if stop.etaAt}}
                                 <Badge @status="default" @hideStatusDot={{true}}>{{format-date-fns stop.etaAt "d MMM HH:mm"}}</Badge>
@@ -81,10 +87,13 @@
                         {{#if stop.completed}}
                             <Badge @status="success" @hideStatusDot={{true}}>Completed</Badge>
                         {{else if stop.active}}
-                            <Badge @status="warning" @hideStatusDot={{true}}>Current Stop</Badge>
+                            <span class="route-list-current-stop-badge">Current Stop</span>
                         {{/if}}
                         {{#if stop.etaSeconds}}
-                            <Badge @status="info" @hideStatusDot={{true}}><span class="font-bold">ETA:</span> {{format-duration stop.etaSeconds}}</Badge>
+                            <Badge @status="warning" @hideStatusDot={{true}}><span class="font-bold">ETA:</span> {{format-duration stop.etaSeconds}}</Badge>
+                        {{/if}}
+                        {{#if stop.routeLeg.distance_m}}
+                            <Badge @status="default" @hideStatusDot={{true}}>{{format-meters stop.routeLeg.distance_m}}</Badge>
                         {{/if}}
                         {{#if stop.etaAt}}
                             <Badge @status="default" @hideStatusDot={{true}}>{{format-date-fns stop.etaAt "d MMM HH:mm"}}</Badge>
@@ -112,10 +121,13 @@
                     {{#if this.lastStop.completed}}
                         <Badge @status="success" @hideStatusDot={{true}}>Completed</Badge>
                     {{else if this.lastStop.active}}
-                        <Badge @status="warning" @hideStatusDot={{true}}>Current Stop</Badge>
+                        <span class="route-list-current-stop-badge">Current Stop</span>
                     {{/if}}
                     {{#if this.lastStop.etaSeconds}}
-                        <Badge @status="info" @hideStatusDot={{true}}><span class="font-bold">ETA:</span> {{format-duration this.lastStop.etaSeconds}}</Badge>
+                        <Badge @status="warning" @hideStatusDot={{true}}><span class="font-bold">ETA:</span> {{format-duration this.lastStop.etaSeconds}}</Badge>
+                    {{/if}}
+                    {{#if this.lastStop.routeLeg.distance_m}}
+                        <Badge @status="default" @hideStatusDot={{true}}>{{format-meters this.lastStop.routeLeg.distance_m}}</Badge>
                     {{/if}}
                     {{#if this.lastStop.etaAt}}
                         <Badge @status="default" @hideStatusDot={{true}}>{{format-date-fns this.lastStop.etaAt "d MMM HH:mm"}}</Badge>

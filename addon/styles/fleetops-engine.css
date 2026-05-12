@@ -4217,6 +4217,18 @@ body[data-theme='dark'] .next-google-container-map .fleetops-google-draw-actions
     color: #b6bfca;
 }
 
+.tracking-intelligence-alert--critical .tracking-intelligence-alert__cta {
+    border-color: rgba(239, 68, 68, 30%);
+    background: rgba(239, 68, 68, 8%);
+    color: #b91c1c;
+}
+
+[data-theme='dark'] .tracking-intelligence-alert--critical .tracking-intelligence-alert__cta {
+    border-color: rgba(226, 107, 107, 32%);
+    background: rgba(226, 107, 107, 10%);
+    color: #e26b6b;
+}
+
 .tracking-intelligence__eta-grid {
     display: grid;
     grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
@@ -4227,6 +4239,7 @@ body[data-theme='dark'] .next-google-container-map .fleetops-google-draw-actions
 .tracking-intelligence-destination,
 .tracking-intelligence-distance,
 .tracking-intelligence-diagnostics,
+.tracking-intelligence-labels,
 .tracking-stop-progress {
     border: 1px solid #e5e7eb;
     border-radius: 0.5rem;
@@ -4238,6 +4251,7 @@ body[data-theme='dark'] .next-google-container-map .fleetops-google-draw-actions
 [data-theme='dark'] .tracking-intelligence-destination,
 [data-theme='dark'] .tracking-intelligence-distance,
 [data-theme='dark'] .tracking-intelligence-diagnostics,
+[data-theme='dark'] .tracking-intelligence-labels,
 [data-theme='dark'] .tracking-stop-progress {
     border-color: #374151;
     background: #1f2937;
@@ -4286,6 +4300,13 @@ body[data-theme='dark'] .next-google-container-map .fleetops-google-draw-actions
     color: #d97706;
 }
 
+.tracking-intelligence-cell__value--muted {
+    color: #6b7280;
+    text-decoration: line-through;
+    text-decoration-color: #ef4444;
+    text-decoration-thickness: 1px;
+}
+
 .tracking-intelligence-cell__sub {
     margin-top: 0.2rem;
     overflow: hidden;
@@ -4294,6 +4315,11 @@ body[data-theme='dark'] .next-google-container-map .fleetops-google-draw-actions
     line-height: 1.25;
     text-overflow: ellipsis;
     white-space: nowrap;
+}
+
+.tracking-intelligence-cell__sub--warn {
+    color: #b45309;
+    white-space: normal;
 }
 
 [data-theme='dark'] .tracking-intelligence-cell__label,
@@ -4306,6 +4332,14 @@ body[data-theme='dark'] .next-google-container-map .fleetops-google-draw-actions
 }
 
 [data-theme='dark'] .tracking-intelligence-cell--accent .tracking-intelligence-cell__value {
+    color: #e5a14b;
+}
+
+[data-theme='dark'] .tracking-intelligence-cell__value--muted {
+    color: #7c8896;
+}
+
+[data-theme='dark'] .tracking-intelligence-cell__sub--warn {
     color: #e5a14b;
 }
 
@@ -4427,10 +4461,10 @@ body[data-theme='dark'] .next-google-container-map .fleetops-google-draw-actions
 }
 
 .tracking-intelligence-distance__row {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
     gap: 0.75rem;
+    align-items: center;
     color: #6b7280;
     font-size: 0.72rem;
 }
@@ -4441,6 +4475,25 @@ body[data-theme='dark'] .next-google-container-map .fleetops-google-draw-actions
 
 .tracking-intelligence-distance__row strong {
     color: #111827;
+}
+
+.tracking-intelligence-distance__bar {
+    grid-column: 1 / -1;
+    height: 0.32rem;
+    overflow: hidden;
+    border-radius: 9999px;
+    background: #e5e7eb;
+}
+
+.tracking-intelligence-distance__bar span {
+    display: block;
+    height: 100%;
+    border-radius: inherit;
+    background: #f59e0b;
+}
+
+.tracking-intelligence-distance__bar--secondary span {
+    background: #38bdf8;
 }
 
 .tracking-intelligence-distance__foot {
@@ -4457,6 +4510,18 @@ body[data-theme='dark'] .next-google-container-map .fleetops-google-draw-actions
 
 [data-theme='dark'] .tracking-intelligence-distance__row strong {
     color: #eceff4;
+}
+
+[data-theme='dark'] .tracking-intelligence-distance__bar {
+    background: #20293a;
+}
+
+[data-theme='dark'] .tracking-intelligence-distance__bar span {
+    background: #e5a14b;
+}
+
+[data-theme='dark'] .tracking-intelligence-distance__bar--secondary span {
+    background: #5baec7;
 }
 
 [data-theme='dark'] .tracking-intelligence-distance__foot {
@@ -4481,6 +4546,21 @@ body[data-theme='dark'] .next-google-container-map .fleetops-google-draw-actions
     letter-spacing: 0.08em;
     list-style: none;
     text-transform: uppercase;
+}
+
+.tracking-intelligence-diagnostics__summary {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    white-space: nowrap;
+}
+
+.tracking-intelligence-diagnostics__summary svg {
+    transition: transform 160ms ease;
+}
+
+.tracking-intelligence-diagnostics[open] .tracking-intelligence-diagnostics__summary svg {
+    transform: rotate(90deg);
 }
 
 .tracking-intelligence-diagnostics summary::-webkit-details-marker {
@@ -4563,7 +4643,8 @@ body[data-theme='dark'] .next-google-container-map .fleetops-google-draw-actions
 }
 
 .tracking-stop-progress__scroller {
-    overflow-x: auto;
+    overflow: auto hidden;
+    min-height: 2.7rem;
     padding: 0.2rem 0 0.05rem;
 }
 
@@ -4671,4 +4752,68 @@ body[data-theme='dark'] .next-google-container-map .fleetops-google-draw-actions
     border-color: #e5a14b;
     background: #e5a14b;
     color: #1a1206;
+}
+
+.tracking-intelligence-alert__cta,
+.tracking-intelligence-footer__button {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    border: 1px solid rgba(245, 158, 11, 32%);
+    border-radius: 0.375rem;
+    background: rgba(245, 158, 11, 8%);
+    color: #b45309;
+    font-size: 0.7rem;
+    font-weight: 700;
+    line-height: 1.2;
+    padding: 0.35rem 0.55rem;
+    white-space: nowrap;
+}
+
+.tracking-intelligence-alert__cta:disabled,
+.tracking-intelligence-footer__button:disabled {
+    cursor: progress;
+    opacity: 0.7;
+}
+
+[data-theme='dark'] .tracking-intelligence-alert__cta,
+[data-theme='dark'] .tracking-intelligence-footer__button {
+    border-color: rgba(229, 161, 75, 32%);
+    background: rgba(229, 161, 75, 10%);
+    color: #e5a14b;
+}
+
+.tracking-intelligence-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    color: #9ca3af;
+    font-size: 0.68rem;
+}
+
+.tracking-intelligence-labels {
+    display: flex;
+    flex-direction: column;
+    padding: 0.75rem;
+}
+
+.route-list-current-stop-badge {
+    display: inline-flex;
+    align-items: center;
+    border: 1px solid rgba(99, 102, 241, 30%);
+    border-radius: 9999px;
+    background: rgba(99, 102, 241, 12%);
+    color: #4f46e5;
+    font-size: 0.7rem;
+    font-weight: 700;
+    line-height: 1.2;
+    padding: 0.16rem 0.45rem;
+    white-space: nowrap;
+}
+
+[data-theme='dark'] .route-list-current-stop-badge {
+    border-color: rgba(129, 140, 248, 36%);
+    background: rgba(129, 140, 248, 16%);
+    color: #a5b4fc;
 }
