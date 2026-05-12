@@ -15,13 +15,13 @@
                     {{#if this.firstStop.completed}}
                         <Badge @status="success" @hideStatusDot={{true}}>Completed</Badge>
                     {{else if this.firstStop.active}}
-                        <Badge @status="magic" @hideStatusDot={{true}}>Current Stop</Badge>
+                        <Badge @status="indigo" @hideStatusDot={{true}}>Current Stop</Badge>
                     {{/if}}
                     {{#if this.firstStop.etaSeconds}}
-                        <Badge @status="warning" @hideStatusDot={{true}}><span class="font-bold">ETA:</span> {{format-duration this.firstStop.etaSeconds}}</Badge>
+                        <Badge @status="pending" @hideStatusDot={{true}}><span class="font-bold">ETA:</span> {{format-duration this.firstStop.etaSeconds}}</Badge>
                     {{/if}}
                     {{#if this.firstStop.etaAt}}
-                        <Badge @status="default" @hideStatusDot={{true}}>{{format-date-fns this.firstStop.etaAt "d MMM HH:mm"}}</Badge>
+                        <Badge @status="pending" @hideStatusDot={{true}}>{{format-date-fns this.firstStop.etaAt "d MMM HH:mm"}}</Badge>
                     {{/if}}
                 </div>
                 <DisplayPlace @place={{this.firstStop.place}} @waypointActions={{@waypointActions}} @hideBadges={{true}} />
@@ -53,13 +53,13 @@
                             {{#if stop.completed}}
                                 <Badge @status="success" @hideStatusDot={{true}}>Completed</Badge>
                             {{else if stop.active}}
-                                <Badge @status="magic" @hideStatusDot={{true}}>Current Stop</Badge>
+                                <Badge @status="indigo" @hideStatusDot={{true}}>Current Stop</Badge>
                             {{/if}}
                             {{#if stop.etaSeconds}}
-                                <Badge @status="warning" @hideStatusDot={{true}}><span class="font-bold">ETA:</span> {{format-duration stop.etaSeconds}}</Badge>
+                                <Badge @status="pending" @hideStatusDot={{true}}><span class="font-bold">ETA:</span> {{format-duration stop.etaSeconds}}</Badge>
                             {{/if}}
                             {{#if stop.etaAt}}
-                                <Badge @status="default" @hideStatusDot={{true}}>{{format-date-fns stop.etaAt "d MMM HH:mm"}}</Badge>
+                                <Badge @status="pending" @hideStatusDot={{true}}>{{format-date-fns stop.etaAt "d MMM HH:mm"}}</Badge>
                             {{/if}}
                         </div>
                         <DisplayPlace @place={{stop.place}} @waypointActions={{@waypointActions}} @hideBadges={{true}} />
@@ -81,13 +81,13 @@
                         {{#if stop.completed}}
                             <Badge @status="success" @hideStatusDot={{true}}>Completed</Badge>
                         {{else if stop.active}}
-                            <Badge @status="magic" @hideStatusDot={{true}}>Current Stop</Badge>
+                            <Badge @status="indigo" @hideStatusDot={{true}}>Current Stop</Badge>
                         {{/if}}
                         {{#if stop.etaSeconds}}
-                            <Badge @status="warning" @hideStatusDot={{true}}><span class="font-bold">ETA:</span> {{format-duration stop.etaSeconds}}</Badge>
+                            <Badge @status="pending" @hideStatusDot={{true}}><span class="font-bold">ETA:</span> {{format-duration stop.etaSeconds}}</Badge>
                         {{/if}}
                         {{#if stop.etaAt}}
-                            <Badge @status="default" @hideStatusDot={{true}}>{{format-date-fns stop.etaAt "d MMM HH:mm"}}</Badge>
+                            <Badge @status="pending" @hideStatusDot={{true}}>{{format-date-fns stop.etaAt "d MMM HH:mm"}}</Badge>
                         {{/if}}
                     </div>
                     <DisplayPlace @place={{stop.place}} @waypointActions={{@waypointActions}} @hideBadges={{true}} />
@@ -112,13 +112,13 @@
                     {{#if this.lastStop.completed}}
                         <Badge @status="success" @hideStatusDot={{true}}>Completed</Badge>
                     {{else if this.lastStop.active}}
-                        <Badge @status="magic" @hideStatusDot={{true}}>Current Stop</Badge>
+                        <Badge @status="indigo" @hideStatusDot={{true}}>Current Stop</Badge>
                     {{/if}}
                     {{#if this.lastStop.etaSeconds}}
-                        <Badge @status="warning" @hideStatusDot={{true}}><span class="font-bold">ETA:</span> {{format-duration this.lastStop.etaSeconds}}</Badge>
+                        <Badge @status="pending" @hideStatusDot={{true}}><span class="font-bold">ETA:</span> {{format-duration this.lastStop.etaSeconds}}</Badge>
                     {{/if}}
                     {{#if this.lastStop.etaAt}}
-                        <Badge @status="default" @hideStatusDot={{true}}>{{format-date-fns this.lastStop.etaAt "d MMM HH:mm"}}</Badge>
+                        <Badge @status="pending" @hideStatusDot={{true}}>{{format-date-fns this.lastStop.etaAt "d MMM HH:mm"}}</Badge>
                     {{/if}}
                 </div>
                 <DisplayPlace @place={{this.lastStop.place}} @waypointActions={{@waypointActions}} @hideBadges={{true}} />
