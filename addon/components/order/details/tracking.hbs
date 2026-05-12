@@ -1,12 +1,31 @@
 <ContentPanel @title={{t "order.fields.tracking"}} @prefixTitleRight={{@resource.tracking}} @isLoading={{@isLoading}} @open={{true}} @wrapperClass="bordered-top">
     {{#if this.hasTrackerData}}
         <div class="mb-4 space-y-3">
-            <OrderProgressBar
-                @order={{@resource}}
-                @progress={{@resource.tracker_data.progress.percentage}}
-                @firstWaypointCompleted={{gt @resource.tracker_data.progress.completed_stops 0}}
-                @lastWaypointCompleted={{eq @resource.tracker_data.progress.percentage 100}}
-            />
+            <div class="flex flex-wrap items-center gap-2 text-xs">
+                <span
+                    class="inline-flex items-center rounded-full border border-gray-200 bg-gray-50 px-2 py-1 font-semibold text-gray-700 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-200"
+                >
+                    <FaIcon @icon="circle" @size="2xs" class="mr-1 {{this.driverSignalClass}}" />
+                    {{this.driverSignal}}
+                </span>
+                {{#each this.routeQualityItems as |item|}}
+                    <span
+                        class="inline-flex items-center rounded-full border border-gray-200 bg-gray-50 px-2 py-1 text-gray-500 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300"
+                    >{{item}}</span>
+                {{/each}}
+                <span class="ml-auto text-gray-400 dark:text-gray-500">Updated {{n-a (format-date-fns @resource.tracker_data.generated_at "d MMM HH:mm")}}</span>
+            </div>
+
+            {{#if this.operatorWarning}}
+                <div
+                    class="flex items-start rounded-md border border-yellow-400 bg-yellow-100 px-2 py-1.5 text-xs leading-5 text-yellow-900 dark:border-yellow-700 dark:bg-yellow-900 dark:text-yellow-100"
+                >
+                    <FaIcon @icon="triangle-exclamation" @size="xs" class="mt-1 mr-2 shrink-0" />
+                    <span>{{this.operatorWarning}}</span>
+                </div>
+            {{/if}}
+
+            <TrackingStopProgress @stops={{@resource.tracker_data.stops}} @activeStop={{@resource.tracker_data.active_stop}} />
 
             <div class="grid grid-cols-2 gap-2">
                 <div class="min-w-0 rounded-md border border-gray-200 bg-gray-50 px-3 py-2 dark:border-gray-700 dark:bg-gray-900">
@@ -38,44 +57,23 @@
                 <div class="mt-1 text-sm leading-5 text-gray-900 dark:text-gray-100">{{n-a @resource.tracker_data.active_stop.address}}</div>
             </div>
 
-            <div class="grid grid-cols-2 gap-2">
-                <div class="min-w-0 rounded-md border border-gray-200 bg-gray-50 px-3 py-2 dark:border-gray-700 dark:bg-gray-900">
-                    <div class="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Remaining Distance</div>
-                    <div class="mt-1 truncate text-sm font-semibold leading-5 text-gray-900 dark:text-gray-100">
+            <div class="rounded-md border border-gray-200 bg-gray-50 px-3 py-2 dark:border-gray-700 dark:bg-gray-900">
+                <div class="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Route Summary</div>
+                <div class="mt-1 flex items-center justify-between gap-3 text-xs text-gray-500 dark:text-gray-400">
+                    <span>Distance</span>
+                    <span class="font-semibold text-gray-900 dark:text-gray-100">
                         {{#if this.hasRemainingDistance}}
                             {{format-meters @resource.tracker_data.route.distance_m}}
                         {{else}}
                             -
                         {{/if}}
-                    </div>
+                    </span>
                 </div>
-                <div class="min-w-0 rounded-md border border-gray-200 bg-gray-50 px-3 py-2 dark:border-gray-700 dark:bg-gray-900">
-                    <div class="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Remaining Stops</div>
-                    <div class="mt-1 truncate text-sm font-semibold leading-5 text-gray-900 dark:text-gray-100">{{n-a @resource.tracker_data.progress.remaining_stops}}</div>
+                <div class="mt-1 flex items-center justify-between gap-3 text-xs text-gray-500 dark:text-gray-400">
+                    <span>Remaining stops</span>
+                    <span class="font-semibold text-gray-900 dark:text-gray-100">{{n-a @resource.tracker_data.progress.remaining_stops}}</span>
                 </div>
             </div>
-
-            <div class="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs leading-5 text-gray-500 dark:text-gray-400">
-                <span class="inline-flex items-center font-semibold {{this.driverSignalClass}}">
-                    <FaIcon @icon="circle" @size="2xs" class="mr-1" />
-                    {{this.driverSignal}}
-                </span>
-                {{#each this.routeQualityItems as |item|}}
-                    <span class="text-gray-300 dark:text-gray-600">&middot;</span>
-                    <span>{{item}}</span>
-                {{/each}}
-                <span class="text-gray-300 dark:text-gray-600">&middot;</span>
-                <span>Updated {{n-a (format-date-fns @resource.tracker_data.generated_at "d MMM HH:mm")}}</span>
-            </div>
-
-            {{#if this.operatorWarning}}
-                <div
-                    class="flex items-start rounded-md border border-yellow-400 bg-yellow-100 px-2 py-1.5 text-xs leading-5 text-yellow-900 dark:border-yellow-700 dark:bg-yellow-900 dark:text-yellow-100"
-                >
-                    <FaIcon @icon="triangle-exclamation" @size="xs" class="mt-1 mr-2 shrink-0" />
-                    <span>{{this.operatorWarning}}</span>
-                </div>
-            {{/if}}
         </div>
     {{/if}}
 

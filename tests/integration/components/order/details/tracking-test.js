@@ -68,8 +68,10 @@ module('Integration | Component | order/details/tracking', function (hooks) {
         assert.dom().containsText('Completion ETA');
         assert.dom().containsText('Remaining Distance');
         assert.dom().containsText('Current Destination');
+        assert.dom().containsText('Route Progress');
         assert.dom().containsText('Live');
         assert.dom().containsText('Google Routes route');
+        assert.dom().doesNotContainText('All Stops');
         assert.dom().doesNotContainText('Provider:');
         assert.dom().doesNotContainText('Route Legs');
         assert.dom().doesNotContainText('2026-05-12T04:49:26');

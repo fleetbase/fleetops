@@ -65,6 +65,21 @@ test('tracking context builder normalizes order stops and driver telemetry', fun
         ->and($context->warnings)->toBe([]);
 });
 
+test('tracking context ignores zero coordinate driver location and falls back to pickup origin', function () {
+    $order                           = trackingOrderWithStops();
+    $order->driverAssigned->location = new Point(0, 0);
+
+    $context = (new TrackingContextBuilder())->build($order, TrackingOptions::fromArray([
+        'provider' => 'calculated',
+    ]));
+
+    expect($context->driverLocation)->toBeNull()
+        ->and($context->origin?->getLat())->toBe(1.30)
+        ->and($context->origin?->getLng())->toBe(103.80)
+        ->and($context->routePoints()[0]->getLat())->toBe(1.30)
+        ->and($context->warnings)->toContain('missing_driver_location');
+});
+
 test('calculated provider returns normalized low confidence route data', function () {
     $context = (new TrackingContextBuilder())->build(trackingOrderWithStops(), TrackingOptions::fromArray([
         'provider' => 'calculated',
@@ -80,6 +95,23 @@ test('calculated provider returns normalized low confidence route data', functio
         ->and($result->durationSeconds)->toBeGreaterThan(0)
         ->and($result->confidence)->toBe('low')
         ->and($result->warnings)->toContain('calculated_route_used');
+});
+
+test('tracking route legs include cumulative stop eta values', function () {
+    $context = (new TrackingContextBuilder())->build(trackingOrderWithStops(), TrackingOptions::fromArray([
+        'provider' => 'calculated',
+    ]));
+
+    $result = (new CalculatedTrackingProvider())->track($context, TrackingOptions::fromArray([
+        'provider' => 'calculated',
+    ]));
+    $service = app(Fleetbase\FleetOps\Tracking\TrackingIntelligenceService::class);
+    $method  = new ReflectionMethod($service, 'legs');
+    $method->setAccessible(true);
+    $legs = $method->invoke($service, $context, $result, Carbon::parse('2026-05-12 00:00:00'));
+
+    expect($legs[0]['eta_seconds'])->toBeGreaterThan(0)
+        ->and($legs[0]['eta_at'])->not->toBeNull();
 });
 
 test('provider manager falls back to registered provider and records fallback warning', function () {

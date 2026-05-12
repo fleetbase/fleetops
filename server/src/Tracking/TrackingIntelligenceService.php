@@ -59,7 +59,7 @@ class TrackingIntelligenceService
             'confidence'        => $providerResult->confidence,
             'warnings'          => array_values(array_unique($warnings)),
             'driver'            => [
-                'location'             => $this->pointToGeoJson($context->origin),
+                'location'             => $this->pointToGeoJson($context->driverLocation),
                 'location_age_seconds' => $context->driverLocationAgeSeconds,
                 'online'               => (bool) data_get($context->driver, 'online', false),
             ],
@@ -73,7 +73,7 @@ class TrackingIntelligenceService
                 'duration_in_traffic_s' => $providerResult->durationInTrafficSeconds,
                 'polyline'              => $providerResult->polyline,
                 'coordinates'           => $providerResult->coordinates,
-                'legs'                  => $this->legs($context, $providerResult),
+                'legs'                  => $this->legs($context, $providerResult, $now),
             ],
             'eta'               => [
                 'active_stop_seconds' => $activeStopSeconds,
@@ -107,13 +107,26 @@ class TrackingIntelligenceService
         ];
     }
 
-    protected function legs(TrackingContext $context, TrackingProviderResult $providerResult): array
+    protected function legs(TrackingContext $context, TrackingProviderResult $providerResult, Carbon $now): array
     {
-        return collect($providerResult->legs)->map(function ($leg, $index) use ($context) {
-            $stop = $context->remainingStops->values()->get($index);
+        $elapsedSeconds = 0;
+
+        return collect($providerResult->legs)->map(function ($leg, $index) use ($context, $now, &$elapsedSeconds) {
+            $stop        = $context->remainingStops->values()->get($index);
+            $legSeconds  = data_get($leg, 'duration_in_traffic_s', data_get($leg, 'duration_s'));
+            $etaSeconds  = null;
+            $etaAt       = null;
+
+            if ($legSeconds !== null) {
+                $elapsedSeconds += (float) $legSeconds;
+                $etaSeconds = $elapsedSeconds;
+                $etaAt      = $this->addSeconds($now, $etaSeconds);
+            }
 
             return array_merge($leg, [
-                'stop' => $stop instanceof TrackingStop ? $stop->toArray() : null,
+                'stop'        => $stop instanceof TrackingStop ? $stop->toArray() : null,
+                'eta_seconds' => $etaSeconds,
+                'eta_at'      => $etaAt,
             ]);
         })->all();
     }

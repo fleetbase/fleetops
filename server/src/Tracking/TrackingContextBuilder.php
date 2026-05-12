@@ -27,16 +27,22 @@ class TrackingContextBuilder
         $warnings          = [];
         $driverLocationAge = $driver?->updated_at ? now()->diffInSeconds($driver->updated_at) : null;
 
-        $origin = null;
+        $origin         = null;
+        $driverLocation = null;
         if ($driver && $driver->location) {
             try {
-                $origin = Utils::getPointFromMixed($driver);
+                $driverLocation = Utils::getPointFromMixed($driver);
+                if (!$this->isValidPoint($driverLocation)) {
+                    $driverLocation = null;
+                }
             } catch (\Throwable) {
-                $warnings[] = 'missing_driver_location';
+                $driverLocation = null;
             }
         }
 
-        if (!$origin) {
+        if ($driverLocation) {
+            $origin = $driverLocation;
+        } else {
             $warnings[] = 'missing_driver_location';
             $origin     = $this->fallbackOrigin($payload);
         }
@@ -65,6 +71,7 @@ class TrackingContextBuilder
             payload: $payload,
             driver: $driver,
             origin: $origin,
+            driverLocation: $driverLocation,
             stops: $stops,
             completedStops: $completedStops,
             remainingStops: $remainingStops,
@@ -169,9 +176,29 @@ class TrackingContextBuilder
         }
 
         try {
-            return Utils::getPointFromMixed($payload->getPickupOrCurrentWaypoint());
+            $point = Utils::getPointFromMixed($payload->getPickupOrCurrentWaypoint());
+
+            return $this->isValidPoint($point) ? $point : null;
         } catch (\Throwable) {
             return null;
         }
+    }
+
+    protected function isValidPoint($point): bool
+    {
+        if (!$point || !method_exists($point, 'getLat') || !method_exists($point, 'getLng')) {
+            return false;
+        }
+
+        $lat = (float) $point->getLat();
+        $lng = (float) $point->getLng();
+
+        return is_finite($lat)
+            && is_finite($lng)
+            && $lat >= -90
+            && $lat <= 90
+            && $lng >= -180
+            && $lng <= 180
+            && !(abs($lat) < 0.000001 && abs($lng) < 0.000001);
     }
 }

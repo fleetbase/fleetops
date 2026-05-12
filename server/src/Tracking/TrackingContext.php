@@ -15,6 +15,7 @@ class TrackingContext
         public ?Payload $payload,
         public ?Driver $driver,
         public ?Point $origin,
+        public ?Point $driverLocation,
         public Collection $stops,
         public Collection $completedStops,
         public Collection $remainingStops,

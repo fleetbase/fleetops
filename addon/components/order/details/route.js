@@ -15,6 +15,11 @@ export default class OrderDetailsRouteComponent extends Component {
     @service hostRouter;
     @service intl;
 
+    constructor() {
+        super(...arguments);
+        this.loadTrackerData.perform();
+    }
+
     get actionButtons() {
         return [
             this.showOptimizationSelect
@@ -54,6 +59,34 @@ export default class OrderDetailsRouteComponent extends Component {
 
     get showOptimizationSelect() {
         return this.routeOptimization.availableEngines.length > 1;
+    }
+
+    get trackerData() {
+        return this.args.resource?.tracker_data;
+    }
+
+    get hasTrackingRouteSummary() {
+        return Boolean(this.trackerData?.route || this.trackerData?.eta);
+    }
+
+    get hasTrackingDistance() {
+        return this.trackerData?.route?.distance_m !== null && this.trackerData?.route?.distance_m !== undefined;
+    }
+
+    get hasCompletionEta() {
+        return Boolean(this.trackerData?.eta?.completion_at);
+    }
+
+    @task *loadTrackerData() {
+        if (!this.args.resource || this.args.resource.tracker_data || typeof this.args.resource.loadTrackerData !== 'function') {
+            return;
+        }
+
+        try {
+            yield this.args.resource.loadTrackerData();
+        } catch (err) {
+            debug('Failed to load order tracker data for route: ' + err.message);
+        }
     }
 
     @task *optimizeRouteWithService(service) {
