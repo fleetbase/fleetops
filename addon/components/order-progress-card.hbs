@@ -21,15 +21,21 @@
             @lastWaypointCompleted={{eq this.order.tracker_data.progress.percentage 100}}
         />
     </div>
-    <div class="flex flex-wrap gap-1 px-1 mt-1">
-        <Badge @status={{if (eq this.order.tracker_data.confidence "high") "success" "warning"}} @hideStatusDot={{true}}>{{smart-humanize this.order.tracker_data.confidence}}</Badge>
-        {{#if this.order.tracker_data.fallback_provider}}
-            <Badge @status="warning" @hideStatusDot={{true}}>Fallback</Badge>
-        {{/if}}
-        {{#if this.order.tracker_data.insights.is_location_stale}}
+    {{#if this.order.tracker_data.insights.is_location_stale}}
+        <div class="flex px-1 mt-1">
             <Badge @status="warning" @hideStatusDot={{true}}>Stale GPS</Badge>
-        {{/if}}
-    </div>
+        </div>
+    {{else if this.order.tracker_data.fallback_provider}}
+        <div class="flex px-1 mt-1">
+            <Badge @status="warning" @hideStatusDot={{true}}>Fallback ETA</Badge>
+        </div>
+    {{else if this.order.tracker_data.confidence}}
+        {{#unless (eq this.order.tracker_data.confidence "high")}}
+            <div class="flex px-1 mt-1">
+                <Badge @status="warning" @hideStatusDot={{true}}>Low ETA Confidence</Badge>
+            </div>
+        {{/unless}}
+    {{/if}}
     <div class="order-progress-card-details">
         <div class="order-progress-card-details-address start">
             {{#if this.order.payload.isMultiDrop}}

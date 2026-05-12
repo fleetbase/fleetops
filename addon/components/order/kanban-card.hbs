@@ -19,15 +19,21 @@
                 @firstWaypointCompleted={{gt @card.tracker_data.progress.completed_stops 0}}
                 @lastWaypointCompleted={{eq @card.tracker_data.progress.percentage 100}}
             />
-            <div class="flex flex-wrap gap-1 mt-1">
-                <Badge @status={{if (eq @card.tracker_data.confidence "high") "success" "warning"}} @hideStatusDot={{true}}>{{smart-humanize @card.tracker_data.confidence}}</Badge>
-                {{#if @card.tracker_data.fallback_provider}}
-                    <Badge @status="warning" @hideStatusDot={{true}}>Fallback</Badge>
-                {{/if}}
-                {{#if @card.tracker_data.insights.is_location_stale}}
+            {{#if @card.tracker_data.insights.is_location_stale}}
+                <div class="flex mt-1">
                     <Badge @status="warning" @hideStatusDot={{true}}>Stale GPS</Badge>
-                {{/if}}
-            </div>
+                </div>
+            {{else if @card.tracker_data.fallback_provider}}
+                <div class="flex mt-1">
+                    <Badge @status="warning" @hideStatusDot={{true}}>Fallback ETA</Badge>
+                </div>
+            {{else if @card.tracker_data.confidence}}
+                {{#unless (eq @card.tracker_data.confidence "high")}}
+                    <div class="flex mt-1">
+                        <Badge @status="warning" @hideStatusDot={{true}}>Low ETA Confidence</Badge>
+                    </div>
+                {{/unless}}
+            {{/if}}
         </div>
         <div class="order-listing-row-body flex flex-row">
             <div class="flex-1 order-listing-row-body-address start">
