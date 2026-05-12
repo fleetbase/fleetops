@@ -1,38 +1,35 @@
 {{#if @resource.purchase_rate}}
-    <ContentPanel @title={{t "order.fields.purchase-rate-panel-title"}} @isLoading={{@isLoading}} @open={{true}} @wrapperClass="bordered-top" @panelBodyWrapperClass="px-0i">
-        <div class="order-view-purchase-rate-table-wrapper next-table-wrapper no-scroll h-auto table-fluid rounded-b-md">
-            <table id="order-view-purchase-rate-table" class="table table-fixed flex-1">
+    <ContentPanel @title={{t "order.fields.purchase-rate-panel-title"}} @isLoading={{@isLoading}} @open={{true}} @wrapperClass="bordered-top">
+        <div class="overflow-x-auto">
+            <table class="w-full text-xs">
                 <thead>
-                    <tr>
-                        <th class="text-left">{{t "order.fields.breakdown"}}</th>
-                        <th>
-                            <div class="flex flex-row items-center justify-end">{{@resource.purchase_rate.service_quote.currency}}</div>
-                        </th>
+                    <tr class="border-b border-gray-200 dark:border-gray-700 text-[11px] uppercase tracking-wide text-gray-500 font-semibold">
+                        <th class="py-2 pr-2 text-left">{{t "order.fields.breakdown"}}</th>
+                        <th class="py-2 pl-2 text-right w-32">{{@resource.purchase_rate.service_quote.currency}}</th>
                     </tr>
                 </thead>
                 <tbody>
                     {{#each @resource.purchase_rate.service_quote.items as |item|}}
-                        <tr>
-                            <td>
-                                <span class="font-semibold">{{smart-humanize item.details}}</span>
+                        <tr class="border-b border-gray-100 dark:border-gray-800 last:border-0">
+                            <td class="py-2 pr-2 text-gray-700 dark:text-gray-300">
+                                {{smart-humanize item.details}}
                             </td>
-                            <td>
-                                <div class="flex flex-row items-center justify-end">{{format-currency item.amount @resource.purchase_rate.service_quote.currency}}</div>
+                            <td class="py-2 pl-2 text-right font-medium text-gray-700 dark:text-gray-300 whitespace-nowrap">
+                                {{format-currency item.amount @resource.purchase_rate.service_quote.currency}}
                             </td>
                         </tr>
                     {{/each}}
-                    <tr class="border-b-0">
-                        <td class="border-b-0">
-                            <span class="font-semibold">{{t "common.total"}}</span>
+                </tbody>
+                <tfoot class="border-t border-gray-200 dark:border-gray-700">
+                    <tr class="text-xs">
+                        <td class="pt-2 pb-1 pr-2 text-right text-[11px] uppercase tracking-wide font-bold text-gray-800 dark:text-gray-100">
+                            {{t "common.total"}}
                         </td>
-                        <td class="border-b-0">
-                            <div class="flex flex-row items-center justify-end">{{format-currency
-                                    @resource.purchase_rate.service_quote.amount
-                                    @resource.purchase_rate.service_quote.currency
-                                }}</div>
+                        <td class="pt-2 pb-1 pl-2 text-right font-bold text-gray-800 dark:text-gray-100 whitespace-nowrap">
+                            {{format-currency @resource.purchase_rate.service_quote.amount @resource.purchase_rate.service_quote.currency}}
                         </td>
                     </tr>
-                </tbody>
+                </tfoot>
             </table>
         </div>
     </ContentPanel>

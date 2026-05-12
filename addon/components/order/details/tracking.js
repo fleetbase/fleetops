@@ -41,8 +41,26 @@ export default class OrderDetailsTrackingComponent extends Component {
         return this.activeEtaSeconds !== null && this.activeEtaSeconds !== undefined;
     }
 
-    get isDueNow() {
-        return this.hasActiveEta && Number(this.activeEtaSeconds) <= 0;
+    get smartAdjustedEtaSeconds() {
+        return (
+            this.firstPositiveNumber(this.activeEtaSeconds) ??
+            this.firstPositiveNumber(this.trackerData?.route?.duration_in_traffic_s) ??
+            this.firstPositiveNumber(this.trackerData?.route?.duration_s) ??
+            this.firstPositiveNumber(this.reportedEtaSeconds) ??
+            null
+        );
+    }
+
+    get hasSmartAdjustedEta() {
+        return this.smartAdjustedEtaSeconds !== null && this.smartAdjustedEtaSeconds !== undefined;
+    }
+
+    get smartAdjustedEtaUnavailableLabel() {
+        if (this.driverSignal === 'Missing' || this.driverSignal === 'Stale') {
+            return 'Pending GPS fix';
+        }
+
+        return 'Pending start';
     }
 
     get hasCompletionEta() {
@@ -212,7 +230,13 @@ export default class OrderDetailsTrackingComponent extends Component {
     }
 
     get displayedReportedEtaSeconds() {
-        return this.reportedEtaSeconds ?? this.activeEtaSeconds ?? this.trackerData?.route?.duration_in_traffic_s ?? this.trackerData?.route?.duration_s ?? null;
+        return (
+            this.firstPositiveNumber(this.reportedEtaSeconds) ??
+            this.firstPositiveNumber(this.activeEtaSeconds) ??
+            this.firstPositiveNumber(this.trackerData?.route?.duration_in_traffic_s) ??
+            this.firstPositiveNumber(this.trackerData?.route?.duration_s) ??
+            null
+        );
     }
 
     get hasDisplayedReportedEta() {
@@ -246,13 +270,26 @@ export default class OrderDetailsTrackingComponent extends Component {
     }
 
     get totalProgressPercentage() {
-        const percentage = Number(this.trackerData?.progress?.percentage ?? 0);
+        const percentage = Number(this.trackerData?.progress?.percentage);
 
-        return Math.max(0, Math.min(100, Number.isFinite(percentage) ? percentage : 0));
+        if (Number.isFinite(percentage)) {
+            return Math.max(0, Math.min(100, percentage));
+        }
+
+        const stops = this.trackerData?.stops ?? [];
+        const completedStops = stops.filter((stop) => stop.completed).length;
+
+        if (stops.length) {
+            return Math.max(0, Math.min(100, Math.round((completedStops / stops.length) * 100)));
+        }
+
+        return 0;
     }
 
     get totalProgressStyle() {
-        return `width: ${this.totalProgressPercentage}%;`;
+        const percentage = this.hasRemainingDistance && this.totalProgressPercentage === 0 ? 2 : this.totalProgressPercentage;
+
+        return `width: ${percentage}%;`;
     }
 
     get currentLeg() {
@@ -342,6 +379,12 @@ export default class OrderDetailsTrackingComponent extends Component {
             .replace(/\s+/g, ' ')
             .trim()
             .replace(/\b\w/g, (character) => character.toUpperCase());
+    }
+
+    firstPositiveNumber(value) {
+        const number = Number(value);
+
+        return Number.isFinite(number) && number > 0 ? number : null;
     }
 
     matchesStop(stop, activeStop) {

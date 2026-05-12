@@ -4644,7 +4644,7 @@ body[data-theme='dark'] .next-google-container-map .fleetops-google-draw-actions
 
 .tracking-stop-progress__scroller {
     overflow: auto hidden;
-    min-height: 2.7rem;
+    min-height: 2rem;
     padding: 0.2rem 0 0.05rem;
 }
 
@@ -4796,24 +4796,4 @@ body[data-theme='dark'] .next-google-container-map .fleetops-google-draw-actions
     display: flex;
     flex-direction: column;
     padding: 0.75rem;
-}
-
-.route-list-current-stop-badge {
-    display: inline-flex;
-    align-items: center;
-    border: 1px solid rgba(99, 102, 241, 30%);
-    border-radius: 9999px;
-    background: rgba(99, 102, 241, 12%);
-    color: #4f46e5;
-    font-size: 0.7rem;
-    font-weight: 700;
-    line-height: 1.2;
-    padding: 0.16rem 0.45rem;
-    white-space: nowrap;
-}
-
-[data-theme='dark'] .route-list-current-stop-badge {
-    border-color: rgba(129, 140, 248, 36%);
-    background: rgba(129, 140, 248, 16%);
-    color: #a5b4fc;
 }

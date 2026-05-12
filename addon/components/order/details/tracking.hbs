@@ -55,12 +55,10 @@
                         <span class="tracking-intelligence-tag">Live</span>
                     </div>
                     <div class="tracking-intelligence-cell__value">
-                        {{#if this.isDueNow}}
-                            Due now
-                        {{else if this.hasActiveEta}}
-                            {{format-duration this.activeEtaSeconds}}
+                        {{#if this.hasSmartAdjustedEta}}
+                            {{format-duration this.smartAdjustedEtaSeconds}}
                         {{else}}
-                            -
+                            {{this.smartAdjustedEtaUnavailableLabel}}
                         {{/if}}
                     </div>
                     <div class="tracking-intelligence-cell__sub">Based on provider route and driver signal</div>
