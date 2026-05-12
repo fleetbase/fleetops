@@ -4,6 +4,7 @@ import { action } from '@ember/object';
 import { debug } from '@ember/debug';
 import { task } from 'ember-concurrency';
 import { applyOptimizedIntermediateWaypoints, buildRouteOptimizationInput, canOptimizeIntermediateWaypoints } from '../../../utils/order-route-editing';
+import { buildRoutePointsFromPayload } from '../../../utils/route-visualization';
 
 export default class OrderDetailsRouteComponent extends Component {
     @service orderActions;
@@ -78,10 +79,7 @@ export default class OrderDetailsRouteComponent extends Component {
     }
 
     get routeStopsCount() {
-        const payload = this.args.resource?.payload;
-        const waypointCount = payload?.waypoints?.length ?? payload?.waypoints?.toArray?.().length ?? 0;
-
-        return [payload?.pickup, ...Array.from({ length: waypointCount }), payload?.dropoff].filter(Boolean).length;
+        return buildRoutePointsFromPayload(this.args.resource?.payload).length;
     }
 
     get hasTrackingDuration() {
