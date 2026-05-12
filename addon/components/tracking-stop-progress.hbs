@@ -14,11 +14,9 @@
             {{#each this.stops as |stop|}}
                 <div class="tracking-stop-progress__stop">
                     <div class="tracking-stop-progress__line">
-                        {{#if stop.isFirst}}
-                            <div class="flex-1"></div>
-                        {{else}}
+                        {{#unless stop.isFirst}}
                             <div class="tracking-stop-progress__connector"></div>
-                        {{/if}}
+                        {{/unless}}
 
                         <div
                             class="tracking-stop-progress__dot
@@ -36,11 +34,9 @@
                             </InfoBlock>
                         </Attach::Tooltip>
 
-                        {{#if stop.isLast}}
-                            <div class="flex-1"></div>
-                        {{else}}
+                        {{#unless stop.isLast}}
                             <div class="tracking-stop-progress__connector"></div>
-                        {{/if}}
+                        {{/unless}}
                     </div>
                 </div>
             {{/each}}
