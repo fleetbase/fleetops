@@ -1,36 +1,65 @@
 <ContentPanel @title={{t "order.fields.tracking"}} @prefixTitleRight={{@resource.tracking}} @isLoading={{@isLoading}} @open={{true}} @wrapperClass="bordered-top">
     {{#if this.hasTrackerData}}
-        <div class="mb-4 space-y-3">
-            <div class="flex flex-wrap items-center gap-2 text-xs">
-                <span
-                    class="inline-flex items-center rounded-full border border-gray-200 bg-gray-50 px-2 py-1 font-semibold text-gray-700 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-200"
-                >
-                    <FaIcon @icon="circle" @size="2xs" class="mr-1 {{this.driverSignalClass}}" />
-                    {{this.driverSignal}}
+        <div class="tracking-intelligence mb-4">
+            <div class="tracking-intelligence__status">
+                <span class="tracking-intelligence-pill {{this.confidenceToneClass}}">
+                    <span class="tracking-intelligence-pill__dot"></span>
+                    {{this.confidenceLabel}}
+                    confidence
                 </span>
-                {{#each this.routeQualityItems as |item|}}
-                    <span
-                        class="inline-flex items-center rounded-full border border-gray-200 bg-gray-50 px-2 py-1 text-gray-500 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300"
-                    >{{item}}</span>
-                {{/each}}
-                <span class="ml-auto text-gray-400 dark:text-gray-500">Updated {{n-a (format-date-fns @resource.tracker_data.generated_at "d MMM HH:mm")}}</span>
+                <span class="tracking-intelligence-pill {{if (eq this.driverSignal 'Live') 'tracking-intelligence-pill--good' 'tracking-intelligence-pill--warn'}}">
+                    <span class="tracking-intelligence-pill__dot"></span>
+                    {{this.driverStatusLabel}}
+                    {{#if this.hasDriverLocationAge}}
+                        ·
+                        {{format-duration @resource.tracker_data.driver.location_age_seconds}}
+                    {{/if}}
+                </span>
+                {{#if @resource.tracker_data.fallback_provider}}
+                    <span class="tracking-intelligence-pill tracking-intelligence-pill--muted">Fallback:
+                        {{this.fallbackProviderLabel}}</span>
+                {{/if}}
+                <span class="tracking-intelligence__updated">Updated {{n-a (format-date-fns @resource.tracker_data.generated_at "d MMM HH:mm")}}</span>
             </div>
 
             {{#if this.operatorWarning}}
-                <div
-                    class="flex items-start rounded-md border border-yellow-400 bg-yellow-100 px-2 py-1.5 text-xs leading-5 text-yellow-900 dark:border-yellow-700 dark:bg-yellow-900 dark:text-yellow-100"
-                >
-                    <FaIcon @icon="triangle-exclamation" @size="xs" class="mt-1 mr-2 shrink-0" />
-                    <span>{{this.operatorWarning}}</span>
+                <div class="tracking-intelligence-alert {{if (eq this.driverSignal 'Missing') 'tracking-intelligence-alert--critical'}}">
+                    <div class="tracking-intelligence-alert__icon"><FaIcon @icon="triangle-exclamation" @size="xs" /></div>
+                    <div class="min-w-0">
+                        <div class="tracking-intelligence-alert__title">
+                            {{#if (eq this.driverSignal "Missing")}}
+                                Pending GPS fix
+                            {{else if (eq this.driverSignal "Stale")}}
+                                Stale driver location
+                            {{else}}
+                                Tracking estimate warning
+                            {{/if}}
+                        </div>
+                        <div class="tracking-intelligence-alert__body">{{this.operatorWarning}}</div>
+                    </div>
+                    {{#if (or (eq this.driverSignal "Missing") (eq this.driverSignal "Stale"))}}
+                        <Button
+                            @type="default"
+                            @size="xs"
+                            @icon="bell"
+                            @text="Ping driver app"
+                            @onClick={{perform this.pingDriver}}
+                            @isLoading={{this.pingDriver.isRunning}}
+                            @permission="fleet-ops update order"
+                        />
+                    {{/if}}
                 </div>
             {{/if}}
 
             <TrackingStopProgress @stops={{@resource.tracker_data.stops}} @activeStop={{@resource.tracker_data.active_stop}} />
 
-            <div class="grid grid-cols-2 gap-2">
-                <div class="min-w-0 rounded-md border border-gray-200 bg-gray-50 px-3 py-2 dark:border-gray-700 dark:bg-gray-900">
-                    <div class="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Current ETA</div>
-                    <div class="mt-1 truncate text-sm font-semibold leading-5 text-gray-900 dark:text-gray-100">
+            <div class="tracking-intelligence__eta-grid">
+                <div class="tracking-intelligence-cell tracking-intelligence-cell--accent">
+                    <div class="tracking-intelligence-cell__label">
+                        Smart adjusted ETA
+                        <span class="tracking-intelligence-tag">Live</span>
+                    </div>
+                    <div class="tracking-intelligence-cell__value">
                         {{#if this.isDueNow}}
                             Due now
                         {{else if this.hasActiveEta}}
@@ -39,41 +68,96 @@
                             -
                         {{/if}}
                     </div>
+                    <div class="tracking-intelligence-cell__sub">Based on provider route and driver signal</div>
                 </div>
-                <div class="min-w-0 rounded-md border border-gray-200 bg-gray-50 px-3 py-2 dark:border-gray-700 dark:bg-gray-900">
-                    <div class="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Completion ETA</div>
-                    <div class="mt-1 truncate text-sm font-semibold leading-5 text-gray-900 dark:text-gray-100">
-                        {{#if this.hasCompletionEta}}
-                            {{format-date-fns @resource.tracker_data.eta.completion_at "d MMM HH:mm"}}
+                <div class="tracking-intelligence-cell">
+                    <div class="tracking-intelligence-cell__label">Reported ETA</div>
+                    <div class="tracking-intelligence-cell__value">
+                        {{#if this.hasReportedEta}}
+                            {{format-duration this.reportedEtaSeconds}}
                         {{else}}
-                            -
+                            Pending GPS fix
+                        {{/if}}
+                    </div>
+                    <div class="tracking-intelligence-cell__sub">
+                        Completion
+                        {{#if this.hasCompletionEta}}
+                            ·
+                            {{format-date-fns @resource.tracker_data.eta.completion_at "d MMM HH:mm"}}
                         {{/if}}
                     </div>
                 </div>
             </div>
 
-            <div class="rounded-md border border-gray-200 bg-gray-50 px-3 py-2 dark:border-gray-700 dark:bg-gray-900">
-                <div class="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Current Destination</div>
-                <div class="mt-1 text-sm leading-5 text-gray-900 dark:text-gray-100">{{n-a @resource.tracker_data.active_stop.address}}</div>
+            <div class="tracking-intelligence-confidence">
+                <div class="tracking-intelligence-confidence__label">ETA confidence</div>
+                <div class="tracking-intelligence-confidence__segments {{this.confidenceToneClass}}">
+                    {{#each this.confidenceSegments as |segment|}}
+                        <span class="{{if segment.lit 'is-lit'}}"></span>
+                    {{/each}}
+                </div>
+                <div class="tracking-intelligence-confidence__value">{{this.confidenceLabel}}</div>
             </div>
 
-            <div class="rounded-md border border-gray-200 bg-gray-50 px-3 py-2 dark:border-gray-700 dark:bg-gray-900">
-                <div class="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Route Summary</div>
-                <div class="mt-1 flex items-center justify-between gap-3 text-xs text-gray-500 dark:text-gray-400">
-                    <span>Distance</span>
-                    <span class="font-semibold text-gray-900 dark:text-gray-100">
+            <div class="tracking-intelligence-destination">
+                <div class="tracking-intelligence-destination__marker">{{this.activeStopMarkerLabel}}</div>
+                <div class="min-w-0 flex-1">
+                    <div class="tracking-intelligence-destination__label">{{this.activeStopLabel}}</div>
+                    <div class="tracking-intelligence-destination__address">{{n-a @resource.tracker_data.active_stop.address}}</div>
+                    <div class="tracking-intelligence-destination__eta">
+                        ETA:
+                        <strong>
+                            {{#if this.hasActiveEta}}
+                                {{format-duration this.activeEtaSeconds}}
+                            {{else}}
+                                Pending GPS fix
+                            {{/if}}
+                        </strong>
+                    </div>
+                </div>
+            </div>
+
+            <div class="tracking-intelligence-distance">
+                <div class="tracking-intelligence-distance__row">
+                    <span>Adjusted total</span>
+                    <strong>
                         {{#if this.hasRemainingDistance}}
                             {{format-meters @resource.tracker_data.route.distance_m}}
                         {{else}}
                             -
                         {{/if}}
-                    </span>
+                    </strong>
                 </div>
-                <div class="mt-1 flex items-center justify-between gap-3 text-xs text-gray-500 dark:text-gray-400">
+                <div class="tracking-intelligence-distance__row">
                     <span>Remaining stops</span>
-                    <span class="font-semibold text-gray-900 dark:text-gray-100">{{n-a @resource.tracker_data.progress.remaining_stops}}</span>
+                    <strong>{{n-a @resource.tracker_data.progress.remaining_stops}}</strong>
                 </div>
+                <div class="tracking-intelligence-distance__foot">Provider context:
+                    {{this.providerLabel}}
+                    route</div>
             </div>
+
+            <details class="tracking-intelligence-diagnostics">
+                <summary>
+                    <span>Diagnostics</span>
+                    <span>{{if this.hasWarnings "Warnings active" "No blocking warnings"}}</span>
+                </summary>
+                <div class="tracking-intelligence-diagnostics__body">
+                    {{#each this.diagnostics as |item|}}
+                        <div class="tracking-intelligence-diagnostics__row">
+                            <span>{{item.label}}</span>
+                            <strong>{{item.value}}</strong>
+                        </div>
+                    {{/each}}
+                    {{#if this.hasWarnings}}
+                        <div class="tracking-intelligence-diagnostics__warnings">
+                            {{#each @resource.tracker_data.warnings as |warning|}}
+                                <span>{{warning}}</span>
+                            {{/each}}
+                        </div>
+                    {{/if}}
+                </div>
+            </details>
         </div>
     {{/if}}
 

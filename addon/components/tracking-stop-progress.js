@@ -17,6 +17,7 @@ export default class TrackingStopProgressComponent extends Component {
                 label: this.labelFor(stop, index),
                 title: this.titleFor(stop, index),
                 locationLabel: this.locationLabelFor(stop, index),
+                place: this.placeFor(stop),
                 completed,
                 active: isActive,
                 pending: !completed && !isActive,
@@ -58,6 +59,14 @@ export default class TrackingStopProgressComponent extends Component {
 
     locationLabelFor(stop, index) {
         return stop.city || stop.name || stop.address || this.titleFor(stop, index);
+    }
+
+    placeFor(stop) {
+        return {
+            ...stop,
+            street1: stop.street1 || stop.address || stop.name,
+            country_name: stop.country_name || stop.country,
+        };
     }
 
     matches(stop, activeStop) {

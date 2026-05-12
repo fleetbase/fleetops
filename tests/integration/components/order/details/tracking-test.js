@@ -38,8 +38,16 @@ module('Integration | Component | order/details/tracking', function (hooks) {
                     completion_at: '2026-05-12T04:49:26.000000Z',
                 },
                 active_stop: {
+                    uuid: 'stop_1',
+                    public_id: 'stop_1',
+                    type: 'waypoint',
                     address: '11807 Broadway Lane, Charlotte, 28273, United States',
                 },
+                stops: [
+                    { uuid: 'pickup', type: 'pickup', address: 'Pickup Address', completed: true },
+                    { uuid: 'stop_1', public_id: 'stop_1', type: 'waypoint', address: '11807 Broadway Lane, Charlotte, 28273, United States', completed: false },
+                    { uuid: 'dropoff', type: 'dropoff', address: 'Dropoff Address', completed: false },
+                ],
                 route: {
                     distance_m: 91872,
                 },
@@ -64,13 +72,14 @@ module('Integration | Component | order/details/tracking', function (hooks) {
 
         await render(hbs`<Order::Details::Tracking @resource={{this.order}} />`);
 
-        assert.dom().containsText('Current ETA');
-        assert.dom().containsText('Completion ETA');
-        assert.dom().containsText('Remaining Distance');
-        assert.dom().containsText('Current Destination');
-        assert.dom().containsText('Route Progress');
-        assert.dom().containsText('Live');
-        assert.dom().containsText('Google Routes route');
+        assert.dom().containsText('Smart adjusted ETA');
+        assert.dom().containsText('Reported ETA');
+        assert.dom().containsText('ETA confidence');
+        assert.dom().containsText('NOW HEADING TO - STOP 2 OF 3');
+        assert.dom().containsText('Between Stops');
+        assert.dom().containsText('Driver live');
+        assert.dom().containsText('Provider context: Google Routes route');
+        assert.dom().containsText('Diagnostics');
         assert.dom().doesNotContainText('All Stops');
         assert.dom().doesNotContainText('Provider:');
         assert.dom().doesNotContainText('Route Legs');
@@ -136,7 +145,7 @@ module('Integration | Component | order/details/tracking', function (hooks) {
 
         await render(hbs`<Order::Details::Tracking @resource={{this.order}} />`);
 
-        assert.dom().containsText('Stale');
+        assert.dom().containsText('Driver stale');
         assert.dom().containsText('Driver location is stale');
     });
 
@@ -155,7 +164,8 @@ module('Integration | Component | order/details/tracking', function (hooks) {
 
         await render(hbs`<Order::Details::Tracking @resource={{this.order}} />`);
 
-        assert.dom().containsText('Missing');
+        assert.dom().containsText('Driver missing GPS');
         assert.dom().containsText('Driver location is missing');
+        assert.dom().containsText('Ping driver app');
     });
 });

@@ -88,6 +88,7 @@ Route::prefix(config('fleetops.api.routing.prefix', null))->namespace('Fleetbase
                 $router->get('{id}/next-activity', 'OrderController@getNextActivity');
                 $router->get('{id}/tracker', 'OrderController@trackerData');
                 $router->get('{id}/eta', 'OrderController@etaData');
+                $router->post('{id}/ping-driver', 'OrderController@pingDriver');
                 $router->get('{id}/comments', 'OrderController@orderComments');
                 $router->match(['post', 'patch'], '{id}/set-destination/{placeId}', 'OrderController@setDestination');
                 $router->post('{id}/capture-signature/{subjectId?}', 'OrderController@captureSignature');

@@ -16,10 +16,11 @@ module('Integration | Component | tracking-stop-progress', function (hooks) {
 
         await render(hbs`<TrackingStopProgress @stops={{this.stops}} @activeStop={{this.activeStop}} />`);
 
-        assert.dom().containsText('Route Progress');
+        assert.dom().containsText('Between Stops');
         assert.dom().containsText('1 / 3 stops');
-        assert.dom().containsText('Pickup Address');
-        assert.dom().containsText('Active Stop');
-        assert.dom().containsText('Dropoff Address');
+        assert.dom('.tracking-stop-progress__dot').exists({ count: 3 });
+        assert.dom('.tracking-stop-progress__dot--done').exists({ count: 1 });
+        assert.dom('.tracking-stop-progress__dot--active').exists({ count: 1 });
+        assert.dom('.tracking-stop-progress__dot--pending').exists({ count: 1 });
     });
 });

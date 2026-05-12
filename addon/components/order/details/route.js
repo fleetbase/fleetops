@@ -77,6 +77,25 @@ export default class OrderDetailsRouteComponent extends Component {
         return Boolean(this.trackerData?.eta?.completion_at);
     }
 
+    get routeStopsCount() {
+        const payload = this.args.resource?.payload;
+        const waypointCount = payload?.waypoints?.length ?? payload?.waypoints?.toArray?.().length ?? 0;
+
+        return [payload?.pickup, ...Array.from({ length: waypointCount }), payload?.dropoff].filter(Boolean).length;
+    }
+
+    get hasTrackingDuration() {
+        return this.trackerData?.route?.duration_in_traffic_s !== null && this.trackerData?.route?.duration_in_traffic_s !== undefined;
+    }
+
+    get trackingDurationSeconds() {
+        return this.trackerData?.route?.duration_in_traffic_s ?? this.trackerData?.route?.duration_s;
+    }
+
+    get hasRouteSummaryLine() {
+        return this.hasTrackingRouteSummary || this.routeStopsCount > 0;
+    }
+
     @task *loadTrackerData() {
         if (!this.args.resource || this.args.resource.tracker_data || typeof this.args.resource.loadTrackerData !== 'function') {
             return;

@@ -2,23 +2,29 @@
     {{#if this.firstStop}}
         <div class="order-route-stop {{@routeStopClass}}">
             <div class="order-route-stop-index {{@routeStopIndexClass}}">
-                <div class="index-count fleetops-route-stop-badge" style={{this.firstStop.badgeStyle}}>{{this.firstStop.label}}</div>
+                <div
+                    class="index-count fleetops-route-stop-badge {{if this.firstStop.active 'fleetops-route-stop-badge--active'}}"
+                    style={{this.firstStop.badgeStyle}}
+                >{{this.firstStop.label}}</div>
             </div>
             <div class="order-route-location {{@routeLocationClass}} dark:text-gray-100">
-                <DisplayPlace @place={{this.firstStop.place}} @waypointActions={{@waypointActions}} />
-                <div class="mt-2 flex flex-wrap items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
+                <div class="mb-2 flex flex-wrap items-center gap-1.5">
+                    {{#if this.firstStop.place.status_code}}
+                        <Badge @status={{this.firstStop.place.status_code}} />
+                    {{/if}}
                     {{#if this.firstStop.completed}}
                         <Badge @status="success" @hideStatusDot={{true}}>Completed</Badge>
                     {{else if this.firstStop.active}}
                         <Badge @status="warning" @hideStatusDot={{true}}>Current Stop</Badge>
                     {{/if}}
                     {{#if this.firstStop.etaSeconds}}
-                        <span><span class="font-semibold">ETA:</span> {{format-duration this.firstStop.etaSeconds}}</span>
+                        <Badge @status="info" @hideStatusDot={{true}}><span class="font-bold">ETA:</span> {{format-duration this.firstStop.etaSeconds}}</Badge>
                     {{/if}}
                     {{#if this.firstStop.etaAt}}
-                        <span><span class="font-semibold">Arrives:</span> {{format-date-fns this.firstStop.etaAt "d MMM HH:mm"}}</span>
+                        <Badge @status="default" @hideStatusDot={{true}}>{{format-date-fns this.firstStop.etaAt "d MMM HH:mm"}}</Badge>
                     {{/if}}
                 </div>
+                <DisplayPlace @place={{this.firstStop.place}} @waypointActions={{@waypointActions}} @hideBadges={{true}} />
             </div>
         </div>
     {{/if}}
@@ -37,23 +43,26 @@
             {{#each this.middleStops as |stop|}}
                 <div class="order-route-stop {{@routeStopClass}}">
                     <div class="order-route-stop-index {{@routeStopIndexClass}}">
-                        <div class="index-count fleetops-route-stop-badge" style={{stop.badgeStyle}}>{{stop.label}}</div>
+                        <div class="index-count fleetops-route-stop-badge {{if stop.active 'fleetops-route-stop-badge--active'}}" style={{stop.badgeStyle}}>{{stop.label}}</div>
                     </div>
                     <div class="order-route-location {{@routeLocationClass}} dark:text-gray-100">
-                        <DisplayPlace @place={{stop.place}} @waypointActions={{@waypointActions}} />
-                        <div class="mt-2 flex flex-wrap items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
+                        <div class="mb-2 flex flex-wrap items-center gap-1.5">
+                            {{#if stop.place.status_code}}
+                                <Badge @status={{stop.place.status_code}} />
+                            {{/if}}
                             {{#if stop.completed}}
                                 <Badge @status="success" @hideStatusDot={{true}}>Completed</Badge>
                             {{else if stop.active}}
                                 <Badge @status="warning" @hideStatusDot={{true}}>Current Stop</Badge>
                             {{/if}}
                             {{#if stop.etaSeconds}}
-                                <span><span class="font-semibold">ETA:</span> {{format-duration stop.etaSeconds}}</span>
+                                <Badge @status="info" @hideStatusDot={{true}}><span class="font-bold">ETA:</span> {{format-duration stop.etaSeconds}}</Badge>
                             {{/if}}
                             {{#if stop.etaAt}}
-                                <span><span class="font-semibold">Arrives:</span> {{format-date-fns stop.etaAt "d MMM HH:mm"}}</span>
+                                <Badge @status="default" @hideStatusDot={{true}}>{{format-date-fns stop.etaAt "d MMM HH:mm"}}</Badge>
                             {{/if}}
                         </div>
+                        <DisplayPlace @place={{stop.place}} @waypointActions={{@waypointActions}} @hideBadges={{true}} />
                     </div>
                 </div>
             {{/each}}
@@ -62,23 +71,26 @@
         {{#each this.middleStops as |stop|}}
             <div class="order-route-stop {{@routeStopClass}}">
                 <div class="order-route-stop-index {{@routeStopIndexClass}}">
-                    <div class="index-count fleetops-route-stop-badge" style={{stop.badgeStyle}}>{{stop.label}}</div>
+                    <div class="index-count fleetops-route-stop-badge {{if stop.active 'fleetops-route-stop-badge--active'}}" style={{stop.badgeStyle}}>{{stop.label}}</div>
                 </div>
                 <div class="order-route-location {{@routeLocationClass}} dark:text-gray-100">
-                    <DisplayPlace @place={{stop.place}} @waypointActions={{@waypointActions}} />
-                    <div class="mt-2 flex flex-wrap items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
+                    <div class="mb-2 flex flex-wrap items-center gap-1.5">
+                        {{#if stop.place.status_code}}
+                            <Badge @status={{stop.place.status_code}} />
+                        {{/if}}
                         {{#if stop.completed}}
                             <Badge @status="success" @hideStatusDot={{true}}>Completed</Badge>
                         {{else if stop.active}}
                             <Badge @status="warning" @hideStatusDot={{true}}>Current Stop</Badge>
                         {{/if}}
                         {{#if stop.etaSeconds}}
-                            <span><span class="font-semibold">ETA:</span> {{format-duration stop.etaSeconds}}</span>
+                            <Badge @status="info" @hideStatusDot={{true}}><span class="font-bold">ETA:</span> {{format-duration stop.etaSeconds}}</Badge>
                         {{/if}}
                         {{#if stop.etaAt}}
-                            <span><span class="font-semibold">Arrives:</span> {{format-date-fns stop.etaAt "d MMM HH:mm"}}</span>
+                            <Badge @status="default" @hideStatusDot={{true}}>{{format-date-fns stop.etaAt "d MMM HH:mm"}}</Badge>
                         {{/if}}
                     </div>
+                    <DisplayPlace @place={{stop.place}} @waypointActions={{@waypointActions}} @hideBadges={{true}} />
                 </div>
             </div>
         {{/each}}
@@ -87,23 +99,29 @@
     {{#if this.lastStop}}
         <div class="order-route-stop {{@routeStopClass}}">
             <div class="order-route-stop-index {{@routeStopIndexClass}}">
-                <div class="index-count fleetops-route-stop-badge" style={{this.lastStop.badgeStyle}}>{{this.lastStop.label}}</div>
+                <div
+                    class="index-count fleetops-route-stop-badge {{if this.lastStop.active 'fleetops-route-stop-badge--active'}}"
+                    style={{this.lastStop.badgeStyle}}
+                >{{this.lastStop.label}}</div>
             </div>
             <div class="order-route-location {{@routeLocationClass}} dark:text-gray-100">
-                <DisplayPlace @place={{this.lastStop.place}} @waypointActions={{@waypointActions}} />
-                <div class="mt-2 flex flex-wrap items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
+                <div class="mb-2 flex flex-wrap items-center gap-1.5">
+                    {{#if this.lastStop.place.status_code}}
+                        <Badge @status={{this.lastStop.place.status_code}} />
+                    {{/if}}
                     {{#if this.lastStop.completed}}
                         <Badge @status="success" @hideStatusDot={{true}}>Completed</Badge>
                     {{else if this.lastStop.active}}
                         <Badge @status="warning" @hideStatusDot={{true}}>Current Stop</Badge>
                     {{/if}}
                     {{#if this.lastStop.etaSeconds}}
-                        <span><span class="font-semibold">ETA:</span> {{format-duration this.lastStop.etaSeconds}}</span>
+                        <Badge @status="info" @hideStatusDot={{true}}><span class="font-bold">ETA:</span> {{format-duration this.lastStop.etaSeconds}}</Badge>
                     {{/if}}
                     {{#if this.lastStop.etaAt}}
-                        <span><span class="font-semibold">Arrives:</span> {{format-date-fns this.lastStop.etaAt "d MMM HH:mm"}}</span>
+                        <Badge @status="default" @hideStatusDot={{true}}>{{format-date-fns this.lastStop.etaAt "d MMM HH:mm"}}</Badge>
                     {{/if}}
                 </div>
+                <DisplayPlace @place={{this.lastStop.place}} @waypointActions={{@waypointActions}} @hideBadges={{true}} />
             </div>
         </div>
     {{/if}}

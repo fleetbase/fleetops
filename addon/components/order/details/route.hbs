@@ -1,25 +1,25 @@
 <ContentPanel @title={{t "order.fields.route-panel-title"}} @open={{true}} @actionButtons={{this.actionButtons}} @wrapperClass="bordered-top">
-    {{#if this.hasTrackingRouteSummary}}
-        <div class="mb-4 grid grid-cols-2 gap-2">
-            <div class="rounded-md border border-gray-200 bg-gray-50 px-3 py-2 dark:border-gray-700 dark:bg-gray-900">
-                <div class="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Total Route Distance</div>
-                <div class="mt-1 text-sm font-semibold text-gray-900 dark:text-gray-100">
+    {{#if this.hasRouteSummaryLine}}
+        <div class="mb-3 flex items-center justify-between gap-3 text-xs">
+            <div class="font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">All Stops - {{this.routeStopsCount}}</div>
+            <div class="flex min-w-0 items-center gap-2 font-semibold text-gray-700 dark:text-gray-200">
+                <span>
                     {{#if this.hasTrackingDistance}}
                         {{format-meters this.trackerData.route.distance_m}}
                     {{else}}
                         -
                     {{/if}}
-                </div>
-            </div>
-            <div class="rounded-md border border-gray-200 bg-gray-50 px-3 py-2 dark:border-gray-700 dark:bg-gray-900">
-                <div class="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Estimated Completion</div>
-                <div class="mt-1 text-sm font-semibold text-gray-900 dark:text-gray-100">
-                    {{#if this.hasCompletionEta}}
+                </span>
+                <span class="text-gray-300 dark:text-gray-600">-</span>
+                <span>
+                    {{#if this.trackingDurationSeconds}}
+                        {{format-duration this.trackingDurationSeconds}}
+                    {{else if this.hasCompletionEta}}
                         {{format-date-fns this.trackerData.eta.completion_at "d MMM HH:mm"}}
                     {{else}}
                         -
                     {{/if}}
-                </div>
+                </span>
             </div>
         </div>
     {{/if}}

@@ -23,6 +23,7 @@ use Fleetbase\FleetOps\Models\Place;
 use Fleetbase\FleetOps\Models\Proof;
 use Fleetbase\FleetOps\Models\ServiceQuote;
 use Fleetbase\FleetOps\Models\Waypoint;
+use Fleetbase\FleetOps\Notifications\OrderPing;
 use Fleetbase\FleetOps\Support\Utils;
 use Fleetbase\Http\Controllers\Controller;
 use Fleetbase\Http\Resources\Comment as CommentResource;
@@ -1365,6 +1366,35 @@ class OrderController extends Controller
         }
 
         return response()->apiError('An error occured trying to track order.', 404);
+    }
+
+    /**
+     * Ping the assigned driver to refresh/order attention in the driver app.
+     *
+     * @return \Illuminate\Http\Response
+     */
+    public function pingDriver(string $id)
+    {
+        try {
+            $order = Order::findRecordOrFail($id, ['driverAssigned']);
+        } catch (ModelNotFoundException $e) {
+            return response()->apiError('Order resource not found.', 404);
+        }
+
+        if (!$order->driverAssigned) {
+            return response()->apiError('Order does not have an assigned driver.', 422);
+        }
+
+        try {
+            $order->driverAssigned->notify(new OrderPing($order));
+
+            return response()->json([
+                'status'  => 'ok',
+                'message' => 'Driver app ping sent.',
+            ]);
+        } catch (\Throwable $e) {
+            return response()->apiError('Unable to ping driver app.', 500);
+        }
     }
 
     /**
