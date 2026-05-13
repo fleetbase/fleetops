@@ -20,6 +20,7 @@ export default class SettingsRoutingController extends Controller {
     @tracked trackingRouteCacheTtlSeconds = 600;
     @tracked trackingStaleLocationThresholdSeconds = 300;
     @tracked trackingDefaultVehicleSpeedKph = 35;
+    @tracked showTrackingAdvancedSettings = false;
     @tracked trackingProviderOptions = [
         { value: 'google_routes', label: 'Google Routes' },
         { value: 'osrm', label: 'OSRM' },
@@ -159,6 +160,10 @@ export default class SettingsRoutingController extends Controller {
 
     @action setTrackingFallbacks(options) {
         this.trackingFallbacks = this.normalizeFallbacks(options);
+    }
+
+    @action toggleTrackingAdvancedSettings() {
+        this.showTrackingAdvancedSettings = !this.showTrackingAdvancedSettings;
     }
 
     registerSaveTask(key, task) {

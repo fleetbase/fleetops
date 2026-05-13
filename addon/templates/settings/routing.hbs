@@ -75,23 +75,36 @@
                         </PowerSelectMultiple>
                     </div>
                 </InputGroup>
-                <InputGroup @name="Traffic-Aware ETA" @helpText="Use provider traffic data when supported.">
-                    <Toggle @isToggled={{this.trackingTrafficEnabled}} @onToggle={{fn (mut this.trackingTrafficEnabled)}} />
-                </InputGroup>
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <InputGroup @name="Summary Cache TTL" @helpText="Seconds to cache the final tracking summary.">
-                        <Input @type="number" @value={{this.trackingCacheTtlSeconds}} min="15" max="300" class="form-input w-full" />
-                    </InputGroup>
-                    <InputGroup @name="Route Cache TTL" @helpText="Seconds to cache provider route responses.">
-                        <Input @type="number" @value={{this.trackingRouteCacheTtlSeconds}} min="60" max="1800" class="form-input w-full" />
-                    </InputGroup>
-                    <InputGroup @name="Stale Location Threshold" @helpText="Seconds before driver location is marked stale.">
-                        <Input @type="number" @value={{this.trackingStaleLocationThresholdSeconds}} min="30" max="3600" class="form-input w-full" />
-                    </InputGroup>
-                    <InputGroup @name="Fallback Speed" @helpText="Kilometers per hour used by the calculated provider.">
-                        <Input @type="number" @value={{this.trackingDefaultVehicleSpeedKph}} min="1" max="160" class="form-input w-full" />
-                    </InputGroup>
+                <div class="flex justify-end">
+                    <Button
+                        @type="default"
+                        @size="xs"
+                        @icon={{if this.showTrackingAdvancedSettings "chevron-up" "chevron-down"}}
+                        @text={{if this.showTrackingAdvancedSettings "Hide Advanced Settings" "Advanced Settings"}}
+                        @onClick={{this.toggleTrackingAdvancedSettings}}
+                    />
                 </div>
+                {{#if this.showTrackingAdvancedSettings}}
+                    <div class="space-y-4 rounded-md border border-gray-200 bg-gray-50 p-3 dark:border-gray-700 dark:bg-gray-800">
+                        <InputGroup @name="Traffic-Aware ETA" @helpText="Use provider traffic data when supported.">
+                            <Toggle @isToggled={{this.trackingTrafficEnabled}} @onToggle={{fn (mut this.trackingTrafficEnabled)}} />
+                        </InputGroup>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <InputGroup @name="Summary Cache TTL" @helpText="Seconds to cache the final tracking summary.">
+                                <Input @type="number" @value={{this.trackingCacheTtlSeconds}} min="15" max="300" class="form-input w-full" />
+                            </InputGroup>
+                            <InputGroup @name="Route Cache TTL" @helpText="Seconds to cache provider route responses.">
+                                <Input @type="number" @value={{this.trackingRouteCacheTtlSeconds}} min="60" max="1800" class="form-input w-full" />
+                            </InputGroup>
+                            <InputGroup @name="Stale Location Threshold" @helpText="Seconds before driver location is marked stale.">
+                                <Input @type="number" @value={{this.trackingStaleLocationThresholdSeconds}} min="30" max="3600" class="form-input w-full" />
+                            </InputGroup>
+                            <InputGroup @name="Fallback Speed" @helpText="Kilometers per hour used by the calculated provider.">
+                                <Input @type="number" @value={{this.trackingDefaultVehicleSpeedKph}} min="1" max="160" class="form-input w-full" />
+                            </InputGroup>
+                        </div>
+                    </div>
+                {{/if}}
             </ContentPanel>
             <RegistryYield @registry="fleet-ops:template:settings:routing" as |RegistryComponent|>
                 <RegistryComponent @controller={{this}} />
