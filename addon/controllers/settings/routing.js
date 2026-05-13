@@ -1,6 +1,7 @@
 import Controller from '@ember/controller';
 import { tracked } from '@glimmer/tracking';
 import { inject as service } from '@ember/service';
+import { action } from '@ember/object';
 import { task } from 'ember-concurrency';
 
 export default class SettingsRoutingController extends Controller {
@@ -13,16 +14,16 @@ export default class SettingsRoutingController extends Controller {
     @tracked optimizationEngine = 'osrm';
     @tracked routingUnit = 'km';
     @tracked trackingProvider = 'google_routes';
-    @tracked trackingFallbacks = 'osrm,calculated';
+    @tracked trackingFallbacks = ['osrm', 'calculated'];
     @tracked trackingTrafficEnabled = true;
     @tracked trackingCacheTtlSeconds = 60;
     @tracked trackingRouteCacheTtlSeconds = 600;
     @tracked trackingStaleLocationThresholdSeconds = 300;
     @tracked trackingDefaultVehicleSpeedKph = 35;
     @tracked trackingProviderOptions = [
-        { key: 'google_routes', name: 'Google Routes' },
-        { key: 'osrm', name: 'Osrm' },
-        { key: 'calculated', name: 'Calculated' },
+        { value: 'google_routes', label: 'Google Routes' },
+        { value: 'osrm', label: 'OSRM' },
+        { value: 'calculated', label: 'Calculated' },
     ];
     @tracked routingUnitOptions = [
         { label: 'Kilometers', value: 'km' },
@@ -81,16 +82,22 @@ export default class SettingsRoutingController extends Controller {
             this.routingUnit = unit;
             const trackingSettings = yield this.fetch.get('fleet-ops/settings/tracking-settings');
             this.trackingProvider = trackingSettings.provider ?? 'google_routes';
-            this.trackingFallbacks = this.normalizeFallbacks(trackingSettings.fallbacks).join(',');
+            this.trackingFallbacks = this.normalizeFallbacks(trackingSettings.fallbacks);
             this.trackingTrafficEnabled = trackingSettings.traffic_enabled ?? true;
             this.trackingCacheTtlSeconds = trackingSettings.cache_ttl_seconds ?? 60;
             this.trackingRouteCacheTtlSeconds = trackingSettings.route_cache_ttl_seconds ?? 600;
             this.trackingStaleLocationThresholdSeconds = trackingSettings.stale_location_threshold_seconds ?? 300;
             this.trackingDefaultVehicleSpeedKph = trackingSettings.default_vehicle_speed_kph ?? 35;
-            this.trackingProviderOptions = trackingSettings.providers ?? this.trackingProviderOptions;
+            this.trackingProviderOptions = this.normalizeProviderOptions(trackingSettings.providers ?? this.trackingProviderOptions);
         } catch (error) {
             this.notifications.serverError(error);
         }
+    }
+
+    get selectedTrackingFallbackOptions() {
+        const selected = new Set(this.normalizeFallbacks(this.trackingFallbacks));
+
+        return this.trackingProviderOptions.filter((option) => selected.has(this.optionValue(option)));
     }
 
     get trackingSettingsPayload() {
@@ -107,13 +114,51 @@ export default class SettingsRoutingController extends Controller {
 
     normalizeFallbacks(fallbacks) {
         if (Array.isArray(fallbacks)) {
-            return fallbacks.map((fallback) => String(fallback).trim()).filter(Boolean);
+            return fallbacks
+                .map((fallback) => this.optionValue(fallback))
+                .map((fallback) => String(fallback).trim())
+                .filter(Boolean);
         }
 
         return String(fallbacks ?? '')
             .split(',')
             .map((fallback) => fallback.trim())
             .filter(Boolean);
+    }
+
+    normalizeProviderOptions(options = []) {
+        return options.map((option) => {
+            const value = this.optionValue(option);
+            const label = option?.label ?? option?.name ?? this.providerLabel(value);
+
+            return {
+                ...option,
+                key: option?.key ?? value,
+                name: option?.name ?? label,
+                value,
+                label,
+            };
+        });
+    }
+
+    providerLabel(value) {
+        if (value === 'osrm') {
+            return 'OSRM';
+        }
+
+        return String(value ?? '')
+            .replace(/[_-]+/g, ' ')
+            .replace(/\s+/g, ' ')
+            .trim()
+            .replace(/\b\w/g, (character) => character.toUpperCase());
+    }
+
+    optionValue(option) {
+        return typeof option === 'object' && option !== null ? (option.value ?? option.key) : option;
+    }
+
+    @action setTrackingFallbacks(options) {
+        this.trackingFallbacks = this.normalizeFallbacks(options);
     }
 
     registerSaveTask(key, task) {

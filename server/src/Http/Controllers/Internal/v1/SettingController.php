@@ -527,9 +527,13 @@ class SettingController extends Controller
         $registry = app(TrackingProviderRegistry::class);
 
         return collect($registry->all())->map(function ($provider, $key) {
+            $label = $key === 'osrm' ? 'OSRM' : str($key)->replace('_', ' ')->title()->toString();
+
             return [
                 'key'          => $key,
-                'name'         => str($key)->replace('_', ' ')->title()->toString(),
+                'name'         => $label,
+                'value'        => $key,
+                'label'        => $label,
                 'capabilities' => $provider->capabilities()->toArray(),
             ];
         })->values()->all();
