@@ -9,9 +9,12 @@ import { camelize, capitalize, dasherize } from '@ember/string';
 import { singularize, pluralize } from 'ember-inflector';
 import { all } from 'rsvp';
 import { task } from 'ember-concurrency';
+import { next } from '@ember/runloop';
 import getModelName from '@fleetbase/ember-core/utils/get-model-name';
 
 export default class MapLeafletLiveMapComponent extends Component {
+    @service mapManager;
+    @service mapSettings;
     @service leafletMapManager;
     @service leafletLayerVisibilityManager;
     @service leafletContextmenuManager;
@@ -47,6 +50,7 @@ export default class MapLeafletLiveMapComponent extends Component {
     @tracked drivers = [];
     @tracked vehicles = [];
     @tracked places = [];
+    _viewportReloadLocks = new Set();
 
     constructor() {
         super(...arguments);
@@ -61,9 +65,9 @@ export default class MapLeafletLiveMapComponent extends Component {
         this.#updateCoordinatesFromLocation();
 
         if (this.currentUser.companyId) {
-            this.geofenceEventBus.subscribe(this.currentUser.companyId);
+            next(this, () => this.geofenceEventBus.subscribe(this.currentUser.companyId));
         } else {
-            this._currentUserLoadedHandler = () => this.geofenceEventBus.subscribe(this.currentUser.companyId);
+            this._currentUserLoadedHandler = () => next(this, () => this.geofenceEventBus.subscribe(this.currentUser.companyId));
             this.currentUser.on('user.loaded', this._currentUserLoadedHandler);
         }
 
@@ -101,10 +105,33 @@ export default class MapLeafletLiveMapComponent extends Component {
         this.#createMapContextMenu(map);
         this.trigger('onLoad', ...arguments);
         this.load.perform();
-
         // Listen for map move/zoom events to trigger viewport-based resource reload
         map.on('moveend', () => this.reloadResourcesInViewport.perform());
         map.on('zoomend', () => this.reloadResourcesInViewport.perform());
+    }
+
+    /**
+     * Called when the Google Maps adapter is ready.
+     * Mirrors `didLoad` but receives the adapter instance instead of a raw Leaflet map.
+     *
+     * @param {{ target: * }} event
+     */
+    @action didLoadGoogleMap({ target: map }) {
+        this.#setMapFromAdapter(map);
+        this.trigger('onLoad', { target: map });
+        this.load.perform();
+    }
+
+    suspendViewportReload(lockId = 'default') {
+        this._viewportReloadLocks.add(lockId);
+    }
+
+    resumeViewportReload(lockId = 'default') {
+        this._viewportReloadLocks.delete(lockId);
+    }
+
+    get isViewportReloadSuspended() {
+        return this._viewportReloadLocks.size > 0;
     }
 
     @action trigger(name, ...rest) {
@@ -121,11 +148,13 @@ export default class MapLeafletLiveMapComponent extends Component {
 
     @action didCreateDrawControl(drawControl) {
         this.leafletMapManager.setDrawControl(drawControl);
+        this.mapManager.adapter?.setDrawControl?.(drawControl, this.leafletMapManager.drawControlFeatureGroup);
         this.trigger('onDrawControlCreated', ...arguments);
     }
 
     @action didCreateDrawControlFeatureGroup(featureGroup) {
         this.leafletMapManager.setDrawControlFeatureGroup(featureGroup);
+        this.mapManager.adapter?.setDrawControl?.(this.leafletMapManager.drawControl, featureGroup);
         this.trigger('onDrawFeatureGroupCreated', ...arguments);
     }
 
@@ -139,9 +168,7 @@ export default class MapLeafletLiveMapComponent extends Component {
         this.driverActions.panel.view(driver, {
             size: 'xs',
             onOpen: () => {
-                this.map.once('moveend', () => {
-                    this.map.panBy([200, 0]);
-                });
+                this.mapManager.once?.('moveend', () => this.mapManager.panBy?.(200, 0)) ?? this.map?.once?.('moveend', () => this.map?.panBy?.([200, 0]));
             },
         });
     }
@@ -156,9 +183,7 @@ export default class MapLeafletLiveMapComponent extends Component {
         this.vehicleActions.panel.view(vehicle, {
             size: 'xs',
             onOpen: () => {
-                this.map.once('moveend', () => {
-                    this.map.panBy([200, 0]);
-                });
+                this.mapManager.once?.('moveend', () => this.mapManager.panBy?.(200, 0)) ?? this.map?.once?.('moveend', () => this.map?.panBy?.([200, 0]));
             },
         });
     }
@@ -171,9 +196,7 @@ export default class MapLeafletLiveMapComponent extends Component {
         this.placeActions.panel.view(place, {
             size: 'xs',
             onOpen: () => {
-                this.map.once('moveend', () => {
-                    this.map.panBy([200, 0]);
-                });
+                this.mapManager.once?.('moveend', () => this.mapManager.panBy?.(200, 0)) ?? this.map?.once?.('moveend', () => this.map?.panBy?.([200, 0]));
             },
         });
     }
@@ -191,13 +214,10 @@ export default class MapLeafletLiveMapComponent extends Component {
     /** load resources and wait for stuff here and trigger map ready **/
     @task *load() {
         try {
-            // Get initial map bounds for spatial filtering
-            const bounds = this.map ? this.map.getBounds() : null;
-            const params = bounds
-                ? {
-                      bounds: [bounds.getSouth(), bounds.getWest(), bounds.getNorth(), bounds.getEast()],
-                  }
-                : {};
+            // Get initial map bounds for spatial filtering (provider-agnostic)
+            const mapBounds = this.mapManager.getBounds?.() ?? (this.map ? this.map.getBounds() : null);
+            const bounds = this.#serializeBoundsForRequest(mapBounds);
+            const params = bounds ? { bounds } : {};
 
             const data = yield all([
                 this.loadResource.perform('routes'),
@@ -216,15 +236,18 @@ export default class MapLeafletLiveMapComponent extends Component {
     }
 
     @task({ restartable: true }) *reloadResourcesInViewport() {
-        if (!this.map) {
+        if (!this.map && !this.mapManager.isReady) {
             return;
         }
-
-        // Get current map bounds
-        const bounds = this.map.getBounds();
-        const params = {
-            bounds: [bounds.getSouth(), bounds.getWest(), bounds.getNorth(), bounds.getEast()],
-        };
+        if (this.isViewportReloadSuspended) {
+            return;
+        }
+        // Get current map bounds (provider-agnostic)
+        const rawBounds = this.mapManager.getBounds?.() ?? this.map?.getBounds();
+        if (!rawBounds) return;
+        const bounds = this.#serializeBoundsForRequest(rawBounds);
+        if (!bounds) return;
+        const params = { bounds };
 
         // Reload spatially-filtered resources (drivers, vehicles, places)
         // Orders, routes, and service-areas are not spatially filtered
@@ -270,6 +293,10 @@ export default class MapLeafletLiveMapComponent extends Component {
 
     isReady() {
         return this.ready === true;
+    }
+
+    get shouldUseGoogleMaps() {
+        return this.mapSettings.isGoogleMaps;
     }
 
     /**
@@ -372,46 +399,93 @@ export default class MapLeafletLiveMapComponent extends Component {
         set(map, 'livemap', this);
         this.map = map;
         this.leafletMapManager.setMap(map);
+        this.mapManager.setLivemap(this);
+        // Also register with the provider-agnostic manager so all services can use it
+        this.mapManager.setActiveProvider('leaflet');
+        this.mapManager.setMapInstance(map);
         this.universe.trigger('fleet-ops.live-map.loaded', map);
         this.universe.set('component:fleet-ops:live-map', this);
+    }
+
+    /**
+     * Called when the Google Maps adapter initialises.
+     * Registers the adapter as the active provider so all services
+     * route through the provider-agnostic MapManagerService.
+     *
+     * @param {import('../services/map-manager').default} adapter
+     */
+    #setMapFromAdapter(map) {
+        this.map = map;
+        this.mapManager.setLivemap(this);
+        this.mapManager.setActiveProvider('google');
+        this.universe.trigger('fleet-ops.live-map.loaded', map);
+        this.universe.set('component:fleet-ops:live-map', this);
+    }
+
+    #serializeBoundsForRequest(rawBounds) {
+        if (!rawBounds) return null;
+
+        if (isArray(rawBounds) && rawBounds.length === 2) {
+            const [[south, west], [north, east]] = rawBounds;
+            return [south, west, north, east].every(Number.isFinite) ? [south, west, north, east] : null;
+        }
+
+        if (typeof rawBounds.getSouth === 'function') {
+            const bounds = [rawBounds.getSouth(), rawBounds.getWest(), rawBounds.getNorth(), rawBounds.getEast()];
+            return bounds.every(Number.isFinite) ? bounds : null;
+        }
+
+        if (typeof rawBounds.getSouthWest === 'function') {
+            const sw = rawBounds.getSouthWest();
+            const ne = rawBounds.getNorthEast();
+            const bounds = [sw.lat(), sw.lng(), ne.lat(), ne.lng()];
+            return bounds.every(Number.isFinite) ? bounds : null;
+        }
+
+        return null;
     }
 
     #setResourceLayer(model, layer, options = {}) {
         const { hidden = false } = options;
         const type = getModelName(model);
-
+        // Leaflet backward-compat: keep leafletLayer for existing code
         set(model, 'leafletLayer', layer);
         set(layer, 'record_id', model.id);
         set(layer, 'record_type', type);
-
         this.leafletLayerVisibilityManager.registerLayer(pluralize(type), layer, { id: model.id, hidden });
+
+        if (type === 'service-area' || type === 'zone') {
+            this.mapManager.registerPolygon?.(model.id, layer, { type, hidden });
+        } else {
+            this.mapManager.registerMarker?.(model.id, layer, { type, hidden });
+        }
     }
 
     #createMapContextMenu(map) {
         const items = [
             {
                 text: this.intl.t('live-map.show-coordinates'),
-                callback: this.leafletMapManager.showCoordinates,
+                callback: this.mapManager.showCoordinates?.bind(this.mapManager) ?? this.leafletMapManager.showCoordinates,
                 index: 0,
             },
             {
                 text: this.intl.t('live-map.center-map'),
-                callback: this.leafletMapManager.centerMap,
+                callback: this.mapManager.centerMap?.bind(this.mapManager) ?? this.leafletMapManager.centerMap,
                 index: 1,
             },
             {
                 text: this.intl.t('live-map.zoom-in'),
-                callback: this.leafletMapManager.zoomIn,
+                callback: this.mapManager.zoomIn?.bind(this.mapManager) ?? this.leafletMapManager.zoomIn,
                 index: 2,
             },
             {
                 text: this.intl.t('live-map.zoom-out'),
-                callback: this.leafletMapManager.zoomOut,
+                callback: this.mapManager.zoomOut?.bind(this.mapManager) ?? this.leafletMapManager.zoomOut,
                 index: 3,
             },
             {
                 text: this.intl.t('live-map.toggle-draw-controls'),
-                callback: this.leafletMapManager.toggleDrawControl,
+                callback: this.geofence.toggleDrawControl.bind(this.geofence),
                 index: 4,
             },
             { separator: true },
@@ -446,14 +520,17 @@ export default class MapLeafletLiveMapComponent extends Component {
                 callback: () => this.zoneActions.modal.edit(zone),
             },
             {
-                text: this.intl.t('live-map.edit-boundaries', { resource: zone.name }),
-                callback: () => this.geofence.editZone(zone),
-            },
-            {
                 text: this.intl.t('live-map.delete-zone', { zoneName: zone.name }),
                 callback: () => this.zoneActions.delete(zone),
             },
         ];
+
+        if (!this.mapManager.isGoogleMaps) {
+            items.splice(2, 0, {
+                text: this.intl.t('live-map.edit-boundaries', { resource: zone.name }),
+                callback: () => this.geofence.editZone(zone),
+            });
+        }
 
         // create contextmenu registry
         const contextmenuRegistry = this.leafletContextmenuManager.createContextMenu(`zone:${zone.public_id}`, layer, items, { zone });
@@ -480,14 +557,17 @@ export default class MapLeafletLiveMapComponent extends Component {
                 callback: () => this.serviceAreaActions.modal.edit(serviceArea),
             },
             {
-                text: this.intl.t('live-map.edit-boundaries', { resource: serviceArea.name }),
-                callback: () => this.geofence.editServiceArea(serviceArea),
-            },
-            {
                 text: this.intl.t('live-map.delete-service', { serviceName: serviceArea.name }),
                 callback: () => this.serviceAreaActions.delete(serviceArea),
             },
         ];
+
+        if (!this.mapManager.isGoogleMaps) {
+            items.splice(4, 0, {
+                text: this.intl.t('live-map.edit-boundaries', { resource: serviceArea.name }),
+                callback: () => this.geofence.editServiceArea(serviceArea),
+            });
+        }
 
         // create contextmenu registry
         const contextmenuRegistry = this.leafletContextmenuManager.createContextMenu(`service-area:${serviceArea.public_id}`, layer, items, { serviceArea });

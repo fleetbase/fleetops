@@ -312,6 +312,7 @@ export default class ServiceAreasService extends Service {
 
         this.modalsManager.show('modals/map-layer-form', {
             title: 'Create new Layer',
+            modalClass: 'flb-resource-modal',
             acceptButtonText: 'Create',
             acceptButtonIcon: 'magic',
             declineButtonIcon: 'times',
@@ -319,7 +320,13 @@ export default class ServiceAreasService extends Service {
             layerTypes: ['Service Area', 'Zone'],
             selectedLayerType: 'Service Area',
             serviceAreaTypes: this.serviceAreaTypes,
-            layerOptions: {},
+            layerOptions: {
+                trigger_on_entry: false,
+                trigger_on_exit: false,
+                dwell_threshold_minutes: null,
+                speed_limit_kmh: null,
+                description: null,
+            },
             confirm: (modal) => {
                 modal.startLoading();
 

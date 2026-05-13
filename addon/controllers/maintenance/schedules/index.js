@@ -1,4 +1,5 @@
 import Controller from '@ember/controller';
+import { isArray } from '@ember/array';
 import { inject as service } from '@ember/service';
 import { tracked } from '@glimmer/tracking';
 import { action } from '@ember/object';
@@ -75,7 +76,7 @@ export default class MaintenanceSchedulesIndexController extends Controller {
                 })
                 .then((response) => {
                     // The API returns { events: [...] } — unwrap the array.
-                    const raw = Array.isArray(response) ? response : (response?.events ?? []);
+                    const raw = isArray(response) ? response : (response?.events ?? []);
                     const events = raw.map((event) => ({
                         id: event.id,
                         title: event.title,

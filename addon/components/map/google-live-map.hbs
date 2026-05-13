@@ -1,0 +1,9 @@
+<div
+    id={{this.id}}
+    class="google-live-map-container next-google-container-map {{@mapClass}}"
+    style={{html-safe "width:100%;height:100%"}}
+    {{did-insert this.setupMap}}
+    {{did-update this.syncResources @drivers @vehicles @places @serviceAreas}}
+    ...attributes
+>
+</div>

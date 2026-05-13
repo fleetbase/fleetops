@@ -9,7 +9,7 @@ export default class OrderFormComponent extends Component {
     @service store;
     @service orderConfigActions;
     @service customFieldsRegistry;
-    @service leafletMapManager;
+    @service mapManager;
     @service currentUser;
     @tracked customFields;
 
@@ -47,7 +47,7 @@ export default class OrderFormComponent extends Component {
             debug('Unable to load and set driver vehicle: ' + err.message);
         }
 
-        this.leafletMapManager.map.liveMap.focusDriver(driver);
+        this.mapManager.focusResource(driver, 18);
         // if (this.args.resource.is_route_optimized) {
         //     this.optimizeRoute.perform();
         // }

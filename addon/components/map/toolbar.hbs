@@ -1,12 +1,12 @@
 <div class="next-map-container-toolbar-container {{if @horizontal 'toolbar-container-horizontal'}} {{if (eq @position 'bottom') 'position-bottom'}}" ...attributes>
     <div class="next-map-container-toolbar next-map-container-toolbar-zoom-control">
         <div id="map-toolbar-zoom-in-button-wrapper">
-            <button type="button" id="map-toolbar-zoom-in-button" class="toolbar-button" {{on "click" this.leafletMapManager.zoomIn}}>
+            <button type="button" id="map-toolbar-zoom-in-button" class="toolbar-button" {{on "click" this.zoomIn}}>
                 <FaIcon @icon="plus" @prefix="fas" class="text-gray-100" />
             </button>
         </div>
         <div id="map-toolbar-zoom-out-button-wrapper">
-            <button type="button" class="toolbar-button" {{on "click" this.leafletMapManager.zoomOut}}>
+            <button type="button" class="toolbar-button" {{on "click" this.zoomOut}}>
                 <FaIcon @icon="minus" id="map-toolbar-zoom-out-button" @prefix="fas" class="text-gray-100" />
             </button>
         </div>

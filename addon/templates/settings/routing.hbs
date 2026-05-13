@@ -16,12 +16,23 @@
             <ContentPanel @title={{t "settings.routing.configure-routing"}} @open={{true}} @wrapperClass="bordered-classic">
                 <InputGroup @name={{t "settings.routing.routing-service"}} @helpText={{t "settings.routing.routing-service-help-text"}}>
                     <Select
-                        @value={{this.routerService}}
-                        @options={{this.leafletRoutingControl.availableServices}}
+                        @value={{this.displayEngine}}
+                        @options={{this.routeEngine.availableServices}}
                         @optionLabel="name"
                         @optionValue="key"
-                        @onSelect={{fn (mut this.routerService)}}
+                        @onSelect={{fn (mut this.displayEngine)}}
                         @placeholder={{t "settings.routing.select-routing-service"}}
+                        class="w-full"
+                    />
+                </InputGroup>
+                <InputGroup @name="Routing Optimization Engine" @helpText="Choose which engine should optimize stop order before the route is rendered.">
+                    <Select
+                        @value={{this.optimizationEngine}}
+                        @options={{this.routeOptimization.availableServices}}
+                        @optionLabel="name"
+                        @optionValue="key"
+                        @onSelect={{fn (mut this.optimizationEngine)}}
+                        @placeholder="Select route optimization engine"
                         class="w-full"
                     />
                 </InputGroup>

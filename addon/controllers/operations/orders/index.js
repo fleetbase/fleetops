@@ -162,6 +162,13 @@ export default class OperationsOrdersIndexController extends Controller {
                 filterComponent: 'filter/string',
             },
             {
+                label: this.intl.t('column.route-type'),
+                valuePath: 'payload.waypoints.length',
+                cellComponent: 'cell/order-route-type',
+                cellClassNames: 'overflow-visible',
+                resizable: true,
+            },
+            {
                 label: this.intl.t('column.internal-id'),
                 valuePath: 'internal_id',
                 cellComponent: 'click-to-copy',
@@ -302,7 +309,7 @@ export default class OperationsOrdersIndexController extends Controller {
                 label: this.intl.t('column.type'),
                 valuePath: 'type',
                 resizable: true,
-                hidden: true,
+                humanize: true,
                 sortable: true,
                 filterable: true,
                 filterComponent: 'filter/model',

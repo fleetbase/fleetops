@@ -137,6 +137,26 @@ class Payload extends Model
         return $this->hasMany(Waypoint::class)->with(['place']);
     }
 
+    /**
+     * The first waypoint marker for lightweight index fallback.
+     */
+    public function firstWaypointMarker()
+    {
+        return $this->hasOne(Waypoint::class, 'payload_uuid', 'uuid')
+            ->oldestOfMany('order')
+            ->with(['place']);
+    }
+
+    /**
+     * The last waypoint marker for lightweight index fallback.
+     */
+    public function lastWaypointMarker()
+    {
+        return $this->hasOne(Waypoint::class, 'payload_uuid', 'uuid')
+            ->latestOfMany('order')
+            ->with(['place']);
+    }
+
     public function getTotalEntitiesAttribute()
     {
         return $this->entities()->count();
@@ -534,47 +554,103 @@ class Payload extends Model
             return $this;
         }
 
-        $placeIds = [];
+        $this->loadMissing('waypointMarkers');
+        $keptWaypointIds = [];
+        $availableWaypointMarkers = $this->waypointMarkers()->get();
 
-        // collect all place ids to insert
         foreach ($waypoints as $index => $attributes) {
+            $raw = $attributes;
+            $type = data_get($raw, 'type', 'dropoff');
+            $customerUuidIn = data_get($raw, 'customer_uuid');
+            $customerPubIdIn = data_get($raw, 'customer_id');
+            $customerType = data_get($raw, 'customer_type', 'fleetops:contact');
+
             if (Utils::isset($attributes, 'place') && is_array(Utils::get($attributes, 'place'))) {
                 $attributes = Utils::get($attributes, 'place');
             }
 
-            if (is_array($attributes) && array_key_exists('place_uuid', $attributes)) {
-                $placeIds[] = $attributes['place_uuid'];
+            $placeUuid = null;
+
+            if (
+                is_array($attributes)
+                && isset($attributes['place_uuid'])
+                && Place::where('uuid', $attributes['place_uuid'])->exists()
+            ) {
+                $placeUuid = $attributes['place_uuid'];
+            } elseif (
+                is_array($attributes)
+                && isset($attributes['uuid'])
+                && ($resolvedUuid = Place::where('uuid', $attributes['uuid'])->value('uuid'))
+            ) {
+                $placeUuid = $resolvedUuid;
+            } elseif (
+                is_array($attributes)
+                && isset($attributes['id'])
+                && ($resolvedUuid = Place::where('public_id', $attributes['id'])->value('uuid'))
+            ) {
+                $placeUuid = $resolvedUuid;
             } else {
-                $placeUuid  = Place::insertFromMixed($attributes);
-                $placeIds[] = $placeUuid;
-            }
-        }
+                $place = Place::createFromMixed($attributes);
 
-        /** @return \Illuminate\Database\Eloquent\Collection $waypointMakers */
-        $waypointMakers = $this->waypointMarkers()->get();
+                if ($place instanceof Place && isset($attributes['uuid']) && $place->uuid !== $attributes['uuid']) {
+                    $place->updateMeta('search_uuid', $attributes['uuid']);
+                }
 
-        // remove all waypoints that are not included in the placeids
-        $waypointMakers = $waypointMakers->filter(function ($waypointMarker) use ($placeIds) {
-            if (!in_array($waypointMarker->place_uuid, $placeIds)) {
-                $waypointMarker->delete();
+                $placeUuid = $place->uuid;
             }
 
-            return in_array($waypointMarker->place_uuid, $placeIds);
-        });
+            $customerUuid = null;
+            $customerTypeNamespace = null;
 
-        // update or create waypoint markers
-        foreach ($placeIds as $placeId) {
-            Waypoint::updateOrCreate(
-                [
-                    'payload_uuid' => $this->uuid,
-                    'place_uuid'   => $placeId,
-                ],
-                [
-                    'payload_uuid' => $this->uuid,
-                    'place_uuid'   => $placeId,
-                ]
-            );
+            if ($customerType) {
+                $customerTypeNamespace = Utils::getMutationType($customerType);
+                $customerModel = app($customerTypeNamespace);
+
+                if ($customerUuidIn && $customerModel->where('uuid', $customerUuidIn)->exists()) {
+                    $customerUuid = $customerUuidIn;
+                }
+
+                if (!$customerUuid && $customerPubIdIn) {
+                    $maybeUuid = $customerModel->where('public_id', $customerPubIdIn)->value('uuid');
+                    if ($maybeUuid) {
+                        $customerUuid = $maybeUuid;
+                    } else {
+                        $customerTypeNamespace = null;
+                    }
+                }
+
+                if (!$customerUuid) {
+                    $customerTypeNamespace = null;
+                }
+            }
+
+            $values = [
+                'payload_uuid'   => $this->uuid,
+                'place_uuid'     => $placeUuid,
+                'order'          => $index,
+                'type'           => $type,
+                'customer_uuid'  => $customerUuid,
+                'customer_type'  => $customerTypeNamespace,
+            ];
+
+            $existingWaypointMarker = $availableWaypointMarkers
+                ->first(fn ($waypointMarker) => $waypointMarker->place_uuid === $placeUuid && !in_array($waypointMarker->uuid, $keptWaypointIds));
+
+            if ($existingWaypointMarker) {
+                $existingWaypointMarker->update($values);
+                $keptWaypointIds[] = $existingWaypointMarker->uuid;
+                continue;
+            }
+
+            $waypointRecord = Waypoint::create($values);
+            $keptWaypointIds[] = $waypointRecord->uuid;
         }
+
+        $this->waypointMarkers()
+            ->whereNotIn('uuid', $keptWaypointIds)
+            ->get()
+            ->each
+            ->delete();
 
         return $this->refresh()->load(['waypoints']);
     }
@@ -671,6 +747,34 @@ class Payload extends Model
         }
 
         return null;
+    }
+
+    /**
+     * Get the lightweight pickup fallback for index resources.
+     */
+    public function getIndexPickupPlaceAttribute(): ?Place
+    {
+        if ($this->pickup instanceof Place) {
+            return $this->pickup;
+        }
+
+        $this->loadMissing('firstWaypointMarker.place');
+
+        return data_get($this, 'firstWaypointMarker.place');
+    }
+
+    /**
+     * Get the lightweight dropoff fallback for index resources.
+     */
+    public function getIndexDropoffPlaceAttribute(): ?Place
+    {
+        if ($this->dropoff instanceof Place) {
+            return $this->dropoff;
+        }
+
+        $this->loadMissing('lastWaypointMarker.place');
+
+        return data_get($this, 'lastWaypointMarker.place');
     }
 
     public function getPickupRegion(): string

@@ -6,13 +6,13 @@ import { calculateInPlacePosition } from 'ember-basic-dropdown/utils/calculate-p
 
 export default class MapToolbarVisibilityControlPanel extends Component {
     @service leafletLayerVisibilityManager;
-    @service leafletMapManager;
+    @service mapManager;
     @tracked areVehiclesHidden = false;
     @tracked arePlacesHidden = false;
     @tracked areDriversHidden = false;
 
     get livemap() {
-        return this.leafletMapManager?._livemap ?? {};
+        return this.mapManager.livemap ?? {};
     }
 
     get vehicles() {

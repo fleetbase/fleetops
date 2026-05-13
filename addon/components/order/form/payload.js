@@ -52,6 +52,7 @@ export default class OrderFormPayloadComponent extends Component {
     @action addEntity(importId = null) {
         const entity = this.store.createRecord('entity', {
             _import_id: typeof importId === 'string' ? importId : null,
+            type: 'entity',
         });
 
         this.args.resource.payload.entities.pushObject(entity);

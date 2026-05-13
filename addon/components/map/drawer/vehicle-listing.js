@@ -5,13 +5,13 @@ import { action } from '@ember/object';
 
 export default class MapDrawerVehicleListingComponent extends Component {
     @service vehicleActions;
-    @service leafletMapManager;
+    @service mapManager;
     @service hostRouter;
     @service intl;
     @tracked query = '';
 
     get filteredVehicles() {
-        const vehicles = this.leafletMapManager._livemap?.vehicles ?? [];
+        const vehicles = this.mapManager.livemap?.vehicles ?? [];
         const query = this.query?.toLowerCase();
         if (!query) {
             return vehicles;
@@ -100,7 +100,7 @@ export default class MapDrawerVehicleListingComponent extends Component {
     }
 
     @action view(vehicle) {
-        this.leafletMapManager.flyToRecordLayer(vehicle, 16, {
+        this.mapManager.focusResource(vehicle, 16, {
             paddingBottomRight: [300, 200],
             moveend: () => {
                 this.vehicleActions.panel.view(vehicle);
@@ -109,7 +109,7 @@ export default class MapDrawerVehicleListingComponent extends Component {
     }
 
     @action edit(vehicle) {
-        this.leafletMapManager.flyToRecordLayer(vehicle, 16, {
+        this.mapManager.focusResource(vehicle, 16, {
             paddingBottomRight: [300, 200],
             moveend: () => {
                 this.vehicleActions.panel.edit(vehicle);
@@ -118,7 +118,7 @@ export default class MapDrawerVehicleListingComponent extends Component {
     }
 
     @action locate(vehicle) {
-        this.leafletMapManager.flyToRecordLayer(vehicle, 18, {
+        this.mapManager.focusResource(vehicle, 18, {
             paddingBottomRight: [300, 200],
         });
     }

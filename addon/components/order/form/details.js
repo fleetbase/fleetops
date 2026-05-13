@@ -25,6 +25,12 @@ export default class OrderFormDetailsComponent extends Component {
         this.args.resource.set('driver', null);
     }
 
+    @action selectCustomer(model) {
+        this.args.resource.set('customer', model);
+        this.args.resource.set('customer_uuid', model?.uuid ?? model?.id ?? null);
+        this.args.resource.set('customer_type', model?.customer_type ? `fleet-ops:${model.customer_type}` : null);
+    }
+
     @task *selectOrderConfig(orderConfig) {
         if (!orderConfig) return;
         this.args.resource.setProperties({

@@ -335,24 +335,8 @@ class Place extends Model
 
         // Before saving or returning this instance check the database for a duplicate address
         // it cannot have any owner, and must belong to this session
-        if ($companyUuid = session('company')) {
-            $duplicate = static::where([
-                'company_uuid' => $companyUuid,
-                'street1'      => $instance->street1,
-                'city'         => $instance->city,
-                'country'      => $instance->country,
-            ])
-            ->when(
-                $instance->postal_code !== null,
-                fn ($q) => $q->where('postal_code', $instance->postal_code),
-                fn ($q) => $q->whereNull('postal_code')
-            )
-            ->whereNull('owner_uuid')
-            ->first();
-
-            if ($duplicate) {
-                return $duplicate;
-            }
+        if ($duplicate = static::findExistingSharedPlace($instance->toArray())) {
+            return $duplicate;
         }
 
         if ($saveInstance) {
@@ -400,7 +384,7 @@ class Place extends Model
     /**
      * Create a new Place instance from a geocoding lookup.
      *
-     * @return \Fleetbase\Models\Place|null
+     * @return array
      */
     public static function getValuesFromGeocodingLookup(string $address): array
     {
@@ -411,6 +395,163 @@ class Place extends Model
         }
 
         return static::getGoogleAddressArray($results->first());
+    }
+
+    /**
+     * Compose a fuller geocoding query from structured place attributes.
+     */
+    public static function composeGeocodingQuery(array $place): ?string
+    {
+        $parts = [];
+
+        foreach (['street1', 'street2', 'city', 'province', 'postal_code', 'country'] as $field) {
+            $value = static::normalizePlaceValue(data_get($place, $field));
+            if ($value) {
+                $parts[] = $value;
+            }
+        }
+
+        if (empty($parts)) {
+            return null;
+        }
+
+        return implode(', ', array_values(array_unique($parts)));
+    }
+
+    /**
+     * Normalize a place field value for matching and persistence.
+     */
+    public static function normalizePlaceValue($value): ?string
+    {
+        if (!is_scalar($value)) {
+            return null;
+        }
+
+        $value = trim((string) $value);
+
+        return $value !== '' ? $value : null;
+    }
+
+    /**
+     * Merge explicit structured place attributes with geocoded fallbacks.
+     * Explicit values always win.
+     */
+    public static function mergeStructuredPlaceAttributes(array $place, array $geocoded = []): array
+    {
+        $place = array_merge($geocoded, $place);
+
+        foreach (['name', 'street1', 'street2', 'city', 'province', 'postal_code', 'country', 'phone'] as $field) {
+            $normalized = static::normalizePlaceValue(data_get($place, $field));
+            if ($normalized !== null) {
+                $place[$field] = $normalized;
+            } elseif (array_key_exists($field, $place)) {
+                $place[$field] = null;
+            }
+        }
+
+        if (!empty($place['location'])) {
+            $place['location'] = Utils::getPointFromMixed($place['location']) ?? $place['location'];
+        }
+
+        return array_filter($place, fn ($value) => $value !== '');
+    }
+
+    /**
+     * Find an existing shared place using normalized address identity.
+     */
+    public static function findExistingSharedPlace(array $place): ?Place
+    {
+        if (data_get($place, 'owner_uuid')) {
+            return null;
+        }
+
+        $companyUuid = data_get($place, 'company_uuid', session('company'));
+        $street1     = static::normalizePlaceValue(data_get($place, 'street1'));
+        $city        = static::normalizePlaceValue(data_get($place, 'city'));
+        $country     = static::normalizePlaceValue(data_get($place, 'country'));
+
+        if (!$companyUuid || !$street1 || !$city || !$country) {
+            return null;
+        }
+
+        $postalCode = static::normalizePlaceValue(data_get($place, 'postal_code'));
+        $street2    = static::normalizePlaceValue(data_get($place, 'street2'));
+        $location   = Utils::getPointFromMixed(data_get($place, 'location'));
+
+        $existingPlace = static::query()
+            ->where('company_uuid', $companyUuid)
+            ->whereNull('owner_uuid')
+            ->whereNull('deleted_at')
+            ->where('street1', $street1)
+            ->where('city', $city)
+            ->where('country', $country)
+            ->when(
+                $postalCode !== null,
+                fn ($query) => $query->where('postal_code', $postalCode)
+            )
+            ->when(
+                $postalCode === null,
+                fn ($query) => $query->whereNull('postal_code')
+            )
+            ->when(
+                $street2 !== null,
+                fn ($query) => $query->where('street2', $street2)
+            )
+            ->first();
+
+        if ($existingPlace) {
+            return $existingPlace;
+        }
+
+        if (!$location instanceof SpatialPoint) {
+            return null;
+        }
+
+        return static::query()
+                ->where('company_uuid', $companyUuid)
+                ->whereNull('owner_uuid')
+                ->whereNull('deleted_at')
+                ->where('street1', $street1)
+                ->where('city', $city)
+                ->where('country', $country)
+                ->whereRaw('ST_Equals(location, ST_GeomFromText(?))', [
+                    sprintf('POINT(%s %s)', $location->getLng(), $location->getLat()),
+                ])
+                ->first();
+    }
+
+    /**
+     * Update safe missing fields on an existing shared place.
+     */
+    public static function hydrateSharedPlace(Place $existingPlace, array $values): Place
+    {
+        $updates = [];
+
+        foreach (['name', 'street2', 'province', 'postal_code', 'neighborhood', 'district', 'building', 'phone'] as $field) {
+            $current = static::normalizePlaceValue($existingPlace->{$field});
+            $next    = static::normalizePlaceValue(data_get($values, $field));
+
+            if ($current === null && $next !== null) {
+                $updates[$field] = $next;
+            }
+        }
+
+        $existingLocation = Utils::getPointFromMixed($existingPlace->location);
+        $location         = Utils::getPointFromMixed(data_get($values, 'location'));
+        $hasZeroLocation  = $existingLocation instanceof SpatialPoint
+            && $existingLocation->getLat() == 0.0
+            && $existingLocation->getLng() == 0.0;
+
+        if (($existingLocation === null || $hasZeroLocation) && $location instanceof SpatialPoint) {
+            $updates['location'] = $location;
+        }
+
+        if (!empty($updates)) {
+            $existingPlace->fill($updates);
+            $existingPlace->save();
+        }
+
+        return $existingPlace;
     }
 
     /**
@@ -571,31 +712,33 @@ class Place extends Model
             }
 
             // Get public_id if supplied if set
-            $id = data_get($place, 'id') || data_get($place, 'public_id');
+            $id = data_get($place, 'id') ?: data_get($place, 'public_id');
 
             // If $place has a valid uuid and a matching Place object exists, return the uuid
             if (Utils::isPublicId($id) && $existingPlace = static::where('public_id', $id)->first()) {
                 return $existingPlace;
             }
 
-            // If has $attributes['address']
-            $address = data_get($place, 'address');
-            if ($address) {
-                return static::create(array_merge($place, static::getValuesFromGeocodingLookup($address)));
+            $query = static::composeGeocodingQuery($place)
+                ?? static::normalizePlaceValue(data_get($place, 'address'))
+                ?? static::normalizePlaceValue(data_get($place, 'street1'));
+
+            $geocoded = [];
+            if ($query) {
+                $geocoded = static::getValuesFromGeocodingLookup($query);
             }
 
-            // Perform google lookup to fill street1
-            $street1 = data_get($place, 'street1');
-            if ($street1) {
-                return static::create(array_merge($place, static::getValuesFromGeocodingLookup($street1)));
+            $values = static::mergeStructuredPlaceAttributes($place, $geocoded);
+
+            if ($existingPlace = static::findExistingSharedPlace($values)) {
+                return static::hydrateSharedPlace($existingPlace, $values);
             }
 
-            // Otherwise, create a new Place owith the given attributes
-            if (empty($place['location'])) {
-                $place['location'] = new SpatialPoint(0, 0);
+            if (empty($values['location'])) {
+                $values['location'] = new SpatialPoint(0, 0);
             }
 
-            return static::create($place);
+            return static::create($values);
         }
         // If $place is a GoogleAddress object
         elseif ($place instanceof \Geocoder\Provider\GoogleMaps\Model\GoogleAddress) {
@@ -655,7 +798,11 @@ class Place extends Model
                 }
             }
 
-            $values = $place;
+            $values = is_array($place) ? $place : (array) $place;
+
+            if ($existingPlace = static::findExistingSharedPlace($values)) {
+                return $existingPlace->uuid;
+            }
 
             // create a new place
             return static::insertGetUuid((array) $values);
@@ -703,21 +850,8 @@ class Place extends Model
             $values['location'] = Utils::parsePointToWkt($values['location']);
         }
 
-        // check if place already exists
-        $existing = DB::table($instance->getTable())
-            ->select(['uuid'])->where([
-                'company_uuid' => session('company'),
-                'name'         => $values['name'] ?? null,
-                'street1'      => $values['street1'] ?? null,
-            ])
-            ->whereNull('deleted_at')
-            ->first();
-
-        if ($existing) {
-            unset($values['uuid'], $values['created_at'], $values['_key'], $values['company_uuid']);
-            static::where('uuid', $existing->uuid)->update($values);
-
-            return $existing->uuid;
+        if ($existing = static::findExistingSharedPlace($values)) {
+            return static::hydrateSharedPlace($existing, $values)->uuid;
         }
 
         if (isset($values['meta']) && (is_object($values['meta']) || is_array($values['meta']))) {
