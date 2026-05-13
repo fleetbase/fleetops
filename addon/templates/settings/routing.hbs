@@ -68,7 +68,7 @@
                             @selected={{this.selectedTrackingFallbackOptions}}
                             @onChange={{this.setTrackingFallbacks}}
                             @placeholder="Select fallback providers"
-                            @triggerClass="form-select form-input flex-1"
+                            @triggerClass="form-select form-input form-input-sm flex-1"
                             as |provider|
                         >
                             {{provider.label}}
@@ -80,12 +80,12 @@
                         @type="default"
                         @size="xs"
                         @icon={{if this.showTrackingAdvancedSettings "chevron-up" "chevron-down"}}
-                        @text={{if this.showTrackingAdvancedSettings "Hide Advanced Settings" "Advanced Settings"}}
+                        @text="Advanced Settings"
                         @onClick={{this.toggleTrackingAdvancedSettings}}
                     />
                 </div>
                 {{#if this.showTrackingAdvancedSettings}}
-                    <div class="space-y-4 rounded-md border border-gray-200 bg-gray-50 p-3 dark:border-gray-700 dark:bg-gray-800">
+                    <div class="mt-4 space-y-4 rounded-md border border-gray-200 bg-gray-50 p-3 dark:border-gray-700 dark:bg-gray-800">
                         <InputGroup @name="Traffic-Aware ETA" @helpText="Use provider traffic data when supported.">
                             <Toggle @isToggled={{this.trackingTrafficEnabled}} @onToggle={{fn (mut this.trackingTrafficEnabled)}} />
                         </InputGroup>
