@@ -19,8 +19,8 @@ class Payload extends FleetbaseResource
     public function toArray($request): array
     {
         $isInternal = Http::isInternalRequest();
-        $pickup = $this->index_pickup_place;
-        $dropoff = $this->index_dropoff_place;
+        $pickup     = $this->index_pickup_place;
+        $dropoff    = $this->index_dropoff_place;
 
         return [
             'id'           => $this->when($isInternal, $this->id, $this->public_id),

@@ -825,7 +825,7 @@ class OrderController extends FleetOpsController
         }
 
         try {
-            $order = Order::findRecordOrFail($id, ['driverAssigned']);
+            $order = Order::findByIdOrFail($id, ['driverAssigned']);
         } catch (ModelNotFoundException $e) {
             return response()->error('Order resource not found.', 404);
         }

@@ -15,5 +15,5 @@ test('ping driver handler belongs to the internal order controller', function ()
         ->and($apiController)->not->toContain('Notifications\OrderPing')
         ->and($internalController)->toContain('function pingDriver')
         ->and($internalController)->toContain('Notifications\OrderPing')
-        ->and($internalController)->toContain("fleet-ops update order");
+        ->and($internalController)->toContain('fleet-ops update order');
 });

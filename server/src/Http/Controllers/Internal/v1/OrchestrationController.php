@@ -573,7 +573,7 @@ class OrchestrationController extends Controller
                 $isMulti   = $orderType === 'multi_waypoint';
 
                 // ── Resolve OrderConfig ───────────────────────────────────────
-                $orderConfigUuid = null;
+                $orderConfigUuid     = null;
                 $resolvedOrderConfig = null;
                 if (!empty($firstRow['type'])) {
                     $resolvedOrderConfig = OrderConfig::resolveFromIdentifier($firstRow['type']);

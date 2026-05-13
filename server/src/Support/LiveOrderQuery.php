@@ -7,7 +7,7 @@ use Illuminate\Database\Eloquent\Builder;
 
 class LiveOrderQuery
 {
-    public static array $baseExcludedStatuses = ['canceled', 'completed', 'expired'];
+    public static array $baseExcludedStatuses   = ['canceled', 'completed', 'expired'];
     public static array $activeExcludedStatuses = ['created', 'completed', 'expired', 'order_canceled', 'canceled', 'pending'];
 
     public static function make(?string $companyUuid = null, array $options = []): Builder
