@@ -9,7 +9,7 @@
                     </tr>
                 </thead>
                 <tbody>
-                    {{#each @resource.purchase_rate.service_quote.items as |item index|}}
+                    {{#each @resource.purchase_rate.service_quote.items as |item|}}
                         <tr class="border-b border-gray-100 dark:border-gray-800 last:border-0">
                             <td class="py-1 pr-2 text-gray-700 dark:text-gray-300">
                                 {{smart-humanize item.details}}
