@@ -88,7 +88,6 @@ Route::prefix(config('fleetops.api.routing.prefix', null))->namespace('Fleetbase
                 $router->get('{id}/next-activity', 'OrderController@getNextActivity');
                 $router->get('{id}/tracker', 'OrderController@trackerData');
                 $router->get('{id}/eta', 'OrderController@etaData');
-                $router->post('{id}/ping-driver', 'OrderController@pingDriver');
                 $router->get('{id}/comments', 'OrderController@orderComments');
                 $router->match(['post', 'patch'], '{id}/set-destination/{placeId}', 'OrderController@setDestination');
                 $router->post('{id}/capture-signature/{subjectId?}', 'OrderController@captureSignature');
@@ -340,6 +339,7 @@ Route::prefix(config('fleetops.api.routing.prefix', null))->namespace('Fleetbase
                                 $router->get('next-activity/{id}', $controller('nextActivity'));
                                 $router->get('{id}/tracker', 'OrderController@trackerInfo');
                                 $router->get('{id}/eta', 'OrderController@waypointEtas');
+                                $router->post('{id}/ping-driver', $controller('pingDriver'));
                                 $router->post('process-imports', $controller('importFromFiles'));
                                 $router->patch('route/{id}', $controller('editOrderRoute'));
                                 $router->patch('update-activity/{id}', $controller('updateActivity'));

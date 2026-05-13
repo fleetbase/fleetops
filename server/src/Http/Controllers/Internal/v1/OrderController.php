@@ -26,11 +26,13 @@ use Fleetbase\FleetOps\Models\Proof;
 use Fleetbase\FleetOps\Models\ServiceQuote;
 use Fleetbase\FleetOps\Models\TrackingStatus;
 use Fleetbase\FleetOps\Models\Waypoint;
+use Fleetbase\FleetOps\Notifications\OrderPing;
 use Fleetbase\FleetOps\Support\Utils;
 use Fleetbase\Http\Requests\ExportRequest;
 use Fleetbase\Http\Requests\Internal\BulkActionRequest;
 use Fleetbase\Models\File;
 use Fleetbase\Models\Type;
+use Fleetbase\Support\Auth;
 use Fleetbase\Support\TemplateString;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Database\QueryException;
@@ -809,6 +811,39 @@ class OrderController extends FleetOpsController
         }
 
         return response()->json($order->tracker()->eta($request->only(['provider', 'fallbacks', 'traffic_enabled'])));
+    }
+
+    /**
+     * Ping the assigned driver to refresh/order attention in the driver app.
+     *
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function pingDriver(string $id)
+    {
+        if (!Auth::can('fleet-ops update order')) {
+            return response()->error('Unauthorized.', 403);
+        }
+
+        try {
+            $order = Order::findRecordOrFail($id, ['driverAssigned']);
+        } catch (ModelNotFoundException $e) {
+            return response()->error('Order resource not found.', 404);
+        }
+
+        if (!$order->driverAssigned) {
+            return response()->error('Order does not have an assigned driver.', 422);
+        }
+
+        try {
+            $order->driverAssigned->notify(new OrderPing($order));
+
+            return response()->json([
+                'status'  => 'ok',
+                'message' => 'Driver app ping sent.',
+            ]);
+        } catch (\Throwable $e) {
+            return response()->error('Unable to ping driver app.', 500);
+        }
     }
 
     /**
