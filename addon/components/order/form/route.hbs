@@ -56,9 +56,9 @@
                                 @renderInPlace={{true}}
                                 @onChange={{fn this.setWaypointPlace index}}
                                 @permission={{cannot-write @resource}}
-                                as |model|
+                                as |place|
                             >
-                                {{model.address}}
+                                <Place::Address @place={{place}} />
                             </ModelSelect>
                             {{#if (and @resource.facilitator.isIntegratedVendor (is-not-facilitator-supported-place @resource.facilitator waypoint.place))}}
                                 <InfoBlock
@@ -169,9 +169,9 @@
                     @renderInPlace={{true}}
                     @onChange={{fn this.setPayloadPlace "pickup"}}
                     @permission={{cannot-write @resource}}
-                    as |model|
+                    as |place|
                 >
-                    {{model.address}}
+                    <Place::Address @place={{place}} />
                 </ModelSelect>
 
                 {{#if (and @resource.facilitator.isIntegratedVendor (is-not-facilitator-supported-place @resource.facilitator @resource.payload.pickup))}}
@@ -213,9 +213,9 @@
                     @renderInPlace={{true}}
                     @onChange={{fn this.setPayloadPlace "dropoff"}}
                     @permission={{cannot-write @resource}}
-                    as |model|
+                    as |place|
                 >
-                    {{model.address}}
+                    <Place::Address @place={{place}} />
                 </ModelSelect>
 
                 {{#if (and @resource.facilitator.isIntegratedVendor (is-not-facilitator-supported-place @resource.facilitator @resource.payload.dropoff))}}
@@ -250,9 +250,9 @@
                     @renderInPlace={{true}}
                     @onChange={{fn this.setPayloadPlace "return"}}
                     @permission={{cannot-write @resource}}
-                    as |model|
+                    as |place|
                 >
-                    {{model.address}}
+                    <Place::Address @place={{place}} />
                 </ModelSelect>
 
                 {{#if (and @resource.facilitator.isIntegratedVendor (is-not-facilitator-supported-place @resource.facilitator @resource.payload.return))}}

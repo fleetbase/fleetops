@@ -65,6 +65,7 @@ class ServiceAreaController extends Controller
         // create the serviceArea
         try {
             $serviceArea = ServiceArea::create($input);
+            $serviceArea->refresh();
         } catch (\Throwable $e) {
             logger()->error('Unable to create service area.', ['error' => $e->getMessage()]);
 
@@ -135,6 +136,7 @@ class ServiceAreaController extends Controller
 
         // update the serviceArea
         $serviceArea->update($input);
+        $serviceArea->refresh();
 
         // response the serviceArea resource
         return new ServiceAreaResource($serviceArea);

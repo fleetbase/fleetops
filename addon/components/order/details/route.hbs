@@ -1,5 +1,5 @@
 <ContentPanel @title={{t "order.fields.route-panel-title"}} @open={{true}} @actionButtons={{this.actionButtons}} @wrapperClass="bordered-top">
-    {{#if @resource.payload.isMultiDrop}}
+    {{#if @resource.hasIntermediateWaypoints}}
         <div>
             <RouteList @order={{@resource}} @eta={{@resource.eta}} @waypointActions={{hash viewWaypointLabel=(hash label=(t "order.fields.get-label") fn=this.viewWaypointLabel)}} />
         </div>

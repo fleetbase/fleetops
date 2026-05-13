@@ -31,6 +31,11 @@ class PayloadController extends Controller
         $pickup    = data_get($input, 'pickup');
         $dropoff   = data_get($input, 'dropoff');
         $return    = data_get($input, 'return');
+        $hasPickupField = array_key_exists('pickup', $input);
+        $hasDropoffField = array_key_exists('dropoff', $input);
+        $hasReturnField = array_key_exists('return', $input);
+        $hasWaypointsField = array_key_exists('waypoints', $input);
+        $hasRouteEndpointFields = $hasPickupField || $hasDropoffField || $hasReturnField;
 
         // make sure company is set
         $input['company_uuid'] = session('company');
@@ -116,8 +121,10 @@ class PayloadController extends Controller
         }
 
         // set waypoints
-        if ($waypoints) {
+        if ($hasWaypointsField && is_array($waypoints) && count($waypoints)) {
             $payload->setWaypoints($waypoints);
+        } elseif ($hasWaypointsField || $hasRouteEndpointFields) {
+            $payload->removeWaypoints();
         }
 
         // set entities
@@ -130,6 +137,12 @@ class PayloadController extends Controller
 
         // save the payload
         $payload->save();
+
+        // set the first / current waypoint from the effective route shape
+        $firstWaypoint = $payload->getPickupOrFirstWaypoint();
+        if ($firstWaypoint instanceof Place) {
+            $payload->setCurrentWaypoint($firstWaypoint);
+        }
 
         // make sure entities and waypoints is loaded
         $payload->load(['entities', 'waypoints', 'pickup', 'dropoff', 'return']);

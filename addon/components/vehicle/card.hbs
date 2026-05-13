@@ -1,7 +1,7 @@
 <Layout::Resource::Card ...attributes as |Card|>
-    <Card.header class="{{@headerClass}} truncate">
-        <div class="font-semibold">{{or @resource.name @resource.yearMakeModel}}</div>
-        <div class="text-gray-300 dark:text-gray-500 text-sm">{{or @resource.plate_number @resource.vin @resource.serial_number @resource.call_sign @resource.public_id}}</div>
+    <Card.header class="{{@headerClass}}">
+        <div class="font-semibold w-full truncate">{{or @resource.name @resource.yearMakeModel}}</div>
+        <div class="text-gray-300 dark:text-gray-500 text-sm w-full truncate">{{or @resource.plate_number @resource.vin @resource.serial_number @resource.call_sign @resource.public_id}}</div>
         {{#if (has-block "header")}}
             {{yield to="header"}}
         {{/if}}
@@ -21,7 +21,7 @@
         {{#if (has-block "footer")}}
             {{yield to="footer"}}
         {{/if}}
-        <div class="mt-1">
+        <div class="mt-1.5">
             <div class="text-gray-300 dark:text-gray-500 text-xs">Last Modified: {{@resource.updatedAt}}</div>
         </div>
     </Card.footer>

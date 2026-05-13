@@ -3,11 +3,18 @@ import { tracked } from '@glimmer/tracking';
 import { inject as service } from '@ember/service';
 import { action, get } from '@ember/object';
 import { task } from 'ember-concurrency';
+import { colorForId, routeColorForStatus, routeStyleForStatus } from '../../../utils/route-colors';
+import { buildRoutePointMarkerPresentation, buildRoutePointsFromPayload } from '../../../utils/route-visualization';
+
+const ORDER_ROUTE_PREVIEW_PADDING_BOTTOM_RIGHT = [420, 0];
+const ORDER_ROUTE_PREVIEW_MAX_ZOOM_TWO_POINTS = 13;
+const ORDER_ROUTE_PREVIEW_MAX_ZOOM_MULTI_POINTS = 12;
+const ORDER_ROUTE_PREVIEW_SINGLE_POINT_PANBY = [10, 0];
 
 export default class OrderFormRouteComponent extends Component {
-    @service leafletMapManager;
+    @service mapManager;
+    @service routeEngine;
     @service routeOptimization;
-    @service osrm;
     @service location;
     @service store;
     @service currentUser;
@@ -17,24 +24,31 @@ export default class OrderFormRouteComponent extends Component {
     @tracked routingControl;
     @tracked route;
 
-    get coordinates() {
-        const payload = this.args.resource.payload;
-        const waypoints = payload ? [payload.pickup, ...this.args.resource.payload.waypoints.map((waypoint) => waypoint.place), payload.dropoff] : [];
+    focusPlace(place, zoom = 18) {
+        if (place?.hasValidCoordinates) {
+            this.mapManager.positionWaypoints([[place.latitude, place.longitude]], {
+                singlePointZoom: zoom,
+                panBy: ORDER_ROUTE_PREVIEW_SINGLE_POINT_PANBY,
+            });
+        }
+    }
 
-        return waypoints.filter((wp) => wp && wp.hasValidCoordinates).map((wp) => [wp.latitude, wp.longitude]);
+    get coordinates() {
+        return this.routePoints.map(({ place }) => [place.latitude, place.longitude]);
     }
 
     get places() {
-        const payload = this.args.resource.payload;
-        const waypoints = payload ? [payload.pickup, ...this.args.resource.payload.waypoints.map((waypoint) => waypoint.place), payload.dropoff] : [];
+        return this.routePoints.map(({ place }) => place);
+    }
 
-        return waypoints.filter((place) => place);
+    get routePoints() {
+        return buildRoutePointsFromPayload(this.args.resource.payload);
     }
 
     willDestroy() {
         super.willDestroy(...arguments);
         if (this.routingControl) {
-            this.leafletMapManager.removeRoutingControl(this.routingControl);
+            this.mapManager.removeRoutingControl(this.routingControl);
         }
     }
 
@@ -91,15 +105,23 @@ export default class OrderFormRouteComponent extends Component {
 
         const waypoint = this.store.createRecord('waypoint', { ...properties, type: 'dropoff' });
         this.args.resource.payload.waypoints.pushObject(waypoint);
+
         this.previewRoute();
     }
 
     @action setWaypointPlace(index, place) {
-        if (!this.args.resource.payload.waypoints[index]) {
-            return;
-        }
+        if (!this.args.resource.payload.waypoints[index]) return;
 
         this.args.resource.payload.waypoints[index].place = place;
+        this.args.resource.payload.waypoints[index]?.setProperties({
+            street1: place.street1,
+            street2: place.street2,
+            city: place.city,
+            province: place.province,
+            postal_code: place.postal_code,
+            country: place.country,
+            location: place.location,
+        });
         this.previewRoute();
     }
 
@@ -129,13 +151,55 @@ export default class OrderFormRouteComponent extends Component {
     }
 
     @action async previewRoute() {
-        if (!this.coordinates.length) return;
+        if (!this.coordinates.length) {
+            if (this.routingControl) {
+                this.mapManager.removeRoutingControl(this.routingControl);
+                this.routingControl = null;
+            }
 
-        const routingControl = await this.leafletMapManager.replaceRoutingControl(this.coordinates, this.routingControl, {
+            return;
+        }
+
+        const order = this.args.resource;
+        const orderId = order.public_id ?? order.id ?? 'new-order';
+        const routeColor = colorForId(orderId);
+        const routeStatus = order.status ?? 'created';
+        const statusColor = routeColorForStatus(routeStatus);
+        const routeStyles = routeStyleForStatus(routeStatus, statusColor);
+        const isSinglePointPreview = this.coordinates.length === 1;
+        const fitOptions = isSinglePointPreview
+            ? {
+                  paddingBottomRight: [0, 0],
+                  panBy: ORDER_ROUTE_PREVIEW_SINGLE_POINT_PANBY,
+              }
+            : {
+                  paddingBottomRight: ORDER_ROUTE_PREVIEW_PADDING_BOTTOM_RIGHT,
+                  panBy: [0, 0],
+                  maxZoom: this.coordinates.length === 2 ? ORDER_ROUTE_PREVIEW_MAX_ZOOM_TWO_POINTS : ORDER_ROUTE_PREVIEW_MAX_ZOOM_MULTI_POINTS,
+              };
+        const routingControl = await this.mapManager.replaceRoutingControl(this.coordinates, this.routingControl, {
+            engine: this.routeEngine.getDisplayEngine('osrm'),
+            color: statusColor,
+            orderId,
+            status: routeStatus,
+            fitOptions,
+            places: this.places,
+            markerWaypoints: this.coordinates,
+            polylineOptions: {
+                color: statusColor,
+                weight: routeStyles.at(-1)?.weight ?? 4,
+                opacity: routeStyles.at(-1)?.opacity ?? 0.85,
+                styles: routeStyles,
+            },
+            createMarker: (_waypoint, index) => {
+                const routePoint = this.routePoints[index];
+                return buildRoutePointMarkerPresentation(routePoint, routeColor);
+            },
             onRouteFound: (route) => this.setRoute(route),
             removeOptions: {
-                filter: (layer) => layer.record_id === this.args.resource.driver_assigned?.id,
+                filter: (handle) => handle?.tag === this.args.resource.driver_assigned?.id,
             },
+            tag: this.args.resource.driver_assigned?.id,
         });
 
         this.routingControl = routingControl;
@@ -166,9 +230,10 @@ export default class OrderFormRouteComponent extends Component {
         const payload = order.payload;
         const waypoints = this.args.resource.payload.waypoints;
         const coordinates = this.coordinates.map((coord) => coord.reverse());
+        const service = this.routeEngine.getOptimizationEngine('osrm');
 
         try {
-            const result = yield this.osrm.optimize({
+            const result = yield this.routeOptimization.optimize(service, {
                 context: 'create_order',
                 order,
                 payload,
@@ -193,7 +258,10 @@ export default class OrderFormRouteComponent extends Component {
     }
 
     @action setOptimizedRoute(route, trip, waypoints, engine = 'osrm') {
-        let summary = { totalDistance: trip.distance, totalTime: trip.duration };
+        let summary = {
+            totalDistance: trip?.distance ?? trip?.totalDistance ?? 0,
+            totalTime: trip?.duration ?? trip?.totalTime ?? 0,
+        };
         let payload = {
             optimized: true,
             coordinates: route,

@@ -3,7 +3,6 @@ import { inject as service } from '@ember/service';
 
 export default class OperationsOrdersIndexRoute extends Route {
     @service store;
-    @service leafletMapManager;
 
     queryParams = {
         page: { refreshModel: true },

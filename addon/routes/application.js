@@ -12,6 +12,7 @@ export default class ApplicationRoute extends Route {
     @service notifications;
     @service fetch;
     @service currentUser;
+    @service mapSettings;
 
     @action loading(transition) {
         const resource = getResourceNameFromTransition(transition, { humanize: true });
@@ -28,10 +29,15 @@ export default class ApplicationRoute extends Route {
 
         await this.location.getUserLocation();
         await this.#loadRoutingSettings();
+        await this.#loadMapSettings();
     }
 
     async #loadRoutingSettings() {
         const routingSetting = await this.fetch.get('fleet-ops/settings/routing-settings');
         this.currentUser.setOption('routing', routingSetting);
+    }
+
+    async #loadMapSettings() {
+        await this.mapSettings.load();
     }
 }

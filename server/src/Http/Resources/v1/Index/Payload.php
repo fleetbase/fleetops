@@ -19,6 +19,8 @@ class Payload extends FleetbaseResource
     public function toArray($request): array
     {
         $isInternal = Http::isInternalRequest();
+        $pickup = $this->index_pickup_place;
+        $dropoff = $this->index_dropoff_place;
 
         return [
             'id'           => $this->when($isInternal, $this->id, $this->public_id),
@@ -30,24 +32,24 @@ class Payload extends FleetbaseResource
             'return_uuid'  => $this->when($isInternal, $this->return_uuid),
 
             // Minimal pickup - only what's displayed in the table
-            'pickup'     => $this->whenLoaded('pickup', function () {
-                return new Place($this->pickup);
+            'pickup'     => $this->when($pickup, function () use ($pickup) {
+                return new Place($pickup);
             }),
 
             // Minimal dropoff - only what's displayed in the table
-            'dropoff'    => $this->whenLoaded('dropoff', function () {
-                return new Place($this->dropoff);
+            'dropoff'    => $this->when($dropoff, function () use ($dropoff) {
+                return new Place($dropoff);
             }),
 
             // Entity count instead of full entities
             'entities_count' => $this->whenLoaded('entities', function () {
                 return $this->entities->count();
-            }),
+            }, $this->entities()->count()),
 
-            // Waypoint count instead of full waypoints
+            // Waypoint count for lightweight route-shape summaries.
             'waypoints_count' => $this->whenLoaded('waypoints', function () {
                 return $this->waypoints->count();
-            }),
+            }, $this->waypoints()->count()),
 
             'type'       => $this->type,
             'created_at' => $this->created_at,

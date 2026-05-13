@@ -1,4 +1,5 @@
 import Service from '@ember/service';
+import { isArray } from '@ember/array';
 import booleanPointInPolygon from '@turf/boolean-point-in-polygon';
 import { point as turfPoint, polygon as turfPolygon } from '@turf/helpers';
 
@@ -124,7 +125,7 @@ export default class LeafletMapManagerService extends Service {
     #everyVertexInside(latlngs) {
         // latlngs can be nested (poly: [ring], multi: [[ring]...])
         const walk = (arr) => {
-            if (!Array.isArray(arr)) return true;
+            if (!isArray(arr)) return true;
             if (arr.length && arr[0]?.lat != null) {
                 return arr.every((ll) => this.#isInside(ll));
             }

@@ -1,67 +1,136 @@
 <Modal::Default @modalIsOpened={{@modalIsOpened}} @options={{@options}} @confirm={{@onConfirm}} @decline={{@onDecline}}>
-    <div class="modal-body-container">
-        <div class="mb-4 border border-gray-700 shadow-sm rounded-md pt-2 px-4">
-            <InputGroup @name={{t "modals.map-layer-form.layer-type"}} @helpText={{t "modals.map-layer-form.layer-type-text"}}>
-                <Select
-                    @options={{@options.layerTypes}}
-                    @value={{@options.selectedLayerType}}
-                    @onSelect={{fn (mut @options.selectedLayerType)}}
-                    @placeholder={{t "modals.map-layer-form.select-layer-type"}}
-                    class="w-full"
+    <div>
+        <ContentPanel @title={{if (eq @options.selectedLayerType "Zone") "Zone Details" "Service Area Details"}} @open={{true}} @wrapperClass="bordered-top">
+            <div class="space-y-2">
+                <InputGroup @name={{t "modals.map-layer-form.layer-type"}} @helpText={{t "modals.map-layer-form.layer-type-text"}}>
+                    <Select
+                        @options={{@options.layerTypes}}
+                        @value={{@options.selectedLayerType}}
+                        @onSelect={{fn (mut @options.selectedLayerType)}}
+                        @placeholder={{t "modals.map-layer-form.select-layer-type"}}
+                        class="w-full"
+                    />
+                </InputGroup>
+
+                {{#if (eq @options.selectedLayerType "Zone")}}
+                    <InputGroup @name={{t "modals.map-layer-form.service-area"}} @helpText={{t "modals.map-layer-form.service-area-text"}}>
+                        <ModelSelect
+                            @modelName="service-area"
+                            @selectedModel={{@options.layerOptions.service_area}}
+                            @placeholder={{t "modals.map-layer-form.select-service-area"}}
+                            @triggerClass="form-select form-input"
+                            @infiniteScroll={{false}}
+                            @renderInPlace={{true}}
+                            @onChange={{fn (mut @options.layerOptions.service_area)}}
+                            as |model|
+                        >
+                            {{model.name}}
+                        </ModelSelect>
+                    </InputGroup>
+                {{/if}}
+
+                <InputGroup
+                    @value={{@options.layerOptions.name}}
+                    @name="{{@options.selectedLayerType}} Name"
+                    @helpText={{t "modals.map-layer-form.set-name" htmlSafe=true options=@options.selectedLayerType}}
+                    @required={{true}}
                 />
-            </InputGroup>
-        </div>
-        {{#if (eq @options.selectedLayerType "Zone")}}
-            <InputGroup @name={{t "modals.map-layer-form.service-area"}} @helpText={{t "modals.map-layer-form.service-area-text"}}>
-                <ModelSelect
-                    @modelName="service-area"
-                    @selectedModel={{@options.layerOptions.service_area}}
-                    @placeholder={{t "modals.map-layer-form.select-service-area"}}
-                    @triggerClass="form-select form-input"
-                    @infiniteScroll={{false}}
-                    @renderInPlace={{true}}
-                    @onChange={{fn (mut @options.layerOptions.service_area)}}
-                    as |model|
-                >
-                    {{model.name}}
-                </ModelSelect>
-            </InputGroup>
-        {{/if}}
-        <InputGroup
-            @value={{@options.layerOptions.name}}
-            @name="{{@options.selectedLayerType}} Name"
-            @helpText={{t "modals.map-layer-form.set-name" htmlSafe=true options=@options.selectedLayerType}}
-            @required={{true}}
-        />
-        {{#if (eq @options.selectedLayerType "Service Area")}}
-            <InputGroup @name={{t "modals.map-layer-form.service-type"}} @helpText={{t "modals.map-layer-form.service-type-text"}}>
-                <Select
-                    @options={{@options.serviceAreaTypes}}
-                    @value={{@options.layerOptions.type}}
-                    @onSelect={{fn (mut @options.layerOptions.type)}}
-                    @placeholder={{t "modals.map-layer-form.select-service-type"}}
-                    class="w-full"
+
+                {{#if (eq @options.selectedLayerType "Service Area")}}
+                    <InputGroup @name={{t "modals.map-layer-form.service-type"}} @helpText={{t "modals.map-layer-form.service-type-text"}}>
+                        <Select
+                            @options={{@options.serviceAreaTypes}}
+                            @value={{@options.layerOptions.type}}
+                            @onSelect={{fn (mut @options.layerOptions.type)}}
+                            @placeholder={{t "modals.map-layer-form.select-service-type"}}
+                            class="w-full"
+                        />
+                    </InputGroup>
+                {{/if}}
+
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-2">
+                    <InputGroup
+                        @type="color"
+                        @value={{@options.layerOptions.stroke_color}}
+                        @name="{{@options.selectedLayerType}} Border Color"
+                        @helpText={{t "modals.map-layer-form.customize-border" htmlSafe=true options=@options.selectedLayerType}}
+                        class="p-0 border-0 m-0 w-8 h-8 bg-transparent rounded-none"
+                    />
+                    <InputGroup
+                        @type="color"
+                        @value={{@options.layerOptions.color}}
+                        @name="{{@options.selectedLayerType}} Color"
+                        @helpText={{t "modals.map-layer-form.customize-fill-color" htmlSafe=true options=@options.selectedLayerType}}
+                        class="p-0 border-0 m-0 w-8 h-8 bg-transparent rounded-none"
+                    />
+                </div>
+
+                {{#if (eq @options.selectedLayerType "Service Area")}}
+                    <InputGroup @name={{t "modals.map-layer-form.service-area-country"}} @helpText={{t "modals.map-layer-form.service-area-country-text"}}>
+                        <CountrySelect class="w-full form-input" @value={{@options.layerOptions.country}} @onChange={{fn (mut @options.layerOptions.country)}} />
+                    </InputGroup>
+                {{else}}
+                    <InputGroup @name={{t "modals.zone-form.description-zone"}} @helpText={{t "modals.zone-form.optionally"}}>
+                        <Textarea @value={{@options.layerOptions.description}} rows={{3}} type="text" class="w-full form-input" placeholder={{t "modals.zone-form.description-zone"}} />
+                    </InputGroup>
+                {{/if}}
+            </div>
+        </ContentPanel>
+
+        <ContentPanel @title="Geofence Triggers" @open={{true}} @wrapperClass="bordered-top">
+            <div class="space-y-4">
+                <p class="text-sm text-gray-500 dark:text-gray-400">
+                    Configure when this {{if (eq @options.selectedLayerType "Zone") "zone" "service area"}} fires active geofence events. Entry and exit events are dispatched to webhooks, WebSocket channels, and the notification system whenever a driver crosses the boundary.
+                </p>
+
+                <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                    <div class="flex items-start space-x-3 p-3 rounded-lg border border-gray-200 dark:border-gray-700">
+                        <div class="flex-shrink-0 mt-0.5">
+                            <Toggle
+                                @isToggled={{@options.layerOptions.trigger_on_entry}}
+                                @onToggle={{fn (mut @options.layerOptions.trigger_on_entry)}}
+                            />
+                        </div>
+                        <div>
+                            <p class="text-sm font-medium text-gray-900 dark:text-white">Trigger on Entry</p>
+                            <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                                Fire a <code class="font-mono">geofence.entered</code> event when a driver enters this {{if (eq @options.selectedLayerType "Zone") "zone" "service area"}}.
+                            </p>
+                        </div>
+                    </div>
+
+                    <div class="flex items-start space-x-3 p-3 rounded-lg border border-gray-200 dark:border-gray-700">
+                        <div class="flex-shrink-0 mt-0.5">
+                            <Toggle
+                                @isToggled={{@options.layerOptions.trigger_on_exit}}
+                                @onToggle={{fn (mut @options.layerOptions.trigger_on_exit)}}
+                            />
+                        </div>
+                        <div>
+                            <p class="text-sm font-medium text-gray-900 dark:text-white">Trigger on Exit</p>
+                            <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                                Fire a <code class="font-mono">geofence.exited</code> event when a driver leaves this {{if (eq @options.selectedLayerType "Zone") "zone" "service area"}}.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                <InputGroup
+                    @name="Dwell Threshold (minutes)"
+                    @value={{@options.layerOptions.dwell_threshold_minutes}}
+                    @type="number"
+                    @placeholder="e.g. 10"
+                    @helpText="Fire a geofence.dwelled event after a driver has been inside this boundary for this many minutes. Leave blank to disable dwell tracking."
                 />
-            </InputGroup>
-        {{/if}}
-        <InputGroup
-            @type="color"
-            @value={{@options.layerOptions.stroke_color}}
-            @name="{{@options.selectedLayerType}} Border Color"
-            @helpText={{t "modals.map-layer-form.customize-border" htmlSafe=true options=@options.selectedLayerType}}
-            class="p-0 border-0 m-0 w-8 h-8 bg-transparent rounded-none"
-        />
-        <InputGroup
-            @type="color"
-            @value={{@options.layerOptions.color}}
-            @name="{{@options.selectedLayerType}} Color"
-            @helpText={{t "modals.map-layer-form.customize-fill-color" htmlSafe=true options=@options.selectedLayerType}}
-            class="p-0 border-0 m-0 w-8 h-8 bg-transparent rounded-none"
-        />
-        {{#if (eq @options.selectedLayerType "Service Area")}}
-            <InputGroup @name={{t "modals.map-layer-form.service-area-country"}} @helpText={{t "modals.map-layer-form.service-area-country-text"}}>
-                <CountrySelect class="w-full form-input" @value={{@options.layerOptions.country}} @onChange={{fn (mut @options.layerOptions.country)}} />
-            </InputGroup>
-        {{/if}}
+
+                <InputGroup
+                    @name="Speed Limit (km/h)"
+                    @value={{@options.layerOptions.speed_limit_kmh}}
+                    @type="number"
+                    @placeholder="e.g. 50"
+                    @helpText="Optional speed limit enforced within this boundary. Leave blank for no limit."
+                />
+            </div>
+        </ContentPanel>
     </div>
 </Modal::Default>

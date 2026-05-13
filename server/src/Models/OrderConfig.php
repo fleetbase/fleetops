@@ -5,6 +5,7 @@ namespace Fleetbase\FleetOps\Models;
 use Fleetbase\Casts\Json;
 use Fleetbase\FleetOps\Casts\OrderConfigEntities;
 use Fleetbase\FleetOps\Flow\Activity;
+use Fleetbase\FleetOps\Support\FleetOps;
 use Fleetbase\Models\Company;
 use Fleetbase\Models\Model;
 use Fleetbase\Support\Auth;
@@ -497,5 +498,19 @@ class OrderConfig extends Model
     public static function default(?Company $company = null): self
     {
         return static::where(['namespace' => 'system:order-config:transport', 'company_uuid' => $company ? $company->uuid : session('company')])->first();
+    }
+
+    /**
+     * Get the default transport config, creating it for the company if needed.
+     */
+    public static function defaultOrCreate(?Company $company = null): ?self
+    {
+        $company ??= Company::where('uuid', session('company'))->first();
+
+        if (!$company) {
+            return static::default($company);
+        }
+
+        return static::default($company) ?? FleetOps::createTransportConfig($company);
     }
 }

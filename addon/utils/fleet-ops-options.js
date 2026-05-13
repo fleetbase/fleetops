@@ -124,6 +124,7 @@ export const contactTypes = [
 ];
 
 export const entityTypes = [
+    { label: 'Entity', value: 'entity', description: 'Standard generic entity representing an item.' },
     { label: 'Parcel', value: 'parcel', description: 'Standard parcel or package used by parcel-based pricing.' },
     { label: 'Package', value: 'package', description: 'Generic package or boxed item.' },
     { label: 'Product', value: 'product', description: 'Sellable product or catalog item.' },

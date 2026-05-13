@@ -1,5 +1,5 @@
 <ContentPanel @title={{t "order.fields.payload"}} @open={{true}} @actionButtons={{this.actionButtons}} @wrapperClass="bordered-top">
-    {{#if @resource.isMultiDrop}}
+    {{#if @resource.hasIntermediateWaypoints}}
         <div class="space-y-2">
             {{#each @resource.entitiesByDestination as |group|}}
                 <div class="rounded-md border border-gray-200 dark:border-gray-900 p-3">
@@ -25,11 +25,11 @@
                                     </div>
                                 </div>
                             {{/if}}
-                            <DisplayPlace @place={{group.waypoint}} @addressClass="text-sm" />
-                            <div class="my-2">
-                                <span class="rounded-md bg-yellow-300 text-yellow-900 px-2 py-1 text-sm">{{t "order.fields.tracking"}}
+                            <DisplayPlace @place={{group.waypoint}} @addressClass="text-sm" @hideBadges={{true}} />
+                            <div class="flex align-self mt-1">
+                                <ClickToCopy @value={{group.waypoint.tracking}} class="rounded-md bg-yellow-300 text-yellow-900 px-2 py-1 text-sm">{{t "order.fields.tracking"}}
                                     {{group.waypoint.tracking}}
-                                </span>
+                                </ClickToCopy>
                             </div>
                         </div>
                         <div>

@@ -44,10 +44,11 @@ class OrderFilter extends Filter
         // eager load main relationships to reduce N+1 overhead
         $this->builder->with([
             'payload.entities',
-            'payload.waypoints',
             'payload.pickup',
             'payload.dropoff',
             'payload.return',
+            'payload.firstWaypointMarker.place',
+            'payload.lastWaypointMarker.place',
             'trackingNumber',
             'trackingStatuses',
             'driverAssigned' => function ($query) {

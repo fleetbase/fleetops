@@ -5,9 +5,14 @@ import { OSRMv1 } from '@fleetbase/leaflet-routing-machine';
 export function initialize(owner) {
     // Register OSRM as route optimization service
     const routeOptimization = owner.lookup('service:route-optimization');
+    const routeEngine = owner.lookup('service:route-engine');
     const osrm = owner.lookup('service:osrm');
     if (routeOptimization && osrm) {
         routeOptimization.register('osrm', osrm);
+    }
+
+    if (routeEngine && osrm) {
+        routeEngine.register('osrm', osrm, { display: true });
     }
 
     // Register OSRM as Routing Controler

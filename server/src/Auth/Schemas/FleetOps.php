@@ -157,6 +157,11 @@ class FleetOps
             'action'         => [],
             'remove_actions' => ['export', 'create'],
         ],
+        [
+            'name'           => 'map-settings',
+            'action'         => [],
+            'remove_actions' => ['export', 'create'],
+        ],
     ];
 
     /**

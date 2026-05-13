@@ -1,4 +1,5 @@
 import Component from '@glimmer/component';
+import { isArray } from '@ember/array';
 import { inject as service } from '@ember/service';
 import { tracked } from '@glimmer/tracking';
 import { action } from '@ember/object';
@@ -6,8 +7,6 @@ import { later } from '@ember/runloop';
 import { debug } from '@ember/debug';
 import { task } from 'ember-concurrency';
 import { colorForId, waypointIconHtml } from '../utils/route-colors';
-import polyline from '@fleetbase/ember-core/utils/polyline';
-import getRoutingHost from '@fleetbase/ember-core/utils/get-routing-host';
 
 /**
  * OrchestratorWorkbenchComponent
@@ -36,7 +35,8 @@ export default class OrchestratorWorkbenchComponent extends Component {
     @service intl;
     @service modalsManager;
     @service location;
-    @service leafletMapManager;
+    @service mapManager;
+    @service routeEngine;
     @service('order-allocation') allocationService;
 
     /** Routing controls added to the map for the current proposed plan. */
@@ -150,6 +150,10 @@ export default class OrchestratorWorkbenchComponent extends Component {
         this.loadData.perform();
         this.loadEngines.perform();
         this.loadCardFields.perform();
+    }
+
+    willDestroy() {
+        super.willDestroy(...arguments);
     }
 
     // ── Data loading ──────────────────────────────────────────────────────────
@@ -536,10 +540,8 @@ export default class OrchestratorWorkbenchComponent extends Component {
 
     @action onMapLoad({ target: map }) {
         this.leafletMap = map;
-        // Register the map with the service so addRoutingControl / ensureInteractive
-        // can resolve it. Without this call, waitForMap() never resolves and
-        // routing controls silently time out.
-        this.leafletMapManager.setMap(map);
+        this.mapManager.setActiveProvider('leaflet');
+        this.mapManager.setMapInstance(map);
         // If orders have already loaded before the map mounted, re-center now
         // using the same fitBounds strategy as _centerMapOnOrders().
         if (this._mapCenteredOnOrders) {
@@ -563,37 +565,28 @@ export default class OrchestratorWorkbenchComponent extends Component {
      */
     async _drawRoutingControls() {
         this._clearRoutingControls();
-        const map = this.leafletMap;
-        if (!map) return;
         const groups = this.planByVehicle;
         if (!groups.length) return;
-
-        const routingHost = getRoutingHost();
         const allLatLngs = [];
 
         for (const group of groups) {
             const waypoints = group.routeWaypoints;
             if (!waypoints || waypoints.length < 2) continue;
             try {
-                // OSRM route/v1 expects coordinates as lon,lat pairs joined by semicolons.
-                const coordStr = waypoints.map(([lat, lng]) => `${lng},${lat}`).join(';');
-                const url = `${routingHost}/route/v1/driving/${coordStr}?overview=full&geometries=polyline`;
-                const resp = await fetch(url);
-                if (!resp.ok) continue;
-                const data = await resp.json();
-                const geometry = data?.routes?.[0]?.geometry;
-                if (!geometry) continue;
-                // polyline.decode returns [[lat, lng], ...] — exactly what L.polyline expects.
-                const latlngs = polyline.decode(geometry);
-                if (!latlngs.length) continue;
-                const pl = L.polyline(latlngs, {
-                    color: group.routeColor,
-                    weight: 4,
-                    opacity: 0.85,
+                const routeHandle = await this.mapManager.addRoutingControl(waypoints, {
+                    engine: this.routeEngine.getDisplayEngine('osrm'),
+                    suppressMarkers: true,
+                    position: false,
+                    tag: `orchestrator:${group.vehicle?.public_id ?? group.vehicleId ?? group.vehicle_uuid ?? 'unknown'}`,
+                    polylineOptions: {
+                        color: group.routeColor,
+                        weight: 4,
+                        opacity: 0.85,
+                    },
                 });
-                pl.addTo(map);
-                this._routingControls.push(pl);
-                allLatLngs.push(...latlngs);
+                if (!routeHandle?.route?.coordinates?.length) continue;
+                this._routingControls.push(routeHandle);
+                allLatLngs.push(...routeHandle.route.coordinates);
             } catch {
                 // Non-fatal: routing may fail for individual vehicles if OSRM
                 // cannot find a route (e.g. ferry-only legs, missing road data)
@@ -603,7 +596,7 @@ export default class OrchestratorWorkbenchComponent extends Component {
         // Fit the map to show all drawn routes.
         if (allLatLngs.length >= 2) {
             try {
-                map.fitBounds(allLatLngs, { padding: [40, 40], maxZoom: 14 });
+                this.mapManager.fitBounds(allLatLngs, { padding: [40, 40], maxZoom: 14 });
             } catch {
                 // ignore fitBounds errors
             }
@@ -614,14 +607,9 @@ export default class OrchestratorWorkbenchComponent extends Component {
      * Remove all route polylines that were added for the current plan.
      */
     _clearRoutingControls() {
-        const map = this.leafletMap;
-        for (const layer of this._routingControls) {
+        for (const routeHandle of this._routingControls) {
             try {
-                if (map) {
-                    map.removeLayer(layer);
-                } else {
-                    layer.remove?.();
-                }
+                this.mapManager.removeRoutingControl(routeHandle);
             } catch {
                 // ignore removal errors
             }
@@ -686,7 +674,7 @@ export default class OrchestratorWorkbenchComponent extends Component {
     }
 
     get hasProposedPlan() {
-        return Array.isArray(this.proposedPlan) && this.proposedPlan.length > 0;
+        return isArray(this.proposedPlan) && this.proposedPlan.length > 0;
     }
 
     get hasUnassigned() {
@@ -792,7 +780,7 @@ export default class OrchestratorWorkbenchComponent extends Component {
         if (loc) {
             // GeoJSON Point — with or without the type field.
             // LaravelMysqlSpatial SpatialExpression may serialize without type.
-            if (Array.isArray(loc.coordinates) && loc.coordinates.length >= 2) {
+            if (isArray(loc.coordinates) && loc.coordinates.length >= 2) {
                 const lng = parseFloat(loc.coordinates[0]);
                 const lat = parseFloat(loc.coordinates[1]);
                 // Use isFinite to accept 0 as a valid coordinate (not just truthy)
@@ -809,7 +797,7 @@ export default class OrchestratorWorkbenchComponent extends Component {
                 }
             }
             // Numeric array [lat, lng] (some internal formats)
-            if (Array.isArray(loc) && loc.length >= 2) {
+            if (isArray(loc) && loc.length >= 2) {
                 const lat = parseFloat(loc[0]);
                 const lng = parseFloat(loc[1]);
                 if (isFinite(lat) && isFinite(lng) && (lat !== 0 || lng !== 0)) {
@@ -848,7 +836,7 @@ export default class OrchestratorWorkbenchComponent extends Component {
         // NOTE: isMultiDrop is an Ember Data computed property and won't exist on
         // plain JSON objects returned by the orchestrator/orders endpoint.
         const waypoints = payload.waypoints;
-        const hasWaypoints = Array.isArray(waypoints) && waypoints.length > 0;
+        const hasWaypoints = isArray(waypoints) && waypoints.length > 0;
         const isMultiDrop = payload.isMultiDrop === true || (hasWaypoints && !payload.pickup && !payload.dropoff);
         if (isMultiDrop && hasWaypoints) {
             const sorted = [...waypoints].sort((a, b) => (a.order ?? 0) - (b.order ?? 0));

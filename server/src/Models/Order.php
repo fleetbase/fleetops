@@ -1746,12 +1746,53 @@ class Order extends Model
 
         if (Str::isUuid($this->order_config_uuid)) {
             $orderConfig = OrderConfig::where('uuid', $this->order_config_uuid)->withTrashed()->first();
+            if ($orderConfig instanceof OrderConfig) {
+                $orderConfig->setOrderContext($this);
+
+                return $orderConfig;
+            }
+        }
+
+        $company = $this->relationLoaded('company') ? $this->company : $this->company()->first();
+        $orderConfig = OrderConfig::defaultOrCreate($company);
+        if ($orderConfig instanceof OrderConfig) {
             $orderConfig->setOrderContext($this);
 
             return $orderConfig;
         }
 
         return null;
+    }
+
+    /**
+     * Ensure the order has a persisted order config and normalized type.
+     */
+    public function ensureOrderConfig(): ?OrderConfig
+    {
+        $orderConfig = $this->config();
+
+        if (!$orderConfig) {
+            return null;
+        }
+
+        $updates = [];
+
+        if ($this->order_config_uuid !== $orderConfig->uuid) {
+            $updates['order_config_uuid'] = $orderConfig->uuid;
+        }
+
+        if (empty($this->type) || $this->type === 'default' || $this->type !== $orderConfig->key) {
+            $updates['type'] = $orderConfig->key;
+        }
+
+        if (!empty($updates)) {
+            $this->fill($updates);
+            $this->save();
+        }
+
+        $this->setRelation('orderConfig', $orderConfig);
+
+        return $orderConfig;
     }
 
     /**
@@ -1767,7 +1808,7 @@ class Order extends Model
     public function getConfigFlow(): array
     {
         $orderConfig = $this->config();
-        if (is_array($orderConfig->flow)) {
+        if ($orderConfig && is_array($orderConfig->flow)) {
             return $orderConfig->flow;
         }
 

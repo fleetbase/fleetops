@@ -5,13 +5,13 @@ import { action } from '@ember/object';
 
 export default class MapDrawerDriverListingComponent extends Component {
     @service driverActions;
-    @service leafletMapManager;
+    @service mapManager;
     @service hostRouter;
     @service intl;
     @tracked query = '';
 
     get filteredDrivers() {
-        const drivers = this.leafletMapManager._livemap?.drivers ?? [];
+        const drivers = this.mapManager.livemap?.drivers ?? [];
         const query = this.query?.toLowerCase();
         if (!query) {
             return drivers;
@@ -119,7 +119,7 @@ export default class MapDrawerDriverListingComponent extends Component {
     }
 
     @action view(driver) {
-        this.leafletMapManager.flyToRecordLayer(driver, 16, {
+        this.mapManager.focusResource(driver, 16, {
             paddingBottomRight: [300, 200],
             moveend: () => {
                 this.driverActions.panel.view(driver);
@@ -128,7 +128,7 @@ export default class MapDrawerDriverListingComponent extends Component {
     }
 
     @action edit(driver) {
-        this.leafletMapManager.flyToRecordLayer(driver, 16, {
+        this.mapManager.focusResource(driver, 16, {
             paddingBottomRight: [300, 200],
             moveend: () => {
                 this.driverActions.panel.edit(driver);
@@ -137,7 +137,7 @@ export default class MapDrawerDriverListingComponent extends Component {
     }
 
     @action locate(driver) {
-        this.leafletMapManager.flyToRecordLayer(driver, 18, {
+        this.mapManager.focusResource(driver, 18, {
             paddingBottomRight: [300, 200],
         });
     }

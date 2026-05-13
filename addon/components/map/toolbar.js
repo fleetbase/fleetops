@@ -6,7 +6,7 @@ import { debug } from '@ember/debug';
 import { task } from 'ember-concurrency';
 
 export default class MapToolbarComponent extends Component {
-    @service leafletMapManager;
+    @service mapManager;
     @service orderListOverlay;
     @service mapDrawer;
     @service globalSearch;
@@ -28,6 +28,14 @@ export default class MapToolbarComponent extends Component {
         };
 
         return { style };
+    }
+
+    @action zoomIn() {
+        return this.mapManager.zoomIn?.();
+    }
+
+    @action zoomOut() {
+        return this.mapManager.zoomOut?.();
     }
 
     @task *getActiveOrderCount() {

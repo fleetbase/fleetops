@@ -74,6 +74,16 @@ export default {
             'Fleet-Ops Config',
             [
                 new MenuItem({
+                    title: 'Routing',
+                    icon: 'route',
+                    component: new ExtensionComponent('@fleetbase/fleetops-engine', 'admin/routing-settings'),
+                }),
+                new MenuItem({
+                    title: 'Map',
+                    icon: 'map',
+                    component: new ExtensionComponent('@fleetbase/fleetops-engine', 'admin/map-settings'),
+                }),
+                new MenuItem({
                     title: 'Navigator App',
                     icon: 'location-arrow',
                     component: new ExtensionComponent('@fleetbase/fleetops-engine', 'admin/navigator-app'),
@@ -179,6 +189,7 @@ export default {
             'fleet-ops:component:order:form:payload:entity:form',
             'fleet-ops:template:settings:routing',
             'fleet-ops:template:settings:orchestrator',
+            'fleet-ops:component:admin:routing-settings',
         ]);
     },
 };

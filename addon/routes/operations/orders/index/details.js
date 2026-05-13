@@ -7,36 +7,27 @@ export default class OperationsOrdersIndexDetailsRoute extends Route {
     @service store;
     @service hostRouter;
     @service orderSocketEvents;
-    @service leafletMapManager;
+    @service mapManager;
     @service abilities;
-    @service universe;
     @service intl;
+    @service sidebar;
 
     @action willTransition(transition) {
         const fromName = transition.from?.name;
         const toName = transition.to?.name;
         const orderDetailsRoute = 'console.fleet-ops.operations.orders.index.details';
+        const isRefreshWithinSameDetailsRoute = fromName?.startsWith(orderDetailsRoute) && toName?.startsWith(orderDetailsRoute) && fromName === toName;
+
+        if (isRefreshWithinSameDetailsRoute) {
+            return true;
+        }
 
         // only cleanup when leaving the order details route tree entirely
         const isLeavingOrderDetails = fromName?.startsWith(orderDetailsRoute) && !toName?.startsWith(orderDetailsRoute);
-
         if (isLeavingOrderDetails) {
             const controller = this.controllerFor('operations.orders.index.details');
-            const rc = controller.routingControl;
-
-            // Put back sidebar
-            if (this.universe.sidebarContext) {
-                this.universe.sidebarContext.show();
-            }
-
-            // stop listening for events
-            this.orderSocketEvents.stop(controller.model);
-
-            // cleanup guards
-            if (rc) {
-                this.leafletMapManager.removeRoutingControl(rc);
-                controller.routingControl = undefined;
-            }
+            controller.teardownRealtime();
+            controller.teardownRoutingControls();
         }
 
         return true;
@@ -45,6 +36,14 @@ export default class OperationsOrdersIndexDetailsRoute extends Route {
     @action error(error) {
         this.notifications.serverError(error);
         return this.hostRouter.transitionTo('console.fleet-ops.operations.orders.index');
+    }
+
+    activate() {
+        this.sidebar.hide();
+    }
+
+    deactivate() {
+        this.sidebar.show();
     }
 
     beforeModel() {
@@ -75,10 +74,18 @@ export default class OperationsOrdersIndexDetailsRoute extends Route {
         });
     }
 
-    async afterModel(order) {
-        await order.loadTrackingActivity();
-        if (order.meta?._index_resource) {
-            await order.reload();
+    async setupController(controller, model) {
+        super.setupController(...arguments);
+
+        // Change layout to map
+        controller.index?.changeLayout?.('map');
+
+        // load activity and reload order if lightweight payload
+        await model.loadTrackingActivity();
+        if (model.meta?._index_resource) {
+            await model.reload();
         }
+
+        await controller.setupDetailsSession();
     }
 }

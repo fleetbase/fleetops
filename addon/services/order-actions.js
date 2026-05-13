@@ -13,9 +13,14 @@ export default class OrderActionsService extends ResourceActionService {
         this.initialize('order', {
             defaultAttributes: {
                 meta: {},
-                payload: this.store.createRecord('payload'),
             },
         });
+    }
+
+    createNewInstance(attributes = {}) {
+        const payload = attributes.payload ?? this.store.createRecord('payload');
+
+        return super.createNewInstance({ ...attributes, payload });
     }
 
     transition = {
@@ -114,6 +119,10 @@ export default class OrderActionsService extends ResourceActionService {
 
             if (saveOptions?.closePanel === true) {
                 this.resourceContextPanel.close(saveOptions.overlay.id);
+            }
+
+            if (saveOptions?.refresh === true) {
+                yield this.hostRouter.refresh();
             }
 
             return updatedOrder;
@@ -287,6 +296,7 @@ export default class OrderActionsService extends ResourceActionService {
             saveDisabled: false,
             saveOptions: {
                 closePanel: true,
+                refresh: true,
             },
         });
     }
