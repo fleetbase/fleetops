@@ -9,4 +9,12 @@ module('Unit | Service | order-list-overlay', function (hooks) {
         let service = this.owner.lookup('service:order-list-overlay');
         assert.ok(service);
     });
+
+    test('activeOrdersCount reflects loaded active orders', function (assert) {
+        let service = this.owner.lookup('service:order-list-overlay');
+
+        service.activeOrders = [{ public_id: 'order_1' }, { public_id: 'order_2' }];
+
+        assert.strictEqual(service.activeOrdersCount, 2);
+    });
 });

@@ -215,6 +215,21 @@ class Metrics
         return $this->set('orders_in_progress', $data);
     }
 
+    public function activeLiveOrders(?callable $callback = null): Metrics
+    {
+        $query = LiveOrderQuery::make($this->company->uuid, [
+            'active' => true,
+        ]);
+
+        if (is_callable($callback)) {
+            $callback($query);
+        }
+
+        $data = $query->count();
+
+        return $this->set('active_live_orders', $data);
+    }
+
     public function ordersScheduled(?callable $callback = null): Metrics
     {
         $query = Order::where('company_uuid', $this->company->uuid)
