@@ -8,6 +8,7 @@ use Fleetbase\FleetOps\Imports\ContactImport;
 use Fleetbase\FleetOps\Models\Contact;
 use Fleetbase\Http\Requests\ExportRequest;
 use Fleetbase\Http\Requests\ImportRequest;
+use Fleetbase\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 use Maatwebsite\Excel\Facades\Excel;
@@ -22,10 +23,34 @@ class ContactController extends FleetOpsController
     public $resource = 'contact';
 
     /**
+     * Handle pre-create transactions.
+     */
+    public function onBeforeCreate(Request $request, array &$input)
+    {
+        $this->resolveUserInput($request, $input);
+    }
+
+    /**
+     * Handle pre-update transactions.
+     */
+    public function onBeforeUpdate(Request $request, Contact $contact, array &$input)
+    {
+        if ($contact->type === 'customer' && isset($input['type']) && $input['type'] !== 'customer') {
+            throw new \Exception('Customer contact type cannot be changed.');
+        }
+
+        $this->resolveUserInput($request, $input);
+    }
+
+    /**
      * Handle post save transactions.
      */
     public function afterSave(Request $request, Contact $contact)
     {
+        if ($contact->type === 'customer') {
+            $contact->normalizeCustomerUser();
+        }
+
         $customFieldValues = $request->array('contact.custom_field_values');
         if ($customFieldValues) {
             $contact->syncCustomFieldValues($customFieldValues);
@@ -104,5 +129,21 @@ class ContactController extends FleetOpsController
         }
 
         return response()->json(['status' => 'ok', 'message' => 'Import completed', 'imported' => $importedCount]);
+    }
+
+    private function resolveUserInput(Request $request, array &$input): void
+    {
+        $user = data_get($input, 'user_uuid') ?? data_get($input, 'user') ?? $request->input('contact.user_uuid') ?? $request->input('contact.user');
+
+        if (is_array($user)) {
+            $user = data_get($user, 'uuid') ?? data_get($user, 'id');
+        }
+
+        if (!$user) {
+            return;
+        }
+
+        $input['user_uuid'] = User::where('uuid', $user)->orWhere('public_id', $user)->value('uuid') ?? $user;
+        unset($input['user']);
     }
 }
