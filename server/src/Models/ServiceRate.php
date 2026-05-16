@@ -740,7 +740,7 @@ class ServiceRate extends Model
 
         if ($this->isAlgorithm()) {
             $resolvedEndpointCount = $endpointCount ?? $this->inferEndpointCountFromStops($waypoints);
-            $rateFee = $this->normalizeCalculatedMoney(Algo::exec(
+            $rateFee               = $this->normalizeCalculatedMoney(Algo::exec(
                 $this->algorithm,
                 $this->buildAlgorithmVariables(
                     $entities,

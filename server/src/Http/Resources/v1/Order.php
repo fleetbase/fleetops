@@ -30,26 +30,29 @@ class Order extends FleetbaseResource
         $tracker         = ($withTrackerData || $withEta) ? $this->resource->tracker() : null;
 
         return $this->withCustomFields([
-            'id'                   => $this->when($isInternal, $this->id, $this->public_id),
-            'uuid'                 => $this->when($isInternal, $this->uuid),
-            'public_id'            => $this->when($isInternal, $this->public_id),
-            'internal_id'          => $this->internal_id,
-            'company_uuid'         => $this->when($isInternal, $this->company_uuid),
-            'transaction_uuid'     => $this->when($isInternal, $this->transaction_uuid),
-            'customer_uuid'        => $this->when($isInternal, $this->customer_uuid),
-            'customer_type'        => $this->when($isInternal, $this->customer_type ? Utils::toEmberResourceType($this->customer_type) : null),
-            'facilitator_uuid'     => $this->when($isInternal, $this->facilitator_uuid),
-            'facilitator_type'     => $this->when($isInternal, $this->facilitator_type ? Utils::toEmberResourceType($this->facilitator_type) : null),
-            'payload_uuid'         => $this->when($isInternal, $this->payload_uuid),
-            'route_uuid'           => $this->when($isInternal, $this->route_uuid),
-            'purchase_rate_uuid'   => $this->when($isInternal, $this->purchase_rate_uuid),
-            'tracking_number_uuid' => $this->when($isInternal, $this->tracking_number_uuid),
-            'driver_assigned_uuid' => $this->when($isInternal, $this->driver_assigned_uuid),
-            'vehicle_assigned_uuid'=> $this->when($isInternal, $this->vehicle_assigned_uuid),
-            'has_driver_assigned'  => $this->when($isInternal, $this->has_driver_assigned),
-            'is_scheduled'         => $this->when($isInternal, $this->is_scheduled),
-            'order_config_uuid'    => $this->when($isInternal, $this->order_config_uuid),
-            'order_config'         => $this->when(
+            'id'                            => $this->when($isInternal, $this->id, $this->public_id),
+            'uuid'                          => $this->when($isInternal, $this->uuid),
+            'public_id'                     => $this->when($isInternal, $this->public_id),
+            'internal_id'                   => $this->internal_id,
+            'company_uuid'                  => $this->when($isInternal, $this->company_uuid),
+            'transaction_uuid'              => $this->when($isInternal, $this->transaction_uuid),
+            'customer_uuid'                 => $this->when($isInternal, $this->customer_uuid),
+            'customer_type'                 => $this->when($isInternal, $this->customer_type ? Utils::toEmberResourceType($this->customer_type) : null),
+            'facilitator_uuid'              => $this->when($isInternal, $this->facilitator_uuid),
+            'facilitator_type'              => $this->when($isInternal, $this->facilitator_type ? Utils::toEmberResourceType($this->facilitator_type) : null),
+            'payload_uuid'                  => $this->when($isInternal, $this->payload_uuid),
+            'route_uuid'                    => $this->when($isInternal, $this->route_uuid),
+            'purchase_rate_uuid'            => $this->when($isInternal, $this->purchase_rate_uuid),
+            'tracking_number_uuid'          => $this->when($isInternal, $this->tracking_number_uuid),
+            'driver_assigned_uuid'          => $this->when($isInternal, $this->driver_assigned_uuid),
+            'vehicle_assigned_uuid'         => $this->when($isInternal, $this->vehicle_assigned_uuid),
+            'recurring_order_schedule_uuid' => $this->when($isInternal, $this->recurring_order_schedule_uuid),
+            'recurring_occurrence_at'       => $this->when($isInternal, $this->recurring_occurrence_at),
+            'is_recurring_generated'        => $this->when($isInternal, $this->is_recurring_generated),
+            'has_driver_assigned'           => $this->when($isInternal, $this->has_driver_assigned),
+            'is_scheduled'                  => $this->when($isInternal, $this->is_scheduled),
+            'order_config_uuid'             => $this->when($isInternal, $this->order_config_uuid),
+            'order_config'                  => $this->when(
                 $isInternal,
                 $this->whenLoaded('orderConfig', function () {
                     return $this->orderConfig;
@@ -68,6 +71,9 @@ class Order extends FleetbaseResource
             }),
             'vehicle_assigned'     => $this->whenLoaded('vehicleAssigned', function () {
                 return new Vehicle($this->vehicleAssigned);
+            }),
+            'recurring_order_schedule' => $this->whenLoaded('recurringOrderSchedule', function () {
+                return new RecurringOrderSchedule($this->recurringOrderSchedule);
             }),
             'tracking_number'      => new TrackingNumber($this->trackingNumber),
             'tracking_statuses'    => $this->whenLoaded('trackingStatuses', function () {

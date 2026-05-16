@@ -10,6 +10,7 @@ export default class OperationsOrdersIndexDetailsController extends Controller {
     @controller('operations.orders.index') index;
     @service('universe/menu-service') menuService;
     @service orderActions;
+    @service recurringOrderScheduleActions;
     @service orderSocketEvents;
     @service mapManager;
     @service leafletLayerVisibilityManager;
@@ -125,6 +126,11 @@ export default class OperationsOrdersIndexDetailsController extends Controller {
                         text: 'View metadata',
                         icon: 'table',
                         fn: () => this.orderActions.viewMetadata(this.model),
+                    },
+                    {
+                        text: 'Make this recurring...',
+                        icon: 'arrows-rotate',
+                        fn: () => this.recurringOrderScheduleActions.transition.createFromOrder(this.model),
                     },
                     {
                         separator: true,

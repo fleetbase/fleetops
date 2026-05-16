@@ -1,0 +1,19 @@
+{{#if (eq this.layout "series")}}
+    <Layout::Resource::Tabular
+        @resource="recurring-order-schedule"
+        @title="Recurring series"
+        @searchQuery={{this.query}}
+        @onSearch={{perform this.search}}
+        @searchPlaceholder="Search series, customer, driver..."
+        @data={{@model}}
+        @columns={{this.columns}}
+        @page={{this.page}}
+        @onPageChange={{fn (mut this.page)}}
+        @actionButtons={{this.actionButtons}}
+        @controller={{this}}
+        @tfootVerticalOffset="7"
+        @tfootVerticalOffsetElements="#next-view-section-subheader,.next-table-wrapper > table > thead,.next-map-container-topbar"
+    />
+{{/if}}
+
+{{outlet}}

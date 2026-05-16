@@ -3,6 +3,8 @@
         {{yield
             (hash
                 Details=(component "order/form/details" resource=@resource)
+                Schedule=(component "order/form/schedule" resource=@resource repeatEnabled=@repeatEnabled seriesDraft=@seriesDraft onRepeatChange=@onRepeatChange)
+                OrchestratorConstraints=(component "order/form/orchestrator-constraints" resource=@resource)
                 CustomFields=(component "order/form/custom-fields" resource=@resource customFields=@customFields)
                 Route=(component "order/form/route" resource=@resource)
                 RegistryYield=(component "registry-yield" registry="fleet-ops:component:order:form" order=@resource)
@@ -14,7 +16,14 @@
             )
         }}
     {{else}}
+        {{#if @scheduleFirst}}
+            <Order::Form::Schedule @resource={{@resource}} @repeatEnabled={{@repeatEnabled}} @seriesDraft={{@seriesDraft}} @onRepeatChange={{@onRepeatChange}} />
+        {{/if}}
         <Order::Form::Details @resource={{@resource}} />
+        {{#unless @scheduleFirst}}
+            <Order::Form::Schedule @resource={{@resource}} @repeatEnabled={{@repeatEnabled}} @seriesDraft={{@seriesDraft}} @onRepeatChange={{@onRepeatChange}} />
+        {{/unless}}
+        <Order::Form::OrchestratorConstraints @resource={{@resource}} />
         <Order::Form::Route @resource={{@resource}} />
         <RegistryYield @registry="fleet-ops:component:order:form" as |RegistryComponent|>
             <RegistryComponent @order={{@order}} />

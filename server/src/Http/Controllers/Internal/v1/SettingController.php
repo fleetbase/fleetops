@@ -211,12 +211,12 @@ class SettingController extends Controller
     {
         $routingSettings = Setting::lookupCompany('routing', ['router' => 'osrm', 'unit' => 'km']);
 
-        $displayEngine = data_get($routingSettings, 'display_engine', data_get($routingSettings, 'routing_display_engine', data_get($routingSettings, 'router', 'osrm')));
-        $optimizationEngine = data_get($routingSettings, 'optimization_engine', data_get($routingSettings, 'routing_optimization_engine', $displayEngine));
-        $routingSettings['router'] = $displayEngine;
-        $routingSettings['display_engine'] = $displayEngine;
-        $routingSettings['optimization_engine'] = $optimizationEngine;
-        $routingSettings['routing_display_engine'] = $displayEngine;
+        $displayEngine                                  = data_get($routingSettings, 'display_engine', data_get($routingSettings, 'routing_display_engine', data_get($routingSettings, 'router', 'osrm')));
+        $optimizationEngine                             = data_get($routingSettings, 'optimization_engine', data_get($routingSettings, 'routing_optimization_engine', $displayEngine));
+        $routingSettings['router']                      = $displayEngine;
+        $routingSettings['display_engine']              = $displayEngine;
+        $routingSettings['optimization_engine']         = $optimizationEngine;
+        $routingSettings['routing_display_engine']      = $displayEngine;
         $routingSettings['routing_optimization_engine'] = $optimizationEngine;
 
         // always default to km if no unit is set
@@ -244,15 +244,15 @@ class SettingController extends Controller
             'mapProvider' => 'leaflet',
         ];
 
-        $systemMapSettings = Setting::lookup('fleet-ops.map-settings', []);
-        $mapSettings = Setting::lookupFromCompany('fleet-ops.map-settings', $defaults);
+        $systemMapSettings          = Setting::lookup('fleet-ops.map-settings', []);
+        $mapSettings                = Setting::lookupFromCompany('fleet-ops.map-settings', $defaults);
         $mapSettings['mapProvider'] = data_get($mapSettings, 'mapProvider') ?: data_get($systemMapSettings, 'mapProvider', 'leaflet');
 
         // Source the Google Maps API key from the system-level services config
         // that is managed by the core-api admin settings panel. This ensures a
         // single source of truth and avoids duplicating key management.
         $mapSettings['googleMapsApiKey'] = config('services.google_maps.api_key', env('GOOGLE_MAPS_API_KEY', ''));
-        $mapSettings['googleMapsMapId'] = data_get($systemMapSettings, 'googleMapsMapId', '');
+        $mapSettings['googleMapsMapId']  = data_get($systemMapSettings, 'googleMapsMapId', '');
 
         return response()->json($mapSettings);
     }
@@ -289,7 +289,7 @@ class SettingController extends Controller
     public function getAdminMapSettings()
     {
         $defaults = [
-            'mapProvider' => 'leaflet',
+            'mapProvider'     => 'leaflet',
             'googleMapsMapId' => '',
         ];
 
@@ -299,13 +299,13 @@ class SettingController extends Controller
     public function saveAdminMapSettings(Request $request)
     {
         $allowedProviders = ['leaflet', 'google'];
-        $mapProvider = $request->input('mapProvider', 'leaflet');
+        $mapProvider      = $request->input('mapProvider', 'leaflet');
         if (!in_array($mapProvider, $allowedProviders)) {
             $mapProvider = 'leaflet';
         }
 
         $settings = [
-            'mapProvider' => $mapProvider,
+            'mapProvider'     => $mapProvider,
             'googleMapsMapId' => (string) $request->input('googleMapsMapId', ''),
         ];
 

@@ -127,6 +127,8 @@ class Order extends Model
         'time_window_end',
         // Manifest (set by orchestrator commit)
         'manifest_uuid',
+        'recurring_order_schedule_uuid',
+        'recurring_occurrence_at',
     ];
 
     /**
@@ -183,6 +185,7 @@ class Order extends Model
         'payload_id',
         'purchase_rate_id',
         'is_scheduled',
+        'is_recurring_generated',
         'qr_code',
         'created_by_name',
         'updated_by_name',
@@ -213,10 +216,11 @@ class Order extends Model
         'dispatched_at'    => 'datetime',
         'started_at'       => 'datetime',
         // Orchestrator
-        'required_skills'       => Json::class,
-        'time_window_start'     => 'datetime',
-        'time_window_end'       => 'datetime',
-        'orchestrator_priority' => 'integer',
+        'required_skills'         => Json::class,
+        'time_window_start'       => 'datetime',
+        'time_window_end'         => 'datetime',
+        'orchestrator_priority'   => 'integer',
+        'recurring_occurrence_at' => 'datetime',
     ];
 
     /**
@@ -385,6 +389,11 @@ class Order extends Model
     public function trackingNumber(): BelongsTo
     {
         return $this->belongsTo(TrackingNumber::class)->without(['owner']);
+    }
+
+    public function recurringOrderSchedule(): BelongsTo
+    {
+        return $this->belongsTo(RecurringOrderSchedule::class, 'recurring_order_schedule_uuid', 'uuid')->withoutGlobalScopes();
     }
 
     public function trackingStatuses(): HasMany
@@ -749,6 +758,11 @@ class Order extends Model
     public function getIsScheduledAttribute(): bool
     {
         return !empty($this->scheduled_at) && Carbon::parse($this->scheduled_at)->isValid();
+    }
+
+    public function getIsRecurringGeneratedAttribute(): bool
+    {
+        return !empty($this->recurring_order_schedule_uuid) || (bool) data_get($this->meta, 'is_recurring_generated', false);
     }
 
     /**
@@ -1739,7 +1753,7 @@ class Order extends Model
             }
         }
 
-        $company = $this->relationLoaded('company') ? $this->company : $this->company()->first();
+        $company     = $this->relationLoaded('company') ? $this->company : $this->company()->first();
         $orderConfig = OrderConfig::defaultOrCreate($company);
         if ($orderConfig instanceof OrderConfig) {
             $orderConfig->setOrderContext($this);

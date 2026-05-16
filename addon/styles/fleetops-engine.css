@@ -160,6 +160,444 @@ body.fleetbase-console .next-content-overlay > .next-content-overlay-panel-conta
     flex-shrink: 0;
 }
 
+.next-map-container-topbar.next-topbar-series {
+    position: relative;
+    box-shadow: none;
+}
+
+/** orders new split button */
+.fleetops-new-order-split-button {
+    display: inline-flex;
+    align-items: stretch;
+    height: 1.75rem;
+    border-radius: 0.375rem;
+    box-shadow: 0 1px 2px 0 rgb(0 0 0 / 5%);
+    overflow: visible;
+}
+
+.fleetops-new-order-split-button .btn-wrapper {
+    height: 1.75rem;
+    box-shadow: none !important;
+}
+
+.fleetops-new-order-split-button__primary-wrapper {
+    display: inline-flex;
+    height: 1.75rem;
+    border-top-right-radius: 0 !important;
+    border-bottom-right-radius: 0 !important;
+}
+
+.fleetops-new-order-split-button__menu-wrapper {
+    display: inline-flex;
+    align-items: stretch;
+    height: 1.75rem;
+    margin-left: 0;
+}
+
+.fleetops-new-order-split-button__menu-trigger {
+    display: inline-flex;
+    align-items: stretch;
+    height: 1.75rem;
+}
+
+.fleetops-new-order-split-button__primary,
+.fleetops-new-order-split-button__menu {
+    height: 1.75rem;
+    min-height: 1.75rem;
+    line-height: 1;
+}
+
+.fleetops-new-order-split-button__primary {
+    border-top-right-radius: 0 !important;
+    border-bottom-right-radius: 0 !important;
+    padding-top: 0;
+    padding-bottom: 0;
+    padding-right: 0.875rem;
+}
+
+.fleetops-new-order-split-button__menu {
+    width: 2rem;
+    justify-content: center;
+    border-top-left-radius: 0 !important;
+    border-bottom-left-radius: 0 !important;
+    border-left: 0 !important;
+    box-shadow: inset 1px 0 0 rgb(255 255 255 / 30%);
+    padding: 0 0.625rem;
+}
+
+.fleetops-new-order-split-button__menu .btn-icon-wrapper svg {
+    margin-right: 0 !important;
+}
+
+/** order schedule and recurring series composer */
+.fleetops-order-schedule-form {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.fleetops-repeat-toggle-row {
+    display: flex;
+    min-height: 3.25rem;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    border-radius: 0.375rem;
+    border: 1px solid rgb(229 231 235);
+    background-color: rgb(249 250 251);
+    padding: 0.625rem 0.75rem;
+}
+
+body[data-theme='dark'] .fleetops-repeat-toggle-row {
+    border-color: rgb(55 65 81);
+    background-color: rgb(31 41 55);
+}
+
+.fleetops-recurring-series-editor {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    border-radius: 0.375rem;
+    border: 1px solid rgb(229 231 235);
+    background-color: rgb(255 255 255);
+    box-shadow: 0 4px 10px rgb(0 0 0 / 8%);
+    padding: 0.75rem;
+}
+
+body[data-theme='dark'] .fleetops-recurring-series-editor {
+    border-color: rgb(55 65 81);
+    background-color: rgb(31 41 55);
+    box-shadow: 0 8px 20px rgb(0 0 0 / 24%);
+}
+
+.fleetops-recurring-series-field,
+.fleetops-recurring-series-preview {
+    display: flex;
+    min-width: 0;
+    flex-direction: column;
+    gap: 0.375rem;
+}
+
+.fleetops-recurring-series-field label,
+.fleetops-recurring-series-preview-header label {
+    display: block;
+    font-size: 0.6875rem;
+    font-weight: 600;
+    line-height: 1rem;
+    color: rgb(107 114 128);
+    text-transform: uppercase;
+}
+
+.fleetops-recurring-series-field-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0.75rem;
+}
+
+@media (width >= 640px) {
+    .fleetops-recurring-series-field-grid {
+        grid-template-columns: minmax(0, 1fr) minmax(7rem, 0.45fr);
+    }
+}
+
+.fleetops-recurring-series-days {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+.fleetops-recurring-series-day-button {
+    border-radius: 0.375rem;
+    border: 1px solid rgb(209 213 219);
+    background-color: rgb(255 255 255);
+    padding: 0.375rem 0.75rem;
+    font-size: 0.75rem;
+    line-height: 1rem;
+    color: rgb(75 85 99);
+    transition:
+        background-color 0.15s ease,
+        border-color 0.15s ease,
+        color 0.15s ease;
+}
+
+.fleetops-recurring-series-day-button.is-selected {
+    border-color: rgb(37 99 235);
+    background-color: rgb(37 99 235);
+    color: rgb(255 255 255);
+}
+
+body[data-theme='dark'] .fleetops-recurring-series-day-button {
+    border-color: rgb(75 85 99);
+    background-color: rgb(17 24 39);
+    color: rgb(209 213 219);
+}
+
+body[data-theme='dark'] .fleetops-recurring-series-day-button.is-selected {
+    border-color: rgb(59 130 246);
+    background-color: rgb(37 99 235);
+    color: rgb(255 255 255);
+}
+
+.fleetops-recurring-series-preview {
+    width: 100%;
+}
+
+.fleetops-recurring-series-preview-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+}
+
+.fleetops-recurring-series-preview-box {
+    min-height: 3.5rem;
+    border-radius: 0.375rem;
+    border: 1px solid rgb(229 231 235);
+    background-color: rgb(249 250 251);
+    padding: 0.625rem 0.75rem;
+}
+
+body[data-theme='dark'] .fleetops-recurring-series-preview-box {
+    border-color: rgb(55 65 81);
+    background-color: rgb(17 24 39);
+}
+
+.fleetops-recurring-series-preview-item {
+    font-size: 0.8125rem;
+    line-height: 1.25rem;
+    color: rgb(55 65 81);
+}
+
+body[data-theme='dark'] .fleetops-recurring-series-preview-item {
+    color: rgb(229 231 235);
+}
+
+.fleetops-recurring-order-indicator {
+    display: inline-flex;
+    position: relative;
+    width: 1rem;
+    height: 1rem;
+    flex-shrink: 0;
+    align-items: center;
+    justify-content: center;
+    border-radius: 9999px;
+    background-color: rgb(224 231 255);
+    color: rgb(79 70 229);
+    cursor: default;
+}
+
+body[data-theme='dark'] .fleetops-recurring-order-indicator {
+    background-color: rgb(49 46 129);
+    color: rgb(199 210 254);
+}
+
+.fleetops-recurring-order-indicator svg {
+    width: 0.625rem;
+    height: 0.625rem;
+}
+
+.fleetops-recurring-order-popover {
+    box-sizing: border-box;
+    width: 19rem;
+    max-width: calc(100vw - 2rem);
+    overflow: hidden;
+    border-radius: 0.5rem;
+    border: 1px solid rgb(55 65 81);
+    background-color: rgb(17 24 39);
+    box-shadow: 0 16px 40px rgba(0, 0, 0, 35%);
+    padding: 0.625rem;
+    font-size: 0.75rem;
+    line-height: 1.15rem;
+    color: rgb(243 244 246);
+}
+
+.fleetops-recurring-order-popover * {
+    box-sizing: border-box;
+}
+
+.fleetops-recurring-order-eyebrow {
+    font-size: 0.625rem;
+    line-height: 0.875rem;
+    text-transform: uppercase;
+    color: rgb(156 163 175);
+}
+
+body[data-theme='dark'] .fleetops-recurring-order-eyebrow {
+    color: rgb(107 114 128);
+}
+
+.fleetops-recurring-order-title {
+    overflow: hidden;
+    font-size: 0.8125rem;
+    line-height: 1rem;
+    font-weight: 600;
+    color: rgb(31 41 55);
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+body[data-theme='dark'] .fleetops-recurring-order-title {
+    color: rgb(243 244 246);
+}
+
+.fleetops-recurring-order-schedule-card {
+    border-radius: 0.375rem;
+    border: 1px solid rgb(229 231 235);
+    background-color: rgb(249 250 251);
+    padding: 0.5rem;
+}
+
+body[data-theme='dark'] .fleetops-recurring-order-schedule-card {
+    border-color: rgb(55 65 81);
+    background-color: rgb(31 41 55);
+}
+
+.fleetops-recurring-order-summary {
+    overflow: hidden;
+    font-size: 0.8125rem;
+    line-height: 1rem;
+    font-weight: 500;
+    color: rgb(31 41 55);
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+body[data-theme='dark'] .fleetops-recurring-order-summary {
+    color: rgb(243 244 246);
+}
+
+.fleetops-recurring-order-days {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.25rem;
+    margin-top: 0.375rem;
+}
+
+.fleetops-recurring-order-day {
+    display: inline-flex;
+    min-width: 1.625rem;
+    height: 1.25rem;
+    align-items: center;
+    justify-content: center;
+    border-radius: 9999px;
+    border: 1px solid rgb(229 231 235);
+    background-color: rgb(255 255 255);
+    padding: 0 0.375rem;
+    font-size: 0.625rem;
+    font-weight: 500;
+    color: rgb(156 163 175);
+}
+
+body[data-theme='dark'] .fleetops-recurring-order-day {
+    border-color: rgb(55 65 81);
+    background-color: rgb(17 24 39);
+    color: rgb(107 114 128);
+}
+
+.fleetops-recurring-order-day.is-scheduled {
+    border-color: rgb(191 219 254);
+    background-color: rgb(239 246 255);
+    color: rgb(29 78 216);
+}
+
+body[data-theme='dark'] .fleetops-recurring-order-day.is-scheduled {
+    border-color: rgb(30 64 175);
+    background-color: rgb(23 37 84);
+    color: rgb(191 219 254);
+}
+
+.fleetops-recurring-order-day.is-highlighted {
+    border-color: rgb(99 102 241);
+    background-color: rgb(79 70 229);
+    color: rgb(255 255 255);
+    box-shadow: 0 1px 2px rgba(15, 23, 42, 15%);
+}
+
+body[data-theme='dark'] .fleetops-recurring-order-day.is-highlighted {
+    border-color: rgb(129 140 248);
+    background-color: rgb(99 102 241);
+}
+
+.fleetops-recurring-order-stat {
+    border-radius: 0.375rem;
+    border: 1px solid rgb(229 231 235);
+    background-color: rgb(255 255 255);
+    padding: 0.375rem 0.5rem;
+}
+
+body[data-theme='dark'] .fleetops-recurring-order-stat {
+    border-color: rgb(55 65 81);
+    background-color: rgb(17 24 39);
+}
+
+.fleetops-recurring-order-stat span {
+    display: block;
+    font-size: 0.5625rem;
+    line-height: 0.75rem;
+    letter-spacing: 0;
+    text-transform: uppercase;
+    color: rgb(156 163 175);
+}
+
+body[data-theme='dark'] .fleetops-recurring-order-stat span {
+    color: rgb(107 114 128);
+}
+
+.fleetops-recurring-order-stat strong {
+    display: block;
+    margin-top: 0.125rem;
+    overflow: hidden;
+    font-size: 0.75rem;
+    font-weight: 600;
+    line-height: 1rem;
+    color: rgb(31 41 55);
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+body[data-theme='dark'] .fleetops-recurring-order-stat strong {
+    color: rgb(243 244 246);
+}
+
+.fleetops-recurring-order-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.375rem;
+    margin-top: 0.5rem;
+}
+
+.fleetops-recurring-order-action {
+    display: inline-flex;
+    height: 1.5rem;
+    min-width: 0;
+    flex: 1 1 0;
+    align-items: center;
+    justify-content: center;
+    gap: 0.25rem;
+    border-radius: 0.3125rem;
+    background-color: rgb(75 85 99);
+    padding: 0 0.375rem;
+    font-size: 0.6875rem;
+    line-height: 1;
+    color: rgb(243 244 246);
+}
+
+.fleetops-recurring-order-action:hover {
+    background-color: rgb(55 65 81);
+}
+
+.fleetops-recurring-order-action svg {
+    width: 0.6875rem;
+    height: 0.6875rem;
+    flex-shrink: 0;
+}
+
+.fleetops-recurring-order-action span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
 /** calendar event css mods */
 
 #fleet-ops-scheduler-calendar .fc-h-event .fc-event-main .fc-event-title {

@@ -64,6 +64,7 @@ menu:
     orders: Orders
     service-rates: Service Rates
     scheduler: Scheduler
+    recurring-orders: Recurring Orders
     order-config: Order Config
     resources: Resources
     drivers: Drivers
@@ -151,6 +152,8 @@ resource:
     maintenances: Maintenances
     maintenance-schedule: Maintenance Schedule
     maintenance-schedules: Maintenance Schedules
+    recurring-order-schedule: Recurring Order Schedule
+    recurring-order-schedules: Recurring Order Schedules
     order-config: Order Config
     order-configs: Order Configs
     order: Order

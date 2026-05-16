@@ -1,0 +1,136 @@
+<div class="recurring-order-schedule-form" ...attributes>
+    <ContentPanel @title="Schedule Details" @open={{true}} @wrapperClass="bordered-top">
+        <div class="grid grid-cols-1 gap-2 lg:grid-cols-2 lg:gap-2 no-input-group-padding text-xs">
+            <InputGroup @name="Schedule Name" @wrapperClass="col-span-2">
+                <Input @value={{@resource.name}} @type="text" class="w-full form-input" placeholder="e.g. ACME Tue/Thu Delivery" />
+            </InputGroup>
+
+            <InputGroup @name="Description" @wrapperClass="col-span-2">
+                <Textarea @value={{@resource.description}} class="w-full form-input" rows="2" placeholder="Optional internal notes for this recurring schedule..." />
+            </InputGroup>
+
+            <InputGroup @name="Status">
+                <div class="fleetbase-model-select fleetbase-power-select ember-model-select">
+                    <PowerSelect @options={{this.statusOptions}} @selected={{@resource.status}} @onChange={{fn (mut @resource.status)}} @triggerClass="form-select form-input" as |status|>
+                        {{smart-humanize status}}
+                    </PowerSelect>
+                </div>
+            </InputGroup>
+
+            <InputGroup @name="Timezone">
+                <Input @value={{@resource.timezone}} @type="text" class="w-full form-input" placeholder="Asia/Singapore" />
+            </InputGroup>
+
+            <InputGroup @name="Starts At">
+                <DateTimeInput class="form-input" @value={{@resource.starts_at}} @onUpdate={{this.updateStartsAt}} />
+            </InputGroup>
+
+            <InputGroup @name="Ends At">
+                <DateTimeInput class="form-input" @value={{@resource.ends_at}} @onUpdate={{this.updateEndsAt}} />
+            </InputGroup>
+
+            <InputGroup @name="Frequency">
+                <div class="fleetbase-model-select fleetbase-power-select ember-model-select">
+                    <PowerSelect
+                        @options={{this.frequencyOptions}}
+                        @selected={{find-by "value" this.frequency this.frequencyOptions}}
+                        @onChange={{this.updateFrequency}}
+                        @triggerClass="form-select form-input"
+                        as |option|
+                    >
+                        {{option.label}}
+                    </PowerSelect>
+                </div>
+            </InputGroup>
+
+            <InputGroup @name="Repeat Every">
+                <Input @value={{this.interval}} @type="number" class="w-full form-input" min="1" {{on "input" this.updateInterval}} />
+            </InputGroup>
+
+            {{#if this.isWeekly}}
+                <div class="col-span-2">
+                    <div class="text-[11px] uppercase tracking-wide text-gray-500 font-semibold mb-2">Days of Week</div>
+                    <div class="flex flex-wrap gap-2">
+                        {{#each this.weekdayOptions as |day|}}
+                            <button
+                                type="button"
+                                class="px-3 py-1.5 rounded-md border text-xs transition-colors
+                                    {{if (this.isWeekdaySelected day.code) 'bg-blue-600 border-blue-600 text-white' 'border-gray-300 dark:border-gray-700 text-gray-600 dark:text-gray-300'}}"
+                                {{on "click" (fn this.toggleWeekday day.code)}}
+                            >
+                                {{day.label}}
+                            </button>
+                        {{/each}}
+                    </div>
+                </div>
+            {{/if}}
+
+            {{#if this.isMonthly}}
+                <InputGroup @name="Day of Month" @wrapperClass="col-span-2">
+                    <Input @value={{this.monthday}} @type="number" class="w-full form-input" min="1" max="31" {{on "input" this.updateMonthday}} />
+                </InputGroup>
+            {{/if}}
+
+            <div class="col-span-2">
+                <div class="flex items-center justify-between mb-2">
+                    <div class="text-[11px] uppercase tracking-wide text-gray-500 font-semibold">Upcoming Occurrences</div>
+                    <Button @icon="refresh" @size="xs" @text="Refresh Preview" @onClick={{perform this.updatePreview}} @isLoading={{this.updatePreview.isRunning}} />
+                </div>
+                <div class="rounded-md border border-gray-200 dark:border-gray-800 px-3 py-2">
+                    {{#if this.previewOccurrences.length}}
+                        <div class="space-y-1">
+                            {{#each this.previewOccurrences as |occurrence|}}
+                                <div class="text-sm text-gray-700 dark:text-gray-200">
+                                    {{n-a occurrence.occurrence_at_local occurrence.occurrence_at}}
+                                </div>
+                            {{/each}}
+                        </div>
+                    {{else}}
+                        <div class="text-sm text-gray-400">Set a start date and recurrence to preview upcoming orders.</div>
+                    {{/if}}
+                </div>
+            </div>
+        </div>
+    </ContentPanel>
+
+    <Order::Form::Details @resource={{this.draftOrder}} />
+    <Order::Form::Route @resource={{this.draftOrder}} />
+    <Order::Form::Payload @resource={{this.draftOrder}} />
+
+    <ContentPanel @title="Service Rate" @open={{true}} @wrapperClass="bordered-top">
+        <div class="space-y-2">
+            <div class="flex items-center justify-between">
+                <div class="text-sm text-gray-500 dark:text-gray-400">
+                    Select a default service rate to price each generated order at materialization time.
+                </div>
+                <Button
+                    @icon="refresh"
+                    @size="xs"
+                    @text="Load Service Rates"
+                    @onClick={{perform this.loadServiceRates}}
+                    @disabled={{not this.canQueryServiceRates}}
+                    @isLoading={{this.loadServiceRates.isRunning}}
+                />
+            </div>
+            <div class="fleetbase-model-select fleetbase-power-select ember-model-select">
+                <PowerSelect
+                    @options={{this.serviceRates}}
+                    @selected={{this.selectedServiceRate}}
+                    @onChange={{this.selectServiceRate}}
+                    @placeholder="Select Service Rate"
+                    @triggerClass="form-select form-input"
+                    @disabled={{or (not this.canQueryServiceRates) this.loadServiceRates.isRunning}}
+                    as |serviceRate|
+                >
+                    <div class="text-sm">
+                        <div class="font-semibold normalize-in-trigger">{{serviceRate.service_name}}</div>
+                        <div class="hide-from-trigger">{{serviceRate.currency}}</div>
+                    </div>
+                </PowerSelect>
+            </div>
+        </div>
+    </ContentPanel>
+
+    <Order::Form::Notes @resource={{this.draftOrder}} />
+    <Spacer @height="200px" />
+</div>

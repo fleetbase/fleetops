@@ -1,0 +1,30 @@
+<div class="fleetops-new-order-split-button" ...attributes>
+    <Button @type="primary" @icon="plus" @text="New" @onClick={{this.onNewOrder}} @wrapperClass="fleetops-new-order-split-button__primary-wrapper" class="fleetops-new-order-split-button__primary" />
+    <DropdownButton
+        @type="primary"
+        @icon="chevron-down"
+        @text=""
+        @wrapperClass="fleetops-new-order-split-button__menu-wrapper"
+        @triggerClass="fleetops-new-order-split-button__menu-trigger"
+        @buttonClass="fleetops-new-order-split-button__menu"
+        @renderInPlace={{false}}
+        @verticalPosition="below"
+        @horizontalPosition="right"
+        as |dd|
+    >
+        <div class="next-dd-menu mt-1 mx-0" aria-labelledby="new-order-menu">
+            <div class="px-1">
+                <a href="javascript:;" class="next-dd-item" {{on "click" (dropdown-fn dd this.onNewOrder)}}>
+                    <div class="w-7 flex-grow-0 flex-shrink-0"><FaIcon @icon="plus" /></div>
+                    <span>New order</span>
+                </a>
+            </div>
+            <div class="px-1">
+                <a href="javascript:;" class="next-dd-item" {{on "click" (dropdown-fn dd this.onNewSeries)}}>
+                    <div class="w-7 flex-grow-0 flex-shrink-0"><FaIcon @icon="arrows-rotate" /></div>
+                    <span>New recurring series</span>
+                </a>
+            </div>
+        </div>
+    </DropdownButton>
+</div>

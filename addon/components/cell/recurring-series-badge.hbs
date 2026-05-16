@@ -1,0 +1,13 @@
+{{#if this.label}}
+    <button
+        type="button"
+        class="inline-flex items-center gap-1 rounded-md border border-indigo-200 bg-indigo-50 px-2 py-1 text-xs font-medium text-indigo-700 hover:bg-indigo-100 dark:border-indigo-800 dark:bg-indigo-950 dark:text-indigo-200"
+        {{on "click" this.openSeries}}
+        ...attributes
+    >
+        <FaIcon @icon="arrows-rotate" />
+        <span class="truncate max-w-40">{{this.label}}</span>
+    </button>
+{{else}}
+    <span class="text-gray-400 dark:text-gray-600">--</span>
+{{/if}}

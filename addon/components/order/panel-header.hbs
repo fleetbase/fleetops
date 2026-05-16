@@ -10,6 +10,9 @@
                 <div class="font-semibold">{{@resource.tracking}}</div>
                 <div class="flex flex-row space-x-1">
                     <Badge @status={{@resource.status}} />
+                    {{#if @resource.meta.is_recurring_generated}}
+                        <Badge @status="info">Recurring</Badge>
+                    {{/if}}
                     {{#if @resource.dispatched_at}}
                         <Badge @status="dispatched">{{concat "Dispatched at " @resource.dispatchedAt}}</Badge>
                     {{/if}}

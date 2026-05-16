@@ -1,0 +1,12 @@
+<Layout::Resource::Panel
+    @resource={{@model}}
+    @controller={{this}}
+    @headerTitle={{or @model.name @model.public_id "Recurring series"}}
+    @actionButtons={{this.actionButtons}}
+    @onPressCancel={{transition-to "operations.orders.index.series"}}
+    @onOverlayReady={{fn (mut this.overlay)}}
+    @width="640px"
+>
+    <RecurringOrderSchedule::Details @resource={{@model}} @activeTab={{this.activeTab}} @onSelectTab={{this.selectTab}} />
+    <Spacer @height="180px" />
+</Layout::Resource::Panel>

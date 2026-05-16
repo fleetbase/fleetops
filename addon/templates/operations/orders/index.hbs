@@ -1,8 +1,8 @@
 <MapContainer::Topbar class="next-topbar-{{this.layout}}">
     <MapContainer::ViewSwitch>
         <FaIcon @icon="layer-group" class="mr-2 text-gray-400 dark:text-gray-600" />
-        <button type="button" id="ops-map-view-button" class="{{if (eq this.layout 'map') 'active'}}" {{on "click" (fn this.changeLayout "map")}}>{{t "common.map"}}</button>
-        <button type="button" id="ops-table-view-button" class="{{if (eq this.layout 'table') 'active'}} flex flex-row items-center relative" {{on "click" (fn this.changeLayout "table")}}>
+        <button type="button" id="ops-map-view-button" class="{{if (eq this.layout 'map') 'active'}}" {{on "click" (fn this.changeWorkspaceLayout "map")}}>{{t "common.map"}}</button>
+        <button type="button" id="ops-table-view-button" class="{{if (eq this.layout 'table') 'active'}} flex flex-row items-center relative" {{on "click" (fn this.changeWorkspaceLayout "table")}}>
             <div class="mr-1.5">{{t "common.table"}}</div>
             <Badge
                 class="flex items-center justify-center -mr-4"
@@ -11,7 +11,16 @@
                 @status="info"
             >{{@model.meta.total}}</Badge>
         </button>
-        <button type="button" id="ops-kanban-view-button" class="{{if (eq this.layout 'kanban') 'active'}}" {{on "click" (fn this.changeLayout "kanban")}}>{{t "common.board"}}</button>
+        <button type="button" id="ops-kanban-view-button" class="{{if (eq this.layout 'kanban') 'active'}}" {{on "click" (fn this.changeWorkspaceLayout "kanban")}}>{{t "common.board"}}</button>
+        <button type="button" id="ops-series-view-button" class="{{if (eq this.layout 'series') 'active'}} flex flex-row items-center relative" {{on "click" (fn this.changeWorkspaceLayout "series")}}>
+            <div class="mr-1.5">Series</div>
+            <Badge
+                class="flex items-center justify-center -mr-4"
+                @spanClass="rounded-full items-center justify-center h-5 w-7"
+                @hideStatusDot={{true}}
+                @status="info"
+            >{{this.seriesCount}}</Badge>
+        </button>
     </MapContainer::ViewSwitch>
 </MapContainer::Topbar>
 

@@ -1,0 +1,32 @@
+<div class="recurring-order-schedule-manager" ...attributes>
+    <Layout::Section::Header @actionsWrapperClass="space-x-1" @searchQuery={{this.query}} @onSearch={{perform this.searchSchedules}} @searchPlaceholder="Search recurring schedules">
+        <div class="fleetbase-model-select fleetbase-power-select ember-model-select w-44">
+            <PowerSelect
+                @options={{this.statusOptions}}
+                @selected={{this.selectedStatusOption}}
+                @onChange={{this.changeStatus}}
+                @triggerClass="form-select form-input"
+                as |option|
+            >
+                {{option.label}}
+            </PowerSelect>
+        </div>
+        {{#each this.actionButtons as |actionButton|}}
+            <Button @type={{actionButton.type}} @text={{actionButton.text}} @icon={{actionButton.icon}} @helpText={{actionButton.helpText}} @onClick={{actionButton.onClick}} />
+        {{/each}}
+    </Layout::Section::Header>
+
+    <Layout::Section::Body class="overflow-hidden">
+        <Table
+            @rows={{this.schedules}}
+            @columns={{this.columns}}
+            @selectable={{false}}
+            @pagination={{true}}
+            @paginationMeta={{this.schedules.meta}}
+            @page={{this.page}}
+            @onPageChange={{this.changePage}}
+            @onSort={{this.handleSort}}
+            @onRowClick={{this.editSchedule}}
+        />
+    </Layout::Section::Body>
+</div>

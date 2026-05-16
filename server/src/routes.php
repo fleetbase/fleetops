@@ -355,6 +355,14 @@ Route::prefix(config('fleetops.api.routing.prefix', null))->namespace('Fleetbase
                                 $router->match(['get', 'post'], 'export', $controller('export'));
                             }
                         );
+                        $router->fleetbaseRoutes('recurring-order-schedules', function ($router, $controller) {
+                            $router->post('preview', $controller('preview'));
+                            $router->post('{id}/pause', $controller('pause'));
+                            $router->post('{id}/resume', $controller('resume'));
+                            $router->post('{id}/skip-occurrence', $controller('skipOccurrence'));
+                            $router->post('{id}/cancel-future', $controller('cancelFuture'));
+                            $router->get('{id}/occurrences', $controller('occurrences'));
+                        });
                         $router->fleetbaseRoutes('order-configs');
                         $router->fleetbaseRoutes('payloads');
                         $router->fleetbaseRoutes(

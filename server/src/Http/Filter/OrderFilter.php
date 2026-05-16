@@ -59,6 +59,7 @@ class OrderFilter extends Filter
             },
             'customer',
             'facilitator',
+            'recurringOrderSchedule',
         ]);
     }
 
