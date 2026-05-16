@@ -1,12 +1,70 @@
 import serializeModel from '@fleetbase/ember-core/utils/serialize-model';
 import serializeArray from '@fleetbase/ember-core/utils/serialize-model-array';
 
+const CHILD_RECORD_IDENTITY_KEYS = ['id', 'uuid', 'public_id', 'created_at', 'updated_at', 'deleted_at'];
+
+const ENTITY_LINKAGE_KEYS = [
+    ...CHILD_RECORD_IDENTITY_KEYS,
+    'payload_uuid',
+    'company_uuid',
+    'customer_uuid',
+    'supplier_uuid',
+    'tracking_number_uuid',
+    'driver_assigned_uuid',
+    'photo_uuid',
+    'tracking',
+    'trackingNumber',
+    'barcode',
+    'qr_code',
+    'slug',
+];
+
+const WAYPOINT_LINKAGE_KEYS = [...CHILD_RECORD_IDENTITY_KEYS, 'waypoint_uuid', 'waypoint_public_id', 'tracking_number_uuid', 'tracking', 'status', 'status_code', 'complete'];
+
+function toPlainObject(record) {
+    if (!record) {
+        return {};
+    }
+
+    if (typeof record.serialize === 'function') {
+        return record.serialize();
+    }
+
+    return { ...record };
+}
+
+function copyWithout(record, keys = []) {
+    const copy = toPlainObject(record);
+
+    keys.forEach((key) => {
+        delete copy[key];
+    });
+
+    return copy;
+}
+
+function relationshipValue(record, relationshipName) {
+    if (!record) {
+        return null;
+    }
+
+    if (typeof record.belongsTo === 'function') {
+        try {
+            return record.belongsTo(relationshipName).value();
+        } catch {
+            return null;
+        }
+    }
+
+    return record[relationshipName] ?? null;
+}
+
 function normalizeCustomerType(order) {
     if (order.customer_type) {
         return order.customer_type;
     }
 
-    const customerType = order.customer?.customer_type;
+    const customerType = relationshipValue(order, 'customer')?.customer_type;
     return customerType ? `fleet-ops:${customerType}` : null;
 }
 
@@ -15,7 +73,7 @@ function normalizeFacilitatorType(order) {
         return order.facilitator_type;
     }
 
-    const facilitatorType = order.facilitator?.facilitator_type;
+    const facilitatorType = relationshipValue(order, 'facilitator')?.facilitator_type;
     return facilitatorType ? `fleet-ops:${facilitatorType}` : null;
 }
 
@@ -28,45 +86,55 @@ function createDraftPlace(store, place) {
         return place;
     }
 
+    const placeId = place.id ?? place.public_id;
+    const loadedPlace = placeId ? store.peekRecord('place', placeId) : null;
+
+    if (loadedPlace) {
+        return loadedPlace;
+    }
+
     return store.createRecord('place', {
         ...place,
-        id: place.id ?? place.public_id ?? undefined,
+        id: placeId ?? undefined,
     });
 }
 
 function createDraftWaypoint(store, waypoint) {
+    const waypointAttrs = copyWithout(waypoint, WAYPOINT_LINKAGE_KEYS);
+
     return store.createRecord('waypoint', {
-        ...waypoint,
-        id: waypoint.id ?? waypoint.public_id ?? undefined,
+        ...waypointAttrs,
         place: createDraftPlace(store, waypoint.place),
     });
 }
 
 function createDraftEntity(store, entity) {
-    return store.createRecord('entity', {
-        ...entity,
-        id: entity.id ?? entity.public_id ?? undefined,
-    });
+    return store.createRecord('entity', copyWithout(entity, ENTITY_LINKAGE_KEYS));
 }
 
 export function createRecurringDraftOrder(store, source = {}) {
     const templatePayload = source.template_payload ?? source.payload ?? {};
     const templateOrderMeta = source.template_order_meta ?? {};
     const templateEntities = source.template_entities ?? templatePayload.entities ?? [];
+    const customer = relationshipValue(source, 'customer');
+    const facilitator = relationshipValue(source, 'facilitator');
+    const orderConfig = relationshipValue(source, 'order_config') ?? relationshipValue(source, 'orderConfig');
+    const driverAssigned = relationshipValue(source, 'driver_assigned') ?? relationshipValue(source, 'driverAssigned');
+    const vehicleAssigned = relationshipValue(source, 'vehicle_assigned') ?? relationshipValue(source, 'vehicleAssigned');
 
     const order = store.createRecord('order', {
-        customer: source.customer ?? null,
-        customer_uuid: source.customer_uuid ?? source.customer?.id ?? null,
+        customer,
+        customer_uuid: source.customer_uuid ?? customer?.id ?? null,
         customer_type: source.customer_type ?? normalizeCustomerType(source),
-        facilitator: source.facilitator ?? null,
-        facilitator_uuid: source.facilitator_uuid ?? source.facilitator?.id ?? null,
+        facilitator,
+        facilitator_uuid: source.facilitator_uuid ?? facilitator?.id ?? null,
         facilitator_type: source.facilitator_type ?? normalizeFacilitatorType(source),
-        order_config: source.order_config ?? source.orderConfig ?? null,
-        order_config_uuid: source.order_config_uuid ?? source.order_config?.id ?? null,
-        driver_assigned: source.driver_assigned ?? source.driverAssigned ?? null,
-        driver_assigned_uuid: source.driver_assigned_uuid ?? source.driver_assigned?.id ?? null,
-        vehicle_assigned: source.vehicle_assigned ?? source.vehicleAssigned ?? null,
-        vehicle_assigned_uuid: source.vehicle_assigned_uuid ?? source.vehicle_assigned?.id ?? null,
+        order_config: orderConfig,
+        order_config_uuid: source.order_config_uuid ?? orderConfig?.id ?? null,
+        driver_assigned: driverAssigned,
+        driver_assigned_uuid: source.driver_assigned_uuid ?? driverAssigned?.id ?? null,
+        vehicle_assigned: vehicleAssigned,
+        vehicle_assigned_uuid: source.vehicle_assigned_uuid ?? vehicleAssigned?.id ?? null,
         internal_id: source.internal_id ?? templateOrderMeta.internal_id ?? null,
         scheduled_at: source.scheduled_at ?? source.starts_at ?? new Date(),
         pod_method: source.pod_method ?? templateOrderMeta.pod_method ?? null,
@@ -129,11 +197,11 @@ export function serializeRecurringDraftOrder(order, serviceRateUuid = null) {
         time_window_start: order.time_window_start ?? null,
         time_window_end: order.time_window_end ?? null,
         payload: {
-            pickup: serializeModel(payload.pickup),
-            dropoff: serializeModel(payload.dropoff),
-            return: serializeModel(payload.return),
-            waypoints: serializeArray(payload.waypoints),
-            entities: serializeArray(payload.entities),
+            pickup: serializeTemplatePlace(payload.pickup),
+            dropoff: serializeTemplatePlace(payload.dropoff),
+            return: serializeTemplatePlace(payload.return),
+            waypoints: serializeArray(payload.waypoints).map(serializeTemplateWaypoint),
+            entities: serializeArray(payload.entities).map(serializeTemplateEntity),
             type: payload.type ?? order.type ?? null,
             payment_method: payload.payment_method ?? null,
             cod_amount: payload.cod_amount ?? null,
@@ -141,5 +209,73 @@ export function serializeRecurringDraftOrder(order, serviceRateUuid = null) {
             cod_payment_method: payload.cod_payment_method ?? null,
             meta: payload.meta ?? {},
         },
+    };
+}
+
+function serializeTemplatePlace(place) {
+    const serialized = serializeModel(place);
+
+    if (!serialized) {
+        return null;
+    }
+
+    return {
+        uuid: serialized.uuid ?? serialized.id ?? null,
+        public_id: serialized.public_id ?? null,
+        name: serialized.name ?? null,
+        phone: serialized.phone ?? null,
+        type: serialized.type ?? 'place',
+        address: serialized.address ?? null,
+        street1: serialized.street1 ?? null,
+        street2: serialized.street2 ?? null,
+        city: serialized.city ?? null,
+        province: serialized.province ?? null,
+        postal_code: serialized.postal_code ?? null,
+        neighborhood: serialized.neighborhood ?? null,
+        district: serialized.district ?? null,
+        building: serialized.building ?? null,
+        security_access_code: serialized.security_access_code ?? null,
+        country: serialized.country ?? null,
+        location: serialized.location ?? null,
+        meta: serialized.meta ?? {},
+    };
+}
+
+function serializeTemplateWaypoint(waypoint) {
+    return {
+        place: serializeTemplatePlace(waypoint.place ?? waypoint),
+        type: waypoint.type ?? 'dropoff',
+        order: waypoint.order ?? null,
+        customer_uuid: waypoint.customer_uuid ?? null,
+        customer_type: waypoint.customer_type ?? null,
+        time_window_start: waypoint.time_window_start ?? null,
+        time_window_end: waypoint.time_window_end ?? null,
+        service_time: waypoint.service_time ?? null,
+        notes: waypoint.notes ?? null,
+        pod_method: waypoint.pod_method ?? null,
+        pod_required: Boolean(waypoint.pod_required),
+    };
+}
+
+function serializeTemplateEntity(entity) {
+    return {
+        internal_id: entity.internal_id ?? null,
+        destination_uuid: entity.destination_uuid ?? entity.destination?.id ?? null,
+        name: entity.name ?? null,
+        type: entity.type ?? 'entity',
+        description: entity.description ?? null,
+        photo_url: entity.photo_url ?? null,
+        currency: entity.currency ?? null,
+        weight: entity.weight ?? null,
+        weight_unit: entity.weight_unit ?? null,
+        length: entity.length ?? null,
+        width: entity.width ?? null,
+        height: entity.height ?? null,
+        dimensions_unit: entity.dimensions_unit ?? null,
+        declared_value: entity.declared_value ?? null,
+        sku: entity.sku ?? null,
+        price: entity.price ?? null,
+        sale_price: entity.sale_price ?? null,
+        meta: entity.meta ?? {},
     };
 }

@@ -23,24 +23,41 @@ class Order extends FleetbaseResource
         $isInternal = Http::isInternalRequest();
 
         return [
-            'id'                   => $this->when($isInternal, $this->id, $this->public_id),
-            'uuid'                 => $this->when($isInternal, $this->uuid),
-            'public_id'            => $this->when($isInternal, $this->public_id),
-            'internal_id'          => $this->internal_id,
-            'company_uuid'         => $this->when($isInternal, $this->company_uuid),
-            'payload_uuid'         => $this->when($isInternal, $this->payload_uuid),
-            'driver_assigned_uuid' => $this->when($isInternal, $this->driver_assigned_uuid),
-            'vehicle_assigned_uuid'=> $this->when($isInternal, $this->vehicle_assigned_uuid),
-            'customer_uuid'        => $this->when($isInternal, $this->customer_uuid),
-            'customer_type'        => $this->when($isInternal, $this->customer_type),
-            'facilitator_uuid'     => $this->when($isInternal, $this->facilitator_uuid),
-            'facilitator_type'     => $this->when($isInternal, $this->facilitator_type),
+            'id'                            => $this->when($isInternal, $this->id, $this->public_id),
+            'uuid'                          => $this->when($isInternal, $this->uuid),
+            'public_id'                     => $this->when($isInternal, $this->public_id),
+            'internal_id'                   => $this->internal_id,
+            'company_uuid'                  => $this->when($isInternal, $this->company_uuid),
+            'payload_uuid'                  => $this->when($isInternal, $this->payload_uuid),
+            'driver_assigned_uuid'          => $this->when($isInternal, $this->driver_assigned_uuid),
+            'vehicle_assigned_uuid'         => $this->when($isInternal, $this->vehicle_assigned_uuid),
+            'customer_uuid'                 => $this->when($isInternal, $this->customer_uuid),
+            'customer_type'                 => $this->when($isInternal, $this->customer_type),
+            'facilitator_uuid'              => $this->when($isInternal, $this->facilitator_uuid),
+            'facilitator_type'              => $this->when($isInternal, $this->facilitator_type),
             'recurring_order_schedule_uuid' => $this->when($isInternal, $this->recurring_order_schedule_uuid),
-            'recurring_occurrence_at' => $this->when($isInternal, $this->recurring_occurrence_at),
-            'is_recurring_generated' => $this->when($isInternal, $this->is_recurring_generated),
-            'tracking_number_uuid' => $this->when($isInternal, $this->tracking_number_uuid),
-            'order_config_uuid'    => $this->when($isInternal, $this->order_config_uuid),
-            'tracking'             => $this->trackingNumber ? $this->trackingNumber->tracking_number : null,
+            'recurring_occurrence_at'       => $this->when($isInternal, $this->recurring_occurrence_at),
+            'is_recurring_generated'        => $this->when($isInternal, $this->is_recurring_generated),
+            'tracking_number_uuid'          => $this->when($isInternal, $this->tracking_number_uuid),
+            'order_config_uuid'             => $this->when($isInternal, $this->order_config_uuid),
+            'tracking'                      => $this->trackingNumber ? $this->trackingNumber->tracking_number : null,
+
+            'recurring_order_schedule' => $this->when(
+                $isInternal,
+                $this->whenLoaded('recurringOrderSchedule', function () {
+                    return [
+                        'id'                     => $this->recurringOrderSchedule->public_id,
+                        'uuid'                   => $this->recurringOrderSchedule->uuid,
+                        'public_id'              => $this->recurringOrderSchedule->public_id,
+                        'name'                   => $this->recurringOrderSchedule->name,
+                        'status'                 => $this->recurringOrderSchedule->status,
+                        'timezone'               => $this->recurringOrderSchedule->timezone,
+                        'rrule'                  => $this->recurringOrderSchedule->rrule,
+                        'next_occurrence_at'     => $this->recurringOrderSchedule->next_occurrence_at,
+                        'generated_orders_count' => $this->recurringOrderSchedule->generated_orders_count ?? $this->recurringOrderSchedule->generatedOrders()->count(),
+                    ];
+                })
+            ),
 
             // Minimal order config - only essential fields
             'order_config'         => $this->when(

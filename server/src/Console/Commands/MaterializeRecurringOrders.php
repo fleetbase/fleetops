@@ -14,7 +14,7 @@ class MaterializeRecurringOrders extends Command
     public function handle(RecurringOrderMaterializationService $service): void
     {
         $horizon = max(1, (int) $this->option('horizon'));
-        $stats = $service->materializeAll($horizon);
+        $stats   = $service->materializeAll($horizon);
 
         $this->info(sprintf(
             'Recurring order materialization complete. materialized=%d skipped=%d errors=%d',

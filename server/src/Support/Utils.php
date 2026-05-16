@@ -392,7 +392,7 @@ class Utils extends FleetbaseUtils
             return null;
         }
 
-        if (preg_match("/POINT\\(\\s*([-+]?\\d*\\.?\\d+)\\s+([-+]?\\d*\\.?\\d+)\\s*\\)/i", $expressionValue, $matches)) {
+        if (preg_match('/POINT\\(\\s*([-+]?\\d*\\.?\\d+)\\s+([-+]?\\d*\\.?\\d+)\\s*\\)/i', $expressionValue, $matches)) {
             return sprintf('POINT(%s %s)', $matches[1], $matches[2]);
         }
 

@@ -128,9 +128,9 @@ export default class OperationsOrdersIndexDetailsController extends Controller {
                         fn: () => this.orderActions.viewMetadata(this.model),
                     },
                     {
-                        text: 'Create recurring schedule',
+                        text: 'Make this recurring...',
                         icon: 'arrows-rotate',
-                        fn: () => this.recurringOrderScheduleActions.modal.createFromOrder(this.model),
+                        fn: () => this.recurringOrderScheduleActions.transition.createFromOrder(this.model),
                     },
                     {
                         separator: true,

@@ -1,5 +1,5 @@
 <div class="next-content-panel-wrapper" ...attributes>
-    <ContentPanel @title="Overview" @open={{true}} @wrapperClass="bordered-top">
+    <ContentPanel @title="Summary" @open={{true}} @wrapperClass="bordered-top">
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-2 text-xs dark:text-gray-100">
             <div class="field-info-container">
                 <div class="field-name">ID</div>
@@ -15,62 +15,118 @@
             </div>
             <div class="field-info-container">
                 <div class="field-name">Next Occurrence</div>
-                <div class="field-value">{{n-a @resource.next_occurrence_at}}</div>
+                <div class="field-value">
+                    {{#if @resource.next_occurrence_at}}
+                        {{format-date-fns @resource.next_occurrence_at "dd MMM yyyy, HH:mm"}}
+                    {{else}}
+                        --
+                    {{/if}}
+                </div>
             </div>
             <div class="field-info-container">
                 <div class="field-name">Customer</div>
-                <div class="field-value">{{n-a @resource.customer.name}}</div>
+                <div class="field-value">{{n-a @resource.customer_name}}</div>
             </div>
             <div class="field-info-container">
                 <div class="field-name">Order Type</div>
-                <div class="field-value">{{n-a @resource.order_config.name}}</div>
+                <div class="field-value">{{n-a @resource.order_config_name}}</div>
             </div>
             <div class="field-info-container">
                 <div class="field-name">Service Rate</div>
-                <div class="field-value">{{n-a @resource.service_rate.service_name "No default service rate"}}</div>
+                <div class="field-value">{{n-a @resource.service_rate_name "No default service rate"}}</div>
             </div>
             <div class="field-info-container">
-                <div class="field-name">Starts At</div>
-                <div class="field-value">{{n-a @resource.starts_at}}</div>
-            </div>
-            <div class="field-info-container">
-                <div class="field-name">Ends At</div>
-                <div class="field-value">{{n-a @resource.ends_at}}</div>
-            </div>
-            <div class="field-info-container">
-                <div class="field-name">Recurrence Rule</div>
+                <div class="field-name">Pattern</div>
                 <div class="field-value break-all">{{n-a @resource.rrule}}</div>
             </div>
         </div>
     </ContentPanel>
 
-    <ContentPanel @title="Upcoming Orders" @open={{true}} @wrapperClass="bordered-top">
-        {{#if this.upcomingOccurrences.length}}
-            <div class="space-y-2">
-                {{#each this.upcomingOccurrences as |occurrence|}}
-                    <div class="rounded-md border border-gray-200 dark:border-gray-800 px-3 py-2 flex items-center justify-between gap-3">
-                        <div>
+    <div class="border-b border-gray-200 dark:border-gray-800 px-3 pt-3">
+        <div class="flex items-center gap-2">
+            <button type="button" class="px-3 py-2 text-sm font-medium border-b-2 {{if this.isUpcomingTab 'border-blue-600 text-blue-600' 'border-transparent text-gray-500'}}" {{on "click" (fn this.selectTab "upcoming")}}>Upcoming</button>
+            <button type="button" class="px-3 py-2 text-sm font-medium border-b-2 {{if this.isHistoryTab 'border-blue-600 text-blue-600' 'border-transparent text-gray-500'}}" {{on "click" (fn this.selectTab "history")}}>History</button>
+            <button type="button" class="px-3 py-2 text-sm font-medium border-b-2 {{if this.isSettingsTab 'border-blue-600 text-blue-600' 'border-transparent text-gray-500'}}" {{on "click" (fn this.selectTab "settings")}}>Settings</button>
+        </div>
+    </div>
+
+    {{#if this.isUpcomingTab}}
+        <ContentPanel @title="Upcoming" @open={{true}} @wrapperClass="bordered-top">
+            {{#if this.upcomingOccurrences.length}}
+                <div class="space-y-2">
+                    {{#each this.upcomingOccurrences as |occurrence|}}
+                        <div class="rounded-md border border-gray-200 dark:border-gray-800 px-3 py-2 flex items-center justify-between gap-3">
+                            <div>
+                                <div class="text-sm font-medium text-gray-800 dark:text-gray-100">{{n-a occurrence.occurrence_at_local occurrence.occurrence_at}}</div>
+                                <div class="text-xs text-gray-500 dark:text-gray-400">Status: {{smart-humanize occurrence.status}}</div>
+                                {{#if occurrence.order}}
+                                    <div class="text-xs text-gray-500 dark:text-gray-400">Order: {{occurrence.order.public_id}}</div>
+                                {{/if}}
+                            </div>
+                            <div class="flex items-center gap-2">
+                                {{#if occurrence.order}}
+                                    <Button @icon="arrow-up-right-from-square" @size="xs" @text="Open" @onClick={{fn this.viewOrder occurrence.order}} />
+                                {{/if}}
+                                {{#if (eq occurrence.status "scheduled")}}
+                                    <Button @type="danger" @icon="ban" @size="xs" @text="Skip" @onClick={{fn this.skipOccurrence occurrence}} />
+                                {{/if}}
+                            </div>
+                        </div>
+                    {{/each}}
+                </div>
+            {{else}}
+                <div class="text-sm text-gray-400">No upcoming occurrences found for this recurring series.</div>
+            {{/if}}
+        </ContentPanel>
+    {{/if}}
+
+    {{#if this.isHistoryTab}}
+        <ContentPanel @title="History" @open={{true}} @wrapperClass="bordered-top">
+            {{#if this.historyOccurrences.length}}
+                <div class="space-y-2">
+                    {{#each this.historyOccurrences as |occurrence|}}
+                        <div class="rounded-md border border-gray-200 dark:border-gray-800 px-3 py-2">
                             <div class="text-sm font-medium text-gray-800 dark:text-gray-100">{{n-a occurrence.occurrence_at_local occurrence.occurrence_at}}</div>
                             <div class="text-xs text-gray-500 dark:text-gray-400">Status: {{smart-humanize occurrence.status}}</div>
-                            {{#if occurrence.order}}
-                                <div class="text-xs text-gray-500 dark:text-gray-400">Order: {{occurrence.order.public_id}}</div>
-                            {{/if}}
                         </div>
-                        <div class="flex items-center gap-2">
-                            {{#if occurrence.order}}
-                                <Button @icon="arrow-up-right-from-square" @size="xs" @text="View Order" @onClick={{fn this.viewOrder occurrence.order}} />
-                            {{/if}}
-                            {{#if (eq occurrence.status "scheduled")}}
-                                <Button @type="danger" @icon="ban" @size="xs" @text="Cancel Occurrence" @onClick={{fn this.skipOccurrence occurrence}} />
-                            {{/if}}
-                        </div>
+                    {{/each}}
+                </div>
+            {{else}}
+                <div class="text-sm text-gray-400">No historical occurrences found for this recurring series.</div>
+            {{/if}}
+        </ContentPanel>
+    {{/if}}
+
+    {{#if this.isSettingsTab}}
+        <ContentPanel @title="Settings" @open={{true}} @wrapperClass="bordered-top">
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-2 text-xs dark:text-gray-100">
+                <div class="field-info-container">
+                    <div class="field-name">Starts At</div>
+                    <div class="field-value">
+                        {{#if @resource.starts_at}}
+                            {{format-date-fns @resource.starts_at "dd MMM yyyy, HH:mm"}}
+                        {{else}}
+                            --
+                        {{/if}}
                     </div>
-                {{/each}}
+                </div>
+                <div class="field-info-container">
+                    <div class="field-name">Ends At</div>
+                    <div class="field-value">
+                        {{#if @resource.ends_at}}
+                            {{format-date-fns @resource.ends_at "dd MMM yyyy, HH:mm"}}
+                        {{else}}
+                            --
+                        {{/if}}
+                    </div>
+                </div>
+                <div class="field-info-container lg:col-span-2">
+                    <div class="field-name">Rule</div>
+                    <div class="field-value break-all">{{n-a @resource.rrule}}</div>
+                </div>
             </div>
-        {{else}}
-            <div class="text-sm text-gray-400">No upcoming occurrences found for this recurring schedule.</div>
-        {{/if}}
-    </ContentPanel>
+        </ContentPanel>
+    {{/if}}
 
     {{#if @resource.description}}
         <ContentPanel @title="Description" @open={{false}} @wrapperClass="bordered-top">

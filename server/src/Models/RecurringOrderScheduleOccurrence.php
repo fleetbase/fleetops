@@ -40,7 +40,7 @@ class RecurringOrderScheduleOccurrence extends Model
     ];
 
     protected $casts = [
-        'meta' => Json::class,
+        'meta'          => Json::class,
         'occurrence_at' => 'datetime',
     ];
 

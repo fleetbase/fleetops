@@ -104,9 +104,9 @@ class VroomOrchestrationEngine implements OrchestrationEngineInterface
         unset($job);
 
         // ── Resolve connection config ─────────────────────────────────────────
-        $baseUri = $this->resolveVroomBaseUri();
+        $baseUri      = $this->resolveVroomBaseUri();
         $endpointMode = $this->resolveVroomEndpointMode();
-        $timeout = (int) env('VROOM_TIMEOUT', 30);
+        $timeout      = (int) env('VROOM_TIMEOUT', 30);
 
         $apiKey = $this->resolveVroomApiKey();
 

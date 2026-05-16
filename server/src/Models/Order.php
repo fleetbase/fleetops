@@ -216,10 +216,10 @@ class Order extends Model
         'dispatched_at'    => 'datetime',
         'started_at'       => 'datetime',
         // Orchestrator
-        'required_skills'       => Json::class,
-        'time_window_start'     => 'datetime',
-        'time_window_end'       => 'datetime',
-        'orchestrator_priority' => 'integer',
+        'required_skills'         => Json::class,
+        'time_window_start'       => 'datetime',
+        'time_window_end'         => 'datetime',
+        'orchestrator_priority'   => 'integer',
         'recurring_occurrence_at' => 'datetime',
     ];
 
@@ -1753,7 +1753,7 @@ class Order extends Model
             }
         }
 
-        $company = $this->relationLoaded('company') ? $this->company : $this->company()->first();
+        $company     = $this->relationLoaded('company') ? $this->company : $this->company()->first();
         $orderConfig = OrderConfig::defaultOrCreate($company);
         if ($orderConfig instanceof OrderConfig) {
             $orderConfig->setOrderContext($this);

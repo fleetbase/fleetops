@@ -1,0 +1,101 @@
+<ContentPanel @title={{if @repeatEnabled "Recurring Series Schedule" "Schedule"}} @open={{true}} @wrapperClass="bordered-top">
+    <div class="fleetops-order-schedule-form">
+        <InputGroup>
+            <InputLabel @labelText={{t "order.fields.schedule"}} @helpText={{t "order.fields.schedule-help-text"}} />
+            <DateTimeInput
+                class="form-input"
+                @value={{@resource.scheduled_at}}
+                @minDate={{format-date-fns (now) "yyyy-MM-dd"}}
+                @minTime={{format-date-fns (now) "HH:mm"}}
+                @onUpdate={{this.updateScheduledAt}}
+                @disabled={{or @resource.dispatched (cannot-write @resource)}}
+            />
+        </InputGroup>
+
+        <div class="fleetops-repeat-toggle-row">
+            <div>
+                <div class="text-sm font-semibold text-gray-800 dark:text-gray-100">Repeat this order</div>
+                <div class="text-xs text-gray-500 dark:text-gray-400">Generate orders from this template.</div>
+            </div>
+            <Toggle @isToggled={{@repeatEnabled}} @onToggle={{this.toggleRepeat}} />
+        </div>
+
+        {{#if @repeatEnabled}}
+            <div class="fleetops-recurring-series-editor">
+                <div class="fleetops-recurring-series-field">
+                    <label>Series name</label>
+                    <Input @value={{@seriesDraft.name}} @type="text" class="w-full form-input" placeholder="e.g. Daily morning replenishment" />
+                </div>
+
+                <div class="fleetops-recurring-series-field-grid">
+                    <div class="fleetops-recurring-series-field">
+                        <label>Frequency</label>
+                        <div class="fleetbase-model-select fleetbase-power-select ember-model-select">
+                            <PowerSelect
+                                @options={{this.frequencyOptions}}
+                                @selected={{find-by "value" this.frequency this.frequencyOptions}}
+                                @onChange={{this.updateFrequency}}
+                                @triggerClass="form-select form-input"
+                                as |option|
+                            >
+                                {{option.label}}
+                            </PowerSelect>
+                        </div>
+                    </div>
+
+                    <div class="fleetops-recurring-series-field">
+                        <label>Repeat every</label>
+                        <Input @value={{this.interval}} @type="number" class="w-full form-input" min="1" {{on "input" this.updateInterval}} />
+                    </div>
+                </div>
+
+                {{#if this.isWeekly}}
+                    <div class="fleetops-recurring-series-field">
+                        <label>Days of week</label>
+                        <div class="fleetops-recurring-series-days">
+                            {{#each this.weekdayOptions as |day|}}
+                                <button
+                                    type="button"
+                                    class="fleetops-recurring-series-day-button {{if (this.isWeekdaySelected day.code) 'is-selected'}}"
+                                    {{on "click" (fn this.toggleWeekday day.code)}}
+                                >
+                                    {{day.label}}
+                                </button>
+                            {{/each}}
+                        </div>
+                    </div>
+                {{/if}}
+
+                {{#if this.isMonthly}}
+                    <div class="fleetops-recurring-series-field">
+                        <label>Day of month</label>
+                        <Input @value={{this.monthday}} @type="number" class="w-full form-input" min="1" max="31" {{on "input" this.updateMonthday}} />
+                    </div>
+                {{/if}}
+
+                <div class="fleetops-recurring-series-field">
+                    <label>Ends at</label>
+                    <DateTimeInput class="form-input" @value={{@seriesDraft.ends_at}} @onUpdate={{this.updateEndsAt}} />
+                </div>
+
+                <div class="fleetops-recurring-series-preview">
+                    <div class="fleetops-recurring-series-preview-header">
+                        <label>Next 5</label>
+                        <Button @icon="refresh" @size="xs" @text="Preview" @onClick={{perform this.updatePreview}} @isLoading={{this.updatePreview.isRunning}} />
+                    </div>
+                    <div class="fleetops-recurring-series-preview-box">
+                        {{#if this.previewOccurrences.length}}
+                            <div class="space-y-1">
+                                {{#each this.previewOccurrences as |occurrence|}}
+                                    <div class="fleetops-recurring-series-preview-item">{{format-date-fns occurrence.occurrence_at_local "MMM d, yyyy HH:mm"}}</div>
+                                {{/each}}
+                            </div>
+                        {{else}}
+                            <div class="text-sm text-gray-400">Preview appears after route and schedule are ready.</div>
+                        {{/if}}
+                    </div>
+                </div>
+            </div>
+        {{/if}}
+    </div>
+</ContentPanel>

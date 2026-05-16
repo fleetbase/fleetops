@@ -25,16 +25,16 @@ class PayloadController extends Controller
      */
     public function create(CreatePayloadRequest $request)
     {
-        $input     = $request->all();
-        $entities  = data_get($input, 'entities', []);
-        $waypoints = data_get($input, 'waypoints', []);
-        $pickup    = data_get($input, 'pickup');
-        $dropoff   = data_get($input, 'dropoff');
-        $return    = data_get($input, 'return');
-        $hasPickupField = array_key_exists('pickup', $input);
-        $hasDropoffField = array_key_exists('dropoff', $input);
-        $hasReturnField = array_key_exists('return', $input);
-        $hasWaypointsField = array_key_exists('waypoints', $input);
+        $input                  = $request->all();
+        $entities               = data_get($input, 'entities', []);
+        $waypoints              = data_get($input, 'waypoints', []);
+        $pickup                 = data_get($input, 'pickup');
+        $dropoff                = data_get($input, 'dropoff');
+        $return                 = data_get($input, 'return');
+        $hasPickupField         = array_key_exists('pickup', $input);
+        $hasDropoffField        = array_key_exists('dropoff', $input);
+        $hasReturnField         = array_key_exists('return', $input);
+        $hasWaypointsField      = array_key_exists('waypoints', $input);
         $hasRouteEndpointFields = $hasPickupField || $hasDropoffField || $hasReturnField;
 
         // make sure company is set

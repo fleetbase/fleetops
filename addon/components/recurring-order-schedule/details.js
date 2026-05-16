@@ -10,6 +10,30 @@ export default class RecurringOrderScheduleDetailsComponent extends Component {
         return this.args.resource?.upcoming_occurrences ?? this.args.resource?.meta?.upcoming_occurrences ?? [];
     }
 
+    get activeTab() {
+        return this.args.activeTab ?? 'upcoming';
+    }
+
+    get isUpcomingTab() {
+        return this.activeTab === 'upcoming';
+    }
+
+    get isHistoryTab() {
+        return this.activeTab === 'history';
+    }
+
+    get isSettingsTab() {
+        return this.activeTab === 'settings';
+    }
+
+    get historyOccurrences() {
+        return this.args.resource?.history_occurrences ?? this.args.resource?.meta?.history_occurrences ?? [];
+    }
+
+    @action selectTab(tab) {
+        this.args.onSelectTab?.(tab);
+    }
+
     @action skipOccurrence(occurrence) {
         return this.recurringOrderScheduleActions.skipOccurrence(this.args.resource, occurrence.occurrence_at).then(async () => {
             if (typeof this.args.resource?.reload === 'function') {

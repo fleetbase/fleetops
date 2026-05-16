@@ -2,15 +2,22 @@
     @resource={{this.order}}
     @controller={{this}}
     @actionButtons={{this.actionButtons}}
-    @headerTitle={{t "common.create-a-new-resource" resource=(lowercase (t "resource.order"))}}
+    @headerTitle={{this.headerTitle}}
     @saveTask={{this.save}}
-    @saveDisabled={{this.orderValidation.isNotValid}}
+    @saveDisabled={{this.saveDisabled}}
     @onPressCancel={{transition-to "operations.orders.index"}}
     @onOverlayReady={{fn (mut this.overlay)}}
     @width="530px"
     @onOpen={{this.setup}}
     class="new-order-panel"
 >
-    <Order::Form @resource={{this.order}} @controller={{this}} />
+    <Order::Form
+        @resource={{this.order}}
+        @controller={{this}}
+        @repeatEnabled={{this.repeatEnabled}}
+        @scheduleFirst={{this.scheduleFirst}}
+        @seriesDraft={{this.seriesDraft}}
+        @onRepeatChange={{this.onRepeatChange}}
+    />
     <Spacer @height="300px" />
 </Layout::Resource::Panel>

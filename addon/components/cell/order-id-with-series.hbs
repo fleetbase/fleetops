@@ -1,0 +1,63 @@
+<div class="flex items-center gap-1.5 overflow-visible" ...attributes>
+    {{#if this.isSeriesOrder}}
+        <span class="fleetops-recurring-order-indicator" tabindex="0">
+            <FaIcon @icon="arrows-rotate" />
+            <Attach::Popover @classNames="ember-attacher-tooltip clean fleetops-recurring-order-tooltip" @ariaRole="tooltip" @animation="scale" @placement="right" @interactive={{true}}>
+                <div class="fleetops-recurring-order-popover">
+                    <div class="flex items-start justify-between gap-2 mb-2">
+                        <div class="min-w-0">
+                            <div class="fleetops-recurring-order-eyebrow">Recurring series</div>
+                            <div class="fleetops-recurring-order-title">{{n-a this.series.name "Recurring series"}}</div>
+                        </div>
+                        <Badge @status={{this.series.status}}>{{smart-humanize this.series.status}}</Badge>
+                    </div>
+
+                    <div class="fleetops-recurring-order-schedule-card">
+                        <div class="fleetops-recurring-order-summary">{{this.scheduleSummary}}</div>
+                        <div class="fleetops-recurring-order-days">
+                            {{#each this.scheduleDays as |day|}}
+                                <span class="fleetops-recurring-order-day {{if day.scheduled 'is-scheduled'}} {{if day.highlighted 'is-highlighted'}}">{{day.label}}</span>
+                            {{/each}}
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-1.5 mt-2 text-xs">
+                        <div class="fleetops-recurring-order-stat">
+                            <span>Scheduled time</span>
+                            <strong>{{n-a this.occurrenceTime "--"}}</strong>
+                        </div>
+                        <div class="fleetops-recurring-order-stat">
+                            <span>Spawned</span>
+                            <strong>{{this.spawnedCount}} orders</strong>
+                        </div>
+                        <div class="fleetops-recurring-order-stat col-span-2">
+                            <span>This occurrence</span>
+                            <strong>{{n-a this.occurrenceDateLabel "--"}}</strong>
+                        </div>
+                    </div>
+
+                    {{#if this.series}}
+                        <div class="fleetops-recurring-order-actions">
+                            <button type="button" class="fleetops-recurring-order-action" {{on "click" this.openSeries}}>
+                                <FaIcon @icon="arrow-up-right-from-square" />
+                                <span>Open</span>
+                            </button>
+                            <button type="button" class="fleetops-recurring-order-action" {{on "click" this.skipNext}}>
+                                <FaIcon @icon="forward-step" />
+                                <span>Skip next</span>
+                            </button>
+                            <button type="button" class="fleetops-recurring-order-action" {{on "click" this.pauseSeries}}>
+                                <FaIcon @icon="pause" />
+                                <span>Pause</span>
+                            </button>
+                        </div>
+                    {{/if}}
+                </div>
+            </Attach::Popover>
+        </span>
+    {{/if}}
+
+    <a href="javascript:;" class="text-blue-600 dark:text-blue-400 hover:underline font-normal" disabled={{and @column.permission (cannot @column.permission)}} {{on "click" this.openOrder}}>
+        {{@value}}
+    </a>
+</div>

@@ -11,7 +11,9 @@ export default class OperationsOrdersIndexController extends Controller {
     @service mapDrawer;
     @service orderListOverlay;
     @service fetch;
+    @service store;
     @service intl;
+    @service hostRouter;
 
     /** query params */
     @tracked queryParams = [
@@ -68,6 +70,7 @@ export default class OperationsOrdersIndexController extends Controller {
     @tracked bulkSearchValue = '';
     @tracked bulk_query = '';
     @tracked layout = 'map';
+    @tracked seriesCount = 0;
 
     /** action buttons */
     get actionButtons() {
@@ -78,28 +81,11 @@ export default class OperationsOrdersIndexController extends Controller {
                 helpText: this.intl.t('common.refresh'),
             },
             {
-                icon: 'calendar-days',
-                wrapperClass: 'hidden md:flex',
-                helpText: 'View recurring order schedules',
-                onClick: () => this.recurringOrderScheduleActions.modal.manage(),
-            },
-            {
-                icon: 'plus',
-                type: 'primary',
-                text: this.intl.t('common.new'),
-                renderInPlace: true,
-                items: [
-                    {
-                        label: 'Create new order',
-                        icon: 'plus',
-                        onClick: this.orderActions.transition.create,
-                    },
-                    {
-                        label: 'Create recurring schedule',
-                        icon: 'arrows-rotate',
-                        onClick: () => this.recurringOrderScheduleActions.modal.create(),
-                    },
-                ],
+                component: 'order/new-split-button',
+                options: {
+                    onNewOrder: this.orderActions.transition.create,
+                    onNewSeries: this.recurringOrderScheduleActions.transition.create,
+                },
             },
             {
                 text: this.intl.t('common.export'),
@@ -152,7 +138,7 @@ export default class OperationsOrdersIndexController extends Controller {
                 sticky: true,
                 label: this.intl.t('column.id'),
                 valuePath: 'public_id',
-                cellComponent: 'table/cell/link-to',
+                cellComponent: 'cell/order-id-with-series',
                 route: 'operations.orders.index.details',
                 onLinkClick: this.orderActions.transition.view,
                 permission: 'fleet-ops view order',
@@ -270,6 +256,13 @@ export default class OperationsOrdersIndexController extends Controller {
                 filterComponentPlaceholder: 'Select order facilitator',
                 filterParam: 'facilitator',
                 model: 'vendor',
+            },
+            {
+                label: 'Series',
+                valuePath: 'recurring_order_schedule.name',
+                cellComponent: 'cell/recurring-series-badge',
+                cellClassNames: 'overflow-visible',
+                resizable: true,
             },
             {
                 label: this.intl.t('column.scheduled-at'),
@@ -405,10 +398,16 @@ export default class OperationsOrdersIndexController extends Controller {
                         isVisible: (order) => order.canBeDispatched,
                     },
                     {
-                        label: 'Create recurring schedule',
+                        label: 'Make this recurring...',
                         icon: 'arrows-rotate',
-                        fn: (order) => this.recurringOrderScheduleActions.modal.createFromOrder(order),
+                        fn: this.recurringOrderScheduleActions.transition.createFromOrder,
                         permission: 'fleet-ops create recurring-order-schedule',
+                    },
+                    {
+                        label: 'Reschedule',
+                        icon: 'calendar-days',
+                        fn: this.orderActions.editOrderDetails,
+                        permission: 'fleet-ops update order',
                     },
                     {
                         separator: true,
@@ -443,10 +442,40 @@ export default class OperationsOrdersIndexController extends Controller {
     }
 
     @action changeLayout(mode) {
+        if (mode === 'series') {
+            return this.recurringOrderScheduleActions.transition.manage();
+        }
+
         this.layout = mode;
 
         if (mode === 'table') {
             this.isSearchVisible = false;
+        }
+    }
+
+    @action changeWorkspaceLayout(mode) {
+        if (mode === 'series') {
+            return this.recurringOrderScheduleActions.transition.manage();
+        }
+
+        this.layout = mode;
+        return this.hostRouter.transitionTo('console.fleet-ops.operations.orders.index', {
+            queryParams: {
+                layout: mode,
+            },
+        });
+    }
+
+    @action setSeriesCount(count) {
+        this.seriesCount = Number(count ?? 0);
+    }
+
+    async loadSeriesCount() {
+        try {
+            const series = await this.store.query('recurring-order-schedule', { limit: 1 });
+            this.setSeriesCount(series?.meta?.total ?? series?.length ?? 0);
+        } catch {
+            this.setSeriesCount(0);
         }
     }
 }

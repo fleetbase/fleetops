@@ -70,6 +70,42 @@ export default class RecurringOrderScheduleActionsService extends ResourceAction
         },
     };
 
+    transition = {
+        create: () => {
+            return this.hostRouter.transitionTo('console.fleet-ops.operations.orders.index.new', {
+                queryParams: {
+                    repeat: true,
+                    source_order: null,
+                    source_series: null,
+                },
+            });
+        },
+        createFromOrder: (order) => {
+            return this.hostRouter.transitionTo('console.fleet-ops.operations.orders.index.new', {
+                queryParams: {
+                    repeat: true,
+                    source_order: order?.public_id ?? order?.id ?? null,
+                    source_series: null,
+                },
+            });
+        },
+        view: (series) => {
+            return this.transitionTo('operations.orders.index.series.details', series?.public_id ?? series?.id ?? series);
+        },
+        editTemplate: (series) => {
+            return this.hostRouter.transitionTo('console.fleet-ops.operations.orders.index.new', {
+                queryParams: {
+                    repeat: true,
+                    source_order: null,
+                    source_series: series?.public_id ?? series?.id ?? series,
+                },
+            });
+        },
+        manage: () => {
+            return this.transitionTo('operations.orders.index.series');
+        },
+    };
+
     buildPayload(schedule, overrides = {}) {
         return {
             recurring_order_schedule: {
@@ -202,5 +238,15 @@ export default class RecurringOrderScheduleActionsService extends ResourceAction
         } catch (error) {
             this.notifications.serverError(error);
         }
+    }
+
+    @action async skipNextOccurrence(schedule) {
+        const occurrenceAt = schedule?.next_occurrence_at ?? schedule?.upcoming_occurrences?.[0]?.occurrence_at;
+
+        if (!occurrenceAt) {
+            return this.notifications.warning('No upcoming occurrence is available to skip.');
+        }
+
+        return this.skipOccurrence(schedule, occurrenceAt);
     }
 }

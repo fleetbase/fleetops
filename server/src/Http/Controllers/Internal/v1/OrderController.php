@@ -74,6 +74,13 @@ class OrderController extends FleetOpsController
         }
     }
 
+    public function onQueryRecord($builder, $request): void
+    {
+        $builder->with([
+            'recurringOrderSchedule' => fn ($query) => $query->withCount('generatedOrders'),
+        ]);
+    }
+
     /**
      * Creates a record with request payload.
      *
@@ -121,7 +128,7 @@ class OrderController extends FleetOpsController
 
                     if ($resolvedOrderConfig) {
                         $input['order_config_uuid'] = $resolvedOrderConfig->uuid;
-                        $input['type'] = $resolvedOrderConfig->key;
+                        $input['type']              = $resolvedOrderConfig->key;
                     } elseif (!isset($input['type'])) {
                         $input['type'] = 'transport';
                     }
@@ -762,7 +769,7 @@ class OrderController extends FleetOpsController
             return response()->error('No order found.');
         }
 
-        $waypoint   = $request->filled('waypoint') ? Waypoint::findByPlace($request->input('waypoint'), $order) : null;
+        $waypoint    = $request->filled('waypoint') ? Waypoint::findByPlace($request->input('waypoint'), $order) : null;
         $orderConfig = $order->ensureOrderConfig();
         if (!$orderConfig) {
             return response()->error('No order config found for order.');

@@ -34,4 +34,9 @@ export default class OperationsOrdersIndexRoute extends Route {
     model(params) {
         return this.store.query('order', params);
     }
+
+    setupController(controller) {
+        super.setupController(...arguments);
+        controller.loadSeriesCount?.();
+    }
 }

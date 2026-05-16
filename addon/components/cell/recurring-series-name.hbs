@@ -1,0 +1,11 @@
+<div class="flex flex-col" ...attributes>
+    <a href="javascript:;" class="font-semibold text-blue-600 dark:text-blue-400 hover:underline" {{on "click" (fn @column.onLinkClick @row)}}>
+        {{n-a @row.name "Untitled series"}}
+    </a>
+    <div class="text-xs text-gray-500 dark:text-gray-400">
+        {{n-a @row.public_id}}
+        {{#if @row.meta.spawned_count}}
+            <span class="ml-1">- {{@row.meta.spawned_count}} spawned</span>
+        {{/if}}
+    </div>
+</div>
