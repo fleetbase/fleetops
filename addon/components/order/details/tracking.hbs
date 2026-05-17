@@ -28,18 +28,15 @@
                 <div class="tracking-intelligence-alert {{if (eq this.driverSignal 'Missing') 'tracking-intelligence-alert--critical'}}">
                     <div class="tracking-intelligence-alert__icon"><FaIcon @icon="triangle-exclamation" @size="xs" /></div>
                     <div class="min-w-0">
-                        <div class="tracking-intelligence-alert__title">
-                            {{#if (eq this.driverSignal "Missing")}}
-                                Pending GPS fix
-                            {{else if (eq this.driverSignal "Stale")}}
-                                Stale driver location
-                            {{else}}
-                                Tracking estimate warning
-                            {{/if}}
-                        </div>
+                        <div class="tracking-intelligence-alert__title">{{this.operatorWarningTitle}}</div>
                         <div class="tracking-intelligence-alert__body">{{this.operatorWarning}}</div>
                     </div>
-                    {{#if (or (eq this.driverSignal "Missing") (eq this.driverSignal "Stale"))}}
+                    {{#if this.canAssignDriver}}
+                        <button type="button" class="tracking-intelligence-alert__cta" {{on "click" this.assignDriver}}>
+                            <FaIcon @icon="user-plus" @size="xs" />
+                            <span>Assign driver</span>
+                        </button>
+                    {{else if this.canPingDriver}}
                         <button type="button" class="tracking-intelligence-alert__cta" disabled={{this.pingDriver.isRunning}} {{on "click" (perform this.pingDriver)}}>
                             <FaIcon @icon="bell" @size="xs" />
                             <span>{{if this.pingDriver.isRunning "Pinging..." "Ping driver app"}}</span>
@@ -69,7 +66,7 @@
                         {{#if this.hasDisplayedReportedEta}}
                             {{format-duration this.displayedReportedEtaSeconds}}
                         {{else}}
-                            Pending GPS fix
+                            {{this.etaUnavailableLabel}}
                         {{/if}}
                     </div>
                     <div class="tracking-intelligence-cell__sub {{if this.isReportedEtaUntrusted 'tracking-intelligence-cell__sub--warn'}}">{{this.reportedEtaWarning}}</div>
@@ -97,7 +94,7 @@
                             {{#if this.hasActiveEta}}
                                 {{format-duration this.activeEtaSeconds}}
                             {{else}}
-                                Pending GPS fix
+                                {{this.etaUnavailableLabel}}
                             {{/if}}
                         </strong>
                     </div>
