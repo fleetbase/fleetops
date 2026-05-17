@@ -1,20 +1,35 @@
 import Service from '@ember/service';
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'dummy/tests/helpers';
-import { render } from '@ember/test-helpers';
+import { click, render } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 
 module('Integration | Component | order/details/tracking', function (hooks) {
     setupRenderingTest(hooks);
 
     hooks.beforeEach(function () {
-        this.owner.register('service:order-actions', class OrderActionsService extends Service {});
+        this.assignedDriverOrder = null;
+        const testContext = this;
+
+        this.owner.register(
+            'service:order-actions',
+            class OrderActionsService extends Service {
+                assignDriver(order) {
+                    testContext.assignedDriverOrder = order;
+                }
+            }
+        );
     });
 
     function buildOrder(overrides = {}) {
         return {
             tracking: 'FLE2177254646SG',
             public_id: 'order_test',
+            driver_assigned_uuid: 'driver_1',
+            driver_assigned: {
+                id: 'driver_1',
+                name: 'Test Driver',
+            },
             tracking_number: {
                 qr_code: '',
                 barcode: '',
@@ -147,9 +162,10 @@ module('Integration | Component | order/details/tracking', function (hooks) {
 
         assert.dom().containsText('Driver stale');
         assert.dom().containsText('Driver location is stale');
+        assert.dom().containsText('Ping driver app');
     });
 
-    test('it shows missing driver location as the clearest warning', async function (assert) {
+    test('it shows missing driver location for assigned drivers', async function (assert) {
         this.set(
             'order',
             buildOrder({
@@ -167,5 +183,36 @@ module('Integration | Component | order/details/tracking', function (hooks) {
         assert.dom().containsText('Driver missing GPS');
         assert.dom().containsText('Driver location is missing');
         assert.dom().containsText('Ping driver app');
+    });
+
+    test('it shows assignment state instead of gps recovery when no driver is assigned', async function (assert) {
+        const order = buildOrder({
+            driver_assigned_uuid: null,
+            driver_assigned: null,
+            tracker_data: {
+                driver: {
+                    online: false,
+                    location: null,
+                },
+                eta: {
+                    active_stop_seconds: null,
+                    completion_at: null,
+                },
+            },
+        });
+
+        this.set('order', order);
+
+        await render(hbs`<Order::Details::Tracking @resource={{this.order}} />`);
+
+        assert.dom().containsText('No driver assigned');
+        assert.dom().containsText('Assign driver');
+        assert.dom().containsText('Pending driver assignment');
+        assert.dom().doesNotContainText('Pending GPS fix');
+        assert.dom().doesNotContainText('Ping driver app');
+
+        await click('.tracking-intelligence-alert__cta');
+
+        assert.strictEqual(this.assignedDriverOrder, order);
     });
 });

@@ -1,5 +1,6 @@
 import Component from '@glimmer/component';
 import { inject as service } from '@ember/service';
+import { action } from '@ember/object';
 import { debug } from '@ember/debug';
 import { task } from 'ember-concurrency';
 
@@ -56,6 +57,10 @@ export default class OrderDetailsTrackingComponent extends Component {
     }
 
     get smartAdjustedEtaUnavailableLabel() {
+        if (this.driverSignal === 'Unassigned') {
+            return 'Pending driver assignment';
+        }
+
         if (this.driverSignal === 'Missing' || this.driverSignal === 'Stale') {
             return 'Pending GPS fix';
         }
@@ -71,8 +76,18 @@ export default class OrderDetailsTrackingComponent extends Component {
         return this.trackerData?.route?.distance_m !== null && this.trackerData?.route?.distance_m !== undefined;
     }
 
+    get hasAssignedDriver() {
+        const order = this.args.resource;
+
+        return Boolean(order?.driver_assigned || order?.driver_assigned_uuid);
+    }
+
     get driverSignal() {
         const trackerData = this.trackerData;
+
+        if (!this.hasAssignedDriver) {
+            return 'Unassigned';
+        }
 
         if (!trackerData?.driver?.location) {
             return 'Missing';
@@ -93,6 +108,8 @@ export default class OrderDetailsTrackingComponent extends Component {
                 return 'Driver stale';
             case 'Missing':
                 return 'Driver missing GPS';
+            case 'Unassigned':
+                return 'No driver assigned';
             default:
                 return 'Driver offline';
         }
@@ -110,6 +127,8 @@ export default class OrderDetailsTrackingComponent extends Component {
                 return 'text-yellow-600 dark:text-yellow-400';
             case 'Missing':
                 return 'text-red-600 dark:text-red-400';
+            case 'Unassigned':
+                return 'text-yellow-600 dark:text-yellow-400';
             default:
                 return 'text-gray-600 dark:text-gray-300';
         }
@@ -261,6 +280,39 @@ export default class OrderDetailsTrackingComponent extends Component {
         return this.operatorWarning ?? 'Reported ETA may not reflect the latest tracking signal.';
     }
 
+    get etaUnavailableLabel() {
+        if (this.driverSignal === 'Unassigned') {
+            return 'Pending driver assignment';
+        }
+
+        if (this.driverSignal === 'Missing' || this.driverSignal === 'Stale') {
+            return 'Pending GPS fix';
+        }
+
+        return '-';
+    }
+
+    get operatorWarningTitle() {
+        switch (this.driverSignal) {
+            case 'Unassigned':
+                return 'No driver assigned';
+            case 'Missing':
+                return 'Pending GPS fix';
+            case 'Stale':
+                return 'Stale driver location';
+            default:
+                return 'Tracking estimate warning';
+        }
+    }
+
+    get canAssignDriver() {
+        return this.driverSignal === 'Unassigned';
+    }
+
+    get canPingDriver() {
+        return this.driverSignal === 'Missing' || this.driverSignal === 'Stale';
+    }
+
     get warningsCount() {
         return (this.trackerData?.warnings ?? []).length;
     }
@@ -307,7 +359,7 @@ export default class OrderDetailsTrackingComponent extends Component {
             return Math.max(0, Math.min(100, explicit));
         }
 
-        if (this.driverSignal === 'Missing') {
+        if (this.driverSignal === 'Unassigned' || this.driverSignal === 'Missing') {
             return 0;
         }
 
@@ -348,6 +400,10 @@ export default class OrderDetailsTrackingComponent extends Component {
 
         if (!trackerData) {
             return null;
+        }
+
+        if (!this.hasAssignedDriver) {
+            return 'Assign a driver to start live tracking and improve ETA accuracy.';
         }
 
         if (!trackerData?.driver?.location) {
@@ -393,6 +449,16 @@ export default class OrderDetailsTrackingComponent extends Component {
         }
 
         return stop.uuid === activeStop.uuid || stop.public_id === activeStop.public_id || stop.id === activeStop.id;
+    }
+
+    @action assignDriver() {
+        const order = this.args.resource;
+
+        if (!order || typeof this.orderActions.assignDriver !== 'function') {
+            return;
+        }
+
+        return this.orderActions.assignDriver(order);
     }
 
     @task *pingDriver() {
