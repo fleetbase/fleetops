@@ -141,85 +141,243 @@ class OrchestrationPayloadBuilder
     }
 
     /**
-     * Build the normalized job list from a collection of Orders.
+     * Build normalized route tasks from Fleetbase orders.
      *
-     * Each job contains:
-     *   - id:            order public_id
-     *   - location:      [longitude, latitude] of the delivery destination
-     *   - pickup:        [longitude, latitude] of the pickup (for PDPTW shipments)
-     *   - service:       service time in seconds (waypoint.service_time → order meta → default 300)
-     *   - time_windows:  [[earliest_unix, latest_unix]] from order.time_window_start/end or scheduled_at
-     *   - skills:        integer skill codes from order.required_skills or custom fields
-     *   - amount:        multi-dimensional capacity demand [weight_kg, volume_litres, pallets, parcels]
-     *   - priority:      orchestrator_priority (0–100, higher = more important)
-     *   - description:   human-readable label for debugging
+     * Fleetbase orders must remain atomic during allocation. A task contains
+     * the full ordered stop list for the order, but engine adapters decide how
+     * much of that route shape their solver can safely model.
      */
-    public static function buildJobs(Collection $orders): array
+    public static function buildRouteTasks(Collection $orders): array
     {
         return $orders->map(function (Order $order) {
-            $payload     = $order->payload;
-            $destination = $payload?->dropoff ?? $payload?->waypoints?->last();
+            $candidates  = static::buildRouteStopCandidates($order);
+            $invalidStop = collect($candidates)->first(fn (array $stop) => !static::coordinatesFromPlace($stop['place'] ?? null));
+            $stops       = static::normalizeRouteStops($candidates);
 
-            if (!$destination || !$destination->location) {
-                return null;
+            if ($invalidStop) {
+                return [
+                    'id'          => $order->public_id,
+                    'description' => $order->public_id,
+                    'invalid'     => true,
+                    'reason'      => sprintf('Order %s stop is missing valid coordinates.', $invalidStop['role'] ?? 'route'),
+                    'stops'       => [],
+                ];
             }
 
-            // --- Location ---
-            $job = [
+            if (empty($stops)) {
+                return [
+                    'id'          => $order->public_id,
+                    'description' => $order->public_id,
+                    'invalid'     => true,
+                    'reason'      => 'Order has no routable pickup, dropoff, or waypoint coordinates.',
+                    'stops'       => [],
+                ];
+            }
+
+            $task = [
                 'id'          => $order->public_id,
-                'location'    => [$destination->location->getLng(), $destination->location->getLat()],
                 'description' => $order->public_id,
+                'stops'       => $stops,
+                'amount'      => static::computePayloadDemand($order),
+                'service'     => static::resolveServiceTime($order),
             ];
 
-            // Pickup location (for pickup-and-delivery problems)
-            $pickup = $payload?->pickup;
-            if ($pickup && $pickup->location) {
-                $job['pickup'] = [$pickup->location->getLng(), $pickup->location->getLat()];
-            }
-
-            // --- Service time ---
-            // Prefer waypoint-level service_time, then order meta, then default 300s
-            $waypointMarker = $payload?->waypointMarkers?->last();
-            $job['service'] = (int) (
-                $waypointMarker?->service_time
-                ?? $order->getMeta('service_time_seconds')
-                ?? 300
-            );
-
-            // --- Capacity demand ---
-            // Aggregated dynamically from payload entities; falls back to order meta.
-            $job['amount'] = static::computePayloadDemand($order);
-
-            // --- Time windows ---
-            // Prefer explicit orchestrator time_window columns, fall back to scheduled_at
             if ($order->time_window_start && $order->time_window_end) {
-                $job['time_windows'] = [[
+                $task['time_windows'] = [[
                     $order->time_window_start->timestamp,
                     $order->time_window_end->timestamp,
                 ]];
             } elseif ($order->scheduled_at) {
-                $start               = $order->scheduled_at->timestamp;
-                $end                 = $order->scheduled_at->copy()->addHours(4)->timestamp;
-                $job['time_windows'] = [[$start, $end]];
+                $start                = $order->scheduled_at->timestamp;
+                $end                  = $order->scheduled_at->copy()->addHours(4)->timestamp;
+                $task['time_windows'] = [[$start, $end]];
             }
 
-            // --- Skills ---
-            // Prefer first-class required_skills JSON column, fall back to custom fields
             $skills = static::resolveSkills(
                 $order->required_skills ?? [],
                 $order->custom_fields ?? []
             );
             if (!empty($skills)) {
-                $job['skills'] = $skills;
+                $task['skills'] = $skills;
             }
 
-            // --- Priority ---
             if ($order->orchestrator_priority !== null && $order->orchestrator_priority > 0) {
-                $job['priority'] = (int) $order->orchestrator_priority;
+                $task['priority'] = (int) $order->orchestrator_priority;
             }
 
-            return $job;
-        })->filter()->values()->toArray();
+            return $task;
+        })->values()->toArray();
+    }
+
+    /**
+     * @deprecated Use buildRouteTasks(). Kept for older engine adapters.
+     */
+    public static function buildJobs(Collection $orders): array
+    {
+        return array_values(array_filter(
+            static::buildRouteTasks($orders),
+            fn (array $task) => empty($task['invalid'])
+        ));
+    }
+
+    /**
+     * Build normalized capacity-only tasks from Fleetbase orders.
+     *
+     * Capacity allocation does not require route stops. It only needs an order
+     * demand vector plus optional skills, priority, and task limits.
+     */
+    public static function buildCapacityTasks(Collection $orders): array
+    {
+        return $orders->map(function (Order $order) {
+            if (!$order->payload) {
+                return [
+                    'id'          => $order->public_id,
+                    'description' => $order->public_id,
+                    'invalid'     => true,
+                    'reason'      => 'Order has no payload to compute capacity demand.',
+                    'amount'      => [0, 0, 0, 0],
+                ];
+            }
+
+            $task = [
+                'id'          => $order->public_id,
+                'description' => $order->public_id,
+                'amount'      => static::computePayloadDemand($order),
+                'service'     => static::resolveServiceTime($order),
+            ];
+
+            $skills = static::resolveSkills(
+                $order->required_skills ?? [],
+                $order->custom_fields ?? []
+            );
+            if (!empty($skills)) {
+                $task['skills'] = $skills;
+            }
+
+            if ($order->orchestrator_priority !== null && $order->orchestrator_priority > 0) {
+                $task['priority'] = (int) $order->orchestrator_priority;
+            }
+
+            return $task;
+        })->values()->toArray();
+    }
+
+    /**
+     * Return Fleetbase's canonical ordered stops for an order:
+     * pickup, then waypoints by marker order, then dropoff.
+     */
+    public static function buildRouteStops(Order $order): array
+    {
+        return static::normalizeRouteStops(static::buildRouteStopCandidates($order));
+    }
+
+    protected static function buildRouteStopCandidates(Order $order): array
+    {
+        $payload = $order->payload;
+        if (!$payload) {
+            return [];
+        }
+
+        $stops = [];
+
+        if ($payload->pickup) {
+            $stops[] = ['role' => 'pickup', 'place' => $payload->pickup];
+        }
+
+        $waypointMarkers = method_exists($payload, 'relationLoaded') && $payload->relationLoaded('waypointMarkers')
+            ? $payload->waypointMarkers
+            : collect();
+        if ($waypointMarkers->isNotEmpty()) {
+            foreach ($waypointMarkers->sortBy('order')->values() as $index => $waypoint) {
+                $stops[] = [
+                    'role'          => 'waypoint',
+                    'place'         => $waypoint->place,
+                    'waypoint_id'   => $waypoint->public_id,
+                    'waypoint_uuid' => $waypoint->uuid,
+                    'order'         => $waypoint->order ?? $index,
+                ];
+            }
+        } elseif (isset($payload->waypoints) && $payload->waypoints) {
+            foreach ($payload->waypoints->values() as $index => $waypoint) {
+                $stops[] = [
+                    'role'  => 'waypoint',
+                    'place' => $waypoint,
+                    'order' => $index,
+                ];
+            }
+        }
+
+        if ($payload->dropoff) {
+            $stops[] = ['role' => 'dropoff', 'place' => $payload->dropoff];
+        }
+
+        return $stops;
+    }
+
+    protected static function normalizeRouteStops(array $stops): array
+    {
+        return collect($stops)
+            ->map(function (array $stop) {
+                $coordinates = static::coordinatesFromPlace($stop['place'] ?? null);
+                if (!$coordinates) {
+                    return null;
+                }
+
+                unset($stop['place'], $stop['waypoint_uuid']);
+
+                return array_merge($stop, [
+                    'location' => $coordinates,
+                ]);
+            })
+            ->filter()
+            ->values()
+            ->toArray();
+    }
+
+    protected static function resolveServiceTime(Order $order): int
+    {
+        $payload        = $order->payload;
+        $waypointMarker = $payload?->waypointMarkers?->last();
+
+        return (int) (
+            $waypointMarker?->service_time
+            ?? $order->getMeta('service_time_seconds')
+            ?? 300
+        );
+    }
+
+    protected static function coordinatesFromPlace($place): ?array
+    {
+        $location = $place?->location;
+        if (!$location) {
+            return null;
+        }
+
+        $lng = $location->getLng();
+        $lat = $location->getLat();
+
+        if (!static::isValidCoordinate($lng, $lat)) {
+            return null;
+        }
+
+        return [(float) $lng, (float) $lat];
+    }
+
+    protected static function isValidCoordinate($lng, $lat): bool
+    {
+        if (!is_numeric($lng) || !is_numeric($lat)) {
+            return false;
+        }
+
+        $lng = (float) $lng;
+        $lat = (float) $lat;
+
+        return is_finite($lng)
+            && is_finite($lat)
+            && $lng >= -180
+            && $lng <= 180
+            && $lat >= -90
+            && $lat <= 90;
     }
 
     /**
@@ -335,6 +493,56 @@ class OrchestrationPayloadBuilder
 
             return $entry;
         })->filter()->values()->toArray();
+    }
+
+    /**
+     * Build vehicles for non-geospatial capacity allocation.
+     *
+     * Unlike buildVehicles(), this intentionally does not require a vehicle or
+     * driver location because no routing engine will be asked to calculate
+     * travel distance or duration.
+     */
+    public static function buildCapacityVehicles(Collection $vehicles): array
+    {
+        return $vehicles->map(function (Vehicle $vehicle) {
+            $driver = $vehicle->driver;
+            $entry  = [
+                'id'        => $vehicle->public_id,
+                'driver_id' => $driver?->public_id,
+                'capacity'  => static::buildVehicleCapacity($vehicle),
+            ];
+
+            if ($vehicle->max_tasks !== null && $vehicle->max_tasks > 0) {
+                $entry['max_tasks'] = (int) $vehicle->max_tasks;
+            }
+
+            $maxTravel = $driver?->max_travel_time ?? static::safeMeta($vehicle, 'max_travel_time_seconds');
+            if ($maxTravel) {
+                $entry['max_travel_time'] = (int) $maxTravel;
+            }
+
+            if ($driver?->time_window_start && $driver?->time_window_end) {
+                $entry['time_window'] = [
+                    $driver->time_window_start->timestamp,
+                    $driver->time_window_end->timestamp,
+                ];
+            } elseif ($vehicle->time_window_start && $vehicle->time_window_end) {
+                $entry['time_window'] = [
+                    $vehicle->time_window_start->timestamp,
+                    $vehicle->time_window_end->timestamp,
+                ];
+            }
+
+            $skills = array_values(array_unique(array_merge(
+                static::resolveSkills($vehicle->skills ?? [], $vehicle->custom_fields ?? []),
+                static::resolveSkills($driver?->skills ?? [], $driver?->custom_fields ?? [])
+            )));
+            if (!empty($skills)) {
+                $entry['skills'] = $skills;
+            }
+
+            return $entry;
+        })->values()->toArray();
     }
 
     /**

@@ -203,6 +203,12 @@ Route::prefix(config('fleetops.api.routing.prefix', null))->namespace('Fleetbase
                 $router->get('{id}', 'LabelController@getLabel');
             });
 
+            // orchestrator routes
+            $router->group(['prefix' => 'orchestrator'], function () use ($router) {
+                $router->post('run', 'OrchestrationController@run');
+                $router->post('commit', 'OrchestrationController@commit');
+            });
+
             // navigator routes
             $router->group(['prefix' => 'onboard'], function () use ($router) {
                 $router->get('driver-onboard-settings/{companyId}', 'NavigatorController@getDriverOnboardSettings');
