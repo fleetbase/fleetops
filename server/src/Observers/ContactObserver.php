@@ -27,9 +27,17 @@ class ContactObserver
      */
     public function saving(Contact $contact)
     {
+        if ($contact->exists && $contact->getOriginal('type') === 'customer' && $contact->isDirty('type') && $contact->type !== 'customer') {
+            throw new \Exception('Customer contact type cannot be changed.');
+        }
+
         // Get the contacts assosciated user
         if ($contact->doesntHaveUser()) {
             $contact->createUser();
+        }
+
+        if ($contact->isCustomer()) {
+            $contact->normalizeCustomerUser();
         }
 
         // Validate email is available to user
