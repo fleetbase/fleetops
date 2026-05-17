@@ -99,6 +99,10 @@ export default class OrchestratorResourcePanelComponent extends Component {
         return [...(this.args.selectedDriverIds ?? new Set())];
     }
 
+    @action hasPosition(resource) {
+        return resource?.hasInvalidCoordinates === false;
+    }
+
     @action clearAllSelections() {
         this.args.onClearVehicles?.();
         this.args.onClearDrivers?.();

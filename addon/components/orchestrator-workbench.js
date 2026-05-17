@@ -68,7 +68,7 @@ export default class OrchestratorWorkbenchComponent extends Component {
 
     /**
      * User-composed list of phases to execute in sequence.
-     * Each phase: { id, mode, label, engine, orderStatuses, balanceWorkload,
+     * Each phase: { id, mode, label, engine, allocationStrategy, orderStatuses, balanceWorkload,
      *               respectSkills, respectCapacity, returnToDepot, autoCommit }
      */
     @tracked phases = [];
@@ -270,6 +270,7 @@ export default class OrchestratorWorkbenchComponent extends Component {
                 order_statuses: phase.orderStatuses ?? ['created'],
                 options: {
                     engine: phase.engine ?? 'greedy',
+                    allocation_strategy: phase.allocationStrategy ?? 'route_aware',
                     balance_workload: phase.balanceWorkload ?? false,
                     respect_skills: phase.respectSkills ?? true,
                     respect_capacity: phase.respectCapacity ?? true,
@@ -399,6 +400,7 @@ export default class OrchestratorWorkbenchComponent extends Component {
             mode: 'allocate',
             label: 'Allocate',
             engine: 'greedy',
+            allocationStrategy: 'route_aware',
             orderStatuses: ['created'],
             balanceWorkload: false,
             respectSkills: true,

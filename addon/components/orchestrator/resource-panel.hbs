@@ -187,6 +187,15 @@
                                     <Badge @status={{vehicle.status}}>{{smart-humanize vehicle.status}}</Badge>
                                 {{/if}}
                             </div>
+                            {{! Position }}
+                            <div
+                                class="flex items-center gap-1 text-xs truncate
+                                    {{if (this.hasPosition vehicle) 'text-green-500 dark:text-green-300' 'text-amber-600 dark:text-amber-300'}}"
+                                title={{if (this.hasPosition vehicle) (point-coordinates vehicle.location) (t "orchestrator.no-position")}}
+                            >
+                                <FaIcon @icon="location-dot" @size="xs" class="w-3 flex-shrink-0" />
+                                <span class="truncate">{{#if (this.hasPosition vehicle)}}{{point-coordinates vehicle.location}}{{else}}{{t "orchestrator.no-position"}}{{/if}}</span>
+                            </div>
                             {{! Assigned driver }}
                             <div class="flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400">
                                 <FaIcon @icon="id-card-alt" @size="xs" class="w-3 flex-shrink-0" />
@@ -245,6 +254,15 @@
                         {{! All fields — always shown, "-" when absent }}
                         <div class="flex-1 min-w-0 space-y-0.5">
                             <div class="text-xs font-semibold truncate dark:text-white">{{or driver.name "-"}}</div>
+                            {{! Position }}
+                            <div
+                                class="flex items-center gap-1 text-xs truncate
+                                    {{if (this.hasPosition driver) 'text-green-500 dark:text-green-300' 'text-amber-600 dark:text-amber-300'}}"
+                                title={{if (this.hasPosition driver) (point-coordinates driver.location) (t "orchestrator.no-position")}}
+                            >
+                                <FaIcon @icon="location-dot" @size="xs" class="w-3 flex-shrink-0" />
+                                <span class="truncate">{{#if (this.hasPosition driver)}}{{point-coordinates driver.location}}{{else}}{{t "orchestrator.no-position"}}{{/if}}</span>
+                            </div>
                             {{! Vehicle }}
                             <div class="flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400">
                                 <FaIcon @icon="truck" @size="xs" class="w-3 flex-shrink-0" />

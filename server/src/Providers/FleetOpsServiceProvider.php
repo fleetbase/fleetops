@@ -142,6 +142,9 @@ class FleetOpsServiceProvider extends CoreServiceProvider
                 if (!$registry->has('greedy')) {
                     $registry->register(new \Fleetbase\FleetOps\Orchestration\Engines\GreedyOrchestrationEngine());
                 }
+                if (!$registry->has('capacity')) {
+                    $registry->register(new \Fleetbase\FleetOps\Orchestration\Engines\CapacityAllocationEngine());
+                }
             }
         );
 
