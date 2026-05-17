@@ -16,11 +16,26 @@
     <div class="order-progress-card-progress">
         <OrderProgressBar
             @order={{this.order}}
-            @progress={{this.order.tracker_data.progress_percentage}}
-            @firstWaypointCompleted={{this.order.tracker_data.first_waypoint_completed}}
-            @lastWaypointCompleted={{this.order.tracker_data.last_waypoint_completed}}
+            @progress={{this.order.tracker_data.progress.percentage}}
+            @firstWaypointCompleted={{gt this.order.tracker_data.progress.completed_stops 0}}
+            @lastWaypointCompleted={{eq this.order.tracker_data.progress.percentage 100}}
         />
     </div>
+    {{#if this.order.tracker_data.insights.is_location_stale}}
+        <div class="flex px-1 mt-1">
+            <Badge @status="warning" @hideStatusDot={{true}}>Stale GPS</Badge>
+        </div>
+    {{else if this.order.tracker_data.fallback_provider}}
+        <div class="flex px-1 mt-1">
+            <Badge @status="warning" @hideStatusDot={{true}}>Fallback ETA</Badge>
+        </div>
+    {{else if this.order.tracker_data.confidence}}
+        {{#unless (eq this.order.tracker_data.confidence "high")}}
+            <div class="flex px-1 mt-1">
+                <Badge @status="warning" @hideStatusDot={{true}}>Low ETA Confidence</Badge>
+            </div>
+        {{/unless}}
+    {{/if}}
     <div class="order-progress-card-details">
         <div class="order-progress-card-details-address start">
             {{#if this.order.payload.isMultiDrop}}
@@ -41,11 +56,11 @@
         <div class="grid grid-cols-2 gap-2 mt-1 px-1">
             <div class="flex flex-col text-xs">
                 <div class="font-semibold">{{t "order.fields.current-eta"}}:</div>
-                <div class="">{{format-duration this.order.tracker_data.current_destination_eta}}</div>
+                <div class="">{{format-duration this.order.tracker_data.eta.active_stop_seconds}}</div>
             </div>
             <div class="flex flex-col text-xs">
                 <div class="font-semibold">{{t "order.fields.ect"}}:</div>
-                <div class="">{{n-a this.order.tracker_data.estimated_completion_time_formatted}}</div>
+                <div class="">{{n-a this.order.tracker_data.eta.completion_at}}</div>
             </div>
             <div class="flex flex-col text-xs">
                 <div class="font-semibold">{{t "order.fields.driver"}}:</div>
@@ -57,7 +72,7 @@
             </div>
             <div class="flex flex-col text-xs">
                 <div class="font-semibold">{{t "order.fields.current-destination"}}:</div>
-                <div class="truncate">{{n-a this.order.tracker_data.current_destination.address}}</div>
+                <div class="truncate">{{n-a this.order.tracker_data.active_stop.address}}</div>
             </div>
         </div>
     </div>

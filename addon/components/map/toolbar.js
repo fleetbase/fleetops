@@ -38,10 +38,18 @@ export default class MapToolbarComponent extends Component {
         return this.mapManager.zoomOut?.();
     }
 
+    get displayedActiveOrderCount() {
+        if (this.orderListOverlay.isOpen && this.orderListOverlay.loaded) {
+            return this.orderListOverlay.activeOrdersCount;
+        }
+
+        return this.activeOrderCount;
+    }
+
     @task *getActiveOrderCount() {
         try {
-            const count = yield this.fetch.get('fleet-ops/metrics', { discover: ['orders_in_progress'] });
-            this.activeOrderCount = count.orders_in_progress;
+            const count = yield this.fetch.get('fleet-ops/metrics', { discover: ['active_live_orders'] });
+            this.activeOrderCount = count.active_live_orders;
             return count;
         } catch (err) {
             debug('Failed to get active order count: ' + err.message);

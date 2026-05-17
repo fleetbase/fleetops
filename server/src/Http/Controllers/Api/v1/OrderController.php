@@ -93,17 +93,17 @@ class OrderController extends Controller
 
         // create payload
         if ($request->has('payload') && $request->isArray('payload')) {
-            $payload      = new Payload();
-            $payloadInput = $request->input('payload');
-            $entities     = data_get($payloadInput, 'entities', []);
-            $waypoints    = data_get($payloadInput, 'waypoints', []);
-            $pickup       = data_get($payloadInput, 'pickup');
-            $dropoff      = data_get($payloadInput, 'dropoff');
-            $return       = data_get($payloadInput, 'return');
-            $hasPickupField = array_key_exists('pickup', $payloadInput);
-            $hasDropoffField = array_key_exists('dropoff', $payloadInput);
-            $hasReturnField = array_key_exists('return', $payloadInput);
-            $hasWaypointsField = array_key_exists('waypoints', $payloadInput);
+            $payload                = new Payload();
+            $payloadInput           = $request->input('payload');
+            $entities               = data_get($payloadInput, 'entities', []);
+            $waypoints              = data_get($payloadInput, 'waypoints', []);
+            $pickup                 = data_get($payloadInput, 'pickup');
+            $dropoff                = data_get($payloadInput, 'dropoff');
+            $return                 = data_get($payloadInput, 'return');
+            $hasPickupField         = array_key_exists('pickup', $payloadInput);
+            $hasDropoffField        = array_key_exists('dropoff', $payloadInput);
+            $hasReturnField         = array_key_exists('return', $payloadInput);
+            $hasWaypointsField      = array_key_exists('waypoints', $payloadInput);
             $hasRouteEndpointFields = $hasPickupField || $hasDropoffField || $hasReturnField;
 
             if ($pickup) {
@@ -445,17 +445,17 @@ class OrderController extends Controller
 
         // create a payload if missing payload[] but has pickup/dropoff/etc
         if ($request->missing('payload')) {
-            $payload      = data_get($order, 'payload', new Payload());
-            $payloadInput = $request->only(['pickup', 'dropoff', 'return', 'waypoints', 'entities']);
-            $entities     = data_get($payloadInput, 'entities', []);
-            $waypoints    = data_get($payloadInput, 'waypoints', []);
-            $pickup       = data_get($payloadInput, 'pickup');
-            $dropoff      = data_get($payloadInput, 'dropoff');
-            $return       = data_get($payloadInput, 'return');
-            $hasPickupField = $request->exists('pickup');
-            $hasDropoffField = $request->exists('dropoff');
-            $hasReturnField = $request->exists('return');
-            $hasWaypointsField = $request->exists('waypoints');
+            $payload                = data_get($order, 'payload', new Payload());
+            $payloadInput           = $request->only(['pickup', 'dropoff', 'return', 'waypoints', 'entities']);
+            $entities               = data_get($payloadInput, 'entities', []);
+            $waypoints              = data_get($payloadInput, 'waypoints', []);
+            $pickup                 = data_get($payloadInput, 'pickup');
+            $dropoff                = data_get($payloadInput, 'dropoff');
+            $return                 = data_get($payloadInput, 'return');
+            $hasPickupField         = $request->exists('pickup');
+            $hasDropoffField        = $request->exists('dropoff');
+            $hasReturnField         = $request->exists('return');
+            $hasWaypointsField      = $request->exists('waypoints');
             $hasRouteEndpointFields = $hasPickupField || $hasDropoffField || $hasReturnField;
 
             // if no pickup and dropoff extract from waypoints
@@ -1328,13 +1328,13 @@ class OrderController extends Controller
      *
      * @return \Illuminate\Http\Response
      */
-    public function trackerData(string $id)
+    public function trackerData(Request $request, string $id)
     {
         set_time_limit(280);
 
         try {
             $order = Order::findRecordOrFail($id);
-            $data  = $order->tracker()->toArray();
+            $data  = $order->tracker()->toArray($request->only(['provider', 'fallbacks', 'traffic_enabled']));
 
             return response()->json($data);
         } catch (ModelNotFoundException $e) {
@@ -1351,11 +1351,11 @@ class OrderController extends Controller
      *
      * @return \Illuminate\Http\Response
      */
-    public function etaData(string $id)
+    public function etaData(Request $request, string $id)
     {
         try {
             $order = Order::findRecordOrFail($id);
-            $data  = $order->tracker()->eta();
+            $data  = $order->tracker()->eta($request->only(['provider', 'fallbacks', 'traffic_enabled']));
 
             return response()->json($data);
         } catch (ModelNotFoundException $e) {

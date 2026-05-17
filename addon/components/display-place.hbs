@@ -10,7 +10,7 @@
             </span>
         </div>
     {{else}}
-        {{#if (and @waypointActions (not @hideBadges))}}
+        {{#if @waypointActions}}
             <div class="flex flex-row item-center space-x-2 {{if (or this.place.status_code @eta) 'mb-2'}}">
                 {{#unless @hideBadges}}
                     {{#if this.place.status_code}}
