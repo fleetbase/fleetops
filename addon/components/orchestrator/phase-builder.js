@@ -50,6 +50,7 @@ export default class OrchestratorPhaseBuilderComponent extends Component {
             mode,
             label: this.intl.t(`orchestrator.mode-${mode.replace(/_/g, '-')}`),
             engine: 'greedy',
+            allocationStrategy: 'route_aware',
             orderStatuses: ['created'],
             balanceWorkload: false,
             respectSkills: true,
@@ -125,7 +126,11 @@ export default class OrchestratorPhaseBuilderComponent extends Component {
     }
 
     @action setDraftEngine(engine) {
-        this.draftPhase = { ...this.draftPhase, engine };
+        this.draftPhase = {
+            ...this.draftPhase,
+            engine,
+            allocationStrategy: engine === 'capacity' ? 'capacity_only' : (this.draftPhase.allocationStrategy ?? 'route_aware'),
+        };
     }
 
     @action toggleDraftOrderStatus(status) {
@@ -144,6 +149,21 @@ export default class OrchestratorPhaseBuilderComponent extends Component {
 
     get isEditing() {
         return this.editingIndex !== null && this.draftPhase !== null;
+    }
+
+    get allocationStrategyOptions() {
+        return [
+            { value: 'route_aware', label: this.intl.t('orchestrator.allocation-strategy-route-aware') },
+            { value: 'capacity_only', label: this.intl.t('orchestrator.allocation-strategy-capacity-only') },
+        ];
+    }
+
+    get shouldShowAllocationStrategy() {
+        return this.draftPhase?.mode === 'assign_vehicles' && this.draftPhase?.engine === 'vroom';
+    }
+
+    get shouldShowRouteOptions() {
+        return this.draftPhase?.engine !== 'capacity' && this.draftPhase?.allocationStrategy !== 'capacity_only';
     }
 
     modeLabel(mode) {

@@ -1989,6 +1989,9 @@ orchestrator:
     mode-allocate: Allocate Orders
     mode-optimize: Optimize Routes
     engine: Engine
+    allocation-strategy: Allocation Strategy
+    allocation-strategy-route-aware: Route + Capacity
+    allocation-strategy-capacity-only: Capacity Only
     respect-skills: Respect Skills
     respect-capacity: Respect Capacity
     return-to-depot: Return to Depot
@@ -2029,6 +2032,7 @@ orchestrator:
     no-search-results: No results match your search.
     search-drivers: Search drivers...
     search-vehicles: Search vehicles...
+    no-position: No position
     filter-online: Online
     filter-offline: Offline
     filter-on-shift: On Job
