@@ -13,6 +13,7 @@ use Fleetbase\FleetOps\Models\Place;
 use Fleetbase\FleetOps\Models\Route;
 use Fleetbase\FleetOps\Models\Vehicle;
 use Fleetbase\FleetOps\Support\LiveCacheService;
+use Fleetbase\FleetOps\Support\LiveOrderQuery;
 use Fleetbase\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 
@@ -110,49 +111,12 @@ class LiveController extends Controller
         ];
 
         return LiveCacheService::remember('orders', $cacheParams, function () use ($exclude, $active, $unassigned) {
-            $query = Order::where('company_uuid', session('company'))
-            ->whereHas('payload', function ($query) {
-                $query->where(
-                    function ($q) {
-                        $q->whereHas('waypoints');
-                        $q->orWhereHas('pickup');
-                        $q->orWhereHas('dropoff');
-                    }
-                );
-            })
-            ->whereNotIn('status', ['canceled', 'completed', 'expired'])
-            ->whereHas('trackingNumber')
-            ->whereHas('trackingStatuses')
-            ->whereNotIn('public_id', $exclude)
-            ->whereNull('deleted_at')
-            ->applyDirectivesForPermissions('fleet-ops list order')
-            ->with([
-                'payload.entities',
-                'payload.dropoff',
-                'payload.pickup',
-                'payload.return',
-                'payload.firstWaypointMarker.place',
-                'payload.lastWaypointMarker.place',
-                'trackingNumber',
-                'trackingStatuses',
-                'driverAssigned' => function ($query) {
-                    $query->without(['jobs', 'currentJob']);
-                },
-                'vehicleAssigned' => function ($query) {
-                    $query->without(['fleets', 'vendor']);
-                },
-                'customer',
-                'facilitator',
+            $query = LiveOrderQuery::make(session('company'), [
+                'exclude'        => $exclude,
+                'active'         => $active,
+                'unassigned'     => $unassigned,
+                'with_relations' => true,
             ]);
-
-            if ($active) {
-                $query->whereHas('driverAssigned');
-                $query->whereNotIn('status', ['created', 'completed', 'expired', 'order_canceled', 'canceled', 'pending']);
-            }
-
-            if ($unassigned) {
-                $query->whereNull('driver_assigned_uuid');
-            }
 
             $query->limit(60); // max 60 latest
             $query->latest();

@@ -16,12 +16,22 @@ export default class RouteListComponent extends Component {
     get routeStops() {
         const routePoints = buildRoutePointsFromPayload(this.args.order?.payload);
 
-        return routePoints.map((routePoint) => ({
-            routePoint,
-            place: routePoint.place,
-            badgeStyle: this.badgeStyleForStop(routePoint),
-            ...describeRoutePoint(routePoint, this.routeColor),
-        }));
+        return routePoints
+            .map((routePoint) => ({
+                routePoint,
+                place: routePoint.place,
+                badgeStyle: this.badgeStyleForStop(routePoint),
+                trackingStop: this.trackingStopFor(routePoint.place),
+                routeLeg: this.routeLegFor(routePoint.place),
+                ...describeRoutePoint(routePoint, this.routeColor),
+            }))
+            .map((stop) => ({
+                ...stop,
+                etaSeconds: stop.routeLeg?.eta_seconds ?? stop.routeLeg?.duration_in_traffic_s ?? stop.routeLeg?.duration_s ?? this.legacyEtaFor(stop.place),
+                etaAt: stop.routeLeg?.eta_at,
+                completed: Boolean(stop.trackingStop?.completed),
+                active: this.matchesStop(stop.trackingStop, this.args.order?.tracker_data?.active_stop),
+            }));
     }
 
     get firstStop() {
@@ -50,6 +60,38 @@ export default class RouteListComponent extends Component {
         const textColor = isYellow ? '#111827' : '#ffffff';
 
         return `background-color: ${markerColor}; color: ${textColor};`;
+    }
+
+    trackingStopFor(place) {
+        const stops = this.args.order?.tracker_data?.stops ?? [];
+
+        return stops.find((stop) => this.matchesPlace(stop, place)) ?? null;
+    }
+
+    routeLegFor(place) {
+        const legs = this.args.order?.tracker_data?.route?.legs ?? [];
+
+        return legs.find((leg) => this.matchesPlace(leg.stop, place)) ?? null;
+    }
+
+    legacyEtaFor(place) {
+        return this.args.eta?.[place?.id] ?? this.args.eta?.[place?.uuid] ?? this.args.eta?.[place?.public_id] ?? null;
+    }
+
+    matchesPlace(stop, place) {
+        if (!stop || !place) {
+            return false;
+        }
+
+        return stop.uuid === place.uuid || stop.public_id === place.public_id || stop.id === place.id;
+    }
+
+    matchesStop(stop, activeStop) {
+        if (!stop || !activeStop) {
+            return false;
+        }
+
+        return stop.uuid === activeStop.uuid || stop.public_id === activeStop.public_id;
     }
 
     @action toggleWaypointsCollapse() {

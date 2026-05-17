@@ -27,10 +27,25 @@
             <div class="order-listing-row-progress">
                 <OrderProgressBar
                     @order={{@order}}
-                    @progress={{@order.tracker_data.progress_percentage}}
-                    @firstWaypointCompleted={{@order.tracker_data.first_waypoint_completed}}
-                    @lastWaypointCompleted={{@order.tracker_data.last_waypoint_completed}}
+                    @progress={{@order.tracker_data.progress.percentage}}
+                    @firstWaypointCompleted={{gt @order.tracker_data.progress.completed_stops 0}}
+                    @lastWaypointCompleted={{eq @order.tracker_data.progress.percentage 100}}
                 />
+                {{#if @order.tracker_data.insights.is_location_stale}}
+                    <div class="flex mt-1">
+                        <Badge @status="warning" @hideStatusDot={{true}}>Stale GPS</Badge>
+                    </div>
+                {{else if @order.tracker_data.fallback_provider}}
+                    <div class="flex mt-1">
+                        <Badge @status="warning" @hideStatusDot={{true}}>Fallback ETA</Badge>
+                    </div>
+                {{else if @order.tracker_data.confidence}}
+                    {{#unless (eq @order.tracker_data.confidence "high")}}
+                        <div class="flex mt-1">
+                            <Badge @status="warning" @hideStatusDot={{true}}>Low ETA Confidence</Badge>
+                        </div>
+                    {{/unless}}
+                {{/if}}
             </div>
             <div class="order-listing-row-body">
                 <div class="order-listing-row-body-address start">

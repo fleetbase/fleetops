@@ -15,10 +15,25 @@
         <div class="order-listing-row-progress mb-2">
             <OrderProgressBar
                 @card={{@card}}
-                @progress={{@card.tracker_data.progress_percentage}}
-                @firstWaypointCompleted={{@card.tracker_data.first_waypoint_completed}}
-                @lastWaypointCompleted={{@card.tracker_data.last_waypoint_completed}}
+                @progress={{@card.tracker_data.progress.percentage}}
+                @firstWaypointCompleted={{gt @card.tracker_data.progress.completed_stops 0}}
+                @lastWaypointCompleted={{eq @card.tracker_data.progress.percentage 100}}
             />
+            {{#if @card.tracker_data.insights.is_location_stale}}
+                <div class="flex mt-1">
+                    <Badge @status="warning" @hideStatusDot={{true}}>Stale GPS</Badge>
+                </div>
+            {{else if @card.tracker_data.fallback_provider}}
+                <div class="flex mt-1">
+                    <Badge @status="warning" @hideStatusDot={{true}}>Fallback ETA</Badge>
+                </div>
+            {{else if @card.tracker_data.confidence}}
+                {{#unless (eq @card.tracker_data.confidence "high")}}
+                    <div class="flex mt-1">
+                        <Badge @status="warning" @hideStatusDot={{true}}>Low ETA Confidence</Badge>
+                    </div>
+                {{/unless}}
+            {{/if}}
         </div>
         <div class="order-listing-row-body flex flex-row">
             <div class="flex-1 order-listing-row-body-address start">

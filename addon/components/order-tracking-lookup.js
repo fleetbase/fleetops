@@ -50,7 +50,7 @@ export default class OrderTrackingLookupComponent extends Component {
         try {
             this.order = yield this.fetch.get('fleet-ops/lookup', { tracking: this.trackingNumber }, { normalizeToEmberData: true, normalizeModelType: 'order' });
             this.urlSearchParams.addParamToCurrentUrl('order', this.order.tracking);
-            const driverCurrentLocation = this.order.get('tracker_data.driver_current_location');
+            const driverCurrentLocation = this.order.get('tracker_data.driver.location');
             if (driverCurrentLocation) {
                 this.latitude = driverCurrentLocation.coordinates[1];
                 this.longitude = driverCurrentLocation.coordinates[0];

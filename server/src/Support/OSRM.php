@@ -88,7 +88,7 @@ class OSRM
         $cacheKey    = 'getRouteFromCoordinatesString:' . md5($coordinates . serialize($queryParameters));
 
         try {
-            $url         = self::$baseUrl . "/route/v1/driving/{$coordinates}";
+            $url         = static::baseUrl() . "/route/v1/driving/{$coordinates}";
             $response    = Http::timeout(1)->get($url, $queryParameters);
             $data        = $response->json();
 
@@ -130,7 +130,7 @@ class OSRM
         }
 
         $coordinates = "{$location->getLng()},{$location->getLat()}";
-        $url         = self::$baseUrl . "/nearest/v1/driving/{$coordinates}";
+        $url         = static::baseUrl() . "/nearest/v1/driving/{$coordinates}";
         $response    = Http::timeout(1)->get($url, $queryParameters);
         $result      = $response->json();
 
@@ -163,7 +163,7 @@ class OSRM
             return "{$point->getLng()},{$point->getLat()}";
         }, $points));
 
-        $url      = self::$baseUrl . "/table/v1/driving/{$coordinates}";
+        $url      = static::baseUrl() . "/table/v1/driving/{$coordinates}";
         $response = Http::timeout(1)->get($url, $queryParameters);
         $result   = $response->json();
 
@@ -196,7 +196,7 @@ class OSRM
             return "{$point->getLng()},{$point->getLat()}";
         }, $points));
 
-        $url      = self::$baseUrl . "/trip/v1/driving/{$coordinates}";
+        $url      = static::baseUrl() . "/trip/v1/driving/{$coordinates}";
         $response = Http::timeout(1)->get($url, $queryParameters);
         $data     = $response->json();
 
@@ -222,7 +222,7 @@ class OSRM
 
             return "{$point->getLng()},{$point->getLat()}";
         }, $points));
-        $url = self::$baseUrl . "/match/v1/driving/{$coordinates}";
+        $url = static::baseUrl() . "/match/v1/driving/{$coordinates}";
 
         $response = Http::timeout(1)->get($url, $queryParameters);
 
@@ -241,7 +241,7 @@ class OSRM
      */
     public static function getTile(int $z, int $x, int $y, array $queryParameters = [])
     {
-        $url = self::$baseUrl . "/tile/v1/car/{$z}/{$x}/{$y}.mvt";
+        $url = static::baseUrl() . "/tile/v1/car/{$z}/{$x}/{$y}.mvt";
 
         $response = Http::timeout(1)->get($url, $queryParameters);
 
@@ -258,5 +258,10 @@ class OSRM
     public static function decodePolyline($polyline)
     {
         return Polyline::decode($polyline);
+    }
+
+    protected static function baseUrl(): string
+    {
+        return rtrim(config('fleetops.osrm.host', static::$baseUrl), '/');
     }
 }

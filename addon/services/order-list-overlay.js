@@ -185,12 +185,12 @@ export default class OrderListOverlayService extends Service {
 
     #peekActiveOrders() {
         // Consider an order "active" if it has an assigned driver and is not terminal
-        const TERMINAL = ['created', 'completed', 'canceled', 'expired'];
+        const TERMINAL = ['created', 'completed', 'canceled', 'expired', 'order_canceled', 'pending'];
         return this.#peekOrders((order) => !!order.driver_assigned && !TERMINAL.includes(order.status));
     }
 
     #peekDriverActiveOrders(driver) {
-        const TERMINAL = ['created', 'completed', 'canceled', 'expired'];
+        const TERMINAL = ['created', 'completed', 'canceled', 'expired', 'order_canceled', 'pending'];
         return this.#peekOrders((order) => !!order.driver_assigned && order.driver_assigned?.id === driver.id && !TERMINAL.includes(order.status));
     }
 

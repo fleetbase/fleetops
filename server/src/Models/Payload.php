@@ -555,15 +555,15 @@ class Payload extends Model
         }
 
         $this->loadMissing('waypointMarkers');
-        $keptWaypointIds = [];
+        $keptWaypointIds          = [];
         $availableWaypointMarkers = $this->waypointMarkers()->get();
 
         foreach ($waypoints as $index => $attributes) {
-            $raw = $attributes;
-            $type = data_get($raw, 'type', 'dropoff');
-            $customerUuidIn = data_get($raw, 'customer_uuid');
+            $raw             = $attributes;
+            $type            = data_get($raw, 'type', 'dropoff');
+            $customerUuidIn  = data_get($raw, 'customer_uuid');
             $customerPubIdIn = data_get($raw, 'customer_id');
-            $customerType = data_get($raw, 'customer_type', 'fleetops:contact');
+            $customerType    = data_get($raw, 'customer_type', 'fleetops:contact');
 
             if (Utils::isset($attributes, 'place') && is_array(Utils::get($attributes, 'place'))) {
                 $attributes = Utils::get($attributes, 'place');
@@ -599,12 +599,12 @@ class Payload extends Model
                 $placeUuid = $place->uuid;
             }
 
-            $customerUuid = null;
+            $customerUuid          = null;
             $customerTypeNamespace = null;
 
             if ($customerType) {
                 $customerTypeNamespace = Utils::getMutationType($customerType);
-                $customerModel = app($customerTypeNamespace);
+                $customerModel         = app($customerTypeNamespace);
 
                 if ($customerUuidIn && $customerModel->where('uuid', $customerUuidIn)->exists()) {
                     $customerUuid = $customerUuidIn;
@@ -642,7 +642,7 @@ class Payload extends Model
                 continue;
             }
 
-            $waypointRecord = Waypoint::create($values);
+            $waypointRecord    = Waypoint::create($values);
             $keptWaypointIds[] = $waypointRecord->uuid;
         }
 

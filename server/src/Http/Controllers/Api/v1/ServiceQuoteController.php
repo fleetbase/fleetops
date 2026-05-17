@@ -231,7 +231,7 @@ class ServiceQuoteController extends Controller
         $entities  = collect($entities)->mapInto(Entity::class);
 
         // should all be Place like
-        $waypoints = collect([$pickup, ...$waypoints, $dropoff])->filter();
+        $waypoints     = collect([$pickup, ...$waypoints, $dropoff])->filter();
         $endpointCount = (int) ($pickup instanceof Place) + (int) ($dropoff instanceof Place);
 
         // if facilitator is an integrated partner resolve service quotes from bridge

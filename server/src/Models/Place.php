@@ -21,7 +21,6 @@ use Fleetbase\Traits\Searchable;
 use Fleetbase\Traits\SendsWebhooks;
 use Fleetbase\Traits\TracksApiCredential;
 use Illuminate\Support\Carbon;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
 class Place extends Model
@@ -383,8 +382,6 @@ class Place extends Model
 
     /**
      * Create a new Place instance from a geocoding lookup.
-     *
-     * @return array
      */
     public static function getValuesFromGeocodingLookup(string $address): array
     {

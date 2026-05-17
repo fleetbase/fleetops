@@ -1,40 +1,184 @@
 <ContentPanel @title={{t "order.fields.tracking"}} @prefixTitleRight={{@resource.tracking}} @isLoading={{@isLoading}} @open={{true}} @wrapperClass="bordered-top">
-    {{#if @resource.tracker_data}}
-        <div class="mb-4">
-            <div class="mb-6">
-                <OrderProgressBar
-                    @order={{@resource}}
-                    @progress={{@resource.tracker_data.progress_percentage}}
-                    @firstWaypointCompleted={{@resource.tracker_data.first_waypoint_completed}}
-                    @lastWaypointCompleted={{@resource.tracker_data.last_waypoint_completed}}
-                />
+    {{#if this.hasTrackerData}}
+        <div class="tracking-intelligence mb-4">
+            <div class="tracking-intelligence__status">
+                <span class="tracking-intelligence-pill {{this.confidenceToneClass}}">
+                    <span class="tracking-intelligence-pill__dot"></span>
+                    {{this.confidenceLabel}}
+                    confidence ·
+                    {{this.confidencePercent}}%
+                </span>
+                <span class="tracking-intelligence-pill {{if (eq this.driverSignal 'Live') 'tracking-intelligence-pill--good' 'tracking-intelligence-pill--warn'}}">
+                    <span class="tracking-intelligence-pill__dot"></span>
+                    {{this.driverStatusLabel}}
+                    {{#if this.hasDriverLocationAge}}
+                        ·
+                        {{format-duration @resource.tracker_data.driver.location_age_seconds}}
+                    {{/if}}
+                </span>
+                {{#if @resource.tracker_data.fallback_provider}}
+                    <span class="tracking-intelligence-pill tracking-intelligence-pill--muted">Fallback:
+                        {{this.fallbackProviderLabel}}</span>
+                {{/if}}
             </div>
-            <div class="grid grid-cols-2 gap-2">
-                <div class="field-info-container space-y-1">
-                    <div class="field-name">Current ETA</div>
-                    <div class="field-value">{{n-a (format-duration @resource.tracker_data.current_destination_eta)}}</div>
+
+            <TrackingStopProgress @stops={{@resource.tracker_data.stops}} @activeStop={{@resource.tracker_data.active_stop}} />
+
+            {{#if this.operatorWarning}}
+                <div class="tracking-intelligence-alert {{if (eq this.driverSignal 'Missing') 'tracking-intelligence-alert--critical'}}">
+                    <div class="tracking-intelligence-alert__icon"><FaIcon @icon="triangle-exclamation" @size="xs" /></div>
+                    <div class="min-w-0">
+                        <div class="tracking-intelligence-alert__title">{{this.operatorWarningTitle}}</div>
+                        <div class="tracking-intelligence-alert__body">{{this.operatorWarning}}</div>
+                    </div>
+                    {{#if this.canAssignDriver}}
+                        <button type="button" class="tracking-intelligence-alert__cta" {{on "click" this.assignDriver}}>
+                            <FaIcon @icon="user-plus" @size="xs" />
+                            <span>Assign driver</span>
+                        </button>
+                    {{else if this.canPingDriver}}
+                        <button type="button" class="tracking-intelligence-alert__cta" disabled={{this.pingDriver.isRunning}} {{on "click" (perform this.pingDriver)}}>
+                            <FaIcon @icon="bell" @size="xs" />
+                            <span>{{if this.pingDriver.isRunning "Pinging..." "Ping driver app"}}</span>
+                        </button>
+                    {{/if}}
                 </div>
-                <div class="field-info-container space-y-1">
-                    <div class="field-name">Current ECT</div>
-                    <div class="field-value">{{n-a @resource.tracker_data.estimated_completion_time_formatted}}</div>
+            {{/if}}
+
+            <div class="tracking-intelligence__eta-grid">
+                <div class="tracking-intelligence-cell tracking-intelligence-cell--accent">
+                    <div class="tracking-intelligence-cell__label">
+                        Smart adjusted ETA
+                        <span class="tracking-intelligence-tag">Live</span>
+                    </div>
+                    <div class="tracking-intelligence-cell__value">
+                        {{#if this.hasSmartAdjustedEta}}
+                            {{format-duration this.smartAdjustedEtaSeconds}}
+                        {{else}}
+                            {{this.smartAdjustedEtaUnavailableLabel}}
+                        {{/if}}
+                    </div>
+                    <div class="tracking-intelligence-cell__sub">Based on provider route and driver signal</div>
                 </div>
-                <div class="field-info-container space-y-1">
-                    <div class="field-name">Current Destination</div>
-                    <div class="field-value">{{n-a @resource.tracker_data.current_destination.address}}</div>
+                <div class="tracking-intelligence-cell">
+                    <div class="tracking-intelligence-cell__label">Reported ETA</div>
+                    <div class="tracking-intelligence-cell__value {{if this.isReportedEtaUntrusted 'tracking-intelligence-cell__value--muted'}}">
+                        {{#if this.hasDisplayedReportedEta}}
+                            {{format-duration this.displayedReportedEtaSeconds}}
+                        {{else}}
+                            {{this.etaUnavailableLabel}}
+                        {{/if}}
+                    </div>
+                    <div class="tracking-intelligence-cell__sub {{if this.isReportedEtaUntrusted 'tracking-intelligence-cell__sub--warn'}}">{{this.reportedEtaWarning}}</div>
                 </div>
+            </div>
+
+            <div class="tracking-intelligence-confidence">
+                <div class="tracking-intelligence-confidence__label">ETA confidence</div>
+                <div class="tracking-intelligence-confidence__segments {{this.confidenceToneClass}}">
+                    {{#each this.confidenceSegments as |segment|}}
+                        <span class="{{if segment.lit 'is-lit'}}"></span>
+                    {{/each}}
+                </div>
+                <div class="tracking-intelligence-confidence__value">{{this.confidencePercent}}%</div>
+            </div>
+
+            <div class="tracking-intelligence-destination">
+                <div class="tracking-intelligence-destination__marker">{{this.activeStopMarkerLabel}}</div>
+                <div class="min-w-0 flex-1">
+                    <div class="tracking-intelligence-destination__label">{{this.activeStopLabel}}</div>
+                    <div class="tracking-intelligence-destination__address">{{n-a @resource.tracker_data.active_stop.address}}</div>
+                    <div class="tracking-intelligence-destination__eta">
+                        ETA:
+                        <strong>
+                            {{#if this.hasActiveEta}}
+                                {{format-duration this.activeEtaSeconds}}
+                            {{else}}
+                                {{this.etaUnavailableLabel}}
+                            {{/if}}
+                        </strong>
+                    </div>
+                </div>
+            </div>
+
+            <div class="tracking-intelligence-distance">
+                <div class="tracking-intelligence-distance__row">
+                    <span>Reported total</span>
+                    <strong>
+                        {{#if this.hasRemainingDistance}}
+                            {{format-meters @resource.tracker_data.route.distance_m}}
+                        {{else}}
+                            -
+                        {{/if}}
+                    </strong>
+                    <div class="tracking-intelligence-distance__bar">
+                        <span style={{this.totalProgressStyle}}></span>
+                    </div>
+                </div>
+                <div class="tracking-intelligence-distance__row">
+                    <span>Between stops</span>
+                    <strong>
+                        {{#if this.hasCurrentLegDistance}}
+                            {{format-meters this.currentLeg.distance_m}}
+                        {{else}}
+                            -
+                        {{/if}}
+                    </strong>
+                    <div class="tracking-intelligence-distance__bar tracking-intelligence-distance__bar--secondary">
+                        <span style={{this.currentLegProgressStyle}}></span>
+                    </div>
+                </div>
+                <div class="tracking-intelligence-distance__foot">Provider context:
+                    {{this.providerLabel}}
+                    route</div>
+            </div>
+
+            <details class="tracking-intelligence-diagnostics">
+                <summary>
+                    <span>Diagnostics</span>
+                    <span class="tracking-intelligence-diagnostics__summary">
+                        {{this.diagnosticsSummaryLabel}}
+                        <FaIcon @icon="chevron-right" @size="xs" />
+                    </span>
+                </summary>
+                <div class="tracking-intelligence-diagnostics__body">
+                    {{#each this.diagnostics as |item|}}
+                        <div class="tracking-intelligence-diagnostics__row">
+                            <span>{{item.label}}</span>
+                            <strong>{{item.value}}</strong>
+                        </div>
+                    {{/each}}
+                    {{#if this.hasWarnings}}
+                        <div class="tracking-intelligence-diagnostics__warnings">
+                            {{#each @resource.tracker_data.warnings as |warning|}}
+                                <span>{{warning}}</span>
+                            {{/each}}
+                        </div>
+                    {{/if}}
+                </div>
+            </details>
+
+            <div class="tracking-intelligence-footer">
+                <span>Updated {{n-a (format-date-fns @resource.tracker_data.generated_at "d MMM HH:mm")}}</span>
+                <button type="button" class="tracking-intelligence-footer__button" disabled={{this.loadTrackerData.isRunning}} {{on "click" (perform this.loadTrackerData)}}>
+                    <FaIcon @icon="rotate" @size="xs" class={{if this.loadTrackerData.isRunning "fa-spin"}} />
+                    <span>{{if this.loadTrackerData.isRunning "Recalculating" "Recalculate"}}</span>
+                </button>
             </div>
         </div>
     {{/if}}
-    <div class="flex flex-col border border-gray-200 bg-gray-50 dark:bg-gray-900 dark:border-gray-700 rounded-md px-4 py-4 shadow-sm">
-        <div class="flex flex-row items-center justify-center space-x-4">
+
+    <div class="text-xs uppercase tracking-wide font-semibold text-gray-500 dark:text-gray-400 mb-2">Labels</div>
+    <div class="tracking-intelligence-labels">
+        <div class="flex flex-row items-center justify-center space-x-3">
             <div class="rounded-md bg-white p-2">
-                <img src={{concat "data:image/png;base64," @resource.tracking_number.qr_code}} class="w-14 h-14" alt={{@resource.public_id}} />
+                <img src={{concat "data:image/png;base64," @resource.tracking_number.qr_code}} class="w-12 h-12" alt={{@resource.public_id}} />
             </div>
             <div class="rounded-md bg-white p-2">
-                <img src={{concat "data:image/png;base64," @resource.tracking_number.barcode}} class="w-40 h-14" alt={{@resource.public_id}} />
+                <img src={{concat "data:image/png;base64," @resource.tracking_number.barcode}} class="w-36 h-12" alt={{@resource.public_id}} />
             </div>
         </div>
-        <div class="mt-4 flex justify-center items-center">
+        <div class="mt-2 flex justify-center items-center">
             <Button @size="xs" @type="default" @icon="barcode" @text="Get Order Label" @onClick={{fn this.orderActions.viewLabel @resource}} @permission="fleet-ops view order" />
         </div>
     </div>

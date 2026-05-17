@@ -1,0 +1,45 @@
+<div class="tracking-stop-progress" ...attributes>
+    <div class="tracking-stop-progress__header">
+        <div class="tracking-stop-progress__title">Between Stops</div>
+        <div class="tracking-stop-progress__count">
+            <span class="font-semibold text-gray-800 dark:text-gray-100">{{this.completedCount}}</span>
+            /
+            {{this.totalCount}}
+            stops
+        </div>
+    </div>
+
+    <div class="tracking-stop-progress__scroller">
+        <div class="tracking-stop-progress__rail">
+            {{#each this.stops as |stop|}}
+                <div class="tracking-stop-progress__stop">
+                    <div class="tracking-stop-progress__line">
+                        {{#unless stop.isFirst}}
+                            <div class="tracking-stop-progress__connector"></div>
+                        {{/unless}}
+
+                        <div
+                            class="tracking-stop-progress__dot
+                                {{if stop.completed 'tracking-stop-progress__dot--done'}}
+                                {{if stop.active 'tracking-stop-progress__dot--active'}}
+                                {{if stop.pending 'tracking-stop-progress__dot--pending'}}"
+                            title={{stop.title}}
+                        >
+                            {{stop.label}}
+                        </div>
+                        <Attach::Tooltip @class="clean" @animation="scale" @placement="top">
+                            <InputInfo class="max-w-xs">
+                                <div class="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">{{stop.title}}</div>
+                                <DisplayPlace @place={{stop.place}} @addressClass="mt-1 text-xs leading-4 text-gray-900 dark:text-gray-100 not-italic" @hideBadges={{true}} />
+                            </InputInfo>
+                        </Attach::Tooltip>
+
+                        {{#unless stop.isLast}}
+                            <div class="tracking-stop-progress__connector"></div>
+                        {{/unless}}
+                    </div>
+                </div>
+            {{/each}}
+        </div>
+    </div>
+</div>

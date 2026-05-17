@@ -26,16 +26,17 @@ use Fleetbase\FleetOps\Models\Proof;
 use Fleetbase\FleetOps\Models\ServiceQuote;
 use Fleetbase\FleetOps\Models\TrackingStatus;
 use Fleetbase\FleetOps\Models\Waypoint;
+use Fleetbase\FleetOps\Notifications\OrderPing;
 use Fleetbase\FleetOps\Support\Utils;
 use Fleetbase\Http\Requests\ExportRequest;
 use Fleetbase\Http\Requests\Internal\BulkActionRequest;
 use Fleetbase\Models\File;
 use Fleetbase\Models\Type;
+use Fleetbase\Support\Auth;
 use Fleetbase\Support\TemplateString;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
@@ -121,7 +122,7 @@ class OrderController extends FleetOpsController
 
                     if ($resolvedOrderConfig) {
                         $input['order_config_uuid'] = $resolvedOrderConfig->uuid;
-                        $input['type'] = $resolvedOrderConfig->key;
+                        $input['type']              = $resolvedOrderConfig->key;
                     } elseif (!isset($input['type'])) {
                         $input['type'] = 'transport';
                     }
@@ -762,7 +763,7 @@ class OrderController extends FleetOpsController
             return response()->error('No order found.');
         }
 
-        $waypoint   = $request->filled('waypoint') ? Waypoint::findByPlace($request->input('waypoint'), $order) : null;
+        $waypoint    = $request->filled('waypoint') ? Waypoint::findByPlace($request->input('waypoint'), $order) : null;
         $orderConfig = $order->ensureOrderConfig();
         if (!$orderConfig) {
             return response()->error('No order config found for order.');
@@ -792,33 +793,57 @@ class OrderController extends FleetOpsController
      *
      * @return \Illuminate\Http\Response
      */
-    public function trackerInfo(string $id)
+    public function trackerInfo(Request $request, string $id)
     {
         $order = Order::findById($id);
         if (!$order) {
             return response()->error('No order found.');
         }
 
-        // Cache tracker data for 30 seconds with order-specific key
-        $cacheKey    = "order:{$order->uuid}:tracker";
-        $trackerInfo = Cache::remember($cacheKey, 30, function () use ($order) {
-            return $order->tracker()->toArray();
-        });
-
-        return response()->json($trackerInfo);
+        return response()->json($order->tracker()->toArray($request->only(['provider', 'fallbacks', 'traffic_enabled'])));
     }
 
-    public function waypointEtas(string $id)
+    public function waypointEtas(Request $request, string $id)
     {
         $order = Order::findById($id);
         if (!$order) {
             return response()->error('No order found.');
         }
 
-        // Get order tracker
-        $eta = $order->tracker()->eta();
+        return response()->json($order->tracker()->eta($request->only(['provider', 'fallbacks', 'traffic_enabled'])));
+    }
 
-        return response()->json($eta);
+    /**
+     * Ping the assigned driver to refresh/order attention in the driver app.
+     *
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function pingDriver(string $id)
+    {
+        if (!Auth::can('fleet-ops update order')) {
+            return response()->error('Unauthorized.', 403);
+        }
+
+        try {
+            $order = Order::findByIdOrFail($id, ['driverAssigned']);
+        } catch (ModelNotFoundException $e) {
+            return response()->error('Order resource not found.', 404);
+        }
+
+        if (!$order->driverAssigned) {
+            return response()->error('Order does not have an assigned driver.', 422);
+        }
+
+        try {
+            $order->driverAssigned->notify(new OrderPing($order));
+
+            return response()->json([
+                'status'  => 'ok',
+                'message' => 'Driver app ping sent.',
+            ]);
+        } catch (\Throwable $e) {
+            return response()->error('Unable to ping driver app.', 500);
+        }
     }
 
     /**

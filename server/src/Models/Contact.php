@@ -5,6 +5,7 @@ namespace Fleetbase\FleetOps\Models;
 use Fleetbase\Casts\Json;
 use Fleetbase\FleetOps\Exceptions\UserAlreadyExistsException;
 use Fleetbase\FleetOps\Support\Utils;
+use Fleetbase\Models\CompanyUser;
 use Fleetbase\Models\Invite;
 use Fleetbase\Models\Model;
 use Fleetbase\Models\User;
@@ -262,6 +263,14 @@ class Contact extends Model
     }
 
     /**
+     * Determines if this contact is a Fleet-Ops customer.
+     */
+    public function isCustomer(): bool
+    {
+        return $this->type === 'customer';
+    }
+
+    /**
      * Creates a new contact from an import row.
      */
     public static function createFromImport(array $row, bool $saveInstance = false): Contact
@@ -308,19 +317,33 @@ class Contact extends Model
     public static function createUserFromContact(Contact $contact, bool $sendInvite = false, bool $update = false): User
     {
         // Check if user already exist with email or phone number
-        $existingUser = User::where(function ($query) use ($contact) {
-            $query->where('company_uuid', $contact->company_uuid);
-            $query->where('email', $contact->email);
-            if ($contact->phone) {
-                $query->orWhere('phone', Utils::formatPhoneNumber($contact->phone));
-            }
-        })->whereNull('deleted_at')->first();
+        $existingUser = null;
+        if ($contact->email || $contact->phone) {
+            $existingUser = User::where('company_uuid', $contact->company_uuid)
+                ->where(function ($query) use ($contact) {
+                    if ($contact->email) {
+                        $query->where('email', $contact->email);
+                    }
+
+                    if ($contact->phone) {
+                        $method = $contact->email ? 'orWhere' : 'where';
+                        $query->{$method}('phone', Utils::formatPhoneNumber($contact->phone));
+                    }
+                })
+                ->whereNull('deleted_at')
+                ->first();
+        }
+
         if ($existingUser) {
             // Check if existing user belongs to another contact
             $existingUserContact = Contact::where(['user_uuid' => $existingUser->uuid, 'company_uuid' => $contact->company_uuid])->whereHas('user')->first();
             if ($existingUserContact) {
                 throw new UserAlreadyExistsException('User already exists, try to assigning the user to this contact.', $existingUser);
             } else {
+                if ($contact->isCustomer()) {
+                    $contact->normalizeCustomerUser($existingUser);
+                }
+
                 // Assign the user to this contact instead
                 $contact->setAttribute('user_uuid', $existingUser->uuid);
                 if ($update) {
@@ -351,10 +374,10 @@ class Contact extends Model
         $user->setType($contact->type);
 
         // Assing to company
-        $user->assignCompany($contact->company, $user->type === 'customer' ? 'Fleet-Ops Customer' : 'Fleet-Ops Contact');
+        $user->assignCompany($contact->company, $contact->isCustomer() ? 'Fleet-Ops Customer' : 'Fleet-Ops Contact');
 
         // Assign customer role
-        if ($user->type === 'customer') {
+        if ($contact->isCustomer()) {
             $user->assignSingleRole('Fleet-Ops Customer');
         }
 
@@ -387,6 +410,87 @@ class Contact extends Model
     }
 
     /**
+     * Normalize the linked user for a customer contact.
+     */
+    public function normalizeCustomerUser(?User $user = null, bool $quiet = false): ?User
+    {
+        if (!$this->isCustomer()) {
+            return $user;
+        }
+
+        $user ??= $this->getUser();
+        if (!$user) {
+            return null;
+        }
+
+        if ($user->type !== 'customer') {
+            if ($quiet) {
+                $user->forceFill(['type' => 'customer'])->saveQuietly();
+            } else {
+                $user->setType('customer');
+            }
+        }
+
+        $this->loadMissing('company');
+        if ($this->company) {
+            $companyUser = CompanyUser::firstOrCreate(
+                [
+                    'company_uuid' => $this->company->uuid,
+                    'user_uuid'    => $user->uuid,
+                ],
+                [
+                    'company_uuid' => $this->company->uuid,
+                    'user_uuid'    => $user->uuid,
+                    'status'       => $user->status ?? 'active',
+                ]
+            );
+            $user->forceFill(['company_uuid' => $this->company->uuid])->saveQuietly();
+            $user->setRelation('companyUser', $companyUser);
+
+            if ($companyUser) {
+                $companyUser->assignSingleRole('Fleet-Ops Customer');
+            }
+        }
+
+        $this->setRelation('user', $user);
+
+        return $user;
+    }
+
+    /**
+     * Repair a historical customer contact and its linked user.
+     */
+    public function repairCustomerTypeInvariant(bool $quiet = false): ?User
+    {
+        if (!$this->isCustomer()) {
+            $this->forceFill(['type' => 'customer'])->saveQuietly();
+        }
+
+        $user = $this->getUser();
+        if (!$user && ($this->email || $this->phone)) {
+            if ($quiet) {
+                $this->loadMissing('company');
+                $user = User::create([
+                    'company_uuid' => $this->company_uuid,
+                    'name'         => $this->name,
+                    'email'        => $this->email,
+                    'phone'        => $this->phone ? Utils::formatPhoneNumber($this->phone) : null,
+                    'username'     => Str::slug($this->name . '_' . Str::random(4), '_'),
+                    'password'     => Str::random(),
+                    'timezone'     => $this->company->timezone ?? date_default_timezone_get(),
+                    'status'       => 'pending',
+                ]);
+                $user->forceFill(['type' => 'customer'])->saveQuietly();
+                $this->forceFill(['user_uuid' => $user->uuid])->saveQuietly();
+            } else {
+                $user = $this->createUser();
+            }
+        }
+
+        return $this->normalizeCustomerUser($user, $quiet);
+    }
+
+    /**
      * Assigns a user to the company and optionally sends an invitation email.
      *
      * This method performs the following actions:
@@ -406,16 +510,21 @@ class Contact extends Model
     public function assignUser(User $user, bool $sendInvite = false): self
     {
         // Load company
-        $this->loadMissing('copmany');
+        $this->loadMissing('company');
+
+        if ($this->isCustomer() && $user->type !== 'customer') {
+            $user->setType('customer');
+        }
 
         // Assing to company
-        $user->assignCompany($this->company, $this->type === 'customer' ? 'Fleet-Ops Customer' : 'Fleet-Ops Contact');
+        $user->assignCompany($this->company, $this->isCustomer() ? 'Fleet-Ops Customer' : 'Fleet-Ops Contact');
 
         // Get the company user instance
         $companyUser = $user->getCompanyUser($this->company);
 
-        // Assign customer role
-        $companyUser->assignSingleRole('Fleet-Ops Customer');
+        if ($companyUser) {
+            $companyUser->assignSingleRole($this->isCustomer() ? 'Fleet-Ops Customer' : 'Fleet-Ops Contact');
+        }
 
         // Set user to contact
         $this->update(['user_uuid' => $user->uuid]);

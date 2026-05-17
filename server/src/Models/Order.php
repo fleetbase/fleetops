@@ -1739,7 +1739,7 @@ class Order extends Model
             }
         }
 
-        $company = $this->relationLoaded('company') ? $this->company : $this->company()->first();
+        $company     = $this->relationLoaded('company') ? $this->company : $this->company()->first();
         $orderConfig = OrderConfig::defaultOrCreate($company);
         if ($orderConfig instanceof OrderConfig) {
             $orderConfig->setOrderContext($this);

@@ -203,6 +203,12 @@ Route::prefix(config('fleetops.api.routing.prefix', null))->namespace('Fleetbase
                 $router->get('{id}', 'LabelController@getLabel');
             });
 
+            // orchestrator routes
+            $router->group(['prefix' => 'orchestrator'], function () use ($router) {
+                $router->post('run', 'OrchestrationController@run');
+                $router->post('commit', 'OrchestrationController@commit');
+            });
+
             // navigator routes
             $router->group(['prefix' => 'onboard'], function () use ($router) {
                 $router->get('driver-onboard-settings/{companyId}', 'NavigatorController@getDriverOnboardSettings');
@@ -339,6 +345,7 @@ Route::prefix(config('fleetops.api.routing.prefix', null))->namespace('Fleetbase
                                 $router->get('next-activity/{id}', $controller('nextActivity'));
                                 $router->get('{id}/tracker', 'OrderController@trackerInfo');
                                 $router->get('{id}/eta', 'OrderController@waypointEtas');
+                                $router->post('{id}/ping-driver', $controller('pingDriver'));
                                 $router->post('process-imports', $controller('importFromFiles'));
                                 $router->patch('route/{id}', $controller('editOrderRoute'));
                                 $router->patch('update-activity/{id}', $controller('updateActivity'));
@@ -546,6 +553,10 @@ Route::prefix(config('fleetops.api.routing.prefix', null))->namespace('Fleetbase
                                         $router->post('notification-settings', 'SettingController@saveNotificationSettings');
                                         $router->get('routing-settings', 'SettingController@getRoutingSettings');
                                         $router->post('routing-settings', 'SettingController@saveRoutingSettings');
+                                        $router->get('tracking-settings', 'SettingController@getTrackingSettings');
+                                        $router->post('tracking-settings', 'SettingController@saveTrackingSettings');
+                                        $router->get('admin-tracking-settings', 'SettingController@getAdminTrackingSettings');
+                                        $router->post('admin-tracking-settings', 'SettingController@saveAdminTrackingSettings');
                                         $router->get('map', 'SettingController@getMapSettings');
                                         $router->post('map', 'SettingController@saveMapSettings');
                                         $router->get('admin-map', 'SettingController@getAdminMapSettings');
