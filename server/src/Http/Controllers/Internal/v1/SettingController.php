@@ -251,6 +251,7 @@ class SettingController extends Controller
             'route_cache_ttl_seconds'          => (int) $request->input('route_cache_ttl_seconds', data_get($config, 'route_cache_ttl_seconds', 600)),
             'stale_location_threshold_seconds' => (int) $request->input('stale_location_threshold_seconds', data_get($config, 'stale_location_threshold_seconds', 300)),
             'default_vehicle_speed_kph'        => (float) $request->input('default_vehicle_speed_kph', data_get($config, 'default_vehicle_speed_kph', 35)),
+            'alerts'                           => $this->normalizeTrackingAlertSettings((array) $request->input('alerts', data_get($config, 'alerts', []))),
         ]);
 
         return response()->json([
@@ -275,7 +276,9 @@ class SettingController extends Controller
             'route_cache_ttl_seconds'          => data_get($config, 'route_cache_ttl_seconds', 600),
             'stale_location_threshold_seconds' => data_get($config, 'stale_location_threshold_seconds', 300),
             'default_vehicle_speed_kph'        => data_get($config, 'default_vehicle_speed_kph', 35),
+            'alerts'                           => data_get($config, 'alerts', $this->trackingAlertDefaults()),
         ]);
+        $trackingSettings['alerts']    = $this->normalizeTrackingAlertSettings(data_get($trackingSettings, 'alerts', []));
         $trackingSettings['providers'] = $this->trackingProviderOptions();
 
         return response()->json($trackingSettings);
@@ -304,6 +307,7 @@ class SettingController extends Controller
             'route_cache_ttl_seconds'          => (int) $request->input('route_cache_ttl_seconds', data_get($config, 'route_cache_ttl_seconds', 600)),
             'stale_location_threshold_seconds' => (int) $request->input('stale_location_threshold_seconds', data_get($config, 'stale_location_threshold_seconds', 300)),
             'default_vehicle_speed_kph'        => (float) $request->input('default_vehicle_speed_kph', data_get($config, 'default_vehicle_speed_kph', 35)),
+            'alerts'                           => $this->normalizeTrackingAlertSettings((array) $request->input('alerts', data_get($config, 'alerts', []))),
         ]);
 
         return response()->json($this->getAdminTrackingSettings()->getData(true));
@@ -519,7 +523,48 @@ class SettingController extends Controller
         $config         = config('fleetops.tracking', []);
         $systemSettings = Setting::lookup('fleet-ops.tracking-settings', []);
 
-        return array_merge($config, is_array($systemSettings) ? $systemSettings : []);
+        $defaults = array_merge($config, is_array($systemSettings) ? $systemSettings : []);
+        $defaults['alerts'] = $this->normalizeTrackingAlertSettings(data_get($defaults, 'alerts', []));
+
+        return $defaults;
+    }
+
+    protected function trackingAlertDefaults(): array
+    {
+        return [
+            'late_departures' => [
+                'enabled'              => true,
+                'grace_period_minutes' => 15,
+            ],
+            'route_deviations' => [
+                'enabled'                    => true,
+                'distance_threshold_meters'  => 500,
+            ],
+            'prolonged_stoppages' => [
+                'enabled'                  => true,
+                'duration_threshold_minutes' => 30,
+            ],
+        ];
+    }
+
+    protected function normalizeTrackingAlertSettings(array $alerts): array
+    {
+        $defaults = $this->trackingAlertDefaults();
+
+        return [
+            'late_departures' => [
+                'enabled'              => (bool) data_get($alerts, 'late_departures.enabled', data_get($defaults, 'late_departures.enabled')),
+                'grace_period_minutes' => max(0, (int) data_get($alerts, 'late_departures.grace_period_minutes', data_get($defaults, 'late_departures.grace_period_minutes'))),
+            ],
+            'route_deviations' => [
+                'enabled'                   => (bool) data_get($alerts, 'route_deviations.enabled', data_get($defaults, 'route_deviations.enabled')),
+                'distance_threshold_meters' => max(0, (int) data_get($alerts, 'route_deviations.distance_threshold_meters', data_get($defaults, 'route_deviations.distance_threshold_meters'))),
+            ],
+            'prolonged_stoppages' => [
+                'enabled'                    => (bool) data_get($alerts, 'prolonged_stoppages.enabled', data_get($defaults, 'prolonged_stoppages.enabled')),
+                'duration_threshold_minutes' => max(0, (int) data_get($alerts, 'prolonged_stoppages.duration_threshold_minutes', data_get($defaults, 'prolonged_stoppages.duration_threshold_minutes'))),
+            ],
+        ];
     }
 
     protected function trackingProviderOptions(): array
