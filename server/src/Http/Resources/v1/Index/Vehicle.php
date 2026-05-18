@@ -70,7 +70,7 @@ class Vehicle extends FleetbaseResource
     {
         $location = Utils::castPoint($this->location);
 
-        return $location ? $location->getLat() . ' ' . $location->getLng() : null;
+        return $location ? $this->formatCoordinate($location->getLat()) . ' ' . $this->formatCoordinate($location->getLng()) : null;
     }
 
     protected function speedLabel(): string
@@ -114,5 +114,10 @@ class Vehicle extends FleetbaseResource
         }
 
         return $this->resource->getRelation('last_known_position');
+    }
+
+    protected function formatCoordinate(float $coordinate): string
+    {
+        return (string) round($coordinate, 4);
     }
 }

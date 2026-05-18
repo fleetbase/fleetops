@@ -55,7 +55,7 @@ class Driver extends FleetbaseResource
     {
         $location = Utils::castPoint($this->location);
 
-        return $location ? $location->getLat() . ' ' . $location->getLng() : null;
+        return $location ? $this->formatCoordinate($location->getLat()) . ' ' . $this->formatCoordinate($location->getLng()) : null;
     }
 
     protected function speedLabel(): string
@@ -75,5 +75,10 @@ class Driver extends FleetbaseResource
     protected function statusLabel(): ?string
     {
         return $this->status ? str($this->status)->replace(['_', '-'], ' ')->headline()->toString() : null;
+    }
+
+    protected function formatCoordinate(float $coordinate): string
+    {
+        return (string) round($coordinate, 4);
     }
 }

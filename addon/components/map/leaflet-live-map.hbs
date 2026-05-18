@@ -88,7 +88,7 @@
                                     <span class="inline-block w-2 h-2 rounded-full {{if driver.online 'bg-green-400' 'bg-red-500'}}"></span>
                                     <span>{{driver.name}}</span>
                                     <div class="status-badge {{if driver.status (dasherize driver.status) 'default'}}-status-badge status-badge-{{if driver.status (dasherize driver.status) 'default'}} shadow-none ml-auto">
-                                        <span class="rounded-full text-[9px] px-1.5 py-0.5">{{n-a driver.meta.status_label driver.status}}</span>
+                                        <span class="rounded-full text-[9px] px-1.5 py-0.5">{{n-a driver.meta.status_label (smart-humanize driver.status)}}</span>
                                     </div>
                                 </div>
                                 <div class="grid grid-cols-2 gap-1">
@@ -121,7 +121,7 @@
                                     <span class="inline-block w-2 h-2 rounded-full {{if driver.online 'bg-green-400' 'bg-red-500'}}"></span>
                                     <span>{{driver.name}}</span>
                                     <div class="status-badge {{if driver.status (dasherize driver.status) 'default'}}-status-badge status-badge-{{if driver.status (dasherize driver.status) 'default'}} shadow-none ml-auto">
-                                        <span class="rounded-full text-[9px] px-1.5 py-0.5">{{n-a driver.meta.status_label driver.status}}</span>
+                                        <span class="rounded-full text-[9px] px-1.5 py-0.5">{{n-a driver.meta.status_label (smart-humanize driver.status)}}</span>
                                     </div>
                                 </div>
                                 <div class="grid grid-cols-2 gap-1">

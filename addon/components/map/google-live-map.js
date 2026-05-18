@@ -14,10 +14,23 @@ function resolveStatusClass(status) {
     return `status-badge ${statusKey}-status-badge status-badge-${statusKey}`;
 }
 
+function titleizeStatus(status) {
+    if (!status) {
+        return '-';
+    }
+
+    return `${status}`
+        .replace(/[_-]+/g, ' ')
+        .split(' ')
+        .filter(Boolean)
+        .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+        .join(' ');
+}
+
 function buildStatusBadge(status, label = status) {
     return `
         <div class="${resolveStatusClass(status)} shadow-none ml-auto">
-            <span class="rounded-full text-[9px] px-1.5 py-0.5">${label ?? '-'}</span>
+            <span class="rounded-full text-[9px] px-1.5 py-0.5">${titleizeStatus(label)}</span>
         </div>`;
 }
 
@@ -30,7 +43,7 @@ function buildMetaCell(label, value, valueClass = '') {
 }
 
 function resolveDriverStatus(driver) {
-    return driver.meta?.status_label ?? driver.status ?? '-';
+    return driver.meta?.status_label ?? titleizeStatus(driver.status);
 }
 
 function resolveDriverLocation(driver) {
@@ -46,9 +59,10 @@ function resolveDriverHeading(driver) {
 }
 
 function buildLiveMapCard(content, framed = false) {
-    const frameClasses = framed ? 'rounded-lg bg-gray-900 shadow-lg p-1.5 text-white' : '';
+    const frameClasses = framed ? 'relative rounded-lg bg-gray-900 shadow-lg p-1.5 text-white' : '';
+    const closeButton = framed ? '<button type="button" class="fleetops-google-popover__close" data-fleetops-google-popover-close aria-label="Close">&times;</button>' : '';
 
-    return `<div class="w-[280px] max-w-[calc(100vw-2rem)] ${frameClasses}">${content}</div>`;
+    return `<div class="w-[280px] max-w-[calc(100vw-2rem)] ${frameClasses}">${closeButton}${content}</div>`;
 }
 
 function buildDriverLiveMapContent(driver, framed = false) {
@@ -141,15 +155,19 @@ function resolveLocationCoordinates(location) {
 
     if (location?.coordinates && isArray(location.coordinates)) {
         const [lng, lat] = location.coordinates;
-        return Number.isFinite(lat) && Number.isFinite(lng) ? `${lat} ${lng}` : '-';
+        return Number.isFinite(lat) && Number.isFinite(lng) ? `${formatCoordinate(lat)} ${formatCoordinate(lng)}` : '-';
     }
 
     if (isArray(location) && location.length >= 2) {
         const [lat, lng] = location;
-        return Number.isFinite(lat) && Number.isFinite(lng) ? `${lat} ${lng}` : '-';
+        return Number.isFinite(lat) && Number.isFinite(lng) ? `${formatCoordinate(lat)} ${formatCoordinate(lng)}` : '-';
     }
 
     return '-';
+}
+
+function formatCoordinate(coordinate) {
+    return `${Math.round(coordinate * 10000) / 10000}`;
 }
 
 function buildPlaceInfoWindowContent(place) {
@@ -195,6 +213,7 @@ export default class MapGoogleLiveMapComponent extends Component {
 
         this.map = map;
         this.mapManager.on('moveend', () => this.args.onViewportChanged?.());
+        this.mapManager.on('click', () => this._closeAllInfoWindows());
         this.mapManager.on('rightclick', (event) => this._showMapContextMenu(event));
         this.args.onLoad?.({ target: map });
         this.syncResources();
@@ -403,6 +422,10 @@ export default class MapGoogleLiveMapComponent extends Component {
         if (!infoWindow) {
             infoWindow = new google.maps.InfoWindow({ content });
             this._infoWindows.set(infoId, infoWindow);
+
+            infoWindow.addListener('domready', () => {
+                document.querySelector('[data-fleetops-google-popover-close]')?.addEventListener('click', () => infoWindow.close(), { once: true });
+            });
         } else {
             infoWindow.setContent(content);
         }

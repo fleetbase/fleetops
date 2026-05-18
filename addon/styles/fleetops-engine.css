@@ -4065,6 +4065,28 @@ body[data-theme='dark'] .next-google-container-map .fleetops-google-draw-actions
     background: #111827 !important;
 }
 
+.fleetops-google-popover__close {
+    position: absolute;
+    top: 0.25rem;
+    right: 0.35rem;
+    z-index: 1;
+    width: 1rem;
+    height: 1rem;
+    border: 0;
+    border-radius: 9999px;
+    background: rgba(31, 41, 55, 80%);
+    color: #d1d5db;
+    font-size: 0.8rem;
+    line-height: 1rem;
+    text-align: center;
+    cursor: pointer;
+}
+
+.fleetops-google-popover__close:hover {
+    background: rgba(55, 65, 81, 95%);
+    color: #fff;
+}
+
 /* Tracking intelligence panel */
 .tracking-intelligence {
     display: flex;

@@ -2097,8 +2097,12 @@ export default class GoogleMapsAdapter extends MapAdapterInterface {
             const size = options.iconSize ?? [24, 24];
             markerOptions.icon = {
                 url: options.iconUrl,
+                size: new google.maps.Size(size[0], size[1]),
                 scaledSize: new google.maps.Size(size[0], size[1]),
+                origin: new google.maps.Point(0, 0),
+                anchor: new google.maps.Point(size[0] / 2, size[1] / 2),
             };
+            markerOptions.optimized = false;
         }
 
         const marker = new google.maps.Marker(markerOptions);
