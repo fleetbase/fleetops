@@ -93,6 +93,16 @@
                 />
             </InputGroup>
 
+            <InputGroup @name={{t "driver.fields.license-expiry"}}>
+                <Input
+                    @value={{@resource.license_expiry}}
+                    @type="date"
+                    class="w-full form-input"
+                    placeholder={{t "driver.fields.license-expiry"}}
+                    disabled={{cannot-write @resource}}
+                />
+            </InputGroup>
+
             <InputGroup @name={{t "driver.fields.vendor"}}>
                 <ModelSelect
                     @modelName="vendor"

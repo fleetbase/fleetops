@@ -31,18 +31,72 @@ function buildDriverTooltipContent(driver) {
     `;
 }
 
+function resolveVehicleNumber(vehicle) {
+    return vehicle.internal_id ?? vehicle.public_id ?? vehicle.plate_number ?? vehicle.serial_number ?? vehicle.vin ?? '-';
+}
+
+function resolveVehicleStatus(vehicle) {
+    return vehicle.current_status ?? vehicle.status ?? (vehicle.online ? 'Online' : 'Offline');
+}
+
+function resolveVehicleOrderReference(vehicle) {
+    return (
+        vehicle.active_order_reference ??
+        vehicle.current_order_reference ??
+        vehicle.order_reference ??
+        vehicle.current_job_id ??
+        vehicle.current_job?.tracking ??
+        vehicle.current_job?.public_id ??
+        vehicle.meta?.active_order_reference ??
+        vehicle.meta?.current_order_reference ??
+        vehicle.meta?.order_reference ??
+        '-'
+    );
+}
+
+function formatCoordinates(location) {
+    const coordinates = Array.isArray(location?.coordinates) ? location.coordinates : null;
+    const lat = location?.lat ?? location?.latitude ?? coordinates?.[1];
+    const lng = location?.lng ?? location?.longitude ?? coordinates?.[0];
+
+    if (!Number.isFinite(Number(lat)) || !Number.isFinite(Number(lng))) {
+        return '-';
+    }
+
+    return `${Number(lat).toFixed(6)}, ${Number(lng).toFixed(6)}`;
+}
+
+function formatHeading(heading) {
+    const degrees = Number(heading);
+
+    if (!Number.isFinite(degrees) || degrees === -1) {
+        return '-';
+    }
+
+    const directions = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'];
+    const direction = directions[Math.round((degrees % 360) / 45) % 8];
+
+    return `${degrees} deg ${direction}`;
+}
+
 function buildVehicleInfoWindowContent(vehicle) {
+    const status = resolveVehicleStatus(vehicle);
+
     return `
         <div class="fleetops-google-popover">
             <div class="fleetops-google-popover__row">
                 <img src="${vehicle.photo_url ?? ''}" alt="${vehicle.display_name ?? ''}" class="fleetops-google-popover__vehicle" />
                 <div class="fleetops-google-popover__body">
                     <div class="fleetops-google-popover__title">${vehicle.displayName ?? '-'}</div>
-                    <div class="fleetops-google-popover__meta">ID: ${vehicle.public_id ?? '-'}</div>
+                    <div class="fleetops-google-popover__meta">Vehicle #: ${resolveVehicleNumber(vehicle)}</div>
                     <div class="fleetops-google-popover__meta">Serial: ${vehicle.serial_number ?? vehicle.vin ?? '-'}</div>
-                    <div class="fleetops-google-popover__meta">Driver: ${vehicle.driver_name ?? '-'}</div>
+                    <div class="fleetops-google-popover__meta">Driver: ${vehicle.driver_name ?? vehicle.driver?.name ?? '-'}</div>
+                    <div class="fleetops-google-popover__meta">Order: ${resolveVehicleOrderReference(vehicle)}</div>
+                    <div class="fleetops-google-popover__meta">Location: ${formatCoordinates(vehicle.location)}</div>
+                    <div class="fleetops-google-popover__meta">Speed: ${vehicle.speed ?? '-'} km/h</div>
+                    <div class="fleetops-google-popover__meta">Heading: ${formatHeading(vehicle.heading)}</div>
                     <div class="fleetops-google-popover__meta">Status:
-                        <span class="${vehicle.online ? 'text-green-500' : 'text-red-400'}">${vehicle.online ? 'Online' : 'Offline'}</span>
+                        <span class="${vehicle.online ? 'text-green-500' : 'text-red-400'}">${status}</span>
                     </div>
                 </div>
             </div>
@@ -50,10 +104,17 @@ function buildVehicleInfoWindowContent(vehicle) {
 }
 
 function buildVehicleTooltipContent(vehicle) {
+    const status = resolveVehicleStatus(vehicle);
+
     return `
         <div class="fleetops-google-hover-tooltip__title">${vehicle.displayName ?? '-'}</div>
-        <div class="fleetops-google-hover-tooltip__meta">ID: ${vehicle.public_id ?? '-'}</div>
-        <div class="fleetops-google-hover-tooltip__meta ${vehicle.online ? 'text-green-400' : 'text-red-400'}">${vehicle.online ? 'Online' : 'Offline'}</div>
+        <div class="fleetops-google-hover-tooltip__meta">Vehicle #: ${resolveVehicleNumber(vehicle)}</div>
+        <div class="fleetops-google-hover-tooltip__meta">Driver: ${vehicle.driver_name ?? vehicle.driver?.name ?? '-'}</div>
+        <div class="fleetops-google-hover-tooltip__meta">Order: ${resolveVehicleOrderReference(vehicle)}</div>
+        <div class="fleetops-google-hover-tooltip__meta">Location: ${formatCoordinates(vehicle.location)}</div>
+        <div class="fleetops-google-hover-tooltip__meta">Speed: ${vehicle.speed ?? '-'} km/h</div>
+        <div class="fleetops-google-hover-tooltip__meta">Heading: ${formatHeading(vehicle.heading)}</div>
+        <div class="fleetops-google-hover-tooltip__meta ${vehicle.online ? 'text-green-400' : 'text-red-400'}">${status}</div>
     `;
 }
 

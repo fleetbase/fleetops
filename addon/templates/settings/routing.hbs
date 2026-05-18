@@ -106,6 +106,26 @@
                     </div>
                 {{/if}}
             </ContentPanel>
+            <ContentPanel @title="Operational Alerts" @open={{true}} @wrapperClass="bordered-classic">
+                <InputGroup @name="Late Departures" @helpText="Notify when an order has not departed after the scheduled pickup window plus the configured grace period.">
+                    <Toggle @isToggled={{this.lateDepartureAlertsEnabled}} @onToggle={{fn (mut this.lateDepartureAlertsEnabled)}} />
+                </InputGroup>
+                <InputGroup @name="Late Departure Grace Period" @helpText="Minutes after scheduled pickup before the order is considered late to depart.">
+                    <Input @type="number" @value={{this.lateDepartureGracePeriodMinutes}} min="0" max="1440" class="form-input w-full" />
+                </InputGroup>
+                <InputGroup @name="Route Deviations" @helpText="Notify when tracked vehicle location drifts beyond the configured distance from the active route.">
+                    <Toggle @isToggled={{this.routeDeviationAlertsEnabled}} @onToggle={{fn (mut this.routeDeviationAlertsEnabled)}} />
+                </InputGroup>
+                <InputGroup @name="Route Deviation Threshold" @helpText="Meters from the active route before a deviation alert is eligible.">
+                    <Input @type="number" @value={{this.routeDeviationDistanceThresholdMeters}} min="0" max="100000" class="form-input w-full" />
+                </InputGroup>
+                <InputGroup @name="Prolonged Stoppages" @helpText="Notify when a vehicle remains stopped beyond the configured duration during an active trip.">
+                    <Toggle @isToggled={{this.prolongedStoppageAlertsEnabled}} @onToggle={{fn (mut this.prolongedStoppageAlertsEnabled)}} />
+                </InputGroup>
+                <InputGroup @name="Prolonged Stoppage Duration" @helpText="Minutes stopped before a stoppage alert is eligible.">
+                    <Input @type="number" @value={{this.prolongedStoppageDurationThresholdMinutes}} min="0" max="1440" class="form-input w-full" />
+                </InputGroup>
+            </ContentPanel>
             <RegistryYield @registry="fleet-ops:template:settings:routing" as |RegistryComponent|>
                 <RegistryComponent @controller={{this}} />
             </RegistryYield>

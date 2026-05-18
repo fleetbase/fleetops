@@ -192,6 +192,9 @@ class FleetOpsServiceProvider extends CoreServiceProvider
             \Fleetbase\FleetOps\Notifications\OrderFailed::class,
             \Fleetbase\FleetOps\Notifications\OrderCompleted::class,
             \Fleetbase\FleetOps\Notifications\DriverArrivedAtGeofence::class,
+            \Fleetbase\FleetOps\Notifications\LateDeparture::class,
+            \Fleetbase\FleetOps\Notifications\RouteDeviation::class,
+            \Fleetbase\FleetOps\Notifications\ProlongedStoppage::class,
         ]);
 
         // Register Notifiables

@@ -31,6 +31,9 @@ class NotificationServiceProvider extends CoreServiceProvider
             \Fleetbase\FleetOps\Notifications\OrderDispatched::class,
             \Fleetbase\FleetOps\Notifications\OrderDispatchFailed::class,
             \Fleetbase\FleetOps\Notifications\OrderPing::class,
+            \Fleetbase\FleetOps\Notifications\LateDeparture::class,
+            \Fleetbase\FleetOps\Notifications\RouteDeviation::class,
+            \Fleetbase\FleetOps\Notifications\ProlongedStoppage::class,
         ]);
 
         // Register Notifiables
