@@ -80,7 +80,7 @@ function buildVehicleMetaCell(label, value, valueClass = '') {
     return `
         <div class="rounded bg-gray-900 shadow-md px-1.5 py-1 min-w-0">
             <div class="text-[9px] uppercase text-gray-400 leading-none">${label}</div>
-            <div class="text-[11px] font-semibold text-white leading-tight truncate ${valueClass}">${value ?? '-'}</div>
+            <div class="text-[11px] font-semibold text-white leading-tight whitespace-normal break-words ${valueClass}">${value ?? '-'}</div>
         </div>`;
 }
 
@@ -89,13 +89,13 @@ function buildVehicleTooltipContent(vehicle) {
     const onlineClass = vehicle.online ? 'bg-green-400' : 'bg-red-500';
 
     return `
-        <div class="min-w-[460px] max-w-[520px]">
+        <div class="min-w-[620px] max-w-[700px]">
             <div class="fleetops-google-hover-tooltip__title mb-1.5 flex items-center gap-1.5">
                 <span class="inline-block w-2 h-2 rounded-full ${onlineClass}"></span>
                 <span>${vehicle.displayName ?? '-'}</span>
             </div>
-            <div class="grid grid-cols-3 gap-1">
-                ${buildVehicleMetaCell('Vehicle Status', status)}
+            <div class="grid grid-cols-2 gap-1">
+                ${buildVehicleMetaCell('Status', status)}
                 ${buildVehicleMetaCell('Vehicle #', resolveVehicleNumber(vehicle))}
                 ${buildVehicleMetaCell('Driver', vehicle.driver_name ?? vehicle.driver?.name ?? '-')}
                 ${buildVehicleMetaCell('Order', vehicle.meta?.current_order_reference ?? '-')}

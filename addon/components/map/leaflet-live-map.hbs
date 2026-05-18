@@ -140,39 +140,39 @@
                             </div>
                         </marker.popup>
                         <marker.tooltip @permanent={{false}} @sticky={{true}}>
-                            <div class="min-w-[460px] max-w-[520px]">
+                            <div class="min-w-[620px] max-w-[700px]">
                                 <div class="flex items-center gap-1.5 text-xs font-semibold mb-1.5">
                                     <span class="inline-block w-2 h-2 rounded-full {{if vehicle.online 'bg-green-400' 'bg-red-500'}}"></span>
                                     <span>{{vehicle.displayName}}</span>
                                 </div>
-                                <div class="grid grid-cols-3 gap-1">
+                                <div class="grid grid-cols-2 gap-1">
                                     <div class="rounded bg-gray-900 shadow-md px-1.5 py-1 min-w-0">
-                                        <div class="text-[9px] uppercase text-gray-400 leading-none">Vehicle Status</div>
-                                        <div class="text-[11px] font-semibold text-white leading-tight truncate">{{n-a vehicle.meta.status_label}}</div>
+                                        <div class="text-[9px] uppercase text-gray-400 leading-none">Status</div>
+                                        <div class="text-[11px] font-semibold text-white leading-tight whitespace-normal break-words">{{n-a vehicle.meta.status_label}}</div>
                                     </div>
                                     <div class="rounded bg-gray-900 shadow-md px-1.5 py-1 min-w-0">
                                         <div class="text-[9px] uppercase text-gray-400 leading-none">Vehicle #</div>
-                                        <div class="text-[11px] font-semibold text-white leading-tight truncate">{{n-a vehicle.internal_id vehicle.public_id vehicle.plate_number vehicle.serial_number vehicle.vin}}</div>
+                                        <div class="text-[11px] font-semibold text-white leading-tight whitespace-normal break-words">{{n-a vehicle.internal_id vehicle.public_id vehicle.plate_number vehicle.serial_number vehicle.vin}}</div>
                                     </div>
                                     <div class="rounded bg-gray-900 shadow-md px-1.5 py-1 min-w-0">
                                         <div class="text-[9px] uppercase text-gray-400 leading-none">Driver</div>
-                                        <div class="text-[11px] font-semibold text-white leading-tight truncate">{{n-a vehicle.driver_name}}</div>
+                                        <div class="text-[11px] font-semibold text-white leading-tight whitespace-normal break-words">{{n-a vehicle.driver_name}}</div>
                                     </div>
                                     <div class="rounded bg-gray-900 shadow-md px-1.5 py-1 min-w-0">
                                         <div class="text-[9px] uppercase text-gray-400 leading-none">Order</div>
-                                        <div class="text-[11px] font-semibold text-white leading-tight truncate">{{n-a vehicle.meta.current_order_reference}}</div>
+                                        <div class="text-[11px] font-semibold text-white leading-tight whitespace-normal break-words">{{n-a vehicle.meta.current_order_reference}}</div>
                                     </div>
                                     <div class="rounded bg-gray-900 shadow-md px-1.5 py-1 min-w-0">
                                         <div class="text-[9px] uppercase text-gray-400 leading-none">Speed</div>
-                                        <div class="text-[11px] font-semibold text-white leading-tight truncate">{{n-a vehicle.meta.speed_label}}</div>
+                                        <div class="text-[11px] font-semibold text-white leading-tight whitespace-normal break-words">{{n-a vehicle.meta.speed_label}}</div>
                                     </div>
                                     <div class="rounded bg-gray-900 shadow-md px-1.5 py-1 min-w-0">
                                         <div class="text-[9px] uppercase text-gray-400 leading-none">Heading</div>
-                                        <div class="text-[11px] font-semibold text-white leading-tight truncate">{{n-a vehicle.meta.heading_label}}</div>
+                                        <div class="text-[11px] font-semibold text-white leading-tight whitespace-normal break-words">{{n-a vehicle.meta.heading_label}}</div>
                                     </div>
                                     <div class="rounded bg-gray-900 shadow-md px-1.5 py-1 min-w-0">
                                         <div class="text-[9px] uppercase text-gray-400 leading-none">Location</div>
-                                        <div class="text-[11px] font-semibold text-white leading-tight truncate">{{n-a vehicle.meta.location_coordinates}}</div>
+                                        <div class="text-[11px] font-semibold text-white leading-tight whitespace-normal break-words">{{n-a vehicle.meta.location_coordinates}}</div>
                                     </div>
                                 </div>
                             </div>
