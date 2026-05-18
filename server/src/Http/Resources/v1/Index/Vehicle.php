@@ -2,6 +2,7 @@
 
 namespace Fleetbase\FleetOps\Http\Resources\v1\Index;
 
+use Fleetbase\FleetOps\Models\Order;
 use Fleetbase\FleetOps\Support\Utils;
 use Fleetbase\Http\Resources\FleetbaseResource;
 use Fleetbase\Support\Http;
@@ -50,6 +51,9 @@ class Vehicle extends FleetbaseResource
                 '_index_resource'          => true,
                 'current_order_reference'  => $this->currentOrderReference(),
                 'location_coordinates'     => $this->locationCoordinates(),
+                'speed_label'              => $this->speedLabel(),
+                'heading_label'            => $this->headingLabel(),
+                'status_label'             => $this->statusLabel(),
             ],
         ];
     }
@@ -57,16 +61,58 @@ class Vehicle extends FleetbaseResource
     protected function currentOrderReference(): ?string
     {
         $this->loadMissing('driver.currentOrder');
-        $order = data_get($this, 'driver.currentOrder');
+        $order = data_get($this, 'driver.currentOrder') ?? $this->currentPositionOrder() ?? $this->currentVehicleOrder();
 
         return data_get($order, 'tracking') ?? data_get($order, 'public_id');
     }
 
     protected function locationCoordinates(): ?string
     {
-        $location    = Utils::castPoint($this->location);
-        $coordinates = data_get($location, 'coordinates');
+        $location = Utils::castPoint($this->location);
 
-        return is_array($coordinates) && count($coordinates) >= 2 ? $coordinates[1] . ' ' . $coordinates[0] : null;
+        return $location ? $location->getLat() . ' ' . $location->getLng() : null;
+    }
+
+    protected function speedLabel(): string
+    {
+        $speed = data_get($this->lastKnownPosition(), 'speed', data_get($this, 'speed'));
+
+        return is_numeric($speed) ? ((int) $speed) . ' km/h' : '-';
+    }
+
+    protected function headingLabel(): string
+    {
+        $heading = data_get($this->lastKnownPosition(), 'heading', data_get($this, 'heading'));
+
+        return is_numeric($heading) ? ((int) $heading) . ' deg' : '-';
+    }
+
+    protected function statusLabel(): ?string
+    {
+        return $this->status ? str($this->status)->replace(['_', '-'], ' ')->headline()->toString() : null;
+    }
+
+    protected function currentPositionOrder(): ?Order
+    {
+        $orderUuid = data_get($this->lastKnownPosition(), 'order_uuid');
+
+        return $orderUuid ? Order::where('uuid', $orderUuid)->first() : null;
+    }
+
+    protected function currentVehicleOrder(): ?Order
+    {
+        return Order::where('vehicle_assigned_uuid', $this->uuid)
+            ->whereNotIn('status', ['completed', 'canceled', 'cancelled'])
+            ->latest()
+            ->first();
+    }
+
+    protected function lastKnownPosition()
+    {
+        if (!$this->resource->relationLoaded('last_known_position')) {
+            $this->resource->setRelation('last_known_position', $this->getLastKnownPosition());
+        }
+
+        return $this->resource->getRelation('last_known_position');
     }
 }

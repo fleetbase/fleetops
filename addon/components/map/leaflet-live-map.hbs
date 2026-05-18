@@ -140,40 +140,39 @@
                             </div>
                         </marker.popup>
                         <marker.tooltip @permanent={{false}} @sticky={{true}}>
-                            <div class="min-w-[320px] max-w-[380px]">
-                                <div class="text-xs font-semibold mb-2">{{vehicle.displayName}}</div>
-                                <div class="grid grid-cols-2 gap-2">
-                                    <div class="rounded bg-gray-900 shadow-md px-2 py-1.5 min-w-0">
-                                        <div class="text-[10px] uppercase text-gray-400 leading-tight">Online</div>
-                                        <div class="text-xs font-semibold truncate {{if vehicle.online 'text-green-400' 'text-red-400'}}">{{if vehicle.online "Online" "Offline"}}</div>
+                            <div class="min-w-[460px] max-w-[520px]">
+                                <div class="flex items-center gap-1.5 text-xs font-semibold mb-1.5">
+                                    <span class="inline-block w-2 h-2 rounded-full {{if vehicle.online 'bg-green-400' 'bg-red-500'}}"></span>
+                                    <span>{{vehicle.displayName}}</span>
+                                </div>
+                                <div class="grid grid-cols-3 gap-1">
+                                    <div class="rounded bg-gray-900 shadow-md px-1.5 py-1 min-w-0">
+                                        <div class="text-[9px] uppercase text-gray-400 leading-none">Vehicle Status</div>
+                                        <div class="text-[11px] font-semibold text-white leading-tight truncate">{{n-a vehicle.meta.status_label}}</div>
                                     </div>
-                                    <div class="rounded bg-gray-900 shadow-md px-2 py-1.5 min-w-0">
-                                        <div class="text-[10px] uppercase text-gray-400 leading-tight">Vehicle Status</div>
-                                        <div class="text-xs font-semibold text-white truncate">{{n-a vehicle.status}}</div>
+                                    <div class="rounded bg-gray-900 shadow-md px-1.5 py-1 min-w-0">
+                                        <div class="text-[9px] uppercase text-gray-400 leading-none">Vehicle #</div>
+                                        <div class="text-[11px] font-semibold text-white leading-tight truncate">{{n-a vehicle.internal_id vehicle.public_id vehicle.plate_number vehicle.serial_number vehicle.vin}}</div>
                                     </div>
-                                    <div class="rounded bg-gray-900 shadow-md px-2 py-1.5 min-w-0">
-                                        <div class="text-[10px] uppercase text-gray-400 leading-tight">Vehicle #</div>
-                                        <div class="text-xs font-semibold text-white truncate">{{n-a vehicle.internal_id vehicle.public_id vehicle.plate_number vehicle.serial_number vehicle.vin}}</div>
+                                    <div class="rounded bg-gray-900 shadow-md px-1.5 py-1 min-w-0">
+                                        <div class="text-[9px] uppercase text-gray-400 leading-none">Driver</div>
+                                        <div class="text-[11px] font-semibold text-white leading-tight truncate">{{n-a vehicle.driver_name}}</div>
                                     </div>
-                                    <div class="rounded bg-gray-900 shadow-md px-2 py-1.5 min-w-0">
-                                        <div class="text-[10px] uppercase text-gray-400 leading-tight">Driver</div>
-                                        <div class="text-xs font-semibold text-white truncate">{{n-a vehicle.driver_name}}</div>
+                                    <div class="rounded bg-gray-900 shadow-md px-1.5 py-1 min-w-0">
+                                        <div class="text-[9px] uppercase text-gray-400 leading-none">Order</div>
+                                        <div class="text-[11px] font-semibold text-white leading-tight truncate">{{n-a vehicle.meta.current_order_reference}}</div>
                                     </div>
-                                    <div class="rounded bg-gray-900 shadow-md px-2 py-1.5 min-w-0">
-                                        <div class="text-[10px] uppercase text-gray-400 leading-tight">Order</div>
-                                        <div class="text-xs font-semibold text-white truncate">{{n-a vehicle.meta.current_order_reference}}</div>
+                                    <div class="rounded bg-gray-900 shadow-md px-1.5 py-1 min-w-0">
+                                        <div class="text-[9px] uppercase text-gray-400 leading-none">Speed</div>
+                                        <div class="text-[11px] font-semibold text-white leading-tight truncate">{{n-a vehicle.meta.speed_label}}</div>
                                     </div>
-                                    <div class="rounded bg-gray-900 shadow-md px-2 py-1.5 min-w-0">
-                                        <div class="text-[10px] uppercase text-gray-400 leading-tight">Speed</div>
-                                        <div class="text-xs font-semibold text-white truncate">{{n-a vehicle.speed}} km/h</div>
+                                    <div class="rounded bg-gray-900 shadow-md px-1.5 py-1 min-w-0">
+                                        <div class="text-[9px] uppercase text-gray-400 leading-none">Heading</div>
+                                        <div class="text-[11px] font-semibold text-white leading-tight truncate">{{n-a vehicle.meta.heading_label}}</div>
                                     </div>
-                                    <div class="rounded bg-gray-900 shadow-md px-2 py-1.5 min-w-0">
-                                        <div class="text-[10px] uppercase text-gray-400 leading-tight">Heading</div>
-                                        <div class="text-xs font-semibold text-white truncate">{{n-a vehicle.heading}}</div>
-                                    </div>
-                                    <div class="rounded bg-gray-900 shadow-md px-2 py-1.5 min-w-0">
-                                        <div class="text-[10px] uppercase text-gray-400 leading-tight">Location</div>
-                                        <div class="text-xs font-semibold text-white truncate">{{point-coordinates vehicle.location}}</div>
+                                    <div class="rounded bg-gray-900 shadow-md px-1.5 py-1 min-w-0">
+                                        <div class="text-[9px] uppercase text-gray-400 leading-none">Location</div>
+                                        <div class="text-[11px] font-semibold text-white leading-tight truncate">{{n-a vehicle.meta.location_coordinates}}</div>
                                     </div>
                                 </div>
                             </div>
