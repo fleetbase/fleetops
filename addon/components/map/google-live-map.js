@@ -64,19 +64,32 @@ function buildVehicleInfoWindowContent(vehicle) {
         </div>`;
 }
 
+function buildVehicleMetaCell(label, value, valueClass = '') {
+    return `
+        <div class="rounded bg-gray-900 shadow-md px-2 py-1.5 min-w-0">
+            <div class="text-[10px] uppercase text-gray-400 leading-tight">${label}</div>
+            <div class="text-xs font-semibold text-white truncate ${valueClass}">${value ?? '-'}</div>
+        </div>`;
+}
+
 function buildVehicleTooltipContent(vehicle) {
     const status = resolveVehicleStatus(vehicle);
+    const onlineClass = vehicle.online ? 'text-green-400' : 'text-red-400';
 
     return `
-        <div class="fleetops-google-hover-tooltip__title">${vehicle.displayName ?? '-'}</div>
-        <div class="fleetops-google-hover-tooltip__meta">Vehicle #: ${resolveVehicleNumber(vehicle)}</div>
-        <div class="fleetops-google-hover-tooltip__meta">Driver: ${vehicle.driver_name ?? vehicle.driver?.name ?? '-'}</div>
-        <div class="fleetops-google-hover-tooltip__meta">Order: ${vehicle.meta?.current_order_reference ?? '-'}</div>
-        <div class="fleetops-google-hover-tooltip__meta">Location: ${vehicle.meta?.location_coordinates ?? '-'}</div>
-        <div class="fleetops-google-hover-tooltip__meta">Speed: ${vehicle.speed ?? '-'} km/h</div>
-        <div class="fleetops-google-hover-tooltip__meta">Heading: ${vehicle.heading ?? '-'}</div>
-        <div class="fleetops-google-hover-tooltip__meta ${vehicle.online ? 'text-green-400' : 'text-red-400'}">${vehicle.online ? 'Online' : 'Offline'}</div>
-        <div class="fleetops-google-hover-tooltip__meta">Vehicle Status: ${status}</div>
+        <div class="min-w-[320px] max-w-[380px]">
+            <div class="fleetops-google-hover-tooltip__title mb-2">${vehicle.displayName ?? '-'}</div>
+            <div class="grid grid-cols-2 gap-2">
+                ${buildVehicleMetaCell('Online', vehicle.online ? 'Online' : 'Offline', onlineClass)}
+                ${buildVehicleMetaCell('Vehicle Status', status)}
+                ${buildVehicleMetaCell('Vehicle #', resolveVehicleNumber(vehicle))}
+                ${buildVehicleMetaCell('Driver', vehicle.driver_name ?? vehicle.driver?.name ?? '-')}
+                ${buildVehicleMetaCell('Order', vehicle.meta?.current_order_reference ?? '-')}
+                ${buildVehicleMetaCell('Speed', `${vehicle.speed ?? '-'} km/h`)}
+                ${buildVehicleMetaCell('Heading', vehicle.heading ?? '-')}
+                ${buildVehicleMetaCell('Location', vehicle.meta?.location_coordinates ?? '-')}
+            </div>
+        </div>
     `;
 }
 
