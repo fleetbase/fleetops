@@ -6,29 +6,73 @@ import { action } from '@ember/object';
 import { isArray } from '@ember/array';
 import { debug } from '@ember/debug';
 import { guidFor } from '@ember/object/internals';
+import { dasherize } from '@ember/string';
 
-function buildDriverInfoWindowContent(driver) {
+function resolveStatusClass(status) {
+    const statusKey = dasherize(status ?? 'default');
+
+    return `status-badge ${statusKey}-status-badge status-badge-${statusKey}`;
+}
+
+function buildStatusBadge(status, label = status) {
     return `
-        <div class="fleetops-google-popover fleetops-google-popover--compact">
-            <div class="fleetops-google-popover__row">
-                <img src="${driver.photoUrl ?? ''}" alt="${driver.name ?? ''}" class="fleetops-google-popover__avatar" />
-                <div class="fleetops-google-popover__body">
-                    <div class="fleetops-google-popover__title">${driver.name ?? '-'}</div>
-                    <div class="fleetops-google-popover__meta">Phone: ${driver.phone ?? '-'}</div>
-                    <div class="fleetops-google-popover__meta">Vehicle: ${driver.vehicle_name ?? '-'}</div>
-                    <div class="fleetops-google-popover__meta">Status:
-                        <span class="${driver.online ? 'text-green-500' : 'text-red-400'}">${driver.online ? 'Online' : 'Offline'}</span>
-                    </div>
-                </div>
-            </div>
+        <div class="${resolveStatusClass(status)} shadow-none ml-auto">
+            <span class="text-[9px] px-1.5 py-0.5">${label ?? '-'}</span>
         </div>`;
 }
 
-function buildDriverTooltipContent(driver) {
+function buildMetaCell(label, value, valueClass = '') {
     return `
-        <div class="fleetops-google-hover-tooltip__title">${driver.name ?? '-'}</div>
-        <div class="fleetops-google-hover-tooltip__meta ${driver.online ? 'text-green-400' : 'text-red-400'}">${driver.online ? 'Online' : 'Offline'}</div>
+        <div class="rounded bg-gray-900 shadow-md px-1.5 py-1 min-w-0">
+            <div class="text-[9px] font-semibold uppercase text-gray-400 leading-none">${label}</div>
+            <div class="text-[11px] text-white leading-tight whitespace-normal break-words ${valueClass}">${value ?? '-'}</div>
+        </div>`;
+}
+
+function resolveDriverStatus(driver) {
+    return driver.meta?.status_label ?? driver.status ?? '-';
+}
+
+function resolveDriverLocation(driver) {
+    return driver.meta?.location_coordinates ?? '-';
+}
+
+function resolveDriverSpeed(driver) {
+    return driver.meta?.speed_label ?? `${driver.speed ?? '-'} km/h`;
+}
+
+function resolveDriverHeading(driver) {
+    return driver.meta?.heading_label ?? driver.heading ?? '-';
+}
+
+function buildDriverLiveMapContent(driver) {
+    const status = resolveDriverStatus(driver);
+    const onlineClass = driver.online ? 'bg-green-400' : 'bg-red-500';
+
+    return `
+        <div class="w-[280px] max-w-[calc(100vw-2rem)]">
+            <div class="fleetops-google-hover-tooltip__title mb-1.5 flex items-center gap-1.5">
+                <span class="inline-block w-2 h-2 rounded-full ${onlineClass}"></span>
+                <span>${driver.name ?? '-'}</span>
+                ${buildStatusBadge(driver.status, status)}
+            </div>
+            <div class="grid grid-cols-2 gap-1">
+                ${buildMetaCell('Phone', driver.phone ?? '-')}
+                ${buildMetaCell('Vehicle', driver.vehicle_name ?? '-')}
+                ${buildMetaCell('Speed', resolveDriverSpeed(driver))}
+                ${buildMetaCell('Heading', resolveDriverHeading(driver))}
+                ${buildMetaCell('Location', resolveDriverLocation(driver))}
+            </div>
+        </div>
     `;
+}
+
+function buildDriverInfoWindowContent(driver) {
+    return buildDriverLiveMapContent(driver);
+}
+
+function buildDriverTooltipContent(driver) {
+    return buildDriverLiveMapContent(driver);
 }
 
 function resolveVehicleNumber(vehicle) {
@@ -51,40 +95,7 @@ function resolveVehicleHeading(vehicle) {
     return vehicle.meta?.heading_label ?? vehicle.heading ?? '-';
 }
 
-function buildVehicleInfoWindowContent(vehicle) {
-    const status = resolveVehicleStatus(vehicle);
-
-    return `
-        <div class="fleetops-google-popover">
-            <div class="fleetops-google-popover__row">
-                <img src="${vehicle.photo_url ?? ''}" alt="${vehicle.display_name ?? ''}" class="fleetops-google-popover__vehicle" />
-                <div class="fleetops-google-popover__body">
-                    <div class="fleetops-google-popover__title">${vehicle.displayName ?? '-'}</div>
-                    <div class="fleetops-google-popover__meta">Vehicle #: ${resolveVehicleNumber(vehicle)}</div>
-                    <div class="fleetops-google-popover__meta">Serial: ${vehicle.serial_number ?? vehicle.vin ?? '-'}</div>
-                    <div class="fleetops-google-popover__meta">Driver: ${vehicle.driver_name ?? vehicle.driver?.name ?? '-'}</div>
-                    <div class="fleetops-google-popover__meta">Order: ${vehicle.meta?.current_order_reference ?? '-'}</div>
-                    <div class="fleetops-google-popover__meta">Location: ${resolveVehicleLocation(vehicle)}</div>
-                    <div class="fleetops-google-popover__meta">Speed: ${resolveVehicleSpeed(vehicle)}</div>
-                    <div class="fleetops-google-popover__meta">Heading: ${resolveVehicleHeading(vehicle)}</div>
-                    <div class="fleetops-google-popover__meta">Online:
-                        <span class="${vehicle.online ? 'text-green-500' : 'text-red-400'}">${vehicle.online ? 'Online' : 'Offline'}</span>
-                    </div>
-                    <div class="fleetops-google-popover__meta">Vehicle Status: ${status}</div>
-                </div>
-            </div>
-        </div>`;
-}
-
-function buildVehicleMetaCell(label, value, valueClass = '') {
-    return `
-        <div class="rounded bg-gray-900 shadow-md px-1.5 py-1 min-w-0">
-            <div class="text-[9px] font-semibold uppercase text-gray-400 leading-none">${label}</div>
-            <div class="text-[11px] text-white leading-tight whitespace-normal break-words ${valueClass}">${value ?? '-'}</div>
-        </div>`;
-}
-
-function buildVehicleTooltipContent(vehicle) {
+function buildVehicleLiveMapContent(vehicle) {
     const status = resolveVehicleStatus(vehicle);
     const onlineClass = vehicle.online ? 'bg-green-400' : 'bg-red-500';
 
@@ -93,18 +104,26 @@ function buildVehicleTooltipContent(vehicle) {
             <div class="fleetops-google-hover-tooltip__title mb-1.5 flex items-center gap-1.5">
                 <span class="inline-block w-2 h-2 rounded-full ${onlineClass}"></span>
                 <span>${vehicle.displayName ?? '-'}</span>
-                <span class="ml-auto rounded bg-gray-900 px-1.5 py-0.5 text-[9px] font-semibold uppercase text-gray-300">${status}</span>
+                ${buildStatusBadge(vehicle.status, status)}
             </div>
             <div class="grid grid-cols-2 gap-1">
-                ${buildVehicleMetaCell('Vehicle #', resolveVehicleNumber(vehicle))}
-                ${buildVehicleMetaCell('Driver', vehicle.driver_name ?? vehicle.driver?.name ?? '-')}
-                ${buildVehicleMetaCell('Order', vehicle.meta?.current_order_reference ?? '-')}
-                ${buildVehicleMetaCell('Speed', resolveVehicleSpeed(vehicle))}
-                ${buildVehicleMetaCell('Heading', resolveVehicleHeading(vehicle))}
-                ${buildVehicleMetaCell('Location', resolveVehicleLocation(vehicle))}
+                ${buildMetaCell('Vehicle #', resolveVehicleNumber(vehicle))}
+                ${buildMetaCell('Driver', vehicle.driver_name ?? vehicle.driver?.name ?? '-')}
+                ${buildMetaCell('Order', vehicle.meta?.current_order_reference ?? '-')}
+                ${buildMetaCell('Speed', resolveVehicleSpeed(vehicle))}
+                ${buildMetaCell('Heading', resolveVehicleHeading(vehicle))}
+                ${buildMetaCell('Location', resolveVehicleLocation(vehicle))}
             </div>
         </div>
     `;
+}
+
+function buildVehicleInfoWindowContent(vehicle) {
+    return buildVehicleLiveMapContent(vehicle);
+}
+
+function buildVehicleTooltipContent(vehicle) {
+    return buildVehicleLiveMapContent(vehicle);
 }
 
 function buildPlaceInfoWindowContent(place) {

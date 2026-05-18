@@ -41,6 +41,39 @@ class Driver extends FleetbaseResource
             'altitude'        => (int) data_get($this, 'altitude', 0),
             'speed'           => (int) data_get($this, 'speed', 0),
             'online'          => data_get($this, 'online', false),
+            'meta'            => [
+                '_index_resource'      => true,
+                'location_coordinates' => $this->locationCoordinates(),
+                'speed_label'          => $this->speedLabel(),
+                'heading_label'        => $this->headingLabel(),
+                'status_label'         => $this->statusLabel(),
+            ],
         ];
+    }
+
+    protected function locationCoordinates(): ?string
+    {
+        $location = Utils::castPoint($this->location);
+
+        return $location ? $location->getLat() . ' ' . $location->getLng() : null;
+    }
+
+    protected function speedLabel(): string
+    {
+        $speed = data_get($this, 'speed');
+
+        return is_numeric($speed) ? ((int) $speed) . ' km/h' : '-';
+    }
+
+    protected function headingLabel(): string
+    {
+        $heading = data_get($this, 'heading');
+
+        return is_numeric($heading) ? ((int) $heading) . ' deg' : '-';
+    }
+
+    protected function statusLabel(): ?string
+    {
+        return $this->status ? str($this->status)->replace(['_', '-'], ' ')->headline()->toString() : null;
     }
 }
