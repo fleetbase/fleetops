@@ -58,6 +58,10 @@ function resolveDriverHeading(driver) {
     return driver.meta?.heading_label ?? driver.heading ?? '-';
 }
 
+function resolveDriverId(driver) {
+    return driver.public_id ?? driver.id ?? '-';
+}
+
 function buildLiveMapCard(content, framed = false) {
     const frameClasses = framed ? 'relative rounded-lg bg-gray-900 shadow-lg p-1.5 text-white' : '';
     const closeButton = framed ? '<button type="button" class="fleetops-google-popover__close" data-fleetops-google-popover-close aria-label="Close">&times;</button>' : '';
@@ -77,6 +81,7 @@ function buildDriverLiveMapContent(driver, framed = false) {
                 ${buildStatusBadge(driver.status, status)}
             </div>
             <div class="grid grid-cols-2 gap-1">
+                ${buildMetaCell('ID', resolveDriverId(driver))}
                 ${buildMetaCell('Phone', driver.phone ?? '-')}
                 ${buildMetaCell('Vehicle', driver.vehicle_name ?? '-')}
                 ${buildMetaCell('Speed', resolveDriverSpeed(driver))}
