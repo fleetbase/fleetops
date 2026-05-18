@@ -89,7 +89,7 @@ function buildVehicleTooltipContent(vehicle) {
     const onlineClass = vehicle.online ? 'bg-green-400' : 'bg-red-500';
 
     return `
-        <div class="min-w-[620px] max-w-[700px]">
+        <div class="w-[480px] max-w-[calc(100vw-2rem)]">
             <div class="fleetops-google-hover-tooltip__title mb-1.5 flex items-center gap-1.5">
                 <span class="inline-block w-2 h-2 rounded-full ${onlineClass}"></span>
                 <span>${vehicle.displayName ?? '-'}</span>
