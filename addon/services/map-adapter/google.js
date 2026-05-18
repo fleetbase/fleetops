@@ -1056,6 +1056,7 @@ export default class GoogleMapsAdapter extends MapAdapterInterface {
                         content: buildWaypointMarkerContent(customOptions.waypointLabel, customOptions.waypointColor ?? '#2563eb'),
                         iconSize: customOptions.iconSize ?? [32, 32],
                         iconAnchor: customOptions.iconAnchor ?? [16, 16],
+                        zIndexOffset: customOptions.zIndexOffset ?? 100000,
                     };
                 }
 
@@ -2084,7 +2085,7 @@ export default class GoogleMapsAdapter extends MapAdapterInterface {
             map: this._map,
             position,
             title: options.title ?? options.tooltip ?? '',
-            zIndex: options.zIndexOffset ?? 0,
+            zIndex: options.zIndexOffset ?? (options.waypointLabel ? 100000 : 0),
         };
 
         if (options.waypointLabel) {
@@ -2093,6 +2094,7 @@ export default class GoogleMapsAdapter extends MapAdapterInterface {
                 scaledSize: new google.maps.Size(34, 34),
                 anchor: new google.maps.Point(17, 17),
             };
+            markerOptions.optimized = false;
         } else if (options.iconUrl) {
             const size = options.iconSize ?? [24, 24];
             markerOptions.icon = {
