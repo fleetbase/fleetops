@@ -16,7 +16,7 @@ function resolveStatusClass(status) {
 
 function buildStatusBadge(status, label = status) {
     return `
-        <div class="${resolveStatusClass(status)} rounded-full shadow-none ml-auto">
+        <div class="${resolveStatusClass(status)} shadow-none ml-auto">
             <span class="rounded-full text-[9px] px-1.5 py-0.5">${label ?? '-'}</span>
         </div>`;
 }
@@ -45,12 +45,18 @@ function resolveDriverHeading(driver) {
     return driver.meta?.heading_label ?? driver.heading ?? '-';
 }
 
-function buildDriverLiveMapContent(driver) {
+function buildLiveMapCard(content, framed = false) {
+    const frameClasses = framed ? 'rounded-lg bg-gray-900 shadow-lg p-1.5 text-white' : '';
+
+    return `<div class="w-[280px] max-w-[calc(100vw-2rem)] ${frameClasses}">${content}</div>`;
+}
+
+function buildDriverLiveMapContent(driver, framed = false) {
     const status = resolveDriverStatus(driver);
     const onlineClass = driver.online ? 'bg-green-400' : 'bg-red-500';
 
-    return `
-        <div class="w-[280px] max-w-[calc(100vw-2rem)] rounded-lg bg-gray-900 shadow-lg p-1.5 text-white">
+    return buildLiveMapCard(
+        `
             <div class="fleetops-google-hover-tooltip__title mb-1.5 flex items-center gap-1.5">
                 <span class="inline-block w-2 h-2 rounded-full ${onlineClass}"></span>
                 <span>${driver.name ?? '-'}</span>
@@ -63,12 +69,13 @@ function buildDriverLiveMapContent(driver) {
                 ${buildMetaCell('Heading', resolveDriverHeading(driver))}
                 ${buildMetaCell('Location', resolveDriverLocation(driver))}
             </div>
-        </div>
-    `;
+        `,
+        framed
+    );
 }
 
 function buildDriverInfoWindowContent(driver) {
-    return buildDriverLiveMapContent(driver);
+    return buildDriverLiveMapContent(driver, true);
 }
 
 function buildDriverTooltipContent(driver) {
@@ -95,12 +102,12 @@ function resolveVehicleHeading(vehicle) {
     return vehicle.meta?.heading_label ?? vehicle.heading ?? '-';
 }
 
-function buildVehicleLiveMapContent(vehicle) {
+function buildVehicleLiveMapContent(vehicle, framed = false) {
     const status = resolveVehicleStatus(vehicle);
     const onlineClass = vehicle.online ? 'bg-green-400' : 'bg-red-500';
 
-    return `
-        <div class="w-[280px] max-w-[calc(100vw-2rem)] rounded-lg bg-gray-900 shadow-lg p-1.5 text-white">
+    return buildLiveMapCard(
+        `
             <div class="fleetops-google-hover-tooltip__title mb-1.5 flex items-center gap-1.5">
                 <span class="inline-block w-2 h-2 rounded-full ${onlineClass}"></span>
                 <span>${vehicle.displayName ?? '-'}</span>
@@ -114,12 +121,13 @@ function buildVehicleLiveMapContent(vehicle) {
                 ${buildMetaCell('Heading', resolveVehicleHeading(vehicle))}
                 ${buildMetaCell('Location', resolveVehicleLocation(vehicle))}
             </div>
-        </div>
-    `;
+        `,
+        framed
+    );
 }
 
 function buildVehicleInfoWindowContent(vehicle) {
-    return buildVehicleLiveMapContent(vehicle);
+    return buildVehicleLiveMapContent(vehicle, true);
 }
 
 function buildVehicleTooltipContent(vehicle) {
@@ -212,7 +220,7 @@ export default class MapGoogleLiveMapComponent extends Component {
             if (!marker) {
                 const createdMarker = await this.mapManager.addMarker(driver.id, coords.lat, coords.lng, {
                     iconUrl: driver.vehicle_avatar ?? '/engines-dist/images/driver-marker.png',
-                    iconSize: [24, 24],
+                    iconSize: [20, 20],
                     title: driver.name,
                     tooltip: buildDriverTooltipContent(driver),
                     tooltipOptions: { html: true },
@@ -242,7 +250,7 @@ export default class MapGoogleLiveMapComponent extends Component {
             if (!marker) {
                 const createdMarker = await this.mapManager.addMarker(vehicle.id, coords.lat, coords.lng, {
                     iconUrl: vehicle.avatar_url ?? '/engines-dist/images/vehicle-marker.png',
-                    iconSize: [24, 24],
+                    iconSize: [20, 20],
                     title: vehicle.displayName,
                     tooltip: buildVehicleTooltipContent(vehicle),
                     tooltipOptions: { html: true },
