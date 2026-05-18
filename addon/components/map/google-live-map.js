@@ -16,8 +16,8 @@ function resolveStatusClass(status) {
 
 function buildStatusBadge(status, label = status) {
     return `
-        <div class="${resolveStatusClass(status)} shadow-none ml-auto">
-            <span class="text-[9px] px-1.5 py-0.5">${label ?? '-'}</span>
+        <div class="${resolveStatusClass(status)} rounded-full shadow-none ml-auto">
+            <span class="rounded-full text-[9px] px-1.5 py-0.5">${label ?? '-'}</span>
         </div>`;
 }
 
@@ -34,7 +34,7 @@ function resolveDriverStatus(driver) {
 }
 
 function resolveDriverLocation(driver) {
-    return driver.meta?.location_coordinates ?? '-';
+    return driver.meta?.location_coordinates ?? resolveLocationCoordinates(driver.location);
 }
 
 function resolveDriverSpeed(driver) {
@@ -50,7 +50,7 @@ function buildDriverLiveMapContent(driver) {
     const onlineClass = driver.online ? 'bg-green-400' : 'bg-red-500';
 
     return `
-        <div class="w-[280px] max-w-[calc(100vw-2rem)]">
+        <div class="w-[280px] max-w-[calc(100vw-2rem)] rounded-lg bg-gray-900 shadow-lg p-1.5 text-white">
             <div class="fleetops-google-hover-tooltip__title mb-1.5 flex items-center gap-1.5">
                 <span class="inline-block w-2 h-2 rounded-full ${onlineClass}"></span>
                 <span>${driver.name ?? '-'}</span>
@@ -84,7 +84,7 @@ function resolveVehicleStatus(vehicle) {
 }
 
 function resolveVehicleLocation(vehicle) {
-    return vehicle.meta?.location_coordinates ?? '-';
+    return vehicle.meta?.location_coordinates ?? resolveLocationCoordinates(vehicle.location);
 }
 
 function resolveVehicleSpeed(vehicle) {
@@ -100,7 +100,7 @@ function buildVehicleLiveMapContent(vehicle) {
     const onlineClass = vehicle.online ? 'bg-green-400' : 'bg-red-500';
 
     return `
-        <div class="w-[280px] max-w-[calc(100vw-2rem)]">
+        <div class="w-[280px] max-w-[calc(100vw-2rem)] rounded-lg bg-gray-900 shadow-lg p-1.5 text-white">
             <div class="fleetops-google-hover-tooltip__title mb-1.5 flex items-center gap-1.5">
                 <span class="inline-block w-2 h-2 rounded-full ${onlineClass}"></span>
                 <span>${vehicle.displayName ?? '-'}</span>
@@ -124,6 +124,24 @@ function buildVehicleInfoWindowContent(vehicle) {
 
 function buildVehicleTooltipContent(vehicle) {
     return buildVehicleLiveMapContent(vehicle);
+}
+
+function resolveLocationCoordinates(location) {
+    if (!location) {
+        return '-';
+    }
+
+    if (location?.coordinates && isArray(location.coordinates)) {
+        const [lng, lat] = location.coordinates;
+        return Number.isFinite(lat) && Number.isFinite(lng) ? `${lat} ${lng}` : '-';
+    }
+
+    if (isArray(location) && location.length >= 2) {
+        const [lat, lng] = location;
+        return Number.isFinite(lat) && Number.isFinite(lng) ? `${lat} ${lng}` : '-';
+    }
+
+    return '-';
 }
 
 function buildPlaceInfoWindowContent(place) {

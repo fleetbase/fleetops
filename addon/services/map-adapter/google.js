@@ -344,12 +344,14 @@ export default class GoogleMapsAdapter extends MapAdapterInterface {
             const size = options.iconSize ?? [24, 24];
             img.style.width = `${size[0]}px`;
             img.style.height = `${size[1]}px`;
+            img.style.maxWidth = 'none';
+            img.style.objectFit = 'contain';
             img.style.display = 'block';
             img.alt = options.alt ?? options.title ?? '';
             // Wrapper div allows rotation transforms without affecting the anchor
             const wrapper = document.createElement('div');
             wrapper.className = 'fleetops-map-marker';
-            wrapper.style.cssText = 'transform-origin: center center; display: block;';
+            wrapper.style.cssText = `width: ${size[0]}px; height: ${size[1]}px; transform-origin: center center; display: block; overflow: visible;`;
             wrapper.appendChild(img);
             content = wrapper;
         }

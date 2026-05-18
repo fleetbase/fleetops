@@ -83,12 +83,12 @@
                         as |marker|
                     >
                         <marker.popup @maxWidth="500" @minWidth="225">
-                            <div class="w-[280px] max-w-[calc(100vw-2rem)]">
+                            <div class="w-[280px] max-w-[calc(100vw-2rem)] rounded-lg bg-gray-900 shadow-lg p-1.5 text-white">
                                 <div class="flex items-center gap-1.5 text-xs font-semibold mb-1.5">
                                     <span class="inline-block w-2 h-2 rounded-full {{if driver.online 'bg-green-400' 'bg-red-500'}}"></span>
                                     <span>{{driver.name}}</span>
-                                    <div class="status-badge {{dasherize driver.status}}-status-badge status-badge-{{dasherize driver.status}} shadow-none ml-auto">
-                                        <span class="text-[9px] px-1.5 py-0.5">{{n-a driver.meta.status_label}}</span>
+                                    <div class="status-badge {{if driver.status (dasherize driver.status) 'default'}}-status-badge status-badge-{{if driver.status (dasherize driver.status) 'default'}} rounded-full shadow-none ml-auto">
+                                        <span class="rounded-full text-[9px] px-1.5 py-0.5">{{n-a driver.meta.status_label driver.status}}</span>
                                     </div>
                                 </div>
                                 <div class="grid grid-cols-2 gap-1">
@@ -110,18 +110,18 @@
                                     </div>
                                     <div class="rounded bg-gray-900 shadow-md px-1.5 py-1 min-w-0">
                                         <div class="text-[9px] font-semibold uppercase text-gray-400 leading-none">Location</div>
-                                        <div class="text-[11px] text-white leading-tight whitespace-normal break-words">{{n-a driver.meta.location_coordinates}}</div>
+                                        <div class="text-[11px] text-white leading-tight whitespace-normal break-words">{{n-a driver.meta.location_coordinates (point-coordinates driver.location)}}</div>
                                     </div>
                                 </div>
                             </div>
                         </marker.popup>
                         <marker.tooltip @permanent={{false}} @sticky={{true}}>
-                            <div class="w-[280px] max-w-[calc(100vw-2rem)]">
+                            <div class="w-[280px] max-w-[calc(100vw-2rem)] rounded-lg bg-gray-900 shadow-lg p-1.5 text-white">
                                 <div class="flex items-center gap-1.5 text-xs font-semibold mb-1.5">
                                     <span class="inline-block w-2 h-2 rounded-full {{if driver.online 'bg-green-400' 'bg-red-500'}}"></span>
                                     <span>{{driver.name}}</span>
-                                    <div class="status-badge {{dasherize driver.status}}-status-badge status-badge-{{dasherize driver.status}} shadow-none ml-auto">
-                                        <span class="text-[9px] px-1.5 py-0.5">{{n-a driver.meta.status_label}}</span>
+                                    <div class="status-badge {{if driver.status (dasherize driver.status) 'default'}}-status-badge status-badge-{{if driver.status (dasherize driver.status) 'default'}} rounded-full shadow-none ml-auto">
+                                        <span class="rounded-full text-[9px] px-1.5 py-0.5">{{n-a driver.meta.status_label driver.status}}</span>
                                     </div>
                                 </div>
                                 <div class="grid grid-cols-2 gap-1">
@@ -143,7 +143,7 @@
                                     </div>
                                     <div class="rounded bg-gray-900 shadow-md px-1.5 py-1 min-w-0">
                                         <div class="text-[9px] font-semibold uppercase text-gray-400 leading-none">Location</div>
-                                        <div class="text-[11px] text-white leading-tight whitespace-normal break-words">{{n-a driver.meta.location_coordinates}}</div>
+                                        <div class="text-[11px] text-white leading-tight whitespace-normal break-words">{{n-a driver.meta.location_coordinates (point-coordinates driver.location)}}</div>
                                     </div>
                                 </div>
                             </div>
@@ -164,12 +164,12 @@
                         as |marker|
                     >
                         <marker.popup @permanent={{false}} @sticky={{true}}>
-                            <div class="w-[280px] max-w-[calc(100vw-2rem)]">
+                            <div class="w-[280px] max-w-[calc(100vw-2rem)] rounded-lg bg-gray-900 shadow-lg p-1.5 text-white">
                                 <div class="flex items-center gap-1.5 text-xs font-semibold mb-1.5">
                                     <span class="inline-block w-2 h-2 rounded-full {{if vehicle.online 'bg-green-400' 'bg-red-500'}}"></span>
                                     <span>{{vehicle.displayName}}</span>
-                                    <div class="status-badge {{dasherize vehicle.status}}-status-badge status-badge-{{dasherize vehicle.status}} shadow-none ml-auto">
-                                        <span class="text-[9px] px-1.5 py-0.5">{{n-a vehicle.meta.status_label}}</span>
+                                    <div class="status-badge {{if vehicle.status (dasherize vehicle.status) 'default'}}-status-badge status-badge-{{if vehicle.status (dasherize vehicle.status) 'default'}} rounded-full shadow-none ml-auto">
+                                        <span class="rounded-full text-[9px] px-1.5 py-0.5">{{n-a vehicle.meta.status_label}}</span>
                                     </div>
                                 </div>
                                 <div class="grid grid-cols-2 gap-1">
@@ -201,12 +201,12 @@
                             </div>
                         </marker.popup>
                         <marker.tooltip @permanent={{false}} @sticky={{true}}>
-                            <div class="w-[280px] max-w-[calc(100vw-2rem)]">
+                            <div class="w-[280px] max-w-[calc(100vw-2rem)] rounded-lg bg-gray-900 shadow-lg p-1.5 text-white">
                                 <div class="flex items-center gap-1.5 text-xs font-semibold mb-1.5">
                                     <span class="inline-block w-2 h-2 rounded-full {{if vehicle.online 'bg-green-400' 'bg-red-500'}}"></span>
                                     <span>{{vehicle.displayName}}</span>
-                                    <div class="status-badge {{dasherize vehicle.status}}-status-badge status-badge-{{dasherize vehicle.status}} shadow-none ml-auto">
-                                        <span class="text-[9px] px-1.5 py-0.5">{{n-a vehicle.meta.status_label}}</span>
+                                    <div class="status-badge {{if vehicle.status (dasherize vehicle.status) 'default'}}-status-badge status-badge-{{if vehicle.status (dasherize vehicle.status) 'default'}} rounded-full shadow-none ml-auto">
+                                        <span class="rounded-full text-[9px] px-1.5 py-0.5">{{n-a vehicle.meta.status_label}}</span>
                                     </div>
                                 </div>
                                 <div class="grid grid-cols-2 gap-1">
