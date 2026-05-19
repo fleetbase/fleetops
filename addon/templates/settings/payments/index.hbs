@@ -11,7 +11,7 @@
     {{/if}}
 </Layout::Section::Header>
 
-<Layout::Section::Body class="overflow-y-scroll h-full">
+<Layout::Section::Body class="overflow-y-scroll-i h-full">
     {{#if this.lookupStripeConnectAccount.isRunning}}
         <div class="flex items-center justify-center flex-1 p-4">
             <Spinner @loadingMessage={{t "settings.payments.loading-settings"}} @loadingMessageClass="ml-2 text-black dark:text-white" @wrapperClass="flex flex-row items-center" />
