@@ -8,22 +8,6 @@ import { debug } from '@ember/debug';
 import { guidFor } from '@ember/object/internals';
 import { buildDriverLiveMapContent, buildPlaceInfoWindowContent, buildPlaceTooltipContent, buildVehicleLiveMapContent } from '../../utils/live-map-card-content';
 
-function buildDriverInfoWindowContent(driver) {
-    return buildDriverLiveMapContent(driver, true);
-}
-
-function buildDriverTooltipContent(driver) {
-    return buildDriverLiveMapContent(driver);
-}
-
-function buildVehicleInfoWindowContent(vehicle) {
-    return buildVehicleLiveMapContent(vehicle, true);
-}
-
-function buildVehicleTooltipContent(vehicle) {
-    return buildVehicleLiveMapContent(vehicle);
-}
-
 export default class MapGoogleLiveMapComponent extends Component {
     @service mapManager;
     id = guidFor(this);
@@ -78,10 +62,10 @@ export default class MapGoogleLiveMapComponent extends Component {
                     iconUrl: driver.vehicle_avatar ?? '/engines-dist/images/driver-marker.png',
                     iconSize: [20, 20],
                     title: driver.name,
-                    tooltip: buildDriverTooltipContent(driver),
+                    tooltip: buildDriverLiveMapContent(driver),
                     tooltipOptions: { html: true },
                     rotationAngle: driver.heading,
-                    onClick: () => this.#openInfoWindow(`driver:${driver.id}`, buildDriverInfoWindowContent(driver), driver.id, () => this.args.onDriverClicked?.(driver)),
+                    onClick: () => this.#openInfoWindow(`driver:${driver.id}`, buildDriverLiveMapContent(driver, true), driver.id, () => this.args.onDriverClicked?.(driver)),
                     onRightClick: (event) => this._showDriverContextMenu(driver, event),
                 });
 
@@ -108,10 +92,10 @@ export default class MapGoogleLiveMapComponent extends Component {
                     iconUrl: vehicle.avatar_url ?? '/engines-dist/images/vehicle-marker.png',
                     iconSize: [20, 20],
                     title: vehicle.displayName,
-                    tooltip: buildVehicleTooltipContent(vehicle),
+                    tooltip: buildVehicleLiveMapContent(vehicle),
                     tooltipOptions: { html: true },
                     rotationAngle: vehicle.heading,
-                    onClick: () => this.#openInfoWindow(`vehicle:${vehicle.id}`, buildVehicleInfoWindowContent(vehicle), vehicle.id, () => this.args.onVehicleClicked?.(vehicle)),
+                    onClick: () => this.#openInfoWindow(`vehicle:${vehicle.id}`, buildVehicleLiveMapContent(vehicle, true), vehicle.id, () => this.args.onVehicleClicked?.(vehicle)),
                     onRightClick: (event) => this._showVehicleContextMenu(vehicle, event),
                 });
 
