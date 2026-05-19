@@ -171,12 +171,17 @@ class VroomOrchestrationEngine implements OrchestrationEngineInterface
         $vroomPayload = $this->buildCapacityOnlyPayload($capacityTasks, $vroomVehicles, $options, $jobIdReverse);
 
         if (empty($vroomPayload['vehicles'])) {
+            $vehiclePacking   = $this->resolveVehiclePacking($options);
+            $vehicleFixedCost = $this->resolveVehicleFixedCost($options);
+
             return $this->mergeInvalidTasks([
                 'assignments' => [],
                 'unassigned'  => array_column($capacityTasks, 'id'),
                 'summary'     => [
                     'engine'              => 'vroom',
                     'allocation_strategy' => 'capacity_only',
+                    'vehicle_packing'     => $vehiclePacking,
+                    'vehicle_fixed_cost'  => $vehiclePacking === 'minimize_vehicles' ? $vehicleFixedCost : null,
                     'assigned'            => 0,
                     'unassigned'          => count($capacityTasks),
                     'unassigned_reasons'  => array_map(fn (array $task) => [
@@ -192,6 +197,8 @@ class VroomOrchestrationEngine implements OrchestrationEngineInterface
         $result['summary'] = array_merge($result['summary'] ?? [], [
             'engine'              => 'vroom',
             'allocation_strategy' => 'capacity_only',
+            'vehicle_packing'     => $this->resolveVehiclePacking($options),
+            'vehicle_fixed_cost'  => $this->resolveVehiclePacking($options) === 'minimize_vehicles' ? $this->resolveVehicleFixedCost($options) : null,
         ]);
 
         return $this->mergeInvalidTasks($result, $invalidTasks);
@@ -203,16 +210,22 @@ class VroomOrchestrationEngine implements OrchestrationEngineInterface
         $profile         = $options['profile'] ?? 'capacity_only';
         $respectCapacity = (bool) ($options['respect_capacity'] ?? true);
         $respectSkills   = (bool) ($options['respect_skills'] ?? true);
+        $vehiclePacking  = $this->resolveVehiclePacking($options);
+        $fixedCost       = $this->resolveVehicleFixedCost($options);
 
         $vroomPayload = [
             'jobs'     => [],
-            'vehicles' => array_map(function (array $v) use ($profile, $respectCapacity, $respectSkills) {
+            'vehicles' => array_map(function (array $v) use ($profile, $respectCapacity, $respectSkills, $vehiclePacking, $fixedCost) {
                 $vehicle = [
                     'id'          => crc32($v['id']),
                     'description' => json_encode(['vehicle_id' => $v['id'], 'driver_id' => $v['driver_id'] ?? null]),
                     'profile'     => $profile,
                     'start_index' => 0,
                 ];
+
+                if ($vehiclePacking === 'minimize_vehicles') {
+                    $vehicle['costs'] = ['fixed' => $fixedCost];
+                }
 
                 if ($respectCapacity) {
                     $vehicle['capacity'] = $v['capacity'];
@@ -263,6 +276,20 @@ class VroomOrchestrationEngine implements OrchestrationEngineInterface
         }
 
         return $vroomPayload;
+    }
+
+    protected function resolveVehiclePacking(array $options): string
+    {
+        $packing = strtolower((string) ($options['vehicle_packing'] ?? 'minimize_vehicles'));
+
+        return in_array($packing, ['minimize_vehicles', 'balanced', 'none'], true)
+            ? $packing
+            : 'minimize_vehicles';
+    }
+
+    protected function resolveVehicleFixedCost(array $options): int
+    {
+        return max(0, (int) ($options['vehicle_fixed_cost'] ?? 100000));
     }
 
     protected function buildUniformMatrix(int $size): array

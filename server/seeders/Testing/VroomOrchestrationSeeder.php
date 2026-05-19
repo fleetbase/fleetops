@@ -1,6 +1,6 @@
 <?php
 
-namespace Fleetbase\FleetOps\Seeders;
+namespace Fleetbase\FleetOps\Seeders\Testing;
 
 use Fleetbase\FleetOps\Models\Entity;
 use Fleetbase\FleetOps\Models\Order;
@@ -15,6 +15,13 @@ use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
+/**
+ * Explicit test-data seeder. Kept below server/seeders/Testing so fleetbase:seed
+ * does not auto-discover it during deploys.
+ *
+ * Run with:
+ * php artisan db:seed --class="Fleetbase\\FleetOps\\Seeders\\Testing\\VroomOrchestrationSeeder"
+ */
 class VroomOrchestrationSeeder extends Seeder
 {
     use ResolvesSeedCompany;
