@@ -31,4 +31,14 @@ export default class FleetListingPanelComponent extends Component {
             this.args.onVehicleClicked(vehicle);
         }
     }
+
+    @action calculateDropdownItemPosition(trigger) {
+        let { top, left, width } = trigger.getBoundingClientRect();
+        let style = {
+            left: 11 + left + width,
+            top: top + 2,
+        };
+
+        return { style };
+    }
 }

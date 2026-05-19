@@ -36,11 +36,12 @@
             @dropdownButtonIcon={{@itemDropdownButtonIcon}}
             @dropdownButtonIconPrefix={{@itemDropdownButtonIconPrefix}}
             @dropdownButtonText={{@itemDropdownButtonText}}
-            @dropdownButtonCalculatePosition={{@itemDropdownButtonCalculatePosition}}
+            @dropdownButtonCalculatePosition={{this.calculateDropdownItemPosition}}
             @dropdownButtonMenuLabel={{vehicle.displayName}}
             @dropdownButtonWrapperClass={{@itemDropdownButtonWrapperClass}}
             @dropdownButtonTriggerClass={{@itemDropdownButtonTriggerClass}}
             @registerDropdownButtonAPI={{@itemRegisterDropdownButtonAPI}}
+            @dropdownButtonRenderInPlace={{false}}
             @permission="fleet-ops view vehicle"
             @dropdownButtonRenderInPlace={{false}}
         >{{vehicle.displayName}}</Layout::Sidebar::Item>
