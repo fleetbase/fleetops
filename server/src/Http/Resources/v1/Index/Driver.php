@@ -33,6 +33,7 @@ class Driver extends FleetbaseResource
             'current_job_uuid'=> $this->when($isInternal, $this->current_job_uuid),
             'name'            => $this->name,
             'vehicle_name'    => $this->when($isInternal, $this->vehicle_name),
+            'email'           => $this->email,
             'phone'           => $this->phone,
             'photo_url'       => $this->photo_url,
             'status'          => $this->status,
@@ -42,13 +43,22 @@ class Driver extends FleetbaseResource
             'speed'           => (int) data_get($this, 'speed', 0),
             'online'          => data_get($this, 'online', false),
             'meta'            => [
-                '_index_resource'      => true,
-                'location_coordinates' => $this->locationCoordinates(),
-                'speed_label'          => $this->speedLabel(),
-                'heading_label'        => $this->headingLabel(),
-                'status_label'         => $this->statusLabel(),
+                '_index_resource'         => true,
+                'location_coordinates'    => $this->locationCoordinates(),
+                'current_order_reference' => $this->currentOrderReference(),
+                'speed_label'             => $this->speedLabel(),
+                'heading_label'           => $this->headingLabel(),
+                'status_label'            => $this->statusLabel(),
             ],
         ];
+    }
+
+    protected function currentOrderReference(): ?string
+    {
+        $this->loadMissing('currentOrder');
+        $order = data_get($this, 'currentOrder');
+
+        return data_get($order, 'tracking') ?? data_get($order, 'public_id');
     }
 
     protected function locationCoordinates(): ?string
