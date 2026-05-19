@@ -435,6 +435,7 @@ driver:
         vendor: Vendor
         select-vendor: Select Vendor
         driver-license: Drivers License
+        license-expiry: License Expiry
         no-vehicle-assigned: No Vehicle Assigned
     actions:
         assign-order: Assign Order to Driver

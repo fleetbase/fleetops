@@ -112,13 +112,19 @@ class OrderController extends FleetOpsController
                         $input['integrated_vendor_order'] = $integratedVendorOrder;
                     }
 
-                    // Normalize order config + type onto the company transport
-                    // config when an explicit config was not provided.
-                    $resolvedOrderConfig = null;
-                    if (!empty($input['order_config_uuid']) || !empty($input['type'])) {
-                        $resolvedOrderConfig = OrderConfig::resolveFromIdentifier([$input['order_config_uuid'] ?? null, $input['type'] ?? null]);
+                    // Normalize order config + type. Invalid explicit configs must
+                    // not silently fall back to the default transport config.
+                    $hasExplicitOrderConfig = !empty($input['order_config_uuid']);
+                    $hasExplicitOrderType   = !empty($input['type']);
+                    $resolvedOrderConfig    = OrderConfig::resolveFromIdentifier([$input['order_config_uuid'] ?? null, $input['type'] ?? null]);
+
+                    if (!$resolvedOrderConfig && $hasExplicitOrderConfig) {
+                        throw new FleetbaseRequestValidationException(['order_config_uuid' => 'The selected order config is invalid.']);
                     }
-                    $resolvedOrderConfig ??= OrderConfig::defaultOrCreate();
+
+                    if (!$resolvedOrderConfig && !$hasExplicitOrderType) {
+                        $resolvedOrderConfig = OrderConfig::defaultOrCreate();
+                    }
 
                     if ($resolvedOrderConfig) {
                         $input['order_config_uuid'] = $resolvedOrderConfig->uuid;

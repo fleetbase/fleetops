@@ -342,14 +342,19 @@ export default class GoogleMapsAdapter extends MapAdapterInterface {
             const img = document.createElement('img');
             img.src = options.iconUrl;
             const size = options.iconSize ?? [24, 24];
+            img.width = size[0];
+            img.height = size[1];
             img.style.width = `${size[0]}px`;
             img.style.height = `${size[1]}px`;
+            img.style.maxWidth = 'none';
+            img.style.maxHeight = 'none';
+            img.style.objectFit = 'contain';
             img.style.display = 'block';
             img.alt = options.alt ?? options.title ?? '';
             // Wrapper div allows rotation transforms without affecting the anchor
             const wrapper = document.createElement('div');
             wrapper.className = 'fleetops-map-marker';
-            wrapper.style.cssText = 'transform-origin: center center; display: block;';
+            wrapper.style.cssText = `width: ${size[0]}px; height: ${size[1]}px; max-width: ${size[0]}px; max-height: ${size[1]}px; line-height: 0; transform-origin: center center; display: block; overflow: visible;`;
             wrapper.appendChild(img);
             content = wrapper;
         }
@@ -1051,6 +1056,7 @@ export default class GoogleMapsAdapter extends MapAdapterInterface {
                         content: buildWaypointMarkerContent(customOptions.waypointLabel, customOptions.waypointColor ?? '#2563eb'),
                         iconSize: customOptions.iconSize ?? [32, 32],
                         iconAnchor: customOptions.iconAnchor ?? [16, 16],
+                        zIndexOffset: customOptions.zIndexOffset ?? 100000,
                     };
                 }
 
@@ -2079,7 +2085,7 @@ export default class GoogleMapsAdapter extends MapAdapterInterface {
             map: this._map,
             position,
             title: options.title ?? options.tooltip ?? '',
-            zIndex: options.zIndexOffset ?? 0,
+            zIndex: options.zIndexOffset ?? (options.waypointLabel ? 100000 : 0),
         };
 
         if (options.waypointLabel) {
@@ -2088,12 +2094,17 @@ export default class GoogleMapsAdapter extends MapAdapterInterface {
                 scaledSize: new google.maps.Size(34, 34),
                 anchor: new google.maps.Point(17, 17),
             };
+            markerOptions.optimized = false;
         } else if (options.iconUrl) {
             const size = options.iconSize ?? [24, 24];
             markerOptions.icon = {
                 url: options.iconUrl,
+                size: new google.maps.Size(size[0], size[1]),
                 scaledSize: new google.maps.Size(size[0], size[1]),
+                origin: new google.maps.Point(0, 0),
+                anchor: new google.maps.Point(size[0] / 2, size[1] / 2),
             };
+            markerOptions.optimized = false;
         }
 
         const marker = new google.maps.Marker(markerOptions);

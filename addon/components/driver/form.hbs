@@ -93,6 +93,16 @@
                 />
             </InputGroup>
 
+            <InputGroup @name={{t "driver.fields.license-expiry"}}>
+                <DatePicker
+                    @value={{@resource.license_expiry}}
+                    @onChange={{fn (mut @resource.license_expiry)}}
+                    @placeholder={{t "driver.fields.license-expiry"}}
+                    @disabled={{cannot-write @resource}}
+                    class="w-full form-input"
+                />
+            </InputGroup>
+
             <InputGroup @name={{t "driver.fields.vendor"}}>
                 <ModelSelect
                     @modelName="vendor"
