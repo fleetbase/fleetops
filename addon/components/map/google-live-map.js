@@ -84,7 +84,7 @@ function buildDriverLiveMapContent(driver, framed = false) {
                 ${buildMetaCell('ID', resolveDriverId(driver))}
                 ${buildMetaCell('Phone', driver.phone ?? '-')}
                 ${buildMetaCell('Vehicle', driver.vehicle_name ?? '-')}
-                ${buildMetaCell('Email', driver.email ?? '-')}
+                ${buildMetaCell('Email', driver.email ?? '-', 'truncate')}
                 ${buildMetaCell('Order', driver.meta?.current_order_reference ?? '-')}
                 ${buildMetaCell('Speed', resolveDriverSpeed(driver))}
                 ${buildMetaCell('Heading', resolveDriverHeading(driver))}
