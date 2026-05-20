@@ -154,11 +154,17 @@ class LiveController extends Controller
             if ($bounds && is_array($bounds) && count($bounds) === 4) {
                 [$south, $west, $north, $east] = $bounds;
 
-                // Use MySQL spatial functions for POINT column
-                // ST_Within checks if location is within the bounding box
+                // Build a WKT polygon envelope and pass it through ST_GeomFromText(?, 4326).
+                // ST_MakeEnvelope is MySQL-only (absent on MariaDB) and on MySQL it
+                // rejects SRID 4326 inputs, conflicting with the SRID of the location column.
+                // %F is locale-independent so commas-as-decimal-separator locales don't break WKT.
+                $envelopeWkt = sprintf(
+                    'POLYGON((%1$F %2$F, %3$F %2$F, %3$F %4$F, %1$F %4$F, %1$F %2$F))',
+                    $west, $south, $east, $north
+                );
                 $query->whereRaw(
-                    'ST_Within(location, ST_MakeEnvelope(POINT(?, ?), POINT(?, ?)))',
-                    [$west, $south, $east, $north]
+                    'ST_Within(location, ST_GeomFromText(?, 4326))',
+                    [$envelopeWkt]
                 );
             }
 
@@ -196,11 +202,17 @@ class LiveController extends Controller
             if ($bounds && is_array($bounds) && count($bounds) === 4) {
                 [$south, $west, $north, $east] = $bounds;
 
-                // Use MySQL spatial functions for POINT column
-                // ST_Within checks if location is within the bounding box
+                // Build a WKT polygon envelope and pass it through ST_GeomFromText(?, 4326).
+                // ST_MakeEnvelope is MySQL-only (absent on MariaDB) and on MySQL it
+                // rejects SRID 4326 inputs, conflicting with the SRID of the location column.
+                // %F is locale-independent so commas-as-decimal-separator locales don't break WKT.
+                $envelopeWkt = sprintf(
+                    'POLYGON((%1$F %2$F, %3$F %2$F, %3$F %4$F, %1$F %4$F, %1$F %2$F))',
+                    $west, $south, $east, $north
+                );
                 $query->whereRaw(
-                    'ST_Within(location, ST_MakeEnvelope(POINT(?, ?), POINT(?, ?)))',
-                    [$west, $south, $east, $north]
+                    'ST_Within(location, ST_GeomFromText(?, 4326))',
+                    [$envelopeWkt]
                 );
             }
 
@@ -239,11 +251,17 @@ class LiveController extends Controller
             if ($bounds && is_array($bounds) && count($bounds) === 4) {
                 [$south, $west, $north, $east] = $bounds;
 
-                // Use MySQL spatial functions for POINT column
-                // ST_Within checks if location is within the bounding box
+                // Build a WKT polygon envelope and pass it through ST_GeomFromText(?, 4326).
+                // ST_MakeEnvelope is MySQL-only (absent on MariaDB) and on MySQL it
+                // rejects SRID 4326 inputs, conflicting with the SRID of the location column.
+                // %F is locale-independent so commas-as-decimal-separator locales don't break WKT.
+                $envelopeWkt = sprintf(
+                    'POLYGON((%1$F %2$F, %3$F %2$F, %3$F %4$F, %1$F %4$F, %1$F %2$F))',
+                    $west, $south, $east, $north
+                );
                 $query->whereRaw(
-                    'ST_Within(location, ST_MakeEnvelope(POINT(?, ?), POINT(?, ?)))',
-                    [$west, $south, $east, $north]
+                    'ST_Within(location, ST_GeomFromText(?, 4326))',
+                    [$envelopeWkt]
                 );
             }
 
