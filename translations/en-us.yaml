@@ -435,6 +435,7 @@ driver:
         vendor: Vendor
         select-vendor: Select Vendor
         driver-license: Drivers License
+        license-expiry: License Expiry
         no-vehicle-assigned: No Vehicle Assigned
     actions:
         assign-order: Assign Order to Driver
@@ -2025,6 +2026,9 @@ orchestrator:
     allocation-strategy: Allocation Strategy
     allocation-strategy-route-aware: Route + Capacity
     allocation-strategy-capacity-only: Capacity Only
+    vehicle-packing: Vehicle Packing
+    vehicle-packing-minimize-vehicles: Minimize Vehicles
+    vehicle-packing-balanced: Balanced
     respect-skills: Respect Skills
     respect-capacity: Respect Capacity
     return-to-depot: Return to Depot

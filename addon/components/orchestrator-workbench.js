@@ -271,6 +271,7 @@ export default class OrchestratorWorkbenchComponent extends Component {
                 options: {
                     engine: phase.engine ?? 'greedy',
                     allocation_strategy: phase.allocationStrategy ?? 'route_aware',
+                    vehicle_packing: phase.vehiclePacking ?? 'minimize_vehicles',
                     balance_workload: phase.balanceWorkload ?? false,
                     respect_skills: phase.respectSkills ?? true,
                     respect_capacity: phase.respectCapacity ?? true,

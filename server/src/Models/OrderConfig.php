@@ -458,28 +458,31 @@ class OrderConfig extends Model
     /**
      * Resolves an OrderConfig from a given identifier or an array of identifiers within an optional company context.
      *
-     * @param string|array $orderConfigIdentifier the identifier(s) for the OrderConfig (namespace, public_id, or key)
+     * @param string|array $orderConfigIdentifier the identifier(s) for the OrderConfig (uuid, namespace, public_id, or key)
      * @param Company|null $company               the company context, if any, to narrow down the search
      *
      * @return OrderConfig|null the found OrderConfig or null if none found
      */
     public static function resolveFromIdentifier($orderConfigIdentifier, ?Company $company = null): ?OrderConfig
     {
-        $query = static::query();
+        $companyUuid  = $company instanceof Company ? $company->uuid : session('company');
+        $identifiers  = is_array($orderConfigIdentifier) ? $orderConfigIdentifier : [$orderConfigIdentifier];
+        $identifiers  = collect($identifiers)->filter(fn ($identifier) => filled($identifier))->values();
 
-        if ($company instanceof Company) {
-            $query->where('company_uuid', $company->uuid);
-        } else {
-            $companyUuid = session('company');
+        if ($identifiers->isEmpty()) {
+            return static::default($company);
+        }
+
+        foreach ($identifiers as $identifier) {
+            $query = static::query();
+
             if ($companyUuid) {
                 $query->where('company_uuid', $companyUuid);
             }
-        }
 
-        $identifiers = is_array($orderConfigIdentifier) ? $orderConfigIdentifier : [$orderConfigIdentifier];
-        foreach ($identifiers as $identifier) {
             $orderConfig = $query->where(function ($query) use ($identifier) {
-                $query->where('namespace', $identifier)
+                $query->where('uuid', $identifier)
+                      ->orWhere('namespace', $identifier)
                       ->orWhere('public_id', $identifier)
                       ->orWhere('key', $identifier);
             })->first();
@@ -489,7 +492,7 @@ class OrderConfig extends Model
             }
         }
 
-        return static::default($company);
+        return null;
     }
 
     /**

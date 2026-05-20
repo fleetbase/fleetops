@@ -20,6 +20,12 @@ export default class SettingsRoutingController extends Controller {
     @tracked trackingRouteCacheTtlSeconds = 600;
     @tracked trackingStaleLocationThresholdSeconds = 300;
     @tracked trackingDefaultVehicleSpeedKph = 35;
+    @tracked lateDepartureAlertsEnabled = true;
+    @tracked lateDepartureGracePeriodMinutes = 15;
+    @tracked routeDeviationAlertsEnabled = true;
+    @tracked routeDeviationDistanceThresholdMeters = 500;
+    @tracked prolongedStoppageAlertsEnabled = true;
+    @tracked prolongedStoppageDurationThresholdMinutes = 30;
     @tracked showTrackingAdvancedSettings = false;
     @tracked trackingProviderOptions = [
         { value: 'google_routes', label: 'Google Routes' },
@@ -89,6 +95,12 @@ export default class SettingsRoutingController extends Controller {
             this.trackingRouteCacheTtlSeconds = trackingSettings.route_cache_ttl_seconds ?? 600;
             this.trackingStaleLocationThresholdSeconds = trackingSettings.stale_location_threshold_seconds ?? 300;
             this.trackingDefaultVehicleSpeedKph = trackingSettings.default_vehicle_speed_kph ?? 35;
+            this.lateDepartureAlertsEnabled = trackingSettings.alerts?.late_departures?.enabled ?? true;
+            this.lateDepartureGracePeriodMinutes = trackingSettings.alerts?.late_departures?.grace_period_minutes ?? 15;
+            this.routeDeviationAlertsEnabled = trackingSettings.alerts?.route_deviations?.enabled ?? true;
+            this.routeDeviationDistanceThresholdMeters = trackingSettings.alerts?.route_deviations?.distance_threshold_meters ?? 500;
+            this.prolongedStoppageAlertsEnabled = trackingSettings.alerts?.prolonged_stoppages?.enabled ?? true;
+            this.prolongedStoppageDurationThresholdMinutes = trackingSettings.alerts?.prolonged_stoppages?.duration_threshold_minutes ?? 30;
             this.trackingProviderOptions = this.normalizeProviderOptions(trackingSettings.providers ?? this.trackingProviderOptions);
         } catch (error) {
             this.notifications.serverError(error);
@@ -110,6 +122,20 @@ export default class SettingsRoutingController extends Controller {
             route_cache_ttl_seconds: Number(this.trackingRouteCacheTtlSeconds) || 600,
             stale_location_threshold_seconds: Number(this.trackingStaleLocationThresholdSeconds) || 300,
             default_vehicle_speed_kph: Number(this.trackingDefaultVehicleSpeedKph) || 35,
+            alerts: {
+                late_departures: {
+                    enabled: this.lateDepartureAlertsEnabled,
+                    grace_period_minutes: Number(this.lateDepartureGracePeriodMinutes) || 15,
+                },
+                route_deviations: {
+                    enabled: this.routeDeviationAlertsEnabled,
+                    distance_threshold_meters: Number(this.routeDeviationDistanceThresholdMeters) || 500,
+                },
+                prolonged_stoppages: {
+                    enabled: this.prolongedStoppageAlertsEnabled,
+                    duration_threshold_minutes: Number(this.prolongedStoppageDurationThresholdMinutes) || 30,
+                },
+            },
         };
     }
 
