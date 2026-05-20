@@ -14,11 +14,11 @@ const TILE_ORDER = ['active_orders', 'completed_today', 'drivers_online', 'vehic
  *  - deltaInverse: flip success/danger semantics (for "lower-is-better" metrics)
  */
 const TILE_META = {
-    active_orders:     { icon: 'bolt',                 accent: 'pulse-accent-blue'   },
-    completed_today:   { icon: 'circle-check',         accent: 'pulse-accent-green'  },
-    drivers_online:    { icon: 'id-card',              accent: 'pulse-accent-sky'    },
-    vehicles_deployed: { icon: 'truck',                accent: 'pulse-accent-indigo' },
-    issues_open:       { icon: 'triangle-exclamation', accent: 'pulse-accent-amber', deltaInverse: true },
+    active_orders: { icon: 'bolt', accent: 'pulse-accent-blue' },
+    completed_today: { icon: 'circle-check', accent: 'pulse-accent-green' },
+    drivers_online: { icon: 'id-card', accent: 'pulse-accent-sky' },
+    vehicles_deployed: { icon: 'truck', accent: 'pulse-accent-indigo' },
+    issues_open: { icon: 'triangle-exclamation', accent: 'pulse-accent-amber', deltaInverse: true },
 };
 
 /** Refetch the full snapshot this often as a reconciliation guard against
@@ -59,18 +59,19 @@ export default class WidgetOperationsPulseComponent extends Component {
 
     get tiles() {
         if (!this.data) return [];
-        return TILE_ORDER
-            .filter((key) => this.data[key])
-            .map((key) => ({
-                key,
-                title: this.titleFor(key),
-                ...this.data[key],
-                meta: TILE_META[key] ?? {},
-            }));
+        return TILE_ORDER.filter((key) => this.data[key]).map((key) => ({
+            key,
+            title: this.titleFor(key),
+            ...this.data[key],
+            meta: TILE_META[key] ?? {},
+        }));
     }
 
     titleFor(key) {
-        return key.split('_').map((p) => p.charAt(0).toUpperCase() + p.slice(1)).join(' ');
+        return key
+            .split('_')
+            .map((p) => p.charAt(0).toUpperCase() + p.slice(1))
+            .join(' ');
     }
 
     deltaStatus(tile) {

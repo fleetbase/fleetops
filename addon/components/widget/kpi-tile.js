@@ -15,7 +15,6 @@ import { task } from 'ember-concurrency';
  */
 export default class WidgetKpiTileComponent extends Component {
     @service fetch;
-
     @tracked data = null;
     @tracked error = null;
 
@@ -83,9 +82,7 @@ export default class WidgetKpiTileComponent extends Component {
         }
         const positive = pct > 0;
         const isGood = this.deltaInverse ? !positive : positive;
-        return isGood
-            ? 'text-emerald-600 dark:text-emerald-400'
-            : 'text-rose-600 dark:text-rose-400';
+        return isGood ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400';
     }
 
     /** Neon palette per delta direction. Drives line + fill + value highlight. */

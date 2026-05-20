@@ -109,12 +109,10 @@ export default class WidgetFleetOpsKeyMetricsComponent extends Component {
      */
     get topMetrics() {
         if (!this.metrics) return [];
-        return TOP_KEYS
-            .filter((key) => this.metrics[key] !== undefined)
-            .map((key) => {
-                const { value, format } = this.metrics[key];
-                const formatter = FORMATTERS[format] ?? FORMATTERS.count;
-                return { key, formattedValue: formatter(value) };
-            });
+        return TOP_KEYS.filter((key) => this.metrics[key] !== undefined).map((key) => {
+            const { value, format } = this.metrics[key];
+            const formatter = FORMATTERS[format] ?? FORMATTERS.count;
+            return { key, formattedValue: formatter(value) };
+        });
     }
 }

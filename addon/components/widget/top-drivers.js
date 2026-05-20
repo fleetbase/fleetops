@@ -6,8 +6,8 @@ import { task } from 'ember-concurrency';
 
 const SORTS = [
     { key: 'orders_completed', label: 'Orders' },
-    { key: 'on_time',          label: 'On-time' },
-    { key: 'distance',         label: 'Distance' },
+    { key: 'on_time', label: 'On-time' },
+    { key: 'distance', label: 'Distance' },
 ];
 
 export default class WidgetTopDriversComponent extends Component {

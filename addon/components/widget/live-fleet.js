@@ -101,7 +101,7 @@ export default class WidgetLiveFleetComponent extends Component {
      * widget is read-only.
      */
     #patchLeafletDrawInitHook() {
-        const L = typeof window !== 'undefined' ? window.L ?? window.leaflet : null;
+        const L = typeof window !== 'undefined' ? (window.L ?? window.leaflet) : null;
         if (L && !L.Edit) {
             L.Edit = {};
         }
@@ -122,9 +122,7 @@ export default class WidgetLiveFleetComponent extends Component {
         const emberLeaflet = owner?.lookup?.('service:ember-leaflet');
         if (!emberLeaflet) return;
 
-        const already = emberLeaflet.components?.find(
-            (c) => c.name === 'leaflet-tracking-marker' || c.as === 'tracking-marker',
-        );
+        const already = emberLeaflet.components?.find((c) => c.name === 'leaflet-tracking-marker' || c.as === 'tracking-marker');
         if (already) return;
 
         emberLeaflet.registerComponent('leaflet-tracking-marker', {
@@ -360,9 +358,7 @@ export default class WidgetLiveFleetComponent extends Component {
         const lng = data.lng ?? data.longitude;
         if (typeof lat !== 'number' || typeof lng !== 'number') return;
 
-        const drivers = (this.data.drivers ?? []).map((d) =>
-            d.uuid === targetUuid ? { ...d, lat, lng, heading: data.heading ?? d.heading } : d,
-        );
+        const drivers = (this.data.drivers ?? []).map((d) => (d.uuid === targetUuid ? { ...d, lat, lng, heading: data.heading ?? d.heading } : d));
 
         this.data = { ...this.data, drivers };
     }

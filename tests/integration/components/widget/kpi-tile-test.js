@@ -68,8 +68,6 @@ module('Integration | Component | widget/kpi-tile', function (hooks) {
 
         await waitFor('.fleet-ops-kpi-tile');
 
-        assert
-            .dom('.fleet-ops-kpi-tile .danger-status-badge, .fleet-ops-kpi-tile [class*="danger"]')
-            .exists('positive delta on an inverse metric renders as danger');
+        assert.dom('.fleet-ops-kpi-tile .danger-status-badge, .fleet-ops-kpi-tile [class*="danger"]').exists('positive delta on an inverse metric renders as danger');
     });
 });
