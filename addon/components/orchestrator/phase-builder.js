@@ -51,6 +51,7 @@ export default class OrchestratorPhaseBuilderComponent extends Component {
             label: this.intl.t(`orchestrator.mode-${mode.replace(/_/g, '-')}`),
             engine: 'greedy',
             allocationStrategy: 'route_aware',
+            vehiclePacking: 'minimize_vehicles',
             orderStatuses: ['created'],
             balanceWorkload: false,
             respectSkills: true,
@@ -130,6 +131,7 @@ export default class OrchestratorPhaseBuilderComponent extends Component {
             ...this.draftPhase,
             engine,
             allocationStrategy: engine === 'capacity' ? 'capacity_only' : (this.draftPhase.allocationStrategy ?? 'route_aware'),
+            vehiclePacking: this.draftPhase.vehiclePacking ?? 'minimize_vehicles',
         };
     }
 
@@ -158,8 +160,19 @@ export default class OrchestratorPhaseBuilderComponent extends Component {
         ];
     }
 
+    get vehiclePackingOptions() {
+        return [
+            { value: 'minimize_vehicles', label: this.intl.t('orchestrator.vehicle-packing-minimize-vehicles') },
+            { value: 'balanced', label: this.intl.t('orchestrator.vehicle-packing-balanced') },
+        ];
+    }
+
     get shouldShowAllocationStrategy() {
         return this.draftPhase?.mode === 'assign_vehicles' && this.draftPhase?.engine === 'vroom';
+    }
+
+    get shouldShowVehiclePacking() {
+        return this.shouldShowAllocationStrategy && this.draftPhase?.allocationStrategy === 'capacity_only';
     }
 
     get shouldShowRouteOptions() {

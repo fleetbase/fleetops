@@ -6,73 +6,7 @@ import { action } from '@ember/object';
 import { isArray } from '@ember/array';
 import { debug } from '@ember/debug';
 import { guidFor } from '@ember/object/internals';
-
-function buildDriverInfoWindowContent(driver) {
-    return `
-        <div class="fleetops-google-popover fleetops-google-popover--compact">
-            <div class="fleetops-google-popover__row">
-                <img src="${driver.photoUrl ?? ''}" alt="${driver.name ?? ''}" class="fleetops-google-popover__avatar" />
-                <div class="fleetops-google-popover__body">
-                    <div class="fleetops-google-popover__title">${driver.name ?? '-'}</div>
-                    <div class="fleetops-google-popover__meta">Phone: ${driver.phone ?? '-'}</div>
-                    <div class="fleetops-google-popover__meta">Vehicle: ${driver.vehicle_name ?? '-'}</div>
-                    <div class="fleetops-google-popover__meta">Status:
-                        <span class="${driver.online ? 'text-green-500' : 'text-red-400'}">${driver.online ? 'Online' : 'Offline'}</span>
-                    </div>
-                </div>
-            </div>
-        </div>`;
-}
-
-function buildDriverTooltipContent(driver) {
-    return `
-        <div class="fleetops-google-hover-tooltip__title">${driver.name ?? '-'}</div>
-        <div class="fleetops-google-hover-tooltip__meta ${driver.online ? 'text-green-400' : 'text-red-400'}">${driver.online ? 'Online' : 'Offline'}</div>
-    `;
-}
-
-function buildVehicleInfoWindowContent(vehicle) {
-    return `
-        <div class="fleetops-google-popover">
-            <div class="fleetops-google-popover__row">
-                <img src="${vehicle.photo_url ?? ''}" alt="${vehicle.display_name ?? ''}" class="fleetops-google-popover__vehicle" />
-                <div class="fleetops-google-popover__body">
-                    <div class="fleetops-google-popover__title">${vehicle.displayName ?? '-'}</div>
-                    <div class="fleetops-google-popover__meta">ID: ${vehicle.public_id ?? '-'}</div>
-                    <div class="fleetops-google-popover__meta">Serial: ${vehicle.serial_number ?? vehicle.vin ?? '-'}</div>
-                    <div class="fleetops-google-popover__meta">Driver: ${vehicle.driver_name ?? '-'}</div>
-                    <div class="fleetops-google-popover__meta">Status:
-                        <span class="${vehicle.online ? 'text-green-500' : 'text-red-400'}">${vehicle.online ? 'Online' : 'Offline'}</span>
-                    </div>
-                </div>
-            </div>
-        </div>`;
-}
-
-function buildVehicleTooltipContent(vehicle) {
-    return `
-        <div class="fleetops-google-hover-tooltip__title">${vehicle.displayName ?? '-'}</div>
-        <div class="fleetops-google-hover-tooltip__meta">ID: ${vehicle.public_id ?? '-'}</div>
-        <div class="fleetops-google-hover-tooltip__meta ${vehicle.online ? 'text-green-400' : 'text-red-400'}">${vehicle.online ? 'Online' : 'Offline'}</div>
-    `;
-}
-
-function buildPlaceInfoWindowContent(place) {
-    return `
-        <div class="fleetops-google-popover fleetops-google-popover--compact">
-            <div class="fleetops-google-popover__body">
-                <div class="fleetops-google-popover__title">${place.name ?? place.address ?? '-'}</div>
-                <div class="fleetops-google-popover__meta">${place.address ?? ''}</div>
-            </div>
-        </div>`;
-}
-
-function buildPlaceTooltipContent(place) {
-    return `
-        <div class="fleetops-google-hover-tooltip__title">${place.name ?? place.address ?? '-'}</div>
-        <div class="fleetops-google-hover-tooltip__meta">${place.address ?? ''}</div>
-    `;
-}
+import { buildDriverLiveMapContent, buildPlaceInfoWindowContent, buildPlaceTooltipContent, buildVehicleLiveMapContent } from '../../utils/live-map-card-content';
 
 export default class MapGoogleLiveMapComponent extends Component {
     @service mapManager;
@@ -100,6 +34,7 @@ export default class MapGoogleLiveMapComponent extends Component {
 
         this.map = map;
         this.mapManager.on('moveend', () => this.args.onViewportChanged?.());
+        this.mapManager.on('click', () => this._closeAllInfoWindows());
         this.mapManager.on('rightclick', (event) => this._showMapContextMenu(event));
         this.args.onLoad?.({ target: map });
         this.syncResources();
@@ -125,12 +60,12 @@ export default class MapGoogleLiveMapComponent extends Component {
             if (!marker) {
                 const createdMarker = await this.mapManager.addMarker(driver.id, coords.lat, coords.lng, {
                     iconUrl: driver.vehicle_avatar ?? '/engines-dist/images/driver-marker.png',
-                    iconSize: [24, 24],
+                    iconSize: [20, 20],
                     title: driver.name,
-                    tooltip: buildDriverTooltipContent(driver),
+                    tooltip: buildDriverLiveMapContent(driver),
                     tooltipOptions: { html: true },
                     rotationAngle: driver.heading,
-                    onClick: () => this.#openInfoWindow(`driver:${driver.id}`, buildDriverInfoWindowContent(driver), driver.id, () => this.args.onDriverClicked?.(driver)),
+                    onClick: () => this.#openInfoWindow(`driver:${driver.id}`, buildDriverLiveMapContent(driver, true), driver.id, () => this.args.onDriverClicked?.(driver)),
                     onRightClick: (event) => this._showDriverContextMenu(driver, event),
                 });
 
@@ -155,12 +90,12 @@ export default class MapGoogleLiveMapComponent extends Component {
             if (!marker) {
                 const createdMarker = await this.mapManager.addMarker(vehicle.id, coords.lat, coords.lng, {
                     iconUrl: vehicle.avatar_url ?? '/engines-dist/images/vehicle-marker.png',
-                    iconSize: [24, 24],
+                    iconSize: [20, 20],
                     title: vehicle.displayName,
-                    tooltip: buildVehicleTooltipContent(vehicle),
+                    tooltip: buildVehicleLiveMapContent(vehicle),
                     tooltipOptions: { html: true },
                     rotationAngle: vehicle.heading,
-                    onClick: () => this.#openInfoWindow(`vehicle:${vehicle.id}`, buildVehicleInfoWindowContent(vehicle), vehicle.id, () => this.args.onVehicleClicked?.(vehicle)),
+                    onClick: () => this.#openInfoWindow(`vehicle:${vehicle.id}`, buildVehicleLiveMapContent(vehicle, true), vehicle.id, () => this.args.onVehicleClicked?.(vehicle)),
                     onRightClick: (event) => this._showVehicleContextMenu(vehicle, event),
                 });
 
@@ -308,6 +243,10 @@ export default class MapGoogleLiveMapComponent extends Component {
         if (!infoWindow) {
             infoWindow = new google.maps.InfoWindow({ content });
             this._infoWindows.set(infoId, infoWindow);
+
+            infoWindow.addListener('domready', () => {
+                document.querySelector('[data-fleetops-google-popover-close]')?.addEventListener('click', () => infoWindow.close(), { once: true });
+            });
         } else {
             infoWindow.setContent(content);
         }

@@ -157,3 +157,94 @@ test('vroom capacity-only payload uses matrix indexes instead of coordinates', f
     expect($payload['matrices']['capacity_only']['durations'])->toHaveCount(2);
     expect(array_values($reverse))->toBe(['order_capacity']);
 });
+
+test('vroom capacity-only payload minimizes vehicles by default', function () {
+    $engine  = new VroomOrchestrationEngine();
+    $method  = new ReflectionMethod($engine, 'buildCapacityOnlyPayload');
+    $reverse = [];
+
+    $method->setAccessible(true);
+
+    $payload = $method->invokeArgs($engine, [[
+        ['id' => 'order_a', 'description' => 'order_a', 'amount' => [100, 250, 1, 2]],
+        ['id' => 'order_b', 'description' => 'order_b', 'amount' => [80, 100, 0, 1]],
+    ], [
+        ['id' => 'vehicle_large', 'driver_id' => null, 'capacity' => [500, 1000, 4, 20]],
+        ['id' => 'vehicle_spare', 'driver_id' => null, 'capacity' => [500, 1000, 4, 20]],
+    ], [], &$reverse]);
+
+    expect($payload['vehicles'][0]['costs'])->toBe(['fixed' => 100000]);
+    expect($payload['vehicles'][1]['costs'])->toBe(['fixed' => 100000]);
+    expect($payload['jobs'])->toHaveCount(2);
+    expect($payload['jobs'][0]['delivery'])->toBe([100, 250, 1, 2]);
+    expect($payload['jobs'][1]['delivery'])->toBe([80, 100, 0, 1]);
+});
+
+test('vroom capacity-only payload accepts custom minimize vehicles fixed cost', function () {
+    $engine  = new VroomOrchestrationEngine();
+    $method  = new ReflectionMethod($engine, 'buildCapacityOnlyPayload');
+    $reverse = [];
+
+    $method->setAccessible(true);
+
+    $payload = $method->invokeArgs($engine, [[
+        ['id' => 'order_a', 'description' => 'order_a', 'amount' => [100, 250, 1, 2]],
+    ], [
+        ['id' => 'vehicle_large', 'driver_id' => null, 'capacity' => [500, 1000, 4, 20]],
+    ], [
+        'vehicle_packing'    => 'minimize_vehicles',
+        'vehicle_fixed_cost' => 50000,
+    ], &$reverse]);
+
+    expect($payload['vehicles'][0]['costs'])->toBe(['fixed' => 50000]);
+});
+
+test('vroom capacity-only payload can disable vehicle packing bias', function (string $packing) {
+    $engine  = new VroomOrchestrationEngine();
+    $method  = new ReflectionMethod($engine, 'buildCapacityOnlyPayload');
+    $reverse = [];
+
+    $method->setAccessible(true);
+
+    $payload = $method->invokeArgs($engine, [[
+        ['id' => 'order_a', 'description' => 'order_a', 'amount' => [100, 250, 1, 2]],
+    ], [
+        ['id' => 'vehicle_large', 'driver_id' => null, 'capacity' => [500, 1000, 4, 20]],
+    ], [
+        'vehicle_packing' => $packing,
+    ], &$reverse]);
+
+    expect($payload['vehicles'][0])->not->toHaveKey('costs');
+})->with(['balanced', 'none']);
+
+test('vroom capacity-only response can assign multiple orders to one large vehicle', function () {
+    $engine = new VroomOrchestrationEngine();
+    $method = new ReflectionMethod($engine, 'mapVroomResponse');
+
+    $method->setAccessible(true);
+
+    $result = $method->invoke($engine, [
+        'routes' => [
+            [
+                'description' => json_encode(['vehicle_id' => 'vehicle_large', 'driver_id' => null]),
+                'steps'       => [
+                    ['type' => 'start'],
+                    ['type' => 'job', 'id' => 1001],
+                    ['type' => 'job', 'id' => 1002],
+                    ['type' => 'job', 'id' => 1003],
+                    ['type' => 'end'],
+                ],
+            ],
+        ],
+        'unassigned' => [],
+        'summary'    => ['routes' => 1],
+    ], [
+        1001 => 'order_a',
+        1002 => 'order_b',
+        1003 => 'order_c',
+    ]);
+
+    expect($result['assignments'])->toHaveCount(3);
+    expect(collect($result['assignments'])->pluck('vehicle_id')->unique()->values()->all())->toBe(['vehicle_large']);
+    expect(collect($result['assignments'])->pluck('order_id')->all())->toBe(['order_a', 'order_b', 'order_c']);
+});

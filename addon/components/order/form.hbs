@@ -17,7 +17,7 @@
         <Order::Form::Details @resource={{@resource}} />
         <Order::Form::Route @resource={{@resource}} />
         <RegistryYield @registry="fleet-ops:component:order:form" as |RegistryComponent|>
-            <RegistryComponent @order={{@order}} />
+            <RegistryComponent @order={{@resource}} @resource={{@resource}} />
         </RegistryYield>
         <Order::Form::Payload @resource={{@resource}} />
         <Order::Form::ServiceRate @resource={{@resource}} />

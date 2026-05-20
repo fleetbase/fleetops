@@ -65,6 +65,7 @@ class FleetOpsServiceProvider extends CoreServiceProvider
         \Fleetbase\FleetOps\Console\Commands\TestEmail::class,
         \Fleetbase\FleetOps\Console\Commands\ProcessMaintenanceTriggers::class,
         \Fleetbase\FleetOps\Console\Commands\SendMaintenanceReminders::class,
+        \Fleetbase\FleetOps\Console\Commands\ProcessOperationalAlerts::class,
     ];
 
     /**
@@ -126,6 +127,7 @@ class FleetOpsServiceProvider extends CoreServiceProvider
             $schedule->command('fleetops:purge-service-quotes')->daily()->withoutOverlapping();
             $schedule->command('fleetops:process-maintenance-triggers')->daily()->withoutOverlapping()->storeOutputInDb();
             $schedule->command('fleetops:send-maintenance-reminders')->daily()->withoutOverlapping()->storeOutputInDb();
+            $schedule->command('fleetops:process-operational-alerts')->everyMinute()->withoutOverlapping()->storeOutputInDb();
         });
         $this->registerNotifications();
         $this->registerExpansionsFrom(__DIR__ . '/../Expansions');
@@ -192,6 +194,9 @@ class FleetOpsServiceProvider extends CoreServiceProvider
             \Fleetbase\FleetOps\Notifications\OrderFailed::class,
             \Fleetbase\FleetOps\Notifications\OrderCompleted::class,
             \Fleetbase\FleetOps\Notifications\DriverArrivedAtGeofence::class,
+            \Fleetbase\FleetOps\Notifications\LateDeparture::class,
+            \Fleetbase\FleetOps\Notifications\RouteDeviation::class,
+            \Fleetbase\FleetOps\Notifications\ProlongedStoppage::class,
         ]);
 
         // Register Notifiables

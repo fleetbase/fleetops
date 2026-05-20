@@ -2,21 +2,26 @@
 
 namespace Fleetbase\FleetOps\Support;
 
-use Fleetbase\FleetOps\Models\Contact;
-use Fleetbase\FleetOps\Models\Driver;
-use Fleetbase\FleetOps\Models\FuelReport;
-use Fleetbase\FleetOps\Models\Issue;
-use Fleetbase\FleetOps\Models\Order;
+use Fleetbase\FleetOps\Support\Metrics\AbstractMetric;
+use Fleetbase\FleetOps\Support\Metrics\Registry;
 use Fleetbase\Models\Company;
-use Fleetbase\Models\Transaction;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Str;
 
 /**
- * Metrics service to pull analyitcs and metrics from FleetOps.
+ * Thin facade over Support/Metrics/* — preserves the legacy chainable API
+ * (Metrics::new($co)->withEarnings()->withFuelCosts()->get()) for one release
+ * while the new per-slug pattern is preferred:
  *
- * Ex:
- * $metrics = Metrics::new($company)->withEarnings()->withFuelCosts()->get();
+ *     Metrics::forCompany($co)->between($s, $e)->resolve('earnings')->get()
+ *
+ * The 7 documented bugs in the previous monolithic implementation are fixed
+ * by the per-metric classes:
+ *  - totalTimeTraveled now sums `time`, not `distance`
+ *  - openIssues/resolvedIssues use $this->company->uuid (not session)
+ *  - earnings/fuelCosts return float, currency-filtered
+ *  - ordersInProgress uses explicit allowlist
+ *  - metric discovery uses explicit Registry (not array_slice + reflection)
  */
 class Metrics
 {
@@ -57,264 +62,56 @@ class Metrics
         return $this->start($start)->end($end);
     }
 
+    /**
+     * Resolve a single metric by slug. New preferred entry point.
+     */
+    public function resolve(string $slug): ?AbstractMetric
+    {
+        $class = Registry::resolve($slug);
+
+        if ($class === null) {
+            return null;
+        }
+
+        return $class::forCompany($this->company)->between($this->start, $this->end);
+    }
+
+    /**
+     * Legacy bulk API: invoke a set of metrics and collect their scalar values
+     * in the same shape the old endpoint returned. Empty $metrics means "all".
+     *
+     * @param array<string> $metrics slugs or camelCase method names accepted for back-compat
+     */
+    public function with(?array $metrics = []): Metrics
+    {
+        if (empty($metrics)) {
+            $slugs = Registry::slugs();
+        } else {
+            $slugs = array_map(
+                fn ($m) => Str::snake($m),
+                $metrics
+            );
+        }
+
+        foreach ($slugs as $slug) {
+            $metric = $this->resolve($slug);
+            if ($metric !== null) {
+                $this->metrics[$slug] = $metric->value();
+            }
+        }
+
+        return $this;
+    }
+
+    public function get(): array
+    {
+        return $this->metrics;
+    }
+
     private function setCompany(Company $company): Metrics
     {
         $this->company = $company;
 
         return $this;
-    }
-
-    private function set($key, $value = null): Metrics
-    {
-        if (is_array($key)) {
-            foreach ($key as $k => $v) {
-                $this->set($k, $v);
-            }
-
-            return $this;
-        }
-
-        $this->metrics = data_set($this->metrics, $key, $value);
-
-        return $this;
-    }
-
-    public function get()
-    {
-        return $this->metrics;
-    }
-
-    public function with(?array $metrics = [])
-    {
-        if (empty($metrics)) {
-            $metrics = array_slice(get_class_methods($this), 9);
-        }
-
-        $metrics = array_map(
-            function ($metric) {
-                return Str::camel($metric);
-            },
-            $metrics
-        );
-
-        foreach ($metrics as $metric) {
-            if (method_exists($this, $metric)) {
-                $this->{$metric}();
-            }
-        }
-
-        return $this;
-    }
-
-    public function earnings(?callable $callback = null): Metrics
-    {
-        $query = Transaction::where('company_uuid', $this->company->uuid)->whereBetween('created_at', [$this->start, $this->end]);
-
-        if (is_callable($callback)) {
-            $callback($query);
-        }
-
-        $data = $query->sum('amount');
-
-        return $this->set('earnings', (int) $data);
-    }
-
-    public function fuelCosts(?callable $callback = null): Metrics
-    {
-        $query = FuelReport::where('company_uuid', $this->company->uuid)->whereBetween('created_at', [$this->start, $this->end]);
-
-        if (is_callable($callback)) {
-            $callback($query);
-        }
-
-        $data = $query->sum('amount');
-
-        return $this->set('fuel_costs', (int) $data);
-    }
-
-    public function totalDistanceTraveled(?callable $callback = null): Metrics
-    {
-        $query = Order::where(
-            [
-                'company_uuid' => $this->company->uuid,
-                'status'       => 'completed',
-            ]
-        )
-            ->whereBetween('created_at', [$this->start, $this->end]);
-
-        if (is_callable($callback)) {
-            $callback($query);
-        }
-
-        $data = $query->sum('distance');
-
-        return $this->set('total_distance_traveled', (int) $data);
-    }
-
-    public function totalTimeTraveled(?callable $callback = null): Metrics
-    {
-        $query = Order::where(
-            [
-                'company_uuid' => $this->company->uuid,
-                'status'       => 'completed',
-            ]
-        )
-            ->whereBetween('created_at', [$this->start, $this->end]);
-
-        if (is_callable($callback)) {
-            $callback($query);
-        }
-
-        $data = $query->sum('distance');
-
-        return $this->set('total_distance_traveled', (int) $data);
-    }
-
-    public function ordersCanceled(?callable $callback = null): Metrics
-    {
-        $query = Order::where('company_uuid', $this->company->uuid)
-            ->whereBetween('created_at', [$this->start, $this->end])
-            ->where('status', 'canceled');
-
-        if (is_callable($callback)) {
-            $callback($query);
-        }
-
-        $data = $query->count();
-
-        return $this->set('orders_canceled', $data);
-    }
-
-    public function ordersCompleted(?callable $callback = null): Metrics
-    {
-        $query = Order::where('company_uuid', $this->company->uuid)
-            ->whereBetween('created_at', [$this->start, $this->end])
-            ->where('status', 'completed');
-
-        if (is_callable($callback)) {
-            $callback($query);
-        }
-
-        $data = $query->count();
-
-        return $this->set('orders_completed', $data);
-    }
-
-    public function ordersInProgress(?callable $callback = null): Metrics
-    {
-        $query = Order::where('company_uuid', $this->company->uuid)
-            ->whereBetween('created_at', [$this->start, $this->end])
-            ->whereNotIn('status', ['completed', 'created', 'pending', 'canceled']);
-
-        if (is_callable($callback)) {
-            $callback($query);
-        }
-
-        $data = $query->count();
-
-        return $this->set('orders_in_progress', $data);
-    }
-
-    public function activeLiveOrders(?callable $callback = null): Metrics
-    {
-        $query = LiveOrderQuery::make($this->company->uuid, [
-            'active' => true,
-        ]);
-
-        if (is_callable($callback)) {
-            $callback($query);
-        }
-
-        $data = $query->count();
-
-        return $this->set('active_live_orders', $data);
-    }
-
-    public function ordersScheduled(?callable $callback = null): Metrics
-    {
-        $query = Order::where('company_uuid', $this->company->uuid)
-            ->whereBetween('created_at', [$this->start, $this->end])
-            ->where('status', 'created')
-            ->whereDate('scheduled_at', '>', Carbon::now());
-
-        if (is_callable($callback)) {
-            $callback($query);
-        }
-
-        $data = $query->count();
-
-        return $this->set('orders_scheduled', $data);
-    }
-
-    public function driversOnline(?callable $callback = null): Metrics
-    {
-        $query = Driver::where('company_uuid', $this->company->uuid)
-            ->where('online', true)
-            ->whereNotNull('current_job_uuid');
-
-        if (is_callable($callback)) {
-            $callback($query);
-        }
-
-        $data = $query->count();
-
-        return $this->set('drivers_online', $data);
-    }
-
-    public function totalDrivers(?callable $callback = null): Metrics
-    {
-        $query = Driver::where('company_uuid', $this->company->uuid);
-
-        if (is_callable($callback)) {
-            $callback($query);
-        }
-
-        $data = $query->count();
-
-        return $this->set('total_drivers', $data);
-    }
-
-    public function totalCustomers(?callable $callback = null): Metrics
-    {
-        $query = Contact::where('company_uuid', $this->company->uuid)
-            ->where('type', 'customer');
-
-        if (is_callable($callback)) {
-            $callback($query);
-        }
-
-        $data = $query->count();
-
-        return $this->set('total_customers', $data);
-    }
-
-    public function openIssues(?callable $callback = null): Metrics
-    {
-        $query = Issue::where('company_uuid', session('company'))
-            ->whereBetween('created_at', [$this->start, $this->end])
-            ->where('status', 'pending');
-
-        if (is_callable($callback)) {
-            $callback($query);
-        }
-
-        $data = $query->count();
-
-        return $this->set('open_issues', $data);
-    }
-
-    public function resolvedIssues(?callable $callback = null): Metrics
-    {
-        $query = Issue::where('company_uuid', session('company'))
-            ->whereBetween('created_at', [$this->start, $this->end])
-            ->whereNotNull('resolved_at');
-
-        if (is_callable($callback)) {
-            $callback($query);
-        }
-
-        $data = $query->count();
-
-        return $this->set('resolved_issues', $data);
     }
 }

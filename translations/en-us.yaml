@@ -435,6 +435,7 @@ driver:
         vendor: Vendor
         select-vendor: Select Vendor
         driver-license: Drivers License
+        license-expiry: License Expiry
         no-vehicle-assigned: No Vehicle Assigned
     actions:
         assign-order: Assign Order to Driver
@@ -1653,6 +1654,39 @@ modals:
         description-zone: Description of Zone
 
 widget:
+    refresh: Refresh
+    kpi-earnings:
+        title: Earnings
+    kpi-distance:
+        title: Distance Travelled
+    kpi-aov:
+        title: Avg Order Value
+    kpi-active-orders:
+        title: Active Orders
+    kpi-drivers-online:
+        title: Drivers Online
+    kpi-open-issues:
+        title: Open Issues
+    operations-pulse:
+        title: Operations Pulse
+    revenue-trend:
+        title: Revenue Trend
+    orders-by-status:
+        title: Order Volume by Status
+    on-time-delivery:
+        title: On-Time Delivery
+    top-drivers:
+        title: Top Drivers
+    fuel-efficiency:
+        title: Fuel Cost & Efficiency
+    issues-insights:
+        title: Issues Insights
+    maintenance-overview:
+        title: Maintenance Overview
+    geofence-violations:
+        title: Geofence Violations
+    live-fleet:
+        title: Live Fleet Map
     fleet-ops-quickstart:
         message: Let's see what you can do to jumpstart operations...
         start-task: Start Task
@@ -1992,6 +2026,9 @@ orchestrator:
     allocation-strategy: Allocation Strategy
     allocation-strategy-route-aware: Route + Capacity
     allocation-strategy-capacity-only: Capacity Only
+    vehicle-packing: Vehicle Packing
+    vehicle-packing-minimize-vehicles: Minimize Vehicles
+    vehicle-packing-balanced: Balanced
     respect-skills: Respect Skills
     respect-capacity: Respect Capacity
     return-to-depot: Return to Depot

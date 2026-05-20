@@ -1,3 +1,4 @@
+/* stylelint-disable alpha-value-notation -- FleetOps lazy engine production CSS is minified by legacy clean-css, which corrupts comma-form rgba() percent alpha values. */
 .scheduler-left-sidebar {
     border-right: 1px rgb(229 231 235 / 100%) solid;
     height: 100vh;
@@ -425,7 +426,7 @@ body[data-theme='light'] .fleetops-pill-tabs > nav > a.ui-tab.active {
 
 body[data-theme='light'] .flow-activity {
     stroke: #e5e7eb;
-    fill: rgba(249, 250, 251, 50%);
+    fill: rgba(249, 250, 251, 0.5);
 }
 
 body[data-theme='light'] .flow-activity:hover,
@@ -856,7 +857,7 @@ body[data-theme='dark'] .order-progress-bar > .order-progress-bar-marker-wrapper
 }
 
 .order-progress-bar.has-progress > .order-progress-bar-wrapper > .order-progress-bar-track {
-    border-top: 4px dashed rgba(209, 213, 219, 50%);
+    border-top: 4px dashed rgba(209, 213, 219, 0.5);
 }
 
 .order-progress-bar > .order-progress-bar-wrapper > .order-progress-bar-track {
@@ -1872,21 +1873,21 @@ main.console-fleet-ops-operations-orders-index-index section.next-view-section >
 .positions-replay-component .metric-card {
     padding: 0.75rem;
     border-radius: 0.5rem;
-    background-color: rgba(0, 0, 0, 2%);
+    background-color: rgba(0, 0, 0, 0.02);
     transition: all 0.2s ease-in-out;
 }
 
 .positions-replay-component .metric-card:hover {
-    background-color: rgba(0, 0, 0, 4%);
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 10%);
+    background-color: rgba(0, 0, 0, 0.04);
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
 }
 
 body[data-theme='dark'] .positions-replay-component .metric-card {
-    background-color: rgba(255, 255, 255, 5%);
+    background-color: rgba(255, 255, 255, 0.05);
 }
 
 body[data-theme='dark'] .positions-replay-component .metric-card:hover {
-    background-color: rgba(255, 255, 255, 8%);
+    background-color: rgba(255, 255, 255, 0.08);
 }
 
 .positions-replay-component .metric-label {
@@ -2221,7 +2222,7 @@ body[data-theme='dark'] #fleet-ops-fleet-schedule-container .fc-timeline-slot.fc
     font-weight: 500;
     padding: 0.1rem 0.35rem;
     cursor: pointer;
-    box-shadow: 0 1px 2px rgba(0, 0, 0, 8%);
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
 }
 
 #fleet-ops-fleet-schedule-container .fc-event:hover {
@@ -2390,7 +2391,7 @@ body[data-theme='dark'] #fleet-ops-scheduler-timeline .ec-day {
     font-weight: 500;
     padding: 0.25rem 0.5rem;
     cursor: pointer;
-    box-shadow: 0 1px 2px rgba(0, 0, 0, 8%);
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
     border: none;
     min-height: 3.25rem;
     overflow: hidden;
@@ -2412,11 +2413,11 @@ body[data-theme='dark'] #fleet-ops-scheduler-timeline .ec-day {
 
 /* Drag-over hover state */
 #fleet-ops-scheduler-timeline[data-dragging-over='true'] .ec-main {
-    background-color: rgba(99, 102, 241, 4%);
+    background-color: rgba(99, 102, 241, 0.04);
 }
 
 body[data-theme='dark'] #fleet-ops-scheduler-timeline[data-dragging-over='true'] .ec-main {
-    background-color: rgba(129, 140, 248, 6%);
+    background-color: rgba(129, 140, 248, 0.06);
 }
 
 /* Per-column drop cursor indicator */
@@ -2429,13 +2430,13 @@ body[data-theme='dark'] #fleet-ops-scheduler-timeline[data-dragging-over='true']
     pointer-events: none;
     z-index: 10;
     border-radius: 1px;
-    box-shadow: 0 0 6px rgba(99, 102, 241, 70%);
+    box-shadow: 0 0 6px rgba(99, 102, 241, 0.7);
     transition: left 0.04s linear;
 }
 
 body[data-theme='dark'] #fleet-ops-scheduler-timeline .ec-drop-cursor {
     background-color: #818cf8;
-    box-shadow: 0 0 6px rgba(129, 140, 248, 70%);
+    box-shadow: 0 0 6px rgba(129, 140, 248, 0.7);
 }
 
 /* Full-height timeline */
@@ -2726,7 +2727,7 @@ body[data-theme='dark'] .order-pool-card.selected,
 }
 
 .vehicle-drop-zone.drag-over {
-    background: rgba(59, 130, 246, 10%);
+    background: rgba(59, 130, 246, 0.1);
     outline: 1px dashed #3b82f6;
     border-radius: 4px;
 }
@@ -2832,7 +2833,7 @@ body[data-theme='dark'] .import-dropzone.dragging,
     border-radius: 50%;
     background: #3b82f6;
     border: 2px solid #fff;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 50%);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
     transition: transform 0.1s;
 }
 
@@ -2848,7 +2849,7 @@ body[data-theme='dark'] .import-dropzone.dragging,
     height: 16px;
     border-radius: 50%;
     border: 2px solid #fff;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 50%);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
     background: #ef4444; /* default: offline */
 }
 
@@ -2875,7 +2876,7 @@ body[data-theme='dark'] .import-dropzone.dragging,
  * Minimal padding, small font, semi-transparent dark background.
  */
 .fleetops-waypoint-tooltip {
-    background: rgba(15, 23, 42, 88%) !important;
+    background: rgba(15, 23, 42, 0.88) !important;
     border: none !important;
     border-radius: 4px !important;
     color: #f8fafc !important;
@@ -2883,11 +2884,11 @@ body[data-theme='dark'] .import-dropzone.dragging,
     font-weight: 600 !important;
     padding: 3px 7px !important;
     white-space: nowrap;
-    box-shadow: 0 2px 6px rgba(0, 0, 0, 35%) !important;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.35) !important;
 }
 
 .fleetops-waypoint-tooltip::before {
-    border-top-color: rgba(15, 23, 42, 88%) !important;
+    border-top-color: rgba(15, 23, 42, 0.88) !important;
 }
 
 /* ============================================================
@@ -2899,7 +2900,7 @@ body[data-theme='dark'] .import-dropzone.dragging,
  */
 .fleetops-waypoint-popup-wrapper .leaflet-popup-content-wrapper {
     border-radius: 6px !important;
-    box-shadow: 0 4px 16px rgba(0, 0, 0, 20%) !important;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2) !important;
     padding: 0 !important;
     overflow: hidden;
 }
@@ -2986,10 +2987,10 @@ body[data-theme='dark'] .import-dropzone.dragging,
 }
 
 .fleetops-route-tooltip-wrapper .leaflet-tooltip {
-    background: rgba(15, 23, 42, 92%) !important;
+    background: rgba(15, 23, 42, 0.92) !important;
     border: none !important;
     border-radius: 5px !important;
-    box-shadow: 0 3px 10px rgba(0, 0, 0, 30%) !important;
+    box-shadow: 0 3px 10px rgba(0, 0, 0, 0.3) !important;
     padding: 6px 10px !important;
     color: #f1f5f9 !important;
     font-size: 11px !important;
@@ -2997,7 +2998,7 @@ body[data-theme='dark'] .import-dropzone.dragging,
 }
 
 .fleetops-route-tooltip-wrapper .leaflet-tooltip::before {
-    border-top-color: rgba(15, 23, 42, 92%) !important;
+    border-top-color: rgba(15, 23, 42, 0.92) !important;
 }
 
 .fleetops-route-tooltip {
@@ -3188,7 +3189,7 @@ body[data-theme='dark'] #fleet-ops-orchestrator-plan-timeline .ec-day {
     font-weight: 500;
     padding: 0.25rem 0.5rem;
     cursor: default;
-    box-shadow: 0 1px 2px rgba(0, 0, 0, 8%);
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
     border: none;
     min-height: 3.25rem;
     overflow: hidden;
@@ -3393,21 +3394,21 @@ body[data-theme='dark'] .import-mapping-row,
 }
 
 .import-mapping-row:hover {
-    background: rgba(0, 0, 0, 2%); /* light mode hover */
+    background: rgba(0, 0, 0, 0.02); /* light mode hover */
 }
 
 body[data-theme='dark'] .import-mapping-row:hover,
 .dark .import-mapping-row:hover {
-    background: rgba(255, 255, 255, 2%);
+    background: rgba(255, 255, 255, 0.02);
 }
 
 /* Highlight rows that have a mapping applied */
 .import-mapping-row--mapped {
-    background: rgba(16, 185, 129, 5%);
+    background: rgba(16, 185, 129, 0.05);
 }
 
 .import-mapping-row--mapped:hover {
-    background: rgba(16, 185, 129, 9%);
+    background: rgba(16, 185, 129, 0.09);
 }
 
 /* Column sizing helpers */
@@ -3618,15 +3619,15 @@ body[data-theme='light'] .import-preview-table td {
 }
 
 .import-preview-table tbody tr:hover td {
-    background: rgba(255, 255, 255, 2%);
+    background: rgba(255, 255, 255, 0.02);
 }
 
 body[data-theme='light'] .import-preview-table tbody tr:hover td {
-    background: rgba(0, 0, 0, 2%);
+    background: rgba(0, 0, 0, 0.02);
 }
 
 .import-preview-row--error td {
-    background: rgba(239, 68, 68, 6%) !important;
+    background: rgba(239, 68, 68, 0.06) !important;
 }
 
 /* Address cell — allow wrapping for long addresses */
@@ -3650,17 +3651,17 @@ body[data-theme='light'] .import-preview-table tbody tr:hover td {
 }
 
 .import-preview-badge--blue {
-    background: rgba(59, 130, 246, 15%);
+    background: rgba(59, 130, 246, 0.15);
     color: #60a5fa;
 }
 
 .import-preview-badge--gray {
-    background: rgba(107, 114, 128, 15%);
+    background: rgba(107, 114, 128, 0.15);
     color: #9ca3af;
 }
 
 .import-preview-badge--green {
-    background: rgba(16, 185, 129, 15%);
+    background: rgba(16, 185, 129, 0.15);
     color: #34d399;
 }
 
@@ -3746,7 +3747,7 @@ body[data-theme='light'] .import-preview-table tbody tr:hover td {
     border-top: 1px solid #1f2937;
     font-size: 0.72rem;
     color: #fbbf24;
-    background: rgba(251, 191, 36, 6%);
+    background: rgba(251, 191, 36, 0.06);
 }
 
 .fleetops-google-contextmenu {
@@ -3754,7 +3755,7 @@ body[data-theme='light'] .import-preview-table tbody tr:hover td {
     background: #1f2937;
     color: #f9fafb;
     border-radius: 0.375rem;
-    box-shadow: 0 10px 30px rgba(15, 23, 42, 28%);
+    box-shadow: 0 10px 30px rgba(15, 23, 42, 0.28);
     border: 0;
     padding: 0;
     overflow: hidden;
@@ -3808,7 +3809,7 @@ body[data-theme='light'] .import-preview-table tbody tr:hover td {
     padding: 0.313rem;
     border-radius: 9999px;
     background: #fff;
-    box-shadow: 0 10px 30px rgba(15, 23, 42, 18%);
+    box-shadow: 0 10px 30px rgba(15, 23, 42, 0.18);
     border: 0;
     pointer-events: auto;
 }
@@ -3899,7 +3900,7 @@ body[data-theme='light'] .import-preview-table tbody tr:hover td {
 body[data-theme='light'] .fleetops-google-contextmenu {
     background: #fff;
     color: #111827;
-    box-shadow: 0 10px 30px rgba(15, 23, 42, 18%);
+    box-shadow: 0 10px 30px rgba(15, 23, 42, 0.18);
 }
 
 body[data-theme='light'] .fleetops-google-contextmenu > .fleetops-google-contextmenu-separator {
@@ -3945,7 +3946,7 @@ body[data-theme='dark'] .next-google-container-map .fleetops-google-draw-actions
     max-width: 180px;
     padding: 2px 8px;
     border-radius: 9999px;
-    background: rgba(17, 24, 39, 88%);
+    background: rgba(17, 24, 39, 0.88);
     color: #f9fafb;
     font-size: 11px;
     font-weight: 600;
@@ -3953,22 +3954,22 @@ body[data-theme='dark'] .next-google-container-map .fleetops-google-draw-actions
     white-space: nowrap;
     text-overflow: ellipsis;
     overflow: hidden;
-    box-shadow: 0 6px 16px rgba(15, 23, 42, 22%);
+    box-shadow: 0 6px 16px rgba(15, 23, 42, 0.22);
 }
 
 .fleetops-google-hover-tooltip {
     position: absolute;
     z-index: 99999;
     display: none;
-    max-width: 240px;
+    max-width: none;
     padding: 0.45rem 0.65rem;
     border-radius: 0.625rem;
-    background: rgba(17, 24, 39, 94%);
+    background: rgba(17, 24, 39, 0.94);
     color: #f9fafb;
     font-size: 0.75rem;
     line-height: 1.25;
     pointer-events: none;
-    box-shadow: 0 10px 30px rgba(15, 23, 42, 22%);
+    box-shadow: 0 10px 30px rgba(15, 23, 42, 0.22);
     transform: translateY(-50%);
 }
 
@@ -3988,8 +3989,8 @@ body[data-theme='dark'] .next-google-container-map .fleetops-google-draw-actions
     height: 8px;
     border-radius: 9999px;
     background: #3b82f6;
-    border: 1px solid rgba(255, 255, 255, 95%);
-    box-shadow: 0 0 0 1px rgba(59, 130, 246, 25%);
+    border: 1px solid rgba(255, 255, 255, 0.95);
+    box-shadow: 0 0 0 1px rgba(59, 130, 246, 0.25);
 }
 
 .fleetops-google-popover {
@@ -3999,7 +4000,7 @@ body[data-theme='dark'] .next-google-container-map .fleetops-google-draw-actions
     border-radius: 1rem;
     background: #111827;
     color: #f9fafb;
-    box-shadow: 0 16px 40px rgba(15, 23, 42, 28%);
+    box-shadow: 0 16px 40px rgba(15, 23, 42, 0.28);
 }
 
 .fleetops-google-popover--compact {
@@ -4065,6 +4066,28 @@ body[data-theme='dark'] .next-google-container-map .fleetops-google-draw-actions
     background: #111827 !important;
 }
 
+.fleetops-google-popover__close {
+    position: absolute;
+    top: 0.25rem;
+    right: 0.35rem;
+    z-index: 1;
+    width: 1rem;
+    height: 1rem;
+    border: 0;
+    border-radius: 9999px;
+    background: rgba(31, 41, 55, 0.8);
+    color: #d1d5db;
+    font-size: 0.8rem;
+    line-height: 1rem;
+    text-align: center;
+    cursor: pointer;
+}
+
+.fleetops-google-popover__close:hover {
+    background: rgba(55, 65, 81, 0.95);
+    color: #fff;
+}
+
 /* Tracking intelligence panel */
 .tracking-intelligence {
     display: flex;
@@ -4112,48 +4135,48 @@ body[data-theme='dark'] .next-google-container-map .fleetops-google-draw-actions
 
 .tracking-intelligence-pill--good {
     color: #16a34a;
-    background: rgba(34, 197, 94, 10%);
-    border-color: rgba(34, 197, 94, 24%);
+    background: rgba(34, 197, 94, 0.1);
+    border-color: rgba(34, 197, 94, 0.24);
 }
 
 .tracking-intelligence-pill--warn {
     color: #d97706;
-    background: rgba(245, 158, 11, 12%);
-    border-color: rgba(245, 158, 11, 28%);
+    background: rgba(245, 158, 11, 0.12);
+    border-color: rgba(245, 158, 11, 0.28);
 }
 
 .tracking-intelligence-pill--bad {
     color: #dc2626;
-    background: rgba(239, 68, 68, 11%);
-    border-color: rgba(239, 68, 68, 28%);
+    background: rgba(239, 68, 68, 0.11);
+    border-color: rgba(239, 68, 68, 0.28);
 }
 
 .tracking-intelligence-pill--muted {
     color: #6b7280;
-    background: rgba(107, 114, 128, 10%);
-    border-color: rgba(107, 114, 128, 22%);
+    background: rgba(107, 114, 128, 0.1);
+    border-color: rgba(107, 114, 128, 0.22);
 }
 
 [data-theme='dark'] .tracking-intelligence-pill--good {
     color: #5bc796;
-    background: rgba(91, 199, 150, 12%);
+    background: rgba(91, 199, 150, 0.12);
 }
 
 [data-theme='dark'] .tracking-intelligence-pill--warn {
     color: #e5a14b;
-    background: rgba(229, 161, 75, 12%);
-    border-color: rgba(229, 161, 75, 32%);
+    background: rgba(229, 161, 75, 0.12);
+    border-color: rgba(229, 161, 75, 0.32);
 }
 
 [data-theme='dark'] .tracking-intelligence-pill--bad {
     color: #e26b6b;
-    background: rgba(226, 107, 107, 13%);
-    border-color: rgba(226, 107, 107, 32%);
+    background: rgba(226, 107, 107, 0.13);
+    border-color: rgba(226, 107, 107, 0.32);
 }
 
 [data-theme='dark'] .tracking-intelligence-pill--muted {
     color: #7c8896;
-    background: rgba(255, 255, 255, 4%);
+    background: rgba(255, 255, 255, 0.04);
     border-color: #232c38;
 }
 
@@ -4163,16 +4186,16 @@ body[data-theme='dark'] .next-google-container-map .fleetops-google-draw-actions
     gap: 0.625rem;
     align-items: flex-start;
     padding: 0.625rem 0.7rem;
-    border: 1px solid rgba(245, 158, 11, 28%);
+    border: 1px solid rgba(245, 158, 11, 0.28);
     border-radius: 0.5rem;
-    background: rgba(245, 158, 11, 10%);
+    background: rgba(245, 158, 11, 0.1);
     color: #92400e;
     font-size: 0.75rem;
 }
 
 .tracking-intelligence-alert--critical {
-    border-color: rgba(239, 68, 68, 28%);
-    background: rgba(239, 68, 68, 10%);
+    border-color: rgba(239, 68, 68, 0.28);
+    background: rgba(239, 68, 68, 0.1);
     color: #991b1b;
 }
 
@@ -4183,7 +4206,7 @@ body[data-theme='dark'] .next-google-container-map .fleetops-google-draw-actions
     align-items: center;
     justify-content: center;
     border-radius: 0.3125rem;
-    background: rgba(0, 0, 0, 10%);
+    background: rgba(0, 0, 0, 0.1);
 }
 
 .tracking-intelligence-alert__title {
@@ -4198,14 +4221,14 @@ body[data-theme='dark'] .next-google-container-map .fleetops-google-draw-actions
 }
 
 [data-theme='dark'] .tracking-intelligence-alert {
-    border-color: rgba(229, 161, 75, 32%);
-    background: rgba(229, 161, 75, 12%);
+    border-color: rgba(229, 161, 75, 0.32);
+    background: rgba(229, 161, 75, 0.12);
     color: #e5a14b;
 }
 
 [data-theme='dark'] .tracking-intelligence-alert--critical {
-    border-color: rgba(226, 107, 107, 32%);
-    background: rgba(226, 107, 107, 13%);
+    border-color: rgba(226, 107, 107, 0.32);
+    background: rgba(226, 107, 107, 0.13);
     color: #e26b6b;
 }
 
@@ -4218,14 +4241,14 @@ body[data-theme='dark'] .next-google-container-map .fleetops-google-draw-actions
 }
 
 .tracking-intelligence-alert--critical .tracking-intelligence-alert__cta {
-    border-color: rgba(239, 68, 68, 30%);
-    background: rgba(239, 68, 68, 8%);
+    border-color: rgba(239, 68, 68, 0.3);
+    background: rgba(239, 68, 68, 0.08);
     color: #b91c1c;
 }
 
 [data-theme='dark'] .tracking-intelligence-alert--critical .tracking-intelligence-alert__cta {
-    border-color: rgba(226, 107, 107, 32%);
-    background: rgba(226, 107, 107, 10%);
+    border-color: rgba(226, 107, 107, 0.32);
+    background: rgba(226, 107, 107, 0.1);
     color: #e26b6b;
 }
 
@@ -4244,7 +4267,7 @@ body[data-theme='dark'] .next-google-container-map .fleetops-google-draw-actions
     border: 1px solid #e5e7eb;
     border-radius: 0.5rem;
     background: #f9fafb;
-    box-shadow: 0 1px 2px rgba(15, 23, 42, 8%);
+    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.08);
 }
 
 [data-theme='dark'] .tracking-intelligence-cell,
@@ -4255,7 +4278,7 @@ body[data-theme='dark'] .next-google-container-map .fleetops-google-draw-actions
 [data-theme='dark'] .tracking-stop-progress {
     border-color: #374151;
     background: #1f2937;
-    box-shadow: 0 8px 20px rgba(0, 0, 0, 18%);
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.18);
 }
 
 .tracking-intelligence-cell {
@@ -4264,13 +4287,13 @@ body[data-theme='dark'] .next-google-container-map .fleetops-google-draw-actions
 }
 
 .tracking-intelligence-cell--accent {
-    border-color: rgba(245, 158, 11, 32%);
-    background: linear-gradient(180deg, rgba(245, 158, 11, 8%), transparent), #f9fafb;
+    border-color: rgba(245, 158, 11, 0.32);
+    background: linear-gradient(180deg, rgba(245, 158, 11, 0.08), transparent), #f9fafb;
 }
 
 [data-theme='dark'] .tracking-intelligence-cell--accent {
-    border-color: rgba(229, 161, 75, 32%);
-    background: linear-gradient(180deg, rgba(229, 161, 75, 8%), transparent), #1f2937;
+    border-color: rgba(229, 161, 75, 0.32);
+    background: linear-gradient(180deg, rgba(229, 161, 75, 0.08), transparent), #1f2937;
 }
 
 .tracking-intelligence-cell__label {
@@ -4346,7 +4369,7 @@ body[data-theme='dark'] .next-google-container-map .fleetops-google-draw-actions
 .tracking-intelligence-tag {
     padding: 0.0625rem 0.3rem;
     border-radius: 0.2rem;
-    background: rgba(245, 158, 11, 12%);
+    background: rgba(245, 158, 11, 0.12);
     color: #d97706;
     font-size: 0.55rem;
     font-weight: 800;
@@ -4595,9 +4618,9 @@ body[data-theme='dark'] .next-google-container-map .fleetops-google-draw-actions
 
 .tracking-intelligence-diagnostics__warnings span {
     padding: 0.125rem 0.375rem;
-    border: 1px solid rgba(245, 158, 11, 25%);
+    border: 1px solid rgba(245, 158, 11, 0.25);
     border-radius: 0.25rem;
-    background: rgba(245, 158, 11, 10%);
+    background: rgba(245, 158, 11, 0.1);
     color: #b45309;
     font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
     font-size: 0.62rem;
@@ -4696,7 +4719,7 @@ body[data-theme='dark'] .next-google-container-map .fleetops-google-draw-actions
     border-color: #f59e0b;
     background: #f59e0b;
     color: #1f1300;
-    box-shadow: 0 0 0 3px rgba(245, 158, 11, 14%);
+    box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.14);
 }
 
 .tracking-stop-progress__dot--active::before,
@@ -4759,9 +4782,9 @@ body[data-theme='dark'] .next-google-container-map .fleetops-google-draw-actions
     display: inline-flex;
     align-items: center;
     gap: 0.35rem;
-    border: 1px solid rgba(245, 158, 11, 32%);
+    border: 1px solid rgba(245, 158, 11, 0.32);
     border-radius: 0.375rem;
-    background: rgba(245, 158, 11, 8%);
+    background: rgba(245, 158, 11, 0.08);
     color: #b45309;
     font-size: 0.7rem;
     font-weight: 700;
@@ -4778,8 +4801,8 @@ body[data-theme='dark'] .next-google-container-map .fleetops-google-draw-actions
 
 [data-theme='dark'] .tracking-intelligence-alert__cta,
 [data-theme='dark'] .tracking-intelligence-footer__button {
-    border-color: rgba(229, 161, 75, 32%);
-    background: rgba(229, 161, 75, 10%);
+    border-color: rgba(229, 161, 75, 0.32);
+    background: rgba(229, 161, 75, 0.1);
     color: #e5a14b;
 }
 
@@ -4796,4 +4819,8 @@ body[data-theme='dark'] .next-google-container-map .fleetops-google-draw-actions
     display: flex;
     flex-direction: column;
     padding: 0.75rem;
+}
+
+.overflow-y-scroll-i {
+    overflow-y: scroll !important;
 }

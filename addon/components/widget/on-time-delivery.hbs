@@ -1,0 +1,27 @@
+<div class="fleet-ops-widget fleet-ops-on-time-delivery flex flex-col h-full rounded-md border dark:border-gray-700 border-gray-200 dark:bg-gray-800 bg-white shadow-sm {{@class}}" ...attributes>
+    <div class="flex items-center justify-between px-2.5 pt-2">
+        <span class="text-[10px] uppercase tracking-wide text-gray-500 dark:text-gray-400 font-semibold">
+            {{t "widget.on-time-delivery.title"}}
+        </span>
+        <FaIcon @icon="clock" class="text-gray-400 text-[11px]" />
+    </div>
+
+    <div class="flex-1 flex flex-col items-center justify-center px-2.5 pb-2 min-h-0">
+        {{#if this.load.isRunning}}
+            <Spinner />
+        {{else if this.error}}
+            <div class="text-[10px] text-red-500">{{this.error}}</div>
+        {{else if this.data}}
+            <div class="relative w-full max-w-24 aspect-square">
+                <Chart @type="doughnut" @labels={{this.chartLabels}} @datasets={{this.chartDatasets}} @options={{this.chartOptions}} />
+                <div class="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+                    <span class="text-base font-bold text-black dark:text-gray-100 leading-none">{{this.data.on_time_pct}}%</span>
+                    <span class="text-[9px] text-gray-500 dark:text-gray-400 mt-0.5">{{this.data.on_time}}/{{this.data.total}}</span>
+                </div>
+            </div>
+            {{#if this.deltaStatus}}
+                <Badge @status={{this.deltaStatus}} @text={{this.deltaText}} @hideIcon={{true}} @disableHumanize={{true}} @wrapperClass="mt-1 text-[9px] px-1 py-0" />
+            {{/if}}
+        {{/if}}
+    </div>
+</div>

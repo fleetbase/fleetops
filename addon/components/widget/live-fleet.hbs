@@ -1,0 +1,122 @@
+<div class="fleet-ops-widget fleet-ops-live-fleet flex flex-col h-full {{@class}}" ...attributes>
+    <div class="flex items-center justify-between px-3 py-1.5 border dark:border-gray-700 border-gray-200 dark:bg-gray-800 bg-gray-50 rounded-t-md shadow-sm">
+        <span class="text-xs font-bold text-black dark:text-gray-100">{{t "widget.live-fleet.title"}}</span>
+        <div class="flex items-center gap-3 text-[10px] text-gray-500 dark:text-gray-400">
+            <span class="flex items-center" title="Drivers"><FaIcon @icon="id-card" class="mr-1" />{{this.drivers.length}}</span>
+            <span class="flex items-center" title="Vehicles"><FaIcon @icon="truck" class="mr-1" />{{this.vehicles.length}}</span>
+            <span class="flex items-center" title="Active orders"><FaIcon @icon="bolt" class="mr-1" />{{this.activeOrderCount}}</span>
+            <button type="button" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200" {{on "click" this.refresh}}>
+                <FaIcon @icon="rotate" class={{if this.load.isRunning "animate-spin"}} />
+            </button>
+        </div>
+    </div>
+
+    <div class="flex-1 relative border border-t-0 dark:border-gray-700 border-gray-200 rounded-b-md overflow-hidden min-h-0 bg-gray-100 dark:bg-gray-900">
+        <div class="fleetbase-leaflet-map-container w-full h-full" {{set-container-dimensions}}>
+            <LeafletMap
+                class="w-full h-full"
+                @lat={{get this.center 0}}
+                @lng={{get this.center 1}}
+                @zoom={{this.zoom}}
+                @zoomControl={{true}}
+                @onLoad={{this.onMapLoad}}
+                {{set-container-dimensions}}
+                as |layers|
+            >
+                <layers.tile @url={{this.tileUrl}} />
+
+                {{#if this.load.isIdle}}
+                    {{! Drivers — fleetops' rotating tracking-marker matches the operational
+                         live-map's look and animates on heading changes. }}
+                    {{#each this.drivers as |driver|}}
+                        <layers.tracking-marker
+                            @id={{driver.uuid}}
+                            @publicId={{driver.public_id}}
+                            @location={{array driver.lat driver.lng}}
+                            @rotationAngle={{driver.heading}}
+                            @icon={{icon iconUrl=(or driver.vehicle_avatar driver.avatar_url "/engines-dist/images/map-marker.png") iconSize=(array 28 28) iconAnchor=(array 14 28)}}
+                            @draggable={{false}}
+                            as |marker|
+                        >
+                            <marker.popup @maxWidth="240" @minWidth="180">
+                                <div class="flex flex-row gap-2">
+                                    <div class="w-9 h-9 flex-shrink-0">
+                                        <img src={{or driver.avatar_url driver.vehicle_avatar}} alt={{driver.name}} class="rounded-md w-9 h-9 object-cover shadow-sm" />
+                                    </div>
+                                    <div class="flex-1 min-w-0">
+                                        <div class="text-xs font-semibold truncate">{{or driver.name "Driver"}}</div>
+                                        <div class="text-[11px]">
+                                            {{#if driver.current_order_uuid}}
+                                                <span class="text-blue-500"><FaIcon @icon="bolt" class="mr-1" />On order</span>
+                                            {{else if driver.online}}
+                                                <span class="text-green-500"><FaIcon @icon="circle" @size="2xs" class="mr-1" />Online</span>
+                                            {{else}}
+                                                <span class="text-gray-400"><FaIcon @icon="circle" @size="2xs" class="mr-1" />Offline</span>
+                                            {{/if}}
+                                        </div>
+                                        <div class="text-[10px] text-gray-400 mt-0.5 truncate">{{driver.lat}}, {{driver.lng}}</div>
+                                    </div>
+                                </div>
+                            </marker.popup>
+                            <marker.tooltip @permanent={{false}} @sticky={{true}} @direction="top">
+                                <div class="text-[11px] font-semibold">{{or driver.name "Driver"}}</div>
+                            </marker.tooltip>
+                        </layers.tracking-marker>
+                    {{/each}}
+
+                    {{! Vehicles — also rendered via tracking-marker so the heading
+                         animation applies on telematics-driven position updates. }}
+                    {{#each this.vehicles as |vehicle|}}
+                        <layers.tracking-marker
+                            @id={{vehicle.uuid}}
+                            @publicId={{vehicle.public_id}}
+                            @location={{array vehicle.lat vehicle.lng}}
+                            @rotationAngle={{vehicle.heading}}
+                            @icon={{icon iconUrl=(or vehicle.avatar_url vehicle.photo_url "/engines-dist/images/map-marker.png") iconSize=(array 28 28) iconAnchor=(array 14 28)}}
+                            @draggable={{false}}
+                            as |marker|
+                        >
+                            <marker.popup @maxWidth="240" @minWidth="180">
+                                <div class="flex flex-row gap-2">
+                                    <div class="w-9 h-9 flex-shrink-0">
+                                        <img src={{or vehicle.photo_url vehicle.avatar_url}} alt={{vehicle.name}} class="rounded-md w-9 h-9 object-cover shadow-sm" />
+                                    </div>
+                                    <div class="flex-1 min-w-0">
+                                        <div class="text-xs font-semibold truncate">{{or vehicle.name "Vehicle"}}</div>
+                                        {{#if vehicle.plate_number}}
+                                            <div class="text-[10px] text-gray-500 truncate">{{vehicle.plate_number}}</div>
+                                        {{/if}}
+                                        {{#if vehicle.driver_name}}
+                                            <div class="text-[11px] text-gray-600 dark:text-gray-300 truncate">
+                                                <FaIcon @icon="id-card" class="mr-1 text-gray-400" />{{vehicle.driver_name}}
+                                            </div>
+                                        {{/if}}
+                                        <div class="text-[10px] text-gray-400 mt-0.5 truncate">{{vehicle.lat}}, {{vehicle.lng}}</div>
+                                    </div>
+                                </div>
+                            </marker.popup>
+                            <marker.tooltip @permanent={{false}} @sticky={{true}} @direction="top">
+                                <div class="text-[11px] font-semibold">{{or vehicle.name "Vehicle"}}</div>
+                            </marker.tooltip>
+                        </layers.tracking-marker>
+                    {{/each}}
+                {{/if}}
+            </LeafletMap>
+        </div>
+
+        {{#if this.load.isRunning}}
+            <div class="absolute inset-0 flex items-center justify-center bg-white/70 dark:bg-gray-900/70 z-[400]">
+                <Spinner />
+            </div>
+        {{else if this.error}}
+            <div class="absolute inset-0 flex items-center justify-center text-xs text-red-500 z-[400]">{{this.error}}</div>
+        {{else if (not this.totalMarkerCount)}}
+            <div class="absolute inset-0 flex items-center justify-center pointer-events-none">
+                <div class="text-center text-[11px] text-gray-500 dark:text-gray-400 bg-white/90 dark:bg-gray-900/90 rounded-md px-3 py-2 shadow-sm">
+                    <FaIcon @icon="map-location-dot" class="text-xl block mb-1 opacity-50" />
+                    No active drivers or vehicles to display.
+                </div>
+            </div>
+        {{/if}}
+    </div>
+</div>

@@ -33,6 +33,7 @@ class Driver extends FleetbaseResource
             'current_job_uuid'=> $this->when($isInternal, $this->current_job_uuid),
             'name'            => $this->name,
             'vehicle_name'    => $this->when($isInternal, $this->vehicle_name),
+            'email'           => $this->email,
             'phone'           => $this->phone,
             'photo_url'       => $this->photo_url,
             'status'          => $this->status,
@@ -41,6 +42,53 @@ class Driver extends FleetbaseResource
             'altitude'        => (int) data_get($this, 'altitude', 0),
             'speed'           => (int) data_get($this, 'speed', 0),
             'online'          => data_get($this, 'online', false),
+            'meta'            => [
+                '_index_resource'         => true,
+                'location_coordinates'    => $this->locationCoordinates(),
+                'current_order_reference' => $this->currentOrderReference(),
+                'speed_label'             => $this->speedLabel(),
+                'heading_label'           => $this->headingLabel(),
+                'status_label'            => $this->statusLabel(),
+            ],
         ];
+    }
+
+    protected function currentOrderReference(): ?string
+    {
+        $this->loadMissing('currentOrder');
+        $order = data_get($this, 'currentOrder');
+
+        return data_get($order, 'tracking') ?? data_get($order, 'public_id');
+    }
+
+    protected function locationCoordinates(): ?string
+    {
+        $location = Utils::castPoint($this->location);
+
+        return $location ? $this->formatCoordinate($location->getLat()) . ' ' . $this->formatCoordinate($location->getLng()) : null;
+    }
+
+    protected function speedLabel(): string
+    {
+        $speed = data_get($this, 'speed');
+
+        return is_numeric($speed) ? ((int) $speed) . ' km/h' : '-';
+    }
+
+    protected function headingLabel(): string
+    {
+        $heading = data_get($this, 'heading');
+
+        return is_numeric($heading) ? ((int) $heading) . ' deg' : '-';
+    }
+
+    protected function statusLabel(): ?string
+    {
+        return $this->status ? str($this->status)->replace(['_', '-'], ' ')->headline()->toString() : null;
+    }
+
+    protected function formatCoordinate(float $coordinate): string
+    {
+        return (string) round($coordinate, 4);
     }
 }

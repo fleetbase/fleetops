@@ -1,0 +1,26 @@
+<div class="fleet-ops-widget fleet-ops-fuel-efficiency flex flex-col h-full {{@class}}" ...attributes>
+    <div class="flex items-center justify-between px-3 py-1.5 border dark:border-gray-700 border-gray-200 dark:bg-gray-800 bg-gray-50 rounded-t-md shadow-sm">
+        <span class="text-xs font-bold text-black dark:text-gray-100">{{t "widget.fuel-efficiency.title"}}</span>
+        <FaIcon @icon="gas-pump" class="text-gray-400" />
+    </div>
+
+    <div class="flex-1 flex flex-col p-2.5 border border-t-0 dark:border-gray-700 border-gray-200 rounded-b-md bg-white dark:bg-gray-900 min-h-0">
+        {{#if this.load.isRunning}}
+            <div class="flex items-center justify-center h-full"><Spinner /></div>
+        {{else if this.error}}
+            <div class="flex items-center justify-center h-full text-xs text-red-500">{{this.error}}</div>
+        {{else if this.data}}
+            <div class="flex items-baseline justify-between mb-1.5">
+                <span class="text-sm font-bold text-black dark:text-gray-100">
+                    {{format-currency this.data.summary.total_cost this.data.summary.currency}}
+                </span>
+                <span class="text-[10px] text-gray-500 dark:text-gray-400">
+                    {{format-currency this.data.summary.avg_cost_per_km this.data.summary.currency}}/km avg
+                </span>
+            </div>
+            <div class="flex-1 min-h-0">
+                <Chart @type="bar" @labels={{this.data.labels}} @datasets={{this.data.datasets}} @options={{this.chartOptions}} />
+            </div>
+        {{/if}}
+    </div>
+</div>

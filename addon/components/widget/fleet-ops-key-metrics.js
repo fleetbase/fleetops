@@ -2,6 +2,18 @@ import Component from '@glimmer/component';
 import { tracked } from '@glimmer/tracking';
 import { inject as service } from '@ember/service';
 import { task } from 'ember-concurrency';
+import formatCurrency from '@fleetbase/ember-ui/utils/format-currency';
+import formatMeters from '@fleetbase/ember-ui/utils/format-meters';
+
+/** Subset shown in the compact legacy widget. Full 13 metrics still come back from
+ *  the API; users who want the rest should adopt the per-tile KPI widgets. */
+const TOP_KEYS = ['earnings', 'orders_completed', 'orders_in_progress', 'drivers_online', 'fuel_costs', 'total_distance_traveled'];
+
+const FORMATTERS = {
+    money: (v, currency) => formatCurrency(v ?? 0, currency || 'USD'),
+    meters: (v) => formatMeters(v ?? 0),
+    count: (v) => v ?? 0,
+};
 
 export default class WidgetFleetOpsKeyMetricsComponent extends Component {
     /**
@@ -88,5 +100,19 @@ export default class WidgetFleetOpsKeyMetricsComponent extends Component {
         }
 
         return options;
+    }
+
+    /**
+     * Pre-formatted top-N entries the compact template renders. Surfaces a fixed
+     * priority order rather than dumping every available metric — the per-tile
+     * KPI widgets cover the long tail for users who want everything.
+     */
+    get topMetrics() {
+        if (!this.metrics) return [];
+        return TOP_KEYS.filter((key) => this.metrics[key] !== undefined).map((key) => {
+            const { value, format } = this.metrics[key];
+            const formatter = FORMATTERS[format] ?? FORMATTERS.count;
+            return { key, formattedValue: formatter(value) };
+        });
     }
 }
