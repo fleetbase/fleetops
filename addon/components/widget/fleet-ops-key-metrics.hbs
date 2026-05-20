@@ -1,19 +1,21 @@
-<div class="fleet-ops-key-metrics" ...attributes>
-    <div class="flex flex-col">
-        <div class="flex flex-row items-center justify-between px-4 py-2 border dark:border-gray-700 border-gray-200 dark:bg-gray-800 bg-gray-50 rounded-lg shadow-sm">
-            <span class="text-base font-bold text-black dark:text-gray-100">{{t "widget.key-metrics.title"}}</span>
-        </div>
+<div class="fleet-ops-key-metrics flex flex-col h-full" ...attributes>
+    <div class="flex flex-row items-center justify-between px-3 py-1.5 border dark:border-gray-700 border-gray-200 dark:bg-gray-800 bg-gray-50 rounded-t-md shadow-sm">
+        <span class="text-xs font-bold text-black dark:text-gray-100">{{t "widget.key-metrics.title"}}</span>
+        <span class="text-[9px] uppercase tracking-wide text-amber-500 font-bold">Legacy</span>
+    </div>
 
-        <div class="mt-4">
-            {{#if this.getDashboardMetrics.isRunning}}
-                <Spinner />
-            {{else}}
-                <div class="grid grid-cols-2 lg:grid-cols-12 gap-4">
-                    {{#each-in this.metrics as |title options|}}
-                        <Widget::Count @title={{smart-humanize title}} @options={{options}} class="lg:col-span-2 h-full" />
-                    {{/each-in}}
-                </div>
-            {{/if}}
-        </div>
+    <div class="flex-1 p-2.5 border border-t-0 dark:border-gray-700 border-gray-200 rounded-b-md bg-white dark:bg-gray-900 min-h-0">
+        {{#if this.getDashboardMetrics.isRunning}}
+            <div class="flex items-center justify-center h-full"><Spinner /></div>
+        {{else}}
+            <div class="grid grid-cols-2 lg:grid-cols-3 gap-1.5">
+                {{#each this.topMetrics as |entry|}}
+                    <div class="rounded-md border dark:border-gray-700 border-gray-200 dark:bg-gray-800 bg-gray-50 p-2 flex flex-col">
+                        <span class="text-[9px] uppercase tracking-wide text-gray-500 dark:text-gray-400 font-semibold truncate">{{smart-humanize entry.key}}</span>
+                        <span class="text-base font-bold text-black dark:text-gray-100 leading-tight mt-0.5 truncate">{{entry.formattedValue}}</span>
+                    </div>
+                {{/each}}
+            </div>
+        {{/if}}
     </div>
 </div>

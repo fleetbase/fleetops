@@ -1,0 +1,44 @@
+<div class="fleet-ops-widget fleet-ops-geofence-violations flex flex-col h-full {{@class}}" ...attributes>
+    <div class="flex items-center justify-between px-3 py-1.5 border dark:border-gray-700 border-gray-200 dark:bg-gray-800 bg-gray-50 rounded-t-md shadow-sm">
+        <span class="text-xs font-bold text-black dark:text-gray-100">{{t "widget.geofence-violations.title"}}</span>
+        <FaIcon @icon="location-crosshairs" class="text-gray-400" />
+    </div>
+
+    <div class="flex-1 flex flex-col p-2.5 border border-t-0 dark:border-gray-700 border-gray-200 rounded-b-md bg-white dark:bg-gray-900 min-h-0">
+        {{#if this.load.isRunning}}
+            <div class="flex items-center justify-center h-full"><Spinner /></div>
+        {{else if this.error}}
+            <div class="flex items-center justify-center h-full text-xs text-red-500">{{this.error}}</div>
+        {{else if this.data}}
+            <div class="grid grid-cols-2 gap-1.5 mb-2">
+                <div class="rounded-md border dark:border-gray-700 border-gray-200 p-1.5 text-center">
+                    <div class="text-[9px] uppercase text-gray-500 dark:text-gray-400 leading-none">Today</div>
+                    <div class="text-lg font-bold leading-tight mt-0.5 {{if this.data.violations_today 'text-amber-500' 'text-gray-400'}}">{{this.data.violations_today}}</div>
+                </div>
+                <div class="rounded-md border dark:border-gray-700 border-gray-200 p-1.5 text-center">
+                    <div class="text-[9px] uppercase text-gray-500 dark:text-gray-400 leading-none">Last 7d</div>
+                    <div class="text-lg font-bold text-black dark:text-gray-100 leading-tight mt-0.5">{{this.data.violations_period}}</div>
+                </div>
+            </div>
+            <div class="grid grid-cols-2 gap-2 flex-1 min-h-0">
+                <div class="min-h-0">
+                    {{#if this.zoneDatasets}}
+                        <Chart @type="bar" @labels={{this.zoneLabels}} @datasets={{this.zoneDatasets}} @options={{this.zoneOptions}} />
+                    {{else}}
+                        <div class="flex items-center justify-center h-full text-[10px] text-gray-500">No zone activity.</div>
+                    {{/if}}
+                </div>
+                <div class="min-h-0 overflow-auto divide-y dark:divide-gray-700">
+                    {{#each this.data.top_dwells as |dwell|}}
+                        <div class="py-1">
+                            <div class="text-[11px] font-medium text-black dark:text-gray-100 truncate">{{or dwell.driver_name "Driver"}}</div>
+                            <div class="text-[10px] text-gray-500 dark:text-gray-400 truncate">{{or dwell.zone_name "Zone"}} &middot; {{dwell.duration_minutes}}m</div>
+                        </div>
+                    {{else}}
+                        <div class="text-center text-[10px] text-gray-500 py-3">No dwell outliers.</div>
+                    {{/each}}
+                </div>
+            </div>
+        {{/if}}
+    </div>
+</div>

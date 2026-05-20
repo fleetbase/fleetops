@@ -1,0 +1,59 @@
+{{!--
+    KPI tile. Layout strategy:
+    - Title + icon at the top.
+    - Value + delta directly under the title.
+    - Sparkline absolutely positioned at the bottom edge of the card so every
+      tile lines up regardless of value-string length, and a flat-zero
+      sparkline (all-zero data, fill:'origin', y.min=0) sits flush along the
+      bottom rather than floating in the middle.
+--}}
+<div class="fleet-ops-widget fleet-ops-kpi-tile fleet-ops-kpi-tile-pop {{this.cardAccentClass}} relative flex flex-col h-full rounded-md border shadow-sm overflow-hidden {{@class}}" ...attributes>
+    <div class="flex items-center justify-between px-2.5 pt-2 relative z-10">
+        <span class="text-[10px] uppercase tracking-wider text-gray-500 dark:text-gray-400 font-bold truncate">
+            {{@title}}
+        </span>
+        {{#if @icon}}
+            <FaIcon @icon={{@icon}} @prefix={{or @iconPrefix "fas"}} class="kpi-tile-icon text-gray-400 dark:text-gray-500 text-[11px]" />
+        {{/if}}
+    </div>
+
+    <div class="flex-1 flex flex-col px-2.5 pt-1 min-h-0 relative z-10">
+        {{#if this.load.isRunning}}
+            <div class="flex-1 flex items-center justify-center">
+                <Spinner />
+            </div>
+        {{else if this.error}}
+            <div class="flex-1 flex items-center justify-center text-[10px] text-red-500 dark:text-red-400">
+                {{this.error}}
+            </div>
+        {{else if this.data}}
+            <div class="flex items-baseline gap-1.5 kpi-tile-value-row">
+                <span class="text-2xl font-bold leading-none truncate {{this.valueTextClass}}">
+                    {{#if (eq this.format "money")}}
+                        {{format-currency this.data.value this.currency}}
+                    {{else if (eq this.format "meters")}}
+                        {{format-meters this.data.value}}
+                    {{else if (eq this.format "duration")}}
+                        {{format-duration this.data.value}}
+                    {{else}}
+                        {{this.data.value}}
+                    {{/if}}
+                </span>
+                {{#if this.hasDelta}}
+                    <Badge @status={{this.deltaStatus}} @text={{this.deltaText}} @hideIcon={{true}} @disableHumanize={{true}} @wrapperClass="text-[9px] px-1 py-0 font-bold" />
+                {{/if}}
+            </div>
+        {{/if}}
+    </div>
+
+    {{#if this.sparklineDatasets}}
+        <div class="kpi-tile-sparkline absolute inset-x-0 bottom-0">
+            <Chart
+                @type="line"
+                @labels={{this.sparklineLabels}}
+                @datasets={{this.sparklineDatasets}}
+                @options={{this.sparklineOptions}}
+            />
+        </div>
+    {{/if}}
+</div>
