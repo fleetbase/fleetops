@@ -7,9 +7,17 @@ use Fleetbase\Http\Requests\FleetbaseRequest;
 /**
  * Validates the body of `POST /v1/customers/orders`.
  *
- * The portal supplies a lightweight order shape (item + weight + value + mode
- * + pickup/dropoff). The controller maps it into a full Fleet-Ops Order via
- * the normal payload/entities scaffolding before passing to OrderController.
+ * Mirrors the canonical Fleet-Ops Order create shape used by the operator
+ * `POST /v1/orders` endpoint: `type` / `order_config`, `scheduled_at`,
+ * `notes`, `meta`, and either a nested `payload` or top-level
+ * `pickup` / `dropoff` / `return` / `waypoints` / `entities`. Place and
+ * Entity sub-objects accept the standard Fleet-Ops Place / Entity field
+ * shapes — no client-portal aliases are recognized.
+ *
+ * `customer` is intentionally not accepted: the controller forces
+ * `customer_uuid` from the authenticated Customer-Token. `status`,
+ * `driver`, `vehicle`, `facilitator`, `dispatch` and similar operator-tier
+ * fields are also out of scope for the customer surface.
  */
 class CreateCustomerOrderRequest extends FleetbaseRequest
 {
@@ -22,31 +30,30 @@ class CreateCustomerOrderRequest extends FleetbaseRequest
     public function rules(): array
     {
         return [
-            'item'             => 'required|string',
-            'weight'           => 'required|numeric|min:0',
-            'weight_unit'      => 'nullable|string|in:lb,kg,g,oz',
-            'value'            => 'required|numeric|min:0',
-            'currency'         => 'nullable|string|size:3',
-            'category'         => 'nullable|string',
-            'mode'             => 'nullable|string|in:Ocean,Air,Ground',
-            'delivery'         => 'nullable|boolean',
-            'notes'            => 'nullable|string|max:2000',
+            'type'             => 'nullable|string',
+            'order_config'     => 'nullable|string',
             'scheduled_at'     => 'nullable|date',
-            'pickup'           => 'nullable|array',
-            'pickup.name'      => 'nullable|string',
-            'pickup.street1'   => 'nullable|string',
-            'pickup.city'      => 'nullable|string',
-            'pickup.province'  => 'nullable|string',
-            'pickup.postal_code' => 'nullable|string',
-            'pickup.country'   => 'nullable|string',
-            'dropoff'          => 'nullable|array',
-            'dropoff.name'     => 'nullable|string',
-            'dropoff.street1'  => 'nullable|string',
-            'dropoff.city'     => 'nullable|string',
-            'dropoff.province' => 'nullable|string',
-            'dropoff.postal_code' => 'nullable|string',
-            'dropoff.country'  => 'nullable|string',
+            'notes'            => 'nullable|string|max:2000',
+            'internal_id'      => 'nullable|string|max:191',
             'meta'             => 'nullable|array',
+
+            // payload may be an object OR a payload public_id string
+            'payload'          => 'nullable',
+
+            // Top-level alternatives when `payload` is not provided. Each
+            // Place sub-object accepts the standard Place fillable shape.
+            'pickup'           => 'nullable',
+            'dropoff'          => 'nullable',
+            'return'           => 'nullable',
+            'waypoints'        => 'nullable|array',
+            'entities'         => 'nullable|array',
+            'entities.*.name'           => 'nullable|string',
+            'entities.*.description'    => 'nullable|string',
+            'entities.*.weight'         => 'nullable|numeric|min:0',
+            'entities.*.weight_unit'    => 'nullable|string',
+            'entities.*.declared_value' => 'nullable|numeric|min:0',
+            'entities.*.currency'       => 'nullable|string|size:3',
+            'entities.*.meta'           => 'nullable|array',
         ];
     }
 }

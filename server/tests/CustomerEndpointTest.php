@@ -80,6 +80,39 @@ test('customer controller does not reference Storefront concerns', function () {
         ->not->toContain("createStripeCustomerForContact");
 });
 
+test('customer controller does not introduce client-portal field aliases', function () {
+    // Public Fleetbase APIs must accept canonical model field names only. No
+    // aliasing like line1/state/zip → street1/province/postal_code, no portal-
+    // specific tagging like meta.origin, no top-level item/weight/value/mode
+    // aliases on order create — clients conform to the API, not vice versa.
+    $source = file_get_contents(dirname(__DIR__) . '/src/Http/Controllers/Api/v1/CustomerController.php');
+
+    expect($source)
+        ->not->toContain("'line1'")
+        ->not->toContain("'line2'")
+        ->not->toContain("'state'")
+        ->not->toContain("'zip'")
+        ->not->toContain("'origin' => 'fleetops_customer_portal'")
+        ->not->toContain("fleetops_customer_portal")
+        ->not->toContain("\$request->input('item'")
+        ->not->toContain("\$request->input('value'")
+        ->not->toContain("\$request->input('delivery'")
+        ->not->toContain("\$request->input('category'");
+});
+
+test('createOrder mirrors the canonical Fleet-Ops order shape', function () {
+    $source = file_get_contents(dirname(__DIR__) . '/src/Http/Controllers/Api/v1/CustomerController.php');
+
+    expect($source)
+        ->toContain('OrderConfig::resolveFromIdentifier')
+        ->toContain('buildPayloadFromInput')
+        ->toContain('Payload')
+        ->toContain('setPickup')
+        ->toContain('setDropoff')
+        ->toContain('setEntities')
+        ->toContain("'customer_uuid'");
+});
+
 test('verification code slugs are FleetOps-namespaced, not Storefront', function () {
     $source = file_get_contents(dirname(__DIR__) . '/src/Http/Controllers/Api/v1/CustomerController.php');
 

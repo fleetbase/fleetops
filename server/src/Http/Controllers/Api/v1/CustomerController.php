@@ -11,7 +11,6 @@ use Fleetbase\FleetOps\Http\Resources\v1\Customer as CustomerResource;
 use Fleetbase\FleetOps\Http\Resources\v1\Order as OrderResource;
 use Fleetbase\FleetOps\Http\Resources\v1\Place as PlaceResource;
 use Fleetbase\FleetOps\Models\Contact;
-use Fleetbase\FleetOps\Models\Entity;
 use Fleetbase\FleetOps\Models\Order;
 use Fleetbase\FleetOps\Models\OrderConfig;
 use Fleetbase\FleetOps\Models\Payload;
@@ -205,10 +204,7 @@ class CustomerController extends Controller
             'title'        => $request->input('title'),
             'email'        => $isEmail ? $identity : ($request->input('email') ?: $user->email),
             'phone'        => $isEmail ? static::phone($request->input('phone')) : $identity,
-            'meta'         => array_merge(
-                ['origin' => 'fleetops_customer_portal'],
-                (array) $request->input('meta', [])
-            ),
+            'meta'         => (array) $request->input('meta', []),
         ];
 
         // Handle photo as either file id or base64 data.
@@ -255,13 +251,16 @@ class CustomerController extends Controller
             }
         }
 
-        // If the signup included home-address fields (either nested under meta or
-        // sent as a top-level `address` object), materialize them as a Place
-        // owned by the new customer and set as their default. Idempotent: only
-        // creates a Place when none is already linked.
-        $address = $request->input('address') ?? data_get($input, 'meta.address');
-        if (is_array($address) && !$contact->place_uuid) {
-            $place = $this->createCustomerPlace($contact, $sessionCompany, $address);
+        // Optionally link a default Place to the new customer. Accepts either:
+        //   - a string public_id of an existing Place in this company
+        //   - a Place-shaped object using canonical fields:
+        //       name, street1, street2, city, province, postal_code, country,
+        //       neighborhood, district, building, phone, meta
+        // The created Place is owned by the customer Contact (polymorphic via
+        // owner_uuid + owner_type). Idempotent: only acts when no place is
+        // already linked.
+        if (!$contact->place_uuid) {
+            $place = $this->resolveCustomerPlace($request->input('place'), $contact, $sessionCompany);
             if ($place) {
                 $contact->place_uuid = $place->uuid;
                 $contact->save();
@@ -275,41 +274,44 @@ class CustomerController extends Controller
     }
 
     /**
-     * Materialize a customer's address payload into a Place owned by the
-     * Contact (polymorphic via `owner_uuid` + `owner_type`).
+     * Resolve the customer's default Place reference. Accepts either:
+     *  - a string public_id of an existing Place (must be in the same company)
+     *  - an array of canonical Place fields (Place::$fillable subset)
      *
-     * Accepts both Storefront-style (street1/street2/city/province/postal_code/
-     * country) and portal-form-style (line1/line2/state/zip) keys.
+     * Returns null when no place data was provided. Mirrors the convention
+     * used by other v1 controllers that accept a `place` reference.
      */
-    protected function createCustomerPlace(Contact $contact, string $companyUuid, array $address): ?Place
+    protected function resolveCustomerPlace($input, Contact $contact, string $companyUuid): ?Place
     {
-        $street1     = data_get($address, 'street1') ?? data_get($address, 'line1');
-        $street2     = data_get($address, 'street2') ?? data_get($address, 'line2');
-        $city        = data_get($address, 'city');
-        $province    = data_get($address, 'province') ?? data_get($address, 'state');
-        $postalCode  = data_get($address, 'postal_code') ?? data_get($address, 'zip');
-        $country     = data_get($address, 'country');
-        $placeName   = data_get($address, 'name') ?: trim(($contact->name ?: 'Customer') . ' — Home');
-
-        // Skip when there's nothing usable to save.
-        if (!$street1 && !$city && !$province && !$postalCode) {
+        if (empty($input)) {
             return null;
         }
 
-        return Place::create([
-            'company_uuid' => $companyUuid,
-            'owner_uuid'   => $contact->uuid,
-            'owner_type'   => get_class($contact),
-            'name'         => $placeName,
-            'type'         => 'residential',
-            'street1'      => $street1,
-            'street2'      => $street2,
-            'city'         => $city,
-            'province'     => $province,
-            'postal_code'  => $postalCode,
-            'country'      => $country,
-            'phone'        => $contact->phone,
-        ]);
+        if (is_string($input)) {
+            return Place::where(['public_id' => $input, 'company_uuid' => $companyUuid])->first();
+        }
+
+        if (!is_array($input)) {
+            return null;
+        }
+
+        // Filter the supplied attributes to Place's fillable list — never accept
+        // arbitrary client-specific keys at this surface.
+        $allowed    = ['name', 'street1', 'street2', 'city', 'province', 'postal_code', 'neighborhood', 'district', 'building', 'security_access_code', 'country', 'phone', 'meta', 'type'];
+        $attributes = array_intersect_key($input, array_flip($allowed));
+
+        if (!array_filter($attributes, fn ($v) => $v !== null && $v !== '')) {
+            return null;
+        }
+
+        return Place::create(array_merge(
+            [
+                'company_uuid' => $companyUuid,
+                'owner_uuid'   => $contact->uuid,
+                'owner_type'   => get_class($contact),
+            ],
+            $attributes,
+        ));
     }
 
     /**
@@ -346,7 +348,6 @@ class CustomerController extends Controller
                 'name'  => $user->name,
                 'phone' => $user->phone,
                 'email' => $user->email,
-                'meta'  => ['origin' => 'fleetops_customer_portal'],
             ]
         );
 
@@ -430,7 +431,6 @@ class CustomerController extends Controller
                 'name'  => $user->name,
                 'phone' => $user->phone,
                 'email' => $user->email,
-                'meta'  => ['origin' => 'fleetops_customer_portal'],
             ]
         );
 
@@ -679,11 +679,18 @@ class CustomerController extends Controller
     }
 
     /**
-     * Create a freight order on behalf of the authenticated customer.
+     * Create an Order on behalf of the authenticated customer.
      *
-     * Accepts a lightweight portal-friendly body (item + weight + value + mode
-     * + pickup/dropoff) and maps it into a full Fleet-Ops Order (Payload +
-     * Entity + Places) under the company resolved from the API credential.
+     * Accepts the canonical Fleet-Ops Order create shape (the same fields as
+     * `POST /v1/orders` would accept from an operator): `type` / `order_config`,
+     * `scheduled_at`, `notes`, `meta`, plus either a top-level `payload`
+     * (object or public_id) or top-level `pickup` / `dropoff` / `waypoints` /
+     * `entities` that the controller rolls into a Payload — using the
+     * Payload model's canonical setters for parity with OrderController.
+     *
+     * `customer_uuid` + `customer_type` are forced from the Customer-Token;
+     * any client-supplied `customer` field is ignored. `status` is forced to
+     * `created` (customers cannot self-dispatch).
      */
     public function createOrder(CreateCustomerOrderRequest $request)
     {
@@ -697,63 +704,92 @@ class CustomerController extends Controller
             return response()->apiError('No company resolved from API credential.', 500);
         }
 
-        // Resolve the default order config for the company; fall back to creating
-        // one if none exists yet (matches OrderController behavior expectations).
+        // Resolve the order config for this order. Mirrors OrderController::create.
         $orderConfig = OrderConfig::resolveFromIdentifier($request->only(['type', 'order_config']))
             ?: OrderConfig::where('company_uuid', $sessionCompany)->first();
         if (!$orderConfig) {
-            return response()->apiError('No order config found for this company.', 422);
+            return response()->apiError('No order config available for this company.', 422);
         }
 
-        // Resolve pickup/dropoff Places.
-        $pickup  = $this->resolvePlace($request->input('pickup'), $sessionCompany);
-        $dropoff = $this->resolvePlace($request->input('dropoff'), $sessionCompany);
+        // Build the Payload (matching the operator OrderController convention).
+        // - `payload` may be an array of {pickup, dropoff, return, waypoints, entities}
+        // - `payload` may be a string public_id referencing an existing Payload
+        // - Or top-level pickup/dropoff/return/waypoints/entities are accepted
+        $payloadUuid = null;
+        if ($request->isArray('payload')) {
+            $payloadInput = (array) $request->input('payload');
+            $payloadUuid  = $this->buildPayloadFromInput($payloadInput, $sessionCompany)->uuid;
+        } elseif ($request->isString('payload')) {
+            $payloadUuid = Utils::getUuid('payloads', [
+                'public_id'    => $request->input('payload'),
+                'company_uuid' => $sessionCompany,
+            ]);
+        } else {
+            $payloadInput = $request->only(['pickup', 'dropoff', 'return', 'waypoints', 'entities']);
+            if (array_filter($payloadInput, fn ($v) => $v !== null && $v !== '' && $v !== [])) {
+                $payloadUuid = $this->buildPayloadFromInput($payloadInput, $sessionCompany)->uuid;
+            }
+        }
 
-        // Create the payload.
-        $payload = Payload::create([
-            'company_uuid' => $sessionCompany,
-            'pickup_uuid'  => $pickup?->uuid,
-            'dropoff_uuid' => $dropoff?->uuid,
-        ]);
-
-        // Create the entity (the item being shipped).
-        Entity::create([
-            'company_uuid'   => $sessionCompany,
-            'payload_uuid'   => $payload->uuid,
-            'name'           => $request->input('item'),
-            'description'    => $request->input('category'),
-            'weight'         => $request->input('weight'),
-            'weight_unit'    => $request->input('weight_unit', 'lb'),
-            'declared_value' => $request->input('value'),
-            'currency'       => $request->input('currency', 'USD'),
-            'destination_uuid' => $dropoff?->uuid,
-            'meta'           => [
-                'mode' => $request->input('mode', 'Ocean'),
-            ],
-        ]);
-
-        // Create the order itself.
         $order = Order::create([
             'company_uuid'      => $sessionCompany,
             'customer_uuid'     => $customer->uuid,
             'customer_type'     => Utils::getModelClassName('contact'),
-            'payload_uuid'      => $payload->uuid,
+            'payload_uuid'      => $payloadUuid,
             'order_config_uuid' => $orderConfig->uuid,
             'type'              => $orderConfig->key,
             'status'            => 'created',
             'scheduled_at'      => $request->input('scheduled_at'),
             'notes'             => $request->input('notes'),
-            'meta'              => array_merge(
-                [
-                    'mode'              => $request->input('mode', 'Ocean'),
-                    'delivery_required' => (bool) $request->input('delivery', false),
-                    'origin'            => 'fleetops_customer_portal',
-                ],
-                (array) $request->input('meta', [])
-            ),
+            'internal_id'       => $request->input('internal_id'),
+            'meta'              => (array) $request->input('meta', []),
         ]);
 
         return new OrderResource($order->fresh(['payload', 'payload.pickup', 'payload.dropoff', 'payload.entities']));
+    }
+
+    /**
+     * Build a Payload from the canonical {pickup, dropoff, return, waypoints,
+     * entities} shape. Identical to OrderController::create's payload-building
+     * branch so customer-created orders are indistinguishable from operator-
+     * created ones at the data layer.
+     */
+    protected function buildPayloadFromInput(array $payloadInput, string $companyUuid): Payload
+    {
+        $payload   = new Payload();
+        $entities  = data_get($payloadInput, 'entities', []);
+        $waypoints = data_get($payloadInput, 'waypoints', []);
+        $pickup    = data_get($payloadInput, 'pickup');
+        $dropoff   = data_get($payloadInput, 'dropoff');
+        $return    = data_get($payloadInput, 'return');
+
+        $payload->company_uuid = $companyUuid;
+
+        if ($pickup) {
+            $payload->setPickup($pickup, [
+                'callback' => function ($pickup, $payload) {
+                    $payload->setCurrentWaypoint($pickup);
+                },
+            ]);
+        }
+        if ($dropoff) {
+            $payload->setDropoff($dropoff);
+        }
+        if ($return) {
+            $payload->setReturn($return);
+        }
+
+        $payload->save();
+
+        $payload->setWaypoints($waypoints);
+        $payload->setEntities($entities);
+
+        $firstWaypoint = $payload->getPickupOrFirstWaypoint();
+        if ($firstWaypoint instanceof Place) {
+            $payload->setCurrentWaypoint($firstWaypoint);
+        }
+
+        return $payload;
     }
 
     /**
@@ -805,44 +841,6 @@ class CustomerController extends Controller
     /* ============================================================
      | Helpers
      * ============================================================ */
-
-    /**
-     * Resolve a Place from a free-form payload (either a public_id reference
-     * or an inline address object). Returns null when nothing was supplied.
-     */
-    protected function resolvePlace($input, string $companyUuid): ?Place
-    {
-        if (empty($input)) {
-            return null;
-        }
-
-        // Public-id reference: resolve in-place.
-        if (is_string($input)) {
-            return Place::where(['public_id' => $input, 'company_uuid' => $companyUuid])->first();
-        }
-
-        if (!is_array($input)) {
-            return null;
-        }
-
-        if (isset($input['place']) && is_string($input['place'])) {
-            $existing = Place::where(['public_id' => $input['place'], 'company_uuid' => $companyUuid])->first();
-            if ($existing) {
-                return $existing;
-            }
-        }
-
-        return Place::create([
-            'company_uuid' => $companyUuid,
-            'name'         => $input['name']        ?? null,
-            'street1'      => $input['street1']     ?? null,
-            'street2'      => $input['street2']     ?? null,
-            'city'         => $input['city']        ?? null,
-            'province'     => $input['province']    ?? null,
-            'postal_code'  => $input['postal_code'] ?? null,
-            'country'      => $input['country']     ?? null,
-        ]);
-    }
 
     /**
      * Normalize a phone number to international format (with leading `+`).
