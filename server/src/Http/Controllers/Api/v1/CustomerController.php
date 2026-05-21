@@ -15,6 +15,7 @@ use Fleetbase\FleetOps\Models\Order;
 use Fleetbase\FleetOps\Models\OrderConfig;
 use Fleetbase\FleetOps\Models\Payload;
 use Fleetbase\FleetOps\Models\Place;
+use Fleetbase\FleetOps\Models\ServiceQuote;
 use Fleetbase\FleetOps\Support\CustomerAuth;
 use Fleetbase\FleetOps\Support\Utils;
 use Fleetbase\Http\Controllers\Controller;
@@ -748,6 +749,14 @@ class CustomerController extends Controller
             'internal_id'       => $request->input('internal_id'),
             'meta'              => (array) $request->input('meta', []),
         ]);
+
+        // If the customer picked a ServiceQuote up front, consume it now to
+        // lock the pricing onto the order's PurchaseRate (mirrors how
+        // OrderController::create handles `service_quote`).
+        $serviceQuote = ServiceQuote::resolveFromRequest($request);
+        if ($serviceQuote instanceof ServiceQuote) {
+            $order->purchaseServiceQuote($serviceQuote);
+        }
 
         return new OrderResource($order->fresh(['payload', 'payload.pickup', 'payload.dropoff', 'payload.entities']));
     }

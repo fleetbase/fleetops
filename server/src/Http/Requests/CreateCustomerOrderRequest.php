@@ -36,6 +36,10 @@ class CreateCustomerOrderRequest extends FleetbaseRequest
             'notes'            => 'nullable|string|max:2000',
             'internal_id'      => 'nullable|string|max:191',
             'meta'             => 'nullable|array',
+            // Optional ServiceQuote reference (uuid or `sqte_…` public_id).
+            // Resolved server-side via `ServiceQuote::resolveFromRequest` and
+            // consumed by `$order->purchaseServiceQuote()` after creation.
+            'service_quote'    => 'nullable|string',
 
             // payload may be an object OR a payload public_id string
             'payload'          => 'nullable',
