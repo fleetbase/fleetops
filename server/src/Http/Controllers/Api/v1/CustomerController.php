@@ -64,12 +64,31 @@ class CustomerController extends Controller
             $identity = static::phone($identity);
         }
 
-        // We need a Contact-like subject to attach the verification code to. The
-        // Contact instance is unsaved here — VerificationCode only needs its
-        // identifiers for the `subject_uuid` polymorphic link.
-        $subject = new Contact([
-            $isEmail ? 'email' : 'phone' => $identity,
-        ]);
+        $sessionCompany = session('company');
+        if (!$sessionCompany) {
+            return response()->apiError('No company resolved from API credential.', 500);
+        }
+
+        // The verification code needs a persisted subject so the mail renderer can
+        // resolve the polymorphic `subject` relation (the verification.blade.php
+        // template references `$user->name`). Look up — or stub-create — the User
+        // before sending. On successful verification, `create()` will fill in the
+        // remaining fields (name, password) on this same User.
+        $subject = $isEmail
+            ? User::where('email', $identity)->whereNull('deleted_at')->withoutGlobalScopes()->first()
+            : User::where('phone', $identity)->whereNull('deleted_at')->withoutGlobalScopes()->first();
+
+        if (!$subject) {
+            // `password` and `type` are guarded on User; assign them after create
+            // (setUserType saves, setPasswordAttribute hashes via mutator).
+            $subject = User::create([
+                'company_uuid' => $sessionCompany,
+                'name'         => 'Pending Customer',
+                'email'        => $isEmail ? $identity : null,
+                'phone'        => $isEmail ? null : $identity,
+            ]);
+            $subject->setUserType('customer');
+        }
 
         $meta = ['identity' => $identity];
 
@@ -131,19 +150,36 @@ class CustomerController extends Controller
         }
 
         if (!$user) {
+            // `password` and `type` are guarded on User; assign them after create
+            // (setUserType saves the type, setPasswordAttribute hashes plaintext).
             $user = User::create([
-                'type'         => 'customer',
                 'company_uuid' => $sessionCompany,
                 'name'         => $request->input('name'),
                 'email'        => $isEmail ? $identity : $request->input('email'),
                 'phone'        => $isEmail ? static::phone($request->input('phone')) : $identity,
-                'password'     => Hash::make($request->input('password')),
             ]);
-        } elseif ($request->filled('password')) {
-            // If the matched user has no password set yet, set it.
+            $user->password = $request->input('password');
+            $user->save();
+            $user->setUserType('customer');
+        } else {
+            // User row exists. If it's a stub created during request-creation-code
+            // (no password set yet), backfill name + password + email/phone from
+            // the signup form. If a password is already set this is an existing
+            // account — only attach a new Contact, don't overwrite credentials.
             if (!$user->password) {
-                $user->password = Hash::make($request->input('password'));
+                $update = ['name' => $request->input('name')];
+                if ($isEmail && !$user->phone && $request->filled('phone')) {
+                    $update['phone'] = static::phone($request->input('phone'));
+                }
+                if (!$isEmail && !$user->email && $request->filled('email')) {
+                    $update['email'] = $request->input('email');
+                }
+                $user->fill($update);
+                $user->password = $request->input('password'); // mutator hashes
                 $user->save();
+                if (!$user->type) {
+                    $user->setUserType('customer');
+                }
             }
         }
 
@@ -151,9 +187,9 @@ class CustomerController extends Controller
             'type'         => 'customer',
             'company_uuid' => $sessionCompany,
             'user_uuid'    => $user->uuid,
-            'name'         => $request->input('name'),
+            'name'         => $request->input('name') ?: $user->name,
             'title'        => $request->input('title'),
-            'email'        => $isEmail ? $identity : $request->input('email'),
+            'email'        => $isEmail ? $identity : ($request->input('email') ?: $user->email),
             'phone'        => $isEmail ? static::phone($request->input('phone')) : $identity,
             'meta'         => array_merge(
                 ['origin' => 'fleetops_customer_portal'],
@@ -179,20 +215,30 @@ class CustomerController extends Controller
             }
         }
 
-        try {
-            $contact = Contact::create($input);
-        } catch (UserAlreadyExistsException $e) {
-            // The contact already exists for this company; resolve it.
-            $contact = Contact::where([
-                'company_uuid' => $sessionCompany,
-                'user_uuid'    => $user->uuid,
-                'type'         => 'customer',
-            ])->first();
-            if (!$contact) {
+        // Reuse an existing customer-Contact for this user+company if one exists
+        // (idempotent re-signup), otherwise create one.
+        $contact = Contact::where([
+            'company_uuid' => $sessionCompany,
+            'user_uuid'    => $user->uuid,
+            'type'         => 'customer',
+        ])->first();
+        if ($contact) {
+            $contact->fill(array_filter($input, fn ($v) => $v !== null && $v !== ''))->save();
+        } else {
+            try {
+                $contact = Contact::create($input);
+            } catch (UserAlreadyExistsException $e) {
+                $contact = Contact::where([
+                    'company_uuid' => $sessionCompany,
+                    'user_uuid'    => $user->uuid,
+                    'type'         => 'customer',
+                ])->first();
+                if (!$contact) {
+                    return response()->apiError($e->getMessage());
+                }
+            } catch (\Exception $e) {
                 return response()->apiError($e->getMessage());
             }
-        } catch (\Exception $e) {
-            return response()->apiError($e->getMessage());
         }
 
         $token          = $user->createToken($contact->uuid);
@@ -404,7 +450,8 @@ class CustomerController extends Controller
             return response()->apiError('Account not found.');
         }
 
-        $user->password = Hash::make($password);
+        // setPasswordAttribute mutator hashes plaintext; don't pre-hash here.
+        $user->password = $password;
         $user->save();
         // Invalidate all existing sessions for this user after a password reset.
         $user->tokens()->delete();
