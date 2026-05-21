@@ -69,25 +69,39 @@ class CustomerController extends Controller
             return response()->apiError('No company resolved from API credential.', 500);
         }
 
-        // The verification code needs a persisted subject so the mail renderer can
-        // resolve the polymorphic `subject` relation (the verification.blade.php
-        // template references `$user->name`). Look up — or stub-create — the User
-        // before sending. On successful verification, `create()` will fill in the
-        // remaining fields (name, password) on this same User.
+        // Optional profile fields the client can include up front so the
+        // verification email greets the customer by name (and so a later
+        // `create()` doesn't need to overwrite stub values).
+        $providedName  = trim((string) $request->input('name', ''));
+        $providedPhone = $request->filled('phone') ? static::phone($request->input('phone')) : null;
+
+        // The verification code needs a persisted subject so the mail renderer
+        // can resolve the polymorphic `subject` relation (the verification blade
+        // template references `$user->name`). Look up — or create — the User
+        // before sending. `create()` later backfills password + remaining fields
+        // on this same row when the customer confirms the code.
         $subject = $isEmail
             ? User::where('email', $identity)->whereNull('deleted_at')->withoutGlobalScopes()->first()
             : User::where('phone', $identity)->whereNull('deleted_at')->withoutGlobalScopes()->first();
 
         if (!$subject) {
-            // `password` and `type` are guarded on User; assign them after create
-            // (setUserType saves, setPasswordAttribute hashes via mutator).
+            // `password` and `type` are guarded on User; assign type after create
+            // via setUserType (saves the row).
             $subject = User::create([
                 'company_uuid' => $sessionCompany,
-                'name'         => 'Pending Customer',
+                'name'         => $providedName !== '' ? $providedName : $identity,
                 'email'        => $isEmail ? $identity : null,
-                'phone'        => $isEmail ? null : $identity,
+                'phone'        => $isEmail ? $providedPhone : $identity,
             ]);
             $subject->setUserType('customer');
+        } elseif ($providedName !== '' && (!$subject->name || $subject->name === $subject->email)) {
+            // Existing stub user from a prior incomplete signup — refresh the
+            // greeting name if the client supplied one.
+            $subject->name = $providedName;
+            if ($isEmail && $providedPhone && !$subject->phone) {
+                $subject->phone = $providedPhone;
+            }
+            $subject->save();
         }
 
         $meta = ['identity' => $identity];
