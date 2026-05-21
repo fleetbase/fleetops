@@ -196,6 +196,10 @@ class CustomerController extends Controller
             }
         }
 
+        // `meta` is a client-owned free-form bag — we pass through whatever the
+        // client sent without injecting controller-side keys. The API should
+        // only stamp meta when the backend itself needs the data to operate
+        // (cf. Storefront's `meta.storefront_id` for query scoping).
         $input = [
             'type'         => 'customer',
             'company_uuid' => $sessionCompany,
