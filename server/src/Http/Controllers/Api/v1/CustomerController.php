@@ -255,10 +255,61 @@ class CustomerController extends Controller
             }
         }
 
+        // If the signup included home-address fields (either nested under meta or
+        // sent as a top-level `address` object), materialize them as a Place
+        // owned by the new customer and set as their default. Idempotent: only
+        // creates a Place when none is already linked.
+        $address = $request->input('address') ?? data_get($input, 'meta.address');
+        if (is_array($address) && !$contact->place_uuid) {
+            $place = $this->createCustomerPlace($contact, $sessionCompany, $address);
+            if ($place) {
+                $contact->place_uuid = $place->uuid;
+                $contact->save();
+            }
+        }
+
         $token          = $user->createToken($contact->uuid);
         $contact->token = $token->plainTextToken;
 
         return new CustomerResource($contact);
+    }
+
+    /**
+     * Materialize a customer's address payload into a Place owned by the
+     * Contact (polymorphic via `owner_uuid` + `owner_type`).
+     *
+     * Accepts both Storefront-style (street1/street2/city/province/postal_code/
+     * country) and portal-form-style (line1/line2/state/zip) keys.
+     */
+    protected function createCustomerPlace(Contact $contact, string $companyUuid, array $address): ?Place
+    {
+        $street1     = data_get($address, 'street1') ?? data_get($address, 'line1');
+        $street2     = data_get($address, 'street2') ?? data_get($address, 'line2');
+        $city        = data_get($address, 'city');
+        $province    = data_get($address, 'province') ?? data_get($address, 'state');
+        $postalCode  = data_get($address, 'postal_code') ?? data_get($address, 'zip');
+        $country     = data_get($address, 'country');
+        $placeName   = data_get($address, 'name') ?: trim(($contact->name ?: 'Customer') . ' — Home');
+
+        // Skip when there's nothing usable to save.
+        if (!$street1 && !$city && !$province && !$postalCode) {
+            return null;
+        }
+
+        return Place::create([
+            'company_uuid' => $companyUuid,
+            'owner_uuid'   => $contact->uuid,
+            'owner_type'   => get_class($contact),
+            'name'         => $placeName,
+            'type'         => 'residential',
+            'street1'      => $street1,
+            'street2'      => $street2,
+            'city'         => $city,
+            'province'     => $province,
+            'postal_code'  => $postalCode,
+            'country'      => $country,
+            'phone'        => $contact->phone,
+        ]);
     }
 
     /**
