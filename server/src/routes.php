@@ -49,6 +49,11 @@ Route::prefix(config('fleetops.api.routing.prefix', null))->namespace('Fleetbase
                 $router->put('{id}', 'ContactController@update');
                 $router->delete('{id}', 'ContactController@delete');
             });
+            // order-configs — read-only public projection of the OrderConfig flow.
+            $router->group(['prefix' => 'order-configs'], function () use ($router) {
+                $router->get('/', 'OrderConfigController@query');
+                $router->get('{id}', 'OrderConfigController@find');
+            });
             // customers routes — public B2C customer auth + customer-scoped orders.
             //  - Public endpoints: API key only (resolves company from credential)
             //  - Authenticated endpoints: API key + `Customer-Token` header (Sanctum)

@@ -168,6 +168,22 @@ test('Customer API resource exposes token and orders_count for the consumable sh
         ->toContain("Str::replaceFirst('contact', 'customer'");
 });
 
+test('Customer API resource includes a company sub-object resolved from the API credential', function () {
+    $source = file_get_contents(dirname(__DIR__) . '/src/Http/Resources/v1/Customer.php');
+
+    expect($source)
+        // The sub-object lives on `company`, keyed off the customer's company_uuid.
+        ->toContain("'company'")
+        ->toContain('buildCompanyPayload')
+        // Currency must be resolved through the existing canonical helper —
+        // never hardcoded, never aliased.
+        ->toContain('Utils::getCompanyTransactionCurrency')
+        // Public-safe projection only: id, name, currency, country, phone.
+        ->toContain("'currency'")
+        ->toContain("'country'")
+        ->toContain("'phone'");
+});
+
 test('FormRequest validators are present and authorize via api credential', function () {
     expect(class_exists(CreateCustomerRequest::class))->toBeTrue()
         ->and(class_exists(VerifyCreateCustomerRequest::class))->toBeTrue()
