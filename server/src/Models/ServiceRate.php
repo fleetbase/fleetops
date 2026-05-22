@@ -337,6 +337,16 @@ class ServiceRate extends Model
             return $this;
         }
 
+        $serviceRateFees = collect($serviceRateFees)
+            ->map(fn ($fee) => $this->normalizeServiceRateFeePayload($fee))
+            ->filter()
+            ->values()
+            ->toArray();
+
+        if (!$serviceRateFees) {
+            return $this;
+        }
+
         $iterate = count($serviceRateFees);
 
         for ($i = 0; $i < $iterate; $i++) {
@@ -362,6 +372,43 @@ class ServiceRate extends Model
         ServiceRateFee::bulkInsert($serviceRateFees);
 
         return $this;
+    }
+
+    /**
+     * Normalize embedded service-rate fee payloads before persistence.
+     */
+    public function normalizeServiceRateFeePayload($fee): ?array
+    {
+        if (!is_array($fee)) {
+            return null;
+        }
+
+        $fee['service_area_uuid'] ??= data_get($fee, 'service_area.uuid');
+        $fee['zone_uuid'] ??= data_get($fee, 'zone.uuid');
+
+        if (Utils::castBoolean($fee['is_fallback'] ?? false)) {
+            $fee['service_area_uuid'] = null;
+            $fee['zone_uuid']         = null;
+        }
+
+        return collect($fee)
+            ->only([
+                'uuid',
+                'service_rate_uuid',
+                'service_area_uuid',
+                'zone_uuid',
+                'label',
+                'priority',
+                'is_fallback',
+                'distance',
+                'distance_unit',
+                'min',
+                'max',
+                'unit',
+                'fee',
+                'currency',
+            ])
+            ->toArray();
     }
 
     /**

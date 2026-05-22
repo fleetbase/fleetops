@@ -14,8 +14,8 @@ class ServiceRateObserver
      */
     public function created(ServiceRate $serviceRate)
     {
-        $serviceRateFees       = request()->input('serviceRate.rate_fees');
-        $serviceRateParcelFees = request()->input('serviceRate.parcel_fees');
+        $serviceRateFees       = request()->input('serviceRate.rate_fees', request()->input('service_rate.rate_fees'));
+        $serviceRateParcelFees = request()->input('serviceRate.parcel_fees', request()->input('service_rate.parcel_fees'));
 
         if ($serviceRate->isFixedMeter() || $serviceRate->isPerDrop() || $serviceRate->isMultiZoneDistance()) {
             $serviceRate->setServiceRateFees($serviceRateFees);
@@ -33,8 +33,8 @@ class ServiceRateObserver
      */
     public function updated(ServiceRate $serviceRate)
     {
-        $serviceRateFees       = request()->input('serviceRate.rate_fees');
-        $serviceRateParcelFees = request()->input('serviceRate.parcel_fees');
+        $serviceRateFees       = request()->input('serviceRate.rate_fees', request()->input('service_rate.rate_fees'));
+        $serviceRateParcelFees = request()->input('serviceRate.parcel_fees', request()->input('service_rate.parcel_fees'));
 
         if ($serviceRate->isFixedMeter() || $serviceRate->isPerDrop() || $serviceRate->isMultiZoneDistance()) {
             $serviceRate->setServiceRateFees($serviceRateFees);
