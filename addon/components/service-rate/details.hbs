@@ -150,7 +150,7 @@
                                     {{/if}}
                                 </td>
                                 <td>{{n-a rateFee.priority}}</td>
-                                <td>{{format-currency rateFee.fee @resource.currency}}</td>
+                                <td>{{format-currency (f-to-int rateFee.fee) @resource.currency}}</td>
                                 <td>{{n-a rateFee.distance_unit}}</td>
                             </tr>
                         {{else}}
