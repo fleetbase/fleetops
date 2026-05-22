@@ -1186,15 +1186,23 @@ class ServiceRate extends Model
                 continue;
             }
 
-            $unit     = $rule->distance_unit ?: 'km';
+            $unit     = strtolower($rule->distance_unit ?: 'km');
             $distance = $this->normalizeDistanceForUnit($distanceInMeters, $unit);
             $fee      = $this->normalizeCalculatedMoney($distance * Utils::numbersOnly($rule->fee ?? 0));
             $subTotal += $fee;
 
-            $label = $rule->label ?: data_get($rule, 'zone.name') ?: data_get($rule, 'serviceArea.name') ?: ($rule->is_fallback ? 'Fallback distance' : 'Geographic distance');
+            if ($rule->is_fallback) {
+                $label = 'Out-of-zone distance charge';
+            } else {
+                $label = data_get($rule, 'zone.name') ?: data_get($rule, 'serviceArea.name') ?: $rule->label ?: 'Geographic';
+            }
+
+            if (!$rule->is_fallback && !str_ends_with(strtolower($label), 'distance charge')) {
+                $label .= ' distance charge';
+            }
 
             $lines->push([
-                'details'          => sprintf('%s: %s %s x %s', $label, round($distance, 2), $unit, Utils::moneyFormat($rule->fee, $this->currency)),
+                'details'          => sprintf('%s (%s %s x %s)', $label, round($distance, 2), $unit, Utils::moneyFormat($rule->fee, $this->currency)),
                 'amount'           => $fee,
                 'formatted_amount' => Utils::moneyFormat($fee, $this->currency),
                 'currency'         => $this->currency,
