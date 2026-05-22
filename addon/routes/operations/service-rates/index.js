@@ -27,7 +27,7 @@ export default class OperationsServiceRatesIndexRoute extends Route {
     model(params) {
         return this.store.query('service-rate', {
             ...params,
-            with: ['parcelFees', 'rateFees', 'zone', 'serviceArea'],
+            with: ['parcelFees', 'rateFees.zone', 'rateFees.serviceArea', 'zone', 'serviceArea'],
         });
     }
 }

@@ -217,6 +217,14 @@ class ServiceRate extends Model
     }
 
     /**
+     * Check if the rate calculation method is "multi_zone_distance".
+     */
+    public function isMultiZoneDistance(): bool
+    {
+        return $this->rate_calculation_method === 'multi_zone_distance';
+    }
+
+    /**
      * Check if the rate calculation method is "per_drop".
      */
     public function isPerDrop(): bool
@@ -506,7 +514,7 @@ class ServiceRate extends Model
     public static function getServicableForPlaces($places = [], $service = null, $currency = null, ?\Closure $queryCallback = null): array
     {
         $reader            = new GeoJSONReader();
-        $serviceRatesQuery = static::with(['zone', 'serviceArea', 'rateFees', 'parcelFees']);
+        $serviceRatesQuery = static::with(['zone', 'serviceArea', 'rateFees.zone', 'rateFees.serviceArea', 'parcelFees']);
 
         if ($currency) {
             $serviceRatesQuery->whereRaw('lower(currency) = ?', [strtolower($currency)]);
@@ -738,6 +746,12 @@ class ServiceRate extends Model
             ]);
         }
 
+        if ($this->isMultiZoneDistance()) {
+            [$multiZoneFee, $multiZoneLines] = $this->quoteMultiZoneDistance($waypoints, $totalDistance);
+            $subTotal += $multiZoneFee;
+            $lines = $lines->merge($multiZoneLines);
+        }
+
         if ($this->isAlgorithm()) {
             $resolvedEndpointCount = $endpointCount ?? $this->inferEndpointCountFromStops($waypoints);
             $rateFee               = $this->normalizeCalculatedMoney(Algo::exec(
@@ -927,6 +941,12 @@ class ServiceRate extends Model
             ]);
         }
 
+        if ($this->isMultiZoneDistance()) {
+            [$multiZoneFee, $multiZoneLines] = $this->quoteMultiZoneDistance($waypoints, $totalDistance);
+            $subTotal += $multiZoneFee;
+            $lines = $lines->merge($multiZoneLines);
+        }
+
         if ($this->isAlgorithm()) {
             $rateFee = $this->normalizeCalculatedMoney(Algo::exec(
                 $this->algorithm,
@@ -1084,6 +1104,203 @@ class ServiceRate extends Model
         }
 
         return 2;
+    }
+
+    protected function quoteMultiZoneDistance($waypoints = [], ?int $totalDistance = 0): array
+    {
+        $this->loadMissing(['rateFees.zone', 'rateFees.serviceArea']);
+
+        $rules = $this->rateFees
+            ->filter(fn ($rule) => !$rule->is_fallback && ($rule->zone || $rule->serviceArea))
+            ->sortByDesc(fn ($rule) => (int) ($rule->priority ?? 0))
+            ->values();
+
+        $fallbackRule = $this->rateFees
+            ->filter(fn ($rule) => (bool) $rule->is_fallback)
+            ->sortByDesc(fn ($rule) => (int) ($rule->priority ?? 0))
+            ->first();
+
+        if ($rules->isEmpty() && !$fallbackRule) {
+            return [0, collect()];
+        }
+
+        $pricedDistances = $this->calculateMultiZoneDistances($waypoints, $rules, $fallbackRule, $totalDistance);
+        $lines           = collect();
+        $subTotal        = 0;
+
+        foreach ($pricedDistances as $entry) {
+            $rule = $entry['rule'];
+            if (!$rule instanceof ServiceRateFee) {
+                continue;
+            }
+
+            $distanceInMeters = (float) ($entry['distance_m'] ?? 0);
+            if ($distanceInMeters <= 0) {
+                continue;
+            }
+
+            $unit     = $rule->distance_unit ?: 'km';
+            $distance = $this->normalizeDistanceForUnit($distanceInMeters, $unit);
+            $fee      = $this->normalizeCalculatedMoney($distance * Utils::numbersOnly($rule->fee ?? 0));
+            $subTotal += $fee;
+
+            $label = $rule->label ?: data_get($rule, 'zone.name') ?: data_get($rule, 'serviceArea.name') ?: ($rule->is_fallback ? 'Fallback distance' : 'Geographic distance');
+
+            $lines->push([
+                'details'          => sprintf('%s: %s %s x %s', $label, round($distance, 2), $unit, Utils::moneyFormat($rule->fee, $this->currency)),
+                'amount'           => $fee,
+                'formatted_amount' => Utils::moneyFormat($fee, $this->currency),
+                'currency'         => $this->currency,
+                'code'             => 'MULTI_ZONE_DISTANCE_FEE',
+            ]);
+        }
+
+        return [$subTotal, $lines];
+    }
+
+    protected function calculateMultiZoneDistances($waypoints, $rules, ?ServiceRateFee $fallbackRule = null, ?int $totalDistance = 0): array
+    {
+        $places = collect($waypoints)->map(fn ($place) => Place::createFromMixed($place))->filter()->values();
+
+        if ($places->count() < 2 || (int) $totalDistance <= 0) {
+            return $fallbackRule ? [['rule' => $fallbackRule, 'distance_m' => (float) ($totalDistance ?? 0)]] : [];
+        }
+
+        $reader         = new GeoJSONReader();
+        $ruleGeometries = $rules->map(function ($rule) use ($reader) {
+            return [
+                'rule'      => $rule,
+                'geometry'  => $this->readRateRuleGeometry($rule, $reader),
+            ];
+        })->filter(fn ($entry) => $entry['geometry'])->values();
+
+        if ($ruleGeometries->isEmpty()) {
+            return $fallbackRule ? [['rule' => $fallbackRule, 'distance_m' => (float) $totalDistance]] : [];
+        }
+
+        $distances    = [];
+        $sampledTotal = 0;
+
+        for ($i = 0; $i < $places->count() - 1; $i++) {
+            $start = $this->getLngLatFromPlace($places[$i]);
+            $end   = $this->getLngLatFromPlace($places[$i + 1]);
+
+            if (!$start || !$end) {
+                continue;
+            }
+
+            $legDistance = $this->haversineDistanceInMeters($start['lat'], $start['lng'], $end['lat'], $end['lng']);
+            $steps       = max(1, min(500, (int) ceil($legDistance / 1000)));
+
+            for ($step = 0; $step < $steps; $step++) {
+                $fromRatio = $step / $steps;
+                $toRatio   = ($step + 1) / $steps;
+                $midRatio  = ($fromRatio + $toRatio) / 2;
+
+                $from = $this->interpolateLngLat($start, $end, $fromRatio);
+                $to   = $this->interpolateLngLat($start, $end, $toRatio);
+                $mid  = $this->interpolateLngLat($start, $end, $midRatio);
+
+                $sampleDistance = $this->haversineDistanceInMeters($from['lat'], $from['lng'], $to['lat'], $to['lng']);
+                $sampledTotal += $sampleDistance;
+
+                $matchedRule = $this->matchMultiZoneRule($mid, $ruleGeometries) ?: $fallbackRule;
+                if (!$matchedRule instanceof ServiceRateFee) {
+                    continue;
+                }
+
+                $key = $matchedRule->uuid ?? spl_object_hash($matchedRule);
+                if (!isset($distances[$key])) {
+                    $distances[$key] = ['rule' => $matchedRule, 'distance_m' => 0];
+                }
+
+                $distances[$key]['distance_m'] += $sampleDistance;
+            }
+        }
+
+        if ($sampledTotal > 0 && $totalDistance > 0) {
+            $scale = $totalDistance / $sampledTotal;
+            foreach ($distances as &$entry) {
+                $entry['distance_m'] *= $scale;
+            }
+            unset($entry);
+        }
+
+        return array_values($distances);
+    }
+
+    protected function readRateRuleGeometry(ServiceRateFee $rule, GeoJSONReader $reader)
+    {
+        $border = data_get($rule, 'zone.border') ?: data_get($rule, 'serviceArea.border');
+
+        if (!$border) {
+            return null;
+        }
+
+        try {
+            if (is_object($border) && method_exists($border, 'toJson')) {
+                return $reader->read($border->toJson());
+            }
+
+            if (is_array($border) || is_object($border)) {
+                return $reader->read(json_encode($border, JSON_UNESCAPED_UNICODE));
+            }
+
+            if (is_string($border)) {
+                return $reader->read($border);
+            }
+        } catch (\Throwable $e) {
+            return null;
+        }
+
+        return null;
+    }
+
+    protected function matchMultiZoneRule(array $point, $ruleGeometries): ?ServiceRateFee
+    {
+        $brickPoint = \Brick\Geo\Point::fromText(sprintf('POINT (%F %F)', $point['lng'], $point['lat']), 4326);
+
+        foreach ($ruleGeometries as $entry) {
+            if ($entry['geometry']->contains($brickPoint)) {
+                return $entry['rule'];
+            }
+        }
+
+        return null;
+    }
+
+    protected function getLngLatFromPlace(?Place $place): ?array
+    {
+        if (!$place instanceof Place) {
+            return null;
+        }
+
+        $point = $place->getLocationAsPoint();
+
+        if (!$point || !method_exists($point, 'getLat') || !method_exists($point, 'getLng')) {
+            return null;
+        }
+
+        return ['lat' => (float) $point->getLat(), 'lng' => (float) $point->getLng()];
+    }
+
+    protected function interpolateLngLat(array $start, array $end, float $ratio): array
+    {
+        return [
+            'lat' => $start['lat'] + (($end['lat'] - $start['lat']) * $ratio),
+            'lng' => $start['lng'] + (($end['lng'] - $start['lng']) * $ratio),
+        ];
+    }
+
+    protected function haversineDistanceInMeters(float $lat1, float $lng1, float $lat2, float $lng2): float
+    {
+        $earthRadius = 6371000;
+        $latDelta    = deg2rad($lat2 - $lat1);
+        $lngDelta    = deg2rad($lng2 - $lng1);
+
+        $a = sin($latDelta / 2) ** 2 + cos(deg2rad($lat1)) * cos(deg2rad($lat2)) * sin($lngDelta / 2) ** 2;
+
+        return $earthRadius * 2 * atan2(sqrt($a), sqrt(1 - $a));
     }
 
     /**

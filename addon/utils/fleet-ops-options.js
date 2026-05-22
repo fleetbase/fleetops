@@ -382,6 +382,7 @@ export const podOptions = [
 export const serviceRateCalculationMethods = [
     { label: 'Per Meter', value: 'per_meter', description: 'Calculate cost based on the number of meters traveled.' },
     { label: 'Fixed Rate', value: 'fixed_meter', description: 'Charge a fixed rate per meter regardless of distance.' },
+    { label: 'Multi-zone Distance', value: 'multi_zone_distance', description: 'Calculate cost by splitting route distance across priced service areas and zones.' },
     { label: 'Parcel Rate', value: 'parcel', description: 'Charge a dynamic rate based on parcel/payload weight and dimensions.' },
     { label: 'Per Drop-off', value: 'per_drop', description: 'Cost applied per drop-off point.' },
     { label: 'Algorithm', value: 'algo', description: 'Cost calculated dynamically using algorithmic logic.' },

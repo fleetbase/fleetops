@@ -7,6 +7,7 @@ use Fleetbase\FleetOps\Support\Utils;
 use Fleetbase\Models\Model;
 use Fleetbase\Traits\HasUuid;
 use Fleetbase\Traits\TracksApiCredential;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class ServiceRateFee extends Model
 {
@@ -32,7 +33,22 @@ class ServiceRateFee extends Model
      *
      * @var array
      */
-    protected $fillable = ['_key', 'service_rate_uuid', 'distance', 'distance_unit', 'min', 'max', 'unit', 'fee', 'currency'];
+    protected $fillable = [
+        '_key',
+        'service_rate_uuid',
+        'service_area_uuid',
+        'zone_uuid',
+        'label',
+        'priority',
+        'is_fallback',
+        'distance',
+        'distance_unit',
+        'min',
+        'max',
+        'unit',
+        'fee',
+        'currency',
+    ];
 
     /**
      * The attributes that should be cast to native types.
@@ -40,10 +56,12 @@ class ServiceRateFee extends Model
      * @var array
      */
     protected $casts = [
-        'min'      => 'integer',
-        'max'      => 'integer',
-        'fee'      => Money::class,
-        'distance' => 'integer',
+        'min'         => 'integer',
+        'max'         => 'integer',
+        'fee'         => Money::class,
+        'distance'    => 'integer',
+        'priority'    => 'integer',
+        'is_fallback' => 'boolean',
     ];
 
     /**
@@ -62,12 +80,24 @@ class ServiceRateFee extends Model
 
     public static function onRowInsert($row)
     {
-        $row['fee']      = Money::apply($row['fee'] ?? 0);
-        $row['distance'] = Utils::numbersOnly($row['distance'] ?? null);
-        $row['min']      = Utils::numbersOnly($row['min'] ?? null);
-        $row['max']      = Utils::numbersOnly($row['max'] ?? null);
+        $row['fee']         = Money::apply($row['fee'] ?? 0);
+        $row['distance']    = Utils::numbersOnly($row['distance'] ?? null);
+        $row['min']         = Utils::numbersOnly($row['min'] ?? null);
+        $row['max']         = Utils::numbersOnly($row['max'] ?? null);
+        $row['priority']    = Utils::numbersOnly($row['priority'] ?? 0);
+        $row['is_fallback'] = Utils::castBoolean($row['is_fallback'] ?? false);
 
         return $row;
+    }
+
+    public function serviceArea(): BelongsTo
+    {
+        return $this->belongsTo(ServiceArea::class, 'service_area_uuid', 'uuid');
+    }
+
+    public function zone(): BelongsTo
+    {
+        return $this->belongsTo(Zone::class, 'zone_uuid', 'uuid');
     }
 
     public function setDistanceAttribute($value)

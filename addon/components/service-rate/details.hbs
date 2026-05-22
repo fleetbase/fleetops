@@ -121,6 +121,41 @@
                 </table>
             </div>
         </ContentPanel>
+    {{else if @resource.isMultiZoneDistance}}
+        <ContentPanel @title="Multi-zone Distance" @open={{true}} @wrapperClass="bordered-top" @panelBodyWrapperClass="p-0i">
+            <div class="next-table-wrapper h-auto table-fluid rounded-none overflow-x-auto">
+                <table class="table table-fixed w-full">
+                    <thead>
+                        <tr>
+                            <th>Label</th>
+                            <th>Service Area</th>
+                            <th>Zone</th>
+                            <th>Priority</th>
+                            <th>Fallback</th>
+                            <th>Rate</th>
+                            <th>Unit</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {{#each @resource.rateFees as |rateFee|}}
+                            <tr>
+                                <td>{{n-a rateFee.label}}</td>
+                                <td>{{n-a rateFee.service_area.name}}</td>
+                                <td>{{n-a rateFee.zone.name}}</td>
+                                <td>{{n-a rateFee.priority}}</td>
+                                <td>{{if rateFee.is_fallback "Yes" "No"}}</td>
+                                <td>{{format-currency rateFee.fee @resource.currency}}</td>
+                                <td>{{n-a rateFee.distance_unit}}</td>
+                            </tr>
+                        {{else}}
+                            <tr>
+                                <td colspan="7" class="text-center text-gray-500 italic">No geographic pricing rules defined</td>
+                            </tr>
+                        {{/each}}
+                    </tbody>
+                </table>
+            </div>
+        </ContentPanel>
     {{else if @resource.isPerMeter}}
         <ContentPanel @title={{t "service-rate.fields.per-meter"}} @open={{true}} @wrapperClass="bordered-top">
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-2">
