@@ -230,10 +230,9 @@
                         <thead>
                             <tr>
                                 <th class="w-1/6">Label</th>
-                                <th class="w-1/6">Service Area</th>
-                                <th class="w-1/6">Zone</th>
+                                <th class="w-1/6">Geography Type</th>
+                                <th class="w-1/5">Geography</th>
                                 <th class="w-1/12">Priority</th>
-                                <th class="w-1/12">Fallback</th>
                                 <th class="w-1/6">Rate</th>
                                 <th class="w-1/6">Unit</th>
                                 <th class="w-12"></th>
@@ -248,38 +247,53 @@
                                     <td>
                                         <div class="fleetbase-model-select fleetbase-power-select ember-model-select">
                                             <PowerSelect
-                                                @options={{this.serviceAreas}}
-                                                @selected={{rateFee.service_area}}
-                                                @onChange={{fn this.selectRuleServiceArea rateFee}}
-                                                @placeholder="Service area"
+                                                @options={{this.geographyTypes}}
+                                                @selected={{find-by "value" rateFee.geography_type this.geographyTypes}}
+                                                @onChange={{fn this.selectRuleGeographyType rateFee}}
+                                                @placeholder="Geography type"
                                                 @triggerClass="form-select form-input"
-                                                @disabled={{or rateFee.is_fallback (cannot-write @resource)}}
-                                                as |serviceArea|
+                                                @disabled={{cannot-write @resource}}
+                                                as |type|
                                             >
-                                                {{serviceArea.name}}
+                                                {{type.label}}
                                             </PowerSelect>
                                         </div>
                                     </td>
                                     <td>
-                                        <div class="fleetbase-model-select fleetbase-power-select ember-model-select">
-                                            <PowerSelect
-                                                @options={{this.zones}}
-                                                @selected={{rateFee.zone}}
-                                                @onChange={{fn this.selectRuleZone rateFee}}
-                                                @placeholder="Zone"
-                                                @triggerClass="form-select form-input"
-                                                @disabled={{or rateFee.is_fallback (cannot-write @resource)}}
-                                                as |zone|
-                                            >
-                                                {{zone.name}}
-                                            </PowerSelect>
-                                        </div>
+                                        {{#if (eq rateFee.geography_type "zone")}}
+                                            <div class="fleetbase-model-select fleetbase-power-select ember-model-select">
+                                                <PowerSelect
+                                                    @options={{this.zones}}
+                                                    @selected={{rateFee.zone}}
+                                                    @onChange={{fn this.selectRuleZone rateFee}}
+                                                    @placeholder="Select zone"
+                                                    @triggerClass="form-select form-input"
+                                                    @disabled={{cannot-write @resource}}
+                                                    as |zone|
+                                                >
+                                                    {{zone.name}}
+                                                </PowerSelect>
+                                            </div>
+                                        {{else if (eq rateFee.geography_type "fallback")}}
+                                            <div class="text-sm text-gray-500 dark:text-gray-400">Unmatched route distance</div>
+                                        {{else}}
+                                            <div class="fleetbase-model-select fleetbase-power-select ember-model-select">
+                                                <PowerSelect
+                                                    @options={{this.serviceAreas}}
+                                                    @selected={{rateFee.service_area}}
+                                                    @onChange={{fn this.selectRuleServiceArea rateFee}}
+                                                    @placeholder="Select service area"
+                                                    @triggerClass="form-select form-input"
+                                                    @disabled={{cannot-write @resource}}
+                                                    as |serviceArea|
+                                                >
+                                                    {{serviceArea.name}}
+                                                </PowerSelect>
+                                            </div>
+                                        {{/if}}
                                     </td>
                                     <td>
                                         <Input @type="number" @value={{rateFee.priority}} placeholder="0" disabled={{cannot-write @resource}} class="form-input w-full" />
-                                    </td>
-                                    <td>
-                                        <Checkbox @value={{rateFee.is_fallback}} @onToggle={{fn this.setRuleFallback rateFee}} @disabled={{cannot-write @resource}} />
                                     </td>
                                     <td>
                                         <MoneyInput class="w-full" @currency={{@resource.currency}} @value={{rateFee.fee}} disabled={{cannot-write @resource}} />
@@ -305,7 +319,7 @@
                                 </tr>
                             {{else}}
                                 <tr>
-                                    <td colspan="8" class="text-center text-gray-500 italic">No geographic pricing rules defined</td>
+                                    <td colspan="7" class="text-center text-gray-500 italic">No geographic pricing rules defined</td>
                                 </tr>
                             {{/each}}
                         </tbody>

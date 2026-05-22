@@ -21,6 +21,14 @@ export default class ServiceRateFormComponent extends Component {
         return Array.from(this.serviceAreas).flatMap((serviceArea) => serviceArea.zones?.toArray?.() ?? serviceArea.zones ?? []);
     }
 
+    get geographyTypes() {
+        return [
+            { label: 'Service Area', value: 'service_area' },
+            { label: 'Zone', value: 'zone' },
+            { label: 'Fallback', value: 'fallback' },
+        ];
+    }
+
     @action selectOrderConfig(orderConfig) {
         this.args.resource.set('order_config', orderConfig);
         this.args.resource.set('order_config_uuid', orderConfig.id);
@@ -42,6 +50,14 @@ export default class ServiceRateFormComponent extends Component {
 
     @action onMaxDistanceChange() {
         this.serviceRateActions.generateFixedRateFees(this.args.resource);
+    }
+
+    @action selectRuleGeographyType(rule, { value }) {
+        rule.set('zone', null);
+        rule.set('zone_uuid', null);
+        rule.set('service_area', null);
+        rule.set('service_area_uuid', null);
+        rule.set('is_fallback', value === 'fallback');
     }
 
     @action selectRuleServiceArea(rule, serviceArea) {
