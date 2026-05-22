@@ -214,7 +214,7 @@
             <div class="px-2 mb-3">
                 <InfoBlock
                     class="mb-3"
-                    @text="Price route distance across multiple service areas or zones. Each matched segment uses the highest-priority rule; unmatched distance can use a fallback rule."
+                    @text="Price route distance across multiple service areas or zones. Priority controls overlap: if a route segment matches more than one rule, the highest-priority rule is used. Unmatched distance can use a fallback rule."
                     @exampleText="Main City: 2.50 per km, Remote Area: 3.75 per km, Fallback: 3.75 per km."
                 />
 
