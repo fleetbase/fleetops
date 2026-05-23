@@ -49,6 +49,38 @@ Route::prefix(config('fleetops.api.routing.prefix', null))->namespace('Fleetbase
                 $router->put('{id}', 'ContactController@update');
                 $router->delete('{id}', 'ContactController@delete');
             });
+            // order-configs — read-only public projection of the OrderConfig flow.
+            $router->group(['prefix' => 'order-configs'], function () use ($router) {
+                $router->get('/', 'OrderConfigController@query');
+                $router->get('{id}', 'OrderConfigController@find');
+            });
+            // customers routes — public B2C customer auth + customer-scoped orders.
+            //  - Public endpoints: API key only (resolves company from credential)
+            //  - Authenticated endpoints: API key + `Customer-Token` header (Sanctum)
+            $router->group(['prefix' => 'customers', 'middleware' => []], function () use ($router) {
+                // Public auth flows
+                $router->post('request-creation-code', 'CustomerController@requestCreationCode');
+                $router->post('/', 'CustomerController@create');
+                $router->post('login', 'CustomerController@login');
+                $router->post('login-with-sms', 'CustomerController@loginWithPhone');
+                $router->post('verify-code', 'CustomerController@verifyCode');
+                $router->post('forgot-password', 'CustomerController@forgotPassword');
+                $router->post('reset-password', 'CustomerController@resetPassword');
+
+                // Authenticated (require Customer-Token)
+                $router->group(['middleware' => [\Fleetbase\FleetOps\Http\Middleware\AuthenticateCustomerToken::class]], function () use ($router) {
+                    $router->get('me', 'CustomerController@me');
+                    $router->put('me', 'CustomerController@updateMe');
+                    $router->match(['post', 'patch'], 'me', 'CustomerController@updateMe');
+                    $router->post('logout', 'CustomerController@logout');
+                    $router->post('logout-all', 'CustomerController@logoutAll');
+                    $router->post('register-device', 'CustomerController@registerDevice');
+                    $router->get('places', 'CustomerController@places');
+                    $router->get('orders', 'CustomerController@orders');
+                    $router->post('orders', 'CustomerController@createOrder');
+                    $router->get('orders/{id}', 'CustomerController@findOrder');
+                });
+            });
             // vendors routes
             $router->group(['prefix' => 'vendors'], function () use ($router) {
                 $router->post('/', 'VendorController@create');
