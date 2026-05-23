@@ -463,7 +463,7 @@ class Contact extends Model
     public function repairCustomerTypeInvariant(bool $quiet = false): ?User
     {
         if (!$this->isCustomer()) {
-            $this->forceFill(['type' => 'customer'])->saveQuietly();
+            return $this->getUser();
         }
 
         $user = $this->getUser();
