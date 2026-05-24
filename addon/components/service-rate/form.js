@@ -4,11 +4,29 @@ import { action } from '@ember/object';
 
 export default class ServiceRateFormComponent extends Component {
     @service orderConfigActions;
+    @service serviceAreaActions;
     @service serviceRateActions;
 
     constructor() {
         super(...arguments);
         this.orderConfigActions.loadAll.perform();
+        this.serviceAreaActions.loadAll.perform();
+    }
+
+    get serviceAreas() {
+        return this.serviceAreaActions.serviceAreas ?? [];
+    }
+
+    get zones() {
+        return Array.from(this.serviceAreas).flatMap((serviceArea) => serviceArea.zones?.toArray?.() ?? serviceArea.zones ?? []);
+    }
+
+    get geographyTypes() {
+        return [
+            { label: 'Service Area', value: 'service_area' },
+            { label: 'Zone', value: 'zone' },
+            { label: 'Fallback', value: 'fallback' },
+        ];
     }
 
     @action selectOrderConfig(orderConfig) {
@@ -24,10 +42,47 @@ export default class ServiceRateFormComponent extends Component {
             this.args.resource.resetPerDropFees();
         } else if (rateCalculationMethod === 'fixed_meter' || rateCalculationMethod === 'fixed_rate') {
             this.serviceRateActions.generateFixedRateFees(this.args.resource);
+        } else if (rateCalculationMethod === 'multi_zone_distance' && !this.args.resource.rateFees.length) {
+            this.args.resource.addMultiZoneDistanceRule();
+            this.args.resource.addMultiZoneDistanceFallbackRule();
         }
     }
 
     @action onMaxDistanceChange() {
         this.serviceRateActions.generateFixedRateFees(this.args.resource);
+    }
+
+    @action selectRuleGeographyType(rule, { value }) {
+        rule.set('zone', null);
+        rule.set('zone_uuid', null);
+        rule.set('service_area', null);
+        rule.set('service_area_uuid', null);
+        rule.set('is_fallback', value === 'fallback');
+    }
+
+    @action selectRuleServiceArea(rule, serviceArea) {
+        rule.set('service_area', serviceArea);
+        rule.set('service_area_uuid', serviceArea?.id);
+        rule.set('zone', null);
+        rule.set('zone_uuid', null);
+        rule.set('is_fallback', false);
+    }
+
+    @action selectRuleZone(rule, zone) {
+        rule.set('zone', zone);
+        rule.set('zone_uuid', zone?.id);
+        rule.set('service_area', null);
+        rule.set('service_area_uuid', null);
+        rule.set('is_fallback', false);
+    }
+
+    @action setRuleFallback(rule, isFallback) {
+        rule.set('is_fallback', Boolean(isFallback));
+        if (isFallback) {
+            rule.set('zone', null);
+            rule.set('zone_uuid', null);
+            rule.set('service_area', null);
+            rule.set('service_area_uuid', null);
+        }
     }
 }
