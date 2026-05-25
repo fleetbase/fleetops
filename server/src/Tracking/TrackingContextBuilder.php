@@ -5,12 +5,15 @@ namespace Fleetbase\FleetOps\Tracking;
 use Fleetbase\FleetOps\Models\Order;
 use Fleetbase\FleetOps\Models\Place;
 use Fleetbase\FleetOps\Models\Waypoint;
+use Fleetbase\FleetOps\Support\ResolvesOrderServiceStops;
 use Fleetbase\FleetOps\Support\Utils;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Str;
 
 class TrackingContextBuilder
 {
+    use ResolvesOrderServiceStops;
+
     public function build(Order $order, TrackingOptions $options): TrackingContext
     {
         $order->loadAssignedDriver();
@@ -18,8 +21,10 @@ class TrackingContextBuilder
             'payload',
             'payload.pickup',
             'payload.dropoff',
+            'payload.return',
             'payload.waypoints',
             'payload.waypointMarkers.place',
+            'payload.waypointMarkers.trackingNumber.status',
         ]);
 
         $payload           = $order->payload;
@@ -91,52 +96,50 @@ class TrackingContextBuilder
         $stops    = collect();
         $sequence = 0;
 
-        if ($payload->pickup instanceof Place) {
-            $stops->push(new TrackingStop(
-                uuid: $payload->pickup->uuid,
-                publicId: $payload->pickup->public_id,
-                type: 'pickup',
-                status: null,
-                place: $payload->pickup,
-                completed: !in_array($order->status, ['created', 'dispatched', 'pending']),
-                sequence: ++$sequence
-            ));
-        }
+        foreach ($this->payloadServiceStops($payload) as $serviceStop) {
+            $place    = $serviceStop['place'] ?? null;
+            $waypoint = $serviceStop['waypoint'] ?? null;
+            $status   = $waypoint instanceof Waypoint
+                ? $this->waypointServiceStopStatus($waypoint)
+                : $this->endpointServiceStopStatus($payload, $serviceStop);
 
-        $markers = $payload->waypointMarkers instanceof Collection ? $payload->waypointMarkers : collect();
-        if ($markers->isNotEmpty()) {
-            foreach ($markers->sortBy('order')->values() as $waypoint) {
-                $stops->push($this->stopFromWaypoint($waypoint, ++$sequence));
+            if (!$place instanceof Place) {
+                continue;
             }
-        } elseif ($payload->waypoints instanceof Collection) {
-            foreach ($payload->waypoints as $place) {
-                if ($place instanceof Place) {
-                    $stops->push(new TrackingStop(
-                        uuid: $place->uuid,
-                        publicId: $place->public_id,
-                        type: 'waypoint',
-                        status: null,
-                        place: $place,
-                        completed: false,
-                        sequence: ++$sequence
-                    ));
-                }
-            }
-        }
 
-        if ($payload->dropoff instanceof Place) {
             $stops->push(new TrackingStop(
-                uuid: $payload->dropoff->uuid,
-                publicId: $payload->dropoff->public_id,
-                type: 'dropoff',
-                status: null,
-                place: $payload->dropoff,
-                completed: in_array($order->status, ['completed', 'canceled']),
-                sequence: ++$sequence
+                uuid: $place->uuid,
+                publicId: $place->public_id,
+                type: $serviceStop['type'],
+                status: $status ?: null,
+                place: $place,
+                waypoint: $waypoint,
+                completed: $this->serviceStopIsComplete($order, $payload, $serviceStop),
+                sequence: ++$sequence,
+                trackingNumberUuid: $serviceStop['tracking_number_uuid'] ?? null
             ));
         }
 
         return $stops->values();
+    }
+
+    protected function endpointServiceStopStatus($payload, array $serviceStop): ?string
+    {
+        $trackingNumberUuid = $this->serviceStopTrackingNumberUuid($payload, $serviceStop);
+        if (!$trackingNumberUuid) {
+            return null;
+        }
+
+        return strtolower((string) data_get($this->trackingNumberStatus($trackingNumberUuid), 'code')) ?: null;
+    }
+
+    protected function waypointServiceStopStatus(Waypoint $waypoint): ?string
+    {
+        if (!$waypoint->tracking_number_uuid) {
+            return strtolower((string) $waypoint->status_code) ?: null;
+        }
+
+        return strtolower((string) data_get($this->trackingNumberStatus($waypoint->tracking_number_uuid), 'code')) ?: null;
     }
 
     protected function stopFromWaypoint(Waypoint $waypoint, int $sequence): TrackingStop

@@ -61,7 +61,23 @@ class Payload extends Model
      *
      * @var array
      */
-    protected $fillable = ['_key', 'company_uuid', 'pickup_uuid', 'dropoff_uuid', 'return_uuid', 'current_waypoint_uuid', 'meta', 'payment_method', 'cod_amount', 'cod_currency', 'cod_payment_method', 'type'];
+    protected $fillable = [
+        '_key',
+        'company_uuid',
+        'pickup_uuid',
+        'pickup_tracking_number_uuid',
+        'dropoff_uuid',
+        'dropoff_tracking_number_uuid',
+        'return_uuid',
+        'return_tracking_number_uuid',
+        'current_waypoint_uuid',
+        'meta',
+        'payment_method',
+        'cod_amount',
+        'cod_currency',
+        'cod_payment_method',
+        'type',
+    ];
 
     /**
      * The attributes that should be cast to native types.

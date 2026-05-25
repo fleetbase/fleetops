@@ -1,5 +1,5 @@
 <div class="order-activity-list space-y-2">
-    {{#each @resource.tracking_statuses as |trackingStatus|}}
+    {{#each (or @activity @resource.tracking_statuses) as |trackingStatus|}}
         <div class="order-activity-list-item flex flex-row justify-between">
             <div class="flex flex-row">
                 <div class="w-8 pt-1">

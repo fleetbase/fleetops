@@ -3,7 +3,7 @@ import { setupRenderingTest } from 'dummy/tests/helpers';
 import { render } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 
-module('Integration | Component | place/address', function (hooks) {
+module('Integration | Helper | place-address-html', function (hooks) {
     setupRenderingTest(hooks);
 
     test('it renders the place title by default', async function (assert) {
@@ -14,7 +14,7 @@ module('Integration | Component | place/address', function (hooks) {
             country_name: 'Singapore',
         });
 
-        await render(hbs`<Place::Address @place={{this.place}} />`);
+        await render(hbs`{{place-address-html this.place}}`);
 
         assert.dom('address').containsText('North Dock');
         assert.dom('address').containsText('100 Harbor Road');
@@ -28,7 +28,7 @@ module('Integration | Component | place/address', function (hooks) {
             country_name: 'Singapore',
         });
 
-        await render(hbs`<Place::Address @place={{this.place}} @showTitle={{false}} />`);
+        await render(hbs`{{place-address-html this.place showTitle=false}}`);
 
         assert.dom('address').doesNotContainText('North Dock');
         assert.dom('address').containsText('100 Harbor Road');

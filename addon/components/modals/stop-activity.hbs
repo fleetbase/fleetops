@@ -1,0 +1,28 @@
+<Modal::Default @modalIsOpened={{@modalIsOpened}} @options={{@options}} @confirm={{@onConfirm}} @decline={{@onDecline}}>
+    <div class="modal-body-container">
+        <div class="mb-4 rounded-md border border-gray-200 bg-gray-50 px-4 py-3 dark:border-gray-700 dark:bg-gray-800">
+            <div class="text-xs font-semibold uppercase text-gray-500 dark:text-gray-400">Stop</div>
+            <div class="mt-1 text-sm font-semibold text-gray-900 dark:text-gray-100">{{this.stopName}}</div>
+            <div class="mt-1 text-xs text-gray-500 dark:text-gray-400">{{or this.place.address this.place.street1}}</div>
+        </div>
+
+        {{#if this.loadActivity.isRunning}}
+            <div class="flex items-center justify-center p-8 text-sm text-gray-500 dark:text-gray-400">
+                <FaIcon @icon="spinner" @spin={{true}} class="mr-2" />
+                Loading activity...
+            </div>
+        {{else if this.trackingNumberUuid}}
+            <Order::ActivityList @activity={{this.activity}} @resource={{hash status=this.stop.status}} />
+        {{else}}
+            <div class="min-h-24 pb-4">
+                <div class="flex items-center justify-center rounded-xl border border-dashed border-gray-300 bg-gray-50 p-6 dark:border-gray-600 dark:bg-gray-800">
+                    <div class="text-center">
+                        <FaIcon @icon="layer-group" @size="2x" class="mb-2 text-gray-400" />
+                        <div class="text-sm font-medium text-gray-600 dark:text-gray-400">No stop activity</div>
+                        <div class="mt-1 text-xs text-gray-500 dark:text-gray-500">This stop does not have a separate activity stream.</div>
+                    </div>
+                </div>
+            </div>
+        {{/if}}
+    </div>
+</Modal::Default>

@@ -43,8 +43,9 @@ class TrackingIntelligenceService
     protected function buildResult(TrackingContext $context, TrackingProviderResult $providerResult, TrackingOptions $options): array
     {
         $now               = now();
-        $completionSeconds = $providerResult->durationInTrafficSeconds ?? $providerResult->durationSeconds;
-        $activeStopSeconds = data_get($providerResult->legs, '0.duration_in_traffic_s', data_get($providerResult->legs, '0.duration_s', $completionSeconds));
+        $isTerminal        = in_array($context->order->status, ['completed', 'canceled'], true) || $context->remainingStops->isEmpty();
+        $completionSeconds = $isTerminal ? null : ($providerResult->durationInTrafficSeconds ?? $providerResult->durationSeconds);
+        $activeStopSeconds = $isTerminal ? null : data_get($providerResult->legs, '0.duration_in_traffic_s', data_get($providerResult->legs, '0.duration_s', $completionSeconds));
         $progress          = $this->progress($context, $providerResult);
         $warnings          = array_values(array_unique([...$context->warnings, ...$providerResult->warnings]));
 
@@ -73,7 +74,7 @@ class TrackingIntelligenceService
                 'duration_in_traffic_s' => $providerResult->durationInTrafficSeconds,
                 'polyline'              => $providerResult->polyline,
                 'coordinates'           => $providerResult->coordinates,
-                'legs'                  => $this->legs($context, $providerResult, $now),
+                'legs'                  => $this->legs($context, $providerResult, $now, $isTerminal),
             ],
             'eta'               => [
                 'active_stop_seconds' => $activeStopSeconds,
@@ -107,17 +108,17 @@ class TrackingIntelligenceService
         ];
     }
 
-    protected function legs(TrackingContext $context, TrackingProviderResult $providerResult, Carbon $now): array
+    protected function legs(TrackingContext $context, TrackingProviderResult $providerResult, Carbon $now, bool $isTerminal = false): array
     {
         $elapsedSeconds = 0;
 
-        return collect($providerResult->legs)->map(function ($leg, $index) use ($context, $now, &$elapsedSeconds) {
+        return collect($providerResult->legs)->map(function ($leg, $index) use ($context, $now, $isTerminal, &$elapsedSeconds) {
             $stop        = $context->remainingStops->values()->get($index);
             $legSeconds  = data_get($leg, 'duration_in_traffic_s', data_get($leg, 'duration_s'));
             $etaSeconds  = null;
             $etaAt       = null;
 
-            if ($legSeconds !== null) {
+            if (!$isTerminal && $stop instanceof TrackingStop && $legSeconds !== null) {
                 $elapsedSeconds += (float) $legSeconds;
                 $etaSeconds = $elapsedSeconds;
                 $etaAt      = $this->addSeconds($now, $etaSeconds);

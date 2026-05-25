@@ -7,6 +7,6 @@ export default class PlaceAddressComponent extends Component {
     }
 
     get addressHtml() {
-        return placeAddressHtml(this.place);
+        return placeAddressHtml(this.place, { showTitle: this.args.showTitle });
     }
 }

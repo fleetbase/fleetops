@@ -23,6 +23,7 @@ use Fleetbase\FleetOps\Models\Place;
 use Fleetbase\FleetOps\Models\Proof;
 use Fleetbase\FleetOps\Models\ServiceQuote;
 use Fleetbase\FleetOps\Models\Waypoint;
+use Fleetbase\FleetOps\Support\ResolvesOrderServiceStops;
 use Fleetbase\FleetOps\Support\Utils;
 use Fleetbase\Http\Controllers\Controller;
 use Fleetbase\Http\Resources\Comment as CommentResource;
@@ -43,6 +44,8 @@ use Illuminate\Validation\ValidationException;
 
 class OrderController extends Controller
 {
+    use ResolvesOrderServiceStops;
+
     /**
      * Creates a new Fleetbase Order resource.
      *
@@ -1043,7 +1046,17 @@ class OrderController extends Controller
         // if string $id
         if (!$order) {
             try {
-                $order = Order::findRecordOrFail($id, ['driverAssigned', 'payload.entities', 'payload.currentWaypoint', 'payload.waypoints']);
+                $order = Order::findRecordOrFail($id, [
+                    'driverAssigned',
+                    'payload.entities',
+                    'payload.pickup',
+                    'payload.dropoff',
+                    'payload.return',
+                    'payload.currentWaypoint',
+                    'payload.waypoints',
+                    'payload.waypointMarkers.place',
+                    'payload.waypointMarkers.trackingNumber.status',
+                ]);
             } catch (ModelNotFoundException $exception) {
                 return response()->apiError('Order resource not found.', 404);
             }
@@ -1094,37 +1107,8 @@ class OrderController extends Controller
         /** @var \Fleetbase\LaravelMysqlSpatial\Types\Point */
         $location = $order->getLastLocation();
 
-        // Check if multiple waypoint order to update activity for
-        $isMultipleWaypointOrder = (bool) $order->payload->isMultipleDropOrder;
-
-        // if is multi drop order and no current destination set it
-        if ($isMultipleWaypointOrder && !$order->payload->current_waypoint_uuid) {
-            $order->payload->setFirstWaypoint($activity, $location);
-        }
-
-        // Handle multiple dropoff waypoint activity
-        if (Utils::isActivity($activity) && $activity->completesOrder() && $isMultipleWaypointOrder) {
-            // Check if every waypoint is completed
-            $isCompleted = $order->payload->waypointMarkers->every(function ($waypoint) {
-                return $waypoint->complete;
-            });
-
-            // only update activity for waypoint
-            if (!$isCompleted) {
-                $order->payload->updateWaypointActivity($activity, $location, $proof);
-                $order->payload->setNextWaypointDestination();
-                $order->payload->load('waypointMarkers');
-
-                // recheck if order is completed
-                $isFullyCompleted = $order->payload->waypointMarkers->every(function ($waypoint) {
-                    return $waypoint->complete;
-                });
-
-                if (!$isFullyCompleted) {
-                    return new OrderResource($order);
-                }
-            }
-        }
+        // Check if multiple waypoint order to update activity for.
+        $isMultipleWaypointOrder = $this->payloadHasWaypoints($order->payload);
 
         // also update for each order entities if not multiple drop order
         // all entities will share the same activity status as is one drop order
@@ -1136,23 +1120,48 @@ class OrderController extends Controller
             foreach ($order->payload->entities as $entity) {
                 $entity->insertActivity($activity, $location, $proof);
             }
-        } else {
-            // Update parent order when status is `dispatched` or `started`
-            if (in_array($activity->code, ['started', 'dispatched'])) {
-                $order->updateActivity($activity, $proof);
+            // Handle order completion
+            if (Utils::isActivity($activity) && $activity->completesOrder()) {
+                $order->driverAssigned?->unassignCurrentJob();
+                $order->complete($this->resolveProof($proof));
             }
 
-            $order->payload->updateWaypointActivity($activity, $location);
+            return new OrderResource($order);
         }
 
-        // Handle order completion
+        if ($activity->is('started')) {
+            $order->updateActivity($activity, $proof);
+
+            $this->ensurePayloadCurrentServiceStop($order->payload);
+            if (!$this->payloadHasCurrentServiceStopActivity($order->payload, $activity)) {
+                $this->updateCurrentServiceStopActivity($order, $activity, $location, $proof);
+            }
+
+            return new OrderResource($order->refresh());
+        }
+
+        $currentStop               = $this->ensurePayloadCurrentServiceStop($order->payload);
+        $isCompletingCurrentStop   = Utils::isActivity($activity) && $activity->complete();
+
+        $this->updateCurrentServiceStopActivity($order, $activity, $location, $proof);
+
+        if (Utils::isActivity($activity) && $activity->is('canceled')) {
+            $order->driverAssigned?->unassignCurrentJob();
+            $order->cancel();
+
+            return new OrderResource($order->refresh());
+        }
+
         if (Utils::isActivity($activity) && $activity->completesOrder()) {
-            // unset from driver current job
-            $order->driverAssigned->unassignCurrentJob();
-            $order->complete();
+            $nextStop = $isCompletingCurrentStop ? $this->advanceCurrentServiceStopDestination($order, $order->payload) : null;
+
+            if (!$nextStop || !$currentStop) {
+                $order->driverAssigned?->unassignCurrentJob();
+                $order->complete($this->resolveProof($proof));
+            }
         }
 
-        return new OrderResource($order);
+        return new OrderResource($order->refresh());
     }
 
     /**
@@ -1165,7 +1174,14 @@ class OrderController extends Controller
         $waypointId = $request->input('waypoint');
 
         try {
-            $order = Order::findRecordOrFail($id, ['payload']);
+            $order = Order::findRecordOrFail($id, [
+                'payload.pickup',
+                'payload.dropoff',
+                'payload.return',
+                'payload.waypoints',
+                'payload.waypointMarkers.place',
+                'payload.waypointMarkers.trackingNumber.status',
+            ]);
         } catch (ModelNotFoundException $exception) {
             return response()->json(
                 [
@@ -1175,19 +1191,16 @@ class OrderController extends Controller
             );
         }
 
-        // Get waypoint record if available
-        $waypoint = null;
+        $stop = null;
         if ($waypointId) {
-            $waypoint = Waypoint::where('payload_uuid', $order->payload_uuid)->whereHas('place', function ($query) use ($waypointId) {
-                $query->where('public_id', $waypointId);
-            })->first();
+            $stop = $this->resolveServiceStopFromKey($order->payload, $waypointId);
         }
 
         $orderConfig = $order->ensureOrderConfig();
         if (!$orderConfig) {
             return response()->apiError('No order config found for order.');
         }
-        $activities = $orderConfig->nextActivity($waypoint);
+        $activities = $stop ? $this->nextActivitiesForServiceStop($order, $order->payload, $stop) : $orderConfig->nextActivity();
 
         // If activity is to complete order add proof of delivery properties if required
         // This is a temporary fix until activity is updated to handle POD on it's own
@@ -1282,7 +1295,18 @@ class OrderController extends Controller
     public function setDestination(string $id, string $placeId)
     {
         try {
-            $order = Order::findRecordOrFail($id, ['payload.waypoints', 'payload.pickup', 'payload.dropoff', 'driverAssigned', 'vehicleAssigned', 'customer', 'facilitator']);
+            $order = Order::findRecordOrFail($id, [
+                'payload.pickup',
+                'payload.dropoff',
+                'payload.return',
+                'payload.waypoints',
+                'payload.waypointMarkers.place',
+                'payload.waypointMarkers.trackingNumber.status',
+                'driverAssigned',
+                'vehicleAssigned',
+                'customer',
+                'facilitator',
+            ]);
         } catch (ModelNotFoundException $exception) {
             return response()->apiError('Order resource not found.', 404);
         }
@@ -1290,17 +1314,13 @@ class OrderController extends Controller
         // Get the order payload
         $payload = $order->payload;
 
-        // Resolve the place
-        $place = $payload->waypoints->firstWhere('public_id', $placeId)
-            ?? (($payload->pickup && $payload->pickup->public_id === $placeId) ? $payload->pickup : null)
-            ?? (($payload->dropoff && $payload->dropoff->public_id === $placeId) ? $payload->dropoff : null);
-
-        if (!$place) {
+        $stop = $this->resolveServiceStopFromKey($payload, $placeId);
+        if (!$stop) {
             return response()->apiError('Place resource is not a valid destination.', 422);
         }
 
         // Persist destination choice
-        $payload->setCurrentWaypoint($place);
+        $this->setPayloadCurrentServiceStop($payload, $stop);
 
         return new OrderResource($order->refresh());
     }
@@ -1385,7 +1405,7 @@ class OrderController extends Controller
 
         // Load Order
         try {
-            $order = Order::findRecordOrFail($id);
+            $order = Order::findRecordOrFail($id, ['payload.pickup', 'payload.dropoff', 'payload.return', 'payload.waypoints', 'payload.waypointMarkers.place']);
         } catch (ModelNotFoundException $e) {
             return response()->apiError('Order resource not found.', 404);
         }
@@ -1580,7 +1600,7 @@ class OrderController extends Controller
 
         // Load Order
         try {
-            $order = Order::findRecordOrFail($id);
+            $order = Order::findRecordOrFail($id, ['payload.pickup', 'payload.dropoff', 'payload.return', 'payload.waypoints', 'payload.waypointMarkers.place']);
         } catch (ModelNotFoundException $e) {
             return response()->apiError('Order resource not found.', 404);
         }
@@ -1676,6 +1696,13 @@ class OrderController extends Controller
     {
         if (!$type) {
             return $order;
+        }
+
+        if (in_array($type, ['place', 'waypoint'], true)) {
+            $stop = $this->resolveServiceStopFromKey($order->payload, $subjectId);
+            if ($stop) {
+                return ($stop['waypoint'] ?? null) instanceof Waypoint ? $stop['waypoint'] : ($stop['place'] ?? $order);
+            }
         }
 
         return match ($type) {
