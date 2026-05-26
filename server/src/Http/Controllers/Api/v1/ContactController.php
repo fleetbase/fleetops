@@ -39,6 +39,10 @@ class ContactController extends Controller
         }
 
         try {
+            $contactCandidate               = new Contact($input);
+            $contactCandidate->company_uuid = session('company');
+            $contactCandidate->assertCustomerIdentityIsAvailable();
+
             // create the contact
             $contact = Contact::updateOrCreate(
                 [
@@ -106,8 +110,19 @@ class ContactController extends Controller
             }
         }
 
-        // update the contact
-        $contact->update($input);
+        try {
+            // update the contact
+            $contactCandidate = $contact->replicate();
+            $contactCandidate->forceFill($contact->getAttributes());
+            $contactCandidate->exists = $contact->exists;
+            $contactCandidate->forceFill($input);
+            $contactCandidate->assertCustomerIdentityIsAvailable();
+
+            $contact->update($input);
+        } catch (\Exception $e) {
+            return response()->apiError($e->getMessage());
+        }
+
         $contact->flushAttributesCache();
 
         // response the contact resource

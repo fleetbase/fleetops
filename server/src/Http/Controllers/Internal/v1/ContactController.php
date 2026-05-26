@@ -28,6 +28,7 @@ class ContactController extends FleetOpsController
     public function onBeforeCreate(Request $request, array &$input)
     {
         $this->resolveUserInput($request, $input);
+        $this->assertCustomerIdentityIsAvailable($input);
     }
 
     /**
@@ -40,6 +41,7 @@ class ContactController extends FleetOpsController
         }
 
         $this->resolveUserInput($request, $input);
+        $this->assertCustomerIdentityIsAvailable($input, $contact);
     }
 
     /**
@@ -145,5 +147,22 @@ class ContactController extends FleetOpsController
 
         $input['user_uuid'] = User::where('uuid', $user)->orWhere('public_id', $user)->value('uuid') ?? $user;
         unset($input['user']);
+    }
+
+    private function assertCustomerIdentityIsAvailable(array $input, ?Contact $contact = null): void
+    {
+        $type = data_get($input, 'type', $contact?->type);
+        if ($type !== 'customer') {
+            return;
+        }
+
+        $customer = $contact ? $contact->replicate() : new Contact();
+        if ($contact) {
+            $customer->forceFill($contact->getAttributes());
+            $customer->exists = $contact->exists;
+        }
+
+        $customer->forceFill($input);
+        $customer->assertCustomerIdentityIsAvailable();
     }
 }

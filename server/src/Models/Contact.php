@@ -3,6 +3,7 @@
 namespace Fleetbase\FleetOps\Models;
 
 use Fleetbase\Casts\Json;
+use Fleetbase\FleetOps\Exceptions\CustomerUserConflictException;
 use Fleetbase\FleetOps\Exceptions\UserAlreadyExistsException;
 use Fleetbase\FleetOps\Support\Utils;
 use Fleetbase\Models\CompanyUser;
@@ -319,7 +320,12 @@ class Contact extends Model
         // Check if user already exist with email or phone number
         $existingUser = null;
         if ($contact->email || $contact->phone) {
-            $existingUser = User::where('company_uuid', $contact->company_uuid)
+            $existingUser = User::where(function ($query) use ($contact) {
+                $query->where('company_uuid', $contact->company_uuid)
+                    ->orWhereHas('companyUsers', function ($query) use ($contact) {
+                        $query->where('company_uuid', $contact->company_uuid);
+                    });
+            })
                 ->where(function ($query) use ($contact) {
                     if ($contact->email) {
                         $query->where('email', $contact->email);
@@ -335,15 +341,15 @@ class Contact extends Model
         }
 
         if ($existingUser) {
+            if ($contact->isCustomer()) {
+                $contact->assertCustomerUserCanBeAssigned($existingUser);
+            }
+
             // Check if existing user belongs to another contact
             $existingUserContact = Contact::where(['user_uuid' => $existingUser->uuid, 'company_uuid' => $contact->company_uuid])->whereHas('user')->first();
             if ($existingUserContact) {
                 throw new UserAlreadyExistsException('User already exists, try to assigning the user to this contact.', $existingUser);
             } else {
-                if ($contact->isCustomer()) {
-                    $contact->normalizeCustomerUser($existingUser);
-                }
-
                 // Assign the user to this contact instead
                 $contact->setAttribute('user_uuid', $existingUser->uuid);
                 if ($update) {
@@ -423,13 +429,7 @@ class Contact extends Model
             return null;
         }
 
-        if ($user->type !== 'customer') {
-            if ($quiet) {
-                $user->forceFill(['type' => 'customer'])->saveQuietly();
-            } else {
-                $user->setType('customer');
-            }
-        }
+        $this->assertCustomerUserCanBeAssigned($user);
 
         $this->loadMissing('company');
         if ($this->company) {
@@ -512,8 +512,17 @@ class Contact extends Model
         // Load company
         $this->loadMissing('company');
 
-        if ($this->isCustomer() && $user->type !== 'customer') {
-            $user->setType('customer');
+        if ($this->isCustomer()) {
+            $this->assertCustomerUserCanBeAssigned($user);
+
+            $existingUserContact = static::where(['user_uuid' => $user->uuid, 'company_uuid' => $this->company_uuid])
+                ->whereNot('uuid', $this->uuid)
+                ->whereHas('user')
+                ->first();
+
+            if ($existingUserContact) {
+                throw new UserAlreadyExistsException('User already exists, try to assigning the user to this contact.', $user);
+            }
         }
 
         // Assing to company
@@ -549,6 +558,74 @@ class Contact extends Model
         $this->setRelation('user', $user);
 
         return $this;
+    }
+
+    public function assertCustomerIdentityIsAvailable(): void
+    {
+        if (!$this->isCustomer()) {
+            return;
+        }
+
+        $assignedUser = $this->getAssignedUserWithoutTypeScope();
+        if ($assignedUser) {
+            $this->assertCustomerUserCanBeAssigned($assignedUser);
+        }
+
+        $matchedUser = $this->findExistingUserByIdentity();
+        if ($matchedUser && $matchedUser->uuid !== $this->user_uuid) {
+            $this->assertCustomerUserCanBeAssigned($matchedUser);
+        }
+    }
+
+    public function assertCustomerUserCanBeAssigned(User $user): void
+    {
+        if ($user->type === 'customer') {
+            return;
+        }
+
+        throw new CustomerUserConflictException(static::customerUserConflictMessage($user), $user);
+    }
+
+    public static function customerUserConflictMessage(?User $user = null): string
+    {
+        $field = $user?->email ? 'email' : ($user?->phone ? 'phone number' : 'user account');
+
+        return 'This ' . $field . ' belongs to an existing staff user and cannot be used for a customer account.';
+    }
+
+    private function findExistingUserByIdentity(): ?User
+    {
+        if (!$this->email && !$this->phone) {
+            return null;
+        }
+
+        return User::where(function ($query) {
+            $query->where('company_uuid', $this->company_uuid)
+                ->orWhereHas('companyUsers', function ($query) {
+                    $query->where('company_uuid', $this->company_uuid);
+                });
+        })
+            ->where(function ($query) {
+                if ($this->email) {
+                    $query->where('email', $this->email);
+                }
+
+                if ($this->phone) {
+                    $method = $this->email ? 'orWhere' : 'where';
+                    $query->{$method}('phone', Utils::formatPhoneNumber($this->phone));
+                }
+            })
+            ->whereNull('deleted_at')
+            ->first();
+    }
+
+    private function getAssignedUserWithoutTypeScope(): ?User
+    {
+        if (!Str::isUuid($this->user_uuid)) {
+            return null;
+        }
+
+        return User::where('uuid', $this->user_uuid)->first();
     }
 
     public function syncWithUser(): bool

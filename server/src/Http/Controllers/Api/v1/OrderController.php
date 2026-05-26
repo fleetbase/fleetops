@@ -5,6 +5,7 @@ namespace Fleetbase\FleetOps\Http\Controllers\Api\v1;
 use Fleetbase\FleetOps\Events\OrderDispatchFailed;
 use Fleetbase\FleetOps\Events\OrderReady;
 use Fleetbase\FleetOps\Events\OrderStarted;
+use Fleetbase\FleetOps\Exceptions\CustomerUserConflictException;
 use Fleetbase\FleetOps\Exceptions\UserAlreadyExistsException;
 use Fleetbase\FleetOps\Flow\Activity;
 use Fleetbase\FleetOps\Http\Requests\CreateOrderRequest;
@@ -254,6 +255,13 @@ class OrderController extends Controller
                 $customer = Arr::only($customer, ['internal_id', 'name', 'title', 'email', 'phone', 'meta']);
 
                 try {
+                    $customerCandidate = new Contact([
+                        ...$customer,
+                        'company_uuid' => session('company'),
+                        'type'         => 'customer',
+                    ]);
+                    $customerCandidate->assertCustomerIdentityIsAvailable();
+
                     $customer = Contact::firstOrCreate(
                         [
                             'company_uuid' => session('company'),
@@ -266,19 +274,12 @@ class OrderController extends Controller
                             'type'         => 'customer',
                         ]
                     );
+                } catch (CustomerUserConflictException $e) {
+                    return response()->apiError($e->getMessage());
+                } catch (UserAlreadyExistsException $e) {
+                    return response()->apiError($e->getMessage());
                 } catch (\Exception $e) {
                     return response()->apiError('Failed to find or create customer for order.');
-                } catch (UserAlreadyExistsException $e) {
-                    try {
-                        // If user already exist then assign user to this customer and the company
-                        $existingUser = $e->getUser();
-                        // Assign user to customer
-                        if ($existingUser && $customer) {
-                            $customer->assignUser($existingUser);
-                        }
-                    } catch (\Exception $e) {
-                        return response()->apiError('Failed to find or create customer for order.');
-                    }
                 }
 
                 if (Str::isUuid($customer)) {
