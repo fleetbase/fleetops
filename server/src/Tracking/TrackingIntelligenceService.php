@@ -8,6 +8,8 @@ use Illuminate\Support\Facades\Cache;
 
 class TrackingIntelligenceService
 {
+    protected const TERMINAL_STATUSES = ['completed', 'canceled'];
+
     public function __construct(
         protected TrackingContextBuilder $contextBuilder,
         protected TrackingProviderManager $providerManager,
@@ -34,20 +36,28 @@ class TrackingIntelligenceService
             'completion_seconds'  => data_get($tracker, 'eta.completion_seconds'),
             'active_stop_at'      => data_get($tracker, 'eta.active_stop_at'),
             'completion_at'       => data_get($tracker, 'eta.completion_at'),
+            'start_seconds'       => data_get($tracker, 'eta.start_seconds'),
+            'start_at'            => data_get($tracker, 'eta.start_at'),
             'provider'            => data_get($tracker, 'provider'),
             'confidence'          => data_get($tracker, 'confidence'),
+            'lifecycle'           => data_get($tracker, 'lifecycle'),
             'warnings'            => data_get($tracker, 'warnings', []),
         ];
     }
 
     protected function buildResult(TrackingContext $context, TrackingProviderResult $providerResult, TrackingOptions $options): array
     {
-        $now               = now();
-        $isTerminal        = in_array($context->order->status, ['completed', 'canceled'], true) || $context->remainingStops->isEmpty();
-        $completionSeconds = $isTerminal ? null : ($providerResult->durationInTrafficSeconds ?? $providerResult->durationSeconds);
-        $activeStopSeconds = $isTerminal ? null : data_get($providerResult->legs, '0.duration_in_traffic_s', data_get($providerResult->legs, '0.duration_s', $completionSeconds));
-        $progress          = $this->progress($context, $providerResult);
-        $warnings          = array_values(array_unique([...$context->warnings, ...$providerResult->warnings]));
+        $now                  = now();
+        $rawCompletionSeconds = $providerResult->durationInTrafficSeconds ?? $providerResult->durationSeconds;
+        $rawActiveStopSeconds = data_get($providerResult->legs, '0.duration_in_traffic_s', data_get($providerResult->legs, '0.duration_s', $rawCompletionSeconds));
+        $lifecycle            = $this->lifecycle($context, $rawActiveStopSeconds, $now);
+        $showsLiveEta         = (bool) data_get($lifecycle, 'show_live_eta');
+        $showsStartEta        = (bool) data_get($lifecycle, 'show_start_eta');
+        $completionSeconds    = $showsLiveEta ? $rawCompletionSeconds : null;
+        $activeStopSeconds    = $showsLiveEta ? $rawActiveStopSeconds : null;
+        $startSeconds         = $showsStartEta ? $rawActiveStopSeconds : null;
+        $progress             = $this->progress($context, $providerResult);
+        $warnings             = array_values(array_unique([...$context->warnings, ...$providerResult->warnings]));
 
         if ($providerResult->confidence === 'low') {
             $warnings[] = 'low_confidence_eta';
@@ -65,6 +75,7 @@ class TrackingIntelligenceService
                 'online'               => (bool) data_get($context->driver, 'online', false),
             ],
             'progress'          => $progress,
+            'lifecycle'         => $lifecycle,
             'stops'             => $context->stops->map(fn (TrackingStop $stop) => $stop->toArray())->values()->all(),
             'active_stop'       => $context->activeStop?->toArray(),
             'next_stop'         => $context->nextStop?->toArray(),
@@ -74,13 +85,15 @@ class TrackingIntelligenceService
                 'duration_in_traffic_s' => $providerResult->durationInTrafficSeconds,
                 'polyline'              => $providerResult->polyline,
                 'coordinates'           => $providerResult->coordinates,
-                'legs'                  => $this->legs($context, $providerResult, $now, $isTerminal),
+                'legs'                  => $this->legs($context, $providerResult, $now, $showsLiveEta),
             ],
             'eta'               => [
                 'active_stop_seconds' => $activeStopSeconds,
                 'completion_seconds'  => $completionSeconds,
                 'active_stop_at'      => $this->addSeconds($now, $activeStopSeconds),
                 'completion_at'       => $this->addSeconds($now, $completionSeconds),
+                'start_seconds'       => $startSeconds,
+                'start_at'            => $this->addSeconds($now, $startSeconds),
             ],
             'insights'          => [
                 'is_delayed'          => false,
@@ -108,17 +121,17 @@ class TrackingIntelligenceService
         ];
     }
 
-    protected function legs(TrackingContext $context, TrackingProviderResult $providerResult, Carbon $now, bool $isTerminal = false): array
+    protected function legs(TrackingContext $context, TrackingProviderResult $providerResult, Carbon $now, bool $showsLiveEta = true): array
     {
         $elapsedSeconds = 0;
 
-        return collect($providerResult->legs)->map(function ($leg, $index) use ($context, $now, $isTerminal, &$elapsedSeconds) {
+        return collect($providerResult->legs)->map(function ($leg, $index) use ($context, $now, $showsLiveEta, &$elapsedSeconds) {
             $stop        = $context->remainingStops->values()->get($index);
             $legSeconds  = data_get($leg, 'duration_in_traffic_s', data_get($leg, 'duration_s'));
             $etaSeconds  = null;
             $etaAt       = null;
 
-            if (!$isTerminal && $stop instanceof TrackingStop && $legSeconds !== null) {
+            if ($showsLiveEta && $stop instanceof TrackingStop && $legSeconds !== null) {
                 $elapsedSeconds += (float) $legSeconds;
                 $etaSeconds = $elapsedSeconds;
                 $etaAt      = $this->addSeconds($now, $etaSeconds);
@@ -130,6 +143,92 @@ class TrackingIntelligenceService
                 'eta_at'      => $etaAt,
             ]);
         })->all();
+    }
+
+    protected function lifecycle(TrackingContext $context, ?float $startSeconds, Carbon $now): array
+    {
+        $order             = $context->order;
+        $status            = strtolower((string) ($order->status ?? 'created'));
+        $hasAssignedDriver = !empty($order->driver_assigned_uuid);
+        $hasStarted        = $this->hasOrderStarted($order);
+        $isTerminal        = in_array($status, self::TERMINAL_STATUSES, true);
+        $isDispatched      = $status === 'dispatched' || (bool) $order->dispatched;
+
+        if ($isTerminal) {
+            return [
+                'status'        => $status,
+                'mode'          => $status,
+                'message'       => $status === 'completed' ? 'Order has been completed.' : 'Order has been canceled.',
+                'is_terminal'   => true,
+                'has_started'   => $hasStarted,
+                'show_live_eta' => false,
+                'show_start_eta' => false,
+            ];
+        }
+
+        if (!$hasAssignedDriver) {
+            return [
+                'status'        => $status,
+                'mode'          => 'unassigned',
+                'message'       => 'Assign a driver to start live tracking and improve ETA accuracy.',
+                'is_terminal'   => false,
+                'has_started'   => $hasStarted,
+                'show_live_eta' => false,
+                'show_start_eta' => false,
+            ];
+        }
+
+        if (!$hasStarted && $isDispatched) {
+            return [
+                'status'        => $status,
+                'mode'          => 'dispatched',
+                'message'       => 'Order has been dispatched. Estimated start is based on the assigned driver route to the first stop.',
+                'is_terminal'   => false,
+                'has_started'   => false,
+                'show_live_eta' => false,
+                'show_start_eta' => $startSeconds !== null,
+                'start_at'      => $this->addSeconds($now, $startSeconds),
+            ];
+        }
+
+        if (!$hasStarted) {
+            return [
+                'status'        => $status,
+                'mode'          => 'pre_start',
+                'message'       => 'Live ETA will begin once the order is started.',
+                'is_terminal'   => false,
+                'has_started'   => false,
+                'show_live_eta' => false,
+                'show_start_eta' => false,
+            ];
+        }
+
+        return [
+            'status'        => $status,
+            'mode'          => 'active',
+            'message'       => null,
+            'is_terminal'   => false,
+            'has_started'   => true,
+            'show_live_eta' => true,
+            'show_start_eta' => false,
+        ];
+    }
+
+    protected function hasOrderStarted(Order $order): bool
+    {
+        if ((bool) $order->started || $order->started_at || strtolower((string) $order->status) === 'started') {
+            return true;
+        }
+
+        try {
+            if ($order->relationLoaded('trackingStatuses')) {
+                return $order->trackingStatuses->contains(fn ($status) => strtolower((string) data_get($status, 'code')) === 'started');
+            }
+
+            return $order->trackingStatuses()->whereRaw('LOWER(code) = ?', ['started'])->exists();
+        } catch (\Throwable) {
+            return false;
+        }
     }
 
     protected function capabilitiesFor(string $provider): array

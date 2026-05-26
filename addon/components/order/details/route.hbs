@@ -28,19 +28,23 @@
         <div>
             <RouteList
                 @order={{@resource}}
-                @eta={{@resource.eta}}
-                @waypointActions={{hash viewStopActivity=(hash label="View activity" fn=this.viewStopActivity) viewWaypointLabel=(hash label=(t "order.fields.get-label") fn=this.viewWaypointLabel)}}
+                @eta={{if this.showRouteEtaData @resource.eta}}
+                @showEta={{this.showRouteEtaData}}
+                @waypointActions={{hash
+                    viewStopActivity=(hash label="View activity" fn=this.viewStopActivity)
+                    viewWaypointLabel=(hash label=(t "order.fields.get-label") fn=this.viewWaypointLabel)
+                }}
             />
         </div>
     {{else}}
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-2">
             <div class="field-info-container">
                 <label class="field-name">{{t "order.fields.pickup"}}</label>
-                <DisplayPlace @place={{@resource.payload.pickup}} @eta={{get @resource.eta @resource.payload.pickup.id}} />
+                <DisplayPlace @place={{@resource.payload.pickup}} @eta={{if this.showRouteEtaData (get @resource.eta @resource.payload.pickup.id)}} />
             </div>
             <div class="field-info-container">
                 <label class="field-name">{{t "order.fields.dropoff"}}</label>
-                <DisplayPlace @place={{@resource.payload.dropoff}} @eta={{get @resource.eta @resource.payload.dropoff.id}} />
+                <DisplayPlace @place={{@resource.payload.dropoff}} @eta={{if this.showRouteEtaData (get @resource.eta @resource.payload.dropoff.id)}} />
             </div>
             <div class="field-info-container">
                 <label class="field-name">{{t "order.fields.return"}}</label>

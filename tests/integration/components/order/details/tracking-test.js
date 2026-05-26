@@ -25,6 +25,8 @@ module('Integration | Component | order/details/tracking', function (hooks) {
         return {
             tracking: 'FLE2177254646SG',
             public_id: 'order_test',
+            status: 'started',
+            started: true,
             driver_assigned_uuid: 'driver_1',
             driver_assigned: {
                 id: 'driver_1',
@@ -51,6 +53,17 @@ module('Integration | Component | order/details/tracking', function (hooks) {
                 eta: {
                     active_stop_seconds: 900,
                     completion_at: '2026-05-12T04:49:26.000000Z',
+                    start_seconds: null,
+                    start_at: null,
+                },
+                lifecycle: {
+                    status: 'started',
+                    mode: 'active',
+                    has_started: true,
+                    is_terminal: false,
+                    show_live_eta: true,
+                    show_start_eta: false,
+                    message: null,
                 },
                 active_stop: {
                     uuid: 'stop_1',
@@ -214,5 +227,163 @@ module('Integration | Component | order/details/tracking', function (hooks) {
         await click('.tracking-intelligence-alert__cta');
 
         assert.strictEqual(this.assignedDriverOrder, order);
+    });
+
+    test('it hides live eta before the order is started', async function (assert) {
+        this.set(
+            'order',
+            buildOrder({
+                status: 'created',
+                started: false,
+                tracker_data: {
+                    eta: {
+                        active_stop_seconds: null,
+                        completion_at: null,
+                    },
+                    lifecycle: {
+                        status: 'created',
+                        mode: 'pre_start',
+                        has_started: false,
+                        is_terminal: false,
+                        show_live_eta: false,
+                        show_start_eta: false,
+                        message: 'Live ETA will begin once the order is started.',
+                    },
+                },
+            })
+        );
+
+        await render(hbs`<Order::Details::Tracking @resource={{this.order}} />`);
+
+        assert.dom().containsText('Tracking pending start');
+        assert.dom().containsText('Live ETA will begin once the order is started.');
+        assert.dom().doesNotContainText('Smart adjusted ETA');
+        assert.dom().doesNotContainText('Reported ETA');
+        assert.dom().doesNotContainText('ETA confidence');
+    });
+
+    test('it shows estimated start eta for dispatched orders', async function (assert) {
+        this.set(
+            'order',
+            buildOrder({
+                status: 'dispatched',
+                started: false,
+                tracker_data: {
+                    eta: {
+                        active_stop_seconds: null,
+                        completion_at: null,
+                        start_seconds: 720,
+                        start_at: '2026-05-12T04:01:26.000000Z',
+                    },
+                    lifecycle: {
+                        status: 'dispatched',
+                        mode: 'dispatched',
+                        has_started: false,
+                        is_terminal: false,
+                        show_live_eta: false,
+                        show_start_eta: true,
+                        message: 'Order has been dispatched. Estimated start is based on the assigned driver route to the first stop.',
+                    },
+                },
+            })
+        );
+
+        await render(hbs`<Order::Details::Tracking @resource={{this.order}} />`);
+
+        assert.dom().containsText('Order dispatched');
+        assert.dom().containsText('Estimated start');
+        assert.dom().containsText('Based on the assigned driver route to the first stop');
+        assert.dom().doesNotContainText('Smart adjusted ETA');
+        assert.dom().doesNotContainText('Reported ETA');
+    });
+
+    test('it shows terminal messages instead of eta data', async function (assert) {
+        this.set(
+            'order',
+            buildOrder({
+                status: 'completed',
+                tracker_data: {
+                    eta: {
+                        active_stop_seconds: null,
+                        completion_at: null,
+                    },
+                    lifecycle: {
+                        status: 'completed',
+                        mode: 'completed',
+                        has_started: true,
+                        is_terminal: true,
+                        show_live_eta: false,
+                        show_start_eta: false,
+                        message: 'Order has been completed.',
+                    },
+                },
+            })
+        );
+
+        await render(hbs`<Order::Details::Tracking @resource={{this.order}} />`);
+
+        assert.dom().containsText('Order completed');
+        assert.dom().containsText('Order has been completed.');
+        assert.dom().doesNotContainText('Smart adjusted ETA');
+        assert.dom().doesNotContainText('Reported ETA');
+        assert.dom().doesNotContainText('ETA confidence');
+    });
+
+    test('it shows canceled terminal messages instead of eta data', async function (assert) {
+        this.set(
+            'order',
+            buildOrder({
+                status: 'canceled',
+                tracker_data: {
+                    eta: {
+                        active_stop_seconds: null,
+                        completion_at: null,
+                    },
+                    lifecycle: {
+                        status: 'canceled',
+                        mode: 'canceled',
+                        has_started: false,
+                        is_terminal: true,
+                        show_live_eta: false,
+                        show_start_eta: false,
+                        message: 'Order has been canceled.',
+                    },
+                },
+            })
+        );
+
+        await render(hbs`<Order::Details::Tracking @resource={{this.order}} />`);
+
+        assert.dom().containsText('Order canceled');
+        assert.dom().containsText('Order has been canceled.');
+        assert.dom().doesNotContainText('Smart adjusted ETA');
+        assert.dom().doesNotContainText('Reported ETA');
+    });
+
+    test('it keeps eta visible for custom activity after start', async function (assert) {
+        this.set(
+            'order',
+            buildOrder({
+                status: 'arrived_at_pickup',
+                started: true,
+                tracker_data: {
+                    lifecycle: {
+                        status: 'arrived_at_pickup',
+                        mode: 'active',
+                        has_started: true,
+                        is_terminal: false,
+                        show_live_eta: true,
+                        show_start_eta: false,
+                        message: null,
+                    },
+                },
+            })
+        );
+
+        await render(hbs`<Order::Details::Tracking @resource={{this.order}} />`);
+
+        assert.dom().containsText('Smart adjusted ETA');
+        assert.dom().containsText('Reported ETA');
+        assert.dom().containsText('NOW HEADING TO - STOP 2 OF 3');
     });
 });

@@ -87,6 +87,17 @@ export default class OrderDetailsRouteComponent extends Component {
         return this.args.resource?.tracker_data;
     }
 
+    get showRouteEtaData() {
+        if (this.trackerData?.lifecycle?.show_live_eta !== undefined) {
+            return Boolean(this.trackerData.lifecycle.show_live_eta);
+        }
+
+        const status = String(this.args.resource?.status ?? 'created').toLowerCase();
+        const hasStarted = Boolean(this.args.resource?.started ?? this.args.resource?.started_at ?? status === 'started');
+
+        return hasStarted && !['completed', 'canceled'].includes(status);
+    }
+
     get hasTrackingRouteSummary() {
         return Boolean(this.trackerData?.route || this.trackerData?.eta);
     }
@@ -96,7 +107,7 @@ export default class OrderDetailsRouteComponent extends Component {
     }
 
     get hasCompletionEta() {
-        return Boolean(this.trackerData?.eta?.completion_at);
+        return this.showRouteEtaData && Boolean(this.trackerData?.eta?.completion_at);
     }
 
     get routeStopsCount() {
@@ -104,10 +115,14 @@ export default class OrderDetailsRouteComponent extends Component {
     }
 
     get hasTrackingDuration() {
-        return this.trackerData?.route?.duration_in_traffic_s !== null && this.trackerData?.route?.duration_in_traffic_s !== undefined;
+        return this.showRouteEtaData && this.trackerData?.route?.duration_in_traffic_s !== null && this.trackerData?.route?.duration_in_traffic_s !== undefined;
     }
 
     get trackingDurationSeconds() {
+        if (!this.showRouteEtaData) {
+            return null;
+        }
+
         return this.trackerData?.route?.duration_in_traffic_s ?? this.trackerData?.route?.duration_s;
     }
 

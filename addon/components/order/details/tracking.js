@@ -34,15 +34,150 @@ export default class OrderDetailsTrackingComponent extends Component {
         return Boolean(this.trackerData);
     }
 
+    get lifecycle() {
+        return this.trackerData?.lifecycle ?? {};
+    }
+
+    get lifecycleMode() {
+        if (this.lifecycle.mode) {
+            return this.lifecycle.mode;
+        }
+
+        const status = this.statusCode;
+
+        if (['completed', 'canceled'].includes(status)) {
+            return status;
+        }
+
+        if (!this.hasAssignedDriver) {
+            return 'unassigned';
+        }
+
+        if (!this.hasOrderStarted && status === 'dispatched') {
+            return 'dispatched';
+        }
+
+        if (!this.hasOrderStarted) {
+            return 'pre_start';
+        }
+
+        return 'active';
+    }
+
+    get statusCode() {
+        return String(this.lifecycle.status ?? this.args.resource?.status ?? 'created').toLowerCase();
+    }
+
+    get hasOrderStarted() {
+        return Boolean(this.lifecycle.has_started ?? this.args.resource?.started ?? this.args.resource?.started_at ?? this.statusCode === 'started');
+    }
+
+    get showLiveEta() {
+        if (this.lifecycle.show_live_eta !== undefined) {
+            return Boolean(this.lifecycle.show_live_eta);
+        }
+
+        return this.hasOrderStarted && !this.isTerminalLifecycle;
+    }
+
+    get showStartEta() {
+        if (this.lifecycle.show_start_eta !== undefined) {
+            return Boolean(this.lifecycle.show_start_eta);
+        }
+
+        return this.lifecycleMode === 'dispatched' && this.hasStartEta;
+    }
+
+    get isTerminalLifecycle() {
+        return Boolean(this.lifecycle.is_terminal ?? ['completed', 'canceled'].includes(this.statusCode));
+    }
+
+    get isPreStartLifecycle() {
+        return ['created', 'pre_start'].includes(this.lifecycleMode);
+    }
+
+    get isDispatchedLifecycle() {
+        return this.lifecycleMode === 'dispatched';
+    }
+
+    get lifecycleMessage() {
+        if (this.lifecycleMode === 'unassigned') {
+            return null;
+        }
+
+        return this.lifecycle.message ?? this.defaultLifecycleMessage;
+    }
+
+    get defaultLifecycleMessage() {
+        if (this.statusCode === 'completed') {
+            return 'Order has been completed.';
+        }
+
+        if (this.statusCode === 'canceled') {
+            return 'Order has been canceled.';
+        }
+
+        if (this.isDispatchedLifecycle) {
+            return 'Order has been dispatched. Estimated start is based on the assigned driver route to the first stop.';
+        }
+
+        if (this.isPreStartLifecycle) {
+            return 'Live ETA will begin once the order is started.';
+        }
+
+        return null;
+    }
+
+    get lifecycleMessageTitle() {
+        switch (this.lifecycleMode) {
+            case 'completed':
+                return 'Order completed';
+            case 'canceled':
+                return 'Order canceled';
+            case 'dispatched':
+                return 'Order dispatched';
+            case 'pre_start':
+            case 'created':
+                return 'Tracking pending start';
+            default:
+                return null;
+        }
+    }
+
+    get lifecycleMessageIcon() {
+        switch (this.lifecycleMode) {
+            case 'completed':
+                return 'circle-check';
+            case 'canceled':
+                return 'ban';
+            case 'dispatched':
+                return 'route';
+            default:
+                return 'clock';
+        }
+    }
+
+    get startEtaSeconds() {
+        return this.trackerData?.eta?.start_seconds;
+    }
+
+    get hasStartEta() {
+        return this.startEtaSeconds !== null && this.startEtaSeconds !== undefined;
+    }
+
     get activeEtaSeconds() {
         return this.trackerData?.eta?.active_stop_seconds;
     }
 
     get hasActiveEta() {
-        return this.activeEtaSeconds !== null && this.activeEtaSeconds !== undefined;
+        return this.showLiveEta && this.activeEtaSeconds !== null && this.activeEtaSeconds !== undefined;
     }
 
     get smartAdjustedEtaSeconds() {
+        if (!this.showLiveEta) {
+            return null;
+        }
+
         return (
             this.firstPositiveNumber(this.activeEtaSeconds) ??
             this.firstPositiveNumber(this.trackerData?.route?.duration_in_traffic_s) ??
@@ -69,7 +204,7 @@ export default class OrderDetailsTrackingComponent extends Component {
     }
 
     get hasCompletionEta() {
-        return Boolean(this.trackerData?.eta?.completion_at);
+        return this.showLiveEta && Boolean(this.trackerData?.eta?.completion_at);
     }
 
     get hasRemainingDistance() {
@@ -249,6 +384,10 @@ export default class OrderDetailsTrackingComponent extends Component {
     }
 
     get displayedReportedEtaSeconds() {
+        if (!this.showLiveEta) {
+            return null;
+        }
+
         return (
             this.firstPositiveNumber(this.reportedEtaSeconds) ??
             this.firstPositiveNumber(this.activeEtaSeconds) ??
@@ -266,6 +405,10 @@ export default class OrderDetailsTrackingComponent extends Component {
         const trackerData = this.trackerData;
 
         if (!trackerData) {
+            return false;
+        }
+
+        if (!this.showLiveEta) {
             return false;
         }
 
@@ -399,6 +542,10 @@ export default class OrderDetailsTrackingComponent extends Component {
         const trackerData = this.trackerData;
 
         if (!trackerData) {
+            return null;
+        }
+
+        if (this.isTerminalLifecycle || this.isPreStartLifecycle || this.isDispatchedLifecycle) {
             return null;
         }
 

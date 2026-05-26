@@ -63,6 +63,10 @@ export default class RouteListComponent extends Component {
         return this.args.isCollapsible !== false && this.hasExtraStops;
     }
 
+    get showEta() {
+        return this.args.showEta !== false;
+    }
+
     badgeStyleForStop(routePoint) {
         const { markerColor } = describeRoutePoint(routePoint, this.routeColor);
         const isYellow = markerColor?.toLowerCase?.() === '#facc15' || markerColor?.toLowerCase?.() === '#ca8a04';
@@ -119,7 +123,7 @@ export default class RouteListComponent extends Component {
     shouldShowEtaForStop(stop) {
         const status = this.args.order?.status;
 
-        return !['completed', 'canceled'].includes(status) && !stop.trackingStop?.completed;
+        return this.showEta && !['completed', 'canceled'].includes(status) && !stop.trackingStop?.completed;
     }
 
     @action toggleWaypointsCollapse() {

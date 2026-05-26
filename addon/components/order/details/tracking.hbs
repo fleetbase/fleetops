@@ -45,93 +45,122 @@
                 </div>
             {{/if}}
 
-            <div class="tracking-intelligence__eta-grid">
-                <div class="tracking-intelligence-cell tracking-intelligence-cell--accent">
-                    <div class="tracking-intelligence-cell__label">
-                        Smart adjusted ETA
-                        <span class="tracking-intelligence-tag">Live</span>
+            {{#if this.lifecycleMessage}}
+                <div class="tracking-intelligence-alert">
+                    <div class="tracking-intelligence-alert__icon"><FaIcon @icon={{this.lifecycleMessageIcon}} @size="xs" /></div>
+                    <div class="min-w-0">
+                        <div class="tracking-intelligence-alert__title">{{this.lifecycleMessageTitle}}</div>
+                        <div class="tracking-intelligence-alert__body">{{this.lifecycleMessage}}</div>
                     </div>
-                    <div class="tracking-intelligence-cell__value">
-                        {{#if this.hasSmartAdjustedEta}}
-                            {{format-duration this.smartAdjustedEtaSeconds}}
-                        {{else}}
-                            {{this.smartAdjustedEtaUnavailableLabel}}
-                        {{/if}}
-                    </div>
-                    <div class="tracking-intelligence-cell__sub">Based on provider route and driver signal</div>
                 </div>
-                <div class="tracking-intelligence-cell">
-                    <div class="tracking-intelligence-cell__label">Reported ETA</div>
-                    <div class="tracking-intelligence-cell__value {{if this.isReportedEtaUntrusted 'tracking-intelligence-cell__value--muted'}}">
-                        {{#if this.hasDisplayedReportedEta}}
-                            {{format-duration this.displayedReportedEtaSeconds}}
-                        {{else}}
-                            {{this.etaUnavailableLabel}}
-                        {{/if}}
-                    </div>
-                    <div class="tracking-intelligence-cell__sub {{if this.isReportedEtaUntrusted 'tracking-intelligence-cell__sub--warn'}}">{{this.reportedEtaWarning}}</div>
-                </div>
-            </div>
+            {{/if}}
 
-            <div class="tracking-intelligence-confidence">
-                <div class="tracking-intelligence-confidence__label">ETA confidence</div>
-                <div class="tracking-intelligence-confidence__segments {{this.confidenceToneClass}}">
-                    {{#each this.confidenceSegments as |segment|}}
-                        <span class="{{if segment.lit 'is-lit'}}"></span>
-                    {{/each}}
+            {{#if this.showStartEta}}
+                <div class="tracking-intelligence__eta-grid">
+                    <div class="tracking-intelligence-cell tracking-intelligence-cell--accent">
+                        <div class="tracking-intelligence-cell__label">
+                            Estimated start
+                            <span class="tracking-intelligence-tag">Pre-start</span>
+                        </div>
+                        <div class="tracking-intelligence-cell__value">
+                            {{#if this.hasStartEta}}
+                                {{format-duration this.startEtaSeconds}}
+                            {{else}}
+                                Pending start
+                            {{/if}}
+                        </div>
+                        <div class="tracking-intelligence-cell__sub">Based on the assigned driver route to the first stop</div>
+                    </div>
                 </div>
-                <div class="tracking-intelligence-confidence__value">{{this.confidencePercent}}%</div>
-            </div>
-
-            <div class="tracking-intelligence-destination">
-                <div class="tracking-intelligence-destination__marker">{{this.activeStopMarkerLabel}}</div>
-                <div class="min-w-0 flex-1">
-                    <div class="tracking-intelligence-destination__label">{{this.activeStopLabel}}</div>
-                    <div class="tracking-intelligence-destination__address">{{n-a @resource.tracker_data.active_stop.address}}</div>
-                    <div class="tracking-intelligence-destination__eta">
-                        ETA:
-                        <strong>
-                            {{#if this.hasActiveEta}}
-                                {{format-duration this.activeEtaSeconds}}
+            {{else if this.showLiveEta}}
+                <div class="tracking-intelligence__eta-grid">
+                    <div class="tracking-intelligence-cell tracking-intelligence-cell--accent">
+                        <div class="tracking-intelligence-cell__label">
+                            Smart adjusted ETA
+                            <span class="tracking-intelligence-tag">Live</span>
+                        </div>
+                        <div class="tracking-intelligence-cell__value">
+                            {{#if this.hasSmartAdjustedEta}}
+                                {{format-duration this.smartAdjustedEtaSeconds}}
+                            {{else}}
+                                {{this.smartAdjustedEtaUnavailableLabel}}
+                            {{/if}}
+                        </div>
+                        <div class="tracking-intelligence-cell__sub">Based on provider route and driver signal</div>
+                    </div>
+                    <div class="tracking-intelligence-cell">
+                        <div class="tracking-intelligence-cell__label">Reported ETA</div>
+                        <div class="tracking-intelligence-cell__value {{if this.isReportedEtaUntrusted 'tracking-intelligence-cell__value--muted'}}">
+                            {{#if this.hasDisplayedReportedEta}}
+                                {{format-duration this.displayedReportedEtaSeconds}}
                             {{else}}
                                 {{this.etaUnavailableLabel}}
                             {{/if}}
-                        </strong>
+                        </div>
+                        <div class="tracking-intelligence-cell__sub {{if this.isReportedEtaUntrusted 'tracking-intelligence-cell__sub--warn'}}">{{this.reportedEtaWarning}}</div>
                     </div>
                 </div>
-            </div>
 
-            <div class="tracking-intelligence-distance">
-                <div class="tracking-intelligence-distance__row">
-                    <span>Reported total</span>
-                    <strong>
-                        {{#if this.hasRemainingDistance}}
-                            {{format-meters @resource.tracker_data.route.distance_m}}
-                        {{else}}
-                            -
-                        {{/if}}
-                    </strong>
-                    <div class="tracking-intelligence-distance__bar">
-                        <span style={{this.totalProgressStyle}}></span>
+                <div class="tracking-intelligence-confidence">
+                    <div class="tracking-intelligence-confidence__label">ETA confidence</div>
+                    <div class="tracking-intelligence-confidence__segments {{this.confidenceToneClass}}">
+                        {{#each this.confidenceSegments as |segment|}}
+                            <span class="{{if segment.lit 'is-lit'}}"></span>
+                        {{/each}}
+                    </div>
+                    <div class="tracking-intelligence-confidence__value">{{this.confidencePercent}}%</div>
+                </div>
+
+                <div class="tracking-intelligence-destination">
+                    <div class="tracking-intelligence-destination__marker">{{this.activeStopMarkerLabel}}</div>
+                    <div class="min-w-0 flex-1">
+                        <div class="tracking-intelligence-destination__label">{{this.activeStopLabel}}</div>
+                        <div class="tracking-intelligence-destination__address">{{n-a @resource.tracker_data.active_stop.address}}</div>
+                        <div class="tracking-intelligence-destination__eta">
+                            ETA:
+                            <strong>
+                                {{#if this.hasActiveEta}}
+                                    {{format-duration this.activeEtaSeconds}}
+                                {{else}}
+                                    {{this.etaUnavailableLabel}}
+                                {{/if}}
+                            </strong>
+                        </div>
                     </div>
                 </div>
-                <div class="tracking-intelligence-distance__row">
-                    <span>Between stops</span>
-                    <strong>
-                        {{#if this.hasCurrentLegDistance}}
-                            {{format-meters this.currentLeg.distance_m}}
-                        {{else}}
-                            -
-                        {{/if}}
-                    </strong>
-                    <div class="tracking-intelligence-distance__bar tracking-intelligence-distance__bar--secondary">
-                        <span style={{this.currentLegProgressStyle}}></span>
+
+                <div class="tracking-intelligence-distance">
+                    <div class="tracking-intelligence-distance__row">
+                        <span>Reported total</span>
+                        <strong>
+                            {{#if this.hasRemainingDistance}}
+                                {{format-meters @resource.tracker_data.route.distance_m}}
+                            {{else}}
+                                -
+                            {{/if}}
+                        </strong>
+                        <div class="tracking-intelligence-distance__bar">
+                            <span style={{this.totalProgressStyle}}></span>
+                        </div>
                     </div>
+                    <div class="tracking-intelligence-distance__row">
+                        <span>Between stops</span>
+                        <strong>
+                            {{#if this.hasCurrentLegDistance}}
+                                {{format-meters this.currentLeg.distance_m}}
+                            {{else}}
+                                -
+                            {{/if}}
+                        </strong>
+                        <div class="tracking-intelligence-distance__bar tracking-intelligence-distance__bar--secondary">
+                            <span style={{this.currentLegProgressStyle}}></span>
+                        </div>
+                    </div>
+                    <div class="tracking-intelligence-distance__foot">Provider context:
+                        {{this.providerLabel}}
+                        route</div>
                 </div>
-                <div class="tracking-intelligence-distance__foot">Provider context:
-                    {{this.providerLabel}}
-                    route</div>
-            </div>
+            {{/if}}
 
             <details class="tracking-intelligence-diagnostics">
                 <summary>
