@@ -142,6 +142,7 @@ class ConnectivitySeeder extends Seeder
                 'min_threshold'       => $min,
                 'max_threshold'       => $max,
                 'threshold_inclusive' => true,
+                'last_position'       => $device?->last_position ?? $this->point(0, 0),
                 'last_reading_at'     => $this->timestamp(2),
                 'last_value'          => $lastValue,
                 'sensorable_type'     => Device::class,

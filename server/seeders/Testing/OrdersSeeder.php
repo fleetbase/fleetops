@@ -174,6 +174,7 @@ class OrdersSeeder extends Seeder
             $this->createRecord(Entity::class, [
                 '_key'                 => $this->fixtureKey($seedId . '_entity_' . $i),
                 '_import_id'           => $this->fixtureKey($seedId . ':entity:' . $i),
+                'public_id'            => Entity::generatePublicId(),
                 'company_uuid'         => $company->uuid,
                 'payload_uuid'         => $payload->uuid,
                 'tracking_number_uuid' => $trackingNumber->uuid,
@@ -191,7 +192,7 @@ class OrdersSeeder extends Seeder
                 'currency'             => 'SGD',
                 'declared_value'       => 1000 + ($i * 100),
                 'meta'                 => $this->meta($seedId . '_entity_' . $i),
-            ]);
+            ], true);
         }
     }
 }
