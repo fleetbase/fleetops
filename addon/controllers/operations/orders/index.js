@@ -386,6 +386,20 @@ export default class OperationsOrdersIndexController extends Controller {
                         isVisible: (order) => order.canBeDispatched,
                     },
                     {
+                        label: this.intl.t('common.assign-driver'),
+                        icon: 'edit',
+                        fn: this.orderActions.assignDriver,
+                        permission: 'fleet-ops update order',
+                        isVisible: (order) => !order.has_driver_assigned,
+                    },
+                    {
+                        label: this.intl.t('common.unassign-driver'),
+                        icon: 'edit',
+                        fn: this.orderActions.unassignDriver,
+                        permission: 'fleet-ops update order',
+                        isVisible: (order) => order.has_driver_assigned,
+                    },
+                    {
                         label: this.intl.t('common.cancel-resource', { resource: this.intl.t('resource.order') }),
                         icon: 'ban',
                         fn: this.orderActions.cancel,
