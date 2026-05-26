@@ -1,6 +1,7 @@
 <?php
 
 use Fleetbase\FleetOps\Http\Controllers\Api\v1\OrderConfigController;
+use Fleetbase\FleetOps\Http\Resources\Internal\v1\OrderConfig as InternalOrderConfigResource;
 use Fleetbase\FleetOps\Http\Resources\v1\OrderConfig as OrderConfigResource;
 
 /*
@@ -70,4 +71,16 @@ test('OrderConfig resource projects only public-safe fields', function () {
         ->toContain("'complete'")
         // Internal config payload must not be exposed on the public surface.
         ->not->toContain("'entities'");
+});
+
+test('internal OrderConfig resource preserves editable flow graph fields', function () {
+    expect(class_exists(InternalOrderConfigResource::class))->toBeTrue();
+
+    $source = file_get_contents(dirname(__DIR__) . '/src/Http/Resources/Internal/v1/OrderConfig.php');
+
+    expect($source)
+        ->toContain("'flow'")
+        ->toContain('$this->flow')
+        ->toContain("'entities'")
+        ->toContain("'core_service'");
 });
