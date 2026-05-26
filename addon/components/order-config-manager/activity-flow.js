@@ -54,11 +54,26 @@ export default class OrderConfigManagerActivityFlowComponent extends Component {
     @tracked graph;
 
     /**
+     * True when the rendered graph is wider than the visible Activity Flow area.
+     *
+     * @type {Boolean}
+     */
+    @tracked hasHorizontalOverflow = false;
+
+    /**
      * Checks if listener pointerdown listener is called.
      *
      * @type {Boolean}
      */
     @tracked listeningForClicks = false;
+
+    graphScrollContainer;
+    horizontalScrollbar;
+    horizontalScrollbarContent;
+    isSyncingHorizontalScroll = false;
+    onGraphScroll;
+    onHorizontalScrollbarScroll;
+    onWindowResize;
 
     /**
      * Initializes the component with the given configuration.
@@ -85,6 +100,42 @@ export default class OrderConfigManagerActivityFlowComponent extends Component {
         this.initializeActivityJointModel();
         this.initializeActivityFlow();
         this.listenForElementClicks();
+        this.updateHorizontalScrollbar();
+    }
+
+    @action setupGraphScrollContainer(element) {
+        this.graphScrollContainer = element;
+        this.onGraphScroll = () => this.syncHorizontalScrollbarFromGraph();
+        this.onWindowResize = () => this.updateHorizontalScrollbar();
+
+        element.addEventListener('scroll', this.onGraphScroll);
+        window.addEventListener('resize', this.onWindowResize);
+        this.updateHorizontalScrollbar();
+    }
+
+    @action setupHorizontalScrollbar(element) {
+        this.horizontalScrollbar = element;
+        this.horizontalScrollbarContent = element.firstElementChild;
+        this.onHorizontalScrollbarScroll = () => this.syncGraphFromHorizontalScrollbar();
+
+        element.addEventListener('scroll', this.onHorizontalScrollbarScroll);
+        this.updateHorizontalScrollbar();
+    }
+
+    willDestroy() {
+        super.willDestroy(...arguments);
+
+        if (this.graphScrollContainer && this.onGraphScroll) {
+            this.graphScrollContainer.removeEventListener('scroll', this.onGraphScroll);
+        }
+
+        if (this.horizontalScrollbar && this.onHorizontalScrollbarScroll) {
+            this.horizontalScrollbar.removeEventListener('scroll', this.onHorizontalScrollbarScroll);
+        }
+
+        if (this.onWindowResize) {
+            window.removeEventListener('resize', this.onWindowResize);
+        }
     }
 
     /**
@@ -355,6 +406,7 @@ export default class OrderConfigManagerActivityFlowComponent extends Component {
         this.addActivityNodeTools(parentActivity, positionals);
         this.addChildActivities(parentActivity, childActivities);
         this.repositionAllActivities();
+        this.resizePaperWidthToFitActivities();
     }
 
     /**
@@ -392,6 +444,79 @@ export default class OrderConfigManagerActivityFlowComponent extends Component {
         activities.forEach((parentActivity) => {
             this.repositionActivities(parentActivity);
         });
+    }
+
+    /**
+     * Expands the JointJS paper width so wide activity flows can scroll horizontally.
+     *
+     * @returns {void}
+     */
+    resizePaperWidthToFitActivities() {
+        if (!this.paper) {
+            return;
+        }
+
+        const nodes = Object.values(this.flow)
+            .map((activity) => activity.get('node'))
+            .filter(Boolean);
+
+        if (nodes.length === 0) {
+            return;
+        }
+
+        const padding = 150;
+        const viewportWidth = this.paper.el.parentElement?.clientWidth ?? this.paper.options.width;
+        const currentHeight = this.paper.options.height;
+        const contentWidth = nodes.reduce((width, node) => {
+            const position = node.position();
+            const size = node.size();
+
+            return Math.max(width, position.x + size.width + padding);
+        }, 0);
+        const paperWidth = Math.max(viewportWidth, contentWidth);
+
+        this.paper.setDimensions(paperWidth, currentHeight);
+        this.paper.el.style.width = contentWidth > viewportWidth ? `${paperWidth}px` : '100%';
+        this.paper.el.style.minWidth = '100%';
+        next(this, this.updateHorizontalScrollbar);
+    }
+
+    updateHorizontalScrollbar() {
+        if (!this.graphScrollContainer || !this.horizontalScrollbar || !this.horizontalScrollbarContent) {
+            return;
+        }
+
+        const scrollWidth = this.graphScrollContainer.scrollWidth;
+        const clientWidth = this.graphScrollContainer.clientWidth;
+        const hasOverflow = scrollWidth > clientWidth + 1;
+
+        this.hasHorizontalOverflow = hasOverflow;
+        this.horizontalScrollbarContent.style.width = hasOverflow ? `${scrollWidth}px` : '100%';
+        this.horizontalScrollbar.scrollLeft = this.graphScrollContainer.scrollLeft;
+
+        const { left, width } = this.graphScrollContainer.getBoundingClientRect();
+        this.horizontalScrollbar.style.left = `${left}px`;
+        this.horizontalScrollbar.style.width = `${width}px`;
+    }
+
+    syncHorizontalScrollbarFromGraph() {
+        if (this.isSyncingHorizontalScroll || !this.horizontalScrollbar || !this.graphScrollContainer) {
+            return;
+        }
+
+        this.isSyncingHorizontalScroll = true;
+        this.horizontalScrollbar.scrollLeft = this.graphScrollContainer.scrollLeft;
+        this.isSyncingHorizontalScroll = false;
+    }
+
+    syncGraphFromHorizontalScrollbar() {
+        if (this.isSyncingHorizontalScroll || !this.horizontalScrollbar || !this.graphScrollContainer) {
+            return;
+        }
+
+        this.isSyncingHorizontalScroll = true;
+        this.graphScrollContainer.scrollLeft = this.horizontalScrollbar.scrollLeft;
+        this.isSyncingHorizontalScroll = false;
     }
 
     /**
@@ -484,6 +609,7 @@ export default class OrderConfigManagerActivityFlowComponent extends Component {
             const firstActivity = this.addActivityToGraph(activityObject);
             lastActivity = firstActivity;
         });
+        this.resizePaperWidthToFitActivities();
         return;
     }
 
@@ -933,6 +1059,7 @@ export default class OrderConfigManagerActivityFlowComponent extends Component {
             target: { id: newActivity.get('id') },
         });
         link.addTo(this.graph);
+        this.resizePaperWidthToFitActivities();
 
         return newActivity;
     }

@@ -464,7 +464,54 @@ body[data-theme='light'] .flow-activity-status-pill text {
 .activity-flow-graph-container {
     position: relative;
     width: 100%;
-    height: 100%;
+    height: calc(100vh - 16rem);
+    min-height: 24rem;
+    overflow-x: auto;
+    overflow-y: hidden;
+    scrollbar-width: none;
+}
+
+.activity-flow-graph-container > .joint-js-paper {
+    min-width: 100%;
+    max-width: none;
+    overflow: visible;
+}
+
+.activity-flow-graph-container::-webkit-scrollbar {
+    display: none;
+}
+
+.activity-flow-horizontal-scrollbar {
+    position: fixed;
+    bottom: 0;
+    z-index: 100;
+    height: 12px;
+    overflow-x: auto;
+    overflow-y: hidden;
+    background-color: transparent;
+    scrollbar-color: #6b7280 transparent;
+    scrollbar-width: thin;
+}
+
+.activity-flow-horizontal-scrollbar.is-hidden {
+    display: none;
+}
+
+.activity-flow-horizontal-scrollbar-content {
+    height: 1px;
+}
+
+.activity-flow-horizontal-scrollbar::-webkit-scrollbar {
+    height: 8px;
+}
+
+.activity-flow-horizontal-scrollbar::-webkit-scrollbar-thumb {
+    background-color: #6b7280;
+    border-radius: 9999px;
+}
+
+.activity-flow-horizontal-scrollbar::-webkit-scrollbar-track {
+    background-color: transparent;
 }
 
 .activity-flow-zoom-controls {

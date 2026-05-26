@@ -10,10 +10,13 @@
     />
     <Button @type="default" @icon="rotate" @text="Reset" @onClick={{this.resetConfig}} @disabled={{or this.config.core_service (cannot "fleet-ops update order-config")}} />
 </div>
-<div class="activity-flow-graph-container">
+<div class="activity-flow-graph-container" {{did-insert this.setupGraphScrollContainer}}>
     <div class="activity-flow-zoom-controls">
         <Button @icon="plus" @onClick={{this.zoomIn}} />
         <Button @icon="minus" @onClick={{this.zoomOut}} />
     </div>
     <JointGraph @onSetup={{this.initializeGraph}} />
+</div>
+<div class="activity-flow-horizontal-scrollbar {{unless this.hasHorizontalOverflow 'is-hidden'}}" {{did-insert this.setupHorizontalScrollbar}}>
+    <div class="activity-flow-horizontal-scrollbar-content"></div>
 </div>
