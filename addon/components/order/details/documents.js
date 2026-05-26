@@ -39,6 +39,8 @@ export default class OrderDetailsDocumentsComponent extends Component {
                 file,
                 {
                     path: 'uploads/fleet-ops/order-files',
+                    subject_uuid: this.args.resource.id,
+                    subject_type: 'fleet-ops:order',
                     type: 'order_file',
                 },
                 (uploadedFile) => {

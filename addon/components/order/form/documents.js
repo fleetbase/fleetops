@@ -35,12 +35,19 @@ export default class OrderFormDocumentsComponent extends Component {
 
         try {
             this.uploadQueue.pushObject(file);
+            const uploadOptions = {
+                path: 'uploads/fleet-ops/order-files',
+                type: 'order_file',
+            };
+
+            if (!this.args.resource.isNew) {
+                uploadOptions.subject_uuid = this.args.resource.id;
+                uploadOptions.subject_type = 'fleet-ops:order';
+            }
+
             yield this.fetch.uploadFile.perform(
                 file,
-                {
-                    path: 'uploads/fleet-ops/order-files',
-                    type: 'order_file',
-                },
+                uploadOptions,
                 (uploadedFile) => {
                     this.args.resource.files.pushObject(uploadedFile);
                     this.uploadQueue.removeObject(file);

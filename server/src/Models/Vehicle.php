@@ -597,6 +597,14 @@ class Vehicle extends Model
         return $this;
     }
 
+    public function unassignDriver(): self
+    {
+        Driver::where('vehicle_uuid', $this->uuid)->update(['vehicle_uuid' => null]);
+        $this->unsetRelation('driver');
+
+        return $this;
+    }
+
     /**
      * Retrieves the last known position of the driver within the current company context.
      *

@@ -67,7 +67,7 @@ class VehicleController extends Controller
         $vehicle = Vehicle::create($input);
 
         // driver assignment
-        if ($request->has('driver')) {
+        if ($request->exists('driver') && !empty($request->input('driver'))) {
             // set this vehicle to the driver
             try {
                 $driver = Driver::findRecordOrFail($request->input('driver'));
@@ -80,8 +80,7 @@ class VehicleController extends Controller
                 );
             }
 
-            $driver->vehicle_uuid = $vehicle->uuid;
-            $driver->save();
+            $vehicle->assignDriver($driver);
         }
 
         // response the driver resource
@@ -149,6 +148,24 @@ class VehicleController extends Controller
 
         // save the update
         $vehicle->save();
+
+        if ($request->exists('driver')) {
+            if (empty($request->input('driver'))) {
+                $vehicle->unassignDriver();
+            } else {
+                try {
+                    $driver = Driver::findRecordOrFail($request->input('driver'));
+                    $vehicle->assignDriver($driver);
+                } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $exception) {
+                    return response()->json(
+                        [
+                            'error' => 'The driver attempted to assign this vehicle was not found.',
+                        ],
+                        404
+                    );
+                }
+            }
+        }
 
         // get udpated vehicle
         $vehicle = $vehicle->refresh();

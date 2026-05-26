@@ -2,7 +2,6 @@
 
 namespace Fleetbase\FleetOps\Models;
 
-use Barryvdh\DomPDF\Facade\Pdf;
 use Fleetbase\Casts\Json;
 use Fleetbase\Casts\PolymorphicType;
 use Fleetbase\FleetOps\Events\OrderCanceled;
@@ -10,6 +9,7 @@ use Fleetbase\FleetOps\Events\OrderCompleted;
 use Fleetbase\FleetOps\Events\OrderDispatched;
 use Fleetbase\FleetOps\Events\OrderDriverAssigned;
 use Fleetbase\FleetOps\Flow\Activity;
+use Fleetbase\FleetOps\Support\LabelPdf;
 use Fleetbase\FleetOps\Support\OrderTracker;
 use Fleetbase\FleetOps\Support\Utils;
 use Fleetbase\FleetOps\Traits\HasTrackingNumber;
@@ -275,7 +275,32 @@ class Order extends Model
      */
     public function pdfLabel()
     {
-        return Pdf::loadHTML($this->label());
+        return LabelPdf::fromHtml($this->label());
+    }
+
+    public function attachFiles($uploads): self
+    {
+        $ids = collect($uploads)
+            ->map(function ($upload) {
+                if (is_string($upload)) {
+                    return $upload;
+                }
+
+                return data_get($upload, 'uuid') ?? data_get($upload, 'id');
+            })
+            ->filter()
+            ->unique()
+            ->values();
+
+        if ($ids->isEmpty()) {
+            return $this;
+        }
+
+        \Fleetbase\Models\File::whereIn('uuid', $ids)->get()->each(function ($file) {
+            $file->setKey($this);
+        });
+
+        return $this;
     }
 
     /**
