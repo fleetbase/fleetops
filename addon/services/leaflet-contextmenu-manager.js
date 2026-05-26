@@ -86,6 +86,33 @@ export default class LeafletContextmenuManagerService extends Service {
     }
 
     /**
+     * Remove a registered context menu and detach it from its layer when possible.
+     *
+     * @param {string} registryName - The public context menu registry name.
+     * @returns {Object|null} The removed registry, or null when none existed.
+     */
+    removeContextMenu(registryName) {
+        const internalRegistryName = this.createInternalRegistryName(registryName);
+        const registry = this.contextMenuRegistry[internalRegistryName];
+
+        if (!registry) {
+            return null;
+        }
+
+        try {
+            registry.contextmenuApi?.removeAllItems?.();
+            registry.layer?.unbindContextMenu?.();
+        } catch (error) {
+            // Context menus are disposable UI state; stale layer cleanup should not block record deletion.
+        }
+
+        delete this.contextMenuRegistry[internalRegistryName];
+        this.contextMenuRegistry = { ...this.contextMenuRegistry };
+
+        return registry;
+    }
+
+    /**
      * Creates an internal registry name by camelizing the provided registry name and appending "ConextmenuRegistry" to it.
      *
      * @method createInternalRegistryName

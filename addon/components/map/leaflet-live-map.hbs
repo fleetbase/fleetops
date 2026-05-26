@@ -13,7 +13,7 @@
     through the provider-agnostic MapManagerService.
 }}
 
-<div class="live-map-component {{@wrapperClass}}">
+<div class="live-map-component {{@wrapperClass}}" {{did-update this.syncServiceAreaContextMenus this.serviceAreaActions.serviceAreas this.serviceAreaActions.serviceAreas.length}}>
 
     {{#if this.shouldUseGoogleMaps}}
         {{! ─── Google Maps branch ──────────────────────────────────────────── }}
@@ -87,7 +87,11 @@
                                 <div class="flex items-center gap-1.5 text-xs font-semibold mb-1.5">
                                     <span class="inline-block w-2 h-2 rounded-full {{if driver.online 'bg-green-400' 'bg-red-500'}}"></span>
                                     <span>{{driver.name}}</span>
-                                    <div class="status-badge {{if driver.status (dasherize driver.status) 'default'}}-status-badge status-badge-{{if driver.status (dasherize driver.status) 'default'}} shadow-none ml-auto">
+                                    <div
+                                        class="status-badge
+                                            {{if driver.status (dasherize driver.status) 'default'}}-status-badge status-badge-{{if driver.status (dasherize driver.status) 'default'}}
+                                            shadow-none ml-auto"
+                                    >
                                         <span class="rounded-full text-[9px] px-1.5 py-0.5">{{n-a driver.meta.status_label (smart-humanize driver.status)}}</span>
                                     </div>
                                 </div>
@@ -122,7 +126,10 @@
                                     </div>
                                     <div class="rounded bg-gray-900 shadow-md px-1.5 py-1 min-w-0">
                                         <div class="text-[9px] font-semibold uppercase text-gray-400 leading-none">Location</div>
-                                        <div class="text-[11px] text-white leading-tight whitespace-normal break-words">{{n-a driver.meta.location_coordinates (point-coordinates driver.location)}}</div>
+                                        <div class="text-[11px] text-white leading-tight whitespace-normal break-words">{{n-a
+                                                driver.meta.location_coordinates
+                                                (point-coordinates driver.location)
+                                            }}</div>
                                     </div>
                                 </div>
                             </div>
@@ -132,7 +139,11 @@
                                 <div class="flex items-center gap-1.5 text-xs font-semibold mb-1.5">
                                     <span class="inline-block w-2 h-2 rounded-full {{if driver.online 'bg-green-400' 'bg-red-500'}}"></span>
                                     <span>{{driver.name}}</span>
-                                    <div class="status-badge {{if driver.status (dasherize driver.status) 'default'}}-status-badge status-badge-{{if driver.status (dasherize driver.status) 'default'}} shadow-none ml-auto">
+                                    <div
+                                        class="status-badge
+                                            {{if driver.status (dasherize driver.status) 'default'}}-status-badge status-badge-{{if driver.status (dasherize driver.status) 'default'}}
+                                            shadow-none ml-auto"
+                                    >
                                         <span class="rounded-full text-[9px] px-1.5 py-0.5">{{n-a driver.meta.status_label (smart-humanize driver.status)}}</span>
                                     </div>
                                 </div>
@@ -167,7 +178,10 @@
                                     </div>
                                     <div class="rounded bg-gray-900 shadow-md px-1.5 py-1 min-w-0">
                                         <div class="text-[9px] font-semibold uppercase text-gray-400 leading-none">Location</div>
-                                        <div class="text-[11px] text-white leading-tight whitespace-normal break-words">{{n-a driver.meta.location_coordinates (point-coordinates driver.location)}}</div>
+                                        <div class="text-[11px] text-white leading-tight whitespace-normal break-words">{{n-a
+                                                driver.meta.location_coordinates
+                                                (point-coordinates driver.location)
+                                            }}</div>
                                     </div>
                                 </div>
                             </div>
@@ -192,14 +206,24 @@
                                 <div class="flex items-center gap-1.5 text-xs font-semibold mb-1.5">
                                     <span class="inline-block w-2 h-2 rounded-full {{if vehicle.online 'bg-green-400' 'bg-red-500'}}"></span>
                                     <span>{{vehicle.displayName}}</span>
-                                    <div class="status-badge {{if vehicle.status (dasherize vehicle.status) 'default'}}-status-badge status-badge-{{if vehicle.status (dasherize vehicle.status) 'default'}} shadow-none ml-auto">
+                                    <div
+                                        class="status-badge
+                                            {{if vehicle.status (dasherize vehicle.status) 'default'}}-status-badge status-badge-{{if vehicle.status (dasherize vehicle.status) 'default'}}
+                                            shadow-none ml-auto"
+                                    >
                                         <span class="rounded-full text-[9px] px-1.5 py-0.5">{{n-a vehicle.meta.status_label}}</span>
                                     </div>
                                 </div>
                                 <div class="grid grid-cols-2 gap-1">
                                     <div class="rounded bg-gray-900 shadow-md px-1.5 py-1 min-w-0">
                                         <div class="text-[9px] font-semibold uppercase text-gray-400 leading-none">Vehicle #</div>
-                                        <div class="text-[11px] text-white leading-tight whitespace-normal break-words">{{n-a vehicle.internal_id vehicle.public_id vehicle.plate_number vehicle.serial_number vehicle.vin}}</div>
+                                        <div class="text-[11px] text-white leading-tight whitespace-normal break-words">{{n-a
+                                                vehicle.internal_id
+                                                vehicle.public_id
+                                                vehicle.plate_number
+                                                vehicle.serial_number
+                                                vehicle.vin
+                                            }}</div>
                                     </div>
                                     <div class="rounded bg-gray-900 shadow-md px-1.5 py-1 min-w-0">
                                         <div class="text-[9px] font-semibold uppercase text-gray-400 leading-none">Driver</div>
@@ -229,14 +253,24 @@
                                 <div class="flex items-center gap-1.5 text-xs font-semibold mb-1.5">
                                     <span class="inline-block w-2 h-2 rounded-full {{if vehicle.online 'bg-green-400' 'bg-red-500'}}"></span>
                                     <span>{{vehicle.displayName}}</span>
-                                    <div class="status-badge {{if vehicle.status (dasherize vehicle.status) 'default'}}-status-badge status-badge-{{if vehicle.status (dasherize vehicle.status) 'default'}} shadow-none ml-auto">
+                                    <div
+                                        class="status-badge
+                                            {{if vehicle.status (dasherize vehicle.status) 'default'}}-status-badge status-badge-{{if vehicle.status (dasherize vehicle.status) 'default'}}
+                                            shadow-none ml-auto"
+                                    >
                                         <span class="rounded-full text-[9px] px-1.5 py-0.5">{{n-a vehicle.meta.status_label}}</span>
                                     </div>
                                 </div>
                                 <div class="grid grid-cols-2 gap-1">
                                     <div class="rounded bg-gray-900 shadow-md px-1.5 py-1 min-w-0">
                                         <div class="text-[9px] font-semibold uppercase text-gray-400 leading-none">Vehicle #</div>
-                                        <div class="text-[11px] text-white leading-tight whitespace-normal break-words">{{n-a vehicle.internal_id vehicle.public_id vehicle.plate_number vehicle.serial_number vehicle.vin}}</div>
+                                        <div class="text-[11px] text-white leading-tight whitespace-normal break-words">{{n-a
+                                                vehicle.internal_id
+                                                vehicle.public_id
+                                                vehicle.plate_number
+                                                vehicle.serial_number
+                                                vehicle.vin
+                                            }}</div>
                                     </div>
                                     <div class="rounded bg-gray-900 shadow-md px-1.5 py-1 min-w-0">
                                         <div class="text-[9px] font-semibold uppercase text-gray-400 leading-none">Driver</div>
@@ -291,8 +325,8 @@
                         @id={{serviceArea.id}}
                         @record={{serviceArea}}
                         @locations={{unwrap-coordinates serviceArea.leafletCoordinates}}
-                        @fillColor={{serviceArea.color}}
-                        @color={{serviceArea.stroke_color}}
+                        @fillColor={{or serviceArea.color "#3388ff"}}
+                        @color={{or serviceArea.stroke_color serviceArea.color "#3388ff"}}
                         @onAdd={{fn this.trigger "onServiceAreaLayerAdded" serviceArea}}
                         as |polygon|
                     >
@@ -304,8 +338,8 @@
                             @id={{zone.id}}
                             @record={{zone}}
                             @locations={{unwrap-coordinates zone.leafletCoordinates}}
-                            @fillColor={{zone.color}}
-                            @color={{zone.stroke_color}}
+                            @fillColor={{or zone.color "#3388ff"}}
+                            @color={{or zone.stroke_color zone.color "#3388ff"}}
                             @onAdd={{fn this.trigger "onZoneLayerAdd" zone}}
                             as |polygon|
                         >

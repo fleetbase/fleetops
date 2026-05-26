@@ -211,6 +211,20 @@ export default class MapLeafletLiveMapComponent extends Component {
         this.#createZoneContextMenu(zone, layer);
     }
 
+    @action rebuildMapContextMenu() {
+        if (!this.map) {
+            return;
+        }
+
+        this.#createMapContextMenu(this.map);
+        this.#refreshResourceContextMenus();
+        this.#pruneResourceContextMenus();
+    }
+
+    @action syncServiceAreaContextMenus() {
+        this.rebuildMapContextMenu();
+    }
+
     /** load resources and wait for stuff here and trigger map ready **/
     @task *load() {
         try {
@@ -462,6 +476,7 @@ export default class MapLeafletLiveMapComponent extends Component {
     }
 
     #createMapContextMenu(map) {
+        const serviceAreas = Array.from(this.serviceAreaActions.serviceAreas ?? []);
         const items = [
             {
                 text: this.intl.t('live-map.show-coordinates'),
@@ -494,10 +509,10 @@ export default class MapLeafletLiveMapComponent extends Component {
                 callback: () => this.geofence.createServiceArea(),
                 index: 5,
             },
-            this.serviceAreaActions.serviceAreas.length ? { separator: true } : null,
-            ...this.serviceAreaActions.serviceAreas.map((serviceArea, i) => {
+            serviceAreas.length ? { separator: true } : null,
+            ...serviceAreas.map((serviceArea, i) => {
                 return {
-                    text: this.intl.t('live-map.focus-service', { serviceName: serviceArea.name }),
+                    text: this.intl.t('live-map.focus-service', { serviceName: this.#resourceDisplayName(serviceArea) }),
                     callback: () => this.geofence.focusServiceArea(serviceArea),
                     index: 6 + i,
                 };
@@ -511,69 +526,198 @@ export default class MapLeafletLiveMapComponent extends Component {
     }
 
     #createZoneContextMenu(zone, layer) {
+        const zoneName = this.#resourceDisplayName(zone);
         let items = [
             {
                 separator: true,
             },
             {
-                text: this.intl.t('live-map.edit-zone', { zoneName: zone.name }),
+                text: this.intl.t('live-map.edit-zone', { zoneName }),
                 callback: () => this.zoneActions.modal.edit(zone),
             },
             {
-                text: this.intl.t('live-map.delete-zone', { zoneName: zone.name }),
-                callback: () => this.zoneActions.delete(zone),
+                text: this.intl.t('live-map.delete-zone', { zoneName }),
+                callback: () => this.#deleteZone(zone),
             },
         ];
 
         if (!this.mapManager.isGoogleMaps) {
             items.splice(2, 0, {
-                text: this.intl.t('live-map.edit-boundaries', { resource: zone.name }),
+                text: this.intl.t('live-map.edit-boundaries', { resource: zoneName }),
                 callback: () => this.geofence.editZone(zone),
             });
         }
 
         // create contextmenu registry
-        const contextmenuRegistry = this.leafletContextmenuManager.createContextMenu(`zone:${zone.public_id}`, layer, items, { zone });
+        const contextmenuRegistry = this.leafletContextmenuManager.createContextMenu(this.#resourceContextKey('zone', zone), layer, items, { zone });
         this.universe.trigger('fleet-ops:contextmenu:zone:created', contextmenuRegistry, this.leafletContextmenuManager);
 
         return contextmenuRegistry;
     }
 
     #createServiceAreaContextMenu(serviceArea, layer) {
+        const serviceName = this.#resourceDisplayName(serviceArea);
         let items = [
             {
                 separator: true,
             },
             {
-                text: this.intl.t('live-map.blur-service', { serviceName: serviceArea.name }),
+                text: this.intl.t('live-map.blur-service', { serviceName }),
                 callback: () => this.geofence.blurServiceArea(serviceArea),
             },
             {
-                text: this.intl.t('live-map.create-zone', { serviceName: serviceArea.name }),
+                text: this.intl.t('live-map.create-zone', { serviceName }),
                 callback: () => this.geofence.createZone(serviceArea),
             },
             {
-                text: this.intl.t('live-map.edit-service', { serviceName: serviceArea.name }),
+                text: this.intl.t('live-map.edit-service', { serviceName }),
                 callback: () => this.serviceAreaActions.modal.edit(serviceArea),
             },
             {
-                text: this.intl.t('live-map.delete-service', { serviceName: serviceArea.name }),
-                callback: () => this.serviceAreaActions.delete(serviceArea),
+                text: this.intl.t('live-map.delete-service', { serviceName }),
+                callback: () => this.#deleteServiceArea(serviceArea),
             },
         ];
 
         if (!this.mapManager.isGoogleMaps) {
             items.splice(4, 0, {
-                text: this.intl.t('live-map.edit-boundaries', { resource: serviceArea.name }),
+                text: this.intl.t('live-map.edit-boundaries', { resource: serviceName }),
                 callback: () => this.geofence.editServiceArea(serviceArea),
             });
         }
 
         // create contextmenu registry
-        const contextmenuRegistry = this.leafletContextmenuManager.createContextMenu(`service-area:${serviceArea.public_id}`, layer, items, { serviceArea });
+        const contextmenuRegistry = this.leafletContextmenuManager.createContextMenu(this.#resourceContextKey('service-area', serviceArea), layer, items, { serviceArea });
         this.universe.trigger('fleet-ops:contextmenu:service-area:created', contextmenuRegistry, this.leafletContextmenuManager);
 
         return contextmenuRegistry;
+    }
+
+    #resourceContextKey(type, resource) {
+        return `${type}:${resource?.public_id ?? resource?.id}`;
+    }
+
+    #resourceDisplayName(resource) {
+        return resource?.get?.('name') || resource?.name || resource?.display_name || resource?.public_id || resource?.id || '';
+    }
+
+    #deleteServiceArea(serviceArea) {
+        const zones = Array.from(serviceArea?.zones ?? []);
+
+        return this.serviceAreaActions.delete(
+            serviceArea,
+            {},
+            {
+                callback: () => {
+                    this.#removeServiceAreaFromMapState(serviceArea, zones);
+                    this.rebuildMapContextMenu();
+                },
+            }
+        );
+    }
+
+    #deleteZone(zone) {
+        return this.zoneActions.delete(
+            zone,
+            {},
+            {
+                callback: () => {
+                    this.#removeZoneFromMapState(zone);
+                    this.rebuildMapContextMenu();
+                },
+            }
+        );
+    }
+
+    #removeServiceAreaFromMapState(serviceArea, zones = []) {
+        const serviceAreaId = serviceArea?.id;
+        const serviceAreaKey = this.#resourceContextKey('service-area', serviceArea);
+
+        zones.forEach((zone) => this.#removeZoneFromMapState(zone));
+        this.#removeOverlay(serviceArea);
+        this.leafletContextmenuManager.removeContextMenu(serviceAreaKey);
+
+        this.serviceAreaActions.serviceAreas = Array.from(this.serviceAreaActions.serviceAreas ?? []).filter((candidate) => candidate?.id !== serviceAreaId);
+    }
+
+    #removeZoneFromMapState(zone) {
+        const zoneId = zone?.id;
+        const zoneKey = this.#resourceContextKey('zone', zone);
+
+        this.#removeOverlay(zone);
+        this.leafletContextmenuManager.removeContextMenu(zoneKey);
+
+        for (const serviceArea of Array.from(this.serviceAreaActions.serviceAreas ?? [])) {
+            const zones = serviceArea?.zones;
+            if (!zones) {
+                continue;
+            }
+
+            const currentZones = Array.from(zones);
+            const nextZones = currentZones.filter((candidate) => candidate?.id !== zoneId);
+            if (nextZones.length !== currentZones.length) {
+                if (typeof zones.removeObject === 'function') {
+                    zones.removeObject(zone);
+                } else {
+                    serviceArea.set?.('zones', nextZones);
+                }
+                break;
+            }
+        }
+
+        this.serviceAreaActions.serviceAreas = Array.from(this.serviceAreaActions.serviceAreas ?? []);
+    }
+
+    #removeOverlay(resource) {
+        if (!resource?.id) {
+            return;
+        }
+
+        this.mapManager.removeOverlay?.(resource.id);
+
+        const layer = resource?.leafletLayer;
+        if (layer) {
+            this.mapManager.removeLayer?.(layer);
+        }
+    }
+
+    #refreshResourceContextMenus() {
+        for (const serviceArea of Array.from(this.serviceAreaActions.serviceAreas ?? [])) {
+            const serviceAreaLayer = this.mapManager.getOverlay(serviceArea?.id) ?? serviceArea?.leafletLayer;
+            if (serviceAreaLayer) {
+                this.#createServiceAreaContextMenu(serviceArea, serviceAreaLayer);
+            }
+
+            for (const zone of Array.from(serviceArea?.zones ?? [])) {
+                const zoneLayer = this.mapManager.getOverlay(zone?.id) ?? zone?.leafletLayer;
+                if (zoneLayer) {
+                    this.#createZoneContextMenu(zone, zoneLayer);
+                }
+            }
+        }
+    }
+
+    #pruneResourceContextMenus() {
+        const activeServiceAreaKeys = new Set();
+        const activeZoneKeys = new Set();
+
+        for (const serviceArea of Array.from(this.serviceAreaActions.serviceAreas ?? [])) {
+            activeServiceAreaKeys.add(this.#resourceContextKey('service-area', serviceArea));
+
+            for (const zone of Array.from(serviceArea?.zones ?? [])) {
+                activeZoneKeys.add(this.#resourceContextKey('zone', zone));
+            }
+        }
+
+        for (const registry of Object.values(this.leafletContextmenuManager.contextMenuRegistry ?? {})) {
+            if (registry?.serviceArea && !activeServiceAreaKeys.has(this.#resourceContextKey('service-area', registry.serviceArea))) {
+                this.leafletContextmenuManager.removeContextMenu(this.#resourceContextKey('service-area', registry.serviceArea));
+            }
+
+            if (registry?.zone && !activeZoneKeys.has(this.#resourceContextKey('zone', registry.zone))) {
+                this.leafletContextmenuManager.removeContextMenu(this.#resourceContextKey('zone', registry.zone));
+            }
+        }
     }
 
     #createDriverContextMenu(driver, layer) {
