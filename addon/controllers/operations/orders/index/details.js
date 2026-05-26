@@ -106,7 +106,7 @@ export default class OperationsOrdersIndexDetailsController extends Controller {
                         text: this.model.has_driver_assigned ? 'Unassign driver' : 'Assign driver',
                         icon: this.model.has_driver_assigned ? 'user-xmark' : 'edit',
                         disabled: this.model.has_driver_assigned ? !this.model.hasActiveStatus || !this.model.driver_assigned : !this.model.hasActiveStatus,
-                        fn: () => this.model.has_driver_assigned ? this.orderActions.unassignDriver(this.model) : this.orderActions.assignDriver(this.model),
+                        fn: () => (this.model.has_driver_assigned ? this.orderActions.unassignDriver(this.model) : this.orderActions.assignDriver(this.model)),
                     },
                     {
                         text: 'View order label',
