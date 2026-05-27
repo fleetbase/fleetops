@@ -69,11 +69,11 @@ class HandleOrderDispatched implements ShouldQueue
                 return;
             }
 
-            $drivers = Driver::where(['status' => 'active', 'online' => 1])
+            $drivers = Driver::where(['status' => 'available', 'online' => 1])
                 ->whereHas('company', function ($q) {
                     $q->whereHas('users', function ($q) {
                         $q->whereHas('driver', function ($q) {
-                            $q->where(['status' => 'active', 'online' => 1]);
+                            $q->where(['status' => 'available', 'online' => 1]);
                             $q->whereNull('deleted_at');
                         });
                     });

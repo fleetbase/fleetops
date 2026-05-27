@@ -4,7 +4,7 @@ import { inject as service } from '@ember/service';
 import { action } from '@ember/object';
 import { task } from 'ember-concurrency';
 
-const DEFAULT_PROPERTIES = { status: 'active' };
+const DEFAULT_PROPERTIES = { status: 'available' };
 
 export default class ManagementVehiclesIndexNewController extends Controller {
     @service store;

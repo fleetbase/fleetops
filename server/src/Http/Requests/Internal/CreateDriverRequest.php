@@ -51,7 +51,7 @@ class CreateDriverRequest extends CreateDriverApiRequest
             'country'                => 'nullable|string|size:2',
             'city'                   => 'nullable|string|max:255',
             'vehicle'                => ['nullable', new ResolvableVehicle()],
-            'status'                 => 'nullable|string|in:active,inactive',
+            'status'                 => 'nullable|string|in:active,available,inactive',
             'vendor'                 => 'nullable|exists:vendors,public_id',
             'job'                    => 'nullable|exists:orders,public_id',
             'location'               => ['nullable', new ResolvablePoint()],

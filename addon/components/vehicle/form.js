@@ -10,7 +10,7 @@ export default class VehicleFormComponent extends Component {
     @service currentUser;
     @service notifications;
     @service modalsManager;
-    @tracked statusOptions = ['active', 'pending'];
+    @tracked statusOptions = ['available', 'pending'];
 
     @action updateAvatarUrl(option) {
         this.args.resource.avatar_url = option.key === 'custom_avatar' ? option.value : [option.value];

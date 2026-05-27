@@ -59,12 +59,10 @@ export default class OrchestratorResourcePanelComponent extends Component {
             );
         }
 
-        if (this.vehicleFilter === 'active') {
-            vehicles = vehicles.filter((v) => v.status === 'active');
-        } else if (this.vehicleFilter === 'no-driver') {
+        if (this.vehicleFilter === 'no-driver') {
             vehicles = vehicles.filter((v) => !v.driver?.id);
         } else if (this.vehicleFilter === 'available') {
-            vehicles = vehicles.filter((v) => v.status === 'active' && !v.driver?.current_job);
+            vehicles = vehicles.filter((v) => v.status === 'available' && !v.driver?.current_job);
         }
 
         return vehicles;

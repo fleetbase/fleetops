@@ -15,7 +15,7 @@ export const driverTypes = [
 ];
 
 export const driverStatuses = [
-    { label: 'Active', value: 'active', description: 'Driver is available for assignments' },
+    { label: 'Available', value: 'available', description: 'Driver is available for assignments' },
     { label: 'Inactive', value: 'inactive', description: 'Driver is not currently active' },
     { label: 'On Duty', value: 'on_duty', description: 'Driver is working and available' },
     { label: 'Off Duty', value: 'off_duty', description: 'Driver is not working' },

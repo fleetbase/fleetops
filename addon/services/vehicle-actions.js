@@ -62,7 +62,7 @@ export default class VehicleActionsService extends ResourceActionService {
 
     constructor() {
         super(...arguments);
-        this.initialize('vehicle', { status: 'active' });
+        this.initialize('vehicle', { status: 'available' });
     }
 
     transition = {

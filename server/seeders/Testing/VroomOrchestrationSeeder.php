@@ -257,7 +257,7 @@ class VroomOrchestrationSeeder extends Seeder
                 'model'                    => $vehicle['model'],
                 'year'                     => '2024',
                 'type'                     => 'van',
-                'status'                   => 'active',
+                'status'                   => 'available',
                 'online'                   => true,
                 'location'                 => isset($vehicle['lat'], $vehicle['lng']) ? new Point($vehicle['lat'], $vehicle['lng']) : null,
                 'skills'                   => $vehicle['skills'] ?? [],
