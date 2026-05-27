@@ -27,6 +27,7 @@
                     @onClick={{fn this.addWaypoint (hash)}}
                     @helpText={{t "order.fields.add-waypoint-help-text"}}
                     @permission={{cannot-write @resource}}
+                    data-test-waypoint-add
                 />
             {{/if}}
         </div>
@@ -34,118 +35,123 @@
 
     {{#if this.multipleWaypoints}}
         <DragSortList class="multi-drop-select-container overflow-visible" @items={{@resource.payload.waypoints}} @dragEndAction={{this.sortWaypoints}} as |waypoint index|>
-            <div id={{concat "waypoint_" (add index 1)}} class="border rounded-md px-3 py-2 shadow-sm border-gray-300 dark:border-gray-900 mb-3">
-                <div class="flex items-start justify-between">
-                    <div class="flex items-center justify-between grip-cursor">
-                        <FaIcon @icon="grip-lines" @prefix="fas" class="mr-3 text-gray-100" />
-                        <label class="waypoint-label dark:text-gray-100 text-sm">
-                            {{waypoint-label (add index 1)}}
-                        </label>
-                    </div>
+            {{#let (get this.waypointRouteStops index) as |stop|}}
+                <div
+                    id={{concat "waypoint_" (add index 1)}}
+                    class="fleetops-order-form-waypoint {{if stop.required 'fleetops-order-form-waypoint--required'}} border rounded-md px-3 py-2 shadow-sm border-gray-300 dark:border-gray-900 mb-3"
+                    data-test-waypoint-row={{add index 1}}
+                >
+                    {{#if stop.required}}
+                        <div class="fleetops-order-form-waypoint__required-tab" data-test-required-waypoint-tab>Required</div>
+                    {{/if}}
+                    <div class="flex items-start justify-between">
+                        <div class="fleetops-order-form-waypoint__marker grip-cursor">
+                            <FaIcon @icon="grip-lines" @prefix="fas" class="text-gray-400" />
+                            <span class="index-count fleetops-route-stop-badge fleetops-order-form-waypoint__badge" style={{stop.badgeStyle}}>{{stop.label}}</span>
+                        </div>
 
-                    <div class="flex-1 flex-col px-3">
-                        <div class="mb-2">
-                            <ModelSelect
-                                @modelName="place"
-                                @selectedModel={{waypoint.place}}
-                                @placeholder={{concat (t "order.fields.select-waypoint") " " (add index 1)}}
-                                @triggerClass="form-select form-input truncate max-w-300px"
-                                @infiniteScroll={{false}}
-                                @customSearchEndpoint="places/search"
-                                @query={{hash geo=true latitude=this.location.latitude longitude=this.location.longitude}}
-                                @renderInPlace={{true}}
-                                @onChange={{fn this.setWaypointPlace index}}
-                                @permission={{cannot-write @resource}}
-                                as |place|
-                            >
-                                <Place::Address @place={{place}} />
-                            </ModelSelect>
-                            {{#if (and @resource.facilitator.isIntegratedVendor (is-not-facilitator-supported-place @resource.facilitator waypoint.place))}}
-                                <InfoBlock
-                                    class="my-2 px-4 py-1.5 danger"
-                                    @blockClass="flex flex-row items-center"
-                                    @text={{concat @resource.facilitator.name (t "order.fields.infoblock-text")}}
-                                />
-                            {{/if}}
-                            {{#if waypoint.place.hasInvalidCoordinates}}
-                                <div class="leading-5 text-sm text-red-400 mt-2">
-                                    <FaIcon @icon="exclamation-triangle" class="mr-1" />
-                                    {{t "order.fields.invalid-coordinates"}}
-                                </div>
-                            {{/if}}
-                        </div>
-                        <div>
-                            <ModelSelect
-                                @modelName="customer"
-                                @selectedModel={{waypoint.customer}}
-                                @placeholder={{t "order.fields.customer-placeholder"}}
-                                @triggerClass="form-select form-input truncate max-w-300px"
-                                @infiniteScroll={{false}}
-                                @renderInPlace={{true}}
-                                @allowClear={{true}}
-                                @onChange={{fn this.setWaypointCustomer waypoint}}
-                                @permission={{cannot-write @resource}}
-                                as |model|
-                            >
-                                <div class="flex items-center">
-                                    <div class="w-7">
-                                        <FaIcon @icon={{if model.isVendor "warehouse" "user"}} />
+                        <div class="flex-1 flex-col px-3">
+                            <div class="mb-2">
+                                <ModelSelect
+                                    @modelName="place"
+                                    @selectedModel={{waypoint.place}}
+                                    @placeholder={{concat (t "order.fields.select-waypoint") " " (add index 1)}}
+                                    @triggerClass="form-select form-input truncate max-w-300px"
+                                    @infiniteScroll={{false}}
+                                    @customSearchEndpoint="places/search"
+                                    @query={{hash geo=true latitude=this.location.latitude longitude=this.location.longitude}}
+                                    @renderInPlace={{true}}
+                                    @onChange={{fn this.setWaypointPlace index}}
+                                    @permission={{cannot-write @resource}}
+                                    as |place|
+                                >
+                                    <Place::Address @place={{place}} />
+                                </ModelSelect>
+                                {{#if (and @resource.facilitator.isIntegratedVendor (is-not-facilitator-supported-place @resource.facilitator waypoint.place))}}
+                                    <InfoBlock
+                                        class="my-2 px-4 py-1.5 danger"
+                                        @blockClass="flex flex-row items-center"
+                                        @text={{concat @resource.facilitator.name (t "order.fields.infoblock-text")}}
+                                    />
+                                {{/if}}
+                                {{#if waypoint.place.hasInvalidCoordinates}}
+                                    <div class="leading-5 text-sm text-red-400 mt-2">
+                                        <FaIcon @icon="exclamation-triangle" class="mr-1" />
+                                        {{t "order.fields.invalid-coordinates"}}
                                     </div>
-                                    <span class="uppercase">
-                                        {{model.name}}
-                                    </span>
-                                </div>
-                            </ModelSelect>
-                        </div>
-                        <div>
-                            <div class="flex flex-row items-center space-x-4 text-sm mt-2">
-                                <div class={{if (eq waypoint.type "dropoff") "is-checked"}}>
-                                    <div class="flex flex-row items-center">
-                                        <RadioButton
-                                            @radioClass="focus:ring-blue-500 h-4 w-4 text-blue-500"
-                                            @radioId={{concat "waypoint_" index "_dropoff"}}
-                                            @value="dropoff"
-                                            @groupValue={{waypoint.type}}
-                                            @name={{concat "waypoint_" index "_dropoff"}}
-                                            @changed={{fn (mut waypoint.type)}}
-                                        />
-                                        <label for={{concat "waypoint_" index "_dropoff"}} class="ml-2">Dropoff</label>
+                                {{/if}}
+                            </div>
+                            <div>
+                                <ModelSelect
+                                    @modelName="customer"
+                                    @selectedModel={{waypoint.customer}}
+                                    @placeholder={{t "order.fields.customer-placeholder"}}
+                                    @triggerClass="form-select form-input truncate max-w-300px"
+                                    @infiniteScroll={{false}}
+                                    @renderInPlace={{true}}
+                                    @allowClear={{true}}
+                                    @onChange={{fn this.setWaypointCustomer waypoint}}
+                                    @permission={{cannot-write @resource}}
+                                    as |model|
+                                >
+                                    <div class="flex items-center">
+                                        <div class="w-7">
+                                            <FaIcon @icon={{if model.isVendor "warehouse" "user"}} />
+                                        </div>
+                                        <span class="uppercase">
+                                            {{model.name}}
+                                        </span>
                                     </div>
-                                </div>
-                                <div class={{if (eq waypoint.type "pickup") "is-checked"}}>
-                                    <div class="flex flex-row items-center">
-                                        <RadioButton
-                                            @radioClass="focus:ring-blue-500 h-4 w-4 text-blue-500"
-                                            @radioId={{concat "waypoint_" index "_pickup"}}
-                                            @value="pickup"
-                                            @groupValue={{waypoint.type}}
-                                            @name={{concat "waypoint_" index "_pickup"}}
-                                            @changed={{fn (mut waypoint.type)}}
-                                        />
-                                        <label for={{concat "waypoint_" index "_pickup"}} class="ml-2">Pickup</label>
+                                </ModelSelect>
+                            </div>
+                            <div>
+                                <div class="flex flex-row items-center space-x-4 text-sm mt-2">
+                                    <div class={{if (eq waypoint.type "dropoff") "is-checked"}}>
+                                        <div class="flex flex-row items-center">
+                                            <RadioButton
+                                                @radioClass="focus:ring-blue-500 h-4 w-4 text-blue-500"
+                                                @radioId={{concat "waypoint_" index "_dropoff"}}
+                                                @value="dropoff"
+                                                @groupValue={{waypoint.type}}
+                                                @name={{concat "waypoint_" index "_dropoff"}}
+                                                @changed={{fn (mut waypoint.type)}}
+                                            />
+                                            <label for={{concat "waypoint_" index "_dropoff"}} class="ml-2">Dropoff</label>
+                                        </div>
+                                    </div>
+                                    <div class={{if (eq waypoint.type "pickup") "is-checked"}}>
+                                        <div class="flex flex-row items-center">
+                                            <RadioButton
+                                                @radioClass="focus:ring-blue-500 h-4 w-4 text-blue-500"
+                                                @radioId={{concat "waypoint_" index "_pickup"}}
+                                                @value="pickup"
+                                                @groupValue={{waypoint.type}}
+                                                @name={{concat "waypoint_" index "_pickup"}}
+                                                @changed={{fn (mut waypoint.type)}}
+                                            />
+                                            <label for={{concat "waypoint_" index "_pickup"}} class="ml-2">Pickup</label>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
                         </div>
-                    </div>
 
-                    <div class="flex items-center space-x-2">
-                        {{#if waypoint.place}}
-                            <Button @icon="edit" @size="sm" @onClick={{fn this.editPlace waypoint.place}} @disabled={{cannot-write waypoint.place}} />
-                        {{/if}}
-                        {{#unless (eq index 0)}}
-                            <Button @type="danger" @icon="trash" @size="sm" @onClick={{fn this.removeWaypoint waypoint}} />
-                        {{/unless}}
+                        <div class="flex items-center space-x-2">
+                            {{#if waypoint.place}}
+                                <Button @icon="edit" @size="sm" @onClick={{fn this.editPlace waypoint.place}} @disabled={{cannot-write waypoint.place}} />
+                            {{/if}}
+                            {{#unless (eq index 0)}}
+                                <Button @type="danger" @icon="trash" @size="sm" @onClick={{fn this.removeWaypoint waypoint}} />
+                            {{/unless}}
+                        </div>
                     </div>
                 </div>
-            </div>
+            {{/let}}
         </DragSortList>
     {{else}}
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-2 text-xs dark:text-gray-100">
-            <InputGroup>
-                <div class="flex items-center justify-between">
-                    <label>{{t "order.fields.pickup"}}</label>
-
+            <InputGroup @name={{t "order.fields.pickup"}} @required={{true}}>
+                <div class="flex items-center justify-end">
                     <div class="flex-row space-x-1 pr-0.5">
                         {{#if @resource.payload.pickup}}
                             <a href="javascript:;" {{on "click" (fn this.editPlace @resource.payload.pickup)}}>
@@ -186,10 +192,8 @@
                 {{/if}}
             </InputGroup>
 
-            <InputGroup>
-                <div class="flex items-center justify-between">
-                    <label>{{t "order.fields.dropoff"}}</label>
-
+            <InputGroup @name={{t "order.fields.dropoff"}} @required={{true}}>
+                <div class="flex items-center justify-end">
                     <div class="flex-row space-x-2 pr-0.5">
                         {{#if @resource.payload.dropoff}}
                             <a href="javascript:;" {{on "click" (fn this.editPlace @resource.payload.dropoff)}} disaled={{cannot "fleet-ops update place"}}>
