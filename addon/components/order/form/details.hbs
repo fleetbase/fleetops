@@ -1,6 +1,6 @@
 <ContentPanel @title="Details" @open={{true}} @wrapperClass="bordered-top">
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-2">
-        <InputGroup @name={{t "order.fields.order-type"}} @helpText={{t "order.fields.order-type-help-text"}}>
+        <InputGroup @name={{t "order.fields.order-type"}} @helpText={{t "order.fields.order-type-help-text"}} @required={{true}}>
             <div class="fleetbase-model-select fleetbase-power-select ember-model-select">
                 <PowerSelect
                     @options={{this.orderConfigActions.allOrderConfigs}}
@@ -160,7 +160,7 @@
         </InputGroup>
 
         {{#if (and @resource.pod_required (not @resource.facilitator.isIntegratedVendor))}}
-            <InputGroup @name={{t "order.fields.proof-delivery"}} @helpText={{t "order.fields.proof-delivery-help-text"}}>
+            <InputGroup @name={{t "order.fields.proof-delivery"}} @helpText={{t "order.fields.proof-delivery-help-text"}} @required={{true}}>
                 <div class="fleetbase-model-select fleetbase-power-select ember-model-select">
                     <PowerSelect
                         @options={{get-fleet-ops-options "podOptions"}}

@@ -1,4 +1,5 @@
 import { module, test } from 'qunit';
+import Service from '@ember/service';
 import { setupRenderingTest } from 'dummy/tests/helpers';
 import { render } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
@@ -6,21 +7,34 @@ import { hbs } from 'ember-cli-htmlbars';
 module('Integration | Component | order/form/details', function (hooks) {
     setupRenderingTest(hooks);
 
-    test('it renders', async function (assert) {
-        // Set any properties with this.set('myProperty', 'value');
-        // Handle any actions with this.set('myAction', function(val) { ... });
+    hooks.beforeEach(function () {
+        class OrderConfigActionsStub extends Service {
+            allOrderConfigs = [];
+            loadAll = {
+                perform() {},
+            };
+        }
 
-        await render(hbs`<Order::Form::Details />`);
+        this.owner.register('service:order-config-actions', OrderConfigActionsStub);
+    });
 
-        assert.dom().hasText('');
+    test('it marks required create-order detail fields', async function (assert) {
+        this.set('resource', {
+            facilitator: {
+                isIntegratedVendor: false,
+            },
+            order_config: null,
+            payload: {},
+            pod_required: true,
+            required_skills: [],
+        });
 
-        // Template block usage:
-        await render(hbs`
-      <Order::Form::Details>
-        template block text
-      </Order::Form::Details>
-    `);
+        await render(hbs`<Order::Form::Details @resource={{this.resource}} />`);
 
-        assert.dom().hasText('template block text');
+        const requiredLabels = [...this.element.querySelectorAll('label.required')].map((label) => label.textContent.trim());
+
+        assert.dom('label.required').exists({ count: 2 });
+        assert.true(requiredLabels.includes('Order Type'));
+        assert.true(requiredLabels.includes('Proof of Delivery'));
     });
 });
