@@ -22,6 +22,10 @@ use Illuminate\Http\Request;
  */
 class LiveController extends Controller
 {
+    protected const DEFAULT_VIEWPORT_LIMIT    = 500;
+    protected const MAX_VIEWPORT_LIMIT        = 1000;
+    protected const VIEWPORT_BOUNDS_PRECISION = 4;
+
     /**
      * Get coordinates for active orders.
      *
@@ -134,33 +138,19 @@ class LiveController extends Controller
      */
     public function drivers(Request $request)
     {
-        $bounds      = $request->input('bounds'); // Map viewport bounds: [south, west, north, east]
-        $cacheParams = ['bounds' => $bounds];
+        $bounds      = $this->normalizeLiveBounds($request);
+        $limit       = $this->normalizeLiveLimit($request);
+        $cacheParams = ['bounds' => $bounds, 'limit' => $limit];
 
-        return LiveCacheService::remember('drivers', $cacheParams, function () use ($bounds) {
+        return LiveCacheService::remember('drivers', $cacheParams, function () use ($bounds, $limit) {
             $query = Driver::where(['company_uuid' => session('company')])
                 ->with(['user', 'vehicle'])
                 ->applyDirectivesForPermissions('fleet-ops list driver');
 
-            // Filter out drivers with invalid coordinates
-            $query->whereNotNull('location')
-                ->whereRaw('
-                    ST_Y(location) BETWEEN -90 AND 90
-                    AND ST_X(location) BETWEEN -180 AND 180
-                    AND NOT (ST_X(location) = 0 AND ST_Y(location) = 0)
-                ');
+            $this->applyLiveLocationGuards($query);
+            $this->applyLiveViewportBounds($query, $bounds);
 
-            // Apply spatial filtering if bounds are provided
-            if ($bounds && is_array($bounds) && count($bounds) === 4) {
-                [$south, $west, $north, $east] = $bounds;
-
-                // Use MySQL spatial functions for POINT column
-                // ST_Within checks if location is within the bounding box
-                $query->whereRaw(
-                    'ST_Within(location, ST_MakeEnvelope(POINT(?, ?), POINT(?, ?)))',
-                    [$west, $south, $east, $north]
-                );
-            }
+            $query->orderByDesc('updated_at')->orderByDesc('id')->limit($limit);
 
             $drivers = $query->get();
 
@@ -175,34 +165,20 @@ class LiveController extends Controller
      */
     public function vehicles(Request $request)
     {
-        $bounds      = $request->input('bounds'); // Map viewport bounds: [south, west, north, east]
-        $cacheParams = ['bounds' => $bounds];
+        $bounds      = $this->normalizeLiveBounds($request);
+        $limit       = $this->normalizeLiveLimit($request);
+        $cacheParams = ['bounds' => $bounds, 'limit' => $limit];
 
-        return LiveCacheService::remember('vehicles', $cacheParams, function () use ($bounds) {
+        return LiveCacheService::remember('vehicles', $cacheParams, function () use ($bounds, $limit) {
             // Fetch vehicles that are online
             $query = Vehicle::where(['company_uuid' => session('company')])
                 ->with(['devices', 'driver'])
                 ->applyDirectivesForPermissions('fleet-ops list vehicle');
 
-            // Filter out vehicles with invalid coordinates
-            $query->whereNotNull('location')
-                ->whereRaw('
-                    ST_Y(location) BETWEEN -90 AND 90
-                    AND ST_X(location) BETWEEN -180 AND 180
-                    AND NOT (ST_X(location) = 0 AND ST_Y(location) = 0)
-                ');
+            $this->applyLiveLocationGuards($query);
+            $this->applyLiveViewportBounds($query, $bounds);
 
-            // Apply spatial filtering if bounds are provided
-            if ($bounds && is_array($bounds) && count($bounds) === 4) {
-                [$south, $west, $north, $east] = $bounds;
-
-                // Use MySQL spatial functions for POINT column
-                // ST_Within checks if location is within the bounding box
-                $query->whereRaw(
-                    'ST_Within(location, ST_MakeEnvelope(POINT(?, ?), POINT(?, ?)))',
-                    [$west, $south, $east, $north]
-                );
-            }
+            $query->orderByDesc('updated_at')->orderByDesc('id')->limit($limit);
 
             $vehicles = $query->get();
 
@@ -217,39 +193,98 @@ class LiveController extends Controller
      */
     public function places(Request $request)
     {
-        // Cache key includes filter parameters
-        $cacheParams = $request->only(['query', 'type', 'country', 'limit', 'bounds']);
+        $bounds = $this->normalizeLiveBounds($request);
+        $limit  = $this->normalizeLiveLimit($request);
 
-        return LiveCacheService::remember('places', $cacheParams, function () use ($request) {
+        // Cache key includes filter parameters
+        $cacheParams = array_merge($request->only(['query', 'type', 'country']), [
+            'bounds' => $bounds,
+            'limit'  => $limit,
+        ]);
+
+        return LiveCacheService::remember('places', $cacheParams, function () use ($request, $bounds, $limit) {
             // Query places based on filters
             $query = Place::where(['company_uuid' => session('company')])
                 ->filter(new PlaceFilter($request))
                 ->applyDirectivesForPermissions('fleet-ops list place');
 
-            // Filter out places with invalid coordinates
-            $query->whereNotNull('location')
-                ->whereRaw('
-                    ST_Y(location) BETWEEN -90 AND 90
-                    AND ST_X(location) BETWEEN -180 AND 180
-                    AND NOT (ST_X(location) = 0 AND ST_Y(location) = 0)
-                ');
+            $this->applyLiveLocationGuards($query);
+            $this->applyLiveViewportBounds($query, $bounds);
 
-            // Apply spatial filtering if bounds are provided
-            $bounds = $request->input('bounds');
-            if ($bounds && is_array($bounds) && count($bounds) === 4) {
-                [$south, $west, $north, $east] = $bounds;
-
-                // Use MySQL spatial functions for POINT column
-                // ST_Within checks if location is within the bounding box
-                $query->whereRaw(
-                    'ST_Within(location, ST_MakeEnvelope(POINT(?, ?), POINT(?, ?)))',
-                    [$west, $south, $east, $north]
-                );
-            }
+            $query->orderByDesc('updated_at')->orderByDesc('id')->limit($limit);
 
             $places = $query->get();
 
             return PlaceIndexResource::collection($places);
         });
+    }
+
+    protected function normalizeLiveBounds(Request $request): ?array
+    {
+        $bounds = $request->input('bounds');
+
+        if (!is_array($bounds) || count($bounds) !== 4) {
+            return null;
+        }
+
+        $bounds = array_values($bounds);
+
+        if (array_filter($bounds, fn ($value) => !is_numeric($value))) {
+            return null;
+        }
+
+        [$south, $west, $north, $east] = array_map('floatval', $bounds);
+
+        if ($south < -90 || $south > 90 || $north < -90 || $north > 90) {
+            return null;
+        }
+
+        if ($west < -180 || $west > 180 || $east < -180 || $east > 180) {
+            return null;
+        }
+
+        if ($south > $north || $west > $east) {
+            return null;
+        }
+
+        return array_map(
+            fn ($value) => round($value, static::VIEWPORT_BOUNDS_PRECISION),
+            [$south, $west, $north, $east]
+        );
+    }
+
+    protected function normalizeLiveLimit(Request $request): int
+    {
+        $limit = (int) $request->input('limit', static::DEFAULT_VIEWPORT_LIMIT);
+
+        if ($limit < 1) {
+            return static::DEFAULT_VIEWPORT_LIMIT;
+        }
+
+        return min($limit, static::MAX_VIEWPORT_LIMIT);
+    }
+
+    protected function applyLiveLocationGuards($query): void
+    {
+        $query->whereNotNull('location')
+            ->whereRaw('
+                ST_Y(location) BETWEEN -90 AND 90
+                AND ST_X(location) BETWEEN -180 AND 180
+                AND NOT (ST_X(location) = 0 AND ST_Y(location) = 0)
+            ');
+    }
+
+    protected function applyLiveViewportBounds($query, ?array $bounds): void
+    {
+        if (!$bounds) {
+            return;
+        }
+
+        [$south, $west, $north, $east] = $bounds;
+
+        $query->whereRaw(
+            'ST_Y(location) BETWEEN ? AND ? AND ST_X(location) BETWEEN ? AND ?',
+            [$south, $north, $west, $east]
+        );
     }
 }
