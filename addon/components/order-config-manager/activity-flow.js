@@ -12,6 +12,7 @@ import generateUUID from '@fleetbase/ember-core/utils/generate-uuid';
 import inlineTask from '@fleetbase/ember-core/utils/inline-task';
 import createFlowActivity from '../../utils/create-flow-activity';
 import contextComponentCallback from '@fleetbase/ember-core/utils/context-component-callback';
+import normalizeOrderConfigFlow, { getOrderConfigFlowRootCode } from '../../utils/normalize-order-config-flow';
 
 /**
  * Manages the activity flow for order configuration, allowing users to create, edit, and view a sequence of activities.
@@ -54,11 +55,26 @@ export default class OrderConfigManagerActivityFlowComponent extends Component {
     @tracked graph;
 
     /**
+     * True when the rendered graph is wider than the visible Activity Flow area.
+     *
+     * @type {Boolean}
+     */
+    @tracked hasHorizontalOverflow = false;
+
+    /**
      * Checks if listener pointerdown listener is called.
      *
      * @type {Boolean}
      */
     @tracked listeningForClicks = false;
+
+    graphScrollContainer;
+    horizontalScrollbar;
+    horizontalScrollbarContent;
+    isSyncingHorizontalScroll = false;
+    onGraphScroll;
+    onHorizontalScrollbarScroll;
+    onWindowResize;
 
     /**
      * Initializes the component with the given configuration.
@@ -85,6 +101,42 @@ export default class OrderConfigManagerActivityFlowComponent extends Component {
         this.initializeActivityJointModel();
         this.initializeActivityFlow();
         this.listenForElementClicks();
+        this.updateHorizontalScrollbar();
+    }
+
+    @action setupGraphScrollContainer(element) {
+        this.graphScrollContainer = element;
+        this.onGraphScroll = () => this.syncHorizontalScrollbarFromGraph();
+        this.onWindowResize = () => this.updateHorizontalScrollbar();
+
+        element.addEventListener('scroll', this.onGraphScroll);
+        window.addEventListener('resize', this.onWindowResize);
+        this.updateHorizontalScrollbar();
+    }
+
+    @action setupHorizontalScrollbar(element) {
+        this.horizontalScrollbar = element;
+        this.horizontalScrollbarContent = element.firstElementChild;
+        this.onHorizontalScrollbarScroll = () => this.syncGraphFromHorizontalScrollbar();
+
+        element.addEventListener('scroll', this.onHorizontalScrollbarScroll);
+        this.updateHorizontalScrollbar();
+    }
+
+    willDestroy() {
+        super.willDestroy(...arguments);
+
+        if (this.graphScrollContainer && this.onGraphScroll) {
+            this.graphScrollContainer.removeEventListener('scroll', this.onGraphScroll);
+        }
+
+        if (this.horizontalScrollbar && this.onHorizontalScrollbarScroll) {
+            this.horizontalScrollbar.removeEventListener('scroll', this.onHorizontalScrollbarScroll);
+        }
+
+        if (this.onWindowResize) {
+            window.removeEventListener('resize', this.onWindowResize);
+        }
     }
 
     /**
@@ -299,14 +351,20 @@ export default class OrderConfigManagerActivityFlowComponent extends Component {
      * @param {Object} incomingFlow - The incoming serialized activity flow.
      */
     deserializeFlow(incomingFlow) {
+        const normalizedFlow = normalizeOrderConfigFlow(incomingFlow);
         const deserializedFlow = {};
-        const keys = Object.keys(incomingFlow);
+        const keys = Object.keys(normalizedFlow);
         keys.forEach((key) => {
-            const activity = this.deserializeActivity(incomingFlow[key], incomingFlow);
-            deserializedFlow[activity.get('code')] = activity;
+            const activity = this.deserializeActivity(normalizedFlow[key], normalizedFlow, deserializedFlow);
+            if (activity) {
+                deserializedFlow[activity.get('code')] = activity;
+            }
         });
 
-        this.addDeserializedActivityToGraph(deserializedFlow.created);
+        const rootCode = getOrderConfigFlowRootCode(deserializedFlow);
+        if (rootCode && deserializedFlow[rootCode]) {
+            this.addDeserializedActivityToGraph(deserializedFlow[rootCode]);
+        }
     }
 
     /**
@@ -315,8 +373,21 @@ export default class OrderConfigManagerActivityFlowComponent extends Component {
      * @param {Object} incomingFlow - The entire incoming serialized activity flow for reference.
      * @returns {Object} Deserialized activity object.
      */
-    deserializeActivity(activityObject, incomingFlow) {
-        const activity = createFlowActivity(activityObject.code, activityObject.status, activityObject.details, activityObject.sequence, activityObject.color, {
+    deserializeActivity(activityObject, incomingFlow, deserializedFlow = {}) {
+        if (!activityObject || typeof activityObject !== 'object') {
+            return;
+        }
+
+        const code = activityObject.code ?? activityObject.key;
+        if (!code) {
+            return;
+        }
+
+        if (deserializedFlow[code]) {
+            return deserializedFlow[code];
+        }
+
+        const activity = createFlowActivity(code, activityObject.status, activityObject.details, activityObject.sequence, activityObject.color, {
             key: activityObject.key,
             logic: activityObject.logic ?? [],
             events: activityObject.events ?? [],
@@ -327,13 +398,14 @@ export default class OrderConfigManagerActivityFlowComponent extends Component {
             complete: activityObject.complete ?? false,
             internalId: activityObject.internalId ?? generateUUID(),
         });
+        deserializedFlow[code] = activity;
         const { activities } = activityObject;
         if (isArray(activities)) {
             activity.set(
                 'activities',
                 activities
                     .map((activityKey) => {
-                        return this.deserializeActivity(incomingFlow[activityKey], incomingFlow);
+                        return this.deserializeActivity(incomingFlow[activityKey], incomingFlow, deserializedFlow);
                     })
                     .filter(Boolean)
             );
@@ -347,6 +419,10 @@ export default class OrderConfigManagerActivityFlowComponent extends Component {
      * @param {Object} activity - The activity to add to the graph.
      */
     addDeserializedActivityToGraph(activity) {
+        if (!activity) {
+            return;
+        }
+
         const positionals = this.getActivityPositioning(activity);
         const parentActivity = this.createActivityNode(activity, positionals);
         const childActivities = activity.get('activities');
@@ -355,6 +431,7 @@ export default class OrderConfigManagerActivityFlowComponent extends Component {
         this.addActivityNodeTools(parentActivity, positionals);
         this.addChildActivities(parentActivity, childActivities);
         this.repositionAllActivities();
+        this.resizePaperWidthToFitActivities();
     }
 
     /**
@@ -392,6 +469,79 @@ export default class OrderConfigManagerActivityFlowComponent extends Component {
         activities.forEach((parentActivity) => {
             this.repositionActivities(parentActivity);
         });
+    }
+
+    /**
+     * Expands the JointJS paper width so wide activity flows can scroll horizontally.
+     *
+     * @returns {void}
+     */
+    resizePaperWidthToFitActivities() {
+        if (!this.paper) {
+            return;
+        }
+
+        const nodes = Object.values(this.flow)
+            .map((activity) => activity.get('node'))
+            .filter(Boolean);
+
+        if (nodes.length === 0) {
+            return;
+        }
+
+        const padding = 150;
+        const viewportWidth = this.paper.el.parentElement?.clientWidth ?? this.paper.options.width;
+        const currentHeight = this.paper.options.height;
+        const contentWidth = nodes.reduce((width, node) => {
+            const position = node.position();
+            const size = node.size();
+
+            return Math.max(width, position.x + size.width + padding);
+        }, 0);
+        const paperWidth = Math.max(viewportWidth, contentWidth);
+
+        this.paper.setDimensions(paperWidth, currentHeight);
+        this.paper.el.style.width = contentWidth > viewportWidth ? `${paperWidth}px` : '100%';
+        this.paper.el.style.minWidth = '100%';
+        next(this, this.updateHorizontalScrollbar);
+    }
+
+    updateHorizontalScrollbar() {
+        if (!this.graphScrollContainer || !this.horizontalScrollbar || !this.horizontalScrollbarContent) {
+            return;
+        }
+
+        const scrollWidth = this.graphScrollContainer.scrollWidth;
+        const clientWidth = this.graphScrollContainer.clientWidth;
+        const hasOverflow = scrollWidth > clientWidth + 1;
+
+        this.hasHorizontalOverflow = hasOverflow;
+        this.horizontalScrollbarContent.style.width = hasOverflow ? `${scrollWidth}px` : '100%';
+        this.horizontalScrollbar.scrollLeft = this.graphScrollContainer.scrollLeft;
+
+        const { left, width } = this.graphScrollContainer.getBoundingClientRect();
+        this.horizontalScrollbar.style.left = `${left}px`;
+        this.horizontalScrollbar.style.width = `${width}px`;
+    }
+
+    syncHorizontalScrollbarFromGraph() {
+        if (this.isSyncingHorizontalScroll || !this.horizontalScrollbar || !this.graphScrollContainer) {
+            return;
+        }
+
+        this.isSyncingHorizontalScroll = true;
+        this.horizontalScrollbar.scrollLeft = this.graphScrollContainer.scrollLeft;
+        this.isSyncingHorizontalScroll = false;
+    }
+
+    syncGraphFromHorizontalScrollbar() {
+        if (this.isSyncingHorizontalScroll || !this.horizontalScrollbar || !this.graphScrollContainer) {
+            return;
+        }
+
+        this.isSyncingHorizontalScroll = true;
+        this.graphScrollContainer.scrollLeft = this.horizontalScrollbar.scrollLeft;
+        this.isSyncingHorizontalScroll = false;
     }
 
     /**
@@ -484,6 +634,7 @@ export default class OrderConfigManagerActivityFlowComponent extends Component {
             const firstActivity = this.addActivityToGraph(activityObject);
             lastActivity = firstActivity;
         });
+        this.resizePaperWidthToFitActivities();
         return;
     }
 
@@ -551,6 +702,16 @@ export default class OrderConfigManagerActivityFlowComponent extends Component {
     }
 
     /**
+     * Coerces activity label fields before passing them to JointJS text helpers.
+     *
+     * @param {*} value
+     * @returns {String}
+     */
+    activityText(value) {
+        return typeof value === 'string' ? value : value == null ? '' : String(value);
+    }
+
+    /**
      * Creates a new activity node based on the provided activity and positioning data.
      * @param {Object} activity - The activity data.
      * @param {Object} positionals - Positioning information for the activity node.
@@ -558,14 +719,17 @@ export default class OrderConfigManagerActivityFlowComponent extends Component {
      */
     createActivityNode(activity, positionals = {}) {
         const { width, height, x, y } = positionals;
-        const wrappedDetails = joint.util.breakText(activity.get('details'), { width });
+        const code = this.activityText(activity.get('code'));
+        const status = this.activityText(activity.get('status'));
+        const details = this.activityText(activity.get('details'));
+        const wrappedDetails = this.activityText(joint.util.breakText(details, { width }));
         const activityNode = new joint.shapes.fleetbase.Activity({
             position: { x, y },
             size: { width, height },
             attrs: {
                 pill: {
                     ref: 'code',
-                    refWidth: activity.get('code').length * 1.35,
+                    refWidth: code.length * 1.35,
                     refHeight: 5,
                     refX: -5,
                     refY: -2,
@@ -575,8 +739,8 @@ export default class OrderConfigManagerActivityFlowComponent extends Component {
                     stroke: '#374151',
                     strokeWidth: 1,
                 },
-                code: { ref: 'pill', text: activity.get('code'), fill: 'white', fontSize: 14, textAnchor: 'left', refX: 15, refY: 20, yAlignment: 'middle' },
-                status: { text: activity.get('status'), fill: 'white', fontSize: 14, fontWeight: 'bold', refY: 40, refX: 10, textAnchor: 'left' },
+                code: { ref: 'pill', text: code, fill: 'white', fontSize: 14, textAnchor: 'left', refX: 15, refY: 20, yAlignment: 'middle' },
+                status: { text: status, fill: 'white', fontSize: 14, fontWeight: 'bold', refY: 40, refX: 10, textAnchor: 'left' },
                 details: {
                     text: wrappedDetails,
                     fill: 'white',
@@ -608,7 +772,8 @@ export default class OrderConfigManagerActivityFlowComponent extends Component {
         const width = 250;
         const baseHeight = 90;
         const lineHeight = 10;
-        const wrappedDetails = joint.util.breakText(activity.get('details'), { width });
+        const details = this.activityText(activity.get('details'));
+        const wrappedDetails = this.activityText(joint.util.breakText(details, { width }));
         const numberOfLines = wrappedDetails.split('\n').length;
         const height = baseHeight + lineHeight * (numberOfLines - 1);
         let x = 100;
@@ -933,6 +1098,7 @@ export default class OrderConfigManagerActivityFlowComponent extends Component {
             target: { id: newActivity.get('id') },
         });
         link.addTo(this.graph);
+        this.resizePaperWidthToFitActivities();
 
         return newActivity;
     }

@@ -276,13 +276,17 @@ export default class MapGoogleLiveMapComponent extends Component {
     }
 
     _showServiceAreaContextMenu(serviceArea, event) {
-        const items = this.mapManager.getComposedContextMenuItems(`service-area:${serviceArea.public_id}`);
+        const items = this.mapManager.getComposedContextMenuItems(this._resourceContextKey('service-area', serviceArea));
         this.mapManager.showContextMenu(event, items);
     }
 
     _showZoneContextMenu(zone, event) {
-        const items = this.mapManager.getComposedContextMenuItems(`zone:${zone.public_id}`);
+        const items = this.mapManager.getComposedContextMenuItems(this._resourceContextKey('zone', zone));
         this.mapManager.showContextMenu(event, items);
+    }
+
+    _resourceContextKey(type, resource) {
+        return `${type}:${resource?.public_id ?? resource?.id}`;
     }
 
     _closeAllInfoWindows() {

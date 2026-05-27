@@ -16,6 +16,23 @@
             </InfoBlock>
         {{/if}}
 
+        {{#if this.currentWaypoint}}
+            <div class="my-4 rounded-md border border-blue-200 bg-blue-50 px-4 py-3 text-blue-900 dark:border-blue-700 dark:bg-blue-900 dark:text-blue-50">
+                <div class="text-xs font-semibold uppercase">Updating activity for</div>
+                <div class="mt-1 flex items-start justify-between gap-3">
+                    <div class="min-w-0">
+                        <div class="truncate text-sm font-semibold">{{or this.currentWaypoint.name this.currentWaypoint.id}}</div>
+                        <div class="truncate text-xs">{{or (place-address-html this.currentWaypoint showTitle=false) this.currentWaypoint.address this.currentWaypoint.street1}}</div>
+                    </div>
+                    {{#if this.currentWaypoint.status_code}}
+                        <Badge @status={{dasherize this.currentWaypoint.status_code}} class="uppercase">{{this.currentWaypoint.status_code}}</Badge>
+                    {{else if this.currentWaypoint.status}}
+                        <Badge @status={{dasherize this.currentWaypoint.status}} class="uppercase">{{this.currentWaypoint.status}}</Badge>
+                    {{/if}}
+                </div>
+            </div>
+        {{/if}}
+
         <fieldset class="my-5">
             <legend class="sr-only">
                 {{t "modals.order-new-activity.activity-options"}}
@@ -36,13 +53,17 @@
                         </div>
                         <label for={{concat "activity_" index}} class="ml-3 flex flex-col cursor-pointer w-full">
                             <span class="block text-sm font-semibold">
-                                {{activity.status}}
+                                {{or activity._resolved_status activity.status}}
                             </span>
                             <span class="block text-sm">
-                                {{activity.details}}
+                                {{or activity._resolved_details activity.details}}
 
                                 {{#if (eq activity.code "dispatched")}}
                                     <InfoBlock @type="warning" @size="xs" @icon="exclamation-triangle" @text={{t "modals.order-new-activity.dispatch"}} class="mt-1" />
+                                {{/if}}
+
+                                {{#if activity.require_pod}}
+                                    <InfoBlock @type="warning" @size="xs" @icon="camera" @text="Requires photo proof of delivery" class="mt-1" />
                                 {{/if}}
                             </span>
                         </label>
@@ -88,5 +109,26 @@
                 </div>
             </div>
         </fieldset>
+
+        {{#if this.selectedActivityRequiresPod}}
+            <div class="mb-5 rounded-md border border-yellow-300 bg-yellow-50 p-4 dark:border-yellow-700 dark:bg-yellow-900">
+                <div class="mb-2 text-sm font-semibold text-yellow-900 dark:text-yellow-50">Photo proof of delivery required</div>
+                <p class="mb-3 text-xs text-yellow-800 dark:text-yellow-100">Upload a delivery photo before submitting this activity update.</p>
+                <FileUpload @name="photos[]" @accept={{join "," this.acceptedProofFileTypes}} @multiple={{false}} @onFileAdded={{this.setProofFile}}>
+                    <a tabindex={{0}} class="btn btn-magic cursor-pointer">
+                        <FaIcon @icon="camera" class="mr-1" />
+                        Select photo
+                    </a>
+                </FileUpload>
+                {{#if this.proofFiles}}
+                    {{#each this.proofFiles as |file|}}
+                        <div class="mt-3 flex items-center justify-between rounded-md border border-yellow-400 bg-white px-3 py-2 text-xs text-yellow-900 dark:bg-yellow-950 dark:text-yellow-50">
+                            <span class="truncate">{{file.name}}</span>
+                            <span class="font-semibold">{{round file.progress}}%</span>
+                        </div>
+                    {{/each}}
+                {{/if}}
+            </div>
+        {{/if}}
     </div>
 </Modal::Default>

@@ -17,20 +17,29 @@ export default class RouteListComponent extends Component {
         const routePoints = buildRoutePointsFromPayload(this.args.order?.payload);
 
         return routePoints
-            .map((routePoint) => ({
-                routePoint,
-                place: routePoint.place,
-                badgeStyle: this.badgeStyleForStop(routePoint),
-                trackingStop: this.trackingStopFor(routePoint.place),
-                routeLeg: this.routeLegFor(routePoint.place),
-                ...describeRoutePoint(routePoint, this.routeColor),
-            }))
+            .map((routePoint) => {
+                const trackingStop = this.trackingStopFor(routePoint.place);
+
+                return {
+                    routePoint,
+                    place: routePoint.place,
+                    badgeStyle: this.badgeStyleForStop(routePoint),
+                    trackingStop,
+                    routeLeg: this.routeLegFor(routePoint.place),
+                    trackingNumberUuid: routePoint.trackingNumberUuid ?? trackingStop?.tracking_number_uuid,
+                    ...describeRoutePoint(routePoint, this.routeColor),
+                };
+            })
             .map((stop) => ({
                 ...stop,
-                etaSeconds: stop.routeLeg?.eta_seconds ?? stop.routeLeg?.duration_in_traffic_s ?? stop.routeLeg?.duration_s ?? this.legacyEtaFor(stop.place),
-                etaAt: stop.routeLeg?.eta_at,
+                etaSeconds: this.shouldShowEtaForStop(stop)
+                    ? (stop.routeLeg?.eta_seconds ?? stop.routeLeg?.duration_in_traffic_s ?? stop.routeLeg?.duration_s ?? this.legacyEtaFor(stop.place))
+                    : null,
+                etaAt: this.shouldShowEtaForStop(stop) ? stop.routeLeg?.eta_at : null,
                 completed: Boolean(stop.trackingStop?.completed),
                 active: this.matchesStop(stop.trackingStop, this.args.order?.tracker_data?.active_stop),
+                statusCode: stop.place?.status_code ?? stop.trackingStop?.status,
+                showCompletedFlagBadge: this.shouldShowCompletedFlagBadge(stop),
             }));
     }
 
@@ -52,6 +61,10 @@ export default class RouteListComponent extends Component {
 
     get shouldCollapseWaypoints() {
         return this.args.isCollapsible !== false && this.hasExtraStops;
+    }
+
+    get showEta() {
+        return this.args.showEta !== false;
     }
 
     badgeStyleForStop(routePoint) {
@@ -92,6 +105,25 @@ export default class RouteListComponent extends Component {
         }
 
         return stop.uuid === activeStop.uuid || stop.public_id === activeStop.public_id;
+    }
+
+    shouldShowCompletedFlagBadge(stop) {
+        if (!stop.trackingStop?.completed) {
+            return false;
+        }
+
+        const visibleStatus = stop.statusCode ?? stop.place?.status_code ?? stop.trackingStop?.status_code ?? stop.trackingStop?.status ?? stop.place?.status;
+        if (typeof visibleStatus !== 'string') {
+            return true;
+        }
+
+        return visibleStatus.trim().toLowerCase() !== 'completed';
+    }
+
+    shouldShowEtaForStop(stop) {
+        const status = this.args.order?.status;
+
+        return this.showEta && !['completed', 'canceled'].includes(status) && !stop.trackingStop?.completed;
     }
 
     @action toggleWaypointsCollapse() {

@@ -41,7 +41,7 @@ class OrdersByStatus extends AbstractAnalytics
         while ($cursor <= $endDay) {
             $labels[] = $cursor->format('M j');
             foreach (array_keys(self::STATUS_PALETTE) as $status) {
-                $match = $rows->first(fn ($r) => $r->bucket === $cursor->format('Y-m-d') && $r->status === $status);
+                $match               = $rows->first(fn ($r) => $r->bucket === $cursor->format('Y-m-d') && $r->status === $status);
                 $byStatus[$status][] = $match ? (int) $match->total : 0;
             }
             $cursor->addDay();

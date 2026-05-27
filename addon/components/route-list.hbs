@@ -9,10 +9,10 @@
             </div>
             <div class="order-route-location {{@routeLocationClass}} dark:text-gray-100">
                 <div class="mb-2 flex flex-wrap items-center gap-1.5">
-                    {{#if this.firstStop.place.status_code}}
-                        <Badge @status={{this.firstStop.place.status_code}} />
+                    {{#if this.firstStop.statusCode}}
+                        <Badge @status={{this.firstStop.statusCode}} />
                     {{/if}}
-                    {{#if this.firstStop.completed}}
+                    {{#if this.firstStop.showCompletedFlagBadge}}
                         <Badge @status="success" @hideStatusDot={{true}}>Completed</Badge>
                     {{else if this.firstStop.active}}
                         <Badge @status="indigo" @hideStatusDot={{true}}>Current Stop</Badge>
@@ -24,7 +24,7 @@
                         <Badge @status="pending" @hideStatusDot={{true}}>{{format-date-fns this.firstStop.etaAt "d MMM HH:mm"}}</Badge>
                     {{/if}}
                 </div>
-                <DisplayPlace @place={{this.firstStop.place}} @waypointActions={{@waypointActions}} @hideBadges={{true}} />
+                <DisplayPlace @place={{this.firstStop.place}} @waypointActions={{@waypointActions}} @waypointActionContext={{this.firstStop}} @hideBadges={{true}} />
             </div>
         </div>
     {{/if}}
@@ -47,10 +47,10 @@
                     </div>
                     <div class="order-route-location {{@routeLocationClass}} dark:text-gray-100">
                         <div class="mb-2 flex flex-wrap items-center gap-1.5">
-                            {{#if stop.place.status_code}}
-                                <Badge @status={{stop.place.status_code}} />
+                            {{#if stop.statusCode}}
+                                <Badge @status={{stop.statusCode}} />
                             {{/if}}
-                            {{#if stop.completed}}
+                            {{#if stop.showCompletedFlagBadge}}
                                 <Badge @status="success" @hideStatusDot={{true}}>Completed</Badge>
                             {{else if stop.active}}
                                 <Badge @status="indigo" @hideStatusDot={{true}}>Current Stop</Badge>
@@ -62,7 +62,7 @@
                                 <Badge @status="pending" @hideStatusDot={{true}}>{{format-date-fns stop.etaAt "d MMM HH:mm"}}</Badge>
                             {{/if}}
                         </div>
-                        <DisplayPlace @place={{stop.place}} @waypointActions={{@waypointActions}} @hideBadges={{true}} />
+                        <DisplayPlace @place={{stop.place}} @waypointActions={{@waypointActions}} @waypointActionContext={{stop}} @hideBadges={{true}} />
                     </div>
                 </div>
             {{/each}}
@@ -75,10 +75,10 @@
                 </div>
                 <div class="order-route-location {{@routeLocationClass}} dark:text-gray-100">
                     <div class="mb-2 flex flex-wrap items-center gap-1.5">
-                        {{#if stop.place.status_code}}
-                            <Badge @status={{stop.place.status_code}} />
+                        {{#if stop.statusCode}}
+                            <Badge @status={{stop.statusCode}} />
                         {{/if}}
-                        {{#if stop.completed}}
+                        {{#if stop.showCompletedFlagBadge}}
                             <Badge @status="success" @hideStatusDot={{true}}>Completed</Badge>
                         {{else if stop.active}}
                             <Badge @status="indigo" @hideStatusDot={{true}}>Current Stop</Badge>
@@ -90,7 +90,7 @@
                             <Badge @status="pending" @hideStatusDot={{true}}>{{format-date-fns stop.etaAt "d MMM HH:mm"}}</Badge>
                         {{/if}}
                     </div>
-                    <DisplayPlace @place={{stop.place}} @waypointActions={{@waypointActions}} @hideBadges={{true}} />
+                    <DisplayPlace @place={{stop.place}} @waypointActions={{@waypointActions}} @waypointActionContext={{stop}} @hideBadges={{true}} />
                 </div>
             </div>
         {{/each}}
@@ -106,10 +106,10 @@
             </div>
             <div class="order-route-location {{@routeLocationClass}} dark:text-gray-100">
                 <div class="mb-2 flex flex-wrap items-center gap-1.5">
-                    {{#if this.lastStop.place.status_code}}
-                        <Badge @status={{this.lastStop.place.status_code}} />
+                    {{#if this.lastStop.statusCode}}
+                        <Badge @status={{this.lastStop.statusCode}} />
                     {{/if}}
-                    {{#if this.lastStop.completed}}
+                    {{#if this.lastStop.showCompletedFlagBadge}}
                         <Badge @status="success" @hideStatusDot={{true}}>Completed</Badge>
                     {{else if this.lastStop.active}}
                         <Badge @status="indigo" @hideStatusDot={{true}}>Current Stop</Badge>
@@ -121,7 +121,7 @@
                         <Badge @status="pending" @hideStatusDot={{true}}>{{format-date-fns this.lastStop.etaAt "d MMM HH:mm"}}</Badge>
                     {{/if}}
                 </div>
-                <DisplayPlace @place={{this.lastStop.place}} @waypointActions={{@waypointActions}} @hideBadges={{true}} />
+                <DisplayPlace @place={{this.lastStop.place}} @waypointActions={{@waypointActions}} @waypointActionContext={{this.lastStop}} @hideBadges={{true}} />
             </div>
         </div>
     {{/if}}

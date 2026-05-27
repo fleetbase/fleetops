@@ -12,9 +12,9 @@ class RouteDeviation extends Notification implements ShouldQueue
 {
     use Queueable;
 
-    public static string $name = 'Route Deviation';
+    public static string $name        = 'Route Deviation';
     public static string $description = 'Notify when tracked vehicle location deviates from the active route beyond the configured threshold.';
-    public static string $package = 'fleet-ops';
+    public static string $package     = 'fleet-ops';
 
     public function __construct(public Order $order, public array $context = [])
     {

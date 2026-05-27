@@ -6,7 +6,7 @@
                     @modelName="user"
                     @selectedModel={{@resource.user}}
                     @placeholder={{t "customer.fields.select-user"}}
-                    @query={{hash doesnt_have_contact=true}}
+                    @query={{hash doesnt_have_contact=true is_customer=true}}
                     @triggerClass="form-select form-input"
                     @infiniteScroll={{false}}
                     @renderInPlace={{true}}

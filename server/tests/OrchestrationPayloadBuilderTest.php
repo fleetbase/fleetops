@@ -39,7 +39,7 @@ function orchestrationTestOrder($pickup = null, $dropoff = null, array $waypoint
         public function __construct(public $pickup, public $dropoff, array $waypoints)
         {
             $this->entities         = collect();
-            $this->waypointMarkers = collect($waypoints)->map(function ($place, $index) {
+            $this->waypointMarkers  = collect($waypoints)->map(function ($place, $index) {
                 return new class($place, $index) {
                     public string $public_id;
                     public string $uuid;
@@ -61,7 +61,7 @@ function orchestrationTestOrder($pickup = null, $dropoff = null, array $waypoint
         }
     };
 
-    $order = new Order();
+    $order            = new Order();
     $order->public_id = 'order_test';
     $order->setRelation('payload', $payload);
 

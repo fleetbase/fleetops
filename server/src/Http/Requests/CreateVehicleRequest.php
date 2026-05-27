@@ -4,6 +4,7 @@ namespace Fleetbase\FleetOps\Http\Requests;
 
 use Fleetbase\FleetOps\Rules\ResolvablePoint;
 use Fleetbase\Http\Requests\FleetbaseRequest;
+use Illuminate\Validation\Rule;
 
 class CreateVehicleRequest extends FleetbaseRequest
 {
@@ -25,7 +26,30 @@ class CreateVehicleRequest extends FleetbaseRequest
     public function rules()
     {
         return [
-            'status'    => 'nullable|in:operational,maintenance,decommissioned',
+            'status'    => [
+                'nullable',
+                Rule::in([
+                    'active',
+                    'available',
+                    'in_use',
+                    'maintenance',
+                    'out_of_service',
+                    'reserved',
+                    'retired',
+                    'staging',
+                    'on_route',
+                    'idle',
+                    'cleaning',
+                    'awaiting_parts',
+                    'inspection_due',
+                    'inspection_failed',
+                    'accident',
+                    'compliance_hold',
+                    'stolen',
+                    'operational',
+                    'decommissioned',
+                ]),
+            ],
             'vendor'    => 'nullable|exists:vendors,public_id',
             'driver'    => 'nullable|exists:drivers,public_id',
             'location'  => ['nullable', new ResolvablePoint()],

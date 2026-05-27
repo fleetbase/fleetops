@@ -121,6 +121,47 @@
                 </table>
             </div>
         </ContentPanel>
+    {{else if @resource.isMultiZoneDistance}}
+        <ContentPanel @title="Multi-zone Distance" @open={{true}} @wrapperClass="bordered-top" @panelBodyWrapperClass="p-0i">
+            <div class="next-table-wrapper h-auto table-fluid rounded-none overflow-x-auto">
+                <table class="table table-fixed w-full">
+                    <thead>
+                        <tr>
+                            <th>Label</th>
+                            <th>Geography Type</th>
+                            <th>Geography</th>
+                            <th>Priority</th>
+                            <th>Rate</th>
+                            <th>Unit</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {{#each @resource.rateFees as |rateFee|}}
+                            <tr>
+                                <td>{{n-a rateFee.label}}</td>
+                                <td>{{smart-humanize rateFee.geography_type}}</td>
+                                <td>
+                                    {{#if (eq rateFee.geography_type "zone")}}
+                                        {{n-a rateFee.zone.name}}
+                                    {{else if (eq rateFee.geography_type "fallback")}}
+                                        Unmatched route distance
+                                    {{else}}
+                                        {{n-a rateFee.service_area.name}}
+                                    {{/if}}
+                                </td>
+                                <td>{{n-a rateFee.priority}}</td>
+                                <td>{{format-currency (f-to-int rateFee.fee) @resource.currency}}</td>
+                                <td>{{n-a rateFee.distance_unit}}</td>
+                            </tr>
+                        {{else}}
+                            <tr>
+                                <td colspan="6" class="text-center text-gray-500 italic">No geographic pricing rules defined</td>
+                            </tr>
+                        {{/each}}
+                    </tbody>
+                </table>
+            </div>
+        </ContentPanel>
     {{else if @resource.isPerMeter}}
         <ContentPanel @title={{t "service-rate.fields.per-meter"}} @open={{true}} @wrapperClass="bordered-top">
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-2">

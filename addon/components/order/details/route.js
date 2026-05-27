@@ -41,21 +41,42 @@ export default class OrderDetailsRouteComponent extends Component {
                       isLoading: this.optimizeRoute.isRunning,
                   },
             {
-                type: 'default',
-                text: 'Edit',
-                icon: 'pencil',
-                iconPrefix: 'fas',
-                permission: 'fleet-ops update-route-for order',
-                disabled: this.args.resource.status === 'canceled',
-                onClick: () => {
-                    this.orderActions.editRoute(this.args.resource);
-                },
+                icon: 'ellipsis-h',
+                prefix: 'fas',
+                triggerClass: 'fleetops-btn-xxs',
+                items: [
+                    {
+                        text: 'Edit route',
+                        icon: 'pencil',
+                        disabled: !this.args.resource.hasActiveStatus,
+                        onClick: () => {
+                            this.orderActions.editRoute(this.args.resource);
+                        },
+                    },
+                    this.isMultipleWaypointOrder
+                        ? {
+                              text: 'Change destination',
+                              icon: 'location-dot',
+                              disabled: !this.args.resource.hasActiveStatus,
+                              onClick: () => {
+                                  this.changeDestination();
+                              },
+                          }
+                        : null,
+                ].filter(Boolean),
             },
-        ];
+        ].filter(Boolean);
     }
 
     get canOptimizeRoute() {
         return canOptimizeIntermediateWaypoints(this.args.resource?.payload);
+    }
+
+    get isMultipleWaypointOrder() {
+        const waypoints = this.args.resource?.payload?.waypoints;
+        const waypointCount = typeof waypoints?.toArray === 'function' ? waypoints.toArray().length : Array.isArray(waypoints) ? waypoints.length : (waypoints?.length ?? 0);
+
+        return Boolean(this.args.resource?.hasIntermediateWaypoints || waypointCount > 0);
     }
 
     get showOptimizationSelect() {
@@ -64,6 +85,17 @@ export default class OrderDetailsRouteComponent extends Component {
 
     get trackerData() {
         return this.args.resource?.tracker_data;
+    }
+
+    get showRouteEtaData() {
+        if (this.trackerData?.lifecycle?.show_live_eta !== undefined) {
+            return Boolean(this.trackerData.lifecycle.show_live_eta);
+        }
+
+        const status = String(this.args.resource?.status ?? 'created').toLowerCase();
+        const hasStarted = Boolean(this.args.resource?.started ?? this.args.resource?.started_at ?? status === 'started');
+
+        return hasStarted && !['completed', 'canceled'].includes(status);
     }
 
     get hasTrackingRouteSummary() {
@@ -75,7 +107,7 @@ export default class OrderDetailsRouteComponent extends Component {
     }
 
     get hasCompletionEta() {
-        return Boolean(this.trackerData?.eta?.completion_at);
+        return this.showRouteEtaData && Boolean(this.trackerData?.eta?.completion_at);
     }
 
     get routeStopsCount() {
@@ -83,10 +115,14 @@ export default class OrderDetailsRouteComponent extends Component {
     }
 
     get hasTrackingDuration() {
-        return this.trackerData?.route?.duration_in_traffic_s !== null && this.trackerData?.route?.duration_in_traffic_s !== undefined;
+        return this.showRouteEtaData && this.trackerData?.route?.duration_in_traffic_s !== null && this.trackerData?.route?.duration_in_traffic_s !== undefined;
     }
 
     get trackingDurationSeconds() {
+        if (!this.showRouteEtaData) {
+            return null;
+        }
+
         return this.trackerData?.route?.duration_in_traffic_s ?? this.trackerData?.route?.duration_s;
     }
 
@@ -150,7 +186,48 @@ export default class OrderDetailsRouteComponent extends Component {
         yield this.hostRouter.refresh();
     }
 
-    @action async viewWaypointLabel(waypoint) {
+    @action changeDestination() {
+        this.modalsManager.show('modals/order-change-destination', {
+            title: 'Change destination',
+            order: this.args.resource,
+            acceptButtonText: 'Change destination',
+            declineButtonText: 'Close',
+            onChange: async () => {
+                if (typeof this.args.resource?.reload === 'function') {
+                    await this.args.resource.reload();
+                }
+
+                if (typeof this.args.resource?.set === 'function') {
+                    this.args.resource.set('tracker_data', null);
+                }
+
+                if (typeof this.args.resource?.loadTrackerData === 'function') {
+                    await this.args.resource.loadTrackerData();
+                }
+
+                await this.hostRouter.refresh();
+            },
+        });
+    }
+
+    @action viewStopActivity(stop) {
+        this.modalsManager.show('modals/stop-activity', {
+            title: 'Stop activity',
+            stop,
+            order: this.args.resource,
+            hideAcceptButton: true,
+            declineButtonText: 'Close',
+        });
+    }
+
+    @action async viewWaypointLabel(stop) {
+        const waypoint = stop?.place ?? stop;
+        const waypointId = waypoint?.waypoint_public_id ?? stop?.waypoint_public_id;
+        if (!waypointId) {
+            this.notifications.warning('Labels are only available for waypoint stops.');
+            return;
+        }
+
         this.modalsManager.show(`modals/order-label`, {
             title: 'Waypoint Label',
             modalClass: 'modal-xl',
@@ -161,7 +238,7 @@ export default class OrderDetailsRouteComponent extends Component {
         try {
             // eslint-disable-next-line no-undef
             const fileReader = new FileReader();
-            const { data: pdfStream } = await this.fetch.get(`orders/label/${waypoint.waypoint_public_id}?format=base64`);
+            const { data: pdfStream } = await this.fetch.get(`orders/label/${waypointId}?format=base64`);
             // eslint-disable-next-line no-undef
             const base64 = await fetch(`data:application/pdf;base64,${pdfStream}`);
             const blob = await base64.blob();

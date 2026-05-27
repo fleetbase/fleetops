@@ -6,21 +6,31 @@ import { hbs } from 'ember-cli-htmlbars';
 module('Integration | Component | place/address', function (hooks) {
     setupRenderingTest(hooks);
 
-    test('it renders', async function (assert) {
-        // Set any properties with this.set('myProperty', 'value');
-        // Handle any actions with this.set('myAction', function(val) { ... });
+    test('it renders the place title by default', async function (assert) {
+        this.set('place', {
+            name: 'North Dock',
+            street1: '100 Harbor Road',
+            city: 'Singapore',
+            country_name: 'Singapore',
+        });
 
-        await render(hbs`<Place::Address />`);
+        await render(hbs`<Place::Address @place={{this.place}} />`);
 
-        assert.dom().hasText('');
+        assert.dom('address').containsText('North Dock');
+        assert.dom('address').containsText('100 Harbor Road');
+    });
 
-        // Template block usage:
-        await render(hbs`
-      <Place::Address>
-        template block text
-      </Place::Address>
-    `);
+    test('it hides the place title when showTitle is false', async function (assert) {
+        this.set('place', {
+            name: 'North Dock',
+            street1: '100 Harbor Road',
+            city: 'Singapore',
+            country_name: 'Singapore',
+        });
 
-        assert.dom().hasText('template block text');
+        await render(hbs`<Place::Address @place={{this.place}} @showTitle={{false}} />`);
+
+        assert.dom('address').doesNotContainText('North Dock');
+        assert.dom('address').containsText('100 Harbor Road');
     });
 });

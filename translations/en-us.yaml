@@ -8,6 +8,7 @@ common:
     dispatch-orders: Dispatch Orders
     dispatch-order: Dispatch Order
     assign-driver: Assign Driver
+    unassign-driver: Unassign Driver
     assign-drivers: Assign Drivers
     no-driver-assigned: No driver assigned
     details: Details

@@ -523,7 +523,7 @@ class SettingController extends Controller
         $config         = config('fleetops.tracking', []);
         $systemSettings = Setting::lookup('fleet-ops.tracking-settings', []);
 
-        $defaults = array_merge($config, is_array($systemSettings) ? $systemSettings : []);
+        $defaults           = array_merge($config, is_array($systemSettings) ? $systemSettings : []);
         $defaults['alerts'] = $this->normalizeTrackingAlertSettings(data_get($defaults, 'alerts', []));
 
         return $defaults;
@@ -541,7 +541,7 @@ class SettingController extends Controller
                 'distance_threshold_meters'  => 500,
             ],
             'prolonged_stoppages' => [
-                'enabled'                  => true,
+                'enabled'                    => true,
                 'duration_threshold_minutes' => 30,
             ],
         ];

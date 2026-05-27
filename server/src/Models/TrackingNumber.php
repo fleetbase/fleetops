@@ -14,6 +14,7 @@ use Fleetbase\Traits\SendsWebhooks;
 use Fleetbase\Traits\TracksApiCredential;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 use Milon\Barcode\Facades\DNS2DFacade as DNS2D;
 
@@ -242,7 +243,7 @@ class TrackingNumber extends Model
         $status = strtolower($trackingStatus->code);
         $owner  = $this->load(['owner'])->getRelationValue('owner');
 
-        if ($owner && $owner->isFillable('status') && $owner->status !== $status) {
+        if ($owner && static::ownerHasStatusColumn($owner) && $owner->isFillable('status') && $owner->status !== $status) {
             $this->owner->status = $status;
 
             $this->owner->save();
@@ -303,7 +304,7 @@ class TrackingNumber extends Model
         TrackingNumber::where('uuid', $uuid)->update(['status_uuid' => $trackingStatusId]);
 
         // update owner status
-        if ($owner && $owner instanceof Model && $owner->isFillable('status')) {
+        if ($owner && $owner instanceof Model && static::ownerHasStatusColumn($owner) && $owner->isFillable('status')) {
             // runs event cycles
             // $model->update([ 'status' => 'created' ]);
 
@@ -312,5 +313,10 @@ class TrackingNumber extends Model
         }
 
         return $uuid;
+    }
+
+    protected static function ownerHasStatusColumn(Model $owner): bool
+    {
+        return Schema::hasColumn($owner->getTable(), 'status');
     }
 }

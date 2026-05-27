@@ -188,7 +188,7 @@ class ServiceQuoteController extends FleetOpsController
         $service          = $request->input('service', 'all'); // the specific service rate to query - defaults to `all`
         $serviceType      = $request->input('service_type'); // the specific type of service rate to query
         $isCashOnDelivery = $request->has('cod');
-        $currency         = $request->has('currency');
+        $currency         = $request->input('currency');
         $totalDistance    = $request->input('distance');
         $totalTime        = $request->input('time');
         $pickup           = $request->or(['payload.pickup', 'payload.pickup_uuid', 'pickup']);

@@ -209,6 +209,124 @@
                 </div>
             </div>
         </ContentPanel>
+    {{else if @resource.isMultiZoneDistance}}
+        <ContentPanel @title="Multi-zone Distance" @open={{true}} @wrapperClass="bordered-top" @panelBodyWrapperClass="px-0i">
+            <div class="px-2 mb-3">
+                <InfoBlock
+                    class="mb-3"
+                    @text="Price route distance across multiple service areas or zones. Priority controls overlap: if a route segment matches more than one rule, the highest-priority rule is used. Unmatched distance can use a fallback rule."
+                    @exampleText="Main City: 2.50 per km, Remote Area: 3.75 per km, Fallback: 3.75 per km."
+                />
+
+                <div class="flex flex-row items-center space-x-2">
+                    <Button @text="Add Rule" @icon="plus" @iconPrefix="fas" @onClick={{@resource.addMultiZoneDistanceRule}} />
+                    <Button @text="Add Fallback" @icon="route" @iconPrefix="fas" @onClick={{@resource.addMultiZoneDistanceFallbackRule}} />
+                </div>
+            </div>
+
+            <div class="overflow-x-auto">
+                <div class="next-table-wrapper h-auto table-fluid rounded-none">
+                    <table class="table table-fixed">
+                        <thead>
+                            <tr>
+                                <th class="w-1/6">Label</th>
+                                <th class="w-1/6">Geography Type</th>
+                                <th class="w-1/5">Geography</th>
+                                <th class="w-1/12">Priority</th>
+                                <th class="w-1/6">Rate</th>
+                                <th class="w-1/6">Unit</th>
+                                <th class="w-12"></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {{#each @resource.rateFees as |rateFee|}}
+                                <tr>
+                                    <td>
+                                        <Input @value={{rateFee.label}} placeholder="Rule label" disabled={{cannot-write @resource}} class="form-input w-full" />
+                                    </td>
+                                    <td>
+                                        <div class="fleetbase-model-select fleetbase-power-select ember-model-select">
+                                            <PowerSelect
+                                                @options={{this.geographyTypes}}
+                                                @selected={{find-by "value" rateFee.geography_type this.geographyTypes}}
+                                                @onChange={{fn this.selectRuleGeographyType rateFee}}
+                                                @placeholder="Geography type"
+                                                @triggerClass="form-select form-input"
+                                                @disabled={{cannot-write @resource}}
+                                                as |type|
+                                            >
+                                                {{type.label}}
+                                            </PowerSelect>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        {{#if (eq rateFee.geography_type "zone")}}
+                                            <div class="fleetbase-model-select fleetbase-power-select ember-model-select">
+                                                <PowerSelect
+                                                    @options={{this.zones}}
+                                                    @selected={{rateFee.zone}}
+                                                    @onChange={{fn this.selectRuleZone rateFee}}
+                                                    @placeholder="Select zone"
+                                                    @triggerClass="form-select form-input"
+                                                    @disabled={{cannot-write @resource}}
+                                                    as |zone|
+                                                >
+                                                    {{zone.name}}
+                                                </PowerSelect>
+                                            </div>
+                                        {{else if (eq rateFee.geography_type "fallback")}}
+                                            <div class="text-sm text-gray-500 dark:text-gray-400">Unmatched route distance</div>
+                                        {{else}}
+                                            <div class="fleetbase-model-select fleetbase-power-select ember-model-select">
+                                                <PowerSelect
+                                                    @options={{this.serviceAreas}}
+                                                    @selected={{rateFee.service_area}}
+                                                    @onChange={{fn this.selectRuleServiceArea rateFee}}
+                                                    @placeholder="Select service area"
+                                                    @triggerClass="form-select form-input"
+                                                    @disabled={{cannot-write @resource}}
+                                                    as |serviceArea|
+                                                >
+                                                    {{serviceArea.name}}
+                                                </PowerSelect>
+                                            </div>
+                                        {{/if}}
+                                    </td>
+                                    <td>
+                                        <Input @type="number" @value={{rateFee.priority}} placeholder="0" disabled={{cannot-write @resource}} class="form-input w-full" />
+                                    </td>
+                                    <td>
+                                        <MoneyInput class="w-full" @currency={{@resource.currency}} @value={{rateFee.fee}} disabled={{cannot-write @resource}} />
+                                    </td>
+                                    <td>
+                                        <div class="fleetbase-model-select fleetbase-power-select ember-model-select">
+                                            <PowerSelect
+                                                @options={{get-fleet-ops-options "distanceUnits"}}
+                                                @selected={{find-by "value" rateFee.distance_unit (get-fleet-ops-options "distanceUnits")}}
+                                                @onChange={{set-model-attr rateFee "distance_unit"}}
+                                                @placeholder="Distance unit"
+                                                @triggerClass="form-select form-input"
+                                                @disabled={{cannot-write @resource}}
+                                                as |unit|
+                                            >
+                                                {{unit.label}}
+                                            </PowerSelect>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <Button @type="danger" @icon="trash" @onClick={{fn @resource.removeMultiZoneDistanceRule rateFee}} />
+                                    </td>
+                                </tr>
+                            {{else}}
+                                <tr>
+                                    <td colspan="7" class="text-center text-gray-500 italic">No geographic pricing rules defined</td>
+                                </tr>
+                            {{/each}}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </ContentPanel>
     {{else if @resource.isPerMeter}}
         <ContentPanel @title={{t "service-rate.fields.per-meter"}} @open={{true}} @wrapperClass="bordered-top">
             <InfoBlock class="mb-5" @text={{t "service-rate.fields.per-meter-text"}} @exampleText={{t "service-rate.fields.per-meter-example-text"}} />

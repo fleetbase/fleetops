@@ -73,16 +73,6 @@
                     type="button"
                     class="px-2 py-0.5 rounded text-xs transition-colors
                         {{if
-                            (eq this.vehicleFilter 'active')
-                            'bg-indigo-500 text-white'
-                            'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
-                        }}"
-                    {{on "click" (fn this.setVehicleFilter "active")}}
-                >{{t "orchestrator.filter-active"}}</button>
-                <button
-                    type="button"
-                    class="px-2 py-0.5 rounded text-xs transition-colors
-                        {{if
                             (eq this.vehicleFilter 'available')
                             'bg-indigo-500 text-white'
                             'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'

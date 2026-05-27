@@ -9,6 +9,17 @@ export default class OrderDetailsActivityComponent extends Component {
     @service intl;
     @tracked layout = this.appCache.get('fleetops:order:activity:layout', 'timeline');
 
+    get parentOrderActivity() {
+        const orderTrackingNumberUuid = this.args.resource?.tracking_number_uuid;
+        const activity = this.args.resource?.tracking_statuses ?? [];
+
+        if (!orderTrackingNumberUuid) {
+            return activity;
+        }
+
+        return activity.filter((trackingStatus) => trackingStatus.tracking_number_uuid === orderTrackingNumberUuid);
+    }
+
     /* eslint-disable ember/no-side-effects */
     get actionButtons() {
         return [

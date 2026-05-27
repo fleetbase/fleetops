@@ -223,6 +223,7 @@ class Vehicle extends Model
      */
     protected $attributes = [
         'avatar_url' => 'https://flb-assets.s3-ap-southeast-1.amazonaws.com/static/vehicle-icons/mini_bus.svg',
+        'status'     => 'available',
     ];
 
     /**
@@ -322,6 +323,14 @@ class Vehicle extends Model
     public function driver(): HasOne
     {
         return $this->hasOne(Driver::class, 'vehicle_uuid', 'uuid')->without(['vehicle']);
+    }
+
+    /**
+     * Set the vehicle status attribute.
+     */
+    public function setStatusAttribute(?string $status = 'available'): void
+    {
+        $this->attributes['status'] = $status === null || $status === 'active' ? 'available' : $status;
     }
 
     public function category(): BelongsTo
@@ -597,6 +606,14 @@ class Vehicle extends Model
         return $this;
     }
 
+    public function unassignDriver(): self
+    {
+        Driver::where('vehicle_uuid', $this->uuid)->update(['vehicle_uuid' => null]);
+        $this->unsetRelation('driver');
+
+        return $this;
+    }
+
     /**
      * Retrieves the last known position of the driver within the current company context.
      *
@@ -727,9 +744,8 @@ class Vehicle extends Model
             'plate_number'           => $plateNumber,
             'vin'                    => $vin,
             'type'                   => $type,
-            'status'                 => 'active',
+            'status'                 => 'available',
             'online'                 => 0,
-            'status'                 => 'active',
         ]);
 
         // If driver was resolved assign driver to vehicle

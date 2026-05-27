@@ -4,7 +4,7 @@ import { inject as service } from '@ember/service';
 import { action, get } from '@ember/object';
 import { task } from 'ember-concurrency';
 import { colorForId, routeColorForStatus, routeStyleForStatus } from '../../../utils/route-colors';
-import { buildRoutePointMarkerPresentation, buildRoutePointsFromPayload } from '../../../utils/route-visualization';
+import { buildRoutePointMarkerPresentation, buildRoutePointsFromPayload, describeRoutePoint } from '../../../utils/route-visualization';
 
 const ORDER_ROUTE_PREVIEW_PADDING_BOTTOM_RIGHT = [420, 0];
 const ORDER_ROUTE_PREVIEW_MAX_ZOOM_TWO_POINTS = 13;
@@ -43,6 +43,42 @@ export default class OrderFormRouteComponent extends Component {
 
     get routePoints() {
         return buildRoutePointsFromPayload(this.args.resource.payload);
+    }
+
+    get routeColor() {
+        const order = this.args.resource;
+
+        return colorForId(order?.public_id ?? order?.id ?? 'new-order');
+    }
+
+    get waypointRouteStops() {
+        const waypoints = this.args.resource.payload?.waypoints ?? [];
+
+        return waypoints.map((_waypoint, index) => {
+            const routePoint = {
+                role: 'waypoint',
+                stopNumber: index + 1,
+            };
+
+            return {
+                ...describeRoutePoint(routePoint, this.routeColor),
+                badgeStyle: this.badgeStyleForWaypoint(index),
+                required: this.isRequiredWaypoint(index),
+            };
+        });
+    }
+
+    badgeStyleForWaypoint(index) {
+        const { markerColor } = describeRoutePoint({ role: 'waypoint', stopNumber: index + 1 }, this.routeColor);
+        const normalizedColor = markerColor?.toLowerCase?.();
+        const isYellow = normalizedColor === '#facc15' || normalizedColor === '#ca8a04';
+        const textColor = isYellow ? '#111827' : '#ffffff';
+
+        return `background-color: ${markerColor}; color: ${textColor};`;
+    }
+
+    isRequiredWaypoint(index) {
+        return index < 2;
     }
 
     willDestroy() {

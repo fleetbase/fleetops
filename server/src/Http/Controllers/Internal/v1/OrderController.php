@@ -3,9 +3,13 @@
 namespace Fleetbase\FleetOps\Http\Controllers\Internal\v1;
 
 use Fleetbase\Exceptions\FleetbaseRequestValidationException;
+use Fleetbase\FleetOps\Events\EntityActivityChanged;
+use Fleetbase\FleetOps\Events\EntityCompleted;
 use Fleetbase\FleetOps\Events\OrderDispatchFailed;
 use Fleetbase\FleetOps\Events\OrderReady;
 use Fleetbase\FleetOps\Events\OrderStarted;
+use Fleetbase\FleetOps\Events\WaypointActivityChanged;
+use Fleetbase\FleetOps\Events\WaypointCompleted;
 use Fleetbase\FleetOps\Exports\OrderExport;
 use Fleetbase\FleetOps\Flow\Activity;
 use Fleetbase\FleetOps\Http\Controllers\FleetOpsController;
@@ -27,6 +31,7 @@ use Fleetbase\FleetOps\Models\ServiceQuote;
 use Fleetbase\FleetOps\Models\TrackingStatus;
 use Fleetbase\FleetOps\Models\Waypoint;
 use Fleetbase\FleetOps\Notifications\OrderPing;
+use Fleetbase\FleetOps\Support\ResolvesOrderServiceStops;
 use Fleetbase\FleetOps\Support\Utils;
 use Fleetbase\Http\Requests\ExportRequest;
 use Fleetbase\Http\Requests\Internal\BulkActionRequest;
@@ -37,13 +42,18 @@ use Fleetbase\Support\TemplateString;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\Request;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
+use Illuminate\Validation\ValidationException;
 use Maatwebsite\Excel\Facades\Excel;
 
 class OrderController extends FleetOpsController
 {
+    use ResolvesOrderServiceStops;
+
     /**
      * The resource to query.
      *
@@ -63,6 +73,11 @@ class OrderController extends FleetOpsController
      */
     public function onAfterUpdate($request, $order)
     {
+        $uploads = $request->array('order.files');
+        if ($uploads) {
+            $order->attachFiles($uploads);
+        }
+
         $waypoints = $request->array('order.payload.waypoints');
         if ($waypoints) {
             $order->loadMissing('payload');
@@ -165,14 +180,7 @@ class OrderController extends FleetOpsController
                         ->insertEntities($entities);
 
                     // If order creation includes files assosciate each to this order
-                    if ($uploads) {
-                        $ids   = collect($uploads)->pluck('uuid');
-                        $files = File::whereIn('uuid', $ids)->get();
-
-                        foreach ($files as $file) {
-                            $file->setKey($order);
-                        }
-                    }
+                    $order->attachFiles($uploads);
 
                     // save custom field values
                     if (is_array($customFieldValues)) {
@@ -706,11 +714,22 @@ class OrderController extends FleetOpsController
      */
     public function updateActivity(string $id, Request $request)
     {
-        $order = Order::findById($id, ['driverAssigned', 'payload.entities']);
+        $order = Order::findById($id, [
+            'driverAssigned',
+            'payload.entities',
+            'payload.pickup',
+            'payload.dropoff',
+            'payload.return',
+            'payload.currentWaypoint',
+            'payload.waypoints',
+            'payload.waypointMarkers.place',
+            'payload.waypointMarkers.trackingNumber.status',
+        ]);
         if (!$order) {
             return response()->error('No order found.');
         }
 
+        $proof    = $request->input('proof');
         $activity = $request->array('activity');
         $activity = new Activity($activity, $order->getConfigFlow());
 
@@ -731,29 +750,77 @@ class OrderController extends FleetOpsController
         /**
          * @var \Fleetbase\LaravelMysqlSpatial\Types\Point
          */
-        $location = $order->getLastLocation();
-        $order->setStatus($activity->code);
-        $order->insertActivity($activity, $location);
+        $location                = $order->getLastLocation();
+        $isMultipleWaypointOrder = $this->payloadHasWaypoints($order->payload);
 
-        // also update for each order entities if not multiple drop order
-        // all entities will share the same activity status as is one drop order
-        if (!$order->payload->isMultipleDropOrder) {
+        if (!$isMultipleWaypointOrder) {
+            $order->updateActivity($activity, $proof);
+
+            // also update for each order entities if not multiple drop order
+            // all entities will share the same activity status as is one drop order
             foreach ($order->payload->entities as $entity) {
-                $entity->insertActivity($activity, $location);
+                $entity->insertActivity($activity, $location, $proof);
+            }
+
+            // Handle order completed
+            if (Utils::isActivity($activity) && $activity->completesOrder() && $order->driverAssigned) {
+                // unset from driver current job
+                $order->driverAssigned->unassignCurrentOrder();
+                $order->complete($this->resolveProof($proof));
+            }
+
+            return new OrderResource($order->refresh());
+        }
+
+        if ($activity->is('dispatched')) {
+            $order->updateActivity($activity, $proof);
+
+            return new OrderResource($order->refresh());
+        }
+
+        if ($activity->is('started')) {
+            $order->updateActivity($activity, $proof);
+
+            $this->ensurePayloadCurrentServiceStop($order->payload);
+            if (!$this->payloadHasCurrentServiceStopActivity($order->payload, $activity)) {
+                $this->updateCurrentServiceStopActivity($order, $activity, $location, $proof);
+            }
+
+            return new OrderResource($order->refresh());
+        }
+
+        if (!$order->started && in_array($order->status, ['created', 'dispatched'])) {
+            return response()->error('Order must be started before waypoint activity can be updated.', 422);
+        }
+
+        $currentStop               = $this->ensurePayloadCurrentServiceStop($order->payload);
+        $isCompletingCurrentStop   = Utils::isActivity($activity) && $activity->complete();
+
+        $this->updateCurrentServiceStopActivity($order, $activity, $location, $proof);
+
+        if (Utils::isActivity($activity) && $activity->is('canceled')) {
+            if ($order->driverAssigned) {
+                $order->driverAssigned->unassignCurrentOrder();
+            }
+
+            $order->cancel();
+
+            return new OrderResource($order->refresh());
+        }
+
+        if (Utils::isActivity($activity) && $activity->completesOrder()) {
+            $nextStop = $isCompletingCurrentStop ? $this->advanceCurrentServiceStopDestination($order, $order->payload) : null;
+
+            if (!$nextStop || !$currentStop) {
+                if ($order->driverAssigned) {
+                    $order->driverAssigned->unassignCurrentOrder();
+                }
+
+                $order->complete($this->resolveProof($proof));
             }
         }
 
-        // Handle order completed
-        if (Utils::isActivity($activity) && $activity->completesOrder() && $order->driverAssigned) {
-            // unset from driver current job
-            $order->driverAssigned->unassignCurrentOrder();
-            $order->complete();
-        }
-
-        // Fire activity events
-        $activity->fireEvents($order);
-
-        return response()->json(['status' => 'ok']);
+        return new OrderResource($order->refresh());
     }
 
     /**
@@ -769,12 +836,24 @@ class OrderController extends FleetOpsController
             return response()->error('No order found.');
         }
 
-        $waypoint    = $request->filled('waypoint') ? Waypoint::findByPlace($request->input('waypoint'), $order) : null;
+        $canUpdateWaypointActivity = $order->started || $order->started_at || !in_array($order->status, ['created', 'dispatched']);
+        $stop                      = null;
+        if ($request->filled('waypoint') && $canUpdateWaypointActivity) {
+            $order->loadMissing([
+                'payload.pickup',
+                'payload.dropoff',
+                'payload.return',
+                'payload.waypoints',
+                'payload.waypointMarkers.place',
+                'payload.waypointMarkers.trackingNumber.status',
+            ]);
+            $stop = $this->resolveServiceStopFromKey($order->payload, $request->input('waypoint'));
+        }
         $orderConfig = $order->ensureOrderConfig();
         if (!$orderConfig) {
             return response()->error('No order config found for order.');
         }
-        $activities = $orderConfig->nextActivity($waypoint);
+        $activities = $stop ? $this->nextActivitiesForServiceStop($order, $order->payload, $stop) : $orderConfig->nextActivity();
 
         // If activity is to complete order add proof of delivery properties if required
         // This is a temporary fix until activity is updated to handle POD on it's own
@@ -792,6 +871,330 @@ class OrderController extends FleetOpsController
         });
 
         return response()->json($activities);
+    }
+
+    /**
+     * Mark a waypoint as the current destination for a multi-waypoint order.
+     *
+     * @return \Fleetbase\Http\Resources\v1\Order
+     */
+    public function setDestination(string $id, string $placeId)
+    {
+        $order = Order::findById($id, [
+            'payload.pickup',
+            'payload.dropoff',
+            'payload.return',
+            'payload.waypoints',
+            'payload.waypointMarkers.place',
+            'payload.waypointMarkers.trackingNumber.status',
+            'driverAssigned',
+            'vehicleAssigned',
+            'customer',
+            'facilitator',
+        ]);
+        if (!$order) {
+            return response()->error('No order found.');
+        }
+
+        if (!$this->payloadHasWaypoints($order->payload)) {
+            return response()->error('Destination can only be changed for multi-waypoint orders.', 422);
+        }
+
+        $stop = $this->resolveServiceStopFromKey($order->payload, $placeId);
+        if (!$stop) {
+            return response()->error('Place resource is not a valid route destination.', 422);
+        }
+
+        $this->setPayloadCurrentServiceStop($order->payload, $stop);
+
+        return new OrderResource($order->refresh());
+    }
+
+    /**
+     * Capture one or more photos for order/waypoint proof of delivery.
+     *
+     * @return ProofResource|\Illuminate\Http\Response
+     */
+    public function capturePhoto(Request $request, string $id, ?string $subjectId = null)
+    {
+        try {
+            $request->validate([
+                'photos'   => 'required|array|min:1',
+                'photos.*' => [
+                    function ($attribute, $value, $fail) {
+                        if ($value instanceof UploadedFile) {
+                            if (
+                                !$value->isValid()
+                                || !in_array($value->extension(), ['jpg', 'jpeg', 'png', 'gif', 'webp'])
+                                || $value->getSize() > 10 * 1024 * 1024
+                            ) {
+                                $fail("{$attribute} must be a valid image file <= 10 MB.");
+                            }
+
+                            return;
+                        }
+
+                        if (is_string($value) && base64_decode($value, true) !== false) {
+                            return;
+                        }
+
+                        $fail("{$attribute} must be an image file or a valid Base64 string.");
+                    },
+                ],
+                'remarks'  => 'sometimes|string|max:255',
+                'data'     => 'sometimes|array',
+            ]);
+        } catch (ValidationException $e) {
+            $errorMessage = collect($e->errors())->flatten()->first();
+
+            return response()->error($errorMessage, 422);
+        }
+
+        $order = Order::findById($id, ['payload.pickup', 'payload.dropoff', 'payload.return', 'payload.waypoints', 'payload.waypointMarkers.place']);
+        if (!$order) {
+            return response()->error('No order found.');
+        }
+
+        $subject = $this->resolveProofSubject($order, $subjectId);
+        if (!$subject) {
+            return response()->error('Unable to capture photo as proof.', 422);
+        }
+
+        $disk         = $request->input('disk', config('filesystems.default'));
+        $bucket       = $request->input("filesystems.disks.{$disk}.bucket", config('filesystems.disks.s3.bucket'));
+        $rawInputs    = $request->file('photos', []);
+        $base64Inputs = array_filter($request->input('photos', []), function ($value) {
+            return is_string($value) && base64_decode($value, true) !== false;
+        });
+        $incoming     = array_merge($rawInputs, $base64Inputs);
+        $remarks      = $request->input('remarks', 'Verified by Photo');
+        $data         = $request->input('data', []);
+
+        if (empty($incoming)) {
+            return response()->error('No photo data to capture.', 422);
+        }
+
+        foreach ($incoming as $item) {
+            $proof = Proof::create([
+                'company_uuid' => session('company'),
+                'order_uuid'   => $order->uuid,
+                'subject_uuid' => $subject->uuid,
+                'subject_type' => Utils::getModelClassName($subject),
+                'remarks'      => $remarks,
+                'raw_data'     => $item instanceof UploadedFile ? null : $item,
+                'data'         => $data,
+            ]);
+
+            $file = $this->storeProofPhoto($proof, $item, $disk, $bucket);
+            $proof->update(['file_uuid' => $file->uuid]);
+        }
+
+        return new ProofResource($proof);
+    }
+
+    /**
+     * Store a proof photo and create its file record.
+     */
+    protected function storeProofPhoto(Proof $proof, UploadedFile|string $photo, string $disk, string $bucket): File
+    {
+        $isFile      = $photo instanceof UploadedFile;
+        $contents    = $isFile ? file_get_contents($photo->getRealPath()) : base64_decode($photo);
+        $extension   = $isFile ? $photo->getClientOriginalExtension() : 'png';
+        $contentType = $isFile ? $photo->getClientMimeType() : 'image/png';
+        $company     = session('company');
+        $path        = "uploads/{$company}/photos/{$proof->public_id}.{$extension}";
+
+        Storage::disk($disk)->put($path, $contents);
+
+        return File::create([
+            'company_uuid'      => $company,
+            'uploader_uuid'     => session('user'),
+            'name'              => basename($path),
+            'original_filename' => basename($path),
+            'extension'         => $extension,
+            'content_type'      => $contentType,
+            'path'              => $path,
+            'bucket'            => $bucket,
+            'type'              => 'photo',
+            'size'              => strlen($contents),
+        ])->setKey($proof);
+    }
+
+    /**
+     * Resolve the subject that proof belongs to.
+     */
+    protected function resolveProofSubject(Order $order, ?string $subjectId = null): Order|Waypoint|Place|null
+    {
+        if (!$subjectId) {
+            return $order;
+        }
+
+        $stop = $this->resolveServiceStopFromKey($order->payload, $subjectId);
+        if ($stop) {
+            return ($stop['waypoint'] ?? null) instanceof Waypoint ? $stop['waypoint'] : ($stop['place'] ?? $order);
+        }
+
+        return Waypoint::withoutGlobalScopes()
+            ->where('payload_uuid', $order->payload_uuid)
+            ->where(function ($query) use ($subjectId) {
+                $query
+                    ->where('public_id', $subjectId)
+                    ->orWhere('uuid', $subjectId)
+                    ->orWhereHas('place', function ($query) use ($subjectId) {
+                        $query->where('public_id', $subjectId)->orWhere('uuid', $subjectId);
+                    });
+            })
+            ->first();
+    }
+
+    /**
+     * Resolve proof to the model expected by order completion.
+     */
+    protected function resolveProof($proof): ?Proof
+    {
+        if ($proof instanceof Proof) {
+            return $proof;
+        }
+
+        if (is_string($proof)) {
+            return Proof::where('public_id', $proof)->orWhere('uuid', $proof)->first();
+        }
+
+        return null;
+    }
+
+    /**
+     * Determine whether the payload should use waypoint-scoped activity.
+     */
+    protected function payloadHasWaypoints(?Payload $payload): bool
+    {
+        if (!$payload) {
+            return false;
+        }
+
+        $payload->loadMissing('waypoints');
+
+        return $payload->waypoints->isNotEmpty();
+    }
+
+    /**
+     * Insert an activity on the payload's current waypoint and its destination entities.
+     */
+    protected function updateCurrentWaypointActivity(?Payload $payload, Activity $activity, $location = null, $proof = null): ?Waypoint
+    {
+        if (!$payload || !Utils::isActivity($activity) || !$location) {
+            return null;
+        }
+
+        $payload->loadMissing(['order', 'waypointMarkers', 'entities']);
+        $currentWaypoint = $payload->waypointMarkers->firstWhere('place_uuid', $payload->current_waypoint_uuid);
+        if (!$currentWaypoint) {
+            return null;
+        }
+
+        $currentWaypoint->insertActivity($activity, $location, $proof);
+        $activity->fireEvents($payload->order, $currentWaypoint);
+
+        $entities = $payload->entities->where('destination_uuid', $payload->current_waypoint_uuid);
+        foreach ($entities as $entity) {
+            $entity->insertActivity($activity, $location, $proof);
+            if ($activity->complete()) {
+                event(new EntityCompleted($entity, $activity));
+            } else {
+                event(new EntityActivityChanged($entity, $activity));
+            }
+        }
+
+        if ($activity->complete()) {
+            event(new WaypointCompleted($currentWaypoint, $activity));
+        } else {
+            event(new WaypointActivityChanged($currentWaypoint, $activity));
+        }
+
+        return $currentWaypoint;
+    }
+
+    /**
+     * Reload waypoint marker status and decide whether every stop is complete.
+     */
+    protected function allWaypointMarkersComplete(?Payload $payload): bool
+    {
+        if (!$payload) {
+            return false;
+        }
+
+        $waypointMarkers = $this->freshWaypointMarkers($payload);
+
+        return $waypointMarkers->isNotEmpty() && $waypointMarkers->every(fn (Waypoint $waypoint) => $this->waypointMarkerIsComplete($waypoint));
+    }
+
+    /**
+     * Move the current destination to the next incomplete waypoint.
+     */
+    protected function advanceCurrentWaypointDestination(?Payload $payload): ?Waypoint
+    {
+        if (!$payload) {
+            return null;
+        }
+
+        $nextWaypoint = $this->freshWaypointMarkers($payload)
+            ->sortBy('order')
+            ->first(function (Waypoint $waypoint) use ($payload) {
+                return !$this->waypointMarkerIsComplete($waypoint) && $waypoint->place_uuid !== $payload->current_waypoint_uuid;
+            });
+
+        if (!$nextWaypoint) {
+            return null;
+        }
+
+        $payload->setCurrentWaypoint($nextWaypoint);
+        $payload->setRelation('currentWaypoint', $nextWaypoint->getPlace());
+        $payload->setRelation('currentWaypointMarker', $nextWaypoint);
+
+        return $nextWaypoint;
+    }
+
+    /**
+     * Reload waypoint markers with current tracking status.
+     */
+    protected function freshWaypointMarkers(Payload $payload)
+    {
+        $payload->unsetRelation('waypointMarkers');
+        $payload->load(['waypointMarkers.trackingNumber.status']);
+
+        return $payload->waypointMarkers;
+    }
+
+    /**
+     * Determine whether a waypoint marker's latest status is complete.
+     */
+    protected function waypointMarkerIsComplete(Waypoint $waypoint): bool
+    {
+        if (!$waypoint->tracking_number_uuid) {
+            return false;
+        }
+
+        return (bool) data_get($this->trackingNumberStatus($waypoint->tracking_number_uuid), 'complete', false);
+    }
+
+    /**
+     * Determine whether the payload's current waypoint already has an activity row.
+     */
+    protected function payloadHasCurrentWaypointActivity(?Payload $payload, Activity $activity): bool
+    {
+        if (!$payload || !$payload->current_waypoint_uuid) {
+            return false;
+        }
+
+        $payload->loadMissing('waypointMarkers');
+        $currentWaypoint = $payload->waypointMarkers->firstWhere('place_uuid', $payload->current_waypoint_uuid);
+        if (!$currentWaypoint || !$currentWaypoint->tracking_number_uuid) {
+            return false;
+        }
+
+        return TrackingStatus::where('tracking_number_uuid', $currentWaypoint->tracking_number_uuid)
+            ->where('code', TrackingStatus::prepareCode($activity->code))
+            ->exists();
     }
 
     /**

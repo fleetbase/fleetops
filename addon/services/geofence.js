@@ -9,6 +9,7 @@ import Service, { inject as service } from '@ember/service';
 import { action } from '@ember/object';
 import { debug } from '@ember/debug';
 import { dasherize } from '@ember/string';
+import { later } from '@ember/runloop';
 import toMultiPolygon from '../utils/to-multi-polygon';
 
 export default class GeofenceService extends Service {
@@ -173,9 +174,11 @@ export default class GeofenceService extends Service {
                 },
                 {
                     callback: (serviceArea) => {
-                        this.#resetDraftSession({ hideControl: true, removeDraft: true });
-                        this.#showServiceArea(serviceArea);
+                        this.#finishDraftSave((draftLayer) => {
+                            this.#reloadThenFocusServiceArea(serviceArea, { draftLayer });
+                        });
                     },
+                    refresh: false,
                 }
             );
             return;
@@ -184,7 +187,7 @@ export default class GeofenceService extends Service {
         if (this._draftSession.mode === 'zone') {
             const serviceArea = this._draftSession.serviceArea;
             this.zoneActions.modal.create(
-                { border: geoJson, service_area_uuid: serviceArea.id },
+                { border: geoJson, service_area: serviceArea },
                 {
                     decline: (modal) => {
                         this.#resetDraftSession({ hideControl: true, removeDraft: true });
@@ -193,10 +196,11 @@ export default class GeofenceService extends Service {
                 },
                 {
                     callback: (zone) => {
-                        serviceArea?.zones?.pushObject?.(zone);
-                        this.#resetDraftSession({ hideControl: true, removeDraft: true });
-                        this.#showZone(zone);
+                        this.#finishDraftSave((draftLayer) => {
+                            this.#reloadThenFocusZone(serviceArea, zone, { draftLayer });
+                        });
                     },
+                    refresh: false,
                 }
             );
             return;
@@ -246,19 +250,19 @@ export default class GeofenceService extends Service {
                 } else {
                     record.setProperties({
                         border: geoJson,
-                        service_area_uuid: selectedServiceArea.id,
-                        serviceArea: selectedServiceArea,
+                        service_area: selectedServiceArea,
                     });
                 }
 
                 return record.save().then((savedRecord) => {
-                    this.#resetDraftSession({ hideControl: true, removeDraft: true });
-
                     if (selectedLayerType === 'Service Area') {
-                        this.#showServiceArea(savedRecord);
+                        this.#finishDraftSave((draftLayer) => {
+                            this.#reloadThenFocusServiceArea(savedRecord, { draftLayer });
+                        });
                     } else {
-                        selectedServiceArea?.zones?.pushObject?.(savedRecord);
-                        this.#showZone(savedRecord);
+                        this.#finishDraftSave((draftLayer) => {
+                            this.#reloadThenFocusZone(selectedServiceArea, savedRecord, { draftLayer });
+                        });
                     }
 
                     return savedRecord;
@@ -289,28 +293,168 @@ export default class GeofenceService extends Service {
         this._draftSession = null;
     }
 
+    #finishDraftSave(callback) {
+        const draftLayer = this._draftSession?.draftLayer ?? null;
+        callback?.(draftLayer);
+        this.#resetDraftSession({ hideControl: true, removeDraft: false });
+    }
+
     async #editPolygonLayer(originalLayer, { focusBounds = null } = {}) {
         return this.mapManager.editPolygon(originalLayer, { focusBounds });
     }
 
     #showZone(zone, { pin = false } = {}) {
-        const layer = this.mapManager.getOverlay(zone.id) ?? zone?.leafletLayer ?? null;
+        const overlay = this.mapManager.getOverlay(zone.id);
+        const layer = overlay ?? zone?.leafletLayer ?? null;
         this.#setLayerPinned(layer, pin);
-        this.mapManager.showPolygon(zone.id);
+        if (overlay) {
+            this.mapManager.showPolygon(zone.id);
+        } else if (layer) {
+            this.mapManager.showLayer?.(layer);
+        }
+    }
+
+    #includeServiceArea(serviceArea) {
+        if (!serviceArea?.id) return;
+
+        const currentServiceAreas = this.serviceAreaActions.serviceAreas;
+        if (!currentServiceAreas) {
+            this.serviceAreaActions.serviceAreas = [serviceArea];
+            return;
+        }
+
+        const serviceAreas = Array.from(currentServiceAreas);
+        const exists = serviceAreas.some((existingServiceArea) => existingServiceArea?.id === serviceArea.id);
+        if (exists) return;
+
+        this.serviceAreaActions.serviceAreas = [...serviceAreas, serviceArea];
+    }
+
+    #includeZone(serviceArea, zone) {
+        if (!serviceArea?.id || !zone?.id) return;
+
+        const zones = serviceArea.zones;
+        if (!zones) {
+            serviceArea.set?.('zones', [zone]);
+            this.serviceAreaActions.serviceAreas = Array.from(this.serviceAreaActions.serviceAreas ?? []);
+            return;
+        }
+
+        const exists = Array.from(zones).some((existingZone) => existingZone?.id === zone.id);
+        if (exists) return;
+
+        if (typeof zones.pushObject === 'function') {
+            zones.pushObject(zone);
+        } else if (typeof zones.addObject === 'function') {
+            zones.addObject(zone);
+        } else if (typeof zones.push === 'function') {
+            zones.push(zone);
+        }
+
+        this.serviceAreaActions.serviceAreas = Array.from(this.serviceAreaActions.serviceAreas ?? []);
+    }
+
+    #reloadThenFocusServiceArea(serviceArea, options = {}) {
+        this.#reloadServiceAreas()
+            .then((serviceAreas) => {
+                const canonicalServiceArea = this.#findResource(serviceAreas, serviceArea) ?? serviceArea;
+                this.#focusServiceAreaAfterCreate(canonicalServiceArea, options);
+            })
+            .catch(() => {
+                this.#includeServiceArea(serviceArea);
+                this.#focusServiceAreaAfterCreate(serviceArea, options);
+            });
+    }
+
+    #reloadThenFocusZone(serviceArea, zone, options = {}) {
+        this.#reloadServiceAreas()
+            .then((serviceAreas) => {
+                const canonicalServiceArea = this.#findResource(serviceAreas, serviceArea) ?? serviceArea;
+                const canonicalZone = this.#findResource(canonicalServiceArea?.zones, zone) ?? zone;
+                this.#focusZoneAfterCreate(canonicalZone, options);
+            })
+            .catch(() => {
+                this.#includeZone(serviceArea, zone);
+                this.#focusZoneAfterCreate(zone, options);
+            });
+    }
+
+    #reloadServiceAreas() {
+        return Promise.resolve(this.serviceAreaActions.loadAll.perform()).then(() => this.serviceAreaActions.serviceAreas ?? []);
+    }
+
+    #findResource(resources, resource) {
+        if (!resource || !resources) return null;
+
+        const resourceId = resource.id ?? resource.public_id;
+        const publicId = resource.public_id ?? resource.id;
+
+        return (
+            Array.from(resources).find((candidate) => {
+                return candidate?.id === resourceId || candidate?.id === publicId || candidate?.public_id === publicId || candidate?.public_id === resourceId;
+            }) ?? null
+        );
+    }
+
+    #focusServiceAreaAfterCreate(serviceArea, options = {}) {
+        this.#focusWhenReady([serviceArea], () => this.focusServiceArea(serviceArea), options);
+    }
+
+    #focusZoneAfterCreate(zone, options = {}) {
+        this.#focusWhenReady([zone], () => this.focusZone(zone), options);
+    }
+
+    #focusWhenReady(models, focus, { attempts = 60, delay = 100, draftLayer = null } = {}) {
+        const overlays = models
+            .map((model) => {
+                const overlay = this.mapManager.getOverlay(model?.id);
+                if (overlay) {
+                    return overlay;
+                }
+
+                return model?.leafletLayer === draftLayer ? null : model?.leafletLayer;
+            })
+            .filter(Boolean);
+        const allRegistered = overlays.length === models.length;
+
+        if (allRegistered || attempts <= 0) {
+            focus();
+            if (draftLayer && !draftLayer.__removedAfterCreate && !overlays.includes(draftLayer)) {
+                draftLayer.__removedAfterCreate = true;
+                this.mapManager.removeLayer(draftLayer);
+            }
+            return;
+        }
+
+        later(this, () => this.#focusWhenReady(models, focus, { attempts: attempts - 1, delay, draftLayer }), delay);
     }
 
     #showServiceArea(serviceArea, { pin = false } = {}) {
         [serviceArea, ...(serviceArea.zones ?? [])].forEach((model) => {
-            const layer = this.mapManager.getOverlay(model.id) ?? model?.leafletLayer ?? null;
+            const overlay = this.mapManager.getOverlay(model.id);
+            const layer = overlay ?? model?.leafletLayer ?? null;
             this.#setLayerPinned(layer, pin);
-            this.mapManager.showPolygon(model.id);
+            if (overlay) {
+                this.mapManager.showPolygon(model.id);
+            } else if (layer) {
+                this.mapManager.showLayer?.(layer);
+            }
         });
     }
 
     #hideServiceArea(serviceArea) {
         [serviceArea, ...(serviceArea.zones ?? [])].forEach((model) => {
-            this.#setLayerPinned(model?.leafletLayer ?? this.mapManager.getOverlay(model.id), false);
-            this.mapManager.hidePolygon(model.id);
+            const overlay = this.mapManager.getOverlay(model.id);
+            const layer = model?.leafletLayer;
+
+            this.#setLayerPinned(layer ?? overlay, false);
+            if (overlay) {
+                this.mapManager.hidePolygon(model.id);
+            }
+
+            if (layer && layer !== overlay) {
+                this.mapManager.hideLayer?.(layer);
+            }
         });
     }
 

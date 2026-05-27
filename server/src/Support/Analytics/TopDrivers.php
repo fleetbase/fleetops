@@ -12,7 +12,7 @@ use Illuminate\Support\Carbon;
  */
 class TopDrivers extends AbstractAnalytics
 {
-    protected int $limit = 10;
+    protected int $limit     = 10;
     protected string $sortBy = 'orders_completed';
 
     public function limit(int $limit): self

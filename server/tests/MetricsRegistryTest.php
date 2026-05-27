@@ -1,12 +1,8 @@
 <?php
 
 use Fleetbase\FleetOps\Support\Metrics\AbstractMetric;
-use Fleetbase\FleetOps\Support\Metrics\AvgOrderValueMetric;
-use Fleetbase\FleetOps\Support\Metrics\EarningsMetric;
-use Fleetbase\FleetOps\Support\Metrics\OpenIssuesMetric;
 use Fleetbase\FleetOps\Support\Metrics\OrdersInProgressMetric;
 use Fleetbase\FleetOps\Support\Metrics\Registry;
-use Fleetbase\FleetOps\Support\Metrics\ResolvedIssuesMetric;
 use Fleetbase\FleetOps\Support\Metrics\TotalTimeTraveledMetric;
 
 test('registry exposes every known metric slug', function () {
@@ -42,7 +38,7 @@ test('every registered metric extends the abstract base', function () {
 });
 
 test('open and resolved issue metrics scope to the constructor company (not session)', function () {
-    $sourceOpen = file_get_contents(dirname(__DIR__) . '/src/Support/Metrics/OpenIssuesMetric.php');
+    $sourceOpen     = file_get_contents(dirname(__DIR__) . '/src/Support/Metrics/OpenIssuesMetric.php');
     $sourceResolved = file_get_contents(dirname(__DIR__) . '/src/Support/Metrics/ResolvedIssuesMetric.php');
 
     expect($sourceOpen)->not->toContain("session('company')");
@@ -60,7 +56,7 @@ test('total_time_traveled metric sums the time column, not distance', function (
 });
 
 test('money metrics return float values to preserve cents', function () {
-    $earnings = file_get_contents(dirname(__DIR__) . '/src/Support/Metrics/EarningsMetric.php');
+    $earnings  = file_get_contents(dirname(__DIR__) . '/src/Support/Metrics/EarningsMetric.php');
     $fuelCosts = file_get_contents(dirname(__DIR__) . '/src/Support/Metrics/FuelCostsMetric.php');
 
     expect($earnings)->toContain('(float) $query->sum');
@@ -70,9 +66,9 @@ test('money metrics return float values to preserve cents', function () {
 });
 
 test('money metrics filter by currency to avoid mixed-currency sums', function () {
-    $earnings = file_get_contents(dirname(__DIR__) . '/src/Support/Metrics/EarningsMetric.php');
+    $earnings  = file_get_contents(dirname(__DIR__) . '/src/Support/Metrics/EarningsMetric.php');
     $fuelCosts = file_get_contents(dirname(__DIR__) . '/src/Support/Metrics/FuelCostsMetric.php');
-    $aov = file_get_contents(dirname(__DIR__) . '/src/Support/Metrics/AvgOrderValueMetric.php');
+    $aov       = file_get_contents(dirname(__DIR__) . '/src/Support/Metrics/AvgOrderValueMetric.php');
 
     expect($earnings)->toContain("->where('currency'");
     expect($fuelCosts)->toContain("->where('currency'");

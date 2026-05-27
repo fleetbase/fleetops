@@ -75,7 +75,7 @@
                                             {{#each serviceQuote.items as |item|}}
                                                 <tr>
                                                     <td>
-                                                        <span class="font-semibold">{{smart-humanize item.details}}</span>
+                                                        <span class="font-semibold">{{item.details}}</span>
                                                     </td>
                                                     <td>
                                                         <span>{{format-currency item.amount serviceQuote.currency}}</span>

@@ -82,7 +82,6 @@ class OrdersSeeder extends Seeder
             'order_started'            => ['started', 'driver_ken', 'van_east', 'customer_ben', 'airport_hub', 'tampines_store', [], 8, 1, null, true, true],
             'order_completed'          => ['completed', 'driver_ava', 'van_central', 'customer_alice', 'central_depot', 'orchard_store', [], -4, 1, null, true, true],
             'order_canceled'           => ['canceled', null, null, 'customer_ben', 'central_depot', 'rochor_store', [], -2, 1, null, false, false],
-            'order_failed'             => ['failed', 'driver_ken', 'van_east', 'customer_ben', 'airport_hub', 'tampines_store', [], -1, 1, null, true, true],
             'order_vehicle_assigned'   => ['created', null, 'van_central', 'customer_alice', 'west_depot', 'airport_hub', ['orchard_store', 'rochor_store'], 10, 3, null, false, false],
         ];
 
@@ -111,15 +110,15 @@ class OrdersSeeder extends Seeder
                 'status'                => $status,
                 'notes'                 => 'FleetOps testing fixture order: ' . $seedId,
                 'pod_method'            => 'scan',
-                'pod_required'          => in_array($status, ['completed', 'failed'], true),
-                'orchestrator_priority' => $status === 'failed' ? 90 : 50,
+                'pod_required'          => $status === 'completed',
+                'orchestrator_priority' => 50,
                 'required_skills'       => $vehicleSeedId === 'van_east' ? ['cold_chain'] : [],
                 'meta'                  => $this->meta($seedId),
                 'created_at'            => $this->timestamp($hourOffset),
                 'updated_at'            => $this->timestamp($hourOffset + 1),
             ]);
 
-            $trackingNumber = $this->createTrackingNumber($company, $order, $seedId, $status);
+            $trackingNumber = $this->createTrackingNumber($company, $order, $seedId);
             $order->forceFill(['tracking_number_uuid' => $trackingNumber->uuid])->save();
             $this->seedEntities($company, $payload, $trackingNumber, $seedId, $entityCount, $places[$dropoffSeedId]);
         }
@@ -154,7 +153,7 @@ class OrdersSeeder extends Seeder
         return $payload;
     }
 
-    protected function createTrackingNumber(Company $company, Order $order, string $seedId, string $status): TrackingNumber
+    protected function createTrackingNumber(Company $company, Order $order, string $seedId): TrackingNumber
     {
         /** @var TrackingNumber $trackingNumber */
         $trackingNumber = $this->createRecord(TrackingNumber::class, [
@@ -166,22 +165,6 @@ class OrdersSeeder extends Seeder
             'region'          => 'SG',
         ]);
 
-        $trackingStatus = $this->createRecord(TrackingStatus::class, [
-            '_key'                 => $this->fixtureKey($seedId . '_tracking_status'),
-            'company_uuid'         => $company->uuid,
-            'tracking_number_uuid' => $trackingNumber->uuid,
-            'status'               => str_replace('_', ' ', $status),
-            'details'              => 'FleetOps testing tracking status for ' . $seedId,
-            'code'                 => $status,
-            'complete'             => $status === 'completed',
-            'city'                 => 'Singapore',
-            'country'              => 'SG',
-            'location'             => $this->point(1.3048, 103.8318),
-            'meta'                 => $this->meta($seedId . '_tracking_status'),
-        ]);
-
-        $trackingNumber->forceFill(['status_uuid' => $trackingStatus->uuid])->save();
-
         return $trackingNumber;
     }
 
@@ -191,6 +174,7 @@ class OrdersSeeder extends Seeder
             $this->createRecord(Entity::class, [
                 '_key'                 => $this->fixtureKey($seedId . '_entity_' . $i),
                 '_import_id'           => $this->fixtureKey($seedId . ':entity:' . $i),
+                'public_id'            => Entity::generatePublicId(),
                 'company_uuid'         => $company->uuid,
                 'payload_uuid'         => $payload->uuid,
                 'tracking_number_uuid' => $trackingNumber->uuid,
@@ -208,7 +192,7 @@ class OrdersSeeder extends Seeder
                 'currency'             => 'SGD',
                 'declared_value'       => 1000 + ($i * 100),
                 'meta'                 => $this->meta($seedId . '_entity_' . $i),
-            ]);
+            ], true);
         }
     }
 }

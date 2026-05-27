@@ -31,6 +31,8 @@ class ContactObserver
             throw new \Exception('Customer contact type cannot be changed.');
         }
 
+        $contact->assertCustomerIdentityIsAvailable();
+
         // Get the contacts assosciated user
         if ($contact->doesntHaveUser()) {
             $contact->createUser();

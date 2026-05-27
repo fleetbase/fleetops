@@ -257,7 +257,7 @@ class VroomOrchestrationSeeder extends Seeder
                 'model'                    => $vehicle['model'],
                 'year'                     => '2024',
                 'type'                     => 'van',
-                'status'                   => 'active',
+                'status'                   => 'available',
                 'online'                   => true,
                 'location'                 => isset($vehicle['lat'], $vehicle['lng']) ? new Point($vehicle['lat'], $vehicle['lng']) : null,
                 'skills'                   => $vehicle['skills'] ?? [],
@@ -287,22 +287,22 @@ class VroomOrchestrationSeeder extends Seeder
         $orders = [
             'endpoint_only' => [
                 'payload_seed_id' => 'endpoint_only',
-                'name'       => 'VROOM Test Order - Pickup Dropoff',
-                'pickup'     => $places['depot'],
-                'dropoff'    => $places['orchard'],
-                'waypoints'  => [],
-                'entities'   => [
+                'name'            => 'VROOM Test Order - Pickup Dropoff',
+                'pickup'          => $places['depot'],
+                'dropoff'         => $places['orchard'],
+                'waypoints'       => [],
+                'entities'        => [
                     ['name' => 'Small carton', 'type' => 'parcel', 'weight' => 12, 'weight_unit' => 'kg', 'length' => 60, 'width' => 40, 'height' => 35, 'dimensions_unit' => 'cm'],
                     ['name' => 'Fragile tote', 'type' => 'parcel', 'weight' => 8, 'weight_unit' => 'kg', 'length' => 50, 'width' => 35, 'height' => 30, 'dimensions_unit' => 'cm'],
                 ],
             ],
             'waypoint_only' => [
                 'payload_seed_id' => 'waypoint_only',
-                'name'       => 'VROOM Test Order - Waypoints Only',
-                'pickup'     => null,
-                'dropoff'    => null,
-                'waypoints'  => [$places['rochor'], $places['novena'], $places['serangoon']],
-                'entities'   => [
+                'name'            => 'VROOM Test Order - Waypoints Only',
+                'pickup'          => null,
+                'dropoff'         => null,
+                'waypoints'       => [$places['rochor'], $places['novena'], $places['serangoon']],
+                'entities'        => [
                     ['name' => 'Multi-stop parcel 1', 'type' => 'parcel', 'weight' => 25, 'weight_unit' => 'kg', 'length' => 80, 'width' => 50, 'height' => 40, 'dimensions_unit' => 'cm'],
                     ['name' => 'Multi-stop parcel 2', 'type' => 'parcel', 'weight' => 18, 'weight_unit' => 'kg', 'length' => 70, 'width' => 45, 'height' => 35, 'dimensions_unit' => 'cm'],
                     ['name' => 'Multi-stop parcel 3', 'type' => 'parcel', 'weight' => 15, 'weight_unit' => 'kg', 'length' => 65, 'width' => 40, 'height' => 35, 'dimensions_unit' => 'cm'],
@@ -310,22 +310,22 @@ class VroomOrchestrationSeeder extends Seeder
             ],
             'mixed' => [
                 'payload_seed_id' => 'mixed',
-                'name'       => 'VROOM Test Order - Mixed Stops',
-                'pickup'     => $places['depot'],
-                'dropoff'    => $places['changi'],
-                'waypoints'  => [$places['paya_lebar'], $places['tampines']],
-                'entities'   => [
+                'name'            => 'VROOM Test Order - Mixed Stops',
+                'pickup'          => $places['depot'],
+                'dropoff'         => $places['changi'],
+                'waypoints'       => [$places['paya_lebar'], $places['tampines']],
+                'entities'        => [
                     ['name' => 'Heavy equipment crate', 'type' => 'freight', 'weight' => 180, 'weight_unit' => 'kg', 'length' => 120, 'width' => 80, 'height' => 90, 'dimensions_unit' => 'cm'],
                     ['name' => 'Accessory box', 'type' => 'parcel', 'weight' => 22, 'weight_unit' => 'kg', 'length' => 75, 'width' => 55, 'height' => 45, 'dimensions_unit' => 'cm'],
                 ],
             ],
             'single_waypoint' => [
                 'payload_seed_id' => 'single_waypoint',
-                'name'       => 'VROOM Test Order - Single Waypoint',
-                'pickup'     => null,
-                'dropoff'    => null,
-                'waypoints'  => [$places['woodlands']],
-                'entities'   => [
+                'name'            => 'VROOM Test Order - Single Waypoint',
+                'pickup'          => null,
+                'dropoff'         => null,
+                'waypoints'       => [$places['woodlands']],
+                'entities'        => [
                     ['name' => 'Oversized sample case', 'type' => 'parcel', 'weight' => 60, 'weight_unit' => 'kg', 'length' => 100, 'width' => 60, 'height' => 60, 'dimensions_unit' => 'cm'],
                 ],
             ],

@@ -2,8 +2,8 @@
 
 namespace Fleetbase\FleetOps\Models;
 
-use Barryvdh\DomPDF\Facade\Pdf;
 use Fleetbase\Casts\PolymorphicType;
+use Fleetbase\FleetOps\Support\LabelPdf;
 use Fleetbase\FleetOps\Support\Utils;
 use Fleetbase\FleetOps\Traits\HasTrackingNumber;
 use Fleetbase\FleetOps\Traits\PayloadAccessors;
@@ -94,7 +94,7 @@ class Waypoint extends Model
      */
     public function pdfLabel()
     {
-        return Pdf::loadHTML($this->label());
+        return LabelPdf::fromHtml($this->label());
     }
 
     /**

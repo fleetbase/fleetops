@@ -120,6 +120,15 @@ class Driver extends Model
     ];
 
     /**
+     * Set attributes and defaults.
+     *
+     * @var array
+     */
+    protected $attributes = [
+        'status' => 'available',
+    ];
+
+    /**
      * The attributes that are guarded and not mass assignable.
      *
      * @var array
@@ -595,9 +604,9 @@ class Driver extends Model
     /**
      * Set the driver status attribute.
      */
-    public function setStatusAttribute(?string $status = 'active'): void
+    public function setStatusAttribute(?string $status = 'available'): void
     {
-        $this->attributes['status'] = $status;
+        $this->attributes['status'] = $status === null || $status === 'active' ? 'available' : $status;
     }
 
     /**
@@ -854,7 +863,7 @@ class Driver extends Model
             'user_uuid'              => $user->uuid,
             'drivers_license_number' => $driversLicenseNumber,
             'country'                => $country,
-            'status'                 => 'active',
+            'status'                 => 'available',
             'location'               => Utils::parsePointToWkt(new Point(0, 0)),
         ]);
 

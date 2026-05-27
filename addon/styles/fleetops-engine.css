@@ -345,6 +345,51 @@ body.fleetbase-console .next-content-overlay > .next-content-overlay-panel-conta
     gap: 0.5rem;
 }
 
+.fleetops-order-form-waypoint {
+    position: relative;
+}
+
+.fleetops-order-form-waypoint--required {
+    border-color: #f97316 !important;
+    padding-top: 1.25rem;
+    box-shadow:
+        0 1px 3px 0 rgb(249 115 22 / 15%),
+        0 0 0 1px rgb(249 115 22 / 10%);
+}
+
+.fleetops-order-form-waypoint__required-tab {
+    position: absolute;
+    top: -1px;
+    right: -1px;
+    border-top-right-radius: 0.375rem;
+    border-bottom-left-radius: 0.375rem;
+    background-color: #f97316;
+    color: #fff7ed;
+    padding: 0.15rem 0.5rem;
+    font-size: 0.62rem;
+    font-weight: 700;
+    line-height: 1.2;
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+}
+
+.fleetops-order-form-waypoint__marker {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 0.6rem;
+    min-width: 3.25rem;
+    padding-top: 0.15rem;
+}
+
+.fleetops-order-form-waypoint__badge {
+    min-width: 1.65rem;
+    width: 1.65rem;
+    height: 1.65rem;
+    font-size: 0.75rem;
+    flex-shrink: 0;
+}
+
 .fleetops-route-editor-empty-state {
     border: 1px dashed rgb(75 85 99 / 75%);
     border-radius: 0.5rem;
@@ -464,7 +509,52 @@ body[data-theme='light'] .flow-activity-status-pill text {
 .activity-flow-graph-container {
     position: relative;
     width: 100%;
-    height: 100%;
+    height: calc(100vh - 16rem);
+    min-height: 24rem;
+    overflow: auto hidden;
+    scrollbar-width: none;
+}
+
+.activity-flow-graph-container > .joint-js-paper {
+    min-width: 100%;
+    max-width: none;
+    overflow: visible;
+}
+
+.activity-flow-graph-container::-webkit-scrollbar {
+    display: none;
+}
+
+.activity-flow-horizontal-scrollbar {
+    position: fixed;
+    bottom: 0;
+    z-index: 100;
+    height: 12px;
+    overflow: auto hidden;
+    background-color: transparent;
+    scrollbar-color: #6b7280 transparent;
+    scrollbar-width: thin;
+}
+
+.activity-flow-horizontal-scrollbar.is-hidden {
+    display: none;
+}
+
+.activity-flow-horizontal-scrollbar-content {
+    height: 1px;
+}
+
+.activity-flow-horizontal-scrollbar::-webkit-scrollbar {
+    height: 8px;
+}
+
+.activity-flow-horizontal-scrollbar::-webkit-scrollbar-thumb {
+    background-color: #6b7280;
+    border-radius: 9999px;
+}
+
+.activity-flow-horizontal-scrollbar::-webkit-scrollbar-track {
+    background-color: transparent;
 }
 
 .activity-flow-zoom-controls {

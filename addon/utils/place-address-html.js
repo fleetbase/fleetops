@@ -11,17 +11,18 @@ function line(content, className = '') {
     return `<div${classAttribute}>${escapeHtml(content)}</div>`;
 }
 
-export default function placeAddressHtml(place) {
+export default function placeAddressHtml(place, options = {}) {
     if (!place) {
         return htmlSafe('');
     }
 
+    const { showTitle = true } = options;
     const name = place.name === place.street1 ? null : place.name;
     const cityStatePostalCode = [place.city, place.province, place.postal_code].filter((value) => !isBlank(value)).join(', ');
     const lines = [];
 
     if (name) {
-        lines.push(line(name, 'font-semibold'));
+        if (showTitle) lines.push(line(name, 'font-semibold'));
         lines.push(line(place.street1));
     } else if (place.street1) {
         lines.push(line(place.street1, 'font-semibold'));

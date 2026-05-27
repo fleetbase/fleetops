@@ -12,7 +12,7 @@
                     {{#each @resource.purchase_rate.service_quote.items as |item|}}
                         <tr class="border-b border-gray-100 dark:border-gray-800 last:border-0">
                             <td class="py-1 pr-2 text-gray-700 dark:text-gray-300">
-                                {{smart-humanize item.details}}
+                                {{item.details}}
                             </td>
                             <td class="py-1 pl-2 text-right font-medium text-gray-700 dark:text-gray-300 whitespace-nowrap">
                                 {{format-currency item.amount @resource.purchase_rate.service_quote.currency}}

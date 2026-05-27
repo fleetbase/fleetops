@@ -12,9 +12,9 @@ class ProlongedStoppage extends Notification implements ShouldQueue
 {
     use Queueable;
 
-    public static string $name = 'Prolonged Stoppage';
+    public static string $name        = 'Prolonged Stoppage';
     public static string $description = 'Notify when a vehicle remains stopped during an active trip beyond the configured threshold.';
-    public static string $package = 'fleet-ops';
+    public static string $package     = 'fleet-ops';
 
     public function __construct(public Order $order, public array $context = [])
     {

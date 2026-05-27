@@ -18,6 +18,7 @@ class TrackingStop implements \JsonSerializable
         public ?Waypoint $waypoint = null,
         public bool $completed = false,
         public ?int $sequence = null,
+        public ?string $trackingNumberUuid = null,
     ) {
     }
 
@@ -35,20 +36,21 @@ class TrackingStop implements \JsonSerializable
         $point = $this->point();
 
         return [
-            'uuid'       => $this->uuid,
-            'public_id'  => $this->publicId,
-            'type'       => $this->type,
-            'status'     => $this->status,
-            'completed'  => $this->completed,
-            'sequence'   => $this->sequence,
-            'address'    => data_get($this->place, 'address'),
-            'name'       => data_get($this->place, 'name'),
-            'location'   => $point ? [
+            'uuid'                 => $this->uuid,
+            'public_id'            => $this->publicId,
+            'type'                 => $this->type,
+            'status'               => $this->status,
+            'completed'            => $this->completed,
+            'sequence'             => $this->sequence,
+            'tracking_number_uuid' => $this->trackingNumberUuid,
+            'address'              => data_get($this->place, 'address'),
+            'name'                 => data_get($this->place, 'name'),
+            'location'             => $point ? [
                 'type'        => 'Point',
                 'coordinates' => [$point->getLng(), $point->getLat()],
             ] : null,
-            'latitude'   => $point ? $point->getLat() : null,
-            'longitude'  => $point ? $point->getLng() : null,
+            'latitude'             => $point ? $point->getLat() : null,
+            'longitude'            => $point ? $point->getLng() : null,
         ];
     }
 
