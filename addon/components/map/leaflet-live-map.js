@@ -8,11 +8,14 @@ import { guidFor } from '@ember/object/internals';
 import { camelize, capitalize, dasherize } from '@ember/string';
 import { singularize, pluralize } from 'ember-inflector';
 import { all } from 'rsvp';
-import { task } from 'ember-concurrency';
+import { task, timeout } from 'ember-concurrency';
 import { next } from '@ember/runloop';
 import getModelName from '@fleetbase/ember-core/utils/get-model-name';
 
 export default class MapLeafletLiveMapComponent extends Component {
+    liveViewportReloadDebounceMs = 300;
+    liveViewportResourceLimit = 500;
+
     @service mapManager;
     @service mapSettings;
     @service leafletMapManager;
@@ -98,6 +101,11 @@ export default class MapLeafletLiveMapComponent extends Component {
             this.universe.off('fleet-ops.geofence.exited', this._geofenceExitedHandler);
             this._geofenceExitedHandler = null;
         }
+        if (this._viewportReloadHandler && this.map && typeof this.map.off === 'function') {
+            this.map.off('moveend', this._viewportReloadHandler);
+            this.map.off('zoomend', this._viewportReloadHandler);
+            this._viewportReloadHandler = null;
+        }
     }
 
     @action didLoad({ target: map }) {
@@ -106,8 +114,9 @@ export default class MapLeafletLiveMapComponent extends Component {
         this.trigger('onLoad', ...arguments);
         this.load.perform();
         // Listen for map move/zoom events to trigger viewport-based resource reload
-        map.on('moveend', () => this.reloadResourcesInViewport.perform());
-        map.on('zoomend', () => this.reloadResourcesInViewport.perform());
+        this._viewportReloadHandler = () => this.reloadResourcesInViewport.perform();
+        map.on('moveend', this._viewportReloadHandler);
+        map.on('zoomend', this._viewportReloadHandler);
     }
 
     /**
@@ -231,7 +240,7 @@ export default class MapLeafletLiveMapComponent extends Component {
             // Get initial map bounds for spatial filtering (provider-agnostic)
             const mapBounds = this.mapManager.getBounds?.() ?? (this.map ? this.map.getBounds() : null);
             const bounds = this.#serializeBoundsForRequest(mapBounds);
-            const params = bounds ? { bounds } : {};
+            const params = this.#liveViewportRequestParams(bounds);
 
             const data = yield all([
                 this.loadResource.perform('routes'),
@@ -256,12 +265,19 @@ export default class MapLeafletLiveMapComponent extends Component {
         if (this.isViewportReloadSuspended) {
             return;
         }
+
+        yield timeout(this.liveViewportReloadDebounceMs);
+
+        if (this.isViewportReloadSuspended) {
+            return;
+        }
+
         // Get current map bounds (provider-agnostic)
         const rawBounds = this.mapManager.getBounds?.() ?? this.map?.getBounds();
         if (!rawBounds) return;
         const bounds = this.#serializeBoundsForRequest(rawBounds);
         if (!bounds) return;
-        const params = { bounds };
+        const params = this.#liveViewportRequestParams(bounds);
 
         // Reload spatially-filtered resources (drivers, vehicles, places)
         // Orders, routes, and service-areas are not spatially filtered
@@ -457,6 +473,10 @@ export default class MapLeafletLiveMapComponent extends Component {
         }
 
         return null;
+    }
+
+    #liveViewportRequestParams(bounds) {
+        return bounds ? { bounds, limit: this.liveViewportResourceLimit } : { limit: this.liveViewportResourceLimit };
     }
 
     #setResourceLayer(model, layer, options = {}) {
