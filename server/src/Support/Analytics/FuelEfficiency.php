@@ -22,7 +22,7 @@ class FuelEfficiency extends AbstractAnalytics
         $fuelByWeek = FuelReport::where('company_uuid', $this->company->uuid)
             ->where('currency', $currency)
             ->whereBetween('created_at', [$start, $end])
-            ->selectRaw("YEARWEEK(created_at, 1) as wk, MIN(DATE(created_at)) as wk_start, SUM(amount) as total_cost")
+            ->selectRaw('YEARWEEK(created_at, 1) as wk, MIN(DATE(created_at)) as wk_start, SUM(amount) as total_cost')
             ->groupBy('wk')
             ->orderBy('wk')
             ->get();
@@ -30,7 +30,7 @@ class FuelEfficiency extends AbstractAnalytics
         $distanceByWeek = Order::where('company_uuid', $this->company->uuid)
             ->where('status', 'completed')
             ->whereBetween('updated_at', [$start, $end])
-            ->selectRaw("YEARWEEK(updated_at, 1) as wk, SUM(distance) as total_distance")
+            ->selectRaw('YEARWEEK(updated_at, 1) as wk, SUM(distance) as total_distance')
             ->groupBy('wk')
             ->orderBy('wk')
             ->pluck('total_distance', 'wk');

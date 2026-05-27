@@ -200,7 +200,7 @@ trait ResolvesOrderServiceStops
 
     protected function nextIncompleteServiceStop(Order $order, Payload $payload): ?array
     {
-        $current = $this->payloadCurrentServiceStop($payload);
+        $current         = $this->payloadCurrentServiceStop($payload);
         $currentSequence = (int) data_get($current, 'sequence', 0);
 
         return $this->payloadServiceStops($payload)
@@ -388,7 +388,7 @@ trait ResolvesOrderServiceStops
             return null;
         }
 
-        $proof = $this->resolveProof($proof);
+        $proof      = $this->resolveProof($proof);
         $activityId = TrackingStatus::insertGetUuid([
             'company_uuid'         => $payload->company_uuid ?? $order->company_uuid,
             'tracking_number_uuid' => $trackingNumber->uuid,
@@ -420,7 +420,7 @@ trait ResolvesOrderServiceStops
         }
 
         $trackingNumber = $this->endpointServiceStopTrackingNumber($order, $payload, $stop);
-        $context = new Waypoint([
+        $context        = new Waypoint([
             'company_uuid'          => $payload->company_uuid ?? $order->company_uuid,
             'payload_uuid'          => $payload->uuid,
             'place_uuid'            => data_get($stop, 'place.uuid'),
@@ -450,8 +450,8 @@ trait ResolvesOrderServiceStops
         }
 
         $trackingNumberUuid = $this->serviceStopTrackingNumberUuid($payload, $stop);
-        $currentStatus = $trackingNumberUuid ? $this->trackingNumberStatus($trackingNumberUuid) : null;
-        $currentCode = $currentStatus
+        $currentStatus      = $trackingNumberUuid ? $this->trackingNumberStatus($trackingNumberUuid) : null;
+        $currentCode        = $currentStatus
             ? $currentStatus->code
             : 'created';
 

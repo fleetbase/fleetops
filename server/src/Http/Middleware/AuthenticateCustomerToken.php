@@ -2,7 +2,6 @@
 
 namespace Fleetbase\FleetOps\Http\Middleware;
 
-use Closure;
 use Fleetbase\FleetOps\Support\CustomerAuth;
 use Illuminate\Http\Request;
 
@@ -16,7 +15,7 @@ use Illuminate\Http\Request;
  */
 class AuthenticateCustomerToken
 {
-    public function handle(Request $request, Closure $next)
+    public function handle(Request $request, \Closure $next)
     {
         $customer = CustomerAuth::resolveFromHeader($request);
         if (!$customer) {

@@ -14,12 +14,12 @@ use Illuminate\Support\Carbon;
 abstract class AbstractMetric
 {
     protected Company $company;
-    protected ?\DateTimeInterface $start = null;
-    protected ?\DateTimeInterface $end   = null;
+    protected ?\DateTimeInterface $start        = null;
+    protected ?\DateTimeInterface $end          = null;
     protected ?\DateTimeInterface $compareStart = null;
     protected ?\DateTimeInterface $compareEnd   = null;
-    protected int $sparklineBuckets = 0;
-    protected string $sparklineUnit = 'day';
+    protected int $sparklineBuckets             = 0;
+    protected string $sparklineUnit             = 'day';
 
     /**
      * Period boundaries for the currently-executing aggregate call.

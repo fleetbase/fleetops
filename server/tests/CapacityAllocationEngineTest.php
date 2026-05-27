@@ -16,8 +16,8 @@ function capacityTestOrder(string $publicId, float $weightKg, float $volumeLitre
                     public float $weight;
                     public string $weight_unit = 'kg';
                     public float $length;
-                    public float $width = 1;
-                    public float $height = 1;
+                    public float $width            = 1;
+                    public float $height           = 1;
                     public string $dimensions_unit = 'm';
 
                     public function __construct(float $weightKg, float $volumeLitres)
@@ -30,8 +30,8 @@ function capacityTestOrder(string $publicId, float $weightKg, float $volumeLitre
         }
     };
 
-    $order = new Order();
-    $order->public_id = $publicId;
+    $order                  = new Order();
+    $order->public_id       = $publicId;
     $order->required_skills = $skills;
     $order->setRelation('payload', $payload);
 
@@ -40,14 +40,14 @@ function capacityTestOrder(string $publicId, float $weightKg, float $volumeLitre
 
 function capacityTestVehicle(string $publicId, float $weightKg, float $volumeM3 = 0, int $maxTasks = 0, array $skills = []): Vehicle
 {
-    $vehicle = new Vehicle();
-    $vehicle->public_id = $publicId;
-    $vehicle->payload_capacity = $weightKg;
-    $vehicle->payload_capacity_volume = $volumeM3;
+    $vehicle                           = new Vehicle();
+    $vehicle->public_id                = $publicId;
+    $vehicle->payload_capacity         = $weightKg;
+    $vehicle->payload_capacity_volume  = $volumeM3;
     $vehicle->payload_capacity_pallets = 0;
     $vehicle->payload_capacity_parcels = 100;
-    $vehicle->max_tasks = $maxTasks;
-    $vehicle->skills = $skills;
+    $vehicle->max_tasks                = $maxTasks;
+    $vehicle->skills                   = $skills;
     $vehicle->setRelation('driver', null);
 
     return $vehicle;

@@ -4,7 +4,6 @@ namespace Fleetbase\FleetOps\Support\Analytics;
 
 use Fleetbase\Models\Transaction;
 use Illuminate\Support\Carbon;
-use Illuminate\Support\Facades\DB;
 
 /**
  * Time-series of revenue (sum of transactions) per bucket, filtered to the

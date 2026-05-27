@@ -41,8 +41,8 @@ use Fleetbase\Support\Auth;
 use Fleetbase\Support\TemplateString;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Database\QueryException;
-use Illuminate\Http\UploadedFile;
 use Illuminate\Http\Request;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
@@ -913,7 +913,7 @@ class OrderController extends FleetOpsController
     /**
      * Capture one or more photos for order/waypoint proof of delivery.
      *
-     * @return \Fleetbase\FleetOps\Http\Resources\v1\Proof|\Illuminate\Http\Response
+     * @return ProofResource|\Illuminate\Http\Response
      */
     public function capturePhoto(Request $request, string $id, ?string $subjectId = null)
     {

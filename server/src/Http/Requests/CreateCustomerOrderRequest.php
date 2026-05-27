@@ -46,11 +46,11 @@ class CreateCustomerOrderRequest extends FleetbaseRequest
 
             // Top-level alternatives when `payload` is not provided. Each
             // Place sub-object accepts the standard Place fillable shape.
-            'pickup'           => 'nullable',
-            'dropoff'          => 'nullable',
-            'return'           => 'nullable',
-            'waypoints'        => 'nullable|array',
-            'entities'         => 'nullable|array',
+            'pickup'                    => 'nullable',
+            'dropoff'                   => 'nullable',
+            'return'                    => 'nullable',
+            'waypoints'                 => 'nullable|array',
+            'entities'                  => 'nullable|array',
             'entities.*.name'           => 'nullable|string',
             'entities.*.description'    => 'nullable|string',
             'entities.*.weight'         => 'nullable|numeric|min:0',

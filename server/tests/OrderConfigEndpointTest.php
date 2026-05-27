@@ -24,8 +24,8 @@ test('order-configs route group is registered in the consumable v1 namespace', f
 
     expect($routes)
         ->toContain("\$router->group(['prefix' => 'order-configs']")
-        ->and($routes)->toContain("OrderConfigController@query")
-        ->and($routes)->toContain("OrderConfigController@find");
+        ->and($routes)->toContain('OrderConfigController@query')
+        ->and($routes)->toContain('OrderConfigController@find');
 });
 
 test('OrderConfigController exposes only read-only methods', function () {

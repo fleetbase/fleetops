@@ -19,8 +19,6 @@ class OrderConfig extends FleetbaseResource
      * Transform the resource into an array.
      *
      * @param \Illuminate\Http\Request $request
-     *
-     * @return array
      */
     public function toArray($request): array
     {
@@ -61,12 +59,12 @@ class OrderConfig extends FleetbaseResource
                 continue;
             }
             $activities[] = [
-                'code'        => $activity['code']        ?? ($activity['key'] ?? null),
-                'status'      => $activity['status']      ?? null,
-                'details'     => $activity['details']     ?? null,
-                'color'       => $activity['color']       ?? null,
+                'code'        => $activity['code'] ?? ($activity['key'] ?? null),
+                'status'      => $activity['status'] ?? null,
+                'details'     => $activity['details'] ?? null,
+                'color'       => $activity['color'] ?? null,
                 'complete'    => (bool) ($activity['complete'] ?? false),
-                'pod_method'  => $activity['pod_method']  ?? null,
+                'pod_method'  => $activity['pod_method'] ?? null,
                 'require_pod' => (bool) ($activity['require_pod'] ?? false),
             ];
         }

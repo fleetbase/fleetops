@@ -28,13 +28,13 @@ test('customers route group is registered inside the consumable v1 namespace', f
 
     expect($routes)
         ->toContain("\$router->group(['prefix' => 'customers', 'middleware' => []]")
-        ->and($routes)->toContain("CustomerController@requestCreationCode")
-        ->and($routes)->toContain("CustomerController@create")
-        ->and($routes)->toContain("CustomerController@login")
-        ->and($routes)->toContain("CustomerController@loginWithPhone")
-        ->and($routes)->toContain("CustomerController@verifyCode")
-        ->and($routes)->toContain("CustomerController@forgotPassword")
-        ->and($routes)->toContain("CustomerController@resetPassword");
+        ->and($routes)->toContain('CustomerController@requestCreationCode')
+        ->and($routes)->toContain('CustomerController@create')
+        ->and($routes)->toContain('CustomerController@login')
+        ->and($routes)->toContain('CustomerController@loginWithPhone')
+        ->and($routes)->toContain('CustomerController@verifyCode')
+        ->and($routes)->toContain('CustomerController@forgotPassword')
+        ->and($routes)->toContain('CustomerController@resetPassword');
 });
 
 test('authenticated customer routes are gated by AuthenticateCustomerToken middleware', function () {
@@ -42,15 +42,15 @@ test('authenticated customer routes are gated by AuthenticateCustomerToken middl
 
     expect($routes)
         ->toContain('AuthenticateCustomerToken::class')
-        ->and($routes)->toContain("CustomerController@me")
-        ->and($routes)->toContain("CustomerController@updateMe")
-        ->and($routes)->toContain("CustomerController@logout")
-        ->and($routes)->toContain("CustomerController@logoutAll")
-        ->and($routes)->toContain("CustomerController@orders")
-        ->and($routes)->toContain("CustomerController@createOrder")
-        ->and($routes)->toContain("CustomerController@findOrder")
-        ->and($routes)->toContain("CustomerController@places")
-        ->and($routes)->toContain("CustomerController@registerDevice");
+        ->and($routes)->toContain('CustomerController@me')
+        ->and($routes)->toContain('CustomerController@updateMe')
+        ->and($routes)->toContain('CustomerController@logout')
+        ->and($routes)->toContain('CustomerController@logoutAll')
+        ->and($routes)->toContain('CustomerController@orders')
+        ->and($routes)->toContain('CustomerController@createOrder')
+        ->and($routes)->toContain('CustomerController@findOrder')
+        ->and($routes)->toContain('CustomerController@places')
+        ->and($routes)->toContain('CustomerController@registerDevice');
 });
 
 test('customer controller exposes the documented method surface', function () {
@@ -76,8 +76,8 @@ test('customer controller does not reference Storefront concerns', function () {
         ->not->toContain("session('storefront_key')")
         ->not->toContain("session('storefront_store')")
         ->not->toContain("session('storefront_network')")
-        ->not->toContain("storefront_id")
-        ->not->toContain("createStripeCustomerForContact");
+        ->not->toContain('storefront_id')
+        ->not->toContain('createStripeCustomerForContact');
 });
 
 test('customer controller does not introduce client-portal field aliases', function () {
@@ -93,7 +93,7 @@ test('customer controller does not introduce client-portal field aliases', funct
         ->not->toContain("'state'")
         ->not->toContain("'zip'")
         ->not->toContain("'origin' => 'fleetops_customer_portal'")
-        ->not->toContain("fleetops_customer_portal")
+        ->not->toContain('fleetops_customer_portal')
         ->not->toContain("\$request->input('item'")
         ->not->toContain("\$request->input('value'")
         ->not->toContain("\$request->input('delivery'")
@@ -129,10 +129,10 @@ test('AuthenticateCustomerToken enforces a customer-token + company cross-check'
 
     $source = file_get_contents(dirname(__DIR__) . '/src/Http/Middleware/AuthenticateCustomerToken.php');
     expect($source)
-        ->toContain("Customer token is missing or invalid")
-        ->toContain("Customer does not belong to this company")
-        ->toContain("CustomerAuth::resolveFromHeader")
-        ->toContain("CustomerAuth::setCurrent");
+        ->toContain('Customer token is missing or invalid')
+        ->toContain('Customer does not belong to this company')
+        ->toContain('CustomerAuth::resolveFromHeader')
+        ->toContain('CustomerAuth::setCurrent');
 });
 
 test('CustomerAuth resolves tokens by contact UUID with company-preferred fallback', function () {
@@ -150,7 +150,7 @@ test('CustomerAuth resolves tokens by contact UUID with company-preferred fallba
 });
 
 test('Customer model extends Contact with a type=customer global scope', function () {
-    expect(is_subclass_of(CustomerModel::class, \Fleetbase\FleetOps\Models\Contact::class))->toBeTrue();
+    expect(is_subclass_of(CustomerModel::class, Fleetbase\FleetOps\Models\Contact::class))->toBeTrue();
 
     $source = file_get_contents(dirname(__DIR__) . '/src/Models/Customer.php');
     expect($source)

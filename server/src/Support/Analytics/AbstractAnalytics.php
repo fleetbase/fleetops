@@ -40,12 +40,12 @@ abstract class AbstractAnalytics
     {
         if ($period !== null && $period !== '') {
             $days = match ($period) {
-                '7d'   => 7,
-                '14d'  => 14,
-                '30d'  => 30,
-                '90d'  => 90,
-                '180d' => 180,
-                '365d' => 365,
+                '7d'    => 7,
+                '14d'   => 14,
+                '30d'   => 30,
+                '90d'   => 90,
+                '180d'  => 180,
+                '365d'  => 365,
                 default => null,
             };
 

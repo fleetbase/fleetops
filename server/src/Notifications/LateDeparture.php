@@ -12,9 +12,9 @@ class LateDeparture extends Notification implements ShouldQueue
 {
     use Queueable;
 
-    public static string $name = 'Late Departure';
+    public static string $name        = 'Late Departure';
     public static string $description = 'Notify when an order has not departed after the configured grace period.';
-    public static string $package = 'fleet-ops';
+    public static string $package     = 'fleet-ops';
 
     public function __construct(public Order $order, public array $context = [])
     {

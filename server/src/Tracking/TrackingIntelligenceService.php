@@ -156,60 +156,60 @@ class TrackingIntelligenceService
 
         if ($isTerminal) {
             return [
-                'status'        => $status,
-                'mode'          => $status,
-                'message'       => $status === 'completed' ? 'Order has been completed.' : 'Order has been canceled.',
-                'is_terminal'   => true,
-                'has_started'   => $hasStarted,
-                'show_live_eta' => false,
+                'status'         => $status,
+                'mode'           => $status,
+                'message'        => $status === 'completed' ? 'Order has been completed.' : 'Order has been canceled.',
+                'is_terminal'    => true,
+                'has_started'    => $hasStarted,
+                'show_live_eta'  => false,
                 'show_start_eta' => false,
             ];
         }
 
         if (!$hasAssignedDriver) {
             return [
-                'status'        => $status,
-                'mode'          => 'unassigned',
-                'message'       => 'Assign a driver to start live tracking and improve ETA accuracy.',
-                'is_terminal'   => false,
-                'has_started'   => $hasStarted,
-                'show_live_eta' => false,
+                'status'         => $status,
+                'mode'           => 'unassigned',
+                'message'        => 'Assign a driver to start live tracking and improve ETA accuracy.',
+                'is_terminal'    => false,
+                'has_started'    => $hasStarted,
+                'show_live_eta'  => false,
                 'show_start_eta' => false,
             ];
         }
 
         if (!$hasStarted && $isDispatched) {
             return [
-                'status'        => $status,
-                'mode'          => 'dispatched',
-                'message'       => 'Order has been dispatched. Estimated start is based on the assigned driver route to the first stop.',
-                'is_terminal'   => false,
-                'has_started'   => false,
-                'show_live_eta' => false,
+                'status'         => $status,
+                'mode'           => 'dispatched',
+                'message'        => 'Order has been dispatched. Estimated start is based on the assigned driver route to the first stop.',
+                'is_terminal'    => false,
+                'has_started'    => false,
+                'show_live_eta'  => false,
                 'show_start_eta' => $startSeconds !== null,
-                'start_at'      => $this->addSeconds($now, $startSeconds),
+                'start_at'       => $this->addSeconds($now, $startSeconds),
             ];
         }
 
         if (!$hasStarted) {
             return [
-                'status'        => $status,
-                'mode'          => 'pre_start',
-                'message'       => 'Live ETA will begin once the order is started.',
-                'is_terminal'   => false,
-                'has_started'   => false,
-                'show_live_eta' => false,
+                'status'         => $status,
+                'mode'           => 'pre_start',
+                'message'        => 'Live ETA will begin once the order is started.',
+                'is_terminal'    => false,
+                'has_started'    => false,
+                'show_live_eta'  => false,
                 'show_start_eta' => false,
             ];
         }
 
         return [
-            'status'        => $status,
-            'mode'          => 'active',
-            'message'       => null,
-            'is_terminal'   => false,
-            'has_started'   => true,
-            'show_live_eta' => true,
+            'status'         => $status,
+            'mode'           => 'active',
+            'message'        => null,
+            'is_terminal'    => false,
+            'has_started'    => true,
+            'show_live_eta'  => true,
             'show_start_eta' => false,
         ];
     }

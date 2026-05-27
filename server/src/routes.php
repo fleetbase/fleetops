@@ -68,7 +68,7 @@ Route::prefix(config('fleetops.api.routing.prefix', null))->namespace('Fleetbase
                 $router->post('reset-password', 'CustomerController@resetPassword');
 
                 // Authenticated (require Customer-Token)
-                $router->group(['middleware' => [\Fleetbase\FleetOps\Http\Middleware\AuthenticateCustomerToken::class]], function () use ($router) {
+                $router->group(['middleware' => [Fleetbase\FleetOps\Http\Middleware\AuthenticateCustomerToken::class]], function () use ($router) {
                     $router->get('me', 'CustomerController@me');
                     $router->put('me', 'CustomerController@updateMe');
                     $router->match(['post', 'patch'], 'me', 'CustomerController@updateMe');
@@ -613,16 +613,16 @@ Route::prefix(config('fleetops.api.routing.prefix', null))->namespace('Fleetbase
                                 $router->group(
                                     ['prefix' => 'analytics'],
                                     function ($router) {
-                                        $router->get('operations-pulse',     'AnalyticsController@operationsPulse');
-                                        $router->get('revenue-trend',        'AnalyticsController@revenueTrend');
-                                        $router->get('orders-by-status',     'AnalyticsController@ordersByStatus');
-                                        $router->get('on-time-delivery',     'AnalyticsController@onTimeDelivery');
-                                        $router->get('top-drivers',          'AnalyticsController@topDrivers');
-                                        $router->get('fuel-efficiency',      'AnalyticsController@fuelEfficiency');
-                                        $router->get('issues-insights',      'AnalyticsController@issuesInsights');
+                                        $router->get('operations-pulse', 'AnalyticsController@operationsPulse');
+                                        $router->get('revenue-trend', 'AnalyticsController@revenueTrend');
+                                        $router->get('orders-by-status', 'AnalyticsController@ordersByStatus');
+                                        $router->get('on-time-delivery', 'AnalyticsController@onTimeDelivery');
+                                        $router->get('top-drivers', 'AnalyticsController@topDrivers');
+                                        $router->get('fuel-efficiency', 'AnalyticsController@fuelEfficiency');
+                                        $router->get('issues-insights', 'AnalyticsController@issuesInsights');
                                         $router->get('maintenance-overview', 'AnalyticsController@maintenanceOverview');
-                                        $router->get('geofence-violations',  'AnalyticsController@geofenceViolations');
-                                        $router->get('live-fleet',           'AnalyticsController@liveFleet');
+                                        $router->get('geofence-violations', 'AnalyticsController@geofenceViolations');
+                                        $router->get('live-fleet', 'AnalyticsController@liveFleet');
                                     }
                                 );
                                 $router->group(

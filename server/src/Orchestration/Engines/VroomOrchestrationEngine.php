@@ -85,7 +85,7 @@ class VroomOrchestrationEngine implements OrchestrationEngineInterface
         $vroomPayload = [
             'jobs'      => [],
             'shipments' => [],
-            'vehicles' => array_map(function (array $v) use ($profile) {
+            'vehicles'  => array_map(function (array $v) use ($profile) {
                 $vehicle = [
                     'id'          => crc32($v['id']), // VROOM requires integer IDs
                     'description' => json_encode(['vehicle_id' => $v['id'], 'driver_id' => $v['driver_id']]),

@@ -592,7 +592,7 @@ class CustomerController extends Controller
         // Mirror critical fields on the linked User row so login works after edits.
         if ($customer->user_uuid) {
             $userUpdate = array_filter([
-                'name'  => $input['name']  ?? null,
+                'name'  => $input['name'] ?? null,
                 'email' => $input['email'] ?? null,
                 'phone' => $input['phone'] ?? null,
             ], fn ($v) => $v !== null);
