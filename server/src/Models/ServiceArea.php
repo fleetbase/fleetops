@@ -123,7 +123,7 @@ class ServiceArea extends Model
      */
     public function zones()
     {
-        return $this->hasMany(Zone::class)->without(['serviceArea']);
+        return $this->hasMany(Zone::class, 'service_area_uuid', 'uuid')->without(['serviceArea']);
     }
 
     /**
