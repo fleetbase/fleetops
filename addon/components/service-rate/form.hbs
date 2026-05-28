@@ -248,7 +248,7 @@
                                         <div class="fleetbase-model-select fleetbase-power-select ember-model-select">
                                             <PowerSelect
                                                 @options={{this.geographyTypes}}
-                                                @selected={{find-by "value" rateFee.geography_type this.geographyTypes}}
+                                                @selected={{find-by "value" (or rateFee.selected_geography_type rateFee.geography_type) this.geographyTypes}}
                                                 @onChange={{fn this.selectRuleGeographyType rateFee}}
                                                 @placeholder="Geography type"
                                                 @triggerClass="form-select form-input"
@@ -260,7 +260,7 @@
                                         </div>
                                     </td>
                                     <td>
-                                        {{#if (eq rateFee.geography_type "zone")}}
+                                        {{#if (eq (or rateFee.selected_geography_type rateFee.geography_type) "zone")}}
                                             <div class="fleetbase-model-select fleetbase-power-select ember-model-select">
                                                 <PowerSelect
                                                     @options={{this.zones}}
@@ -274,7 +274,7 @@
                                                     {{zone.name}}
                                                 </PowerSelect>
                                             </div>
-                                        {{else if (eq rateFee.geography_type "fallback")}}
+                                        {{else if (eq (or rateFee.selected_geography_type rateFee.geography_type) "fallback")}}
                                             <div class="text-sm text-gray-500 dark:text-gray-400">Unmatched route distance</div>
                                         {{else}}
                                             <div class="fleetbase-model-select fleetbase-power-select ember-model-select">
