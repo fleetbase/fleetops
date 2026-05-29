@@ -6,6 +6,7 @@
     @saveTask={{this.save}}
     @onPressCancel={{this.cancel}}
     @onOverlayReady={{fn (mut this.overlay)}}
+     @maxResizeWidth={{1000}}
 >
     <ServiceRate::Form @resource={{@model}} @controller={{this}} />
     <Spacer @height="200px" />
