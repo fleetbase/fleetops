@@ -11,12 +11,17 @@ export default class CustomerFormComponent extends Component {
     @service currentUser;
     @service notifications;
     @service modalsManager;
+    @service('universe/extension-manager') extensionManager;
+
     @tracked userAccountActionButtons = [
         {
             icon: 'user-plus',
             size: 'xs',
             permission: 'iam create user',
-            onClick: () => {
+            onClick: async () => {
+                // Load IAM engine for user-form modal component
+                await this.extensionManager.ensureEngineLoaded('@fleetbase/iam-engine');
+
                 const user = this.store.createRecord('user', {
                     status: 'pending',
                     type: 'user',
