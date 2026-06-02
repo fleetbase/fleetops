@@ -1379,8 +1379,9 @@ class Order extends Model
      *
      * The process involves the following steps:
      * 1. Creating a new Activity instance with the 'completed' code and relevant details.
-     * 2. Notifying that the order has been completed via `notifyCompleted`.
-     * 3. Updating the order's activity with the new 'completed' activity through `updateActivity`.
+     * 2. Updating the order's activity with the new 'completed' activity through `updateActivity`,
+     *    which applies and persists the 'completed' status.
+     * 3. Notifying that the order has been completed via `notifyCompleted`.
      *
      * @param Proof|null $proof Optional. Additional proof or details for the activity update.
      *
@@ -1388,14 +1389,14 @@ class Order extends Model
      */
     public function complete(?Proof $proof = null): self
     {
-        $this->notifyCompleted();
-
         $doesntHaveCompletedActivity = TrackingStatus::where(['tracking_number_uuid' => $this->tracking_number_uuid, 'code' => 'COMPLETED'])->doesntExist();
         if ($doesntHaveCompletedActivity) {
             $activity = $this->config()->getCompletedActivity();
 
-            return $this->updateActivity($activity, $proof);
+            $this->updateActivity($activity, $proof);
         }
+
+        $this->notifyCompleted();
 
         return $this;
     }
