@@ -10,7 +10,7 @@
                 @disabled={{cannot-write @resource}}
             />
 
-            <InputGroup @name={{t "service-rate.fields.service-order-label"}} @helpText={{t "service-rate.fields.service-order-help-text"}}>
+            <InputGroup @name={{t "service-rate.fields.service-order-label"}} @helpText={{t "service-rate.fields.service-order-help-text"}} @required={{true}}>
                 <div class="fleetbase-model-select fleetbase-power-select ember-model-select">
                     <PowerSelect
                         @options={{this.orderConfigActions.allOrderConfigs}}

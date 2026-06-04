@@ -1,16 +1,20 @@
 import Controller from '@ember/controller';
 import { inject as service } from '@ember/service';
+import { isArray } from '@ember/array';
 
 export default class ManagementContactsCustomersDetailsController extends Controller {
-    @service customerActions;
+    @service('universe/menu-service') menuService;
     @service hostRouter;
+    @service intl;
 
     get tabs() {
+        const registeredTabs = this.menuService.getMenuItems('fleet-ops:component:customer:details');
         return [
             {
-                route: 'management.contacts.customers.details.index',
+                route: 'management.contacts.index.details.index',
                 label: 'Overview',
             },
+            ...(isArray(registeredTabs) ? registeredTabs : []),
         ];
     }
 
