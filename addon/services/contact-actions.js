@@ -2,6 +2,8 @@ import ResourceActionService from '@fleetbase/ember-core/services/resource-actio
 import { inject as service } from '@ember/service';
 import { action, get } from '@ember/object';
 
+const INTERNAL_NAMESPACE = 'int/v1';
+
 export default class ContactActionsService extends ResourceActionService {
     @service fetch;
     @service placeActions;
@@ -297,8 +299,8 @@ export default class ContactActionsService extends ResourceActionService {
                 modal.startLoading();
 
                 try {
-                    const response = await this.fetch.post(endpoint, { customer: contact?.id }, { namespace: 'fleet-ops/int/v1' });
-                    this.updateContactFromResponse(contact, response);
+                    const response = await this.fetch.post(endpoint, { customer: contact?.id }, { namespace: INTERNAL_NAMESPACE });
+                    await this.updateContactFromResponse(contact, response);
                     this.notifications.success(successMessage);
                     modal.done();
                 } catch (error) {
@@ -309,10 +311,35 @@ export default class ContactActionsService extends ResourceActionService {
         });
     }
 
-    updateContactFromResponse(contact, response) {
+    async updateContactFromResponse(contact, response) {
         const payload = response.customer ?? response.contact;
-        if (payload && typeof contact?.setProperties === 'function') {
-            contact.setProperties(payload);
+
+        if (!payload || typeof contact?.setProperties !== 'function') {
+            return;
         }
+
+        contact.setProperties(
+            this.withoutIdentityFields({
+                user_uuid: payload.user_uuid,
+            })
+        );
+
+        if (payload.user) {
+            const user = await contact.user;
+
+            if (typeof user?.setProperties === 'function') {
+                user.setProperties(this.withoutIdentityFields(payload.user));
+            }
+        }
+    }
+
+    withoutIdentityFields(payload = {}) {
+        const attributes = { ...payload };
+
+        delete attributes.id;
+        delete attributes.uuid;
+        delete attributes.public_id;
+
+        return attributes;
     }
 }

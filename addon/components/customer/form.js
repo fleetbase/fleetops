@@ -66,6 +66,27 @@ export default class CustomerFormComponent extends Component {
         },
     ];
 
+    get showWelcomeEmailOption() {
+        return this.args.resource?.isNew && this.extensionManager.isInstalled('@fleetbase/customer-portal-engine');
+    }
+
+    get sendWelcomeEmail() {
+        return Boolean(this.args.resource?.meta?.customer_portal?.send_welcome_email);
+    }
+
+    @action toggleWelcomeEmail(value = !this.sendWelcomeEmail) {
+        const meta = this.args.resource.meta ?? {};
+        const customerPortal = meta.customer_portal ?? {};
+
+        this.args.resource.set('meta', {
+            ...meta,
+            customer_portal: {
+                ...customerPortal,
+                send_welcome_email: value,
+            },
+        });
+    }
+
     @action selectPlace(place) {
         if (!place) return;
         this.args.resource.setProperties({

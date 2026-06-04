@@ -78,6 +78,19 @@ class UserFilterExpansion implements Expansion
     }
 
     /**
+     * Filter where users can be driver.
+     *
+     * @return void
+     */
+    public static function canBeDriver()
+    {
+        return function () {
+            /** @var \Fleetbase\Http\Filter\UserFilter|\Fleetbase\Http\Filter\Filter $this */
+            $this->builder->whereIn('type', ['user', 'admin']);
+        };
+    }
+
+    /**
      * @return void
      */
     public static function doesntHaveContact()

@@ -4,6 +4,7 @@ import { isArray } from '@ember/array';
 
 export default class ManagementContactsIndexDetailsController extends Controller {
     @service('universe/menu-service') menuService;
+    @service contactActions;
     @service hostRouter;
     @service intl;
 

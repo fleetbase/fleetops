@@ -6,6 +6,7 @@ use Fleetbase\FleetOps\Exports\ContactExport;
 use Fleetbase\FleetOps\Http\Controllers\FleetOpsController;
 use Fleetbase\FleetOps\Http\Resources\v1\Vendor as VendorResource;
 use Fleetbase\FleetOps\Imports\ContactImport;
+use Fleetbase\FleetOps\Mail\CustomerCredentialsMail;
 use Fleetbase\FleetOps\Models\Contact;
 use Fleetbase\FleetOps\Models\Entity;
 use Fleetbase\FleetOps\Models\Issue;
@@ -19,6 +20,7 @@ use Fleetbase\Http\Requests\ImportRequest;
 use Fleetbase\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
 use Maatwebsite\Excel\Facades\Excel;
 
@@ -38,6 +40,7 @@ class ContactController extends FleetOpsController
     {
         $this->resolveUserInput($request, $input);
         $this->assertCustomerIdentityIsAvailable($input);
+        $this->assertCustomerPortalCanSendWelcomeEmail($input);
     }
 
     /**
@@ -60,6 +63,7 @@ class ContactController extends FleetOpsController
     {
         if ($contact->type === 'customer') {
             $contact->normalizeCustomerUser();
+            $this->sendCustomerPortalWelcomeEmail($contact);
         }
 
         $customFieldValues = $request->array('contact.custom_field_values');
@@ -230,6 +234,54 @@ class ContactController extends FleetOpsController
 
         $input['user_uuid'] = User::where('uuid', $user)->orWhere('public_id', $user)->value('uuid') ?? $user;
         unset($input['user']);
+    }
+
+    private function assertCustomerPortalCanSendWelcomeEmail(array $input): void
+    {
+        $type = data_get($input, 'type', 'contact');
+        if ($type !== 'customer' || !data_get($input, 'meta.customer_portal.send_welcome_email')) {
+            return;
+        }
+
+        if (!$this->isCustomerPortalInstalled()) {
+            throw new \Exception('Customer portal must be installed before sending a customer welcome email.');
+        }
+    }
+
+    private function sendCustomerPortalWelcomeEmail(Contact $contact): void
+    {
+        if (!data_get($contact->meta, 'customer_portal.send_welcome_email')) {
+            return;
+        }
+
+        if (!$this->isCustomerPortalInstalled()) {
+            throw new \Exception('Customer portal must be installed before sending a customer welcome email.');
+        }
+
+        $user = $contact->getUser() ?? Contact::createUserFromContact($contact, false, true);
+        if (!$user) {
+            throw new \Exception('Unable to create customer portal login.');
+        }
+
+        $password = Str::random(16);
+        $user->changePassword($password);
+
+        if ($user->status !== 'active') {
+            $user->activate();
+        }
+
+        Mail::to($user)->send(new CustomerCredentialsMail($password, $contact));
+
+        $meta = (array) $contact->meta;
+        data_forget($meta, 'customer_portal.send_welcome_email');
+        $contact->forceFill(['meta' => $meta])->saveQuietly();
+        $contact->setAttribute('meta', $meta);
+    }
+
+    private function isCustomerPortalInstalled(): bool
+    {
+        return collect(Utils::getInstalledFleetbaseExtensions())
+            ->contains(fn ($package) => data_get($package, 'name') === 'fleetbase/customer-portal-api');
     }
 
     private function assertCustomerIdentityIsAvailable(array $input, ?Contact $contact = null): void

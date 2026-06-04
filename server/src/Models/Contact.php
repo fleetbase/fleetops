@@ -7,10 +7,8 @@ use Fleetbase\FleetOps\Exceptions\CustomerUserConflictException;
 use Fleetbase\FleetOps\Exceptions\UserAlreadyExistsException;
 use Fleetbase\FleetOps\Support\Utils;
 use Fleetbase\Models\CompanyUser;
-use Fleetbase\Models\Invite;
 use Fleetbase\Models\Model;
 use Fleetbase\Models\User;
-use Fleetbase\Notifications\UserInvited;
 use Fleetbase\Traits\HasApiModelBehavior;
 use Fleetbase\Traits\HasApiModelCache;
 use Fleetbase\Traits\HasCustomFields;
@@ -301,15 +299,15 @@ class Contact extends Model
     }
 
     /**
-     * Creates a new user from the given contact and optionally sends an invitation.
+     * Creates a new user from the given contact without sending an organization invitation.
      *
      * This method first checks if a user with the same email or phone number as the contact already exists.
      * If such a user exists, it throws a UserAlreadyExistsException. Otherwise, it proceeds to create a new
      * user record using the contact's details, assigns the user to the contact's company, and links the
-     * user to the contact. Optionally, it sends an invitation to the newly created user via email.
+     * user to the contact.
      *
      * @param Contact $contact    the contact instance from which the user should be created
-     * @param bool    $sendInvite (optional) Whether to send an invitation to the newly created user. Default is false.
+     * @param bool    $sendInvite Deprecated and ignored. Contact and customer users do not receive organization invitations.
      *
      * @return User the newly created user instance
      *
@@ -379,8 +377,8 @@ class Contact extends Model
         // Set user type
         $user->setType($contact->type);
 
-        // Assing to company
-        $user->assignCompany($contact->company, $contact->isCustomer() ? 'Fleet-Ops Customer' : 'Fleet-Ops Contact');
+        // Assign to company without triggering core organization invitations.
+        static::assignUserToContactCompany($contact, $user);
 
         // Assign customer role
         if ($contact->isCustomer()) {
@@ -391,23 +389,6 @@ class Contact extends Model
         $contact->setAttribute('user_uuid', $user->uuid);
         if ($update) {
             $contact->update(['user_uuid' => $user->uuid]);
-        }
-
-        // Optionally, send invite
-        if ($sendInvite) {
-            // send invitation to user
-            $invitation = Invite::create([
-                'company_uuid'    => $user->company_uuid,
-                'created_by_uuid' => session('user'),
-                'subject_uuid'    => $user->company_uuid,
-                'subject_type'    => Utils::getMutationType('company'),
-                'protocol'        => 'email',
-                'recipients'      => [$user->email],
-                'reason'          => 'join_company',
-            ]);
-
-            // notify user
-            $user->notify(new UserInvited($invitation));
         }
 
         $contact->setRelation('user', $user);
@@ -491,21 +472,20 @@ class Contact extends Model
     }
 
     /**
-     * Assigns a user to the company and optionally sends an invitation email.
+     * Assigns a user to the contact's company without sending an organization invitation.
      *
      * This method performs the following actions:
      * 1. Associates the provided user with the current company, assigning them a role based on the
      *    company's type (e.g., 'Fleet-Ops Customer' or 'Fleet-Ops Contact').
      * 2. If the user is of type 'customer', assigns the 'Fleet-Ops Customer' role specifically.
      * 3. Updates the current entity's `user_uuid` to reference the assigned user.
-     * 4. Optionally sends an invitation email to the user, inviting them to join the company.
      *
      * @param User $user       the user to be assigned to the company
-     * @param bool $sendInvite Determines whether to send an invitation email to the user. Defaults to false.
+     * @param bool $sendInvite Deprecated and ignored. Contact and customer users do not receive organization invitations.
      *
      * @return self returns the current instance to allow method chaining
      *
-     * @throws \Exception if an error occurs during user assignment or while sending the invitation
+     * @throws \Exception if an error occurs during user assignment
      */
     public function assignUser(User $user, bool $sendInvite = false): self
     {
@@ -525,8 +505,8 @@ class Contact extends Model
             }
         }
 
-        // Assing to company
-        $user->assignCompany($this->company, $this->isCustomer() ? 'Fleet-Ops Customer' : 'Fleet-Ops Contact');
+        // Assign to company without triggering core organization invitations.
+        static::assignUserToContactCompany($this, $user);
 
         // Get the company user instance
         $companyUser = $user->getCompanyUser($this->company);
@@ -537,23 +517,6 @@ class Contact extends Model
 
         // Set user to contact
         $this->update(['user_uuid' => $user->uuid]);
-
-        // Optionally, send invite
-        if ($sendInvite) {
-            // send invitation to user
-            $invitation = Invite::create([
-                'company_uuid'    => $user->company_uuid,
-                'created_by_uuid' => session('user'),
-                'subject_uuid'    => $user->company_uuid,
-                'subject_type'    => Utils::getMutationType('company'),
-                'protocol'        => 'email',
-                'recipients'      => [$user->email],
-                'reason'          => 'join_company',
-            ]);
-
-            // notify user
-            $user->notify(new UserInvited($invitation));
-        }
 
         $this->setRelation('user', $user);
 
@@ -657,12 +620,11 @@ class Contact extends Model
     }
 
     /**
-     * Creates a new user from the current contact instance and optionally sends an invitation.
+     * Creates a new user from the current contact instance without sending an organization invitation.
      *
-     * This method is a wrapper around the createUserFromContact method. It allows creating a user directly
-     * from a contact instance and, optionally, sending an invitation to the newly created user.
+     * This method is a wrapper around the createUserFromContact method.
      *
-     * @param bool $sendInvite (optional) Whether to send an invitation to the newly created user. Default is false.
+     * @param bool $sendInvite Deprecated and ignored. Contact and customer users do not receive organization invitations.
      *
      * @return User the newly created user instance
      */
@@ -708,5 +670,22 @@ class Contact extends Model
     public function doesntHaveUser(): bool
     {
         return !$this->hasUser();
+    }
+
+    private static function assignUserToContactCompany(Contact $contact, User $user): ?CompanyUser
+    {
+        $contact->loadMissing('company');
+
+        if (!$contact->company) {
+            return null;
+        }
+
+        $role        = $contact->isCustomer() ? 'Fleet-Ops Customer' : 'Fleet-Ops Contact';
+        $companyUser = $contact->company->addUser($user, $role);
+
+        $user->forceFill(['company_uuid' => $contact->company->uuid])->saveQuietly();
+        $user->setRelation('companyUser', $companyUser);
+
+        return $companyUser;
     }
 }

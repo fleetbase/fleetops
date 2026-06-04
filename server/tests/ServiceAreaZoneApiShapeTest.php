@@ -49,3 +49,30 @@ test('zone service area relationship uses the stored service area uuid foreign k
     expect($relation->getForeignKeyName())->toBe('service_area_uuid')
         ->and($relation->getOwnerKeyName())->toBe('uuid');
 });
+
+test('zone observer is registered to invalidate service area cache when zones change', function () {
+    $provider = file_get_contents(__DIR__ . '/../src/Providers/FleetOpsServiceProvider.php');
+    $observer = file_get_contents(__DIR__ . '/../src/Observers/ZoneObserver.php');
+
+    expect($provider)
+        ->toContain('\Fleetbase\FleetOps\Models\Zone::class')
+        ->toContain('\Fleetbase\FleetOps\Observers\ZoneObserver::class');
+
+    expect($observer)
+        ->toContain('function created')
+        ->toContain('function updated')
+        ->toContain('function deleted')
+        ->toContain('function restored')
+        ->toContain("\$zone->getOriginal('service_area_uuid')")
+        ->toContain('ServiceArea::invalidateApiCacheManually($zone->company_uuid)')
+        ->toContain('ServiceArea::invalidateApiCacheManually()');
+});
+
+test('internal service area controller does not bypass api cache directly', function () {
+    $controller = file_get_contents(__DIR__ . '/../src/Http/Controllers/Internal/v1/ServiceAreaController.php');
+
+    expect($controller)
+        ->not->toContain('disableApiCache')
+        ->not->toContain('function queryRecord')
+        ->not->toContain('function findRecord');
+});

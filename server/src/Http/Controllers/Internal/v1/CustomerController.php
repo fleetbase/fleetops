@@ -15,7 +15,7 @@ class CustomerController extends Controller
     public function createPortalLogin(Request $request)
     {
         $customer = $this->resolveCustomer($request);
-        $user     = $this->resolveCustomerUser($customer, $request->boolean('send_invite'));
+        $user     = $this->resolveCustomerUser($customer);
 
         if (!$user) {
             return response()->error('Unable to create customer portal login.');
@@ -178,9 +178,9 @@ class CustomerController extends Controller
             ->firstOrFail();
     }
 
-    protected function resolveCustomerUser(Contact $customer, bool $sendInvite = false): ?User
+    protected function resolveCustomerUser(Contact $customer): ?User
     {
-        return $customer->user_uuid ? User::where('uuid', $customer->user_uuid)->first() : Contact::createUserFromContact($customer, $sendInvite, true);
+        return $customer->user_uuid ? User::where('uuid', $customer->user_uuid)->first() : Contact::createUserFromContact($customer, false, true);
     }
 
     protected function customerPayload(Contact $customer): array
