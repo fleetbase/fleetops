@@ -11,7 +11,7 @@ const ACCENT_CLASS = {
 
 export default class HomeGettingStartedGuidanceComponent extends Component {
     @service gettingStarted;
-    @service hostRouter;
+    @service router;
     @service docsPanel;
 
     constructor() {
@@ -39,10 +39,12 @@ export default class HomeGettingStartedGuidanceComponent extends Component {
         return this.gettingStarted.isCompleted;
     }
 
+    @action
     isActiveStep(step) {
         return this.nextStep?.key === step.key && !step.completed;
     }
 
+    @action
     statusText(step) {
         if (step.completed) {
             return 'Done';
@@ -51,6 +53,7 @@ export default class HomeGettingStartedGuidanceComponent extends Component {
         return this.isActiveStep(step) ? 'Next' : 'Not started';
     }
 
+    @action
     statusClass(step) {
         if (step.completed) {
             return 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300';
@@ -63,6 +66,7 @@ export default class HomeGettingStartedGuidanceComponent extends Component {
         return 'bg-gray-100 text-gray-500 dark:bg-gray-700 dark:text-gray-300';
     }
 
+    @action
     accentClass(feature) {
         return ACCENT_CLASS[feature.accent] ?? ACCENT_CLASS.blue;
     }
@@ -70,7 +74,7 @@ export default class HomeGettingStartedGuidanceComponent extends Component {
     @action
     startStep(step) {
         if (step?.route) {
-            return this.hostRouter.transitionTo(step.route);
+            return this.router.transitionTo(step.route);
         }
 
         if (step?.docs_url) {

@@ -117,8 +117,8 @@ export default {
         // Create registries
         this.createRegistries(registryService);
 
-        // Register console home guidance
-        this.registerHomeComponents(registryService);
+        // // Register console home guidance
+        // this.registerHomeComponents(registryService);
 
         // Setup customer portal
         const isCustomerPortalInstalled = universe.extensionManager.isInstalled('@fleetbase/customer-portal-engine');

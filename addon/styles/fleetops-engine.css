@@ -4915,165 +4915,72 @@ body[data-theme='dark'] .next-google-container-map .fleetops-google-draw-actions
     overflow-y: scroll !important;
 }
 
-.fleet-ops-get-started .fleet-ops-get-started-visual {
-    background-image:
-        radial-gradient(circle at 18% 28%, rgba(59, 130, 246, 0.16), transparent 26%), radial-gradient(circle at 78% 76%, rgba(16, 185, 129, 0.14), transparent 24%),
-        linear-gradient(135deg, rgba(239, 246, 255, 0.95), rgba(219, 234, 254, 0.84));
+.fleet-ops-home-guidance-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1rem;
 }
 
-[data-theme='dark'] .fleet-ops-get-started .fleet-ops-get-started-visual {
-    background-image:
-        radial-gradient(circle at 18% 28%, rgba(96, 165, 250, 0.18), transparent 26%), radial-gradient(circle at 78% 76%, rgba(52, 211, 153, 0.12), transparent 24%),
-        linear-gradient(135deg, rgba(15, 23, 42, 0.96), rgba(30, 41, 59, 0.86));
+.fleet-ops-get-started-content {
+    min-height: 256px;
 }
 
-.fleet-ops-get-started-map-line,
-.fleet-ops-recommended-feature .feature-route-line {
-    position: absolute;
-    inset: 18% 10% 22% 12%;
-    border: 3px solid rgba(37, 99, 235, 0.35);
-    border-right-color: transparent;
-    border-bottom-color: rgba(37, 99, 235, 0.18);
-    border-radius: 42% 58% 46% 54%;
-    transform: rotate(-8deg);
+.fleet-ops-get-started .fleet-ops-get-started-step {
+    min-height: 52px;
 }
 
-.fleet-ops-get-started-node,
-.fleet-ops-recommended-feature .feature-dot {
-    position: absolute;
-    width: 12px;
-    height: 12px;
-    border: 2px solid #fff;
-    border-radius: 9999px;
-    background: #2563eb;
-    box-shadow: 0 7px 18px rgba(37, 99, 235, 0.24);
+.fleet-ops-recommended-features-loading {
+    min-height: 256px;
 }
 
-.fleet-ops-get-started-node.node-a {
-    left: 18%;
-    top: 30%;
+.fleet-ops-recommended-feature {
+    min-height: 92px;
 }
 
-.fleet-ops-get-started-node.node-b {
-    left: 43%;
-    top: 20%;
+@media (max-width: 1180px) {
+    .fleet-ops-home-guidance-grid {
+        grid-template-columns: 1fr;
+    }
 }
 
-.fleet-ops-get-started-node.node-c {
-    right: 24%;
-    top: 48%;
-}
-
-.fleet-ops-get-started-node.node-d {
-    left: 34%;
-    bottom: 24%;
-}
-
-.fleet-ops-recommended-feature .feature-preview {
-    background-image:
-        linear-gradient(135deg, rgba(239, 246, 255, 0.92), rgba(219, 234, 254, 0.78)), linear-gradient(90deg, rgba(148, 163, 184, 0.16) 1px, transparent 1px),
-        linear-gradient(0deg, rgba(148, 163, 184, 0.16) 1px, transparent 1px);
-    background-size:
-        auto,
-        22px 22px,
-        22px 22px;
-}
-
-[data-theme='dark'] .fleet-ops-recommended-feature .feature-preview {
-    background-image:
-        linear-gradient(135deg, rgba(15, 23, 42, 0.92), rgba(30, 41, 59, 0.78)), linear-gradient(90deg, rgba(148, 163, 184, 0.12) 1px, transparent 1px),
-        linear-gradient(0deg, rgba(148, 163, 184, 0.12) 1px, transparent 1px);
-}
-
-.fleet-ops-recommended-feature .feature-route-line {
-    inset: 26% 14% 28% 10%;
-    border-width: 2px;
-}
-
-.fleet-ops-recommended-feature .feature-dot {
-    width: 9px;
-    height: 9px;
-}
-
-.fleet-ops-recommended-feature .dot-a {
-    left: 22%;
-    top: 35%;
-}
-
-.fleet-ops-recommended-feature .dot-b {
-    right: 30%;
-    bottom: 28%;
-}
-
-.fleet-ops-recommended-feature .feature-cardlet {
-    position: absolute;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border: 1px solid rgba(226, 232, 240, 0.92);
-    border-radius: 0.375rem;
-    background: rgba(255, 255, 255, 0.92);
+.fleet-ops-recommended-feature-icon {
+    background: rgba(37, 99, 235, 0.12);
     color: #2563eb;
-    box-shadow: 0 10px 25px rgba(15, 23, 42, 0.08);
 }
 
-[data-theme='dark'] .fleet-ops-recommended-feature .feature-cardlet {
-    border-color: rgba(51, 65, 85, 0.92);
-    background: rgba(30, 41, 59, 0.92);
+.fleet-ops-recommended-feature.feature-accent-green .fleet-ops-recommended-feature-icon {
+    background: rgba(16, 185, 129, 0.12);
+    color: #059669;
 }
 
-.fleet-ops-recommended-feature .cardlet-a {
-    right: 14px;
-    top: 12px;
-    width: 40px;
-    height: 40px;
+.fleet-ops-recommended-feature.feature-accent-amber .fleet-ops-recommended-feature-icon {
+    background: rgba(245, 158, 11, 0.14);
+    color: #d97706;
 }
 
-.fleet-ops-recommended-feature .cardlet-b {
-    left: 14px;
-    bottom: 12px;
-    width: 58px;
-    height: 24px;
-    flex-direction: column;
-    gap: 4px;
+.fleet-ops-recommended-feature.feature-accent-purple .fleet-ops-recommended-feature-icon {
+    background: rgba(124, 58, 237, 0.12);
+    color: #7c3aed;
 }
 
-.fleet-ops-recommended-feature .cardlet-b span {
-    display: block;
-    width: 36px;
-    height: 3px;
-    border-radius: 9999px;
-    background: rgba(37, 99, 235, 0.28);
+[data-theme='dark'] .fleet-ops-recommended-feature-icon {
+    background: rgba(96, 165, 250, 0.16);
+    color: #93c5fd;
 }
 
-.fleet-ops-recommended-feature.feature-accent-green .feature-route-line {
-    border-color: rgba(16, 185, 129, 0.35);
-    border-right-color: transparent;
+[data-theme='dark'] .fleet-ops-recommended-feature.feature-accent-green .fleet-ops-recommended-feature-icon {
+    background: rgba(52, 211, 153, 0.14);
+    color: #6ee7b7;
 }
 
-.fleet-ops-recommended-feature.feature-accent-green .feature-dot,
-.fleet-ops-recommended-feature.feature-accent-green .cardlet-b span {
-    background: #10b981;
+[data-theme='dark'] .fleet-ops-recommended-feature.feature-accent-amber .fleet-ops-recommended-feature-icon {
+    background: rgba(251, 191, 36, 0.14);
+    color: #fcd34d;
 }
 
-.fleet-ops-recommended-feature.feature-accent-amber .feature-route-line {
-    border-color: rgba(245, 158, 11, 0.35);
-    border-right-color: transparent;
-}
-
-.fleet-ops-recommended-feature.feature-accent-amber .feature-dot,
-.fleet-ops-recommended-feature.feature-accent-amber .cardlet-b span {
-    background: #f59e0b;
-}
-
-.fleet-ops-recommended-feature.feature-accent-purple .feature-route-line {
-    border-color: rgba(124, 58, 237, 0.35);
-    border-right-color: transparent;
-}
-
-.fleet-ops-recommended-feature.feature-accent-purple .feature-dot,
-.fleet-ops-recommended-feature.feature-accent-purple .cardlet-b span {
-    background: #7c3aed;
+[data-theme='dark'] .fleet-ops-recommended-feature.feature-accent-purple .fleet-ops-recommended-feature-icon {
+    background: rgba(167, 139, 250, 0.14);
+    color: #c4b5fd;
 }
 
 .issue-panel-header {

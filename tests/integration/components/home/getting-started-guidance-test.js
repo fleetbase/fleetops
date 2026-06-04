@@ -53,7 +53,7 @@ class StubGettingStartedService extends Service {
     }
 }
 
-class StubHostRouterService extends Service {
+class StubRouterService extends Service {
     lastRoute = null;
 
     transitionTo(route) {
@@ -74,7 +74,7 @@ module('Integration | Component | home/getting-started-guidance', function (hook
 
     hooks.beforeEach(function () {
         this.owner.register('service:getting-started', StubGettingStartedService);
-        this.owner.register('service:host-router', StubHostRouterService);
+        this.owner.register('service:router', StubRouterService);
         this.owner.register('service:docs-panel', StubDocsPanelService);
     });
 
@@ -89,7 +89,7 @@ module('Integration | Component | home/getting-started-guidance', function (hook
         assert.dom('.fleet-ops-recommended-feature').exists({ count: 2 });
 
         await click(document.querySelectorAll('.fleet-ops-get-started-step')[1]);
-        assert.strictEqual(this.owner.lookup('service:host-router').lastRoute, 'orders.new');
+        assert.strictEqual(this.owner.lookup('service:router').lastRoute, 'orders.new');
 
         await click('.fleet-ops-recommended-feature');
         assert.strictEqual(this.owner.lookup('service:docs-panel').lastUrl, 'https://www.fleetbase.io/docs/fleet-ops/orchestrator');
