@@ -1,0 +1,20 @@
+<Modal::Default @modalIsOpened={{@modalIsOpened}} @options={{@options}} @confirm={{@onConfirm}} @decline={{@onDecline}}>
+    <div class="modal-body-container">
+        <InputGroup @name="Assignee" @helpText="Choose the operator responsible for following up on this issue.">
+            <ModelSelect
+                @modelName="user"
+                @selectedModel={{this.selectedAssignee}}
+                @placeholder="Select assignee"
+                @triggerClass="form-select form-input"
+                @infiniteScroll={{false}}
+                @renderInPlace={{true}}
+                @query={{hash is_not_customer=true}}
+                @allowClear={{true}}
+                @onChange={{fn (mut this.selectedAssignee)}}
+                as |model|
+            >
+                {{model.name}}
+            </ModelSelect>
+        </InputGroup>
+    </div>
+</Modal::Default>

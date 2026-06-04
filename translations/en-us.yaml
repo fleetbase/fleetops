@@ -1688,6 +1688,15 @@ widget:
         title: Geofence Violations
     live-fleet:
         title: Live Fleet Map
+    get-started:
+        title: Get Started with Fleet-Ops
+        subtitle: Set up the essentials and complete your first dispatch flow.
+        completed: completed
+        preview-title: First order workflow
+    recommended-features:
+        title: Recommended features for you
+        subtitle: Explore tools that help new operations teams get productive faster.
+        learn-more: Learn more
     fleet-ops-quickstart:
         message: Let's see what you can do to jumpstart operations...
         start-task: Start Task

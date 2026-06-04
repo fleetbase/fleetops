@@ -1,0 +1,9 @@
+<div class="issue-detail-comment-thread" {{did-insert this.loadComments}} {{did-update this.loadComments this.issueId}}>
+    <CommentThread
+        @subject={{@resource}}
+        @subjectType="Fleetbase\FleetOps\Models\Issue"
+        @comments={{this.comments}}
+        @onReloadComments={{this.reloadCommentsForIssue}}
+        @onPublishComment={{this.publishComment}}
+    />
+</div>

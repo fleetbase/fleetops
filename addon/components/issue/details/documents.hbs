@@ -1,0 +1,69 @@
+<div class="issue-detail-documents">
+    <div class="issue-detail-documents-header">
+        <div class="issue-detail-documents-title">
+            <FaIcon @icon="paperclip" />
+            <span>Attachments</span>
+        </div>
+    </div>
+
+    {{#if this.queueFile.isRunning}}
+        <div class="issue-detail-dropzone is-loading">
+            <Spinner @loadingMessage="Uploading..." />
+        </div>
+    {{else}}
+        {{#let (file-queue name="issue-files" onFileAdded=(perform this.queueFile) accept=(join "," this.acceptedFileTypes)) as |queue|}}
+            <FileDropzone @queue={{queue}} class="issue-detail-dropzone file-dropzone" @disabled={{cannot-write @resource}} as |dropzone|>
+                {{#if dropzone.active}}
+                    {{#if dropzone.valid}}
+                        Drop files to attach them to this issue.
+                    {{else}}
+                        This file type is not supported.
+                    {{/if}}
+                {{else if queue.files.length}}
+                    <div class="issue-detail-dropzone-ready">
+                        <FaIcon @icon="folder-open" />
+                        <span>{{pluralize queue.files.length "file"}} ready for upload</span>
+                    </div>
+                    <div class="issue-detail-dropzone-progress">{{queue.progress}}%</div>
+                {{else}}
+                    <div class="issue-detail-dropzone-empty">
+                        <FaIcon @icon="folder-open" />
+                        <span>Drop documents or images here</span>
+                        <FileUpload
+                            @name="issue-files"
+                            @for="issue-files"
+                            @accept={{join "," this.acceptedFileTypes}}
+                            @multiple={{true}}
+                            @onFileAdded={{perform this.queueFile}}
+                            @disabled={{cannot-write @resource}}
+                        >
+                            <a tabindex={{0}} class="btn btn-sm btn-default">select files</a>
+                        </FileUpload>
+                    </div>
+                {{/if}}
+            </FileDropzone>
+        {{/let}}
+    {{/if}}
+
+    {{#if this.uploadQueue}}
+        <div class="issue-detail-upload-queue mt-4">
+            {{#each this.uploadQueue as |file|}}
+                <div class="issue-detail-upload-row">
+                    <span>{{truncate-filename file.name 40}}</span>
+                    <div class="flex flex-row items-center">
+                        <Spinner class="mr-1" />
+                        <strong>{{round file.progress}}%</strong>
+                    </div>
+                </div>
+            {{/each}}
+        </div>
+    {{/if}}
+
+    {{#if this.files.length}}
+        <div class="issue-detail-file-grid mt-4">
+            {{#each this.files as |file|}}
+                <File @file={{file}} @onDownload={{this.downloadFile}} @onDelete={{perform this.removeFile}} />
+            {{/each}}
+        </div>
+    {{/if}}
+</div>

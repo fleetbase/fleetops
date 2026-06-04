@@ -11,14 +11,14 @@ test('driver and vehicle statuses default to available', function () {
 });
 
 test('legacy active and null driver and vehicle statuses normalize to available', function () {
-    $driver = new Driver();
+    $driver         = new Driver();
     $driver->status = 'active';
     expect($driver->status)->toBe('available');
 
     $driver->status = null;
     expect($driver->status)->toBe('available');
 
-    $vehicle = new Vehicle();
+    $vehicle         = new Vehicle();
     $vehicle->status = 'active';
     expect($vehicle->status)->toBe('available');
 

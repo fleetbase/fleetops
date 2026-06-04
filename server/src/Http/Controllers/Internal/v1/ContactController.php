@@ -4,12 +4,21 @@ namespace Fleetbase\FleetOps\Http\Controllers\Internal\v1;
 
 use Fleetbase\FleetOps\Exports\ContactExport;
 use Fleetbase\FleetOps\Http\Controllers\FleetOpsController;
+use Fleetbase\FleetOps\Http\Resources\v1\Vendor as VendorResource;
 use Fleetbase\FleetOps\Imports\ContactImport;
 use Fleetbase\FleetOps\Models\Contact;
+use Fleetbase\FleetOps\Models\Entity;
+use Fleetbase\FleetOps\Models\Issue;
+use Fleetbase\FleetOps\Models\Order;
+use Fleetbase\FleetOps\Models\PurchaseRate;
+use Fleetbase\FleetOps\Models\Vendor;
+use Fleetbase\FleetOps\Models\VendorPersonnel;
+use Fleetbase\FleetOps\Support\Utils;
 use Fleetbase\Http\Requests\ExportRequest;
 use Fleetbase\Http\Requests\ImportRequest;
 use Fleetbase\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Maatwebsite\Excel\Facades\Excel;
 
@@ -95,6 +104,57 @@ class ContactController extends FleetOpsController
         ]);
     }
 
+    public function convertToVendor(Request $request, string $id)
+    {
+        $contact = Contact::where('company_uuid', session('company'))
+            ->where(function ($query) use ($id) {
+                $query->where('uuid', $id)->orWhere('public_id', $id)->orWhere('id', $id);
+            })
+            ->firstOrFail();
+
+        $vendor = DB::transaction(function () use ($contact, $request) {
+            $originalType = $contact->type;
+            $vendor       = Vendor::create([
+                'company_uuid' => $contact->company_uuid,
+                'place_uuid'   => $contact->place_uuid,
+                'name'         => $request->input('name', $contact->name),
+                'email'        => $request->input('email', $contact->email),
+                'phone'        => $request->input('phone', $contact->phone),
+                'status'       => 'active',
+                'type'         => 'customer',
+                'meta'         => [
+                    'converted_from_contact_uuid' => $contact->uuid,
+                    'converted_from_contact_type' => $originalType,
+                    'converted_by_uuid'           => session('user'),
+                    'converted_at'                => now()->toISOString(),
+                ],
+            ]);
+
+            VendorPersonnel::updateOrCreate(
+                ['vendor_uuid' => $vendor->uuid, 'contact_uuid' => $contact->uuid],
+                ['role' => 'admin', 'status' => 'active', 'invited_by_uuid' => session('user')]
+            );
+
+            $this->migrateContactCustomerContextToVendor($contact, $vendor);
+
+            $contact->update([
+                'type' => 'customer',
+                'meta' => array_merge((array) $contact->meta, [
+                    'converted_from_type'            => $originalType,
+                    'converted_to_vendor_uuid'       => $vendor->uuid,
+                    'converted_to_vendor_public_id'  => $vendor->public_id,
+                    'converted_to_vendor_at'         => now()->toISOString(),
+                ]),
+            ]);
+
+            return $vendor;
+        });
+
+        return response()->json([
+            'vendor' => (new VendorResource($vendor->load('personnels')))->resolve(),
+        ]);
+    }
+
     /**
      * Export the contacts to excel or csv.
      *
@@ -131,6 +191,29 @@ class ContactController extends FleetOpsController
         }
 
         return response()->json(['status' => 'ok', 'message' => 'Import completed', 'imported' => $importedCount]);
+    }
+
+    private function migrateContactCustomerContextToVendor(Contact $contact, Vendor $vendor): void
+    {
+        $contactType = Utils::getMutationType($contact);
+        $vendorType  = Utils::getMutationType($vendor);
+        $filter      = ['customer_uuid' => $contact->uuid, 'customer_type' => $contactType];
+        $replacement = ['customer_uuid' => $vendor->uuid, 'customer_type' => $vendorType];
+
+        Order::where($filter)->update($replacement);
+        PurchaseRate::where($filter)->update($replacement);
+        Entity::where($filter)->update($replacement);
+
+        Issue::where('company_uuid', $contact->company_uuid)
+            ->where('meta->customer_portal->customer_uuid', $contact->uuid)
+            ->where('meta->customer_portal->customer_type', 'contact')
+            ->get()
+            ->each(function (Issue $issue) use ($vendor) {
+                $meta = (array) $issue->meta;
+                data_set($meta, 'customer_portal.customer_uuid', $vendor->uuid);
+                data_set($meta, 'customer_portal.customer_type', 'vendor');
+                $issue->update(['meta' => $meta]);
+            });
     }
 
     private function resolveUserInput(Request $request, array &$input): void

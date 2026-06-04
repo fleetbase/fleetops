@@ -1,0 +1,43 @@
+<div class="issue-panel-header">
+    <div class="issue-panel-header-main">
+        <div class="issue-panel-header-icon">
+            <FaIcon @icon="triangle-exclamation" />
+        </div>
+        <div class="issue-panel-header-content">
+            <div class="issue-panel-header-title-row">
+                <h1 class="issue-panel-header-title">{{this.title}}</h1>
+            </div>
+            {{#if @resource.public_id}}
+                <ClickToCopy @value={{@resource.public_id}} class="issue-panel-header-id">
+                    <FaIcon @icon="hashtag" />
+                    <span>{{@resource.public_id}}</span>
+                </ClickToCopy>
+            {{/if}}
+            <div class="issue-panel-header-meta">
+                {{#if this.subtitle}}
+                    <span>{{titleize this.subtitle}}</span>
+                {{/if}}
+                {{#if @resource.createdAt}}
+                    <span>Reported {{@resource.createdAt}}</span>
+                {{/if}}
+            </div>
+        </div>
+    </div>
+
+    <div class="issue-panel-header-actions">
+        <div class="issue-panel-header-badges">
+            <Badge @status={{@resource.status}} />
+            <Badge @status={{@resource.priority}} />
+        </div>
+        <Layout::Resource::Panel::HeaderActions
+            @resource={{@resource}}
+            @saveTask={{@saveTask}}
+            @saveOptions={{@saveOptions}}
+            @saveDisabled={{@saveDisabled}}
+            @pojoResource={{@pojoResource}}
+            @authSchema={{@authSchema}}
+            @actionButtons={{@actionButtons}}
+            @onPressCancel={{@onPressCancel}}
+        />
+    </div>
+</div>

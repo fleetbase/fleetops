@@ -168,19 +168,26 @@ export default class ManagementContactsIndexController extends Controller {
                 actions: [
                     {
                         label: this.intl.t('common.view-resource', { resource: this.intl.t('resource.contact') }),
+                        icon: 'eye',
                         fn: this.contactActions.transition.view,
                         permission: 'fleet-ops view contact',
                     },
                     {
                         label: this.intl.t('common.edit-resource', { resource: this.intl.t('resource.contact') }),
+                        icon: 'pencil',
                         fn: this.contactActions.transition.edit,
                         permission: 'fleet-ops update contact',
                     },
                     {
                         separator: true,
                     },
+                    ...this.contactActions.accountRowActionItems(),
+                    {
+                        separator: true,
+                    },
                     {
                         label: this.intl.t('common.delete-resource', { resource: this.intl.t('resource.contact') }),
+                        icon: 'trash',
                         fn: this.contactActions.delete,
                         permission: 'fleet-ops delete contact',
                     },

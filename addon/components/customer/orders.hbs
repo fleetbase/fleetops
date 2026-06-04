@@ -121,6 +121,7 @@
                                                         <Button @helpText="View Label" @icon="print" @onClick={{this.viewOrderLabel}} />
                                                         <Button @helpText="View Route" @icon="route" @onClick={{this.locateOrderRoute}} />
                                                         <Button @helpText="Locate Driver" @icon="truck" @onClick={{this.locateDriver}} @disabled={{not order.has_driver_assigned}} />
+                                                        <Button @helpText="Cancel Order" @icon="ban" @onClick={{this.cancelOrder}} @disabled={{or order.isCompleted order.isCanceled}} />
                                                     </div>
                                                 </div>
                                             </div>
@@ -158,6 +159,53 @@
                                                             <p class="text-red-600 dark:text-red-100">{{t "order.fields.no-order-activity"}}</p>
                                                         </div>
                                                     {{/each}}
+                                                </div>
+                                            </div>
+                                            <div class="customer-order-details-seperator"></div>
+                                            <div>
+                                                <div class="mb-2 ml-1">
+                                                    <h1 class="font-bold text-sm">Delivery Options:</h1>
+                                                </div>
+                                                <div class="grid grid-cols-1 lg:grid-cols-2 gap-2">
+                                                    <InputGroup @name="Scheduled At" @type="datetime-local" @value={{this.scheduledAt}} />
+                                                    <div class="flex items-end">
+                                                        <Button @type="primary" @icon="calendar" @text="Reschedule" @onClick={{this.rescheduleOrder}} @disabled={{or order.isCompleted order.isCanceled}} />
+                                                    </div>
+                                                    <InputGroup @name="Access Notes">
+                                                        <Input
+                                                            @value={{this.deliveryInstructions.access_notes}}
+                                                            class="form-input w-full"
+                                                            placeholder="Gate code, loading dock, reception notes"
+                                                            {{on "input" (fn this.updateDeliveryInstruction "access_notes")}}
+                                                        />
+                                                    </InputGroup>
+                                                    <InputGroup @name="Safe Place">
+                                                        <Input
+                                                            @value={{this.deliveryInstructions.safe_place}}
+                                                            class="form-input w-full"
+                                                            placeholder="Leave-at-door or safe-place instructions"
+                                                            {{on "input" (fn this.updateDeliveryInstruction "safe_place")}}
+                                                        />
+                                                    </InputGroup>
+                                                    <InputGroup @name="Contact Phone">
+                                                        <Input
+                                                            @value={{this.deliveryInstructions.contact_phone}}
+                                                            class="form-input w-full"
+                                                            placeholder="Delivery contact phone"
+                                                            {{on "input" (fn this.updateDeliveryInstruction "contact_phone")}}
+                                                        />
+                                                    </InputGroup>
+                                                    <InputGroup @name="Special Handling">
+                                                        <Input
+                                                            @value={{this.deliveryInstructions.special_handling}}
+                                                            class="form-input w-full"
+                                                            placeholder="Fragile, temperature, access, or handling notes"
+                                                            {{on "input" (fn this.updateDeliveryInstruction "special_handling")}}
+                                                        />
+                                                    </InputGroup>
+                                                </div>
+                                                <div class="mt-2">
+                                                    <Button @icon="save" @text="Save Delivery Instructions" @onClick={{this.saveDeliveryInstructions}} @disabled={{or order.isCompleted order.isCanceled}} />
                                                 </div>
                                             </div>
                                             <div class="customer-order-details-seperator"></div>

@@ -32,6 +32,28 @@ trait ResolvesOrderServiceStops
         return $payload->waypoints->isNotEmpty();
     }
 
+    protected function payloadHasWaypointMarkers(?Payload $payload): bool
+    {
+        if (!$payload) {
+            return false;
+        }
+
+        $payload->loadMissing('waypointMarkers');
+
+        return $payload->waypointMarkers->isNotEmpty();
+    }
+
+    protected function payloadUsesServiceStopActivity(?Payload $payload): bool
+    {
+        if (!$payload) {
+            return false;
+        }
+
+        return $this->payloadHasWaypointMarkers($payload)
+            || $this->payloadHasWaypoints($payload)
+            || $this->payloadServiceStops($payload)->count() > 2;
+    }
+
     protected function resolveProof($proof): ?Proof
     {
         if ($proof instanceof Proof) {
@@ -54,7 +76,6 @@ trait ResolvesOrderServiceStops
         $payload->loadMissing([
             'pickup',
             'dropoff',
-            'return',
             'waypoints',
             'waypointMarkers.place',
             'waypointMarkers.trackingNumber.status',
@@ -108,16 +129,6 @@ trait ResolvesOrderServiceStops
                 'place'                => $payload->dropoff,
                 'waypoint'             => null,
                 'tracking_number_uuid' => $payload->dropoff_tracking_number_uuid,
-                'sequence'             => ++$sequence,
-            ]);
-        }
-
-        if ($payload->return instanceof Place) {
-            $stops->push([
-                'type'                 => 'return',
-                'place'                => $payload->return,
-                'waypoint'             => null,
-                'tracking_number_uuid' => $payload->return_tracking_number_uuid,
                 'sequence'             => ++$sequence,
             ]);
         }
@@ -340,7 +351,6 @@ trait ResolvesOrderServiceStops
         return match ($type) {
             'pickup'  => 'pickup_tracking_number_uuid',
             'dropoff' => 'dropoff_tracking_number_uuid',
-            'return'  => 'return_tracking_number_uuid',
             default   => null,
         };
     }

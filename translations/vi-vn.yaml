@@ -722,6 +722,15 @@ fleet-ops:
       fleet-ops-quickstart:
         message: Hãy xem những gì bạn có thể làm để khởi động các hoạt động...
         start-task: Bắt đầu Nhiệm vụ
+      get-started:
+        title: Get Started with Fleet-Ops
+        subtitle: Set up the essentials and complete your first dispatch flow.
+        completed: completed
+        preview-title: First order workflow
+      recommended-features:
+        title: Recommended features for you
+        subtitle: Explore tools that help new operations teams get productive faster.
+        learn-more: Learn more
       key-metrics:
         title: Các Chỉ số Fleet-Ops
         earnings: Doanh thu

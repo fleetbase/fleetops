@@ -27,6 +27,7 @@
                     @triggerClass="form-select form-input"
                     @infiniteScroll={{false}}
                     @renderInPlace={{true}}
+                    @query={{hash is_not_customer=true}}
                     @onChange={{fn (mut @resource.assignee)}}
                     @onChangeId={{fn (mut @resource.assigned_to_uuid)}}
                     @disabled={{cannot-write @resource}}
@@ -67,6 +68,23 @@
                     as |model|
                 >
                     {{model.displayName}}
+                </ModelSelect>
+            </InputGroup>
+
+            <InputGroup @name={{t "resource.order"}}>
+                <ModelSelect
+                    @modelName="order"
+                    @selectedModel={{@resource.order}}
+                    @placeholder={{t "common.select-field" field=(t "resource.order")}}
+                    @triggerClass="form-select form-input"
+                    @infiniteScroll={{false}}
+                    @renderInPlace={{true}}
+                    @onChange={{fn (mut @resource.order)}}
+                    @onChangeId={{fn (mut @resource.order_uuid)}}
+                    @disabled={{cannot-write @resource}}
+                    as |model|
+                >
+                    {{or model.tracking model.public_id}}
                 </ModelSelect>
             </InputGroup>
 

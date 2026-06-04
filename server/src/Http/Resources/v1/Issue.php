@@ -3,6 +3,7 @@
 namespace Fleetbase\FleetOps\Http\Resources\v1;
 
 use Fleetbase\FleetOps\Support\Utils;
+use Fleetbase\Http\Resources\File;
 use Fleetbase\Http\Resources\FleetbaseResource;
 use Fleetbase\Http\Resources\User;
 use Fleetbase\LaravelMysqlSpatial\Types\Point;
@@ -26,12 +27,15 @@ class Issue extends FleetbaseResource
             'driver_uuid'                 => $this->when(Http::isInternalRequest(), $this->driver_uuid),
             'company_uuid'                => $this->when(Http::isInternalRequest(), $this->company_uuid),
             'vehicle_uuid'                => $this->when(Http::isInternalRequest(), $this->vehicle_uuid),
+            'order_uuid'                  => $this->when(Http::isInternalRequest(), $this->order_uuid ?? data_get($this, 'meta.order_uuid')),
             'assigned_to_uuid'            => $this->when(Http::isInternalRequest(), $this->assigned_to_uuid),
             'reported_by_uuid'            => $this->when(Http::isInternalRequest(), $this->reported_by_uuid),
             'assignee'                    => $this->whenLoaded('assignee', fn () => new User($this->assignee)),
             'reporter'                    => $this->whenLoaded('reporter', fn () => new User($this->reporter)),
             'vehicle'                     => $this->whenLoaded('vehicle', fn () => new Vehicle($this->vehicle)),
             'driver'                      => $this->whenLoaded('driver', fn () => new Driver($this->driver)),
+            'order'                       => $this->when(Http::isInternalRequest(), fn () => $this->resolveLinkedOrder()),
+            'files'                       => $this->whenLoaded('files', fn () => File::collection($this->files)),
             'driver_name'                 => $this->driver_name,
             'vehicle_name'                => $this->vehicle_name,
             'vehicle_id'                  => $this->vehicle_id,
@@ -53,6 +57,27 @@ class Issue extends FleetbaseResource
             'updated_at'                  => $this->updated_at,
             'created_at'                  => $this->created_at,
         ]);
+    }
+
+    protected function resolveLinkedOrder()
+    {
+        if ($this->relationLoaded('order') && $this->order) {
+            $this->order->loadMissing(['payload.pickup', 'payload.dropoff', 'trackingNumber', 'customer']);
+
+            return new Order($this->order);
+        }
+
+        $orderUuid = $this->order_uuid ?? data_get($this, 'meta.order_uuid');
+        if (!$orderUuid) {
+            return null;
+        }
+
+        $order = \Fleetbase\FleetOps\Models\Order::with(['payload.pickup', 'payload.dropoff', 'trackingNumber', 'customer'])
+            ->where('uuid', $orderUuid)
+            ->where('company_uuid', $this->company_uuid)
+            ->first();
+
+        return $order ? new Order($order) : null;
     }
 
     /**

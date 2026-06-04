@@ -47,7 +47,6 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
-use Illuminate\Validation\ValidationException;
 use Maatwebsite\Excel\Facades\Excel;
 
 class OrderController extends FleetOpsController
@@ -676,28 +675,9 @@ class OrderController extends FleetOpsController
         // get the next order activity
         $flow = $activity = $order->config()->nextFirstActivity();
 
-        /**
-         * @var \Fleetbase\LaravelMysqlSpatial\Types\Point
-         */
-        $location = $order->getLastLocation();
-
-        // if multi drop order set first destination
-        if ($payload->isMultipleDropOrder) {
-            $firstDestination = $payload->waypoints->first();
-
-            if ($firstDestination) {
-                $payload->current_waypoint_uuid = $firstDestination->uuid;
-                $payload->save();
-            }
-
-            // update activity for each waypoint and entity
-            foreach ($payload->waypointMarkers as $waypointMarker) {
-                $waypointMarker->insertActivity($activity, $location);
-            }
-
-            foreach ($payload->entities as $entity) {
-                $entity->insertActivity($activity, $location);
-            }
+        // if multi-stop route set first service stop destination
+        if ($this->payloadUsesServiceStopActivity($payload)) {
+            $this->ensurePayloadCurrentServiceStop($payload);
         }
 
         // update order activity
@@ -729,9 +709,16 @@ class OrderController extends FleetOpsController
             return response()->error('No order found.');
         }
 
-        $proof    = $request->input('proof');
-        $activity = $request->array('activity');
-        $activity = new Activity($activity, $order->getConfigFlow());
+        $proof       = $request->input('proof');
+        $bypassProof = $request->boolean('bypass_proof');
+        $activity    = $request->array('activity');
+        $activity    = new Activity($activity, $order->getConfigFlow());
+
+        $requiresProof = Utils::isActivity($activity)
+            && ($activity->get('require_pod') || ($activity->completesOrder() && $order->pod_required));
+        if ($requiresProof && !$proof && !$bypassProof) {
+            return response()->error('Proof of delivery is required for this activity or must be explicitly bypassed.', 422);
+        }
 
         // Handle pickup/dropoff order activity update as normal
         if (Utils::isActivity($activity) && $activity->is('dispatched')) {
@@ -751,15 +738,20 @@ class OrderController extends FleetOpsController
          * @var \Fleetbase\LaravelMysqlSpatial\Types\Point
          */
         $location                = $order->getLastLocation();
-        $isMultipleWaypointOrder = $this->payloadHasWaypoints($order->payload);
+        $usesServiceStopActivity = $this->payloadUsesServiceStopActivity($order->payload);
+        $isLifecycleActivity     = Utils::isActivity($activity) && in_array($activity->code, ['created', 'dispatched', 'started'], true);
 
-        if (!$isMultipleWaypointOrder) {
+        if (!$usesServiceStopActivity || $isLifecycleActivity) {
             $order->updateActivity($activity, $proof);
 
-            // also update for each order entities if not multiple drop order
-            // all entities will share the same activity status as is one drop order
-            foreach ($order->payload->entities as $entity) {
-                $entity->insertActivity($activity, $location, $proof);
+            if (!$usesServiceStopActivity) {
+                foreach ($order->payload->entities as $entity) {
+                    $entity->insertActivity($activity, $location, $proof);
+                }
+            }
+
+            if ($usesServiceStopActivity && $activity->is('started')) {
+                $this->ensurePayloadCurrentServiceStop($order->payload);
             }
 
             // Handle order completed
@@ -767,23 +759,6 @@ class OrderController extends FleetOpsController
                 // unset from driver current job
                 $order->driverAssigned->unassignCurrentOrder();
                 $order->complete($this->resolveProof($proof));
-            }
-
-            return new OrderResource($order->refresh());
-        }
-
-        if ($activity->is('dispatched')) {
-            $order->updateActivity($activity, $proof);
-
-            return new OrderResource($order->refresh());
-        }
-
-        if ($activity->is('started')) {
-            $order->updateActivity($activity, $proof);
-
-            $this->ensurePayloadCurrentServiceStop($order->payload);
-            if (!$this->payloadHasCurrentServiceStopActivity($order->payload, $activity)) {
-                $this->updateCurrentServiceStopActivity($order, $activity, $location, $proof);
             }
 
             return new OrderResource($order->refresh());
@@ -836,18 +811,21 @@ class OrderController extends FleetOpsController
             return response()->error('No order found.');
         }
 
-        $canUpdateWaypointActivity = $order->started || $order->started_at || !in_array($order->status, ['created', 'dispatched']);
+        $order->loadMissing([
+            'payload.pickup',
+            'payload.dropoff',
+            'payload.waypoints',
+            'payload.waypointMarkers.place',
+            'payload.waypointMarkers.trackingNumber.status',
+        ]);
+
+        $canUpdateWaypointActivity = $this->payloadUsesServiceStopActivity($order->payload)
+            && ($order->started || $order->started_at || !in_array($order->status, ['created', 'dispatched']));
         $stop                      = null;
-        if ($request->filled('waypoint') && $canUpdateWaypointActivity) {
-            $order->loadMissing([
-                'payload.pickup',
-                'payload.dropoff',
-                'payload.return',
-                'payload.waypoints',
-                'payload.waypointMarkers.place',
-                'payload.waypointMarkers.trackingNumber.status',
-            ]);
-            $stop = $this->resolveServiceStopFromKey($order->payload, $request->input('waypoint'));
+        if ($canUpdateWaypointActivity) {
+            $stop = $request->filled('waypoint')
+                ? $this->resolveServiceStopFromKey($order->payload, $request->input('waypoint'))
+                : $this->payloadCurrentServiceStop($order->payload);
         }
         $orderConfig = $order->ensureOrderConfig();
         if (!$orderConfig) {
@@ -896,7 +874,7 @@ class OrderController extends FleetOpsController
             return response()->error('No order found.');
         }
 
-        if (!$this->payloadHasWaypoints($order->payload)) {
+        if (!$this->payloadUsesServiceStopActivity($order->payload)) {
             return response()->error('Destination can only be changed for multi-waypoint orders.', 422);
         }
 
@@ -917,35 +895,43 @@ class OrderController extends FleetOpsController
      */
     public function capturePhoto(Request $request, string $id, ?string $subjectId = null)
     {
-        try {
-            $request->validate([
-                'photos'   => 'required|array|min:1',
-                'photos.*' => [
-                    function ($attribute, $value, $fail) {
-                        if ($value instanceof UploadedFile) {
-                            if (
-                                !$value->isValid()
-                                || !in_array($value->extension(), ['jpg', 'jpeg', 'png', 'gif', 'webp'])
-                                || $value->getSize() > 10 * 1024 * 1024
-                            ) {
-                                $fail("{$attribute} must be a valid image file <= 10 MB.");
-                            }
-
-                            return;
+        $incoming  = $this->collectProofPhotoInputs($request);
+        $metadata  = $request->input('data', []);
+        $metadata  = is_array($metadata) ? $metadata : [];
+        $validator = Validator::make([
+            'photos'  => $incoming,
+            'remarks' => $request->input('remarks'),
+            'data'    => $metadata,
+        ], [
+            'photos'   => 'required|array|min:1',
+            'photos.*' => [
+                function ($attribute, $value, $fail) {
+                    if ($value instanceof UploadedFile) {
+                        $extension = strtolower($value->getClientOriginalExtension() ?: $value->extension());
+                        if (
+                            !$value->isValid()
+                            || !in_array($extension, ['jpg', 'jpeg', 'png', 'gif', 'webp'])
+                            || $value->getSize() > 10 * 1024 * 1024
+                        ) {
+                            $fail("{$attribute} must be a valid image file <= 10 MB.");
                         }
 
-                        if (is_string($value) && base64_decode($value, true) !== false) {
-                            return;
-                        }
+                        return;
+                    }
 
-                        $fail("{$attribute} must be an image file or a valid Base64 string.");
-                    },
-                ],
-                'remarks'  => 'sometimes|string|max:255',
-                'data'     => 'sometimes|array',
-            ]);
-        } catch (ValidationException $e) {
-            $errorMessage = collect($e->errors())->flatten()->first();
+                    if ($this->isValidBase64ProofPhoto($value)) {
+                        return;
+                    }
+
+                    $fail("{$attribute} must be an image file or a valid Base64 string.");
+                },
+            ],
+            'remarks'  => 'sometimes|string|max:255',
+            'data'     => 'sometimes|array',
+        ]);
+
+        if ($validator->fails()) {
+            $errorMessage = collect($validator->errors()->all())->first();
 
             return response()->error($errorMessage, 422);
         }
@@ -960,15 +946,10 @@ class OrderController extends FleetOpsController
             return response()->error('Unable to capture photo as proof.', 422);
         }
 
-        $disk         = $request->input('disk', config('filesystems.default'));
-        $bucket       = $request->input("filesystems.disks.{$disk}.bucket", config('filesystems.disks.s3.bucket'));
-        $rawInputs    = $request->file('photos', []);
-        $base64Inputs = array_filter($request->input('photos', []), function ($value) {
-            return is_string($value) && base64_decode($value, true) !== false;
-        });
-        $incoming     = array_merge($rawInputs, $base64Inputs);
-        $remarks      = $request->input('remarks', 'Verified by Photo');
-        $data         = $request->input('data', []);
+        $disk    = $request->input('disk', config('filesystems.default'));
+        $bucket  = $request->input("filesystems.disks.{$disk}.bucket", config('filesystems.disks.s3.bucket'));
+        $remarks = $request->input('remarks', 'Verified by Photo');
+        $data    = $metadata;
 
         if (empty($incoming)) {
             return response()->error('No photo data to capture.', 422);
@@ -993,12 +974,106 @@ class OrderController extends FleetOpsController
     }
 
     /**
+     * Normalize console proof upload payloads into one photo list before validation.
+     */
+    protected function collectProofPhotoInputs(Request $request): array
+    {
+        $incoming = [];
+        foreach (['photos', 'photo', 'files', 'file'] as $key) {
+            $this->appendProofPhotoInputs($incoming, $request->file($key));
+            $this->appendProofPhotoInputs($incoming, $request->input($key));
+        }
+
+        $incoming = array_values(array_filter($incoming, function ($value) {
+            return $value instanceof UploadedFile || is_string($value);
+        }));
+
+        return $this->dedupeProofPhotoInputs($incoming);
+    }
+
+    /**
+     * Append a nested file/input value to the proof input list.
+     */
+    protected function appendProofPhotoInputs(array &$incoming, mixed $value): void
+    {
+        if ($value === null) {
+            return;
+        }
+
+        if (is_array($value)) {
+            foreach ($value as $nested) {
+                $this->appendProofPhotoInputs($incoming, $nested);
+            }
+
+            return;
+        }
+
+        $incoming[] = $value;
+    }
+
+    /**
+     * Remove duplicate photo inputs exposed under multiple multipart aliases.
+     */
+    protected function dedupeProofPhotoInputs(array $incoming): array
+    {
+        $seen = [];
+
+        return array_values(array_filter($incoming, function ($value) use (&$seen) {
+            $fingerprint = $this->proofPhotoInputFingerprint($value);
+            if ($fingerprint === null || isset($seen[$fingerprint])) {
+                return false;
+            }
+
+            $seen[$fingerprint] = true;
+
+            return true;
+        }));
+    }
+
+    /**
+     * Build a stable fingerprint for an uploaded file or Base64 proof payload.
+     */
+    protected function proofPhotoInputFingerprint(mixed $value): ?string
+    {
+        if ($value instanceof UploadedFile) {
+            return hash('sha256', implode('|', [
+                $value->getRealPath(),
+                $value->getSize(),
+                $value->getClientOriginalName(),
+                $value->getClientMimeType(),
+            ]));
+        }
+
+        if (is_string($value)) {
+            $payload = Str::contains($value, 'base64,') ? Str::after($value, 'base64,') : $value;
+
+            return hash('sha256', $payload);
+        }
+
+        return null;
+    }
+
+    /**
+     * Determine whether a proof input is a usable Base64 image payload.
+     */
+    protected function isValidBase64ProofPhoto(mixed $value): bool
+    {
+        if (!is_string($value)) {
+            return false;
+        }
+
+        $payload = Str::contains($value, 'base64,') ? Str::after($value, 'base64,') : $value;
+
+        return base64_decode($payload, true) !== false;
+    }
+
+    /**
      * Store a proof photo and create its file record.
      */
     protected function storeProofPhoto(Proof $proof, UploadedFile|string $photo, string $disk, string $bucket): File
     {
         $isFile      = $photo instanceof UploadedFile;
-        $contents    = $isFile ? file_get_contents($photo->getRealPath()) : base64_decode($photo);
+        $contents    = $isFile ? file_get_contents($photo->getRealPath()) : base64_decode(Str::contains($photo, 'base64,') ? Str::after($photo, 'base64,') : $photo);
         $extension   = $isFile ? $photo->getClientOriginalExtension() : 'png';
         $contentType = $isFile ? $photo->getClientMimeType() : 'image/png';
         $company     = session('company');

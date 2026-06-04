@@ -1,0 +1,40 @@
+<div class="issue-timeline" {{did-update this.reload this.issueId}} ...attributes>
+    {{#if this.loadTimeline.isRunning}}
+        <div class="issue-timeline-loading">
+            <Spinner @loadingMessage="Loading timeline..." />
+        </div>
+    {{else if this.hasEvents}}
+        <ol class="issue-timeline-list">
+            {{#each this.events as |event|}}
+                <li class="issue-timeline-event tone-{{event.tone}}">
+                    <div class="issue-timeline-marker">
+                        <FaIcon @icon={{event.icon}} />
+                    </div>
+                    <div class="issue-timeline-card">
+                        <div class="issue-timeline-card-header">
+                            <div>
+                                <div class="issue-timeline-label">{{event.label}}</div>
+                                <div class="issue-timeline-actor">{{n-a event.actor_name "Someone"}}</div>
+                            </div>
+                            <time>{{n-a (format-date-fns event.created_at "dd MMM yyyy HH:mm")}}</time>
+                        </div>
+                        {{#if event.description}}
+                            <p>{{event.description}}</p>
+                        {{/if}}
+                        {{#if event.meta.file_url}}
+                            <a href={{event.meta.file_url}} target="_blank" rel="noopener noreferrer" class="issue-timeline-link">
+                                <FaIcon @icon="download" />
+                                <span>{{n-a event.meta.file_name "Download file"}}</span>
+                            </a>
+                        {{/if}}
+                    </div>
+                </li>
+            {{/each}}
+        </ol>
+    {{else}}
+        <div class="issue-detail-empty issue-detail-empty-compact">
+            <FaIcon @icon="timeline" />
+            <span>No issue activity yet.</span>
+        </div>
+    {{/if}}
+</div>

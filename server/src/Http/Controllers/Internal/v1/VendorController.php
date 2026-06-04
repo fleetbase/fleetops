@@ -4,9 +4,12 @@ namespace Fleetbase\FleetOps\Http\Controllers\Internal\v1;
 
 use Fleetbase\FleetOps\Exports\VendorExport;
 use Fleetbase\FleetOps\Http\Controllers\FleetOpsController;
+use Fleetbase\FleetOps\Http\Resources\v1\Contact as ContactResource;
 use Fleetbase\FleetOps\Imports\VendorImport;
+use Fleetbase\FleetOps\Models\Contact;
 use Fleetbase\FleetOps\Models\Driver;
 use Fleetbase\FleetOps\Models\Vendor;
+use Fleetbase\FleetOps\Models\VendorPersonnel;
 use Fleetbase\Http\Requests\ExportRequest;
 use Fleetbase\Http\Requests\ImportRequest;
 use Illuminate\Http\Request;
@@ -189,5 +192,91 @@ class VendorController extends FleetOpsController
         return response()->json([
             'status' => 'ok',
         ]);
+    }
+
+    public function vendorPersonnels(string $vendorId)
+    {
+        $vendor = Vendor::findByIdOrFail($vendorId);
+
+        $personnels = VendorPersonnel::where('vendor_uuid', $vendor->uuid)
+            ->with('contact')
+            ->latest()
+            ->get()
+            ->map(fn (VendorPersonnel $personnel) => $this->vendorPersonnelPayload($personnel));
+
+        return response()->json(['personnels' => $personnels->values()]);
+    }
+
+    public function addVendorPersonnel(Request $request, string $vendorId)
+    {
+        $vendor  = Vendor::findByIdOrFail($vendorId);
+        $contact = $this->resolveOrCreatePersonnelContact($request);
+
+        $personnel = VendorPersonnel::updateOrCreate(
+            ['vendor_uuid' => $vendor->uuid, 'contact_uuid' => $contact->uuid],
+            [
+                'role'            => $request->input('role', 'member'),
+                'status'          => $request->input('status', 'active'),
+                'invited_by_uuid' => session('user'),
+            ]
+        );
+
+        if ($request->boolean('create_login', true)) {
+            $contact->createUser();
+        }
+
+        return response()->json([
+            'personnel' => $this->vendorPersonnelPayload($personnel->load('contact')),
+        ]);
+    }
+
+    public function removeVendorPersonnel(string $vendorId, string $contactId)
+    {
+        $vendor  = Vendor::findByIdOrFail($vendorId);
+        $contact = Contact::findByIdOrFail($contactId);
+
+        VendorPersonnel::where(['vendor_uuid' => $vendor->uuid, 'contact_uuid' => $contact->uuid])->delete();
+
+        return response()->json(['status' => 'ok']);
+    }
+
+    protected function resolveOrCreatePersonnelContact(Request $request): Contact
+    {
+        $contactId = $request->input('contact');
+        if ($contactId) {
+            return Contact::where('company_uuid', session('company'))
+                ->where(function ($query) use ($contactId) {
+                    $query->where('uuid', $contactId)->orWhere('public_id', $contactId);
+                })
+                ->firstOrFail();
+        }
+
+        return Contact::create([
+            'company_uuid' => session('company'),
+            'name'         => $request->input('name'),
+            'email'        => $request->input('email'),
+            'phone'        => $request->input('phone'),
+            'type'         => 'customer',
+        ]);
+    }
+
+    protected function vendorPersonnelPayload(VendorPersonnel $personnel): array
+    {
+        $contact = $personnel->contact;
+
+        return [
+            'id'              => $contact?->public_id,
+            'uuid'            => $contact?->uuid,
+            'contact_uuid'    => $contact?->uuid,
+            'public_id'       => $contact?->public_id,
+            'name'            => $contact?->name,
+            'email'           => $contact?->email,
+            'phone'           => $contact?->phone,
+            'photo_url'       => $contact?->photo_url,
+            'role'            => $personnel->role ?? 'member',
+            'status'          => $personnel->status ?? 'active',
+            'invited_by_uuid' => $personnel->invited_by_uuid,
+            'contact'         => $contact ? (new ContactResource($contact))->resolve() : null,
+        ];
     }
 }

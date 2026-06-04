@@ -1,7 +1,7 @@
 <Layout::Resource::Panel
     @resource={{@model}}
     @controller={{this}}
-    @headerComponent={{component "contact/panel-header" resource=@model}}
+    @headerComponent={{component "contact/panel-header" resource=@model actionButtons=this.actionButtons}}
     @headerTitle={{or @model.name}}
     @actionButtons={{this.actionButtons}}
     @onPressCancel={{transition-to "management.contacts.customers"}}

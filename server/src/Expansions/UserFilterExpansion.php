@@ -48,6 +48,21 @@ class UserFilterExpansion implements Expansion
     }
 
     /**
+     * Filter where a user is not a customer.
+     *
+     * @return void
+     */
+    public static function isNotCustomer()
+    {
+        return function () {
+            /** @var \Fleetbase\Http\Filter\UserFilter|\Fleetbase\Http\Filter\Filter $this */
+            $this->builder->where(function ($query) {
+                $query->whereNull('type')->orWhere('type', '!=', 'customer');
+            });
+        };
+    }
+
+    /**
      * Filter where doesnt have driver within the CURRENT organizations.
      *
      * @return void

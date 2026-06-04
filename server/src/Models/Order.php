@@ -169,6 +169,7 @@ class Order extends Model
         'tracking',
         'total_entities',
         'transaction_amount',
+        'transaction_currency',
         'customer_name',
         'customer_phone',
         'facilitator_name',
@@ -506,6 +507,16 @@ class Order extends Model
     public function getTransactionAmountAttribute()
     {
         return data_get($this, 'transaction.amount');
+    }
+
+    /**
+     * The transaction amount for the order.
+     *
+     * @return string
+     */
+    public function getTransactionCurrencyAttribute()
+    {
+        return data_get($this, 'transaction.currency');
     }
 
     /**
@@ -1143,7 +1154,17 @@ class Order extends Model
             $this->setRelation('purchaseRate', $purchaseRate);
 
             if ($purchaseRate->transaction_uuid) {
-                $this->setRelation('transaction', Transaction::where('uuid', $purchaseRate->transaction_uuid)->first());
+                $transaction = Transaction::where('uuid', $purchaseRate->transaction_uuid)->first();
+                if ($transaction instanceof Transaction) {
+                    $transaction->update([
+                        'subject_uuid' => $this->uuid,
+                        'subject_type' => static::class,
+                        'context_uuid' => $purchaseRate->uuid,
+                        'context_type' => PurchaseRate::class,
+                        'direction'    => Transaction::DIRECTION_CREDIT,
+                    ]);
+                    $this->setRelation('transaction', $transaction);
+                }
             }
 
             if (
@@ -1176,12 +1197,17 @@ class Order extends Model
                 'company_uuid'           => session('company', $this->company_uuid),
                 'customer_uuid'          => $this->customer_uuid,
                 'customer_type'          => $this->customer_type,
+                'subject_uuid'           => $this->uuid,
+                'subject_type'           => static::class,
+                'context_uuid'           => $this->uuid,
+                'context_type'           => static::class,
                 'gateway_transaction_id' => Transaction::generateNumber(),
                 'gateway'                => 'internal',
                 'amount'                 => 0,
                 'currency'               => Utils::getCompanyTransactionCurrency($this->company ?? $this->company_uuid),
                 'description'            => 'Dispatch order',
                 'type'                   => 'dispatch',
+                'direction'              => Transaction::DIRECTION_CREDIT,
                 'status'                 => 'success',
             ]);
 

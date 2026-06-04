@@ -31,9 +31,9 @@ export default class OrderDetailsActivityComponent extends Component {
                         disabled: this.args.resource.status === 'canceled',
                         onClick: () => {
                             this.orderActions.updateActivity(this.args.resource, {
-                                onFinish: ({ activityCreated }) => {
+                                onFinish: (options) => {
                                     if (typeof this.args.onChange === 'function') {
-                                        this.args.onChange(activityCreated);
+                                        this.args.onChange(options);
                                     }
                                 },
                             });

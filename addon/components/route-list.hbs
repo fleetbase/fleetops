@@ -20,9 +20,6 @@
                     {{#if this.firstStop.etaSeconds}}
                         <Badge @status="pending" @hideStatusDot={{true}}><span class="font-bold">ETA:</span> {{format-duration this.firstStop.etaSeconds}}</Badge>
                     {{/if}}
-                    {{#if this.firstStop.etaAt}}
-                        <Badge @status="pending" @hideStatusDot={{true}}>{{format-date-fns this.firstStop.etaAt "d MMM HH:mm"}}</Badge>
-                    {{/if}}
                 </div>
                 <DisplayPlace @place={{this.firstStop.place}} @waypointActions={{@waypointActions}} @waypointActionContext={{this.firstStop}} @hideBadges={{true}} />
             </div>
@@ -58,9 +55,6 @@
                             {{#if stop.etaSeconds}}
                                 <Badge @status="pending" @hideStatusDot={{true}}><span class="font-bold">ETA:</span> {{format-duration stop.etaSeconds}}</Badge>
                             {{/if}}
-                            {{#if stop.etaAt}}
-                                <Badge @status="pending" @hideStatusDot={{true}}>{{format-date-fns stop.etaAt "d MMM HH:mm"}}</Badge>
-                            {{/if}}
                         </div>
                         <DisplayPlace @place={{stop.place}} @waypointActions={{@waypointActions}} @waypointActionContext={{stop}} @hideBadges={{true}} />
                     </div>
@@ -85,9 +79,6 @@
                         {{/if}}
                         {{#if stop.etaSeconds}}
                             <Badge @status="pending" @hideStatusDot={{true}}><span class="font-bold">ETA:</span> {{format-duration stop.etaSeconds}}</Badge>
-                        {{/if}}
-                        {{#if stop.etaAt}}
-                            <Badge @status="pending" @hideStatusDot={{true}}>{{format-date-fns stop.etaAt "d MMM HH:mm"}}</Badge>
                         {{/if}}
                     </div>
                     <DisplayPlace @place={{stop.place}} @waypointActions={{@waypointActions}} @waypointActionContext={{stop}} @hideBadges={{true}} />
@@ -116,9 +107,6 @@
                     {{/if}}
                     {{#if this.lastStop.etaSeconds}}
                         <Badge @status="pending" @hideStatusDot={{true}}><span class="font-bold">ETA:</span> {{format-duration this.lastStop.etaSeconds}}</Badge>
-                    {{/if}}
-                    {{#if this.lastStop.etaAt}}
-                        <Badge @status="pending" @hideStatusDot={{true}}>{{format-date-fns this.lastStop.etaAt "d MMM HH:mm"}}</Badge>
                     {{/if}}
                 </div>
                 <DisplayPlace @place={{this.lastStop.place}} @waypointActions={{@waypointActions}} @waypointActionContext={{this.lastStop}} @hideBadges={{true}} />

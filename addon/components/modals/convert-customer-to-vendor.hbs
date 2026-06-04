@@ -1,0 +1,29 @@
+<Modal::Default @modalIsOpened={{@modalIsOpened}} @options={{@options}} @confirm={{@onConfirm}} @decline={{@onDecline}}>
+    <div class="modal-body-container">
+        <div class="mb-4 rounded-md border border-yellow-200 bg-yellow-50 p-3 text-sm text-yellow-900 dark:border-yellow-700 dark:bg-yellow-900 dark:text-yellow-100">
+            <div class="mb-1 font-semibold">Create a company customer account</div>
+            <div>
+                FleetOps will create a vendor, assign
+                {{this.customer.name}}
+                as admin personnel, and migrate any customer-owned portal history to the vendor account.
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 gap-3 text-xs lg:grid-cols-2">
+            <InputGroup @name="Vendor Name" @value={{this.vendorName}} @placeholder="Company name" @wrapperClass="mb-0i" />
+            <InputGroup @name="Email" @type="email" @value={{this.vendorEmail}} @placeholder="billing@example.com" @wrapperClass="mb-0i" />
+            <InputGroup @name="Phone" @wrapperClass="mb-0i">
+                <PhoneInput @value={{this.vendorPhone}} @onInput={{fn (mut this.vendorPhone)}} class="form-input w-full" />
+            </InputGroup>
+            <InputGroup @name="Primary Personnel" @wrapperClass="mb-0i">
+                <div class="flex items-center rounded-md border border-gray-200 bg-gray-50 px-3 py-2 dark:border-gray-700 dark:bg-gray-800">
+                    <Image src={{this.customer.photo_url}} @fallbackSrc={{config "defaultValues.contactImage"}} alt={{this.customer.name}} class="mr-2 h-6 w-6 rounded-md" />
+                    <div class="min-w-0">
+                        <div class="truncate font-semibold dark:text-gray-100">{{this.customer.name}}</div>
+                        <div class="truncate text-gray-500 dark:text-gray-400">{{n-a this.customer.email}}</div>
+                    </div>
+                </div>
+            </InputGroup>
+        </div>
+    </div>
+</Modal::Default>

@@ -30,6 +30,7 @@ class IssueController extends Controller
             'type',
             'report',
             'priority',
+            'tags',
             'status',
         ]);
 
@@ -85,6 +86,7 @@ class IssueController extends Controller
             'type',
             'report',
             'priority',
+            'tags',
             'status',
         ]);
 

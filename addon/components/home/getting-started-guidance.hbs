@@ -1,0 +1,145 @@
+{{#unless this.isComplete}}
+    <section class="fleet-ops-home-guidance px-4 pt-4 lg:px-6 {{@class}}" ...attributes>
+        <div class="grid gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(360px,0.8fr)]">
+            <div class="fleet-ops-get-started rounded-md border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-900">
+                <div class="flex items-center justify-between border-b border-gray-200 px-3 py-2 dark:border-gray-700">
+                    <div class="min-w-0">
+                        <div class="truncate text-sm font-bold text-gray-900 dark:text-gray-100">{{t "widget.get-started.title"}}</div>
+                        <div class="truncate text-[11px] text-gray-500 dark:text-gray-400">{{t "widget.get-started.subtitle"}}</div>
+                    </div>
+                    <button type="button" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200" {{on "click" this.refresh}} title={{t "widget.refresh"}}>
+                        <FaIcon @icon="rotate" class={{if this.gettingStarted.load.isRunning "animate-spin"}} />
+                    </button>
+                </div>
+
+                <div class="grid min-h-[330px] grid-cols-1 gap-3 p-3 lg:grid-cols-[minmax(0,1.15fr)_minmax(220px,0.85fr)]">
+                    <div class="flex min-h-0 flex-col gap-2">
+                        {{#if this.gettingStarted.load.isRunning}}
+                            <div class="flex flex-1 items-center justify-center"><Spinner /></div>
+                        {{else if this.gettingStarted.error}}
+                            <div class="flex flex-1 items-center justify-center text-xs text-red-500">{{this.gettingStarted.error}}</div>
+                        {{else}}
+                            <div class="mb-1 flex items-center justify-between">
+                                <span class="text-[11px] font-semibold text-gray-600 dark:text-gray-300">
+                                    {{this.progress.completed}}/{{this.progress.total}} {{t "widget.get-started.completed"}}
+                                </span>
+                                <span class="text-[11px] font-semibold text-blue-600 dark:text-blue-300">{{this.progress.percent}}%</span>
+                            </div>
+                            <div class="h-1.5 overflow-hidden rounded-full bg-gray-100 dark:bg-gray-800">
+                                <div class="h-full rounded-full bg-blue-600 transition-all" style={{html-safe (concat "width:" this.progress.percent "%")}}></div>
+                            </div>
+
+                            <div class="mt-1 flex min-h-0 flex-1 flex-col gap-2">
+                                {{#each this.steps as |step index|}}
+                                    <button
+                                        type="button"
+                                        class="fleet-ops-get-started-step flex min-h-[58px] w-full items-center gap-2 rounded-md border p-2 text-left transition
+                                            {{if step.completed "border-gray-200 bg-gray-50 dark:border-gray-700 dark:bg-gray-800/70"}}
+                                            {{if (this.isActiveStep step) "border-blue-500 bg-blue-50 shadow-sm dark:border-blue-400 dark:bg-blue-950/30"}}
+                                            {{unless (or step.completed (this.isActiveStep step)) "border-gray-200 bg-white hover:border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:hover:border-gray-600"}}"
+                                        {{on "click" (fn this.startStep step)}}
+                                    >
+                                        <div class="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full {{if step.completed "bg-green-100 text-green-600 dark:bg-green-900/40 dark:text-green-300" "bg-blue-100 text-blue-600 dark:bg-blue-900/40 dark:text-blue-300"}}">
+                                            {{#if step.completed}}
+                                                <FaIcon @icon="check" />
+                                            {{else}}
+                                                <FaIcon @icon={{step.icon}} />
+                                            {{/if}}
+                                        </div>
+                                        <div class="min-w-0 flex-1">
+                                            <div class="flex items-center gap-1.5">
+                                                <span class="text-[12px] font-bold text-gray-900 dark:text-gray-100">{{add index 1}}. {{step.title}}</span>
+                                                <span class="text-[10px] text-gray-400"><FaIcon @icon="clock" /> {{step.estimate}}</span>
+                                            </div>
+                                            <div class="truncate text-[11px] text-gray-500 dark:text-gray-400">{{step.description}}</div>
+                                        </div>
+                                        <span class="rounded-full px-2 py-0.5 text-[10px] font-bold {{this.statusClass step}}">{{this.statusText step}}</span>
+                                    </button>
+                                {{/each}}
+                            </div>
+                        {{/if}}
+                    </div>
+
+                    <div class="fleet-ops-get-started-visual relative hidden min-h-[280px] overflow-hidden rounded-md border border-blue-100 bg-blue-50 dark:border-blue-900/50 dark:bg-blue-950/20 lg:block">
+                        <div class="absolute inset-0 opacity-80">
+                            <div class="fleet-ops-get-started-map-line"></div>
+                            <div class="fleet-ops-get-started-node node-a"></div>
+                            <div class="fleet-ops-get-started-node node-b"></div>
+                            <div class="fleet-ops-get-started-node node-c"></div>
+                            <div class="fleet-ops-get-started-node node-d"></div>
+                        </div>
+                        <div class="absolute right-3 top-3 w-32 rounded-md border border-gray-200 bg-white p-2 shadow-sm dark:border-gray-700 dark:bg-gray-800">
+                            <div class="mb-1 flex items-center gap-2">
+                                <div class="flex h-7 w-7 items-center justify-center rounded-full bg-blue-100 text-blue-600 dark:bg-blue-900/40 dark:text-blue-300">
+                                    <FaIcon @icon="truck" />
+                                </div>
+                                <div class="min-w-0">
+                                    <div class="truncate text-[10px] font-bold text-gray-900 dark:text-gray-100">Order ready</div>
+                                    <div class="truncate text-[9px] text-gray-500 dark:text-gray-400">Driver assigned</div>
+                                </div>
+                            </div>
+                            <div class="h-1.5 rounded-full bg-green-400"></div>
+                        </div>
+                        <div class="absolute bottom-3 left-3 right-3 rounded-md border border-gray-200 bg-white/95 p-2 shadow-sm dark:border-gray-700 dark:bg-gray-800/95">
+                            <div class="mb-1 flex items-center justify-between">
+                                <span class="text-[10px] font-bold text-gray-900 dark:text-gray-100">{{t "widget.get-started.preview-title"}}</span>
+                                <Badge @status="info" @text="In progress" @hideIcon={{true}} @disableHumanize={{true}} @wrapperClass="text-[9px] px-1 py-0" />
+                            </div>
+                            <div class="grid grid-cols-4 gap-1">
+                                {{#each this.steps as |step|}}
+                                    <div class="h-1.5 rounded-full {{if step.completed "bg-green-400" "bg-gray-200 dark:bg-gray-700"}}"></div>
+                                {{/each}}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="fleet-ops-recommended-features rounded-md border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-900">
+                <div class="border-b border-gray-200 px-3 py-2 dark:border-gray-700">
+                    <div class="truncate text-sm font-bold text-gray-900 dark:text-gray-100">{{t "widget.recommended-features.title"}}</div>
+                    <div class="truncate text-[11px] text-gray-500 dark:text-gray-400">{{t "widget.recommended-features.subtitle"}}</div>
+                </div>
+
+                <div class="p-3">
+                    {{#if this.gettingStarted.load.isRunning}}
+                        <div class="flex min-h-[280px] items-center justify-center"><Spinner /></div>
+                    {{else if this.gettingStarted.error}}
+                        <div class="flex min-h-[280px] items-center justify-center text-xs text-red-500">{{this.gettingStarted.error}}</div>
+                    {{else}}
+                        <div class="grid gap-2 sm:grid-cols-2 xl:grid-cols-1">
+                            {{#each this.recommendations as |feature|}}
+                                <button
+                                    type="button"
+                                    class="fleet-ops-recommended-feature {{this.accentClass feature}} group grid min-h-[132px] grid-cols-[132px_minmax(0,1fr)] overflow-hidden rounded-md border border-gray-200 bg-white text-left transition hover:-translate-y-0.5 hover:shadow-md dark:border-gray-700 dark:bg-gray-800 max-sm:grid-cols-1"
+                                    {{on "click" (fn this.openFeature feature)}}
+                                >
+                                    <div class="feature-preview relative min-h-[116px] overflow-hidden">
+                                        <div class="feature-route-line"></div>
+                                        <div class="feature-dot dot-a"></div>
+                                        <div class="feature-dot dot-b"></div>
+                                        <div class="feature-cardlet cardlet-a">
+                                            <FaIcon @icon={{feature.icon}} />
+                                        </div>
+                                        <div class="feature-cardlet cardlet-b">
+                                            <span></span>
+                                            <span></span>
+                                        </div>
+                                    </div>
+                                    <div class="flex min-h-0 flex-1 flex-col p-3">
+                                        <div class="truncate text-[12px] font-bold text-gray-900 dark:text-gray-100">{{feature.title}}</div>
+                                        <p class="mt-1 line-clamp-2 flex-1 text-[11px] leading-4 text-gray-500 dark:text-gray-400">{{feature.description}}</p>
+                                        <div class="mt-2 flex items-center gap-1 text-[11px] font-bold text-blue-600 dark:text-blue-300">
+                                            <span>{{t "widget.recommended-features.learn-more"}}</span>
+                                            <FaIcon @icon="arrow-right" class="transition group-hover:translate-x-0.5" />
+                                        </div>
+                                    </div>
+                                </button>
+                            {{/each}}
+                        </div>
+                    {{/if}}
+                </div>
+            </div>
+        </div>
+    </section>
+{{/unless}}

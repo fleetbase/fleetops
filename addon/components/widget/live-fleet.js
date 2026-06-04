@@ -7,6 +7,7 @@ import { debug } from '@ember/debug';
 import { task } from 'ember-concurrency';
 import { renderCompleted, waitForInsertedAndSized } from '@fleetbase/ember-ui/utils/dom';
 import LeafletTrackingMarkerComponent from '../leaflet-tracking-marker';
+import ensureLeafletDrawEditNamespace from '../../utils/leaflet-draw-namespace-guard';
 
 const DEFAULT_CENTER = [1.31, 103.85];
 const DEFAULT_ZOOM = 11;
@@ -101,13 +102,7 @@ export default class WidgetLiveFleetComponent extends Component {
      * widget is read-only.
      */
     #patchLeafletDrawInitHook() {
-        const L = typeof window !== 'undefined' ? (window.L ?? window.leaflet) : null;
-        if (L && !L.Edit) {
-            L.Edit = {};
-        }
-        if (L && !L.Marker) {
-            L.Marker = {};
-        }
+        ensureLeafletDrawEditNamespace();
     }
 
     /**

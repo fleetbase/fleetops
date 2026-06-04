@@ -1,0 +1,30 @@
+<Modal::Default @modalIsOpened={{@modalIsOpened}} @options={{@options}} @confirm={{@onConfirm}} @decline={{@onDecline}}>
+    <div class="modal-body-container">
+        <div class="issue-close-modal-summary">
+            {{#if this.vehicleLabel}}
+                <div>
+                    <span>Vehicle</span>
+                    <strong>{{this.vehicleLabel}}</strong>
+                </div>
+            {{/if}}
+            {{#if this.orderLabel}}
+                <div>
+                    <span>Order</span>
+                    <strong>{{this.orderLabel}}</strong>
+                </div>
+            {{/if}}
+            <div>
+                <span>Summary</span>
+                <strong>{{n-a this.issue.title}}</strong>
+            </div>
+            <div>
+                <span>Description</span>
+                <strong>{{n-a this.issue.report "No report was provided."}}</strong>
+            </div>
+        </div>
+
+        <InputGroup @name="Close Note" @helpText="Describe why this issue is being closed.">
+            <Textarea @value={{this.note}} class="form-input w-full" rows={{5}} placeholder="Resolution note" />
+        </InputGroup>
+    </div>
+</Modal::Default>

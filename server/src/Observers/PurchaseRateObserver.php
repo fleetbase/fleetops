@@ -2,6 +2,7 @@
 
 namespace Fleetbase\FleetOps\Observers;
 
+use Fleetbase\FleetOps\Models\Order;
 use Fleetbase\FleetOps\Models\PurchaseRate;
 use Fleetbase\FleetOps\Support\Utils;
 use Fleetbase\Models\Company;
@@ -18,7 +19,12 @@ class PurchaseRateObserver
      */
     public function creating(PurchaseRate $purchaseRate)
     {
+        if (!$purchaseRate->uuid) {
+            $purchaseRate->uuid = PurchaseRate::generateUuid();
+        }
+
         $purchaseRate->load(['serviceQuote.items', 'serviceQuote.serviceRate']);
+        $order = $this->resolveOrder($purchaseRate);
 
         // get company
         $company = Company::where('uuid', session('company', $purchaseRate->company_uuid))->first();
@@ -32,12 +38,17 @@ class PurchaseRateObserver
             'company_uuid'           => session('company', $purchaseRate->company_uuid),
             'customer_uuid'          => $purchaseRate->customer_uuid,
             'customer_type'          => $purchaseRate->customer_type,
+            'subject_uuid'           => $order?->uuid,
+            'subject_type'           => $order ? Order::class : null,
+            'context_uuid'           => $purchaseRate->uuid,
+            'context_type'           => PurchaseRate::class,
             'gateway_transaction_id' => $purchaseRate->getMeta('transaction_id', Transaction::generateNumber()),
             'gateway'                => 'internal',
             'amount'                 => data_get($purchaseRate, 'serviceQuote.amount', 0),
             'currency'               => $currency,
             'description'            => 'Dispatch order',
             'type'                   => 'dispatch',
+            'direction'              => Transaction::DIRECTION_CREDIT,
             'status'                 => 'success',
         ]);
 
@@ -55,5 +66,14 @@ class PurchaseRateObserver
 
         $purchaseRate->transaction_uuid = $transaction->uuid;
         $purchaseRate->status           = $purchaseRate->status ?: Transaction::STATUS_SUCCESS;
+    }
+
+    protected function resolveOrder(PurchaseRate $purchaseRate): ?Order
+    {
+        if (!$purchaseRate->payload_uuid) {
+            return null;
+        }
+
+        return Order::where('payload_uuid', $purchaseRate->payload_uuid)->first();
     }
 }

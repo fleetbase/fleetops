@@ -4,6 +4,10 @@ import { inject as service } from '@ember/service';
 export default class ManagementContactsCustomersController extends ManagementContactsIndexController {
     @service('customerActions') contactActions;
 
+    get customerActions() {
+        return this.contactActions;
+    }
+
     /** columns */
     get columns() {
         return [
@@ -13,7 +17,7 @@ export default class ManagementContactsCustomersController extends ManagementCon
                 valuePath: 'name',
 
                 cellComponent: 'table/cell/media-name',
-                action: this.contactActions.transition.view,
+                action: this.customerActions.transition.view,
                 permission: 'fleet-ops view contact',
                 resizable: true,
                 sortable: true,
@@ -75,7 +79,7 @@ export default class ManagementContactsCustomersController extends ManagementCon
                 label: this.intl.t('column.address'),
                 valuePath: 'address',
                 cellComponent: 'table/cell/anchor',
-                action: this.contactActions.viewPlace,
+                action: this.customerActions.viewPlace,
 
                 resizable: true,
                 sortable: true,
@@ -118,20 +122,27 @@ export default class ManagementContactsCustomersController extends ManagementCon
                 actions: [
                     {
                         label: this.intl.t('common.view-resource', { resource: this.intl.t('resource.customer') }),
-                        fn: this.contactActions.transition.view,
+                        icon: 'eye',
+                        fn: this.customerActions.transition.view,
                         permission: 'fleet-ops view contact',
                     },
                     {
                         label: this.intl.t('common.edit-resource', { resource: this.intl.t('resource.customer') }),
-                        fn: this.contactActions.transition.edit,
+                        icon: 'pencil',
+                        fn: this.customerActions.transition.edit,
                         permission: 'fleet-ops update contact',
                     },
                     {
                         separator: true,
                     },
+                    ...this.customerActions.accountRowActionItems(),
+                    {
+                        separator: true,
+                    },
                     {
                         label: this.intl.t('common.delete-resource', { resource: this.intl.t('resource.customer') }),
-                        fn: this.contactActions.delete,
+                        icon: 'trash',
+                        fn: this.customerActions.delete,
                         permission: 'fleet-ops delete contact',
                     },
                 ],

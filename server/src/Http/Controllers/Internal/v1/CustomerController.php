@@ -8,9 +8,78 @@ use Fleetbase\Http\Controllers\Controller;
 use Fleetbase\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Str;
 
 class CustomerController extends Controller
 {
+    public function createPortalLogin(Request $request)
+    {
+        $customer = $this->resolveCustomer($request);
+        $user     = $this->resolveCustomerUser($customer, $request->boolean('send_invite'));
+
+        if (!$user) {
+            return response()->error('Unable to create customer portal login.');
+        }
+
+        if ($user->status !== 'active') {
+            $user->activate();
+        }
+
+        return response()->json([
+            'customer' => $this->customerPayload($customer->fresh()),
+        ]);
+    }
+
+    public function sendCredentials(Request $request)
+    {
+        $customer = $this->resolveCustomer($request);
+        $user     = $this->resolveCustomerUser($customer);
+
+        if (!$user) {
+            return response()->error('Unable to send customer portal credentials.');
+        }
+
+        $password = Str::random(16);
+        $user->changePassword($password);
+        Mail::to($user)->send(new CustomerCredentialsMail($password, $customer));
+
+        return response()->json([
+            'customer' => $this->customerPayload($customer->fresh()),
+        ]);
+    }
+
+    public function deactivatePortalLogin(Request $request)
+    {
+        $customer = $this->resolveCustomer($request);
+        $user     = $customer->user_uuid ? User::where('uuid', $customer->user_uuid)->first() : null;
+
+        if (!$user) {
+            return response()->error('Customer portal login not found.');
+        }
+
+        $user->deactivate();
+
+        return response()->json([
+            'customer' => $this->customerPayload($customer->fresh()),
+        ]);
+    }
+
+    public function reactivatePortalLogin(Request $request)
+    {
+        $customer = $this->resolveCustomer($request);
+        $user     = $customer->user_uuid ? User::where('uuid', $customer->user_uuid)->first() : null;
+
+        if (!$user) {
+            return response()->error('Customer portal login not found.');
+        }
+
+        $user->activate();
+
+        return response()->json([
+            'customer' => $this->customerPayload($customer->fresh()),
+        ]);
+    }
+
     /**
      * Resets the password for a specified customer and optionally sends the new credentials via email.
      *
@@ -72,13 +141,10 @@ class CustomerController extends Controller
             return response()->error('Passwords do not match.');
         }
 
-        $customer = Contact::where(['uuid' => $customerId, 'company_uuid' => session('company'), 'type' => 'customer'])->first();
-        if (!$customer) {
-            return response()->error('Customer not found to change password for.');
-        }
+        $customer = $this->resolveCustomer($request);
 
         // Load customer user
-        $user = $customer->user_uuid ? User::where('uuid', $customer->user_uuid)->first() : $customer->createUser();
+        $user = $this->resolveCustomerUser($customer);
         if (!$user) {
             return response()->error('Unable to reset customer credentials');
         }
@@ -91,6 +157,50 @@ class CustomerController extends Controller
             Mail::to($user)->send(new CustomerCredentialsMail($password, $customer));
         }
 
-        return response()->json(['status' => 'ok']);
+        return response()->json([
+            'status'   => 'ok',
+            'customer' => $this->customerPayload($customer->fresh()),
+        ]);
+    }
+
+    protected function resolveCustomer(Request $request): Contact
+    {
+        $customerId = $request->input('customer');
+
+        abort_if(!$customerId, 400, 'No customer specified.');
+
+        return Contact::where('company_uuid', session('company'))
+            ->where(function ($query) use ($customerId) {
+                $query->where('uuid', $customerId)
+                    ->orWhere('public_id', $customerId)
+                    ->orWhere('id', $customerId);
+            })
+            ->firstOrFail();
+    }
+
+    protected function resolveCustomerUser(Contact $customer, bool $sendInvite = false): ?User
+    {
+        return $customer->user_uuid ? User::where('uuid', $customer->user_uuid)->first() : Contact::createUserFromContact($customer, $sendInvite, true);
+    }
+
+    protected function customerPayload(Contact $customer): array
+    {
+        $customer->loadMissing('user');
+
+        return [
+            'id'        => $customer->public_id,
+            'uuid'      => $customer->uuid,
+            'user_uuid' => $customer->user_uuid,
+            'user'      => $customer->user ? [
+                'id'             => $customer->user->public_id,
+                'uuid'           => $customer->user->uuid,
+                'name'           => $customer->user->name,
+                'email'          => $customer->user->email,
+                'phone'          => $customer->user->phone,
+                'status'         => $customer->user->status,
+                'session_status' => $customer->user->session_status,
+                'avatar_url'     => $customer->user->avatar_url,
+            ] : null,
+        ];
     }
 }

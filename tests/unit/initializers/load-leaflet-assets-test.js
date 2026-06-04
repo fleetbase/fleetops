@@ -8,6 +8,10 @@ import { run } from '@ember/runloop';
 
 module('Unit | Initializer | load-leaflet-assets', function (hooks) {
     hooks.beforeEach(function () {
+        this.originalL = window.L;
+        this.originalLeaflet = window.leaflet;
+        this.originalFleetopsLeafletPluginsLoaded = window.fleetopsLeafletPluginsLoaded;
+
         this.TestApplication = class TestApplication extends Application {
             modulePrefix = config.modulePrefix;
             podModulePrefix = config.podModulePrefix;
@@ -25,13 +29,18 @@ module('Unit | Initializer | load-leaflet-assets', function (hooks) {
     });
 
     hooks.afterEach(function () {
+        window.L = this.originalL;
+        window.leaflet = this.originalLeaflet;
+        window.fleetopsLeafletPluginsLoaded = this.originalFleetopsLeafletPluginsLoaded;
         run(this.application, 'destroy');
     });
 
-    // TODO: Replace this with your real tests.
-    test('it works', async function (assert) {
+    test('it guards the Leaflet Draw edit namespace before plugin loading can create markers', async function (assert) {
+        window.L = {};
+        window.leaflet = undefined;
+
         await this.application.boot();
 
-        assert.ok(true);
+        assert.deepEqual(window.L.Edit, {});
     });
 });
