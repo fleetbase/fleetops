@@ -15,8 +15,22 @@ const PARTIAL_STATUS = {
         { key: 'create_order', title: 'Create an order', description: 'Create the first order', estimate: '3 min', completed: false, icon: 'box', route: 'orders.new' },
     ],
     recommendations: [
-        { key: 'route_optimization', title: 'Route Optimization', description: 'Plan better routes.', icon: 'route', accent: 'blue', docs_url: 'https://www.fleetbase.io/docs/fleet-ops/orchestrator' },
-        { key: 'live_fleet', title: 'Live Fleet Map', description: 'Track work in real time.', icon: 'map-location-dot', accent: 'green', docs_url: 'https://www.fleetbase.io/docs/fleet-ops/live-map' },
+        {
+            key: 'route_optimization',
+            title: 'Route Optimization',
+            description: 'Plan better routes.',
+            icon: 'route',
+            accent: 'blue',
+            docs_url: 'https://www.fleetbase.io/docs/fleet-ops/orchestrator',
+        },
+        {
+            key: 'live_fleet',
+            title: 'Live Fleet Map',
+            description: 'Track work in real time.',
+            icon: 'map-location-dot',
+            accent: 'green',
+            docs_url: 'https://www.fleetbase.io/docs/fleet-ops/live-map',
+        },
     ],
 };
 
@@ -49,7 +63,7 @@ class StubGettingStartedService extends Service {
     }
 
     @task *load() {
-        return this.data;
+        return yield this.data;
     }
 }
 

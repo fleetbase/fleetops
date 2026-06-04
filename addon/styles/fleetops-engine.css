@@ -4937,7 +4937,7 @@ body[data-theme='dark'] .next-google-container-map .fleetops-google-draw-actions
     min-height: 92px;
 }
 
-@media (max-width: 1180px) {
+@media (width <= 1180px) {
     .fleet-ops-home-guidance-grid {
         grid-template-columns: 1fr;
     }

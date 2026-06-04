@@ -37,10 +37,7 @@
                                         class="fleet-ops-get-started-step flex min-h-[58px] w-full items-center gap-2 rounded-md border p-2 text-left transition
                                             {{if step.completed 'border-gray-200 bg-gray-50 dark:border-gray-700 dark:bg-gray-800/70'}}
                                             {{if (this.isActiveStep step) 'border-blue-500 bg-blue-50 shadow-sm dark:border-blue-400 dark:bg-blue-950/30'}}
-                                            {{unless
-                                                (or step.completed (this.isActiveStep step))
-                                                'border-gray-200 bg-white hover:border-gray-300 dark:border-gray-700 dark:bg-gray-800 dark:hover:border-gray-600'
-                                            }}"
+                                            {{if (this.isInactiveStep step) 'border-gray-200 bg-white hover:border-gray-300 dark:border-gray-700 dark:bg-gray-800 dark:hover:border-gray-600'}}"
                                         {{on "click" (fn this.startStep step)}}
                                     >
                                         <div

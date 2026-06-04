@@ -45,6 +45,11 @@ export default class HomeGettingStartedGuidanceComponent extends Component {
     }
 
     @action
+    isInactiveStep(step) {
+        return !step.completed && !this.isActiveStep(step);
+    }
+
+    @action
     statusText(step) {
         if (step.completed) {
             return 'Done';
