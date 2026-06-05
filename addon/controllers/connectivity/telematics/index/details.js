@@ -50,7 +50,7 @@ export default class ConnectivityTelematicsIndexDetailsController extends Contro
     }
 
     get telematicId() {
-        return this.model?.id ?? this.model?.public_id ?? this.model?.uuid;
+        return this.model?.id;
     }
 
     @task *testConnection() {

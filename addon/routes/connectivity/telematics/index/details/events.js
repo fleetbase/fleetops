@@ -7,7 +7,7 @@ export default class ConnectivityTelematicsIndexDetailsEventsRoute extends Route
     model() {
         const telematic = this.modelFor('connectivity.telematics.index.details');
         return this.store.query('device-event', {
-            telematic: telematic.uuid ?? telematic.id,
+            telematic: telematic.id,
             sort: '-created_at',
         });
     }
