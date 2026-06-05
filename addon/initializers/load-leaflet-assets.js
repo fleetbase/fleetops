@@ -1,22 +1,14 @@
-import loadLeafletPlugins from '@fleetbase/ember-ui/utils/load-leaflet-plugins';
-import ensureLeafletDrawEditNamespace from '../utils/leaflet-draw-namespace-guard';
+import { debug } from '@ember/debug';
+import ensureLeafletPluginsReady from '../utils/leaflet-plugin-loader';
 
 export function initialize() {
     let waitForLeaflet = setInterval(() => {
         let leafletLoaded = window.L !== undefined;
         if (leafletLoaded) {
-            ensureLeafletDrawEditNamespace();
-            loadLeafletPlugins(
-                {
-                    scripts: ['leaflet.contextmenu.js', 'leaflet.draw-src.js'],
-                    stylesheets: ['leaflet.contextmenu.css', 'leaflet.draw.css'],
-                    globalIndicatorKey: 'fleetopsLeafletPluginsLoaded',
-                },
-                () => {
-                    ensureLeafletDrawEditNamespace();
-                }
-            );
             clearInterval(waitForLeaflet);
+            ensureLeafletPluginsReady().catch((error) => {
+                debug(error.message);
+            });
         }
     }, 100);
 }

@@ -10,6 +10,7 @@ import MultiPolygon from '@fleetbase/fleetops-data/utils/geojson/multi-polygon';
 import Polygon from '@fleetbase/fleetops-data/utils/geojson/polygon';
 import FeatureCollection from '@fleetbase/fleetops-data/utils/geojson/feature-collection';
 import wrapCoordinates from '../utils/leaflet-wrap-coordinates';
+import ensureLeafletDrawEditNamespace from '../utils/leaflet-draw-namespace-guard';
 
 const L = window.L;
 export default class ServiceAreasService extends Service {
@@ -194,6 +195,8 @@ export default class ServiceAreasService extends Service {
 
         // If you need a Leaflet polygon, you might need to convert back to LatLng arrays.
         // Here we assume Leaflet can work with [lng, lat] arrays, or you convert them as needed.
+        ensureLeafletDrawEditNamespace(L);
+        ensureLeafletDrawEditNamespace();
         const polygon = L.polygon(latLngs, options);
         return polygon;
     }
