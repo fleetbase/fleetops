@@ -60,8 +60,16 @@ class TelematicWebhookController extends Controller
         // Get provider
         $provider = $this->registry->resolve($providerKey);
 
-        // Find telematic for this provider
-        $telematic = Telematic::where('provider', $providerKey)->first();
+        // Find telematic for this provider. Provider webhooks can include an
+        // integration id in the URL query or headers to disambiguate tenants.
+        $telematicId = $request->query('telematic') ?? $request->query('integration') ?? $request->header('X-Fleetbase-Telematic');
+        $telematic   = Telematic::where('provider', $providerKey)
+            ->when($telematicId, function ($query) use ($telematicId) {
+                $query->where(function ($query) use ($telematicId) {
+                    $query->where('uuid', $telematicId)->orWhere('public_id', $telematicId);
+                });
+            })
+            ->first();
 
         if (!$telematic) {
             Log::warning('No telematic found for provider', [
@@ -89,13 +97,26 @@ class TelematicWebhookController extends Controller
         try {
             $result = $provider->processWebhook($request->all(), $request->headers->all());
 
+            $devicesByExternalId = [];
+
             // Link devices
             foreach ($result['devices'] as $deviceData) {
-                $this->service->linkDevice($telematic, $deviceData);
+                $device     = $this->service->linkDevice($telematic, $deviceData);
+                $externalId = $deviceData['external_id'] ?? $deviceData['device_id'] ?? null;
+                if ($externalId) {
+                    $devicesByExternalId[$externalId] = $device;
+                }
             }
 
-            // Store events (TODO: implement event storage)
-            // Store sensors (TODO: implement sensor storage)
+            foreach ($result['events'] as $eventData) {
+                $externalId = $eventData['device_id'] ?? $eventData['external_id'] ?? $eventData['ident'] ?? null;
+                $this->service->storeDeviceEvent($telematic, $eventData, $externalId ? ($devicesByExternalId[$externalId] ?? null) : null);
+            }
+
+            foreach ($result['sensors'] as $sensorData) {
+                $externalId = $sensorData['device_id'] ?? $sensorData['external_id'] ?? $sensorData['ident'] ?? null;
+                $this->service->storeSensor($telematic, $sensorData, $externalId ? ($devicesByExternalId[$externalId] ?? null) : null);
+            }
 
             // Mark as processed
             if ($idempotencyKey) {
@@ -106,6 +127,7 @@ class TelematicWebhookController extends Controller
                 'correlation_id' => $correlationId,
                 'devices_count'  => count($result['devices']),
                 'events_count'   => count($result['events']),
+                'sensors_count'  => count($result['sensors']),
             ]);
 
             return response()->json(['status' => 'processed'], 200);
@@ -139,11 +161,27 @@ class TelematicWebhookController extends Controller
         }
 
         try {
+            $devicesByExternalId = [];
+
             // Process devices
             if ($request->has('devices')) {
                 foreach ($request->input('devices') as $deviceData) {
-                    $this->service->linkDevice($telematic, $deviceData);
+                    $device     = $this->service->linkDevice($telematic, $deviceData);
+                    $externalId = $deviceData['external_id'] ?? $deviceData['device_id'] ?? null;
+                    if ($externalId) {
+                        $devicesByExternalId[$externalId] = $device;
+                    }
                 }
+            }
+
+            foreach ($request->input('events', []) as $eventData) {
+                $externalId = $eventData['device_id'] ?? $eventData['external_id'] ?? $eventData['ident'] ?? null;
+                $this->service->storeDeviceEvent($telematic, $eventData, $externalId ? ($devicesByExternalId[$externalId] ?? null) : null);
+            }
+
+            foreach ($request->input('sensors', []) as $sensorData) {
+                $externalId = $sensorData['device_id'] ?? $sensorData['external_id'] ?? $sensorData['ident'] ?? null;
+                $this->service->storeSensor($telematic, $sensorData, $externalId ? ($devicesByExternalId[$externalId] ?? null) : null);
             }
 
             // Mark as processed
@@ -154,6 +192,8 @@ class TelematicWebhookController extends Controller
             Log::info('Custom ingest processed', [
                 'correlation_id' => $correlationId,
                 'devices_count'  => count($request->input('devices', [])),
+                'events_count'   => count($request->input('events', [])),
+                'sensors_count'  => count($request->input('sensors', [])),
             ]);
 
             return response()->json(['status' => 'ingested'], 200);

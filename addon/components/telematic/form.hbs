@@ -36,12 +36,21 @@
                         @name={{field.label}}
                         @value={{get @resource.credentials field.name}}
                         @required={{field.required}}
-                        @type={{if (eq field.type "password") "text" field.type}}
+                        @type={{field.type}}
                         @helpText={{field.help_text}}
                         {{on "input" (fn this.setCredential field)}}
                     />
                 {{/each}}
             </div>
+
+            {{#if this.connectionTestResult}}
+                <div class="mt-3 text-xs">
+                    <Badge @status={{if this.connectionTestResult.success "success" "error"}}>
+                        {{if this.connectionTestResult.success "Connection successful" "Connection failed"}}
+                    </Badge>
+                    <span class="ml-2 text-gray-500 dark:text-gray-400">{{this.connectionTestResult.message}}</span>
+                </div>
+            {{/if}}
         </ContentPanel>
 
         <ContentPanel @title="Configure Integration" @open={{true}} @wrapperClass="bordered-top">

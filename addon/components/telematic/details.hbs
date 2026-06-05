@@ -23,10 +23,10 @@
                 <div class="field-value">{{n-a @resource.name}}</div>
             </div>
 
-            {{#if @resource.provider_descriptor.supportsWebhooks}}
+            {{#if @resource.provider_descriptor.supports_webhooks}}
                 <InputGroup @name="Webhook URL" @helpText={{concat "Configure the URL in your " @resource.provider_descriptor.label " dashboard to receive real-time updates."}}>
-                    <ClickToCopy @value={{@resource.provider_descriptor.webhook_url}}>
-                        <Input @value={{@resource.provider_descriptor.webhook_url}} class="form-input" readonly />
+                    <ClickToCopy @value={{this.webhookUrl}}>
+                        <Input @value={{this.webhookUrl}} class="form-input" readonly />
                     </ClickToCopy>
                     <small class="form-text text-muted">
                         Configure this URL in your
@@ -35,6 +35,40 @@
                     </small>
                 </InputGroup>
             {{/if}}
+        </div>
+    </ContentPanel>
+
+    <ContentPanel @title="Integration Health" @open={{true}} @wrapperClass="bordered-top">
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-2">
+            <div class="field-info-container">
+                <div class="field-name">Last Connection Test</div>
+                <div class="field-value">{{n-a @resource.meta.last_connection_test}}</div>
+            </div>
+
+            <div class="field-info-container">
+                <div class="field-name">Last Test Result</div>
+                <div class="field-value">{{n-a @resource.meta.last_test_result}}</div>
+            </div>
+
+            <div class="field-info-container">
+                <div class="field-name">Last Error</div>
+                <div class="field-value">{{n-a @resource.meta.last_error}}</div>
+            </div>
+
+            <div class="field-info-container">
+                <div class="field-name">Last Sync Started</div>
+                <div class="field-value">{{n-a @resource.meta.last_sync_started_at}}</div>
+            </div>
+
+            <div class="field-info-container">
+                <div class="field-name">Last Sync Completed</div>
+                <div class="field-value">{{n-a @resource.meta.last_sync_completed_at}}</div>
+            </div>
+
+            <div class="field-info-container">
+                <div class="field-name">Devices Synced</div>
+                <div class="field-value">{{n-a @resource.meta.last_sync_total}}</div>
+            </div>
         </div>
     </ContentPanel>
 

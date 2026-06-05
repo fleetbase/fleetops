@@ -486,9 +486,9 @@ Route::prefix(config('fleetops.api.routing.prefix'))->namespace('Fleetbase\Fleet
                         $router->fleetbaseRoutes('sensors');
                         $router->fleetbaseRoutes('telematics', function ($router, $controller) {
                             $router->get('providers', $controller('providers'));
-                            $router->get('devices', $controller('devices'));
-                            $router->post('link-device', $controller('linkDevice'));
-                            $router->post('discover', $controller('discover'));
+                            $router->get('{id}/devices', $controller('devices'));
+                            $router->post('{id}/link-device', $controller('linkDevice'));
+                            $router->post('{id}/discover', $controller('discover'));
                             $router->post('{id}/test-connection', $controller('testConnection'));
                             $router->post('{key}/test-credentials', $controller('testCredentials'));
                         });

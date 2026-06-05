@@ -3,6 +3,8 @@
 namespace Fleetbase\FleetOps\Models;
 
 use Fleetbase\Casts\Json;
+use Fleetbase\FleetOps\Casts\Point;
+use Fleetbase\LaravelMysqlSpatial\Eloquent\SpatialTrait;
 use Fleetbase\Models\Alert;
 use Fleetbase\Models\Company;
 use Fleetbase\Models\Model;
@@ -35,6 +37,7 @@ class DeviceEvent extends Model
     use LogsActivity;
     use HasMetaAttributes;
     use Searchable;
+    use SpatialTrait;
 
     /**
      * The database table used by the model.
@@ -109,6 +112,13 @@ class DeviceEvent extends Model
     protected $hidden = ['device'];
 
     /**
+     * The attributes that are spatial columns.
+     *
+     * @var array
+     */
+    protected $spatialFields = ['location'];
+
+    /**
      * The attributes that should be cast to native types.
      *
      * @var array
@@ -116,6 +126,7 @@ class DeviceEvent extends Model
     protected $casts = [
         'payload'         => Json::class,
         'meta'            => Json::class,
+        'location'        => Point::class,
         'resolved_at'     => 'datetime',
     ];
 

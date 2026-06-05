@@ -131,6 +131,7 @@ class GeotabProvider extends AbstractProvider
     {
         return [
             'external_id' => $payload['id'] ?? null,
+            'device_id'   => $payload['device']['id'] ?? $payload['deviceId'] ?? null,
             'event_type'  => $payload['type'] ?? 'status_data',
             'occurred_at' => $payload['dateTime'] ?? now(),
             'meta'        => $payload,

@@ -94,6 +94,7 @@ class SamsaraProvider extends AbstractProvider
     {
         return [
             'external_id' => $payload['id'] ?? null,
+            'device_id'   => $payload['vehicle']['id'] ?? $payload['vehicleId'] ?? null,
             'event_type'  => $payload['eventType'] ?? 'vehicle_update',
             'occurred_at' => $payload['time'] ?? now(),
             'location'    => [
@@ -135,7 +136,8 @@ class SamsaraProvider extends AbstractProvider
         if (isset($payload['data'])) {
             foreach ($payload['data'] as $item) {
                 if (isset($item['vehicle'])) {
-                    $devices[] = $this->normalizeDevice($item['vehicle']);
+                    $devices[]         = $this->normalizeDevice($item['vehicle']);
+                    $item['vehicleId'] = $item['vehicle']['id'] ?? null;
                 }
 
                 $events[] = $this->normalizeEvent($item);

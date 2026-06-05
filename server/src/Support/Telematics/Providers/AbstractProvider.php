@@ -20,7 +20,7 @@ use Illuminate\Support\Str;
  */
 abstract class AbstractProvider implements TelematicProviderInterface
 {
-    protected Telematic $telematic;
+    protected ?Telematic $telematic  = null;
     protected array $credentials     = [];
     protected array $headers         = [];
     protected string $baseUrl        = '';
@@ -33,7 +33,7 @@ abstract class AbstractProvider implements TelematicProviderInterface
     public function connect(Telematic $telematic): void
     {
         $this->telematic   = $telematic;
-        $this->credentials = json_decode(Crypt::decryptString($telematic->credentials), true);
+        $this->credentials = $this->resolveCredentials($telematic);
         $this->prepareAuthentication();
     }
 
@@ -88,7 +88,7 @@ abstract class AbstractProvider implements TelematicProviderInterface
      */
     protected function checkRateLimit(): void
     {
-        $key    = 'rate_limit:' . class_basename($this) . ':' . $this->telematic->uuid;
+        $key    = $this->rateLimitKey();
         $tokens = Cache::get($key, $this->burstSize);
 
         if ($tokens <= 0) {
@@ -103,12 +103,34 @@ abstract class AbstractProvider implements TelematicProviderInterface
      */
     protected function recordRequest(): void
     {
-        $key    = 'rate_limit:' . class_basename($this) . ':' . $this->telematic->uuid;
+        $key    = $this->rateLimitKey();
         $tokens = Cache::get($key, 0);
 
         // Refill tokens gradually
         if ($tokens < $this->burstSize) {
             Cache::put($key, min($tokens + 1, $this->burstSize), 60);
+        }
+    }
+
+    protected function rateLimitKey(): string
+    {
+        return 'rate_limit:' . class_basename($this) . ':' . ($this->telematic?->uuid ?? 'credential-test');
+    }
+
+    protected function resolveCredentials(Telematic $telematic): array
+    {
+        if (is_array($telematic->credentials)) {
+            return $telematic->credentials;
+        }
+
+        if (!$telematic->credentials) {
+            return [];
+        }
+
+        try {
+            return json_decode(Crypt::decryptString($telematic->credentials), true) ?? [];
+        } catch (\Throwable) {
+            return json_decode($telematic->credentials, true) ?? [];
         }
     }
 

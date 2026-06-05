@@ -126,6 +126,7 @@ class SafeeProvider extends AbstractProvider
 
         return [
             'external_id' => $payload['id'] ?? data_get($payload, 'vehicle.id') ?? null,
+            'device_id'   => $payload['id'] ?? data_get($payload, 'vehicle.id') ?? null,
             'event_type'  => data_get($payload, 'event.code') ?? data_get($payload, 'event.name') ?? 'telemetry_update',
             'occurred_at' => $this->parseTimestamp($payload['date'] ?? $payload['deviceTime'] ?? $payload['time'] ?? null),
             'location'    => [

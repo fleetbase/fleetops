@@ -1,1 +1,7 @@
-{{outlet}}
+<Layout::Resource::Tabular
+    @resource="sensor"
+    @title="Connected Sensors"
+    @data={{@model}}
+    @columns={{this.columns}}
+    @controller={{this}}
+/>

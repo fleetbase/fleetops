@@ -74,7 +74,7 @@ class Device extends Model
      *
      * @var array
      */
-    protected $filterParams = ['status', 'warranty_uuid', 'attachable_type'];
+    protected $filterParams = ['status', 'warranty_uuid', 'attachable_type', 'telematic_uuid', 'provider'];
 
     /**
      * The attributes that are mass assignable.

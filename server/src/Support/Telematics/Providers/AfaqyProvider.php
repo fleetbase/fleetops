@@ -145,6 +145,7 @@ class AfaqyProvider extends AbstractProvider
 
         return [
             'external_id' => $payload['_id'] ?? $payload['id'] ?? null,
+            'device_id'   => $payload['_id'] ?? $payload['id'] ?? null,
             'event_type'  => $payload['event'] ?? $payload['event_type'] ?? 'telemetry_update',
             'occurred_at' => $this->parseTimestamp($lastUpdate['dtt'] ?? $lastUpdate['dts'] ?? null),
             'location'    => [

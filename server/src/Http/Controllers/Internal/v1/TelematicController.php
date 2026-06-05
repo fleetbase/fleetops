@@ -54,9 +54,7 @@ class TelematicController extends FleetOpsController
      */
     public function testConnection(Request $request, string $id): JsonResponse
     {
-        $telematic = Telematic::where('uuid', $id)
-            ->where('company_uuid', session('company'))
-            ->firstOrFail();
+        $telematic = $this->findTelematic($id);
 
         $async = $request->input('async', false);
 
@@ -99,9 +97,7 @@ class TelematicController extends FleetOpsController
      */
     public function discover(Request $request, string $id): JsonResponse
     {
-        $telematic = Telematic::where('uuid', $id)
-            ->where('company_uuid', session('company'))
-            ->firstOrFail();
+        $telematic = $this->findTelematic($id);
 
         $jobId = $this->telematicService->discoverDevices($telematic, [
             'limit'   => $request->input('limit', 100),
@@ -119,9 +115,7 @@ class TelematicController extends FleetOpsController
      */
     public function devices(Request $request, string $id): JsonResponse
     {
-        $telematic = Telematic::where('uuid', $id)
-            ->where('company_uuid', session('company'))
-            ->firstOrFail();
+        $telematic = $this->findTelematic($id);
 
         $devices = $this->telematicService->getDevices($telematic, [
             'status' => $request->input('status'),
@@ -138,13 +132,13 @@ class TelematicController extends FleetOpsController
      */
     public function linkDevice(Request $request, string $id): JsonResponse
     {
-        $telematic = Telematic::where('uuid', $id)
-            ->where('company_uuid', session('company'))
-            ->firstOrFail();
+        $telematic = $this->findTelematic($id);
 
         $request->validate([
-            'external_id' => 'required|string',
-            'device_name' => 'required|string',
+            'external_id' => 'required_without:device_id|nullable|string',
+            'device_id'   => 'required_without:external_id|nullable|string',
+            'device_name' => 'nullable|string',
+            'name'        => 'nullable|string',
         ]);
 
         $device = $this->telematicService->linkDevice($telematic, $request->all());
@@ -152,5 +146,14 @@ class TelematicController extends FleetOpsController
         return response()->json([
             'device' => $device,
         ], 201);
+    }
+
+    protected function findTelematic(string $id): Telematic
+    {
+        return Telematic::where(function ($query) use ($id) {
+            $query->where('uuid', $id)->orWhere('public_id', $id);
+        })
+            ->where('company_uuid', session('company'))
+            ->firstOrFail();
     }
 }
