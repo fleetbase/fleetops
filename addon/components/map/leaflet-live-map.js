@@ -11,6 +11,7 @@ import { all } from 'rsvp';
 import { task, timeout } from 'ember-concurrency';
 import { next } from '@ember/runloop';
 import getModelName from '@fleetbase/ember-core/utils/get-model-name';
+import ensureLeafletPluginsReady, { hasLeafletPluginsReady } from '../../utils/leaflet-plugin-loader';
 
 export default class MapLeafletLiveMapComponent extends Component {
     liveViewportReloadDebounceMs = 300;
@@ -53,6 +54,7 @@ export default class MapLeafletLiveMapComponent extends Component {
     @tracked drivers = [];
     @tracked vehicles = [];
     @tracked places = [];
+    @tracked leafletPluginsReady = hasLeafletPluginsReady();
     _viewportReloadLocks = new Set();
 
     constructor() {
@@ -79,6 +81,10 @@ export default class MapLeafletLiveMapComponent extends Component {
         this._geofenceExitedHandler = this.#handleGeofenceExited.bind(this);
         this.universe.on('fleet-ops.geofence.entered', this._geofenceEnteredHandler);
         this.universe.on('fleet-ops.geofence.exited', this._geofenceExitedHandler);
+
+        if (!this.shouldUseGoogleMaps && !this.leafletPluginsReady) {
+            this.prepareLeafletPlugins();
+        }
     }
 
     willDestroy() {
@@ -327,6 +333,17 @@ export default class MapLeafletLiveMapComponent extends Component {
 
     get shouldUseGoogleMaps() {
         return this.mapSettings.isGoogleMaps;
+    }
+
+    async prepareLeafletPlugins() {
+        try {
+            await ensureLeafletPluginsReady();
+            if (!this.isDestroying && !this.isDestroyed) {
+                this.leafletPluginsReady = true;
+            }
+        } catch (error) {
+            debug('Failed to prepare Leaflet plugins: ' + error.message);
+        }
     }
 
     /**

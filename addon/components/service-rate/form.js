@@ -53,6 +53,7 @@ export default class ServiceRateFormComponent extends Component {
     }
 
     @action selectRuleGeographyType(rule, { value }) {
+        rule.set('selected_geography_type', value);
         rule.set('zone', null);
         rule.set('zone_uuid', null);
         rule.set('service_area', null);
@@ -61,6 +62,7 @@ export default class ServiceRateFormComponent extends Component {
     }
 
     @action selectRuleServiceArea(rule, serviceArea) {
+        rule.set('selected_geography_type', 'service_area');
         rule.set('service_area', serviceArea);
         rule.set('service_area_uuid', serviceArea?.id);
         rule.set('zone', null);
@@ -69,6 +71,7 @@ export default class ServiceRateFormComponent extends Component {
     }
 
     @action selectRuleZone(rule, zone) {
+        rule.set('selected_geography_type', 'zone');
         rule.set('zone', zone);
         rule.set('zone_uuid', zone?.id);
         rule.set('service_area', null);
@@ -79,6 +82,7 @@ export default class ServiceRateFormComponent extends Component {
     @action setRuleFallback(rule, isFallback) {
         rule.set('is_fallback', Boolean(isFallback));
         if (isFallback) {
+            rule.set('selected_geography_type', 'fallback');
             rule.set('zone', null);
             rule.set('zone_uuid', null);
             rule.set('service_area', null);

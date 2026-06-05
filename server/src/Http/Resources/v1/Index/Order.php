@@ -44,9 +44,10 @@ class Order extends FleetbaseResource
                 $isInternal,
                 $this->whenLoaded('orderConfig', function () {
                     return [
-                        'id'   => $this->orderConfig->public_id,
-                        'name' => $this->orderConfig->name,
-                        'key'  => $this->orderConfig->key,
+                        'uuid'        => $this->orderConfig->uuid,
+                        'public_id'   => $this->orderConfig->public_id,
+                        'name'        => $this->orderConfig->name,
+                        'key'         => $this->orderConfig->key,
                     ];
                 })
             ),
@@ -104,12 +105,14 @@ class Order extends FleetbaseResource
             }),
 
             // Essential scalar fields
-            'type'                 => $this->type,
-            'status'               => $this->status,
-            'adhoc'                => (bool) data_get($this, 'adhoc', false),
-            'dispatched'           => (bool) data_get($this, 'dispatched', false),
-            'has_driver_assigned'  => $this->when($isInternal, $this->has_driver_assigned),
-            'is_scheduled'         => $this->when($isInternal, $this->is_scheduled),
+            'type'                                 => $this->type,
+            'status'                               => $this->status,
+            'adhoc'                                => (bool) data_get($this, 'adhoc', false),
+            'dispatched'                           => (bool) data_get($this, 'dispatched', false),
+            'has_driver_assigned'                  => $this->when($isInternal, $this->has_driver_assigned),
+            'is_scheduled'                         => $this->when($isInternal, $this->is_scheduled),
+            'transaction_amount'                   => $this->transaction_amount,
+            'currency'                             => $this->transaction_currency,
 
             // Timestamps
             'scheduled_at'         => $this->scheduled_at,

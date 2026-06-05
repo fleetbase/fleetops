@@ -7,6 +7,7 @@ import { renderCompleted, waitForInsertedAndSized } from '@fleetbase/ember-ui/ut
 import { Control as RoutingControl } from '@fleetbase/leaflet-routing-machine';
 import { getLayerById, findLayer, flyToLayer } from '../utils/leaflet';
 import isUuid from '@fleetbase/ember-core/utils/is-uuid';
+import ensureLeafletPluginsReady from '../utils/leaflet-plugin-loader';
 
 export default class LeafletMapManagerService extends Service {
     @service leafletRoutingControl;
@@ -92,6 +93,7 @@ export default class LeafletMapManagerService extends Service {
     }
 
     async ensureInteractive({ timeoutMs = 8000 } = {}) {
+        await ensureLeafletPluginsReady({ timeoutMs });
         await this.whenMapLoaded({ timeoutMs });
 
         // always ask Leaflet for the live container

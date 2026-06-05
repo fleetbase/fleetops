@@ -2,6 +2,7 @@ import ResourceActionService from '@fleetbase/ember-core/services/resource-actio
 import { inject as service } from '@ember/service';
 import { action } from '@ember/object';
 import { format } from 'date-fns';
+import { issueStatuses } from '../utils/fleet-ops-options';
 
 export default class IssueActionsService extends ResourceActionService {
     @service driverActions;
@@ -91,6 +92,76 @@ export default class IssueActionsService extends ResourceActionService {
             });
         },
     };
+
+    get closedStatuses() {
+        return ['closed', 'resolved', 'completed'];
+    }
+
+    openStatusModal(issue, options = {}) {
+        return this.modalsManager.show('modals/issue-status', {
+            issue,
+            statusOptions: issueStatuses,
+            onSaved: options.onSaved,
+        });
+    }
+
+    openAssignModal(issue, options = {}) {
+        return this.modalsManager.show('modals/issue-assign', {
+            issue,
+            onSaved: options.onSaved,
+        });
+    }
+
+    openCloseIssueModal(issue, options = {}) {
+        return this.modalsManager.show('modals/issue-close', {
+            issue,
+            onSaved: options.onSaved,
+        });
+    }
+
+    confirmReopenIssue(issue, options = {}) {
+        this.modalsManager.confirm({
+            title: `Re-open ${issue.public_id || 'issue'}?`,
+            body: 'This will move the issue back into an active re-opened state and clear the active resolution date.',
+            acceptButtonText: 'Re-open Issue',
+            acceptButtonIcon: 'rotate-left',
+            confirm: async (modal) => {
+                modal.startLoading();
+
+                try {
+                    const meta = issue.meta ?? {};
+                    const reopenHistory = Array.isArray(meta.reopen_history) ? meta.reopen_history : [];
+                    const user = this.currentUser.user;
+
+                    issue.status = 're_opened';
+                    issue.resolved_at = null;
+                    issue.meta = {
+                        ...meta,
+                        reopen_history: [
+                            ...reopenHistory,
+                            {
+                                reopened_at: new Date().toISOString(),
+                                reopened_by_uuid: user?.id,
+                                reopened_by_name: user?.name,
+                            },
+                        ],
+                    };
+
+                    await issue.save();
+                    this.notifications.success('Issue re-opened.');
+
+                    if (typeof options.onSaved === 'function') {
+                        await options.onSaved(issue);
+                    }
+
+                    modal.done();
+                } catch (error) {
+                    this.notifications.serverError(error);
+                    modal.stopLoading();
+                }
+            },
+        });
+    }
 
     @action async viewDriver(issue) {
         const driver = await issue.loadDriver();

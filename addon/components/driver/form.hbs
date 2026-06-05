@@ -6,7 +6,7 @@
                     @modelName="user"
                     @selectedModel={{@resource.user}}
                     @placeholder={{t "driver.fields.select-user"}}
-                    @query={{hash doesnt_have_driver=true}}
+                    @query={{hash doesnt_have_driver=true can_be_driver=true}}
                     @triggerClass="form-select form-input"
                     @infiniteScroll={{false}}
                     @renderInPlace={{true}}

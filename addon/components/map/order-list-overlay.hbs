@@ -44,10 +44,10 @@
                             <div class="next-dd-menu-seperator"></div>
                             <div class="px-1">
                                 <a href="javascript:;" class="next-dd-item" {{on "click" (dropdown-fn dd this.orderActions.bulkCancel this.overlay.selectedOrders)}}>{{t
-                                        "fleet-ops.component.order-list-overlay.cancel"
+                                        "order-list-overlay.cancel"
                                     }}</a>
                                 <a href="javascript:;" class="next-dd-item text-danger" {{on "click" (dropdown-fn dd this.orderActions.bulkDelete this.overlay.selectedOrders)}}>{{t
-                                        "fleet-ops.component.order-list-overlay.delete"
+                                        "order-list-overlay.delete"
                                     }}</a>
                             </div>
                         </div>
@@ -70,10 +70,10 @@
                         <div class="next-dd-menu-seperator"></div>
                         <div class="px-1">
                             <a href="javascript:;" class="next-dd-item" {{on "click" (dropdown-fn dd (transition-to "operations.orders.index.new"))}}>{{t
-                                    "fleet-ops.component.order-list-overlay.create-order"
+                                    "order-list-overlay.create-order"
                                 }}</a>
                             <a href="javascript:;" class="next-dd-item" {{on "click" (dropdown-fn dd this.fleetActions.modal.create)}}>{{t
-                                    "fleet-ops.component.order-list-overlay.create-fleet"
+                                    "order-list-overlay.create-fleet"
                                 }}</a>
                         </div>
                     </div>

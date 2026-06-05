@@ -7,15 +7,11 @@ use Fleetbase\FleetOps\Http\Requests\UpdatePlaceRequest;
 use Fleetbase\FleetOps\Http\Resources\v1\DeletedResource;
 use Fleetbase\FleetOps\Http\Resources\v1\Place as PlaceResource;
 use Fleetbase\FleetOps\Models\Place;
+use Fleetbase\FleetOps\Support\PlaceSearch;
 use Fleetbase\FleetOps\Support\Utils;
 use Fleetbase\Http\Controllers\Controller;
 use Fleetbase\LaravelMysqlSpatial\Types\Point;
-use Geocoder\Laravel\Facades\Geocoder;
-use Geocoder\Provider\GoogleMapsPlaces\GoogleMapsPlaces;
-use Geocoder\Query\GeocodeQuery;
-use Http\Adapter\Guzzle7\Client;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
 class PlaceController extends Controller
@@ -283,63 +279,19 @@ class PlaceController extends Controller
     {
         $searchQuery = strtolower($request->input('query'));
         $limit       = $request->input('limit', 10);
-        $geo         = $request->input('geo', false);
+        $geo         = $request->boolean('geo');
         $latitude    = $request->input('latitude', false);
         $longitude   = $request->input('longitude', false);
 
-        $results = DB::table('places')
-            ->where('company_uuid', session('company'))
-            ->whereNull('deleted_at')
-            ->where(function ($q) use ($searchQuery) {
-                if (Utils::notEmpty($searchQuery)) {
-                    $q->orWhere(DB::raw('lower(name)'), 'like', '%' . $searchQuery . '%');
-                    $q->orWhere(DB::raw('lower(street1)'), 'like', '%' . $searchQuery . '%');
-                    $q->orWhere(DB::raw('lower(postal_code)'), 'like', '%' . $searchQuery . '%');
-                }
-            })
-            ->limit($limit)
-            ->orderBy('name', 'desc')
-            ->get()
-            ->map(function ($place) {
-                $place             = (array) $place;
-                $place['location'] = Utils::mysqlPointAsGeometry($place['location']);
-                $place             = new Place($place);
-                $place->address    = $place->toAddressString();
+        $query = Place::where('company_uuid', session('company'))->whereNull('deleted_at');
 
-                return $place;
-            })
-            ->values();
-
-        if ($geo && Utils::notEmpty($searchQuery)) {
-            $httpClient = new Client();
-            $provider   = new \Geocoder\Provider\GoogleMaps\GoogleMaps($httpClient, null, env('GOOGLE_MAPS_API_KEY'));
-            $geocoder   = new \Geocoder\StatefulGeocoder($provider, 'en');
-
-            if ($latitude && $longitude) {
-                $geoResults = $geocoder->geocodeQuery(
-                    GeocodeQuery::create($searchQuery)
-                        ->withData('mode', GoogleMapsPlaces::GEOCODE_MODE_SEARCH)
-                        ->withData('location', "$latitude, $longitude")
-                );
-
-                $geoResults = collect($geoResults->all());
-            } else {
-                $geoResults = Geocoder::geocode($searchQuery)->get();
-            }
-
-            $geoResults = $geoResults
-                ->map(function ($googleAddress) {
-                    return Place::createFromGoogleAddress($googleAddress);
-                })
-                ->values();
-
-            $results = $results->merge($geoResults);
-        }
-
-        $results = $results
-            ->sortBy('name')
-            ->values()
-            ->toArray();
+        $results = PlaceSearch::search($query, $searchQuery, [
+            'limit'          => $limit,
+            'geo'            => $geo,
+            'latitude'       => $latitude,
+            'longitude'      => $longitude,
+            'no_query_order' => 'name_desc',
+        ]);
 
         return PlaceResource::collection($results);
     }

@@ -16,6 +16,8 @@ export default class ModalsUpdateOrderActivityComponent extends Component {
     @tracked selectedActivity;
     @tracked customActivity = {};
     @tracked proofFiles = [];
+    @tracked proof;
+    @tracked bypassProof = false;
 
     constructor(owner, { options = {} }) {
         super(...arguments);
@@ -104,6 +106,14 @@ export default class ModalsUpdateOrderActivityComponent extends Component {
         return ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
     }
 
+    get hasUploadedProof() {
+        return Boolean(this.proof?.id || this.proof?.public_id);
+    }
+
+    get uploadedProofId() {
+        return this.proof?.id ?? this.proof?.public_id;
+    }
+
     @task *loadActivity() {
         if (!this.order?.id) {
             return [];
@@ -128,14 +138,22 @@ export default class ModalsUpdateOrderActivityComponent extends Component {
             return this.notifications.warning(this.intl.t('fleet-ops.operations.orders.index.view.invalid-warning'));
         }
 
-        if (this.selectedActivityRequiresPod && this.proofFiles.length === 0) {
+        if (this.selectedActivityRequiresPod && this.uploadProofFile.isRunning) {
             modal.stopLoading();
-            return this.notifications.warning('Photo proof of delivery is required for this activity.');
+            return this.notifications.warning('Photo proof of delivery is still uploading.');
+        }
+
+        if (this.selectedActivityRequiresPod && !this.hasUploadedProof && !this.bypassProof) {
+            modal.stopLoading();
+            return this.notifications.warning('Upload photo proof of delivery or choose to bypass proof of delivery.');
         }
 
         try {
-            const proof = this.selectedActivityRequiresPod ? yield this.capturePhotoProof.perform() : null;
-            yield this.fetch.patch(`orders/update-activity/${this.order.id}`, { activity, proof: proof?.id ?? proof?.public_id });
+            yield this.fetch.patch(`orders/update-activity/${this.order.id}`, {
+                activity,
+                proof: this.hasUploadedProof ? this.uploadedProofId : null,
+                bypass_proof: this.selectedActivityRequiresPod && this.bypassProof,
+            });
 
             if (typeof this.order?.reload === 'function') {
                 yield this.order.reload();
@@ -150,6 +168,7 @@ export default class ModalsUpdateOrderActivityComponent extends Component {
             }
 
             this.modalsManager.setOption('activityCreated', activity);
+            this.modalsManager.setOption('proofCreated', this.hasUploadedProof ? this.proof : null);
             this.notifications.success(`Order activity has been updated to ${activity.status}`);
             modal.done();
         } catch (error) {
@@ -161,6 +180,10 @@ export default class ModalsUpdateOrderActivityComponent extends Component {
 
     @task *capturePhotoProof() {
         const [proofFile] = this.proofFiles;
+        if (!proofFile) {
+            return null;
+        }
+
         const headers = this.fetch.getHeaders();
         delete headers['Content-Type'];
 
@@ -179,11 +202,42 @@ export default class ModalsUpdateOrderActivityComponent extends Component {
         return response.json();
     }
 
-    @action setProofFile(file) {
+    @task *uploadProofFile(file) {
         if (!file) {
             return;
         }
 
+        this.bypassProof = false;
+        this.proof = null;
         this.proofFiles = [file];
+
+        try {
+            this.proof = this.normalizeProofResponse(yield this.capturePhotoProof.perform());
+            this.notifications.success('Photo proof of delivery uploaded.');
+        } catch (error) {
+            this.proof = null;
+            this.proofFiles = [];
+            this.notifications.serverError(error);
+        }
+    }
+
+    @action toggleBypassProof(value) {
+        this.bypassProof = value;
+        if (value) {
+            this.proofFiles = [];
+            this.proof = null;
+        }
+    }
+
+    normalizeProofResponse(response) {
+        if (response?.proof) {
+            return response.proof;
+        }
+
+        if (response?.data?.id || response?.data?.public_id) {
+            return response.data;
+        }
+
+        return response;
     }
 }

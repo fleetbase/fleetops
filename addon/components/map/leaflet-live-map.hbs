@@ -39,7 +39,7 @@
             @mapClass={{@mapClass}}
             ...attributes
         />
-    {{else}}
+    {{else if this.leafletPluginsReady}}
         {{! ─── Leaflet branch (default) ────────────────────────────────────── }}
         <LeafletMap
             id={{this.id}}

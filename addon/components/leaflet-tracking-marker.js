@@ -1,5 +1,6 @@
 import MarkerLayer from 'ember-leaflet/components/marker-layer';
 import { isArray } from '@ember/array';
+import ensureLeafletDrawEditNamespace from '../utils/leaflet-draw-namespace-guard';
 
 const __draggingHotfix = (layer) => {
     if (!layer.dragging) {
@@ -23,6 +24,7 @@ const arrayFromLatLng = (latlng) => {
 };
 
 const L = window.leaflet || window.L;
+ensureLeafletDrawEditNamespace(L);
 const oldIE = L.DomUtil.TRANSFORM === 'msTransform';
 L.TrackingMarker = L.Marker.extend({
     // eslint-disable-next-line ember/avoid-leaking-state-in-ember-objects
@@ -291,6 +293,7 @@ export default class LeafletTrackingMarkerComponent extends MarkerLayer {
     }
 
     createLayer() {
+        ensureLeafletDrawEditNamespace(L);
         const { rotationAngle, location } = this.args;
         const bearingAngle = rotationAngle ?? computeBearing([0, 0], location);
         return new L.TrackingMarker(...this.requiredOptions, { ...this.options, bearingAngle });

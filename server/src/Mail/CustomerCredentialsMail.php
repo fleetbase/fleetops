@@ -45,7 +45,7 @@ class CustomerCredentialsMail extends Mailable
         $this->customer->loadMissing('company');
 
         return new Envelope(
-            subject: 'Your login credentials for ' . $this->customer->company->name . ' on ' . config('app.name'),
+            subject: 'Your ' . $this->customer->company->name . ' customer portal access is ready',
         );
     }
 
@@ -63,19 +63,18 @@ class CustomerCredentialsMail extends Mailable
                 'customer'          => $this->customer,
                 'plaintextPassword' => $this->plaintextPassword,
                 'customerPortalUrl' => $this->getCustomerPortalAccessUrl(),
-                'currentHour'       => now()->hour,
             ]
         );
     }
 
     /**
-     * Get the customer portal URL if available.
+     * Get the customer portal URL.
      */
-    private function getCustomerPortalAccessUrl(): ?string
+    private function getCustomerPortalAccessUrl(): string
     {
         $customerPortalConfig = Setting::lookupFromCompany('customer-portal-config');
-        $accessUrlSlug        = data_get($customerPortalConfig, 'accessUrlSlug');
+        $accessUrlSlug        = data_get($customerPortalConfig, 'accessUrlSlug', 'customer-portal');
 
-        return $accessUrlSlug ? Utils::consoleUrl($accessUrlSlug) : null;
+        return Utils::consoleUrl($accessUrlSlug ?: 'customer-portal');
     }
 }

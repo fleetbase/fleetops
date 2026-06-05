@@ -14,7 +14,11 @@ use Fleetbase\Traits\HasCustomFields;
 use Fleetbase\Traits\HasPublicId;
 use Fleetbase\Traits\HasUuid;
 use Fleetbase\Traits\TracksApiCredential;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Str;
+use Spatie\Activitylog\LogOptions;
+use Spatie\Activitylog\Traits\LogsActivity;
 
 class Issue extends Model
 {
@@ -24,6 +28,7 @@ class Issue extends Model
     use SpatialTrait;
     use HasApiModelBehavior;
     use HasApiModelCache;
+    use LogsActivity;
     use HasCustomFields;
 
     /**
@@ -60,6 +65,7 @@ class Issue extends Model
         'assigned_to_uuid',
         'vehicle_uuid',
         'driver_uuid',
+        'order_uuid',
         'issue_id',
         'location',
         'category',
@@ -107,6 +113,31 @@ class Issue extends Model
     protected $appends = ['driver_name', 'vehicle_name', 'assignee_name', 'reporter_name'];
 
     /**
+     * Get the activity log options for the model.
+     */
+    public function getActivitylogOptions(): LogOptions
+    {
+        return LogOptions::defaults()
+            ->logOnly([
+                'title',
+                'report',
+                'status',
+                'priority',
+                'assigned_to_uuid',
+                'vehicle_uuid',
+                'driver_uuid',
+                'order_uuid',
+                'type',
+                'category',
+                'tags',
+                'resolved_at',
+                'meta',
+            ])
+            ->logOnlyDirty()
+            ->dontSubmitEmptyLogs();
+    }
+
+    /**
      * The attributes excluded from the model's JSON form.
      *
      * @var array
@@ -114,7 +145,7 @@ class Issue extends Model
     protected $hidden = [];
 
     /**
-     * @return \Illuminate\Database\Eloquent\Relations\BelongsTo
+     * @return BelongsTo
      */
     public function reportedBy()
     {
@@ -122,7 +153,7 @@ class Issue extends Model
     }
 
     /**
-     * @return \Illuminate\Database\Eloquent\Relations\BelongsTo
+     * @return BelongsTo
      */
     public function reporter()
     {
@@ -130,7 +161,7 @@ class Issue extends Model
     }
 
     /**
-     * @return \Illuminate\Database\Eloquent\Relations\BelongsTo
+     * @return BelongsTo
      */
     public function assignedTo()
     {
@@ -138,7 +169,7 @@ class Issue extends Model
     }
 
     /**
-     * @return \Illuminate\Database\Eloquent\Relations\BelongsTo
+     * @return BelongsTo
      */
     public function assignee()
     {
@@ -146,7 +177,7 @@ class Issue extends Model
     }
 
     /**
-     * @return \Illuminate\Database\Eloquent\Relations\BelongsTo
+     * @return BelongsTo
      */
     public function vehicle()
     {
@@ -154,11 +185,21 @@ class Issue extends Model
     }
 
     /**
-     * @return \Illuminate\Database\Eloquent\Relations\BelongsTo
+     * @return BelongsTo
      */
     public function driver()
     {
         return $this->belongsTo(Driver::class);
+    }
+
+    public function order(): BelongsTo
+    {
+        return $this->belongsTo(Order::class, 'order_uuid', 'uuid')->without(['comments', 'files']);
+    }
+
+    public function files(): HasMany
+    {
+        return $this->hasMany(\Fleetbase\Models\File::class, 'subject_uuid', 'uuid')->latest();
     }
 
     /**

@@ -9,6 +9,10 @@ export default class ManagementVendorsIndexDetailsController extends Controller 
             route: 'management.vendors.index.details.index',
             label: 'Overview',
         },
+        {
+            route: 'management.vendors.index.details.personnel',
+            label: 'Personnel',
+        },
     ];
     @tracked actionButtons = [
         {

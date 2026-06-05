@@ -1013,11 +1013,10 @@ class OrderController extends Controller
         $driver->current_job_uuid = $order->uuid;
         $driver->save();
 
-        /** @var \Fleetbase\LaravelMysqlSpatial\Types\Point */
-        $location = $order->getLastLocation();
-
-        // set first destination for payload
-        $payload->setFirstWaypoint($activity, $location);
+        // set first service stop destination for multi-stop routes
+        if ($this->payloadUsesServiceStopActivity($payload)) {
+            $this->ensurePayloadCurrentServiceStop($payload);
+        }
         $order->setRelation('payload', $payload);
 
         // update order activity
@@ -1108,37 +1107,35 @@ class OrderController extends Controller
         /** @var \Fleetbase\LaravelMysqlSpatial\Types\Point */
         $location = $order->getLastLocation();
 
-        // Check if multiple waypoint order to update activity for.
-        $isMultipleWaypointOrder = $this->payloadHasWaypoints($order->payload);
+        $usesServiceStopActivity = $this->payloadUsesServiceStopActivity($order->payload);
+        $isLifecycleActivity     = Utils::isActivity($activity) && in_array($activity->code, ['created', 'dispatched', 'started'], true);
 
-        // also update for each order entities if not multiple drop order
-        // all entities will share the same activity status as is one drop order
-        if (!$isMultipleWaypointOrder) {
+        // Classic pickup/dropoff orders and static lifecycle statuses update the order.
+        if (!$usesServiceStopActivity || $isLifecycleActivity) {
             // Update order activity
             $order->updateActivity($activity, $proof);
 
-            // Only update entities belonging to the waypoint
-            foreach ($order->payload->entities as $entity) {
-                $entity->insertActivity($activity, $location, $proof);
+            if (!$usesServiceStopActivity) {
+                foreach ($order->payload->entities as $entity) {
+                    $entity->insertActivity($activity, $location, $proof);
+                }
             }
+
+            if ($usesServiceStopActivity && $activity->is('started')) {
+                $this->ensurePayloadCurrentServiceStop($order->payload);
+            }
+
             // Handle order completion
             if (Utils::isActivity($activity) && $activity->completesOrder()) {
                 $order->driverAssigned?->unassignCurrentJob();
                 $order->complete($this->resolveProof($proof));
             }
 
-            return new OrderResource($order);
+            return new OrderResource($order->refresh());
         }
 
-        if ($activity->is('started')) {
-            $order->updateActivity($activity, $proof);
-
-            $this->ensurePayloadCurrentServiceStop($order->payload);
-            if (!$this->payloadHasCurrentServiceStopActivity($order->payload, $activity)) {
-                $this->updateCurrentServiceStopActivity($order, $activity, $location, $proof);
-            }
-
-            return new OrderResource($order->refresh());
+        if (!$order->started && in_array($order->status, ['created', 'dispatched'], true)) {
+            return response()->apiError('Order must be started before waypoint activity can be updated.', 422);
         }
 
         $currentStop               = $this->ensurePayloadCurrentServiceStop($order->payload);
@@ -1192,9 +1189,13 @@ class OrderController extends Controller
             );
         }
 
+        $canUpdateServiceStopActivity = $this->payloadUsesServiceStopActivity($order->payload)
+            && ($order->started || $order->started_at || !in_array($order->status, ['created', 'dispatched'], true));
         $stop = null;
-        if ($waypointId) {
-            $stop = $this->resolveServiceStopFromKey($order->payload, $waypointId);
+        if ($canUpdateServiceStopActivity) {
+            $stop = $waypointId
+                ? $this->resolveServiceStopFromKey($order->payload, $waypointId)
+                : $this->payloadCurrentServiceStop($order->payload);
         }
 
         $orderConfig = $order->ensureOrderConfig();

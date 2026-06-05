@@ -38,7 +38,15 @@ class TopDrivers extends AbstractAnalytics
 
         $sortColumn = match ($this->sortBy) {
             'distance' => 'distance_m',
-            'on_time'  => 'on_time_pct',
+            'on_time'  => 'CASE
+                WHEN SUM(CASE WHEN orders.scheduled_at IS NOT NULL THEN 1 ELSE 0 END) > 0
+                THEN SUM(CASE
+                    WHEN orders.scheduled_at IS NOT NULL
+                     AND TIMESTAMPDIFF(SECOND, orders.scheduled_at, orders.updated_at) <= 1800
+                    THEN 1 ELSE 0 END)
+                    / SUM(CASE WHEN orders.scheduled_at IS NOT NULL THEN 1 ELSE 0 END)
+                ELSE -1
+            END',
             default    => 'orders_completed',
         };
 

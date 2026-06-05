@@ -1,23 +1,26 @@
 <x-mail-layout>
 <h2 style="font-size: 18px; font-weight: 600;">
-@if($currentHour < 12)
-    Good Morning, {{ $customer->name }}!
-@elseif($currentHour < 18)
-    Good Afternoon, {{ $customer->name }}!
-@else
-    Good Evening, {{ $customer->name }}!
-@endif
+Your customer portal access is ready
 </h2>
 
-Your login credentials:
+Hi {{ $customer->name }},
 <br />
 <br />
-Your Email: {{ $customer->user->email }}
+{{ $customer->company->name }} has created customer portal access for you. You can use the portal to view orders, invoices, support requests, and account details when available.
 <br />
-Your Password: {{ $plaintextPassword }}
-@if($customerPortalUrl)
 <br />
-Customer Portal URL: {{ $customerPortalUrl}}
-@endif
+<a href="{{ $customerPortalUrl }}" style="display:inline-block; background:#2563eb; color:#ffffff; text-decoration:none; border-radius:6px; padding:12px 18px; font-size:14px; line-height:20px; font-weight:700;">Sign in to customer portal</a>
+<br />
+<br />
+<strong>Your sign-in details</strong>
+<br />
+Email: {{ $customer->user->email }}
+<br />
+Temporary password: {{ $plaintextPassword }}
+<br />
+Portal URL: {{ $customerPortalUrl }}
+<br />
+<br />
+You can change your password after signing in.
 
 </x-mail-layout>

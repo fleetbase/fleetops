@@ -1,15 +1,14 @@
-import loadLeafletPlugins from '@fleetbase/ember-ui/utils/load-leaflet-plugins';
+import { debug } from '@ember/debug';
+import ensureLeafletPluginsReady from '../utils/leaflet-plugin-loader';
 
 export function initialize() {
     let waitForLeaflet = setInterval(() => {
         let leafletLoaded = window.L !== undefined;
         if (leafletLoaded) {
-            loadLeafletPlugins({
-                scripts: ['leaflet.contextmenu.js', 'leaflet.draw-src.js'],
-                stylesheets: ['leaflet.contextmenu.css', 'leaflet.draw.css'],
-                globalIndicatorKey: 'fleetopsLeafletPluginsLoaded',
-            });
             clearInterval(waitForLeaflet);
+            ensureLeafletPluginsReady().catch((error) => {
+                debug(error.message);
+            });
         }
     }, 100);
 }

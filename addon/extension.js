@@ -117,6 +117,9 @@ export default {
         // Create registries
         this.createRegistries(registryService);
 
+        // // Register console home guidance
+        // this.registerHomeComponents(registryService);
+
         // Setup customer portal
         const isCustomerPortalInstalled = universe.extensionManager.isInstalled('@fleetbase/customer-portal-engine');
         if (isCustomerPortalInstalled) {
@@ -217,12 +220,22 @@ export default {
                 default: false,
             }),
             new Widget({
+                id: 'fleet-ops-live-fleet-widget',
+                name: 'Live Fleet Map',
+                description: 'Real-time driver positions and active routes.',
+                icon: 'map-location-dot',
+                component: new ExtensionComponent('@fleetbase/fleetops-engine', 'widget/live-fleet'),
+                grid_options: { w: 8, h: 11, minW: 8, minH: 8 },
+                category: 'Maps',
+                default: true,
+            }),
+            new Widget({
                 id: 'fleet-ops-revenue-trend-widget',
                 name: 'Revenue Trend',
                 description: 'Revenue over time with period comparison.',
                 icon: 'chart-line',
                 component: new ExtensionComponent('@fleetbase/fleetops-engine', 'widget/revenue-trend'),
-                grid_options: { w: 6, h: 6, minW: 5, minH: 5 },
+                grid_options: { w: 4, h: 11, minW: 4, minH: 8 },
                 category: 'Analytics',
                 default: true,
             }),
@@ -254,7 +267,7 @@ export default {
                 component: new ExtensionComponent('@fleetbase/fleetops-engine', 'widget/top-drivers'),
                 grid_options: { w: 6, h: 6, minW: 5, minH: 5 },
                 category: 'Analytics',
-                default: false,
+                default: true,
             }),
             new Widget({
                 id: 'fleet-ops-fuel-efficiency-widget',
@@ -296,19 +309,13 @@ export default {
                 category: 'Analytics',
                 default: false,
             }),
-            new Widget({
-                id: 'fleet-ops-live-fleet-widget',
-                name: 'Live Fleet Map',
-                description: 'Real-time driver positions and active routes.',
-                icon: 'map-location-dot',
-                component: new ExtensionComponent('@fleetbase/fleetops-engine', 'widget/live-fleet'),
-                grid_options: { w: 12, h: 10, minW: 8, minH: 8 },
-                category: 'Maps',
-                default: true,
-            }),
         ];
 
         widgetService.registerWidgets('dashboard', widgets);
+    },
+
+    registerHomeComponents(registryService) {
+        registryService.registerRenderableComponent('console:home:before-dashboard', new ExtensionComponent('@fleetbase/fleetops-engine', 'home/getting-started-guidance'));
     },
 
     createRegistries(registryService) {

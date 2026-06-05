@@ -1,5 +1,6 @@
 import Controller, { inject as controller } from '@ember/controller';
 import { tracked } from '@glimmer/tracking';
+import { action } from '@ember/object';
 import { inject as service } from '@ember/service';
 import { isArray } from '@ember/array';
 import { task } from 'ember-concurrency';
@@ -19,6 +20,7 @@ export default class OperationsOrdersIndexDetailsController extends Controller {
     @tracked routingControl;
     @tracked routingCompleted = false;
     @tracked realtimeOrderPublicId = null;
+    @tracked proofReloadToken = 0;
 
     get routePoints() {
         return buildRoutePointsFromPayload(this.model?.payload);
@@ -97,9 +99,7 @@ export default class OperationsOrdersIndexDetailsController extends Controller {
                         disabled: this.model.status === 'canceled',
                         fn: () =>
                             this.orderActions.updateActivity(this.model, {
-                                onFinish: () => {
-                                    this.refresh.perform();
-                                },
+                                onFinish: this.handleActivityModalFinish,
                             }),
                     },
                     {
@@ -152,6 +152,14 @@ export default class OperationsOrdersIndexDetailsController extends Controller {
                 ].filter(Boolean),
             },
         ];
+    }
+
+    @action handleActivityModalFinish(options) {
+        this.refresh.perform();
+
+        if (options?.proofCreated) {
+            this.proofReloadToken++;
+        }
     }
 
     @task *refresh() {

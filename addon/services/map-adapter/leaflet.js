@@ -21,8 +21,15 @@ import { isNone } from '@ember/utils';
 import { next } from '@ember/runloop';
 import { createGeoJsonFromLayer } from '../../utils/leaflet-to-geojson';
 import { waypointIconHtml } from '../../utils/route-colors';
+import ensureLeafletDrawEditNamespace from '../../utils/leaflet-draw-namespace-guard';
+import ensureLeafletPluginsReady from '../../utils/leaflet-plugin-loader';
 
 const L = window.leaflet || window.L;
+
+function ensureLeafletConstructorNamespace() {
+    ensureLeafletDrawEditNamespace(L);
+    ensureLeafletDrawEditNamespace();
+}
 
 export default class LeafletAdapter extends MapAdapterInterface {
     // ─── Internal State ────────────────────────────────────────────────────────
@@ -64,6 +71,8 @@ export default class LeafletAdapter extends MapAdapterInterface {
             debug('[LeafletAdapter] Map already initialized, returning existing instance.');
             return this._map;
         }
+
+        ensureLeafletConstructorNamespace();
 
         const mapOptions = {
             center: [options.lat ?? 1.3521, options.lng ?? 103.8198],
@@ -111,6 +120,11 @@ export default class LeafletAdapter extends MapAdapterInterface {
 
     invalidateSize() {
         this._map?.invalidateSize(false);
+    }
+
+    async ensureInteractive({ timeoutMs = 8000, map = null } = {}) {
+        await ensureLeafletPluginsReady({ timeoutMs });
+        return map ?? this._map;
     }
 
     // ─── Viewport ──────────────────────────────────────────────────────────────
@@ -183,6 +197,7 @@ export default class LeafletAdapter extends MapAdapterInterface {
 
     addMarker(id, lat, lng, options = {}) {
         if (!this._map) return null;
+        ensureLeafletConstructorNamespace();
 
         const iconOptions = options.iconUrl
             ? L.icon({
@@ -258,6 +273,7 @@ export default class LeafletAdapter extends MapAdapterInterface {
 
     addPolygon(id, coordinates, options = {}) {
         if (!this._map) return null;
+        ensureLeafletConstructorNamespace();
         const polygon = L.polygon(coordinates, {
             color: options.color ?? '#3388ff',
             fillColor: options.fillColor ?? options.color ?? '#3388ff',
@@ -276,6 +292,7 @@ export default class LeafletAdapter extends MapAdapterInterface {
 
     addPolyline(id, coordinates, options = {}) {
         if (!this._map) return null;
+        ensureLeafletConstructorNamespace();
         const polyline = L.polyline(coordinates, {
             color: options.color ?? '#3388ff',
             weight: options.weight ?? 3,
@@ -289,6 +306,7 @@ export default class LeafletAdapter extends MapAdapterInterface {
 
     addCircle(id, lat, lng, radiusMeters, options = {}) {
         if (!this._map) return null;
+        ensureLeafletConstructorNamespace();
         const circle = L.circle([lat, lng], {
             radius: radiusMeters,
             color: options.color ?? '#3388ff',
@@ -671,6 +689,7 @@ export default class LeafletAdapter extends MapAdapterInterface {
             return Promise.reject(new Error('LeafletAdapter editPolygon: layer has no coordinates'));
         }
 
+        ensureLeafletConstructorNamespace();
         const proxy = L.polygon(latlngs, {
             color: originalLayer.options?.color || '#3388ff',
             weight: 3,

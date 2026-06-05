@@ -52,3 +52,44 @@ test('customer conflict audit command is registered and read only', function () 
         ->not->toContain('->update(')
         ->not->toContain('forceFill');
 });
+
+test('customer portal welcome email is opt in and does not create organization invites', function () {
+    $internalContact     = file_get_contents(__DIR__ . '/../src/Http/Controllers/Internal/v1/ContactController.php');
+    $internalCustomer    = file_get_contents(__DIR__ . '/../src/Http/Controllers/Internal/v1/CustomerController.php');
+    $contactModel        = file_get_contents(__DIR__ . '/../src/Models/Contact.php');
+    $customerCredentials = file_get_contents(__DIR__ . '/../src/Mail/CustomerCredentialsMail.php');
+    $customerEmail       = file_get_contents(__DIR__ . '/../resources/views/mail/customer-credentials.blade.php');
+    $customerForm        = file_get_contents(__DIR__ . '/../../addon/components/customer/form.hbs');
+
+    expect($internalContact)
+        ->toContain('meta.customer_portal.send_welcome_email')
+        ->toContain('assertCustomerPortalCanSendWelcomeEmail')
+        ->toContain('sendCustomerPortalWelcomeEmail')
+        ->toContain('Contact::createUserFromContact($contact, false, true)')
+        ->toContain('Mail::to($user)->send(new CustomerCredentialsMail($password, $contact))')
+        ->toContain("data_forget(\$meta, 'customer_portal.send_welcome_email')")
+        ->toContain('fleetbase/customer-portal-api')
+        ->not->toContain('UserInvited')
+        ->not->toContain('Invite::create');
+
+    expect($internalCustomer)
+        ->toContain('Contact::createUserFromContact($customer, false, true)')
+        ->not->toContain('send_invite');
+
+    expect($customerCredentials)->toContain('customer portal access is ready')
+        ->and($customerCredentials)->toContain("Utils::consoleUrl(\$accessUrlSlug ?: 'customer-portal')")
+        ->and($customerEmail)->toContain('Your customer portal access is ready')
+        ->and($customerEmail)->toContain('Sign in to customer portal')
+        ->and($customerEmail)->toContain('Temporary password:')
+        ->and($customerEmail)->toContain('You can change your password after signing in.')
+        ->and($customerForm)->toContain('this.showWelcomeEmailOption')
+        ->and($customerForm)->toContain('this.toggleWelcomeEmail');
+
+    expect($contactModel)
+        ->toContain('assignUserToContactCompany')
+        ->toContain('$contact->company->addUser($user, $role)')
+        ->toContain('Deprecated and ignored. Contact and customer users do not receive organization invitations.')
+        ->not->toContain('UserInvited')
+        ->not->toContain('Invite::create')
+        ->not->toContain('->assignCompany(');
+});

@@ -1487,6 +1487,15 @@ widget:
   fleet-ops-quickstart:
     message: Veamos qué puedes hacer para impulsar las operaciones...
     start-task: Iniciar tarea
+  get-started:
+    title: Get Started with Fleet-Ops
+    subtitle: Set up the essentials and complete your first dispatch flow.
+    completed: completed
+    preview-title: First order workflow
+  recommended-features:
+    title: Recommended features for you
+    subtitle: Explore tools that help new operations teams get productive faster.
+    learn-more: Learn more
   key-metrics:
     title: Métricas de operaciones de flota
     earnings: Ganancias

@@ -3,6 +3,7 @@
 namespace Fleetbase\FleetOps\Models;
 
 use Fleetbase\Models\Model;
+use Fleetbase\Models\User;
 use Fleetbase\Traits\HasUuid;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
@@ -22,7 +23,7 @@ class VendorPersonnel extends Model
      *
      * @var array
      */
-    protected $fillable = ['vendor_uuid', 'contact_uuid'];
+    protected $fillable = ['vendor_uuid', 'contact_uuid', 'role', 'status', 'invited_by_uuid'];
 
     /**
      * These attributes that can be queried.
@@ -59,5 +60,13 @@ class VendorPersonnel extends Model
     public function contact(): BelongsTo
     {
         return $this->belongsTo(Contact::class);
+    }
+
+    /**
+     * The Fleetbase user who invited this personnel.
+     */
+    public function invitedBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'invited_by_uuid');
     }
 }

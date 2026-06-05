@@ -28,6 +28,6 @@ export default class ManagementIssuesIndexDetailsRoute extends Route {
     };
 
     model({ public_id }) {
-        return this.store.queryRecord('issue', { public_id, single: true, with: ['driver', 'vehicle', 'assignee', 'reporter'] });
+        return this.store.queryRecord('issue', { public_id, single: true, with: ['driver', 'vehicle', 'assignee', 'reporter', 'order', 'files'] });
     }
 }

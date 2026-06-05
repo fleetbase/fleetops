@@ -2,6 +2,8 @@ import Component from '@glimmer/component';
 import { tracked } from '@glimmer/tracking';
 import { inject as service } from '@ember/service';
 
+const INTERNAL_NAMESPACE = 'int/v1';
+
 export default class ModalsResetCustomerCredentialsComponent extends Component {
     @service fetch;
     @service notifications;
@@ -26,12 +28,16 @@ export default class ModalsResetCustomerCredentialsComponent extends Component {
             modal.startLoading();
 
             try {
-                await this.fetch.post('customers/reset-credentials', {
-                    customer: this.customer.id,
-                    password: this.password,
-                    password_confirmation: this.confirmPassword,
-                    send_credentials: this.sendCredentials,
-                });
+                await this.fetch.post(
+                    'customers/reset-credentials',
+                    {
+                        customer: this.customer.id,
+                        password: this.password,
+                        password_confirmation: this.confirmPassword,
+                        send_credentials: this.sendCredentials,
+                    },
+                    { namespace: INTERNAL_NAMESPACE }
+                );
 
                 this.notifications.success('Customer password reset.');
 

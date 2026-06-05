@@ -403,6 +403,8 @@ customer:
         select-address: Select Address
         new-address: New Adddress
         select-user: Select User
+        send-welcome-email: Send customer portal welcome email
+        send-welcome-email-help-text: Generate a temporary password and email this customer a link to sign in to the customer portal.
         upload-new-photo: Upload New Photo
         user-account: User Account
         user-account-help-text: Each customer profile needs to be connected to a specific user account. This association is essential for handling the authentication process, ensuring that each customer can securely access and manage their profile and other services.
@@ -1688,6 +1690,15 @@ widget:
         title: Geofence Violations
     live-fleet:
         title: Live Fleet Map
+    get-started:
+        title: Get Started with Fleet-Ops
+        subtitle: Set up the essentials and complete your first dispatch flow.
+        completed: completed
+        preview-title: First order workflow
+    recommended-features:
+        title: Recommended features for you
+        subtitle: Explore tools that help new operations teams get productive faster.
+        learn-more: Learn more
     fleet-ops-quickstart:
         message: Let's see what you can do to jumpstart operations...
         start-task: Start Task

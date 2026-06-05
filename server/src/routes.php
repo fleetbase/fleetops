@@ -12,7 +12,7 @@ use Illuminate\Support\Facades\Route;
 | is assigned the "api" middleware group. Enjoy building your API!
 |
 */
-Route::prefix(config('fleetops.api.routing.prefix', null))->namespace('Fleetbase\FleetOps\Http\Controllers')->group(
+Route::prefix(config('fleetops.api.routing.prefix'))->namespace('Fleetbase\FleetOps\Http\Controllers')->group(
     function ($router) {
         /*
         |--------------------------------------------------------------------------
@@ -312,6 +312,7 @@ Route::prefix(config('fleetops.api.routing.prefix', null))->namespace('Fleetbase
                                 $router->post('import', $controller('import'));
                                 $router->get('facilitators/{id}', $controller('getAsFacilitator'));
                                 $router->get('customers/{id}', $controller('getAsCustomer'));
+                                $router->post('{id}/convert-to-vendor', $controller('convertToVendor'));
                                 $router->delete('bulk-delete', $controller('bulkDelete'));
                             }
                         );
@@ -351,6 +352,7 @@ Route::prefix(config('fleetops.api.routing.prefix', null))->namespace('Fleetbase
                                 $router->delete('bulk-delete', $controller('bulkDelete'));
                             }
                         );
+                        $router->get('issues/{id}/timeline', 'IssueController@timeline');
                         $router->fleetbaseRoutes(
                             'issues',
                             function ($router, $controller) {
@@ -470,6 +472,9 @@ Route::prefix(config('fleetops.api.routing.prefix', null))->namespace('Fleetbase
                                 $router->match(['get', 'post'], 'export', $controller('export'));
                                 $router->get('facilitators/{id}', $controller('getAsFacilitator'));
                                 $router->get('customers/{id}', $controller('getAsCustomer'));
+                                $router->get('{id}/personnels', $controller('vendorPersonnels'));
+                                $router->post('{id}/personnels', $controller('addVendorPersonnel'));
+                                $router->delete('{id}/personnels/{contact}', $controller('removeVendorPersonnel'));
                                 $router->post('{id}/assign-driver', $controller('assignDriver'));
                                 $router->post('{id}/remove-driver', $controller('removeDriver'));
                                 $router->delete('bulk-delete', $controller('bulkDelete'));
@@ -523,7 +528,11 @@ Route::prefix(config('fleetops.api.routing.prefix', null))->namespace('Fleetbase
                             ['prefix' => 'customers'],
                             function () use ($router) {
                                 $router->get('/', 'MorphController@queryCustomers');
+                                $router->post('create-portal-login', 'CustomerController@createPortalLogin');
                                 $router->post('reset-credentials', 'CustomerController@resetCredentials');
+                                $router->post('send-credentials', 'CustomerController@sendCredentials');
+                                $router->post('deactivate-portal-login', 'CustomerController@deactivatePortalLogin');
+                                $router->post('reactivate-portal-login', 'CustomerController@reactivatePortalLogin');
                             }
                         );
                         $router->group(
@@ -626,6 +635,12 @@ Route::prefix(config('fleetops.api.routing.prefix', null))->namespace('Fleetbase
                                     }
                                 );
                                 $router->group(
+                                    ['prefix' => 'getting-started'],
+                                    function ($router) {
+                                        $router->get('status', 'GettingStartedController@status');
+                                    }
+                                );
+                                $router->group(
                                     ['prefix' => 'orchestrator'],
                                     function ($router) {
                                         $router->get('orders', 'OrchestrationController@orders');
@@ -661,3 +676,20 @@ Route::prefix(config('fleetops.api.routing.prefix', null))->namespace('Fleetbase
         );
     }
 );
+
+if (filled(config('fleetops.api.routing.prefix'))) {
+    Route::prefix(config('fleetops.api.routing.internal_prefix', 'int') . '/v1')
+        ->namespace('Fleetbase\FleetOps\Http\Controllers\Internal\v1')
+        ->middleware([
+            'fleetbase.protected',
+            Fleetbase\FleetOps\Http\Middleware\TransformLocationMiddleware::class,
+            Fleetbase\FleetOps\Http\Middleware\SetupDriverSession::class,
+        ])
+        ->group(function ($router) {
+            $router->get('issues/{id}/timeline', 'IssueController@timeline');
+            $router->get('vendors/{id}/personnels', 'VendorController@vendorPersonnels');
+            $router->post('vendors/{id}/personnels', 'VendorController@addVendorPersonnel');
+            $router->delete('vendors/{id}/personnels/{contact}', 'VendorController@removeVendorPersonnel');
+            $router->post('contacts/{id}/convert-to-vendor', 'ContactController@convertToVendor');
+        });
+}

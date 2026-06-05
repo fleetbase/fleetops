@@ -26,10 +26,14 @@ class CreateIssueRequest extends FleetbaseRequest
         return [
             'driver'       => ['required'],
             'location'     => ['required'],
+            'order'        => ['nullable', 'exists:orders,public_id'],
+            'order_uuid'   => ['nullable', 'exists:orders,uuid'],
             'report'       => ['required'],
             'category'     => ['nullable'],
             'type'         => ['nullable'],
             'priority'     => ['nullable'],
+            'tags'         => ['nullable', 'array'],
+            'tags.*'       => ['string'],
         ];
     }
 }

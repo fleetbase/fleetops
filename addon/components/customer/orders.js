@@ -39,6 +39,8 @@ export default class CustomerOrdersComponent extends Component {
     @tracked route;
     @tracked query;
     @tracked tileSourceUrl = 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png';
+    @tracked scheduledAt;
+    @tracked deliveryInstructions = {};
 
     get modalsManager() {
         const owner = getOwner(this);
@@ -71,7 +73,7 @@ export default class CustomerOrdersComponent extends Component {
         this.query = query;
 
         try {
-            this.orders = yield this.store.query('order', { customer: this.customerSession.get('id'), ...params, query });
+            this.orders = yield this.store.query('order', { customer: this.customerAccountId, customer_type: this.customerTypeParam, ...params, query });
             this.orders = this.orders.toArray().filter((_) => !_.isNew);
             this.restoreSelectedOrder();
         } catch (error) {
@@ -87,7 +89,7 @@ export default class CustomerOrdersComponent extends Component {
         yield timeout(300);
 
         try {
-            this.orders = yield this.store.query('order', { query, with_tracker_data: true });
+            this.orders = yield this.store.query('order', { query, customer: this.customerAccountId, customer_type: this.customerTypeParam, with_tracker_data: true });
         } catch (error) {
             this.notifications.serverError(error);
         }
@@ -97,9 +99,9 @@ export default class CustomerOrdersComponent extends Component {
         this.unselectOrder();
         this.newOrder = this.store.createRecord('order', {
             type: 'transport',
-            customer_uuid: this.customerSession.get('id'),
-            customer_type: 'fleet-ops:contact',
-            customer: this.customerSession.getCustomer(),
+            customer_uuid: this.customerAccountId,
+            customer_type: this.customerTypeParam,
+            customer: this.customerSession.getAccount(),
             meta: [],
         });
         this.urlSearchParams.addParamToCurrentUrl('creating', 1);
@@ -135,6 +137,8 @@ export default class CustomerOrdersComponent extends Component {
 
     @action viewOrder(order, options = { resetOrderRoute: false }) {
         this.selectedOrder = order;
+        this.scheduledAt = order.scheduled_at;
+        this.deliveryInstructions = order.meta?.customer_portal?.delivery_instructions ?? {};
         // start loading order tracking activity
         order.loadTrackingActivity();
         this.urlSearchParams.addParamToCurrentUrl('order', order.public_id);
@@ -340,9 +344,67 @@ export default class CustomerOrdersComponent extends Component {
         }
     }
 
+    @action async cancelOrder() {
+        if (!this.selectedOrder) {
+            return;
+        }
+
+        try {
+            const response = await this.fetch.post(`customer-portal/orders/${this.selectedOrder.public_id}/cancel`, {}, { namespace: 'fleet-ops/int/v1' });
+            this.selectedOrder.set('status', response.order?.status ?? 'canceled');
+            this.notifications.success('Order canceled.');
+        } catch (error) {
+            this.notifications.serverError(error);
+        }
+    }
+
+    @action async rescheduleOrder() {
+        if (!this.selectedOrder || !this.scheduledAt) {
+            return;
+        }
+
+        try {
+            const response = await this.fetch.post(
+                `customer-portal/orders/${this.selectedOrder.public_id}/reschedule`,
+                { scheduled_at: this.scheduledAt },
+                { namespace: 'fleet-ops/int/v1' }
+            );
+            this.selectedOrder.set('scheduled_at', response.order?.scheduled_at ?? this.scheduledAt);
+            this.notifications.success('Order rescheduled.');
+        } catch (error) {
+            this.notifications.serverError(error);
+        }
+    }
+
+    @action updateDeliveryInstruction(key, event) {
+        this.deliveryInstructions = { ...this.deliveryInstructions, [key]: event.target.value };
+    }
+
+    @action async saveDeliveryInstructions() {
+        if (!this.selectedOrder) {
+            return;
+        }
+
+        try {
+            await this.fetch.post(`customer-portal/orders/${this.selectedOrder.public_id}/delivery-instructions`, this.deliveryInstructions, { namespace: 'fleet-ops/int/v1' });
+            this.notifications.success('Delivery instructions saved.');
+        } catch (error) {
+            this.notifications.serverError(error);
+        }
+    }
+
     isCreatingOrder() {
         const isCreating = this.urlSearchParams.get('creating');
         return isCreating === '1' || isCreating === 1;
+    }
+
+    get customerAccountId() {
+        return this.customerSession.get('uuid') || this.customerSession.get('id');
+    }
+
+    get customerTypeParam() {
+        const customerType = this.customerSession.get('customer_type', 'contact');
+        return customerType === 'vendor' ? 'fleet-ops:vendor' : 'fleet-ops:contact';
     }
 
     cannotRouteWaypoints(waypoints = []) {

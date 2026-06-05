@@ -118,7 +118,7 @@ class Zone extends Model
      */
     public function serviceArea()
     {
-        return $this->belongsTo(ServiceArea::class);
+        return $this->belongsTo(ServiceArea::class, 'service_area_uuid', 'uuid');
     }
 
     /**

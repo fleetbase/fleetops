@@ -271,7 +271,7 @@ export default class OperationsOrdersIndexController extends Controller {
             },
             {
                 label: this.intl.t('column.transaction'),
-                cellComponent: 'table/cell/base',
+                cellComponent: 'table/cell/currency',
                 valuePath: 'transaction_amount',
                 resizable: true,
                 hidden: true,

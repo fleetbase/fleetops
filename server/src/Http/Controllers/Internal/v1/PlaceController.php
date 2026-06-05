@@ -7,10 +7,9 @@ use Fleetbase\FleetOps\Http\Controllers\FleetOpsController;
 use Fleetbase\FleetOps\Http\Resources\v1\Place as PlaceResource;
 use Fleetbase\FleetOps\Imports\PlaceImport;
 use Fleetbase\FleetOps\Models\Place;
-use Fleetbase\FleetOps\Support\Geocoding;
+use Fleetbase\FleetOps\Support\PlaceSearch;
 use Fleetbase\Http\Requests\ExportRequest;
 use Fleetbase\Http\Requests\ImportRequest;
-use Fleetbase\LaravelMysqlSpatial\Types\Point;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 use Maatwebsite\Excel\Facades\Excel;
@@ -50,50 +49,15 @@ class PlaceController extends FleetOpsController
 
         $query = Place::where('company_uuid', session('company'))
             ->whereNull('deleted_at')
-            ->applyDirectivesForPermissions('fleet-ops list place')
-            ->search($searchQuery);
+            ->applyDirectivesForPermissions('fleet-ops list place');
 
-        if ($latitude && $longitude) {
-            $point = new Point($latitude, $longitude);
-            $query->whereNotNull('location')->whereRaw('
-                ST_Y(location) BETWEEN -90 AND 90
-                AND ST_X(location) BETWEEN -180 AND 180
-                AND NOT (ST_X(location) = 0 AND ST_Y(location) = 0)
-            ');
-            $query->orderByDistanceSphere('location', $point, 'asc');
-        } else {
-            $query->orderBy('name', 'desc');
-        }
-
-        if ($limit) {
-            $query->limit($limit);
-        }
-
-        $results = $query->get();
-
-        if ($geo && Geocoding::canGoogleGeocode()) {
-            if ($searchQuery) {
-                try {
-                    $geocodingResults = Geocoding::query($searchQuery, $latitude, $longitude);
-
-                    foreach ($geocodingResults as $result) {
-                        $results->prepend($result);
-                    }
-                } catch (\Throwable $e) {
-                    return response()->error($e->getMessage());
-                }
-            } elseif ($latitude && $longitude) {
-                try {
-                    $geocodingResults = Geocoding::reverseFromCoordinates($latitude, $longitude, $searchQuery);
-
-                    foreach ($geocodingResults as $result) {
-                        $results->prepend($result);
-                    }
-                } catch (\Throwable $e) {
-                    return response()->error($e->getMessage());
-                }
-            }
-        }
+        $results = PlaceSearch::search($query, $searchQuery, [
+            'limit'          => $limit,
+            'geo'            => $geo,
+            'latitude'       => $latitude,
+            'longitude'      => $longitude,
+            'no_query_order' => 'name_desc',
+        ]);
 
         return PlaceResource::collection($results);
     }
@@ -108,29 +72,7 @@ class PlaceController extends FleetOpsController
         $searchQuery = $request->searchQuery();
         $latitude    = $request->input('latitude', false);
         $longitude   = $request->input('longitude', false);
-        $results     = collect();
-
-        if ($searchQuery && Geocoding::canGoogleGeocode()) {
-            try {
-                $geocodingResults = Geocoding::query($searchQuery, $latitude, $longitude);
-
-                foreach ($geocodingResults as $result) {
-                    $results->push($result);
-                }
-            } catch (\Throwable $e) {
-                return response()->error($e->getMessage());
-            }
-        } elseif ($latitude && $longitude) {
-            try {
-                $geocodingResults = Geocoding::reverseFromCoordinates($latitude, $longitude, $searchQuery);
-
-                foreach ($geocodingResults as $result) {
-                    $results->push($result);
-                }
-            } catch (\Throwable $e) {
-                return response()->error($e->getMessage());
-            }
-        }
+        $results     = PlaceSearch::geocode($searchQuery, $latitude, $longitude);
 
         return response()->json($results)->withHeaders(['Cache-Control' => 'no-cache']);
     }

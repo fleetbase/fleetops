@@ -1,4 +1,4 @@
-<Layout::Section::Header @title={{t "payment.settings.onboard.header-title"}} />
+<Layout::Section::Header @title={{t "settings.payments.onboard.header-title"}} />
 
 <Layout::Section::Body class="overflow-y-scroll-i h-full">
     <div class="container">
@@ -13,16 +13,16 @@
                     >
                         <h2 id="title" class="text-base">
                             {{#if this.onboardCompleted}}
-                                {{t "payment.settings.onboard.title-completed"}}
+                                {{t "settings.payments.onboard.title-completed"}}
                             {{else}}
-                                {{t "payment.settings.onboard.title-incomplete"}}
+                                {{t "settings.payments.onboard.title-incomplete"}}
                             {{/if}}
                         </h2>
                         <span id="subtitle">
                             {{#if this.onboardCompleted}}
-                                {{t "payment.settings.onboard.subtitle-completed"}}
+                                {{t "settings.payments.onboard.subtitle-completed"}}
                             {{else}}
-                                {{t "payment.settings.onboard.subtitle-incomplete"}}
+                                {{t "settings.payments.onboard.subtitle-incomplete"}}
                             {{/if}}
                         </span>
                         <div class="mt-4 mb-1">
@@ -31,7 +31,7 @@
                                     @icon="check"
                                     @type="primary"
                                     @size="lg"
-                                    @text={{t "payment.settings.onboard.button-continue"}}
+                                    @text={{t "settings.payments.onboard.button-continue"}}
                                     @onClick={{transition-to "settings.payments.index"}}
                                     @disabled={{this.onboardInProgress}}
                                 />
@@ -40,7 +40,7 @@
                                     @icon="play"
                                     @type="primary"
                                     @size="lg"
-                                    @text={{if this.onboardInProgress (t "payment.settings.onboard.button-in-progress") (t "payment.settings.onboard.button-start")}}
+                                    @text={{if this.onboardInProgress (t "settings.payments.onboard.button-in-progress") (t "settings.payments.onboard.button-start")}}
                                     @onClick={{perform this.startOnboard}}
                                     @isLoading={{this.startOnboard.isRunning}}
                                     @disabled={{this.onboardInProgress}}

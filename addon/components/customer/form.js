@@ -11,12 +11,17 @@ export default class CustomerFormComponent extends Component {
     @service currentUser;
     @service notifications;
     @service modalsManager;
+    @service('universe/extension-manager') extensionManager;
+
     @tracked userAccountActionButtons = [
         {
             icon: 'user-plus',
             size: 'xs',
             permission: 'iam create user',
-            onClick: () => {
+            onClick: async () => {
+                // Load IAM engine for user-form modal component
+                await this.extensionManager.ensureEngineLoaded('@fleetbase/iam-engine');
+
                 const user = this.store.createRecord('user', {
                     status: 'pending',
                     type: 'user',
@@ -60,6 +65,27 @@ export default class CustomerFormComponent extends Component {
             },
         },
     ];
+
+    get showWelcomeEmailOption() {
+        return this.args.resource?.isNew && this.extensionManager.isInstalled('@fleetbase/customer-portal-engine');
+    }
+
+    get sendWelcomeEmail() {
+        return Boolean(this.args.resource?.meta?.customer_portal?.send_welcome_email);
+    }
+
+    @action toggleWelcomeEmail(value = !this.sendWelcomeEmail) {
+        const meta = this.args.resource.meta ?? {};
+        const customerPortal = meta.customer_portal ?? {};
+
+        this.args.resource.set('meta', {
+            ...meta,
+            customer_portal: {
+                ...customerPortal,
+                send_welcome_email: value,
+            },
+        });
+    }
 
     @action selectPlace(place) {
         if (!place) return;

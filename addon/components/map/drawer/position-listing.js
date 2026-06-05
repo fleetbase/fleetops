@@ -7,6 +7,7 @@ import { isArray } from '@ember/array';
 import { htmlSafe } from '@ember/template';
 import { startOfWeek, endOfWeek, format } from 'date-fns';
 import getModelName from '@fleetbase/ember-core/utils/get-model-name';
+import ensureLeafletDrawEditNamespace from '../../../utils/leaflet-draw-namespace-guard';
 
 const L = window.leaflet || window.L;
 
@@ -412,6 +413,8 @@ export default class MapDrawerPositionListingComponent extends Component {
             return;
         }
 
+        ensureLeafletDrawEditNamespace(L);
+        ensureLeafletDrawEditNamespace();
         const marker = L.circleMarker([lat, lng], {
             radius: 3,
             color: '#3b82f6',

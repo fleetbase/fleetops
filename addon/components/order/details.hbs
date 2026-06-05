@@ -2,12 +2,12 @@
     {{#if (has-block)}}
         {{yield
             (hash
-                Activity=(component "order/details/activity" resource=@resource onChange=@onActivityChanged isLoadingActivity=@isLoadingActivity isLoading=@isLoading)
+                Activity=(component "order/details/activity" resource=@resource onChange=this.handleActivityChanged isLoadingActivity=@isLoadingActivity isLoading=@isLoading)
                 Detail=(component "order/details/detail" resource=@resource onChange=@onDetailsChanged isLoading=@isLoading)
                 CustomFields=(component "order/details/custom-fields" resource=@resource onChange=@onCustomFieldsChanged isLoading=@isLoading)
                 PurchaseRate=(component "order/details/purchase-rate" resource=@resource isLoading=@isLoading)
                 Tracking=(component "order/details/tracking" resource=@resource isLoading=@isLoading)
-                Proof=(component "order/details/proof" resource=@resource isLoading=@isLoading)
+                Proof=(component "order/details/proof" resource=@resource reloadToken=this.effectiveProofReloadToken isLoading=@isLoading)
                 Notes=(component "order/details/notes" resource=@resource onChange=@onNotesChanged isLoading=@isLoading)
                 IntegratedVendorDetails=(component "order/details/integrated-vendor-details" resource=@resource isLoading=@isLoading)
                 Route=(component "order/details/route" resource=@resource onChange=@onRouteChanged isLoading=@isLoading)
@@ -21,12 +21,12 @@
             )
         }}
     {{else}}
-        <Order::Details::Activity @resource={{@resource}} @onChange={{@onActivityChanged}} @isLoadingActivity={{@isLoadingActivity}} @isLoading={{@isLoading}} />
+        <Order::Details::Activity @resource={{@resource}} @onChange={{this.handleActivityChanged}} @isLoadingActivity={{@isLoadingActivity}} @isLoading={{@isLoading}} />
         <Order::Details::Detail @resource={{@resource}} @onChange={{@onDetailsChanged}} @isLoading={{@isLoading}} />
         <Order::Details::CustomFields @resource={{@resource}} @onChange={{@onCustomFieldsChanged}} @isLoading={{@isLoading}} />
         <Order::Details::PurchaseRate @resource={{@resource}} @isLoading={{@isLoading}} />
         <Order::Details::Tracking @resource={{@resource}} @isLoading={{@isLoading}} />
-        <Order::Details::Proof @resource={{@resource}} @isLoading={{@isLoading}} />
+        <Order::Details::Proof @resource={{@resource}} @reloadToken={{this.effectiveProofReloadToken}} @isLoading={{@isLoading}} />
         <Order::Details::Notes @resource={{@resource}} @onChange={{@onNotesChanged}} @isLoading={{@isLoading}} />
         <Order::Details::IntegratedVendorDetails @resource={{@resource}} @isLoading={{@isLoading}} />
         <Order::Details::Route @resource={{@resource}} @onChange={{@onRouteChanged}} @isLoading={{@isLoading}} />
