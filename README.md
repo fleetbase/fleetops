@@ -29,7 +29,7 @@
 </p>
 
 <p align="center">
-    <img src="https://www.fleetbase.io/_next/image?url=%2F_next%2Fstatic%2Fmedia%2Ffleet-ops-multi-waypoint-order.59489fa6.webp&amp;w=1920&amp;q=75&amp;dpl=dpl_EEJ8AtkXotr3uAokPgnTfgNfRcrU" alt="Fleet-Ops multi-waypoint order with live map, route, driver assignment, and order details" width="900">
+    <img src="https://www.fleetbase.io/images/screenshots/fleet-ops/fleet-ops-multi-waypoint-order.webp" alt="Fleet-Ops multi-waypoint order with live map, route, driver assignment, and order details" width="900">
 </p>
 
 ## What is Fleet-Ops?
