@@ -2,8 +2,6 @@
     <img src="https://flb-assets.s3.ap-southeast-1.amazonaws.com/static/fleetbase-logo-svg.svg" alt="Fleetbase" width="380" height="100">
 </p>
 
-<h1 align="center">Fleet-Ops</h1>
-
 <p align="center">
     Open-source fleet, dispatch, transport management, and real-time logistics operations for Fleetbase.
 </p>
