@@ -90,17 +90,21 @@ class SafeeProvider extends AbstractProvider
 
     public function normalizeDevice(array $payload): array
     {
-        $position = $this->extractPosition($payload);
+        $position  = $this->extractPosition($payload);
+        $rawStatus = $payload['status'] ?? $payload['vehicleStatus'] ?? null;
+        $status    = $this->normalizeVehicleStatus($rawStatus);
 
         return [
-            'external_id'     => $payload['id'] ?? data_get($payload, 'vehicle.id') ?? null,
-            'device_name'     => $payload['name'] ?? $payload['plateNumber'] ?? data_get($payload, 'vehicle.name') ?? 'Unknown Vehicle',
-            'device_provider' => 'safee',
-            'device_model'    => $payload['model'] ?? data_get($payload, 'device.model') ?? null,
-            'imei'            => data_get($payload, 'device.imei') ?? data_get($payload, 'device.serial') ?? null,
-            'vin'             => $payload['vin'] ?? null,
-            'status'          => $this->normalizeVehicleStatus($payload['status'] ?? $payload['vehicleStatus'] ?? null),
-            'location'        => [
+            'device_id'    => $payload['id'] ?? data_get($payload, 'vehicle.id') ?? null,
+            'name'         => $payload['name'] ?? $payload['plateNumber'] ?? data_get($payload, 'vehicle.name') ?? 'Unknown Vehicle',
+            'provider'     => 'safee',
+            'model'        => $payload['model'] ?? data_get($payload, 'device.model') ?? null,
+            'imei'         => data_get($payload, 'device.imei') ?? data_get($payload, 'device.serial') ?? null,
+            'vin'          => $payload['vin'] ?? null,
+            'status'       => $status,
+            'online'       => $rawStatus ? $status === 'active' : null,
+            'last_seen_at' => $this->parseTimestamp($payload['date'] ?? $payload['deviceTime'] ?? $payload['time'] ?? null),
+            'location'     => [
                 'lat' => $position['lat'] ?? null,
                 'lng' => $position['lng'] ?? null,
             ],
@@ -128,6 +132,7 @@ class SafeeProvider extends AbstractProvider
             'external_id' => $payload['id'] ?? data_get($payload, 'vehicle.id') ?? null,
             'device_id'   => $payload['id'] ?? data_get($payload, 'vehicle.id') ?? null,
             'event_type'  => data_get($payload, 'event.code') ?? data_get($payload, 'event.name') ?? 'telemetry_update',
+            'message'     => data_get($payload, 'event.name') ?? data_get($payload, 'event.message') ?? null,
             'occurred_at' => $this->parseTimestamp($payload['date'] ?? $payload['deviceTime'] ?? $payload['time'] ?? null),
             'location'    => [
                 'lat' => $position['lat'] ?? null,
@@ -224,7 +229,7 @@ class SafeeProvider extends AbstractProvider
             ]);
 
         if ($response->failed()) {
-            throw new \RuntimeException('Safee authentication failed: ' . $response->body());
+            throw new \RuntimeException('Safee authentication failed with status ' . $response->status());
         }
 
         $token = $response->json('access_token');
@@ -243,7 +248,7 @@ class SafeeProvider extends AbstractProvider
             ->get($this->baseUrl . $endpoint);
 
         if ($response->failed()) {
-            throw new \RuntimeException('Safee API request failed: ' . $response->body());
+            throw new \RuntimeException('Safee API request failed with status ' . $response->status());
         }
 
         return $response->json() ?? [];
@@ -256,7 +261,7 @@ class SafeeProvider extends AbstractProvider
             ->post($this->baseUrl . $endpoint, $payload);
 
         if ($response->failed()) {
-            throw new \RuntimeException('Safee API request failed: ' . $response->body());
+            throw new \RuntimeException('Safee API request failed with status ' . $response->status());
         }
 
         return $response->json() ?? [];

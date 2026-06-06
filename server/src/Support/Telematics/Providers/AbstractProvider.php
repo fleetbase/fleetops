@@ -72,10 +72,9 @@ abstract class AbstractProvider implements TelematicProviderInterface
             Log::error('Provider API request failed', [
                 'correlation_id' => $correlationId,
                 'status'         => $response->status(),
-                'body'           => $response->body(),
             ]);
 
-            throw new \Exception('API request failed: ' . $response->body());
+            throw new \Exception('Provider API request failed with status ' . $response->status());
         }
 
         return $response->json();

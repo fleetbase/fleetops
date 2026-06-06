@@ -155,7 +155,11 @@ class TelematicService
      */
     public function linkDevice(Telematic $telematic, array $deviceData): Device
     {
-        $externalId = $deviceData['device_id'] ?? $deviceData['external_id'] ?? null;
+        $externalId = $this->resolveExternalId($deviceData);
+
+        if (!$externalId) {
+            throw ValidationException::withMessages(['device_id' => ['Provider device identity is required to link a telematics device.']]);
+        }
 
         $device = Device::firstOrNew([
             'telematic_uuid' => $telematic->uuid,
@@ -163,8 +167,8 @@ class TelematicService
         ]);
 
         $device->company_uuid     = $telematic->company_uuid;
-        $device->name             = $deviceData['name'] ?? $deviceData['device_name'] ?? 'Unknown Device';
-        $device->model            = $deviceData['model'] ?? $deviceData['device_model'] ?? null;
+        $device->name             = $deviceData['name'] ?? $deviceData['device_name'] ?? $device->name ?? 'Unknown Device';
+        $device->model            = $deviceData['model'] ?? $deviceData['device_model'] ?? $device->model;
         $device->provider         = $deviceData['provider'] ?? $deviceData['device_provider'] ?? $telematic->provider;
         $device->type             = $deviceData['type'] ?? null;
         $device->internal_id      = $deviceData['internal_id'] ?? $externalId;
@@ -173,8 +177,17 @@ class TelematicService
         $device->serial_number    = $deviceData['serial_number'] ?? null;
         $device->firmware_version = $deviceData['firmware_version'] ?? null;
         $device->status           = $deviceData['status'] ?? $device->status ?? 'active';
-        $device->online           = $deviceData['online'] ?? ($device->status === 'active');
-        $device->last_online_at   = $deviceData['last_online_at'] ?? $deviceData['last_seen_at'] ?? now();
+
+        if (array_key_exists('online', $deviceData) && $deviceData['online'] !== null) {
+            $device->online = (bool) $deviceData['online'];
+        } elseif (!$device->exists) {
+            $device->online = $device->status === 'active';
+        }
+
+        if (!empty($deviceData['last_online_at']) || !empty($deviceData['last_seen_at'])) {
+            $device->last_online_at = $deviceData['last_online_at'] ?? $deviceData['last_seen_at'];
+        }
+
         $device->meta             = array_merge($device->meta ?? [], [
             'external_id' => $externalId,
         ], $deviceData['meta'] ?? []);
@@ -195,25 +208,38 @@ class TelematicService
             $device = $this->resolveDeviceForPayload($telematic, $eventData);
         }
 
-        $event               = new DeviceEvent();
+        $eventKey            = $this->makeEventKey($telematic, $eventData, $device);
+        $event               = $eventKey ? DeviceEvent::firstOrNew(['_key' => $eventKey]) : new DeviceEvent();
         $event->company_uuid = $telematic->company_uuid;
         $event->device_uuid  = $device?->uuid;
         $event->event_type   = $eventData['event_type'] ?? $eventData['type'] ?? 'telemetry_update';
         $event->severity     = $eventData['severity'] ?? 'info';
+        $event->message      = $eventData['message'] ?? $eventData['reason'] ?? null;
         $event->provider     = $telematic->provider;
-        $event->ident        = $eventData['ident'] ?? $eventData['external_id'] ?? null;
+        $event->ident        = $eventData['ident'] ?? $eventData['event_id'] ?? $eventData['external_event_id'] ?? $eventData['external_id'] ?? null;
         $event->code         = $eventData['code'] ?? null;
         $event->state        = $eventData['state'] ?? null;
         $event->reason       = $eventData['reason'] ?? null;
+        $event->occurred_at  = $eventData['occurred_at'] ?? $eventData['recorded_at'] ?? $eventData['timestamp'] ?? null;
+        $event->data         = $eventData['data'] ?? array_filter([
+            'speed'      => $eventData['speed'] ?? null,
+            'heading'    => $eventData['heading'] ?? null,
+            'odometer'   => $eventData['odometer'] ?? null,
+            'ignition'   => $eventData['ignition'] ?? null,
+            'fuel_level' => $eventData['fuel_level'] ?? null,
+        ], fn ($value) => $value !== null);
         $event->payload      = $eventData['payload'] ?? $eventData['meta'] ?? $eventData;
+        $event->_key         = $eventKey;
         $event->meta         = array_merge($eventData['meta'] ?? [], [
-            'telematic_uuid' => $telematic->uuid,
-            'occurred_at'    => $eventData['occurred_at'] ?? null,
-            'speed'          => $eventData['speed'] ?? null,
-            'heading'        => $eventData['heading'] ?? null,
-            'odometer'       => $eventData['odometer'] ?? null,
-            'ignition'       => $eventData['ignition'] ?? null,
-            'fuel_level'     => $eventData['fuel_level'] ?? null,
+            'telematic_uuid'    => $telematic->uuid,
+            'telematic_id'      => $telematic->public_id,
+            'provider_event_id' => $event->ident,
+            'occurred_at'       => $eventData['occurred_at'] ?? null,
+            'speed'             => $eventData['speed'] ?? null,
+            'heading'           => $eventData['heading'] ?? null,
+            'odometer'          => $eventData['odometer'] ?? null,
+            'ignition'          => $eventData['ignition'] ?? null,
+            'fuel_level'        => $eventData['fuel_level'] ?? null,
         ]);
 
         $location = $this->normalizeLocation($eventData['location'] ?? null);
@@ -232,18 +258,23 @@ class TelematicService
             $device = $this->resolveDeviceForPayload($telematic, $sensorData);
         }
 
+        $sensorIdentity = $sensorData['internal_id'] ?? $sensorData['sensor_id'] ?? $sensorData['external_id'] ?? null;
+        if (!$sensorIdentity && !$device) {
+            throw ValidationException::withMessages(['sensor_id' => ['Provider sensor identity or device identity is required to link a telematics sensor.']]);
+        }
+
         $sensor = Sensor::firstOrNew([
             'telematic_uuid' => $telematic->uuid,
             'device_uuid'    => $device?->uuid,
             'type'           => $sensorData['type'] ?? $sensorData['sensor_type'] ?? 'generic',
-            'internal_id'    => $sensorData['internal_id'] ?? $sensorData['external_id'] ?? null,
+            'internal_id'    => $sensorIdentity ?? $this->makeSensorIdentity($sensorData, $device),
         ]);
 
         $sensor->company_uuid     = $telematic->company_uuid;
         $sensor->name             = $sensorData['name'] ?? $sensorData['sensor_type'] ?? $sensor->type ?? 'Sensor';
         $sensor->unit             = $sensorData['unit'] ?? null;
         $sensor->last_value       = isset($sensorData['value']) ? (string) $sensorData['value'] : $sensor->last_value;
-        $sensor->last_reading_at  = $sensorData['recorded_at'] ?? now();
+        $sensor->last_reading_at  = $sensorData['recorded_at'] ?? $sensorData['last_reading_at'] ?? $sensor->last_reading_at ?? now();
         $sensor->status           = $sensorData['status'] ?? 'active';
         $sensor->meta             = array_merge($sensor->meta ?? [], $sensorData['meta'] ?? []);
 
@@ -354,7 +385,7 @@ class TelematicService
 
     protected function resolveDeviceForPayload(Telematic $telematic, array $payload): ?Device
     {
-        $externalId = $payload['device_id'] ?? $payload['external_id'] ?? $payload['ident'] ?? null;
+        $externalId = $this->resolveExternalId($payload);
 
         if (!$externalId) {
             return null;
@@ -367,6 +398,54 @@ class TelematicService
                     ->orWhere('imei', $externalId);
             })
             ->first();
+    }
+
+    public function resolveWebhookTelematic(string $providerKey, array $payload = [], array $headers = [], ?string $integrationId = null): ?Telematic
+    {
+        $query = Telematic::where('provider', $providerKey);
+
+        if ($integrationId) {
+            return (clone $query)
+                ->where(function ($query) use ($integrationId) {
+                    $query->where('public_id', $integrationId)->orWhere('uuid', $integrationId);
+                })
+                ->first();
+        }
+
+        $providerAccountId = $this->resolveProviderAccountId($payload, $headers);
+        if ($providerAccountId) {
+            $matches = (clone $query)
+                ->where(function ($query) use ($providerAccountId) {
+                    $query->where('meta->provider_account_id', $providerAccountId)
+                        ->orWhere('meta->account_id', $providerAccountId)
+                        ->orWhere('meta->organization_id', $providerAccountId)
+                        ->orWhere('meta->customer_id', $providerAccountId);
+                })
+                ->limit(2)
+                ->get();
+
+            if ($matches->count() === 1) {
+                return $matches->first();
+            }
+        }
+
+        $deviceId = $this->resolveExternalId($payload);
+        if ($deviceId) {
+            $matches = (clone $query)
+                ->whereHas('device', function ($query) use ($deviceId) {
+                    $query->where('device_id', $deviceId)
+                        ->orWhere('internal_id', $deviceId)
+                        ->orWhere('imei', $deviceId);
+                })
+                ->limit(2)
+                ->get();
+
+            if ($matches->count() === 1) {
+                return $matches->first();
+            }
+        }
+
+        return null;
     }
 
     protected function normalizeLocation(?array $location): mixed
@@ -383,5 +462,70 @@ class TelematicService
         }
 
         return ['latitude' => (float) $lat, 'longitude' => (float) $lng];
+    }
+
+    protected function resolveExternalId(array $payload): ?string
+    {
+        $value = $payload['device_id']
+            ?? $payload['external_id']
+            ?? $payload['ident']
+            ?? $payload['unit_id']
+            ?? $payload['vehicle_id']
+            ?? $payload['imei']
+            ?? null;
+
+        return $value === null || $value === '' ? null : (string) $value;
+    }
+
+    protected function resolveProviderAccountId(array $payload, array $headers = []): ?string
+    {
+        $headerValue = data_get($headers, 'x-provider-account.0')
+            ?? data_get($headers, 'x-organization-id.0')
+            ?? data_get($headers, 'x-customer-id.0');
+
+        $value = $payload['provider_account_id']
+            ?? $payload['account_id']
+            ?? $payload['organization_id']
+            ?? $payload['org_id']
+            ?? $payload['customer_id']
+            ?? data_get($payload, 'account.id')
+            ?? data_get($payload, 'organization.id')
+            ?? $headerValue;
+
+        return $value === null || $value === '' ? null : (string) $value;
+    }
+
+    protected function makeEventKey(Telematic $telematic, array $eventData, ?Device $device = null): ?string
+    {
+        $deviceId = $device?->device_id ?? $this->resolveExternalId($eventData);
+        if (!$deviceId) {
+            return null;
+        }
+
+        $providerEventId = $eventData['event_id'] ?? $eventData['external_event_id'] ?? $eventData['ident'] ?? $eventData['external_id'] ?? null;
+        $occurredAt      = $eventData['occurred_at'] ?? $eventData['recorded_at'] ?? $eventData['timestamp'] ?? null;
+        $eventType       = $eventData['event_type'] ?? $eventData['type'] ?? 'telemetry_update';
+
+        if (!$providerEventId && !$occurredAt) {
+            return null;
+        }
+
+        return sha1(implode('|', [
+            $telematic->provider,
+            $telematic->public_id ?? $telematic->uuid,
+            $deviceId,
+            $providerEventId,
+            $eventType,
+            $occurredAt,
+        ]));
+    }
+
+    protected function makeSensorIdentity(array $sensorData, ?Device $device = null): string
+    {
+        return sha1(implode('|', [
+            $device?->uuid ?? 'no-device',
+            $sensorData['type'] ?? $sensorData['sensor_type'] ?? 'generic',
+            $sensorData['name'] ?? $sensorData['unit'] ?? 'sensor',
+        ]));
     }
 }

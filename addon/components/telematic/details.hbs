@@ -25,14 +25,20 @@
 
             {{#if @resource.provider_descriptor.supports_webhooks}}
                 <InputGroup @name="Webhook URL" @helpText={{concat "Configure the URL in your " @resource.provider_descriptor.label " dashboard to receive real-time updates."}}>
-                    <ClickToCopy @value={{this.webhookUrl}}>
-                        <Input @value={{this.webhookUrl}} class="form-input" readonly />
-                    </ClickToCopy>
-                    <small class="form-text text-muted">
-                        Configure this URL in your
-                        {{@resource.provider_descriptor.label}}
-                        dashboard to receive real-time updates.
-                    </small>
+                    {{#if this.hasWebhookUrl}}
+                        <ClickToCopy @value={{this.webhookUrl}}>
+                            <Input @value={{this.webhookUrl}} class="form-input" readonly />
+                        </ClickToCopy>
+                        <small class="form-text text-muted">
+                            Configure this URL in your
+                            {{@resource.provider_descriptor.label}}
+                            dashboard to receive real-time updates.
+                        </small>
+                    {{else}}
+                        <div class="text-sm text-yellow-600 dark:text-yellow-400">
+                            Webhook URL unavailable until this integration has a public ID.
+                        </div>
+                    {{/if}}
                 </InputGroup>
             {{/if}}
         </div>
@@ -42,12 +48,18 @@
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-2">
             <div class="field-info-container">
                 <div class="field-name">Last Connection Test</div>
-                <div class="field-value">{{n-a @resource.meta.last_connection_test}}</div>
+                <div class="field-value">{{n-a (format-date-fns @resource.meta.last_connection_test "dd MMM yyyy, HH:mm")}}</div>
             </div>
 
             <div class="field-info-container">
                 <div class="field-name">Last Test Result</div>
-                <div class="field-value">{{n-a @resource.meta.last_test_result}}</div>
+                <div class="field-value">
+                    {{#if @resource.meta.last_test_result}}
+                        <Badge @status={{this.lastTestStatus}}>{{smart-humanize @resource.meta.last_test_result}}</Badge>
+                    {{else}}
+                        {{n-a @resource.meta.last_test_result}}
+                    {{/if}}
+                </div>
             </div>
 
             <div class="field-info-container">
@@ -57,17 +69,38 @@
 
             <div class="field-info-container">
                 <div class="field-name">Last Sync Started</div>
-                <div class="field-value">{{n-a @resource.meta.last_sync_started_at}}</div>
+                <div class="field-value">{{n-a (format-date-fns @resource.meta.last_sync_started_at "dd MMM yyyy, HH:mm")}}</div>
             </div>
 
             <div class="field-info-container">
                 <div class="field-name">Last Sync Completed</div>
-                <div class="field-value">{{n-a @resource.meta.last_sync_completed_at}}</div>
+                <div class="field-value">{{n-a (format-date-fns @resource.meta.last_sync_completed_at "dd MMM yyyy, HH:mm")}}</div>
             </div>
 
             <div class="field-info-container">
                 <div class="field-name">Devices Synced</div>
                 <div class="field-value">{{n-a @resource.meta.last_sync_total}}</div>
+            </div>
+
+            <div class="field-info-container">
+                <div class="field-name">Last Sync Result</div>
+                <div class="field-value">
+                    {{#if @resource.meta.last_sync_result}}
+                        <Badge @status={{this.lastSyncStatus}}>{{smart-humanize @resource.meta.last_sync_result}}</Badge>
+                    {{else}}
+                        {{n-a @resource.meta.last_sync_result}}
+                    {{/if}}
+                </div>
+            </div>
+
+            <div class="field-info-container">
+                <div class="field-name">Last Sync Error</div>
+                <div class="field-value">{{n-a @resource.meta.last_sync_error}}</div>
+            </div>
+
+            <div class="field-info-container">
+                <div class="field-name">Last Job ID</div>
+                <div class="field-value font-mono text-xs">{{n-a @resource.meta.last_sync_job_id}}</div>
             </div>
         </div>
     </ContentPanel>

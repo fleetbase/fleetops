@@ -70,8 +70,15 @@ class SyncTelematicDevicesJob implements ShouldQueue
 
                 foreach ($response['devices'] as $devicePayload) {
                     $normalizedDevice = $provider->normalizeDevice($devicePayload);
-                    $service->linkDevice($this->telematic, $normalizedDevice);
-                    $totalSynced++;
+                    try {
+                        $service->linkDevice($this->telematic, $normalizedDevice);
+                        $totalSynced++;
+                    } catch (\Illuminate\Validation\ValidationException $e) {
+                        Log::warning('Skipping telematics device without provider identity', [
+                            'correlation_id' => $correlationId,
+                            'provider'       => $this->telematic->provider,
+                        ]);
+                    }
                 }
 
                 $cursor = $response['next_cursor'];

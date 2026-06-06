@@ -76,10 +76,12 @@ class DeviceEvent extends Model
         'company_uuid',
         'device_uuid',
         'payload',
+        'data',
         'meta',
         'location',
         'event_type',
         'severity',
+        'message',
         'ident',
         'protocol',
         'provider',
@@ -89,6 +91,8 @@ class DeviceEvent extends Model
         'reason',
         'comment',
         'resolved_at',
+        'occurred_at',
+        'processed_at',
         'slug',
     ];
 
@@ -125,9 +129,12 @@ class DeviceEvent extends Model
      */
     protected $casts = [
         'payload'         => Json::class,
+        'data'            => Json::class,
         'meta'            => Json::class,
         'location'        => Point::class,
         'resolved_at'     => 'datetime',
+        'occurred_at'     => 'datetime',
+        'processed_at'    => 'datetime',
     ];
 
     /**
