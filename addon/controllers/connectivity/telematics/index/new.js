@@ -12,6 +12,8 @@ export default class ConnectivityTelematicsIndexNewController extends Controller
     @service events;
     @tracked overlay;
     @tracked telematic = this.telematicActions.createNewInstance();
+    queryParams = ['setupProvider'];
+    @tracked setupProvider;
 
     @task *save(telematic) {
         try {
@@ -30,5 +32,9 @@ export default class ConnectivityTelematicsIndexNewController extends Controller
 
     @action resetForm() {
         this.telematic = this.telematicActions.createNewInstance();
+    }
+
+    @action cancel() {
+        return this.hostRouter.transitionTo('console.fleet-ops.connectivity.telematics.index');
     }
 }

@@ -7,7 +7,7 @@ return [
             'label' => 'Flespi',
             'type' => 'native',
             'driver_class' => \Fleetbase\FleetOps\Support\Telematics\Providers\FlespiProvider::class,
-            'icon' => 'https://flespi.com/favicon.ico',
+            'icon' => '/engines-dist/images/telematics/providers/flespi.webp',
             'description' => 'Flespi is a robust telematics platform offering device management, data processing, and API integration.',
             'docs_url' => 'https://flespi.com/docs',
             'required_fields' => [
@@ -40,7 +40,7 @@ return [
             'label' => 'Geotab',
             'type' => 'native',
             'driver_class' => \Fleetbase\FleetOps\Support\Telematics\Providers\GeotabProvider::class,
-            'icon' => 'https://www.geotab.com/favicon.ico',
+            'icon' => '/engines-dist/images/telematics/providers/geotab.webp',
             'description' => 'Geotab provides fleet management solutions with GPS tracking, driver safety, and compliance features.',
             'docs_url' => 'https://developers.geotab.com/',
             'required_fields' => [
@@ -79,7 +79,7 @@ return [
             'label' => 'Samsara',
             'type' => 'native',
             'driver_class' => \Fleetbase\FleetOps\Support\Telematics\Providers\SamsaraProvider::class,
-            'icon' => 'https://www.samsara.com/favicon.ico',
+            'icon' => '/engines-dist/images/telematics/providers/samsara.webp',
             'description' => 'Samsara offers IoT solutions for fleet operations, including GPS tracking, dashcams, and asset monitoring.',
             'docs_url' => 'https://developers.samsara.com/',
             'required_fields' => [
@@ -112,7 +112,7 @@ return [
             'label' => 'AFAQY',
             'type' => 'native',
             'driver_class' => \Fleetbase\FleetOps\Support\Telematics\Providers\AfaqyProvider::class,
-            'icon' => 'https://api.afaqy.sa/docs/img/favicon.ico',
+            'icon' => '/engines-dist/images/telematics/providers/afaqy.webp',
             'description' => 'AFAQY AVL REST integration for unit discovery, live position, speed, heading, odometer, fuel, and signal data.',
             'docs_url' => 'https://api.afaqy.sa/docs/',
             'required_fields' => [
@@ -163,6 +163,7 @@ return [
             'label' => 'Safee Tracking',
             'type' => 'native',
             'driver_class' => \Fleetbase\FleetOps\Support\Telematics\Providers\SafeeProvider::class,
+            'icon' => '/engines-dist/images/telematics/providers/safee.webp',
             'description' => 'Safee Tracking REST integration for vehicle discovery, last state, live positions, odometer, fuel, and sensor data.',
             'required_fields' => [
                 [

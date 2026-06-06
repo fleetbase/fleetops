@@ -1,162 +1,103 @@
-<div class="details-wrapper" ...attributes>
-    <ContentPanel @title="Telematics Provider" @open={{true}} @wrapperClass="bordered-top">
-        <div class="field-info-container">
-            <div class="field-name">Provider</div>
-            <div class="field-value">
-                <div class="flex flew-row space-x-2 text-sm">
-                    <div class="pt-1.5">
-                        <Image src={{@resource.provider_descriptor.icon}} class="w-5 h-5" />
-                    </div>
-                    <div>
-                        <div class="font-semibold">{{@resource.provider_descriptor.label}}</div>
-                        <div class="text-xs text-gray-400 dark:text-gray-500">{{n-a @resource.provider_descriptor.description}}</div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </ContentPanel>
-
-    <ContentPanel @title="Integration Details" @open={{true}} @wrapperClass="bordered-top">
-        <div class="grid grid-cols-1 gap-2 lg:grid-cols-2 lg:gap-2 no-input-group-padding text-xs">
-            <div class="field-info-container">
-                <div class="field-name">Integration Name</div>
-                <div class="field-value">{{n-a @resource.name}}</div>
-            </div>
-
-            {{#if @resource.provider_descriptor.supports_webhooks}}
-                <InputGroup @name="Webhook URL" @helpText={{concat "Configure the URL in your " @resource.provider_descriptor.label " dashboard to receive real-time updates."}}>
-                    {{#if this.hasWebhookUrl}}
-                        <ClickToCopy @value={{this.webhookUrl}}>
-                            <Input @value={{this.webhookUrl}} class="form-input" readonly />
-                        </ClickToCopy>
-                        <small class="form-text text-muted">
-                            Configure this URL in your
-                            {{@resource.provider_descriptor.label}}
-                            dashboard to receive real-time updates.
-                        </small>
-                    {{else}}
-                        <div class="text-sm text-yellow-600 dark:text-yellow-400">
-                            Webhook URL unavailable until this integration has a public ID.
+<div class="flex flex-col gap-4" ...attributes>
+    <section class="grid grid-cols-1 gap-3 lg:grid-cols-3">
+        {{#each this.healthCards as |card|}}
+            <div class="rounded-md border border-gray-200 bg-white p-3 dark:border-gray-700 dark:bg-gray-800">
+                <div class="flex items-start justify-between gap-3">
+                    <div class="flex min-w-0 items-start gap-3">
+                        <div class="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-md border border-gray-200 bg-gray-50 text-blue-600 dark:border-gray-700 dark:bg-gray-800 dark:text-blue-300">
+                            <FaIcon @icon={{card.icon}} />
                         </div>
+                        <div class="min-w-0">
+                            <div class="truncate text-sm font-bold text-gray-900 dark:text-gray-100">{{card.label}}</div>
+                            <div class="truncate text-xs text-gray-500 dark:text-gray-300">{{n-a card.value}}</div>
+                            <div class="truncate text-[11px] text-gray-400 dark:text-gray-500">{{n-a (format-date-fns card.detail "dd MMM yyyy, HH:mm")}}</div>
+                        </div>
+                    </div>
+                    {{#if card.statusLabel}}
+                        <Badge @status={{card.status}} @hideStatusDot={{true}}>{{card.statusLabel}}</Badge>
                     {{/if}}
-                </InputGroup>
-            {{/if}}
+                </div>
+            </div>
+        {{/each}}
+    </section>
+
+    {{#if this.attentionItems.length}}
+        <section class="grid grid-cols-1 gap-3 lg:grid-cols-2">
+            {{#each this.attentionItems as |item|}}
+                <div class="rounded-md border border-yellow-200 bg-yellow-50 p-3 dark:border-yellow-700 dark:bg-gray-800">
+                    <div class="flex items-start gap-3">
+                        <div class="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-md bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-300">
+                            <FaIcon @icon={{item.icon}} />
+                        </div>
+                        <div class="min-w-0">
+                            <div class="text-sm font-bold text-gray-900 dark:text-gray-100">{{item.title}}</div>
+                            <p class="mt-1 text-xs leading-5 text-yellow-800 dark:text-yellow-300">{{item.description}}</p>
+                        </div>
+                    </div>
+                </div>
+            {{/each}}
+        </section>
+    {{else}}
+        <section class="rounded-md border border-green-200 bg-green-50 p-3 dark:border-green-700 dark:bg-gray-800">
+            <div class="flex items-center gap-3">
+                <div class="flex h-9 w-9 items-center justify-center rounded-md bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300">
+                    <FaIcon @icon="check" />
+                </div>
+                <div>
+                    <div class="text-sm font-bold text-gray-900 dark:text-gray-100">No immediate attention needed</div>
+                    <div class="text-xs text-green-800 dark:text-green-300">Connection, sync, and telemetry status are ready for review.</div>
+                </div>
+            </div>
+        </section>
+    {{/if}}
+
+    <section class="grid grid-cols-1 gap-4 lg:grid-cols-3">
+        <div class="rounded-md border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800 lg:col-span-2">
+            <div class="mb-3">
+                <h2 class="text-sm font-bold text-gray-900 dark:text-gray-100">Provider Connection</h2>
+                <p class="text-xs text-gray-500 dark:text-gray-300">External provider identity and public webhook configuration.</p>
+            </div>
+            <div class="grid grid-cols-1 gap-3 text-xs md:grid-cols-2">
+                <div class="rounded-md border border-gray-200 p-3 dark:border-gray-700">
+                    <div class="text-gray-400 dark:text-gray-500">Provider</div>
+                    <div class="mt-1 flex items-center gap-2 font-bold text-gray-900 dark:text-gray-100">
+                        <Image src={{@resource.provider_descriptor.icon}} class="h-5 w-5 rounded" />
+                        {{@resource.provider_descriptor.label}}
+                    </div>
+                </div>
+                <div class="rounded-md border border-gray-200 p-3 dark:border-gray-700">
+                    <div class="text-gray-400 dark:text-gray-500">Integration ID</div>
+                    <div class="mt-1 font-mono font-bold text-gray-900 dark:text-gray-100">{{n-a @resource.public_id}}</div>
+                </div>
+                {{#if @resource.provider_descriptor.supports_webhooks}}
+                    <div class="rounded-md border border-gray-200 p-3 dark:border-gray-700 md:col-span-2">
+                        <div class="mb-2 text-gray-400 dark:text-gray-500">Webhook URL</div>
+                        {{#if this.hasWebhookUrl}}
+                            <ClickToCopy @value={{this.webhookUrl}}>
+                                <Input @value={{this.webhookUrl}} class="form-input w-full" readonly />
+                            </ClickToCopy>
+                        {{else}}
+                            <div class="text-yellow-700 dark:text-yellow-300">Webhook URL unavailable until this integration has a public ID.</div>
+                        {{/if}}
+                    </div>
+                {{/if}}
+            </div>
         </div>
-    </ContentPanel>
 
-    <ContentPanel @title="Integration Health" @open={{true}} @wrapperClass="bordered-top">
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-2">
-            <div class="field-info-container">
-                <div class="field-name">Last Connection Test</div>
-                <div class="field-value">{{n-a (format-date-fns @resource.meta.last_connection_test "dd MMM yyyy, HH:mm")}}</div>
+        <div class="rounded-md border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800">
+            <div class="mb-3">
+                <h2 class="text-sm font-bold text-gray-900 dark:text-gray-100">Hardware Identity</h2>
+                <p class="text-xs text-gray-500 dark:text-gray-300">Provider blackbox metadata stored on the integration.</p>
             </div>
-
-            <div class="field-info-container">
-                <div class="field-name">Last Test Result</div>
-                <div class="field-value">
-                    {{#if @resource.meta.last_test_result}}
-                        <Badge @status={{this.lastTestStatus}}>{{smart-humanize @resource.meta.last_test_result}}</Badge>
-                    {{else}}
-                        {{n-a @resource.meta.last_test_result}}
-                    {{/if}}
-                </div>
-            </div>
-
-            <div class="field-info-container">
-                <div class="field-name">Last Error</div>
-                <div class="field-value">{{n-a @resource.meta.last_error}}</div>
-            </div>
-
-            <div class="field-info-container">
-                <div class="field-name">Last Sync Started</div>
-                <div class="field-value">{{n-a (format-date-fns @resource.meta.last_sync_started_at "dd MMM yyyy, HH:mm")}}</div>
-            </div>
-
-            <div class="field-info-container">
-                <div class="field-name">Last Sync Completed</div>
-                <div class="field-value">{{n-a (format-date-fns @resource.meta.last_sync_completed_at "dd MMM yyyy, HH:mm")}}</div>
-            </div>
-
-            <div class="field-info-container">
-                <div class="field-name">Devices Synced</div>
-                <div class="field-value">{{n-a @resource.meta.last_sync_total}}</div>
-            </div>
-
-            <div class="field-info-container">
-                <div class="field-name">Last Sync Result</div>
-                <div class="field-value">
-                    {{#if @resource.meta.last_sync_result}}
-                        <Badge @status={{this.lastSyncStatus}}>{{smart-humanize @resource.meta.last_sync_result}}</Badge>
-                    {{else}}
-                        {{n-a @resource.meta.last_sync_result}}
-                    {{/if}}
-                </div>
-            </div>
-
-            <div class="field-info-container">
-                <div class="field-name">Last Sync Error</div>
-                <div class="field-value">{{n-a @resource.meta.last_sync_error}}</div>
-            </div>
-
-            <div class="field-info-container">
-                <div class="field-name">Last Job ID</div>
-                <div class="field-value font-mono text-xs">{{n-a @resource.meta.last_sync_job_id}}</div>
-            </div>
-        </div>
-    </ContentPanel>
-
-    <ContentPanel @title="Telematic Blackbox" @open={{true}} @wrapperClass="bordered-top">
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-2">
-            <div class="field-info-container">
-                <div class="field-name">Model</div>
-                <div class="field-value">{{n-a @resource.model}}</div>
-            </div>
-
-            <div class="field-info-container">
-                <div class="field-name">Serial Number</div>
-                <div class="field-value">{{n-a @resource.serial_number}}</div>
-            </div>
-
-            <div class="field-info-container">
-                <div class="field-name">Firmware Version</div>
-                <div class="field-value">{{n-a @resource.firmware_version}}</div>
-            </div>
-
-            <div class="field-info-container">
-                <div class="field-name">Status</div>
-                <div class="field-value">
-                    <Badge @status={{@resource.status}}>{{smart-humanize @resource.status}}</Badge>
-                </div>
-            </div>
-
-            <div class="field-info-container">
-                <div class="field-name">IMEI</div>
-                <div class="field-value">{{n-a @resource.imei}}</div>
-            </div>
-
-            <div class="field-info-container">
-                <div class="field-name">ICCID</div>
-                <div class="field-value">{{n-a @resource.iccid}}</div>
-            </div>
-
-            <div class="field-info-container">
-                <div class="field-name">IMSI</div>
-                <div class="field-value">{{n-a @resource.imsi}}</div>
-            </div>
-
-            <div class="field-info-container">
-                <div class="field-name">MSISDN</div>
-                <div class="field-value">{{n-a @resource.msisdn}}</div>
-            </div>
-
-            <div class="field-info-container">
-                <div class="field-name">Last Seen</div>
-                <div class="field-value">{{n-a (format-date @resource.last_seen_at)}}</div>
-            </div>
-
-            <div class="field-info-container">
-                <div class="field-name">Online Status</div>
-                <div class="field-value">
+            <div class="grid gap-2 text-xs">
+                {{#each this.hardwareFields as |field|}}
+                    <div class="flex items-center justify-between gap-3 border-b border-gray-100 py-1.5 last:border-b-0 dark:border-gray-700">
+                        <span class="text-gray-400 dark:text-gray-500">{{field.label}}</span>
+                        <span class="truncate font-semibold text-gray-900 dark:text-gray-100">{{n-a field.value}}</span>
+                    </div>
+                {{/each}}
+                <div class="flex items-center justify-between gap-3 border-b border-gray-100 py-1.5 last:border-b-0 dark:border-gray-700">
+                    <span class="text-gray-400 dark:text-gray-500">Online</span>
                     {{#if @resource.is_online}}
                         <Badge @status="online">Online</Badge>
                     {{else}}
@@ -164,13 +105,8 @@
                     {{/if}}
                 </div>
             </div>
-
-            <div class="field-info-container">
-                <div class="field-name">Signal Strength</div>
-                <div class="field-value">{{n-a @resource.signal_strength}}</div>
-            </div>
         </div>
-    </ContentPanel>
+    </section>
 
     <CustomField::Yield @subject={{@resource}} @viewMode={{true}} @wrapperClass="bordered-top" />
 </div>

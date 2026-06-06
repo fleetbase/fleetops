@@ -80,7 +80,16 @@ class TelematicController extends FleetOpsController
             if (!$provider) {
                 return response()->error('Unable to resolve telematic provider.');
             }
-            $result   = $provider->testConnection($credentials);
+            $result      = $provider->testConnection($credentials);
+            $telematicId = $request->input('telematic_id');
+
+            if ($telematicId) {
+                $telematic = $this->findTelematic($telematicId);
+
+                if ($telematic->provider === $key) {
+                    $this->telematicService->recordConnectionTest($telematic, $result);
+                }
+            }
         } catch (\Exception $e) {
             return response()->error($e->getMessage());
         }

@@ -1,5 +1,7 @@
 <?php
 
+use Fleetbase\FleetOps\Contracts\TelematicProviderDescriptor;
+
 test('device event model and migration expose lifecycle fields used by telematics workflows', function () {
     $model     = file_get_contents(__DIR__ . '/../src/Models/DeviceEvent.php');
     $migration = file_get_contents(__DIR__ . '/../migrations/2026_06_06_000001_harden_device_events_telematics_contract.php');
@@ -77,4 +79,35 @@ test('telematics details use public id for consumer webhook URLs and do not read
         ->toContain('Webhook URL unavailable until this integration has a public ID.')
         ->toContain('last_sync_job_id')
         ->toContain('last_sync_error');
+});
+
+test('native telematics providers expose local provider icons with a descriptor fallback', function () {
+    $config    = include __DIR__ . '/../config/telematics.php';
+    $iconPath  = '/engines-dist/images/telematics/providers/';
+    $providers = array_filter($config['providers'], fn ($provider) => ($provider['type'] ?? 'native') === 'native');
+
+    foreach ($providers as $provider) {
+        $icon = $provider['icon'] ?? null;
+
+        expect($icon)
+            ->not->toBeNull()
+            ->not->toContain('http://')
+            ->not->toContain('https://');
+
+        expect(str_starts_with($icon, $iconPath))->toBeTrue();
+        expect(str_ends_with($icon, '.webp'))->toBeTrue();
+        expect(file_exists(__DIR__ . '/../../assets/images/telematics/providers/' . basename($icon)))->toBeTrue();
+    }
+
+    $safee = collect($providers)->firstWhere('key', 'safee');
+
+    expect($safee['icon'])->toBe($iconPath . 'safee.webp');
+
+    $descriptor = new TelematicProviderDescriptor([
+        'key'   => 'custom',
+        'label' => 'Custom',
+    ]);
+
+    expect($descriptor->icon)->toBe(TelematicProviderDescriptor::DEFAULT_ICON);
+    expect(file_exists(__DIR__ . '/../../assets/images/telematics/providers/default.webp'))->toBeTrue();
 });

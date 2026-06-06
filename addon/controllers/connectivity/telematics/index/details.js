@@ -1,10 +1,12 @@
 import Controller from '@ember/controller';
 import { inject as service } from '@ember/service';
+import { action } from '@ember/object';
 import { task } from 'ember-concurrency';
 
 export default class ConnectivityTelematicsIndexDetailsController extends Controller {
     @service hostRouter;
     @service fetch;
+    @service modalsManager;
     @service notifications;
 
     get tabs() {
@@ -18,6 +20,10 @@ export default class ConnectivityTelematicsIndexDetailsController extends Contro
                 label: 'Devices',
             },
             {
+                route: 'connectivity.telematics.index.details.attachments',
+                label: 'Vehicle Attachments',
+            },
+            {
                 route: 'connectivity.telematics.index.details.sensors',
                 label: 'Sensors',
             },
@@ -25,7 +31,10 @@ export default class ConnectivityTelematicsIndexDetailsController extends Contro
                 route: 'connectivity.telematics.index.details.events',
                 label: 'Events',
             },
-        ];
+        ].map((tab) => ({
+            ...tab,
+            active: this.isTabActive(tab.route),
+        }));
     }
 
     get actionButtons() {
@@ -33,8 +42,7 @@ export default class ConnectivityTelematicsIndexDetailsController extends Contro
             {
                 icon: 'plug',
                 text: 'Test',
-                onClick: () => this.testConnection.perform(),
-                isLoading: this.testConnection.isRunning,
+                onClick: () => this.openConnectionTestDialog(),
             },
             {
                 icon: 'satellite-dish',
@@ -43,7 +51,7 @@ export default class ConnectivityTelematicsIndexDetailsController extends Contro
                 isLoading: this.discoverDevices.isRunning,
             },
             {
-                icon: 'pencil',
+                icon: 'cog',
                 fn: () => this.hostRouter.transitionTo('console.fleet-ops.connectivity.telematics.index.edit', this.model),
             },
         ];
@@ -53,18 +61,43 @@ export default class ConnectivityTelematicsIndexDetailsController extends Contro
         return this.model?.id;
     }
 
-    @task *testConnection() {
-        try {
-            const result = yield this.fetch.post(`telematics/${this.telematicId}/test-connection`);
-            if (result.success) {
-                this.notifications.success(result.message ?? 'Connection successful.');
-            } else {
-                this.notifications.error(result.message ?? 'Connection test failed.');
-            }
-            yield this.hostRouter.refresh();
-        } catch (error) {
-            this.notifications.serverError(error);
+    isTabActive(routeName) {
+        return this.hostRouter.currentRouteName?.endsWith(routeName);
+    }
+
+    get healthStatus() {
+        if (this.model?.meta?.last_error || this.model?.meta?.last_sync_error || ['error', 'degraded', 'disconnected'].includes(this.model?.status)) {
+            return 'warning';
         }
+
+        if (['active', 'connected'].includes(this.model?.status)) {
+            return 'success';
+        }
+
+        return 'default';
+    }
+
+    get statusLabel() {
+        if (this.healthStatus === 'success') {
+            return 'Healthy';
+        }
+
+        if (this.healthStatus === 'warning') {
+            return 'Needs attention';
+        }
+
+        return 'Not verified';
+    }
+
+    @action openConnectionTestDialog() {
+        this.modalsManager.show('modals/telematic-connection-diagnostics', {
+            title: 'Test Connection',
+            acceptButtonText: 'Run Test',
+            acceptButtonIcon: 'plug',
+            declineButtonText: 'Close',
+            telematic: this.model,
+            onTested: () => this.hostRouter.refresh(),
+        });
     }
 
     @task *discoverDevices() {
