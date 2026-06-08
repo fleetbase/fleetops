@@ -23,6 +23,10 @@ export default class TelematicHubComponent extends Component {
         return new Set(this.integrations.map((integration) => integration.provider).filter(Boolean));
     }
 
+    get hasProviderConnections() {
+        return this.integrations.length > 0;
+    }
+
     get providerCards() {
         const connected = this.connectedProviderKeys;
 

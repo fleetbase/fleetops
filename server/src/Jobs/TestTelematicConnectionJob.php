@@ -37,7 +37,6 @@ class TestTelematicConnectionJob implements ShouldQueue
     {
         $this->telematic = $telematic;
         $this->jobId     = $jobId ?? Str::uuid()->toString();
-        $this->queue     = 'telematics-priority';
     }
 
     /**

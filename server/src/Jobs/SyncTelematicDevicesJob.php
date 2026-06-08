@@ -38,7 +38,6 @@ class SyncTelematicDevicesJob implements ShouldQueue
         $this->telematic = $telematic;
         $this->options   = $options;
         $this->jobId     = $jobId ?? \Illuminate\Support\Str::uuid()->toString();
-        $this->queue     = 'telematics-sync';
     }
 
     /**
@@ -110,14 +109,16 @@ class SyncTelematicDevicesJob implements ShouldQueue
             Log::error('Device discovery failed', [
                 'correlation_id' => $correlationId,
                 'error'          => $e->getMessage(),
+                'exception'      => get_class($e),
             ]);
 
             $this->telematic->status = 'error';
             $this->telematic->meta   = array_merge($this->telematic->meta ?? [], [
-                'last_sync_job_id'    => $this->jobId,
-                'last_sync_result'    => 'failed',
-                'last_sync_error'     => $e->getMessage(),
-                'last_sync_failed_at' => now()->toDateTimeString(),
+                'last_sync_job_id'     => $this->jobId,
+                'last_sync_result'     => 'failed',
+                'last_sync_error'      => 'Device sync failed. Review the provider connection and server logs, then try again.',
+                'last_sync_error_type' => class_basename($e),
+                'last_sync_failed_at'  => now()->toDateTimeString(),
             ]);
             $this->telematic->save();
 

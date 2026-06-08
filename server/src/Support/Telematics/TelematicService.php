@@ -144,6 +144,8 @@ class TelematicService
         $telematic->meta   = array_merge($telematic->meta ?? [], [
             'last_sync_job_id'     => $jobId,
             'last_sync_started_at' => now()->toDateTimeString(),
+            'last_sync_result'     => 'queued',
+            'last_sync_error'      => null,
         ]);
         $telematic->save();
 
@@ -195,6 +197,8 @@ class TelematicService
         $location = $this->normalizeLocation($deviceData['location'] ?? null);
         if ($location) {
             $device->last_position = $location;
+        } elseif (!$device->exists || !$device->last_position) {
+            $device->last_position = $this->defaultLocation();
         }
 
         $device->save();
@@ -281,6 +285,8 @@ class TelematicService
         $location = $this->normalizeLocation($sensorData['location'] ?? null);
         if ($location) {
             $sensor->last_position = $location;
+        } elseif (!$sensor->exists || !$sensor->last_position) {
+            $sensor->last_position = $this->defaultLocation();
         }
 
         $sensor->save();
@@ -462,6 +468,11 @@ class TelematicService
         }
 
         return ['latitude' => (float) $lat, 'longitude' => (float) $lng];
+    }
+
+    protected function defaultLocation(): array
+    {
+        return ['latitude' => 0, 'longitude' => 0];
     }
 
     protected function resolveExternalId(array $payload): ?string

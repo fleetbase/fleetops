@@ -66,27 +66,60 @@ export default class ConnectivityTelematicsIndexDetailsController extends Contro
     }
 
     get healthStatus() {
-        if (this.model?.meta?.last_error || this.model?.meta?.last_sync_error || ['error', 'degraded', 'disconnected'].includes(this.model?.status)) {
-            return 'warning';
+        switch (this.model?.status) {
+            case 'active':
+            case 'connected':
+                return 'success';
+            case 'synchronizing':
+                return 'info';
+            case 'error':
+            case 'degraded':
+            case 'disconnected':
+                return 'warning';
+            case 'initialized':
+                return 'default';
+            default:
+                return 'default';
         }
-
-        if (['active', 'connected'].includes(this.model?.status)) {
-            return 'success';
-        }
-
-        return 'default';
     }
 
     get statusLabel() {
-        if (this.healthStatus === 'success') {
-            return 'Healthy';
+        switch (this.model?.status) {
+            case 'initialized':
+                return 'Not tested';
+            case 'connected':
+                return 'Connected';
+            case 'synchronizing':
+                return 'Syncing';
+            case 'active':
+                return 'Healthy';
+            case 'error':
+                return 'Needs attention';
+            case null:
+            case undefined:
+                return 'Unknown';
+            default:
+                return 'Unknown';
+        }
+    }
+
+    get connectionTestLabel() {
+        switch (this.model?.meta?.last_test_result) {
+            case 'success':
+                return 'Verified';
+            case 'failed':
+                return 'Failed';
+            default:
+                return 'Not tested';
+        }
+    }
+
+    get lastSyncAt() {
+        if (this.model?.status === 'synchronizing') {
+            return this.model?.meta?.last_sync_started_at;
         }
 
-        if (this.healthStatus === 'warning') {
-            return 'Needs attention';
-        }
-
-        return 'Not verified';
+        return this.model?.meta?.last_sync_completed_at;
     }
 
     @action openConnectionTestDialog() {
