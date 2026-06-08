@@ -352,6 +352,15 @@ Route::prefix(config('fleetops.api.routing.prefix'))->namespace('Fleetbase\Fleet
                                 $router->delete('bulk-delete', $controller('bulkDelete'));
                             }
                         );
+                        $router->fleetbaseRoutes(
+                            'fuel-provider-connections',
+                            function ($router, $controller) {
+                                $router->get('providers', $controller('providers'));
+                                $router->post('{id}/test-connection', $controller('testConnection'));
+                                $router->post('{id}/sync', $controller('sync'));
+                            }
+                        );
+                        $router->fleetbaseRoutes('fuel-provider-transactions');
                         $router->get('issues/{id}/timeline', 'IssueController@timeline');
                         $router->fleetbaseRoutes(
                             'issues',
@@ -486,9 +495,9 @@ Route::prefix(config('fleetops.api.routing.prefix'))->namespace('Fleetbase\Fleet
                         $router->fleetbaseRoutes('sensors');
                         $router->fleetbaseRoutes('telematics', function ($router, $controller) {
                             $router->get('providers', $controller('providers'));
-                            $router->get('devices', $controller('devices'));
-                            $router->post('link-device', $controller('linkDevice'));
-                            $router->post('discover', $controller('discover'));
+                            $router->get('{id}/devices', $controller('devices'));
+                            $router->post('{id}/link-device', $controller('linkDevice'));
+                            $router->post('{id}/discover', $controller('discover'));
                             $router->post('{id}/test-connection', $controller('testConnection'));
                             $router->post('{key}/test-credentials', $controller('testCredentials'));
                         });
@@ -628,6 +637,7 @@ Route::prefix(config('fleetops.api.routing.prefix'))->namespace('Fleetbase\Fleet
                                         $router->get('on-time-delivery', 'AnalyticsController@onTimeDelivery');
                                         $router->get('top-drivers', 'AnalyticsController@topDrivers');
                                         $router->get('fuel-efficiency', 'AnalyticsController@fuelEfficiency');
+                                        $router->get('fuel-providers', 'AnalyticsController@fuelProviders');
                                         $router->get('issues-insights', 'AnalyticsController@issuesInsights');
                                         $router->get('maintenance-overview', 'AnalyticsController@maintenanceOverview');
                                         $router->get('geofence-violations', 'AnalyticsController@geofenceViolations');

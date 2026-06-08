@@ -135,6 +135,9 @@ export default buildRoutes(function () {
                 this.route('edit', { path: '/edit/:public_id' });
             });
         });
+        this.route('fuel-transactions', function () {
+            this.route('index', { path: '/' });
+        });
         this.route('issues', function () {
             this.route('index', { path: '/' }, function () {
                 this.route('new');
@@ -146,13 +149,18 @@ export default buildRoutes(function () {
         });
     });
     this.route('connectivity', function () {
+        this.route('fuel-providers', function () {
+            this.route('index', { path: '/' });
+        });
         this.route('telematics', function () {
             this.route('index', { path: '/' }, function () {
+                this.route('index', { path: '/' });
                 this.route('new');
                 this.route('edit', { path: '/edit/:public_id' });
                 this.route('details', { path: '/:public_id' }, function () {
                     this.route('index', { path: '/' });
                     this.route('devices');
+                    this.route('attachments');
                     this.route('sensors');
                     this.route('events');
                 });

@@ -61,6 +61,7 @@ menu:
   contacts: Контакти
   places: Места
   fuel-reports: Доклади за гориво
+  fuel-transactions: Транзакции за гориво
   issues: Проблеми
   maintenance: Поддръжка
   work-orders: Работни поръчки
@@ -68,6 +69,7 @@ menu:
   parts: Части
   connectivity: Свързаност
   telematics: Телематика
+  fuel-providers: Доставчици на гориво
   devices: Устройства
   sensors: Сензори
   events: Събития

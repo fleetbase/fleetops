@@ -61,6 +61,7 @@ menu:
   contacts: Contacts
   places: Lieux
   fuel-reports: Rapports de carburant
+  fuel-transactions: Transactions de carburant
   issues: Problèmes
   maintenance: Maintenance
   work-orders: Ordres de travail
@@ -68,6 +69,7 @@ menu:
   parts: Pièces
   connectivity: Connectivité
   telematics: Télématique
+  fuel-providers: Fournisseurs de carburant
   devices: Appareils
   sensors: Capteurs
   events: Événements

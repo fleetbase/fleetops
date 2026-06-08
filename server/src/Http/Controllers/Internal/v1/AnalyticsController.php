@@ -4,6 +4,7 @@ namespace Fleetbase\FleetOps\Http\Controllers\Internal\v1;
 
 use Fleetbase\FleetOps\Support\Analytics\AbstractAnalytics;
 use Fleetbase\FleetOps\Support\Analytics\FuelEfficiency;
+use Fleetbase\FleetOps\Support\Analytics\FuelProviderSummary;
 use Fleetbase\FleetOps\Support\Analytics\GeofenceViolations;
 use Fleetbase\FleetOps\Support\Analytics\IssuesInsights;
 use Fleetbase\FleetOps\Support\Analytics\LiveFleet;
@@ -62,6 +63,11 @@ class AnalyticsController extends Controller
     public function fuelEfficiency(Request $request)
     {
         return $this->run($request, FuelEfficiency::class, defaultDays: 90);
+    }
+
+    public function fuelProviders(Request $request)
+    {
+        return $this->run($request, FuelProviderSummary::class, defaultDays: 30);
     }
 
     public function issuesInsights(Request $request)
