@@ -109,6 +109,15 @@ class FleetOpsServiceProvider extends CoreServiceProvider
             \Fleetbase\FleetOps\Tracking\TrackingProviderRegistry::class,
             fn () => new \Fleetbase\FleetOps\Tracking\TrackingProviderRegistry()
         );
+
+        // Register the fuel provider registry as a singleton so FleetOps core
+        // and third-party extensions can share fuel card and fuel billing
+        // providers. Extensions can register providers from their own service
+        // providers with callAfterResolving(FuelProviderRegistry::class, ...).
+        $this->app->singleton(
+            \Fleetbase\FleetOps\Support\FuelProviders\FuelProviderRegistry::class,
+            fn () => new \Fleetbase\FleetOps\Support\FuelProviders\FuelProviderRegistry()
+        );
     }
 
     /**
@@ -173,6 +182,7 @@ class FleetOpsServiceProvider extends CoreServiceProvider
         $this->loadViewsFrom(__DIR__ . '/../../resources/views', 'fleetops');
         $this->mergeConfigFrom(__DIR__ . '/../../config/fleetops.php', 'fleetops');
         $this->mergeConfigFrom(__DIR__ . '/../../config/telematics.php', 'telematics');
+        $this->mergeConfigFrom(__DIR__ . '/../../config/fuel-providers.php', 'fuel-providers');
         $this->mergeConfigFrom(__DIR__ . '/../../config/api.php', 'api');
         $this->mergeConfigFrom(__DIR__ . '/../../config/cache.stores.php', 'cache.stores');
         $this->mergeConfigFrom(__DIR__ . '/../../config/geocoder.php', 'geocoder');

@@ -280,6 +280,16 @@ export default {
                 default: false,
             }),
             new Widget({
+                id: 'fleet-ops-fuel-providers-widget',
+                name: 'Fuel Providers',
+                description: 'Provider spend, unmatched transactions, and sync health.',
+                icon: 'gas-pump',
+                component: new ExtensionComponent('@fleetbase/fleetops-engine', 'widget/fuel-providers'),
+                grid_options: { w: 4, h: 5, minW: 4, minH: 5 },
+                category: 'Analytics',
+                default: false,
+            }),
+            new Widget({
                 id: 'fleet-ops-issues-insights-widget',
                 name: 'Issues Insights',
                 description: 'Open/resolved issues, category breakdown, and average resolution time.',

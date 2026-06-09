@@ -1,0 +1,35 @@
+<div class="fuel-provider-hub space-y-4">
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+        {{#each this.providers as |provider|}}
+            <div class="rounded border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4">
+                <div class="flex items-start justify-between">
+                    <div>
+                        <div class="text-sm font-semibold text-gray-900 dark:text-gray-100">{{provider.label}}</div>
+                        <div class="text-xs text-gray-500 dark:text-gray-400">{{provider.key}}</div>
+                    </div>
+                    <Badge @status={{provider.type}} />
+                </div>
+                <p class="mt-3 text-xs text-gray-600 dark:text-gray-300 leading-relaxed">{{provider.description}}</p>
+                <div class="mt-3 flex flex-wrap gap-1">
+                    {{#each provider.capabilities as |capability|}}
+                        <span class="px-2 py-0.5 rounded bg-gray-100 dark:bg-gray-700 text-xs text-gray-600 dark:text-gray-300">{{capability}}</span>
+                    {{/each}}
+                </div>
+            </div>
+        {{/each}}
+    </div>
+
+    <Layout::Resource::Tabular
+        @resource="fuel-provider-connection"
+        @title="Fuel Provider Connections"
+        @searchQuery={{this.query}}
+        @data={{@model}}
+        @columns={{this.columns}}
+        @page={{this.page}}
+        @onPageChange={{fn (mut this.page)}}
+        @setupTable={{fn (mut this.table)}}
+        @actionButtons={{this.actionButtons}}
+        @bulkActions={{this.bulkActions}}
+        @controller={{this}}
+    />
+</div>

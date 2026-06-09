@@ -74,6 +74,7 @@ menu:
     contacts: Contacts
     places: Places
     fuel-reports: Fuel Reports
+    fuel-transactions: Fuel Transactions
     issues: Issues
     maintenance: Maintenance
     schedules: Schedules
@@ -83,6 +84,7 @@ menu:
     maintenance-history: Maintenance History
     connectivity: Connectivity
     telematics: Telematics
+    fuel-providers: Fuel Providers
     devices: Devices
     sensors: Sensors
     events: Events

@@ -352,6 +352,15 @@ Route::prefix(config('fleetops.api.routing.prefix'))->namespace('Fleetbase\Fleet
                                 $router->delete('bulk-delete', $controller('bulkDelete'));
                             }
                         );
+                        $router->fleetbaseRoutes(
+                            'fuel-provider-connections',
+                            function ($router, $controller) {
+                                $router->get('providers', $controller('providers'));
+                                $router->post('{id}/test-connection', $controller('testConnection'));
+                                $router->post('{id}/sync', $controller('sync'));
+                            }
+                        );
+                        $router->fleetbaseRoutes('fuel-provider-transactions');
                         $router->get('issues/{id}/timeline', 'IssueController@timeline');
                         $router->fleetbaseRoutes(
                             'issues',
@@ -628,6 +637,7 @@ Route::prefix(config('fleetops.api.routing.prefix'))->namespace('Fleetbase\Fleet
                                         $router->get('on-time-delivery', 'AnalyticsController@onTimeDelivery');
                                         $router->get('top-drivers', 'AnalyticsController@topDrivers');
                                         $router->get('fuel-efficiency', 'AnalyticsController@fuelEfficiency');
+                                        $router->get('fuel-providers', 'AnalyticsController@fuelProviders');
                                         $router->get('issues-insights', 'AnalyticsController@issuesInsights');
                                         $router->get('maintenance-overview', 'AnalyticsController@maintenanceOverview');
                                         $router->get('geofence-violations', 'AnalyticsController@geofenceViolations');

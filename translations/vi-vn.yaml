@@ -1,3 +1,7 @@
+menu:
+  fuel-providers: Nhà cung cấp nhiên liệu
+  fuel-transactions: Giao dịch nhiên liệu
+
 fleet-ops:
   extension-name: Fleet-Ops
   common:
@@ -310,10 +314,12 @@ fleet-ops:
         contacts: Liên hệ
         places: Địa điểm
         fuel-reports: Báo cáo Nhiên liệu
+        fuel-transactions: Giao dịch Nhiên liệu
         issues: Vấn đề
         title: Tạo đơn hàng mới
         settings: Cài đặt
         order-config: Cấu hình Đơn hàng
+        fuel-providers: Nhà cung cấp Nhiên liệu
     live-map-drawer:
       driver-listing:
         location: Vị trí
