@@ -19,10 +19,10 @@ class FuelProviderConnection extends Model
     use HasApiModelBehavior;
     use Searchable;
 
-    protected $table = 'fuel_provider_connections';
-    protected $publicIdType = 'fuel_provider_connection';
+    protected $table             = 'fuel_provider_connections';
+    protected $publicIdType      = 'fuel_provider_connection';
     protected $searchableColumns = ['public_id', 'name', 'provider', 'status', 'environment'];
-    protected $filterParams = ['provider', 'status', 'environment'];
+    protected $filterParams      = ['provider', 'status', 'environment'];
 
     protected $fillable = [
         'company_uuid',

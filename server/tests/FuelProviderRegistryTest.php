@@ -15,16 +15,16 @@ test('native and extension fuel providers are exposed through the shared registr
 
     if (!$registry->has('test_fuel_provider')) {
         $registry->register(new FuelProviderDescriptor([
-            'key' => 'test_fuel_provider',
-            'label' => 'Test Fuel Provider',
-            'type' => 'extension',
-            'driver_class' => TestFuelProvider::class,
-            'description' => 'Test extension fuel provider.',
+            'key'             => 'test_fuel_provider',
+            'label'           => 'Test Fuel Provider',
+            'type'            => 'extension',
+            'driver_class'    => TestFuelProvider::class,
+            'description'     => 'Test extension fuel provider.',
             'required_fields' => [
                 [
-                    'name' => 'api_key',
-                    'label' => 'API Key',
-                    'type' => 'password',
+                    'name'     => 'api_key',
+                    'label'    => 'API Key',
+                    'type'     => 'password',
                     'required' => true,
                 ],
             ],

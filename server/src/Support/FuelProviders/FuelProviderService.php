@@ -34,9 +34,9 @@ class FuelProviderService
         $result = $this->registry->resolve($connection->provider)->testConnection($connection);
 
         $connection->update([
-            'status' => data_get($result, 'success') ? 'connected' : 'error',
+            'status'         => data_get($result, 'success') ? 'connected' : 'error',
             'last_tested_at' => now(),
-            'last_error' => data_get($result, 'success') ? null : data_get($result, 'message'),
+            'last_error'     => data_get($result, 'success') ? null : data_get($result, 'message'),
         ]);
 
         return $result;
@@ -52,9 +52,9 @@ class FuelProviderService
         $payloads = $provider->listTransactions($connection, $from, $to, $options);
 
         $summary = [
-            'imported' => 0,
-            'matched' => 0,
-            'unmatched' => 0,
+            'imported'             => 0,
+            'matched'              => 0,
+            'unmatched'            => 0,
             'fuel_reports_created' => 0,
         ];
 
@@ -74,12 +74,12 @@ class FuelProviderService
         }
 
         $connection->update([
-            'status' => 'active',
-            'last_synced_at' => now(),
-            'last_error' => null,
+            'status'          => 'active',
+            'last_synced_at'  => now(),
+            'last_error'      => null,
             'last_sync_state' => [
-                'from' => $from->toIso8601String(),
-                'to' => $to->toIso8601String(),
+                'from'    => $from->toIso8601String(),
+                'to'      => $to->toIso8601String(),
                 'summary' => $summary,
             ],
         ]);
@@ -90,14 +90,14 @@ class FuelProviderService
     public function ingestTransaction(FuelProviderConnection $connection, array $payload): FuelProviderTransaction
     {
         return DB::transaction(function () use ($connection, $payload) {
-            $provider = $payload['provider'] ?? $connection->provider;
+            $provider              = $payload['provider'] ?? $connection->provider;
             $providerTransactionId = $payload['provider_transaction_id'];
-            $transaction = FuelProviderTransaction::updateOrCreate(
+            $transaction           = FuelProviderTransaction::updateOrCreate(
                 ['provider' => $provider, 'provider_transaction_id' => $providerTransactionId],
                 array_merge($payload, [
-                    'company_uuid' => $connection->company_uuid,
+                    'company_uuid'                  => $connection->company_uuid,
                     'fuel_provider_connection_uuid' => $connection->uuid,
-                    'sync_status' => 'imported',
+                    'sync_status'                   => 'imported',
                 ])
             );
 
@@ -162,7 +162,7 @@ class FuelProviderService
 
         foreach ($identifiers as $identifier) {
             $normalized = $this->normalizeIdentifier($identifier);
-            $vehicle = Vehicle::where('company_uuid', $transaction->company_uuid)
+            $vehicle    = Vehicle::where('company_uuid', $transaction->company_uuid)
                 ->where(function ($query) use ($identifier, $normalized) {
                     $query->where('uuid', $identifier)
                         ->orWhere('public_id', $identifier)
@@ -199,21 +199,21 @@ class FuelProviderService
         $fuelReport = FuelReport::create([
             'company_uuid' => $transaction->company_uuid,
             'vehicle_uuid' => $transaction->vehicle_uuid,
-            'driver_uuid' => $transaction->driver_uuid,
-            'report' => trim("Imported {$transaction->provider} fuel transaction {$transaction->provider_transaction_id}"),
-            'odometer' => $transaction->odometer,
-            'amount' => $transaction->amount,
-            'currency' => $transaction->currency,
-            'volume' => $transaction->volume,
-            'metric_unit' => $transaction->metric_unit,
-            'status' => 'processed',
-            'location' => Utils::parsePointToWkt($location ?? new Point(0, 0)),
-            'meta' => [
-                'source' => 'fuel_provider',
-                'provider' => $transaction->provider,
+            'driver_uuid'  => $transaction->driver_uuid,
+            'report'       => trim("Imported {$transaction->provider} fuel transaction {$transaction->provider_transaction_id}"),
+            'odometer'     => $transaction->odometer,
+            'amount'       => $transaction->amount,
+            'currency'     => $transaction->currency,
+            'volume'       => $transaction->volume,
+            'metric_unit'  => $transaction->metric_unit,
+            'status'       => 'processed',
+            'location'     => Utils::parsePointToWkt($location ?? new Point(0, 0)),
+            'meta'         => [
+                'source'                         => 'fuel_provider',
+                'provider'                       => $transaction->provider,
                 'fuel_provider_transaction_uuid' => $transaction->uuid,
-                'station_name' => $transaction->station_name,
-                'trip_number' => $transaction->trip_number,
+                'station_name'                   => $transaction->station_name,
+                'trip_number'                    => $transaction->trip_number,
             ],
         ]);
 

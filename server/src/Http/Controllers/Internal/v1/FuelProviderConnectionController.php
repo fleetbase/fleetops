@@ -27,7 +27,7 @@ class FuelProviderConnectionController extends FleetOpsController
     public function testConnection(Request $request, string $id): JsonResponse
     {
         $connection = $this->findConnection($id);
-        $result = $this->fuelProviderService->testConnection($connection);
+        $result     = $this->fuelProviderService->testConnection($connection);
 
         return response()->json($result, data_get($result, 'success') ? 200 : 422);
     }
@@ -35,10 +35,10 @@ class FuelProviderConnectionController extends FleetOpsController
     public function sync(Request $request, string $id): JsonResponse
     {
         $connection = $this->findConnection($id);
-        $async = $request->boolean('async', true);
-        $from = $request->input('from') ? Carbon::parse($request->input('from')) : null;
-        $to = $request->input('to') ? Carbon::parse($request->input('to')) : null;
-        $options = $request->array('options', []);
+        $async      = $request->boolean('async', true);
+        $from       = $request->input('from') ? Carbon::parse($request->input('from')) : null;
+        $to         = $request->input('to') ? Carbon::parse($request->input('to')) : null;
+        $options    = $request->array('options', []);
 
         if ($async) {
             SyncFuelProviderTransactionsJob::dispatch($connection->uuid, $from?->toIso8601String(), $to?->toIso8601String(), $options);

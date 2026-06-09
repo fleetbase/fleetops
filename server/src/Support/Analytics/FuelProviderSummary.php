@@ -18,23 +18,23 @@ class FuelProviderSummary extends AbstractAnalytics
         $byProvider = $transactions
             ->groupBy('provider')
             ->map(fn ($rows, $provider) => [
-                'provider' => $provider,
+                'provider'     => $provider,
                 'transactions' => $rows->count(),
-                'spend' => (int) $rows->sum('amount'),
-                'volume' => (float) $rows->sum('volume'),
-                'unmatched' => $rows->where('sync_status', 'unmatched')->count(),
+                'spend'        => (int) $rows->sum('amount'),
+                'volume'       => (float) $rows->sum('volume'),
+                'unmatched'    => $rows->where('sync_status', 'unmatched')->count(),
             ])
             ->values();
 
         return [
             'summary' => [
-                'connections' => $connections->count(),
+                'connections'        => $connections->count(),
                 'active_connections' => $connections->whereIn('status', ['connected', 'active'])->count(),
-                'transactions' => $transactions->count(),
-                'unmatched' => $transactions->where('sync_status', 'unmatched')->count(),
-                'spend' => (int) $transactions->sum('amount'),
-                'volume' => (float) $transactions->sum('volume'),
-                'currency' => $transactions->first()?->currency ?? $this->companyCurrency(),
+                'transactions'       => $transactions->count(),
+                'unmatched'          => $transactions->where('sync_status', 'unmatched')->count(),
+                'spend'              => (int) $transactions->sum('amount'),
+                'volume'             => (float) $transactions->sum('volume'),
+                'currency'           => $transactions->first()?->currency ?? $this->companyCurrency(),
             ],
             'providers' => $byProvider,
         ];

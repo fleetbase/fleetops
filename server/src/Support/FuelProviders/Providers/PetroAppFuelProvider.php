@@ -25,15 +25,15 @@ class PetroAppFuelProvider extends AbstractFuelProvider
 
             if (!$response->successful()) {
                 return [
-                    'success' => false,
-                    'message' => $response->json('message') ?? 'Unable to connect to PetroApp.',
+                    'success'  => false,
+                    'message'  => $response->json('message') ?? 'Unable to connect to PetroApp.',
                     'metadata' => ['status' => $response->status()],
                 ];
             }
 
             return [
-                'success' => true,
-                'message' => 'PetroApp connection successful.',
+                'success'  => true,
+                'message'  => 'PetroApp connection successful.',
                 'metadata' => [
                     'total_vehicles' => $response->json('data.total'),
                 ],
@@ -57,7 +57,7 @@ class PetroAppFuelProvider extends AbstractFuelProvider
     {
         $params = array_merge($options, [
             'from' => $from->toDateString(),
-            'to' => $to->toDateString(),
+            'to'   => $to->toDateString(),
             'lang' => data_get($options, 'lang', 'en'),
         ]);
 
@@ -78,13 +78,13 @@ class PetroAppFuelProvider extends AbstractFuelProvider
 
         return [
             'WS-Version' => data_get($credentials, 'version', 'v2.0'),
-            'WS-SK' => data_get($credentials, 'api_key'),
+            'WS-SK'      => data_get($credentials, 'api_key'),
         ];
     }
 
     protected function paginatedGet(FuelProviderConnection $connection, string $endpoint, array $params = [], ?string $dataKey = null): Collection
     {
-        $page = (int) data_get($params, 'page', 1);
+        $page     = (int) data_get($params, 'page', 1);
         $maxPages = (int) data_get($params, 'max_pages', 100);
         unset($params['max_pages']);
 
@@ -98,11 +98,11 @@ class PetroAppFuelProvider extends AbstractFuelProvider
             }
 
             $payload = $response->json();
-            $data = $dataKey ? data_get($payload, $dataKey, []) : data_get($payload, 'data.data', []);
-            $items = $items->merge($data);
+            $data    = $dataKey ? data_get($payload, $dataKey, []) : data_get($payload, 'data.data', []);
+            $items   = $items->merge($data);
 
             $lastPage = (int) data_get($payload, 'data.last_page', $page);
-            $hasMore = data_get($payload, 'data.next_page_url') || $page < $lastPage;
+            $hasMore  = data_get($payload, 'data.next_page_url') || $page < $lastPage;
             $page++;
         } while ($hasMore && $page <= $maxPages);
 
@@ -112,8 +112,8 @@ class PetroAppFuelProvider extends AbstractFuelProvider
     protected function normalizeBill(array $bill): array
     {
         $transactionAt = $this->dateFrom($bill['bill_date'] ?? $bill['billDate'] ?? null);
-        $providerId = $bill['id'] ?? $bill['bill_id'] ?? null;
-        $fallbackId = $this->transactionHash([
+        $providerId    = $bill['id'] ?? $bill['bill_id'] ?? null;
+        $fallbackId    = $this->transactionHash([
             $bill['bill_date'] ?? $bill['billDate'] ?? null,
             $bill['trip_number'] ?? null,
             $bill['internal_number'] ?? null,
@@ -125,30 +125,30 @@ class PetroAppFuelProvider extends AbstractFuelProvider
         ]);
 
         return [
-            'provider' => $this->key(),
+            'provider'                => $this->key(),
             'provider_transaction_id' => (string) ($providerId ?: $fallbackId),
-            'provider_vehicle_id' => $this->compactIdentifier($bill['vehicle_id'] ?? null),
-            'vehicle_card_id' => $this->compactIdentifier($bill['internal_number'] ?? $bill['structure_number'] ?? $bill['plate_snum'] ?? null),
-            'internal_number' => $this->compactIdentifier($bill['internal_number'] ?? null),
-            'structure_number' => $this->compactIdentifier($bill['structure_number'] ?? null),
-            'plate_number' => $this->compactIdentifier($bill['plate_snum'] ?? null),
-            'trip_number' => $this->compactIdentifier($bill['trip_number'] ?? null),
-            'station_name' => $this->compactIdentifier($bill['station_name'] ?? null),
-            'station_latitude' => $bill['station_lat'] ?? null,
-            'station_longitude' => $bill['station_lng'] ?? null,
-            'transaction_at' => $transactionAt,
-            'volume' => $bill['num_of_liters'] ?? null,
-            'metric_unit' => 'l',
-            'amount' => $this->minorCurrencyUnit($bill['cost'] ?? null),
-            'currency' => 'SAR',
-            'odometer' => $bill['odometer'] ?? null,
-            'normalized_payload' => [
-                'payment_method' => $bill['payment_method'] ?? null,
+            'provider_vehicle_id'     => $this->compactIdentifier($bill['vehicle_id'] ?? null),
+            'vehicle_card_id'         => $this->compactIdentifier($bill['internal_number'] ?? $bill['structure_number'] ?? $bill['plate_snum'] ?? null),
+            'internal_number'         => $this->compactIdentifier($bill['internal_number'] ?? null),
+            'structure_number'        => $this->compactIdentifier($bill['structure_number'] ?? null),
+            'plate_number'            => $this->compactIdentifier($bill['plate_snum'] ?? null),
+            'trip_number'             => $this->compactIdentifier($bill['trip_number'] ?? null),
+            'station_name'            => $this->compactIdentifier($bill['station_name'] ?? null),
+            'station_latitude'        => $bill['station_lat'] ?? null,
+            'station_longitude'       => $bill['station_lng'] ?? null,
+            'transaction_at'          => $transactionAt,
+            'volume'                  => $bill['num_of_liters'] ?? null,
+            'metric_unit'             => 'l',
+            'amount'                  => $this->minorCurrencyUnit($bill['cost'] ?? null),
+            'currency'                => 'SAR',
+            'odometer'                => $bill['odometer'] ?? null,
+            'normalized_payload'      => [
+                'payment_method'      => $bill['payment_method'] ?? null,
                 'payment_method_text' => $bill['payment_method_text'] ?? null,
-                'branch_name' => $bill['branch_name'] ?? null,
-                'city' => $bill['city'] ?? null,
-                'district' => $bill['district'] ?? null,
-                'delegate_name' => $bill['delegate_name'] ?? null,
+                'branch_name'         => $bill['branch_name'] ?? null,
+                'city'                => $bill['city'] ?? null,
+                'district'            => $bill['district'] ?? null,
+                'delegate_name'       => $bill['delegate_name'] ?? null,
             ],
             'raw_payload' => $bill,
         ];

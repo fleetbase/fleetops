@@ -35,11 +35,11 @@ class SyncFuelProviderTransactionsJob implements ShouldQueue
             );
         } catch (\Throwable $e) {
             $connection->update([
-                'status' => 'error',
-                'last_error' => $e->getMessage(),
+                'status'          => 'error',
+                'last_error'      => $e->getMessage(),
                 'last_sync_state' => [
                     'failed_at' => now()->toIso8601String(),
-                    'message' => $e->getMessage(),
+                    'message'   => $e->getMessage(),
                 ],
             ]);
 

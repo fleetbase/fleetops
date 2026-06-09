@@ -18,10 +18,10 @@ class FuelProviderTransaction extends Model
     use HasApiModelBehavior;
     use Searchable;
 
-    protected $table = 'fuel_provider_transactions';
-    protected $publicIdType = 'fuel_provider_transaction';
+    protected $table             = 'fuel_provider_transactions';
+    protected $publicIdType      = 'fuel_provider_transaction';
     protected $searchableColumns = ['public_id', 'provider', 'provider_transaction_id', 'vehicle_card_id', 'station_name', 'trip_number'];
-    protected $filterParams = ['provider', 'sync_status', 'vehicle', 'driver', 'order', 'fuel_report', 'connection'];
+    protected $filterParams      = ['provider', 'sync_status', 'vehicle', 'driver', 'order', 'fuel_report', 'connection'];
 
     protected $fillable = [
         'company_uuid',
@@ -63,7 +63,7 @@ class FuelProviderTransaction extends Model
     ];
 
     protected $appends = ['vehicle_name', 'driver_name', 'fuel_report_id', 'station_location'];
-    protected $hidden = ['vehicle', 'driver', 'fuelReport'];
+    protected $hidden  = ['vehicle', 'driver', 'fuelReport'];
 
     public function connection(): BelongsTo
     {
