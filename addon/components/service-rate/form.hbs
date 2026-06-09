@@ -379,6 +379,7 @@
                         <li class="leading-5"><code>&#123;stops&#125;</code>: total service stops including pickup, dropoff, and intermediate waypoints.</li>
                         <li class="leading-5"><code>&#123;waypoints&#125;</code>: intermediate waypoint count only.</li>
                         <li class="leading-5"><code>&#123;parcels&#125;</code>, <code>&#123;entities&#125;</code>: parcel count and total payload entity count.</li>
+                        <li class="leading-5"><code>&#123;weight&#125;</code>, <code>&#123;weight_kg&#125;</code>, <code>&#123;weight_g&#125;</code>, <code>&#123;weight_lb&#125;</code>, <code>&#123;weight_oz&#125;</code>, <code>&#123;weight_tonne&#125;</code>, <code>&#123;weight_t&#125;</code>: total entity weight converted across supported units.</li>
                         <li class="leading-5"><code>&#123;base_fee&#125;</code>: the configured base fee for this service rate.</li>
                         <li class="leading-5">Supported functions: <code>max(a,b)</code>, <code>min(a,b)</code>, <code>ceil(x)</code>, <code>floor(x)</code>, <code>round(x)</code>.</li>
                     </ul>
@@ -399,8 +400,8 @@
 
                     <div>
                         <h4 class="mb-1 text-sm font-semibold">{{t "service-rate.fields.example"}} 3</h4>
-                        <div class="mb-2 text-inherit">Combine waypoint, parcel, and distance surcharges in one formula.</div>
-                        <code class="text-xs font-mono">max(&#123;waypoints&#125;, 0) * 15 + max(&#123;parcels&#125; - 3, 0) * 2 + max(&#123;distance_km&#125; - 25, 0) * 0.5 + &#123;base_fee&#125;</code>
+                        <div class="mb-2 text-inherit">Combine waypoint, payload weight, and distance surcharges in one formula.</div>
+                        <code class="text-xs font-mono">max(&#123;waypoints&#125;, 0) * 15 + max(&#123;weight_kg&#125; - 100, 0) * 0.25 + max(&#123;distance_km&#125; - 25, 0) * 0.5 + &#123;base_fee&#125;</code>
                     </div>
                 </div>
             </InfoBlock>
