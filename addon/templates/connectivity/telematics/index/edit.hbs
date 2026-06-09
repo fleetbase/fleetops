@@ -1,12 +1,26 @@
-<Layout::Resource::Panel
-    @resource={{@model}}
-    @controller={{this}}
-    @headerTitle={{concat "Edit: " (or @model.name @model.provider)}}
-    @actionButtons={{this.actionButtons}}
-    @saveTask={{this.save}}
-    @onPressCancel={{this.cancel}}
-    @onOverlayReady={{fn (mut this.overlay)}}
->
-    <Telematic::Form @resource={{@model}} @controller={{this}} />
-    <Spacer @height="200px" />
-</Layout::Resource::Panel>
+<div class="flex h-full flex-col bg-gray-50 dark:bg-gray-900">
+    <section class="flex-shrink-0 border-b border-gray-200 bg-white px-4 py-4 shadow-sm dark:border-gray-700 dark:bg-gray-900 dark:shadow-sm dark:shadow-black/30 md:px-6">
+        <div class="mx-auto flex w-full max-w-6xl flex-col gap-3 md:flex-row md:items-start md:justify-between">
+            <div class="min-w-0">
+                <div class="text-xs font-semibold uppercase text-gray-400 dark:text-gray-500">Connection settings</div>
+                <h1 class="truncate text-lg font-bold text-gray-900 dark:text-gray-100">Edit {{or @model.name @model.provider}}</h1>
+                <p class="mt-1 text-sm text-gray-500 dark:text-gray-300">Update credentials, webhook configuration, and hardware identity for this provider connection.</p>
+            </div>
+            <div class="flex items-center gap-2">
+                <Button @icon="eye" @text="View" @size="sm" @onClick={{this.view}} />
+                <Button @icon="times" @text="Cancel" @size="sm" @onClick={{this.cancel}} />
+            </div>
+        </div>
+    </section>
+
+    <Telematic::Form
+        @resource={{@model}}
+        @controller={{this}}
+        @saveLabel="Save Changes"
+        @savingLabel="Saving changes"
+        @footerHelp="Changes affect provider sync, webhook ingestion, and device discovery."
+        @isSaving={{this.save.isRunning}}
+        @onCancel={{this.cancel}}
+        @onSave={{perform this.save @model}}
+    />
+</div>

@@ -73,7 +73,7 @@ class Sensor extends Model
      *
      * @var array
      */
-    protected $filterParams = ['sensor_type', 'status', 'device_uuid', 'warranty_uuid', 'sensorable_type'];
+    protected $filterParams = ['sensor_type', 'status', 'device_uuid', 'warranty_uuid', 'sensorable_type', 'telematic_uuid'];
 
     /**
      * The attributes that are mass assignable.

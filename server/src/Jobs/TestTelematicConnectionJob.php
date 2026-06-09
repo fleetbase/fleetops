@@ -3,12 +3,13 @@
 namespace Fleetbase\FleetOps\Jobs;
 
 use Fleetbase\FleetOps\Models\Telematic;
+use Fleetbase\FleetOps\Support\Telematics\TelematicProviderRegistry;
+use Fleetbase\FleetOps\Support\Telematics\TelematicService;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
-use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 
@@ -25,22 +26,23 @@ class TestTelematicConnectionJob implements ShouldQueue
     use SerializesModels;
 
     public Telematic $telematic;
+    public string $jobId;
     public int $tries   = 1;
     public int $timeout = 30;
 
     /**
      * Create a new job instance.
      */
-    public function __construct(Telematic $telematic)
+    public function __construct(Telematic $telematic, ?string $jobId = null)
     {
         $this->telematic = $telematic;
-        $this->queue     = 'telematics-priority';
+        $this->jobId     = $jobId ?? Str::uuid()->toString();
     }
 
     /**
      * Execute the job.
      */
-    public function handle(ProviderRegistry $registry): void
+    public function handle(TelematicProviderRegistry $registry, TelematicService $service): void
     {
         $correlationId = Str::uuid()->toString();
 
@@ -52,26 +54,11 @@ class TestTelematicConnectionJob implements ShouldQueue
 
         try {
             $provider    = $registry->resolve($this->telematic->provider);
-            $credentials = json_decode(Crypt::decryptString($this->telematic->credentials), true);
+            $credentials = $service->getCredentials($this->telematic);
 
             $result = $provider->testConnection($credentials);
 
-            if ($result['success']) {
-                $this->telematic->status = 'active';
-                $this->telematic->meta   = array_merge($this->telematic->meta ?? [], [
-                    'last_connection_test' => now()->toDateTimeString(),
-                    'last_test_result'     => 'success',
-                ]);
-            } else {
-                $this->telematic->status = 'error';
-                $this->telematic->meta   = array_merge($this->telematic->meta ?? [], [
-                    'last_connection_test' => now()->toDateTimeString(),
-                    'last_test_result'     => 'failed',
-                    'last_error'           => $result['message'],
-                ]);
-            }
-
-            $this->telematic->save();
+            $service->recordConnectionTest($this->telematic, $result);
 
             Log::info('Connection test completed', [
                 'correlation_id' => $correlationId,
@@ -97,6 +84,6 @@ class TestTelematicConnectionJob implements ShouldQueue
      */
     public function getJobId(): string
     {
-        return $this->job->getJobId() ?? Str::uuid()->toString();
+        return $this->jobId;
     }
 }

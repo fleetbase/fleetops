@@ -1,1 +1,7 @@
-{{outlet}}
+<Layout::Resource::Tabular
+    @resource="device"
+    @title="Connected Devices"
+    @data={{@model}}
+    @columns={{this.columns}}
+    @controller={{this}}
+/>

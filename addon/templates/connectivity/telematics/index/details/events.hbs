@@ -1,1 +1,7 @@
-{{outlet}}
+<Layout::Resource::Tabular
+    @resource="device-event"
+    @title="Integration Events"
+    @data={{@model}}
+    @columns={{this.columns}}
+    @controller={{this}}
+/>
