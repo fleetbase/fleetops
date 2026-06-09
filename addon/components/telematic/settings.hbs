@@ -1,0 +1,125 @@
+<div class="flex min-h-0 flex-1 flex-col" ...attributes>
+    <div class="min-h-0 flex-1 overflow-y-auto px-4 py-4 md:px-6">
+        <div class="mx-auto flex w-full max-w-6xl flex-col gap-4">
+            <section class="rounded-md border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-800">
+                <div class="mb-3">
+                    <h2 class="text-sm font-bold text-gray-900 dark:text-gray-100">Provider</h2>
+                    <p class="text-xs text-gray-500 dark:text-gray-300">Provider identity is locked after the connection is created.</p>
+                </div>
+
+                <div class="flex flex-col gap-3 rounded-md border border-gray-200 bg-gray-50 p-3 dark:border-gray-700 dark:bg-gray-900/40 md:flex-row md:items-start md:justify-between">
+                    <div class="flex min-w-0 items-start gap-3">
+                        <Image src={{this.provider.icon}} class="h-10 w-10 flex-shrink-0 rounded" />
+                        <div class="min-w-0">
+                            <div class="truncate text-sm font-bold text-gray-900 dark:text-gray-100">{{or this.provider.label @resource.provider}}</div>
+                            <p class="mt-1 max-w-3xl text-xs leading-5 text-gray-500 dark:text-gray-300">{{this.provider.description}}</p>
+                        </div>
+                    </div>
+                    <div class="flex flex-shrink-0 flex-wrap items-center gap-2">
+                        <Badge @status="info" @hideStatusDot={{true}}>{{@resource.provider}}</Badge>
+                        {{#if @resource.public_id}}
+                            <Badge @status="default" @hideStatusDot={{true}}>{{@resource.public_id}}</Badge>
+                        {{/if}}
+                    </div>
+                </div>
+            </section>
+
+            <section class="grid grid-cols-1 gap-4 lg:grid-cols-3">
+                <div class="rounded-md border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-800 lg:col-span-2">
+                    <div class="mb-3">
+                        <h2 class="text-sm font-bold text-gray-900 dark:text-gray-100">Connection</h2>
+                        <p class="text-xs text-gray-500 dark:text-gray-300">Update connection naming and saved provider credentials.</p>
+                    </div>
+
+                    <div class="grid grid-cols-1 gap-2 no-input-group-padding text-xs">
+                        <InputGroup @value={{@resource.name}} @name="Connection Name" />
+
+                        {{#if this.credentialFields.length}}
+                            <div class="mt-2 grid grid-cols-1 gap-2 lg:grid-cols-2">
+                                {{#each this.credentialFields as |field|}}
+                                    <InputGroup
+                                        @name={{field.label}}
+                                        @value={{get @resource.credentials field.name}}
+                                        @required={{field.required}}
+                                        @type={{field.type}}
+                                        @helpText={{field.help_text}}
+                                        {{on "input" (fn this.setCredential field)}}
+                                    />
+                                {{/each}}
+                            </div>
+                        {{else}}
+                            <div class="rounded-md border border-dashed border-gray-300 p-3 text-xs text-gray-500 dark:border-gray-700 dark:text-gray-300">
+                                This provider does not define editable credential fields.
+                            </div>
+                        {{/if}}
+                    </div>
+                </div>
+
+                <aside class="rounded-md border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-800">
+                    <div class="mb-3">
+                        <h2 class="text-sm font-bold text-gray-900 dark:text-gray-100">Capabilities</h2>
+                        <p class="text-xs text-gray-500 dark:text-gray-300">Provider-supported connectivity features.</p>
+                    </div>
+                    <div class="flex flex-wrap gap-2">
+                        <Badge @status={{if this.provider.supports_discovery "success" "default"}} @hideStatusDot={{true}}>Discovery</Badge>
+                        <Badge @status={{if this.provider.supports_webhooks "success" "default"}} @hideStatusDot={{true}}>Webhooks</Badge>
+                    </div>
+                </aside>
+            </section>
+
+            <section class="rounded-md border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-800">
+                <div class="mb-3">
+                    <h2 class="text-sm font-bold text-gray-900 dark:text-gray-100">Webhook</h2>
+                    <p class="text-xs text-gray-500 dark:text-gray-300">Provider-facing URL used for inbound telemetry when supported.</p>
+                </div>
+
+                {{#if this.provider.supports_webhooks}}
+                    {{#if this.hasWebhookUrl}}
+                        <ClickToCopy @value={{this.webhookUrl}} class="block w-full">
+                            <Input @value={{this.webhookUrl}} class="form-input w-full" readonly />
+                        </ClickToCopy>
+                    {{else}}
+                        <div class="rounded-md border border-yellow-200 bg-yellow-50 p-3 text-xs text-yellow-800 dark:border-yellow-700 dark:bg-gray-800 dark:text-yellow-300">
+                            Webhook URL unavailable until this connection has a public ID.
+                        </div>
+                    {{/if}}
+                {{else}}
+                    <div class="rounded-md border border-dashed border-gray-300 p-3 text-xs text-gray-500 dark:border-gray-700 dark:text-gray-300">
+                        This provider does not require FleetOps webhook configuration.
+                    </div>
+                {{/if}}
+            </section>
+
+            <section class="rounded-md border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-800">
+                <div class="mb-3">
+                    <h2 class="text-sm font-bold text-gray-900 dark:text-gray-100">Hardware Identity</h2>
+                    <p class="text-xs text-gray-500 dark:text-gray-300">Optional blackbox metadata for provider hardware installed in the fleet.</p>
+                </div>
+                <div class="grid grid-cols-1 gap-2 no-input-group-padding text-xs lg:grid-cols-3">
+                    <InputGroup @value={{@resource.model}} @name="Model" />
+                    <InputGroup @value={{@resource.serial_number}} @name="Serial Number" />
+                    <InputGroup @value={{@resource.firmware_version}} @name="Firmware Version" />
+                    <InputGroup @value={{@resource.imei}} @name="IMEI" />
+                    <InputGroup @value={{@resource.imsi}} @name="IMSI" />
+                    <InputGroup @value={{@resource.iccid}} @name="ICCID" />
+                </div>
+            </section>
+
+            <CustomField::Yield @subject={{@resource}} @wrapperClass="bordered-top" />
+
+            <RegistryYield @registry="fleet-ops:component:telematic:form" as |RegistryComponent|>
+                <RegistryComponent @resource={{@resource}} @controller={{@controller}} @permission={{get-write-permission @resource}} />
+            </RegistryYield>
+        </div>
+    </div>
+
+    <footer class="flex-shrink-0 border-t border-gray-200 bg-white px-4 py-3 shadow-sm dark:border-gray-700 dark:bg-gray-900 dark:shadow-sm dark:shadow-black/30 md:px-6">
+        <div class="mx-auto flex w-full max-w-6xl flex-col gap-2 md:flex-row md:items-center md:justify-between">
+            <div class="text-xs text-gray-500 dark:text-gray-300">{{@footerHelp}}</div>
+            <div class="flex items-center justify-end gap-2">
+                <Button @icon="times" @text="Cancel" @size="sm" @onClick={{@onCancel}} />
+                <Button @icon="save" @text={{if @isSaving @savingLabel @saveLabel}} @type="primary" @size="sm" @isLoading={{@isSaving}} @onClick={{@onSave}} />
+            </div>
+        </div>
+    </footer>
+</div>

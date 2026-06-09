@@ -1,1 +1,12 @@
-{{outlet}}
+<Telematic::Hub
+    @integrations={{@model}}
+    @providers={{this.providers}}
+    @providersLoading={{this.loadProviders.isRunning}}
+    @columns={{this.columns}}
+    @page={{this.page}}
+    @onPageChange={{fn (mut this.page)}}
+    @bulkActions={{this.bulkActions}}
+    @controller={{this}}
+    @searchQuery={{this.query}}
+    @onSearch={{perform this.telematicActions.controllerSearchTask this}}
+/>

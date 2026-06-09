@@ -118,7 +118,7 @@
                                         <div class="truncate text-[10px] uppercase text-gray-400 dark:text-gray-500">{{provider.type}}</div>
                                     </div>
                                 </div>
-                                <Badge @status={{if provider.connected "success" "default"}} @hideStatusDot={{true}}>
+                                <Badge @status={{if provider.connected "success" "info"}} @hideStatusDot={{true}}>
                                     {{if provider.connected "Connected" "Available"}}
                                 </Badge>
                             </div>

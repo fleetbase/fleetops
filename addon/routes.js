@@ -165,17 +165,15 @@ export default buildRoutes(function () {
             });
         });
         this.route('telematics', function () {
-            this.route('index', { path: '/' }, function () {
+            this.route('index', { path: '/' });
+            this.route('new');
+            this.route('edit', { path: '/edit/:public_id' });
+            this.route('details', { path: '/:public_id' }, function () {
                 this.route('index', { path: '/' });
-                this.route('new');
-                this.route('edit', { path: '/edit/:public_id' });
-                this.route('details', { path: '/:public_id' }, function () {
-                    this.route('index', { path: '/' });
-                    this.route('devices');
-                    this.route('attachments');
-                    this.route('sensors');
-                    this.route('events');
-                });
+                this.route('devices');
+                this.route('attachments');
+                this.route('sensors');
+                this.route('events');
             });
         });
 

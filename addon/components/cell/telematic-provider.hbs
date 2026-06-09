@@ -3,14 +3,14 @@
         type="button"
         disabled={{and @column.permission (cannot @column.permission)}}
         {{on "click" this.onClick}}
-        class="flex min-w-0 max-w-md items-start py-1 gap-2"
+        class="flex min-w-0 max-w-md items-start gap-2 py-1 text-left"
     >
         <div class="pt-0.5">
             <Image src={{this.icon}} class="mr-3 h-8 w-8 flex-shrink-0 rounded-md" />
         </div>
-        <div>
+        <div class="min-w-0 text-left">
             <div class="truncate text-sm font-semibold text-gray-900 hover:text-blue-600 dark:text-gray-100 dark:hover:text-blue-300">{{n-a this.name}}</div>
-            <div class="mt-0.5 line-clamp-2 whitespace-normal text-xs leading-4 text-gray-500 dark:text-gray-400">{{n-a this.description}}</div>
+            <div class="mt-0.5 line-clamp-2 whitespace-normal text-left text-xs leading-4 text-gray-500 dark:text-gray-400">{{n-a this.description}}</div>
         </div>
     </button>
 </div>
