@@ -52,4 +52,9 @@ class FuelProviderConnection extends Model
     {
         return $this->hasMany(FuelProviderTransaction::class, 'fuel_provider_connection_uuid', 'uuid');
     }
+
+    public function syncRuns(): HasMany
+    {
+        return $this->hasMany(FuelProviderSyncRun::class, 'fuel_provider_connection_uuid', 'uuid');
+    }
 }

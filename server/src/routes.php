@@ -356,11 +356,21 @@ Route::prefix(config('fleetops.api.routing.prefix'))->namespace('Fleetbase\Fleet
                             'fuel-provider-connections',
                             function ($router, $controller) {
                                 $router->get('providers', $controller('providers'));
+                                $router->post('providers/{provider}/test-credentials', $controller('testCredentials'));
                                 $router->post('{id}/test-connection', $controller('testConnection'));
                                 $router->post('{id}/sync', $controller('sync'));
                             }
                         );
-                        $router->fleetbaseRoutes('fuel-provider-transactions');
+                        $router->fleetbaseRoutes('fuel-provider-sync-runs');
+                        $router->fleetbaseRoutes(
+                            'fuel-provider-transactions',
+                            function ($router, $controller) {
+                                $router->post('{id}/match-vehicle', $controller('matchVehicle'));
+                                $router->post('{id}/match-order', $controller('matchOrder'));
+                                $router->post('{id}/reprocess', $controller('reprocess'));
+                                $router->post('{id}/review', $controller('review'));
+                            }
+                        );
                         $router->get('issues/{id}/timeline', 'IssueController@timeline');
                         $router->fleetbaseRoutes(
                             'issues',

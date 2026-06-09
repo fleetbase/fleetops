@@ -65,7 +65,7 @@ menu:
   parts: Partes
   connectivity: Conectividad
   telematics: Telemática
-  fuel-providers: Proveedores de combustible
+  fuel-providers: Integraciones de combustible
   devices: Dispositivos
   sensors: Sensores
   events: Eventos

@@ -1,5 +1,5 @@
 menu:
-  fuel-providers: Nhà cung cấp nhiên liệu
+  fuel-providers: Tích hợp Nhiên liệu
   fuel-transactions: Giao dịch nhiên liệu
 
 fleet-ops:
@@ -319,7 +319,7 @@ fleet-ops:
         title: Tạo đơn hàng mới
         settings: Cài đặt
         order-config: Cấu hình Đơn hàng
-        fuel-providers: Nhà cung cấp Nhiên liệu
+        fuel-providers: Tích hợp Nhiên liệu
     live-map-drawer:
       driver-listing:
         location: Vị trí

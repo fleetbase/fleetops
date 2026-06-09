@@ -84,7 +84,7 @@ menu:
     maintenance-history: Maintenance History
     connectivity: Connectivity
     telematics: Telematics
-    fuel-providers: Fuel Providers
+    fuel-providers: Fuel Integrations
     devices: Devices
     sensors: Sensors
     events: Events

@@ -75,10 +75,18 @@ class PetroAppFuelProvider extends AbstractFuelProvider
     protected function headers(FuelProviderConnection $connection): array
     {
         $credentials = (array) $connection->credentials;
+        $token       = data_get($credentials, 'api_token') ?? data_get($credentials, 'api_key');
+
+        if (data_get($credentials, 'auth_type') === 'ws_sk_header') {
+            return [
+                'WS-Version' => data_get($credentials, 'version', 'v2.0'),
+                'WS-SK'      => $token,
+            ];
+        }
 
         return [
             'WS-Version' => data_get($credentials, 'version', 'v2.0'),
-            'WS-SK'      => data_get($credentials, 'api_key'),
+            'Authorization' => 'Bearer ' . $token,
         ];
     }
 

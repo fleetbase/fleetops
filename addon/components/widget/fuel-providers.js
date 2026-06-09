@@ -21,7 +21,7 @@ export default class WidgetFuelProvidersComponent extends Component {
             this.data = yield this.fetch.get('fleet-ops/analytics/fuel-providers', { period: '30d' });
             this.error = null;
         } catch (error) {
-            this.error = error?.message ?? 'Failed to load fuel provider data';
+            this.error = error?.message ?? 'Failed to load fuel integration data';
         }
     }
 }

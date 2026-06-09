@@ -281,7 +281,7 @@ export default {
             }),
             new Widget({
                 id: 'fleet-ops-fuel-providers-widget',
-                name: 'Fuel Providers',
+                name: 'Fuel Integrations',
                 description: 'Provider spend, unmatched transactions, and sync health.',
                 icon: 'gas-pump',
                 component: new ExtensionComponent('@fleetbase/fleetops-engine', 'widget/fuel-providers'),

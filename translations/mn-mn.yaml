@@ -69,7 +69,7 @@ menu:
   parts: Сэлбэгүүд
   connectivity: Холболт
   telematics: Телематикийн систем
-  fuel-providers: Түлшний үйлчилгээ үзүүлэгчид
+  fuel-providers: Түлшний интеграцууд
   devices: Төхөөрөмжүүд
   sensors: Мэдрэгчүүд
   events: Үйл явдлууд

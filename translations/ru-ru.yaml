@@ -69,7 +69,7 @@ menu:
   parts: Запчасти
   connectivity: Подключение
   telematics: Телематика
-  fuel-providers: Поставщики топлива
+  fuel-providers: Интеграции топлива
   devices: Устройства
   sensors: Датчики
   events: События

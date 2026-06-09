@@ -1,5 +1,5 @@
 menu:
-  fuel-providers: مزودو الوقود
+  fuel-providers: تكاملات الوقود
   fuel-transactions: معاملات الوقود
 
 fleet-ops:
@@ -318,7 +318,7 @@ fleet-ops:
         title: إنشاء طلب جديد
         settings: الإعدادات
         order-config: تكوين الطلب
-        fuel-providers: مزودو الوقود
+        fuel-providers: تكاملات الوقود
     live-map-drawer:
       driver-listing:
         location: الموقع

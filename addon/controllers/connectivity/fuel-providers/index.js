@@ -8,6 +8,8 @@ export default class ConnectivityFuelProvidersIndexController extends Controller
     @service fetch;
     @service notifications;
     @service tableContext;
+    @service fuelIntegrationActions;
+    @service intl;
 
     @tracked queryParams = ['page', 'limit', 'sort', 'query', 'provider', 'status', 'environment'];
     @tracked page = 1;
@@ -30,7 +32,13 @@ export default class ConnectivityFuelProvidersIndexController extends Controller
             {
                 icon: 'refresh',
                 onClick: this.refresh,
-                helpText: 'Refresh',
+                helpText: this.intl.t('common.reload'),
+            },
+            {
+                icon: 'plus',
+                text: 'Connect Integration',
+                type: 'primary',
+                onClick: () => this.fuelIntegrationActions.transition.create(),
             },
         ];
     }
@@ -50,8 +58,8 @@ export default class ConnectivityFuelProvidersIndexController extends Controller
         return [
             {
                 sticky: true,
-                label: 'Provider',
-                valuePath: 'displayName',
+                label: 'Integration',
+                valuePath: 'name',
                 cellComponent: 'click-to-copy',
                 resizable: true,
                 sortable: true,
@@ -60,7 +68,7 @@ export default class ConnectivityFuelProvidersIndexController extends Controller
                 filterComponent: 'filter/string',
             },
             {
-                label: 'Key',
+                label: 'Provider Key',
                 valuePath: 'provider',
                 resizable: true,
                 sortable: true,
@@ -87,9 +95,21 @@ export default class ConnectivityFuelProvidersIndexController extends Controller
             },
             {
                 label: 'Last Sync',
-                valuePath: 'lastSyncedAt',
+                valuePath: 'last_synced_at',
                 resizable: true,
                 sortable: true,
+            },
+            {
+                label: 'Imported',
+                valuePath: 'last_sync_state.summary.imported',
+                resizable: true,
+                sortable: false,
+            },
+            {
+                label: 'Unmatched',
+                valuePath: 'last_sync_state.summary.unmatched',
+                resizable: true,
+                sortable: false,
             },
             {
                 label: 'Last Error',
@@ -103,12 +123,15 @@ export default class ConnectivityFuelProvidersIndexController extends Controller
                 ddButtonText: false,
                 ddButtonIcon: 'ellipsis-h',
                 ddButtonIconPrefix: 'fas',
-                ddMenuLabel: 'Fuel Provider Actions',
+                ddMenuLabel: 'Fuel Integration Actions',
                 cellClassNames: 'overflow-visible',
                 wrapperClass: 'flex items-center justify-end mx-2',
                 sticky: 'right',
                 width: 60,
                 actions: [
+                    { label: 'Open Integration', fn: this.openConnection },
+                    { label: 'Edit Settings', fn: this.editConnection },
+                    { separator: true },
                     { label: 'Test Connection', fn: this.testConnection },
                     { label: 'Sync Transactions', fn: this.syncConnection },
                 ],
@@ -132,10 +155,18 @@ export default class ConnectivityFuelProvidersIndexController extends Controller
         this.target.send('refresh');
     }
 
+    @action openConnection(connection) {
+        return this.fuelIntegrationActions.transition.view(connection);
+    }
+
+    @action editConnection(connection) {
+        return this.fuelIntegrationActions.transition.edit(connection);
+    }
+
     @action async testConnection(connection) {
         try {
             await this.fetch.post(`fuel-provider-connections/${connection.id}/test-connection`);
-            this.notifications.success('Fuel provider connection tested.');
+            this.notifications.success('Fuel integration connection tested.');
             this.refresh();
         } catch (error) {
             this.notifications.serverError(error);
@@ -145,7 +176,7 @@ export default class ConnectivityFuelProvidersIndexController extends Controller
     @action async syncConnection(connection) {
         try {
             await this.fetch.post(`fuel-provider-connections/${connection.id}/sync`, { async: true });
-            this.notifications.success('Fuel provider sync queued.');
+            this.notifications.success('Fuel transaction sync queued.');
             this.refresh();
         } catch (error) {
             this.notifications.serverError(error);
