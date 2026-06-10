@@ -31,6 +31,10 @@ export default class ConnectivityTelematicsDetailsController extends Controller 
                 route: 'connectivity.telematics.details.events',
                 label: 'Events',
             },
+            {
+                route: 'connectivity.telematics.details.logs',
+                label: 'Logs',
+            },
         ].map((tab) => ({
             ...tab,
             active: this.isTabActive(tab.route),
@@ -92,7 +96,7 @@ export default class ConnectivityTelematicsDetailsController extends Controller 
             case 'synchronizing':
                 return 'Syncing';
             case 'active':
-                return 'Healthy';
+                return 'Connected';
             case 'error':
                 return 'Needs attention';
             case null:

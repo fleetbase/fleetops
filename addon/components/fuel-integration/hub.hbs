@@ -10,7 +10,7 @@
                         </Badge>
                     </div>
                     <p class="mt-1 max-w-3xl text-sm leading-5 text-gray-500 dark:text-gray-300">
-                        Connect fuel card providers or fuel management systems, import provider bills as fuel transactions, match them to FleetOps vehicles and trips, then create linked fuel reports for operations.
+                        Connect fuel card providers or fuel management systems, import provider bills as fuel transactions, match them to vehicles and trips, then create linked fuel reports for operations.
                     </p>
                 </div>
                 <div class="flex flex-shrink-0 items-center gap-2 whitespace-nowrap">
@@ -91,7 +91,7 @@
                     </div>
                     <h2 class="mt-3 text-sm font-bold text-gray-900 dark:text-gray-100">No fuel integrations connected yet</h2>
                     <p class="mx-auto mt-1 max-w-2xl text-xs leading-5 text-gray-500 dark:text-gray-300">
-                        Start by connecting PetroApp or another fuel card/fuel management system. FleetOps will import provider bills into Fuel Transactions, match them to vehicles and trips, and create linked Fuel Reports once matched.
+                        Start by connecting PetroApp or another fuel card/fuel management system. Provider bills import into Fuel Transactions, match to vehicles and trips, and create linked Fuel Reports once matched.
                     </p>
                     <Button class="mt-4" @icon="plus" @text="Connect Integration" @type="primary" @size="sm" @onClick={{this.createIntegration}} />
                 </section>
@@ -121,7 +121,7 @@
                                         <div class="truncate text-[10px] uppercase text-gray-400 dark:text-gray-500">{{provider.categoryLabel}}</div>
                                     </div>
                                 </div>
-                                <Badge @status={{if provider.connected "success" "default"}} @hideStatusDot={{true}}>
+                                <Badge @status={{if provider.connected "success" "info"}} @hideStatusDot={{true}}>
                                     {{if provider.connected "Connected" "Available"}}
                                 </Badge>
                             </div>

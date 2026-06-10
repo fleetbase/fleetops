@@ -67,14 +67,14 @@ class Device extends Model
      *
      * @var array
      */
-    protected $searchableColumns = ['name', 'model', 'serial_number', 'manufacturer', 'public_id'];
+    protected $searchableColumns = ['name', 'model', 'serial_number', 'manufacturer', 'device_id', 'internal_id', 'imei', 'public_id'];
 
     /**
      * The attributes that can be used for filtering.
      *
      * @var array
      */
-    protected $filterParams = ['status', 'warranty_uuid', 'attachable_type', 'telematic_uuid', 'provider'];
+    protected $filterParams = ['status', 'warranty_uuid', 'attachable_type', 'attachable_uuid', 'telematic_uuid', 'provider'];
 
     /**
      * The attributes that are mass assignable.
@@ -195,7 +195,29 @@ class Device extends Model
      */
     public function getActivitylogOptions(): LogOptions
     {
-        return LogOptions::defaults()->logAll();
+        return LogOptions::defaults()
+            ->logOnly([
+                'company_uuid',
+                'telematic_uuid',
+                'attachable_uuid',
+                'attachable_type',
+                'device_id',
+                'internal_id',
+                'imei',
+                'imsi',
+                'firmware_version',
+                'provider',
+                'name',
+                'model',
+                'manufacturer',
+                'serial_number',
+                'installation_date',
+                'last_maintenance_date',
+                'online',
+                'status',
+                'last_online_at',
+            ])
+            ->logOnlyDirty();
     }
 
     public function telematic(): BelongsTo

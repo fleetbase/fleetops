@@ -21,6 +21,35 @@ use Illuminate\Support\Str;
 
 class FuelProviderService
 {
+    protected const DEFAULT_MATCHING_ORDER = ['plate_number', 'internal_id', 'vin', 'serial_number', 'call_sign', 'fuel_card_number', 'trip_number'];
+
+    protected const LEGACY_DEFAULT_MATCHING_ORDER = ['provider_vehicle_id', 'internal_number', 'structure_number', 'plate_number', 'vehicle_card_id', 'trip_number'];
+
+    protected const ALLOWED_MATCHING_FIELDS = ['plate_number', 'internal_id', 'vin', 'serial_number', 'call_sign', 'fuel_card_number', 'trip_number', 'provider_vehicle_id', 'structure_number'];
+
+    protected const LEGACY_MATCHING_FIELDS = [
+        'internal_number' => 'internal_id',
+        'vehicle_card_id' => 'fuel_card_number',
+    ];
+
+    protected const TRANSACTION_FIELDS = [
+        'plate_number'      => 'plate_number',
+        'internal_id'       => 'internal_number',
+        'vin'               => 'vin',
+        'serial_number'     => 'serial_number',
+        'call_sign'         => 'call_sign',
+        'fuel_card_number'  => 'vehicle_card_id',
+    ];
+
+    protected const VEHICLE_FIELDS = [
+        'plate_number'      => 'plate_number',
+        'internal_id'       => 'internal_id',
+        'vin'               => 'vin',
+        'serial_number'     => 'serial_number',
+        'call_sign'         => 'call_sign',
+        'fuel_card_number'  => 'fuel_card_number',
+    ];
+
     public function __construct(protected FuelProviderRegistry $registry)
     {
     }
@@ -155,7 +184,7 @@ class FuelProviderService
 
             event(new FuelProviderTransactionImported($transaction));
 
-            $this->matchTransaction($transaction);
+            $this->matchTransaction($transaction, $connection);
             $fuelReport = $this->shouldCreateFuelReport($connection) ? $this->ensureFuelReport($transaction) : null;
 
             if ($fuelReport && !$transaction->fuel_report_uuid) {
@@ -217,7 +246,7 @@ class FuelProviderService
         $transaction->sync_status = 'imported';
         $transaction->save();
 
-        $this->matchTransaction($transaction);
+        $this->matchTransaction($transaction, $transaction->connection);
         if ($transaction->vehicle_uuid) {
             $this->ensureFuelReport($transaction);
             $transaction->sync_status = 'matched';
@@ -250,60 +279,118 @@ class FuelProviderService
         return $transaction;
     }
 
-    protected function matchTransaction(FuelProviderTransaction $transaction): void
+    protected function matchTransaction(FuelProviderTransaction $transaction, ?FuelProviderConnection $connection = null): void
     {
-        if (!$transaction->vehicle_uuid) {
-            $vehicle = $this->resolveVehicle($transaction);
-            if ($vehicle) {
-                $transaction->vehicle_uuid = $vehicle->uuid;
+        foreach ($this->matchingOrder($connection) as $field) {
+            if ($field === 'trip_number') {
+                if (!$transaction->order_uuid && $transaction->trip_number) {
+                    $order = $this->resolveOrder($transaction);
+                    if ($order) {
+                        $transaction->order_uuid = $order->uuid;
+                    }
+                }
+
+                continue;
             }
-        }
 
-        if (!$transaction->order_uuid && $transaction->trip_number) {
-            $order = Order::where('company_uuid', $transaction->company_uuid)
-                ->where(function ($query) use ($transaction) {
-                    $query->where('public_id', $transaction->trip_number)
-                        ->orWhere('internal_id', $transaction->trip_number)
-                        ->orWhereHas('trackingNumber', function ($trackingNumberQuery) use ($transaction) {
-                            $trackingNumberQuery->where('tracking_number', $transaction->trip_number);
-                        });
-                })->first();
-
-            if ($order) {
-                $transaction->order_uuid = $order->uuid;
+            if (!$transaction->vehicle_uuid) {
+                $vehicle = $this->resolveVehicle($transaction, $field);
+                if ($vehicle) {
+                    $transaction->vehicle_uuid = $vehicle->uuid;
+                }
             }
         }
     }
 
-    protected function resolveVehicle(FuelProviderTransaction $transaction): ?Vehicle
+    protected function matchingOrder(?FuelProviderConnection $connection = null): Collection
     {
-        $identifiers = collect([
-            $transaction->provider_vehicle_id,
-            $transaction->internal_number,
-            $transaction->structure_number,
-            $transaction->plate_number,
-            $transaction->vehicle_card_id,
-        ])->filter()->unique()->values();
+        $configuredFields = collect(data_get((array) $connection?->sync_settings, 'matching_order', []))->filter()->values();
 
-        foreach ($identifiers as $identifier) {
-            $normalized = $this->normalizeIdentifier($identifier);
-            $vehicle    = Vehicle::where('company_uuid', $transaction->company_uuid)
-                ->where(function ($query) use ($identifier, $normalized) {
-                    $query->where('uuid', $identifier)
-                        ->orWhere('public_id', $identifier)
-                        ->orWhere('internal_id', $identifier)
-                        ->orWhere('plate_number', $identifier)
-                        ->orWhere('vin', $identifier)
-                        ->orWhereRaw("replace(plate_number, ' ', '') = ?", [$normalized])
-                        ->orWhereRaw("replace(internal_id, ' ', '') = ?", [$normalized]);
-                })->first();
-
-            if ($vehicle) {
-                return $vehicle;
-            }
+        if ($configuredFields->all() === self::LEGACY_DEFAULT_MATCHING_ORDER) {
+            return collect(self::DEFAULT_MATCHING_ORDER);
         }
 
-        return null;
+        $fields  = $configuredFields
+            ->map(fn ($field) => $this->normalizeMatchingField($field))
+            ->filter(fn ($field) => in_array($field, self::ALLOWED_MATCHING_FIELDS, true))
+            ->unique()
+            ->values();
+
+        if ($fields->isNotEmpty()) {
+            return $fields;
+        }
+
+        return collect(self::DEFAULT_MATCHING_ORDER);
+    }
+
+    protected function resolveOrder(FuelProviderTransaction $transaction): ?Order
+    {
+        return Order::where('company_uuid', $transaction->company_uuid)
+            ->where(function ($query) use ($transaction) {
+                $query->where('public_id', $transaction->trip_number)
+                    ->orWhere('internal_id', $transaction->trip_number)
+                    ->orWhereHas('trackingNumber', function ($trackingNumberQuery) use ($transaction) {
+                        $trackingNumberQuery->where('tracking_number', $transaction->trip_number);
+                    });
+            })->first();
+    }
+
+    protected function resolveVehicle(FuelProviderTransaction $transaction, string $field): ?Vehicle
+    {
+        if ($field === 'provider_vehicle_id') {
+            return $this->resolveVehicleByProviderId($transaction);
+        }
+
+        if ($field === 'structure_number') {
+            return $this->resolveVehicleByColumns($transaction, 'structure_number', ['serial_number', 'internal_id', 'fuel_card_number']);
+        }
+
+        $transactionField = self::TRANSACTION_FIELDS[$field] ?? null;
+        $vehicleField     = self::VEHICLE_FIELDS[$field] ?? null;
+
+        if (!$transactionField || !$vehicleField) {
+            return null;
+        }
+
+        return $this->resolveVehicleByColumns($transaction, $transactionField, [$vehicleField]);
+    }
+
+    protected function resolveVehicleByColumns(FuelProviderTransaction $transaction, string $transactionField, array $vehicleFields): ?Vehicle
+    {
+        $identifier = $transaction->{$transactionField};
+        if (!$identifier) {
+            return null;
+        }
+
+        $normalized = $this->normalizeIdentifier($identifier);
+
+        return Vehicle::where('company_uuid', $transaction->company_uuid)
+            ->where(function ($query) use ($identifier, $normalized, $vehicleFields) {
+                foreach ($vehicleFields as $vehicleField) {
+                    $query->orWhere($vehicleField, $identifier)
+                        ->orWhereRaw("REPLACE(REPLACE(UPPER({$vehicleField}), ' ', ''), '-', '') = ?", [$normalized]);
+                }
+            })
+            ->first();
+    }
+
+    protected function resolveVehicleByProviderId(FuelProviderTransaction $transaction): ?Vehicle
+    {
+        if (!$transaction->provider_vehicle_id) {
+            return null;
+        }
+
+        return Vehicle::where('company_uuid', $transaction->company_uuid)
+            ->where(function ($query) use ($transaction) {
+                $query->where('meta->fuel_provider_vehicle_id', $transaction->provider_vehicle_id)
+                    ->orWhere("meta->fuel_provider_ids->{$transaction->provider}", $transaction->provider_vehicle_id);
+            })
+            ->first();
+    }
+
+    protected function normalizeMatchingField(string $field): string
+    {
+        return self::LEGACY_MATCHING_FIELDS[$field] ?? $field;
     }
 
     protected function ensureFuelReport(FuelProviderTransaction $transaction): ?FuelReport
@@ -355,6 +442,6 @@ class FuelProviderService
 
     protected function normalizeIdentifier(string $identifier): string
     {
-        return Str::of($identifier)->replace(' ', '')->upper()->toString();
+        return Str::of($identifier)->replace([' ', '-'], '')->upper()->toString();
     }
 }

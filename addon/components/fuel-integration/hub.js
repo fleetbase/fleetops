@@ -7,6 +7,7 @@ const WARNING_STATUSES = ['error', 'disabled'];
 
 export default class FuelIntegrationHubComponent extends Component {
     @service fuelIntegrationActions;
+    @service currentUser;
     @tracked table;
     @tracked columns = this.args.columns ?? [];
 
@@ -112,11 +113,13 @@ export default class FuelIntegrationHubComponent extends Component {
     }
 
     get formatSpend() {
+        const currency = this.currentUser?.company?.currency || this.currentUser?.currency || 'USD';
+
         if (!this.totalSpend) {
-            return 'SAR 0';
+            return `${currency} 0`;
         }
 
-        return `SAR ${(this.totalSpend / 100).toLocaleString(undefined, { maximumFractionDigits: 2 })}`;
+        return `${currency} ${(this.totalSpend / 100).toLocaleString(undefined, { maximumFractionDigits: 2 })}`;
     }
 
     get formatLiters() {

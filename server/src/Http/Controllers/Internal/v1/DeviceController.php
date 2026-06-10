@@ -21,7 +21,23 @@ class DeviceController extends FleetOpsController
      */
     public static function onQueryRecord($query, $request): void
     {
-        $query->with(['telematic', 'warranty']);
+        $query->with(['telematic', 'warranty', 'attachable']);
+
+        if ($request->filled('attachment_state')) {
+            match ($request->input('attachment_state')) {
+                'attached'   => $query->whereNotNull('attachable_uuid'),
+                'unattached' => $query->whereNull('attachable_uuid'),
+                default      => null,
+            };
+        }
+
+        if ($request->filled('vehicle')) {
+            $query->where('attachable_uuid', $request->input('vehicle'));
+        }
+
+        if ($request->filled('device_id')) {
+            $query->where('device_id', 'like', '%' . $request->input('device_id') . '%');
+        }
     }
 
     /**
@@ -32,6 +48,6 @@ class DeviceController extends FleetOpsController
      */
     public static function onFindRecord($query, $request): void
     {
-        $query->with(['telematic', 'warranty']);
+        $query->with(['telematic', 'warranty', 'attachable']);
     }
 }

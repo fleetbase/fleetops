@@ -13,13 +13,13 @@ use Illuminate\Support\Facades\Http;
  */
 class SafeeProvider extends AbstractProvider
 {
-    protected string $baseUrl        = '';
+    protected string $baseUrl        = 'https://api.safee.com';
     protected int $requestsPerMinute = 3000;
     protected ?string $accessToken   = null;
 
     protected function prepareAuthentication(): void
     {
-        $this->baseUrl     = rtrim($this->credentials['api_base_url'] ?? $this->credentials['server_uri'] ?? '', '/');
+        $this->baseUrl     = rtrim($this->credentials['api_base_url'] ?? $this->credentials['server_uri'] ?? $this->baseUrl, '/');
         $this->accessToken = $this->credentials['access_token'] ?? $this->authenticate();
         $scheme            = $this->credentials['authorization_scheme'] ?? 'Bearer';
 
@@ -162,12 +162,16 @@ class SafeeProvider extends AbstractProvider
     {
         return [
             [
-                'name'        => 'server_uri',
-                'label'       => 'Server URI',
-                'type'        => 'text',
-                'placeholder' => 'https://tracking.example.com',
-                'required'    => true,
-                'validation'  => 'required|url',
+                'name'          => 'server_uri',
+                'label'         => 'Server URI',
+                'type'          => 'text',
+                'placeholder'   => 'https://api.safee.com',
+                'required'      => false,
+                'advanced'      => true,
+                'is_endpoint'   => true,
+                'default_value' => 'https://api.safee.com',
+                'help_text'     => 'Optional override. Leave blank to use the default Safee API host.',
+                'validation'    => 'nullable|url',
             ],
             [
                 'name'        => 'realm_id',
@@ -209,13 +213,13 @@ class SafeeProvider extends AbstractProvider
 
     protected function authenticate(): string
     {
-        foreach (['server_uri', 'realm_id', 'client_id', 'client_secret', 'username', 'password'] as $field) {
+        foreach (['realm_id', 'client_id', 'client_secret', 'username', 'password'] as $field) {
             if (empty($this->credentials[$field])) {
                 throw new \InvalidArgumentException("Safee credential '{$field}' is required.");
             }
         }
 
-        $tokenUrl = rtrim($this->credentials['server_uri'], '/') . '/auth/realms/' . $this->credentials['realm_id'] . '/protocol/openid-connect/token';
+        $tokenUrl = $this->baseUrl . '/auth/realms/' . $this->credentials['realm_id'] . '/protocol/openid-connect/token';
 
         $response = Http::asForm()
             ->acceptJson()

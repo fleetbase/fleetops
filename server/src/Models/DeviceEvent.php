@@ -58,14 +58,14 @@ class DeviceEvent extends Model
      *
      * @var array
      */
-    protected $searchableColumns = ['event_type', 'message', 'public_id'];
+    protected $searchableColumns = ['event_type', 'message', 'ident', 'code', 'provider', 'public_id'];
 
     /**
      * The attributes that can be used for filtering.
      *
      * @var array
      */
-    protected $filterParams = ['event_type', 'severity', 'device_uuid'];
+    protected $filterParams = ['event_type', 'severity', 'device_uuid', 'provider', 'code'];
 
     /**
      * The attributes that are mass assignable.
@@ -163,7 +163,26 @@ class DeviceEvent extends Model
      */
     public function getActivitylogOptions(): LogOptions
     {
-        return LogOptions::defaults()->logAll();
+        return LogOptions::defaults()
+            ->logOnly([
+                'company_uuid',
+                'device_uuid',
+                'event_type',
+                'severity',
+                'message',
+                'ident',
+                'protocol',
+                'provider',
+                'mileage',
+                'state',
+                'code',
+                'reason',
+                'comment',
+                'resolved_at',
+                'occurred_at',
+                'processed_at',
+            ])
+            ->logOnlyDirty();
     }
 
     public function company(): BelongsTo

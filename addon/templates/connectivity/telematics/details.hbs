@@ -25,7 +25,7 @@
                     </div>
                 </div>
 
-                <div class="flex flex-wrap items-center gap-2">
+                <div class="flex flex-shrink-0 flex-nowrap items-center gap-2 whitespace-nowrap">
                     <Button @icon="arrow-left" @text="Back" @size="xs" @onClick={{transition-to "connectivity.telematics.index"}} />
                     <Button @icon="plug" @text="Test" @size="xs" @onClick={{this.openConnectionTestDialog}} />
                     <Button @icon="satellite-dish" @text="Sync Devices" @type="primary" @size="xs" @isLoading={{this.discoverDevices.isRunning}} @onClick={{perform this.discoverDevices}} />

@@ -76,14 +76,6 @@ export default class ConnectivityFuelProvidersIndexController extends Controller
                 filterComponent: 'filter/string',
             },
             {
-                label: 'Environment',
-                valuePath: 'environment',
-                resizable: true,
-                sortable: true,
-                filterable: true,
-                filterComponent: 'filter/string',
-            },
-            {
                 label: 'Status',
                 valuePath: 'status',
                 cellComponent: 'table/cell/status',

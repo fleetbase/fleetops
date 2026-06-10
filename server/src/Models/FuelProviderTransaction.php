@@ -20,7 +20,7 @@ class FuelProviderTransaction extends Model
 
     protected $table             = 'fuel_provider_transactions';
     protected $publicIdType      = 'fuel_provider_transaction';
-    protected $searchableColumns = ['public_id', 'provider', 'provider_transaction_id', 'vehicle_card_id', 'station_name', 'trip_number'];
+    protected $searchableColumns = ['public_id', 'provider', 'provider_transaction_id', 'vehicle_card_id', 'internal_number', 'plate_number', 'vin', 'serial_number', 'call_sign', 'station_name', 'trip_number'];
     protected $filterParams      = ['provider', 'sync_status', 'vehicle', 'driver', 'order', 'fuel_report', 'connection'];
 
     protected $fillable = [
@@ -37,6 +37,9 @@ class FuelProviderTransaction extends Model
         'internal_number',
         'structure_number',
         'plate_number',
+        'vin',
+        'serial_number',
+        'call_sign',
         'trip_number',
         'station_name',
         'station_latitude',

@@ -1,0 +1,25 @@
+<Modal::Default @modalIsOpened={{@modalIsOpened}} @options={{@options}} @confirm={{@onConfirm}} @decline={{@onDecline}}>
+    <div class="modal-body-container">
+        <div class="mb-4 rounded-md border border-gray-200 bg-gray-50 p-3 dark:border-gray-700 dark:bg-gray-800">
+            <div class="text-xs font-semibold uppercase text-gray-500 dark:text-gray-400">Synced device</div>
+            <div class="mt-2">
+                <Device::Pill @device={{@options.device}} />
+            </div>
+        </div>
+
+        <InputGroup @name={{t "common.select-field" field=(t "resource.vehicle")}} @value={{@options.selectedVehicle}}>
+            <ModelSelect
+                @modelName="vehicle"
+                @selectedModel={{@options.selectedVehicle}}
+                @placeholder={{t "common.select-field" field=(t "resource.vehicle")}}
+                @triggerClass="form-select form-input"
+                @infiniteScroll={{true}}
+                @renderInPlace={{true}}
+                @onChange={{fn (mut @options.selectedVehicle)}}
+                as |vehicle|
+            >
+                <Vehicle::Pill @resource={{vehicle}} />
+            </ModelSelect>
+        </InputGroup>
+    </div>
+</Modal::Default>

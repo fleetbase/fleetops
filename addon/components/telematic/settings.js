@@ -7,7 +7,15 @@ export default class TelematicSettingsComponent extends Component {
     }
 
     get credentialFields() {
-        return this.provider.required_fields ?? [];
+        return (this.provider.required_fields ?? []).filter((field) => !field.advanced && !field.is_endpoint);
+    }
+
+    get advancedCredentialFields() {
+        return (this.provider.required_fields ?? []).filter((field) => field.advanced || field.is_endpoint);
+    }
+
+    get hasAdvancedCredentialFields() {
+        return this.advancedCredentialFields.length > 0;
     }
 
     get webhookUrl() {

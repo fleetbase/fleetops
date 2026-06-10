@@ -65,7 +65,7 @@ class Vehicle extends Model
      *
      * @var array
      */
-    protected $searchableColumns = ['name', 'description', 'make', 'model', 'trim', 'model_type', 'body_type', 'body_sub_type', 'year', 'plate_number', 'vin', 'call_sign', 'public_id'];
+    protected $searchableColumns = ['name', 'description', 'make', 'model', 'trim', 'model_type', 'body_type', 'body_sub_type', 'year', 'internal_id', 'plate_number', 'vin', 'serial_number', 'call_sign', 'fuel_card_number', 'public_id'];
 
     /**
      * Attributes that is filterable on this model.
@@ -142,6 +142,7 @@ class Vehicle extends Model
         'internal_id',
         'plate_number',
         'call_sign',
+        'fuel_card_number',
         'serial_number',
         'vin',
         'vin_data',
@@ -701,8 +702,12 @@ class Vehicle extends Model
         $year             = Utils::or($row, ['year', 'vehicle_year', 'build_year', 'release_year']);
         $trim             = Utils::or($row, ['trim', 'vehicle_trim', 'brand_trim']);
         $type             = Utils::or($row, ['type', 'vehicle_type'], 'vehicle');
+        $internalId       = Utils::or($row, ['internal_id', 'internal_number', 'fleet_number', 'vehicle_number']);
         $plateNumber      = Utils::or($row, ['plate_number', 'license_plate', 'license_place_number', 'vehicle_plate', 'registration_plate', 'tag_number', 'tail_number', 'head_number']);
         $vin              = Utils::or($row, ['vin', 'vin_number', 'vin_id', 'vehicle_identification_number', 'serial_number']);
+        $serialNumber     = Utils::or($row, ['serial_number', 'serial', 'vehicle_serial_number']);
+        $callSign         = Utils::or($row, ['call_sign', 'callsign', 'call_number']);
+        $fuelCardNumber   = Utils::or($row, ['fuel_card_number', 'fuel_card', 'fuel_card_id', 'vehicle_card_id', 'card_number']);
         $driverAssigned   = Utils::or($row, ['driver', 'driver_name', 'driver_assigned', 'driver_assignee']);
 
         // Handle when only a vehicle name is provided
@@ -741,8 +746,12 @@ class Vehicle extends Model
             'model'                  => $model,
             'year'                   => $year,
             'trim'                   => $trim,
+            'internal_id'            => $internalId,
             'plate_number'           => $plateNumber,
             'vin'                    => $vin,
+            'serial_number'          => $serialNumber,
+            'call_sign'              => $callSign,
+            'fuel_card_number'       => $fuelCardNumber,
             'type'                   => $type,
             'status'                 => 'available',
             'online'                 => 0,
@@ -769,10 +778,12 @@ class Vehicle extends Model
 
         return static::where(function ($query) use ($vehicleName) {
             $query->where('public_id', $vehicleName)
+                    ->orWhere('internal_id', $vehicleName)
                     ->orWhere('plate_number', $vehicleName)
                     ->orWhere('vin', $vehicleName)
                     ->orWhere('serial_number', $vehicleName)
                     ->orWhere('call_sign', $vehicleName)
+                    ->orWhere('fuel_card_number', $vehicleName)
                     ->orWhereRaw("CONCAT(make, ' ', model, ' ', year) LIKE ?", ["%{$vehicleName}%"])
                     ->orWhereRaw("CONCAT(year, ' ', make, ' ', model) LIKE ?", ["%{$vehicleName}%"]);
         })->first();

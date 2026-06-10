@@ -501,10 +501,13 @@ Route::prefix(config('fleetops.api.routing.prefix'))->namespace('Fleetbase\Fleet
                             }
                         );
                         $router->fleetbaseRoutes('devices');
-                        $router->fleetbaseRoutes('device-events');
+                        $router->fleetbaseRoutes('device-events', function ($router, $controller) {
+                            $router->post('{id}/mark-processed', $controller('markProcessed'));
+                        });
                         $router->fleetbaseRoutes('sensors');
                         $router->fleetbaseRoutes('telematics', function ($router, $controller) {
                             $router->get('providers', $controller('providers'));
+                            $router->get('{id}/logs', $controller('logs'));
                             $router->get('{id}/devices', $controller('devices'));
                             $router->post('{id}/link-device', $controller('linkDevice'));
                             $router->post('{id}/discover', $controller('discover'));

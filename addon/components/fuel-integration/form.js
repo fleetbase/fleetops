@@ -3,7 +3,7 @@ import { tracked } from '@glimmer/tracking';
 import { inject as service } from '@ember/service';
 import { action } from '@ember/object';
 import { task } from 'ember-concurrency';
-import { copyToClipboard } from '@fleetbase/ember-core/utils/clipboard';
+import copyToClipboard from '@fleetbase/ember-core/utils/copy-to-clipboard';
 
 export default class FuelIntegrationFormComponent extends Component {
     @service fetch;
@@ -29,6 +29,7 @@ export default class FuelIntegrationFormComponent extends Component {
         ].map((step, index) => ({
             ...step,
             active: this.activeStep === index,
+            complete: index < this.activeStep && step.complete,
         }));
     }
 
@@ -53,7 +54,7 @@ export default class FuelIntegrationFormComponent extends Component {
     }
 
     get matchingOrder() {
-        return this.syncSettings.matching_order ?? [];
+        return this.syncSettings.matching_order;
     }
 
     get hasRequiredCredentials() {
@@ -96,7 +97,7 @@ export default class FuelIntegrationFormComponent extends Component {
         }
 
         if (this.connectionState === 'testing') {
-            return 'FleetOps is sending the configured credentials to the fuel integration and waiting for a response.';
+            return 'The configured credentials are being checked with the fuel integration provider.';
         }
 
         return this.connectionTestResult?.message;
@@ -163,7 +164,6 @@ export default class FuelIntegrationFormComponent extends Component {
         try {
             this.connectionTestResult = yield this.fetch.post(`fuel-provider-connections/providers/${this.selectedProvider.key}/test-credentials`, {
                 credentials: this.credentials,
-                environment: this.args.resource?.environment,
                 connection_id: this.args.resource?.id,
             });
         } catch (error) {
@@ -204,10 +204,6 @@ export default class FuelIntegrationFormComponent extends Component {
         });
     }
 
-    @action setEnvironment(event) {
-        this.args.resource?.set('environment', event.target.value);
-    }
-
     @action setName(event) {
         this.args.resource?.set('name', event.target.value);
     }
@@ -216,6 +212,10 @@ export default class FuelIntegrationFormComponent extends Component {
         const current = this.matchingOrder;
         const next = current.includes(field) ? current.filter((item) => item !== field) : [...current, field];
 
+        this.setMatchingOrder(next);
+    }
+
+    @action setMatchingOrder(next) {
         this.args.resource?.set('sync_settings', {
             ...this.syncSettings,
             matching_order: next,

@@ -23,7 +23,7 @@
                 <section class="rounded-md border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-800">
                     <div class="mb-3">
                         <h2 class="text-sm font-bold text-gray-900 dark:text-gray-100">Choose Fuel Integration</h2>
-                        <p class="text-xs text-gray-500 dark:text-gray-300">Select the system FleetOps will connect to for fuel card bills, purchase transactions, station locations, or vehicle fuel identifiers.</p>
+                        <p class="text-xs text-gray-500 dark:text-gray-300">Select the system to connect for fuel card bills, purchase transactions, station locations, or vehicle fuel identifiers.</p>
                     </div>
 
                     {{#if this.loadProviders.isRunning}}
@@ -62,7 +62,7 @@
                     <div class="rounded-md border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-800 lg:col-span-2">
                         <div class="mb-3">
                             <h2 class="text-sm font-bold text-gray-900 dark:text-gray-100">Credentials</h2>
-                            <p class="text-xs text-gray-500 dark:text-gray-300">FleetOps stores these credentials on the connection and uses them to test and import provider transactions.</p>
+                            <p class="text-xs text-gray-500 dark:text-gray-300">These credentials are stored on the connection and used to test and import provider transactions.</p>
                         </div>
 
                         {{#if this.selectedProvider}}
@@ -158,43 +158,28 @@
                 <section class="rounded-md border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-800">
                     <div class="mb-3">
                         <h2 class="text-sm font-bold text-gray-900 dark:text-gray-100">Sync Settings</h2>
-                        <p class="text-xs text-gray-500 dark:text-gray-300">Choose how FleetOps imports fuel transactions from this system.</p>
+                        <p class="text-xs text-gray-500 dark:text-gray-300">Choose how fuel transactions are imported from this system.</p>
                     </div>
 
                     <div class="grid grid-cols-1 gap-3 lg:grid-cols-2 no-input-group-padding text-xs">
                         <InputGroup @name="Integration name" @value={{@resource.name}} {{on "input" this.setName}} />
-                        <InputGroup @name="Environment">
-                            <select class="form-select w-full" value={{@resource.environment}} {{on "change" this.setEnvironment}}>
-                                <option value="production">Production</option>
-                                <option value="sandbox">Sandbox</option>
-                            </select>
-                        </InputGroup>
-                        <InputGroup @name="Default sync window" @helpText="Number of days FleetOps should pull when no explicit date range is provided.">
+                        <InputGroup @name="Default sync window" @helpText="Number of days to import when no explicit date range is provided.">
                             <Input @type="number" min="1" max="90" class="form-input w-full" @value={{this.syncSettings.window_days}} {{on "input" (fn this.setSyncSetting "window_days")}} />
                         </InputGroup>
-                        <div class="rounded-md border border-gray-200 p-3 dark:border-gray-700">
+                        <div class="rounded-md border border-gray-200 p-3 dark:border-gray-700 lg:col-span-2">
                             <Checkbox @value={{this.syncSettings.auto_create_fuel_reports}} @label="Create Fuel Reports after vehicle match" @onToggle={{fn this.setSyncSetting "auto_create_fuel_reports"}} @alignItems="center" @labelClass="mb-0i" />
-                            <p class="mt-2 text-xs leading-5 text-gray-500 dark:text-gray-300">Provider bills remain in Fuel Transactions. FleetOps creates visible Fuel Reports only when a transaction is matched to a vehicle.</p>
+                            <p class="mt-2 text-xs leading-5 text-gray-500 dark:text-gray-300">Provider bills remain in Fuel Transactions. Fuel Reports are created only when a transaction is matched to a vehicle.</p>
                         </div>
                     </div>
                 </section>
             {{else}}
                 <section class="rounded-md border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-800">
                     <div class="mb-3">
-                        <h2 class="text-sm font-bold text-gray-900 dark:text-gray-100">Matching Rules</h2>
-                        <p class="text-xs text-gray-500 dark:text-gray-300">Choose the provider identifiers FleetOps should use to match imported transactions to vehicles and trips.</p>
+                        <h2 class="text-sm font-bold text-gray-900 dark:text-gray-100">Vehicle Matching Priority</h2>
+                        <p class="text-xs leading-5 text-gray-500 dark:text-gray-300">Choose which provider identifiers should be used for automatic matching and put the most reliable identifier first.</p>
                     </div>
 
-                    <div class="grid grid-cols-1 gap-2 md:grid-cols-2 xl:grid-cols-3">
-                        {{#each (array "provider_vehicle_id" "internal_number" "structure_number" "plate_number" "vehicle_card_id" "trip_number") as |field|}}
-                            <button type="button" class="rounded-md border p-3 text-left text-xs transition {{if (includes field this.matchingOrder) 'border-blue-500 bg-blue-50 text-blue-700 dark:border-blue-400 dark:bg-blue-900/10 dark:text-blue-300' 'border-gray-200 bg-white text-gray-600 hover:border-blue-300 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300'}}" {{on "click" (fn this.toggleMatchingField field)}}>
-                                <div class="flex items-center justify-between gap-2">
-                                    <span class="font-semibold">{{smart-humanize field}}</span>
-                                    {{#if (includes field this.matchingOrder)}}<FaIcon @icon="check" />{{/if}}
-                                </div>
-                            </button>
-                        {{/each}}
-                    </div>
+                    <FuelIntegration::MatchingPriority @order={{this.matchingOrder}} @onChange={{this.setMatchingOrder}} @editable={{true}} />
                 </section>
             {{/if}}
         </div>

@@ -34,6 +34,7 @@ class Vehicle extends FleetbaseResource
             'driver_name'     => $this->driver_name,
             'plate_number'    => $this->plate_number,
             'serial_number'   => $this->serial_number,
+            'fuel_card_number' => $this->fuel_card_number,
             'vin'             => $this->vin,
             'make'            => $this->make,
             'model'           => $this->model,

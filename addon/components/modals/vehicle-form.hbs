@@ -38,6 +38,13 @@
 
                         <div class="input-group mb-2">
                             <label>
+                                Fuel Card Number
+                            </label>
+                            <Input @value={{@options.vehicle.fuel_card_number}} @type="text" class="w-full form-input" placeholder="Fuel Card Number" />
+                        </div>
+
+                        <div class="input-group mb-2">
+                            <label>
                                 {{t "modals.vehicle-details.make"}}
                             </label>
                             <Input @value={{@options.vehicle.make}} @type="text" class="w-full form-input" placeholder={{t "modals.vehicle-form.make"}} />

@@ -30,9 +30,9 @@
     </section>
 
     {{#if this.attentionItems.length}}
-        <section class="grid grid-cols-1 gap-3 lg:grid-cols-2">
+        <section class="flex flex-col gap-3">
             {{#each this.attentionItems as |item|}}
-                <div class="rounded-md border border-yellow-200 bg-yellow-50 p-3 dark:border-yellow-700 dark:bg-gray-800">
+                <div class="w-full rounded-md border border-yellow-200 bg-yellow-50 p-3 dark:border-yellow-700 dark:bg-gray-800">
                     <div class="flex items-start gap-3">
                         <div class="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-md bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-300">
                             <FaIcon @icon={{item.icon}} />

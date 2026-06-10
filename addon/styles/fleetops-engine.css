@@ -114,7 +114,7 @@ body[data-theme='dark'] .next-table-wrapper.order-view-purchase-rate-table-wrapp
 
 nav.next-sidebar {
     height: 100%;
-    overflow-y: scroll;
+    overflow: hidden;
 }
 
 /** places management css mods */
@@ -260,6 +260,11 @@ body[data-theme='dark'] .fleetops-connectivity-kpi-accent-rose .fleetops-connect
 .fleetops-provider-connections-panel .table-wrapper table tbody tr td,
 .fleetops-provider-connections-panel .next-table-wrapper table tbody tr td {
     vertical-align: top;
+}
+
+.fleetops-provider-connections-panel .table-wrapper table tbody tr td.fleetops-provider-connections-cell-middle,
+.fleetops-provider-connections-panel .next-table-wrapper table tbody tr td.fleetops-provider-connections-cell-middle {
+    vertical-align: middle;
 }
 
 body[data-theme='dark'] .fleetops-provider-connections-panel .table-wrapper.table-fluid,

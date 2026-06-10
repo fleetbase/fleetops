@@ -151,17 +151,16 @@ export default buildRoutes(function () {
         });
     });
     this.route('connectivity', function () {
-        this.route('fuel-providers', function () {
-            this.route('index', { path: '/' }, function () {
-                this.route('new');
-                this.route('edit', { path: '/edit/:public_id' });
-                this.route('details', { path: '/:public_id' }, function () {
-                    this.route('index', { path: '/' });
-                    this.route('sync');
-                    this.route('matching');
-                    this.route('transactions');
-                    this.route('settings');
-                });
+        this.route('fuel-providers', { path: '/fuel-integrations' }, function () {
+            this.route('index', { path: '/' });
+            this.route('new');
+            this.route('edit', { path: '/edit/:public_id' });
+            this.route('details', { path: '/:public_id' }, function () {
+                this.route('index', { path: '/' });
+                this.route('sync');
+                this.route('matching');
+                this.route('transactions');
+                this.route('settings');
             });
         });
         this.route('telematics', function () {
@@ -174,6 +173,7 @@ export default buildRoutes(function () {
                 this.route('attachments');
                 this.route('sensors');
                 this.route('events');
+                this.route('logs');
             });
         });
 

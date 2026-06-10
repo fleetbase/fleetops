@@ -70,6 +70,18 @@ export default class TelematicFormComponent extends Component {
         return (this.selectedProvider?.required_fields ?? []).filter((field) => field.required);
     }
 
+    get credentialFields() {
+        return (this.selectedProvider?.required_fields ?? []).filter((field) => !field.advanced && !field.is_endpoint);
+    }
+
+    get advancedCredentialFields() {
+        return (this.selectedProvider?.required_fields ?? []).filter((field) => field.advanced || field.is_endpoint);
+    }
+
+    get hasAdvancedCredentialFields() {
+        return this.advancedCredentialFields.length > 0;
+    }
+
     get missingCredentialFields() {
         const credentials = this.args.resource?.credentials ?? {};
 
@@ -173,7 +185,7 @@ export default class TelematicFormComponent extends Component {
 
     get connectionStateMessage() {
         if (this.connectionState === 'testing') {
-            return 'FleetOps is sending the configured credentials to the provider and waiting for a response.';
+            return 'Sending the configured credentials to the provider and waiting for a response.';
         }
 
         if (this.connectionState === 'idle') {
@@ -404,7 +416,7 @@ export default class TelematicFormComponent extends Component {
             name: this.args.resource.name ?? provider.label,
             provider: provider.key,
             credentials: (provider.required_fields ?? []).reduce((acc, item) => {
-                acc[item.name] = null;
+                acc[item.name] = item.advanced || item.is_endpoint ? null : (item.default_value ?? null);
                 return acc;
             }, {}),
         });
