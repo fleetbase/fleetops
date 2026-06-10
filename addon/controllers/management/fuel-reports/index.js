@@ -8,7 +8,24 @@ export default class ManagementFuelReportsIndexController extends Controller {
     @service intl;
 
     /** query params */
-    @tracked queryParams = ['page', 'limit', 'sort', 'query', 'public_id', 'internal_id', 'vehicle', 'driver', 'created_by', 'updated_by', 'status', 'source', 'provider', 'country', 'volume', 'odometer'];
+    @tracked queryParams = [
+        'page',
+        'limit',
+        'sort',
+        'query',
+        'public_id',
+        'internal_id',
+        'vehicle',
+        'driver',
+        'created_by',
+        'updated_by',
+        'status',
+        'source',
+        'provider',
+        'country',
+        'volume',
+        'odometer',
+    ];
     @tracked page = 1;
     @tracked limit;
     @tracked sort = '-created_at';
