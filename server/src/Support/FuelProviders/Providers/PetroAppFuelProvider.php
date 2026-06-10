@@ -85,7 +85,7 @@ class PetroAppFuelProvider extends AbstractFuelProvider
         }
 
         return [
-            'WS-Version' => data_get($credentials, 'version', 'v2.0'),
+            'WS-Version'    => data_get($credentials, 'version', 'v2.0'),
             'Authorization' => 'Bearer ' . $token,
         ];
     }

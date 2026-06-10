@@ -32,10 +32,10 @@ test('native and extension fuel providers are exposed through the shared registr
                     'required' => true,
                 ],
             ],
-            'capabilities' => ['vehicles', 'transactions', 'stations'],
+            'capabilities'  => ['vehicles', 'transactions', 'stations'],
             'sync_defaults' => [
-                'window_days' => 7,
-                'matching_order' => ['plate_number', 'internal_id', 'vin', 'serial_number', 'call_sign', 'fuel_card_number', 'trip_number'],
+                'window_days'              => 7,
+                'matching_order'           => ['plate_number', 'internal_id', 'vin', 'serial_number', 'call_sign', 'fuel_card_number', 'trip_number'],
                 'auto_create_fuel_reports' => true,
             ],
         ]));
@@ -65,13 +65,13 @@ test('fuel provider service records sync runs and review states', function () {
         ]));
     }
 
-    $service = new FuelProviderService($registry);
+    $service    = new FuelProviderService($registry);
     $connection = FuelProviderConnection::create([
         'company_uuid' => session('company'),
-        'provider' => 'test_fuel_provider',
-        'name' => 'Test Fuel',
-        'environment' => 'production',
-        'status' => 'configured',
+        'provider'     => 'test_fuel_provider',
+        'name'         => 'Test Fuel',
+        'environment'  => 'production',
+        'status'       => 'configured',
     ]);
 
     $syncRun = $service->createSyncRun($connection, Carbon::parse('2026-06-01'), Carbon::parse('2026-06-02'));
@@ -80,11 +80,11 @@ test('fuel provider service records sync runs and review states', function () {
         ->and($syncRun->status)->toBe('queued');
 
     $transaction = FuelProviderTransaction::create([
-        'company_uuid' => session('company'),
+        'company_uuid'                  => session('company'),
         'fuel_provider_connection_uuid' => $connection->uuid,
-        'provider' => 'test_fuel_provider',
-        'provider_transaction_id' => 'txn-1',
-        'sync_status' => 'unmatched',
+        'provider'                      => 'test_fuel_provider',
+        'provider_transaction_id'       => 'txn-1',
+        'sync_status'                   => 'unmatched',
     ]);
 
     $reviewed = $service->reviewTransaction($transaction, 'reviewed');
@@ -106,7 +106,7 @@ test('fuel provider matching defaults to plate before provider or internal ident
         ]));
     }
 
-    $service = new FuelProviderService($registry);
+    $service       = new FuelProviderService($registry);
     $internalMatch = Vehicle::create([
         'company_uuid'  => session('company'),
         'public_id'     => 'vehicle_internal_default_priority',
@@ -120,22 +120,22 @@ test('fuel provider matching defaults to plate before provider or internal ident
         'plate_number'  => 'MATCH-001',
     ]);
     $connection = FuelProviderConnection::create([
-        'company_uuid' => session('company'),
-        'provider' => 'test_fuel_provider',
-        'name' => 'Test Fuel',
-        'environment' => 'production',
-        'status' => 'configured',
+        'company_uuid'  => session('company'),
+        'provider'      => 'test_fuel_provider',
+        'name'          => 'Test Fuel',
+        'environment'   => 'production',
+        'status'        => 'configured',
         'sync_settings' => [
             'auto_create_fuel_reports' => false,
         ],
     ]);
 
     $transaction = $service->ingestTransaction($connection, [
-        'provider' => 'test_fuel_provider',
+        'provider'                => 'test_fuel_provider',
         'provider_transaction_id' => 'txn-default-plate-first',
-        'provider_vehicle_id' => $internalMatch->public_id,
-        'internal_number' => 'MATCH-001',
-        'plate_number' => 'MATCH-001',
+        'provider_vehicle_id'     => $internalMatch->public_id,
+        'internal_number'         => 'MATCH-001',
+        'plate_number'            => 'MATCH-001',
     ]);
 
     expect($transaction->vehicle_uuid)->toBe($plateMatch->uuid);
@@ -154,7 +154,7 @@ test('fuel provider matching upgrades old provider-first defaults to production 
         ]));
     }
 
-    $service = new FuelProviderService($registry);
+    $service       = new FuelProviderService($registry);
     $internalMatch = Vehicle::create([
         'company_uuid'  => session('company'),
         'public_id'     => 'vehicle_internal_legacy_priority',
@@ -168,23 +168,23 @@ test('fuel provider matching upgrades old provider-first defaults to production 
         'plate_number'  => 'MATCH-LEGACY',
     ]);
     $connection = FuelProviderConnection::create([
-        'company_uuid' => session('company'),
-        'provider' => 'test_fuel_provider',
-        'name' => 'Test Fuel',
-        'environment' => 'production',
-        'status' => 'configured',
+        'company_uuid'  => session('company'),
+        'provider'      => 'test_fuel_provider',
+        'name'          => 'Test Fuel',
+        'environment'   => 'production',
+        'status'        => 'configured',
         'sync_settings' => [
-            'matching_order' => ['provider_vehicle_id', 'internal_number', 'structure_number', 'plate_number', 'vehicle_card_id', 'trip_number'],
+            'matching_order'           => ['provider_vehicle_id', 'internal_number', 'structure_number', 'plate_number', 'vehicle_card_id', 'trip_number'],
             'auto_create_fuel_reports' => false,
         ],
     ]);
 
     $transaction = $service->ingestTransaction($connection, [
-        'provider' => 'test_fuel_provider',
+        'provider'                => 'test_fuel_provider',
         'provider_transaction_id' => 'txn-legacy-default-upgrade',
-        'provider_vehicle_id' => $internalMatch->public_id,
-        'internal_number' => 'MATCH-LEGACY',
-        'plate_number' => 'MATCH-LEGACY',
+        'provider_vehicle_id'     => $internalMatch->public_id,
+        'internal_number'         => 'MATCH-LEGACY',
+        'plate_number'            => 'MATCH-LEGACY',
     ]);
 
     expect($transaction->vehicle_uuid)->toBe($plateMatch->uuid);
@@ -203,7 +203,7 @@ test('fuel provider matching honors configured identifier priority', function ()
         ]));
     }
 
-    $service = new FuelProviderService($registry);
+    $service       = new FuelProviderService($registry);
     $internalMatch = Vehicle::create([
         'company_uuid'  => session('company'),
         'public_id'     => 'vehicle_internal_configured_priority',
@@ -217,35 +217,35 @@ test('fuel provider matching honors configured identifier priority', function ()
         'plate_number'  => 'MATCH-002',
     ]);
     $connection = FuelProviderConnection::create([
-        'company_uuid' => session('company'),
-        'provider' => 'test_fuel_provider',
-        'name' => 'Test Fuel',
-        'environment' => 'production',
-        'status' => 'configured',
+        'company_uuid'  => session('company'),
+        'provider'      => 'test_fuel_provider',
+        'name'          => 'Test Fuel',
+        'environment'   => 'production',
+        'status'        => 'configured',
         'sync_settings' => [
-            'matching_order' => ['internal_id', 'plate_number'],
+            'matching_order'           => ['internal_id', 'plate_number'],
             'auto_create_fuel_reports' => false,
         ],
     ]);
 
     $internalFirst = $service->ingestTransaction($connection, [
-        'provider' => 'test_fuel_provider',
+        'provider'                => 'test_fuel_provider',
         'provider_transaction_id' => 'txn-internal-first',
-        'internal_number' => 'MATCH-002',
-        'plate_number' => 'MATCH-002',
+        'internal_number'         => 'MATCH-002',
+        'plate_number'            => 'MATCH-002',
     ]);
 
     $connection->sync_settings = [
-        'matching_order' => ['plate_number', 'internal_id'],
+        'matching_order'           => ['plate_number', 'internal_id'],
         'auto_create_fuel_reports' => false,
     ];
     $connection->save();
 
     $plateFirst = $service->ingestTransaction($connection->fresh(), [
-        'provider' => 'test_fuel_provider',
+        'provider'                => 'test_fuel_provider',
         'provider_transaction_id' => 'txn-plate-first',
-        'internal_number' => 'MATCH-002',
-        'plate_number' => 'MATCH-002',
+        'internal_number'         => 'MATCH-002',
+        'plate_number'            => 'MATCH-002',
     ]);
 
     expect($internalFirst->vehicle_uuid)->toBe($internalMatch->uuid)
@@ -265,58 +265,58 @@ test('fuel provider matching resolves production vehicle identity fields', funct
         ]));
     }
 
-    $service = new FuelProviderService($registry);
+    $service  = new FuelProviderService($registry);
     $vinMatch = Vehicle::create([
         'company_uuid' => session('company'),
-        'public_id' => 'vehicle_vin_priority',
-        'vin' => 'VIN-001',
+        'public_id'    => 'vehicle_vin_priority',
+        'vin'          => 'VIN-001',
     ]);
     $serialMatch = Vehicle::create([
-        'company_uuid' => session('company'),
-        'public_id' => 'vehicle_serial_priority',
+        'company_uuid'  => session('company'),
+        'public_id'     => 'vehicle_serial_priority',
         'serial_number' => 'SERIAL-001',
     ]);
     $callSignMatch = Vehicle::create([
         'company_uuid' => session('company'),
-        'public_id' => 'vehicle_call_sign_priority',
-        'call_sign' => 'CALL-001',
+        'public_id'    => 'vehicle_call_sign_priority',
+        'call_sign'    => 'CALL-001',
     ]);
     $fuelCardMatch = Vehicle::create([
-        'company_uuid' => session('company'),
-        'public_id' => 'vehicle_fuel_card_priority',
+        'company_uuid'     => session('company'),
+        'public_id'        => 'vehicle_fuel_card_priority',
         'fuel_card_number' => 'CARD-001',
     ]);
     $connection = FuelProviderConnection::create([
-        'company_uuid' => session('company'),
-        'provider' => 'test_fuel_provider',
-        'name' => 'Test Fuel',
-        'environment' => 'production',
-        'status' => 'configured',
+        'company_uuid'  => session('company'),
+        'provider'      => 'test_fuel_provider',
+        'name'          => 'Test Fuel',
+        'environment'   => 'production',
+        'status'        => 'configured',
         'sync_settings' => [
-            'matching_order' => ['vin', 'serial_number', 'call_sign', 'fuel_card_number'],
+            'matching_order'           => ['vin', 'serial_number', 'call_sign', 'fuel_card_number'],
             'auto_create_fuel_reports' => false,
         ],
     ]);
 
     $vinTransaction = $service->ingestTransaction($connection, [
-        'provider' => 'test_fuel_provider',
+        'provider'                => 'test_fuel_provider',
         'provider_transaction_id' => 'txn-vin',
-        'vin' => 'VIN 001',
+        'vin'                     => 'VIN 001',
     ]);
     $serialTransaction = $service->ingestTransaction($connection, [
-        'provider' => 'test_fuel_provider',
+        'provider'                => 'test_fuel_provider',
         'provider_transaction_id' => 'txn-serial',
-        'serial_number' => 'SERIAL 001',
+        'serial_number'           => 'SERIAL 001',
     ]);
     $callSignTransaction = $service->ingestTransaction($connection, [
-        'provider' => 'test_fuel_provider',
+        'provider'                => 'test_fuel_provider',
         'provider_transaction_id' => 'txn-call-sign',
-        'call_sign' => 'CALL 001',
+        'call_sign'               => 'CALL 001',
     ]);
     $fuelCardTransaction = $service->ingestTransaction($connection, [
-        'provider' => 'test_fuel_provider',
+        'provider'                => 'test_fuel_provider',
         'provider_transaction_id' => 'txn-fuel-card',
-        'vehicle_card_id' => 'CARD 001',
+        'vehicle_card_id'         => 'CARD 001',
     ]);
 
     expect($vinTransaction->vehicle_uuid)->toBe($vinMatch->uuid)
@@ -338,24 +338,24 @@ test('fuel provider matching leaves transactions unmatched when no selected iden
         ]));
     }
 
-    $service = new FuelProviderService($registry);
+    $service    = new FuelProviderService($registry);
     $connection = FuelProviderConnection::create([
-        'company_uuid' => session('company'),
-        'provider' => 'test_fuel_provider',
-        'name' => 'Test Fuel',
-        'environment' => 'production',
-        'status' => 'configured',
+        'company_uuid'  => session('company'),
+        'provider'      => 'test_fuel_provider',
+        'name'          => 'Test Fuel',
+        'environment'   => 'production',
+        'status'        => 'configured',
         'sync_settings' => [
-            'matching_order' => ['plate_number', 'internal_id'],
+            'matching_order'           => ['plate_number', 'internal_id'],
             'auto_create_fuel_reports' => false,
         ],
     ]);
 
     $transaction = $service->ingestTransaction($connection, [
-        'provider' => 'test_fuel_provider',
+        'provider'                => 'test_fuel_provider',
         'provider_transaction_id' => 'txn-unmatched',
-        'plate_number' => 'NO-MATCH',
-        'internal_number' => 'NO-MATCH',
+        'plate_number'            => 'NO-MATCH',
+        'internal_number'         => 'NO-MATCH',
     ]);
 
     expect($transaction->vehicle_uuid)->toBeNull()

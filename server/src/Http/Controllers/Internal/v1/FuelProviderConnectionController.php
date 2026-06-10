@@ -105,10 +105,10 @@ class FuelProviderConnectionController extends FleetOpsController
     {
         $input['company_uuid'] ??= session('company');
         $input['environment'] ??= 'production';
-        $input['status'] = $connection?->status && $connection->status !== 'draft' ? $connection->status : ($input['status'] ?? 'configured');
+        $input['status']        = $connection?->status && $connection->status !== 'draft' ? $connection->status : ($input['status'] ?? 'configured');
         $input['sync_settings'] = array_merge([
-            'window_days' => 7,
-            'matching_order' => ['plate_number', 'internal_id', 'vin', 'serial_number', 'call_sign', 'fuel_card_number', 'trip_number'],
+            'window_days'              => 7,
+            'matching_order'           => ['plate_number', 'internal_id', 'vin', 'serial_number', 'call_sign', 'fuel_card_number', 'trip_number'],
             'auto_create_fuel_reports' => true,
         ], (array) data_get($input, 'sync_settings', []));
     }

@@ -268,8 +268,8 @@ class FuelProviderService
             throw new \InvalidArgumentException('Fuel transaction review status must be reviewed or ignored.');
         }
 
-        $meta = (array) $transaction->meta;
-        $meta['reviewed_at'] = now()->toIso8601String();
+        $meta                  = (array) $transaction->meta;
+        $meta['reviewed_at']   = now()->toIso8601String();
         $meta['review_status'] = $status;
 
         $transaction->sync_status = $status;
