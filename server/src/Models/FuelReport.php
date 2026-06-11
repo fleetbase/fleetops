@@ -91,7 +91,7 @@ class FuelReport extends Model
      *
      * @var array
      */
-    protected $appends = ['vehicle_name', 'driver_name', 'reporter_name'];
+    protected $appends = ['vehicle_name', 'driver_name', 'reporter_name', 'source', 'provider', 'fuel_provider_transaction_uuid'];
 
     /**
      * The attributes excluded from the model's JSON form.
@@ -177,6 +177,21 @@ class FuelReport extends Model
     public function getReporterNameAttribute()
     {
         return data_get($this, 'reportedBy.name');
+    }
+
+    public function getSourceAttribute(): ?string
+    {
+        return data_get($this, 'meta.source');
+    }
+
+    public function getProviderAttribute(): ?string
+    {
+        return data_get($this, 'meta.provider');
+    }
+
+    public function getFuelProviderTransactionUuidAttribute(): ?string
+    {
+        return data_get($this, 'meta.fuel_provider_transaction_uuid');
     }
 
     public static function createFromImport(array $row, bool $saveInstance = false): FuelReport

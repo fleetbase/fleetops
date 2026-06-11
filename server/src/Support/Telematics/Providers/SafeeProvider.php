@@ -13,13 +13,13 @@ use Illuminate\Support\Facades\Http;
  */
 class SafeeProvider extends AbstractProvider
 {
-    protected string $baseUrl        = '';
+    protected string $baseUrl        = 'https://api.safee.com';
     protected int $requestsPerMinute = 3000;
     protected ?string $accessToken   = null;
 
     protected function prepareAuthentication(): void
     {
-        $this->baseUrl     = rtrim($this->credentials['api_base_url'] ?? $this->credentials['server_uri'] ?? '', '/');
+        $this->baseUrl     = rtrim($this->credentials['api_base_url'] ?? $this->credentials['server_uri'] ?? $this->baseUrl, '/');
         $this->accessToken = $this->credentials['access_token'] ?? $this->authenticate();
         $scheme            = $this->credentials['authorization_scheme'] ?? 'Bearer';
 
@@ -90,17 +90,21 @@ class SafeeProvider extends AbstractProvider
 
     public function normalizeDevice(array $payload): array
     {
-        $position = $this->extractPosition($payload);
+        $position  = $this->extractPosition($payload);
+        $rawStatus = $payload['status'] ?? $payload['vehicleStatus'] ?? null;
+        $status    = $this->normalizeVehicleStatus($rawStatus);
 
         return [
-            'external_id'     => $payload['id'] ?? data_get($payload, 'vehicle.id') ?? null,
-            'device_name'     => $payload['name'] ?? $payload['plateNumber'] ?? data_get($payload, 'vehicle.name') ?? 'Unknown Vehicle',
-            'device_provider' => 'safee',
-            'device_model'    => $payload['model'] ?? data_get($payload, 'device.model') ?? null,
-            'imei'            => data_get($payload, 'device.imei') ?? data_get($payload, 'device.serial') ?? null,
-            'vin'             => $payload['vin'] ?? null,
-            'status'          => $this->normalizeVehicleStatus($payload['status'] ?? $payload['vehicleStatus'] ?? null),
-            'location'        => [
+            'device_id'    => $payload['id'] ?? data_get($payload, 'vehicle.id') ?? null,
+            'name'         => $payload['name'] ?? $payload['plateNumber'] ?? data_get($payload, 'vehicle.name') ?? 'Unknown Vehicle',
+            'provider'     => 'safee',
+            'model'        => $payload['model'] ?? data_get($payload, 'device.model') ?? null,
+            'imei'         => data_get($payload, 'device.imei') ?? data_get($payload, 'device.serial') ?? null,
+            'vin'          => $payload['vin'] ?? null,
+            'status'       => $status,
+            'online'       => $rawStatus ? $status === 'active' : null,
+            'last_seen_at' => $this->parseTimestamp($payload['date'] ?? $payload['deviceTime'] ?? $payload['time'] ?? null),
+            'location'     => [
                 'lat' => $position['lat'] ?? null,
                 'lng' => $position['lng'] ?? null,
             ],
@@ -126,7 +130,9 @@ class SafeeProvider extends AbstractProvider
 
         return [
             'external_id' => $payload['id'] ?? data_get($payload, 'vehicle.id') ?? null,
+            'device_id'   => $payload['id'] ?? data_get($payload, 'vehicle.id') ?? null,
             'event_type'  => data_get($payload, 'event.code') ?? data_get($payload, 'event.name') ?? 'telemetry_update',
+            'message'     => data_get($payload, 'event.name') ?? data_get($payload, 'event.message') ?? null,
             'occurred_at' => $this->parseTimestamp($payload['date'] ?? $payload['deviceTime'] ?? $payload['time'] ?? null),
             'location'    => [
                 'lat' => $position['lat'] ?? null,
@@ -156,12 +162,16 @@ class SafeeProvider extends AbstractProvider
     {
         return [
             [
-                'name'        => 'server_uri',
-                'label'       => 'Server URI',
-                'type'        => 'text',
-                'placeholder' => 'https://tracking.example.com',
-                'required'    => true,
-                'validation'  => 'required|url',
+                'name'          => 'server_uri',
+                'label'         => 'Server URI',
+                'type'          => 'text',
+                'placeholder'   => 'https://api.safee.com',
+                'required'      => false,
+                'advanced'      => true,
+                'is_endpoint'   => true,
+                'default_value' => 'https://api.safee.com',
+                'help_text'     => 'Optional override. Leave blank to use the default Safee API host.',
+                'validation'    => 'nullable|url',
             ],
             [
                 'name'        => 'realm_id',
@@ -203,13 +213,13 @@ class SafeeProvider extends AbstractProvider
 
     protected function authenticate(): string
     {
-        foreach (['server_uri', 'realm_id', 'client_id', 'client_secret', 'username', 'password'] as $field) {
+        foreach (['realm_id', 'client_id', 'client_secret', 'username', 'password'] as $field) {
             if (empty($this->credentials[$field])) {
                 throw new \InvalidArgumentException("Safee credential '{$field}' is required.");
             }
         }
 
-        $tokenUrl = rtrim($this->credentials['server_uri'], '/') . '/auth/realms/' . $this->credentials['realm_id'] . '/protocol/openid-connect/token';
+        $tokenUrl = $this->baseUrl . '/auth/realms/' . $this->credentials['realm_id'] . '/protocol/openid-connect/token';
 
         $response = Http::asForm()
             ->acceptJson()
@@ -223,7 +233,7 @@ class SafeeProvider extends AbstractProvider
             ]);
 
         if ($response->failed()) {
-            throw new \RuntimeException('Safee authentication failed: ' . $response->body());
+            throw new \RuntimeException('Safee authentication failed with status ' . $response->status());
         }
 
         $token = $response->json('access_token');
@@ -242,7 +252,7 @@ class SafeeProvider extends AbstractProvider
             ->get($this->baseUrl . $endpoint);
 
         if ($response->failed()) {
-            throw new \RuntimeException('Safee API request failed: ' . $response->body());
+            throw new \RuntimeException('Safee API request failed with status ' . $response->status());
         }
 
         return $response->json() ?? [];
@@ -255,7 +265,7 @@ class SafeeProvider extends AbstractProvider
             ->post($this->baseUrl . $endpoint, $payload);
 
         if ($response->failed()) {
-            throw new \RuntimeException('Safee API request failed: ' . $response->body());
+            throw new \RuntimeException('Safee API request failed with status ' . $response->status());
         }
 
         return $response->json() ?? [];

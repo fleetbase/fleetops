@@ -21,6 +21,6 @@ class SensorController extends FleetOpsController
      */
     public static function onQueryRecord($query, $request): void
     {
-        $query->with(['telematic', 'warranty']);
+        $query->with(['telematic', 'device', 'warranty']);
     }
 }

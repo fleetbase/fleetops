@@ -9,6 +9,18 @@
                 <div class="field-name">{{t "common.status"}}</div>
                 <div class="field-value"><Badge @status={{@resource.status}} /></div>
             </div>
+            {{#if @resource.source}}
+                <div class="field-info-container">
+                    <div class="field-name">Source</div>
+                    <div class="field-value"><Badge @status={{@resource.source}} /></div>
+                </div>
+            {{/if}}
+            {{#if @resource.provider}}
+                <div class="field-info-container">
+                    <div class="field-name">Provider</div>
+                    <div class="field-value uppercase">{{@resource.provider}}</div>
+                </div>
+            {{/if}}
             <div class="field-info-container">
                 <div class="field-name">{{t "fuel-report.fields.reporter"}}</div>
                 <div class="field-value">{{n-a @resource.reporter_name}}</div>

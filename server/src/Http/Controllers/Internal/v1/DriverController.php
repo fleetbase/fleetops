@@ -6,12 +6,12 @@ use Fleetbase\Exceptions\FleetbaseRequestValidationException;
 use Fleetbase\FleetOps\Exports\DriverExport;
 use Fleetbase\FleetOps\Http\Controllers\Api\v1\DriverController as ApiDriverController;
 use Fleetbase\FleetOps\Http\Controllers\FleetOpsController;
-use Fleetbase\FleetOps\Http\Requests\Internal\AssignOrderRequest;
 use Fleetbase\FleetOps\Http\Requests\Internal\CreateDriverRequest;
 use Fleetbase\FleetOps\Http\Requests\Internal\UpdateDriverRequest;
 use Fleetbase\FleetOps\Imports\DriverImport;
 use Fleetbase\FleetOps\Models\Driver;
 use Fleetbase\FleetOps\Models\Order;
+use Fleetbase\FleetOps\Models\Vehicle;
 use Fleetbase\FleetOps\Support\Utils;
 use Fleetbase\Http\Requests\ExportRequest;
 use Fleetbase\Http\Requests\ImportRequest;
@@ -21,6 +21,7 @@ use Fleetbase\Models\User;
 use Fleetbase\Models\VerificationCode;
 use Fleetbase\Support\Auth;
 use Illuminate\Database\QueryException;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
@@ -303,7 +304,7 @@ class DriverController extends FleetOpsController
                 function (&$request, &$driver, &$input) {
                     $driver->load(['user'])->guard(['user_uuid']);
                     $input     = collect($input);
-                    $userInput = $input->only(['name', 'password', 'email', 'phone', 'avatar_uuid'])->toArray();
+                    $userInput = $input->only(['name', 'password', 'email', 'phone', 'avatar_uuid'])->reject(fn ($value) => $value === null)->toArray();
                     // handle `photo_uuid`
                     if (isset($input['photo_uuid']) && Str::isUuid($input['photo_uuid'])) {
                         $userInput['avatar_uuid'] = $input['photo_uuid'];
@@ -312,9 +313,8 @@ class DriverController extends FleetOpsController
 
                     // Update driver user details
                     $driverUser = $driver->getUser();
-                    if ($driverUser) {
+                    if ($driverUser && !empty($userInput)) {
                         $driverUser->update($userInput);
-                        $input['slug'] = $driverUser->slug;
                     }
 
                     // Flush cache
@@ -396,10 +396,18 @@ class DriverController extends FleetOpsController
      *
      * @return \Illuminate\Http\Response $response
      */
-    public function assignOrder(AssignOrderRequest $request)
+    public function assignOrder(Request $request, ?string $id = null)
     {
-        $driver = Driver::where('public_id', $request->driver)->first();
-        $order  = Order::where('public_id', $request->order)->first();
+        $request->validate([
+            'driver' => ($id ? 'nullable' : 'required') . '|string',
+            'order'  => 'required|string',
+        ]);
+
+        $driverIdentifier = $id ?? $request->input('driver');
+        $orderIdentifier  = $request->input('order');
+
+        $driver = $this->findDriver($driverIdentifier);
+        $order  = $this->findOrder($orderIdentifier);
 
         if ($order->hasDriverAssigned) {
             return response()->error('A driver is already assigned to this order.');
@@ -410,11 +418,94 @@ class DriverController extends FleetOpsController
         }
 
         $order->assignDriver($driver);
+        $driver->update(['current_job_uuid' => $order->uuid]);
 
         return response()->json([
             'status'  => 'ok',
             'message' => 'Driver assigned',
+            'driver'  => $driver->fresh(['vehicle', 'currentOrder']),
+            'order'   => $order->fresh(['driverAssigned']),
         ]);
+    }
+
+    public function unassignOrder(string $id): JsonResponse
+    {
+        $driver = $this->findDriver($id);
+        $order  = Order::where('driver_assigned_uuid', $driver->uuid)
+            ->where('company_uuid', session('company'))
+            ->first() ?? $driver->getCurrentOrder();
+
+        if ($order) {
+            $order->update(['driver_assigned_uuid' => null]);
+        }
+
+        $driver->unassignCurrentJob();
+
+        return response()->json([
+            'status'  => 'ok',
+            'message' => 'Driver unassigned from order.',
+            'driver'  => $driver->fresh(['vehicle', 'currentOrder']),
+            'order'   => $order?->fresh(['driverAssigned']),
+        ]);
+    }
+
+    public function assignVehicle(Request $request, string $id): JsonResponse
+    {
+        $request->validate(['vehicle' => 'required|string']);
+
+        $driver  = $this->findDriver($id);
+        $vehicle = $this->findVehicle($request->input('vehicle'));
+
+        $driver->assignVehicle($vehicle);
+
+        return response()->json([
+            'status'  => 'ok',
+            'message' => 'Vehicle assigned to driver.',
+            'driver'  => $driver->fresh(['vehicle', 'currentOrder']),
+            'vehicle' => $vehicle->fresh(['driver']),
+        ]);
+    }
+
+    public function unassignVehicle(string $id): JsonResponse
+    {
+        $driver  = $this->findDriver($id);
+        $vehicle = $driver->vehicle;
+
+        $driver->update(['vehicle_uuid' => null]);
+
+        return response()->json([
+            'status'  => 'ok',
+            'message' => 'Vehicle unassigned from driver.',
+            'driver'  => $driver->fresh(['vehicle', 'currentOrder']),
+            'vehicle' => $vehicle?->fresh(['driver']),
+        ]);
+    }
+
+    protected function findDriver(?string $id): Driver
+    {
+        return Driver::where(function ($query) use ($id) {
+            $query->where('uuid', $id)->orWhere('public_id', $id);
+        })
+            ->where('company_uuid', session('company'))
+            ->firstOrFail();
+    }
+
+    protected function findOrder(?string $id): Order
+    {
+        return Order::where(function ($query) use ($id) {
+            $query->where('uuid', $id)->orWhere('public_id', $id);
+        })
+            ->where('company_uuid', session('company'))
+            ->firstOrFail();
+    }
+
+    protected function findVehicle(?string $id): Vehicle
+    {
+        return Vehicle::where(function ($query) use ($id) {
+            $query->where('uuid', $id)->orWhere('public_id', $id);
+        })
+            ->where('company_uuid', session('company'))
+            ->firstOrFail();
     }
 
     /**

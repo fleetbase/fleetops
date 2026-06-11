@@ -5,6 +5,7 @@ import { action } from '@ember/object';
 
 export default class ManagementDriversIndexController extends Controller {
     @service driverActions;
+    @service issueActions;
     @service fleetActions;
     @service vendorActions;
     @service vehicleActions;
@@ -283,9 +284,24 @@ export default class ManagementDriversIndexController extends Controller {
                         permission: 'fleet-ops assign-vehicle-for driver',
                     },
                     {
+                        label: 'Unassign Order',
+                        fn: this.driverActions.unassignOrder,
+                        permission: 'fleet-ops assign-order-for driver',
+                    },
+                    {
+                        label: 'Unassign Vehicle',
+                        fn: this.driverActions.unassignVehicle,
+                        permission: 'fleet-ops assign-vehicle-for driver',
+                    },
+                    {
                         label: this.intl.t('driver.actions.locate-driver'),
                         fn: this.driverActions.locate,
                         permission: 'fleet-ops view driver',
+                    },
+                    {
+                        label: 'Create Issue',
+                        fn: this.createIssue,
+                        permission: 'fleet-ops create issue',
                     },
                     {
                         separator: true,
@@ -306,5 +322,13 @@ export default class ManagementDriversIndexController extends Controller {
 
     @action changeLayout(layout) {
         this.layout = layout;
+    }
+
+    @action createIssue(driver) {
+        this.issueActions.modal.create({
+            driver,
+            driver_uuid: driver.id,
+            title: `Issue reported for ${driver.name}`,
+        });
     }
 }

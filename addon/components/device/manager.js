@@ -8,6 +8,7 @@ import getModelName from '@fleetbase/ember-core/utils/get-model-name';
 
 export default class DeviceManagerComponent extends Component {
     @service store;
+    @service fetch;
     @service modalsManager;
     @service notifications;
     @tracked devices = [];
@@ -40,15 +41,10 @@ export default class DeviceManagerComponent extends Component {
                 const selectedDevice = modal.getOption('selectedDevice');
                 if (!selectedDevice) return;
 
-                selectedDevice.setProperties({
-                    attachable_uuid: this.args.resource.id,
-                    attachable_type: `fleet-ops:${getModelName(this.args.resource)}`,
-                });
-
                 modal.startLoading();
 
                 try {
-                    await selectedDevice.save();
+                    await this.fetch.post(`vehicles/${this.args.resource.id}/attach-device`, { device: selectedDevice.id });
                     await this.loadDevices.perform();
                     this.notifications.success('Device attached successfully.');
                     modal.done();
@@ -67,10 +63,8 @@ export default class DeviceManagerComponent extends Component {
             confirm: async (modal) => {
                 modal.startLoading();
 
-                device.setProperties({ attachable_uuid: null, attachable_type: null });
-
                 try {
-                    await device.save();
+                    await this.fetch.post(`vehicles/${this.args.resource.id}/detach-device`, { device: device.id });
                     await this.loadDevices.perform();
                     this.notifications.success('Device removed.');
                     modal.done();

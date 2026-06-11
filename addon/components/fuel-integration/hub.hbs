@@ -1,0 +1,154 @@
+<div class="h-full overflow-y-auto bg-gray-50 dark:bg-gray-900" ...attributes>
+    <div class="flex w-full flex-col">
+        <section class="sticky top-0 z-50 border-b border-gray-200 bg-white px-4 py-4 shadow-sm dark:border-gray-700 dark:bg-gray-900 md:px-6">
+            <div class="mx-auto flex w-full max-w-7xl flex-col gap-3 md:flex-row md:items-start md:justify-between">
+                <div class="min-w-0">
+                    <div class="flex flex-wrap items-center gap-2">
+                        <h1 class="text-lg font-bold text-gray-900 dark:text-gray-100">Fuel Integrations</h1>
+                        <Badge @status={{if this.syncErrorCount "warning" "success"}} @hideStatusDot={{true}}>
+                            {{this.syncErrorCount}} sync issues
+                        </Badge>
+                    </div>
+                    <p class="mt-1 max-w-3xl text-sm leading-5 text-gray-500 dark:text-gray-300">
+                        Connect fuel card providers or fuel management systems, import provider bills as fuel transactions, match them to vehicles and trips, then create linked fuel reports for operations.
+                    </p>
+                </div>
+                <div class="flex flex-shrink-0 items-center gap-2 whitespace-nowrap">
+                    <Button @icon="refresh" @size="sm" @helpText={{t "common.reload"}} @onClick={{@onRefresh}} />
+                    <Button @icon="plus" @text="Connect Integration" @type="primary" @size="sm" @onClick={{this.createIntegration}} />
+                </div>
+            </div>
+        </section>
+
+        <div class="mx-auto flex w-full max-w-7xl flex-col gap-4 px-4 py-4 md:px-6">
+            <section class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                {{#each this.kpiWidgets as |widget|}}
+                    <div class="fleet-ops-widget fleet-ops-kpi-tile fleetops-connectivity-kpi-tile {{widget.accentClass}} relative flex min-h-[118px] flex-col overflow-hidden rounded-md border bg-white shadow-sm transition hover:-translate-y-px hover:shadow-lg dark:bg-gray-800">
+                        <div class="flex h-full flex-col justify-between p-3">
+                            <div class="flex items-start justify-between gap-2">
+                                <div class="min-w-0">
+                                    <div class="truncate text-[10px] font-bold uppercase text-gray-500 dark:text-gray-400">{{widget.label}}</div>
+                                    <div class="mt-2 truncate text-[1.35rem] font-extrabold leading-none text-gray-900 dark:text-gray-50">{{widget.value}}</div>
+                                </div>
+                                <div class="fleetops-connectivity-kpi-icon flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-md text-[13px]">
+                                    <FaIcon @icon={{widget.icon}} />
+                                </div>
+                            </div>
+
+                            <div class="mt-3 flex items-center justify-between gap-2 text-[11px]">
+                                <span class="min-w-0 truncate text-gray-500 dark:text-gray-400">{{widget.help}}</span>
+                                <button type="button" class="inline-flex flex-shrink-0 items-center gap-1 font-semibold text-blue-600 hover:text-blue-700 dark:text-blue-300 dark:hover:text-blue-200" {{on "click" (fn this.runKpiAction widget)}}>
+                                    <span>{{widget.action}}</span>
+                                    <FaIcon @icon="arrow-right" class="text-[9px]" />
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                {{/each}}
+            </section>
+
+            {{#if this.hasConnections}}
+                <section class="fleetops-provider-connections-panel min-w-0 overflow-hidden rounded-md border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-800">
+                    <div class="fleetops-provider-connections-header border-b border-gray-200 px-4 py-3 dark:border-gray-700">
+                        <div class="min-w-0 max-w-md">
+                            <h2 class="text-sm font-bold text-gray-900 dark:text-gray-100">Connected Fuel Systems</h2>
+                            <p class="mt-1 text-xs leading-5 text-gray-500 dark:text-gray-300">Manage credentials, connection health, sync windows, and imported transaction status for each fuel integration.</p>
+                        </div>
+                        <div class="fleetops-provider-connections-actions flex min-w-0 flex-wrap items-center gap-2 lg:ml-auto lg:flex-nowrap lg:justify-end">
+                            <Layout::Resource::TabularActions
+                                @title="Connected Fuel Systems"
+                                @searchQuery={{@searchQuery}}
+                                @onSearch={{@onSearch}}
+                                @columns={{this.columns}}
+                                @bulkActions={{@bulkActions}}
+                                @controller={{@controller}}
+                                @table={{this.table}}
+                                @searchInputClass="fleetops-provider-connections-search"
+                                @filterPickerButtonClass="fleetops-provider-connections-action-button"
+                                @columnPickerButtonClass="fleetops-provider-connections-action-button"
+                            />
+                        </div>
+                    </div>
+                    <Layout::Resource::Tabular
+                        @resource="fuel-provider-connection"
+                        @title=""
+                        @withoutHeader={{true}}
+                        @searchQuery={{@searchQuery}}
+                        @onSearch={{@onSearch}}
+                        @data={{@connections}}
+                        @columns={{this.columns}}
+                        @page={{@page}}
+                        @onPageChange={{@onPageChange}}
+                        @bulkActions={{@bulkActions}}
+                        @controller={{@controller}}
+                        @setupTable={{this.setupTable}}
+                        @emptyStateComponent={{component
+                            "table/empty-state"
+                            variant="compact"
+                            icon="gas-pump"
+                            title="No fuel connections"
+                            description="Connect a fuel provider to import transactions and match them to reports."
+                            primaryText="Connect provider"
+                            primaryIcon="plus"
+                            primaryAction=this.createIntegration
+                        }}
+                    />
+                </section>
+            {{else}}
+                <section class="rounded-md border border-dashed border-gray-300 bg-white p-6 text-center shadow-sm dark:border-gray-700 dark:bg-gray-800">
+                    <div class="mx-auto flex h-11 w-11 items-center justify-center rounded-md bg-blue-50 text-blue-600 dark:bg-blue-900/20 dark:text-blue-300">
+                        <FaIcon @icon="gas-pump" />
+                    </div>
+                    <h2 class="mt-3 text-sm font-bold text-gray-900 dark:text-gray-100">No fuel integrations connected yet</h2>
+                    <p class="mx-auto mt-1 max-w-2xl text-xs leading-5 text-gray-500 dark:text-gray-300">
+                        Start by connecting PetroApp or another fuel card/fuel management system. Provider bills import into Fuel Transactions, match to vehicles and trips, and create linked Fuel Reports once matched.
+                    </p>
+                    <Button class="mt-4" @icon="plus" @text="Connect Integration" @type="primary" @size="sm" @onClick={{this.createIntegration}} />
+                </section>
+            {{/if}}
+
+            <section class="rounded-md border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-800">
+                <div class="mb-3 flex flex-col gap-1 md:flex-row md:items-end md:justify-between">
+                    <div>
+                        <h2 class="text-sm font-bold text-gray-900 dark:text-gray-100">Available Fuel Integrations</h2>
+                        <p class="text-xs leading-5 text-gray-500 dark:text-gray-300">Connect providers that supply fuel card bills, purchase transactions, vehicle identifiers, station locations, or trip references.</p>
+                    </div>
+                    {{#if @providersLoading}}
+                        <div class="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-300"><Spinner /> Loading integrations</div>
+                    {{/if}}
+                </div>
+
+                <div class="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
+                    {{#each this.providerCards as |provider|}}
+                        <button type="button" class="group flex min-h-[166px] flex-col rounded-md border border-gray-200 bg-white p-3 text-left transition hover:border-blue-300 hover:shadow-sm dark:border-gray-700 dark:bg-gray-800 dark:hover:border-blue-400" {{on "click" (fn this.openProvider provider)}}>
+                            <div class="flex items-start justify-between gap-3">
+                                <div class="flex min-w-0 items-start gap-3">
+                                    <div class="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-md bg-blue-50 text-blue-600 dark:bg-blue-900/20 dark:text-blue-300">
+                                        <FaIcon @icon={{or provider.icon "gas-pump"}} />
+                                    </div>
+                                    <div class="min-w-0">
+                                        <div class="truncate text-sm font-bold text-gray-900 dark:text-gray-100">{{provider.label}}</div>
+                                        <div class="truncate text-[10px] uppercase text-gray-400 dark:text-gray-500">{{provider.categoryLabel}}</div>
+                                    </div>
+                                </div>
+                                <Badge @status={{if provider.connected "success" "info"}} @hideStatusDot={{true}}>
+                                    {{if provider.connected "Connected" "Available"}}
+                                </Badge>
+                            </div>
+                            <p class="mt-3 line-clamp-2 text-xs leading-5 text-gray-500 dark:text-gray-300">{{provider.description}}</p>
+                            <div class="mt-3 flex flex-wrap gap-1">
+                                {{#each provider.capabilities as |capability|}}
+                                    <span class="rounded bg-gray-100 px-2 py-0.5 text-[11px] text-gray-600 dark:bg-gray-700 dark:text-gray-300">{{capability}}</span>
+                                {{/each}}
+                            </div>
+                            <div class="mt-auto flex items-center justify-between pt-3 text-xs font-semibold text-blue-600 dark:text-blue-300">
+                                <span>{{if provider.connected "Manage integration" "Connect integration"}}</span>
+                                <FaIcon @icon="arrow-right" class="transition group-hover:translate-x-0.5" />
+                            </div>
+                        </button>
+                    {{/each}}
+                </div>
+            </section>
+        </div>
+    </div>
+</div>

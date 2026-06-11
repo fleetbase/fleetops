@@ -57,6 +57,7 @@ menu:
   contacts: Contactos
   places: Lugares
   fuel-reports: Informes de combustible
+  fuel-transactions: Transacciones de combustible
   issues: Asuntos
   maintenance: Mantenimiento
   work-orders: Órdenes de trabajo
@@ -64,6 +65,7 @@ menu:
   parts: Partes
   connectivity: Conectividad
   telematics: Telemática
+  fuel-providers: Integraciones de combustible
   devices: Dispositivos
   sensors: Sensores
   events: Eventos

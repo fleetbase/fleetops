@@ -66,14 +66,14 @@ class Sensor extends Model
      *
      * @var array
      */
-    protected $searchableColumns = ['name', 'sensor_type', 'unit', 'public_id'];
+    protected $searchableColumns = ['name', 'type', 'internal_id', 'unit', 'public_id'];
 
     /**
      * The attributes that can be used for filtering.
      *
      * @var array
      */
-    protected $filterParams = ['sensor_type', 'status', 'device_uuid', 'warranty_uuid', 'sensorable_type'];
+    protected $filterParams = ['type', 'sensor_type', 'status', 'device_uuid', 'warranty_uuid', 'sensorable_type', 'telematic_uuid'];
 
     /**
      * The attributes that are mass assignable.
@@ -178,7 +178,8 @@ class Sensor extends Model
     {
         return SlugOptions::create()
             ->generateSlugsFrom(['name', 'sensor_type'])
-            ->saveSlugsTo('slug');
+            ->saveSlugsTo('slug')
+            ->doNotGenerateSlugsOnUpdate();
     }
 
     /**
@@ -186,7 +187,23 @@ class Sensor extends Model
      */
     public function getActivitylogOptions(): LogOptions
     {
-        return LogOptions::defaults()->logAll();
+        return LogOptions::defaults()
+            ->logOnly([
+                'company_uuid',
+                'telematic_uuid',
+                'device_uuid',
+                'sensorable_uuid',
+                'sensorable_type',
+                'type',
+                'sensor_type',
+                'internal_id',
+                'name',
+                'unit',
+                'last_value',
+                'last_reading_at',
+                'status',
+            ])
+            ->logOnlyDirty();
     }
 
     public function telematic(): BelongsTo

@@ -7,6 +7,7 @@ import { dasherize } from '@ember/string';
 
 export default class VehicleActionsService extends ResourceActionService {
     @service('universe/menu-service') menuService;
+    @service fetch;
     @service maintenanceScheduleActions;
     @service workOrderActions;
     @service maintenanceActions;
@@ -181,6 +182,37 @@ export default class VehicleActionsService extends ResourceActionService {
 
     @action logMaintenance(vehicle) {
         this.maintenanceActions.modal.create({ maintainable: vehicle });
+    }
+
+    @action attachDevice(vehicle, options = {}) {
+        this.modalsManager.show('modals/attach-device', {
+            title: 'Attach device to vehicle',
+            acceptButtonText: 'Attach Device',
+            acceptButtonIcon: 'link',
+            selectedDevice: null,
+            vehicle,
+            confirm: async (modal) => {
+                const selectedDevice = modal.getOption('selectedDevice');
+
+                if (!selectedDevice) {
+                    return this.notifications.warning('Select a device to attach.');
+                }
+
+                modal.startLoading();
+
+                try {
+                    await this.fetch.post(`vehicles/${vehicle.id}/attach-device`, { device: selectedDevice.id });
+                    await vehicle.reload?.();
+                    this.notifications.success('Device attached to vehicle.');
+                    modal.done();
+                    this.refresh();
+                } catch (error) {
+                    this.notifications.serverError(error);
+                    modal.stopLoading();
+                }
+            },
+            ...options,
+        });
     }
 
     @action locate(vehicle, options = {}) {

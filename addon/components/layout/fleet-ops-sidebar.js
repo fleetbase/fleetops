@@ -162,6 +162,15 @@ export default class LayoutFleetOpsSidebarComponent extends Component {
             },
             {
                 priority: 7,
+                intl: 'menu.fuel-transactions',
+                title: this.intl.t('menu.fuel-transactions'),
+                icon: 'credit-card',
+                route: 'management.fuel-transactions',
+                permission: 'fleet-ops list fuel-report',
+                visible: this.abilities.can('fleet-ops see fuel-report'),
+            },
+            {
+                priority: 8,
                 intl: 'menu.issues',
                 title: this.intl.t('menu.issues'),
                 icon: 'triangle-exclamation',
@@ -184,6 +193,15 @@ export default class LayoutFleetOpsSidebarComponent extends Component {
             },
             {
                 priority: 1,
+                intl: 'menu.fuel-providers',
+                title: this.intl.t('menu.fuel-providers'),
+                icon: 'gas-pump',
+                route: 'connectivity.fuel-providers',
+                permission: 'fleet-ops list fuel-report',
+                visible: this.abilities.can('fleet-ops see fuel-report'),
+            },
+            {
+                priority: 2,
                 intl: 'menu.devices',
                 title: this.intl.t('menu.devices'),
                 icon: 'hard-drive',
@@ -192,7 +210,7 @@ export default class LayoutFleetOpsSidebarComponent extends Component {
                 visible: this.abilities.can('fleet-ops see device'),
             },
             {
-                priority: 2,
+                priority: 3,
                 intl: 'menu.sensors',
                 title: this.intl.t('menu.sensors'),
                 icon: 'temperature-full',
@@ -201,7 +219,7 @@ export default class LayoutFleetOpsSidebarComponent extends Component {
                 visible: this.abilities.can('fleet-ops see sensor'),
             },
             {
-                priority: 3,
+                priority: 4,
                 intl: 'menu.events',
                 title: this.intl.t('menu.events'),
                 icon: 'stream',

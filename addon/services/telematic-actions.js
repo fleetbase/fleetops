@@ -7,9 +7,15 @@ export default class TelematicActionsService extends ResourceActionService {
     }
 
     transition = {
-        view: (telematic) => this.transitionTo('connectivity.telematics.index.details', telematic),
-        edit: (telematic) => this.transitionTo('connectivity.telematics.index.edit', telematic),
-        create: () => this.transitionTo('connectivity.telematics.index.new'),
+        view: (telematic) => this.transitionTo('connectivity.telematics.details', telematic),
+        edit: (telematic) => this.transitionTo('connectivity.telematics.edit', telematic),
+        create: (provider) => {
+            if (provider) {
+                return this.transitionTo('connectivity.telematics.new', { queryParams: { setupProvider: provider } });
+            }
+
+            return this.transitionTo('connectivity.telematics.new');
+        },
     };
 
     panel = {

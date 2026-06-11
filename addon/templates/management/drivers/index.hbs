@@ -11,5 +11,23 @@
     @actionButtons={{this.actionButtons}}
     @bulkActions={{this.bulkActions}}
     @controller={{this}}
+    @emptyStateComponent={{component
+        "table/empty-state"
+        icon="id-card"
+        title="Add your first driver"
+        description="Drivers power dispatching, live fleet visibility, assignments, and delivery activity."
+        filteredTitle="No drivers match your search"
+        filteredDescription="Adjust the search or filters to find another driver."
+        primaryText="New driver"
+        primaryIcon="plus"
+        primaryAction=this.driverActions.transition.create
+        secondaryText="Import"
+        secondaryIcon="upload"
+        secondaryAction=this.driverActions.import
+        docsSlug="fleet-ops/resources/drivers/overview"
+        docsTitle="Drivers guide"
+        docsText="Driver guide"
+        docsSource="fleet-ops-empty-drivers"
+    }}
 />
 {{outlet}}

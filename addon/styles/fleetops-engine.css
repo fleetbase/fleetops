@@ -114,7 +114,7 @@ body[data-theme='dark'] .next-table-wrapper.order-view-purchase-rate-table-wrapp
 
 nav.next-sidebar {
     height: 100%;
-    overflow-y: scroll;
+    overflow: hidden;
 }
 
 /** places management css mods */
@@ -159,6 +159,154 @@ nav.next-sidebar {
 
 body.fleetbase-console .next-content-overlay > .next-content-overlay-panel-container > .next-content-overlay-panel .next-content-overlay-panel-header > .next-view-header-right .btn-wrapper {
     flex-shrink: 0;
+}
+
+.fleetops-connectivity-kpi-tile {
+    transition:
+        transform 160ms ease-out,
+        box-shadow 160ms ease-out,
+        border-color 160ms ease-out;
+}
+
+.fleetops-connectivity-kpi-tile:hover {
+    box-shadow: 0 8px 24px -12px rgb(15 23 42 / 35%);
+}
+
+.fleetops-connectivity-kpi-tile .fleetops-connectivity-kpi-icon {
+    color: #64748b;
+    background-color: rgb(100 116 139 / 12%);
+}
+
+.fleetops-connectivity-kpi-accent-blue {
+    border-color: rgb(59 130 246 / 28%);
+    background-image: linear-gradient(135deg, rgb(59 130 246 / 10%) 0%, rgb(59 130 246 / 0%) 62%);
+}
+
+.fleetops-connectivity-kpi-accent-green {
+    border-color: rgb(16 185 129 / 28%);
+    background-image: linear-gradient(135deg, rgb(16 185 129 / 10%) 0%, rgb(16 185 129 / 0%) 62%);
+}
+
+.fleetops-connectivity-kpi-accent-amber {
+    border-color: rgb(245 158 11 / 32%);
+    background-image: linear-gradient(135deg, rgb(245 158 11 / 12%) 0%, rgb(245 158 11 / 0%) 62%);
+}
+
+.fleetops-connectivity-kpi-accent-rose {
+    border-color: rgb(244 63 94 / 28%);
+    background-image: linear-gradient(135deg, rgb(244 63 94 / 10%) 0%, rgb(244 63 94 / 0%) 62%);
+}
+
+.fleetops-connectivity-kpi-accent-blue .fleetops-connectivity-kpi-icon {
+    color: rgb(37 99 235);
+    background-color: rgb(59 130 246 / 12%);
+}
+
+.fleetops-connectivity-kpi-accent-green .fleetops-connectivity-kpi-icon {
+    color: rgb(5 150 105);
+    background-color: rgb(16 185 129 / 12%);
+}
+
+.fleetops-connectivity-kpi-accent-amber .fleetops-connectivity-kpi-icon {
+    color: rgb(217 119 6);
+    background-color: rgb(245 158 11 / 14%);
+}
+
+.fleetops-connectivity-kpi-accent-rose .fleetops-connectivity-kpi-icon {
+    color: rgb(225 29 72);
+    background-color: rgb(244 63 94 / 12%);
+}
+
+body[data-theme='dark'] .fleetops-connectivity-kpi-accent-blue .fleetops-connectivity-kpi-icon {
+    color: rgb(147 197 253);
+}
+
+body[data-theme='dark'] .fleetops-connectivity-kpi-accent-green .fleetops-connectivity-kpi-icon {
+    color: rgb(110 231 183);
+}
+
+body[data-theme='dark'] .fleetops-connectivity-kpi-accent-amber .fleetops-connectivity-kpi-icon {
+    color: rgb(252 211 77);
+}
+
+body[data-theme='dark'] .fleetops-connectivity-kpi-accent-rose .fleetops-connectivity-kpi-icon {
+    color: rgb(251 113 133);
+}
+
+.fleetops-provider-connections-actions .fleetops-provider-connections-search {
+    min-width: 16rem;
+    height: 2.25rem;
+    min-height: 2.25rem;
+}
+
+.fleetops-provider-connections-header {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0.75rem;
+}
+
+@media (width >= 1024px) {
+    .fleetops-provider-connections-header {
+        grid-template-columns: minmax(0, 26rem) minmax(22rem, max-content);
+        align-items: start;
+        justify-content: space-between;
+    }
+}
+
+.fleetops-provider-connections-actions .fleetops-provider-connections-action-button,
+.fleetops-provider-connections-actions .fleetops-telematics-action-button,
+.fleetops-provider-connections-actions button {
+    flex-shrink: 0;
+    height: 2.25rem;
+    min-height: 2.25rem;
+    white-space: nowrap;
+}
+
+.fleetops-provider-connections-actions button span {
+    white-space: nowrap;
+}
+
+.status-badge.long-offline-status-badge > span,
+.status-badge.long_offline-status-badge > span {
+    @apply bg-yellow-800 border-yellow-700 text-yellow-100;
+}
+
+.status-badge.long-offline-status-badge > span svg,
+.status-badge.long_offline-status-badge > span svg {
+    @apply text-yellow-300;
+}
+
+.fleetops-provider-connections-panel .table-wrapper table tbody tr td,
+.fleetops-provider-connections-panel .next-table-wrapper table tbody tr td {
+    vertical-align: top;
+}
+
+.fleetops-provider-connections-panel .table-wrapper table tbody tr td.fleetops-provider-connections-cell-middle,
+.fleetops-provider-connections-panel .next-table-wrapper table tbody tr td.fleetops-provider-connections-cell-middle {
+    vertical-align: middle;
+}
+
+body[data-theme='dark'] .fleetops-provider-connections-panel .table-wrapper.table-fluid,
+body[data-theme='dark'] .fleetops-provider-connections-panel .table-wrapper.table-fluid table,
+body[data-theme='dark'] .fleetops-provider-connections-panel .table-wrapper.table-fluid table tbody,
+body[data-theme='dark'] .fleetops-provider-connections-panel .table-wrapper.table-fluid table tbody tr,
+body[data-theme='dark'] .fleetops-provider-connections-panel .table-wrapper.table-fluid table tbody tr td,
+body[data-theme='dark'] .fleetops-provider-connections-panel .next-table-wrapper,
+body[data-theme='dark'] .fleetops-provider-connections-panel .next-table-wrapper table,
+body[data-theme='dark'] .fleetops-provider-connections-panel .next-table-wrapper table tbody,
+body[data-theme='dark'] .fleetops-provider-connections-panel .next-table-wrapper table tbody tr,
+body[data-theme='dark'] .fleetops-provider-connections-panel .next-table-wrapper table tbody tr td {
+    background-color: rgb(17 24 39);
+}
+
+body[data-theme='dark'] .fleetops-provider-connections-panel .table-wrapper.table-fluid table tbody tr:nth-child(even):not(.is-selected) td,
+body[data-theme='dark'] .fleetops-provider-connections-panel .next-table-wrapper table tbody tr:nth-child(even):not(.is-selected) td {
+    background-color: rgb(17 24 39);
+}
+
+.fleetops-provider-connections-panel div.has-floating-pagination,
+.fleetops-provider-connections-panel .next-table-wrapper.has-floating-pagination {
+    padding-bottom: 0;
 }
 
 /** calendar event css mods */

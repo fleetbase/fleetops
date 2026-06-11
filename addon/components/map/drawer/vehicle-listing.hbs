@@ -3,4 +3,17 @@
         <Input @value={{this.query}} @type="text" class="form-input form-input-sm w-60" placeholder={{t "live-map-drawer.vehicle-listing.message"}} />
     </div>
 </div>
-<Table @rows={{this.filteredVehicles}} @columns={{this.columns}} />
+<Table
+    @rows={{this.filteredVehicles}}
+    @columns={{this.columns}}
+    @searchQuery={{this.query}}
+    @emptyStateComponent={{component
+        "table/empty-state"
+        variant="compact"
+        icon="truck"
+        title="No vehicles visible"
+        description="Vehicles appear here when they are available in the live map context."
+        filteredTitle="No vehicles match this search"
+        filteredDescription="Adjust the search to find another vehicle."
+    }}
+/>

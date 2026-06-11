@@ -61,6 +61,7 @@ menu:
   contacts: Холбоо барих
   places: Газрууд
   fuel-reports: Түлшний тайлан
+  fuel-transactions: Түлшний гүйлгээнүүд
   issues: Асуудлууд
   maintenance: Үйлчилгээ
   work-orders: Ажлын захиалгууд
@@ -68,6 +69,7 @@ menu:
   parts: Сэлбэгүүд
   connectivity: Холболт
   telematics: Телематикийн систем
+  fuel-providers: Түлшний интеграцууд
   devices: Төхөөрөмжүүд
   sensors: Мэдрэгчүүд
   events: Үйл явдлууд

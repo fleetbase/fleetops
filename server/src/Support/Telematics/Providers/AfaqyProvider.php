@@ -23,8 +23,9 @@ class AfaqyProvider extends AbstractProvider
 
         $this->credentials['token'] = $token;
         $this->headers              = [
-            'Accept'       => 'application/json',
-            'Content-Type' => 'application/json',
+            'Accept'        => 'application/json',
+            'Content-Type'  => 'application/json',
+            'Authorization' => 'Bearer ' . $token,
         ];
     }
 
@@ -78,7 +79,6 @@ class AfaqyProvider extends AbstractProvider
                     'last_update',
                     'counters',
                     'profile',
-                    'sensors',
                     'sensors_last_val',
                 ],
             ],
@@ -110,26 +110,33 @@ class AfaqyProvider extends AbstractProvider
     public function normalizeDevice(array $payload): array
     {
         $lastUpdate = $payload['last_update'] ?? [];
+        $profile    = $payload['profile'] ?? [];
 
         return [
-            'external_id'     => $payload['_id'] ?? $payload['id'] ?? null,
-            'device_name'     => $payload['name'] ?? data_get($payload, 'profile.plate_number') ?? 'Unknown Unit',
-            'device_provider' => 'afaqy',
-            'device_model'    => data_get($payload, 'profile.model') ?? $payload['device'] ?? null,
-            'imei'            => $payload['imei'] ?? null,
-            'phone'           => $payload['sim_number'] ?? null,
-            'vin'             => data_get($payload, 'profile.vin'),
-            'status'          => ($payload['active'] ?? false) ? 'active' : 'inactive',
-            'location'        => [
+            'device_id'    => $payload['_id'] ?? $payload['id'] ?? null,
+            'name'         => $payload['name'] ?? data_get($payload, 'profile.plate_number') ?? 'Unknown Unit',
+            'provider'     => 'afaqy',
+            'model'        => data_get($payload, 'profile.model') ?? $payload['device'] ?? null,
+            'imei'         => $payload['imei'] ?? null,
+            'phone'        => $payload['sim_number'] ?? null,
+            'vin'          => data_get($payload, 'profile.vin'),
+            'status'       => ($payload['active'] ?? false) ? 'active' : 'inactive',
+            'online'       => $payload['active'] ?? null,
+            'last_seen_at' => $this->parseTimestamp($lastUpdate['dtt'] ?? $lastUpdate['dts'] ?? null),
+            'location'     => [
                 'lat' => $lastUpdate['lat'] ?? null,
                 'lng' => $lastUpdate['lng'] ?? null,
             ],
             'meta' => [
-                'raw'          => $payload,
-                'plate_number' => data_get($payload, 'profile.plate_number'),
-                'driver_id'    => $payload['driver_id'] ?? null,
-                'last_update'  => $this->normalizeEvent($payload),
-                'capabilities' => [
+                'provider_unit_id' => $payload['_id'] ?? $payload['id'] ?? null,
+                'plate_number'     => data_get($profile, 'plate_number'),
+                'vehicle_type'     => data_get($profile, 'vehicle_type'),
+                'fuel_type'        => data_get($profile, 'fuel_type'),
+                'device_serial'    => $payload['device_serial'] ?? null,
+                'sim_number'       => $payload['sim_number'] ?? null,
+                'driver_id'        => $payload['driver_id'] ?? null,
+                'last_update'      => $this->compactLastUpdate($lastUpdate),
+                'capabilities'     => [
                     'tracking'       => isset($lastUpdate['lat'], $lastUpdate['lng']),
                     'odometer'       => data_get($payload, 'counters.odometer') !== null,
                     'fuel_level'     => $this->extractFuelLevel($payload) !== null,
@@ -145,7 +152,9 @@ class AfaqyProvider extends AbstractProvider
 
         return [
             'external_id' => $payload['_id'] ?? $payload['id'] ?? null,
+            'device_id'   => $payload['_id'] ?? $payload['id'] ?? null,
             'event_type'  => $payload['event'] ?? $payload['event_type'] ?? 'telemetry_update',
+            'message'     => $payload['message'] ?? $payload['event'] ?? null,
             'occurred_at' => $this->parseTimestamp($lastUpdate['dtt'] ?? $lastUpdate['dts'] ?? null),
             'location'    => [
                 'lat' => $lastUpdate['lat'] ?? data_get($lastUpdate, 'loc.coordinates.1'),
@@ -175,12 +184,16 @@ class AfaqyProvider extends AbstractProvider
     {
         return [
             [
-                'name'        => 'base_url',
-                'label'       => 'Base URL',
-                'type'        => 'text',
-                'placeholder' => 'https://api.afaqy.sa',
-                'required'    => false,
-                'validation'  => 'nullable|url',
+                'name'          => 'base_url',
+                'label'         => 'Base URL',
+                'type'          => 'text',
+                'placeholder'   => 'https://api.afaqy.sa',
+                'required'      => false,
+                'advanced'      => true,
+                'is_endpoint'   => true,
+                'default_value' => 'https://api.afaqy.sa',
+                'help_text'     => 'Optional override. Leave blank to use the default AFAQY API host.',
+                'validation'    => 'nullable|url',
             ],
             [
                 'name'        => 'username',
@@ -227,7 +240,7 @@ class AfaqyProvider extends AbstractProvider
             ]);
 
         if ($response->failed()) {
-            throw new \RuntimeException('AFAQY authentication failed: ' . $response->body());
+            throw new \RuntimeException('AFAQY authentication failed with status ' . $response->status());
         }
 
         $token = data_get($response->json(), 'data.token');
@@ -243,13 +256,29 @@ class AfaqyProvider extends AbstractProvider
     {
         $response = Http::withHeaders($this->headers)
             ->timeout(30)
-            ->post($this->baseUrl . $endpoint . '?token=' . urlencode($this->credentials['token']), $payload);
+            ->post($this->baseUrl . $endpoint, array_merge(['token' => $this->credentials['token']], $payload));
 
         if ($response->failed()) {
-            throw new \RuntimeException('AFAQY API request failed: ' . $response->body());
+            throw new \RuntimeException('AFAQY API request failed with status ' . $response->status());
         }
 
         return $response->json() ?? [];
+    }
+
+    protected function compactLastUpdate(array $lastUpdate): array
+    {
+        $params = $lastUpdate['params'] ?? $lastUpdate['prms'] ?? [];
+
+        return array_filter([
+            'occurred_at' => $this->parseTimestamp($lastUpdate['dtt'] ?? $lastUpdate['dts'] ?? null),
+            'lat'         => $lastUpdate['lat'] ?? null,
+            'lng'         => $lastUpdate['lng'] ?? null,
+            'speed'       => $lastUpdate['speed'] ?? $lastUpdate['spd'] ?? null,
+            'heading'     => $lastUpdate['angle'] ?? $lastUpdate['ang'] ?? null,
+            'altitude'    => $lastUpdate['alt'] ?? null,
+            'satellites'  => $params['sat'] ?? null,
+            'protocol'    => $params['protocol'] ?? null,
+        ], fn ($value) => $value !== null);
     }
 
     protected function parseTimestamp($value): ?string

@@ -1,0 +1,18 @@
+<Modal::Default @modalIsOpened={{@modalIsOpened}} @options={{@options}} @confirm={{@onConfirm}} @decline={{@onDecline}}>
+    <div class="modal-body-container">
+        <InputGroup @name={{t "common.select-field" field=(t "resource.vehicle")}} @value={{@options.selectedVehicle}}>
+            <ModelSelect
+                @modelName="vehicle"
+                @selectedModel={{@options.selectedVehicle}}
+                @placeholder={{t "common.select-field" field=(t "resource.vehicle")}}
+                @triggerClass="form-select form-input"
+                @infiniteScroll={{true}}
+                @renderInPlace={{true}}
+                @onChange={{fn (mut @options.selectedVehicle)}}
+                as |vehicle|
+            >
+                <Vehicle::Pill @resource={{vehicle}} />
+            </ModelSelect>
+        </InputGroup>
+    </div>
+</Modal::Default>

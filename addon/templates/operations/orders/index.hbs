@@ -47,6 +47,24 @@
         @filterPickerGridCols="3"
         @filterPickerWidth="700px"
         @controller={{this}}
+        @emptyStateComponent={{component
+            "table/empty-state"
+            icon="paper-plane"
+            title="Create your first order"
+            description="Orders are the center of FleetOps: plan routes, assign drivers and vehicles, track progress, and collect proof."
+            filteredTitle="No orders match your filters"
+            filteredDescription="Adjust the search, bulk search, or filters to find another order."
+            primaryText="New order"
+            primaryIcon="plus"
+            primaryAction=this.orderActions.transition.create
+            secondaryText="Import"
+            secondaryIcon="upload"
+            secondaryAction=this.importOrders
+            docsSlug="fleet-ops/operations/orders/overview"
+            docsTitle="Orders guide"
+            docsText="Order guide"
+            docsSource="fleet-ops-empty-orders"
+        }}
         @tfootVerticalOffset="7"
         @tfootVerticalOffsetElements="#next-view-section-subheader,.next-table-wrapper > table > thead,.next-map-container-topbar"
     />

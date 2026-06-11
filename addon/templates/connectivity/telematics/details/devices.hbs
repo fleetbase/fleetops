@@ -1,0 +1,88 @@
+<div class="flex flex-col gap-4 p-4 md:p-6">
+    <div class="flex flex-col gap-1">
+        <h2 class="text-base font-bold text-gray-900 dark:text-gray-100">Device Inventory</h2>
+        <p class="text-sm text-gray-500 dark:text-gray-300">Review synced provider devices, connection state, and vehicle mapping from this connection.</p>
+    </div>
+
+    <section class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        {{#each this.metrics as |metric|}}
+            <div class="fleet-ops-widget fleet-ops-kpi-tile fleetops-connectivity-kpi-tile {{metric.accentClass}} relative min-h-[102px] overflow-hidden rounded-md border bg-white shadow-sm dark:bg-gray-800">
+                <div class="flex h-full items-start justify-between gap-3 p-3">
+                    <div class="min-w-0">
+                        <div class="truncate text-[10px] font-bold uppercase text-gray-500 dark:text-gray-400">{{metric.label}}</div>
+                        <div class="mt-2 text-2xl font-extrabold leading-none text-gray-900 dark:text-gray-50">{{metric.value}}</div>
+                    </div>
+                    <div class="fleetops-connectivity-kpi-icon flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-md text-[13px]">
+                        <FaIcon @icon={{metric.icon}} />
+                    </div>
+                </div>
+            </div>
+        {{/each}}
+    </section>
+
+    <section class="overflow-hidden rounded-md border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-800">
+        <div class="fleetops-provider-connections-header border-b border-gray-200 px-4 py-3 dark:border-gray-700">
+            <div>
+                <h3 class="text-sm font-bold text-gray-900 dark:text-gray-100">Synced Devices</h3>
+                <p class="mt-1 text-xs leading-5 text-gray-500 dark:text-gray-300">Search provider identifiers, filter attachment state, and open devices for troubleshooting.</p>
+            </div>
+            <div class="fleetops-provider-connections-actions flex min-w-0 flex-wrap items-center gap-2 lg:ml-auto lg:flex-nowrap lg:justify-end">
+                <Layout::Resource::TabularActions
+                    @title="Synced Devices"
+                    @searchQuery={{this.query}}
+                    @onSearch={{perform this.deviceActions.controllerSearchTask this}}
+                    @columns={{this.columns}}
+                    @page={{this.page}}
+                    @onPageChange={{fn (mut this.page)}}
+                    @actionButtons={{this.actionButtons}}
+                    @bulkActions={{this.bulkActions}}
+                    @controller={{this}}
+                    @searchInputClass="fleetops-provider-connections-search"
+                    @filterPickerButtonClass="fleetops-provider-connections-action-button"
+                    @columnPickerButtonClass="fleetops-provider-connections-action-button"
+                />
+            </div>
+        </div>
+
+        {{#if this.emptyStateContent}}
+            <div class="p-4">
+                <Telematic::TabEmptyState
+                    @tone={{this.emptyStateContent.tone}}
+                    @icon={{this.emptyStateContent.icon}}
+                    @title={{this.emptyStateContent.title}}
+                    @message={{this.emptyStateContent.message}}
+                    @note={{this.emptyStateContent.note}}
+                    @primaryText={{this.emptyStateContent.primaryText}}
+                    @primaryIcon={{this.emptyStateContent.primaryIcon}}
+                    @primaryAction={{this.emptyStateContent.primaryAction}}
+                    @secondaryText={{this.emptyStateContent.secondaryText}}
+                    @secondaryIcon={{this.emptyStateContent.secondaryIcon}}
+                    @secondaryAction={{this.emptyStateContent.secondaryAction}}
+                />
+            </div>
+        {{else}}
+            <Layout::Resource::Tabular
+                @resource="device"
+                @title="Synced Devices"
+                @data={{@model}}
+                @columns={{this.columns}}
+                @page={{this.page}}
+                @onPageChange={{fn (mut this.page)}}
+                @controller={{this}}
+                @withoutHeader={{true}}
+                @emptyStateComponent={{component
+                    "table/empty-state"
+                    variant="compact"
+                    icon="tablet-screen-button"
+                    title="No synced devices"
+                    description="Run a provider sync or adjust filters to review devices from this connection."
+                    filteredTitle="No devices match your filters"
+                    filteredDescription="Adjust the search or filters to find another synced device."
+                    primaryText="Refresh"
+                    primaryIcon="refresh"
+                    primaryAction=this.refresh
+                }}
+            />
+        {{/if}}
+    </section>
+</div>

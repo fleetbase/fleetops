@@ -1,11 +1,15 @@
 import Controller from '@ember/controller';
 import { inject as service } from '@ember/service';
 import { tracked } from '@glimmer/tracking';
+import { task } from 'ember-concurrency';
 import fleetOpsOptions from '../../../utils/fleet-ops-options';
 
 export default class ConnectivityTelematicsIndexController extends Controller {
     @service telematicActions;
+    @service fetch;
     @service intl;
+    @service notifications;
+    @tracked providers = [];
 
     /** query params */
     @tracked queryParams = ['name', 'provider', 'status', 'page', 'limit', 'sort', 'query', 'public_id', 'created_at', 'updated_at'];
@@ -16,6 +20,11 @@ export default class ConnectivityTelematicsIndexController extends Controller {
     @tracked name;
     @tracked provider;
     @tracked status;
+
+    constructor() {
+        super(...arguments);
+        this.loadProviders.perform();
+    }
 
     /** action buttons */
     @tracked actionButtons = [
@@ -59,11 +68,11 @@ export default class ConnectivityTelematicsIndexController extends Controller {
         {
             sticky: true,
             label: 'Provider',
-            valuePath: 'provider',
-            cellComponent: 'table/cell/anchor',
-            cellClassNames: 'uppercase',
+            valuePath: 'name',
+            cellComponent: 'cell/telematic-provider',
             action: this.telematicActions.transition.view,
             permission: 'fleet-ops view telematic',
+            width: 460,
             resizable: true,
             sortable: true,
             filterable: true,
@@ -73,7 +82,8 @@ export default class ConnectivityTelematicsIndexController extends Controller {
         {
             label: this.intl.t('column.status'),
             valuePath: 'status',
-            cellComponent: 'table/cell/status',
+            cellComponent: 'cell/telematic-status',
+            cellClassNames: 'fleetops-provider-connections-cell-middle',
             resizable: true,
             sortable: true,
             filterable: true,
@@ -84,6 +94,7 @@ export default class ConnectivityTelematicsIndexController extends Controller {
             label: this.intl.t('column.created-at'),
             valuePath: 'createdAt',
             sortParam: 'created_at',
+            cellClassNames: 'fleetops-provider-connections-cell-middle',
             resizable: true,
             sortable: true,
             filterable: true,
@@ -93,6 +104,7 @@ export default class ConnectivityTelematicsIndexController extends Controller {
             label: this.intl.t('column.updated-at'),
             valuePath: 'updatedAt',
             sortParam: 'updated_at',
+            cellClassNames: 'fleetops-provider-connections-cell-middle',
             resizable: true,
             sortable: true,
             hidden: true,
@@ -107,7 +119,7 @@ export default class ConnectivityTelematicsIndexController extends Controller {
             ddButtonIcon: 'ellipsis-h',
             ddButtonIconPrefix: 'fas',
             ddMenuLabel: this.intl.t('common.resource-actions', { resource: this.intl.t('resource.telematic') }),
-            cellClassNames: 'overflow-visible',
+            cellClassNames: 'fleetops-provider-connections-cell-middle overflow-visible',
             wrapperClass: 'flex items-center justify-end mx-2',
             sticky: 'right',
             width: 60,
@@ -137,4 +149,12 @@ export default class ConnectivityTelematicsIndexController extends Controller {
             searchable: false,
         },
     ];
+
+    @task *loadProviders() {
+        try {
+            this.providers = yield this.fetch.get('telematics/providers');
+        } catch (error) {
+            this.notifications.serverError(error);
+        }
+    }
 }

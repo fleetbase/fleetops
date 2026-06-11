@@ -1,0 +1,21 @@
+<div class="mx-auto w-full max-w-7xl px-4 py-4 md:px-6">
+    <Layout::Resource::Tabular
+        @resource="fuel-provider-transaction"
+        @title="Imported Transactions"
+        @data={{@model}}
+        @columns={{this.columns}}
+        @page={{1}}
+        @controller={{this}}
+        @emptyStateComponent={{component
+            "table/empty-state"
+            icon="receipt"
+            title="No imported transactions"
+            description="Fuel transactions will appear here after this provider syncs bills or purchase records."
+            filteredTitle="No transactions match your filters"
+            filteredDescription="Adjust filters or sync the provider again to review imported transactions."
+            primaryText="Refresh"
+            primaryIcon="refresh"
+            primaryAction=this.refresh
+        }}
+    />
+</div>

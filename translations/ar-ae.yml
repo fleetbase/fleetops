@@ -1,3 +1,7 @@
+menu:
+  fuel-providers: تكاملات الوقود
+  fuel-transactions: معاملات الوقود
+
 fleet-ops:
   extension-name: Fleet-Ops
   common:
@@ -309,10 +313,12 @@ fleet-ops:
         contacts: جهات الاتصال
         places: الأماكن
         fuel-reports: تقارير الوقود
+        fuel-transactions: معاملات الوقود
         issues: القضايا
         title: إنشاء طلب جديد
         settings: الإعدادات
         order-config: تكوين الطلب
+        fuel-providers: تكاملات الوقود
     live-map-drawer:
       driver-listing:
         location: الموقع

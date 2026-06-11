@@ -1,6 +1,9 @@
-import ResourceActionService from '@fleetbase/ember-core/services/resource-action';
+import ResourceActionService, { inject as service } from '@fleetbase/ember-core/services/resource-action';
+import { action } from '@ember/object';
 
 export default class DeviceActionsService extends ResourceActionService {
+    @service fetch;
+
     constructor() {
         super(...arguments);
         this.initialize('device');
@@ -78,4 +81,57 @@ export default class DeviceActionsService extends ResourceActionService {
             });
         },
     };
+
+    @action attachToVehicle(device, options = {}) {
+        this.modalsManager.show('modals/attach-telematic-device', {
+            title: 'Attach device to vehicle',
+            acceptButtonText: 'Attach Device',
+            acceptButtonIcon: 'link',
+            device,
+            selectedVehicle: null,
+            confirm: async (modal) => {
+                const selectedVehicle = modal.getOption('selectedVehicle');
+
+                if (!selectedVehicle) {
+                    return this.notifications.warning('Select a vehicle to attach this device to.');
+                }
+
+                modal.startLoading();
+
+                try {
+                    await this.fetch.post(`devices/${device.id}/attach`, { vehicle: selectedVehicle.id });
+                    await device.reload?.();
+                    this.notifications.success('Device attached to vehicle.');
+                    modal.done();
+                    this.refresh();
+                } catch (error) {
+                    this.notifications.serverError(error);
+                    modal.stopLoading();
+                }
+            },
+            ...options,
+        });
+    }
+
+    @action detachFromVehicle(device, options = {}) {
+        this.modalsManager.confirm({
+            title: 'Detach device from vehicle?',
+            body: `This will stop vehicle telemetry updates from ${device.displayName ?? device.name ?? 'this device'} until it is attached again.`,
+            confirm: async (modal) => {
+                modal.startLoading();
+
+                try {
+                    await this.fetch.post(`devices/${device.id}/detach`);
+                    await device.reload?.();
+                    this.notifications.success('Device detached from vehicle.');
+                    modal.done();
+                    this.refresh();
+                } catch (error) {
+                    this.notifications.serverError(error);
+                    modal.stopLoading();
+                }
+            },
+            ...options,
+        });
+    }
 }

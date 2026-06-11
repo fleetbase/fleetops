@@ -7,6 +7,7 @@ import { dasherize } from '@ember/string';
 
 export default class DriverActionsService extends ResourceActionService {
     @service('universe/menu-service') menuService;
+    @service fetch;
 
     get registeredTabs() {
         const registeredTabs = this.menuService.getMenuItems('fleet-ops:component:driver:details');
@@ -197,12 +198,14 @@ export default class DriverActionsService extends ResourceActionService {
                 modal.startLoading();
 
                 try {
-                    driver.set('current_job_uuid', selectedOrder.id);
-                    await driver.save();
+                    await this.fetch.post(`drivers/${driver.id}/assign-order`, { order: selectedOrder.id });
+                    await driver.reload?.();
+                    this.notifications.success('Order assigned to driver.');
+                    modal.done();
+                    this.refresh();
                 } catch (err) {
                     this.notifications.serverError(err);
                     driver.rollbackAttributes();
-                } finally {
                     modal.stopLoading();
                 }
             },
@@ -221,12 +224,64 @@ export default class DriverActionsService extends ResourceActionService {
                 modal.startLoading();
 
                 try {
-                    await driver.save();
+                    const vehicleId = driver.vehicle_uuid ?? driver.vehicle?.id;
+                    if (!vehicleId) {
+                        modal.stopLoading();
+                        return this.notifications.warning('Select a vehicle to assign.');
+                    }
+
+                    await this.fetch.post(`drivers/${driver.id}/assign-vehicle`, { vehicle: vehicleId });
+                    await driver.reload?.();
                     this.notifications.success(this.intl.t('fleet-ops.management.drivers.index.assign-vehicle', { driverName: driver.name }));
+                    modal.done();
+                    this.refresh();
                 } catch (err) {
                     this.notifications.serverError(err);
                     driver.rollbackAttributes();
-                } finally {
+                    modal.stopLoading();
+                }
+            },
+            ...options,
+        });
+    }
+
+    @action unassignOrder(driver, options = {}) {
+        this.modalsManager.confirm({
+            title: 'Unassign order from driver?',
+            body: `This removes the current order assignment from ${driver.name}.`,
+            confirm: async (modal) => {
+                modal.startLoading();
+
+                try {
+                    await this.fetch.post(`drivers/${driver.id}/unassign-order`);
+                    await driver.reload?.();
+                    this.notifications.success('Order unassigned from driver.');
+                    modal.done();
+                    this.refresh();
+                } catch (error) {
+                    this.notifications.serverError(error);
+                    modal.stopLoading();
+                }
+            },
+            ...options,
+        });
+    }
+
+    @action unassignVehicle(driver, options = {}) {
+        this.modalsManager.confirm({
+            title: 'Unassign vehicle from driver?',
+            body: `This removes the current vehicle assignment from ${driver.name}.`,
+            confirm: async (modal) => {
+                modal.startLoading();
+
+                try {
+                    await this.fetch.post(`drivers/${driver.id}/unassign-vehicle`);
+                    await driver.reload?.();
+                    this.notifications.success('Vehicle unassigned from driver.');
+                    modal.done();
+                    this.refresh();
+                } catch (error) {
+                    this.notifications.serverError(error);
                     modal.stopLoading();
                 }
             },

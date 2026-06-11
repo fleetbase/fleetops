@@ -1,0 +1,200 @@
+<div class="flex min-h-0 flex-1 flex-col" ...attributes>
+    <div class="min-h-0 flex-1 overflow-y-auto px-4 py-4 md:px-6">
+        <div class="mx-auto flex w-full max-w-6xl flex-col gap-4">
+            <section class="rounded-md border border-gray-200 bg-white p-3 shadow-sm dark:border-gray-700 dark:bg-gray-800">
+                <div class="grid grid-cols-1 gap-2 md:grid-cols-5">
+                    {{#each this.setupSteps as |step index|}}
+                        <button type="button" class="rounded-md border p-2 text-left transition {{if step.active 'border-blue-500 bg-blue-50 dark:border-blue-400 dark:bg-blue-500/10' 'border-gray-200 bg-white hover:border-gray-300 dark:border-gray-700 dark:bg-gray-800 dark:hover:border-gray-600'}}" {{on "click" (fn this.goToStep index)}}>
+                            <div class="flex items-center gap-2">
+                                <div class="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-md text-xs {{if step.active 'bg-blue-600 text-white dark:bg-blue-500' (if step.complete 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300' 'bg-gray-100 text-gray-500 dark:bg-gray-700 dark:text-gray-300')}}">
+                                    <FaIcon @icon={{if step.complete "check" step.icon}} />
+                                </div>
+                                <div class="min-w-0">
+                                    <div class="text-[10px] font-semibold uppercase text-gray-400 dark:text-gray-500">{{add index 1}}</div>
+                                    <div class="truncate text-xs font-bold text-gray-900 dark:text-gray-100">{{step.label}}</div>
+                                </div>
+                            </div>
+                        </button>
+                    {{/each}}
+                </div>
+            </section>
+
+            {{#if (eq this.activeStep 0)}}
+                <section class="rounded-md border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-800">
+                    <div class="mb-3">
+                        <h2 class="text-sm font-bold text-gray-900 dark:text-gray-100">Choose Fuel Integration</h2>
+                        <p class="text-xs text-gray-500 dark:text-gray-300">Select the system to connect for fuel card bills, purchase transactions, station locations, or vehicle fuel identifiers.</p>
+                    </div>
+
+                    {{#if this.loadProviders.isRunning}}
+                        <div class="flex min-h-[140px] items-center justify-center"><Spinner /></div>
+                    {{else}}
+                        <div class="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
+                            {{#each this.providerCards as |provider|}}
+                                <button type="button" class="flex min-h-[148px] flex-col rounded-md border p-3 text-left transition {{if provider.selected 'border-blue-500 bg-blue-50 dark:border-blue-400 dark:bg-gray-800' 'border-gray-200 bg-white hover:border-blue-300 dark:border-gray-700 dark:bg-gray-800 dark:hover:border-blue-400'}}" {{on "click" (fn this.selectProvider provider)}}>
+                                    <div class="flex items-start justify-between gap-3">
+                                        <div class="flex min-w-0 items-center gap-2">
+                                            <div class="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-md bg-blue-50 text-blue-600 dark:bg-blue-900/20 dark:text-blue-300">
+                                                <FaIcon @icon={{or provider.icon "gas-pump"}} />
+                                            </div>
+                                            <div class="min-w-0">
+                                                <div class="truncate text-sm font-bold text-gray-900 dark:text-gray-100">{{provider.label}}</div>
+                                                <div class="truncate text-[11px] uppercase text-gray-400 dark:text-gray-500">{{provider.categoryLabel}}</div>
+                                            </div>
+                                        </div>
+                                        {{#if provider.selected}}
+                                            <Badge @status="success" @hideStatusDot={{true}}>Selected</Badge>
+                                        {{/if}}
+                                    </div>
+                                    <p class="mt-3 line-clamp-2 flex-1 text-xs leading-5 text-gray-500 dark:text-gray-300">{{provider.description}}</p>
+                                    <div class="mt-3 flex flex-wrap gap-1">
+                                        {{#each provider.capabilities as |capability|}}
+                                            <span class="rounded bg-gray-100 px-2 py-0.5 text-[11px] text-gray-600 dark:bg-gray-700 dark:text-gray-300">{{capability}}</span>
+                                        {{/each}}
+                                    </div>
+                                </button>
+                            {{/each}}
+                        </div>
+                    {{/if}}
+                </section>
+            {{else if (eq this.activeStep 1)}}
+                <section class="grid grid-cols-1 gap-4 lg:grid-cols-3">
+                    <div class="rounded-md border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-800 lg:col-span-2">
+                        <div class="mb-3">
+                            <h2 class="text-sm font-bold text-gray-900 dark:text-gray-100">Credentials</h2>
+                            <p class="text-xs text-gray-500 dark:text-gray-300">These credentials are stored on the connection and used to test and import provider transactions.</p>
+                        </div>
+
+                        {{#if this.selectedProvider}}
+                            <div class="grid grid-cols-1 gap-2 lg:grid-cols-2 no-input-group-padding text-xs">
+                                {{#each this.selectedProvider.required_fields as |field|}}
+                                    <InputGroup @name={{field.label}} @value={{get @resource.credentials field.name}} @required={{field.required}} @type={{field.type}} @helpText={{field.help_text}} {{on "input" (fn this.setCredential field)}} />
+                                {{/each}}
+                            </div>
+                        {{else}}
+                            <div class="rounded-md border border-dashed border-gray-300 p-6 text-center text-xs text-gray-500 dark:border-gray-700 dark:text-gray-300">
+                                Choose a fuel integration before entering credentials.
+                            </div>
+                        {{/if}}
+                    </div>
+
+                    {{#if this.selectedProvider}}
+                        <aside class="rounded-md border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-800">
+                            <div class="flex items-start gap-3">
+                                <div class="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-md bg-blue-50 text-blue-600 dark:bg-blue-900/20 dark:text-blue-300">
+                                    <FaIcon @icon={{or this.selectedProvider.icon "gas-pump"}} />
+                                </div>
+                                <div class="min-w-0">
+                                    <div class="truncate text-sm font-bold text-gray-900 dark:text-gray-100">{{this.selectedProvider.label}}</div>
+                                    <p class="mt-1 text-xs leading-5 text-gray-500 dark:text-gray-300">{{this.selectedProvider.description}}</p>
+                                </div>
+                            </div>
+                            <div class="mt-3 flex flex-wrap gap-2">
+                                {{#each this.selectedProvider.capabilities as |capability|}}
+                                    <Badge @status="info" @hideStatusDot={{true}}>{{capability}}</Badge>
+                                {{/each}}
+                            </div>
+                        </aside>
+                    {{/if}}
+                </section>
+            {{else if (eq this.activeStep 2)}}
+                <section class="rounded-md border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-800">
+                    <div class="mb-3">
+                        <h2 class="text-sm font-bold text-gray-900 dark:text-gray-100">Test Connection</h2>
+                        <p class="text-xs text-gray-500 dark:text-gray-300">Confirm the provider accepts the credentials before saving this fuel integration.</p>
+                    </div>
+
+                    <div class="rounded-md border p-4 text-xs transition {{if (eq this.connectionState 'success') 'border-green-200 bg-green-50 dark:border-green-800 dark:bg-green-900/10'}} {{if (eq this.connectionState 'failed') 'border-red-200 bg-red-50 dark:border-red-800 dark:bg-red-900/10'}} {{if (eq this.connectionState 'testing') 'border-blue-200 bg-blue-50 dark:border-blue-800 dark:bg-blue-900/10'}} {{if (eq this.connectionState 'idle') 'border-dashed border-gray-300 bg-white dark:border-gray-700 dark:bg-gray-800'}}">
+                        <div class="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+                            <div class="flex min-w-0 items-start gap-3">
+                                <div class="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-md {{if (eq this.connectionState 'success') 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300'}} {{if (eq this.connectionState 'failed') 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300'}} {{if (eq this.connectionState 'testing') 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300 animate-pulse'}} {{if (eq this.connectionState 'idle') 'bg-gray-100 text-gray-500 dark:bg-gray-700 dark:text-gray-300'}}">
+                                    {{#if (eq this.connectionState "testing")}}<Spinner />{{else if (eq this.connectionState "success")}}<FaIcon @icon="check" />{{else if (eq this.connectionState "failed")}}<FaIcon @icon="triangle-exclamation" />{{else}}<FaIcon @icon="plug" />{{/if}}
+                                </div>
+                                <div class="min-w-0">
+                                    <div class="text-sm font-bold text-gray-900 dark:text-gray-100">{{this.connectionStateTitle}}</div>
+                                    <p class="mt-1 max-w-3xl text-xs leading-5 text-gray-600 dark:text-gray-300">{{this.connectionStateMessage}}</p>
+                                    {{#if this.connectionMetadataEntries.length}}
+                                        <div class="mt-3 flex flex-wrap gap-2">
+                                            {{#each this.connectionMetadataEntries as |item|}}
+                                                <span class="inline-flex items-center rounded-md border border-gray-200 bg-white px-2 py-1 text-[11px] text-gray-600 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300">
+                                                    <span class="mr-1 font-semibold text-gray-900 dark:text-gray-100">{{item.label}}</span>
+                                                    {{item.value}}
+                                                </span>
+                                            {{/each}}
+                                        </div>
+                                    {{/if}}
+                                </div>
+                            </div>
+
+                            <Button @icon="plug" @text={{if (eq this.connectionState "success") "Test Again" "Test Connection"}} @size="xs" @isLoading={{this.testConnection.isRunning}} @disabled={{this.testConnection.isRunning}} @onClick={{perform this.testConnection}} />
+                        </div>
+
+                        <div class="mt-4 border-t border-gray-200 pt-3 dark:border-gray-700">
+                            <div class="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+                                <button type="button" class="inline-flex items-center gap-2 text-xs font-semibold text-blue-600 hover:text-blue-700 dark:text-blue-300 dark:hover:text-blue-200" {{on "click" (fn (mut this.showDiagnostics) (not this.showDiagnostics))}}>
+                                    <FaIcon @icon={{if this.showDiagnostics "chevron-up" "chevron-down"}} class="text-[10px]" />
+                                    <span>{{if this.showDiagnostics "Hide diagnostics" "Show diagnostics"}}</span>
+                                </button>
+
+                                {{#if this.showDiagnostics}}
+                                    <Button @icon="copy" @text="Copy diagnostics" @size="xs" @onClick={{this.copyDiagnostics}} />
+                                {{/if}}
+                            </div>
+
+                            {{#if this.showDiagnostics}}
+                                <div class="mt-3 max-h-56 overflow-y-auto rounded-md border border-gray-800 bg-gray-900 p-3 font-mono text-[11px] leading-5 shadow-inner dark:border-gray-700 dark:bg-gray-900">
+                                    {{#each this.diagnosticEntries as |entry|}}
+                                        <div class="flex gap-3 {{if (eq entry.tone 'success') 'text-green-300'}} {{if (eq entry.tone 'danger') 'text-red-300'}} {{if (eq entry.tone 'info') 'text-blue-300'}}">
+                                            <span class="flex-shrink-0 text-gray-500">[{{entry.time}}]</span>
+                                            <span class="min-w-0 break-words">{{entry.text}}</span>
+                                        </div>
+                                    {{/each}}
+                                </div>
+                            {{/if}}
+                        </div>
+                    </div>
+                </section>
+            {{else if (eq this.activeStep 3)}}
+                <section class="rounded-md border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-800">
+                    <div class="mb-3">
+                        <h2 class="text-sm font-bold text-gray-900 dark:text-gray-100">Sync Settings</h2>
+                        <p class="text-xs text-gray-500 dark:text-gray-300">Choose how fuel transactions are imported from this system.</p>
+                    </div>
+
+                    <div class="grid grid-cols-1 gap-3 lg:grid-cols-2 no-input-group-padding text-xs">
+                        <InputGroup @name="Integration name" @value={{@resource.name}} {{on "input" this.setName}} />
+                        <InputGroup @name="Default sync window" @helpText="Number of days to import when no explicit date range is provided.">
+                            <Input @type="number" min="1" max="90" class="form-input w-full" @value={{this.syncSettings.window_days}} {{on "input" (fn this.setSyncSetting "window_days")}} />
+                        </InputGroup>
+                        <div class="rounded-md border border-gray-200 p-3 dark:border-gray-700 lg:col-span-2">
+                            <Checkbox @value={{this.syncSettings.auto_create_fuel_reports}} @label="Create Fuel Reports after vehicle match" @onToggle={{fn this.setSyncSetting "auto_create_fuel_reports"}} @alignItems="center" @labelClass="mb-0i" />
+                            <p class="mt-2 text-xs leading-5 text-gray-500 dark:text-gray-300">Provider bills remain in Fuel Transactions. Fuel Reports are created only when a transaction is matched to a vehicle.</p>
+                        </div>
+                    </div>
+                </section>
+            {{else}}
+                <section class="rounded-md border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-800">
+                    <div class="mb-3">
+                        <h2 class="text-sm font-bold text-gray-900 dark:text-gray-100">Vehicle Matching Priority</h2>
+                        <p class="text-xs leading-5 text-gray-500 dark:text-gray-300">Choose which provider identifiers should be used for automatic matching and put the most reliable identifier first.</p>
+                    </div>
+
+                    <FuelIntegration::MatchingPriority @order={{this.matchingOrder}} @onChange={{this.setMatchingOrder}} @editable={{true}} />
+                </section>
+            {{/if}}
+        </div>
+    </div>
+
+    <div class="flex flex-shrink-0 items-center justify-between border-t border-gray-200 bg-white px-4 py-3 dark:border-gray-700 dark:bg-gray-900 md:px-6">
+        <div class="text-xs text-gray-500 dark:text-gray-300">{{@footerHelp}}</div>
+        <div class="flex items-center gap-2">
+            <Button @icon="arrow-left" @text="Back" @size="sm" @disabled={{eq this.activeStep 0}} @onClick={{this.previousStep}} />
+            {{#if (eq this.activeStep 4)}}
+                <Button @icon="save" @text={{@saveLabel}} @type="primary" @size="sm" @isLoading={{@isSaving}} @disabled={{@isSaving}} @onClick={{@onSave}} />
+            {{else}}
+                <Button @icon="arrow-right" @text="Next" @type="primary" @size="sm" @onClick={{this.nextStep}} />
+            {{/if}}
+            <Button @icon="times" @text="Cancel" @size="sm" @onClick={{@onCancel}} />
+        </div>
+    </div>
+</div>

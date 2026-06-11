@@ -41,9 +41,10 @@ class TelematicWebhookController extends Controller
         $correlationId = Str::uuid()->toString();
 
         Log::info('Webhook received', [
-            'correlation_id' => $correlationId,
-            'provider'       => $providerKey,
-            'headers'        => $request->headers->all(),
+            'correlation_id'      => $correlationId,
+            'provider'            => $providerKey,
+            'has_signature'       => $request->headers->has('X-Webhook-Signature'),
+            'has_idempotency_key' => $request->headers->has('X-Idempotency-Key'),
         ]);
 
         // Check idempotency
@@ -60,20 +61,42 @@ class TelematicWebhookController extends Controller
         // Get provider
         $provider = $this->registry->resolve($providerKey);
 
-        // Find telematic for this provider
-        $telematic = Telematic::where('provider', $providerKey)->first();
+        // Find telematic for this provider. Native provider payloads are
+        // resolved by provider identifiers first; Fleetbase URL/header ids are
+        // optional configuration affordances where provider dashboards allow it.
+        $telematicId = $request->query('telematic') ?? $request->query('integration') ?? $request->header('X-Fleetbase-Telematic');
+        $signature   = $request->header('X-Webhook-Signature');
+        $telematic   = $this->service->resolveWebhookTelematic($providerKey, $request->all(), $request->headers->all(), $telematicId);
+
+        if (!$telematic && !$telematicId && $signature) {
+            $signatureMatches = Telematic::where('provider', $providerKey)
+                ->get()
+                ->filter(fn (Telematic $candidate) => $provider->validateWebhookSignature($request->getContent(), $signature, $this->service->getCredentials($candidate)));
+
+            if ($signatureMatches->count() === 1) {
+                $telematic = $signatureMatches->first();
+            } elseif ($signatureMatches->count() > 1) {
+                Log::warning('Ambiguous telematic webhook signature match', [
+                    'correlation_id' => $correlationId,
+                    'provider'       => $providerKey,
+                    'matches'        => $signatureMatches->count(),
+                ]);
+
+                return response()->json(['error' => 'Ambiguous telematic integration'], 409);
+            }
+        }
 
         if (!$telematic) {
-            Log::warning('No telematic found for provider', [
-                'correlation_id' => $correlationId,
-                'provider'       => $providerKey,
+            Log::warning('Unable to resolve telematic for provider webhook', [
+                'correlation_id'     => $correlationId,
+                'provider'           => $providerKey,
+                'has_integration_id' => (bool) $telematicId,
             ]);
 
-            return response()->json(['error' => 'No telematic configured'], 404);
+            return response()->json(['error' => 'Unable to resolve telematic integration'], 422);
         }
 
         // Validate signature
-        $signature   = $request->header('X-Webhook-Signature');
         $credentials = $this->service->getCredentials($telematic);
 
         if ($signature && !$provider->validateWebhookSignature($request->getContent(), $signature, $credentials)) {
@@ -87,15 +110,45 @@ class TelematicWebhookController extends Controller
 
         // Process webhook
         try {
-            $result = $provider->processWebhook($request->all(), $request->headers->all());
+            $result  = $provider->processWebhook($request->all(), $request->headers->all());
+            $devices = $result['devices'] ?? [];
+            $events  = $result['events'] ?? [];
+            $sensors = $result['sensors'] ?? [];
+
+            $devicesByExternalId = [];
 
             // Link devices
-            foreach ($result['devices'] as $deviceData) {
-                $this->service->linkDevice($telematic, $deviceData);
+            foreach ($devices as $deviceData) {
+                try {
+                    $device     = $this->service->linkDevice($telematic, $deviceData);
+                    $externalId = $deviceData['external_id'] ?? $deviceData['device_id'] ?? $deviceData['unit_id'] ?? $deviceData['vehicle_id'] ?? $deviceData['imei'] ?? null;
+                    if ($externalId) {
+                        $devicesByExternalId[$externalId] = $device;
+                    }
+                } catch (\Illuminate\Validation\ValidationException) {
+                    Log::warning('Skipping webhook device without provider identity', [
+                        'correlation_id' => $correlationId,
+                        'provider'       => $providerKey,
+                    ]);
+                }
             }
 
-            // Store events (TODO: implement event storage)
-            // Store sensors (TODO: implement sensor storage)
+            foreach ($events as $eventData) {
+                $externalId = $eventData['device_id'] ?? $eventData['external_id'] ?? $eventData['ident'] ?? $eventData['unit_id'] ?? $eventData['vehicle_id'] ?? $eventData['imei'] ?? null;
+                $this->service->storeDeviceEvent($telematic, $eventData, $externalId ? ($devicesByExternalId[$externalId] ?? null) : null);
+            }
+
+            foreach ($sensors as $sensorData) {
+                try {
+                    $externalId = $sensorData['device_id'] ?? $sensorData['external_id'] ?? $sensorData['ident'] ?? $sensorData['unit_id'] ?? $sensorData['vehicle_id'] ?? $sensorData['imei'] ?? null;
+                    $this->service->storeSensor($telematic, $sensorData, $externalId ? ($devicesByExternalId[$externalId] ?? null) : null);
+                } catch (\Illuminate\Validation\ValidationException) {
+                    Log::warning('Skipping webhook sensor without provider or device identity', [
+                        'correlation_id' => $correlationId,
+                        'provider'       => $providerKey,
+                    ]);
+                }
+            }
 
             // Mark as processed
             if ($idempotencyKey) {
@@ -104,8 +157,9 @@ class TelematicWebhookController extends Controller
 
             Log::info('Webhook processed successfully', [
                 'correlation_id' => $correlationId,
-                'devices_count'  => count($result['devices']),
-                'events_count'   => count($result['events']),
+                'devices_count'  => count($devices),
+                'events_count'   => count($events),
+                'sensors_count'  => count($sensors),
             ]);
 
             return response()->json(['status' => 'processed'], 200);
@@ -124,7 +178,7 @@ class TelematicWebhookController extends Controller
      */
     public function ingest(Request $request, string $id): JsonResponse
     {
-        $telematic     = Telematic::where('uuid', $id)->orWhere('public_id', $id)->firstOrFail();
+        $telematic     = Telematic::where('public_id', $id)->orWhere('uuid', $id)->firstOrFail();
         $correlationId = Str::uuid()->toString();
 
         Log::info('Custom ingest received', [
@@ -139,10 +193,38 @@ class TelematicWebhookController extends Controller
         }
 
         try {
+            $devicesByExternalId = [];
+
             // Process devices
             if ($request->has('devices')) {
                 foreach ($request->input('devices') as $deviceData) {
-                    $this->service->linkDevice($telematic, $deviceData);
+                    try {
+                        $device     = $this->service->linkDevice($telematic, $deviceData);
+                        $externalId = $deviceData['external_id'] ?? $deviceData['device_id'] ?? $deviceData['unit_id'] ?? $deviceData['vehicle_id'] ?? $deviceData['imei'] ?? null;
+                        if ($externalId) {
+                            $devicesByExternalId[$externalId] = $device;
+                        }
+                    } catch (\Illuminate\Validation\ValidationException) {
+                        Log::warning('Skipping custom ingest device without provider identity', [
+                            'correlation_id' => $correlationId,
+                        ]);
+                    }
+                }
+            }
+
+            foreach ($request->input('events', []) as $eventData) {
+                $externalId = $eventData['device_id'] ?? $eventData['external_id'] ?? $eventData['ident'] ?? $eventData['unit_id'] ?? $eventData['vehicle_id'] ?? $eventData['imei'] ?? null;
+                $this->service->storeDeviceEvent($telematic, $eventData, $externalId ? ($devicesByExternalId[$externalId] ?? null) : null);
+            }
+
+            foreach ($request->input('sensors', []) as $sensorData) {
+                try {
+                    $externalId = $sensorData['device_id'] ?? $sensorData['external_id'] ?? $sensorData['ident'] ?? $sensorData['unit_id'] ?? $sensorData['vehicle_id'] ?? $sensorData['imei'] ?? null;
+                    $this->service->storeSensor($telematic, $sensorData, $externalId ? ($devicesByExternalId[$externalId] ?? null) : null);
+                } catch (\Illuminate\Validation\ValidationException) {
+                    Log::warning('Skipping custom ingest sensor without provider or device identity', [
+                        'correlation_id' => $correlationId,
+                    ]);
                 }
             }
 
@@ -154,6 +236,8 @@ class TelematicWebhookController extends Controller
             Log::info('Custom ingest processed', [
                 'correlation_id' => $correlationId,
                 'devices_count'  => count($request->input('devices', [])),
+                'events_count'   => count($request->input('events', [])),
+                'sensors_count'  => count($request->input('sensors', [])),
             ]);
 
             return response()->json(['status' => 'ingested'], 200);

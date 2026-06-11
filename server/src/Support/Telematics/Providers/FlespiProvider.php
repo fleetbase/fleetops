@@ -97,6 +97,7 @@ class FlespiProvider extends AbstractProvider
     {
         return [
             'external_id' => $payload['id'] ?? null,
+            'device_id'   => $payload['device.id'] ?? null,
             'event_type'  => $payload['event.enum'] ?? 'telemetry_update',
             'occurred_at' => isset($payload['timestamp']) ? date('Y-m-d H:i:s', $payload['timestamp']) : now(),
             'location'    => [

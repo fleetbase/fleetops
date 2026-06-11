@@ -11,6 +11,7 @@ export default class FleetVehicleListingComponent extends Component {
     @service fetch;
     @service intl;
     @service universe;
+    @service notifications;
     @tracked vehicles = [];
     @tracked selected = [];
     @tracked selectable = false;

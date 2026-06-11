@@ -1,9 +1,11 @@
 import Controller from '@ember/controller';
+import { action } from '@ember/object';
 import { inject as service } from '@ember/service';
 import { tracked } from '@glimmer/tracking';
 
 export default class ManagementVehiclesIndexController extends Controller {
     @service vehicleActions;
+    @service issueActions;
     @service driverActions;
     @service tableContext;
     @service intl;
@@ -293,6 +295,11 @@ export default class ManagementVehiclesIndexController extends Controller {
                         permission: 'fleet-ops view vehicle',
                     },
                     {
+                        label: 'Attach Device',
+                        fn: this.vehicleActions.attachDevice,
+                        permission: 'fleet-ops update vehicle',
+                    },
+                    {
                         separator: true,
                     },
                     {
@@ -311,6 +318,11 @@ export default class ManagementVehiclesIndexController extends Controller {
                         permission: 'fleet-ops create maintenance',
                     },
                     {
+                        label: 'Create Issue',
+                        fn: this.createIssue,
+                        permission: 'fleet-ops create issue',
+                    },
+                    {
                         separator: true,
                     },
                     {
@@ -325,5 +337,13 @@ export default class ManagementVehiclesIndexController extends Controller {
                 searchable: false,
             },
         ];
+    }
+
+    @action createIssue(vehicle) {
+        this.issueActions.modal.create({
+            vehicle,
+            vehicle_uuid: vehicle.id,
+            title: `Issue reported for ${vehicle.displayName ?? vehicle.name}`,
+        });
     }
 }
