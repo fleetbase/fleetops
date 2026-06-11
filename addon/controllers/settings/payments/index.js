@@ -4,6 +4,7 @@ import { inject as service } from '@ember/service';
 import { isEmpty } from '@ember/utils';
 import { task } from 'ember-concurrency';
 import config from 'ember-get-config';
+import { action } from '@ember/object';
 
 export default class SettingsPaymentsIndexController extends Controller {
     @service fetch;
@@ -56,5 +57,9 @@ export default class SettingsPaymentsIndexController extends Controller {
         } catch (error) {
             this.hasStripeConnectAccount = false;
         }
+    }
+
+    @action refreshPayments() {
+        return this.lookupStripeConnectAccount.perform();
     }
 }

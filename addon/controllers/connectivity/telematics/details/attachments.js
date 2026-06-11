@@ -185,7 +185,7 @@ export default class ConnectivityTelematicsDetailsAttachmentsController extends 
     }
 
     @action goToDevices() {
-        return this.hostRouter.transitionTo('connectivity.telematics.details.devices', this.telematic);
+        return this.hostRouter.transitionTo('console.fleet-ops.connectivity.telematics.details.devices', this.telematic);
     }
 
     @action openAttachDeviceModal(device) {

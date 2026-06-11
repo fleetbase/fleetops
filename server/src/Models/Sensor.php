@@ -178,7 +178,8 @@ class Sensor extends Model
     {
         return SlugOptions::create()
             ->generateSlugsFrom(['name', 'sensor_type'])
-            ->saveSlugsTo('slug');
+            ->saveSlugsTo('slug')
+            ->doNotGenerateSlugsOnUpdate();
     }
 
     /**

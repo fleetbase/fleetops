@@ -102,8 +102,10 @@ export default class ConnectivityTelematicsDetailsEventsController extends Contr
     @tracked actionButtons = [
         {
             icon: 'refresh',
+            size: 'xs',
             onClick: this.refresh,
             helpText: this.intl.t('common.refresh'),
+            wrapperClass: 'fleetops-telematics-action-button',
         },
     ];
 
@@ -157,7 +159,8 @@ export default class ConnectivityTelematicsDetailsEventsController extends Contr
             },
             {
                 label: 'Processed',
-                valuePath: 'processed_at',
+                valuePath: 'processedAt',
+                sortParam: 'processed_at',
                 resizable: true,
                 sortable: true,
                 filterable: true,
@@ -170,7 +173,7 @@ export default class ConnectivityTelematicsDetailsEventsController extends Contr
             },
             {
                 label: 'Occurred',
-                valuePath: 'occurred_at',
+                valuePath: 'occurredAt',
                 sortParam: 'occurred_at',
                 resizable: true,
                 sortable: true,

@@ -88,6 +88,19 @@
                         @bulkActions={{@bulkActions}}
                         @controller={{@controller}}
                         @setupTable={{this.setupTable}}
+                        @emptyStateComponent={{component
+                            "table/empty-state"
+                            variant="compact"
+                            icon="satellite-dish"
+                            title="No provider connections"
+                            description="Connect a telematics provider to sync devices, events, and vehicle attachments."
+                            primaryText="Connect provider"
+                            primaryIcon="plus"
+                            primaryAction=this.telematicActions.transition.create
+                            docsSlug="fleet-ops/connectivity/telematics/overview"
+                            docsTitle="Telematics guide"
+                            docsText="Telematics guide"
+                        }}
                     />
                 </section>
             {{/if}}

@@ -1,12 +1,13 @@
 <Modal::Default @modalIsOpened={{@modalIsOpened}} @options={{@options}} @confirm={{@onConfirm}} @decline={{@onDecline}}>
     <div class="modal-body-container">
-        <InputGroup @name={{t "common.select-field" field=(t "resource.device")}} @value={{@options.driver.vehicle_uuid}}>
+        <InputGroup @name={{t "common.select-field" field=(t "resource.device")}} @value={{@options.selectedDevice}}>
             <ModelSelect
                 @modelName="device"
                 @selectedModel={{@options.selectedDevice}}
+                @query={{hash attachment_state="unattached"}}
                 @placeholder={{t "common.select-field" field=(t "resource.device")}}
                 @triggerClass="form-select form-input"
-                @infiniteScroll={{false}}
+                @infiniteScroll={{true}}
                 @renderInPlace={{true}}
                 @onChange={{fn (mut @options.selectedDevice)}}
                 as |model|

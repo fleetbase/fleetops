@@ -40,6 +40,7 @@ common:
     activity: Activity
     eta: ETA
     position: Position
+    positions: Positions
     pos: POS
     edit-address: Edit Address
     new-address: New Address

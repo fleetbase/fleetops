@@ -3,4 +3,17 @@
         <Input @value={{this.query}} @type="text" class="form-input form-input-sm w-60" placeholder={{t "live-map-drawer.driver-listing.message"}} />
     </div>
 </div>
-<Table @rows={{this.filteredDrivers}} @columns={{this.columns}} />
+<Table
+    @rows={{this.filteredDrivers}}
+    @columns={{this.columns}}
+    @searchQuery={{this.query}}
+    @emptyStateComponent={{component
+        "table/empty-state"
+        variant="compact"
+        icon="id-card"
+        title="No drivers visible"
+        description="Drivers appear here when they are available in the live map context."
+        filteredTitle="No drivers match this search"
+        filteredDescription="Adjust the search to find another driver."
+    }}
+/>

@@ -70,6 +70,18 @@
                 @onPageChange={{fn (mut this.page)}}
                 @controller={{this}}
                 @withoutHeader={{true}}
+                @emptyStateComponent={{component
+                    "table/empty-state"
+                    variant="compact"
+                    icon="tablet-screen-button"
+                    title="No synced devices"
+                    description="Run a provider sync or adjust filters to review devices from this connection."
+                    filteredTitle="No devices match your filters"
+                    filteredDescription="Adjust the search or filters to find another synced device."
+                    primaryText="Refresh"
+                    primaryIcon="refresh"
+                    primaryAction=this.refresh
+                }}
             />
         {{/if}}
     </section>

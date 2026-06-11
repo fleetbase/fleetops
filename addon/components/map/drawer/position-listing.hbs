@@ -96,5 +96,15 @@
         </div>
     </div>
 </div>
-<Table @rows={{this.positions}} @columns={{this.columns}} />
+<Table
+    @rows={{this.positions}}
+    @columns={{this.columns}}
+    @emptyStateComponent={{component
+        "table/empty-state"
+        variant="compact"
+        icon="route"
+        title="No positions loaded"
+        description="Select a trackable and date range to load position history for replay."
+    }}
+/>
 <Spacer @height="400px" />

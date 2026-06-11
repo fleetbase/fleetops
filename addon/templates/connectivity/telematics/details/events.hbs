@@ -83,6 +83,18 @@
                 @onPageChange={{fn (mut this.page)}}
                 @controller={{this}}
                 @withoutHeader={{true}}
+                @emptyStateComponent={{component
+                    "table/empty-state"
+                    variant="compact"
+                    icon="bolt"
+                    title="No telemetry events"
+                    description="Events appear after synced devices report provider activity."
+                    filteredTitle="No events match your filters"
+                    filteredDescription="Adjust the search, severity, or date filters to review other events."
+                    primaryText="Refresh"
+                    primaryIcon="refresh"
+                    primaryAction=this.refresh
+                }}
             />
         {{/if}}
     </section>

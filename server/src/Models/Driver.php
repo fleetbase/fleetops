@@ -220,7 +220,8 @@ class Driver extends Model
     {
         return SlugOptions::create()
             ->generateSlugsFrom('drivers_license_number')
-            ->saveSlugsTo('slug');
+            ->saveSlugsTo('slug')
+            ->doNotGenerateSlugsOnUpdate();
     }
 
     /**

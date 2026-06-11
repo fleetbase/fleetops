@@ -60,5 +60,15 @@
         {{/if}}
     </div>
 </div>
-<Table @rows={{this.events}} @columns={{this.columns}} />
+<Table
+    @rows={{this.events}}
+    @columns={{this.columns}}
+    @emptyStateComponent={{component
+        "table/empty-state"
+        variant="compact"
+        icon="bolt"
+        title="No device events"
+        description="Events appear here after connected devices report activity for the selected filters."
+    }}
+/>
 <Spacer @height="200px" />

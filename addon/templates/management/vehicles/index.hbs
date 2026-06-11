@@ -12,6 +12,24 @@
         @actionButtons={{this.actionButtons}}
         @bulkActions={{this.bulkActions}}
         @controller={{this}}
+        @emptyStateComponent={{component
+            "table/empty-state"
+            icon="truck"
+            title="Add your first vehicle"
+            description="Vehicles connect assignments, live tracking, fleet capacity, maintenance, and compliance history."
+            filteredTitle="No vehicles match your filters"
+            filteredDescription="Adjust the search or filters to find another vehicle."
+            primaryText="New vehicle"
+            primaryIcon="plus"
+            primaryAction=this.vehicleActions.transition.create
+            secondaryText="Import"
+            secondaryIcon="upload"
+            secondaryAction=this.vehicleActions.import
+            docsSlug="fleet-ops/resources/vehicles/overview"
+            docsTitle="Vehicles guide"
+            docsText="Vehicle guide"
+            docsSource="fleet-ops-empty-vehicles"
+        }}
     />
 {{else}}
     <Layout::Section::Header @title={{t "resource.vehicles"}} @actionsWrapperClass="space-x-1">

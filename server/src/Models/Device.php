@@ -187,7 +187,8 @@ class Device extends Model
     {
         return SlugOptions::create()
             ->generateSlugsFrom(['name', 'serial_number'])
-            ->saveSlugsTo('slug');
+            ->saveSlugsTo('slug')
+            ->doNotGenerateSlugsOnUpdate();
     }
 
     /**

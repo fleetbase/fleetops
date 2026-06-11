@@ -1,9 +1,11 @@
 import Controller from '@ember/controller';
+import { action } from '@ember/object';
 import { inject as service } from '@ember/service';
 import { isArray } from '@ember/array';
 
 export default class ManagementVehiclesIndexDetailsController extends Controller {
     @service vehicleActions;
+    @service issueActions;
     @service('universe/menu-service') menuService;
     @service hostRouter;
     @service intl;
@@ -59,6 +61,12 @@ export default class ManagementVehiclesIndexDetailsController extends Controller
                         permission: 'fleet-ops view vehicle',
                     },
                     {
+                        text: 'Attach Device',
+                        icon: 'link',
+                        fn: () => this.vehicleActions.attachDevice(this.model),
+                        permission: 'fleet-ops update vehicle',
+                    },
+                    {
                         separator: true,
                     },
                     {
@@ -80,6 +88,12 @@ export default class ManagementVehiclesIndexDetailsController extends Controller
                         permission: 'fleet-ops create maintenance',
                     },
                     {
+                        text: 'Create Issue',
+                        icon: 'triangle-exclamation',
+                        fn: () => this.createIssue(this.model),
+                        permission: 'fleet-ops create issue',
+                    },
+                    {
                         separator: true,
                     },
                     {
@@ -97,5 +111,13 @@ export default class ManagementVehiclesIndexDetailsController extends Controller
                 ],
             },
         ];
+    }
+
+    @action createIssue(vehicle) {
+        this.issueActions.modal.create({
+            vehicle,
+            vehicle_uuid: vehicle.id,
+            title: `Issue reported for ${vehicle.displayName ?? vehicle.name}`,
+        });
     }
 }

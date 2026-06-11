@@ -3,4 +3,17 @@
         <Input @value={{this.query}} @type="text" class="form-input form-input-sm w-60" placeholder={{t "live-map-drawer.place-listing.message"}} />
     </div>
 </div>
-<Table @rows={{this.filteredPlaces}} @columns={{this.columns}} />
+<Table
+    @rows={{this.filteredPlaces}}
+    @columns={{this.columns}}
+    @searchQuery={{this.query}}
+    @emptyStateComponent={{component
+        "table/empty-state"
+        variant="compact"
+        icon="location-dot"
+        title="No places visible"
+        description="Places appear here when they are available in the current map context."
+        filteredTitle="No places match this search"
+        filteredDescription="Adjust the search to find another place."
+    }}
+/>

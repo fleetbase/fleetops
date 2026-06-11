@@ -321,6 +321,10 @@ Route::prefix(config('fleetops.api.routing.prefix'))->namespace('Fleetbase\Fleet
                             function ($router, $controller) {
                                 $router->get('statuses', $controller('statuses'));
                                 $router->get('avatars', $controller('avatars'));
+                                $router->post('{id}/assign-order', $controller('assignOrder'));
+                                $router->post('{id}/unassign-order', $controller('unassignOrder'));
+                                $router->post('{id}/assign-vehicle', $controller('assignVehicle'));
+                                $router->post('{id}/unassign-vehicle', $controller('unassignVehicle'));
                                 $router->match(['get', 'post'], 'export', $controller('export'));
                                 $router->delete('bulk-delete', $controller('bulkDelete'));
                                 $router->post('import', $controller('import'));
@@ -478,6 +482,10 @@ Route::prefix(config('fleetops.api.routing.prefix'))->namespace('Fleetbase\Fleet
                             function ($router, $controller) {
                                 $router->get('statuses', $controller('statuses'));
                                 $router->get('avatars', $controller('avatars'));
+                                $router->post('{id}/assign-driver', $controller('assignDriver'));
+                                $router->post('{id}/unassign-driver', $controller('unassignDriver'));
+                                $router->post('{id}/attach-device', $controller('attachDevice'));
+                                $router->post('{id}/detach-device', $controller('detachDevice'));
                                 $router->match(['get', 'post'], 'export', $controller('export'));
                                 $router->post('import', $controller('import'));
                                 $router->delete('bulk-delete', $controller('bulkDelete'));
@@ -501,6 +509,8 @@ Route::prefix(config('fleetops.api.routing.prefix'))->namespace('Fleetbase\Fleet
                             }
                         );
                         $router->fleetbaseRoutes('devices');
+                        $router->post('devices/{id}/attach', 'DeviceController@attach');
+                        $router->post('devices/{id}/detach', 'DeviceController@detach');
                         $router->fleetbaseRoutes('device-events', function ($router, $controller) {
                             $router->post('{id}/mark-processed', $controller('markProcessed'));
                         });

@@ -6,5 +6,16 @@
         @columns={{this.columns}}
         @page={{1}}
         @controller={{this}}
+        @emptyStateComponent={{component
+            "table/empty-state"
+            icon="receipt"
+            title="No imported transactions"
+            description="Fuel transactions will appear here after this provider syncs bills or purchase records."
+            filteredTitle="No transactions match your filters"
+            filteredDescription="Adjust filters or sync the provider again to review imported transactions."
+            primaryText="Refresh"
+            primaryIcon="refresh"
+            primaryAction=this.refresh
+        }}
     />
 </div>

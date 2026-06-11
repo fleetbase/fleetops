@@ -148,19 +148,30 @@ export default class ConnectivityTelematicsDetailsDevicesController extends Cont
     @tracked actionButtons = [
         {
             icon: 'refresh',
+            size: 'xs',
             onClick: this.refresh,
             helpText: this.intl.t('common.refresh'),
+            wrapperClass: 'fleetops-telematics-action-button',
         },
         {
-            icon: 'satellite-dish',
-            text: 'Sync Devices',
+            icon: 'ellipsis-h',
+            prefix: 'fas',
+            text: 'Actions',
             type: 'primary',
-            onClick: this.startDeviceSync,
-        },
-        {
-            icon: 'link',
-            text: 'Attach Unassigned',
-            onClick: this.openAttachmentsForUnassigned,
+            size: 'xs',
+            triggerClass: 'fleetops-telematics-action-button',
+            items: [
+                {
+                    icon: 'satellite-dish',
+                    text: 'Sync Devices',
+                    onClick: this.startDeviceSync,
+                },
+                {
+                    icon: 'link',
+                    text: 'Attach Unassigned',
+                    onClick: this.openAttachmentsForUnassigned,
+                },
+            ],
         },
     ];
 
@@ -216,7 +227,8 @@ export default class ConnectivityTelematicsDetailsDevicesController extends Cont
             },
             {
                 label: 'Last Seen',
-                valuePath: 'last_online_at',
+                valuePath: 'lastOnlineAt',
+                sortParam: 'last_online_at',
                 resizable: true,
                 sortable: true,
             },
@@ -296,13 +308,13 @@ export default class ConnectivityTelematicsDetailsDevicesController extends Cont
     }
 
     @action openAttachmentsForUnassigned() {
-        return this.hostRouter.transitionTo('connectivity.telematics.details.attachments', this.telematic, {
+        return this.hostRouter.transitionTo('console.fleet-ops.connectivity.telematics.details.attachments', this.telematic, {
             queryParams: { attachment_state: 'unattached' },
         });
     }
 
     @action openDeviceEvents(device) {
-        return this.hostRouter.transitionTo('connectivity.telematics.details.events', this.telematic, {
+        return this.hostRouter.transitionTo('console.fleet-ops.connectivity.telematics.details.events', this.telematic, {
             queryParams: { device_uuid: device.id },
         });
     }

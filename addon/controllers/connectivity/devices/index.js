@@ -157,6 +157,19 @@ export default class ConnectivityDevicesIndexController extends Controller {
                     separator: true,
                 },
                 {
+                    label: 'Attach to Vehicle',
+                    fn: this.deviceActions.attachToVehicle,
+                    permission: 'fleet-ops update device',
+                },
+                {
+                    label: 'Detach from Vehicle',
+                    fn: this.deviceActions.detachFromVehicle,
+                    permission: 'fleet-ops update device',
+                },
+                {
+                    separator: true,
+                },
+                {
                     label: this.intl.t('common.delete-resource', { resource: this.intl.t('resource.device') }),
                     fn: this.deviceActions.delete,
                     permission: 'fleet-ops delete device',

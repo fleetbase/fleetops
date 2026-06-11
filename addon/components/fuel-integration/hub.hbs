@@ -82,6 +82,16 @@
                         @bulkActions={{@bulkActions}}
                         @controller={{@controller}}
                         @setupTable={{this.setupTable}}
+                        @emptyStateComponent={{component
+                            "table/empty-state"
+                            variant="compact"
+                            icon="gas-pump"
+                            title="No fuel connections"
+                            description="Connect a fuel provider to import transactions and match them to reports."
+                            primaryText="Connect provider"
+                            primaryIcon="plus"
+                            primaryAction=this.createIntegration
+                        }}
                     />
                 </section>
             {{else}}

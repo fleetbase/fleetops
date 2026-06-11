@@ -1,5 +1,6 @@
 import Controller from '@ember/controller';
 import { inject as service } from '@ember/service';
+import { action } from '@ember/object';
 
 export default class ConnectivityFuelProvidersIndexDetailsTransactionsController extends Controller {
     @service hostRouter;
@@ -15,5 +16,9 @@ export default class ConnectivityFuelProvidersIndexDetailsTransactionsController
             { label: 'Fuel Report', valuePath: 'fuel_report_id', cellComponent: 'click-to-copy', resizable: true },
             { label: 'Date', valuePath: 'transaction_at', resizable: true },
         ];
+    }
+
+    @action refresh() {
+        return this.hostRouter.refresh();
     }
 }

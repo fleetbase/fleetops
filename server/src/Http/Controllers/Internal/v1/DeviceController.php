@@ -3,6 +3,10 @@
 namespace Fleetbase\FleetOps\Http\Controllers\Internal\v1;
 
 use Fleetbase\FleetOps\Http\Controllers\FleetOpsController;
+use Fleetbase\FleetOps\Models\Device;
+use Fleetbase\FleetOps\Models\Vehicle;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 
 class DeviceController extends FleetOpsController
 {
@@ -49,5 +53,59 @@ class DeviceController extends FleetOpsController
     public static function onFindRecord($query, $request): void
     {
         $query->with(['telematic', 'warranty', 'attachable']);
+    }
+
+    /**
+     * Attach a device to a supported FleetOps resource.
+     */
+    public function attach(Request $request, string $id): JsonResponse
+    {
+        $request->validate([
+            'vehicle' => 'required_without:attachable_uuid|nullable|string',
+        ]);
+
+        $device  = $this->findDevice($id);
+        $vehicle = $this->findVehicle($request->input('vehicle') ?? $request->input('attachable_uuid'));
+
+        $device->attachTo($vehicle);
+        $device->load(['telematic', 'warranty', 'attachable']);
+
+        return response()->json([
+            'status' => 'ok',
+            'device' => $device,
+        ]);
+    }
+
+    /**
+     * Detach a device from its current FleetOps resource.
+     */
+    public function detach(string $id): JsonResponse
+    {
+        $device = $this->findDevice($id);
+        $device->detach();
+        $device->load(['telematic', 'warranty', 'attachable']);
+
+        return response()->json([
+            'status' => 'ok',
+            'device' => $device,
+        ]);
+    }
+
+    protected function findDevice(string $id): Device
+    {
+        return Device::where(function ($query) use ($id) {
+            $query->where('uuid', $id)->orWhere('public_id', $id);
+        })
+            ->where('company_uuid', session('company'))
+            ->firstOrFail();
+    }
+
+    protected function findVehicle(?string $id): Vehicle
+    {
+        return Vehicle::where(function ($query) use ($id) {
+            $query->where('uuid', $id)->orWhere('public_id', $id);
+        })
+            ->where('company_uuid', session('company'))
+            ->firstOrFail();
     }
 }

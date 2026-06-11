@@ -4,6 +4,7 @@ import { isArray } from '@ember/array';
 
 export default class ConnectivityDevicesIndexDetailsController extends Controller {
     @service('universe/menu-service') menuService;
+    @service deviceActions;
     @service hostRouter;
 
     get tabs() {
@@ -22,6 +23,16 @@ export default class ConnectivityDevicesIndexDetailsController extends Controlle
             {
                 icon: 'pencil',
                 fn: () => this.hostRouter.transitionTo('console.fleet-ops.connectivity.devices.index.edit', this.model),
+            },
+            {
+                icon: 'link',
+                fn: () => this.deviceActions.attachToVehicle(this.model),
+                helpText: 'Attach to vehicle',
+            },
+            {
+                icon: 'unlink',
+                fn: () => this.deviceActions.detachFromVehicle(this.model),
+                helpText: 'Detach from vehicle',
             },
         ];
     }

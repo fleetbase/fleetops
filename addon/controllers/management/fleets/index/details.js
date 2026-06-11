@@ -4,6 +4,7 @@ import { isArray } from '@ember/array';
 
 export default class ManagementFleetsIndexDetailsController extends Controller {
     @service('universe/menu-service') menuService;
+    @service fleetActions;
     @service hostRouter;
 
     get tabs() {
@@ -30,6 +31,16 @@ export default class ManagementFleetsIndexDetailsController extends Controller {
             {
                 icon: 'pencil',
                 fn: () => this.hostRouter.transitionTo('console.fleet-ops.management.fleets.index.edit', this.model),
+            },
+            {
+                icon: 'user-plus',
+                fn: () => this.fleetActions.assignDriver(this.model),
+                helpText: 'Assign driver',
+            },
+            {
+                icon: 'car',
+                fn: () => this.fleetActions.assignVehicle(this.model),
+                helpText: 'Assign vehicle',
             },
         ];
     }

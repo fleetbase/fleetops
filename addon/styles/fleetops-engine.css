@@ -236,6 +236,7 @@ body[data-theme='dark'] .fleetops-connectivity-kpi-accent-rose .fleetops-connect
 .fleetops-provider-connections-actions .fleetops-provider-connections-search {
     min-width: 16rem;
     height: 2.25rem;
+    min-height: 2.25rem;
 }
 
 .fleetops-provider-connections-header {
@@ -253,8 +254,26 @@ body[data-theme='dark'] .fleetops-connectivity-kpi-accent-rose .fleetops-connect
 }
 
 .fleetops-provider-connections-actions .fleetops-provider-connections-action-button,
+.fleetops-provider-connections-actions .fleetops-telematics-action-button,
 .fleetops-provider-connections-actions button {
+    flex-shrink: 0;
+    height: 2.25rem;
     min-height: 2.25rem;
+    white-space: nowrap;
+}
+
+.fleetops-provider-connections-actions button span {
+    white-space: nowrap;
+}
+
+.status-badge.long-offline-status-badge > span,
+.status-badge.long_offline-status-badge > span {
+    @apply bg-yellow-800 border-yellow-700 text-yellow-100;
+}
+
+.status-badge.long-offline-status-badge > span svg,
+.status-badge.long_offline-status-badge > span svg {
+    @apply text-yellow-300;
 }
 
 .fleetops-provider-connections-panel .table-wrapper table tbody tr td,

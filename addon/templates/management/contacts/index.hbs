@@ -11,6 +11,24 @@
     @actionButtons={{this.actionButtons}}
     @bulkActions={{this.bulkActions}}
     @controller={{this}}
+    @emptyStateComponent={{component
+        "table/empty-state"
+        icon="address-book"
+        title="Add your first contact"
+        description="Contacts keep customer, vendor, and internal stakeholder details ready for orders and communication."
+        filteredTitle="No contacts match your filters"
+        filteredDescription="Adjust the search or filters to find another contact."
+        primaryText="New contact"
+        primaryIcon="plus"
+        primaryAction=this.contactActions.transition.create
+        secondaryText="Import"
+        secondaryIcon="upload"
+        secondaryAction=this.contactActions.import
+        docsSlug="fleet-ops/resources/contacts/overview"
+        docsTitle="Contacts guide"
+        docsText="Contacts guide"
+        docsSource="fleet-ops-empty-contacts"
+    }}
     @withoutHeader={{true}}
 />
 {{outlet}}

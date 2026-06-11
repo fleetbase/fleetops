@@ -70,6 +70,18 @@
                 @onPageChange={{fn (mut this.page)}}
                 @controller={{this}}
                 @withoutHeader={{true}}
+                @emptyStateComponent={{component
+                    "table/empty-state"
+                    variant="compact"
+                    icon="satellite-dish"
+                    title="No sensor readings"
+                    description="Sensor readings appear after devices sync telemetry from this provider."
+                    filteredTitle="No readings match your filters"
+                    filteredDescription="Adjust the search or filters to find other sensor readings."
+                    primaryText="Refresh"
+                    primaryIcon="refresh"
+                    primaryAction=this.refresh
+                }}
             />
         {{/if}}
     </section>

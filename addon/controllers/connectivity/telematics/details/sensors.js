@@ -125,13 +125,17 @@ export default class ConnectivityTelematicsDetailsSensorsController extends Cont
     @tracked actionButtons = [
         {
             icon: 'refresh',
+            size: 'xs',
             onClick: this.refresh,
             helpText: this.intl.t('common.refresh'),
+            wrapperClass: 'fleetops-telematics-action-button',
         },
         {
             icon: 'microchip',
             text: 'View Devices',
+            size: 'xs',
             onClick: this.goToDevices,
+            wrapperClass: 'fleetops-telematics-action-button',
         },
     ];
 
@@ -200,7 +204,8 @@ export default class ConnectivityTelematicsDetailsSensorsController extends Cont
             },
             {
                 label: 'Last Reading',
-                valuePath: 'last_reading_at',
+                valuePath: 'lastReadingAt',
+                sortParam: 'last_reading_at',
                 resizable: true,
                 sortable: true,
             },
@@ -248,7 +253,7 @@ export default class ConnectivityTelematicsDetailsSensorsController extends Cont
     }
 
     @action goToDevices() {
-        return this.hostRouter.transitionTo('connectivity.telematics.details.devices', this.telematic);
+        return this.hostRouter.transitionTo('console.fleet-ops.connectivity.telematics.details.devices', this.telematic);
     }
 
     @action openParentDevice(sensor) {
@@ -258,7 +263,7 @@ export default class ConnectivityTelematicsDetailsSensorsController extends Cont
             return this.deviceActions.transition.view(device);
         }
 
-        return this.hostRouter.transitionTo('connectivity.telematics.details.devices', this.telematic, {
+        return this.hostRouter.transitionTo('console.fleet-ops.connectivity.telematics.details.devices', this.telematic, {
             queryParams: { device_id: sensor.device_uuid },
         });
     }
