@@ -23,28 +23,30 @@ class Vehicle extends FleetbaseResource
         $isInternal = Http::isInternalRequest();
 
         return [
-            'id'              => $this->when($isInternal, $this->id, $this->public_id),
-            'uuid'            => $this->when($isInternal, $this->uuid),
-            'public_id'       => $this->when($isInternal, $this->public_id),
-            'company_uuid'    => $this->when($isInternal, $this->company_uuid),
-            'vendor_uuid'     => $this->when($isInternal, $this->vendor_uuid),
-            'photo_uuid'      => $this->when($isInternal, $this->photo_uuid),
-            'internal_id'     => $this->internal_id,
-            'display_name'    => $this->display_name,
-            'driver_name'     => $this->driver_name,
-            'plate_number'    => $this->plate_number,
-            'serial_number'   => $this->serial_number,
-            'vin'             => $this->vin,
-            'make'            => $this->make,
-            'model'           => $this->model,
-            'year'            => $this->year,
-            'photo_url'       => $this->photo_url,
-            'status'          => $this->status,
-            'location'        => Utils::castPoint($this->location),
-            'heading'         => (int) data_get($this, 'heading', 0),
-            'altitude'        => (int) data_get($this, 'altitude', 0),
-            'speed'           => (int) data_get($this, 'speed', 0),
-            'online'          => (bool) data_get($this, 'online', false),
+            'id'                    => $this->when($isInternal, $this->id, $this->public_id),
+            'uuid'                  => $this->when($isInternal, $this->uuid),
+            'public_id'             => $this->when($isInternal, $this->public_id),
+            'company_uuid'          => $this->when($isInternal, $this->company_uuid),
+            'vendor_uuid'           => $this->when($isInternal, $this->vendor_uuid),
+            'photo_uuid'            => $this->when($isInternal, $this->photo_uuid),
+            'internal_id'           => $this->internal_id,
+            'display_name'          => $this->display_name,
+            'driver_name'           => $this->driver_name,
+            'plate_number'          => $this->plate_number,
+            'serial_number'         => $this->serial_number,
+            'fuel_card_number'      => $this->fuel_card_number,
+            'vin'                   => $this->vin,
+            'make'                  => $this->make,
+            'model'                 => $this->model,
+            'year'                  => $this->year,
+            'photo_url'             => $this->photo_url,
+            'status'                => $this->status,
+            'location'              => Utils::castPoint($this->location),
+            'heading'               => (int) data_get($this, 'heading', 0),
+            'altitude'              => (int) data_get($this, 'altitude', 0),
+            'speed'                 => (int) data_get($this, 'speed', 0),
+            'online'                => (bool) data_get($this, 'online', false),
+            'assigned_orders_count' => $this->when($isInternal, $this->assignedOrdersCount()),
 
             // Meta flag to indicate this is an index resource
             'meta'            => [
@@ -56,6 +58,11 @@ class Vehicle extends FleetbaseResource
                 'status_label'             => $this->statusLabel(),
             ],
         ];
+    }
+
+    protected function assignedOrdersCount(): int
+    {
+        return Order::where('vehicle_assigned_uuid', $this->uuid)->count();
     }
 
     protected function currentOrderReference(): ?string

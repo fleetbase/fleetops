@@ -8,7 +8,24 @@ export default class ManagementFuelReportsIndexController extends Controller {
     @service intl;
 
     /** query params */
-    @tracked queryParams = ['page', 'limit', 'sort', 'query', 'public_id', 'internal_id', 'vehicle', 'driver', 'created_by', 'updated_by', 'status', 'country', 'volume', 'odometer'];
+    @tracked queryParams = [
+        'page',
+        'limit',
+        'sort',
+        'query',
+        'public_id',
+        'internal_id',
+        'vehicle',
+        'driver',
+        'created_by',
+        'updated_by',
+        'status',
+        'source',
+        'provider',
+        'country',
+        'volume',
+        'odometer',
+    ];
     @tracked page = 1;
     @tracked limit;
     @tracked sort = '-created_at';
@@ -20,6 +37,8 @@ export default class ManagementFuelReportsIndexController extends Controller {
     @tracked volume;
     @tracked odometer;
     @tracked status;
+    @tracked source;
+    @tracked provider;
     @tracked table;
 
     /** action buttons */
@@ -129,6 +148,23 @@ export default class ManagementFuelReportsIndexController extends Controller {
                 filterable: true,
                 filterComponent: 'filter/multi-option',
                 filterOptions: ['draft', 'pending-approval', 'approved', 'rejected', 'revised', 'submitted', 'in-review', 'confirmed', 'processed', 'archived', 'cancelled'],
+            },
+            {
+                label: 'Source',
+                valuePath: 'source',
+                resizable: true,
+                sortable: false,
+                filterable: true,
+                filterComponent: 'filter/multi-option',
+                filterOptions: ['manual', 'import', 'fuel_provider'],
+            },
+            {
+                label: 'Provider',
+                valuePath: 'provider',
+                resizable: true,
+                sortable: false,
+                filterable: true,
+                filterComponent: 'filter/string',
             },
             {
                 label: this.intl.t('column.volume'),

@@ -1,6 +1,6 @@
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'dummy/tests/helpers';
-import { render } from '@ember/test-helpers';
+import { click, render } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 
 module('Integration | Component | order/form/service-rate', function (hooks) {
@@ -22,5 +22,21 @@ module('Integration | Component | order/form/service-rate', function (hooks) {
     `);
 
         assert.dom().hasText('template block text');
+    });
+
+    test('service rate selector is searchable', async function (assert) {
+        this.set('resource', {
+            servicable: true,
+            order_config: {},
+            payloadCoordinates: ['1,1', '2,2'],
+            payload: {
+                payloadCoordinates: ['1,1', '2,2'],
+            },
+        });
+
+        await render(hbs`<Order::Form::ServiceRate @resource={{this.resource}} />`);
+        await click('.ember-power-select-trigger');
+
+        assert.dom('.ember-power-select-search-input').exists();
     });
 });

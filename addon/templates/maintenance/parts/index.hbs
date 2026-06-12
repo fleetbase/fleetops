@@ -12,6 +12,24 @@
         @actionButtons={{this.actionButtons}}
         @bulkActions={{this.bulkActions}}
         @controller={{this}}
+        @emptyStateComponent={{component
+            "table/empty-state"
+            icon="gears"
+            title="Add your first part"
+            description="Parts keep replacement inventory and compatibility details ready for maintenance work."
+            filteredTitle="No parts match your filters"
+            filteredDescription="Adjust the search or filters to find another part."
+            primaryText="New part"
+            primaryIcon="plus"
+            primaryAction=this.partActions.transition.create
+            secondaryText="Import"
+            secondaryIcon="upload"
+            secondaryAction=this.partActions.import
+            docsSlug="fleet-ops/maintenance/parts/overview"
+            docsTitle="Parts guide"
+            docsText="Parts guide"
+            docsSource="fleet-ops-empty-parts"
+        }}
     />
 {{else}}
     <Layout::Section::Header @title={{t "resource.parts"}} @actionsWrapperClass="space-x-1">

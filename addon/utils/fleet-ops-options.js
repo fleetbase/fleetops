@@ -495,10 +495,13 @@ export const sensorTypes = [
 ];
 
 export const deviceStatuses = [
+    { label: 'Never Connected', value: 'never_connected', description: 'Device has not reported a provider heartbeat yet.' },
     { label: 'Inactive', value: 'inactive', description: 'Device record exists but has not yet been activated or assigned.' },
     { label: 'Active', value: 'active', description: 'Device is online and actively communicating with the platform.' },
     { label: 'Online', value: 'online', description: 'Device is currently connected and transmitting live data.' },
+    { label: 'Recently Offline', value: 'recently_offline', description: 'Device stopped reporting recently and may reconnect without intervention.' },
     { label: 'Offline', value: 'offline', description: 'Device is powered off or has not transmitted data within the expected interval.' },
+    { label: 'Long Offline', value: 'long_offline', description: 'Device has not reported telemetry for more than a day.' },
     { label: 'Sleeping', value: 'sleeping', description: 'Device in low-power mode awaiting wake event or scheduled reporting interval.' },
     { label: 'Idle', value: 'idle', description: 'Device is powered and connected but not moving or transmitting new telemetry.' },
     { label: 'Maintenance', value: 'maintenance', description: 'Device is undergoing repair, firmware update, or service maintenance.' },

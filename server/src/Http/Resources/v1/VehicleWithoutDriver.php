@@ -53,6 +53,7 @@ class VehicleWithoutDriver extends FleetbaseResource
             'serial_number'          => $this->serial_number,
             'plate_number'           => $this->plate_number,
             'call_sign'              => $this->call_sign,
+            'fuel_card_number'       => $this->fuel_card_number,
             // VIN & specs blobs
             'vin'                    => $this->vin ?? null,
             'vin_data'               => data_get($this, 'vin_data', Utils::createObject()),
@@ -160,6 +161,7 @@ class VehicleWithoutDriver extends FleetbaseResource
             'vin'                        => $this->vin,
             'plate_number'               => $this->plate_number,
             'serial_number'              => $this->serial_number,
+            'fuel_card_number'           => $this->fuel_card_number,
             'make'                       => $this->make,
             'model'                      => $this->model,
             'model_type'                 => $this->model_type,

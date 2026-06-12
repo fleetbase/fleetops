@@ -7,6 +7,7 @@ import { dasherize } from '@ember/string';
 
 export default class VehicleActionsService extends ResourceActionService {
     @service('universe/menu-service') menuService;
+    @service fetch;
     @service maintenanceScheduleActions;
     @service workOrderActions;
     @service maintenanceActions;
@@ -183,6 +184,107 @@ export default class VehicleActionsService extends ResourceActionService {
         this.maintenanceActions.modal.create({ maintainable: vehicle });
     }
 
+    @action attachDevice(vehicle, options = {}) {
+        this.modalsManager.show('modals/attach-device', {
+            title: this.intl.t('vehicle.prompts.attach-device-title', { vehicleName: vehicle.displayName ?? vehicle.name }),
+            acceptButtonText: this.intl.t('vehicle.actions.attach-device'),
+            acceptButtonIcon: 'link',
+            selectedDevice: null,
+            vehicle,
+            confirm: async (modal) => {
+                const selectedDevice = modal.getOption('selectedDevice');
+
+                if (!selectedDevice) {
+                    return this.notifications.warning(this.intl.t('vehicle.prompts.select-device-warning'));
+                }
+
+                modal.startLoading();
+
+                try {
+                    await this.fetch.post(`vehicles/${vehicle.id}/attach-device`, { device: selectedDevice.id });
+                    await vehicle.reload?.();
+                    this.notifications.success(this.intl.t('vehicle.prompts.attach-device-success', { vehicleName: vehicle.displayName ?? vehicle.name }));
+                    modal.done();
+                    this.refresh();
+                } catch (error) {
+                    this.notifications.serverError(error);
+                    modal.stopLoading();
+                }
+            },
+            ...options,
+        });
+    }
+
+    @action async unassignOrders(vehicle, options = {}) {
+        let response;
+
+        try {
+            response = await this.fetch.get(`vehicles/${vehicle.id}/assigned-orders`);
+        } catch (error) {
+            return this.notifications.serverError(error);
+        }
+
+        const currentOrderId = response.current;
+        const orders = (response.orders ?? response.data ?? []).map((order) => ({
+            ...order,
+            is_current_job: [order.id, order.uuid, order.public_id].includes(currentOrderId),
+        }));
+        const vehicleName = vehicle.displayName ?? vehicle.display_name ?? vehicle.name;
+
+        if (orders.length === 0) {
+            return this.notifications.warning(this.intl.t('vehicle.prompts.no-assigned-orders-warning', { vehicleName }));
+        }
+
+        this.modalsManager.show('modals/assigned-orders', {
+            title: this.intl.t('vehicle.prompts.unassign-orders-title', { vehicleName }),
+            acceptButtonText: this.intl.t('vehicle.actions.unassign-orders'),
+            acceptButtonIcon: 'truck-ramp-box',
+            acceptButtonDisabled: true,
+            subjectLabel: this.intl.t('resource.vehicle'),
+            subjectName: vehicleName,
+            orders,
+            selectedOrderIds: [],
+            toggleOrder: (order) => {
+                const orderId = order.id;
+                const selected = this.modalsManager.getOption('selectedOrderIds') ?? [];
+                const selectedOrderIds = selected.includes(orderId) ? selected.filter((id) => id !== orderId) : [...selected, orderId];
+                this.modalsManager.setOption('selectedOrderIds', selectedOrderIds);
+                this.modalsManager.setOption('acceptButtonDisabled', selectedOrderIds.length === 0);
+            },
+            confirm: async (modal) => {
+                const selectedOrderIds = modal.getOption('selectedOrderIds') ?? [];
+                const selectedOrders = orders.filter((order) => selectedOrderIds.includes(order.id));
+
+                if (selectedOrders.length === 0) {
+                    return this.notifications.warning(this.intl.t('vehicle.prompts.select-orders-warning'));
+                }
+
+                const confirmed = await this.confirmUnassignOrders({
+                    title: this.intl.t('vehicle.prompts.confirm-unassign-orders-title', { count: selectedOrders.length, vehicleName }),
+                    body: this.intl.t('vehicle.prompts.confirm-unassign-orders-body', { vehicleName, orders: this.orderReferenceList(selectedOrders) }),
+                });
+
+                if (!confirmed) {
+                    return;
+                }
+
+                modal.startLoading();
+
+                try {
+                    await this.fetch.post(`vehicles/${vehicle.id}/unassign-orders`, { orders: selectedOrderIds });
+                    await vehicle.reload?.();
+                    this.notifications.success(this.intl.t('vehicle.prompts.unassign-orders-success', { count: selectedOrders.length, vehicleName }));
+                    modal.done();
+                    this.refresh();
+                } catch (error) {
+                    this.notifications.serverError(error);
+                    modal.stopLoading();
+                }
+            },
+            ...options,
+        });
+    }
+
     @action locate(vehicle, options = {}) {
         const { latitude, longitude, location } = vehicle;
 
@@ -201,6 +303,29 @@ export default class VehicleActionsService extends ResourceActionService {
             longitude,
             location,
             ...options,
+        });
+    }
+
+    orderReferenceList(orders) {
+        const references = orders.map((order) => order.tracking ?? order.public_id ?? order.id).filter(Boolean);
+
+        return references.length > 5 ? `${references.slice(0, 5).join(', ')} +${references.length - 5}` : references.join(', ');
+    }
+
+    async confirmUnassignOrders({ title, body }) {
+        return new Promise((resolve) => {
+            this.modalsManager.confirm({
+                title,
+                body,
+                confirm: (_modal, done) => {
+                    done();
+                    resolve(true);
+                },
+                decline: (_modal, done) => {
+                    done();
+                    resolve(false);
+                },
+            });
         });
     }
 }

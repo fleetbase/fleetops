@@ -241,7 +241,12 @@ export default class ManagementFleetsIndexController extends Controller {
                     {
                         label: this.intl.t('fleet.actions.assign-driver'),
                         permission: 'fleet-ops assign-driver-for fleet',
-                        fn: () => {},
+                        fn: this.fleetActions.assignDriver,
+                    },
+                    {
+                        label: this.intl.t('fleet.actions.assign-vehicle'),
+                        permission: 'fleet-ops assign-vehicle-for fleet',
+                        fn: this.fleetActions.assignVehicle,
                     },
                     {
                         separator: true,

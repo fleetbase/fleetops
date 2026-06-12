@@ -165,7 +165,8 @@ class Part extends Model
     {
         return SlugOptions::create()
             ->generateSlugsFrom(['name', 'sku'])
-            ->saveSlugsTo('slug');
+            ->saveSlugsTo('slug')
+            ->doNotGenerateSlugsOnUpdate();
     }
 
     /**

@@ -40,6 +40,7 @@ common:
     activity: Activity
     eta: ETA
     position: Position
+    positions: Positions
     pos: POS
     edit-address: Edit Address
     new-address: New Address
@@ -74,6 +75,7 @@ menu:
     contacts: Contacts
     places: Places
     fuel-reports: Fuel Reports
+    fuel-transactions: Fuel Transactions
     issues: Issues
     maintenance: Maintenance
     schedules: Schedules
@@ -83,6 +85,7 @@ menu:
     maintenance-history: Maintenance History
     connectivity: Connectivity
     telematics: Telematics
+    fuel-providers: Fuel Integrations
     devices: Devices
     sensors: Sensors
     events: Events
@@ -441,10 +444,31 @@ driver:
         license-expiry: License Expiry
         no-vehicle-assigned: No Vehicle Assigned
     actions:
+        unassign-orders: Unassign Orders
+        unassign-vehicle: Unassign Vehicle
+        create-issue: Create Issue
         assign-order: Assign Order to Driver
         assign-vehicle: Assign Vehicle to Driver
         locate-driver: Locate Driver on Map
 
+    prompts:
+        assign-order-title: "Assign order to {driverName}"
+        assign-order-success: Order assigned to {driverName}.
+        select-order-warning: "Select an order to assign."
+        assign-vehicle-title: "Assign vehicle to {driverName}"
+        assign-vehicle-success: "Vehicle assigned to {driverName}."
+        select-vehicle-warning: Select a vehicle to assign.
+        no-assigned-orders-warning: No assigned orders found for {driverName}.
+        select-orders-warning: Select at least one order to unassign.
+        unassign-orders-title: Unassign orders from {driverName}
+        confirm-unassign-orders-title: Unassign {count} order(s) from {driverName}?
+        confirm-unassign-orders-body: "This will remove {driverName} from these orders: {orders}."
+        unassign-orders-success: Unassigned {driverName} from {count} order(s).
+        no-vehicle-assigned-warning: No vehicle is assigned to {driverName}.
+        unassign-vehicle-title: Unassign {vehicleName} from {driverName}?
+        unassign-vehicle-body: This removes {driverName} from {vehicleName}. Order assignments are not changed.
+        unassign-vehicle-success: Unassigned {vehicleName} from {driverName}.
+        issue-title: Issue reported for {driverName}
 device:
     fields:
         title: Device Details
@@ -479,6 +503,29 @@ device:
         notes: Notes
         notes-placeholder: Notes
 
+    actions:
+        attach-device: Attach Device
+        attach-to-vehicle: Attach to Vehicle
+        detach-from-vehicle: Detach from Vehicle
+    prompts:
+        attach-to-vehicle-title: Attach device to vehicle
+        attach-device-to-vehicle-title: "Attach {deviceName} to vehicle"
+        select-vehicle-warning: Select a vehicle to attach this device to.
+        attach-to-vehicle-success: Device attached to vehicle.
+        not-attached-warning: "{deviceName} is not attached to a vehicle."
+        detach-from-vehicle-title: "Detach {deviceName} from vehicle?"
+        detach-from-vehicle-body: "This detaches {deviceName} from {vehicleName} and stops vehicle telemetry updates until it is attached again."
+        detach-from-vehicle-success: Device detached from vehicle.
+        select-device-to-attach-title: "Select device to attach to {resourceName}"
+        confirm-attach-device: "Confirm & Attach Device"
+        attach-device-success: Device attached successfully.
+        detach-from-resource-title: "Detach {deviceName} from {resourceName}?"
+        detach-from-resource-body: "This detaches {deviceName} from {resourceName} and stops telemetry updates and events for this {resourceType}."
+        detach-from-resource-success: "Detached {deviceName} from {resourceName}."
+        detach-telematic-device-title: "Detach {deviceName} from vehicle?"
+        detach-telematic-device-body: "{deviceName} will remain synced from the provider but will no longer be mapped to a vehicle."
+        no-devices-attached-title: No Devices Attached
+        no-devices-attached-body: "Click Attach Device above to start receiving telematic data for this {resourceType}."
 entity:
     fields:
         declare: Declare
@@ -530,8 +577,16 @@ fleet:
         add-vehicle: Add vehicle to fleet
         loading-message: Loading fleet vehicle...
     actions:
+        assign-vehicle: Assign Vehicle to Fleet
         assign-driver: Assign Driver to Fleet
 
+    prompts:
+        assign-driver-title: Assign driver to {fleetName}
+        assign-vehicle-title: Assign vehicle to {fleetName}
+        select-driver-warning: Select a driver to assign.
+        select-vehicle-warning: Select a vehicle to assign.
+        assign-driver-success: Driver assigned to {fleetName}.
+        assign-vehicle-success: Vehicle assigned to {fleetName}.
 fuel-report:
     fields:
         details: Fuel Report Details
@@ -562,6 +617,20 @@ issue:
         type: Issue Type
 
 order:
+    card:
+      linked-order: Linked Order
+      unknown-order: Unknown order
+      no-type: No type
+      pickup: Pickup
+      dropoff: Dropoff
+      return: Return
+      waypoints: Waypoints
+      additional-stop: additional stop
+      additional-stops: additional stops
+      no-pickup-address: No pickup address
+      no-dropoff-address: No dropoff address
+      no-route-details: No route details available.
+      no-order-linked: No order is linked to this issue.
     fields:
         ad-hoc: Ad-Hoc
         ad-hoc-help-text: Toggling Ad-Hoc will enable the order to intelligently ping drivers within the order pickup vicinity about the order allowing the first available driver to accept the order. This is an alternative to manually assigning the driver for real-time orders.
@@ -949,11 +1018,25 @@ vehicle:
         vin-number: VIN Number
         year: Year
     actions:
+        attach-device: Attach Device
+        unassign-orders: Unassign Orders
+        create-issue: Create Issue
         locate-vehicle: Locate Vehicle on Map
         schedule-maintenance: Schedule Maintenance
         create-work-order: Create Work Order
         log-maintenance: Log Maintenance
 
+    prompts:
+        attach-device-title: Attach device to {vehicleName}
+        select-device-warning: Select a device to attach.
+        attach-device-success: Device attached to {vehicleName}.
+        no-assigned-orders-warning: No assigned orders found for {vehicleName}.
+        select-orders-warning: Select at least one order to unassign.
+        unassign-orders-title: Unassign orders from {vehicleName}
+        confirm-unassign-orders-title: Unassign {count} order(s) from {vehicleName}?
+        confirm-unassign-orders-body: "This will remove {vehicleName} from these orders: {orders}."
+        unassign-orders-success: Unassigned {vehicleName} from {count} order(s).
+        issue-title: Issue reported for {vehicleName}
 vendor:
     fields:
         setup-vendor: Setup Vendor

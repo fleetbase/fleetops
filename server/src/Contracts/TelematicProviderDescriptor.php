@@ -12,6 +12,8 @@ use Fleetbase\FleetOps\Support\Utils;
  */
 class TelematicProviderDescriptor
 {
+    public const DEFAULT_ICON = '/engines-dist/images/telematics/providers/default.webp';
+
     public string $key;
     public string $label;
     public string $type; // 'native' or 'custom'
@@ -33,7 +35,7 @@ class TelematicProviderDescriptor
         $this->label             = $data['label'];
         $this->type              = $data['type'] ?? 'native';
         $this->driverClass       = $data['driver_class'] ?? null;
-        $this->icon              = $data['icon'] ?? null;
+        $this->icon              = $data['icon'] ?? self::DEFAULT_ICON;
         $this->description       = $data['description'] ?? null;
         $this->docsUrl           = $data['docs_url'] ?? null;
         $this->requiredFields    = $data['required_fields'] ?? [];

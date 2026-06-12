@@ -1,0 +1,106 @@
+{{! template-lint-disable no-positive-tabindex }}
+<div
+    class={{this.classNames}}
+    role={{this.role}}
+    tabindex={{this.tabIndex}}
+    {{on "click" this.handleClick}}
+    {{on "keydown" this.handleKeyDown}}
+    ...attributes
+>
+    <div class="order-card-topline">
+        {{#if @selectable}}
+            <Input
+                @type="checkbox"
+                class="order-card-checkbox form-checkbox"
+                @checked={{@selected}}
+                disabled={{@disabled}}
+                {{on "click" this.handleSelect}}
+            />
+        {{/if}}
+        <div class="order-card-title-block">
+            <div class="order-card-title">{{n-a this.orderLabel (t "order.card.unknown-order")}}</div>
+            {{#if this.showType}}
+                <div class="order-card-subtitle">{{n-a (smart-humanize this.orderTypeLabel) (t "order.card.no-type")}}</div>
+            {{/if}}
+        </div>
+        {{#if (has-block "headerActions")}}
+            <div class="order-card-header-actions">
+                {{yield this.order to="headerActions"}}
+            </div>
+        {{/if}}
+        {{#if this.showStatus}}
+            <Badge @status={{this.order.status}} />
+        {{/if}}
+    </div>
+
+    {{#if this.showProgress}}
+        <div class="order-card-progress {{this.orderProgressClass}}">
+            <span></span>
+        </div>
+    {{/if}}
+
+    {{#if this.showRoute}}
+        {{#if this.hasOrderStops}}
+            <div class="order-card-route">
+                <div class="order-card-stop">
+                    <div class="order-card-stop-marker pickup">1</div>
+                    <div class="min-w-0">
+                        <div class="order-card-stop-label">{{t "order.card.pickup"}}</div>
+                        <div class="order-card-stop-address">{{n-a this.orderOriginAddress (t "order.card.no-pickup-address")}}</div>
+                    </div>
+                </div>
+                {{#if this.isMultiStopOrder}}
+                    <div class="order-card-stop compact">
+                        <div class="order-card-stop-marker middle">+</div>
+                        <div class="min-w-0">
+                            <div class="order-card-stop-label">{{t "order.card.waypoints"}}</div>
+                            <div class="order-card-stop-address">
+                                {{this.middleStopCount}}
+                                {{if (eq this.middleStopCount 1) (t "order.card.additional-stop") (t "order.card.additional-stops")}}
+                            </div>
+                        </div>
+                    </div>
+                {{/if}}
+                <div class="order-card-stop">
+                    <div class="order-card-stop-marker dropoff">{{this.orderStopCount}}</div>
+                    <div class="min-w-0">
+                        <div class="order-card-stop-label">{{t this.destinationLabelKey}}</div>
+                        <div class="order-card-stop-address">{{n-a this.orderDestinationAddress (t "order.card.no-dropoff-address")}}</div>
+                    </div>
+                </div>
+            </div>
+        {{else}}
+            {{#if (has-block "emptyRoute")}}
+                {{yield this.order to="emptyRoute"}}
+            {{else}}
+                <div class="order-card-empty-route">
+                    <FaIcon @icon="route" />
+                    <span>{{t "order.card.no-route-details"}}</span>
+                </div>
+            {{/if}}
+        {{/if}}
+    {{/if}}
+
+    {{#if this.showMeta}}
+        {{#if (has-block "meta")}}
+            {{yield this.order to="meta"}}
+        {{else if this.hasMeta}}
+            <div class="order-card-meta">
+                {{#each this.metaItems as |item|}}
+                    <span>
+                        <FaIcon @icon={{item.icon}} />
+                        {{#if item.isDate}}
+                            {{format-date-fns item.value "MMM d, HH:mm"}}
+                        {{else}}
+                            {{item.value}}
+                        {{/if}}
+                    </span>
+                {{/each}}
+            </div>
+        {{/if}}
+    {{/if}}
+
+    {{#if (has-block "footer")}}
+        {{yield this.order to="footer"}}
+    {{/if}}
+</div>

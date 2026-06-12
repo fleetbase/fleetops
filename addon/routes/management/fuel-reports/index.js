@@ -13,6 +13,8 @@ export default class ManagementFuelReportsIndexRoute extends Route {
         reporter: { refreshModel: true },
         driver: { refreshModel: true },
         status: { refreshModel: true },
+        source: { refreshModel: true },
+        provider: { refreshModel: true },
         createdAt: { refreshModel: true },
         updatedAt: { refreshModel: true },
         public_id: { refreshModel: true },

@@ -197,7 +197,8 @@ class Asset extends Model
     {
         return SlugOptions::create()
             ->generateSlugsFrom(['name', 'code'])
-            ->saveSlugsTo('slug');
+            ->saveSlugsTo('slug')
+            ->doNotGenerateSlugsOnUpdate();
     }
 
     /**

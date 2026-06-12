@@ -3,6 +3,7 @@
 namespace Fleetbase\FleetOps\Jobs;
 
 use Fleetbase\FleetOps\Models\Telematic;
+use Fleetbase\FleetOps\Support\Telematics\TelematicProviderRegistry;
 use Fleetbase\FleetOps\Support\Telematics\TelematicService;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -25,23 +26,24 @@ class SyncTelematicDevicesJob implements ShouldQueue
 
     public Telematic $telematic;
     public array $options;
+    public string $jobId;
     public int $tries   = 3;
     public int $timeout = 300;
 
     /**
      * Create a new job instance.
      */
-    public function __construct(Telematic $telematic, array $options = [])
+    public function __construct(Telematic $telematic, array $options = [], ?string $jobId = null)
     {
         $this->telematic = $telematic;
         $this->options   = $options;
-        $this->queue     = 'telematics-sync';
+        $this->jobId     = $jobId ?? \Illuminate\Support\Str::uuid()->toString();
     }
 
     /**
      * Execute the job.
      */
-    public function handle(ProviderRegistry $registry, TelematicService $service): void
+    public function handle(TelematicProviderRegistry $registry, TelematicService $service): void
     {
         $correlationId = \Illuminate\Support\Str::uuid()->toString();
 
@@ -67,8 +69,15 @@ class SyncTelematicDevicesJob implements ShouldQueue
 
                 foreach ($response['devices'] as $devicePayload) {
                     $normalizedDevice = $provider->normalizeDevice($devicePayload);
-                    $service->linkDevice($this->telematic, $normalizedDevice);
-                    $totalSynced++;
+                    try {
+                        $service->linkDevice($this->telematic, $normalizedDevice);
+                        $totalSynced++;
+                    } catch (\Illuminate\Validation\ValidationException $e) {
+                        Log::warning('Skipping telematics device without provider identity', [
+                            'correlation_id' => $correlationId,
+                            'provider'       => $this->telematic->provider,
+                        ]);
+                    }
                 }
 
                 $cursor = $response['next_cursor'];
@@ -86,11 +95,32 @@ class SyncTelematicDevicesJob implements ShouldQueue
                 'correlation_id' => $correlationId,
                 'total_synced'   => $totalSynced,
             ]);
+
+            $this->telematic->status = 'active';
+            $this->telematic->meta   = array_merge($this->telematic->meta ?? [], [
+                'last_sync_job_id'       => $this->jobId,
+                'last_sync_completed_at' => now()->toDateTimeString(),
+                'last_sync_result'       => 'success',
+                'last_sync_total'        => $totalSynced,
+                'last_sync_error'        => null,
+            ]);
+            $this->telematic->save();
         } catch (\Exception $e) {
             Log::error('Device discovery failed', [
                 'correlation_id' => $correlationId,
                 'error'          => $e->getMessage(),
+                'exception'      => get_class($e),
             ]);
+
+            $this->telematic->status = 'error';
+            $this->telematic->meta   = array_merge($this->telematic->meta ?? [], [
+                'last_sync_job_id'     => $this->jobId,
+                'last_sync_result'     => 'failed',
+                'last_sync_error'      => 'Device sync failed. Review the provider connection and server logs, then try again.',
+                'last_sync_error_type' => class_basename($e),
+                'last_sync_failed_at'  => now()->toDateTimeString(),
+            ]);
+            $this->telematic->save();
 
             throw $e;
         }
@@ -101,6 +131,6 @@ class SyncTelematicDevicesJob implements ShouldQueue
      */
     public function getJobId(): string
     {
-        return $this->job->getJobId() ?? \Illuminate\Support\Str::uuid()->toString();
+        return $this->jobId;
     }
 }

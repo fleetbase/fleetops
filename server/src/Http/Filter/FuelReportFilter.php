@@ -111,4 +111,14 @@ class FuelReportFilter extends Filter
             $this->builder->where('status', $status);
         }
     }
+
+    public function source(?string $source)
+    {
+        $this->builder->where('meta->source', $source);
+    }
+
+    public function provider(?string $provider)
+    {
+        $this->builder->where('meta->provider', $provider);
+    }
 }

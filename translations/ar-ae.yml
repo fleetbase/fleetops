@@ -1,3 +1,7 @@
+menu:
+  fuel-providers: تكاملات الوقود
+  fuel-transactions: معاملات الوقود
+
 fleet-ops:
   extension-name: Fleet-Ops
   common:
@@ -309,10 +313,12 @@ fleet-ops:
         contacts: جهات الاتصال
         places: الأماكن
         fuel-reports: تقارير الوقود
+        fuel-transactions: معاملات الوقود
         issues: القضايا
         title: إنشاء طلب جديد
         settings: الإعدادات
         order-config: تكوين الطلب
+        fuel-providers: تكاملات الوقود
     live-map-drawer:
       driver-listing:
         location: الموقع
@@ -1612,3 +1618,19 @@ scheduler:
   reason: Reason
   reason-placeholder: e.g. Personal appointment
   notes-placeholder: Optional additional notes
+
+order:
+    card:
+      linked-order: Linked Order
+      unknown-order: Unknown order
+      no-type: No type
+      pickup: Pickup
+      dropoff: Dropoff
+      return: Return
+      waypoints: Waypoints
+      additional-stop: additional stop
+      additional-stops: additional stops
+      no-pickup-address: No pickup address
+      no-dropoff-address: No dropoff address
+      no-route-details: No route details available.
+      no-order-linked: No order is linked to this issue.

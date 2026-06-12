@@ -1130,8 +1130,9 @@ class ServiceRate extends Model
         $stopCount        = collect($stops)->filter()->count();
         $endpointCount    = max(0, min($endpointCount, $stopCount));
         $waypointCount    = max($stopCount - $endpointCount, 0);
+        $weightVariables  = $this->buildAlgorithmWeightVariables($entityCollection);
 
-        return Algo::normalizeVariables([
+        return Algo::normalizeVariables(array_merge([
             'distance_m' => $totalDistance ?? 0,
             'time_s'     => $totalTime ?? 0,
             'stops'      => $stopCount,
@@ -1139,7 +1140,43 @@ class ServiceRate extends Model
             'parcels'    => $entityCollection->where('type', 'parcel')->count(),
             'entities'   => $entityCollection->count(),
             'base_fee'   => Utils::numbersOnly($this->base_fee ?? 0),
-        ]);
+        ], $weightVariables));
+    }
+
+    protected function buildAlgorithmWeightVariables($entities): array
+    {
+        $weightKg = collect($entities)->sum(fn ($entity) => $this->normalizeEntityWeightToKilograms($entity));
+
+        return [
+            'weight'       => $weightKg,
+            'weight_kg'    => $weightKg,
+            'weight_g'     => $weightKg * 1000,
+            'weight_lb'    => $weightKg / 0.45359237,
+            'weight_oz'    => $weightKg / 0.028349523125,
+            'weight_tonne' => $weightKg / 1000,
+            'weight_t'     => $weightKg / 1000,
+        ];
+    }
+
+    protected function normalizeEntityWeightToKilograms($entity): float
+    {
+        $weight = data_get($entity, 'weight');
+
+        if ($weight === null || $weight === '' || !is_numeric($weight)) {
+            return 0;
+        }
+
+        $weight = (float) $weight;
+        $unit   = strtolower(trim((string) data_get($entity, 'weight_unit', 'kg')));
+
+        return match ($unit) {
+            'g', 'gram', 'grams'                       => $weight / 1000,
+            'oz', 'ounce', 'ounces'                    => $weight * 0.028349523125,
+            'lb', 'lbs', 'pound', 'pounds'             => $weight * 0.45359237,
+            't', 'mt', 'tonne', 'tonnes', 'metric_ton',
+            'metric_tons'                              => $weight * 1000,
+            default                                    => $weight,
+        };
     }
 
     protected function inferEndpointCountFromStops($stops = []): int

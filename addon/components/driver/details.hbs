@@ -32,7 +32,7 @@
             </div>
             <div class="field-info-container">
                 <div class="field-name">{{t "driver.fields.license-expiry"}}</div>
-                <div class="field-value">{{n-a @resource.license_expiry}}</div>
+                <div class="field-value">{{n-a (format-date-fns @resource.license_expiry)}}</div>
             </div>
             <div class="field-info-container">
                 <div class="field-name">{{t "resource.vendor"}}</div>

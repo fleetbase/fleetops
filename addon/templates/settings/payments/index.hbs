@@ -28,6 +28,20 @@
                 @paginationMeta={{@model.meta}}
                 @page={{this.page}}
                 @onPageChange={{fn (mut this.page)}}
+                @emptyStateComponent={{component
+                    "table/empty-state"
+                    icon="credit-card"
+                    title="No payment transactions yet"
+                    description="Completed customer payments will appear here once Stripe starts sending transaction records."
+                    filteredTitle="No payments match your filters"
+                    filteredDescription="Adjust filters or refresh the page to review other payment transactions."
+                    primaryText="Refresh"
+                    primaryIcon="refresh"
+                    primaryAction=this.refreshPayments
+                    docsSlug="fleet-ops/settings/payments"
+                    docsTitle="Payments guide"
+                    docsText="Payments guide"
+                }}
             />
         {{else}}
             <div class="container">

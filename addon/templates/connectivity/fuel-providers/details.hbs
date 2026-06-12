@@ -1,0 +1,51 @@
+<div class="h-full overflow-y-auto bg-gray-50 dark:bg-gray-900">
+    <div class="flex w-full flex-col">
+        <section class="sticky top-0 z-50 bg-white pt-4 shadow-sm dark:bg-gray-900">
+            <div class="mx-auto flex w-full max-w-7xl flex-col gap-4 px-4 lg:flex-row lg:items-start lg:justify-between md:px-6">
+                <div class="flex min-w-0 items-start gap-3">
+                    <div class="mt-1 flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-md bg-blue-50 text-blue-600 dark:bg-blue-900/20 dark:text-blue-300">
+                        <FaIcon @icon="gas-pump" />
+                    </div>
+                    <div class="min-w-0">
+                        <div class="flex flex-wrap items-center gap-2">
+                            <h1 class="truncate text-lg font-bold text-gray-900 dark:text-gray-100">{{or @model.name @model.provider}}</h1>
+                            <Badge @status={{this.healthStatus}} @hideStatusDot={{true}}>{{this.statusLabel}}</Badge>
+                        </div>
+                        <div class="mt-1 text-sm text-gray-500 dark:text-gray-300">
+                            {{@model.provider}}
+                            {{#if @model.public_id}}
+                                <span class="mx-1 text-gray-300 dark:text-gray-600">/</span>
+                                <span class="font-mono text-xs">{{@model.public_id}}</span>
+                            {{/if}}
+                        </div>
+                        <div class="mt-2 flex flex-wrap gap-2 text-xs text-gray-500 dark:text-gray-300">
+                            <span>Last test: {{n-a (format-date-fns @model.last_tested_at "dd MMM HH:mm")}}</span>
+                            <span>Last sync: {{n-a (format-date-fns @model.last_synced_at "dd MMM HH:mm")}}</span>
+                            <span>Imported: {{n-a this.lastSummary.imported}}</span>
+                            <span>Unmatched: {{n-a this.lastSummary.unmatched}}</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="flex flex-wrap items-center gap-2">
+                    <Button @icon="arrow-left" @text="Back" @size="xs" @onClick={{transition-to "connectivity.fuel-providers.index"}} />
+                    <Button @icon="plug" @text="Test" @size="xs" @isLoading={{this.testConnection.isRunning}} @onClick={{perform this.testConnection}} />
+                    <Button @icon="rotate" @text="Sync Transactions" @type="primary" @size="xs" @isLoading={{this.syncTransactions.isRunning}} @onClick={{perform this.syncTransactions}} />
+                    <Button @icon="cog" @text="Settings" @size="xs" @onClick={{transition-to "connectivity.fuel-providers.edit" @model}} />
+                </div>
+            </div>
+
+            <nav class="mt-4 flex w-full gap-1 overflow-x-auto border-b border-gray-200 text-sm dark:border-gray-700" aria-label="Fuel integration sections">
+                {{#each this.tabs as |tab|}}
+                    <LinkTo @route={{tab.route}} class="inline-flex flex-shrink-0 items-center border-b-2 px-3 py-3 font-medium {{if tab.active 'border-blue-500 text-gray-900 dark:text-white' 'border-transparent text-gray-500 hover:border-blue-400 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white'}}">
+                        {{tab.label}}
+                    </LinkTo>
+                {{/each}}
+            </nav>
+        </section>
+
+        <section class="min-w-0">
+            {{outlet}}
+        </section>
+    </div>
+</div>

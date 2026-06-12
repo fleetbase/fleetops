@@ -1,6 +1,9 @@
-import ResourceActionService from '@fleetbase/ember-core/services/resource-action';
+import ResourceActionService, { inject as service } from '@fleetbase/ember-core/services/resource-action';
+import { action } from '@ember/object';
 
 export default class DeviceActionsService extends ResourceActionService {
+    @service fetch;
+
     constructor() {
         super(...arguments);
         this.initialize('device');
@@ -78,4 +81,64 @@ export default class DeviceActionsService extends ResourceActionService {
             });
         },
     };
+
+    @action attachToVehicle(device, options = {}) {
+        this.modalsManager.show('modals/attach-telematic-device', {
+            title: this.intl.t('device.prompts.attach-to-vehicle-title'),
+            acceptButtonText: this.intl.t('device.actions.attach-to-vehicle'),
+            acceptButtonIcon: 'link',
+            device,
+            selectedVehicle: null,
+            confirm: async (modal) => {
+                const selectedVehicle = modal.getOption('selectedVehicle');
+
+                if (!selectedVehicle) {
+                    return this.notifications.warning(this.intl.t('device.prompts.select-vehicle-warning'));
+                }
+
+                modal.startLoading();
+
+                try {
+                    await this.fetch.post(`devices/${device.id}/attach`, { vehicle: selectedVehicle.id });
+                    await device.reload?.();
+                    this.notifications.success(this.intl.t('device.prompts.attach-to-vehicle-success'));
+                    modal.done();
+                    this.refresh();
+                } catch (error) {
+                    this.notifications.serverError(error);
+                    modal.stopLoading();
+                }
+            },
+            ...options,
+        });
+    }
+
+    @action detachFromVehicle(device, options = {}) {
+        const deviceName = device.displayName ?? device.name ?? this.intl.t('resource.device');
+        const vehicleName = device.attached_to_name ?? device.attachable?.display_name ?? device.attachable?.name;
+
+        if (!device.attachable_uuid && !vehicleName) {
+            return this.notifications.warning(this.intl.t('device.prompts.not-attached-warning', { deviceName }));
+        }
+
+        this.modalsManager.confirm({
+            title: this.intl.t('device.prompts.detach-from-vehicle-title', { deviceName }),
+            body: this.intl.t('device.prompts.detach-from-vehicle-body', { deviceName, vehicleName: vehicleName ?? this.intl.t('resource.vehicle') }),
+            confirm: async (modal) => {
+                modal.startLoading();
+
+                try {
+                    await this.fetch.post(`devices/${device.id}/detach`);
+                    await device.reload?.();
+                    this.notifications.success(this.intl.t('device.prompts.detach-from-vehicle-success'));
+                    modal.done();
+                    this.refresh();
+                } catch (error) {
+                    this.notifications.serverError(error);
+                    modal.stopLoading();
+                }
+            },
+            ...options,
+        });
+    }
 }

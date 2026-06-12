@@ -39,6 +39,8 @@ class Vehicle extends FleetbaseResource
             'description'            => $this->description,
             'driver_name'            => $this->when(Http::isInternalRequest(), $this->driver_name),
             'vendor_name'            => $this->when(Http::isInternalRequest(), $this->vendor_name),
+            'assigned_orders_count'  => $this->when(Http::isInternalRequest(), $this->assignedOrdersCount()),
+            'current_order_reference'=> $this->when(Http::isInternalRequest(), $this->currentOrderReference()),
             // Relationships
             'driver'                 => $this->whenLoaded('driver', fn () => new Driver($this->driver)),
             'devices'                => $this->whenLoaded('devices', fn () => $this->devices),
@@ -54,6 +56,7 @@ class Vehicle extends FleetbaseResource
             'serial_number'          => $this->serial_number,
             'plate_number'           => $this->plate_number,
             'call_sign'              => $this->call_sign,
+            'fuel_card_number'       => $this->fuel_card_number,
             // VIN & specs blobs
             'vin'                    => $this->vin ?? null,
             'vin_data'               => data_get($this, 'vin_data', Utils::createObject()),
@@ -142,6 +145,19 @@ class Vehicle extends FleetbaseResource
         ]);
     }
 
+    protected function assignedOrdersCount(): int
+    {
+        return \Fleetbase\FleetOps\Models\Order::where('vehicle_assigned_uuid', $this->uuid)->count();
+    }
+
+    protected function currentOrderReference(): ?string
+    {
+        $this->loadMissing('driver.currentOrder');
+        $order = data_get($this, 'driver.currentOrder');
+
+        return data_get($order, 'tracking') ?? data_get($order, 'public_id');
+    }
+
     /**
      * Transform the resource into a webhook payload.
      *
@@ -161,6 +177,7 @@ class Vehicle extends FleetbaseResource
             'vin'                        => $this->vin,
             'plate_number'               => $this->plate_number,
             'serial_number'              => $this->serial_number,
+            'fuel_card_number'           => $this->fuel_card_number,
             'make'                       => $this->make,
             'model'                      => $this->model,
             'model_type'                 => $this->model_type,

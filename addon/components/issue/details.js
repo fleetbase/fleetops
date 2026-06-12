@@ -3,9 +3,6 @@ import { inject as service } from '@ember/service';
 import { action } from '@ember/object';
 import { formatDistanceStrict, isValid } from 'date-fns';
 
-const COMPLETE_ORDER_STATUSES = ['completed', 'delivered'];
-const ACTIVE_ORDER_STATUSES = ['dispatched', 'started', 'in_progress', 'driver_enroute', 'driver_nearby'];
-
 export default class IssueDetailsComponent extends Component {
     @service hostRouter;
     @service issueActions;
@@ -121,102 +118,9 @@ export default class IssueDetailsComponent extends Component {
         return formatDistanceStrict(createdAt, resolvedAt);
     }
 
-    get orderLabel() {
-        return this.order?.tracking_number?.tracking_number || this.order?.tracking_number || this.order?.tracking || this.order?.public_id || this.order?.id;
-    }
-
-    get orderStops() {
-        const payload = this.order?.payload ?? {};
-        const stops = [];
-
-        if (payload.pickup) {
-            stops.push({ type: 'pickup', place: payload.pickup });
-        }
-
-        (payload.waypoints ?? []).forEach((waypoint, index) => {
-            stops.push({
-                type: waypoint.type ?? 'waypoint',
-                place: waypoint.place ?? waypoint,
-                index: index + 1,
-            });
-        });
-
-        if (payload.dropoff) {
-            stops.push({ type: 'dropoff', place: payload.dropoff });
-        }
-
-        if (payload.return) {
-            stops.push({ type: 'return', place: payload.return });
-        }
-
-        return stops.filter((stop) => this.addressForPlace(stop.place));
-    }
-
-    get orderOrigin() {
-        return this.orderStops[0];
-    }
-
-    get orderDestination() {
-        return this.orderStops[this.orderStops.length - 1];
-    }
-
-    get orderOriginAddress() {
-        return this.addressForPlace(this.orderOrigin?.place);
-    }
-
-    get orderDestinationAddress() {
-        return this.addressForPlace(this.orderDestination?.place);
-    }
-
-    get orderStopCount() {
-        return this.orderStops.length;
-    }
-
-    get middleStopCount() {
-        return Math.max(this.orderStopCount - 2, 0);
-    }
-
-    get isMultiStopOrder() {
-        return this.orderStopCount > 2;
-    }
-
-    get hasOrderStops() {
-        return this.orderStopCount > 0;
-    }
-
-    get orderProgressClass() {
-        const status = this.order?.status;
-
-        if (COMPLETE_ORDER_STATUSES.includes(status)) {
-            return 'is-complete';
-        }
-
-        if (ACTIVE_ORDER_STATUSES.includes(status)) {
-            return 'is-active';
-        }
-
-        return 'is-pending';
-    }
-
-    get orderScheduledAt() {
-        return this.order?.scheduled_at || this.order?.created_at || this.order?.createdAt;
-    }
-
-    get orderDriverLabel() {
-        return this.order?.driver_assigned?.name || this.order?.driver_name || this.order?.driver?.name;
-    }
-
-    get orderVehicleLabel() {
-        return this.order?.vehicle_assigned?.displayName || this.order?.vehicle_assigned?.display_name || this.order?.vehicle_name || this.order?.vehicle?.displayName;
-    }
-
     get hasLocation() {
         const location = this.resource?.location;
         return Boolean(location?.latitude || location?.longitude || location?.coordinates);
-    }
-
-    addressForPlace(place) {
-        return place?.address ?? place?.address_html ?? place?.street1 ?? place?.name;
     }
 
     dateFromValue(value) {

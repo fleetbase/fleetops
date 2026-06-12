@@ -435,4 +435,8 @@ export default class OperationsOrdersIndexController extends Controller {
             this.isSearchVisible = false;
         }
     }
+
+    @action importOrders() {
+        return this.orderActions.importOrders({ onImportComplete: this.orderActions.refresh });
+    }
 }

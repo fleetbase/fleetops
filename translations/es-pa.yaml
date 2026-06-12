@@ -42,6 +42,7 @@ common:
   new-address: Nueva dirección
   select-address: Seleccionar dirección
 
+  current-job: Current Job
 menu:
   operations: Operaciones
   dashboard: Panel
@@ -57,6 +58,7 @@ menu:
   contacts: Contactos
   places: Lugares
   fuel-reports: Informes de combustible
+  fuel-transactions: Transacciones de combustible
   issues: Asuntos
   maintenance: Mantenimiento
   work-orders: Órdenes de trabajo
@@ -64,6 +66,7 @@ menu:
   parts: Partes
   connectivity: Conectividad
   telematics: Telemática
+  fuel-providers: Integraciones de combustible
   devices: Dispositivos
   sensors: Sensores
   events: Eventos
@@ -396,10 +399,31 @@ driver:
     driver-license: Licencia de conducir
     no-vehicle-assigned: Ningún vehículo asignado
   actions:
+    unassign-orders: Unassign Orders
+    unassign-vehicle: Unassign Vehicle
+    create-issue: Create Issue
     assign-order: Asignar orden al conductor
     assign-vehicle: Asignar vehículo al conductor
     locate-driver: Localizar al conductor en el mapa
 
+  prompts:
+    assign-order-success: Order assigned to {driverName}.
+    assign-order-title: "Assign order to {driverName}"
+    select-order-warning: "Select an order to assign."
+    assign-vehicle-title: "Assign vehicle to {driverName}"
+    assign-vehicle-success: "Vehicle assigned to {driverName}."
+    select-vehicle-warning: Select a vehicle to assign.
+    no-assigned-orders-warning: No assigned orders found for {driverName}.
+    select-orders-warning: Select at least one order to unassign.
+    unassign-orders-title: Unassign orders from {driverName}
+    confirm-unassign-orders-title: Unassign {count} order(s) from {driverName}?
+    confirm-unassign-orders-body: "This will remove {driverName} from these orders: {orders}."
+    unassign-orders-success: Unassigned {driverName} from {count} order(s).
+    no-vehicle-assigned-warning: No vehicle is assigned to {driverName}.
+    unassign-vehicle-title: Unassign {vehicleName} from {driverName}?
+    unassign-vehicle-body: This removes {driverName} from {vehicleName}. Order assignments are not changed.
+    unassign-vehicle-success: Unassigned {vehicleName} from {driverName}.
+    issue-title: Issue reported for {driverName}
 device:
   fields:
     title: Detalles del dispositivo
@@ -434,6 +458,18 @@ device:
     notes: Notas
     notes-placeholder: Notas
 
+  actions:
+    attach-to-vehicle: Attach to Vehicle
+    detach-from-vehicle: Detach from Vehicle
+  prompts:
+    attach-to-vehicle-title: Attach device to vehicle
+    attach-device-to-vehicle-title: "Attach {deviceName} to vehicle"
+    select-vehicle-warning: Select a vehicle to attach this device to.
+    attach-to-vehicle-success: Device attached to vehicle.
+    not-attached-warning: "{deviceName} is not attached to a vehicle."
+    detach-from-vehicle-title: "Detach {deviceName} from vehicle?"
+    detach-from-vehicle-body: "This detaches {deviceName} from {vehicleName} and stops vehicle telemetry updates until it is attached again."
+    detach-from-vehicle-success: Device detached from vehicle.
 entity:
   fields:
     declare: Declarar
@@ -485,8 +521,16 @@ fleet:
     add-vehicle: Agregar vehículo a la flota
     loading-message: Cargando vehículo de flota...
   actions:
+    assign-vehicle: Assign Vehicle to Fleet
     assign-driver: Asignar conductor a la flota
 
+  prompts:
+    assign-driver-title: Assign driver to {fleetName}
+    assign-vehicle-title: Assign vehicle to {fleetName}
+    select-driver-warning: Select a driver to assign.
+    select-vehicle-warning: Select a vehicle to assign.
+    assign-driver-success: Driver assigned to {fleetName}.
+    assign-vehicle-success: Vehicle assigned to {fleetName}.
 fuel-report:
   fields:
     details: Detalles del informe de combustible
@@ -517,6 +561,20 @@ issue:
     type: Tipo de problema
 
 order:
+  card:
+    linked-order: Linked Order
+    unknown-order: Unknown order
+    no-type: No type
+    pickup: Pickup
+    dropoff: Dropoff
+    return: Return
+    waypoints: Waypoints
+    additional-stop: additional stop
+    additional-stops: additional stops
+    no-pickup-address: No pickup address
+    no-dropoff-address: No dropoff address
+    no-route-details: No route details available.
+    no-order-linked: No order is linked to this issue.
   fields:
     ad-hoc: ad hoc
     ad-hoc-help-text: Alternar Ad-Hoc permitirá que el pedido haga ping de manera inteligente a los conductores dentro del área de recogida del pedido sobre el pedido, lo que permitirá que el primer conductor disponible acepte el pedido. Esta es una alternativa a la asignación manual del conductor para pedidos en tiempo real.
@@ -903,8 +961,22 @@ vehicle:
     vin-number: Número de bastidor
     year: Año
   actions:
+    attach-device: Attach Device
+    unassign-orders: Unassign Orders
+    create-issue: Create Issue
     locate-vehicle: Localizar vehículo en el mapa
 
+  prompts:
+    attach-device-title: Attach device to {vehicleName}
+    select-device-warning: Select a device to attach.
+    attach-device-success: Device attached to {vehicleName}.
+    no-assigned-orders-warning: No assigned orders found for {vehicleName}.
+    select-orders-warning: Select at least one order to unassign.
+    unassign-orders-title: Unassign orders from {vehicleName}
+    confirm-unassign-orders-title: Unassign {count} order(s) from {vehicleName}?
+    confirm-unassign-orders-body: "This will remove {vehicleName} from these orders: {orders}."
+    unassign-orders-success: Unassigned {vehicleName} from {count} order(s).
+    issue-title: Issue reported for {vehicleName}
 vendor:
   fields:
     setup-vendor: Proveedor de configuración

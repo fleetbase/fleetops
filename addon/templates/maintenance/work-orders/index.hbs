@@ -10,5 +10,23 @@
     @actionButtons={{this.actionButtons}}
     @bulkActions={{this.bulkActions}}
     @controller={{this}}
+    @emptyStateComponent={{component
+        "table/empty-state"
+        icon="clipboard-list"
+        title="No work orders yet"
+        description="Create work orders to assign maintenance tasks, track progress, and close out repairs."
+        filteredTitle="No work orders match your filters"
+        filteredDescription="Adjust the search or filters to find another work order."
+        primaryText="New work order"
+        primaryIcon="plus"
+        primaryAction=this.workOrderActions.transition.create
+        secondaryText="Import"
+        secondaryIcon="upload"
+        secondaryAction=this.workOrderActions.import
+        docsSlug="fleet-ops/maintenance/work-orders/overview"
+        docsTitle="Work orders guide"
+        docsText="Work orders guide"
+        docsSource="fleet-ops-empty-work-orders"
+    }}
 />
 {{outlet}}

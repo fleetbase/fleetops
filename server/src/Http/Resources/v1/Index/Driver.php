@@ -23,26 +23,27 @@ class Driver extends FleetbaseResource
         $isInternal = Http::isInternalRequest();
 
         return [
-            'id'              => $this->when($isInternal, $this->id, $this->public_id),
-            'uuid'            => $this->when($isInternal, $this->uuid),
-            'public_id'       => $this->when($isInternal, $this->public_id),
-            'company_uuid'    => $this->when($isInternal, $this->company_uuid),
-            'user_uuid'       => $this->when($isInternal, $this->user_uuid),
-            'vehicle_uuid'    => $this->when($isInternal, $this->vehicle_uuid),
-            'vendor_uuid'     => $this->when($isInternal, $this->vendor_uuid),
-            'current_job_uuid'=> $this->when($isInternal, $this->current_job_uuid),
-            'name'            => $this->name,
-            'vehicle_name'    => $this->when($isInternal, $this->vehicle_name),
-            'email'           => $this->email,
-            'phone'           => $this->phone,
-            'photo_url'       => $this->photo_url,
-            'status'          => $this->status,
-            'location'        => $this->wasRecentlyCreated ? new Point(0, 0) : Utils::castPoint($this->location),
-            'heading'         => (int) data_get($this, 'heading', 0),
-            'altitude'        => (int) data_get($this, 'altitude', 0),
-            'speed'           => (int) data_get($this, 'speed', 0),
-            'online'          => data_get($this, 'online', false),
-            'meta'            => [
+            'id'                    => $this->when($isInternal, $this->id, $this->public_id),
+            'uuid'                  => $this->when($isInternal, $this->uuid),
+            'public_id'             => $this->when($isInternal, $this->public_id),
+            'company_uuid'          => $this->when($isInternal, $this->company_uuid),
+            'user_uuid'             => $this->when($isInternal, $this->user_uuid),
+            'vehicle_uuid'          => $this->when($isInternal, $this->vehicle_uuid),
+            'vendor_uuid'           => $this->when($isInternal, $this->vendor_uuid),
+            'current_job_uuid'      => $this->when($isInternal, $this->current_job_uuid),
+            'assigned_orders_count' => $this->when($isInternal, $this->assignedOrdersCount()),
+            'name'                  => $this->name,
+            'vehicle_name'          => $this->when($isInternal, $this->vehicle_name),
+            'email'                 => $this->email,
+            'phone'                 => $this->phone,
+            'photo_url'             => $this->photo_url,
+            'status'                => $this->status,
+            'location'              => $this->wasRecentlyCreated ? new Point(0, 0) : Utils::castPoint($this->location),
+            'heading'               => (int) data_get($this, 'heading', 0),
+            'altitude'              => (int) data_get($this, 'altitude', 0),
+            'speed'                 => (int) data_get($this, 'speed', 0),
+            'online'                => data_get($this, 'online', false),
+            'meta'                  => [
                 '_index_resource'         => true,
                 'location_coordinates'    => $this->locationCoordinates(),
                 'current_order_reference' => $this->currentOrderReference(),
@@ -51,6 +52,11 @@ class Driver extends FleetbaseResource
                 'status_label'            => $this->statusLabel(),
             ],
         ];
+    }
+
+    protected function assignedOrdersCount(): int
+    {
+        return $this->orders()->count();
     }
 
     protected function currentOrderReference(): ?string

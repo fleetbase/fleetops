@@ -3,6 +3,8 @@
 namespace Fleetbase\FleetOps\Models;
 
 use Fleetbase\Casts\Json;
+use Fleetbase\FleetOps\Casts\Point;
+use Fleetbase\LaravelMysqlSpatial\Eloquent\SpatialTrait;
 use Fleetbase\Models\Alert;
 use Fleetbase\Models\Company;
 use Fleetbase\Models\Model;
@@ -35,6 +37,7 @@ class DeviceEvent extends Model
     use LogsActivity;
     use HasMetaAttributes;
     use Searchable;
+    use SpatialTrait;
 
     /**
      * The database table used by the model.
@@ -55,14 +58,14 @@ class DeviceEvent extends Model
      *
      * @var array
      */
-    protected $searchableColumns = ['event_type', 'message', 'public_id'];
+    protected $searchableColumns = ['event_type', 'message', 'ident', 'code', 'provider', 'public_id'];
 
     /**
      * The attributes that can be used for filtering.
      *
      * @var array
      */
-    protected $filterParams = ['event_type', 'severity', 'device_uuid'];
+    protected $filterParams = ['event_type', 'severity', 'device_uuid', 'provider', 'code'];
 
     /**
      * The attributes that are mass assignable.
@@ -73,10 +76,12 @@ class DeviceEvent extends Model
         'company_uuid',
         'device_uuid',
         'payload',
+        'data',
         'meta',
         'location',
         'event_type',
         'severity',
+        'message',
         'ident',
         'protocol',
         'provider',
@@ -86,6 +91,8 @@ class DeviceEvent extends Model
         'reason',
         'comment',
         'resolved_at',
+        'occurred_at',
+        'processed_at',
         'slug',
     ];
 
@@ -109,14 +116,25 @@ class DeviceEvent extends Model
     protected $hidden = ['device'];
 
     /**
+     * The attributes that are spatial columns.
+     *
+     * @var array
+     */
+    protected $spatialFields = ['location'];
+
+    /**
      * The attributes that should be cast to native types.
      *
      * @var array
      */
     protected $casts = [
         'payload'         => Json::class,
+        'data'            => Json::class,
         'meta'            => Json::class,
+        'location'        => Point::class,
         'resolved_at'     => 'datetime',
+        'occurred_at'     => 'datetime',
+        'processed_at'    => 'datetime',
     ];
 
     /**
@@ -145,7 +163,26 @@ class DeviceEvent extends Model
      */
     public function getActivitylogOptions(): LogOptions
     {
-        return LogOptions::defaults()->logAll();
+        return LogOptions::defaults()
+            ->logOnly([
+                'company_uuid',
+                'device_uuid',
+                'event_type',
+                'severity',
+                'message',
+                'ident',
+                'protocol',
+                'provider',
+                'mileage',
+                'state',
+                'code',
+                'reason',
+                'comment',
+                'resolved_at',
+                'occurred_at',
+                'processed_at',
+            ])
+            ->logOnlyDirty();
     }
 
     public function company(): BelongsTo

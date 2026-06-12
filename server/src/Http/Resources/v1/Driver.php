@@ -45,6 +45,8 @@ class Driver extends FleetbaseResource
             'vehicle_name'                  => $this->when(Http::isInternalRequest(), $this->vehicle_name),
             'vehicle_avatar'                => $this->vehicle_avatar,
             'vendor_name'                   => $this->when(Http::isInternalRequest(), $this->vendor_name),
+            'assigned_orders_count'         => $this->when(Http::isInternalRequest(), $this->assignedOrdersCount()),
+            'current_order_reference'       => $this->when(Http::isInternalRequest(), $this->currentOrderReference()),
             'vehicle'                       => $this->whenLoaded('vehicle', fn () => new VehicleWithoutDriver($this->vehicle)),
             'current_job'                   => $this->whenLoaded('currentJob', fn () => new Order($this->currentJob)),
             'current_job_id'                => $this->when(Http::isInternalRequest(), data_get($this, 'currentJob.tracking')),
@@ -66,6 +68,19 @@ class Driver extends FleetbaseResource
             'updated_at'                    => $this->updated_at,
             'created_at'                    => $this->created_at,
         ]);
+    }
+
+    protected function assignedOrdersCount(): int
+    {
+        return $this->orders()->count();
+    }
+
+    protected function currentOrderReference(): ?string
+    {
+        $this->loadMissing('currentOrder');
+        $order = data_get($this, 'currentOrder');
+
+        return data_get($order, 'tracking') ?? data_get($order, 'public_id');
     }
 
     public function getJobs(): AnonymousResourceCollection|FleetbaseResourceCollection

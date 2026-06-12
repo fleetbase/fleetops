@@ -114,7 +114,7 @@ body[data-theme='dark'] .next-table-wrapper.order-view-purchase-rate-table-wrapp
 
 nav.next-sidebar {
     height: 100%;
-    overflow-y: scroll;
+    overflow: hidden;
 }
 
 /** places management css mods */
@@ -159,6 +159,154 @@ nav.next-sidebar {
 
 body.fleetbase-console .next-content-overlay > .next-content-overlay-panel-container > .next-content-overlay-panel .next-content-overlay-panel-header > .next-view-header-right .btn-wrapper {
     flex-shrink: 0;
+}
+
+.fleetops-connectivity-kpi-tile {
+    transition:
+        transform 160ms ease-out,
+        box-shadow 160ms ease-out,
+        border-color 160ms ease-out;
+}
+
+.fleetops-connectivity-kpi-tile:hover {
+    box-shadow: 0 8px 24px -12px rgb(15 23 42 / 35%);
+}
+
+.fleetops-connectivity-kpi-tile .fleetops-connectivity-kpi-icon {
+    color: #64748b;
+    background-color: rgb(100 116 139 / 12%);
+}
+
+.fleetops-connectivity-kpi-accent-blue {
+    border-color: rgb(59 130 246 / 28%);
+    background-image: linear-gradient(135deg, rgb(59 130 246 / 10%) 0%, rgb(59 130 246 / 0%) 62%);
+}
+
+.fleetops-connectivity-kpi-accent-green {
+    border-color: rgb(16 185 129 / 28%);
+    background-image: linear-gradient(135deg, rgb(16 185 129 / 10%) 0%, rgb(16 185 129 / 0%) 62%);
+}
+
+.fleetops-connectivity-kpi-accent-amber {
+    border-color: rgb(245 158 11 / 32%);
+    background-image: linear-gradient(135deg, rgb(245 158 11 / 12%) 0%, rgb(245 158 11 / 0%) 62%);
+}
+
+.fleetops-connectivity-kpi-accent-rose {
+    border-color: rgb(244 63 94 / 28%);
+    background-image: linear-gradient(135deg, rgb(244 63 94 / 10%) 0%, rgb(244 63 94 / 0%) 62%);
+}
+
+.fleetops-connectivity-kpi-accent-blue .fleetops-connectivity-kpi-icon {
+    color: rgb(37 99 235);
+    background-color: rgb(59 130 246 / 12%);
+}
+
+.fleetops-connectivity-kpi-accent-green .fleetops-connectivity-kpi-icon {
+    color: rgb(5 150 105);
+    background-color: rgb(16 185 129 / 12%);
+}
+
+.fleetops-connectivity-kpi-accent-amber .fleetops-connectivity-kpi-icon {
+    color: rgb(217 119 6);
+    background-color: rgb(245 158 11 / 14%);
+}
+
+.fleetops-connectivity-kpi-accent-rose .fleetops-connectivity-kpi-icon {
+    color: rgb(225 29 72);
+    background-color: rgb(244 63 94 / 12%);
+}
+
+body[data-theme='dark'] .fleetops-connectivity-kpi-accent-blue .fleetops-connectivity-kpi-icon {
+    color: rgb(147 197 253);
+}
+
+body[data-theme='dark'] .fleetops-connectivity-kpi-accent-green .fleetops-connectivity-kpi-icon {
+    color: rgb(110 231 183);
+}
+
+body[data-theme='dark'] .fleetops-connectivity-kpi-accent-amber .fleetops-connectivity-kpi-icon {
+    color: rgb(252 211 77);
+}
+
+body[data-theme='dark'] .fleetops-connectivity-kpi-accent-rose .fleetops-connectivity-kpi-icon {
+    color: rgb(251 113 133);
+}
+
+.fleetops-provider-connections-actions .fleetops-provider-connections-search {
+    min-width: 16rem;
+    height: 2.25rem;
+    min-height: 2.25rem;
+}
+
+.fleetops-provider-connections-header {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0.75rem;
+}
+
+@media (width >= 1024px) {
+    .fleetops-provider-connections-header {
+        grid-template-columns: minmax(0, 26rem) minmax(22rem, max-content);
+        align-items: start;
+        justify-content: space-between;
+    }
+}
+
+.fleetops-provider-connections-actions .fleetops-provider-connections-action-button,
+.fleetops-provider-connections-actions .fleetops-telematics-action-button,
+.fleetops-provider-connections-actions button {
+    flex-shrink: 0;
+    height: 2.25rem;
+    min-height: 2.25rem;
+    white-space: nowrap;
+}
+
+.fleetops-provider-connections-actions button span {
+    white-space: nowrap;
+}
+
+.status-badge.long-offline-status-badge > span,
+.status-badge.long_offline-status-badge > span {
+    @apply bg-yellow-800 border-yellow-700 text-yellow-100;
+}
+
+.status-badge.long-offline-status-badge > span svg,
+.status-badge.long_offline-status-badge > span svg {
+    @apply text-yellow-300;
+}
+
+.fleetops-provider-connections-panel .table-wrapper table tbody tr td,
+.fleetops-provider-connections-panel .next-table-wrapper table tbody tr td {
+    vertical-align: top;
+}
+
+.fleetops-provider-connections-panel .table-wrapper table tbody tr td.fleetops-provider-connections-cell-middle,
+.fleetops-provider-connections-panel .next-table-wrapper table tbody tr td.fleetops-provider-connections-cell-middle {
+    vertical-align: middle;
+}
+
+body[data-theme='dark'] .fleetops-provider-connections-panel .table-wrapper.table-fluid,
+body[data-theme='dark'] .fleetops-provider-connections-panel .table-wrapper.table-fluid table,
+body[data-theme='dark'] .fleetops-provider-connections-panel .table-wrapper.table-fluid table tbody,
+body[data-theme='dark'] .fleetops-provider-connections-panel .table-wrapper.table-fluid table tbody tr,
+body[data-theme='dark'] .fleetops-provider-connections-panel .table-wrapper.table-fluid table tbody tr td,
+body[data-theme='dark'] .fleetops-provider-connections-panel .next-table-wrapper,
+body[data-theme='dark'] .fleetops-provider-connections-panel .next-table-wrapper table,
+body[data-theme='dark'] .fleetops-provider-connections-panel .next-table-wrapper table tbody,
+body[data-theme='dark'] .fleetops-provider-connections-panel .next-table-wrapper table tbody tr,
+body[data-theme='dark'] .fleetops-provider-connections-panel .next-table-wrapper table tbody tr td {
+    background-color: rgb(17 24 39);
+}
+
+body[data-theme='dark'] .fleetops-provider-connections-panel .table-wrapper.table-fluid table tbody tr:nth-child(even):not(.is-selected) td,
+body[data-theme='dark'] .fleetops-provider-connections-panel .next-table-wrapper table tbody tr:nth-child(even):not(.is-selected) td {
+    background-color: rgb(17 24 39);
+}
+
+.fleetops-provider-connections-panel div.has-floating-pagination,
+.fleetops-provider-connections-panel .next-table-wrapper.has-floating-pagination {
+    padding-bottom: 0;
 }
 
 /** calendar event css mods */
@@ -5442,7 +5590,7 @@ body[data-theme='dark'] .next-google-container-map .fleetops-google-draw-actions
     margin-top: 0.375rem;
 }
 
-.issue-detail-order-card {
+.order-card {
     display: block;
     width: 100%;
     padding: 0.75rem;
@@ -5458,24 +5606,122 @@ body[data-theme='dark'] .next-google-container-map .fleetops-google-draw-actions
         border-color 0.15s ease;
 }
 
-.issue-detail-order-card:hover {
+.order-card.is-interactive {
+    cursor: pointer;
+}
+
+.order-card.is-interactive:hover {
     background: #eff6ff;
     border-color: #93c5fd;
 }
 
-.issue-detail-order-topline,
-.issue-detail-order-meta {
+.order-card-compact,
+.order-card-list {
+    padding: 0.625rem;
+    margin-top: 0;
+}
+
+.order-card-selection {
+    padding: 0;
+    margin-top: 0;
+    background: transparent;
+    border: 0;
+    border-radius: 0.375rem;
+    box-shadow: none;
+}
+
+.order-card-selection .order-card-topline {
+    padding: 0.5rem 0.75rem 0;
+}
+
+.order-card-selection .order-card-route {
+    gap: 0.375rem;
+    padding: 0.375rem 0.75rem 0;
+}
+
+.order-card-selection .order-card-stop {
+    grid-template-columns: 1.25rem minmax(0, 1fr);
+    gap: 0.5rem;
+}
+
+.order-card-selection .order-card-stop-marker {
+    width: 1.25rem;
+    height: 1.25rem;
+    font-size: 0.625rem;
+}
+
+.order-card-selection .order-card-meta {
+    padding: 0 0.75rem 0.5rem;
+    margin-top: 0.5rem;
+}
+
+.order-card-selection .order-card-empty-route {
+    margin: 0.375rem 0.75rem 0.5rem;
+}
+
+.ember-power-select-option[aria-selected='true'] .order-card-selection,
+.ember-power-select-option[aria-current='true'] .order-card-selection,
+.ember-power-select-option.ember-power-select-option--highlighted .order-card-selection {
+    background: transparent;
+    border-color: transparent;
+    box-shadow: none;
+}
+
+.ember-power-select-option[aria-selected='true'] .order-card-selection .order-card-title,
+.ember-power-select-option[aria-current='true'] .order-card-selection .order-card-title,
+.ember-power-select-option.ember-power-select-option--highlighted .order-card-selection .order-card-title,
+.ember-power-select-option[aria-selected='true'] .order-card-selection .order-card-stop-address,
+.ember-power-select-option[aria-current='true'] .order-card-selection .order-card-stop-address,
+.ember-power-select-option.ember-power-select-option--highlighted .order-card-selection .order-card-stop-address {
+    color: #fff;
+}
+
+.ember-power-select-option[aria-selected='true'] .order-card-selection .order-card-subtitle,
+.ember-power-select-option[aria-current='true'] .order-card-selection .order-card-subtitle,
+.ember-power-select-option.ember-power-select-option--highlighted .order-card-selection .order-card-subtitle,
+.ember-power-select-option[aria-selected='true'] .order-card-selection .order-card-route,
+.ember-power-select-option[aria-current='true'] .order-card-selection .order-card-route,
+.ember-power-select-option.ember-power-select-option--highlighted .order-card-selection .order-card-route,
+.ember-power-select-option[aria-selected='true'] .order-card-selection .order-card-meta,
+.ember-power-select-option[aria-current='true'] .order-card-selection .order-card-meta,
+.ember-power-select-option.ember-power-select-option--highlighted .order-card-selection .order-card-meta,
+.ember-power-select-option[aria-selected='true'] .order-card-selection .order-card-stop-label,
+.ember-power-select-option[aria-current='true'] .order-card-selection .order-card-stop-label,
+.ember-power-select-option.ember-power-select-option--highlighted .order-card-selection .order-card-stop-label {
+    color: rgb(255 255 255 / 78%);
+}
+
+.order-card.is-selected {
+    border-color: #3485e2;
+    box-shadow: 0 0 0 2px rgb(52 133 226 / 16%);
+}
+
+.order-card.is-disabled {
+    opacity: 0.55;
+    pointer-events: none;
+}
+
+.order-card.is-selectable {
+    cursor: pointer;
+}
+
+.order-card-topline,
+.order-card-meta {
     display: flex;
     align-items: center;
     justify-content: space-between;
     gap: 0.5rem;
 }
 
-.issue-detail-order-title-block {
+.order-card-checkbox {
+    flex: 0 0 auto;
+}
+
+.order-card-title-block {
     min-width: 0;
 }
 
-.issue-detail-order-title {
+.order-card-title {
     overflow: hidden;
     color: #111827;
     font-weight: 600;
@@ -5484,15 +5730,19 @@ body[data-theme='dark'] .next-google-container-map .fleetops-google-draw-actions
     white-space: nowrap;
 }
 
-.issue-detail-order-subtitle,
-.issue-detail-order-meta,
+.order-card-subtitle,
+.order-card-meta,
 .issue-detail-timeline-value,
 .issue-detail-coordinate {
     color: #6b7280;
     font-size: 0.75rem;
 }
 
-.issue-detail-order-progress {
+.order-card-header-actions {
+    flex: 0 0 auto;
+}
+
+.order-card-progress {
     position: relative;
     height: 0.25rem;
     margin: 0.625rem 0 0.75rem;
@@ -5501,46 +5751,46 @@ body[data-theme='dark'] .next-google-container-map .fleetops-google-draw-actions
     border-radius: 9999px;
 }
 
-.issue-detail-order-progress span {
+.order-card-progress span {
     position: absolute;
     inset: 0 auto 0 0;
     background: #3485e2;
     border-radius: inherit;
 }
 
-.issue-detail-order-progress.is-pending span {
+.order-card-progress.is-pending span {
     width: 22%;
     background: #94a3b8;
 }
 
-.issue-detail-order-progress.is-active span {
+.order-card-progress.is-active span {
     width: 58%;
 }
 
-.issue-detail-order-progress.is-complete span {
+.order-card-progress.is-complete span {
     width: 100%;
     background: #10b981;
 }
 
-.issue-detail-order-route {
+.order-card-route {
     display: grid;
     gap: 0.5rem;
     color: #64748b;
     font-size: 0.75rem;
 }
 
-.issue-detail-order-stop {
+.order-card-stop {
     display: grid;
     grid-template-columns: 1.5rem minmax(0, 1fr);
     gap: 0.5rem;
     align-items: start;
 }
 
-.issue-detail-order-stop.compact {
+.order-card-stop.compact {
     opacity: 0.88;
 }
 
-.issue-detail-order-stop-marker {
+.order-card-stop-marker {
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -5553,27 +5803,27 @@ body[data-theme='dark'] .next-google-container-map .fleetops-google-draw-actions
     border-radius: 9999px;
 }
 
-.issue-detail-order-stop-marker.pickup {
+.order-card-stop-marker.pickup {
     background: #3485e2;
 }
 
-.issue-detail-order-stop-marker.dropoff {
+.order-card-stop-marker.dropoff {
     background: #10b981;
 }
 
-.issue-detail-order-stop-marker.middle {
+.order-card-stop-marker.middle {
     color: #2563eb;
     background: #dbeafe;
 }
 
-.issue-detail-order-stop-label {
+.order-card-stop-label {
     color: #94a3b8;
     font-weight: 700;
     font-size: 0.625rem;
     text-transform: uppercase;
 }
 
-.issue-detail-order-stop-address {
+.order-card-stop-address {
     overflow: hidden;
     color: #334155;
     font-weight: 700;
@@ -5583,17 +5833,31 @@ body[data-theme='dark'] .next-google-container-map .fleetops-google-draw-actions
     white-space: nowrap;
 }
 
-.issue-detail-order-meta {
+.order-card-meta {
     flex-flow: row wrap;
     justify-content: flex-start;
     margin-top: 0.75rem;
     font-size: 0.6875rem;
 }
 
-.issue-detail-order-meta span {
+.order-card-meta span {
     display: inline-flex;
     align-items: center;
     gap: 0.25rem;
+}
+
+.order-card-empty-route {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    padding: 0.75rem;
+    margin-top: 0.75rem;
+    color: #6b7280;
+    font-size: 0.75rem;
+    background: #fff;
+    border: 1px dashed #d1d5db;
+    border-radius: 0.375rem;
 }
 
 .issue-detail-empty {
@@ -5820,7 +6084,7 @@ body[data-theme='dark'] .issue-panel-header-icon {
 
 body[data-theme='dark'] .issue-detail-report,
 body[data-theme='dark'] .issue-detail-resolution-state,
-body[data-theme='dark'] .issue-detail-order-card,
+body[data-theme='dark'] .order-card,
 body[data-theme='dark'] .issue-detail-empty,
 body[data-theme='dark'] .issue-detail-timeline-marker {
     background: #374151;
@@ -5832,8 +6096,8 @@ body[data-theme='dark'] .issue-detail-message-author,
 body[data-theme='dark'] .issue-detail-resolution-title,
 body[data-theme='dark'] .issue-detail-meta-list dd,
 body[data-theme='dark'] .issue-detail-summary-item dd,
-body[data-theme='dark'] .issue-detail-order-title,
-body[data-theme='dark'] .issue-detail-order-stop-address,
+body[data-theme='dark'] .order-card-title,
+body[data-theme='dark'] .order-card-stop-address,
 body[data-theme='dark'] .issue-detail-report {
     color: #f9fafb;
 }
@@ -5847,9 +6111,9 @@ body[data-theme='dark'] .issue-detail-meta-list dt,
 body[data-theme='dark'] .issue-detail-summary-item dt,
 body[data-theme='dark'] .issue-detail-resource-label,
 body[data-theme='dark'] .issue-detail-timeline-label,
-body[data-theme='dark'] .issue-detail-order-subtitle,
-body[data-theme='dark'] .issue-detail-order-route,
-body[data-theme='dark'] .issue-detail-order-meta,
+body[data-theme='dark'] .order-card-subtitle,
+body[data-theme='dark'] .order-card-route,
+body[data-theme='dark'] .order-card-meta,
 body[data-theme='dark'] .issue-detail-timeline-value,
 body[data-theme='dark'] .issue-detail-coordinate,
 body[data-theme='dark'] .issue-detail-empty {
@@ -5895,7 +6159,7 @@ body[data-theme='dark'] .issue-detail-meta-list > div {
     border-top-color: #374151;
 }
 
-body[data-theme='dark'] .issue-detail-order-card:hover {
+body[data-theme='dark'] .order-card.is-interactive:hover {
     background: #374151;
     border-color: #2563eb;
 }
@@ -5905,13 +6169,25 @@ body[data-theme='dark'] .issue-detail-avatar {
     background: #1e3a8a;
 }
 
-body[data-theme='dark'] .issue-detail-order-progress {
+body[data-theme='dark'] .order-card-progress {
     background: #4b5563;
 }
 
-body[data-theme='dark'] .issue-detail-order-stop-marker.middle {
+body[data-theme='dark'] .order-card-stop-marker.middle {
     color: #93c5fd;
     background: rgb(37 99 235 / 24%);
+}
+
+body[data-theme='dark'] .order-card-empty-route {
+    color: #9ca3af;
+    background: #1f2937;
+    border-color: #4b5563;
+}
+
+body[data-theme='dark'] .order-card-selection {
+    background: transparent;
+    border-color: transparent;
+    box-shadow: none;
 }
 
 body[data-theme='dark'] .issue-detail-dropzone {
