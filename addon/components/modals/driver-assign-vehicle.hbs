@@ -13,7 +13,15 @@
                     @onChangeId={{fn (mut @options.driver.vehicle_uuid)}}
                     as |model|
                 >
-                    {{model.display_name}}
+                    <Vehicle::Pill
+                        @vehicle={{model}}
+                        @anchorClass="w-full"
+                        @imageWrapperClass="w-8 h-8"
+                        @imageClass="w-8 h-8"
+                        @contentWrapperClass="min-w-0"
+                        @titleClass="truncate"
+                        @subtitleClass="truncate"
+                    />
                 </ModelSelect>
             </InputGroup>
         </div>

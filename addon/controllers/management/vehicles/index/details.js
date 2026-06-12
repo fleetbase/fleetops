@@ -61,11 +61,21 @@ export default class ManagementVehiclesIndexDetailsController extends Controller
                         permission: 'fleet-ops view vehicle',
                     },
                     {
-                        text: 'Attach Device',
+                        text: this.intl.t('vehicle.actions.attach-device'),
                         icon: 'link',
                         fn: () => this.vehicleActions.attachDevice(this.model),
                         permission: 'fleet-ops update vehicle',
                     },
+                    ...(Number(this.model.assigned_orders_count) > 0
+                        ? [
+                              {
+                                  text: this.intl.t('vehicle.actions.unassign-orders'),
+                                  icon: 'truck-ramp-box',
+                                  fn: () => this.vehicleActions.unassignOrders(this.model),
+                                  permission: 'fleet-ops update vehicle',
+                              },
+                          ]
+                        : []),
                     {
                         separator: true,
                     },
@@ -88,7 +98,7 @@ export default class ManagementVehiclesIndexDetailsController extends Controller
                         permission: 'fleet-ops create maintenance',
                     },
                     {
-                        text: 'Create Issue',
+                        text: this.intl.t('vehicle.actions.create-issue'),
                         icon: 'triangle-exclamation',
                         fn: () => this.createIssue(this.model),
                         permission: 'fleet-ops create issue',
@@ -117,7 +127,7 @@ export default class ManagementVehiclesIndexDetailsController extends Controller
         this.issueActions.modal.create({
             vehicle,
             vehicle_uuid: vehicle.id,
-            title: `Issue reported for ${vehicle.displayName ?? vehicle.name}`,
+            title: this.intl.t('vehicle.prompts.issue-title', { vehicleName: vehicle.displayName ?? vehicle.name }),
         });
     }
 }

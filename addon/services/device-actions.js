@@ -84,8 +84,8 @@ export default class DeviceActionsService extends ResourceActionService {
 
     @action attachToVehicle(device, options = {}) {
         this.modalsManager.show('modals/attach-telematic-device', {
-            title: 'Attach device to vehicle',
-            acceptButtonText: 'Attach Device',
+            title: this.intl.t('device.prompts.attach-to-vehicle-title'),
+            acceptButtonText: this.intl.t('device.actions.attach-to-vehicle'),
             acceptButtonIcon: 'link',
             device,
             selectedVehicle: null,
@@ -93,7 +93,7 @@ export default class DeviceActionsService extends ResourceActionService {
                 const selectedVehicle = modal.getOption('selectedVehicle');
 
                 if (!selectedVehicle) {
-                    return this.notifications.warning('Select a vehicle to attach this device to.');
+                    return this.notifications.warning(this.intl.t('device.prompts.select-vehicle-warning'));
                 }
 
                 modal.startLoading();
@@ -101,7 +101,7 @@ export default class DeviceActionsService extends ResourceActionService {
                 try {
                     await this.fetch.post(`devices/${device.id}/attach`, { vehicle: selectedVehicle.id });
                     await device.reload?.();
-                    this.notifications.success('Device attached to vehicle.');
+                    this.notifications.success(this.intl.t('device.prompts.attach-to-vehicle-success'));
                     modal.done();
                     this.refresh();
                 } catch (error) {
@@ -114,16 +114,23 @@ export default class DeviceActionsService extends ResourceActionService {
     }
 
     @action detachFromVehicle(device, options = {}) {
+        const deviceName = device.displayName ?? device.name ?? this.intl.t('resource.device');
+        const vehicleName = device.attached_to_name ?? device.attachable?.display_name ?? device.attachable?.name;
+
+        if (!device.attachable_uuid && !vehicleName) {
+            return this.notifications.warning(this.intl.t('device.prompts.not-attached-warning', { deviceName }));
+        }
+
         this.modalsManager.confirm({
-            title: 'Detach device from vehicle?',
-            body: `This will stop vehicle telemetry updates from ${device.displayName ?? device.name ?? 'this device'} until it is attached again.`,
+            title: this.intl.t('device.prompts.detach-from-vehicle-title', { deviceName }),
+            body: this.intl.t('device.prompts.detach-from-vehicle-body', { deviceName, vehicleName: vehicleName ?? this.intl.t('resource.vehicle') }),
             confirm: async (modal) => {
                 modal.startLoading();
 
                 try {
                     await this.fetch.post(`devices/${device.id}/detach`);
                     await device.reload?.();
-                    this.notifications.success('Device detached from vehicle.');
+                    this.notifications.success(this.intl.t('device.prompts.detach-from-vehicle-success'));
                     modal.done();
                     this.refresh();
                 } catch (error) {

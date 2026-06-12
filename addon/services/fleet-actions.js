@@ -87,8 +87,8 @@ export default class FleetActionsService extends ResourceActionService {
 
     @action assignDriver(fleet, options = {}) {
         this.modalsManager.show('modals/fleet-assign-driver', {
-            title: 'Assign driver to fleet',
-            acceptButtonText: 'Assign Driver',
+            title: this.intl.t('fleet.prompts.assign-driver-title', { fleetName: fleet.name }),
+            acceptButtonText: this.intl.t('fleet.actions.assign-driver'),
             acceptButtonIcon: 'user-plus',
             selectedDriver: null,
             fleet,
@@ -96,7 +96,7 @@ export default class FleetActionsService extends ResourceActionService {
                 const selectedDriver = modal.getOption('selectedDriver');
 
                 if (!selectedDriver) {
-                    return this.notifications.warning('Select a driver to assign.');
+                    return this.notifications.warning(this.intl.t('fleet.prompts.select-driver-warning'));
                 }
 
                 modal.startLoading();
@@ -104,7 +104,7 @@ export default class FleetActionsService extends ResourceActionService {
                 try {
                     await this.fetch.post('fleets/assign-driver', { driver: selectedDriver.id, fleet: fleet.id });
                     await fleet.reload?.();
-                    this.notifications.success('Driver assigned to fleet.');
+                    this.notifications.success(this.intl.t('fleet.prompts.assign-driver-success', { fleetName: fleet.name }));
                     modal.done();
                     this.refresh();
                 } catch (error) {
@@ -118,8 +118,8 @@ export default class FleetActionsService extends ResourceActionService {
 
     @action assignVehicle(fleet, options = {}) {
         this.modalsManager.show('modals/fleet-assign-vehicle', {
-            title: 'Assign vehicle to fleet',
-            acceptButtonText: 'Assign Vehicle',
+            title: this.intl.t('fleet.prompts.assign-vehicle-title', { fleetName: fleet.name }),
+            acceptButtonText: this.intl.t('fleet.actions.assign-vehicle'),
             acceptButtonIcon: 'car',
             selectedVehicle: null,
             fleet,
@@ -127,7 +127,7 @@ export default class FleetActionsService extends ResourceActionService {
                 const selectedVehicle = modal.getOption('selectedVehicle');
 
                 if (!selectedVehicle) {
-                    return this.notifications.warning('Select a vehicle to assign.');
+                    return this.notifications.warning(this.intl.t('fleet.prompts.select-vehicle-warning'));
                 }
 
                 modal.startLoading();
@@ -135,7 +135,7 @@ export default class FleetActionsService extends ResourceActionService {
                 try {
                     await this.fetch.post('fleets/assign-vehicle', { vehicle: selectedVehicle.id, fleet: fleet.id });
                     await fleet.reload?.();
-                    this.notifications.success('Vehicle assigned to fleet.');
+                    this.notifications.success(this.intl.t('fleet.prompts.assign-vehicle-success', { fleetName: fleet.name }));
                     modal.done();
                     this.refresh();
                 } catch (error) {

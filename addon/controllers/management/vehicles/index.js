@@ -295,9 +295,15 @@ export default class ManagementVehiclesIndexController extends Controller {
                         permission: 'fleet-ops view vehicle',
                     },
                     {
-                        label: 'Attach Device',
+                        label: this.intl.t('vehicle.actions.attach-device'),
                         fn: this.vehicleActions.attachDevice,
                         permission: 'fleet-ops update vehicle',
+                    },
+                    {
+                        label: this.intl.t('vehicle.actions.unassign-orders'),
+                        fn: this.vehicleActions.unassignOrders,
+                        permission: 'fleet-ops update vehicle',
+                        isVisible: (vehicle) => Number(vehicle.assigned_orders_count) > 0,
                     },
                     {
                         separator: true,
@@ -318,7 +324,7 @@ export default class ManagementVehiclesIndexController extends Controller {
                         permission: 'fleet-ops create maintenance',
                     },
                     {
-                        label: 'Create Issue',
+                        label: this.intl.t('vehicle.actions.create-issue'),
                         fn: this.createIssue,
                         permission: 'fleet-ops create issue',
                     },
@@ -343,7 +349,7 @@ export default class ManagementVehiclesIndexController extends Controller {
         this.issueActions.modal.create({
             vehicle,
             vehicle_uuid: vehicle.id,
-            title: `Issue reported for ${vehicle.displayName ?? vehicle.name}`,
+            title: this.intl.t('vehicle.prompts.issue-title', { vehicleName: vehicle.displayName ?? vehicle.name }),
         });
     }
 }

@@ -4,9 +4,11 @@ namespace Fleetbase\FleetOps\Http\Controllers\Internal\v1;
 
 use Fleetbase\FleetOps\Exports\VehicleExport;
 use Fleetbase\FleetOps\Http\Controllers\FleetOpsController;
+use Fleetbase\FleetOps\Http\Resources\v1\Index\Order as IndexOrderResource;
 use Fleetbase\FleetOps\Imports\VehicleImport;
 use Fleetbase\FleetOps\Models\Device;
 use Fleetbase\FleetOps\Models\Driver;
+use Fleetbase\FleetOps\Models\Order;
 use Fleetbase\FleetOps\Models\Vehicle;
 use Fleetbase\Http\Requests\ExportRequest;
 use Fleetbase\Http\Requests\ImportRequest;
@@ -118,6 +120,61 @@ class VehicleController extends FleetOpsController
         ]);
     }
 
+    public function assignedOrders(string $id): JsonResponse
+    {
+        $vehicle = $this->findVehicle($id);
+        $orders  = Order::where('vehicle_assigned_uuid', $vehicle->uuid)
+            ->where('company_uuid', session('company'))
+            ->with(['payload', 'trackingNumber', 'orderConfig', 'driverAssigned', 'vehicleAssigned'])
+            ->orderByRaw('uuid = ? desc', [$this->activeOrderUuid($vehicle)])
+            ->latest()
+            ->get();
+
+        return response()->json([
+            'status'  => 'ok',
+            'vehicle' => $vehicle->fresh(['driver', 'devices']),
+            'orders'  => IndexOrderResource::collection($orders)->resolve(),
+            'current' => $this->activeOrderUuid($vehicle),
+            'count'   => $orders->count(),
+        ]);
+    }
+
+    public function unassignOrders(Request $request, string $id): JsonResponse
+    {
+        $request->validate([
+            'orders'   => 'required|array|min:1',
+            'orders.*' => 'required|string',
+        ]);
+
+        $vehicle = $this->findVehicle($id);
+        $ids     = collect($request->input('orders'))->filter()->unique()->values();
+        $orders  = Order::where('vehicle_assigned_uuid', $vehicle->uuid)
+            ->where('company_uuid', session('company'))
+            ->where(function ($query) use ($ids) {
+                $query->whereIn('uuid', $ids)->orWhereIn('public_id', $ids);
+            })
+            ->get();
+
+        if ($orders->isEmpty()) {
+            return response()->error('No assigned orders were selected for this vehicle.');
+        }
+
+        DB::transaction(function () use ($orders): void {
+            Order::whereIn('uuid', $orders->pluck('uuid'))->update([
+                'vehicle_assigned_uuid' => null,
+                'updated_at'            => now(),
+            ]);
+        });
+
+        return response()->json([
+            'status'  => 'ok',
+            'message' => 'Vehicle unassigned from selected orders.',
+            'vehicle' => $vehicle->fresh(['driver', 'devices']),
+            'orders'  => IndexOrderResource::collection($orders->fresh(['driverAssigned', 'vehicleAssigned']))->resolve(),
+            'count'   => $orders->count(),
+        ]);
+    }
+
     public function attachDevice(Request $request, string $id): JsonResponse
     {
         $request->validate(['device' => 'required|string']);
@@ -176,6 +233,13 @@ class VehicleController extends FleetOpsController
         })
             ->where('company_uuid', session('company'))
             ->firstOrFail();
+    }
+
+    protected function activeOrderUuid(Vehicle $vehicle): ?string
+    {
+        $vehicle->loadMissing('driver.currentOrder');
+
+        return data_get($vehicle, 'driver.currentOrder.uuid') ?? data_get($vehicle->lastKnownPosition(), 'order_uuid');
     }
 
     protected function findDevice(string $id): Device

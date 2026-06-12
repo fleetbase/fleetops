@@ -321,8 +321,8 @@ export default class ConnectivityTelematicsDetailsDevicesController extends Cont
 
     @action openAttachDeviceModal(device) {
         this.modalsManager.show('modals/attach-telematic-device', {
-            title: `Attach ${device.displayName ?? device.name ?? device.device_id ?? 'device'} to vehicle`,
-            acceptButtonText: 'Attach Device',
+            title: this.intl.t('device.prompts.attach-device-to-vehicle-title', { deviceName: device.displayName ?? device.name ?? device.device_id ?? this.intl.t('resource.device') }),
+            acceptButtonText: this.intl.t('device.actions.attach-to-vehicle'),
             device,
             selectedVehicle: null,
             confirm: async (modal) => {
@@ -340,7 +340,7 @@ export default class ConnectivityTelematicsDetailsDevicesController extends Cont
 
                 try {
                     await device.save();
-                    this.notifications.success('Device attached to vehicle.');
+                    this.notifications.success(this.intl.t('device.prompts.attach-to-vehicle-success'));
                     await this.hostRouter.refresh();
                     modal.done();
                 } catch (error) {

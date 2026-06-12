@@ -157,14 +157,15 @@ export default class ConnectivityDevicesIndexController extends Controller {
                     separator: true,
                 },
                 {
-                    label: 'Attach to Vehicle',
+                    label: this.intl.t('device.actions.attach-to-vehicle'),
                     fn: this.deviceActions.attachToVehicle,
                     permission: 'fleet-ops update device',
                 },
                 {
-                    label: 'Detach from Vehicle',
+                    label: this.intl.t('device.actions.detach-from-vehicle'),
                     fn: this.deviceActions.detachFromVehicle,
                     permission: 'fleet-ops update device',
+                    isVisible: (device) => Boolean(device.attachable_uuid || device.attached_to_name || device.attachable),
                 },
                 {
                     separator: true,

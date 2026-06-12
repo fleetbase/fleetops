@@ -139,67 +139,13 @@
             </section>
 
             <section class="issue-detail-side-card">
-                <div class="issue-detail-section-title">Linked Order</div>
+                <div class="issue-detail-section-title">{{t "order.card.linked-order"}}</div>
                 {{#if this.order}}
-                    <button type="button" class="issue-detail-order-card" {{on "click" this.viewOrder}}>
-                        <div class="issue-detail-order-topline">
-                            <div class="issue-detail-order-title-block">
-                                <div class="issue-detail-order-title">{{this.orderLabel}}</div>
-                                <div class="issue-detail-order-subtitle">{{n-a (smart-humanize this.order.type)}}</div>
-                            </div>
-                            <Badge @status={{this.order.status}} />
-                        </div>
-                        <div class="issue-detail-order-progress {{this.orderProgressClass}}">
-                            <span></span>
-                        </div>
-                        {{#if this.hasOrderStops}}
-                            <div class="issue-detail-order-route">
-                                <div class="issue-detail-order-stop">
-                                    <div class="issue-detail-order-stop-marker pickup">1</div>
-                                    <div class="min-w-0">
-                                        <div class="issue-detail-order-stop-label">Pickup</div>
-                                        <div class="issue-detail-order-stop-address">{{n-a this.orderOriginAddress "No pickup address"}}</div>
-                                    </div>
-                                </div>
-                                {{#if this.isMultiStopOrder}}
-                                    <div class="issue-detail-order-stop compact">
-                                        <div class="issue-detail-order-stop-marker middle">+</div>
-                                        <div class="min-w-0">
-                                            <div class="issue-detail-order-stop-label">Waypoints</div>
-                                            <div class="issue-detail-order-stop-address">{{this.middleStopCount}} additional {{if (eq this.middleStopCount 1) "stop" "stops"}}</div>
-                                        </div>
-                                    </div>
-                                {{/if}}
-                                <div class="issue-detail-order-stop">
-                                    <div class="issue-detail-order-stop-marker dropoff">{{this.orderStopCount}}</div>
-                                    <div class="min-w-0">
-                                        <div class="issue-detail-order-stop-label">{{if (eq this.orderDestination.type "return") "Return" "Dropoff"}}</div>
-                                        <div class="issue-detail-order-stop-address">{{n-a this.orderDestinationAddress "No dropoff address"}}</div>
-                                    </div>
-                                </div>
-                            </div>
-                        {{else}}
-                            <div class="issue-detail-empty issue-detail-empty-compact">
-                                <FaIcon @icon="route" />
-                                <span>No route details available.</span>
-                            </div>
-                        {{/if}}
-                        <div class="issue-detail-order-meta">
-                            {{#if this.orderScheduledAt}}
-                                <span><FaIcon @icon="calendar" /> {{format-date-fns this.orderScheduledAt "MMM d, HH:mm"}}</span>
-                            {{/if}}
-                            {{#if this.orderDriverLabel}}
-                                <span><FaIcon @icon="id-card" /> {{this.orderDriverLabel}}</span>
-                            {{/if}}
-                            {{#if this.orderVehicleLabel}}
-                                <span><FaIcon @icon="truck" /> {{this.orderVehicleLabel}}</span>
-                            {{/if}}
-                        </div>
-                    </button>
+                    <Order::Card @order={{this.order}} @variant="default" @interactive={{true}} @onClick={{this.viewOrder}} />
                 {{else}}
                     <div class="issue-detail-empty">
                         <FaIcon @icon="route" />
-                        <span>No order is linked to this issue.</span>
+                        <span>{{t "order.card.no-order-linked"}}</span>
                     </div>
                 {{/if}}
             </section>

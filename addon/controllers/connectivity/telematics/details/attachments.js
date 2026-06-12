@@ -190,8 +190,8 @@ export default class ConnectivityTelematicsDetailsAttachmentsController extends 
 
     @action openAttachDeviceModal(device) {
         this.modalsManager.show('modals/attach-telematic-device', {
-            title: `Attach ${device.displayName ?? device.name ?? device.device_id ?? 'device'} to vehicle`,
-            acceptButtonText: 'Attach Device',
+            title: this.intl.t('device.prompts.attach-device-to-vehicle-title', { deviceName: device.displayName ?? device.name ?? device.device_id ?? this.intl.t('resource.device') }),
+            acceptButtonText: this.intl.t('device.actions.attach-to-vehicle'),
             device,
             selectedVehicle: null,
             confirm: async (modal) => {
@@ -209,7 +209,7 @@ export default class ConnectivityTelematicsDetailsAttachmentsController extends 
 
                 try {
                     await device.save();
-                    this.notifications.success('Device attached to vehicle.');
+                    this.notifications.success(this.intl.t('device.prompts.attach-to-vehicle-success'));
                     await this.hostRouter.refresh();
                     modal.done();
                 } catch (error) {
@@ -222,16 +222,18 @@ export default class ConnectivityTelematicsDetailsAttachmentsController extends 
     }
 
     @action detachDevice(device) {
+        const deviceName = device.displayName ?? device.name ?? device.device_id ?? this.intl.t('resource.device');
+
         this.modalsManager.confirm({
-            title: 'Detach device from vehicle?',
-            body: `${device.displayName ?? device.name ?? device.device_id ?? 'This device'} will remain synced from the provider but will no longer be mapped to a vehicle.`,
+            title: this.intl.t('device.prompts.detach-telematic-device-title', { deviceName }),
+            body: this.intl.t('device.prompts.detach-telematic-device-body', { deviceName }),
             confirm: async (modal) => {
                 modal.startLoading();
                 device.setProperties({ attachable_uuid: null, attachable_type: null });
 
                 try {
                     await device.save();
-                    this.notifications.success('Device detached from vehicle.');
+                    this.notifications.success(this.intl.t('device.prompts.detach-from-vehicle-success'));
                     await this.hostRouter.refresh();
                     modal.done();
                 } catch (error) {

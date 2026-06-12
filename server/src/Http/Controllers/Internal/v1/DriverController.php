@@ -8,6 +8,7 @@ use Fleetbase\FleetOps\Http\Controllers\Api\v1\DriverController as ApiDriverCont
 use Fleetbase\FleetOps\Http\Controllers\FleetOpsController;
 use Fleetbase\FleetOps\Http\Requests\Internal\CreateDriverRequest;
 use Fleetbase\FleetOps\Http\Requests\Internal\UpdateDriverRequest;
+use Fleetbase\FleetOps\Http\Resources\v1\Index\Order as IndexOrderResource;
 use Fleetbase\FleetOps\Imports\DriverImport;
 use Fleetbase\FleetOps\Models\Driver;
 use Fleetbase\FleetOps\Models\Order;
@@ -425,6 +426,65 @@ class DriverController extends FleetOpsController
             'message' => 'Driver assigned',
             'driver'  => $driver->fresh(['vehicle', 'currentOrder']),
             'order'   => $order->fresh(['driverAssigned']),
+        ]);
+    }
+
+    public function assignedOrders(string $id): JsonResponse
+    {
+        $driver = $this->findDriver($id);
+        $orders = Order::where('driver_assigned_uuid', $driver->uuid)
+            ->where('company_uuid', session('company'))
+            ->with(['payload', 'trackingNumber', 'orderConfig', 'driverAssigned', 'vehicleAssigned'])
+            ->orderByRaw('uuid = ? desc', [$driver->current_job_uuid])
+            ->latest()
+            ->get();
+
+        return response()->json([
+            'status'  => 'ok',
+            'driver'  => $driver->fresh(['vehicle', 'currentOrder']),
+            'orders'  => IndexOrderResource::collection($orders)->resolve(),
+            'current' => $driver->current_job_uuid,
+            'count'   => $orders->count(),
+        ]);
+    }
+
+    public function unassignOrders(Request $request, string $id): JsonResponse
+    {
+        $request->validate([
+            'orders'   => 'required|array|min:1',
+            'orders.*' => 'required|string',
+        ]);
+
+        $driver = $this->findDriver($id);
+        $ids    = collect($request->input('orders'))->filter()->unique()->values();
+        $orders = Order::where('driver_assigned_uuid', $driver->uuid)
+            ->where('company_uuid', session('company'))
+            ->where(function ($query) use ($ids) {
+                $query->whereIn('uuid', $ids)->orWhereIn('public_id', $ids);
+            })
+            ->get();
+
+        if ($orders->isEmpty()) {
+            return response()->error('No assigned orders were selected for this driver.');
+        }
+
+        DB::transaction(function () use ($driver, $orders): void {
+            Order::whereIn('uuid', $orders->pluck('uuid'))->update([
+                'driver_assigned_uuid' => null,
+                'updated_at'           => now(),
+            ]);
+
+            if ($driver->current_job_uuid && $orders->contains('uuid', $driver->current_job_uuid)) {
+                $driver->update(['current_job_uuid' => null]);
+            }
+        });
+
+        return response()->json([
+            'status'  => 'ok',
+            'message' => 'Driver unassigned from selected orders.',
+            'driver'  => $driver->fresh(['vehicle', 'currentOrder']),
+            'orders'  => IndexOrderResource::collection($orders->fresh(['driverAssigned', 'vehicleAssigned']))->resolve(),
+            'count'   => $orders->count(),
         ]);
     }
 

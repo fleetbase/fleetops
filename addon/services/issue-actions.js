@@ -66,7 +66,7 @@ export default class IssueActionsService extends ResourceActionService {
             return this.modalsManager.show('modals/resource', {
                 resource: issue,
                 title: this.intl.t('common.create-a-new-resource', { resource: this.intl.t('resource.issue')?.toLowerCase() }),
-                acceptButtonText: this.intl.t('common.create-resource', { resource: this.intl.t('resource.Issue') }),
+                acceptButtonText: this.intl.t('common.create-resource', { resource: this.intl.t('resource.issue') }),
                 component: 'issue/form',
                 confirm: (modal) => this.modalTask.perform(modal, 'saveTask', issue, { refresh: true, ...saveOptions }),
                 ...options,

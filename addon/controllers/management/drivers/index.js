@@ -48,6 +48,10 @@ export default class ManagementDriversIndexController extends Controller {
     @tracked layout = 'table';
     @tracked table;
 
+    hasAssignedVehicle(driver) {
+        return Boolean(driver?.vehicle_uuid || driver?.vehicle?.id || driver?.vehicle?.uuid || driver?.vehicle_name);
+    }
+
     /** action buttons */
     get actionButtons() {
         return [
@@ -262,11 +266,13 @@ export default class ManagementDriversIndexController extends Controller {
                 actions: [
                     {
                         label: this.intl.t('common.view-resource', { resource: this.intl.t('resource.driver') }),
+                        icon: 'eye',
                         fn: this.driverActions.transition.view,
                         permission: 'fleet-ops view driver',
                     },
                     {
                         label: this.intl.t('common.edit-resource', { resource: this.intl.t('resource.driver') }),
+                        icon: 'pencil',
                         fn: this.driverActions.transition.edit,
                         permission: 'fleet-ops update driver',
                     },
@@ -275,31 +281,39 @@ export default class ManagementDriversIndexController extends Controller {
                     },
                     {
                         label: this.intl.t('driver.actions.assign-order'),
+                        icon: 'clipboard-list',
                         fn: this.driverActions.assignOrder,
                         permission: 'fleet-ops assign-order-for driver',
                     },
                     {
                         label: this.intl.t('driver.actions.assign-vehicle'),
+                        icon: 'car',
                         fn: this.driverActions.assignVehicle,
                         permission: 'fleet-ops assign-vehicle-for driver',
                     },
                     {
-                        label: 'Unassign Order',
-                        fn: this.driverActions.unassignOrder,
+                        label: this.intl.t('driver.actions.unassign-orders'),
+                        icon: 'user-minus',
+                        fn: this.driverActions.unassignOrders,
                         permission: 'fleet-ops assign-order-for driver',
+                        isVisible: (driver) => Number(driver.assigned_orders_count) > 0,
                     },
                     {
-                        label: 'Unassign Vehicle',
+                        label: this.intl.t('driver.actions.unassign-vehicle'),
+                        icon: 'link-slash',
                         fn: this.driverActions.unassignVehicle,
                         permission: 'fleet-ops assign-vehicle-for driver',
+                        isVisible: (driver) => this.hasAssignedVehicle(driver),
                     },
                     {
                         label: this.intl.t('driver.actions.locate-driver'),
+                        icon: 'location-dot',
                         fn: this.driverActions.locate,
                         permission: 'fleet-ops view driver',
                     },
                     {
-                        label: 'Create Issue',
+                        label: this.intl.t('driver.actions.create-issue'),
+                        icon: 'triangle-exclamation',
                         fn: this.createIssue,
                         permission: 'fleet-ops create issue',
                     },
@@ -308,6 +322,7 @@ export default class ManagementDriversIndexController extends Controller {
                     },
                     {
                         label: this.intl.t('common.delete-resource', { resource: this.intl.t('resource.driver') }),
+                        icon: 'trash',
                         fn: this.driverActions.delete,
                         permission: 'fleet-ops delete driver',
                     },

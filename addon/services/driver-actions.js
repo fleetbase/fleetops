@@ -177,8 +177,8 @@ export default class DriverActionsService extends ResourceActionService {
 
     @action assignOrder(driver, options = {}) {
         this.modalsManager.show('modals/driver-assign-order', {
-            title: this.intl.t('fleet-ops.management.drivers.index.order-driver'),
-            acceptButtonText: this.intl.t('fleet-ops.management.drivers.index.assign-order'),
+            title: this.intl.t('driver.prompts.assign-order-title', { driverName: driver.name }),
+            acceptButtonText: this.intl.t('driver.actions.assign-order'),
             acceptButtonIcon: 'check',
             acceptButtonIconPrefix: 'fas',
             acceptButtonDisabled: true,
@@ -192,7 +192,7 @@ export default class DriverActionsService extends ResourceActionService {
             confirm: async (modal) => {
                 const selectedOrder = modal.getOption('selectedOrder');
                 if (!selectedOrder) {
-                    return this.notifications.warning(this.intl.t('fleet-ops.management.drivers.index.no-order-warning'));
+                    return this.notifications.warning(this.intl.t('driver.prompts.select-order-warning'));
                 }
 
                 modal.startLoading();
@@ -200,7 +200,7 @@ export default class DriverActionsService extends ResourceActionService {
                 try {
                     await this.fetch.post(`drivers/${driver.id}/assign-order`, { order: selectedOrder.id });
                     await driver.reload?.();
-                    this.notifications.success('Order assigned to driver.');
+                    this.notifications.success(this.intl.t('driver.prompts.assign-order-success', { driverName: driver.name }));
                     modal.done();
                     this.refresh();
                 } catch (err) {
@@ -215,8 +215,8 @@ export default class DriverActionsService extends ResourceActionService {
 
     @action assignVehicle(driver, options = {}) {
         this.modalsManager.show('modals/driver-assign-vehicle', {
-            title: this.intl.t('fleet-ops.management.drivers.index.title-vehicle'),
-            acceptButtonText: this.intl.t('fleet-ops.management.drivers.index.confirm-button'),
+            title: this.intl.t('driver.prompts.assign-vehicle-title', { driverName: driver.name }),
+            acceptButtonText: this.intl.t('driver.actions.assign-vehicle'),
             acceptButtonIcon: 'check',
             hideDeclineButton: true,
             driver,
@@ -227,12 +227,12 @@ export default class DriverActionsService extends ResourceActionService {
                     const vehicleId = driver.vehicle_uuid ?? driver.vehicle?.id;
                     if (!vehicleId) {
                         modal.stopLoading();
-                        return this.notifications.warning('Select a vehicle to assign.');
+                        return this.notifications.warning(this.intl.t('driver.prompts.select-vehicle-warning'));
                     }
 
                     await this.fetch.post(`drivers/${driver.id}/assign-vehicle`, { vehicle: vehicleId });
                     await driver.reload?.();
-                    this.notifications.success(this.intl.t('fleet-ops.management.drivers.index.assign-vehicle', { driverName: driver.name }));
+                    this.notifications.success(this.intl.t('driver.prompts.assign-vehicle-success', { driverName: driver.name }));
                     modal.done();
                     this.refresh();
                 } catch (err) {
@@ -246,16 +246,68 @@ export default class DriverActionsService extends ResourceActionService {
     }
 
     @action unassignOrder(driver, options = {}) {
-        this.modalsManager.confirm({
-            title: 'Unassign order from driver?',
-            body: `This removes the current order assignment from ${driver.name}.`,
+        return this.unassignOrders(driver, options);
+    }
+
+    @action async unassignOrders(driver, options = {}) {
+        let response;
+
+        try {
+            response = await this.fetch.get(`drivers/${driver.id}/assigned-orders`);
+        } catch (error) {
+            return this.notifications.serverError(error);
+        }
+
+        const currentOrderId = response.current;
+        const orders = (response.orders ?? response.data ?? []).map((order) => ({
+            ...order,
+            is_current_job: [order.id, order.uuid, order.public_id].includes(currentOrderId),
+        }));
+
+        if (orders.length === 0) {
+            return this.notifications.warning(this.intl.t('driver.prompts.no-assigned-orders-warning', { driverName: driver.name }));
+        }
+
+        this.modalsManager.show('modals/assigned-orders', {
+            title: this.intl.t('driver.prompts.unassign-orders-title', { driverName: driver.name }),
+            acceptButtonText: this.intl.t('driver.actions.unassign-orders'),
+            acceptButtonIcon: 'user-minus',
+            acceptButtonDisabled: true,
+            subjectLabel: this.intl.t('resource.driver'),
+            subjectName: driver.name,
+            orders,
+            selectedOrderIds: [],
+            toggleOrder: (order) => {
+                const orderId = order.id;
+                const selected = this.modalsManager.getOption('selectedOrderIds') ?? [];
+                const selectedOrderIds = selected.includes(orderId) ? selected.filter((id) => id !== orderId) : [...selected, orderId];
+                this.modalsManager.setOption('selectedOrderIds', selectedOrderIds);
+                this.modalsManager.setOption('acceptButtonDisabled', selectedOrderIds.length === 0);
+            },
             confirm: async (modal) => {
+                const selectedOrderIds = modal.getOption('selectedOrderIds') ?? [];
+                const selectedOrders = orders.filter((order) => selectedOrderIds.includes(order.id));
+
+                if (selectedOrders.length === 0) {
+                    return this.notifications.warning(this.intl.t('driver.prompts.select-orders-warning'));
+                }
+
+                const orderList = this.orderReferenceList(selectedOrders);
+                const confirmed = await this.confirmUnassignOrders({
+                    title: this.intl.t('driver.prompts.confirm-unassign-orders-title', { count: selectedOrders.length, driverName: driver.name }),
+                    body: this.intl.t('driver.prompts.confirm-unassign-orders-body', { driverName: driver.name, orders: orderList }),
+                });
+
+                if (!confirmed) {
+                    return;
+                }
+
                 modal.startLoading();
 
                 try {
-                    await this.fetch.post(`drivers/${driver.id}/unassign-order`);
+                    await this.fetch.post(`drivers/${driver.id}/unassign-orders`, { orders: selectedOrderIds });
                     await driver.reload?.();
-                    this.notifications.success('Order unassigned from driver.');
+                    this.notifications.success(this.intl.t('driver.prompts.unassign-orders-success', { count: selectedOrders.length, driverName: driver.name }));
                     modal.done();
                     this.refresh();
                 } catch (error) {
@@ -268,16 +320,22 @@ export default class DriverActionsService extends ResourceActionService {
     }
 
     @action unassignVehicle(driver, options = {}) {
+        const vehicleName = driver.vehicle?.get?.('display_name') ?? driver.vehicle?.get?.('name') ?? driver.get?.('vehicle_name') ?? driver.vehicle_name;
+
+        if (!driver.vehicle_uuid && !driver.vehicle?.id && !vehicleName) {
+            return this.notifications.warning(this.intl.t('driver.prompts.no-vehicle-assigned-warning', { driverName: driver.name }));
+        }
+
         this.modalsManager.confirm({
-            title: 'Unassign vehicle from driver?',
-            body: `This removes the current vehicle assignment from ${driver.name}.`,
+            title: this.intl.t('driver.prompts.unassign-vehicle-title', { driverName: driver.name, vehicleName }),
+            body: this.intl.t('driver.prompts.unassign-vehicle-body', { driverName: driver.name, vehicleName }),
             confirm: async (modal) => {
                 modal.startLoading();
 
                 try {
                     await this.fetch.post(`drivers/${driver.id}/unassign-vehicle`);
                     await driver.reload?.();
-                    this.notifications.success('Vehicle unassigned from driver.');
+                    this.notifications.success(this.intl.t('driver.prompts.unassign-vehicle-success', { driverName: driver.name, vehicleName }));
                     modal.done();
                     this.refresh();
                 } catch (error) {
@@ -286,6 +344,29 @@ export default class DriverActionsService extends ResourceActionService {
                 }
             },
             ...options,
+        });
+    }
+
+    orderReferenceList(orders) {
+        const references = orders.map((order) => order.tracking ?? order.public_id ?? order.id).filter(Boolean);
+
+        return references.length > 5 ? `${references.slice(0, 5).join(', ')} +${references.length - 5}` : references.join(', ');
+    }
+
+    async confirmUnassignOrders({ title, body }) {
+        return new Promise((resolve) => {
+            this.modalsManager.confirm({
+                title,
+                body,
+                confirm: (_modal, done) => {
+                    done();
+                    resolve(true);
+                },
+                decline: (_modal, done) => {
+                    done();
+                    resolve(false);
+                },
+            });
         });
     }
 }
