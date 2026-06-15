@@ -260,6 +260,29 @@ test('telematics overview attention items render as full width stacked alerts', 
         ->not->toContain('lg:grid-cols-2');
 });
 
+test('device attachment morph types are normalized and legacy aliases are tolerated', function () {
+    $migration       = file_get_contents(__DIR__ . '/../migrations/2026_06_15_000001_normalize_device_attachable_vehicle_morph_types.php');
+    $command         = file_get_contents(__DIR__ . '/../src/Console/Commands/FixInvalidPolymorphicRelationTypeNamespaces.php');
+    $serviceProvider = file_get_contents(__DIR__ . '/../src/Providers/FleetOpsServiceProvider.php');
+
+    expect($migration)
+        ->toContain("whereNotNull('attachable_uuid')")
+        ->toContain("'Fleetbase\\\\Models\\\\Vehicle'")
+        ->toContain("'\\\\Fleetbase\\\\Models\\\\Vehicle'")
+        ->toContain("'attachable_type' => Vehicle::class")
+        ->toContain('Intentionally do not restore invalid legacy morph class names.');
+
+    expect($command)
+        ->toContain('\\Fleetbase\\FleetOps\\Models\\Device::class')
+        ->toContain("'columns' => ['attachable_type']");
+
+    expect($serviceProvider)
+        ->toContain('use Illuminate\Database\Eloquent\Relations\Relation;')
+        ->toContain('$this->registerMorphMap();')
+        ->toContain("'Fleetbase\\\\Models\\\\Vehicle'   => \\Fleetbase\\FleetOps\\Models\\Vehicle::class")
+        ->toContain("'\\\\Fleetbase\\\\Models\\\\Vehicle' => \\Fleetbase\\FleetOps\\Models\\Vehicle::class");
+});
+
 function telematics_activity_log_method(string $model): string
 {
     preg_match('/public function getActivitylogOptions\(\): LogOptions\s+\{(?P<body>.*?)\n    \}/s', $model, $matches);

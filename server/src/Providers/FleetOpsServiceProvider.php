@@ -7,6 +7,7 @@ use Brick\Geo\Engine\GEOSEngine;
 use Fleetbase\Providers\CoreServiceProvider;
 use Fleetbase\Support\NotificationRegistry;
 use Fleetbase\Support\Utils;
+use Illuminate\Database\Eloquent\Relations\Relation;
 
 if (!Utils::classExists(CoreServiceProvider::class)) {
     throw new \Exception('FleetOps cannot be loaded without `fleetbase/core-api` installed!');
@@ -129,6 +130,7 @@ class FleetOpsServiceProvider extends CoreServiceProvider
      */
     public function boot()
     {
+        $this->registerMorphMap();
         $this->registerObservers();
         $this->registerCommands();
         $this->scheduleCommands(function ($schedule) {
@@ -192,6 +194,14 @@ class FleetOpsServiceProvider extends CoreServiceProvider
         if (extension_loaded('geos')) {
             GeometryEngineRegistry::set(new GEOSEngine());
         }
+    }
+
+    public function registerMorphMap(): void
+    {
+        Relation::morphMap([
+            'Fleetbase\\Models\\Vehicle'   => \Fleetbase\FleetOps\Models\Vehicle::class,
+            '\\Fleetbase\\Models\\Vehicle' => \Fleetbase\FleetOps\Models\Vehicle::class,
+        ]);
     }
 
     public function registerNotifications()
