@@ -37,6 +37,7 @@ const MODEL_TO_TYPE = {
 const ASSIGNEE_MODEL_TO_TYPE = {
     'facilitator-vendor': 'fleet-ops:vendor',
     'facilitator-contact': 'fleet-ops:contact',
+    'facilitator-driver': 'fleet-ops:driver',
     'facilitator-integrated-vendor': 'fleet-ops:vendor',
     vendor: 'fleet-ops:vendor',
     contact: 'fleet-ops:contact',
