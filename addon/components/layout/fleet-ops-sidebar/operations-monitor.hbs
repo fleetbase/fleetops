@@ -1,0 +1,201 @@
+<div class="fleet-ops-operations-monitor" {{did-insert this.registerMonitor}}>
+    <div class="fleet-ops-operations-monitor-divider"></div>
+
+    <div class="mb-2 flex items-center justify-between px-1">
+        <div class="min-w-0">
+            <div class="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Live Operations</div>
+            <div class="mt-1 flex flex-col gap-0.5 text-xs text-gray-500 dark:text-gray-400">
+                <span class="flex items-center gap-1"><span class="h-1.5 w-1.5 rounded-full bg-green-500"></span>{{this.driverOnlineSummary}}</span>
+                <span class="flex items-center gap-1"><span class="h-1.5 w-1.5 rounded-full bg-blue-500"></span>{{this.vehicleOnlineSummary}}</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="mb-2 grid grid-cols-3 gap-1 rounded-md bg-gray-100 p-1 dark:bg-gray-800">
+        {{#each this.tabs as |tab|}}
+            <button
+                type="button"
+                class="rounded px-1.5 py-1 text-xs font-medium {{if (eq this.activeTab tab.id) 'bg-white text-gray-900 shadow-sm dark:bg-gray-700 dark:text-white' 'text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white'}}"
+                data-test-operations-monitor-tab={{tab.id}}
+                {{on "click" (fn this.setActiveTab tab.id)}}
+            >
+                <span>{{tab.label}}</span>
+            </button>
+        {{/each}}
+    </div>
+
+    <div class="mb-2 flex items-center gap-1.5 rounded-md bg-gray-50 px-2 py-1 text-gray-400 dark:bg-gray-800">
+        <FaIcon @icon="magnifying-glass" @size="xs" />
+        <input
+            type="search"
+            value={{this.query}}
+            placeholder="Filter resources..."
+            class="min-w-0 flex-1 appearance-none border-0 bg-transparent p-0 text-xs leading-5 text-gray-700 outline-none shadow-none ring-0 focus:border-transparent focus:outline-none focus:ring-0 dark:text-gray-100"
+            data-test-operations-monitor-filter
+            {{on "input" this.updateQuery}}
+        />
+    </div>
+
+    <div class="fleet-ops-operations-monitor-list space-y-1" data-test-operations-monitor-list {{did-insert this.registerList}}>
+        {{#if (eq this.activeTab "drivers")}}
+            {{#each this.drivers as |driver|}}
+                <div class="fleet-ops-operations-monitor-row group flex items-start gap-2 rounded-md px-2 py-1.5 text-sm text-gray-700 hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-gray-800" data-test-operations-monitor-row>
+                    <button type="button" class="flex min-w-0 flex-1 items-center gap-2 text-left" {{on "click" (fn this.locateDriver driver)}}>
+                        <span class="h-2 w-2 shrink-0 rounded-full {{if driver.online 'bg-green-500' 'bg-yellow-300'}}"></span>
+                        <span class="min-w-0 flex-1">
+                            <span class="block truncate leading-5">{{or driver.displayName driver.display_name driver.name driver.public_id}}</span>
+                            <span class="block truncate text-xs leading-4 text-gray-400">{{if driver.online "Online" "Offline"}} - {{or driver.vehicle_name driver.public_id driver.status}}</span>
+                        </span>
+                    </button>
+                    <div class="fleet-ops-operations-monitor-row-actions">
+                        <DropdownButton
+                            @icon="ellipsis-h"
+                            @iconPrefix="fas"
+                            @size="xs"
+                            @buttonClass="fleetops-btn-xxs"
+                            @contentClass="dropdown-menu fleet-ops-operations-monitor-dropdown"
+                            @horizontalPosition="right"
+                            @calculatePosition={{this.calculateDropdownPosition}}
+                            as |dd|
+                        >
+                            <div class="next-dd-menu mx-0 mt-1" role="menu">
+                                <a href="javascript:;" class="next-dd-item" {{on "click" (dropdown-fn dd this.viewDriver driver)}}>View details</a>
+                                <a href="javascript:;" class="next-dd-item" {{on "click" (dropdown-fn dd this.editDriver driver)}}>Edit details</a>
+                                <div class="next-dd-menu-seperator"></div>
+                                <a href="javascript:;" class="next-dd-item" {{on "click" (dropdown-fn dd this.assignOrderToDriver driver)}}>Assign order</a>
+                                <a href="javascript:;" class="next-dd-item" {{on "click" (dropdown-fn dd this.assignVehicleToDriver driver)}}>Assign vehicle</a>
+                                <a href="javascript:;" class="next-dd-item" {{on "click" (dropdown-fn dd this.locateDriver driver)}}>Locate on map</a>
+                                <div class="next-dd-menu-seperator"></div>
+                                <a href="javascript:;" class="next-dd-item text-danger" {{on "click" (dropdown-fn dd this.deleteDriver driver)}}>Delete driver</a>
+                            </div>
+                        </DropdownButton>
+                    </div>
+                </div>
+            {{else}}
+                {{#let this.emptyState as |emptyState|}}
+                    <div class="fleet-ops-operations-monitor-empty" data-test-operations-monitor-empty-state>
+                        <span class="fleet-ops-operations-monitor-empty-icon"><FaIcon @icon={{emptyState.icon}} @size="xs" /></span>
+                        <span class="fleet-ops-operations-monitor-empty-title">{{emptyState.title}}</span>
+                        <span class="fleet-ops-operations-monitor-empty-description">{{emptyState.description}}</span>
+                        <button type="button" class="fleet-ops-operations-monitor-empty-action" {{on "click" this.performEmptyStateAction}}>{{emptyState.action}}</button>
+                    </div>
+                {{/let}}
+            {{/each}}
+        {{else if (eq this.activeTab "vehicles")}}
+            {{#each this.vehicles as |vehicle|}}
+                <div class="fleet-ops-operations-monitor-row group flex items-start gap-2 rounded-md px-2 py-1.5 text-sm text-gray-700 hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-gray-800" data-test-operations-monitor-row>
+                    <button type="button" class="flex min-w-0 flex-1 items-center gap-2 text-left" {{on "click" (fn this.locateVehicle vehicle)}}>
+                        <span class="h-2 w-2 shrink-0 rounded-full {{if vehicle.online 'bg-green-500' 'bg-yellow-300'}}"></span>
+                        <span class="min-w-0 flex-1">
+                            <span class="block truncate leading-5">{{or vehicle.displayName vehicle.display_name vehicle.name vehicle.public_id}}</span>
+                            <span class="block truncate text-xs leading-4 text-gray-400">{{if vehicle.online "Online" "Offline"}} - {{or vehicle.driver_name vehicle.public_id vehicle.status}}</span>
+                        </span>
+                    </button>
+                    <div class="fleet-ops-operations-monitor-row-actions">
+                        <DropdownButton
+                            @icon="ellipsis-h"
+                            @iconPrefix="fas"
+                            @size="xs"
+                            @buttonClass="fleetops-btn-xxs"
+                            @contentClass="dropdown-menu fleet-ops-operations-monitor-dropdown"
+                            @horizontalPosition="right"
+                            @calculatePosition={{this.calculateDropdownPosition}}
+                            as |dd|
+                        >
+                            <div class="next-dd-menu mx-0 mt-1" role="menu">
+                                <a href="javascript:;" class="next-dd-item" {{on "click" (dropdown-fn dd this.viewVehicle vehicle)}}>View details</a>
+                                <a href="javascript:;" class="next-dd-item" {{on "click" (dropdown-fn dd this.editVehicle vehicle)}}>Edit details</a>
+                                <a href="javascript:;" class="next-dd-item" {{on "click" (dropdown-fn dd this.locateVehicle vehicle)}}>Locate on map</a>
+                                <div class="next-dd-menu-seperator"></div>
+                                <a href="javascript:;" class="next-dd-item text-danger" {{on "click" (dropdown-fn dd this.deleteVehicle vehicle)}}>Delete vehicle</a>
+                            </div>
+                        </DropdownButton>
+                    </div>
+                </div>
+            {{else}}
+                {{#let this.emptyState as |emptyState|}}
+                    <div class="fleet-ops-operations-monitor-empty" data-test-operations-monitor-empty-state>
+                        <span class="fleet-ops-operations-monitor-empty-icon"><FaIcon @icon={{emptyState.icon}} @size="xs" /></span>
+                        <span class="fleet-ops-operations-monitor-empty-title">{{emptyState.title}}</span>
+                        <span class="fleet-ops-operations-monitor-empty-description">{{emptyState.description}}</span>
+                        <button type="button" class="fleet-ops-operations-monitor-empty-action" {{on "click" this.performEmptyStateAction}}>{{emptyState.action}}</button>
+                    </div>
+                {{/let}}
+            {{/each}}
+        {{else}}
+            {{#each this.fleetRows as |row|}}
+                {{#if (eq row.type "fleet")}}
+                    <div class="fleet-ops-operations-monitor-row fleet-ops-operations-monitor-row-depth-{{row.depth}} group flex items-start gap-2 rounded-md px-2 py-1.5 text-sm text-gray-700 hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-gray-800" data-test-operations-monitor-row>
+                        <button type="button" class="flex min-w-0 flex-1 items-start gap-2 text-left" {{on "click" (fn this.toggleFleet row.fleet)}}>
+                            <span class="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded bg-gray-100 text-gray-400 dark:bg-gray-800">
+                                {{#if (this.fleetHasChildren row.fleet)}}
+                                    <FaIcon @icon={{if (this.isFleetExpanded row.fleet) "chevron-down" "chevron-right"}} @size="xs" />
+                                {{else}}
+                                    <FaIcon @icon="user-group" @size="xs" />
+                                {{/if}}
+                            </span>
+                            <span class="min-w-0 flex-1">
+                                <span class="block truncate leading-5">{{or row.fleet.displayName row.fleet.display_name row.fleet.name row.fleet.public_id}}</span>
+                                <span class="block truncate text-xs leading-4 text-gray-400">{{this.fleetSubtitle row.fleet}}</span>
+                            </span>
+                        </button>
+                        <div class="fleet-ops-operations-monitor-row-actions">
+                            <DropdownButton
+                                @icon="ellipsis-h"
+                                @iconPrefix="fas"
+                                @size="xs"
+                                @buttonClass="fleetops-btn-xxs"
+                                @contentClass="dropdown-menu fleet-ops-operations-monitor-dropdown"
+                                @horizontalPosition="right"
+                                @calculatePosition={{this.calculateDropdownPosition}}
+                                as |dd|
+                            >
+                                <div class="next-dd-menu mx-0 mt-1" role="menu">
+                                    <a href="javascript:;" class="next-dd-item" {{on "click" (dropdown-fn dd this.viewFleet row.fleet)}}>View details</a>
+                                    <div class="next-dd-menu-seperator"></div>
+                                    <a href="javascript:;" class="next-dd-item" {{on "click" (dropdown-fn dd this.assignDriverToFleet row.fleet)}}>Assign driver</a>
+                                    <a href="javascript:;" class="next-dd-item" {{on "click" (dropdown-fn dd this.assignVehicleToFleet row.fleet)}}>Assign vehicle</a>
+                                </div>
+                            </DropdownButton>
+                        </div>
+                    </div>
+                {{else if (eq row.type "driver")}}
+                    <button
+                        type="button"
+                        class="fleet-ops-operations-monitor-child-row fleet-ops-operations-monitor-row-depth-{{row.depth}} flex w-full min-w-0 items-start gap-2 rounded-md px-2 py-1 text-left text-xs text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800"
+                        data-test-operations-monitor-row
+                        {{on "click" (fn this.locateDriver row.driver)}}
+                    >
+                        <span class="mt-1 h-1.5 w-1.5 shrink-0 rounded-full {{if row.driver.online 'bg-green-500' 'bg-yellow-300'}}"></span>
+                        <span class="min-w-0 flex-1">
+                            <span class="block truncate leading-4">{{or row.driver.displayName row.driver.display_name row.driver.name row.driver.public_id}}</span>
+                            <span class="block truncate text-xs leading-4 text-gray-400">Driver - {{if row.driver.online "Online" "Offline"}}</span>
+                        </span>
+                    </button>
+                {{else}}
+                    <button
+                        type="button"
+                        class="fleet-ops-operations-monitor-child-row fleet-ops-operations-monitor-row-depth-{{row.depth}} flex w-full min-w-0 items-start gap-2 rounded-md px-2 py-1 text-left text-xs text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800"
+                        data-test-operations-monitor-row
+                        {{on "click" (fn this.locateVehicle row.vehicle)}}
+                    >
+                        <span class="mt-1 h-1.5 w-1.5 shrink-0 rounded-full {{if row.vehicle.online 'bg-green-500' 'bg-yellow-300'}}"></span>
+                        <span class="min-w-0 flex-1">
+                            <span class="block truncate leading-4">{{or row.vehicle.displayName row.vehicle.display_name row.vehicle.name row.vehicle.public_id}}</span>
+                            <span class="block truncate text-xs leading-4 text-gray-400">Vehicle - {{if row.vehicle.online "Online" "Offline"}}</span>
+                        </span>
+                    </button>
+                {{/if}}
+            {{else}}
+                {{#let this.emptyState as |emptyState|}}
+                    <div class="fleet-ops-operations-monitor-empty" data-test-operations-monitor-empty-state>
+                        <span class="fleet-ops-operations-monitor-empty-icon"><FaIcon @icon={{emptyState.icon}} @size="xs" /></span>
+                        <span class="fleet-ops-operations-monitor-empty-title">{{emptyState.title}}</span>
+                        <span class="fleet-ops-operations-monitor-empty-description">{{emptyState.description}}</span>
+                        <button type="button" class="fleet-ops-operations-monitor-empty-action" {{on "click" this.performEmptyStateAction}}>{{emptyState.action}}</button>
+                    </div>
+                {{/let}}
+            {{/each}}
+        {{/if}}
+    </div>
+</div>

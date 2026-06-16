@@ -7,6 +7,7 @@ use Fleetbase\FleetOps\Models\Device;
 use Fleetbase\FleetOps\Models\Vehicle;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 
 class DeviceController extends FleetOpsController
 {
@@ -64,11 +65,30 @@ class DeviceController extends FleetOpsController
             'vehicle' => 'required_without:attachable_uuid|nullable|string',
         ]);
 
-        $device  = $this->findDevice($id);
-        $vehicle = $this->findVehicle($request->input('vehicle') ?? $request->input('attachable_uuid'));
+        $vehicleId = $request->input('vehicle') ?? $request->input('attachable_uuid');
+        $device    = $this->resolveDevice($id);
+        $vehicle   = $this->resolveVehicle($vehicleId);
 
-        $device->attachTo($vehicle);
-        $device->load(['telematic', 'warranty', 'attachable']);
+        if (!$device) {
+            $this->logDeviceAttachmentLookupFailure('attach', 'device', $id, $vehicleId);
+
+            return response()->error('Device not found or not available for this organization.', 404);
+        }
+
+        if (!$vehicle) {
+            $this->logDeviceAttachmentLookupFailure('attach', 'vehicle', $id, $vehicleId);
+
+            return response()->error('Vehicle not found or not available for this organization.', 404);
+        }
+
+        try {
+            $device->attachTo($vehicle);
+            $device->load(['telematic', 'warranty', 'attachable']);
+        } catch (\Throwable $e) {
+            $this->logDeviceAttachmentFailure('attach', $device, $vehicle, $e);
+
+            return response()->error('Unable to attach device to vehicle. Please try again or contact support.', 500);
+        }
 
         return response()->json([
             'status' => 'ok',
@@ -81,9 +101,22 @@ class DeviceController extends FleetOpsController
      */
     public function detach(string $id): JsonResponse
     {
-        $device = $this->findDevice($id);
-        $device->detach();
-        $device->load(['telematic', 'warranty', 'attachable']);
+        $device = $this->resolveDevice($id);
+
+        if (!$device) {
+            $this->logDeviceAttachmentLookupFailure('detach', 'device', $id, null);
+
+            return response()->error('Device not found or not available for this organization.', 404);
+        }
+
+        try {
+            $device->detach();
+            $device->load(['telematic', 'warranty', 'attachable']);
+        } catch (\Throwable $e) {
+            $this->logDeviceAttachmentFailure('detach', $device, null, $e);
+
+            return response()->error('Unable to detach device from vehicle. Please try again or contact support.', 500);
+        }
 
         return response()->json([
             'status' => 'ok',
@@ -91,21 +124,52 @@ class DeviceController extends FleetOpsController
         ]);
     }
 
-    protected function findDevice(string $id): Device
+    protected function resolveDevice(string $id): ?Device
     {
         return Device::where(function ($query) use ($id) {
             $query->where('uuid', $id)->orWhere('public_id', $id);
         })
             ->where('company_uuid', session('company'))
-            ->firstOrFail();
+            ->first();
     }
 
-    protected function findVehicle(?string $id): Vehicle
+    protected function resolveVehicle(?string $id): ?Vehicle
     {
+        if (!$id) {
+            return null;
+        }
+
         return Vehicle::where(function ($query) use ($id) {
             $query->where('uuid', $id)->orWhere('public_id', $id);
         })
             ->where('company_uuid', session('company'))
-            ->firstOrFail();
+            ->first();
+    }
+
+    protected function logDeviceAttachmentLookupFailure(string $action, string $missingResource, string $deviceId, ?string $vehicleId): void
+    {
+        Log::warning('Device attachment lookup failed', [
+            'action'           => $action,
+            'missing_resource' => $missingResource,
+            'device_id'        => $deviceId,
+            'vehicle_id'       => $vehicleId,
+            'company_uuid'     => session('company'),
+            'request_id'       => request()->headers->get('X-Request-ID') ?? request()->headers->get('X-Correlation-ID'),
+        ]);
+    }
+
+    protected function logDeviceAttachmentFailure(string $action, Device $device, ?Vehicle $vehicle, \Throwable $exception): void
+    {
+        Log::error('Device attachment failed', [
+            'action'          => $action,
+            'device_uuid'     => $device->uuid,
+            'device_id'       => $device->public_id,
+            'vehicle_uuid'    => $vehicle?->uuid,
+            'vehicle_id'      => $vehicle?->public_id,
+            'company_uuid'    => session('company'),
+            'request_id'      => request()->headers->get('X-Request-ID') ?? request()->headers->get('X-Correlation-ID'),
+            'exception_class' => get_class($exception),
+            'exception'       => $exception->getMessage(),
+        ]);
     }
 }

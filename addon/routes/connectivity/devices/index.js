@@ -11,6 +11,9 @@ export default class ConnectivityDevicesIndexRoute extends Route {
         query: { refreshModel: true },
         name: { refreshModel: true },
         public_id: { refreshModel: true },
+        status: { refreshModel: true },
+        attachment_state: { refreshModel: true },
+        telematic: { refreshModel: true },
         created_at: { refreshModel: true },
         updated_at: { refreshModel: true },
     };

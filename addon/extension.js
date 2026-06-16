@@ -321,7 +321,28 @@ export default {
             }),
         ];
 
+        const defaultWidgets = widgets
+            .filter((widget) => (typeof widget.isDefault === 'function' ? widget.isDefault() : widget.default === true))
+            .map((widget) => {
+                const definition = typeof widget.toObject === 'function' ? widget.toObject() : widget;
+
+                return {
+                    ...definition,
+                    widgetId: definition.widgetId ?? definition.id,
+                };
+            });
+
         widgetService.registerWidgets('dashboard', widgets);
+
+        if (typeof widgetService.registerDashboard === 'function') {
+            widgetService.registerDashboard('fleet-ops');
+        }
+
+        widgetService.registerWidgets('fleet-ops', widgets);
+
+        if (typeof widgetService.registerDefaultWidgets === 'function') {
+            widgetService.registerDefaultWidgets('fleet-ops', defaultWidgets);
+        }
     },
 
     registerHomeComponents(registryService) {

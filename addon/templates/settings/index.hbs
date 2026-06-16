@@ -1,0 +1,83 @@
+<div class="fleet-ops-control-hub fleet-ops-settings-control-hub" data-test-fleet-ops-settings-hub>
+    <section class="fleet-ops-control-hub-header">
+        <div class="fleet-ops-control-hub-header-copy">
+            <div class="fleet-ops-control-hub-eyebrow">Settings</div>
+            <h1 class="fleet-ops-control-hub-title">Fleet-Ops Settings</h1>
+            <p class="fleet-ops-control-hub-subtitle">Configure the operator, driver, routing, notification, and data rules that shape Fleet-Ops workflows.</p>
+        </div>
+    </section>
+
+    <div class="fleet-ops-control-hub-body">
+        <section class="fleet-ops-control-hub-grid">
+            <div class="fleet-ops-control-hub-main">
+                {{#each this.groups as |group|}}
+                    <div class="fleet-ops-control-hub-panel">
+                        <div class="fleet-ops-control-hub-panel-header">
+                            <div>
+                                <h2>{{group.title}}</h2>
+                                <p>{{group.description}}</p>
+                            </div>
+                        </div>
+
+                        <div class="fleet-ops-control-hub-link-grid fleet-ops-control-hub-link-grid-compact">
+                            {{#each group.links as |link|}}
+                                <LinkTo @route={{link.route}} class="fleet-ops-control-hub-link" data-test-fleet-ops-hub-card={{link.label}}>
+                                    <span class="fleet-ops-control-hub-link-icon"><FaIcon @icon={{link.icon}} /></span>
+                                    <span class="fleet-ops-control-hub-link-copy">
+                                        <span class="fleet-ops-control-hub-link-title">{{link.label}}</span>
+                                        <span class="fleet-ops-control-hub-link-description">{{link.description}}</span>
+                                    </span>
+                                    <FaIcon @icon="arrow-right" class="fleet-ops-control-hub-link-arrow" />
+                                </LinkTo>
+                            {{/each}}
+                        </div>
+                    </div>
+                {{/each}}
+            </div>
+
+            <aside class="fleet-ops-control-hub-side">
+                <div class="fleet-ops-control-hub-panel">
+                    <div class="fleet-ops-control-hub-panel-header">
+                        <div>
+                            <h2>Setup Focus</h2>
+                            <p>Compact next steps for operators.</p>
+                        </div>
+                    </div>
+
+                    <div class="fleet-ops-control-hub-action-list">
+                        {{#each this.actions as |action|}}
+                            <LinkTo @route={{action.route}} class="fleet-ops-control-hub-action fleet-ops-control-hub-tone-{{action.tone}}">
+                                <FaIcon @icon={{action.icon}} />
+                                <span>
+                                    <strong>{{action.label}}</strong>
+                                    <small>{{action.description}}</small>
+                                </span>
+                            </LinkTo>
+                        {{/each}}
+                    </div>
+                </div>
+
+                <div class="fleet-ops-control-hub-doc-note">
+                    <div class="fleet-ops-control-hub-doc-note-heading">
+                        <FaIcon @icon="lightbulb" />
+                        <span>Guides</span>
+                    </div>
+                    <p class="fleet-ops-control-hub-doc-note-copy">Read the guide before changing settings.</p>
+                    <div class="fleet-ops-control-hub-doc-grid">
+                        {{#each this.docs as |doc|}}
+                            <button type="button" class="fleet-ops-control-hub-doc-link" {{on "click" (fn this.openDocs doc)}}>
+                                <FaIcon @icon={{doc.icon}} />
+                                <span class="fleet-ops-control-hub-doc-copy">
+                                    <strong>Read the guide on {{doc.label}}</strong>
+                                    <small>{{doc.description}}</small>
+                                </span>
+                            </button>
+                        {{/each}}
+                    </div>
+                </div>
+            </aside>
+        </section>
+    </div>
+</div>
+
+{{outlet}}

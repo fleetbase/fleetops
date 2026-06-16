@@ -40,7 +40,7 @@ export default class ManagementFuelTransactionsIndexController extends Controlle
 
     get emptyStateMessage() {
         if (this.sync_status === 'unmatched') {
-            return 'FleetOps did not find imported provider bills that still need vehicle or trip matching.';
+            return 'Fleet-Ops did not find imported provider bills that still need vehicle or trip matching.';
         }
 
         if (this.connection) {

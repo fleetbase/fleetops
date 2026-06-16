@@ -69,6 +69,8 @@ export default class OrderFormPayloadComponent extends Component {
     }
 
     @action editEntity(entity) {
-        this.entityActions.modal.edit(entity);
+        this.entityActions.modal.edit(entity, {
+            confirm: (modal) => modal.done(),
+        });
     }
 }

@@ -59,6 +59,12 @@ class VehicleFilter extends Filter
 
     public function driver(?string $driverId)
     {
+        if ($driverId === 'unassigned') {
+            $this->builder->whereDoesntHave('driver');
+
+            return;
+        }
+
         $this->builder->whereHas(
             'driver',
             function ($query) use ($driverId) {

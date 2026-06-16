@@ -37,6 +37,7 @@ class FixInvalidPolymorphicRelationTypeNamespaces extends Command
             ['model' => \Fleetbase\FleetOps\Models\Place::class, 'columns' => ['owner_type']],
             ['model' => \Fleetbase\FleetOps\Models\Entity::class, 'columns' => ['customer_type']],
             ['model' => \Fleetbase\FleetOps\Models\PurchaseRate::class, 'columns' => ['customer_type']],
+            ['model' => \Fleetbase\FleetOps\Models\Device::class, 'columns' => ['attachable_type']],
         ];
 
         foreach ($models as $modelConfig) {

@@ -110,7 +110,7 @@ class TelematicController extends FleetOpsController
         $telematic = $this->findTelematic($id);
 
         $jobId = $this->telematicService->discoverDevices($telematic, [
-            'limit'   => $request->input('limit', 100),
+            'limit'   => $request->input('limit'),
             'filters' => $request->input('filters', []),
         ]);
 

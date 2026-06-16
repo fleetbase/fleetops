@@ -9,12 +9,15 @@ export default class ConnectivityDevicesIndexController extends Controller {
     @service intl;
 
     /** query params */
-    @tracked queryParams = ['name', 'page', 'limit', 'sort', 'query', 'public_id', 'created_at', 'updated_at'];
+    @tracked queryParams = ['name', 'status', 'attachment_state', 'telematic', 'page', 'limit', 'sort', 'query', 'public_id', 'created_at', 'updated_at'];
     @tracked page = 1;
     @tracked limit;
     @tracked sort = '-created_at';
     @tracked public_id;
     @tracked name;
+    @tracked status;
+    @tracked attachment_state;
+    @tracked telematic;
 
     /** action buttons */
     @tracked actionButtons = [

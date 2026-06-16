@@ -1054,7 +1054,7 @@ fleet-ops:
       more-waypoints: thêm điểm dừng
     settings-window:
       success-message: Cài đặt đã được lưu thành công.
-      title: Cài đặt FleetOps
+      title: Cài đặt Fleet-Ops
       save: Lưu Thay đổi
       name: Khoảng cách Ping Adhoc Mặc định
       name-text: Cài đặt này xác định khoảng cách mặc định tính bằng mét mà các đơn hàng adhoc nên ping tài xế trong khu vực của điểm đón đơn hàng.
