@@ -305,6 +305,8 @@ Route::prefix(config('fleetops.api.routing.prefix'))->namespace('Fleetbase\Fleet
                         ],
                     ],
                     function ($router) {
+                        $router->get('search', 'SearchController@search');
+
                         $router->fleetbaseRoutes(
                             'contacts',
                             function ($router, $controller) {
@@ -669,6 +671,13 @@ Route::prefix(config('fleetops.api.routing.prefix'))->namespace('Fleetbase\Fleet
                                         $router->get('maintenance-overview', 'AnalyticsController@maintenanceOverview');
                                         $router->get('geofence-violations', 'AnalyticsController@geofenceViolations');
                                         $router->get('live-fleet', 'AnalyticsController@liveFleet');
+                                    }
+                                );
+                                $router->group(
+                                    ['prefix' => 'hubs'],
+                                    function ($router) {
+                                        $router->get('resources', 'HubController@resources');
+                                        $router->get('maintenance', 'HubController@maintenance');
                                     }
                                 );
                                 $router->group(

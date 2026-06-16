@@ -1,0 +1,14 @@
+<Layout::Section::Body class="overflow-y-scroll h-full" data-test-fleet-ops-analytics-hub>
+    <Dashboard
+        @defaultDashboardId="fleet-ops"
+        @defaultDashboardName="Fleet-Ops Dashboard"
+        @extension="fleet-ops"
+        @leftHeaderWrapperClass="fleet-ops-dashboard-title"
+        @rightHeaderWrapperClass="fleet-ops-dashboard-actions"
+        @createWrapperClass="fleet-ops-dashboard-create-wrapper"
+        @stickyHeader={{true}}
+        class="fleet-ops-dashboard-page"
+    />
+    <Spacer @height="300px" />
+    {{outlet}}
+</Layout::Section::Body>

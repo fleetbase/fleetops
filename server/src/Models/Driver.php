@@ -196,7 +196,7 @@ class Driver extends Model
      *
      * @var array
      */
-    protected $filterParams = ['vendor', 'facilitator', 'customer', 'fleet', 'photo_uuid', 'avatar_uuid', 'avatar_value'];
+    protected $filterParams = ['vendor', 'facilitator', 'customer', 'fleet', 'vehicle', 'photo_uuid', 'avatar_uuid', 'avatar_value'];
 
     /**
      * The session-agnostic columns for the model.

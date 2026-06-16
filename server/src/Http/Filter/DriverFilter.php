@@ -70,6 +70,12 @@ class DriverFilter extends Filter
 
     public function vehicle(string $vehicle)
     {
+        if ($vehicle === 'unassigned') {
+            $this->builder->whereNull('vehicle_uuid');
+
+            return;
+        }
+
         if (Str::isUuid($vehicle)) {
             $this->builder->where('vehicle_uuid', $vehicle);
         } else {

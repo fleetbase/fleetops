@@ -11,6 +11,8 @@ export default class MaintenanceWorkOrdersIndexRoute extends Route {
         query: { refreshModel: true },
         name: { refreshModel: true },
         public_id: { refreshModel: true },
+        status: { refreshModel: true },
+        priority: { refreshModel: true },
         created_at: { refreshModel: true },
         updated_at: { refreshModel: true },
     };

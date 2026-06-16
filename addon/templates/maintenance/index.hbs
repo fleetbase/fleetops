@@ -1,9 +1,9 @@
-<div class="fleet-ops-control-hub" data-test-fleet-ops-resources-hub>
+<div class="fleet-ops-control-hub" data-test-fleet-ops-maintenance-hub>
     <section class="fleet-ops-control-hub-header">
         <div class="fleet-ops-control-hub-header-copy">
-            <div class="fleet-ops-control-hub-eyebrow">Resources</div>
-            <h1 class="fleet-ops-control-hub-title">Resources Hub</h1>
-            <p class="fleet-ops-control-hub-subtitle">Manage the people, vehicles, places, partners, and operating records that keep dispatch grounded.</p>
+            <div class="fleet-ops-control-hub-eyebrow">Maintenance</div>
+            <h1 class="fleet-ops-control-hub-title">Maintenance Hub</h1>
+            <p class="fleet-ops-control-hub-subtitle">Plan recurring service, coordinate work orders, and keep assets ready for daily operations.</p>
         </div>
         <div class="fleet-ops-control-hub-header-actions">
             <Button @icon="refresh" @size="sm" @helpText={{t "common.reload"}} @onClick={{perform this.loadHub}} />
@@ -13,13 +13,13 @@
     <div class="fleet-ops-control-hub-body">
         <section class="fleet-ops-control-hub-kpis">
             {{#each this.kpis as |kpi|}}
-                <LinkTo @route={{kpi.route}} class="fleet-ops-control-hub-kpi fleet-ops-control-hub-tone-{{kpi.tone}}" data-test-fleet-ops-resources-kpi={{kpi.key}}>
+                <LinkTo @route={{kpi.route}} class="fleet-ops-control-hub-kpi fleet-ops-control-hub-tone-{{kpi.tone}}" data-test-fleet-ops-maintenance-kpi={{kpi.key}}>
                     <div class="fleet-ops-control-hub-kpi-copy">
                         <div class="fleet-ops-control-hub-kpi-label">{{kpi.label}}</div>
                         <div class="fleet-ops-control-hub-kpi-value">{{kpi.value}}</div>
                         <div class="fleet-ops-control-hub-kpi-caption">{{kpi.caption}}</div>
                         <div class="fleet-ops-control-hub-kpi-action">
-                            <span>{{kpi.actionLabel}}</span>
+                            <span>Open {{kpi.label}}</span>
                             <FaIcon @icon="arrow-right" />
                         </div>
                     </div>
@@ -31,7 +31,7 @@
         <section class="fleet-ops-control-hub-grid">
             <div class="fleet-ops-control-hub-main">
                 {{#each this.sections as |section|}}
-                    <div class="fleet-ops-control-hub-panel" data-test-fleet-ops-resources-section={{section.key}}>
+                    <div class="fleet-ops-control-hub-panel" data-test-fleet-ops-maintenance-section={{section.key}}>
                         <div class="fleet-ops-control-hub-panel-header">
                             <div>
                                 <h2>{{section.title}}</h2>
@@ -60,7 +60,7 @@
                     <div class="fleet-ops-control-hub-panel-header">
                         <div>
                             <h2>Action Queue</h2>
-                            <p>Prioritized from current resource readiness.</p>
+                            <p>Signals from schedules, work orders, parts, and equipment.</p>
                         </div>
                     </div>
 
@@ -92,7 +92,7 @@
                         <FaIcon @icon="lightbulb" />
                         <span>Guides</span>
                     </div>
-                    <p class="fleet-ops-control-hub-doc-note-copy">Read the guide before changing resource setup.</p>
+                    <p class="fleet-ops-control-hub-doc-note-copy">Read the guide before changing maintenance workflows.</p>
                     <div class="fleet-ops-control-hub-doc-grid">
                         {{#each this.docs as |doc|}}
                             <button type="button" class="fleet-ops-control-hub-doc-link" {{on "click" (fn this.openDocs doc)}}>
