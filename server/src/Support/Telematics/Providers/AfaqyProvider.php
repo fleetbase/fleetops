@@ -4,6 +4,7 @@ namespace Fleetbase\FleetOps\Support\Telematics\Providers;
 
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 
 /**
  * AFAQY telematics provider implementation.
@@ -40,7 +41,7 @@ class AfaqyProvider extends AbstractProvider
                     'projection' => ['_id', 'name', 'imei', 'last_update'],
                     'filters'    => new \stdClass(),
                 ],
-            ]);
+            ], true);
 
             return [
                 'success'  => true,
@@ -61,13 +62,20 @@ class AfaqyProvider extends AbstractProvider
 
     public function fetchDevices(array $options = []): array
     {
-        $limit  = (int) ($options['limit'] ?? 100);
-        $offset = (int) ($options['cursor'] ?? 0);
+        $limit   = max(1, min((int) ($options['limit'] ?? 500), 500));
+        $offset  = (int) ($options['cursor'] ?? 0);
+        $filters = $options['filters'] ?? new \stdClass();
+
+        if (is_array($filters) && empty($filters)) {
+            $filters = new \stdClass();
+        }
 
         $response = $this->afaqyPost('/units/lists', [
             'data' => [
                 'address'    => $options['address'] ?? false,
-                'filters'    => $options['filters'] ?? new \stdClass(),
+                'filters'    => $filters,
+                'limit'      => $limit,
+                'offset'     => $offset,
                 'projection' => $options['projection'] ?? [
                     '_id',
                     'name',
@@ -82,19 +90,42 @@ class AfaqyProvider extends AbstractProvider
                     'sensors_last_val',
                 ],
             ],
-            'limit'  => $limit,
-            'offset' => $offset,
-        ]);
+        ], true);
 
-        $devices    = $response['data'] ?? [];
-        $pagination = $response['pagination'] ?? [];
-        $total      = (int) ($pagination['filtersCount'] ?? $pagination['allCount'] ?? count($devices));
-        $nextCursor = ($offset + $limit) < $total ? $offset + $limit : null;
+        $devices     = $response['data'] ?? [];
+        $pagination  = $response['pagination'] ?? [];
+        $pageOffset  = (int) ($pagination['offset'] ?? $offset);
+        $pageLimit   = (int) ($pagination['limit'] ?? $limit);
+        $resultCount = (int) ($pagination['resultCount'] ?? count($devices));
+        $total       = (int) ($pagination['filtersCount'] ?? $pagination['allCount'] ?? count($devices));
+        $advanceBy   = $resultCount > 0 ? $resultCount : max($pageLimit, count($devices), 1);
+        $nextCursor  = ($pageOffset + $advanceBy) < $total ? $pageOffset + $advanceBy : null;
+
+        Log::info('AFAQY units page fetched', [
+            'telematic_uuid'        => $this->telematic?->uuid,
+            'requested_offset'      => $offset,
+            'requested_limit'       => $limit,
+            'provider_offset'       => $pageOffset,
+            'provider_limit'        => $pageLimit,
+            'provider_result_count' => $resultCount,
+            'result_count'          => count($devices),
+            'all_count'             => $pagination['allCount'] ?? null,
+            'filters_count'         => $pagination['filtersCount'] ?? null,
+            'next_cursor'           => $nextCursor,
+            'has_more'              => $nextCursor !== null,
+        ]);
 
         return [
             'devices'     => $devices,
             'next_cursor' => $nextCursor,
             'has_more'    => $nextCursor !== null,
+            'pagination'  => [
+                'allCount'     => $pagination['allCount'] ?? null,
+                'filtersCount' => $pagination['filtersCount'] ?? null,
+                'resultCount'  => $resultCount,
+                'offset'       => $pageOffset,
+                'limit'        => $pageLimit,
+            ],
         ];
     }
 
@@ -252,11 +283,18 @@ class AfaqyProvider extends AbstractProvider
         return $token;
     }
 
-    protected function afaqyPost(string $endpoint, array $payload = []): array
+    protected function afaqyPost(string $endpoint, array $payload = [], bool $tokenInQuery = false): array
     {
+        $url  = $this->baseUrl . $endpoint;
+        $body = $tokenInQuery ? $payload : array_merge(['token' => $this->credentials['token']], $payload);
+
+        if ($tokenInQuery) {
+            $url .= (str_contains($url, '?') ? '&' : '?') . http_build_query(['token' => $this->credentials['token']]);
+        }
+
         $response = Http::withHeaders($this->headers)
             ->timeout(30)
-            ->post($this->baseUrl . $endpoint, array_merge(['token' => $this->credentials['token']], $payload));
+            ->post($url, $body);
 
         if ($response->failed()) {
             throw new \RuntimeException('AFAQY API request failed with status ' . $response->status());

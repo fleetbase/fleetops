@@ -129,7 +129,7 @@ test('device event mark processed action is routed and company scoped', function
         ->toContain("'Event was already processed.'");
 });
 
-test('afaqy sync stores compact device diagnostics and does not leak token URLs', function () {
+test('afaqy sync stores compact device diagnostics and paginates complete units lists', function () {
     $provider = file_get_contents(__DIR__ . '/../src/Support/Telematics/Providers/AfaqyProvider.php');
 
     expect($provider)
@@ -139,9 +139,53 @@ test('afaqy sync stores compact device diagnostics and does not leak token URLs'
         ->toContain("'capabilities'")
         ->not->toContain("'raw'          => \$payload")
         ->not->toContain("'sensors',")
-        ->not->toContain("?token=' . urlencode")
         ->toContain("'Authorization' => 'Bearer ' . \$token")
-        ->toContain("array_merge(['token' => \$this->credentials['token']], \$payload)");
+        ->toContain('?? 500), 500')
+        ->toContain('if (is_array($filters) && empty($filters))')
+        ->toContain('$filters = new \stdClass();')
+        ->toContain("'limit'      => \$limit")
+        ->toContain("'offset'     => \$offset")
+        ->not->toContain("\n            'limit'  => \$limit,\n            'offset' => \$offset,")
+        ->toContain("\$this->afaqyPost('/units/lists', [")
+        ->toContain('], true);')
+        ->toContain("http_build_query(['token' => \$this->credentials['token']])")
+        ->toContain("\$body = \$tokenInQuery ? \$payload : array_merge(['token' => \$this->credentials['token']], \$payload)")
+        ->toContain('$pageOffset  = (int) ($pagination[\'offset\'] ?? $offset);')
+        ->toContain('$pageLimit   = (int) ($pagination[\'limit\'] ?? $limit);')
+        ->toContain('$advanceBy   = $resultCount > 0 ? $resultCount : max($pageLimit, count($devices), 1);')
+        ->toContain('$nextCursor  = ($pageOffset + $advanceBy) < $total ? $pageOffset + $advanceBy : null;')
+        ->toContain("'requested_limit'")
+        ->toContain("'provider_limit'")
+        ->toContain("'provider_result_count'")
+        ->toContain("'pagination'  => [")
+        ->toContain("'allCount'")
+        ->toContain("'filtersCount'")
+        ->toContain("'resultCount'");
+});
+
+test('telematics device sync records provider pagination and skipped device counts', function () {
+    $job        = file_get_contents(__DIR__ . '/../src/Jobs/SyncTelematicDevicesJob.php');
+    $controller = file_get_contents(__DIR__ . '/../src/Http/Controllers/Internal/v1/TelematicController.php');
+
+    expect($controller)
+        ->toContain("'limit'   => \$request->input('limit')")
+        ->not->toContain("'limit'   => \$request->input('limit', 100)");
+
+    expect($job)
+        ->toContain("'limit'   => \$this->options['limit'] ?? null")
+        ->toContain('$totalFetched')
+        ->toContain('$totalLinked')
+        ->toContain('$totalSkipped')
+        ->toContain('$pageCount')
+        ->toContain('Device discovery page fetched')
+        ->toContain("'provider_unit_id'")
+        ->toContain("'last_sync_fetched_total'")
+        ->toContain("'last_sync_linked_total'")
+        ->toContain("'last_sync_skipped_total'")
+        ->toContain("'last_sync_page_count'")
+        ->toContain("'last_sync_provider_total'")
+        ->toContain("'last_sync_provider_all_count'")
+        ->toContain("'last_sync_provider_filters_count'");
 });
 
 test('native endpoint fields are advanced optional overrides with provider defaults', function () {
@@ -281,6 +325,30 @@ test('device attachment morph types are normalized and legacy aliases are tolera
         ->toContain('$this->registerMorphMap();')
         ->toContain("'Fleetbase\\\\Models\\\\Vehicle'   => \\Fleetbase\\FleetOps\\Models\\Vehicle::class")
         ->toContain("'\\\\Fleetbase\\\\Models\\\\Vehicle' => \\Fleetbase\\FleetOps\\Models\\Vehicle::class");
+});
+
+test('internal device attachment endpoints return specific api errors instead of raw model misses', function () {
+    $vehicleController = file_get_contents(__DIR__ . '/../src/Http/Controllers/Internal/v1/VehicleController.php');
+    $deviceController  = file_get_contents(__DIR__ . '/../src/Http/Controllers/Internal/v1/DeviceController.php');
+
+    expect($vehicleController)
+        ->toContain('$vehicle  = $this->resolveVehicle($id);')
+        ->toContain('$device   = $this->resolveDevice($deviceId);')
+        ->toContain('Vehicle not found or not available for this organization.')
+        ->toContain('Device not found or not available for this organization.')
+        ->toContain('Unable to attach device to vehicle. Please try again or contact support.')
+        ->toContain('Unable to detach device from vehicle. Please try again or contact support.')
+        ->toContain('logDeviceAttachmentLookupFailure')
+        ->toContain('logDeviceAttachmentFailure');
+
+    expect($deviceController)
+        ->toContain('$device    = $this->resolveDevice($id);')
+        ->toContain('$vehicle   = $this->resolveVehicle($vehicleId);')
+        ->toContain('Vehicle not found or not available for this organization.')
+        ->toContain('Device not found or not available for this organization.')
+        ->toContain('Unable to attach device to vehicle. Please try again or contact support.')
+        ->toContain('Unable to detach device from vehicle. Please try again or contact support.')
+        ->not->toContain('firstOrFail();');
 });
 
 function telematics_activity_log_method(string $model): string
