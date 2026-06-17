@@ -32,6 +32,7 @@ use Illuminate\Database\Eloquent\Relations\MorphMany;
 use Illuminate\Database\Eloquent\Relations\MorphOne;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Arr;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -233,6 +234,21 @@ class Driver extends Model
     {
         parent::boot();
         static::addGlobalScope(new DriverScope());
+    }
+
+    public function setLicenseExpiryAttribute($value): void
+    {
+        if (empty($value)) {
+            if ($this->exists && !empty($this->getOriginal('license_expiry'))) {
+                return;
+            }
+
+            $this->attributes['license_expiry'] = null;
+
+            return;
+        }
+
+        $this->attributes['license_expiry'] = Carbon::parse($value)->toDateString();
     }
 
     /**

@@ -9,6 +9,52 @@ module('Unit | Service | driver-actions', function (hooks) {
         assert.ok(service);
     });
 
+    test('assignVehicle posts only the selected vehicle and reloads the driver', async function (assert) {
+        const service = this.owner.lookup('service:driver-actions');
+        const options = {};
+        const posted = {};
+        const driver = {
+            id: 'driver-1',
+            name: 'Alex Driver',
+            vehicle_uuid: 'vehicle-1',
+            license_expiry: null,
+            reload: async () => assert.step('driver reloaded'),
+            save: () => assert.ok(false, 'assignVehicle should not save the driver model'),
+            rollbackAttributes: () => assert.ok(false, 'assignVehicle should not roll back on success'),
+        };
+
+        service.intl = { t: (key) => key };
+        service.refresh = () => assert.step('refreshed');
+        service.notifications = {
+            serverError: () => assert.ok(false, 'unexpected call'),
+            success: (message) => assert.strictEqual(message, 'driver.prompts.assign-vehicle-success'),
+            warning: () => assert.ok(false, 'unexpected call'),
+        };
+        service.fetch = {
+            post: async (url, payload) => {
+                posted.url = url;
+                posted.payload = payload;
+            },
+        };
+        service.modalsManager = {
+            show: (_name, modalOptions) => Object.assign(options, modalOptions),
+        };
+
+        service.assignVehicle(driver);
+        await options.confirm({
+            startLoading: () => assert.step('modal loading'),
+            stopLoading: () => assert.ok(false, 'modal should not stop loading on success'),
+            done: () => assert.step('modal closed'),
+        });
+
+        assert.deepEqual(posted, {
+            url: 'drivers/driver-1/assign-vehicle',
+            payload: { vehicle: 'vehicle-1' },
+        });
+        assert.false(Object.prototype.hasOwnProperty.call(posted.payload, 'license_expiry'), 'does not post license_expiry');
+        assert.verifySteps(['modal loading', 'driver reloaded', 'modal closed', 'refreshed']);
+    });
+
     test('unassignOrders loads assigned orders, highlights the current job, and posts selected orders', async function (assert) {
         const service = this.owner.lookup('service:driver-actions');
         const options = {};
