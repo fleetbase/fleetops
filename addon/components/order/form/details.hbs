@@ -28,7 +28,7 @@
                 @value={{@resource.scheduled_at}}
                 @minDate={{format-date-fns (now) "yyyy-MM-dd"}}
                 @minTime={{format-date-fns (now) "HH:mm"}}
-                @onUpdate={{fn (mut @resource.scheduled_at)}}
+                @onUpdate={{this.setScheduledAt}}
                 @disabled={{or @resource.dispatched (cannot-write @resource)}}
             />
         </InputGroup>

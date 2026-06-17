@@ -1,8 +1,11 @@
 import Service, { inject as service } from '@ember/service';
 import { tracked } from '@glimmer/tracking';
 import { next } from '@ember/runloop';
+import Evented from '@ember/object/evented';
 
-export default class OrderCreationService extends Service {
+export const SERVICE_QUOTE_REFRESH_REQUESTED = 'service-quote-refresh-requested';
+
+export default class OrderCreationService extends Service.extend(Evented) {
     @service orderActions;
     @tracked context;
     @tracked order;
@@ -33,5 +36,12 @@ export default class OrderCreationService extends Service {
 
     removeContext(key) {
         delete this.context[key];
+    }
+
+    requestServiceQuoteRefresh(reason, order = this.order) {
+        this.trigger(SERVICE_QUOTE_REFRESH_REQUESTED, {
+            reason,
+            order,
+        });
     }
 }

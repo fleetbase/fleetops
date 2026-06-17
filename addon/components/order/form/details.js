@@ -20,9 +20,14 @@ export default class OrderFormDetailsComponent extends Component {
         this.orderConfigActions.loadAll.perform();
     }
 
+    get integratedVendorServiceType() {
+        return this.args.resource?.type;
+    }
+
     @action selectFacilitator(model) {
         this.args.resource.set('facilitator', model);
         this.args.resource.set('driver', null);
+        this.requestServiceQuoteRefresh('details.facilitator.changed');
     }
 
     @action selectCustomer(model) {
@@ -39,6 +44,7 @@ export default class OrderFormDetailsComponent extends Component {
             type: orderConfig.key,
         });
         this.args.resource.payload.set('type', orderConfig.key);
+        this.requestServiceQuoteRefresh('details.order_config.changed');
 
         try {
             const customFieldsManager = yield this.customFieldsRegistry.loadSubjectCustomFields.perform(orderConfig);
@@ -127,6 +133,18 @@ export default class OrderFormDetailsComponent extends Component {
         }
     }
 
+    @action setScheduledAt(value) {
+        this.args.resource.scheduled_at = value;
+        this.requestServiceQuoteRefresh('details.scheduled_at.changed');
+    }
+
+    @action selectIntegratedServiceType(serviceType) {
+        const type = serviceType?.key ?? serviceType?.value ?? serviceType;
+        this.args.resource.type = type;
+        this.args.resource.payload.set('type', type);
+        this.requestServiceQuoteRefresh('details.integrated_service_type.changed');
+    }
+
     @action toggleAdhoc(toggled) {
         this.args.resource.adhoc = toggled;
         this.args.resource.adhoc_distance = this.currentUser.getCompanyOption('fleetops.adhoc_distance', 5000);
@@ -135,5 +153,9 @@ export default class OrderFormDetailsComponent extends Component {
     @action toggleProofOfDelivery(toggled) {
         this.args.resource.pod_required = toggled;
         this.args.resource.pod_method = toggled ? 'scan' : null;
+    }
+
+    requestServiceQuoteRefresh(reason) {
+        this.orderCreation.requestServiceQuoteRefresh(reason, this.args.resource);
     }
 }

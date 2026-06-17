@@ -2,6 +2,7 @@ import { module, test } from 'qunit';
 import { setupRenderingTest } from 'dummy/tests/helpers';
 import Service from '@ember/service';
 import { click, findAll, render } from '@ember/test-helpers';
+import { A } from '@ember/array';
 import { hbs } from 'ember-cli-htmlbars';
 
 module('Integration | Component | order/form/payload', function (hooks) {
@@ -61,5 +62,48 @@ module('Integration | Component | order/form/payload', function (hooks) {
         await click(editButton);
 
         assert.strictEqual(savedCount, 0, 'clicking edit does not save the entity directly');
+    });
+
+    test('adding and removing entities requests service quote refresh', async function (assert) {
+        const requests = [];
+        const entity = {
+            isNew: true,
+            name: 'Draft box',
+            sku: 'BOX-1',
+            type: 'entity',
+            photo_url: 'https://example.test/box.png',
+        };
+        const order = {
+            imported: false,
+            payload: {
+                entities: A([entity]),
+                waypoints: A([]),
+            },
+        };
+
+        class OrderCreationStub extends Service {
+            requestServiceQuoteRefresh(reason, resource) {
+                requests.push({ reason, resource });
+            }
+        }
+
+        this.owner.register('service:order-creation', OrderCreationStub);
+        this.set('order', order);
+
+        await render(hbs`<Order::Form::Payload @resource={{this.order}} />`);
+
+        const addButton = findAll('button').find((button) => button.textContent.includes('Add Item'));
+        assert.ok(addButton, 'renders the add item button');
+
+        await click(addButton);
+
+        assert.strictEqual(requests.at(-1).reason, 'entity.added');
+        assert.strictEqual(requests.at(-1).resource, order);
+
+        const removeButtons = findAll('button').filter((button) => button.querySelector('[data-icon="times"]'));
+        await click(removeButtons.at(-1));
+
+        assert.strictEqual(requests.at(-1).reason, 'entity.removed');
+        assert.strictEqual(requests.at(-1).resource, order);
     });
 });
