@@ -34,7 +34,7 @@ test('driver vehicle assignment preserves license expiry', function () {
         ->and($driverModel)
         ->toContain('public function setLicenseExpiryAttribute($value): void')
         ->toContain("!empty(\$this->getOriginal('license_expiry'))")
-        ->toContain("Carbon::parse(\$value)->toDateString()")
+        ->toContain('Carbon::parse($value)->toDateString()')
         ->toContain('public function assignVehicle(Vehicle $vehicle): self')
         ->toContain('$this->setVehicle($vehicle)')
         ->toContain('$this->save()')
