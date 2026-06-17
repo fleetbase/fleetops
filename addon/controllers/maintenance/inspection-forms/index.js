@@ -88,6 +88,7 @@ export default class MaintenanceInspectionFormsIndexController extends Controlle
                     { separator: true },
                     { label: 'Publish', fn: this.inspectionFormActions.publish, permission: 'fleet-ops publish inspection-form' },
                     { label: 'Archive', fn: this.inspectionFormActions.archive, permission: 'fleet-ops archive inspection-form' },
+                    { label: 'Generate inspection link', fn: this.inspectionFormActions.generateLink, permission: 'fleet-ops view inspection-form' },
                     { separator: true },
                     { label: 'Delete form', fn: this.inspectionFormActions.delete, class: 'text-red-500', permission: 'fleet-ops delete inspection-form' },
                 ],

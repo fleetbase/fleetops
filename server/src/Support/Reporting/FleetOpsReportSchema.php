@@ -976,7 +976,7 @@ class FleetOpsReportSchema implements ReportSchema
     protected function createInspectionSubmissionsTable(): Table
     {
         return Table::make('inspection_submissions')
-            ->label('Inspection Results')
+            ->label('Inspections')
             ->description('DVIR and inspection submissions, pass/fail status, and linked maintenance follow-up')
             ->category('Maintenance')
             ->extension('fleet-ops')

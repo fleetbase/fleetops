@@ -1,0 +1,105 @@
+<div class="min-h-screen bg-gray-50 dark:bg-gray-900 px-4 py-8">
+    <div class="mx-auto max-w-2xl">
+        {{#if this.loadInspection.isRunning}}
+            <div class="flex flex-col items-center justify-center py-24 text-gray-500 dark:text-gray-400">
+                <FaIcon @icon="spinner" @spin={{true}} @size="2x" class="mb-4" />
+                <p class="text-sm">Loading inspection...</p>
+            </div>
+        {{else if this.error}}
+            <div class="rounded-lg border border-red-200 dark:border-red-700 bg-red-50 dark:bg-red-900/20 p-6 text-center">
+                <FaIcon @icon="triangle-exclamation" @size="2x" class="text-red-500 mb-3" />
+                <p class="text-sm font-medium text-red-700 dark:text-red-300">{{this.error}}</p>
+            </div>
+        {{else if this.submission}}
+            <div class="rounded-lg border border-green-200 dark:border-green-700 bg-white dark:bg-gray-800 p-6 text-center shadow-sm">
+                <FaIcon @icon="circle-check" @size="2x" class="text-green-500 mb-3" />
+                <h1 class="text-xl font-semibold text-gray-900 dark:text-white">Inspection Submitted</h1>
+                <p class="mt-2 text-sm text-gray-600 dark:text-gray-400">
+                    Result:
+                    <span class="font-semibold {{if (eq this.submission.result 'failed') 'text-red-600 dark:text-red-400' 'text-green-600 dark:text-green-400'}}">
+                        {{smart-humanize this.submission.result}}
+                    </span>
+                </p>
+                <p class="mt-1 text-xs text-gray-500 dark:text-gray-500">Reference: {{this.submission.public_id}}</p>
+            </div>
+        {{else if this.form}}
+            <div class="mb-4">
+                <p class="text-xs uppercase tracking-wide text-blue-600 dark:text-blue-400 font-semibold">FleetOps Inspection</p>
+                <h1 class="mt-1 text-2xl font-bold text-gray-900 dark:text-white">{{this.form.name}}</h1>
+                {{#if this.form.description}}
+                    <p class="mt-2 text-sm text-gray-600 dark:text-gray-400">{{this.form.description}}</p>
+                {{/if}}
+            </div>
+
+            <div class="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4 mb-4 shadow-sm">
+                <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 text-sm">
+                    <div>
+                        <div class="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400">Driver</div>
+                        <div class="font-medium text-gray-900 dark:text-white">{{or this.identity.driver.name this.identity.driver.id "Assigned by link"}}</div>
+                    </div>
+                    <div>
+                        <div class="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400">Vehicle</div>
+                        <div class="font-medium text-gray-900 dark:text-white">{{or this.identity.vehicle.name this.identity.vehicle.id "Assigned by link"}}</div>
+                    </div>
+                    <label class="block">
+                        <span class="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400">Odometer</span>
+                        <Input @type="number" @value={{this.odometer}} class="mt-1 w-full form-input" placeholder="Current odometer" {{on "input" (fn this.updateReading "odometer")}} />
+                    </label>
+                    <label class="block">
+                        <span class="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400">Engine Hours</span>
+                        <Input @type="number" @value={{this.engineHours}} class="mt-1 w-full form-input" placeholder="Current engine hours" {{on "input" (fn this.updateReading "engineHours")}} />
+                    </label>
+                </div>
+            </div>
+
+            <div class="space-y-3">
+                {{#each this.itemResults as |item index|}}
+                    <div class="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4 shadow-sm">
+                        <div class="flex items-start justify-between gap-3">
+                            <div>
+                                <h2 class="font-semibold text-gray-900 dark:text-white">{{item.label}}</h2>
+                                {{#if item.category}}
+                                    <p class="text-xs text-gray-500 dark:text-gray-400">{{item.category}}</p>
+                                {{/if}}
+                            </div>
+                            <Badge @status={{item.status}}>{{smart-humanize item.status}}</Badge>
+                        </div>
+                        <div class="mt-3 grid grid-cols-2 gap-2">
+                            <button type="button" class="rounded-md border px-3 py-2 text-sm font-medium {{if item.passed 'border-green-500 bg-green-50 text-green-700 dark:bg-green-900/20 dark:text-green-300' 'border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300'}}" {{on "click" (fn this.markItem index true)}}>
+                                Pass
+                            </button>
+                            <button type="button" class="rounded-md border px-3 py-2 text-sm font-medium {{unless item.passed 'border-red-500 bg-red-50 text-red-700 dark:bg-red-900/20 dark:text-red-300' 'border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300'}}" {{on "click" (fn this.markItem index false)}}>
+                                Fail
+                            </button>
+                        </div>
+                        {{#unless item.passed}}
+                            <Textarea class="mt-3 w-full form-input" rows={{3}} placeholder="Describe the defect or add repair notes" @value={{item.comments}} {{on "input" (fn this.updateComments index)}} />
+                            <Textarea class="mt-2 w-full form-input" rows={{2}} placeholder="Photo URLs or upload references, one per line" {{on "input" (fn this.updatePhotos index)}} />
+                        {{/unless}}
+                    </div>
+                {{/each}}
+            </div>
+
+            <div class="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4 mt-4 shadow-sm">
+                <label class="block text-sm">
+                    <span class="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400">Signature Name</span>
+                    <Input @type="text" @value={{this.signatureName}} class="mt-1 w-full form-input" placeholder="Type your name to sign" {{on "input" (fn this.updateReading "signatureName")}} />
+                </label>
+                <div class="mt-4 flex items-center justify-between">
+                    <div class="text-sm text-gray-600 dark:text-gray-400">
+                        <span class="font-semibold">{{this.failedCount}}</span>
+                        failed items
+                    </div>
+                    <Button
+                        @type="primary"
+                        @icon={{if this.submitInspection.isRunning "spinner" "paper-plane"}}
+                        @iconSpin={{this.submitInspection.isRunning}}
+                        @text={{if this.submitInspection.isRunning "Submitting..." "Submit Inspection"}}
+                        @disabled={{not this.canSubmit}}
+                        @onClick={{perform this.submitInspection}}
+                    />
+                </div>
+            </div>
+        {{/if}}
+    </div>
+</div>

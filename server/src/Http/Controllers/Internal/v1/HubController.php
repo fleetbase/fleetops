@@ -141,7 +141,7 @@ class HubController extends Controller
                     'description' => 'Capture driver inspections, failed items, and repair follow-up.',
                     'links'       => [
                         $this->link('Inspection Forms', 'maintenance.inspection-forms', 'clipboard-check', $publishedInspectionForms, 'Published forms available for driver and technician inspections.'),
-                        $this->link('Inspection Results', 'maintenance.inspection-submissions', 'list-check', $unresolvedInspections, 'Submitted DVIRs, failed items, and linked follow-up work.'),
+                        $this->link('Inspections', 'maintenance.inspection-submissions', 'list-check', $unresolvedInspections, 'Submitted DVIRs, failed items, and linked follow-up work.'),
                     ],
                 ],
                 [

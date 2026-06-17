@@ -111,6 +111,21 @@ export default {
             })
         );
 
+        menuService.registerMenuItem(
+            'auth:login',
+            new MenuItem({
+                title: 'Inspection',
+                route: 'virtual',
+                slug: 'inspection',
+                type: 'link',
+                wrapperClass: 'hidden',
+                component: new ExtensionComponent('@fleetbase/fleetops-engine', 'public-inspection'),
+                onClick: (menuItem) => {
+                    universe.transitionMenuItem('virtual', menuItem);
+                },
+            })
+        );
+
         // Register widgets
         this.registerWidgets(widgetService);
 
@@ -383,6 +398,7 @@ export default {
             'fleet-ops:component:inspection-form:details',
             'fleet-ops:component:inspection-submission:form',
             'fleet-ops:component:inspection-submission:details',
+            'fleet-ops:component:public-inspection',
             'fleet-ops:component:work-order:form',
             'fleet-ops:component:work-order:form:details',
             'fleet-ops:component:work-order:details',

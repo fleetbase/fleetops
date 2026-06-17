@@ -14,6 +14,11 @@ use Illuminate\Support\Facades\Route;
 */
 Route::prefix(config('fleetops.api.routing.prefix'))->namespace('Fleetbase\FleetOps\Http\Controllers')->group(
     function ($router) {
+        $router->prefix('public')->namespace('Public')->group(function ($router) {
+            $router->get('inspections/forms/{id}', 'PublicInspectionController@show');
+            $router->post('inspections/forms/{id}/submit', 'PublicInspectionController@submit');
+        });
+
         /*
         |--------------------------------------------------------------------------
         | Consumable FleetOps API Routes
@@ -541,6 +546,7 @@ Route::prefix(config('fleetops.api.routing.prefix'))->namespace('Fleetbase\Fleet
                         $router->fleetbaseRoutes('inspection-forms', function ($router, $controller) {
                             $router->post('{id}/publish', $controller('publish'));
                             $router->post('{id}/archive', $controller('archive'));
+                            $router->post('{id}/generate-link', $controller('generateLink'));
                         });
                         $router->fleetbaseRoutes('inspection-submissions', function ($router, $controller) {
                             $router->post('{id}/submit', $controller('submit'));

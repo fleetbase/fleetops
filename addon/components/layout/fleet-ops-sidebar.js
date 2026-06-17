@@ -154,7 +154,7 @@ export default class LayoutFleetOpsSidebarComponent extends Component {
                 'maintenance control panel',
             ]),
             this.createItem('Inspection Forms', 'clipboard-check', 'maintenance.inspection-forms', 'fleet-ops list inspection-form', 'fleet-ops see inspection-form'),
-            this.createItem('Inspection Results', 'list-check', 'maintenance.inspection-submissions', 'fleet-ops list inspection-submission', 'fleet-ops see inspection-submission'),
+            this.createItem('Inspections', 'list-check', 'maintenance.inspection-submissions', 'fleet-ops list inspection-submission', 'fleet-ops see inspection-submission'),
             this.createItem('menu.schedules', 'calendar-alt', 'maintenance.schedules', 'fleet-ops list maintenance-schedule', 'fleet-ops see maintenance-schedule'),
             this.createItem('menu.work-orders', 'clipboard-list', 'maintenance.work-orders', 'fleet-ops list work-order', 'fleet-ops see work-order'),
             this.createItem('menu.maintenances', 'history', 'maintenance.maintenances', 'fleet-ops list maintenance', 'fleet-ops see maintenance'),

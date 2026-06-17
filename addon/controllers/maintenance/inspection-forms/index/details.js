@@ -11,6 +11,7 @@ export default class MaintenanceInspectionFormsIndexDetailsController extends Co
     get actionButtons() {
         return [
             { icon: 'check', fn: this.publish, text: 'Publish', permission: 'fleet-ops publish inspection-form' },
+            { icon: 'link', fn: this.generateLink, text: 'Generate Link', permission: 'fleet-ops view inspection-form' },
             { icon: 'edit', fn: this.edit, permission: 'fleet-ops update inspection-form' },
             { icon: 'trash', fn: this.delete, type: 'danger', permission: 'fleet-ops delete inspection-form' },
         ];
@@ -18,6 +19,10 @@ export default class MaintenanceInspectionFormsIndexDetailsController extends Co
 
     @action publish() {
         return this.inspectionFormActions.publish(this.model);
+    }
+
+    @action generateLink() {
+        return this.inspectionFormActions.generateLink(this.model);
     }
 
     @action edit() {
