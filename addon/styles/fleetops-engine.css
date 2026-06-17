@@ -235,8 +235,6 @@ body[data-theme='dark'] .fleetops-connectivity-kpi-accent-rose .fleetops-connect
 
 .fleetops-provider-connections-actions .fleetops-provider-connections-search {
     min-width: 16rem;
-    height: 2.25rem;
-    min-height: 2.25rem;
 }
 
 .fleetops-provider-connections-header {
@@ -257,13 +255,31 @@ body[data-theme='dark'] .fleetops-connectivity-kpi-accent-rose .fleetops-connect
 .fleetops-provider-connections-actions .fleetops-telematics-action-button,
 .fleetops-provider-connections-actions button {
     flex-shrink: 0;
-    height: 2.25rem;
-    min-height: 2.25rem;
     white-space: nowrap;
 }
 
 .fleetops-provider-connections-actions button span {
     white-space: nowrap;
+}
+
+.fleetops-attachments-vehicle-filter-trigger.ember-power-select-trigger {
+    display: flex;
+    align-items: center;
+    min-height: 2rem;
+    padding-right: 1.75rem;
+}
+
+.fleetops-attachments-vehicle-filter-trigger.ember-power-select-trigger .ember-power-select-placeholder,
+.fleetops-attachments-vehicle-filter-trigger.ember-power-select-trigger .ember-power-select-selected-item {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.fleetops-attachments-vehicle-filter-trigger.ember-power-select-trigger .ember-power-select-status-icon {
+    display: block;
+    right: 0.65rem;
 }
 
 .status-badge.long-offline-status-badge > span,

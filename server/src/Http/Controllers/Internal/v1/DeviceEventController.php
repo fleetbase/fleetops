@@ -4,6 +4,7 @@ namespace Fleetbase\FleetOps\Http\Controllers\Internal\v1;
 
 use Fleetbase\FleetOps\Http\Controllers\FleetOpsController;
 use Fleetbase\FleetOps\Models\DeviceEvent;
+use Fleetbase\FleetOps\Support\Utils;
 use Illuminate\Http\JsonResponse;
 
 class DeviceEventController extends FleetOpsController
@@ -32,11 +33,21 @@ class DeviceEventController extends FleetOpsController
         }
 
         if ($request->filled('processed')) {
-            match ($request->input('processed')) {
-                'processed'   => $query->whereNotNull('processed_at'),
-                'unprocessed' => $query->whereNull('processed_at'),
-                default       => null,
-            };
+            $states = Utils::arrayFrom($request->input('processed'));
+
+            if (!$states) {
+                return;
+            }
+
+            $query->where(function ($query) use ($states) {
+                foreach ($states as $state) {
+                    match ($state) {
+                        'processed'   => $query->orWhereNotNull('processed_at'),
+                        'unprocessed' => $query->orWhereNull('processed_at'),
+                        default       => null,
+                    };
+                }
+            });
         }
     }
 

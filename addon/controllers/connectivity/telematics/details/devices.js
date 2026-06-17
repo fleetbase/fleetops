@@ -3,7 +3,14 @@ import { action } from '@ember/object';
 import { inject as service } from '@ember/service';
 import { tracked } from '@glimmer/tracking';
 import { task } from 'ember-concurrency';
-import fleetOpsOptions from '../../../../utils/fleet-ops-options';
+
+const connectionStatusOptions = [
+    { label: 'Online', value: 'online' },
+    { label: 'Recently Offline', value: 'recently_offline' },
+    { label: 'Offline', value: 'offline' },
+    { label: 'Long Offline', value: 'long_offline' },
+    { label: 'Never Connected', value: 'never_connected' },
+];
 
 export default class ConnectivityTelematicsDetailsDevicesController extends Controller {
     @service deviceActions;
@@ -13,7 +20,7 @@ export default class ConnectivityTelematicsDetailsDevicesController extends Cont
     @service modalsManager;
     @service notifications;
 
-    @tracked queryParams = ['page', 'limit', 'sort', 'query', 'status', 'provider', 'attachment_state', 'device_id'];
+    @tracked queryParams = ['page', 'limit', 'sort', 'query', 'status', 'provider', 'attachment_state', 'vehicle', 'connection_status', 'device_id', 'last_online_at', 'updated_at'];
     @tracked telematic;
     @tracked page = 1;
     @tracked limit;
@@ -22,7 +29,11 @@ export default class ConnectivityTelematicsDetailsDevicesController extends Cont
     @tracked status;
     @tracked provider;
     @tracked attachment_state;
+    @tracked vehicle;
+    @tracked connection_status;
     @tracked device_id;
+    @tracked last_online_at;
+    @tracked updated_at;
 
     get devices() {
         return Array.from(this.model ?? []);
@@ -45,7 +56,9 @@ export default class ConnectivityTelematicsDetailsDevicesController extends Cont
     }
 
     get hasActiveFilters() {
-        return Boolean(this.query || this.status || this.provider || this.attachment_state || this.device_id);
+        return Boolean(
+            this.query || this.status || this.provider || this.attachment_state || this.vehicle || this.connection_status || this.device_id || this.last_online_at || this.updated_at
+        );
     }
 
     get hasDevices() {
@@ -145,35 +158,39 @@ export default class ConnectivityTelematicsDetailsDevicesController extends Cont
         ];
     }
 
-    @tracked actionButtons = [
-        {
-            icon: 'refresh',
-            size: 'xs',
-            onClick: this.refresh,
-            helpText: this.intl.t('common.refresh'),
-            wrapperClass: 'fleetops-telematics-action-button',
-        },
-        {
-            icon: 'ellipsis-h',
-            prefix: 'fas',
-            text: 'Actions',
-            type: 'primary',
-            size: 'xs',
-            triggerClass: 'fleetops-telematics-action-button',
-            items: [
-                {
-                    icon: 'satellite-dish',
-                    text: 'Sync Devices',
-                    onClick: this.startDeviceSync,
-                },
-                {
-                    icon: 'link',
-                    text: 'Attach Unassigned',
-                    onClick: this.openAttachmentsForUnassigned,
-                },
-            ],
-        },
-    ];
+    get actionButtons() {
+        return [
+            {
+                icon: 'refresh',
+                size: 'sm',
+                onClick: this.refresh,
+                helpText: this.intl.t('common.refresh'),
+                wrapperClass: 'fleetops-telematics-action-button',
+                isLoading: this.refreshTask.isRunning,
+                disabled: this.refreshTask.isRunning,
+            },
+            {
+                icon: 'ellipsis-h',
+                prefix: 'fas',
+                helpText: 'Actions',
+                type: 'primary',
+                size: 'sm',
+                triggerClass: 'fleetops-telematics-action-button',
+                items: [
+                    {
+                        icon: 'satellite-dish',
+                        text: 'Sync Devices',
+                        onClick: this.startDeviceSync,
+                    },
+                    {
+                        icon: 'link',
+                        text: 'Attach Unassigned',
+                        onClick: this.openAttachmentsForUnassigned,
+                    },
+                ],
+            },
+        ];
+    }
 
     @tracked bulkActions = [];
 
@@ -207,12 +224,11 @@ export default class ConnectivityTelematicsDetailsDevicesController extends Cont
                 resizable: true,
                 sortable: true,
                 filterable: true,
-                filterParam: 'attachment_state',
-                filterComponent: 'filter/multi-option',
-                filterOptions: [
-                    { label: 'Attached', value: 'attached' },
-                    { label: 'Unattached', value: 'unattached' },
-                ],
+                filterParam: 'vehicle',
+                filterComponent: 'filter/model',
+                filterComponentPlaceholder: 'Select vehicle',
+                model: 'vehicle',
+                modelNamePath: 'displayName',
             },
             {
                 label: 'Connection',
@@ -221,9 +237,11 @@ export default class ConnectivityTelematicsDetailsDevicesController extends Cont
                 resizable: true,
                 sortable: true,
                 filterable: true,
-                filterParam: 'status',
+                filterParam: 'connection_status',
                 filterComponent: 'filter/multi-option',
-                filterOptions: fleetOpsOptions('deviceStatuses'),
+                filterOptions: connectionStatusOptions,
+                filterOptionLabel: 'label',
+                filterOptionValue: 'value',
             },
             {
                 label: 'Last Seen',
@@ -231,6 +249,25 @@ export default class ConnectivityTelematicsDetailsDevicesController extends Cont
                 sortParam: 'last_online_at',
                 resizable: true,
                 sortable: true,
+                filterable: true,
+                filterParam: 'last_online_at',
+                filterComponent: 'filter/date',
+            },
+            {
+                label: 'Attachment',
+                valuePath: 'attachable_uuid',
+                hidden: true,
+                resizable: true,
+                sortable: false,
+                filterable: true,
+                filterParam: 'attachment_state',
+                filterComponent: 'filter/multi-option',
+                filterOptions: [
+                    { label: 'Attached', value: 'attached' },
+                    { label: 'Unattached', value: 'unattached' },
+                ],
+                filterOptionLabel: 'label',
+                filterOptionValue: 'value',
             },
             {
                 label: this.intl.t('column.updated-at'),
@@ -284,7 +321,11 @@ export default class ConnectivityTelematicsDetailsDevicesController extends Cont
     }
 
     @action refresh() {
-        return this.hostRouter.refresh();
+        if (this.refreshTask.isRunning) {
+            return;
+        }
+
+        return this.refreshTask.perform();
     }
 
     @action clearFilters() {
@@ -292,7 +333,11 @@ export default class ConnectivityTelematicsDetailsDevicesController extends Cont
         this.status = null;
         this.provider = null;
         this.attachment_state = null;
+        this.vehicle = null;
+        this.connection_status = null;
         this.device_id = null;
+        this.last_online_at = null;
+        this.updated_at = null;
         this.page = 1;
     }
 
@@ -354,6 +399,10 @@ export default class ConnectivityTelematicsDetailsDevicesController extends Cont
 
     @action startDeviceSync() {
         return this.syncDevices.perform();
+    }
+
+    @task *refreshTask() {
+        yield this.hostRouter.refresh();
     }
 
     @task *syncDevices() {

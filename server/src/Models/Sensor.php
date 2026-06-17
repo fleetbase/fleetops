@@ -66,14 +66,27 @@ class Sensor extends Model
      *
      * @var array
      */
-    protected $searchableColumns = ['name', 'type', 'internal_id', 'unit', 'public_id'];
+    protected $searchableColumns = ['name', 'type', 'internal_id', 'serial_number', 'imei', 'unit', 'public_id'];
 
     /**
      * The attributes that can be used for filtering.
      *
      * @var array
      */
-    protected $filterParams = ['type', 'sensor_type', 'status', 'device_uuid', 'warranty_uuid', 'sensorable_type', 'telematic_uuid'];
+    protected $filterParams = [
+        'type',
+        'sensor_type',
+        'status',
+        'device_uuid',
+        'serial_number',
+        'imei',
+        'warranty_uuid',
+        'sensorable_type',
+        'telematic_uuid',
+        'last_reading_at',
+        'created_at',
+        'updated_at',
+    ];
 
     /**
      * The attributes that are mass assignable.

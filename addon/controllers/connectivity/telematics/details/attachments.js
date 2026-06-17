@@ -59,19 +59,27 @@ export default class ConnectivityTelematicsDetailsAttachmentsController extends 
         const groups = new Map();
 
         for (const device of this.attachedDevices) {
-            const key = device.attachable_uuid;
-
-            if (!groups.has(key)) {
-                groups.set(key, {
-                    id: key,
-                    name: device.attached_to_name ?? 'Unknown vehicle',
-                    devices: [],
-                });
-            }
-
-            groups.get(key).devices.push(device);
+            this.addDeviceToVehicleGroup(groups, device);
         }
 
+        return this.sortVehicleGroups(groups);
+    }
+
+    addDeviceToVehicleGroup(groups, device) {
+        const key = device.attachable_uuid;
+
+        if (!groups.has(key)) {
+            groups.set(key, {
+                id: key,
+                name: device.attached_to_name ?? 'Unknown vehicle',
+                devices: [],
+            });
+        }
+
+        groups.get(key).devices.push(device);
+    }
+
+    sortVehicleGroups(groups) {
         return Array.from(groups.values()).sort((a, b) => String(a.name).localeCompare(String(b.name)));
     }
 
@@ -175,6 +183,12 @@ export default class ConnectivityTelematicsDetailsAttachmentsController extends 
 
     @action updateStatus(event) {
         this.status = event.target.value || null;
+    }
+
+    @action updateVehicle(valueOrEvent) {
+        const value = valueOrEvent?.target ? valueOrEvent.target.value : valueOrEvent;
+
+        this.vehicle = value || null;
     }
 
     @action clearFilters() {

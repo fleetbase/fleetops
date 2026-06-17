@@ -44,6 +44,50 @@ class DeviceEventFilter extends Filter
         });
     }
 
+    public function deviceUuid(?string $device)
+    {
+        $this->device($device);
+    }
+
+    public function severity(string|array $severity)
+    {
+        $severity = Utils::arrayFrom($severity);
+
+        if ($severity) {
+            $this->builder->whereIn('severity', $severity);
+        }
+    }
+
+    public function processed(string|array $processed)
+    {
+        $states = Utils::arrayFrom($processed);
+
+        if (!$states) {
+            return;
+        }
+
+        $this->builder->where(function ($query) use ($states) {
+            foreach ($states as $state) {
+                match ($state) {
+                    'processed'   => $query->orWhereNotNull('processed_at'),
+                    'unprocessed' => $query->orWhereNull('processed_at'),
+                    default       => null,
+                };
+            }
+        });
+    }
+
+    public function occurredAt($occurredAt)
+    {
+        $occurredAt = Utils::dateRange($occurredAt);
+
+        if (is_array($occurredAt)) {
+            $this->builder->whereBetween('occurred_at', $occurredAt);
+        } else {
+            $this->builder->whereDate('occurred_at', $occurredAt);
+        }
+    }
+
     public function createdAt($createdAt)
     {
         $createdAt = Utils::dateRange($createdAt);

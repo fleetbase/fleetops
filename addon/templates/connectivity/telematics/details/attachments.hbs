@@ -21,31 +21,47 @@
     </section>
 
     <section class="overflow-hidden rounded-md border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-800">
-        <div class="flex flex-col gap-3 border-b border-gray-200 px-4 py-3 dark:border-gray-700 lg:flex-row lg:items-start lg:justify-between">
+        <div class="grid grid-cols-1 gap-3 border-b border-gray-200 px-4 py-3 dark:border-gray-700 xl:grid-cols-[minmax(16rem,24rem)_minmax(0,1fr)] xl:items-start">
             <div class="max-w-xl">
                 <h3 class="text-sm font-bold text-gray-900 dark:text-gray-100">Vehicle Groups</h3>
                 <p class="mt-1 text-xs leading-5 text-gray-500 dark:text-gray-300">Find a vehicle to review its attached devices, or resolve the unattached queue first.</p>
             </div>
-            <div class="flex w-full min-w-0 flex-nowrap items-center justify-end gap-2 overflow-x-auto lg:w-auto lg:flex-shrink-0">
+            <div class="grid w-full min-w-0 grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-[minmax(18rem,1fr)_10rem_10rem_14rem] xl:justify-end">
                 <Input
                     @value={{this.query}}
                     @type="text"
-                    class="form-input h-9 min-w-[16rem] flex-shrink-0"
+                    class="form-input form-input-sm w-full"
                     placeholder="Search vehicles or devices"
                     {{on "input" this.updateQuery}}
                 />
-                <select class="form-select h-9 flex-shrink-0" {{on "change" this.updateAttachmentState}}>
+                <select class="form-select form-select-sm w-full" {{on "change" this.updateAttachmentState}}>
                     <option value="" selected={{not this.attachment_state}}>All mappings</option>
                     <option value="unattached" selected={{eq this.attachment_state "unattached"}}>Unattached</option>
                     <option value="attached" selected={{eq this.attachment_state "attached"}}>Attached</option>
                 </select>
-                <select class="form-select h-9 flex-shrink-0" {{on "change" this.updateStatus}}>
+                <select class="form-select form-select-sm w-full" {{on "change" this.updateStatus}}>
                     <option value="" selected={{not this.status}}>Any status</option>
                     <option value="active" selected={{eq this.status "active"}}>Active</option>
                     <option value="online" selected={{eq this.status "online"}}>Online</option>
                     <option value="offline" selected={{eq this.status "offline"}}>Offline</option>
                     <option value="inactive" selected={{eq this.status "inactive"}}>Inactive</option>
                 </select>
+                <div class="min-w-0">
+                    <ModelSelect
+                        @modelName="vehicle"
+                        @query={{hash telematic_uuid=this.telematic.id}}
+                        @selectedModel={{this.vehicle}}
+                        @placeholder="Any vehicle"
+                        @triggerClass="fleetops-attachments-vehicle-filter-trigger form-select form-select-sm w-full"
+                        @infiniteScroll={{false}}
+                        @renderInPlace={{false}}
+                        @allowClear={{true}}
+                        @onChangeId={{this.updateVehicle}}
+                        as |vehicle|
+                    >
+                        {{vehicle.displayName}}
+                    </ModelSelect>
+                </div>
             </div>
         </div>
 
@@ -110,8 +126,8 @@
                                     <Device::Pill @device={{device}} />
                                 </div>
                                 <div class="flex flex-shrink-0 items-center gap-2">
-                                    <Button @icon="eye" @text="Open" @size="xs" @onClick={{fn this.deviceActions.transition.view device}} />
-                                    <Button @icon="link" @text="Attach" @size="xs" @type="primary" @onClick={{fn this.openAttachDeviceModal device}} />
+                                    <Button @icon="eye" @text="Open" @size="sm" @onClick={{fn this.deviceActions.transition.view device}} />
+                                    <Button @icon="link" @text="Attach" @size="sm" @type="primary" @onClick={{fn this.openAttachDeviceModal device}} />
                                 </div>
                             </div>
                         {{/each}}
@@ -148,9 +164,9 @@
                                         </div>
                                     </div>
                                     <div class="flex items-center gap-2 lg:justify-end">
-                                        <Button @icon="eye" @text="Open" @size="xs" @onClick={{fn this.deviceActions.transition.view device}} />
-                                        <Button @icon="shuffle" @text="Change" @size="xs" @onClick={{fn this.openAttachDeviceModal device}} />
-                                        <Button @icon="unlink" @text="Detach" @size="xs" @type="danger" @onClick={{fn this.detachDevice device}} />
+                                        <Button @icon="eye" @text="Open" @size="sm" @onClick={{fn this.deviceActions.transition.view device}} />
+                                        <Button @icon="shuffle" @text="Change" @size="sm" @onClick={{fn this.openAttachDeviceModal device}} />
+                                        <Button @icon="unlink" @text="Detach" @size="sm" @type="danger" @onClick={{fn this.detachDevice device}} />
                                     </div>
                                 </div>
                             {{/each}}

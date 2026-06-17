@@ -24,6 +24,6 @@ export default class ConnectivityTelematicsEditRoute extends Route {
     }
 
     model({ public_id }) {
-        return this.store.findRecord('telematic', public_id);
+        return this.store.queryRecord('telematic', { public_id, single: true });
     }
 }
