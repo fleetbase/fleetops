@@ -1,0 +1,11 @@
+<Layout::Resource::Panel
+    @resource={{this.inspectionForm}}
+    @controller={{this}}
+    @headerTitle="Create inspection form"
+    @saveTask={{this.save}}
+    @onPressCancel={{transition-to "maintenance.inspection-forms.index"}}
+    @onOverlayReady={{fn (mut this.overlay)}}
+>
+    <InspectionForm::Form @resource={{this.inspectionForm}} @controller={{this}} />
+    <Spacer @height="200px" />
+</Layout::Resource::Panel>

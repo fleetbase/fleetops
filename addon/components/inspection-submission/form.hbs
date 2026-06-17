@@ -1,0 +1,111 @@
+<div class="inspection-submission-form" ...attributes>
+    <ContentPanel @title="Inspection" @open={{true}} @wrapperClass="bordered-top">
+        <div class="grid grid-cols-1 gap-2 lg:grid-cols-2 no-input-group-padding text-xs">
+            <InputGroup @name="Form">
+                <ModelSelect
+                    @modelName="inspection-form"
+                    @selectedModel={{@resource.form}}
+                    @query={{hash status="published"}}
+                    @placeholder="Select inspection form"
+                    @triggerClass="form-select form-input"
+                    @infiniteScroll={{false}}
+                    @renderInPlace={{true}}
+                    @onChange={{this.assignForm}}
+                    @disabled={{cannot-write @resource}}
+                    as |form|
+                >
+                    {{form.name}}
+                </ModelSelect>
+            </InputGroup>
+            <InputGroup @name="Status">
+                <PowerSelect @options={{this.statusOptions}} @selected={{@resource.status}} @onChange={{fn (mut @resource.status)}} @triggerClass="form-select form-input" @disabled={{cannot-write @resource}} as |status|>
+                    {{smart-humanize status}}
+                </PowerSelect>
+            </InputGroup>
+            <InputGroup @name="Vehicle">
+                <ModelSelect
+                    @modelName="vehicle"
+                    @selectedModel={{@resource.vehicle}}
+                    @placeholder="Select vehicle"
+                    @triggerClass="form-select form-input"
+                    @infiniteScroll={{false}}
+                    @renderInPlace={{true}}
+                    @onChange={{this.assignVehicle}}
+                    @disabled={{cannot-write @resource}}
+                    as |vehicle|
+                >
+                    {{or vehicle.displayName vehicle.name vehicle.public_id}}
+                </ModelSelect>
+            </InputGroup>
+            <InputGroup @name="Driver">
+                <ModelSelect
+                    @modelName="driver"
+                    @selectedModel={{@resource.driver}}
+                    @placeholder="Select driver"
+                    @triggerClass="form-select form-input"
+                    @infiniteScroll={{false}}
+                    @renderInPlace={{true}}
+                    @onChange={{this.assignDriver}}
+                    @disabled={{cannot-write @resource}}
+                    as |driver|
+                >
+                    {{or driver.name driver.public_id}}
+                </ModelSelect>
+            </InputGroup>
+            <InputGroup @name="Odometer">
+                <Input @value={{@resource.odometer}} @type="number" class="w-full form-input" placeholder="Current odometer" disabled={{cannot-write @resource}} />
+            </InputGroup>
+            <InputGroup @name="Engine Hours">
+                <Input @value={{@resource.engine_hours}} @type="number" class="w-full form-input" placeholder="Current engine hours" disabled={{cannot-write @resource}} />
+            </InputGroup>
+        </div>
+    </ContentPanel>
+
+    <ContentPanel @title="Inspection Results" @open={{true}} @wrapperClass="bordered-top">
+        <div class="space-y-3">
+            {{#each this.itemResults as |item index|}}
+                <div class="rounded border border-gray-200 dark:border-gray-700 p-3">
+                    <div class="grid grid-cols-1 gap-2 lg:grid-cols-5 no-input-group-padding text-xs">
+                        <InputGroup @name="Item" @wrapperClass="lg:col-span-2">
+                            <Input @value={{item.label}} @type="text" class="w-full form-input" placeholder="Inspection item" {{on "input" (fn this.updateResult index "label" item.label)}} />
+                        </InputGroup>
+                        <InputGroup @name="Category">
+                            <Input @value={{item.category}} @type="text" class="w-full form-input" placeholder="Category" {{on "input" (fn this.updateResult index "category" item.category)}} />
+                        </InputGroup>
+                        <InputGroup @name="Result">
+                            <PowerSelect @options={{this.resultOptions}} @selected={{item.status}} @onChange={{fn this.updateResult index "status"}} @triggerClass="form-select form-input" as |result|>
+                                {{smart-humanize result}}
+                            </PowerSelect>
+                        </InputGroup>
+                        <InputGroup @name="Severity">
+                            <PowerSelect @options={{this.severityOptions}} @selected={{item.severity}} @onChange={{fn this.updateResult index "severity"}} @triggerClass="form-select form-input" as |severity|>
+                                {{smart-humanize severity}}
+                            </PowerSelect>
+                        </InputGroup>
+                        <InputGroup @name="Comments" @wrapperClass="lg:col-span-5">
+                            <Textarea @value={{item.comments}} class="w-full form-input" rows={{2}} placeholder="Notes, defect description, or repair context" {{on "input" (fn this.updateResult index "comments" item.comments)}} />
+                        </InputGroup>
+                    </div>
+                    <div class="mt-2 flex justify-end">
+                        <Button @text="Remove" @icon="trash" @size="xs" @type="danger" @onClick={{fn this.removeResult index}} />
+                    </div>
+                </div>
+            {{/each}}
+            <div class="flex items-center justify-between text-xs">
+                <div>
+                    <span class="font-semibold">{{@resource.failed_items}}</span>
+                    failed of
+                    <span class="font-semibold">{{@resource.total_items}}</span>
+                    items
+                </div>
+                <Button @text="Add result" @icon="plus" @size="sm" @onClick={{this.addResult}} />
+            </div>
+        </div>
+    </ContentPanel>
+
+    <ContentPanel @title="Metadata" @open={{false}} @wrapperClass="bordered-top">
+        <MetadataEditor @value={{@resource.meta}} @onChange={{fn (mut @resource.meta)}} />
+    </ContentPanel>
+
+    <CustomField::Yield @subject={{@resource}} @wrapperClass="bordered-top" />
+</div>

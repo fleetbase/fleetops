@@ -9,6 +9,8 @@ use Fleetbase\FleetOps\Models\Equipment;
 use Fleetbase\FleetOps\Models\Fleet;
 use Fleetbase\FleetOps\Models\FuelProviderTransaction;
 use Fleetbase\FleetOps\Models\FuelReport;
+use Fleetbase\FleetOps\Models\InspectionForm;
+use Fleetbase\FleetOps\Models\InspectionSubmission;
 use Fleetbase\FleetOps\Models\Issue;
 use Fleetbase\FleetOps\Models\Maintenance;
 use Fleetbase\FleetOps\Models\MaintenanceSchedule;
@@ -118,6 +120,9 @@ class HubController extends Controller
         $overdueWorkOrders       = $this->count(WorkOrder::query()->whereNotIn('status', ['closed', 'canceled'])->whereNotNull('due_at')->where('due_at', '<', $now), $company);
         $openMaintenance         = $this->count(Maintenance::query()->whereNotIn('status', ['completed', 'canceled']), $company);
         $highPriorityMaintenance = $this->count(Maintenance::query()->whereNotIn('status', ['completed', 'canceled'])->whereIn('priority', ['high', 'urgent', 'critical']), $company);
+        $publishedInspectionForms = $this->count(InspectionForm::query()->where('status', 'published'), $company);
+        $failedInspections       = $this->count(InspectionSubmission::query()->whereIn('status', ['submitted', 'needs_review'])->where('result', 'failed'), $company);
+        $unresolvedInspections   = $this->count(InspectionSubmission::query()->where('result', 'failed')->whereNull('resolved_at'), $company);
         $lowStockParts           = $this->count(Part::query()->where('quantity_on_hand', '>', 0)->where('quantity_on_hand', '<=', 5), $company);
         $equipment               = $this->count(Equipment::query(), $company);
 
@@ -125,11 +130,20 @@ class HubController extends Controller
             'kpis'     => [
                 $this->kpi('overdue_schedules', 'Overdue Schedules', $overdueSchedules, $overdueSchedules > 0 ? 'Recurring service needs attention.' : 'No recurring service is overdue.', $overdueSchedules > 0 ? 'rose' : 'green', 'calendar-xmark', 'maintenance.schedules'),
                 $this->kpi('upcoming_schedules', 'Due This Week', $upcomingSchedules, 'Maintenance schedules due in the next 7 days.', 'blue', 'calendar-day', 'maintenance.schedules'),
+                $this->kpi('failed_inspections', 'Failed Inspections', $failedInspections, $failedInspections > 0 ? 'Failed DVIR items need issue or work order follow-up.' : 'No failed inspections need review.', $failedInspections > 0 ? 'rose' : 'green', 'clipboard-check', 'maintenance.inspection-submissions'),
                 $this->kpi('open_work_orders', 'Open Work Orders', $openWorkOrders, $openWorkOrders > 0 ? 'Active work needs assignment or closure.' : 'No open work orders right now.', $openWorkOrders > 0 ? 'amber' : 'green', 'clipboard-list', 'maintenance.work-orders'),
-                $this->kpi('low_stock_parts', 'Low Stock Parts', $lowStockParts, $lowStockParts > 0 ? 'Parts inventory may need replenishment.' : 'No low-stock parts detected.', $lowStockParts > 0 ? 'amber' : 'green', 'cog', 'maintenance.parts'),
             ],
-            'actions'  => $this->maintenanceActions($overdueSchedules, $upcomingSchedules, $openWorkOrders, $overdueWorkOrders, $highPriorityMaintenance, $lowStockParts, $equipment),
+            'actions'  => $this->maintenanceActions($overdueSchedules, $upcomingSchedules, $openWorkOrders, $overdueWorkOrders, $highPriorityMaintenance, $lowStockParts, $equipment, $failedInspections, $unresolvedInspections, $publishedInspectionForms),
             'sections' => [
+                [
+                    'key'         => 'inspections',
+                    'title'       => 'Inspections And DVIR',
+                    'description' => 'Capture driver inspections, failed items, and repair follow-up.',
+                    'links'       => [
+                        $this->link('Inspection Forms', 'maintenance.inspection-forms', 'clipboard-check', $publishedInspectionForms, 'Published forms available for driver and technician inspections.'),
+                        $this->link('Inspection Results', 'maintenance.inspection-submissions', 'list-check', $unresolvedInspections, 'Submitted DVIRs, failed items, and linked follow-up work.'),
+                    ],
+                ],
                 [
                     'key'         => 'planning',
                     'title'       => 'Planning',
@@ -152,6 +166,7 @@ class HubController extends Controller
             ],
             'docs'     => [
                 $this->doc('Schedules', 'calendar-alt', 'fleet-ops/maintenance/schedules/overview', 'Maintenance schedules guide', 'Plan recurring service windows and convert due schedules into work orders.'),
+                $this->doc('Inspections', 'clipboard-check', 'fleet-ops/maintenance/inspections/overview', 'Inspections guide', 'Capture DVIR checks, failed items, and issue or work order follow-up.'),
                 $this->doc('Work Orders', 'clipboard-list', 'fleet-ops/maintenance/work-orders/overview', 'Work orders guide', 'Coordinate assigned maintenance work, vendors, due dates, and completion.'),
                 $this->doc('Equipment', 'trailer', 'fleet-ops/maintenance/equipment/overview', 'Equipment guide', 'Track serviceable equipment that participates in maintenance operations.'),
                 $this->doc('Parts', 'cog', 'fleet-ops/maintenance/parts/overview', 'Parts guide', 'Manage parts inventory and restocking signals used by maintenance teams.'),
@@ -231,9 +246,15 @@ class HubController extends Controller
         return $actions ? array_slice($actions, 0, 6) : [$this->action('ready', 'Core resources look ready', 'Drivers, vehicles, issues, and supporting records are in a healthy operating posture.', 'success', 'check-circle', null)];
     }
 
-    protected function maintenanceActions(int $overdueSchedules, int $upcomingSchedules, int $openWorkOrders, int $overdueWorkOrders, int $highPriorityMaintenance, int $lowStockParts, int $equipment): array
+    protected function maintenanceActions(int $overdueSchedules, int $upcomingSchedules, int $openWorkOrders, int $overdueWorkOrders, int $highPriorityMaintenance, int $lowStockParts, int $equipment, int $failedInspections = 0, int $unresolvedInspections = 0, int $publishedInspectionForms = 0): array
     {
         $actions = [];
+
+        if ($failedInspections > 0) {
+            $actions[] = $this->action('failed_inspections', 'Review failed inspections', "{$failedInspections} failed inspection" . ($failedInspections === 1 ? ' needs' : 's need') . ' issue or work order follow-up.', 'warning', 'clipboard-check', 'maintenance.inspection-submissions', ['result' => 'failed']);
+        } elseif ($publishedInspectionForms === 0) {
+            $actions[] = $this->action('create_inspection_forms', 'Create inspection forms', 'Publish DVIR forms so drivers can report vehicle defects before dispatch.', 'info', 'clipboard-check', 'maintenance.inspection-forms');
+        }
 
         if ($overdueSchedules > 0) {
             $actions[] = $this->action('overdue_schedules', 'Review overdue schedules', "{$overdueSchedules} recurring service schedule" . ($overdueSchedules === 1 ? ' is' : 's are') . ' overdue.', 'warning', 'calendar-xmark', 'maintenance.schedules');
@@ -257,6 +278,10 @@ class HubController extends Controller
 
         if ($lowStockParts > 0) {
             $actions[] = $this->action('low_stock_parts', 'Replenish low-stock parts', "{$lowStockParts} stocked part" . ($lowStockParts === 1 ? ' is' : 's are') . ' at or below the default threshold.', 'warning', 'cog', 'maintenance.parts');
+        }
+
+        if ($unresolvedInspections > 0 && $failedInspections === 0) {
+            $actions[] = $this->action('unresolved_inspections', 'Resolve inspection follow-up', "{$unresolvedInspections} failed inspection" . ($unresolvedInspections === 1 ? ' remains' : 's remain') . ' unresolved.', 'warning', 'list-check', 'maintenance.inspection-submissions', ['result' => 'failed']);
         }
 
         if ($equipment === 0) {

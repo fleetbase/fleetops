@@ -642,6 +642,16 @@ Route::prefix(config('fleetops.api.routing.prefix'))->namespace('Fleetbase\Fleet
                             $router->get('calendar-feed', $controller('calendarFeed'));
                             $router->get('{id}/ical', $controller('ical'));
                         });
+                        $router->fleetbaseRoutes('inspection-forms', function ($router, $controller) {
+                            $router->post('{id}/publish', $controller('publish'));
+                            $router->post('{id}/archive', $controller('archive'));
+                        });
+                        $router->fleetbaseRoutes('inspection-submissions', function ($router, $controller) {
+                            $router->post('{id}/submit', $controller('submit'));
+                            $router->post('{id}/create-issue', $controller('createIssue'));
+                            $router->post('{id}/create-work-order', $controller('createWorkOrder'));
+                            $router->post('{id}/resolve', $controller('resolve'));
+                        });
                         $router->fleetbaseRoutes('work-orders', function ($router, $controller) {
                             $router->match(['get', 'post'], 'export', $controller('export'));
                             $router->post('import', $controller('import'));
