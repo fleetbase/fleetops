@@ -35,6 +35,11 @@ class FleetOpsReportSchema implements ReportSchema
 
         // Register Fuel Reports table
         $registry->registerTable($this->createFuelReportsTable());
+
+        // Register Maintenance tables
+        $registry->registerTable($this->createWorkOrdersTable());
+        $registry->registerTable($this->createMaintenancesTable());
+        $registry->registerTable($this->createInspectionSubmissionsTable());
     }
 
     /**
@@ -851,6 +856,180 @@ class FleetOpsReportSchema implements ReportSchema
                     ->columns([
                         Column::make('name', 'string')->label('Driver Name'),
                         Column::make('email', 'string')->label('Driver Email'),
+                    ]),
+            ]);
+    }
+
+    /**
+     * Create the Work Orders table definition.
+     */
+    protected function createWorkOrdersTable(): Table
+    {
+        return Table::make('work_orders')
+            ->label('Work Orders')
+            ->description('Maintenance work orders, assignments, budgets, and lifecycle status')
+            ->category('Maintenance')
+            ->extension('fleet-ops')
+            ->excludeColumns(['uuid', 'deleted_at', 'meta', 'checklist', 'cost_breakdown'])
+            ->maxRows(100000)
+            ->columns([
+                Column::make('public_id', 'string')->label('Work Order ID')->searchable()->filterable()->sortable(),
+                Column::make('code', 'string')->label('Code')->searchable()->filterable()->sortable(),
+                Column::make('subject', 'string')->label('Subject')->searchable()->filterable()->sortable(),
+                Column::make('status', 'string')->label('Status')->filterable()->sortable()->aggregatable(),
+                Column::make('priority', 'string')->label('Priority')->filterable()->sortable()->aggregatable(),
+                Column::make('opened_at', 'datetime')->label('Opened At')->filterable()->sortable()->aggregatable(),
+                Column::make('due_at', 'datetime')->label('Due At')->filterable()->sortable()->aggregatable(),
+                Column::make('closed_at', 'datetime')->label('Closed At')->filterable()->sortable()->aggregatable(),
+                Column::make('estimated_cost', 'integer')->label('Estimated Cost')->aggregatable()->sortable(),
+                Column::make('approved_budget', 'integer')->label('Approved Budget')->aggregatable()->sortable(),
+                Column::make('actual_cost', 'integer')->label('Actual Cost')->aggregatable()->sortable(),
+                Column::make('currency', 'string')->label('Currency')->filterable()->aggregatable(),
+                Column::make('cost_center', 'string')->label('Cost Center')->filterable()->sortable(),
+                Column::make('budget_code', 'string')->label('Budget Code')->filterable()->sortable(),
+                Column::make('created_at', 'datetime')->label('Created At')->filterable()->sortable()->aggregatable(),
+            ])
+            ->computedColumns([
+                Column::count('total_work_orders', 'id')->label('Total Work Orders')->description('Count of work orders'),
+                Column::sum('total_actual_cost', 'actual_cost')->label('Total Actual Cost')->description('Sum of completed work order actual cost'),
+                Column::avg('average_actual_cost', 'actual_cost')->label('Average Actual Cost')->description('Average actual work order cost'),
+            ])
+            ->relationships([
+                Relationship::hasAutoJoin('vehicle_target', 'vehicles')
+                    ->label('Target Vehicle')
+                    ->localKey('target_uuid')
+                    ->foreignKey('uuid')
+                    ->columns([
+                        Column::make('public_id', 'string')->label('Vehicle ID'),
+                        Column::make('plate_number', 'string')->label('Plate Number'),
+                        Column::make('make', 'string')->label('Make'),
+                        Column::make('model', 'string')->label('Model'),
+                        Column::make('odometer', 'integer')->label('Odometer'),
+                    ]),
+            ]);
+    }
+
+    /**
+     * Create the Maintenances table definition.
+     */
+    protected function createMaintenancesTable(): Table
+    {
+        return Table::make('maintenances')
+            ->label('Maintenance History')
+            ->description('Completed and scheduled maintenance records with labor, parts, tax, and total cost')
+            ->category('Maintenance')
+            ->extension('fleet-ops')
+            ->excludeColumns(['uuid', 'deleted_at', 'meta', 'line_items', 'attachments'])
+            ->maxRows(100000)
+            ->columns([
+                Column::make('public_id', 'string')->label('Maintenance ID')->searchable()->filterable()->sortable(),
+                Column::make('type', 'string')->label('Type')->filterable()->sortable()->aggregatable(),
+                Column::make('status', 'string')->label('Status')->filterable()->sortable()->aggregatable(),
+                Column::make('priority', 'string')->label('Priority')->filterable()->sortable()->aggregatable(),
+                Column::make('scheduled_at', 'datetime')->label('Scheduled At')->filterable()->sortable()->aggregatable(),
+                Column::make('started_at', 'datetime')->label('Started At')->filterable()->sortable()->aggregatable(),
+                Column::make('completed_at', 'datetime')->label('Completed At')->filterable()->sortable()->aggregatable(),
+                Column::make('odometer', 'integer')->label('Odometer')->aggregatable()->sortable(),
+                Column::make('engine_hours', 'integer')->label('Engine Hours')->aggregatable()->sortable(),
+                Column::make('summary', 'string')->label('Summary')->searchable()->filterable()->sortable(),
+                Column::make('labor_cost', 'integer')->label('Labor Cost')->aggregatable()->sortable(),
+                Column::make('parts_cost', 'integer')->label('Parts Cost')->aggregatable()->sortable(),
+                Column::make('tax', 'integer')->label('Tax')->aggregatable()->sortable(),
+                Column::make('total_cost', 'integer')->label('Total Cost')->aggregatable()->sortable(),
+                Column::make('currency', 'string')->label('Currency')->filterable()->aggregatable(),
+                Column::make('created_at', 'datetime')->label('Created At')->filterable()->sortable()->aggregatable(),
+            ])
+            ->computedColumns([
+                Column::count('total_maintenance_records', 'id')->label('Total Maintenance Records')->description('Count of maintenance records'),
+                Column::sum('total_maintenance_cost', 'total_cost')->label('Total Maintenance Cost')->description('Sum of maintenance total cost'),
+                Column::avg('average_maintenance_cost', 'total_cost')->label('Average Maintenance Cost')->description('Average maintenance total cost'),
+                Column::sum('total_parts_cost', 'parts_cost')->label('Total Parts Cost')->description('Sum of parts cost'),
+                Column::sum('total_labor_cost', 'labor_cost')->label('Total Labor Cost')->description('Sum of labor cost'),
+            ])
+            ->relationships([
+                Relationship::hasAutoJoin('work_order', 'work_orders')
+                    ->label('Work Order')
+                    ->localKey('work_order_uuid')
+                    ->foreignKey('uuid')
+                    ->columns([
+                        Column::make('public_id', 'string')->label('Work Order ID'),
+                        Column::make('code', 'string')->label('Work Order Code'),
+                        Column::make('subject', 'string')->label('Work Order Subject'),
+                    ]),
+                Relationship::hasAutoJoin('vehicle', 'vehicles')
+                    ->label('Vehicle')
+                    ->localKey('maintainable_uuid')
+                    ->foreignKey('uuid')
+                    ->columns([
+                        Column::make('public_id', 'string')->label('Vehicle ID'),
+                        Column::make('plate_number', 'string')->label('Plate Number'),
+                        Column::make('make', 'string')->label('Make'),
+                        Column::make('model', 'string')->label('Model'),
+                        Column::make('acquisition_cost', 'integer')->label('Acquisition Cost'),
+                    ]),
+            ]);
+    }
+
+    /**
+     * Create the Inspection Submissions table definition.
+     */
+    protected function createInspectionSubmissionsTable(): Table
+    {
+        return Table::make('inspection_submissions')
+            ->label('Inspection Results')
+            ->description('DVIR and inspection submissions, pass/fail status, and linked maintenance follow-up')
+            ->category('Maintenance')
+            ->extension('fleet-ops')
+            ->excludeColumns(['uuid', 'deleted_at', 'meta', 'location', 'signature', 'attachments'])
+            ->maxRows(100000)
+            ->columns([
+                Column::make('public_id', 'string')->label('Inspection ID')->searchable()->filterable()->sortable(),
+                Column::make('type', 'string')->label('Type')->filterable()->sortable()->aggregatable(),
+                Column::make('status', 'string')->label('Status')->filterable()->sortable()->aggregatable(),
+                Column::make('result', 'string')->label('Result')->filterable()->sortable()->aggregatable(),
+                Column::make('source', 'string')->label('Source')->filterable()->sortable()->aggregatable(),
+                Column::make('odometer', 'integer')->label('Odometer')->aggregatable()->sortable(),
+                Column::make('engine_hours', 'integer')->label('Engine Hours')->aggregatable()->sortable(),
+                Column::make('total_items', 'integer')->label('Total Items')->aggregatable()->sortable(),
+                Column::make('failed_items', 'integer')->label('Failed Items')->aggregatable()->sortable(),
+                Column::make('started_at', 'datetime')->label('Started At')->filterable()->sortable()->aggregatable(),
+                Column::make('submitted_at', 'datetime')->label('Submitted At')->filterable()->sortable()->aggregatable(),
+                Column::make('resolved_at', 'datetime')->label('Resolved At')->filterable()->sortable()->aggregatable(),
+                Column::make('created_at', 'datetime')->label('Created At')->filterable()->sortable()->aggregatable(),
+            ])
+            ->computedColumns([
+                Column::count('total_inspections', 'id')->label('Total Inspections')->description('Count of inspection submissions'),
+                Column::sum('total_failed_items', 'failed_items')->label('Total Failed Items')->description('Sum of failed inspection items'),
+                Column::avg('average_failed_items', 'failed_items')->label('Average Failed Items')->description('Average failed items per inspection'),
+            ])
+            ->relationships([
+                Relationship::hasAutoJoin('inspection_form', 'inspection_forms')
+                    ->label('Inspection Form')
+                    ->localKey('inspection_form_uuid')
+                    ->foreignKey('uuid')
+                    ->columns([
+                        Column::make('name', 'string')->label('Form Name'),
+                        Column::make('type', 'string')->label('Form Type'),
+                        Column::make('frequency', 'string')->label('Frequency'),
+                    ]),
+                Relationship::hasAutoJoin('vehicle', 'vehicles')
+                    ->label('Vehicle')
+                    ->localKey('vehicle_uuid')
+                    ->foreignKey('uuid')
+                    ->columns([
+                        Column::make('public_id', 'string')->label('Vehicle ID'),
+                        Column::make('plate_number', 'string')->label('Plate Number'),
+                        Column::make('make', 'string')->label('Make'),
+                        Column::make('model', 'string')->label('Model'),
+                    ]),
+                Relationship::hasAutoJoin('work_order', 'work_orders')
+                    ->label('Work Order')
+                    ->localKey('work_order_uuid')
+                    ->foreignKey('uuid')
+                    ->columns([
+                        Column::make('public_id', 'string')->label('Work Order ID'),
+                        Column::make('status', 'string')->label('Work Order Status'),
+                        Column::make('actual_cost', 'integer')->label('Work Order Actual Cost'),
                     ]),
             ]);
     }

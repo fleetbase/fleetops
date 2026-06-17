@@ -1,0 +1,1 @@
+export { default } from '@fleetbase/fleetops-engine/templates/maintenance/inspection-forms/index/new';

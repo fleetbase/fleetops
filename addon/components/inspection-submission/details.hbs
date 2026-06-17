@@ -1,0 +1,86 @@
+<div class="next-content-panel-wrapper" ...attributes>
+    <ContentPanel @title="Overview" @open={{true}} @wrapperClass="bordered-top">
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-2 text-xs dark:text-gray-100">
+            <div class="field-info-container">
+                <div class="field-name">Inspection</div>
+                <ClickToCopy @value={{@resource.public_id}} class="field-value font-mono">{{n-a @resource.public_id}}</ClickToCopy>
+            </div>
+            <div class="field-info-container">
+                <div class="field-name">Result</div>
+                <div class="field-value"><Badge @status={{if (eq @resource.result "failed") "danger" "success"}}>{{smart-humanize @resource.result}}</Badge></div>
+            </div>
+            <div class="field-info-container">
+                <div class="field-name">Form</div>
+                <div class="field-value">{{n-a (or @resource.form.name @resource.form_name)}}</div>
+            </div>
+            <div class="field-info-container">
+                <div class="field-name">Status</div>
+                <div class="field-value"><Badge @status={{@resource.status}}>{{smart-humanize @resource.status}}</Badge></div>
+            </div>
+            <div class="field-info-container">
+                <div class="field-name">Vehicle</div>
+                <div class="field-value">{{n-a (or @resource.vehicle.displayName @resource.vehicle_name)}}</div>
+            </div>
+            <div class="field-info-container">
+                <div class="field-name">Driver</div>
+                <div class="field-value">{{n-a (or @resource.driver.name @resource.driver_name)}}</div>
+            </div>
+            <div class="field-info-container">
+                <div class="field-name">Odometer</div>
+                <div class="field-value">{{n-a @resource.odometer}}</div>
+            </div>
+            <div class="field-info-container">
+                <div class="field-name">Engine Hours</div>
+                <div class="field-value">{{n-a @resource.engine_hours}}</div>
+            </div>
+            <div class="field-info-container">
+                <div class="field-name">Submitted</div>
+                <div class="field-value">{{n-a (format-date-fns @resource.submitted_at "dd MMM yyyy, HH:mm")}}</div>
+            </div>
+            <div class="field-info-container">
+                <div class="field-name">Resolved</div>
+                <div class="field-value">{{n-a (format-date-fns @resource.resolved_at "dd MMM yyyy, HH:mm")}}</div>
+            </div>
+        </div>
+    </ContentPanel>
+
+    <ContentPanel @title="Item Results" @open={{true}} @wrapperClass="bordered-top">
+        <div class="space-y-2 text-xs">
+            {{#each @resource.item_results as |item|}}
+                <div class="rounded border border-gray-200 dark:border-gray-700 p-3">
+                    <div class="flex items-start justify-between gap-3">
+                        <div>
+                            <div class="font-semibold">{{n-a item.label}}</div>
+                            <div class="text-gray-500">{{n-a item.category}}</div>
+                            {{#if item.comments}}
+                                <div class="mt-2 whitespace-pre-wrap">{{item.comments}}</div>
+                            {{/if}}
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <Badge @status={{if item.passed "success" "danger"}}>{{if item.passed "Passed" "Failed"}}</Badge>
+                            <Badge @status={{if (eq item.severity "critical") "danger" "info"}}>{{smart-humanize item.severity}}</Badge>
+                        </div>
+                    </div>
+                </div>
+            {{else}}
+                <div class="text-gray-500">No item results recorded.</div>
+            {{/each}}
+        </div>
+    </ContentPanel>
+
+    <ContentPanel @title="Follow Up" @open={{true}} @wrapperClass="bordered-top">
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-2 text-xs dark:text-gray-100">
+            <div class="field-info-container">
+                <div class="field-name">Linked Issue</div>
+                <div class="field-value">{{n-a (or @resource.issue.public_id @resource.issue_uuid)}}</div>
+            </div>
+            <div class="field-info-container">
+                <div class="field-name">Linked Work Order</div>
+                <div class="field-value">{{n-a (or @resource.work_order.public_id @resource.work_order_uuid)}}</div>
+            </div>
+        </div>
+    </ContentPanel>
+
+    <CustomField::Yield @subject={{@resource}} @viewMode={{true}} @wrapperClass="bordered-top" />
+    <Spacer @height="200px" />
+</div>

@@ -122,6 +122,14 @@ class FleetOps
             'actions' => ['export', 'import'],
         ],
         [
+            'name'    => 'inspection-form',
+            'actions' => ['publish', 'archive'],
+        ],
+        [
+            'name'    => 'inspection-submission',
+            'actions' => ['submit', 'create-issue', 'create-work-order', 'resolve'],
+        ],
+        [
             'name'    => 'equipment',
             'actions' => ['export', 'import'],
         ],
@@ -292,6 +300,8 @@ class FleetOps
                 'see extension',
                 '* maintenance',
                 '* work-order',
+                '* inspection-form',
+                '* inspection-submission',
                 '* equipment',
                 '* part',
                 'see vehicle',
@@ -316,6 +326,8 @@ class FleetOps
                 '* place',
                 '* maintenance',
                 '* work-order',
+                '* inspection-form',
+                '* inspection-submission',
                 '* equipment',
                 '* part',
             ],
