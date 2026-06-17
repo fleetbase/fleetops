@@ -36,18 +36,27 @@
                         <Button
                             @icon="refresh"
                             @text={{t "order.fields.refresh-button"}}
-                            @isLoading={{this.getServiceQuotes.isRunning}}
+                            @isLoading={{this.isLoadingServiceQuotes}}
                             @disabled={{not this.selectedRate}}
                             @onClick={{perform this.getServiceQuotes this.selectedRate}}
                         />
                     </div>
                 </div>
-                {{#if this.getServiceQuotes.isRunning}}
+                {{#if this.shouldShowServiceQuotesLoader}}
                     <div class="flex items-center justify-center py-5">
                         <Spinner class="text-sm dark:text-gray-100 flex flex-row items-center" @iconClass="mr-2" @loadingMessage={{t "order.fields.loading-message"}} />
                     </div>
                 {{else}}
                     <InfoBlock class="my-3" @text={{t "order.fields.service-quote-info"}} />
+                    {{#if (and this.isAutoRefreshingServiceQuotes this.hasServiceQuotes)}}
+                        <div class="my-3 rounded-md border border-blue-200 bg-blue-50 px-3 py-2 text-blue-700 dark:border-blue-800 dark:bg-blue-900 dark:text-blue-100">
+                            <Spinner
+                                class="text-sm flex flex-row items-center"
+                                @iconClass="mr-2"
+                                @loadingMessage={{t "order.fields.updating-service-quotes-message"}}
+                            />
+                        </div>
+                    {{/if}}
                     <div class="radio-group-condensed -space-y-px">
                         {{#each this.serviceQuotes as |serviceQuote|}}
                             <div class="radio-group-item shadow-sm flex-col pl-0i pr-0i {{if (eq @resource.service_quote_uuid serviceQuote.uuid) 'is-checked'}}">

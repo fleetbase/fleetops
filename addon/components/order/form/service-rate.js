@@ -12,6 +12,8 @@ export default class OrderFormServiceRateComponent extends Component {
     @tracked selectedRate;
     @tracked serviceRates = [];
     @tracked serviceQuotes = [];
+    @tracked isAutoRefreshingServiceQuotes = false;
+    serviceQuoteRefreshRequestId = 0;
 
     constructor() {
         super(...arguments);
@@ -33,6 +35,18 @@ export default class OrderFormServiceRateComponent extends Component {
         return this.args.resource?.servicable && this.selectedRate && this.args.resource?.payloadCoordinates?.length >= 2;
     }
 
+    get hasServiceQuotes() {
+        return this.serviceQuotes?.length > 0;
+    }
+
+    get isLoadingServiceQuotes() {
+        return this.getServiceQuotes.isRunning || this.isAutoRefreshingServiceQuotes;
+    }
+
+    get shouldShowServiceQuotesLoader() {
+        return this.isLoadingServiceQuotes && !this.hasServiceQuotes;
+    }
+
     @task *queryServiceRates(toggled) {
         this.args.resource.servicable = toggled;
         if (!toggled) return;
@@ -44,14 +58,22 @@ export default class OrderFormServiceRateComponent extends Component {
         yield this.loadServiceQuotes(serviceRate);
     }
 
-    @task *refreshServiceQuotes() {
-        yield timeout(SERVICE_QUOTE_REFRESH_DEBOUNCE_MS);
+    @task *refreshServiceQuotes(refreshRequestId) {
+        this.isAutoRefreshingServiceQuotes = true;
 
-        if (!this.canRefreshServiceQuotes) {
-            return;
+        try {
+            yield timeout(SERVICE_QUOTE_REFRESH_DEBOUNCE_MS);
+
+            if (!this.canRefreshServiceQuotes) {
+                return;
+            }
+
+            yield this.loadServiceQuotes(this.selectedRate);
+        } finally {
+            if (refreshRequestId === this.serviceQuoteRefreshRequestId) {
+                this.isAutoRefreshingServiceQuotes = false;
+            }
         }
-
-        yield this.loadServiceQuotes(this.selectedRate);
     }
 
     handleServiceQuoteRefreshRequest({ order } = {}) {
@@ -64,7 +86,9 @@ export default class OrderFormServiceRateComponent extends Component {
         }
 
         this.refreshServiceQuotes.cancelAll();
-        this.refreshServiceQuotes.perform();
+        this.serviceQuoteRefreshRequestId++;
+        this.isAutoRefreshingServiceQuotes = true;
+        this.refreshServiceQuotes.perform(this.serviceQuoteRefreshRequestId);
     }
 
     async loadServiceQuotes(serviceRate) {
