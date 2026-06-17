@@ -1,0 +1,54 @@
+<Modal::Default @modalIsOpened={{@modalIsOpened}} @options={{@options}} @confirm={{@onConfirm}} @decline={{@onDecline}}>
+    <div class="modal-body-container space-y-4">
+        <div class="text-sm text-gray-600 dark:text-gray-400">
+            Generate a single-use public link for
+            <span class="font-semibold text-gray-900 dark:text-white">{{@options.form.name}}</span>.
+            The driver can complete this published form without opening the console.
+        </div>
+
+        <div class="grid grid-cols-1 gap-3 text-xs">
+            <InputGroup @name="Driver">
+                <ModelSelect
+                    @modelName="driver"
+                    @selectedModel={{this.formState.driver}}
+                    @placeholder="Select driver"
+                    @triggerClass="form-select form-input"
+                    @infiniteScroll={{false}}
+                    @renderInPlace={{true}}
+                    @onChange={{this.assignDriver}}
+                    as |driver|
+                >
+                    {{or driver.name driver.public_id}}
+                </ModelSelect>
+            </InputGroup>
+
+            <InputGroup @name="Vehicle">
+                <ModelSelect
+                    @modelName="vehicle"
+                    @selectedModel={{this.formState.vehicle}}
+                    @placeholder="Select vehicle"
+                    @triggerClass="form-select form-input"
+                    @infiniteScroll={{false}}
+                    @renderInPlace={{true}}
+                    @onChange={{this.assignVehicle}}
+                    as |vehicle|
+                >
+                    {{or vehicle.displayName vehicle.name vehicle.public_id}}
+                </ModelSelect>
+            </InputGroup>
+
+            <InputGroup @name="Expires At">
+                <Input @type="datetime-local" @value={{this.formState.expires_at}} class="w-full form-input" {{on "input" this.updateExpiry}} />
+            </InputGroup>
+        </div>
+
+        {{#if this.formState.generatedUrl}}
+            <div class="rounded-lg border border-green-200 dark:border-green-700 bg-green-50 dark:bg-green-900/20 p-3">
+                <div class="text-xs font-semibold text-green-700 dark:text-green-300 mb-1">Generated Link</div>
+                <ClickToCopy @value={{this.formState.generatedUrl}} class="block text-xs font-mono break-all text-green-900 dark:text-green-100">
+                    {{this.formState.generatedUrl}}
+                </ClickToCopy>
+            </div>
+        {{/if}}
+    </div>
+</Modal::Default>

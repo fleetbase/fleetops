@@ -1,6 +1,6 @@
 <Layout::Resource::Tabular
     @resource="inspection-submission"
-    @title="Inspection Results"
+    @title="Inspections"
     @searchQuery={{this.query}}
     @onSearch={{perform this.inspectionSubmissionActions.controllerSearchTask this}}
     @data={{@model}}
@@ -13,7 +13,7 @@
     @emptyStateComponent={{component
         "table/empty-state"
         icon="list-check"
-        title="No inspections submitted yet"
+        title="No inspections yet"
         description="Capture DVIR submissions and turn failed items into issues or work orders."
         filteredTitle="No inspections match your filters"
         filteredDescription="Adjust search or filters to find another inspection."
