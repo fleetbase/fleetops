@@ -2,12 +2,17 @@
 
 namespace Fleetbase\FleetOps\Support\Telematics;
 
+use Fleetbase\FleetOps\Events\VehicleLocationChanged;
+use Fleetbase\FleetOps\Contracts\TelematicProviderInterface;
 use Fleetbase\FleetOps\Jobs\SyncTelematicDevicesJob;
 use Fleetbase\FleetOps\Jobs\TestTelematicConnectionJob;
 use Fleetbase\FleetOps\Models\Device;
 use Fleetbase\FleetOps\Models\DeviceEvent;
 use Fleetbase\FleetOps\Models\Sensor;
 use Fleetbase\FleetOps\Models\Telematic;
+use Fleetbase\FleetOps\Models\Vehicle;
+use Fleetbase\LaravelMysqlSpatial\Types\Point as SpatialPoint;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
@@ -21,6 +26,14 @@ use Illuminate\Validation\ValidationException;
  */
 class TelematicService
 {
+    protected const PROTECTED_DEVICE_STATUSES = [
+        'disabled',
+        'decommissioned',
+        'maintenance',
+        'provisioning',
+        'pending_activation',
+    ];
+
     protected TelematicProviderRegistry $registry;
 
     public function __construct(TelematicProviderRegistry $registry)
@@ -168,42 +181,34 @@ class TelematicService
             'device_id'      => $externalId,
         ]);
 
-        $device->company_uuid     = $telematic->company_uuid;
-        $device->name             = $deviceData['name'] ?? $deviceData['device_name'] ?? $device->name ?? 'Unknown Device';
-        $device->model            = $deviceData['model'] ?? $deviceData['device_model'] ?? $device->model;
-        $device->provider         = $deviceData['provider'] ?? $deviceData['device_provider'] ?? $telematic->provider;
-        $device->type             = $deviceData['type'] ?? null;
-        $device->internal_id      = $deviceData['internal_id'] ?? $externalId;
-        $device->imei             = $deviceData['imei'] ?? null;
-        $device->imsi             = $deviceData['imsi'] ?? null;
-        $device->serial_number    = $deviceData['serial_number'] ?? null;
-        $device->firmware_version = $deviceData['firmware_version'] ?? null;
-        $device->status           = $deviceData['status'] ?? $device->status ?? 'active';
-
-        if (array_key_exists('online', $deviceData) && $deviceData['online'] !== null) {
-            $device->online = (bool) $deviceData['online'];
-        } elseif (!$device->exists) {
-            $device->online = $device->status === 'active';
-        }
-
-        if (!empty($deviceData['last_online_at']) || !empty($deviceData['last_seen_at'])) {
-            $device->last_online_at = $deviceData['last_online_at'] ?? $deviceData['last_seen_at'];
-        }
-
-        $device->meta             = array_merge($device->meta ?? [], [
+        $this->reconcileDeviceTelemetry($device, $telematic, array_merge($deviceData, [
             'external_id' => $externalId,
-        ], $deviceData['meta'] ?? []);
-
-        $location = $this->normalizeLocation($deviceData['location'] ?? null);
-        if ($location) {
-            $device->last_position = $location;
-        } elseif (!$device->exists || !$device->last_position) {
-            $device->last_position = $this->defaultLocation();
-        }
+        ]));
 
         $device->save();
 
         return $device;
+    }
+
+    public function ingestDeviceSnapshot(Telematic $telematic, TelematicProviderInterface $provider, array $payload): array
+    {
+        $device = $this->linkDevice($telematic, $provider->normalizeDevice($payload));
+
+        $event = null;
+        try {
+            $eventData = $provider->normalizeEvent($payload);
+            if ($this->hasEventSignal($eventData)) {
+                $event = $this->storeDeviceEvent($telematic, $eventData, $device);
+            }
+        } catch (\Throwable) {
+            $event = null;
+        }
+
+        return [
+            'device'  => $device,
+            'event'   => $event,
+            'sensors' => $this->storeSnapshotSensors($telematic, $provider, $payload, $device),
+        ];
     }
 
     public function storeDeviceEvent(Telematic $telematic, array $eventData, ?Device $device = null): DeviceEvent
@@ -214,6 +219,7 @@ class TelematicService
 
         $eventKey            = $this->makeEventKey($telematic, $eventData, $device);
         $event               = $eventKey ? DeviceEvent::firstOrNew(['_key' => $eventKey]) : new DeviceEvent();
+        $wasRecentlyCreated  = !$event->exists;
         $event->company_uuid = $telematic->company_uuid;
         $event->device_uuid  = $device?->uuid;
         $event->event_type   = $eventData['event_type'] ?? $eventData['type'] ?? 'telemetry_update';
@@ -228,6 +234,7 @@ class TelematicService
         $event->data         = $eventData['data'] ?? array_filter([
             'speed'      => $eventData['speed'] ?? null,
             'heading'    => $eventData['heading'] ?? null,
+            'altitude'   => $eventData['altitude'] ?? null,
             'odometer'   => $eventData['odometer'] ?? null,
             'ignition'   => $eventData['ignition'] ?? null,
             'fuel_level' => $eventData['fuel_level'] ?? null,
@@ -241,6 +248,7 @@ class TelematicService
             'occurred_at'       => $eventData['occurred_at'] ?? null,
             'speed'             => $eventData['speed'] ?? null,
             'heading'           => $eventData['heading'] ?? null,
+            'altitude'          => $eventData['altitude'] ?? null,
             'odometer'          => $eventData['odometer'] ?? null,
             'ignition'          => $eventData['ignition'] ?? null,
             'fuel_level'        => $eventData['fuel_level'] ?? null,
@@ -252,6 +260,7 @@ class TelematicService
         }
 
         $event->save();
+        $this->applyDeviceEventTelemetry($event, $eventData, $device, $wasRecentlyCreated, $telematic);
 
         return $event;
     }
@@ -468,6 +477,297 @@ class TelematicService
         }
 
         return ['latitude' => (float) $lat, 'longitude' => (float) $lng];
+    }
+
+    protected function reconcileDeviceTelemetry(Device $device, ?Telematic $telematic, array $payload): void
+    {
+        $externalId = $this->resolveExternalId($payload);
+
+        if ($telematic) {
+            $device->company_uuid = $telematic->company_uuid;
+        }
+
+        $this->setDeviceAttributeIfPresent($device, 'name', $payload['name'] ?? $payload['device_name'] ?? (!$device->exists ? 'Unknown Device' : null));
+        $this->setDeviceAttributeIfPresent($device, 'model', $payload['model'] ?? $payload['device_model'] ?? null);
+        $this->setDeviceAttributeIfPresent($device, 'provider', $payload['provider'] ?? $payload['device_provider'] ?? $telematic?->provider);
+        $this->setDeviceAttributeIfPresent($device, 'type', $payload['type'] ?? null);
+        $this->setDeviceAttributeIfPresent($device, 'internal_id', $payload['internal_id'] ?? $externalId);
+        $this->setDeviceAttributeIfPresent($device, 'imei', $payload['imei'] ?? null);
+        $this->setDeviceAttributeIfPresent($device, 'imsi', $payload['imsi'] ?? null);
+        $this->setDeviceAttributeIfPresent($device, 'serial_number', $payload['serial_number'] ?? null);
+        $this->setDeviceAttributeIfPresent($device, 'firmware_version', $payload['firmware_version'] ?? null);
+
+        $location = $this->normalizeLocation($payload['location'] ?? null);
+        if ($location) {
+            $device->last_position = $location;
+        } elseif (!$device->exists || !$device->last_position) {
+            $device->last_position = $this->defaultLocation();
+        }
+
+        $lastSeen = $this->resolveTelemetryTimestamp($payload);
+        $reportedOnline = $this->resolveReportedOnline($payload);
+
+        if (!$lastSeen && $reportedOnline === true) {
+            $lastSeen = now();
+        }
+
+        if ($lastSeen) {
+            $device->last_online_at = $lastSeen;
+        }
+
+        $connectionStatus = $this->connectionStatusForDevice($device, $lastSeen, $reportedOnline);
+        $device->online   = $connectionStatus === 'online';
+
+        if (!$this->isProtectedDeviceStatus($device->status)) {
+            $device->status = $connectionStatus;
+        }
+
+        $device->meta = array_merge($device->meta ?? [], [
+            'external_id'       => $externalId,
+            'provider_status'   => array_filter([
+                'status'    => $payload['status'] ?? null,
+                'state'     => $payload['state'] ?? null,
+                'active'    => $payload['active'] ?? data_get($payload, 'meta.active'),
+                'online'    => $payload['online'] ?? null,
+                'is_online' => $payload['is_online'] ?? null,
+            ], fn ($value) => $value !== null),
+            'telemetry_summary' => array_filter([
+                'last_seen_at' => $lastSeen?->toDateTimeString(),
+                'status'       => $connectionStatus,
+                'speed'        => $payload['speed'] ?? null,
+                'heading'      => $payload['heading'] ?? null,
+                'altitude'     => $payload['altitude'] ?? null,
+                'odometer'     => $payload['odometer'] ?? null,
+                'ignition'     => $payload['ignition'] ?? null,
+                'fuel_level'   => $payload['fuel_level'] ?? null,
+            ], fn ($value) => $value !== null),
+        ], $payload['meta'] ?? []);
+    }
+
+    protected function setDeviceAttributeIfPresent(Device $device, string $key, mixed $value): void
+    {
+        if ($value === null || $value === '') {
+            return;
+        }
+
+        $device->{$key} = $value;
+    }
+
+    protected function resolveTelemetryTimestamp(array $payload): ?Carbon
+    {
+        $value = $payload['last_online_at']
+            ?? $payload['last_seen_at']
+            ?? $payload['occurred_at']
+            ?? $payload['recorded_at']
+            ?? $payload['timestamp']
+            ?? data_get($payload, 'meta.last_update.occurred_at')
+            ?? data_get($payload, 'meta.occurred_at')
+            ?? null;
+
+        if (!$value) {
+            return null;
+        }
+
+        try {
+            return $value instanceof Carbon ? $value : Carbon::parse($value);
+        } catch (\Throwable) {
+            return null;
+        }
+    }
+
+    protected function resolveReportedOnline(array $payload): ?bool
+    {
+        $value = $payload['online'] ?? $payload['is_online'] ?? null;
+
+        if ($value === null) {
+            return null;
+        }
+
+        return filter_var($value, FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE) ?? (bool) $value;
+    }
+
+    protected function connectionStatusForDevice(Device $device, ?Carbon $lastSeen = null, ?bool $reportedOnline = null): string
+    {
+        if ($reportedOnline === true) {
+            return 'online';
+        }
+
+        $lastSeen ??= $device->last_online_at;
+
+        if (!$lastSeen) {
+            return 'never_connected';
+        }
+
+        $minutesOffline = Carbon::parse($lastSeen)->diffInMinutes(now());
+
+        if ($minutesOffline <= 10) {
+            return 'online';
+        }
+
+        if ($minutesOffline <= 60) {
+            return 'recently_offline';
+        }
+
+        if ($minutesOffline <= 1440) {
+            return 'offline';
+        }
+
+        return 'long_offline';
+    }
+
+    protected function isProtectedDeviceStatus(?string $status): bool
+    {
+        return in_array($status, self::PROTECTED_DEVICE_STATUSES, true);
+    }
+
+    protected function applyDeviceEventTelemetry(DeviceEvent $event, array $eventData, ?Device $device = null, bool $wasRecentlyCreated = true, ?Telematic $telematic = null): void
+    {
+        $location = $this->normalizeLocation($eventData['location'] ?? null);
+
+        $device ??= $event->device;
+        if ($device) {
+            $this->reconcileDeviceTelemetry($device, $telematic, $eventData);
+            $device->save();
+            $device->loadMissing('attachable');
+        }
+
+        if (!$location) {
+            return;
+        }
+
+        $positionData = $this->makePositionData($location, $eventData);
+        if ($wasRecentlyCreated && $positionData) {
+            $event->createPosition($positionData);
+        }
+
+        $attachable = $device?->attachable;
+        if ($attachable instanceof Vehicle) {
+            $this->updateVehicleTelemetry($attachable, $location, $eventData, $event);
+        }
+    }
+
+    protected function updateVehicleTelemetry(Vehicle $vehicle, array $location, array $eventData, DeviceEvent $event): void
+    {
+        $vehicle->location = new SpatialPoint($location['latitude'], $location['longitude']);
+        $vehicle->online   = array_key_exists('online', $eventData) && $eventData['online'] !== null ? (bool) $eventData['online'] : true;
+
+        if (array_key_exists('speed', $eventData) && $eventData['speed'] !== null) {
+            $vehicle->speed = $eventData['speed'];
+        }
+
+        if (array_key_exists('heading', $eventData) && $eventData['heading'] !== null) {
+            $vehicle->heading = $eventData['heading'];
+        }
+
+        if (array_key_exists('altitude', $eventData) && $eventData['altitude'] !== null) {
+            $vehicle->altitude = $eventData['altitude'];
+        }
+
+        $vehicle->telematics = array_merge($vehicle->telematics ?? [], [
+            'last_event_uuid'     => $event->uuid,
+            'last_event_id'       => $event->public_id,
+            'last_event_type'     => $event->event_type,
+            'last_event_at'       => optional($event->occurred_at)->toDateTimeString() ?? now()->toDateTimeString(),
+            'last_device_uuid'    => $event->device_uuid,
+            'last_provider'       => $event->provider,
+            'last_telemetry_data' => array_filter([
+                'speed'      => $eventData['speed'] ?? null,
+                'heading'    => $eventData['heading'] ?? null,
+                'altitude'   => $eventData['altitude'] ?? null,
+                'odometer'   => $eventData['odometer'] ?? null,
+                'ignition'   => $eventData['ignition'] ?? null,
+                'fuel_level' => $eventData['fuel_level'] ?? null,
+            ], fn ($value) => $value !== null),
+        ]);
+        $vehicle->save();
+
+        broadcast(new VehicleLocationChanged($vehicle, [
+            'source'            => 'telematics',
+            'device_event_uuid' => $event->uuid,
+            'provider'          => $event->provider,
+        ]));
+    }
+
+    protected function makePositionData(array $location, array $eventData): array
+    {
+        return array_filter([
+            'latitude'  => $location['latitude'],
+            'longitude' => $location['longitude'],
+            'heading'   => $eventData['heading'] ?? null,
+            'bearing'   => $eventData['heading'] ?? null,
+            'speed'     => $eventData['speed'] ?? null,
+            'altitude'  => $eventData['altitude'] ?? null,
+        ], fn ($value) => $value !== null);
+    }
+
+    protected function hasEventSignal(array $eventData): bool
+    {
+        return (bool) array_filter([
+            $eventData['event_id'] ?? null,
+            $eventData['external_event_id'] ?? null,
+            $eventData['ident'] ?? null,
+            $eventData['event_type'] ?? null,
+            $eventData['occurred_at'] ?? null,
+            $eventData['recorded_at'] ?? null,
+            $eventData['timestamp'] ?? null,
+            $eventData['location']['lat'] ?? null,
+            $eventData['location']['latitude'] ?? null,
+            $eventData['speed'] ?? null,
+            $eventData['heading'] ?? null,
+            $eventData['altitude'] ?? null,
+            $eventData['odometer'] ?? null,
+            $eventData['ignition'] ?? null,
+            $eventData['fuel_level'] ?? null,
+        ], fn ($value) => $value !== null);
+    }
+
+    protected function storeSnapshotSensors(Telematic $telematic, TelematicProviderInterface $provider, array $payload, Device $device): int
+    {
+        $rawSensors = $payload['sensors'] ?? $payload['sensors_last_val'] ?? [];
+        if (!is_array($rawSensors) || empty($rawSensors)) {
+            return 0;
+        }
+
+        $stored     = 0;
+        $externalId = $this->resolveExternalId($payload);
+
+        foreach ($this->normalizeRawSensorList($rawSensors) as $rawSensor) {
+            try {
+                $sensorData = $provider->normalizeSensor(array_merge([
+                    'device_id' => $externalId,
+                ], $rawSensor));
+                $sensorData['device_id'] ??= $externalId;
+
+                $this->storeSensor($telematic, $sensorData, $device);
+                $stored++;
+            } catch (\Throwable) {
+                continue;
+            }
+        }
+
+        return $stored;
+    }
+
+    protected function normalizeRawSensorList(array $rawSensors): array
+    {
+        if (array_is_list($rawSensors)) {
+            return array_filter($rawSensors, fn ($sensor) => is_array($sensor));
+        }
+
+        return collect($rawSensors)
+            ->map(function ($sensor, $name) {
+                if (is_array($sensor)) {
+                    return array_merge(['name' => $name], $sensor);
+                }
+
+                return [
+                    'name'  => $name,
+                    'type'  => $name,
+                    'value' => $sensor,
+                ];
+            })
+            ->values()
+            ->all();
     }
 
     protected function defaultLocation(): array

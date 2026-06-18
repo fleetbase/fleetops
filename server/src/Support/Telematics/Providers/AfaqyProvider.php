@@ -2,6 +2,9 @@
 
 namespace Fleetbase\FleetOps\Support\Telematics\Providers;
 
+use Fleetbase\FleetOps\Exceptions\TelematicProviderException;
+use Illuminate\Http\Client\ConnectionException;
+use Illuminate\Http\Client\Response;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
@@ -14,20 +17,23 @@ use Illuminate\Support\Facades\Log;
  */
 class AfaqyProvider extends AbstractProvider
 {
-    protected string $baseUrl        = 'https://api.afaqy.sa';
-    protected int $requestsPerMinute = 60;
+    protected string $baseUrl                   = 'https://api.afaqy.sa';
+    protected int $requestsPerMinute            = 60;
+    protected int $dataTimeout                  = 120;
+    protected int $connectTimeout               = 15;
+    protected int $connectionTestTimeout        = 30;
+    protected int $connectionTestConnectTimeout = 10;
 
     protected function prepareAuthentication(): void
     {
         $this->baseUrl = rtrim($this->credentials['base_url'] ?? $this->baseUrl, '/');
-        $token         = $this->credentials['token'] ?? $this->authenticate();
+        $token         = $this->canRefreshToken() ? $this->authenticate() : ($this->credentials['token'] ?? null);
 
-        $this->credentials['token'] = $token;
-        $this->headers              = [
-            'Accept'        => 'application/json',
-            'Content-Type'  => 'application/json',
-            'Authorization' => 'Bearer ' . $token,
-        ];
+        if (!$token) {
+            throw new \InvalidArgumentException('AFAQY username/password or token is required.');
+        }
+
+        $this->setToken($token);
     }
 
     public function testConnection(array $credentials): array
@@ -41,7 +47,7 @@ class AfaqyProvider extends AbstractProvider
                     'projection' => ['_id', 'name', 'imei', 'last_update'],
                     'filters'    => new \stdClass(),
                 ],
-            ], true);
+            ], true, $this->connectionTestTimeout, $this->connectionTestConnectTimeout);
 
             return [
                 'success'  => true,
@@ -55,7 +61,7 @@ class AfaqyProvider extends AbstractProvider
             return [
                 'success'  => false,
                 'message'  => $e->getMessage(),
-                'metadata' => [],
+                'metadata' => method_exists($e, 'context') ? $e->context() : [],
             ];
         }
     }
@@ -187,12 +193,14 @@ class AfaqyProvider extends AbstractProvider
             'event_type'  => $payload['event'] ?? $payload['event_type'] ?? 'telemetry_update',
             'message'     => $payload['message'] ?? $payload['event'] ?? null,
             'occurred_at' => $this->parseTimestamp($lastUpdate['dtt'] ?? $lastUpdate['dts'] ?? null),
+            'online'      => $payload['active'] ?? null,
             'location'    => [
                 'lat' => $lastUpdate['lat'] ?? data_get($lastUpdate, 'loc.coordinates.1'),
                 'lng' => $lastUpdate['lng'] ?? data_get($lastUpdate, 'loc.coordinates.0'),
             ],
             'speed'      => $lastUpdate['speed'] ?? $lastUpdate['spd'] ?? null,
             'heading'    => $lastUpdate['angle'] ?? $lastUpdate['ang'] ?? null,
+            'altitude'   => $lastUpdate['alt'] ?? null,
             'odometer'   => data_get($payload, 'counters.odometer'),
             'ignition'   => $this->extractIgnition($payload),
             'fuel_level' => $this->extractFuelLevel($payload),
@@ -271,19 +279,64 @@ class AfaqyProvider extends AbstractProvider
             ]);
 
         if ($response->failed()) {
-            throw new \RuntimeException('AFAQY authentication failed with status ' . $response->status());
+            throw new TelematicProviderException('AFAQY authentication failed with status ' . $response->status(), $this->providerErrorContext('/auth/login', $response, false));
         }
 
         $token = data_get($response->json(), 'data.token');
 
         if (!$token) {
-            throw new \RuntimeException('AFAQY authentication did not return a token.');
+            throw new TelematicProviderException('AFAQY authentication did not return a token.', $this->providerErrorContext('/auth/login', $response, false));
         }
 
         return $token;
     }
 
-    protected function afaqyPost(string $endpoint, array $payload = [], bool $tokenInQuery = false): array
+    protected function afaqyPost(string $endpoint, array $payload = [], bool $tokenInQuery = false, ?int $timeout = null, ?int $connectTimeout = null): array
+    {
+        return $this->authenticatedPost($endpoint, $payload, $tokenInQuery, true, $timeout, $connectTimeout);
+    }
+
+    protected function authenticatedPost(string $endpoint, array $payload = [], bool $tokenInQuery = false, bool $allowRetry = true, ?int $timeout = null, ?int $connectTimeout = null): array
+    {
+        [$url, $body] = $this->buildAuthenticatedRequest($endpoint, $payload, $tokenInQuery);
+
+        $startedAt = microtime(true);
+        $timeout ??= $this->dataTimeout;
+        $connectTimeout ??= $this->connectTimeout;
+
+        try {
+            $response = Http::withHeaders($this->headers)
+                ->timeout($timeout)
+                ->connectTimeout($connectTimeout)
+                ->post($url, $body);
+        } catch (ConnectionException $e) {
+            throw new TelematicProviderException('AFAQY API request timed out while waiting for provider response.', $this->transportErrorContext($endpoint, $payload, $e, !$allowRetry, $startedAt, $timeout, $connectTimeout), previous: $e);
+        }
+
+        if ($this->isTokenRejected($response)) {
+            if (!$allowRetry || !$this->canRefreshToken()) {
+                $message = $this->canRefreshToken()
+                    ? 'AFAQY token rejected after refresh with status ' . $response->status()
+                    : 'AFAQY token rejected and username/password credentials are required to refresh it.';
+
+                throw new TelematicProviderException($message, $this->providerErrorContext($endpoint, $response, !$allowRetry));
+            }
+
+            Log::warning('AFAQY token rejected; refreshing token and retrying request', $this->providerErrorContext($endpoint, $response, true));
+
+            $this->refreshToken();
+
+            return $this->authenticatedPost($endpoint, $payload, $tokenInQuery, false, $timeout, $connectTimeout);
+        }
+
+        if ($response->failed()) {
+            throw new TelematicProviderException('AFAQY API request failed with status ' . $response->status(), $this->providerErrorContext($endpoint, $response, !$allowRetry));
+        }
+
+        return $response->json() ?? [];
+    }
+
+    protected function buildAuthenticatedRequest(string $endpoint, array $payload = [], bool $tokenInQuery = false): array
     {
         $url  = $this->baseUrl . $endpoint;
         $body = $tokenInQuery ? $payload : array_merge(['token' => $this->credentials['token']], $payload);
@@ -292,15 +345,84 @@ class AfaqyProvider extends AbstractProvider
             $url .= (str_contains($url, '?') ? '&' : '?') . http_build_query(['token' => $this->credentials['token']]);
         }
 
-        $response = Http::withHeaders($this->headers)
-            ->timeout(30)
-            ->post($url, $body);
+        return [$url, $body];
+    }
 
-        if ($response->failed()) {
-            throw new \RuntimeException('AFAQY API request failed with status ' . $response->status());
+    protected function setToken(string $token): void
+    {
+        $this->credentials['token'] = $token;
+        $this->headers              = [
+            'Accept'        => 'application/json',
+            'Content-Type'  => 'application/json',
+            'Authorization' => 'Bearer ' . $token,
+        ];
+    }
+
+    protected function refreshToken(): void
+    {
+        unset($this->credentials['token']);
+
+        $this->setToken($this->authenticate());
+    }
+
+    protected function canRefreshToken(): bool
+    {
+        return !empty($this->credentials['username']) && !empty($this->credentials['password']);
+    }
+
+    protected function isTokenRejected(Response $response): bool
+    {
+        return in_array($response->status(), [401, 403], true);
+    }
+
+    protected function providerErrorContext(string $endpoint, Response $response, bool $retryAttempted): array
+    {
+        $json = $response->json() ?? [];
+        $json = is_array($json) ? $json : [];
+
+        return array_filter([
+            'provider'         => 'afaqy',
+            'endpoint'         => $endpoint,
+            'status_code'      => $response->status(),
+            'provider_code'    => data_get($json, 'code') ?? data_get($json, 'error.code') ?? data_get($json, 'error_code'),
+            'provider_message' => $this->providerErrorMessage($json),
+            'retry_attempted'  => $retryAttempted,
+        ], fn ($value) => $value !== null);
+    }
+
+    protected function providerErrorMessage(array $json): ?string
+    {
+        $message = data_get($json, 'message')
+            ?? data_get($json, 'error.message')
+            ?? data_get($json, 'error_description')
+            ?? data_get($json, 'error');
+
+        return is_scalar($message) ? (string) $message : null;
+    }
+
+    protected function transportErrorContext(string $endpoint, array $payload, ConnectionException $e, bool $retryAttempted, float $startedAt, int $timeout, int $connectTimeout): array
+    {
+        return array_filter([
+            'provider'         => 'afaqy',
+            'endpoint'         => $endpoint,
+            'requested_limit'  => data_get($payload, 'data.limit'),
+            'requested_offset' => data_get($payload, 'data.offset'),
+            'timeout'          => $timeout,
+            'connect_timeout'  => $connectTimeout,
+            'elapsed_ms'       => (int) ((microtime(true) - $startedAt) * 1000),
+            'bytes_received'   => $this->extractBytesReceived($e->getMessage()),
+            'retry_attempted'  => $retryAttempted,
+            'transport_error'  => 'connection_exception',
+        ], fn ($value) => $value !== null);
+    }
+
+    protected function extractBytesReceived(string $message): ?int
+    {
+        if (preg_match('/with\s+(\d+)\s+bytes\s+received/i', $message, $matches)) {
+            return (int) $matches[1];
         }
 
-        return $response->json() ?? [];
+        return null;
     }
 
     protected function compactLastUpdate(array $lastUpdate): array

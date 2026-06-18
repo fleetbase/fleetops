@@ -24,7 +24,7 @@
                         }}</div>
                     <div class="text-xs text-gray-400 dark:text-gray-500">{{n-a @resource.serial_number}}</div>
                 </div>
-                <Badge @status={{if @resource.online "online" "offline"}}>{{if @resource.online (t "common.online") (t "common.offline")}}</Badge>
+                <Badge @status={{if @resource.is_online "online" "offline"}}>{{if @resource.is_online (t "common.online") (t "common.offline")}}</Badge>
             </div>
         </div>
         <div class="next-view-header-right">

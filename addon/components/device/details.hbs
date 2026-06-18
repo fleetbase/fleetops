@@ -111,7 +111,7 @@
 
             <div class="field-info-container">
                 <div class="field-name">{{t "common.last-seen-at"}}</div>
-                <div class="field-value">{{or (format-date @resource.last_online_at) "-"}}</div>
+                <div class="field-value">{{n-a (format-date-fns @resource.last_online_at "dd MMM yyyy, HH:mm")}}</div>
             </div>
 
             {{#if @resource.signal_strength}}
