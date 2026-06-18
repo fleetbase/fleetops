@@ -39,6 +39,25 @@ module('Integration | Component | order/form/details', function (hooks) {
         assert.true(requiredLabels.includes('Proof of Delivery'));
     });
 
+    test('it does not render orchestrator constraint inputs', async function (assert) {
+        this.set('resource', {
+            facilitator: {
+                isIntegratedVendor: false,
+            },
+            order_config: null,
+            payload: {},
+            pod_required: false,
+            required_skills: [],
+        });
+
+        await render(hbs`<Order::Form::Details @resource={{this.resource}} />`);
+
+        assert.dom().doesNotContainText('Orchestrator Constraints');
+        assert.dom().doesNotContainText('Time Window Start');
+        assert.dom().doesNotContainText('Required Skills');
+        assert.dom().doesNotContainText('Orchestrator Priority');
+    });
+
     test('quote-relevant detail changes request service quote refresh', function (assert) {
         const requests = [];
         const resource = {
