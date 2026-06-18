@@ -261,7 +261,7 @@ export default class ConnectivityTelematicsDetailsDevicesController extends Cont
                 sortable: false,
                 filterable: true,
                 filterParam: 'attachment_state',
-                filterComponent: 'filter/multi-option',
+                filterComponent: 'filter/select',
                 filterOptions: [
                     { label: 'Attached', value: 'attached' },
                     { label: 'Unattached', value: 'unattached' },
