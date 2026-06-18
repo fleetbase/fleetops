@@ -67,7 +67,7 @@ class SyncTelematics extends Command
 
     protected function pollableProviderKeys(TelematicProviderRegistry $registry): array
     {
-        $requestedProviders = array_filter((array) $this->option('provider'));
+        $requestedProviders      = array_filter((array) $this->option('provider'));
         $includeWebhookProviders = (bool) $this->option('sync-webhook-providers');
 
         return $registry->all()

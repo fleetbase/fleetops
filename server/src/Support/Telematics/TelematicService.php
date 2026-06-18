@@ -2,8 +2,8 @@
 
 namespace Fleetbase\FleetOps\Support\Telematics;
 
-use Fleetbase\FleetOps\Events\VehicleLocationChanged;
 use Fleetbase\FleetOps\Contracts\TelematicProviderInterface;
+use Fleetbase\FleetOps\Events\VehicleLocationChanged;
 use Fleetbase\FleetOps\Jobs\SyncTelematicDevicesJob;
 use Fleetbase\FleetOps\Jobs\TestTelematicConnectionJob;
 use Fleetbase\FleetOps\Models\Device;
@@ -504,7 +504,7 @@ class TelematicService
             $device->last_position = $this->defaultLocation();
         }
 
-        $lastSeen = $this->resolveTelemetryTimestamp($payload);
+        $lastSeen       = $this->resolveTelemetryTimestamp($payload);
         $reportedOnline = $this->resolveReportedOnline($payload);
 
         if (!$lastSeen && $reportedOnline === true) {

@@ -407,6 +407,10 @@ class Vehicle extends Model
      */
     public function getDisplayNameAttribute()
     {
+        if (isset($this->name) && strlen($this->name)) {
+            return $this->name;
+        }
+
         // Initialize an empty array to hold the name segments
         $nameSegments = [];
 

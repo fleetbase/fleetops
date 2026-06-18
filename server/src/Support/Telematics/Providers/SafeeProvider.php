@@ -221,7 +221,7 @@ class SafeeProvider extends AbstractProvider
             }
         }
 
-        $tokenUrl = $this->baseUrl . '/auth/realms/' . $this->credentials['realm_id'] . '/protocol/openid-connect/token';
+        $tokenUrl          = $this->baseUrl . '/auth/realms/' . $this->credentials['realm_id'] . '/protocol/openid-connect/token';
         $this->authContext = $this->buildAuthContext($tokenUrl);
 
         $response = Http::asForm()
@@ -270,7 +270,7 @@ class SafeeProvider extends AbstractProvider
 
     protected function buildAuthContext(string $tokenUrl): array
     {
-        $parts = parse_url($tokenUrl) ?: [];
+        $parts  = parse_url($tokenUrl) ?: [];
         $scheme = $parts['scheme'] ?? null;
         $host   = $parts['host'] ?? null;
 
