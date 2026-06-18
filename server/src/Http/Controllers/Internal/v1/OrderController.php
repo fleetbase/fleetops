@@ -6,7 +6,6 @@ use Fleetbase\Exceptions\FleetbaseRequestValidationException;
 use Fleetbase\FleetOps\Events\EntityActivityChanged;
 use Fleetbase\FleetOps\Events\EntityCompleted;
 use Fleetbase\FleetOps\Events\OrderDispatchFailed;
-use Fleetbase\FleetOps\Events\OrderReady;
 use Fleetbase\FleetOps\Events\OrderStarted;
 use Fleetbase\FleetOps\Events\WaypointActivityChanged;
 use Fleetbase\FleetOps\Events\WaypointCompleted;
@@ -20,6 +19,8 @@ use Fleetbase\FleetOps\Http\Resources\v1\Index\Order as OrderIndexResource;
 use Fleetbase\FleetOps\Http\Resources\v1\Order as OrderResource;
 use Fleetbase\FleetOps\Http\Resources\v1\Proof as ProofResource;
 use Fleetbase\FleetOps\Imports\OrdersImport;
+use Fleetbase\FleetOps\Jobs\FinalizeInternalOrderCreation;
+use Fleetbase\FleetOps\Jobs\NotifyBulkAssignedDriver;
 use Fleetbase\FleetOps\Models\Driver;
 use Fleetbase\FleetOps\Models\Entity;
 use Fleetbase\FleetOps\Models\Order;
@@ -210,14 +211,7 @@ class OrderController extends FleetOpsController
                     // if service quote attached purchase
                     $order->purchaseServiceQuote($serviceQuote);
 
-                    // Run background processes on queue
-                    dispatch(function () use ($order): void {
-                        // notify driver if assigned
-                        $order->notifyDriverAssigned();
-
-                        // Trigger order created event
-                        event(new OrderReady($order));
-                    })->afterCommit();
+                    FinalizeInternalOrderCreation::dispatch($order->uuid)->afterCommit();
                 }
             );
 
@@ -527,29 +521,7 @@ class OrderController extends FleetOpsController
 
         // Queue Per‑Order Notifications
         if (!$request->boolean('silent')) {
-            dispatch(function () use ($orderUuids, $driver): void {
-                // Re‑hydrate Driver To Avoid Serializing The Full Model
-                $driver = Driver::whereUuid($driver->uuid)->first();
-
-                // Stream Orders To Keep Memory Footprint Low
-                Order::whereIn('uuid', $orderUuids)
-                    ->cursor()
-                    ->each(function (Order $order) use ($driver): void {
-                        // Synchronize In‑Memory Model
-                        $order->setRelation('driverAssigned', $driver);
-                        $order->driver_assigned_uuid = $driver->uuid;
-
-                        try {
-                            $order->notifyDriverAssigned();
-                        } catch (\Throwable $e) {
-                            logger()->warning(
-                                'Failed notifying driver on order ' . $order->uuid,
-                                ['error' => $e->getMessage()]
-                            );
-                        }
-                    });
-            })
-            ->afterCommit();
+            NotifyBulkAssignedDriver::dispatch($orderUuids->all(), $driver->uuid)->afterCommit();
         }
 
         return response()->json([

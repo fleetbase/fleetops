@@ -3,7 +3,6 @@
 namespace Fleetbase\FleetOps\Http\Controllers\Api\v1;
 
 use Fleetbase\FleetOps\Events\OrderDispatchFailed;
-use Fleetbase\FleetOps\Events\OrderReady;
 use Fleetbase\FleetOps\Events\OrderStarted;
 use Fleetbase\FleetOps\Exceptions\CustomerUserConflictException;
 use Fleetbase\FleetOps\Exceptions\UserAlreadyExistsException;
@@ -14,6 +13,7 @@ use Fleetbase\FleetOps\Http\Requests\UpdateOrderRequest;
 use Fleetbase\FleetOps\Http\Resources\v1\DeletedResource;
 use Fleetbase\FleetOps\Http\Resources\v1\Order as OrderResource;
 use Fleetbase\FleetOps\Http\Resources\v1\Proof as ProofResource;
+use Fleetbase\FleetOps\Jobs\FinalizeApiOrderCreation;
 use Fleetbase\FleetOps\Models\Contact;
 use Fleetbase\FleetOps\Models\Driver;
 use Fleetbase\FleetOps\Models\Entity;
@@ -335,26 +335,11 @@ class OrderController extends Controller
         // Determine if order should be dispatched on creation
         $shouldDispatch = $request->boolean('dispatch') && $integratedVendorOrder === null;
 
-        // Run background processes on queue
-        dispatch(function () use ($order, $serviceQuote, $shouldDispatch): void {
-            // notify driver if assigned
-            $order->notifyDriverAssigned();
-
-            // set driving distance and time
-            $order->setPreliminaryDistanceAndTime();
-
-            // if service quote attached purchase
-            $order->purchaseServiceQuote($serviceQuote);
-
-            // dispatch if flagged true
-            if ($shouldDispatch) {
-                $order->dispatchWithActivity();
-            }
-
-            // Trigger order created event
-            event(new OrderReady($order));
-        })
-        ->afterCommit();
+        FinalizeApiOrderCreation::dispatch(
+            $order->uuid,
+            $serviceQuote instanceof ServiceQuote ? $serviceQuote->uuid : null,
+            $shouldDispatch
+        )->afterCommit();
 
         // response the driver resource
         return new OrderResource($order);
