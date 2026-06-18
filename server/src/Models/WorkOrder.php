@@ -59,14 +59,14 @@ class WorkOrder extends Model
      *
      * @var array
      */
-    protected $searchableColumns = ['code', 'subject', 'instructions', 'public_id'];
+    protected $searchableColumns = ['code', 'subject', 'category', 'instructions', 'public_id'];
 
     /**
      * The attributes that can be used for filtering.
      *
      * @var array
      */
-    protected $filterParams = ['status', 'priority', 'target_type', 'assignee_type'];
+    protected $filterParams = ['category', 'status', 'priority', 'target_type', 'assignee_type'];
 
     /**
      * The attributes that are mass assignable.
@@ -77,6 +77,7 @@ class WorkOrder extends Model
         'company_uuid',
         'code',
         'subject',
+        'category',
         'status',
         'priority',
         'target_type',
@@ -575,6 +576,7 @@ class WorkOrder extends Model
         $row = array_filter($row);
 
         $subject        = Utils::or($row, ['subject', 'title', 'name']);
+        $category       = Utils::or($row, ['category', 'work_order_category', 'work_type', 'type']);
         $status         = Utils::or($row, ['status'], 'open');
         $priority       = Utils::or($row, ['priority'], 'normal');
         $instructions   = Utils::or($row, ['instructions', 'description', 'notes']);
@@ -592,6 +594,7 @@ class WorkOrder extends Model
         $workOrder = new static([
             'company_uuid'    => session('company'),
             'subject'         => $subject,
+            'category'        => $category,
             'status'          => $status,
             'priority'        => $priority,
             'instructions'    => $instructions,

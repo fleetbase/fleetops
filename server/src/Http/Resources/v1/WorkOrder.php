@@ -41,6 +41,7 @@ class WorkOrder extends FleetbaseResource
             // Core attributes
             'code'                    => $this->code,
             'subject'                 => $this->subject,
+            'category'                => $this->category,
             'status'                  => $this->status,
             'priority'                => $this->priority,
             'instructions'            => $this->instructions,

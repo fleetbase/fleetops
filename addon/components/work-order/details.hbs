@@ -20,6 +20,10 @@
                 <div class="field-name">Subject</div>
                 <div class="field-value">{{n-a @resource.subject}}</div>
             </div>
+            <div class="field-info-container col-span-2">
+                <div class="field-name">Category</div>
+                <div class="field-value">{{n-a (smart-humanize @resource.category)}}</div>
+            </div>
 
             {{! — Status & Priority — }}
             <div class="col-span-2 text-[11px] uppercase tracking-wide text-gray-500 font-semibold mt-3">
