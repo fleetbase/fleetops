@@ -15,6 +15,18 @@ export default class ConnectivityDevicesIndexDetailsController extends Controlle
                 route: 'connectivity.devices.index.details.index',
                 label: this.intl.t('common.overview'),
             },
+            {
+                route: 'connectivity.devices.index.details.vehicle',
+                label: this.intl.t('resource.vehicle'),
+            },
+            {
+                route: 'connectivity.devices.index.details.sensors',
+                label: this.intl.t('resource.sensors'),
+            },
+            {
+                route: 'connectivity.devices.index.details.events',
+                label: this.intl.t('resource.device-events'),
+            },
             ...(isArray(registeredTabs) ? registeredTabs : []),
         ];
     }
