@@ -134,6 +134,7 @@ export default class ServiceRateActionsService extends ResourceActionService {
                 scheduled_at: order.scheduled_at,
                 is_route_optimized: order.optimized,
                 service: serviceRate.id,
+                meta: order.meta,
             });
 
             return serviceQuotes;
