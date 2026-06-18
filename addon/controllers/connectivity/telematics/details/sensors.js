@@ -2,6 +2,7 @@ import Controller from '@ember/controller';
 import { action } from '@ember/object';
 import { inject as service } from '@ember/service';
 import { tracked } from '@glimmer/tracking';
+import { task } from 'ember-concurrency';
 import fleetOpsOptions from '../../../../utils/fleet-ops-options';
 
 export default class ConnectivityTelematicsDetailsSensorsController extends Controller {
@@ -10,7 +11,7 @@ export default class ConnectivityTelematicsDetailsSensorsController extends Cont
     @service hostRouter;
     @service intl;
 
-    @tracked queryParams = ['page', 'limit', 'sort', 'query', 'status', 'type', 'device_uuid'];
+    @tracked queryParams = ['page', 'limit', 'sort', 'query', 'status', 'type', 'device_uuid', 'last_reading_at'];
     @tracked telematic;
     @tracked page = 1;
     @tracked limit;
@@ -19,6 +20,7 @@ export default class ConnectivityTelematicsDetailsSensorsController extends Cont
     @tracked status;
     @tracked type;
     @tracked device_uuid;
+    @tracked last_reading_at;
 
     get sensors() {
         return Array.from(this.model ?? []);
@@ -37,7 +39,7 @@ export default class ConnectivityTelematicsDetailsSensorsController extends Cont
     }
 
     get hasActiveFilters() {
-        return Boolean(this.query || this.status || this.type || this.device_uuid);
+        return Boolean(this.query || this.status || this.type || this.device_uuid || this.last_reading_at);
     }
 
     get hasSensors() {
@@ -122,22 +124,26 @@ export default class ConnectivityTelematicsDetailsSensorsController extends Cont
         ];
     }
 
-    @tracked actionButtons = [
-        {
-            icon: 'refresh',
-            size: 'xs',
-            onClick: this.refresh,
-            helpText: this.intl.t('common.refresh'),
-            wrapperClass: 'fleetops-telematics-action-button',
-        },
-        {
-            icon: 'microchip',
-            text: 'View Devices',
-            size: 'xs',
-            onClick: this.goToDevices,
-            wrapperClass: 'fleetops-telematics-action-button',
-        },
-    ];
+    get actionButtons() {
+        return [
+            {
+                icon: 'refresh',
+                size: 'sm',
+                onClick: this.refresh,
+                helpText: this.intl.t('common.refresh'),
+                wrapperClass: 'fleetops-telematics-action-button',
+                isLoading: this.refreshTask.isRunning,
+                disabled: this.refreshTask.isRunning,
+            },
+            {
+                icon: 'microchip',
+                text: 'View Devices',
+                size: 'sm',
+                onClick: this.goToDevices,
+                wrapperClass: 'fleetops-telematics-action-button',
+            },
+        ];
+    }
 
     @tracked bulkActions = [];
 
@@ -179,6 +185,8 @@ export default class ConnectivityTelematicsDetailsSensorsController extends Cont
                 filterComponentPlaceholder: 'Select device',
                 filterParam: 'device_uuid',
                 model: 'device',
+                modelNamePath: 'displayName',
+                query: { telematic_uuid: this.telematic?.id },
             },
             {
                 label: 'Value',
@@ -208,6 +216,9 @@ export default class ConnectivityTelematicsDetailsSensorsController extends Cont
                 sortParam: 'last_reading_at',
                 resizable: true,
                 sortable: true,
+                filterable: true,
+                filterParam: 'last_reading_at',
+                filterComponent: 'filter/date',
             },
             {
                 label: '',
@@ -241,7 +252,11 @@ export default class ConnectivityTelematicsDetailsSensorsController extends Cont
     }
 
     @action refresh() {
-        return this.hostRouter.refresh();
+        if (this.refreshTask.isRunning) {
+            return;
+        }
+
+        return this.refreshTask.perform();
     }
 
     @action clearFilters() {
@@ -249,6 +264,7 @@ export default class ConnectivityTelematicsDetailsSensorsController extends Cont
         this.status = null;
         this.type = null;
         this.device_uuid = null;
+        this.last_reading_at = null;
         this.page = 1;
     }
 
@@ -266,5 +282,9 @@ export default class ConnectivityTelematicsDetailsSensorsController extends Cont
         return this.hostRouter.transitionTo('console.fleet-ops.connectivity.telematics.details.devices', this.telematic, {
             queryParams: { device_id: sensor.device_uuid },
         });
+    }
+
+    @task *refreshTask() {
+        yield this.hostRouter.refresh();
     }
 }

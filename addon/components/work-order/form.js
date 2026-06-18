@@ -1,6 +1,7 @@
 import Component from '@glimmer/component';
 import { tracked } from '@glimmer/tracking';
 import { action } from '@ember/object';
+import { workOrderCategories, workOrderStatuses } from '../../utils/fleet-ops-options';
 
 /**
  * Maps a user-facing polymorphic type string to the Ember Data model name
@@ -42,7 +43,10 @@ const ASSIGNEE_MODEL_TO_TYPE = {
 
 export default class WorkOrderFormComponent extends Component {
     /** Status options for work orders. */
-    statusOptions = ['open', 'in_progress', 'on_hold', 'completed', 'cancelled'];
+    statusOptions = workOrderStatuses;
+
+    /** Operational category options for work orders. */
+    categoryOptions = workOrderCategories;
 
     /** Priority options for work orders. */
     priorityOptions = ['low', 'medium', 'high', 'critical'];

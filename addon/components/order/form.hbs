@@ -10,6 +10,7 @@
                 ServiceRate=(component "order/form/service-rate" resource=@resource)
                 Notes=(component "order/form/notes" resource=@resource)
                 Documents=(component "order/form/documents" resource=@resource)
+                OrchestratorConstraints=(component "order/form/orchestrator-constraints" resource=@resource)
                 Metadata=(component "order/form/metadata" resource=@resource)
             )
         }}
@@ -23,6 +24,7 @@
         <Order::Form::ServiceRate @resource={{@resource}} />
         <Order::Form::Notes @resource={{@resource}} />
         <Order::Form::Documents @resource={{@resource}} />
+        <Order::Form::OrchestratorConstraints @resource={{@resource}} />
         <Order::Form::Metadata @resource={{@resource}} />
     {{/if}}
 </div>

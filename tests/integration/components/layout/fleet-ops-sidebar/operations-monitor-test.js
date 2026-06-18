@@ -1,25 +1,65 @@
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'dummy/tests/helpers';
-import { click, render, waitUntil } from '@ember/test-helpers';
+import { click, fillIn, render, waitUntil } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 import Service from '@ember/service';
 
 class StoreStubService extends Service {
-    query(modelName) {
-        const data = {
-            driver: [
-                { name: 'Offline Driver', public_id: 'driver_2', online: false, status: 'inactive' },
-                { name: 'Online Driver', public_id: 'driver_1', online: true, status: 'active' },
-            ],
-            vehicle: [
-                { display_name: 'Offline Van', public_id: 'vehicle_2', online: false, status: 'inactive' },
-                { display_name: 'Online Truck', public_id: 'vehicle_1', online: true, status: 'active' },
-                { display_name: 'Standby Car', public_id: 'vehicle_3', online: false, status: 'standby' },
-            ],
-            fleet: [{ name: 'North Fleet', public_id: 'fleet_1' }],
-        };
+    records = new Map();
 
-        return Promise.resolve(data[modelName] ?? []);
+    pushPayload(modelName, payload) {
+        const resource = payload[modelName];
+
+        if (resource?.id) {
+            this.records.set(`${modelName}:${resource.id}`, resource);
+        }
+
+        if (resource?.public_id) {
+            this.records.set(`${modelName}:${resource.public_id}`, resource);
+        }
+    }
+
+    peekRecord(modelName, id) {
+        return this.records.get(`${modelName}:${id}`);
+    }
+}
+
+class FetchStubService extends Service {
+    get() {
+        return Promise.resolve({
+            drivers: [
+                { id: 'driver_2', name: 'Offline Driver', public_id: 'driver_2', online: false, status: 'inactive' },
+                { id: 'driver_1', name: 'Online Driver', public_id: 'driver_1', online: true, status: 'active' },
+            ],
+            vehicles: [
+                { id: 'vehicle_2', display_name: 'Offline Van', public_id: 'vehicle_2', online: false, status: 'inactive' },
+                { id: 'vehicle_1', display_name: 'Online Truck', public_id: 'vehicle_1', online: true, status: 'active' },
+                { id: 'vehicle_3', display_name: 'Standby Car', public_id: 'vehicle_3', online: false, status: 'standby' },
+            ],
+            fleets: [
+                {
+                    id: 'fleet_1',
+                    name: 'North Fleet',
+                    public_id: 'fleet_1',
+                    driver_ids: ['driver_1', 'missing_driver'],
+                    vehicle_ids: ['vehicle_1'],
+                    drivers_count: 1,
+                    vehicles_count: 1,
+                    subfleets: [
+                        {
+                            id: 'fleet_2',
+                            name: 'North Subfleet',
+                            public_id: 'fleet_2',
+                            driver_ids: ['driver_2'],
+                            vehicle_ids: ['missing_vehicle'],
+                            drivers_count: 1,
+                            vehicles_count: 0,
+                            subfleets: [],
+                        },
+                    ],
+                },
+            ],
+        });
     }
 }
 
@@ -73,6 +113,7 @@ module('Integration | Component | layout/fleet-ops-sidebar/operations-monitor', 
 
     hooks.beforeEach(function () {
         this.owner.register('service:store', StoreStubService);
+        this.owner.register('service:fetch', FetchStubService);
         this.owner.register('service:universe', UniverseStubService);
         this.owner.register('service:map-manager', MapManagerStubService);
         this.owner.register('service:host-router', HostRouterStubService);
@@ -93,6 +134,9 @@ module('Integration | Component | layout/fleet-ops-sidebar/operations-monitor', 
         assert.dom('[data-test-operations-monitor-tab="drivers"]').hasText('Drivers');
         assert.dom('[data-test-operations-monitor-tab="vehicles"]').hasText('Vehicles');
         assert.dom('[data-test-operations-monitor-tab="fleets"]').hasText('Fleets');
+
+        await click('[data-test-operations-monitor-tab="drivers"]');
+
         assert.dom('[data-test-operations-monitor-row]:first-of-type').includesText('Online Driver');
         assert.dom('[data-test-operations-monitor-row]:first-of-type').includesText('Online');
 
@@ -106,5 +150,23 @@ module('Integration | Component | layout/fleet-ops-sidebar/operations-monitor', 
         assert.dom('[data-test-operations-monitor-row]:first-of-type').includesText('Online Truck');
         assert.dom('[data-test-operations-monitor-row]:first-of-type').includesText('Online');
         assert.dom('[data-test-operations-monitor-row]:nth-of-type(2)').includesText('Offline');
+    });
+
+    test('it renders fleet children from composite response id links', async function (assert) {
+        await render(hbs`<Layout::FleetOpsSidebar::OperationsMonitor />`);
+        await waitUntil(() => this.element.textContent.includes('North Fleet'));
+
+        assert.dom('[data-test-operations-monitor-list]').includesText('North Fleet');
+        assert.dom('[data-test-operations-monitor-list]').includesText('North Subfleet');
+        assert.dom('[data-test-operations-monitor-list]').includesText('Online Driver');
+        assert.dom('[data-test-operations-monitor-list]').includesText('Online Truck');
+        assert.dom('[data-test-operations-monitor-list]').doesNotIncludeText('missing_driver');
+        assert.dom('[data-test-operations-monitor-list]').doesNotIncludeText('missing_vehicle');
+
+        await fillIn('[data-test-operations-monitor-filter]', 'offline');
+
+        assert.dom('[data-test-operations-monitor-list]').includesText('North Fleet');
+        assert.dom('[data-test-operations-monitor-list]').includesText('North Subfleet');
+        assert.dom('[data-test-operations-monitor-list]').includesText('Offline Driver');
     });
 });

@@ -65,7 +65,7 @@ class DeviceEvent extends Model
      *
      * @var array
      */
-    protected $filterParams = ['event_type', 'severity', 'device_uuid', 'provider', 'code'];
+    protected $filterParams = ['event_type', 'severity', 'device_uuid', 'provider', 'code', 'processed', 'occurred_at', 'created_at', 'updated_at', 'telematic'];
 
     /**
      * The attributes that are mass assignable.

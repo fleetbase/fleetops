@@ -1,55 +1,59 @@
 <div class="flex flex-col gap-4 p-4 md:p-6">
-    <div class="flex flex-col gap-1">
-        <h2 class="text-base font-bold text-gray-900 dark:text-gray-100">Vehicle Attachment Mapping</h2>
-        <p class="text-sm text-gray-500 dark:text-gray-300">Map synced provider devices to vehicles so telemetry can power vehicle state, maintenance, and operations workflows.</p>
-    </div>
-
-    <section class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        {{#each this.metrics as |metric|}}
-            <div class="fleet-ops-widget fleet-ops-kpi-tile fleetops-connectivity-kpi-tile {{metric.accentClass}} relative min-h-[102px] overflow-hidden rounded-md border bg-white shadow-sm dark:bg-gray-800">
-                <div class="flex h-full items-start justify-between gap-3 p-3">
-                    <div class="min-w-0">
-                        <div class="truncate text-[10px] font-bold uppercase text-gray-500 dark:text-gray-400">{{metric.label}}</div>
-                        <div class="mt-2 text-2xl font-extrabold leading-none text-gray-900 dark:text-gray-50">{{metric.value}}</div>
-                    </div>
-                    <div class="fleetops-connectivity-kpi-icon flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-md text-[13px]">
-                        <FaIcon @icon={{metric.icon}} />
-                    </div>
-                </div>
-            </div>
-        {{/each}}
-    </section>
-
     <section class="overflow-hidden rounded-md border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-800">
-        <div class="flex flex-col gap-3 border-b border-gray-200 px-4 py-3 dark:border-gray-700 lg:flex-row lg:items-start lg:justify-between">
-            <div class="max-w-xl">
-                <h3 class="text-sm font-bold text-gray-900 dark:text-gray-100">Vehicle Groups</h3>
-                <p class="mt-1 text-xs leading-5 text-gray-500 dark:text-gray-300">Find a vehicle to review its attached devices, or resolve the unattached queue first.</p>
-            </div>
-            <div class="flex w-full min-w-0 flex-nowrap items-center justify-end gap-2 overflow-x-auto lg:w-auto lg:flex-shrink-0">
-                <Input
-                    @value={{this.query}}
-                    @type="text"
-                    class="form-input h-9 min-w-[16rem] flex-shrink-0"
-                    placeholder="Search vehicles or devices"
-                    {{on "input" this.updateQuery}}
-                />
-                <select class="form-select h-9 flex-shrink-0" {{on "change" this.updateAttachmentState}}>
-                    <option value="" selected={{not this.attachment_state}}>All mappings</option>
-                    <option value="unattached" selected={{eq this.attachment_state "unattached"}}>Unattached</option>
-                    <option value="attached" selected={{eq this.attachment_state "attached"}}>Attached</option>
-                </select>
-                <select class="form-select h-9 flex-shrink-0" {{on "change" this.updateStatus}}>
-                    <option value="" selected={{not this.status}}>Any status</option>
-                    <option value="active" selected={{eq this.status "active"}}>Active</option>
-                    <option value="online" selected={{eq this.status "online"}}>Online</option>
-                    <option value="offline" selected={{eq this.status "offline"}}>Offline</option>
-                    <option value="inactive" selected={{eq this.status "inactive"}}>Inactive</option>
-                </select>
+        <div class="border-b border-gray-200 px-4 py-3 dark:border-gray-700">
+            <div class="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
+                <div class="min-w-0">
+                    <h3 class="text-sm font-bold text-gray-900 dark:text-gray-100">Attachment Workspace</h3>
+                    <p class="mt-1 truncate text-xs text-gray-500 dark:text-gray-300">
+                        Loaded
+                        {{this.syncedDevices.length}}
+                        of
+                        {{this.totalSyncedDevices}}
+                        synced devices.
+                    </p>
+                </div>
+                <div class="flex w-full min-w-0 items-start gap-2 xl:max-w-4xl">
+                    <div class="grid min-w-0 flex-1 grid-cols-1 gap-2 sm:grid-cols-3">
+                        <Input
+                            @value={{this.query}}
+                            @type="text"
+                            class="form-input form-input-sm h-10 w-full text-sm"
+                            placeholder="Search vehicles or devices"
+                            {{on "input" this.updateQuery}}
+                        />
+                        <select class="form-select form-select-sm h-10 w-full text-sm" {{on "change" this.updateStatus}}>
+                            <option value="" selected={{not this.status}}>Any status</option>
+                            <option value="active" selected={{eq this.status "active"}}>Active</option>
+                            <option value="online" selected={{eq this.status "online"}}>Online</option>
+                            <option value="recently_offline" selected={{eq this.status "recently_offline"}}>Recently offline</option>
+                            <option value="offline" selected={{eq this.status "offline"}}>Offline</option>
+                            <option value="long_offline" selected={{eq this.status "long_offline"}}>Long offline</option>
+                            <option value="never_connected" selected={{eq this.status "never_connected"}}>Never connected</option>
+                            <option value="inactive" selected={{eq this.status "inactive"}}>Inactive</option>
+                        </select>
+                        <div class="min-w-0">
+                            <ModelSelect
+                                @modelName="vehicle"
+                                @query={{hash telematic_uuid=this.telematic.id}}
+                                @selectedModel={{this.selectedVehicle}}
+                                @placeholder="Any vehicle"
+                                @triggerClass="fleetops-attachments-vehicle-filter-trigger form-select form-select-sm h-10 w-full text-sm"
+                                @infiniteScroll={{false}}
+                                @renderInPlace={{false}}
+                                @allowClear={{true}}
+                                @onChange={{this.updateSelectedVehicle}}
+                                as |vehicle|
+                            >
+                                {{vehicle.displayName}}
+                            </ModelSelect>
+                        </div>
+                    </div>
+                    <Button @icon="refresh" @size="xs" @isLoading={{this.isRefreshing}} @disabled={{this.isRefreshing}} @onClick={{this.refresh}} />
+                </div>
             </div>
         </div>
 
-        {{#if (or (eq this.emptyStateVariant "not_synced") (eq this.emptyStateVariant "filtered_empty"))}}
+        {{#if (or (eq this.emptyStateVariant "error") (eq this.emptyStateVariant "not_synced") (eq this.emptyStateVariant "filtered_empty"))}}
             <div class="p-4">
                 <Telematic::TabEmptyState
                     @tone={{this.emptyStateContent.tone}}
@@ -66,97 +70,170 @@
                 />
             </div>
         {{else}}
-            <div class="divide-y divide-gray-200 dark:divide-gray-700">
-                {{#if (eq this.emptyStateVariant "empty")}}
-                    <div class="p-4">
-                        <Telematic::TabEmptyState
-                            @tone={{this.emptyStateContent.tone}}
-                            @icon={{this.emptyStateContent.icon}}
-                            @title={{this.emptyStateContent.title}}
-                            @message={{this.emptyStateContent.message}}
-                            @note={{this.emptyStateContent.note}}
-                        />
-                    </div>
-                {{/if}}
-
-                {{#if (eq this.emptyStateVariant "unattached_only")}}
-                    <div class="p-4">
-                        <Telematic::TabEmptyState
-                            @tone={{this.emptyStateContent.tone}}
-                            @icon={{this.emptyStateContent.icon}}
-                            @title={{this.emptyStateContent.title}}
-                            @message={{this.emptyStateContent.message}}
-                            @note={{this.emptyStateContent.note}}
-                        />
-                    </div>
-                {{/if}}
-
-                <div class="bg-yellow-50/70 px-4 py-3 dark:bg-yellow-900/10">
-                <div class="mb-3 flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
-                    <div>
-                        <h4 class="text-sm font-bold text-gray-900 dark:text-gray-100">Unattached Devices</h4>
-                        <p class="text-xs text-yellow-800 dark:text-yellow-300">These devices are synced, but not yet mapped to a vehicle. Attach devices deliberately one at a time.</p>
-                    </div>
-                    <Badge @status={{if this.unattachedDevices.length "warning" "success"}} @hideStatusDot={{true}}>
-                        {{this.unattachedDevices.length}} devices
-                    </Badge>
-                </div>
-
-                {{#if this.unattachedDevices.length}}
-                    <div class="grid grid-cols-1 gap-2 xl:grid-cols-2">
-                        {{#each this.unattachedDevices as |device|}}
-                            <div class="flex flex-col gap-3 rounded-md border border-yellow-200 bg-white p-3 dark:border-yellow-700 dark:bg-gray-800 md:flex-row md:items-center md:justify-between">
-                                <div class="min-w-0">
-                                    <Device::Pill @device={{device}} />
-                                </div>
-                                <div class="flex flex-shrink-0 items-center gap-2">
-                                    <Button @icon="eye" @text="Open" @size="xs" @onClick={{fn this.deviceActions.transition.view device}} />
-                                    <Button @icon="link" @text="Attach" @size="xs" @type="primary" @onClick={{fn this.openAttachDeviceModal device}} />
-                                </div>
-                            </div>
-                        {{/each}}
-                    </div>
-                {{else}}
-                    <div class="rounded-md border border-green-200 bg-green-50 p-3 text-sm text-green-800 dark:border-green-700 dark:bg-green-900/20 dark:text-green-300">
-                        All synced devices in this view are mapped to vehicles.
-                    </div>
-                {{/if}}
-                </div>
-
-                {{#each this.vehicleGroups as |group|}}
-                    <div class="px-4 py-3">
-                        <div class="mb-3 flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+            <div class="grid grid-cols-1 divide-y divide-gray-200 dark:divide-gray-700 md:grid-cols-2 md:divide-x md:divide-y-0">
+                <div class="min-w-0 bg-gray-50/70 dark:bg-gray-900/20">
+                    <div class="sticky top-0 z-10 border-b border-gray-200 bg-gray-50/95 px-4 py-3 backdrop-blur dark:border-gray-700 dark:bg-gray-800/95">
+                        <div class="flex items-start justify-between gap-3">
                             <div class="min-w-0">
-                                <h4 class="truncate text-sm font-bold text-gray-900 dark:text-gray-100">{{group.name}}</h4>
-                                <p class="text-xs text-gray-500 dark:text-gray-300">{{group.devices.length}} attached provider devices</p>
-                            </div>
-                            <Badge @status="info" @hideStatusDot={{true}}>Vehicle mapped</Badge>
-                        </div>
-
-                        <div class="overflow-hidden rounded-md border border-gray-200 dark:border-gray-700">
-                            {{#each group.devices as |device|}}
-                                <div class="grid grid-cols-1 gap-3 border-b border-gray-200 p-3 last:border-b-0 dark:border-gray-700 lg:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)_auto] lg:items-center">
-                                    <Device::Pill @device={{device}} />
-                                    <div class="grid grid-cols-2 gap-2 text-xs">
-                                        <div>
-                                            <div class="text-gray-400 dark:text-gray-500">Provider ID</div>
-                                            <div class="truncate font-semibold text-gray-900 dark:text-gray-100">{{n-a device.device_id}}</div>
-                                        </div>
-                                        <div>
-                                            <div class="text-gray-400 dark:text-gray-500">Last seen</div>
-                                            <div class="truncate font-semibold text-gray-900 dark:text-gray-100">{{n-a (format-date-fns device.last_online_at "dd MMM HH:mm")}}</div>
-                                        </div>
-                                    </div>
-                                    <div class="flex items-center gap-2 lg:justify-end">
-                                        <Button @icon="eye" @text="Open" @size="xs" @onClick={{fn this.deviceActions.transition.view device}} />
-                                        <Button @icon="shuffle" @text="Change" @size="xs" @onClick={{fn this.openAttachDeviceModal device}} />
-                                        <Button @icon="unlink" @text="Detach" @size="xs" @type="danger" @onClick={{fn this.detachDevice device}} />
-                                    </div>
+                                <div class="flex items-center gap-2">
+                                    <h4 class="text-sm font-bold text-gray-900 dark:text-gray-100">Unattached</h4>
+                                    <span class="text-xs font-semibold text-gray-500 dark:text-gray-400">{{this.filteredUnattachedCount}} devices</span>
                                 </div>
-                            {{/each}}
+                                {{#if this.selectedDevice}}
+                                    <p class="mt-1 truncate text-xs text-blue-600 dark:text-blue-300">
+                                        Selected:
+                                        {{this.selectedDeviceName}}.
+                                        Choose a vehicle on the right.
+                                    </p>
+                                {{else}}
+                                    <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Select a device, then choose a vehicle target.</p>
+                                {{/if}}
+                            </div>
+                            {{#if this.selectedDevice}}
+                                <Button @icon="times" @size="xs" @onClick={{this.clearSelectedDevice}} />
+                            {{/if}}
                         </div>
                     </div>
-                {{/each}}
+
+                    <div class="h-[calc(100vh-24rem)] min-h-[28rem] overflow-y-auto">
+                        {{#if this.unattachedDevices.length}}
+                            <div class="divide-y divide-gray-200 dark:divide-gray-700">
+                                {{#each this.unattachedDevices as |device|}}
+                                    <div
+                                        class="group flex min-h-[56px] cursor-pointer items-center gap-3 border-l-2 px-3 py-2 transition {{if
+                                            (eq this.selectedDevice device)
+                                            "border-blue-500 bg-blue-50 dark:bg-blue-900/20"
+                                            "border-transparent bg-white hover:border-blue-300 hover:bg-gray-50 dark:bg-gray-800 dark:hover:bg-gray-700/50"
+                                        }}"
+                                        {{on "click" (fn this.selectUnattachedDevice device)}}
+                                    >
+                                        <div class="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-md bg-gray-100 text-gray-500 dark:bg-gray-700 dark:text-gray-300">
+                                            <FaIcon @icon="microchip" />
+                                        </div>
+                                        <div class="min-w-0 flex-1">
+                                            <div class="flex min-w-0 items-center gap-2">
+                                                <span class="truncate text-sm font-semibold text-gray-900 dark:text-gray-100">{{or device.displayName device.name device.device_id}}</span>
+                                                <Badge
+                                                    @status={{or device.connection_status device.status "default"}}
+                                                    @hideIcon={{true}}
+                                                    @wrapperClass="text-[9px] px-1 py-0 leading-tight flex-shrink-0"
+                                                >
+                                                    {{smart-humanize (or device.connection_status device.status "unknown")}}
+                                                </Badge>
+                                            </div>
+                                            <div class="mt-0.5 flex min-w-0 items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
+                                                <span class="truncate">{{or device.public_id device.device_id device.serial_number device.imei device.id}}</span>
+                                            </div>
+                                        </div>
+                                        <div class="flex flex-shrink-0 items-center gap-1">
+                                            <Button @icon="eye" @size="xs" @onClick={{fn this.deviceActions.transition.view device}} />
+                                            {{#if (eq this.selectedDevice device)}}
+                                                <Button @icon="link" @text="Attach" @size="xs" @type="primary" @onClick={{fn this.openAttachDeviceModal device}} />
+                                            {{else}}
+                                                <Button @icon="link" @size="xs" @type="default" @onClick={{fn this.openAttachDeviceModal device}} />
+                                            {{/if}}
+                                        </div>
+                                    </div>
+                                {{/each}}
+                            </div>
+                        {{else}}
+                            <div class="p-4">
+                                <div class="rounded-md border border-green-200 bg-green-50 p-3 text-sm text-green-800 dark:border-green-700 dark:bg-green-900/20 dark:text-green-300">
+                                    All visible synced devices are mapped to vehicles.
+                                </div>
+                            </div>
+                        {{/if}}
+                    </div>
+                </div>
+
+                <div class="min-w-0">
+                    <div class="sticky top-0 z-10 border-b border-gray-200 bg-white/95 px-4 py-3 backdrop-blur dark:border-gray-700 dark:bg-gray-800/95">
+                        <div class="flex items-start justify-between gap-3">
+                            <div class="min-w-0">
+                                <div class="flex items-center gap-2">
+                                    <h4 class="text-sm font-bold text-gray-900 dark:text-gray-100">Vehicles</h4>
+                                    <span class="text-xs font-semibold text-gray-500 dark:text-gray-400">{{this.vehicleGroups.length}} mapped</span>
+                                </div>
+                                {{#if this.selectedDevice}}
+                                    <p class="mt-1 truncate text-xs text-blue-600 dark:text-blue-300">
+                                        Choose a vehicle for
+                                        {{this.selectedDeviceName}}
+                                    </p>
+                                {{else}}
+                                    <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Attached devices grouped by vehicle.</p>
+                                {{/if}}
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="h-[calc(100vh-24rem)] min-h-[28rem] overflow-y-auto">
+                        {{#if this.vehicleGroups.length}}
+                            <div class="divide-y divide-gray-200 dark:divide-gray-700">
+                                {{#each this.vehicleGroups as |group|}}
+                                    <div class="border-l-2 border-transparent px-4 py-3 transition hover:border-blue-300 hover:bg-blue-50/40 dark:hover:bg-blue-900/10">
+                                        <div class="mb-2 flex items-center justify-between gap-3">
+                                            <div class="flex min-w-0 items-center gap-3">
+                                                <Image
+                                                    src={{or group.vehicle.photo_url group.vehicle.avatar_url}}
+                                                    @fallbackSrc={{config "defaultValues.vehicleImage"}}
+                                                    alt={{group.name}}
+                                                    class="h-10 w-9 flex-shrink-0 rounded-md object-cover"
+                                                />
+                                                <div class="min-w-0">
+                                                    <div class="truncate text-sm font-bold text-gray-900 dark:text-gray-100">{{or group.vehicle.displayName group.vehicle.display_name group.vehicle.name group.name}}</div>
+                                                    <div class="mt-0.5 truncate text-xs text-gray-500 dark:text-gray-400">
+                                                        {{n-a (or group.vehicle.plate_number group.vehicle.internal_id group.vehicle.call_sign group.vehicle.vin)}}
+                                                        <span class="mx-1">·</span>
+                                                        {{group.devices.length}}
+                                                        devices
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            {{#if this.selectedDevice}}
+                                                <Button @icon="link" @text="Attach here" @size="xs" @type="primary" @onClick={{fn this.attachSelectedDeviceToGroup group}} />
+                                            {{/if}}
+                                        </div>
+
+                                        <div class="overflow-hidden rounded-md border border-gray-200 dark:border-gray-700">
+                                            {{#each group.devices as |device|}}
+                                                <div class="flex min-h-[46px] items-center gap-3 border-b border-gray-200 px-3 py-2 last:border-b-0 dark:border-gray-700">
+                                                    <div class="min-w-0 flex-1">
+                                                        <div class="flex min-w-0 items-center gap-2">
+                                                            <span class="truncate text-sm font-semibold text-gray-800 dark:text-gray-100">{{or device.displayName device.name device.device_id}}</span>
+                                                            <Badge
+                                                                @status={{or device.connection_status device.status "default"}}
+                                                                @hideIcon={{true}}
+                                                                @wrapperClass="text-[9px] px-1 py-0 leading-tight flex-shrink-0"
+                                                            >
+                                                                {{smart-humanize (or device.connection_status device.status "unknown")}}
+                                                            </Badge>
+                                                        </div>
+                                                        <div class="mt-0.5 flex min-w-0 items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
+                                                            <span class="truncate">{{or device.public_id device.device_id device.serial_number device.imei device.id}}</span>
+                                                            <span class="h-1 w-1 flex-shrink-0 rounded-full bg-gray-400"></span>
+                                                            <span class="flex-shrink-0">{{n-a (format-date-fns device.last_online_at "dd MMM HH:mm")}}</span>
+                                                        </div>
+                                                    </div>
+                                                    <div class="flex flex-shrink-0 items-center gap-1">
+                                                        <Button @icon="eye" @size="xs" @onClick={{fn this.deviceActions.transition.view device}} />
+                                                        <Button @icon="shuffle" @size="xs" @onClick={{fn this.openAttachDeviceModal device}} />
+                                                        <Button @icon="unlink" @size="xs" @type="danger" @onClick={{fn this.detachDevice device}} />
+                                                    </div>
+                                                </div>
+                                            {{/each}}
+                                        </div>
+                                    </div>
+                                {{/each}}
+                            </div>
+                        {{else}}
+                            <div class="p-4">
+                                <div class="rounded-md border border-gray-200 bg-gray-50 p-4 text-sm text-gray-600 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300">
+                                    No visible vehicle groups. Attach a device from the left pane or adjust the filters.
+                                </div>
+                            </div>
+                        {{/if}}
+                    </div>
+                </div>
             </div>
         {{/if}}
     </section>

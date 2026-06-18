@@ -155,18 +155,19 @@ class MaintenanceSeeder extends Seeder
         $driver     = $this->seededModel(Driver::class, 'driver_mira');
         $vehicle    = $this->seededModel(Vehicle::class, 'truck_maintenance');
         $workOrders = [
-            'work_order_open'      => ['WO-TEST-OPEN', 'Open Inspection', 'open', 'medium', $this->timestamp(-4), $this->timestamp(24), null, 'schedule_due_soon'],
-            'work_order_overdue'   => ['WO-TEST-OVERDUE', 'Overdue Service', 'open', 'high', $this->timestamp(-120), $this->timestamp(-24), null, 'schedule_overdue'],
-            'work_order_completed' => ['WO-TEST-CLOSED', 'Completed Repair', 'completed', 'low', $this->timestamp(-240), $this->timestamp(-120), $this->timestamp(-96), 'schedule_overdue'],
+            'work_order_open'      => ['WO-TEST-OPEN', 'Open Inspection', 'inspection_request', 'open', 'medium', $this->timestamp(-4), $this->timestamp(24), null, 'schedule_due_soon'],
+            'work_order_overdue'   => ['WO-TEST-OVERDUE', 'Overdue Service', 'preventive_maintenance', 'open', 'high', $this->timestamp(-120), $this->timestamp(-24), null, 'schedule_overdue'],
+            'work_order_completed' => ['WO-TEST-CLOSED', 'Completed Repair', 'general_repair', 'completed', 'low', $this->timestamp(-240), $this->timestamp(-120), $this->timestamp(-96), 'schedule_overdue'],
         ];
 
         $models = [];
-        foreach ($workOrders as $seedId => [$code, $subject, $status, $priority, $openedAt, $dueAt, $closedAt, $scheduleSeedId]) {
+        foreach ($workOrders as $seedId => [$code, $subject, $category, $status, $priority, $openedAt, $dueAt, $closedAt, $scheduleSeedId]) {
             $models[$seedId] = $this->createRecord(WorkOrder::class, [
                 '_key'            => $this->fixtureKey($seedId),
                 'company_uuid'    => $company->uuid,
                 'code'            => $code,
                 'subject'         => $subject,
+                'category'        => $category,
                 'status'          => $status,
                 'priority'        => $priority,
                 'target_type'     => Vehicle::class,

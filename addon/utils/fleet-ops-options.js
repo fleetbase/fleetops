@@ -216,6 +216,42 @@ export const fuelReportStatuses = [
     { label: 'Reimbursed', value: 'reimbursed', description: 'Driver expense reimbursed' },
 ];
 
+export const workOrderStatuses = [
+    { label: 'Open', value: 'open', description: 'Work order has been created and is awaiting planning or assignment' },
+    { label: 'Scheduled', value: 'scheduled', description: 'Work has been planned for a specific service window' },
+    { label: 'Assigned', value: 'assigned', description: 'A technician, vendor, or team has been assigned' },
+    { label: 'In Progress', value: 'in_progress', description: 'Work is actively being performed' },
+    { label: 'Awaiting Parts', value: 'awaiting_parts', description: 'Work is blocked until required parts are available' },
+    { label: 'Awaiting Vendor', value: 'awaiting_vendor', description: 'Work is waiting on a third-party vendor or repair shop' },
+    { label: 'On Hold', value: 'on_hold', description: 'Work is temporarily paused' },
+    { label: 'Quality Check', value: 'quality_check', description: 'Work is complete and awaiting verification or road-readiness check' },
+    { label: 'Closed', value: 'closed', description: 'Work is complete and recorded in maintenance history' },
+    { label: 'Canceled', value: 'canceled', description: 'Work order was canceled before completion' },
+];
+
+export const workOrderCategories = [
+    { label: 'Preventive Maintenance (PM)', value: 'preventive_maintenance', description: 'Scheduled service intended to prevent failures and downtime' },
+    { label: 'Predictive Maintenance', value: 'predictive_maintenance', description: 'Maintenance triggered by forecasts, telematics, diagnostics, or condition trends' },
+    { label: 'Condition-Based Maintenance', value: 'condition_based_maintenance', description: 'Service based on measured asset condition or threshold readings' },
+    { label: 'Inspection Request', value: 'inspection_request', description: 'Technician or compliance inspection requested for the asset' },
+    { label: 'Failed Inspection', value: 'failed_inspection', description: 'Follow-up work created from a failed inspection or DVIR item' },
+    { label: 'Recall', value: 'recall', description: 'Manufacturer, regulatory, or safety recall work' },
+    { label: 'Compliance / Safety', value: 'compliance_safety', description: 'Required safety, regulatory, or roadworthiness work' },
+    { label: 'General Repair', value: 'general_repair', description: 'General corrective repair that does not fit a more specific category' },
+    { label: 'Mechanical Complaint', value: 'mechanical_complaint', description: 'Engine, drivetrain, suspension, steering, or other mechanical concern' },
+    { label: 'Electrical Complaint', value: 'electrical_complaint', description: 'Battery, charging, lighting, wiring, sensor, or electrical system concern' },
+    { label: 'Brake Issue', value: 'brake_issue', description: 'Brake wear, performance, air brake, ABS, or related safety concern' },
+    { label: 'Tire Issue', value: 'tire_issue', description: 'Tire wear, puncture, blowout, alignment, rotation, or replacement' },
+    { label: 'HVAC / Air Conditioning Issue', value: 'hvac_issue', description: 'Heating, ventilation, defrost, or air conditioning concern' },
+    { label: 'AdBlue / DEF', value: 'adblue_def', description: 'Diesel exhaust fluid, SCR, emissions fluid, or dosing system issue' },
+    { label: 'Fluid Leak', value: 'fluid_leak', description: 'Oil, coolant, fuel, hydraulic, brake fluid, or other leak' },
+    { label: 'Body Damage', value: 'body_damage', description: 'Non-accident body, panel, paint, glass, door, or cosmetic damage' },
+    { label: 'Accident Damage', value: 'accident_damage', description: 'Collision or incident-related inspection and repair' },
+    { label: 'Roadside Assistance', value: 'roadside_assistance', description: 'Tow, recovery, jump start, lockout, or field service request' },
+    { label: 'Breakdown', value: 'breakdown', description: 'Unplanned asset failure requiring urgent repair' },
+    { label: 'Other', value: 'other', description: 'Work that does not fit another operational category' },
+];
+
 export const issueStatuses = [
     { label: 'Open', value: 'open', description: 'Issue is open and unresolved' },
     { label: 'Pending', value: 'pending', description: 'Issue is logged but work has not yet started' },
@@ -862,6 +898,8 @@ export default function fleetOpsOptions(key) {
         contactStatuses,
         fuelReportTypes,
         fuelReportStatuses,
+        workOrderStatuses,
+        workOrderCategories,
         issueTypes,
         issueStatuses,
         issueCategories,

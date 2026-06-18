@@ -40,6 +40,8 @@
                     @searchInputClass="fleetops-provider-connections-search"
                     @filterPickerButtonClass="fleetops-provider-connections-action-button"
                     @columnPickerButtonClass="fleetops-provider-connections-action-button"
+                    @filterPickerSize="sm"
+                    @columnPickerSize="sm"
                 />
             </div>
         </div>
@@ -70,6 +72,7 @@
                 @onPageChange={{fn (mut this.page)}}
                 @controller={{this}}
                 @withoutHeader={{true}}
+                @tableWrapperClass="no-table-extra-spacing"
                 @emptyStateComponent={{component
                     "table/empty-state"
                     variant="compact"

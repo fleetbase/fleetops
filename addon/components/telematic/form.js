@@ -415,11 +415,15 @@ export default class TelematicFormComponent extends Component {
         this.args.resource.setProperties({
             name: this.args.resource.name ?? provider.label,
             provider: provider.key,
-            credentials: (provider.required_fields ?? []).reduce((acc, item) => {
-                acc[item.name] = item.advanced || item.is_endpoint ? null : (item.default_value ?? null);
-                return acc;
-            }, {}),
+            credentials: this.buildProviderCredentials(provider),
         });
+    }
+
+    buildProviderCredentials(provider) {
+        return (provider.required_fields ?? []).reduce((acc, item) => {
+            acc[item.name] = item.default_value ?? null;
+            return acc;
+        }, {});
     }
 
     @action goToStep(index) {
@@ -553,10 +557,7 @@ export default class TelematicFormComponent extends Component {
         this.lastConnectionTestCompletedAt = null;
 
         try {
-            const result = yield this.fetch.post(`telematics/${this.selectedProvider.key}/test-credentials`, {
-                credentials: this.args.resource.credentials,
-                telematic_id: this.args.resource?.id,
-            });
+            const result = yield this.fetch.post(`telematics/${this.selectedProvider.key}/test-credentials`, this.getConnectionTestPayload());
             this.connectionTestResult = result;
             this.lastConnectionTestCompletedAt = new Date();
             this.updateResourceConnectionTestMeta(result);
@@ -575,6 +576,13 @@ export default class TelematicFormComponent extends Component {
             this.updateResourceConnectionTestMeta(this.connectionTestResult);
             this.notifications.error('Connection test failed');
         }
+    }
+
+    getConnectionTestPayload() {
+        return {
+            credentials: this.args.resource.credentials,
+            telematic_id: this.args.resource?.id,
+        };
     }
 
     updateResourceConnectionTestMeta(result) {

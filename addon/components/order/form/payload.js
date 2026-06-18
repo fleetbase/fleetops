@@ -7,6 +7,7 @@ export default class OrderFormPayloadComponent extends Component {
     @service store;
     @service fetch;
     @service entityActions;
+    @service orderCreation;
 
     get entitiesByImportId() {
         const groups = [];
@@ -32,6 +33,7 @@ export default class OrderFormPayloadComponent extends Component {
         const { value } = target;
 
         this.args.resource.payload.entities[index].destination_uuid = value;
+        this.requestServiceQuoteRefresh('entity.destination.changed');
     }
 
     @action addFromCustomEntity(customEntity) {
@@ -41,11 +43,15 @@ export default class OrderFormPayloadComponent extends Component {
         });
 
         this.args.resource.payload.entities.pushObject(entity);
+        this.requestServiceQuoteRefresh('entity.added');
     }
 
     @action addEntities(entities = []) {
         if (isArray(entities)) {
             this.args.resource.payload.entities.pushObjects(entities);
+            if (entities.length) {
+                this.requestServiceQuoteRefresh('entity.batch_added');
+            }
         }
     }
 
@@ -56,21 +62,61 @@ export default class OrderFormPayloadComponent extends Component {
         });
 
         this.args.resource.payload.entities.pushObject(entity);
+        this.requestServiceQuoteRefresh('entity.added');
     }
 
     @action removeEntity(entity) {
         if (this.args.resource.payload.entities.length === 1) return;
 
         if (!entity.isNew) {
-            return entity.destroyRecord();
+            return entity.destroyRecord().then(() => {
+                this.requestServiceQuoteRefresh('entity.removed');
+            });
         }
 
         this.args.resource.payload.entities.removeObject(entity);
+        this.requestServiceQuoteRefresh('entity.removed');
     }
 
     @action editEntity(entity) {
         this.entityActions.modal.edit(entity, {
-            confirm: (modal) => modal.done(),
+            confirm: (modal) => {
+                modal.done();
+                this.requestServiceQuoteRefresh('entity.edited');
+            },
         });
+    }
+
+    @action setEntityQuoteField(entity, field, value) {
+        this.setEntityValue(entity, field, value);
+        this.requestServiceQuoteRefresh(`entity.${field}.changed`);
+    }
+
+    @action setEntityCurrency(entity, value) {
+        this.setEntityValue(entity, 'currency', value);
+        this.requestServiceQuoteRefresh('entity.currency.changed');
+    }
+
+    @action setEntityDimensionsUnit(entity, value) {
+        this.setEntityValue(entity, 'dimensions_unit', value);
+        this.requestServiceQuoteRefresh('entity.dimensions_unit.changed');
+    }
+
+    @action setEntityWeightUnit(entity, value) {
+        this.setEntityValue(entity, 'weight_unit', value);
+        this.requestServiceQuoteRefresh('entity.weight_unit.changed');
+    }
+
+    setEntityValue(entity, field, value) {
+        if (typeof entity?.set === 'function') {
+            entity.set(field, value);
+            return;
+        }
+
+        entity[field] = value;
+    }
+
+    requestServiceQuoteRefresh(reason) {
+        this.orderCreation.requestServiceQuoteRefresh(reason, this.args.resource);
     }
 }

@@ -12,6 +12,7 @@ export default class ConnectivityTelematicsDetailsSensorsRoute extends Route {
         status: { refreshModel: true },
         type: { refreshModel: true },
         device_uuid: { refreshModel: true },
+        last_reading_at: { refreshModel: true },
     };
 
     model(params) {

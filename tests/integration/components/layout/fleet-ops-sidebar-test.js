@@ -3,20 +3,32 @@ import { setupRenderingTest } from 'dummy/tests/helpers';
 import { click, fillIn, render, waitFor } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 import Service from '@ember/service';
+import window from 'ember-window-mock';
+import { getOwner } from '@ember/application';
 
 class RouterStubService extends Service {
     currentRouteName = 'console.fleet-ops.operations.orders';
     currentURL = '/fleet-ops';
     transitions = [];
+    handlers = {};
 
-    on() {}
+    on(eventName, handler) {
+        this.handlers[eventName] = handler;
+    }
 
-    off() {}
+    off(eventName) {
+        delete this.handlers[eventName];
+    }
 
     transitionTo(route, ...args) {
         this.currentRouteName = route;
         this.transitions.push({ route, args });
+        this.triggerRouteDidChange();
         return Promise.resolve();
+    }
+
+    triggerRouteDidChange() {
+        this.handlers.routeDidChange?.();
     }
 }
 
@@ -111,6 +123,82 @@ module('Integration | Component | layout/fleet-ops-sidebar', function (hooks) {
         assert.dom('.next-sidebar-navigator-view-in .next-sidebar-navigator-item:first-of-type').includesText('Settings Hub');
         assert.dom('.next-sidebar-navigator-view-in .next-sidebar-navigator-item:first-of-type svg[data-icon="sliders"]').exists();
         assert.dom('.next-sidebar-navigator-view-in .next-sidebar-navigator-item:first-of-type svg[data-icon="table-cells-large"]').doesNotExist();
+    });
+
+    test('it preserves registered item priority, virtual metadata, and nested active state', async function (assert) {
+        assert.expect(8);
+
+        const contractsItem = {
+            title: 'Contracts',
+            slug: 'contracts',
+            section: 'management',
+            icon: 'file-signature',
+            priority: -10,
+            visible: true,
+        };
+        const permitsItem = {
+            title: 'Permits',
+            slug: 'permits',
+            section: 'management',
+            icon: 'stamp',
+            priority: 1.5,
+            visible: true,
+        };
+
+        class MenuServiceStub extends Service {
+            getMenuItems(registryName) {
+                assert.strictEqual(registryName, 'engine:fleet-ops');
+                return [permitsItem, contractsItem];
+            }
+
+            getMenuPanels(registryName) {
+                assert.strictEqual(registryName, 'engine:fleet-ops');
+                return [
+                    {
+                        title: 'Registry Late',
+                        icon: 'box',
+                        priority: 20,
+                        items: [],
+                    },
+                    {
+                        title: 'Registry Early',
+                        icon: 'box',
+                        priority: 10,
+                        items: [],
+                    },
+                ];
+            }
+        }
+
+        class UniverseStub extends Service {
+            transitionMenuItem(route, menuItem) {
+                assert.strictEqual(route, 'console.fleet-ops.virtual');
+                assert.true(menuItem._virtual, 'registered item keeps virtual metadata');
+                assert.strictEqual(menuItem.slug, 'contracts');
+
+                const router = getOwner(this).lookup('service:router');
+                router.currentRouteName = 'console.fleet-ops.virtual';
+                router.currentURL = '/fleet-ops/management/contracts';
+                window.location.href = '/fleet-ops/management/contracts';
+                router.triggerRouteDidChange();
+            }
+        }
+
+        this.owner.register('service:universe/menu-service', MenuServiceStub);
+        this.owner.register('service:universe', UniverseStub);
+
+        await render(hbs`<Layout::FleetOpsSidebar />`);
+
+        await click('.next-sidebar-navigator-view-in .next-sidebar-navigator-item:nth-of-type(2)');
+
+        const labels = [...this.element.querySelectorAll('.next-sidebar-navigator-view-in .next-sidebar-navigator-item-label')].map((element) => element.textContent.trim());
+
+        assert.deepEqual(labels.slice(0, 5), ['Resources Hub', 'Contracts', 'Drivers', 'Permits', 'Vehicles'], 'hub items stay first while registered section items sort by priority');
+
+        await click('.next-sidebar-navigator-view-in .next-sidebar-navigator-item:nth-of-type(2)');
+
+        assert.dom('.next-sidebar-navigator-back').includesText('Resources');
+        assert.dom('.next-sidebar-navigator-view-in .next-sidebar-navigator-item:nth-of-type(2)').hasClass('is-active');
     });
 
     test('it keeps block usage backwards compatible', async function (assert) {

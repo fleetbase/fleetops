@@ -332,9 +332,9 @@ class SearchController extends Controller
 
     private function searchWorkOrders(string $query, int $limit): Collection
     {
-        return $this->searchGeneric(WorkOrder::class, ['code', 'subject', 'instructions', 'status', 'priority', 'public_id', 'uuid'], $query, $limit, fn (WorkOrder $workOrder) => [
+        return $this->searchGeneric(WorkOrder::class, ['code', 'subject', 'category', 'instructions', 'status', 'priority', 'public_id', 'uuid'], $query, $limit, fn (WorkOrder $workOrder) => [
             'label'       => $workOrder->code ?: $workOrder->subject,
-            'description' => $this->description($workOrder->status, $workOrder->priority, $workOrder->subject),
+            'description' => $this->description($workOrder->status, $workOrder->priority, $workOrder->category ?: $workOrder->subject),
             'icon'        => 'clipboard-list',
             'type'        => 'Work Order',
             'route'       => 'console.fleet-ops.maintenance.work-orders.index.details',

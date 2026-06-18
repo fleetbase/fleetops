@@ -612,6 +612,7 @@ Route::prefix(config('fleetops.api.routing.prefix'))->namespace('Fleetbase\Fleet
                                         $router->get('coordinates', 'LiveController@coordinates');
                                         $router->get('routes', 'LiveController@routes');
                                         $router->get('orders', 'LiveController@orders');
+                                        $router->get('operations-monitor', 'LiveController@operationsMonitor');
                                         $router->get('drivers', 'LiveController@drivers');
                                         $router->get('vehicles', 'LiveController@vehicles');
                                         $router->get('places', 'LiveController@places');

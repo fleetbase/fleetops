@@ -30,7 +30,7 @@ class DriverObserver
      */
     public function created(Driver $driver)
     {
-        LiveCacheService::invalidate('drivers');
+        LiveCacheService::invalidateMultiple(['drivers', 'operations-monitor']);
     }
 
     /**
@@ -40,7 +40,7 @@ class DriverObserver
      */
     public function updated(Driver $driver)
     {
-        LiveCacheService::invalidate('drivers');
+        LiveCacheService::invalidateMultiple(['drivers', 'operations-monitor']);
     }
 
     /**
@@ -70,6 +70,6 @@ class DriverObserver
             $user->delete();
         }
 
-        LiveCacheService::invalidate('drivers');
+        LiveCacheService::invalidateMultiple(['drivers', 'operations-monitor']);
     }
 }

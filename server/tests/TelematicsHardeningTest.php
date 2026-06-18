@@ -1,6 +1,10 @@
 <?php
 
 use Fleetbase\FleetOps\Contracts\TelematicProviderDescriptor;
+use Fleetbase\FleetOps\Support\Telematics\Providers\AfaqyProvider;
+use Fleetbase\FleetOps\Support\Telematics\Providers\SafeeProvider;
+use Illuminate\Http\Client\ConnectionException;
+use Illuminate\Support\Facades\Http;
 
 test('device event model and migration expose lifecycle fields used by telematics workflows', function () {
     $model     = file_get_contents(__DIR__ . '/../src/Models/DeviceEvent.php');
@@ -41,12 +45,37 @@ test('telematics service requires provider identity and stores idempotent event 
 
     expect($service)
         ->toContain('Provider device identity is required to link a telematics device.')
+        ->toContain('public function ingestDeviceSnapshot')
         ->toContain('DeviceEvent::firstOrNew([\'_key\' => $eventKey])')
+        ->toContain('reconcileDeviceTelemetry')
+        ->toContain('PROTECTED_DEVICE_STATUSES')
+        ->toContain("'provider_status'")
+        ->toContain("'telemetry_summary'")
+        ->toContain('connectionStatusForDevice')
+        ->toContain('applyDeviceEventTelemetry')
+        ->toContain('$event->createPosition($positionData)')
+        ->toContain('updateVehicleTelemetry')
+        ->toContain('broadcast(new VehicleLocationChanged')
+        ->toContain('storeSnapshotSensors')
+        ->toContain("\$payload['sensors'] ?? \$payload['sensors_last_val']")
         ->toContain('protected function makeEventKey')
         ->toContain('$telematic->public_id ?? $telematic->uuid')
         ->toContain('resolveWebhookTelematic')
         ->toContain('whereHas(\'device\'')
         ->toContain('meta->provider_account_id');
+});
+
+test('device details render consistent telematics connection state and timestamp', function () {
+    $details = file_get_contents(__DIR__ . '/../../addon/components/device/details.hbs');
+    $header  = file_get_contents(__DIR__ . '/../../addon/components/device/panel-header.hbs');
+
+    expect($details)
+        ->toContain('format-date-fns @resource.last_online_at "dd MMM yyyy, HH:mm"')
+        ->not->toContain('format-date @resource.last_online_at');
+
+    expect($header)
+        ->toContain('@resource.is_online')
+        ->not->toContain('@resource.online "online"');
 });
 
 test('native providers normalize device payloads to canonical FleetOps keys', function () {
@@ -133,6 +162,7 @@ test('afaqy sync stores compact device diagnostics and paginates complete units 
     $provider = file_get_contents(__DIR__ . '/../src/Support/Telematics/Providers/AfaqyProvider.php');
 
     expect($provider)
+        ->toContain('TelematicProviderException')
         ->toContain('compactLastUpdate')
         ->toContain("'provider_unit_id'")
         ->toContain("'plate_number'")
@@ -140,6 +170,29 @@ test('afaqy sync stores compact device diagnostics and paginates complete units 
         ->not->toContain("'raw'          => \$payload")
         ->not->toContain("'sensors',")
         ->toContain("'Authorization' => 'Bearer ' . \$token")
+        ->toContain('protected function authenticatedPost')
+        ->toContain('protected function refreshToken')
+        ->toContain('protected function isTokenRejected')
+        ->toContain('protected int $dataTimeout       = 120')
+        ->toContain('protected int $connectTimeout    = 15')
+        ->toContain('protected int $connectionTestTimeout = 30')
+        ->toContain('protected int $connectionTestConnectTimeout = 10')
+        ->toContain('->timeout($timeout)')
+        ->toContain('->connectTimeout($connectTimeout)')
+        ->toContain('ConnectionException')
+        ->toContain('transportErrorContext')
+        ->toContain('extractBytesReceived')
+        ->toContain("'requested_limit'")
+        ->toContain("'requested_offset'")
+        ->toContain("'bytes_received'")
+        ->toContain('AFAQY token rejected; refreshing token and retrying request')
+        ->toContain('AFAQY token rejected after refresh with status')
+        ->toContain('AFAQY token rejected and username/password credentials are required to refresh it.')
+        ->toContain('providerErrorContext')
+        ->toContain("'endpoint'")
+        ->toContain("'provider_code'")
+        ->toContain("'provider_message'")
+        ->toContain("'retry_attempted'")
         ->toContain('?? 500), 500')
         ->toContain('if (is_array($filters) && empty($filters))')
         ->toContain('$filters = new \stdClass();')
@@ -160,7 +213,195 @@ test('afaqy sync stores compact device diagnostics and paginates complete units 
         ->toContain("'pagination'  => [")
         ->toContain("'allCount'")
         ->toContain("'filtersCount'")
-        ->toContain("'resultCount'");
+        ->toContain("'resultCount'")
+        ->toContain("'online'      => \$payload['active'] ?? null")
+        ->toContain("'altitude'   => \$lastUpdate['alt'] ?? null");
+});
+
+test('afaqy sync keeps default limit and uses extended data request path', function () {
+    $requests = [];
+
+    Http::fake(function ($request) use (&$requests) {
+        $requests[] = $request;
+
+        if (str_ends_with($request->url(), '/auth/login')) {
+            return Http::response(['data' => ['token' => 'testing-token']], 200);
+        }
+
+        return Http::response([
+            'data'       => [],
+            'pagination' => ['resultCount' => 0],
+        ], 200);
+    });
+
+    $provider = new class extends AfaqyProvider {
+        public function fetchDevicesForTest(array $credentials): array
+        {
+            $this->credentials = $credentials;
+            $this->prepareAuthentication();
+
+            return $this->fetchDevices();
+        }
+    };
+
+    $result = $provider->fetchDevicesForTest([
+        'base_url' => 'https://api.afaqy.test',
+        'username' => 'testing-user',
+        'password' => 'testing-password',
+    ]);
+
+    expect($result['pagination']['resultCount'])->toBe(0);
+    expect($requests)->toHaveCount(2);
+    expect($requests[0]->url())->toBe('https://api.afaqy.test/auth/login');
+    expect($requests[1]->url())->toContain('/units/lists?token=testing-token');
+    expect($requests[1]->body())->toContain('"limit":500');
+});
+
+test('afaqy sync timeout failures are converted to sanitized provider metadata', function () {
+    Http::fake(function ($request) {
+        if (str_ends_with($request->url(), '/auth/login')) {
+            return Http::response(['data' => ['token' => 'timeout-testing-token']], 200);
+        }
+
+        throw new ConnectionException('cURL error 28: Operation timed out after 30000 milliseconds with 1186621 bytes received for https://api.afaqy.test/units/lists?token=timeout-testing-token');
+    });
+
+    $provider = new class extends AfaqyProvider {
+        public function fetchDevicesForTest(array $credentials): array
+        {
+            $this->credentials = $credentials;
+            $this->prepareAuthentication();
+
+            return $this->fetchDevices();
+        }
+    };
+
+    try {
+        $provider->fetchDevicesForTest([
+            'base_url' => 'https://api.afaqy.test',
+            'username' => 'testing-user',
+            'password' => 'testing-password',
+        ]);
+    } catch (Throwable $e) {
+        $result = [
+            'success'  => false,
+            'message'  => $e->getMessage(),
+            'metadata' => method_exists($e, 'context') ? $e->context() : [],
+        ];
+    }
+
+    expect($result['success'])->toBeFalse();
+    expect($result['message'])->toBe('AFAQY API request timed out while waiting for provider response.');
+    expect($result['metadata'])->toMatchArray([
+        'provider'         => 'afaqy',
+        'endpoint'         => '/units/lists',
+        'requested_limit'  => 500,
+        'requested_offset' => 0,
+        'timeout'          => 120,
+        'connect_timeout'  => 15,
+        'bytes_received'   => 1186621,
+        'retry_attempted'  => false,
+        'transport_error'  => 'connection_exception',
+    ]);
+    expect(json_encode($result))
+        ->not->toContain('timeout-testing-token')
+        ->not->toContain('token=')
+        ->not->toContain('testing-password')
+        ->not->toContain('testing-user');
+});
+
+test('afaqy credential test refreshes token once when units list rejects token', function () {
+    $authCount = 0;
+    $requests  = [];
+
+    Http::fake(function ($request) use (&$authCount, &$requests) {
+        $requests[] = $request;
+
+        if (str_ends_with($request->url(), '/auth/login')) {
+            $authCount++;
+
+            return Http::response(['data' => ['token' => $authCount === 1 ? 'first-testing-token' : 'second-testing-token']], 200);
+        }
+
+        if (str_contains($request->url(), '/units/lists?token=first-testing-token')) {
+            return Http::response(['message' => 'Token expired', 'code' => 'TOKEN_EXPIRED'], 401);
+        }
+
+        return Http::response([
+            'data'       => [['_id' => 'unit-1', 'name' => 'Truck 1']],
+            'pagination' => ['resultCount' => 1],
+        ], 200);
+    });
+
+    $result = (new AfaqyProvider())->testConnection([
+        'base_url' => 'https://api.afaqy.test',
+        'username' => 'testing-user',
+        'password' => 'testing-password',
+    ]);
+
+    expect($result['success'])->toBeTrue();
+    expect($authCount)->toBe(2);
+    expect(collect($requests)->filter(fn ($request) => str_contains($request->url(), '/units/lists'))->count())->toBe(2);
+    expect($requests[1]->url())->toContain('/units/lists?token=first-testing-token');
+    expect($requests[2]->url())->toContain('/auth/login');
+    expect($requests[3]->url())->toContain('/units/lists?token=second-testing-token');
+});
+
+test('afaqy token rejection failure metadata is sanitized', function () {
+    $authCount = 0;
+
+    Http::fake(function ($request) use (&$authCount) {
+        if (str_ends_with($request->url(), '/auth/login')) {
+            $authCount++;
+
+            return Http::response(['data' => ['token' => 'rejected-testing-token-' . $authCount]], 200);
+        }
+
+        return Http::response(['message' => 'Token rejected', 'code' => 'TOKEN_REJECTED'], 401);
+    });
+
+    $result = (new AfaqyProvider())->testConnection([
+        'base_url' => 'https://api.afaqy.test',
+        'username' => 'testing-user',
+        'password' => 'testing-password',
+    ]);
+
+    expect($result['success'])->toBeFalse();
+    expect($result['message'])->toBe('AFAQY token rejected after refresh with status 401');
+    expect($result['metadata'])->toMatchArray([
+        'provider'         => 'afaqy',
+        'endpoint'         => '/units/lists',
+        'status_code'      => 401,
+        'provider_code'    => 'TOKEN_REJECTED',
+        'provider_message' => 'Token rejected',
+        'retry_attempted'  => true,
+    ]);
+    expect(json_encode($result))
+        ->not->toContain('rejected-testing-token')
+        ->not->toContain('testing-password')
+        ->not->toContain('testing-user');
+});
+
+test('afaqy supplied token rejection requires password credentials for refresh', function () {
+    Http::fake([
+        'https://api.afaqy.test/units/lists?token=static-testing-token' => Http::response(['message' => 'Token rejected'], 401),
+    ]);
+
+    $result = (new AfaqyProvider())->testConnection([
+        'base_url' => 'https://api.afaqy.test',
+        'token'    => 'static-testing-token',
+    ]);
+
+    expect($result['success'])->toBeFalse();
+    expect($result['message'])->toBe('AFAQY token rejected and username/password credentials are required to refresh it.');
+    expect($result['metadata'])->toMatchArray([
+        'provider'         => 'afaqy',
+        'endpoint'         => '/units/lists',
+        'status_code'      => 401,
+        'provider_message' => 'Token rejected',
+        'retry_attempted'  => false,
+    ]);
+    expect(json_encode($result))->not->toContain('static-testing-token');
 });
 
 test('telematics device sync records provider pagination and skipped device counts', function () {
@@ -172,20 +413,56 @@ test('telematics device sync records provider pagination and skipped device coun
         ->not->toContain("'limit'   => \$request->input('limit', 100)");
 
     expect($job)
+        ->toContain('public int $tries   = 1')
         ->toContain("'limit'   => \$this->options['limit'] ?? null")
+        ->toContain('Cache::lock($lockKey, $this->timeout + 60)')
+        ->toContain("'fleetops:sync-telematic-devices:' . \$this->telematic->uuid")
+        ->toContain('Device discovery skipped because another sync is already running')
+        ->toContain("'last_sync_skipped_reason'")
+        ->toContain("'sync_already_running'")
         ->toContain('$totalFetched')
         ->toContain('$totalLinked')
+        ->toContain('$totalEvents')
+        ->toContain('$totalSensors')
         ->toContain('$totalSkipped')
         ->toContain('$pageCount')
+        ->toContain('$service->ingestDeviceSnapshot($this->telematic, $provider, $devicePayload)')
         ->toContain('Device discovery page fetched')
         ->toContain("'provider_unit_id'")
         ->toContain("'last_sync_fetched_total'")
         ->toContain("'last_sync_linked_total'")
+        ->toContain("'last_sync_events_total'")
+        ->toContain("'last_sync_sensors_total'")
         ->toContain("'last_sync_skipped_total'")
         ->toContain("'last_sync_page_count'")
         ->toContain("'last_sync_provider_total'")
         ->toContain("'last_sync_provider_all_count'")
-        ->toContain("'last_sync_provider_filters_count'");
+        ->toContain("'last_sync_provider_filters_count'")
+        ->toContain("'last_sync_error_context'")
+        ->toContain('safeSyncErrorMessage')
+        ->toContain('token=|password|client_secret|authorization')
+        ->toContain("method_exists(\$e, 'context') ? \$e->context() : []");
+});
+
+test('telematics polling command is registered and scheduled for no webhook providers', function () {
+    $command  = file_get_contents(__DIR__ . '/../src/Console/Commands/SyncTelematics.php');
+    $provider = file_get_contents(__DIR__ . '/../src/Providers/FleetOpsServiceProvider.php');
+    $details  = file_get_contents(__DIR__ . '/../../addon/components/telematic/details.hbs');
+
+    expect($command)
+        ->toContain("protected \$signature = 'fleetops:sync-telematics")
+        ->toContain('SyncTelematicDevicesJob::dispatch($telematic')
+        ->toContain('!$descriptor->supportsWebhooks')
+        ->toContain('$descriptor->supportsDiscovery')
+        ->toContain("whereIn('status', ['active', 'connected'])");
+
+    expect($provider)
+        ->toContain('Console\\Commands\\SyncTelematics::class')
+        ->toContain("command('fleetops:sync-telematics')->everyMinute()");
+
+    expect($details)
+        ->toContain('Provider polling')
+        ->toContain('FleetOps polls this provider for device snapshots and telemetry updates.');
 });
 
 test('native endpoint fields are advanced optional overrides with provider defaults', function () {
@@ -204,6 +481,90 @@ test('native endpoint fields are advanced optional overrides with provider defau
         expect($field['validation'])->toBe('nullable|url');
         expect($field['default_value'])->not->toBeEmpty();
     }
+});
+
+test('safee credential test sends documented form auth request to custom server uri', function () {
+    $requests = [];
+
+    Http::fake(function ($request) use (&$requests) {
+        $requests[] = $request;
+
+        if (str_ends_with($request->url(), '/protocol/openid-connect/token')) {
+            return Http::response(['access_token' => 'testing-access-token'], 200);
+        }
+
+        return Http::response([
+            'code'    => 0,
+            'time'    => 1509946353.033,
+            'status'  => 'success',
+            'message' => 'operation completed successfully',
+        ], 200);
+    });
+
+    $result = (new SafeeProvider())->testConnection([
+        'server_uri'    => ' https://fms.example.test/ ',
+        'realm_id'      => 'dsco',
+        'client_id'     => 'api',
+        'client_secret' => 'testing-client-secret',
+        'username'      => 'testing-user',
+        'password'      => 'testing-password',
+    ]);
+
+    expect($result['success'])->toBeTrue();
+    expect($result['metadata'])
+        ->toMatchArray([
+            'auth_host' => 'https://fms.example.test',
+            'auth_path' => '/auth/realms/dsco/protocol/openid-connect/token',
+            'realm_id'  => 'dsco',
+        ]);
+
+    expect($requests)->toHaveCount(2);
+
+    $tokenRequest = $requests[0];
+    parse_str($tokenRequest->body(), $tokenBody);
+
+    expect($tokenRequest->method())->toBe('POST');
+    expect($tokenRequest->url())->toBe('https://fms.example.test/auth/realms/dsco/protocol/openid-connect/token');
+    expect(implode(' ', (array) $tokenRequest->header('Content-Type')))->toContain('application/x-www-form-urlencoded');
+    expect($tokenBody)->toMatchArray([
+        'grant_type'    => 'password',
+        'client_secret' => 'testing-client-secret',
+        'client_id'     => 'api',
+        'username'      => 'testing-user',
+        'password'      => 'testing-password',
+    ]);
+
+    expect($requests[1]->method())->toBe('GET');
+    expect($requests[1]->url())->toBe('https://fms.example.test/api/v2/status');
+    expect(implode(' ', (array) $requests[1]->header('Authorization')))->toBe('Bearer testing-access-token');
+});
+
+test('safee credential test reports token endpoint 401 with sanitized auth context', function () {
+    Http::fake([
+        'https://fms.example.test/auth/realms/dsco/protocol/openid-connect/token' => Http::response(['error' => 'unauthorized'], 401),
+    ]);
+
+    $result = (new SafeeProvider())->testConnection([
+        'server_uri'    => 'https://fms.example.test',
+        'realm_id'      => 'dsco',
+        'client_id'     => 'api',
+        'client_secret' => 'testing-client-secret',
+        'username'      => 'testing-user',
+        'password'      => 'testing-password',
+    ]);
+
+    expect($result['success'])->toBeFalse();
+    expect($result['message'])->toBe('Safee authentication failed with status 401');
+    expect($result['metadata'])
+        ->toMatchArray([
+            'auth_host' => 'https://fms.example.test',
+            'auth_path' => '/auth/realms/dsco/protocol/openid-connect/token',
+            'realm_id'  => 'dsco',
+        ])
+        ->not->toHaveKey('client_secret')
+        ->not->toHaveKey('password')
+        ->not->toHaveKey('access_token')
+        ->not->toHaveKey('refresh_token');
 });
 
 test('telematics activity logging excludes large json and spatial payloads', function () {

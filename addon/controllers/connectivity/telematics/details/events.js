@@ -2,6 +2,15 @@ import Controller from '@ember/controller';
 import { action } from '@ember/object';
 import { inject as service } from '@ember/service';
 import { tracked } from '@glimmer/tracking';
+import { task } from 'ember-concurrency';
+
+const severityOptions = [
+    { label: 'Info', value: 'info' },
+    { label: 'Warning', value: 'warning' },
+    { label: 'Error', value: 'error' },
+    { label: 'Critical', value: 'critical' },
+    { label: 'High', value: 'high' },
+];
 
 export default class ConnectivityTelematicsDetailsEventsController extends Controller {
     @service deviceEventActions;
@@ -99,15 +108,19 @@ export default class ConnectivityTelematicsDetailsEventsController extends Contr
         ];
     }
 
-    @tracked actionButtons = [
-        {
-            icon: 'refresh',
-            size: 'xs',
-            onClick: this.refresh,
-            helpText: this.intl.t('common.refresh'),
-            wrapperClass: 'fleetops-telematics-action-button',
-        },
-    ];
+    get actionButtons() {
+        return [
+            {
+                icon: 'refresh',
+                size: 'sm',
+                onClick: this.refresh,
+                helpText: this.intl.t('common.refresh'),
+                wrapperClass: 'fleetops-telematics-action-button',
+                isLoading: this.refreshTask.isRunning,
+                disabled: this.refreshTask.isRunning,
+            },
+        ];
+    }
 
     @tracked bulkActions = [];
 
@@ -136,6 +149,8 @@ export default class ConnectivityTelematicsDetailsEventsController extends Contr
                 filterComponentPlaceholder: 'Select device',
                 filterParam: 'device_uuid',
                 model: 'device',
+                modelNamePath: 'displayName',
+                query: { telematic_uuid: this.telematic?.id },
             },
             {
                 label: 'Provider',
@@ -155,7 +170,10 @@ export default class ConnectivityTelematicsDetailsEventsController extends Contr
                 sortable: true,
                 filterable: true,
                 filterParam: 'severity',
-                filterComponent: 'filter/string',
+                filterComponent: 'filter/multi-option',
+                filterOptions: severityOptions,
+                filterOptionLabel: 'label',
+                filterOptionValue: 'value',
             },
             {
                 label: 'Processed',
@@ -170,6 +188,8 @@ export default class ConnectivityTelematicsDetailsEventsController extends Contr
                     { label: 'Processed', value: 'processed' },
                     { label: 'Unprocessed', value: 'unprocessed' },
                 ],
+                filterOptionLabel: 'label',
+                filterOptionValue: 'value',
             },
             {
                 label: 'Occurred',
@@ -222,7 +242,11 @@ export default class ConnectivityTelematicsDetailsEventsController extends Contr
     }
 
     @action refresh() {
-        return this.hostRouter.refresh();
+        if (this.refreshTask.isRunning) {
+            return;
+        }
+
+        return this.refreshTask.perform();
     }
 
     @action clearFilters() {
@@ -240,5 +264,9 @@ export default class ConnectivityTelematicsDetailsEventsController extends Contr
     @action async markProcessed(deviceEvent) {
         await this.deviceEventActions.markProcessed(deviceEvent);
         await this.hostRouter.refresh();
+    }
+
+    @task *refreshTask() {
+        yield this.hostRouter.refresh();
     }
 }

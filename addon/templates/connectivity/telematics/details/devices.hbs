@@ -26,7 +26,7 @@
                 <h3 class="text-sm font-bold text-gray-900 dark:text-gray-100">Synced Devices</h3>
                 <p class="mt-1 text-xs leading-5 text-gray-500 dark:text-gray-300">Search provider identifiers, filter attachment state, and open devices for troubleshooting.</p>
             </div>
-            <div class="fleetops-provider-connections-actions flex min-w-0 flex-wrap items-center gap-2 lg:ml-auto lg:flex-nowrap lg:justify-end">
+            <div class="fleetops-provider-connections-actions flex min-w-0 flex-wrap items-center gap-1 lg:ml-auto lg:flex-nowrap lg:justify-end">
                 <Layout::Resource::TabularActions
                     @title="Synced Devices"
                     @searchQuery={{this.query}}
@@ -40,6 +40,8 @@
                     @searchInputClass="fleetops-provider-connections-search"
                     @filterPickerButtonClass="fleetops-provider-connections-action-button"
                     @columnPickerButtonClass="fleetops-provider-connections-action-button"
+                    @filterPickerSize="sm"
+                    @columnPickerSize="sm"
                 />
             </div>
         </div>
@@ -70,6 +72,7 @@
                 @onPageChange={{fn (mut this.page)}}
                 @controller={{this}}
                 @withoutHeader={{true}}
+                @tableWrapperClass="no-table-extra-spacing"
                 @emptyStateComponent={{component
                     "table/empty-state"
                     variant="compact"

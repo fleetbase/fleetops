@@ -38,7 +38,7 @@ class Driver extends FleetbaseResource
             'email'                         => $this->email,
             'phone'                         => $this->phone,
             'drivers_license_number'        => $this->drivers_license_number,
-            'license_expiry'                => $this->license_expiry,
+            'license_expiry'                => $this->formatDateOnly($this->license_expiry),
             'photo_url'                     => $this->photo_url,
             'avatar_url'                    => $this->avatar_url,
             'avatar_value'                  => $this->when(Http::isInternalRequest(), $this->getOriginal('avatar_url')),
@@ -96,6 +96,15 @@ class Driver extends FleetbaseResource
         );
     }
 
+    protected function formatDateOnly($date): ?string
+    {
+        if (!$date) {
+            return null;
+        }
+
+        return method_exists($date, 'toDateString') ? $date->toDateString() : (string) $date;
+    }
+
     /**
      * Transform the resource into an webhook payload.
      *
@@ -110,7 +119,7 @@ class Driver extends FleetbaseResource
             'email'                  => $this->email,
             'phone'                  => $this->phone,
             'photo_url'              => $this->photo_url,
-            'license_expiry'         => $this->license_expiry,
+            'license_expiry'         => $this->formatDateOnly($this->license_expiry),
             'vehicle'                => data_get($this, 'vehicle.public_id'),
             'current_job'            => data_get($this, 'currentJob.public_id'),
             'vendor'                 => data_get($this, 'vendor.public_id'),

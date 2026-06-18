@@ -115,7 +115,7 @@ class ServiceQuoteController extends FleetOpsController
                     ]);
                 });
 
-                $quote->setRelation('items', $items);
+                $quote->setRelation('items', $quote->items()->get());
 
                 // if single quotation requested
                 if ($single) {
@@ -161,7 +161,7 @@ class ServiceQuoteController extends FleetOpsController
                 ]);
             });
 
-            $quote->setRelation('items', $items);
+            $quote->setRelation('items', $quote->items()->get());
             $serviceQuotes->push($quote);
         }
 
@@ -298,7 +298,7 @@ class ServiceQuoteController extends FleetOpsController
                     ]);
                 });
 
-                $quote->setRelation('items', $items);
+                $quote->setRelation('items', $quote->items()->get());
                 $serviceQuotes->push($quote);
 
                 // if requesting single
@@ -346,7 +346,7 @@ class ServiceQuoteController extends FleetOpsController
                 ]);
             });
 
-            $quote->setRelation('items', $items);
+            $quote->setRelation('items', $quote->items()->get());
             $serviceQuotes->push($quote);
         }
 

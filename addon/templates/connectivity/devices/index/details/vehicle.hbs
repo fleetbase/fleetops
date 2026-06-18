@@ -1,0 +1,84 @@
+<div class="flex flex-col gap-3 p-3">
+    <div class="flex items-start justify-between gap-3">
+        <div class="min-w-0">
+            <h2 class="text-base font-bold text-gray-900 dark:text-gray-100">Vehicle Attachment</h2>
+            <p class="mt-0.5 text-xs text-gray-500 dark:text-gray-300">Fleet context for telemetry from this device.</p>
+        </div>
+
+        {{#if this.hasVehicle}}
+            <div class="flex flex-nowrap items-center gap-2 whitespace-nowrap">
+                {{#if this.vehicle.id}}
+                    <Button @icon="eye" @text="Open Vehicle" @size="xs" @onClick={{this.openVehicle}} />
+                {{/if}}
+                <Button @icon="shuffle" @text="Change Vehicle" @size="xs" @onClick={{this.attachToVehicle}} />
+                <Button @icon="unlink" @text="Detach" @size="xs" @type="danger" @onClick={{this.detachFromVehicle}} />
+            </div>
+        {{/if}}
+    </div>
+
+    {{#if this.hasVehicle}}
+        <section class="overflow-hidden rounded-md border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-800">
+            <div class="flex gap-3 p-3">
+                <Image
+                    src={{this.vehiclePhotoUrl}}
+                    @fallbackSrc={{config "defaultValues.placeholderImage"}}
+                    alt={{this.vehicleName}}
+                    class="h-20 w-20 flex-shrink-0 rounded-md object-cover shadow-sm"
+                />
+
+                <div class="min-w-0 flex-1">
+                    <div class="flex flex-wrap items-center gap-2">
+                        <h3 class="truncate text-base font-bold text-gray-900 dark:text-gray-100">{{this.vehicleName}}</h3>
+                        {{#if this.vehicleStatus}}
+                            <Badge @status={{this.vehicleStatus}}>{{smart-humanize this.vehicleStatus}}</Badge>
+                        {{/if}}
+                    </div>
+
+                    <div class="mt-1 grid grid-cols-1 gap-2 text-xs text-gray-500 dark:text-gray-300 sm:grid-cols-2 lg:grid-cols-4">
+                        <div>
+                            <div class="font-semibold uppercase text-gray-400 dark:text-gray-500">Plate</div>
+                            <div class="truncate text-gray-800 dark:text-gray-100">{{n-a this.plateNumber}}</div>
+                        </div>
+                        <div>
+                            <div class="font-semibold uppercase text-gray-400 dark:text-gray-500">VIN</div>
+                            <div class="truncate text-gray-800 dark:text-gray-100">{{n-a this.vin}}</div>
+                        </div>
+                        <div>
+                            <div class="font-semibold uppercase text-gray-400 dark:text-gray-500">Call Sign</div>
+                            <div class="truncate text-gray-800 dark:text-gray-100">{{n-a this.callSign}}</div>
+                        </div>
+                        <div>
+                            <div class="font-semibold uppercase text-gray-400 dark:text-gray-500">Driver</div>
+                            <div class="truncate text-gray-800 dark:text-gray-100">{{n-a this.vehicleDriverName}}</div>
+                        </div>
+                    </div>
+
+                    <div class="mt-3 grid grid-cols-1 gap-2 text-xs text-gray-500 dark:text-gray-300 sm:grid-cols-3">
+                        <div>
+                            <div class="font-semibold uppercase text-gray-400 dark:text-gray-500">Vehicle</div>
+                            <div class="truncate text-gray-800 dark:text-gray-100">{{n-a this.yearMakeModel}}</div>
+                        </div>
+                        <div>
+                            <div class="font-semibold uppercase text-gray-400 dark:text-gray-500">Attached Device</div>
+                            <div class="truncate text-gray-800 dark:text-gray-100">{{n-a this.device.displayName}}</div>
+                        </div>
+                        <div>
+                            <div class="font-semibold uppercase text-gray-400 dark:text-gray-500">Device Last Seen</div>
+                            <div class="truncate text-gray-800 dark:text-gray-100">{{n-a (format-date-fns this.device.last_online_at "dd MMM yyyy, HH:mm")}}</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+    {{else}}
+        <Telematic::TabEmptyState
+            @tone="warning"
+            @icon="link-slash"
+            @title="No vehicle attached"
+            @message="Attach this device to a vehicle so telemetry has fleet context."
+            @primaryText="Attach Vehicle"
+            @primaryIcon="link"
+            @primaryAction={{this.attachToVehicle}}
+        />
+    {{/if}}
+</div>

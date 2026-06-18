@@ -1,14 +1,55 @@
 <ContentPanel @title={{t "order.fields.service"}} @open={{true}} @wrapperClass="bordered-top">
     <div>
-        <Toggle
-            @label={{t "order.fields.apply-service-rate"}}
-            @wrapperClass="justify-start-i mb-4"
-            @isToggled={{@resource.servicable}}
-            @onToggle={{perform this.queryServiceRates}}
-            @disabled={{or (cannot-write @resource) (not this.isServicable)}}
-            @helpText={{t "order.fields.service-help-text"}}
-        />
-        {{#if @resource.servicable}}
+        {{#if this.hasServiceQuoteOverride}}
+            <div class="rounded-md border border-blue-200 bg-blue-50 px-3 py-3 text-blue-800 dark:border-blue-800 dark:bg-blue-900 dark:text-blue-100">
+                <div class="flex items-start justify-between gap-3">
+                    <div>
+                        <div class="text-sm font-semibold">{{this.serviceQuoteOverride.title}}</div>
+                        {{#if this.serviceQuoteOverride.description}}
+                            <div class="mt-1 text-xs opacity-80">{{this.serviceQuoteOverride.description}}</div>
+                        {{/if}}
+                    </div>
+                    <Badge @hideStatusDot={{true}} @status="info">Locked</Badge>
+                </div>
+
+                {{#if this.serviceQuoteOverride.isLoading}}
+                    <div class="flex items-center justify-center py-5">
+                        <Spinner class="text-sm flex flex-row items-center" @iconClass="mr-2" @loadingMessage="Generating contract quote..." />
+                    </div>
+                {{else if this.overrideQuote}}
+                    <div class="mt-3 rounded-md border border-blue-300 bg-blue-600/20 text-blue-50 dark:border-blue-600 dark:bg-blue-950/30">
+                        <div class="border-b border-blue-300 px-3 py-2 text-xs font-semibold uppercase tracking-wide text-blue-100/80 dark:border-blue-700 dark:text-blue-200/80">
+                            {{t "order.fields.breakdown"}}
+                        </div>
+                        <div class="divide-y divide-blue-300/70 dark:divide-blue-700">
+                            {{#each this.overrideQuoteItems as |item|}}
+                                <div class="flex flex-col gap-1 px-3 py-2 sm:flex-row sm:items-start sm:justify-between sm:gap-3">
+                                    <span class="min-w-0 whitespace-normal break-words text-sm font-semibold text-blue-50 dark:text-blue-100 w-3/4">{{item.details}}</span>
+                                    <span class="shrink-0 text-right text-sm font-medium text-blue-50 dark:text-blue-100">
+                                        {{format-currency item.amount this.overrideCurrency}}
+                                    </span>
+                                </div>
+                            {{/each}}
+                            <div class="flex flex-col gap-1 px-3 py-2 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
+                                <span class="font-semibold text-blue-50 dark:text-blue-100">{{t "common.total"}}</span>
+                                <span class="shrink-0 text-right font-semibold text-blue-50 dark:text-blue-100">
+                                    {{format-currency this.overrideQuote.amount this.overrideCurrency}}
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                {{/if}}
+            </div>
+        {{else}}
+            <Toggle
+                @label={{t "order.fields.apply-service-rate"}}
+                @wrapperClass="justify-start-i mb-4"
+                @isToggled={{@resource.servicable}}
+                @onToggle={{perform this.queryServiceRates}}
+                @disabled={{or (cannot-write @resource) (not this.isServicable)}}
+                @helpText={{t "order.fields.service-help-text"}}
+            />
+            {{#if @resource.servicable}}
             <div>
                 <div class="space-y-2">
                     {{#unless @resource.facilitator.isIntegratedVendor}}
@@ -36,18 +77,27 @@
                         <Button
                             @icon="refresh"
                             @text={{t "order.fields.refresh-button"}}
-                            @isLoading={{this.getServiceQuotes.isRunning}}
+                            @isLoading={{this.isLoadingServiceQuotes}}
                             @disabled={{not this.selectedRate}}
                             @onClick={{perform this.getServiceQuotes this.selectedRate}}
                         />
                     </div>
                 </div>
-                {{#if this.getServiceQuotes.isRunning}}
+                {{#if this.shouldShowServiceQuotesLoader}}
                     <div class="flex items-center justify-center py-5">
                         <Spinner class="text-sm dark:text-gray-100 flex flex-row items-center" @iconClass="mr-2" @loadingMessage={{t "order.fields.loading-message"}} />
                     </div>
                 {{else}}
                     <InfoBlock class="my-3" @text={{t "order.fields.service-quote-info"}} />
+                    {{#if (and this.isAutoRefreshingServiceQuotes this.hasServiceQuotes)}}
+                        <div class="my-3 rounded-md border border-blue-200 bg-blue-50 px-3 py-2 text-blue-700 dark:border-blue-800 dark:bg-blue-900 dark:text-blue-100">
+                            <Spinner
+                                class="text-sm flex flex-row items-center"
+                                @iconClass="mr-2"
+                                @loadingMessage={{t "order.fields.updating-service-quotes-message"}}
+                            />
+                        </div>
+                    {{/if}}
                     <div class="radio-group-condensed -space-y-px">
                         {{#each this.serviceQuotes as |serviceQuote|}}
                             <div class="radio-group-item shadow-sm flex-col pl-0i pr-0i {{if (eq @resource.service_quote_uuid serviceQuote.uuid) 'is-checked'}}">
@@ -106,6 +156,7 @@
                     </div>
                 {{/if}}
             </div>
+            {{/if}}
         {{/if}}
     </div>
 </ContentPanel>

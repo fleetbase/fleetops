@@ -72,7 +72,7 @@ class Vehicle extends Model
      *
      * @var array
      */
-    protected $filterParams = ['vendor', 'driver', 'driver_uuid', 'vehicle_make', 'vehicle_model'];
+    protected $filterParams = ['vendor', 'driver', 'driver_uuid', 'vehicle_make', 'vehicle_model', 'telematic_uuid'];
 
     /**
      * Relationships to auto load with driver.
@@ -407,6 +407,10 @@ class Vehicle extends Model
      */
     public function getDisplayNameAttribute()
     {
+        if (isset($this->name) && strlen($this->name)) {
+            return $this->name;
+        }
+
         // Initialize an empty array to hold the name segments
         $nameSegments = [];
 

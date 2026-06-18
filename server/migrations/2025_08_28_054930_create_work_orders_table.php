@@ -19,6 +19,7 @@ return new class extends Migration {
 
             $table->string('code')->nullable()->index(); // external WO number
             $table->string('subject')->index();
+            $table->string('category')->nullable()->index();       // preventive_maintenance, tire_issue, breakdown, etc.
             $table->string('status')->default('open')->index();     // open, in_progress, blocked, done, canceled
             $table->string('priority')->nullable()->index();        // low, normal, high, critical
 

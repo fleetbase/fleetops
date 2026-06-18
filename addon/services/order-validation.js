@@ -24,12 +24,13 @@ export default class OrderValidationService extends Service {
         const hasPickup = isNotEmpty(order.payload.pickup);
         const hasDropoff = isNotEmpty(order.payload.dropoff);
         const hasValidCustomFields = cfManager ? this.isCustomFieldsValid(cfManager) : true;
+        const hasValidExtensionRules = this.orderCreation.validateOrderRules(order, cfManager);
 
         if (hasWaypoints) {
-            return hasOrderConfig && hasOrderType && hasValidCustomFields;
+            return hasOrderConfig && hasOrderType && hasValidCustomFields && hasValidExtensionRules;
         }
 
-        return hasPickup && hasDropoff && hasOrderConfig && hasOrderType && hasValidCustomFields;
+        return hasPickup && hasDropoff && hasOrderConfig && hasOrderType && hasValidCustomFields && hasValidExtensionRules;
     }
 
     validationFails(order, cfManager) {

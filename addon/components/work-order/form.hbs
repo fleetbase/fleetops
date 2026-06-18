@@ -13,6 +13,27 @@
                 <Input @value={{@resource.subject}} @type="text" class="w-full form-input" placeholder="Brief description of the work order" disabled={{cannot-write @resource}} />
             </InputGroup>
 
+            {{! Work Classification }}
+            <div class="col-span-1 lg:col-span-2 text-[11px] uppercase tracking-wide text-gray-500 font-semibold mt-3">
+                Work Order Classification
+            </div>
+            <InputGroup @name="Category" @wrapperClass="col-span-1 lg:col-span-2">
+                <div class="fleetbase-model-select fleetbase-power-select ember-model-select">
+                    <PowerSelect
+                        @options={{this.categoryOptions}}
+                        @selected={{find-by "value" @resource.category this.categoryOptions}}
+                        @onChange={{set-model-attr @resource "category"}}
+                        @placeholder="Select Category"
+                        @triggerClass="form-select form-input"
+                        @disabled={{cannot-write @resource}}
+                        as |category|
+                    >
+                        <div class="font-semibold normalize-in-trigger">{{category.label}}</div>
+                        <div class="hide-from-trigger">{{category.description}}</div>
+                    </PowerSelect>
+                </div>
+            </InputGroup>
+
             {{! Status & Priority }}
             <div class="col-span-1 lg:col-span-2 text-[11px] uppercase tracking-wide text-gray-500 font-semibold mt-3">
                 Status & Priority
@@ -21,14 +42,15 @@
                 <div class="fleetbase-model-select fleetbase-power-select ember-model-select">
                     <PowerSelect
                         @options={{this.statusOptions}}
-                        @selected={{@resource.status}}
-                        @onChange={{fn (mut @resource.status)}}
+                        @selected={{find-by "value" @resource.status this.statusOptions}}
+                        @onChange={{set-model-attr @resource "status"}}
                         @placeholder="Select Status"
                         @triggerClass="form-select form-input"
                         @disabled={{cannot-write @resource}}
                         as |status|
                     >
-                        {{smart-humanize status}}
+                        <div class="font-semibold normalize-in-trigger">{{status.label}}</div>
+                        <div class="hide-from-trigger">{{status.description}}</div>
                     </PowerSelect>
                 </div>
             </InputGroup>

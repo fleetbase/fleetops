@@ -124,6 +124,7 @@ class ProcessMaintenanceTriggers extends Command
                     'company_uuid'    => $schedule->company_uuid,
                     'schedule_uuid'   => $schedule->uuid,
                     'subject'         => $schedule->name,
+                    'category'        => 'preventive_maintenance',
                     'code'            => $woCode,
                     'status'          => 'open',
                     'priority'        => $schedule->default_priority ?? 'normal',

@@ -63,7 +63,7 @@ class Telematic extends Model
      *
      * @var array
      */
-    protected $filterParams = ['provider', 'status', 'warranty_uuid'];
+    protected $filterParams = ['public_id', 'provider', 'status', 'warranty_uuid'];
 
     /**
      * The attributes that are mass assignable.

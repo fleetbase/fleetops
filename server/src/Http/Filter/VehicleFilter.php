@@ -2,6 +2,7 @@
 
 namespace Fleetbase\FleetOps\Http\Filter;
 
+use Fleetbase\FleetOps\Models\Vehicle;
 use Fleetbase\FleetOps\Support\Utils;
 use Fleetbase\Http\Filter\Filter;
 
@@ -130,5 +131,17 @@ class VehicleFilter extends Filter
         if ($assignedFleet === 'false') {
             $this->builder->whereDoesntHave('fleets');
         }
+    }
+
+    public function telematicUuid(?string $telematic)
+    {
+        if (!$telematic) {
+            return;
+        }
+
+        $this->builder->whereHas('devices', function ($query) use ($telematic) {
+            $query->where('telematic_uuid', $telematic);
+            $query->whereIn('attachable_type', ['fleet-ops:vehicle', Vehicle::class]);
+        });
     }
 }

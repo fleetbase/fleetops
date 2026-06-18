@@ -20,6 +20,7 @@ export default class OrderFormRouteComponent extends Component {
     @service currentUser;
     @service notifications;
     @service placeActions;
+    @service orderCreation;
     @tracked multipleWaypoints = false;
     @tracked routingControl;
     @tracked route;
@@ -119,6 +120,8 @@ export default class OrderFormRouteComponent extends Component {
 
             this.clearWaypoints();
         }
+
+        this.requestServiceQuoteRefresh('route.waypoints.toggled');
     }
 
     @action sortWaypoints({ sourceList, sourceIndex, targetList, targetIndex }) {
@@ -132,6 +135,7 @@ export default class OrderFormRouteComponent extends Component {
         targetList.insertAt(targetIndex, item);
 
         this.previewRoute();
+        this.requestServiceQuoteRefresh('route.waypoints.reordered');
     }
 
     @action addWaypoint(properties = {}) {
@@ -143,6 +147,7 @@ export default class OrderFormRouteComponent extends Component {
         this.args.resource.payload.waypoints.pushObject(waypoint);
 
         this.previewRoute();
+        this.requestServiceQuoteRefresh('route.waypoint.added');
     }
 
     @action setWaypointPlace(index, place) {
@@ -159,6 +164,7 @@ export default class OrderFormRouteComponent extends Component {
             location: place.location,
         });
         this.previewRoute();
+        this.requestServiceQuoteRefresh('route.waypoint.place.changed');
     }
 
     @action setWaypointCustomer(waypoint, model) {
@@ -170,16 +176,19 @@ export default class OrderFormRouteComponent extends Component {
         if (this.multipleWaypoints && this.args.resource.payload.waypoints.length === 1) return;
         this.args.resource.payload.waypoints.removeObject(waypoint);
         this.previewRoute();
+        this.requestServiceQuoteRefresh('route.waypoint.removed');
     }
 
     @action clearWaypoints() {
         this.args.resource.payload.waypoints.clear();
         this.previewRoute();
+        this.requestServiceQuoteRefresh('route.waypoints.cleared');
     }
 
     @action setPayloadPlace(prop, place) {
         this.args.resource.payload[prop] = place;
         this.previewRoute();
+        this.requestServiceQuoteRefresh(`route.${prop}.changed`);
     }
 
     @action editPlace(place) {
@@ -291,6 +300,7 @@ export default class OrderFormRouteComponent extends Component {
         }
         this.previewRoute();
         this.args.resource.set('optimized', true);
+        this.requestServiceQuoteRefresh('route.optimized');
     }
 
     @action setOptimizedRoute(route, trip, waypoints, engine = 'osrm') {
@@ -314,5 +324,10 @@ export default class OrderFormRouteComponent extends Component {
         const routeModel = this.store.createRecord('route', payload);
         this.args.resource.route = routeModel;
         this.route = payload;
+        this.requestServiceQuoteRefresh('route.changed');
+    }
+
+    requestServiceQuoteRefresh(reason) {
+        this.orderCreation.requestServiceQuoteRefresh(reason, this.args.resource);
     }
 }

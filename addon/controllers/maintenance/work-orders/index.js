@@ -1,16 +1,18 @@
 import Controller from '@ember/controller';
 import { inject as service } from '@ember/service';
 import { tracked } from '@glimmer/tracking';
+import fleetOpsOptions from '../../../utils/fleet-ops-options';
 
 export default class MaintenanceWorkOrdersIndexController extends Controller {
     @service workOrderActions;
     @service intl;
 
-    @tracked queryParams = ['status', 'priority', 'page', 'limit', 'sort', 'query', 'public_id', 'created_at', 'updated_at'];
+    @tracked queryParams = ['category', 'status', 'priority', 'page', 'limit', 'sort', 'query', 'public_id', 'created_at', 'updated_at'];
     @tracked page = 1;
     @tracked limit;
     @tracked sort = '-created_at';
     @tracked public_id;
+    @tracked category;
     @tracked status;
     @tracked priority;
 
@@ -43,6 +45,21 @@ export default class MaintenanceWorkOrdersIndexController extends Controller {
                 filterComponent: 'filter/string',
             },
             { label: this.intl.t('column.subject'), valuePath: 'subject', resizable: true, sortable: true, filterable: true, filterParam: 'subject', filterComponent: 'filter/string' },
+            {
+                label: this.intl.t('column.category'),
+                valuePath: 'category',
+                cellComponent: 'table/cell/base',
+                humanize: true,
+                resizable: true,
+                sortable: true,
+                filterable: true,
+                filterParam: 'category',
+                filterComponent: 'filter/select',
+                filterOptionLabel: 'label',
+                filterOptionValue: 'value',
+                filterOptions: fleetOpsOptions('workOrderCategories'),
+                placeholder: 'Select work order category',
+            },
             {
                 label: this.intl.t('column.status'),
                 valuePath: 'status',

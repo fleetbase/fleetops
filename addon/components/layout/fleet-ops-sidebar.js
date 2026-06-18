@@ -2,6 +2,7 @@ import Component from '@glimmer/component';
 import { tracked } from '@glimmer/tracking';
 import { inject as service } from '@ember/service';
 import { action } from '@ember/object';
+import isMenuItemActive from '@fleetbase/ember-ui/utils/is-menu-item-active';
 
 const SECTION_REGISTRY_KEYS = {
     operations: 'universeOperationsMenuItems',
@@ -198,23 +199,26 @@ export default class LayoutFleetOpsSidebarComponent extends Component {
     }
 
     get registryRootItems() {
-        return this.universeMenuItems.filter((item) => !item.renderComponentInPlace).map((item) => this.registryItem(item));
+        return this.sortByPriority(this.universeMenuItems.filter((item) => !item.renderComponentInPlace).map((item) => this.registryItem(item)));
     }
 
     get registryPanelItems() {
-        return this.universeMenuPanels.map((panel) => {
-            const children = (panel.items ?? []).filter((item) => !item.renderComponentInPlace).map((item) => this.registryItem(item));
+        return this.sortByPriority(
+            this.universeMenuPanels.map((panel) => {
+                const children = this.sortByPriority((panel.items ?? []).filter((item) => !item.renderComponentInPlace).map((item) => this.registryItem(item)));
 
-            return {
-                id: panel.id ?? panel.slug ?? panel.title,
-                label: panel.intl ? this.intl.t(panel.intl) : panel.title,
-                icon: panel.icon,
-                visible: panel.visible,
-                permission: panel.permission,
-                keywords: [panel.slug, panel.title, panel.intl].filter(Boolean),
-                children,
-            };
-        });
+                return {
+                    id: panel.id ?? panel.slug ?? panel.title,
+                    label: panel.intl ? this.intl.t(panel.intl) : panel.title,
+                    icon: panel.icon,
+                    visible: panel.visible,
+                    permission: panel.permission,
+                    priority: panel.priority,
+                    keywords: [panel.slug, panel.title, panel.intl].filter(Boolean),
+                    children,
+                };
+            })
+        );
     }
 
     get footerRegistryComponents() {
@@ -257,6 +261,7 @@ export default class LayoutFleetOpsSidebarComponent extends Component {
 
     createItem(intl, icon, route, permission, ability, keywords = []) {
         return {
+            priority: this.defaultPriorityForRoute(route),
             label: this.intl.t(intl),
             description: this.intl.t(intl),
             icon,
@@ -269,6 +274,8 @@ export default class LayoutFleetOpsSidebarComponent extends Component {
 
     createHubItem(label, icon, route, permission, ability, keywords = []) {
         return {
+            pinnedFirst: true,
+            priority: this.defaultPriorityForRoute(route),
             label,
             description: label,
             icon,
@@ -280,8 +287,9 @@ export default class LayoutFleetOpsSidebarComponent extends Component {
     }
 
     registryItem(menuItem) {
-        return {
+        const registryMenuItem = {
             ...menuItem,
+            _virtual: true,
             label: menuItem.intl ? this.intl.t(menuItem.intl) : (menuItem.title ?? menuItem.label),
             description: menuItem.description,
             icon: menuItem.icon,
@@ -289,15 +297,83 @@ export default class LayoutFleetOpsSidebarComponent extends Component {
             permission: menuItem.permission,
             visible: menuItem.visible,
             keywords: [menuItem.slug, menuItem.view, menuItem.section, menuItem.title, menuItem.label, menuItem.intl, ...(menuItem.keywords ?? [])].filter(Boolean),
-            onClick: () => this.universe.transitionMenuItem(`${this.routePrefix}virtual`, menuItem),
+            activeWhen: () => isMenuItemActive(menuItem.section, menuItem.slug, menuItem.view),
         };
+
+        registryMenuItem.onClick = () => this.universe.transitionMenuItem(`${this.routePrefix}virtual`, registryMenuItem);
+
+        return registryMenuItem;
     }
 
     withRegistryItems(section, items) {
         const registryProperty = SECTION_REGISTRY_KEYS[section];
         const registryItems = (this[registryProperty] ?? []).filter((item) => !item.renderComponentInPlace).map((item) => this.registryItem(item));
 
-        return [...items, ...registryItems];
+        return this.sortByPriority([...items, ...registryItems]);
+    }
+
+    sortByPriority(items = []) {
+        return [...items]
+            .map((item, index) => ({ item, index }))
+            .sort((a, b) => {
+                if (a.item.pinnedFirst !== b.item.pinnedFirst) {
+                    return a.item.pinnedFirst ? -1 : 1;
+                }
+
+                const priorityOrder = (a.item.priority ?? 0) - (b.item.priority ?? 0);
+
+                if (priorityOrder !== 0) {
+                    return priorityOrder;
+                }
+
+                return a.index - b.index;
+            })
+            .map(({ item }) => item);
+    }
+
+    defaultPriorityForRoute(route) {
+        const priorities = {
+            'operations.orders': 0,
+            'operations.orchestrator': 1,
+            'operations.scheduler': 2,
+            'operations.order-config': 3,
+            'operations.service-rates': 4,
+            'management.index': 0,
+            'management.drivers': 1,
+            'management.vehicles': 2,
+            'management.fleets': 3,
+            'management.vendors': 4,
+            'management.contacts': 5,
+            'management.places': 6,
+            'management.fuel-reports': 7,
+            'management.fuel-transactions': 8,
+            'management.issues': 9,
+            'maintenance.index': 0,
+            'maintenance.schedules': 1,
+            'maintenance.work-orders': 2,
+            'maintenance.maintenances': 3,
+            'maintenance.equipment': 4,
+            'maintenance.parts': 5,
+            'connectivity.telematics': 0,
+            'connectivity.fuel-providers': 1,
+            'connectivity.devices': 2,
+            'connectivity.sensors': 3,
+            'connectivity.events': 4,
+            'analytics.index': 0,
+            'analytics.reports': 1,
+            'settings.index': 0,
+            'settings.navigator-app': 1,
+            'settings.map': 2,
+            'settings.payments': 3,
+            'settings.notifications': 4,
+            'settings.routing': 5,
+            'settings.orchestrator': 6,
+            'settings.scheduling': 7,
+            'settings.custom-fields': 8,
+            'settings.avatars': 9,
+        };
+
+        return priorities[route] ?? 0;
     }
 
     fullRoute(route) {

@@ -8,12 +8,16 @@ use Fleetbase\FleetOps\Http\Resources\v1\Index\Order as OrderIndexResource;
 use Fleetbase\FleetOps\Http\Resources\v1\Index\Place as PlaceIndexResource;
 use Fleetbase\FleetOps\Http\Resources\v1\Index\Vehicle as VehicleIndexResource;
 use Fleetbase\FleetOps\Models\Driver;
+use Fleetbase\FleetOps\Models\Fleet;
+use Fleetbase\FleetOps\Models\FleetDriver;
+use Fleetbase\FleetOps\Models\FleetVehicle;
 use Fleetbase\FleetOps\Models\Order;
 use Fleetbase\FleetOps\Models\Place;
 use Fleetbase\FleetOps\Models\Route;
 use Fleetbase\FleetOps\Models\Vehicle;
 use Fleetbase\FleetOps\Support\LiveCacheService;
 use Fleetbase\FleetOps\Support\LiveOrderQuery;
+use Fleetbase\FleetOps\Support\Utils;
 use Fleetbase\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 
@@ -184,6 +188,179 @@ class LiveController extends Controller
 
             return VehicleIndexResource::collection($vehicles);
         });
+    }
+
+    /**
+     * Get the complete resource snapshot used by the operations sidebar monitor.
+     *
+     * @return array
+     */
+    public function operationsMonitor()
+    {
+        return LiveCacheService::remember('operations-monitor', [], function () {
+            $drivers = Driver::where(['company_uuid' => session('company')])
+                ->with(['user', 'vehicle'])
+                ->applyDirectivesForPermissions('fleet-ops list driver')
+                ->orderBy('id')
+                ->get();
+
+            $vehicles = Vehicle::where(['company_uuid' => session('company')])
+                ->with(['driver'])
+                ->applyDirectivesForPermissions('fleet-ops list vehicle')
+                ->orderBy('id')
+                ->get();
+
+            $fleets = Fleet::where(['company_uuid' => session('company')])
+                ->applyDirectivesForPermissions('fleet-ops list fleet')
+                ->orderBy('name')
+                ->orderBy('id')
+                ->get();
+
+            $driverIdsByUuid    = $drivers->pluck('uuid', 'uuid');
+            $vehicleIdsByUuid   = $vehicles->pluck('uuid', 'uuid');
+            $onlineDriverUuids  = $drivers->where('online', true)->pluck('uuid')->flip();
+            $onlineVehicleUuids = $vehicles->where('online', true)->pluck('uuid')->flip();
+            $fleetUuids         = $fleets->pluck('uuid');
+
+            $driverMemberships = FleetDriver::whereIn('fleet_uuid', $fleetUuids)
+                ->whereIn('driver_uuid', $driverIdsByUuid->keys())
+                ->get()
+                ->groupBy('fleet_uuid');
+
+            $vehicleMemberships = FleetVehicle::whereIn('fleet_uuid', $fleetUuids)
+                ->whereIn('vehicle_uuid', $vehicleIdsByUuid->keys())
+                ->get()
+                ->groupBy('fleet_uuid');
+
+            $fleetNodes = $fleets->mapWithKeys(function (Fleet $fleet) use ($driverMemberships, $vehicleMemberships, $driverIdsByUuid, $vehicleIdsByUuid, $onlineDriverUuids, $onlineVehicleUuids) {
+                $fleetDriverUuids  = $driverMemberships->get($fleet->uuid, collect())->pluck('driver_uuid')->unique()->values();
+                $fleetVehicleUuids = $vehicleMemberships->get($fleet->uuid, collect())->pluck('vehicle_uuid')->unique()->values();
+                $driverIds         = $fleetDriverUuids->map(fn ($uuid) => $driverIdsByUuid->get($uuid))->filter()->values();
+                $vehicleIds        = $fleetVehicleUuids->map(fn ($uuid) => $vehicleIdsByUuid->get($uuid))->filter()->values();
+
+                return [
+                    $fleet->uuid => [
+                        'id'                    => $fleet->uuid,
+                        'uuid'                  => $fleet->uuid,
+                        'public_id'             => $fleet->public_id,
+                        'name'                  => $fleet->name,
+                        'task'                  => $fleet->task,
+                        'status'                => $fleet->status,
+                        'slug'                  => $fleet->slug,
+                        'parent_fleet_uuid'     => $fleet->parent_fleet_uuid,
+                        'drivers_count'         => $driverIds->count(),
+                        'drivers_online_count'  => $fleetDriverUuids->filter(fn ($uuid) => $onlineDriverUuids->has($uuid))->count(),
+                        'vehicles_count'        => $vehicleIds->count(),
+                        'vehicles_online_count' => $fleetVehicleUuids->filter(fn ($uuid) => $onlineVehicleUuids->has($uuid))->count(),
+                        'driver_ids'            => $driverIds->all(),
+                        'vehicle_ids'           => $vehicleIds->all(),
+                        'subfleets'             => [],
+                        'updated_at'            => $fleet->updated_at,
+                        'created_at'            => $fleet->created_at,
+                    ],
+                ];
+            });
+
+            return [
+                'drivers'  => $drivers->map(fn (Driver $driver) => $this->serializeMonitorDriver($driver))->values()->all(),
+                'vehicles' => $vehicles->map(fn (Vehicle $vehicle) => $this->serializeMonitorVehicle($vehicle))->values()->all(),
+                'fleets'   => $this->buildOperationsMonitorFleetTree($fleetNodes),
+                'meta'     => [
+                    'generated_at'   => now()->toISOString(),
+                    'ttl'            => LiveCacheService::DEFAULT_TTL,
+                    'drivers_count'  => $drivers->count(),
+                    'vehicles_count' => $vehicles->count(),
+                    'fleets_count'   => $fleets->count(),
+                ],
+            ];
+        });
+    }
+
+    protected function serializeMonitorDriver(Driver $driver): array
+    {
+        return [
+            'id'                    => $driver->uuid,
+            'uuid'                  => $driver->uuid,
+            'public_id'             => $driver->public_id,
+            'company_uuid'          => $driver->company_uuid,
+            'user_uuid'             => $driver->user_uuid,
+            'vehicle_uuid'          => $driver->vehicle_uuid,
+            'vendor_uuid'           => $driver->vendor_uuid,
+            'current_job_uuid'      => $driver->current_job_uuid,
+            'name'                  => $driver->name,
+            'email'                 => $driver->email,
+            'phone'                 => $driver->phone,
+            'photo_url'             => $driver->photo_url,
+            'avatar_url'            => $driver->photo_url,
+            'vehicle_name'          => $driver->vehicle_name,
+            'status'                => $driver->status,
+            'location'              => Utils::castPoint($driver->location),
+            'heading'               => (int) data_get($driver, 'heading', 0),
+            'altitude'              => (int) data_get($driver, 'altitude', 0),
+            'speed'                 => (int) data_get($driver, 'speed', 0),
+            'online'                => (bool) data_get($driver, 'online', false),
+            'assigned_orders_count' => null,
+            'meta'                  => [
+                '_index_resource' => true,
+            ],
+            'updated_at'            => $driver->updated_at,
+            'created_at'            => $driver->created_at,
+        ];
+    }
+
+    protected function serializeMonitorVehicle(Vehicle $vehicle): array
+    {
+        return [
+            'id'                    => $vehicle->uuid,
+            'uuid'                  => $vehicle->uuid,
+            'public_id'             => $vehicle->public_id,
+            'company_uuid'          => $vehicle->company_uuid,
+            'vendor_uuid'           => $vehicle->vendor_uuid,
+            'photo_uuid'            => $vehicle->photo_uuid,
+            'internal_id'           => $vehicle->internal_id,
+            'name'                  => $vehicle->name,
+            'display_name'          => $vehicle->display_name,
+            'driver_name'           => $vehicle->driver_name,
+            'plate_number'          => $vehicle->plate_number,
+            'serial_number'         => $vehicle->serial_number,
+            'fuel_card_number'      => $vehicle->fuel_card_number,
+            'vin'                   => $vehicle->vin,
+            'make'                  => $vehicle->make,
+            'model'                 => $vehicle->model,
+            'year'                  => $vehicle->year,
+            'photo_url'             => $vehicle->photo_url,
+            'avatar_url'            => $vehicle->avatar_url,
+            'status'                => $vehicle->status,
+            'location'              => Utils::castPoint($vehicle->location),
+            'heading'               => (int) data_get($vehicle, 'heading', 0),
+            'altitude'              => (int) data_get($vehicle, 'altitude', 0),
+            'speed'                 => (int) data_get($vehicle, 'speed', 0),
+            'online'                => (bool) data_get($vehicle, 'online', false),
+            'assigned_orders_count' => null,
+            'meta'                  => [
+                '_index_resource' => true,
+            ],
+            'updated_at'            => $vehicle->updated_at,
+            'created_at'            => $vehicle->created_at,
+        ];
+    }
+
+    protected function buildOperationsMonitorFleetTree($fleetNodes): array
+    {
+        $nodes = $fleetNodes->map(fn ($node) => $node)->all();
+
+        foreach ($nodes as $uuid => $node) {
+            $parentUuid = data_get($node, 'parent_fleet_uuid');
+
+            if ($parentUuid && isset($nodes[$parentUuid])) {
+                $nodes[$parentUuid]['subfleets'][] = &$nodes[$uuid];
+            }
+        }
+
+        return collect($nodes)
+            ->filter(fn ($node) => empty(data_get($node, 'parent_fleet_uuid')) || !isset($nodes[data_get($node, 'parent_fleet_uuid')]))
+            ->values()
+            ->all();
     }
 
     /**

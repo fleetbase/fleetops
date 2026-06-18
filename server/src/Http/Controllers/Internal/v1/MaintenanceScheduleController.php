@@ -102,6 +102,7 @@ class MaintenanceScheduleController extends FleetOpsController
             'company_uuid'    => $schedule->company_uuid,
             'schedule_uuid'   => $schedule->uuid,
             'subject'         => $schedule->name,
+            'category'        => 'preventive_maintenance',
             'status'          => 'open',
             'priority'        => $schedule->default_priority ?? 'normal',
             'target_type'     => $schedule->subject_type,

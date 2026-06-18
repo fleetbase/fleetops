@@ -28,19 +28,20 @@ class CreateDriverRequest extends FleetbaseRequest
         $isCreating = $this->isMethod('POST');
 
         return [
-            'name'      => [Rule::requiredIf($isCreating)],
-            'email'     => [Rule::requiredIf($isCreating), Rule::when($this->filled('email'), ['email']), Rule::when($isCreating, [Rule::unique('users')->whereNull('deleted_at')])],
-            'phone'     => [Rule::requiredIf($isCreating), Rule::when($isCreating, [Rule::unique('users')->whereNull('deleted_at')])],
-            'password'  => 'nullable|string',
-            'country'   => 'nullable|size:2',
-            'city'      => 'nullable|string',
-            'vehicle'   => 'nullable|string|starts_with:vehicle_|exists:vehicles,public_id',
-            'status'    => 'nullable|string|in:active,available,inactive',
-            'vendor'    => 'nullable|exists:vendors,public_id',
-            'job'       => 'nullable|exists:orders,public_id',
-            'location'  => ['nullable', new ResolvablePoint()],
-            'latitude'  => ['nullable', 'required_with:longitude'],
-            'longitude' => ['nullable', 'required_with:latitude'],
+            'name'           => [Rule::requiredIf($isCreating)],
+            'email'          => [Rule::requiredIf($isCreating), Rule::when($this->filled('email'), ['email']), Rule::when($isCreating, [Rule::unique('users')->whereNull('deleted_at')])],
+            'phone'          => [Rule::requiredIf($isCreating), Rule::when($isCreating, [Rule::unique('users')->whereNull('deleted_at')])],
+            'password'       => 'nullable|string',
+            'country'        => 'nullable|size:2',
+            'city'           => 'nullable|string',
+            'vehicle'        => 'nullable|string|starts_with:vehicle_|exists:vehicles,public_id',
+            'license_expiry' => 'nullable|date',
+            'status'         => 'nullable|string|in:active,available,inactive',
+            'vendor'         => 'nullable|exists:vendors,public_id',
+            'job'            => 'nullable|exists:orders,public_id',
+            'location'       => ['nullable', new ResolvablePoint()],
+            'latitude'       => ['nullable', 'required_with:longitude'],
+            'longitude'      => ['nullable', 'required_with:latitude'],
         ];
     }
 

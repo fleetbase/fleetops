@@ -16,10 +16,11 @@ class SafeeProvider extends AbstractProvider
     protected string $baseUrl        = 'https://api.safee.com';
     protected int $requestsPerMinute = 3000;
     protected ?string $accessToken   = null;
+    protected array $authContext     = [];
 
     protected function prepareAuthentication(): void
     {
-        $this->baseUrl     = rtrim($this->credentials['api_base_url'] ?? $this->credentials['server_uri'] ?? $this->baseUrl, '/');
+        $this->baseUrl     = $this->resolveBaseUrl();
         $this->accessToken = $this->credentials['access_token'] ?? $this->authenticate();
         $scheme            = $this->credentials['authorization_scheme'] ?? 'Bearer';
 
@@ -45,13 +46,14 @@ class SafeeProvider extends AbstractProvider
                 'metadata' => [
                     'status' => $response['status'] ?? null,
                     'time'   => $response['time'] ?? null,
+                    ...$this->safeDiagnosticMetadata(),
                 ],
             ];
         } catch (\Throwable $e) {
             return [
                 'success'  => false,
                 'message'  => $e->getMessage(),
-                'metadata' => [],
+                'metadata' => $this->safeDiagnosticMetadata(),
             ];
         }
     }
@@ -219,7 +221,8 @@ class SafeeProvider extends AbstractProvider
             }
         }
 
-        $tokenUrl = $this->baseUrl . '/auth/realms/' . $this->credentials['realm_id'] . '/protocol/openid-connect/token';
+        $tokenUrl          = $this->baseUrl . '/auth/realms/' . $this->credentials['realm_id'] . '/protocol/openid-connect/token';
+        $this->authContext = $this->buildAuthContext($tokenUrl);
 
         $response = Http::asForm()
             ->acceptJson()
@@ -243,6 +246,44 @@ class SafeeProvider extends AbstractProvider
         }
 
         return $token;
+    }
+
+    protected function resolveBaseUrl(): string
+    {
+        $baseUrl = $this->filledCredential('api_base_url') ?? $this->filledCredential('server_uri') ?? $this->baseUrl;
+
+        return rtrim($baseUrl, '/');
+    }
+
+    protected function filledCredential(string $key): ?string
+    {
+        $value = $this->credentials[$key] ?? null;
+
+        if (!is_string($value)) {
+            return null;
+        }
+
+        $value = trim($value);
+
+        return $value === '' ? null : $value;
+    }
+
+    protected function buildAuthContext(string $tokenUrl): array
+    {
+        $parts  = parse_url($tokenUrl) ?: [];
+        $scheme = $parts['scheme'] ?? null;
+        $host   = $parts['host'] ?? null;
+
+        return [
+            'auth_host' => $host ? trim(($scheme ? $scheme . '://' : '') . $host, '/') : null,
+            'auth_path' => $parts['path'] ?? null,
+            'realm_id'  => $this->credentials['realm_id'] ?? null,
+        ];
+    }
+
+    protected function safeDiagnosticMetadata(): array
+    {
+        return array_filter($this->authContext, fn ($value) => $value !== null && $value !== '');
     }
 
     protected function safeeGet(string $endpoint): array

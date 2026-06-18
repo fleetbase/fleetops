@@ -7,6 +7,7 @@ import { task } from 'ember-concurrency';
 
 export default class LayoutFleetOpsSidebarOperationsMonitorComponent extends Component {
     @service store;
+    @service fetch;
     @service universe;
     @service hostRouter;
     @service mapManager;
@@ -203,11 +204,11 @@ export default class LayoutFleetOpsSidebarOperationsMonitorComponent extends Com
     }
 
     fleetDrivers(fleet) {
-        return this.resourceArray(fleet?.drivers);
+        return this.resolveFleetResources(fleet, 'driver');
     }
 
     fleetVehicles(fleet) {
-        return this.resourceArray(fleet?.vehicles);
+        return this.resolveFleetResources(fleet, 'vehicle');
     }
 
     fleetSubfleets(fleet) {
@@ -337,6 +338,53 @@ export default class LayoutFleetOpsSidebarOperationsMonitorComponent extends Com
 
             return String(this.displayName(a) ?? '').localeCompare(String(this.displayName(b) ?? ''));
         });
+    }
+
+    get driverById() {
+        return this.resourcesById(this.fallbackDrivers);
+    }
+
+    get vehicleById() {
+        return this.resourcesById(this.fallbackVehicles);
+    }
+
+    resourcesById(resources = []) {
+        return this.resourceArray(resources).reduce((map, resource) => {
+            this.resourceIdentifiers(resource).forEach((id) => map.set(id, resource));
+
+            return map;
+        }, new Map());
+    }
+
+    resourceIdentifiers(resource) {
+        return [resource?.id, resource?.uuid, resource?.public_id].filter(Boolean).map((id) => String(id));
+    }
+
+    resolveFleetResources(fleet, type) {
+        const embeddedResources = this.resourceArray(fleet?.[`${type}s`]);
+
+        if (embeddedResources.length) {
+            return embeddedResources;
+        }
+
+        const ids = this.resourceArray(fleet?.[`${type}_ids`]);
+        const resources = type === 'driver' ? this.driverById : this.vehicleById;
+
+        return ids.map((id) => resources.get(String(id))).filter(Boolean);
+    }
+
+    normalizeMonitorResource(type, resource) {
+        if (!resource) {
+            return resource;
+        }
+
+        try {
+            this.store.pushPayload?.(type, { [type]: resource });
+        } catch (_) {
+            // Keep the monitor usable in tests and older hosts without pushPayload support.
+        }
+
+        return this.store.peekRecord?.(type, resource.id) ?? this.store.peekRecord?.(type, resource.public_id) ?? resource;
     }
 
     listenForChanges() {
@@ -572,18 +620,35 @@ export default class LayoutFleetOpsSidebarOperationsMonitorComponent extends Com
 
     @task *loadFallbackResources() {
         try {
-            const [drivers, vehicles, fleets] = yield Promise.all([
-                this.store.query('driver', { limit: 20, without: ['vendor'] }),
-                this.store.query('vehicle', { limit: 20 }),
-                this.store.query('fleet', { limit: 20, with: ['vehicles', 'drivers', 'subfleets'], parents_only: true }),
-            ]);
+            const response = yield this.fetch.get('fleet-ops/live/operations-monitor', {}, { namespace: 'int/v1' });
+            const drivers = this.resourceArray(response?.drivers).map((driver) => this.normalizeMonitorResource('driver', driver));
+            const vehicles = this.resourceArray(response?.vehicles).map((vehicle) => this.normalizeMonitorResource('vehicle', vehicle));
+            const fleets = this.resourceArray(response?.fleets).map((fleet) => this.normalizeMonitorFleet(fleet));
 
-            this.fallbackDrivers = drivers.toArray?.() ?? drivers;
-            this.fallbackVehicles = vehicles.toArray?.() ?? vehicles;
-            this.fallbackFleets = fleets.toArray?.() ?? fleets;
+            this.fallbackDrivers = drivers;
+            this.fallbackVehicles = vehicles;
+            this.fallbackFleets = fleets;
             this.expandedFleetIds = new Set(this.collectFleetKeys(this.fallbackFleets));
         } catch (error) {
             this.notifications.serverError(error);
         }
+    }
+
+    normalizeMonitorFleet(fleet) {
+        const normalizedFleet = this.normalizeMonitorResource('fleet', fleet);
+        const subfleets = this.resourceArray(fleet?.subfleets).map((subfleet) => this.normalizeMonitorFleet(subfleet));
+
+        if (normalizedFleet?.set) {
+            normalizedFleet.set('driver_ids', this.resourceArray(fleet?.driver_ids));
+            normalizedFleet.set('vehicle_ids', this.resourceArray(fleet?.vehicle_ids));
+            normalizedFleet.set('subfleets', subfleets);
+
+            return normalizedFleet;
+        }
+
+        return {
+            ...fleet,
+            subfleets,
+        };
     }
 }

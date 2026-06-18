@@ -12,7 +12,11 @@ export default class ConnectivityTelematicsDetailsDevicesRoute extends Route {
         status: { refreshModel: true },
         provider: { refreshModel: true },
         attachment_state: { refreshModel: true },
+        vehicle: { refreshModel: true },
+        connection_status: { refreshModel: true },
         device_id: { refreshModel: true },
+        last_online_at: { refreshModel: true },
+        updated_at: { refreshModel: true },
     };
 
     model(params) {
