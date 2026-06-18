@@ -47,6 +47,26 @@ export default class OrderFormServiceRateComponent extends Component {
         return this.isLoadingServiceQuotes && !this.hasServiceQuotes;
     }
 
+    get serviceQuoteOverride() {
+        return this.orderCreation.getServiceQuoteOverride(this.args.resource);
+    }
+
+    get hasServiceQuoteOverride() {
+        return this.serviceQuoteOverride?.mode === 'locked';
+    }
+
+    get overrideQuote() {
+        return this.serviceQuoteOverride?.quote;
+    }
+
+    get overrideQuoteItems() {
+        return this.overrideQuote?.items ?? [];
+    }
+
+    get overrideCurrency() {
+        return this.overrideQuote?.currency ?? this.serviceQuoteOverride?.currency ?? 'USD';
+    }
+
     @task *queryServiceRates(toggled) {
         this.args.resource.servicable = toggled;
         if (!toggled) return;
@@ -79,6 +99,14 @@ export default class OrderFormServiceRateComponent extends Component {
     handleServiceQuoteRefreshRequest({ order } = {}) {
         if (order && order !== this.args.resource) {
             return;
+        }
+
+        if (this.hasServiceQuoteOverride) {
+            return;
+        }
+
+        if (this.args.resource?.servicable && !this.serviceRates?.length && !this.queryServiceRates.isRunning) {
+            this.queryServiceRates.perform(true);
         }
 
         if (!this.canRefreshServiceQuotes) {
