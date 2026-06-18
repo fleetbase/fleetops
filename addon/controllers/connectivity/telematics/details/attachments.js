@@ -11,13 +11,15 @@ export default class ConnectivityTelematicsDetailsAttachmentsController extends 
     @service modalsManager;
     @service notifications;
 
-    @tracked queryParams = ['query', 'status', 'attachment_state', 'vehicle', 'sort'];
+    @tracked queryParams = ['query', 'status', 'vehicle', 'sort'];
     @tracked telematic;
     @tracked query;
     @tracked status;
-    @tracked attachment_state;
     @tracked vehicle;
     @tracked sort = '-updated_at';
+    @tracked selectedDevice = null;
+    @tracked selectedVehicle = null;
+    @tracked isRefreshing = false;
 
     get syncedDevices() {
         return Array.from(this.model?.devices ?? this.model ?? []);
@@ -32,43 +34,15 @@ export default class ConnectivityTelematicsDetailsAttachmentsController extends 
     }
 
     get devices() {
-        const query = String(this.query ?? '')
-            .trim()
-            .toLowerCase();
-
-        return this.syncedDevices.filter((device) => {
-            const matchesQuery =
-                !query ||
-                [
-                    device.displayName,
-                    device.name,
-                    device.device_id,
-                    device.serial_number,
-                    device.imei,
-                    device.attached_to_name,
-                    device.attachable?.display_name,
-                    device.attachable?.name,
-                    device.status,
-                    device.connection_status,
-                ]
-                    .filter(Boolean)
-                    .some((value) => String(value).toLowerCase().includes(query));
-
-            const matchesStatus = !this.status || device.status === this.status || device.connection_status === this.status;
-            const matchesAttachmentState =
-                !this.attachment_state || (this.attachment_state === 'attached' && device.attachable_uuid) || (this.attachment_state === 'unattached' && !device.attachable_uuid);
-            const matchesVehicle = !this.vehicle || device.attachable_uuid === this.vehicle;
-
-            return matchesQuery && matchesStatus && matchesAttachmentState && matchesVehicle;
-        });
+        return [...this.unattachedDevices, ...this.attachedDevices];
     }
 
     get unattachedDevices() {
-        return this.devices.filter((device) => !device.attachable_uuid);
+        return this.syncedDevices.filter((device) => !device.attachable_uuid && this.deviceMatchesQuery(device) && this.deviceMatchesStatus(device));
     }
 
     get attachedDevices() {
-        return this.devices.filter((device) => device.attachable_uuid);
+        return this.syncedDevices.filter((device) => device.attachable_uuid && this.deviceMatchesQuery(device) && this.deviceMatchesStatus(device) && this.deviceMatchesVehicle(device));
     }
 
     get onlineDevicesCount() {
@@ -103,9 +77,12 @@ export default class ConnectivityTelematicsDetailsAttachmentsController extends 
         const key = device.attachable_uuid;
 
         if (!groups.has(key)) {
+            const vehicle = device.attachable;
+
             groups.set(key, {
                 id: key,
                 name: this.getDeviceVehicleName(device),
+                vehicle,
                 devices: [],
             });
         }
@@ -117,8 +94,47 @@ export default class ConnectivityTelematicsDetailsAttachmentsController extends 
         return Array.from(groups.values()).sort((a, b) => String(a.name).localeCompare(String(b.name)));
     }
 
+    get normalizedQuery() {
+        return String(this.query ?? '')
+            .trim()
+            .toLowerCase();
+    }
+
+    deviceMatchesQuery(device) {
+        const query = this.normalizedQuery;
+
+        if (!query) {
+            return true;
+        }
+
+        return [
+            device.displayName,
+            device.name,
+            device.device_id,
+            device.serial_number,
+            device.imei,
+            device.public_id,
+            device.attached_to_name,
+            device.attachable?.displayName,
+            device.attachable?.display_name,
+            device.attachable?.name,
+            device.status,
+            device.connection_status,
+        ]
+            .filter(Boolean)
+            .some((value) => String(value).toLowerCase().includes(query));
+    }
+
+    deviceMatchesStatus(device) {
+        return !this.status || device.status === this.status || device.connection_status === this.status;
+    }
+
+    deviceMatchesVehicle(device) {
+        return !this.vehicle || device.attachable_uuid === this.vehicle;
+    }
+
     get hasActiveFilters() {
-        return Boolean(this.query || this.status || this.attachment_state || this.vehicle);
+        return Boolean(this.query || this.status || this.vehicle);
     }
 
     get hasSyncedDevices() {
@@ -237,12 +253,12 @@ export default class ConnectivityTelematicsDetailsAttachmentsController extends 
         return this.attachedDevices.length;
     }
 
-    @action updateQuery(event) {
-        this.query = event.target.value;
+    get selectedDeviceName() {
+        return this.selectedDevice?.displayName ?? this.selectedDevice?.name ?? this.selectedDevice?.device_id;
     }
 
-    @action updateAttachmentState(event) {
-        this.attachment_state = event.target.value || null;
+    @action updateQuery(event) {
+        this.query = event.target.value;
     }
 
     @action updateStatus(event) {
@@ -255,11 +271,16 @@ export default class ConnectivityTelematicsDetailsAttachmentsController extends 
         this.vehicle = value || null;
     }
 
+    @action updateSelectedVehicle(vehicle) {
+        this.selectedVehicle = vehicle;
+        this.vehicle = vehicle?.id ?? null;
+    }
+
     @action clearFilters() {
         this.query = null;
         this.status = null;
-        this.attachment_state = null;
         this.vehicle = null;
+        this.selectedVehicle = null;
     }
 
     @action goToDevices() {
@@ -270,8 +291,36 @@ export default class ConnectivityTelematicsDetailsAttachmentsController extends 
         return this.hostRouter.transitionTo('console.fleet-ops.connectivity.telematics.details.logs', this.telematic);
     }
 
-    @action refresh() {
-        return this.hostRouter.refresh();
+    @action async refresh() {
+        this.isRefreshing = true;
+
+        try {
+            return await this.hostRouter.refresh();
+        } finally {
+            this.isRefreshing = false;
+        }
+    }
+
+    @action selectUnattachedDevice(device) {
+        if (this.selectedDevice === device) {
+            this.selectedDevice = null;
+
+            return;
+        }
+
+        this.selectedDevice = device;
+    }
+
+    @action clearSelectedDevice() {
+        this.selectedDevice = null;
+    }
+
+    @action attachSelectedDeviceToGroup(group) {
+        if (!this.selectedDevice) {
+            return;
+        }
+
+        return this.attachDeviceToVehicle(this.selectedDevice, group.vehicle ?? { id: group.id, name: group.name });
     }
 
     @action openAttachDeviceModal(device) {
@@ -289,10 +338,7 @@ export default class ConnectivityTelematicsDetailsAttachmentsController extends 
                 modal.startLoading();
 
                 try {
-                    const response = await this.fetch.post(`devices/${device.id}/attach`, { vehicle: selectedVehicle.id });
-
-                    this.applyDeviceAttachment(device, selectedVehicle, response?.device);
-                    this.notifications.success(this.intl.t('device.prompts.attach-to-vehicle-success'));
+                    await this.attachDeviceToVehicle(device, selectedVehicle);
                     modal.done();
                 } catch (error) {
                     this.notifications.serverError(error);
@@ -300,6 +346,14 @@ export default class ConnectivityTelematicsDetailsAttachmentsController extends 
                 }
             },
         });
+    }
+
+    async attachDeviceToVehicle(device, selectedVehicle) {
+        const response = await this.fetch.post(`devices/${device.id}/attach`, { vehicle: selectedVehicle.id });
+
+        this.applyDeviceAttachment(device, selectedVehicle, response?.device);
+        this.selectedDevice = null;
+        this.notifications.success(this.intl.t('device.prompts.attach-to-vehicle-success'));
     }
 
     @action detachDevice(device) {

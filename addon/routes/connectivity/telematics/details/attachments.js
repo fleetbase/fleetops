@@ -10,13 +10,13 @@ export default class ConnectivityTelematicsDetailsAttachmentsRoute extends Route
     queryParams = {
         query: { refreshModel: false },
         status: { refreshModel: false },
-        attachment_state: { refreshModel: false },
         vehicle: { refreshModel: false },
         sort: { refreshModel: true },
     };
 
     async model(params) {
         const telematic = this.modelFor('connectivity.telematics.details');
+        const selectedVehicle = await this.loadSelectedVehicle(params.vehicle);
         const devices = [];
         let page = 1;
         let total = null;
@@ -50,6 +50,7 @@ export default class ConnectivityTelematicsDetailsAttachmentsRoute extends Route
             return {
                 devices,
                 error: null,
+                selectedVehicle,
                 meta: {
                     total: total ?? devices.length,
                     loaded: devices.length,
@@ -60,6 +61,7 @@ export default class ConnectivityTelematicsDetailsAttachmentsRoute extends Route
             return {
                 devices: [],
                 error,
+                selectedVehicle,
                 meta: {
                     total: 0,
                     loaded: 0,
@@ -69,8 +71,21 @@ export default class ConnectivityTelematicsDetailsAttachmentsRoute extends Route
         }
     }
 
+    async loadSelectedVehicle(vehicleId) {
+        if (!vehicleId) {
+            return null;
+        }
+
+        try {
+            return await this.store.findRecord('vehicle', vehicleId);
+        } catch {
+            return null;
+        }
+    }
+
     setupController(controller, model) {
         super.setupController(controller, model);
         controller.telematic = this.modelFor('connectivity.telematics.details');
+        controller.selectedVehicle = model?.selectedVehicle ?? null;
     }
 }
