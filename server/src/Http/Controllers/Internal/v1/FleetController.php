@@ -11,6 +11,7 @@ use Fleetbase\FleetOps\Models\Fleet;
 use Fleetbase\FleetOps\Models\FleetDriver;
 use Fleetbase\FleetOps\Models\FleetVehicle;
 use Fleetbase\FleetOps\Models\Vehicle;
+use Fleetbase\FleetOps\Support\LiveCacheService;
 use Fleetbase\Http\Requests\ExportRequest;
 use Fleetbase\Http\Requests\ImportRequest;
 use Illuminate\Http\Request;
@@ -121,6 +122,8 @@ class FleetController extends FleetOpsController
             'driver_uuid' => $driver->uuid,
         ])->delete();
 
+        LiveCacheService::invalidate('operations-monitor');
+
         return response()->json([
             'status'  => 'ok',
             'deleted' => $deleted,
@@ -153,6 +156,8 @@ class FleetController extends FleetOpsController
             ]);
         }
 
+        LiveCacheService::invalidate('operations-monitor');
+
         return response()->json([
             'status' => 'ok',
             'exists' => $exists,
@@ -177,6 +182,8 @@ class FleetController extends FleetOpsController
             'fleet_uuid'   => $fleet->uuid,
             'vehicle_uuid' => $vehicle->uuid,
         ])->delete();
+
+        LiveCacheService::invalidate('operations-monitor');
 
         return response()->json([
             'status'  => 'ok',
@@ -209,6 +216,8 @@ class FleetController extends FleetOpsController
                 'vehicle_uuid' => $vehicle->uuid,
             ]);
         }
+
+        LiveCacheService::invalidate('operations-monitor');
 
         return response()->json([
             'status' => 'ok',

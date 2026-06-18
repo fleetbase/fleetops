@@ -108,7 +108,7 @@ class LiveCacheService
             }
         } else {
             // Invalidate all endpoints
-            $endpoints = ['orders', 'routes', 'coordinates', 'drivers', 'vehicles', 'places'];
+            $endpoints = ['orders', 'routes', 'coordinates', 'drivers', 'vehicles', 'places', 'operations-monitor'];
             foreach ($endpoints as $ep) {
                 static::incrementVersion($ep);
             }

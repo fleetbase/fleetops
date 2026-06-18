@@ -30,7 +30,7 @@ class VehicleObserver
             }
         }
 
-        LiveCacheService::invalidate('vehicles');
+        LiveCacheService::invalidateMultiple(['vehicles', 'operations-monitor']);
     }
 
     /**
@@ -55,7 +55,7 @@ class VehicleObserver
             }
         }
 
-        LiveCacheService::invalidate('vehicles');
+        LiveCacheService::invalidateMultiple(['vehicles', 'operations-monitor']);
     }
 
     /**
@@ -68,6 +68,6 @@ class VehicleObserver
         // Unassign the deleted vehicle from matching driver/(s)
         Driver::where(['vehicle_uuid' => $vehicle->uuid])->delete();
 
-        LiveCacheService::invalidate('vehicles');
+        LiveCacheService::invalidateMultiple(['vehicles', 'operations-monitor']);
     }
 }
