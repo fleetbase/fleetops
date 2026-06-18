@@ -110,8 +110,19 @@ class SafeeProvider extends AbstractProvider
                 'lat' => $position['lat'] ?? null,
                 'lng' => $position['lng'] ?? null,
             ],
-            'meta' => [
-                'raw'          => $payload,
+            'speed'      => $payload['speed'] ?? $payload['lastSpeed'] ?? null,
+            'heading'    => $payload['heading'] ?? $payload['angle'] ?? null,
+            'altitude'   => $payload['altitude'] ?? $payload['alt'] ?? null,
+            'odometer'   => $this->extractOdometer($payload),
+            'ignition'   => $this->extractIgnition($payload),
+            'fuel_level' => $this->extractFuelLevel($payload),
+            'meta'       => [
+                'raw'             => $payload,
+                'provider_status' => array_filter([
+                    'status'        => $rawStatus,
+                    'normalized'    => $status,
+                    'vehicleStatus' => $payload['vehicleStatus'] ?? null,
+                ], fn ($value) => $value !== null),
                 'plate_number' => $payload['plateNumber'] ?? $payload['plate_number'] ?? null,
                 'door_number'  => $payload['doorNumber'] ?? null,
                 'driver'       => $payload['driver'] ?? null,
@@ -136,12 +147,14 @@ class SafeeProvider extends AbstractProvider
             'event_type'  => data_get($payload, 'event.code') ?? data_get($payload, 'event.name') ?? 'telemetry_update',
             'message'     => data_get($payload, 'event.name') ?? data_get($payload, 'event.message') ?? null,
             'occurred_at' => $this->parseTimestamp($payload['date'] ?? $payload['deviceTime'] ?? $payload['time'] ?? null),
+            'online'      => $this->resolveOnline($payload),
             'location'    => [
                 'lat' => $position['lat'] ?? null,
                 'lng' => $position['lng'] ?? null,
             ],
             'speed'      => $payload['speed'] ?? $payload['lastSpeed'] ?? null,
             'heading'    => $payload['heading'] ?? $payload['angle'] ?? null,
+            'altitude'   => $payload['altitude'] ?? $payload['alt'] ?? null,
             'odometer'   => $this->extractOdometer($payload),
             'ignition'   => $this->extractIgnition($payload),
             'fuel_level' => $this->extractFuelLevel($payload),
@@ -345,6 +358,17 @@ class SafeeProvider extends AbstractProvider
         }
 
         return in_array(strtolower($status), ['offline', 'inactive', 'deleted', 'expired'], true) ? 'inactive' : 'active';
+    }
+
+    protected function resolveOnline(array $payload): ?bool
+    {
+        if (array_key_exists('online', $payload)) {
+            return filter_var($payload['online'], FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE) ?? (bool) $payload['online'];
+        }
+
+        $status = $payload['status'] ?? $payload['vehicleStatus'] ?? null;
+
+        return $status ? $this->normalizeVehicleStatus($status) === 'active' : null;
     }
 
     protected function extractOdometer(array $payload): mixed

@@ -151,6 +151,7 @@ class AfaqyProvider extends AbstractProvider
 
         return [
             'device_id'    => $payload['_id'] ?? $payload['id'] ?? null,
+            'external_id'  => $payload['_id'] ?? $payload['id'] ?? null,
             'name'         => $payload['name'] ?? data_get($payload, 'profile.plate_number') ?? 'Unknown Unit',
             'provider'     => 'afaqy',
             'model'        => data_get($payload, 'profile.model') ?? $payload['device'] ?? null,

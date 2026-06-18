@@ -2,6 +2,8 @@
 
 namespace Fleetbase\FleetOps\Support\Telematics\Providers;
 
+use Illuminate\Support\Carbon;
+
 /**
  * Class SamsaraProvider.
  *
@@ -78,30 +80,68 @@ class SamsaraProvider extends AbstractProvider
 
     public function normalizeDevice(array $payload): array
     {
+        $position = $this->extractPosition($payload);
+
         return [
-            'external_id'     => $payload['id'],
-            'device_name'     => $payload['name'] ?? 'Unknown Device',
-            'device_provider' => 'samsara',
-            'device_model'    => $payload['make'] ?? null,
-            'vin'             => $payload['vin'] ?? null,
-            'license_plate'   => $payload['licensePlate'] ?? null,
-            'status'          => 'active',
-            'meta'            => $payload,
+            'device_id'      => $payload['id'] ?? null,
+            'external_id'    => $payload['id'] ?? null,
+            'name'           => $payload['name'] ?? 'Unknown Device',
+            'provider'       => 'samsara',
+            'model'          => $payload['make'] ?? $payload['model'] ?? null,
+            'vin'            => $payload['vin'] ?? null,
+            'serial_number'  => $payload['serial'] ?? $payload['serialNumber'] ?? null,
+            'license_plate'  => $payload['licensePlate'] ?? null,
+            'status'         => $this->normalizeStatus($payload),
+            'online'         => $this->resolveOnline($payload),
+            'last_seen_at'   => $this->parseTimestamp($payload['time'] ?? data_get($payload, 'location.time') ?? data_get($payload, 'gps.time') ?? null),
+            'location'       => [
+                'lat' => $position['lat'] ?? null,
+                'lng' => $position['lng'] ?? null,
+            ],
+            'speed'      => $this->extractSpeed($payload),
+            'heading'    => $this->extractHeading($payload),
+            'altitude'   => $this->extractAltitude($payload),
+            'odometer'   => data_get($payload, 'odometerMeters') ?? data_get($payload, 'obdOdometerMeters.value'),
+            'fuel_level' => data_get($payload, 'fuelPercent.value') ?? data_get($payload, 'fuelPercent'),
+            'meta'       => [
+                'raw'             => $payload,
+                'provider_status' => array_filter([
+                    'status'         => $payload['status'] ?? null,
+                    'gateway_status' => data_get($payload, 'gateway.status'),
+                    'online'         => $payload['online'] ?? $payload['isOnline'] ?? data_get($payload, 'gateway.online'),
+                ], fn ($value) => $value !== null),
+            ],
         ];
     }
 
     public function normalizeEvent(array $payload): array
     {
+        $position = $this->extractPosition($payload);
+        $deviceId = data_get($payload, 'vehicle.id') ?? $payload['vehicleId'] ?? $payload['id'] ?? null;
+
         return [
-            'external_id' => $payload['id'] ?? null,
-            'device_id'   => $payload['vehicle']['id'] ?? $payload['vehicleId'] ?? null,
+            'external_id' => $payload['id'] ?? $deviceId,
+            'device_id'   => $deviceId,
             'event_type'  => $payload['eventType'] ?? 'vehicle_update',
-            'occurred_at' => $payload['time'] ?? now(),
+            'occurred_at' => $this->parseTimestamp($payload['time'] ?? data_get($payload, 'location.time') ?? data_get($payload, 'gps.time') ?? null) ?? now(),
+            'online'      => $this->resolveOnline($payload),
             'location'    => [
-                'lat' => $payload['location']['latitude'] ?? null,
-                'lng' => $payload['location']['longitude'] ?? null,
+                'lat' => $position['lat'] ?? null,
+                'lng' => $position['lng'] ?? null,
             ],
-            'meta' => $payload,
+            'speed'      => $this->extractSpeed($payload),
+            'heading'    => $this->extractHeading($payload),
+            'altitude'   => $this->extractAltitude($payload),
+            'odometer'   => data_get($payload, 'odometerMeters') ?? data_get($payload, 'obdOdometerMeters.value'),
+            'fuel_level' => data_get($payload, 'fuelPercent.value') ?? data_get($payload, 'fuelPercent'),
+            'meta'       => [
+                'raw'             => $payload,
+                'provider_status' => array_filter([
+                    'status'         => $payload['status'] ?? null,
+                    'gateway_status' => data_get($payload, 'gateway.status'),
+                    'online'         => $payload['online'] ?? $payload['isOnline'] ?? data_get($payload, 'gateway.online'),
+                ], fn ($value) => $value !== null),
+            ],
         ];
     }
 
@@ -175,5 +215,73 @@ class SamsaraProvider extends AbstractProvider
     public function supportsWebhooks(): bool
     {
         return true;
+    }
+
+    protected function extractPosition(array $payload): array
+    {
+        $position = $payload['location']
+            ?? $payload['gps']
+            ?? $payload['currentLocation']
+            ?? $payload['lastKnownLocation']
+            ?? data_get($payload, 'vehicle.location')
+            ?? [];
+
+        return [
+            'lat' => $position['latitude'] ?? $position['lat'] ?? null,
+            'lng' => $position['longitude'] ?? $position['lng'] ?? null,
+        ];
+    }
+
+    protected function extractSpeed(array $payload): mixed
+    {
+        return data_get($payload, 'location.speedMilesPerHour')
+            ?? data_get($payload, 'location.speed')
+            ?? data_get($payload, 'gps.speedMilesPerHour')
+            ?? data_get($payload, 'speedMilesPerHour')
+            ?? data_get($payload, 'speed');
+    }
+
+    protected function extractHeading(array $payload): mixed
+    {
+        return data_get($payload, 'location.headingDegrees')
+            ?? data_get($payload, 'location.heading')
+            ?? data_get($payload, 'gps.headingDegrees')
+            ?? data_get($payload, 'headingDegrees')
+            ?? data_get($payload, 'heading');
+    }
+
+    protected function extractAltitude(array $payload): mixed
+    {
+        return data_get($payload, 'location.altitudeMeters')
+            ?? data_get($payload, 'gps.altitudeMeters')
+            ?? data_get($payload, 'altitudeMeters')
+            ?? data_get($payload, 'altitude');
+    }
+
+    protected function parseTimestamp($value): ?string
+    {
+        if (!$value) {
+            return null;
+        }
+
+        return Carbon::parse($value)->toDateTimeString();
+    }
+
+    protected function resolveOnline(array $payload): ?bool
+    {
+        $value = $payload['online'] ?? $payload['isOnline'] ?? data_get($payload, 'gateway.online') ?? null;
+
+        if ($value === null) {
+            return $this->extractPosition($payload)['lat'] !== null;
+        }
+
+        return filter_var($value, FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE) ?? (bool) $value;
+    }
+
+    protected function normalizeStatus(array $payload): string
+    {
+        $status = strtolower((string) ($payload['status'] ?? data_get($payload, 'gateway.status') ?? 'active'));
+
+        return in_array($status, ['inactive', 'offline', 'deactivated'], true) ? 'inactive' : 'active';
     }
 }
