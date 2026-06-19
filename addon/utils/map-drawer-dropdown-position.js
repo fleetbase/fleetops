@@ -11,7 +11,7 @@ export default function calculateMapDrawerDropdownPosition(trigger, content) {
     const drawerRect = drawerPanel?.getBoundingClientRect?.();
     const contentRect = content?.getBoundingClientRect?.();
     const contentWidth = contentRect?.width || 224;
-    const contentHeight = contentRect?.height || 240;
+    // const contentHeight = contentRect?.height || 240;
     const gap = 6;
 
     const viewportRect = {
@@ -23,11 +23,11 @@ export default function calculateMapDrawerDropdownPosition(trigger, content) {
     const boundaryRect = drawerRect ?? viewportRect;
     const minLeft = boundaryRect.left - rootRect.left + gap;
     const maxLeft = boundaryRect.right - rootRect.left - contentWidth - gap;
-    const minTop = boundaryRect.top - rootRect.top + gap;
-    const maxTop = boundaryRect.bottom - rootRect.top - contentHeight - gap;
+    // const minTop = boundaryRect.top - rootRect.top + gap;
+    // const maxTop = boundaryRect.bottom - rootRect.top - contentHeight - gap;
 
     const preferredLeft = triggerRect.left - rootRect.left - contentWidth - gap;
-    const preferredTop = triggerRect.top - rootRect.top;
+    // const preferredTop = triggerRect.top - rootRect.top;
     const left = clamp(preferredLeft, minLeft, Math.max(minLeft, maxLeft));
     const top = 0; //clamp(preferredTop, minTop, Math.max(minTop, maxTop));
 

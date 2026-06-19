@@ -1,5 +1,5 @@
 import Controller from '@ember/controller';
-import { action } from '@ember/object';
+import { action, get } from '@ember/object';
 import { inject as service } from '@ember/service';
 import { tracked } from '@glimmer/tracking';
 
@@ -126,7 +126,8 @@ export default class ManagementVehiclesIndexController extends Controller {
                 label: this.intl.t('column.name'),
                 valuePath: 'displayName',
                 photoPath: 'avatar_url',
-                cellComponent: 'table/cell/vehicle-name',
+                cellComponent: 'cell/vehicle-identity',
+                compact: true,
                 permission: 'fleet-ops view vehicle',
                 action: this.vehicleActions.transition.view,
                 resizable: true,
@@ -135,6 +136,7 @@ export default class ManagementVehiclesIndexController extends Controller {
                 filterComponent: 'filter/string',
                 filterParam: 'name',
                 showOnlineIndicator: true,
+                showStatus: false,
             },
             {
                 label: this.intl.t('column.plate-number'),
@@ -160,14 +162,39 @@ export default class ManagementVehiclesIndexController extends Controller {
             },
             {
                 label: this.intl.t('column.driver-assigned'),
-                cellComponent: 'table/cell/anchor',
+                cellComponent: 'cell/driver-identity',
+                compact: true,
+                assignedVehicleLabel: (_driver, vehicle) => get(vehicle, 'displayName') ?? get(vehicle, 'display_name') ?? get(vehicle, 'name'),
                 permission: 'fleet-ops view driver',
-                action: async (vehicle) => {
-                    const driver = await vehicle.loadDriver();
+                action: async (driver) => {
+                    const resolvedDriver = get(driver, 'id') ? driver : await driver?.loadResource?.();
 
-                    return this.driverActions.panel.view(driver);
+                    if (resolvedDriver) {
+                        return this.driverActions.panel.view(resolvedDriver);
+                    }
                 },
                 valuePath: 'driver_name',
+                emptyText: '-',
+                resourcePath: (vehicle) => {
+                    const driver = get(vehicle, 'driver');
+
+                    if (driver) {
+                        return driver;
+                    }
+
+                    const driverName = get(vehicle, 'driver_name');
+
+                    if (driverName) {
+                        return {
+                            name: driverName,
+                            display_name: driverName,
+                            status: 'assigned',
+                            loadResource: () => vehicle.loadDriver?.(),
+                        };
+                    }
+
+                    return null;
+                },
                 resizable: true,
                 filterable: true,
                 filterComponent: 'filter/model',

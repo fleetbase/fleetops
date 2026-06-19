@@ -24,7 +24,7 @@ class DeviceEventController extends FleetOpsController
      */
     public static function onQueryRecord($query, $request): void
     {
-        $query->with(['device']);
+        $query->with(['device.telematic']);
 
         if ($request->filled('telematic')) {
             $query->whereHas('device', function ($deviceQuery) use ($request) {

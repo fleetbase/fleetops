@@ -8,6 +8,13 @@ export default class DeviceFormComponent extends Component {
     @service currentUser;
     @service notifications;
 
+    get isTelematicLocked() {
+        const resource = this.args.resource;
+        const hasTelematic = Boolean(resource?.telematic_uuid || resource?.telematic?.id);
+
+        return Boolean(hasTelematic && resource?.isNew === false);
+    }
+
     @action selectTelematic(telematic) {
         this.args.resource.setProperties({
             telematic,

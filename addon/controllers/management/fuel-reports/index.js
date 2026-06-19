@@ -1,4 +1,5 @@
 import Controller from '@ember/controller';
+import { get } from '@ember/object';
 import { inject as service } from '@ember/service';
 import { tracked } from '@glimmer/tracking';
 
@@ -113,9 +114,37 @@ export default class ManagementFuelReportsIndexController extends Controller {
             {
                 label: this.intl.t('column.driver'),
                 valuePath: 'driver_name',
-                cellComponent: 'table/cell/anchor',
+                cellComponent: 'cell/driver-identity',
                 permission: 'fleet-ops view driver',
-                onClick: this.fuelReportActions.viewDriver,
+                action: async (driver) => {
+                    const resolvedDriver = driver?.loadResource ? await driver.loadResource() : driver;
+
+                    if (resolvedDriver) {
+                        this.fuelReportActions.driverActions.panel.view(resolvedDriver);
+                    }
+                },
+                emptyText: '-',
+                showStatusBadge: true,
+                resourcePath: (fuelReport) => {
+                    const driver = get(fuelReport, 'driver');
+
+                    if (driver) {
+                        return driver;
+                    }
+
+                    const driverName = get(fuelReport, 'driver_name');
+
+                    if (driverName) {
+                        return {
+                            id: get(fuelReport, 'driver_uuid'),
+                            name: driverName,
+                            display_name: driverName,
+                            loadResource: () => fuelReport.loadDriver?.(),
+                        };
+                    }
+
+                    return null;
+                },
                 resizable: true,
                 sortable: true,
                 filterable: true,
@@ -127,9 +156,39 @@ export default class ManagementFuelReportsIndexController extends Controller {
             {
                 label: this.intl.t('column.vehicle'),
                 valuePath: 'vehicle_name',
-                cellComponent: 'table/cell/anchor',
+                cellComponent: 'cell/vehicle-identity',
                 permission: 'fleet-ops view vehicle',
-                onClick: this.fuelReportActions.viewVehicle,
+                action: async (vehicle) => {
+                    const resolvedVehicle = vehicle?.loadResource ? await vehicle.loadResource() : vehicle;
+
+                    if (resolvedVehicle) {
+                        this.fuelReportActions.vehicleActions.panel.view(resolvedVehicle);
+                    }
+                },
+                emptyText: '-',
+                showStatusBadge: true,
+                resourcePath: (fuelReport) => {
+                    const vehicle = get(fuelReport, 'vehicle');
+
+                    if (vehicle) {
+                        return vehicle;
+                    }
+
+                    const vehicleName = get(fuelReport, 'vehicle_name');
+
+                    if (vehicleName) {
+                        return {
+                            id: get(fuelReport, 'vehicle_uuid'),
+                            displayName: vehicleName,
+                            display_name: vehicleName,
+                            name: vehicleName,
+                            vehicle_number: get(fuelReport, 'vehicle_uuid'),
+                            loadResource: () => fuelReport.loadVehicle?.(),
+                        };
+                    }
+
+                    return null;
+                },
                 resizable: true,
                 sortable: true,
                 filterable: true,

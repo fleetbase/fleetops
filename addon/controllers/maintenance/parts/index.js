@@ -61,8 +61,7 @@ export default class MaintenancePartsIndexController extends Controller {
             {
                 label: this.intl.t('column.name'),
                 valuePath: 'name',
-                cellComponent: 'table/cell/anchor',
-                cellClassNames: 'uppercase',
+                cellComponent: 'cell/part-identity',
                 action: this.partActions.transition.view,
                 permission: 'fleet-ops view part',
                 resizable: true,

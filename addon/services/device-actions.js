@@ -1,8 +1,10 @@
 import ResourceActionService, { inject as service } from '@fleetbase/ember-core/services/resource-action';
 import { action } from '@ember/object';
+import { isArray } from '@ember/array';
 
 export default class DeviceActionsService extends ResourceActionService {
     @service fetch;
+    @service('universe/menu-service') menuService;
 
     constructor() {
         super(...arguments);
@@ -37,13 +39,41 @@ export default class DeviceActionsService extends ResourceActionService {
             });
         },
         view: (device) => {
+            if (!device?.id) {
+                return this.notifications?.warning?.(this.intl.t('common.invalid-resource'));
+            }
+
+            const registeredTabs = this.menuService?.getMenuItems?.('fleet-ops:component:device:details');
+
             return this.resourceContextPanel.open({
                 device,
+                header: 'device/panel-header',
                 tabs: [
                     {
+                        key: 'overview',
+                        id: 'overview',
                         label: this.intl.t('common.overview'),
                         component: 'device/details',
                     },
+                    {
+                        key: 'vehicle',
+                        id: 'vehicle',
+                        label: this.intl.t('resource.vehicle'),
+                        component: 'device/panel-tabs/vehicle',
+                    },
+                    {
+                        key: 'sensors',
+                        id: 'sensors',
+                        label: this.intl.t('resource.sensors'),
+                        component: 'device/panel-tabs/sensors',
+                    },
+                    {
+                        key: 'events',
+                        id: 'events',
+                        label: this.intl.t('resource.device-events'),
+                        component: 'device/panel-tabs/events',
+                    },
+                    ...(isArray(registeredTabs) ? registeredTabs.filter((tab) => tab.component || tab.render) : []),
                 ],
             });
         },

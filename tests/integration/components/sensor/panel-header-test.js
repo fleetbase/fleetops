@@ -6,21 +6,43 @@ import { hbs } from 'ember-cli-htmlbars';
 module('Integration | Component | sensor/panel-header', function (hooks) {
     setupRenderingTest(hooks);
 
-    test('it renders', async function (assert) {
-        // Set any properties with this.set('myProperty', 'value');
-        // Handle any actions with this.set('myAction', function(val) { ... });
+    test('it renders compact operational sensor identity', async function (assert) {
+        this.set('resource', {
+            name: 'Fuel Level Sensor',
+            photo_url: 'https://example.test/sensor.png',
+            status: 'active',
+            threshold_status: 'normal',
+            type: 'fuel_level',
+            serial_number: 'SNS-22',
+            last_value: 72,
+            unit: '%',
+            device: {
+                displayName: 'BX-046',
+            },
+            last_reading_at: '2026-06-18T15:28:00Z',
+        });
 
-        await render(hbs`<Sensor::PanelHeader />`);
+        await render(hbs`<Sensor::PanelHeader @resource={{this.resource}} />`);
 
-        assert.dom().hasText('');
+        assert.dom().includesText('Fuel Level Sensor');
+        assert.dom().includesText('Active');
+        assert.dom().includesText('Normal');
+        assert.dom().includesText('SNS-22');
+        assert.dom().includesText('72 %');
+        assert.dom().includesText('BX-046');
+        assert.dom('img').hasClass('rounded-md');
+    });
 
-        // Template block usage:
-        await render(hbs`
-      <Sensor::PanelHeader>
-        template block text
-      </Sensor::PanelHeader>
-    `);
+    test('it falls back when sensor values are missing', async function (assert) {
+        this.set('resource', {
+            imei: 'IMEI-88',
+            status: 'inactive',
+        });
 
-        assert.dom().hasText('template block text');
+        await render(hbs`<Sensor::PanelHeader @resource={{this.resource}} />`);
+
+        assert.dom().includesText('IMEI-88');
+        assert.dom().includesText('Inactive');
+        assert.dom().includesText('No reading yet');
     });
 });

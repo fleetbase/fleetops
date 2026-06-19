@@ -61,8 +61,7 @@ export default class MaintenanceEquipmentIndexController extends Controller {
             {
                 label: this.intl.t('column.name'),
                 valuePath: 'name',
-                cellComponent: 'table/cell/anchor',
-                cellClassNames: 'uppercase',
+                cellComponent: 'cell/equipment-identity',
                 action: this.equipmentActions.transition.view,
                 permission: 'fleet-ops view equipment',
                 resizable: true,

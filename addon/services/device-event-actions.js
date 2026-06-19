@@ -11,7 +11,7 @@ export default class DeviceEventActionsService extends ResourceActionService {
     }
 
     transition = {
-        view: (deviceEvent) => this.transitionTo('connectivity.events.index.details', deviceEvent),
+        view: (deviceEvent) => this.transitionTo('connectivity.events.details', deviceEvent),
     };
 
     panel = {

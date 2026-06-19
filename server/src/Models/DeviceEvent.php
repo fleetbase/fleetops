@@ -103,6 +103,15 @@ class DeviceEvent extends Model
      */
     protected $appends = [
         'device_name',
+        'device_id',
+        'device_imei',
+        'device_serial_number',
+        'device_connection_status',
+        'device_status',
+        'device_photo_url',
+        'telematic_uuid',
+        'telematic_name',
+        'provider_descriptor',
         'is_processed',
         'age_minutes',
         'processing_delay_minutes',
@@ -206,6 +215,78 @@ class DeviceEvent extends Model
     public function getDeviceNameAttribute(): ?string
     {
         return $this->device?->name;
+    }
+
+    /**
+     * Get the provider device identifier.
+     */
+    public function getDeviceIdAttribute(): ?string
+    {
+        return $this->device?->device_id ?? $this->ident;
+    }
+
+    /**
+     * Get the device IMEI.
+     */
+    public function getDeviceImeiAttribute(): ?string
+    {
+        return $this->device?->imei;
+    }
+
+    /**
+     * Get the device serial number.
+     */
+    public function getDeviceSerialNumberAttribute(): ?string
+    {
+        return $this->device?->serial_number;
+    }
+
+    /**
+     * Get the device connection status.
+     */
+    public function getDeviceConnectionStatusAttribute(): ?string
+    {
+        return $this->device?->connection_status;
+    }
+
+    /**
+     * Get the device operational status.
+     */
+    public function getDeviceStatusAttribute(): ?string
+    {
+        return $this->device?->status;
+    }
+
+    /**
+     * Get the device photo URL.
+     */
+    public function getDevicePhotoUrlAttribute(): ?string
+    {
+        return $this->device?->photo_url;
+    }
+
+    /**
+     * Get the related telematic UUID.
+     */
+    public function getTelematicUuidAttribute(): ?string
+    {
+        return $this->device?->telematic_uuid;
+    }
+
+    /**
+     * Get the related telematic name.
+     */
+    public function getTelematicNameAttribute(): ?string
+    {
+        return $this->device?->telematic?->name;
+    }
+
+    /**
+     * Get the related telematic provider descriptor.
+     */
+    public function getProviderDescriptorAttribute(): array
+    {
+        return $this->device?->telematic?->provider_descriptor ?? [];
     }
 
     /**

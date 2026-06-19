@@ -43,8 +43,11 @@ export default class VendorActionsService extends ResourceActionService {
         view: (vendor) => {
             return this.resourceContextPanel.open({
                 vendor,
+                header: 'vendor/panel-header',
                 tabs: [
                     {
+                        key: 'overview',
+                        id: 'overview',
                         label: this.intl.t('common.overview'),
                         component: 'vendor/details',
                     },

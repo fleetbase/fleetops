@@ -24,6 +24,11 @@ test('device event model and migration expose lifecycle fields used by telematic
         ->toContain("'occurred_at'")
         ->toContain("'processed_at'")
         ->toContain("'data'")
+        ->toContain("'device_imei'")
+        ->toContain("'device_connection_status'")
+        ->toContain("'provider_descriptor'")
+        ->toContain('public function getDeviceImeiAttribute(): ?string')
+        ->toContain('public function getProviderDescriptorAttribute(): array')
         ->toContain("'occurred_at'     => 'datetime'")
         ->toContain("'processed_at'    => 'datetime'");
 });
