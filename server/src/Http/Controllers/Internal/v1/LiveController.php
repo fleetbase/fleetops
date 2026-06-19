@@ -148,7 +148,7 @@ class LiveController extends Controller
 
         return LiveCacheService::remember('drivers', $cacheParams, function () use ($bounds, $limit) {
             $query = Driver::where(['company_uuid' => session('company')])
-                ->with(['user', 'vehicle'])
+                ->with(['user', 'vehicle.devices'])
                 ->applyDirectivesForPermissions('fleet-ops list driver');
 
             $this->applyLiveLocationGuards($query);

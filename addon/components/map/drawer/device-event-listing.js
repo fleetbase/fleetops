@@ -5,6 +5,7 @@ import { action } from '@ember/object';
 import { task } from 'ember-concurrency';
 import { isArray } from '@ember/array';
 import { startOfWeek, endOfWeek, format } from 'date-fns';
+import calculateMapDrawerDropdownPosition from '../../../utils/map-drawer-dropdown-position';
 
 export default class MapDrawerDeviceEventListingComponent extends Component {
     @service store;
@@ -115,6 +116,7 @@ export default class MapDrawerDeviceEventListingComponent extends Component {
                 ddMenuLabel: this.intl.t('common.resource-actions', { resource: this.intl.t('resource.device-event') }),
                 cellClassNames: 'overflow-visible',
                 wrapperClass: 'flex items-center justify-end mx-2',
+                calculatePosition: calculateMapDrawerDropdownPosition,
                 width: '10%',
                 actions: [
                     {

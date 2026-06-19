@@ -8,6 +8,7 @@ import { htmlSafe } from '@ember/template';
 import { startOfWeek, endOfWeek, format } from 'date-fns';
 import getModelName from '@fleetbase/ember-core/utils/get-model-name';
 import ensureLeafletDrawEditNamespace from '../../../utils/leaflet-draw-namespace-guard';
+import { buildTrackableOption } from '../../../utils/trackable-option';
 
 const L = window.leaflet || window.L;
 
@@ -29,6 +30,7 @@ export default class MapDrawerPositionListingComponent extends Component {
     @tracked replaySpeed = '1';
     @tracked positionsLayer = null;
     @tracked positionOverlayIds = [];
+    @tracked selectedTrackableModelName = null;
 
     /** Computed properties - read state from service */
     get isReplaying() {
@@ -47,7 +49,17 @@ export default class MapDrawerPositionListingComponent extends Component {
         const vehicles = this.mapManager.livemap?.vehicles ?? [];
         const drivers = this.mapManager.livemap?.drivers ?? [];
 
-        return [...vehicles, ...drivers];
+        return [...vehicles.map((vehicle) => buildTrackableOption(vehicle, 'vehicle')), ...drivers.map((driver) => buildTrackableOption(driver, 'driver'))];
+    }
+
+    get selectedTrackable() {
+        if (!this.resource) {
+            return null;
+        }
+
+        const resourceType = this.resourceType;
+
+        return this.trackables.find((trackable) => trackable.resource?.id === this.resource?.id && trackable.modelName === resourceType) ?? null;
     }
 
     get replayProgressWidth() {
@@ -72,7 +84,7 @@ export default class MapDrawerPositionListingComponent extends Component {
         if (!this.resource) {
             return 'resource';
         }
-        return getModelName(this.resource) || 'resource';
+        return this.selectedTrackableModelName || getModelName(this.resource) || 'resource';
     }
 
     get hasPositions() {
@@ -179,8 +191,9 @@ export default class MapDrawerPositionListingComponent extends Component {
         this.positionOverlayIds = [];
     }
 
-    @action onResourceSelected(resource) {
-        this.resource = resource;
+    @action onResourceSelected(trackable) {
+        this.resource = trackable?.resource ?? null;
+        this.selectedTrackableModelName = trackable?.modelName ?? null;
         this.loadPositions.perform();
     }
 

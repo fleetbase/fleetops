@@ -19,6 +19,7 @@
                         <div class="fleetbase-model-select fleetbase-power-select ember-model-select">
                             <PowerSelectMultiple
                                 @searchEnabled={{true}}
+                                @searchField="label"
                                 @options={{this.notifiables}}
                                 @selected={{get this.notificationSettings (concat (get-notification-key notification.definition notification.name) ".notifiables")}}
                                 @onChange={{fn this.onSelectNotifiable notification}}

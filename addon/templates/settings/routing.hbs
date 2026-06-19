@@ -64,6 +64,7 @@
                     <div class="fleetbase-model-select fleetbase-power-select ember-model-select">
                         <PowerSelectMultiple
                             @searchEnabled={{true}}
+                            @searchField="label"
                             @options={{this.trackingProviderOptions}}
                             @selected={{this.selectedTrackingFallbackOptions}}
                             @onChange={{this.setTrackingFallbacks}}
