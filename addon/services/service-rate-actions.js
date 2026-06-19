@@ -96,8 +96,15 @@ export default class ServiceRateActionsService extends ResourceActionService {
     };
 
     @task *queryServiceRatesForOrder(order, params = {}) {
+        const payloadCoordinates = order.payload?.payloadCoordinates ?? [];
+        const routeCoordinates = payloadCoordinates.map((coordinate) => this.#serializeRouteCoordinate(coordinate)).filter(Boolean);
+
+        if (routeCoordinates.length < 2) {
+            return [];
+        }
+
         const queryParams = {
-            coordinates: order.payload.payloadCoordinates.join(';'),
+            coordinates: routeCoordinates.join(';'),
             facilitator: order.facilitator?.get('isIntegratedVendor') ? order.facilitator.get('public_id') : null,
             service_type: order.order_config?.get('key'),
             ...params,
@@ -115,6 +122,37 @@ export default class ServiceRateActionsService extends ResourceActionService {
             console.error(err);
             this.notifications.serverError(err);
         }
+    }
+
+    #serializeRouteCoordinate(coordinate) {
+        if (Array.isArray(coordinate)) {
+            const [longitude, latitude] = coordinate;
+
+            if (!this.#isValidCoordinate(latitude) || !this.#isValidCoordinate(longitude)) {
+                return null;
+            }
+
+            return `${latitude},${longitude}`;
+        }
+
+        if (typeof coordinate === 'string') {
+            const parts = coordinate
+                .split(',')
+                .map((part) => part.trim())
+                .filter(Boolean);
+
+            if (parts.length !== 2 || !parts.every((part) => this.#isValidCoordinate(part))) {
+                return null;
+            }
+
+            return parts.join(',');
+        }
+
+        return null;
+    }
+
+    #isValidCoordinate(value) {
+        return value !== null && value !== undefined && value !== '' && Number.isFinite(Number(value));
     }
 
     @task *getServiceQuotes(serviceRate, order) {

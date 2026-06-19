@@ -476,7 +476,6 @@ Route::prefix(config('fleetops.api.routing.prefix'))->namespace('Fleetbase\Fleet
                                 $router->delete('bulk-delete', $controller('bulkDelete'));
                                 $router->get('for-route', $controller('getServicesForRoute'));
                                 $router->match(['get', 'post'], 'export', $controller('export'));
-                                $router->get('for-route', $controller('getServicesForRoute'));
                             }
                         );
                         $router->fleetbaseRoutes('tracking-numbers');

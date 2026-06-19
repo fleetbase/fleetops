@@ -42,6 +42,48 @@ module('Integration | Component | order/form/service-rate', function (hooks) {
         assert.dom('.ember-power-select-search-input').exists();
     });
 
+    test('service rate toggle loads options into the selector', async function (assert) {
+        const calls = [];
+
+        class ServiceRateActionsStub extends Service {
+            queryServiceRatesForOrder = {
+                perform(order) {
+                    calls.push(order);
+                    return Promise.resolve([
+                        {
+                            id: 'service_rate_route',
+                            service_name: 'Local Route Rate',
+                        },
+                    ]);
+                },
+            };
+        }
+
+        this.owner.register('service:service-rate-actions', ServiceRateActionsStub);
+
+        this.set('resource', {
+            servicable: false,
+            order_config: {},
+            payloadCoordinates: [
+                [103.8845049, 1.3621663],
+                [103.86458, 1.353151],
+            ],
+            payload: {
+                payloadCoordinates: [
+                    [103.8845049, 1.3621663],
+                    [103.86458, 1.353151],
+                ],
+            },
+        });
+
+        await render(hbs`<Order::Form::ServiceRate @resource={{this.resource}} />`);
+        await click('[role="checkbox"]');
+        await waitUntil(() => calls.length === 1, { timeout: 1000 });
+        await click('.ember-power-select-trigger');
+
+        assert.dom('.ember-power-select-option').hasText('Local Route Rate');
+    });
+
     test('service quote refresh events run debounced quote lookup for the matching order', async function (assert) {
         const calls = [];
         const resource = {
