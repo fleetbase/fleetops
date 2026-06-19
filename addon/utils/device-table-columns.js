@@ -31,6 +31,7 @@ export default function buildDeviceTableColumns(controller, options = {}) {
             valuePath: 'displayName',
             cellComponent: 'cell/device-identity',
             action: viewDevice,
+            compact: true,
             permission: 'fleet-ops view device',
             resizable: true,
             sortable: true,
@@ -73,6 +74,7 @@ export default function buildDeviceTableColumns(controller, options = {}) {
                 return controller.vehicleActions.panel.view(resolvedVehicle);
             }
         },
+        compact: true,
         permission: 'fleet-ops view vehicle',
         showStatusBadge: true,
         emptyText: '-',
