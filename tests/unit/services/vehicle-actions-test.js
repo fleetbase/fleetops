@@ -1,12 +1,45 @@
 import { module, test } from 'qunit';
 import { setupTest } from 'dummy/tests/helpers';
+import Service from '@ember/service';
+
+class MenuServiceStub extends Service {
+    getMenuItems() {
+        return [];
+    }
+}
+
+class ResourceContextPanelStub extends Service {
+    open(config) {
+        this.config = config;
+        return config;
+    }
+}
 
 module('Unit | Service | vehicle-actions', function (hooks) {
     setupTest(hooks);
 
+    hooks.beforeEach(function () {
+        this.owner.register('service:universe/menu-service', MenuServiceStub);
+        this.owner.register('service:resource-context-panel', ResourceContextPanelStub);
+    });
+
     test('it exists', function (assert) {
         let service = this.owner.lookup('service:vehicle-actions');
         assert.ok(service);
+    });
+
+    test('panel.view resolves promise-like vehicle resources before reading metadata', async function (assert) {
+        const service = this.owner.lookup('service:vehicle-actions');
+        const vehicle = {
+            id: 'vehicle-1',
+            name: 'Truck 12',
+            meta: { _index_resource: true },
+            reload: async () => assert.step('vehicle reloaded'),
+        };
+        const config = await service.panel.view(Promise.resolve(vehicle));
+
+        assert.strictEqual(config.vehicle, vehicle);
+        assert.verifySteps(['vehicle reloaded']);
     });
 
     test('unassignOrders loads assigned orders, highlights the current job, and posts selected orders', async function (assert) {

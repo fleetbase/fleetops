@@ -4,23 +4,28 @@
             <div class="fleetbase-model-select fleetbase-power-select ember-model-select">
                 <PowerSelect
                     @options={{this.trackables}}
-                    @selected={{this.resource}}
+                    @selected={{this.selectedTrackable}}
                     @onChange={{this.onResourceSelected}}
+                    @searchEnabled={{true}}
+                    @searchField="trackableSearchText"
                     @placeholder={{t "common.select-field" field="trackable"}}
                     @triggerClass="form-select form-input form-input-sm w-48"
                     as |option|
                 >
                     <div class="flex flex-row items-start space-x-2">
                         <div class="inline-block">
-                            {{#if (eq (get-model-name option) "driver")}}
-                                <Image src={{option.photo_url}} @fallbackSrc={{config "defaultValues.driverAvatar"}} class="w-4 h-4" />
+                            {{#if (eq option.modelName "driver")}}
+                                <Image src={{option.resource.photo_url}} @fallbackSrc={{config "defaultValues.driverAvatar"}} class="w-4 h-4" />
                             {{else}}
-                                <Image src={{option.avatar_url}} @fallbackSrc={{config "defaultValues.vehicleAvatar"}} class="w-4 h-4" />
+                                <Image src={{option.resource.avatar_url}} @fallbackSrc={{config "defaultValues.vehicleAvatar"}} class="w-4 h-4" />
                             {{/if}}
                         </div>
                         <div class="inline-block text-sm truncate">
-                            <div class="font-semibold text-sm normalize-in-trigger">{{or option.name option.displayName option.public_id}}</div>
-                            <div class="hide-from-trigger text-xs">{{or option.email option.serial_number option.plate_number option.internal_id}}</div>
+                            <div class="font-semibold text-sm normalize-in-trigger">{{option.primaryLabel}}</div>
+                            <div class="hide-from-trigger text-xs">{{option.secondaryLabel}}</div>
+                            {{#if option.deviceLabel}}
+                                <div class="hide-from-trigger text-xs text-gray-500 dark:text-gray-400 truncate">{{option.deviceLabel}}</div>
+                            {{/if}}
                         </div>
                     </div>
                 </PowerSelect>

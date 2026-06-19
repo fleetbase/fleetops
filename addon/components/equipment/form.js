@@ -11,7 +11,14 @@ import { task } from 'ember-concurrency';
 const TYPE_TO_MODEL = {
     'fleet-ops:vehicle': 'vehicle',
     'fleet-ops:driver': 'driver',
+    'Fleetbase\\FleetOps\\Models\\Vehicle': 'vehicle',
+    'Fleetbase\\FleetOps\\Models\\Driver': 'driver',
     'fleet-ops:equipment': 'equipment',
+};
+
+const TYPE_TO_OPTION_VALUE = {
+    'Fleetbase\\FleetOps\\Models\\Vehicle': 'fleet-ops:vehicle',
+    'Fleetbase\\FleetOps\\Models\\Driver': 'fleet-ops:driver',
 };
 
 export default class EquipmentFormComponent extends Component {
@@ -45,7 +52,7 @@ export default class EquipmentFormComponent extends Component {
         const { resource } = args;
         if (resource?.equipable_type) {
             this.equipableModelName = TYPE_TO_MODEL[resource.equipable_type] ?? null;
-            this.selectedEquipableType = this.equipableTypeOptions.find((o) => o.value === resource.equipable_type) ?? null;
+            this.selectedEquipableType = this.equipableTypeOptions.find((o) => o.value === (TYPE_TO_OPTION_VALUE[resource.equipable_type] ?? resource.equipable_type)) ?? null;
         }
     }
 

@@ -2,6 +2,7 @@ import { module, test } from 'qunit';
 import { setupRenderingTest } from 'dummy/tests/helpers';
 import { render } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
+import EquipmentFormComponent from '@fleetbase/fleetops-engine/components/equipment/form';
 
 module('Integration | Component | equipment/form', function (hooks) {
     setupRenderingTest(hooks);
@@ -22,5 +23,34 @@ module('Integration | Component | equipment/form', function (hooks) {
     `);
 
         assert.dom().hasText('template block text');
+    });
+
+    test('it resolves alias and model class equipable types for asset selection', function (assert) {
+        const aliasComponent = new EquipmentFormComponent(this.owner, {
+            resource: {
+                equipable_type: 'fleet-ops:vehicle',
+            },
+        });
+
+        assert.strictEqual(aliasComponent.equipableModelName, 'vehicle');
+        assert.strictEqual(aliasComponent.selectedEquipableType.value, 'fleet-ops:vehicle');
+
+        const classComponent = new EquipmentFormComponent(this.owner, {
+            resource: {
+                equipable_type: 'Fleetbase\\FleetOps\\Models\\Vehicle',
+            },
+        });
+
+        assert.strictEqual(classComponent.equipableModelName, 'vehicle');
+        assert.strictEqual(classComponent.selectedEquipableType.value, 'fleet-ops:vehicle');
+
+        const driverClassComponent = new EquipmentFormComponent(this.owner, {
+            resource: {
+                equipable_type: 'Fleetbase\\FleetOps\\Models\\Driver',
+            },
+        });
+
+        assert.strictEqual(driverClassComponent.equipableModelName, 'driver');
+        assert.strictEqual(driverClassComponent.selectedEquipableType.value, 'fleet-ops:driver');
     });
 });

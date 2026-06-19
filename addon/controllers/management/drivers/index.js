@@ -1,7 +1,7 @@
 import Controller from '@ember/controller';
 import { inject as service } from '@ember/service';
 import { tracked } from '@glimmer/tracking';
-import { action } from '@ember/object';
+import { action, get } from '@ember/object';
 
 export default class ManagementDriversIndexController extends Controller {
     @service driverActions;
@@ -50,6 +50,22 @@ export default class ManagementDriversIndexController extends Controller {
 
     hasAssignedVehicle(driver) {
         return Boolean(driver?.vehicle_uuid || driver?.vehicle?.id || driver?.vehicle?.uuid || driver?.vehicle_name);
+    }
+
+    async resolveAssignedVehicle(vehicle) {
+        if (!vehicle) {
+            return null;
+        }
+
+        if (typeof vehicle.then === 'function') {
+            return await vehicle;
+        }
+
+        if (typeof vehicle.loadResource === 'function') {
+            return (await vehicle.loadResource()) ?? vehicle;
+        }
+
+        return vehicle;
     }
 
     /** action buttons */
@@ -102,7 +118,8 @@ export default class ManagementDriversIndexController extends Controller {
                 sticky: true,
                 label: this.intl.t('column.name'),
                 valuePath: 'name',
-                cellComponent: 'table/cell/driver-name',
+                cellComponent: 'cell/driver-identity',
+                compact: true,
                 permission: 'fleet-ops view driver',
                 action: this.driverActions.transition.view,
                 resizable: true,
@@ -119,6 +136,69 @@ export default class ManagementDriversIndexController extends Controller {
                 filterable: true,
                 hidden: false,
                 filterComponent: 'filter/string',
+            },
+            {
+                label: this.intl.t('column.phone'),
+                valuePath: 'phone',
+                cellComponent: 'table/cell/base',
+                resizable: true,
+                sortable: true,
+                filterable: true,
+                filterParam: 'phone',
+                filterComponent: 'filter/string',
+            },
+            {
+                label: this.intl.t('column.license'),
+                valuePath: 'drivers_license_number',
+                cellComponent: 'table/cell/base',
+                resizable: true,
+                sortable: true,
+                filterable: true,
+                filterComponent: 'filter/string',
+            },
+            {
+                label: this.intl.t('column.vehicle'),
+                cellComponent: 'cell/vehicle-identity',
+                compact: true,
+                permission: 'fleet-ops view vehicle',
+                action: async (vehicle) => {
+                    try {
+                        const resolvedVehicle = await this.resolveAssignedVehicle(vehicle);
+                        if (resolvedVehicle) this.vehicleActions.panel.view(resolvedVehicle);
+                    } catch (err) {
+                        this.notifications.serverError(err);
+                    }
+                },
+                valuePath: 'vehicle.display_name',
+                emptyText: '-',
+                showStatusBadge: true,
+                resourcePath: (driver) => {
+                    const vehicle = get(driver, 'vehicle_assigned') ?? get(driver, 'vehicle');
+
+                    if (vehicle) {
+                        return vehicle;
+                    }
+
+                    const vehicleName = get(driver, 'vehicle_name');
+
+                    if (vehicleName) {
+                        return {
+                            display_name: vehicleName,
+                            name: vehicleName,
+                            status: 'assigned',
+                            loadResource: () => driver.loadVehicle?.(),
+                        };
+                    }
+
+                    return null;
+                },
+                modelNamePath: 'display_name',
+                resizable: true,
+                filterable: true,
+                filterComponent: 'filter/model',
+                filterComponentPlaceholder: 'Select vehicle to filter by',
+                filterParam: 'vehicle',
+                model: 'vehicle',
             },
             {
                 label: this.intl.t('column.internal-id'),
@@ -151,27 +231,6 @@ export default class ManagementDriversIndexController extends Controller {
                 model: 'vendor',
             },
             {
-                label: this.intl.t('column.vehicle'),
-                cellComponent: 'table/cell/anchor',
-                permission: 'fleet-ops view vehicle',
-                onClick: async (driver) => {
-                    try {
-                        const vehicle = await driver.loadVehicle();
-                        if (vehicle) this.vehicleActions.panel.view(vehicle);
-                    } catch (err) {
-                        this.notifications.serverError(err);
-                    }
-                },
-                valuePath: 'vehicle.display_name',
-                modelNamePath: 'display_name',
-                resizable: true,
-                filterable: true,
-                filterComponent: 'filter/model',
-                filterComponentPlaceholder: 'Select vehicle to filter by',
-                filterParam: 'vehicle',
-                model: 'vehicle',
-            },
-            {
                 label: this.intl.t('column.fleet'),
                 cellComponent: 'table/cell/link-list',
                 cellComponentLabelPath: 'name',
@@ -184,25 +243,6 @@ export default class ManagementDriversIndexController extends Controller {
                 filterComponentPlaceholder: 'Select fleet to filter by',
                 filterParam: 'fleet',
                 model: 'fleet',
-            },
-            {
-                label: this.intl.t('column.license'),
-                valuePath: 'drivers_license_number',
-                cellComponent: 'table/cell/base',
-                resizable: true,
-                sortable: true,
-                filterable: true,
-                filterComponent: 'filter/string',
-            },
-            {
-                label: this.intl.t('column.phone'),
-                valuePath: 'phone',
-                cellComponent: 'table/cell/base',
-                resizable: true,
-                sortable: true,
-                filterable: true,
-                filterParam: 'phone',
-                filterComponent: 'filter/string',
             },
             {
                 label: this.intl.t('column.country'),

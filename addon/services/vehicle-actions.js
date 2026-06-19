@@ -66,6 +66,26 @@ export default class VehicleActionsService extends ResourceActionService {
         this.initialize('vehicle', { status: 'available' });
     }
 
+    async resolveVehicleResource(vehicle) {
+        if (typeof vehicle?.then === 'function') {
+            return await vehicle;
+        }
+
+        if (typeof vehicle?.loadResource === 'function') {
+            return (await vehicle.loadResource()) ?? vehicle;
+        }
+
+        return vehicle;
+    }
+
+    async reloadIndexResource(vehicle) {
+        if (vehicle?.meta?._index_resource) {
+            await vehicle.reload();
+        }
+
+        return vehicle;
+    }
+
     transition = {
         view: (vehicle) => this.transitionTo('management.vehicles.index.details', vehicle),
         edit: (vehicle) => this.transitionTo('management.vehicles.index.edit', vehicle),
@@ -87,9 +107,7 @@ export default class VehicleActionsService extends ResourceActionService {
             });
         },
         edit: async (vehicle, options = {}) => {
-            if (vehicle?.meta?._index_resource) {
-                await vehicle.reload();
-            }
+            vehicle = await this.reloadIndexResource(await this.resolveVehicleResource(vehicle));
 
             return this.resourceContextPanel.open({
                 content: 'vehicle/form',
@@ -109,9 +127,7 @@ export default class VehicleActionsService extends ResourceActionService {
             });
         },
         view: async (vehicle, options = {}) => {
-            if (vehicle?.meta?._index_resource) {
-                await vehicle.reload();
-            }
+            vehicle = await this.reloadIndexResource(await this.resolveVehicleResource(vehicle));
 
             return this.resourceContextPanel.open({
                 vehicle,
@@ -144,9 +160,7 @@ export default class VehicleActionsService extends ResourceActionService {
             });
         },
         edit: async (vehicle, options = {}, saveOptions = {}) => {
-            if (vehicle?.meta?._index_resource) {
-                await vehicle.reload();
-            }
+            vehicle = await this.reloadIndexResource(await this.resolveVehicleResource(vehicle));
 
             return this.modalsManager.show('modals/resource', {
                 resource: vehicle,
@@ -159,9 +173,7 @@ export default class VehicleActionsService extends ResourceActionService {
             });
         },
         view: async (vehicle, options = {}) => {
-            if (vehicle?.meta?._index_resource) {
-                await vehicle.reload();
-            }
+            vehicle = await this.reloadIndexResource(await this.resolveVehicleResource(vehicle));
 
             return this.modalsManager.show('modals/resource', {
                 resource: vehicle,

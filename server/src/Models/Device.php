@@ -80,6 +80,8 @@ class Device extends Model
         'vehicle',
         'connection_status',
         'device_id',
+        'type',
+        'serial_number',
         'last_online_at',
         'updated_at',
         'warranty_uuid',

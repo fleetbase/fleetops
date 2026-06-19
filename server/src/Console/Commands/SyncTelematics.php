@@ -13,7 +13,7 @@ class SyncTelematics extends Command
     protected $signature = 'fleetops:sync-telematics
         {--provider=* : Limit polling to one or more provider keys}
         {--limit=500 : Maximum provider units to fetch per page}
-        {--sync-webhook-providers : Include providers that support webhooks}
+        {--exclude-webhook-providers : Skip providers that support webhooks}
         {--no-lock : Skip process locking}';
 
     protected $description = 'Poll active telematics providers for device snapshots and positional telemetry.';
@@ -68,10 +68,10 @@ class SyncTelematics extends Command
     protected function pollableProviderKeys(TelematicProviderRegistry $registry): array
     {
         $requestedProviders      = array_filter((array) $this->option('provider'));
-        $includeWebhookProviders = (bool) $this->option('sync-webhook-providers');
+        $excludeWebhookProviders = (bool) $this->option('exclude-webhook-providers');
 
         return $registry->all()
-            ->filter(function ($descriptor) use ($requestedProviders, $includeWebhookProviders) {
+            ->filter(function ($descriptor) use ($requestedProviders, $excludeWebhookProviders) {
                 if (!empty($requestedProviders) && !in_array($descriptor->key, $requestedProviders, true)) {
                     return false;
                 }
@@ -80,7 +80,7 @@ class SyncTelematics extends Command
                     return false;
                 }
 
-                return $includeWebhookProviders || !$descriptor->supportsWebhooks;
+                return !$excludeWebhookProviders || !$descriptor->supportsWebhooks;
             })
             ->keys()
             ->values()

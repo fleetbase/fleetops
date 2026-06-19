@@ -1,16 +1,19 @@
 <?php
 
 use Fleetbase\FleetOps\Models\Driver;
+use Fleetbase\FleetOps\Models\Equipment;
 use Fleetbase\FleetOps\Models\Vehicle;
 
-test('driver and vehicle statuses default to available', function () {
+test('driver vehicle and equipment statuses default to available', function () {
     expect((new Driver())->status)
         ->toBe('available')
         ->and((new Vehicle())->status)
+        ->toBe('available')
+        ->and((new Equipment())->status)
         ->toBe('available');
 });
 
-test('legacy active and null driver and vehicle statuses normalize to available', function () {
+test('legacy active and null driver vehicle and equipment statuses normalize to available', function () {
     $driver         = new Driver();
     $driver->status = 'active';
     expect($driver->status)->toBe('available');
@@ -24,6 +27,20 @@ test('legacy active and null driver and vehicle statuses normalize to available'
 
     $vehicle->status = null;
     expect($vehicle->status)->toBe('available');
+
+    $equipment         = new Equipment();
+    $equipment->status = 'active';
+    expect($equipment->status)->toBe('available');
+
+    $equipment->status = null;
+    expect($equipment->status)->toBe('available');
+});
+
+test('equipment preserves explicit non default status values', function () {
+    $equipment         = new Equipment();
+    $equipment->status = 'maintenance';
+
+    expect($equipment->status)->toBe('maintenance');
 });
 
 test('dispatch driver availability queries use available status', function () {

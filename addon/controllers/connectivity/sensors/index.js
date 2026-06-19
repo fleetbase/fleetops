@@ -1,21 +1,84 @@
 import Controller from '@ember/controller';
+import { action, get } from '@ember/object';
 import { inject as service } from '@ember/service';
 import { tracked } from '@glimmer/tracking';
 import fleetOpsOptions from '../../../utils/fleet-ops-options';
+
+function sensorTelematic(sensor) {
+    const telematic = get(sensor, 'telematic');
+
+    if (telematic) {
+        return telematic;
+    }
+
+    const id = get(sensor, 'telematic_uuid');
+    const name = get(sensor, 'telematic_name');
+    const provider = get(sensor, 'provider');
+
+    if (!id && !name && !provider) {
+        return null;
+    }
+
+    return {
+        id,
+        name: name ?? provider,
+        provider,
+        provider_descriptor: get(sensor, 'provider_descriptor'),
+    };
+}
+
+function sensorDevice(sensor) {
+    const device = get(sensor, 'device');
+
+    if (device) {
+        return device;
+    }
+
+    const id = get(sensor, 'device_uuid');
+    const deviceId = get(sensor, 'device_id') ?? get(sensor, 'provider_device_id') ?? get(sensor, 'ident');
+    const name = get(sensor, 'device_name') ?? deviceId;
+    const imei = get(sensor, 'device_imei') ?? get(sensor, 'imei') ?? get(sensor, 'ident');
+
+    if (!id && !name && !imei && !deviceId) {
+        return null;
+    }
+
+    return {
+        id,
+        displayName: name,
+        name,
+        imei,
+        device_id: deviceId,
+        ident: get(sensor, 'ident'),
+        serial_number: get(sensor, 'device_serial_number'),
+        connection_status: get(sensor, 'device_connection_status'),
+        status: get(sensor, 'device_status'),
+        photo_url: get(sensor, 'device_photo_url') ?? get(sensor, 'photo_url'),
+    };
+}
 
 export default class ConnectivitySensorsIndexController extends Controller {
     @service sensorActions;
     @service deviceActions;
     @service telematicActions;
     @service intl;
+    @service store;
 
     /** query params */
-    @tracked queryParams = ['name', 'page', 'limit', 'sort', 'query', 'public_id', 'created_at', 'updated_at'];
+    @tracked queryParams = ['page', 'limit', 'sort', 'query', 'telematic', 'device', 'type', 'status', 'serial_number', 'imei', 'last_reading_at', 'created_at', 'updated_at'];
     @tracked page = 1;
     @tracked limit;
     @tracked sort = '-created_at';
-    @tracked public_id;
-    @tracked name;
+    @tracked query;
+    @tracked telematic;
+    @tracked device;
+    @tracked type;
+    @tracked status;
+    @tracked serial_number;
+    @tracked imei;
+    @tracked last_reading_at;
+    @tracked created_at;
+    @tracked updated_at;
 
     /** action buttons */
     @tracked actionButtons = [
@@ -67,14 +130,16 @@ export default class ConnectivitySensorsIndexController extends Controller {
             resizable: true,
             sortable: true,
             filterable: true,
-            filterParam: 'name',
+            filterParam: 'query',
             filterComponent: 'filter/string',
         },
         {
             label: 'Telematic',
             valuePath: 'telematic.provider',
-            cellComponent: 'table/cell/anchor',
-            action: this.telematicActions.transition.view,
+            cellComponent: 'cell/telematic-provider',
+            resourcePath: sensorTelematic,
+            compact: true,
+            action: this.openTelematic,
             permission: 'fleet-ops view telematic',
             resizable: true,
             sortable: true,
@@ -87,8 +152,10 @@ export default class ConnectivitySensorsIndexController extends Controller {
         {
             label: 'Device',
             valuePath: 'device.displayName',
-            cellComponent: 'table/cell/anchor',
-            action: this.deviceActions.transition.view,
+            cellComponent: 'cell/device-identity',
+            resourcePath: sensorDevice,
+            showStatus: false,
+            action: this.openDevice,
             permission: 'fleet-ops view device',
             resizable: true,
             sortable: true,
@@ -97,10 +164,14 @@ export default class ConnectivitySensorsIndexController extends Controller {
             filterComponentPlaceholder: 'Select device',
             filterParam: 'device',
             model: 'device',
+            modelNamePath: 'displayName',
+            query: this.telematic ? { telematic_uuid: this.telematic } : undefined,
         },
         {
             label: 'Type',
             valuePath: 'type',
+            cellComponent: 'table/cell/base',
+            humanize: true,
             resizable: true,
             sortable: true,
             filterable: true,
@@ -109,13 +180,16 @@ export default class ConnectivitySensorsIndexController extends Controller {
             filterOptions: fleetOpsOptions('sensorTypes'),
         },
         {
-            label: 'Serial Number',
-            valuePath: 'serial_number',
+            label: 'Last Value',
+            valuePath: 'last_value',
             resizable: true,
             sortable: true,
-            filterable: true,
-            filterParam: 'serial_number',
-            filterComponent: 'filter/string',
+        },
+        {
+            label: 'Unit',
+            valuePath: 'unit',
+            resizable: true,
+            sortable: true,
         },
         {
             label: this.intl.t('column.status'),
@@ -128,12 +202,48 @@ export default class ConnectivitySensorsIndexController extends Controller {
             filterOptions: fleetOpsOptions('sensorStatuses'),
         },
         {
+            label: 'Threshold',
+            valuePath: 'threshold_status',
+            cellComponent: 'table/cell/status',
+            resizable: true,
+            sortable: true,
+        },
+        {
+            label: 'Serial Number',
+            valuePath: 'serial_number',
+            resizable: true,
+            sortable: true,
+            filterable: true,
+            filterParam: 'serial_number',
+            filterComponent: 'filter/string',
+        },
+        {
+            label: 'IMEI',
+            valuePath: 'imei',
+            resizable: true,
+            sortable: true,
+            filterable: true,
+            filterParam: 'imei',
+            filterComponent: 'filter/string',
+        },
+        {
+            label: 'Last Reading',
+            valuePath: 'lastReadingAt',
+            sortParam: 'last_reading_at',
+            resizable: true,
+            sortable: true,
+            filterable: true,
+            filterParam: 'last_reading_at',
+            filterComponent: 'filter/date',
+        },
+        {
             label: this.intl.t('column.created-at'),
             valuePath: 'createdAt',
             sortParam: 'created_at',
             resizable: true,
             sortable: true,
             filterable: true,
+            filterParam: 'created_at',
             filterComponent: 'filter/date',
         },
         {
@@ -144,9 +254,9 @@ export default class ConnectivitySensorsIndexController extends Controller {
             sortable: true,
             hidden: true,
             filterable: true,
+            filterParam: 'updated_at',
             filterComponent: 'filter/date',
         },
-
         {
             label: '',
             cellComponent: 'table/cell/dropdown',
@@ -184,4 +294,36 @@ export default class ConnectivitySensorsIndexController extends Controller {
             searchable: false,
         },
     ];
+
+    async resolveDevice(device) {
+        if (!device?.id) {
+            return null;
+        }
+
+        const cachedDevice = this.store.peekRecord('device', device.id);
+
+        if (cachedDevice) {
+            return cachedDevice;
+        }
+
+        try {
+            return await this.store.findRecord('device', device.id);
+        } catch (_) {
+            return device;
+        }
+    }
+
+    @action async openDevice(device) {
+        const resolvedDevice = await this.resolveDevice(device);
+
+        if (resolvedDevice?.id) {
+            return this.deviceActions.panel.view(resolvedDevice);
+        }
+    }
+
+    @action openTelematic(telematic) {
+        if (telematic?.id) {
+            return this.telematicActions.transition.view(telematic);
+        }
+    }
 }

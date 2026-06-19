@@ -26,6 +26,27 @@ class DeviceEventFilter extends Filter
         $this->builder->search($searchQuery);
     }
 
+    public function eventType(?string $eventType)
+    {
+        if ($eventType) {
+            $this->builder->where('event_type', 'like', '%' . $eventType . '%');
+        }
+    }
+
+    public function provider(?string $provider)
+    {
+        if ($provider) {
+            $this->builder->where('provider', 'like', '%' . $provider . '%');
+        }
+    }
+
+    public function code(?string $code)
+    {
+        if ($code) {
+            $this->builder->where('code', 'like', '%' . $code . '%');
+        }
+    }
+
     public function telematic(?string $telematic)
     {
         $this->builder->whereHas('device', function ($query) use ($telematic) {

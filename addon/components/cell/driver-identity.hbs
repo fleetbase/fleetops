@@ -1,0 +1,33 @@
+{{#if this.resource}}
+    {{#if this.compact}}
+        <button
+            type="button"
+            disabled={{and @column.permission (cannot @column.permission)}}
+            {{on "click" this.onClick}}
+            class="group flex w-full min-w-0 cursor-pointer items-center gap-2 py-0.5 text-left"
+            data-test-driver-identity-compact
+            ...attributes
+        >
+            <div class="relative flex h-5 w-5 flex-shrink-0 items-center justify-center">
+                <Image src={{this.mediaUrl}} @fallbackSrc={{this.fallbackImage}} class="h-5 w-5 rounded-md border border-gray-200 object-cover shadow-sm dark:border-gray-700" />
+                {{#if this.hasCompactStatusDot}}
+                    <FaIcon @icon="circle" @size="2xs" class="absolute left-0 top-0 -ml-1 -mt-1 {{this.compactStatusDotClass}}" data-test-resource-identity-status-dot />
+                {{/if}}
+            </div>
+            <div class="min-w-0 truncate text-sm leading-4 text-gray-900 group-hover:text-blue-600 dark:text-gray-200 dark:group-hover:text-blue-300">{{n-a this.label}}</div>
+            {{#if this.assignedVehicleLabel}}
+                <span
+                    data-test-resource-identity-meta-badge
+                    class="inline-flex min-w-0 max-w-[12rem] flex-shrink items-center rounded-lg bg-gray-200 px-1 py-0 text-[10px] leading-4 text-gray-700 shadow-sm dark:bg-gray-800 dark:text-gray-300"
+                >
+                    <FaIcon @icon="car" @prefix="fas" @size="xs" class="mr-1 flex-shrink-0" />
+                    <span class="truncate">{{n-a this.assignedVehicleLabel}}</span>
+                </span>
+            {{/if}}
+        </button>
+    {{else}}
+        <Table::Cell::ResourceIdentity @row={{this.resource}} @value={{@value}} @column={{this.column}} @onClick={{@onClick}} ...attributes />
+    {{/if}}
+{{else}}
+    <div class="py-1 text-xs text-gray-400 dark:text-gray-500" data-test-identity-empty-text ...attributes>{{this.emptyText}}</div>
+{{/if}}

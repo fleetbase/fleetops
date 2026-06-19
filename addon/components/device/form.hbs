@@ -10,7 +10,7 @@
                     @infiniteScroll={{false}}
                     @renderInPlace={{true}}
                     @onChange={{this.selectTelematic}}
-                    @disabled={{cannot-write @resource}}
+                    @disabled={{or (cannot-write @resource) this.isTelematicLocked}}
                     as |model|
                 >
                     <div class="space-x-2 text-sm">

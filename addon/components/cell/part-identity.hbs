@@ -1,0 +1,5 @@
+{{#if this.resource}}
+    <Table::Cell::ResourceIdentity @row={{this.resource}} @value={{@value}} @column={{this.column}} @onClick={{@onClick}} ...attributes />
+{{else}}
+    <div class="py-1 text-xs text-gray-400 dark:text-gray-500" data-test-identity-empty-text ...attributes>{{this.emptyText}}</div>
+{{/if}}

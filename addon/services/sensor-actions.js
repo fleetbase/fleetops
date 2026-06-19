@@ -36,8 +36,11 @@ export default class SensorActionsService extends ResourceActionService {
         view: (sensor) => {
             return this.resourceContextPanel.open({
                 sensor,
+                header: 'sensor/panel-header',
                 tabs: [
                     {
+                        key: 'overview',
+                        id: 'overview',
                         label: this.intl.t('common.overview'),
                         component: 'sensor/details',
                     },

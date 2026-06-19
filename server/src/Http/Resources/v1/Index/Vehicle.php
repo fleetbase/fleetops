@@ -46,6 +46,7 @@ class Vehicle extends FleetbaseResource
             'altitude'              => (int) data_get($this, 'altitude', 0),
             'speed'                 => (int) data_get($this, 'speed', 0),
             'online'                => (bool) data_get($this, 'online', false),
+            'devices'               => $this->whenLoaded('devices', fn () => $this->compactDevices()),
             'assigned_orders_count' => $this->when($isInternal, $this->assignedOrdersCount()),
 
             // Meta flag to indicate this is an index resource
@@ -63,6 +64,24 @@ class Vehicle extends FleetbaseResource
     protected function assignedOrdersCount(): int
     {
         return Order::where('vehicle_assigned_uuid', $this->uuid)->count();
+    }
+
+    protected function compactDevices(): array
+    {
+        return $this->devices->map(
+            fn ($device) => [
+                'id'            => $device->uuid,
+                'uuid'          => $device->uuid,
+                'public_id'     => $device->public_id,
+                'name'          => $device->name,
+                'display_name'  => $device->display_name,
+                'device_id'     => $device->device_id,
+                'serial_number' => $device->serial_number,
+                'imei'          => $device->imei,
+                'provider'      => $device->provider,
+                'status'        => $device->status,
+            ]
+        )->values()->all();
     }
 
     protected function currentOrderReference(): ?string

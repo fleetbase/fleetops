@@ -2,6 +2,7 @@ import Component from '@glimmer/component';
 import { tracked } from '@glimmer/tracking';
 import { inject as service } from '@ember/service';
 import { action } from '@ember/object';
+import calculateMapDrawerDropdownPosition from '../../../utils/map-drawer-dropdown-position';
 
 export default class MapDrawerPlaceListingComponent extends Component {
     @service placeActions;
@@ -53,6 +54,7 @@ export default class MapDrawerPlaceListingComponent extends Component {
                 ddMenuLabel: this.intl.t('common.resource-actions', { resource: this.intl.t('resource.place') }),
                 cellClassNames: 'overflow-visible',
                 wrapperClass: 'flex items-center justify-end mx-2',
+                calculatePosition: calculateMapDrawerDropdownPosition,
                 width: '90px',
                 actions: [
                     {

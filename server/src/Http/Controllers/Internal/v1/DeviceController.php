@@ -28,6 +28,7 @@ class DeviceController extends FleetOpsController
     public static function onQueryRecord($query, $request): void
     {
         $query->with(['telematic', 'warranty', 'attachable']);
+        $query->withCount('sensors');
 
         if ($request->filled('attachment_state')) {
             match ($request->input('attachment_state')) {
@@ -38,11 +39,15 @@ class DeviceController extends FleetOpsController
         }
 
         if ($request->filled('vehicle')) {
-            $query->where('attachable_uuid', $request->input('vehicle'));
+            static::applyVehicleFilter($query, $request->input('vehicle'));
         }
 
         if ($request->filled('device_id')) {
             $query->where('device_id', 'like', '%' . $request->input('device_id') . '%');
+        }
+
+        if ($request->filled('serial_number')) {
+            $query->where('serial_number', 'like', '%' . $request->input('serial_number') . '%');
         }
 
         if ($request->filled('connection_status')) {
@@ -80,6 +85,7 @@ class DeviceController extends FleetOpsController
     public static function onFindRecord($query, $request): void
     {
         $query->with(['telematic', 'warranty', 'attachable']);
+        $query->withCount('sensors');
     }
 
     /**
@@ -181,6 +187,17 @@ class DeviceController extends FleetOpsController
         } else {
             $query->whereDate($column, $dates);
         }
+    }
+
+    protected static function applyVehicleFilter($query, string $vehicle): void
+    {
+        $query->where(function ($vehicleQuery) use ($vehicle) {
+            $vehicleQuery->where('attachable_uuid', $vehicle)
+                ->orWhereIn('attachable_uuid', Vehicle::query()
+                    ->where('company_uuid', session('company'))
+                    ->where('public_id', $vehicle)
+                    ->pluck('uuid'));
+        });
     }
 
     protected function logDeviceAttachmentLookupFailure(string $action, string $missingResource, string $deviceId, ?string $vehicleId): void

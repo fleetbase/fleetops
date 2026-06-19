@@ -7,8 +7,11 @@
 
         {{#if this.hasVehicle}}
             <div class="flex flex-nowrap items-center gap-2 whitespace-nowrap">
-                {{#if this.vehicle.id}}
+                {{#if this.canOpenVehicle}}
                     <Button @icon="eye" @text="Open Vehicle" @size="xs" @onClick={{this.openVehicle}} />
+                {{/if}}
+                {{#if this.canLocateVehicle}}
+                    <Button @icon="location-dot" @text="Locate" @size="xs" @onClick={{this.locateVehicle}} />
                 {{/if}}
                 <Button @icon="shuffle" @text="Change Vehicle" @size="xs" @onClick={{this.attachToVehicle}} />
                 <Button @icon="unlink" @text="Detach" @size="xs" @type="danger" @onClick={{this.detachFromVehicle}} />
@@ -69,6 +72,66 @@
                     </div>
                 </div>
             </div>
+        </section>
+
+        <section class="overflow-hidden rounded-md border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-800">
+            <div class="flex items-start justify-between gap-3 border-b border-gray-200 px-3 py-2 dark:border-gray-700">
+                <div class="min-w-0">
+                    <h3 class="text-sm font-bold text-gray-900 dark:text-gray-100">Latest Positions</h3>
+                    <p class="mt-0.5 text-xs text-gray-500 dark:text-gray-300">Recent vehicle coordinates reported through this device attachment.</p>
+                </div>
+                {{#if this.canOpenVehicle}}
+                    <Button @icon="route" @text="Full History" @size="xs" @onClick={{this.openVehiclePositions}} />
+                {{/if}}
+            </div>
+
+            {{#if this.hasPositions}}
+                <div class="grid grid-cols-1 gap-0 divide-y divide-gray-100 dark:divide-gray-700">
+                    {{#each this.positions as |position index|}}
+                        <div class="flex flex-wrap items-center justify-between gap-3 px-3 py-2 text-xs">
+                            <div class="flex min-w-0 items-center gap-2">
+                                <div class="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-md bg-blue-50 text-blue-600 dark:bg-blue-900/30 dark:text-blue-300">
+                                    <span class="font-bold">{{add index 1}}</span>
+                                </div>
+                                <div class="min-w-0">
+                                    <div class="truncate font-semibold text-gray-900 dark:text-gray-100">{{n-a (format-date-fns position.created_at "dd MMM yyyy, HH:mm")}}</div>
+                                    <div class="truncate text-gray-500 dark:text-gray-400">{{n-a (point-coordinates position.coordinates)}}</div>
+                                </div>
+                            </div>
+                            <div class="grid grid-cols-2 gap-2 text-right text-gray-500 dark:text-gray-400 sm:grid-cols-3">
+                                <div>
+                                    <div class="font-semibold uppercase text-gray-400 dark:text-gray-500">Speed</div>
+                                    <div class="text-gray-800 dark:text-gray-100">{{n-a position.speed}}</div>
+                                </div>
+                                <div>
+                                    <div class="font-semibold uppercase text-gray-400 dark:text-gray-500">Heading</div>
+                                    <div class="text-gray-800 dark:text-gray-100">{{n-a position.heading position.bearing}}</div>
+                                </div>
+                                <div>
+                                    <div class="font-semibold uppercase text-gray-400 dark:text-gray-500">Altitude</div>
+                                    <div class="text-gray-800 dark:text-gray-100">{{n-a position.altitude}}</div>
+                                </div>
+                            </div>
+                        </div>
+                    {{/each}}
+                </div>
+
+                <div class="border-t border-gray-200 dark:border-gray-700">
+                    <PositionsReplay @resource={{this.vehicle}} @mapHeight={{180}} class="max-h-[360px] overflow-hidden" />
+                </div>
+            {{else}}
+                <div class="p-3">
+                    <Telematic::TabEmptyState
+                        @tone="info"
+                        @icon="location-dot"
+                        @title="No recent positions"
+                        @message="This attached vehicle does not have recent position history available yet."
+                        @primaryText="Locate Vehicle"
+                        @primaryIcon="location-dot"
+                        @primaryAction={{this.locateVehicle}}
+                    />
+                </div>
+            {{/if}}
         </section>
     {{else}}
         <Telematic::TabEmptyState

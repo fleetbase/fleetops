@@ -2,7 +2,10 @@
 
 use Fleetbase\FleetOps\Contracts\TelematicProviderDescriptor;
 use Fleetbase\FleetOps\Support\Telematics\Providers\AfaqyProvider;
+use Fleetbase\FleetOps\Support\Telematics\Providers\FlespiProvider;
+use Fleetbase\FleetOps\Support\Telematics\Providers\GeotabProvider;
 use Fleetbase\FleetOps\Support\Telematics\Providers\SafeeProvider;
+use Fleetbase\FleetOps\Support\Telematics\Providers\SamsaraProvider;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Support\Facades\Http;
 
@@ -21,6 +24,11 @@ test('device event model and migration expose lifecycle fields used by telematic
         ->toContain("'occurred_at'")
         ->toContain("'processed_at'")
         ->toContain("'data'")
+        ->toContain("'device_imei'")
+        ->toContain("'device_connection_status'")
+        ->toContain("'provider_descriptor'")
+        ->toContain('public function getDeviceImeiAttribute(): ?string')
+        ->toContain('public function getProviderDescriptorAttribute(): array')
         ->toContain("'occurred_at'     => 'datetime'")
         ->toContain("'processed_at'    => 'datetime'");
 });
@@ -79,18 +87,238 @@ test('device details render consistent telematics connection state and timestamp
 });
 
 test('native providers normalize device payloads to canonical FleetOps keys', function () {
-    $afaqy = file_get_contents(__DIR__ . '/../src/Support/Telematics/Providers/AfaqyProvider.php');
-    $safee = file_get_contents(__DIR__ . '/../src/Support/Telematics/Providers/SafeeProvider.php');
+    $providers = [
+        file_get_contents(__DIR__ . '/../src/Support/Telematics/Providers/AfaqyProvider.php'),
+        file_get_contents(__DIR__ . '/../src/Support/Telematics/Providers/FlespiProvider.php'),
+        file_get_contents(__DIR__ . '/../src/Support/Telematics/Providers/GeotabProvider.php'),
+        file_get_contents(__DIR__ . '/../src/Support/Telematics/Providers/SafeeProvider.php'),
+        file_get_contents(__DIR__ . '/../src/Support/Telematics/Providers/SamsaraProvider.php'),
+    ];
 
-    foreach ([$afaqy, $safee] as $provider) {
+    foreach ($providers as $provider) {
         expect($provider)
             ->toContain("'device_id'")
+            ->toContain("'external_id'")
             ->toContain("'name'")
             ->toContain("'provider'")
             ->toContain("'model'")
             ->toContain("'online'")
-            ->toContain("'last_seen_at'");
+            ->toContain("'last_seen_at'")
+            ->toContain("'location'")
+            ->toContain("'speed'")
+            ->toContain("'heading'")
+            ->toContain("'altitude'");
     }
+});
+
+test('flespi telemetry normalizes positional event fields', function () {
+    $event = (new FlespiProvider())->normalizeEvent([
+        'id'                     => 'message-1',
+        'device.id'              => 'device-1',
+        'timestamp'              => 1781769600,
+        'position.latitude'      => 25.2048,
+        'position.longitude'     => 55.2708,
+        'position.speed'         => 42,
+        'position.direction'     => 91,
+        'position.altitude'      => 12,
+        'vehicle.mileage'        => 12345,
+        'engine.ignition.status' => true,
+        'fuel.level'             => 67,
+    ]);
+
+    expect($event)->toMatchArray([
+        'external_id' => 'message-1',
+        'device_id'   => 'device-1',
+        'event_type'  => 'telemetry_update',
+        'online'      => true,
+        'location'    => ['lat' => 25.2048, 'lng' => 55.2708],
+        'speed'       => 42,
+        'heading'     => 91,
+        'altitude'    => 12,
+        'odometer'    => 12345,
+        'ignition'    => true,
+        'fuel_level'  => 67,
+    ]);
+    expect($event['meta'])->toHaveKeys(['raw', 'provider_status']);
+});
+
+test('samsara telemetry variants normalize positional event fields', function () {
+    $event = (new SamsaraProvider())->normalizeEvent([
+        'id'                 => 'event-1',
+        'vehicle'            => ['id' => 'vehicle-1'],
+        'time'               => '2026-06-18T08:00:00Z',
+        'location'           => [
+            'latitude'          => 25.2048,
+            'longitude'         => 55.2708,
+            'speedMilesPerHour' => 30,
+            'headingDegrees'    => 180,
+            'altitudeMeters'    => 16,
+        ],
+        'odometerMeters'     => 1000,
+        'fuelPercent'        => 50,
+        'gateway'            => ['status' => 'connected', 'online' => true],
+    ]);
+
+    expect($event)->toMatchArray([
+        'external_id' => 'event-1',
+        'device_id'   => 'vehicle-1',
+        'event_type'  => 'vehicle_update',
+        'online'      => true,
+        'location'    => ['lat' => 25.2048, 'lng' => 55.2708],
+        'speed'       => 30,
+        'heading'     => 180,
+        'altitude'    => 16,
+        'odometer'    => 1000,
+        'fuel_level'  => 50,
+    ]);
+    expect($event['meta']['provider_status'])->toMatchArray([
+        'gateway_status' => 'connected',
+        'online'         => true,
+    ]);
+});
+
+test('safee telemetry includes online and altitude event fields', function () {
+    $event = (new SafeeProvider())->normalizeEvent([
+        'id'            => 'event-1',
+        'deviceId'      => 'device-1',
+        'status'        => 'online',
+        'date'          => '2026-06-18T08:00:00Z',
+        'lat'           => 25.2048,
+        'lon'           => 55.2708,
+        'speed'         => 30,
+        'heading'       => 100,
+        'altitude'      => 15,
+    ]);
+
+    expect($event)->toMatchArray([
+        'external_id' => 'event-1',
+        'device_id'   => 'device-1',
+        'online'      => true,
+        'location'    => ['lat' => 25.2048, 'lng' => 55.2708],
+        'speed'       => 30,
+        'heading'     => 100,
+        'altitude'    => 15,
+    ]);
+});
+
+test('geotab latest log record drives device and event telemetry', function () {
+    $payload = [
+        'id'                          => 'device-1',
+        'name'                        => 'Truck 1',
+        'deviceType'                  => 'GO9',
+        'serialNumber'                => 'serial-1',
+        'vehicleIdentificationNumber' => 'VIN123',
+        'latest_log_record'           => [
+            'id'        => 'log-1',
+            'dateTime'  => '2026-06-18T08:00:00Z',
+            'latitude'  => 25.2048,
+            'longitude' => 55.2708,
+            'speed'     => 55,
+            'bearing'   => 90,
+            'altitude'  => 20,
+            'device'    => ['id' => 'device-1'],
+        ],
+    ];
+
+    $provider = new GeotabProvider();
+    $device   = $provider->normalizeDevice($payload);
+    $event    = $provider->normalizeEvent($payload);
+
+    expect($device)->toMatchArray([
+        'device_id'     => 'device-1',
+        'external_id'   => 'device-1',
+        'name'          => 'Truck 1',
+        'provider'      => 'geotab',
+        'model'         => 'GO9',
+        'imei'          => 'serial-1',
+        'vin'           => 'VIN123',
+        'serial_number' => 'serial-1',
+        'online'        => true,
+        'location'      => ['lat' => 25.2048, 'lng' => 55.2708],
+        'speed'         => 55,
+        'heading'       => 90,
+        'altitude'      => 20,
+    ]);
+
+    expect($event)->toMatchArray([
+        'external_id' => 'log-1',
+        'device_id'   => 'device-1',
+        'event_type'  => 'status_data',
+        'online'      => true,
+        'location'    => ['lat' => 25.2048, 'lng' => 55.2708],
+        'speed'       => 55,
+        'heading'     => 90,
+        'altitude'    => 20,
+    ]);
+});
+
+test('geotab polling fetches recent log records and merges latest record into device snapshots', function () {
+    $requests = [];
+
+    Http::fake(function ($request) use (&$requests) {
+        $requests[] = $request;
+        $body       = json_decode($request->body(), true);
+        $typeName   = data_get($body, 'params.typeName');
+
+        if ($typeName === 'Device') {
+            return Http::response([
+                'result' => [
+                    ['id' => 'device-1', 'name' => 'Truck 1'],
+                    ['id' => 'device-2', 'name' => 'Truck 2'],
+                ],
+            ], 200);
+        }
+
+        if ($typeName === 'LogRecord') {
+            return Http::response([
+                'result' => [
+                    ['id' => 'old-log', 'device' => ['id' => 'device-1'], 'dateTime' => '2026-06-18T07:00:00Z', 'latitude' => 1, 'longitude' => 2],
+                    ['id' => 'new-log', 'device' => ['id' => 'device-1'], 'dateTime' => '2026-06-18T08:00:00Z', 'latitude' => 3, 'longitude' => 4],
+                    ['id' => 'other-log', 'device' => ['id' => 'other-device'], 'dateTime' => '2026-06-18T08:00:00Z', 'latitude' => 5, 'longitude' => 6],
+                ],
+            ], 200);
+        }
+
+        return Http::response(['result' => []], 200);
+    });
+
+    $provider = new class extends GeotabProvider {
+        public function fetchDevicesForTest(): array
+        {
+            $this->credentials = [
+                'database' => 'testing-db',
+            ];
+            $this->sessionId = 'testing-session';
+
+            return $this->fetchDevices(['limit' => 2, 'from_date' => '2026-06-18T00:00:00Z']);
+        }
+    };
+
+    $result = $provider->fetchDevicesForTest();
+
+    expect($result['devices'])->toHaveCount(2);
+    expect($result['devices'][0]['latest_log_record'])->toMatchArray([
+        'id'        => 'new-log',
+        'latitude'  => 3,
+        'longitude' => 4,
+    ]);
+    expect($result['devices'][1])->not->toHaveKey('latest_log_record');
+    expect($requests)->toHaveCount(2);
+    expect($requests[0]->data())->toMatchArray([
+        'method' => 'Get',
+        'params' => [
+            'typeName'     => 'Device',
+            'resultsLimit' => 2,
+        ],
+    ]);
+    expect($requests[1]->data())->toMatchArray([
+        'method' => 'Get',
+        'params' => [
+            'typeName'     => 'LogRecord',
+            'search'       => ['fromDate' => '2026-06-18T00:00:00Z'],
+            'resultsLimit' => 100,
+        ],
+    ]);
 });
 
 test('telematics details use public id for consumer webhook URLs and do not read ember uuid', function () {
@@ -444,17 +672,20 @@ test('telematics device sync records provider pagination and skipped device coun
         ->toContain("method_exists(\$e, 'context') ? \$e->context() : []");
 });
 
-test('telematics polling command is registered and scheduled for no webhook providers', function () {
+test('telematics polling command is registered and scheduled for discovery providers by default', function () {
     $command  = file_get_contents(__DIR__ . '/../src/Console/Commands/SyncTelematics.php');
     $provider = file_get_contents(__DIR__ . '/../src/Providers/FleetOpsServiceProvider.php');
     $details  = file_get_contents(__DIR__ . '/../../addon/components/telematic/details.hbs');
 
     expect($command)
         ->toContain("protected \$signature = 'fleetops:sync-telematics")
+        ->toContain('{--exclude-webhook-providers : Skip providers that support webhooks}')
         ->toContain('SyncTelematicDevicesJob::dispatch($telematic')
-        ->toContain('!$descriptor->supportsWebhooks')
+        ->toContain('$excludeWebhookProviders = (bool) $this->option(\'exclude-webhook-providers\')')
+        ->toContain('!$excludeWebhookProviders || !$descriptor->supportsWebhooks')
         ->toContain('$descriptor->supportsDiscovery')
-        ->toContain("whereIn('status', ['active', 'connected'])");
+        ->toContain("whereIn('status', ['active', 'connected'])")
+        ->not->toContain('sync-webhook-providers');
 
     expect($provider)
         ->toContain('Console\\Commands\\SyncTelematics::class')

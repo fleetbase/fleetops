@@ -2,6 +2,7 @@
 
 namespace Fleetbase\FleetOps\Support\Telematics\Providers;
 
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Http;
 
 /**
@@ -75,19 +76,21 @@ class GeotabProvider extends AbstractProvider
     {
         $limit = $options['limit'] ?? 100;
 
-        $response = Http::post($this->baseUrl, [
-            'method' => 'Get',
-            'params' => [
-                'credentials' => [
-                    'database'  => $this->credentials['database'],
-                    'sessionId' => $this->sessionId,
-                ],
-                'typeName'     => 'Device',
-                'resultsLimit' => $limit,
-            ],
-        ])->json();
+        $response = $this->apiCall('Get', [
+            'typeName'     => 'Device',
+            'resultsLimit' => $limit,
+        ]);
 
-        $devices = $response['result'] ?? [];
+        $devices      = $response['result'] ?? [];
+        $logsByDevice = $this->fetchLatestLogRecords($devices, $options);
+        $devices      = array_map(function ($device) use ($logsByDevice) {
+            $deviceId = $device['id'] ?? null;
+            if ($deviceId && isset($logsByDevice[$deviceId])) {
+                $device['latest_log_record'] = $logsByDevice[$deviceId];
+            }
+
+            return $device;
+        }, $devices);
 
         return [
             'devices'     => $devices,
@@ -98,43 +101,76 @@ class GeotabProvider extends AbstractProvider
 
     public function fetchDeviceDetails(string $externalId): array
     {
-        $response = Http::post($this->baseUrl, [
-            'method' => 'Get',
-            'params' => [
-                'credentials' => [
-                    'database'  => $this->credentials['database'],
-                    'sessionId' => $this->sessionId,
-                ],
-                'typeName' => 'Device',
-                'search'   => ['id' => $externalId],
-            ],
-        ])->json();
+        $response = $this->apiCall('Get', [
+            'typeName' => 'Device',
+            'search'   => ['id' => $externalId],
+        ]);
 
         return $response['result'][0] ?? [];
     }
 
     public function normalizeDevice(array $payload): array
     {
+        $latestLog    = $payload['latest_log_record'] ?? [];
+        $hasTelemetry = isset($latestLog['dateTime']) || isset($latestLog['latitude'], $latestLog['longitude']);
+
         return [
-            'external_id'     => $payload['id'],
-            'device_name'     => $payload['name'] ?? 'Unknown Device',
-            'device_provider' => 'geotab',
-            'device_model'    => $payload['deviceType'] ?? null,
-            'imei'            => $payload['serialNumber'] ?? null,
-            'vin'             => $payload['vehicleIdentificationNumber'] ?? null,
-            'status'          => 'active',
-            'meta'            => $payload,
+            'device_id'     => $payload['id'] ?? null,
+            'external_id'   => $payload['id'] ?? null,
+            'name'          => $payload['name'] ?? 'Unknown Device',
+            'provider'      => 'geotab',
+            'model'         => $payload['deviceType'] ?? null,
+            'imei'          => $payload['serialNumber'] ?? null,
+            'vin'           => $payload['vehicleIdentificationNumber'] ?? null,
+            'serial_number' => $payload['serialNumber'] ?? null,
+            'status'        => 'active',
+            'online'        => $hasTelemetry ? true : null,
+            'last_seen_at'  => $latestLog ? $this->parseTimestamp($latestLog['dateTime'] ?? null) : null,
+            'location'      => [
+                'lat' => $latestLog['latitude'] ?? null,
+                'lng' => $latestLog['longitude'] ?? null,
+            ],
+            'speed'    => $latestLog['speed'] ?? null,
+            'heading'  => $latestLog['bearing'] ?? $latestLog['heading'] ?? null,
+            'altitude' => $latestLog['altitude'] ?? null,
+            'meta'     => [
+                'raw'             => $payload,
+                'provider_status' => array_filter([
+                    'active_from' => $payload['activeFrom'] ?? null,
+                    'active_to'   => $payload['activeTo'] ?? null,
+                    'groups'      => $payload['groups'] ?? null,
+                    'has_log'     => $hasTelemetry,
+                ], fn ($value) => $value !== null),
+            ],
         ];
     }
 
     public function normalizeEvent(array $payload): array
     {
+        $latestLog    = $payload['latest_log_record'] ?? $payload;
+        $deviceId     = data_get($latestLog, 'device.id') ?? $payload['deviceId'] ?? $payload['id'] ?? null;
+        $hasTelemetry = isset($latestLog['dateTime']) || isset($latestLog['latitude'], $latestLog['longitude']);
+
         return [
-            'external_id' => $payload['id'] ?? null,
-            'device_id'   => $payload['device']['id'] ?? $payload['deviceId'] ?? null,
+            'external_id' => $latestLog['id'] ?? $payload['id'] ?? null,
+            'device_id'   => $deviceId,
             'event_type'  => $payload['type'] ?? 'status_data',
-            'occurred_at' => $payload['dateTime'] ?? now(),
-            'meta'        => $payload,
+            'occurred_at' => $this->parseTimestamp($latestLog['dateTime'] ?? null) ?? now(),
+            'online'      => $hasTelemetry ? true : null,
+            'location'    => [
+                'lat' => $latestLog['latitude'] ?? null,
+                'lng' => $latestLog['longitude'] ?? null,
+            ],
+            'speed'    => $latestLog['speed'] ?? null,
+            'heading'  => $latestLog['bearing'] ?? $latestLog['heading'] ?? null,
+            'altitude' => $latestLog['altitude'] ?? null,
+            'meta'     => [
+                'raw'             => $payload,
+                'provider_status' => array_filter([
+                    'has_log' => $hasTelemetry,
+                    'device'  => data_get($latestLog, 'device.id'),
+                ], fn ($value) => $value !== null),
+            ],
         ];
     }
 
@@ -178,5 +214,57 @@ class GeotabProvider extends AbstractProvider
     public function supportsWebhooks(): bool
     {
         return false;
+    }
+
+    protected function apiCall(string $method, array $params): array
+    {
+        $params['credentials'] = [
+            'database'  => $this->credentials['database'],
+            'sessionId' => $this->sessionId,
+        ];
+
+        return Http::post($this->baseUrl, [
+            'method' => $method,
+            'params' => $params,
+        ])->json() ?? [];
+    }
+
+    protected function fetchLatestLogRecords(array $devices, array $options = []): array
+    {
+        $deviceIds = array_values(array_filter(array_map(fn ($device) => $device['id'] ?? null, $devices)));
+        if (empty($deviceIds)) {
+            return [];
+        }
+
+        $fromDate = $options['from_date'] ?? Carbon::now()->subHours(24)->toIso8601String();
+        $response = $this->apiCall('Get', [
+            'typeName'     => 'LogRecord',
+            'search'       => ['fromDate' => $fromDate],
+            'resultsLimit' => max(count($deviceIds) * 5, 100),
+        ]);
+
+        $logsByDevice = [];
+        foreach ($response['result'] ?? [] as $record) {
+            $deviceId = data_get($record, 'device.id');
+            if (!$deviceId || !in_array($deviceId, $deviceIds, true)) {
+                continue;
+            }
+
+            $current = $logsByDevice[$deviceId] ?? null;
+            if (!$current || Carbon::parse($record['dateTime'] ?? now())->greaterThan(Carbon::parse($current['dateTime'] ?? now()))) {
+                $logsByDevice[$deviceId] = $record;
+            }
+        }
+
+        return $logsByDevice;
+    }
+
+    protected function parseTimestamp($value): ?string
+    {
+        if (!$value) {
+            return null;
+        }
+
+        return Carbon::parse($value)->toDateTimeString();
     }
 }

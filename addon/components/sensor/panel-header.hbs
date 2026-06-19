@@ -1,29 +1,61 @@
-<div class="px-4 py-2">
-    <div class="flex flex-1 flex-row items-start justify-between">
-        <div class="flex flex-row space-x-3">
-            <div class="flex items-start justify-start rounded-full">
+<div class="px-4 py-3" ...attributes>
+    <div class="flex flex-1 flex-row items-start justify-between gap-4">
+        <div class="flex min-w-0 flex-row items-start gap-3">
+            <div class="relative flex flex-shrink-0 items-start justify-start">
                 <Image
                     src={{@resource.photo_url}}
                     @fallbackSrc={{config "defaultValues.placeholderImage"}}
-                    alt={{@resource.displayName}}
+                    alt={{this.name}}
                     height="48"
                     width="48"
-                    class="h-14 w-14 rounded-full shadow-sm"
+                    class="h-14 w-14 rounded-md border border-gray-200 object-cover shadow-sm dark:border-gray-700"
                 />
                 <Attach::Tooltip @class="clean" @animation="scale" @placement="top">
-                    <InputInfo @text={{@resource.displayName}} />
+                    <InputInfo @text={{this.name}} />
                 </Attach::Tooltip>
             </div>
-            <div class="flex flex-col">
-                <h1 class="text-gray-900 dark:text-white font-semibold text-lg">{{@resource.displayName}}</h1>
-                <div>
-                    <div class="text-xs text-gray-400 dark:text-gray-500">{{n-a (get-fleet-ops-option-label "sensorTypes" @resource.type)}}</div>
-                    <div class="text-xs text-gray-400 dark:text-gray-500">{{n-a @resource.serial_number}}</div>
+            <div class="flex min-w-0 flex-col">
+                <div class="flex min-w-0 flex-wrap items-center gap-2">
+                    <h1 class="truncate text-base font-semibold leading-5 text-gray-900 dark:text-gray-100">{{this.name}}</h1>
+                    <Badge @status={{this.status}} @size="xs">{{smart-humanize this.status}}</Badge>
+                    {{#if this.thresholdStatus}}
+                        <Badge @status={{if (eq this.thresholdStatus "normal") "success" "warning"}} @size="xs">{{smart-humanize this.thresholdStatus}}</Badge>
+                    {{/if}}
                 </div>
-                <Badge @status={{if @resource.online "online" "offline"}}>{{if @resource.online (t "common.online") (t "common.offline")}}</Badge>
+
+                <div class="mt-1 flex max-w-2xl flex-wrap items-center gap-1.5">
+                    {{#if this.type}}
+                        <span class="inline-flex max-w-[10rem] items-center gap-1 truncate rounded-md bg-gray-100 px-1.5 py-0.5 text-[11px] font-medium leading-4 text-gray-600 dark:bg-gray-700 dark:text-gray-200">
+                            <FaIcon @icon="gauge-high" class="text-gray-400 dark:text-gray-300" />
+                            <span class="truncate">{{n-a (get-fleet-ops-option-label "sensorTypes" this.type)}}</span>
+                        </span>
+                    {{/if}}
+                    {{#if this.identifier}}
+                        <span class="inline-flex max-w-[12rem] items-center gap-1 truncate rounded-md bg-gray-100 px-1.5 py-0.5 text-[11px] font-medium leading-4 text-gray-600 dark:bg-gray-700 dark:text-gray-200">
+                            <FaIcon @icon="id-card" class="text-gray-400 dark:text-gray-300" />
+                            <span class="truncate">{{this.identifier}}</span>
+                        </span>
+                    {{/if}}
+                    {{#if this.reading}}
+                        <span class="inline-flex max-w-[10rem] items-center gap-1 truncate rounded-md bg-gray-100 px-1.5 py-0.5 text-[11px] font-medium leading-4 text-gray-600 dark:bg-gray-700 dark:text-gray-200">
+                            <FaIcon @icon="chart-line" class="text-gray-400 dark:text-gray-300" />
+                            <span class="truncate">{{this.reading}}</span>
+                        </span>
+                    {{/if}}
+                    {{#if this.deviceName}}
+                        <span class="inline-flex max-w-[12rem] items-center gap-1 truncate rounded-md bg-gray-100 px-1.5 py-0.5 text-[11px] font-medium leading-4 text-gray-600 dark:bg-gray-700 dark:text-gray-200">
+                            <FaIcon @icon="microchip" class="text-gray-400 dark:text-gray-300" />
+                            <span class="truncate">{{this.deviceName}}</span>
+                        </span>
+                    {{/if}}
+                    <span class="inline-flex max-w-[13rem] items-center gap-1 truncate rounded-md bg-gray-100 px-1.5 py-0.5 text-[11px] font-medium leading-4 text-gray-600 dark:bg-gray-700 dark:text-gray-200">
+                        <FaIcon @icon="clock" class="text-gray-400 dark:text-gray-300" />
+                        <span class="truncate">{{#if this.lastReadingAt}}{{format-date-fns this.lastReadingAt "dd MMM yyyy, HH:mm"}}{{else}}No reading yet{{/if}}</span>
+                    </span>
+                </div>
             </div>
         </div>
-        <div class="next-view-header-right">
+        <div class="next-view-header-right flex-shrink-0">
             <Layout::Resource::Panel::HeaderActions
                 @resource={{@resource}}
                 @saveTask={{@saveTask}}

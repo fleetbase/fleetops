@@ -14,6 +14,8 @@ module('Unit | Route | connectivity/telematics/index/details/devices', function 
 
         assert.deepEqual(route.queryParams.vehicle, { refreshModel: true }, 'vehicle filter refreshes devices');
         assert.deepEqual(route.queryParams.connection_status, { refreshModel: true }, 'connection filter refreshes devices');
+        assert.deepEqual(route.queryParams.type, { refreshModel: true }, 'type filter refreshes devices');
+        assert.deepEqual(route.queryParams.serial_number, { refreshModel: true }, 'serial number filter refreshes devices');
         assert.deepEqual(route.queryParams.last_online_at, { refreshModel: true }, 'last seen date filter refreshes devices');
         assert.deepEqual(route.queryParams.updated_at, { refreshModel: true }, 'updated date filter refreshes devices');
     });
