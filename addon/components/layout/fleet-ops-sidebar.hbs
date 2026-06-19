@@ -3,7 +3,7 @@
     @primaryAction={{this.createOrderAction}}
     @searchPlaceholder="Search Fleet-Ops..."
     @searchProvider={{this.searchNavigation}}
-    @initialActiveParentSync={{false}}
+    @shouldSyncInitialActiveParent={{this.shouldSyncInitialActiveParent}}
     class="fleet-ops-sidebar-navigator"
 >
     <:footer as |state|>

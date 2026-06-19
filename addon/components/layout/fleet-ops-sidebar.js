@@ -390,6 +390,14 @@ export default class LayoutFleetOpsSidebarComponent extends Component {
         }
     }
 
+    @action shouldSyncInitialActiveParent({ activePath = [], routeName }) {
+        const [parent, child] = activePath;
+        const defaultOrdersRoutes = [this.fullRoute('operations.orders'), this.fullRoute('operations.orders.index')];
+        const isDefaultOrdersLanding = parent?.id === 'operations' && child?.route === this.fullRoute('operations.orders') && defaultOrdersRoutes.includes(routeName);
+
+        return !isDefaultOrdersLanding;
+    }
+
     @action
     async searchNavigation({ query, limit = 12 }) {
         const trimmedQuery = query?.trim();
