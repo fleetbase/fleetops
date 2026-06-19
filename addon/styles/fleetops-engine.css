@@ -294,6 +294,14 @@ body[data-theme='dark'] .fleetops-connectivity-kpi-accent-rose .fleetops-connect
     color: #fde047;
 }
 
+.fleetops-device-status-badge.status-badge > span {
+    padding: 0 0.25rem !important;
+    border-radius: 0.125rem !important;
+    font-size: 0.5625rem !important;
+    line-height: 0.75rem !important;
+    font-weight: 700;
+}
+
 .fleetops-provider-connections-panel .table-wrapper table tbody tr td,
 .fleetops-provider-connections-panel .next-table-wrapper table tbody tr td {
     vertical-align: top;

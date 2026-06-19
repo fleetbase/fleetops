@@ -7,15 +7,25 @@ export default class ConnectivityDevicesIndexDetailsVehicleController extends Co
     @service deviceActions;
     @service hostRouter;
     @service intl;
+    @service mapManager;
+    @service vehicleActions;
 
     @tracked queryParams = [];
 
     get device() {
-        return this.model;
+        return this.model?.device ?? this.model;
     }
 
     get vehicle() {
         return this.device?.attachable;
+    }
+
+    get positions() {
+        return Array.from(this.model?.positions ?? []);
+    }
+
+    get hasPositions() {
+        return this.positions.length > 0;
     }
 
     get vehicleName() {
@@ -58,6 +68,14 @@ export default class ConnectivityDevicesIndexDetailsVehicleController extends Co
         return Boolean(this.vehicleName || this.device?.attachable_uuid);
     }
 
+    get canOpenVehicle() {
+        return Boolean(this.vehicle?.id);
+    }
+
+    get canLocateVehicle() {
+        return Boolean(this.vehicle?.id && (this.vehicle?.location || this.vehicle?.last_position || this.hasPositions));
+    }
+
     @action attachToVehicle() {
         return this.deviceActions.attachToVehicle(this.device, { callback: () => this.hostRouter.refresh() });
     }
@@ -69,6 +87,36 @@ export default class ConnectivityDevicesIndexDetailsVehicleController extends Co
     @action openVehicle() {
         if (this.vehicle?.id) {
             return this.hostRouter.transitionTo('console.fleet-ops.management.vehicles.index.details', this.vehicle);
+        }
+    }
+
+    @action openVehiclePositions() {
+        if (this.vehicle?.id) {
+            return this.hostRouter.transitionTo('console.fleet-ops.management.vehicles.index.details.positions', this.vehicle);
+        }
+    }
+
+    @action async locateVehicle() {
+        if (!this.vehicle?.id) {
+            return;
+        }
+
+        await this.transitionToLiveMap();
+        await this.mapManager.waitForMap({ timeoutMs: 8000 });
+
+        this.mapManager.focusResource(this.vehicle, 16, {
+            paddingBottomRight: [300, 200],
+            moveend: () => {
+                this.vehicleActions.panel?.view?.(this.vehicle, { closeOnTransition: true });
+            },
+        });
+    }
+
+    async transitionToLiveMap() {
+        try {
+            await this.hostRouter.transitionTo('console.fleet-ops.operations.orders.index', { queryParams: { layout: 'map' } });
+        } catch (_) {
+            // Keep locate actions usable even if the current transition is already in-flight.
         }
     }
 }

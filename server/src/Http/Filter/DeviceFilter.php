@@ -2,6 +2,7 @@
 
 namespace Fleetbase\FleetOps\Http\Filter;
 
+use Fleetbase\FleetOps\Models\Vehicle;
 use Fleetbase\FleetOps\Support\Utils;
 use Fleetbase\Http\Filter\Filter;
 
@@ -38,6 +39,22 @@ class DeviceFilter extends Filter
         }
     }
 
+    public function type(string|array|null $type)
+    {
+        $type = Utils::arrayFrom($type);
+
+        if ($type) {
+            $this->builder->whereIn('type', $type);
+        }
+    }
+
+    public function serialNumber(?string $serialNumber)
+    {
+        if ($serialNumber) {
+            $this->builder->where('serial_number', 'like', '%' . $serialNumber . '%');
+        }
+    }
+
     public function telematic(?string $telematic)
     {
         $this->builder->where('telematic_uuid', $telematic);
@@ -71,7 +88,13 @@ class DeviceFilter extends Filter
     public function vehicle(?string $vehicle)
     {
         if ($vehicle) {
-            $this->builder->where('attachable_uuid', $vehicle);
+            $this->builder->where(function ($query) use ($vehicle) {
+                $query->where('attachable_uuid', $vehicle)
+                    ->orWhereIn('attachable_uuid', Vehicle::query()
+                        ->where('company_uuid', $this->session->get('company'))
+                        ->where('public_id', $vehicle)
+                        ->pluck('uuid'));
+            });
         }
     }
 

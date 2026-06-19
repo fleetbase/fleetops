@@ -15,6 +15,8 @@ export default class ConnectivityTelematicsDetailsDevicesRoute extends Route {
         vehicle: { refreshModel: true },
         connection_status: { refreshModel: true },
         device_id: { refreshModel: true },
+        type: { refreshModel: true },
+        serial_number: { refreshModel: true },
         last_online_at: { refreshModel: true },
         updated_at: { refreshModel: true },
     };

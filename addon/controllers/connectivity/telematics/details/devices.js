@@ -3,24 +3,36 @@ import { action } from '@ember/object';
 import { inject as service } from '@ember/service';
 import { tracked } from '@glimmer/tracking';
 import { task } from 'ember-concurrency';
-
-const connectionStatusOptions = [
-    { label: 'Online', value: 'online' },
-    { label: 'Recently Offline', value: 'recently_offline' },
-    { label: 'Offline', value: 'offline' },
-    { label: 'Long Offline', value: 'long_offline' },
-    { label: 'Never Connected', value: 'never_connected' },
-];
+import buildDeviceTableColumns from '../../../../utils/device-table-columns';
+import fleetOpsOptions from '../../../../utils/fleet-ops-options';
 
 export default class ConnectivityTelematicsDetailsDevicesController extends Controller {
     @service deviceActions;
     @service fetch;
     @service hostRouter;
     @service intl;
+    @service mapManager;
     @service modalsManager;
     @service notifications;
+    @service store;
+    @service vehicleActions;
 
-    @tracked queryParams = ['page', 'limit', 'sort', 'query', 'status', 'provider', 'attachment_state', 'vehicle', 'connection_status', 'device_id', 'last_online_at', 'updated_at'];
+    @tracked queryParams = [
+        'page',
+        'limit',
+        'sort',
+        'query',
+        'status',
+        'provider',
+        'attachment_state',
+        'vehicle',
+        'connection_status',
+        'device_id',
+        'type',
+        'serial_number',
+        'last_online_at',
+        'updated_at',
+    ];
     @tracked telematic;
     @tracked page = 1;
     @tracked limit;
@@ -32,6 +44,8 @@ export default class ConnectivityTelematicsDetailsDevicesController extends Cont
     @tracked vehicle;
     @tracked connection_status;
     @tracked device_id;
+    @tracked type;
+    @tracked serial_number;
     @tracked last_online_at;
     @tracked updated_at;
 
@@ -57,7 +71,17 @@ export default class ConnectivityTelematicsDetailsDevicesController extends Cont
 
     get hasActiveFilters() {
         return Boolean(
-            this.query || this.status || this.provider || this.attachment_state || this.vehicle || this.connection_status || this.device_id || this.last_online_at || this.updated_at
+            this.query ||
+            this.status ||
+            this.provider ||
+            this.attachment_state ||
+            this.vehicle ||
+            this.connection_status ||
+            this.device_id ||
+            this.type ||
+            this.serial_number ||
+            this.last_online_at ||
+            this.updated_at
         );
     }
 
@@ -194,130 +218,16 @@ export default class ConnectivityTelematicsDetailsDevicesController extends Cont
 
     @tracked bulkActions = [];
 
+    get deviceTypeOptions() {
+        return fleetOpsOptions('deviceTypes');
+    }
+
+    get deviceStatusOptions() {
+        return fleetOpsOptions('deviceStatuses');
+    }
+
     get columns() {
-        return [
-            {
-                sticky: true,
-                label: this.intl.t('column.name'),
-                valuePath: 'displayName',
-                cellComponent: 'table/cell/anchor',
-                action: this.deviceActions.transition.view,
-                permission: 'fleet-ops view device',
-                resizable: true,
-                sortable: true,
-                filterable: true,
-                filterParam: 'query',
-                filterComponent: 'filter/string',
-            },
-            {
-                label: 'Provider ID',
-                valuePath: 'device_id',
-                resizable: true,
-                sortable: true,
-                filterable: true,
-                filterParam: 'device_id',
-                filterComponent: 'filter/string',
-            },
-            {
-                label: 'Vehicle',
-                valuePath: 'attached_to_name',
-                resizable: true,
-                sortable: true,
-                filterable: true,
-                filterParam: 'vehicle',
-                filterComponent: 'filter/model',
-                filterComponentPlaceholder: 'Select vehicle',
-                model: 'vehicle',
-                modelNamePath: 'displayName',
-            },
-            {
-                label: 'Connection',
-                valuePath: 'connection_status',
-                cellComponent: 'table/cell/status',
-                resizable: true,
-                sortable: true,
-                filterable: true,
-                filterParam: 'connection_status',
-                filterComponent: 'filter/multi-option',
-                filterOptions: connectionStatusOptions,
-                filterOptionLabel: 'label',
-                filterOptionValue: 'value',
-            },
-            {
-                label: 'Last Seen',
-                valuePath: 'lastOnlineAt',
-                sortParam: 'last_online_at',
-                resizable: true,
-                sortable: true,
-                filterable: true,
-                filterParam: 'last_online_at',
-                filterComponent: 'filter/date',
-            },
-            {
-                label: 'Attachment',
-                valuePath: 'attachable_uuid',
-                hidden: true,
-                resizable: true,
-                sortable: false,
-                filterable: true,
-                filterParam: 'attachment_state',
-                filterComponent: 'filter/select',
-                filterOptions: [
-                    { label: 'Attached', value: 'attached' },
-                    { label: 'Unattached', value: 'unattached' },
-                ],
-                filterOptionLabel: 'label',
-                filterOptionValue: 'value',
-            },
-            {
-                label: this.intl.t('column.updated-at'),
-                valuePath: 'updatedAt',
-                sortParam: 'updated_at',
-                resizable: true,
-                sortable: true,
-                hidden: true,
-                filterable: true,
-                filterComponent: 'filter/date',
-            },
-            {
-                label: '',
-                cellComponent: 'table/cell/dropdown',
-                ddButtonText: false,
-                ddButtonIcon: 'ellipsis-h',
-                ddButtonIconPrefix: 'fas',
-                ddMenuLabel: this.intl.t('common.resource-actions', { resource: this.intl.t('resource.device') }),
-                cellClassNames: 'overflow-visible align-middle',
-                wrapperClass: 'flex items-center justify-end mx-2',
-                sticky: 'right',
-                width: 60,
-                actions: [
-                    {
-                        label: this.intl.t('common.view-resource', { resource: this.intl.t('resource.device') }),
-                        fn: this.deviceActions.transition.view,
-                        permission: 'fleet-ops view device',
-                    },
-                    {
-                        label: this.intl.t('common.edit-resource', { resource: this.intl.t('resource.device') }),
-                        fn: this.deviceActions.transition.edit,
-                        permission: 'fleet-ops update device',
-                    },
-                    {
-                        label: 'Attach or change vehicle',
-                        fn: this.openAttachDeviceModal,
-                        permission: 'fleet-ops update device',
-                    },
-                    {
-                        label: 'Review recent events',
-                        fn: this.openDeviceEvents,
-                        permission: 'fleet-ops view device-event',
-                    },
-                ],
-                sortable: false,
-                filterable: false,
-                resizable: false,
-                searchable: false,
-            },
-        ];
+        return buildDeviceTableColumns(this, { showProvider: false, deviceActionMode: 'panel', showDeviceStatus: false });
     }
 
     @action refresh() {
@@ -336,6 +246,8 @@ export default class ConnectivityTelematicsDetailsDevicesController extends Cont
         this.vehicle = null;
         this.connection_status = null;
         this.device_id = null;
+        this.type = null;
+        this.serial_number = null;
         this.last_online_at = null;
         this.updated_at = null;
         this.page = 1;
@@ -356,6 +268,86 @@ export default class ConnectivityTelematicsDetailsDevicesController extends Cont
         return this.hostRouter.transitionTo('console.fleet-ops.connectivity.telematics.details.attachments', this.telematic, {
             queryParams: { attachment_state: 'unattached' },
         });
+    }
+
+    @action hasAttachedVehicle(device) {
+        return Boolean(device?.attachable_uuid && this.isVehicleAttachment(device));
+    }
+
+    @action async viewAttachedVehicle(device) {
+        const vehicle = await this.resolveAttachedVehicle(device);
+
+        if (!vehicle) {
+            return;
+        }
+
+        return this.vehicleActions.panel.view(vehicle);
+    }
+
+    @action async locateAttachedVehicle(device) {
+        const vehicle = await this.resolveAttachedVehicle(device);
+
+        if (!vehicle) {
+            return;
+        }
+
+        await this.transitionToLiveMap();
+        await this.mapManager.waitForMap({ timeoutMs: 8000 });
+
+        this.mapManager.focusResource(vehicle, 16, {
+            paddingBottomRight: [300, 200],
+            moveend: () => {
+                this.vehicleActions.panel.view(vehicle, { closeOnTransition: true });
+            },
+        });
+    }
+
+    async transitionToLiveMap() {
+        try {
+            await this.hostRouter.transitionTo('console.fleet-ops.operations.orders.index', { queryParams: { layout: 'map' } });
+        } catch (_) {
+            // Keep locate actions usable even if the current transition is already in-flight.
+        }
+    }
+
+    isVehicleAttachment(device) {
+        const attachableType = `${device?.attachable_type ?? ''}`.toLowerCase();
+
+        return !attachableType || attachableType.includes('vehicle');
+    }
+
+    async resolveAttachedVehicle(device) {
+        if (!device?.attachable_uuid) {
+            return null;
+        }
+
+        if (!this.isVehicleAttachment(device)) {
+            return null;
+        }
+
+        const attachable = device.attachable;
+
+        if (attachable && typeof attachable.then !== 'function') {
+            return attachable;
+        }
+
+        if (attachable && typeof attachable.then === 'function') {
+            return await attachable;
+        }
+
+        const cachedVehicle = this.store.peekRecord('vehicle', device.attachable_uuid);
+
+        if (cachedVehicle) {
+            return cachedVehicle;
+        }
+
+        try {
+            return await this.store.findRecord('vehicle', device.attachable_uuid);
+        } catch (error) {
+            this.notifications.serverError(error);
+        }
+
+        return null;
     }
 
     @action openDeviceEvents(device) {

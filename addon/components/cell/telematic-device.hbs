@@ -1,0 +1,38 @@
+<div ...attributes>
+    <button
+        type="button"
+        disabled={{and @column.permission (cannot @column.permission)}}
+        {{on "click" this.onClick}}
+        class="group flex w-full min-w-0 max-w-md cursor-pointer items-center gap-2 py-0.5 text-left"
+    >
+        <div class="relative flex h-9 w-9 flex-shrink-0 items-center justify-center">
+            <Image
+                src={{this.imageUrl}}
+                @fallbackSrc={{config "defaultValues.placeholderImage"}}
+                alt={{this.name}}
+                data-test-telematic-device-image
+                class="h-9 w-9 rounded-sm border border-gray-200 bg-white object-cover shadow-sm dark:border-gray-700 dark:bg-gray-900"
+            />
+            <FaIcon
+                @icon="circle"
+                @size="2xs"
+                data-test-telematic-device-online-indicator
+                class="absolute left-0 top-0 -ml-1 -mt-1 h-2 w-2 {{if this.isOnline 'text-green-500' 'text-yellow-200'}}"
+            />
+        </div>
+        <div class="min-w-0 text-left">
+            <div class="truncate text-sm font-semibold leading-4 text-gray-900 group-hover:text-blue-600 dark:text-gray-100 dark:group-hover:text-blue-300">{{n-a this.name}}</div>
+            <div class="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-0.5 text-xs leading-4 text-gray-500 dark:text-gray-400">
+                <Badge
+                    @status={{this.connectionStatus}}
+                    @hideStatusDot={{true}}
+                    @wrapperClass="fleetops-device-status-badge"
+                    data-test-telematic-device-status-badge
+                >
+                    {{smart-humanize this.connectionStatus}}
+                </Badge>
+                <span class="truncate" data-test-telematic-device-identifier>{{n-a this.identifier}}</span>
+            </div>
+        </div>
+    </button>
+</div>

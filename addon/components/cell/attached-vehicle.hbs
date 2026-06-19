@@ -1,0 +1,10 @@
+<div ...attributes>
+    {{#if this.hasVehicle}}
+        <Cell::VehicleIdentity @row={{this.vehicleResource}} @column={{this.identityColumn}} @onClick={{this.onClick}} />
+    {{else}}
+        <div class="flex items-center gap-2 py-1 text-xs text-gray-400 dark:text-gray-500">
+            <FaIcon @icon="link-slash" />
+            <span>Unattached</span>
+        </div>
+    {{/if}}
+</div>
