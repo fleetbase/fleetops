@@ -9,6 +9,7 @@ export default class EquipmentActionsService extends ResourceActionService {
         super(...arguments);
         this.initialize('equipment', {
             defaultAttributes: {
+                status: 'available',
                 currency: this.defaultCurrency,
             },
         });

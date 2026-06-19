@@ -18,6 +18,7 @@ use Fleetbase\Traits\TracksApiCredential;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
+use Illuminate\Database\Eloquent\Relations\Relation;
 use Spatie\Activitylog\LogOptions;
 use Spatie\Activitylog\Traits\LogsActivity;
 use Spatie\Sluggable\HasSlug;
@@ -95,6 +96,15 @@ class Equipment extends Model
     ];
 
     /**
+     * Set attributes and defaults.
+     *
+     * @var array
+     */
+    protected $attributes = [
+        'status' => 'available',
+    ];
+
+    /**
      * Dynamic attributes that are appended to object.
      *
      * @var array
@@ -149,6 +159,19 @@ class Equipment extends Model
     protected static $logName = 'equipment';
 
     /**
+     * Enforce assignment morph aliases for existing short type values.
+     */
+    public static function boot(): void
+    {
+        parent::boot();
+
+        Relation::morphMap([
+            'fleet-ops:vehicle' => Vehicle::class,
+            'fleet-ops:driver'  => Driver::class,
+        ]);
+    }
+
+    /**
      * Get the options for generating the slug.
      */
     public function getSlugOptions(): SlugOptions
@@ -190,6 +213,38 @@ class Equipment extends Model
     public function equipable(): MorphTo
     {
         return $this->morphTo(__FUNCTION__, 'equipable_type', 'equipable_uuid');
+    }
+
+    /**
+     * Set the equipment status attribute.
+     */
+    public function setStatusAttribute(?string $status = 'available'): void
+    {
+        $this->attributes['status'] = $status === null || $status === 'active' ? 'available' : $status;
+    }
+
+    /**
+     * Normalize equipment assignment type aliases to Eloquent morph classes.
+     */
+    public function setEquipableTypeAttribute(?string $type): void
+    {
+        if ($type === null || $type === '') {
+            $this->attributes['equipable_type'] = null;
+
+            return;
+        }
+
+        if (str_contains($type, '\\')) {
+            $this->attributes['equipable_type'] = $type;
+
+            return;
+        }
+
+        $this->attributes['equipable_type'] = match ($type) {
+            'fleet-ops:vehicle', 'vehicle' => Utils::getMutationType('fleet-ops:vehicle'),
+            'fleet-ops:driver', 'driver'   => Utils::getMutationType('fleet-ops:driver'),
+            default                       => $type,
+        };
     }
 
     public function maintenances(): HasMany

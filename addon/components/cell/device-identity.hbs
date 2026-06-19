@@ -1,0 +1,24 @@
+{{#if this.resource}}
+    {{#if this.compact}}
+        <button
+            type="button"
+            disabled={{and @column.permission (cannot @column.permission)}}
+            {{on "click" this.onClick}}
+            class="group flex w-full min-w-0 cursor-pointer items-center gap-2 py-0.5 text-left"
+            data-test-device-identity-compact
+            ...attributes
+        >
+            <div class="relative flex h-5 w-5 flex-shrink-0 items-center justify-center">
+                <Image src={{this.mediaUrl}} @fallbackSrc={{this.fallbackImage}} class="h-5 w-5 rounded-md border border-gray-200 object-cover shadow-sm dark:border-gray-700" />
+                {{#if this.hasCompactStatusDot}}
+                    <FaIcon @icon="circle" @size="2xs" class="absolute left-0 top-0 -ml-1 -mt-1 {{this.compactStatusDotClass}}" data-test-resource-identity-status-dot />
+                {{/if}}
+            </div>
+            <div class="min-w-0 truncate text-sm leading-4 text-gray-900 group-hover:text-blue-600 dark:text-gray-200 dark:group-hover:text-blue-300">{{n-a this.label}}</div>
+        </button>
+    {{else}}
+        <Table::Cell::ResourceIdentity @row={{this.resource}} @value={{@value}} @column={{this.column}} @onClick={{@onClick}} ...attributes />
+    {{/if}}
+{{else}}
+    <div class="py-1 text-xs text-gray-400 dark:text-gray-500" data-test-identity-empty-text ...attributes>{{this.emptyText}}</div>
+{{/if}}
