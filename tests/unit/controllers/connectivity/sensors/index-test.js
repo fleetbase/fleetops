@@ -89,6 +89,13 @@ module('Unit | Controller | connectivity/sensors/index', function (hooks) {
         assert.strictEqual(deviceColumn.filterParam, 'device');
         assert.strictEqual(typeColumn.cellComponent, 'table/cell/base');
         assert.true(typeColumn.humanize);
+        assert.strictEqual(typeColumn.filterOptionLabel, 'label', 'type filter reads option labels explicitly');
+        assert.strictEqual(typeColumn.filterOptionValue, 'value', 'type filter serializes option values explicitly');
+
+        let statusColumn = controller.columns.find((column) => column.label === 'column.status');
+        assert.strictEqual(statusColumn.filterOptionLabel, 'label', 'status filter reads option labels explicitly');
+        assert.strictEqual(statusColumn.filterOptionValue, 'value', 'status filter serializes option values explicitly');
+
         assert.strictEqual(serialColumn.filterParam, 'serial_number');
         assert.strictEqual(imeiColumn.filterParam, 'imei');
         assert.strictEqual(lastReadingColumn.filterParam, 'last_reading_at');

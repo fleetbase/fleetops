@@ -66,13 +66,39 @@ test('money metrics return float values to preserve cents', function () {
 });
 
 test('money metrics filter by currency to avoid mixed-currency sums', function () {
-    $earnings  = file_get_contents(dirname(__DIR__) . '/src/Support/Metrics/EarningsMetric.php');
-    $fuelCosts = file_get_contents(dirname(__DIR__) . '/src/Support/Metrics/FuelCostsMetric.php');
-    $aov       = file_get_contents(dirname(__DIR__) . '/src/Support/Metrics/AvgOrderValueMetric.php');
+    $earnings      = file_get_contents(dirname(__DIR__) . '/src/Support/Metrics/EarningsMetric.php');
+    $fuelCosts     = file_get_contents(dirname(__DIR__) . '/src/Support/Metrics/FuelCostsMetric.php');
+    $aov           = file_get_contents(dirname(__DIR__) . '/src/Support/Metrics/AvgOrderValueMetric.php');
+    $activeRevenue = file_get_contents(dirname(__DIR__) . '/src/Support/Metrics/ActiveRevenueQuery.php');
 
-    expect($earnings)->toContain("->where('currency'");
+    expect($earnings)->toContain('ActiveRevenueQuery::forCompany');
     expect($fuelCosts)->toContain("->where('currency'");
-    expect($aov)->toContain("->where('currency'");
+    expect($aov)->toContain('ActiveRevenueQuery::forCompany');
+    expect($activeRevenue)->toContain("->where('currency'");
+});
+
+test('earnings use the shared active revenue query', function () {
+    $earnings     = file_get_contents(dirname(__DIR__) . '/src/Support/Metrics/EarningsMetric.php');
+    $aov          = file_get_contents(dirname(__DIR__) . '/src/Support/Metrics/AvgOrderValueMetric.php');
+    $revenueTrend = file_get_contents(dirname(__DIR__) . '/src/Support/Analytics/RevenueTrend.php');
+
+    expect($earnings)->toContain('ActiveRevenueQuery::forCompany');
+    expect($aov)->toContain('ActiveRevenueQuery::forCompany');
+    expect($revenueTrend)->toContain('ActiveRevenueQuery::forCompany');
+});
+
+test('active revenue query excludes inactive financial and operational lifecycle records', function () {
+    $source = file_get_contents(dirname(__DIR__) . '/src/Support/Metrics/ActiveRevenueQuery.php');
+
+    expect($source)->toContain("where('direction', Transaction::DIRECTION_CREDIT)");
+    expect($source)->toContain("whereIn('status', self::ACTIVE_STATUSES)");
+    expect($source)->toContain("whereNull('voided_at')");
+    expect($source)->toContain("whereNull('reversed_at')");
+    expect($source)->toContain("whereNull('parent_transaction_uuid')");
+    expect($source)->toContain('excludeInactiveOrders');
+    expect($source)->toContain('excludeInactiveInvoices');
+    expect($source)->toContain('ledger_invoices.deleted_at');
+    expect($source)->toContain('orders.deleted_at');
 });
 
 test('ordersInProgress uses an explicit allowlist rather than an exclusion list', function () {

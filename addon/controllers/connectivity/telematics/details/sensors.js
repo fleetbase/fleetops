@@ -171,6 +171,8 @@ export default class ConnectivityTelematicsDetailsSensorsController extends Cont
                 filterParam: 'type',
                 filterComponent: 'filter/multi-option',
                 filterOptions: fleetOpsOptions('sensorTypes'),
+                filterOptionLabel: 'label',
+                filterOptionValue: 'value',
             },
             {
                 label: 'Device',
@@ -209,6 +211,8 @@ export default class ConnectivityTelematicsDetailsSensorsController extends Cont
                 filterable: true,
                 filterComponent: 'filter/multi-option',
                 filterOptions: fleetOpsOptions('sensorStatuses'),
+                filterOptionLabel: 'label',
+                filterOptionValue: 'value',
             },
             {
                 label: 'Last Reading',

@@ -2,7 +2,7 @@
 
 namespace Fleetbase\FleetOps\Support\Analytics;
 
-use Fleetbase\Models\Transaction;
+use Fleetbase\FleetOps\Support\Metrics\ActiveRevenueQuery;
 use Illuminate\Support\Carbon;
 
 /**
@@ -32,9 +32,7 @@ class RevenueTrend extends AbstractAnalytics
             default => '%Y-%m-%d',
         };
 
-        $rows = Transaction::where('company_uuid', $this->company->uuid)
-            ->where('currency', $currency)
-            ->whereBetween('created_at', [$start, $end])
+        $rows = ActiveRevenueQuery::forCompany($this->company, $currency, $start, $end)
             ->selectRaw('DATE_FORMAT(created_at, ?) as bucket, SUM(amount) as total', [$format])
             ->groupBy('bucket')
             ->orderBy('bucket')
@@ -47,10 +45,7 @@ class RevenueTrend extends AbstractAnalytics
         $duration       = $end->getTimestamp() - $start->getTimestamp();
         $compareStart   = (clone $start);
         $compareStart   = (new \DateTime())->setTimestamp($start->getTimestamp() - $duration);
-        $previousTotal  = (float) Transaction::where('company_uuid', $this->company->uuid)
-            ->where('currency', $currency)
-            ->whereBetween('created_at', [$compareStart, $start])
-            ->sum('amount');
+        $previousTotal  = (float) ActiveRevenueQuery::forCompany($this->company, $currency, $compareStart, $start)->sum('amount');
 
         $deltaPct = $previousTotal > 0
             ? round((($total - $previousTotal) / $previousTotal) * 100, 1)
