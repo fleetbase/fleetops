@@ -11,13 +11,7 @@ class FuelTransaction extends FleetbaseResource
     {
         return [
             'id'                            => $this->when(Http::isInternalRequest(), $this->id, $this->public_id),
-            'uuid'                          => $this->when(Http::isInternalRequest(), $this->uuid),
             'public_id'                     => $this->when(Http::isInternalRequest(), $this->public_id),
-            'fuel_provider_connection_uuid' => $this->when(Http::isInternalRequest(), $this->fuel_provider_connection_uuid),
-            'fuel_report_uuid'              => $this->when(Http::isInternalRequest(), $this->fuel_report_uuid),
-            'vehicle_uuid'                  => $this->when(Http::isInternalRequest(), $this->vehicle_uuid),
-            'driver_uuid'                   => $this->when(Http::isInternalRequest(), $this->driver_uuid),
-            'order_uuid'                    => $this->when(Http::isInternalRequest(), $this->order_uuid),
             'connection'                    => $this->whenLoaded('connection', fn () => $this->connection?->public_id),
             'fuel_report'                   => $this->whenLoaded('fuelReport', fn () => $this->fuelReport?->public_id),
             'vehicle'                       => $this->whenLoaded('vehicle', fn () => $this->vehicle?->public_id),

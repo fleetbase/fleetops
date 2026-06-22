@@ -28,6 +28,8 @@ class FuelTransactionController extends Controller
 
     public function create(CreateFuelTransactionRequest $request)
     {
+        $this->rejectUuidIdentifiers($request);
+
         $input                 = $this->input($request);
         $input['company_uuid'] = session('company');
 
@@ -38,6 +40,8 @@ class FuelTransactionController extends Controller
 
     public function update(string $id, UpdateFuelTransactionRequest $request)
     {
+        $this->rejectUuidIdentifiers($request);
+
         try {
             $transaction = $this->findTransaction($id);
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $exception) {
@@ -51,6 +55,8 @@ class FuelTransactionController extends Controller
 
     public function query(Request $request)
     {
+        $this->rejectUuidIdentifiers($request);
+
         $results = FuelProviderTransaction::queryWithRequest($request, function (&$query) {
             $query->with(['connection', 'vehicle', 'driver', 'order', 'fuelReport']);
         });
@@ -84,23 +90,29 @@ class FuelTransactionController extends Controller
 
     public function matchVehicle(Request $request, string $id): JsonResponse
     {
+        $this->rejectUuidIdentifiers($request);
+
         $request->validate(['vehicle' => 'required|string']);
         $transaction = $this->findTransaction($id);
+        $vehicle     = $this->resolveModel(Vehicle::class, $request->input('vehicle'));
 
         return response()->json([
             'status'      => 'ok',
-            'transaction' => new FuelTransactionResource($this->fuelProviderService->matchVehicle($transaction, $request->input('vehicle'))),
+            'transaction' => new FuelTransactionResource($this->fuelProviderService->matchVehicle($transaction, $vehicle)),
         ]);
     }
 
     public function matchOrder(Request $request, string $id): JsonResponse
     {
+        $this->rejectUuidIdentifiers($request);
+
         $request->validate(['order' => 'required|string']);
         $transaction = $this->findTransaction($id);
+        $order       = $this->resolveModel(Order::class, $request->input('order'));
 
         return response()->json([
             'status'      => 'ok',
-            'transaction' => new FuelTransactionResource($this->fuelProviderService->matchOrder($transaction, $request->input('order'))),
+            'transaction' => new FuelTransactionResource($this->fuelProviderService->matchOrder($transaction, $order)),
         ]);
     }
 
@@ -116,6 +128,8 @@ class FuelTransactionController extends Controller
 
     public function review(Request $request, string $id): JsonResponse
     {
+        $this->rejectUuidIdentifiers($request);
+
         $request->validate(['status' => 'required|string|in:reviewed,ignored']);
         $transaction = $this->findTransaction($id);
 
@@ -127,11 +141,7 @@ class FuelTransactionController extends Controller
 
     protected function findTransaction(string $id): FuelProviderTransaction
     {
-        return FuelProviderTransaction::where(function ($query) use ($id) {
-            $query->where('uuid', $id)->orWhere('public_id', $id);
-        })
-            ->where('company_uuid', session('company'))
-            ->firstOrFail();
+        return $this->resolveModel(FuelProviderTransaction::class, $id);
     }
 
     protected function input(Request $request): array

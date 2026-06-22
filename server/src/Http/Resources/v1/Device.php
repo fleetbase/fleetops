@@ -12,14 +12,8 @@ class Device extends FleetbaseResource
     {
         return $this->withCustomFields([
             'id'                    => $this->when(Http::isInternalRequest(), $this->id, $this->public_id),
-            'uuid'                  => $this->when(Http::isInternalRequest(), $this->uuid),
             'public_id'             => $this->when(Http::isInternalRequest(), $this->public_id),
-            'company_uuid'          => $this->when(Http::isInternalRequest(), $this->company_uuid),
-            'telematic_uuid'        => $this->when(Http::isInternalRequest(), $this->telematic_uuid),
-            'attachable_uuid'       => $this->when(Http::isInternalRequest(), $this->attachable_uuid),
             'attachable_type'       => $this->when(Http::isInternalRequest(), $this->attachable_type ? Utils::toEmberResourceType($this->attachable_type) : null),
-            'warranty_uuid'         => $this->when(Http::isInternalRequest(), $this->warranty_uuid),
-            'photo_uuid'            => $this->when(Http::isInternalRequest(), $this->photo_uuid),
             'telematic'             => $this->whenLoaded('telematic', fn () => $this->telematic?->public_id),
             'attachable'            => $this->whenLoaded('attachable', fn () => $this->attachable?->public_id),
             'warranty'              => $this->whenLoaded('warranty', fn () => $this->warranty?->public_id),

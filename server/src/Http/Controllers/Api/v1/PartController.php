@@ -20,6 +20,8 @@ class PartController extends Controller
 
     public function create(CreatePartRequest $request)
     {
+        $this->rejectUuidIdentifiers($request);
+
         $input                 = $this->input($request);
         $input['company_uuid'] = session('company');
 
@@ -30,6 +32,8 @@ class PartController extends Controller
 
     public function update(string $id, UpdatePartRequest $request)
     {
+        $this->rejectUuidIdentifiers($request);
+
         try {
             $part = $this->resolveModel(Part::class, $id);
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $exception) {
@@ -43,6 +47,8 @@ class PartController extends Controller
 
     public function query(Request $request)
     {
+        $this->rejectUuidIdentifiers($request);
+
         $results = Part::queryWithRequest($request, function (&$query) {
             $query->with(['vendor', 'warranty', 'photo', 'asset']);
         });

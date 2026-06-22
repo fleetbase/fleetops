@@ -64,7 +64,7 @@ test('new public controllers expose the expected rest methods', function () {
     }
 });
 
-test('new public resources exist and hide internal identifiers behind internal request checks', function () {
+test('new public resources exist and do not expose uuid identifier fields', function () {
     foreach ([Equipment::class, Part::class, WorkOrder::class, Device::class, Sensor::class, FuelTransaction::class] as $resource) {
         expect(class_exists($resource))->toBeTrue();
     }
@@ -75,28 +75,75 @@ test('new public resources exist and hide internal identifiers behind internal r
         'Device.php',
         'Sensor.php',
         'FuelTransaction.php',
+        'WorkOrder.php',
     ] as $resourceFile) {
         $source = file_get_contents(dirname(__DIR__) . '/src/Http/Resources/v1/' . $resourceFile);
 
         expect($source)
-            ->toContain('Http::isInternalRequest()')
             ->toContain("'id'")
-            ->toContain("'uuid'");
+            ->not->toMatch("/'[^']*uuid'/i");
     }
 });
 
-test('fuel transaction filter applies public company scoping and public id relation filters', function () {
+test('new public resolver rejects uuid lookup while preserving public and internal identifiers', function () {
+    $resolver = file_get_contents(dirname(__DIR__) . '/src/Http/Controllers/Api/v1/Concerns/ResolvesFleetOpsApiResources.php');
+
+    expect($resolver)
+        ->not->toContain("where('uuid', \$id)")
+        ->not->toContain("orWhere('uuid', \$id)")
+        ->toContain("orWhere('public_id', \$id)")
+        ->toContain("orWhere('internal_id', \$id)")
+        ->toContain('rejectUuidIdentifiers')
+        ->toContain('Use public_id or internal_id values instead');
+});
+
+test('public controllers reject uuid shaped request keys', function () {
+    foreach ([
+        'EquipmentController.php',
+        'PartController.php',
+        'WorkOrderController.php',
+        'DeviceController.php',
+        'SensorController.php',
+        'FuelTransactionController.php',
+    ] as $controllerFile) {
+        $source = file_get_contents(dirname(__DIR__) . '/src/Http/Controllers/Api/v1/' . $controllerFile);
+
+        expect($source)->toContain('rejectUuidIdentifiers($request)');
+    }
+});
+
+test('new public list endpoints have company scoped filters', function () {
+    foreach ([
+        'EquipmentFilter.php',
+        'PartFilter.php',
+        'WorkOrderFilter.php',
+        'DeviceFilter.php',
+        'SensorFilter.php',
+        'FuelProviderTransactionFilter.php',
+    ] as $filterFile) {
+        $source = file_get_contents(dirname(__DIR__) . '/src/Http/Filter/' . $filterFile);
+
+        expect($source)
+            ->toContain('public function queryForPublic()')
+            ->toContain("where('company_uuid', \$this->session->get('company'))");
+    }
+});
+
+test('fuel transaction filter applies public company scoping and public id relation filters without raw uuid matching', function () {
     $filter = file_get_contents(dirname(__DIR__) . '/src/Http/Filter/FuelProviderTransactionFilter.php');
 
     expect($filter)
         ->toContain('public function queryForPublic()')
         ->toContain('$this->queryForInternal();')
         ->toContain('public function vehicle(?string $vehicle)')
-        ->toContain("where('public_id', \$vehicle)")
         ->toContain('public function driver(?string $driver)')
-        ->toContain("where('public_id', \$driver)")
         ->toContain('public function order(?string $order)')
-        ->toContain("where('public_id', \$order)")
         ->toContain('public function fuelReport(?string $fuelReport)')
-        ->toContain("where('public_id', \$fuelReport)");
+        ->toContain("where('public_id', \$identifier)")
+        ->toContain("orWhere('internal_id', \$identifier)")
+        ->toContain("if (\$allowUuid)")
+        ->not->toContain("where('vehicle_uuid', \$vehicle)")
+        ->not->toContain("where('driver_uuid', \$driver)")
+        ->not->toContain("where('order_uuid', \$order)")
+        ->not->toContain("where('fuel_report_uuid', \$fuelReport)");
 });

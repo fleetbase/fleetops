@@ -23,6 +23,8 @@ class SensorController extends Controller
 
     public function create(CreateSensorRequest $request)
     {
+        $this->rejectUuidIdentifiers($request);
+
         $input                 = $this->input($request);
         $input['company_uuid'] = session('company');
 
@@ -33,6 +35,8 @@ class SensorController extends Controller
 
     public function update(string $id, UpdateSensorRequest $request)
     {
+        $this->rejectUuidIdentifiers($request);
+
         try {
             $sensor = $this->resolveModel(Sensor::class, $id);
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $exception) {
@@ -46,6 +50,8 @@ class SensorController extends Controller
 
     public function query(Request $request)
     {
+        $this->rejectUuidIdentifiers($request);
+
         $results = Sensor::queryWithRequest($request, function (&$query) {
             $query->with(['telematic', 'device', 'warranty', 'photo', 'sensorable']);
         });

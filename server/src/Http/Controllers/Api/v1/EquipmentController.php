@@ -19,6 +19,8 @@ class EquipmentController extends Controller
 
     public function create(CreateEquipmentRequest $request)
     {
+        $this->rejectUuidIdentifiers($request);
+
         $input                 = $this->input($request);
         $input['company_uuid'] = session('company');
 
@@ -29,6 +31,8 @@ class EquipmentController extends Controller
 
     public function update(string $id, UpdateEquipmentRequest $request)
     {
+        $this->rejectUuidIdentifiers($request);
+
         try {
             $equipment = $this->resolveModel(Equipment::class, $id);
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $exception) {
@@ -42,6 +46,8 @@ class EquipmentController extends Controller
 
     public function query(Request $request)
     {
+        $this->rejectUuidIdentifiers($request);
+
         $results = Equipment::queryWithRequest($request, function (&$query) {
             $query->with(['warranty', 'photo', 'equipable']);
         });

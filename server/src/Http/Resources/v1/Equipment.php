@@ -12,12 +12,7 @@ class Equipment extends FleetbaseResource
     {
         return $this->withCustomFields([
             'id'                 => $this->when(Http::isInternalRequest(), $this->id, $this->public_id),
-            'uuid'               => $this->when(Http::isInternalRequest(), $this->uuid),
             'public_id'          => $this->when(Http::isInternalRequest(), $this->public_id),
-            'company_uuid'       => $this->when(Http::isInternalRequest(), $this->company_uuid),
-            'warranty_uuid'      => $this->when(Http::isInternalRequest(), $this->warranty_uuid),
-            'photo_uuid'         => $this->when(Http::isInternalRequest(), $this->photo_uuid),
-            'equipable_uuid'     => $this->when(Http::isInternalRequest(), $this->equipable_uuid),
             'equipable_type'     => $this->when(Http::isInternalRequest(), $this->equipable_type ? Utils::toEmberResourceType($this->equipable_type) : null),
             'warranty'           => $this->whenLoaded('warranty', fn () => $this->warranty?->public_id),
             'photo'              => $this->whenLoaded('photo', fn () => $this->photo?->public_id),

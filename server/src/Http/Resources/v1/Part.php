@@ -12,13 +12,7 @@ class Part extends FleetbaseResource
     {
         return [
             'id'               => $this->when(Http::isInternalRequest(), $this->id, $this->public_id),
-            'uuid'             => $this->when(Http::isInternalRequest(), $this->uuid),
             'public_id'        => $this->when(Http::isInternalRequest(), $this->public_id),
-            'company_uuid'     => $this->when(Http::isInternalRequest(), $this->company_uuid),
-            'vendor_uuid'      => $this->when(Http::isInternalRequest(), $this->vendor_uuid),
-            'warranty_uuid'    => $this->when(Http::isInternalRequest(), $this->warranty_uuid),
-            'photo_uuid'       => $this->when(Http::isInternalRequest(), $this->photo_uuid),
-            'asset_uuid'       => $this->when(Http::isInternalRequest(), $this->asset_uuid),
             'asset_type'       => $this->when(Http::isInternalRequest(), $this->asset_type ? Utils::toEmberResourceType($this->asset_type) : null),
             'vendor'           => $this->whenLoaded('vendor', fn () => $this->vendor?->public_id),
             'warranty'         => $this->whenLoaded('warranty', fn () => $this->warranty?->public_id),

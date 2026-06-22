@@ -12,14 +12,7 @@ class Sensor extends FleetbaseResource
     {
         return $this->withCustomFields([
             'id'                   => $this->when(Http::isInternalRequest(), $this->id, $this->public_id),
-            'uuid'                 => $this->when(Http::isInternalRequest(), $this->uuid),
             'public_id'            => $this->when(Http::isInternalRequest(), $this->public_id),
-            'company_uuid'         => $this->when(Http::isInternalRequest(), $this->company_uuid),
-            'device_uuid'          => $this->when(Http::isInternalRequest(), $this->device_uuid),
-            'warranty_uuid'        => $this->when(Http::isInternalRequest(), $this->warranty_uuid),
-            'telematic_uuid'       => $this->when(Http::isInternalRequest(), $this->telematic_uuid),
-            'photo_uuid'           => $this->when(Http::isInternalRequest(), $this->photo_uuid),
-            'sensorable_uuid'      => $this->when(Http::isInternalRequest(), $this->sensorable_uuid),
             'sensorable_type'      => $this->when(Http::isInternalRequest(), $this->sensorable_type ? Utils::toEmberResourceType($this->sensorable_type) : null),
             'device'               => $this->whenLoaded('device', fn () => $this->device?->public_id),
             'warranty'             => $this->whenLoaded('warranty', fn () => $this->warranty?->public_id),

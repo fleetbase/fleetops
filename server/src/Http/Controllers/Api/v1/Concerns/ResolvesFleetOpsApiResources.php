@@ -18,6 +18,8 @@ use Fleetbase\FleetOps\Support\Utils;
 use Fleetbase\Models\File;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
+use Illuminate\Http\Request;
+use Illuminate\Validation\ValidationException;
 
 trait ResolvesFleetOpsApiResources
 {
@@ -34,7 +36,7 @@ trait ResolvesFleetOpsApiResources
     {
         $instance = new $modelClass();
         $query    = $modelClass::query()->where(function ($query) use ($id, $instance) {
-            $query->where('uuid', $id);
+            $query->whereRaw('0 = 1');
 
             if (in_array('public_id', $instance->getFillable()) || method_exists($instance, 'getPublicIdType')) {
                 $query->orWhere('public_id', $id);
@@ -67,6 +69,49 @@ trait ResolvesFleetOpsApiResources
         $model      = $this->resolveModel($modelClass, $id);
 
         return [$modelClass, $model->uuid];
+    }
+
+    protected function rejectUuidIdentifiers(Request $request): void
+    {
+        $invalidKeys = array_unique(array_merge(
+            $this->collectUuidIdentifierKeys($request->query->all()),
+            $this->collectUuidIdentifierKeys($request->request->all())
+        ));
+
+        if (empty($invalidKeys)) {
+            return;
+        }
+
+        $messages = [];
+        foreach ($invalidKeys as $key) {
+            $messages[$key] = ['UUID identifiers are not accepted by the public API. Use public_id or internal_id values instead.'];
+        }
+
+        throw ValidationException::withMessages($messages);
+    }
+
+    protected function collectUuidIdentifierKeys(array $input, string $prefix = ''): array
+    {
+        $keys = [];
+
+        foreach ($input as $key => $value) {
+            $path = $prefix ? $prefix . '.' . $key : (string) $key;
+
+            if ($this->isUuidIdentifierKey((string) $key)) {
+                $keys[] = $path;
+            }
+
+            if (is_array($value)) {
+                $keys = array_merge($keys, $this->collectUuidIdentifierKeys($value, $path));
+            }
+        }
+
+        return $keys;
+    }
+
+    protected function isUuidIdentifierKey(string $key): bool
+    {
+        return preg_match('/(^uuid$|_uuid$|Uuid$|UUID$)/', $key) === 1;
     }
 
     protected function applyPublicIdRelation(array &$input, string $requestKey, string $column, string $modelClass, $request): void

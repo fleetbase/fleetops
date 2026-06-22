@@ -25,6 +25,8 @@ class DeviceController extends Controller
 
     public function create(CreateDeviceRequest $request)
     {
+        $this->rejectUuidIdentifiers($request);
+
         $input                 = $this->input($request);
         $input['company_uuid'] = session('company');
 
@@ -35,6 +37,8 @@ class DeviceController extends Controller
 
     public function update(string $id, UpdateDeviceRequest $request)
     {
+        $this->rejectUuidIdentifiers($request);
+
         try {
             $device = $this->resolveModel(Device::class, $id);
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $exception) {
@@ -48,6 +52,8 @@ class DeviceController extends Controller
 
     public function query(Request $request)
     {
+        $this->rejectUuidIdentifiers($request);
+
         $results = Device::queryWithRequest($request, function (&$query) {
             $query->with(['telematic', 'warranty', 'attachable', 'photo'])->withCount('sensors');
         });
@@ -82,6 +88,8 @@ class DeviceController extends Controller
 
     public function attach(Request $request, string $id): JsonResponse
     {
+        $this->rejectUuidIdentifiers($request);
+
         $request->validate([
             'vehicle' => 'required_without:attachable|string|nullable',
         ]);

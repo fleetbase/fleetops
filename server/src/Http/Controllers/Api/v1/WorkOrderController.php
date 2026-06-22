@@ -20,6 +20,8 @@ class WorkOrderController extends Controller
 
     public function create(CreateWorkOrderRequest $request)
     {
+        $this->rejectUuidIdentifiers($request);
+
         $input                 = $this->input($request);
         $input['company_uuid'] = session('company');
 
@@ -30,6 +32,8 @@ class WorkOrderController extends Controller
 
     public function update(string $id, UpdateWorkOrderRequest $request)
     {
+        $this->rejectUuidIdentifiers($request);
+
         try {
             $workOrder = $this->resolveModel(WorkOrder::class, $id);
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $exception) {
@@ -43,6 +47,8 @@ class WorkOrderController extends Controller
 
     public function query(Request $request)
     {
+        $this->rejectUuidIdentifiers($request);
+
         $results = WorkOrder::queryWithRequest($request, function (&$query) {
             $query->with(['target', 'assignee']);
         });
