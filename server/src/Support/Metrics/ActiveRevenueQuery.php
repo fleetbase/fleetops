@@ -10,10 +10,10 @@ use Illuminate\Support\Facades\Schema;
 
 class ActiveRevenueQuery
 {
-    public const ACTIVE_STATUSES               = ['success', 'completed', 'paid'];
+    public const ACTIVE_STATUSES               = [Transaction::STATUS_SUCCESS];
     public const INACTIVE_TRANSACTION_STATUSES = ['pending', 'failed', 'cancelled', 'canceled', 'void', 'voided', 'expired', 'reversed', 'refunded', 'ignored'];
     public const INACTIVE_ORDER_STATUSES       = ['canceled', 'cancelled', 'order_canceled'];
-    public const INACTIVE_INVOICE_STATUSES     = ['draft', 'void', 'voided', 'cancelled', 'canceled'];
+    public const INACTIVE_INVOICE_STATUSES     = ['void', 'voided', 'cancelled', 'canceled'];
 
     public static function forCompany(Company $company, string $currency, ?\DateTimeInterface $start = null, ?\DateTimeInterface $end = null): Builder
     {

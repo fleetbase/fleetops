@@ -49,7 +49,8 @@ class PurchaseRateObserver
             'description'            => 'Dispatch order',
             'type'                   => 'dispatch',
             'direction'              => Transaction::DIRECTION_CREDIT,
-            'status'                 => 'success',
+            'status'                 => Transaction::STATUS_SUCCESS,
+            'settlement_status'      => Transaction::SETTLEMENT_STATUS_UNPAID,
         ]);
 
         if (isset($purchaseRate->serviceQuote)) {

@@ -1208,7 +1208,8 @@ class Order extends Model
                 'description'            => 'Dispatch order',
                 'type'                   => 'dispatch',
                 'direction'              => Transaction::DIRECTION_CREDIT,
-                'status'                 => 'success',
+                'status'                 => Transaction::STATUS_SUCCESS,
+                'settlement_status'      => Transaction::SETTLEMENT_STATUS_UNPAID,
             ]);
 
             $this->updateQuietly(['transaction_uuid' => $transaction->uuid]);

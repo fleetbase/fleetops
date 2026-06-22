@@ -4,6 +4,7 @@ use Fleetbase\FleetOps\Support\Metrics\AbstractMetric;
 use Fleetbase\FleetOps\Support\Metrics\OrdersInProgressMetric;
 use Fleetbase\FleetOps\Support\Metrics\Registry;
 use Fleetbase\FleetOps\Support\Metrics\TotalTimeTraveledMetric;
+use Fleetbase\Models\Transaction;
 
 test('registry exposes every known metric slug', function () {
     $slugs = Registry::slugs();
@@ -99,6 +100,19 @@ test('active revenue query excludes inactive financial and operational lifecycle
     expect($source)->toContain('excludeInactiveInvoices');
     expect($source)->toContain('ledger_invoices.deleted_at');
     expect($source)->toContain('orders.deleted_at');
+    expect(\Fleetbase\FleetOps\Support\Metrics\ActiveRevenueQuery::ACTIVE_STATUSES)->toBe([Transaction::STATUS_SUCCESS]);
+    expect(\Fleetbase\FleetOps\Support\Metrics\ActiveRevenueQuery::ACTIVE_STATUSES)->not->toContain('completed');
+    expect(\Fleetbase\FleetOps\Support\Metrics\ActiveRevenueQuery::ACTIVE_STATUSES)->not->toContain('paid');
+});
+
+test('active revenue query treats invoice status as invalidation only', function () {
+    $inactiveInvoiceStatuses = \Fleetbase\FleetOps\Support\Metrics\ActiveRevenueQuery::INACTIVE_INVOICE_STATUSES;
+
+    expect($inactiveInvoiceStatuses)->not->toContain('draft');
+    expect($inactiveInvoiceStatuses)->toContain('void');
+    expect($inactiveInvoiceStatuses)->toContain('voided');
+    expect($inactiveInvoiceStatuses)->toContain('cancelled');
+    expect($inactiveInvoiceStatuses)->toContain('canceled');
 });
 
 test('ordersInProgress uses an explicit allowlist rather than an exclusion list', function () {
