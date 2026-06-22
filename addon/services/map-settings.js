@@ -6,6 +6,9 @@ const DEFAULT_SETTINGS = {
     mapProvider: 'leaflet',
     googleMapsApiKey: '',
     googleMapsMapId: '',
+    googleMapsMapType: 'roadmap',
+    showGoogleMapsTrafficLayer: false,
+    showGoogleMapsTransitLayer: false,
 };
 
 export default class MapSettingsService extends Service {
@@ -24,6 +27,18 @@ export default class MapSettingsService extends Service {
 
     get googleMapsMapId() {
         return this.settings.googleMapsMapId ?? '';
+    }
+
+    get googleMapsMapType() {
+        return this.settings.googleMapsMapType ?? 'roadmap';
+    }
+
+    get showGoogleMapsTrafficLayer() {
+        return Boolean(this.settings.showGoogleMapsTrafficLayer);
+    }
+
+    get showGoogleMapsTransitLayer() {
+        return Boolean(this.settings.showGoogleMapsTransitLayer);
     }
 
     get isGoogleMaps() {

@@ -139,6 +139,9 @@ export default class MapManagerService extends Service {
             ...options,
             apiKey: options.apiKey ?? this.mapSettings.googleMapsApiKey,
             mapId: options.mapId ?? this.mapSettings.googleMapsMapId,
+            mapTypeId: options.mapTypeId ?? this.mapSettings.googleMapsMapType,
+            showTrafficLayer: options.showTrafficLayer ?? this.mapSettings.showGoogleMapsTrafficLayer,
+            showTransitLayer: options.showTransitLayer ?? this.mapSettings.showGoogleMapsTransitLayer,
         });
 
         return Promise.resolve(map).then((nativeMap) => {

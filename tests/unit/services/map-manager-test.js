@@ -9,6 +9,10 @@ module('Unit | Service | map-manager', function (hooks) {
         class MapSettingsStubService extends Service {
             mapProvider = 'google';
             googleMapsApiKey = 'abc123';
+            googleMapsMapId = 'map-123';
+            googleMapsMapType = 'satellite';
+            showGoogleMapsTrafficLayer = true;
+            showGoogleMapsTransitLayer = true;
         }
 
         class LeafletContextmenuManagerStubService extends Service {
@@ -109,6 +113,10 @@ module('Unit | Service | map-manager', function (hooks) {
 
         assert.strictEqual(map.provider, 'google');
         assert.strictEqual(map.options.apiKey, 'abc123');
+        assert.strictEqual(map.options.mapId, 'map-123');
+        assert.strictEqual(map.options.mapTypeId, 'satellite');
+        assert.true(map.options.showTrafficLayer);
+        assert.true(map.options.showTransitLayer);
     });
 
     test('it delegates draw control config to the active adapter', function (assert) {

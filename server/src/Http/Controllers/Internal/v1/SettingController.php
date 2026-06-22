@@ -327,12 +327,16 @@ class SettingController extends Controller
     public function getMapSettings()
     {
         $defaults = [
-            'mapProvider' => 'leaflet',
+            'mapProvider'                 => 'leaflet',
+            'googleMapsMapType'           => 'roadmap',
+            'showGoogleMapsTrafficLayer'  => false,
+            'showGoogleMapsTransitLayer'  => false,
         ];
 
         $systemMapSettings          = Setting::lookup('fleet-ops.map-settings', []);
         $mapSettings                = Setting::lookupFromCompany('fleet-ops.map-settings', $defaults);
         $mapSettings['mapProvider'] = data_get($mapSettings, 'mapProvider') ?: data_get($systemMapSettings, 'mapProvider', 'leaflet');
+        $mapSettings                = $this->normalizeCompanyMapSettings($mapSettings);
 
         // Source the Google Maps API key from the system-level services config
         // that is managed by the core-api admin settings panel. This ensures a
@@ -362,10 +366,7 @@ class SettingController extends Controller
         unset($settings['googleMapsApiKey']);
 
         // Validate provider value
-        $allowedProviders = ['leaflet', 'google'];
-        if (isset($settings['mapProvider']) && !in_array($settings['mapProvider'], $allowedProviders)) {
-            $settings['mapProvider'] = 'leaflet';
-        }
+        $settings = $this->normalizeCompanyMapSettings($settings);
 
         Setting::configureCompany('fleet-ops.map-settings', $settings);
 
@@ -398,6 +399,29 @@ class SettingController extends Controller
         Setting::configure('fleet-ops.map-settings', $settings);
 
         return response()->json($this->getAdminMapSettings()->getData(true));
+    }
+
+    protected function normalizeCompanyMapSettings(array $settings): array
+    {
+        $allowedProviders = ['leaflet', 'google'];
+        $mapProvider      = data_get($settings, 'mapProvider', 'leaflet');
+        if (!in_array($mapProvider, $allowedProviders)) {
+            $mapProvider = 'leaflet';
+        }
+
+        $allowedGoogleMapTypes = ['roadmap', 'satellite', 'hybrid', 'terrain'];
+        $googleMapsMapType     = data_get($settings, 'googleMapsMapType', 'roadmap');
+        if (!in_array($googleMapsMapType, $allowedGoogleMapTypes)) {
+            $googleMapsMapType = 'roadmap';
+        }
+
+        return [
+            ...$settings,
+            'mapProvider'                => $mapProvider,
+            'googleMapsMapType'          => $googleMapsMapType,
+            'showGoogleMapsTrafficLayer' => filter_var(data_get($settings, 'showGoogleMapsTrafficLayer', false), FILTER_VALIDATE_BOOLEAN),
+            'showGoogleMapsTransitLayer' => filter_var(data_get($settings, 'showGoogleMapsTransitLayer', false), FILTER_VALIDATE_BOOLEAN),
+        ];
     }
 
     /**

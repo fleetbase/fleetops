@@ -11,6 +11,9 @@ module('Unit | Service | map-settings', function (hooks) {
                 return Promise.resolve({
                     mapProvider: 'google',
                     googleMapsApiKey: 'abc123',
+                    googleMapsMapType: 'satellite',
+                    showGoogleMapsTrafficLayer: true,
+                    showGoogleMapsTransitLayer: true,
                 });
             }
         }
@@ -22,6 +25,9 @@ module('Unit | Service | map-settings', function (hooks) {
 
         assert.strictEqual(settings.mapProvider, 'google');
         assert.strictEqual(service.googleMapsApiKey, 'abc123');
+        assert.strictEqual(service.googleMapsMapType, 'satellite');
+        assert.true(service.showGoogleMapsTrafficLayer);
+        assert.true(service.showGoogleMapsTransitLayer);
         assert.true(service.isGoogleMaps);
     });
 
@@ -39,6 +45,18 @@ module('Unit | Service | map-settings', function (hooks) {
 
         assert.strictEqual(settings.mapProvider, 'leaflet');
         assert.strictEqual(service.googleMapsApiKey, '');
+        assert.strictEqual(service.googleMapsMapType, 'roadmap');
+        assert.false(service.showGoogleMapsTrafficLayer);
+        assert.false(service.showGoogleMapsTransitLayer);
         assert.false(service.isGoogleMaps);
+    });
+
+    test('it applies google view layer defaults when values are omitted', function (assert) {
+        const service = this.owner.lookup('service:map-settings');
+        const settings = service.applySettings({ mapProvider: 'google' });
+
+        assert.strictEqual(settings.googleMapsMapType, 'roadmap');
+        assert.false(service.showGoogleMapsTrafficLayer);
+        assert.false(service.showGoogleMapsTransitLayer);
     });
 });
