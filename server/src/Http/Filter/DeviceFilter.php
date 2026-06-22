@@ -2,9 +2,11 @@
 
 namespace Fleetbase\FleetOps\Http\Filter;
 
+use Fleetbase\FleetOps\Models\Telematic;
 use Fleetbase\FleetOps\Models\Vehicle;
 use Fleetbase\FleetOps\Support\Utils;
 use Fleetbase\Http\Filter\Filter;
+use Fleetbase\Support\Http;
 
 class DeviceFilter extends Filter
 {
@@ -57,7 +59,7 @@ class DeviceFilter extends Filter
 
     public function telematic(?string $telematic)
     {
-        $this->builder->where('telematic_uuid', $telematic);
+        $this->wherePublicRelation('telematic_uuid', Telematic::class, $telematic);
     }
 
     public function telematicUuid(?string $telematic)
@@ -87,15 +89,7 @@ class DeviceFilter extends Filter
 
     public function vehicle(?string $vehicle)
     {
-        if ($vehicle) {
-            $this->builder->where(function ($query) use ($vehicle) {
-                $query->where('attachable_uuid', $vehicle)
-                    ->orWhereIn('attachable_uuid', Vehicle::query()
-                        ->where('company_uuid', $this->session->get('company'))
-                        ->where('public_id', $vehicle)
-                        ->pluck('uuid'));
-            });
-        }
+        $this->wherePublicRelation('attachable_uuid', Vehicle::class, $vehicle);
     }
 
     public function connectionStatus(string|array $connectionStatus)
@@ -150,5 +144,34 @@ class DeviceFilter extends Filter
         } else {
             $this->builder->whereDate($column, $dates);
         }
+    }
+
+    protected function wherePublicRelation(string $column, string $modelClass, ?string $identifier): void
+    {
+        if (!$identifier) {
+            return;
+        }
+
+        $this->builder->whereIn($column, $this->resolvePublicRelationUuids($modelClass, $identifier, Http::isInternalRequest($this->request)));
+    }
+
+    protected function resolvePublicRelationUuids(string $modelClass, string $identifier, bool $allowUuid = false)
+    {
+        $instance = new $modelClass();
+
+        return $modelClass::query()
+            ->where('company_uuid', $this->session->get('company'))
+            ->where(function ($query) use ($identifier, $instance, $allowUuid) {
+                $query->where('public_id', $identifier);
+
+                if (in_array('internal_id', $instance->getFillable())) {
+                    $query->orWhere('internal_id', $identifier);
+                }
+
+                if ($allowUuid) {
+                    $query->orWhere('uuid', $identifier);
+                }
+            })
+            ->pluck('uuid');
     }
 }

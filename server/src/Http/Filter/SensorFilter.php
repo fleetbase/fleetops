@@ -2,8 +2,11 @@
 
 namespace Fleetbase\FleetOps\Http\Filter;
 
+use Fleetbase\FleetOps\Models\Device;
+use Fleetbase\FleetOps\Models\Telematic;
 use Fleetbase\FleetOps\Support\Utils;
 use Fleetbase\Http\Filter\Filter;
+use Fleetbase\Support\Http;
 
 class SensorFilter extends Filter
 {
@@ -47,9 +50,7 @@ class SensorFilter extends Filter
 
     public function device(?string $device)
     {
-        if ($device) {
-            $this->builder->where('device_uuid', $device);
-        }
+        $this->wherePublicRelation('device_uuid', Device::class, $device);
     }
 
     public function deviceUuid(?string $device)
@@ -59,9 +60,7 @@ class SensorFilter extends Filter
 
     public function telematic(?string $telematic)
     {
-        if ($telematic) {
-            $this->builder->where('telematic_uuid', $telematic);
-        }
+        $this->wherePublicRelation('telematic_uuid', Telematic::class, $telematic);
     }
 
     public function telematicUuid(?string $telematic)
@@ -121,5 +120,34 @@ class SensorFilter extends Filter
         } else {
             $this->builder->whereDate($column, $dates);
         }
+    }
+
+    protected function wherePublicRelation(string $column, string $modelClass, ?string $identifier): void
+    {
+        if (!$identifier) {
+            return;
+        }
+
+        $this->builder->whereIn($column, $this->resolvePublicRelationUuids($modelClass, $identifier, Http::isInternalRequest($this->request)));
+    }
+
+    protected function resolvePublicRelationUuids(string $modelClass, string $identifier, bool $allowUuid = false)
+    {
+        $instance = new $modelClass();
+
+        return $modelClass::query()
+            ->where('company_uuid', $this->session->get('company'))
+            ->where(function ($query) use ($identifier, $instance, $allowUuid) {
+                $query->where('public_id', $identifier);
+
+                if (in_array('internal_id', $instance->getFillable())) {
+                    $query->orWhere('internal_id', $identifier);
+                }
+
+                if ($allowUuid) {
+                    $query->orWhere('uuid', $identifier);
+                }
+            })
+            ->pluck('uuid');
     }
 }

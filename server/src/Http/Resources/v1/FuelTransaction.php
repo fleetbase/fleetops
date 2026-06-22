@@ -1,0 +1,53 @@
+<?php
+
+namespace Fleetbase\FleetOps\Http\Resources\v1;
+
+use Fleetbase\Http\Resources\FleetbaseResource;
+use Fleetbase\Support\Http;
+
+class FuelTransaction extends FleetbaseResource
+{
+    public function toArray($request)
+    {
+        return [
+            'id'                            => $this->when(Http::isInternalRequest(), $this->id, $this->public_id),
+            'public_id'                     => $this->when(Http::isInternalRequest(), $this->public_id),
+            'connection'                    => $this->whenLoaded('connection', fn () => $this->connection?->public_id),
+            'fuel_report'                   => $this->whenLoaded('fuelReport', fn () => $this->fuelReport?->public_id),
+            'vehicle'                       => $this->whenLoaded('vehicle', fn () => $this->vehicle?->public_id),
+            'driver'                        => $this->whenLoaded('driver', fn () => $this->driver?->public_id),
+            'order'                         => $this->whenLoaded('order', fn () => $this->order?->public_id),
+            'provider'                      => $this->provider,
+            'provider_transaction_id'       => $this->provider_transaction_id,
+            'provider_vehicle_id'           => $this->provider_vehicle_id,
+            'vehicle_card_id'               => $this->vehicle_card_id,
+            'internal_number'               => $this->internal_number,
+            'structure_number'              => $this->structure_number,
+            'plate_number'                  => $this->plate_number,
+            'vin'                           => $this->vin,
+            'serial_number'                 => $this->serial_number,
+            'call_sign'                     => $this->call_sign,
+            'trip_number'                   => $this->trip_number,
+            'station_name'                  => $this->station_name,
+            'station_latitude'              => $this->station_latitude,
+            'station_longitude'             => $this->station_longitude,
+            'station_location'              => $this->station_location,
+            'transaction_at'                => $this->transaction_at,
+            'volume'                        => $this->volume,
+            'metric_unit'                   => $this->metric_unit,
+            'amount'                        => $this->amount,
+            'currency'                      => $this->currency,
+            'odometer'                      => $this->odometer,
+            'sync_status'                   => $this->sync_status,
+            'matched_at'                    => $this->matched_at,
+            'vehicle_name'                  => $this->vehicle_name,
+            'driver_name'                   => $this->driver_name,
+            'fuel_report_id'                => $this->fuel_report_id,
+            'normalized_payload'            => $this->when(Http::isInternalRequest(), $this->normalized_payload),
+            'raw_payload'                   => $this->when(Http::isInternalRequest(), $this->raw_payload),
+            'meta'                          => $this->when(Http::isInternalRequest(), $this->meta),
+            'updated_at'                    => $this->updated_at,
+            'created_at'                    => $this->created_at,
+        ];
+    }
+}

@@ -20,20 +20,13 @@ class WorkOrder extends FleetbaseResource
     {
         return $this->withCustomFields([
             'id'                      => $this->when(Http::isInternalRequest(), $this->id, $this->public_id),
-            'uuid'                    => $this->when(Http::isInternalRequest(), $this->uuid),
             'public_id'               => $this->when(Http::isInternalRequest(), $this->public_id),
-            'company_uuid'            => $this->when(Http::isInternalRequest(), $this->company_uuid),
-            'schedule_uuid'           => $this->when(Http::isInternalRequest(), $this->schedule_uuid),
-            'created_by_uuid'         => $this->when(Http::isInternalRequest(), $this->created_by_uuid),
-            'updated_by_uuid'         => $this->when(Http::isInternalRequest(), $this->updated_by_uuid),
             // Polymorphic target
-            'target_uuid'             => $this->when(Http::isInternalRequest(), $this->target_uuid),
             'target_type'             => $this->when(Http::isInternalRequest(), $this->target_type ? Utils::toEmberResourceType($this->target_type) : null),
             'target'                  => $this->whenLoaded('target', function () {
                 return $this->setTargetType($this->transformMorphResource($this->target));
             }),
             // Polymorphic assignee
-            'assignee_uuid'           => $this->when(Http::isInternalRequest(), $this->assignee_uuid),
             'assignee_type'           => $this->when(Http::isInternalRequest(), $this->assignee_type ? Utils::toEmberResourceType($this->assignee_type) : null),
             'assignee'                => $this->whenLoaded('assignee', function () {
                 return $this->setAssigneeType($this->transformMorphResource($this->assignee));
