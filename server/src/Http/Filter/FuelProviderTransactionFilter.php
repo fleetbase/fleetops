@@ -13,6 +13,11 @@ class FuelProviderTransactionFilter extends Filter
         $this->builder->where('company_uuid', $this->session->get('company'));
     }
 
+    public function queryForPublic()
+    {
+        $this->queryForInternal();
+    }
+
     public function query(?string $searchQuery)
     {
         $this->builder->search($searchQuery);
@@ -38,12 +43,57 @@ class FuelProviderTransactionFilter extends Filter
 
     public function vehicle(?string $vehicle)
     {
-        $this->builder->where('vehicle_uuid', $vehicle);
+        $this->builder->where(function ($query) use ($vehicle) {
+            $query->where('vehicle_uuid', $vehicle)
+                ->orWhereIn('vehicle_uuid', \Fleetbase\FleetOps\Models\Vehicle::query()
+                    ->where('company_uuid', $this->session->get('company'))
+                    ->where('public_id', $vehicle)
+                    ->pluck('uuid'));
+        });
     }
 
     public function connection(?string $connection)
     {
-        $this->builder->where('fuel_provider_connection_uuid', $connection);
+        $this->builder->where(function ($query) use ($connection) {
+            $query->where('fuel_provider_connection_uuid', $connection)
+                ->orWhereIn('fuel_provider_connection_uuid', \Fleetbase\FleetOps\Models\FuelProviderConnection::query()
+                    ->where('company_uuid', $this->session->get('company'))
+                    ->where('public_id', $connection)
+                    ->pluck('uuid'));
+        });
+    }
+
+    public function driver(?string $driver)
+    {
+        $this->builder->where(function ($query) use ($driver) {
+            $query->where('driver_uuid', $driver)
+                ->orWhereIn('driver_uuid', \Fleetbase\FleetOps\Models\Driver::query()
+                    ->where('company_uuid', $this->session->get('company'))
+                    ->where('public_id', $driver)
+                    ->pluck('uuid'));
+        });
+    }
+
+    public function order(?string $order)
+    {
+        $this->builder->where(function ($query) use ($order) {
+            $query->where('order_uuid', $order)
+                ->orWhereIn('order_uuid', \Fleetbase\FleetOps\Models\Order::query()
+                    ->where('company_uuid', $this->session->get('company'))
+                    ->where('public_id', $order)
+                    ->pluck('uuid'));
+        });
+    }
+
+    public function fuelReport(?string $fuelReport)
+    {
+        $this->builder->where(function ($query) use ($fuelReport) {
+            $query->where('fuel_report_uuid', $fuelReport)
+                ->orWhereIn('fuel_report_uuid', \Fleetbase\FleetOps\Models\FuelReport::query()
+                    ->where('company_uuid', $this->session->get('company'))
+                    ->where('public_id', $fuelReport)
+                    ->pluck('uuid'));
+        });
     }
 
     public function transactionAt($transactionAt)

@@ -105,6 +105,61 @@ Route::prefix(config('fleetops.api.routing.prefix'))->namespace('Fleetbase\Fleet
                 $router->put('{id}', 'FuelReportController@update');
                 $router->delete('{id}', 'FuelReportController@delete');
             });
+            // fuel-transactions routes
+            $router->group(['prefix' => 'fuel-transactions'], function () use ($router) {
+                $router->post('/', 'FuelTransactionController@create');
+                $router->get('/', 'FuelTransactionController@query');
+                $router->get('{id}', 'FuelTransactionController@find');
+                $router->put('{id}', 'FuelTransactionController@update');
+                $router->delete('{id}', 'FuelTransactionController@delete');
+                $router->post('{id}/match-vehicle', 'FuelTransactionController@matchVehicle');
+                $router->post('{id}/match-order', 'FuelTransactionController@matchOrder');
+                $router->post('{id}/reprocess', 'FuelTransactionController@reprocess');
+                $router->post('{id}/review', 'FuelTransactionController@review');
+            });
+            // equipment routes
+            $router->group(['prefix' => 'equipment'], function () use ($router) {
+                $router->post('/', 'EquipmentController@create');
+                $router->get('/', 'EquipmentController@query');
+                $router->get('{id}', 'EquipmentController@find');
+                $router->put('{id}', 'EquipmentController@update');
+                $router->delete('{id}', 'EquipmentController@delete');
+            });
+            // parts routes
+            $router->group(['prefix' => 'parts'], function () use ($router) {
+                $router->post('/', 'PartController@create');
+                $router->get('/', 'PartController@query');
+                $router->get('{id}', 'PartController@find');
+                $router->put('{id}', 'PartController@update');
+                $router->delete('{id}', 'PartController@delete');
+            });
+            // work-orders routes
+            $router->group(['prefix' => 'work-orders'], function () use ($router) {
+                $router->post('/', 'WorkOrderController@create');
+                $router->get('/', 'WorkOrderController@query');
+                $router->get('{id}', 'WorkOrderController@find');
+                $router->put('{id}', 'WorkOrderController@update');
+                $router->delete('{id}', 'WorkOrderController@delete');
+                $router->post('{id}/send', 'WorkOrderController@send');
+            });
+            // devices routes
+            $router->group(['prefix' => 'devices'], function () use ($router) {
+                $router->post('/', 'DeviceController@create');
+                $router->get('/', 'DeviceController@query');
+                $router->get('{id}', 'DeviceController@find');
+                $router->put('{id}', 'DeviceController@update');
+                $router->delete('{id}', 'DeviceController@delete');
+                $router->post('{id}/attach', 'DeviceController@attach');
+                $router->post('{id}/detach', 'DeviceController@detach');
+            });
+            // sensors routes
+            $router->group(['prefix' => 'sensors'], function () use ($router) {
+                $router->post('/', 'SensorController@create');
+                $router->get('/', 'SensorController@query');
+                $router->get('{id}', 'SensorController@find');
+                $router->put('{id}', 'SensorController@update');
+                $router->delete('{id}', 'SensorController@delete');
+            });
             // orders routes
             $router->group(['prefix' => 'orders', 'middleware' => []], function () use ($router) {
                 $router->post('/', 'OrderController@create');
