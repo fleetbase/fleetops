@@ -180,7 +180,7 @@ class DeviceController extends Controller
                 $input['attachable_type'] = null;
                 $input['attachable_uuid'] = null;
             } else {
-                [$type, $uuid] = $this->resolveMorph($request->input('attachable_type'), $request->input('attachable'));
+                [$type, $uuid]            = $this->resolveMorph($request->input('attachable_type'), $request->input('attachable'));
                 $input['attachable_type'] = $type;
                 $input['attachable_uuid'] = $uuid;
             }

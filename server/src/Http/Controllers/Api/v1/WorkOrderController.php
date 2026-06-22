@@ -133,7 +133,7 @@ class WorkOrderController extends Controller
                 $input['target_type'] = null;
                 $input['target_uuid'] = null;
             } else {
-                [$type, $uuid] = $this->resolveMorph($request->input('target_type'), $request->input('target'));
+                [$type, $uuid]        = $this->resolveMorph($request->input('target_type'), $request->input('target'));
                 $input['target_type'] = $type;
                 $input['target_uuid'] = $uuid;
             }
@@ -144,7 +144,7 @@ class WorkOrderController extends Controller
                 $input['assignee_type'] = null;
                 $input['assignee_uuid'] = null;
             } else {
-                [$type, $uuid] = $this->resolveMorph($request->input('assignee_type'), $request->input('assignee'));
+                [$type, $uuid]          = $this->resolveMorph($request->input('assignee_type'), $request->input('assignee'));
                 $input['assignee_type'] = $type;
                 $input['assignee_uuid'] = $uuid;
             }

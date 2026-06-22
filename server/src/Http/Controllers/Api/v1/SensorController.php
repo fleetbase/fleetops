@@ -115,7 +115,7 @@ class SensorController extends Controller
                 $input['sensorable_type'] = null;
                 $input['sensorable_uuid'] = null;
             } else {
-                [$type, $uuid] = $this->resolveMorph($request->input('sensorable_type'), $request->input('sensorable'));
+                [$type, $uuid]            = $this->resolveMorph($request->input('sensorable_type'), $request->input('sensorable'));
                 $input['sensorable_type'] = $type;
                 $input['sensorable_uuid'] = $uuid;
             }

@@ -103,7 +103,7 @@ class PartController extends Controller
                 $input['asset_type'] = null;
                 $input['asset_uuid'] = null;
             } else {
-                [$type, $uuid] = $this->resolveMorph($request->input('asset_type'), $request->input('asset'));
+                [$type, $uuid]       = $this->resolveMorph($request->input('asset_type'), $request->input('asset'));
                 $input['asset_type'] = $type;
                 $input['asset_uuid'] = $uuid;
             }

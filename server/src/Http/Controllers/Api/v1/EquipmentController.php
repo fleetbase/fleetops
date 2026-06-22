@@ -97,7 +97,7 @@ class EquipmentController extends Controller
                 $input['equipable_type'] = null;
                 $input['equipable_uuid'] = null;
             } else {
-                [$type, $uuid] = $this->resolveMorph($request->input('equipable_type'), $request->input('equipable'));
+                [$type, $uuid]           = $this->resolveMorph($request->input('equipable_type'), $request->input('equipable'));
                 $input['equipable_type'] = $type;
                 $input['equipable_uuid'] = $uuid;
             }
