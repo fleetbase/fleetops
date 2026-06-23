@@ -1,7 +1,7 @@
 /**
  * MapManagerService
  *
- * Provider-agnostic central map service for FleetOps. Replaces the
+ * Provider-agnostic central map service for Fleet-Ops. Replaces the
  * Leaflet-specific `leaflet-map-manager` as the single point of contact
  * for all map operations across the application.
  *

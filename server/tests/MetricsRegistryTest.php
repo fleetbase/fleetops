@@ -100,13 +100,13 @@ test('active revenue query excludes inactive financial and operational lifecycle
     expect($source)->toContain('excludeInactiveInvoices');
     expect($source)->toContain('ledger_invoices.deleted_at');
     expect($source)->toContain('orders.deleted_at');
-    expect(\Fleetbase\FleetOps\Support\Metrics\ActiveRevenueQuery::ACTIVE_STATUSES)->toBe([Transaction::STATUS_SUCCESS]);
-    expect(\Fleetbase\FleetOps\Support\Metrics\ActiveRevenueQuery::ACTIVE_STATUSES)->not->toContain('completed');
-    expect(\Fleetbase\FleetOps\Support\Metrics\ActiveRevenueQuery::ACTIVE_STATUSES)->not->toContain('paid');
+    expect(Fleetbase\FleetOps\Support\Metrics\ActiveRevenueQuery::ACTIVE_STATUSES)->toBe([Transaction::STATUS_SUCCESS]);
+    expect(Fleetbase\FleetOps\Support\Metrics\ActiveRevenueQuery::ACTIVE_STATUSES)->not->toContain('completed');
+    expect(Fleetbase\FleetOps\Support\Metrics\ActiveRevenueQuery::ACTIVE_STATUSES)->not->toContain('paid');
 });
 
 test('active revenue query treats invoice status as invalidation only', function () {
-    $inactiveInvoiceStatuses = \Fleetbase\FleetOps\Support\Metrics\ActiveRevenueQuery::INACTIVE_INVOICE_STATUSES;
+    $inactiveInvoiceStatuses = Fleetbase\FleetOps\Support\Metrics\ActiveRevenueQuery::INACTIVE_INVOICE_STATUSES;
 
     expect($inactiveInvoiceStatuses)->not->toContain('draft');
     expect($inactiveInvoiceStatuses)->toContain('void');

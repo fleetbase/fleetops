@@ -28,8 +28,8 @@ class SyncTelematicDevicesJob implements ShouldQueue
     public Telematic $telematic;
     public array $options;
     public string $jobId;
-    public int $tries   = 1;
-    public int $timeout = 3600;
+    public int $tries          = 1;
+    public int $timeout        = 3600;
     public bool $failOnTimeout = true;
 
     /**
@@ -286,28 +286,28 @@ class SyncTelematicDevicesJob implements ShouldQueue
 
                 $this->telematic->status = 'active';
                 $this->telematic->meta   = array_merge($this->telematic->meta ?? [], $providerSyncMeta, [
-                    'last_sync_job_id'                 => $this->jobId,
-                    'last_sync_completed_at'           => now()->toDateTimeString(),
-                    'last_sync_result'                 => 'success',
-                    'last_sync_total'                  => $totalLinked,
-                    'last_sync_fetched_total'          => $totalFetched,
-                    'last_sync_linked_total'           => $totalLinked,
-                    'last_sync_link_attempts_total'    => $totalLinkAttempts,
-                    'last_sync_inventory_total'        => $inventoryFetched,
-                    'last_sync_inventory_linked_total' => $inventoryLinked,
+                    'last_sync_job_id'                  => $this->jobId,
+                    'last_sync_completed_at'            => now()->toDateTimeString(),
+                    'last_sync_result'                  => 'success',
+                    'last_sync_total'                   => $totalLinked,
+                    'last_sync_fetched_total'           => $totalFetched,
+                    'last_sync_linked_total'            => $totalLinked,
+                    'last_sync_link_attempts_total'     => $totalLinkAttempts,
+                    'last_sync_inventory_total'         => $inventoryFetched,
+                    'last_sync_inventory_linked_total'  => $inventoryLinked,
                     'last_sync_inventory_skipped_total' => $inventorySkipped,
-                    'last_sync_enrichment_total'       => $totalEnrichment,
-                    'last_sync_enrichment_completed'   => $totalEnrichmentCompleted,
-                    'last_sync_enrichment_failures'    => $totalEnrichmentFailures,
-                    'last_sync_events_total'           => $totalEvents,
-                    'last_sync_sensors_total'          => $totalSensors,
-                    'last_sync_skipped_total'          => $totalSkipped,
-                    'last_sync_page_count'             => $pageCount,
-                    'last_sync_provider_total'         => $lastProviderFiltersCount ?? $lastProviderAllCount,
-                    'last_sync_provider_all_count'     => $lastProviderAllCount,
-                    'last_sync_provider_filters_count' => $lastProviderFiltersCount,
-                    'last_sync_error'                  => null,
-                    'last_sync_error_context'          => null,
+                    'last_sync_enrichment_total'        => $totalEnrichment,
+                    'last_sync_enrichment_completed'    => $totalEnrichmentCompleted,
+                    'last_sync_enrichment_failures'     => $totalEnrichmentFailures,
+                    'last_sync_events_total'            => $totalEvents,
+                    'last_sync_sensors_total'           => $totalSensors,
+                    'last_sync_skipped_total'           => $totalSkipped,
+                    'last_sync_page_count'              => $pageCount,
+                    'last_sync_provider_total'          => $lastProviderFiltersCount ?? $lastProviderAllCount,
+                    'last_sync_provider_all_count'      => $lastProviderAllCount,
+                    'last_sync_provider_filters_count'  => $lastProviderFiltersCount,
+                    'last_sync_error'                   => null,
+                    'last_sync_error_context'           => null,
                 ]);
                 $this->telematic->save();
             } catch (\Exception $e) {
@@ -323,28 +323,28 @@ class SyncTelematicDevicesJob implements ShouldQueue
 
                 $this->telematic->status = 'error';
                 $this->telematic->meta   = array_merge($this->telematic->meta ?? [], [
-                    'last_sync_job_id'                 => $this->jobId,
-                    'last_sync_result'                 => 'failed',
-                    'last_sync_fetched_total'          => $totalFetched,
-                    'last_sync_linked_total'           => $totalLinked,
-                    'last_sync_link_attempts_total'    => $totalLinkAttempts,
-                    'last_sync_inventory_total'        => $inventoryFetched,
-                    'last_sync_inventory_linked_total' => $inventoryLinked,
+                    'last_sync_job_id'                  => $this->jobId,
+                    'last_sync_result'                  => 'failed',
+                    'last_sync_fetched_total'           => $totalFetched,
+                    'last_sync_linked_total'            => $totalLinked,
+                    'last_sync_link_attempts_total'     => $totalLinkAttempts,
+                    'last_sync_inventory_total'         => $inventoryFetched,
+                    'last_sync_inventory_linked_total'  => $inventoryLinked,
                     'last_sync_inventory_skipped_total' => $inventorySkipped,
-                    'last_sync_enrichment_total'       => $totalEnrichment,
-                    'last_sync_enrichment_completed'   => $totalEnrichmentCompleted,
-                    'last_sync_enrichment_failures'    => $totalEnrichmentFailures,
-                    'last_sync_events_total'           => $totalEvents,
-                    'last_sync_sensors_total'          => $totalSensors,
-                    'last_sync_skipped_total'          => $totalSkipped,
-                    'last_sync_page_count'             => $pageCount,
-                    'last_sync_provider_total'         => $lastProviderFiltersCount ?? $lastProviderAllCount,
-                    'last_sync_provider_all_count'     => $lastProviderAllCount,
-                    'last_sync_provider_filters_count' => $lastProviderFiltersCount,
-                    'last_sync_error'                  => $failureMessage,
-                    'last_sync_error_type'             => class_basename($e),
-                    'last_sync_error_context'          => $failureContext,
-                    'last_sync_failed_at'              => now()->toDateTimeString(),
+                    'last_sync_enrichment_total'        => $totalEnrichment,
+                    'last_sync_enrichment_completed'    => $totalEnrichmentCompleted,
+                    'last_sync_enrichment_failures'     => $totalEnrichmentFailures,
+                    'last_sync_events_total'            => $totalEvents,
+                    'last_sync_sensors_total'           => $totalSensors,
+                    'last_sync_skipped_total'           => $totalSkipped,
+                    'last_sync_page_count'              => $pageCount,
+                    'last_sync_provider_total'          => $lastProviderFiltersCount ?? $lastProviderAllCount,
+                    'last_sync_provider_all_count'      => $lastProviderAllCount,
+                    'last_sync_provider_filters_count'  => $lastProviderFiltersCount,
+                    'last_sync_error'                   => $failureMessage,
+                    'last_sync_error_type'              => class_basename($e),
+                    'last_sync_error_context'           => $failureContext,
+                    'last_sync_failed_at'               => now()->toDateTimeString(),
                 ]);
                 $this->telematic->save();
 

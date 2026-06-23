@@ -364,10 +364,10 @@ test('safee sync returns inventory first then enriches with last info positions 
     $device = $result['devices'][0];
 
     expect($result['sync_meta'])->toMatchArray([
-        'safee_last_telemetry_synced_at' => 1782206140.0,
-        'safee_last_enrichment_total'    => 1,
+        'safee_last_telemetry_synced_at'  => 1782206140.0,
+        'safee_last_enrichment_total'     => 1,
         'safee_last_enrichment_completed' => 1,
-        'safee_last_enrichment_failures' => [],
+        'safee_last_enrichment_failures'  => [],
     ]);
     expect(data_get($result, 'sync_meta.safee_last_sync_window'))->toMatchArray([
         'startDate' => 1782205240.0,
@@ -497,8 +497,8 @@ test('safee list info reports duplicate and missing vehicle identities', functio
                 'code'   => 0,
                 'result' => [
                     ['id' => 105, 'plateNo' => 'SAFE-105'],
-                    ['id' => 105, 'plateNo' => 'SAFE-105-DUP'],
-                    ['id' => 106, 'plateNo' => 'SAFE-106'],
+                    ['id'      => 105, 'plateNo' => 'SAFE-105-DUP'],
+                    ['id'      => 106, 'plateNo' => 'SAFE-106'],
                     ['plateNo' => 'SAFE-MISSING'],
                 ],
             ], 200);
@@ -574,8 +574,8 @@ test('safee current telemetry merges last state with last info fallback fields',
         'plateNo' => 'ABC-1234',
         '_safee'  => [
             'vehicle_id'     => 105,
-            'identity'      => ['id' => 105, 'plateNo' => 'ABC-1234'],
-            'current_state' => [
+            'identity'       => ['id' => 105, 'plateNo' => 'ABC-1234'],
+            'current_state'  => [
                 'id'       => 105,
                 'date'     => 1782206120.5,
                 'status'   => 'offline',

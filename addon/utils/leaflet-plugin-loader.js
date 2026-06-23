@@ -79,7 +79,7 @@ function waitForLeafletGlobal({ timeoutMs = 8000 } = {}) {
 
             if (timeoutMs != null && Date.now() - startedAt >= timeoutMs) {
                 clearInterval(interval);
-                reject(new Error('[FleetOps Leaflet] Leaflet global is not available'));
+                reject(new Error('[Fleet-Ops Leaflet] Leaflet global is not available'));
             }
         }, 50);
     });
@@ -105,7 +105,7 @@ function appendStylesheet(href) {
 
 function loadScript(src, { timeoutMs = 8000, isReady = null } = {}) {
     if (typeof document === 'undefined') {
-        return Promise.reject(new Error('[FleetOps Leaflet] document is not available'));
+        return Promise.reject(new Error('[Fleet-Ops Leaflet] document is not available'));
     }
 
     const existing = findAssetElement('script', 'src', src);
@@ -137,7 +137,7 @@ function loadScript(src, { timeoutMs = 8000, isReady = null } = {}) {
 
         const onError = () => {
             cleanup();
-            reject(new Error(`[FleetOps Leaflet] Failed to load ${src}`));
+            reject(new Error(`[Fleet-Ops Leaflet] Failed to load ${src}`));
         };
 
         script.addEventListener('load', onLoad);
@@ -146,7 +146,7 @@ function loadScript(src, { timeoutMs = 8000, isReady = null } = {}) {
         if (timeoutMs != null) {
             timeoutId = setTimeout(() => {
                 cleanup();
-                reject(new Error(`[FleetOps Leaflet] Timed out loading ${src}`));
+                reject(new Error(`[Fleet-Ops Leaflet] Timed out loading ${src}`));
             }, timeoutMs);
         }
 
@@ -202,7 +202,7 @@ export default function ensureLeafletPluginsReady(options = {}) {
         .then(() => {
             const readyLeaflet = normalizeLeafletGlobal();
             if (!hasLeafletPluginsReady()) {
-                throw new Error('[FleetOps Leaflet] Leaflet plugins loaded but required Draw/contextmenu APIs are missing');
+                throw new Error('[Fleet-Ops Leaflet] Leaflet plugins loaded but required Draw/contextmenu APIs are missing');
             }
 
             window.fleetopsLeafletPluginsLoaded = true;

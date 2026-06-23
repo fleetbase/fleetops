@@ -3,7 +3,7 @@
  *
  * Implements the MapAdapterInterface using the Leaflet library (via ember-leaflet).
  * This adapter wraps all existing Leaflet-specific logic, preserving 100% of
- * the original FleetOps map functionality while conforming to the provider-agnostic
+ * the original Fleet-Ops map functionality while conforming to the provider-agnostic
  * interface.
  *
  * All Leaflet-specific plugins are supported:

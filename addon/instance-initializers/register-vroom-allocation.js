@@ -10,7 +10,7 @@
  * Third-party orchestration engines follow the same pattern:
  *   1. Create a service extending OrchestrationEngineInterfaceService
  *   2. Create an instance initializer that calls orchestrationEngine.register()
- *   3. The engine will appear in the FleetOps orchestrator settings dropdown
+ *   3. The engine will appear in the Fleet-Ops orchestrator settings dropdown
  */
 export function initialize(appInstance) {
     const orchestrationEngine = appInstance.lookup('service:orchestration-engine');

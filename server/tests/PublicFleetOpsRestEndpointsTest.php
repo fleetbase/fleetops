@@ -183,7 +183,7 @@ test('fuel transaction filter applies public company scoping and public id relat
         ->toContain('public function fuelReport(?string $fuelReport)')
         ->toContain("where('public_id', \$identifier)")
         ->toContain("orWhere('internal_id', \$identifier)")
-        ->toContain("if (\$allowUuid)")
+        ->toContain('if ($allowUuid)')
         ->not->toContain("where('vehicle_uuid', \$vehicle)")
         ->not->toContain("where('driver_uuid', \$driver)")
         ->not->toContain("where('order_uuid', \$order)")

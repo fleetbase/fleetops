@@ -326,7 +326,7 @@ class VehicleExport implements FromCollection, WithHeadings, WithMapping, WithCo
         while ($index > 0) {
             $index--;
             $letter = chr(65 + ($index % 26)) . $letter;
-            $index = intdiv($index, 26);
+            $index  = intdiv($index, 26);
         }
 
         return $letter;

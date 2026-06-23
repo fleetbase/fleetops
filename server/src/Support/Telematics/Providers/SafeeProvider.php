@@ -81,23 +81,23 @@ class SafeeProvider extends AbstractProvider
             'devices_returned_for_ingestion'  => count($vehicles),
             'failures'                        => [],
         ];
-        $statesById = $this->fetchLastStatesByVehicle($vehicleIds, $endpointStats);
+        $statesById                          = $this->fetchLastStatesByVehicle($vehicleIds, $endpointStats);
         $endpointStats['last_state_fetched'] = count($statesById);
 
         $devices = array_map(function (array $vehicle) use ($statesById, &$endpointStats) {
-            $vehicleId = $this->resolveListedVehicleId($vehicle);
+            $vehicleId    = $this->resolveListedVehicleId($vehicle);
             $currentState = $statesById[(string) $vehicleId] ?? null;
 
             return array_merge($vehicle, [
                 '_safee' => [
                     'vehicle_id'     => $vehicleId,
-                    'identity'      => $vehicle,
-                    'current_info'  => null,
-                    'current_state' => $currentState,
-                    'positions'     => [],
-                    'events'        => [],
-                    'sync_window'   => null,
-                    'diagnostics'   => $endpointStats,
+                    'identity'       => $vehicle,
+                    'current_info'   => null,
+                    'current_state'  => $currentState,
+                    'positions'      => [],
+                    'events'         => [],
+                    'sync_window'    => null,
+                    'diagnostics'    => $endpointStats,
                 ],
                 'sensors' => [],
             ]);
@@ -619,13 +619,13 @@ class SafeeProvider extends AbstractProvider
         return array_merge($vehicle, [
             '_safee' => [
                 'vehicle_id'     => $vehicleId,
-                'identity'      => $vehicle,
-                'current_info'  => $lastInfo,
-                'current_state' => $currentState,
-                'positions'     => is_array($positions) ? $positions : [],
-                'events'        => is_array($events) ? $events : [],
-                'sync_window'   => $window,
-                'diagnostics'   => $endpointStats,
+                'identity'       => $vehicle,
+                'current_info'   => $lastInfo,
+                'current_state'  => $currentState,
+                'positions'      => is_array($positions) ? $positions : [],
+                'events'         => is_array($events) ? $events : [],
+                'sync_window'    => $window,
+                'diagnostics'    => $endpointStats,
             ],
             'sensors' => $this->extractTelemetrySensors($lastInfo ?? []),
         ]);
