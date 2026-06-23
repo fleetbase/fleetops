@@ -772,13 +772,17 @@ class TelematicService
         return collect($rawSensors)
             ->map(function ($sensor, $name) {
                 if (is_array($sensor)) {
-                    return array_merge(['name' => $name], $sensor);
+                    return array_merge([
+                        'sensor_key' => $name,
+                        'name'       => $name,
+                    ], $sensor);
                 }
 
                 return [
-                    'name'  => $name,
-                    'type'  => $name,
-                    'value' => $sensor,
+                    'sensor_key' => $name,
+                    'name'       => $name,
+                    'type'       => $name,
+                    'value'      => $sensor,
                 ];
             })
             ->values()

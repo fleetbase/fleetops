@@ -74,6 +74,7 @@ test('telematics service requires provider identity and stores idempotent event 
         ->toContain("'altitude'  => \$eventData['altitude'] ?? null")
         ->toContain('storeSnapshotSensors')
         ->toContain("\$payload['sensors'] ?? \$payload['sensors_last_val']")
+        ->toContain("'sensor_key' => \$name")
         ->toContain('Sensor::firstOrNew')
         ->toContain("'telematic_uuid' => \$telematic->uuid")
         ->toContain("'device_uuid'    => \$device?->uuid")
@@ -775,6 +776,74 @@ test('afaqy sync stores compact device diagnostics and paginates complete units 
         ->toContain("'resultCount'")
         ->toContain("'online'      => \$payload['active'] ?? null")
         ->toContain("'altitude'   => \$lastUpdate['alt'] ?? null");
+});
+
+test('afaqy sensors normalize stable parent scoped identities and latest values', function () {
+    $provider = new AfaqyProvider();
+
+    $open = $provider->normalizeSensor([
+        'device_id'  => 'unit-123',
+        'sensor_key' => 'Door1',
+        'name'       => 'Door1',
+        'type'       => 'digital',
+        'last_val'   => [
+            'value' => 'Open',
+            'dtt'   => '2026-06-23T09:00:00Z',
+        ],
+    ]);
+
+    $closed = $provider->normalizeSensor([
+        'device_id'  => 'unit-123',
+        'sensor_key' => 'Door1',
+        'name'       => 'Door1',
+        'type'       => 'digital',
+        'last_val'   => [
+            'value' => 'Closed',
+            'dtt'   => '2026-06-23T09:05:00Z',
+        ],
+    ]);
+
+    expect($open)->toMatchArray([
+        'internal_id' => 'afaqy:unit-123:door1',
+        'external_id' => 'afaqy:unit-123:door1',
+        'name'        => 'Door1',
+        'type'        => 'door',
+        'sensor_type' => 'door',
+        'value'       => 'Open',
+        'status'      => 'active',
+    ]);
+    expect($open['recorded_at'])->toBe('2026-06-23 09:00:00');
+    expect(data_get($open, 'meta.provider'))->toBe('afaqy');
+    expect(data_get($open, 'meta.unit_id'))->toBe('unit-123');
+    expect($closed['internal_id'])->toBe($open['internal_id']);
+    expect($closed['value'])->toBe('Closed');
+});
+
+test('afaqy sensors reject event shaped payloads without scalar sensor values', function () {
+    $provider = new AfaqyProvider();
+
+    expect(fn () => $provider->normalizeSensor([
+        'device_id'    => 'unit-123',
+        'sensor_key'   => 'ignition_event',
+        'name'         => 'ignition_event',
+        'last_update'  => [
+            'lat'   => 25.2,
+            'lng'   => 55.2,
+            'speed' => 40,
+        ],
+    ]))->toThrow(InvalidArgumentException::class);
+});
+
+test('afaqy bad sensor cleanup migration targets only afaqy telematics sensors', function () {
+    $migration = file_get_contents(__DIR__ . '/../migrations/2026_06_23_000001_delete_bad_afaqy_telematics_sensors.php');
+
+    expect($migration)
+        ->toContain("->from('telematics')")
+        ->toContain("->where('provider', 'afaqy')")
+        ->toContain("->whereIn('telematic_uuid'")
+        ->toContain("JSON_EXTRACT(meta, '$.provider')")
+        ->toContain('Run an AFAQY sync to recreate')
+        ->toContain('public function down(): void');
 });
 
 test('afaqy sync keeps default limit and uses extended data request path', function () {

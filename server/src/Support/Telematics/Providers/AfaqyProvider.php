@@ -211,12 +211,35 @@ class AfaqyProvider extends AbstractProvider
 
     public function normalizeSensor(array $payload): array
     {
+        $unitId         = $payload['device_id'] ?? $payload['unit_id'] ?? $payload['vehicle_id'] ?? null;
+        $sensorIdentity = $this->resolveSensorIdentity($payload);
+        $sensorName     = $this->resolveSensorName($payload, $sensorIdentity);
+        $value          = $this->resolveSensorValue($payload);
+
+        if (!$unitId || !$sensorIdentity || !$sensorName || !$this->isSensorValue($value)) {
+            throw new \InvalidArgumentException('AFAQY sensor payload does not contain a stable identity and scalar latest value.');
+        }
+
+        $type       = $this->normalizeSensorType($payload, $sensorName);
+        $internalId = implode(':', ['afaqy', $unitId, $this->sensorIdentityPart($sensorIdentity)]);
+
         return [
-            'sensor_type' => $payload['type'] ?? $payload['name'] ?? $payload['param'] ?? 'generic',
-            'value'       => $payload['value'] ?? $payload['last_val']['value'] ?? $payload['last_update'] ?? null,
-            'unit'        => $payload['units'] ?? null,
-            'recorded_at' => $this->parseTimestamp($payload['updated_at'] ?? $payload['created_at'] ?? null),
-            'meta'        => $payload,
+            'internal_id' => $internalId,
+            'external_id' => $internalId,
+            'name'        => $sensorName,
+            'type'        => $type,
+            'sensor_type' => $type,
+            'value'       => $value,
+            'unit'        => $payload['unit'] ?? $payload['units'] ?? data_get($payload, 'last_val.unit'),
+            'recorded_at' => $this->parseTimestamp(data_get($payload, 'last_val.dtt') ?? data_get($payload, 'last_update.dtt') ?? $payload['updated_at'] ?? $payload['created_at'] ?? null),
+            'status'      => 'active',
+            'meta'        => array_filter([
+                'provider'           => 'afaqy',
+                'unit_id'            => $unitId,
+                'provider_sensor_id' => $sensorIdentity,
+                'sensor_key'         => $payload['sensor_key'] ?? null,
+                'raw'                => $payload,
+            ], fn ($value) => $value !== null),
         ];
     }
 
@@ -476,5 +499,81 @@ class AfaqyProvider extends AbstractProvider
             ?? data_get($payload, 'last_update.params.fuel_level')
             ?? data_get($payload, 'fc.level')
             ?? null;
+    }
+
+    protected function resolveSensorIdentity(array $payload): ?string
+    {
+        $value = $payload['_id']
+            ?? $payload['id']
+            ?? $payload['sensor_id']
+            ?? $payload['ident']
+            ?? $payload['param']
+            ?? $payload['sensor_key']
+            ?? $payload['name']
+            ?? data_get($payload, 'sensor.name');
+
+        if ($value === null || $value === '') {
+            return null;
+        }
+
+        return (string) $value;
+    }
+
+    protected function resolveSensorName(array $payload, ?string $fallback = null): ?string
+    {
+        $value = $payload['name']
+            ?? data_get($payload, 'sensor.name')
+            ?? $payload['param']
+            ?? $payload['sensor_key']
+            ?? $fallback;
+
+        if ($value === null || $value === '') {
+            return null;
+        }
+
+        return (string) $value;
+    }
+
+    protected function resolveSensorValue(array $payload): mixed
+    {
+        if (array_key_exists('value', $payload)) {
+            return $payload['value'];
+        }
+
+        return data_get($payload, 'last_val.value')
+            ?? data_get($payload, 'last_update.value')
+            ?? data_get($payload, 'last_update.val')
+            ?? data_get($payload, 'last_update.state');
+    }
+
+    protected function isSensorValue(mixed $value): bool
+    {
+        return $value !== null && is_scalar($value);
+    }
+
+    protected function normalizeSensorType(array $payload, string $sensorName): string
+    {
+        $providerType = (string) ($payload['sensor_type'] ?? $payload['type'] ?? $payload['param'] ?? '');
+        $type         = strtolower(trim($providerType . ' ' . $sensorName));
+
+        return match (true) {
+            str_contains($type, 'door')                                      => 'door',
+            str_contains($type, 'temp')                                      => 'temperature',
+            str_contains($type, 'humid')                                     => 'humidity',
+            str_contains($type, 'fuel')                                      => 'fuel',
+            str_starts_with($type, 'di') || str_contains($type, 'digital')   => 'digital',
+            str_starts_with($type, 'ai') || str_contains($type, 'analog')    => 'analog',
+            str_contains($type, 'battery') || str_contains($type, 'voltage') => 'voltage',
+            default                                                          => $this->sensorIdentityPart($type) ?: 'generic',
+        };
+    }
+
+    protected function sensorIdentityPart(string $value): string
+    {
+        $normalized = strtolower(trim($value));
+        $normalized = preg_replace('/[^a-z0-9]+/i', '_', $normalized) ?? '';
+        $normalized = trim($normalized, '_');
+
+        return $normalized !== '' ? $normalized : 'sensor';
     }
 }
