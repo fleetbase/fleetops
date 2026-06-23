@@ -29,7 +29,8 @@ class SyncTelematicDevicesJob implements ShouldQueue
     public array $options;
     public string $jobId;
     public int $tries   = 1;
-    public int $timeout = 300;
+    public int $timeout = 3600;
+    public bool $failOnTimeout = true;
 
     /**
      * Create a new job instance.
@@ -79,6 +80,7 @@ class SyncTelematicDevicesJob implements ShouldQueue
             $cursor                     = null;
             $totalFetched               = 0;
             $totalLinked                = 0;
+            $totalLinkAttempts          = 0;
             $totalEvents                = 0;
             $totalSensors               = 0;
             $totalSkipped               = 0;
@@ -86,6 +88,14 @@ class SyncTelematicDevicesJob implements ShouldQueue
             $lastProviderAllCount       = null;
             $lastProviderFiltersCount   = null;
             $providerSyncMeta           = [];
+            $linkedDeviceKeys           = [];
+            $inventoryPayloads          = [];
+            $inventoryFetched           = 0;
+            $inventoryLinked            = 0;
+            $inventorySkipped           = 0;
+            $totalEnrichment            = 0;
+            $totalEnrichmentCompleted   = 0;
+            $totalEnrichmentFailures    = 0;
 
             try {
                 $provider = $registry->resolve($this->telematic->provider);
@@ -103,6 +113,7 @@ class SyncTelematicDevicesJob implements ShouldQueue
                     $providerSyncMeta = array_merge($providerSyncMeta, $response['sync_meta'] ?? []);
                     $pageCount++;
                     $totalFetched += count($devices);
+                    $inventoryPayloads = array_merge($inventoryPayloads, $devices);
 
                     if (isset($pagination['allCount'])) {
                         $lastProviderAllCount = $pagination['allCount'];
@@ -130,7 +141,14 @@ class SyncTelematicDevicesJob implements ShouldQueue
                         $normalizedDevice = $provider->normalizeDevice($devicePayload);
                         try {
                             $result = $service->ingestDeviceSnapshot($this->telematic, $provider, $devicePayload);
-                            $totalLinked++;
+                            $totalLinkAttempts++;
+                            $linkedDeviceKey = $this->resolveLinkedDeviceKey($result, $normalizedDevice);
+
+                            if ($linkedDeviceKey && !isset($linkedDeviceKeys[$linkedDeviceKey])) {
+                                $linkedDeviceKeys[$linkedDeviceKey] = true;
+                                $totalLinked++;
+                            }
+
                             $totalEvents += count($result['events'] ?? array_filter([$result['event'] ?? null]));
                             $totalSensors += $result['sensors'] ?? 0;
                         } catch (\Illuminate\Validation\ValidationException $e) {
@@ -152,6 +170,7 @@ class SyncTelematicDevicesJob implements ShouldQueue
                         'correlation_id' => $correlationId,
                         'fetched'        => $totalFetched,
                         'linked'         => $totalLinked,
+                        'link_attempts'  => $totalLinkAttempts,
                         'events'         => $totalEvents,
                         'sensors'        => $totalSensors,
                         'skipped'        => $totalSkipped,
@@ -161,10 +180,102 @@ class SyncTelematicDevicesJob implements ShouldQueue
                     // Broadcast progress (TODO: implement WebSocket broadcasting)
                 } while (($response['has_more'] ?? false) && $cursor);
 
+                $inventoryFetched = $totalFetched;
+                $inventoryLinked  = $totalLinked;
+                $inventorySkipped = $totalSkipped;
+
+                $this->telematic->status = 'synchronizing';
+                $this->telematic->meta   = array_merge($this->telematic->meta ?? [], $providerSyncMeta, [
+                    'last_sync_job_id'                   => $this->jobId,
+                    'last_sync_result'                   => 'inventory_synced',
+                    'last_sync_total'                    => $totalLinked,
+                    'last_sync_inventory_completed_at'   => now()->toDateTimeString(),
+                    'last_sync_inventory_total'          => $inventoryFetched,
+                    'last_sync_inventory_linked_total'   => $inventoryLinked,
+                    'last_sync_inventory_skipped_total'  => $inventorySkipped,
+                    'last_sync_fetched_total'            => $totalFetched,
+                    'last_sync_linked_total'             => $totalLinked,
+                    'last_sync_link_attempts_total'      => $totalLinkAttempts,
+                    'last_sync_skipped_total'            => $totalSkipped,
+                    'last_sync_page_count'               => $pageCount,
+                    'last_sync_provider_total'           => $lastProviderFiltersCount ?? $lastProviderAllCount,
+                    'last_sync_provider_all_count'       => $lastProviderAllCount,
+                    'last_sync_provider_filters_count'   => $lastProviderFiltersCount,
+                ]);
+                $this->telematic->save();
+
+                Log::info($this->telematic->provider === 'safee' ? 'Safee inventory sync completed' : 'Telematics inventory sync completed', [
+                    'correlation_id'   => $correlationId,
+                    'telematic_uuid'   => $this->telematic->uuid,
+                    'provider'         => $this->telematic->provider,
+                    'inventory_total'  => $inventoryFetched,
+                    'inventory_linked' => $inventoryLinked,
+                    'skipped'          => $inventorySkipped,
+                ]);
+
+                if (method_exists($provider, 'fetchDeviceTelemetrySnapshots') && !empty($inventoryPayloads)) {
+                    Log::info($this->telematic->provider === 'safee' ? 'Safee telemetry enrichment started' : 'Telematics telemetry enrichment started', [
+                        'correlation_id' => $correlationId,
+                        'telematic_uuid' => $this->telematic->uuid,
+                        'provider'       => $this->telematic->provider,
+                        'device_count'   => count($inventoryPayloads),
+                    ]);
+
+                    $enrichmentResponse = $provider->fetchDeviceTelemetrySnapshots($inventoryPayloads, [
+                        'limit'   => $this->options['limit'] ?? null,
+                        'filters' => $this->options['filters'] ?? [],
+                    ]);
+                    $providerSyncMeta = array_merge($providerSyncMeta, $enrichmentResponse['sync_meta'] ?? []);
+                    $enrichedDevices  = $enrichmentResponse['devices'] ?? [];
+                    $totalEnrichment += count($enrichedDevices);
+
+                    foreach ($enrichedDevices as $devicePayload) {
+                        $normalizedDevice = $provider->normalizeDevice($devicePayload);
+                        try {
+                            $result = $service->ingestDeviceSnapshot($this->telematic, $provider, $devicePayload);
+                            $totalLinkAttempts++;
+                            $linkedDeviceKey = $this->resolveLinkedDeviceKey($result, $normalizedDevice);
+
+                            if ($linkedDeviceKey && !isset($linkedDeviceKeys[$linkedDeviceKey])) {
+                                $linkedDeviceKeys[$linkedDeviceKey] = true;
+                                $totalLinked++;
+                            }
+
+                            $totalEnrichmentCompleted++;
+                            $totalEvents += count($result['events'] ?? array_filter([$result['event'] ?? null]));
+                            $totalSensors += $result['sensors'] ?? 0;
+                        } catch (\Illuminate\Validation\ValidationException $e) {
+                            $totalSkipped++;
+                            $totalEnrichmentFailures++;
+                            Log::warning('Skipping telematics enrichment without provider identity', [
+                                'correlation_id'   => $correlationId,
+                                'provider'         => $this->telematic->provider,
+                                'provider_unit_id' => $devicePayload['_id'] ?? $devicePayload['id'] ?? null,
+                                'device_id'        => $normalizedDevice['device_id'] ?? null,
+                                'name'             => $normalizedDevice['name'] ?? $devicePayload['name'] ?? null,
+                                'imei'             => $devicePayload['imei'] ?? null,
+                            ]);
+                        }
+                    }
+
+                    Log::info($this->telematic->provider === 'safee' ? 'Safee telemetry enrichment completed' : 'Telematics telemetry enrichment completed', [
+                        'correlation_id' => $correlationId,
+                        'telematic_uuid' => $this->telematic->uuid,
+                        'provider'       => $this->telematic->provider,
+                        'total'          => $totalEnrichment,
+                        'completed'      => $totalEnrichmentCompleted,
+                        'failures'       => $totalEnrichmentFailures,
+                    ]);
+                }
+
                 Log::info('Device discovery completed', [
                     'correlation_id'        => $correlationId,
                     'total_fetched'         => $totalFetched,
                     'total_linked'          => $totalLinked,
+                    'total_link_attempts'   => $totalLinkAttempts,
+                    'total_enrichment'      => $totalEnrichment,
+                    'enrichment_completed'  => $totalEnrichmentCompleted,
+                    'enrichment_failures'   => $totalEnrichmentFailures,
                     'total_events'          => $totalEvents,
                     'total_sensors'         => $totalSensors,
                     'total_skipped'         => $totalSkipped,
@@ -181,6 +292,13 @@ class SyncTelematicDevicesJob implements ShouldQueue
                     'last_sync_total'                  => $totalLinked,
                     'last_sync_fetched_total'          => $totalFetched,
                     'last_sync_linked_total'           => $totalLinked,
+                    'last_sync_link_attempts_total'    => $totalLinkAttempts,
+                    'last_sync_inventory_total'        => $inventoryFetched,
+                    'last_sync_inventory_linked_total' => $inventoryLinked,
+                    'last_sync_inventory_skipped_total' => $inventorySkipped,
+                    'last_sync_enrichment_total'       => $totalEnrichment,
+                    'last_sync_enrichment_completed'   => $totalEnrichmentCompleted,
+                    'last_sync_enrichment_failures'    => $totalEnrichmentFailures,
                     'last_sync_events_total'           => $totalEvents,
                     'last_sync_sensors_total'          => $totalSensors,
                     'last_sync_skipped_total'          => $totalSkipped,
@@ -209,6 +327,13 @@ class SyncTelematicDevicesJob implements ShouldQueue
                     'last_sync_result'                 => 'failed',
                     'last_sync_fetched_total'          => $totalFetched,
                     'last_sync_linked_total'           => $totalLinked,
+                    'last_sync_link_attempts_total'    => $totalLinkAttempts,
+                    'last_sync_inventory_total'        => $inventoryFetched,
+                    'last_sync_inventory_linked_total' => $inventoryLinked,
+                    'last_sync_inventory_skipped_total' => $inventorySkipped,
+                    'last_sync_enrichment_total'       => $totalEnrichment,
+                    'last_sync_enrichment_completed'   => $totalEnrichmentCompleted,
+                    'last_sync_enrichment_failures'    => $totalEnrichmentFailures,
                     'last_sync_events_total'           => $totalEvents,
                     'last_sync_sensors_total'          => $totalSensors,
                     'last_sync_skipped_total'          => $totalSkipped,
@@ -236,6 +361,37 @@ class SyncTelematicDevicesJob implements ShouldQueue
     public function getJobId(): string
     {
         return $this->jobId;
+    }
+
+    public function failed(\Throwable $e): void
+    {
+        $this->telematic->refresh();
+        $this->telematic->status = 'error';
+        $this->telematic->meta   = array_merge($this->telematic->meta ?? [], [
+            'last_sync_job_id'        => $this->jobId,
+            'last_sync_result'        => 'failed',
+            'last_sync_error'         => $this->safeSyncErrorMessage($e),
+            'last_sync_error_type'    => class_basename($e),
+            'last_sync_failed_at'     => now()->toDateTimeString(),
+            'last_sync_failed_reason' => $e instanceof \Illuminate\Queue\TimeoutExceededException ? 'job_timeout' : null,
+        ]);
+        $this->telematic->save();
+    }
+
+    protected function resolveLinkedDeviceKey(array $result, array $normalizedDevice): ?string
+    {
+        $device = $result['device'] ?? null;
+        $value  = null;
+
+        if (is_object($device)) {
+            $value = $device->uuid ?? $device->device_id ?? null;
+        }
+
+        $value ??= $normalizedDevice['device_id']
+            ?? $normalizedDevice['external_id']
+            ?? null;
+
+        return $value === null || $value === '' ? null : (string) $value;
     }
 
     protected function safeSyncErrorMessage(\Throwable $e): string

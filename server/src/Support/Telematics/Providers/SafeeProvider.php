@@ -62,49 +62,41 @@ class SafeeProvider extends AbstractProvider
 
     public function fetchDevices(array $options = []): array
     {
-        $window        = $this->resolveTelemetryWindow($options);
-        $response      = $this->safeePost('/api/v2/vehicle/list-info', $options['filter'] ?? new \stdClass(), true);
+        $listInfoBody  = $this->resolveListInfoPayload($options);
+        $response      = $this->safeePost('/api/v2/vehicle/list-info', $listInfoBody, true);
         $vehicles      = $response['result'] ?? [];
-        $vehicleIds    = array_values(array_filter(array_map(fn ($vehicle) => $this->resolveVehicleId($vehicle), $vehicles)));
-        $statesById    = $this->fetchLastStatesByVehicle($vehicleIds);
+        $vehicleIds    = $this->resolveListedVehicleIds($vehicles);
+        $identityStats = $this->summarizeVehicleIdentities($vehicles, $vehicleIds);
         $endpointStats = [
-            'vehicles_listed'    => count($vehicles),
-            'last_state_fetched' => count($statesById),
-            'last_info_fetched'  => 0,
-            'positions_fetched'  => 0,
-            'events_fetched'     => 0,
-            'failures'           => [],
+            'vehicles_listed'                 => count($vehicles),
+            'unique_vehicle_ids'              => $identityStats['unique_vehicle_ids'],
+            'missing_vehicle_ids'             => $identityStats['missing_vehicle_ids'],
+            'duplicate_vehicle_ids'           => $identityStats['duplicate_vehicle_ids'],
+            'list_info_page_size'             => $listInfoBody['pageSize'] ?? null,
+            'list_info_requested_unpaginated' => ($listInfoBody['pageSize'] ?? null) === 0,
+            'last_state_fetched'              => 0,
+            'last_info_fetched'               => 0,
+            'positions_fetched'               => 0,
+            'events_fetched'                  => 0,
+            'devices_returned_for_ingestion'  => count($vehicles),
+            'failures'                        => [],
         ];
 
-        $devices = array_map(function (array $vehicle) use ($statesById, $window, &$endpointStats) {
-            $vehicleId = $this->resolveVehicleId($vehicle);
-
-            $lastInfo  = $this->fetchVehicleEndpoint('/api/v2/vehicle/last-info', ['vehicleId' => $vehicleId], 'last-info', $vehicleId, $endpointStats);
-            $positions = $this->fetchVehicleEndpoint('/api/v2/vehicle/positions', [
-                'vehicleId' => $vehicleId,
-                'startDate' => $window['startDate'],
-                'endDate'   => $window['endDate'],
-            ], 'positions', $vehicleId, $endpointStats, []);
-            $events = $this->fetchVehicleEndpoint('/api/v2/vehicle/events', [
-                'vehicleId' => $vehicleId,
-                'startDate' => $window['startDate'],
-                'endDate'   => $window['endDate'],
-                'status'    => 'ALL',
-            ], 'events', $vehicleId, $endpointStats, []);
-
-            $currentState = $statesById[(string) $vehicleId] ?? null;
+        $devices = array_map(function (array $vehicle) use (&$endpointStats) {
+            $vehicleId = $this->resolveListedVehicleId($vehicle);
 
             return array_merge($vehicle, [
                 '_safee' => [
+                    'vehicle_id'     => $vehicleId,
                     'identity'      => $vehicle,
-                    'current_info'  => $lastInfo,
-                    'current_state' => $currentState,
-                    'positions'     => is_array($positions) ? $positions : [],
-                    'events'        => is_array($events) ? $events : [],
-                    'sync_window'   => $window,
+                    'current_info'  => null,
+                    'current_state' => null,
+                    'positions'     => [],
+                    'events'        => [],
+                    'sync_window'   => null,
                     'diagnostics'   => $endpointStats,
                 ],
-                'sensors' => $this->extractTelemetrySensors($lastInfo ?? []),
+                'sensors' => [],
             ]);
         }, $vehicles);
 
@@ -113,11 +105,47 @@ class SafeeProvider extends AbstractProvider
             'next_cursor' => null,
             'has_more'    => false,
             'sync_meta'   => [
+                'safee_last_endpoint_counts'     => array_merge($endpointStats, [
+                    'failures' => array_slice($endpointStats['failures'], 0, 25),
+                ]),
+            ],
+        ];
+    }
+
+    public function fetchDeviceTelemetrySnapshots(array $inventoryPayloads, array $options = []): array
+    {
+        $window        = $this->resolveTelemetryWindow($options);
+        $vehicleIds    = $this->resolveListedVehicleIds($inventoryPayloads);
+        $identityStats = $this->summarizeVehicleIdentities($inventoryPayloads, $vehicleIds);
+        $statesById    = $this->fetchLastStatesByVehicle($vehicleIds);
+        $endpointStats = [
+            'vehicles_listed'                 => count($inventoryPayloads),
+            'unique_vehicle_ids'              => $identityStats['unique_vehicle_ids'],
+            'missing_vehicle_ids'             => $identityStats['missing_vehicle_ids'],
+            'duplicate_vehicle_ids'           => $identityStats['duplicate_vehicle_ids'],
+            'last_state_fetched'              => count($statesById),
+            'last_info_fetched'               => 0,
+            'positions_fetched'               => 0,
+            'events_fetched'                  => 0,
+            'devices_returned_for_ingestion'  => count($inventoryPayloads),
+            'failures'                        => [],
+        ];
+
+        $devices = array_map(function (array $vehicle) use ($statesById, $window, &$endpointStats) {
+            return $this->enrichVehicleSnapshot($vehicle, $statesById, $window, $endpointStats);
+        }, $inventoryPayloads);
+
+        return [
+            'devices'   => $devices,
+            'sync_meta' => [
                 'safee_last_telemetry_synced_at' => $window['endDate'],
                 'safee_last_sync_window'         => $window,
                 'safee_last_endpoint_counts'     => array_merge($endpointStats, [
                     'failures' => array_slice($endpointStats['failures'], 0, 25),
                 ]),
+                'safee_last_enrichment_total'     => count($inventoryPayloads),
+                'safee_last_enrichment_completed' => count($devices),
+                'safee_last_enrichment_failures'  => array_slice($endpointStats['failures'], 0, 25),
             ],
         ];
     }
@@ -135,7 +163,7 @@ class SafeeProvider extends AbstractProvider
     {
         $identity  = $this->identityPayload($payload);
         $current   = $this->currentTelemetryPayload($payload) ?? [];
-        $vehicleId = $this->resolveVehicleId($identity) ?? $this->resolveVehicleId($current);
+        $vehicleId = $this->resolveCanonicalVehicleId($payload, $identity, $current);
         $position  = $this->extractPosition($current ?: $payload);
         $rawStatus = $current['status'] ?? $identity['status'] ?? $identity['vehicleStatus'] ?? null;
         $status    = $this->normalizeVehicleStatus($rawStatus);
@@ -178,6 +206,7 @@ class SafeeProvider extends AbstractProvider
                 'mileage'      => $current['mileage'] ?? null,
                 'last_update'  => $current ? $this->normalizeEvent($payload) : null,
                 'safee'        => [
+                    'vehicle_id'   => $vehicleId,
                     'vehicle_uuid' => $identity['uuid'] ?? null,
                     'sync_window'  => data_get($payload, '_safee.sync_window'),
                     'diagnostics'  => data_get($payload, '_safee.diagnostics'),
@@ -226,7 +255,7 @@ class SafeeProvider extends AbstractProvider
     protected function normalizeSafeeTelemetryEvent(array $payload, string $source, array $identity = []): array
     {
         $position        = $this->extractPosition($payload);
-        $vehicleId       = $this->resolveVehicleId($payload) ?? $this->resolveVehicleId($identity);
+        $vehicleId       = $this->resolveVehicleId($identity) ?? $this->resolveVehicleId($payload);
         $eventCode       = data_get($payload, 'event.code') ?? data_get($payload, 'type.key') ?? data_get($payload, 'event.name');
         $eventName       = data_get($payload, 'event.name') ?? data_get($payload, 'type.value') ?? $payload['reason'] ?? null;
         $occurredAt      = $this->parseTimestamp($payload['date'] ?? $payload['deviceTime'] ?? $payload['time'] ?? null);
@@ -446,6 +475,84 @@ class SafeeProvider extends AbstractProvider
         return (float) $now->getTimestamp() + ((int) $now->format('u') / 1000000);
     }
 
+    protected function resolveListInfoPayload(array $options = []): array
+    {
+        $filter = $options['filter'] ?? [];
+
+        if ($filter instanceof \stdClass) {
+            $filter = (array) $filter;
+        }
+
+        $payload             = is_array($filter) ? $filter : [];
+        $payload['pageSize'] = array_key_exists('page_size', $options) ? (int) $options['page_size'] : 0;
+
+        if (array_key_exists('page_index', $options)) {
+            $payload['pageIndex'] = (int) $options['page_index'];
+        }
+
+        return $payload;
+    }
+
+    protected function resolveListedVehicleIds(array $vehicles): array
+    {
+        $ids = [];
+
+        foreach ($vehicles as $vehicle) {
+            if (!is_array($vehicle)) {
+                continue;
+            }
+
+            $vehicleId = $this->resolveListedVehicleId($vehicle);
+            if ($vehicleId !== null && $vehicleId !== '') {
+                $ids[] = $vehicleId;
+            }
+        }
+
+        return array_values(array_unique($ids, SORT_REGULAR));
+    }
+
+    protected function summarizeVehicleIdentities(array $vehicles, array $uniqueVehicleIds): array
+    {
+        $counts  = [];
+        $missing = 0;
+
+        foreach ($vehicles as $vehicle) {
+            if (!is_array($vehicle)) {
+                $missing++;
+                continue;
+            }
+
+            $vehicleId = $this->resolveListedVehicleId($vehicle);
+            if ($vehicleId === null || $vehicleId === '') {
+                $missing++;
+                continue;
+            }
+
+            $key          = (string) $vehicleId;
+            $counts[$key] = ($counts[$key] ?? 0) + 1;
+        }
+
+        $duplicates = [];
+        foreach ($counts as $vehicleId => $count) {
+            if ($count > 1) {
+                $duplicates[$vehicleId] = $count;
+            }
+        }
+
+        return [
+            'unique_vehicle_ids'    => count($uniqueVehicleIds),
+            'missing_vehicle_ids'   => $missing,
+            'duplicate_vehicle_ids' => $duplicates,
+        ];
+    }
+
+    protected function resolveListedVehicleId(array $vehicle): mixed
+    {
+        return data_get($vehicle, '_safee.vehicle_id')
+            ?? data_get($vehicle, '_safee.identity.id')
+            ?? ($vehicle['id'] ?? null);
+    }
+
     protected function fetchLastStatesByVehicle(array $vehicleIds): array
     {
         if (empty($vehicleIds)) {
@@ -474,6 +581,40 @@ class SafeeProvider extends AbstractProvider
         }
 
         return $states;
+    }
+
+    protected function enrichVehicleSnapshot(array $vehicle, array $statesById, array $window, array &$endpointStats): array
+    {
+        $vehicleId = $this->resolveListedVehicleId($vehicle);
+
+        $lastInfo  = $this->fetchVehicleEndpoint('/api/v2/vehicle/last-info', ['vehicleId' => $vehicleId], 'last-info', $vehicleId, $endpointStats);
+        $positions = $this->fetchVehicleEndpoint('/api/v2/vehicle/positions', [
+            'vehicleId' => $vehicleId,
+            'startDate' => $window['startDate'],
+            'endDate'   => $window['endDate'],
+        ], 'positions', $vehicleId, $endpointStats, []);
+        $events = $this->fetchVehicleEndpoint('/api/v2/vehicle/events', [
+            'vehicleId' => $vehicleId,
+            'startDate' => $window['startDate'],
+            'endDate'   => $window['endDate'],
+            'status'    => 'ALL',
+        ], 'events', $vehicleId, $endpointStats, []);
+
+        $currentState = $statesById[(string) $vehicleId] ?? null;
+
+        return array_merge($vehicle, [
+            '_safee' => [
+                'vehicle_id'     => $vehicleId,
+                'identity'      => $vehicle,
+                'current_info'  => $lastInfo,
+                'current_state' => $currentState,
+                'positions'     => is_array($positions) ? $positions : [],
+                'events'        => is_array($events) ? $events : [],
+                'sync_window'   => $window,
+                'diagnostics'   => $endpointStats,
+            ],
+            'sensors' => $this->extractTelemetrySensors($lastInfo ?? []),
+        ]);
     }
 
     protected function fetchVehicleEndpoint(string $endpoint, array $payload, string $name, mixed $vehicleId, array &$endpointStats, mixed $default = null): mixed
@@ -529,10 +670,21 @@ class SafeeProvider extends AbstractProvider
 
     protected function resolveVehicleId(array $payload): mixed
     {
-        return $payload['vehicleId']
+        return data_get($payload, '_safee.vehicle_id')
+            ?? data_get($payload, '_safee.identity.id')
+            ?? $payload['vehicleId']
             ?? data_get($payload, 'vehicle.id')
-            ?? $payload['id']
-            ?? data_get($payload, '_safee.identity.id');
+            ?? $payload['id'];
+    }
+
+    protected function resolveCanonicalVehicleId(array $payload, array $identity, array $current = []): mixed
+    {
+        return data_get($payload, '_safee.vehicle_id')
+            ?? data_get($payload, '_safee.identity.id')
+            ?? data_get($identity, '_safee.vehicle_id')
+            ?? data_get($identity, '_safee.identity.id')
+            ?? ($identity['id'] ?? null)
+            ?? $this->resolveVehicleId($current);
     }
 
     protected function resolveVehicleName(array $identity, array $current = [], mixed $vehicleId = null): string

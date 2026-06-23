@@ -214,7 +214,7 @@ test('safee telemetry includes online and altitude event fields', function () {
     expect($event['external_id'])->toContain('event-1');
 });
 
-test('safee sync enriches inventory with last info positions and events', function () {
+test('safee sync returns inventory first then enriches with last info positions and events', function () {
     Carbon::setTestNow(Carbon::parse('2026-06-23T09:15:40Z'));
     $requests = [];
 
@@ -318,13 +318,48 @@ test('safee sync enriches inventory with last info positions and events', functi
 
             return $this->fetchDevices();
         }
+
+        public function fetchTelemetryForTest(array $devices): array
+        {
+            return $this->fetchDeviceTelemetrySnapshots($devices);
+        }
     };
 
-    $result = $provider->fetchDevicesForTest($telematic);
+    $inventoryResult = $provider->fetchDevicesForTest($telematic);
+    $inventoryDevice = $inventoryResult['devices'][0];
+
+    expect($inventoryResult['devices'])->toHaveCount(1);
+    expect($inventoryDevice['_safee']['identity']['plateNo'])->toBe('ABC-1234');
+    expect($inventoryDevice['_safee']['current_info'])->toBeNull();
+    expect($inventoryDevice['_safee']['positions'])->toBe([]);
+    expect($inventoryDevice['_safee']['events'])->toBe([]);
+    expect($inventoryDevice['sensors'])->toBe([]);
+    expect(data_get($inventoryResult, 'sync_meta.safee_last_endpoint_counts'))->toMatchArray([
+        'vehicles_listed'                  => 1,
+        'unique_vehicle_ids'               => 1,
+        'missing_vehicle_ids'              => 0,
+        'duplicate_vehicle_ids'            => [],
+        'devices_returned_for_ingestion'   => 1,
+        'list_info_page_size'              => 0,
+        'list_info_requested_unpaginated'  => true,
+        'last_state_fetched'               => 0,
+        'last_info_fetched'                => 0,
+        'positions_fetched'                => 0,
+        'events_fetched'                   => 0,
+    ]);
+
+    expect(array_map(fn ($request) => parse_url($request->url(), PHP_URL_PATH), $requests))->toBe([
+        '/api/v2/vehicle/list-info',
+    ]);
+
+    $result = $provider->fetchTelemetryForTest($inventoryResult['devices']);
     $device = $result['devices'][0];
 
     expect($result['sync_meta'])->toMatchArray([
         'safee_last_telemetry_synced_at' => 1782206140.0,
+        'safee_last_enrichment_total'    => 1,
+        'safee_last_enrichment_completed' => 1,
+        'safee_last_enrichment_failures' => [],
     ]);
     expect(data_get($result, 'sync_meta.safee_last_sync_window'))->toMatchArray([
         'startDate' => 1782205240.0,
@@ -363,6 +398,7 @@ test('safee sync enriches inventory with last info positions and events', functi
         '/api/v2/vehicle/events',
     ]);
 
+    expect($requests[0]->data())->toMatchArray(['pageSize' => 0]);
     expect($requests[1]->data())->toMatchArray([
         'live'      => true,
         'startDate' => null,
@@ -374,6 +410,136 @@ test('safee sync enriches inventory with last info positions and events', functi
     expect($requests[4]->data())->toMatchArray(['vehicleId' => 105, 'status' => 'ALL']);
 
     Carbon::setTestNow();
+});
+
+test('safee list info requests all vehicles and preserves filters', function () {
+    Carbon::setTestNow(Carbon::parse('2026-06-23T09:15:40Z'));
+    $requests = [];
+
+    Http::fake(function ($request) use (&$requests) {
+        $requests[] = $request;
+        $path       = parse_url($request->url(), PHP_URL_PATH);
+
+        if ($path === '/api/v2/vehicle/list-info') {
+            return Http::response([
+                'code'   => 0,
+                'result' => array_map(fn ($id) => [
+                    'id'      => $id,
+                    'plateNo' => 'SAFE-' . $id,
+                    'device'  => ['id' => 'device-' . $id],
+                ], range(101, 107)),
+            ], 200);
+        }
+
+        return Http::response(['code' => 0, 'result' => []], 200);
+    });
+
+    $telematic       = new Telematic();
+    $telematic->meta = [];
+
+    $provider = new class extends SafeeProvider {
+        public function fetchDevicesForTest(Telematic $telematic): array
+        {
+            $this->telematic = $telematic;
+            $this->baseUrl   = 'https://fms.example.test';
+            $this->headers   = ['Authorization' => 'Bearer testing-token'];
+
+            return $this->fetchDevices([
+                'filter' => [
+                    'plateNo' => 'SAFE',
+                ],
+            ]);
+        }
+    };
+
+    $result = $provider->fetchDevicesForTest($telematic);
+
+    expect($result['devices'])->toHaveCount(7);
+    expect($requests)->toHaveCount(1);
+    expect($requests[0]->data())->toMatchArray([
+        'plateNo'  => 'SAFE',
+        'pageSize' => 0,
+    ]);
+    expect(data_get($result, 'sync_meta.safee_last_endpoint_counts'))->toMatchArray([
+        'vehicles_listed'                  => 7,
+        'unique_vehicle_ids'               => 7,
+        'missing_vehicle_ids'              => 0,
+        'duplicate_vehicle_ids'            => [],
+        'devices_returned_for_ingestion'   => 7,
+        'list_info_page_size'              => 0,
+        'list_info_requested_unpaginated'  => true,
+    ]);
+
+    Carbon::setTestNow();
+});
+
+test('safee list info reports duplicate and missing vehicle identities', function () {
+    Carbon::setTestNow(Carbon::parse('2026-06-23T09:15:40Z'));
+    $requests = [];
+
+    Http::fake(function ($request) use (&$requests) {
+        $requests[] = $request;
+        $path       = parse_url($request->url(), PHP_URL_PATH);
+
+        if ($path === '/api/v2/vehicle/list-info') {
+            return Http::response([
+                'code'   => 0,
+                'result' => [
+                    ['id' => 105, 'plateNo' => 'SAFE-105'],
+                    ['id' => 105, 'plateNo' => 'SAFE-105-DUP'],
+                    ['id' => 106, 'plateNo' => 'SAFE-106'],
+                    ['plateNo' => 'SAFE-MISSING'],
+                ],
+            ], 200);
+        }
+
+        return Http::response(['code' => 0, 'result' => []], 200);
+    });
+
+    $telematic       = new Telematic();
+    $telematic->meta = [];
+
+    $provider = new class extends SafeeProvider {
+        public function fetchDevicesForTest(Telematic $telematic): array
+        {
+            $this->telematic = $telematic;
+            $this->baseUrl   = 'https://fms.example.test';
+            $this->headers   = ['Authorization' => 'Bearer testing-token'];
+
+            return $this->fetchDevices();
+        }
+    };
+
+    $result = $provider->fetchDevicesForTest($telematic);
+
+    expect($result['devices'])->toHaveCount(4);
+    expect($requests)->toHaveCount(1);
+    expect(data_get($result, 'sync_meta.safee_last_endpoint_counts'))->toMatchArray([
+        'vehicles_listed'                => 4,
+        'unique_vehicle_ids'             => 2,
+        'missing_vehicle_ids'            => 1,
+        'duplicate_vehicle_ids'          => ['105' => 2],
+        'devices_returned_for_ingestion' => 4,
+    ]);
+
+    Carbon::setTestNow();
+});
+
+test('telematics sync job counts unique persisted devices separately from link attempts', function () {
+    $job = file_get_contents(__DIR__ . '/../src/Jobs/SyncTelematicDevicesJob.php');
+
+    expect($job)
+        ->toContain('public int $timeout = 3600')
+        ->toContain('public bool $failOnTimeout = true')
+        ->toContain('$linkedDeviceKeys')
+        ->toContain('resolveLinkedDeviceKey($result, $normalizedDevice)')
+        ->toContain('fetchDeviceTelemetrySnapshots')
+        ->toContain('Safee inventory sync completed')
+        ->toContain('last_sync_link_attempts_total')
+        ->toContain('last_sync_inventory_linked_total')
+        ->toContain('last_sync_enrichment_completed')
+        ->toContain('last_sync_failed_reason')
+        ->toContain('last_sync_linked_total');
 });
 
 test('safee normalizes documented vehicle identity current telemetry positions and events', function () {
@@ -392,13 +558,14 @@ test('safee normalizes documented vehicle identity current telemetry positions a
                 'device'  => ['id' => 315, 'imei' => 'imei-315', 'serial' => 'serial-315'],
             ],
             'current_info' => [
-                'id'          => 105,
+                'id'          => 999,
                 'plateNo'     => 'ABC-1234',
                 'date'        => 1782206140.5,
                 'speed'       => 45,
                 'heading'     => 100,
                 'status'      => 'moving',
                 'position'    => ['lat' => 25.2, 'lon' => 55.2, 'alt' => 12],
+                'vehicle'     => ['id' => 6],
                 'event'       => ['id' => 3, 'code' => 'over_speed', 'name' => 'Over Speed'],
                 'odometer'    => 1232.4,
                 'temperature' => ['Temp Sensor 1' => 36.8],
