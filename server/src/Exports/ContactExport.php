@@ -25,10 +25,13 @@ class ContactExport implements FromCollection, WithHeadings, WithMapping, WithCo
             $contact->public_id,
             $contact->internal_id,
             $contact->name,
-            $contact->address ? $contact->address->address : null,
+            $contact->title,
+            $contact->type,
+            $contact->address,
             $contact->email,
             $contact->phone,
             $contact->created_at,
+            $contact->updated_at,
         ];
     }
 
@@ -38,18 +41,22 @@ class ContactExport implements FromCollection, WithHeadings, WithMapping, WithCo
             'ID',
             'Internal ID',
             'Name',
+            'Title',
+            'Type',
             'Address',
             'Email',
             'Phone',
             'Date Created',
+            'Date Updated',
         ];
     }
 
     public function columnFormats(): array
     {
         return [
-            'F' => '+#',
-            'G' => NumberFormat::FORMAT_DATE_DDMMYYYY,
+            'H' => '+#',
+            'I' => NumberFormat::FORMAT_DATE_DDMMYYYY,
+            'J' => NumberFormat::FORMAT_DATE_DDMMYYYY,
         ];
     }
 
@@ -59,9 +66,9 @@ class ContactExport implements FromCollection, WithHeadings, WithMapping, WithCo
     public function collection()
     {
         if ($this->selections) {
-            return Contact::where('company_uuid', session('company'))->whereIn('uuid', $this->selections)->get();
+            return Contact::where('company_uuid', session('company'))->whereIn('uuid', $this->selections)->with(['place'])->get();
         }
 
-        return Contact::where('company_uuid', session('company'))->get();
+        return Contact::where('company_uuid', session('company'))->with(['place'])->get();
     }
 }

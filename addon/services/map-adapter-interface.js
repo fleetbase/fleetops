@@ -2,7 +2,7 @@
  * MapAdapterInterface
  *
  * Abstract base class that defines the standardized contract all map provider
- * adapters must implement. This enables FleetOps to support multiple map
+ * adapters must implement. This enables Fleet-Ops to support multiple map
  * providers (Leaflet, Google Maps, Mapbox, etc.) without changing any
  * application-level business logic.
  *

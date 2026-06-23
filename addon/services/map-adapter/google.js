@@ -108,6 +108,12 @@ export default class GoogleMapsAdapter extends MapAdapterInterface {
     /** @type {google.maps.ImageMapType|null} */
     _customTileLayer = null;
 
+    /** @type {google.maps.TrafficLayer|null} */
+    _trafficLayer = null;
+
+    /** @type {google.maps.TransitLayer|null} */
+    _transitLayer = null;
+
     /** @type {Map<string, Function[]>} Normalized event name → array of [handler, gmListener] pairs */
     _eventListeners = new Map();
 
@@ -176,6 +182,7 @@ export default class GoogleMapsAdapter extends MapAdapterInterface {
             styles: mergedMapStyles,
         });
 
+        this.#syncGoogleLayers(options);
         await this.#initDrawingManager();
 
         debug('[GoogleMapsAdapter] Map initialized');
@@ -231,6 +238,10 @@ export default class GoogleMapsAdapter extends MapAdapterInterface {
         this._tooltipOverlayView?.setMap?.(null);
         this._tooltipOverlayView = null;
         this._supportsAdvancedMarkers = false;
+        this._trafficLayer?.setMap(null);
+        this._trafficLayer = null;
+        this._transitLayer?.setMap(null);
+        this._transitLayer = null;
 
         this._map = null;
         debug('[GoogleMapsAdapter] Map destroyed');
@@ -1181,6 +1192,20 @@ export default class GoogleMapsAdapter extends MapAdapterInterface {
             });
         } catch (e) {
             debug('[GoogleMapsAdapter] DrawingManager not available: ' + e.message);
+        }
+    }
+
+    #syncGoogleLayers(options = {}) {
+        if (!this._map) return;
+
+        if (options.showTrafficLayer) {
+            this._trafficLayer = new google.maps.TrafficLayer();
+            this._trafficLayer.setMap(this._map);
+        }
+
+        if (options.showTransitLayer) {
+            this._transitLayer = new google.maps.TransitLayer();
+            this._transitLayer.setMap(this._map);
         }
     }
 

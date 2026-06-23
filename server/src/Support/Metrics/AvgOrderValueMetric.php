@@ -3,7 +3,6 @@
 namespace Fleetbase\FleetOps\Support\Metrics;
 
 use Fleetbase\FleetOps\Models\Order;
-use Fleetbase\Models\Transaction;
 
 /**
  * Average revenue per completed order in the period. Computed as
@@ -39,12 +38,7 @@ class AvgOrderValueMetric extends MoneyMetric
             return 0.0;
         }
 
-        $revenueQuery = Transaction::where('company_uuid', $this->company->uuid)
-            ->where('currency', $this->currency());
-
-        if ($this->currentStart && $this->currentEnd) {
-            $revenueQuery->whereBetween('created_at', [$this->currentStart, $this->currentEnd]);
-        }
+        $revenueQuery = ActiveRevenueQuery::forCompany($this->company, $this->currency(), $this->currentStart, $this->currentEnd);
 
         $totalRevenue = (float) $revenueQuery->sum('amount');
 

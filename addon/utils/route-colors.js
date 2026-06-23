@@ -2,7 +2,7 @@
  * Route Colors Utility
  *
  * Provides deterministic color assignment, color manipulation helpers,
- * and status-based route line styling for the FleetOps map visualization.
+ * and status-based route line styling for the Fleet-Ops map visualization.
  */
 
 /**

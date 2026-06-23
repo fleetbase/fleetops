@@ -32,11 +32,24 @@ class RouterStubService extends Service {
     }
 }
 
+class AbilitiesStub extends Service {
+    denied = new Set();
+
+    can(permission) {
+        return !this.denied.has(permission);
+    }
+
+    cannot(permission) {
+        return !this.can(permission);
+    }
+}
+
 module('Integration | Component | layout/fleet-ops-sidebar', function (hooks) {
     setupRenderingTest(hooks);
 
     hooks.beforeEach(function () {
         this.owner.register('service:router', RouterStubService);
+        this.owner.register('service:abilities', AbilitiesStub);
     });
 
     test('it renders the FleetOps navigator shell', async function (assert) {
@@ -62,7 +75,7 @@ module('Integration | Component | layout/fleet-ops-sidebar', function (hooks) {
 
     test('it starts on the root menu for the default FleetOps landing route', async function (assert) {
         const router = this.owner.lookup('service:router');
-        router.currentRouteName = 'console.fleet-ops.operations.orders.index';
+        router.currentRouteName = 'console.fleet-ops.operations.orders.index.index';
         router.currentURL = '/fleet-ops';
 
         await render(hbs`<Layout::FleetOpsSidebar />`);
@@ -73,11 +86,6 @@ module('Integration | Component | layout/fleet-ops-sidebar', function (hooks) {
         assert.dom('.next-sidebar-navigator-view-in').includesText('Resources');
         assert.dom('.fleet-ops-operations-monitor').exists('Live Operations remains visible on the root menu');
 
-        router.triggerRouteDidChange();
-        await settled();
-
-        assert.dom('.next-sidebar-navigator-back').doesNotExist('the first routeDidChange for the default landing route still keeps root-first entry');
-
         router.currentRouteName = 'console.fleet-ops.management.vehicles.index';
         router.currentURL = '/fleet-ops/manage/vehicles';
         router.triggerRouteDidChange();
@@ -85,6 +93,33 @@ module('Integration | Component | layout/fleet-ops-sidebar', function (hooks) {
 
         assert.dom('.next-sidebar-navigator-back').includesText('Resources', 'later route changes still sync nested state normally');
         assert.dom('.next-sidebar-navigator-view-in .next-sidebar-navigator-item').includesText('Vehicles');
+    });
+
+    test('it treats root URL variants as FleetOps root entry', async function (assert) {
+        const router = this.owner.lookup('service:router');
+        router.currentRouteName = 'console.fleet-ops.operations.orders.index.index';
+        router.currentURL = '/fleet-ops/?from=console-home';
+
+        await render(hbs`<Layout::FleetOpsSidebar />`);
+
+        assert.dom('.next-sidebar-navigator-back').doesNotExist();
+        assert.dom('.next-sidebar-navigator-view-in .next-sidebar-navigator-item:first-of-type').includesText('Operations');
+        assert.dom('.next-sidebar-navigator-view-in').includesText('Resources');
+    });
+
+    test('clicking Operations from root keeps the user-driven nested context', async function (assert) {
+        const router = this.owner.lookup('service:router');
+        router.currentRouteName = 'console.fleet-ops.operations.orders.index.index';
+        router.currentURL = '/fleet-ops';
+
+        await render(hbs`<Layout::FleetOpsSidebar />`);
+
+        assert.dom('.next-sidebar-navigator-back').doesNotExist();
+
+        await click('.next-sidebar-navigator-view-in .next-sidebar-navigator-item:first-of-type');
+
+        assert.dom('.next-sidebar-navigator-back').includesText('Operations');
+        assert.dom('.next-sidebar-navigator-view-in .next-sidebar-navigator-item:first-of-type').includesText('Orders');
     });
 
     test('it opens the matching nested menu for specific initial FleetOps routes', async function (assert) {
@@ -106,6 +141,14 @@ module('Integration | Component | layout/fleet-ops-sidebar', function (hooks) {
         assert.dom('.next-sidebar-navigator-back').includesText('Connectivity');
         assert.dom('.next-sidebar-navigator-view-in .next-sidebar-navigator-item:first-of-type').includesText('Telematics');
         assert.dom('.next-sidebar-navigator-view-in .next-sidebar-navigator-item:first-of-type').hasClass('is-active');
+
+        router.currentRouteName = 'console.fleet-ops.connectivity.devices.index';
+        router.currentURL = '/fleet-ops/connectivity/devices';
+        router.triggerRouteDidChange();
+        await settled();
+
+        assert.dom('.next-sidebar-navigator-back').includesText('Connectivity');
+        assert.dom('.next-sidebar-navigator-view-in .next-sidebar-navigator-item').includesText('Devices');
     });
 
     test('it opens Operations nested for non-default order entry routes', async function (assert) {
@@ -134,6 +177,126 @@ module('Integration | Component | layout/fleet-ops-sidebar', function (hooks) {
         await waitFor('.next-sidebar-navigator-search-result');
 
         assert.dom('.next-sidebar-navigator-search-result').includesText('Orders');
+    });
+
+    test('it hides FleetOps core items by see permissions even when list permissions exist', async function (assert) {
+        const abilities = this.owner.lookup('service:abilities');
+        abilities.denied.add('fleet-ops see service-rate');
+        abilities.denied.add('fleet-ops see vehicle');
+
+        await render(hbs`<Layout::FleetOpsSidebar />`);
+
+        assert.dom('.next-sidebar-navigator-view-in .next-sidebar-navigator-item:first-of-type').includesText('Operations');
+
+        await click('.next-sidebar-navigator-view-in .next-sidebar-navigator-item:first-of-type');
+
+        assert.dom('.next-sidebar-navigator-back').includesText('Operations');
+        assert.dom('.next-sidebar-navigator').includesText('Orders');
+        assert.dom('.next-sidebar-navigator').doesNotIncludeText('Service Rates');
+
+        await click('.next-sidebar-navigator-back');
+        await click('.next-sidebar-navigator-view-in .next-sidebar-navigator-item:nth-of-type(2)');
+
+        assert.dom('.next-sidebar-navigator-back').includesText('Resources');
+        assert.dom('.next-sidebar-navigator').doesNotIncludeText('Vehicles');
+
+        await fillIn('.next-sidebar-navigator-search input', 'vehicles');
+
+        assert.dom('.next-sidebar-navigator-search-result').doesNotExist('denied FleetOps items are excluded from search results');
+    });
+
+    test('it hides hub-only FleetOps sections when every real child is denied', async function (assert) {
+        const abilities = this.owner.lookup('service:abilities');
+        abilities.denied.add('fleet-ops see maintenance-schedule');
+        abilities.denied.add('fleet-ops see work-order');
+        abilities.denied.add('fleet-ops see maintenance');
+        abilities.denied.add('fleet-ops see equipment');
+        abilities.denied.add('fleet-ops see part');
+
+        await render(hbs`<Layout::FleetOpsSidebar />`);
+
+        assert.dom('.next-sidebar-navigator-view-in').doesNotIncludeText('Maintenance');
+
+        await fillIn('.next-sidebar-navigator-search input', 'maintenance hub');
+
+        assert.dom('.next-sidebar-navigator-search-result').doesNotExist('hidden hub-only sections are excluded from search');
+    });
+
+    test('it keeps section hubs visible when at least one real child is visible', async function (assert) {
+        const abilities = this.owner.lookup('service:abilities');
+        abilities.denied.add('fleet-ops see maintenance-schedule');
+        abilities.denied.add('fleet-ops see maintenance');
+        abilities.denied.add('fleet-ops see equipment');
+        abilities.denied.add('fleet-ops see part');
+
+        await render(hbs`<Layout::FleetOpsSidebar />`);
+
+        assert.dom('.next-sidebar-navigator-view-in').includesText('Maintenance');
+
+        await click('.next-sidebar-navigator-view-in .next-sidebar-navigator-item:nth-of-type(3)');
+
+        assert.dom('.next-sidebar-navigator-back').includesText('Maintenance');
+        assert.dom('.next-sidebar-navigator-view-in .next-sidebar-navigator-item:first-of-type').includesText('Maintenance Hub');
+        assert.dom('.next-sidebar-navigator').includesText('Work Orders');
+        assert.dom('.next-sidebar-navigator').doesNotIncludeText('Schedules');
+        assert.dom('.next-sidebar-navigator').doesNotIncludeText('Equipment');
+        assert.dom('.next-sidebar-navigator').doesNotIncludeText('Parts');
+    });
+
+    test('it hides Resources when the Resources Hub is the only visible child', async function (assert) {
+        const abilities = this.owner.lookup('service:abilities');
+        abilities.denied.add('fleet-ops see driver');
+        abilities.denied.add('fleet-ops see vehicle');
+        abilities.denied.add('fleet-ops see fleet');
+        abilities.denied.add('fleet-ops see vendor');
+        abilities.denied.add('fleet-ops see contact');
+        abilities.denied.add('fleet-ops see place');
+        abilities.denied.add('fleet-ops see fuel-report');
+        abilities.denied.add('fleet-ops see issue');
+
+        await render(hbs`<Layout::FleetOpsSidebar />`);
+
+        assert.dom('.next-sidebar-navigator-view-in').doesNotIncludeText('Resources');
+
+        await fillIn('.next-sidebar-navigator-search input', 'resources hub');
+
+        assert.dom('.next-sidebar-navigator-search-result').doesNotExist('Resources Hub is not searchable when Resources has no real visible children');
+    });
+
+    test('it hides Connectivity when Telematics is the only visible child', async function (assert) {
+        const abilities = this.owner.lookup('service:abilities');
+        abilities.denied.add('fleet-ops see fuel-report');
+        abilities.denied.add('fleet-ops see device');
+        abilities.denied.add('fleet-ops see sensor');
+        abilities.denied.add('fleet-ops see device-event');
+
+        await render(hbs`<Layout::FleetOpsSidebar />`);
+
+        assert.dom('.next-sidebar-navigator-view-in').doesNotIncludeText('Connectivity');
+
+        await fillIn('.next-sidebar-navigator-search input', 'connectivity hub');
+
+        assert.dom('.next-sidebar-navigator-search-result').doesNotExist('Telematics is not searchable when Connectivity has no real visible children');
+    });
+
+    test('it keeps Connectivity visible when at least one real child is visible', async function (assert) {
+        const abilities = this.owner.lookup('service:abilities');
+        abilities.denied.add('fleet-ops see fuel-report');
+        abilities.denied.add('fleet-ops see sensor');
+        abilities.denied.add('fleet-ops see device-event');
+
+        await render(hbs`<Layout::FleetOpsSidebar />`);
+
+        assert.dom('.next-sidebar-navigator-view-in').includesText('Connectivity');
+
+        await click('.next-sidebar-navigator-view-in .next-sidebar-navigator-item:nth-of-type(4)');
+
+        assert.dom('.next-sidebar-navigator-back').includesText('Connectivity');
+        assert.dom('.next-sidebar-navigator-view-in .next-sidebar-navigator-item:first-of-type').includesText('Telematics');
+        assert.dom('.next-sidebar-navigator').includesText('Devices');
+        assert.dom('.next-sidebar-navigator').doesNotIncludeText('Fuel Integrations');
+        assert.dom('.next-sidebar-navigator').doesNotIncludeText('Sensors');
+        assert.dom('.next-sidebar-navigator').doesNotIncludeText('Events');
     });
 
     test('it routes nested branches to hub defaults', async function (assert) {

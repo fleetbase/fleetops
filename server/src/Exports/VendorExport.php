@@ -25,10 +25,16 @@ class VendorExport implements FromCollection, WithHeadings, WithMapping, WithCol
             $vendor->public_id,
             $vendor->internal_id,
             $vendor->name,
+            $vendor->business_id,
             $vendor->address,
             $vendor->email,
+            $vendor->website_url,
             $vendor->phone,
+            $vendor->type,
+            $vendor->country,
+            $vendor->status,
             $vendor->created_at,
+            $vendor->updated_at,
         ];
     }
 
@@ -38,18 +44,25 @@ class VendorExport implements FromCollection, WithHeadings, WithMapping, WithCol
             'ID',
             'Internal ID',
             'Name',
+            'Business ID',
             'Address',
             'Email',
+            'Website URL',
             'Phone',
+            'Type',
+            'Country',
+            'Status',
             'Date Created',
+            'Date Updated',
         ];
     }
 
     public function columnFormats(): array
     {
         return [
-            'F' => '+#',
-            'G' => NumberFormat::FORMAT_DATE_DDMMYYYY,
+            'H' => '+#',
+            'L' => NumberFormat::FORMAT_DATE_DDMMYYYY,
+            'M' => NumberFormat::FORMAT_DATE_DDMMYYYY,
         ];
     }
 

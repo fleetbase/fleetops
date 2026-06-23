@@ -111,7 +111,7 @@ export default class DeviceDetailsComponent extends Component {
     }
 
     get unprocessedEventsCount() {
-        return this.events.filter((event) => !event.processed_at && !event.is_processed).length;
+        return this.events.filter((event) => !event.processed_at).length;
     }
 
     get activeSensorsCount() {

@@ -178,6 +178,8 @@ export default class ConnectivitySensorsIndexController extends Controller {
             filterParam: 'type',
             filterComponent: 'filter/multi-option',
             filterOptions: fleetOpsOptions('sensorTypes'),
+            filterOptionLabel: 'label',
+            filterOptionValue: 'value',
         },
         {
             label: 'Last Value',
@@ -200,6 +202,8 @@ export default class ConnectivitySensorsIndexController extends Controller {
             filterable: true,
             filterComponent: 'filter/multi-option',
             filterOptions: fleetOpsOptions('sensorStatuses'),
+            filterOptionLabel: 'label',
+            filterOptionValue: 'value',
         },
         {
             label: 'Threshold',

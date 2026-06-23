@@ -4,6 +4,7 @@ use Fleetbase\FleetOps\Support\Metrics\AbstractMetric;
 use Fleetbase\FleetOps\Support\Metrics\OrdersInProgressMetric;
 use Fleetbase\FleetOps\Support\Metrics\Registry;
 use Fleetbase\FleetOps\Support\Metrics\TotalTimeTraveledMetric;
+use Fleetbase\Models\Transaction;
 
 test('registry exposes every known metric slug', function () {
     $slugs = Registry::slugs();
@@ -66,13 +67,52 @@ test('money metrics return float values to preserve cents', function () {
 });
 
 test('money metrics filter by currency to avoid mixed-currency sums', function () {
-    $earnings  = file_get_contents(dirname(__DIR__) . '/src/Support/Metrics/EarningsMetric.php');
-    $fuelCosts = file_get_contents(dirname(__DIR__) . '/src/Support/Metrics/FuelCostsMetric.php');
-    $aov       = file_get_contents(dirname(__DIR__) . '/src/Support/Metrics/AvgOrderValueMetric.php');
+    $earnings      = file_get_contents(dirname(__DIR__) . '/src/Support/Metrics/EarningsMetric.php');
+    $fuelCosts     = file_get_contents(dirname(__DIR__) . '/src/Support/Metrics/FuelCostsMetric.php');
+    $aov           = file_get_contents(dirname(__DIR__) . '/src/Support/Metrics/AvgOrderValueMetric.php');
+    $activeRevenue = file_get_contents(dirname(__DIR__) . '/src/Support/Metrics/ActiveRevenueQuery.php');
 
-    expect($earnings)->toContain("->where('currency'");
+    expect($earnings)->toContain('ActiveRevenueQuery::forCompany');
     expect($fuelCosts)->toContain("->where('currency'");
-    expect($aov)->toContain("->where('currency'");
+    expect($aov)->toContain('ActiveRevenueQuery::forCompany');
+    expect($activeRevenue)->toContain("->where('currency'");
+});
+
+test('earnings use the shared active revenue query', function () {
+    $earnings     = file_get_contents(dirname(__DIR__) . '/src/Support/Metrics/EarningsMetric.php');
+    $aov          = file_get_contents(dirname(__DIR__) . '/src/Support/Metrics/AvgOrderValueMetric.php');
+    $revenueTrend = file_get_contents(dirname(__DIR__) . '/src/Support/Analytics/RevenueTrend.php');
+
+    expect($earnings)->toContain('ActiveRevenueQuery::forCompany');
+    expect($aov)->toContain('ActiveRevenueQuery::forCompany');
+    expect($revenueTrend)->toContain('ActiveRevenueQuery::forCompany');
+});
+
+test('active revenue query excludes inactive financial and operational lifecycle records', function () {
+    $source = file_get_contents(dirname(__DIR__) . '/src/Support/Metrics/ActiveRevenueQuery.php');
+
+    expect($source)->toContain("where('direction', Transaction::DIRECTION_CREDIT)");
+    expect($source)->toContain("whereIn('status', self::ACTIVE_STATUSES)");
+    expect($source)->toContain("whereNull('voided_at')");
+    expect($source)->toContain("whereNull('reversed_at')");
+    expect($source)->toContain("whereNull('parent_transaction_uuid')");
+    expect($source)->toContain('excludeInactiveOrders');
+    expect($source)->toContain('excludeInactiveInvoices');
+    expect($source)->toContain('ledger_invoices.deleted_at');
+    expect($source)->toContain('orders.deleted_at');
+    expect(Fleetbase\FleetOps\Support\Metrics\ActiveRevenueQuery::ACTIVE_STATUSES)->toBe([Transaction::STATUS_SUCCESS]);
+    expect(Fleetbase\FleetOps\Support\Metrics\ActiveRevenueQuery::ACTIVE_STATUSES)->not->toContain('completed');
+    expect(Fleetbase\FleetOps\Support\Metrics\ActiveRevenueQuery::ACTIVE_STATUSES)->not->toContain('paid');
+});
+
+test('active revenue query treats invoice status as invalidation only', function () {
+    $inactiveInvoiceStatuses = Fleetbase\FleetOps\Support\Metrics\ActiveRevenueQuery::INACTIVE_INVOICE_STATUSES;
+
+    expect($inactiveInvoiceStatuses)->not->toContain('draft');
+    expect($inactiveInvoiceStatuses)->toContain('void');
+    expect($inactiveInvoiceStatuses)->toContain('voided');
+    expect($inactiveInvoiceStatuses)->toContain('cancelled');
+    expect($inactiveInvoiceStatuses)->toContain('canceled');
 });
 
 test('ordersInProgress uses an explicit allowlist rather than an exclusion list', function () {

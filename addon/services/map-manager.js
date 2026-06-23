@@ -1,7 +1,7 @@
 /**
  * MapManagerService
  *
- * Provider-agnostic central map service for FleetOps. Replaces the
+ * Provider-agnostic central map service for Fleet-Ops. Replaces the
  * Leaflet-specific `leaflet-map-manager` as the single point of contact
  * for all map operations across the application.
  *
@@ -139,6 +139,9 @@ export default class MapManagerService extends Service {
             ...options,
             apiKey: options.apiKey ?? this.mapSettings.googleMapsApiKey,
             mapId: options.mapId ?? this.mapSettings.googleMapsMapId,
+            mapTypeId: options.mapTypeId ?? this.mapSettings.googleMapsMapType,
+            showTrafficLayer: options.showTrafficLayer ?? this.mapSettings.showGoogleMapsTrafficLayer,
+            showTransitLayer: options.showTransitLayer ?? this.mapSettings.showGoogleMapsTransitLayer,
         });
 
         return Promise.resolve(map).then((nativeMap) => {

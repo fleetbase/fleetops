@@ -23,12 +23,19 @@ class FleetExport implements FromCollection, WithHeadings, WithMapping, WithColu
     {
         return [
             $fleet->public_id,
-            $fleet->internal_id,
             $fleet->name,
+            data_get($fleet, 'serviceArea.name'),
+            data_get($fleet, 'parentFleet.name'),
+            data_get($fleet, 'vendor.name'),
+            data_get($fleet, 'zone.name'),
             $fleet->drivers_count,
+            $fleet->drivers_online_count,
             $fleet->vehicles_count,
-            $fleet->zone_uuid,
+            $fleet->vehicles_online_count,
+            $fleet->task,
+            $fleet->status,
             $fleet->created_at,
+            $fleet->updated_at,
         ];
     }
 
@@ -36,19 +43,27 @@ class FleetExport implements FromCollection, WithHeadings, WithMapping, WithColu
     {
         return [
             'ID',
-            'Internal ID',
             'Name',
+            'Service Area',
+            'Parent Fleet',
+            'Vendor',
+            'Zone',
             'Drivers Count',
+            'Drivers Online Count',
             'Vehicles Count',
-            'Zone Assigned',
+            'Vehicles Online Count',
+            'Task',
+            'Status',
             'Date Created',
+            'Date Updated',
         ];
     }
 
     public function columnFormats(): array
     {
         return [
-            'G' => NumberFormat::FORMAT_DATE_DDMMYYYY,
+            'L' => NumberFormat::FORMAT_DATE_DDMMYYYY,
+            'M' => NumberFormat::FORMAT_DATE_DDMMYYYY,
         ];
     }
 
@@ -58,9 +73,9 @@ class FleetExport implements FromCollection, WithHeadings, WithMapping, WithColu
     public function collection()
     {
         if ($this->selections) {
-            return Fleet::where('company_uuid', session('company'))->whereIn('uuid', $this->selections)->get();
+            return Fleet::where('company_uuid', session('company'))->whereIn('uuid', $this->selections)->with(['serviceArea', 'parentFleet', 'vendor', 'zone'])->get();
         }
 
-        return Fleet::where('company_uuid', session('company'))->get();
+        return Fleet::where('company_uuid', session('company'))->with(['serviceArea', 'parentFleet', 'vendor', 'zone'])->get();
     }
 }

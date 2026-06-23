@@ -2,12 +2,15 @@
 
 namespace Fleetbase\FleetOps\Http\Controllers\Internal\v1;
 
+use Fleetbase\FleetOps\Exports\MaintenanceExport;
 use Fleetbase\FleetOps\Http\Controllers\FleetOpsController;
 use Fleetbase\FleetOps\Imports\MaintenanceImport;
 use Fleetbase\FleetOps\Models\Maintenance;
+use Fleetbase\Http\Requests\ExportRequest;
 use Fleetbase\Http\Requests\ImportRequest;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Str;
 use Maatwebsite\Excel\Facades\Excel;
 
 class MaintenanceController extends FleetOpsController
@@ -18,6 +21,20 @@ class MaintenanceController extends FleetOpsController
      * @var string
      */
     public $resource = 'maintenance';
+
+    /**
+     * Export maintenances to excel or csv.
+     *
+     * @return \Illuminate\Http\Response
+     */
+    public function export(ExportRequest $request)
+    {
+        $format     = $request->input('format', 'xlsx');
+        $selections = $request->array('selections');
+        $fileName   = trim(Str::slug('maintenances-' . date('Y-m-d-H:i')) . '.' . $format);
+
+        return Excel::download(new MaintenanceExport($selections), $fileName);
+    }
 
     /**
      * Eager-load polymorphic relationships after create so they appear in the API response.

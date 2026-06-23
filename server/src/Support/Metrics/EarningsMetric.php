@@ -2,8 +2,6 @@
 
 namespace Fleetbase\FleetOps\Support\Metrics;
 
-use Fleetbase\Models\Transaction;
-
 class EarningsMetric extends MoneyMetric
 {
     public static function slug(): string
@@ -13,14 +11,7 @@ class EarningsMetric extends MoneyMetric
 
     protected function query(?\DateTimeInterface $start, ?\DateTimeInterface $end)
     {
-        $query = Transaction::where('company_uuid', $this->company->uuid)
-            ->where('currency', $this->currency());
-
-        if ($start && $end) {
-            $query->whereBetween('created_at', [$start, $end]);
-        }
-
-        return $query;
+        return ActiveRevenueQuery::forCompany($this->company, $this->currency(), $start, $end);
     }
 
     protected function aggregate($query): float

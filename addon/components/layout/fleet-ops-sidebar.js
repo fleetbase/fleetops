@@ -63,6 +63,7 @@ export default class LayoutFleetOpsSidebarComponent extends Component {
                 icon: 'truck',
                 route: 'management',
                 defaultRoute: 'management.index',
+                requiresVisibleChildren: true,
                 keywords: ['drivers', 'vehicles', 'fleets', 'contacts', 'places'],
                 children: this.resourcesItems,
             }),
@@ -72,6 +73,7 @@ export default class LayoutFleetOpsSidebarComponent extends Component {
                 icon: 'cog',
                 route: 'maintenance',
                 defaultRoute: 'maintenance.index',
+                requiresVisibleChildren: true,
                 keywords: ['work orders', 'equipment', 'parts'],
                 children: this.maintenanceItems,
             }),
@@ -81,6 +83,7 @@ export default class LayoutFleetOpsSidebarComponent extends Component {
                 icon: 'satellite-dish',
                 route: 'connectivity',
                 defaultRoute: 'connectivity.telematics',
+                requiresVisibleChildren: true,
                 keywords: ['telematics', 'fuel integrations', 'devices', 'sensors'],
                 children: this.connectivityItems,
             }),
@@ -90,6 +93,7 @@ export default class LayoutFleetOpsSidebarComponent extends Component {
                 icon: 'chart-line',
                 route: 'analytics',
                 defaultRoute: 'analytics.index',
+                requiresVisibleChildren: true,
                 keywords: ['reports', 'metrics'],
                 children: this.analyticsItems,
             }),
@@ -99,6 +103,7 @@ export default class LayoutFleetOpsSidebarComponent extends Component {
                 icon: 'gear',
                 route: 'settings',
                 defaultRoute: 'settings.index',
+                requiresVisibleChildren: true,
                 keywords: ['configuration', 'navigator', 'map', 'routing', 'notifications'],
                 children: this.settingsItems,
             }),
@@ -164,7 +169,7 @@ export default class LayoutFleetOpsSidebarComponent extends Component {
 
     get connectivityItems() {
         return this.withRegistryItems('connectivity', [
-            this.createItem('menu.telematics', 'satellite-dish', 'connectivity.telematics', 'fleet-ops list telematic', 'fleet-ops see telematic', ['connectivity hub']),
+            this.createHubItem(this.intl.t('menu.telematics'), 'satellite-dish', 'connectivity.telematics', 'fleet-ops list telematic', 'fleet-ops see telematic', ['connectivity hub']),
             this.createItem('menu.fuel-providers', 'gas-pump', 'connectivity.fuel-providers', 'fleet-ops list fuel-report', 'fleet-ops see fuel-report', ['fuel integrations']),
             this.createItem('menu.devices', 'hard-drive', 'connectivity.devices', 'fleet-ops list device', 'fleet-ops see device'),
             this.createItem('menu.sensors', 'temperature-full', 'connectivity.sensors', 'fleet-ops list sensor', 'fleet-ops see sensor'),
@@ -247,13 +252,14 @@ export default class LayoutFleetOpsSidebarComponent extends Component {
         this.universeSettingsMenuItems = registeredMenuItems.filter((menuItem) => menuItem.section === 'settings');
     }
 
-    createBranch({ id, label, icon, route, defaultRoute, children, keywords = [] }) {
+    createBranch({ id, label, icon, route, defaultRoute, requiresVisibleChildren = false, children, keywords = [] }) {
         return {
             id,
             label,
             icon,
             route: this.fullRoute(route),
             defaultRoute: this.fullRoute(defaultRoute),
+            requiresVisibleChildren,
             children: children.filter((item) => item.visible !== false),
             keywords,
         };
@@ -267,12 +273,12 @@ export default class LayoutFleetOpsSidebarComponent extends Component {
             icon,
             route: this.fullRoute(route),
             permission,
-            visible: this.abilities.can(ability),
+            visiblePermission: ability,
             keywords: [intl, route, ...keywords].filter(Boolean),
         };
     }
 
-    createHubItem(label, icon, route, permission, ability, keywords = []) {
+    createHubItem(label, icon, route, _permission, _ability, keywords = []) {
         return {
             pinnedFirst: true,
             priority: this.defaultPriorityForRoute(route),
@@ -280,8 +286,7 @@ export default class LayoutFleetOpsSidebarComponent extends Component {
             description: label,
             icon,
             route: this.fullRoute(route),
-            permission,
-            visible: this.abilities.can(ability),
+            isNavigationHub: true,
             keywords: [label, route, ...keywords].filter(Boolean),
         };
     }
@@ -390,10 +395,11 @@ export default class LayoutFleetOpsSidebarComponent extends Component {
         }
     }
 
-    @action shouldSyncInitialActiveParent({ activePath = [], routeName }) {
+    @action shouldSyncInitialActiveParent({ activePath = [], currentURL }) {
         const [parent, child] = activePath;
-        const defaultOrdersRoutes = [this.fullRoute('operations.orders'), this.fullRoute('operations.orders.index')];
-        const isDefaultOrdersLanding = parent?.id === 'operations' && child?.route === this.fullRoute('operations.orders') && defaultOrdersRoutes.includes(routeName);
+        const normalizedURL = (currentURL ?? '').split('?')[0].replace(/\/+$/, '') || '/';
+        const isFleetOpsRootURL = normalizedURL === '/fleet-ops';
+        const isDefaultOrdersLanding = parent?.id === 'operations' && child?.route === this.fullRoute('operations.orders') && isFleetOpsRootURL;
 
         return !isDefaultOrdersLanding;
     }

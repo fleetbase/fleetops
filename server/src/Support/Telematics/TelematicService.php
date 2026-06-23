@@ -194,19 +194,30 @@ class TelematicService
     {
         $device = $this->linkDevice($telematic, $provider->normalizeDevice($payload));
 
-        $event = null;
+        $event  = null;
+        $events = [];
         try {
-            $eventData = $provider->normalizeEvent($payload);
-            if ($this->hasEventSignal($eventData)) {
-                $event = $this->storeDeviceEvent($telematic, $eventData, $device);
+            $eventPayloads = method_exists($provider, 'normalizeEvents') ? $provider->normalizeEvents($payload) : [];
+            if (empty($eventPayloads)) {
+                $eventPayloads = [$provider->normalizeEvent($payload)];
+            }
+
+            foreach ($eventPayloads as $eventData) {
+                if ($this->hasEventSignal($eventData)) {
+                    $storedEvent = $this->storeDeviceEvent($telematic, $eventData, $device);
+                    $events[]    = $storedEvent;
+                    $event ??= $storedEvent;
+                }
             }
         } catch (\Throwable) {
-            $event = null;
+            $event  = null;
+            $events = [];
         }
 
         return [
             'device'  => $device,
             'event'   => $event,
+            'events'  => $events,
             'sensors' => $this->storeSnapshotSensors($telematic, $provider, $payload, $device),
         ];
     }
@@ -663,6 +674,10 @@ class TelematicService
             $vehicle->altitude = $eventData['altitude'];
         }
 
+        if (array_key_exists('odometer', $eventData) && $eventData['odometer'] !== null) {
+            $vehicle->odometer = $eventData['odometer'];
+        }
+
         $vehicle->telematics = array_merge($vehicle->telematics ?? [], [
             'last_event_uuid'     => $event->uuid,
             'last_event_id'       => $event->public_id,
@@ -757,13 +772,17 @@ class TelematicService
         return collect($rawSensors)
             ->map(function ($sensor, $name) {
                 if (is_array($sensor)) {
-                    return array_merge(['name' => $name], $sensor);
+                    return array_merge([
+                        'sensor_key' => $name,
+                        'name'       => $name,
+                    ], $sensor);
                 }
 
                 return [
-                    'name'  => $name,
-                    'type'  => $name,
-                    'value' => $sensor,
+                    'sensor_key' => $name,
+                    'name'       => $name,
+                    'type'       => $name,
+                    'value'      => $sensor,
                 ];
             })
             ->values()

@@ -1,0 +1,192 @@
+<div class="flex flex-col gap-3 p-3" ...attributes>
+    <section class="overflow-hidden rounded-md border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-800">
+        <div class="flex flex-col gap-3 p-3 lg:flex-row lg:items-start lg:justify-between">
+            <div class="min-w-0">
+                <div class="flex flex-wrap items-center gap-2">
+                    <h2 class="truncate text-base font-bold text-gray-900 dark:text-gray-100">{{smart-humanize this.eventType}}</h2>
+                    <Badge @status={{this.severity}} @hideStatusDot={{true}}>{{smart-humanize this.severity}}</Badge>
+                    <Badge @status={{this.processedStatus}} @hideStatusDot={{true}}>{{this.processedLabel}}</Badge>
+                </div>
+
+                <p class="mt-2 max-w-4xl text-sm leading-5 text-gray-700 dark:text-gray-200">{{n-a this.message}}</p>
+
+                <div class="mt-2 flex flex-wrap gap-2 text-xs text-gray-500 dark:text-gray-300">
+                    <span>Occurred: {{n-a (format-date-fns this.occurredAt "dd MMM yyyy, HH:mm")}}</span>
+                    <span>Processed: {{n-a (format-date-fns this.processedAt "dd MMM yyyy, HH:mm")}}</span>
+                    <span>Public ID: {{n-a @resource.public_id}}</span>
+                    <span>UUID: {{n-a @resource.id}}</span>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-4">
+        {{#each this.metrics as |metric|}}
+            <div class="fleet-ops-widget fleet-ops-kpi-tile fleetops-connectivity-kpi-tile {{metric.accentClass}} relative min-h-[82px] overflow-hidden rounded-md border bg-white shadow-sm dark:bg-gray-800">
+                <div class="flex h-full items-start justify-between gap-2 p-3">
+                    <div class="min-w-0">
+                        <div class="truncate text-[10px] font-bold uppercase text-gray-500 dark:text-gray-400">{{metric.label}}</div>
+                        <div class="mt-1 truncate text-lg font-extrabold leading-none text-gray-900 dark:text-gray-50">{{n-a metric.value}}</div>
+                        {{#if metric.meta}}
+                            <div class="mt-1 truncate text-xs text-gray-500 dark:text-gray-300">{{metric.meta}}</div>
+                        {{/if}}
+                    </div>
+                    <div class="fleetops-connectivity-kpi-icon flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-md text-[13px]">
+                        <FaIcon @icon={{metric.icon}} />
+                    </div>
+                </div>
+            </div>
+        {{/each}}
+    </section>
+
+    <section class="grid grid-cols-1 gap-3 xl:grid-cols-2">
+        <div class="overflow-hidden rounded-md border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-800">
+            <div class="border-b border-gray-200 px-3 py-2 dark:border-gray-700">
+                <h3 class="text-sm font-bold text-gray-900 dark:text-gray-100">Event Details</h3>
+            </div>
+            <div class="grid grid-cols-1 gap-2 p-3 sm:grid-cols-2 lg:grid-cols-3">
+                <div class="field-info-container">
+                    <div class="field-name">Event Type</div>
+                    <div class="field-value">{{n-a (smart-humanize this.eventType)}}</div>
+                </div>
+                <div class="field-info-container">
+                    <div class="field-name">Severity</div>
+                    <div class="field-value"><Badge @status={{this.severity}}>{{smart-humanize this.severity}}</Badge></div>
+                </div>
+                <div class="field-info-container">
+                    <div class="field-name">State</div>
+                    <div class="field-value">{{n-a (smart-humanize @resource.state)}}</div>
+                </div>
+                <div class="field-info-container">
+                    <div class="field-name">Code</div>
+                    <div class="field-value">{{n-a @resource.code}}</div>
+                </div>
+                <div class="field-info-container">
+                    <div class="field-name">Reason</div>
+                    <div class="field-value">{{n-a @resource.reason}}</div>
+                </div>
+                <div class="field-info-container">
+                    <div class="field-name">Mileage</div>
+                    <div class="field-value">{{n-a @resource.mileage}}</div>
+                </div>
+                <div class="field-info-container">
+                    <div class="field-name">Age</div>
+                    <div class="field-value">{{#if this.ageMinutes}}{{this.ageMinutes}} minutes{{else}}{{n-a null}}{{/if}}</div>
+                </div>
+                <div class="field-info-container">
+                    <div class="field-name">Processing Delay</div>
+                    <div class="field-value">{{#if this.processingDelay}}{{this.processingDelay}} minutes{{else}}{{n-a null}}{{/if}}</div>
+                </div>
+                <div class="field-info-container sm:col-span-2 lg:col-span-3">
+                    <div class="field-name">Comment</div>
+                    <div class="field-value whitespace-pre-line">{{n-a @resource.comment}}</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="overflow-hidden rounded-md border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-800">
+            <div class="border-b border-gray-200 px-3 py-2 dark:border-gray-700">
+                <h3 class="text-sm font-bold text-gray-900 dark:text-gray-100">Device & Provider</h3>
+            </div>
+            <div class="grid grid-cols-1 gap-2 p-3 sm:grid-cols-2 lg:grid-cols-3">
+                <div class="field-info-container">
+                    <div class="field-name">Device</div>
+                    <div class="field-value">
+                        {{#if this.deviceRouteModel}}
+                            <button
+                                type="button"
+                                class="text-blue-600 hover:text-blue-700 hover:underline dark:text-blue-300 dark:hover:text-blue-200"
+                                data-test-device-event-device-link
+                                {{on "click" this.openDevice}}
+                            >
+                                {{n-a this.deviceName}}
+                            </button>
+                        {{else}}
+                            {{n-a this.deviceName}}
+                        {{/if}}
+                    </div>
+                </div>
+                <div class="field-info-container">
+                    <div class="field-name">Device UUID</div>
+                    <div class="field-value">{{n-a @resource.device_uuid}}</div>
+                </div>
+                <div class="field-info-container">
+                    <div class="field-name">Device ID</div>
+                    <div class="field-value">{{n-a @resource.device_id}}</div>
+                </div>
+                <div class="field-info-container">
+                    <div class="field-name">IMEI</div>
+                    <div class="field-value">{{n-a @resource.device_imei}}</div>
+                </div>
+                <div class="field-info-container">
+                    <div class="field-name">Serial Number</div>
+                    <div class="field-value">{{n-a @resource.device_serial_number}}</div>
+                </div>
+                <div class="field-info-container">
+                    <div class="field-name">IDENT</div>
+                    <div class="field-value">{{n-a @resource.ident}}</div>
+                </div>
+                <div class="field-info-container">
+                    <div class="field-name">Provider</div>
+                    <div class="field-value">
+                        {{#if this.telematicRouteModel}}
+                            <button
+                                type="button"
+                                class="text-blue-600 hover:text-blue-700 hover:underline dark:text-blue-300 dark:hover:text-blue-200"
+                                data-test-device-event-telematic-link
+                                {{on "click" this.openTelematic}}
+                            >
+                                {{n-a this.providerLabel}}
+                            </button>
+                        {{else}}
+                            {{n-a this.providerLabel}}
+                        {{/if}}
+                    </div>
+                </div>
+                <div class="field-info-container">
+                    <div class="field-name">Protocol</div>
+                    <div class="field-value">{{n-a @resource.protocol}}</div>
+                </div>
+                <div class="field-info-container">
+                    <div class="field-name">Telematic UUID</div>
+                    <div class="field-value">{{n-a @resource.telematic_uuid}}</div>
+                </div>
+                <div class="field-info-container">
+                    <div class="field-name">Device Status</div>
+                    <div class="field-value" data-test-device-event-device-status>
+                        {{#if this.deviceStatus}}
+                            <Badge @status={{this.deviceStatus}}>{{smart-humanize this.deviceStatus}}</Badge>
+                        {{else}}
+                            {{n-a null}}
+                        {{/if}}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="grid grid-cols-1 gap-3 xl:grid-cols-3">
+        <div class="overflow-hidden rounded-md border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-800">
+            <div class="border-b border-gray-200 px-3 py-2 dark:border-gray-700">
+                <h3 class="text-sm font-bold text-gray-900 dark:text-gray-100">Payload</h3>
+            </div>
+            <pre class="max-h-80 overflow-auto bg-gray-900 p-3 text-[11px] leading-5 text-gray-100">{{n-a this.payloadJson}}</pre>
+        </div>
+
+        <div class="overflow-hidden rounded-md border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-800">
+            <div class="border-b border-gray-200 px-3 py-2 dark:border-gray-700">
+                <h3 class="text-sm font-bold text-gray-900 dark:text-gray-100">Data</h3>
+            </div>
+            <pre class="max-h-80 overflow-auto bg-gray-900 p-3 text-[11px] leading-5 text-gray-100">{{n-a this.dataJson}}</pre>
+        </div>
+
+        <div class="overflow-hidden rounded-md border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-800">
+            <div class="border-b border-gray-200 px-3 py-2 dark:border-gray-700">
+                <h3 class="text-sm font-bold text-gray-900 dark:text-gray-100">Meta</h3>
+            </div>
+            <pre class="max-h-80 overflow-auto bg-gray-900 p-3 text-[11px] leading-5 text-gray-100">{{n-a this.metaJson}}</pre>
+        </div>
+    </section>
+
+    <CustomField::Yield @subject={{@resource}} @viewMode={{true}} @wrapperClass="bordered-top" />
+</div>

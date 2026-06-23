@@ -2,13 +2,17 @@
 
 namespace Fleetbase\FleetOps\Http\Controllers\Internal\v1;
 
+use Fleetbase\FleetOps\Exports\DeviceExport;
 use Fleetbase\FleetOps\Http\Controllers\FleetOpsController;
 use Fleetbase\FleetOps\Models\Device;
 use Fleetbase\FleetOps\Models\Vehicle;
 use Fleetbase\FleetOps\Support\Utils;
+use Fleetbase\Http\Requests\ExportRequest;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
+use Maatwebsite\Excel\Facades\Excel;
 
 class DeviceController extends FleetOpsController
 {
@@ -18,6 +22,20 @@ class DeviceController extends FleetOpsController
      * @var string
      */
     public $resource = 'device';
+
+    /**
+     * Export devices to excel or csv.
+     *
+     * @return \Illuminate\Http\Response
+     */
+    public function export(ExportRequest $request)
+    {
+        $format     = $request->input('format', 'xlsx');
+        $selections = $request->array('selections');
+        $fileName   = trim(Str::slug('devices-' . date('Y-m-d-H:i')) . '.' . $format);
+
+        return Excel::download(new DeviceExport($selections), $fileName);
+    }
 
     /**
      * Query callback when querying record.

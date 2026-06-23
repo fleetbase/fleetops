@@ -219,7 +219,7 @@ export default class DriverScheduleComponent extends Component {
     }
 
     /**
-     * Load HOS (Hours of Service) status from the FleetOps driver endpoint.
+     * Load HOS (Hours of Service) status from the Fleet-Ops driver endpoint.
      * Best-effort — if the endpoint is not yet implemented hosStatus stays null.
      */
     @task *loadHOSStatus() {

@@ -19,6 +19,12 @@ export default class SettingsMapController extends Controller {
      * @var {Array}
      */
     @tracked mapProviderOptions = MAP_PROVIDER_OPTIONS;
+    @tracked googleMapsMapTypeOptions = [
+        { label: 'Roadmap', value: 'roadmap' },
+        { label: 'Satellite', value: 'satellite' },
+        { label: 'Hybrid', value: 'hybrid' },
+        { label: 'Terrain', value: 'terrain' },
+    ];
 
     /**
      * The currently-selected map provider key (e.g. 'leaflet' or 'google').
@@ -27,6 +33,9 @@ export default class SettingsMapController extends Controller {
      * @var {String}
      */
     @tracked mapProvider = 'leaflet';
+    @tracked googleMapsMapType = 'roadmap';
+    @tracked showGoogleMapsTrafficLayer = false;
+    @tracked showGoogleMapsTransitLayer = false;
 
     /**
      * Whether settings have been loaded from the server.
@@ -68,6 +77,9 @@ export default class SettingsMapController extends Controller {
     @task *saveSettings() {
         const settings = {
             mapProvider: this.mapProvider,
+            googleMapsMapType: this.googleMapsMapType,
+            showGoogleMapsTrafficLayer: this.showGoogleMapsTrafficLayer,
+            showGoogleMapsTransitLayer: this.showGoogleMapsTransitLayer,
         };
 
         try {
@@ -89,6 +101,9 @@ export default class SettingsMapController extends Controller {
             const response = yield this.mapSettings.load({ force: true });
 
             this.mapProvider = response?.mapProvider ?? 'leaflet';
+            this.googleMapsMapType = response?.googleMapsMapType ?? 'roadmap';
+            this.showGoogleMapsTrafficLayer = Boolean(response?.showGoogleMapsTrafficLayer);
+            this.showGoogleMapsTransitLayer = Boolean(response?.showGoogleMapsTransitLayer);
             this.settingsLoaded = true;
         } catch (error) {
             this.notifications.serverError(error);
