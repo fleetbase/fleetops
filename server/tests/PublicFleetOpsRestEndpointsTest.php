@@ -64,11 +64,34 @@ test('new public controllers expose the expected rest methods', function () {
     }
 });
 
-test('new public resources exist and do not expose uuid identifier fields', function () {
+test('new public resources preserve internal uuid fields behind internal request checks', function () {
     foreach ([Equipment::class, Part::class, WorkOrder::class, Device::class, Sensor::class, FuelTransaction::class] as $resource) {
         expect(class_exists($resource))->toBeTrue();
     }
 
+    $internalFields = [
+        'Equipment.php'       => ['uuid', 'company_uuid', 'warranty_uuid', 'photo_uuid', 'equipable_uuid'],
+        'Part.php'            => ['uuid', 'company_uuid', 'vendor_uuid', 'warranty_uuid', 'photo_uuid', 'asset_uuid'],
+        'Device.php'          => ['uuid', 'company_uuid', 'telematic_uuid', 'attachable_uuid', 'warranty_uuid', 'photo_uuid'],
+        'Sensor.php'          => ['uuid', 'company_uuid', 'device_uuid', 'warranty_uuid', 'telematic_uuid', 'photo_uuid', 'sensorable_uuid'],
+        'FuelTransaction.php' => ['uuid', 'fuel_provider_connection_uuid', 'fuel_report_uuid', 'vehicle_uuid', 'driver_uuid', 'order_uuid'],
+        'WorkOrder.php'       => ['uuid', 'company_uuid', 'schedule_uuid', 'created_by_uuid', 'updated_by_uuid', 'target_uuid', 'assignee_uuid'],
+    ];
+
+    foreach ($internalFields as $resourceFile => $fields) {
+        $source = file_get_contents(dirname(__DIR__) . '/src/Http/Resources/v1/' . $resourceFile);
+
+        expect($source)->toContain("'id'");
+
+        foreach ($fields as $field) {
+            expect($source)
+                ->toContain("'{$field}'")
+                ->toMatch("/'{$field}'\\s*=>\\s*\\\$this->when\\(Http::isInternalRequest\\(\\)/");
+        }
+    }
+});
+
+test('new shared resources do not expose unguarded uuid fields', function () {
     foreach ([
         'Equipment.php',
         'Part.php',
@@ -79,9 +102,28 @@ test('new public resources exist and do not expose uuid identifier fields', func
     ] as $resourceFile) {
         $source = file_get_contents(dirname(__DIR__) . '/src/Http/Resources/v1/' . $resourceFile);
 
+        preg_match_all("/'([^']*uuid)'\\s*=>\\s*([^,\\n]+)/i", $source, $matches, PREG_SET_ORDER);
+
+        foreach ($matches as $match) {
+            expect($match[2])->toContain('Http::isInternalRequest()');
+        }
+    }
+});
+
+test('new shared resources preserve public and internal relationship shapes', function () {
+    foreach ([
+        'Equipment.php',
+        'Part.php',
+        'Device.php',
+        'Sensor.php',
+        'FuelTransaction.php',
+    ] as $resourceFile) {
+        $source = file_get_contents(dirname(__DIR__) . '/src/Http/Resources/v1/' . $resourceFile);
+
         expect($source)
-            ->toContain("'id'")
-            ->not->toMatch("/'[^']*uuid'/i");
+            ->toContain('resolveLoadedRelation')
+            ->toContain('Resolve::httpResourceForModel($model)')
+            ->toContain('$model->public_id');
     }
 });
 

@@ -5,6 +5,7 @@ namespace Fleetbase\FleetOps\Http\Resources\v1;
 use Fleetbase\FleetOps\Support\Utils;
 use Fleetbase\Http\Resources\FleetbaseResource;
 use Fleetbase\Support\Http;
+use Fleetbase\Support\Resolve;
 
 class Part extends FleetbaseResource
 {
@@ -12,12 +13,18 @@ class Part extends FleetbaseResource
     {
         return [
             'id'               => $this->when(Http::isInternalRequest(), $this->id, $this->public_id),
+            'uuid'             => $this->when(Http::isInternalRequest(), $this->uuid),
             'public_id'        => $this->when(Http::isInternalRequest(), $this->public_id),
+            'company_uuid'     => $this->when(Http::isInternalRequest(), $this->company_uuid),
+            'vendor_uuid'      => $this->when(Http::isInternalRequest(), $this->vendor_uuid),
+            'warranty_uuid'    => $this->when(Http::isInternalRequest(), $this->warranty_uuid),
+            'photo_uuid'       => $this->when(Http::isInternalRequest(), $this->photo_uuid),
+            'asset_uuid'       => $this->when(Http::isInternalRequest(), $this->asset_uuid),
             'asset_type'       => $this->when(Http::isInternalRequest(), $this->asset_type ? Utils::toEmberResourceType($this->asset_type) : null),
-            'vendor'           => $this->whenLoaded('vendor', fn () => $this->vendor?->public_id),
-            'warranty'         => $this->whenLoaded('warranty', fn () => $this->warranty?->public_id),
-            'photo'            => $this->whenLoaded('photo', fn () => $this->photo?->public_id),
-            'asset'            => $this->whenLoaded('asset', fn () => $this->asset?->public_id),
+            'vendor'           => $this->whenLoaded('vendor', fn () => $this->resolveLoadedRelation($this->vendor)),
+            'warranty'         => $this->whenLoaded('warranty', fn () => $this->resolveLoadedRelation($this->warranty)),
+            'photo'            => $this->whenLoaded('photo', fn () => $this->resolveLoadedRelation($this->photo)),
+            'asset'            => $this->whenLoaded('asset', fn () => $this->resolveLoadedRelation($this->asset)),
             'sku'              => $this->sku,
             'name'             => $this->name,
             'manufacturer'     => $this->manufacturer,
@@ -44,5 +51,14 @@ class Part extends FleetbaseResource
             'updated_at'       => $this->updated_at,
             'created_at'       => $this->created_at,
         ];
+    }
+
+    protected function resolveLoadedRelation($model)
+    {
+        if (!$model) {
+            return null;
+        }
+
+        return Http::isInternalRequest() ? Resolve::httpResourceForModel($model) : $model->public_id;
     }
 }

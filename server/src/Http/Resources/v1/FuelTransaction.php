@@ -4,6 +4,7 @@ namespace Fleetbase\FleetOps\Http\Resources\v1;
 
 use Fleetbase\Http\Resources\FleetbaseResource;
 use Fleetbase\Support\Http;
+use Fleetbase\Support\Resolve;
 
 class FuelTransaction extends FleetbaseResource
 {
@@ -11,12 +12,18 @@ class FuelTransaction extends FleetbaseResource
     {
         return [
             'id'                            => $this->when(Http::isInternalRequest(), $this->id, $this->public_id),
+            'uuid'                          => $this->when(Http::isInternalRequest(), $this->uuid),
             'public_id'                     => $this->when(Http::isInternalRequest(), $this->public_id),
-            'connection'                    => $this->whenLoaded('connection', fn () => $this->connection?->public_id),
-            'fuel_report'                   => $this->whenLoaded('fuelReport', fn () => $this->fuelReport?->public_id),
-            'vehicle'                       => $this->whenLoaded('vehicle', fn () => $this->vehicle?->public_id),
-            'driver'                        => $this->whenLoaded('driver', fn () => $this->driver?->public_id),
-            'order'                         => $this->whenLoaded('order', fn () => $this->order?->public_id),
+            'fuel_provider_connection_uuid' => $this->when(Http::isInternalRequest(), $this->fuel_provider_connection_uuid),
+            'fuel_report_uuid'              => $this->when(Http::isInternalRequest(), $this->fuel_report_uuid),
+            'vehicle_uuid'                  => $this->when(Http::isInternalRequest(), $this->vehicle_uuid),
+            'driver_uuid'                   => $this->when(Http::isInternalRequest(), $this->driver_uuid),
+            'order_uuid'                    => $this->when(Http::isInternalRequest(), $this->order_uuid),
+            'connection'                    => $this->whenLoaded('connection', fn () => $this->resolveLoadedRelation($this->connection)),
+            'fuel_report'                   => $this->whenLoaded('fuelReport', fn () => $this->resolveLoadedRelation($this->fuelReport)),
+            'vehicle'                       => $this->whenLoaded('vehicle', fn () => $this->resolveLoadedRelation($this->vehicle)),
+            'driver'                        => $this->whenLoaded('driver', fn () => $this->resolveLoadedRelation($this->driver)),
+            'order'                         => $this->whenLoaded('order', fn () => $this->resolveLoadedRelation($this->order)),
             'provider'                      => $this->provider,
             'provider_transaction_id'       => $this->provider_transaction_id,
             'provider_vehicle_id'           => $this->provider_vehicle_id,
@@ -49,5 +56,14 @@ class FuelTransaction extends FleetbaseResource
             'updated_at'                    => $this->updated_at,
             'created_at'                    => $this->created_at,
         ];
+    }
+
+    protected function resolveLoadedRelation($model)
+    {
+        if (!$model) {
+            return null;
+        }
+
+        return Http::isInternalRequest() ? Resolve::httpResourceForModel($model) : $model->public_id;
     }
 }

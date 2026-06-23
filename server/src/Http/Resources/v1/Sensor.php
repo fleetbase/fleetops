@@ -5,6 +5,7 @@ namespace Fleetbase\FleetOps\Http\Resources\v1;
 use Fleetbase\FleetOps\Support\Utils;
 use Fleetbase\Http\Resources\FleetbaseResource;
 use Fleetbase\Support\Http;
+use Fleetbase\Support\Resolve;
 
 class Sensor extends FleetbaseResource
 {
@@ -12,13 +13,20 @@ class Sensor extends FleetbaseResource
     {
         return $this->withCustomFields([
             'id'                   => $this->when(Http::isInternalRequest(), $this->id, $this->public_id),
+            'uuid'                 => $this->when(Http::isInternalRequest(), $this->uuid),
             'public_id'            => $this->when(Http::isInternalRequest(), $this->public_id),
+            'company_uuid'         => $this->when(Http::isInternalRequest(), $this->company_uuid),
+            'device_uuid'          => $this->when(Http::isInternalRequest(), $this->device_uuid),
+            'warranty_uuid'        => $this->when(Http::isInternalRequest(), $this->warranty_uuid),
+            'telematic_uuid'       => $this->when(Http::isInternalRequest(), $this->telematic_uuid),
+            'photo_uuid'           => $this->when(Http::isInternalRequest(), $this->photo_uuid),
+            'sensorable_uuid'      => $this->when(Http::isInternalRequest(), $this->sensorable_uuid),
             'sensorable_type'      => $this->when(Http::isInternalRequest(), $this->sensorable_type ? Utils::toEmberResourceType($this->sensorable_type) : null),
-            'device'               => $this->whenLoaded('device', fn () => $this->device?->public_id),
-            'warranty'             => $this->whenLoaded('warranty', fn () => $this->warranty?->public_id),
-            'telematic'            => $this->whenLoaded('telematic', fn () => $this->telematic?->public_id),
-            'photo'                => $this->whenLoaded('photo', fn () => $this->photo?->public_id),
-            'sensorable'           => $this->whenLoaded('sensorable', fn () => $this->sensorable?->public_id),
+            'device'               => $this->whenLoaded('device', fn () => $this->resolveLoadedRelation($this->device)),
+            'warranty'             => $this->whenLoaded('warranty', fn () => $this->resolveLoadedRelation($this->warranty)),
+            'telematic'            => $this->whenLoaded('telematic', fn () => $this->resolveLoadedRelation($this->telematic)),
+            'photo'                => $this->whenLoaded('photo', fn () => $this->resolveLoadedRelation($this->photo)),
+            'sensorable'           => $this->whenLoaded('sensorable', fn () => $this->resolveLoadedRelation($this->sensorable)),
             'name'                 => $this->name,
             'type'                 => $this->type,
             'internal_id'          => $this->internal_id,
@@ -47,5 +55,14 @@ class Sensor extends FleetbaseResource
             'updated_at'           => $this->updated_at,
             'created_at'           => $this->created_at,
         ]);
+    }
+
+    protected function resolveLoadedRelation($model)
+    {
+        if (!$model) {
+            return null;
+        }
+
+        return Http::isInternalRequest() ? Resolve::httpResourceForModel($model) : $model->public_id;
     }
 }
