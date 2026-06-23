@@ -169,9 +169,7 @@ export default class LayoutFleetOpsSidebarComponent extends Component {
 
     get connectivityItems() {
         return this.withRegistryItems('connectivity', [
-            this.createHubItem(this.intl.t('menu.telematics'), 'satellite-dish', 'connectivity.telematics', 'fleet-ops list telematic', 'fleet-ops see telematic', [
-                'connectivity hub',
-            ]),
+            this.createHubItem(this.intl.t('menu.telematics'), 'satellite-dish', 'connectivity.telematics', 'fleet-ops list telematic', 'fleet-ops see telematic', ['connectivity hub']),
             this.createItem('menu.fuel-providers', 'gas-pump', 'connectivity.fuel-providers', 'fleet-ops list fuel-report', 'fleet-ops see fuel-report', ['fuel integrations']),
             this.createItem('menu.devices', 'hard-drive', 'connectivity.devices', 'fleet-ops list device', 'fleet-ops see device'),
             this.createItem('menu.sensors', 'temperature-full', 'connectivity.sensors', 'fleet-ops list sensor', 'fleet-ops see sensor'),

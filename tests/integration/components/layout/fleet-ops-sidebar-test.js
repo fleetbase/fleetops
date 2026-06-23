@@ -201,7 +201,6 @@ module('Integration | Component | layout/fleet-ops-sidebar', function (hooks) {
         assert.dom('.next-sidebar-navigator').doesNotIncludeText('Vehicles');
 
         await fillIn('.next-sidebar-navigator-search input', 'vehicles');
-        await settled();
 
         assert.dom('.next-sidebar-navigator-search-result').doesNotExist('denied FleetOps items are excluded from search results');
     });
@@ -219,7 +218,6 @@ module('Integration | Component | layout/fleet-ops-sidebar', function (hooks) {
         assert.dom('.next-sidebar-navigator-view-in').doesNotIncludeText('Maintenance');
 
         await fillIn('.next-sidebar-navigator-search input', 'maintenance hub');
-        await settled();
 
         assert.dom('.next-sidebar-navigator-search-result').doesNotExist('hidden hub-only sections are excluded from search');
     });
@@ -261,7 +259,6 @@ module('Integration | Component | layout/fleet-ops-sidebar', function (hooks) {
         assert.dom('.next-sidebar-navigator-view-in').doesNotIncludeText('Resources');
 
         await fillIn('.next-sidebar-navigator-search input', 'resources hub');
-        await settled();
 
         assert.dom('.next-sidebar-navigator-search-result').doesNotExist('Resources Hub is not searchable when Resources has no real visible children');
     });
@@ -278,7 +275,6 @@ module('Integration | Component | layout/fleet-ops-sidebar', function (hooks) {
         assert.dom('.next-sidebar-navigator-view-in').doesNotIncludeText('Connectivity');
 
         await fillIn('.next-sidebar-navigator-search input', 'connectivity hub');
-        await settled();
 
         assert.dom('.next-sidebar-navigator-search-result').doesNotExist('Telematics is not searchable when Connectivity has no real visible children');
     });
