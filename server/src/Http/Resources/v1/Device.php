@@ -5,6 +5,7 @@ namespace Fleetbase\FleetOps\Http\Resources\v1;
 use Fleetbase\FleetOps\Support\Utils;
 use Fleetbase\Http\Resources\FleetbaseResource;
 use Fleetbase\Support\Http;
+use Fleetbase\Support\Resolve;
 
 class Device extends FleetbaseResource
 {
@@ -12,12 +13,18 @@ class Device extends FleetbaseResource
     {
         return $this->withCustomFields([
             'id'                    => $this->when(Http::isInternalRequest(), $this->id, $this->public_id),
+            'uuid'                  => $this->when(Http::isInternalRequest(), $this->uuid),
             'public_id'             => $this->when(Http::isInternalRequest(), $this->public_id),
+            'company_uuid'          => $this->when(Http::isInternalRequest(), $this->company_uuid),
+            'telematic_uuid'        => $this->when(Http::isInternalRequest(), $this->telematic_uuid),
+            'attachable_uuid'       => $this->when(Http::isInternalRequest(), $this->attachable_uuid),
             'attachable_type'       => $this->when(Http::isInternalRequest(), $this->attachable_type ? Utils::toEmberResourceType($this->attachable_type) : null),
-            'telematic'             => $this->whenLoaded('telematic', fn () => $this->telematic?->public_id),
-            'attachable'            => $this->whenLoaded('attachable', fn () => $this->attachable?->public_id),
-            'warranty'              => $this->whenLoaded('warranty', fn () => $this->warranty?->public_id),
-            'photo'                 => $this->whenLoaded('photo', fn () => $this->photo?->public_id),
+            'warranty_uuid'         => $this->when(Http::isInternalRequest(), $this->warranty_uuid),
+            'photo_uuid'            => $this->when(Http::isInternalRequest(), $this->photo_uuid),
+            'telematic'             => $this->whenLoaded('telematic', fn () => $this->resolveLoadedRelation($this->telematic)),
+            'attachable'            => $this->whenLoaded('attachable', fn () => $this->resolveLoadedRelation($this->attachable)),
+            'warranty'              => $this->whenLoaded('warranty', fn () => $this->resolveLoadedRelation($this->warranty)),
+            'photo'                 => $this->whenLoaded('photo', fn () => $this->resolveLoadedRelation($this->photo)),
             'type'                  => $this->type,
             'device_id'             => $this->device_id,
             'internal_id'           => $this->internal_id,
@@ -52,5 +59,14 @@ class Device extends FleetbaseResource
             'updated_at'            => $this->updated_at,
             'created_at'            => $this->created_at,
         ]);
+    }
+
+    protected function resolveLoadedRelation($model)
+    {
+        if (!$model) {
+            return null;
+        }
+
+        return Http::isInternalRequest() ? Resolve::httpResourceForModel($model) : $model->public_id;
     }
 }

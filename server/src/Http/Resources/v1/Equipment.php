@@ -5,6 +5,7 @@ namespace Fleetbase\FleetOps\Http\Resources\v1;
 use Fleetbase\FleetOps\Support\Utils;
 use Fleetbase\Http\Resources\FleetbaseResource;
 use Fleetbase\Support\Http;
+use Fleetbase\Support\Resolve;
 
 class Equipment extends FleetbaseResource
 {
@@ -12,11 +13,16 @@ class Equipment extends FleetbaseResource
     {
         return $this->withCustomFields([
             'id'                 => $this->when(Http::isInternalRequest(), $this->id, $this->public_id),
+            'uuid'               => $this->when(Http::isInternalRequest(), $this->uuid),
             'public_id'          => $this->when(Http::isInternalRequest(), $this->public_id),
+            'company_uuid'       => $this->when(Http::isInternalRequest(), $this->company_uuid),
+            'warranty_uuid'      => $this->when(Http::isInternalRequest(), $this->warranty_uuid),
+            'photo_uuid'         => $this->when(Http::isInternalRequest(), $this->photo_uuid),
+            'equipable_uuid'     => $this->when(Http::isInternalRequest(), $this->equipable_uuid),
             'equipable_type'     => $this->when(Http::isInternalRequest(), $this->equipable_type ? Utils::toEmberResourceType($this->equipable_type) : null),
-            'warranty'           => $this->whenLoaded('warranty', fn () => $this->warranty?->public_id),
-            'photo'              => $this->whenLoaded('photo', fn () => $this->photo?->public_id),
-            'equipable'          => $this->whenLoaded('equipable', fn () => $this->equipable?->public_id),
+            'warranty'           => $this->whenLoaded('warranty', fn () => $this->resolveLoadedRelation($this->warranty)),
+            'photo'              => $this->whenLoaded('photo', fn () => $this->resolveLoadedRelation($this->photo)),
+            'equipable'          => $this->whenLoaded('equipable', fn () => $this->resolveLoadedRelation($this->equipable)),
             'name'               => $this->name,
             'code'               => $this->code,
             'type'               => $this->type,
@@ -38,5 +44,14 @@ class Equipment extends FleetbaseResource
             'updated_at'         => $this->updated_at,
             'created_at'         => $this->created_at,
         ]);
+    }
+
+    protected function resolveLoadedRelation($model)
+    {
+        if (!$model) {
+            return null;
+        }
+
+        return Http::isInternalRequest() ? Resolve::httpResourceForModel($model) : $model->public_id;
     }
 }
