@@ -556,14 +556,19 @@ Route::prefix(config('fleetops.api.routing.prefix'))->namespace('Fleetbase\Fleet
                                 $router->post('import', $controller('import'));
                             }
                         );
-                        $router->fleetbaseRoutes('devices');
+                        $router->fleetbaseRoutes('devices', function ($router, $controller) {
+                            $router->match(['get', 'post'], 'export', $controller('export'));
+                        });
                         $router->post('devices/{id}/attach', 'DeviceController@attach');
                         $router->post('devices/{id}/detach', 'DeviceController@detach');
                         $router->fleetbaseRoutes('device-events', function ($router, $controller) {
                             $router->post('{id}/mark-processed', $controller('markProcessed'));
                         });
-                        $router->fleetbaseRoutes('sensors');
+                        $router->fleetbaseRoutes('sensors', function ($router, $controller) {
+                            $router->match(['get', 'post'], 'export', $controller('export'));
+                        });
                         $router->fleetbaseRoutes('telematics', function ($router, $controller) {
+                            $router->match(['get', 'post'], 'export', $controller('export'));
                             $router->get('providers', $controller('providers'));
                             $router->get('{id}/logs', $controller('logs'));
                             $router->get('{id}/devices', $controller('devices'));
@@ -573,6 +578,7 @@ Route::prefix(config('fleetops.api.routing.prefix'))->namespace('Fleetbase\Fleet
                             $router->post('{key}/test-credentials', $controller('testCredentials'));
                         });
                         $router->fleetbaseRoutes('maintenance-schedules', function ($router, $controller) {
+                            $router->match(['get', 'post'], 'export', $controller('export'));
                             $router->post('import', $controller('import'));
                             $router->post('{id}/pause', $controller('pause'));
                             $router->post('{id}/resume', $controller('resume'));
@@ -581,19 +587,23 @@ Route::prefix(config('fleetops.api.routing.prefix'))->namespace('Fleetbase\Fleet
                             $router->get('{id}/ical', $controller('ical'));
                         });
                         $router->fleetbaseRoutes('work-orders', function ($router, $controller) {
+                            $router->match(['get', 'post'], 'export', $controller('export'));
                             $router->post('import', $controller('import'));
                             $router->post('{id}/send', $controller('sendEmail'));
                         });
                         $router->fleetbaseRoutes('maintenances', function ($router, $controller) {
+                            $router->match(['get', 'post'], 'export', $controller('export'));
                             $router->post('import', $controller('import'));
                             $router->post('{id}/line-items', $controller('addLineItem'));
                             $router->put('{id}/line-items/{index}', $controller('updateLineItem'));
                             $router->delete('{id}/line-items/{index}', $controller('removeLineItem'));
                         });
                         $router->fleetbaseRoutes('equipment', function ($router, $controller) {
+                            $router->match(['get', 'post'], 'export', $controller('export'));
                             $router->post('import', $controller('import'));
                         });
                         $router->fleetbaseRoutes('parts', function ($router, $controller) {
+                            $router->match(['get', 'post'], 'export', $controller('export'));
                             $router->post('import', $controller('import'));
                         });
                         $router->fleetbaseRoutes('warranties');

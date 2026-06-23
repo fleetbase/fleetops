@@ -2,15 +2,18 @@
 
 namespace Fleetbase\FleetOps\Http\Controllers\Internal\v1;
 
+use Fleetbase\FleetOps\Exports\MaintenanceScheduleExport;
 use Fleetbase\FleetOps\Http\Controllers\FleetOpsController;
 use Fleetbase\FleetOps\Imports\MaintenanceScheduleImport;
 use Fleetbase\FleetOps\Models\MaintenanceSchedule;
 use Fleetbase\FleetOps\Models\WorkOrder;
+use Fleetbase\Http\Requests\ExportRequest;
 use Fleetbase\Http\Requests\ImportRequest;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Str;
 use Maatwebsite\Excel\Facades\Excel;
 use Spatie\IcalendarGenerator\Components\Calendar;
 use Spatie\IcalendarGenerator\Components\Event;
@@ -25,6 +28,20 @@ class MaintenanceScheduleController extends FleetOpsController
      * @var string
      */
     public $resource = 'maintenance-schedule';
+
+    /**
+     * Export maintenance schedules to excel or csv.
+     *
+     * @return Response
+     */
+    public function export(ExportRequest $request)
+    {
+        $format     = $request->input('format', 'xlsx');
+        $selections = $request->array('selections');
+        $fileName   = trim(Str::slug('maintenance-schedules-' . date('Y-m-d-H:i')) . '.' . $format);
+
+        return Excel::download(new MaintenanceScheduleExport($selections), $fileName);
+    }
 
     /**
      * Process import files (excel, csv) into MaintenanceSchedule records.

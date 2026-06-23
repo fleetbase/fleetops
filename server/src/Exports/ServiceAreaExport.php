@@ -20,16 +20,25 @@ class ServiceAreaExport implements FromCollection, WithHeadings, WithMapping, Wi
         $this->selections = $selections;
     }
 
-    public function map($servicArea): array
+    public function map($serviceArea): array
     {
         return [
-            $servicArea->public_id,
-            $servicArea->name,
-            $servicArea->zones instanceof Collection ? $servicArea->zones->map(function ($zone) {
+            $serviceArea->public_id,
+            $serviceArea->name,
+            $serviceArea->type,
+            $serviceArea->zones instanceof Collection ? $serviceArea->zones->map(function ($zone) {
                 return $zone->name;
             })->join(', ') : null,
-            $servicArea->status,
-            $servicArea->created_at,
+            $serviceArea->country,
+            $serviceArea->color,
+            $serviceArea->stroke_color,
+            $this->yesNo($serviceArea->trigger_on_entry),
+            $this->yesNo($serviceArea->trigger_on_exit),
+            $serviceArea->dwell_threshold_minutes,
+            $serviceArea->speed_limit_kmh,
+            $serviceArea->status,
+            $serviceArea->created_at,
+            $serviceArea->updated_at,
         ];
     }
 
@@ -38,17 +47,32 @@ class ServiceAreaExport implements FromCollection, WithHeadings, WithMapping, Wi
         return [
             'ID',
             'Name',
+            'Type',
             'Zones',
+            'Country',
+            'Color',
+            'Stroke Color',
+            'Trigger On Entry',
+            'Trigger On Exit',
+            'Dwell Threshold Minutes',
+            'Speed Limit KMH',
             'Status',
             'Date Created',
+            'Date Updated',
         ];
     }
 
     public function columnFormats(): array
     {
         return [
-            'E' => NumberFormat::FORMAT_DATE_DDMMYYYY,
+            'M' => NumberFormat::FORMAT_DATE_DDMMYYYY,
+            'N' => NumberFormat::FORMAT_DATE_DDMMYYYY,
         ];
+    }
+
+    protected function yesNo($value): string
+    {
+        return $value ? 'Yes' : 'No';
     }
 
     /**

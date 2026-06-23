@@ -2,13 +2,17 @@
 
 namespace Fleetbase\FleetOps\Http\Controllers\Internal\v1;
 
+use Fleetbase\FleetOps\Exports\TelematicExport;
 use Fleetbase\FleetOps\Http\Controllers\FleetOpsController;
 use Fleetbase\FleetOps\Models\Telematic;
 use Fleetbase\FleetOps\Support\Telematics\TelematicProviderRegistry;
 use Fleetbase\FleetOps\Support\Telematics\TelematicService;
+use Fleetbase\Http\Requests\ExportRequest;
 use Fleetbase\Models\Activity;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Str;
+use Maatwebsite\Excel\Facades\Excel;
 
 class TelematicController extends FleetOpsController
 {
@@ -27,6 +31,20 @@ class TelematicController extends FleetOpsController
         parent::__construct();
         $this->telematicService  = $service;
         $this->registry          = $registry;
+    }
+
+    /**
+     * Export telematics to excel or csv.
+     *
+     * @return \Illuminate\Http\Response
+     */
+    public function export(ExportRequest $request)
+    {
+        $format     = $request->input('format', 'xlsx');
+        $selections = $request->array('selections');
+        $fileName   = trim(Str::slug('telematics-' . date('Y-m-d-H:i')) . '.' . $format);
+
+        return Excel::download(new TelematicExport($selections), $fileName);
     }
 
     /**

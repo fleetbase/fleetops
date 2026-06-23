@@ -2,13 +2,16 @@
 
 namespace Fleetbase\FleetOps\Http\Controllers\Internal\v1;
 
+use Fleetbase\FleetOps\Exports\WorkOrderExport;
 use Fleetbase\FleetOps\Http\Controllers\FleetOpsController;
 use Fleetbase\FleetOps\Imports\WorkOrderImport;
 use Fleetbase\FleetOps\Mail\WorkOrderDispatched;
 use Fleetbase\FleetOps\Models\WorkOrder;
+use Fleetbase\Http\Requests\ExportRequest;
 use Fleetbase\Http\Requests\ImportRequest;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Str;
 use Maatwebsite\Excel\Facades\Excel;
 
 class WorkOrderController extends FleetOpsController
@@ -19,6 +22,20 @@ class WorkOrderController extends FleetOpsController
      * @var string
      */
     public $resource = 'work-order';
+
+    /**
+     * Export work orders to excel or csv.
+     *
+     * @return \Illuminate\Http\Response
+     */
+    public function export(ExportRequest $request)
+    {
+        $format     = $request->input('format', 'xlsx');
+        $selections = $request->array('selections');
+        $fileName   = trim(Str::slug('work-orders-' . date('Y-m-d-H:i')) . '.' . $format);
+
+        return Excel::download(new WorkOrderExport($selections), $fileName);
+    }
 
     /**
      * Process import files (excel, csv) into WorkOrder records.

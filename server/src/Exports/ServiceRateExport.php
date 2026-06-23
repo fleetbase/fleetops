@@ -31,8 +31,25 @@ class ServiceRateExport implements FromCollection, WithHeadings, WithMapping, Wi
             $serviceRate->rate_calculation_method,
             $serviceRate->service_area_name,
             $serviceRate->zone_name,
+            $serviceRate->per_meter_flat_rate_fee,
+            $serviceRate->per_meter_unit,
+            $serviceRate->max_distance,
+            $serviceRate->max_distance_unit,
+            $this->yesNo($serviceRate->has_cod_fee),
+            $serviceRate->cod_calculation_method,
+            $serviceRate->cod_flat_fee,
+            $serviceRate->cod_percent,
+            $this->yesNo($serviceRate->has_peak_hours_fee),
+            $serviceRate->peak_hours_calculation_method,
+            $serviceRate->peak_hours_flat_fee,
+            $serviceRate->peak_hours_percent,
+            $serviceRate->peak_hours_start,
+            $serviceRate->peak_hours_end,
             $serviceRate->currency,
+            $serviceRate->duration_terms,
+            $serviceRate->estimated_days,
             $serviceRate->created_at,
+            $serviceRate->updated_at,
         ];
     }
 
@@ -46,16 +63,39 @@ class ServiceRateExport implements FromCollection, WithHeadings, WithMapping, Wi
             'Calculation Method',
             'Service Area',
             'Zone',
+            'Per Meter Flat Rate Fee',
+            'Per Meter Unit',
+            'Max Distance',
+            'Max Distance Unit',
+            'Has COD Fee',
+            'COD Calculation Method',
+            'COD Flat Fee',
+            'COD Percent',
+            'Has Peak Hours Fee',
+            'Peak Hours Calculation Method',
+            'Peak Hours Flat Fee',
+            'Peak Hours Percent',
+            'Peak Hours Start',
+            'Peak Hours End',
             'Currency',
+            'Duration Terms',
+            'Estimated Days',
             'Date Created',
+            'Date Updated',
         ];
     }
 
     public function columnFormats(): array
     {
         return [
-            'I' => NumberFormat::FORMAT_DATE_DDMMYYYY,
+            'Y' => NumberFormat::FORMAT_DATE_DDMMYYYY,
+            'Z' => NumberFormat::FORMAT_DATE_DDMMYYYY,
         ];
+    }
+
+    protected function yesNo($value): string
+    {
+        return $value ? 'Yes' : 'No';
     }
 
     /**

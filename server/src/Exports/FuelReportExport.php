@@ -27,9 +27,16 @@ class FuelReportExport implements FromCollection, WithHeadings, WithMapping, Wit
             $fuelReport->driver_name,
             $fuelReport->vehicle_name,
             $fuelReport->status,
+            $fuelReport->amount,
+            $fuelReport->currency,
             $fuelReport->volume,
+            $fuelReport->metric_unit,
             $fuelReport->odometer,
+            $fuelReport->type,
+            $fuelReport->source,
+            $fuelReport->provider,
             $fuelReport->created_at,
+            $fuelReport->updated_at,
         ];
     }
 
@@ -41,16 +48,24 @@ class FuelReportExport implements FromCollection, WithHeadings, WithMapping, Wit
             'Driver',
             'Vehicle',
             'Status',
+            'Amount',
+            'Currency',
             'Volume',
+            'Metric Unit',
             'Odometer',
+            'Type',
+            'Source',
+            'Provider',
             'Date Created',
+            'Date Updated',
         ];
     }
 
     public function columnFormats(): array
     {
         return [
-            'H' => NumberFormat::FORMAT_DATE_DDMMYYYY,
+            'M' => NumberFormat::FORMAT_DATE_DDMMYYYY,
+            'N' => NumberFormat::FORMAT_DATE_DDMMYYYY,
         ];
     }
 

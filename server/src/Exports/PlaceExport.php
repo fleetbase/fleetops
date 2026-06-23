@@ -25,11 +25,21 @@ class PlaceExport implements FromCollection, WithHeadings, WithMapping, WithColu
             $place->public_id,
             $place->name,
             $place->phone,
-            strtoupper($place->address),
-            strtoupper($place->city),
+            $this->upper($place->address),
+            $place->street1,
+            $place->street2,
+            $this->upper($place->city),
+            $this->upper($place->province),
             $place->postal_code,
-            strtoupper($place->country_name),
+            $place->neighborhood,
+            $place->district,
+            $place->building,
+            $place->security_access_code,
+            $this->upper($place->country_name),
+            data_get($place, 'owner.name') ?? data_get($place, 'owner.public_id'),
+            $place->type,
             $place->created_at,
+            $place->updated_at,
         ];
     }
 
@@ -40,10 +50,20 @@ class PlaceExport implements FromCollection, WithHeadings, WithMapping, WithColu
             'Name',
             'Phone',
             'Address',
+            'Street 1',
+            'Street 2',
             'City',
+            'Province',
             'Postal Code',
+            'Neighborhood',
+            'District',
+            'Building',
+            'Security Access Code',
             'Country',
+            'Owner',
+            'Type',
             'Date Created',
+            'Date Updated',
         ];
     }
 
@@ -51,9 +71,15 @@ class PlaceExport implements FromCollection, WithHeadings, WithMapping, WithColu
     {
         return [
             'C' => '+#',
-            'F' => NumberFormat::FORMAT_GENERAL,
-            'H' => NumberFormat::FORMAT_DATE_DDMMYYYY,
+            'I' => NumberFormat::FORMAT_GENERAL,
+            'P' => NumberFormat::FORMAT_DATE_DDMMYYYY,
+            'Q' => NumberFormat::FORMAT_DATE_DDMMYYYY,
         ];
+    }
+
+    protected function upper($value): ?string
+    {
+        return $value ? strtoupper($value) : null;
     }
 
     /**
@@ -62,9 +88,9 @@ class PlaceExport implements FromCollection, WithHeadings, WithMapping, WithColu
     public function collection()
     {
         if ($this->selections) {
-            return Place::where('company_uuid', session('company'))->whereIn('uuid', $this->selections)->get();
+            return Place::where('company_uuid', session('company'))->whereIn('uuid', $this->selections)->with(['owner'])->get();
         }
 
-        return Place::where('company_uuid', session('company'))->get();
+        return Place::where('company_uuid', session('company'))->with(['owner'])->get();
     }
 }
