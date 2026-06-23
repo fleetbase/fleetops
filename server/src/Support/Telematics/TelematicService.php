@@ -194,19 +194,30 @@ class TelematicService
     {
         $device = $this->linkDevice($telematic, $provider->normalizeDevice($payload));
 
-        $event = null;
+        $event  = null;
+        $events = [];
         try {
-            $eventData = $provider->normalizeEvent($payload);
-            if ($this->hasEventSignal($eventData)) {
-                $event = $this->storeDeviceEvent($telematic, $eventData, $device);
+            $eventPayloads = method_exists($provider, 'normalizeEvents') ? $provider->normalizeEvents($payload) : [];
+            if (empty($eventPayloads)) {
+                $eventPayloads = [$provider->normalizeEvent($payload)];
+            }
+
+            foreach ($eventPayloads as $eventData) {
+                if ($this->hasEventSignal($eventData)) {
+                    $storedEvent = $this->storeDeviceEvent($telematic, $eventData, $device);
+                    $events[]    = $storedEvent;
+                    $event ??= $storedEvent;
+                }
             }
         } catch (\Throwable) {
-            $event = null;
+            $event  = null;
+            $events = [];
         }
 
         return [
             'device'  => $device,
             'event'   => $event,
+            'events'  => $events,
             'sensors' => $this->storeSnapshotSensors($telematic, $provider, $payload, $device),
         ];
     }
@@ -661,6 +672,10 @@ class TelematicService
 
         if (array_key_exists('altitude', $eventData) && $eventData['altitude'] !== null) {
             $vehicle->altitude = $eventData['altitude'];
+        }
+
+        if (array_key_exists('odometer', $eventData) && $eventData['odometer'] !== null) {
+            $vehicle->odometer = $eventData['odometer'];
         }
 
         $vehicle->telematics = array_merge($vehicle->telematics ?? [], [

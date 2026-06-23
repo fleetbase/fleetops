@@ -85,6 +85,7 @@ class SyncTelematicDevicesJob implements ShouldQueue
             $pageCount                  = 0;
             $lastProviderAllCount       = null;
             $lastProviderFiltersCount   = null;
+            $providerSyncMeta           = [];
 
             try {
                 $provider = $registry->resolve($this->telematic->provider);
@@ -97,8 +98,9 @@ class SyncTelematicDevicesJob implements ShouldQueue
                         'filters' => $this->options['filters'] ?? [],
                     ]);
 
-                    $devices     = $response['devices'] ?? [];
-                    $pagination  = $response['pagination'] ?? [];
+                    $devices          = $response['devices'] ?? [];
+                    $pagination       = $response['pagination'] ?? [];
+                    $providerSyncMeta = array_merge($providerSyncMeta, $response['sync_meta'] ?? []);
                     $pageCount++;
                     $totalFetched += count($devices);
 
@@ -129,9 +131,7 @@ class SyncTelematicDevicesJob implements ShouldQueue
                         try {
                             $result = $service->ingestDeviceSnapshot($this->telematic, $provider, $devicePayload);
                             $totalLinked++;
-                            if ($result['event']) {
-                                $totalEvents++;
-                            }
+                            $totalEvents += count($result['events'] ?? array_filter([$result['event'] ?? null]));
                             $totalSensors += $result['sensors'] ?? 0;
                         } catch (\Illuminate\Validation\ValidationException $e) {
                             $totalSkipped++;
@@ -174,7 +174,7 @@ class SyncTelematicDevicesJob implements ShouldQueue
                 ]);
 
                 $this->telematic->status = 'active';
-                $this->telematic->meta   = array_merge($this->telematic->meta ?? [], [
+                $this->telematic->meta   = array_merge($this->telematic->meta ?? [], $providerSyncMeta, [
                     'last_sync_job_id'                 => $this->jobId,
                     'last_sync_completed_at'           => now()->toDateTimeString(),
                     'last_sync_result'                 => 'success',

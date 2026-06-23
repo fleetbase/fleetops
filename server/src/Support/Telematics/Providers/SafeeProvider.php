@@ -17,6 +17,8 @@ class SafeeProvider extends AbstractProvider
     protected int $requestsPerMinute = 3000;
     protected ?string $accessToken   = null;
     protected array $authContext     = [];
+    protected int $dataTimeout       = 120;
+    protected int $connectTimeout    = 15;
 
     protected function prepareAuthentication(): void
     {
@@ -60,24 +62,63 @@ class SafeeProvider extends AbstractProvider
 
     public function fetchDevices(array $options = []): array
     {
-        if (!empty($options['vehicles'])) {
-            $response = $this->safeePost('/api/v2/vehicle/last-state', [
-                'live'      => $options['live'] ?? true,
-                'startDate' => $options['start_date'] ?? null,
-                'endDate'   => $options['end_date'] ?? null,
-                'vehicles'  => $options['vehicles'],
-            ]);
+        $window        = $this->resolveTelemetryWindow($options);
+        $response      = $this->safeePost('/api/v2/vehicle/list-info', $options['filter'] ?? new \stdClass(), true);
+        $vehicles      = $response['result'] ?? [];
+        $vehicleIds    = array_values(array_filter(array_map(fn ($vehicle) => $this->resolveVehicleId($vehicle), $vehicles)));
+        $statesById    = $this->fetchLastStatesByVehicle($vehicleIds);
+        $endpointStats = [
+            'vehicles_listed'    => count($vehicles),
+            'last_state_fetched' => count($statesById),
+            'last_info_fetched'  => 0,
+            'positions_fetched'  => 0,
+            'events_fetched'     => 0,
+            'failures'           => [],
+        ];
 
-            $devices = $response['result'] ?? [];
-        } else {
-            $response = $this->safeePost('/api/v2/vehicle/list-info', $options['filter'] ?? new \stdClass());
-            $devices  = $response['result'] ?? [];
-        }
+        $devices = array_map(function (array $vehicle) use ($statesById, $window, &$endpointStats) {
+            $vehicleId = $this->resolveVehicleId($vehicle);
+
+            $lastInfo  = $this->fetchVehicleEndpoint('/api/v2/vehicle/last-info', ['vehicleId' => $vehicleId], 'last-info', $vehicleId, $endpointStats);
+            $positions = $this->fetchVehicleEndpoint('/api/v2/vehicle/positions', [
+                'vehicleId' => $vehicleId,
+                'startDate' => $window['startDate'],
+                'endDate'   => $window['endDate'],
+            ], 'positions', $vehicleId, $endpointStats, []);
+            $events = $this->fetchVehicleEndpoint('/api/v2/vehicle/events', [
+                'vehicleId' => $vehicleId,
+                'startDate' => $window['startDate'],
+                'endDate'   => $window['endDate'],
+                'status'    => 'ALL',
+            ], 'events', $vehicleId, $endpointStats, []);
+
+            $currentState = $statesById[(string) $vehicleId] ?? null;
+
+            return array_merge($vehicle, [
+                '_safee' => [
+                    'identity'      => $vehicle,
+                    'current_info'  => $lastInfo,
+                    'current_state' => $currentState,
+                    'positions'     => is_array($positions) ? $positions : [],
+                    'events'        => is_array($events) ? $events : [],
+                    'sync_window'   => $window,
+                    'diagnostics'   => $endpointStats,
+                ],
+                'sensors' => $this->extractTelemetrySensors($lastInfo ?? []),
+            ]);
+        }, $vehicles);
 
         return [
             'devices'     => $devices,
             'next_cursor' => null,
             'has_more'    => false,
+            'sync_meta'   => [
+                'safee_last_telemetry_synced_at' => $window['endDate'],
+                'safee_last_sync_window'         => $window,
+                'safee_last_endpoint_counts'     => array_merge($endpointStats, [
+                    'failures' => array_slice($endpointStats['failures'], 0, 25),
+                ]),
+            ],
         ];
     }
 
@@ -92,46 +133,60 @@ class SafeeProvider extends AbstractProvider
 
     public function normalizeDevice(array $payload): array
     {
-        $position  = $this->extractPosition($payload);
-        $rawStatus = $payload['status'] ?? $payload['vehicleStatus'] ?? null;
+        $identity  = $this->identityPayload($payload);
+        $current   = $this->currentTelemetryPayload($payload) ?? [];
+        $vehicleId = $this->resolveVehicleId($identity) ?? $this->resolveVehicleId($current);
+        $position  = $this->extractPosition($current ?: $payload);
+        $rawStatus = $current['status'] ?? $identity['status'] ?? $identity['vehicleStatus'] ?? null;
         $status    = $this->normalizeVehicleStatus($rawStatus);
 
         return [
-            'device_id'    => $payload['id'] ?? data_get($payload, 'vehicle.id') ?? null,
-            'name'         => $payload['name'] ?? $payload['plateNumber'] ?? data_get($payload, 'vehicle.name') ?? 'Unknown Vehicle',
-            'provider'     => 'safee',
-            'model'        => $payload['model'] ?? data_get($payload, 'device.model') ?? null,
-            'imei'         => data_get($payload, 'device.imei') ?? data_get($payload, 'device.serial') ?? null,
-            'vin'          => $payload['vin'] ?? null,
-            'status'       => $status,
-            'online'       => $rawStatus ? $status === 'active' : null,
-            'last_seen_at' => $this->parseTimestamp($payload['date'] ?? $payload['deviceTime'] ?? $payload['time'] ?? null),
-            'location'     => [
+            'device_id'     => $vehicleId,
+            'external_id'   => $vehicleId,
+            'name'          => $this->resolveVehicleName($identity, $current, $vehicleId),
+            'provider'      => 'safee',
+            'model'         => $identity['model'] ?? data_get($identity, 'device.model') ?? null,
+            'internal_id'   => $identity['uuid'] ?? $vehicleId,
+            'imei'          => data_get($identity, 'device.imei') ?? data_get($current, 'device.imei') ?? null,
+            'serial_number' => data_get($identity, 'device.serial') ?? data_get($identity, 'device.id') ?? data_get($current, 'device.serial') ?? null,
+            'vin'           => $identity['vin'] ?? null,
+            'status'        => $status,
+            'online'        => $this->resolveOnline($current ?: $identity),
+            'last_seen_at'  => $this->parseTimestamp($current['date'] ?? $current['deviceTime'] ?? $current['time'] ?? null),
+            'location'      => [
                 'lat' => $position['lat'] ?? null,
                 'lng' => $position['lng'] ?? null,
             ],
-            'speed'      => $payload['speed'] ?? $payload['lastSpeed'] ?? null,
-            'heading'    => $payload['heading'] ?? $payload['angle'] ?? null,
-            'altitude'   => $payload['altitude'] ?? $payload['alt'] ?? null,
-            'odometer'   => $this->extractOdometer($payload),
-            'ignition'   => $this->extractIgnition($payload),
-            'fuel_level' => $this->extractFuelLevel($payload),
+            'speed'      => $current['speed'] ?? $current['lastSpeed'] ?? null,
+            'heading'    => $current['heading'] ?? $current['angle'] ?? null,
+            'altitude'   => $position['alt'] ?? $current['altitude'] ?? $current['alt'] ?? null,
+            'odometer'   => $this->extractOdometer($current),
+            'ignition'   => $this->extractIgnition($current),
+            'fuel_level' => $this->extractFuelLevel($current),
             'meta'       => [
                 'raw'             => $payload,
                 'provider_status' => array_filter([
                     'status'        => $rawStatus,
                     'normalized'    => $status,
-                    'vehicleStatus' => $payload['vehicleStatus'] ?? null,
+                    'vehicleStatus' => $identity['vehicleStatus'] ?? null,
                 ], fn ($value) => $value !== null),
-                'plate_number' => $payload['plateNumber'] ?? $payload['plate_number'] ?? null,
-                'door_number'  => $payload['doorNumber'] ?? null,
-                'driver'       => $payload['driver'] ?? null,
-                'last_update'  => $this->normalizeEvent($payload),
+                'plate_number' => $identity['plateNo'] ?? $identity['plateNumber'] ?? $identity['plate_number'] ?? $current['plateNo'] ?? null,
+                'driver'       => $current['driver'] ?? $identity['driver'] ?? null,
+                'temperature'  => $current['temperature'] ?? null,
+                'door'         => $current['door'] ?? null,
+                'humidity'     => $current['humidity'] ?? $current['humidityPerType'] ?? null,
+                'mileage'      => $current['mileage'] ?? null,
+                'last_update'  => $current ? $this->normalizeEvent($payload) : null,
+                'safee'        => [
+                    'vehicle_uuid' => $identity['uuid'] ?? null,
+                    'sync_window'  => data_get($payload, '_safee.sync_window'),
+                    'diagnostics'  => data_get($payload, '_safee.diagnostics'),
+                ],
                 'capabilities' => [
                     'tracking'       => isset($position['lat'], $position['lng']),
-                    'odometer'       => $this->extractOdometer($payload) !== null,
-                    'fuel_level'     => $this->extractFuelLevel($payload) !== null,
-                    'ignition_state' => $this->extractIgnition($payload) !== null,
+                    'odometer'       => $this->extractOdometer($current) !== null,
+                    'fuel_level'     => $this->extractFuelLevel($current) !== null,
+                    'ignition_state' => $this->extractIgnition($current) !== null,
                 ],
             ],
         ];
@@ -139,37 +194,110 @@ class SafeeProvider extends AbstractProvider
 
     public function normalizeEvent(array $payload): array
     {
-        $position = $this->extractPosition($payload);
+        $eventPayload = $this->currentTelemetryPayload($payload) ?? $payload;
+
+        return $this->normalizeSafeeTelemetryEvent($eventPayload, 'current', $this->identityPayload($payload));
+    }
+
+    public function normalizeEvents(array $payload): array
+    {
+        $identity = $this->identityPayload($payload);
+        $events   = [];
+
+        if ($current = $this->currentTelemetryPayload($payload)) {
+            $events[] = $this->normalizeSafeeTelemetryEvent($current, 'current', $identity);
+        }
+
+        foreach ((array) data_get($payload, '_safee.positions', []) as $position) {
+            if (is_array($position)) {
+                $events[] = $this->normalizeSafeeTelemetryEvent($position, 'position', $identity);
+            }
+        }
+
+        foreach ((array) data_get($payload, '_safee.events', []) as $event) {
+            if (is_array($event)) {
+                $events[] = $this->normalizeSafeeTelemetryEvent($event, 'event', $identity);
+            }
+        }
+
+        return $events;
+    }
+
+    protected function normalizeSafeeTelemetryEvent(array $payload, string $source, array $identity = []): array
+    {
+        $position        = $this->extractPosition($payload);
+        $vehicleId       = $this->resolveVehicleId($payload) ?? $this->resolveVehicleId($identity);
+        $eventCode       = data_get($payload, 'event.code') ?? data_get($payload, 'type.key') ?? data_get($payload, 'event.name');
+        $eventName       = data_get($payload, 'event.name') ?? data_get($payload, 'type.value') ?? $payload['reason'] ?? null;
+        $occurredAt      = $this->parseTimestamp($payload['date'] ?? $payload['deviceTime'] ?? $payload['time'] ?? null);
+        $providerEventId = $source === 'current'
+            ? (data_get($payload, 'event.id') ?? $payload['id'] ?? null)
+            : ($payload['id'] ?? data_get($payload, 'event.id') ?? null);
 
         return [
-            'external_id' => $payload['id'] ?? data_get($payload, 'vehicle.id') ?? null,
-            'device_id'   => $payload['id'] ?? data_get($payload, 'vehicle.id') ?? null,
-            'event_type'  => data_get($payload, 'event.code') ?? data_get($payload, 'event.name') ?? 'telemetry_update',
-            'message'     => data_get($payload, 'event.name') ?? data_get($payload, 'event.message') ?? null,
-            'occurred_at' => $this->parseTimestamp($payload['date'] ?? $payload['deviceTime'] ?? $payload['time'] ?? null),
-            'online'      => $this->resolveOnline($payload),
-            'location'    => [
+            'external_id'       => implode(':', array_filter(['safee', $source, $vehicleId, $providerEventId, $payload['date'] ?? null])),
+            'external_event_id' => $providerEventId,
+            'device_id'         => $vehicleId,
+            'event_type'        => $eventCode ?? ($source === 'position' ? 'position_update' : 'telemetry_update'),
+            'code'              => $eventCode,
+            'message'           => $eventName,
+            'reason'            => $payload['reason'] ?? null,
+            'state'             => $payload['status'] ?? null,
+            'occurred_at'       => $occurredAt,
+            'online'            => $this->resolveOnline($payload),
+            'location'          => [
                 'lat' => $position['lat'] ?? null,
                 'lng' => $position['lng'] ?? null,
             ],
             'speed'      => $payload['speed'] ?? $payload['lastSpeed'] ?? null,
             'heading'    => $payload['heading'] ?? $payload['angle'] ?? null,
-            'altitude'   => $payload['altitude'] ?? $payload['alt'] ?? null,
+            'altitude'   => $position['alt'] ?? $payload['altitude'] ?? $payload['alt'] ?? null,
             'odometer'   => $this->extractOdometer($payload),
             'ignition'   => $this->extractIgnition($payload),
             'fuel_level' => $this->extractFuelLevel($payload),
-            'meta'       => $payload,
+            'data'       => array_filter([
+                'source'      => $source,
+                'status'      => $payload['status'] ?? null,
+                'type'        => $payload['type'] ?? null,
+                'event'       => $payload['event'] ?? null,
+                'driver'      => $payload['driver'] ?? $identity['driver'] ?? null,
+                'vehicle'     => $payload['vehicle'] ?? null,
+                'arguments'   => $payload['arguments'] ?? null,
+                'temperature' => $payload['temperature'] ?? null,
+                'door'        => $payload['door'] ?? null,
+                'humidity'    => $payload['humidity'] ?? $payload['humidityPerType'] ?? null,
+                'mileage'     => $payload['mileage'] ?? null,
+            ], fn ($value) => $value !== null),
+            'meta'       => [
+                'raw'          => $payload,
+                'source'       => $source,
+                'plate_number' => $payload['plateNo'] ?? $identity['plateNo'] ?? null,
+            ],
         ];
     }
 
     public function normalizeSensor(array $payload): array
     {
+        $type = $payload['type'] ?? $payload['sensor_type'] ?? 'generic';
+        $name = $payload['name'] ?? $payload['sensor_name'] ?? $type;
+
         return [
-            'sensor_type' => $payload['type'] ?? $payload['name'] ?? 'generic',
+            'internal_id' => $payload['internal_id'] ?? $payload['sensor_id'] ?? $payload['external_id'] ?? null,
+            'external_id' => $payload['external_id'] ?? $payload['internal_id'] ?? null,
+            'name'        => $name,
+            'type'        => $type,
+            'sensor_type' => $type,
             'value'       => $payload['value'] ?? $payload['lastValue'] ?? null,
             'unit'        => $payload['unit'] ?? null,
-            'recorded_at' => $this->parseTimestamp($payload['date'] ?? $payload['deviceTime'] ?? null),
-            'meta'        => $payload,
+            'recorded_at' => $this->parseTimestamp($payload['recorded_at'] ?? $payload['date'] ?? $payload['deviceTime'] ?? null),
+            'status'      => $payload['status'] ?? 'active',
+            'meta'        => array_filter(array_merge($payload['meta'] ?? [], [
+                'provider'   => 'safee',
+                'vehicle_id' => $payload['vehicle_id'] ?? null,
+                'plate_no'   => $payload['plate_no'] ?? null,
+                'source'     => $payload['source'] ?? null,
+                'raw'        => $payload['raw'] ?? $payload,
+            ]), fn ($value) => $value !== null),
         ];
     }
 
@@ -299,6 +427,124 @@ class SafeeProvider extends AbstractProvider
         return array_filter($this->authContext, fn ($value) => $value !== null && $value !== '');
     }
 
+    protected function resolveTelemetryWindow(array $options = []): array
+    {
+        $endDate     = (float) ($options['end_date'] ?? $this->currentSafeeTimestamp());
+        $storedStart = data_get($this->telematic?->meta ?? [], 'safee_last_telemetry_synced_at');
+        $startDate   = $options['start_date'] ?? ($storedStart ? ((float) $storedStart - 120) : $endDate - 900);
+
+        return [
+            'startDate' => max(0, (float) $startDate),
+            'endDate'   => $endDate,
+        ];
+    }
+
+    protected function currentSafeeTimestamp(): float
+    {
+        $now = Carbon::now();
+
+        return (float) $now->getTimestamp() + ((int) $now->format('u') / 1000000);
+    }
+
+    protected function fetchLastStatesByVehicle(array $vehicleIds): array
+    {
+        if (empty($vehicleIds)) {
+            return [];
+        }
+
+        $states = [];
+        foreach (array_chunk($vehicleIds, 1000) as $chunk) {
+            $response = $this->safeePost('/api/v2/vehicle/last-state', [
+                'live'      => true,
+                'startDate' => null,
+                'endDate'   => null,
+                'vehicles'  => array_values($chunk),
+            ], true);
+
+            foreach ($response['result'] ?? [] as $state) {
+                if (!is_array($state)) {
+                    continue;
+                }
+
+                $vehicleId = $this->resolveVehicleId($state);
+                if ($vehicleId !== null) {
+                    $states[(string) $vehicleId] = $state;
+                }
+            }
+        }
+
+        return $states;
+    }
+
+    protected function fetchVehicleEndpoint(string $endpoint, array $payload, string $name, mixed $vehicleId, array &$endpointStats, mixed $default = null): mixed
+    {
+        if (!$vehicleId) {
+            return $default;
+        }
+
+        try {
+            $response = $this->safeePost($endpoint, $payload, true);
+            $result   = $response['result'] ?? $default;
+
+            if ($name === 'last-info' && $result) {
+                $endpointStats['last_info_fetched']++;
+            }
+
+            if ($name === 'positions' && is_array($result)) {
+                $endpointStats['positions_fetched'] += count($result);
+            }
+
+            if ($name === 'events' && is_array($result)) {
+                $endpointStats['events_fetched'] += count($result);
+            }
+
+            return $result;
+        } catch (\Throwable $e) {
+            $endpointStats['failures'][] = [
+                'endpoint'   => $endpoint,
+                'vehicle_id' => $vehicleId,
+                'message'    => $this->sanitizeProviderMessage($e->getMessage()),
+            ];
+
+            return $default;
+        }
+    }
+
+    protected function identityPayload(array $payload): array
+    {
+        return data_get($payload, '_safee.identity') ?? $payload;
+    }
+
+    protected function currentTelemetryPayload(array $payload): ?array
+    {
+        $currentInfo  = data_get($payload, '_safee.current_info');
+        $currentState = data_get($payload, '_safee.current_state');
+
+        if (is_array($currentInfo) && !empty($currentInfo)) {
+            return $currentInfo;
+        }
+
+        return is_array($currentState) && !empty($currentState) ? $currentState : null;
+    }
+
+    protected function resolveVehicleId(array $payload): mixed
+    {
+        return $payload['vehicleId']
+            ?? data_get($payload, 'vehicle.id')
+            ?? $payload['id']
+            ?? data_get($payload, '_safee.identity.id');
+    }
+
+    protected function resolveVehicleName(array $identity, array $current = [], mixed $vehicleId = null): string
+    {
+        return $identity['plateNo']
+            ?? $identity['plateNumber']
+            ?? $identity['name']
+            ?? $current['plateNo']
+            ?? data_get($current, 'vehicle.name')
+            ?? ($vehicleId ? 'Safee Vehicle ' . $vehicleId : 'Unknown Safee Vehicle');
+    }
+
     protected function safeeGet(string $endpoint): array
     {
         $response = Http::withHeaders($this->headers)
@@ -312,10 +558,13 @@ class SafeeProvider extends AbstractProvider
         return $response->json() ?? [];
     }
 
-    protected function safeePost(string $endpoint, array|\stdClass $payload = []): array
+    protected function safeePost(string $endpoint, array|\stdClass $payload = [], bool $dataEndpoint = false): array
     {
-        $response = Http::withHeaders($this->headers)
-            ->timeout(30)
+        $timeout        = $dataEndpoint ? $this->dataTimeout : 30;
+        $connectTimeout = $dataEndpoint ? $this->connectTimeout : 10;
+        $response       = Http::withHeaders($this->headers)
+            ->timeout($timeout)
+            ->connectTimeout($connectTimeout)
             ->post($this->baseUrl . $endpoint, $payload);
 
         if ($response->failed()) {
@@ -323,6 +572,11 @@ class SafeeProvider extends AbstractProvider
         }
 
         return $response->json() ?? [];
+    }
+
+    protected function sanitizeProviderMessage(string $message): string
+    {
+        return preg_replace('/(access_token|refresh_token|token|password|client_secret)=([^\\s&]+)/i', '$1=[redacted]', $message) ?? 'Safee API request failed';
     }
 
     protected function extractPosition(array $payload): array
@@ -404,5 +658,77 @@ class SafeeProvider extends AbstractProvider
             ?? data_get($payload, 'fuelLevel')
             ?? data_get($payload, 'vehicleFuel.level')
             ?? null;
+    }
+
+    protected function extractTelemetrySensors(array $payload): array
+    {
+        $vehicleId = $this->resolveVehicleId($payload);
+        $plateNo   = $payload['plateNo'] ?? data_get($payload, 'vehicle.name');
+        $sensors   = [];
+
+        foreach ($this->extractSensorMap($payload, ['temperature', 'temperaturePerType']) as $name => $value) {
+            $sensors[] = $this->makeSafeeSensorPayload($payload, $vehicleId, $plateNo, 'temperature', (string) $name, $value, 'celsius');
+        }
+
+        foreach ($this->extractSensorMap($payload, ['door', 'doorPerType']) as $name => $value) {
+            $sensors[] = $this->makeSafeeSensorPayload($payload, $vehicleId, $plateNo, 'door', (string) $name, $value);
+        }
+
+        foreach ($this->extractSensorMap($payload, ['humidity', 'humidityPerType']) as $name => $value) {
+            $sensors[] = $this->makeSafeeSensorPayload($payload, $vehicleId, $plateNo, 'humidity', (string) $name, $value, 'percent');
+        }
+
+        return $sensors;
+    }
+
+    protected function extractSensorMap(array $payload, array $keys): array
+    {
+        foreach ($keys as $key) {
+            $value = data_get($payload, $key);
+
+            if (is_array($value) && !empty($value)) {
+                return $value;
+            }
+        }
+
+        return [];
+    }
+
+    protected function makeSafeeSensorPayload(array $sourcePayload, mixed $vehicleId, mixed $plateNo, string $type, string $name, mixed $value, ?string $unit = null): array
+    {
+        return array_filter([
+            'internal_id' => implode(':', ['safee', $vehicleId ?: 'unknown_vehicle', $type, $name]),
+            'external_id' => implode(':', ['safee', $vehicleId ?: 'unknown_vehicle', $type, $name]),
+            'name'        => $name,
+            'type'        => $type,
+            'sensor_type' => $type,
+            'value'       => $value,
+            'unit'        => $unit,
+            'recorded_at' => $sourcePayload['date'] ?? $sourcePayload['deviceTime'] ?? null,
+            'date'        => $sourcePayload['date'] ?? null,
+            'deviceTime'  => $sourcePayload['deviceTime'] ?? null,
+            'status'      => 'active',
+            'vehicle_id'  => $vehicleId,
+            'plate_no'    => $plateNo,
+            'source'      => $type,
+            'raw'         => [
+                'name'  => $name,
+                'type'  => $type,
+                'value' => $value,
+                'unit'  => $unit,
+            ],
+            'meta'        => [
+                'provider'   => 'safee',
+                'vehicle_id' => $vehicleId,
+                'plate_no'   => $plateNo,
+                'source'     => $type,
+                'raw'        => [
+                    'name'  => $name,
+                    'type'  => $type,
+                    'value' => $value,
+                    'unit'  => $unit,
+                ],
+            ],
+        ], fn ($value) => $value !== null);
     }
 }
