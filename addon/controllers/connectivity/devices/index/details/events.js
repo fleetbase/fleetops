@@ -56,7 +56,7 @@ export default class ConnectivityDevicesIndexDetailsEventsController extends Con
     }
 
     get unprocessedEventsCount() {
-        return this.events.filter((event) => !event.processed_at && !event.is_processed).length;
+        return this.events.filter((event) => !event.processed_at).length;
     }
 
     get processedEventsCount() {

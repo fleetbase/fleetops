@@ -102,6 +102,17 @@ module('Unit | Controller | connectivity/events/index', function (hooks) {
         );
     });
 
+    test('it opens event details from the event anchor and dropdown view action', function (assert) {
+        let controller = this.owner.lookup('controller:connectivity/events/index');
+        let deviceEventActions = this.owner.lookup('service:device-event-actions');
+        let eventColumn = controller.columns.find((column) => column.label === 'Event');
+        let actionColumn = controller.columns.find((column) => column.cellComponent === 'table/cell/dropdown');
+        let viewAction = actionColumn.actions.find((action) => action.permission === 'fleet-ops view device-event');
+
+        assert.strictEqual(eventColumn.action, deviceEventActions.transition.view);
+        assert.strictEqual(viewAction.fn, deviceEventActions.transition.view);
+    });
+
     test('it builds event fallback resources and resolves devices before opening panel', async function (assert) {
         let controller = this.owner.lookup('controller:connectivity/events/index');
         let deviceColumn = controller.columns.find((column) => column.label === 'Device');

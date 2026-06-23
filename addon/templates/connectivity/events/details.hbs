@@ -1,1 +1,40 @@
-{{outlet}}
+<div class="h-full overflow-y-auto bg-gray-50 dark:bg-gray-900">
+    <section class="sticky top-0 z-40 border-b border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-900">
+        <div class="mx-auto flex w-full max-w-7xl flex-col gap-3 px-4 py-3 md:px-6 lg:flex-row lg:items-start lg:justify-between">
+            <div class="min-w-0 flex-1">
+                <div class="flex flex-wrap items-center gap-2">
+                    <h1 class="truncate text-lg font-bold text-gray-900 dark:text-gray-100">{{smart-humanize this.event.event_type}}</h1>
+                    <Badge @status={{this.event.severity}} @hideStatusDot={{true}}>{{smart-humanize this.event.severity}}</Badge>
+                    <Badge @status={{this.processedStatus}} @hideStatusDot={{true}}>{{this.processedLabel}}</Badge>
+                </div>
+                <div class="mt-1 flex flex-wrap gap-2 text-xs text-gray-500 dark:text-gray-300">
+                    <span>{{n-a this.event.public_id}}</span>
+                    <span>Device: {{n-a (or this.event.device_name this.event.device_id this.event.ident)}}</span>
+                    <span>Provider: {{n-a (or this.event.telematic_name this.event.provider)}}</span>
+                    <span>Occurred: {{n-a (format-date-fns this.event.occurred_at "dd MMM yyyy, HH:mm")}}</span>
+                </div>
+            </div>
+
+            <div class="flex shrink-0 flex-row flex-nowrap items-center gap-2 whitespace-nowrap">
+                <Button @icon="arrow-left" @text="Back" @size="xs" @wrapperClass="shrink-0" @onClick={{this.goBack}} />
+                <Button @icon="refresh" @text="Refresh" @size="xs" @wrapperClass="shrink-0" @onClick={{this.refresh}} />
+                {{#unless this.isProcessed}}
+                    <Button
+                        @icon="check"
+                        @text="Mark Processed"
+                        @type="primary"
+                        @size="xs"
+                        @wrapperClass="shrink-0"
+                        @isLoading={{this.isMarkingProcessed}}
+                        @disabled={{this.isMarkingProcessed}}
+                        @onClick={{this.markProcessed}}
+                    />
+                {{/unless}}
+            </div>
+        </div>
+    </section>
+
+    <section class="mx-auto w-full max-w-7xl">
+        <DeviceEvent::Details @resource={{this.event}} />
+    </section>
+</div>
