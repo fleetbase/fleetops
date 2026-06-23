@@ -28,6 +28,8 @@ export default class ManagementVehiclesIndexDetailsRoute extends Route {
     }
 
     afterModel(model) {
-        model.loadDriver();
+        if (model && typeof model.loadDriver === 'function') {
+            model.loadDriver();
+        }
     }
 }

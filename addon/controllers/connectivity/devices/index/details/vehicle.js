@@ -86,13 +86,13 @@ export default class ConnectivityDevicesIndexDetailsVehicleController extends Co
 
     @action openVehicle() {
         if (this.vehicle?.id) {
-            return this.hostRouter.transitionTo('console.fleet-ops.management.vehicles.index.details', this.vehicle);
+            return this.hostRouter.transitionTo('console.fleet-ops.management.vehicles.index.details', this.vehicle.public_id);
         }
     }
 
     @action openVehiclePositions() {
         if (this.vehicle?.id) {
-            return this.hostRouter.transitionTo('console.fleet-ops.management.vehicles.index.details.positions', this.vehicle);
+            return this.hostRouter.transitionTo('console.fleet-ops.management.vehicles.index.details.positions', this.vehicle.public_id);
         }
     }
 
