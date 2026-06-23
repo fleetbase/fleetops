@@ -370,7 +370,6 @@ Route::prefix(config('fleetops.api.routing.prefix'))->namespace('Fleetbase\Fleet
                                 $router->get('facilitators/{id}', $controller('getAsFacilitator'));
                                 $router->get('customers/{id}', $controller('getAsCustomer'));
                                 $router->post('{id}/convert-to-vendor', $controller('convertToVendor'));
-                                $router->delete('bulk-delete', $controller('bulkDelete'));
                             }
                         );
                         $router->fleetbaseRoutes(
@@ -385,7 +384,6 @@ Route::prefix(config('fleetops.api.routing.prefix'))->namespace('Fleetbase\Fleet
                                 $router->post('{id}/assign-vehicle', $controller('assignVehicle'));
                                 $router->post('{id}/unassign-vehicle', $controller('unassignVehicle'));
                                 $router->match(['get', 'post'], 'export', $controller('export'));
-                                $router->delete('bulk-delete', $controller('bulkDelete'));
                                 $router->post('import', $controller('import'));
                                 // Driver scheduling endpoints
                                 $router->get('{id}/schedule-items', $controller('scheduleItems'));
@@ -404,7 +402,6 @@ Route::prefix(config('fleetops.api.routing.prefix'))->namespace('Fleetbase\Fleet
                                 $router->post('remove-vehicle', $controller('removeVehicle'));
                                 $router->match(['get', 'post'], 'export', $controller('export'));
                                 $router->post('import', $controller('import'));
-                                $router->delete('bulk-delete', $controller('bulkDelete'));
                             }
                         );
                         $router->fleetbaseRoutes(
@@ -412,7 +409,6 @@ Route::prefix(config('fleetops.api.routing.prefix'))->namespace('Fleetbase\Fleet
                             function ($router, $controller) {
                                 $router->match(['get', 'post'], 'export', $controller('export'));
                                 $router->post('import', $controller('import'));
-                                $router->delete('bulk-delete', $controller('bulkDelete'));
                             }
                         );
                         $router->fleetbaseRoutes(
@@ -440,14 +436,12 @@ Route::prefix(config('fleetops.api.routing.prefix'))->namespace('Fleetbase\Fleet
                             function ($router, $controller) {
                                 $router->match(['get', 'post'], 'export', $controller('export'));
                                 $router->post('import', $controller('import'));
-                                $router->delete('bulk-delete', $controller('bulkDelete'));
                             }
                         );
                         $router->fleetbaseRoutes(
                             'integrated-vendors',
                             function ($router, $controller) {
                                 $router->get('supported', $controller('getSupported'));
-                                $router->delete('bulk-delete', $controller('bulkDelete'));
                             }
                         );
                         $router->fleetbaseRoutes(
@@ -476,7 +470,6 @@ Route::prefix(config('fleetops.api.routing.prefix'))->namespace('Fleetbase\Fleet
                                 $router->patch('start', $controller('start'));
                                 // Scheduler: set scheduled_at + driver without triggering dispatch
                                 $router->patch('schedule', $controller('scheduleOrder'));
-                                $router->delete('bulk-delete', $controller('bulkDelete'));
                                 $router->match(['get', 'post'], 'export', $controller('export'));
                             }
                         );
@@ -489,7 +482,6 @@ Route::prefix(config('fleetops.api.routing.prefix'))->namespace('Fleetbase\Fleet
                                 $router->get('lookup', $controller('geocode'))->middleware(['cache.headers:private;max_age=3600']);
                                 $router->get('avatars', $controller('avatars'));
                                 $router->match(['get', 'post'], 'export', $controller('export'));
-                                $router->delete('bulk-delete', $controller('bulkDelete'));
                                 $router->post('import', $controller('import'));
                             }
                         );
@@ -504,7 +496,6 @@ Route::prefix(config('fleetops.api.routing.prefix'))->namespace('Fleetbase\Fleet
                             'service-areas',
                             function ($router, $controller) {
                                 $router->match(['get', 'post'], 'export', $controller('export'));
-                                $router->delete('bulk-delete', $controller('bulkDelete'));
                             }
                         );
                         $router->group(
@@ -528,7 +519,6 @@ Route::prefix(config('fleetops.api.routing.prefix'))->namespace('Fleetbase\Fleet
                         $router->fleetbaseRoutes(
                             'service-rates',
                             function ($router, $controller) {
-                                $router->delete('bulk-delete', $controller('bulkDelete'));
                                 $router->get('for-route', $controller('getServicesForRoute'));
                                 $router->match(['get', 'post'], 'export', $controller('export'));
                             }
@@ -548,7 +538,6 @@ Route::prefix(config('fleetops.api.routing.prefix'))->namespace('Fleetbase\Fleet
                                 $router->post('{id}/detach-device', $controller('detachDevice'));
                                 $router->match(['get', 'post'], 'export', $controller('export'));
                                 $router->post('import', $controller('import'));
-                                $router->delete('bulk-delete', $controller('bulkDelete'));
                             }
                         );
                         $router->fleetbaseRoutes('vehicle-devices');
@@ -564,7 +553,6 @@ Route::prefix(config('fleetops.api.routing.prefix'))->namespace('Fleetbase\Fleet
                                 $router->delete('{id}/personnels/{contact}', $controller('removeVendorPersonnel'));
                                 $router->post('{id}/assign-driver', $controller('assignDriver'));
                                 $router->post('{id}/remove-driver', $controller('removeDriver'));
-                                $router->delete('bulk-delete', $controller('bulkDelete'));
                                 $router->post('import', $controller('import'));
                             }
                         );
