@@ -81,16 +81,19 @@ class SafeeProvider extends AbstractProvider
             'devices_returned_for_ingestion'  => count($vehicles),
             'failures'                        => [],
         ];
+        $statesById = $this->fetchLastStatesByVehicle($vehicleIds, $endpointStats);
+        $endpointStats['last_state_fetched'] = count($statesById);
 
-        $devices = array_map(function (array $vehicle) use (&$endpointStats) {
+        $devices = array_map(function (array $vehicle) use ($statesById, &$endpointStats) {
             $vehicleId = $this->resolveListedVehicleId($vehicle);
+            $currentState = $statesById[(string) $vehicleId] ?? null;
 
             return array_merge($vehicle, [
                 '_safee' => [
                     'vehicle_id'     => $vehicleId,
                     'identity'      => $vehicle,
                     'current_info'  => null,
-                    'current_state' => null,
+                    'current_state' => $currentState,
                     'positions'     => [],
                     'events'        => [],
                     'sync_window'   => null,
@@ -117,13 +120,12 @@ class SafeeProvider extends AbstractProvider
         $window        = $this->resolveTelemetryWindow($options);
         $vehicleIds    = $this->resolveListedVehicleIds($inventoryPayloads);
         $identityStats = $this->summarizeVehicleIdentities($inventoryPayloads, $vehicleIds);
-        $statesById    = $this->fetchLastStatesByVehicle($vehicleIds);
         $endpointStats = [
             'vehicles_listed'                 => count($inventoryPayloads),
             'unique_vehicle_ids'              => $identityStats['unique_vehicle_ids'],
             'missing_vehicle_ids'             => $identityStats['missing_vehicle_ids'],
             'duplicate_vehicle_ids'           => $identityStats['duplicate_vehicle_ids'],
-            'last_state_fetched'              => count($statesById),
+            'last_state_fetched'              => 0,
             'last_info_fetched'               => 0,
             'positions_fetched'               => 0,
             'events_fetched'                  => 0,
@@ -131,8 +133,8 @@ class SafeeProvider extends AbstractProvider
             'failures'                        => [],
         ];
 
-        $devices = array_map(function (array $vehicle) use ($statesById, $window, &$endpointStats) {
-            return $this->enrichVehicleSnapshot($vehicle, $statesById, $window, $endpointStats);
+        $devices = array_map(function (array $vehicle) use ($window, &$endpointStats) {
+            return $this->enrichVehicleSnapshot($vehicle, $window, $endpointStats);
         }, $inventoryPayloads);
 
         return [
@@ -553,7 +555,7 @@ class SafeeProvider extends AbstractProvider
             ?? ($vehicle['id'] ?? null);
     }
 
-    protected function fetchLastStatesByVehicle(array $vehicleIds): array
+    protected function fetchLastStatesByVehicle(array $vehicleIds, ?array &$endpointStats = null): array
     {
         if (empty($vehicleIds)) {
             return [];
@@ -561,12 +563,24 @@ class SafeeProvider extends AbstractProvider
 
         $states = [];
         foreach (array_chunk($vehicleIds, 1000) as $chunk) {
-            $response = $this->safeePost('/api/v2/vehicle/last-state', [
-                'live'      => true,
-                'startDate' => null,
-                'endDate'   => null,
-                'vehicles'  => array_values($chunk),
-            ], true);
+            try {
+                $response = $this->safeePost('/api/v2/vehicle/last-state', [
+                    'live'      => true,
+                    'startDate' => null,
+                    'endDate'   => null,
+                    'vehicles'  => array_values($chunk),
+                ], true);
+            } catch (\Throwable $e) {
+                if (is_array($endpointStats)) {
+                    $endpointStats['failures'][] = [
+                        'endpoint'   => '/api/v2/vehicle/last-state',
+                        'vehicle_id' => null,
+                        'message'    => $this->sanitizeProviderMessage($e->getMessage()),
+                    ];
+                }
+
+                continue;
+            }
 
             foreach ($response['result'] ?? [] as $state) {
                 if (!is_array($state)) {
@@ -583,7 +597,7 @@ class SafeeProvider extends AbstractProvider
         return $states;
     }
 
-    protected function enrichVehicleSnapshot(array $vehicle, array $statesById, array $window, array &$endpointStats): array
+    protected function enrichVehicleSnapshot(array $vehicle, array $window, array &$endpointStats): array
     {
         $vehicleId = $this->resolveListedVehicleId($vehicle);
 
@@ -600,7 +614,7 @@ class SafeeProvider extends AbstractProvider
             'status'    => 'ALL',
         ], 'events', $vehicleId, $endpointStats, []);
 
-        $currentState = $statesById[(string) $vehicleId] ?? null;
+        $currentState = data_get($vehicle, '_safee.current_state');
 
         return array_merge($vehicle, [
             '_safee' => [
@@ -661,6 +675,10 @@ class SafeeProvider extends AbstractProvider
         $currentInfo  = data_get($payload, '_safee.current_info');
         $currentState = data_get($payload, '_safee.current_state');
 
+        if (is_array($currentState) && !empty($currentState) && is_array($currentInfo) && !empty($currentInfo)) {
+            return array_replace_recursive($currentState, $currentInfo);
+        }
+
         if (is_array($currentInfo) && !empty($currentInfo)) {
             return $currentInfo;
         }
@@ -672,9 +690,9 @@ class SafeeProvider extends AbstractProvider
     {
         return data_get($payload, '_safee.vehicle_id')
             ?? data_get($payload, '_safee.identity.id')
-            ?? $payload['vehicleId']
+            ?? ($payload['vehicleId'] ?? null)
             ?? data_get($payload, 'vehicle.id')
-            ?? $payload['id'];
+            ?? ($payload['id'] ?? null);
     }
 
     protected function resolveCanonicalVehicleId(array $payload, array $identity, array $current = []): mixed

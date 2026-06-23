@@ -331,6 +331,13 @@ test('safee sync returns inventory first then enriches with last info positions 
     expect($inventoryResult['devices'])->toHaveCount(1);
     expect($inventoryDevice['_safee']['identity']['plateNo'])->toBe('ABC-1234');
     expect($inventoryDevice['_safee']['current_info'])->toBeNull();
+    expect($inventoryDevice['_safee']['current_state'])->toMatchArray([
+        'id'       => 105,
+        'status'   => 'moving',
+        'speed'    => 45,
+        'heading'  => 100,
+        'position' => ['lat' => 25.2, 'lon' => 55.2, 'alt' => 12],
+    ]);
     expect($inventoryDevice['_safee']['positions'])->toBe([]);
     expect($inventoryDevice['_safee']['events'])->toBe([]);
     expect($inventoryDevice['sensors'])->toBe([]);
@@ -342,7 +349,7 @@ test('safee sync returns inventory first then enriches with last info positions 
         'devices_returned_for_ingestion'   => 1,
         'list_info_page_size'              => 0,
         'list_info_requested_unpaginated'  => true,
-        'last_state_fetched'               => 0,
+        'last_state_fetched'               => 1,
         'last_info_fetched'                => 0,
         'positions_fetched'                => 0,
         'events_fetched'                   => 0,
@@ -350,6 +357,7 @@ test('safee sync returns inventory first then enriches with last info positions 
 
     expect(array_map(fn ($request) => parse_url($request->url(), PHP_URL_PATH), $requests))->toBe([
         '/api/v2/vehicle/list-info',
+        '/api/v2/vehicle/last-state',
     ]);
 
     $result = $provider->fetchTelemetryForTest($inventoryResult['devices']);
@@ -455,10 +463,13 @@ test('safee list info requests all vehicles and preserves filters', function () 
     $result = $provider->fetchDevicesForTest($telematic);
 
     expect($result['devices'])->toHaveCount(7);
-    expect($requests)->toHaveCount(1);
+    expect($requests)->toHaveCount(2);
     expect($requests[0]->data())->toMatchArray([
         'plateNo'  => 'SAFE',
         'pageSize' => 0,
+    ]);
+    expect($requests[1]->data())->toMatchArray([
+        'vehicles' => range(101, 107),
     ]);
     expect(data_get($result, 'sync_meta.safee_last_endpoint_counts'))->toMatchArray([
         'vehicles_listed'                  => 7,
@@ -513,7 +524,10 @@ test('safee list info reports duplicate and missing vehicle identities', functio
     $result = $provider->fetchDevicesForTest($telematic);
 
     expect($result['devices'])->toHaveCount(4);
-    expect($requests)->toHaveCount(1);
+    expect($requests)->toHaveCount(2);
+    expect($requests[1]->data())->toMatchArray([
+        'vehicles' => [105, 106],
+    ]);
     expect(data_get($result, 'sync_meta.safee_last_endpoint_counts'))->toMatchArray([
         'vehicles_listed'                => 4,
         'unique_vehicle_ids'             => 2,
@@ -542,6 +556,52 @@ test('telematics sync job counts unique persisted devices separately from link a
         ->toContain('last_sync_linked_total');
 });
 
+test('safee vehicle id resolution tolerates missing id fields', function () {
+    $events = (new SafeeProvider())->normalizeEvents([
+        '_safee' => [
+            'identity'     => ['plateNo' => 'NO-ID'],
+            'current_info' => ['status' => 'offline'],
+        ],
+    ]);
+
+    expect($events)->toHaveCount(1);
+    expect($events[0]['device_id'])->toBeNull();
+});
+
+test('safee current telemetry merges last state with last info fallback fields', function () {
+    $device = (new SafeeProvider())->normalizeDevice([
+        'id'      => 105,
+        'plateNo' => 'ABC-1234',
+        '_safee'  => [
+            'vehicle_id'     => 105,
+            'identity'      => ['id' => 105, 'plateNo' => 'ABC-1234'],
+            'current_state' => [
+                'id'       => 105,
+                'date'     => 1782206120.5,
+                'status'   => 'offline',
+                'speed'    => 12,
+                'heading'  => 30,
+                'position' => ['lat' => 25.1, 'lon' => 55.1, 'alt' => 5],
+            ],
+            'current_info'  => [
+                'odometer' => 1234.5,
+            ],
+        ],
+    ]);
+
+    expect($device)->toMatchArray([
+        'device_id'    => 105,
+        'status'       => 'inactive',
+        'online'       => false,
+        'last_seen_at' => Carbon::createFromTimestamp(1782206120.5)->toDateTimeString(),
+        'location'     => ['lat' => 25.1, 'lng' => 55.1],
+        'speed'        => 12,
+        'heading'      => 30,
+        'altitude'     => 5,
+        'odometer'     => 1234.5,
+    ]);
+});
+
 test('safee normalizes documented vehicle identity current telemetry positions and events', function () {
     $provider = new SafeeProvider();
     $payload  = [
@@ -556,6 +616,14 @@ test('safee normalizes documented vehicle identity current telemetry positions a
                 'uuid'    => 'vehicle-uuid-105',
                 'plateNo' => 'ABC-1234',
                 'device'  => ['id' => 315, 'imei' => 'imei-315', 'serial' => 'serial-315'],
+            ],
+            'current_state' => [
+                'id'       => 105,
+                'date'     => 1782206120.5,
+                'status'   => 'moving',
+                'speed'    => 22,
+                'heading'  => 45,
+                'position' => ['lat' => 24.9, 'lon' => 54.9, 'alt' => 7],
             ],
             'current_info' => [
                 'id'          => 999,
