@@ -145,6 +145,7 @@ class FleetOpsServiceProvider extends CoreServiceProvider
             $schedule->command('fleetops:sync-telematics')->everyMinute()->withoutOverlapping()->storeOutputInDb();
         });
         $this->registerNotifications();
+        $this->registerAiCapabilities();
         $this->registerExpansionsFrom(__DIR__ . '/../Expansions');
 
         // Register built-in orchestration engines.
@@ -233,5 +234,30 @@ class FleetOpsServiceProvider extends CoreServiceProvider
             'dynamic:driver',
             'dynamic:facilitator',
         ]);
+    }
+
+    protected function registerAiCapabilities(): void
+    {
+        if (!Utils::classExists(\Fleetbase\Ai\Support\AiCapabilityRegistry::class)) {
+            return;
+        }
+
+        if (Utils::classExists(\Fleetbase\Ai\Support\AiQueryRegistry::class)) {
+            $this->callAfterResolving(\Fleetbase\Ai\Support\AiQueryRegistry::class, function (\Fleetbase\Ai\Support\AiQueryRegistry $registry) {
+                \Fleetbase\FleetOps\Support\Ai\FleetOpsAiQueryResources::register($registry);
+            });
+        }
+
+        $this->callAfterResolving(\Fleetbase\Ai\Support\AiCapabilityRegistry::class, function (\Fleetbase\Ai\Support\AiCapabilityRegistry $registry) {
+            $registry->register(new \Fleetbase\FleetOps\Support\Ai\Capabilities\SearchResourcesCapability());
+            $registry->register(new \Fleetbase\FleetOps\Support\Ai\Capabilities\OperationalQueryCapability());
+            $registry->register(new \Fleetbase\FleetOps\Support\Ai\Capabilities\OrderInsightsCapability());
+            $registry->register(new \Fleetbase\FleetOps\Support\Ai\Capabilities\AssetStatusCapability());
+            $registry->register(new \Fleetbase\FleetOps\Support\Ai\Capabilities\DocsHelpCapability());
+            $registry->register(new \Fleetbase\FleetOps\Support\Ai\Capabilities\ConsoleNavigationCapability());
+            $registry->register(new \Fleetbase\FleetOps\Support\Ai\Capabilities\CreateOrderPreviewCapability());
+            $registry->register(new \Fleetbase\FleetOps\Support\Ai\Capabilities\OptimizeOrderRouteCapability());
+            $registry->register(new \Fleetbase\FleetOps\Support\Ai\Capabilities\ImportOrdersPreviewCapability());
+        });
     }
 }
