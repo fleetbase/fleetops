@@ -72,6 +72,7 @@ export default class MapDrawerDriverListingComponent extends Component {
                 ddMenuLabel: this.intl.t('common.resource-actions', { resource: this.intl.t('resource.driver') }),
                 cellClassNames: 'overflow-visible',
                 wrapperClass: 'flex items-center justify-end mx-2',
+                renderInPlace: false,
                 calculatePosition: calculateMapDrawerDropdownPosition,
                 width: '90px',
                 actions: [

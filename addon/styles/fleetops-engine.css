@@ -8049,3 +8049,184 @@ body[data-theme='dark'] .issue-timeline-card time,
 body[data-theme='dark'] .issue-timeline-card p {
     color: #d1d5db;
 }
+
+.fleetbase-ai-create-order-preview {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 8px;
+}
+
+.fleetbase-ai-create-order-preview__header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 8px;
+}
+
+.fleetbase-ai-create-order-preview__map {
+    overflow: hidden;
+    border: 1px solid rgb(148 163 184 / 20%);
+    border-radius: 7px;
+    background: rgb(15 23 42 / 5%);
+}
+
+.fleetbase-ai-create-order-preview__leaflet,
+.fleetbase-ai-create-order-preview__empty-map {
+    width: 100%;
+    height: 118px;
+}
+
+.fleetbase-ai-create-order-preview__empty-map {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    color: #64748b;
+    font-size: 12px;
+}
+
+.fleetbase-ai-create-order-preview__route-list {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 5px;
+}
+
+.fleetbase-ai-create-order-preview__stop {
+    display: flex;
+    min-width: 0;
+    align-items: flex-start;
+    gap: 6px;
+    border: 1px solid rgb(148 163 184 / 18%);
+    border-radius: 6px;
+    background: rgb(255 255 255 / 24%);
+    padding: 5px 6px;
+}
+
+.fleetbase-ai-create-order-preview__stop > span {
+    display: inline-flex;
+    width: 18px;
+    height: 18px;
+    flex-shrink: 0;
+    align-items: center;
+    justify-content: center;
+    border-radius: 999px;
+    background: #2563eb;
+    color: #fff;
+    font-size: 10px;
+    font-weight: 700;
+}
+
+.fleetbase-ai-create-order-preview__stop strong,
+.fleetbase-ai-create-order-preview__stop small {
+    display: block;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.fleetbase-ai-create-order-preview__stop strong {
+    color: #0f172a;
+    font-size: 12px;
+    line-height: 1.2;
+}
+
+.fleetbase-ai-create-order-preview__stop small {
+    color: #64748b;
+    font-size: 11px;
+    line-height: 1.25;
+}
+
+.fleetbase-ai-create-order-preview__grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 6px 8px;
+}
+
+.fleetbase-ai-create-order-preview__field {
+    margin: 0;
+}
+
+.fleetbase-ai-create-order-preview__field label,
+.fleetbase-ai-create-order-preview__field .input-label {
+    margin-bottom: 2px;
+    color: #64748b;
+    font-size: 11px;
+    line-height: 1.2;
+}
+
+.fleetbase-ai-create-order-preview__field .form-input,
+.fleetbase-ai-create-order-preview__field .form-select,
+.fleetbase-ai-create-order-preview__field .ember-power-select-trigger {
+    min-height: 28px;
+    font-size: 12px;
+}
+
+.fleetbase-ai-create-order-preview__field--inline {
+    display: flex;
+    min-height: 28px;
+    align-items: center;
+    gap: 8px;
+}
+
+.fleetbase-ai-create-order-preview__select-label {
+    overflow: hidden;
+    color: #0f172a;
+    font-size: 12px;
+    font-weight: 600;
+    line-height: 1.25;
+    text-overflow: ellipsis;
+    text-transform: uppercase;
+    white-space: nowrap;
+}
+
+.fleetbase-ai-create-order-preview__controls {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.fleetbase-ai-create-order-preview__refreshing {
+    color: #64748b;
+    font-size: 11px;
+}
+
+.fleetbase-ai-create-order-preview__cancelled {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    border: 1px solid rgb(239 68 68 / 20%);
+    border-radius: 7px;
+    background: rgb(239 68 68 / 10%);
+    padding: 8px 9px;
+    color: #991b1b;
+    font-size: 12px;
+}
+
+body[data-theme='dark'] .fleetbase-ai-create-order-preview__map,
+body[data-theme='dark'] .fleetbase-ai-create-order-preview__stop {
+    border-color: rgb(148 163 184 / 20%);
+    background: rgb(15 23 42 / 30%);
+}
+
+body[data-theme='dark'] .fleetbase-ai-create-order-preview__stop strong {
+    color: #f8fafc;
+}
+
+body[data-theme='dark'] .fleetbase-ai-create-order-preview__select-label {
+    color: #f8fafc;
+}
+
+body[data-theme='dark'] .fleetbase-ai-create-order-preview__stop small,
+body[data-theme='dark'] .fleetbase-ai-create-order-preview__field label,
+body[data-theme='dark'] .fleetbase-ai-create-order-preview__field .input-label,
+body[data-theme='dark'] .fleetbase-ai-create-order-preview__refreshing,
+body[data-theme='dark'] .fleetbase-ai-create-order-preview__empty-map {
+    color: #cbd5e1;
+}
+
+body[data-theme='dark'] .fleetbase-ai-create-order-preview__cancelled {
+    border-color: rgb(248 113 113 / 22%);
+    background: rgb(127 29 29 / 22%);
+    color: #fecaca;
+}
