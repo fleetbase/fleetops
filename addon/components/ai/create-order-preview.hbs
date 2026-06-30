@@ -13,163 +13,226 @@
             <span>{{this.cancelledMessage}}</span>
         </div>
     {{else}}
-        <div class="fleetbase-ai-create-order-preview__map">
-            {{#if this.canShowMap}}
-                <LeafletMap
-                    class="fleetbase-ai-create-order-preview__leaflet"
-                    @lat={{this.mapCenter.latitude}}
-                    @lng={{this.mapCenter.longitude}}
-                    @zoom={{12}}
-                    @zoomControl={{false}}
-                    as |layers|
-                >
-                    <layers.tile @url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png" />
-                    <layers.polyline @locations={{this.routeLineCoordinates}} @color="#3b82f6" @weight={{4}} @opacity={{0.82}} />
-                    {{#each this.coordinates as |stop index|}}
-                        <layers.marker @location={{stop.coordinates}} @title={{stop.address}} as |marker|>
-                            <marker.tooltip @permanent={{false}} @sticky={{true}}>{{add index 1}}. {{stop.label}}</marker.tooltip>
-                        </layers.marker>
-                    {{/each}}
-                </LeafletMap>
-            {{else}}
-                <div class="fleetbase-ai-create-order-preview__empty-map">
-                    <FaIcon @icon="route" />
-                    <span>Select pickup and dropoff with coordinates to preview the route.</span>
+        <Ai::RoutePreviewMap @payload={{this.payload}} @orderId={{this.orderPreviewId}} @status="created" />
+
+        <div class="fleetbase-ai-create-order-preview__fields">
+            <div class="fleetbase-ai-create-order-preview__field-row">
+                <div class="fleetbase-ai-create-order-preview__field-copy">
+                    <span>Order type</span>
+                    {{#if this.isEditingOrderType}}
+                        <ModelSelect
+                            @modelName="order-config"
+                            @selectedModel={{this.draft.order_config_uuid}}
+                            @placeholder="Select order type"
+                            @triggerClass="fleetbase-ai-create-order-preview__inline-select"
+                            @infiniteScroll={{false}}
+                            @renderInPlace={{true}}
+                            @onChange={{this.setOrderConfig}}
+                            as |model|
+                        >
+                            {{or model.name model.key}}
+                        </ModelSelect>
+                    {{else}}
+                        <strong>{{this.orderTypeLabel}}</strong>
+                    {{/if}}
                 </div>
-            {{/if}}
-        </div>
-        <div class="fleetbase-ai-create-order-preview__route-list">
-            {{#each this.routeStops as |stop index|}}
-                <div class="fleetbase-ai-create-order-preview__stop">
-                    <span>{{add index 1}}</span>
-                    <div>
-                        <strong>{{stop.label}}</strong>
-                        <small>{{or stop.address "No address resolved"}}</small>
-                    </div>
-                </div>
-            {{/each}}
-        </div>
-
-    <div class="fleetbase-ai-create-order-preview__grid">
-        <InputGroup @name="Order type" @wrapperClass="fleetbase-ai-create-order-preview__field">
-            <ModelSelect
-                @modelName="order-config"
-                @selectedModel={{this.draft.order_config_uuid}}
-                @placeholder="Select order type"
-                @triggerClass="form-select form-input form-input-sm"
-                @infiniteScroll={{false}}
-                @renderInPlace={{true}}
-                @onChange={{this.setOrderConfig}}
-                as |model|
-            >
-                {{or model.name model.key}}
-            </ModelSelect>
-        </InputGroup>
-
-        <InputGroup @name="Pickup" @wrapperClass="fleetbase-ai-create-order-preview__field">
-            <ModelSelect
-                @modelName="place"
-                @selectedModel={{this.payload.pickup}}
-                @placeholder="Pickup address"
-                @triggerClass="form-select form-input form-input-sm"
-                @customSearchEndpoint="places/search"
-                @query={{hash geo=true}}
-                @infiniteScroll={{false}}
-                @renderInPlace={{true}}
-                @onChange={{fn this.setPayloadPlace "pickup"}}
-                as |place|
-            >
-                <div class="fleetbase-ai-create-order-preview__select-label">{{this.addressLabel place}}</div>
-            </ModelSelect>
-        </InputGroup>
-
-        <InputGroup @name="Dropoff" @wrapperClass="fleetbase-ai-create-order-preview__field">
-            <ModelSelect
-                @modelName="place"
-                @selectedModel={{this.payload.dropoff}}
-                @placeholder="Dropoff address"
-                @triggerClass="form-select form-input form-input-sm"
-                @customSearchEndpoint="places/search"
-                @query={{hash geo=true}}
-                @infiniteScroll={{false}}
-                @renderInPlace={{true}}
-                @onChange={{fn this.setPayloadPlace "dropoff"}}
-                as |place|
-            >
-                <div class="fleetbase-ai-create-order-preview__select-label">{{this.addressLabel place}}</div>
-            </ModelSelect>
-        </InputGroup>
-
-        <InputGroup @name="Driver" @wrapperClass="fleetbase-ai-create-order-preview__field">
-            <ModelSelect
-                @modelName="driver"
-                @placeholder="Assign driver"
-                @triggerClass="form-select form-input form-input-sm"
-                @allowClear={{true}}
-                @infiniteScroll={{false}}
-                @renderInPlace={{true}}
-                @onChange={{this.setDriver}}
-                as |driver|
-            >
-                {{driver.name}}
-            </ModelSelect>
-        </InputGroup>
-
-        <InputGroup @name="Vehicle" @wrapperClass="fleetbase-ai-create-order-preview__field">
-            <ModelSelect
-                @modelName="vehicle"
-                @placeholder="Assign vehicle"
-                @triggerClass="form-select form-input form-input-sm"
-                @allowClear={{true}}
-                @infiniteScroll={{false}}
-                @renderInPlace={{true}}
-                @onChange={{this.setVehicle}}
-                as |vehicle|
-            >
-                {{or vehicle.display_name vehicle.name vehicle.plate_number}}
-            </ModelSelect>
-        </InputGroup>
-
-        <InputGroup @name="Proof" @wrapperClass="fleetbase-ai-create-order-preview__field fleetbase-ai-create-order-preview__field--inline">
-            <Toggle @isToggled={{this.draft.pod_required}} @onToggle={{this.setPodRequired}} @label="Require POD" />
-            {{#if this.draft.pod_required}}
-                <Select
-                    @options={{this.podMethods}}
-                    @value={{this.draft.pod_method}}
-                    @onSelect={{this.setPodMethod}}
-                    @placeholder="POD method"
-                    class="form-input-sm"
+                <Button
+                    @icon={{if this.isEditingOrderType "xmark" "pen"}}
+                    @helpText={{if this.isEditingOrderType "Close editor" "Edit order type"}}
+                    @wrapperClass="fleetbase-ai-create-order-preview__edit-wrapper"
+                    class="fleetbase-ai-create-order-preview__edit-button"
+                    @onClick={{if this.isEditingOrderType this.closeEditor (fn this.editField "orderType")}}
                 />
-            {{/if}}
-        </InputGroup>
+            </div>
 
-        <InputGroup @name="Dispatch" @wrapperClass="fleetbase-ai-create-order-preview__field fleetbase-ai-create-order-preview__field--inline">
-            <Toggle @isToggled={{this.draft.dispatched}} @onToggle={{this.setDispatched}} @label="Dispatch after create" />
-        </InputGroup>
-    </div>
+            <div class="fleetbase-ai-create-order-preview__field-row">
+                <div class="fleetbase-ai-create-order-preview__field-copy">
+                    <span>Pickup</span>
+                    {{#if this.isEditingPickup}}
+                        <ModelSelect
+                            @modelName="place"
+                            @selectedModel={{this.payload.pickup}}
+                            @placeholder="Pickup address"
+                            @triggerClass="fleetbase-ai-create-order-preview__inline-select"
+                            @customSearchEndpoint="places/search"
+                            @query={{hash geo=true}}
+                            @infiniteScroll={{false}}
+                            @renderInPlace={{true}}
+                            @onChange={{fn this.setPayloadPlace "pickup"}}
+                            as |place|
+                        >
+                            <div class="fleetbase-ai-create-order-preview__select-label">{{this.addressLabel place}}</div>
+                        </ModelSelect>
+                    {{else}}
+                        <strong>{{this.pickupLabel}}</strong>
+                    {{/if}}
+                </div>
+                <Button
+                    @icon={{if this.isEditingPickup "xmark" "pen"}}
+                    @helpText={{if this.isEditingPickup "Close editor" "Edit pickup"}}
+                    @wrapperClass="fleetbase-ai-create-order-preview__edit-wrapper"
+                    class="fleetbase-ai-create-order-preview__edit-button"
+                    @onClick={{if this.isEditingPickup this.closeEditor (fn this.editField "pickup")}}
+                />
+            </div>
 
-    <InputGroup @name="Notes" @wrapperClass="fleetbase-ai-create-order-preview__field">
-        <Textarea @value={{this.draft.notes}} class="form-input form-input-sm w-full" rows={{2}} placeholder="Add order notes" {{on "change" this.setNotes}} />
-    </InputGroup>
+            <div class="fleetbase-ai-create-order-preview__field-row">
+                <div class="fleetbase-ai-create-order-preview__field-copy">
+                    <span>Dropoff</span>
+                    {{#if this.isEditingDropoff}}
+                        <ModelSelect
+                            @modelName="place"
+                            @selectedModel={{this.payload.dropoff}}
+                            @placeholder="Dropoff address"
+                            @triggerClass="fleetbase-ai-create-order-preview__inline-select"
+                            @customSearchEndpoint="places/search"
+                            @query={{hash geo=true}}
+                            @infiniteScroll={{false}}
+                            @renderInPlace={{true}}
+                            @onChange={{fn this.setPayloadPlace "dropoff"}}
+                            as |place|
+                        >
+                            <div class="fleetbase-ai-create-order-preview__select-label">{{this.addressLabel place}}</div>
+                        </ModelSelect>
+                    {{else}}
+                        <strong>{{this.dropoffLabel}}</strong>
+                    {{/if}}
+                </div>
+                <Button
+                    @icon={{if this.isEditingDropoff "xmark" "pen"}}
+                    @helpText={{if this.isEditingDropoff "Close editor" "Edit dropoff"}}
+                    @wrapperClass="fleetbase-ai-create-order-preview__edit-wrapper"
+                    class="fleetbase-ai-create-order-preview__edit-button"
+                    @onClick={{if this.isEditingDropoff this.closeEditor (fn this.editField "dropoff")}}
+                />
+            </div>
 
-    {{#if this.hasMissingFields}}
-        <div class="fleetbase-ai-action-list">
-            <div class="fleetbase-ai-action-list-title">Required before apply</div>
-            <ul>
-                {{#each this.missingFields as |field|}}
-                    <li>{{field}}</li>
-                {{/each}}
-            </ul>
+            <div class="fleetbase-ai-create-order-preview__field-row">
+                <div class="fleetbase-ai-create-order-preview__field-copy">
+                    <span>Driver</span>
+                    {{#if this.isEditingDriver}}
+                        <ModelSelect
+                            @modelName="driver"
+                            @placeholder="Assign driver"
+                            @triggerClass="fleetbase-ai-create-order-preview__inline-select"
+                            @allowClear={{true}}
+                            @infiniteScroll={{false}}
+                            @renderInPlace={{true}}
+                            @onChange={{this.setDriver}}
+                            as |driver|
+                        >
+                            {{driver.name}}
+                        </ModelSelect>
+                    {{else}}
+                        <strong>{{this.driverLabel}}</strong>
+                    {{/if}}
+                </div>
+                <Button
+                    @icon={{if this.isEditingDriver "xmark" "pen"}}
+                    @helpText={{if this.isEditingDriver "Close editor" "Edit driver"}}
+                    @wrapperClass="fleetbase-ai-create-order-preview__edit-wrapper"
+                    class="fleetbase-ai-create-order-preview__edit-button"
+                    @onClick={{if this.isEditingDriver this.closeEditor (fn this.editField "driver")}}
+                />
+            </div>
+
+            <div class="fleetbase-ai-create-order-preview__field-row">
+                <div class="fleetbase-ai-create-order-preview__field-copy">
+                    <span>Vehicle</span>
+                    {{#if this.isEditingVehicle}}
+                        <ModelSelect
+                            @modelName="vehicle"
+                            @placeholder="Assign vehicle"
+                            @triggerClass="fleetbase-ai-create-order-preview__inline-select"
+                            @allowClear={{true}}
+                            @infiniteScroll={{false}}
+                            @renderInPlace={{true}}
+                            @onChange={{this.setVehicle}}
+                            as |vehicle|
+                        >
+                            {{or vehicle.display_name vehicle.name vehicle.plate_number}}
+                        </ModelSelect>
+                    {{else}}
+                        <strong>{{this.vehicleLabel}}</strong>
+                    {{/if}}
+                </div>
+                <Button
+                    @icon={{if this.isEditingVehicle "xmark" "pen"}}
+                    @helpText={{if this.isEditingVehicle "Close editor" "Edit vehicle"}}
+                    @wrapperClass="fleetbase-ai-create-order-preview__edit-wrapper"
+                    class="fleetbase-ai-create-order-preview__edit-button"
+                    @onClick={{if this.isEditingVehicle this.closeEditor (fn this.editField "vehicle")}}
+                />
+            </div>
+
+            <div class="fleetbase-ai-create-order-preview__field-row fleetbase-ai-create-order-preview__field-row--notes">
+                <div class="fleetbase-ai-create-order-preview__field-copy">
+                    <span>Notes</span>
+                    {{#if this.isEditingNotes}}
+                        <Textarea
+                            @value={{this.draft.notes}}
+                            class="fleetbase-ai-create-order-preview__inline-textarea"
+                            rows={{2}}
+                            placeholder="Add order notes"
+                            {{on "input" this.setNotes}}
+                        />
+                    {{else}}
+                        <strong>{{this.notesLabel}}</strong>
+                    {{/if}}
+                </div>
+                <Button
+                    @icon={{if this.isEditingNotes "check" "pen"}}
+                    @helpText={{if this.isEditingNotes "Done" "Edit notes"}}
+                    @wrapperClass="fleetbase-ai-create-order-preview__edit-wrapper"
+                    class="fleetbase-ai-create-order-preview__edit-button"
+                    @onClick={{if this.isEditingNotes this.closeEditor (fn this.editField "notes")}}
+                />
+            </div>
         </div>
-    {{/if}}
 
-    {{#if this.preview.result}}
-        <div class="fleetbase-ai-action-result">{{this.preview.result.message}}</div>
-    {{/if}}
+        <div class="fleetbase-ai-create-order-preview__toggles">
+            <div class="fleetbase-ai-create-order-preview__toggle-row">
+                <Toggle @isToggled={{this.draft.pod_required}} @onToggle={{this.setPodRequired}} @label="Require POD" />
+                {{#if this.draft.pod_required}}
+                    {{#if this.isEditingPodMethod}}
+                        <Select
+                            @options={{this.podMethods}}
+                            @value={{this.draft.pod_method}}
+                            @onSelect={{this.setPodMethod}}
+                            @placeholder="POD method"
+                            class="fleetbase-ai-create-order-preview__inline-native-select"
+                        />
+                    {{else}}
+                        <button type="button" class="fleetbase-ai-create-order-preview__inline-pill" {{on "click" (fn this.editField "podMethod")}}>
+                            {{this.podMethodLabel}}
+                            <FaIcon @icon="pen" />
+                        </button>
+                    {{/if}}
+                {{/if}}
+            </div>
+            <div class="fleetbase-ai-create-order-preview__toggle-row">
+                <Toggle @isToggled={{this.draft.dispatched}} @onToggle={{this.setDispatched}} @label="Dispatch after create" />
+            </div>
+        </div>
 
-    {{#if this.preview.error}}
-        <div class="fleetbase-ai-action-error">{{this.preview.error.message}}</div>
-    {{/if}}
+        {{#if this.hasMissingFields}}
+            <div class="fleetbase-ai-action-list">
+                <div class="fleetbase-ai-action-list-title">Required before apply</div>
+                <ul>
+                    {{#each this.missingFields as |field|}}
+                        <li>{{field}}</li>
+                    {{/each}}
+                </ul>
+            </div>
+        {{/if}}
+
+        {{#if this.preview.result}}
+            <div class="fleetbase-ai-action-result">{{this.preview.result.message}}</div>
+        {{/if}}
+
+        {{#if this.preview.error}}
+            <div class="fleetbase-ai-action-error">{{this.preview.error.message}}</div>
+        {{/if}}
 
         <div class="fleetbase-ai-create-order-preview__controls">
             <Button
