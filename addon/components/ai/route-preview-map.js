@@ -28,15 +28,6 @@ export default class AiRoutePreviewMapComponent extends Component {
     computeToken = 0;
     googleApiLoadPromise = null;
 
-    constructor() {
-        super(...arguments);
-        this.mapSettings.load();
-
-        if (!this.shouldUseGoogleMaps && !this.leafletPluginsReady) {
-            this.prepareLeafletPlugins();
-        }
-    }
-
     willDestroy() {
         super.willDestroy(...arguments);
         this.clearGoogleRoute();
@@ -100,18 +91,29 @@ export default class AiRoutePreviewMapComponent extends Component {
         return this.route?.coordinates?.length ? this.route.coordinates : this.coordinates;
     }
 
-    get markerStops() {
-        return this.routePoints.map((routePoint, index) => {
-            const presentation = buildRoutePointMarkerPresentation(routePoint, this.routeColor);
+    get routeLineCoordinates() {
+        return this.route?.coordinates?.length ? this.route.coordinates : [];
+    }
 
-            return {
-                ...presentation,
-                index,
-                location: [Number(routePoint.place.latitude), Number(routePoint.place.longitude)],
-                title: presentation.title,
-                address: this.addressLabel(routePoint.place),
-            };
-        });
+    get hasRouteLine() {
+        return this.routeLineCoordinates.length > 1;
+    }
+
+    get markerStops() {
+        return this.routePoints
+            .map((routePoint, index) => {
+                const location = [Number(routePoint.place.latitude), Number(routePoint.place.longitude)];
+                const presentation = buildRoutePointMarkerPresentation(routePoint, this.routeColor);
+
+                return {
+                    ...presentation,
+                    index,
+                    location,
+                    title: presentation.title,
+                    address: this.addressLabel(routePoint.place),
+                };
+            })
+            .filter((stop) => stop.location.every((coordinate) => Number.isFinite(coordinate)));
     }
 
     get tileUrl() {
@@ -144,7 +146,21 @@ export default class AiRoutePreviewMapComponent extends Component {
         return waypointIconHtml(label, color);
     }
 
+    @action async setupPreview() {
+        await this.mapSettings.load();
+
+        if (!this.shouldUseGoogleMaps && !this.leafletPluginsReady) {
+            await this.prepareLeafletPlugins();
+        }
+
+        this.syncPreview();
+    }
+
     @action async prepareLeafletPlugins() {
+        if (this.leafletPluginsReady) {
+            return;
+        }
+
         await ensureLeafletPluginsReady();
         this.leafletPluginsReady = true;
     }
@@ -251,7 +267,7 @@ export default class AiRoutePreviewMapComponent extends Component {
         this.clearGoogleRoute();
 
         const googleMaps = window.google;
-        const path = this.routeCoordinates.map(([lat, lng]) => ({ lat, lng }));
+        const path = this.routeLineCoordinates.map(([lat, lng]) => ({ lat, lng }));
 
         if (path.length > 1) {
             this.routeStyles.forEach((style) => {

@@ -1,4 +1,4 @@
-<div class="fleetbase-ai-create-order-preview__map">
+<div class="fleetbase-ai-create-order-preview__map" {{did-insert this.setupPreview}}>
     {{#if this.canShowMap}}
         {{#if this.shouldUseGoogleMaps}}
             <div
@@ -18,17 +18,19 @@
                 as |layers|
             >
                 <layers.tile @url={{this.tileUrl}} />
-                {{#each this.routeStyles as |style|}}
-                    <layers.polyline
-                        @locations={{this.routeCoordinates}}
-                        @color={{style.color}}
-                        @weight={{style.weight}}
-                        @opacity={{style.opacity}}
-                        @lineCap={{style.lineCap}}
-                        @lineJoin={{style.lineJoin}}
-                        @dashArray={{style.dashArray}}
-                    />
-                {{/each}}
+                {{#if this.hasRouteLine}}
+                    {{#each this.routeStyles as |style|}}
+                        <layers.polyline
+                            @locations={{this.routeLineCoordinates}}
+                            @color={{style.color}}
+                            @weight={{style.weight}}
+                            @opacity={{style.opacity}}
+                            @lineCap={{style.lineCap}}
+                            @lineJoin={{style.lineJoin}}
+                            @dashArray={{style.dashArray}}
+                        />
+                    {{/each}}
+                {{/if}}
                 {{#each this.markerStops as |stop|}}
                     <layers.marker
                         @location={{stop.location}}
