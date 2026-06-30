@@ -85,9 +85,9 @@ class OperationalQueryCapability extends AbstractFleetOpsAICapability
     protected function driverQueries(string $prompt, AiQueryExecutor $executor): array
     {
         $queries = [
-            'total'           => $executor->count('fleet-ops.drivers'),
-            'online'          => $executor->count('fleet-ops.drivers', [['field' => 'online', 'operator' => '=', 'value' => true]]),
-            'offline'         => $executor->count('fleet-ops.drivers', [['field' => 'online', 'operator' => 'false_or_null']]),
+            'total'            => $executor->count('fleet-ops.drivers'),
+            'online'           => $executor->count('fleet-ops.drivers', [['field' => 'online', 'operator' => '=', 'value' => true]]),
+            'offline'          => $executor->count('fleet-ops.drivers', [['field' => 'online', 'operator' => 'false_or_null']]),
             'counts_by_status' => $executor->countsBy('fleet-ops.drivers', 'status'),
         ];
 
@@ -101,7 +101,7 @@ class OperationalQueryCapability extends AbstractFleetOpsAICapability
         if ($this->mentions($prompt, ['where', 'located', 'location', 'majority', 'service area', 'zone'])) {
             $filters = $this->mentions($prompt, ['online']) ? [['field' => 'online', 'operator' => '=', 'value' => true]] : [];
 
-            $queries['location_summary'] = $executor->locationSummary('fleet-ops.drivers', $filters, 250);
+            $queries['location_summary']          = $executor->locationSummary('fleet-ops.drivers', $filters, 250);
             $queries['service_area_distribution'] = $this->driverGeofenceDistribution($filters);
         }
 
@@ -111,9 +111,9 @@ class OperationalQueryCapability extends AbstractFleetOpsAICapability
     protected function onlineResourceQueries(string $resource, string $prompt, AiQueryExecutor $executor): array
     {
         $queries = [
-            'total'           => $executor->count($resource),
-            'online'          => $executor->count($resource, [['field' => 'online', 'operator' => '=', 'value' => true]]),
-            'offline'         => $executor->count($resource, [['field' => 'online', 'operator' => 'false_or_null']]),
+            'total'            => $executor->count($resource),
+            'online'           => $executor->count($resource, [['field' => 'online', 'operator' => '=', 'value' => true]]),
+            'offline'          => $executor->count($resource, [['field' => 'online', 'operator' => 'false_or_null']]),
             'counts_by_status' => $executor->countsBy($resource, 'status'),
         ];
 

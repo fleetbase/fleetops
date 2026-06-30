@@ -1,7 +1,7 @@
 <?php
 
-use Fleetbase\FleetOps\Support\Ai\Capabilities\CreateOrderPreviewCapability;
 use Fleetbase\FleetOps\Models\Place;
+use Fleetbase\FleetOps\Support\Ai\Capabilities\CreateOrderPreviewCapability;
 use Fleetbase\LaravelMysqlSpatial\Types\Point as SpatialPoint;
 
 function fleetopsAiCreateOrderCapability()

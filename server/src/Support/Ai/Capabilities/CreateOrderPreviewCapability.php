@@ -61,12 +61,12 @@ class CreateOrderPreviewCapability extends AbstractFleetOpsAICapability implemen
     public function inputSchema(): array
     {
         return [
-            'order_config_uuid' => 'Fleet-Ops order config UUID. Defaults to the company transport config when available.',
-            'payload.pickup_uuid' => 'Existing Fleet-Ops place UUID for pickup.',
+            'order_config_uuid'    => 'Fleet-Ops order config UUID. Defaults to the company transport config when available.',
+            'payload.pickup_uuid'  => 'Existing Fleet-Ops place UUID for pickup.',
             'payload.dropoff_uuid' => 'Existing Fleet-Ops place UUID for dropoff.',
-            'payload.waypoints' => 'Optional ordered waypoint place UUIDs.',
-            'customer' => 'Optional contact/vendor UUID.',
-            'dispatched' => 'Optional boolean. Defaults to false for AI-created drafts.',
+            'payload.waypoints'    => 'Optional ordered waypoint place UUIDs.',
+            'customer'             => 'Optional contact/vendor UUID.',
+            'dispatched'           => 'Optional boolean. Defaults to false for AI-created drafts.',
         ];
     }
 
@@ -96,7 +96,7 @@ class CreateOrderPreviewCapability extends AbstractFleetOpsAICapability implemen
         }
 
         if ($driver) {
-            $draft['driver'] = $driver->uuid;
+            $draft['driver']               = $driver->uuid;
             $draft['driver_assigned_uuid'] = $driver->uuid;
         }
 
@@ -172,10 +172,10 @@ class CreateOrderPreviewCapability extends AbstractFleetOpsAICapability implemen
             'status'   => 'completed',
             'message'  => 'Fleet-Ops order was created.',
             'resource' => [
-                'type'  => 'order',
-                'id'    => data_get($order, 'public_id') ?? data_get($order, 'id'),
-                'uuid'  => data_get($order, 'uuid'),
-                'route' => 'console.fleet-ops.operations.orders.index.details',
+                'type'   => 'order',
+                'id'     => data_get($order, 'public_id') ?? data_get($order, 'id'),
+                'uuid'   => data_get($order, 'uuid'),
+                'route'  => 'console.fleet-ops.operations.orders.index.details',
                 'models' => array_filter([data_get($order, 'public_id') ?? data_get($order, 'uuid')]),
             ],
         ];

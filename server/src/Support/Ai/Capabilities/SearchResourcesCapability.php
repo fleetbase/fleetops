@@ -83,15 +83,15 @@ class SearchResourcesCapability extends AbstractFleetOpsAICapability
             ->limit(5)
             ->get()
             ->map(fn (Order $order) => [
-                'id'                  => $order->public_id,
-                'uuid'                => $order->uuid,
-                'tracking'            => $order->tracking,
-                'status'              => $order->status,
-                'type'                => $order->type,
-                'transaction_amount'  => $order->transaction_amount,
+                'id'                   => $order->public_id,
+                'uuid'                 => $order->uuid,
+                'tracking'             => $order->tracking,
+                'status'               => $order->status,
+                'type'                 => $order->type,
+                'transaction_amount'   => $order->transaction_amount,
                 'transaction_currency' => $order->transaction_currency,
-                'route'               => 'console.fleet-ops.operations.orders.index.details',
-                'models'              => [$order->public_id ?: $order->uuid],
+                'route'                => 'console.fleet-ops.operations.orders.index.details',
+                'models'               => [$order->public_id ?: $order->uuid],
             ])
             ->values()
             ->all();
