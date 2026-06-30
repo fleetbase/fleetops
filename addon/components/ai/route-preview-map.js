@@ -66,9 +66,9 @@ export default class AiRoutePreviewMapComponent extends Component {
     }
 
     get displayRouteEngine() {
-        const configuredEngine = this.routeEngine.getDisplayEngine('osrm');
+        const configuredEngine = this.routeEngine?.getDisplayEngine?.('osrm') ?? 'osrm';
 
-        return this.routeEngine.get(configuredEngine) ? configuredEngine : 'osrm';
+        return this.routeEngine?.get?.(configuredEngine) ? configuredEngine : 'osrm';
     }
 
     get routeErrorMessage() {
@@ -255,6 +255,10 @@ export default class AiRoutePreviewMapComponent extends Component {
             payload: this.payload,
             fitOptions: this.fitOptions,
         };
+
+        if (!this.routeEngine?.compute) {
+            throw new Error('No route engine is available for the AI order preview.');
+        }
 
         try {
             return await this.routeEngine.compute(engine, this.coordinates, options);
