@@ -219,7 +219,7 @@ export default class AiCreateOrderPreviewComponent extends Component {
             .replace(/\b\w/g, (char) => char.toUpperCase());
     }
 
-    mergeDraft(updates = {}) {
+    updateDraft(updates = {}) {
         this.draft = {
             ...this.draft,
             ...updates,
@@ -228,6 +228,10 @@ export default class AiCreateOrderPreviewComponent extends Component {
                 ...(updates.payload ?? {}),
             },
         };
+    }
+
+    updateRouteDraft(updates = {}) {
+        this.updateDraft(updates);
         this.refreshPreview.perform();
     }
 
@@ -247,8 +251,11 @@ export default class AiCreateOrderPreviewComponent extends Component {
         yield timeout(180);
         const refreshed = yield this.args.onRefresh?.(this.args.task, this.preview, { draft: this.draft });
         if (refreshed) {
-            this.preview = refreshed;
-            this.draft = this.clone(refreshed.draft ?? this.draft);
+            this.preview = {
+                ...this.preview,
+                ...refreshed,
+                draft: this.draft,
+            };
         }
     }
 
@@ -265,12 +272,12 @@ export default class AiCreateOrderPreviewComponent extends Component {
             delete payload[`${role}_uuid`];
         }
 
-        this.mergeDraft({ payload });
+        this.updateRouteDraft({ payload });
         this.closeEditor();
     }
 
     @action setOrderConfig(orderConfig) {
-        this.mergeDraft({
+        this.updateDraft({
             order_config_uuid: this.modelValue(orderConfig, 'uuid') ?? this.modelValue(orderConfig, 'id'),
             order_config_name: this.modelValue(orderConfig, 'name'),
             type: this.modelValue(orderConfig, 'key'),
@@ -279,11 +286,11 @@ export default class AiCreateOrderPreviewComponent extends Component {
     }
 
     @action setScheduledAt(value) {
-        this.mergeDraft({ scheduled_at: value });
+        this.updateDraft({ scheduled_at: value });
     }
 
     @action setDriver(driver) {
-        this.mergeDraft({
+        this.updateDraft({
             driver: this.modelValue(driver, 'uuid') ?? this.modelValue(driver, 'id'),
             driver_query: this.modelValue(driver, 'name') ?? this.modelValue(driver, 'public_id'),
         });
@@ -291,7 +298,7 @@ export default class AiCreateOrderPreviewComponent extends Component {
     }
 
     @action setVehicle(vehicle) {
-        this.mergeDraft({
+        this.updateDraft({
             vehicle_assigned_uuid: this.modelValue(vehicle, 'uuid') ?? this.modelValue(vehicle, 'id'),
             vehicle_query: this.modelValue(vehicle, 'display_name') ?? this.modelValue(vehicle, 'name') ?? this.modelValue(vehicle, 'plate_number'),
         });
@@ -299,14 +306,14 @@ export default class AiCreateOrderPreviewComponent extends Component {
     }
 
     @action setPodRequired(value) {
-        this.mergeDraft({
+        this.updateDraft({
             pod_required: value,
             pod_method: value ? (this.draft.pod_method ?? 'scan') : null,
         });
     }
 
     @action setPodMethod(value) {
-        this.mergeDraft({ pod_method: value });
+        this.updateDraft({ pod_method: value });
         this.closeEditor();
     }
 
@@ -315,11 +322,13 @@ export default class AiCreateOrderPreviewComponent extends Component {
     }
 
     @action setDispatched(value) {
-        this.mergeDraft({ dispatched: value });
+        this.updateDraft({ dispatched: value });
     }
 
-    @action setNotes(event) {
-        this.mergeDraft({ notes: event.target.value });
+    @action setNotes(valueOrEvent) {
+        const value = valueOrEvent?.target ? valueOrEvent.target.value : valueOrEvent;
+
+        this.updateDraft({ notes: value });
     }
 
     @action apply() {
@@ -354,7 +363,7 @@ export default class AiCreateOrderPreviewComponent extends Component {
 
     @action updatePreview(preview) {
         this.preview = preview;
-        if (preview?.draft) {
+        if (preview?.draft && !this.editingField) {
             this.draft = this.clone(preview.draft);
         }
     }
