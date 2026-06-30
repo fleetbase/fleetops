@@ -64,6 +64,11 @@
                 <Spinner />
                 <span>Rendering route...</span>
             </div>
+        {{else if this.routeErrorMessage}}
+            <div class="fleetbase-ai-create-order-preview__map-status fleetbase-ai-create-order-preview__map-status--error">
+                <FaIcon @icon="triangle-exclamation" />
+                <span>{{this.routeErrorMessage}}</span>
+            </div>
         {{/if}}
     {{else}}
         <div class="fleetbase-ai-create-order-preview__empty-map">

@@ -4,14 +4,38 @@
             <div class="fleetbase-ai-action-title">{{this.preview.label}}</div>
             <div class="fleetbase-ai-action-message">{{this.preview.message}}</div>
         </div>
-        <span class="fleetbase-ai-action-status">{{if this.isCancelled "Cancelled" (if this.preview.ready "Ready" "Needs info")}}</span>
+        <span class="fleetbase-ai-action-status">{{if this.isCompleted "Completed" (if this.isCancelled "Cancelled" (if this.preview.ready "Ready" "Needs info"))}}</span>
     </div>
 
-    {{#if this.isCancelled}}
+    {{#if @isApplying}}
+        <div class="fleetbase-ai-create-order-preview__applying">
+            <span class="fleetbase-ai-create-order-preview__magic-loader" aria-hidden="true">
+                <span></span>
+                <span></span>
+                <span></span>
+            </span>
+            <span>Creating Fleet-Ops order...</span>
+        </div>
+    {{else if this.isCompleted}}
+        <div class="fleetbase-ai-create-order-preview__completed">
+            <div class="fleetbase-ai-create-order-preview__completed-icon">
+                <FaIcon @icon="check" />
+            </div>
+            <div class="fleetbase-ai-create-order-preview__completed-copy">
+                <strong>{{this.completedMessage}}</strong>
+                <span>{{this.orderReference}}</span>
+            </div>
+            {{#if this.canOpenOrder}}
+                <Button @size="sm" @icon="arrow-up-right-from-square" @text="Open order" @onClick={{this.openOrder}} />
+            {{/if}}
+        </div>
+    {{else if this.isCancelled}}
         <div class="fleetbase-ai-create-order-preview__cancelled">
             <FaIcon @icon="circle-xmark" />
             <span>{{this.cancelledMessage}}</span>
         </div>
+    {{else if this.preview.error}}
+        <div class="fleetbase-ai-action-error">{{this.preview.error.message}}</div>
     {{else}}
         <Ai::RoutePreviewMap @payload={{this.payload}} @orderId={{this.orderPreviewId}} @status="created" />
 
@@ -42,6 +66,30 @@
                     @wrapperClass="fleetbase-ai-create-order-preview__edit-wrapper"
                     class="fleetbase-ai-create-order-preview__edit-button"
                     @onClick={{if this.isEditingOrderType this.closeEditor (fn this.editField "orderType")}}
+                />
+            </div>
+
+            <div class="fleetbase-ai-create-order-preview__field-row">
+                <div class="fleetbase-ai-create-order-preview__field-copy">
+                    <span>Schedule</span>
+                    {{#if this.isEditingSchedule}}
+                        <DateTimeInput
+                            class="fleetbase-ai-create-order-preview__inline-datetime"
+                            @value={{this.draft.scheduled_at}}
+                            @minDate={{format-date-fns (now) "yyyy-MM-dd"}}
+                            @minTime={{format-date-fns (now) "HH:mm"}}
+                            @onUpdate={{this.setScheduledAt}}
+                        />
+                    {{else}}
+                        <strong>{{this.scheduledAtLabel}}</strong>
+                    {{/if}}
+                </div>
+                <Button
+                    @icon={{if this.isEditingSchedule "check" "pen"}}
+                    @helpText={{if this.isEditingSchedule "Done" "Edit schedule"}}
+                    @wrapperClass="fleetbase-ai-create-order-preview__edit-wrapper"
+                    class="fleetbase-ai-create-order-preview__edit-button"
+                    @onClick={{if this.isEditingSchedule this.closeEditor (fn this.editField "schedule")}}
                 />
             </div>
 
@@ -195,13 +243,11 @@
                 <Toggle @isToggled={{this.draft.pod_required}} @onToggle={{this.setPodRequired}} @label="Require POD" />
                 {{#if this.draft.pod_required}}
                     {{#if this.isEditingPodMethod}}
-                        <Select
-                            @options={{this.podMethods}}
-                            @value={{this.draft.pod_method}}
-                            @onSelect={{this.setPodMethod}}
-                            @placeholder="POD method"
-                            class="fleetbase-ai-create-order-preview__inline-native-select"
-                        />
+                        <select class="fleetbase-ai-create-order-preview__inline-native-select" value={{this.draft.pod_method}} {{on "change" this.setPodMethodFromEvent}}>
+                            {{#each this.podMethods as |method|}}
+                                <option value={{method}} selected={{eq method this.draft.pod_method}}>{{this.titleize method}}</option>
+                            {{/each}}
+                        </select>
                     {{else}}
                         <button type="button" class="fleetbase-ai-create-order-preview__inline-pill" {{on "click" (fn this.editField "podMethod")}}>
                             {{this.podMethodLabel}}
@@ -224,14 +270,6 @@
                     {{/each}}
                 </ul>
             </div>
-        {{/if}}
-
-        {{#if this.preview.result}}
-            <div class="fleetbase-ai-action-result">{{this.preview.result.message}}</div>
-        {{/if}}
-
-        {{#if this.preview.error}}
-            <div class="fleetbase-ai-action-error">{{this.preview.error.message}}</div>
         {{/if}}
 
         <div class="fleetbase-ai-create-order-preview__controls">

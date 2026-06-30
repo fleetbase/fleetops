@@ -66,6 +66,7 @@ class CreateOrderPreviewCapability extends AbstractFleetOpsAICapability implemen
             'payload.dropoff_uuid' => 'Existing Fleet-Ops place UUID for dropoff.',
             'payload.waypoints'    => 'Optional ordered waypoint place UUIDs.',
             'customer'             => 'Optional contact/vendor UUID.',
+            'scheduled_at'         => 'Optional scheduled date/time for the order.',
             'dispatched'           => 'Optional boolean. Defaults to false for AI-created drafts.',
         ];
     }
@@ -126,6 +127,7 @@ class CreateOrderPreviewCapability extends AbstractFleetOpsAICapability implemen
             ],
             'fields'          => [
                 ['label' => 'Order config', 'value' => $orderConfig?->name ?? $orderConfig?->key],
+                ['label' => 'Schedule', 'value' => data_get($draft, 'scheduled_at')],
                 ['label' => 'Pickup', 'value' => data_get($pickup, 'address') ?? data_get($pickup, 'name')],
                 ['label' => 'Dropoff', 'value' => data_get($dropoff, 'address') ?? data_get($dropoff, 'name')],
                 ['label' => 'Driver', 'value' => $driver?->name],
@@ -193,6 +195,9 @@ class CreateOrderPreviewCapability extends AbstractFleetOpsAICapability implemen
 
         $draft['dispatched'] = filter_var(data_get($draft, 'dispatched', false), FILTER_VALIDATE_BOOLEAN);
         $draft['payload']    = (array) data_get($draft, 'payload', []);
+        if (blank(data_get($draft, 'scheduled_at'))) {
+            unset($draft['scheduled_at']);
+        }
 
         foreach (['pickup', 'dropoff'] as $role) {
             $query = data_get($draft, "payload.{$role}_query");

@@ -1,9 +1,12 @@
 import Component from '@glimmer/component';
 import { tracked } from '@glimmer/tracking';
+import { inject as service } from '@ember/service';
 import { action, get } from '@ember/object';
 import { task, timeout } from 'ember-concurrency';
 
 export default class AiCreateOrderPreviewComponent extends Component {
+    @service router;
+
     @tracked draft = this.clone(this.args.preview?.draft ?? {});
     @tracked preview = this.args.preview;
     @tracked editingField = null;
@@ -21,7 +24,15 @@ export default class AiCreateOrderPreviewComponent extends Component {
     }
 
     get isReady() {
-        return this.preview?.ready === true && !this.preview?.result && !this.isCancelled;
+        return this.preview?.ready === true && !this.isTerminal;
+    }
+
+    get isCompleted() {
+        return Boolean(this.preview?.result);
+    }
+
+    get isTerminal() {
+        return this.isCompleted || this.isCancelled || Boolean(this.preview?.error);
     }
 
     get isCancelled() {
@@ -30,6 +41,22 @@ export default class AiCreateOrderPreviewComponent extends Component {
 
     get cancelledMessage() {
         return this.preview?.error?.message ?? 'This order creation preview was cancelled.';
+    }
+
+    get completedMessage() {
+        return this.preview?.result?.message ?? 'Fleet-Ops order was created.';
+    }
+
+    get resultResource() {
+        return this.preview?.result?.resource;
+    }
+
+    get orderReference() {
+        return this.resultResource?.id ?? this.resultResource?.uuid ?? 'Created order';
+    }
+
+    get canOpenOrder() {
+        return Boolean(this.resultResource?.route && (this.resultResource?.models?.length || this.resultResource?.uuid || this.resultResource?.id));
     }
 
     get missingFields() {
@@ -46,6 +73,24 @@ export default class AiCreateOrderPreviewComponent extends Component {
 
     get orderTypeLabel() {
         return this.titleize(this.draft.type ?? this.draft.order_config_name ?? this.draft.order_config_uuid) ?? 'Select order type';
+    }
+
+    get scheduledAtLabel() {
+        const scheduledAt = this.draft.scheduled_at;
+
+        if (!scheduledAt) {
+            return 'Add schedule';
+        }
+
+        const date = scheduledAt instanceof Date ? scheduledAt : new Date(scheduledAt);
+        if (Number.isNaN(date.getTime())) {
+            return String(scheduledAt);
+        }
+
+        return new Intl.DateTimeFormat(undefined, {
+            dateStyle: 'medium',
+            timeStyle: 'short',
+        }).format(date);
     }
 
     get pickupLabel() {
@@ -74,6 +119,10 @@ export default class AiCreateOrderPreviewComponent extends Component {
 
     get isEditingOrderType() {
         return this.editingField === 'orderType';
+    }
+
+    get isEditingSchedule() {
+        return this.editingField === 'schedule';
     }
 
     get isEditingPickup() {
@@ -183,7 +232,7 @@ export default class AiCreateOrderPreviewComponent extends Component {
     }
 
     @action editField(field) {
-        if (this.isCancelled) {
+        if (this.isTerminal) {
             return;
         }
 
@@ -229,6 +278,10 @@ export default class AiCreateOrderPreviewComponent extends Component {
         this.closeEditor();
     }
 
+    @action setScheduledAt(value) {
+        this.mergeDraft({ scheduled_at: value });
+    }
+
     @action setDriver(driver) {
         this.mergeDraft({
             driver: this.modelValue(driver, 'uuid') ?? this.modelValue(driver, 'id'),
@@ -257,6 +310,10 @@ export default class AiCreateOrderPreviewComponent extends Component {
         this.closeEditor();
     }
 
+    @action setPodMethodFromEvent(event) {
+        this.setPodMethod(event.target.value);
+    }
+
     @action setDispatched(value) {
         this.mergeDraft({ dispatched: value });
     }
@@ -266,11 +323,33 @@ export default class AiCreateOrderPreviewComponent extends Component {
     }
 
     @action apply() {
+        if (this.isTerminal) {
+            return;
+        }
+
         return this.args.onApply?.(this.args.task, this.preview, { draft: this.draft });
     }
 
     @action cancel() {
+        if (this.isTerminal) {
+            return;
+        }
+
         return this.args.onCancel?.(this.args.task);
+    }
+
+    @action openOrder() {
+        if (!this.canOpenOrder) {
+            return;
+        }
+
+        const models = this.resultResource.models?.length ? this.resultResource.models : [this.resultResource.uuid ?? this.resultResource.id].filter(Boolean);
+
+        try {
+            this.router.transitionTo(this.resultResource.route, ...models);
+        } catch {
+            this.router.transitionTo('operations.orders.index.details', ...models);
+        }
     }
 
     @action updatePreview(preview) {

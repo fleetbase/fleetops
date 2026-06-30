@@ -54,7 +54,7 @@ export default class AiRoutePreviewMapComponent extends Component {
     }
 
     get routeSignature() {
-        return `${this.provider}:${this.coordinates.map((coordinate) => coordinate.join(',')).join('|')}`;
+        return `${this.provider}:${this.displayRouteEngine}:${this.coordinates.map((coordinate) => coordinate.join(',')).join('|')}`;
     }
 
     get provider() {
@@ -63,6 +63,20 @@ export default class AiRoutePreviewMapComponent extends Component {
 
     get shouldUseGoogleMaps() {
         return this.provider === 'google';
+    }
+
+    get displayRouteEngine() {
+        const configuredEngine = this.routeEngine.getDisplayEngine('osrm');
+
+        return this.routeEngine.get(configuredEngine) ? configuredEngine : 'osrm';
+    }
+
+    get routeErrorMessage() {
+        if (!this.error || this.isLoading || this.hasRouteLine) {
+            return null;
+        }
+
+        return 'Unable to calculate route';
     }
 
     get center() {
@@ -211,11 +225,7 @@ export default class AiRoutePreviewMapComponent extends Component {
         this.isLoading = true;
 
         try {
-            const engine = this.routeEngine.getDisplayEngine('osrm');
-            const route = await this.routeEngine.compute(engine, this.coordinates, {
-                payload: this.payload,
-                fitOptions: this.fitOptions,
-            });
+            const route = await this.computeRoute();
 
             if (token !== this.computeToken) {
                 return;
@@ -236,6 +246,24 @@ export default class AiRoutePreviewMapComponent extends Component {
             if (token === this.computeToken) {
                 this.isLoading = false;
             }
+        }
+    }
+
+    async computeRoute() {
+        const engine = this.displayRouteEngine;
+        const options = {
+            payload: this.payload,
+            fitOptions: this.fitOptions,
+        };
+
+        try {
+            return await this.routeEngine.compute(engine, this.coordinates, options);
+        } catch (error) {
+            if (engine !== 'osrm') {
+                return this.routeEngine.compute('osrm', this.coordinates, options);
+            }
+
+            throw error;
         }
     }
 
