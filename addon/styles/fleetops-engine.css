@@ -2242,6 +2242,20 @@ body[data-theme='dark'] .fleet-ops-operations-monitor-divider::before {
     padding-left: 2.75rem !important;
 }
 
+.fleet-hierarchy-tree-row-depth-1 {
+    padding-left: 1.5rem !important;
+}
+
+.fleet-hierarchy-tree-row-depth-2 {
+    padding-left: 2.5rem !important;
+}
+
+.fleet-hierarchy-tree-row-depth-3,
+.fleet-hierarchy-tree-row-depth-4,
+.fleet-hierarchy-tree-row-depth-5 {
+    padding-left: 3.5rem !important;
+}
+
 .fleet-ops-operations-monitor-child-row {
     margin-top: -0.125rem;
 }

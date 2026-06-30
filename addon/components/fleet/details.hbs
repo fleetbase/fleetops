@@ -3,30 +3,43 @@
         <div class="grid grid-cols-2 gap-2 text-xs dark:text-gray-100">
             <div class="field-info-container">
                 <div class="field-name">{{t "common.name"}}</div>
-                <div class="field-value">{{n-a @resource.name}}</div>
+                <div class="field-value">{{n-a this.resource.name}}</div>
             </div>
             <div class="field-info-container">
                 <div class="field-name">{{t "resource.service-area"}}</div>
-                <div class="field-value">{{n-a @resource.service_area.name}}</div>
+                <div class="field-value">{{n-a this.resource.service_area.name}}</div>
             </div>
             <div class="field-info-container">
                 <div class="field-name">{{t "resource.zone"}}</div>
-                <div class="field-value">{{n-a @resource.zone.name}}</div>
+                <div class="field-value">{{n-a this.resource.zone.name}}</div>
             </div>
             <div class="field-info-container">
                 <div class="field-name">{{t "fleet.fields.task"}}</div>
-                <div class="field-value">{{n-a @resource.task}}</div>
+                <div class="field-value">{{n-a this.resource.task}}</div>
             </div>
             <div class="field-info-container">
                 <div class="field-name">{{t "fleet.fields.active-manpower"}}</div>
-                <div class="field-value">{{@resource.drivers_online_count}} of {{@resource.drivers_count}} Online</div>
+                <div class="field-value">{{this.driversOnlineCount}} of {{this.driversCount}} Online</div>
             </div>
             <div class="field-info-container">
                 <div class="field-name">{{t "common.date-created"}}</div>
-                <div class="field-value">{{@resource.createdAtShort}}</div>
+                <div class="field-value">{{this.resource.createdAtShort}}</div>
             </div>
         </div>
     </ContentPanel>
 
-    <CustomField::Yield @subject={{@resource}} @viewMode={{true}} @wrapperClass="bordered-top" />
+    <ContentPanel @title="Hierarchy" @open={{true}} @wrapperClass="bordered-top" @panelBodyWrapperClass="p-0i">
+        <Fleet::HierarchyTree
+            @fleet={{this.resource}}
+            @onViewFleet={{this.viewFleet}}
+            @onViewDriver={{this.viewDriver}}
+            @onViewVehicle={{this.viewVehicle}}
+            @onAssignDriver={{this.assignDriver}}
+            @onAssignVehicle={{this.assignVehicle}}
+        />
+    </ContentPanel>
+
+    <CustomField::Yield @subject={{this.resource}} @viewMode={{true}} @wrapperClass="bordered-top" />
+
+    <Spacer @height="200px" />
 </div>

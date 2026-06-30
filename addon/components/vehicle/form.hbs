@@ -1,4 +1,8 @@
 <div class="form-wrapper" ...attributes>
+    <RegistryYield @registry="fleet-ops:component:vehicle:form:start" as |RegistryComponent|>
+        <RegistryComponent @resource={{@resource}} @controller={{this.controller}} @permission={{get-write-permission @resource}} />
+    </RegistryYield>
+
     {{! DETAILS / IDENTIFICATION }}
     <ContentPanel @title={{t "common.details"}} @open={{true}} @wrapperClass="bordered-top">
         <div class="flex flex-row space-x-3 mb-3">
@@ -127,6 +131,10 @@
             <RegistryComponent @resource={{@resource}} @controller={{this.controller}} @permission={{get-write-permission @resource}} />
         </RegistryYield>
     </ContentPanel>
+
+    <RegistryYield @registry="fleet-ops:component:vehicle:form:after-details" as |RegistryComponent|>
+        <RegistryComponent @resource={{@resource}} @controller={{this.controller}} @permission={{get-write-permission @resource}} />
+    </RegistryYield>
 
     {{! MEASUREMENT & UNITS / ODOMETER }}
     <ContentPanel @title="Measurement & Units" @open={{true}} @wrapperClass="bordered-top">
@@ -608,4 +616,8 @@
     <ContentPanel @title={{t "common.metadata"}} @open={{true}} @wrapperClass="bordered-top">
         <MetadataEditor @value={{@resource.meta}} @onChange={{fn (mut @resource.meta)}} />
     </ContentPanel>
+
+    <RegistryYield @registry="fleet-ops:component:vehicle:form:end" as |RegistryComponent|>
+        <RegistryComponent @resource={{@resource}} @controller={{this.controller}} @permission={{get-write-permission @resource}} />
+    </RegistryYield>
 </div>
