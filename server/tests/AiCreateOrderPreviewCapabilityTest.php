@@ -3,6 +3,7 @@
 use Fleetbase\FleetOps\Models\Place;
 use Fleetbase\FleetOps\Support\Ai\Capabilities\CreateOrderPreviewCapability;
 use Fleetbase\LaravelMysqlSpatial\Types\Point as SpatialPoint;
+use Illuminate\Support\Carbon;
 
 function fleetopsAiCreateOrderCapability()
 {
@@ -84,4 +85,20 @@ test('create order preview route preview excludes return stops', function () {
     expect(collect($preview['stops'])->pluck('role')->all())
         ->toBe(['pickup', 'dropoff'])
         ->and($preview['coordinates'])->toHaveCount(2);
+});
+
+test('create order preview resolves relative schedule phrases', function () {
+    $timezone = date_default_timezone_get();
+    date_default_timezone_set('Asia/Singapore');
+    Carbon::setTestNow(Carbon::parse('2026-06-30 15:00:00', 'Asia/Singapore'));
+
+    try {
+        $capability = fleetopsAiCreateOrderCapability();
+        $method     = fleetopsAiCreateOrderProtectedMethod('scheduledAtFromPrompt');
+
+        expect($method->invoke($capability, 'Create an order scheduled for 3 days from now'))->toBe('2026-07-03T15:00:00+08:00');
+    } finally {
+        Carbon::setTestNow();
+        date_default_timezone_set($timezone);
+    }
 });

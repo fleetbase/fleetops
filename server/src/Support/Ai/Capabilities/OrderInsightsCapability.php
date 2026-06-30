@@ -3,8 +3,8 @@
 namespace Fleetbase\FleetOps\Support\Ai\Capabilities;
 
 use Fleetbase\Ai\Models\AiTask;
+use Fleetbase\Ai\Support\AiRelativeDateResolver;
 use Fleetbase\FleetOps\Models\Order;
-use Illuminate\Support\Carbon;
 
 class OrderInsightsCapability extends AbstractFleetOpsAICapability
 {
@@ -54,6 +54,7 @@ class OrderInsightsCapability extends AbstractFleetOpsAICapability
             'metric'            => 'orders',
             'date_window'       => $window ? [
                 'label' => $window['label'],
+                'timezone' => $window['timezone'],
                 'start' => $window['start']->toIso8601String(),
                 'end'   => $window['end']->toIso8601String(),
             ] : null,
@@ -70,7 +71,7 @@ class OrderInsightsCapability extends AbstractFleetOpsAICapability
 
     protected function matchesPrompt(string $prompt): bool
     {
-        return str_contains($prompt, 'order') && $this->containsAny($prompt, ['how many', 'count', 'report', 'value', 'over', 'status', 'last month', 'this month', 'completed', 'active']);
+        return str_contains($prompt, 'order') && $this->containsAny($prompt, ['how many', 'count', 'report', 'value', 'over', 'status', 'today', 'yesterday', 'tomorrow', 'last week', 'this week', 'next week', 'last month', 'this month', 'last 30 days', 'completed', 'active']);
     }
 
     protected function amountThreshold(string $prompt): ?float
@@ -84,29 +85,11 @@ class OrderInsightsCapability extends AbstractFleetOpsAICapability
 
     protected function dateWindow(string $prompt): ?array
     {
-        $now = Carbon::now();
+        return $this->relativeDateResolver()->resolveWindow($prompt);
+    }
 
-        if (str_contains($prompt, 'last month')) {
-            $start = $now->copy()->subMonthNoOverflow()->startOfMonth();
-            $end   = $now->copy()->subMonthNoOverflow()->endOfMonth();
-
-            return compact('start', 'end') + ['label' => 'last_month'];
-        }
-
-        if (str_contains($prompt, 'this month')) {
-            $start = $now->copy()->startOfMonth();
-            $end   = $now->copy()->endOfMonth();
-
-            return compact('start', 'end') + ['label' => 'this_month'];
-        }
-
-        if (str_contains($prompt, 'last 30 days')) {
-            $start = $now->copy()->subDays(30)->startOfDay();
-            $end   = $now->copy()->endOfDay();
-
-            return compact('start', 'end') + ['label' => 'last_30_days'];
-        }
-
-        return null;
+    protected function relativeDateResolver(): AiRelativeDateResolver
+    {
+        return function_exists('app') ? app(AiRelativeDateResolver::class) : new AiRelativeDateResolver(null);
     }
 }

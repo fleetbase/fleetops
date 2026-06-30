@@ -4,11 +4,11 @@ namespace Fleetbase\FleetOps\Support\Ai\Capabilities;
 
 use Fleetbase\Ai\Models\AiTask;
 use Fleetbase\Ai\Services\AiQueryExecutor;
+use Fleetbase\Ai\Support\AiRelativeDateResolver;
 use Fleetbase\FleetOps\Models\Driver;
 use Fleetbase\FleetOps\Models\ServiceArea;
 use Fleetbase\FleetOps\Models\Zone;
 use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Support\Carbon;
 
 class OperationalQueryCapability extends AbstractFleetOpsAICapability
 {
@@ -79,17 +79,27 @@ class OperationalQueryCapability extends AbstractFleetOpsAICapability
     protected function matchesPrompt(string $prompt): bool
     {
         return $this->mentions($prompt, ['driver', 'drivers', 'vehicle', 'vehicles', 'device', 'devices', 'order', 'orders', 'fleet', 'fleets'])
-            && $this->mentions($prompt, ['how many', 'count', 'where', 'located', 'location', 'majority', 'online', 'offline', 'without', 'unassigned', 'assigned', 'break down', 'status', 'service area', 'zone']);
+            && $this->mentions($prompt, ['how many', 'count', 'where', 'located', 'location', 'majority', 'online', 'offline', 'without', 'unassigned', 'assigned', 'break down', 'status', 'service area', 'zone', 'today', 'yesterday', 'tomorrow', 'this week', 'last week', 'next week', 'this month', 'last month', 'last 30 days']);
     }
 
     protected function driverQueries(string $prompt, AiQueryExecutor $executor): array
     {
+        $dateWindow  = $this->dateWindow($prompt);
+        $dateFilters = $dateWindow ? $this->dateFilters($dateWindow, 'updated_at') : [];
+
         $queries = [
             'total'            => $executor->count('fleet-ops.drivers'),
             'online'           => $executor->count('fleet-ops.drivers', [['field' => 'online', 'operator' => '=', 'value' => true]]),
             'offline'          => $executor->count('fleet-ops.drivers', [['field' => 'online', 'operator' => 'false_or_null']]),
             'counts_by_status' => $executor->countsBy('fleet-ops.drivers', 'status'),
         ];
+
+        if ($dateWindow) {
+            $queries['date_window']       = $this->dateWindowPayload($dateWindow, 'updated_at');
+            $queries['total_in_window']   = $executor->count('fleet-ops.drivers', $dateFilters);
+            $queries['online_in_window']  = $executor->count('fleet-ops.drivers', array_merge($dateFilters, [['field' => 'online', 'operator' => '=', 'value' => true]]));
+            $queries['offline_in_window'] = $executor->count('fleet-ops.drivers', array_merge($dateFilters, [['field' => 'online', 'operator' => 'false_or_null']]));
+        }
 
         if ($this->mentions($prompt, ['without vehicle', 'without vehicles', 'unassigned vehicle', 'no vehicle'])) {
             $queries['without_vehicle'] = [
@@ -99,7 +109,7 @@ class OperationalQueryCapability extends AbstractFleetOpsAICapability
         }
 
         if ($this->mentions($prompt, ['where', 'located', 'location', 'majority', 'service area', 'zone'])) {
-            $filters = $this->mentions($prompt, ['online']) ? [['field' => 'online', 'operator' => '=', 'value' => true]] : [];
+            $filters = array_merge($dateFilters, $this->mentions($prompt, ['online']) ? [['field' => 'online', 'operator' => '=', 'value' => true]] : []);
 
             $queries['location_summary']          = $executor->locationSummary('fleet-ops.drivers', $filters, 250);
             $queries['service_area_distribution'] = $this->driverGeofenceDistribution($filters);
@@ -110,6 +120,10 @@ class OperationalQueryCapability extends AbstractFleetOpsAICapability
 
     protected function onlineResourceQueries(string $resource, string $prompt, AiQueryExecutor $executor): array
     {
+        $dateWindow  = $this->dateWindow($prompt);
+        $dateField   = $resource === 'fleet-ops.devices' ? 'last_online_at' : 'updated_at';
+        $dateFilters = $dateWindow ? $this->dateFilters($dateWindow, $dateField) : [];
+
         $queries = [
             'total'            => $executor->count($resource),
             'online'           => $executor->count($resource, [['field' => 'online', 'operator' => '=', 'value' => true]]),
@@ -117,8 +131,15 @@ class OperationalQueryCapability extends AbstractFleetOpsAICapability
             'counts_by_status' => $executor->countsBy($resource, 'status'),
         ];
 
+        if ($dateWindow) {
+            $queries['date_window']       = $this->dateWindowPayload($dateWindow, $dateField);
+            $queries['total_in_window']   = $executor->count($resource, $dateFilters);
+            $queries['online_in_window']  = $executor->count($resource, array_merge($dateFilters, [['field' => 'online', 'operator' => '=', 'value' => true]]));
+            $queries['offline_in_window'] = $executor->count($resource, array_merge($dateFilters, [['field' => 'online', 'operator' => 'false_or_null']]));
+        }
+
         if ($this->mentions($prompt, ['where', 'located', 'location', 'majority']) && $resource === 'fleet-ops.vehicles') {
-            $queries['location_summary'] = $executor->locationSummary($resource, $this->mentions($prompt, ['online']) ? [['field' => 'online', 'operator' => '=', 'value' => true]] : [], 250);
+            $queries['location_summary'] = $executor->locationSummary($resource, array_merge($dateFilters, $this->mentions($prompt, ['online']) ? [['field' => 'online', 'operator' => '=', 'value' => true]] : []), 250);
         }
 
         return $queries;
@@ -136,6 +157,10 @@ class OperationalQueryCapability extends AbstractFleetOpsAICapability
             'total'            => $executor->count('fleet-ops.orders', $filters),
             'counts_by_status' => $executor->countsBy('fleet-ops.orders', 'status', $filters),
         ];
+
+        if ($dateWindow = $this->dateWindow($prompt)) {
+            $queries['date_window'] = $this->dateWindowPayload($dateWindow, 'created_at');
+        }
 
         if ($this->mentions($prompt, ['without driver', 'unassigned driver', 'no driver'])) {
             $queries['without_driver'] = $executor->count('fleet-ops.orders', array_merge($filters, [['field' => 'driver_assigned_uuid', 'operator' => 'null']]));
@@ -164,6 +189,10 @@ class OperationalQueryCapability extends AbstractFleetOpsAICapability
         foreach ($filters as $filter) {
             if (($filter['field'] ?? null) === 'online') {
                 $query->where('online', (bool) ($filter['value'] ?? false));
+            }
+
+            if (($filter['field'] ?? null) === 'updated_at' && in_array(($filter['operator'] ?? null), ['>=', '<='], true)) {
+                $query->where('updated_at', $filter['operator'], $filter['value']);
             }
         }
 
@@ -249,30 +278,38 @@ class OperationalQueryCapability extends AbstractFleetOpsAICapability
 
     protected function orderDateFilters(string $prompt): array
     {
-        $now = Carbon::now();
+        $window = $this->dateWindow($prompt);
 
-        if (str_contains($prompt, 'this month')) {
-            return [
-                ['field' => 'created_at', 'operator' => '>=', 'value' => $now->copy()->startOfMonth()],
-                ['field' => 'created_at', 'operator' => '<=', 'value' => $now->copy()->endOfMonth()],
-            ];
-        }
+        return $window ? $this->dateFilters($window, 'created_at') : [];
+    }
 
-        if (str_contains($prompt, 'last month')) {
-            return [
-                ['field' => 'created_at', 'operator' => '>=', 'value' => $now->copy()->subMonthNoOverflow()->startOfMonth()],
-                ['field' => 'created_at', 'operator' => '<=', 'value' => $now->copy()->subMonthNoOverflow()->endOfMonth()],
-            ];
-        }
+    protected function dateWindow(string $prompt): ?array
+    {
+        return $this->relativeDateResolver()->resolveWindow($prompt);
+    }
 
-        if (str_contains($prompt, 'last 30 days')) {
-            return [
-                ['field' => 'created_at', 'operator' => '>=', 'value' => $now->copy()->subDays(30)->startOfDay()],
-                ['field' => 'created_at', 'operator' => '<=', 'value' => $now->copy()->endOfDay()],
-            ];
-        }
+    protected function dateFilters(array $window, string $field): array
+    {
+        return [
+            ['field' => $field, 'operator' => '>=', 'value' => $window['start']],
+            ['field' => $field, 'operator' => '<=', 'value' => $window['end']],
+        ];
+    }
 
-        return [];
+    protected function dateWindowPayload(array $window, string $field): array
+    {
+        return [
+            'label'    => $window['label'],
+            'timezone' => $window['timezone'],
+            'field'    => $field,
+            'start'    => $window['start']->toIso8601String(),
+            'end'      => $window['end']->toIso8601String(),
+        ];
+    }
+
+    protected function relativeDateResolver(): AiRelativeDateResolver
+    {
+        return function_exists('app') ? app(AiRelativeDateResolver::class) : new AiRelativeDateResolver(null);
     }
 
     protected function mentions(string $prompt, array $terms): bool

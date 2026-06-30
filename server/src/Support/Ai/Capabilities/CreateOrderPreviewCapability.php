@@ -4,6 +4,7 @@ namespace Fleetbase\FleetOps\Support\Ai\Capabilities;
 
 use Fleetbase\Ai\Contracts\AIActionCapabilityInterface;
 use Fleetbase\Ai\Models\AiTask;
+use Fleetbase\Ai\Support\AiRelativeDateResolver;
 use Fleetbase\FleetOps\Http\Controllers\Internal\v1\OrderController;
 use Fleetbase\FleetOps\Models\Driver;
 use Fleetbase\FleetOps\Models\OrderConfig;
@@ -256,6 +257,10 @@ class CreateOrderPreviewCapability extends AbstractFleetOpsAICapability implemen
             $draft['dispatched'] = true;
         }
 
+        if ($scheduledAt = $this->scheduledAtFromPrompt($prompt)) {
+            $draft['scheduled_at'] = $scheduledAt;
+        }
+
         if (preg_match('/(?:note|notes)[:\s]+(.+)$/i', $prompt, $matches)) {
             $draft['notes'] = trim($matches[1]);
         }
@@ -266,6 +271,16 @@ class CreateOrderPreviewCapability extends AbstractFleetOpsAICapability implemen
         }
 
         return $draft;
+    }
+
+    protected function scheduledAtFromPrompt(string $prompt): ?string
+    {
+        return $this->relativeDateResolver()->resolveDateTime($prompt)?->toIso8601String();
+    }
+
+    protected function relativeDateResolver(): AiRelativeDateResolver
+    {
+        return function_exists('app') ? app(AiRelativeDateResolver::class) : new AiRelativeDateResolver(null);
     }
 
     protected function addressPairFromPrompt(string $prompt): array
