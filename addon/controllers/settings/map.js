@@ -90,6 +90,10 @@ export default class SettingsMapController extends Controller {
                 this.mapManager.setActiveProvider(this.mapProvider);
             }
 
+            if (this.mapProvider === 'google' && typeof this.mapManager?.applyViewSettingsFromSettings === 'function') {
+                yield this.mapManager.applyViewSettingsFromSettings();
+            }
+
             this.notifications.success(this.intl.t('settings.map.settings-saved'));
         } catch (error) {
             this.notifications.serverError(error);

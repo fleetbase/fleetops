@@ -116,6 +116,7 @@ export default {
 
         // Create registries
         this.createRegistries(registryService);
+        registryService.registerRenderableComponent('ai:action-preview:fleet-ops.create_order', new ExtensionComponent('@fleetbase/fleetops-engine', 'ai/create-order-preview'));
 
         // // Register console home guidance
         // this.registerHomeComponents(registryService);

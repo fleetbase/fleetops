@@ -48,9 +48,15 @@ module('Unit | Service | map-manager', function (hooks) {
         class GoogleAdapterStubService extends Service {
             lastDrawControlConfig = null;
             lastRoute = null;
+            lastViewSettings = null;
 
             initializeMap(_element, options = {}) {
                 return { provider: 'google', options };
+            }
+
+            applyViewSettings(options = {}) {
+                this.lastViewSettings = options;
+                return options;
             }
 
             destroyMap() {}
@@ -117,6 +123,20 @@ module('Unit | Service | map-manager', function (hooks) {
         assert.strictEqual(map.options.mapTypeId, 'satellite');
         assert.true(map.options.showTrafficLayer);
         assert.true(map.options.showTransitLayer);
+    });
+
+    test('it applies google view settings to an active adapter', function (assert) {
+        const service = this.owner.lookup('service:map-manager');
+        service.setActiveProvider('google');
+
+        const result = service.applyViewSettingsFromSettings();
+
+        assert.deepEqual(result, {
+            mapTypeId: 'satellite',
+            showTrafficLayer: true,
+            showTransitLayer: true,
+        });
+        assert.deepEqual(service.adapter.lastViewSettings, result);
     });
 
     test('it delegates draw control config to the active adapter', function (assert) {

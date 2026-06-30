@@ -62,6 +62,16 @@ const DEFAULT_GOOGLE_MAP_STYLES = [
     },
 ];
 
+function buildGoogleMapStyles({ showTransitLayer = false, googleOptions = {} } = {}) {
+    const baseStyles = showTransitLayer ? DEFAULT_GOOGLE_MAP_STYLES.filter((style) => style.featureType !== 'transit') : DEFAULT_GOOGLE_MAP_STYLES;
+
+    if (googleOptions.styles === undefined) {
+        return baseStyles;
+    }
+
+    return [...baseStyles, ...googleOptions.styles];
+}
+
 function buildWaypointMarkerContent(label, color) {
     const wrapper = document.createElement('div');
     wrapper.className = 'fleetops-map-marker';
@@ -166,7 +176,10 @@ export default class GoogleMapsAdapter extends MapAdapterInterface {
         const { AdvancedMarkerElement } = await googleMaps.maps.importLibrary('marker');
         this._advancedMarkerElementClass = AdvancedMarkerElement;
         const mergedGoogleOptions = options.googleOptions ?? {};
-        const mergedMapStyles = mergedGoogleOptions.styles === undefined ? DEFAULT_GOOGLE_MAP_STYLES : [...DEFAULT_GOOGLE_MAP_STYLES, ...mergedGoogleOptions.styles];
+        const mergedMapStyles = buildGoogleMapStyles({
+            showTransitLayer: options.showTransitLayer,
+            googleOptions: mergedGoogleOptions,
+        });
         const mapId = options.mapId ?? mergedGoogleOptions.mapId ?? this.#getConfig()?.googleMaps?.mapId ?? this.#getConfig()?.GOOGLE_MAPS_MAP_ID ?? null;
         this._supportsAdvancedMarkers = Boolean(mapId && mapId !== 'FLEETOPS_MAP');
 
@@ -182,7 +195,7 @@ export default class GoogleMapsAdapter extends MapAdapterInterface {
             styles: mergedMapStyles,
         });
 
-        this.#syncGoogleLayers(options);
+        await this.applyViewSettings(options);
         await this.#initDrawingManager();
 
         debug('[GoogleMapsAdapter] Map initialized');
@@ -250,6 +263,47 @@ export default class GoogleMapsAdapter extends MapAdapterInterface {
     invalidateSize() {
         if (!this._map) return;
         google.maps.event.trigger(this._map, 'resize');
+    }
+
+    async applyViewSettings(options = {}) {
+        if (!this._map) return;
+
+        const googleMaps = window.google;
+        const { TrafficLayer, TransitLayer } = await googleMaps.maps.importLibrary('maps');
+        const mapTypeId = options.mapTypeId ?? googleMaps.maps.MapTypeId.ROADMAP;
+        const showTrafficLayer = Boolean(options.showTrafficLayer);
+        const showTransitLayer = Boolean(options.showTransitLayer);
+        const googleOptions = options.googleOptions ?? {};
+
+        this._map.setMapTypeId?.(mapTypeId);
+        this._map.setOptions?.({
+            styles: buildGoogleMapStyles({
+                showTransitLayer,
+                googleOptions,
+            }),
+        });
+
+        if (showTrafficLayer) {
+            if (!this._trafficLayer) {
+                this._trafficLayer = new TrafficLayer();
+            }
+            this._trafficLayer.setMap(this._map);
+        } else if (this._trafficLayer) {
+            this._trafficLayer.setMap(null);
+            this._trafficLayer = null;
+        }
+
+        if (showTransitLayer) {
+            if (!this._transitLayer) {
+                this._transitLayer = new TransitLayer();
+            }
+            this._transitLayer.setMap(this._map);
+        } else if (this._transitLayer) {
+            this._transitLayer.setMap(null);
+            this._transitLayer = null;
+        }
+
+        debug(`[GoogleMapsAdapter] Applied view settings: mapTypeId=${mapTypeId}, traffic=${showTrafficLayer}, transit=${showTransitLayer}`);
     }
 
     // ─── Viewport ──────────────────────────────────────────────────────────────
@@ -1192,20 +1246,6 @@ export default class GoogleMapsAdapter extends MapAdapterInterface {
             });
         } catch (e) {
             debug('[GoogleMapsAdapter] DrawingManager not available: ' + e.message);
-        }
-    }
-
-    #syncGoogleLayers(options = {}) {
-        if (!this._map) return;
-
-        if (options.showTrafficLayer) {
-            this._trafficLayer = new google.maps.TrafficLayer();
-            this._trafficLayer.setMap(this._map);
-        }
-
-        if (options.showTransitLayer) {
-            this._transitLayer = new google.maps.TransitLayer();
-            this._transitLayer.setMap(this._map);
         }
     }
 
