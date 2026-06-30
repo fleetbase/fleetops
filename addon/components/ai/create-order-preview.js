@@ -3,6 +3,7 @@ import { tracked } from '@glimmer/tracking';
 import { inject as service } from '@ember/service';
 import { action, get } from '@ember/object';
 import { task, timeout } from 'ember-concurrency';
+import { format, isValid, parseISO } from 'date-fns';
 
 export default class AiCreateOrderPreviewComponent extends Component {
     @service router;
@@ -82,15 +83,12 @@ export default class AiCreateOrderPreviewComponent extends Component {
             return 'Add schedule';
         }
 
-        const date = scheduledAt instanceof Date ? scheduledAt : new Date(scheduledAt);
-        if (Number.isNaN(date.getTime())) {
+        const date = scheduledAt instanceof Date ? scheduledAt : parseISO(String(scheduledAt));
+        if (!isValid(date)) {
             return String(scheduledAt);
         }
 
-        return new Intl.DateTimeFormat(undefined, {
-            dateStyle: 'medium',
-            timeStyle: 'short',
-        }).format(date);
+        return format(date, 'yyyy-MM-dd HH:mm');
     }
 
     get pickupLabel() {

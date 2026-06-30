@@ -8308,6 +8308,17 @@ body[data-theme='dark'] .issue-timeline-card p {
     box-shadow: none;
 }
 
+.fleetbase-ai-create-order-preview__inline-datetime {
+    display: grid;
+    grid-template-columns: minmax(0, 1.15fr) minmax(0, 0.85fr);
+    gap: 6px;
+}
+
+.fleetbase-ai-create-order-preview__inline-datetime input {
+    width: 100%;
+    min-width: 0;
+}
+
 .fleetbase-ai-create-order-preview__toggles {
     display: flex;
     flex-direction: column;

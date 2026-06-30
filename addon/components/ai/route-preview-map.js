@@ -3,12 +3,45 @@ import { inject as service } from '@ember/service';
 import { action } from '@ember/object';
 import { tracked } from '@glimmer/tracking';
 import { isArray } from '@ember/array';
+import { debug } from '@ember/debug';
 import { colorForId, routeColorForStatus, routeStyleForStatus, waypointIconHtml } from '../../utils/route-colors';
 import { buildRoutePointMarkerPresentation, buildRoutePointsFromPayload } from '../../utils/route-visualization';
 import ensureLeafletPluginsReady, { hasLeafletPluginsReady } from '../../utils/leaflet-plugin-loader';
 
 const PREVIEW_MAX_ZOOM_TWO_POINTS = 13;
 const PREVIEW_MAX_ZOOM_MULTI_POINTS = 12;
+const GOOGLE_MAP_STYLES = [
+    {
+        featureType: 'all',
+        elementType: 'labels.icon',
+        stylers: [{ visibility: 'off' }],
+    },
+    {
+        featureType: 'poi',
+        elementType: 'all',
+        stylers: [{ visibility: 'off' }],
+    },
+    {
+        featureType: 'transit',
+        elementType: 'all',
+        stylers: [{ visibility: 'off' }],
+    },
+    {
+        featureType: 'administrative.land_parcel',
+        elementType: 'all',
+        stylers: [{ visibility: 'off' }],
+    },
+    {
+        featureType: 'road',
+        elementType: 'labels.icon',
+        stylers: [{ visibility: 'off' }],
+    },
+    {
+        featureType: 'landscape.man_made',
+        elementType: 'labels',
+        stylers: [{ visibility: 'off' }],
+    },
+];
 
 export default class AiRoutePreviewMapComponent extends Component {
     @service mapSettings;
@@ -197,6 +230,7 @@ export default class AiRoutePreviewMapComponent extends Component {
             disableDefaultUI: true,
             gestureHandling: 'greedy',
             clickableIcons: false,
+            styles: this.googleMapStyles,
         };
 
         if (this.mapSettings.googleMapsMapId) {
@@ -204,11 +238,15 @@ export default class AiRoutePreviewMapComponent extends Component {
         }
 
         this.googleMap = new Map(element, mapOptions);
-        this.applyGoogleLayers();
+        this.applyGoogleViewSettings();
         this.syncPreview();
     }
 
     @action syncPreview() {
+        if (this.shouldUseGoogleMaps) {
+            this.applyGoogleViewSettings();
+        }
+
         this.computeAndDrawRoute();
     }
 
@@ -232,8 +270,9 @@ export default class AiRoutePreviewMapComponent extends Component {
             }
 
             this.route = route;
+            this.error = null;
             this.fitLeafletMap();
-            this.drawGoogleRoute();
+            this.drawGoogleRoute().catch((error) => this.logRenderError(error));
         } catch (error) {
             if (token !== this.computeToken) {
                 return;
@@ -241,7 +280,8 @@ export default class AiRoutePreviewMapComponent extends Component {
 
             this.error = error;
             this.route = null;
-            this.drawGoogleRoute();
+            this.logRouteError(error);
+            this.drawGoogleRoute().catch((renderError) => this.logRenderError(renderError));
         } finally {
             if (token === this.computeToken) {
                 this.isLoading = false;
@@ -276,6 +316,14 @@ export default class AiRoutePreviewMapComponent extends Component {
             padding: [18, 18],
             maxZoom: this.coordinates.length === 2 ? PREVIEW_MAX_ZOOM_TWO_POINTS : PREVIEW_MAX_ZOOM_MULTI_POINTS,
         };
+    }
+
+    get googleMapStyles() {
+        if (this.mapSettings.showGoogleMapsTransitLayer) {
+            return GOOGLE_MAP_STYLES.filter((style) => style.featureType !== 'transit');
+        }
+
+        return GOOGLE_MAP_STYLES;
     }
 
     fitLeafletMap() {
@@ -377,7 +425,7 @@ export default class AiRoutePreviewMapComponent extends Component {
         this.googlePolylines = [];
     }
 
-    applyGoogleLayers() {
+    applyGoogleViewSettings() {
         if (!this.googleMap || !window.google?.maps) {
             return;
         }
@@ -385,6 +433,13 @@ export default class AiRoutePreviewMapComponent extends Component {
         const googleMaps = window.google;
         this.googleTrafficLayer?.setMap(null);
         this.googleTransitLayer?.setMap(null);
+        this.googleTrafficLayer = null;
+        this.googleTransitLayer = null;
+        this.googleMap.setOptions({
+            mapTypeId: this.mapSettings.googleMapsMapType ?? googleMaps.maps.MapTypeId.ROADMAP,
+            clickableIcons: false,
+            styles: this.googleMapStyles,
+        });
 
         if (this.mapSettings.showGoogleMapsTrafficLayer) {
             this.googleTrafficLayer = new googleMaps.maps.TrafficLayer();
@@ -395,6 +450,14 @@ export default class AiRoutePreviewMapComponent extends Component {
             this.googleTransitLayer = new googleMaps.maps.TransitLayer();
             this.googleTransitLayer.setMap(this.googleMap);
         }
+    }
+
+    logRouteError(error) {
+        debug(`[Fleet-Ops AI Route Preview] Unable to calculate route with ${this.displayRouteEngine}. coordinates=${this.coordinates.length}. error=${error?.message ?? error}`);
+    }
+
+    logRenderError(error) {
+        debug(`[Fleet-Ops AI Route Preview] Route calculated but map rendering failed. error=${error?.message ?? error}`);
     }
 
     googleWaypointIcon(label, color) {
