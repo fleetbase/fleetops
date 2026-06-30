@@ -6,6 +6,7 @@ import { task, timeout } from 'ember-concurrency';
 export default class AiCreateOrderPreviewComponent extends Component {
     @tracked draft = this.clone(this.args.preview?.draft ?? {});
     @tracked preview = this.args.preview;
+    @tracked editingField = null;
 
     get payload() {
         return this.draft.payload ?? {};
@@ -13,35 +14,6 @@ export default class AiCreateOrderPreviewComponent extends Component {
 
     get routeStops() {
         return this.preview?.route_preview?.stops ?? [];
-    }
-
-    get coordinates() {
-        return this.routeStops.filter(
-            (stop) =>
-                stop.latitude !== null &&
-                stop.latitude !== undefined &&
-                stop.longitude !== null &&
-                stop.longitude !== undefined &&
-                Number.isFinite(Number(stop.latitude)) &&
-                Number.isFinite(Number(stop.longitude))
-        );
-    }
-
-    get mapCenter() {
-        const stop = this.coordinates[0];
-
-        return {
-            latitude: Number(stop?.latitude ?? 1.3521),
-            longitude: Number(stop?.longitude ?? 103.8198),
-        };
-    }
-
-    get canShowMap() {
-        return this.coordinates.length >= 2;
-    }
-
-    get routeLineCoordinates() {
-        return this.coordinates.map((stop) => stop.coordinates);
     }
 
     get podMethods() {
@@ -66,6 +38,66 @@ export default class AiCreateOrderPreviewComponent extends Component {
 
     get hasMissingFields() {
         return this.missingFields.length > 0;
+    }
+
+    get orderPreviewId() {
+        return this.args.task?.uuid ?? this.args.task?.id ?? this.preview?.key ?? 'ai-order-preview';
+    }
+
+    get orderTypeLabel() {
+        return this.titleize(this.draft.type ?? this.draft.order_config_name ?? this.draft.order_config_uuid) ?? 'Select order type';
+    }
+
+    get pickupLabel() {
+        return this.addressLabel(this.payload.pickup) ?? this.payload.pickup_query ?? 'Add pickup';
+    }
+
+    get dropoffLabel() {
+        return this.addressLabel(this.payload.dropoff) ?? this.payload.dropoff_query ?? 'Add dropoff';
+    }
+
+    get driverLabel() {
+        return this.draft.driver_query ?? this.draft.driver_name ?? 'Assign driver';
+    }
+
+    get vehicleLabel() {
+        return this.draft.vehicle_query ?? this.draft.vehicle_name ?? 'Assign vehicle';
+    }
+
+    get notesLabel() {
+        return this.draft.notes?.trim?.() || 'Add order notes';
+    }
+
+    get podMethodLabel() {
+        return this.titleize(this.draft.pod_method ?? 'scan');
+    }
+
+    get isEditingOrderType() {
+        return this.editingField === 'orderType';
+    }
+
+    get isEditingPickup() {
+        return this.editingField === 'pickup';
+    }
+
+    get isEditingDropoff() {
+        return this.editingField === 'dropoff';
+    }
+
+    get isEditingDriver() {
+        return this.editingField === 'driver';
+    }
+
+    get isEditingVehicle() {
+        return this.editingField === 'vehicle';
+    }
+
+    get isEditingPodMethod() {
+        return this.editingField === 'podMethod';
+    }
+
+    get isEditingNotes() {
+        return this.editingField === 'notes';
     }
 
     get isApplyDisabled() {
@@ -126,6 +158,18 @@ export default class AiCreateOrderPreviewComponent extends Component {
         return { ...model, ...fallback };
     }
 
+    titleize(value) {
+        if (!value) {
+            return null;
+        }
+
+        return String(value)
+            .replace(/[_-]+/g, ' ')
+            .replace(/\s+/g, ' ')
+            .trim()
+            .replace(/\b\w/g, (char) => char.toUpperCase());
+    }
+
     mergeDraft(updates = {}) {
         this.draft = {
             ...this.draft,
@@ -136,6 +180,18 @@ export default class AiCreateOrderPreviewComponent extends Component {
             },
         };
         this.refreshPreview.perform();
+    }
+
+    @action editField(field) {
+        if (this.isCancelled) {
+            return;
+        }
+
+        this.editingField = field;
+    }
+
+    @action closeEditor() {
+        this.editingField = null;
     }
 
     @task *refreshPreview() {
@@ -161,13 +217,16 @@ export default class AiCreateOrderPreviewComponent extends Component {
         }
 
         this.mergeDraft({ payload });
+        this.closeEditor();
     }
 
     @action setOrderConfig(orderConfig) {
         this.mergeDraft({
             order_config_uuid: this.modelValue(orderConfig, 'uuid') ?? this.modelValue(orderConfig, 'id'),
+            order_config_name: this.modelValue(orderConfig, 'name'),
             type: this.modelValue(orderConfig, 'key'),
         });
+        this.closeEditor();
     }
 
     @action setDriver(driver) {
@@ -175,6 +234,7 @@ export default class AiCreateOrderPreviewComponent extends Component {
             driver: this.modelValue(driver, 'uuid') ?? this.modelValue(driver, 'id'),
             driver_query: this.modelValue(driver, 'name') ?? this.modelValue(driver, 'public_id'),
         });
+        this.closeEditor();
     }
 
     @action setVehicle(vehicle) {
@@ -182,6 +242,7 @@ export default class AiCreateOrderPreviewComponent extends Component {
             vehicle_assigned_uuid: this.modelValue(vehicle, 'uuid') ?? this.modelValue(vehicle, 'id'),
             vehicle_query: this.modelValue(vehicle, 'display_name') ?? this.modelValue(vehicle, 'name') ?? this.modelValue(vehicle, 'plate_number'),
         });
+        this.closeEditor();
     }
 
     @action setPodRequired(value) {
@@ -193,6 +254,7 @@ export default class AiCreateOrderPreviewComponent extends Component {
 
     @action setPodMethod(value) {
         this.mergeDraft({ pod_method: value });
+        this.closeEditor();
     }
 
     @action setDispatched(value) {
