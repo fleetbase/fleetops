@@ -81,7 +81,13 @@
                             @onUpdate={{this.setScheduledAt}}
                         />
                     {{else}}
-                        <strong>{{this.scheduledAtLabel}}</strong>
+                        <strong>
+                            {{#if this.draft.scheduled_at}}
+                                {{format-date-fns this.draft.scheduled_at "yyyy-MM-dd HH:mm" fallback=this.scheduledAtLabel}}
+                            {{else}}
+                                {{this.scheduledAtLabel}}
+                            {{/if}}
+                        </strong>
                     {{/if}}
                 </div>
                 <Button
