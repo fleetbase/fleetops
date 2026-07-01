@@ -520,8 +520,8 @@ export default class FleetHierarchyTreeComponent extends Component {
             style: {
                 position: 'fixed',
                 marginTop: '0px',
-                left: triggerRect.left - contentWidth - 3,
-                top: triggerRect.top,
+                left: triggerRect.left - (triggerRect.width / 2) - contentWidth - 9,
+                top: triggerRect.top - (triggerRect.height / 2) + 5,
             },
         };
     }
