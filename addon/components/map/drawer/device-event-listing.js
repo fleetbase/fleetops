@@ -116,6 +116,7 @@ export default class MapDrawerDeviceEventListingComponent extends Component {
                 ddMenuLabel: this.intl.t('common.resource-actions', { resource: this.intl.t('resource.device-event') }),
                 cellClassNames: 'overflow-visible',
                 wrapperClass: 'flex items-center justify-end mx-2',
+                renderInPlace: false,
                 calculatePosition: calculateMapDrawerDropdownPosition,
                 width: '10%',
                 actions: [

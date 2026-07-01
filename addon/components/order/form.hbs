@@ -2,6 +2,7 @@
     {{#if (has-block)}}
         {{yield
             (hash
+                RegistryYieldStart=(component "registry-yield" registry="fleet-ops:component:order:form:start" order=@resource)
                 Details=(component "order/form/details" resource=@resource)
                 CustomFields=(component "order/form/custom-fields" resource=@resource customFields=@customFields)
                 Route=(component "order/form/route" resource=@resource)
@@ -12,9 +13,13 @@
                 Documents=(component "order/form/documents" resource=@resource)
                 OrchestratorConstraints=(component "order/form/orchestrator-constraints" resource=@resource)
                 Metadata=(component "order/form/metadata" resource=@resource)
+                RegistryYieldEnd=(component "registry-yield" registry="fleet-ops:component:order:form:end" order=@resource)
             )
         }}
     {{else}}
+        <RegistryYield @registry="fleet-ops:component:order:form:start" as |RegistryComponent|>
+            <RegistryComponent @order={{@resource}} @resource={{@resource}} />
+        </RegistryYield>
         <Order::Form::Details @resource={{@resource}} />
         <Order::Form::Route @resource={{@resource}} />
         <RegistryYield @registry="fleet-ops:component:order:form" as |RegistryComponent|>
@@ -26,5 +31,8 @@
         <Order::Form::Documents @resource={{@resource}} />
         <Order::Form::OrchestratorConstraints @resource={{@resource}} />
         <Order::Form::Metadata @resource={{@resource}} />
+        <RegistryYield @registry="fleet-ops:component:order:form:end" as |RegistryComponent|>
+            <RegistryComponent @order={{@resource}} @resource={{@resource}} />
+        </RegistryYield>
     {{/if}}
 </div>

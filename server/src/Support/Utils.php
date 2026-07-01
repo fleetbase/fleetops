@@ -248,6 +248,10 @@ class Utils extends FleetbaseUtils
             $coordinates = static::extractPointWktFromQueryExpression($coordinates) ?? $coordinates;
         }
 
+        if ($geoJsonPoint = static::pointFromGeoJson($coordinates)) {
+            return $geoJsonPoint;
+        }
+
         if ($coordinates instanceof Point) {
             $latitude  = $coordinates->getLat();
             $longitude = $coordinates->getLng();
@@ -452,6 +456,10 @@ class Utils extends FleetbaseUtils
             return $coordinates;
         }
 
+        if ($geoJsonPoint = static::pointFromGeoJson($coordinates)) {
+            return $geoJsonPoint;
+        }
+
         if (static::isGeoJson($coordinates)) {
             $coordinatesJson = null;
 
@@ -539,6 +547,10 @@ class Utils extends FleetbaseUtils
 
         if ($coordinates instanceof \Fleetbase\FleetOps\Models\Place) {
             $coordinates = $coordinates->location;
+        }
+
+        if ($geoJsonPoint = static::pointFromGeoJson($coordinates)) {
+            $coordinates = $geoJsonPoint;
         }
 
         if ($coordinates instanceof Point) {
@@ -639,6 +651,10 @@ class Utils extends FleetbaseUtils
             return $coordinates;
         }
 
+        if ($geoJsonPoint = static::pointFromGeoJson($coordinates)) {
+            return $geoJsonPoint;
+        }
+
         if (is_null($coordinates) || !static::isCoordinates($coordinates)) {
             return new Point(0, 0);
         }
@@ -647,6 +663,42 @@ class Utils extends FleetbaseUtils
         $longitude = static::getLongitudeFromCoordinates($coordinates);
 
         return new Point($latitude, $longitude);
+    }
+
+    /**
+     * Resolve direct GeoJSON Point values and Feature-wrapped Point values.
+     */
+    protected static function pointFromGeoJson($coordinates): ?Point
+    {
+        if (is_string($coordinates) && static::isJson($coordinates)) {
+            $coordinates = json_decode($coordinates, true);
+        }
+
+        if (!is_array($coordinates) && !is_object($coordinates)) {
+            return null;
+        }
+
+        if (data_get($coordinates, 'type') === 'Feature') {
+            $coordinates = data_get($coordinates, 'geometry');
+        }
+
+        if (data_get($coordinates, 'type') !== 'Point') {
+            return null;
+        }
+
+        $pointCoordinates = data_get($coordinates, 'coordinates');
+        if (!is_array($pointCoordinates) || count($pointCoordinates) < 2) {
+            return null;
+        }
+
+        $longitude = $pointCoordinates[0];
+        $latitude  = $pointCoordinates[1];
+
+        if (!is_numeric($latitude) || !is_numeric($longitude)) {
+            return null;
+        }
+
+        return new Point((float) $latitude, (float) $longitude);
     }
 
     /**

@@ -234,6 +234,10 @@
                 />
             </InputGroup>
         </div>
+
+        <RegistryYield @registry="fleet-ops:component:order:form:details" as |RegistryComponent|>
+            <RegistryComponent @order={{@resource}} @resource={{@resource}} />
+        </RegistryYield>
     </div>
 </ContentPanel>
 

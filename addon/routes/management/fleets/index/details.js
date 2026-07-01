@@ -24,6 +24,6 @@ export default class ManagementFleetsIndexDetailsRoute extends Route {
     }
 
     model({ public_id }) {
-        return this.store.queryRecord('fleet', { public_id, single: true, with: ['parent_fleet', 'service_area', 'zone'] });
+        return this.store.queryRecord('fleet', { public_id, single: true, with: ['parent_fleet', 'service_area', 'zone', 'subfleets', 'drivers', 'vehicles'] });
     }
 }

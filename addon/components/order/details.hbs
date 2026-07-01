@@ -2,8 +2,24 @@
     {{#if (has-block)}}
         {{yield
             (hash
+                RegistryYieldStart=(component
+                    "registry-yield"
+                    registry="fleet-ops:component:order:details:start"
+                    resource=@resource
+                    controller=@controller
+                    permission=(get-write-permission @resource)
+                    isLoading=@isLoading
+                )
                 Activity=(component "order/details/activity" resource=@resource onChange=this.handleActivityChanged isLoadingActivity=@isLoadingActivity isLoading=@isLoading)
                 Detail=(component "order/details/detail" resource=@resource onChange=@onDetailsChanged isLoading=@isLoading)
+                RegistryYieldAfterDetails=(component
+                    "registry-yield"
+                    registry="fleet-ops:component:order:details:after-details"
+                    resource=@resource
+                    controller=@controller
+                    permission=(get-write-permission @resource)
+                    isLoading=@isLoading
+                )
                 CustomFields=(component "order/details/custom-fields" resource=@resource onChange=@onCustomFieldsChanged isLoading=@isLoading)
                 PurchaseRate=(component "order/details/purchase-rate" resource=@resource isLoading=@isLoading)
                 Tracking=(component "order/details/tracking" resource=@resource isLoading=@isLoading)
@@ -18,11 +34,25 @@
                 Documents=(component "order/details/documents" resource=@resource onChange=@onDocumentsChanged isLoading=@isLoading)
                 Comments=(component "order/details/comments" resource=@resource onChange=@onCommentsChanged isLoading=@isLoading)
                 Metadata=(component "order/details/metadata" resource=@resource onChange=@onMetadataChanged isLoading=@isLoading)
+                RegistryYieldEnd=(component
+                    "registry-yield"
+                    registry="fleet-ops:component:order:details:end"
+                    resource=@resource
+                    controller=@controller
+                    permission=(get-write-permission @resource)
+                    isLoading=@isLoading
+                )
             )
         }}
     {{else}}
+        <RegistryYield @registry="fleet-ops:component:order:details:start" as |RegistryComponent|>
+            <RegistryComponent @resource={{@resource}} @controller={{@controller}} @permission={{get-write-permission @resource}} @isLoading={{@isLoading}} />
+        </RegistryYield>
         <Order::Details::Activity @resource={{@resource}} @onChange={{this.handleActivityChanged}} @isLoadingActivity={{@isLoadingActivity}} @isLoading={{@isLoading}} />
         <Order::Details::Detail @resource={{@resource}} @onChange={{@onDetailsChanged}} @isLoading={{@isLoading}} />
+        <RegistryYield @registry="fleet-ops:component:order:details:after-details" as |RegistryComponent|>
+            <RegistryComponent @resource={{@resource}} @controller={{@controller}} @permission={{get-write-permission @resource}} @isLoading={{@isLoading}} />
+        </RegistryYield>
         <Order::Details::CustomFields @resource={{@resource}} @onChange={{@onCustomFieldsChanged}} @isLoading={{@isLoading}} />
         <Order::Details::PurchaseRate @resource={{@resource}} @isLoading={{@isLoading}} />
         <Order::Details::Tracking @resource={{@resource}} @isLoading={{@isLoading}} />
@@ -37,5 +67,8 @@
         <Order::Details::Documents @resource={{@resource}} @onChange={{@onDocumentsChanged}} @isLoading={{@isLoading}} />
         <Order::Details::Comments @resource={{@resource}} @onChange={{@onCommentsChanged}} @isLoading={{@isLoading}} />
         <Order::Details::Metadata @resource={{@resource}} @onChange={{@onMetadataChanged}} @isLoading={{@isLoading}} />
+        <RegistryYield @registry="fleet-ops:component:order:details:end" as |RegistryComponent|>
+            <RegistryComponent @resource={{@resource}} @controller={{@controller}} @permission={{get-write-permission @resource}} @isLoading={{@isLoading}} />
+        </RegistryYield>
     {{/if}}
 </div>

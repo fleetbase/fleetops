@@ -1,0 +1,79 @@
+<div class="fleetbase-ai-create-order-preview__map" {{did-insert this.setupPreview}}>
+    {{#if this.canShowMap}}
+        {{#if this.shouldUseGoogleMaps}}
+            <div
+                class="fleetbase-ai-create-order-preview__google"
+                {{did-insert this.setupGoogleMap}}
+                {{did-update this.syncPreview this.routeSignature this.mapSettings.googleMapsMapType this.mapSettings.showGoogleMapsTrafficLayer this.mapSettings.showGoogleMapsTransitLayer}}
+            ></div>
+        {{else if this.leafletPluginsReady}}
+            <LeafletMap
+                class="fleetbase-ai-create-order-preview__leaflet"
+                @lat={{this.center.lat}}
+                @lng={{this.center.lng}}
+                @zoom={{12}}
+                @zoomControl={{false}}
+                @onLoad={{this.didLoadLeafletMap}}
+                {{did-update this.syncPreview this.routeSignature}}
+                as |layers|
+            >
+                <layers.tile @url={{this.tileUrl}} />
+                {{#if this.hasRouteLine}}
+                    {{#each this.routeStyles as |style|}}
+                        <layers.polyline
+                            @locations={{this.routeLineCoordinates}}
+                            @color={{style.color}}
+                            @weight={{style.weight}}
+                            @opacity={{style.opacity}}
+                            @lineCap={{style.lineCap}}
+                            @lineJoin={{style.lineJoin}}
+                            @dashArray={{style.dashArray}}
+                        />
+                    {{/each}}
+                {{/if}}
+                {{#each this.markerStops as |stop|}}
+                    <layers.marker
+                        @location={{stop.location}}
+                        @title={{stop.title}}
+                        @icon={{div-icon
+                            html=(this.waypointIconHtml stop.waypointLabel stop.waypointColor)
+                            className="fleetops-waypoint-marker"
+                            iconSize=(array 32 32)
+                            iconAnchor=(array 16 16)
+                            popupAnchor=(array 0 -20)
+                        }}
+                        @riseOnHover={{true}}
+                        @zIndexOffset={{stop.zIndexOffset}}
+                        as |marker|
+                    >
+                        <marker.tooltip @permanent={{false}} @sticky={{true}} @direction="top">
+                            {{stop.title}}{{#if stop.address}} - {{stop.address}}{{/if}}
+                        </marker.tooltip>
+                    </layers.marker>
+                {{/each}}
+            </LeafletMap>
+        {{else}}
+            <div class="fleetbase-ai-create-order-preview__empty-map">
+                <Spinner />
+                <span>Preparing map preview...</span>
+            </div>
+        {{/if}}
+
+        {{#if this.isLoading}}
+            <div class="fleetbase-ai-create-order-preview__map-status">
+                <Spinner />
+                <span>Rendering route...</span>
+            </div>
+        {{else if this.routeErrorMessage}}
+            <div class="fleetbase-ai-create-order-preview__map-status fleetbase-ai-create-order-preview__map-status--error">
+                <FaIcon @icon="triangle-exclamation" />
+                <span>{{this.routeErrorMessage}}</span>
+            </div>
+        {{/if}}
+    {{else}}
+        <div class="fleetbase-ai-create-order-preview__empty-map">
+            <FaIcon @icon="route" />
+            <span>{{this.emptyText}}</span>
+        </div>
+    {{/if}}
+</div>

@@ -27,7 +27,13 @@ module('Unit | Controller | settings/map', function (hooks) {
         }
 
         class MapManagerStubService extends Service {
+            appliedViewSettings = false;
+
             setActiveProvider() {}
+
+            applyViewSettingsFromSettings() {
+                this.appliedViewSettings = true;
+            }
         }
 
         class MapSettingsStubService extends Service {
@@ -66,6 +72,7 @@ module('Unit | Controller | settings/map', function (hooks) {
 
         const fetch = this.owner.lookup('service:fetch');
         const mapSettings = this.owner.lookup('service:map-settings');
+        const mapManager = this.owner.lookup('service:map-manager');
 
         assert.strictEqual(fetch.lastPost.url, 'fleet-ops/settings/map');
         assert.deepEqual(fetch.lastPost.payload, {
@@ -77,5 +84,6 @@ module('Unit | Controller | settings/map', function (hooks) {
             },
         });
         assert.deepEqual(mapSettings.appliedSettings, fetch.lastPost.payload.settings);
+        assert.true(mapManager.appliedViewSettings, 'google map view settings are applied after save');
     });
 });

@@ -170,6 +170,18 @@ export default class MapManagerService extends Service {
         this.adapter?.invalidateSize();
     }
 
+    @action applyViewSettingsFromSettings() {
+        if (this.providerName !== 'google' || typeof this.adapter?.applyViewSettings !== 'function') {
+            return;
+        }
+
+        return this.adapter.applyViewSettings({
+            mapTypeId: this.mapSettings.googleMapsMapType,
+            showTrafficLayer: this.mapSettings.showGoogleMapsTrafficLayer,
+            showTransitLayer: this.mapSettings.showGoogleMapsTransitLayer,
+        });
+    }
+
     /**
      * Set the live map component reference.
      *

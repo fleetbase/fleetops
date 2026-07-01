@@ -24,8 +24,14 @@ class Fleet extends FleetbaseResource
 
             $this->load($with);
 
-            if (in_array('subfleets', $with, true) && in_array('vehicles', $with, true)) {
-                $this->loadMissing('subFleets.vehicles');
+            if (in_array('subfleets', $with, true)) {
+                if (in_array('drivers', $with, true)) {
+                    $this->loadMissing('subFleets.drivers');
+                }
+
+                if (in_array('vehicles', $with, true)) {
+                    $this->loadMissing('subFleets.vehicles');
+                }
             }
         }
 

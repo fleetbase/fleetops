@@ -116,6 +116,7 @@ export default {
 
         // Create registries
         this.createRegistries(registryService);
+        registryService.registerRenderableComponent('ai:action-preview:fleet-ops.create_order', new ExtensionComponent('@fleetbase/fleetops-engine', 'ai/create-order-preview'));
 
         // // Register console home guidance
         // this.registerHomeComponents(registryService);
@@ -368,6 +369,13 @@ export default {
             'fleet-ops:component:place:form:details',
             'fleet-ops:component:vehicle:form',
             'fleet-ops:component:vehicle:form:details',
+            'fleet-ops:component:vehicle:form:after-details',
+            'fleet-ops:component:vehicle:form:start',
+            'fleet-ops:component:vehicle:form:end',
+            'fleet-ops:component:vehicle:card:header:start',
+            'fleet-ops:component:vehicle:card:header:end',
+            'fleet-ops:component:vehicle:card:footer:start',
+            'fleet-ops:component:vehicle:card:footer:end',
             'fleet-ops:component:vendor:form:edit',
             'fleet-ops:component:vendor:form:edit:details',
             'fleet-ops:component:vendor:form:create',
@@ -392,6 +400,12 @@ export default {
             'fleet-ops:contextmenu:driver',
             'fleet-ops:component:order:details',
             'fleet-ops:component:order:form',
+            'fleet-ops:component:order:form:start',
+            'fleet-ops:component:order:form:end',
+            'fleet-ops:component:order:form:details',
+            'fleet-ops:component:order:form:details:start',
+            'fleet-ops:component:order:form:details:end',
+            'fleet-ops:component:order:form:details:after-details',
             'fleet-ops:component:order:form:payload:entity',
             'fleet-ops:component:order:form:payload:entity:form',
             'fleet-ops:template:settings:routing',

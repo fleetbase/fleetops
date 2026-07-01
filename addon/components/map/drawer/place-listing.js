@@ -54,6 +54,7 @@ export default class MapDrawerPlaceListingComponent extends Component {
                 ddMenuLabel: this.intl.t('common.resource-actions', { resource: this.intl.t('resource.place') }),
                 cellClassNames: 'overflow-visible',
                 wrapperClass: 'flex items-center justify-end mx-2',
+                renderInPlace: false,
                 calculatePosition: calculateMapDrawerDropdownPosition,
                 width: '90px',
                 actions: [
