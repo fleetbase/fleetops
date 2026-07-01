@@ -1,4 +1,3 @@
-/* stylelint-disable alpha-value-notation -- Fleet-Ops lazy engine production CSS is minified by legacy clean-css, which corrupts comma-form rgba() percent alpha values. */
 .scheduler-left-sidebar {
     border-right: 1px rgb(229 231 235 / 100%) solid;
     height: 100vh;
