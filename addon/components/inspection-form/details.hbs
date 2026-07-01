@@ -1,0 +1,53 @@
+<div class="next-content-panel-wrapper" ...attributes>
+    <ContentPanel @title="Overview" @open={{true}} @wrapperClass="bordered-top">
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-2 text-xs dark:text-gray-100">
+            <div class="field-info-container">
+                <div class="field-name">Name</div>
+                <div class="field-value">{{n-a @resource.name}}</div>
+            </div>
+            <div class="field-info-container">
+                <div class="field-name">Status</div>
+                <div class="field-value"><Badge @status={{@resource.status}}>{{smart-humanize @resource.status}}</Badge></div>
+            </div>
+            <div class="field-info-container">
+                <div class="field-name">Type</div>
+                <div class="field-value">{{smart-humanize @resource.type}}</div>
+            </div>
+            <div class="field-info-container">
+                <div class="field-name">Frequency</div>
+                <div class="field-value">{{smart-humanize @resource.frequency}}</div>
+            </div>
+            <div class="field-info-container">
+                <div class="field-name">Items</div>
+                <div class="field-value">{{@resource.item_count}}</div>
+            </div>
+            <div class="field-info-container">
+                <div class="field-name">Published</div>
+                <div class="field-value">{{n-a (format-date-fns @resource.published_at "dd MMM yyyy, HH:mm")}}</div>
+            </div>
+            <div class="field-info-container lg:col-span-2">
+                <div class="field-name">Description</div>
+                <div class="field-value whitespace-pre-wrap">{{n-a @resource.description}}</div>
+            </div>
+        </div>
+    </ContentPanel>
+
+    <ContentPanel @title="Checklist" @open={{true}} @wrapperClass="bordered-top">
+        <div class="space-y-2 text-xs">
+            {{#each @resource.items as |item|}}
+                <div class="flex items-center justify-between rounded border border-gray-200 dark:border-gray-700 p-2">
+                    <div>
+                        <div class="font-semibold">{{n-a item.label}}</div>
+                        <div class="text-gray-500">{{n-a item.category}}</div>
+                    </div>
+                    <Badge @status={{if (eq item.severity "critical") "danger" "info"}}>{{smart-humanize item.severity}}</Badge>
+                </div>
+            {{else}}
+                <div class="text-gray-500">No checklist items configured.</div>
+            {{/each}}
+        </div>
+    </ContentPanel>
+
+    <CustomField::Yield @subject={{@resource}} @viewMode={{true}} @wrapperClass="bordered-top" />
+    <Spacer @height="200px" />
+</div>

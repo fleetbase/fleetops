@@ -75,6 +75,7 @@ class WorkOrder extends Model
      */
     protected $fillable = [
         'company_uuid',
+        'schedule_uuid',
         'code',
         'subject',
         'category',
@@ -97,6 +98,8 @@ class WorkOrder extends Model
         'cost_center',
         'budget_code',
         'meta',
+        'created_by_uuid',
+        'updated_by_uuid',
     ];
 
     /**

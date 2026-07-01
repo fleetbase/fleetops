@@ -210,6 +210,26 @@ export default buildRoutes(function () {
         this.route('tracking');
     });
     this.route('maintenance', function () {
+        this.route('inspection-forms', function () {
+            this.route('index', { path: '/' }, function () {
+                this.route('new');
+                this.route('edit', { path: '/edit/:public_id' });
+                this.route('details', { path: '/:public_id' }, function () {
+                    this.route('index', { path: '/' });
+                });
+            });
+        });
+
+        this.route('inspection-submissions', function () {
+            this.route('index', { path: '/' }, function () {
+                this.route('new');
+                this.route('edit', { path: '/edit/:public_id' });
+                this.route('details', { path: '/:public_id' }, function () {
+                    this.route('index', { path: '/' });
+                });
+            });
+        });
+
         this.route('schedules', function () {
             this.route('index', { path: '/' }, function () {
                 this.route('new');
