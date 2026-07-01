@@ -58,11 +58,13 @@ export default class AiRoutePreviewMapComponent extends Component {
     googlePolylines = [];
     googleTrafficLayer = null;
     googleTransitLayer = null;
+    googleListeners = [];
     computeToken = 0;
     googleApiLoadPromise = null;
 
     willDestroy() {
         super.willDestroy(...arguments);
+        this.clearGoogleListeners();
         this.clearGoogleRoute();
         this.googleTrafficLayer?.setMap(null);
         this.googleTransitLayer?.setMap(null);
@@ -397,19 +399,27 @@ export default class AiRoutePreviewMapComponent extends Component {
 
     fitGoogleMap() {
         const googleMaps = window.google;
-        if (!this.googleMap || !googleMaps?.maps || !this.routeCoordinates.length) {
+        const map = this.googleMap;
+
+        if (!map || !googleMaps?.maps || !this.routeCoordinates.length) {
             return;
         }
 
+        const maxZoom = this.coordinates.length === 2 ? PREVIEW_MAX_ZOOM_TWO_POINTS : PREVIEW_MAX_ZOOM_MULTI_POINTS;
         const bounds = new googleMaps.maps.LatLngBounds();
         this.routeCoordinates.forEach(([lat, lng]) => bounds.extend({ lat, lng }));
-        this.googleMap.fitBounds(bounds, 18);
+        map.fitBounds(bounds, 18);
 
-        googleMaps.maps.event.addListenerOnce(this.googleMap, 'idle', () => {
-            if (this.googleMap.getZoom() > (this.coordinates.length === 2 ? PREVIEW_MAX_ZOOM_TWO_POINTS : PREVIEW_MAX_ZOOM_MULTI_POINTS)) {
-                this.googleMap.setZoom(this.coordinates.length === 2 ? PREVIEW_MAX_ZOOM_TWO_POINTS : PREVIEW_MAX_ZOOM_MULTI_POINTS);
+        this.clearGoogleListeners();
+        const idleListener = googleMaps.maps.event.addListenerOnce(map, 'idle', () => {
+            const currentZoom = map.getZoom?.();
+
+            if (Number.isFinite(currentZoom) && currentZoom > maxZoom) {
+                map.setZoom?.(maxZoom);
             }
         });
+
+        this.googleListeners.push(idleListener);
     }
 
     clearGoogleRoute() {
@@ -423,6 +433,15 @@ export default class AiRoutePreviewMapComponent extends Component {
         this.googlePolylines.forEach((polyline) => polyline.setMap(null));
         this.googleMarkers = [];
         this.googlePolylines = [];
+    }
+
+    clearGoogleListeners() {
+        const googleMaps = window.google;
+
+        this.googleListeners.forEach((listener) => {
+            googleMaps?.maps?.event?.removeListener?.(listener);
+        });
+        this.googleListeners = [];
     }
 
     applyGoogleViewSettings() {
