@@ -53,10 +53,10 @@ class OrderInsightsCapability extends AbstractFleetOpsAICapability
             'authorized'        => true,
             'metric'            => 'orders',
             'date_window'       => $window ? [
-                'label' => $window['label'],
+                'label'    => $window['label'],
                 'timezone' => $window['timezone'],
-                'start' => $window['start']->toIso8601String(),
-                'end'   => $window['end']->toIso8601String(),
+                'start'    => $window['start']->toIso8601String(),
+                'end'      => $window['end']->toIso8601String(),
             ] : null,
             'amount_threshold'  => $amount,
             'count'             => $total,

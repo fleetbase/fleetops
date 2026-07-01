@@ -191,7 +191,7 @@ class OperationalQueryCapability extends AbstractFleetOpsAICapability
                 $query->where('online', (bool) ($filter['value'] ?? false));
             }
 
-            if (($filter['field'] ?? null) === 'updated_at' && in_array(($filter['operator'] ?? null), ['>=', '<='], true)) {
+            if (($filter['field'] ?? null) === 'updated_at' && in_array($filter['operator'] ?? null, ['>=', '<='], true)) {
                 $query->where('updated_at', $filter['operator'], $filter['value']);
             }
         }
