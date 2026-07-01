@@ -849,7 +849,7 @@ class Order extends Model
             $attributes['type'] = $this->type;
         }
 
-        if (isset($attributes['pickup']) && is_array($attributes['pickup'])) {
+        if ($this->shouldResolvePayloadPlace($attributes, 'pickup')) {
             $pickup = Place::createFromMixed($attributes['pickup']);
 
             if ($pickup instanceof Place) {
@@ -857,7 +857,7 @@ class Order extends Model
             }
         }
 
-        if (isset($attributes['dropoff']) && is_array($attributes['dropoff'])) {
+        if ($this->shouldResolvePayloadPlace($attributes, 'dropoff')) {
             $dropoff = Place::createFromMixed($attributes['dropoff']);
 
             if ($dropoff instanceof Place) {
@@ -865,7 +865,7 @@ class Order extends Model
             }
         }
 
-        if (isset($attributes['return']) && is_array($attributes['return'])) {
+        if ($this->shouldResolvePayloadPlace($attributes, 'return')) {
             $return = Place::createFromMixed($attributes['return']);
 
             if ($return instanceof Place) {
@@ -897,19 +897,19 @@ class Order extends Model
             $attributes['type'] = $this->type;
         }
 
-        if (isset($attributes['pickup']) && is_array($attributes['pickup'])) {
+        if ($this->shouldResolvePayloadPlace($attributes, 'pickup')) {
             $pickupId = Place::insertFromMixed($attributes['pickup']);
 
             $attributes['pickup_uuid'] = $pickupId;
         }
 
-        if (isset($attributes['dropoff']) && is_array($attributes['dropoff'])) {
+        if ($this->shouldResolvePayloadPlace($attributes, 'dropoff')) {
             $dropoffId = Place::insertFromMixed($attributes['dropoff']);
 
             $attributes['dropoff_uuid'] = $dropoffId;
         }
 
-        if (isset($attributes['return']) && is_array($attributes['return'])) {
+        if ($this->shouldResolvePayloadPlace($attributes, 'return')) {
             $returnId = Place::insertFromMixed($attributes['return']);
 
             $attributes['return_uuid'] = $returnId;
@@ -945,6 +945,18 @@ class Order extends Model
         }
 
         return $payload;
+    }
+
+    protected function shouldResolvePayloadPlace(?array $attributes, string $role): bool
+    {
+        return !$this->hasExistingPayloadPlaceUuid($attributes, $role) && isset($attributes[$role]) && is_array($attributes[$role]);
+    }
+
+    protected function hasExistingPayloadPlaceUuid(?array $attributes, string $role): bool
+    {
+        $uuid = data_get($attributes, "{$role}_uuid");
+
+        return is_string($uuid) && Str::isUuid($uuid) && Place::where('uuid', $uuid)->exists();
     }
 
     /**

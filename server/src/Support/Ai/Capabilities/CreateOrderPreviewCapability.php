@@ -153,6 +153,7 @@ class CreateOrderPreviewCapability extends AbstractFleetOpsAICapability implemen
         }
 
         $draft = array_replace_recursive((array) data_get($preview, 'draft', []), (array) data_get($input, 'draft', $input));
+        $draft = $this->sanitizeDraftForApply($draft);
         Arr::forget($draft, [
             'payload.pickup_query',
             'payload.dropoff_query',
@@ -182,6 +183,23 @@ class CreateOrderPreviewCapability extends AbstractFleetOpsAICapability implemen
                 'models' => array_filter([data_get($order, 'public_id') ?? data_get($order, 'uuid')]),
             ],
         ];
+    }
+
+    protected function sanitizeDraftForApply(array $draft): array
+    {
+        foreach (['pickup', 'dropoff', 'return'] as $role) {
+            $uuid = data_get($draft, "payload.{$role}_uuid");
+            if ($this->hasExistingPlaceUuid($uuid)) {
+                Arr::forget($draft, "payload.{$role}");
+            }
+        }
+
+        return $draft;
+    }
+
+    protected function hasExistingPlaceUuid($uuid): bool
+    {
+        return is_string($uuid) && Str::isUuid($uuid) && Place::where('uuid', $uuid)->exists();
     }
 
     protected function matchesPrompt(string $prompt): bool

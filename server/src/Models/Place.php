@@ -471,9 +471,17 @@ class Place extends Model
             return null;
         }
 
-        $postalCode = static::normalizePlaceValue(data_get($place, 'postal_code'));
-        $street2    = static::normalizePlaceValue(data_get($place, 'street2'));
-        $location   = Utils::getPointFromMixed(data_get($place, 'location'));
+        $postalCode    = static::normalizePlaceValue(data_get($place, 'postal_code'));
+        $street2       = static::normalizePlaceValue(data_get($place, 'street2'));
+        $locationValue = data_get($place, 'location');
+        $location      = new SpatialPoint(0, 0);
+        if (!empty($locationValue)) {
+            try {
+                $location = Utils::getPointFromMixed($locationValue);
+            } catch (\Throwable $e) {
+                $location = new SpatialPoint(0, 0);
+            }
+        }
 
         $existingPlace = static::query()
             ->where('company_uuid', $companyUuid)

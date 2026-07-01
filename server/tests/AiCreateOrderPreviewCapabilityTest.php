@@ -87,6 +87,33 @@ test('create order preview route preview excludes return stops', function () {
         ->and($preview['coordinates'])->toHaveCount(2);
 });
 
+test('create order apply draft removes embedded places when endpoint uuids exist', function () {
+    $capability = new class extends CreateOrderPreviewCapability {
+        public function sanitizeForTest(array $draft): array
+        {
+            return $this->sanitizeDraftForApply($draft);
+        }
+
+        protected function hasExistingPlaceUuid($uuid): bool
+        {
+            return in_array($uuid, ['pickup_uuid_test', 'dropoff_uuid_test'], true);
+        }
+    };
+
+    $draft = $capability->sanitizeForTest([
+        'payload' => [
+            'pickup_uuid'  => 'pickup_uuid_test',
+            'dropoff_uuid' => 'dropoff_uuid_test',
+            'pickup'       => ['uuid' => 'pickup_uuid_test', 'location' => ['type' => 'Point', 'coordinates' => [103.851, 1.2816]]],
+            'dropoff'      => ['uuid' => 'dropoff_uuid_test', 'location' => ['type' => 'Point', 'coordinates' => [103.8318, 1.3048]]],
+            'return'       => ['location' => ['type' => 'Point', 'coordinates' => [103.8, 1.3]]],
+        ],
+    ]);
+
+    expect($draft['payload'])->toHaveKeys(['pickup_uuid', 'dropoff_uuid', 'return'])
+        ->and($draft['payload'])->not->toHaveKeys(['pickup', 'dropoff']);
+});
+
 test('create order preview resolves relative schedule phrases', function () {
     $timezone = date_default_timezone_get();
     date_default_timezone_set('Asia/Singapore');
