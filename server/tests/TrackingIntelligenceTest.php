@@ -29,9 +29,14 @@ class TrackingTestPayload extends Payload
     }
 }
 
+function trackingModel(string $class): object
+{
+    return (new ReflectionClass($class))->newInstanceWithoutConstructor();
+}
+
 function trackingPlace(string $uuid, float $lat, float $lng): Place
 {
-    $place            = new Place();
+    $place            = trackingModel(Place::class);
     $place->uuid      = $uuid;
     $place->public_id = 'place_' . substr($uuid, 0, 8);
     $place->address   = 'Test address ' . $uuid;
@@ -44,7 +49,7 @@ function trackingOrderWithStops(): Order
 {
     $pickup                         = trackingPlace('11111111-1111-1111-1111-111111111111', 1.30, 103.80);
     $dropoff                        = trackingPlace('22222222-2222-2222-2222-222222222222', 1.35, 103.85);
-    $payload                        = new TrackingTestPayload();
+    $payload                        = trackingModel(TrackingTestPayload::class);
     $payload->uuid                  = '33333333-3333-3333-3333-333333333333';
     $payload->current_waypoint_uuid = $pickup->uuid;
     $payload->setRelation('pickup', $pickup);
@@ -53,13 +58,13 @@ function trackingOrderWithStops(): Order
     $payload->setRelation('waypoints', collect());
     $payload->setRelation('waypointMarkers', collect());
 
-    $driver             = new Driver();
+    $driver             = trackingModel(Driver::class);
     $driver->uuid       = '44444444-4444-4444-4444-444444444444';
     $driver->location   = new Point(1.29, 103.79);
     $driver->online     = true;
     $driver->updated_at = Carbon::now();
 
-    $order             = new TrackingTestOrder();
+    $order             = trackingModel(TrackingTestOrder::class);
     $order->uuid       = '55555555-5555-5555-5555-555555555555';
     $order->public_id  = 'order_test';
     $order->status     = 'started';
