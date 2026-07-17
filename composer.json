@@ -1,6 +1,6 @@
 {
     "name": "fleetbase/fleetops-api",
-    "version": "0.6.57",
+    "version": "0.6.58",
     "description": "Fleet & Transport Management Extension for Fleetbase",
     "keywords": [
         "fleetbase-extension",
@@ -86,8 +86,15 @@
         }
     },
     "scripts": {
+        "coverage:baseline": [
+            "@test:coverage:clover",
+            "@coverage:summary"
+        ],
+        "coverage:summary": "php scripts/coverage-summary.php coverage/clover.xml",
         "lint": "php-cs-fixer fix -v",
         "test:lint": "php-cs-fixer fix -v --dry-run",
+        "test:coverage": "php scripts/coverage-runner.php --coverage --coverage-text --colors=always",
+        "test:coverage:clover": "mkdir -p coverage && php scripts/coverage-runner.php --coverage-clover=coverage/clover.xml --colors=always",
         "test:types": "phpstan analyse --ansi --memory-limit=4G",
         "test:unit": "pest --colors=always",
         "test": [
