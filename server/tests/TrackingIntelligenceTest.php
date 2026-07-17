@@ -13,6 +13,22 @@ use Fleetbase\FleetOps\Tracking\TrackingProviderRegistry;
 use Fleetbase\LaravelMysqlSpatial\Types\Point;
 use Illuminate\Support\Carbon;
 
+class TrackingTestOrder extends Order
+{
+    public function loadMissing($relations)
+    {
+        return $this;
+    }
+}
+
+class TrackingTestPayload extends Payload
+{
+    public function loadMissing($relations)
+    {
+        return $this;
+    }
+}
+
 function trackingPlace(string $uuid, float $lat, float $lng): Place
 {
     $place            = new Place();
@@ -28,7 +44,7 @@ function trackingOrderWithStops(): Order
 {
     $pickup                         = trackingPlace('11111111-1111-1111-1111-111111111111', 1.30, 103.80);
     $dropoff                        = trackingPlace('22222222-2222-2222-2222-222222222222', 1.35, 103.85);
-    $payload                        = new Payload();
+    $payload                        = new TrackingTestPayload();
     $payload->uuid                  = '33333333-3333-3333-3333-333333333333';
     $payload->current_waypoint_uuid = $pickup->uuid;
     $payload->setRelation('pickup', $pickup);
@@ -43,7 +59,7 @@ function trackingOrderWithStops(): Order
     $driver->online     = true;
     $driver->updated_at = Carbon::now();
 
-    $order             = new Order();
+    $order             = new TrackingTestOrder();
     $order->uuid       = '55555555-5555-5555-5555-555555555555';
     $order->public_id  = 'order_test';
     $order->status     = 'started';
