@@ -9,8 +9,8 @@ use Fleetbase\FleetOps\Tracking\Support\FakeTrackingProvider;
 use Fleetbase\FleetOps\Tracking\TrackingContextBuilder;
 use Fleetbase\FleetOps\Tracking\TrackingOptions;
 use Fleetbase\FleetOps\Tracking\TrackingProviderManager;
-use Fleetbase\FleetOps\Tracking\TrackingProviderResult;
 use Fleetbase\FleetOps\Tracking\TrackingProviderRegistry;
+use Fleetbase\FleetOps\Tracking\TrackingProviderResult;
 use Fleetbase\LaravelMysqlSpatial\Types\Point;
 use Illuminate\Support\Carbon;
 
@@ -57,7 +57,7 @@ function trackingOrderWithStops(): Order
 {
     $pickup                         = trackingPlace('11111111-1111-1111-1111-111111111111', 1.30, 103.80);
     $dropoff                        = trackingPlace('22222222-2222-2222-2222-222222222222', 1.35, 103.85);
-    $payload = trackingModel(TrackingTestPayload::class);
+    $payload                        = trackingModel(TrackingTestPayload::class);
     trackingSetAttributes($payload, [
         'uuid'                  => '33333333-3333-3333-3333-333333333333',
         'current_waypoint_uuid' => $pickup->uuid,

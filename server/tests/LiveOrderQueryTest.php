@@ -10,7 +10,7 @@ test('active live order query uses the same active status rules as the map overl
 
     expect($source)
         ->toContain("public static array \$activeExcludedStatuses = ['created', 'completed', 'expired', 'order_canceled', 'canceled', 'pending']")
-        ->and($source)->toContain("if (\$active)")
+        ->and($source)->toContain('if ($active)')
         ->and($source)->toContain("whereHas('driverAssigned')")
         ->and($source)->toContain("whereNotIn('status', static::\$activeExcludedStatuses)");
 });
