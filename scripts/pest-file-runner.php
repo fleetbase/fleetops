@@ -22,9 +22,6 @@ if ($autoload === null) {
 
 require_once $autoload;
 
-use Symfony\Component\Process\Exception\ProcessTimedOutException;
-use Symfony\Component\Process\Process;
-
 $runner = getcwd() . '/scripts/pest-runner.php';
 if (!is_file($runner)) {
     fwrite(STDERR, "Unable to find Pest runner at scripts/pest-runner.php.\n");
@@ -49,17 +46,16 @@ foreach ($files as $file) {
     fwrite(STDOUT, "::group::{$relativeFile}\n");
 
     $command = array_merge([PHP_BINARY, $runner], $args, [$file]);
+    $timeoutBinary = trim((string) shell_exec('command -v timeout'));
+    if ($timeoutBinary !== '') {
+        $command = array_merge([$timeoutBinary, "{$timeout}s"], $command);
+    }
+
     fwrite(STDOUT, '$ ' . implode(' ', array_map('escapeshellarg', $command)) . "\n");
 
-    $process = new Process($command, getcwd());
-    $process->setTimeout($timeout);
-    $process->setIdleTimeout($timeout);
+    passthru(implode(' ', array_map('escapeshellarg', $command)), $exitCode);
 
-    try {
-        $process->run(static function (string $type, string $buffer): void {
-            fwrite($type === Process::ERR ? STDERR : STDOUT, $buffer);
-        });
-    } catch (ProcessTimedOutException $exception) {
+    if ($exitCode === 124) {
         fwrite(STDERR, "\nTimed out after {$timeout} seconds while running {$relativeFile}.\n");
         fwrite(STDOUT, "::endgroup::\n");
         exit(1);
@@ -67,10 +63,8 @@ foreach ($files as $file) {
 
     fwrite(STDOUT, "::endgroup::\n");
 
-    if (!$process->isSuccessful()) {
-        fwrite(STDERR, "\nPest failed for {$relativeFile} with exit code {$process->getExitCode()}.\n");
-        fwrite(STDOUT, $process->getOutput());
-        fwrite(STDERR, $process->getErrorOutput());
-        exit($process->getExitCode() ?: 1);
+    if ($exitCode !== 0) {
+        fwrite(STDERR, "\nPest failed for {$relativeFile} with exit code {$exitCode}.\n");
+        exit($exitCode);
     }
 }
