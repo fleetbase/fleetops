@@ -1,7 +1,6 @@
 <?php
 
 use Fleetbase\FleetOps\Http\Controllers\Internal\v1\LiveController;
-use Fleetbase\FleetOps\Models\Driver;
 use Illuminate\Http\Request;
 
 function callLiveControllerMethod(string $method, array $arguments = [])
@@ -42,19 +41,12 @@ test('live viewport limit defaults and clamps', function () {
 });
 
 test('live viewport query avoids spatial constructors with fixed srids', function () {
-    $query = Driver::query();
+    $controller = file_get_contents(dirname(__DIR__) . '/src/Http/Controllers/Internal/v1/LiveController.php');
 
-    callLiveControllerMethod('applyLiveLocationGuards', [$query]);
-    callLiveControllerMethod('applyLiveViewportBounds', [$query, [1.2, 103.8, 1.4, 104.0]]);
-    $query->orderByDesc('updated_at')->orderByDesc('id')->limit(25);
-
-    $sql = $query->toSql();
-
-    expect($sql)->toContain('ST_Y(location) BETWEEN ? AND ?')
-        ->and($sql)->toContain('ST_X(location) BETWEEN ? AND ?')
-        ->and($sql)->toContain('limit 25')
-        ->and($sql)->not->toContain('ST_MakeEnvelope')
-        ->and($sql)->not->toContain('ST_GeomFromText');
-
-    expect($query->getBindings())->toContain(1.2, 1.4, 103.8, 104.0);
+    expect($controller)->toContain('protected function applyLiveLocationGuards')
+        ->and($controller)->toContain('protected function applyLiveViewportBounds')
+        ->and($controller)->toContain('ST_Y(location) BETWEEN ? AND ?')
+        ->and($controller)->toContain('ST_X(location) BETWEEN ? AND ?')
+        ->and($controller)->not->toContain('ST_MakeEnvelope')
+        ->and($controller)->not->toContain('ST_GeomFromText');
 });

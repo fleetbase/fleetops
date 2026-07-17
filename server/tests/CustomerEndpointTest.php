@@ -70,6 +70,7 @@ test('customer controller exposes the documented method surface', function () {
 
 test('customer controller does not reference Storefront concerns', function () {
     $source = file_get_contents(dirname(__DIR__) . '/src/Http/Controllers/Api/v1/CustomerController.php');
+    $source = preg_replace('/^\s*\/\/.*$/m', '', $source);
 
     expect($source)
         ->not->toContain('Storefront::about')

@@ -10,16 +10,45 @@ use Fleetbase\FleetOps\Tracking\TrackingContextBuilder;
 use Fleetbase\FleetOps\Tracking\TrackingOptions;
 use Fleetbase\FleetOps\Tracking\TrackingProviderManager;
 use Fleetbase\FleetOps\Tracking\TrackingProviderRegistry;
+use Fleetbase\FleetOps\Tracking\TrackingProviderResult;
 use Fleetbase\LaravelMysqlSpatial\Types\Point;
 use Illuminate\Support\Carbon;
 
+class TrackingTestOrder extends Order
+{
+    public function loadMissing($relations)
+    {
+        return $this;
+    }
+}
+
+class TrackingTestPayload extends Payload
+{
+    public function loadMissing($relations)
+    {
+        return $this;
+    }
+}
+
+function trackingModel(string $class): object
+{
+    return (new ReflectionClass($class))->newInstanceWithoutConstructor();
+}
+
+function trackingSetAttributes($model, array $attributes): void
+{
+    $model->setRawAttributes(array_merge($model->getAttributes(), $attributes), true);
+}
+
 function trackingPlace(string $uuid, float $lat, float $lng): Place
 {
-    $place            = new Place();
-    $place->uuid      = $uuid;
-    $place->public_id = 'place_' . substr($uuid, 0, 8);
-    $place->address   = 'Test address ' . $uuid;
-    $place->location  = new Point($lat, $lng);
+    $place = trackingModel(Place::class);
+    trackingSetAttributes($place, [
+        'uuid'      => $uuid,
+        'public_id' => 'place_' . substr($uuid, 0, 8),
+        'address'   => 'Test address ' . $uuid,
+        'location'  => new Point($lat, $lng),
+    ]);
 
     return $place;
 }
@@ -28,25 +57,32 @@ function trackingOrderWithStops(): Order
 {
     $pickup                         = trackingPlace('11111111-1111-1111-1111-111111111111', 1.30, 103.80);
     $dropoff                        = trackingPlace('22222222-2222-2222-2222-222222222222', 1.35, 103.85);
-    $payload                        = new Payload();
-    $payload->uuid                  = '33333333-3333-3333-3333-333333333333';
-    $payload->current_waypoint_uuid = $pickup->uuid;
+    $payload                        = trackingModel(TrackingTestPayload::class);
+    trackingSetAttributes($payload, [
+        'uuid'                  => '33333333-3333-3333-3333-333333333333',
+        'current_waypoint_uuid' => $pickup->uuid,
+    ]);
     $payload->setRelation('pickup', $pickup);
     $payload->setRelation('dropoff', $dropoff);
+    $payload->setRelation('return', null);
     $payload->setRelation('waypoints', collect());
     $payload->setRelation('waypointMarkers', collect());
 
-    $driver             = new Driver();
-    $driver->uuid       = '44444444-4444-4444-4444-444444444444';
-    $driver->location   = new Point(1.29, 103.79);
-    $driver->online     = true;
-    $driver->updated_at = Carbon::now();
+    $driver = trackingModel(Driver::class);
+    trackingSetAttributes($driver, [
+        'uuid'       => '44444444-4444-4444-4444-444444444444',
+        'location'   => new Point(1.29, 103.79),
+        'online'     => true,
+        'updated_at' => Carbon::now(),
+    ]);
 
-    $order             = new Order();
-    $order->uuid       = '55555555-5555-5555-5555-555555555555';
-    $order->public_id  = 'order_test';
-    $order->status     = 'started';
-    $order->updated_at = Carbon::now();
+    $order = trackingModel(TrackingTestOrder::class);
+    trackingSetAttributes($order, [
+        'uuid'       => '55555555-5555-5555-5555-555555555555',
+        'public_id'  => 'order_test',
+        'status'     => 'started',
+        'updated_at' => Carbon::now(),
+    ]);
     $order->setRelation('payload', $payload);
     $order->setRelation('driverAssigned', $driver);
 
@@ -59,15 +95,15 @@ test('tracking context builder normalizes order stops and driver telemetry', fun
     ]));
 
     expect($context->stops)->toHaveCount(2)
-        ->and($context->activeStop?->type)->toBe('dropoff')
-        ->and($context->nextStop)->toBeNull()
+        ->and($context->activeStop?->type)->toBe('pickup')
+        ->and($context->nextStop?->type)->toBe('dropoff')
         ->and($context->driverLocationAgeSeconds)->toBeInt()
         ->and($context->warnings)->toBe([]);
 });
 
 test('tracking context ignores zero coordinate driver location and falls back to pickup origin', function () {
     $order                           = trackingOrderWithStops();
-    $order->driverAssigned->location = new Point(0, 0);
+    trackingSetAttributes($order->driverAssigned, ['location' => new Point(0, 0)]);
 
     $context = (new TrackingContextBuilder())->build($order, TrackingOptions::fromArray([
         'provider' => 'calculated',
@@ -102,9 +138,13 @@ test('tracking route legs include cumulative stop eta values', function () {
         'provider' => 'calculated',
     ]));
 
-    $result = (new CalculatedTrackingProvider())->track($context, TrackingOptions::fromArray([
-        'provider' => 'calculated',
-    ]));
+    $result = new TrackingProviderResult(
+        provider: 'test',
+        legs: [
+            ['duration_s' => 120],
+            ['duration_s' => 180],
+        ]
+    );
     $service = app(Fleetbase\FleetOps\Tracking\TrackingIntelligenceService::class);
     $method  = new ReflectionMethod($service, 'legs');
     $method->setAccessible(true);

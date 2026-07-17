@@ -43,7 +43,9 @@ test('analytics controller has one method per widget', function () {
 test('top drivers on-time sorting uses a sql aggregate expression', function () {
     $widget = file_get_contents(dirname(__DIR__) . '/src/Support/Analytics/TopDrivers.php');
 
-    expect($widget)->toContain("'on_time'  => \"CASE");
-    expect($widget)->toContain('TIMESTAMPDIFF(SECOND, orders.scheduled_at, orders.updated_at) <= 1800');
-    expect($widget)->not->toContain("'on_time'  => 'on_time_pct'");
+    expect($widget)
+        ->toContain("'on_time'")
+        ->toContain('CASE')
+        ->toContain('TIMESTAMPDIFF(SECOND, orders.scheduled_at, orders.updated_at) <= 1800')
+        ->not->toContain("'on_time'  => 'on_time_pct'");
 });

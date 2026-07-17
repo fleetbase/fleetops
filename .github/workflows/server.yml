@@ -40,5 +40,15 @@ jobs:
     - name: Run Lint
       run: composer lint
 
-    # - name: Run Tests -- Will add tests back after phppest issue https://github.com/pestphp/pest/issues/920 is fixed
-    #   run: composer test:unit
+    - name: Run Tests
+      run: composer test:unit
+
+    - name: Generate Coverage Baseline
+      run: XDEBUG_MODE=coverage composer coverage:baseline
+
+    - name: Upload Coverage Baseline
+      uses: actions/upload-artifact@v4
+      with:
+        name: fleetops-coverage-clover
+        path: coverage/clover.xml
+        if-no-files-found: error

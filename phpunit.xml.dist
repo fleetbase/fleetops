@@ -8,9 +8,9 @@
             <directory suffix=".php">./server/tests</directory>
         </testsuite>
     </testsuites>
-    <filter>
-        <whitelist processUncoveredFilesFromWhitelist="true">
+    <source>
+        <include>
             <directory suffix=".php">./server/src</directory>
-        </whitelist>
-    </filter>
+        </include>
+    </source>
 </phpunit>

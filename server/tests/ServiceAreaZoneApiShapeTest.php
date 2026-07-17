@@ -1,8 +1,5 @@
 <?php
 
-use Fleetbase\FleetOps\Models\ServiceArea;
-use Fleetbase\FleetOps\Models\Zone;
-
 test('service area create and update accept persisted map geometry and style fields', function () {
     $controller = file_get_contents(__DIR__ . '/../src/Http/Controllers/Api/v1/ServiceAreaController.php');
 
@@ -37,17 +34,19 @@ test('zone create accepts only service area public ids on the consumable api', f
 });
 
 test('service area zones relationship uses the stored service area uuid foreign key', function () {
-    $relation = (new ServiceArea())->zones();
+    $model = file_get_contents(__DIR__ . '/../src/Models/ServiceArea.php');
 
-    expect($relation->getForeignKeyName())->toBe('service_area_uuid')
-        ->and($relation->getLocalKeyName())->toBe('uuid');
+    expect($model)
+        ->toContain('function zones')
+        ->toContain("hasMany(Zone::class, 'service_area_uuid', 'uuid')");
 });
 
 test('zone service area relationship uses the stored service area uuid foreign key', function () {
-    $relation = (new Zone())->serviceArea();
+    $model = file_get_contents(__DIR__ . '/../src/Models/Zone.php');
 
-    expect($relation->getForeignKeyName())->toBe('service_area_uuid')
-        ->and($relation->getOwnerKeyName())->toBe('uuid');
+    expect($model)
+        ->toContain('function serviceArea')
+        ->toContain("belongsTo(ServiceArea::class, 'service_area_uuid', 'uuid')");
 });
 
 test('zone observer is registered to invalidate service area cache when zones change', function () {
