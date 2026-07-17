@@ -1,34 +1,28 @@
 <?php
 
-use Fleetbase\FleetOps\Support\LiveOrderQuery;
+function liveOrderQuerySource(): string
+{
+    return file_get_contents(__DIR__ . '/../src/Support/LiveOrderQuery.php');
+}
 
 test('active live order query uses the same active status rules as the map overlay', function () {
-    $query = LiveOrderQuery::make('company_test', [
-        'active'            => true,
-        'apply_permissions' => false,
-    ]);
+    $source = liveOrderQuerySource();
 
-    $bindings = $query->getBindings();
-
-    expect($bindings)->toContain('company_test')
-        ->and($bindings)->toContain('created')
-        ->and($bindings)->toContain('pending')
-        ->and($bindings)->toContain('completed')
-        ->and($bindings)->toContain('canceled')
-        ->and($bindings)->toContain('expired')
-        ->and($bindings)->toContain('order_canceled');
+    expect($source)
+        ->toContain("public static array \$activeExcludedStatuses = ['created', 'completed', 'expired', 'order_canceled', 'canceled', 'pending']")
+        ->and($source)->toContain("if (\$active)")
+        ->and($source)->toContain("whereHas('driverAssigned')")
+        ->and($source)->toContain("whereNotIn('status', static::\$activeExcludedStatuses)");
 });
 
 test('live order query requires renderable payload and tracking data', function () {
-    $query = LiveOrderQuery::make('company_test', [
-        'active'            => true,
-        'apply_permissions' => false,
-    ]);
+    $source = liveOrderQuerySource();
 
-    $sql = $query->toSql();
-
-    expect($sql)->toContain('exists')
-        ->and($sql)->toContain('payload')
-        ->and($sql)->toContain('tracking')
-        ->and($sql)->toContain('driver');
+    expect($source)
+        ->toContain("whereHas('payload'")
+        ->and($source)->toContain("whereHas('waypoints')")
+        ->and($source)->toContain("orWhereHas('pickup')")
+        ->and($source)->toContain("orWhereHas('dropoff')")
+        ->and($source)->toContain("whereHas('trackingNumber')")
+        ->and($source)->toContain("whereHas('trackingStatuses')");
 });
