@@ -21,7 +21,12 @@ class TrackingOptions
 
     public static function fromArray(array $options = []): self
     {
-        $systemSettings  = Setting::lookup('fleet-ops.tracking-settings', []);
+        try {
+            $systemSettings = Setting::lookup('fleet-ops.tracking-settings', []);
+        } catch (\Throwable) {
+            $systemSettings = [];
+        }
+
         $config          = array_merge(config('fleetops.tracking', []), is_array($systemSettings) ? $systemSettings : []);
         $companySettings = [];
         try {

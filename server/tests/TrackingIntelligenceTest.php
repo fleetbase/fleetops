@@ -33,6 +33,7 @@ function trackingOrderWithStops(): Order
     $payload->current_waypoint_uuid = $pickup->uuid;
     $payload->setRelation('pickup', $pickup);
     $payload->setRelation('dropoff', $dropoff);
+    $payload->setRelation('return', null);
     $payload->setRelation('waypoints', collect());
     $payload->setRelation('waypointMarkers', collect());
 
