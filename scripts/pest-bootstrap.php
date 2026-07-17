@@ -30,7 +30,11 @@ if (class_exists('Illuminate\Container\Container') && class_exists('Illuminate\S
     }
 
     if (!$app->bound('log') && class_exists('Psr\Log\NullLogger')) {
-        $app->singleton('log', fn () => new Psr\Log\NullLogger());
+        if (!class_exists('Fleetbase\TestSupport\LoggerManager')) {
+            eval('namespace Fleetbase\TestSupport; class LoggerManager extends \Psr\Log\NullLogger { public function channel(?string $name = null): self { return $this; } }');
+        }
+
+        $app->singleton('log', fn () => new Fleetbase\TestSupport\LoggerManager());
     }
 }
 
