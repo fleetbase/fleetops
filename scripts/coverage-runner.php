@@ -9,25 +9,9 @@ if ($args === []) {
     exit(1);
 }
 
-$pestCandidates = [
-    getcwd() . '/server_vendor/bin/pest',
-    getcwd() . '/vendor/bin/pest',
-];
-
-$pest = null;
-foreach ($pestCandidates as $candidate) {
-    if (is_file($candidate)) {
-        $pest = $candidate;
-        break;
-    }
-}
-
-if ($pest === null) {
-    fwrite(STDERR, "Unable to find Pest. Run composer install first.\n");
-    fwrite(STDERR, "Checked:\n");
-    foreach ($pestCandidates as $candidate) {
-        fwrite(STDERR, "  - {$candidate}\n");
-    }
+$pestRunner = getcwd() . '/scripts/pest-runner.php';
+if (!is_file($pestRunner)) {
+    fwrite(STDERR, "Unable to find Pest runner at scripts/pest-runner.php.\n");
     exit(1);
 }
 
@@ -47,7 +31,7 @@ putenv('XDEBUG_MODE=coverage');
 $_ENV['XDEBUG_MODE']    = 'coverage';
 $_SERVER['XDEBUG_MODE'] = 'coverage';
 
-$command        = array_merge([PHP_BINARY, $pest], $args);
+$command        = array_merge([PHP_BINARY, $pestRunner], $args);
 $escapedCommand = implode(' ', array_map('escapeshellarg', $command));
 
 passthru($escapedCommand, $exitCode);
