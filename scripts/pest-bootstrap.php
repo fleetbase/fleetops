@@ -28,6 +28,10 @@ if (class_exists('Illuminate\Container\Container') && class_exists('Illuminate\S
     if (!$app->bound('http') && class_exists('Illuminate\Http\Client\Factory')) {
         $app->singleton('http', fn () => new Illuminate\Http\Client\Factory());
     }
+
+    if (!$app->bound('log') && class_exists('Psr\Log\NullLogger')) {
+        $app->singleton('log', fn () => new Psr\Log\NullLogger());
+    }
 }
 
 if (!function_exists('app')) {
@@ -67,6 +71,13 @@ if (!function_exists('session')) {
     }
 }
 
+if (!function_exists('now') && class_exists('Illuminate\Support\Carbon')) {
+    function now($tz = null): Illuminate\Support\Carbon
+    {
+        return Illuminate\Support\Carbon::now($tz);
+    }
+}
+
 if (!trait_exists('Illuminate\Foundation\Auth\Access\AuthorizesRequests')) {
     eval('namespace Illuminate\Foundation\Auth\Access; trait AuthorizesRequests {}');
 }
@@ -84,7 +95,7 @@ if (!trait_exists('Illuminate\Foundation\Validation\ValidatesRequests')) {
 }
 
 if (!class_exists('Illuminate\Foundation\Http\FormRequest') && class_exists('Illuminate\Http\Request')) {
-    eval('namespace Illuminate\Foundation\Http; class FormRequest extends \Illuminate\Http\Request { public function authorize(): bool { return true; } public function rules(): array { return []; } public function responseWithErrors($validator) { return $validator; } }');
+    eval('namespace Illuminate\Foundation\Http; class FormRequest extends \Illuminate\Http\Request { public function authorize(): bool { return true; } public function rules(): array { return []; } public function responseWithErrors(\Illuminate\Contracts\Validation\Validator $validator) { return $validator; } }');
 }
 
 if (!interface_exists('Fleetbase\Ai\Contracts\AIContextCapabilityInterface')) {
