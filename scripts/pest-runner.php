@@ -34,12 +34,30 @@ if (!is_file($bootstrap)) {
     exit(1);
 }
 
+$args = array_slice($argv, 1);
+$hasConfiguration = false;
+foreach ($args as $arg) {
+    if (str_starts_with($arg, '--configuration')) {
+        $hasConfiguration = true;
+        break;
+    }
+}
+$configuration = getcwd() . '/phpunit.xml.dist';
+
+if (!$hasConfiguration && is_file($configuration)) {
+    array_unshift($args, '--configuration=' . $configuration);
+}
+
 $command = array_merge([
     PHP_BINARY,
     '-d',
+    'display_errors=1',
+    '-d',
+    'error_reporting=E_ALL',
+    '-d',
     'auto_prepend_file=' . $bootstrap,
     $pest,
-], array_slice($argv, 1));
+], $args);
 
 passthru(implode(' ', array_map('escapeshellarg', $command)), $exitCode);
 

@@ -336,8 +336,10 @@ class OrchestrationPayloadBuilder
 
     protected static function resolveServiceTime(Order $order): int
     {
-        $payload        = $order->payload;
-        $waypointMarker = $payload?->waypointMarkers?->last();
+        $payload = $order->payload;
+        $waypointMarker = method_exists($payload, 'relationLoaded') && $payload->relationLoaded('waypointMarkers')
+            ? $payload->waypointMarkers?->last()
+            : null;
 
         return (int) (
             $waypointMarker?->service_time
