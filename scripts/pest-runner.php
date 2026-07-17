@@ -3,6 +3,8 @@
 declare(strict_types=1);
 
 $pestCandidates = [
+    getcwd() . '/server_vendor/bin/pest',
+    getcwd() . '/vendor/bin/pest',
     getcwd() . '/server_vendor/pestphp/pest/bin/pest',
     getcwd() . '/vendor/pestphp/pest/bin/pest',
 ];
