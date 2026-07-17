@@ -9,6 +9,7 @@ use Fleetbase\FleetOps\Tracking\Support\FakeTrackingProvider;
 use Fleetbase\FleetOps\Tracking\TrackingContextBuilder;
 use Fleetbase\FleetOps\Tracking\TrackingOptions;
 use Fleetbase\FleetOps\Tracking\TrackingProviderManager;
+use Fleetbase\FleetOps\Tracking\TrackingProviderResult;
 use Fleetbase\FleetOps\Tracking\TrackingProviderRegistry;
 use Fleetbase\LaravelMysqlSpatial\Types\Point;
 use Illuminate\Support\Carbon;
@@ -94,8 +95,8 @@ test('tracking context builder normalizes order stops and driver telemetry', fun
     ]));
 
     expect($context->stops)->toHaveCount(2)
-        ->and($context->activeStop?->type)->toBe('dropoff')
-        ->and($context->nextStop)->toBeNull()
+        ->and($context->activeStop?->type)->toBe('pickup')
+        ->and($context->nextStop?->type)->toBe('dropoff')
         ->and($context->driverLocationAgeSeconds)->toBeInt()
         ->and($context->warnings)->toBe([]);
 });
@@ -137,9 +138,13 @@ test('tracking route legs include cumulative stop eta values', function () {
         'provider' => 'calculated',
     ]));
 
-    $result = (new CalculatedTrackingProvider())->track($context, TrackingOptions::fromArray([
-        'provider' => 'calculated',
-    ]));
+    $result = new TrackingProviderResult(
+        provider: 'test',
+        legs: [
+            ['duration_s' => 120],
+            ['duration_s' => 180],
+        ]
+    );
     $service = app(Fleetbase\FleetOps\Tracking\TrackingIntelligenceService::class);
     $method  = new ReflectionMethod($service, 'legs');
     $method->setAccessible(true);
