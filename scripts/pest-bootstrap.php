@@ -14,8 +14,19 @@ foreach ($autoloadCandidates as $candidate) {
     }
 }
 
+if (!function_exists('config')) {
+    function config(?string $key = null, mixed $default = null): mixed
+    {
+        return $default;
+    }
+}
+
 if (!trait_exists('Illuminate\Foundation\Auth\Access\AuthorizesRequests')) {
     eval('namespace Illuminate\Foundation\Auth\Access; trait AuthorizesRequests {}');
+}
+
+if (!trait_exists('Illuminate\Foundation\Bus\Dispatchable')) {
+    eval('namespace Illuminate\Foundation\Bus; trait Dispatchable {}');
 }
 
 if (!trait_exists('Illuminate\Foundation\Bus\DispatchesJobs')) {
