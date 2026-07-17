@@ -31,6 +31,18 @@ putenv('XDEBUG_MODE=coverage');
 $_ENV['XDEBUG_MODE']    = 'coverage';
 $_SERVER['XDEBUG_MODE'] = 'coverage';
 
+$hasTestTarget = false;
+foreach ($args as $arg) {
+    if ($arg !== '' && $arg[0] !== '-') {
+        $hasTestTarget = true;
+        break;
+    }
+}
+
+if (!$hasTestTarget && is_dir(getcwd() . '/server/tests')) {
+    $args[] = 'server/tests';
+}
+
 $command        = array_merge([PHP_BINARY, $pestRunner], $args);
 $escapedCommand = implode(' ', array_map('escapeshellarg', $command));
 
