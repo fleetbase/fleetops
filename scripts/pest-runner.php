@@ -20,6 +20,12 @@ if ($pest === null) {
     exit(1);
 }
 
+$serverVendor = getcwd() . '/server_vendor';
+$vendor       = getcwd() . '/vendor';
+if (!file_exists($vendor) && is_dir($serverVendor) && function_exists('symlink')) {
+    @symlink($serverVendor, $vendor);
+}
+
 $bootstrap = getcwd() . '/scripts/pest-bootstrap.php';
 if (!is_file($bootstrap)) {
     fwrite(STDERR, "Unable to find Pest bootstrap at scripts/pest-bootstrap.php.\n");
