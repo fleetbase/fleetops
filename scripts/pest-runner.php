@@ -53,7 +53,7 @@ $command = array_merge([
     '-d',
     'display_errors=1',
     '-d',
-    'error_reporting=E_ALL',
+    'error_reporting=8191',
     '-d',
     'auto_prepend_file=' . $bootstrap,
     $pest,
