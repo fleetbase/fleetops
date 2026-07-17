@@ -70,6 +70,34 @@ if (!function_exists('request')) {
     }
 }
 
+if (!function_exists('response')) {
+    function response(): object
+    {
+        return new class {
+            public function json(mixed $data = [], int $status = 200): mixed
+            {
+                if (class_exists('Illuminate\Http\JsonResponse')) {
+                    return new Illuminate\Http\JsonResponse($data, $status);
+                }
+
+                return new class($data, $status) {
+                    public function __construct(public mixed $data, public int $status) {}
+
+                    public function getStatusCode(): int
+                    {
+                        return $this->status;
+                    }
+                };
+            }
+
+            public function error(mixed $error = null, int $status = 500): mixed
+            {
+                return $this->json(['error' => $error], $status);
+            }
+        };
+    }
+}
+
 if (!function_exists('session')) {
     function session(array|string|null $key = null, mixed $default = null): mixed
     {
