@@ -96,7 +96,7 @@
         "test:coverage": "php scripts/coverage-runner.php --coverage --coverage-text --colors=always",
         "test:coverage:clover": "mkdir -p coverage && php scripts/coverage-runner.php --coverage-clover=coverage/clover.xml --colors=always",
         "test:types": "phpstan analyse --ansi --memory-limit=4G",
-        "test:unit": "php scripts/pest-file-runner.php --colors=always --debug",
+        "test:unit": "php scripts/pest-file-runner.php --colors=always",
         "test": [
             "@test:lint",
             "@test:types",
