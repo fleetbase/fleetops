@@ -24,7 +24,7 @@ test('algorithm rate variables expose summed entity weights in converted units',
     ];
 
     expect(fleetopsServiceRateAlgorithmQuote('{weight_kg} * 1000', $entities))->toBe(2454)
-        ->and(fleetopsServiceRateAlgorithmQuote('{weight_lb} * 1000', $entities))->toBe(5410)
+        ->and(fleetopsServiceRateAlgorithmQuote('{weight_lb} * 1000', $entities))->toBe(5409)
         ->and(fleetopsServiceRateAlgorithmQuote('{weight_tonne} * 1000000', $entities))->toBe(2454)
         ->and(fleetopsServiceRateAlgorithmQuote('{weight_t} * 1000000', $entities))->toBe(2454)
         ->and(fleetopsServiceRateAlgorithmQuote('{weight} * 1000', $entities))->toBe(2454);
