@@ -48,7 +48,10 @@ foreach ($files as $file) {
 
     fwrite(STDOUT, "::group::{$relativeFile}\n");
 
-    $process = new Process(array_merge([PHP_BINARY, $runner], $args, [$relativeFile]), getcwd());
+    $command = array_merge([PHP_BINARY, $runner], $args, [$file]);
+    fwrite(STDOUT, '$ ' . implode(' ', array_map('escapeshellarg', $command)) . "\n");
+
+    $process = new Process($command, getcwd());
     $process->setTimeout($timeout);
     $process->setIdleTimeout($timeout);
 
@@ -65,6 +68,9 @@ foreach ($files as $file) {
     fwrite(STDOUT, "::endgroup::\n");
 
     if (!$process->isSuccessful()) {
+        fwrite(STDERR, "\nPest failed for {$relativeFile} with exit code {$process->getExitCode()}.\n");
+        fwrite(STDOUT, $process->getOutput());
+        fwrite(STDERR, $process->getErrorOutput());
         exit($process->getExitCode() ?: 1);
     }
 }
