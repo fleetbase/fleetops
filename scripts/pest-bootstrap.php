@@ -29,6 +29,11 @@ if (class_exists('Illuminate\Container\Container') && class_exists('Illuminate\S
         $app->singleton('http', fn () => new Illuminate\Http\Client\Factory());
     }
 
+    if (!$app->bound('cache') && class_exists('Illuminate\Cache\Repository') && class_exists('Illuminate\Cache\ArrayStore')) {
+        $app->singleton('cache.store', fn () => new Illuminate\Cache\Repository(new Illuminate\Cache\ArrayStore()));
+        $app->singleton('cache', fn ($app) => $app->make('cache.store'));
+    }
+
     if (!$app->bound('log') && class_exists('Psr\Log\NullLogger')) {
         if (!class_exists('Fleetbase\TestSupport\LoggerManager')) {
             eval('namespace Fleetbase\TestSupport; class LoggerManager extends \Psr\Log\NullLogger { public function channel(?string $name = null): self { return $this; } }');
