@@ -34,6 +34,11 @@ if (class_exists('Illuminate\Container\Container') && class_exists('Illuminate\S
         $app->singleton('cache', fn ($app) => $app->make('cache.store'));
     }
 
+    if (!$app->bound('session.store') && class_exists('Illuminate\Session\Store') && class_exists('Illuminate\Session\ArraySessionHandler')) {
+        $app->singleton('session.store', fn () => new Illuminate\Session\Store('pest', new Illuminate\Session\ArraySessionHandler(120)));
+        $app->singleton('session', fn ($app) => $app->make('session.store'));
+    }
+
     if (!$app->bound('log') && class_exists('Psr\Log\NullLogger')) {
         if (!class_exists('Fleetbase\TestSupport\LoggerManager')) {
             eval('namespace Fleetbase\TestSupport; class LoggerManager extends \Psr\Log\NullLogger { public function channel(?string $name = null): self { return $this; } }');
