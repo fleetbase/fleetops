@@ -64,6 +64,18 @@ foreach ($files as $file) {
     fwrite(STDOUT, "::endgroup::\n");
 
     if ($exitCode !== 0) {
+        if (!in_array('--debug', $args, true)) {
+            fwrite(STDOUT, "::group::{$relativeFile} debug\n");
+            $debugCommand = array_merge([PHP_BINARY, $runner], $args, ['--debug', $file]);
+            if ($timeoutBinary !== '') {
+                $debugCommand = array_merge([$timeoutBinary, "{$timeout}s"], $debugCommand);
+            }
+
+            fwrite(STDOUT, '$ ' . implode(' ', array_map('escapeshellarg', $debugCommand)) . "\n");
+            passthru(implode(' ', array_map('escapeshellarg', $debugCommand)));
+            fwrite(STDOUT, "::endgroup::\n");
+        }
+
         fwrite(STDERR, "\nPest failed for {$relativeFile} with exit code {$exitCode}.\n");
         exit($exitCode);
     }
