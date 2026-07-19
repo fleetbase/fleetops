@@ -11,6 +11,7 @@ use Fleetbase\FleetOps\Tracking\TrackingOptions;
 use Fleetbase\FleetOps\Tracking\TrackingProviderManager;
 use Fleetbase\FleetOps\Tracking\TrackingProviderRegistry;
 use Fleetbase\FleetOps\Tracking\TrackingProviderResult;
+use Fleetbase\FleetOps\Tracking\TrackingStop;
 use Fleetbase\LaravelMysqlSpatial\Types\Point;
 use Illuminate\Support\Carbon;
 
@@ -191,6 +192,97 @@ test('tracking options include route cache ttl and fallback provider settings', 
     expect($options->provider)->toBe('calculated')
         ->and($options->fallbacks)->toBe(['osrm', 'calculated'])
         ->and($options->routeCacheTtlSeconds)->toBe(900);
+});
+
+test('tracking options normalize explicit scalar settings', function () {
+    $options = TrackingOptions::fromArray([
+        'provider'                           => 'google_routes',
+        'fallbacks'                          => ['osrm'],
+        'traffic_enabled'                    => false,
+        'cache_ttl_seconds'                  => '45',
+        'route_cache_ttl_seconds'            => '1200',
+        'stale_location_threshold_seconds'   => '180',
+        'default_vehicle_speed_kph'          => '42.5',
+    ]);
+
+    expect($options->provider)->toBe('google_routes')
+        ->and($options->fallbacks)->toBe(['osrm'])
+        ->and($options->trafficEnabled)->toBeFalse()
+        ->and($options->cacheTtlSeconds)->toBe(45)
+        ->and($options->routeCacheTtlSeconds)->toBe(1200)
+        ->and($options->staleLocationThresholdSeconds)->toBe(180)
+        ->and($options->defaultVehicleSpeedKph)->toBe(42.5)
+        ->and($options->raw['provider'])->toBe('google_routes');
+});
+
+test('tracking result stores provider route details without mutation', function () {
+    $result = new TrackingProviderResult(
+        provider: 'osrm',
+        distanceMeters: 1234.5,
+        durationSeconds: 600.0,
+        durationInTrafficSeconds: 720.0,
+        polyline: 'encoded-route',
+        coordinates: [[103.8, 1.3]],
+        legs: [['distance_m' => 1234.5]],
+        warnings: ['traffic_unavailable'],
+        confidence: 'high',
+        raw: ['source' => 'fixture'],
+    );
+
+    expect($result->provider)->toBe('osrm')
+        ->and($result->distanceMeters)->toBe(1234.5)
+        ->and($result->durationSeconds)->toBe(600.0)
+        ->and($result->durationInTrafficSeconds)->toBe(720.0)
+        ->and($result->polyline)->toBe('encoded-route')
+        ->and($result->coordinates)->toBe([[103.8, 1.3]])
+        ->and($result->legs)->toBe([['distance_m' => 1234.5]])
+        ->and($result->warnings)->toBe(['traffic_unavailable'])
+        ->and($result->confidence)->toBe('high')
+        ->and($result->raw)->toBe(['source' => 'fixture']);
+});
+
+test('tracking stops serialize empty place data safely', function () {
+    $stop = new TrackingStop(
+        uuid: 'stop-1',
+        publicId: 'stop_public',
+        type: 'dropoff',
+        status: 'pending',
+        place: null,
+        completed: false,
+        sequence: 2,
+        trackingNumberUuid: 'tracking-1',
+    );
+
+    expect($stop->point())->toBeNull()
+        ->and($stop->toArray())->toMatchArray([
+            'uuid'                 => 'stop-1',
+            'public_id'            => 'stop_public',
+            'type'                 => 'dropoff',
+            'status'               => 'pending',
+            'completed'            => false,
+            'sequence'             => 2,
+            'tracking_number_uuid' => 'tracking-1',
+            'address'              => null,
+            'name'                 => null,
+            'location'             => null,
+            'latitude'             => null,
+            'longitude'            => null,
+        ])
+        ->and($stop->jsonSerialize())->toBe($stop->toArray());
+});
+
+test('tracking provider registry normalizes custom keys and returns all providers', function () {
+    $provider = new FakeTrackingProvider('google-routes');
+    $registry = new TrackingProviderRegistry();
+
+    $returned = $registry->register($provider, 'Google Routes');
+
+    expect($returned)->toBe($registry)
+        ->and($registry->has('google_routes'))->toBeTrue()
+        ->and($registry->has('Google Routes'))->toBeTrue()
+        ->and($registry->get('google_routes'))->toBe($provider)
+        ->and($registry->all())->toBe(['google_routes' => $provider])
+        ->and($registry->get('missing'))->toBeNull();
 });
 
 test('provider cache key varies by route options', function () {
