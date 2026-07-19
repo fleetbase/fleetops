@@ -4,6 +4,15 @@ use Fleetbase\FleetOps\Constraints\HOSConstraint;
 use Fleetbase\Models\ScheduleItem;
 use Illuminate\Support\Carbon;
 
+class FleetOpsHosScheduleItemFake extends ScheduleItem
+{
+    public int $duration;
+    public string $start_at;
+    public ?string $end_at = null;
+    public ?string $break_start_at = null;
+    public ?string $break_end_at = null;
+}
+
 function invokeFleetOpsHosConstraint(HOSConstraint $constraint, string $method, array $arguments = [])
 {
     $reflection = new ReflectionMethod($constraint, $method);
@@ -14,8 +23,11 @@ function invokeFleetOpsHosConstraint(HOSConstraint $constraint, string $method, 
 
 function fleetOpsScheduleItem(array $attributes): ScheduleItem
 {
-    $item = new ScheduleItem();
-    $item->setRawAttributes($attributes, true);
+    $item = new FleetOpsHosScheduleItemFake();
+
+    foreach ($attributes as $key => $value) {
+        $item->{$key} = $value;
+    }
 
     return $item;
 }
@@ -85,7 +97,7 @@ test('hos constraint handles duty windows and thirty minute break requirements',
 
     $recentWithBreak = collect([
         fleetOpsRecentScheduleItem([
-            'duration'       => 420,
+            'duration'       => 300,
             'start_at'       => '2026-07-19 05:00:00',
             'break_start_at' => '2026-07-19 08:00:00',
             'break_end_at'   => '2026-07-19 08:30:00',
