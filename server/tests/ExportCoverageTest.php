@@ -1,9 +1,23 @@
 <?php
 
+use Fleetbase\FleetOps\Exports\ContactExport;
 use Fleetbase\FleetOps\Exports\DeviceExport;
+use Fleetbase\FleetOps\Exports\DriverExport;
+use Fleetbase\FleetOps\Exports\EquipmentExport;
+use Fleetbase\FleetOps\Exports\FleetExport;
+use Fleetbase\FleetOps\Exports\FuelReportExport;
+use Fleetbase\FleetOps\Exports\IssueExport;
 use Fleetbase\FleetOps\Exports\MaintenanceExport;
 use Fleetbase\FleetOps\Exports\MaintenanceScheduleExport;
+use Fleetbase\FleetOps\Exports\OrderExport;
+use Fleetbase\FleetOps\Exports\PartExport;
+use Fleetbase\FleetOps\Exports\PlaceExport;
+use Fleetbase\FleetOps\Exports\SensorExport;
+use Fleetbase\FleetOps\Exports\ServiceAreaExport;
+use Fleetbase\FleetOps\Exports\ServiceRateExport;
+use Fleetbase\FleetOps\Exports\TelematicExport;
 use Fleetbase\FleetOps\Exports\VehicleExport;
+use Fleetbase\FleetOps\Exports\VendorExport;
 use Fleetbase\FleetOps\Exports\WorkOrderExport;
 
 test('expanded export headings include important operational fields', function () {
@@ -76,4 +90,44 @@ test('resources with visible export actions have backend export routes', functio
     }
 
     expect(substr_count($routes, "\$router->match(['get', 'post'], 'export', \$controller('export'));"))->toBeGreaterThanOrEqual(19);
+});
+
+test('all export classes expose stable spreadsheet headings and column formats', function () {
+    $exports = [
+        ContactExport::class,
+        DeviceExport::class,
+        DriverExport::class,
+        EquipmentExport::class,
+        FleetExport::class,
+        FuelReportExport::class,
+        IssueExport::class,
+        MaintenanceExport::class,
+        MaintenanceScheduleExport::class,
+        OrderExport::class,
+        PartExport::class,
+        PlaceExport::class,
+        SensorExport::class,
+        ServiceAreaExport::class,
+        ServiceRateExport::class,
+        TelematicExport::class,
+        VehicleExport::class,
+        VendorExport::class,
+        WorkOrderExport::class,
+    ];
+
+    foreach ($exports as $exportClass) {
+        $export  = new $exportClass(['selected-resource']);
+        $heading = $export->headings();
+        $formats = $export->columnFormats();
+
+        expect($heading)
+            ->not->toBeEmpty()
+            ->each->toBeString()
+            ->and($heading)->toContain('ID')
+            ->and($formats)->toBeArray();
+
+        foreach (array_keys($formats) as $column) {
+            expect($column)->toMatch('/^[A-Z]+$/');
+        }
+    }
 });
