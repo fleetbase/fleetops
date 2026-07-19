@@ -3,9 +3,6 @@
 use Fleetbase\FleetOps\Http\Resources\v1\FuelProviderConnection as FuelProviderConnectionResource;
 use Fleetbase\FleetOps\Http\Resources\v1\FuelProviderSyncRun as FuelProviderSyncRunResource;
 use Fleetbase\FleetOps\Http\Resources\v1\FuelProviderTransaction as FuelProviderTransactionResource;
-use Fleetbase\FleetOps\Models\FuelProviderConnection;
-use Fleetbase\FleetOps\Models\FuelProviderSyncRun;
-use Fleetbase\FleetOps\Models\FuelProviderTransaction;
 use Illuminate\Http\Request;
 
 class FleetOpsResourceRouteFixture
@@ -29,9 +26,13 @@ function fleetopsInternalResourceRequest(): Request
     return $request;
 }
 
+function fuelProviderResourceFixture(array $attributes): object
+{
+    return (object) $attributes;
+}
+
 test('fuel provider connection resource exposes internal identifiers and sync state', function () {
-    $connection = new FuelProviderConnection();
-    $connection->setRawAttributes([
+    $connection = fuelProviderResourceFixture([
         'id'              => 12,
         'uuid'            => 'connection-uuid',
         'public_id'       => 'fuel_connection_public',
@@ -47,7 +48,7 @@ test('fuel provider connection resource exposes internal identifiers and sync st
         'meta'            => ['team' => 'ops'],
         'updated_at'      => '2026-07-01 11:00:00',
         'created_at'      => '2026-07-01 08:00:00',
-    ], true);
+    ]);
 
     $payload = (new FuelProviderConnectionResource($connection))->toArray(fleetopsInternalResourceRequest());
 
@@ -66,8 +67,7 @@ test('fuel provider connection resource exposes internal identifiers and sync st
 });
 
 test('fuel provider sync run resource exposes counters windows and totals', function () {
-    $syncRun = new FuelProviderSyncRun();
-    $syncRun->setRawAttributes([
+    $syncRun = fuelProviderResourceFixture([
         'id'                            => 55,
         'uuid'                          => 'sync-run-uuid',
         'public_id'                     => 'sync_run_public',
@@ -87,7 +87,7 @@ test('fuel provider sync run resource exposes counters windows and totals', func
         'error'                         => null,
         'summary'                       => ['warnings' => 1],
         'meta'                          => ['source' => 'manual'],
-    ], true);
+    ]);
 
     $payload = (new FuelProviderSyncRunResource($syncRun))->toArray(fleetopsInternalResourceRequest());
 
@@ -110,8 +110,7 @@ test('fuel provider sync run resource exposes counters windows and totals', func
 });
 
 test('fuel provider transaction resource exposes identifiers matching fields and raw payloads', function () {
-    $transaction = new FuelProviderTransaction();
-    $transaction->setRawAttributes([
+    $transaction = fuelProviderResourceFixture([
         'id'                            => 99,
         'uuid'                          => 'transaction-uuid',
         'public_id'                     => 'fuel_transaction_public',
@@ -149,7 +148,7 @@ test('fuel provider transaction resource exposes identifiers matching fields and
         'normalized_payload'            => ['amount' => 240],
         'raw_payload'                   => ['source' => 'provider'],
         'meta'                          => ['review_status' => 'approved'],
-    ], true);
+    ]);
 
     $payload = (new FuelProviderTransactionResource($transaction))->toArray(fleetopsInternalResourceRequest());
 
