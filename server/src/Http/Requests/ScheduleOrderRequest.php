@@ -21,7 +21,7 @@ class ScheduleOrderRequest extends FleetbaseRequest
      *
      * @return array
      */
-    public function rules()
+    public function rules(): array
     {
         return [
             'date'     => 'required|date_format:Y-m-d',

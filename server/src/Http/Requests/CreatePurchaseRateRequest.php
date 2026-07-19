@@ -23,7 +23,7 @@ class CreatePurchaseRateRequest extends FleetbaseRequest
      *
      * @return array
      */
-    public function rules()
+    public function rules(): array
     {
         return [
             'service_quote' => ['required', Rule::exists('service_quotes', 'public_id')->whereNull('deleted_at')],

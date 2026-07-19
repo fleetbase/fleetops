@@ -21,7 +21,7 @@ class BulkDispatchRequest extends FleetbaseRequest
      *
      * @return array
      */
-    public function rules()
+    public function rules(): array
     {
         return [
             'ids' => ['required', 'array'],
@@ -33,7 +33,7 @@ class BulkDispatchRequest extends FleetbaseRequest
      *
      * @return array
      */
-    public function messages()
+    public function messages(): array
     {
         return [
             'ids.required' => 'Please provide a resource ID.',

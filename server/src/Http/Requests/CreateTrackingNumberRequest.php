@@ -22,7 +22,7 @@ class CreateTrackingNumberRequest extends FleetbaseRequest
      *
      * @return array
      */
-    public function rules()
+    public function rules(): array
     {
         return [
             'region' => 'required|string',

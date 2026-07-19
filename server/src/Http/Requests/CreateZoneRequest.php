@@ -23,7 +23,7 @@ class CreateZoneRequest extends FleetbaseRequest
      *
      * @return array
      */
-    public function rules()
+    public function rules(): array
     {
         return [
             'name'         => [Rule::requiredIf($this->isMethod('POST')), 'string'],

@@ -21,7 +21,7 @@ class DecodeTrackingNumberQR extends FleetbaseRequest
      *
      * @return array
      */
-    public function rules()
+    public function rules(): array
     {
         return [
             'code' => 'required|string',

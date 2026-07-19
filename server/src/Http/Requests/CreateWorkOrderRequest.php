@@ -12,7 +12,7 @@ class CreateWorkOrderRequest extends FleetbaseRequest
         return request()->session()->has('api_credential') || request()->session()->has('is_sanctum_token');
     }
 
-    public function rules()
+    public function rules(): array
     {
         return [
             'code'            => ['nullable', 'string'],

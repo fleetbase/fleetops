@@ -24,7 +24,7 @@ class CreateOrderRequest extends FleetbaseRequest
      *
      * @return array
      */
-    public function rules()
+    public function rules(): array
     {
         $validations = [
             'adhoc'             => ['nullable', 'boolean'],

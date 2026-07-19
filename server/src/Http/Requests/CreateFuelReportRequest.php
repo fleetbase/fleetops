@@ -21,7 +21,7 @@ class CreateFuelReportRequest extends FleetbaseRequest
      *
      * @return array
      */
-    public function rules()
+    public function rules(): array
     {
         return [
             'driver'          => ['required'],

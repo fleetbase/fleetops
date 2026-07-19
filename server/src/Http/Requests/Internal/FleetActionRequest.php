@@ -40,7 +40,7 @@ class FleetActionRequest extends FleetbaseRequest
      *
      * @return array
      */
-    public function rules()
+    public function rules(): array
     {
         return [
             'fleet'   => 'string|exists:fleets,uuid',

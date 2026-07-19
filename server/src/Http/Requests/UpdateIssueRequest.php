@@ -9,7 +9,7 @@ class UpdateIssueRequest extends CreateIssueRequest
      *
      * @return array
      */
-    public function rules()
+    public function rules(): array
     {
         return [
             'report'       => ['required'],

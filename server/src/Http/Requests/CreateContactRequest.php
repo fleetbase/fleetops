@@ -22,7 +22,7 @@ class CreateContactRequest extends FleetbaseRequest
      *
      * @return array
      */
-    public function rules()
+    public function rules(): array
     {
         return [
             'name'  => [new RequiredIf($this->isMethod('POST'))],

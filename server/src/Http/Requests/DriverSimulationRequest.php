@@ -23,7 +23,7 @@ class DriverSimulationRequest extends FleetbaseRequest
      *
      * @return array
      */
-    public function rules()
+    public function rules(): array
     {
         return [
             'start' => [Rule::requiredIf(

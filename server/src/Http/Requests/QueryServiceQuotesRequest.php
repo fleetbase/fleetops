@@ -23,7 +23,7 @@ class QueryServiceQuotesRequest extends FleetbaseRequest
      *
      * @return array
      */
-    public function rules()
+    public function rules(): array
     {
         return [
             'payload'      => ['nullable', 'required_without_all:waypoints,pickup,dropoff', Rule::exists('payloads', 'public_id')->whereNull('deleted_at')],

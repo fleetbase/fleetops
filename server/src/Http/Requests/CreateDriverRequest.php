@@ -23,7 +23,7 @@ class CreateDriverRequest extends FleetbaseRequest
      *
      * @return array
      */
-    public function rules()
+    public function rules(): array
     {
         $isCreating = $this->isMethod('POST');
 
@@ -50,7 +50,7 @@ class CreateDriverRequest extends FleetbaseRequest
      *
      * @return array
      */
-    public function attributes()
+    public function attributes(): array
     {
         return [
             'email' => 'email address',

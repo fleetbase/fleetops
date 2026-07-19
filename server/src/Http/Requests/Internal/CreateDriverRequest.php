@@ -25,7 +25,7 @@ class CreateDriverRequest extends CreateDriverApiRequest
      *
      * @return array
      */
-    public function rules()
+    public function rules(): array
     {
         $isCreating                   = $this->isMethod('POST');
         $isCreatingWithUser           = $this->filled('driver.user_uuid');
@@ -70,7 +70,7 @@ class CreateDriverRequest extends CreateDriverApiRequest
      *
      * @return array
      */
-    public function attributes()
+    public function attributes(): array
     {
         return [
             'name'                   => 'driver name',
@@ -88,7 +88,7 @@ class CreateDriverRequest extends CreateDriverApiRequest
      *
      * @return array
      */
-    public function messages()
+    public function messages(): array
     {
         return [
             'name.required'  => 'Driver name is required.',

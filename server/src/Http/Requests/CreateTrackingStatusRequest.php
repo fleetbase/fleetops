@@ -26,7 +26,7 @@ class CreateTrackingStatusRequest extends FleetbaseRequest
      *
      * @return array
      */
-    public function rules()
+    public function rules(): array
     {
         $validations = [
             'tracking_number' => array_filter([
