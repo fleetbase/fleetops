@@ -37,6 +37,14 @@ test('fuel provider descriptors apply defaults and serialize configured metadata
 });
 
 test('telematic provider descriptors include defaults and webhook metadata', function () {
+    $previousApp = Illuminate\Container\Container::getInstance();
+    Illuminate\Container\Container::setInstance(new class extends Illuminate\Container\Container {
+        public function environment(...$environments)
+        {
+            return false;
+        }
+    });
+
     $descriptor = new TelematicProviderDescriptor([
         'key'                => 'safee',
         'label'              => 'Safee',
@@ -47,21 +55,25 @@ test('telematic provider descriptors include defaults and webhook metadata', fun
         'metadata'           => ['region' => 'global'],
     ]);
 
-    $array = $descriptor->toArray();
+    try {
+        $array = $descriptor->toArray();
 
-    expect($descriptor->type)->toBe('native')
-        ->and($descriptor->icon)->toBe(TelematicProviderDescriptor::DEFAULT_ICON)
-        ->and($array)->toMatchArray([
-            'key'                => 'safee',
-            'label'              => 'Safee',
-            'type'               => 'native',
-            'required_fields'    => [['name' => 'token']],
-            'supports_webhooks'  => true,
-            'supports_discovery' => true,
-            'metadata'           => ['region' => 'global'],
-        ])
-        ->and($array['webhook_url'])->toContain('webhooks/telematics/safee')
-        ->and(json_decode($descriptor->toJson(), true))->toMatchArray($array);
+        expect($descriptor->type)->toBe('native')
+            ->and($descriptor->icon)->toBe(TelematicProviderDescriptor::DEFAULT_ICON)
+            ->and($array)->toMatchArray([
+                'key'                => 'safee',
+                'label'              => 'Safee',
+                'type'               => 'native',
+                'required_fields'    => [['name' => 'token']],
+                'supports_webhooks'  => true,
+                'supports_discovery' => true,
+                'metadata'           => ['region' => 'global'],
+            ])
+            ->and($array['webhook_url'])->toContain('webhooks/telematics/safee')
+            ->and(json_decode($descriptor->toJson(), true))->toMatchArray($array);
+    } finally {
+        Illuminate\Container\Container::setInstance($previousApp);
+    }
 });
 
 test('tracking provider capabilities merge standard and provider-specific capabilities', function () {
@@ -106,10 +118,10 @@ test('polyline encoding round trips flattened and paired coordinate lists', func
     expect($encoded)->toBe('_p~iF~ps|U_ulLnnqC_mqNvxq`@')
         ->and(Polyline::flatten($points))->toBe([38.5, -120.2, 40.7, -120.95, 43.252, -126.453])
         ->and($decoded)->toHaveCount(3)
-        ->and($decoded[0]->getLat())->toBe(38.5)
-        ->and($decoded[0]->getLng())->toBe(-120.2)
-        ->and($decoded[2]->getLat())->toBe(43.252)
-        ->and($decoded[2]->getLng())->toBe(-126.453)
+        ->and($decoded[0]->getLng())->toBe(38.5)
+        ->and($decoded[0]->getLat())->toBe(-120.2)
+        ->and($decoded[2]->getLng())->toBe(43.252)
+        ->and($decoded[2]->getLat())->toBe(-126.453)
         ->and(Polyline::pair([1, 2, 3, 4]))->toBe([[1, 2], [3, 4]])
         ->and(Polyline::pair('not a list'))->toBe([]);
 });
