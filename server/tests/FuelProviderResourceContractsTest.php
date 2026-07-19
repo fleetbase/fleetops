@@ -19,8 +19,9 @@ class FleetOpsResourceRouteFixture
 
 function fleetopsInternalResourceRequest(): Request
 {
-    $request = request();
+    $request = Request::create('/int/v1/fleet-ops/resource-test', 'GET');
     $request->setRouteResolver(fn () => new FleetOpsResourceRouteFixture('int/v1/fleet-ops/resource-test'));
+    app()->instance('request', $request);
 
     return $request;
 }
