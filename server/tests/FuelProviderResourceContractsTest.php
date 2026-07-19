@@ -19,9 +19,8 @@ class FleetOpsResourceRouteFixture
 
 function fleetopsInternalResourceRequest(): Request
 {
-    $request = Request::create('/int/v1/fleet-ops/resource-test');
+    $request = request();
     $request->setRouteResolver(fn () => new FleetOpsResourceRouteFixture('int/v1/fleet-ops/resource-test'));
-    app()->instance('request', $request);
 
     return $request;
 }
@@ -87,6 +86,8 @@ test('fuel provider sync run resource exposes counters windows and totals', func
         'error'                         => null,
         'summary'                       => ['warnings' => 1],
         'meta'                          => ['source' => 'manual'],
+        'updated_at'                    => '2026-07-01 09:06:00',
+        'created_at'                    => '2026-07-01 08:55:00',
     ]);
 
     $payload = (new FuelProviderSyncRunResource($syncRun))->toArray(fleetopsInternalResourceRequest());
@@ -148,6 +149,8 @@ test('fuel provider transaction resource exposes identifiers matching fields and
         'normalized_payload'            => ['amount' => 240],
         'raw_payload'                   => ['source' => 'provider'],
         'meta'                          => ['review_status' => 'approved'],
+        'updated_at'                    => '2026-07-01 12:06:00',
+        'created_at'                    => '2026-07-01 12:01:00',
     ]);
 
     $payload = (new FuelProviderTransactionResource($transaction))->toArray(fleetopsInternalResourceRequest());
