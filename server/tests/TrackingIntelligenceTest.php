@@ -5,6 +5,7 @@ use Fleetbase\FleetOps\Models\Order;
 use Fleetbase\FleetOps\Models\Payload;
 use Fleetbase\FleetOps\Models\Place;
 use Fleetbase\FleetOps\Tracking\Providers\CalculatedTrackingProvider;
+use Fleetbase\FleetOps\Tracking\TrackingContext;
 use Fleetbase\FleetOps\Tracking\Support\FakeTrackingProvider;
 use Fleetbase\FleetOps\Tracking\TrackingContextBuilder;
 use Fleetbase\FleetOps\Tracking\TrackingOptions;
@@ -134,6 +135,37 @@ test('calculated provider returns normalized low confidence route data', functio
         ->and($result->warnings)->toContain('calculated_route_used');
 });
 
+test('calculated provider requires enough route points and guards minimum speed', function () {
+    $emptyContext = new TrackingContext(
+        order: trackingModel(TrackingTestOrder::class),
+        payload: null,
+        driver: null,
+        origin: null,
+        driverLocation: null,
+        stops: collect(),
+        completedStops: collect(),
+        remainingStops: collect(),
+        activeStop: null,
+        nextStop: null,
+        driverLocationAgeSeconds: null,
+    );
+    $provider = new CalculatedTrackingProvider();
+    $method = new ReflectionMethod($provider, 'durationFromDistance');
+    $method->setAccessible(true);
+
+    expect($provider->key())->toBe('calculated')
+        ->and($provider->capabilities()->toArray())->toBe([
+            'traffic'        => false,
+            'per_leg_eta'    => false,
+            'map_matching'   => false,
+            'route_geometry' => false,
+        ])
+        ->and($provider->canTrack($emptyContext))->toBeFalse()
+        ->and($method->invoke($provider, 1000.0, TrackingOptions::fromArray([
+            'default_vehicle_speed_kph' => 0,
+        ])))->toBe(3600.0);
+});
+
 test('tracking route legs include cumulative stop eta values', function () {
     $context = (new TrackingContextBuilder())->build(trackingOrderWithStops(), TrackingOptions::fromArray([
         'provider' => 'calculated',
@@ -172,6 +204,47 @@ test('provider manager falls back to registered provider and records fallback wa
     expect($result->provider)->toBe('fake')
         ->and($result->warnings)->toContain('provider_not_registered:missing')
         ->and($result->warnings)->toContain('fallback_used');
+});
+
+test('provider manager returns none result with accumulated warnings when providers are unavailable', function () {
+    $manager = new TrackingProviderManager(new TrackingProviderRegistry());
+    $context = new TrackingContext(
+        order: trackingModel(TrackingTestOrder::class),
+        payload: null,
+        driver: null,
+        origin: null,
+        driverLocation: null,
+        stops: collect(),
+        completedStops: collect(),
+        remainingStops: collect(),
+        activeStop: null,
+        nextStop: null,
+        driverLocationAgeSeconds: null,
+    );
+
+    $result = $manager->track($context, TrackingOptions::fromArray([
+        'provider'  => 'missing',
+        'fallbacks' => ['calculated'],
+    ]));
+
+    expect($result->provider)->toBe('none')
+        ->and($result->confidence)->toBe('none')
+        ->and($result->warnings)->toContain('provider_not_registered:missing')
+        ->and($result->warnings)->toContain('provider_not_registered:calculated')
+        ->and($result->warnings)->toContain('no_tracking_provider_available');
+});
+
+test('provider manager normalizes and deduplicates provider order', function () {
+    $manager = new TrackingProviderManager(new TrackingProviderRegistry());
+    $method = new ReflectionMethod($manager, 'providerOrder');
+    $method->setAccessible(true);
+
+    $order = $method->invoke($manager, TrackingOptions::fromArray([
+        'provider'  => 'Google Routes',
+        'fallbacks' => ['google_routes', 'OSRM', 'calculated', 'OSRM'],
+    ]));
+
+    expect($order)->toBe(['google_routes', 'osrm', 'calculated']);
 });
 
 test('third party providers can be registered through the tracking provider contract', function () {
