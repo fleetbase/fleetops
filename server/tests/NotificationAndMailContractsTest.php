@@ -9,16 +9,16 @@ use Fleetbase\FleetOps\Notifications\LateDeparture;
 use Fleetbase\FleetOps\Notifications\ProlongedStoppage;
 use Fleetbase\FleetOps\Notifications\RouteDeviation;
 
+class FleetOpsNotificationOrderFake extends Order
+{
+    public string $uuid = 'order-uuid';
+    public string $public_id = 'order_public';
+    public string $tracking = 'TRACK-123';
+}
+
 function notificationTestOrder(): Order
 {
-    $order = new Order();
-    $order->setRawAttributes([
-        'uuid'      => 'order-uuid',
-        'public_id' => 'order_public',
-        'tracking'  => 'TRACK-123',
-    ], true);
-
-    return $order;
+    return new FleetOpsNotificationOrderFake();
 }
 
 test('operational alert notifications expose expected channels and database payloads', function () {
