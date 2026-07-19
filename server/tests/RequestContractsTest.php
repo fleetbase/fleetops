@@ -1,5 +1,58 @@
 <?php
 
+namespace Illuminate\Validation {
+    if (!class_exists(Rule::class)) {
+        class Rule
+        {
+            public function __construct(private string $rule)
+            {
+            }
+
+            public static function requiredIf($condition): string
+            {
+                return (is_callable($condition) ? $condition() : $condition) ? 'required' : 'nullable';
+            }
+
+            public static function in(array $values): self
+            {
+                return new self('in:' . implode(',', $values));
+            }
+
+            public static function exists($table, $column = null): self
+            {
+                return new self('exists:' . $table . ($column ? ',' . $column : ''));
+            }
+
+            public static function unique($table, $column = null): self
+            {
+                return new self('unique:' . $table . ($column ? ',' . $column : ''));
+            }
+
+            public static function when($condition, array $rules): array
+            {
+                return (is_callable($condition) ? $condition() : $condition) ? $rules : [];
+            }
+
+            public function where($callback): self
+            {
+                return $this;
+            }
+
+            public function whereNull($column): self
+            {
+                return $this;
+            }
+
+            public function __toString(): string
+            {
+                return $this->rule;
+            }
+        }
+    }
+}
+
+namespace {
+
 use Fleetbase\FleetOps\Http\Requests\CreateDeviceRequest;
 use Fleetbase\FleetOps\Http\Requests\CreateFuelReportRequest;
 use Fleetbase\FleetOps\Http\Requests\CreateFuelTransactionRequest;
@@ -78,3 +131,4 @@ test('vehicle and fuel report requests expose core validation contracts', functi
         ->and($fuelReportRules['volume'])->toBe(['required'])
         ->and($fuelReportUpdateRules['driver'])->toBe(['required']);
 });
+}
