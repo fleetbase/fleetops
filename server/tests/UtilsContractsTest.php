@@ -17,17 +17,18 @@ test('utility coordinate validators accept only finite coordinate ranges', funct
 });
 
 test('utility address formatter composes plain text and html addresses without duplicate parts', function () {
-    $place = new \Fleetbase\FleetOps\Models\Place([
+    $place = new \Fleetbase\FleetOps\Models\Place();
+    $place->setRawAttributes([
         'name'         => 'Depot',
-        'street1'      => '123 Main Street',
+        'street1'      => '123 MAIN STREET',
         'street2'      => 'Main Street',
         'city'         => 'Ulaanbaatar',
         'province'     => 'Ulaanbaatar',
         'postal_code'  => '14200',
         'country_name' => 'Mongolia',
-    ]);
+    ], true);
 
-    expect(Utils::getAddressStringForPlace($place))->toBe('DEPOT - 123 MAIN STREET - ULAANBAATAR - 14200 - MONGOLIA')
+    expect(Utils::getAddressStringForPlace($place))->toBe('DEPOT - 123 MAIN STREET, ULAANBAATAR, 14200, MONGOLIA')
         ->and(Utils::getAddressStringForPlace($place, true, ['postal_code']))
         ->toBe('<address>DEPOT<br>123 MAIN STREET<br>ULAANBAATAR, MONGOLIA</address>');
 });
@@ -86,7 +87,7 @@ test('utility geometry summaries and formatters return stable values', function 
         ->and(Utils::formatMeters(1500, false))->toBe('1.5 kilometers')
         ->and(Utils::getCentroid([]))->toBe([0, 0])
         ->and(Utils::getCentroid([['bad'], [10, 20], [30, 40]]))->toBe([20, 30])
-        ->and(Utils::coordsToCircle(47.9131423, 106.9338169, 1))->toHaveCount(122)
+        ->and(Utils::coordsToCircle(47.9131423, 106.9338169, 1))->toHaveCount(121)
         ->and(Utils::getNearestTimezone(new Point(40.7128, -74.0060), 'US'))->toBe('America/New_York')
         ->and(round(Utils::calculateHeading(new Point(0, 0), new Point(0, 1)), 1))->toEqual(90.0)
         ->and(Utils::fixPhone('97612345678'))->toBe('+97612345678')

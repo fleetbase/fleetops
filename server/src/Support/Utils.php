@@ -492,7 +492,7 @@ class Utils extends FleetbaseUtils
                 $coordinates = null;
             }
 
-            if (preg_match('/LatLng\(([^,]+),\s*([^)]+)\)/', $coordinates, $matches)) {
+            if (is_string($coordinates) && preg_match('/LatLng\(([^,]+),\s*([^)]+)\)/', $coordinates, $matches)) {
                 $coords = [
                     floatval($matches[1]),
                     floatval($matches[2]),
@@ -501,20 +501,20 @@ class Utils extends FleetbaseUtils
                 $coordinates = null;
             }
 
-            if (Str::contains($coordinates, ',')) {
+            if (is_string($coordinates) && Str::contains($coordinates, ',')) {
                 $coords = explode(',', $coordinates);
             }
 
-            if (Str::contains($coordinates, '|')) {
+            if (is_string($coordinates) && Str::contains($coordinates, '|')) {
                 $coords = explode('|', $coordinates);
             }
 
-            if (Str::contains($coordinates, ' ')) {
+            if (is_string($coordinates) && Str::contains($coordinates, ' ')) {
                 $coords = explode(' ', $coordinates);
             }
 
-            $latitude  = $coords[0];
-            $longitude = $coords[1];
+            $latitude  = $coords[0] ?? null;
+            $longitude = $coords[1] ?? null;
 
             if (is_numeric($latitude) && is_numeric($longitude)) {
                 $coordinates = new Point((float) $latitude, (float) $longitude);
