@@ -38,23 +38,25 @@ class FleetOpsLiveCacheFake
     public array $tags = [];
     public ?FleetOpsTaggedCacheFake $taggedCache = null;
     public bool $throwOnTags = false;
+    private array $versions = [
+        'live:company-1:orders:version'  => 3,
+        'live:company-1:drivers:version' => 1,
+    ];
 
     public function get($key, $default = null)
     {
         $this->gets[] = [$key, $default];
 
-        return match ($key) {
-            'live:company-1:orders:version' => 3,
-            'live:company-1:drivers:version' => 2,
-            default => $default,
-        };
+        return $this->versions[$key] ?? $default;
     }
 
     public function increment($key)
     {
         $this->increments[] = $key;
 
-        return count($this->increments);
+        $this->versions[$key] = ($this->versions[$key] ?? 0) + 1;
+
+        return $this->versions[$key];
     }
 
     public function tags(array $tags)
