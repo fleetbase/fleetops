@@ -20,6 +20,11 @@ function fleetOpsScheduleItem(array $attributes): ScheduleItem
     return $item;
 }
 
+function fleetOpsRecentScheduleItem(array $attributes): object
+{
+    return (object) $attributes;
+}
+
 test('hos constraint calculates driving hours across current and recent schedule items', function () {
     $constraint = new HOSConstraint();
     $current    = fleetOpsScheduleItem([
@@ -27,8 +32,8 @@ test('hos constraint calculates driving hours across current and recent schedule
         'start_at' => '2026-07-19 12:00:00',
     ]);
     $recent     = collect([
-        fleetOpsScheduleItem(['duration' => 90, 'start_at' => '2026-07-19 08:00:00']),
-        fleetOpsScheduleItem(['duration' => 150, 'start_at' => '2026-07-19 10:00:00']),
+        fleetOpsRecentScheduleItem(['duration' => 90, 'start_at' => '2026-07-19 08:00:00']),
+        fleetOpsRecentScheduleItem(['duration' => 150, 'start_at' => '2026-07-19 10:00:00']),
     ]);
 
     expect(invokeFleetOpsHosConstraint($constraint, 'calculateTotalDrivingHours', [$current, $recent]))
@@ -48,18 +53,18 @@ test('hos constraint enforces driving and weekly hour limits', function () {
     ]);
 
     $withinLimit = collect([
-        fleetOpsScheduleItem(['duration' => 300, 'start_at' => '2026-07-18 08:00:00']),
-        fleetOpsScheduleItem(['duration' => 180, 'start_at' => '2026-07-17 08:00:00']),
+        fleetOpsRecentScheduleItem(['duration' => 300, 'start_at' => '2026-07-18 08:00:00']),
+        fleetOpsRecentScheduleItem(['duration' => 180, 'start_at' => '2026-07-17 08:00:00']),
     ]);
 
     $overLimit = collect([
-        fleetOpsScheduleItem(['duration' => 600, 'start_at' => '2026-07-18 08:00:00']),
-        fleetOpsScheduleItem(['duration' => 120, 'start_at' => '2026-07-17 08:00:00']),
+        fleetOpsRecentScheduleItem(['duration' => 600, 'start_at' => '2026-07-18 08:00:00']),
+        fleetOpsRecentScheduleItem(['duration' => 120, 'start_at' => '2026-07-17 08:00:00']),
     ]);
 
     $weeklyOverLimit = collect([
-        fleetOpsScheduleItem(['duration' => 4200, 'start_at' => '2026-07-18 08:00:00']),
-        fleetOpsScheduleItem(['duration' => 120, 'start_at' => '2026-07-01 08:00:00']),
+        fleetOpsRecentScheduleItem(['duration' => 4200, 'start_at' => '2026-07-18 08:00:00']),
+        fleetOpsRecentScheduleItem(['duration' => 120, 'start_at' => '2026-07-01 08:00:00']),
     ]);
 
     expect(invokeFleetOpsHosConstraint($constraint, 'check11HourDrivingLimit', [$current, $withinLimit]))->toBeTrue()
@@ -79,7 +84,7 @@ test('hos constraint handles duty windows and thirty minute break requirements',
     ]);
 
     $recentWithBreak = collect([
-        fleetOpsScheduleItem([
+        fleetOpsRecentScheduleItem([
             'duration'       => 420,
             'start_at'       => '2026-07-19 05:00:00',
             'break_start_at' => '2026-07-19 08:00:00',
@@ -88,7 +93,7 @@ test('hos constraint handles duty windows and thirty minute break requirements',
     ]);
 
     $recentWithoutBreak = collect([
-        fleetOpsScheduleItem([
+        fleetOpsRecentScheduleItem([
             'duration'       => 420,
             'start_at'       => '2026-07-19 05:00:00',
             'break_start_at' => null,
