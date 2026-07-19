@@ -34,6 +34,10 @@ test('driver location changed broadcasts driver telemetry payload', function () 
         'heading'     => 180,
         'speed'       => 32,
     ], true);
+    $driver->setRelation('user', (object) [
+        'name'  => 'Jane Driver',
+        'phone' => '+15551234567',
+    ]);
 
     $event = new DriverLocationChanged($driver, ['source' => 'telematics']);
 
@@ -73,7 +77,7 @@ test('vehicle location changed broadcasts vehicle telemetry payload', function (
         'uuid'         => 'vehicle-uuid',
         'public_id'    => 'vehicle_public',
         'plate_number' => 'ABC-123',
-        'display_name' => 'Truck 12',
+        'name'         => 'Truck 12',
         'location'     => ['type' => 'Point', 'coordinates' => [103.9, 1.4]],
         'altitude'     => 22,
         'heading'      => 90,

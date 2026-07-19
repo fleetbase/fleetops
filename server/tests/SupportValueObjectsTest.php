@@ -101,9 +101,15 @@ test('point cast helpers normalize coordinate geometry and raw binary detection'
 test('polyline encoding round trips flattened and paired coordinate lists', function () {
     $points  = [[38.5, -120.2], [40.7, -120.95], [43.252, -126.453]];
     $encoded = Polyline::encode($points);
+    $decoded = Polyline::decode($encoded);
 
     expect($encoded)->toBe('_p~iF~ps|U_ulLnnqC_mqNvxq`@')
         ->and(Polyline::flatten($points))->toBe([38.5, -120.2, 40.7, -120.95, 43.252, -126.453])
+        ->and($decoded)->toHaveCount(3)
+        ->and($decoded[0]->getLat())->toBe(38.5)
+        ->and($decoded[0]->getLng())->toBe(-120.2)
+        ->and($decoded[2]->getLat())->toBe(43.252)
+        ->and($decoded[2]->getLng())->toBe(-126.453)
         ->and(Polyline::pair([1, 2, 3, 4]))->toBe([[1, 2], [3, 4]])
         ->and(Polyline::pair('not a list'))->toBe([]);
 });
@@ -111,4 +117,3 @@ test('polyline encoding round trips flattened and paired coordinate lists', func
 class TestTelematicDriver
 {
 }
-
