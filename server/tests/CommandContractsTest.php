@@ -40,8 +40,9 @@ class FleetOpsCommandLockFake
 
 class FleetOpsTelematicProviderRegistryFake extends TelematicProviderRegistry
 {
-    public function __construct(private Illuminate\Support\Collection $providers)
+    public function __construct(Illuminate\Support\Collection $providers)
     {
+        $this->providers = $providers;
     }
 
     public function all(): Illuminate\Support\Collection
