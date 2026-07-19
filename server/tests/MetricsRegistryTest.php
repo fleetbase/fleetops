@@ -4,7 +4,52 @@ use Fleetbase\FleetOps\Support\Metrics\AbstractMetric;
 use Fleetbase\FleetOps\Support\Metrics\OrdersInProgressMetric;
 use Fleetbase\FleetOps\Support\Metrics\Registry;
 use Fleetbase\FleetOps\Support\Metrics\TotalTimeTraveledMetric;
+use Fleetbase\Models\Company;
 use Fleetbase\Models\Transaction;
+use Illuminate\Support\Carbon;
+
+class TestFleetOpsMetric extends AbstractMetric
+{
+    public array $ranges = [];
+
+    public static function slug(): string
+    {
+        return 'test_metric';
+    }
+
+    public function format(): string
+    {
+        return 'currency';
+    }
+
+    public function currency(): ?string
+    {
+        return 'USD';
+    }
+
+    protected function query(?\DateTimeInterface $start, ?\DateTimeInterface $end)
+    {
+        $this->ranges[] = [
+            'start' => $start?->format('Y-m-d'),
+            'end'   => $end?->format('Y-m-d'),
+        ];
+
+        return ['start' => $start, 'end' => $end];
+    }
+
+    protected function aggregate($query): float|int
+    {
+        if (!$query['start'] || !$query['end']) {
+            return 10;
+        }
+
+        return match ($query['start']->format('Y-m-d')) {
+            '2026-01-01' => 20,
+            '2025-12-01' => 10,
+            default      => (int) $query['start']->format('d'),
+        };
+    }
+}
 
 test('registry exposes every known metric slug', function () {
     $slugs = Registry::slugs();
@@ -121,4 +166,60 @@ test('ordersInProgress uses an explicit allowlist rather than an exclusion list'
     expect($statuses)->not->toBeEmpty();
     expect($statuses)->toContain('dispatched');
     expect($statuses)->toContain('started');
+});
+
+test('abstract metric builds value delta currency and sparkline payloads', function () {
+    $company = new Company();
+    $company->setRawAttributes(['uuid' => 'company-1'], true);
+
+    $metric = TestFleetOpsMetric::forCompany($company)
+        ->between(Carbon::parse('2026-01-01'), Carbon::parse('2026-02-01'))
+        ->compareTo(Carbon::parse('2025-12-01'), Carbon::parse('2026-01-01'))
+        ->withSparkline(2, 'day');
+
+    expect($metric->value())->toBe(20)
+        ->and($metric->delta())->toBe(100.0)
+        ->and($metric->sparkline())->toBe([
+            'labels' => ['2026-01-30', '2026-01-31'],
+            'data'   => [30, 31],
+        ])
+        ->and($metric->get())->toMatchArray([
+            'slug'      => 'test_metric',
+            'value'     => 20,
+            'format'    => 'currency',
+            'currency'  => 'USD',
+            'delta_pct' => 100.0,
+            'sparkline' => [
+                'labels' => ['2026-01-30', '2026-01-31'],
+                'data'   => [30, 31],
+            ],
+        ]);
+});
+
+test('abstract metric handles missing comparison and zero previous periods', function () {
+    expect((new TestFleetOpsMetric())->delta())->toBeNull()
+        ->and((new TestFleetOpsMetric())->withSparkline(0)->sparkline())->toBeNull();
+
+    $zeroPrevious = new class extends TestFleetOpsMetric {
+        protected function aggregate($query): float|int
+        {
+            return $query['start']?->format('Y-m-d') === '2025-12-01' ? 0 : 5;
+        }
+    };
+
+    $flatPrevious = new class extends TestFleetOpsMetric {
+        protected function aggregate($query): float|int
+        {
+            return 0;
+        }
+    };
+
+    expect($zeroPrevious
+        ->between(Carbon::parse('2026-01-01'), Carbon::parse('2026-02-01'))
+        ->compareTo(Carbon::parse('2025-12-01'), Carbon::parse('2026-01-01'))
+        ->delta())->toBe(100.0)
+        ->and($flatPrevious
+            ->between(Carbon::parse('2026-01-01'), Carbon::parse('2026-02-01'))
+            ->compareTo(Carbon::parse('2025-12-01'), Carbon::parse('2026-01-01'))
+            ->delta())->toBe(0.0);
 });
