@@ -11,7 +11,7 @@ class CreateServiceQuoteRequest extends FleetbaseRequest
      *
      * @return bool
      */
-    public function authorize()
+    public function authorize(): bool
     {
         return false;
     }

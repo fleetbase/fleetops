@@ -11,7 +11,7 @@ class BulkDispatchRequest extends FleetbaseRequest
      *
      * @return bool
      */
-    public function authorize()
+    public function authorize(): bool
     {
         return $this->session()->has('user');
     }

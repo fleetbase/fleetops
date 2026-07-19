@@ -13,7 +13,7 @@ class CreateOrderConfigRequest extends FleetbaseRequest
      *
      * @return bool
      */
-    public function authorize()
+    public function authorize(): bool
     {
         return Auth::can('fleet-ops create order-config');
     }

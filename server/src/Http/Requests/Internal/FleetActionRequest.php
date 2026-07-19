@@ -12,7 +12,7 @@ class FleetActionRequest extends FleetbaseRequest
      *
      * @return bool
      */
-    public function authorize()
+    public function authorize(): bool
     {
         $action = $this->route()->getActionMethod();
 

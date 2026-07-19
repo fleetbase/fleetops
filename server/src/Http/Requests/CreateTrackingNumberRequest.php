@@ -12,7 +12,7 @@ class CreateTrackingNumberRequest extends FleetbaseRequest
      *
      * @return bool
      */
-    public function authorize()
+    public function authorize(): bool
     {
         return request()->session()->has('api_credential');
     }

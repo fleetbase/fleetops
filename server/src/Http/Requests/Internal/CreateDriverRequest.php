@@ -15,7 +15,7 @@ class CreateDriverRequest extends CreateDriverApiRequest
      *
      * @return bool
      */
-    public function authorize()
+    public function authorize(): bool
     {
         return Auth::can('fleet-ops create driver');
     }

@@ -11,7 +11,7 @@ class UpdateDriverRequest extends CreateDriverRequest
      *
      * @return bool
      */
-    public function authorize()
+    public function authorize(): bool
     {
         return Auth::can('fleet-ops update driver');
     }
