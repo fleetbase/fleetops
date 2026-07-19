@@ -7,6 +7,49 @@ use Fleetbase\FleetOps\Support\Telematics\TelematicProviderRegistry;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Cache;
 
+class FleetOpsCommandCacheFake
+{
+    public function __construct(private FleetOpsCommandLockFake $lock)
+    {
+    }
+
+    public function lock($key, $seconds)
+    {
+        return $this->lock;
+    }
+}
+
+class FleetOpsCommandLockFake
+{
+    public bool $released = false;
+
+    public function __construct(private bool $locked)
+    {
+    }
+
+    public function get(): bool
+    {
+        return $this->locked;
+    }
+
+    public function release(): void
+    {
+        $this->released = true;
+    }
+}
+
+class FleetOpsTelematicProviderRegistryFake extends TelematicProviderRegistry
+{
+    public function __construct(private Illuminate\Support\Collection $providers)
+    {
+    }
+
+    public function all(): Illuminate\Support\Collection
+    {
+        return $this->providers;
+    }
+}
+
 function fleetOpsSyncTelematicsCommandWithOptions(array $options = []): SyncTelematics
 {
     return new class($options) extends SyncTelematics {
@@ -35,29 +78,19 @@ function fleetOpsSyncTelematicsCommandWithOptions(array $options = []): SyncTele
 }
 
 test('sync telematics exits cleanly when another process holds the lock', function () {
-    $lock = Mockery::mock();
-    $lock->shouldReceive('get')->once()->andReturnFalse();
-    $lock->shouldNotReceive('release');
+    $lock = new FleetOpsCommandLockFake(false);
+    Cache::swap(new FleetOpsCommandCacheFake($lock));
 
-    Cache::shouldReceive('lock')
-        ->once()
-        ->with('fleetops:sync-telematics', 600)
-        ->andReturn($lock);
-
-    $registry = Mockery::mock(TelematicProviderRegistry::class);
-    $registry->shouldNotReceive('all');
-
+    $registry = new FleetOpsTelematicProviderRegistryFake(collect());
     $command = fleetOpsSyncTelematicsCommandWithOptions(['no-lock' => false]);
 
     expect($command->handle($registry))->toBe(Command::SUCCESS)
-        ->and($command->messages)->toContain(['warn', 'Another telematics sync run appears to be in progress.']);
+        ->and($command->messages)->toContain(['warn', 'Another telematics sync run appears to be in progress.'])
+        ->and($lock->released)->toBeFalse();
 });
 
 test('sync telematics reports no pollable providers after provider filtering', function () {
-    $registry = Mockery::mock(TelematicProviderRegistry::class);
-    $registry->shouldReceive('all')
-        ->once()
-        ->andReturn(collect([
+    $registry = new FleetOpsTelematicProviderRegistryFake(collect([
             'webhook' => new TelematicProviderDescriptor([
                 'key'                => 'webhook',
                 'label'              => 'Webhook Provider',
@@ -82,10 +115,7 @@ test('sync telematics reports no pollable providers after provider filtering', f
 });
 
 test('sync telematics filters requested pollable providers', function () {
-    $registry = Mockery::mock(TelematicProviderRegistry::class);
-    $registry->shouldReceive('all')
-        ->once()
-        ->andReturn(collect([
+    $registry = new FleetOpsTelematicProviderRegistryFake(collect([
             'afaqy' => new TelematicProviderDescriptor([
                 'key'                => 'afaqy',
                 'label'              => 'Afaqy',

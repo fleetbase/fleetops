@@ -6,13 +6,90 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Cache;
 
+class FleetOpsTaggedCacheFake
+{
+    public array $calls = [];
+
+    public function __construct(private mixed $rememberValue = null, private bool $throwOnFlush = false)
+    {
+    }
+
+    public function remember($key, $ttl, Closure $callback)
+    {
+        $this->calls[] = ['remember', $key, $ttl];
+
+        return $this->rememberValue ?? $callback();
+    }
+
+    public function flush()
+    {
+        $this->calls[] = ['flush'];
+
+        if ($this->throwOnFlush) {
+            throw new RuntimeException('tagged cache is unavailable');
+        }
+    }
+}
+
+class FleetOpsLiveCacheFake
+{
+    public array $gets = [];
+    public array $increments = [];
+    public array $tags = [];
+    public ?FleetOpsTaggedCacheFake $taggedCache = null;
+    public bool $throwOnTags = false;
+
+    public function get($key, $default = null)
+    {
+        $this->gets[] = [$key, $default];
+
+        return match ($key) {
+            'live:company-1:orders:version' => 3,
+            'live:company-1:drivers:version' => 2,
+            default => $default,
+        };
+    }
+
+    public function increment($key)
+    {
+        $this->increments[] = $key;
+
+        return count($this->increments);
+    }
+
+    public function tags(array $tags)
+    {
+        $this->tags[] = $tags;
+
+        if ($this->throwOnTags) {
+            throw new RuntimeException('tagged cache is unavailable');
+        }
+
+        return $this->taggedCache ??= new FleetOpsTaggedCacheFake();
+    }
+}
+
+class FleetOpsDriverScopeBuilderFake extends Builder
+{
+    public array $whereHas = [];
+
+    public function __construct()
+    {
+    }
+
+    public function whereHas($relation, ?Closure $callback = null, $operator = '>=', $count = 1)
+    {
+        $this->whereHas[] = [$relation, $callback, $operator, $count];
+
+        return $this;
+    }
+}
+
 test('live cache service builds company scoped keys and tags', function () {
     session(['company' => 'company-1']);
 
-    Cache::shouldReceive('get')
-        ->once()
-        ->with('live:company-1:orders:version', 0)
-        ->andReturn(3);
+    $cache = new FleetOpsLiveCacheFake();
+    Cache::swap($cache);
 
     $params = ['active' => true, 'bounds' => [1, 2, 3, 4]];
 
@@ -22,101 +99,83 @@ test('live cache service builds company scoped keys and tags', function () {
         ->and(LiveCacheService::getEndpointTags('orders'))->toBe([
             'live:company-1',
             'live:company-1:orders',
-        ]);
+        ])
+        ->and($cache->gets)->toBe([['live:company-1:orders:version', 0]]);
 });
 
 test('live cache service increments versions and remembers tagged values', function () {
     session(['company' => 'company-1']);
 
-    $taggedCache = Mockery::mock();
-    $taggedCache->shouldReceive('remember')
-        ->once()
-        ->with('live:company-1:drivers:v2:' . md5(json_encode(['limit' => 25])), 45, Mockery::type(Closure::class))
-        ->andReturnUsing(fn ($key, $ttl, Closure $callback) => $callback());
-
-    Cache::shouldReceive('increment')
-        ->once()
-        ->with('live:company-1:drivers:version')
-        ->andReturn(2);
-    Cache::shouldReceive('get')
-        ->once()
-        ->with('live:company-1:drivers:version', 0)
-        ->andReturn(2);
-    Cache::shouldReceive('tags')
-        ->once()
-        ->with(['live:company-1', 'live:company-1:drivers'])
-        ->andReturn($taggedCache);
+    $cache              = new FleetOpsLiveCacheFake();
+    $cache->taggedCache = new FleetOpsTaggedCacheFake();
+    Cache::swap($cache);
 
     expect(LiveCacheService::incrementVersion('drivers'))->toBe(2)
         ->and(LiveCacheService::remember('drivers', ['limit' => 25], fn () => ['fresh' => true], 45))->toBe([
             'fresh' => true,
+        ])
+        ->and($cache->increments)->toBe(['live:company-1:drivers:version'])
+        ->and($cache->tags)->toBe([['live:company-1', 'live:company-1:drivers']])
+        ->and($cache->taggedCache->calls)->toBe([
+            ['remember', 'live:company-1:drivers:v2:' . md5(json_encode(['limit' => 25])), 45],
         ]);
 });
 
 test('live cache service invalidates endpoints with version bumps and optional tag flushes', function () {
     session(['company' => 'company-1']);
 
-    $taggedCache = Mockery::mock();
-    $taggedCache->shouldReceive('flush')->once();
-
-    Cache::shouldReceive('increment')
-        ->once()
-        ->with('live:company-1:vehicles:version')
-        ->andReturn(4);
-    Cache::shouldReceive('tags')
-        ->once()
-        ->with(['live:company-1', 'live:company-1:vehicles'])
-        ->andReturn($taggedCache);
+    $cache              = new FleetOpsLiveCacheFake();
+    $cache->taggedCache = new FleetOpsTaggedCacheFake();
+    Cache::swap($cache);
 
     LiveCacheService::invalidate('vehicles');
+
+    expect($cache->increments)->toBe(['live:company-1:vehicles:version'])
+        ->and($cache->tags)->toBe([['live:company-1', 'live:company-1:vehicles']])
+        ->and($cache->taggedCache->calls)->toBe([['flush']]);
 });
 
 test('live cache service invalidates all endpoints and ignores unsupported tag flushes', function () {
     session(['company' => 'company-1']);
 
-    $endpoints = ['orders', 'routes', 'coordinates', 'drivers', 'vehicles', 'places', 'operations-monitor'];
-
-    foreach ($endpoints as $index => $endpoint) {
-        Cache::shouldReceive('increment')
-            ->once()
-            ->with("live:company-1:{$endpoint}:version")
-            ->andReturn($index + 1);
-    }
-
-    Cache::shouldReceive('tags')
-        ->once()
-        ->with(['live:company-1'])
-        ->andThrow(new RuntimeException('tagged cache is unavailable'));
+    $cache              = new FleetOpsLiveCacheFake();
+    $cache->throwOnTags = true;
+    Cache::swap($cache);
 
     LiveCacheService::invalidate();
+
+    expect($cache->increments)->toBe([
+        'live:company-1:orders:version',
+        'live:company-1:routes:version',
+        'live:company-1:coordinates:version',
+        'live:company-1:drivers:version',
+        'live:company-1:vehicles:version',
+        'live:company-1:places:version',
+        'live:company-1:operations-monitor:version',
+    ])->and($cache->tags)->toBe([['live:company-1']]);
 });
 
 test('live cache service invalidates multiple endpoints and ignores tag flush failures', function () {
     session(['company' => 'company-1']);
 
-    foreach (['orders', 'drivers'] as $index => $endpoint) {
-        Cache::shouldReceive('increment')
-            ->once()
-            ->with("live:company-1:{$endpoint}:version")
-            ->andReturn($index + 1);
-    }
-
-    Cache::shouldReceive('tags')
-        ->once()
-        ->with(['live:company-1', 'live:company-1:orders'])
-        ->andThrow(new RuntimeException('tagged cache is unavailable'));
+    $cache              = new FleetOpsLiveCacheFake();
+    $cache->throwOnTags = true;
+    Cache::swap($cache);
 
     LiveCacheService::invalidateMultiple(['orders', 'drivers']);
+
+    expect($cache->increments)->toBe([
+        'live:company-1:orders:version',
+        'live:company-1:drivers:version',
+    ])->and($cache->tags)->toBe([['live:company-1', 'live:company-1:orders']]);
 });
 
 test('driver scope requires an active user relationship', function () {
-    $builder = Mockery::mock(Builder::class);
-    $model   = Mockery::mock(Model::class);
+    $builder = new FleetOpsDriverScopeBuilderFake();
+    $model   = new class extends Model {
+    };
 
-    $builder->shouldReceive('whereHas')
-        ->once()
-        ->with('user')
-        ->andReturnSelf();
-
-    expect((new DriverScope())->apply($builder, $model))->toBeNull();
+    expect((new DriverScope())->apply($builder, $model))->toBeNull()
+        ->and($builder->whereHas)->toHaveCount(1)
+        ->and($builder->whereHas[0][0])->toBe('user');
 });
