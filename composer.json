@@ -90,6 +90,10 @@
             "@test:coverage:clover",
             "@coverage:summary"
         ],
+        "coverage:check": [
+            "@test:coverage:clover",
+            "php scripts/coverage-summary.php coverage/clover.xml --fail-under=100"
+        ],
         "coverage:summary": "php scripts/coverage-summary.php coverage/clover.xml",
         "lint": "php-cs-fixer fix -v",
         "test:lint": "php-cs-fixer fix -v --dry-run",
