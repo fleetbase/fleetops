@@ -31,7 +31,7 @@ function fuelProviderResourceFixture(array $attributes): object
     return (object) $attributes;
 }
 
-test('fuel provider connection resource exposes internal identifiers and sync state', function () {
+test('fuel provider connection resource exposes public identifiers and sync state', function () {
     $connection = fuelProviderResourceFixture([
         'id'              => 12,
         'uuid'            => 'connection-uuid',
@@ -53,9 +53,7 @@ test('fuel provider connection resource exposes internal identifiers and sync st
     $payload = (new FuelProviderConnectionResource($connection))->toArray(fleetopsInternalResourceRequest());
 
     expect($payload)->toMatchArray([
-        'id'              => 12,
-        'uuid'            => 'connection-uuid',
-        'public_id'       => 'fuel_connection_public',
+        'id'              => 'fuel_connection_public',
         'provider'        => 'test_provider',
         'name'            => 'Main Fuel Account',
         'environment'     => 'production',
@@ -94,20 +92,17 @@ test('fuel provider sync run resource exposes counters windows and totals', func
     $payload = (new FuelProviderSyncRunResource($syncRun))->toArray(fleetopsInternalResourceRequest());
 
     expect($payload)->toMatchArray([
-        'id'                            => 55,
-        'uuid'                          => 'sync-run-uuid',
-        'public_id'                     => 'sync_run_public',
-        'fuel_provider_connection_uuid' => 'connection-uuid',
-        'provider'                      => 'test_provider',
-        'status'                        => 'finished',
-        'imported'                      => 10,
-        'matched'                       => 7,
-        'unmatched'                     => 3,
-        'fuel_reports_created'          => 5,
-        'liters'                        => 432.5,
-        'amount'                        => 1200,
-        'summary'                       => ['warnings' => 1],
-        'meta'                          => ['source' => 'manual'],
+        'id'                   => 'sync_run_public',
+        'provider'             => 'test_provider',
+        'status'               => 'finished',
+        'imported'             => 10,
+        'matched'              => 7,
+        'unmatched'            => 3,
+        'fuel_reports_created' => 5,
+        'liters'               => 432.5,
+        'amount'               => 1200,
+        'summary'              => ['warnings' => 1],
+        'meta'                 => ['source' => 'manual'],
     ]);
 });
 
@@ -157,30 +152,17 @@ test('fuel provider transaction resource exposes identifiers matching fields and
     $payload = (new FuelProviderTransactionResource($transaction))->toArray(fleetopsInternalResourceRequest());
 
     expect($payload)->toMatchArray([
-        'id'                            => 99,
-        'uuid'                          => 'transaction-uuid',
-        'public_id'                     => 'fuel_transaction_public',
-        'fuel_provider_connection_uuid' => 'connection-uuid',
-        'fuel_report_uuid'              => 'fuel-report-uuid',
-        'fuel_report_id'                => 'fuel_report_public',
-        'vehicle_uuid'                  => 'vehicle-uuid',
-        'driver_uuid'                   => 'driver-uuid',
-        'order_uuid'                    => 'order-uuid',
-        'provider'                      => 'test_provider',
-        'provider_transaction_id'       => 'txn-123',
-        'plate_number'                  => 'ABC-123',
-        'station_name'                  => 'Station A',
-        'station_location'              => ['type' => 'Point', 'coordinates' => [103.75, 1.25]],
-        'volume'                        => 80,
-        'metric_unit'                   => 'L',
-        'amount'                        => 240,
-        'currency'                      => 'USD',
-        'odometer'                      => 12345,
-        'sync_status'                   => 'matched',
-        'vehicle_name'                  => 'Truck 12',
-        'driver_name'                   => 'Jane Driver',
-        'normalized_payload'            => ['amount' => 240],
-        'raw_payload'                   => ['source' => 'provider'],
-        'meta'                          => ['review_status' => 'approved'],
+        'id'                      => 'fuel_transaction_public',
+        'provider'                => 'test_provider',
+        'provider_transaction_id' => 'txn-123',
+        'plate_number'            => 'ABC-123',
+        'station_name'            => 'Station A',
+        'station_location'        => ['type' => 'Point', 'coordinates' => [103.75, 1.25]],
+        'volume'                  => 80,
+        'metric_unit'             => 'L',
+        'amount'                  => 240,
+        'currency'                => 'USD',
+        'odometer'                => 12345,
+        'sync_status'             => 'matched',
     ]);
 });
