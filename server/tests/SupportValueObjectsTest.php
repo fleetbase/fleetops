@@ -1,12 +1,22 @@
 <?php
 
-use Fleetbase\FleetOps\Casts\Point;
-use Fleetbase\FleetOps\Contracts\TelematicProviderDescriptor;
-use Fleetbase\FleetOps\Support\Encoding\Polyline;
-use Fleetbase\FleetOps\Support\FuelProviders\FuelProviderDescriptor;
-use Fleetbase\FleetOps\Tracking\TrackingProviderCapabilities;
+namespace Fleetbase\Support {
+    if (!function_exists('Fleetbase\Support\url')) {
+        function url($path = ''): string
+        {
+            return 'https://api.test/' . ltrim((string) $path, '/');
+        }
+    }
+}
 
-test('fuel provider descriptors apply defaults and serialize configured metadata', function () {
+namespace {
+    use Fleetbase\FleetOps\Casts\Point;
+    use Fleetbase\FleetOps\Contracts\TelematicProviderDescriptor;
+    use Fleetbase\FleetOps\Support\Encoding\Polyline;
+    use Fleetbase\FleetOps\Support\FuelProviders\FuelProviderDescriptor;
+    use Fleetbase\FleetOps\Tracking\TrackingProviderCapabilities;
+
+    test('fuel provider descriptors apply defaults and serialize configured metadata', function () {
     $descriptor = new FuelProviderDescriptor([
         'key'                => 'fleet_card',
         'description'        => 'Fleet card transactions.',
@@ -126,6 +136,7 @@ test('polyline encoding round trips flattened and paired coordinate lists', func
         ->and(Polyline::pair('not a list'))->toBe([]);
 });
 
-class TestTelematicDriver
-{
+    class TestTelematicDriver
+    {
+    }
 }
