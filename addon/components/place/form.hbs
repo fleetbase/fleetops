@@ -37,7 +37,7 @@
                 <ModelCoordinatesInput @model={{@resource}} @disabled={{cannot-write @resource}} @autocomplete="all" @onInputReady={{fn (mut this.coordinatesInput)}} />
             </InputGroup>
             <InputGroup @name={{t "place.fields.phone"}} @wrapperClass="col-span-2">
-                <PhoneInput @value={{@resource.phone}} @autocomplete="nope" @onInput={{this.phone}} disabled={{cannot-write @resource}} class="form-input w-full" />
+                <PhoneInput @value={{@resource.phone}} @autocomplete="nope" @onInput={{fn (mut @resource.phone)}} disabled={{cannot-write @resource}} class="form-input w-full" />
             </InputGroup>
         </div>
     </ContentPanel>
