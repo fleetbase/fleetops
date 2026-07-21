@@ -34,11 +34,31 @@ class Geocoding
      *
      * @throws \Exception
      */
+    /**
+     * Retrieve the configured Google Maps locale.
+     */
+    public static function getLocale(): string
+    {
+        return config('services.google_maps.locale', env('GOOGLE_MAPS_LOCALE', 'en'));
+    }
+
+    /**
+     * Geocode a search query to get places.
+     *
+     * @param string     $searchQuery the query to search for
+     * @param float|null $latitude    optional latitude for location-based search
+     * @param float|null $longitude   optional longitude for location-based search
+     *
+     * @return Collection a collection of places
+     *
+     * @throws \Exception
+     */
     public static function geocode(string $searchQuery, $latitude = null, $longitude = null): Collection
     {
         $httpClient = new Client();
-        $provider   = new GoogleMaps($httpClient, null, config('services.google_maps.api_key', env('GOOGLE_MAPS_API_KEY')));
-        $geocoder   = new StatefulGeocoder($provider, 'en');
+        $locale     = static::getLocale();
+        $provider   = new GoogleMaps($httpClient, $locale, config('services.google_maps.api_key', env('GOOGLE_MAPS_API_KEY')));
+        $geocoder   = new StatefulGeocoder($provider, $locale);
 
         try {
             if ($latitude && $longitude) {
@@ -82,8 +102,9 @@ class Geocoding
     public static function reverseFromQuery(string $searchQuery, $latitude, $longitude): Collection
     {
         $httpClient = new Client();
-        $provider   = new GoogleMaps($httpClient, null, config('services.google_maps.api_key', env('GOOGLE_MAPS_API_KEY')));
-        $geocoder   = new StatefulGeocoder($provider, 'en');
+        $locale     = static::getLocale();
+        $provider   = new GoogleMaps($httpClient, $locale, config('services.google_maps.api_key', env('GOOGLE_MAPS_API_KEY')));
+        $geocoder   = new StatefulGeocoder($provider, $locale);
 
         if (empty($searchQuery)) {
             return collect();
@@ -128,8 +149,9 @@ class Geocoding
     public static function reverseFromCoordinates($latitude, $longitude, ?string $searchQuery = null): Collection
     {
         $httpClient = new Client();
-        $provider   = new GoogleMaps($httpClient, null, config('services.google_maps.api_key', env('GOOGLE_MAPS_API_KEY')));
-        $geocoder   = new StatefulGeocoder($provider, 'en');
+        $locale     = static::getLocale();
+        $provider   = new GoogleMaps($httpClient, $locale, config('services.google_maps.api_key', env('GOOGLE_MAPS_API_KEY')));
+        $geocoder   = new StatefulGeocoder($provider, $locale);
 
         if (empty($latitude) && empty($longitude)) {
             return collect();
