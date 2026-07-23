@@ -5,7 +5,6 @@ use Fleetbase\FleetOps\Support\Metrics\OrdersInProgressMetric;
 use Fleetbase\FleetOps\Support\Metrics\Registry;
 use Fleetbase\FleetOps\Support\Metrics\TotalTimeTraveledMetric;
 use Fleetbase\Models\Company;
-use Fleetbase\Models\Transaction;
 use Illuminate\Support\Carbon;
 
 class TestFleetOpsMetric extends AbstractMetric
@@ -27,7 +26,7 @@ class TestFleetOpsMetric extends AbstractMetric
         return 'USD';
     }
 
-    protected function query(?\DateTimeInterface $start, ?\DateTimeInterface $end)
+    protected function query(?DateTimeInterface $start, ?DateTimeInterface $end)
     {
         $this->ranges[] = [
             'start' => $start?->format('Y-m-d'),
@@ -136,7 +135,7 @@ test('earnings use the shared active revenue query', function () {
 test('active revenue query excludes inactive financial and operational lifecycle records', function () {
     $source = file_get_contents(dirname(__DIR__) . '/src/Support/Metrics/ActiveRevenueQuery.php');
 
-    expect($source)->toContain("where('direction', Transaction::DIRECTION_CREDIT)");
+    expect($source)->toContain("where('direction', self::CREDIT_DIRECTION)");
     expect($source)->toContain("whereIn('status', self::ACTIVE_STATUSES)");
     expect($source)->toContain("whereNull('voided_at')");
     expect($source)->toContain("whereNull('reversed_at')");
@@ -145,7 +144,8 @@ test('active revenue query excludes inactive financial and operational lifecycle
     expect($source)->toContain('excludeInactiveInvoices');
     expect($source)->toContain('ledger_invoices.deleted_at');
     expect($source)->toContain('orders.deleted_at');
-    expect(Fleetbase\FleetOps\Support\Metrics\ActiveRevenueQuery::ACTIVE_STATUSES)->toBe([Transaction::STATUS_SUCCESS]);
+    expect(Fleetbase\FleetOps\Support\Metrics\ActiveRevenueQuery::CREDIT_DIRECTION)->toBe('credit');
+    expect(Fleetbase\FleetOps\Support\Metrics\ActiveRevenueQuery::ACTIVE_STATUSES)->toBe(['success']);
     expect(Fleetbase\FleetOps\Support\Metrics\ActiveRevenueQuery::ACTIVE_STATUSES)->not->toContain('completed');
     expect(Fleetbase\FleetOps\Support\Metrics\ActiveRevenueQuery::ACTIVE_STATUSES)->not->toContain('paid');
 });

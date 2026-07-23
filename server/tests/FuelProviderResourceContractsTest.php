@@ -20,7 +20,7 @@ class FleetOpsResourceRouteFixture
 function fleetopsInternalResourceRequest(): Request
 {
     $request = Request::create('/int/v1/fleet-ops/resource-test', 'GET');
-    $request->setRouteResolver(fn () => new FleetOpsResourceRouteFixture('int/v1/fleet-ops/resource-test'));
+    $request->setRouteResolver(fn () => new FleetOpsResourceRouteFixture('api/int/v1/fleet-ops/resource-test'));
     app()->instance('request', $request);
 
     return $request;
@@ -53,7 +53,8 @@ test('fuel provider connection resource exposes public identifiers and sync stat
     $payload = (new FuelProviderConnectionResource($connection))->toArray(fleetopsInternalResourceRequest());
 
     expect($payload)->toMatchArray([
-        'id'              => 'fuel_connection_public',
+        'id'              => 12,
+        'public_id'       => 'fuel_connection_public',
         'provider'        => 'test_provider',
         'name'            => 'Main Fuel Account',
         'environment'     => 'production',
@@ -92,7 +93,8 @@ test('fuel provider sync run resource exposes counters windows and totals', func
     $payload = (new FuelProviderSyncRunResource($syncRun))->toArray(fleetopsInternalResourceRequest());
 
     expect($payload)->toMatchArray([
-        'id'                   => 'sync_run_public',
+        'id'                   => 55,
+        'public_id'            => 'sync_run_public',
         'provider'             => 'test_provider',
         'status'               => 'finished',
         'imported'             => 10,
@@ -152,7 +154,8 @@ test('fuel provider transaction resource exposes identifiers matching fields and
     $payload = (new FuelProviderTransactionResource($transaction))->toArray(fleetopsInternalResourceRequest());
 
     expect($payload)->toMatchArray([
-        'id'                      => 'fuel_transaction_public',
+        'id'                      => 99,
+        'public_id'               => 'fuel_transaction_public',
         'provider'                => 'test_provider',
         'provider_transaction_id' => 'txn-123',
         'plate_number'            => 'ABC-123',

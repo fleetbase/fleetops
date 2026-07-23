@@ -33,12 +33,12 @@ class FleetOpsTaggedCacheFake
 
 class FleetOpsLiveCacheFake
 {
-    public array $gets = [];
-    public array $increments = [];
-    public array $tags = [];
+    public array $gets                           = [];
+    public array $increments                     = [];
+    public array $tags                           = [];
     public ?FleetOpsTaggedCacheFake $taggedCache = null;
-    public bool $throwOnTags = false;
-    private array $versions = [
+    public bool $throwOnTags                     = false;
+    private array $versions                      = [
         'live:company-1:orders:version'  => 3,
         'live:company-1:drivers:version' => 1,
     ];
@@ -86,6 +86,10 @@ class FleetOpsDriverScopeBuilderFake extends Builder
         return $this;
     }
 }
+
+afterEach(function () {
+    Cache::swap(new Illuminate\Cache\Repository(new Illuminate\Cache\ArrayStore()));
+});
 
 test('live cache service builds company scoped keys and tags', function () {
     session(['company' => 'company-1']);

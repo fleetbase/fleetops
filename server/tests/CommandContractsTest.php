@@ -83,7 +83,7 @@ test('sync telematics exits cleanly when another process holds the lock', functi
     Cache::swap(new FleetOpsCommandCacheFake($lock));
 
     $registry = new FleetOpsTelematicProviderRegistryFake(collect());
-    $command = fleetOpsSyncTelematicsCommandWithOptions(['no-lock' => false]);
+    $command  = fleetOpsSyncTelematicsCommandWithOptions(['no-lock' => false]);
 
     expect($command->handle($registry))->toBe(Command::SUCCESS)
         ->and($command->messages)->toContain(['warn', 'Another telematics sync run appears to be in progress.'])
@@ -92,18 +92,18 @@ test('sync telematics exits cleanly when another process holds the lock', functi
 
 test('sync telematics reports no pollable providers after provider filtering', function () {
     $registry = new FleetOpsTelematicProviderRegistryFake(collect([
-            'webhook' => new TelematicProviderDescriptor([
-                'key'                => 'webhook',
-                'label'              => 'Webhook Provider',
-                'supports_webhooks'  => true,
-                'supports_discovery' => true,
-            ]),
-            'manual' => new TelematicProviderDescriptor([
-                'key'                => 'manual',
-                'label'              => 'Manual Provider',
-                'supports_discovery' => false,
-            ]),
-        ]));
+        'webhook' => new TelematicProviderDescriptor([
+            'key'                => 'webhook',
+            'label'              => 'Webhook Provider',
+            'supports_webhooks'  => true,
+            'supports_discovery' => true,
+        ]),
+        'manual' => new TelematicProviderDescriptor([
+            'key'                => 'manual',
+            'label'              => 'Manual Provider',
+            'supports_discovery' => false,
+        ]),
+    ]));
 
     $command = fleetOpsSyncTelematicsCommandWithOptions([
         'no-lock'                   => true,
@@ -117,23 +117,23 @@ test('sync telematics reports no pollable providers after provider filtering', f
 
 test('sync telematics filters requested pollable providers', function () {
     $registry = new FleetOpsTelematicProviderRegistryFake(collect([
-            'afaqy' => new TelematicProviderDescriptor([
-                'key'                => 'afaqy',
-                'label'              => 'Afaqy',
-                'supports_discovery' => true,
-            ]),
-            'samsara' => new TelematicProviderDescriptor([
-                'key'                => 'samsara',
-                'label'              => 'Samsara',
-                'supports_discovery' => true,
-            ]),
-            'webhook_only' => new TelematicProviderDescriptor([
-                'key'                => 'webhook_only',
-                'label'              => 'Webhook Only',
-                'supports_webhooks'  => true,
-                'supports_discovery' => true,
-            ]),
-        ]));
+        'afaqy' => new TelematicProviderDescriptor([
+            'key'                => 'afaqy',
+            'label'              => 'Afaqy',
+            'supports_discovery' => true,
+        ]),
+        'samsara' => new TelematicProviderDescriptor([
+            'key'                => 'samsara',
+            'label'              => 'Samsara',
+            'supports_discovery' => true,
+        ]),
+        'webhook_only' => new TelematicProviderDescriptor([
+            'key'                => 'webhook_only',
+            'label'              => 'Webhook Only',
+            'supports_webhooks'  => true,
+            'supports_discovery' => true,
+        ]),
+    ]));
 
     $command = fleetOpsSyncTelematicsCommandWithOptions([
         'provider'                  => ['samsara', 'webhook_only'],

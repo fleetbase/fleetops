@@ -5,8 +5,8 @@ use Fleetbase\FleetOps\Models\Order;
 use Fleetbase\FleetOps\Models\Payload;
 use Fleetbase\FleetOps\Models\Place;
 use Fleetbase\FleetOps\Tracking\Providers\CalculatedTrackingProvider;
-use Fleetbase\FleetOps\Tracking\TrackingContext;
 use Fleetbase\FleetOps\Tracking\Support\FakeTrackingProvider;
+use Fleetbase\FleetOps\Tracking\TrackingContext;
 use Fleetbase\FleetOps\Tracking\TrackingContextBuilder;
 use Fleetbase\FleetOps\Tracking\TrackingOptions;
 use Fleetbase\FleetOps\Tracking\TrackingProviderManager;
@@ -150,7 +150,7 @@ test('calculated provider requires enough route points and guards minimum speed'
         driverLocationAgeSeconds: null,
     );
     $provider = new CalculatedTrackingProvider();
-    $method = new ReflectionMethod($provider, 'durationFromDistance');
+    $method   = new ReflectionMethod($provider, 'durationFromDistance');
     $method->setAccessible(true);
 
     expect($provider->key())->toBe('calculated')
@@ -236,7 +236,7 @@ test('provider manager returns none result with accumulated warnings when provid
 
 test('provider manager normalizes and deduplicates provider order', function () {
     $manager = new TrackingProviderManager(new TrackingProviderRegistry());
-    $method = new ReflectionMethod($manager, 'providerOrder');
+    $method  = new ReflectionMethod($manager, 'providerOrder');
     $method->setAccessible(true);
 
     $order = $method->invoke($manager, TrackingOptions::fromArray([

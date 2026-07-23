@@ -36,7 +36,7 @@ class FleetOpsExpansionRelationFake
 
 class FleetOpsExpansionModelFake
 {
-    public array $calls = [];
+    public array $calls     = [];
     public array $relations = [];
 
     public function __construct()
@@ -148,7 +148,7 @@ test('company expansion exposes driver relationship contract', function () {
     $company = new FleetOpsExpansionModelFake();
     $drivers = bindFleetOpsExpansionClosure(CompanyExpansion::drivers(), $company);
 
-    expect(CompanyExpansion::target())->toBe(\Fleetbase\Models\Company::class)
+    expect(CompanyExpansion::target())->toBe(Fleetbase\Models\Company::class)
         ->and($drivers())->toBe($company->relations['driverProfiles'])
         ->and($company->calls)->toBe([['hasMany', Driver::class]]);
 });
@@ -161,7 +161,7 @@ test('user expansion exposes driver and customer relationship contracts', functi
     $customer       = bindFleetOpsExpansionClosure(UserExpansion::customer(), $user);
     $contact        = bindFleetOpsExpansionClosure(UserExpansion::contact(), $user);
 
-    expect(UserExpansion::target())->toBe(\Fleetbase\Models\User::class)
+    expect(UserExpansion::target())->toBe(Fleetbase\Models\User::class)
         ->and($driver())->toBe($user->relations['driver'])
         ->and($driverProfiles())->toBe($user->relations['driverProfiles'])
         ->and($customer())->toBe($user->relations['customer'])
@@ -177,7 +177,7 @@ test('user expansion exposes driver and customer relationship contracts', functi
 test('user expansion filters current driver session to the active company', function () {
     session(['company' => 'company-uuid']);
 
-    $user = new FleetOpsExpansionModelFake();
+    $user                 = new FleetOpsExpansionModelFake();
     $currentDriverSession = bindFleetOpsExpansionClosure(UserExpansion::currentDriverSession(), $user);
 
     expect($currentDriverSession())->toBe($user->relations['driver'])
@@ -195,7 +195,7 @@ test('user filter expansion applies simple user type filters', function () {
     bindFleetOpsExpansionClosure(UserFilterExpansion::isCustomer(), $filter)();
     bindFleetOpsExpansionClosure(UserFilterExpansion::canBeDriver(), $filter)();
 
-    expect(UserFilterExpansion::target())->toBe(\Fleetbase\Http\Filter\UserFilter::class)
+    expect(UserFilterExpansion::target())->toBe(Fleetbase\Http\Filter\UserFilter::class)
         ->and($builder->calls)->toBe([
             ['where', 'type', 'customer', null],
             ['whereIn', 'type', ['user', 'admin']],

@@ -25,6 +25,45 @@ if (class_exists('Illuminate\Container\Container') && class_exists('Illuminate\S
     $app = Illuminate\Container\Container::getInstance();
     Illuminate\Support\Facades\Facade::setFacadeApplication($app);
 
+    if (!$app->bound('config') && class_exists('Illuminate\Config\Repository')) {
+        $app->singleton('config', fn () => new Illuminate\Config\Repository([
+            'fleetops'   => [],
+            'services'   => [],
+            'telematics' => [],
+        ]));
+    }
+
+    if (!$app->bound(Illuminate\Contracts\Routing\ResponseFactory::class)) {
+        $responseFactory = new class {
+            public function json(mixed $data = [], int $status = 200): mixed
+            {
+                if (class_exists('Illuminate\Http\JsonResponse')) {
+                    return new Illuminate\Http\JsonResponse($data, $status);
+                }
+
+                return new class($data, $status) {
+                    public function __construct(public mixed $data, public int $status)
+                    {
+                    }
+
+                    public function getStatusCode(): int
+                    {
+                        return $this->status;
+                    }
+                };
+            }
+
+            public function error(mixed $error = null, int $status = 500): mixed
+            {
+                return $this->json(['error' => $error], $status);
+            }
+        };
+
+        $app->instance(Illuminate\Contracts\Routing\ResponseFactory::class, $responseFactory);
+        $app->instance('Illuminate\Contracts\Routing\ResponseFactory', $responseFactory);
+        $app->instance('response', $responseFactory);
+    }
+
     if (!$app->bound('http') && class_exists('Illuminate\Http\Client\Factory')) {
         $app->singleton('http', fn () => new Illuminate\Http\Client\Factory());
     }
@@ -64,6 +103,16 @@ if (!function_exists('app')) {
 if (!function_exists('request')) {
     function request(?string $key = null, mixed $default = null): mixed
     {
+        if (class_exists('Illuminate\Container\Container')) {
+            $container = Illuminate\Container\Container::getInstance();
+
+            if ($container->bound('request')) {
+                $request = $container->make('request');
+
+                return $key === null ? $request : $request->input($key, $default);
+            }
+        }
+
         $request = class_exists('Illuminate\Http\Request') ? Illuminate\Http\Request::create('/') : new stdClass();
 
         return $key === null ? $request : $default;
@@ -81,7 +130,9 @@ if (!function_exists('response')) {
                 }
 
                 return new class($data, $status) {
-                    public function __construct(public mixed $data, public int $status) {}
+                    public function __construct(public mixed $data, public int $status)
+                    {
+                    }
 
                     public function getStatusCode(): int
                     {
@@ -136,8 +187,20 @@ if (!trait_exists('Illuminate\Foundation\Validation\ValidatesRequests')) {
     eval('namespace Illuminate\Foundation\Validation; trait ValidatesRequests {}');
 }
 
+if (!trait_exists('Fleetbase\Traits\HasApiModelCache')) {
+    eval('namespace Fleetbase\Traits; trait HasApiModelCache {}');
+}
+
+if (!trait_exists('Fleetbase\Traits\HasCustomFields')) {
+    eval('namespace Fleetbase\Traits; trait HasCustomFields {}');
+}
+
 if (!class_exists('Illuminate\Foundation\Http\FormRequest') && class_exists('Illuminate\Http\Request')) {
     eval('namespace Illuminate\Foundation\Http; class FormRequest extends \Illuminate\Http\Request { public function authorize(): bool { return true; } public function rules(): array { return []; } public function responseWithErrors(\Illuminate\Contracts\Validation\Validator $validator) { return $validator; } }');
+}
+
+if (!class_exists('Fleetbase\Models\ScheduleItem') && class_exists('Fleetbase\Models\Model')) {
+    eval('namespace Fleetbase\Models; class ScheduleItem extends Model {}');
 }
 
 if (!interface_exists('Fleetbase\Ai\Contracts\AIContextCapabilityInterface')) {

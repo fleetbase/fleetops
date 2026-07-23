@@ -8,9 +8,9 @@ class FleetOpsHosScheduleItemFake extends ScheduleItem
 {
     public int $duration;
     public string $start_at;
-    public ?string $end_at = null;
+    public ?string $end_at         = null;
     public ?string $break_start_at = null;
-    public ?string $break_end_at = null;
+    public ?string $break_end_at   = null;
 }
 
 function invokeFleetOpsHosConstraint(HOSConstraint $constraint, string $method, array $arguments = [])

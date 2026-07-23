@@ -74,7 +74,7 @@ test('top drivers on-time sorting uses a sql aggregate expression', function () 
 test('analytics base resolves shorthand explicit and default periods', function () {
     Carbon::setTestNow(Carbon::parse('2026-07-19 12:00:00'));
 
-    [$start7d, $end7d] = AbstractAnalytics::resolvePeriod('7d', null, null);
+    [$start7d, $end7d]             = AbstractAnalytics::resolvePeriod('7d', null, null);
     [$explicitStart, $explicitEnd] = AbstractAnalytics::resolvePeriod(
         null,
         Carbon::parse('2026-01-01'),
@@ -121,8 +121,8 @@ test('analytics widget fluent options clamp or normalize invalid values', functi
     $groupProperty->setAccessible(true);
 
     $topDrivers = (new TopDrivers())->limit(500)->sortBy('unsupported');
-    $onTime = (new OnTimeDelivery())->slaMinutes(-5);
-    $revenue = (new RevenueTrend())->groupBy('quarter');
+    $onTime     = (new OnTimeDelivery())->slaMinutes(-5);
+    $revenue    = (new RevenueTrend())->groupBy('quarter');
 
     expect($limitProperty->getValue($topDrivers))->toBe(50)
         ->and($sortProperty->getValue($topDrivers))->toBe('orders_completed')

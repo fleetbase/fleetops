@@ -74,7 +74,7 @@ class PetroAppFuelProviderHarness extends PetroAppFuelProvider
 
 function fuelProviderConnection(array $credentials = []): FuelProviderConnection
 {
-    $connection = new FuelProviderConnection();
+    $connection              = new FuelProviderConnection();
     $connection->credentials = $credentials;
 
     return $connection;

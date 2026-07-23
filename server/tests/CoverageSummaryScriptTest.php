@@ -17,11 +17,18 @@ XML;
     file_put_contents($path, $xml);
 }
 
+function coverageSummaryPhpCommand(): string
+{
+    $binary = escapeshellarg(PHP_BINARY);
+
+    return PHP_SAPI === 'phpdbg' ? $binary . ' -qrr' : $binary;
+}
+
 test('coverage summary reports line method class directory and file coverage', function () {
     $fixture = tempnam(sys_get_temp_dir(), 'fleetops-clover-');
     writeCoverageFixture($fixture);
 
-    exec(PHP_BINARY . ' scripts/coverage-summary.php ' . escapeshellarg($fixture), $output, $exitCode);
+    exec(coverageSummaryPhpCommand() . ' scripts/coverage-summary.php ' . escapeshellarg($fixture), $output, $exitCode);
 
     @unlink($fixture);
 
@@ -37,11 +44,10 @@ test('coverage summary fails when coverage is below the configured threshold', f
     $fixture = tempnam(sys_get_temp_dir(), 'fleetops-clover-');
     writeCoverageFixture($fixture, 3, 4);
 
-    exec(PHP_BINARY . ' scripts/coverage-summary.php ' . escapeshellarg($fixture) . ' --fail-under=100 2>&1', $output, $exitCode);
+    exec(coverageSummaryPhpCommand() . ' scripts/coverage-summary.php ' . escapeshellarg($fixture) . ' --fail-under=100 2>&1', $output, $exitCode);
 
     @unlink($fixture);
 
     expect($exitCode)->toBe(1)
         ->and(implode("\n", $output))->toContain('Coverage 75.00% is below the required 100.00% line threshold.');
 });
-

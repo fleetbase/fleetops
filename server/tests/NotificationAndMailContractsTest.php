@@ -11,9 +11,9 @@ use Fleetbase\FleetOps\Notifications\RouteDeviation;
 
 class FleetOpsNotificationOrderFake extends Order
 {
-    public string $uuid = 'order-uuid';
+    public string $uuid      = 'order-uuid';
     public string $public_id = 'order_public';
-    public string $tracking = 'TRACK-123';
+    public string $tracking  = 'TRACK-123';
 }
 
 function notificationTestOrder(): Order
@@ -24,8 +24,8 @@ function notificationTestOrder(): Order
 test('operational alert notifications expose expected channels and database payloads', function () {
     $order = notificationTestOrder();
 
-    $lateDeparture = new LateDeparture($order, ['grace_minutes' => 15]);
-    $routeDeviation = new RouteDeviation($order, ['deviation_meters' => 400]);
+    $lateDeparture     = new LateDeparture($order, ['grace_minutes' => 15]);
+    $routeDeviation    = new RouteDeviation($order, ['deviation_meters' => 400]);
     $prolongedStoppage = new ProlongedStoppage($order, ['stopped_minutes' => 30]);
 
     expect(LateDeparture::$name)->toBe('Late Departure')
@@ -61,11 +61,11 @@ test('work order dispatched mail exposes subject and markdown context', function
         'subject'   => 'Replace brake pads',
     ], true);
     $assignee = (object) ['name' => 'Fleet Vendor'];
-    $target = (object) ['display_name' => 'Truck 12'];
+    $target   = (object) ['display_name' => 'Truck 12'];
     $workOrder->setRelation('assignee', $assignee);
     $workOrder->setRelation('target', $target);
 
-    $mail = new WorkOrderDispatched($workOrder);
+    $mail    = new WorkOrderDispatched($workOrder);
     $content = $mail->content();
 
     expect($mail->workOrder)->toBe($workOrder)
@@ -83,12 +83,12 @@ test('maintenance schedule reminder mail exposes schedule context', function () 
     $schedule->setRawAttributes([
         'name' => 'Quarterly inspection',
     ], true);
-    $subject = (object) ['display_name' => 'Truck 12'];
+    $subject  = (object) ['display_name' => 'Truck 12'];
     $assignee = (object) ['name' => 'Maintenance Vendor'];
     $schedule->setRelation('subject', $subject);
     $schedule->setRelation('defaultAssignee', $assignee);
 
-    $mail = new MaintenanceScheduleReminder($schedule, 7);
+    $mail    = new MaintenanceScheduleReminder($schedule, 7);
     $content = $mail->content();
 
     expect($mail->schedule)->toBe($schedule)

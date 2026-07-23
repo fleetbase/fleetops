@@ -35,7 +35,6 @@ use Fleetbase\FleetOps\Observers\FleetObserver;
 use Fleetbase\FleetOps\Observers\OrderObserver;
 use Fleetbase\FleetOps\Observers\PayloadObserver;
 use Fleetbase\FleetOps\Observers\VehicleObserver;
-use Fleetbase\FleetOps\Providers\EventServiceProvider;
 use Fleetbase\FleetOps\Providers\FleetOpsServiceProvider;
 use Fleetbase\Listeners\SendResourceLifecycleWebhook;
 

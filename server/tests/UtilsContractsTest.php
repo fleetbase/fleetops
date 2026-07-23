@@ -17,7 +17,17 @@ test('utility coordinate validators accept only finite coordinate ranges', funct
 });
 
 test('utility address formatter composes plain text and html addresses without duplicate parts', function () {
-    $place = new \Fleetbase\FleetOps\Models\Place();
+    $place = new class extends Fleetbase\FleetOps\Models\Place {
+        public function __construct()
+        {
+        }
+
+        public function getAttribute($key)
+        {
+            return $this->attributes[$key] ?? null;
+        }
+    };
+
     $place->setRawAttributes([
         'name'         => 'Depot',
         'street1'      => '123 MAIN STREET',

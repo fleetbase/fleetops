@@ -10,7 +10,7 @@ use Fleetbase\FleetOps\Models\Order;
 
 class FlowTestOrder extends Order
 {
-    public array $dynamicValues = [];
+    public array $dynamicValues          = [];
     public array $completedActivityCodes = [];
 
     public function resolveDynamicValue(string $value)
