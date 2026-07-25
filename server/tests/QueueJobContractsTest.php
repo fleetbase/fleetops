@@ -2,7 +2,10 @@
 
 use Fleetbase\FleetOps\Contracts\TelematicProviderInterface;
 use Fleetbase\FleetOps\Jobs\CheckGeofenceDwell;
+use Fleetbase\FleetOps\Jobs\ReplayPositions;
 use Fleetbase\FleetOps\Jobs\SendPositionReplay;
+use Fleetbase\FleetOps\Jobs\SimulateDrivingRoute;
+use Fleetbase\FleetOps\Jobs\SimulateWaypointReached;
 use Fleetbase\FleetOps\Jobs\SyncFuelProviderTransactionsJob;
 use Fleetbase\FleetOps\Jobs\TestTelematicConnectionJob;
 use Fleetbase\FleetOps\Models\Driver;
@@ -15,6 +18,7 @@ use Fleetbase\FleetOps\Models\Zone;
 use Fleetbase\FleetOps\Support\FuelProviders\FuelProviderService;
 use Fleetbase\FleetOps\Support\Telematics\TelematicProviderRegistry;
 use Fleetbase\FleetOps\Support\Telematics\TelematicService;
+use Fleetbase\LaravelMysqlSpatial\Types\Point;
 use Illuminate\Support\Carbon;
 
 class FleetOpsCheckGeofenceDwellProbe extends CheckGeofenceDwell
@@ -93,6 +97,42 @@ class FleetOpsSendPositionReplayProbe extends SendPositionReplay
     protected function logError(string $message): void
     {
         $this->errors[] = $message;
+    }
+}
+
+class FleetOpsReplayPositionsProbe extends ReplayPositions
+{
+    public array $dispatches = [];
+    public array $logs       = [];
+
+    protected function dispatchReplayPosition(Position $position, int|string $index, float $offset)
+    {
+        $this->dispatches[] = [$position->uuid, $index, $offset];
+
+        return null;
+    }
+
+    protected function logInfo(string $message): void
+    {
+        $this->logs[] = $message;
+    }
+}
+
+class FleetOpsSimulateDrivingRouteProbe extends SimulateDrivingRoute
+{
+    public array $made       = [];
+    public array $dispatched = [];
+
+    protected function makeWaypointReachedJob($waypoint, array $additionalData): SimulateWaypointReached
+    {
+        $this->made[] = [$waypoint, $additionalData];
+
+        return new SimulateWaypointReached($this->driver, $waypoint, $additionalData);
+    }
+
+    protected function dispatchWaypointChain($firstWaypoint, array $chain): void
+    {
+        $this->dispatched[] = [$firstWaypoint, $chain];
     }
 }
 
@@ -303,6 +343,17 @@ function fleetOpsReplayPosition(): Position
     return $position;
 }
 
+function fleetOpsReplayPositionAt(string $uuid, string $createdAt): Position
+{
+    $position = fleetOpsReplayPosition();
+    $position->setRawAttributes(array_merge($position->getAttributes(), [
+        'uuid'       => $uuid,
+        'created_at' => Carbon::parse($createdAt),
+    ]), true);
+
+    return $position;
+}
+
 test('check geofence dwell exits for stale state and logs missing subject or geofence', function () {
     $job = new FleetOpsCheckGeofenceDwellProbe('driver-uuid', 'zone-uuid', 'zone');
 
@@ -376,6 +427,57 @@ test('send position replay builds payload sends to socket and logs failures', fu
     expect($job->errors)->toBe([
         'Failed to send replay event [position-uuid]: socket offline',
     ]);
+});
+
+test('replay positions schedules replay jobs using relative offsets and speed floor', function () {
+    Carbon::setTestNow(Carbon::parse('2026-03-01 10:00:00'));
+
+    $positions = collect([
+        fleetOpsReplayPositionAt('position-1', '2026-03-01 10:00:00'),
+        fleetOpsReplayPositionAt('position-2', '2026-03-01 10:00:10'),
+        fleetOpsReplayPositionAt('position-3', '2026-03-01 09:59:55'),
+    ]);
+
+    $job = new FleetOpsReplayPositionsProbe($positions, 'vehicle.vehicle-uuid', 2, 'subject-uuid');
+    $job->handle();
+
+    expect($job->dispatches)->toBe([
+        ['position-1', 0, 0.0],
+        ['position-2', 1, 5.0],
+        ['position-3', 2, 0.0],
+    ])
+        ->and($job->logs)->toBe(['Replay scheduled for 3 positions on channel vehicle.vehicle-uuid']);
+
+    $slow = new FleetOpsReplayPositionsProbe(collect([
+        fleetOpsReplayPositionAt('position-slow-1', '2026-03-01 10:00:00'),
+        fleetOpsReplayPositionAt('position-slow-2', '2026-03-01 10:00:01'),
+    ]), 'vehicle.vehicle-uuid', 0, null);
+    $slow->handle();
+
+    expect($slow->dispatches[1])->toBe(['position-slow-2', 1, 10.0]);
+
+    Carbon::setTestNow();
+});
+
+test('simulate driving route builds waypoint chain and dispatches the first waypoint', function () {
+    $driver = new Driver();
+    $driver->setRawAttributes(['uuid' => 'driver-uuid'], true);
+
+    $first  = new Point(1.30, 103.80);
+    $second = new Point(1.31, 103.81);
+    $third  = new Point(1.32, 103.82);
+
+    $job = new FleetOpsSimulateDrivingRouteProbe($driver, [$first, $second, $third]);
+    $job->handle();
+
+    expect($job->made)->toHaveCount(2)
+        ->and($job->made[0])->toBe([$second, ['index' => 1]])
+        ->and($job->made[1])->toBe([$third, ['index' => 2]])
+        ->and($job->dispatched)->toHaveCount(1)
+        ->and($job->dispatched[0][0])->toBe($first)
+        ->and($job->dispatched[0][1])->toHaveCount(2)
+        ->and($job->dispatched[0][1][1])->toBeInstanceOf(SimulateWaypointReached::class)
+        ->and($job->dispatched[0][1][2])->toBeInstanceOf(SimulateWaypointReached::class);
 });
 
 test('sync fuel provider transactions job passes parsed dates and records failure state', function () {

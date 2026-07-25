@@ -12,6 +12,12 @@ use Fleetbase\FleetOps\Events\FuelReportCreatedFromProvider;
 use Fleetbase\FleetOps\Events\GeofenceDwelled;
 use Fleetbase\FleetOps\Events\GeofenceEntered;
 use Fleetbase\FleetOps\Events\GeofenceExited;
+use Fleetbase\FleetOps\Events\OrderCanceled;
+use Fleetbase\FleetOps\Events\OrderCompleted;
+use Fleetbase\FleetOps\Events\OrderDispatched;
+use Fleetbase\FleetOps\Events\OrderDispatchFailed;
+use Fleetbase\FleetOps\Events\OrderDriverAssigned;
+use Fleetbase\FleetOps\Events\OrderFailed;
 use Fleetbase\FleetOps\Events\VehicleLocationChanged;
 use Fleetbase\FleetOps\Events\WaypointActivityChanged;
 use Fleetbase\FleetOps\Events\WaypointCompleted;
@@ -19,6 +25,7 @@ use Fleetbase\FleetOps\Flow\Activity;
 use Fleetbase\FleetOps\Listeners\HandleGeofenceDwelled;
 use Fleetbase\FleetOps\Listeners\HandleGeofenceEntered;
 use Fleetbase\FleetOps\Listeners\HandleGeofenceExited;
+use Fleetbase\FleetOps\Listeners\NotifyOrderEvent;
 use Fleetbase\FleetOps\Models\Driver;
 use Fleetbase\FleetOps\Models\Entity;
 use Fleetbase\FleetOps\Models\FuelProviderTransaction;
@@ -27,6 +34,12 @@ use Fleetbase\FleetOps\Models\GeofenceEventLog;
 use Fleetbase\FleetOps\Models\Order;
 use Fleetbase\FleetOps\Models\Vehicle;
 use Fleetbase\FleetOps\Models\Waypoint;
+use Fleetbase\FleetOps\Notifications\OrderAssigned as OrderAssignedNotification;
+use Fleetbase\FleetOps\Notifications\OrderCanceled as OrderCanceledNotification;
+use Fleetbase\FleetOps\Notifications\OrderCompleted as OrderCompletedNotification;
+use Fleetbase\FleetOps\Notifications\OrderDispatched as OrderDispatchedNotification;
+use Fleetbase\FleetOps\Notifications\OrderDispatchFailed as OrderDispatchFailedNotification;
+use Fleetbase\FleetOps\Notifications\OrderFailed as OrderFailedNotification;
 use Fleetbase\LaravelMysqlSpatial\Types\Point;
 use Illuminate\Support\Carbon;
 
@@ -154,6 +167,100 @@ class FleetOpsEntityCompletedProbe extends EntityCompleted
 class FleetOpsEntityActivityChangedProbe extends EntityActivityChanged
 {
     public ?Order $order = null;
+
+    public function getModelRecord(): ?Order
+    {
+        return $this->order;
+    }
+}
+
+class FleetOpsNotifyOrderEventProbe extends NotifyOrderEvent
+{
+    public array $notifications = [];
+
+    protected function notify(string $notificationClass, mixed ...$arguments): void
+    {
+        $this->notifications[] = [$notificationClass, $arguments];
+    }
+}
+
+class FleetOpsOrderCanceledNotificationEvent extends OrderCanceled
+{
+    public ?Order $order = null;
+
+    public function __construct()
+    {
+    }
+
+    public function getModelRecord(): ?Order
+    {
+        return $this->order;
+    }
+}
+
+class FleetOpsOrderCompletedNotificationEvent extends OrderCompleted
+{
+    public ?Order $order = null;
+
+    public function __construct()
+    {
+    }
+
+    public function getModelRecord(): ?Order
+    {
+        return $this->order;
+    }
+}
+
+class FleetOpsOrderFailedNotificationEvent extends OrderFailed
+{
+    public ?Order $order = null;
+
+    public function __construct()
+    {
+    }
+
+    public function getModelRecord(): ?Order
+    {
+        return $this->order;
+    }
+}
+
+class FleetOpsOrderDispatchFailedNotificationEvent extends OrderDispatchFailed
+{
+    public ?Order $order = null;
+
+    public function __construct()
+    {
+    }
+
+    public function getModelRecord(): ?Order
+    {
+        return $this->order;
+    }
+}
+
+class FleetOpsOrderDispatchedNotificationEvent extends OrderDispatched
+{
+    public ?Order $order = null;
+
+    public function __construct()
+    {
+    }
+
+    public function getModelRecord(): ?Order
+    {
+        return $this->order;
+    }
+}
+
+class FleetOpsOrderDriverAssignedNotificationEvent extends OrderDriverAssigned
+{
+    public ?Order $order = null;
+
+    public function __construct()
+    {
+    }
 
     public function getModelRecord(): ?Order
     {
@@ -759,4 +866,53 @@ test('geofence exit and dwell listeners persist normalized event log payloads', 
         ->and($dwelledListener->logs[0]['occurred_at']->toDateTimeString())->toBe('2026-05-01 14:15:00');
 
     Carbon::setTestNow();
+});
+
+test('notify order event routes lifecycle events to matching notifications', function () {
+    $order = new Order();
+    $order->setRawAttributes(['uuid' => 'order-uuid', 'public_id' => 'order_public'], true);
+
+    $waypoint = new Waypoint();
+    $waypoint->setRawAttributes(['uuid' => 'waypoint-uuid'], true);
+
+    $listener = new FleetOpsNotifyOrderEventProbe();
+
+    $canceled           = new FleetOpsOrderCanceledNotificationEvent();
+    $canceled->order    = $order;
+    $canceled->waypoint = $waypoint;
+    $canceled->activity = new Activity(['details' => 'Customer canceled']);
+
+    $completed           = new FleetOpsOrderCompletedNotificationEvent();
+    $completed->order    = $order;
+    $completed->waypoint = $waypoint;
+
+    $failed           = new FleetOpsOrderFailedNotificationEvent();
+    $failed->order    = $order;
+    $failed->waypoint = $waypoint;
+    $failed->activity = new Activity(['details' => 'Delivery failed']);
+
+    $dispatchFailed        = new FleetOpsOrderDispatchFailedNotificationEvent();
+    $dispatchFailed->order = $order;
+
+    $dispatched           = new FleetOpsOrderDispatchedNotificationEvent();
+    $dispatched->order    = $order;
+    $dispatched->waypoint = $waypoint;
+
+    $assigned        = new FleetOpsOrderDriverAssignedNotificationEvent();
+    $assigned->order = $order;
+
+    foreach ([$canceled, $completed, $failed, $dispatchFailed, $dispatched, $assigned] as $event) {
+        $listener->handle($event);
+    }
+
+    $withoutOrder = new FleetOpsOrderCanceledNotificationEvent();
+    $listener->handle($withoutOrder);
+
+    expect($listener->notifications)->toHaveCount(6)
+        ->and($listener->notifications[0])->toBe([OrderCanceledNotification::class, [$order, 'Customer canceled', $waypoint]])
+        ->and($listener->notifications[1])->toBe([OrderCompletedNotification::class, [$order, $waypoint]])
+        ->and($listener->notifications[2])->toBe([OrderFailedNotification::class, [$order, 'Delivery failed', $waypoint]])
+        ->and($listener->notifications[3])->toBe([OrderDispatchFailedNotification::class, [$order]])
+        ->and($listener->notifications[4])->toBe([OrderDispatchedNotification::class, [$order, $waypoint]])
+        ->and($listener->notifications[5])->toBe([OrderAssignedNotification::class, [$order]]);
 });

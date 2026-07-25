@@ -4,7 +4,6 @@ namespace Fleetbase\FleetOps\Jobs;
 
 use Carbon\Carbon;
 use Fleetbase\FleetOps\Models\Position;
-use Fleetbase\Support\SocketCluster\SocketClusterService;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
@@ -41,8 +40,6 @@ class ReplayPositions implements ShouldQueue
 
     public function handle(): void
     {
-        $socket = new SocketClusterService();
-
         // Base timestamp to compute relative offsets
         $baseTime = Carbon::parse($this->positions->first()->created_at);
 
@@ -51,14 +48,24 @@ class ReplayPositions implements ShouldQueue
             $offset      = $baseTime->diffInSeconds($currentTime, false) / $this->speed;
 
             // Schedule a small job for each event with its own delay
-            SendPositionReplay::dispatch(
-                $this->channelId,
-                $position,
-                $index,
-                $this->subjectUuid
-            )->delay(now()->addSeconds(max(0, $offset)));
+            $this->dispatchReplayPosition($position, $index, max(0, $offset));
         }
 
-        Log::info("Replay scheduled for {$this->positions->count()} positions on channel {$this->channelId}");
+        $this->logInfo("Replay scheduled for {$this->positions->count()} positions on channel {$this->channelId}");
+    }
+
+    protected function dispatchReplayPosition(Position $position, int|string $index, float $offset)
+    {
+        return SendPositionReplay::dispatch(
+            $this->channelId,
+            $position,
+            $index,
+            $this->subjectUuid
+        )->delay(now()->addSeconds($offset));
+    }
+
+    protected function logInfo(string $message): void
+    {
+        Log::info($message);
     }
 }

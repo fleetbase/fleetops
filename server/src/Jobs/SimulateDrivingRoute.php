@@ -69,13 +69,24 @@ class SimulateDrivingRoute implements ShouldQueue
         $firstWaypoint      = reset($this->waypoints);
         $remainingWaypoints = array_slice($this->waypoints, 1, null, true);
 
-        SimulateWaypointReached::withChain(
+        $this->dispatchWaypointChain(
+            $firstWaypoint,
             Arr::map(
                 $remainingWaypoints,
                 function ($waypoint, $index) {
-                    return new SimulateWaypointReached($this->driver, $waypoint, ['index' => $index]);
+                    return $this->makeWaypointReachedJob($waypoint, ['index' => $index]);
                 }
             )
-        )->dispatch($this->driver, $firstWaypoint, ['index' => 0]);
+        );
+    }
+
+    protected function makeWaypointReachedJob($waypoint, array $additionalData): SimulateWaypointReached
+    {
+        return new SimulateWaypointReached($this->driver, $waypoint, $additionalData);
+    }
+
+    protected function dispatchWaypointChain($firstWaypoint, array $chain): void
+    {
+        SimulateWaypointReached::withChain($chain)->dispatch($this->driver, $firstWaypoint, ['index' => 0]);
     }
 }
