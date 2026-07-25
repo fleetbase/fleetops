@@ -6,6 +6,7 @@ use Fleetbase\FleetOps\Http\Controllers\Internal\v1\SettingController;
 use Fleetbase\FleetOps\Http\Filter\DeviceEventFilter;
 use Fleetbase\FleetOps\Http\Filter\DeviceFilter;
 use Fleetbase\FleetOps\Http\Filter\FleetFilter;
+use Fleetbase\FleetOps\Http\Filter\IssueFilter;
 use Fleetbase\FleetOps\Http\Filter\VehicleFilter;
 use Fleetbase\LaravelMysqlSpatial\Types\Point;
 use Illuminate\Http\Request;
@@ -383,6 +384,50 @@ test('fleet filter records hierarchy relationship scalar status and date filters
     expect(collect($query->calls)->where(0, 'whereHas')->pluck(1)->all())->toContain('serviceArea', 'zone', 'parent_fleet', 'vendor')
         ->and(collect($query->calls)->where(0, 'whereDate')->values())->toHaveCount(1)
         ->and(collect($query->calls)->where(0, 'whereBetween')->values())->toHaveCount(1);
+});
+
+test('issue filter records identity relationship priority status and date filters', function () {
+    $query  = new FleetOpsControllerFilterQuery();
+    $filter = fleetopsFilterWithBuilder(IssueFilter::class, $query);
+
+    $filter->queryForInternal();
+    $filter->queryForPublic();
+    $filter->query('flat tire');
+    $filter->publicId('issue-public');
+    $filter->priority('high,urgent');
+    $filter->status('open,assigned');
+    $filter->assignee('11111111-1111-4111-8111-111111111111');
+    $filter->reporter('contact_abc1234');
+    $filter->driver('Driver Name');
+    $filter->vehicle('22222222-2222-4222-8222-222222222222');
+    $filter->createdAt(['2026-01-01', '2026-01-31']);
+    $filter->updatedAt('2026-02-01');
+
+    expect($query->calls)->toContain(['where', ['company_uuid', 'company-uuid']])
+        ->and($query->calls)->toContain(['search', 'flat tire'])
+        ->and($query->calls)->toContain(['searchWhere', 'public_id', 'issue-public'])
+        ->and($query->calls)->toContain(['whereIn', 'priority', ['high', 'urgent']])
+        ->and($query->calls)->toContain(['whereIn', 'status', ['open', 'assigned']]);
+
+    $relations = collect($query->calls)->where(0, 'whereHas')->values();
+
+    expect($relations->pluck(1)->all())->toBe(['assignedTo', 'reportedBy', 'driver', 'vehicle'])
+        ->and($relations[0][2])->toBe([['where', ['uuid', '11111111-1111-4111-8111-111111111111']]])
+        ->and($relations[1][2])->toBe([['where', ['public_id', 'contact_abc1234']]])
+        ->and($relations[2][2])->toBe([['search', 'Driver Name']])
+        ->and($relations[3][2])->toBe([['where', ['uuid', '22222222-2222-4222-8222-222222222222']]])
+        ->and(collect($query->calls)->where(0, 'whereBetween')->values())->toHaveCount(1)
+        ->and(collect($query->calls)->where(0, 'whereDate')->values())->toHaveCount(1);
+
+    $scalarQuery  = new FleetOpsControllerFilterQuery();
+    $scalarFilter = fleetopsFilterWithBuilder(IssueFilter::class, $scalarQuery);
+
+    $scalarFilter->priority('low');
+    $scalarFilter->status([]);
+
+    expect($scalarQuery->calls)->toBe([
+        ['where', ['priority', 'low']],
+    ]);
 });
 
 test('api device controller input maps coordinates and clears blank attachables', function () {

@@ -55,6 +55,8 @@ $command = array_merge([
     '-d',
     'error_reporting=8191',
     '-d',
+    'memory_limit=' . ini_get('memory_limit'),
+    '-d',
     'auto_prepend_file=' . $bootstrap,
     $pest,
 ], $args);

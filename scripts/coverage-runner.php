@@ -43,7 +43,8 @@ if (!$hasTestTarget && is_dir(getcwd() . '/server/tests')) {
     $args[] = 'server/tests';
 }
 
-$command        = array_merge([PHP_BINARY, $pestRunner], $args);
+$memoryLimit = getenv('FLEETOPS_COVERAGE_MEMORY_LIMIT') ?: '-1';
+$command     = array_merge([PHP_BINARY, '-d', 'memory_limit=' . $memoryLimit, $pestRunner], $args);
 $escapedCommand = implode(' ', array_map('escapeshellarg', $command));
 
 passthru($escapedCommand, $exitCode);

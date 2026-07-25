@@ -7,6 +7,7 @@ if (!class_exists('Illuminate\Foundation\Auth\User')) {
 use Fleetbase\FleetOps\Exceptions\CustomerUserConflictException;
 use Fleetbase\FleetOps\Models\Contact;
 use Fleetbase\FleetOps\Models\Device;
+use Fleetbase\FleetOps\Models\FuelReport;
 use Fleetbase\FleetOps\Models\Maintenance;
 use Fleetbase\FleetOps\Models\Order;
 use Fleetbase\FleetOps\Models\Payload;
@@ -306,6 +307,81 @@ test('waypoint model mirrors tracking number status accessors', function () {
         ->and($waypoint->getStatusAttribute())->toBe('Out for delivery')
         ->and($waypoint->getStatusCodeAttribute())->toBe('out_for_delivery')
         ->and($waypoint->getCompleteAttribute())->toBeFalse();
+});
+
+test('fuel report accessors mutators and meta helpers are stable', function () {
+    $report = new FuelReport([
+        'amount' => '$45.67',
+        'meta'   => [
+            'source'                         => 'provider',
+            'provider'                       => 'fuelx',
+            'fuel_provider_transaction_uuid' => 'transaction_uuid',
+        ],
+    ]);
+
+    $report->setRelation('driver', (object) ['name' => 'Driver One']);
+    $report->setRelation('vehicle', (object) ['display_name' => 'Truck 8']);
+    $report->setRelation('reportedBy', (object) ['name' => 'Dispatcher One']);
+
+    expect($report->amount)->toBe(4567)
+        ->and($report->driver_name)->toBe('Driver One')
+        ->and($report->vehicle_name)->toBe('Truck 8')
+        ->and($report->reporter_name)->toBe('Dispatcher One')
+        ->and($report->source)->toBe('provider')
+        ->and($report->provider)->toBe('fuelx')
+        ->and($report->fuel_provider_transaction_uuid)->toBe('transaction_uuid');
+});
+
+test('vendor accessors mutators options notifications and import mapping are stable', function () {
+    $vendor = new Vendor([
+        'name'   => 'Vendor One',
+        'phone'  => '+1 (555) 444-3333',
+        'type'   => null,
+        'status' => null,
+    ]);
+
+    $vendor->setRelation('logo', (object) ['url' => 'https://cdn.example/vendor.png']);
+    $vendor->setRelation('place', (object) [
+        'address_html' => '1 Vendor Way',
+        'street1'      => '1 Vendor Way',
+    ]);
+
+    expect($vendor->type)->toBe('vendor')
+        ->and($vendor->status)->toBe('active')
+        ->and($vendor->logo_url)->toBe('https://cdn.example/vendor.png')
+        ->and($vendor->address)->toBe('1 Vendor Way')
+        ->and($vendor->address_street)->toBe('1 Vendor Way')
+        ->and($vendor->routeNotificationForTwilio())->toContain('555');
+
+    $vendor->type   = null;
+    $vendor->status = null;
+
+    expect($vendor->type)->toBe('vendor')
+        ->and($vendor->status)->toBe('active');
+
+    $slugOptions = $vendor->getSlugOptions();
+    $logOptions  = $vendor->getActivitylogOptions();
+
+    expect($slugOptions->generateSlugFrom)->toBe(['name'])
+        ->and($slugOptions->slugField)->toBe('slug')
+        ->and($logOptions->logAttributes)->toContain('name', 'email', 'company_uuid')
+        ->and($logOptions->logOnlyDirty)->toBeTrue();
+
+    $imported = Vendor::createFromImport([
+        'full_name'     => 'Imported Vendor',
+        'mobile_number' => '+1 555 222 1111',
+        'email_address' => 'vendor@example.com',
+        'website_url'   => 'https://vendor.example',
+        'country_name'  => 'United States',
+    ]);
+
+    expect($imported)->toBeInstanceOf(Vendor::class)
+        ->and($imported->name)->toBe('Imported Vendor')
+        ->and($imported->phone)->toContain('555')
+        ->and($imported->email)->toBe('vendor@example.com')
+        ->and($imported->type)->toBe('vendor')
+        ->and($imported->status)->toBe('active')
+        ->and($imported->country)->toBe('US');
 });
 
 test('service rate accessors flags fee normalization and quote helpers are stable', function () {
