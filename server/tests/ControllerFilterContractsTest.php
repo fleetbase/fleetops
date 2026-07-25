@@ -11,6 +11,7 @@ use Fleetbase\FleetOps\Http\Filter\FleetFilter;
 use Fleetbase\FleetOps\Http\Filter\FuelProviderTransactionFilter;
 use Fleetbase\FleetOps\Http\Filter\FuelReportFilter;
 use Fleetbase\FleetOps\Http\Filter\IssueFilter;
+use Fleetbase\FleetOps\Http\Filter\PartFilter;
 use Fleetbase\FleetOps\Http\Filter\PlaceFilter;
 use Fleetbase\FleetOps\Http\Filter\SensorFilter;
 use Fleetbase\FleetOps\Http\Filter\TrackingNumberFilter;
@@ -772,7 +773,7 @@ test('fuel provider transaction filter records relation status provider and date
         ->and(collect($scalarQuery->calls)->where(0, 'whereDate')->first()[1])->toBe('transaction_at');
 });
 
-test('tracking number and equipment filters apply tenant and search scopes', function () {
+test('tracking number equipment and part filters apply tenant and search scopes', function () {
     $trackingQuery  = new FleetOpsControllerFilterQuery();
     $trackingFilter = fleetopsFilterWithBuilder(TrackingNumberFilter::class, $trackingQuery);
 
@@ -786,6 +787,14 @@ test('tracking number and equipment filters apply tenant and search scopes', fun
     $equipmentFilter->queryForPublic();
     $equipmentFilter->query('forklift');
 
+    $partQuery  = new FleetOpsControllerFilterQuery();
+    $partFilter = fleetopsFilterWithBuilder(PartFilter::class, $partQuery);
+
+    $partFilter->queryForInternal();
+    $partFilter->queryForPublic();
+    $partFilter->query('brake pad');
+    $partFilter->vendor(null);
+
     expect($trackingQuery->calls)->toBe([
         ['where', ['company_uuid', 'company-uuid']],
         ['where', ['company_uuid', 'company-uuid']],
@@ -794,6 +803,11 @@ test('tracking number and equipment filters apply tenant and search scopes', fun
             ['where', ['company_uuid', 'company-uuid']],
             ['where', ['company_uuid', 'company-uuid']],
             ['search', 'forklift'],
+        ])
+        ->and($partQuery->calls)->toBe([
+            ['where', ['company_uuid', 'company-uuid']],
+            ['where', ['company_uuid', 'company-uuid']],
+            ['search', 'brake pad'],
         ]);
 });
 
