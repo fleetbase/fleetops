@@ -52,6 +52,7 @@ namespace Illuminate\Validation {
 }
 
 namespace {
+    use Fleetbase\FleetOps\Http\Requests\BulkDispatchRequest;
     use Fleetbase\FleetOps\Http\Requests\CreateCustomerOrderRequest;
     use Fleetbase\FleetOps\Http\Requests\CreateCustomerRequest;
     use Fleetbase\FleetOps\Http\Requests\CreateDeviceRequest;
@@ -60,6 +61,7 @@ namespace {
     use Fleetbase\FleetOps\Http\Requests\CreateEquipmentRequest;
     use Fleetbase\FleetOps\Http\Requests\CreateFuelReportRequest;
     use Fleetbase\FleetOps\Http\Requests\CreateFuelTransactionRequest;
+    use Fleetbase\FleetOps\Http\Requests\CreateIssueRequest;
     use Fleetbase\FleetOps\Http\Requests\CreateOrderRequest;
     use Fleetbase\FleetOps\Http\Requests\CreatePartRequest;
     use Fleetbase\FleetOps\Http\Requests\CreatePayloadRequest;
@@ -69,14 +71,20 @@ namespace {
     use Fleetbase\FleetOps\Http\Requests\CreateServiceRateRequest;
     use Fleetbase\FleetOps\Http\Requests\CreateTrackingStatusRequest;
     use Fleetbase\FleetOps\Http\Requests\CreateVehicleRequest;
+    use Fleetbase\FleetOps\Http\Requests\CreateVendorRequest;
     use Fleetbase\FleetOps\Http\Requests\CreateWorkOrderRequest;
     use Fleetbase\FleetOps\Http\Requests\CreateZoneRequest;
     use Fleetbase\FleetOps\Http\Requests\DriverSimulationRequest;
     use Fleetbase\FleetOps\Http\Requests\Internal\CreateDriverRequest as InternalCreateDriverRequest;
+    use Fleetbase\FleetOps\Http\Requests\Internal\CreateOrderConfigRequest;
     use Fleetbase\FleetOps\Http\Requests\Internal\CreateOrderRequest as InternalCreateOrderRequest;
+    use Fleetbase\FleetOps\Http\Requests\Internal\FleetActionRequest;
+    use Fleetbase\FleetOps\Http\Requests\QueryServiceQuotesRequest;
     use Fleetbase\FleetOps\Http\Requests\UpdateDeviceRequest;
     use Fleetbase\FleetOps\Http\Requests\UpdateFuelReportRequest;
+    use Fleetbase\FleetOps\Http\Requests\UpdateIssueRequest;
     use Fleetbase\FleetOps\Http\Requests\UpdateWorkOrderRequest;
+    use Fleetbase\FleetOps\Http\Requests\VerifyCreateCustomerRequest;
     use Fleetbase\FleetOps\Rules\ComputableAlgo;
     use Fleetbase\FleetOps\Rules\CustomerIdOrDetails;
     use Fleetbase\FleetOps\Rules\ResolvablePoint;
@@ -671,5 +679,99 @@ namespace {
             ->and(ruleStrings($rateRules['peak_hours_percent']))->toContain('required', 'integer')
             ->and(ruleStrings($rateRules['peak_hours_start']))->toContain('required', 'date_format:H:i')
             ->and(ruleStrings($rateRules['peak_hours_end']))->toContain('required', 'date_format:H:i');
+    });
+
+    test('issue vendor dispatch and verification requests expose session authorization and validation contracts', function () {
+        bindFleetOpsRequestSession();
+
+        $issueRequest       = CreateIssueRequest::create('/fleetops-test', 'POST');
+        $vendorRequest      = CreateVendorRequest::create('/fleetops-test', 'POST');
+        $verification       = VerifyCreateCustomerRequest::create('/fleetops-test', 'POST');
+        $dispatchRequest    = BulkDispatchRequest::create('/fleetops-test', 'POST');
+        $unauthorizedUpdate = UpdateIssueRequest::create('/fleetops-test', 'PATCH');
+        $dispatchRequest->setLaravelSession(app('session.store'));
+
+        expect($issueRequest->authorize())->toBeFalse()
+            ->and($vendorRequest->authorize())->toBeFalse()
+            ->and($verification->authorize())->toBeFalse()
+            ->and($dispatchRequest->authorize())->toBeFalse()
+            ->and($unauthorizedUpdate->authorize())->toBeFalse();
+
+        bindFleetOpsRequestSession(['api_credential' => 'credential-uuid']);
+
+        $issueRules        = $issueRequest->rules();
+        $updateRules       = $unauthorizedUpdate->rules();
+        $vendorCreateRules = $vendorRequest->rules();
+        $vendorPatchRules  = CreateVendorRequest::create('/fleetops-test', 'PATCH')->rules();
+        $verificationRules = $verification->rules();
+        $dispatchRules     = $dispatchRequest->rules();
+
+        expect($issueRequest->authorize())->toBeTrue()
+            ->and($vendorRequest->authorize())->toBeTrue()
+            ->and($verification->authorize())->toBeTrue()
+            ->and($dispatchRequest->authorize())->toBeFalse()
+            ->and($issueRules['driver'])->toBe(['required'])
+            ->and($issueRules['location'])->toBe(['required'])
+            ->and($issueRules['report'])->toBe(['required'])
+            ->and($issueRules['tags'])->toBe(['nullable', 'array'])
+            ->and($issueRules['tags.*'])->toBe(['string'])
+            ->and($updateRules)->not->toHaveKeys(['driver', 'location'])
+            ->and($updateRules['report'])->toBe(['required'])
+            ->and(ruleStrings($vendorCreateRules['name']))->toContain('required', 'string')
+            ->and(ruleStrings($vendorCreateRules['type']))->toContain('required', 'string')
+            ->and(ruleStrings($vendorPatchRules['name']))->not->toContain('required')
+            ->and($vendorCreateRules['email'])->toBe('nullable|email')
+            ->and($vendorCreateRules['address'])->toBe('nullable|exists:places,public_id')
+            ->and($verificationRules)->toBe([
+                'mode'     => 'required|in:email,sms',
+                'identity' => 'required|string',
+                'name'     => 'nullable|string|max:255',
+                'phone'    => 'nullable|string|max:32',
+            ])
+            ->and($dispatchRules['ids'])->toBe(['required', 'array'])
+            ->and($dispatchRequest->messages())->toBe([
+                'ids.required' => 'Please provide a resource ID.',
+                'ids.array'    => 'Please provide multiple resource ID\'s.',
+            ]);
+
+        bindFleetOpsRequestSession(['user' => 'user-uuid']);
+
+        expect($dispatchRequest->authorize())->toBeTrue();
+
+        bindFleetOpsRequestSession(['is_sanctum_token' => true]);
+
+        expect($issueRequest->authorize())->toBeTrue()
+            ->and($verification->authorize())->toBeTrue()
+            ->and($vendorRequest->authorize())->toBeFalse();
+    });
+
+    test('service quote fleet action and order config requests expose rule contracts', function () {
+        bindFleetOpsRequestSession(['api_credential' => 'credential-uuid', 'company' => 'company-uuid']);
+
+        $quoteRequest       = QueryServiceQuotesRequest::create('/fleetops-test', 'POST');
+        $quoteRules         = $quoteRequest->rules();
+        $fleetActionRules   = FleetActionRequest::create('/fleetops-test', 'POST')->rules();
+        $orderConfigRules   = CreateOrderConfigRequest::create('/fleetops-test', 'POST')->rules();
+
+        expect($quoteRequest->authorize())->toBeTrue()
+            ->and(ruleStrings($quoteRules['payload']))->toContain('nullable', 'required_without_all:waypoints,pickup,dropoff', 'exists:payloads,public_id')
+            ->and(ruleStrings($quoteRules['service_type']))->toContain('nullable', 'exists:service_rates,service_type')
+            ->and($quoteRules['pickup'])->toBe(['nullable', 'required_without_all:payload,waypoints'])
+            ->and($quoteRules['dropoff'])->toBe(['nullable', 'required_without_all:payload,waypoints'])
+            ->and($quoteRules['waypoints'])->toBe(['nullable', 'array', 'required_without_all:payload,pickup,dropoff'])
+            ->and($quoteRules['facilitator'][1])->toBeInstanceOf(ExistsInAny::class)
+            ->and($quoteRules['currency'])->toBe(['nullable', 'string', 'size:3'])
+            ->and($quoteRules['scheduled_at'])->toBe(['nullable', 'date'])
+            ->and($fleetActionRules)->toBe([
+                'fleet'   => 'string|exists:fleets,uuid',
+                'driver'  => 'nullable|string|exists:drivers,uuid',
+                'vehicle' => 'nullable|string|exists:vehicles,uuid',
+            ])
+            ->and(ruleStrings($orderConfigRules['name']))->toContain('required', 'unique:order_configs,name')
+            ->and(ruleStrings($orderConfigRules['key']))->toContain('required', 'unique:order_configs,key');
+
+        bindFleetOpsRequestSession();
+
+        expect($quoteRequest->authorize())->toBeFalse();
     });
 }

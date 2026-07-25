@@ -20,9 +20,11 @@ use Fleetbase\FleetOps\Exceptions\CustomerUserConflictException;
 use Fleetbase\FleetOps\Models\Contact;
 use Fleetbase\FleetOps\Models\Device;
 use Fleetbase\FleetOps\Models\Fleet;
+use Fleetbase\FleetOps\Models\FuelProviderTransaction;
 use Fleetbase\FleetOps\Models\FuelReport;
 use Fleetbase\FleetOps\Models\Maintenance;
 use Fleetbase\FleetOps\Models\Manifest;
+use Fleetbase\FleetOps\Models\ManifestStop;
 use Fleetbase\FleetOps\Models\Order;
 use Fleetbase\FleetOps\Models\Payload;
 use Fleetbase\FleetOps\Models\Place;
@@ -147,6 +149,36 @@ class FleetOpsUpdatingManifestFake extends Manifest
         $this->forceFill($attributes);
 
         return true;
+    }
+}
+
+class FleetOpsUpdatingManifestStopFake extends ManifestStop
+{
+    public array $updates          = [];
+    public ?string $status         = null;
+    public ?Carbon $actual_arrival = null;
+
+    public function update(array $attributes = [], array $options = []): bool
+    {
+        $this->updates[] = $attributes;
+
+        foreach ($attributes as $key => $value) {
+            if (property_exists($this, $key)) {
+                $this->{$key} = $value;
+            }
+        }
+
+        return true;
+    }
+}
+
+class FleetOpsManifestStopManifestFake extends Manifest
+{
+    public int $autoCompleteChecks = 0;
+
+    public function checkAndAutoComplete(): void
+    {
+        $this->autoCompleteChecks++;
     }
 }
 
@@ -431,6 +463,28 @@ test('fuel report accessors mutators and meta helpers are stable', function () {
         ->and($report->fuel_provider_transaction_uuid)->toBe('transaction_uuid');
 });
 
+test('fuel provider transaction accessors expose related names and station points', function () {
+    $transaction = new FuelProviderTransaction([
+        'station_latitude'  => 1.3521,
+        'station_longitude' => 103.8198,
+    ]);
+    $transaction->setRelation('vehicle', (object) ['display_name' => 'Truck 8']);
+    $transaction->setRelation('driver', (object) ['name' => 'Driver One']);
+    $transaction->setRelation('fuelReport', (object) ['public_id' => 'fuel_report_123']);
+
+    expect($transaction->vehicle_name)->toBe('Truck 8')
+        ->and($transaction->driver_name)->toBe('Driver One')
+        ->and($transaction->fuel_report_id)->toBe('fuel_report_123')
+        ->and($transaction->station_location)->toBeInstanceOf(Point::class)
+        ->and($transaction->station_location->getLat())->toBe(1.3521)
+        ->and($transaction->station_location->getLng())->toBe(103.8198);
+
+    $transaction->station_latitude  = null;
+    $transaction->station_longitude = 103.8198;
+
+    expect($transaction->station_location)->toBeNull();
+});
+
 test('vendor accessors mutators options notifications and import mapping are stable', function () {
     $vendor = new Vendor([
         'name'   => 'Vendor One',
@@ -613,6 +667,48 @@ test('manifest metadata relations scopes and status transitions are stable', fun
         ->and($manifest->cancel())->toBe($manifest)
         ->and($manifest->status)->toBe('cancelled')
         ->and($manifest->updates[2])->toBe(['status' => 'cancelled']);
+
+    Carbon::setTestNow();
+});
+
+test('manifest stop accessors and status transitions are stable', function () {
+    Carbon::setTestNow(Carbon::parse('2026-04-05 10:45:00'));
+
+    $manifest = new FleetOpsManifestStopManifestFake();
+    $stop     = new FleetOpsUpdatingManifestStopFake([
+        'status'               => 'pending',
+        'sequence'             => 2,
+        'distance_from_prev_m' => 1200,
+        'duration_from_prev_s' => 300,
+    ]);
+    $stop->setRelation('manifest', $manifest);
+    $stop->setRelation('order', (object) [
+        'trackingNumber' => (object) ['tracking_number' => 'TRK-456'],
+        'payload'        => (object) [
+            'dropoff' => (object) ['address' => 'Fallback dropoff'],
+        ],
+    ]);
+    $stop->setRelation('place', (object) ['address' => '123 Stop Street']);
+
+    expect($stop->getTable())->toBe('manifest_stops')
+        ->and($stop->getFillable())->toContain('manifest_uuid', 'order_uuid', 'place_uuid', 'waypoint_uuid', 'status', 'sequence', 'meta')
+        ->and($stop->getCasts())->toHaveKeys(['meta', 'estimated_arrival', 'actual_arrival', 'sequence', 'distance_from_prev_m', 'duration_from_prev_s'])
+        ->and($stop->getAppends())->toBe(['tracking_number', 'address'])
+        ->and($stop->tracking_number)->toBe('TRK-456')
+        ->and($stop->address)->toBe('123 Stop Street')
+        ->and($stop->markArrived())->toBe($stop)
+        ->and($stop->status)->toBe('arrived')
+        ->and($stop->updates[0]['actual_arrival']->toDateTimeString())->toBe('2026-04-05 10:45:00')
+        ->and($stop->markCompleted())->toBe($stop)
+        ->and($stop->status)->toBe('completed')
+        ->and($manifest->autoCompleteChecks)->toBe(1)
+        ->and($stop->markSkipped())->toBe($stop)
+        ->and($stop->status)->toBe('skipped')
+        ->and($manifest->autoCompleteChecks)->toBe(2);
+
+    $stop->setRelation('place', null);
+
+    expect($stop->address)->toBe('Fallback dropoff');
 
     Carbon::setTestNow();
 });
