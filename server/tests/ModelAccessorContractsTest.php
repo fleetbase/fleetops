@@ -28,9 +28,13 @@ use Fleetbase\FleetOps\Models\ManifestStop;
 use Fleetbase\FleetOps\Models\Order;
 use Fleetbase\FleetOps\Models\Payload;
 use Fleetbase\FleetOps\Models\Place;
+use Fleetbase\FleetOps\Models\Position;
 use Fleetbase\FleetOps\Models\PurchaseRate;
+use Fleetbase\FleetOps\Models\Route;
 use Fleetbase\FleetOps\Models\ServiceRate;
 use Fleetbase\FleetOps\Models\ServiceRateFee;
+use Fleetbase\FleetOps\Models\Vehicle;
+use Fleetbase\FleetOps\Models\VehicleDevice;
 use Fleetbase\FleetOps\Models\Vendor;
 use Fleetbase\FleetOps\Models\Waypoint;
 use Fleetbase\FleetOps\Traits\PayloadAccessors;
@@ -114,6 +118,14 @@ class FleetOpsUpdatingDeviceFake extends Device
         $this->forceFill($attributes);
 
         return true;
+    }
+}
+
+class FleetOpsLoadedVehicleDeviceFake extends VehicleDevice
+{
+    public function load($relations)
+    {
+        return $this;
     }
 }
 
@@ -438,6 +450,49 @@ test('waypoint model mirrors tracking number status accessors', function () {
         ->and($waypoint->getStatusAttribute())->toBe('Out for delivery')
         ->and($waypoint->getStatusCodeAttribute())->toBe('out_for_delivery')
         ->and($waypoint->getCompleteAttribute())->toBeFalse();
+});
+
+test('route position and vehicle device accessors use loaded relation data', function () {
+    $payload = new Payload(['public_id' => 'payload_public']);
+    $driver  = new Vehicle(['display_name' => 'Driver vehicle']);
+    $order   = (object) [
+        'status'         => 'dispatched',
+        'public_id'      => 'order_public',
+        'internal_id'    => 'ORD-1',
+        'dispatched_at'  => '2026-01-01 10:00:00',
+        'payload'        => $payload,
+        'driverAssigned' => $driver,
+    ];
+
+    $route = new Route();
+    $route->setRelation('order', $order);
+
+    expect($route->payload)->toBe($payload)
+        ->and($route->driver)->toBe($driver)
+        ->and($route->order_status)->toBe('dispatched')
+        ->and($route->order_public_id)->toBe('order_public')
+        ->and($route->order_internal_id)->toBe('ORD-1')
+        ->and($route->order_dispatched_at)->toBe('2026-01-01 10:00:00');
+
+    $position = new Position();
+    expect($position->latitude)->toBe(0.0)
+        ->and($position->longitude)->toBe(0.0);
+
+    $position->coordinates = new Point(1.3521, 103.8198);
+    expect($position->latitude)->toBe(1.3521)
+        ->and($position->longitude)->toBe(103.8198);
+
+    $vehicle = new Vehicle();
+    $vehicle->setRawAttributes(['uuid' => 'vehicle-uuid'], true);
+
+    $device = new FleetOpsLoadedVehicleDeviceFake();
+    $device->setRelation('vehicle', $vehicle);
+
+    $callbackVehicle = null;
+    expect($device->getVehicle(function (Vehicle $resolved) use (&$callbackVehicle) {
+        $callbackVehicle = $resolved;
+    }))->toBe($vehicle)
+        ->and($callbackVehicle)->toBe($vehicle);
 });
 
 test('fuel report accessors mutators and meta helpers are stable', function () {

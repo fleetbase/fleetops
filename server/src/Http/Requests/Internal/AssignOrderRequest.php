@@ -11,7 +11,7 @@ class AssignOrderRequest extends FleetbaseRequest
      */
     public function authorize(): bool
     {
-        return session('company');
+        return (bool) session('company');
     }
 
     /**

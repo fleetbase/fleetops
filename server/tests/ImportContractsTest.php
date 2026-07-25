@@ -1,15 +1,23 @@
 <?php
 
+use Fleetbase\FleetOps\Imports\ContactImport;
+use Fleetbase\FleetOps\Imports\DriverImport;
 use Fleetbase\FleetOps\Imports\EquipmentImport;
+use Fleetbase\FleetOps\Imports\FleetImport;
+use Fleetbase\FleetOps\Imports\FuelReportImport;
+use Fleetbase\FleetOps\Imports\IssueImport;
 use Fleetbase\FleetOps\Imports\MaintenanceImport;
 use Fleetbase\FleetOps\Imports\MaintenanceScheduleImport;
 use Fleetbase\FleetOps\Imports\OrdersImport;
 use Fleetbase\FleetOps\Imports\PartImport;
+use Fleetbase\FleetOps\Imports\PlaceImport;
 use Fleetbase\FleetOps\Imports\VehicleExport as VehicleRowsImport;
+use Fleetbase\FleetOps\Imports\VehicleImport;
+use Fleetbase\FleetOps\Imports\VendorImport;
 use Fleetbase\FleetOps\Imports\WorkOrderImport;
 use Illuminate\Support\Collection;
 
-class FleetOpsEquipmentImportProbe extends EquipmentImport
+trait FleetOpsImportProbeRecorder
 {
     public array $created = [];
 
@@ -17,46 +25,71 @@ class FleetOpsEquipmentImportProbe extends EquipmentImport
     {
         $this->created[] = $row;
     }
+}
+
+class FleetOpsContactImportProbe extends ContactImport
+{
+    use FleetOpsImportProbeRecorder;
+}
+
+class FleetOpsDriverImportProbe extends DriverImport
+{
+    use FleetOpsImportProbeRecorder;
+}
+
+class FleetOpsEquipmentImportProbe extends EquipmentImport
+{
+    use FleetOpsImportProbeRecorder;
+}
+
+class FleetOpsFleetImportProbe extends FleetImport
+{
+    use FleetOpsImportProbeRecorder;
+}
+
+class FleetOpsFuelReportImportProbe extends FuelReportImport
+{
+    use FleetOpsImportProbeRecorder;
+}
+
+class FleetOpsIssueImportProbe extends IssueImport
+{
+    use FleetOpsImportProbeRecorder;
 }
 
 class FleetOpsMaintenanceImportProbe extends MaintenanceImport
 {
-    public array $created = [];
-
-    protected function createFromImport(array $row): void
-    {
-        $this->created[] = $row;
-    }
+    use FleetOpsImportProbeRecorder;
 }
 
 class FleetOpsMaintenanceScheduleImportProbe extends MaintenanceScheduleImport
 {
-    public array $created = [];
-
-    protected function createFromImport(array $row): void
-    {
-        $this->created[] = $row;
-    }
+    use FleetOpsImportProbeRecorder;
 }
 
 class FleetOpsPartImportProbe extends PartImport
 {
-    public array $created = [];
+    use FleetOpsImportProbeRecorder;
+}
 
-    protected function createFromImport(array $row): void
-    {
-        $this->created[] = $row;
-    }
+class FleetOpsPlaceImportProbe extends PlaceImport
+{
+    use FleetOpsImportProbeRecorder;
+}
+
+class FleetOpsVehicleImportProbe extends VehicleImport
+{
+    use FleetOpsImportProbeRecorder;
+}
+
+class FleetOpsVendorImportProbe extends VendorImport
+{
+    use FleetOpsImportProbeRecorder;
 }
 
 class FleetOpsWorkOrderImportProbe extends WorkOrderImport
 {
-    public array $created = [];
-
-    protected function createFromImport(array $row): void
-    {
-        $this->created[] = $row;
-    }
+    use FleetOpsImportProbeRecorder;
 }
 
 test('pass through import adapters return the provided row collection', function () {
@@ -84,19 +117,35 @@ test('model backed import adapters create non empty rows and increment counters'
             ['code' => 'array-row'],
         ]);
 })->with([
+    FleetOpsContactImportProbe::class,
+    FleetOpsDriverImportProbe::class,
     FleetOpsEquipmentImportProbe::class,
+    FleetOpsFleetImportProbe::class,
+    FleetOpsFuelReportImportProbe::class,
+    FleetOpsIssueImportProbe::class,
     FleetOpsMaintenanceImportProbe::class,
     FleetOpsMaintenanceScheduleImportProbe::class,
     FleetOpsPartImportProbe::class,
+    FleetOpsPlaceImportProbe::class,
+    FleetOpsVehicleImportProbe::class,
+    FleetOpsVendorImportProbe::class,
     FleetOpsWorkOrderImportProbe::class,
 ]);
 
 test('blank-row guarded imports skip empty spreadsheet rows before model creation', function () {
     $guardedImports = [
+        'ContactImport.php',
+        'DriverImport.php',
         'EquipmentImport.php',
+        'FleetImport.php',
+        'FuelReportImport.php',
+        'IssueImport.php',
         'MaintenanceImport.php',
         'MaintenanceScheduleImport.php',
         'PartImport.php',
+        'PlaceImport.php',
+        'VehicleImport.php',
+        'VendorImport.php',
         'WorkOrderImport.php',
     ];
 
@@ -115,10 +164,18 @@ test('all model-backed import adapters maintain imported row counters', function
 
     foreach (glob($importsPath . '/*Import.php') as $path) {
         if (!in_array(basename($path), [
+            'ContactImport.php',
+            'DriverImport.php',
             'EquipmentImport.php',
+            'FleetImport.php',
+            'FuelReportImport.php',
+            'IssueImport.php',
             'MaintenanceImport.php',
             'MaintenanceScheduleImport.php',
             'PartImport.php',
+            'PlaceImport.php',
+            'VehicleImport.php',
+            'VendorImport.php',
             'WorkOrderImport.php',
         ], true)) {
             continue;

@@ -24,8 +24,17 @@ class PlaceImport implements ToCollection, WithHeadingRow
                 $row = array_filter($row->toArray());
             }
 
-            Place::createFromImport($row, true);
+            if (empty($row)) {
+                continue;
+            }
+
+            $this->createFromImport($row);
             $this->imported++;
         }
+    }
+
+    protected function createFromImport(array $row): void
+    {
+        Place::createFromImport($row, true);
     }
 }

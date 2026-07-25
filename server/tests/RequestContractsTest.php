@@ -69,6 +69,7 @@ namespace Illuminate\Validation\Rules {
 
 namespace {
     use Fleetbase\FleetOps\Http\Requests\BulkDispatchRequest;
+    use Fleetbase\FleetOps\Http\Requests\CancelOrderRequest;
     use Fleetbase\FleetOps\Http\Requests\CreateContactRequest;
     use Fleetbase\FleetOps\Http\Requests\CreateCustomerOrderRequest;
     use Fleetbase\FleetOps\Http\Requests\CreateCustomerRequest;
@@ -76,6 +77,7 @@ namespace {
     use Fleetbase\FleetOps\Http\Requests\CreateDriverRequest;
     use Fleetbase\FleetOps\Http\Requests\CreateEntityRequest;
     use Fleetbase\FleetOps\Http\Requests\CreateEquipmentRequest;
+    use Fleetbase\FleetOps\Http\Requests\CreateFleetRequest;
     use Fleetbase\FleetOps\Http\Requests\CreateFuelReportRequest;
     use Fleetbase\FleetOps\Http\Requests\CreateFuelTransactionRequest;
     use Fleetbase\FleetOps\Http\Requests\CreateIssueRequest;
@@ -83,8 +85,10 @@ namespace {
     use Fleetbase\FleetOps\Http\Requests\CreatePartRequest;
     use Fleetbase\FleetOps\Http\Requests\CreatePayloadRequest;
     use Fleetbase\FleetOps\Http\Requests\CreatePlaceRequest;
+    use Fleetbase\FleetOps\Http\Requests\CreatePurchaseRateRequest;
     use Fleetbase\FleetOps\Http\Requests\CreateSensorRequest;
     use Fleetbase\FleetOps\Http\Requests\CreateServiceAreaRequest;
+    use Fleetbase\FleetOps\Http\Requests\CreateServiceQuoteRequest;
     use Fleetbase\FleetOps\Http\Requests\CreateServiceRateRequest;
     use Fleetbase\FleetOps\Http\Requests\CreateTrackingNumberRequest;
     use Fleetbase\FleetOps\Http\Requests\CreateTrackingStatusRequest;
@@ -92,12 +96,15 @@ namespace {
     use Fleetbase\FleetOps\Http\Requests\CreateVendorRequest;
     use Fleetbase\FleetOps\Http\Requests\CreateWorkOrderRequest;
     use Fleetbase\FleetOps\Http\Requests\CreateZoneRequest;
+    use Fleetbase\FleetOps\Http\Requests\DecodeTrackingNumberQR;
     use Fleetbase\FleetOps\Http\Requests\DriverSimulationRequest;
+    use Fleetbase\FleetOps\Http\Requests\Internal\AssignOrderRequest;
     use Fleetbase\FleetOps\Http\Requests\Internal\CreateDriverRequest as InternalCreateDriverRequest;
     use Fleetbase\FleetOps\Http\Requests\Internal\CreateOrderConfigRequest;
     use Fleetbase\FleetOps\Http\Requests\Internal\CreateOrderRequest as InternalCreateOrderRequest;
     use Fleetbase\FleetOps\Http\Requests\Internal\FleetActionRequest;
     use Fleetbase\FleetOps\Http\Requests\QueryServiceQuotesRequest;
+    use Fleetbase\FleetOps\Http\Requests\ScheduleOrderRequest;
     use Fleetbase\FleetOps\Http\Requests\UpdateDeviceRequest;
     use Fleetbase\FleetOps\Http\Requests\UpdateFuelReportRequest;
     use Fleetbase\FleetOps\Http\Requests\UpdateIssueRequest;
@@ -300,6 +307,60 @@ namespace {
             ->and($trackingRules['owner'][1])->toBeInstanceOf(ExistsInAny::class)
             ->and($trackingRules['type'])->toBe('nullable|in:city,province,country')
             ->and($trackingRules['status'])->toBe('nullable|in:active,inactive');
+    });
+
+    test('purchase scheduling fleet and simple action requests expose authorization and rules', function () {
+        bindFleetOpsRequestSession();
+
+        expect(CancelOrderRequest::create('/fleetops-test', 'POST')->authorize())->toBeFalse()
+            ->and(CreatePurchaseRateRequest::create('/fleetops-test', 'POST')->authorize())->toBeFalse()
+            ->and(ScheduleOrderRequest::create('/fleetops-test', 'POST')->authorize())->toBeFalse()
+            ->and(CreateFleetRequest::create('/fleetops-test', 'POST')->authorize())->toBeFalse()
+            ->and(CreateServiceQuoteRequest::create('/fleetops-test', 'POST')->authorize())->toBeFalse();
+
+        bindFleetOpsRequestSession(['api_credential' => 'credential-uuid']);
+
+        expect(CancelOrderRequest::create('/fleetops-test', 'POST')->authorize())->toBeTrue()
+            ->and(CreatePurchaseRateRequest::create('/fleetops-test', 'POST')->authorize())->toBeTrue()
+            ->and(ScheduleOrderRequest::create('/fleetops-test', 'POST')->authorize())->toBeTrue()
+            ->and(CreateFleetRequest::create('/fleetops-test', 'POST')->authorize())->toBeTrue()
+            ->and(DecodeTrackingNumberQR::create('/fleetops-test', 'POST')->authorize())->toBeTrue();
+
+        $purchaseRateRules = requestRules(CreatePurchaseRateRequest::class);
+        $scheduleRules     = requestRules(ScheduleOrderRequest::class);
+        $fleetCreateRules  = requestRules(CreateFleetRequest::class);
+        $fleetPatchRules   = requestRules(CreateFleetRequest::class, 'PATCH');
+
+        expect(ruleStrings($purchaseRateRules['service_quote']))->toContain('required')
+            ->and(ruleStrings($purchaseRateRules['service_quote']))->toContain('exists:service_quotes,public_id')
+            ->and(ruleStrings($purchaseRateRules['order']))->toContain('nullable')
+            ->and(ruleStrings($purchaseRateRules['order']))->toContain('exists:orders,public_id')
+            ->and($purchaseRateRules['customer'][0])->toBe('nullable')
+            ->and($purchaseRateRules['customer'][1])->toBeInstanceOf(ExistsInAny::class)
+            ->and($scheduleRules)->toBe([
+                'date'     => 'required|date_format:Y-m-d',
+                'time'     => 'nullable',
+                'timezone' => 'nullable|timezone',
+            ])
+            ->and(ruleStrings($fleetCreateRules['name']))->toContain('required')
+            ->and(ruleStrings($fleetPatchRules['name']))->not->toContain('required')
+            ->and($fleetCreateRules['service_area'])->toBe('exists:service_areas,public_id')
+            ->and(requestRules(CancelOrderRequest::class))->toBe(['order' => 'required|exists:orders,uuid'])
+            ->and(requestRules(DecodeTrackingNumberQR::class))->toBe(['code' => 'required|string'])
+            ->and(requestRules(CreateServiceQuoteRequest::class))->toBe([]);
+    });
+
+    test('internal assign order request requires company session and order driver references', function () {
+        session(['company' => null]);
+        expect(AssignOrderRequest::create('/fleetops-test', 'POST')->authorize())->toBeFalse();
+
+        session(['company' => 'company-uuid']);
+
+        expect(AssignOrderRequest::create('/fleetops-test', 'POST')->authorize())->toBeTrue()
+            ->and(requestRules(AssignOrderRequest::class))->toBe([
+                'order'  => ['required', 'exists:orders,public_id'],
+                'driver' => ['required', 'exists:drivers,public_id'],
+            ]);
     });
 
     test('internal create driver request exposes user identity vehicle and message contracts', function () {
