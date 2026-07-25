@@ -16,22 +16,43 @@ use Fleetbase\FleetOps\Events\VehicleLocationChanged;
 use Fleetbase\FleetOps\Events\WaypointActivityChanged;
 use Fleetbase\FleetOps\Events\WaypointCompleted;
 use Fleetbase\FleetOps\Flow\Activity;
+use Fleetbase\FleetOps\Listeners\HandleGeofenceDwelled;
 use Fleetbase\FleetOps\Listeners\HandleGeofenceEntered;
+use Fleetbase\FleetOps\Listeners\HandleGeofenceExited;
 use Fleetbase\FleetOps\Models\Driver;
 use Fleetbase\FleetOps\Models\Entity;
 use Fleetbase\FleetOps\Models\FuelProviderTransaction;
 use Fleetbase\FleetOps\Models\FuelReport;
+use Fleetbase\FleetOps\Models\GeofenceEventLog;
 use Fleetbase\FleetOps\Models\Order;
 use Fleetbase\FleetOps\Models\Vehicle;
 use Fleetbase\FleetOps\Models\Waypoint;
 use Fleetbase\LaravelMysqlSpatial\Types\Point;
+use Illuminate\Support\Carbon;
 
 if (!class_exists('Illuminate\Foundation\Auth\User')) {
     class_alias(Illuminate\Database\Eloquent\Model::class, 'Illuminate\Foundation\Auth\User');
 }
 
+if (!function_exists('Fleetbase\Traits\config')) {
+    eval('namespace Fleetbase\Traits; function config($key = null, $default = null) { return $key === "api.cache.enabled" ? false : $default; }');
+}
+
+if (!function_exists('Fleetbase\Models\config')) {
+    eval('namespace Fleetbase\Models; function config($key = null, $default = null) { return $key === "fleetbase.connection.db" ? "mysql" : $default; }');
+}
+
 class FleetOpsEventDriver extends Driver
 {
+    public function getAttribute($key)
+    {
+        if (in_array($key, ['uuid', 'public_id', 'company_uuid', 'name', 'phone'], true)) {
+            return $this->attributes[$key] ?? null;
+        }
+
+        return parent::getAttribute($key);
+    }
+
     public function getCurrentOrder(): ?Order
     {
         return null;
@@ -40,9 +61,63 @@ class FleetOpsEventDriver extends Driver
 
 class FleetOpsEventVehicle extends Vehicle
 {
+    public function getAttribute($key)
+    {
+        if ($key === 'display_name') {
+            return $this->attributes['display_name'] ?? $this->attributes['name'] ?? null;
+        }
+
+        if (in_array($key, ['display_name', 'name', 'plate_number', 'uuid', 'public_id', 'company_uuid'], true)) {
+            return $this->attributes[$key] ?? null;
+        }
+
+        return parent::getAttribute($key);
+    }
+
     public function loadMissing($relations)
     {
         return $this;
+    }
+}
+
+class FleetOpsEventDriverWithOrder extends FleetOpsEventDriver
+{
+    public ?Order $currentOrder = null;
+
+    public function getCurrentOrder(): ?Order
+    {
+        return $this->currentOrder;
+    }
+}
+
+class FleetOpsGeofenceEventLogFake extends GeofenceEventLog
+{
+    public function __construct()
+    {
+    }
+}
+
+class FleetOpsGeofenceDwelledListenerProbe extends HandleGeofenceDwelled
+{
+    public array $logs = [];
+
+    protected function createLog(array $attributes): GeofenceEventLog
+    {
+        $this->logs[] = $attributes;
+
+        return new FleetOpsGeofenceEventLogFake();
+    }
+}
+
+class FleetOpsGeofenceExitedListenerProbe extends HandleGeofenceExited
+{
+    public array $logs = [];
+
+    protected function createLog(array $attributes): GeofenceEventLog
+    {
+        $this->logs[] = $attributes;
+
+        return new FleetOpsGeofenceEventLogFake();
     }
 }
 
@@ -602,4 +677,86 @@ test('geofence exited and dwelled events broadcast vehicle subject payloads', fu
                 'type' => 'service_area',
             ],
         ]);
+});
+
+test('geofence exit and dwell listeners persist normalized event log payloads', function () {
+    Carbon::setTestNow(Carbon::parse('2026-05-01 14:15:00'));
+
+    $order = new Order();
+    $order->setRawAttributes(['uuid' => 'order-uuid'], true);
+
+    $driver               = new FleetOpsEventDriverWithOrder();
+    $driver->currentOrder = $order;
+    $driver->setRawAttributes([
+        'uuid'         => 'driver-uuid',
+        'public_id'    => 'driver_public',
+        'company_uuid' => 'company-uuid',
+        'name'         => 'Jane Driver',
+    ], true);
+
+    $vehicle = new FleetOpsEventVehicle();
+    $vehicle->setRawAttributes([
+        'uuid'         => 'vehicle-uuid',
+        'public_id'    => 'vehicle_public',
+        'company_uuid' => 'company-uuid',
+        'display_name' => 'Dock Van',
+        'plate_number' => 'SG-202',
+    ], true);
+    $vehicle->setRelation('driver', $driver);
+    $driver->setRelation('vehicle', $vehicle);
+
+    $geofence = (object) [
+        'uuid'      => 'geofence-uuid',
+        'public_id' => 'geofence_public',
+        'name'      => 'North Service Area',
+    ];
+
+    $exitedListener  = new FleetOpsGeofenceExitedListenerProbe();
+    $dwelledListener = new FleetOpsGeofenceDwelledListenerProbe();
+
+    $exitedEvent = new GeofenceExited($vehicle, $geofence, 'service_area', new Point(1.4, 103.9), 17);
+    $exitedListener->handle($exitedEvent);
+    $dwelledEvent = new GeofenceDwelled($driver, $geofence, 'service_area', now()->subMinutes(45));
+    $dwelledListener->handle($dwelledEvent);
+
+    expect($exitedListener->tries)->toBe(3)
+        ->and($dwelledListener->tries)->toBe(3)
+        ->and($exitedListener->logs)->toHaveCount(1)
+        ->and($dwelledListener->logs)->toHaveCount(1)
+        ->and($exitedListener->logs[0])->toMatchArray([
+            'company_uuid'           => 'company-uuid',
+            'driver_uuid'            => 'driver-uuid',
+            'vehicle_uuid'           => 'vehicle-uuid',
+            'order_uuid'             => 'order-uuid',
+            'subject_uuid'           => 'vehicle-uuid',
+            'subject_type'           => 'vehicle',
+            'subject_name'           => 'Dock Van',
+            'geofence_uuid'          => 'geofence-uuid',
+            'geofence_type'          => 'service_area',
+            'geofence_name'          => 'North Service Area',
+            'event_type'             => 'exited',
+            'latitude'               => 1.4,
+            'longitude'              => 103.9,
+            'dwell_duration_minutes' => 17,
+        ])
+        ->and($exitedListener->logs[0]['occurred_at']->toDateTimeString())->toBe('2026-05-01 14:15:00')
+        ->and($dwelledListener->logs[0])->toMatchArray([
+            'company_uuid'           => 'company-uuid',
+            'driver_uuid'            => 'driver-uuid',
+            'vehicle_uuid'           => 'vehicle-uuid',
+            'order_uuid'             => 'order-uuid',
+            'subject_uuid'           => 'driver-uuid',
+            'subject_type'           => 'driver',
+            'subject_name'           => 'Jane Driver',
+            'geofence_uuid'          => 'geofence-uuid',
+            'geofence_type'          => 'service_area',
+            'geofence_name'          => 'North Service Area',
+            'event_type'             => 'dwelled',
+            'latitude'               => null,
+            'longitude'              => null,
+            'dwell_duration_minutes' => 45,
+        ])
+        ->and($dwelledListener->logs[0]['occurred_at']->toDateTimeString())->toBe('2026-05-01 14:15:00');
+
+    Carbon::setTestNow();
 });
