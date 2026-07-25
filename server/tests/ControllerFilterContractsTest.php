@@ -15,10 +15,12 @@ use Fleetbase\FleetOps\Http\Filter\IssueFilter;
 use Fleetbase\FleetOps\Http\Filter\PartFilter;
 use Fleetbase\FleetOps\Http\Filter\PlaceFilter;
 use Fleetbase\FleetOps\Http\Filter\SensorFilter;
+use Fleetbase\FleetOps\Http\Filter\ServiceRateFilter;
 use Fleetbase\FleetOps\Http\Filter\TrackingNumberFilter;
 use Fleetbase\FleetOps\Http\Filter\TrackingStatusFilter;
 use Fleetbase\FleetOps\Http\Filter\VehicleFilter;
 use Fleetbase\FleetOps\Http\Filter\VendorFilter;
+use Fleetbase\FleetOps\Http\Filter\ZoneFilter;
 use Fleetbase\FleetOps\Models\Driver;
 use Fleetbase\FleetOps\Models\FuelProviderConnection;
 use Fleetbase\FleetOps\Models\FuelReport;
@@ -472,6 +474,44 @@ test('fleet filter records hierarchy relationship scalar status and date filters
     expect(collect($query->calls)->where(0, 'whereHas')->pluck(1)->all())->toContain('serviceArea', 'zone', 'parent_fleet', 'vendor')
         ->and(collect($query->calls)->where(0, 'whereDate')->values())->toHaveCount(1)
         ->and(collect($query->calls)->where(0, 'whereBetween')->values())->toHaveCount(1);
+});
+
+test('service rate and zone filters scope company service area and zone relationships', function () {
+    $serviceRateQuery  = new FleetOpsControllerFilterQuery();
+    $serviceRateFilter = fleetopsFilterWithBuilder(ServiceRateFilter::class, $serviceRateQuery);
+
+    $serviceRateFilter->queryForInternal();
+    $serviceRateFilter->queryForPublic();
+    $serviceRateFilter->serviceArea('service-area-uuid');
+    $serviceRateFilter->zone('zone-uuid');
+
+    expect($serviceRateQuery->calls)->toContain(['where', ['company_uuid', 'company-uuid']]);
+
+    $serviceRateRelations = collect($serviceRateQuery->calls)->where(0, 'whereHas')->values();
+    expect($serviceRateRelations)->toHaveCount(2)
+        ->and($serviceRateRelations[0])->toBe(['whereHas', 'serviceArea', [
+            ['where', ['uuid', 'service-area-uuid']],
+        ]])
+        ->and($serviceRateRelations[1])->toBe(['whereHas', 'zone', [
+            ['where', ['uuid', 'zone-uuid']],
+        ]]);
+
+    $zoneQuery  = new FleetOpsControllerFilterQuery();
+    $zoneFilter = fleetopsFilterWithBuilder(ZoneFilter::class, $zoneQuery);
+
+    $zoneFilter->queryForInternal();
+    $zoneFilter->queryForPublic();
+    $zoneFilter->serviceArea('service-area-public');
+
+    expect($zoneQuery->calls)->toContain(['where', ['company_uuid', 'company-uuid']]);
+
+    $serviceAreaScope = collect($zoneQuery->calls)->first(fn ($call) => $call[0] === 'whereNested');
+    expect($serviceAreaScope[1])->toBe([
+        ['where', ['service_area_uuid', 'service-area-public']],
+        ['orWhereHas', 'serviceArea', [
+            ['where', ['public_id', 'service-area-public']],
+        ]],
+    ]);
 });
 
 test('issue filter records identity relationship priority status and date filters', function () {

@@ -1,7 +1,36 @@
 <?php
 
+use Fleetbase\FleetOps\Http\Middleware\SetupDriverSession;
 use Fleetbase\FleetOps\Http\Middleware\TransformLocationMiddleware;
+use Fleetbase\FleetOps\Models\Driver;
+use Fleetbase\Models\User;
 use Illuminate\Http\Request;
+
+if (!class_exists('Illuminate\Foundation\Auth\User')) {
+    class_alias(Illuminate\Database\Eloquent\Model::class, 'Illuminate\Foundation\Auth\User');
+}
+
+class FleetOpsSetupDriverSessionProbe extends SetupDriverSession
+{
+    public array $stored = [];
+
+    protected function storeDriverInSession(string $driverUuid): void
+    {
+        $this->stored[] = $driverUuid;
+    }
+}
+
+class FleetOpsSetupDriverSessionUserFake extends User
+{
+    public ?Driver $driverSession = null;
+
+    public function load($relations)
+    {
+        $this->setRelation('currentDriverSession', $this->driverSession);
+
+        return $this;
+    }
+}
 
 test('transform location middleware normalizes nested null locations', function () {
     $request = Request::create('/v1/orders', 'POST', [
@@ -35,4 +64,29 @@ test('transform location middleware normalizes nested null locations', function 
         ],
         'notes' => 'leave unchanged',
     ]);
+});
+
+test('setup driver session stores current driver session and continues request', function () {
+    $driver = new Driver();
+    $driver->setRawAttributes(['uuid' => 'driver-uuid'], true);
+
+    $user                = new FleetOpsSetupDriverSessionUserFake();
+    $user->driverSession = $driver;
+
+    $request = Request::create('/driver/session', 'GET');
+    $request->setUserResolver(fn () => $user);
+
+    $middleware = new FleetOpsSetupDriverSessionProbe();
+    $response   = $middleware->handle($request, fn ($request) => 'next-called');
+
+    expect($response)->toBe('next-called')
+        ->and($middleware->stored)->toBe(['driver-uuid']);
+
+    $anonymous = Request::create('/driver/session', 'GET');
+    $anonymous->setUserResolver(fn () => null);
+
+    $response = $middleware->handle($anonymous, fn ($request) => 'anonymous-next');
+
+    expect($response)->toBe('anonymous-next')
+        ->and($middleware->stored)->toBe(['driver-uuid']);
 });

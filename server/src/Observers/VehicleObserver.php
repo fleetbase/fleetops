@@ -16,10 +16,10 @@ class VehicleObserver
     public function created(Vehicle $vehicle)
     {
         // assign this vehicle to a driver if the driver has been set
-        $identifier = request()->or(['driver_uuid', 'vehicle.driver_uuid', 'vehicle.driver.uuid']);
+        $identifier = $this->getDriverIdentifier();
 
         if ($identifier) {
-            $driver = Driver::where('uuid', $identifier)->whereNull('deleted_at')->withoutGlobalScopes()->first();
+            $driver = $this->findDriver($identifier);
 
             if ($driver) {
                 // assign this vehicle to driver
@@ -30,7 +30,7 @@ class VehicleObserver
             }
         }
 
-        LiveCacheService::invalidateMultiple(['vehicles', 'operations-monitor']);
+        $this->invalidateLiveCache();
     }
 
     /**
@@ -41,10 +41,10 @@ class VehicleObserver
     public function updating(Vehicle $vehicle)
     {
         // assign this vehicle to a driver if the driver has been set
-        $identifier = request()->or(['driver_uuid', 'vehicle.driver_uuid', 'vehicle.driver.uuid']);
+        $identifier = $this->getDriverIdentifier();
 
         if ($identifier) {
-            $driver = Driver::where('uuid', $identifier)->whereNull('deleted_at')->withoutGlobalScopes()->first();
+            $driver = $this->findDriver($identifier);
 
             if ($driver) {
                 // assign this vehicle to driver
@@ -55,7 +55,7 @@ class VehicleObserver
             }
         }
 
-        LiveCacheService::invalidateMultiple(['vehicles', 'operations-monitor']);
+        $this->invalidateLiveCache();
     }
 
     /**
@@ -66,8 +66,28 @@ class VehicleObserver
     public function deleted(Vehicle $vehicle)
     {
         // Unassign the deleted vehicle from matching driver/(s)
-        Driver::where(['vehicle_uuid' => $vehicle->uuid])->delete();
+        $this->deleteDriversAssignedTo($vehicle);
 
+        $this->invalidateLiveCache();
+    }
+
+    protected function getDriverIdentifier(): ?string
+    {
+        return request()->or(['driver_uuid', 'vehicle.driver_uuid', 'vehicle.driver.uuid']);
+    }
+
+    protected function findDriver(string $identifier): ?Driver
+    {
+        return Driver::where('uuid', $identifier)->whereNull('deleted_at')->withoutGlobalScopes()->first();
+    }
+
+    protected function deleteDriversAssignedTo(Vehicle $vehicle): mixed
+    {
+        return Driver::where(['vehicle_uuid' => $vehicle->uuid])->delete();
+    }
+
+    protected function invalidateLiveCache(): void
+    {
         LiveCacheService::invalidateMultiple(['vehicles', 'operations-monitor']);
     }
 }

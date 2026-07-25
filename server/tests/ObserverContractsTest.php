@@ -1,17 +1,33 @@
 <?php
 
 use Carbon\Carbon;
+use Fleetbase\FleetOps\Listeners\NotifyDriverOnShiftChange;
 use Fleetbase\FleetOps\Models\Contact;
+use Fleetbase\FleetOps\Models\Driver;
 use Fleetbase\FleetOps\Models\Maintenance;
 use Fleetbase\FleetOps\Models\MaintenanceSchedule;
 use Fleetbase\FleetOps\Models\Order;
+use Fleetbase\FleetOps\Models\ServiceRate;
+use Fleetbase\FleetOps\Models\TrackingNumber;
+use Fleetbase\FleetOps\Models\TrackingStatus;
+use Fleetbase\FleetOps\Models\Vehicle;
 use Fleetbase\FleetOps\Models\WorkOrder;
+use Fleetbase\FleetOps\Models\Zone;
+use Fleetbase\FleetOps\Notifications\DriverShiftChanged;
 use Fleetbase\FleetOps\Observers\ContactObserver;
+use Fleetbase\FleetOps\Observers\DriverObserver;
 use Fleetbase\FleetOps\Observers\OrderObserver;
+use Fleetbase\FleetOps\Observers\ServiceRateObserver;
+use Fleetbase\FleetOps\Observers\TrackingNumberObserver;
+use Fleetbase\FleetOps\Observers\VehicleObserver;
 use Fleetbase\FleetOps\Observers\WorkOrderObserver;
+use Fleetbase\FleetOps\Observers\ZoneObserver;
+use Fleetbase\Models\Schedule;
+use Fleetbase\Models\ScheduleItem;
 use Fleetbase\Models\User;
 use Illuminate\Cache\ArrayStore;
 use Illuminate\Cache\Repository;
+use Illuminate\Database\Eloquent\Collection as EloquentCollection;
 use Illuminate\Support\Facades\Cache;
 
 if (!class_exists('Illuminate\Foundation\Auth\User')) {
@@ -188,6 +204,249 @@ class FleetOpsContactObserverContactFake extends Contact
             'phone' => $this->phoneChanged,
             default => false,
         };
+    }
+}
+
+class FleetOpsDriverObserverProbe extends DriverObserver
+{
+    public array $invalidations = [];
+    public array $unassigned    = [];
+    public ?User $user          = null;
+
+    protected function invalidateLiveCache(): void
+    {
+        $this->invalidations[] = ['drivers', 'operations-monitor'];
+    }
+
+    protected function unassignOrders(Driver $driver): int
+    {
+        $this->unassigned[] = $driver->uuid;
+
+        return 1;
+    }
+
+    protected function findDriverUser(Driver $driver): ?User
+    {
+        return $this->user;
+    }
+}
+
+class FleetOpsDriverObserverUserFake extends User
+{
+    public bool $driverRole = true;
+    public bool $deleted    = false;
+
+    public function hasRole($roles, ?string $guard = null): bool
+    {
+        return $roles === 'Driver' && $this->driverRole;
+    }
+
+    public function delete()
+    {
+        $this->deleted = true;
+
+        return true;
+    }
+}
+
+class FleetOpsVehicleObserverProbe extends VehicleObserver
+{
+    public ?string $identifier = null;
+    public ?Driver $driver     = null;
+    public array $deleted      = [];
+    public array $invalidated  = [];
+
+    protected function getDriverIdentifier(): ?string
+    {
+        return $this->identifier;
+    }
+
+    protected function findDriver(string $identifier): ?Driver
+    {
+        return $this->driver && $identifier === $this->identifier ? $this->driver : null;
+    }
+
+    protected function deleteDriversAssignedTo(Vehicle $vehicle): mixed
+    {
+        $this->deleted[] = $vehicle->uuid;
+
+        return 1;
+    }
+
+    protected function invalidateLiveCache(): void
+    {
+        $this->invalidated[] = ['vehicles', 'operations-monitor'];
+    }
+}
+
+class FleetOpsVehicleObserverDriverFake extends Driver
+{
+    public array $assignments = [];
+
+    public function assignVehicle(Vehicle $vehicle): self
+    {
+        $this->assignments[] = $vehicle;
+
+        return $this;
+    }
+}
+
+class FleetOpsServiceRateObserverProbe extends ServiceRateObserver
+{
+    public mixed $rateFeesInput       = null;
+    public mixed $parcelFeesInput     = null;
+    public array $deletedModelBatches = [];
+
+    protected function rateFeesInput(): mixed
+    {
+        return $this->rateFeesInput;
+    }
+
+    protected function parcelFeesInput(): mixed
+    {
+        return $this->parcelFeesInput;
+    }
+
+    protected function deleteModels(mixed $models): void
+    {
+        $this->deletedModelBatches[] = $models;
+    }
+}
+
+class FleetOpsServiceRateObserverServiceRateFake extends ServiceRate
+{
+    public bool $fixedMeter       = false;
+    public bool $perDrop          = false;
+    public bool $multiZone        = false;
+    public bool $parcelService    = false;
+    public array $rateFeeCalls    = [];
+    public array $parcelFeeCalls  = [];
+    public bool $relationsLoaded  = false;
+
+    public function isFixedMeter(): bool
+    {
+        return $this->fixedMeter;
+    }
+
+    public function isPerDrop(): bool
+    {
+        return $this->perDrop;
+    }
+
+    public function isMultiZoneDistance(): bool
+    {
+        return $this->multiZone;
+    }
+
+    public function isParcelService(): bool
+    {
+        return $this->parcelService;
+    }
+
+    public function setServiceRateFees(?array $serviceRateFees = [])
+    {
+        $this->rateFeeCalls[] = $serviceRateFees;
+
+        return $this;
+    }
+
+    public function setServiceRateParcelFees(?array $serviceRateParcelFees = [])
+    {
+        $this->parcelFeeCalls[] = $serviceRateParcelFees;
+
+        return $this;
+    }
+
+    public function load($relations)
+    {
+        $this->relationsLoaded = $relations === ['parcelFees', 'rateFees'];
+        $this->setRelation('parcelFees', new EloquentCollection(['parcel-fee']));
+        $this->setRelation('rateFees', new EloquentCollection(['rate-fee']));
+
+        return $this;
+    }
+}
+
+class FleetOpsTrackingNumberObserverProbe extends TrackingNumberObserver
+{
+    public array $barcodes = [];
+    public array $statuses = [];
+
+    protected function generateTrackingNumber(TrackingNumber $trackingNumber): string
+    {
+        return 'TN-' . $trackingNumber->region;
+    }
+
+    protected function generateBarcode(string $ownerUuid, string $type): string
+    {
+        $this->barcodes[] = [$ownerUuid, $type];
+
+        return $type . '-png';
+    }
+
+    protected function createTrackingStatus(array $attributes): TrackingStatus
+    {
+        $this->statuses[] = $attributes;
+
+        $status = new TrackingStatus();
+        $status->setRawAttributes(array_merge(['uuid' => 'status-uuid'], $attributes), true);
+
+        return $status;
+    }
+}
+
+class FleetOpsTrackingNumberObserverTrackingNumberFake extends TrackingNumber
+{
+    public array $ownerStatuses = [];
+
+    public function updateOwnerStatus(?TrackingStatus $trackingStatus = null)
+    {
+        $this->ownerStatuses[] = $trackingStatus;
+
+        return $this;
+    }
+}
+
+class FleetOpsZoneObserverProbe extends ZoneObserver
+{
+    public array $invalidations = [];
+
+    protected function invalidateServiceAreaCache(Zone $zone, ?string $serviceAreaUuid = null): void
+    {
+        $serviceAreaUuid ??= $zone->service_area_uuid;
+        if (!$serviceAreaUuid) {
+            return;
+        }
+
+        $this->invalidations[] = [$zone->company_uuid, $serviceAreaUuid];
+    }
+}
+
+class FleetOpsNotifyDriverOnShiftChangeProbe extends NotifyDriverOnShiftChange
+{
+    public ?Schedule $schedule = null;
+    public array $settings     = [];
+    public bool $createdEvent  = false;
+    public array $sent         = [];
+
+    protected function getSchedule(ScheduleItem $scheduleItem): ?Schedule
+    {
+        return $this->schedule;
+    }
+
+    protected function getSchedulingSettings(): array
+    {
+        return $this->settings;
+    }
+
+    protected function isCreatedEvent(object $event): bool
+    {
+        return $this->createdEvent;
+    }
+
+    protected function notifyDriver(Driver $driver, DriverShiftChanged $notification): void
+    {
+        $this->sent[] = [$driver, $notification];
     }
 }
 
@@ -389,4 +648,185 @@ test('contact observer prevents changing existing customer contact type', functi
 
     expect(fn () => $observer->saving($contact))
         ->toThrow(Exception::class, 'Customer contact type cannot be changed.');
+});
+
+test('driver observer defaults location unassigns related records and deletes driver users', function () {
+    $driver = new Driver();
+    $driver->setRawAttributes([
+        'uuid'      => 'driver-uuid',
+        'user_uuid' => 'user-uuid',
+    ], true);
+
+    $observer = new FleetOpsDriverObserverProbe();
+    $user     = new FleetOpsDriverObserverUserFake();
+
+    $observer->user = $user;
+    $observer->creating($driver);
+    $observer->created($driver);
+    $observer->updated($driver);
+    $observer->deleting($driver);
+    $observer->deleted($driver);
+
+    expect($driver->location)->toBeInstanceOf(Fleetbase\LaravelMysqlSpatial\Types\Point::class)
+        ->and($driver->vehicle_uuid)->toBeNull()
+        ->and($observer->invalidations)->toBe([
+            ['drivers', 'operations-monitor'],
+            ['drivers', 'operations-monitor'],
+            ['drivers', 'operations-monitor'],
+        ])
+        ->and($observer->unassigned)->toBe(['driver-uuid'])
+        ->and($user->deleted)->toBeTrue();
+
+    $driverWithLocation           = new Driver();
+    $location                     = new Fleetbase\LaravelMysqlSpatial\Types\Point(1.3, 103.8);
+    $driverWithLocation->location = $location;
+    $observer->creating($driverWithLocation);
+
+    expect($driverWithLocation->location)->toBe($location);
+});
+
+test('vehicle observer assigns requested driver and invalidates caches', function () {
+    $observer             = new FleetOpsVehicleObserverProbe();
+    $observer->identifier = 'driver-uuid';
+    $observer->driver     = new FleetOpsVehicleObserverDriverFake();
+
+    $vehicle = new Vehicle();
+    $vehicle->setRawAttributes(['uuid' => 'vehicle-uuid'], true);
+
+    $observer->created($vehicle);
+    $observer->updating($vehicle);
+    $observer->deleted($vehicle);
+
+    expect($observer->driver->assignments)->toBe([$vehicle, $vehicle])
+        ->and($vehicle->getRelation('driver'))->toBe($observer->driver)
+        ->and($observer->deleted)->toBe(['vehicle-uuid'])
+        ->and($observer->invalidated)->toBe([
+            ['vehicles', 'operations-monitor'],
+            ['vehicles', 'operations-monitor'],
+            ['vehicles', 'operations-monitor'],
+        ]);
+
+    $withoutDriver = new FleetOpsVehicleObserverProbe();
+    $withoutDriver->created(new Vehicle());
+
+    expect($withoutDriver->invalidated)->toBe([['vehicles', 'operations-monitor']]);
+});
+
+test('service rate observer syncs rate and parcel fee inputs and deletes loaded fees', function () {
+    $observer                  = new FleetOpsServiceRateObserverProbe();
+    $observer->rateFeesInput   = [['fee' => 10]];
+    $observer->parcelFeesInput = [['parcel_fee' => 20]];
+
+    $serviceRate                = new FleetOpsServiceRateObserverServiceRateFake();
+    $serviceRate->fixedMeter    = true;
+    $serviceRate->parcelService = true;
+
+    $observer->created($serviceRate);
+
+    expect($serviceRate->rateFeeCalls)->toBe([[['fee' => 10]]])
+        ->and($serviceRate->parcelFeeCalls)->toBe([[['parcel_fee' => 20]]]);
+
+    $serviceRate->fixedMeter       = false;
+    $serviceRate->perDrop          = true;
+    $serviceRate->multiZone        = false;
+    $serviceRate->parcelService    = false;
+    $serviceRate->rateFeeCalls     = [];
+    $serviceRate->parcelFeeCalls   = [];
+    $observer->updated($serviceRate);
+
+    expect($serviceRate->rateFeeCalls)->toBe([[['fee' => 10]]])
+        ->and($serviceRate->parcelFeeCalls)->toBe([]);
+
+    $observer->deleted($serviceRate);
+
+    expect($serviceRate->relationsLoaded)->toBeTrue()
+        ->and($observer->deletedModelBatches)->toHaveCount(2);
+});
+
+test('tracking number observer generates codes and creates initial tracking status', function () {
+    session(['company' => 'company-uuid']);
+
+    $trackingNumber = new FleetOpsTrackingNumberObserverTrackingNumberFake();
+    $trackingNumber->setRawAttributes([
+        'uuid'       => 'tracking-uuid',
+        'region'     => 'sg',
+        'owner_uuid' => 'owner-uuid',
+        'owner_type' => Order::class,
+    ], true);
+
+    $observer = new FleetOpsTrackingNumberObserverProbe();
+    $observer->creating($trackingNumber);
+    $observer->created($trackingNumber);
+
+    expect($trackingNumber->tracking_number)->toBe('TN-sg')
+        ->and($trackingNumber->qr_code)->toBe('QRCODE-png')
+        ->and($trackingNumber->barcode)->toBe('PDF417-png')
+        ->and($observer->barcodes)->toBe([
+            ['owner-uuid', 'QRCODE'],
+            ['owner-uuid', 'PDF417'],
+        ])
+        ->and($observer->statuses[0])->toMatchArray([
+            'company_uuid'         => 'company-uuid',
+            'tracking_number_uuid' => 'tracking-uuid',
+            'status'               => 'Order Created',
+            'details'              => 'New order created.',
+            'code'                 => 'CREATED',
+        ])
+        ->and($observer->statuses[0]['location'])->toBeInstanceOf(Fleetbase\LaravelMysqlSpatial\Types\Point::class)
+        ->and($trackingNumber->ownerStatuses)->toHaveCount(1);
+});
+
+test('zone observer invalidates service area cache for lifecycle events and original service area', function () {
+    $zone = new Zone();
+    $zone->setRawAttributes([
+        'uuid'              => 'zone-uuid',
+        'company_uuid'      => 'company-uuid',
+        'service_area_uuid' => 'service-area-old',
+    ], true);
+    $zone->service_area_uuid = 'service-area-new';
+
+    $observer = new FleetOpsZoneObserverProbe();
+    $observer->created($zone);
+    $observer->updated($zone);
+    $observer->deleted($zone);
+    $observer->restored($zone);
+    $observer->created(new Zone());
+
+    expect($observer->invalidations)->toBe([
+        ['company-uuid', 'service-area-new'],
+        ['company-uuid', 'service-area-old'],
+        ['company-uuid', 'service-area-new'],
+        ['company-uuid', 'service-area-new'],
+        ['company-uuid', 'service-area-new'],
+    ]);
+});
+
+test('notify driver on shift change exits early and sends enabled driver notifications', function () {
+    $listener = new FleetOpsNotifyDriverOnShiftChangeProbe();
+
+    $listener->handle((object) []);
+    expect($listener->sent)->toBe([]);
+
+    $scheduleItem = new ScheduleItem();
+    $listener->handle((object) ['scheduleItem' => $scheduleItem]);
+    expect($listener->sent)->toBe([]);
+
+    $schedule = new Schedule();
+    $schedule->setRelation('subject', new User());
+    $listener->schedule = $schedule;
+    $listener->handle((object) ['scheduleItem' => $scheduleItem]);
+    expect($listener->sent)->toBe([]);
+
+    $driver = new Driver();
+    $schedule->setRelation('subject', $driver);
+    $listener->handle((object) ['scheduleItem' => $scheduleItem]);
+    expect($listener->sent)->toBe([]);
+
+    $listener->settings     = ['notify_drivers_on_shift_change' => true];
+    $listener->createdEvent = true;
+    $listener->handle((object) ['scheduleItem' => $scheduleItem]);
+
+    expect($listener->sent)->toHaveCount(1)
+        ->and($listener->sent[0][0])->toBe($driver)
+        ->and($listener->sent[0][1])->toBeInstanceOf(DriverShiftChanged::class);
 });
