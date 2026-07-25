@@ -4,6 +4,7 @@ use Carbon\Carbon;
 use Fleetbase\FleetOps\Console\Commands\AssignCustomerRoles;
 use Fleetbase\FleetOps\Console\Commands\AssignDriverRoles;
 use Fleetbase\FleetOps\Console\Commands\AuditCustomerUserConflicts;
+use Fleetbase\FleetOps\Console\Commands\DebugOrderTracker;
 use Fleetbase\FleetOps\Console\Commands\DispatchAdhocOrders;
 use Fleetbase\FleetOps\Console\Commands\DispatchOrders;
 use Fleetbase\FleetOps\Console\Commands\FixCustomerCompanies;
@@ -1477,6 +1478,10 @@ test('sync telematics filters requested pollable providers', function () {
     $method->setAccessible(true);
 
     expect($method->invoke($command, $registry))->toBe(['samsara']);
+});
+
+test('debug order tracker command exits successfully', function () {
+    expect((new DebugOrderTracker())->handle())->toBe(Command::SUCCESS);
 });
 
 test('process maintenance triggers exposes deterministic command helpers', function () {

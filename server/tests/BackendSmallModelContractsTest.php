@@ -175,6 +175,7 @@ test('small model relationships keep their intended foreign keys', function () {
         ->and((new FuelProviderConnection())->transactions()->getForeignKeyName())->toBe('fuel_provider_connection_uuid')
         ->and((new FuelProviderConnection())->syncRuns()->getForeignKeyName())->toBe('fuel_provider_connection_uuid')
         ->and((new FuelProviderSyncRun())->connection()->getForeignKeyName())->toBe('fuel_provider_connection_uuid')
+        ->and((new VehicleDeviceEvent())->device()->getForeignKeyName())->toBe('vehicle_device_uuid')
         ->and($proof->file()->getForeignKeyName())->toBe('file_uuid')
         ->and($proof->order()->getForeignKeyName())->toBe('order_uuid');
 });
