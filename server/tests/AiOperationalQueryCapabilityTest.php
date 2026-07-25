@@ -35,6 +35,39 @@ function fleetopsOrderInsightsProtectedMethod(string $method): ReflectionMethod
     return $method;
 }
 
+class FleetOpsAssetStatusCapabilityProbe extends AssetStatusCapability
+{
+    public array $permissions = [];
+
+    protected function can(string $permission): bool
+    {
+        return in_array($permission, $this->permissions, true);
+    }
+
+    public function callStatusCounts(string $modelClass, string $permission): array
+    {
+        return $this->statusCounts($modelClass, $permission);
+    }
+
+    public function callDeviceStatus(): array
+    {
+        return $this->deviceStatus();
+    }
+
+    public function callDriverStatus(): array
+    {
+        return $this->driverStatus();
+    }
+}
+
+function fleetopsAssetStatusCapabilityProbe(array $permissions = []): FleetOpsAssetStatusCapabilityProbe
+{
+    $capability              = (new ReflectionClass(FleetOpsAssetStatusCapabilityProbe::class))->newInstanceWithoutConstructor();
+    $capability->permissions = $permissions;
+
+    return $capability;
+}
+
 test('fleet-ops registers safe ai query resources', function () {
     $registry = new AiQueryRegistry();
 
@@ -66,7 +99,25 @@ test('asset status capability includes driver online prompts', function () {
     $method     = (new ReflectionClass(AssetStatusCapability::class))->getMethod('matchesPrompt');
     $method->setAccessible(true);
 
-    expect($method->invoke($capability, 'how many drivers are online'))->toBeTrue();
+    expect($method->invoke($capability, 'how many drivers are online'))->toBeTrue()
+        ->and($method->invoke($capability, 'show unrelated warehouse notes'))->toBeFalse();
+});
+
+test('asset status capability exposes metadata and denied branches', function () {
+    $capability = fleetopsAssetStatusCapabilityProbe();
+
+    expect($capability->key())->toBe('fleet-ops.asset_status')
+        ->and($capability->label())->toBe('Fleet-Ops asset status')
+        ->and($capability->description())->toContain('vehicle, device, sensor')
+        ->and($capability->permissions())->toBe([
+            'fleet-ops see vehicle',
+            'fleet-ops see device',
+            'fleet-ops see sensor',
+            'fleet-ops see telematic',
+        ])
+        ->and($capability->callStatusCounts(Fleetbase\FleetOps\Models\Vehicle::class, 'fleet-ops see vehicle'))->toBe(['authorized' => false])
+        ->and($capability->callDeviceStatus())->toBe(['authorized' => false])
+        ->and($capability->callDriverStatus())->toBe(['authorized' => false]);
 });
 
 test('operational query date filters use resolved local windows', function () {
