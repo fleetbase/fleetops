@@ -1,10 +1,17 @@
 <?php
 
 use Carbon\Carbon;
+use Fleetbase\FleetOps\Models\Contact;
 use Fleetbase\FleetOps\Models\Maintenance;
 use Fleetbase\FleetOps\Models\MaintenanceSchedule;
 use Fleetbase\FleetOps\Models\WorkOrder;
+use Fleetbase\FleetOps\Observers\ContactObserver;
 use Fleetbase\FleetOps\Observers\WorkOrderObserver;
+use Fleetbase\Models\User;
+
+if (!class_exists('Illuminate\Foundation\Auth\User')) {
+    class_alias(Illuminate\Database\Eloquent\Model::class, 'Illuminate\Foundation\Auth\User');
+}
 
 class FleetOpsWorkOrderObserverProbe extends WorkOrderObserver
 {
@@ -55,6 +62,84 @@ class FleetOpsWorkOrderObserverScheduleFake extends MaintenanceSchedule
         $this->resets[] = [$completedOdometer, $completedEngineHours, $completedAt];
 
         return true;
+    }
+}
+
+class FleetOpsContactObserverContactFake extends Contact
+{
+    public bool $hasUser       = false;
+    public bool $customer      = false;
+    public bool $typeDirty     = false;
+    public bool $emailChanged  = false;
+    public bool $phoneChanged  = false;
+    public array $events       = [];
+    public array $originalData = [];
+
+    public function doesntHaveUser(): bool
+    {
+        $this->events[] = 'doesntHaveUser';
+
+        return !$this->hasUser;
+    }
+
+    public function createUser(bool $sendInvite = false): User
+    {
+        $this->events[] = 'createUser';
+        $this->hasUser  = true;
+
+        return new User();
+    }
+
+    public function assertCustomerIdentityIsAvailable(): void
+    {
+        $this->events[] = 'assertCustomerIdentityIsAvailable';
+    }
+
+    public function isCustomer(): bool
+    {
+        $this->events[] = 'isCustomer';
+
+        return $this->customer;
+    }
+
+    public function normalizeCustomerUser(?User $user = null, bool $quiet = false): ?User
+    {
+        $this->events[] = 'normalizeCustomerUser';
+
+        return $user ?? new User();
+    }
+
+    public function syncWithUser(): bool
+    {
+        $this->events[] = 'syncWithUser';
+
+        return true;
+    }
+
+    public function deleteUser(): ?bool
+    {
+        $this->events[] = 'deleteUser';
+
+        return true;
+    }
+
+    public function getOriginal($key = null, $default = null): mixed
+    {
+        return $key === null ? $this->originalData : ($this->originalData[$key] ?? $default);
+    }
+
+    public function isDirty($attributes = null): bool
+    {
+        return $attributes === 'type' ? $this->typeDirty : false;
+    }
+
+    public function wasChanged($attributes = null): bool
+    {
+        return match ($attributes) {
+            'email' => $this->emailChanged,
+            'phone' => $this->phoneChanged,
+            default => false,
+        };
     }
 }
 
@@ -153,4 +238,38 @@ test('work order observer skips non closing duplicate and missing schedule branc
 
     expect($observer->createdMaintenance)->toBe([])
         ->and($observer->completedEvents)->toBe([$duplicate]);
+});
+
+test('contact observer creates syncs normalizes and deletes associated users', function () {
+    $observer = new ContactObserver();
+    $contact  = new FleetOpsContactObserverContactFake();
+    $contact->setRawAttributes(['type' => 'customer']);
+    $contact->customer = true;
+
+    $observer->creating($contact);
+    $observer->saving($contact);
+    $observer->deleted($contact);
+
+    expect($contact->events)->toBe([
+        'doesntHaveUser',
+        'createUser',
+        'assertCustomerIdentityIsAvailable',
+        'doesntHaveUser',
+        'isCustomer',
+        'normalizeCustomerUser',
+        'syncWithUser',
+        'deleteUser',
+    ]);
+});
+
+test('contact observer prevents changing existing customer contact type', function () {
+    $observer              = new ContactObserver();
+    $contact               = new FleetOpsContactObserverContactFake();
+    $contact->exists       = true;
+    $contact->typeDirty    = true;
+    $contact->originalData = ['type' => 'customer'];
+    $contact->setRawAttributes(['type' => 'driver']);
+
+    expect(fn () => $observer->saving($contact))
+        ->toThrow(Exception::class, 'Customer contact type cannot be changed.');
 });
