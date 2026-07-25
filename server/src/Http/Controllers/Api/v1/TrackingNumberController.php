@@ -30,7 +30,7 @@ class TrackingNumberController extends Controller
 
         // owner assignment
         if ($request->has('owner')) {
-            $owner = Utils::getUuid(
+            $owner = $this->getOwnerUuid(
                 ['orders', 'entities'],
                 [
                     'public_id'    => $request->input('owner'),
@@ -48,10 +48,10 @@ class TrackingNumberController extends Controller
         }
 
         // create the trackingNumber
-        $trackingNumber = TrackingNumber::create($input);
+        $trackingNumber = $this->createTrackingNumber($input);
 
         // response the driver resource
-        return new TrackingNumberResource($trackingNumber);
+        return $this->trackingNumberResource($trackingNumber);
     }
 
     /**
@@ -61,9 +61,9 @@ class TrackingNumberController extends Controller
      */
     public function query(Request $request)
     {
-        $results = TrackingNumber::queryWithRequest($request);
+        $results = $this->queryTrackingNumbers($request);
 
-        return TrackingNumberResource::collection($results);
+        return $this->trackingNumberResourceCollection($results);
     }
 
     /**
@@ -75,9 +75,9 @@ class TrackingNumberController extends Controller
     {
         // find for the trackingNumber
         try {
-            $trackingNumber = TrackingNumber::findTrackingOrFail($id);
+            $trackingNumber = $this->findTrackingNumber($id);
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $exception) {
-            return response()->json(
+            return $this->jsonResponse(
                 [
                     'error' => 'TrackingNumber resource not found.',
                 ],
@@ -86,7 +86,7 @@ class TrackingNumberController extends Controller
         }
 
         // response the trackingNumber resource
-        return new TrackingNumberResource($trackingNumber);
+        return $this->trackingNumberResource($trackingNumber);
     }
 
     /**
@@ -98,9 +98,9 @@ class TrackingNumberController extends Controller
     {
         // find for the driver
         try {
-            $trackingNumber = TrackingNumber::findTrackingOrFail($id);
+            $trackingNumber = $this->findTrackingNumber($id);
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $exception) {
-            return response()->json(
+            return $this->jsonResponse(
                 [
                     'error' => 'TrackingNumber resource not found.',
                 ],
@@ -112,7 +112,7 @@ class TrackingNumberController extends Controller
         $trackingNumber->delete();
 
         // response the trackingNumber resource
-        return new DeletedResource($trackingNumber);
+        return $this->deletedTrackingNumberResource($trackingNumber);
     }
 
     /**
@@ -128,11 +128,11 @@ class TrackingNumberController extends Controller
         $code = $request->input('code');
 
         // get the model of from the code
-        $model = Utils::findModel(['entities', 'orders'], ['uuid' => $code]);
+        $model = $this->findQrModel(['entities', 'orders'], ['uuid' => $code]);
 
         // if no model response with error
         if (!$model) {
-            return response()->json(
+            return $this->jsonResponse(
                 [
                     'error' => 'Unable to find QR code value',
                 ],
@@ -141,9 +141,59 @@ class TrackingNumberController extends Controller
         }
 
         // get the model class name
+        return $this->qrModelResource($model);
+    }
+
+    protected function getOwnerUuid(array $tables, array $where, array $options)
+    {
+        return Utils::getUuid($tables, $where, $options);
+    }
+
+    protected function createTrackingNumber(array $input): TrackingNumber
+    {
+        return TrackingNumber::create($input);
+    }
+
+    protected function queryTrackingNumbers(Request $request)
+    {
+        return TrackingNumber::queryWithRequest($request);
+    }
+
+    protected function findTrackingNumber(string $id): TrackingNumber
+    {
+        return TrackingNumber::findTrackingOrFail($id);
+    }
+
+    protected function trackingNumberResource(TrackingNumber $trackingNumber)
+    {
+        return new TrackingNumberResource($trackingNumber);
+    }
+
+    protected function trackingNumberResourceCollection($results)
+    {
+        return TrackingNumberResource::collection($results);
+    }
+
+    protected function deletedTrackingNumberResource(TrackingNumber $trackingNumber)
+    {
+        return new DeletedResource($trackingNumber);
+    }
+
+    protected function findQrModel(array $tables, array $where)
+    {
+        return Utils::findModel($tables, $where);
+    }
+
+    protected function qrModelResource($model)
+    {
         $modelType         = class_basename($model);
         $resourceNamespace = '\\Fleetbase\\Http\\Resources\\v1\\' . $modelType;
 
         return new $resourceNamespace($model);
+    }
+
+    protected function jsonResponse(array $payload, int $status)
+    {
+        return response()->json($payload, $status);
     }
 }
