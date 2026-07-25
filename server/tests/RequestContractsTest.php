@@ -56,10 +56,13 @@ namespace {
     use Fleetbase\FleetOps\Http\Requests\CreateCustomerRequest;
     use Fleetbase\FleetOps\Http\Requests\CreateDeviceRequest;
     use Fleetbase\FleetOps\Http\Requests\CreateDriverRequest;
+    use Fleetbase\FleetOps\Http\Requests\CreateEntityRequest;
+    use Fleetbase\FleetOps\Http\Requests\CreateEquipmentRequest;
     use Fleetbase\FleetOps\Http\Requests\CreateFuelReportRequest;
     use Fleetbase\FleetOps\Http\Requests\CreateFuelTransactionRequest;
     use Fleetbase\FleetOps\Http\Requests\CreateOrderRequest;
     use Fleetbase\FleetOps\Http\Requests\CreatePartRequest;
+    use Fleetbase\FleetOps\Http\Requests\CreatePayloadRequest;
     use Fleetbase\FleetOps\Http\Requests\CreatePlaceRequest;
     use Fleetbase\FleetOps\Http\Requests\CreateSensorRequest;
     use Fleetbase\FleetOps\Http\Requests\CreateServiceAreaRequest;
@@ -68,6 +71,7 @@ namespace {
     use Fleetbase\FleetOps\Http\Requests\CreateVehicleRequest;
     use Fleetbase\FleetOps\Http\Requests\CreateWorkOrderRequest;
     use Fleetbase\FleetOps\Http\Requests\CreateZoneRequest;
+    use Fleetbase\FleetOps\Http\Requests\DriverSimulationRequest;
     use Fleetbase\FleetOps\Http\Requests\Internal\CreateDriverRequest as InternalCreateDriverRequest;
     use Fleetbase\FleetOps\Http\Requests\Internal\CreateOrderRequest as InternalCreateOrderRequest;
     use Fleetbase\FleetOps\Http\Requests\UpdateDeviceRequest;
@@ -483,6 +487,70 @@ namespace {
         bindFleetOpsRequestSession(['is_sanctum_token' => true]);
 
         expect($request->authorize())->toBeTrue();
+    });
+
+    test('entity equipment payload and simulation requests expose conditional contracts', function () {
+        bindFleetOpsRequestSession();
+
+        $entityRequest    = CreateEntityRequest::create('/fleetops-test', 'POST', ['weight' => 12, 'length' => 4, 'width' => 5, 'height' => 6, 'declared_value' => 8, 'price' => 9, 'sales_price' => 10]);
+        $equipmentRequest = CreateEquipmentRequest::create('/fleetops-test', 'POST');
+        $payloadRequest   = CreatePayloadRequest::create('/fleetops-test', 'POST', ['cod_amount' => 30]);
+        $simulationRules  = DriverSimulationRequest::create('/fleetops-test', 'POST')->rules();
+
+        expect($entityRequest->authorize())->toBeFalse()
+            ->and($equipmentRequest->authorize())->toBeFalse()
+            ->and($payloadRequest->authorize())->toBeFalse();
+
+        bindFleetOpsRequestSession(['api_credential' => 'credential-uuid']);
+
+        $entityRules    = $entityRequest->rules();
+        $equipmentRules = $equipmentRequest->rules();
+        $payloadRules   = $payloadRequest->rules();
+
+        expect($entityRequest->authorize())->toBeTrue()
+            ->and(ruleStrings($entityRules['name']))->toContain('required')
+            ->and(ruleStrings($entityRules['type']))->toContain('required')
+            ->and(ruleStrings($entityRules['destination']))->toContain('nullable', 'exists:places,public_id')
+            ->and(ruleStrings($entityRules['payload']))->toContain('nullable', 'exists:payloads,public_id', 'required_with:destination,waypoint')
+            ->and(ruleStrings($entityRules['weight_unit']))->toContain('required', 'in:g,oz,lb,kg')
+            ->and(ruleStrings($entityRules['dimensions_unit']))->toContain('required', 'in:cm,in,ft,mm,m,yd')
+            ->and(ruleStrings($entityRules['currency']))->toContain('required', 'size:3')
+            ->and($equipmentRequest->authorize())->toBeTrue()
+            ->and(ruleStrings($equipmentRules['name']))->toContain('required', 'string')
+            ->and($equipmentRules['equipable'])->toBe(['nullable', 'required_with:equipable_type', 'string'])
+            ->and($equipmentRules['meta'])->toBe(['nullable', 'array'])
+            ->and($payloadRequest->authorize())->toBeTrue()
+            ->and(ruleStrings($payloadRules['type']))->toContain('required')
+            ->and(ruleStrings($payloadRules['cod_currency']))->toContain('required', 'size:3')
+            ->and(ruleStrings($payloadRules['cod_payment_method']))->toContain('required', 'in:card,check,cash,bank_transfer')
+            ->and($payloadRules['pickup'])->toBe('required')
+            ->and($payloadRules['dropoff'])->toBe('required')
+            ->and($payloadRules['waypoints'])->toBe('required|array|min:2')
+            ->and($simulationRules['start'][0])->toBe('required')
+            ->and($simulationRules['start'][1])->toBeInstanceOf(ResolvablePoint::class)
+            ->and($simulationRules['end'][0])->toBe('required')
+            ->and($simulationRules['end'][1])->toBeInstanceOf(ResolvablePoint::class)
+            ->and(ruleStrings($simulationRules['order']))->toContain('nullable', 'string', 'exists:orders,public_id');
+
+        $payloadWithWaypointRules = CreatePayloadRequest::create('/fleetops-test', 'POST', [
+            'pickup'  => 'place_pickup',
+            'dropoff' => 'place_dropoff',
+        ])->rules();
+        $orderSimulationRules = DriverSimulationRequest::create('/fleetops-test', 'POST', [
+            'action' => 'order',
+        ])->rules();
+
+        expect($payloadWithWaypointRules['pickup'])->toBe('required|exists:places,public_id')
+            ->and($payloadWithWaypointRules['dropoff'])->toBe('required|exists:places,public_id')
+            ->and($payloadWithWaypointRules['waypoints'])->toBe('array')
+            ->and($orderSimulationRules['start'][0])->toBe('required')
+            ->and(ruleStrings($orderSimulationRules['order']))->toContain('required', 'string', 'exists:orders,public_id');
+
+        bindFleetOpsRequestSession(['is_sanctum_token' => true]);
+
+        expect($entityRequest->authorize())->toBeTrue()
+            ->and($equipmentRequest->authorize())->toBeTrue()
+            ->and($payloadRequest->authorize())->toBeFalse();
     });
 
     test('driver request authorizes api sanctum and navigator sessions with identity rules', function () {

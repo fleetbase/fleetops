@@ -20,7 +20,7 @@ class CreatePayloadRequest extends FleetbaseRequest
      */
     public function rules(): array
     {
-        return [
+        $validations = [
             'entities'              => 'array',
             'waypoints'             => 'array',
             'return'                => 'nullable',
@@ -34,16 +34,18 @@ class CreatePayloadRequest extends FleetbaseRequest
             $validations['dropoff'] = 'required';
         }
 
-        if ($this->isString('pickup')) {
+        if (is_string($this->input('pickup'))) {
             $validations['pickup'] = 'required|exists:places,public_id';
         }
 
-        if ($this->isString('dropoff')) {
+        if (is_string($this->input('dropoff'))) {
             $validations['dropoff'] = 'required|exists:places,public_id';
         }
 
         if ($this->missing(['pickup', 'dropoff'])) {
             $validations['waypoints'] = 'required|array|min:2';
         }
+
+        return $validations;
     }
 }
