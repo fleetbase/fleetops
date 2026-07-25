@@ -51,7 +51,7 @@ class SendDriverNotification extends Command
         }
 
         // Attempt to find the order
-        $order = Order::where('public_id', $orderId)->first();
+        $order = $this->findOrder($orderId);
         if (!$order) {
             $this->error('Order not found!');
 
@@ -88,11 +88,11 @@ class SendDriverNotification extends Command
             // Handle order ping notification which requires distance of pickup point from driver
             if ($event === 'ping') {
                 $destination = $order->payload->getPickupOrFirstWaypoint();
-                $matrix      = Utils::calculateDrivingDistanceAndTime($order->driverAssigned->location, $destination);
-                $order->driverAssigned->notify(new $notificationClass($order, $matrix->distance));
+                $matrix      = $this->calculateDrivingDistanceAndTime($order->driverAssigned->location, $destination);
+                $this->notifyDriver($order->driverAssigned, $notificationClass, $order, $matrix->distance);
             } else {
                 // Trigger notification
-                $order->driverAssigned->notify(new $notificationClass($order));
+                $this->notifyDriver($order->driverAssigned, $notificationClass, $order);
             }
         } catch (\Exception $e) {
             $this->error($e->getMessage());
@@ -103,5 +103,26 @@ class SendDriverNotification extends Command
         $this->info("Notification '{$event}' has been triggered for order ID '{$orderId}'.");
 
         return 0;
+    }
+
+    protected function findOrder(string $orderId): ?Order
+    {
+        return Order::where('public_id', $orderId)->first();
+    }
+
+    protected function calculateDrivingDistanceAndTime(mixed $origin, mixed $destination): object
+    {
+        return Utils::calculateDrivingDistanceAndTime($origin, $destination);
+    }
+
+    protected function notifyDriver($driver, string $notificationClass, Order $order, mixed $distance = null): void
+    {
+        if ($distance !== null) {
+            $driver->notify(new $notificationClass($order, $distance));
+
+            return;
+        }
+
+        $driver->notify(new $notificationClass($order));
     }
 }

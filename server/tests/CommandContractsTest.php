@@ -1,13 +1,17 @@
 <?php
 
 use Carbon\Carbon;
+use Fleetbase\FleetOps\Console\Commands\AssignCustomerRoles;
+use Fleetbase\FleetOps\Console\Commands\AssignDriverRoles;
 use Fleetbase\FleetOps\Console\Commands\AuditCustomerUserConflicts;
 use Fleetbase\FleetOps\Console\Commands\DispatchAdhocOrders;
+use Fleetbase\FleetOps\Console\Commands\DispatchOrders;
 use Fleetbase\FleetOps\Console\Commands\FixCustomerCompanies;
 use Fleetbase\FleetOps\Console\Commands\FixDriverCompanies;
 use Fleetbase\FleetOps\Console\Commands\FixLegacyOrderConfigs;
 use Fleetbase\FleetOps\Console\Commands\ProcessMaintenanceTriggers;
 use Fleetbase\FleetOps\Console\Commands\PurgeUnpurchasedServiceQuotes;
+use Fleetbase\FleetOps\Console\Commands\SendDriverNotification;
 use Fleetbase\FleetOps\Console\Commands\SendMaintenanceReminders;
 use Fleetbase\FleetOps\Console\Commands\SimulateOrderRouteNavigation;
 use Fleetbase\FleetOps\Console\Commands\SyncTelematics;
@@ -20,6 +24,8 @@ use Fleetbase\FleetOps\Models\MaintenanceSchedule;
 use Fleetbase\FleetOps\Models\Order;
 use Fleetbase\FleetOps\Models\OrderConfig;
 use Fleetbase\FleetOps\Models\Vehicle;
+use Fleetbase\FleetOps\Notifications\OrderAssigned;
+use Fleetbase\FleetOps\Notifications\OrderPing;
 use Fleetbase\FleetOps\Support\Telematics\TelematicProviderRegistry;
 use Fleetbase\LaravelMysqlSpatial\Types\Point;
 use Fleetbase\Models\Company;
@@ -30,6 +36,10 @@ use Illuminate\Support\Facades\Cache;
 
 if (!function_exists('Fleetbase\Traits\config')) {
     eval('namespace Fleetbase\Traits; function config($key = null, $default = null) { return false; }');
+}
+
+if (!function_exists('Fleetbase\Models\config')) {
+    eval('namespace Fleetbase\Models; function config($key = null, $default = null) { return $default; }');
 }
 
 if (!function_exists('Fleetbase\FleetOps\Console\Commands\config')) {
@@ -884,6 +894,318 @@ class FleetOpsPurgeServiceQuotesCommandFake extends PurgeUnpurchasedServiceQuote
     }
 }
 
+class FleetOpsSendDriverNotificationCommandFake extends SendDriverNotification
+{
+    public array $messages  = [];
+    public array $questions = [];
+    public array $choices   = [];
+    public array $sent      = [];
+    public ?Order $order    = null;
+    public object $matrix;
+
+    public function __construct(private array $testOptions)
+    {
+        parent::__construct();
+        $this->matrix = (object) ['distance' => 1234];
+    }
+
+    public function option($key = null)
+    {
+        return $key === null ? $this->testOptions : ($this->testOptions[$key] ?? null);
+    }
+
+    public function ask($question, $default = null)
+    {
+        $this->questions[] = [$question, $default];
+
+        return 'asked_order';
+    }
+
+    public function choice($question, array $choices, $default = null, $attempts = null, $multiple = false)
+    {
+        $this->choices[] = [$question, $choices, $default, $attempts, $multiple];
+
+        return 'assigned';
+    }
+
+    public function info($string, $verbosity = null)
+    {
+        $this->messages[] = ['info', $string];
+    }
+
+    public function error($string, $verbosity = null)
+    {
+        $this->messages[] = ['error', $string];
+    }
+
+    protected function findOrder(string $orderId): ?Order
+    {
+        $this->messages[] = ['findOrder', $orderId];
+
+        return $this->order;
+    }
+
+    protected function calculateDrivingDistanceAndTime(mixed $origin, mixed $destination): object
+    {
+        $this->messages[] = ['distance', $origin, $destination];
+
+        return $this->matrix;
+    }
+
+    protected function notifyDriver($driver, string $notificationClass, Order $order, mixed $distance = null): void
+    {
+        $this->sent[] = [$driver, $notificationClass, $order->public_id, $distance];
+    }
+}
+
+class FleetOpsNotificationDriverCommandFake extends Driver
+{
+    public array $notifications   = [];
+    public mixed $locationForTest = null;
+
+    public function getAttribute($key)
+    {
+        if ($key === 'location') {
+            return $this->locationForTest;
+        }
+
+        return parent::getAttribute($key);
+    }
+
+    public function notify($instance): void
+    {
+        $this->notifications[] = $instance;
+    }
+}
+
+class FleetOpsNotificationOrderCommandFake extends Order
+{
+    public string $publicIdForTest      = 'order_public';
+    public mixed $driverAssignedForTest = null;
+    public mixed $payloadForTest        = null;
+
+    public function loadMissing($relations)
+    {
+        return $this;
+    }
+
+    public function getAttribute($key)
+    {
+        return match ($key) {
+            'public_id'      => $this->publicIdForTest,
+            'driverAssigned' => $this->driverAssignedForTest,
+            'payload'        => $this->payloadForTest,
+            default          => parent::getAttribute($key),
+        };
+    }
+}
+
+class FleetOpsNotificationPayloadCommandFake
+{
+    public function __construct(private mixed $pickup)
+    {
+    }
+
+    public function getPickupOrFirstWaypoint(): mixed
+    {
+        return $this->pickup;
+    }
+}
+
+class FleetOpsDispatchOrdersCommandFake extends DispatchOrders
+{
+    public array $messages = [];
+    public EloquentCollection $orders;
+
+    public function __construct(private array $testOptions)
+    {
+        parent::__construct();
+        $this->orders = new EloquentCollection();
+    }
+
+    public function option($key = null)
+    {
+        return $key === null ? $this->testOptions : ($this->testOptions[$key] ?? null);
+    }
+
+    public function info($string, $verbosity = null)
+    {
+        $this->messages[] = ['info', $string];
+    }
+
+    public function alert($string, $verbosity = null)
+    {
+        $this->messages[] = ['alert', $string];
+    }
+
+    public function warn($string, $verbosity = null)
+    {
+        $this->messages[] = ['warn', $string];
+    }
+
+    protected function getScheduledOrders(bool $sandboxMode): EloquentCollection
+    {
+        $this->messages[] = ['getScheduledOrders', $sandboxMode];
+
+        return $this->orders;
+    }
+}
+
+class FleetOpsScheduledOrderCommandFake extends Order
+{
+    public string $publicIdForTest    = '';
+    public string $scheduledAtForTest = '';
+    public bool $ready                = false;
+    public bool $dispatchedForTest    = false;
+
+    public function getAttribute($key)
+    {
+        return match ($key) {
+            'public_id'    => $this->publicIdForTest,
+            'scheduled_at' => $this->scheduledAtForTest,
+            default        => parent::getAttribute($key),
+        };
+    }
+
+    public function shouldDispatch($precision = 1)
+    {
+        return $this->ready;
+    }
+
+    public function dispatch(bool $save = true): self
+    {
+        $this->dispatchedForTest = true;
+
+        return $this;
+    }
+}
+
+class FleetOpsAssignDriverRolesCommandFake extends AssignDriverRoles
+{
+    public array $messages = [];
+    public Illuminate\Support\Collection $testCompanies;
+
+    public function __construct()
+    {
+        parent::__construct();
+        $this->testCompanies = collect();
+    }
+
+    public function info($string, $verbosity = null)
+    {
+        $this->messages[] = ['info', $string];
+    }
+
+    public function error($string, $verbosity = null)
+    {
+        $this->messages[] = ['error', $string];
+    }
+
+    protected function companies()
+    {
+        return $this->testCompanies;
+    }
+
+    protected function isUser($user): bool
+    {
+        return $user instanceof FleetOpsRoleUserCommandFake;
+    }
+
+    protected function setCompanyUserRelation($user, Company $company): void
+    {
+        $user->companies[] = $company->uuid;
+    }
+
+    protected function driverForCompany($user, string $companyUuid)
+    {
+        return $user->drivers[$companyUuid] ?? null;
+    }
+
+    protected function isNotAdmin($user): bool
+    {
+        return !$user->admin;
+    }
+
+    protected function assignDriverRole($user): void
+    {
+        $user->assignSingleRole('Driver');
+    }
+}
+
+class FleetOpsAssignCustomerRolesCommandFake extends AssignCustomerRoles
+{
+    public array $messages      = [];
+    public array $customerUsers = [];
+    public Illuminate\Support\Collection $testCustomers;
+
+    public function __construct()
+    {
+        parent::__construct();
+        $this->testCustomers = collect();
+    }
+
+    public function info($string, $verbosity = null)
+    {
+        $this->messages[] = ['info', $string];
+    }
+
+    public function error($string, $verbosity = null)
+    {
+        $this->messages[] = ['error', $string];
+    }
+
+    protected function customers()
+    {
+        return $this->testCustomers;
+    }
+
+    protected function customerUser(Contact $customer)
+    {
+        return $this->customerUsers[spl_object_id($customer)] ?? null;
+    }
+
+    protected function createUserForCustomer(Contact $customer)
+    {
+        $this->customerUsers[spl_object_id($customer)] = $customer->createdUser;
+
+        return $customer->createdUser;
+    }
+
+    protected function assignCustomerRole($user): void
+    {
+        $user->assignSingleRole('Fleet-Ops Customer');
+    }
+}
+
+class FleetOpsRoleUserCommandFake
+{
+    public string $email;
+    public bool $admin         = false;
+    public array $roles        = [];
+    public array $companies    = [];
+    public array $drivers      = [];
+    public ?Throwable $failure = null;
+
+    public function __construct(string $email)
+    {
+        $this->email = $email;
+    }
+
+    public function assignSingleRole(string $role): void
+    {
+        if ($this->failure) {
+            throw $this->failure;
+        }
+
+        $this->roles[] = $role;
+    }
+}
+
+class FleetOpsCustomerRoleCommandFake extends Contact
+{
+    public mixed $createdUser = null;
+}
+
 class FleetOpsTrackOrderChunkFake implements IteratorAggregate
 {
     public array $loaded = [];
@@ -1546,7 +1868,7 @@ test('dispatch adhoc command handles invalid pickups empty drivers and successfu
         ->and($command->messages)->toContain(['info', 'Order order_ping dispatched successfully to 1 nearby drivers.'])
         ->and($command->messages)->toContain(['info', 'Pinging driver Jane Driver (driver_public) ...'])
         ->and($pingOrder->dispatchedForPing)->toBeTrue()
-        ->and($driver->notifications)->toBe([Fleetbase\FleetOps\Notifications\OrderPing::class])
+        ->and($driver->notifications)->toBe([OrderPing::class])
         ->and($command->tables)->toHaveCount(1);
 
     Carbon::setTestNow();
@@ -1757,6 +2079,155 @@ test('purge unpurchased service quotes command commits deletes and rolls back fa
         ->and($failed->messages)->toContain(['error', 'Error deleting unpurchased service quotes: delete failed']);
 
     Carbon::setTestNow();
+});
+
+test('send driver notification command handles lookup validation choices and ping notifications', function () {
+    $missing = new FleetOpsSendDriverNotificationCommandFake([
+        'id'    => null,
+        'event' => 'assigned',
+    ]);
+
+    expect($missing->handle())->toBe(1)
+        ->and($missing->questions)->toBe([['Enter the order ID to trigger the notification', null]])
+        ->and($missing->messages)->toContain(['findOrder', 'asked_order'])
+        ->and($missing->messages)->toContain(['error', 'Order not found!']);
+
+    $withoutDriver        = new FleetOpsSendDriverNotificationCommandFake([
+        'id'    => 'order_public',
+        'event' => 'assigned',
+    ]);
+    $withoutDriver->order                        = new FleetOpsNotificationOrderCommandFake();
+    $withoutDriver->order->driverAssignedForTest = null;
+
+    expect($withoutDriver->handle())->toBe(1)
+        ->and($withoutDriver->messages)->toContain(['error', 'Order does not have a driver assigned!']);
+
+    $driver                  = new FleetOpsNotificationDriverCommandFake();
+    $driver->locationForTest = 'driver-location';
+
+    $order                        = new FleetOpsNotificationOrderCommandFake();
+    $order->driverAssignedForTest = $driver;
+    $order->payloadForTest        = new FleetOpsNotificationPayloadCommandFake('pickup-location');
+
+    $ping        = new FleetOpsSendDriverNotificationCommandFake([
+        'id'    => 'order_public',
+        'event' => 'ping',
+    ]);
+    $ping->order = $order;
+
+    expect($ping->handle())->toBe(0)
+        ->and($ping->messages)->toContain(['distance', 'driver-location', 'pickup-location'])
+        ->and($ping->messages)->toContain(['info', "Notification 'ping' has been triggered for order ID 'order_public'."])
+        ->and($ping->sent)->toBe([[$driver, OrderPing::class, 'order_public', 1234]]);
+
+    $choice        = new FleetOpsSendDriverNotificationCommandFake([
+        'id'    => 'order_public',
+        'event' => null,
+    ]);
+    $choice->order = $order;
+
+    expect($choice->handle())->toBe(0)
+        ->and($choice->choices[0][0])->toBe('Select the event to trigger')
+        ->and($choice->choices[0][1])->toBe(['assigned', 'canceled', 'dispatched', 'ping'])
+        ->and($choice->sent)->toBe([[$driver, OrderAssigned::class, 'order_public', null]]);
+
+    $invalid        = new FleetOpsSendDriverNotificationCommandFake([
+        'id'    => 'order_public',
+        'event' => 'unknown',
+    ]);
+    $invalid->order = $order;
+
+    expect($invalid->handle())->toBe(1)
+        ->and($invalid->messages)->toContain(['error', 'Invalid event selected!']);
+});
+
+test('dispatch orders command dispatches ready scheduled orders and warns for unready ones', function () {
+    Carbon::setTestNow(Carbon::parse('2026-05-06 07:08:09'));
+
+    $ready                     = new FleetOpsScheduledOrderCommandFake();
+    $ready->publicIdForTest    = 'order_ready';
+    $ready->scheduledAtForTest = '2026-05-06 07:00:00';
+    $ready->ready              = true;
+
+    $waiting                     = new FleetOpsScheduledOrderCommandFake();
+    $waiting->publicIdForTest    = 'order_waiting';
+    $waiting->scheduledAtForTest = '2026-05-06 08:00:00';
+
+    $command         = new FleetOpsDispatchOrdersCommandFake(['sandbox' => 'true']);
+    $command->orders = new EloquentCollection([$ready, $waiting]);
+
+    $command->handle();
+
+    expect($command->messages)->toContain(['info', 'Running in sandbox mode.'])
+        ->and($command->messages)->toContain(['getScheduledOrders', true])
+        ->and($command->messages)->toContain(['alert', 'Found 2 orders scheduled for dispatch. Current Time: 2026-05-06 07:08:09'])
+        ->and($command->messages)->toContain(['info', 'Order order_ready dispatched successfully (2026-05-06 07:00:00).'])
+        ->and($command->messages)->toContain(['warn', 'Order order_waiting is not ready for dispatch (2026-05-06 08:00:00).'])
+        ->and($ready->dispatchedForTest)->toBeTrue()
+        ->and($waiting->dispatchedForTest)->toBeFalse();
+
+    Carbon::setTestNow();
+});
+
+test('assign driver roles command assigns non admin driver users and reports failures', function () {
+    $company = new Company();
+    $company->setRawAttributes(['uuid' => 'company-uuid', 'name' => 'Acme Logistics'], true);
+
+    $driverUser          = new FleetOpsRoleUserCommandFake('driver@example.test');
+    $driverUser->drivers = ['company-uuid' => (object) ['uuid' => 'driver-uuid']];
+
+    $adminUser          = new FleetOpsRoleUserCommandFake('admin@example.test');
+    $adminUser->admin   = true;
+    $adminUser->drivers = ['company-uuid' => (object) ['uuid' => 'admin-driver']];
+
+    $failingUser          = new FleetOpsRoleUserCommandFake('fail@example.test');
+    $failingUser->drivers = ['company-uuid' => (object) ['uuid' => 'fail-driver']];
+    $failingUser->failure = new RuntimeException('role store failed');
+
+    $company->setRelation('users', collect([$driverUser, $adminUser, $failingUser, (object) ['email' => 'ignored@example.test']]));
+
+    $command                = new FleetOpsAssignDriverRolesCommandFake();
+    $command->testCompanies = collect([$company]);
+
+    expect($command->handle())->toBe(Command::SUCCESS)
+        ->and($driverUser->roles)->toBe(['Driver'])
+        ->and($adminUser->roles)->toBe([])
+        ->and($failingUser->roles)->toBe([])
+        ->and($driverUser->companies)->toBe(['company-uuid'])
+        ->and($command->messages)->toContain(['info', 'Acme Logistics - Driver: driver@example.test has been made Driver.'])
+        ->and($command->messages)->toContain(['error', 'role store failed']);
+});
+
+test('assign customer roles command creates missing users and reports assignment errors', function () {
+    $createdUser          = new FleetOpsRoleUserCommandFake('created@example.test');
+    $existingUser         = new FleetOpsRoleUserCommandFake('existing@example.test');
+    $failingUser          = new FleetOpsRoleUserCommandFake('fail@example.test');
+    $failingUser->failure = new RuntimeException('customer role failed');
+
+    $needsUser = new FleetOpsCustomerRoleCommandFake();
+    $needsUser->setRawAttributes(['name' => 'Created Customer', 'email' => 'created@example.test'], true);
+    $needsUser->createdUser = $createdUser;
+
+    $existing = new FleetOpsCustomerRoleCommandFake();
+    $existing->setRawAttributes(['name' => 'Existing Customer', 'email' => 'existing@example.test'], true);
+
+    $failing = new FleetOpsCustomerRoleCommandFake();
+    $failing->setRawAttributes(['name' => 'Fail Customer', 'email' => 'fail@example.test'], true);
+
+    $command                = new FleetOpsAssignCustomerRolesCommandFake();
+    $command->testCustomers = collect([$needsUser, $existing, $failing]);
+    $command->customerUsers = [
+        spl_object_id($existing) => $existingUser,
+        spl_object_id($failing)  => $failingUser,
+    ];
+
+    expect($command->handle())->toBe(Command::SUCCESS)
+        ->and($createdUser->roles)->toBe(['Fleet-Ops Customer'])
+        ->and($existingUser->roles)->toBe(['Fleet-Ops Customer'])
+        ->and($failingUser->roles)->toBe([])
+        ->and($command->messages)->toContain(['info', 'Created Customer - Customer: created@example.test has been assigned the Customer role.'])
+        ->and($command->messages)->toContain(['info', 'Existing Customer - Customer: existing@example.test has been assigned the Customer role.'])
+        ->and($command->messages)->toContain(['error', 'customer role failed']);
 });
 
 test('test email command rejects unsupported email types before sending mail', function () {
