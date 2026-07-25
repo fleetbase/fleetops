@@ -1,13 +1,18 @@
 <?php
 
 use Carbon\Carbon;
+use Fleetbase\FleetOps\Console\Commands\DispatchAdhocOrders;
 use Fleetbase\FleetOps\Console\Commands\ProcessMaintenanceTriggers;
 use Fleetbase\FleetOps\Console\Commands\SyncTelematics;
 use Fleetbase\FleetOps\Console\Commands\TestEmail;
 use Fleetbase\FleetOps\Contracts\TelematicProviderDescriptor;
+use Fleetbase\FleetOps\Models\Driver;
+use Fleetbase\FleetOps\Models\Order;
 use Fleetbase\FleetOps\Models\Vehicle;
 use Fleetbase\FleetOps\Support\Telematics\TelematicProviderRegistry;
+use Fleetbase\LaravelMysqlSpatial\Types\Point;
 use Illuminate\Console\Command;
+use Illuminate\Database\Eloquent\Collection as EloquentCollection;
 use Illuminate\Support\Facades\Cache;
 
 class FleetOpsCommandCacheFake
@@ -67,6 +72,240 @@ class FleetOpsProcessMaintenanceTriggersProbe extends ProcessMaintenanceTriggers
         $reflection->setAccessible(true);
 
         return $reflection->invoke($this, ...$arguments);
+    }
+}
+
+class FleetOpsDispatchAdhocOrdersCommandFake extends DispatchAdhocOrders
+{
+    public array $messages = [];
+    public array $tables   = [];
+    public EloquentCollection $orders;
+    public EloquentCollection $drivers;
+
+    public function __construct(private array $testOptions)
+    {
+        parent::__construct();
+        $this->orders  = new EloquentCollection();
+        $this->drivers = new EloquentCollection();
+    }
+
+    public function option($key = null)
+    {
+        return $key === null ? $this->testOptions : ($this->testOptions[$key] ?? null);
+    }
+
+    public function getDispatchableOrders(int $days = 2, int $intervalMinutes = 4, int $expiryHours = 72): EloquentCollection
+    {
+        $this->messages[] = ['getDispatchableOrders', $days, $intervalMinutes, $expiryHours];
+
+        return $this->orders;
+    }
+
+    public function getNearbyDriversForOrder(Order $order, Point $pickup, int $distance, bool $testing = false): EloquentCollection
+    {
+        $this->messages[] = ['getNearbyDriversForOrder', $order->public_id, $distance, $testing];
+
+        return $this->drivers;
+    }
+
+    public function info($string, $verbosity = null)
+    {
+        $this->messages[] = ['info', $string];
+    }
+
+    public function alert($string, $verbosity = null)
+    {
+        $this->messages[] = ['alert', $string];
+    }
+
+    public function table($headers, $rows, $tableStyle = 'default', array $columnStyles = [])
+    {
+        $this->tables[] = [$headers, $rows];
+    }
+
+    public function error($string, $verbosity = null)
+    {
+        $this->messages[] = ['error', $string];
+    }
+
+    public function line($string, $style = null, $verbosity = null)
+    {
+        $this->messages[] = ['line', $string];
+    }
+
+    public function warn($string, $verbosity = null)
+    {
+        $this->messages[] = ['warn', $string];
+    }
+}
+
+class FleetOpsDispatchAdhocOrdersQueryProbe extends DispatchAdhocOrders
+{
+    public FleetOpsDispatchAdhocOrdersBuilderFake $orderQuery;
+    public FleetOpsDispatchAdhocOrdersBuilderFake $driverQuery;
+
+    public function __construct(private array $testOptions)
+    {
+        parent::__construct();
+        $this->orderQuery  = new FleetOpsDispatchAdhocOrdersBuilderFake();
+        $this->driverQuery = new FleetOpsDispatchAdhocOrdersBuilderFake();
+    }
+
+    public function option($key = null)
+    {
+        return $key === null ? $this->testOptions : ($this->testOptions[$key] ?? null);
+    }
+
+    protected function newOrderQuery(string $connection)
+    {
+        $this->orderQuery->calls[] = ['connection', $connection];
+
+        return $this->orderQuery;
+    }
+
+    protected function newDriverQuery()
+    {
+        return $this->driverQuery;
+    }
+}
+
+class FleetOpsDispatchAdhocOrdersBuilderFake
+{
+    public array $calls = [];
+    public EloquentCollection $results;
+
+    public function __construct()
+    {
+        $this->results = new EloquentCollection();
+    }
+
+    public function withoutGlobalScopes(): self
+    {
+        $this->calls[] = ['withoutGlobalScopes'];
+
+        return $this;
+    }
+
+    public function where(...$arguments): self
+    {
+        $this->calls[] = ['where', $arguments];
+
+        return $this;
+    }
+
+    public function whereBetween(string $column, array $range): self
+    {
+        $this->calls[] = ['whereBetween', $column, $range];
+
+        return $this;
+    }
+
+    public function whereNull(string $column): self
+    {
+        $this->calls[] = ['whereNull', $column];
+
+        return $this;
+    }
+
+    public function whereHas(string $relation, ?Closure $callback = null): self
+    {
+        $this->calls[] = ['whereHas', $relation];
+
+        if ($callback) {
+            $callback($this);
+        }
+
+        return $this;
+    }
+
+    public function with(array $relations): self
+    {
+        $this->calls[] = ['with', $relations];
+
+        return $this;
+    }
+
+    public function whereNotNull(string $column): self
+    {
+        $this->calls[] = ['whereNotNull', $column];
+
+        return $this;
+    }
+
+    public function whereRaw(string $sql): self
+    {
+        $this->calls[] = ['whereRaw', trim($sql)];
+
+        return $this;
+    }
+
+    public function distanceSphere(string $column, Point $point, int $distance): self
+    {
+        $this->calls[] = ['distanceSphere', $column, $point, $distance];
+
+        return $this;
+    }
+
+    public function distanceSphereValue(string $column, Point $point): self
+    {
+        $this->calls[] = ['distanceSphereValue', $column, $point];
+
+        return $this;
+    }
+
+    public function orWhereHas(string $relation, ?Closure $callback = null): self
+    {
+        $this->calls[] = ['orWhereHas', $relation];
+
+        if ($callback) {
+            $callback($this);
+        }
+
+        return $this;
+    }
+
+    public function get(): EloquentCollection
+    {
+        return $this->results;
+    }
+}
+
+class FleetOpsDispatchAdhocOrdersOrderFake extends Order
+{
+    public ?string $public_id      = null;
+    public mixed $dispatched_at    = null;
+    public ?string $company_uuid   = null;
+    public bool $dispatchedForPing = false;
+    public mixed $pickupLocation;
+    public int $adhocDistance = 6000;
+
+    public function getPickupLocation(): mixed
+    {
+        return $this->pickupLocation;
+    }
+
+    public function getAdhocPingDistance(): int
+    {
+        return $this->adhocDistance;
+    }
+
+    public function dispatch(bool $save = true): self
+    {
+        $this->dispatchedForPing = $save;
+
+        return $this;
+    }
+}
+
+class FleetOpsDispatchAdhocOrdersDriverFake extends Driver
+{
+    public ?string $public_id   = null;
+    public ?string $name        = null;
+    public array $notifications = [];
+
+    public function notify($instance): void
+    {
+        $this->notifications[] = $instance::class;
     }
 }
 
@@ -194,6 +433,115 @@ test('process maintenance triggers exposes deterministic command helpers', funct
         ->and($command->callHelper('workOrderCode', 7, Carbon::parse('2026-02-03')))->toBe('WO-20260203-0007')
         ->and($command->callHelper('processedSummary', 2, false))->toBe('Processed 2 schedule trigger(s).')
         ->and($command->callHelper('processedSummary', 2, true))->toBe('Processed 2 schedule trigger(s) (dry run — no work orders created)');
+
+    Carbon::setTestNow();
+});
+
+test('dispatch adhoc command exits when no orders are dispatchable', function () {
+    $command = new FleetOpsDispatchAdhocOrdersCommandFake([
+        'sandbox' => false,
+        'testing' => false,
+        'days'    => 0,
+    ]);
+
+    $command->handle();
+
+    expect($command->messages)->toContain(['info', 'Running in production mode.'])
+        ->and($command->messages)->toContain(['info', 'Looking back 1 day(s) for dispatchable orders...'])
+        ->and($command->messages)->toContain(['getDispatchableOrders', 1, 4, 72])
+        ->and($command->messages)->toContain(['info', 'No dispatchable orders found in the given timeframe.']);
+});
+
+test('dispatch adhoc command handles invalid pickups empty drivers and successful pings', function () {
+    Carbon::setTestNow(Carbon::parse('2026-05-06 07:08:09'));
+
+    $invalidOrder                 = new FleetOpsDispatchAdhocOrdersOrderFake();
+    $invalidOrder->public_id      = 'order_invalid';
+    $invalidOrder->dispatched_at  = '2026-05-06 06:00:00';
+    $invalidOrder->pickupLocation = null;
+
+    $emptyDriverOrder                 = new FleetOpsDispatchAdhocOrdersOrderFake();
+    $emptyDriverOrder->public_id      = 'order_empty';
+    $emptyDriverOrder->dispatched_at  = '2026-05-06 06:05:00';
+    $emptyDriverOrder->pickupLocation = new Point(1.3, 103.8);
+    $emptyDriverOrder->adhocDistance  = 1200;
+
+    $pingOrder                 = new FleetOpsDispatchAdhocOrdersOrderFake();
+    $pingOrder->public_id      = 'order_ping';
+    $pingOrder->dispatched_at  = '2026-05-06 06:10:00';
+    $pingOrder->pickupLocation = new Point(1.31, 103.81);
+    $pingOrder->adhocDistance  = 2400;
+
+    $driver            = new FleetOpsDispatchAdhocOrdersDriverFake();
+    $driver->public_id = 'driver_public';
+    $driver->name      = 'Jane Driver';
+
+    $command         = new class(['sandbox' => true, 'testing' => true, 'days' => 3], $pingOrder, $driver) extends FleetOpsDispatchAdhocOrdersCommandFake {
+        public function __construct(array $options, private Order $pingOrder, private Driver $driver)
+        {
+            parent::__construct($options);
+        }
+
+        public function getNearbyDriversForOrder(Order $order, Point $pickup, int $distance, bool $testing = false): EloquentCollection
+        {
+            parent::getNearbyDriversForOrder($order, $pickup, $distance, $testing);
+
+            return $order === $this->pingOrder ? new EloquentCollection([$this->driver]) : new EloquentCollection();
+        }
+    };
+    $command->orders = new EloquentCollection([$invalidOrder, $emptyDriverOrder, $pingOrder]);
+
+    $command->handle();
+
+    expect($command->messages)->toContain(['info', 'Running in sandbox mode.'])
+        ->and($command->messages)->toContain(['alert', '3 orders found for ad-hoc dispatch. Current Time: 2026-05-06 07:08:09'])
+        ->and($command->messages)->toContain(['error', 'Invalid pickup location for order order_invalid'])
+        ->and($command->messages)->toContain(['warn', 'No available drivers found for order order_empty'])
+        ->and($command->messages)->toContain(['line', 'Checking order order_ping for nearby drivers within 2400 meters.'])
+        ->and($command->messages)->toContain(['info', 'Order order_ping dispatched successfully to 1 nearby drivers.'])
+        ->and($command->messages)->toContain(['info', 'Pinging driver Jane Driver (driver_public) ...'])
+        ->and($pingOrder->dispatchedForPing)->toBeTrue()
+        ->and($driver->notifications)->toBe([Fleetbase\FleetOps\Notifications\OrderPing::class])
+        ->and($command->tables)->toHaveCount(1);
+
+    Carbon::setTestNow();
+});
+
+test('dispatch adhoc command builds dispatchable order and nearby driver queries', function () {
+    Carbon::setTestNow(Carbon::parse('2026-05-06 07:08:09'));
+
+    $command = new FleetOpsDispatchAdhocOrdersQueryProbe([
+        'sandbox' => true,
+    ]);
+
+    expect($command->getDispatchableOrders(3))->toBe($command->orderQuery->results)
+        ->and($command->orderQuery->calls[0])->toBe(['connection', 'sandbox'])
+        ->and($command->orderQuery->calls)->toContain(['where', [['adhoc' => 1, 'dispatched' => 1, 'started' => 0]]])
+        ->and($command->orderQuery->calls)->toContain(['whereNull', 'driver_assigned_uuid'])
+        ->and($command->orderQuery->calls)->toContain(['whereNull', 'deleted_at'])
+        ->and($command->orderQuery->calls)->toContain(['where', ['status', '!=', 'canceled']])
+        ->and($command->orderQuery->calls)->toContain(['whereHas', 'company'])
+        ->and($command->orderQuery->calls)->toContain(['whereHas', 'payload'])
+        ->and($command->orderQuery->calls)->toContain(['with', ['company', 'payload']]);
+
+    $order = new Order();
+    $order->setRawAttributes(['company_uuid' => 'company-uuid']);
+    $point = new Point(1.3, 103.8);
+
+    expect($command->getNearbyDriversForOrder($order, $point, 500, true))->toBe($command->driverQuery->results)
+        ->and($command->driverQuery->calls)->toContain(['where', [['online' => 1]]])
+        ->and($command->driverQuery->calls)->toContain(['whereNull', 'deleted_at'])
+        ->and($command->driverQuery->calls)->not->toContain(['whereNotNull', 'location']);
+
+    $command = new FleetOpsDispatchAdhocOrdersQueryProbe([
+        'sandbox' => false,
+    ]);
+
+    $command->getNearbyDriversForOrder($order, $point, 750, false);
+
+    expect($command->driverQuery->calls)->toContain(['whereNotNull', 'location'])
+        ->and($command->driverQuery->calls)->toContain(['distanceSphere', 'location', $point, 750])
+        ->and($command->driverQuery->calls)->toContain(['distanceSphereValue', 'location', $point]);
 
     Carbon::setTestNow();
 });

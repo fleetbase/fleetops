@@ -97,7 +97,7 @@ class DispatchAdhocOrders extends Command
         $cutoffDate = Carbon::now()->subDays($days);
         $now        = Carbon::now();
 
-        return Order::on($sandbox ? 'sandbox' : 'mysql')
+        return $this->newOrderQuery($sandbox ? 'sandbox' : 'mysql')
             ->withoutGlobalScopes()
             ->where(['adhoc' => 1, 'dispatched' => 1, 'started' => 0])
             ->whereBetween('dispatched_at', [
@@ -125,7 +125,7 @@ class DispatchAdhocOrders extends Command
      */
     public function getNearbyDriversForOrder(Order $order, Point $pickup, int $distance, bool $testing = false): Collection
     {
-        $driverQuery = Driver::query()
+        $driverQuery = $this->newDriverQuery()
             ->where(['online' => 1])
             ->where(function ($q) use ($order) {
                 $q->where('company_uuid', $order->company_uuid)
@@ -145,5 +145,15 @@ class DispatchAdhocOrders extends Command
         }
 
         return $driverQuery->get();
+    }
+
+    protected function newOrderQuery(string $connection)
+    {
+        return Order::on($connection);
+    }
+
+    protected function newDriverQuery()
+    {
+        return Driver::query();
     }
 }
