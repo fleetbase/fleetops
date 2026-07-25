@@ -12,6 +12,7 @@ use Fleetbase\FleetOps\Http\Controllers\Internal\v1\SettingController;
 use Fleetbase\FleetOps\Http\Filter\ContactFilter;
 use Fleetbase\FleetOps\Http\Filter\DeviceEventFilter;
 use Fleetbase\FleetOps\Http\Filter\DeviceFilter;
+use Fleetbase\FleetOps\Http\Filter\EntityFilter;
 use Fleetbase\FleetOps\Http\Filter\EquipmentFilter;
 use Fleetbase\FleetOps\Http\Filter\FleetFilter;
 use Fleetbase\FleetOps\Http\Filter\FuelProviderConnectionFilter;
@@ -19,10 +20,14 @@ use Fleetbase\FleetOps\Http\Filter\FuelProviderSyncRunFilter;
 use Fleetbase\FleetOps\Http\Filter\FuelProviderTransactionFilter;
 use Fleetbase\FleetOps\Http\Filter\FuelReportFilter;
 use Fleetbase\FleetOps\Http\Filter\IssueFilter;
+use Fleetbase\FleetOps\Http\Filter\OrderConfigFilter;
 use Fleetbase\FleetOps\Http\Filter\PartFilter;
+use Fleetbase\FleetOps\Http\Filter\PayloadFilter;
 use Fleetbase\FleetOps\Http\Filter\PlaceFilter;
 use Fleetbase\FleetOps\Http\Filter\PositionFilter;
+use Fleetbase\FleetOps\Http\Filter\PurchaseRateFilter;
 use Fleetbase\FleetOps\Http\Filter\SensorFilter;
+use Fleetbase\FleetOps\Http\Filter\ServiceAreaFilter;
 use Fleetbase\FleetOps\Http\Filter\ServiceRateFilter;
 use Fleetbase\FleetOps\Http\Filter\TrackingNumberFilter;
 use Fleetbase\FleetOps\Http\Filter\TrackingStatusFilter;
@@ -622,6 +627,21 @@ test('fuel provider and work order filters record company search and status scop
         ['where', ['company_uuid', 'company-uuid']],
         ['search', 'repair'],
     ]);
+});
+
+test('simple company scoped filters record internal and public company constraints', function () {
+    foreach ([EntityFilter::class, OrderConfigFilter::class, PayloadFilter::class, PurchaseRateFilter::class, ServiceAreaFilter::class] as $filterClass) {
+        $query  = new FleetOpsControllerFilterQuery();
+        $filter = fleetopsFilterWithBuilder($filterClass, $query);
+
+        $filter->queryForInternal();
+        $filter->queryForPublic();
+
+        expect($query->calls)->toBe([
+            ['where', ['company_uuid', 'company-uuid']],
+            ['where', ['company_uuid', 'company-uuid']],
+        ]);
+    }
 });
 
 test('customer directives scope user contacts and places by session or request identity', function () {

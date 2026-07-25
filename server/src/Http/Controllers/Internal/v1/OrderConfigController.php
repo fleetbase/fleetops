@@ -55,24 +55,44 @@ class OrderConfigController extends FleetOpsController
      */
     public function deleteRecord($id, Request $request)
     {
-        $orderConfig = OrderConfig::where('uuid', $id)->first();
+        $orderConfig = $this->findOrderConfig($id);
         if (!$orderConfig) {
-            return response()->error('No order config found.');
+            return $this->errorResponse('No order config found.');
         }
 
         // `core_service` order configs cannot be deleted
         if ($orderConfig->core_service === 1) {
-            return response()->error('Core service order config\'s cannot be deleted.');
+            return $this->errorResponse('Core service order config\'s cannot be deleted.');
         }
 
         if ($orderConfig) {
             $orderConfig->delete();
 
-            $this->resource::wrap($this->resourceSingularlName);
+            $this->wrapResource();
 
-            return new $this->resource($orderConfig);
+            return $this->deletedResource($orderConfig);
         }
 
-        return response()->error('Unable to delete order config.');
+        return $this->errorResponse('Unable to delete order config.');
+    }
+
+    protected function findOrderConfig(string $id): ?OrderConfig
+    {
+        return OrderConfig::where('uuid', $id)->first();
+    }
+
+    protected function wrapResource(): void
+    {
+        $this->resource::wrap($this->resourceSingularlName);
+    }
+
+    protected function deletedResource(OrderConfig $orderConfig)
+    {
+        return new $this->resource($orderConfig);
+    }
+
+    protected function errorResponse(string $message)
+    {
+        return response()->error($message);
     }
 }
