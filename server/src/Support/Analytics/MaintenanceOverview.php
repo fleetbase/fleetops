@@ -17,40 +17,17 @@ class MaintenanceOverview extends AbstractAnalytics
         $currency    = $this->companyCurrency();
         $now         = Carbon::now();
 
-        $overdue = Maintenance::where('company_uuid', $companyUuid)
-            ->where('scheduled_at', '<', $now)
-            ->where('status', '!=', 'completed')
-            ->where('status', '!=', 'canceled')
-            ->count();
+        $overdue = $this->overdueCount($companyUuid, $now);
 
-        $next7d = Maintenance::where('company_uuid', $companyUuid)
-            ->whereBetween('scheduled_at', [$now, $now->copy()->addDays(7)])
-            ->whereIn('status', ['scheduled', 'pending'])
-            ->count();
+        $next7d = $this->nextSevenDaysCount($companyUuid, $now);
 
-        $inProgress = Maintenance::where('company_uuid', $companyUuid)
-            ->where('status', 'in_progress')
-            ->count();
+        $inProgress = $this->inProgressCount($companyUuid);
 
-        $costThisMonth = (float) Maintenance::where('company_uuid', $companyUuid)
-            ->where('currency', $currency)
-            ->where('status', 'completed')
-            ->whereBetween('completed_at', [$now->copy()->startOfMonth(), $now])
-            ->sum('total_cost');
+        $costThisMonth = (float) $this->costThisMonth($companyUuid, $currency, $now);
 
-        $costYtd = (float) Maintenance::where('company_uuid', $companyUuid)
-            ->where('currency', $currency)
-            ->where('status', 'completed')
-            ->whereBetween('completed_at', [$now->copy()->startOfYear(), $now])
-            ->sum('total_cost');
+        $costYtd = (float) $this->costYtd($companyUuid, $currency, $now);
 
-        $upcoming = Maintenance::where('company_uuid', $companyUuid)
-            ->whereIn('status', ['scheduled', 'pending'])
-            ->whereNotNull('scheduled_at')
-            ->where('scheduled_at', '>=', $now)
-            ->orderBy('scheduled_at', 'asc')
-            ->limit(8)
-            ->get(['uuid', 'maintainable_uuid', 'maintainable_type', 'type', 'priority', 'scheduled_at']);
+        $upcoming = $this->upcomingMaintenance($companyUuid, $now);
 
         return [
             'overdue'           => $overdue,
@@ -66,5 +43,58 @@ class MaintenanceOverview extends AbstractAnalytics
                 'scheduled_at' => $m->scheduled_at,
             ])->all(),
         ];
+    }
+
+    protected function overdueCount(string $companyUuid, Carbon $now): int
+    {
+        return Maintenance::where('company_uuid', $companyUuid)
+            ->where('scheduled_at', '<', $now)
+            ->where('status', '!=', 'completed')
+            ->where('status', '!=', 'canceled')
+            ->count();
+    }
+
+    protected function nextSevenDaysCount(string $companyUuid, Carbon $now): int
+    {
+        return Maintenance::where('company_uuid', $companyUuid)
+            ->whereBetween('scheduled_at', [$now, $now->copy()->addDays(7)])
+            ->whereIn('status', ['scheduled', 'pending'])
+            ->count();
+    }
+
+    protected function inProgressCount(string $companyUuid): int
+    {
+        return Maintenance::where('company_uuid', $companyUuid)
+            ->where('status', 'in_progress')
+            ->count();
+    }
+
+    protected function costThisMonth(string $companyUuid, string $currency, Carbon $now): int|float
+    {
+        return Maintenance::where('company_uuid', $companyUuid)
+            ->where('currency', $currency)
+            ->where('status', 'completed')
+            ->whereBetween('completed_at', [$now->copy()->startOfMonth(), $now])
+            ->sum('total_cost');
+    }
+
+    protected function costYtd(string $companyUuid, string $currency, Carbon $now): int|float
+    {
+        return Maintenance::where('company_uuid', $companyUuid)
+            ->where('currency', $currency)
+            ->where('status', 'completed')
+            ->whereBetween('completed_at', [$now->copy()->startOfYear(), $now])
+            ->sum('total_cost');
+    }
+
+    protected function upcomingMaintenance(string $companyUuid, Carbon $now)
+    {
+        return Maintenance::where('company_uuid', $companyUuid)
+            ->whereIn('status', ['scheduled', 'pending'])
+            ->whereNotNull('scheduled_at')
+            ->where('scheduled_at', '>=', $now)
+            ->orderBy('scheduled_at', 'asc')
+            ->limit(8)
+            ->get(['uuid', 'maintainable_uuid', 'maintainable_type', 'type', 'priority', 'scheduled_at']);
     }
 }

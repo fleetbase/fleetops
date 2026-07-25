@@ -17,27 +17,13 @@ class IssuesInsights extends AbstractAnalytics
         $start       = $this->start ?? Carbon::now()->subDays(30)->toDateTime();
         $end         = $this->end ?? Carbon::now()->toDateTime();
 
-        $byCategory = Issue::where('company_uuid', $companyUuid)
-            ->whereBetween('created_at', [$start, $end])
-            ->selectRaw('category, COUNT(*) as total')
-            ->groupBy('category')
-            ->orderByRaw('total DESC')
-            ->get();
+        $byCategory = $this->byCategory($companyUuid, $start, $end);
 
-        $byPriority = Issue::where('company_uuid', $companyUuid)
-            ->whereBetween('created_at', [$start, $end])
-            ->selectRaw('priority, COUNT(*) as total')
-            ->groupBy('priority')
-            ->pluck('total', 'priority');
+        $byPriority = $this->byPriority($companyUuid, $start, $end);
 
-        $open = Issue::where('company_uuid', $companyUuid)
-            ->where('status', 'pending')
-            ->count();
+        $open = $this->openCount($companyUuid);
 
-        $resolvedInWindow = Issue::where('company_uuid', $companyUuid)
-            ->whereNotNull('resolved_at')
-            ->whereBetween('resolved_at', [$start, $end])
-            ->get(['created_at', 'resolved_at']);
+        $resolvedInWindow = $this->resolvedInWindow($companyUuid, $start, $end);
 
         $totalHours = 0.0;
         foreach ($resolvedInWindow as $issue) {
@@ -63,5 +49,39 @@ class IssuesInsights extends AbstractAnalytics
             'resolved_this_period'   => $resolvedInWindow->count(),
             'avg_resolution_hours'   => $avgResolutionHours,
         ];
+    }
+
+    protected function byCategory(string $companyUuid, \DateTimeInterface $start, \DateTimeInterface $end)
+    {
+        return Issue::where('company_uuid', $companyUuid)
+            ->whereBetween('created_at', [$start, $end])
+            ->selectRaw('category, COUNT(*) as total')
+            ->groupBy('category')
+            ->orderByRaw('total DESC')
+            ->get();
+    }
+
+    protected function byPriority(string $companyUuid, \DateTimeInterface $start, \DateTimeInterface $end)
+    {
+        return Issue::where('company_uuid', $companyUuid)
+            ->whereBetween('created_at', [$start, $end])
+            ->selectRaw('priority, COUNT(*) as total')
+            ->groupBy('priority')
+            ->pluck('total', 'priority');
+    }
+
+    protected function openCount(string $companyUuid): int
+    {
+        return Issue::where('company_uuid', $companyUuid)
+            ->where('status', 'pending')
+            ->count();
+    }
+
+    protected function resolvedInWindow(string $companyUuid, \DateTimeInterface $start, \DateTimeInterface $end)
+    {
+        return Issue::where('company_uuid', $companyUuid)
+            ->whereNotNull('resolved_at')
+            ->whereBetween('resolved_at', [$start, $end])
+            ->get(['created_at', 'resolved_at']);
     }
 }
