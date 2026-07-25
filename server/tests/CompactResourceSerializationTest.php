@@ -1,32 +1,49 @@
 <?php
 
+use Fleetbase\FleetOps\Http\Resources\Internal\v1\IntegratedVendorFacilitator as InternalIntegratedVendorFacilitatorResource;
+use Fleetbase\FleetOps\Http\Resources\Internal\v1\OrderConfig as InternalOrderConfigResource;
+use Fleetbase\FleetOps\Http\Resources\Internal\v1\Vehicle as InternalVehicleResource;
+use Fleetbase\FleetOps\Http\Resources\Internal\v1\Waypoint as InternalWaypointResource;
 use Fleetbase\FleetOps\Http\Resources\v1\Contact as ContactResource;
+use Fleetbase\FleetOps\Http\Resources\v1\CurrentJob as CurrentJobResource;
 use Fleetbase\FleetOps\Http\Resources\v1\DeletedResource;
 use Fleetbase\FleetOps\Http\Resources\v1\Device as DeviceResource;
 use Fleetbase\FleetOps\Http\Resources\v1\Entity as EntityResource;
 use Fleetbase\FleetOps\Http\Resources\v1\Fleet as FleetResource;
+use Fleetbase\FleetOps\Http\Resources\v1\Index\Customer as IndexCustomerResource;
 use Fleetbase\FleetOps\Http\Resources\v1\Index\Driver as IndexDriverResource;
+use Fleetbase\FleetOps\Http\Resources\v1\Index\Facilitator as IndexFacilitatorResource;
 use Fleetbase\FleetOps\Http\Resources\v1\Index\Order as IndexOrderResource;
 use Fleetbase\FleetOps\Http\Resources\v1\Index\Payload as IndexPayloadResource;
 use Fleetbase\FleetOps\Http\Resources\v1\Index\Place as IndexPlaceResource;
+use Fleetbase\FleetOps\Http\Resources\v1\Index\TrackingNumber as IndexTrackingNumberResource;
 use Fleetbase\FleetOps\Http\Resources\v1\Index\Vehicle as IndexVehicleResource;
 use Fleetbase\FleetOps\Http\Resources\v1\Issue as IssueResource;
 use Fleetbase\FleetOps\Http\Resources\v1\Maintenance as MaintenanceResource;
 use Fleetbase\FleetOps\Http\Resources\v1\MaintenanceSchedule as MaintenanceScheduleResource;
+use Fleetbase\FleetOps\Http\Resources\v1\Orchestrator\Order as OrchestratorOrderResource;
+use Fleetbase\FleetOps\Http\Resources\v1\Order as OrderResource;
 use Fleetbase\FleetOps\Http\Resources\v1\OrderConfig as OrderConfigResource;
 use Fleetbase\FleetOps\Http\Resources\v1\ParentFleet as ParentFleetResource;
 use Fleetbase\FleetOps\Http\Resources\v1\Payload as PayloadResource;
 use Fleetbase\FleetOps\Http\Resources\v1\Place as PlaceResource;
+use Fleetbase\FleetOps\Http\Resources\v1\Proof as ProofResource;
 use Fleetbase\FleetOps\Http\Resources\v1\PurchaseRate as PurchaseRateResource;
 use Fleetbase\FleetOps\Http\Resources\v1\Sensor as SensorResource;
 use Fleetbase\FleetOps\Http\Resources\v1\ServiceArea as ServiceAreaResource;
+use Fleetbase\FleetOps\Http\Resources\v1\ServiceQuote as ServiceQuoteResource;
+use Fleetbase\FleetOps\Http\Resources\v1\ServiceQuoteItem as ServiceQuoteItemResource;
 use Fleetbase\FleetOps\Http\Resources\v1\ServiceRate as ServiceRateResource;
 use Fleetbase\FleetOps\Http\Resources\v1\SubFleet as SubFleetResource;
+use Fleetbase\FleetOps\Http\Resources\v1\TrackingNumber as TrackingNumberResource;
 use Fleetbase\FleetOps\Http\Resources\v1\TrackingStatus as TrackingStatusResource;
+use Fleetbase\FleetOps\Http\Resources\v1\VehicleWithoutDriver as VehicleWithoutDriverResource;
 use Fleetbase\FleetOps\Http\Resources\v1\Vendor as VendorResource;
+use Fleetbase\FleetOps\Http\Resources\v1\Waypoint as WaypointResource;
 use Fleetbase\FleetOps\Http\Resources\v1\WorkOrder as WorkOrderResource;
 use Fleetbase\FleetOps\Http\Resources\v1\Zone as ZoneResource;
 use Illuminate\Http\Request;
+use Illuminate\Support\Arr;
 use Illuminate\Support\Collection;
 
 class FleetOpsCompactResourceRouteFixture
@@ -1851,4 +1868,599 @@ test('deleted resource marks internal and webhook payloads as deleted', function
             'deleted' => true,
         ])
         ->and($object)->toBeString()->not->toBe('');
+});
+
+test('quote proof current job and tiny index resources serialize simple payloads', function () {
+    $request = fleetopsCompactResourceRequest(true);
+
+    $quoteItem = fleetopsCompactResourceFixture([
+        'service_quote_uuid' => 'quote-uuid',
+        'amount'             => 7.5,
+        'currency'           => 'SGD',
+        'details'            => 'Handling fee',
+        'code'               => 'handling',
+    ]);
+    $quote = fleetopsCompactResourceFixture([
+        'service_rate_uuid' => 'rate-uuid',
+        'payload_uuid'      => 'payload-uuid',
+        'serviceRate'       => (object) ['service_name' => 'Same Day', 'public_id' => 'rate_public'],
+        'integratedVendor'  => (object) ['public_id' => 'vendor_public'],
+        'items'             => new Collection([$quoteItem]),
+        'request_id'        => 'REQ-101',
+        'amount'            => 25.5,
+        'currency'          => 'SGD',
+        'meta'              => ['quoted' => true],
+    ]);
+    $currentJob = fleetopsCompactResourceFixture([
+        'company_uuid' => 'company-uuid',
+        'internal_id'  => 'ORD-101',
+        'payload'      => null,
+        'type'         => 'transport',
+        'status'       => 'dispatched',
+        'meta'         => ['priority' => 'high'],
+    ]);
+    $proof = fleetopsCompactResourceFixture([
+        'subject'  => (object) ['public_id' => 'subject_public'],
+        'order'    => (object) ['public_id' => 'order_public'],
+        'file_url' => 'https://cdn.test/proof.png',
+        'remarks'  => 'Delivered at reception.',
+        'raw_data' => ['signature' => true],
+        'data'     => ['name' => 'Receiver'],
+    ]);
+    $person = fleetopsCompactResourceFixture([
+        'company_uuid' => 'company-uuid',
+        'name'         => 'Compact Person',
+        'phone'        => '+6555554444',
+        'email'        => 'person@example.test',
+    ]);
+    $trackingNumber = fleetopsCompactResourceFixture([
+        'tracking_number' => 'TN-101',
+        'qr_code'         => 'qr-data',
+    ]);
+    $internalConfig = fleetopsCompactResourceFixture([
+        'company_uuid'  => 'company-uuid',
+        'author_uuid'   => 'author-uuid',
+        'category_uuid' => 'category-uuid',
+        'icon_uuid'     => 'icon-uuid',
+        'name'          => 'Delivery',
+        'namespace'     => 'fleet-ops',
+        'description'   => 'Delivery config.',
+        'key'           => 'delivery',
+        'status'        => 'active',
+        'version'       => 3,
+        'core_service'  => 1,
+        'flow'          => [['code' => 'created']],
+        'entities'      => [['type' => 'parcel']],
+        'tags'          => ['last-mile'],
+        'meta'          => ['default' => true],
+        'deleted_at'    => null,
+    ]);
+
+    expect((new ServiceQuoteItemResource($quoteItem))->resolve($request))->toMatchArray([
+        'id'                 => 101,
+        'uuid'               => 'fixture-uuid',
+        'service_quote_uuid' => 'quote-uuid',
+        'amount'             => 7.5,
+        'currency'           => 'SGD',
+        'details'            => 'Handling fee',
+        'code'               => 'handling',
+    ])
+        ->and((new ServiceQuoteResource($quote))->resolve($request))->toMatchArray([
+            'id'                => 101,
+            'uuid'              => 'fixture-uuid',
+            'public_id'         => 'fixture_public',
+            'service_rate_uuid' => 'rate-uuid',
+            'payload_uuid'      => 'payload-uuid',
+            'service_rate_name' => 'Same Day',
+            'service_name'      => 'Same Day',
+            'request_id'        => 'REQ-101',
+            'amount'            => 25.5,
+            'currency'          => 'SGD',
+            'meta'              => ['quoted' => true],
+        ])
+        ->and((new ServiceQuoteResource($quote))->toWebhookPayload())->toMatchArray([
+            'id'           => 'fixture_public',
+            'service_rate' => 'rate_public',
+            'facilitator'  => 'vendor_public',
+            'request_id'   => 'REQ-101',
+            'amount'       => 25.5,
+            'currency'     => 'SGD',
+        ])
+        ->and((new CurrentJobResource($currentJob))->resolve($request))->toMatchArray([
+            'id'           => 101,
+            'uuid'         => 'fixture-uuid',
+            'public_id'    => 'fixture_public',
+            'company_uuid' => 'company-uuid',
+            'internal_id'  => 'ORD-101',
+            'type'         => 'transport',
+            'status'       => 'dispatched',
+            'meta'         => ['priority' => 'high'],
+        ])
+        ->and((new ProofResource($proof))->resolve($request))->toMatchArray([
+            'id'         => 101,
+            'uuid'       => 'fixture-uuid',
+            'public_id'  => 'fixture_public',
+            'subject_id' => 'subject_public',
+            'order_id'   => 'order_public',
+            'url'        => 'https://cdn.test/proof.png',
+            'remarks'    => 'Delivered at reception.',
+            'raw'        => ['signature' => true],
+            'data'       => ['name' => 'Receiver'],
+        ])
+        ->and((new IndexCustomerResource($person))->resolve($request))->toMatchArray([
+            'id'           => 101,
+            'uuid'         => 'fixture-uuid',
+            'public_id'    => 'fixture_public',
+            'company_uuid' => 'company-uuid',
+            'name'         => 'Compact Person',
+            'phone'        => '+6555554444',
+            'email'        => 'person@example.test',
+        ])
+        ->and((new IndexFacilitatorResource($person))->resolve($request))->toMatchArray([
+            'id'           => 101,
+            'uuid'         => 'fixture-uuid',
+            'public_id'    => 'fixture_public',
+            'company_uuid' => 'company-uuid',
+            'name'         => 'Compact Person',
+            'phone'        => '+6555554444',
+            'email'        => 'person@example.test',
+        ])
+        ->and((new IndexTrackingNumberResource($trackingNumber))->resolve($request))->toMatchArray([
+            'id'              => 101,
+            'uuid'            => 'fixture-uuid',
+            'tracking_number' => 'TN-101',
+            'qr_code'         => 'qr-data',
+        ])
+        ->and((new InternalOrderConfigResource($internalConfig))->resolve($request))->toMatchArray([
+            'id'            => 101,
+            'uuid'          => 'fixture-uuid',
+            'public_id'     => 'fixture_public',
+            'company_uuid'  => 'company-uuid',
+            'author_uuid'   => 'author-uuid',
+            'category_uuid' => 'category-uuid',
+            'icon_uuid'     => 'icon-uuid',
+            'name'          => 'Delivery',
+            'namespace'     => 'fleet-ops',
+            'description'   => 'Delivery config.',
+            'key'           => 'delivery',
+            'status'        => 'active',
+            'version'       => 3,
+            'core_service'  => true,
+            'flow'          => [['code' => 'created']],
+            'entities'      => [['type' => 'parcel']],
+            'tags'          => ['last-mile'],
+            'meta'          => ['default' => true],
+            'type'          => 'order-config',
+        ]);
+});
+
+test('orchestrator order resource serializes loaded workbench relationships', function () {
+    $request = fleetopsCompactResourceRequest(true);
+
+    $customFieldValue = fleetopsCompactResourceFixture([
+        'uuid'              => 'custom-value-uuid',
+        'custom_field_uuid' => 'custom-field-uuid',
+        'value'             => 'dock-door-4',
+        'value_type'        => 'string',
+    ], [
+        'customField' => fleetopsCompactResourceFixture([
+            'uuid'     => 'custom-field-uuid',
+            'name'     => 'dock_door',
+            'label'    => 'Dock Door',
+            'type'     => 'text',
+            'required' => 1,
+        ]),
+    ]);
+    $order = fleetopsCompactResourceFixture([
+        'internal_id'            => 'ORCH-101',
+        'company_uuid'           => 'company-uuid',
+        'payload_uuid'           => 'payload-uuid',
+        'order_config_uuid'      => 'config-uuid',
+        'driver_assigned_uuid'   => 'driver-uuid',
+        'vehicle_assigned_uuid'  => 'vehicle-uuid',
+        'trackingNumber'         => (object) ['tracking_number' => 'TN-ORCH'],
+        'type'                   => 'transport',
+        'status'                 => 'assigned',
+        'notes'                  => 'Workbench card.',
+        'adhoc'                  => 1,
+        'dispatched'             => 1,
+        'has_driver_assigned'    => true,
+        'is_scheduled'           => true,
+        'orchestrator_priority'  => 7,
+        'time_window_start'      => '09:00',
+        'time_window_end'        => '11:00',
+        'required_skills'        => ['liftgate'],
+        'scheduled_at'           => '2026-07-28 09:00:00',
+        'dispatched_at'          => '2026-07-28 08:45:00',
+        'started_at'             => null,
+        'meta'                   => ['lane' => 'north'],
+    ], [
+        'orderConfig' => fleetopsCompactResourceFixture([
+            'public_id' => 'config_public',
+            'name'      => 'Delivery',
+            'key'       => 'delivery',
+        ]),
+        'payload' => fleetopsCompactResourceFixture([
+            'company_uuid'          => 'company-uuid',
+            'pickup_uuid'           => 'pickup-uuid',
+            'dropoff_uuid'          => 'dropoff-uuid',
+            'return_uuid'           => 'return-uuid',
+            'index_pickup_place'    => null,
+            'index_dropoff_place'   => null,
+            'type'                  => 'parcel',
+        ], [
+            'entities'  => new Collection([(object) ['public_id' => 'entity_public']]),
+            'waypoints' => new Collection([(object) ['public_id' => 'waypoint_public']]),
+        ]),
+        'driverAssigned' => fleetopsCompactResourceFixture([
+            'company_uuid'      => 'company-uuid',
+            'user_uuid'         => 'user-uuid',
+            'vehicle_uuid'      => 'vehicle-uuid',
+            'vendor_uuid'       => 'vendor-uuid',
+            'current_job_uuid'  => 'order-uuid',
+            'name'              => 'Jane Driver',
+            'vehicle_name'      => 'Truck 101',
+            'email'             => 'jane@example.test',
+            'status'            => 'on_duty',
+            'location'          => null,
+            'heading'           => 180,
+            'altitude'          => 12,
+            'speed'             => 42,
+            'online'            => true,
+        ]),
+        'vehicleAssigned' => fleetopsCompactResourceFixture([
+            'company_uuid'     => 'company-uuid',
+            'vendor_uuid'      => 'vendor-uuid',
+            'photo_uuid'       => 'photo-uuid',
+            'internal_id'      => 'VEH-ORCH',
+            'display_name'     => 'Orchestrator Truck',
+            'driver_name'      => 'Jane Driver',
+            'plate_number'     => 'ORCH-101',
+            'serial_number'    => 'SER-ORCH',
+            'fuel_card_number' => 'FUEL-ORCH',
+            'vin'              => 'VIN-ORCH',
+            'make'             => 'Ford',
+            'model'            => 'Transit',
+            'year'             => 2026,
+            'photo_url'        => 'https://cdn.test/orch-truck.png',
+            'status'           => 'assigned',
+            'location'         => null,
+            'heading'          => 90,
+            'altitude'         => 10,
+            'speed'            => 38,
+            'online'           => true,
+        ]),
+        'customFieldValues' => new Collection([$customFieldValue]),
+    ]);
+
+    $payload = (new OrchestratorOrderResource($order))->resolve($request);
+
+    expect($payload)->toMatchArray([
+        'id'                    => 101,
+        'uuid'                  => 'fixture-uuid',
+        'public_id'             => 'fixture_public',
+        'internal_id'           => 'ORCH-101',
+        'company_uuid'          => 'company-uuid',
+        'payload_uuid'          => 'payload-uuid',
+        'order_config_uuid'     => 'config-uuid',
+        'driver_assigned_uuid'  => 'driver-uuid',
+        'vehicle_assigned_uuid' => 'vehicle-uuid',
+        'tracking'              => 'TN-ORCH',
+        'order_config'          => [
+            'id'   => 'config_public',
+            'name' => 'Delivery',
+            'key'  => 'delivery',
+        ],
+        'type'                  => 'transport',
+        'status'                => 'assigned',
+        'notes'                 => 'Workbench card.',
+        'adhoc'                 => true,
+        'dispatched'            => true,
+        'has_driver_assigned'   => true,
+        'is_scheduled'          => true,
+        'orchestrator_priority' => 7,
+        'time_window_start'     => '09:00',
+        'time_window_end'       => '11:00',
+        'required_skills'       => ['liftgate'],
+        'meta'                  => ['lane' => 'north'],
+    ])
+        ->and($payload['payload']->resolve($request))->toMatchArray([
+            'id'              => 101,
+            'uuid'            => 'fixture-uuid',
+            'public_id'       => 'fixture_public',
+            'company_uuid'    => 'company-uuid',
+            'pickup_uuid'     => 'pickup-uuid',
+            'dropoff_uuid'    => 'dropoff-uuid',
+            'return_uuid'     => 'return-uuid',
+            'entities_count'  => 1,
+            'waypoints_count' => 1,
+            'type'            => 'parcel',
+        ])
+        ->and($payload['custom_field_values']->all())->toMatchArray([
+            [
+                'id'                => 'custom-value-uuid',
+                'uuid'              => 'custom-value-uuid',
+                'custom_field_uuid' => 'custom-field-uuid',
+                'value'             => 'dock-door-4',
+                'value_type'        => 'string',
+                'custom_field'      => [
+                    'id'       => 'custom-field-uuid',
+                    'uuid'     => 'custom-field-uuid',
+                    'name'     => 'dock_door',
+                    'label'    => 'Dock Door',
+                    'type'     => 'text',
+                    'required' => true,
+                ],
+            ],
+        ]);
+});
+
+test('internal vehicle vendor and waypoint resources expose internal compact fields', function () {
+    $request = fleetopsCompactResourceRequest(true);
+
+    if (!Arr::hasMacro('insertAfterKey')) {
+        Arr::macro('insertAfterKey', function (array $array, array $insert, string $afterKey): array {
+            $offset = array_search($afterKey, array_keys($array), true);
+
+            if ($offset === false) {
+                return array_merge($array, $insert);
+            }
+
+            return array_slice($array, 0, $offset + 1, true) + $insert + array_slice($array, $offset + 1, null, true);
+        });
+    }
+
+    $vehicle = fleetopsCompactResourceFixture([
+        'internal_id'        => 'VEH-INTERNAL',
+        'company_uuid'       => 'company-uuid',
+        'vendor_uuid'        => 'vendor-uuid',
+        'category_uuid'      => 'category-uuid',
+        'warranty_uuid'      => 'warranty-uuid',
+        'telematic_uuid'     => 'telematic-uuid',
+        'photo_uuid'         => 'photo-uuid',
+        'photo_url'          => 'https://cdn.test/vehicle.png',
+        'avatar_url'         => 'https://cdn.test/avatar.png',
+        'name'               => 'Internal Vehicle',
+        'display_name'       => 'Internal Van',
+        'driver_name'        => 'Jane Driver',
+        'vendor_name'        => 'Vendor One',
+        'description'        => 'Internal fleet vehicle.',
+        'make'               => 'Ford',
+        'model'              => 'Transit',
+        'year'               => 2026,
+        'plate_number'       => 'INT-101',
+        'serial_number'      => 'SER-INT',
+        'fuel_card_number'   => 'FUEL-INT',
+        'vin'                => 'VIN-INT',
+        'status'             => 'available',
+        'online'             => true,
+        'location'           => null,
+        'heading'            => 15,
+        'altitude'           => 4,
+        'speed'              => 18,
+        'measurement_system' => 'metric',
+        'odometer'           => 1200,
+        'odometer_unit'      => 'km',
+        'fuel_type'          => 'diesel',
+        'currency'           => 'SGD',
+        'meta'               => ['yard' => 'east'],
+        'notes'              => 'Washed weekly.',
+    ], [
+        'devices' => new Collection([(object) ['uuid' => 'device-uuid']]),
+    ]);
+    $vendor = fleetopsCompactResourceFixture([
+        'name'      => 'Fuel Vendor',
+        'photo_url' => 'https://cdn.test/vendor.png',
+        'provider'  => 'shell',
+        'options'   => ['region' => 'sg'],
+        'sandbox'   => true,
+        'type'      => 'fuel',
+        'status'    => 'active',
+    ]);
+    $place = fleetopsCompactResourceFixture([
+        'company_uuid' => 'company-uuid',
+        'owner_uuid'   => 'owner-uuid',
+        'owner_type'   => 'Fleetbase\\FleetOps\\Models\\Contact',
+        'name'         => 'Waypoint Place',
+        'address'      => '12 Route Way',
+        'street1'      => '12 Route Way',
+        'city'         => 'Singapore',
+        'country'      => 'SG',
+        'avatar_url'   => 'https://cdn.test/waypoint.png',
+        'location'     => null,
+        'meta'         => ['dock' => 'A'],
+    ]);
+    $waypoint = fleetopsCompactResourceFixture([
+        'place'                => $place,
+        'tracking_number_uuid' => 'tracking-uuid',
+        'tracking'             => 'TN-WAYPOINT',
+        'status'               => 'arrived',
+        'status_code'          => 'arrived',
+    ]);
+
+    expect((new InternalVehicleResource($vehicle))->resolve($request))->toMatchArray([
+        'id'                 => 101,
+        'uuid'               => 'fixture-uuid',
+        'public_id'          => 'fixture_public',
+        'internal_id'        => 'VEH-INTERNAL',
+        'company_uuid'       => 'company-uuid',
+        'vendor_uuid'        => 'vendor-uuid',
+        'category_uuid'      => 'category-uuid',
+        'warranty_uuid'      => 'warranty-uuid',
+        'telematic_uuid'     => 'telematic-uuid',
+        'photo_uuid'         => 'photo-uuid',
+        'display_name'       => 'Internal Van',
+        'driver_name'        => 'Jane Driver',
+        'vendor_name'        => 'Vendor One',
+        'make'               => 'Ford',
+        'model'              => 'Transit',
+        'year'               => 2026,
+        'plate_number'       => 'INT-101',
+        'status'             => 'available',
+        'online'             => true,
+        'measurement_system' => 'metric',
+        'odometer'           => 1200,
+        'fuel_type'          => 'diesel',
+        'currency'           => 'SGD',
+        'heading'            => 15,
+        'altitude'           => 4,
+        'speed'              => 18,
+        'meta'               => ['yard' => 'east'],
+    ])
+        ->and((new VehicleWithoutDriverResource($vehicle))->toWebhookPayload())->toMatchArray([
+            'id'                 => 'fixture_public',
+            'internal_id'        => 'VEH-INTERNAL',
+            'name'               => 'Internal Vehicle',
+            'display_name'       => 'Internal Van',
+            'description'        => 'Internal fleet vehicle.',
+            'vin'                => 'VIN-INT',
+            'plate_number'       => 'INT-101',
+            'serial_number'      => 'SER-INT',
+            'fuel_card_number'   => 'FUEL-INT',
+            'make'               => 'Ford',
+            'model'              => 'Transit',
+            'year'               => 2026,
+            'photo_url'          => 'https://cdn.test/vehicle.png',
+            'avatar_url'         => 'https://cdn.test/avatar.png',
+            'status'             => 'available',
+            'online'             => true,
+            'measurement_system' => 'metric',
+            'odometer'           => 1200,
+            'odometer_unit'      => 'km',
+            'fuel_type'          => 'diesel',
+            'currency'           => 'SGD',
+            'heading'            => 15,
+            'altitude'           => 4,
+            'speed'              => 18,
+            'notes'              => 'Washed weekly.',
+            'meta'               => ['yard' => 'east'],
+        ])
+        ->and((new InternalIntegratedVendorFacilitatorResource($vendor))->resolve($request))->toMatchArray([
+            'id'               => 101,
+            'uuid'             => 'fixture-uuid',
+            'public_id'        => 'fixture_public',
+            'name'             => 'Fuel Vendor',
+            'photo_url'        => 'https://cdn.test/vendor.png',
+            'provider'         => 'shell',
+            'options'          => ['region' => 'sg'],
+            'sandbox'          => true,
+            'facilitator_type' => 'fuel',
+            'type'             => 'facilitator',
+            'status'           => 'active',
+        ])
+        ->and((new InternalWaypointResource($waypoint))->resolve($request))->toMatchArray([
+            'uuid'                 => 'fixture-uuid',
+            'waypoint_uuid'        => 'fixture-uuid',
+            'waypoint_public_id'   => 'fixture_public',
+            'tracking_number_uuid' => 'tracking-uuid',
+            'tracking'             => 'TN-WAYPOINT',
+            'status'               => 'arrived',
+            'status_code'          => 'arrived',
+            'name'                 => 'Waypoint Place',
+            'address'              => '12 Route Way',
+            'city'                 => 'Singapore',
+            'country'              => 'SG',
+            'meta'                 => ['dock' => 'A'],
+        ]);
+});
+
+test('tracking number and waypoint webhook resources serialize tracking contracts', function () {
+    $trackingNumber = fleetopsCompactResourceFixture([
+        'status_uuid'      => 'status-uuid',
+        'owner_uuid'       => 'owner-uuid',
+        'owner_type'       => 'Fleetbase\\FleetOps\\Models\\Order',
+        'owner'            => (object) ['public_id' => 'order_public'],
+        'tracking_number'  => 'TN-ZERO',
+        'region'           => 'sg',
+        'last_status'      => 'Created',
+        'last_status_code' => 'created',
+        'qr_code'          => 'qr-data',
+        'barcode'          => 'barcode-data',
+    ]);
+    $waypoint = fleetopsCompactResourceFixture([
+        'internal_id'     => 'WAYPOINT-101',
+        'name'            => 'Waypoint Stop',
+        'type'            => 'dropoff',
+        'destination'     => (object) ['public_id' => 'place_public'],
+        'customer_type'   => null,
+        'customer_uuid'   => null,
+        'trackingNumber'  => $trackingNumber,
+        'description'     => 'Dropoff at reception.',
+        'photo_url'       => 'https://cdn.test/waypoint-proof.png',
+        'length'          => 10,
+        'width'           => 8,
+        'height'          => 6,
+        'dimensions_unit' => 'cm',
+        'weight'          => 2.5,
+        'weight_unit'     => 'kg',
+        'declared_value'  => 125,
+        'price'           => 140,
+        'sale_price'      => 120,
+        'sku'             => 'WAY-SKU',
+        'currency'        => 'SGD',
+        'meta'            => ['sequence' => 2],
+    ]);
+    $order = fleetopsCompactResourceFixture([
+        'internal_id'        => 'ORDER-WEBHOOK',
+        'customer'           => null,
+        'payload'            => null,
+        'facilitator'        => null,
+        'driverAssigned'     => null,
+        'trackingNumber'     => $trackingNumber,
+        'purchaseRate'       => null,
+        'notes'              => 'Webhook order.',
+        'type'               => 'transport',
+        'status'             => 'created',
+        'adhoc'              => true,
+        'meta'               => ['channel' => 'api'],
+        'dispatched_at'      => null,
+        'started_at'         => null,
+        'scheduled_at'       => '2026-07-30 09:00:00',
+    ]);
+
+    expect((new TrackingNumberResource($trackingNumber))->toWebhookPayload())->toMatchArray([
+        'id'              => 'fixture_public',
+        'tracking_number' => 'TN-ZERO',
+        'subject'         => 'order_public',
+        'region'          => 'sg',
+        'qr_code'         => 'qr-data',
+        'barcode'         => 'barcode-data',
+        'type'            => 'order',
+    ])
+        ->and((new OrderResource($order))->toWebhookPayload())->toMatchArray([
+            'id'             => 'fixture_public',
+            'internal_id'    => 'ORDER-WEBHOOK',
+            'customer'       => null,
+            'facilitator'    => null,
+            'notes'          => 'Webhook order.',
+            'type'           => 'transport',
+            'status'         => 'created',
+            'adhoc'          => true,
+            'meta'           => ['channel' => 'api'],
+            'dispatched_at'  => null,
+            'started_at'     => null,
+            'scheduled_at'   => '2026-07-30 09:00:00',
+        ])
+        ->and((new WaypointResource($waypoint))->toWebhookPayload())->toMatchArray([
+            'id'              => 'fixture_public',
+            'internal_id'     => 'WAYPOINT-101',
+            'name'            => 'Waypoint Stop',
+            'type'            => 'dropoff',
+            'destination'     => 'place_public',
+            'customer'        => null,
+            'description'     => 'Dropoff at reception.',
+            'photo_url'       => 'https://cdn.test/waypoint-proof.png',
+            'length'          => 10,
+            'width'           => 8,
+            'height'          => 6,
+            'dimensions_unit' => 'cm',
+            'weight'          => 2.5,
+            'weight_unit'     => 'kg',
+            'declared_value'  => 125,
+            'price'           => 140,
+            'sale_price'      => 120,
+            'sku'             => 'WAY-SKU',
+            'currency'        => 'SGD',
+            'meta'            => ['sequence' => 2],
+        ]);
 });
