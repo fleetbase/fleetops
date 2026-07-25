@@ -1,5 +1,6 @@
 <?php
 
+use Fleetbase\FleetOps\Auth\Directives\CustomerOrders;
 use Fleetbase\FleetOps\Http\Controllers\Api\v1\DeviceController as ApiDeviceController;
 use Fleetbase\FleetOps\Http\Controllers\Internal\v1\DeviceController as InternalDeviceController;
 use Fleetbase\FleetOps\Http\Controllers\Internal\v1\DeviceEventController;
@@ -14,6 +15,7 @@ use Fleetbase\FleetOps\Http\Filter\FuelReportFilter;
 use Fleetbase\FleetOps\Http\Filter\IssueFilter;
 use Fleetbase\FleetOps\Http\Filter\PartFilter;
 use Fleetbase\FleetOps\Http\Filter\PlaceFilter;
+use Fleetbase\FleetOps\Http\Filter\PositionFilter;
 use Fleetbase\FleetOps\Http\Filter\SensorFilter;
 use Fleetbase\FleetOps\Http\Filter\ServiceRateFilter;
 use Fleetbase\FleetOps\Http\Filter\TrackingNumberFilter;
@@ -182,6 +184,44 @@ class FleetOpsControllerFilterQuery
     public function within(string $column, mixed $geometry): self
     {
         $this->calls[] = ['within', $column, $geometry];
+
+        return $this;
+    }
+}
+
+class FleetOpsCustomerOrdersBuilderRecorder extends Illuminate\Database\Eloquent\Builder
+{
+    public array $calls = [];
+
+    public function __construct()
+    {
+    }
+
+    public function where($column, $operator = null, $value = null, $boolean = 'and')
+    {
+        if (is_callable($column)) {
+            $nested = new self();
+            $column($nested);
+            $this->calls[] = ['whereNested', $nested->calls];
+
+            return $this;
+        }
+
+        $arguments = func_get_args();
+        if (count($arguments) > 2 && $value === null) {
+            $arguments = array_slice($arguments, 0, 2);
+        }
+
+        $this->calls[] = ['where', $arguments];
+
+        return $this;
+    }
+
+    public function orWhereHas($relation, ?Closure $callback = null, $operator = '>=', $count = 1)
+    {
+        $nested = new self();
+        $callback($nested);
+        $this->calls[] = ['orWhereHas', $relation, $nested->calls];
 
         return $this;
     }
@@ -512,6 +552,48 @@ test('service rate and zone filters scope company service area and zone relation
             ['where', ['public_id', 'service-area-public']],
         ]],
     ]);
+});
+
+test('position filter records company query and created date scopes', function () {
+    $query  = new FleetOpsControllerFilterQuery();
+    $filter = fleetopsFilterWithBuilder(PositionFilter::class, $query);
+
+    $filter->queryForInternal();
+    $filter->queryForPublic();
+    $filter->query('vehicle');
+    $filter->createdAt(['2026-01-01', '2026-01-31']);
+    $filter->createdAt('2026-02-01');
+
+    expect($query->calls)->toContain(['where', ['company_uuid', 'company-uuid']])
+        ->and($query->calls)->toContain(['search', 'vehicle'])
+        ->and(collect($query->calls)->where(0, 'whereBetween')->values())->toHaveCount(1)
+        ->and(collect($query->calls)->where(0, 'whereDate')->values())->toHaveCount(1);
+});
+
+test('customer orders directive scopes direct customer and authenticatable user matches', function () {
+    app('session.store')->forget('user');
+
+    app()->instance('request', Request::create('/customer-orders', 'GET', ['customer' => 'customer-user-uuid']));
+
+    $builder = new FleetOpsCustomerOrdersBuilderRecorder();
+    $result  = (new CustomerOrders())->apply($builder);
+
+    expect($result)->toBe($builder)
+        ->and($builder->calls)->toBe([
+            ['whereNested', [
+                ['where', ['customer_uuid', 'customer-user-uuid']],
+                ['orWhereHas', 'authenticatableCustomer', [
+                    ['where', ['user_uuid', 'customer-user-uuid']],
+                ]],
+            ]],
+        ]);
+
+    session(['user' => 'session-user-uuid']);
+
+    $sessionBuilder = new FleetOpsCustomerOrdersBuilderRecorder();
+    (new CustomerOrders())->apply($sessionBuilder);
+
+    expect($sessionBuilder->calls[0][1][0])->toBe(['where', ['customer_uuid', 'session-user-uuid']]);
 });
 
 test('issue filter records identity relationship priority status and date filters', function () {

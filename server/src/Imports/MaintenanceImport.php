@@ -25,8 +25,13 @@ class MaintenanceImport implements ToCollection, WithHeadingRow
                 continue;
             }
 
-            Maintenance::createFromImport($row, true);
+            $this->createFromImport($row);
             $this->imported++;
         }
+    }
+
+    protected function createFromImport(array $row): void
+    {
+        Maintenance::createFromImport($row, true);
     }
 }

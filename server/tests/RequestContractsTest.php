@@ -51,8 +51,25 @@ namespace Illuminate\Validation {
     }
 }
 
+namespace Illuminate\Validation\Rules {
+    if (!class_exists(RequiredIf::class)) {
+        class RequiredIf
+        {
+            public function __construct(private bool $condition)
+            {
+            }
+
+            public function __toString(): string
+            {
+                return $this->condition ? 'required' : 'nullable';
+            }
+        }
+    }
+}
+
 namespace {
     use Fleetbase\FleetOps\Http\Requests\BulkDispatchRequest;
+    use Fleetbase\FleetOps\Http\Requests\CreateContactRequest;
     use Fleetbase\FleetOps\Http\Requests\CreateCustomerOrderRequest;
     use Fleetbase\FleetOps\Http\Requests\CreateCustomerRequest;
     use Fleetbase\FleetOps\Http\Requests\CreateDeviceRequest;
@@ -69,6 +86,7 @@ namespace {
     use Fleetbase\FleetOps\Http\Requests\CreateSensorRequest;
     use Fleetbase\FleetOps\Http\Requests\CreateServiceAreaRequest;
     use Fleetbase\FleetOps\Http\Requests\CreateServiceRateRequest;
+    use Fleetbase\FleetOps\Http\Requests\CreateTrackingNumberRequest;
     use Fleetbase\FleetOps\Http\Requests\CreateTrackingStatusRequest;
     use Fleetbase\FleetOps\Http\Requests\CreateVehicleRequest;
     use Fleetbase\FleetOps\Http\Requests\CreateVendorRequest;
@@ -250,6 +268,38 @@ namespace {
         });
 
         expect($failed)->toBeFalse();
+    });
+
+    test('contact and tracking number create requests expose authorization and validation contracts', function () {
+        bindFleetOpsRequestSession();
+        expect(CreateContactRequest::create('/fleetops-test', 'POST')->authorize())->toBeFalse()
+            ->and(CreateTrackingNumberRequest::create('/fleetops-test', 'POST')->authorize())->toBeFalse();
+
+        bindFleetOpsRequestSession(['storefront_key' => 'storefront-key']);
+        expect(CreateContactRequest::create('/fleetops-test', 'POST')->authorize())->toBeTrue();
+
+        bindFleetOpsRequestSession(['api_credential' => 'credential-uuid']);
+        expect(CreateContactRequest::create('/fleetops-test', 'POST')->authorize())->toBeTrue()
+            ->and(CreateTrackingNumberRequest::create('/fleetops-test', 'POST')->authorize())->toBeTrue();
+
+        bindFleetOpsRequestSession(['is_sanctum_token' => true]);
+        expect(CreateContactRequest::create('/fleetops-test', 'POST')->authorize())->toBeTrue();
+
+        $contactCreateRules = requestRules(CreateContactRequest::class);
+        $contactPatchRules  = requestRules(CreateContactRequest::class, 'PATCH');
+        $trackingRules      = requestRules(CreateTrackingNumberRequest::class);
+
+        expect(ruleStrings($contactCreateRules['name']))->toContain('required')
+            ->and(ruleStrings($contactCreateRules['type']))->toContain('required')
+            ->and(ruleStrings($contactPatchRules['name']))->not->toContain('required')
+            ->and(ruleStrings($contactPatchRules['type']))->not->toContain('required')
+            ->and($contactCreateRules['email'])->toBe(['nullable', 'email'])
+            ->and($contactCreateRules['phone'])->toBe(['nullable'])
+            ->and($trackingRules['region'])->toBe('required|string')
+            ->and($trackingRules['owner'][0])->toBe('required')
+            ->and($trackingRules['owner'][1])->toBeInstanceOf(ExistsInAny::class)
+            ->and($trackingRules['type'])->toBe('nullable|in:city,province,country')
+            ->and($trackingRules['status'])->toBe('nullable|in:active,inactive');
     });
 
     test('internal create driver request exposes user identity vehicle and message contracts', function () {

@@ -25,8 +25,13 @@ class WorkOrderImport implements ToCollection, WithHeadingRow
                 continue;
             }
 
-            WorkOrder::createFromImport($row, true);
+            $this->createFromImport($row);
             $this->imported++;
         }
+    }
+
+    protected function createFromImport(array $row): void
+    {
+        WorkOrder::createFromImport($row, true);
     }
 }
