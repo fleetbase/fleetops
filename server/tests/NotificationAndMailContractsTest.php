@@ -1,5 +1,6 @@
 <?php
 
+use Fleetbase\FleetOps\Flow\Activity;
 use Fleetbase\FleetOps\Mail\MaintenanceScheduleReminder;
 use Fleetbase\FleetOps\Mail\WorkOrderDispatched;
 use Fleetbase\FleetOps\Models\MaintenanceSchedule;
@@ -7,6 +8,7 @@ use Fleetbase\FleetOps\Models\Order;
 use Fleetbase\FleetOps\Models\Waypoint;
 use Fleetbase\FleetOps\Models\WorkOrder;
 use Fleetbase\FleetOps\Notifications\LateDeparture;
+use Fleetbase\FleetOps\Notifications\OrderAssigned;
 use Fleetbase\FleetOps\Notifications\OrderCanceled as OrderCanceledNotification;
 use Fleetbase\FleetOps\Notifications\OrderCompleted as OrderCompletedNotification;
 use Fleetbase\FleetOps\Notifications\OrderDispatched;
@@ -14,13 +16,29 @@ use Fleetbase\FleetOps\Notifications\OrderFailed as OrderFailedNotification;
 use Fleetbase\FleetOps\Notifications\OrderPing;
 use Fleetbase\FleetOps\Notifications\ProlongedStoppage;
 use Fleetbase\FleetOps\Notifications\RouteDeviation;
+use Fleetbase\FleetOps\Notifications\WaypointCompleted;
 use Fleetbase\Models\Model;
+use Illuminate\Container\Container;
 
 class FleetOpsNotificationOrderFake extends Order
 {
     public string $uuid      = 'order-uuid';
     public string $public_id = 'order_public';
     public string $tracking  = 'TRACK-123';
+
+    public function getAttribute($key)
+    {
+        if ($key === 'scheduled_at') {
+            return $this->attributes['scheduled_at'] ?? null;
+        }
+
+        return parent::getAttribute($key);
+    }
+
+    public function getIsScheduledAttribute(): bool
+    {
+        return !empty($this->attributes['scheduled_at'] ?? null);
+    }
 }
 
 class FleetOpsNotificationDriverFake extends Model
@@ -40,9 +58,49 @@ function notificationTestOrder(): Order
     return new FleetOpsNotificationOrderFake();
 }
 
+function notificationTestOrderWithRelations(array $attributes = []): Order
+{
+    $order = notificationTestOrder();
+    $order->setRawAttributes(array_merge([
+        'uuid'         => 'order-uuid',
+        'public_id'    => 'order_public',
+        'scheduled_at' => null,
+    ], $attributes), true);
+    $order->setRelation('company', (object) [
+        'uuid'      => 'company-uuid',
+        'public_id' => 'company-public',
+    ]);
+    $order->setRelation('driverAssigned', (object) [
+        'uuid'      => 'driver-uuid',
+        'public_id' => 'driver-public',
+    ]);
+    $order->setRelation('trackingNumber', (object) [
+        'tracking_number' => 'TN-ASSIGNED',
+    ]);
+
+    return $order;
+}
+
 function fleetOpsNotificationChannelNames(array $channels): array
 {
     return array_map(fn ($channel) => $channel->name, $channels);
+}
+
+function fleetOpsNotificationWithEnvironment(callable $callback): mixed
+{
+    $previousApp = Container::getInstance();
+    Container::setInstance(new class extends Container {
+        public function environment(...$environments)
+        {
+            return false;
+        }
+    });
+
+    try {
+        return $callback();
+    } finally {
+        Container::setInstance($previousApp);
+    }
 }
 
 test('operational alert notifications expose expected channels and database payloads', function () {
@@ -116,6 +174,54 @@ test('order dispatched notification exposes channels array and mail payloads', f
             'title' => 'Order TRACK-123 has been dispatched!',
             'body'  => 'An order has just been dispatched to you and is ready to be started.',
             'data'  => ['id' => 'order_public', 'type' => 'order_dispatched'],
+        ]);
+});
+
+test('order assigned notification handles scheduled and unscheduled contracts', function () {
+    session([
+        'company'        => 'company-session',
+        'api_credential' => 'api-credential',
+    ]);
+
+    $order        = notificationTestOrderWithRelations();
+    $notification = new OrderAssigned($order);
+    $mail         = fleetOpsNotificationWithEnvironment(fn () => $notification->toMail(null));
+
+    expect(OrderAssigned::$name)->toBe('Order Assigned')
+        ->and(OrderAssigned::$package)->toBe('fleet-ops')
+        ->and($notification->title)->toBe('New order TN-ASSIGNED assigned!')
+        ->and($notification->message)->toBe('You have a new order assigned, tap for details.')
+        ->and($notification->data)->toBe(['id' => 'order_public', 'type' => 'order_assigned'])
+        ->and($notification->via(null))->toContain('broadcast', 'mail')
+        ->and(fleetOpsNotificationChannelNames($notification->broadcastOn()))->toBe([
+            'company.company-session',
+            'company.company-public',
+            'api.api-credential',
+            'order.order-uuid',
+            'order.order_public',
+            'driver.driver-uuid',
+            'driver.driver-public',
+        ])
+        ->and($notification->toArray())->toBe([
+            'event' => 'order.assigned_notification',
+            'title' => 'New order TN-ASSIGNED assigned!',
+            'body'  => 'You have a new order assigned, tap for details.',
+            'data'  => ['id' => 'order_public', 'type' => 'order_assigned'],
+        ])
+        ->and($mail->subject)->toBe('New order TN-ASSIGNED assigned!')
+        ->and($mail->introLines)->toBe(['You have a new order assigned, tap for details.'])
+        ->and($mail->actionText)->toBe('Track Order')
+        ->and($mail->actionUrl)->toContain('track-order')
+        ->and($mail->actionUrl)->toContain('TN-ASSIGNED');
+
+    $scheduledOrder      = notificationTestOrderWithRelations(['scheduled_at' => '2026-08-01 10:30:00']);
+    $scheduled           = new OrderAssigned($scheduledOrder);
+    $scheduledMail       = fleetOpsNotificationWithEnvironment(fn () => $scheduled->toMail(null));
+
+    expect($scheduled->message)->toBe('You have a new order scheduled for 2026-08-01 10:30:00')
+        ->and($scheduledMail->introLines)->toBe([
+            'You have a new order scheduled for 2026-08-01 10:30:00',
+            'Dispatch is scheduled for 2026-08-01 10:30:00',
         ]);
 });
 
@@ -215,6 +321,48 @@ test('terminal order notifications expose shared broadcast and array payload con
             'body'  => 'Order WP-TRACK-123 has been completed by agent.',
             'data'  => ['id' => 'order_public', 'type' => 'order_completed'],
         ]);
+});
+
+test('waypoint completed notification exposes channels array and mail payloads', function () {
+    session([
+        'company'        => 'company-session',
+        'api_credential' => 'api-credential',
+    ]);
+
+    $waypoint = new Waypoint();
+    $waypoint->setRawAttributes([
+        'uuid'         => 'waypoint-uuid',
+        'public_id'    => 'waypoint_public',
+        'payload_uuid' => 'missing-payload',
+    ], true);
+    $waypoint->setRelation('trackingNumber', (object) [
+        'tracking_number' => 'WP-COMPLETE',
+    ]);
+
+    $activity     = new Activity(['details' => 'Dropoff completed']);
+    $notification = new WaypointCompleted($waypoint, $activity);
+    $mail         = fleetOpsNotificationWithEnvironment(fn () => $notification->toMail(null));
+
+    expect(WaypointCompleted::$name)->toBe('Waypoint Completed')
+        ->and(WaypointCompleted::$package)->toBe('fleet-ops')
+        ->and($notification->title)->toBe('Order WP-COMPLETE dropoff completed')
+        ->and($notification->message)->toBe('Dropoff completed')
+        ->and($notification->data)->toBe(['id' => 'waypoint_public', 'type' => 'waypoint_completed'])
+        ->and($notification->via(null))->toContain('broadcast', 'mail')
+        ->and($notification->toArray())->toBe([
+            0       => 'event.waypoint_completed_notification',
+            'title' => 'Order WP-COMPLETE dropoff completed',
+            'body'  => 'Dropoff completed',
+            'data'  => ['id' => 'waypoint_public', 'type' => 'waypoint_completed'],
+        ])
+        ->and($mail->subject)->toBe('Order WP-COMPLETE dropoff completed')
+        ->and($mail->introLines)->toBe([
+            'Dropoff completed',
+            'No further action is necessary.',
+        ])
+        ->and($mail->actionText)->toBe('Track Order')
+        ->and($mail->actionUrl)->toContain('track-order')
+        ->and($mail->actionUrl)->toContain('WP-COMPLETE');
 });
 
 test('work order dispatched mail exposes subject and markdown context', function () {
