@@ -348,14 +348,13 @@ class Contact extends Model
             $existingUserContact = Contact::where(['user_uuid' => $existingUser->uuid, 'company_uuid' => $contact->company_uuid])->whereHas('user')->first();
             if ($existingUserContact) {
                 throw new UserAlreadyExistsException('User already exists, try to assigning the user to this contact.', $existingUser);
-            } else {
-                // Assign the user to this contact instead
-                $contact->setAttribute('user_uuid', $existingUser->uuid);
-                if ($update) {
-                    $contact->update(['user_uuid' => $existingUser->uuid]);
-                }
-                $contact->setRelation('user', $existingUser);
             }
+            // Assign the user to this contact instead
+            $contact->setAttribute('user_uuid', $existingUser->uuid);
+            if ($update) {
+                $contact->update(['user_uuid' => $existingUser->uuid]);
+            }
+            $contact->setRelation('user', $existingUser);
 
             return $existingUser;
         }

@@ -345,9 +345,9 @@ class Device extends Model
             return 'recently_offline';
         } elseif ($minutesOffline <= 1440) { // 24 hours
             return 'offline';
-        } else {
-            return 'long_offline';
         }
+
+        return 'long_offline';
     }
 
     /**

@@ -17,6 +17,11 @@ class FleetOpsCommandCacheFake
     {
         return $this->lock;
     }
+
+    public function forget($key): bool
+    {
+        return true;
+    }
 }
 
 class FleetOpsCommandLockFake
