@@ -1,12 +1,45 @@
 <?php
 
+use Fleetbase\FleetOps\Models\Driver;
+use Fleetbase\FleetOps\Models\Vehicle;
 use Fleetbase\FleetOps\Support\Analytics\AbstractAnalytics;
+use Fleetbase\FleetOps\Support\Analytics\FuelEfficiency;
+use Fleetbase\FleetOps\Support\Analytics\LiveFleet;
 use Fleetbase\FleetOps\Support\Analytics\OnTimeDelivery;
 use Fleetbase\FleetOps\Support\Analytics\OperationsPulse;
 use Fleetbase\FleetOps\Support\Analytics\RevenueTrend;
 use Fleetbase\FleetOps\Support\Analytics\TopDrivers;
+use Fleetbase\LaravelMysqlSpatial\Types\Point;
 use Fleetbase\Models\Company;
 use Illuminate\Support\Carbon;
+
+class TestFleetOpsLiveFleetDriver extends Driver
+{
+    public array $fakeAttributes = [];
+
+    public function getAttribute($key)
+    {
+        if (array_key_exists($key, $this->fakeAttributes)) {
+            return $this->fakeAttributes[$key];
+        }
+
+        return parent::getAttribute($key);
+    }
+}
+
+class TestFleetOpsLiveFleetVehicle extends Vehicle
+{
+    public array $fakeAttributes = [];
+
+    public function getAttribute($key)
+    {
+        if (array_key_exists($key, $this->fakeAttributes)) {
+            return $this->fakeAttributes[$key];
+        }
+
+        return parent::getAttribute($key);
+    }
+}
 
 class TestFleetOpsAnalytics extends AbstractAnalytics
 {
@@ -108,6 +141,132 @@ test('analytics base applies company currency and explicit date ranges', functio
         'start'    => '2026-03-01',
         'end'      => '2026-03-31',
     ]);
+});
+
+test('live fleet analytics serializes driver and vehicle map payloads', function () {
+    $analytics = new LiveFleet();
+
+    $driver                 = new TestFleetOpsLiveFleetDriver();
+    $driver->fakeAttributes = [
+        'uuid'                    => 'driver-uuid',
+        'public_id'               => 'driver-public',
+        'name'                    => 'Ada Driver',
+        'avatar_url'              => 'https://example.test/avatar.png',
+        'vehicle_avatar'          => 'https://example.test/vehicle-avatar.png',
+        'online'                  => 1,
+        'heading'                 => '93.5',
+        'current_job_uuid'        => 'order-uuid',
+        'location'                => new Point(1.30, 103.80),
+        'last_location_update_at' => '2026-01-01 10:00:00',
+    ];
+
+    $vehicle                 = new TestFleetOpsLiveFleetVehicle();
+    $vehicle->fakeAttributes = [
+        'uuid'         => 'vehicle-uuid',
+        'public_id'    => 'vehicle-public',
+        'display_name' => 'Van 7',
+        'plate_number' => 'SBA1234Z',
+        'avatar_url'   => 'https://example.test/van-avatar.png',
+        'photo_url'    => 'https://example.test/van-photo.png',
+        'online'       => null,
+        'driver_name'  => 'Ada Driver',
+        'heading'      => null,
+        'location'     => ['lat' => 1.31, 'lng' => 103.81],
+    ];
+
+    $driverPayload  = new ReflectionMethod(LiveFleet::class, 'driverPayload');
+    $vehiclePayload = new ReflectionMethod(LiveFleet::class, 'vehiclePayload');
+    $driverPayload->setAccessible(true);
+    $vehiclePayload->setAccessible(true);
+
+    expect($driverPayload->invoke($analytics, $driver))->toBe([
+        'uuid'               => 'driver-uuid',
+        'public_id'          => 'driver-public',
+        'name'               => 'Ada Driver',
+        'avatar_url'         => 'https://example.test/avatar.png',
+        'vehicle_avatar'     => 'https://example.test/vehicle-avatar.png',
+        'online'             => true,
+        'heading'            => 93.5,
+        'current_order_uuid' => 'order-uuid',
+        'lat'                => 1.30,
+        'lng'                => 103.80,
+        'updated_at'         => '2026-01-01 10:00:00',
+    ])->and($vehiclePayload->invoke($analytics, $vehicle))->toBe([
+        'uuid'         => 'vehicle-uuid',
+        'public_id'    => 'vehicle-public',
+        'name'         => 'Van 7',
+        'plate_number' => 'SBA1234Z',
+        'avatar_url'   => 'https://example.test/van-avatar.png',
+        'photo_url'    => 'https://example.test/van-photo.png',
+        'online'       => false,
+        'driver_name'  => 'Ada Driver',
+        'heading'      => 0.0,
+        'lat'          => 1.31,
+        'lng'          => 103.81,
+    ]);
+});
+
+test('live fleet analytics extracts coordinates from supported location shapes', function () {
+    $analytics = new LiveFleet();
+    $method    = new ReflectionMethod(LiveFleet::class, 'extractLatLng');
+    $method->setAccessible(true);
+
+    expect($method->invoke($analytics, new Point(1.30, 103.80)))->toBe([1.30, 103.80])
+        ->and($method->invoke($analytics, ['lat' => 1.31, 'lng' => 103.81]))->toBe([1.31, 103.81])
+        ->and($method->invoke($analytics, [103.82, 1.32]))->toBe([1.32, 103.82])
+        ->and($method->invoke($analytics, null))->toBe([null, null]);
+});
+
+test('fuel efficiency analytics builds weekly cost and cost per kilometer datasets', function () {
+    $analytics = new FuelEfficiency();
+    $method    = new ReflectionMethod(FuelEfficiency::class, 'buildFuelEfficiencyPayload');
+    $method->setAccessible(true);
+
+    $payload = $method->invoke(
+        $analytics,
+        collect([
+            (object) ['wk' => 202601, 'wk_start' => '2026-01-05', 'total_cost' => '123.456'],
+            (object) ['wk' => 202602, 'wk_start' => '2026-01-12', 'total_cost' => 50],
+        ]),
+        collect([
+            202601 => 12345,
+            202602 => 0,
+        ]),
+        'USD',
+    );
+
+    expect($payload['labels'])->toBe(['Jan 5', 'Jan 12'])
+        ->and($payload['datasets'][0])->toMatchArray([
+            'type'            => 'bar',
+            'label'           => 'Fuel Cost',
+            'data'            => [123.46, 50.0],
+            'yAxisID'         => 'y1',
+            'backgroundColor' => '#3485e2',
+        ])
+        ->and($payload['datasets'][1])->toMatchArray([
+            'type'        => 'line',
+            'label'       => 'Cost per km',
+            'data'        => [10.0, null],
+            'yAxisID'     => 'y2',
+            'borderColor' => '#f59e0b',
+            'tension'     => 0.3,
+        ])
+        ->and($payload['summary'])->toBe([
+            'total_cost'      => 173.46,
+            'currency'        => 'USD',
+            'avg_cost_per_km' => 14.051,
+        ]);
+
+    $emptyPayload = $method->invoke($analytics, [], [], 'MNT');
+
+    expect($emptyPayload['labels'])->toBe([])
+        ->and($emptyPayload['datasets'][0]['data'])->toBe([])
+        ->and($emptyPayload['datasets'][1]['data'])->toBe([])
+        ->and($emptyPayload['summary'])->toBe([
+            'total_cost'      => 0.0,
+            'currency'        => 'MNT',
+            'avg_cost_per_km' => 0.0,
+        ]);
 });
 
 test('analytics widget fluent options clamp or normalize invalid values', function () {

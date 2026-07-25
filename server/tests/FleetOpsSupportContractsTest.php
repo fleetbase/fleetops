@@ -1,6 +1,7 @@
 <?php
 
 use Fleetbase\FleetOps\Support\FleetOps;
+use Fleetbase\FleetOps\Support\Geocoding;
 use Illuminate\Support\Str;
 
 function fleetopsTransportConfigDefaults(): array
@@ -68,4 +69,10 @@ test('fleet ops support assigns unique internal ids to every default transport s
     foreach ($internalIds as $internalId) {
         expect(Str::isUuid((string) $internalId))->toBeTrue();
     }
+});
+
+test('geocoding support handles disabled and empty coordinate queries without external calls', function () {
+    app('config')->set('services.google_maps.api_key', null);
+
+    expect(Geocoding::canGoogleGeocode())->toBeFalse();
 });

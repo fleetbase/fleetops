@@ -9,9 +9,11 @@ use Fleetbase\FleetOps\Events\GeofenceDwelled;
 use Fleetbase\FleetOps\Events\GeofenceEntered;
 use Fleetbase\FleetOps\Events\GeofenceExited;
 use Fleetbase\FleetOps\Events\VehicleLocationChanged;
+use Fleetbase\FleetOps\Listeners\HandleGeofenceEntered;
 use Fleetbase\FleetOps\Models\Driver;
 use Fleetbase\FleetOps\Models\FuelProviderTransaction;
 use Fleetbase\FleetOps\Models\FuelReport;
+use Fleetbase\FleetOps\Models\Order;
 use Fleetbase\FleetOps\Models\Vehicle;
 use Fleetbase\LaravelMysqlSpatial\Types\Point;
 
@@ -21,7 +23,7 @@ if (!class_exists('Illuminate\Foundation\Auth\User')) {
 
 class FleetOpsEventDriver extends Driver
 {
-    public function getCurrentOrder(): ?Fleetbase\FleetOps\Models\Order
+    public function getCurrentOrder(): ?Order
     {
         return null;
     }
@@ -233,6 +235,15 @@ test('geofence entered event broadcasts driver subject payloads', function () {
                 'longitude' => 103.8198,
             ],
         ]);
+});
+
+test('geofence entered listener calculates proximity and ignores terminal orders', function () {
+    $listener = new HandleGeofenceEntered();
+    $distance = new ReflectionMethod(HandleGeofenceEntered::class, 'haversineDistance');
+    $distance->setAccessible(true);
+
+    expect($listener->tries)->toBe(3)
+        ->and((int) round($distance->invoke($listener, 1.3000, 103.8000, 1.3010, 103.8010)))->toBe(157);
 });
 
 test('geofence exited and dwelled events broadcast vehicle subject payloads', function () {

@@ -3,6 +3,7 @@
 use Fleetbase\FleetOps\Http\Controllers\Api\v1\DeviceController as ApiDeviceController;
 use Fleetbase\FleetOps\Http\Controllers\Internal\v1\DeviceController as InternalDeviceController;
 use Fleetbase\FleetOps\Http\Controllers\Internal\v1\SettingController;
+use Fleetbase\FleetOps\Http\Filter\DeviceFilter;
 use Fleetbase\LaravelMysqlSpatial\Types\Point;
 use Illuminate\Http\Request;
 
@@ -35,6 +36,20 @@ class FleetOpsControllerFilterQuery
     public function whereNotNull(string $column): self
     {
         $this->calls[] = ['whereNotNull', $column];
+
+        return $this;
+    }
+
+    public function search(?string $query): self
+    {
+        $this->calls[] = ['search', $query];
+
+        return $this;
+    }
+
+    public function whereIn(string $column, mixed $values): self
+    {
+        $this->calls[] = ['whereIn', $column, $values];
 
         return $this;
     }
@@ -105,6 +120,28 @@ function fleetopsProtectedMethod(string $class, string $method): ReflectionMetho
     return $reflection;
 }
 
+function fleetopsFilterWithBuilder(string $class, FleetOpsControllerFilterQuery $builder): object
+{
+    $filter = (new ReflectionClass($class))->newInstanceWithoutConstructor();
+
+    foreach ([
+        'builder' => $builder,
+        'session' => new class {
+            public function get(string $key): ?string
+            {
+                return $key === 'company' ? 'company-uuid' : null;
+            }
+        },
+        'request' => new Request(),
+    ] as $property => $value) {
+        $reflection = new ReflectionProperty(Fleetbase\Http\Filter\Filter::class, $property);
+        $reflection->setAccessible(true);
+        $reflection->setValue($filter, $value);
+    }
+
+    return $filter;
+}
+
 test('internal device controller query callback applies attachment status and date filters', function () {
     $request = new Request([
         'attachment_state'  => 'attached',
@@ -145,6 +182,44 @@ test('internal device controller find callback eager loads expected relationship
         ['with', ['telematic', 'warranty', 'attachable']],
         ['withCount', 'sensors'],
     ]);
+});
+
+test('device filter records scalar list attachment and connection filters', function () {
+    $query  = new FleetOpsControllerFilterQuery();
+    $filter = fleetopsFilterWithBuilder(DeviceFilter::class, $query);
+
+    $filter->queryForInternal();
+    $filter->queryForPublic();
+    $filter->query('gps tracker');
+    $filter->status('active,inactive');
+    $filter->deviceId('device-1');
+    $filter->type(['gps', 'sensor']);
+    $filter->serialNumber('serial-1');
+    $filter->provider('teltonika');
+    $filter->warrantyUuid('warranty-uuid');
+    $filter->attachableType('fleet-ops:vehicle');
+    $filter->attachableUuid('vehicle-uuid');
+    $filter->connectionStatus(['recently_offline', 'offline', 'long_offline', 'ignored']);
+    $filter->attachmentState('unattached');
+
+    expect($query->calls)->toContain(['where', ['company_uuid', 'company-uuid']])
+        ->and($query->calls)->toContain(['search', 'gps tracker'])
+        ->and($query->calls)->toContain(['whereIn', 'status', ['active', 'inactive']])
+        ->and($query->calls)->toContain(['where', ['device_id', 'like', '%device-1%']])
+        ->and($query->calls)->toContain(['whereIn', 'type', ['gps', 'sensor']])
+        ->and($query->calls)->toContain(['where', ['serial_number', 'like', '%serial-1%']])
+        ->and($query->calls)->toContain(['where', ['provider', 'teltonika']])
+        ->and($query->calls)->toContain(['where', ['warranty_uuid', 'warranty-uuid']])
+        ->and($query->calls)->toContain(['where', ['attachable_type', 'fleet-ops:vehicle']])
+        ->and($query->calls)->toContain(['where', ['attachable_uuid', 'vehicle-uuid']])
+        ->and($query->calls)->toContain(['whereNull', 'attachable_uuid']);
+
+    $connectionStatus = collect($query->calls)->first(fn ($call) => $call[0] === 'whereNested');
+
+    expect($connectionStatus[1])->toHaveCount(3)
+        ->and($connectionStatus[1][0][0])->toBe('orWhereBetween')
+        ->and($connectionStatus[1][1][0])->toBe('orWhereBetween')
+        ->and($connectionStatus[1][2][0])->toBe('orWhere');
 });
 
 test('api device controller input maps coordinates and clears blank attachables', function () {

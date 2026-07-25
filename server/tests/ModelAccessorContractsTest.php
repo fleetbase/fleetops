@@ -14,6 +14,7 @@ use Fleetbase\FleetOps\Models\Place;
 use Fleetbase\FleetOps\Models\ServiceRate;
 use Fleetbase\FleetOps\Models\ServiceRateFee;
 use Fleetbase\FleetOps\Models\Vendor;
+use Fleetbase\FleetOps\Models\Waypoint;
 use Fleetbase\LaravelMysqlSpatial\Types\Point;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
@@ -290,6 +291,21 @@ test('maintenance accessors lifecycle guards and import mapping are stable', fun
         ->and($imported->currency)->toBe('SGD');
 
     Carbon::setTestNow();
+});
+
+test('waypoint model mirrors tracking number status accessors', function () {
+    $waypoint = new Waypoint();
+    $waypoint->setRelation('trackingNumber', (object) [
+        'tracking_number'      => 'TRK-123',
+        'last_status'          => 'Out for delivery',
+        'last_status_code'     => 'out_for_delivery',
+        'last_status_complete' => false,
+    ]);
+
+    expect($waypoint->getTrackingAttribute())->toBe('TRK-123')
+        ->and($waypoint->getStatusAttribute())->toBe('Out for delivery')
+        ->and($waypoint->getStatusCodeAttribute())->toBe('out_for_delivery')
+        ->and($waypoint->getCompleteAttribute())->toBeFalse();
 });
 
 test('service rate accessors flags fee normalization and quote helpers are stable', function () {

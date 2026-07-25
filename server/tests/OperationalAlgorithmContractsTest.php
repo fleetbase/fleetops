@@ -7,6 +7,7 @@ use Fleetbase\FleetOps\Models\Order;
 use Fleetbase\FleetOps\Models\Place;
 use Fleetbase\FleetOps\Models\Vehicle;
 use Fleetbase\FleetOps\Orchestration\Engines\DriverAssignmentEngine;
+use Fleetbase\FleetOps\Orchestration\Engines\GreedyOrchestrationEngine;
 use Fleetbase\FleetOps\Support\Ai\Capabilities\OptimizeOrderRouteCapability;
 use Fleetbase\LaravelMysqlSpatial\Types\Point;
 
@@ -90,6 +91,31 @@ function fleetopsDriver(string $uuid, string $publicId, array $skills, bool $onl
     return $driver;
 }
 
+function fleetopsVehicle(string $uuid, string $publicId, ?object $location = null, ?Driver $driver = null): object
+{
+    $vehicle            = new stdClass();
+    $vehicle->uuid      = $uuid;
+    $vehicle->public_id = $publicId;
+    $vehicle->location  = $location;
+    $vehicle->driver    = $driver;
+
+    return $vehicle;
+}
+
+function fleetopsOrder(string $publicId, ?object $pickup = null, ?object $dropoff = null, int $priority = 0, ?string $scheduledAt = null): object
+{
+    $order                        = new stdClass();
+    $order->public_id             = $publicId;
+    $order->orchestrator_priority = $priority;
+    $order->scheduled_at          = $scheduledAt ? new DateTimeImmutable($scheduledAt) : null;
+    $order->payload               = (object) [
+        'pickup'  => $pickup,
+        'dropoff' => $dropoff,
+    ];
+
+    return $order;
+}
+
 test('operational alert command extracts route points and distances defensively', function () {
     $command = new ProcessOperationalAlerts();
 
@@ -148,6 +174,89 @@ test('driver assignment helper scores skills online state and proximity', functi
             new Order(['required_skills' => ['hazmat', 'reefer']]),
         ])]))->toBe(['hazmat', 'liftgate', 'reefer'])
         ->and(fleetopsInvoke($engine, 'haversineDistance', [1.30, 103.80, 1.31, 103.81]))->toBeGreaterThan(0.0);
+});
+
+test('greedy orchestration engine assigns nearest available vehicles and reports overflow', function () {
+    $engine     = new GreedyOrchestrationEngine();
+    $nearDriver = fleetopsDriver('driver-a', 'driver_a', [], true, fleetopsLocation(1.3000, 103.8000));
+    $farDriver  = fleetopsDriver('driver-b', 'driver_b', [], true, fleetopsLocation(1.4500, 103.9500));
+
+    $vehicles = collect([
+        fleetopsVehicle('vehicle-a', 'vehicle_a', fleetopsLocation(1.3000, 103.8000), $nearDriver),
+        fleetopsVehicle('vehicle-b', 'vehicle_b', fleetopsLocation(1.4500, 103.9500), $farDriver),
+    ]);
+
+    $orders = collect([
+        fleetopsOrder('order-low', (object) ['lat' => 1.451, 'lng' => 103.951], null, 1, '2026-01-02 10:00:00'),
+        fleetopsOrder('order-high', (object) ['lat' => 1.301, 'lng' => 103.801], null, 10, '2026-01-03 10:00:00'),
+        fleetopsOrder('order-overflow', (object) ['lat' => 1.302, 'lng' => 103.802], null, 0, '2026-01-01 10:00:00'),
+    ]);
+
+    $result = $engine->allocate($orders, $vehicles);
+
+    expect($engine->getName())->toBe('Greedy (built-in)')
+        ->and($engine->getIdentifier())->toBe('greedy')
+        ->and($result['assignments'])->toHaveCount(2)
+        ->and($result['assignments'][0])->toMatchArray([
+            'order_id'   => 'order-high',
+            'vehicle_id' => 'vehicle_a',
+            'driver_id'  => 'driver_a',
+            'sequence'   => 1,
+        ])
+        ->and($result['assignments'][0]['distance'])->toBeInt()
+        ->and($result['assignments'][1])->toMatchArray([
+            'order_id'   => 'order-low',
+            'vehicle_id' => 'vehicle_b',
+            'driver_id'  => 'driver_b',
+            'sequence'   => 1,
+        ])
+        ->and($result['unassigned'])->toBe(['order-overflow'])
+        ->and($result['summary'])->toBe([
+            'engine'     => 'greedy',
+            'assigned'   => 2,
+            'unassigned' => 1,
+        ]);
+});
+
+test('greedy orchestration engine supports multi order movement and no-location fallbacks', function () {
+    $engine   = new GreedyOrchestrationEngine();
+    $vehicles = collect([
+        fleetopsVehicle('vehicle-a', 'vehicle_a', fleetopsLocation(1.3000, 103.8000)),
+        fleetopsVehicle('vehicle-b', 'vehicle_b'),
+    ]);
+
+    $orders = collect([
+        fleetopsOrder('first', (object) ['lat' => 1.301, 'lng' => 103.801], (object) ['lat' => 1.500, 'lng' => 104.000]),
+        fleetopsOrder('second', (object) ['lat' => 1.501, 'lng' => 104.001], null),
+        fleetopsOrder('no-pickup'),
+    ]);
+
+    $result = $engine->allocate($orders, $vehicles, ['allow_multi_order' => true]);
+
+    expect($result['assignments'])->toHaveCount(3)
+        ->and($result['assignments'][0])->toMatchArray([
+            'order_id'   => 'first',
+            'vehicle_id' => 'vehicle_a',
+            'sequence'   => 1,
+        ])
+        ->and($result['assignments'][1])->toMatchArray([
+            'order_id'   => 'second',
+            'vehicle_id' => 'vehicle_a',
+            'sequence'   => 2,
+        ])
+        ->and($result['assignments'][2])->toMatchArray([
+            'order_id'   => 'no-pickup',
+            'vehicle_id' => 'vehicle_a',
+            'sequence'   => 3,
+            'distance'   => 0,
+        ])
+        ->and($result['unassigned'])->toBe([])
+        ->and($engine->allocate(collect([fleetopsOrder('fallback')]), collect([fleetopsVehicle('vehicle-empty', 'vehicle_empty')]))['assignments'][0])->toMatchArray([
+            'order_id'   => 'fallback',
+            'vehicle_id' => 'vehicle_empty',
+            'driver_id'  => null,
+            'distance'   => null,
+        ]);
 });
 
 test('optimize order route capability exposes action metadata and route helpers', function () {

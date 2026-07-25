@@ -35,9 +35,15 @@ class FuelEfficiency extends AbstractAnalytics
             ->orderBy('wk')
             ->pluck('total_distance', 'wk');
 
-        $labels    = [];
-        $costData  = [];
-        $cpkmData  = [];
+        return $this->buildFuelEfficiencyPayload($fuelByWeek, $distanceByWeek, $currency);
+    }
+
+    protected function buildFuelEfficiencyPayload(iterable $fuelByWeek, iterable $distanceByWeek, string $currency): array
+    {
+        $labels          = [];
+        $costData        = [];
+        $cpkmData        = [];
+        $distanceByWeek  = collect($distanceByWeek);
 
         foreach ($fuelByWeek as $row) {
             $labels[]   = Carbon::parse($row->wk_start)->format('M j');

@@ -1,6 +1,7 @@
 <?php
 
 use Fleetbase\FleetOps\Support\Metrics\AbstractMetric;
+use Fleetbase\FleetOps\Support\Metrics\ActiveRevenueQuery;
 use Fleetbase\FleetOps\Support\Metrics\OrdersInProgressMetric;
 use Fleetbase\FleetOps\Support\Metrics\Registry;
 use Fleetbase\FleetOps\Support\Metrics\TotalTimeTraveledMetric;
@@ -47,6 +48,64 @@ class TestFleetOpsMetric extends AbstractMetric
             '2025-12-01' => 10,
             default      => (int) $query['start']->format('d'),
         };
+    }
+}
+
+class TestFleetOpsActiveRevenueQueryRecorder
+{
+    public array $calls = [];
+
+    public function whereNotNull(string $column): static
+    {
+        $this->calls[] = ['whereNotNull', $column];
+
+        return $this;
+    }
+
+    public function orWhereIn(string $column, array $values): static
+    {
+        $this->calls[] = ['orWhereIn', $column, $values];
+
+        return $this;
+    }
+
+    public function orWhereExists(Closure $callback): static
+    {
+        $nested = new static();
+        $callback($nested);
+        $this->calls[] = ['orWhereExists', $nested->calls];
+
+        return $this;
+    }
+
+    public function selectRaw(string $expression): static
+    {
+        $this->calls[] = ['selectRaw', $expression];
+
+        return $this;
+    }
+
+    public function from(string $table): static
+    {
+        $this->calls[] = ['from', $table];
+
+        return $this;
+    }
+
+    public function whereColumn(string $first, string $second): static
+    {
+        $this->calls[] = ['whereColumn', $first, $second];
+
+        return $this;
+    }
+
+    public function where(Closure $callback): static
+    {
+        $nested = new static();
+        $callback($nested);
+        $this->calls[] = ['where', $nested->calls];
+
+        return $this;
     }
 }
 
@@ -144,20 +203,47 @@ test('active revenue query excludes inactive financial and operational lifecycle
     expect($source)->toContain('excludeInactiveInvoices');
     expect($source)->toContain('ledger_invoices.deleted_at');
     expect($source)->toContain('orders.deleted_at');
-    expect(Fleetbase\FleetOps\Support\Metrics\ActiveRevenueQuery::CREDIT_DIRECTION)->toBe('credit');
-    expect(Fleetbase\FleetOps\Support\Metrics\ActiveRevenueQuery::ACTIVE_STATUSES)->toBe(['success']);
-    expect(Fleetbase\FleetOps\Support\Metrics\ActiveRevenueQuery::ACTIVE_STATUSES)->not->toContain('completed');
-    expect(Fleetbase\FleetOps\Support\Metrics\ActiveRevenueQuery::ACTIVE_STATUSES)->not->toContain('paid');
+    expect(ActiveRevenueQuery::CREDIT_DIRECTION)->toBe('credit');
+    expect(ActiveRevenueQuery::ACTIVE_STATUSES)->toBe(['success']);
+    expect(ActiveRevenueQuery::ACTIVE_STATUSES)->not->toContain('completed');
+    expect(ActiveRevenueQuery::ACTIVE_STATUSES)->not->toContain('paid');
 });
 
 test('active revenue query treats invoice status as invalidation only', function () {
-    $inactiveInvoiceStatuses = Fleetbase\FleetOps\Support\Metrics\ActiveRevenueQuery::INACTIVE_INVOICE_STATUSES;
+    $inactiveInvoiceStatuses = ActiveRevenueQuery::INACTIVE_INVOICE_STATUSES;
 
     expect($inactiveInvoiceStatuses)->not->toContain('draft');
     expect($inactiveInvoiceStatuses)->toContain('void');
     expect($inactiveInvoiceStatuses)->toContain('voided');
     expect($inactiveInvoiceStatuses)->toContain('cancelled');
     expect($inactiveInvoiceStatuses)->toContain('canceled');
+});
+
+test('active revenue query constraints mark inactive orders and invoices', function () {
+    app()->instance('db.schema', new class {
+        public function hasTable(string $table): bool
+        {
+            return $table === 'orders';
+        }
+    });
+
+    $orderQuery   = new TestFleetOpsActiveRevenueQueryRecorder();
+    $invoiceQuery = new TestFleetOpsActiveRevenueQueryRecorder();
+
+    $orderConstraint   = new ReflectionMethod(ActiveRevenueQuery::class, 'inactiveOrderConstraint');
+    $invoiceConstraint = new ReflectionMethod(ActiveRevenueQuery::class, 'inactiveInvoiceConstraint');
+    $orderConstraint->setAccessible(true);
+    $invoiceConstraint->setAccessible(true);
+
+    $orderConstraint->invoke(null, $orderQuery);
+    $invoiceConstraint->invoke(null, $invoiceQuery);
+
+    expect($orderQuery->calls)->toContain(['whereNotNull', 'orders.deleted_at'])
+        ->and($orderQuery->calls)->toContain(['orWhereIn', 'orders.status', ActiveRevenueQuery::INACTIVE_ORDER_STATUSES])
+        ->and($invoiceQuery->calls)->toContain(['whereNotNull', 'ledger_invoices.deleted_at'])
+        ->and($invoiceQuery->calls)->toContain(['orWhereIn', 'ledger_invoices.status', ActiveRevenueQuery::INACTIVE_INVOICE_STATUSES])
+        ->and($invoiceQuery->calls)->toHaveCount(3)
+        ->and($invoiceQuery->calls[2][0])->toBe('orWhereExists');
 });
 
 test('ordersInProgress uses an explicit allowlist rather than an exclusion list', function () {
