@@ -26,7 +26,7 @@ use Fleetbase\Support\Reporting\Schema\Column;
 use Fleetbase\Support\Reporting\Schema\Relationship;
 use Fleetbase\Support\Reporting\Schema\Table;
 
-function fleetOpsReportProperty(object $object, string $property): mixed
+function fleetOpsReportProperty(object $object, string $property, mixed $default = null): mixed
 {
     $reflection = new ReflectionObject($object);
 
@@ -41,47 +41,132 @@ function fleetOpsReportProperty(object $object, string $property): mixed
         $reflection = $reflection->getParentClass();
     }
 
-    throw new RuntimeException(sprintf('Property %s was not found on %s.', $property, $object::class));
+    return $default;
+}
+
+function fleetOpsReportCallOrProperty(object $object, string|array $methods, string $property, mixed $default = null): mixed
+{
+    foreach ((array) $methods as $method) {
+        if (method_exists($object, $method)) {
+            return $object->{$method}();
+        }
+    }
+
+    return fleetOpsReportProperty($object, $property, $default);
 }
 
 function fleetOpsReportTables(ReportSchemaRegistry $registry): array
 {
+    if (method_exists($registry, 'getRegisteredTableNames') && method_exists($registry, 'getTable')) {
+        $tables = [];
+
+        foreach ($registry->getRegisteredTableNames() as $tableName) {
+            $tables[$tableName] = $registry->getTable($tableName);
+        }
+
+        return $tables;
+    }
+
     return fleetOpsReportProperty($registry, 'tables');
 }
 
-function fleetOpsReportAttributes(object $schema): array
+function fleetOpsReportTableMeta(Table $table, string $key): mixed
 {
-    return fleetOpsReportProperty($schema, 'attributes');
+    $getter = match ($key) {
+        'label'     => 'getLabel',
+        'category'  => 'getCategory',
+        'extension' => 'getExtension',
+        'maxRows'   => 'getMaxRows',
+        'cacheTtl'  => 'getCacheTtl',
+        default     => null,
+    };
+
+    if ($getter && method_exists($table, $getter)) {
+        return $table->{$getter}();
+    }
+
+    return fleetOpsReportProperty($table, 'attributes', [])[$key] ?? null;
 }
 
 function fleetOpsReportTableName(object $schema): string
 {
-    return fleetOpsReportProperty($schema, 'table');
+    return fleetOpsReportCallOrProperty($schema, 'getTable', 'table');
 }
 
-function fleetOpsReportColumnName(Column $column): string
+function fleetOpsReportSchemaName(Table|Column|Relationship $schema): string
 {
-    return fleetOpsReportProperty($column, 'name');
+    return fleetOpsReportCallOrProperty($schema, 'getName', 'name');
+}
+
+function fleetOpsReportColumnFlag(Column $column, string $flag): bool
+{
+    $getter = match ($flag) {
+        'searchable'   => 'isSearchable',
+        'sortable'     => 'isSortable',
+        'filterable'   => 'isFilterable',
+        'aggregatable' => 'isAggregatable',
+        'hidden'       => 'isHidden',
+        'computed'     => 'isComputed',
+        default        => null,
+    };
+
+    if ($getter && method_exists($column, $getter)) {
+        return $column->{$getter}();
+    }
+
+    return (bool) (fleetOpsReportProperty($column, 'attributes', [])[$flag] ?? false);
 }
 
 function fleetOpsReportColumnAggregate(Column $column): ?string
 {
-    return fleetOpsReportProperty($column, 'aggregate');
+    $aggregate = fleetOpsReportProperty($column, 'aggregate');
+
+    if ($aggregate) {
+        return $aggregate;
+    }
+
+    $computation = fleetOpsReportCallOrProperty($column, 'getComputation', 'computation');
+
+    return match (true) {
+        is_string($computation) && str_starts_with($computation, 'COUNT(') => 'count',
+        is_string($computation) && str_starts_with($computation, 'SUM(')   => 'sum',
+        is_string($computation) && str_starts_with($computation, 'AVG(')   => 'avg',
+        default                                                            => null,
+    };
+}
+
+function fleetOpsReportTransform(Column $column, mixed $value): mixed
+{
+    if (method_exists($column, 'transform')) {
+        return $column->transform($value);
+    }
+
+    if (method_exists($column, 'transformValue')) {
+        return $column->transformValue($value);
+    }
+
+    $transformer = fleetOpsReportProperty($column, 'transformer');
+
+    return is_callable($transformer) ? $transformer($value) : $value;
 }
 
 function fleetOpsReportColumns(Table|Relationship $container): array
 {
-    return fleetOpsReportProperty($container, 'columns');
+    return fleetOpsReportCallOrProperty($container, 'getColumns', 'columns', []);
 }
 
 function fleetOpsReportComputedColumns(Table $table): array
 {
-    return fleetOpsReportProperty($table, 'computedColumns');
+    return fleetOpsReportCallOrProperty($table, 'getComputedColumns', 'computedColumns', []);
 }
 
 function fleetOpsReportRelationships(Table|Relationship $container): array
 {
-    return fleetOpsReportProperty($container, 'relationships');
+    if ($container instanceof Relationship) {
+        return fleetOpsReportCallOrProperty($container, 'getNestedRelationships', 'nestedRelationships', fleetOpsReportProperty($container, 'relationships', []));
+    }
+
+    return fleetOpsReportCallOrProperty($container, 'getRelationships', 'relationships', []);
 }
 
 function fleetOpsReportColumnsFromRelationships(array $relationships): array
@@ -99,7 +184,7 @@ function fleetOpsReportColumnsFromRelationships(array $relationships): array
 function fleetOpsReportColumn(Table|Relationship $container, string $name): Column
 {
     foreach ([...fleetOpsReportColumns($container), ...($container instanceof Table ? fleetOpsReportComputedColumns($container) : []), ...fleetOpsReportColumnsFromRelationships(fleetOpsReportRelationships($container))] as $column) {
-        if (fleetOpsReportColumnName($column) === $name) {
+        if (fleetOpsReportSchemaName($column) === $name) {
             return $column;
         }
     }
@@ -110,7 +195,7 @@ function fleetOpsReportColumn(Table|Relationship $container, string $name): Colu
 function fleetOpsReportRelationship(Table|Relationship $container, string $name): Relationship
 {
     foreach (fleetOpsReportRelationships($container) as $relationship) {
-        if (fleetOpsReportProperty($relationship, 'name') === $name) {
+        if (fleetOpsReportSchemaName($relationship) === $name) {
             return $relationship;
         }
     }
@@ -136,15 +221,12 @@ test('fleetops report schema registers every table with columns computed columns
     ]);
 
     $orders = $tables['orders'];
-    expect(fleetOpsReportAttributes($orders))
-        ->toMatchArray([
-            'label'       => 'Orders',
-            'category'    => 'Operations',
-            'extension'   => 'fleet-ops',
-            'maxRows'     => 50000,
-            'cacheTtl'    => 3600,
-        ])
-        ->and(fleetOpsReportAttributes(fleetOpsReportColumn($orders, 'public_id'))['searchable'])->toBeTrue()
+    expect(fleetOpsReportTableMeta($orders, 'label'))->toBe('Orders')
+        ->and(fleetOpsReportTableMeta($orders, 'category'))->toBe('Operations')
+        ->and(fleetOpsReportTableMeta($orders, 'extension'))->toBe('fleet-ops')
+        ->and(fleetOpsReportTableMeta($orders, 'maxRows'))->toBe(50000)
+        ->and(fleetOpsReportTableMeta($orders, 'cacheTtl'))->toBe(3600)
+        ->and(fleetOpsReportColumnFlag(fleetOpsReportColumn($orders, 'public_id'), 'searchable'))->toBeTrue()
         ->and(fleetOpsReportColumnAggregate(fleetOpsReportColumn($orders, 'total_orders')))->toBe('count')
         ->and(fleetOpsReportColumnAggregate(fleetOpsReportColumn($orders, 'total_transaction_amount')))->toBe('sum')
         ->and(fleetOpsReportColumnAggregate(fleetOpsReportColumn($orders, 'average_transaction_amount')))->toBe('avg');
@@ -155,14 +237,14 @@ test('fleetops report schema registers every table with columns computed columns
         ->and(fleetOpsReportTableName(fleetOpsReportRelationship($payload, 'dropoff')))->toBe('places')
         ->and(fleetOpsReportTableName(fleetOpsReportRelationship($orders, 'transaction')))->toBe('transactions');
 
-    expect(fleetOpsReportAttributes($tables['drivers'])['category'])->toBe('Personnel')
+    expect(fleetOpsReportTableMeta($tables['drivers'], 'category'))->toBe('Personnel')
         ->and(fleetOpsReportTableName(fleetOpsReportRelationship($tables['drivers'], 'current_vehicle')))->toBe('vehicles')
-        ->and(fleetOpsReportAttributes($tables['vehicles'])['category'])->toBe('Fleet')
+        ->and(fleetOpsReportTableMeta($tables['vehicles'], 'category'))->toBe('Fleet')
         ->and(fleetOpsReportTableName(fleetOpsReportRelationship($tables['vehicles'], 'current_driver')))->toBe('drivers')
-        ->and(fleetOpsReportAttributes($tables['places'])['category'])->toBe('Geography')
-        ->and(fleetOpsReportAttributes($tables['contacts'])['category'])->toBe('CRM')
-        ->and(fleetOpsReportAttributes($tables['vendors'])['category'])->toBe('CRM')
-        ->and(fleetOpsReportAttributes($tables['fuel_reports'])['category'])->toBe('Operations');
+        ->and(fleetOpsReportTableMeta($tables['places'], 'category'))->toBe('Geography')
+        ->and(fleetOpsReportTableMeta($tables['contacts'], 'category'))->toBe('CRM')
+        ->and(fleetOpsReportTableMeta($tables['vendors'], 'category'))->toBe('CRM')
+        ->and(fleetOpsReportTableMeta($tables['fuel_reports'], 'category'))->toBe('Operations');
 });
 
 test('fleetops report schema transformers normalize labels booleans distances and money', function () {
@@ -176,14 +258,14 @@ test('fleetops report schema transformers normalize labels booleans distances an
     $vehicles     = $tables['vehicles'];
     $transaction  = fleetOpsReportRelationship($orders, 'transaction');
 
-    expect(fleetOpsReportColumn($orders, 'status')->transform('driver_assigned'))->toBe('Driver Assigned')
-        ->and(fleetOpsReportColumn($orders, 'status')->transform('custom_status'))->toBe('Custom_status')
-        ->and(fleetOpsReportColumn($orders, 'distance')->transform(10))->toBe(6.21)
-        ->and(fleetOpsReportColumn($orders, 'adhoc')->transform(true))->toBe('Yes')
-        ->and(fleetOpsReportColumn($orders, 'pod_required')->transform(false))->toBe('No')
-        ->and(fleetOpsReportColumn($drivers, 'status')->transform('suspended'))->toBe('Suspended')
-        ->and(fleetOpsReportColumn($drivers, 'online')->transform(false))->toBe('No')
-        ->and(fleetOpsReportColumn($vehicles, 'status')->transform('out_of_service'))->toBe('Out of Service')
-        ->and(fleetOpsReportColumn($transaction, 'amount')->transform(12345))->toBe('123.45')
-        ->and(fleetOpsReportColumn($transaction, 'status')->transform('refunded'))->toBe('Refunded');
+    expect(fleetOpsReportTransform(fleetOpsReportColumn($orders, 'status'), 'driver_assigned'))->toBe('Driver Assigned')
+        ->and(fleetOpsReportTransform(fleetOpsReportColumn($orders, 'status'), 'custom_status'))->toBe('Custom_status')
+        ->and(fleetOpsReportTransform(fleetOpsReportColumn($orders, 'distance'), 10))->toBe(6.21)
+        ->and(fleetOpsReportTransform(fleetOpsReportColumn($orders, 'adhoc'), true))->toBe('Yes')
+        ->and(fleetOpsReportTransform(fleetOpsReportColumn($orders, 'pod_required'), false))->toBe('No')
+        ->and(fleetOpsReportTransform(fleetOpsReportColumn($drivers, 'status'), 'suspended'))->toBe('Suspended')
+        ->and(fleetOpsReportTransform(fleetOpsReportColumn($drivers, 'online'), false))->toBe('No')
+        ->and(fleetOpsReportTransform(fleetOpsReportColumn($vehicles, 'status'), 'out_of_service'))->toBe('Out of Service')
+        ->and(fleetOpsReportTransform(fleetOpsReportColumn($transaction, 'amount'), 12345))->toBe('123.45')
+        ->and(fleetOpsReportTransform(fleetOpsReportColumn($transaction, 'status'), 'refunded'))->toBe('Refunded');
 });
