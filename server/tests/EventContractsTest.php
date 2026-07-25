@@ -5,11 +5,35 @@ use Fleetbase\FleetOps\Events\FuelProviderTransactionImported;
 use Fleetbase\FleetOps\Events\FuelProviderTransactionMatched;
 use Fleetbase\FleetOps\Events\FuelProviderTransactionUnmatched;
 use Fleetbase\FleetOps\Events\FuelReportCreatedFromProvider;
+use Fleetbase\FleetOps\Events\GeofenceDwelled;
+use Fleetbase\FleetOps\Events\GeofenceEntered;
+use Fleetbase\FleetOps\Events\GeofenceExited;
 use Fleetbase\FleetOps\Events\VehicleLocationChanged;
 use Fleetbase\FleetOps\Models\Driver;
 use Fleetbase\FleetOps\Models\FuelProviderTransaction;
 use Fleetbase\FleetOps\Models\FuelReport;
 use Fleetbase\FleetOps\Models\Vehicle;
+use Fleetbase\LaravelMysqlSpatial\Types\Point;
+
+if (!class_exists('Illuminate\Foundation\Auth\User')) {
+    class_alias(Illuminate\Database\Eloquent\Model::class, 'Illuminate\Foundation\Auth\User');
+}
+
+class FleetOpsEventDriver extends Driver
+{
+    public function getCurrentOrder(): ?Fleetbase\FleetOps\Models\Order
+    {
+        return null;
+    }
+}
+
+class FleetOpsEventVehicle extends Vehicle
+{
+    public function loadMissing($relations)
+    {
+        return $this;
+    }
+}
 
 function eventChannelNames(array $channels): array
 {
@@ -117,4 +141,198 @@ test('fuel provider events retain transaction and generated fuel report referenc
         ->and((new FuelProviderTransactionUnmatched($transaction))->transaction)->toBe($transaction)
         ->and((new FuelReportCreatedFromProvider($transaction, $fuelReport))->transaction)->toBe($transaction)
         ->and((new FuelReportCreatedFromProvider($transaction, $fuelReport))->fuelReport)->toBe($fuelReport);
+});
+
+test('geofence entered event broadcasts driver subject payloads', function () {
+    session([
+        'company'         => 'company-session',
+        'user'            => 'user-session',
+        'api_credential'  => 'api-credential',
+        'api_secret'      => 'api-secret',
+        'api_key'         => 'api-key',
+        'api_environment' => 'sandbox',
+        'is_sandbox'      => true,
+    ]);
+
+    $vehicle = new FleetOpsEventVehicle();
+    $vehicle->setRawAttributes([
+        'uuid'         => 'vehicle-uuid',
+        'public_id'    => 'vehicle_public',
+        'company_uuid' => 'company-uuid',
+        'name'         => 'Truck 101',
+        'plate_number' => 'SG-101',
+    ], true);
+
+    $driver = new FleetOpsEventDriver();
+    $driver->setRawAttributes([
+        'uuid'         => 'driver-uuid',
+        'public_id'    => 'driver_public',
+        'company_uuid' => 'company-uuid',
+        'name'         => 'Jane Driver',
+        'phone'        => '+6555551111',
+    ], true);
+    $driver->setRelation('user', (object) [
+        'name'  => 'Jane Driver',
+        'phone' => '+6555551111',
+    ]);
+    $driver->setRelation('vehicle', $vehicle);
+
+    $geofence = (object) [
+        'uuid'      => 'zone-uuid',
+        'public_id' => 'zone_public',
+        'name'      => 'Central Zone',
+    ];
+
+    $event = new GeofenceEntered($driver, $geofence, 'zone', new Point(1.3521, 103.8198));
+
+    expect($event->broadcastAs())->toBe('geofence.entered')
+        ->and(eventChannelNames($event->broadcastOn()))->toBe([
+            'company.company-uuid',
+            'driver.driver_public',
+            'driver.driver-uuid',
+            'vehicle.vehicle_public',
+            'vehicle.vehicle-uuid',
+        ])
+        ->and($event->getCompanyUuid())->toBe('company-uuid')
+        ->and($event->modelRecordName)->toBe('Central Zone')
+        ->and($event->companySession)->toBe('company-session')
+        ->and($event->apiCredential)->toBe('api-credential')
+        ->and($event->apiSecret)->toBe('api-secret')
+        ->and($event->apiKey)->toBe('api-key')
+        ->and($event->apiEnvironment)->toBe('sandbox')
+        ->and($event->isSandbox)->toBeTrue()
+        ->and($event->broadcastWith())->toMatchArray([
+            'event'      => 'geofence.entered',
+            'event_type' => 'geofence.entered',
+            'subject'    => [
+                'type' => 'driver',
+                'id'   => 'driver_public',
+                'uuid' => 'driver-uuid',
+                'name' => 'Jane Driver',
+            ],
+            'driver'     => [
+                'id'    => 'driver_public',
+                'uuid'  => 'driver-uuid',
+                'name'  => 'Jane Driver',
+                'phone' => '+6555551111',
+            ],
+            'vehicle'    => [
+                'id'    => 'vehicle_public',
+                'uuid'  => 'vehicle-uuid',
+                'name'  => 'Truck 101',
+                'plate' => 'SG-101',
+            ],
+            'geofence'   => [
+                'id'   => 'zone_public',
+                'uuid' => 'zone-uuid',
+                'name' => 'Central Zone',
+                'type' => 'zone',
+            ],
+            'location'   => [
+                'latitude'  => 1.3521,
+                'longitude' => 103.8198,
+            ],
+        ]);
+});
+
+test('geofence exited and dwelled events broadcast vehicle subject payloads', function () {
+    session([
+        'company'        => null,
+        'api_credential' => null,
+    ]);
+
+    $driver = new FleetOpsEventDriver();
+    $driver->setRawAttributes([
+        'uuid'         => 'driver-uuid',
+        'public_id'    => 'driver_public',
+        'company_uuid' => 'company-uuid',
+        'name'         => 'Jane Driver',
+        'phone'        => '+6555551111',
+    ], true);
+    $driver->setRelation('user', (object) [
+        'name'  => 'Jane Driver',
+        'phone' => '+6555551111',
+    ]);
+
+    $vehicle = new FleetOpsEventVehicle();
+    $vehicle->setRawAttributes([
+        'uuid'         => 'vehicle-uuid',
+        'public_id'    => 'vehicle_public',
+        'company_uuid' => 'company-uuid',
+        'name'         => 'Dock Van',
+        'plate_number' => 'SG-202',
+    ], true);
+    $vehicle->setRelation('driver', $driver);
+
+    $geofence = (object) [
+        'uuid'      => 'service-area-uuid',
+        'public_id' => 'service_area_public',
+        'name'      => 'North Service Area',
+    ];
+
+    $exited  = new GeofenceExited($vehicle, $geofence, 'service_area', new Point(1.4, 103.9), 17);
+    $dwelled = new GeofenceDwelled($vehicle, $geofence, 'service_area', now()->subMinutes(45));
+
+    expect($exited->broadcastAs())->toBe('geofence.exited')
+        ->and($exited->subjectType)->toBe('vehicle')
+        ->and($exited->dwellDurationMinutes)->toBe(17)
+        ->and(eventChannelNames($exited->broadcastOn()))->toBe([
+            'company.company-uuid',
+            'driver.driver_public',
+            'driver.driver-uuid',
+            'vehicle.vehicle_public',
+            'vehicle.vehicle-uuid',
+        ])
+        ->and($exited->broadcastWith())->toMatchArray([
+            'event'                  => 'geofence.exited',
+            'event_type'             => 'geofence.exited',
+            'dwell_duration_minutes' => 17,
+            'subject'                => [
+                'type' => 'vehicle',
+                'id'   => 'vehicle_public',
+                'uuid' => 'vehicle-uuid',
+                'name' => 'Dock Van',
+            ],
+            'driver'                 => [
+                'id'    => 'driver_public',
+                'uuid'  => 'driver-uuid',
+                'name'  => 'Jane Driver',
+                'phone' => '+6555551111',
+            ],
+            'vehicle'                => [
+                'id'    => 'vehicle_public',
+                'uuid'  => 'vehicle-uuid',
+                'name'  => 'Dock Van',
+                'plate' => 'SG-202',
+            ],
+            'geofence'               => [
+                'id'   => 'service_area_public',
+                'uuid' => 'service-area-uuid',
+                'name' => 'North Service Area',
+                'type' => 'service_area',
+            ],
+            'location'               => [
+                'latitude'  => 1.4,
+                'longitude' => 103.9,
+            ],
+        ])
+        ->and($dwelled->broadcastAs())->toBe('geofence.dwelled')
+        ->and($dwelled->subjectType)->toBe('vehicle')
+        ->and($dwelled->dwellDurationMinutes)->toBeGreaterThanOrEqual(44)
+        ->and($dwelled->broadcastWith())->toMatchArray([
+            'event'      => 'geofence.dwelled',
+            'event_type' => 'geofence.dwelled',
+            'subject'    => [
+                'type' => 'vehicle',
+                'id'   => 'vehicle_public',
+                'uuid' => 'vehicle-uuid',
+                'name' => 'Dock Van',
+            ],
+            'geofence'   => [
+                'id'   => 'service_area_public',
+                'uuid' => 'service-area-uuid',
+                'name' => 'North Service Area',
+                'type' => 'service_area',
+            ],
+        ]);
 });
