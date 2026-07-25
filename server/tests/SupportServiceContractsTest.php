@@ -2,9 +2,12 @@
 
 use Fleetbase\FleetOps\Scopes\DriverScope;
 use Fleetbase\FleetOps\Support\LiveCacheService;
+use Fleetbase\FleetOps\Support\OSRM;
+use Fleetbase\LaravelMysqlSpatial\Types\Point;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Http;
 
 class FleetOpsTaggedCacheFake
 {
@@ -89,6 +92,7 @@ class FleetOpsDriverScopeBuilderFake extends Builder
 
 afterEach(function () {
     Cache::swap(new Illuminate\Cache\Repository(new Illuminate\Cache\ArrayStore()));
+    Http::preventStrayRequests(false);
 });
 
 test('live cache service builds company scoped keys and tags', function () {
@@ -184,4 +188,46 @@ test('driver scope requires an active user relationship', function () {
     expect((new DriverScope())->apply($builder, $model))->toBeNull()
         ->and($builder->whereHas)->toHaveCount(1)
         ->and($builder->whereHas[0][0])->toBe('user');
+});
+
+test('osrm decodes polyline route geometry fixtures', function () {
+    $points = OSRM::decodePolyline('_p~iF~ps|U_ulLnnqC_mqNvxq`@');
+
+    expect($points)->toHaveCount(3)
+        ->and($points[0])->toBeInstanceOf(Point::class)
+        ->and($points[0]->getLat())->toBe(-120.2)
+        ->and($points[0]->getLng())->toBe(38.5);
+});
+
+test('osrm support covers nearest table trip match tile and error fallback requests', function () {
+    Cache::swap(new Illuminate\Cache\Repository(new Illuminate\Cache\ArrayStore()));
+    app('config')->set('fleetops.osrm.host', 'https://osrm-other.test/');
+
+    Http::fake(function ($request) {
+        $url = (string) $request->url();
+
+        return match (true) {
+            str_contains($url, '/nearest/v1/driving/') => Http::response(['code' => 'Ok', 'waypoints' => [['name' => 'road']]]),
+            str_contains($url, '/table/v1/driving/')   => Http::response(['code' => 'Ok', 'durations' => [[0, 10], [10, 0]]]),
+            str_contains($url, '/trip/v1/driving/')    => Http::response(['code' => 'Ok', 'trips' => [['distance' => 100]]]),
+            str_contains($url, '/match/v1/driving/')   => Http::response(['code' => 'Ok', 'matchings' => [['confidence' => 1]]]),
+            str_contains($url, '/tile/v1/car/')        => Http::response('tile-bytes'),
+            str_contains($url, '/route/v1/driving/')   => throw new RuntimeException('timeout'),
+            default                                    => Http::response(['code' => 'Unexpected'], 500),
+        };
+    });
+
+    $points = [
+        new Point(1.30, 103.80),
+        new Point(1.31, 103.81),
+    ];
+
+    expect(OSRM::getNearest($points[0], ['number' => 1]))->toMatchArray(['code' => 'Ok'])
+        ->and(OSRM::getTable($points, ['annotations' => 'duration'])['durations'][0][1])->toBe(10)
+        ->and(OSRM::getTrip($points, ['roundtrip' => 'false'])['trips'][0]['distance'])->toBe(100)
+        ->and(OSRM::getMatch($points, ['geometries' => 'polyline'])['matchings'][0]['confidence'])->toBe(1)
+        ->and(OSRM::getTile(1, 2, 3, ['foo' => 'bar']))->toBe('tile-bytes')
+        ->and(OSRM::getRouteFromCoordinatesString('103.8,1.3;103.81,1.31'))->toBe(['code' => 'Error', 'routes' => []]);
+
+    expect(fn () => OSRM::getRouteFromPoints([$points[0]]))->toThrow(InvalidArgumentException::class, 'At least two points');
 });

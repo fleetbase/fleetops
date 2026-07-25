@@ -280,7 +280,12 @@ class ContactController extends FleetOpsController
 
     private function isCustomerPortalInstalled(): bool
     {
-        return collect(Utils::getInstalledFleetbaseExtensions())
+        return $this->containsCustomerPortalExtension(Utils::getInstalledFleetbaseExtensions());
+    }
+
+    protected function containsCustomerPortalExtension(array $packages): bool
+    {
+        return collect($packages)
             ->contains(fn ($package) => data_get($package, 'name') === 'fleetbase/customer-portal-api');
     }
 

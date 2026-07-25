@@ -3,6 +3,7 @@
 use Fleetbase\FleetOps\Http\Controllers\Api\v1\CustomerController;
 use Fleetbase\FleetOps\Http\Controllers\Api\v1\DriverController;
 use Fleetbase\FleetOps\Http\Controllers\Api\v1\EntityController;
+use Fleetbase\FleetOps\Http\Controllers\Internal\v1\ContactController as InternalContactController;
 use Fleetbase\FleetOps\Http\Controllers\Internal\v1\DriverController as InternalDriverController;
 use Fleetbase\FleetOps\Http\Controllers\Internal\v1\OrderController as InternalOrderController;
 use Fleetbase\FleetOps\Http\Controllers\Internal\v1\PositionController;
@@ -46,6 +47,17 @@ class FleetOpsEntityControllerProbe extends EntityController
     public function callHelper(string $method, mixed ...$arguments): mixed
     {
         $reflection = new ReflectionMethod(EntityController::class, $method);
+        $reflection->setAccessible(true);
+
+        return $reflection->invoke($this, ...$arguments);
+    }
+}
+
+class FleetOpsInternalContactControllerProbe extends InternalContactController
+{
+    public function callHelper(string $method, mixed ...$arguments): mixed
+    {
+        $reflection = new ReflectionMethod(InternalContactController::class, $method);
         $reflection->setAccessible(true);
 
         return $reflection->invoke($this, ...$arguments);
@@ -184,6 +196,21 @@ test('entity controller request input keeps only entity attributes', function ()
         'currency'        => 'SGD',
         'supplier_uuid'   => 'supplier-uuid',
     ]);
+});
+
+test('internal contact controller detects the customer portal extension package', function () {
+    $controller = new FleetOpsInternalContactControllerProbe();
+
+    expect($controller->callHelper('containsCustomerPortalExtension', [
+        ['name' => 'fleetbase/fleetops-api'],
+        ['name' => 'fleetbase/customer-portal-api'],
+    ]))->toBeTrue()
+        ->and($controller->callHelper('containsCustomerPortalExtension', [
+            ['name' => 'fleetbase/fleetops-api'],
+            ['name'  => 'fleetbase/customer-portal'],
+            ['extra' => ['name' => 'fleetbase/customer-portal-api']],
+        ]))->toBeFalse()
+        ->and($controller->callHelper('containsCustomerPortalExtension', []))->toBeFalse();
 });
 
 test('api controller phone helpers normalize explicit values', function () {
