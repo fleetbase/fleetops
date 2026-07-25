@@ -30,7 +30,7 @@ class PlaceController extends FleetOpsController
     {
         $customFieldValues = $request->array('place.custom_field_values');
         if ($customFieldValues) {
-            $place->syncCustomFieldValues($customFieldValues);
+            $this->syncCustomFieldValues($place, $customFieldValues);
         }
     }
 
@@ -47,11 +47,12 @@ class PlaceController extends FleetOpsController
         $latitude    = $request->input('latitude');
         $longitude   = $request->input('longitude');
 
-        $query = Place::where('company_uuid', session('company'))
+        $query = $this->newPlaceQuery()
+            ->where('company_uuid', session('company'))
             ->whereNull('deleted_at')
             ->applyDirectivesForPermissions('fleet-ops list place');
 
-        $results = PlaceSearch::search($query, $searchQuery, [
+        $results = $this->searchPlaces($query, $searchQuery, [
             'limit'          => $limit,
             'geo'            => $geo,
             'latitude'       => $latitude,
@@ -72,7 +73,7 @@ class PlaceController extends FleetOpsController
         $searchQuery = $request->searchQuery();
         $latitude    = $request->input('latitude', false);
         $longitude   = $request->input('longitude', false);
-        $results     = PlaceSearch::geocode($searchQuery, $latitude, $longitude);
+        $results     = $this->geocodePlaces($searchQuery, $latitude, $longitude);
 
         return response()->json($results)->withHeaders(['Cache-Control' => 'no-cache']);
     }
@@ -98,7 +99,7 @@ class PlaceController extends FleetOpsController
      */
     public function avatars()
     {
-        $options = Place::getAvatarOptions();
+        $options = $this->avatarOptions();
 
         return response()->json($options);
     }
@@ -125,5 +126,30 @@ class PlaceController extends FleetOpsController
         }
 
         return response()->json(['status' => 'ok', 'message' => 'Import completed', 'imported' => $importedCount]);
+    }
+
+    protected function syncCustomFieldValues(Place $place, array $customFieldValues): void
+    {
+        $place->syncCustomFieldValues($customFieldValues);
+    }
+
+    protected function newPlaceQuery()
+    {
+        return Place::query();
+    }
+
+    protected function searchPlaces($query, ?string $searchQuery, array $options)
+    {
+        return PlaceSearch::search($query, $searchQuery, $options);
+    }
+
+    protected function geocodePlaces(?string $searchQuery, mixed $latitude, mixed $longitude)
+    {
+        return PlaceSearch::geocode($searchQuery, $latitude, $longitude);
+    }
+
+    protected function avatarOptions(): array
+    {
+        return Place::getAvatarOptions();
     }
 }

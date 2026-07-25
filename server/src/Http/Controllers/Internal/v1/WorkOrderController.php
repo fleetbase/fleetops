@@ -67,10 +67,7 @@ class WorkOrderController extends FleetOpsController
      */
     public function sendEmail(string $id): JsonResponse
     {
-        $workOrder = WorkOrder::where('uuid', $id)
-            ->orWhere('public_id', $id)
-            ->with(['assignee', 'target'])
-            ->firstOrFail();
+        $workOrder = $this->workOrderForEmail($id);
 
         // Resolve recipient email from the assignee (vendor or contact)
         $assignee = $workOrder->assignee;
@@ -85,16 +82,34 @@ class WorkOrderController extends FleetOpsController
             return response()->json(['error' => 'The assigned vendor has no email address on file.'], 422);
         }
 
-        Mail::to($email)->send(new WorkOrderDispatched($workOrder));
+        $this->sendWorkOrderDispatchedMail($email, $workOrder);
 
-        activity('work_order_sent')
-            ->performedOn($workOrder)
-            ->withProperties(['sent_to' => $email])
-            ->log('Work order emailed to vendor');
+        $this->recordWorkOrderSentActivity($workOrder, $email);
 
         return response()->json([
             'status'  => 'ok',
             'message' => 'Work order successfully sent to ' . $email,
         ]);
+    }
+
+    protected function workOrderForEmail(string $id): WorkOrder
+    {
+        return WorkOrder::where('uuid', $id)
+            ->orWhere('public_id', $id)
+            ->with(['assignee', 'target'])
+            ->firstOrFail();
+    }
+
+    protected function sendWorkOrderDispatchedMail(string $email, WorkOrder $workOrder): void
+    {
+        Mail::to($email)->send(new WorkOrderDispatched($workOrder));
+    }
+
+    protected function recordWorkOrderSentActivity(WorkOrder $workOrder, string $email): void
+    {
+        activity('work_order_sent')
+            ->performedOn($workOrder)
+            ->withProperties(['sent_to' => $email])
+            ->log('Work order emailed to vendor');
     }
 }

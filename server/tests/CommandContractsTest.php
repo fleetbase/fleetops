@@ -3,7 +3,11 @@
 use Carbon\Carbon;
 use Fleetbase\FleetOps\Console\Commands\AuditCustomerUserConflicts;
 use Fleetbase\FleetOps\Console\Commands\DispatchAdhocOrders;
+use Fleetbase\FleetOps\Console\Commands\FixCustomerCompanies;
+use Fleetbase\FleetOps\Console\Commands\FixDriverCompanies;
+use Fleetbase\FleetOps\Console\Commands\FixLegacyOrderConfigs;
 use Fleetbase\FleetOps\Console\Commands\ProcessMaintenanceTriggers;
+use Fleetbase\FleetOps\Console\Commands\PurgeUnpurchasedServiceQuotes;
 use Fleetbase\FleetOps\Console\Commands\SendMaintenanceReminders;
 use Fleetbase\FleetOps\Console\Commands\SimulateOrderRouteNavigation;
 use Fleetbase\FleetOps\Console\Commands\SyncTelematics;
@@ -14,12 +18,27 @@ use Fleetbase\FleetOps\Models\Contact;
 use Fleetbase\FleetOps\Models\Driver;
 use Fleetbase\FleetOps\Models\MaintenanceSchedule;
 use Fleetbase\FleetOps\Models\Order;
+use Fleetbase\FleetOps\Models\OrderConfig;
 use Fleetbase\FleetOps\Models\Vehicle;
 use Fleetbase\FleetOps\Support\Telematics\TelematicProviderRegistry;
 use Fleetbase\LaravelMysqlSpatial\Types\Point;
+use Fleetbase\Models\Company;
 use Illuminate\Console\Command;
 use Illuminate\Database\Eloquent\Collection as EloquentCollection;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Cache;
+
+if (!function_exists('Fleetbase\Traits\config')) {
+    eval('namespace Fleetbase\Traits; function config($key = null, $default = null) { return false; }');
+}
+
+if (!function_exists('Fleetbase\FleetOps\Console\Commands\config')) {
+    eval('namespace Fleetbase\FleetOps\Console\Commands; function config($key = null, $default = null) { return $default; }');
+}
+
+if (!function_exists('Fleetbase\FleetOps\Console\Commands\now')) {
+    eval('namespace Fleetbase\FleetOps\Console\Commands; function now($timezone = null) { return \Carbon\Carbon::now($timezone); }');
+}
 
 class FleetOpsCommandCacheFake
 {
@@ -568,6 +587,300 @@ class FleetOpsTrackOrderQueryFake
         $this->calls[] = ['chunkById', $perChunk];
 
         $callback(new FleetOpsTrackOrderChunkFake($this->orders));
+    }
+}
+
+class FleetOpsFixLegacyOrderConfigsCommandFake extends FixLegacyOrderConfigs
+{
+    public array $messages = [];
+    public array $created  = [];
+    public array $configs  = [];
+    public Illuminate\Support\Collection $testCompanies;
+    public Illuminate\Support\Collection $testOrders;
+    public FleetOpsTrackProgressBarFake $progressBar;
+
+    public function __construct(private bool $createConfigs)
+    {
+        parent::__construct();
+        $this->testCompanies = collect();
+        $this->testOrders    = collect();
+        $this->progressBar   = new FleetOpsTrackProgressBarFake();
+    }
+
+    public function option($key = null)
+    {
+        $options = ['create-configs' => $this->createConfigs];
+
+        return $key === null ? $options : ($options[$key] ?? null);
+    }
+
+    public function info($string, $verbosity = null)
+    {
+        $this->messages[] = ['info', $string];
+    }
+
+    public function line($string, $style = null, $verbosity = null)
+    {
+        $this->messages[] = ['line', $string];
+    }
+
+    public function error($string, $verbosity = null)
+    {
+        $this->messages[] = ['error', $string];
+    }
+
+    protected function companies()
+    {
+        return $this->testCompanies;
+    }
+
+    protected function createTransportConfig(Company $company): void
+    {
+        $this->created[] = $company->uuid;
+    }
+
+    protected function ordersWithoutConfig()
+    {
+        return $this->testOrders;
+    }
+
+    protected function transportConfigForCompany(string $companyUuid): ?OrderConfig
+    {
+        return $this->configs[$companyUuid] ?? null;
+    }
+
+    protected function createProgressBar(int $total)
+    {
+        $this->messages[] = ['createProgressBar', $total];
+
+        return $this->progressBar;
+    }
+}
+
+class FleetOpsLegacyOrderFake extends Order
+{
+    public array $updates   = [];
+    public bool $failUpdate = false;
+
+    public function update(array $attributes = [], array $options = [])
+    {
+        if ($this->failUpdate) {
+            throw new RuntimeException('order update failed');
+        }
+
+        $this->updates[] = $attributes;
+
+        return true;
+    }
+}
+
+class FleetOpsFixCustomerCompaniesCommandFake extends FixCustomerCompanies
+{
+    public array $messages      = [];
+    public array $users         = [];
+    public array $missing       = [];
+    public array $companies     = [];
+    public array $customerUsers = [];
+    public Illuminate\Support\Collection $testCustomers;
+
+    public function __construct()
+    {
+        parent::__construct();
+        $this->testCustomers = collect();
+    }
+
+    public function info($string, $verbosity = null)
+    {
+        $this->messages[] = ['info', $string];
+    }
+
+    public function line($string, $style = null, $verbosity = null)
+    {
+        $this->messages[] = ['line', $string];
+    }
+
+    public function error($string, $verbosity = null)
+    {
+        $this->messages[] = ['error', $string];
+    }
+
+    protected function customers()
+    {
+        return $this->testCustomers;
+    }
+
+    protected function customerUser(Contact $customer)
+    {
+        return $this->customerUsers[spl_object_id($customer)] ?? null;
+    }
+
+    protected function createUserForCustomer(Contact $customer): mixed
+    {
+        if ($customer->failCreate ?? false) {
+            throw new RuntimeException('existing user');
+        }
+
+        $this->customerUsers[spl_object_id($customer)] = $customer->createdUser;
+
+        return $customer->createdUser;
+    }
+
+    protected function assignExistingUserToCustomer(Contact $customer, $existingUser): void
+    {
+        $customer->updateQuietly(['user_uuid' => $existingUser->uuid]);
+        $this->customerUsers[spl_object_id($customer)] = $existingUser;
+    }
+
+    protected function userByEmail(string $email)
+    {
+        return $this->users[$email] ?? null;
+    }
+
+    protected function missingCompanyUser(string $userUuid, string $companyUuid): bool
+    {
+        return $this->missing[$userUuid . ':' . $companyUuid] ?? false;
+    }
+
+    protected function companyByUuid(string $companyUuid): ?Company
+    {
+        return $this->companies[$companyUuid] ?? null;
+    }
+}
+
+class FleetOpsFixDriverCompaniesCommandFake extends FixDriverCompanies
+{
+    public array $messages  = [];
+    public array $missing   = [];
+    public array $companies = [];
+    public Illuminate\Support\Collection $testDrivers;
+
+    public function __construct()
+    {
+        parent::__construct();
+        $this->testDrivers = collect();
+    }
+
+    public function line($string, $style = null, $verbosity = null)
+    {
+        $this->messages[] = ['line', $string];
+    }
+
+    protected function drivers()
+    {
+        return $this->testDrivers;
+    }
+
+    protected function missingCompanyUser(string $userUuid, string $companyUuid): bool
+    {
+        return $this->missing[$userUuid . ':' . $companyUuid] ?? false;
+    }
+
+    protected function companyByUuid(string $companyUuid): ?Company
+    {
+        return $this->companies[$companyUuid] ?? null;
+    }
+}
+
+class FleetOpsUserCommandFake
+{
+    public string $uuid;
+    public string $name;
+    public string $email;
+    public array $synced   = [];
+    public array $assigned = [];
+
+    public function __construct(string $uuid, string $name, string $email)
+    {
+        $this->uuid  = $uuid;
+        $this->name  = $name;
+        $this->email = $email;
+    }
+
+    public function syncProperty(string $property, Model $model): bool
+    {
+        $this->synced[] = [$property, $model::class];
+
+        return true;
+    }
+
+    public function assignCompany(Company $company, string $role = 'Administrator'): self
+    {
+        $this->assigned[] = [$company->uuid, $role];
+
+        return $this;
+    }
+}
+
+class FleetOpsCustomerCommandFake extends Contact
+{
+    public mixed $createdUser  = null;
+    public bool $failCreate    = false;
+    public array $quietUpdates = [];
+
+    public function loadMissing($relations)
+    {
+        return $this;
+    }
+
+    public function updateQuietly(array $attributes = [], array $options = [])
+    {
+        $this->quietUpdates[] = $attributes;
+
+        return true;
+    }
+}
+
+class FleetOpsPurgeServiceQuotesCommandFake extends PurgeUnpurchasedServiceQuotes
+{
+    public array $messages     = [];
+    public array $events       = [];
+    public int $deletedCount   = 0;
+    public ?Throwable $failure = null;
+
+    public function info($string, $verbosity = null)
+    {
+        $this->messages[] = ['info', $string];
+    }
+
+    public function error($string, $verbosity = null)
+    {
+        $this->messages[] = ['error', $string];
+    }
+
+    protected function disableForeignKeyConstraints(): void
+    {
+        $this->events[] = 'disable';
+    }
+
+    protected function enableForeignKeyConstraints(): void
+    {
+        $this->events[] = 'enable';
+    }
+
+    protected function beginTransaction(): void
+    {
+        $this->events[] = 'begin';
+    }
+
+    protected function commit(): void
+    {
+        $this->events[] = 'commit';
+    }
+
+    protected function rollBack(): void
+    {
+        $this->events[] = 'rollback';
+    }
+
+    protected function purgeServiceQuotes($thresholdDate): int
+    {
+        $this->events[] = ['purge', $thresholdDate->copy()];
+
+        if ($this->failure) {
+            throw $this->failure;
+        }
+
+        return $this->deletedCount;
     }
 }
 
@@ -1274,6 +1587,174 @@ test('dispatch adhoc command builds dispatchable order and nearby driver queries
     expect($command->driverQuery->calls)->toContain(['whereNotNull', 'location'])
         ->and($command->driverQuery->calls)->toContain(['distanceSphere', 'location', $point, 750])
         ->and($command->driverQuery->calls)->toContain(['distanceSphereValue', 'location', $point]);
+
+    Carbon::setTestNow();
+});
+
+test('legacy order config command creates configs and updates legacy orders', function () {
+    $company = new Company();
+    $company->setRawAttributes(['uuid' => 'company-uuid'], true);
+
+    $order = new FleetOpsLegacyOrderFake();
+    $order->setRawAttributes(['uuid' => 'order-uuid', 'company_uuid' => 'company-uuid'], true);
+
+    $config = new OrderConfig();
+    $config->setRawAttributes(['uuid' => 'config-uuid'], true);
+
+    $command                = new FleetOpsFixLegacyOrderConfigsCommandFake(true);
+    $command->testCompanies = collect([$company]);
+    $command->testOrders    = collect([$order]);
+    $command->configs       = ['company-uuid' => $config];
+
+    $command->handle();
+
+    expect($command->created)->toBe(['company-uuid'])
+        ->and($order->updates)->toBe([['order_config_uuid' => 'config-uuid']])
+        ->and($command->messages)->toContain(['info', 'Initializing transport config for 1 companies.'])
+        ->and($command->messages)->toContain(['info', '1 orders found for updating.'])
+        ->and($command->messages)->toContain(['info', 'All orders have been processed.'])
+        ->and($command->progressBar->started)->toBe(2)
+        ->and($command->progressBar->advanced)->toBe(2)
+        ->and($command->progressBar->finished)->toBe(2);
+});
+
+test('legacy order config command reports order update errors and continues', function () {
+    $order = new FleetOpsLegacyOrderFake();
+    $order->setRawAttributes(['uuid' => 'order-error', 'company_uuid' => 'company-uuid'], true);
+    $order->failUpdate = true;
+
+    $config = new OrderConfig();
+    $config->setRawAttributes(['uuid' => 'config-uuid'], true);
+
+    $command             = new FleetOpsFixLegacyOrderConfigsCommandFake(false);
+    $command->testOrders = collect([$order]);
+    $command->configs    = ['company-uuid' => $config];
+
+    $command->handle();
+
+    expect($command->created)->toBe([])
+        ->and($command->messages)->toContain(['error', 'order update failed'])
+        ->and($command->messages)->toContain(['error', 'Order ID: order-error'])
+        ->and($command->messages)->toContain(['info', 'All orders have been processed.'])
+        ->and($command->progressBar->advanced)->toBe(0)
+        ->and($command->progressBar->finished)->toBe(1);
+});
+
+test('fix customer companies command creates or links users and assigns missing company records', function () {
+    $createdUser = new FleetOpsUserCommandFake('created-user', 'Created User', 'created@example.test');
+
+    $customerWithoutUser = new FleetOpsCustomerCommandFake();
+    $customerWithoutUser->setRawAttributes([
+        'name'         => 'Created Customer',
+        'email'        => 'created@example.test',
+        'phone'        => '100',
+        'company_uuid' => 'company-created',
+    ], true);
+    $customerWithoutUser->createdUser = $createdUser;
+
+    $existingUser = new FleetOpsUserCommandFake('existing-user', 'Existing User', 'existing@example.test');
+
+    $customerWithExistingEmail = new FleetOpsCustomerCommandFake();
+    $customerWithExistingEmail->setRawAttributes([
+        'name'         => 'Existing Customer',
+        'email'        => 'existing@example.test',
+        'phone'        => '200',
+        'company_uuid' => 'company-existing',
+    ], true);
+    $customerWithExistingEmail->failCreate = true;
+
+    $createdCompany = new Company();
+    $createdCompany->setRawAttributes(['uuid' => 'company-created', 'name' => 'Created Company'], true);
+
+    $existingCompany = new Company();
+    $existingCompany->setRawAttributes(['uuid' => 'company-existing', 'name' => 'Existing Company'], true);
+
+    $command                = new FleetOpsFixCustomerCompaniesCommandFake();
+    $command->testCustomers = collect([$customerWithoutUser, $customerWithExistingEmail]);
+    $command->users         = ['existing@example.test' => $existingUser];
+    $command->missing       = [
+        'created-user:company-created'   => true,
+        'existing-user:company-existing' => true,
+    ];
+    $command->companies     = [
+        'company-created'  => $createdCompany,
+        'company-existing' => $existingCompany,
+    ];
+
+    expect($command->handle())->toBe(Command::SUCCESS)
+        ->and($command->messages)->toContain(['info', 'User created for customer (Created Customer - created@example.test)'])
+        ->and($command->messages)->toContain(['error', 'existing user'])
+        ->and($command->messages)->toContain(['error', 'Existing user: existing@example.test'])
+        ->and($command->messages)->toContain(['info', 'Update customer user to existing user of the same email address.'])
+        ->and($customerWithExistingEmail->quietUpdates)->toBe([['user_uuid' => 'existing-user']])
+        ->and($createdUser->synced)->toBe([
+            ['email', FleetOpsCustomerCommandFake::class],
+            ['phone', FleetOpsCustomerCommandFake::class],
+        ])
+        ->and($existingUser->synced)->toBe([
+            ['email', FleetOpsCustomerCommandFake::class],
+            ['phone', FleetOpsCustomerCommandFake::class],
+        ])
+        ->and($createdUser->assigned)->toBe([['company-created', 'Administrator']])
+        ->and($existingUser->assigned)->toBe([['company-existing', 'Administrator']]);
+});
+
+test('fix driver companies command syncs assigned users and missing company assignments', function () {
+    $user = new FleetOpsUserCommandFake('driver-user', 'Driver User', 'driver@example.test');
+
+    $driver = new Driver();
+    $driver->setRawAttributes([
+        'email'        => 'driver@example.test',
+        'phone'        => '300',
+        'company_uuid' => 'driver-company',
+    ], true);
+    $driver->setRelation('user', $user);
+
+    $company = new Company();
+    $company->setRawAttributes(['uuid' => 'driver-company', 'name' => 'Driver Company'], true);
+
+    $command              = new FleetOpsFixDriverCompaniesCommandFake();
+    $command->testDrivers = collect([$driver]);
+    $command->missing     = ['driver-user:driver-company' => true];
+    $command->companies   = ['driver-company' => $company];
+
+    expect($command->handle())->toBe(Command::SUCCESS)
+        ->and($user->synced)->toBe([
+            ['email', Driver::class],
+            ['phone', Driver::class],
+        ])
+        ->and($user->assigned)->toBe([['driver-company', 'Administrator']])
+        ->and($command->messages)->toContain(['line', 'Found driver Driver User (driver@example.test) which doesnt have correct company assignment.'])
+        ->and($command->messages)->toContain(['line', 'Driver driver@example.test was assigned to company: Driver Company']);
+});
+
+test('purge unpurchased service quotes command commits deletes and rolls back failures', function () {
+    Carbon::setTestNow(Carbon::parse('2026-05-06 12:00:00'));
+
+    $deleted               = new FleetOpsPurgeServiceQuotesCommandFake();
+    $deleted->deletedCount = 3;
+
+    expect($deleted->handle())->toBe(Command::SUCCESS)
+        ->and($deleted->events[0])->toBe('disable')
+        ->and($deleted->events[1])->toBe('begin')
+        ->and($deleted->events[2][0])->toBe('purge')
+        ->and($deleted->events[2][1]->toDateTimeString())->toBe('2026-05-04 12:00:00')
+        ->and($deleted->events)->toContain('commit')
+        ->and($deleted->events)->toContain('enable')
+        ->and($deleted->messages)->toContain(['info', 'Successfully deleted 3 unpurchased service quotes.']);
+
+    $empty = new FleetOpsPurgeServiceQuotesCommandFake();
+
+    expect($empty->handle())->toBe(Command::SUCCESS)
+        ->and($empty->messages)->toContain(['info', 'No unpurchased service quotes found for deletion.']);
+
+    $failed          = new FleetOpsPurgeServiceQuotesCommandFake();
+    $failed->failure = new RuntimeException('delete failed');
+
+    expect($failed->handle())->toBe(Command::FAILURE)
+        ->and($failed->events)->toContain('rollback')
+        ->and($failed->events)->toContain('enable')
+        ->and($failed->messages)->toContain(['error', 'Error deleting unpurchased service quotes: delete failed']);
 
     Carbon::setTestNow();
 });
