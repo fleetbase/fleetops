@@ -5,6 +5,7 @@ use Fleetbase\FleetOps\Models\Order;
 use Fleetbase\FleetOps\Models\Payload;
 use Fleetbase\FleetOps\Models\Place;
 use Fleetbase\FleetOps\Tracking\Providers\CalculatedTrackingProvider;
+use Fleetbase\FleetOps\Tracking\Providers\GoogleRoutesTrackingProvider;
 use Fleetbase\FleetOps\Tracking\Support\FakeTrackingProvider;
 use Fleetbase\FleetOps\Tracking\TrackingContext;
 use Fleetbase\FleetOps\Tracking\TrackingContextBuilder;
@@ -14,7 +15,9 @@ use Fleetbase\FleetOps\Tracking\TrackingProviderRegistry;
 use Fleetbase\FleetOps\Tracking\TrackingProviderResult;
 use Fleetbase\FleetOps\Tracking\TrackingStop;
 use Fleetbase\LaravelMysqlSpatial\Types\Point;
+use Illuminate\Http\Client\Factory as HttpFactory;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Http;
 
 class TrackingTestOrder extends Order
 {
@@ -29,6 +32,16 @@ class TrackingTestPayload extends Payload
     public function loadMissing($relations)
     {
         return $this;
+    }
+}
+
+class GoogleRoutesTrackingProviderProbe extends GoogleRoutesTrackingProvider
+{
+    public ?string $fakeApiKey = null;
+
+    protected function apiKey(): ?string
+    {
+        return $this->fakeApiKey;
     }
 }
 
@@ -89,6 +102,49 @@ function trackingOrderWithStops(): Order
     $order->setRelation('driverAssigned', $driver);
 
     return $order;
+}
+
+function resetTrackingHttp(): void
+{
+    Http::swap(new HttpFactory());
+}
+
+function googleRoutesTrackingContext(): TrackingContext
+{
+    $pickup = new TrackingStop(
+        uuid: 'pickup-uuid',
+        publicId: 'place_pickup',
+        type: 'pickup',
+        status: 'pending',
+        place: trackingPlace('66666666-6666-6666-6666-666666666666', 1.30, 103.80),
+        completed: false,
+        sequence: 1,
+        trackingNumberUuid: 'tracking-uuid',
+    );
+    $dropoff = new TrackingStop(
+        uuid: 'dropoff-uuid',
+        publicId: 'place_dropoff',
+        type: 'dropoff',
+        status: 'pending',
+        place: trackingPlace('77777777-7777-7777-7777-777777777777', 1.35, 103.85),
+        completed: false,
+        sequence: 2,
+        trackingNumberUuid: 'tracking-uuid',
+    );
+
+    return new TrackingContext(
+        order: trackingModel(TrackingTestOrder::class),
+        payload: null,
+        driver: null,
+        origin: new Point(1.29, 103.79),
+        driverLocation: null,
+        stops: collect([$pickup, $dropoff]),
+        completedStops: collect(),
+        remainingStops: collect([$pickup, $dropoff]),
+        activeStop: $pickup,
+        nextStop: $dropoff,
+        driverLocationAgeSeconds: null,
+    );
 }
 
 test('tracking context builder normalizes order stops and driver telemetry', function () {
@@ -378,4 +434,114 @@ test('provider cache key varies by route options', function () {
     ]));
 
     expect($trafficKey)->not->toBe($nonTrafficKey);
+});
+
+test('google routes provider exposes capabilities and requires routable context with api key', function () {
+    $provider = new GoogleRoutesTrackingProviderProbe();
+    $context  = googleRoutesTrackingContext();
+
+    expect($provider->key())->toBe('google_routes')
+        ->and($provider->capabilities()->toArray())->toBe([
+            'traffic'        => true,
+            'per_leg_eta'    => true,
+            'map_matching'   => false,
+            'route_geometry' => true,
+        ])
+        ->and($provider->canTrack($context))->toBeFalse();
+
+    $provider->fakeApiKey = 'test-api-key';
+    expect($provider->canTrack($context))->toBeTrue();
+});
+
+test('google routes provider posts route points and maps route response with traffic', function () {
+    resetTrackingHttp();
+    app('config')->set('services.google_maps.api_key', 'test-api-key');
+
+    $provider = new GoogleRoutesTrackingProvider();
+    $context  = googleRoutesTrackingContext();
+    $sentBody = null;
+
+    Http::fake(function ($request) use (&$sentBody) {
+        $sentBody = $request->data();
+
+        return Http::response([
+            'routes' => [[
+                'distanceMeters' => 7200,
+                'duration'       => '900s',
+                'staticDuration' => '780s',
+                'polyline'       => ['encodedPolyline' => 'encoded-polyline'],
+                'legs'           => [
+                    ['distanceMeters' => 3000, 'duration' => '420s', 'staticDuration' => '360s'],
+                    ['distanceMeters' => 4200, 'duration' => '480s', 'staticDuration' => '420s'],
+                ],
+            ]],
+        ]);
+    });
+
+    $result = $provider->track($context, new TrackingOptions(trafficEnabled: true));
+
+    expect($result->provider)->toBe('google_routes')
+        ->and($result->distanceMeters)->toBe(7200.0)
+        ->and($result->durationSeconds)->toBe(780.0)
+        ->and($result->durationInTrafficSeconds)->toBe(900.0)
+        ->and($result->polyline)->toBe('encoded-polyline')
+        ->and($result->confidence)->toBe('high')
+        ->and($result->legs)->toBe([
+            [
+                'index'                 => 0,
+                'distance_m'            => 3000,
+                'duration_s'            => 360.0,
+                'duration_in_traffic_s' => 420.0,
+                'provider'              => 'google_routes',
+            ],
+            [
+                'index'                 => 1,
+                'distance_m'            => 4200,
+                'duration_s'            => 420.0,
+                'duration_in_traffic_s' => 480.0,
+                'provider'              => 'google_routes',
+            ],
+        ]);
+
+    expect(data_get($sentBody, 'origin.location.latLng.latitude'))->toBe(1.29)
+        ->and(data_get($sentBody, 'destination.location.latLng.latitude'))->toBe(1.35)
+        ->and(data_get($sentBody, 'intermediates.0.location.latLng.latitude'))->toBe(1.30)
+        ->and(data_get($sentBody, 'routingPreference'))->toBe('TRAFFIC_AWARE_OPTIMAL');
+});
+
+test('google routes provider handles non-traffic confidence and failed route responses', function () {
+    resetTrackingHttp();
+    app('config')->set('services.google_maps.api_key', 'test-api-key');
+
+    $provider = new GoogleRoutesTrackingProvider();
+    $context  = googleRoutesTrackingContext();
+
+    Http::fake([
+        'https://routes.googleapis.com/*' => Http::response([
+            'routes' => [[
+                'distanceMeters' => 1000,
+                'duration'       => '100s',
+                'legs'           => [
+                    ['distanceMeters' => 1000, 'duration' => '100s'],
+                ],
+            ]],
+        ]),
+    ]);
+
+    $result = $provider->track($context, new TrackingOptions(trafficEnabled: false));
+
+    expect($result->durationSeconds)->toBe(100.0)
+        ->and($result->durationInTrafficSeconds)->toBeNull()
+        ->and($result->confidence)->toBe('medium')
+        ->and($result->legs[0]['duration_in_traffic_s'])->toBeNull();
+
+    resetTrackingHttp();
+    Http::fake(['https://routes.googleapis.com/*' => Http::response([], 500)]);
+    expect(fn () => $provider->track($context, new TrackingOptions()))
+        ->toThrow(RuntimeException::class, 'Google Routes request failed with status 500');
+
+    resetTrackingHttp();
+    Http::fake(['https://routes.googleapis.com/*' => Http::response(['routes' => []])]);
+    expect(fn () => $provider->track($context, new TrackingOptions()))
+        ->toThrow(RuntimeException::class, 'Google Routes returned no route.');
 });
