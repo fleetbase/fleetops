@@ -4,6 +4,7 @@ use Fleetbase\FleetOps\Support\Metrics;
 use Fleetbase\FleetOps\Support\Metrics\AbstractMetric;
 use Fleetbase\FleetOps\Support\Metrics\ActiveRevenueQuery;
 use Fleetbase\FleetOps\Support\Metrics\EarningsMetric;
+use Fleetbase\FleetOps\Support\Metrics\MoneyMetric;
 use Fleetbase\FleetOps\Support\Metrics\OrdersInProgressMetric;
 use Fleetbase\FleetOps\Support\Metrics\Registry;
 use Fleetbase\FleetOps\Support\Metrics\TotalTimeTraveledMetric;
@@ -50,6 +51,24 @@ class TestFleetOpsMetric extends AbstractMetric
             '2025-12-01' => 10,
             default      => (int) $query['start']->format('d'),
         };
+    }
+}
+
+class TestFleetOpsMoneyMetric extends MoneyMetric
+{
+    public static function slug(): string
+    {
+        return 'test_money_metric';
+    }
+
+    protected function query(?DateTimeInterface $start, ?DateTimeInterface $end)
+    {
+        return null;
+    }
+
+    protected function aggregate($query): float|int
+    {
+        return 0;
     }
 }
 
@@ -129,6 +148,22 @@ test('registry exposes every known metric slug', function () {
     expect($slugs)->toContain('open_issues');
     expect($slugs)->toContain('resolved_issues');
     expect($slugs)->toContain('avg_order_value');
+});
+
+test('money metrics expose money format and company or override currency', function () {
+    $company = new Company();
+    $company->setRawAttributes(['currency' => 'SGD'], true);
+
+    $metric = TestFleetOpsMoneyMetric::forCompany($company);
+
+    expect($metric->format())->toBe('money')
+        ->and($metric->currency())->toBe('SGD')
+        ->and($metric->inCurrency('EUR'))->toBe($metric)
+        ->and($metric->currency())->toBe('EUR');
+
+    $fallbackCompany = new Company();
+
+    expect(TestFleetOpsMoneyMetric::forCompany($fallbackCompany)->currency())->toBe('USD');
 });
 
 test('registry resolves unknown slugs to null', function () {

@@ -25,13 +25,22 @@ use Fleetbase\FleetOps\Notifications\OrderDispatched;
 use Fleetbase\FleetOps\Notifications\OrderDispatchFailed;
 use Fleetbase\FleetOps\Notifications\OrderFailed as OrderFailedNotification;
 use Fleetbase\FleetOps\Notifications\OrderPing;
+use Fleetbase\FleetOps\Notifications\OrderSplit;
 use Fleetbase\FleetOps\Notifications\ProlongedStoppage;
 use Fleetbase\FleetOps\Notifications\RouteDeviation;
 use Fleetbase\FleetOps\Notifications\WaypointCompleted;
+use Fleetbase\FleetOps\Support\OrderTracker;
+use Fleetbase\FleetOps\Support\Payment;
+use Fleetbase\FleetOps\Tracking\TrackingIntelligenceService;
 use Fleetbase\Models\Model;
 use Fleetbase\Models\ScheduleItem;
 use Illuminate\Container\Container;
 use Illuminate\Support\Carbon;
+use Stripe\StripeClient;
+
+if (!class_exists(StripeClient::class, false)) {
+    eval('namespace Stripe; class StripeClient { public function __construct(public array $config = []) {} }');
+}
 
 class FleetOpsNotificationOrderFake extends Order
 {
@@ -166,6 +175,48 @@ test('operational alert notifications expose expected channels and database payl
             'order_id'   => 'order_public',
             'order_uuid' => 'order-uuid',
             'context'    => ['stopped_minutes' => 30],
+        ]);
+});
+
+test('order split notification payment client and order tracker expose support contracts', function () {
+    $notification = new OrderSplit();
+    $mail         = $notification->toMail(null);
+
+    expect(OrderSplit::$name)->toBe('Order Split')
+        ->and($notification->via(null))->toBe(['mail'])
+        ->and($notification->toArray(null))->toBe([])
+        ->and($mail->introLines)->toContain('The introduction to the notification.')
+        ->and($mail->actionText)->toBe('Notification Action');
+
+    expect(Payment::getStripeClient(['api_key' => 'sk_test_fleetops']))->toBeInstanceOf(StripeClient::class);
+
+    $order = notificationTestOrder();
+    app()->instance(TrackingIntelligenceService::class, new class {
+        public array $calls = [];
+
+        public function eta(Order $order, mixed $options): array
+        {
+            $this->calls[] = ['eta', $order->public_id, $options->provider, $options->fallbacks];
+
+            return ['eta' => 12];
+        }
+
+        public function track(Order $order, mixed $options): array
+        {
+            $this->calls[] = ['track', $order->public_id, $options->provider, $options->fallbacks];
+
+            return ['status' => 'tracked'];
+        }
+    });
+
+    $tracker = new OrderTracker($order);
+    $service = app(TrackingIntelligenceService::class);
+
+    expect($tracker->eta(['provider' => 'mock', 'fallbacks' => 'a,b']))->toBe(['eta' => 12])
+        ->and($tracker->toArray(['provider' => 'mock']))->toBe(['status' => 'tracked'])
+        ->and($service->calls)->toBe([
+            ['eta', 'order_public', 'mock', ['a', 'b']],
+            ['track', 'order_public', 'mock', []],
         ]);
 });
 

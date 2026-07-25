@@ -5,7 +5,9 @@ use Fleetbase\FleetOps\Casts\OrderConfigEntities;
 use Fleetbase\FleetOps\Casts\Polygon;
 use Fleetbase\FleetOps\Rules\ComputableAlgo;
 use Fleetbase\FleetOps\Rules\CustomerIdOrDetails;
+use Fleetbase\FleetOps\Rules\ResolvablePoint;
 use Fleetbase\FleetOps\Rules\ResolvableVehicle;
+use Fleetbase\LaravelMysqlSpatial\Types\Point;
 
 test('customer detail validation accepts useful inline customer payloads', function () {
     $rule = new CustomerIdOrDetails();
@@ -51,6 +53,14 @@ test('resolvable vehicle extracts supported identifier shapes without hitting th
         ->and($rule->passes('vehicle', null))->toBeTrue()
         ->and($rule->getResolved())->toBeNull()
         ->and($rule->message())->toBe('The :attribute must be a valid vehicle public ID, UUID, or vehicle object.');
+});
+
+test('resolvable point accepts point instances and rejects unresolvable values', function () {
+    $rule = new ResolvablePoint();
+
+    expect($rule->passes('location', new Point(1.3, 103.8)))->toBeTrue()
+        ->and($rule->passes('location', 'not-a-point'))->toBeFalse()
+        ->and($rule->message())->toBe('The :attribute must be a valid GeoJSON Point or a type (Place ID) that can be resolved to a Point.');
 });
 
 test('order config entity cast serializes arrays for storage', function () {
