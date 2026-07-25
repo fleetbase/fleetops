@@ -59,14 +59,7 @@ class OrderController extends Controller
         set_time_limit(180);
 
         // get request input
-        $input = $request->only([
-            'internal_id', 'payload', 'service_quote', 'purchase_rate',
-            'adhoc', 'adhoc_distance', 'pod_method', 'pod_required',
-            'scheduled_at', 'status', 'meta', 'notes',
-            // Orchestrator constraints
-            'time_window_start', 'time_window_end',
-            'required_skills', 'orchestrator_priority',
-        ]);
+        $input = $this->orderCreateInputFromRequest($request);
 
         // Get order config
         $orderConfig = OrderConfig::resolveFromIdentifier($request->only(['type', 'order_config']));
@@ -98,17 +91,13 @@ class OrderController extends Controller
         // create payload
         if ($request->has('payload') && $request->isArray('payload')) {
             $payload                = new Payload();
-            $payloadInput           = $request->input('payload');
-            $entities               = data_get($payloadInput, 'entities', []);
-            $waypoints              = data_get($payloadInput, 'waypoints', []);
-            $pickup                 = data_get($payloadInput, 'pickup');
-            $dropoff                = data_get($payloadInput, 'dropoff');
-            $return                 = data_get($payloadInput, 'return');
-            $hasPickupField         = array_key_exists('pickup', $payloadInput);
-            $hasDropoffField        = array_key_exists('dropoff', $payloadInput);
-            $hasReturnField         = array_key_exists('return', $payloadInput);
-            $hasWaypointsField      = array_key_exists('waypoints', $payloadInput);
-            $hasRouteEndpointFields = $hasPickupField || $hasDropoffField || $hasReturnField;
+            [
+                'entities'  => $entities,
+                'waypoints' => $waypoints,
+                'pickup'    => $pickup,
+                'dropoff'   => $dropoff,
+                'return'    => $return,
+            ] = $this->payloadShapeFromArray($request->input('payload'));
 
             if ($pickup) {
                 $payload->setPickup($pickup, [
@@ -150,12 +139,13 @@ class OrderController extends Controller
         // create a payload if missing payload[] but has pickup/dropoff/etc
         if ($request->missing('payload')) {
             $payload      = new Payload();
-            $payloadInput = $request->only(['pickup', 'dropoff', 'return', 'waypoints', 'entities']);
-            $entities     = data_get($payloadInput, 'entities', []);
-            $waypoints    = data_get($payloadInput, 'waypoints', []);
-            $pickup       = data_get($payloadInput, 'pickup');
-            $dropoff      = data_get($payloadInput, 'dropoff');
-            $return       = data_get($payloadInput, 'return');
+            [
+                'entities'  => $entities,
+                'waypoints' => $waypoints,
+                'pickup'    => $pickup,
+                'dropoff'   => $dropoff,
+                'return'    => $return,
+            ] = $this->payloadShapeFromRequest($request);
 
             if ($pickup) {
                 $payload->setPickup($pickup, [
@@ -369,23 +359,20 @@ class OrderController extends Controller
         }
 
         // get request input
-        $input = $request->only([
-            'internal_id', 'payload', 'adhoc', 'adhoc_distance',
-            'pod_method', 'pod_required', 'scheduled_at', 'meta', 'type', 'status', 'notes',
-            // Orchestrator constraints
-            'time_window_start', 'time_window_end',
-            'required_skills', 'orchestrator_priority',
-        ]);
+        $input = $this->orderUpdateInputFromRequest($request);
 
         // update payload if new input or change payload by id
         if ($request->isArray('payload')) {
-            $payload      = data_get($order, 'payload', new Payload());
-            $payloadInput = $request->input('payload');
-            $entities     = data_get($payloadInput, 'entities', []);
-            $waypoints    = data_get($payloadInput, 'waypoints', []);
-            $pickup       = data_get($payloadInput, 'pickup');
-            $dropoff      = data_get($payloadInput, 'dropoff');
-            $return       = data_get($payloadInput, 'return');
+            $payload = data_get($order, 'payload', new Payload());
+            [
+                'entities'                  => $entities,
+                'waypoints'                 => $waypoints,
+                'pickup'                    => $pickup,
+                'dropoff'                   => $dropoff,
+                'return'                    => $return,
+                'has_waypoints_field'       => $hasWaypointsField,
+                'has_route_endpoint_fields' => $hasRouteEndpointFields,
+            ] = $this->payloadShapeFromArray($request->input('payload'));
 
             // if no pickup and dropoff extract from waypoints
             if (empty($pickup) && empty($dropoff) && count($waypoints)) {
@@ -434,18 +421,16 @@ class OrderController extends Controller
 
         // create a payload if missing payload[] but has pickup/dropoff/etc
         if ($request->missing('payload')) {
-            $payload                = data_get($order, 'payload', new Payload());
-            $payloadInput           = $request->only(['pickup', 'dropoff', 'return', 'waypoints', 'entities']);
-            $entities               = data_get($payloadInput, 'entities', []);
-            $waypoints              = data_get($payloadInput, 'waypoints', []);
-            $pickup                 = data_get($payloadInput, 'pickup');
-            $dropoff                = data_get($payloadInput, 'dropoff');
-            $return                 = data_get($payloadInput, 'return');
-            $hasPickupField         = $request->exists('pickup');
-            $hasDropoffField        = $request->exists('dropoff');
-            $hasReturnField         = $request->exists('return');
-            $hasWaypointsField      = $request->exists('waypoints');
-            $hasRouteEndpointFields = $hasPickupField || $hasDropoffField || $hasReturnField;
+            $payload = data_get($order, 'payload', new Payload());
+            [
+                'entities'                  => $entities,
+                'waypoints'                 => $waypoints,
+                'pickup'                    => $pickup,
+                'dropoff'                   => $dropoff,
+                'return'                    => $return,
+                'has_waypoints_field'       => $hasWaypointsField,
+                'has_route_endpoint_fields' => $hasRouteEndpointFields,
+            ] = $this->payloadShapeFromRequest($request);
 
             // if no pickup and dropoff extract from waypoints
             if (empty($pickup) && empty($dropoff) && count($waypoints)) {
@@ -566,6 +551,55 @@ class OrderController extends Controller
 
         // response the order resource
         return new OrderResource($order);
+    }
+
+    protected function orderCreateInputFromRequest(Request $request): array
+    {
+        return $request->only([
+            'internal_id', 'payload', 'service_quote', 'purchase_rate',
+            'adhoc', 'adhoc_distance', 'pod_method', 'pod_required',
+            'scheduled_at', 'status', 'meta', 'notes',
+            // Orchestrator constraints
+            'time_window_start', 'time_window_end',
+            'required_skills', 'orchestrator_priority',
+        ]);
+    }
+
+    protected function orderUpdateInputFromRequest(Request $request): array
+    {
+        return $request->only([
+            'internal_id', 'payload', 'adhoc', 'adhoc_distance',
+            'pod_method', 'pod_required', 'scheduled_at', 'meta', 'type', 'status', 'notes',
+            // Orchestrator constraints
+            'time_window_start', 'time_window_end',
+            'required_skills', 'orchestrator_priority',
+        ]);
+    }
+
+    protected function payloadShapeFromRequest(Request $request): array
+    {
+        return $this->payloadShapeFromArray($request->only(['pickup', 'dropoff', 'return', 'waypoints', 'entities']));
+    }
+
+    protected function payloadShapeFromArray(array $payloadInput): array
+    {
+        $hasPickupField    = array_key_exists('pickup', $payloadInput);
+        $hasDropoffField   = array_key_exists('dropoff', $payloadInput);
+        $hasReturnField    = array_key_exists('return', $payloadInput);
+        $hasWaypointsField = array_key_exists('waypoints', $payloadInput);
+
+        return [
+            'entities'                  => data_get($payloadInput, 'entities', []),
+            'waypoints'                 => data_get($payloadInput, 'waypoints', []),
+            'pickup'                    => data_get($payloadInput, 'pickup'),
+            'dropoff'                   => data_get($payloadInput, 'dropoff'),
+            'return'                    => data_get($payloadInput, 'return'),
+            'has_pickup_field'          => $hasPickupField,
+            'has_dropoff_field'         => $hasDropoffField,
+            'has_return_field'          => $hasReturnField,
+            'has_waypoints_field'       => $hasWaypointsField,
+            'has_route_endpoint_fields' => $hasPickupField || $hasDropoffField || $hasReturnField,
+        ];
     }
 
     /**

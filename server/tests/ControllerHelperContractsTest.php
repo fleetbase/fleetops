@@ -3,6 +3,7 @@
 use Fleetbase\FleetOps\Http\Controllers\Api\v1\CustomerController;
 use Fleetbase\FleetOps\Http\Controllers\Api\v1\DriverController;
 use Fleetbase\FleetOps\Http\Controllers\Api\v1\EntityController;
+use Fleetbase\FleetOps\Http\Controllers\Api\v1\OrderController as ApiOrderController;
 use Fleetbase\FleetOps\Http\Controllers\Internal\v1\ContactController as InternalContactController;
 use Fleetbase\FleetOps\Http\Controllers\Internal\v1\DriverController as InternalDriverController;
 use Fleetbase\FleetOps\Http\Controllers\Internal\v1\OrderController as InternalOrderController;
@@ -47,6 +48,17 @@ class FleetOpsEntityControllerProbe extends EntityController
     public function callHelper(string $method, mixed ...$arguments): mixed
     {
         $reflection = new ReflectionMethod(EntityController::class, $method);
+        $reflection->setAccessible(true);
+
+        return $reflection->invoke($this, ...$arguments);
+    }
+}
+
+class FleetOpsApiOrderControllerProbe extends ApiOrderController
+{
+    public function callHelper(string $method, mixed ...$arguments): mixed
+    {
+        $reflection = new ReflectionMethod(ApiOrderController::class, $method);
         $reflection->setAccessible(true);
 
         return $reflection->invoke($this, ...$arguments);
@@ -195,6 +207,104 @@ test('entity controller request input keeps only entity attributes', function ()
         'sku'             => 'PALLET-1',
         'currency'        => 'SGD',
         'supplier_uuid'   => 'supplier-uuid',
+    ]);
+});
+
+test('api order controller request input separates create and update contracts', function () {
+    $controller = new FleetOpsApiOrderControllerProbe();
+    $request    = new Request([
+        'internal_id'           => 'ORD-1',
+        'payload'               => 'payload-public',
+        'service_quote'         => 'quote-public',
+        'purchase_rate'         => 'purchase-rate-public',
+        'adhoc'                 => true,
+        'adhoc_distance'        => 1200,
+        'pod_method'            => 'scan',
+        'pod_required'          => true,
+        'scheduled_at'          => '2026-01-01T10:00:00Z',
+        'status'                => 'created',
+        'type'                  => 'transport',
+        'meta'                  => ['source' => 'api'],
+        'notes'                 => 'Handle with care',
+        'time_window_start'     => '09:00',
+        'time_window_end'       => '17:00',
+        'required_skills'       => ['hazmat'],
+        'orchestrator_priority' => 75,
+        'driver'                => 'driver-public',
+        'company_uuid'          => 'spoofed-company',
+    ]);
+
+    expect($controller->callHelper('orderCreateInputFromRequest', $request))->toBe([
+        'internal_id'           => 'ORD-1',
+        'payload'               => 'payload-public',
+        'service_quote'         => 'quote-public',
+        'purchase_rate'         => 'purchase-rate-public',
+        'adhoc'                 => true,
+        'adhoc_distance'        => 1200,
+        'pod_method'            => 'scan',
+        'pod_required'          => true,
+        'scheduled_at'          => '2026-01-01T10:00:00Z',
+        'status'                => 'created',
+        'meta'                  => ['source' => 'api'],
+        'notes'                 => 'Handle with care',
+        'time_window_start'     => '09:00',
+        'time_window_end'       => '17:00',
+        'required_skills'       => ['hazmat'],
+        'orchestrator_priority' => 75,
+    ])->and($controller->callHelper('orderUpdateInputFromRequest', $request))->toBe([
+        'internal_id'           => 'ORD-1',
+        'payload'               => 'payload-public',
+        'adhoc'                 => true,
+        'adhoc_distance'        => 1200,
+        'pod_method'            => 'scan',
+        'pod_required'          => true,
+        'scheduled_at'          => '2026-01-01T10:00:00Z',
+        'meta'                  => ['source' => 'api'],
+        'type'                  => 'transport',
+        'status'                => 'created',
+        'notes'                 => 'Handle with care',
+        'time_window_start'     => '09:00',
+        'time_window_end'       => '17:00',
+        'required_skills'       => ['hazmat'],
+        'orchestrator_priority' => 75,
+    ]);
+});
+
+test('api order controller normalizes payload route shape metadata', function () {
+    $controller = new FleetOpsApiOrderControllerProbe();
+
+    $shape = $controller->callHelper('payloadShapeFromArray', [
+        'pickup'    => ['name' => 'Pickup'],
+        'waypoints' => [['name' => 'Middle']],
+        'entities'  => [['name' => 'Box']],
+    ]);
+
+    expect($shape)->toMatchArray([
+        'pickup'                    => ['name' => 'Pickup'],
+        'dropoff'                   => null,
+        'return'                    => null,
+        'waypoints'                 => [['name' => 'Middle']],
+        'entities'                  => [['name' => 'Box']],
+        'has_pickup_field'          => true,
+        'has_dropoff_field'         => false,
+        'has_return_field'          => false,
+        'has_waypoints_field'       => true,
+        'has_route_endpoint_fields' => true,
+    ]);
+
+    $requestShape = $controller->callHelper('payloadShapeFromRequest', new Request([
+        'dropoff' => ['name' => 'Dropoff'],
+        'driver'  => 'driver-public',
+    ]));
+
+    expect($requestShape)->toMatchArray([
+        'pickup'                    => null,
+        'dropoff'                   => ['name' => 'Dropoff'],
+        'waypoints'                 => [],
+        'entities'                  => [],
+        'has_pickup_field'          => false,
+        'has_dropoff_field'         => true,
+        'has_route_endpoint_fields' => true,
     ]);
 });
 

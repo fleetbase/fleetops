@@ -24,7 +24,7 @@ class PaymentController extends Controller
         $company = Auth::getCompany();
         if ($company) {
             return response()->json([
-                'hasStripeConnectAccount' => !empty($company->stripe_connect_id) && Str::startsWith($company->stripe_connect_id, 'acct_'),
+                'hasStripeConnectAccount' => $this->hasStripeConnectId($company->stripe_connect_id),
             ]);
         }
 
@@ -160,8 +160,20 @@ class PaymentController extends Controller
         $paymentsCollection         = $query->get();
 
         // Calculate totals grouped by currency
+        $totals = $this->totalsByServiceQuoteCurrency($paymentsCollection);
+
+        return FleetbaseResource::collection($payments)->additional(['amount_totals' => $totals]);
+    }
+
+    protected function hasStripeConnectId(?string $stripeConnectId): bool
+    {
+        return !empty($stripeConnectId) && Str::startsWith($stripeConnectId, 'acct_');
+    }
+
+    protected function totalsByServiceQuoteCurrency(iterable $payments): array
+    {
         $totals = [];
-        foreach ($paymentsCollection as $payment) {
+        foreach ($payments as $payment) {
             $currency = $payment->serviceQuote->currency;
             $amount   = $payment->serviceQuote->amount;
             if (!isset($totals[$currency])) {
@@ -171,6 +183,6 @@ class PaymentController extends Controller
             $totals[$currency] += $amount;
         }
 
-        return FleetbaseResource::collection($payments)->additional(['amount_totals' => $totals]);
+        return $totals;
     }
 }
