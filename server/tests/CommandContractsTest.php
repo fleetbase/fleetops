@@ -5,6 +5,7 @@ use Fleetbase\FleetOps\Console\Commands\AuditCustomerUserConflicts;
 use Fleetbase\FleetOps\Console\Commands\DispatchAdhocOrders;
 use Fleetbase\FleetOps\Console\Commands\ProcessMaintenanceTriggers;
 use Fleetbase\FleetOps\Console\Commands\SendMaintenanceReminders;
+use Fleetbase\FleetOps\Console\Commands\SimulateOrderRouteNavigation;
 use Fleetbase\FleetOps\Console\Commands\SyncTelematics;
 use Fleetbase\FleetOps\Console\Commands\TestEmail;
 use Fleetbase\FleetOps\Console\Commands\TrackOrderDistanceAndTime;
@@ -130,6 +131,94 @@ class FleetOpsSendMaintenanceRemindersCommandFake extends SendMaintenanceReminde
     protected function recordReminder(string $conn, MaintenanceSchedule $schedule, int $offsetDays, string $dueDateSnapshot): void
     {
         $this->records[] = [$conn, $schedule->uuid, $offsetDays, $dueDateSnapshot];
+    }
+}
+
+class FleetOpsSimulateOrderFake extends Order
+{
+    public ?Driver $assignedDriver = null;
+
+    public function loadAssignedDriver(): Order
+    {
+        $this->setRelation('driverAssigned', $this->assignedDriver);
+
+        return $this;
+    }
+}
+
+class FleetOpsSimulateOrderRouteNavigationCommandFake extends SimulateOrderRouteNavigation
+{
+    public array $messages  = [];
+    public array $events    = [];
+    public int $pauses      = 0;
+    public ?Order $order    = null;
+    public ?Driver $driver  = null;
+    public array $route     = [];
+    public array $waypoints = [];
+
+    public function __construct(private array $testArguments)
+    {
+        parent::__construct();
+    }
+
+    public function argument($key = null)
+    {
+        return $key === null ? $this->testArguments : ($this->testArguments[$key] ?? null);
+    }
+
+    public function info($string, $verbosity = null)
+    {
+        $this->messages[] = ['info', $string];
+    }
+
+    public function error($string, $verbosity = null)
+    {
+        $this->messages[] = ['error', $string];
+
+        return Command::FAILURE;
+    }
+
+    public function promptQuestions(): array
+    {
+        return $this->promptForMissingArgumentsUsing();
+    }
+
+    protected function findOrder(string $orderId): ?Order
+    {
+        $this->messages[] = ['findOrder', $orderId];
+
+        return $this->order;
+    }
+
+    protected function findDriver(string $driverId): ?Driver
+    {
+        $this->messages[] = ['findDriver', $driverId];
+
+        return $this->driver;
+    }
+
+    protected function getRoute(mixed $start, mixed $end): array
+    {
+        $this->messages[] = ['getRoute', (string) $start, (string) $end];
+
+        return $this->route;
+    }
+
+    protected function decodePolyline(string $routeGeometry): array
+    {
+        $this->messages[] = ['decodePolyline', $routeGeometry];
+
+        return $this->waypoints;
+    }
+
+    protected function dispatchLocationChanged(Driver $driver, mixed $waypoint, array $additionalData): void
+    {
+        $this->events[] = [$driver->public_id, (string) $waypoint, $additionalData];
+    }
+
+    protected function pauseBetweenWaypoints(): void
+    {
+        $this->pauses++;
     }
 }
 
@@ -648,6 +737,45 @@ function fleetOpsReminderSchedule(string $uuid, string $publicId, string $name, 
     return $schedule;
 }
 
+function fleetOpsSimulationDriver(string $uuid = 'driver-uuid', string $publicId = 'driver_public', string $name = 'Jane Driver'): Driver
+{
+    $driver            = new FleetOpsDispatchAdhocOrdersDriverFake();
+    $driver->uuid      = $uuid;
+    $driver->public_id = $publicId;
+    $driver->name      = $name;
+
+    return $driver;
+}
+
+function fleetOpsSimulationOrder(?Driver $assignedDriver = null): FleetOpsSimulateOrderFake
+{
+    $order = (new ReflectionClass(FleetOpsSimulateOrderFake::class))->newInstanceWithoutConstructor();
+    $order->setRawAttributes([
+        'uuid'      => 'order-uuid',
+        'public_id' => 'order_public',
+    ], true);
+    $order->assignedDriver = $assignedDriver;
+    $order->setRelation('payload', new class {
+        public function getPickupOrFirstWaypoint(): object
+        {
+            return (object) [
+                'address'  => '1 Pickup Street',
+                'location' => new Point(1.30, 103.80),
+            ];
+        }
+
+        public function getDropoffOrLastWaypoint(): object
+        {
+            return (object) [
+                'address'  => '99 Dropoff Avenue',
+                'location' => new Point(1.32, 103.82),
+            ];
+        }
+    });
+
+    return $order;
+}
+
 test('sync telematics exits cleanly when another process holds the lock', function () {
     $lock = new FleetOpsCommandLockFake(false);
     Cache::swap(new FleetOpsCommandCacheFake($lock));
@@ -971,6 +1099,74 @@ test('send maintenance reminders dry run counts reminders without sending or rec
         ->and($command->messages)->toContain(['info', 'Sent 1 reminder(s) (dry run — no emails sent)']);
 
     Carbon::setTestNow();
+});
+
+test('simulate order route navigation dispatches waypoint events with headings', function () {
+    $driver  = fleetOpsSimulationDriver();
+    $command = new FleetOpsSimulateOrderRouteNavigationCommandFake([
+        'order'  => 'order_public',
+        'driver' => 'driver_public',
+    ]);
+    $command->order     = fleetOpsSimulationOrder();
+    $command->driver    = $driver;
+    $command->route     = ['code' => 'Ok', 'routes' => [['geometry' => 'encoded-route']]];
+    $command->waypoints = [
+        new Point(1.30, 103.80),
+        new Point(1.31, 103.81),
+        new Point(1.32, 103.82),
+    ];
+
+    expect($command->handle())->toBe(Command::SUCCESS)
+        ->and($command->messages)->toContain(['findOrder', 'order_public'])
+        ->and($command->messages)->toContain(['findDriver', 'driver_public'])
+        ->and($command->messages)->toContain(['decodePolyline', 'encoded-route'])
+        ->and($command->messages)->toContain(['info', 'Order pickup point located at: 1 Pickup Street'])
+        ->and($command->messages)->toContain(['info', 'Order dropoff point located at: 99 Dropoff Avenue'])
+        ->and($command->events)->toHaveCount(3)
+        ->and($command->events[0][0])->toBe('driver_public')
+        ->and($command->events[0][2])->toHaveKey('heading')
+        ->and($command->events[0][2]['index'])->toBe(0)
+        ->and($command->events[1][2])->toHaveKey('heading')
+        ->and($command->events[2][2])->toBe(['index' => 2])
+        ->and($command->pauses)->toBe(3)
+        ->and($command->promptQuestions())->toBe([
+            'order' => 'Which order ID should be used to simulate driving the route for?',
+        ]);
+});
+
+test('simulate order route navigation handles missing order driver fallback and unroutable responses', function () {
+    $missingOrder = new FleetOpsSimulateOrderRouteNavigationCommandFake([
+        'order'  => 'missing-order',
+        'driver' => null,
+    ]);
+
+    expect($missingOrder->handle())->toBe(Command::FAILURE)
+        ->and($missingOrder->messages)->toContain(['error', 'Order not found to simulate driving for.']);
+
+    $fallbackDriver = fleetOpsSimulationDriver('assigned-driver-uuid', 'assigned_driver', 'Assigned Driver');
+    $fallback       = new FleetOpsSimulateOrderRouteNavigationCommandFake([
+        'order'  => 'order_public',
+        'driver' => 'missing-driver',
+    ]);
+    $fallback->order  = fleetOpsSimulationOrder($fallbackDriver);
+    $fallback->route  = ['code' => 'NoRoute'];
+    $fallback->driver = null;
+
+    expect($fallback->handle())->toBe(Command::SUCCESS)
+        ->and($fallback->messages)->toContain(['findDriver', 'missing-driver'])
+        ->and($fallback->messages)->toContain(['error', 'The driver specified was not found, defaulting to driver assigned to order.'])
+        ->and($fallback->messages)->toContain(['info', 'Route navigation simulation completed.'])
+        ->and($fallback->events)->toBe([])
+        ->and($fallback->pauses)->toBe(0);
+
+    $withoutDriver        = new FleetOpsSimulateOrderRouteNavigationCommandFake([
+        'order'  => 'order_public',
+        'driver' => null,
+    ]);
+    $withoutDriver->order = fleetOpsSimulationOrder();
+
+    expect($withoutDriver->handle())->toBe(Command::FAILURE)
+        ->and($withoutDriver->messages)->toContain(['error', 'No driver found to simulate the order.']);
 });
 
 test('dispatch adhoc command exits when no orders are dispatchable', function () {
