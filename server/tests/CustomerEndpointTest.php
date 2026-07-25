@@ -150,6 +150,13 @@ test('CustomerAuth resolves tokens by contact UUID with company-preferred fallba
         ->toContain("->where('company_uuid'");
 });
 
+test('CustomerAuth returns null when no customer token or binding exists', function () {
+    app()->forgetInstance(CustomerAuth::APP_BINDING);
+
+    expect(CustomerAuth::resolveFromHeader(Illuminate\Http\Request::create('/customers/me', 'GET')))->toBeNull()
+        ->and(CustomerAuth::current())->toBeNull();
+});
+
 test('Customer model extends Contact with a type=customer global scope', function () {
     expect(is_subclass_of(CustomerModel::class, Fleetbase\FleetOps\Models\Contact::class))->toBeTrue();
 

@@ -27,6 +27,8 @@ use Fleetbase\FleetOps\Models\Vehicle;
 use Fleetbase\FleetOps\Notifications\LateDeparture;
 use Fleetbase\FleetOps\Notifications\OrderAssigned;
 use Fleetbase\FleetOps\Notifications\OrderCompleted as OrderCompletedNotification;
+use Fleetbase\FleetOps\Notifications\OrderDispatched as OrderDispatchedNotification;
+use Fleetbase\FleetOps\Notifications\OrderDispatchFailed;
 use Fleetbase\FleetOps\Notifications\OrderPing;
 use Fleetbase\FleetOps\Notifications\ProlongedStoppage;
 use Fleetbase\FleetOps\Notifications\RouteDeviation;
@@ -36,7 +38,9 @@ use Fleetbase\FleetOps\Observers\OrderObserver;
 use Fleetbase\FleetOps\Observers\PayloadObserver;
 use Fleetbase\FleetOps\Observers\VehicleObserver;
 use Fleetbase\FleetOps\Providers\FleetOpsServiceProvider;
+use Fleetbase\FleetOps\Providers\NotificationServiceProvider;
 use Fleetbase\Listeners\SendResourceLifecycleWebhook;
+use Fleetbase\Support\NotificationRegistry;
 
 function providerDefaultProperty(string $class, string $property): mixed
 {
@@ -81,6 +85,41 @@ test('fleetops service provider notification registry list includes operational 
             'dynamic:driver',
             'dynamic:facilitator'
         );
+});
+
+test('notification service provider registers fleetops notifications and notifiables', function () {
+    $originalNotifications = NotificationRegistry::$notifications;
+    $originalNotifiables   = NotificationRegistry::$notifiables;
+
+    try {
+        NotificationRegistry::$notifications = [];
+        NotificationRegistry::$notifiables   = [];
+
+        (new NotificationServiceProvider(app()))->boot();
+
+        expect(collect(NotificationRegistry::$notifications)->pluck('definition')->all())->toBe([
+            OrderAssigned::class,
+            Fleetbase\FleetOps\Notifications\OrderCanceled::class,
+            OrderDispatchedNotification::class,
+            OrderDispatchFailed::class,
+            OrderPing::class,
+            LateDeparture::class,
+            RouteDeviation::class,
+            ProlongedStoppage::class,
+        ])
+            ->and(NotificationRegistry::$notifiables)->toBe([
+                Fleetbase\FleetOps\Models\Contact::class,
+                Driver::class,
+                Fleetbase\FleetOps\Models\Vendor::class,
+                Fleet::class,
+                'dynamic:customer',
+                'dynamic:driver',
+                'dynamic:facilitator',
+            ]);
+    } finally {
+        NotificationRegistry::$notifications = $originalNotifications;
+        NotificationRegistry::$notifiables   = $originalNotifiables;
+    }
 });
 
 test('event service provider maps order geofence and schedule listeners', function () {

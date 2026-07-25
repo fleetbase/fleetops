@@ -31,7 +31,9 @@ use Fleetbase\FleetOps\Models\ServiceRate;
 use Fleetbase\FleetOps\Models\ServiceRateFee;
 use Fleetbase\FleetOps\Models\Vendor;
 use Fleetbase\FleetOps\Models\Waypoint;
+use Fleetbase\FleetOps\Traits\PayloadAccessors;
 use Fleetbase\LaravelMysqlSpatial\Types\Point;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 
@@ -164,6 +166,18 @@ class FleetOpsManifestScopeQueryFake
         $this->calls[] = ['whereIn', $column, $values];
 
         return $this;
+    }
+}
+
+class FleetOpsPayloadAccessorHostFake extends Illuminate\Database\Eloquent\Model
+{
+    use PayloadAccessors;
+
+    protected $guarded = [];
+
+    public function payload(): BelongsTo
+    {
+        throw new RuntimeException('payload relation query should not be executed for loaded relation access');
     }
 }
 
@@ -601,6 +615,25 @@ test('manifest metadata relations scopes and status transitions are stable', fun
         ->and($manifest->updates[2])->toBe(['status' => 'cancelled']);
 
     Carbon::setTestNow();
+});
+
+test('payload accessors return loaded payloads and associated orders without querying', function () {
+    $order = new Order([
+        'uuid'      => 'order-uuid',
+        'public_id' => 'order_public',
+    ]);
+    $payload = new Payload([
+        'uuid' => 'payload-uuid',
+    ]);
+    $payload->setRelation('order', $order);
+
+    $host = new FleetOpsPayloadAccessorHostFake([
+        'payload_uuid' => 'payload-uuid',
+    ]);
+    $host->setRelation('payload', $payload);
+
+    expect($host->getPayload())->toBe($payload)
+        ->and($host->getOrder())->toBe($order);
 });
 
 test('order accessors mutators and payload association helpers are stable', function () {
