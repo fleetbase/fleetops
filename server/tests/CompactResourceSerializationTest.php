@@ -11,13 +11,16 @@ use Fleetbase\FleetOps\Http\Resources\v1\Maintenance as MaintenanceResource;
 use Fleetbase\FleetOps\Http\Resources\v1\MaintenanceSchedule as MaintenanceScheduleResource;
 use Fleetbase\FleetOps\Http\Resources\v1\OrderConfig as OrderConfigResource;
 use Fleetbase\FleetOps\Http\Resources\v1\ParentFleet as ParentFleetResource;
+use Fleetbase\FleetOps\Http\Resources\v1\Payload as PayloadResource;
 use Fleetbase\FleetOps\Http\Resources\v1\Place as PlaceResource;
 use Fleetbase\FleetOps\Http\Resources\v1\PurchaseRate as PurchaseRateResource;
+use Fleetbase\FleetOps\Http\Resources\v1\Sensor as SensorResource;
 use Fleetbase\FleetOps\Http\Resources\v1\ServiceArea as ServiceAreaResource;
 use Fleetbase\FleetOps\Http\Resources\v1\ServiceRate as ServiceRateResource;
 use Fleetbase\FleetOps\Http\Resources\v1\SubFleet as SubFleetResource;
 use Fleetbase\FleetOps\Http\Resources\v1\TrackingStatus as TrackingStatusResource;
 use Fleetbase\FleetOps\Http\Resources\v1\Vendor as VendorResource;
+use Fleetbase\FleetOps\Http\Resources\v1\WorkOrder as WorkOrderResource;
 use Fleetbase\FleetOps\Http\Resources\v1\Zone as ZoneResource;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
@@ -1175,4 +1178,232 @@ test('service area and zone resources serialize geofence display fields', functi
             'description' => 'Downtown service zone.',
             'status'      => 'active',
         ]);
+});
+
+test('payload resource serializes waypoint references and payment metadata', function () {
+    $request = fleetopsCompactResourceRequest(true);
+    $payload = fleetopsCompactResourceFixture([
+        'current_waypoint_uuid'        => 'waypoint-current-uuid',
+        'pickup_uuid'                  => 'pickup-uuid',
+        'pickup_tracking_number_uuid'  => 'pickup-tracking-uuid',
+        'dropoff_uuid'                 => 'dropoff-uuid',
+        'dropoff_tracking_number_uuid' => 'dropoff-tracking-uuid',
+        'return_uuid'                  => 'return-uuid',
+        'return_tracking_number_uuid'  => 'return-tracking-uuid',
+        'currentWaypoint'              => (object) ['public_id' => 'waypoint_current'],
+        'pickup'                       => null,
+        'dropoff'                      => null,
+        'return'                       => null,
+        'waypoints'                    => new Collection(),
+        'entities'                     => new Collection(),
+        'cod_amount'                   => 19.99,
+        'cod_currency'                 => 'SGD',
+        'cod_payment_method'           => 'cash',
+        'payment_method'               => 'card',
+        'meta'                         => ['fragile' => true],
+    ]);
+
+    $resolved = (new PayloadResource($payload))->resolve($request);
+
+    expect($resolved)->toMatchArray([
+        'id'                           => 101,
+        'uuid'                         => 'fixture-uuid',
+        'public_id'                    => 'fixture_public',
+        'current_waypoint_uuid'        => 'waypoint-current-uuid',
+        'pickup_uuid'                  => 'pickup-uuid',
+        'pickup_tracking_number_uuid'  => 'pickup-tracking-uuid',
+        'dropoff_uuid'                 => 'dropoff-uuid',
+        'dropoff_tracking_number_uuid' => 'dropoff-tracking-uuid',
+        'return_uuid'                  => 'return-uuid',
+        'return_tracking_number_uuid'  => 'return-tracking-uuid',
+        'cod_amount'                   => 19.99,
+        'cod_currency'                 => 'SGD',
+        'cod_payment_method'           => 'cash',
+        'payment_method'               => 'card',
+        'meta'                         => ['fragile' => true],
+    ]);
+});
+
+test('work order resource serializes assignment and completion state', function () {
+    $request   = fleetopsCompactResourceRequest(true);
+    $workOrder = fleetopsCompactResourceFixture([
+        'company_uuid'          => 'company-uuid',
+        'schedule_uuid'         => 'schedule-uuid',
+        'created_by_uuid'       => 'creator-uuid',
+        'updated_by_uuid'       => 'updater-uuid',
+        'target_uuid'           => 'vehicle-uuid',
+        'target_type'           => 'Fleetbase\\FleetOps\\Models\\Vehicle',
+        'assignee_uuid'         => 'vendor-uuid',
+        'assignee_type'         => 'Fleetbase\\FleetOps\\Models\\Vendor',
+        'code'                  => 'WO-101',
+        'subject'               => 'Inspect brakes',
+        'category'              => 'safety',
+        'status'                => 'open',
+        'priority'              => 'high',
+        'instructions'          => 'Inspect and report.',
+        'checklist'             => [['label' => 'Pads', 'done' => false]],
+        'meta'                  => ['source' => 'schedule'],
+        'slug'                  => 'inspect-brakes',
+        'target_name'           => 'Truck 101',
+        'assignee_name'         => 'Vendor One',
+        'is_overdue'            => true,
+        'days_until_due'        => -1,
+        'completion_percentage' => 25,
+        'opened_at'             => '2026-07-01 09:00:00',
+        'due_at'                => '2026-07-05 09:00:00',
+        'closed_at'             => null,
+    ]);
+
+    expect((new WorkOrderResource($workOrder))->resolve($request))->toMatchArray([
+        'id'                    => 101,
+        'uuid'                  => 'fixture-uuid',
+        'public_id'             => 'fixture_public',
+        'company_uuid'          => 'company-uuid',
+        'schedule_uuid'         => 'schedule-uuid',
+        'target_uuid'           => 'vehicle-uuid',
+        'target_type'           => 'fleet-ops:vehicle',
+        'assignee_uuid'         => 'vendor-uuid',
+        'assignee_type'         => 'fleet-ops:vendor',
+        'code'                  => 'WO-101',
+        'subject'               => 'Inspect brakes',
+        'category'              => 'safety',
+        'status'                => 'open',
+        'priority'              => 'high',
+        'instructions'          => 'Inspect and report.',
+        'checklist'             => [['label' => 'Pads', 'done' => false]],
+        'target_name'           => 'Truck 101',
+        'assignee_name'         => 'Vendor One',
+        'is_overdue'            => true,
+        'days_until_due'        => -1,
+        'completion_percentage' => 25,
+        'opened_at'             => '2026-07-01 09:00:00',
+        'due_at'                => '2026-07-05 09:00:00',
+    ]);
+});
+
+test('fuel transaction resource serializes provider transaction state', function () {
+    $request     = fleetopsCompactResourceRequest(true);
+    $transaction = fleetopsCompactResourceFixture([
+        'fuel_provider_connection_uuid' => 'connection-uuid',
+        'fuel_report_uuid'              => 'report-uuid',
+        'vehicle_uuid'                  => 'vehicle-uuid',
+        'driver_uuid'                   => 'driver-uuid',
+        'order_uuid'                    => 'order-uuid',
+        'provider'                      => 'wex',
+        'provider_transaction_id'       => 'provider-txn-101',
+        'provider_vehicle_id'           => 'provider-vehicle-101',
+        'vehicle_card_id'               => 'card-101',
+        'internal_number'               => 'INT-101',
+        'structure_number'              => 'STRUCT-101',
+        'plate_number'                  => 'ABC-101',
+        'vin'                           => 'VIN-101',
+        'serial_number'                 => 'SER-101',
+        'call_sign'                     => 'TRUCK-101',
+        'trip_number'                   => 'TRIP-101',
+        'station_name'                  => 'Fuel Stop',
+        'station_latitude'              => 1.29,
+        'station_longitude'             => 103.85,
+        'station_location'              => ['lat' => 1.29, 'lng' => 103.85],
+        'transaction_at'                => '2026-07-01 11:00:00',
+        'volume'                        => 30.5,
+        'metric_unit'                   => 'liters',
+        'amount'                        => 92.25,
+        'currency'                      => 'SGD',
+        'odometer'                      => 12000,
+        'sync_status'                   => 'matched',
+        'matched_at'                    => '2026-07-01 11:05:00',
+        'vehicle_name'                  => 'Truck 101',
+        'driver_name'                   => 'Jane Driver',
+        'fuel_report_id'                => 'report_public',
+        'normalized_payload'            => ['amount' => 92.25],
+        'raw_payload'                   => ['raw' => true],
+        'meta'                          => ['matched_by' => 'vin'],
+    ]);
+
+    expect((new Fleetbase\FleetOps\Http\Resources\v1\FuelTransaction($transaction))->resolve($request))->toMatchArray([
+        'id'                            => 101,
+        'uuid'                          => 'fixture-uuid',
+        'public_id'                     => 'fixture_public',
+        'fuel_provider_connection_uuid' => 'connection-uuid',
+        'fuel_report_uuid'              => 'report-uuid',
+        'vehicle_uuid'                  => 'vehicle-uuid',
+        'driver_uuid'                   => 'driver-uuid',
+        'order_uuid'                    => 'order-uuid',
+        'provider'                      => 'wex',
+        'provider_transaction_id'       => 'provider-txn-101',
+        'plate_number'                  => 'ABC-101',
+        'station_name'                  => 'Fuel Stop',
+        'volume'                        => 30.5,
+        'amount'                        => 92.25,
+        'currency'                      => 'SGD',
+        'sync_status'                   => 'matched',
+        'vehicle_name'                  => 'Truck 101',
+        'driver_name'                   => 'Jane Driver',
+        'normalized_payload'            => ['amount' => 92.25],
+        'raw_payload'                   => ['raw' => true],
+        'meta'                          => ['matched_by' => 'vin'],
+    ]);
+});
+
+test('sensor resource serializes device sensor thresholds and status', function () {
+    $request = fleetopsCompactResourceRequest(true);
+    $sensor  = fleetopsCompactResourceFixture([
+        'company_uuid'         => 'company-uuid',
+        'device_uuid'          => 'device-uuid',
+        'warranty_uuid'        => 'warranty-uuid',
+        'telematic_uuid'       => 'telematic-uuid',
+        'photo_uuid'           => 'photo-uuid',
+        'sensorable_uuid'      => 'vehicle-uuid',
+        'sensorable_type'      => 'Fleetbase\\FleetOps\\Models\\Vehicle',
+        'name'                 => 'Temperature Sensor',
+        'type'                 => 'temperature',
+        'internal_id'          => 'SEN-101',
+        'imei'                 => 'imei-sensor',
+        'imsi'                 => 'imsi-sensor',
+        'firmware_version'     => '4.5.6',
+        'serial_number'        => 'SER-SEN-101',
+        'last_position'        => ['lat' => 1.29],
+        'unit'                 => 'celsius',
+        'min_threshold'        => 2,
+        'max_threshold'        => 8,
+        'threshold_inclusive'  => true,
+        'last_reading_at'      => '2026-07-01 12:00:00',
+        'last_value'           => 4.2,
+        'calibration'          => ['offset' => 0.1],
+        'report_frequency_sec' => 60,
+        'status'               => 'active',
+        'meta'                 => ['cargo' => 'chilled'],
+        'is_active'            => true,
+        'threshold_status'     => 'normal',
+        'photo_url'            => 'https://cdn.test/sensor.png',
+        'device_name'          => 'Tracker 101',
+        'warranty_name'        => 'Standard',
+        'attached_to_name'     => 'Truck 101',
+        'slug'                 => 'temperature-sensor',
+    ]);
+
+    expect((new SensorResource($sensor))->resolve($request))->toMatchArray([
+        'id'                   => 101,
+        'uuid'                 => 'fixture-uuid',
+        'public_id'            => 'fixture_public',
+        'company_uuid'         => 'company-uuid',
+        'device_uuid'          => 'device-uuid',
+        'sensorable_uuid'      => 'vehicle-uuid',
+        'sensorable_type'      => 'fleet-ops:vehicle',
+        'name'                 => 'Temperature Sensor',
+        'type'                 => 'temperature',
+        'internal_id'          => 'SEN-101',
+        'unit'                 => 'celsius',
+        'min_threshold'        => 2,
+        'max_threshold'        => 8,
+        'threshold_inclusive'  => true,
+        'last_value'           => 4.2,
+        'calibration'          => ['offset' => 0.1],
+        'report_frequency_sec' => 60,
+        'status'               => 'active',
+        'meta'                 => ['cargo' => 'chilled'],
+        'is_active'            => true,
+        'threshold_status'     => 'normal',
+        'slug'                 => 'temperature-sensor',
+    ]);
 });
