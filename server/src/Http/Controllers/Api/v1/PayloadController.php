@@ -25,23 +25,19 @@ class PayloadController extends Controller
      */
     public function create(CreatePayloadRequest $request)
     {
-        $input                  = $request->all();
-        $entities               = data_get($input, 'entities', []);
-        $waypoints              = data_get($input, 'waypoints', []);
-        $pickup                 = data_get($input, 'pickup');
-        $dropoff                = data_get($input, 'dropoff');
-        $return                 = data_get($input, 'return');
-        $hasPickupField         = array_key_exists('pickup', $input);
-        $hasDropoffField        = array_key_exists('dropoff', $input);
-        $hasReturnField         = array_key_exists('return', $input);
-        $hasWaypointsField      = array_key_exists('waypoints', $input);
-        $hasRouteEndpointFields = $hasPickupField || $hasDropoffField || $hasReturnField;
+        $input      = $request->all();
+        $routeShape = $this->payloadRouteShapeFromInput($input);
+        $entities   = $routeShape['entities'];
+        $waypoints  = $routeShape['waypoints'];
+        $pickup     = $routeShape['pickup'];
+        $dropoff    = $routeShape['dropoff'];
+        $return     = $routeShape['return'];
 
         // make sure company is set
         $input['company_uuid'] = session('company');
 
         // create the payload
-        $payload = new Payload(Arr::only($input, ['type', 'provider', 'meta', 'cod_amount', 'cod_currency', 'cod_payment_method']));
+        $payload = new Payload($this->payloadFillInputFromInput($input));
 
         // set pickup point
         if ($pickup) {
@@ -98,12 +94,15 @@ class PayloadController extends Controller
         }
 
         // get request input
-        $input     = $request->all();
-        $entities  = data_get($input, 'entities', []);
-        $waypoints = data_get($input, 'waypoints', []);
-        $pickup    = data_get($input, 'pickup');
-        $dropoff   = data_get($input, 'dropoff');
-        $return    = data_get($input, 'return');
+        $input                  = $request->all();
+        $routeShape             = $this->payloadRouteShapeFromInput($input);
+        $entities               = $routeShape['entities'];
+        $waypoints              = $routeShape['waypoints'];
+        $pickup                 = $routeShape['pickup'];
+        $dropoff                = $routeShape['dropoff'];
+        $return                 = $routeShape['return'];
+        $hasWaypointsField      = $routeShape['has_waypoints_field'];
+        $hasRouteEndpointFields = $routeShape['has_route_endpoint_fields'];
 
         // pickup assignment
         if ($pickup) {
@@ -133,7 +132,7 @@ class PayloadController extends Controller
         }
 
         // update the payload
-        $payload->fill(array_filter(Arr::only($input, ['type', 'provider', 'meta', 'cod_amount', 'cod_currency', 'cod_payment_method'])));
+        $payload->fill(array_filter($this->payloadFillInputFromInput($input)));
 
         // save the payload
         $payload->save();
@@ -210,5 +209,31 @@ class PayloadController extends Controller
 
         // response the payload resource
         return new DeletedResource($payload);
+    }
+
+    protected function payloadRouteShapeFromInput(array $input): array
+    {
+        $hasPickupField    = array_key_exists('pickup', $input);
+        $hasDropoffField   = array_key_exists('dropoff', $input);
+        $hasReturnField    = array_key_exists('return', $input);
+        $hasWaypointsField = array_key_exists('waypoints', $input);
+
+        return [
+            'entities'                  => data_get($input, 'entities', []),
+            'waypoints'                 => data_get($input, 'waypoints', []),
+            'pickup'                    => data_get($input, 'pickup'),
+            'dropoff'                   => data_get($input, 'dropoff'),
+            'return'                    => data_get($input, 'return'),
+            'has_pickup_field'          => $hasPickupField,
+            'has_dropoff_field'         => $hasDropoffField,
+            'has_return_field'          => $hasReturnField,
+            'has_waypoints_field'       => $hasWaypointsField,
+            'has_route_endpoint_fields' => $hasPickupField || $hasDropoffField || $hasReturnField,
+        ];
+    }
+
+    protected function payloadFillInputFromInput(array $input): array
+    {
+        return Arr::only($input, ['type', 'provider', 'meta', 'cod_amount', 'cod_currency', 'cod_payment_method']);
     }
 }

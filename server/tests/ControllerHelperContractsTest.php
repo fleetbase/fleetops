@@ -5,12 +5,18 @@ use Fleetbase\FleetOps\Http\Controllers\Api\v1\CustomerController;
 use Fleetbase\FleetOps\Http\Controllers\Api\v1\DriverController;
 use Fleetbase\FleetOps\Http\Controllers\Api\v1\EntityController;
 use Fleetbase\FleetOps\Http\Controllers\Api\v1\OrderController as ApiOrderController;
+use Fleetbase\FleetOps\Http\Controllers\Api\v1\PayloadController;
+use Fleetbase\FleetOps\Http\Controllers\Api\v1\PurchaseRateController;
 use Fleetbase\FleetOps\Http\Controllers\Api\v1\ServiceAreaController;
+use Fleetbase\FleetOps\Http\Controllers\Api\v1\ServiceRateController;
 use Fleetbase\FleetOps\Http\Controllers\Api\v1\ZoneController;
 use Fleetbase\FleetOps\Http\Controllers\Internal\v1\ContactController as InternalContactController;
 use Fleetbase\FleetOps\Http\Controllers\Internal\v1\DriverController as InternalDriverController;
 use Fleetbase\FleetOps\Http\Controllers\Internal\v1\OrderController as InternalOrderController;
 use Fleetbase\FleetOps\Http\Controllers\Internal\v1\PositionController;
+use Fleetbase\FleetOps\Models\Contact;
+use Fleetbase\FleetOps\Models\Order;
+use Fleetbase\FleetOps\Models\ServiceRate;
 use Fleetbase\LaravelMysqlSpatial\Types\Point;
 use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
@@ -79,11 +85,44 @@ class FleetOpsApiContactControllerProbe extends ApiContactController
     }
 }
 
+class FleetOpsPayloadControllerProbe extends PayloadController
+{
+    public function callHelper(string $method, mixed ...$arguments): mixed
+    {
+        $reflection = new ReflectionMethod(PayloadController::class, $method);
+        $reflection->setAccessible(true);
+
+        return $reflection->invoke($this, ...$arguments);
+    }
+}
+
+class FleetOpsPurchaseRateControllerProbe extends PurchaseRateController
+{
+    public function callHelper(string $method, mixed ...$arguments): mixed
+    {
+        $reflection = new ReflectionMethod(PurchaseRateController::class, $method);
+        $reflection->setAccessible(true);
+
+        return $reflection->invoke($this, ...$arguments);
+    }
+}
+
 class FleetOpsServiceAreaControllerProbe extends ServiceAreaController
 {
     public function callHelper(string $method, mixed ...$arguments): mixed
     {
         $reflection = new ReflectionMethod(ServiceAreaController::class, $method);
+        $reflection->setAccessible(true);
+
+        return $reflection->invoke($this, ...$arguments);
+    }
+}
+
+class FleetOpsServiceRateControllerProbe extends ServiceRateController
+{
+    public function callHelper(string $method, mixed ...$arguments): mixed
+    {
+        $reflection = new ReflectionMethod(ServiceRateController::class, $method);
         $reflection->setAccessible(true);
 
         return $reflection->invoke($this, ...$arguments);
@@ -421,6 +460,163 @@ test('api service area and zone controllers expose input whitelist and integer r
         ])
         ->and($zone->callHelper('radiusFromRequest', $request))->toBe(750)
         ->and($zone->callHelper('radiusFromRequest', new Request()))->toBe(500);
+});
+
+test('api payload controller normalizes route shape and fill input', function () {
+    $controller = new FleetOpsPayloadControllerProbe();
+    $shape      = $controller->callHelper('payloadRouteShapeFromInput', [
+        'type'      => 'parcel',
+        'provider'  => 'native',
+        'pickup'    => ['uuid' => 'pickup-uuid'],
+        'dropoff'   => null,
+        'entities'  => [['name' => 'Box']],
+        'waypoints' => [['uuid' => 'waypoint-uuid']],
+        'ignored'   => 'nope',
+    ]);
+
+    expect($shape)->toMatchArray([
+        'entities'                  => [['name' => 'Box']],
+        'waypoints'                 => [['uuid' => 'waypoint-uuid']],
+        'pickup'                    => ['uuid' => 'pickup-uuid'],
+        'dropoff'                   => null,
+        'return'                    => null,
+        'has_pickup_field'          => true,
+        'has_dropoff_field'         => true,
+        'has_return_field'          => false,
+        'has_waypoints_field'       => true,
+        'has_route_endpoint_fields' => true,
+    ])->and($controller->callHelper('payloadRouteShapeFromInput', []))->toMatchArray([
+        'entities'                  => [],
+        'waypoints'                 => [],
+        'pickup'                    => null,
+        'dropoff'                   => null,
+        'return'                    => null,
+        'has_pickup_field'          => false,
+        'has_dropoff_field'         => false,
+        'has_return_field'          => false,
+        'has_waypoints_field'       => false,
+        'has_route_endpoint_fields' => false,
+    ])->and($controller->callHelper('payloadFillInputFromInput', [
+        'type'               => 'parcel',
+        'provider'           => 'native',
+        'meta'               => ['fragile' => true],
+        'cod_amount'         => 1250,
+        'cod_currency'       => 'USD',
+        'cod_payment_method' => 'cash',
+        'company_uuid'       => 'spoofed-company',
+        'pickup'             => ['uuid' => 'pickup-uuid'],
+    ]))->toBe([
+        'type'               => 'parcel',
+        'provider'           => 'native',
+        'meta'               => ['fragile' => true],
+        'cod_amount'         => 1250,
+        'cod_currency'       => 'USD',
+        'cod_payment_method' => 'cash',
+    ]);
+});
+
+test('api service rate controller exposes input and meter fee helpers', function () {
+    $controller  = new FleetOpsServiceRateControllerProbe();
+    $request     = new Request([
+        'service_name'             => 'Same Day',
+        'service_type'             => 'delivery',
+        'rate_calculation_method'  => 'fixed_meter',
+        'currency'                 => 'USD',
+        'base_fee'                 => 500,
+        'max_distance_unit'        => 'km',
+        'max_distance'             => 15,
+        'per_meter_unit'           => 'km',
+        'per_meter_flat_rate_fee'  => 120,
+        'meter_fees'               => [
+            ['distance' => 5, 'fee' => 100],
+        ],
+        'algorithm'                     => 'simple',
+        'has_cod_fee'                   => true,
+        'cod_calculation_method'        => 'flat',
+        'cod_flat_fee'                  => 50,
+        'cod_percent'                   => 2.5,
+        'has_peak_hours_fee'            => true,
+        'peak_hours_calculation_method' => 'percent',
+        'peak_hours_flat_fee'           => 25,
+        'peak_hours_percent'            => 15,
+        'peak_hours_start'              => '17:00',
+        'peak_hours_end'                => '19:00',
+        'duration_terms'                => 'same_day',
+        'estimated_days'                => 1,
+        'service_area'                  => 'area-public',
+        'zone'                          => 'zone-public',
+    ]);
+    $serviceRate                          = new ServiceRate();
+    $serviceRate->uuid                    = 'service-rate-uuid';
+    $serviceRate->currency                = 'USD';
+    $serviceRate->rate_calculation_method = 'fixed_meter';
+
+    expect($controller->callHelper('serviceRateInputFromRequest', $request))->toBe([
+        'service_name'             => 'Same Day',
+        'service_type'             => 'delivery',
+        'rate_calculation_method'  => 'fixed_meter',
+        'currency'                 => 'USD',
+        'base_fee'                 => 500,
+        'max_distance_unit'        => 'km',
+        'max_distance'             => 15,
+        'per_meter_unit'           => 'km',
+        'per_meter_flat_rate_fee'  => 120,
+        'meter_fees'               => [
+            ['distance' => 5, 'fee' => 100],
+            '*' => [
+                'distance' => [5],
+                'fee'      => [100],
+            ],
+        ],
+        'algorithm'                     => 'simple',
+        'has_cod_fee'                   => true,
+        'cod_calculation_method'        => 'flat',
+        'cod_flat_fee'                  => 50,
+        'cod_percent'                   => 2.5,
+        'has_peak_hours_fee'            => true,
+        'peak_hours_calculation_method' => 'percent',
+        'peak_hours_flat_fee'           => 25,
+        'peak_hours_percent'            => 15,
+        'peak_hours_start'              => '17:00',
+        'peak_hours_end'                => '19:00',
+        'duration_terms'                => 'same_day',
+        'estimated_days'                => 1,
+    ])->and($controller->callHelper('shouldCreateMeterFees', $request, $serviceRate))->toBeTrue()
+        ->and($controller->callHelper('shouldCreateMeterFees', new Request(['meter_fees' => 'bad']), $serviceRate))->toBeFalse()
+        ->and($controller->callHelper('meterFeeInputFromRequest', $request, $serviceRate, ['distance' => 5, 'fee' => 100]))->toBe([
+            'service_rate_uuid' => 'service-rate-uuid',
+            'distance'          => 5,
+            'distance_unit'     => 'km',
+            'fee'               => 100,
+            'currency'          => 'USD',
+        ]);
+});
+
+test('api purchase rate controller derives request order and customer inputs', function () {
+    $controller           = new FleetOpsPurchaseRateControllerProbe();
+    $order                = new Order();
+    $order->payload_uuid  = 'payload-uuid';
+    $order->customer_uuid = 'customer-uuid';
+    $order->customer_type = Contact::class;
+    $order->company_uuid  = null;
+
+    expect($controller->callHelper('purchaseRateInputFromRequest', new Request([
+        'meta'         => ['source' => 'quote'],
+        'create_order' => true,
+    ])))->toBe([
+        'meta' => ['source' => 'quote'],
+    ])->and($controller->callHelper('purchaseRateInputFromOrder', $order, 'fallback-company'))->toBe([
+        'payload_uuid'  => 'payload-uuid',
+        'customer_uuid' => 'customer-uuid',
+        'customer_type' => Contact::class,
+        'company_uuid'  => 'fallback-company',
+    ])->and($controller->callHelper('purchaseRateCustomerInputFromLookup', [
+        'uuid'  => 'lookup-customer-uuid',
+        'table' => 'contacts',
+    ]))->toBe([
+        'customer_uuid' => 'lookup-customer-uuid',
+        'customer_type' => '\\' . Contact::class,
+    ]);
 });
 
 test('internal contact controller detects the customer portal extension package', function () {

@@ -24,7 +24,7 @@ class PurchaseRateController extends Controller
      */
     public function create(CreatePurchaseRateRequest $request)
     {
-        $input       = $request->only(['meta']);
+        $input       = $this->purchaseRateInputFromRequest($request);
         $createOrder = $request->boolean('create_order', false);
         $order       = null;
 
@@ -49,10 +49,7 @@ class PurchaseRateController extends Controller
             $order = Order::where('uuid', $orderUuid)->first();
 
             if ($order instanceof Order) {
-                $input['payload_uuid']   = $order->payload_uuid;
-                $input['customer_uuid']  = $order->customer_uuid;
-                $input['customer_type']  = $order->customer_type;
-                $input['company_uuid']   = $order->company_uuid ?? $input['company_uuid'];
+                $input = array_merge($input, $this->purchaseRateInputFromOrder($order, $input['company_uuid']));
             }
         } elseif ($createOrder) {
             // create order from service quote
@@ -71,8 +68,7 @@ class PurchaseRateController extends Controller
             );
 
             if (is_array($customer)) {
-                $input['customer_uuid'] = Utils::get($customer, 'uuid');
-                $input['customer_type'] = Utils::getModelClassName(Utils::get($customer, 'table'));
+                $input = array_merge($input, $this->purchaseRateCustomerInputFromLookup($customer));
             }
         }
 
@@ -85,6 +81,29 @@ class PurchaseRateController extends Controller
 
         // response the driver resource
         return new PurchaseRateResource($purchaseRate);
+    }
+
+    protected function purchaseRateInputFromRequest(Request $request): array
+    {
+        return $request->only(['meta']);
+    }
+
+    protected function purchaseRateInputFromOrder(Order $order, ?string $fallbackCompanyUuid = null): array
+    {
+        return [
+            'payload_uuid'  => $order->payload_uuid,
+            'customer_uuid' => $order->customer_uuid,
+            'customer_type' => $order->customer_type,
+            'company_uuid'  => $order->company_uuid ?? $fallbackCompanyUuid,
+        ];
+    }
+
+    protected function purchaseRateCustomerInputFromLookup(array $customer): array
+    {
+        return [
+            'customer_uuid' => Utils::get($customer, 'uuid'),
+            'customer_type' => Utils::getModelClassName(Utils::get($customer, 'table')),
+        ];
     }
 
     /**

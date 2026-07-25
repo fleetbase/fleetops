@@ -24,33 +24,7 @@ class ServiceRateController extends Controller
     public function create(CreateServiceRateRequest $request)
     {
         // get request input
-        $input = $request->only([
-            'service_name',
-            'service_type',
-            'rate_calculation_method',
-            'currency',
-            'base_fee',
-            'max_distance_unit',
-            'max_distance',
-            'per_meter_unit',
-            'per_meter_flat_rate_fee',
-            'meter_fees',
-            'meter_fees.*.distance',
-            'meter_fees.*.fee',
-            'algorithm',
-            'has_cod_fee',
-            'cod_calculation_method',
-            'cod_flat_fee',
-            'cod_percent',
-            'has_peak_hours_fee',
-            'peak_hours_calculation_method',
-            'peak_hours_flat_fee',
-            'peak_hours_percent',
-            'peak_hours_start',
-            'peak_hours_end',
-            'duration_terms',
-            'estimated_days',
-        ]);
+        $input = $this->serviceRateInputFromRequest($request);
 
         // make sure company is set
         $input['company_uuid'] = session('company');
@@ -75,15 +49,9 @@ class ServiceRateController extends Controller
         $serviceRate = ServiceRate::create($input);
 
         // create service rate fee's if applicable
-        if ($request->has('meter_fees') && $serviceRate->isRateCalculationMethod(['fixed_meter', 'fixed_rate']) && is_array($request->input('meter_fees'))) {
+        if ($this->shouldCreateMeterFees($request, $serviceRate)) {
             foreach ($request->input('meter_fees') as $meterFee) {
-                ServiceRateFee::create([
-                    'service_rate_uuid' => $serviceRate->uuid,
-                    'distance'          => Utils::get($meterFee, 'distance'),
-                    'distance_unit'     => $request->input('per_meter_unit', 'm'),
-                    'fee'               => Utils::get($meterFee, 'fee'),
-                    'currency'          => $serviceRate->currency,
-                ]);
+                ServiceRateFee::create($this->meterFeeInputFromRequest($request, $serviceRate, $meterFee));
             }
             $serviceRate->makeVisible('meter_fees');
         }
@@ -115,33 +83,7 @@ class ServiceRateController extends Controller
         }
 
         // get request input
-        $input = $request->only([
-            'service_name',
-            'service_type',
-            'rate_calculation_method',
-            'currency',
-            'base_fee',
-            'max_distance_unit',
-            'max_distance',
-            'per_meter_unit',
-            'per_meter_flat_rate_fee',
-            'meter_fees',
-            'meter_fees.*.distance',
-            'meter_fees.*.fee',
-            'algorithm',
-            'has_cod_fee',
-            'cod_calculation_method',
-            'cod_flat_fee',
-            'cod_percent',
-            'has_peak_hours_fee',
-            'peak_hours_calculation_method',
-            'peak_hours_flat_fee',
-            'peak_hours_percent',
-            'peak_hours_start',
-            'peak_hours_end',
-            'duration_terms',
-            'estimated_days',
-        ]);
+        $input = $this->serviceRateInputFromRequest($request);
 
         // service area assignment
         if ($request->has('service_area')) {
@@ -225,5 +167,52 @@ class ServiceRateController extends Controller
 
         // response the serviceRate resource
         return new DeletedResource($serviceRate);
+    }
+
+    protected function serviceRateInputFromRequest(Request $request): array
+    {
+        return $request->only([
+            'service_name',
+            'service_type',
+            'rate_calculation_method',
+            'currency',
+            'base_fee',
+            'max_distance_unit',
+            'max_distance',
+            'per_meter_unit',
+            'per_meter_flat_rate_fee',
+            'meter_fees',
+            'meter_fees.*.distance',
+            'meter_fees.*.fee',
+            'algorithm',
+            'has_cod_fee',
+            'cod_calculation_method',
+            'cod_flat_fee',
+            'cod_percent',
+            'has_peak_hours_fee',
+            'peak_hours_calculation_method',
+            'peak_hours_flat_fee',
+            'peak_hours_percent',
+            'peak_hours_start',
+            'peak_hours_end',
+            'duration_terms',
+            'estimated_days',
+        ]);
+    }
+
+    protected function shouldCreateMeterFees(Request $request, ServiceRate $serviceRate): bool
+    {
+        return $request->has('meter_fees') && $serviceRate->isRateCalculationMethod(['fixed_meter', 'fixed_rate']) && is_array($request->input('meter_fees'));
+    }
+
+    protected function meterFeeInputFromRequest(Request $request, ServiceRate $serviceRate, array $meterFee): array
+    {
+        return [
+            'service_rate_uuid' => $serviceRate->uuid,
+            'distance'          => Utils::get($meterFee, 'distance'),
+            'distance_unit'     => $request->input('per_meter_unit', 'm'),
+            'fee'               => Utils::get($meterFee, 'fee'),
+            'currency'          => $serviceRate->currency,
+        ];
     }
 }
