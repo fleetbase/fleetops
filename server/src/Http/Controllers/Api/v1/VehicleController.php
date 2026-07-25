@@ -32,23 +32,13 @@ class VehicleController extends Controller
     public function create(CreateVehicleRequest $request)
     {
         // get request input
-        $input = $request->only([
-            'status', 'make', 'model', 'year', 'trim', 'type', 'plate_number', 'vin',
-            'meta', 'online', 'location', 'altitude', 'heading', 'speed',
-            // Capacity
-            'payload_capacity', 'payload_capacity_volume',
-            'payload_capacity_pallets', 'payload_capacity_parcels',
-            // Orchestrator constraints
-            'skills', 'max_tasks', 'time_window_start', 'time_window_end', 'return_to_depot',
-        ]);
+        $input = $this->vehicleInputFromRequest($request);
 
         // make sure company is set
         $input['company_uuid'] = session('company');
 
         // set default online
-        if (!isset($input['online'])) {
-            $input['online'] = 0;
-        }
+        $input = $this->withDefaultOnline($input);
 
         // vendor assignment
         if ($request->has('vendor')) {
@@ -59,9 +49,7 @@ class VehicleController extends Controller
         }
 
         // latitude / longitude
-        if ($request->has(['latitude', 'longitude'])) {
-            $input['location'] = Utils::getPointFromCoordinates($request->only(['latitude', 'longitude']));
-        }
+        $input = $this->withCoordinateLocation($input, $request);
 
         // create the vehicle (fires 'created' event for billing resource tracking)
         $vehicle = Vehicle::create($input);
@@ -110,15 +98,7 @@ class VehicleController extends Controller
         }
 
         // get request input
-        $input = $request->only([
-            'status', 'make', 'model', 'year', 'trim', 'type', 'plate_number', 'vin',
-            'meta', 'location', 'online', 'altitude', 'heading', 'speed',
-            // Capacity
-            'payload_capacity', 'payload_capacity_volume',
-            'payload_capacity_pallets', 'payload_capacity_parcels',
-            // Orchestrator constraints
-            'skills', 'max_tasks', 'time_window_start', 'time_window_end', 'return_to_depot',
-        ]);
+        $input = $this->vehicleInputFromRequest($request);
 
         // vendor assignment
         if ($request->has('vendor')) {
@@ -129,14 +109,10 @@ class VehicleController extends Controller
         }
 
         // set default online
-        if (!isset($input['online'])) {
-            $input['online'] = 0;
-        }
+        $input = $this->withDefaultOnline($input);
 
         // latitude / longitude
-        if ($request->has(['latitude', 'longitude'])) {
-            $input['location'] = Utils::getPointFromCoordinates($request->only(['latitude', 'longitude']));
-        }
+        $input = $this->withCoordinateLocation($input, $request);
 
         // update the vehicle w/ user input
         $vehicle->fill($input);
@@ -269,14 +245,7 @@ class VehicleController extends Controller
             return new VehicleResource($vehicle);
         }
 
-        $positionData = [
-            'location'  => new Point($latitude, $longitude),
-            'latitude'  => $latitude,
-            'longitude' => $longitude,
-            'altitude'  => $altitude,
-            'heading'   => $heading,
-            'speed'     => $speed,
-        ];
+        $positionData = $this->positionDataFromTrackingInput($latitude, $longitude, $altitude, $heading, $speed);
 
         // Get vehicle driver
         $vehicle->loadMissing('driver');
@@ -382,5 +351,46 @@ class VehicleController extends Controller
                 }
             }
         }
+    }
+
+    protected function vehicleInputFromRequest(Request $request): array
+    {
+        return $request->only([
+            'status', 'make', 'model', 'year', 'trim', 'type', 'plate_number', 'vin',
+            'meta', 'online', 'location', 'altitude', 'heading', 'speed',
+            'payload_capacity', 'payload_capacity_volume',
+            'payload_capacity_pallets', 'payload_capacity_parcels',
+            'skills', 'max_tasks', 'time_window_start', 'time_window_end', 'return_to_depot',
+        ]);
+    }
+
+    protected function withDefaultOnline(array $input): array
+    {
+        if (!isset($input['online'])) {
+            $input['online'] = 0;
+        }
+
+        return $input;
+    }
+
+    protected function withCoordinateLocation(array $input, Request $request): array
+    {
+        if ($request->has(['latitude', 'longitude'])) {
+            $input['location'] = Utils::getPointFromCoordinates($request->only(['latitude', 'longitude']));
+        }
+
+        return $input;
+    }
+
+    protected function positionDataFromTrackingInput(float $latitude, float $longitude, mixed $altitude = null, mixed $heading = null, mixed $speed = null): array
+    {
+        return [
+            'location'  => new Point($latitude, $longitude),
+            'latitude'  => $latitude,
+            'longitude' => $longitude,
+            'altitude'  => $altitude,
+            'heading'   => $heading,
+            'speed'     => $speed,
+        ];
     }
 }

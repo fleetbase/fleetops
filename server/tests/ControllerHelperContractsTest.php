@@ -6,9 +6,11 @@ use Fleetbase\FleetOps\Http\Controllers\Api\v1\DriverController;
 use Fleetbase\FleetOps\Http\Controllers\Api\v1\EntityController;
 use Fleetbase\FleetOps\Http\Controllers\Api\v1\OrderController as ApiOrderController;
 use Fleetbase\FleetOps\Http\Controllers\Api\v1\PayloadController;
+use Fleetbase\FleetOps\Http\Controllers\Api\v1\PlaceController;
 use Fleetbase\FleetOps\Http\Controllers\Api\v1\PurchaseRateController;
 use Fleetbase\FleetOps\Http\Controllers\Api\v1\ServiceAreaController;
 use Fleetbase\FleetOps\Http\Controllers\Api\v1\ServiceRateController;
+use Fleetbase\FleetOps\Http\Controllers\Api\v1\VehicleController as ApiVehicleController;
 use Fleetbase\FleetOps\Http\Controllers\Api\v1\ZoneController;
 use Fleetbase\FleetOps\Http\Controllers\Internal\v1\ContactController as InternalContactController;
 use Fleetbase\FleetOps\Http\Controllers\Internal\v1\DriverController as InternalDriverController;
@@ -96,11 +98,33 @@ class FleetOpsPayloadControllerProbe extends PayloadController
     }
 }
 
+class FleetOpsPlaceControllerProbe extends PlaceController
+{
+    public function callHelper(string $method, mixed ...$arguments): mixed
+    {
+        $reflection = new ReflectionMethod(PlaceController::class, $method);
+        $reflection->setAccessible(true);
+
+        return $reflection->invoke($this, ...$arguments);
+    }
+}
+
 class FleetOpsPurchaseRateControllerProbe extends PurchaseRateController
 {
     public function callHelper(string $method, mixed ...$arguments): mixed
     {
         $reflection = new ReflectionMethod(PurchaseRateController::class, $method);
+        $reflection->setAccessible(true);
+
+        return $reflection->invoke($this, ...$arguments);
+    }
+}
+
+class FleetOpsApiVehicleControllerProbe extends ApiVehicleController
+{
+    public function callHelper(string $method, mixed ...$arguments): mixed
+    {
+        $reflection = new ReflectionMethod(ApiVehicleController::class, $method);
         $reflection->setAccessible(true);
 
         return $reflection->invoke($this, ...$arguments);
@@ -513,6 +537,153 @@ test('api payload controller normalizes route shape and fill input', function ()
         'cod_currency'       => 'USD',
         'cod_payment_method' => 'cash',
     ]);
+});
+
+test('api place controller exposes address input and search option helpers', function () {
+    $controller = new FleetOpsPlaceControllerProbe();
+    $request    = new Request([
+        'name'                 => 'Warehouse',
+        'street1'              => '1 Depot Road',
+        'street2'              => 'Unit 2',
+        'city'                 => 'Singapore',
+        'location'             => ['latitude' => 1.30, 'longitude' => 103.80],
+        'province'             => 'SG',
+        'postal_code'          => '100001',
+        'neighborhood'         => 'Central',
+        'district'             => 'District 1',
+        'building'             => 'Depot',
+        'security_access_code' => '1234',
+        'country'              => 'SG',
+        'phone'                => '+15551234567',
+        'type'                 => 'warehouse',
+        'meta'                 => ['dock' => true],
+        'owner'                => 'customer-public',
+        'vendor'               => 'vendor-public',
+    ]);
+
+    $coordinateRequest = new Request([
+        'latitude'  => 1.2816,
+        'longitude' => 103.851,
+        'location'  => ['latitude' => 0.1, 'longitude' => 0.2],
+    ]);
+    $pointInput        = $controller->callHelper('withLocationFromRequest', [], $coordinateRequest)['location'];
+    $reversePoint      = $controller->callHelper('pointFromCoordinateRequest', $coordinateRequest);
+
+    expect($controller->callHelper('placeInputFromRequest', $request))->toBe([
+        'name'                 => 'Warehouse',
+        'street1'              => '1 Depot Road',
+        'street2'              => 'Unit 2',
+        'city'                 => 'Singapore',
+        'location'             => ['latitude' => 1.30, 'longitude' => 103.80],
+        'province'             => 'SG',
+        'postal_code'          => '100001',
+        'neighborhood'         => 'Central',
+        'district'             => 'District 1',
+        'building'             => 'Depot',
+        'security_access_code' => '1234',
+        'country'              => 'SG',
+        'phone'                => '+15551234567',
+        'type'                 => 'warehouse',
+        'meta'                 => ['dock' => true],
+    ])->and($controller->callHelper('isNotAddressObject', new Request(['address' => '1 Depot Road'])))->toBeTrue()
+        ->and($controller->callHelper('isNotAddressObject', $request))->toBeFalse()
+        ->and($pointInput)->toBeInstanceOf(Point::class)
+        ->and($pointInput->getLat())->toBe(1.2816)
+        ->and($pointInput->getLng())->toBe(103.851)
+        ->and($reversePoint)->toBeInstanceOf(Point::class)
+        ->and($reversePoint->getLat())->toBe(1.2816)
+        ->and($reversePoint->getLng())->toBe(103.851)
+        ->and($controller->callHelper('pointFromCoordinateRequest', new Request()))->toBeNull()
+        ->and($controller->callHelper('placeSearchOptionsFromRequest', new Request([
+            'limit'     => 25,
+            'geo'       => true,
+            'latitude'  => 1.2816,
+            'longitude' => 103.851,
+        ])))->toBe([
+            'limit'          => 25,
+            'geo'            => true,
+            'latitude'       => 1.2816,
+            'longitude'      => 103.851,
+            'no_query_order' => 'name_desc',
+        ]);
+});
+
+test('api vehicle controller exposes input defaults and tracking payload helpers', function () {
+    $controller = new FleetOpsApiVehicleControllerProbe();
+    $request    = new Request([
+        'status'                   => 'active',
+        'make'                     => 'Toyota',
+        'model'                    => 'HiAce',
+        'year'                     => 2025,
+        'trim'                     => 'DX',
+        'type'                     => 'van',
+        'plate_number'             => 'SG-1234',
+        'vin'                      => 'VIN123',
+        'meta'                     => ['temperature' => 'ambient'],
+        'online'                   => false,
+        'location'                 => ['latitude' => 1.30, 'longitude' => 103.80],
+        'altitude'                 => 10,
+        'heading'                  => 90,
+        'speed'                    => 45,
+        'payload_capacity'         => 1200,
+        'payload_capacity_volume'  => 8,
+        'payload_capacity_pallets' => 2,
+        'payload_capacity_parcels' => 80,
+        'skills'                   => ['refrigerated'],
+        'max_tasks'                => 5,
+        'time_window_start'        => '08:00',
+        'time_window_end'          => '17:00',
+        'return_to_depot'          => true,
+        'vendor'                   => 'vendor-public',
+        'driver'                   => 'driver-public',
+    ]);
+    $locationInput = $controller->callHelper('withCoordinateLocation', [], new Request([
+        'latitude'  => 1.2816,
+        'longitude' => 103.851,
+    ]));
+    $tracking      = $controller->callHelper('positionDataFromTrackingInput', 1.2816, 103.851, 12, 180, 55);
+
+    expect($controller->callHelper('vehicleInputFromRequest', $request))->toBe([
+        'status'                   => 'active',
+        'make'                     => 'Toyota',
+        'model'                    => 'HiAce',
+        'year'                     => 2025,
+        'trim'                     => 'DX',
+        'type'                     => 'van',
+        'plate_number'             => 'SG-1234',
+        'vin'                      => 'VIN123',
+        'meta'                     => ['temperature' => 'ambient'],
+        'online'                   => false,
+        'location'                 => ['latitude' => 1.30, 'longitude' => 103.80],
+        'altitude'                 => 10,
+        'heading'                  => 90,
+        'speed'                    => 45,
+        'payload_capacity'         => 1200,
+        'payload_capacity_volume'  => 8,
+        'payload_capacity_pallets' => 2,
+        'payload_capacity_parcels' => 80,
+        'skills'                   => ['refrigerated'],
+        'max_tasks'                => 5,
+        'time_window_start'        => '08:00',
+        'time_window_end'          => '17:00',
+        'return_to_depot'          => true,
+    ])->and($controller->callHelper('withDefaultOnline', ['make' => 'Toyota']))->toBe([
+        'make'   => 'Toyota',
+        'online' => 0,
+    ])->and($controller->callHelper('withDefaultOnline', ['online' => false]))->toBe(['online' => false])
+        ->and($locationInput['location'])->toBeInstanceOf(Point::class)
+        ->and($locationInput['location']->getLat())->toBe(1.2816)
+        ->and($locationInput['location']->getLng())->toBe(103.851)
+        ->and($tracking['location'])->toBeInstanceOf(Point::class)
+        ->and($tracking['location']->getLat())->toBe(1.2816)
+        ->and($tracking['location']->getLng())->toBe(103.851)
+        ->and($tracking)->toMatchArray([
+            'latitude'  => 1.2816,
+            'longitude' => 103.851,
+            'altitude'  => 12,
+            'heading'   => 180,
+            'speed'     => 55,
+        ]);
 });
 
 test('api service rate controller exposes input and meter fee helpers', function () {

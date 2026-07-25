@@ -26,26 +26,10 @@ class PlaceController extends Controller
     public function create(CreatePlaceRequest $request)
     {
         // get request input
-        $input = $request->only([
-            'name',
-            'street1',
-            'street2',
-            'city',
-            'location',
-            'province',
-            'postal_code',
-            'neighborhood',
-            'district',
-            'building',
-            'security_access_code',
-            'country',
-            'phone',
-            'type',
-            'meta',
-        ]);
+        $input = $this->placeInputFromRequest($request);
 
         // Check is missing key address attributes
-        $isNotAddressObject = $request->isNotFilled(['name', 'location', 'latititude', 'longitude', 'city', 'province', 'postal_code']);
+        $isNotAddressObject = $this->isNotAddressObject($request);
 
         // if address param is sent create from mixed
         if ($isNotAddressObject && $request->isString('address')) {
@@ -70,13 +54,7 @@ class PlaceController extends Controller
         $requestHasLocation    = $request->filled(['location']);
         $requestMissingStreet  = $request->missing('street1');
         if ($requestMissingStreet && ($requestHasCoordinates || $requestHasLocation)) {
-            if ($requestHasLocation) {
-                $point = Utils::getPointFromMixed($request->input('location'));
-            }
-
-            if ($requestHasCoordinates) {
-                $point = Utils::getPointFromMixed($request->only(['latitude', 'longitude']));
-            }
+            $point = $this->pointFromCoordinateRequest($request);
 
             if ($point instanceof Point) {
                 $place = Place::createFromReverseGeocodingLookup($point);
@@ -88,11 +66,7 @@ class PlaceController extends Controller
         }
 
         // latitude / longitude
-        if ($requestHasCoordinates) {
-            $input['location'] = Utils::getPointFromCoordinates($request->only(['latitude', 'longitude']));
-        } elseif ($requestHasLocation) {
-            $input['location'] = Utils::getPointFromMixed($request->input('location'));
-        }
+        $input = $this->withLocationFromRequest($input, $request);
 
         // make sure company is set
         $input['company_uuid'] = session('company');
@@ -177,28 +151,10 @@ class PlaceController extends Controller
         }
 
         // get request input
-        $input = $request->only([
-            'name',
-            'street1',
-            'street2',
-            'city',
-            'location',
-            'province',
-            'postal_code',
-            'neighborhood',
-            'district',
-            'building',
-            'security_access_code',
-            'country',
-            'phone',
-            'type',
-            'meta',
-        ]);
+        $input = $this->placeInputFromRequest($request);
 
         // latitude / longitude
-        if ($request->has(['latitude', 'longitude'])) {
-            $input['location'] = Utils::getPointFromCoordinates($request->only(['latitude', 'longitude']));
-        }
+        $input = $this->withLocationFromRequest($input, $request);
 
         // owner assignment
         if ($request->has('owner')) {
@@ -278,20 +234,11 @@ class PlaceController extends Controller
     public function search(Request $request)
     {
         $searchQuery = strtolower($request->input('query'));
-        $limit       = $request->input('limit', 10);
-        $geo         = $request->boolean('geo');
-        $latitude    = $request->input('latitude', false);
-        $longitude   = $request->input('longitude', false);
+        $options     = $this->placeSearchOptionsFromRequest($request);
 
         $query = Place::where('company_uuid', session('company'))->whereNull('deleted_at');
 
-        $results = PlaceSearch::search($query, $searchQuery, [
-            'limit'          => $limit,
-            'geo'            => $geo,
-            'latitude'       => $latitude,
-            'longitude'      => $longitude,
-            'no_query_order' => 'name_desc',
-        ]);
+        $results = PlaceSearch::search($query, $searchQuery, $options);
 
         return PlaceResource::collection($results);
     }
@@ -329,5 +276,66 @@ class PlaceController extends Controller
         $place->delete();
 
         return new DeletedResource($place);
+    }
+
+    protected function placeInputFromRequest(Request $request): array
+    {
+        return $request->only([
+            'name',
+            'street1',
+            'street2',
+            'city',
+            'location',
+            'province',
+            'postal_code',
+            'neighborhood',
+            'district',
+            'building',
+            'security_access_code',
+            'country',
+            'phone',
+            'type',
+            'meta',
+        ]);
+    }
+
+    protected function isNotAddressObject(Request $request): bool
+    {
+        return $request->isNotFilled(['name', 'location', 'latititude', 'longitude', 'city', 'province', 'postal_code']);
+    }
+
+    protected function pointFromCoordinateRequest(Request $request): ?Point
+    {
+        if ($request->filled(['latitude', 'longitude'])) {
+            return Utils::getPointFromMixed($request->only(['latitude', 'longitude']));
+        }
+
+        if ($request->filled(['location'])) {
+            return Utils::getPointFromMixed($request->input('location'));
+        }
+
+        return null;
+    }
+
+    protected function withLocationFromRequest(array $input, Request $request): array
+    {
+        if ($request->has(['latitude', 'longitude'])) {
+            $input['location'] = Utils::getPointFromCoordinates($request->only(['latitude', 'longitude']));
+        } elseif ($request->filled(['location'])) {
+            $input['location'] = Utils::getPointFromMixed($request->input('location'));
+        }
+
+        return $input;
+    }
+
+    protected function placeSearchOptionsFromRequest(Request $request): array
+    {
+        return [
+            'limit'          => $request->input('limit', 10),
+            'geo'            => $request->boolean('geo'),
+            'latitude'       => $request->input('latitude', false),
+            'longitude'      => $request->input('longitude', false),
+            'no_query_order' => 'name_desc',
+        ];
     }
 }
