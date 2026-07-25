@@ -16,6 +16,7 @@ use Fleetbase\FleetOps\Http\Filter\SensorFilter;
 use Fleetbase\FleetOps\Http\Filter\TrackingNumberFilter;
 use Fleetbase\FleetOps\Http\Filter\TrackingStatusFilter;
 use Fleetbase\FleetOps\Http\Filter\VehicleFilter;
+use Fleetbase\FleetOps\Http\Filter\VendorFilter;
 use Fleetbase\FleetOps\Models\Driver;
 use Fleetbase\FleetOps\Models\FuelProviderConnection;
 use Fleetbase\FleetOps\Models\FuelReport;
@@ -526,6 +527,40 @@ test('place filter records scalar address date and coordinate filters', function
         ->and($spatialCalls[0][2][0])->toBe('POINT(103.8198 1.3521)')
         ->and($spatialCalls[0][2][1])->toBe(0.1)
         ->and($spatialCalls[1][2][1])->toBe(5 / 111.32);
+});
+
+test('vendor filter records company scalar status and date filters', function () {
+    $query  = new FleetOpsControllerFilterQuery();
+    $filter = fleetopsFilterWithBuilder(VendorFilter::class, $query);
+
+    $filter->queryForInternal();
+    $filter->queryForPublic();
+    $filter->query('repair shop');
+    $filter->internalId('vendor-internal');
+    $filter->publicId('vendor_public');
+    $filter->type('maintenance');
+    $filter->phone('+15551234567');
+    $filter->email('vendor@example.test');
+    $filter->websiteUrl('https://vendor.example.test');
+    $filter->country('US');
+    $filter->status('active,inactive');
+    $filter->address('place-uuid');
+    $filter->createdAt('2026-01-01');
+    $filter->updatedAt(['2026-02-01', '2026-02-28']);
+
+    expect($query->calls)->toContain(['where', ['company_uuid', 'company-uuid']])
+        ->and($query->calls)->toContain(['search', 'repair shop'])
+        ->and($query->calls)->toContain(['searchWhere', 'internal_id', 'vendor-internal'])
+        ->and($query->calls)->toContain(['searchWhere', 'public_id', 'vendor_public'])
+        ->and($query->calls)->toContain(['searchWhere', 'type', 'maintenance'])
+        ->and($query->calls)->toContain(['searchWhere', 'phone', '+15551234567'])
+        ->and($query->calls)->toContain(['searchWhere', 'email', 'vendor@example.test'])
+        ->and($query->calls)->toContain(['searchWhere', 'website_url', 'https://vendor.example.test'])
+        ->and($query->calls)->toContain(['searchWhere', 'country', 'US'])
+        ->and($query->calls)->toContain(['whereIn', 'status', ['active', 'inactive']])
+        ->and($query->calls)->toContain(['searchWhere', 'place_uuid', 'place-uuid'])
+        ->and(collect($query->calls)->where(0, 'whereDate')->values())->toHaveCount(1)
+        ->and(collect($query->calls)->where(0, 'whereBetween')->values())->toHaveCount(1);
 });
 
 test('sensor filter records relation scalar status and date filters', function () {

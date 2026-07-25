@@ -55,6 +55,7 @@ namespace {
     use Fleetbase\FleetOps\Http\Requests\CreateCustomerOrderRequest;
     use Fleetbase\FleetOps\Http\Requests\CreateCustomerRequest;
     use Fleetbase\FleetOps\Http\Requests\CreateDeviceRequest;
+    use Fleetbase\FleetOps\Http\Requests\CreateDriverRequest;
     use Fleetbase\FleetOps\Http\Requests\CreateFuelReportRequest;
     use Fleetbase\FleetOps\Http\Requests\CreateFuelTransactionRequest;
     use Fleetbase\FleetOps\Http\Requests\CreateOrderRequest;
@@ -66,6 +67,7 @@ namespace {
     use Fleetbase\FleetOps\Http\Requests\CreateTrackingStatusRequest;
     use Fleetbase\FleetOps\Http\Requests\CreateVehicleRequest;
     use Fleetbase\FleetOps\Http\Requests\CreateWorkOrderRequest;
+    use Fleetbase\FleetOps\Http\Requests\CreateZoneRequest;
     use Fleetbase\FleetOps\Http\Requests\Internal\CreateDriverRequest as InternalCreateDriverRequest;
     use Fleetbase\FleetOps\Http\Requests\Internal\CreateOrderRequest as InternalCreateOrderRequest;
     use Fleetbase\FleetOps\Http\Requests\UpdateDeviceRequest;
@@ -481,6 +483,85 @@ namespace {
         bindFleetOpsRequestSession(['is_sanctum_token' => true]);
 
         expect($request->authorize())->toBeTrue();
+    });
+
+    test('driver request authorizes api sanctum and navigator sessions with identity rules', function () {
+        bindFleetOpsRequestSession();
+
+        $request = CreateDriverRequest::create('/fleetops-test', 'POST', [
+            'email' => 'driver@example.test',
+        ]);
+
+        expect($request->authorize())->toBeFalse();
+
+        bindFleetOpsRequestSession(['api_credential' => 'credential-uuid']);
+
+        $createRules = $request->rules();
+        $patchRules  = CreateDriverRequest::create('/fleetops-test', 'PATCH')->rules();
+
+        expect($request->authorize())->toBeTrue()
+            ->and(ruleStrings($createRules['name']))->toContain('required')
+            ->and(ruleStrings($patchRules['name']))->not->toContain('required')
+            ->and(ruleStrings($createRules['email']))->toContain('required', 'email', 'unique:users')
+            ->and(ruleStrings($createRules['phone']))->toContain('required', 'unique:users')
+            ->and($createRules['password'])->toBe('nullable|string')
+            ->and($createRules['country'])->toBe('nullable|size:2')
+            ->and($createRules['vehicle'])->toBe('nullable|string|starts_with:vehicle_|exists:vehicles,public_id')
+            ->and($createRules['license_expiry'])->toBe('nullable|date')
+            ->and($createRules['status'])->toBe('nullable|string|in:active,available,inactive')
+            ->and($createRules['vendor'])->toBe('nullable|exists:vendors,public_id')
+            ->and($createRules['job'])->toBe('nullable|exists:orders,public_id')
+            ->and($createRules['location'][1])->toBeInstanceOf(ResolvablePoint::class)
+            ->and($createRules['latitude'])->toBe(['nullable', 'required_with:longitude'])
+            ->and($createRules['longitude'])->toBe(['nullable', 'required_with:latitude'])
+            ->and($request->attributes())->toBe([
+                'email' => 'email address',
+                'phone' => 'phone number',
+            ]);
+
+        bindFleetOpsRequestSession(['is_sanctum_token' => true]);
+
+        expect($request->authorize())->toBeTrue();
+
+        $session = app('session.store');
+        $session->flush();
+        $navigatorRequest = Illuminate\Http\Request::create('/navigator/v1/drivers', 'POST');
+        $navigatorRequest->setLaravelSession($session);
+        app()->instance('request', $navigatorRequest);
+
+        expect(CreateDriverRequest::create('/navigator/v1/drivers', 'POST')->authorize())->toBeTrue();
+    });
+
+    test('zone request authorizes api sessions and balances border coordinate rules', function () {
+        bindFleetOpsRequestSession();
+
+        $request = CreateZoneRequest::create('/fleetops-test', 'POST');
+
+        expect($request->authorize())->toBeFalse();
+
+        bindFleetOpsRequestSession(['api_credential' => 'credential-uuid']);
+
+        $createRules        = $request->rules();
+        $coordinateRules    = CreateZoneRequest::create('/fleetops-test', 'POST', ['latitude' => 1, 'longitude' => 2])->rules();
+        $locationRules      = CreateZoneRequest::create('/fleetops-test', 'POST', ['location' => 'Empire State Building'])->rules();
+        $patchRules         = CreateZoneRequest::create('/fleetops-test', 'PATCH')->rules();
+
+        expect($request->authorize())->toBeTrue()
+            ->and(ruleStrings($createRules['name']))->toContain('required', 'string')
+            ->and(ruleStrings($createRules['service_area']))->toContain('required', 'exists:service_areas,public_id')
+            ->and(ruleStrings($createRules['border']))->toContain('nullable', 'required')
+            ->and(ruleStrings($coordinateRules['border']))->toContain('nullable')
+            ->and(ruleStrings($coordinateRules['border']))->not->toContain('required')
+            ->and(ruleStrings($locationRules['border']))->not->toContain('required')
+            ->and(ruleStrings($patchRules['name']))->not->toContain('required')
+            ->and($createRules['location'][1])->toBeInstanceOf(ResolvablePoint::class)
+            ->and($createRules['latitude'])->toBe(['nullable', 'required_with:longitude'])
+            ->and($createRules['longitude'])->toBe(['nullable', 'required_with:latitude'])
+            ->and($createRules['status'])->toBe(['nullable', 'in:active,inactive'])
+            ->and($createRules['trigger_on_entry'])->toBe(['nullable', 'boolean'])
+            ->and($createRules['trigger_on_exit'])->toBe(['nullable', 'boolean'])
+            ->and($createRules['dwell_threshold_minutes'])->toBe(['nullable', 'integer', 'min:1', 'max:10080'])
+            ->and($createRules['speed_limit_kmh'])->toBe(['nullable', 'integer', 'min:1', 'max:1000']);
     });
 
     test('place sensor and service rate requests expose conditional validation contracts', function () {
