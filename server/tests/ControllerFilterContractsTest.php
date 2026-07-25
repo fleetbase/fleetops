@@ -3,7 +3,10 @@
 use Fleetbase\FleetOps\Http\Controllers\Api\v1\DeviceController as ApiDeviceController;
 use Fleetbase\FleetOps\Http\Controllers\Internal\v1\DeviceController as InternalDeviceController;
 use Fleetbase\FleetOps\Http\Controllers\Internal\v1\SettingController;
+use Fleetbase\FleetOps\Http\Filter\DeviceEventFilter;
 use Fleetbase\FleetOps\Http\Filter\DeviceFilter;
+use Fleetbase\FleetOps\Http\Filter\FleetFilter;
+use Fleetbase\FleetOps\Http\Filter\VehicleFilter;
 use Fleetbase\LaravelMysqlSpatial\Types\Point;
 use Illuminate\Http\Request;
 
@@ -33,6 +36,31 @@ class FleetOpsControllerFilterQuery
         return $this;
     }
 
+    public function whereHas(string $relation, callable $callback): self
+    {
+        $nested = new self();
+        $callback($nested);
+        $this->calls[] = ['whereHas', $relation, $nested->calls];
+
+        return $this;
+    }
+
+    public function orWhereHas(string $relation, callable $callback): self
+    {
+        $nested = new self();
+        $callback($nested);
+        $this->calls[] = ['orWhereHas', $relation, $nested->calls];
+
+        return $this;
+    }
+
+    public function whereDoesntHave(string $relation): self
+    {
+        $this->calls[] = ['whereDoesntHave', $relation];
+
+        return $this;
+    }
+
     public function whereNotNull(string $column): self
     {
         $this->calls[] = ['whereNotNull', $column];
@@ -40,9 +68,23 @@ class FleetOpsControllerFilterQuery
         return $this;
     }
 
+    public function orWhereNotNull(string $column): self
+    {
+        $this->calls[] = ['orWhereNotNull', $column];
+
+        return $this;
+    }
+
     public function search(?string $query): self
     {
         $this->calls[] = ['search', $query];
+
+        return $this;
+    }
+
+    public function searchWhere(string|array $columns, ?string $query): self
+    {
+        $this->calls[] = ['searchWhere', $columns, $query];
 
         return $this;
     }
@@ -220,6 +262,127 @@ test('device filter records scalar list attachment and connection filters', func
         ->and($connectionStatus[1][0][0])->toBe('orWhereBetween')
         ->and($connectionStatus[1][1][0])->toBe('orWhereBetween')
         ->and($connectionStatus[1][2][0])->toBe('orWhere');
+});
+
+test('device event filter records event relation processed and date filters', function () {
+    $query  = new FleetOpsControllerFilterQuery();
+    $filter = fleetopsFilterWithBuilder(DeviceEventFilter::class, $query);
+
+    $filter->queryForInternal();
+    $filter->queryForPublic();
+    $filter->query('ignition');
+    $filter->eventType('harsh');
+    $filter->provider('samsara');
+    $filter->code('ALERT');
+    $filter->severity('warning,critical');
+    $filter->processed(['processed', 'unprocessed', 'ignored']);
+    $filter->telematic('telematic-public');
+    $filter->deviceUuid('device-public');
+    $filter->occurredAt(['2026-01-01', '2026-01-31']);
+    $filter->createdAt('2026-02-01');
+    $filter->updatedAt(['2026-03-01', '2026-03-31']);
+
+    expect($query->calls[0][0])->toBe('whereNested')
+        ->and($query->calls[0][1])->toContain(['where', ['company_uuid', 'company-uuid']])
+        ->and($query->calls)->toContain(['where', ['company_uuid', 'company-uuid']])
+        ->and($query->calls)->toContain(['search', 'ignition'])
+        ->and($query->calls)->toContain(['where', ['event_type', 'like', '%harsh%']])
+        ->and($query->calls)->toContain(['where', ['provider', 'like', '%samsara%']])
+        ->and($query->calls)->toContain(['where', ['code', 'like', '%ALERT%']])
+        ->and($query->calls)->toContain(['whereIn', 'severity', ['warning', 'critical']]);
+
+    $processed = collect($query->calls)->first(fn ($call) => $call[0] === 'whereNested' && collect($call[1])->contains(fn ($nested) => $nested[0] === 'orWhereNotNull'));
+    expect($processed[1])->toContain(['orWhereNotNull', 'processed_at'])
+        ->and($processed[1])->toContain(['orWhereNull', 'processed_at']);
+
+    $telematic = collect($query->calls)->first(fn ($call) => $call[0] === 'whereHas' && $call[1] === 'device');
+    expect($telematic[2][0])->toBe(['whereHas', 'telematic', [
+        ['where', ['uuid', 'telematic-public']],
+        ['orWhere', ['public_id', 'telematic-public']],
+    ]]);
+
+    $device = collect($query->calls)->filter(fn ($call) => $call[0] === 'whereHas' && $call[1] === 'device')->values()[1];
+    expect($device[2])->toBe([
+        ['where', ['uuid', 'device-public']],
+        ['orWhere', ['public_id', 'device-public']],
+    ]);
+
+    expect(collect($query->calls)->where(0, 'whereBetween')->values())->toHaveCount(2)
+        ->and(collect($query->calls)->where(0, 'whereDate')->values())->toHaveCount(1);
+});
+
+test('vehicle filter records identity relationship fleet and telematic filters', function () {
+    $query  = new FleetOpsControllerFilterQuery();
+    $filter = fleetopsFilterWithBuilder(VehicleFilter::class, $query);
+
+    $filter->queryForInternal();
+    $filter->queryForPublic();
+    $filter->query('van');
+    $filter->display_name('sprinter');
+    $filter->vin('vin-123');
+    $filter->publicId('vehicle-public');
+    $filter->plateNumber('ABC-123');
+    $filter->vehicleMake('Mercedes');
+    $filter->vehicleModel('Sprinter');
+    $filter->vehicleYear('2026');
+    $filter->driver('unassigned');
+    $filter->vendor('vendor-uuid');
+    $filter->driverUuid('driver-uuid');
+    $filter->fleet('fleet-uuid');
+    $filter->assignedFleet('false');
+    $filter->telematicUuid('telematic-uuid');
+    $filter->createdAt(['2026-01-01', '2026-01-31']);
+    $filter->updatedAt('2026-02-01');
+
+    expect($query->calls)->toContain(['where', ['company_uuid', 'company-uuid']])
+        ->and($query->calls)->toContain(['search', 'van'])
+        ->and($query->calls)->toContain(['searchWhere', ['year', 'make', 'model', 'plate_number'], 'sprinter'])
+        ->and($query->calls)->toContain(['searchWhere', 'vin', 'vin-123'])
+        ->and($query->calls)->toContain(['searchWhere', 'public_id', 'vehicle-public'])
+        ->and($query->calls)->toContain(['searchWhere', 'plate_number', 'ABC-123'])
+        ->and($query->calls)->toContain(['searchWhere', 'make', 'Mercedes'])
+        ->and($query->calls)->toContain(['searchWhere', 'model', 'Sprinter'])
+        ->and($query->calls)->toContain(['searchWhere', 'year', '2026'])
+        ->and($query->calls)->toContain(['whereDoesntHave', 'driver'])
+        ->and($query->calls)->toContain(['whereDoesntHave', 'fleets']);
+
+    expect(collect($query->calls)->where(0, 'whereHas')->pluck(1)->all())->toContain('vendor', 'driver', 'fleets', 'devices')
+        ->and(collect($query->calls)->where(0, 'whereBetween')->values())->toHaveCount(1)
+        ->and(collect($query->calls)->where(0, 'whereDate')->values())->toHaveCount(1);
+});
+
+test('fleet filter records hierarchy relationship scalar status and date filters', function () {
+    $query  = new FleetOpsControllerFilterQuery();
+    $filter = fleetopsFilterWithBuilder(FleetFilter::class, $query);
+
+    $filter->queryForInternal();
+    $filter->queryForPublic();
+    $filter->query('dispatch');
+    $filter->parentsOnly(true);
+    $filter->parentsOnly(false);
+    $filter->serviceArea('service-area-uuid');
+    $filter->zone('zone-uuid');
+    $filter->parentFleet('parent-fleet-uuid');
+    $filter->vendor('vendor-uuid');
+    $filter->publicId('fleet-public');
+    $filter->task('delivery');
+    $filter->name('North Fleet');
+    $filter->status(['active', 'inactive']);
+    $filter->createdAt('2026-01-01');
+    $filter->updatedAt(['2026-02-01', '2026-02-28']);
+
+    expect($query->calls)->toContain(['where', ['company_uuid', 'company-uuid']])
+        ->and($query->calls)->toContain(['with', ['serviceArea', 'zone']])
+        ->and($query->calls)->toContain(['whereNull', 'parent_fleet_uuid'])
+        ->and($query->calls)->toContain(['searchWhere', 'parent_fleet_uuid', 'parent-fleet-uuid'])
+        ->and($query->calls)->toContain(['searchWhere', 'public_id', 'fleet-public'])
+        ->and($query->calls)->toContain(['searchWhere', 'task', 'delivery'])
+        ->and($query->calls)->toContain(['searchWhere', 'name', 'North Fleet'])
+        ->and($query->calls)->toContain(['whereIn', 'status', ['active', 'inactive']]);
+
+    expect(collect($query->calls)->where(0, 'whereHas')->pluck(1)->all())->toContain('serviceArea', 'zone', 'parent_fleet', 'vendor')
+        ->and(collect($query->calls)->where(0, 'whereDate')->values())->toHaveCount(1)
+        ->and(collect($query->calls)->where(0, 'whereBetween')->values())->toHaveCount(1);
 });
 
 test('api device controller input maps coordinates and clears blank attachables', function () {

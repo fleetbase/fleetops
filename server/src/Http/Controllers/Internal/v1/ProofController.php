@@ -61,10 +61,7 @@ class ProofController extends FleetOpsController
                 'data'         => $request->input('data'),
             ]);
 
-            return response()->json([
-                'status' => 'success',
-                'proof'  => $proof->public_id,
-            ]);
+            return response()->json($this->proofSuccessPayload($proof));
         }
 
         return response()->error('Unable to validate QR code data.');
@@ -108,13 +105,37 @@ class ProofController extends FleetOpsController
         ]);
 
         // set the signature storage path
-        $path = 'uploads/' . session('company') . '/signatures/' . $proof->public_id . '.png';
+        $path = $this->signatureStoragePath($proof);
 
         // upload signature
         Storage::disk('s3')->put($path, base64_decode($signature), 'public');
 
         // create file record for upload
-        $file = File::create([
+        $file = File::create($this->signatureFileAttributes($path, $signature))->setKey($proof);
+
+        // set file to proof
+        $proof->file_uuid = $file->uuid;
+        $proof->save();
+
+        return response()->json($this->proofSuccessPayload($proof));
+    }
+
+    protected function proofSuccessPayload(Proof $proof): array
+    {
+        return [
+            'status' => 'success',
+            'proof'  => $proof->public_id,
+        ];
+    }
+
+    protected function signatureStoragePath(Proof $proof): string
+    {
+        return 'uploads/' . session('company') . '/signatures/' . $proof->public_id . '.png';
+    }
+
+    protected function signatureFileAttributes(string $path, string $signature): array
+    {
+        return [
             'company_uuid'      => session('company'),
             'uploader_uuid'     => session('user'),
             'name'              => basename($path),
@@ -125,15 +146,6 @@ class ProofController extends FleetOpsController
             'bucket'            => config('filesystems.disks.s3.bucket'),
             'type'              => 'signature',
             'size'              => Utils::getBase64ImageSize($signature),
-        ])->setKey($proof);
-
-        // set file to proof
-        $proof->file_uuid = $file->uuid;
-        $proof->save();
-
-        return response()->json([
-            'status' => 'success',
-            'proof'  => $proof->public_id,
-        ]);
+        ];
     }
 }
