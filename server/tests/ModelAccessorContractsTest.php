@@ -37,6 +37,7 @@ use Fleetbase\FleetOps\Models\Vehicle;
 use Fleetbase\FleetOps\Models\VehicleDevice;
 use Fleetbase\FleetOps\Models\Vendor;
 use Fleetbase\FleetOps\Models\Waypoint;
+use Fleetbase\FleetOps\Models\WorkOrder;
 use Fleetbase\FleetOps\Traits\PayloadAccessors;
 use Fleetbase\LaravelMysqlSpatial\Types\Point;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -198,9 +199,11 @@ class FleetOpsManifestScopeQueryFake
 {
     public array $calls = [];
 
-    public function where(string $column, mixed $value): self
+    public function where(string $column, mixed $operator = null, mixed $value = null): self
     {
-        $this->calls[] = ['where', $column, $value];
+        $this->calls[] = func_num_args() === 2
+            ? ['where', $column, $operator]
+            : ['where', $column, $operator, $value];
 
         return $this;
     }
@@ -208,6 +211,13 @@ class FleetOpsManifestScopeQueryFake
     public function whereIn(string $column, array $values): self
     {
         $this->calls[] = ['whereIn', $column, $values];
+
+        return $this;
+    }
+
+    public function whereNotIn(string $column, array $values): self
+    {
+        $this->calls[] = ['whereNotIn', $column, $values];
 
         return $this;
     }
@@ -277,6 +287,41 @@ class FleetOpsLoadedServiceRateFake extends ServiceRate
     public function loadMissing($relations)
     {
         return $this;
+    }
+}
+
+class FleetOpsUpdatingWorkOrderFake extends WorkOrder
+{
+    public array $updates = [];
+
+    public function __construct(array $attributes = [])
+    {
+        parent::__construct();
+
+        if ($attributes) {
+            $this->setRawAttributes($attributes, true);
+        }
+    }
+
+    public function getAttribute($key)
+    {
+        if (in_array($key, ['checklist', 'meta'], true)) {
+            return $this->attributes[$key] ?? null;
+        }
+
+        if (in_array($key, ['opened_at', 'due_at', 'closed_at'], true)) {
+            return isset($this->attributes[$key]) ? Carbon::parse($this->attributes[$key]) : null;
+        }
+
+        return parent::getAttribute($key);
+    }
+
+    public function update(array $attributes = [], array $options = []): bool
+    {
+        $this->updates[] = $attributes;
+        $this->setRawAttributes(array_merge($this->getAttributes(), $attributes), true);
+
+        return true;
     }
 }
 
@@ -660,6 +705,171 @@ test('fleet accessors expose photo fallback and online asset counts', function (
         ->and($fleet->vehicles_online_count)->toBe(3)
         ->and($fleet->getActivitylogOptions()->logAttributes)->toBe(['name', 'task', 'service_area_uuid', 'zone_uuid'])
         ->and($fleet->getSlugOptions()->slugField)->toBe('slug');
+});
+
+test('vehicle accessors import mapping and mutable json helpers are stable', function () {
+    session(['company' => 'company-uuid']);
+
+    $vehicle = new Vehicle([
+        'year'         => 2026,
+        'make'         => 'Ford',
+        'model'        => 'Transit',
+        'trim'         => 'XL',
+        'model_type'   => 'cargo',
+        'details'      => ['engine' => ['hours' => 100]],
+        'specs'        => ['battery' => 'standard'],
+        'vin_data'     => ['plant' => 'A'],
+        'status'       => 'active',
+        'avatar_url'   => 'https://cdn.test/vehicle.png',
+    ]);
+    $vehicle->setRelation('driver', (object) [
+        'name'      => 'Driver One',
+        'public_id' => 'driver_public',
+        'uuid'      => 'driver-uuid',
+    ]);
+    $vehicle->setRelation('vendor', (object) [
+        'name'      => 'Vendor One',
+        'public_id' => 'vendor_public',
+    ]);
+    $vehicle->setRelation('photo', (object) [
+        'url' => 'https://cdn.test/photo.png',
+    ]);
+
+    expect($vehicle->status)->toBe('available')
+        ->and($vehicle->photo_url)->toBe('https://cdn.test/photo.png')
+        ->and($vehicle->display_name)->toBe('2026 Ford Transit XL')
+        ->and($vehicle->driver_name)->toBe('Driver One')
+        ->and($vehicle->driver_id)->toBe('driver_public')
+        ->and($vehicle->driver_uuid)->toBe('driver-uuid')
+        ->and($vehicle->vendor_id)->toBe('vendor_public')
+        ->and($vehicle->vendor_name)->toBe('Vendor One')
+        ->and($vehicle->model_data)->toBe(['type' => 'cargo'])
+        ->and($vehicle->getAvatarUrlAttribute('https://cdn.test/direct.png'))->toBe('https://cdn.test/direct.png')
+        ->and($vehicle->setDetail('engine.hours', 125))->toMatchArray(['engine' => ['hours' => 125]])
+        ->and($vehicle->setDetails(['doors' => 4]))->toMatchArray(['engine' => ['hours' => 125], 'doors' => 4])
+        ->and($vehicle->setSpec('battery', 'extended'))->toMatchArray(['battery' => 'extended'])
+        ->and($vehicle->setSpecs(['range' => '300km']))->toMatchArray(['battery' => 'extended', 'range' => '300km'])
+        ->and($vehicle->setVinData('plant', 'B'))->toMatchArray(['plant' => 'B'])
+        ->and($vehicle->setVinDatas(['sequence' => '1001']))->toMatchArray(['plant' => 'B', 'sequence' => '1001']);
+
+    $imported = Vehicle::createFromImport([
+        'vehicle_make'     => 'Mercedes',
+        'vehicle_model'    => 'Sprinter',
+        'vehicle_year'     => 2025,
+        'vehicle_trim'     => 'Crew',
+        'internal_number'  => 'INT-9',
+        'vehicle_plate'    => 'ABC-123',
+        'vin_number'       => 'VIN-9',
+        'serial'           => 'SER-9',
+        'callsign'         => 'CALL-9',
+        'vehicle_card_id'  => 'CARD-9',
+        'vehicle_type'     => 'van',
+    ]);
+
+    expect($imported->company_uuid)->toBe('company-uuid')
+        ->and($imported->make)->toBe('Mercedes')
+        ->and($imported->model)->toBe('Sprinter')
+        ->and($imported->year)->toBe(2025)
+        ->and($imported->trim)->toBe('Crew')
+        ->and($imported->internal_id)->toBe('INT-9')
+        ->and($imported->plate_number)->toBe('ABC-123')
+        ->and($imported->vin)->toBe('VIN-9')
+        ->and($imported->serial_number)->toBe('SER-9')
+        ->and($imported->call_sign)->toBe('CALL-9')
+        ->and($imported->fuel_card_number)->toBe('CARD-9')
+        ->and($imported->type)->toBe('van')
+        ->and($imported->status)->toBe('available')
+        ->and($imported->online)->toBeFalse();
+});
+
+test('work order accessors scopes checklist helpers and imports are stable', function () {
+    Carbon::setTestNow(Carbon::parse('2026-04-10 09:00:00'));
+    session(['company' => 'company-uuid']);
+
+    $workOrder = new FleetOpsUpdatingWorkOrderFake();
+    $workOrder->setRawAttributes([
+        'status'    => 'open',
+        'priority'  => 'high',
+        'opened_at' => '2026-04-09 09:00:00',
+        'due_at'    => '2026-04-11 09:00:00',
+        'closed_at' => '2026-04-10 15:00:00',
+        'checklist' => [
+            ['label' => 'Inspect tires', 'completed' => true],
+            ['label' => 'Replace filter', 'completed' => false],
+        ],
+        'meta'      => ['estimated_duration_hours' => 3.5],
+    ], true);
+    $workOrder->setRelation('target', (object) ['display_name' => 'Truck 20']);
+    $workOrder->setRelation('assignee', (object) ['name' => 'Vendor Crew']);
+
+    expect($workOrder->target_name)->toBe('Truck 20')
+        ->and($workOrder->assignee_name)->toBe('Vendor Crew')
+        ->and($workOrder->is_overdue)->toBeFalse()
+        ->and($workOrder->days_until_due)->toBe(1)
+        ->and($workOrder->completion_percentage)->toBe(50.0)
+        ->and($workOrder->estimated_duration)->toBe(3.5)
+        ->and($workOrder->getActualDuration())->toBe(30.0)
+        ->and($workOrder->isOnSchedule())->toBeTrue()
+        ->and($workOrder->getPriorityLevel())->toBe(4);
+
+    $closed = new FleetOpsUpdatingWorkOrderFake();
+    $closed->setRawAttributes(['status' => 'closed', 'checklist' => []], true);
+    expect($closed->completion_percentage)->toBe(100.0)
+        ->and($closed->is_overdue)->toBeFalse()
+        ->and($closed->days_until_due)->toBeNull();
+
+    $scopeQuery = new FleetOpsManifestScopeQueryFake();
+    expect($workOrder->scopeByStatus($scopeQuery, 'open'))->toBe($scopeQuery)
+        ->and($workOrder->scopeOpen($scopeQuery))->toBe($scopeQuery)
+        ->and($workOrder->scopeOverdue($scopeQuery))->toBe($scopeQuery)
+        ->and($workOrder->scopeByPriority($scopeQuery, 'high'))->toBe($scopeQuery)
+        ->and($workOrder->scopeAssignedTo($scopeQuery, Vendor::class, 'vendor-uuid'))->toBe($scopeQuery)
+        ->and($scopeQuery->calls[0])->toBe(['where', 'status', 'open'])
+        ->and($scopeQuery->calls[1])->toBe(['whereIn', 'status', ['open', 'in_progress']])
+        ->and($scopeQuery->calls[2][0])->toBe('where')
+        ->and($scopeQuery->calls[2][1])->toBe('due_at')
+        ->and($scopeQuery->calls[2][2])->toBe('<')
+        ->and($scopeQuery->calls[3])->toBe(['whereNotIn', 'status', ['closed', 'canceled']])
+        ->and($scopeQuery->calls[4])->toBe(['where', 'priority', 'high'])
+        ->and($scopeQuery->calls[5])->toBe(['where', 'assignee_type', Vendor::class])
+        ->and($scopeQuery->calls[6])->toBe(['where', 'assignee_uuid', 'vendor-uuid']);
+
+    expect($workOrder->updateChecklistItem(1, ['completed' => true]))->toBeTrue()
+        ->and($workOrder->updates[0]['checklist'][1]['completed'])->toBeTrue()
+        ->and($workOrder->updateChecklistItem(99, ['completed' => true]))->toBeFalse()
+        ->and($workOrder->completeChecklistItem(0, 'user-uuid'))->toBeTrue()
+        ->and($workOrder->updates[1]['checklist'][0]['completed_by'])->toBe('user-uuid')
+        ->and($workOrder->addChecklistItem(['label' => 'Road test']))->toBeTrue()
+        ->and($workOrder->updates[2]['checklist'][2]['completed'])->toBeFalse();
+
+    $imported = FleetOpsUpdatingWorkOrderFake::createFromImport([
+        'title'          => 'Oil service',
+        'work_type'      => 'maintenance',
+        'status'         => 'open',
+        'priority'       => 'critical',
+        'description'    => 'Change oil',
+        'open_date'      => '2026-04-01',
+        'due_date'       => '2026-04-15',
+        'estimated_cost' => 12000,
+        'budget'         => 15000,
+        'actual_cost'    => 0,
+        'currency'       => 'sgd',
+        'cost_center'    => 'OPS',
+        'budget_code'    => 'BUD-1',
+    ]);
+
+    expect($imported->company_uuid)->toBe('company-uuid')
+        ->and($imported->subject)->toBe('Oil service')
+        ->and($imported->category)->toBe('maintenance')
+        ->and($imported->priority)->toBe('critical')
+        ->and($imported->instructions)->toBe('Change oil')
+        ->and($imported->opened_at->toDateString())->toBe('2026-04-01')
+        ->and($imported->due_at->toDateString())->toBe('2026-04-15')
+        ->and($imported->currency)->toBe('SGD')
+        ->and($imported->cost_center)->toBe('OPS')
+        ->and($imported->budget_code)->toBe('BUD-1');
+
+    Carbon::setTestNow();
 });
 
 test('manifest metadata relations scopes and status transitions are stable', function () {
