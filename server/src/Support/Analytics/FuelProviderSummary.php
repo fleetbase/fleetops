@@ -9,11 +9,8 @@ class FuelProviderSummary extends AbstractAnalytics
 {
     public function get(): array
     {
-        $transactions = FuelProviderTransaction::where('company_uuid', $this->company->uuid)
-            ->whereBetween('transaction_at', [$this->start, $this->end])
-            ->get();
-
-        $connections = FuelProviderConnection::where('company_uuid', $this->company->uuid)->get();
+        $transactions = $this->transactions($this->company->uuid);
+        $connections  = $this->connections($this->company->uuid);
 
         $byProvider = $transactions
             ->groupBy('provider')
@@ -38,5 +35,17 @@ class FuelProviderSummary extends AbstractAnalytics
             ],
             'providers' => $byProvider,
         ];
+    }
+
+    protected function transactions(string $companyUuid)
+    {
+        return FuelProviderTransaction::where('company_uuid', $companyUuid)
+            ->whereBetween('transaction_at', [$this->start, $this->end])
+            ->get();
+    }
+
+    protected function connections(string $companyUuid)
+    {
+        return FuelProviderConnection::where('company_uuid', $companyUuid)->get();
     }
 }

@@ -7,6 +7,7 @@ if (!class_exists('Illuminate\Foundation\Auth\User')) {
 use Fleetbase\FleetOps\Exceptions\CustomerUserConflictException;
 use Fleetbase\FleetOps\Models\Contact;
 use Fleetbase\FleetOps\Models\Device;
+use Fleetbase\FleetOps\Models\Fleet;
 use Fleetbase\FleetOps\Models\FuelReport;
 use Fleetbase\FleetOps\Models\Maintenance;
 use Fleetbase\FleetOps\Models\Order;
@@ -19,6 +20,39 @@ use Fleetbase\FleetOps\Models\Waypoint;
 use Fleetbase\LaravelMysqlSpatial\Types\Point;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
+
+class FleetOpsCountingRelationFake
+{
+    public function __construct(private int $total, private int $online)
+    {
+    }
+
+    public function where(string $column, mixed $value): self
+    {
+        expect($column)->toBe('online')
+            ->and($value)->toBe(1);
+
+        return new self($this->online, $this->online);
+    }
+
+    public function count(): int
+    {
+        return $this->total;
+    }
+}
+
+class FleetOpsFleetAccessorFake extends Fleet
+{
+    public function drivers()
+    {
+        return new FleetOpsCountingRelationFake(5, 2);
+    }
+
+    public function vehicles()
+    {
+        return new FleetOpsCountingRelationFake(7, 3);
+    }
+}
 
 class FleetOpsUpdatingMaintenanceFake extends Maintenance
 {
@@ -439,6 +473,19 @@ test('service rate accessors flags fee normalization and quote helpers are stabl
     ]);
 
     expect($rate->normalizeServiceRateFeePayload('bad payload'))->toBeNull();
+});
+
+test('fleet accessors expose photo fallback and online asset counts', function () {
+    $fleet = new FleetOpsFleetAccessorFake();
+    $fleet->setRelation('photo', null);
+
+    expect($fleet->photo_url)->toBe('https://s3.ap-northeast-2.amazonaws.com/fleetbase/public/default-fleet.png')
+        ->and($fleet->drivers_count)->toBe(5)
+        ->and($fleet->drivers_online_count)->toBe(2)
+        ->and($fleet->vehicles_count)->toBe(7)
+        ->and($fleet->vehicles_online_count)->toBe(3)
+        ->and($fleet->getActivitylogOptions()->logAttributes)->toBe(['name', 'task', 'service_area_uuid', 'zone_uuid'])
+        ->and($fleet->getSlugOptions()->slugField)->toBe('slug');
 });
 
 test('order accessors mutators and payload association helpers are stable', function () {

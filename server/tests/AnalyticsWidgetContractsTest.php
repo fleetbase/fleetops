@@ -1,5 +1,6 @@
 <?php
 
+use Fleetbase\FleetOps\Support\Analytics\FuelProviderSummary;
 use Fleetbase\FleetOps\Support\Analytics\GeofenceViolations;
 use Fleetbase\FleetOps\Support\Analytics\IssuesInsights;
 use Fleetbase\FleetOps\Support\Analytics\MaintenanceOverview;
@@ -72,6 +73,33 @@ class FleetOpsGeofenceViolationsAnalyticsProbe extends GeofenceViolations
         $this->calls[] = ['zones', $companyUuid, $start, $end];
 
         return $this->zones;
+    }
+}
+
+class FleetOpsFuelProviderSummaryAnalyticsProbe extends FuelProviderSummary
+{
+    public array $calls = [];
+    public Illuminate\Support\Collection $transactions;
+    public Illuminate\Support\Collection $connections;
+
+    public function __construct()
+    {
+        $this->transactions = collect();
+        $this->connections  = collect();
+    }
+
+    protected function transactions(string $companyUuid)
+    {
+        $this->calls[] = ['transactions', $companyUuid];
+
+        return $this->transactions;
+    }
+
+    protected function connections(string $companyUuid)
+    {
+        $this->calls[] = ['connections', $companyUuid];
+
+        return $this->connections;
     }
 }
 
@@ -279,6 +307,71 @@ test('geofence violations analytics maps dwell outliers and zone totals', functi
             ['period', 'company-geofence', $start, $end],
             ['dwells', 'company-geofence', $start, $end],
             ['zones', 'company-geofence', $start, $end],
+        ]);
+});
+
+test('fuel provider summary analytics aggregates connections transactions and provider totals', function () {
+    $analytics = FleetOpsFuelProviderSummaryAnalyticsProbe::forCompany(fleetOpsAnalyticsCompany('company-fuel', 'AED'));
+
+    $analytics->connections = collect([
+        (object) ['status' => 'connected'],
+        (object) ['status' => 'active'],
+        (object) ['status' => 'disabled'],
+    ]);
+    $analytics->transactions = collect([
+        (object) [
+            'provider'    => 'wex',
+            'amount'      => '1000',
+            'volume'      => '12.5',
+            'sync_status' => 'matched',
+            'currency'    => 'USD',
+        ],
+        (object) [
+            'provider'    => 'wex',
+            'amount'      => '250',
+            'volume'      => '2.75',
+            'sync_status' => 'unmatched',
+            'currency'    => 'USD',
+        ],
+        (object) [
+            'provider'    => 'shell',
+            'amount'      => '300',
+            'volume'      => '4.25',
+            'sync_status' => 'unmatched',
+            'currency'    => 'USD',
+        ],
+    ]);
+
+    $result = $analytics->get();
+
+    expect($result['summary'])->toBe([
+        'connections'        => 3,
+        'active_connections' => 2,
+        'transactions'       => 3,
+        'unmatched'          => 2,
+        'spend'              => 1550,
+        'volume'             => 19.5,
+        'currency'           => 'USD',
+    ])
+        ->and($result['providers']->toArray())->toBe([
+            [
+                'provider'     => 'wex',
+                'transactions' => 2,
+                'spend'        => 1250,
+                'volume'       => 15.25,
+                'unmatched'    => 1,
+            ],
+            [
+                'provider'     => 'shell',
+                'transactions' => 1,
+                'spend'        => 300,
+                'volume'       => 4.25,
+                'unmatched'    => 1,
+            ],
+        ])
+        ->and($analytics->calls)->toBe([
+            ['transactions', 'company-fuel'],
+            ['connections', 'company-fuel'],
         ]);
 });
 
