@@ -1,6 +1,10 @@
 <?php
 
+use Fleetbase\FleetOps\Auth\Directives\CustomerContacts;
+use Fleetbase\FleetOps\Auth\Directives\CustomerListPlaces;
 use Fleetbase\FleetOps\Auth\Directives\CustomerOrders;
+use Fleetbase\FleetOps\Auth\Directives\CustomerPlaces;
+use Fleetbase\FleetOps\Auth\Directives\CustomerUser;
 use Fleetbase\FleetOps\Http\Controllers\Api\v1\DeviceController as ApiDeviceController;
 use Fleetbase\FleetOps\Http\Controllers\Internal\v1\DeviceController as InternalDeviceController;
 use Fleetbase\FleetOps\Http\Controllers\Internal\v1\DeviceEventController;
@@ -10,6 +14,8 @@ use Fleetbase\FleetOps\Http\Filter\DeviceEventFilter;
 use Fleetbase\FleetOps\Http\Filter\DeviceFilter;
 use Fleetbase\FleetOps\Http\Filter\EquipmentFilter;
 use Fleetbase\FleetOps\Http\Filter\FleetFilter;
+use Fleetbase\FleetOps\Http\Filter\FuelProviderConnectionFilter;
+use Fleetbase\FleetOps\Http\Filter\FuelProviderSyncRunFilter;
 use Fleetbase\FleetOps\Http\Filter\FuelProviderTransactionFilter;
 use Fleetbase\FleetOps\Http\Filter\FuelReportFilter;
 use Fleetbase\FleetOps\Http\Filter\IssueFilter;
@@ -22,6 +28,7 @@ use Fleetbase\FleetOps\Http\Filter\TrackingNumberFilter;
 use Fleetbase\FleetOps\Http\Filter\TrackingStatusFilter;
 use Fleetbase\FleetOps\Http\Filter\VehicleFilter;
 use Fleetbase\FleetOps\Http\Filter\VendorFilter;
+use Fleetbase\FleetOps\Http\Filter\WorkOrderFilter;
 use Fleetbase\FleetOps\Http\Filter\ZoneFilter;
 use Fleetbase\FleetOps\Models\Driver;
 use Fleetbase\FleetOps\Models\FuelProviderConnection;
@@ -570,8 +577,95 @@ test('position filter records company query and created date scopes', function (
         ->and(collect($query->calls)->where(0, 'whereDate')->values())->toHaveCount(1);
 });
 
+test('fuel provider and work order filters record company search and status scopes', function () {
+    $connectionQuery  = new FleetOpsControllerFilterQuery();
+    $connectionFilter = fleetopsFilterWithBuilder(FuelProviderConnectionFilter::class, $connectionQuery);
+
+    $connectionFilter->queryForInternal();
+    $connectionFilter->query('fuelx');
+    $connectionFilter->provider('petro-app');
+    $connectionFilter->status('active');
+    $connectionFilter->environment('sandbox');
+
+    expect($connectionQuery->calls)->toBe([
+        ['where', ['company_uuid', 'company-uuid']],
+        ['search', 'fuelx'],
+        ['where', ['provider', 'petro-app']],
+        ['where', ['status', 'active']],
+        ['where', ['environment', 'sandbox']],
+    ]);
+
+    $syncQuery  = new FleetOpsControllerFilterQuery();
+    $syncFilter = fleetopsFilterWithBuilder(FuelProviderSyncRunFilter::class, $syncQuery);
+
+    $syncFilter->queryForInternal();
+    $syncFilter->provider('petro-app');
+    $syncFilter->status('completed');
+    $syncFilter->connection('connection-uuid');
+
+    expect($syncQuery->calls)->toBe([
+        ['where', ['company_uuid', 'company-uuid']],
+        ['where', ['provider', 'petro-app']],
+        ['where', ['status', 'completed']],
+        ['where', ['fuel_provider_connection_uuid', 'connection-uuid']],
+    ]);
+
+    $workOrderQuery  = new FleetOpsControllerFilterQuery();
+    $workOrderFilter = fleetopsFilterWithBuilder(WorkOrderFilter::class, $workOrderQuery);
+
+    $workOrderFilter->queryForInternal();
+    $workOrderFilter->queryForPublic();
+    $workOrderFilter->query('repair');
+
+    expect($workOrderQuery->calls)->toBe([
+        ['where', ['company_uuid', 'company-uuid']],
+        ['where', ['company_uuid', 'company-uuid']],
+        ['search', 'repair'],
+    ]);
+});
+
+test('customer directives scope user contacts and places by session or request identity', function () {
+    app('session.store')->forget('user');
+    session(['user' => null]);
+    app()->instance('request', Request::create('/customer-directives', 'GET', ['customer' => 'request-user-uuid']));
+
+    $contacts = new FleetOpsCustomerOrdersBuilderRecorder();
+    expect((new CustomerContacts())->apply($contacts))->toBe($contacts)
+        ->and($contacts->calls)->toBe([
+            ['where', [['type' => 'customer', 'user_uuid' => 'request-user-uuid']]],
+        ]);
+
+    $user = new FleetOpsCustomerOrdersBuilderRecorder();
+    expect((new CustomerUser())->apply($user))->toBe($user)
+        ->and($user->calls)->toBe([
+            ['where', [['uuid' => 'request-user-uuid']]],
+        ]);
+
+    foreach ([CustomerPlaces::class, CustomerListPlaces::class] as $directive) {
+        $builder = new FleetOpsCustomerOrdersBuilderRecorder();
+        expect((new $directive())->apply($builder))->toBe($builder)
+            ->and($builder->calls)->toBe([
+                ['whereNested', [
+                    ['where', ['owner_uuid', 'request-user-uuid']],
+                ]],
+            ]);
+    }
+
+    session(['user' => 'session-user-uuid']);
+
+    $sessionBuilder = new FleetOpsCustomerOrdersBuilderRecorder();
+    (new CustomerUser())->apply($sessionBuilder);
+
+    expect($sessionBuilder->calls)->toBe([
+        ['where', [['uuid' => 'session-user-uuid']]],
+    ]);
+
+    session(['user' => null]);
+});
+
 test('customer orders directive scopes direct customer and authenticatable user matches', function () {
     app('session.store')->forget('user');
+    session(['user' => null]);
 
     app()->instance('request', Request::create('/customer-orders', 'GET', ['customer' => 'customer-user-uuid']));
 
@@ -594,6 +688,8 @@ test('customer orders directive scopes direct customer and authenticatable user 
     (new CustomerOrders())->apply($sessionBuilder);
 
     expect($sessionBuilder->calls[0][1][0])->toBe(['where', ['customer_uuid', 'session-user-uuid']]);
+
+    session(['user' => null]);
 });
 
 test('issue filter records identity relationship priority status and date filters', function () {

@@ -4,11 +4,14 @@ use Carbon\Carbon;
 use Fleetbase\FleetOps\Listeners\NotifyDriverOnShiftChange;
 use Fleetbase\FleetOps\Models\Contact;
 use Fleetbase\FleetOps\Models\Driver;
+use Fleetbase\FleetOps\Models\Fleet;
 use Fleetbase\FleetOps\Models\Maintenance;
 use Fleetbase\FleetOps\Models\MaintenanceSchedule;
 use Fleetbase\FleetOps\Models\Order;
+use Fleetbase\FleetOps\Models\Payload;
 use Fleetbase\FleetOps\Models\Place;
 use Fleetbase\FleetOps\Models\PurchaseRate;
+use Fleetbase\FleetOps\Models\ServiceArea;
 use Fleetbase\FleetOps\Models\ServiceRate;
 use Fleetbase\FleetOps\Models\TrackingNumber;
 use Fleetbase\FleetOps\Models\TrackingStatus;
@@ -16,17 +19,26 @@ use Fleetbase\FleetOps\Models\Vehicle;
 use Fleetbase\FleetOps\Models\WorkOrder;
 use Fleetbase\FleetOps\Models\Zone;
 use Fleetbase\FleetOps\Notifications\DriverShiftChanged;
+use Fleetbase\FleetOps\Observers\CategoryObserver;
+use Fleetbase\FleetOps\Observers\CompanyObserver;
+use Fleetbase\FleetOps\Observers\CompanyUserObserver;
 use Fleetbase\FleetOps\Observers\ContactObserver;
 use Fleetbase\FleetOps\Observers\DriverObserver;
+use Fleetbase\FleetOps\Observers\FleetObserver;
 use Fleetbase\FleetOps\Observers\OrderObserver;
+use Fleetbase\FleetOps\Observers\PayloadObserver;
 use Fleetbase\FleetOps\Observers\PlaceObserver;
 use Fleetbase\FleetOps\Observers\PurchaseRateObserver;
+use Fleetbase\FleetOps\Observers\ServiceAreaObserver;
 use Fleetbase\FleetOps\Observers\ServiceRateObserver;
 use Fleetbase\FleetOps\Observers\TrackingNumberObserver;
+use Fleetbase\FleetOps\Observers\UserObserver;
 use Fleetbase\FleetOps\Observers\VehicleObserver;
 use Fleetbase\FleetOps\Observers\WorkOrderObserver;
 use Fleetbase\FleetOps\Observers\ZoneObserver;
+use Fleetbase\Models\Category;
 use Fleetbase\Models\Company;
+use Fleetbase\Models\CompanyUser;
 use Fleetbase\Models\Schedule;
 use Fleetbase\Models\ScheduleItem;
 use Fleetbase\Models\Transaction;
@@ -457,6 +469,142 @@ class FleetOpsNotifyDriverOnShiftChangeProbe extends NotifyDriverOnShiftChange
     }
 }
 
+class FleetOpsFleetObserverProbe extends FleetObserver
+{
+    public array $cleared = [];
+
+    protected function clearParentFleet(string $fleetUuid): void
+    {
+        $this->cleared[] = $fleetUuid;
+    }
+}
+
+class FleetOpsServiceAreaObserverProbe extends ServiceAreaObserver
+{
+    public array $countries = [];
+    public array $deleted   = [];
+
+    protected function createPolygonFromCountry(string $country): mixed
+    {
+        $this->countries[] = $country;
+
+        return 'polygon-' . $country;
+    }
+
+    protected function deleteModels(mixed $models): void
+    {
+        $this->deleted[] = $models;
+    }
+}
+
+class FleetOpsServiceAreaObserverServiceAreaFake extends ServiceArea
+{
+    public function getAttribute($key)
+    {
+        if ($key === 'border') {
+            return $this->attributes['border'] ?? null;
+        }
+
+        return parent::getAttribute($key);
+    }
+
+    public function setAttribute($key, $value)
+    {
+        if ($key === 'border') {
+            $this->attributes['border'] = $value;
+
+            return $this;
+        }
+
+        return parent::setAttribute($key, $value);
+    }
+
+    public function load($relations)
+    {
+        return $this;
+    }
+}
+
+class FleetOpsCompanyUserObserverProbe extends CompanyUserObserver
+{
+    public array $deleted  = [];
+    public ?Driver $driver = null;
+
+    protected function deleteDrivers(string $userUuid): void
+    {
+        $this->deleted[] = $userUuid;
+    }
+
+    protected function findDriver(string $userUuid): ?Driver
+    {
+        return $this->driver;
+    }
+}
+
+class FleetOpsCompanyUserFake extends CompanyUser
+{
+    public bool $statusChanged = true;
+
+    public function wasChanged($attributes = null): bool
+    {
+        return $attributes === 'status' ? $this->statusChanged : false;
+    }
+}
+
+class FleetOpsObserverDriverFake extends Driver
+{
+    public array $updates = [];
+
+    public function update(array $attributes = [], array $options = []): bool
+    {
+        $this->updates[] = $attributes;
+
+        return true;
+    }
+}
+
+class FleetOpsCategoryObserverProbe extends CategoryObserver
+{
+    public array $deleted = [];
+
+    protected function deleteCustomFields(string $categoryUuid): void
+    {
+        $this->deleted[] = $categoryUuid;
+    }
+}
+
+class FleetOpsCompanyObserverProbe extends CompanyObserver
+{
+    public array $configs = [];
+
+    protected function createTransportConfig(Company $company): void
+    {
+        $this->configs[] = $company->uuid;
+    }
+}
+
+class FleetOpsUserObserverProbe extends UserObserver
+{
+    public array $deleted = [];
+
+    protected function deleteDrivers(string $userUuid): void
+    {
+        $this->deleted[] = $userUuid;
+    }
+}
+
+class FleetOpsPayloadObserverPayloadFake extends Payload
+{
+    public int $updates = 0;
+
+    public function updateOrderDistanceAndTime(): ?Order
+    {
+        $this->updates++;
+
+        return null;
+    }
+}
+
 class FleetOpsPurchaseRateObserverProbe extends PurchaseRateObserver
 {
     public bool $loaded           = false;
@@ -747,6 +895,85 @@ test('place observer uppercases address fields and invalidates live places cache
         ->and($place->country)->toBe('SG')
         ->and($place->postal_code)->toBe(12345)
         ->and(Cache::get('live:company-uuid:places:version'))->toBe(3);
+});
+
+test('fleet service area company category user and payload observers delegate lifecycle side effects', function () {
+    Cache::swap(new Repository(new ArrayStore()));
+    session(['company' => 'company-uuid']);
+
+    $fleet = new Fleet();
+    $fleet->setRawAttributes(['uuid' => 'fleet-uuid'], true);
+
+    $fleetObserver = new FleetOpsFleetObserverProbe();
+    $fleetObserver->created($fleet);
+    $fleetObserver->updated($fleet);
+    $fleetObserver->deleted($fleet);
+
+    expect($fleetObserver->cleared)->toBe(['fleet-uuid'])
+        ->and(Cache::get('live:company-uuid:operations-monitor:version'))->toBe(3);
+
+    $serviceArea          = new FleetOpsServiceAreaObserverServiceAreaFake();
+    $serviceArea->country = 'SG';
+    $serviceArea->setRelation('zones', collect(['zone-a', 'zone-b']));
+
+    $serviceAreaObserver = new FleetOpsServiceAreaObserverProbe();
+    $serviceAreaObserver->creating($serviceArea);
+    $serviceAreaObserver->deleted($serviceArea);
+
+    expect($serviceArea->border)->toBe('polygon-SG')
+        ->and($serviceAreaObserver->countries)->toBe(['SG'])
+        ->and($serviceAreaObserver->deleted)->toHaveCount(1);
+
+    $withBorder          = new FleetOpsServiceAreaObserverServiceAreaFake();
+    $withBorder->border  = 'existing-border';
+    $withBorder->country = 'MY';
+    $serviceAreaObserver->creating($withBorder);
+
+    expect($withBorder->border)->toBe('existing-border')
+        ->and($serviceAreaObserver->countries)->toBe(['SG']);
+
+    $companyUser = new FleetOpsCompanyUserFake();
+    $companyUser->setRawAttributes([
+        'user_uuid' => 'user-uuid',
+        'status'    => 'inactive',
+    ], true);
+
+    $driver                      = new FleetOpsObserverDriverFake();
+    $companyUserObserver         = new FleetOpsCompanyUserObserverProbe();
+    $companyUserObserver->driver = $driver;
+    $companyUserObserver->deleted($companyUser);
+    $companyUserObserver->updated($companyUser);
+
+    expect($companyUserObserver->deleted)->toBe(['user-uuid'])
+        ->and($driver->updates)->toBe([['status' => 'inactive']]);
+
+    $companyUser->statusChanged = false;
+    $companyUserObserver->updated($companyUser);
+
+    expect($driver->updates)->toHaveCount(1);
+
+    $category = new Category();
+    $category->setRawAttributes(['uuid' => 'category-uuid'], true);
+    $categoryObserver = new FleetOpsCategoryObserverProbe();
+    $categoryObserver->deleted($category);
+
+    $company = new Company();
+    $company->setRawAttributes(['uuid' => 'company-uuid'], true);
+    $companyObserver = new FleetOpsCompanyObserverProbe();
+    $companyObserver->created($company);
+
+    $user = new User();
+    $user->setRawAttributes(['uuid' => 'user-uuid'], true);
+    $userObserver = new FleetOpsUserObserverProbe();
+    $userObserver->deleted($user);
+
+    $payload = new FleetOpsPayloadObserverPayloadFake();
+    (new PayloadObserver())->created($payload);
+
+    expect($categoryObserver->deleted)->toBe(['category-uuid'])
+        ->and($companyObserver->configs)->toBe(['company-uuid'])
+        ->and($userObserver->deleted)->toBe(['user-uuid'])
+        ->and($payload->updates)->toBe(1);
 });
 
 test('work order observer skips non closing duplicate and missing schedule branches', function () {

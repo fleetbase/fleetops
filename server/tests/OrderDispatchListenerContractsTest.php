@@ -1,20 +1,31 @@
 <?php
 
+use Fleetbase\Events\UserRemovedFromCompany;
 use Fleetbase\FleetOps\Events\OrderCanceled;
 use Fleetbase\FleetOps\Events\OrderCompleted;
 use Fleetbase\FleetOps\Events\OrderDispatched;
+use Fleetbase\FleetOps\Events\OrderDispatchFailed;
 use Fleetbase\FleetOps\Events\OrderDriverAssigned;
+use Fleetbase\FleetOps\Events\OrderReady;
 use Fleetbase\FleetOps\Flow\Activity;
 use Fleetbase\FleetOps\Listeners\HandleDeliveryCompletion;
 use Fleetbase\FleetOps\Listeners\HandleOrderCanceled;
+use Fleetbase\FleetOps\Listeners\HandleOrderCreated;
 use Fleetbase\FleetOps\Listeners\HandleOrderDispatched;
+use Fleetbase\FleetOps\Listeners\HandleOrderDispatchFailed;
 use Fleetbase\FleetOps\Listeners\HandleOrderDriverAssigned;
+use Fleetbase\FleetOps\Listeners\HandleOrderReady;
+use Fleetbase\FleetOps\Listeners\HandleUserRemovedFromCompany;
 use Fleetbase\FleetOps\Models\Driver;
 use Fleetbase\FleetOps\Models\Order;
 use Fleetbase\FleetOps\Models\TrackingStatus;
 use Fleetbase\LaravelMysqlSpatial\Types\Point;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Carbon;
+
+if (!class_exists('Illuminate\Foundation\Auth\User')) {
+    class_alias(Model::class, 'Illuminate\Foundation\Auth\User');
+}
 
 class FleetOpsOrderDispatchedEventFake extends OrderDispatched
 {
@@ -59,6 +70,36 @@ class FleetOpsOrderDriverAssignedEventFake extends OrderDriverAssigned
     }
 }
 
+class FleetOpsOrderReadyEventFake extends OrderReady
+{
+    public function __construct(private ?Order $order)
+    {
+    }
+
+    public function getModelRecord(): ?Model
+    {
+        return $this->order;
+    }
+}
+
+class FleetOpsOrderDispatchFailedEventFake extends OrderDispatchFailed
+{
+    public function __construct(private Order $order, string $reason)
+    {
+        $this->reason = $reason;
+    }
+
+    public function getModelRecord(): ?Model
+    {
+        return $this->order;
+    }
+
+    public function getReason(): string
+    {
+        return $this->reason;
+    }
+}
+
 class FleetOpsOrderDispatchedOrderFake extends Order
 {
     public bool $hasDriverAssigned       = true;
@@ -74,6 +115,7 @@ class FleetOpsOrderDispatchedOrderFake extends Order
     public int $adhocDistance            = 1500;
     public mixed $dispatchActivity       = null;
     public array $relationsSet           = [];
+    public int $distanceRefreshes        = 0;
 
     public function getLastLocation()
     {
@@ -141,6 +183,13 @@ class FleetOpsOrderDispatchedOrderFake extends Order
     public function isIntegratedVendorOrder(): bool
     {
         return false;
+    }
+
+    public function setDistanceAndTime(array $options = []): Order
+    {
+        $this->distanceRefreshes++;
+
+        return $this;
     }
 }
 
@@ -272,6 +321,35 @@ class FleetOpsHandleOrderDriverAssignedProbe extends HandleOrderDriverAssigned
     }
 }
 
+class FleetOpsHandleOrderDispatchFailedProbe extends HandleOrderDispatchFailed
+{
+    public ?Fleetbase\Models\User $user = null;
+    public array $lookups               = [];
+    public array $notifications         = [];
+
+    protected function findUser(?string $uuid): ?Fleetbase\Models\User
+    {
+        $this->lookups[] = $uuid;
+
+        return $this->user;
+    }
+
+    protected function notifyUser(Fleetbase\Models\User $user, $order, OrderDispatchFailed $event): void
+    {
+        $this->notifications[] = [$user->uuid, $order->created_by_uuid, $event->getReason()];
+    }
+}
+
+class FleetOpsHandleUserRemovedFromCompanyProbe extends HandleUserRemovedFromCompany
+{
+    public array $deleted = [];
+
+    protected function deleteDriversForCompanyUser(string $companyUuid, string $userUuid): void
+    {
+        $this->deleted[] = [$companyUuid, $userUuid];
+    }
+}
+
 function fleetOpsDispatchListenerOrder(array $attributes = []): FleetOpsOrderDispatchedOrderFake
 {
     $order = new FleetOpsOrderDispatchedOrderFake();
@@ -358,6 +436,49 @@ test('order driver assigned listener sets relation and skips adhoc or invalid ev
     $listener->handle(new FleetOpsOrderDriverAssignedEventFake(null));
 
     expect($listener->driverNotifications)->toHaveCount(1);
+});
+
+test('dispatch failed ready created and company removal listeners delegate side effects', function () {
+    $order = fleetOpsDispatchListenerOrder([
+        'created_by_uuid' => 'creator-uuid',
+    ]);
+
+    $createdBy = new Fleetbase\Models\User();
+    $createdBy->setRawAttributes(['uuid' => 'creator-uuid'], true);
+
+    $failedListener       = new FleetOpsHandleOrderDispatchFailedProbe();
+    $failedListener->user = $createdBy;
+    $failedEvent          = new FleetOpsOrderDispatchFailedEventFake($order, 'no_driver');
+
+    $failedListener->handle($failedEvent);
+
+    expect($failedListener->lookups)->toBe(['creator-uuid'])
+        ->and($failedListener->notifications)->toBe([
+            ['creator-uuid', 'creator-uuid', 'no_driver'],
+        ]);
+
+    $missingUserListener = new FleetOpsHandleOrderDispatchFailedProbe();
+    $missingUserListener->handle($failedEvent);
+
+    expect($missingUserListener->lookups)->toBe(['creator-uuid'])
+        ->and($missingUserListener->notifications)->toBe([]);
+
+    (new HandleOrderReady())->handle(new FleetOpsOrderReadyEventFake($order));
+    (new HandleOrderCreated())->handle($order);
+
+    expect($order->distanceRefreshes)->toBe(2);
+
+    $company = new Fleetbase\Models\Company();
+    $company->setRawAttributes(['uuid' => 'company-uuid'], true);
+    $user = new Fleetbase\Models\User();
+    $user->setRawAttributes(['uuid' => 'user-uuid'], true);
+
+    $removedListener = new FleetOpsHandleUserRemovedFromCompanyProbe();
+    $removedListener->handle(new UserRemovedFromCompany($user, $company));
+
+    expect($removedListener->deleted)->toBe([
+        ['company-uuid', 'user-uuid'],
+    ]);
 });
 
 test('order dispatched listener emits failure when a non adhoc order has no assigned driver', function () {

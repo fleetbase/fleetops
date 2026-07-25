@@ -21,10 +21,15 @@ class HandleUserRemovedFromCompany implements ShouldQueue
     public function handle(UserRemovedFromCompany $event)
     {
         // If user has driver record assosciated to the company, remove it
+        $this->deleteDriversForCompanyUser($event->company->uuid, $event->user->uuid);
+    }
+
+    protected function deleteDriversForCompanyUser(string $companyUuid, string $userUuid): void
+    {
         Driver::where(
             [
-                'company_uuid' => $event->company->uuid,
-                'user_uuid'    => $event->user->uuid,
+                'company_uuid' => $companyUuid,
+                'user_uuid'    => $userUuid,
             ]
         )->delete();
     }
