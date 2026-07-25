@@ -84,11 +84,7 @@ class MaintenanceController extends FleetOpsController
         $maintenance->refresh();
         $this->recalculateCosts($maintenance);
 
-        return response()->json([
-            'status'     => 'ok',
-            'line_items' => $maintenance->line_items,
-            'total_cost' => $maintenance->total_cost,
-        ]);
+        return response()->json($this->lineItemPayload($maintenance));
     }
 
     /**
@@ -122,11 +118,7 @@ class MaintenanceController extends FleetOpsController
         $maintenance->refresh();
         $this->recalculateCosts($maintenance);
 
-        return response()->json([
-            'status'     => 'ok',
-            'line_items' => $maintenance->line_items,
-            'total_cost' => $maintenance->total_cost,
-        ]);
+        return response()->json($this->lineItemPayload($maintenance));
     }
 
     /**
@@ -146,11 +138,7 @@ class MaintenanceController extends FleetOpsController
         $maintenance->refresh();
         $this->recalculateCosts($maintenance);
 
-        return response()->json([
-            'status'     => 'ok',
-            'line_items' => $maintenance->line_items,
-            'total_cost' => $maintenance->total_cost,
-        ]);
+        return response()->json($this->lineItemPayload($maintenance));
     }
 
     /**
@@ -193,5 +181,14 @@ class MaintenanceController extends FleetOpsController
             'parts_cost' => $partsCost,
             'total_cost' => $totalCost,
         ]);
+    }
+
+    protected function lineItemPayload(Maintenance $maintenance): array
+    {
+        return [
+            'status'     => 'ok',
+            'line_items' => $maintenance->line_items,
+            'total_cost' => $maintenance->total_cost,
+        ];
     }
 }

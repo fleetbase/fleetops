@@ -15,14 +15,19 @@ use Fleetbase\FleetOps\Http\Controllers\Api\v1\VehicleController as ApiVehicleCo
 use Fleetbase\FleetOps\Http\Controllers\Api\v1\ZoneController;
 use Fleetbase\FleetOps\Http\Controllers\Internal\v1\ContactController as InternalContactController;
 use Fleetbase\FleetOps\Http\Controllers\Internal\v1\DriverController as InternalDriverController;
+use Fleetbase\FleetOps\Http\Controllers\Internal\v1\FleetController as InternalFleetController;
+use Fleetbase\FleetOps\Http\Controllers\Internal\v1\MaintenanceController as InternalMaintenanceController;
 use Fleetbase\FleetOps\Http\Controllers\Internal\v1\OrderController as InternalOrderController;
 use Fleetbase\FleetOps\Http\Controllers\Internal\v1\PositionController;
 use Fleetbase\FleetOps\Http\Controllers\Internal\v1\ServiceQuoteController as InternalServiceQuoteController;
+use Fleetbase\FleetOps\Http\Controllers\Internal\v1\VendorController as InternalVendorController;
 use Fleetbase\FleetOps\Models\Contact;
+use Fleetbase\FleetOps\Models\Maintenance;
 use Fleetbase\FleetOps\Models\Order;
 use Fleetbase\FleetOps\Models\Place;
 use Fleetbase\FleetOps\Models\ServiceQuote;
 use Fleetbase\FleetOps\Models\ServiceRate;
+use Fleetbase\FleetOps\Models\VendorPersonnel;
 use Fleetbase\LaravelMysqlSpatial\Types\Point;
 use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
@@ -190,11 +195,44 @@ class FleetOpsInternalContactControllerProbe extends InternalContactController
     }
 }
 
+class FleetOpsInternalFleetControllerProbe extends InternalFleetController
+{
+    public function callHelper(string $method, mixed ...$arguments): mixed
+    {
+        $reflection = new ReflectionMethod(InternalFleetController::class, $method);
+        $reflection->setAccessible(true);
+
+        return $reflection->invoke(null, ...$arguments);
+    }
+}
+
+class FleetOpsInternalMaintenanceControllerProbe extends InternalMaintenanceController
+{
+    public function callHelper(string $method, mixed ...$arguments): mixed
+    {
+        $reflection = new ReflectionMethod(InternalMaintenanceController::class, $method);
+        $reflection->setAccessible(true);
+
+        return $reflection->invoke($this, ...$arguments);
+    }
+}
+
 class FleetOpsInternalServiceQuoteControllerProbe extends InternalServiceQuoteController
 {
     public function callHelper(string $method, mixed ...$arguments): mixed
     {
         $reflection = new ReflectionMethod(InternalServiceQuoteController::class, $method);
+        $reflection->setAccessible(true);
+
+        return $reflection->invoke($this, ...$arguments);
+    }
+}
+
+class FleetOpsInternalVendorControllerProbe extends InternalVendorController
+{
+    public function callHelper(string $method, mixed ...$arguments): mixed
+    {
+        $reflection = new ReflectionMethod(InternalVendorController::class, $method);
         $reflection->setAccessible(true);
 
         return $reflection->invoke($this, ...$arguments);
@@ -824,6 +862,68 @@ test('internal service quote controller exposes preliminary checkout and quote i
             'serviceQuote' => $quote,
             'purchaseRate' => $purchaseRate,
         ]);
+});
+
+test('internal fleet controller exposes assignment and import payload helpers', function () {
+    $controller = new FleetOpsInternalFleetControllerProbe();
+
+    expect($controller->callHelper('assignmentPayload', false, new stdClass()))->toBe([
+        'status' => 'ok',
+        'exists' => false,
+        'added'  => true,
+    ])->and($controller->callHelper('assignmentPayload', true, false))->toBe([
+        'status' => 'ok',
+        'exists' => true,
+        'added'  => false,
+    ])->and($controller->callHelper('removedAssignmentPayload', 3))->toBe([
+        'status'  => 'ok',
+        'deleted' => 3,
+    ])->and($controller->callHelper('importCompletedPayload', 7))->toBe([
+        'status'   => 'ok',
+        'message'  => 'Import completed',
+        'imported' => 7,
+    ]);
+});
+
+test('internal maintenance controller exposes line item response payload', function () {
+    $controller              = new FleetOpsInternalMaintenanceControllerProbe();
+    $maintenance             = new Maintenance();
+    $maintenance->line_items = [
+        ['description' => 'Oil filter', 'quantity' => 2, 'unit_cost' => 1500],
+    ];
+    $maintenance->total_cost = 3000;
+
+    expect($controller->callHelper('lineItemPayload', $maintenance))->toBe([
+        'status'     => 'ok',
+        'line_items' => [
+            ['description' => 'Oil filter', 'quantity' => 2, 'unit_cost' => 1500],
+        ],
+        'total_cost' => 3000,
+    ]);
+});
+
+test('internal vendor controller serializes personnel payload defaults without contact details', function () {
+    $controller                 = new FleetOpsInternalVendorControllerProbe();
+    $personnel                  = new VendorPersonnel();
+    $personnel->invited_by_uuid = 'user-uuid';
+    $personnel->setRelation('contact', null);
+
+    $payload = $controller->callHelper('vendorPersonnelPayload', $personnel);
+
+    expect($payload)->toMatchArray([
+        'id'              => null,
+        'uuid'            => null,
+        'contact_uuid'    => null,
+        'public_id'       => null,
+        'name'            => null,
+        'email'           => null,
+        'phone'           => null,
+        'photo_url'       => null,
+        'role'            => 'member',
+        'status'          => 'active',
+        'invited_by_uuid' => 'user-uuid',
+        'contact'         => null,
+    ]);
 });
 
 test('api service rate controller exposes input and meter fee helpers', function () {

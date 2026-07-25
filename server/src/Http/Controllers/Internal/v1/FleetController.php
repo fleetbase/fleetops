@@ -124,10 +124,7 @@ class FleetController extends FleetOpsController
 
         LiveCacheService::invalidate('operations-monitor');
 
-        return response()->json([
-            'status'  => 'ok',
-            'deleted' => $deleted,
-        ]);
+        return response()->json(static::removedAssignmentPayload($deleted));
     }
 
     /**
@@ -158,11 +155,7 @@ class FleetController extends FleetOpsController
 
         LiveCacheService::invalidate('operations-monitor');
 
-        return response()->json([
-            'status' => 'ok',
-            'exists' => $exists,
-            'added'  => (bool) $added,
-        ]);
+        return response()->json(static::assignmentPayload($exists, $added));
     }
 
     /**
@@ -185,10 +178,7 @@ class FleetController extends FleetOpsController
 
         LiveCacheService::invalidate('operations-monitor');
 
-        return response()->json([
-            'status'  => 'ok',
-            'deleted' => $deleted,
-        ]);
+        return response()->json(static::removedAssignmentPayload($deleted));
     }
 
     /**
@@ -219,11 +209,7 @@ class FleetController extends FleetOpsController
 
         LiveCacheService::invalidate('operations-monitor');
 
-        return response()->json([
-            'status' => 'ok',
-            'exists' => $exists,
-            'added'  => (bool) $added,
-        ]);
+        return response()->json(static::assignmentPayload($exists, $added));
     }
 
     public function import(ImportRequest $request)
@@ -242,6 +228,28 @@ class FleetController extends FleetOpsController
             }
         }
 
-        return response()->json(['status' => 'ok', 'message' => 'Import completed', 'imported' => $importedCount]);
+        return response()->json(static::importCompletedPayload($importedCount));
+    }
+
+    protected static function assignmentPayload(bool $exists, mixed $added): array
+    {
+        return [
+            'status' => 'ok',
+            'exists' => $exists,
+            'added'  => (bool) $added,
+        ];
+    }
+
+    protected static function removedAssignmentPayload(mixed $deleted): array
+    {
+        return [
+            'status'  => 'ok',
+            'deleted' => $deleted,
+        ];
+    }
+
+    protected static function importCompletedPayload(int $importedCount): array
+    {
+        return ['status' => 'ok', 'message' => 'Import completed', 'imported' => $importedCount];
     }
 }
