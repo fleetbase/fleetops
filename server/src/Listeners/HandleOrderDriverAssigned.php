@@ -31,12 +31,22 @@ class HandleOrderDriverAssigned implements ShouldQueue
         }
 
         /** @var Driver */
-        $driver = Driver::where('uuid', $order->driver_assigned_uuid)->withoutGlobalScopes()->first();
+        $driver = $this->findAssignedDriver($order);
         $order->setRelation('driverAssigned', $driver);
 
         // notify driver order has been assigned - only if order is not adhoc
         if ($driver && $order->adhoc === false) {
-            $driver->notify(new OrderAssigned($order));
+            $this->notifyAssignedDriver($driver, $order);
         }
+    }
+
+    protected function findAssignedDriver(Order $order): ?Driver
+    {
+        return Driver::where('uuid', $order->driver_assigned_uuid)->withoutGlobalScopes()->first();
+    }
+
+    protected function notifyAssignedDriver(Driver $driver, Order $order): void
+    {
+        $driver->notify(new OrderAssigned($order));
     }
 }

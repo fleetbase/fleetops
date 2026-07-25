@@ -1,12 +1,19 @@
 <?php
 
+use Fleetbase\FleetOps\Events\OrderCanceled;
+use Fleetbase\FleetOps\Events\OrderCompleted;
 use Fleetbase\FleetOps\Events\OrderDispatched;
+use Fleetbase\FleetOps\Events\OrderDriverAssigned;
 use Fleetbase\FleetOps\Flow\Activity;
+use Fleetbase\FleetOps\Listeners\HandleDeliveryCompletion;
+use Fleetbase\FleetOps\Listeners\HandleOrderCanceled;
 use Fleetbase\FleetOps\Listeners\HandleOrderDispatched;
+use Fleetbase\FleetOps\Listeners\HandleOrderDriverAssigned;
 use Fleetbase\FleetOps\Models\Driver;
 use Fleetbase\FleetOps\Models\Order;
 use Fleetbase\FleetOps\Models\TrackingStatus;
 use Fleetbase\LaravelMysqlSpatial\Types\Point;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Carbon;
 
 class FleetOpsOrderDispatchedEventFake extends OrderDispatched
@@ -16,6 +23,37 @@ class FleetOpsOrderDispatchedEventFake extends OrderDispatched
     }
 
     public function getModelRecord(): ?Order
+    {
+        return $this->order;
+    }
+}
+
+class FleetOpsOrderCompletedEventFake extends OrderCompleted
+{
+    public function __construct(public mixed $order = null)
+    {
+    }
+}
+
+class FleetOpsOrderCanceledEventFake extends OrderCanceled
+{
+    public function __construct(private ?Order $order)
+    {
+    }
+
+    public function getModelRecord(): ?Model
+    {
+        return $this->order;
+    }
+}
+
+class FleetOpsOrderDriverAssignedEventFake extends OrderDriverAssigned
+{
+    public function __construct(private ?Order $order)
+    {
+    }
+
+    public function getModelRecord(): ?Model
     {
         return $this->order;
     }
@@ -35,6 +73,7 @@ class FleetOpsOrderDispatchedOrderFake extends Order
     public mixed $pickupLocation         = null;
     public int $adhocDistance            = 1500;
     public mixed $dispatchActivity       = null;
+    public array $relationsSet           = [];
 
     public function getLastLocation()
     {
@@ -90,6 +129,29 @@ class FleetOpsOrderDispatchedOrderFake extends Order
         $this->calls[] = ['getAdhocDistance'];
 
         return $this->adhocDistance;
+    }
+
+    public function setRelation($relation, $value)
+    {
+        $this->relationsSet[] = [$relation, $value];
+
+        return parent::setRelation($relation, $value);
+    }
+
+    public function isIntegratedVendorOrder(): bool
+    {
+        return false;
+    }
+}
+
+class FleetOpsOrderCanceledOrderFake extends FleetOpsOrderDispatchedOrderFake
+{
+    public bool $integratedVendor = false;
+    public array $callbacks       = [];
+
+    public function isIntegratedVendorOrder(): bool
+    {
+        return $this->integratedVendor;
     }
 }
 
@@ -156,6 +218,60 @@ class FleetOpsHandleOrderDispatchedProbe extends HandleOrderDispatched
     }
 }
 
+class FleetOpsHandleDeliveryCompletionProbe extends HandleDeliveryCompletion
+{
+    public bool $enabled = false;
+    public array $jobs   = [];
+
+    protected function autoReallocateOnCompleteEnabled(): bool
+    {
+        return $this->enabled;
+    }
+
+    protected function dispatchAllocationJob(?string $companyUuid): void
+    {
+        $this->jobs[] = $companyUuid;
+    }
+}
+
+class FleetOpsHandleOrderCanceledProbe extends HandleOrderCanceled
+{
+    public ?Driver $driver            = null;
+    public array $vendorCallbacks     = [];
+    public array $driverNotifications = [];
+
+    protected function notifyIntegratedVendorCanceled($order): void
+    {
+        $this->vendorCallbacks[] = $order->driver_assigned_uuid;
+    }
+
+    protected function findAssignedDriver($order): ?Driver
+    {
+        return $this->driver;
+    }
+
+    protected function notifyAssignedDriver(Driver $driver, $order): void
+    {
+        $this->driverNotifications[] = [$driver->public_id, $order->driver_assigned_uuid];
+    }
+}
+
+class FleetOpsHandleOrderDriverAssignedProbe extends HandleOrderDriverAssigned
+{
+    public ?Driver $driver            = null;
+    public array $driverNotifications = [];
+
+    protected function findAssignedDriver(Order $order): ?Driver
+    {
+        return $this->driver;
+    }
+
+    protected function notifyAssignedDriver(Driver $driver, Order $order): void
+    {
+        $this->driverNotifications[] = [$driver->public_id, $order->driver_assigned_uuid];
+    }
+}
+
 function fleetOpsDispatchListenerOrder(array $attributes = []): FleetOpsOrderDispatchedOrderFake
 {
     $order = new FleetOpsOrderDispatchedOrderFake();
@@ -175,6 +291,74 @@ function fleetOpsDispatchListenerDriver(string $publicId, float $distance = 0): 
 
     return $driver;
 }
+
+test('delivery completion listener dispatches allocation only for enabled orders', function () {
+    $listener = new FleetOpsHandleDeliveryCompletionProbe();
+
+    $listener->handle(new FleetOpsOrderCompletedEventFake());
+    expect($listener->jobs)->toBe([]);
+
+    $order = fleetOpsDispatchListenerOrder(['company_uuid' => 'company-uuid']);
+    $listener->handle(new FleetOpsOrderCompletedEventFake($order));
+    expect($listener->jobs)->toBe([]);
+
+    $listener->enabled = true;
+    $listener->handle(new FleetOpsOrderCompletedEventFake($order));
+
+    expect($listener->jobs)->toBe(['company-uuid']);
+});
+
+test('order canceled listener invokes integrated vendor callback and assigned driver notification', function () {
+    $order                       = new FleetOpsOrderCanceledOrderFake();
+    $order->driver_assigned_uuid = 'driver-uuid';
+    $order->hasDriverAssigned    = true;
+    $order->integratedVendor     = true;
+
+    $listener         = new FleetOpsHandleOrderCanceledProbe();
+    $listener->driver = fleetOpsDispatchListenerDriver('assigned_driver');
+
+    $listener->handle(new FleetOpsOrderCanceledEventFake($order));
+
+    expect($listener->vendorCallbacks)->toBe(['driver-uuid'])
+        ->and($listener->driverNotifications)->toBe([
+            ['assigned_driver', 'driver-uuid'],
+        ]);
+
+    $withoutDriver            = new FleetOpsHandleOrderCanceledProbe();
+    $order->hasDriverAssigned = false;
+    $order->integratedVendor  = false;
+    $withoutDriver->handle(new FleetOpsOrderCanceledEventFake($order));
+
+    expect($withoutDriver->vendorCallbacks)->toBe([])
+        ->and($withoutDriver->driverNotifications)->toBe([]);
+});
+
+test('order driver assigned listener sets relation and skips adhoc or invalid events', function () {
+    $listener         = new FleetOpsHandleOrderDriverAssignedProbe();
+    $listener->driver = fleetOpsDispatchListenerDriver('assigned_driver');
+
+    $order = fleetOpsDispatchListenerOrder([
+        'driver_assigned_uuid' => 'driver-uuid',
+        'adhoc'                => false,
+    ]);
+
+    $listener->handle(new FleetOpsOrderDriverAssignedEventFake($order));
+
+    expect($order->relationsSet)->toBe([['driverAssigned', $listener->driver]])
+        ->and($listener->driverNotifications)->toBe([
+            ['assigned_driver', 'driver-uuid'],
+        ]);
+
+    $adhoc = fleetOpsDispatchListenerOrder(['adhoc' => true]);
+    $listener->handle(new FleetOpsOrderDriverAssignedEventFake($adhoc));
+
+    expect($adhoc->relationsSet)->toBe([['driverAssigned', $listener->driver]])
+        ->and($listener->driverNotifications)->toHaveCount(1);
+
+    $listener->handle(new FleetOpsOrderDriverAssignedEventFake(null));
+
+    expect($listener->driverNotifications)->toHaveCount(1);
+});
 
 test('order dispatched listener emits failure when a non adhoc order has no assigned driver', function () {
     $listener = new FleetOpsHandleOrderDispatchedProbe();

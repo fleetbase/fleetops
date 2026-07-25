@@ -7,6 +7,8 @@ use Fleetbase\FleetOps\Models\Driver;
 use Fleetbase\FleetOps\Models\Maintenance;
 use Fleetbase\FleetOps\Models\MaintenanceSchedule;
 use Fleetbase\FleetOps\Models\Order;
+use Fleetbase\FleetOps\Models\Place;
+use Fleetbase\FleetOps\Models\PurchaseRate;
 use Fleetbase\FleetOps\Models\ServiceRate;
 use Fleetbase\FleetOps\Models\TrackingNumber;
 use Fleetbase\FleetOps\Models\TrackingStatus;
@@ -17,13 +19,18 @@ use Fleetbase\FleetOps\Notifications\DriverShiftChanged;
 use Fleetbase\FleetOps\Observers\ContactObserver;
 use Fleetbase\FleetOps\Observers\DriverObserver;
 use Fleetbase\FleetOps\Observers\OrderObserver;
+use Fleetbase\FleetOps\Observers\PlaceObserver;
+use Fleetbase\FleetOps\Observers\PurchaseRateObserver;
 use Fleetbase\FleetOps\Observers\ServiceRateObserver;
 use Fleetbase\FleetOps\Observers\TrackingNumberObserver;
 use Fleetbase\FleetOps\Observers\VehicleObserver;
 use Fleetbase\FleetOps\Observers\WorkOrderObserver;
 use Fleetbase\FleetOps\Observers\ZoneObserver;
+use Fleetbase\Models\Company;
 use Fleetbase\Models\Schedule;
 use Fleetbase\Models\ScheduleItem;
+use Fleetbase\Models\Transaction;
+use Fleetbase\Models\TransactionItem;
 use Fleetbase\Models\User;
 use Illuminate\Cache\ArrayStore;
 use Illuminate\Cache\Repository;
@@ -450,6 +457,97 @@ class FleetOpsNotifyDriverOnShiftChangeProbe extends NotifyDriverOnShiftChange
     }
 }
 
+class FleetOpsPurchaseRateObserverProbe extends PurchaseRateObserver
+{
+    public bool $loaded           = false;
+    public ?Company $company      = null;
+    public ?Order $order          = null;
+    public array $currencyInputs  = [];
+    public array $transactions    = [];
+    public array $items           = [];
+    public bool $hasQuote         = true;
+    public ?string $quoteCurrency = null;
+    public int|float $quoteAmount = 0;
+    public Illuminate\Support\Collection $quoteItems;
+    public string $transactionId = 'generated-transaction-id';
+
+    public function __construct()
+    {
+        $this->quoteItems = collect();
+    }
+
+    protected function generateUuid(): string
+    {
+        return 'purchase-rate-uuid';
+    }
+
+    protected function loadRelations(PurchaseRate $purchaseRate): void
+    {
+        $this->loaded = true;
+    }
+
+    protected function findCompany(?string $uuid): ?Company
+    {
+        $this->currencyInputs[] = ['findCompany', $uuid];
+
+        return $this->company;
+    }
+
+    protected function getCompanyTransactionCurrency(mixed $company): string
+    {
+        $this->currencyInputs[] = ['currency', $company instanceof Company ? $company->uuid : $company];
+
+        return 'USD';
+    }
+
+    protected function getServiceQuoteCurrency(PurchaseRate $purchaseRate): ?string
+    {
+        return $this->quoteCurrency;
+    }
+
+    protected function getServiceQuoteAmount(PurchaseRate $purchaseRate): int|float
+    {
+        return $this->quoteAmount;
+    }
+
+    protected function getTransactionId(PurchaseRate $purchaseRate): string
+    {
+        return $this->transactionId;
+    }
+
+    protected function hasServiceQuote(PurchaseRate $purchaseRate): bool
+    {
+        return $this->hasQuote;
+    }
+
+    protected function getServiceQuoteItems(PurchaseRate $purchaseRate): Illuminate\Support\Collection
+    {
+        return $this->quoteItems;
+    }
+
+    protected function createTransaction(array $attributes): Transaction
+    {
+        $this->transactions[] = $attributes;
+
+        $transaction = new Transaction();
+        $transaction->setRawAttributes(['uuid' => 'transaction-uuid'], true);
+
+        return $transaction;
+    }
+
+    protected function createTransactionItem(array $attributes): TransactionItem
+    {
+        $this->items[] = $attributes;
+
+        return new TransactionItem();
+    }
+
+    protected function resolveOrder(PurchaseRate $purchaseRate): ?Order
+    {
+        return $this->order;
+    }
+}
+
 test('work order observer creates maintenance resets schedule and dispatches completed event on close', function () {
     Carbon::setTestNow(Carbon::parse('2026-04-01 12:00:00'));
 
@@ -517,6 +615,138 @@ test('work order observer creates maintenance resets schedule and dispatches com
         ->and($observer->completedEvents)->toBe([$workOrder]);
 
     Carbon::setTestNow();
+});
+
+test('purchase rate observer creates transaction items and defaults generated attributes', function () {
+    session(['company' => 'session-company-uuid']);
+
+    $order = new Order();
+    $order->setRawAttributes(['uuid' => 'order-uuid'], true);
+
+    $purchaseRate = new PurchaseRate();
+    $purchaseRate->setRawAttributes([
+        'company_uuid'   => 'purchase-company-uuid',
+        'customer_uuid'  => 'customer-uuid',
+        'customer_type'  => 'fleet-ops:contact',
+        'payload_uuid'   => 'payload-uuid',
+        'meta'           => ['transaction_id' => 'gateway-id'],
+        'status'         => null,
+    ], true);
+
+    $company = new Company();
+    $company->setRawAttributes(['uuid' => 'session-company-uuid'], true);
+
+    $observer                = new FleetOpsPurchaseRateObserverProbe();
+    $observer->order         = $order;
+    $observer->company       = $company;
+    $observer->quoteAmount   = 4550;
+    $observer->transactionId = 'gateway-id';
+    $observer->quoteItems    = collect([
+        (object) ['amount' => 1200, 'details' => 'Base rate', 'code' => 'base'],
+        (object) ['amount' => null],
+    ]);
+
+    $observer->creating($purchaseRate);
+
+    expect($observer->loaded)->toBeTrue()
+        ->and($purchaseRate->uuid)->toBe('purchase-rate-uuid')
+        ->and($purchaseRate->transaction_uuid)->toBe('transaction-uuid')
+        ->and($purchaseRate->status)->toBe(Transaction::STATUS_SUCCESS)
+        ->and($observer->currencyInputs)->toBe([
+            ['findCompany', 'session-company-uuid'],
+            ['currency', 'session-company-uuid'],
+        ])
+        ->and($observer->transactions[0])->toMatchArray([
+            'company_uuid'           => 'session-company-uuid',
+            'customer_uuid'          => 'customer-uuid',
+            'customer_type'          => 'fleet-ops:contact',
+            'subject_uuid'           => 'order-uuid',
+            'subject_type'           => Order::class,
+            'context_uuid'           => 'purchase-rate-uuid',
+            'context_type'           => PurchaseRate::class,
+            'gateway_transaction_id' => 'gateway-id',
+            'gateway'                => 'internal',
+            'amount'                 => 4550,
+            'currency'               => 'USD',
+            'type'                   => 'dispatch',
+            'direction'              => Transaction::DIRECTION_CREDIT,
+            'status'                 => Transaction::STATUS_SUCCESS,
+            'settlement_status'      => Transaction::SETTLEMENT_STATUS_UNPAID,
+        ])
+        ->and($observer->items)->toBe([
+            [
+                'transaction_uuid' => 'transaction-uuid',
+                'amount'           => 1200,
+                'currency'         => 'USD',
+                'details'          => 'Base rate',
+                'code'             => 'base',
+            ],
+            [
+                'transaction_uuid' => 'transaction-uuid',
+                'amount'           => 0,
+                'currency'         => 'USD',
+                'details'          => 'Internal dispatch',
+                'code'             => 'internal',
+            ],
+        ]);
+});
+
+test('purchase rate observer uses service quote currency and handles missing order or quote items', function () {
+    session(['company' => null]);
+
+    $purchaseRate = new PurchaseRate();
+    $purchaseRate->setRawAttributes([
+        'uuid'          => 'existing-purchase-rate',
+        'company_uuid'  => 'purchase-company-uuid',
+        'payload_uuid'  => null,
+        'status'        => 'pending',
+    ], true);
+
+    $observer                = new FleetOpsPurchaseRateObserverProbe();
+    $observer->quoteAmount   = 250;
+    $observer->quoteCurrency = 'SGD';
+    $observer->quoteItems    = collect();
+
+    $observer->creating($purchaseRate);
+
+    expect($purchaseRate->uuid)->toBe('existing-purchase-rate')
+        ->and($purchaseRate->status)->toBe('pending')
+        ->and($observer->currencyInputs)->toBe([['findCompany', 'purchase-company-uuid']])
+        ->and($observer->transactions[0])->toMatchArray([
+            'company_uuid'  => 'purchase-company-uuid',
+            'subject_uuid'  => null,
+            'subject_type'  => null,
+            'context_uuid'  => 'existing-purchase-rate',
+            'amount'        => 250,
+            'currency'      => 'SGD',
+        ])
+        ->and($observer->items)->toBe([]);
+});
+
+test('place observer uppercases address fields and invalidates live places cache', function () {
+    Cache::swap(new Repository(new ArrayStore()));
+    session(['company' => 'company-uuid']);
+
+    $place               = new Place();
+    $place->name         = 'central depot';
+    $place->street1      = 'main road';
+    $place->city         = 'singapore';
+    $place->country      = 'sg';
+    $place->postal_code  = 12345;
+    $place->neighborhood = null;
+
+    $observer = new PlaceObserver();
+    $observer->creating($place);
+    $observer->created($place);
+    $observer->updated($place);
+    $observer->deleted($place);
+
+    expect($place->name)->toBe('CENTRAL DEPOT')
+        ->and($place->street1)->toBe('MAIN ROAD')
+        ->and($place->city)->toBe('SINGAPORE')
+        ->and($place->country)->toBe('SG')
+        ->and($place->postal_code)->toBe(12345)
+        ->and(Cache::get('live:company-uuid:places:version'))->toBe(3);
 });
 
 test('work order observer skips non closing duplicate and missing schedule branches', function () {

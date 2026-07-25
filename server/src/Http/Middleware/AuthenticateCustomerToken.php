@@ -17,7 +17,7 @@ class AuthenticateCustomerToken
 {
     public function handle(Request $request, \Closure $next)
     {
-        $customer = CustomerAuth::resolveFromHeader($request);
+        $customer = $this->resolveCustomerFromHeader($request);
         if (!$customer) {
             return response()->apiError('Customer token is missing or invalid.', 401);
         }
@@ -27,8 +27,18 @@ class AuthenticateCustomerToken
             return response()->apiError('Customer does not belong to this company.', 403);
         }
 
-        CustomerAuth::setCurrent($customer);
+        $this->setCurrentCustomer($customer);
 
         return $next($request);
+    }
+
+    protected function resolveCustomerFromHeader(Request $request): mixed
+    {
+        return CustomerAuth::resolveFromHeader($request);
+    }
+
+    protected function setCurrentCustomer(mixed $customer): void
+    {
+        CustomerAuth::setCurrent($customer);
     }
 }
