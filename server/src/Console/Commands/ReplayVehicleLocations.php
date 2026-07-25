@@ -69,32 +69,22 @@ class ReplayVehicleLocations extends Command
             $this->warn('Sleep delays disabled - sending all events immediately');
         }
 
-        // Load and parse JSON data
         $this->info('Loading location data...');
-        $jsonContent    = file_get_contents($filePath);
-        $locationEvents = json_decode($jsonContent, true);
-
-        if (json_last_error() !== JSON_ERROR_NONE) {
-            $this->error('Failed to parse JSON: ' . json_last_error_msg());
+        [$locationEvents, $parseError] = $this->loadLocationEventsFromFile($filePath);
+        if ($parseError) {
+            $this->error($parseError);
 
             return Command::FAILURE;
         }
 
-        if (!is_array($locationEvents) || empty($locationEvents)) {
+        if (empty($locationEvents)) {
             $this->error('Invalid or empty location data');
 
             return Command::FAILURE;
         }
 
-        // Filter by vehicle if specified
-        if ($vehicleFilter) {
-            $locationEvents = array_filter($locationEvents, function ($event) use ($vehicleFilter) {
-                return isset($event['data']['id']) && $event['data']['id'] === $vehicleFilter;
-            });
-            $locationEvents = array_values($locationEvents); // Re-index array
-        }
-
-        $totalEvents = count($locationEvents);
+        $locationEvents = $this->filterEventsForVehicle($locationEvents, $vehicleFilter);
+        $totalEvents    = count($locationEvents);
 
         if ($totalEvents === 0) {
             $this->warn('No events found matching the criteria');
@@ -102,11 +92,8 @@ class ReplayVehicleLocations extends Command
             return Command::SUCCESS;
         }
 
-        // Apply limit if specified
-        if ($limit && $limit < $totalEvents) {
-            $locationEvents = array_slice($locationEvents, 0, $limit);
-            $totalEvents    = $limit;
-        }
+        $locationEvents = $this->applyEventLimit($locationEvents, $limit);
+        $totalEvents    = count($locationEvents);
 
         $this->info("Total events to process: {$totalEvents}");
         $this->newLine();
@@ -136,12 +123,7 @@ class ReplayVehicleLocations extends Command
             // Calculate sleep duration based on timestamp difference
             if (!$skipSleep && $previousTimestamp !== null && $createdAt !== null) {
                 try {
-                    $currentTime   = Carbon::parse($createdAt);
-                    $previousTime  = Carbon::parse($previousTimestamp);
-                    $diffInSeconds = $currentTime->diffInSeconds($previousTime);
-
-                    // Apply speed multiplier
-                    $sleepDuration = $diffInSeconds / $speedMultiplier;
+                    [$diffInSeconds, $sleepDuration] = $this->calculateReplayDelay($previousTimestamp, $createdAt, $speedMultiplier);
 
                     if ($sleep) {
                         $this->info("[{$eventNumber}/{$totalEvents}] Waiting {$sleep}s (real: {$diffInSeconds}s)...");
@@ -164,29 +146,14 @@ class ReplayVehicleLocations extends Command
             // Update previous timestamp
             $previousTimestamp = $createdAt;
 
-            // Prepare channel names
-            $channels = ["vehicle.{$vehicleId}", "vehicle.{$vehicle->uuid}"];
+            $channels = $this->channelsForVehicle($vehicleId, $vehicle);
 
             foreach ($channels as $channel) {
                 // Send event via SocketCluster
                 try {
                     $sent = $socketClusterClient->send($channel, $event);
 
-                    $location = $event['data']['location']['coordinates'] ?? ['N/A', 'N/A'];
-                    $speed    = $event['data']['speed'] ?? 'N/A';
-                    $heading  = $event['data']['heading'] ?? 'N/A';
-
-                    $this->line(sprintf(
-                        "[{$eventNumber}/{$totalEvents}] ✓ Sent event %s for vehicle %s | Channel: %s | Coords: [%.6f, %.6f] | Speed: %s | Heading: %s | Time: %s",
-                        $eventId,
-                        $vehicleId,
-                        $channel,
-                        $location[0],
-                        $location[1],
-                        $speed,
-                        $heading,
-                        $createdAt ?? 'N/A'
-                    ));
+                    $this->line($this->formatSentLine($eventNumber, $totalEvents, $eventId, $vehicleId, $channel, $event, $createdAt));
 
                     $successCount++;
                 } catch (\WebSocket\ConnectionException $e) {
@@ -221,5 +188,73 @@ class ReplayVehicleLocations extends Command
         $this->info('Average rate: ' . round($totalEvents / max($duration, 0.001), 2) . ' events/second');
 
         return $errorCount > 0 ? Command::FAILURE : Command::SUCCESS;
+    }
+
+    protected function loadLocationEventsFromFile(string $filePath): array
+    {
+        $locationEvents = json_decode(file_get_contents($filePath), true);
+
+        if (json_last_error() !== JSON_ERROR_NONE) {
+            return [[], 'Failed to parse JSON: ' . json_last_error_msg()];
+        }
+
+        if (!is_array($locationEvents)) {
+            return [[], null];
+        }
+
+        return [$locationEvents, null];
+    }
+
+    protected function filterEventsForVehicle(array $locationEvents, ?string $vehicleFilter): array
+    {
+        if (!$vehicleFilter) {
+            return array_values($locationEvents);
+        }
+
+        return array_values(array_filter($locationEvents, function ($event) use ($vehicleFilter) {
+            return isset($event['data']['id']) && $event['data']['id'] === $vehicleFilter;
+        }));
+    }
+
+    protected function applyEventLimit(array $locationEvents, ?int $limit): array
+    {
+        if ($limit && $limit < count($locationEvents)) {
+            return array_slice($locationEvents, 0, $limit);
+        }
+
+        return $locationEvents;
+    }
+
+    protected function calculateReplayDelay(string $previousTimestamp, string $createdAt, float $speedMultiplier): array
+    {
+        $currentTime   = Carbon::parse($createdAt);
+        $previousTime  = Carbon::parse($previousTimestamp);
+        $diffInSeconds = $currentTime->diffInSeconds($previousTime);
+
+        return [$diffInSeconds, $diffInSeconds / $speedMultiplier];
+    }
+
+    protected function channelsForVehicle(string $vehicleId, Vehicle $vehicle): array
+    {
+        return ["vehicle.{$vehicleId}", "vehicle.{$vehicle->uuid}"];
+    }
+
+    protected function formatSentLine(int $eventNumber, int $totalEvents, string $eventId, string $vehicleId, string $channel, array $event, ?string $createdAt): string
+    {
+        $location = $event['data']['location']['coordinates'] ?? ['N/A', 'N/A'];
+        $speed    = $event['data']['speed'] ?? 'N/A';
+        $heading  = $event['data']['heading'] ?? 'N/A';
+
+        return sprintf(
+            "[{$eventNumber}/{$totalEvents}] ✓ Sent event %s for vehicle %s | Channel: %s | Coords: [%.6f, %.6f] | Speed: %s | Heading: %s | Time: %s",
+            $eventId,
+            $vehicleId,
+            $channel,
+            $location[0],
+            $location[1],
+            $speed,
+            $heading,
+            $createdAt ?? 'N/A'
+        );
     }
 }
