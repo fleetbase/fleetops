@@ -916,3 +916,11 @@ test('notify order event routes lifecycle events to matching notifications', fun
         ->and($listener->notifications[4])->toBe([OrderDispatchedNotification::class, [$order, $waypoint]])
         ->and($listener->notifications[5])->toBe([OrderAssignedNotification::class, [$order]]);
 });
+
+test('order dispatch failed event exposes configured reason', function () {
+    $event         = new FleetOpsOrderDispatchFailedNotificationEvent();
+    $event->reason = 'No eligible driver';
+
+    expect($event->eventName)->toBe('dispatch_failed')
+        ->and($event->getReason())->toBe('No eligible driver');
+});

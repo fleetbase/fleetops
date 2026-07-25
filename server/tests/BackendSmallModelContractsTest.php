@@ -6,10 +6,12 @@ use Fleetbase\FleetOps\Models\Customer;
 use Fleetbase\FleetOps\Models\FleetDriver;
 use Fleetbase\FleetOps\Models\FleetVehicle;
 use Fleetbase\FleetOps\Models\FuelProviderConnection;
+use Fleetbase\FleetOps\Models\FuelProviderSyncRun;
 use Fleetbase\FleetOps\Models\GeofenceEventLog;
 use Fleetbase\FleetOps\Models\Place;
 use Fleetbase\FleetOps\Models\Proof;
 use Fleetbase\FleetOps\Models\ServiceRateParcelFee;
+use Fleetbase\FleetOps\Models\VehicleDeviceEvent;
 use Fleetbase\FleetOps\Models\VendorPersonnel;
 use Fleetbase\FleetOps\Support\ParsePhone;
 use Illuminate\Database\ConnectionResolver;
@@ -172,8 +174,35 @@ test('small model relationships keep their intended foreign keys', function () {
         ->and((new GeofenceEventLog())->vehicle()->getForeignKeyName())->toBe('vehicle_uuid')
         ->and((new FuelProviderConnection())->transactions()->getForeignKeyName())->toBe('fuel_provider_connection_uuid')
         ->and((new FuelProviderConnection())->syncRuns()->getForeignKeyName())->toBe('fuel_provider_connection_uuid')
+        ->and((new FuelProviderSyncRun())->connection()->getForeignKeyName())->toBe('fuel_provider_connection_uuid')
         ->and($proof->file()->getForeignKeyName())->toBe('file_uuid')
         ->and($proof->order()->getForeignKeyName())->toBe('order_uuid');
+});
+
+test('fuel sync run and vehicle device event metadata stays aligned with storage contracts', function () {
+    $syncRun = new FuelProviderSyncRun();
+    $event   = new VehicleDeviceEvent();
+
+    expect($syncRun->getTable())->toBe('fuel_provider_sync_runs')
+        ->and($syncRun->getFillable())->toContain(
+            'company_uuid',
+            'fuel_provider_connection_uuid',
+            'provider',
+            'status',
+            'summary',
+            'meta'
+        )
+        ->and($syncRun->getCasts())->toHaveKeys(['from', 'to', 'started_at', 'finished_at', 'summary', 'meta'])
+        ->and($event->getTable())->toBe('device_events')
+        ->and($event->getFillable())->toContain(
+            'vehicle_device_uuid',
+            'payload',
+            'meta',
+            'location',
+            'ident',
+            'provider'
+        )
+        ->and($event->getCasts())->toHaveKeys(['payload', 'meta', 'location']);
 });
 
 test('proof file url and subject morph use related model state', function () {

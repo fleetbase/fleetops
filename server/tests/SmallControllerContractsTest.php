@@ -3,6 +3,7 @@
 use Fleetbase\FleetOps\Exports\SensorExport;
 use Fleetbase\FleetOps\Exports\ServiceAreaExport;
 use Fleetbase\FleetOps\Http\Controllers\Api\v1\LabelController;
+use Fleetbase\FleetOps\Http\Controllers\Api\v1\NavigatorController as PublicNavigatorController;
 use Fleetbase\FleetOps\Http\Controllers\Api\v1\OrderConfigController as PublicOrderConfigController;
 use Fleetbase\FleetOps\Http\Controllers\Internal\v1\GettingStartedController;
 use Fleetbase\FleetOps\Http\Controllers\Internal\v1\OrderConfigController as InternalOrderConfigController;
@@ -13,7 +14,9 @@ use Fleetbase\FleetOps\Models\OrderConfig;
 use Fleetbase\FleetOps\Models\ServiceArea;
 use Fleetbase\FleetOps\Models\Zone;
 use Fleetbase\Http\Requests\ExportRequest;
+use Fleetbase\Models\Company;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 if (!class_exists('Fleetbase\Http\Requests\ExportRequest', false)) {
@@ -221,6 +224,34 @@ class FleetOpsGettingStartedControllerProbe extends GettingStartedController
     }
 }
 
+class FleetOpsPublicNavigatorControllerProbe extends PublicNavigatorController
+{
+    public mixed $settings = ['require_photo' => true];
+    public array $lookups  = [];
+
+    protected function findCompanyByPublicId(string $companyId): ?Company
+    {
+        $company = new Company();
+        $company->setRawAttributes(['uuid' => 'company-uuid', 'public_id' => $companyId], true);
+
+        $this->lookups[] = $companyId;
+
+        return $company;
+    }
+
+    protected function driverOnboardSetting(string $companyUuid): mixed
+    {
+        $this->lookups[] = $companyUuid;
+
+        return $this->settings;
+    }
+
+    protected function jsonResponse(array $payload): JsonResponse
+    {
+        return new JsonResponse($payload);
+    }
+}
+
 class FleetOpsSensorQueryRecorder
 {
     public array $calls = [];
@@ -346,5 +377,23 @@ test('service area zone and getting started controllers expose small lifecycle c
         ->and($zone->synced)->toBe([[[['key' => 'dock', 'value' => 'D1']], []]])
         ->and((new FleetOpsGettingStartedControllerProbe())->status($request))->toBe([
             'json' => ['company' => 'company-uuid', 'done' => true],
+        ]);
+});
+
+test('public navigator controller returns configured or default driver onboarding settings', function () {
+    $controller = new FleetOpsPublicNavigatorControllerProbe();
+
+    $configured = $controller->getDriverOnboardSettings('company_public');
+
+    $controller->settings = null;
+    $defaults             = $controller->getDriverOnboardSettings('company_public');
+
+    expect($configured->getData(true))->toBe(['driverOnboardSettings' => ['require_photo' => true]])
+        ->and($defaults->getData(true))->toBe(['driverOnboardSettings' => []])
+        ->and($controller->lookups)->toBe([
+            'company_public',
+            'company-uuid',
+            'company_public',
+            'company-uuid',
         ]);
 });

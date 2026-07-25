@@ -19,6 +19,7 @@ use Fleetbase\FleetOps\Http\Filter\FuelProviderConnectionFilter;
 use Fleetbase\FleetOps\Http\Filter\FuelProviderSyncRunFilter;
 use Fleetbase\FleetOps\Http\Filter\FuelProviderTransactionFilter;
 use Fleetbase\FleetOps\Http\Filter\FuelReportFilter;
+use Fleetbase\FleetOps\Http\Filter\IntegratedVendorFilter;
 use Fleetbase\FleetOps\Http\Filter\IssueFilter;
 use Fleetbase\FleetOps\Http\Filter\OrderConfigFilter;
 use Fleetbase\FleetOps\Http\Filter\PartFilter;
@@ -642,6 +643,17 @@ test('simple company scoped filters record internal and public company constrain
             ['where', ['company_uuid', 'company-uuid']],
         ]);
     }
+});
+
+test('integrated vendor filter records internal company constraints', function () {
+    $query  = new FleetOpsControllerFilterQuery();
+    $filter = fleetopsFilterWithBuilder(IntegratedVendorFilter::class, $query);
+
+    $filter->queryForInternal();
+
+    expect($query->calls)->toBe([
+        ['where', ['company_uuid', 'company-uuid']],
+    ]);
 });
 
 test('customer directives scope user contacts and places by session or request identity', function () {
