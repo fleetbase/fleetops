@@ -13,6 +13,7 @@ use Fleetbase\FleetOps\Models\ServiceQuoteItem;
 use Fleetbase\FleetOps\Models\ServiceRate;
 use Fleetbase\FleetOps\Support\Utils;
 use Fleetbase\Http\Controllers\Controller;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
@@ -101,13 +102,7 @@ class ServiceQuoteController extends Controller
                 $quote->setRelation('serviceRate', $serviceRate);
 
                 $items = $lines->map(function ($line) use ($quote) {
-                    return ServiceQuoteItem::create([
-                        'service_quote_uuid' => $quote->uuid,
-                        'amount'             => $line['amount'],
-                        'currency'           => $line['currency'],
-                        'details'            => $line['details'],
-                        'code'               => $line['code'],
-                    ]);
+                    return ServiceQuoteItem::create($this->serviceQuoteItemInput($quote, $line));
                 });
 
                 $quote->setRelation('items', $items);
@@ -163,7 +158,7 @@ class ServiceQuoteController extends Controller
         // if single quotation requested
         if ($single) {
             // find the best quotation
-            $bestQuote = $serviceQuotes->sortBy('amount')->first();
+            $bestQuote = $this->bestQuote($serviceQuotes);
 
             return new ServiceQuoteResource($bestQuote);
         }
@@ -188,24 +183,14 @@ class ServiceQuoteController extends Controller
         $currency         = $request->has('currency');
         $totalDistance    = $request->input('distance');
         $totalTime        = $request->input('time');
-        $pickup           = $request->or(['payload.pickup', 'pickup']);
-        $dropoff          = $request->or(['payload.dropoff', 'dropoff']);
-        $return           = $request->or(['payload.return', 'return']);
-        $waypoints        = $request->or(['payload.waypoints', 'waypoints'], []);
-        $entities         = $request->or(['payload.entities', 'entities']);
+        $preliminaryData  = $this->preliminaryDataFromRequest($request);
+        $pickup           = $preliminaryData['pickup'];
+        $dropoff          = $preliminaryData['dropoff'];
+        $return           = $preliminaryData['return'];
+        $waypoints        = $preliminaryData['waypoints'];
+        $entities         = $preliminaryData['entities'];
         $single           = $request->boolean('single');
         $isRouteOptimized = $request->boolean('is_route_optimized', true);
-
-        // store preliminary data in service quotes meta
-        $preliminaryData = [
-            'pickup'    => $pickup,
-            'dropoff'   => $dropoff,
-            'return'    => $return,
-            'waypoints' => $waypoints,
-            'entities'  => $entities,
-            'cod'       => $isCashOnDelivery,
-            'currency'  => $currency,
-        ];
 
         $requestId     = ServiceQuote::generatePublicId('request');
         $serviceQuotes = [];
@@ -231,8 +216,8 @@ class ServiceQuoteController extends Controller
         $entities  = collect($entities)->mapInto(Entity::class);
 
         // should all be Place like
-        $waypoints     = collect([$pickup, ...$waypoints, $dropoff])->filter();
-        $endpointCount = (int) ($pickup instanceof Place) + (int) ($dropoff instanceof Place);
+        $waypoints     = $this->preliminaryStops($pickup, $waypoints, $dropoff);
+        $endpointCount = $this->endpointCount($pickup, $dropoff);
 
         // if facilitator is an integrated partner resolve service quotes from bridge
         if ($facilitator && Utils::isIntegratedVendorId($facilitator)) {
@@ -297,13 +282,7 @@ class ServiceQuoteController extends Controller
                 $quote->updateMeta('preliminary_data', $preliminaryData);
 
                 $items = $lines->map(function ($line) use ($quote) {
-                    return ServiceQuoteItem::create([
-                        'service_quote_uuid' => $quote->uuid,
-                        'amount'             => $line['amount'],
-                        'currency'           => $line['currency'],
-                        'details'            => $line['details'],
-                        'code'               => $line['code'],
-                    ]);
+                    return ServiceQuoteItem::create($this->serviceQuoteItemInput($quote, $line));
                 });
 
                 $quote->setRelation('items', $items);
@@ -345,13 +324,7 @@ class ServiceQuoteController extends Controller
             $quote->updateMeta('preliminary_data', $preliminaryData);
 
             $items = $lines->map(function ($line) use ($quote) {
-                return ServiceQuoteItem::create([
-                    'service_quote_uuid' => $quote->uuid,
-                    'amount'             => $line['amount'],
-                    'currency'           => $line['currency'],
-                    'details'            => $line['details'],
-                    'code'               => $line['code'],
-                ]);
+                return ServiceQuoteItem::create($this->serviceQuoteItemInput($quote, $line));
             });
 
             $quote->setRelation('items', $items);
@@ -361,12 +334,62 @@ class ServiceQuoteController extends Controller
         // if single quotation requested
         if ($single) {
             // find the best quotation
-            $bestQuote = $serviceQuotes->sortBy('amount')->first();
+            $bestQuote = $this->bestQuote($serviceQuotes);
 
             return new ServiceQuoteResource($bestQuote);
         }
 
         return ServiceQuoteResource::collection($serviceQuotes);
+    }
+
+    protected function preliminaryDataFromRequest(Request $request): array
+    {
+        return [
+            'pickup'    => $this->requestFirst($request, ['payload.pickup', 'pickup']),
+            'dropoff'   => $this->requestFirst($request, ['payload.dropoff', 'dropoff']),
+            'return'    => $this->requestFirst($request, ['payload.return', 'return']),
+            'waypoints' => $this->requestFirst($request, ['payload.waypoints', 'waypoints'], []),
+            'entities'  => $this->requestFirst($request, ['payload.entities', 'entities']),
+            'cod'       => $request->has('cod'),
+            'currency'  => $request->has('currency'),
+        ];
+    }
+
+    protected function requestFirst(Request $request, array $keys, mixed $default = null): mixed
+    {
+        foreach ($keys as $key) {
+            if ($request->has($key)) {
+                return $request->input($key);
+            }
+        }
+
+        return $default;
+    }
+
+    protected function preliminaryStops(mixed $pickup, iterable $waypoints, mixed $dropoff): \Illuminate\Support\Collection
+    {
+        return collect([$pickup, ...$waypoints, $dropoff])->filter();
+    }
+
+    protected function endpointCount(mixed $pickup, mixed $dropoff): int
+    {
+        return (int) ($pickup instanceof Place) + (int) ($dropoff instanceof Place);
+    }
+
+    protected function serviceQuoteItemInput(ServiceQuote $quote, array $line): array
+    {
+        return [
+            'service_quote_uuid' => $quote->uuid,
+            'amount'             => $line['amount'],
+            'currency'           => $line['currency'],
+            'details'            => $line['details'],
+            'code'               => $line['code'],
+        ];
+    }
+
+    protected function bestQuote(iterable $serviceQuotes): mixed
+    {
+        return collect($serviceQuotes)->sortBy('amount')->first();
     }
 
     /**

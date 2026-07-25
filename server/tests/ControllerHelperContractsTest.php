@@ -9,6 +9,7 @@ use Fleetbase\FleetOps\Http\Controllers\Api\v1\PayloadController;
 use Fleetbase\FleetOps\Http\Controllers\Api\v1\PlaceController;
 use Fleetbase\FleetOps\Http\Controllers\Api\v1\PurchaseRateController;
 use Fleetbase\FleetOps\Http\Controllers\Api\v1\ServiceAreaController;
+use Fleetbase\FleetOps\Http\Controllers\Api\v1\ServiceQuoteController;
 use Fleetbase\FleetOps\Http\Controllers\Api\v1\ServiceRateController;
 use Fleetbase\FleetOps\Http\Controllers\Api\v1\VehicleController as ApiVehicleController;
 use Fleetbase\FleetOps\Http\Controllers\Api\v1\ZoneController;
@@ -16,8 +17,11 @@ use Fleetbase\FleetOps\Http\Controllers\Internal\v1\ContactController as Interna
 use Fleetbase\FleetOps\Http\Controllers\Internal\v1\DriverController as InternalDriverController;
 use Fleetbase\FleetOps\Http\Controllers\Internal\v1\OrderController as InternalOrderController;
 use Fleetbase\FleetOps\Http\Controllers\Internal\v1\PositionController;
+use Fleetbase\FleetOps\Http\Controllers\Internal\v1\ServiceQuoteController as InternalServiceQuoteController;
 use Fleetbase\FleetOps\Models\Contact;
 use Fleetbase\FleetOps\Models\Order;
+use Fleetbase\FleetOps\Models\Place;
+use Fleetbase\FleetOps\Models\ServiceQuote;
 use Fleetbase\FleetOps\Models\ServiceRate;
 use Fleetbase\LaravelMysqlSpatial\Types\Point;
 use Illuminate\Http\Request;
@@ -142,6 +146,17 @@ class FleetOpsServiceAreaControllerProbe extends ServiceAreaController
     }
 }
 
+class FleetOpsServiceQuoteControllerProbe extends ServiceQuoteController
+{
+    public function callHelper(string $method, mixed ...$arguments): mixed
+    {
+        $reflection = new ReflectionMethod(ServiceQuoteController::class, $method);
+        $reflection->setAccessible(true);
+
+        return $reflection->invoke($this, ...$arguments);
+    }
+}
+
 class FleetOpsServiceRateControllerProbe extends ServiceRateController
 {
     public function callHelper(string $method, mixed ...$arguments): mixed
@@ -169,6 +184,17 @@ class FleetOpsInternalContactControllerProbe extends InternalContactController
     public function callHelper(string $method, mixed ...$arguments): mixed
     {
         $reflection = new ReflectionMethod(InternalContactController::class, $method);
+        $reflection->setAccessible(true);
+
+        return $reflection->invoke($this, ...$arguments);
+    }
+}
+
+class FleetOpsInternalServiceQuoteControllerProbe extends InternalServiceQuoteController
+{
+    public function callHelper(string $method, mixed ...$arguments): mixed
+    {
+        $reflection = new ReflectionMethod(InternalServiceQuoteController::class, $method);
         $reflection->setAccessible(true);
 
         return $reflection->invoke($this, ...$arguments);
@@ -683,6 +709,120 @@ test('api vehicle controller exposes input defaults and tracking payload helpers
             'altitude'  => 12,
             'heading'   => 180,
             'speed'     => 55,
+        ]);
+});
+
+test('api service quote controller exposes preliminary and quote item helpers', function () {
+    $controller = new FleetOpsServiceQuoteControllerProbe();
+    $request    = new Request([
+        'payload' => [
+            'pickup'    => ['name' => 'Pickup'],
+            'dropoff'   => ['name' => 'Dropoff'],
+            'return'    => ['name' => 'Return'],
+            'waypoints' => [
+                ['name' => 'Waypoint'],
+            ],
+            'entities' => [
+                ['name' => 'Box'],
+            ],
+        ],
+        'cod'      => true,
+        'currency' => 'USD',
+    ]);
+    $pickup      = new Place();
+    $dropoff     = new Place();
+    $quote       = new ServiceQuote();
+    $quote->uuid = 'service-quote-uuid';
+    $cheap       = (object) ['amount' => 1200, 'id' => 'cheap'];
+    $expensive   = (object) ['amount' => 2500, 'id' => 'expensive'];
+
+    expect($controller->callHelper('preliminaryDataFromRequest', $request))->toBe([
+        'pickup'    => ['name' => 'Pickup'],
+        'dropoff'   => ['name' => 'Dropoff'],
+        'return'    => ['name' => 'Return'],
+        'waypoints' => [
+            ['name' => 'Waypoint'],
+        ],
+        'entities' => [
+            ['name' => 'Box'],
+        ],
+        'cod'      => true,
+        'currency' => true,
+    ])->and($controller->callHelper('preliminaryStops', $pickup, [null, 'waypoint-public'], $dropoff)->values()->all())->toBe([
+        $pickup,
+        'waypoint-public',
+        $dropoff,
+    ])->and($controller->callHelper('endpointCount', $pickup, $dropoff))->toBe(2)
+        ->and($controller->callHelper('endpointCount', $pickup, 'dropoff-public'))->toBe(1)
+        ->and($controller->callHelper('serviceQuoteItemInput', $quote, [
+            'amount'   => 1200,
+            'currency' => 'USD',
+            'details'  => ['distance' => 10],
+            'code'     => 'base_fee',
+        ]))->toBe([
+            'service_quote_uuid' => 'service-quote-uuid',
+            'amount'             => 1200,
+            'currency'           => 'USD',
+            'details'            => ['distance' => 10],
+            'code'               => 'base_fee',
+        ])
+        ->and($controller->callHelper('bestQuote', collect([$expensive, $cheap])))->toBe($cheap);
+});
+
+test('internal service quote controller exposes preliminary checkout and quote item helpers', function () {
+    $controller = new FleetOpsInternalServiceQuoteControllerProbe();
+    $request    = new Request([
+        'payload' => [
+            'pickup_uuid'  => 'pickup-uuid',
+            'dropoff_uuid' => 'dropoff-uuid',
+            'waypoints'    => ['waypoint-uuid', null, ''],
+            'entities'     => ['entity-uuid', null],
+        ],
+    ]);
+    $pickup       = new Place();
+    $quote        = new ServiceQuote();
+    $quote->uuid  = 'internal-service-quote-uuid';
+    $purchaseRate = (object) ['uuid' => 'purchase-rate-uuid'];
+    $cheap        = ['amount' => 250, 'id' => 'cheap'];
+    $expensive    = ['amount' => 950, 'id' => 'expensive'];
+
+    expect($controller->callHelper('preliminaryInputFromRequest', $request))->toBe([
+        'pickup'    => 'pickup-uuid',
+        'dropoff'   => 'dropoff-uuid',
+        'waypoints' => ['waypoint-uuid', null, ''],
+        'entities'  => ['entity-uuid', null],
+    ])->and($controller->callHelper('requestFirst', new Request(['fallback' => 'value']), ['missing', 'fallback']))->toBe('value')
+        ->and($controller->callHelper('requestFirst', new Request(), ['missing'], 'default'))->toBe('default')
+        ->and($controller->callHelper('filterPreliminaryCollectionInput', ['one', null, '', 'two']))->toBe([
+            0 => 'one',
+            3 => 'two',
+        ])
+        ->and($controller->callHelper('preliminaryStops', $pickup, [null, 'middle'], null)->values()->all())->toBe([
+            $pickup,
+            'middle',
+        ])
+        ->and($controller->callHelper('endpointCount', $pickup, 'dropoff-uuid'))->toBe(1)
+        ->and($controller->callHelper('serviceQuoteItemInput', $quote, [
+            'amount'   => 250,
+            'currency' => 'SGD',
+            'details'  => ['duration' => 20],
+            'code'     => 'minimum_fee',
+        ]))->toBe([
+            'service_quote_uuid' => 'internal-service-quote-uuid',
+            'amount'             => 250,
+            'currency'           => 'SGD',
+            'details'            => ['duration' => 20],
+            'code'               => 'minimum_fee',
+        ])
+        ->and($controller->callHelper('bestQuote', [$expensive, $cheap]))->toBe($cheap)
+        ->and($controller->callHelper('purchaseCompletePayload', $quote))->toBe([
+            'status'        => 'purchase_complete',
+            'service_quote' => $quote,
+        ])
+        ->and($controller->callHelper('checkoutStatusPayload', 'complete', $quote, $purchaseRate))->toBe([
+            'status'       => 'complete',
+            'serviceQuote' => $quote,
+            'purchaseRate' => $purchaseRate,
         ]);
 });
 
