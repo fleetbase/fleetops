@@ -1,6 +1,7 @@
 <?php
 
 use Fleetbase\FleetOps\Events\DriverLocationChanged;
+use Fleetbase\FleetOps\Events\DriverSimulatedLocationChanged;
 use Fleetbase\FleetOps\Events\EntityActivityChanged;
 use Fleetbase\FleetOps\Events\EntityCompleted;
 use Fleetbase\FleetOps\Events\EntityDriverAssigned;
@@ -140,6 +141,68 @@ test('driver location changed broadcasts driver telemetry payload', function () 
                 'additionalData' => ['source' => 'telematics'],
             ],
         ])
+        ->and($event->eventId)->toStartWith('event_')
+        ->and($event->sentAt)->toBeString();
+});
+
+test('driver simulated location changed broadcasts simulated telemetry payload', function () {
+    session([
+        'company'        => 'company-1',
+        'api_credential' => 'api-1',
+    ]);
+
+    $driver = new Driver();
+    $driver->setRawAttributes([
+        'uuid'        => 'driver-uuid',
+        'public_id'   => 'driver_public',
+        'internal_id' => 'driver_internal',
+        'name'        => 'Jane Driver',
+        'phone'       => '+15551234567',
+        'altitude'    => 20,
+        'heading'     => 180,
+        'speed'       => 32,
+    ], true);
+    $driver->setRelation('user', (object) [
+        'name'  => 'Jane Driver',
+        'phone' => '+15551234567',
+    ]);
+
+    $location = new Point(1.3521, 103.8198);
+    $event    = new DriverSimulatedLocationChanged($driver, $location, [
+        'heading' => 270,
+        'speed'   => 44,
+        'source'  => 'simulator',
+    ]);
+    $payload = $event->broadcastWith();
+    $data    = $payload['data'];
+    unset($data['location']);
+
+    expect($event->broadcastAs())->toBe('driver.simulated_location_changed')
+        ->and(eventChannelNames($event->broadcastOn()))->toBe([
+            'company.company-1',
+            'api.api-1',
+            'driver.driver_public',
+            'driver.driver-uuid',
+        ])
+        ->and($payload)->toHaveKey('event', 'driver.simulated_location_changed')
+        ->and($data)->toBe([
+            'id'             => 'driver_public',
+            'internal_id'    => 'driver_internal',
+            'name'           => 'Jane Driver',
+            'phone'          => '+15551234567',
+            'altitude'       => 20,
+            'heading'        => 270,
+            'speed'          => 44,
+            'additionalData' => [
+                'heading' => 270,
+                'speed'   => 44,
+                'source'  => 'simulator',
+            ],
+        ])
+        ->and($payload)->toMatchArray([
+            'event' => 'driver.simulated_location_changed',
+        ])
+        ->and($payload['data']['location'])->toBe($location)
         ->and($event->eventId)->toStartWith('event_')
         ->and($event->sentAt)->toBeString();
 });

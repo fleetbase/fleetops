@@ -6,6 +6,7 @@ use Fleetbase\FleetOps\Http\Resources\Internal\v1\Vehicle as InternalVehicleReso
 use Fleetbase\FleetOps\Http\Resources\Internal\v1\Waypoint as InternalWaypointResource;
 use Fleetbase\FleetOps\Http\Resources\v1\Contact as ContactResource;
 use Fleetbase\FleetOps\Http\Resources\v1\CurrentJob as CurrentJobResource;
+use Fleetbase\FleetOps\Http\Resources\v1\Customer as CustomerResource;
 use Fleetbase\FleetOps\Http\Resources\v1\DeletedResource;
 use Fleetbase\FleetOps\Http\Resources\v1\Device as DeviceResource;
 use Fleetbase\FleetOps\Http\Resources\v1\Entity as EntityResource;
@@ -203,6 +204,25 @@ class TestFleetOpsIndexDriverResource extends IndexDriverResource
     }
 }
 
+class TestFleetOpsCustomerResource extends CustomerResource
+{
+    protected function getOrdersCount(Request $request): int
+    {
+        return $request->boolean('has_orders') ? 7 : 0;
+    }
+
+    protected function buildCompanyPayload(): ?array
+    {
+        return [
+            'id'       => 'company_public',
+            'name'     => 'Acme Logistics',
+            'currency' => 'USD',
+            'country'  => 'US',
+            'phone'    => '+15550000000',
+        ];
+    }
+}
+
 function fleetopsCompactResourceRequest(bool $internal): Request
 {
     $uri     = $internal ? 'api/int/v1/fleet-ops/resources/resource_123' : 'api/v1/fleet-ops/resources/resource_123';
@@ -224,6 +244,78 @@ function fleetopsCompactResourceFixture(array $attributes = [], array $loaded = 
         'created_at' => '2026-01-02 09:00:00',
     ], $attributes), $loaded);
 }
+
+test('customer resource serializes public and internal customer payloads', function () {
+    $place = fleetopsCompactResourceFixture([
+        'public_id' => 'place_public',
+        'address'   => '123 Harbor Way',
+    ]);
+    $addresses = collect([
+        fleetopsCompactResourceFixture([
+            'public_id' => 'place_home',
+            'address'   => '123 Harbor Way',
+        ]),
+    ]);
+    $fixture = fleetopsCompactResourceFixture([
+        'id'           => 55,
+        'uuid'         => 'customer-uuid',
+        'user_uuid'    => 'user-uuid',
+        'company_uuid' => 'company-uuid',
+        'public_id'    => 'contact_public',
+        'internal_id'  => 'CUST-55',
+        'name'         => 'Jane Customer',
+        'title'        => 'Operations Lead',
+        'photo_url'    => 'https://cdn.test/customer.png',
+        'email'        => 'jane@example.test',
+        'phone'        => '+15551234567',
+        'token'        => 'customer-token',
+        'meta'         => ['tier' => 'gold'],
+        'slug'         => 'jane-customer',
+        'created_at'   => '2026-01-01 10:00:00',
+        'updated_at'   => '2026-07-01 10:00:00',
+    ], [
+        'place'  => $place,
+        'places' => $addresses,
+    ]);
+
+    $publicRequest = fleetopsCompactResourceRequest(false);
+    $publicRequest->merge(['has_orders' => true]);
+
+    $publicPayload   = (new TestFleetOpsCustomerResource($fixture))->resolve($publicRequest);
+    $internalPayload = (new TestFleetOpsCustomerResource($fixture))->resolve(fleetopsCompactResourceRequest(true));
+
+    expect($publicPayload)->toMatchArray([
+        'id'           => 'customer_public',
+        'internal_id'  => 'CUST-55',
+        'name'         => 'Jane Customer',
+        'title'        => 'Operations Lead',
+        'photo_url'    => 'https://cdn.test/customer.png',
+        'email'        => 'jane@example.test',
+        'phone'        => '+15551234567',
+        'address'      => '123 Harbor Way',
+        'token'        => 'customer-token',
+        'orders_count' => 7,
+        'company'      => [
+            'id'       => 'company_public',
+            'name'     => 'Acme Logistics',
+            'currency' => 'USD',
+            'country'  => 'US',
+            'phone'    => '+15550000000',
+        ],
+        'meta'         => ['tier' => 'gold'],
+        'slug'         => 'jane-customer',
+    ])
+        ->and($publicPayload)->not->toHaveKeys(['uuid', 'user_uuid', 'company_uuid', 'public_id'])
+        ->and($publicPayload['addresses'])->toHaveCount(1)
+        ->and($internalPayload)->toMatchArray([
+            'id'           => 55,
+            'uuid'         => 'customer-uuid',
+            'user_uuid'    => 'user-uuid',
+            'company_uuid' => 'company-uuid',
+            'public_id'    => 'contact_public',
+            'orders_count' => 0,
+        ]);
+});
 
 test('service rate resource serializes pricing rules for internal and webhook consumers', function () {
     $request = fleetopsCompactResourceRequest(true);
