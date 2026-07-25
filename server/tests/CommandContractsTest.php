@@ -4,12 +4,14 @@ use Carbon\Carbon;
 use Fleetbase\FleetOps\Console\Commands\AuditCustomerUserConflicts;
 use Fleetbase\FleetOps\Console\Commands\DispatchAdhocOrders;
 use Fleetbase\FleetOps\Console\Commands\ProcessMaintenanceTriggers;
+use Fleetbase\FleetOps\Console\Commands\SendMaintenanceReminders;
 use Fleetbase\FleetOps\Console\Commands\SyncTelematics;
 use Fleetbase\FleetOps\Console\Commands\TestEmail;
 use Fleetbase\FleetOps\Console\Commands\TrackOrderDistanceAndTime;
 use Fleetbase\FleetOps\Contracts\TelematicProviderDescriptor;
 use Fleetbase\FleetOps\Models\Contact;
 use Fleetbase\FleetOps\Models\Driver;
+use Fleetbase\FleetOps\Models\MaintenanceSchedule;
 use Fleetbase\FleetOps\Models\Order;
 use Fleetbase\FleetOps\Models\Vehicle;
 use Fleetbase\FleetOps\Support\Telematics\TelematicProviderRegistry;
@@ -75,6 +77,59 @@ class FleetOpsProcessMaintenanceTriggersProbe extends ProcessMaintenanceTriggers
         $reflection->setAccessible(true);
 
         return $reflection->invoke($this, ...$arguments);
+    }
+}
+
+class FleetOpsSendMaintenanceRemindersCommandFake extends SendMaintenanceReminders
+{
+    public array $messages = [];
+    public array $sent     = [];
+    public array $records  = [];
+    public Illuminate\Support\Collection $testSchedules;
+
+    public function __construct(private array $testOptions, private array $alreadySent = [])
+    {
+        parent::__construct();
+        $this->testSchedules = collect();
+    }
+
+    public function option($key = null)
+    {
+        return $key === null ? $this->testOptions : ($this->testOptions[$key] ?? null);
+    }
+
+    public function info($string, $verbosity = null)
+    {
+        $this->messages[] = ['info', $string];
+    }
+
+    public function line($string, $style = null, $verbosity = null)
+    {
+        $this->messages[] = ['line', $string];
+    }
+
+    protected function schedules(string $conn): Illuminate\Support\Collection
+    {
+        $this->messages[] = ['schedules', $conn];
+
+        return $this->testSchedules;
+    }
+
+    protected function reminderAlreadySent(string $conn, MaintenanceSchedule $schedule, int $offsetDays, string $dueDateSnapshot): bool
+    {
+        $key = implode('|', [$conn, $schedule->uuid, $offsetDays, $dueDateSnapshot]);
+
+        return in_array($key, $this->alreadySent, true);
+    }
+
+    protected function sendReminder(string $email, MaintenanceSchedule $schedule, int $offsetDays): void
+    {
+        $this->sent[] = [$email, $schedule->uuid, $offsetDays];
+    }
+
+    protected function recordReminder(string $conn, MaintenanceSchedule $schedule, int $offsetDays, string $dueDateSnapshot): void
+    {
+        $this->records[] = [$conn, $schedule->uuid, $offsetDays, $dueDateSnapshot];
     }
 }
 
@@ -576,6 +631,23 @@ function fleetOpsSyncTelematicsCommandWithOptions(array $options = []): SyncTele
     };
 }
 
+function fleetOpsReminderSchedule(string $uuid, string $publicId, string $name, string $nextDueDate, array $offsets, ?string $email): MaintenanceSchedule
+{
+    $schedule = (new ReflectionClass(MaintenanceSchedule::class))->newInstanceWithoutConstructor();
+    $schedule->setRawAttributes([
+        'uuid'                  => $uuid,
+        'public_id'             => $publicId,
+        'name'                  => $name,
+        'next_due_date'         => Carbon::parse($nextDueDate),
+        'reminder_offsets'      => json_encode($offsets),
+        'default_assignee_uuid' => $email ? $uuid . '-assignee' : null,
+    ], true);
+
+    $schedule->setRelation('defaultAssignee', $email ? (object) ['email' => $email] : null);
+
+    return $schedule;
+}
+
 test('sync telematics exits cleanly when another process holds the lock', function () {
     $lock = new FleetOpsCommandLockFake(false);
     Cache::swap(new FleetOpsCommandCacheFake($lock));
@@ -821,6 +893,84 @@ test('audit customer user conflicts handles missing users tables and clean audit
         ])
         ->and($cleanCommand->handle())->toBe(Command::SUCCESS)
         ->and($cleanCommand->messages)->toContain(['info', 'No suspicious customer user conflicts found.']);
+});
+
+test('send maintenance reminders sends eligible reminders and skips ineligible schedules', function () {
+    Carbon::setTestNow(Carbon::parse('2026-07-26 09:30:00'));
+
+    $eligible = fleetOpsReminderSchedule(
+        'schedule-eligible',
+        'schedule_public',
+        'Quarterly inspection',
+        '2026-07-28',
+        [7, 1],
+        'mechanic@example.test',
+    );
+    $alreadySent = fleetOpsReminderSchedule(
+        'schedule-already',
+        'schedule_already',
+        'Already sent',
+        '2026-07-26',
+        [0],
+        'lead@example.test',
+    );
+    $withoutEmail = fleetOpsReminderSchedule(
+        'schedule-no-email',
+        'schedule_no_email',
+        'No assignee email',
+        '2026-07-27',
+        [7],
+        null,
+    );
+
+    $alreadySentKey = implode('|', ['sandbox', 'schedule-already', 0, '2026-07-26']);
+    $command        = new FleetOpsSendMaintenanceRemindersCommandFake([
+        'sandbox' => true,
+        'dry-run' => false,
+    ], [$alreadySentKey]);
+    $command->testSchedules = collect([$eligible, $alreadySent, $withoutEmail]);
+
+    $command->handle();
+
+    expect($command->messages)->toContain(['schedules', 'sandbox'])
+        ->and($command->sent)->toBe([
+            ['mechanic@example.test', 'schedule-eligible', 7],
+        ])
+        ->and($command->records)->toBe([
+            ['sandbox', 'schedule-eligible', 7, '2026-07-28'],
+        ])
+        ->and($command->messages)->toContain(['info', 'Sent 1 reminder(s).'])
+        ->and(collect($command->messages)->pluck(1)->filter()->contains(fn ($message) => str_contains($message, 'no email on default assignee')))->toBeTrue();
+
+    Carbon::setTestNow();
+});
+
+test('send maintenance reminders dry run counts reminders without sending or recording', function () {
+    Carbon::setTestNow(Carbon::parse('2026-07-26 09:30:00'));
+
+    $command                = new FleetOpsSendMaintenanceRemindersCommandFake([
+        'sandbox' => false,
+        'dry-run' => true,
+    ]);
+    $command->testSchedules = collect([
+        fleetOpsReminderSchedule(
+            'schedule-dry-run',
+            'schedule_dry_run',
+            'Dry run service',
+            '2026-07-30',
+            [7],
+            'dry@example.test',
+        ),
+    ]);
+
+    $command->handle();
+
+    expect($command->messages)->toContain(['schedules', 'mysql'])
+        ->and($command->sent)->toBe([])
+        ->and($command->records)->toBe([])
+        ->and($command->messages)->toContain(['info', 'Sent 1 reminder(s) (dry run — no emails sent)']);
+
+    Carbon::setTestNow();
 });
 
 test('dispatch adhoc command exits when no orders are dispatchable', function () {

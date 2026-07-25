@@ -6,6 +6,7 @@ use Fleetbase\FleetOps\Mail\MaintenanceScheduleReminder;
 use Fleetbase\FleetOps\Models\MaintenanceSchedule;
 use Illuminate\Console\Command;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Mail;
 
@@ -54,15 +55,7 @@ class SendMaintenanceReminders extends Command
         //   - a non-null next_due_date (reminders are date-based only)
         //   - a non-null reminder_offsets JSON array
         //   - a default_assignee configured
-        $schedules = MaintenanceSchedule::on($conn)
-            ->withoutGlobalScopes()
-            ->where('status', 'active')
-            ->whereNotNull('next_due_date')
-            ->whereNotNull('reminder_offsets')
-            ->whereNotNull('default_assignee_uuid')
-            ->whereNull('deleted_at')
-            ->with(['subject', 'defaultAssignee'])
-            ->get();
+        $schedules = $this->schedules($conn);
 
         foreach ($schedules as $schedule) {
             $offsets     = $schedule->reminder_offsets;
@@ -95,12 +88,7 @@ class SendMaintenanceReminders extends Command
                 }
 
                 // Check whether we already sent this reminder for this cycle
-                $alreadySent = DB::connection($conn)
-                    ->table('maintenance_schedule_reminders')
-                    ->where('schedule_uuid', $schedule->uuid)
-                    ->where('offset_days', $offsetDays)
-                    ->where('due_date_snapshot', $dueDateSnapshot)
-                    ->exists();
+                $alreadySent = $this->reminderAlreadySent($conn, $schedule, $offsetDays, $dueDateSnapshot);
 
                 if ($alreadySent) {
                     continue;
@@ -109,14 +97,8 @@ class SendMaintenanceReminders extends Command
                 $this->line("Sending reminder: schedule {$schedule->public_id} ({$schedule->name}) — {$offsetDays} days before {$dueDateSnapshot} → {$email}");
 
                 if (!$dryRun) {
-                    Mail::to($email)->send(new MaintenanceScheduleReminder($schedule, $offsetDays));
-
-                    DB::connection($conn)->table('maintenance_schedule_reminders')->insert([
-                        'schedule_uuid'     => $schedule->uuid,
-                        'offset_days'       => $offsetDays,
-                        'due_date_snapshot' => $dueDateSnapshot,
-                        'sent_at'           => Carbon::now(),
-                    ]);
+                    $this->sendReminder($email, $schedule, $offsetDays);
+                    $this->recordReminder($conn, $schedule, $offsetDays, $dueDateSnapshot);
                 }
 
                 $sent++;
@@ -124,5 +106,43 @@ class SendMaintenanceReminders extends Command
         }
 
         $this->info("Sent {$sent} reminder(s)" . ($dryRun ? ' (dry run — no emails sent)' : '.'));
+    }
+
+    protected function schedules(string $conn): Collection
+    {
+        return MaintenanceSchedule::on($conn)
+            ->withoutGlobalScopes()
+            ->where('status', 'active')
+            ->whereNotNull('next_due_date')
+            ->whereNotNull('reminder_offsets')
+            ->whereNotNull('default_assignee_uuid')
+            ->whereNull('deleted_at')
+            ->with(['subject', 'defaultAssignee'])
+            ->get();
+    }
+
+    protected function reminderAlreadySent(string $conn, MaintenanceSchedule $schedule, int $offsetDays, string $dueDateSnapshot): bool
+    {
+        return DB::connection($conn)
+            ->table('maintenance_schedule_reminders')
+            ->where('schedule_uuid', $schedule->uuid)
+            ->where('offset_days', $offsetDays)
+            ->where('due_date_snapshot', $dueDateSnapshot)
+            ->exists();
+    }
+
+    protected function sendReminder(string $email, MaintenanceSchedule $schedule, int $offsetDays): void
+    {
+        Mail::to($email)->send(new MaintenanceScheduleReminder($schedule, $offsetDays));
+    }
+
+    protected function recordReminder(string $conn, MaintenanceSchedule $schedule, int $offsetDays, string $dueDateSnapshot): void
+    {
+        DB::connection($conn)->table('maintenance_schedule_reminders')->insert([
+            'schedule_uuid'     => $schedule->uuid,
+            'offset_days'       => $offsetDays,
+            'due_date_snapshot' => $dueDateSnapshot,
+            'sent_at'           => Carbon::now(),
+        ]);
     }
 }
