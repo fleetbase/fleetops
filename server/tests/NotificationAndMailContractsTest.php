@@ -7,6 +7,7 @@ if (!function_exists('url')) {
     }
 }
 
+use Fleetbase\FleetOps\Events\OrderDispatchFailed as OrderDispatchFailedEvent;
 use Fleetbase\FleetOps\Flow\Activity;
 use Fleetbase\FleetOps\Mail\MaintenanceScheduleReminder;
 use Fleetbase\FleetOps\Mail\WorkOrderDispatched;
@@ -15,18 +16,22 @@ use Fleetbase\FleetOps\Models\Order;
 use Fleetbase\FleetOps\Models\Waypoint;
 use Fleetbase\FleetOps\Models\WorkOrder;
 use Fleetbase\FleetOps\Notifications\DriverArrivedAtGeofence;
+use Fleetbase\FleetOps\Notifications\DriverShiftChanged;
 use Fleetbase\FleetOps\Notifications\LateDeparture;
 use Fleetbase\FleetOps\Notifications\OrderAssigned;
 use Fleetbase\FleetOps\Notifications\OrderCanceled as OrderCanceledNotification;
 use Fleetbase\FleetOps\Notifications\OrderCompleted as OrderCompletedNotification;
 use Fleetbase\FleetOps\Notifications\OrderDispatched;
+use Fleetbase\FleetOps\Notifications\OrderDispatchFailed;
 use Fleetbase\FleetOps\Notifications\OrderFailed as OrderFailedNotification;
 use Fleetbase\FleetOps\Notifications\OrderPing;
 use Fleetbase\FleetOps\Notifications\ProlongedStoppage;
 use Fleetbase\FleetOps\Notifications\RouteDeviation;
 use Fleetbase\FleetOps\Notifications\WaypointCompleted;
 use Fleetbase\Models\Model;
+use Fleetbase\Models\ScheduleItem;
 use Illuminate\Container\Container;
+use Illuminate\Support\Carbon;
 
 class FleetOpsNotificationOrderFake extends Order
 {
@@ -58,6 +63,26 @@ class FleetOpsNotificationDriverFake extends Model
             'public_id' => 'driver-public',
             default     => parent::getAttribute($key),
         };
+    }
+}
+
+class FleetOpsNotificationScheduleItemFake extends ScheduleItem
+{
+    public function getDateFormat()
+    {
+        return 'Y-m-d H:i:s';
+    }
+}
+
+class FleetOpsOrderDispatchFailedEventFake extends OrderDispatchFailedEvent
+{
+    public function __construct(private string $reasonForTest)
+    {
+    }
+
+    public function getReason(): string
+    {
+        return $this->reasonForTest;
     }
 }
 
@@ -185,6 +210,85 @@ test('driver arrived at geofence notification exposes mail and database payloads
         'geofence_name' => null,
         'message'       => 'Your driver has arrived at your location for order #order_public.',
     ]);
+});
+
+test('driver shift changed notification formats new and updated shift messages', function () {
+    $scheduleItem = new FleetOpsNotificationScheduleItemFake();
+    $scheduleItem->setRawAttributes([
+        'public_id' => 'schedule_public',
+        'notes'     => 'Bring safety vest',
+    ], true);
+    $scheduleItem->start_at = Carbon::parse('2026-09-01 08:00:00');
+    $scheduleItem->end_at   = Carbon::parse('2026-09-01 17:30:00');
+
+    $created = new DriverShiftChanged($scheduleItem, true);
+    $updated = new DriverShiftChanged($scheduleItem, false);
+    $mail    = fleetOpsNotificationWithEnvironment(fn () => $created->toMail(null));
+
+    expect(DriverShiftChanged::$name)->toBe('Driver Shift Changed')
+        ->and(DriverShiftChanged::$package)->toBe('fleet-ops')
+        ->and($created->via(null))->toBe(['mail'])
+        ->and($created->title)->toBe('New shift scheduled')
+        ->and($created->message)->toContain('A new shift has been added')
+        ->and($created->message)->toContain('Tue, Sep 1 8:00am')
+        ->and($created->message)->toContain('5:30pm')
+        ->and($created->toArray(null))->toMatchArray([
+            'id'       => 'schedule_public',
+            'type'     => 'driver_shift_changed',
+            'is_new'   => true,
+        ])
+        ->and($created->toArray(null)['start_at'])->not->toBeNull()
+        ->and($created->toArray(null)['end_at'])->not->toBeNull()
+        ->and($mail->subject)->toBe('New shift scheduled')
+        ->and($mail->introLines)->toContain(
+            $created->message,
+            'Notes: Bring safety vest'
+        )
+        ->and($mail->actionText)->toBe('View Schedule')
+        ->and($mail->actionUrl)->toContain('fleet-ops/operations/scheduler')
+        ->and($updated->title)->toBe('Your shift has been updated')
+        ->and($updated->message)->toContain('Your shift has been updated')
+        ->and($updated->toArray(null)['is_new'])->toBeFalse();
+});
+
+test('order dispatch failed notification exposes channels array and mail payloads', function () {
+    session([
+        'company'        => 'company-session',
+        'api_credential' => 'api-credential',
+    ]);
+
+    $order = notificationTestOrderWithRelations();
+    $order->setRelation('trackingNumber', (object) [
+        'tracking_number' => 'TN-FAILED',
+    ]);
+    $event        = new FleetOpsOrderDispatchFailedEventFake('No driver accepted the order');
+    $notification = new OrderDispatchFailed($order, $event);
+    $mail         = fleetOpsNotificationWithEnvironment(fn () => $notification->toMail(null));
+
+    expect(OrderDispatchFailed::$name)->toBe('Order dispatch Failed')
+        ->and(OrderDispatchFailed::$description)->toContain('dispatch')
+        ->and($notification->title)->toBe('Order TN-FAILED dispatch has failed!')
+        ->and($notification->message)->toBe('No driver accepted the order')
+        ->and($notification->data)->toBe(['id' => 'order_public', 'type' => 'order_dispatch_failed'])
+        ->and($notification->via(null))->toBe(['mail'])
+        ->and(fleetOpsNotificationChannelNames($notification->broadcastOn()))->toBe([
+            'company.company-session',
+            'company.company-public',
+            'api.api-credential',
+            'order.order-uuid',
+            'order.order_public',
+        ])
+        ->and($notification->toArray())->toBe([
+            'event' => 'order.assigned_failed_notification',
+            'title' => 'Order TN-FAILED dispatch has failed!',
+            'body'  => 'No driver accepted the order',
+            'data'  => ['id' => 'order_public', 'type' => 'order_dispatch_failed'],
+        ])
+        ->and($mail->subject)->toBe('Order TN-FAILED dispatch has failed!')
+        ->and($mail->introLines)->toBe(['No driver accepted the order'])
+        ->and($mail->actionText)->toBe('Track Order')
+        ->and($mail->actionUrl)->toContain('track-order')
+        ->and($mail->actionUrl)->toContain('TN-FAILED');
 });
 
 test('order dispatched notification exposes channels array and mail payloads', function () {

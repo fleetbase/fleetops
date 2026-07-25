@@ -53,10 +53,12 @@ namespace Illuminate\Validation {
 
 namespace {
     use Fleetbase\FleetOps\Http\Requests\CreateCustomerOrderRequest;
+    use Fleetbase\FleetOps\Http\Requests\CreateCustomerRequest;
     use Fleetbase\FleetOps\Http\Requests\CreateDeviceRequest;
     use Fleetbase\FleetOps\Http\Requests\CreateFuelReportRequest;
     use Fleetbase\FleetOps\Http\Requests\CreateFuelTransactionRequest;
     use Fleetbase\FleetOps\Http\Requests\CreateOrderRequest;
+    use Fleetbase\FleetOps\Http\Requests\CreatePartRequest;
     use Fleetbase\FleetOps\Http\Requests\CreatePlaceRequest;
     use Fleetbase\FleetOps\Http\Requests\CreateSensorRequest;
     use Fleetbase\FleetOps\Http\Requests\CreateServiceAreaRequest;
@@ -420,6 +422,65 @@ namespace {
             ->and($createRules['trigger_on_exit'])->toBe(['nullable', 'boolean'])
             ->and($createRules['dwell_threshold_minutes'])->toBe(['nullable', 'integer', 'min:1', 'max:10080'])
             ->and($createRules['speed_limit_kmh'])->toBe(['nullable', 'integer', 'min:1', 'max:1000']);
+    });
+
+    test('customer creation request authorizes token sessions and protects identity contracts', function () {
+        bindFleetOpsRequestSession();
+
+        $request = CreateCustomerRequest::create('/fleetops-test', 'POST');
+
+        expect($request->authorize())->toBeFalse();
+
+        bindFleetOpsRequestSession(['is_sanctum_token' => true]);
+
+        expect($request->authorize())->toBeTrue();
+
+        bindFleetOpsRequestSession(['api_credential' => 'credential-uuid']);
+
+        $rules = $request->rules();
+
+        expect($request->authorize())->toBeTrue()
+            ->and($rules['identity'])->toBe('required|string')
+            ->and($rules['code'])->toBe('required|exists:verification_codes,code')
+            ->and($rules['name'])->toBe('required|string')
+            ->and($rules['password'])->toBe('required|string|min:8')
+            ->and(ruleStrings($rules['email']))->toContain('email', 'nullable', 'unique:contacts')
+            ->and(ruleStrings($rules['phone']))->toContain('nullable', 'string', 'unique:contacts')
+            ->and($rules['meta'])->toBe('nullable|array');
+    });
+
+    test('part request authorizes token sessions and exposes inventory metadata rules', function () {
+        bindFleetOpsRequestSession();
+
+        $request = CreatePartRequest::create('/fleetops-test', 'POST');
+
+        expect($request->authorize())->toBeFalse();
+
+        bindFleetOpsRequestSession(['api_credential' => 'credential-uuid']);
+
+        $createRules = $request->rules();
+        $patchRules  = CreatePartRequest::create('/fleetops-test', 'PATCH')->rules();
+
+        expect($request->authorize())->toBeTrue()
+            ->and($createRules['sku'])->toBe(['nullable', 'string'])
+            ->and(ruleStrings($createRules['name']))->toContain('required', 'string')
+            ->and(ruleStrings($patchRules['name']))->not->toContain('required')
+            ->and($createRules['manufacturer'])->toBe(['nullable', 'string'])
+            ->and($createRules['model'])->toBe(['nullable', 'string'])
+            ->and($createRules['serial_number'])->toBe(['nullable', 'string'])
+            ->and($createRules['barcode'])->toBe(['nullable', 'string'])
+            ->and($createRules['quantity_on_hand'])->toBe(['nullable', 'integer', 'min:0'])
+            ->and($createRules['currency'])->toBe(['nullable', 'string', 'size:3'])
+            ->and($createRules['asset'])->toBe(['nullable', 'required_with:asset_type', 'string'])
+            ->and($createRules['vendor'])->toBe(['nullable', 'string'])
+            ->and($createRules['warranty'])->toBe(['nullable', 'string'])
+            ->and($createRules['photo'])->toBe(['nullable', 'string'])
+            ->and($createRules['specs'])->toBe(['nullable', 'array'])
+            ->and($createRules['meta'])->toBe(['nullable', 'array']);
+
+        bindFleetOpsRequestSession(['is_sanctum_token' => true]);
+
+        expect($request->authorize())->toBeTrue();
     });
 
     test('place sensor and service rate requests expose conditional validation contracts', function () {
