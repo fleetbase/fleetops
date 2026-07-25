@@ -4,12 +4,25 @@ if (!class_exists('Illuminate\Foundation\Auth\User')) {
     eval('namespace Illuminate\Foundation\Auth; class User extends \Illuminate\Database\Eloquent\Model {}');
 }
 
+if (!function_exists('Fleetbase\Traits\config')) {
+    eval('namespace Fleetbase\Traits; function config($key = null, $default = null) { return $key === "api.cache.enabled" ? false : $default; }');
+}
+
+if (!function_exists('Fleetbase\Models\config')) {
+    eval('namespace Fleetbase\Models; function config($key = null, $default = null) { return $key === "fleetbase.connection.db" ? "mysql" : $default; }');
+}
+
+if (!function_exists('Fleetbase\FleetOps\Models\now')) {
+    eval('namespace Fleetbase\FleetOps\Models; function now() { return \Illuminate\Support\Carbon::now(); }');
+}
+
 use Fleetbase\FleetOps\Exceptions\CustomerUserConflictException;
 use Fleetbase\FleetOps\Models\Contact;
 use Fleetbase\FleetOps\Models\Device;
 use Fleetbase\FleetOps\Models\Fleet;
 use Fleetbase\FleetOps\Models\FuelReport;
 use Fleetbase\FleetOps\Models\Maintenance;
+use Fleetbase\FleetOps\Models\Manifest;
 use Fleetbase\FleetOps\Models\Order;
 use Fleetbase\FleetOps\Models\Payload;
 use Fleetbase\FleetOps\Models\Place;
@@ -114,6 +127,43 @@ class FleetOpsSavingOrderFake extends Order
         $this->saved = true;
 
         return true;
+    }
+}
+
+class FleetOpsUpdatingManifestFake extends Manifest
+{
+    public array $updates = [];
+
+    public function getDateFormat()
+    {
+        return 'Y-m-d H:i:s';
+    }
+
+    public function update(array $attributes = [], array $options = []): bool
+    {
+        $this->updates[] = $attributes;
+        $this->forceFill($attributes);
+
+        return true;
+    }
+}
+
+class FleetOpsManifestScopeQueryFake
+{
+    public array $calls = [];
+
+    public function where(string $column, mixed $value): self
+    {
+        $this->calls[] = ['where', $column, $value];
+
+        return $this;
+    }
+
+    public function whereIn(string $column, array $values): self
+    {
+        $this->calls[] = ['whereIn', $column, $values];
+
+        return $this;
     }
 }
 
@@ -487,6 +537,70 @@ test('fleet accessors expose photo fallback and online asset counts', function (
         ->and($fleet->vehicles_online_count)->toBe(3)
         ->and($fleet->getActivitylogOptions()->logAttributes)->toBe(['name', 'task', 'service_area_uuid', 'zone_uuid'])
         ->and($fleet->getSlugOptions()->slugField)->toBe('slug');
+});
+
+test('manifest metadata relations scopes and status transitions are stable', function () {
+    Carbon::setTestNow(Carbon::parse('2026-04-05 09:30:00'));
+
+    $manifest = new FleetOpsUpdatingManifestFake([
+        'company_uuid'     => 'company-uuid',
+        'driver_uuid'      => 'driver-uuid',
+        'vehicle_uuid'     => 'vehicle-uuid',
+        'status'           => 'active',
+        'scheduled_date'   => '2026-04-05',
+        'total_distance_m' => 12345,
+        'total_duration_s' => 3600,
+        'stop_count'       => 4,
+        'meta'             => ['route' => 'A'],
+    ]);
+    $manifest->setRelation('driver', (object) ['name' => 'Jane Driver']);
+    $manifest->setRelation('vehicle', (object) ['display_name' => 'Truck 12']);
+
+    expect($manifest->getTable())->toBe('manifests')
+        ->and($manifest->getFillable())->toContain(
+            'company_uuid',
+            'driver_uuid',
+            'vehicle_uuid',
+            'status',
+            'scheduled_date',
+            'started_at',
+            'completed_at',
+            'total_distance_m',
+            'total_duration_s',
+            'stop_count',
+            'notes',
+            'meta'
+        )
+        ->and($manifest->getCasts())->toHaveKeys(['meta', 'scheduled_date', 'started_at', 'completed_at'])
+        ->and($manifest->getAppends())->toBe(['driver_name', 'vehicle_name', 'completed_stops', 'pending_stops'])
+        ->and($manifest->driver_name)->toBe('Jane Driver')
+        ->and($manifest->vehicle_name)->toBe('Truck 12');
+
+    $scopeQuery = new FleetOpsManifestScopeQueryFake();
+
+    expect($manifest->scopeForCompany($scopeQuery, 'company-uuid'))->toBe($scopeQuery)
+        ->and($manifest->scopeActive($scopeQuery))->toBe($scopeQuery)
+        ->and($manifest->scopeForDriver($scopeQuery, 'driver-uuid'))->toBe($scopeQuery)
+        ->and($manifest->scopeForVehicle($scopeQuery, 'vehicle-uuid'))->toBe($scopeQuery)
+        ->and($scopeQuery->calls)->toBe([
+            ['where', 'company_uuid', 'company-uuid'],
+            ['whereIn', 'status', ['active', 'in_progress']],
+            ['where', 'driver_uuid', 'driver-uuid'],
+            ['where', 'vehicle_uuid', 'vehicle-uuid'],
+        ]);
+
+    expect($manifest->start())->toBe($manifest)
+        ->and($manifest->status)->toBe('in_progress')
+        ->and($manifest->updates[0]['status'])->toBe('in_progress')
+        ->and($manifest->updates[0]['started_at']->toDateTimeString())->toBe('2026-04-05 09:30:00')
+        ->and($manifest->complete())->toBe($manifest)
+        ->and($manifest->status)->toBe('completed')
+        ->and($manifest->updates[1]['completed_at']->toDateTimeString())->toBe('2026-04-05 09:30:00')
+        ->and($manifest->cancel())->toBe($manifest)
+        ->and($manifest->status)->toBe('cancelled')
+        ->and($manifest->updates[2])->toBe(['status' => 'cancelled']);
+
+    Carbon::setTestNow();
 });
 
 test('order accessors mutators and payload association helpers are stable', function () {
