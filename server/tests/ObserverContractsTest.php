@@ -4,10 +4,15 @@ use Carbon\Carbon;
 use Fleetbase\FleetOps\Models\Contact;
 use Fleetbase\FleetOps\Models\Maintenance;
 use Fleetbase\FleetOps\Models\MaintenanceSchedule;
+use Fleetbase\FleetOps\Models\Order;
 use Fleetbase\FleetOps\Models\WorkOrder;
 use Fleetbase\FleetOps\Observers\ContactObserver;
+use Fleetbase\FleetOps\Observers\OrderObserver;
 use Fleetbase\FleetOps\Observers\WorkOrderObserver;
 use Fleetbase\Models\User;
+use Illuminate\Cache\ArrayStore;
+use Illuminate\Cache\Repository;
+use Illuminate\Support\Facades\Cache;
 
 if (!class_exists('Illuminate\Foundation\Auth\User')) {
     class_alias(Illuminate\Database\Eloquent\Model::class, 'Illuminate\Foundation\Auth\User');
@@ -62,6 +67,49 @@ class FleetOpsWorkOrderObserverScheduleFake extends MaintenanceSchedule
         $this->resets[] = [$completedOdometer, $completedEngineHours, $completedAt];
 
         return true;
+    }
+}
+
+class FleetOpsOrderObserverOrderFake extends Order
+{
+    public ?string $uuid           = null;
+    public ?string $status         = null;
+    public bool $started           = false;
+    public ?Carbon $started_at     = null;
+    public bool $statusDirty       = false;
+    public bool $driverWasChanged  = false;
+    public bool $integratedVendor  = false;
+    public array $originalData     = [];
+    public array $events           = [];
+
+    public function isDirty($attributes = null): bool
+    {
+        return $attributes === 'status' ? $this->statusDirty : false;
+    }
+
+    public function getOriginal($key = null, $default = null): mixed
+    {
+        return $key === null ? $this->originalData : ($this->originalData[$key] ?? $default);
+    }
+
+    public function wasChanged($attributes = null): bool
+    {
+        return $attributes === 'driver_assigned_uuid' ? $this->driverWasChanged : false;
+    }
+
+    public function setDriverLocationAsPickup($force = false)
+    {
+        $this->events[] = 'setDriverLocationAsPickup';
+    }
+
+    public function notifyDriverAssigned(): void
+    {
+        $this->events[] = 'notifyDriverAssigned';
+    }
+
+    public function isIntegratedVendorOrder(): bool
+    {
+        return $this->integratedVendor;
     }
 }
 
@@ -238,6 +286,75 @@ test('work order observer skips non closing duplicate and missing schedule branc
 
     expect($observer->createdMaintenance)->toBe([])
         ->and($observer->completedEvents)->toBe([$duplicate]);
+});
+
+test('order observer starts dispatched orders and invalidates live cache entries', function () {
+    Cache::swap(new Repository(new ArrayStore()));
+    session(['company' => 'company-uuid']);
+    Carbon::setTestNow(Carbon::parse('2026-04-02 08:15:00'));
+
+    $order               = new FleetOpsOrderObserverOrderFake();
+    $order->uuid         = 'order-uuid';
+    $order->status       = 'started';
+    $order->started      = false;
+    $order->started_at   = null;
+    $order->originalData = ['status' => 'dispatched'];
+    $order->statusDirty  = true;
+
+    $observer = new OrderObserver();
+
+    $observer->updating($order);
+    $observer->created($order);
+
+    expect($order->started)->toBeTrue()
+        ->and($order->started_at->toDateTimeString())->toBe('2026-04-02 08:15:00')
+        ->and(Cache::get('live:company-uuid:orders:version'))->toBe(1)
+        ->and(Cache::get('live:company-uuid:routes:version'))->toBe(1)
+        ->and(Cache::get('live:company-uuid:coordinates:version'))->toBe(1);
+
+    Carbon::setTestNow();
+});
+
+test('order observer preserves explicit start fields and notifies assigned driver on update', function () {
+    Cache::swap(new Repository(new ArrayStore()));
+    session(['company' => 'company-uuid']);
+
+    $explicitStart            = Carbon::parse('2026-04-01 10:00:00');
+    $order                    = new FleetOpsOrderObserverOrderFake();
+    $order->uuid              = 'order-update-uuid';
+    $order->status            = 'started';
+    $order->started           = true;
+    $order->started_at        = $explicitStart;
+    $order->originalData      = ['status' => 'dispatched'];
+    $order->statusDirty       = true;
+    $order->driverWasChanged  = true;
+
+    $observer = new OrderObserver();
+
+    $observer->updating($order);
+    $observer->updated($order);
+
+    expect($order->started)->toBeTrue()
+        ->and($order->started_at)->toBe($explicitStart)
+        ->and($order->events)->toBe([
+            'setDriverLocationAsPickup',
+            'notifyDriverAssigned',
+        ])
+        ->and(Cache::get('live:company-uuid:orders:version'))->toBe(1);
+});
+
+test('order observer ignores non dispatched start transitions', function () {
+    $order               = new FleetOpsOrderObserverOrderFake();
+    $order->status       = 'started';
+    $order->started      = false;
+    $order->started_at   = null;
+    $order->originalData = ['status' => 'created'];
+    $order->statusDirty  = true;
+
+    (new OrderObserver())->updating($order);
+
+    expect($order->started)->toBeFalse()
+        ->and($order->started_at)->toBeNull();
 });
 
 test('contact observer creates syncs normalizes and deletes associated users', function () {

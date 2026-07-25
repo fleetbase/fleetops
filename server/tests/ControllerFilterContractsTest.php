@@ -2,6 +2,7 @@
 
 use Fleetbase\FleetOps\Http\Controllers\Api\v1\DeviceController as ApiDeviceController;
 use Fleetbase\FleetOps\Http\Controllers\Internal\v1\DeviceController as InternalDeviceController;
+use Fleetbase\FleetOps\Http\Controllers\Internal\v1\DeviceEventController;
 use Fleetbase\FleetOps\Http\Controllers\Internal\v1\SettingController;
 use Fleetbase\FleetOps\Http\Filter\ContactFilter;
 use Fleetbase\FleetOps\Http\Filter\DeviceEventFilter;
@@ -363,6 +364,40 @@ test('device event filter records event relation processed and date filters', fu
 
     expect(collect($query->calls)->where(0, 'whereBetween')->values())->toHaveCount(2)
         ->and(collect($query->calls)->where(0, 'whereDate')->values())->toHaveCount(1);
+});
+
+test('device event controller query scopes device relation telematic and processed states', function () {
+    $query = new FleetOpsControllerFilterQuery();
+
+    DeviceEventController::onQueryRecord($query, Request::create('/device-events', 'GET', [
+        'telematic' => 'telematic-uuid',
+        'processed' => 'processed,unprocessed,ignored',
+    ]));
+
+    expect($query->calls[0])->toBe(['with', ['device.telematic']]);
+
+    $telematic = collect($query->calls)->first(fn ($call) => $call[0] === 'whereHas' && $call[1] === 'device');
+    expect($telematic[2])->toBe([
+        ['where', ['telematic_uuid', 'telematic-uuid']],
+    ]);
+
+    $processed = collect($query->calls)->first(fn ($call) => $call[0] === 'whereNested');
+    expect($processed[1])->toBe([
+        ['orWhereNotNull', 'processed_at'],
+        ['orWhereNull', 'processed_at'],
+    ]);
+});
+
+test('device event controller skips processed scope when states are empty', function () {
+    $query = new FleetOpsControllerFilterQuery();
+
+    DeviceEventController::onQueryRecord($query, Request::create('/device-events', 'GET', [
+        'processed' => [],
+    ]));
+
+    expect($query->calls)->toBe([
+        ['with', ['device.telematic']],
+    ]);
 });
 
 test('vehicle filter records identity relationship fleet and telematic filters', function () {
