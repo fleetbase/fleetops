@@ -1,6 +1,9 @@
 <?php
 
 use Fleetbase\FleetOps\Events\DriverLocationChanged;
+use Fleetbase\FleetOps\Events\EntityActivityChanged;
+use Fleetbase\FleetOps\Events\EntityCompleted;
+use Fleetbase\FleetOps\Events\EntityDriverAssigned;
 use Fleetbase\FleetOps\Events\FuelProviderTransactionImported;
 use Fleetbase\FleetOps\Events\FuelProviderTransactionMatched;
 use Fleetbase\FleetOps\Events\FuelProviderTransactionUnmatched;
@@ -9,12 +12,17 @@ use Fleetbase\FleetOps\Events\GeofenceDwelled;
 use Fleetbase\FleetOps\Events\GeofenceEntered;
 use Fleetbase\FleetOps\Events\GeofenceExited;
 use Fleetbase\FleetOps\Events\VehicleLocationChanged;
+use Fleetbase\FleetOps\Events\WaypointActivityChanged;
+use Fleetbase\FleetOps\Events\WaypointCompleted;
+use Fleetbase\FleetOps\Flow\Activity;
 use Fleetbase\FleetOps\Listeners\HandleGeofenceEntered;
 use Fleetbase\FleetOps\Models\Driver;
+use Fleetbase\FleetOps\Models\Entity;
 use Fleetbase\FleetOps\Models\FuelProviderTransaction;
 use Fleetbase\FleetOps\Models\FuelReport;
 use Fleetbase\FleetOps\Models\Order;
 use Fleetbase\FleetOps\Models\Vehicle;
+use Fleetbase\FleetOps\Models\Waypoint;
 use Fleetbase\LaravelMysqlSpatial\Types\Point;
 
 if (!class_exists('Illuminate\Foundation\Auth\User')) {
@@ -34,6 +42,46 @@ class FleetOpsEventVehicle extends Vehicle
     public function loadMissing($relations)
     {
         return $this;
+    }
+}
+
+class FleetOpsWaypointCompletedProbe extends WaypointCompleted
+{
+    public ?Order $order = null;
+
+    public function getModelRecord(): ?Order
+    {
+        return $this->order;
+    }
+}
+
+class FleetOpsWaypointActivityChangedProbe extends WaypointActivityChanged
+{
+    public ?Order $order = null;
+
+    public function getModelRecord(): ?Order
+    {
+        return $this->order;
+    }
+}
+
+class FleetOpsEntityCompletedProbe extends EntityCompleted
+{
+    public ?Order $order = null;
+
+    public function getModelRecord(): ?Order
+    {
+        return $this->order;
+    }
+}
+
+class FleetOpsEntityActivityChangedProbe extends EntityActivityChanged
+{
+    public ?Order $order = null;
+
+    public function getModelRecord(): ?Order
+    {
+        return $this->order;
     }
 }
 
@@ -60,6 +108,10 @@ test('driver location changed broadcasts driver telemetry payload', function () 
         'heading'     => 180,
         'speed'       => 32,
     ], true);
+    $driver->setRelation('user', (object) [
+        'name'  => 'Jane Driver',
+        'phone' => '+15551234567',
+    ]);
     $driver->setRelation('user', (object) [
         'name'  => 'Jane Driver',
         'phone' => '+15551234567',
@@ -132,6 +184,147 @@ test('vehicle location changed broadcasts vehicle telemetry payload', function (
                 'additionalData' => ['source' => 'device'],
             ],
         ]);
+});
+
+test('waypoint events broadcast activity payloads with associated order channels', function () {
+    session([
+        'company'        => 'company-session',
+        'api_credential' => 'api-credential',
+    ]);
+
+    $company = (object) [
+        'uuid'      => 'company-uuid',
+        'public_id' => 'company_public',
+    ];
+
+    $order = new Order();
+    $order->setRawAttributes([
+        'uuid'      => 'order-uuid',
+        'public_id' => 'order_public',
+    ], true);
+    $order->setRelation('company', $company);
+
+    $waypoint = new Waypoint();
+    $waypoint->setRawAttributes([
+        'uuid'         => 'waypoint-uuid',
+        'public_id'    => 'waypoint_public',
+        'payload_uuid' => 'payload-uuid',
+    ], true);
+    $waypoint->setRelation('place', (object) [
+        'public_id' => 'place_public',
+    ]);
+
+    $activity  = new Activity(['code' => 'arrived', 'status' => 'completed']);
+    $completed = new FleetOpsWaypointCompletedProbe($waypoint, $activity);
+    $changed   = new FleetOpsWaypointActivityChangedProbe($waypoint, $activity);
+
+    $completed->order = $order;
+    $changed->order   = $order;
+
+    expect($completed->broadcastAs())->toBe('waypoint.completed')
+        ->and(eventChannelNames($completed->broadcastOn()))->toBe([
+            'api.api-credential',
+            'waypoint.waypoint_public',
+            'waypoint.waypoint-uuid',
+            'company.company-session',
+            'company.company_public',
+            'order.order-uuid',
+            'order.order_public',
+        ])
+        ->and($completed->broadcastWith())->toMatchArray([
+            'event' => 'waypoint.completed',
+            'data'  => [
+                'waypoint' => 'waypoint_public',
+                'place'    => 'place_public',
+                'activity' => [
+                    'code'   => 'arrived',
+                    'status' => 'completed',
+                ],
+            ],
+        ])
+        ->and($changed->broadcastAs())->toBe('waypoint.activity')
+        ->and(eventChannelNames($changed->broadcastOn()))->toBe(eventChannelNames($completed->broadcastOn()))
+        ->and($changed->broadcastWith())->toMatchArray([
+            'event' => 'waypoint.activity',
+            'data'  => [
+                'waypoint' => 'waypoint_public',
+                'place'    => 'place_public',
+                'activity' => [
+                    'code'   => 'arrived',
+                    'status' => 'completed',
+                ],
+            ],
+        ]);
+});
+
+test('entity events broadcast activity payloads with associated order channels', function () {
+    session([
+        'company'        => 'company-session',
+        'api_credential' => 'api-credential',
+    ]);
+
+    $company = (object) [
+        'uuid'      => 'company-uuid',
+        'public_id' => 'company_public',
+    ];
+
+    $order = new Order();
+    $order->setRawAttributes([
+        'uuid'      => 'order-uuid',
+        'public_id' => 'order_public',
+    ], true);
+    $order->setRelation('company', $company);
+
+    $entity = new Entity();
+    $entity->setRawAttributes([
+        'uuid'         => 'entity-uuid',
+        'public_id'    => 'entity_public',
+        'payload_uuid' => 'payload-uuid',
+    ], true);
+
+    $activity  = new Activity(['code' => 'loaded', 'status' => 'completed']);
+    $completed = new FleetOpsEntityCompletedProbe($entity, $activity);
+    $changed   = new FleetOpsEntityActivityChangedProbe($entity, $activity);
+
+    $completed->order = $order;
+    $changed->order   = $order;
+
+    expect($completed->broadcastAs())->toBe('entity.completed')
+        ->and(eventChannelNames($completed->broadcastOn()))->toBe([
+            'api.api-credential',
+            'entity.entity_public',
+            'entity.entity-uuid',
+            'company.company-session',
+            'company.company_public',
+            'order.order-uuid',
+            'order.order_public',
+        ])
+        ->and($completed->broadcastWith())->toMatchArray([
+            'event' => 'entity.completed',
+            'data'  => [
+                'entity'   => 'entity_public',
+                'activity' => [
+                    'code'   => 'loaded',
+                    'status' => 'completed',
+                ],
+            ],
+        ])
+        ->and($changed->broadcastAs())->toBe('entity.activity')
+        ->and(eventChannelNames($changed->broadcastOn()))->toBe(eventChannelNames($completed->broadcastOn()))
+        ->and($changed->broadcastWith())->toMatchArray([
+            'event' => 'entity.activity',
+            'data'  => [
+                'entity'   => 'entity_public',
+                'activity' => [
+                    'code'   => 'loaded',
+                    'status' => 'completed',
+                ],
+            ],
+        ]);
+});
+
+test('entity driver assigned event broadcasts on its private placeholder channel', function () {
+    expect((new EntityDriverAssigned())->broadcastOn()->name)->toBe('private-channel-name');
 });
 
 test('fuel provider events retain transaction and generated fuel report references', function () {

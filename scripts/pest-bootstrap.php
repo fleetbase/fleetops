@@ -17,6 +17,20 @@ foreach ($autoloadCandidates as $candidate) {
 if (!function_exists('config')) {
     function config(?string $key = null, mixed $default = null): mixed
     {
+        if (class_exists('Illuminate\Container\Container')) {
+            $app = Illuminate\Container\Container::getInstance();
+
+            if ($app->bound('config')) {
+                $config = $app->make('config');
+
+                if ($key === null) {
+                    return $config;
+                }
+
+                return $config->get($key, $default);
+            }
+        }
+
         return $default;
     }
 }

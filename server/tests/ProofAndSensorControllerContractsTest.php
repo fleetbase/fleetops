@@ -51,7 +51,7 @@ test('internal proof controller builds success signature path and file metadata 
             'extension'         => 'png',
             'content_type'      => 'image/png',
             'path'              => 'uploads/company-uuid/signatures/proof-public.png',
-            'bucket'            => null,
+            'bucket'            => 'fleetbase-test-bucket',
             'type'              => 'signature',
             'size'              => 15,
         ]);

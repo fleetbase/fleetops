@@ -55,15 +55,23 @@ namespace {
     use Fleetbase\FleetOps\Http\Requests\CreateDeviceRequest;
     use Fleetbase\FleetOps\Http\Requests\CreateFuelReportRequest;
     use Fleetbase\FleetOps\Http\Requests\CreateFuelTransactionRequest;
+    use Fleetbase\FleetOps\Http\Requests\CreateOrderRequest;
+    use Fleetbase\FleetOps\Http\Requests\CreatePlaceRequest;
+    use Fleetbase\FleetOps\Http\Requests\CreateSensorRequest;
+    use Fleetbase\FleetOps\Http\Requests\CreateServiceRateRequest;
     use Fleetbase\FleetOps\Http\Requests\CreateTrackingStatusRequest;
     use Fleetbase\FleetOps\Http\Requests\CreateVehicleRequest;
     use Fleetbase\FleetOps\Http\Requests\CreateWorkOrderRequest;
     use Fleetbase\FleetOps\Http\Requests\Internal\CreateDriverRequest as InternalCreateDriverRequest;
+    use Fleetbase\FleetOps\Http\Requests\Internal\CreateOrderRequest as InternalCreateOrderRequest;
     use Fleetbase\FleetOps\Http\Requests\UpdateDeviceRequest;
     use Fleetbase\FleetOps\Http\Requests\UpdateFuelReportRequest;
     use Fleetbase\FleetOps\Http\Requests\UpdateWorkOrderRequest;
+    use Fleetbase\FleetOps\Rules\ComputableAlgo;
+    use Fleetbase\FleetOps\Rules\CustomerIdOrDetails;
     use Fleetbase\FleetOps\Rules\ResolvablePoint;
     use Fleetbase\FleetOps\Rules\ResolvableVehicle;
+    use Fleetbase\Rules\ExistsInAny;
 
     function requestRules(string $class, string $method = 'POST'): array
     {
@@ -83,6 +91,27 @@ namespace {
         });
 
         return $strings;
+    }
+
+    class FleetOpsPublicCreateOrderRequestProbe extends CreateOrderRequest
+    {
+        public function isArray(string $key): bool
+        {
+            return is_array($this->input($key));
+        }
+
+        public function isString(string $key): bool
+        {
+            return is_string($this->input($key));
+        }
+    }
+
+    class FleetOpsInternalCreateOrderRequestProbe extends InternalCreateOrderRequest
+    {
+        public function isArray(string $key): bool
+        {
+            return is_array($this->input($key));
+        }
     }
 
     test('device requests require names on create and protect paired location fields', function () {
@@ -218,5 +247,131 @@ namespace {
                 'email.required' => 'Email address is required.',
                 'password.min'   => 'Password must be at least 8 characters.',
             ]);
+    });
+
+    test('public create order request validates payload alternatives and pod methods', function () {
+        app('config')->set('fleetops.pod_methods', ['scan', 'signature']);
+
+        $baseRules = FleetOpsPublicCreateOrderRequestProbe::create('/fleetops-test', 'POST')->rules();
+
+        expect($baseRules['pickup'])->toBe('required')
+            ->and($baseRules['dropoff'])->toBe('required')
+            ->and($baseRules['waypoints'])->toBe('required|array|min:2')
+            ->and($baseRules['facilitator'][1])->toBeInstanceOf(ExistsInAny::class)
+            ->and($baseRules['customer'][1])->toBeInstanceOf(CustomerIdOrDetails::class);
+
+        $payloadRules = FleetOpsPublicCreateOrderRequestProbe::create('/fleetops-test', 'POST', [
+            'payload' => [
+                'entities' => [],
+            ],
+        ])->rules();
+
+        expect($payloadRules['payload'])->toBe('required')
+            ->and($payloadRules['payload.entities'])->toBe('array')
+            ->and($payloadRules['payload.pickup'])->toBe('required')
+            ->and($payloadRules['payload.dropoff'])->toBe('required')
+            ->and($payloadRules['payload.waypoints'])->toBe('required|array|min:2')
+            ->and($payloadRules['payload.return'])->toBe('nullable');
+
+        $payloadIdRules = FleetOpsPublicCreateOrderRequestProbe::create('/fleetops-test', 'POST', [
+            'payload' => 'payload_abc1234',
+        ])->rules();
+
+        expect($payloadIdRules['payload'])->toBe('required|exists:payloads,public_id')
+            ->and($payloadIdRules)->not->toHaveKey('pickup')
+            ->and($payloadIdRules)->not->toHaveKey('dropoff');
+
+        $podRules = FleetOpsPublicCreateOrderRequestProbe::create('/fleetops-test', 'POST', [
+            'pod_required' => true,
+        ])->rules();
+
+        expect(ruleStrings($podRules['pod_method']))->toContain('required')
+            ->and((new CreateOrderRequest())->attributes())->toBe([
+                'pod_required' => 'proof of delivery required',
+                'pod_method'   => 'proof of delivery method',
+            ]);
+    });
+
+    test('internal create order request validates uuid payload contracts and messages', function () {
+        app('config')->set('fleetops.pod_methods', ['scan', 'signature']);
+
+        $baseRules = FleetOpsInternalCreateOrderRequestProbe::create('/fleetops-test', 'POST')->rules();
+
+        expect($baseRules['order_config_uuid'])->toBe(['required'])
+            ->and($baseRules['driver'])->toBe(['nullable', 'exists:drivers,uuid'])
+            ->and($baseRules['service_quote'])->toBe(['nullable', 'exists:service_quotes,uuid'])
+            ->and($baseRules['purchase_rate'])->toBe(['nullable', 'exists:purchase_rates,uuid'])
+            ->and($baseRules['facilitator'][1])->toBeInstanceOf(ExistsInAny::class)
+            ->and($baseRules['customer'][1])->toBeInstanceOf(ExistsInAny::class);
+
+        $payloadRules = FleetOpsInternalCreateOrderRequestProbe::create('/fleetops-test', 'POST', [
+            'payload' => [
+                'entities' => [],
+            ],
+        ])->rules();
+
+        expect($payloadRules['payload'])->toBe('required')
+            ->and($payloadRules['payload.entities'])->toBe('array')
+            ->and($payloadRules['payload.pickup_uuid'])->toBe('required')
+            ->and($payloadRules['payload.dropoff_uuid'])->toBe('required')
+            ->and($payloadRules['payload.waypoints'])->toBe('required|array|min:2')
+            ->and($payloadRules['payload.return_uuid'])->toBe('nullable');
+
+        $podRules = FleetOpsInternalCreateOrderRequestProbe::create('/fleetops-test', 'POST', [
+            'order' => [
+                'pod_required' => true,
+            ],
+        ])->rules();
+        $request  = new InternalCreateOrderRequest();
+
+        expect(ruleStrings($podRules['pod_method']))->toContain('required')
+            ->and($request->messages())->toBe([
+                'pod_method.required' => 'A proof of delivery method is required.',
+            ])
+            ->and($request->attributes())->toBe([
+                'pod_required' => 'proof of delivery required',
+                'pod_method'   => 'proof of delivery method',
+            ]);
+    });
+
+    test('place sensor and service rate requests expose conditional validation contracts', function () {
+        $placeRules          = CreatePlaceRequest::create('/fleetops-test', 'POST')->rules();
+        $coordinatePlaceRule = CreatePlaceRequest::create('/fleetops-test', 'POST', [
+            'latitude'  => 1.3521,
+            'longitude' => 103.8198,
+        ])->rules();
+        $sensorRules         = requestRules(CreateSensorRequest::class);
+        $patchSensorRules    = requestRules(CreateSensorRequest::class, 'PATCH');
+        $rateRules           = CreateServiceRateRequest::create('/fleetops-test', 'POST', [
+            'rate_calculation_method'       => 'fixed_meter',
+            'has_cod_fee'                   => true,
+            'cod_calculation_method'        => 'flat',
+            'has_peak_hours'                => true,
+            'peak_hours_calculation_method' => 'percentage',
+        ])->rules();
+
+        expect(ruleStrings($placeRules['name']))->toContain('required')
+            ->and(ruleStrings($placeRules['street1']))->toContain('required')
+            ->and(ruleStrings($coordinatePlaceRule['name']))->toContain('nullable')
+            ->and(ruleStrings($coordinatePlaceRule['street1']))->toContain('nullable')
+            ->and($placeRules['customer'][1])->toBeInstanceOf(ExistsInAny::class)
+            ->and($placeRules['contact'][1])->toBeInstanceOf(ExistsInAny::class)
+            ->and($placeRules['location'][1])->toBeInstanceOf(ResolvablePoint::class)
+            ->and(ruleStrings($sensorRules['name']))->toContain('required', 'string')
+            ->and(ruleStrings($patchSensorRules['name']))->not->toContain('required')
+            ->and($sensorRules['last_position'][1])->toBeInstanceOf(ResolvablePoint::class)
+            ->and($sensorRules['sensorable'])->toBe(['nullable', 'required_with:sensorable_type', 'string'])
+            ->and($sensorRules['calibration'])->toBe(['nullable', 'array'])
+            ->and(ruleStrings($rateRules['service_name']))->toContain('required', 'string')
+            ->and(ruleStrings($rateRules['service_type']))->toContain('required', 'string')
+            ->and(ruleStrings($rateRules['rate_calculation_method']))->toContain('required', 'string', 'in:fixed_meter,fixed_rate,per_meter,per_drop,algo,parcel')
+            ->and(ruleStrings($rateRules['meter_fees']))->toContain('required', 'array')
+            ->and($rateRules['algorithm'][1])->toBeInstanceOf(ComputableAlgo::class)
+            ->and(ruleStrings($rateRules['cod_calculation_method']))->toContain('required', 'in:percentage,flat')
+            ->and(ruleStrings($rateRules['cod_flat_fee']))->toContain('required', 'numeric')
+            ->and(ruleStrings($rateRules['peak_hours_calculation_method']))->toContain('required', 'in:percentage,flat')
+            ->and(ruleStrings($rateRules['peak_hours_percent']))->toContain('required', 'integer')
+            ->and(ruleStrings($rateRules['peak_hours_start']))->toContain('required', 'date_format:H:i')
+            ->and(ruleStrings($rateRules['peak_hours_end']))->toContain('required', 'date_format:H:i');
     });
 }

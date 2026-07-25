@@ -4,9 +4,13 @@ use Fleetbase\FleetOps\Mail\MaintenanceScheduleReminder;
 use Fleetbase\FleetOps\Mail\WorkOrderDispatched;
 use Fleetbase\FleetOps\Models\MaintenanceSchedule;
 use Fleetbase\FleetOps\Models\Order;
+use Fleetbase\FleetOps\Models\Waypoint;
 use Fleetbase\FleetOps\Models\WorkOrder;
 use Fleetbase\FleetOps\Notifications\LateDeparture;
+use Fleetbase\FleetOps\Notifications\OrderCanceled as OrderCanceledNotification;
+use Fleetbase\FleetOps\Notifications\OrderCompleted as OrderCompletedNotification;
 use Fleetbase\FleetOps\Notifications\OrderDispatched;
+use Fleetbase\FleetOps\Notifications\OrderFailed as OrderFailedNotification;
 use Fleetbase\FleetOps\Notifications\OrderPing;
 use Fleetbase\FleetOps\Notifications\ProlongedStoppage;
 use Fleetbase\FleetOps\Notifications\RouteDeviation;
@@ -153,6 +157,63 @@ test('order ping notification formats distance and driver channels', function ()
             'title' => 'New incoming order!',
             'body'  => $notification->message,
             'data'  => ['id' => 'order_public', 'type' => 'order_ping'],
+        ]);
+});
+
+test('terminal order notifications expose shared broadcast and array payload contracts', function () {
+    session([
+        'company'        => 'company-session',
+        'api_credential' => 'api-credential',
+    ]);
+
+    $order = notificationTestOrder();
+    $order->setRelation('company', (object) [
+        'uuid'      => 'company-uuid',
+        'public_id' => 'company-public',
+    ]);
+
+    $waypoint = new Waypoint();
+    $waypoint->setRawAttributes([
+        'public_id' => 'waypoint_public',
+    ], true);
+    $waypoint->setRelation('trackingNumber', (object) [
+        'tracking_number' => 'WP-TRACK-123',
+    ]);
+
+    $canceled  = new OrderCanceledNotification($order, 'customer requested cancel', $waypoint);
+    $failed    = new OrderFailedNotification($order, 'recipient unavailable', $waypoint);
+    $completed = new OrderCompletedNotification($order, $waypoint);
+
+    expect(OrderCanceledNotification::$name)->toBe('Order Canceled')
+        ->and(OrderFailedNotification::$description)->toContain('failed')
+        ->and(OrderCompletedNotification::$package)->toBe('fleet-ops')
+        ->and($canceled->via(null))->toContain('broadcast', 'mail')
+        ->and($failed->via(null))->toContain('broadcast', 'mail')
+        ->and($completed->via(null))->toContain('broadcast', 'mail')
+        ->and(fleetOpsNotificationChannelNames($canceled->broadcastOn()))->toBe([
+            'company.company-session',
+            'company.company-public',
+            'api.api-credential',
+            'order.order-uuid',
+            'order.order_public',
+        ])
+        ->and($canceled->toArray())->toMatchArray([
+            'event' => 'order.canceled_notification',
+            'title' => 'Order WP-TRACK-123 was canceled',
+            'body'  => 'Order WP-TRACK-123 has been canceled. customer requested cancel',
+            'data'  => ['id' => 'order_public', 'type' => 'order_canceled'],
+        ])
+        ->and($failed->toArray())->toMatchArray([
+            'event' => 'order.failed_notification',
+            'title' => 'Order WP-TRACK-123 delivery has has failed',
+            'body'  => 'Order WP-TRACK-123 delivery has failed. recipient unavailable',
+            'data'  => ['id' => 'order_public', 'type' => 'order_canceled'],
+        ])
+        ->and($completed->toArray())->toMatchArray([
+            'event' => 'order.completed_notification',
+            'title' => 'Order WP-TRACK-123 has been completed.',
+            'body'  => 'Order WP-TRACK-123 has been completed by agent.',
+            'data'  => ['id' => 'order_public', 'type' => 'order_completed'],
         ]);
 });
 
