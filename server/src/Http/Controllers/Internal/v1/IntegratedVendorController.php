@@ -24,7 +24,7 @@ class IntegratedVendorController extends FleetOpsController
      */
     public function getSupported(Request $request)
     {
-        $supported = IntegratedVendors::all()->map(function ($vendor) {
+        $supported = $this->supportedIntegratedVendors()->map(function ($vendor) {
             return $vendor->toArray();
         });
 
@@ -59,5 +59,10 @@ class IntegratedVendorController extends FleetOpsController
             ],
             200
         );
+    }
+
+    protected function supportedIntegratedVendors()
+    {
+        return IntegratedVendors::all();
     }
 }

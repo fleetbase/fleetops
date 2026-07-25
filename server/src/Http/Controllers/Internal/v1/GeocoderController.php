@@ -31,19 +31,19 @@ class GeocoderController extends Controller
         }
 
         // get results
-        $results = Geocoder::reverse($coordinates->getLat(), $coordinates->getLng())->get();
+        $results = $this->reverseGeocode($coordinates->getLat(), $coordinates->getLng());
 
         if ($results->count()) {
             if ($single) {
                 $googleAddress = $results->first();
 
-                return response()->json(Place::createFromGoogleAddress($googleAddress));
+                return response()->json($this->placeFromGoogleAddress($googleAddress));
             }
 
             return response()->json(
                 $results->map(
                     function ($googleAddress) {
-                        return Place::createFromGoogleAddress($googleAddress);
+                        return $this->placeFromGoogleAddress($googleAddress);
                     }
                 )
                     ->values()
@@ -71,19 +71,19 @@ class GeocoderController extends Controller
         }
 
         // lookup
-        $results = Geocoder::geocode($query)->get();
+        $results = $this->forwardGeocode($query);
 
         if ($results->count()) {
             if ($single) {
                 $googleAddress = $results->first();
 
-                return response()->json(Place::createFromGoogleAddress($googleAddress));
+                return response()->json($this->placeFromGoogleAddress($googleAddress));
             }
 
             return response()->json(
                 $results->map(
                     function ($googleAddress) {
-                        return Place::createFromGoogleAddress($googleAddress);
+                        return $this->placeFromGoogleAddress($googleAddress);
                     }
                 )
                     ->values()
@@ -92,5 +92,20 @@ class GeocoderController extends Controller
         }
 
         return response()->json([]);
+    }
+
+    protected function reverseGeocode(float $latitude, float $longitude)
+    {
+        return Geocoder::reverse($latitude, $longitude)->get();
+    }
+
+    protected function forwardGeocode(string $query)
+    {
+        return Geocoder::geocode($query)->get();
+    }
+
+    protected function placeFromGoogleAddress($googleAddress)
+    {
+        return Place::createFromGoogleAddress($googleAddress);
     }
 }

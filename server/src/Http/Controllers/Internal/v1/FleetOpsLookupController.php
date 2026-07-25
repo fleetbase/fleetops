@@ -27,15 +27,9 @@ class FleetOpsLookupController extends Controller
         $type         = Str::lower(Arr::last($request->segments()));
         $resourceType = Str::lower(Str::singular($type));
 
-        $contacts = Contact::where('name', 'like', '%' . $query . '%')
-            ->where('company_uuid', session('company'))
-            ->limit($limit)
-            ->get();
+        $contacts = $this->searchContacts($query, $limit);
 
-        $vendors = Vendor::where('name', 'like', '%' . $query . '%')
-            ->where('company_uuid', session('company'))
-            ->limit($limit)
-            ->get();
+        $vendors = $this->searchVendors($query, $limit);
 
         $results = collect([...$contacts, ...$vendors])
             ->sortBy('name')
@@ -50,7 +44,7 @@ class FleetOpsLookupController extends Controller
 
         // insert integrated vendors if user has any
         if ($resourceType === 'facilitator') {
-            $integratedVendors = IntegratedVendor::where('company_uuid', session('company'))->get();
+            $integratedVendors = $this->integratedVendors();
 
             if ($integratedVendors->count()) {
                 $integratedVendors->each(
@@ -76,5 +70,26 @@ class FleetOpsLookupController extends Controller
         );
 
         return response()->json([$type => $results]);
+    }
+
+    protected function searchContacts(?string $query, int|string $limit)
+    {
+        return Contact::where('name', 'like', '%' . $query . '%')
+            ->where('company_uuid', session('company'))
+            ->limit($limit)
+            ->get();
+    }
+
+    protected function searchVendors(?string $query, int|string $limit)
+    {
+        return Vendor::where('name', 'like', '%' . $query . '%')
+            ->where('company_uuid', session('company'))
+            ->limit($limit)
+            ->get();
+    }
+
+    protected function integratedVendors()
+    {
+        return IntegratedVendor::where('company_uuid', session('company'))->get();
     }
 }
