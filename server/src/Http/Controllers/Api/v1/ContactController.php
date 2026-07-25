@@ -24,9 +24,7 @@ class ContactController extends Controller
     public function create(CreateContactRequest $request)
     {
         // get request input
-        $input          = $request->only(['name', 'type', 'title', 'email', 'phone', 'meta', 'type']);
-        $input['phone'] = is_string($input['phone']) ? Utils::formatPhoneNumber($input['phone']) : $input['phone'];
-        $input['type']  = empty($input['type']) ? 'contact' : $input['type'];
+        $input = $this->contactCreateInputFromRequest($request);
 
         // Handle photo upload using FileResolverService
         if ($request->has('photo')) {
@@ -83,7 +81,7 @@ class ContactController extends Controller
         }
 
         // get request input
-        $input = $request->only(['name', 'type', 'title', 'email', 'phone', 'meta']);
+        $input = $this->contactUpdateInputFromRequest($request);
 
         // If setting a default location for the contact
         if ($request->has('place')) {
@@ -192,5 +190,19 @@ class ContactController extends Controller
 
         // response the contact resource
         return new DeletedResource($contact);
+    }
+
+    protected function contactCreateInputFromRequest(Request $request): array
+    {
+        $input          = $request->only(['name', 'type', 'title', 'email', 'phone', 'meta', 'type']);
+        $input['phone'] = isset($input['phone']) && is_string($input['phone']) ? Utils::formatPhoneNumber($input['phone']) : ($input['phone'] ?? null);
+        $input['type']  = empty($input['type']) ? 'contact' : $input['type'];
+
+        return $input;
+    }
+
+    protected function contactUpdateInputFromRequest(Request $request): array
+    {
+        return $request->only(['name', 'type', 'title', 'email', 'phone', 'meta']);
     }
 }

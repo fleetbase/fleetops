@@ -1,9 +1,12 @@
 <?php
 
+use Fleetbase\FleetOps\Http\Controllers\Api\v1\ContactController as ApiContactController;
 use Fleetbase\FleetOps\Http\Controllers\Api\v1\CustomerController;
 use Fleetbase\FleetOps\Http\Controllers\Api\v1\DriverController;
 use Fleetbase\FleetOps\Http\Controllers\Api\v1\EntityController;
 use Fleetbase\FleetOps\Http\Controllers\Api\v1\OrderController as ApiOrderController;
+use Fleetbase\FleetOps\Http\Controllers\Api\v1\ServiceAreaController;
+use Fleetbase\FleetOps\Http\Controllers\Api\v1\ZoneController;
 use Fleetbase\FleetOps\Http\Controllers\Internal\v1\ContactController as InternalContactController;
 use Fleetbase\FleetOps\Http\Controllers\Internal\v1\DriverController as InternalDriverController;
 use Fleetbase\FleetOps\Http\Controllers\Internal\v1\OrderController as InternalOrderController;
@@ -59,6 +62,39 @@ class FleetOpsApiOrderControllerProbe extends ApiOrderController
     public function callHelper(string $method, mixed ...$arguments): mixed
     {
         $reflection = new ReflectionMethod(ApiOrderController::class, $method);
+        $reflection->setAccessible(true);
+
+        return $reflection->invoke($this, ...$arguments);
+    }
+}
+
+class FleetOpsApiContactControllerProbe extends ApiContactController
+{
+    public function callHelper(string $method, mixed ...$arguments): mixed
+    {
+        $reflection = new ReflectionMethod(ApiContactController::class, $method);
+        $reflection->setAccessible(true);
+
+        return $reflection->invoke($this, ...$arguments);
+    }
+}
+
+class FleetOpsServiceAreaControllerProbe extends ServiceAreaController
+{
+    public function callHelper(string $method, mixed ...$arguments): mixed
+    {
+        $reflection = new ReflectionMethod(ServiceAreaController::class, $method);
+        $reflection->setAccessible(true);
+
+        return $reflection->invoke($this, ...$arguments);
+    }
+}
+
+class FleetOpsZoneControllerProbe extends ZoneController
+{
+    public function callHelper(string $method, mixed ...$arguments): mixed
+    {
+        $reflection = new ReflectionMethod(ZoneController::class, $method);
         $reflection->setAccessible(true);
 
         return $reflection->invoke($this, ...$arguments);
@@ -306,6 +342,85 @@ test('api order controller normalizes payload route shape metadata', function ()
         'has_dropoff_field'         => true,
         'has_route_endpoint_fields' => true,
     ]);
+});
+
+test('api contact controller normalizes create input and keeps update input narrow', function () {
+    $controller = new FleetOpsApiContactControllerProbe();
+    $request    = new Request([
+        'name'         => 'Ada Customer',
+        'title'        => 'Manager',
+        'email'        => 'ada@example.test',
+        'phone'        => '15551234567',
+        'meta'         => ['vip' => true],
+        'photo'        => 'file-public',
+        'company_uuid' => 'spoofed-company',
+    ]);
+
+    expect($controller->callHelper('contactCreateInputFromRequest', $request))->toBe([
+        'name'  => 'Ada Customer',
+        'title' => 'Manager',
+        'email' => 'ada@example.test',
+        'phone' => '15551234567',
+        'meta'  => ['vip' => true],
+        'type'  => 'contact',
+    ])->and($controller->callHelper('contactUpdateInputFromRequest', $request))->toBe([
+        'name'  => 'Ada Customer',
+        'title' => 'Manager',
+        'email' => 'ada@example.test',
+        'phone' => '15551234567',
+        'meta'  => ['vip' => true],
+    ]);
+});
+
+test('api service area and zone controllers expose input whitelist and integer radius helpers', function () {
+    $serviceArea = new FleetOpsServiceAreaControllerProbe();
+    $zone        = new FleetOpsZoneControllerProbe();
+    $request     = new Request([
+        'name'                    => 'Downtown',
+        'type'                    => 'delivery',
+        'status'                  => 'active',
+        'country'                 => 'SG',
+        'border'                  => ['type' => 'MultiPolygon'],
+        'description'             => 'Core zone',
+        'color'                   => '#000000',
+        'stroke_color'            => '#ffffff',
+        'trigger_on_entry'        => true,
+        'trigger_on_exit'         => false,
+        'dwell_threshold_minutes' => 15,
+        'speed_limit_kmh'         => 45,
+        'radius'                  => '750',
+        'company_uuid'            => 'spoofed-company',
+        'service_area'            => 'service-area-public',
+    ]);
+
+    expect($serviceArea->callHelper('serviceAreaInputFromRequest', $request))->toBe([
+        'name'                    => 'Downtown',
+        'type'                    => 'delivery',
+        'status'                  => 'active',
+        'country'                 => 'SG',
+        'border'                  => ['type' => 'MultiPolygon'],
+        'color'                   => '#000000',
+        'stroke_color'            => '#ffffff',
+        'trigger_on_entry'        => true,
+        'trigger_on_exit'         => false,
+        'dwell_threshold_minutes' => 15,
+        'speed_limit_kmh'         => 45,
+    ])->and($serviceArea->callHelper('radiusFromRequest', $request))->toBe(750)
+        ->and($serviceArea->callHelper('radiusFromRequest', new Request()))->toBe(500)
+        ->and($zone->callHelper('zoneInputFromRequest', $request))->toBe([
+            'name'                    => 'Downtown',
+            'border'                  => ['type' => 'MultiPolygon'],
+            'status'                  => 'active',
+            'description'             => 'Core zone',
+            'color'                   => '#000000',
+            'stroke_color'            => '#ffffff',
+            'trigger_on_entry'        => true,
+            'trigger_on_exit'         => false,
+            'dwell_threshold_minutes' => 15,
+            'speed_limit_kmh'         => 45,
+        ])
+        ->and($zone->callHelper('radiusFromRequest', $request))->toBe(750)
+        ->and($zone->callHelper('radiusFromRequest', new Request()))->toBe(500);
 });
 
 test('internal contact controller detects the customer portal extension package', function () {

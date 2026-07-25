@@ -24,10 +24,10 @@ class ZoneController extends Controller
     public function create(CreateZoneRequest $request)
     {
         // get request input
-        $input = $request->only(['name', 'border', 'status', 'description', 'color', 'stroke_color', 'trigger_on_entry', 'trigger_on_exit', 'dwell_threshold_minutes', 'speed_limit_kmh']);
+        $input = $this->zoneInputFromRequest($request);
 
         // get radius for creating zone border - default to 500 meters
-        $radius = $request->input('radius', 500);
+        $radius = $this->radiusFromRequest($request);
 
         // make sure company is set
         $input['company_uuid'] = session('company');
@@ -98,10 +98,10 @@ class ZoneController extends Controller
         }
 
         // get request input
-        $input = $request->only(['name', 'border', 'status', 'description', 'color', 'stroke_color', 'trigger_on_entry', 'trigger_on_exit', 'dwell_threshold_minutes', 'speed_limit_kmh']);
+        $input = $this->zoneInputFromRequest($request);
 
         // get radius for creating zone border - default to 500 meters
-        $radius = $request->input('radius', 500);
+        $radius = $this->radiusFromRequest($request);
 
         // service area assignment
         if ($request->has('service_area')) {
@@ -200,5 +200,15 @@ class ZoneController extends Controller
 
         // response the zone resource
         return new DeletedResource($zone);
+    }
+
+    protected function zoneInputFromRequest(Request $request): array
+    {
+        return $request->only(['name', 'border', 'status', 'description', 'color', 'stroke_color', 'trigger_on_entry', 'trigger_on_exit', 'dwell_threshold_minutes', 'speed_limit_kmh']);
+    }
+
+    protected function radiusFromRequest(Request $request): int
+    {
+        return (int) $request->input('radius', 500);
     }
 }

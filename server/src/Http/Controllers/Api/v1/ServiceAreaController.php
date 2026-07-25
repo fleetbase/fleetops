@@ -24,10 +24,10 @@ class ServiceAreaController extends Controller
     public function create(CreateServiceAreaRequest $request)
     {
         // get request input
-        $input = $request->only(['name', 'type', 'status', 'country', 'border', 'color', 'stroke_color', 'trigger_on_entry', 'trigger_on_exit', 'dwell_threshold_minutes', 'speed_limit_kmh']);
+        $input = $this->serviceAreaInputFromRequest($request);
 
         // get radius for creating service area border - default to 500 meters
-        $radius = (int) $request->input('radius', 500);
+        $radius = $this->radiusFromRequest($request);
 
         // make sure company is set
         $input['company_uuid'] = session('company');
@@ -99,10 +99,10 @@ class ServiceAreaController extends Controller
         }
 
         // get request input
-        $input = $request->only(['name', 'type', 'status', 'country', 'border', 'color', 'stroke_color', 'trigger_on_entry', 'trigger_on_exit', 'dwell_threshold_minutes', 'speed_limit_kmh']);
+        $input = $this->serviceAreaInputFromRequest($request);
 
         // get radius for creating service area border - default to 500 meters
-        $radius = $request->input('radius', 500);
+        $radius = $this->radiusFromRequest($request);
 
         // if parent service area set
         if ($request->filled('parent')) {
@@ -201,5 +201,15 @@ class ServiceAreaController extends Controller
 
         // response the serviceArea resource
         return new DeletedResource($serviceArea);
+    }
+
+    protected function serviceAreaInputFromRequest(Request $request): array
+    {
+        return $request->only(['name', 'type', 'status', 'country', 'border', 'color', 'stroke_color', 'trigger_on_entry', 'trigger_on_exit', 'dwell_threshold_minutes', 'speed_limit_kmh']);
+    }
+
+    protected function radiusFromRequest(Request $request): int
+    {
+        return (int) $request->input('radius', 500);
     }
 }
