@@ -1,9 +1,15 @@
 <?php
 
+use Fleetbase\FleetOps\Http\Resources\v1\Device as DeviceResource;
 use Fleetbase\FleetOps\Http\Resources\v1\Entity as EntityResource;
 use Fleetbase\FleetOps\Http\Resources\v1\Index\Order as IndexOrderResource;
 use Fleetbase\FleetOps\Http\Resources\v1\Index\Vehicle as IndexVehicleResource;
+use Fleetbase\FleetOps\Http\Resources\v1\Issue as IssueResource;
+use Fleetbase\FleetOps\Http\Resources\v1\Maintenance as MaintenanceResource;
+use Fleetbase\FleetOps\Http\Resources\v1\MaintenanceSchedule as MaintenanceScheduleResource;
+use Fleetbase\FleetOps\Http\Resources\v1\Place as PlaceResource;
 use Fleetbase\FleetOps\Http\Resources\v1\ServiceRate as ServiceRateResource;
+use Fleetbase\FleetOps\Http\Resources\v1\Vendor as VendorResource;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
 
@@ -62,9 +68,14 @@ class FleetOpsCompactResourceFixture implements ArrayAccess
         return array_key_exists($relationship, $this->loaded);
     }
 
-    public function loadMissing(string $relationship): self
+    public function loadMissing(string|array $relationship): self
     {
         return $this;
+    }
+
+    public function getOriginal(string $key): mixed
+    {
+        return $this->attributes['original'][$key] ?? $this->attributes[$key] ?? null;
     }
 
     public function getRelation(string $relationship): mixed
@@ -413,4 +424,412 @@ test('index order resource returns compact order table payloads', function () {
         'scheduled_at'          => '2026-07-27 09:00:00',
         'meta'                  => ['_index_resource' => true],
     ]);
+});
+
+test('issue resource serializes internal issue details and webhook identifiers', function () {
+    $request = fleetopsCompactResourceRequest(true);
+    $issue   = fleetopsCompactResourceFixture([
+        'driver_uuid'      => 'driver-uuid',
+        'company_uuid'     => 'company-uuid',
+        'vehicle_uuid'     => 'vehicle-uuid',
+        'order_uuid'       => null,
+        'assigned_to_uuid' => 'assignee-uuid',
+        'reported_by_uuid' => 'reporter-uuid',
+        'driver_name'      => 'Jane Driver',
+        'vehicle_name'     => 'Truck 101',
+        'vehicle_id'       => 'VEH-101',
+        'assignee_name'    => 'Dispatcher',
+        'assignee_id'      => 'USR-101',
+        'reporter_name'    => 'Operator',
+        'reporter_id'      => 'USR-102',
+        'issue_id'         => 'ISS-101',
+        'title'            => 'Door latch',
+        'report'           => 'Rear door latch sticks.',
+        'priority'         => 'high',
+        'meta'             => ['source' => 'inspection'],
+        'type'             => 'vehicle',
+        'category'         => 'body',
+        'tags'             => ['safety'],
+        'status'           => 'open',
+        'location'         => null,
+        'resolved_at'      => null,
+        'reportedBy'       => (object) ['public_id' => 'reporter_public'],
+        'assignedTo'       => (object) ['public_id' => 'assignee_public'],
+        'driver'           => (object) ['public_id' => 'driver_public'],
+        'vehicle'          => (object) ['public_id' => 'vehicle_public'],
+    ]);
+
+    $payload = (new IssueResource($issue))->resolve($request);
+    $webhook = (new IssueResource($issue))->toWebhookPayload();
+
+    expect($payload)->toMatchArray([
+        'id'               => 101,
+        'uuid'             => 'fixture-uuid',
+        'public_id'        => 'fixture_public',
+        'driver_uuid'      => 'driver-uuid',
+        'company_uuid'     => 'company-uuid',
+        'vehicle_uuid'     => 'vehicle-uuid',
+        'assigned_to_uuid' => 'assignee-uuid',
+        'reported_by_uuid' => 'reporter-uuid',
+        'driver_name'      => 'Jane Driver',
+        'vehicle_name'     => 'Truck 101',
+        'issue_id'         => 'ISS-101',
+        'title'            => 'Door latch',
+        'report'           => 'Rear door latch sticks.',
+        'priority'         => 'high',
+        'meta'             => ['source' => 'inspection'],
+        'type'             => 'vehicle',
+        'category'         => 'body',
+        'tags'             => ['safety'],
+        'status'           => 'open',
+    ])
+        ->and($webhook)->toMatchArray([
+            'id'       => 'fixture_public',
+            'reporter' => 'reporter_public',
+            'assignee' => 'assignee_public',
+            'driver'   => 'driver_public',
+            'vehicle'  => 'vehicle_public',
+            'issue_id' => 'ISS-101',
+            'priority' => 'high',
+            'category' => 'body',
+            'status'   => 'open',
+        ]);
+});
+
+test('maintenance resource serializes work order costs and schedule state', function () {
+    $request     = fleetopsCompactResourceRequest(true);
+    $maintenance = fleetopsCompactResourceFixture([
+        'company_uuid'          => 'company-uuid',
+        'work_order_uuid'       => 'work-order-uuid',
+        'created_by_uuid'       => 'creator-uuid',
+        'updated_by_uuid'       => 'updater-uuid',
+        'maintainable_uuid'     => 'vehicle-uuid',
+        'maintainable_type'     => 'Fleetbase\\FleetOps\\Models\\Vehicle',
+        'performed_by_uuid'     => 'vendor-uuid',
+        'performed_by_type'     => 'Fleetbase\\FleetOps\\Models\\Vendor',
+        'type'                  => 'repair',
+        'status'                => 'completed',
+        'priority'              => 'medium',
+        'odometer'              => 10000,
+        'engine_hours'          => 525,
+        'summary'               => 'Brake service',
+        'notes'                 => 'Replaced pads.',
+        'line_items'            => [['name' => 'Pads', 'amount' => 120]],
+        'labor_cost'            => 80,
+        'parts_cost'            => 120,
+        'tax'                   => 14,
+        'total_cost'            => 214,
+        'currency'              => 'SGD',
+        'attachments'           => ['invoice.pdf'],
+        'meta'                  => ['shop' => 'North'],
+        'slug'                  => 'brake-service',
+        'maintainable_name'     => 'Truck 101',
+        'work_order_subject'    => 'WO-101',
+        'performed_by_name'     => 'Vendor One',
+        'duration_hours'        => 2,
+        'is_overdue'            => false,
+        'days_until_due'        => 0,
+        'cost_breakdown'        => ['labor' => 80, 'parts' => 120],
+        'scheduled_at'          => '2026-07-20 09:00:00',
+        'started_at'            => '2026-07-20 10:00:00',
+        'completed_at'          => '2026-07-20 12:00:00',
+    ]);
+
+    $payload = (new MaintenanceResource($maintenance))->resolve($request);
+
+    expect($payload)->toMatchArray([
+        'id'                  => 101,
+        'uuid'                => 'fixture-uuid',
+        'company_uuid'        => 'company-uuid',
+        'work_order_uuid'     => 'work-order-uuid',
+        'maintainable_uuid'   => 'vehicle-uuid',
+        'maintainable_type'   => 'fleet-ops:vehicle',
+        'performed_by_uuid'   => 'vendor-uuid',
+        'performed_by_type'   => 'fleet-ops:vendor',
+        'type'                => 'repair',
+        'status'              => 'completed',
+        'priority'            => 'medium',
+        'summary'             => 'Brake service',
+        'line_items'          => [['name' => 'Pads', 'amount' => 120]],
+        'labor_cost'          => 80,
+        'parts_cost'          => 120,
+        'tax'                 => 14,
+        'total_cost'          => 214,
+        'currency'            => 'SGD',
+        'attachments'         => ['invoice.pdf'],
+        'maintainable_name'   => 'Truck 101',
+        'work_order_subject'  => 'WO-101',
+        'performed_by_name'   => 'Vendor One',
+        'duration_hours'      => 2,
+        'is_overdue'          => false,
+        'cost_breakdown'      => ['labor' => 80, 'parts' => 120],
+        'completed_at'        => '2026-07-20 12:00:00',
+    ]);
+});
+
+test('maintenance schedule resource serializes interval and next due thresholds', function () {
+    $request  = fleetopsCompactResourceRequest(true);
+    $schedule = fleetopsCompactResourceFixture([
+        'company_uuid'              => 'company-uuid',
+        'created_by_uuid'           => 'creator-uuid',
+        'updated_by_uuid'           => 'updater-uuid',
+        'subject_uuid'              => 'vehicle-uuid',
+        'subject_type'              => 'Fleetbase\\FleetOps\\Models\\Vehicle',
+        'default_assignee_uuid'     => 'vendor-uuid',
+        'default_assignee_type'     => 'Fleetbase\\FleetOps\\Models\\Vendor',
+        'name'                      => 'Oil Change',
+        'type'                      => 'preventive',
+        'status'                    => 'active',
+        'interval_method'           => 'distance',
+        'interval_type'             => 'recurring',
+        'interval_value'            => 5000,
+        'interval_unit'             => 'km',
+        'interval_distance'         => 5000,
+        'interval_engine_hours'     => 250,
+        'last_service_odometer'     => 10000,
+        'last_service_engine_hours' => 400,
+        'last_service_date'         => '2026-06-01',
+        'next_due_date'             => '2026-08-01',
+        'next_due_odometer'         => 15000,
+        'next_due_engine_hours'     => 650,
+        'default_priority'          => 'medium',
+        'instructions'              => 'Replace oil and filter.',
+        'reminder_offsets'          => [7, 1],
+        'meta'                      => ['template' => true],
+        'slug'                      => 'oil-change',
+        'subject_name'              => 'Truck 101',
+        'default_assignee_name'     => 'Vendor One',
+        'last_triggered_at'         => '2026-06-01 12:00:00',
+    ]);
+
+    $payload = (new MaintenanceScheduleResource($schedule))->resolve($request);
+
+    expect($payload)->toMatchArray([
+        'id'                      => 101,
+        'uuid'                    => 'fixture-uuid',
+        'company_uuid'            => 'company-uuid',
+        'subject_uuid'            => 'vehicle-uuid',
+        'subject_type'            => 'fleet-ops:vehicle',
+        'default_assignee_uuid'   => 'vendor-uuid',
+        'default_assignee_type'   => 'fleet-ops:vendor',
+        'name'                    => 'Oil Change',
+        'type'                    => 'preventive',
+        'status'                  => 'active',
+        'interval_method'         => 'distance',
+        'interval_type'           => 'recurring',
+        'interval_value'          => 5000,
+        'next_due_odometer'       => 15000,
+        'default_priority'        => 'medium',
+        'instructions'            => 'Replace oil and filter.',
+        'reminder_offsets'        => [7, 1],
+        'subject_name'            => 'Truck 101',
+        'default_assignee_name'   => 'Vendor One',
+        'last_triggered_at'       => '2026-06-01 12:00:00',
+    ]);
+});
+
+test('place resource serializes address data for resources and webhooks', function () {
+    $request = fleetopsCompactResourceRequest(true);
+    $place   = fleetopsCompactResourceFixture([
+        'company_uuid'          => 'company-uuid',
+        'owner_uuid'            => null,
+        'owner_type'            => null,
+        'internal_id'           => 'PLC-101',
+        'name'                  => 'Warehouse',
+        'location'              => null,
+        'address'               => '1 Fleet Way',
+        'address_html'          => '<p>1 Fleet Way</p>',
+        'avatar_url'            => 'https://cdn.test/place.png',
+        'original'              => ['avatar_url' => 'avatar-token'],
+        'street1'               => '1 Fleet Way',
+        'street2'               => 'Dock 4',
+        'city'                  => 'Singapore',
+        'province'              => 'Central',
+        'postal_code'           => '100001',
+        'neighborhood'          => 'Marina',
+        'district'              => 'Downtown',
+        'building'              => 'Tower',
+        'security_access_code'  => '1234',
+        'country'               => 'SG',
+        'country_name'          => 'Singapore',
+        'phone'                 => '+6555550000',
+        'type'                  => 'warehouse',
+        'meta'                  => ['dock' => 4],
+        'eta'                   => '10 minutes',
+        'latitude'              => 1.29,
+        'longitude'             => 103.85,
+    ]);
+
+    $payload = (new PlaceResource($place))->resolve($request);
+    $webhook = (new PlaceResource($place))->toWebhookPayload();
+
+    expect($payload)->toMatchArray([
+        'id'                   => 101,
+        'uuid'                 => 'fixture-uuid',
+        'company_uuid'         => 'company-uuid',
+        'name'                 => 'Warehouse',
+        'address'              => '1 Fleet Way',
+        'address_html'         => '<p>1 Fleet Way</p>',
+        'avatar_value'         => 'avatar-token',
+        'street1'              => '1 Fleet Way',
+        'city'                 => 'Singapore',
+        'country_name'         => 'Singapore',
+        'phone'                => '+6555550000',
+        'type'                 => 'warehouse',
+        'meta'                 => ['dock' => 4],
+        'eta'                  => '10 minutes',
+    ])
+        ->and($webhook)->toMatchArray([
+            'id'                   => 'fixture_public',
+            'internal_id'          => 'PLC-101',
+            'name'                 => 'Warehouse',
+            'latitude'             => 1.29,
+            'longitude'            => 103.85,
+            'street1'              => '1 Fleet Way',
+            'street2'              => 'Dock 4',
+            'city'                 => 'Singapore',
+            'country'              => 'SG',
+            'phone'                => '+6555550000',
+            'type'                 => 'warehouse',
+            'meta'                 => ['dock' => 4],
+        ]);
+});
+
+test('device resource serializes telematics device status fields', function () {
+    $request = fleetopsCompactResourceRequest(true);
+    $device  = fleetopsCompactResourceFixture([
+        'company_uuid'          => 'company-uuid',
+        'telematic_uuid'        => 'telematic-uuid',
+        'attachable_uuid'       => 'vehicle-uuid',
+        'attachable_type'       => 'Fleetbase\\FleetOps\\Models\\Vehicle',
+        'warranty_uuid'         => 'warranty-uuid',
+        'photo_uuid'            => 'photo-uuid',
+        'type'                  => 'gps',
+        'device_id'             => 'DEV-101',
+        'internal_id'           => 'INT-DEV-101',
+        'imei'                  => 'imei-101',
+        'imsi'                  => 'imsi-101',
+        'firmware_version'      => '1.2.3',
+        'provider'              => 'safee',
+        'name'                  => 'Tracker 101',
+        'model'                 => 'T100',
+        'location'              => ['lat' => 1.29, 'lng' => 103.85],
+        'manufacturer'          => 'TrackerCo',
+        'serial_number'         => 'SER-DEV-101',
+        'last_position'         => ['speed' => 42],
+        'installation_date'     => '2026-01-01',
+        'last_maintenance_date' => '2026-06-01',
+        'meta'                  => ['vehicle' => 'Truck 101'],
+        'data'                  => ['battery' => 87],
+        'options'               => ['interval' => 60],
+        'online'                => true,
+        'status'                => 'active',
+        'data_frequency'        => 60,
+        'notes'                 => 'Mounted under dash.',
+        'last_online_at'        => '2026-07-02 10:00:00',
+        'warranty_name'         => 'Standard',
+        'telematic_name'        => 'Safee',
+        'is_online'             => true,
+        'attached_to_name'      => 'Truck 101',
+        'connection_status'     => 'connected',
+        'photo_url'             => 'https://cdn.test/device.png',
+        'sensors_count'         => 2,
+        'slug'                  => 'tracker-101',
+    ]);
+
+    $payload = (new DeviceResource($device))->resolve($request);
+
+    expect($payload)->toMatchArray([
+        'id'                    => 101,
+        'uuid'                  => 'fixture-uuid',
+        'company_uuid'          => 'company-uuid',
+        'telematic_uuid'        => 'telematic-uuid',
+        'attachable_uuid'       => 'vehicle-uuid',
+        'attachable_type'       => 'fleet-ops:vehicle',
+        'type'                  => 'gps',
+        'device_id'             => 'DEV-101',
+        'internal_id'           => 'INT-DEV-101',
+        'imei'                  => 'imei-101',
+        'firmware_version'      => '1.2.3',
+        'provider'              => 'safee',
+        'name'                  => 'Tracker 101',
+        'model'                 => 'T100',
+        'manufacturer'          => 'TrackerCo',
+        'serial_number'         => 'SER-DEV-101',
+        'meta'                  => ['vehicle' => 'Truck 101'],
+        'data'                  => ['battery' => 87],
+        'options'               => ['interval' => 60],
+        'online'                => true,
+        'status'                => 'active',
+        'sensors_count'         => 2,
+        'slug'                  => 'tracker-101',
+    ]);
+});
+
+test('vendor resource serializes vendor identity and webhook address fields', function () {
+    $request = fleetopsCompactResourceRequest(true);
+    $place   = fleetopsCompactResourceFixture([
+        'address' => '1 Vendor Way',
+        'street1' => '1 Vendor Way',
+    ]);
+    $vendor  = fleetopsCompactResourceFixture([
+        'place_uuid'           => 'place-uuid',
+        'connect_company_uuid' => 'connect-company-uuid',
+        'logo_uuid'            => 'logo-uuid',
+        'type_uuid'            => 'type-uuid',
+        'internal_id'          => 'VEN-101',
+        'business_id'          => 'BRN-101',
+        'name'                 => 'Vendor One',
+        'email'                => 'vendor@example.test',
+        'phone'                => '+6555551111',
+        'logo_url'             => 'https://cdn.test/logo.png',
+        'place'                => $place,
+        'places'               => new Collection(),
+        'personnels'           => new Collection(),
+        'country'              => 'SG',
+        'type'                 => 'maintenance',
+        'meta'                 => ['tier' => 'gold'],
+        'status'               => 'active',
+        'slug'                 => 'vendor-one',
+        'website_url'          => 'https://vendor.test',
+    ]);
+
+    $payload = (new VendorResource($vendor))->resolve($request);
+    $webhook = (new VendorResource($vendor))->toWebhookPayload();
+
+    expect($payload)->toMatchArray([
+        'id'                   => 101,
+        'uuid'                 => 'fixture-uuid',
+        'public_id'            => 'fixture_public',
+        'place_uuid'           => 'place-uuid',
+        'connect_company_uuid' => 'connect-company-uuid',
+        'logo_uuid'            => 'logo-uuid',
+        'type_uuid'            => 'type-uuid',
+        'internal_id'          => 'VEN-101',
+        'business_id'          => 'BRN-101',
+        'name'                 => 'Vendor One',
+        'email'                => 'vendor@example.test',
+        'phone'                => '+6555551111',
+        'photo_url'            => 'https://cdn.test/logo.png',
+        'address'              => '1 Vendor Way',
+        'address_street'       => '1 Vendor Way',
+        'country'              => 'SG',
+        'type'                 => 'maintenance',
+        'status'               => 'active',
+        'website_url'          => 'https://vendor.test',
+    ])
+        ->and($webhook)->toMatchArray([
+            'id'             => 'fixture_public',
+            'internal_id'    => 'VEN-101',
+            'name'           => 'Vendor One',
+            'email'          => 'vendor@example.test',
+            'phone'          => '+6555551111',
+            'photo_url'      => 'https://cdn.test/logo.png',
+            'address'        => '1 Vendor Way',
+            'address_street' => '1 Vendor Way',
+            'country'        => 'SG',
+            'type'           => 'maintenance',
+            'status'         => 'active',
+            'website_url'    => 'https://vendor.test',
+        ]);
 });
