@@ -1,7 +1,9 @@
 <?php
 
+use Fleetbase\FleetOps\Support\Metrics;
 use Fleetbase\FleetOps\Support\Metrics\AbstractMetric;
 use Fleetbase\FleetOps\Support\Metrics\ActiveRevenueQuery;
+use Fleetbase\FleetOps\Support\Metrics\EarningsMetric;
 use Fleetbase\FleetOps\Support\Metrics\OrdersInProgressMetric;
 use Fleetbase\FleetOps\Support\Metrics\Registry;
 use Fleetbase\FleetOps\Support\Metrics\TotalTimeTraveledMetric;
@@ -131,6 +133,24 @@ test('registry exposes every known metric slug', function () {
 
 test('registry resolves unknown slugs to null', function () {
     expect(Registry::resolve('does_not_exist'))->toBeNull();
+});
+
+test('metrics facade resolves configured metrics and ignores unknown legacy names', function () {
+    $company = new Company();
+    $company->setRawAttributes(['uuid' => 'company-metrics'], true);
+    $start = Carbon::parse('2026-01-01 00:00:00');
+    $end   = Carbon::parse('2026-01-31 23:59:59');
+
+    $metrics = Metrics::forCompany($company, $start, $end);
+
+    expect(Metrics::new($company))->toBeInstanceOf(Metrics::class)
+        ->and($metrics->start($start))->toBe($metrics)
+        ->and($metrics->end($end))->toBe($metrics)
+        ->and($metrics->between($start, $end))->toBe($metrics)
+        ->and($metrics->resolve('earnings'))->toBeInstanceOf(EarningsMetric::class)
+        ->and($metrics->resolve('not_registered'))->toBeNull()
+        ->and($metrics->with(['notRegisteredMetric']))->toBe($metrics)
+        ->and($metrics->get())->toBe([]);
 });
 
 test('every registered metric extends the abstract base', function () {

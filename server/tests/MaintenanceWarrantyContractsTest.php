@@ -5,6 +5,7 @@ use Fleetbase\FleetOps\Models\MaintenanceSchedule;
 use Fleetbase\FleetOps\Models\ServiceArea;
 use Fleetbase\FleetOps\Models\TrackingNumber;
 use Fleetbase\FleetOps\Models\Warranty;
+use Fleetbase\FleetOps\Models\Zone;
 use Fleetbase\LaravelMysqlSpatial\Types\MultiPolygon;
 use Fleetbase\LaravelMysqlSpatial\Types\Point;
 use Illuminate\Support\Carbon;
@@ -177,6 +178,12 @@ test('service area spatial factories and tracking number light accessors are sta
         ->and($serviceArea->toGeosLineStrings())->toBe([])
         ->and($serviceArea->toGeosPolygon())->toBeNull()
         ->and($serviceArea->asPolygon())->toBeNull();
+
+    $zone = new Zone();
+    expect(Zone::createPolygonFromPoint($point, 100))->toBeInstanceOf(Fleetbase\LaravelMysqlSpatial\Types\Polygon::class)
+        ->and($zone->type)->toBe('zone')
+        ->and($zone->toGeosLineStrings())->toBe([])
+        ->and($zone->toGeosPolygon())->toBeNull();
 
     $tracking = new class extends TrackingNumber {
         public array $loaded = [];
