@@ -30,7 +30,7 @@ class VendorController extends Controller
 
         // address assignment
         if ($request->has('address')) {
-            $input['place_uuid'] = Utils::getUuid(
+            $input['place_uuid'] = $this->getPlaceUuid(
                 'places',
                 [
                     'public_id'    => $request->input('address'),
@@ -40,7 +40,7 @@ class VendorController extends Controller
         }
 
         // create the vendor
-        $vendor = Vendor::updateOrCreate(
+        $vendor = $this->updateOrCreateVendor(
             [
                 'company_uuid' => session('company'),
                 'name'         => strtoupper($input['name']),
@@ -49,7 +49,7 @@ class VendorController extends Controller
         );
 
         // response the driver resource
-        return new VendorResource($vendor);
+        return $this->vendorResource($vendor);
     }
 
     /**
@@ -64,9 +64,9 @@ class VendorController extends Controller
     {
         // find for the vendor
         try {
-            $vendor = Vendor::findRecordOrFail($id);
+            $vendor = $this->findVendorRecord($id);
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $exception) {
-            return response()->json(
+            return $this->jsonResponse(
                 [
                     'error' => 'Vendor resource not found.',
                 ],
@@ -79,7 +79,7 @@ class VendorController extends Controller
 
         // address assignment
         if ($request->has('address')) {
-            $input['place_uuid'] = Utils::getUuid(
+            $input['place_uuid'] = $this->getPlaceUuid(
                 'places',
                 [
                     'public_id'    => $request->input('address'),
@@ -93,7 +93,7 @@ class VendorController extends Controller
         $vendor->flushAttributesCache();
 
         // response the vendor resource
-        return new VendorResource($vendor);
+        return $this->vendorResource($vendor);
     }
 
     /**
@@ -103,9 +103,9 @@ class VendorController extends Controller
      */
     public function query(Request $request)
     {
-        $results = Vendor::queryWithRequest($request);
+        $results = $this->queryVendors($request);
 
-        return VendorResource::collection($results);
+        return $this->vendorResourceCollection($results);
     }
 
     /**
@@ -117,9 +117,9 @@ class VendorController extends Controller
     {
         // find for the vendor
         try {
-            $vendor = Vendor::findRecordOrFail($id);
+            $vendor = $this->findVendorRecord($id);
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $exception) {
-            return response()->json(
+            return $this->jsonResponse(
                 [
                     'error' => 'Vendor resource not found.',
                 ],
@@ -128,7 +128,7 @@ class VendorController extends Controller
         }
 
         // response the vendor resource
-        return new VendorResource($vendor);
+        return $this->vendorResource($vendor);
     }
 
     /**
@@ -140,9 +140,9 @@ class VendorController extends Controller
     {
         // find for the driver
         try {
-            $vendor = Vendor::findRecordOrFail($id);
+            $vendor = $this->findVendorRecord($id);
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $exception) {
-            return response()->json(
+            return $this->jsonResponse(
                 [
                     'error' => 'Vendor resource not found.',
                 ],
@@ -154,6 +154,46 @@ class VendorController extends Controller
         $vendor->delete();
 
         // response the vendor resource
+        return $this->deletedVendorResource($vendor);
+    }
+
+    protected function getPlaceUuid(string $table, array $where): ?string
+    {
+        return Utils::getUuid($table, $where);
+    }
+
+    protected function updateOrCreateVendor(array $where, array $input): Vendor
+    {
+        return Vendor::updateOrCreate($where, $input);
+    }
+
+    protected function findVendorRecord(string $id): Vendor
+    {
+        return Vendor::findRecordOrFail($id);
+    }
+
+    protected function queryVendors(Request $request)
+    {
+        return Vendor::queryWithRequest($request);
+    }
+
+    protected function vendorResource(Vendor $vendor)
+    {
+        return new VendorResource($vendor);
+    }
+
+    protected function vendorResourceCollection($results)
+    {
+        return VendorResource::collection($results);
+    }
+
+    protected function deletedVendorResource(Vendor $vendor)
+    {
         return new DeletedResource($vendor);
+    }
+
+    protected function jsonResponse(array $payload, int $status)
+    {
+        return response()->json($payload, $status);
     }
 }
