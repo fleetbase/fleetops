@@ -52,12 +52,14 @@ namespace Illuminate\Validation {
 }
 
 namespace {
+    use Fleetbase\FleetOps\Http\Requests\CreateCustomerOrderRequest;
     use Fleetbase\FleetOps\Http\Requests\CreateDeviceRequest;
     use Fleetbase\FleetOps\Http\Requests\CreateFuelReportRequest;
     use Fleetbase\FleetOps\Http\Requests\CreateFuelTransactionRequest;
     use Fleetbase\FleetOps\Http\Requests\CreateOrderRequest;
     use Fleetbase\FleetOps\Http\Requests\CreatePlaceRequest;
     use Fleetbase\FleetOps\Http\Requests\CreateSensorRequest;
+    use Fleetbase\FleetOps\Http\Requests\CreateServiceAreaRequest;
     use Fleetbase\FleetOps\Http\Requests\CreateServiceRateRequest;
     use Fleetbase\FleetOps\Http\Requests\CreateTrackingStatusRequest;
     use Fleetbase\FleetOps\Http\Requests\CreateVehicleRequest;
@@ -76,6 +78,21 @@ namespace {
     function requestRules(string $class, string $method = 'POST'): array
     {
         return $class::create('/fleetops-test', $method)->rules();
+    }
+
+    function bindFleetOpsRequestSession(array $data = []): void
+    {
+        $session = app('session.store');
+        $session->flush();
+
+        foreach ($data as $key => $value) {
+            $session->put($key, $value);
+        }
+
+        $request = Illuminate\Http\Request::create('/fleetops-test', 'POST');
+        $request->setLaravelSession($session);
+
+        app()->instance('request', $request);
     }
 
     function ruleStrings(array $rules): array
@@ -332,6 +349,77 @@ namespace {
                 'pod_required' => 'proof of delivery required',
                 'pod_method'   => 'proof of delivery method',
             ]);
+    });
+
+    test('customer order request authorizes token sessions and limits customer order payload shape', function () {
+        bindFleetOpsRequestSession();
+
+        $request = CreateCustomerOrderRequest::create('/fleetops-test', 'POST');
+
+        expect($request->authorize())->toBeFalse();
+
+        bindFleetOpsRequestSession(['is_sanctum_token' => true]);
+
+        expect($request->authorize())->toBeTrue();
+
+        bindFleetOpsRequestSession(['api_credential' => 'credential-uuid']);
+
+        $rules = $request->rules();
+
+        expect($request->authorize())->toBeTrue()
+            ->and($rules['type'])->toBe('nullable|string')
+            ->and($rules['order_config'])->toBe('nullable|string')
+            ->and($rules['scheduled_at'])->toBe('nullable|date')
+            ->and($rules['notes'])->toBe('nullable|string|max:2000')
+            ->and($rules['internal_id'])->toBe('nullable|string|max:191')
+            ->and($rules['service_quote'])->toBe('nullable|string')
+            ->and($rules['payload'])->toBe('nullable')
+            ->and($rules['pickup'])->toBe('nullable')
+            ->and($rules['dropoff'])->toBe('nullable')
+            ->and($rules['return'])->toBe('nullable')
+            ->and($rules['waypoints'])->toBe('nullable|array')
+            ->and($rules['entities'])->toBe('nullable|array')
+            ->and($rules['entities.*.currency'])->toBe('nullable|string|size:3')
+            ->and($rules)->not->toHaveKeys(['customer', 'driver', 'vehicle', 'dispatch', 'status']);
+    });
+
+    test('service area request authorizes api credentials and changes border requirements by coordinates', function () {
+        bindFleetOpsRequestSession();
+
+        $unauthorized = CreateServiceAreaRequest::create('/fleetops-test', 'POST');
+
+        expect($unauthorized->authorize())->toBeFalse();
+
+        bindFleetOpsRequestSession(['api_credential' => 'credential-uuid']);
+
+        $createRules     = CreateServiceAreaRequest::create('/fleetops-test', 'POST')->rules();
+        $coordinateRules = CreateServiceAreaRequest::create('/fleetops-test', 'POST', [
+            'latitude'  => 1.3521,
+            'longitude' => 103.8198,
+        ])->rules();
+        $locationRules = CreateServiceAreaRequest::create('/fleetops-test', 'POST', [
+            'location' => ['latitude' => 1.3521, 'longitude' => 103.8198],
+        ])->rules();
+        $patchRules = CreateServiceAreaRequest::create('/fleetops-test', 'PATCH')->rules();
+
+        expect($unauthorized->authorize())->toBeTrue()
+            ->and(ruleStrings($createRules['name']))->toContain('required', 'string')
+            ->and(ruleStrings($createRules['country']))->toContain('required', 'string')
+            ->and(ruleStrings($createRules['border']))->toContain('nullable', 'required')
+            ->and(ruleStrings($coordinateRules['border']))->toContain('nullable')
+            ->and(ruleStrings($coordinateRules['border']))->not->toContain('required')
+            ->and(ruleStrings($locationRules['border']))->not->toContain('required')
+            ->and(ruleStrings($patchRules['name']))->not->toContain('required')
+            ->and(ruleStrings($patchRules['country']))->not->toContain('required')
+            ->and($createRules['status'])->toBe('in:active,inactive')
+            ->and(ruleStrings($createRules['parent']))->toContain('nullable', 'exists:service_areas,public_id')
+            ->and($createRules['location'][1])->toBeInstanceOf(ResolvablePoint::class)
+            ->and($createRules['latitude'])->toBe(['nullable', 'required_with:longitude'])
+            ->and($createRules['longitude'])->toBe(['nullable', 'required_with:latitude'])
+            ->and($createRules['trigger_on_entry'])->toBe(['nullable', 'boolean'])
+            ->and($createRules['trigger_on_exit'])->toBe(['nullable', 'boolean'])
+            ->and($createRules['dwell_threshold_minutes'])->toBe(['nullable', 'integer', 'min:1', 'max:10080'])
+            ->and($createRules['speed_limit_kmh'])->toBe(['nullable', 'integer', 'min:1', 'max:1000']);
     });
 
     test('place sensor and service rate requests expose conditional validation contracts', function () {

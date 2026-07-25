@@ -13,6 +13,7 @@ use Fleetbase\FleetOps\Models\Maintenance;
 use Fleetbase\FleetOps\Models\Order;
 use Fleetbase\FleetOps\Models\Payload;
 use Fleetbase\FleetOps\Models\Place;
+use Fleetbase\FleetOps\Models\PurchaseRate;
 use Fleetbase\FleetOps\Models\ServiceRate;
 use Fleetbase\FleetOps\Models\ServiceRateFee;
 use Fleetbase\FleetOps\Models\Vendor;
@@ -699,4 +700,47 @@ test('service rate quote math and fee selection helpers are stable', function ()
         'base_fee'   => 500,
         'weight_kg'  => 3.0,
     ]);
+});
+
+test('purchase rate accessors expose relation identifiers and customer type flags', function () {
+    $rate = new PurchaseRate();
+    $rate->setRawAttributes([
+        'customer_type' => Vendor::class,
+    ], true);
+
+    expect($rate->getCustomerIsVendorAttribute())->toBeTrue()
+        ->and($rate->getCustomerIsContactAttribute())->toBeFalse()
+        ->and($rate->getAmountAttribute())->toBe(0)
+        ->and($rate->getCurrencyAttribute())->toBeNull()
+        ->and($rate->getServiceQuoteIdAttribute())->toBeNull()
+        ->and($rate->getOrderIdAttribute())->toBeNull()
+        ->and($rate->getCustomerIdAttribute())->toBeNull()
+        ->and($rate->getTransactionIdAttribute())->toBeNull();
+
+    $rate->setRawAttributes([
+        'customer_type' => Contact::class,
+    ], true);
+    $rate->setRelation('serviceQuote', (object) [
+        'amount'    => 1299,
+        'currency'  => 'USD',
+        'public_id' => 'quote_public',
+    ]);
+    $rate->setRelation('order', (object) [
+        'public_id' => 'order_public',
+    ]);
+    $rate->setRelation('customer', (object) [
+        'public_id' => 'contact_public',
+    ]);
+    $rate->setRelation('transaction', (object) [
+        'public_id' => 'transaction_public',
+    ]);
+
+    expect($rate->getCustomerIsVendorAttribute())->toBeFalse()
+        ->and($rate->getCustomerIsContactAttribute())->toBeTrue()
+        ->and($rate->getAmountAttribute())->toBe(1299)
+        ->and($rate->getCurrencyAttribute())->toBe('USD')
+        ->and($rate->getServiceQuoteIdAttribute())->toBe('quote_public')
+        ->and($rate->getOrderIdAttribute())->toBe('order_public')
+        ->and($rate->getCustomerIdAttribute())->toBe('contact_public')
+        ->and($rate->getTransactionIdAttribute())->toBe('transaction_public');
 });

@@ -1,15 +1,20 @@
 <?php
 
+use Fleetbase\FleetOps\Contracts\TelematicProviderInterface;
 use Fleetbase\FleetOps\Jobs\CheckGeofenceDwell;
 use Fleetbase\FleetOps\Jobs\SendPositionReplay;
 use Fleetbase\FleetOps\Jobs\SyncFuelProviderTransactionsJob;
+use Fleetbase\FleetOps\Jobs\TestTelematicConnectionJob;
 use Fleetbase\FleetOps\Models\Driver;
 use Fleetbase\FleetOps\Models\FuelProviderConnection;
 use Fleetbase\FleetOps\Models\FuelProviderSyncRun;
 use Fleetbase\FleetOps\Models\Position;
+use Fleetbase\FleetOps\Models\Telematic;
 use Fleetbase\FleetOps\Models\Vehicle;
 use Fleetbase\FleetOps\Models\Zone;
 use Fleetbase\FleetOps\Support\FuelProviders\FuelProviderService;
+use Fleetbase\FleetOps\Support\Telematics\TelematicProviderRegistry;
+use Fleetbase\FleetOps\Support\Telematics\TelematicService;
 use Illuminate\Support\Carbon;
 
 class FleetOpsCheckGeofenceDwellProbe extends CheckGeofenceDwell
@@ -152,6 +157,136 @@ class FleetOpsSyncFuelProviderTransactionsJobProbe extends SyncFuelProviderTrans
     }
 }
 
+class FleetOpsTelematicConnectionFake extends Telematic
+{
+    public bool $saved = false;
+
+    public function save(array $options = []): bool
+    {
+        $this->saved = true;
+
+        return true;
+    }
+}
+
+class FleetOpsTelematicProviderFake implements TelematicProviderInterface
+{
+    public array $connections    = [];
+    public array $tests          = [];
+    public ?Throwable $throwable = null;
+
+    public function connect(Telematic $telematic): void
+    {
+        $this->connections[] = $telematic;
+    }
+
+    public function testConnection(array $credentials): array
+    {
+        $this->tests[] = $credentials;
+
+        if ($this->throwable) {
+            throw $this->throwable;
+        }
+
+        return [
+            'success'  => true,
+            'message'  => 'Connection verified',
+            'metadata' => ['account' => 'demo'],
+        ];
+    }
+
+    public function fetchDevices(array $options = []): array
+    {
+        return ['devices' => [], 'next_cursor' => null, 'has_more' => false];
+    }
+
+    public function fetchDeviceDetails(string $externalId): array
+    {
+        return ['external_id' => $externalId];
+    }
+
+    public function normalizeDevice(array $payload): array
+    {
+        return $payload;
+    }
+
+    public function normalizeEvent(array $payload): array
+    {
+        return $payload;
+    }
+
+    public function normalizeSensor(array $payload): array
+    {
+        return $payload;
+    }
+
+    public function validateWebhookSignature(string $payload, string $signature, array $credentials): bool
+    {
+        return true;
+    }
+
+    public function processWebhook(array $payload, array $headers = []): array
+    {
+        return ['devices' => [], 'events' => [], 'sensors' => []];
+    }
+
+    public function getCredentialSchema(): array
+    {
+        return [];
+    }
+
+    public function supportsWebhooks(): bool
+    {
+        return false;
+    }
+
+    public function supportsDiscovery(): bool
+    {
+        return false;
+    }
+
+    public function getRateLimits(): array
+    {
+        return ['requests_per_minute' => 60, 'burst_size' => 10];
+    }
+}
+
+class FleetOpsTelematicProviderRegistryFake extends TelematicProviderRegistry
+{
+    public array $resolved = [];
+
+    public function __construct(public FleetOpsTelematicProviderFake $provider)
+    {
+    }
+
+    public function resolve(string $key): TelematicProviderInterface
+    {
+        $this->resolved[] = $key;
+
+        return $this->provider;
+    }
+}
+
+class FleetOpsTelematicConnectionServiceFake extends TelematicService
+{
+    public array $credentials = ['token' => 'secret'];
+    public array $records     = [];
+
+    public function __construct()
+    {
+    }
+
+    public function getCredentials(Telematic $telematic): array
+    {
+        return $this->credentials;
+    }
+
+    public function recordConnectionTest(Telematic $telematic, array $result): void
+    {
+        $this->records[] = [$telematic, $result];
+    }
+}
+
 function fleetOpsReplayPosition(): Position
 {
     $position = new Position();
@@ -283,4 +418,45 @@ test('sync fuel provider transactions job passes parsed dates and records failur
         ]);
 
     Carbon::setTestNow();
+});
+
+test('test telematic connection job records success and marks failures', function () {
+    $telematic = new FleetOpsTelematicConnectionFake();
+    $telematic->setRawAttributes([
+        'uuid'     => 'telematic-uuid',
+        'provider' => 'demo-provider',
+        'status'   => 'pending',
+    ], true);
+
+    $provider = new FleetOpsTelematicProviderFake();
+    $registry = new FleetOpsTelematicProviderRegistryFake($provider);
+    $service  = new FleetOpsTelematicConnectionServiceFake();
+    $job      = new TestTelematicConnectionJob($telematic, 'connection-job-id');
+
+    $job->handle($registry, $service);
+
+    expect($job->getJobId())->toBe('connection-job-id')
+        ->and($registry->resolved)->toBe(['demo-provider'])
+        ->and($provider->tests)->toBe([['token' => 'secret']])
+        ->and($service->records)->toHaveCount(1)
+        ->and($service->records[0][0])->toBe($telematic)
+        ->and($service->records[0][1])->toMatchArray([
+            'success'  => true,
+            'message'  => 'Connection verified',
+            'metadata' => ['account' => 'demo'],
+        ]);
+
+    $failingTelematic = new FleetOpsTelematicConnectionFake();
+    $failingTelematic->setRawAttributes([
+        'uuid'     => 'telematic-failing-uuid',
+        'provider' => 'demo-provider',
+        'status'   => 'pending',
+    ], true);
+    $provider->throwable = new RuntimeException('provider offline');
+    $failingJob          = new TestTelematicConnectionJob($failingTelematic);
+
+    expect(fn () => $failingJob->handle($registry, $service))->toThrow(RuntimeException::class, 'provider offline')
+        ->and($failingJob->getJobId())->not->toBe('')
+        ->and($failingTelematic->status)->toBe('error')
+        ->and($failingTelematic->saved)->toBeTrue();
 });

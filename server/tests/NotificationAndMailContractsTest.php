@@ -1,5 +1,12 @@
 <?php
 
+if (!function_exists('url')) {
+    function url(string $path = ''): string
+    {
+        return 'https://fleetops.test' . $path;
+    }
+}
+
 use Fleetbase\FleetOps\Flow\Activity;
 use Fleetbase\FleetOps\Mail\MaintenanceScheduleReminder;
 use Fleetbase\FleetOps\Mail\WorkOrderDispatched;
@@ -7,6 +14,7 @@ use Fleetbase\FleetOps\Models\MaintenanceSchedule;
 use Fleetbase\FleetOps\Models\Order;
 use Fleetbase\FleetOps\Models\Waypoint;
 use Fleetbase\FleetOps\Models\WorkOrder;
+use Fleetbase\FleetOps\Notifications\DriverArrivedAtGeofence;
 use Fleetbase\FleetOps\Notifications\LateDeparture;
 use Fleetbase\FleetOps\Notifications\OrderAssigned;
 use Fleetbase\FleetOps\Notifications\OrderCanceled as OrderCanceledNotification;
@@ -134,6 +142,49 @@ test('operational alert notifications expose expected channels and database payl
             'order_uuid' => 'order-uuid',
             'context'    => ['stopped_minutes' => 30],
         ]);
+});
+
+test('driver arrived at geofence notification exposes mail and database payloads', function () {
+    $order = notificationTestOrder();
+    $order->setRawAttributes([
+        'uuid'            => 'order-uuid',
+        'public_id'       => 'order_public',
+        'tracking_number' => 'TRACK-GEOFENCE',
+    ], true);
+
+    $geofence = (object) [
+        'public_id' => 'zone_public',
+        'name'      => 'Central Depot',
+    ];
+
+    $notification = new DriverArrivedAtGeofence($order, $geofence);
+    $mail         = $notification->toMail(null);
+
+    expect($notification->via(null))->toBe(['mail', 'database'])
+        ->and($mail->subject)->toBe('Your driver has arrived — Order #order_public')
+        ->and($mail->introLines)->toContain(
+            'Your driver has arrived at Central Depot for order #order_public.',
+            'Please be ready to receive your delivery.'
+        )
+        ->and($mail->outroLines)->toContain('Thank you for using our service.')
+        ->and($mail->actionText)->toBe('Track Your Order')
+        ->and($mail->actionUrl)->toContain('/tracking/TRACK-GEOFENCE')
+        ->and($notification->toArray(null))->toBe([
+            'event'         => 'driver.arrived_at_geofence',
+            'order_id'      => 'order_public',
+            'order_uuid'    => 'order-uuid',
+            'geofence_id'   => 'zone_public',
+            'geofence_name' => 'Central Depot',
+            'message'       => 'Your driver has arrived at Central Depot for order #order_public.',
+        ]);
+
+    $fallback = new DriverArrivedAtGeofence($order, (object) []);
+
+    expect($fallback->toArray(null))->toMatchArray([
+        'geofence_id'   => null,
+        'geofence_name' => null,
+        'message'       => 'Your driver has arrived at your location for order #order_public.',
+    ]);
 });
 
 test('order dispatched notification exposes channels array and mail payloads', function () {
