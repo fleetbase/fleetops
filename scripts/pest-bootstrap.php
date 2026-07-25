@@ -185,6 +185,26 @@ if (!function_exists('now') && class_exists('Illuminate\Support\Carbon')) {
     }
 }
 
+if (!class_exists('Illuminate\Validation\ValidationException')) {
+    eval('namespace Illuminate\Validation; class ValidationException extends \Exception { public array $messages; public static function withMessages(array $messages): self { $exception = new self("The given data was invalid."); $exception->messages = $messages; return $exception; } public function errors(): array { return $this->messages; } }');
+}
+
+if (class_exists('Illuminate\Http\Request') && method_exists('Illuminate\Http\Request', 'macro')) {
+    if (!method_exists('Illuminate\Http\Request', 'array')) {
+        Illuminate\Http\Request::macro('array', function (string $key, array $default = []): array {
+            $value = $this->input($key, $default);
+
+            return is_array($value) ? $value : $default;
+        });
+    }
+
+    if (!method_exists('Illuminate\Http\Request', 'validate')) {
+        Illuminate\Http\Request::macro('validate', function (array $rules, ...$parameters): array {
+            return $this->all();
+        });
+    }
+}
+
 if (!trait_exists('Illuminate\Foundation\Auth\Access\AuthorizesRequests')) {
     eval('namespace Illuminate\Foundation\Auth\Access; trait AuthorizesRequests {}');
 }

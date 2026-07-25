@@ -3,6 +3,7 @@
 use Fleetbase\Ai\Support\AiQueryRegistry;
 use Fleetbase\FleetOps\Support\Ai\Capabilities\AssetStatusCapability;
 use Fleetbase\FleetOps\Support\Ai\Capabilities\OperationalQueryCapability;
+use Fleetbase\FleetOps\Support\Ai\Capabilities\OrderInsightsCapability;
 use Fleetbase\FleetOps\Support\Ai\FleetOpsAiQueryResources;
 use Illuminate\Support\Carbon;
 
@@ -14,6 +15,20 @@ function fleetopsAiOperationalCapability()
 function fleetopsAiOperationalProtectedMethod(string $method): ReflectionMethod
 {
     $reflection = new ReflectionClass(OperationalQueryCapability::class);
+    $method     = $reflection->getMethod($method);
+    $method->setAccessible(true);
+
+    return $method;
+}
+
+function fleetopsOrderInsightsCapability()
+{
+    return (new ReflectionClass(OrderInsightsCapability::class))->newInstanceWithoutConstructor();
+}
+
+function fleetopsOrderInsightsProtectedMethod(string $method): ReflectionMethod
+{
+    $reflection = new ReflectionClass(OrderInsightsCapability::class);
     $method     = $reflection->getMethod($method);
     $method->setAccessible(true);
 
@@ -68,6 +83,39 @@ test('operational query date filters use resolved local windows', function () {
             ->and($filters[0])->toMatchArray(['field' => 'created_at', 'operator' => '>='])
             ->and($filters[0]['value']->toIso8601String())->toBe('2026-06-22T00:00:00+08:00')
             ->and($filters[1]['value']->toIso8601String())->toBe('2026-06-28T23:59:59+08:00');
+    } finally {
+        Carbon::setTestNow();
+        date_default_timezone_set($timezone);
+    }
+});
+
+test('order insights capability exposes metadata prompt matching thresholds and date windows', function () {
+    $timezone = date_default_timezone_get();
+    date_default_timezone_set('Asia/Singapore');
+    Carbon::setTestNow(Carbon::parse('2026-06-30 15:00:00', 'Asia/Singapore'));
+
+    try {
+        $capability      = fleetopsOrderInsightsCapability();
+        $matchesPrompt   = fleetopsOrderInsightsProtectedMethod('matchesPrompt');
+        $amountThreshold = fleetopsOrderInsightsProtectedMethod('amountThreshold');
+        $dateWindow      = fleetopsOrderInsightsProtectedMethod('dateWindow');
+
+        expect($capability->key())->toBe('fleet-ops.order_insights')
+            ->and($capability->label())->toBe('Fleet-Ops order insights')
+            ->and($capability->description())->toContain('Fleet-Ops orders')
+            ->and($capability->permissions())->toBe(['fleet-ops see order'])
+            ->and($matchesPrompt->invoke($capability, 'how many orders completed last week'))->toBeTrue()
+            ->and($matchesPrompt->invoke($capability, 'show vehicle locations'))->toBeFalse()
+            ->and($amountThreshold->invoke($capability, 'orders over $125.50 last week'))->toBe(125.50)
+            ->and($amountThreshold->invoke($capability, 'orders greater than 40'))->toBe(40.0)
+            ->and($amountThreshold->invoke($capability, 'orders without a value threshold'))->toBeNull();
+
+        $window = $dateWindow->invoke($capability, 'orders from last week');
+
+        expect($window['label'])->toBe('last week')
+            ->and($window['timezone'])->toBe('Asia/Singapore')
+            ->and($window['start']->toIso8601String())->toBe('2026-06-22T00:00:00+08:00')
+            ->and($window['end']->toIso8601String())->toBe('2026-06-28T23:59:59+08:00');
     } finally {
         Carbon::setTestNow();
         date_default_timezone_set($timezone);
