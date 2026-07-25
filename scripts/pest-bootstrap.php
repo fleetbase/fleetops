@@ -213,6 +213,10 @@ if (!trait_exists('Illuminate\Foundation\Bus\Dispatchable')) {
     eval('namespace Illuminate\Foundation\Bus; trait Dispatchable {}');
 }
 
+if (!trait_exists('Illuminate\Foundation\Events\Dispatchable')) {
+    eval('namespace Illuminate\Foundation\Events; trait Dispatchable {}');
+}
+
 if (!trait_exists('Illuminate\Foundation\Bus\DispatchesJobs')) {
     eval('namespace Illuminate\Foundation\Bus; trait DispatchesJobs {}');
 }
