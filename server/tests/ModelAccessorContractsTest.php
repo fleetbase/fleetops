@@ -33,16 +33,33 @@ use Fleetbase\FleetOps\Models\PurchaseRate;
 use Fleetbase\FleetOps\Models\Route;
 use Fleetbase\FleetOps\Models\ServiceRate;
 use Fleetbase\FleetOps\Models\ServiceRateFee;
+use Fleetbase\FleetOps\Models\Telematic;
 use Fleetbase\FleetOps\Models\Vehicle;
 use Fleetbase\FleetOps\Models\VehicleDevice;
 use Fleetbase\FleetOps\Models\Vendor;
 use Fleetbase\FleetOps\Models\Waypoint;
 use Fleetbase\FleetOps\Models\WorkOrder;
+use Fleetbase\FleetOps\Support\Telematics\TelematicProviderRegistry;
 use Fleetbase\FleetOps\Traits\PayloadAccessors;
 use Fleetbase\LaravelMysqlSpatial\Types\Point;
+use Illuminate\Database\ConnectionResolver;
+use Illuminate\Database\Eloquent\Model as EloquentModel;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\SQLiteConnection;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
+
+function fleetopsModelAccessorsUseInMemoryRelationConnection(): void
+{
+    $connection = new SQLiteConnection(new PDO('sqlite::memory:'));
+    $resolver   = new ConnectionResolver([
+        'default' => $connection,
+        'mysql'   => $connection,
+    ]);
+
+    $resolver->setDefaultConnection('mysql');
+    EloquentModel::setConnectionResolver($resolver);
+}
 
 class FleetOpsCountingRelationFake
 {
@@ -74,6 +91,63 @@ class FleetOpsFleetAccessorFake extends Fleet
     public function vehicles()
     {
         return new FleetOpsCountingRelationFake(7, 3);
+    }
+}
+
+class FleetOpsTelematicQueryFake
+{
+    public array $calls = [];
+
+    public function where(...$arguments): self
+    {
+        $this->calls[] = ['where', $arguments];
+
+        return $this;
+    }
+
+    public function whereNull(...$arguments): self
+    {
+        $this->calls[] = ['whereNull', $arguments];
+
+        return $this;
+    }
+
+    public function orWhere(...$arguments): self
+    {
+        $this->calls[] = ['orWhere', $arguments];
+
+        return $this;
+    }
+}
+
+class FleetOpsTelematicUpdatingFake extends Telematic
+{
+    public array $updated = [];
+
+    public function update(array $attributes = [], array $options = [])
+    {
+        $this->updated = $attributes;
+        $this->forceFill($attributes);
+
+        return true;
+    }
+}
+
+class FleetOpsModelAccessorTelematicRegistryFake
+{
+    public function __construct(private ?object $descriptor)
+    {
+    }
+
+    public function findByKey(?string $key): ?object
+    {
+        if (!$key) {
+            return null;
+        }
+
+        expect($key)->toBe('safee');
+
+        return $this->descriptor;
     }
 }
 
@@ -223,7 +297,7 @@ class FleetOpsManifestScopeQueryFake
     }
 }
 
-class FleetOpsPayloadAccessorHostFake extends Illuminate\Database\Eloquent\Model
+class FleetOpsPayloadAccessorHostFake extends EloquentModel
 {
     use PayloadAccessors;
 
@@ -1134,6 +1208,120 @@ test('payload and place pure accessors normalize fallback data', function () {
             'country' => 'US',
             'phone'   => '+1555',
         ]);
+});
+
+test('telematic model accessors relationships scopes and heartbeat contracts are stable', function () {
+    fleetopsModelAccessorsUseInMemoryRelationConnection();
+    Carbon::setTestNow(Carbon::parse('2026-07-26 12:00:00'));
+
+    app()->instance(TelematicProviderRegistry::class, new FleetOpsModelAccessorTelematicRegistryFake(new class {
+        public function toArray(): array
+        {
+            return [
+                'key'                => 'safee',
+                'label'              => 'Safee',
+                'supports_webhooks'  => true,
+                'supports_discovery' => true,
+                'metadata'           => ['region' => 'sg'],
+            ];
+        }
+    }));
+
+    $telematic = new FleetOpsTelematicUpdatingFake();
+    $telematic->setRawAttributes([
+        'uuid'             => 'telematic-uuid',
+        'provider'         => 'safee',
+        'firmware_version' => '1.2.0',
+        'last_seen_at'     => Carbon::parse('2026-07-26 11:58:00'),
+        'last_metrics'     => ['signal_strength' => 87, 'lat' => 1.31, 'lng' => 103.82],
+        'config'           => [
+            'supported_features' => ['ignition', 'fuel'],
+            'latest_firmware'    => '1.3.0',
+        ],
+    ], true);
+    $telematic->setRelation('warranty', (object) ['name' => 'Gold Coverage']);
+
+    expect($telematic->warranty())->toBeInstanceOf(BelongsTo::class)
+        ->and($telematic->createdBy()->getForeignKeyName())->toBe('created_by_uuid')
+        ->and($telematic->updatedBy()->getForeignKeyName())->toBe('updated_by_uuid')
+        ->and($telematic->device()->getForeignKeyName())->toBe('telematic_uuid')
+        ->and($telematic->assets()->getForeignKeyName())->toBe('telematic_uuid')
+        ->and($telematic->provider_descriptor)->toMatchArray([
+            'key'                => 'safee',
+            'label'              => 'Safee',
+            'supports_webhooks'  => true,
+            'supports_discovery' => true,
+            'metadata'           => ['region' => 'sg'],
+        ])
+        ->and($telematic->warranty_name)->toBe('Gold Coverage')
+        ->and($telematic->is_online)->toBeTrue()
+        ->and($telematic->signal_strength)->toBe(87)
+        ->and($telematic->last_location)->toBe([
+            'latitude'  => 1.31,
+            'longitude' => 103.82,
+            'timestamp' => '2026-07-26T11:58:00.000000Z',
+        ])
+        ->and($telematic->getConnectionStatus())->toBe('online')
+        ->and($telematic->supportsFeature('fuel'))->toBeTrue()
+        ->and($telematic->supportsFeature('doors'))->toBeFalse()
+        ->and($telematic->getFirmwareStatus())->toBe([
+            'current_version'  => '1.2.0',
+            'latest_version'   => '1.3.0',
+            'update_available' => true,
+        ])
+        ->and($telematic->getActivitylogOptions())->toBeInstanceOf(Spatie\Activitylog\LogOptions::class);
+
+    $offline = new Telematic();
+    $offline->setRawAttributes(['last_seen_at' => Carbon::parse('2026-07-26 11:30:00')], true);
+    $old = new Telematic();
+    $old->setRawAttributes(['last_seen_at' => Carbon::parse('2026-07-26 05:00:00')], true);
+    $longOffline = new Telematic();
+    $longOffline->setRawAttributes(['last_seen_at' => Carbon::parse('2026-07-24 05:00:00')], true);
+
+    expect((new Telematic())->is_online)->toBeFalse()
+        ->and((new Telematic())->last_location)->toBeNull()
+        ->and((new Telematic())->getProviderDescriptorAttribute())->toBe([])
+        ->and((new Telematic())->getConnectionStatus())->toBe('never_connected')
+        ->and($offline->getConnectionStatus())->toBe('recently_offline')
+        ->and($old->getConnectionStatus())->toBe('offline')
+        ->and($longOffline->getConnectionStatus())->toBe('long_offline');
+
+    $telematic->updateHeartbeat(['battery' => 92]);
+
+    expect($telematic->updated['last_seen_at']->toDateTimeString())->toBe('2026-07-26 12:00:00')
+        ->and($telematic->updated['last_metrics'])->toMatchArray([
+            'signal_strength' => 87,
+            'lat'             => 1.31,
+            'lng'             => 103.82,
+            'battery'         => 92,
+        ]);
+
+    $onlineQuery = new FleetOpsTelematicQueryFake();
+    (new Telematic())->scopeOnline($onlineQuery);
+
+    $providerQuery = new FleetOpsTelematicQueryFake();
+    (new Telematic())->scopeByProvider($providerQuery, 'safee');
+
+    $offlineQuery = new FleetOpsTelematicQueryFake();
+    (new Telematic())->scopeOffline($offlineQuery);
+    $offlineCallback = $offlineQuery->calls[0][1][0];
+    $nestedQuery     = new FleetOpsTelematicQueryFake();
+    $offlineCallback($nestedQuery);
+
+    expect($onlineQuery->calls[0][0])->toBe('where')
+        ->and($onlineQuery->calls[0][1][0])->toBe('last_seen_at')
+        ->and($onlineQuery->calls[0][1][1])->toBe('>=')
+        ->and($onlineQuery->calls[0][1][2]->toDateTimeString())->toBe('2026-07-26 11:55:00')
+        ->and($providerQuery->calls)->toBe([
+            ['where', ['provider', 'safee']],
+        ])
+        ->and($nestedQuery->calls[0])->toBe(['whereNull', ['last_seen_at']])
+        ->and($nestedQuery->calls[1][0])->toBe('orWhere')
+        ->and($nestedQuery->calls[1][1][0])->toBe('last_seen_at')
+        ->and($nestedQuery->calls[1][1][1])->toBe('<')
+        ->and($nestedQuery->calls[1][1][2]->toDateTimeString())->toBe('2026-07-26 11:55:00');
+
+    Carbon::setTestNow();
 });
 
 test('service rate quote math and fee selection helpers are stable', function () {

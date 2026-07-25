@@ -195,6 +195,26 @@ class FleetOpsInternalContactControllerProbe extends InternalContactController
     }
 }
 
+class FleetOpsInternalContactHookFake extends Contact
+{
+    public bool $normalized          = false;
+    public array $syncedCustomFields = [];
+
+    public function normalizeCustomerUser(?Fleetbase\Models\User $user = null, bool $quiet = false): ?Fleetbase\Models\User
+    {
+        $this->normalized = true;
+
+        return null;
+    }
+
+    public function syncCustomFieldValues(array $payload, array $options = []): array
+    {
+        $this->syncedCustomFields = $payload;
+
+        return $payload;
+    }
+}
+
 class FleetOpsInternalFleetControllerProbe extends InternalFleetController
 {
     public function callHelper(string $method, mixed ...$arguments): mixed
@@ -1043,6 +1063,38 @@ test('internal contact controller detects the customer portal extension package'
             ['extra' => ['name' => 'fleetbase/customer-portal-api']],
         ]))->toBeFalse()
         ->and($controller->callHelper('containsCustomerPortalExtension', []))->toBeFalse();
+});
+
+test('internal contact controller create update and after save hooks protect customer contacts', function () {
+    $controller = new FleetOpsInternalContactControllerProbe();
+    $request    = new Request([
+        'contact' => [
+            'custom_field_values' => [
+                ['key' => 'tier', 'value' => 'gold'],
+            ],
+        ],
+    ]);
+    $input      = ['type' => 'contact'];
+
+    $controller->onBeforeCreate($request, $input);
+
+    $contact = new FleetOpsInternalContactHookFake();
+    $contact->setRawAttributes([
+        'type' => 'customer',
+        'meta' => [],
+    ], true);
+    $updateInput = ['type' => 'vendor'];
+
+    expect(fn () => $controller->onBeforeUpdate($request, $contact, $updateInput))
+        ->toThrow(Exception::class, 'Customer contact type cannot be changed.');
+
+    $controller->afterSave($request, $contact);
+
+    expect($input)->toBe(['type' => 'contact'])
+        ->and($contact->normalized)->toBeTrue()
+        ->and($contact->syncedCustomFields)->toBe([
+            ['key' => 'tier', 'value' => 'gold'],
+        ]);
 });
 
 test('api controller phone helpers normalize explicit values', function () {
