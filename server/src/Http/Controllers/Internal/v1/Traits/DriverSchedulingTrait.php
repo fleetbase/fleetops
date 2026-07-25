@@ -35,7 +35,7 @@ trait DriverSchedulingTrait
     /**
      * Resolve a Driver by UUID or public_id, throwing 404 if not found.
      */
-    private function resolveDriver(string $id): Driver
+    protected function resolveDriver(string $id): Driver
     {
         return Driver::where('uuid', $id)
             ->orWhere('public_id', $id)
@@ -51,7 +51,7 @@ trait DriverSchedulingTrait
     public function scheduleItems(string $id, Request $request): JsonResponse
     {
         $driver = $this->resolveDriver($id);
-        $query  = $driver->scheduleItems();
+        $query  = $this->scheduleItemsForDriver($driver);
 
         if ($request->filled('start_at')) {
             $query->where('start_at', '>=', $request->input('start_at'));
@@ -72,7 +72,7 @@ trait DriverSchedulingTrait
     public function availabilities(string $id, Request $request): JsonResponse
     {
         $driver = $this->resolveDriver($id);
-        $query  = $driver->availabilities();
+        $query  = $this->availabilitiesForDriver($driver);
 
         if ($request->filled('start_at')) {
             $query->where('start_at', '>=', $request->input('start_at'));
@@ -116,10 +116,7 @@ trait DriverSchedulingTrait
 
         // ── Resolve the driver's active schedule ──────────────────────────────
         /** @var Schedule|null $schedule */
-        $schedule = $driver->schedules()
-            ->where('status', 'active')
-            ->latest('created_at')
-            ->first();
+        $schedule = $this->activeScheduleForDriver($driver);
 
         // ── Determine HOS limits (per-schedule → global default) ──────────────
         $dailyLimit  = ($schedule && $schedule->hos_daily_limit)
@@ -162,7 +159,7 @@ trait DriverSchedulingTrait
      *
      * @return array{float, float} [dailyHours, weeklyHours]
      */
-    private function calculateHosFromSchedule(Driver $driver): array
+    protected function calculateHosFromSchedule(Driver $driver): array
     {
         $now         = now();
         $startOfDay  = $now->copy()->startOfDay();
@@ -170,19 +167,17 @@ trait DriverSchedulingTrait
 
         // Duration expression: elapsed minutes from shift start to MIN(end_at, NOW()).
         // This caps ongoing shifts at the current moment so future time is never counted.
-        $durationExpr = DB::raw(
-            'TIMESTAMPDIFF(MINUTE, start_at, LEAST(COALESCE(end_at, NOW()), NOW()))'
-        );
+        $durationExpr = $this->hosDurationExpression();
 
         // Daily: shifts that started today and have already begun
-        $dailyMinutes = $driver->scheduleItems()
+        $dailyMinutes = $this->scheduleItemsForDriver($driver)
             ->where('start_at', '>=', $startOfDay)
             ->where('start_at', '<=', $now)
             ->where('status', '!=', 'cancelled')
             ->sum($durationExpr);
 
         // Weekly: shifts that started this week and have already begun
-        $weeklyMinutes = $driver->scheduleItems()
+        $weeklyMinutes = $this->scheduleItemsForDriver($driver)
             ->where('start_at', '>=', $startOfWeek)
             ->where('start_at', '<=', $now)
             ->where('status', '!=', 'cancelled')
@@ -203,12 +198,42 @@ trait DriverSchedulingTrait
     public function activeShift(string $id): JsonResponse
     {
         $driver = $this->resolveDriver($id);
-        $shift  = $driver->activeShiftFor(now());
+        $shift  = $this->activeShiftForDriver($driver, now());
 
         if (!$shift) {
             return response()->json(['data' => null]);
         }
 
         return response()->json(['data' => $shift]);
+    }
+
+    protected function scheduleItemsForDriver(Driver $driver)
+    {
+        return $driver->scheduleItems();
+    }
+
+    protected function availabilitiesForDriver(Driver $driver)
+    {
+        return $driver->availabilities();
+    }
+
+    protected function activeScheduleForDriver(Driver $driver)
+    {
+        return $driver->schedules()
+            ->where('status', 'active')
+            ->latest('created_at')
+            ->first();
+    }
+
+    protected function activeShiftForDriver(Driver $driver, \DateTimeInterface $date)
+    {
+        return $driver->activeShiftFor($date);
+    }
+
+    protected function hosDurationExpression()
+    {
+        return DB::raw(
+            'TIMESTAMPDIFF(MINUTE, start_at, LEAST(COALESCE(end_at, NOW()), NOW()))'
+        );
     }
 }
