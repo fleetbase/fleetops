@@ -1,8 +1,11 @@
 <?php
 
+use Carbon\Carbon;
+use Fleetbase\FleetOps\Console\Commands\ProcessMaintenanceTriggers;
 use Fleetbase\FleetOps\Console\Commands\SyncTelematics;
 use Fleetbase\FleetOps\Console\Commands\TestEmail;
 use Fleetbase\FleetOps\Contracts\TelematicProviderDescriptor;
+use Fleetbase\FleetOps\Models\Vehicle;
 use Fleetbase\FleetOps\Support\Telematics\TelematicProviderRegistry;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Cache;
@@ -53,6 +56,17 @@ class FleetOpsTelematicProviderRegistryFake extends TelematicProviderRegistry
     public function all(): Illuminate\Support\Collection
     {
         return $this->providers;
+    }
+}
+
+class FleetOpsProcessMaintenanceTriggersProbe extends ProcessMaintenanceTriggers
+{
+    public function callHelper(string $method, mixed ...$arguments): mixed
+    {
+        $reflection = new ReflectionMethod(ProcessMaintenanceTriggers::class, $method);
+        $reflection->setAccessible(true);
+
+        return $reflection->invoke($this, ...$arguments);
     }
 }
 
@@ -149,6 +163,39 @@ test('sync telematics filters requested pollable providers', function () {
     $method->setAccessible(true);
 
     expect($method->invoke($command, $registry))->toBe(['samsara']);
+});
+
+test('process maintenance triggers exposes deterministic command helpers', function () {
+    Carbon::setTestNow(Carbon::parse('2026-02-03 04:05:06'));
+
+    $command  = new FleetOpsProcessMaintenanceTriggersProbe();
+    $schedule = (object) [
+        'next_due_date'         => Carbon::parse('2026-02-01'),
+        'next_due_odometer'     => 12000,
+        'next_due_engine_hours' => 300,
+    ];
+
+    $vehicle               = new Vehicle();
+    $vehicle->odometer     = 12500;
+    $vehicle->engine_hours = 450;
+
+    expect($command->callHelper('connectionName', true))->toBe('sandbox')
+        ->and($command->callHelper('connectionName', false))->toBe('mysql')
+        ->and($command->callHelper('currentReadingsFromSubject', $vehicle))->toBe([12500, 450])
+        ->and($command->callHelper('currentReadingsFromSubject', new stdClass()))->toBe([null, null])
+        ->and($command->callHelper('triggerReasons', $schedule, 12500, 450))->toBe([
+            'date due 2026-02-01',
+            'odometer 12500 >= 12000',
+            'engine hours 450 >= 300',
+        ])
+        ->and($command->callHelper('triggerReasons', $schedule, 11000, 250))->toBe([
+            'date due 2026-02-01',
+        ])
+        ->and($command->callHelper('workOrderCode', 7, Carbon::parse('2026-02-03')))->toBe('WO-20260203-0007')
+        ->and($command->callHelper('processedSummary', 2, false))->toBe('Processed 2 schedule trigger(s).')
+        ->and($command->callHelper('processedSummary', 2, true))->toBe('Processed 2 schedule trigger(s) (dry run — no work orders created)');
+
+    Carbon::setTestNow();
 });
 
 test('test email command rejects unsupported email types before sending mail', function () {
