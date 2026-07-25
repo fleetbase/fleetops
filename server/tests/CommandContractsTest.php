@@ -1,11 +1,14 @@
 <?php
 
 use Carbon\Carbon;
+use Fleetbase\FleetOps\Console\Commands\AuditCustomerUserConflicts;
 use Fleetbase\FleetOps\Console\Commands\DispatchAdhocOrders;
 use Fleetbase\FleetOps\Console\Commands\ProcessMaintenanceTriggers;
 use Fleetbase\FleetOps\Console\Commands\SyncTelematics;
 use Fleetbase\FleetOps\Console\Commands\TestEmail;
+use Fleetbase\FleetOps\Console\Commands\TrackOrderDistanceAndTime;
 use Fleetbase\FleetOps\Contracts\TelematicProviderDescriptor;
+use Fleetbase\FleetOps\Models\Contact;
 use Fleetbase\FleetOps\Models\Driver;
 use Fleetbase\FleetOps\Models\Order;
 use Fleetbase\FleetOps\Models\Vehicle;
@@ -309,6 +312,243 @@ class FleetOpsDispatchAdhocOrdersDriverFake extends Driver
     }
 }
 
+class FleetOpsTrackOrderDistanceAndTimeProbe extends TrackOrderDistanceAndTime
+{
+    public array $messages = [];
+    public FleetOpsTrackOrderQueryFake $query;
+    public FleetOpsTrackProgressBarFake $progressBar;
+
+    public function __construct(private array $testOptions, array $orders = [])
+    {
+        parent::__construct();
+        $this->query       = new FleetOpsTrackOrderQueryFake($orders);
+        $this->progressBar = new FleetOpsTrackProgressBarFake();
+    }
+
+    public function option($key = null)
+    {
+        return $key === null ? $this->testOptions : ($this->testOptions[$key] ?? null);
+    }
+
+    public function info($string, $verbosity = null)
+    {
+        $this->messages[] = ['info', $string];
+    }
+
+    public function warn($string, $verbosity = null)
+    {
+        $this->messages[] = ['warn', $string];
+    }
+
+    public function error($string, $verbosity = null)
+    {
+        $this->messages[] = ['error', $string];
+    }
+
+    public function alert($string, $verbosity = null)
+    {
+        $this->messages[] = ['alert', $string];
+    }
+
+    public function newLine($count = 1)
+    {
+        $this->messages[] = ['newLine', $count];
+    }
+
+    protected function activeOrdersQuery(Carbon $cutoff)
+    {
+        $this->messages[] = ['activeOrdersQuery', $cutoff->toDateTimeString()];
+
+        return $this->query;
+    }
+
+    protected function createProgressBar(int $total)
+    {
+        $this->messages[] = ['createProgressBar', $total];
+
+        return $this->progressBar;
+    }
+}
+
+class FleetOpsTrackProgressBarFake
+{
+    public int $started  = 0;
+    public int $advanced = 0;
+    public int $finished = 0;
+
+    public function start(): void
+    {
+        $this->started++;
+    }
+
+    public function advance(): void
+    {
+        $this->advanced++;
+    }
+
+    public function finish(): void
+    {
+        $this->finished++;
+    }
+}
+
+class FleetOpsTrackOrderQueryFake
+{
+    public array $calls = [];
+
+    public function __construct(private array $orders)
+    {
+    }
+
+    public function __clone()
+    {
+        $this->calls[] = ['clone'];
+    }
+
+    public function count($columns = '*'): int
+    {
+        $this->calls[] = ['count', $columns];
+
+        return count($this->orders);
+    }
+
+    public function orderBy(string $column): self
+    {
+        $this->calls[] = ['orderBy', $column];
+
+        return $this;
+    }
+
+    public function chunkById(int $perChunk, Closure $callback): void
+    {
+        $this->calls[] = ['chunkById', $perChunk];
+
+        $callback(new FleetOpsTrackOrderChunkFake($this->orders));
+    }
+}
+
+class FleetOpsTrackOrderChunkFake implements IteratorAggregate
+{
+    public array $loaded = [];
+
+    public function __construct(private array $orders)
+    {
+    }
+
+    public function load(array $relations): self
+    {
+        $this->loaded = $relations;
+
+        return $this;
+    }
+
+    public function getIterator(): Traversable
+    {
+        return new ArrayIterator($this->orders);
+    }
+}
+
+class FleetOpsTrackOrderFake extends Order
+{
+    public int $id;
+    public array $distanceCalls = [];
+
+    public function __construct(int $id = 0, private bool $shouldFail = false)
+    {
+        parent::__construct();
+        $this->id = $id;
+    }
+
+    public function setDistanceAndTime(array $options = []): Order
+    {
+        if ($this->shouldFail) {
+            throw new RuntimeException('distance provider failed');
+        }
+
+        $this->distanceCalls[] = $options;
+
+        return $this;
+    }
+}
+
+class FleetOpsAuditCustomerUserConflictsProbe extends AuditCustomerUserConflicts
+{
+    public array $messages = [];
+    public array $tables   = [];
+    public FleetOpsAuditCustomerQueryFake $query;
+
+    public function __construct(private array $testOptions, array $contacts)
+    {
+        parent::__construct();
+        $this->query = new FleetOpsAuditCustomerQueryFake($contacts);
+    }
+
+    public function option($key = null)
+    {
+        return $key === null ? $this->testOptions : ($this->testOptions[$key] ?? null);
+    }
+
+    public function line($string, $style = null, $verbosity = null)
+    {
+        $this->messages[] = ['line', $string];
+    }
+
+    public function info($string, $verbosity = null)
+    {
+        $this->messages[] = ['info', $string];
+    }
+
+    public function table($headers, $rows, $tableStyle = 'default', array $columnStyles = [])
+    {
+        $this->tables[] = [$headers, $rows];
+    }
+
+    protected function customerContactsQuery()
+    {
+        return $this->query;
+    }
+}
+
+class FleetOpsAuditCustomerQueryFake
+{
+    public array $calls = [];
+
+    public function __construct(private array $contacts)
+    {
+    }
+
+    public function where(string $column, mixed $value): self
+    {
+        $this->calls[] = ['where', $column, $value];
+
+        return $this;
+    }
+
+    public function get(): Illuminate\Support\Collection
+    {
+        $this->calls[] = ['get'];
+
+        return collect($this->contacts);
+    }
+}
+
+function fleetOpsAuditContact(array $attributes, mixed $user, ?object $company = null): Contact
+{
+    $contact = new Contact();
+    $contact->setRawAttributes(array_merge([
+        'uuid'         => 'contact-uuid',
+        'public_id'    => 'contact_public',
+        'name'         => 'Jane Customer',
+        'email'        => 'jane@example.test',
+        'company_uuid' => 'company-uuid',
+        'updated_at'   => Carbon::parse('2026-07-26 12:00:00'),
+    ], $attributes), true);
+    $contact->setRelation('anyUser', $user);
+    $contact->setRelation('company', $company ?? (object) ['name' => 'Acme Logistics']);
+
+    return $contact;
+}
+
 function fleetOpsSyncTelematicsCommandWithOptions(array $options = []): SyncTelematics
 {
     return new class($options) extends SyncTelematics {
@@ -435,6 +675,152 @@ test('process maintenance triggers exposes deterministic command helpers', funct
         ->and($command->callHelper('processedSummary', 2, true))->toBe('Processed 2 schedule trigger(s) (dry run — no work orders created)');
 
     Carbon::setTestNow();
+});
+
+test('track order distance command exits when another estimation run is locked', function () {
+    $lock = new FleetOpsCommandLockFake(false);
+    Cache::swap(new FleetOpsCommandCacheFake($lock));
+
+    $command = new FleetOpsTrackOrderDistanceAndTimeProbe([
+        'provider' => null,
+        'days'     => 2,
+        'chunk'    => 250,
+        'dry'      => false,
+        'no-lock'  => false,
+    ]);
+
+    expect($command->handle())->toBe(Command::SUCCESS)
+        ->and($command->messages)->toContain(['info', 'Using provider: '])
+        ->and($command->messages)->toContain(['info', 'Looking back: last 2 day(s)'])
+        ->and($command->messages)->toContain(['info', 'Chunk size: 250'])
+        ->and($command->messages)->toContain(['warn', 'Another run appears to be in progress (lock active). Use --no-lock to bypass.'])
+        ->and($lock->released)->toBeFalse();
+});
+
+test('track order distance command processes chunks and records handled order errors', function () {
+    Carbon::setTestNow(Carbon::parse('2026-07-26 12:00:00'));
+
+    $first  = new FleetOpsTrackOrderFake(101);
+    $second = new FleetOpsTrackOrderFake(102, shouldFail: true);
+    $third  = new FleetOpsTrackOrderFake(103);
+
+    $command = new FleetOpsTrackOrderDistanceAndTimeProbe([
+        'provider' => 'osrm',
+        'days'     => 0,
+        'chunk'    => 10,
+        'dry'      => false,
+        'no-lock'  => true,
+    ], [$first, $second, $third]);
+
+    expect($command->handle())->toBe(Command::SUCCESS)
+        ->and($command->messages)->toContain(['info', 'Using provider: osrm'])
+        ->and($command->messages)->toContain(['info', 'Looking back: last 1 day(s)'])
+        ->and($command->messages)->toContain(['info', 'Chunk size: 50'])
+        ->and($command->messages)->toContain(['activeOrdersQuery', '2026-07-25 12:00:00'])
+        ->and($command->messages)->toContain(['createProgressBar', 3])
+        ->and($command->messages)->toContain(['error', 'Order 102 failed: distance provider failed'])
+        ->and($command->messages)->toContain(['newLine', 2])
+        ->and($command->messages)->toContain(['info', 'Updated 2/3 orders.'])
+        ->and($command->messages)->toContain(['warn', 'Encountered 1 error(s). Check logs for details.'])
+        ->and($command->query->calls)->toContain(['orderBy', 'id'])
+        ->and($command->query->calls)->toContain(['chunkById', 50])
+        ->and($command->progressBar->started)->toBe(1)
+        ->and($command->progressBar->advanced)->toBe(3)
+        ->and($command->progressBar->finished)->toBe(1)
+        ->and($first->distanceCalls)->toBe([['provider' => 'osrm']])
+        ->and($second->distanceCalls)->toBe([])
+        ->and($third->distanceCalls)->toBe([['provider' => 'osrm']]);
+
+    Carbon::setTestNow();
+});
+
+test('audit customer user conflicts outputs suspicious rows as json and applies company filters', function () {
+    $adminUser = (object) [
+        'uuid'         => 'user-uuid',
+        'email'        => 'admin@example.test',
+        'type'         => 'admin',
+        'companyUsers' => collect([
+            (object) [
+                'company_uuid' => 'company-uuid',
+                'roles'        => collect([
+                    (object) ['name' => 'Admin'],
+                    (object) ['name' => 'Fleet-Ops Customer'],
+                ]),
+            ],
+        ]),
+    ];
+    $contact = fleetOpsAuditContact([], $adminUser);
+
+    $command = new FleetOpsAuditCustomerUserConflictsProbe([
+        'company' => 'company-uuid',
+        'json'    => true,
+    ], [$contact]);
+
+    expect($command->handle())->toBe(Command::SUCCESS)
+        ->and($command->query->calls)->toContain(['where', 'company_uuid', 'company-uuid'])
+        ->and($command->messages)->toHaveCount(1)
+        ->and(json_decode($command->messages[0][1], true))->toMatchArray([
+            [
+                'contact_id'    => 'contact_public',
+                'contact_uuid'  => 'contact-uuid',
+                'contact_name'  => 'Jane Customer',
+                'contact_email' => 'jane@example.test',
+                'user_uuid'     => 'user-uuid',
+                'user_email'    => 'admin@example.test',
+                'user_type'     => 'admin',
+                'roles'         => 'Admin, Fleet-Ops Customer',
+                'company_uuid'  => 'company-uuid',
+                'company_name'  => 'Acme Logistics',
+                'updated_at'    => '2026-07-26 12:00:00',
+                'reason'        => 'linked user type is admin; linked user has non-customer roles: Admin',
+            ],
+        ]);
+});
+
+test('audit customer user conflicts handles missing users tables and clean audits', function () {
+    $missingUserContact = fleetOpsAuditContact([
+        'uuid'      => 'missing-contact-uuid',
+        'public_id' => 'missing_contact',
+        'name'      => 'Missing User',
+    ], null);
+    $customerUser = (object) [
+        'uuid'         => 'customer-user-uuid',
+        'email'        => 'customer@example.test',
+        'type'         => 'customer',
+        'companyUsers' => collect([
+            (object) [
+                'company_uuid' => 'company-uuid',
+                'roles'        => collect([
+                    (object) ['name' => 'Fleet-Ops Customer'],
+                ]),
+            ],
+        ]),
+    ];
+    $cleanContact = fleetOpsAuditContact([
+        'uuid'      => 'clean-contact-uuid',
+        'public_id' => 'clean_contact',
+    ], $customerUser);
+
+    $tableCommand = new FleetOpsAuditCustomerUserConflictsProbe([
+        'company' => null,
+        'json'    => false,
+    ], [$missingUserContact, $cleanContact]);
+    $cleanCommand = new FleetOpsAuditCustomerUserConflictsProbe([
+        'company' => null,
+        'json'    => false,
+    ], [$cleanContact]);
+
+    expect($tableCommand->handle())->toBe(Command::SUCCESS)
+        ->and($tableCommand->tables)->toHaveCount(1)
+        ->and($tableCommand->tables[0][1][0])->toMatchArray([
+            'contact_id' => 'missing_contact',
+            'user_uuid'  => null,
+            'user_type'  => null,
+            'roles'      => '',
+            'reason'     => 'missing linked user',
+        ])
+        ->and($cleanCommand->handle())->toBe(Command::SUCCESS)
+        ->and($cleanCommand->messages)->toContain(['info', 'No suspicious customer user conflicts found.']);
 });
 
 test('dispatch adhoc command exits when no orders are dispatchable', function () {

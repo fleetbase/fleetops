@@ -69,7 +69,7 @@ class TrackOrderDistanceAndTime extends Command
             }
 
             $this->alert('Found ' . number_format($total) . ' orders to update. Current Time: ' . Carbon::now()->toDateTimeString());
-            $bar = $this->output->createProgressBar($total);
+            $bar = $this->createProgressBar($total);
             $bar->start();
 
             $updated = 0;
@@ -135,5 +135,10 @@ class TrackOrderDistanceAndTime extends Command
             ->whereNotNull('started_at')
             ->where('created_at', '>=', $cutoff)
             ->whereHas('payload');
+    }
+
+    protected function createProgressBar(int $total)
+    {
+        return $this->output->createProgressBar($total);
     }
 }
