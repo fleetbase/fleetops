@@ -1,16 +1,23 @@
 <?php
 
+use Fleetbase\FleetOps\Http\Controllers\Internal\v1\AnalyticsController;
 use Fleetbase\FleetOps\Models\Driver;
 use Fleetbase\FleetOps\Models\Vehicle;
 use Fleetbase\FleetOps\Support\Analytics\AbstractAnalytics;
 use Fleetbase\FleetOps\Support\Analytics\FuelEfficiency;
+use Fleetbase\FleetOps\Support\Analytics\FuelProviderSummary;
+use Fleetbase\FleetOps\Support\Analytics\GeofenceViolations;
+use Fleetbase\FleetOps\Support\Analytics\IssuesInsights;
 use Fleetbase\FleetOps\Support\Analytics\LiveFleet;
+use Fleetbase\FleetOps\Support\Analytics\MaintenanceOverview;
 use Fleetbase\FleetOps\Support\Analytics\OnTimeDelivery;
 use Fleetbase\FleetOps\Support\Analytics\OperationsPulse;
+use Fleetbase\FleetOps\Support\Analytics\OrdersByStatus;
 use Fleetbase\FleetOps\Support\Analytics\RevenueTrend;
 use Fleetbase\FleetOps\Support\Analytics\TopDrivers;
 use Fleetbase\LaravelMysqlSpatial\Types\Point;
 use Fleetbase\Models\Company;
+use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 
 class TestFleetOpsLiveFleetDriver extends Driver
@@ -54,6 +61,83 @@ class TestFleetOpsAnalytics extends AbstractAnalytics
     }
 }
 
+class TestFleetOpsAnalyticsControllerWidget extends AbstractAnalytics
+{
+    public array $config         = [];
+    public string $class         = '';
+    public ?Throwable $throwable = null;
+
+    public function groupBy(string $groupBy): self
+    {
+        $this->config['group_by'] = $groupBy;
+
+        return $this;
+    }
+
+    public function slaMinutes(int $minutes): self
+    {
+        $this->config['sla_minutes'] = $minutes;
+
+        return $this;
+    }
+
+    public function limit(int $limit): self
+    {
+        $this->config['limit'] = $limit;
+
+        return $this;
+    }
+
+    public function sortBy(string $sortBy): self
+    {
+        $this->config['sort_by'] = $sortBy;
+
+        return $this;
+    }
+
+    public function get(): array
+    {
+        if ($this->throwable) {
+            throw $this->throwable;
+        }
+
+        return [
+            'class'   => $this->class,
+            'company' => $this->company->uuid,
+            'start'   => $this->start?->format('Y-m-d'),
+            'end'     => $this->end?->format('Y-m-d'),
+            'config'  => $this->config,
+        ];
+    }
+}
+
+class TestFleetOpsAnalyticsControllerProbe extends AnalyticsController
+{
+    public array $widgets        = [];
+    public ?Throwable $throwable = null;
+
+    protected function analyticsForCompany(string $class, $company): AbstractAnalytics
+    {
+        $widget            = TestFleetOpsAnalyticsControllerWidget::forCompany($company);
+        $widget->class     = $class;
+        $widget->throwable = $this->throwable;
+        $this->widgets[]   = $widget;
+
+        return $widget;
+    }
+}
+
+function fleetOpsAnalyticsControllerRequest(array $input = []): Request
+{
+    $company = new Company();
+    $company->setRawAttributes(['uuid' => 'company-analytics', 'currency' => 'USD'], true);
+
+    $request = new Request($input);
+    $request->setUserResolver(fn () => (object) ['company' => $company]);
+
+    return $request;
+}
+
 test('analytics routes are registered alongside metrics routes', function () {
     $routes = file_get_contents(dirname(__DIR__) . '/src/routes.php');
 
@@ -92,6 +176,51 @@ test('analytics controller has one method per widget', function () {
     ] as $method) {
         expect($controller)->toContain("public function {$method}(");
     }
+});
+
+test('analytics controller runs each widget with period and request configuration', function () {
+    Carbon::setTestNow(Carbon::parse('2026-07-26 12:00:00'));
+
+    $controller = new TestFleetOpsAnalyticsControllerProbe();
+
+    $cases = [
+        'operationsPulse'      => [OperationsPulse::class, [], '2026-06-26', []],
+        'revenueTrend'         => [RevenueTrend::class, ['group_by' => 'week'], '2026-06-26', ['group_by' => 'week']],
+        'ordersByStatus'       => [OrdersByStatus::class, [], '2026-07-12', []],
+        'onTimeDelivery'       => [OnTimeDelivery::class, ['sla_minutes' => 45], '2026-06-26', ['sla_minutes' => 45]],
+        'topDrivers'           => [TopDrivers::class, ['limit' => 3, 'sort_by' => 'on_time'], '2026-06-26', ['limit' => 3, 'sort_by' => 'on_time']],
+        'fuelEfficiency'       => [FuelEfficiency::class, [], '2026-04-27', []],
+        'fuelProviders'        => [FuelProviderSummary::class, [], '2026-06-26', []],
+        'issuesInsights'       => [IssuesInsights::class, [], '2026-06-26', []],
+        'maintenanceOverview'  => [MaintenanceOverview::class, [], '2026-06-26', []],
+        'geofenceViolations'   => [GeofenceViolations::class, [], '2026-07-19', []],
+        'liveFleet'            => [LiveFleet::class, [], '2026-06-26', []],
+    ];
+
+    foreach ($cases as $method => [$class, $input, $start, $config]) {
+        $response = $controller->{$method}(fleetOpsAnalyticsControllerRequest($input));
+        $payload  = $response->getData(true);
+
+        expect($payload)->toMatchArray([
+            'class'   => $class,
+            'company' => 'company-analytics',
+            'start'   => $start,
+            'end'     => '2026-07-26',
+            'config'  => $config,
+        ]);
+    }
+
+    $controller->throwable = new RuntimeException('widget unavailable');
+    $response              = $controller->operationsPulse(fleetOpsAnalyticsControllerRequest());
+
+    expect($controller->widgets)->toHaveCount(12)
+        ->and($response->getStatusCode())->toBe(500)
+        ->and($response->getData(true))->toMatchArray([
+            'error'  => 'widget unavailable',
+            'widget' => OperationsPulse::class,
+        ]);
+
+    Carbon::setTestNow();
 });
 
 test('top drivers on-time sorting uses a sql aggregate expression', function () {

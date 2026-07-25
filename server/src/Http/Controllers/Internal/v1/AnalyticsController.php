@@ -35,7 +35,7 @@ class AnalyticsController extends Controller
 
     public function revenueTrend(Request $request)
     {
-        return $this->run($request, RevenueTrend::class, function (RevenueTrend $a) use ($request) {
+        return $this->run($request, RevenueTrend::class, function ($a) use ($request) {
             $a->groupBy($request->string('group_by', 'day')->toString());
         });
     }
@@ -47,14 +47,14 @@ class AnalyticsController extends Controller
 
     public function onTimeDelivery(Request $request)
     {
-        return $this->run($request, OnTimeDelivery::class, function (OnTimeDelivery $a) use ($request) {
+        return $this->run($request, OnTimeDelivery::class, function ($a) use ($request) {
             $a->slaMinutes((int) $request->input('sla_minutes', 30));
         });
     }
 
     public function topDrivers(Request $request)
     {
-        return $this->run($request, TopDrivers::class, function (TopDrivers $a) use ($request) {
+        return $this->run($request, TopDrivers::class, function ($a) use ($request) {
             $a->limit((int) $request->input('limit', 10));
             $a->sortBy($request->string('sort_by', 'orders_completed')->toString());
         });
@@ -106,7 +106,7 @@ class AnalyticsController extends Controller
 
         try {
             /** @var AbstractAnalytics $analytics */
-            $analytics = $class::forCompany($request->user()->company)->between($start, $end);
+            $analytics = $this->analyticsForCompany($class, $request->user()->company)->between($start, $end);
 
             if ($configure !== null) {
                 $configure($analytics);
@@ -114,12 +114,22 @@ class AnalyticsController extends Controller
 
             return response()->json($analytics->get());
         } catch (\Throwable $e) {
-            report($e);
+            if (function_exists('report')) {
+                report($e);
+            }
 
             return response()->json([
                 'error'   => $e->getMessage(),
                 'widget'  => $class,
             ], 500);
         }
+    }
+
+    /**
+     * @param class-string<AbstractAnalytics> $class
+     */
+    protected function analyticsForCompany(string $class, $company): AbstractAnalytics
+    {
+        return $class::forCompany($company);
     }
 }
