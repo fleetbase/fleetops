@@ -48,16 +48,7 @@ class DriverController extends FleetOpsController
     {
         $input = $request->input('driver');
 
-        // Normalize vehicle field - the frontend may send the full vehicle object,
-        // a UUID string, or a public_id string. Normalize to a single identifier
-        // so the ResolvableVehicle rule can validate it correctly.
-        if (isset($input['vehicle']) && is_array($input['vehicle'])) {
-            $input['vehicle'] = data_get($input['vehicle'], 'id')
-                ?? data_get($input['vehicle'], 'public_id')
-                ?? data_get($input['vehicle'], 'uuid')
-                ?? null;
-            $request->merge(['driver' => $input]);
-        }
+        $this->normalizeDriverVehicleInput($request, $input);
 
         // create validation request
         $createDriverRequest = CreateDriverRequest::createFrom($request);
@@ -276,16 +267,7 @@ class DriverController extends FleetOpsController
         // get input data
         $input = $request->input('driver');
 
-        // Normalize vehicle field - the frontend may send the full vehicle object,
-        // a UUID string, or a public_id string. Normalize to a single identifier
-        // so the ResolvableVehicle rule can validate it correctly.
-        if (isset($input['vehicle']) && is_array($input['vehicle'])) {
-            $input['vehicle'] = data_get($input['vehicle'], 'id')
-                ?? data_get($input['vehicle'], 'public_id')
-                ?? data_get($input['vehicle'], 'uuid')
-                ?? null;
-            $request->merge(['driver' => $input]);
-        }
+        $this->normalizeDriverVehicleInput($request, $input);
 
         // create validation request
         $updateDriverRequest = UpdateDriverRequest::createFrom($request);
@@ -684,6 +666,21 @@ class DriverController extends FleetOpsController
         }
 
         return $phone;
+    }
+
+    protected function normalizeDriverVehicleInput(Request $request, ?array &$input): void
+    {
+        // Frontend forms may submit the full vehicle object; validation expects one identifier.
+        if (!isset($input['vehicle']) || !is_array($input['vehicle'])) {
+            return;
+        }
+
+        $input['vehicle'] = data_get($input['vehicle'], 'id')
+            ?? data_get($input['vehicle'], 'public_id')
+            ?? data_get($input['vehicle'], 'uuid')
+            ?? null;
+
+        $request->merge(['driver' => $input]);
     }
 
     /**

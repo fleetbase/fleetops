@@ -25,26 +25,7 @@ class EntityController extends Controller
     public function create(CreateEntityRequest $request)
     {
         // get request input
-        $input = $request->only([
-            'name',
-            'type',
-            'internal_id',
-            'description',
-            'meta',
-            'length',
-            'width',
-            'height',
-            'weight',
-            'weight_unit',
-            'dimensions_unit',
-            'declared_value',
-            'price',
-            'sales_price',
-            'sku',
-            'currency',
-            'meta',
-            'supplier_uuid',
-        ]);
+        $input = $this->entityInputFromRequest($request);
 
         // payload assignment
         if ($request->has('payload')) {
@@ -128,26 +109,7 @@ class EntityController extends Controller
         }
 
         // get request input
-        $input = $request->only([
-            'name',
-            'type',
-            'internal_id',
-            'description',
-            'meta',
-            'length',
-            'width',
-            'height',
-            'weight',
-            'weight_unit',
-            'dimensions_unit',
-            'declared_value',
-            'price',
-            'sales_price',
-            'sku',
-            'currency',
-            'meta',
-            'supplier_uuid',
-        ]);
+        $input = $this->entityInputFromRequest($request);
 
         // payload assignment
         if ($request->has('payload')) {
@@ -263,5 +225,29 @@ class EntityController extends Controller
 
         // response the entity resource
         return new DeletedResource($entity);
+    }
+
+    protected function entityInputFromRequest(Request $request): array
+    {
+        return $request->only([
+            'name',
+            'type',
+            'internal_id',
+            'description',
+            'meta',
+            'length',
+            'width',
+            'height',
+            'weight',
+            'weight_unit',
+            'dimensions_unit',
+            'declared_value',
+            'price',
+            'sales_price',
+            'sku',
+            'currency',
+            'meta',
+            'supplier_uuid',
+        ]);
     }
 }
