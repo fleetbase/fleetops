@@ -1,10 +1,14 @@
 <?php
 
 use Fleetbase\FleetOps\Http\Resources\v1\Contact as ContactResource;
+use Fleetbase\FleetOps\Http\Resources\v1\DeletedResource;
 use Fleetbase\FleetOps\Http\Resources\v1\Device as DeviceResource;
 use Fleetbase\FleetOps\Http\Resources\v1\Entity as EntityResource;
 use Fleetbase\FleetOps\Http\Resources\v1\Fleet as FleetResource;
+use Fleetbase\FleetOps\Http\Resources\v1\Index\Driver as IndexDriverResource;
 use Fleetbase\FleetOps\Http\Resources\v1\Index\Order as IndexOrderResource;
+use Fleetbase\FleetOps\Http\Resources\v1\Index\Payload as IndexPayloadResource;
+use Fleetbase\FleetOps\Http\Resources\v1\Index\Place as IndexPlaceResource;
 use Fleetbase\FleetOps\Http\Resources\v1\Index\Vehicle as IndexVehicleResource;
 use Fleetbase\FleetOps\Http\Resources\v1\Issue as IssueResource;
 use Fleetbase\FleetOps\Http\Resources\v1\Maintenance as MaintenanceResource;
@@ -126,6 +130,24 @@ class FleetOpsCompactResourceFixture implements ArrayAccess
     {
         return $payload;
     }
+
+    public function __call(string $method, array $arguments): mixed
+    {
+        if (array_key_exists($method, $this->loaded) && $this->loaded[$method] instanceof Collection) {
+            return new class($this->loaded[$method]) {
+                public function __construct(private Collection $collection)
+                {
+                }
+
+                public function count(): int
+                {
+                    return $this->collection->count();
+                }
+            };
+        }
+
+        return null;
+    }
 }
 
 class TestFleetOpsIndexVehicleResource extends IndexVehicleResource
@@ -148,6 +170,19 @@ class TestFleetOpsIndexVehicleResource extends IndexVehicleResource
     protected function headingLabel(): string
     {
         return '270 deg';
+    }
+}
+
+class TestFleetOpsIndexDriverResource extends IndexDriverResource
+{
+    protected function assignedOrdersCount(): int
+    {
+        return 5;
+    }
+
+    protected function currentOrderReference(): ?string
+    {
+        return 'TRK-DRIVER';
     }
 }
 
@@ -1690,4 +1725,130 @@ test('position fuel report and vehicle device resources serialize telemetry fiel
             'data_frequency'        => 60,
             'notes'                 => 'Mounted under dash.',
         ]);
+});
+
+test('index driver payload and place resources serialize compact table fields', function () {
+    $request = fleetopsCompactResourceRequest(true);
+    $driver  = fleetopsCompactResourceFixture([
+        'company_uuid'     => 'company-uuid',
+        'user_uuid'        => 'user-uuid',
+        'vehicle_uuid'     => 'vehicle-uuid',
+        'vendor_uuid'      => 'vendor-uuid',
+        'current_job_uuid' => 'order-uuid',
+        'name'             => 'Jane Driver',
+        'vehicle_name'     => 'Truck 101',
+        'email'            => 'jane@example.test',
+        'phone'            => '+6555553333',
+        'photo_url'        => 'https://cdn.test/driver.png',
+        'status'           => 'on_duty',
+        'location'         => null,
+        'heading'          => 135,
+        'altitude'         => 9,
+        'speed'            => 48,
+        'online'           => true,
+    ]);
+    $payload = fleetopsCompactResourceFixture([
+        'company_uuid'        => 'company-uuid',
+        'pickup_uuid'         => 'pickup-uuid',
+        'dropoff_uuid'        => 'dropoff-uuid',
+        'return_uuid'         => 'return-uuid',
+        'index_pickup_place'  => null,
+        'index_dropoff_place' => null,
+        'type'                => 'parcel',
+    ], [
+        'entities'  => new Collection([(object) ['public_id' => 'entity_public']]),
+        'waypoints' => new Collection([(object) ['public_id' => 'waypoint_public']]),
+    ]);
+    $place   = fleetopsCompactResourceFixture([
+        'company_uuid' => 'company-uuid',
+        'owner_uuid'   => 'owner-uuid',
+        'owner_type'   => 'Fleetbase\\FleetOps\\Models\\Contact',
+        'name'         => 'Warehouse',
+        'address'      => '1 Index Way',
+        'street1'      => '1 Index Way',
+        'city'         => 'Singapore',
+        'country'      => 'SG',
+        'avatar_url'   => 'https://cdn.test/place.png',
+        'location'     => null,
+    ]);
+
+    expect((new TestFleetOpsIndexDriverResource($driver))->resolve($request))->toMatchArray([
+        'id'                    => 101,
+        'uuid'                  => 'fixture-uuid',
+        'public_id'             => 'fixture_public',
+        'company_uuid'          => 'company-uuid',
+        'user_uuid'             => 'user-uuid',
+        'vehicle_uuid'          => 'vehicle-uuid',
+        'vendor_uuid'           => 'vendor-uuid',
+        'current_job_uuid'      => 'order-uuid',
+        'assigned_orders_count' => 5,
+        'name'                  => 'Jane Driver',
+        'vehicle_name'          => 'Truck 101',
+        'email'                 => 'jane@example.test',
+        'status'                => 'on_duty',
+        'heading'               => 135,
+        'altitude'              => 9,
+        'speed'                 => 48,
+        'online'                => true,
+        'meta'                  => [
+            '_index_resource'         => true,
+            'location_coordinates'    => '0 0',
+            'current_order_reference' => 'TRK-DRIVER',
+            'speed_label'             => '48 km/h',
+            'heading_label'           => '135 deg',
+            'status_label'            => 'On Duty',
+        ],
+    ])
+        ->and((new IndexPayloadResource($payload))->resolve($request))->toMatchArray([
+            'id'              => 101,
+            'uuid'            => 'fixture-uuid',
+            'public_id'       => 'fixture_public',
+            'company_uuid'    => 'company-uuid',
+            'pickup_uuid'     => 'pickup-uuid',
+            'dropoff_uuid'    => 'dropoff-uuid',
+            'return_uuid'     => 'return-uuid',
+            'entities_count'  => 1,
+            'waypoints_count' => 1,
+            'type'            => 'parcel',
+        ])
+        ->and((new IndexPlaceResource($place))->resolve($request))->toMatchArray([
+            'id'           => 101,
+            'uuid'         => 'fixture-uuid',
+            'public_id'    => 'fixture_public',
+            'company_uuid' => 'company-uuid',
+            'owner_uuid'   => 'owner-uuid',
+            'owner_type'   => 'Fleetbase\\FleetOps\\Models\\Contact',
+            'name'         => 'Warehouse',
+            'address'      => '1 Index Way',
+            'street1'      => '1 Index Way',
+            'city'         => 'Singapore',
+            'country'      => 'SG',
+            'avatar_url'   => 'https://cdn.test/place.png',
+            'meta'         => ['_index_resource' => true],
+        ]);
+});
+
+test('deleted resource marks internal and webhook payloads as deleted', function () {
+    $request = fleetopsCompactResourceRequest(true);
+    $model   = new class(['id' => 101, 'uuid' => 'fixture-uuid', 'public_id' => 'fixture_public', 'deleted_at' => '2026-07-01 00:00:00']) extends FleetOpsCompactResourceFixture {
+    };
+
+    $resource = new DeletedResource($model);
+    $object   = $resource->getObjectType();
+
+    expect($resource->resolve($request))->toMatchArray([
+        'id'        => 101,
+        'uuid'      => 'fixture-uuid',
+        'public_id' => 'fixture_public',
+        'object'    => $object,
+        'time'      => '2026-07-01 00:00:00',
+        'deleted'   => true,
+    ])
+        ->and($resource->toWebhookPayload())->toMatchArray([
+            'id'      => 'fixture_public',
+            'object'  => $object,
+            'time'    => '2026-07-01 00:00:00',
+            'deleted' => true,
+        ])
+        ->and($object)->toBeString()->not->toBe('');
 });
