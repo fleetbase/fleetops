@@ -1,15 +1,24 @@
 <?php
 
+use Fleetbase\FleetOps\Http\Resources\v1\Contact as ContactResource;
 use Fleetbase\FleetOps\Http\Resources\v1\Device as DeviceResource;
 use Fleetbase\FleetOps\Http\Resources\v1\Entity as EntityResource;
+use Fleetbase\FleetOps\Http\Resources\v1\Fleet as FleetResource;
 use Fleetbase\FleetOps\Http\Resources\v1\Index\Order as IndexOrderResource;
 use Fleetbase\FleetOps\Http\Resources\v1\Index\Vehicle as IndexVehicleResource;
 use Fleetbase\FleetOps\Http\Resources\v1\Issue as IssueResource;
 use Fleetbase\FleetOps\Http\Resources\v1\Maintenance as MaintenanceResource;
 use Fleetbase\FleetOps\Http\Resources\v1\MaintenanceSchedule as MaintenanceScheduleResource;
+use Fleetbase\FleetOps\Http\Resources\v1\OrderConfig as OrderConfigResource;
+use Fleetbase\FleetOps\Http\Resources\v1\ParentFleet as ParentFleetResource;
 use Fleetbase\FleetOps\Http\Resources\v1\Place as PlaceResource;
+use Fleetbase\FleetOps\Http\Resources\v1\PurchaseRate as PurchaseRateResource;
+use Fleetbase\FleetOps\Http\Resources\v1\ServiceArea as ServiceAreaResource;
 use Fleetbase\FleetOps\Http\Resources\v1\ServiceRate as ServiceRateResource;
+use Fleetbase\FleetOps\Http\Resources\v1\SubFleet as SubFleetResource;
+use Fleetbase\FleetOps\Http\Resources\v1\TrackingStatus as TrackingStatusResource;
 use Fleetbase\FleetOps\Http\Resources\v1\Vendor as VendorResource;
+use Fleetbase\FleetOps\Http\Resources\v1\Zone as ZoneResource;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
 
@@ -22,6 +31,21 @@ class FleetOpsCompactResourceRouteFixture
     public function uri(): string
     {
         return $this->uri;
+    }
+}
+
+class FleetOpsCompactResourceRequest extends Request
+{
+    public function isArray(string $key): bool
+    {
+        return is_array($this->input($key));
+    }
+
+    public function array(string $key): array
+    {
+        $value = $this->input($key);
+
+        return is_array($value) ? $value : [];
     }
 }
 
@@ -69,6 +93,11 @@ class FleetOpsCompactResourceFixture implements ArrayAccess
     }
 
     public function loadMissing(string|array $relationship): self
+    {
+        return $this;
+    }
+
+    public function load(string|array $relationship): self
     {
         return $this;
     }
@@ -122,7 +151,7 @@ class TestFleetOpsIndexVehicleResource extends IndexVehicleResource
 function fleetopsCompactResourceRequest(bool $internal): Request
 {
     $uri     = $internal ? 'api/int/v1/fleet-ops/resources/resource_123' : 'api/v1/fleet-ops/resources/resource_123';
-    $request = Request::create('/' . $uri, 'GET');
+    $request = FleetOpsCompactResourceRequest::create('/' . $uri, 'GET');
 
     $request->setRouteResolver(fn () => new FleetOpsCompactResourceRouteFixture($uri));
     app()->instance('request', $request);
@@ -831,5 +860,319 @@ test('vendor resource serializes vendor identity and webhook address fields', fu
             'type'           => 'maintenance',
             'status'         => 'active',
             'website_url'    => 'https://vendor.test',
+        ]);
+});
+
+test('contact resource serializes contact identity and webhook payloads', function () {
+    $request = fleetopsCompactResourceRequest(true);
+    $place   = fleetopsCompactResourceFixture([
+        'address' => '1 Contact Way',
+        'street1' => '1 Contact Way',
+    ]);
+    $contact = fleetopsCompactResourceFixture([
+        'company_uuid'     => 'company-uuid',
+        'user_uuid'        => 'user-uuid',
+        'place_uuid'       => 'place-uuid',
+        'photo_uuid'       => 'photo-uuid',
+        'internal_id'      => 'CON-101',
+        'name'             => 'Customer Contact',
+        'title'            => 'Manager',
+        'email'            => 'contact@example.test',
+        'phone'            => '+6555552222',
+        'photo_url'        => 'https://cdn.test/contact.png',
+        'place'            => $place,
+        'places'           => new Collection(),
+        'type'             => 'customer',
+        'customer_type'    => 'Fleetbase\\FleetOps\\Models\\Contact',
+        'facilitator_type' => 'Fleetbase\\FleetOps\\Models\\Vendor',
+        'meta'             => ['segment' => 'priority'],
+        'slug'             => 'customer-contact',
+    ]);
+
+    $payload = (new ContactResource($contact))->resolve($request);
+    $webhook = (new ContactResource($contact))->toWebhookPayload();
+
+    expect($payload)->toMatchArray([
+        'id'               => 101,
+        'uuid'             => 'fixture-uuid',
+        'company_uuid'     => 'company-uuid',
+        'user_uuid'        => 'user-uuid',
+        'place_uuid'       => 'place-uuid',
+        'photo_uuid'       => 'photo-uuid',
+        'public_id'        => 'fixture_public',
+        'internal_id'      => 'CON-101',
+        'name'             => 'Customer Contact',
+        'title'            => 'Manager',
+        'email'            => 'contact@example.test',
+        'phone'            => '+6555552222',
+        'address'          => '1 Contact Way',
+        'address_street'   => '1 Contact Way',
+        'type'             => 'customer',
+        'customer_type'    => 'fleet-ops:contact',
+        'facilitator_type' => 'fleet-ops:vendor',
+        'meta'             => ['segment' => 'priority'],
+        'slug'             => 'customer-contact',
+    ])
+        ->and($webhook)->toMatchArray([
+            'id'          => 'fixture_public',
+            'internal_id' => 'CON-101',
+            'name'        => 'Customer Contact',
+            'title'       => 'Manager',
+            'email'       => 'contact@example.test',
+            'phone'       => '+6555552222',
+            'photo_url'   => 'https://cdn.test/contact.png',
+            'type'        => 'customer',
+            'meta'        => ['segment' => 'priority'],
+            'slug'        => 'customer-contact',
+        ]);
+});
+
+test('fleet resources serialize counters and webhook fleet identifiers', function () {
+    $request = fleetopsCompactResourceRequest(true);
+    $fleet   = fleetopsCompactResourceFixture([
+        'name'                  => 'Downtown Fleet',
+        'task'                  => 'delivery',
+        'status'                => 'active',
+        'drivers_count'         => 5,
+        'drivers_online_count'  => 3,
+        'vehicles_count'        => 4,
+        'vehicles_online_count' => 2,
+        'serviceArea'           => (object) ['public_id' => 'area_public'],
+        'zone'                  => (object) ['public_id' => 'zone_public'],
+        'parentFleet'           => (object) ['public_id' => 'parent_public'],
+    ]);
+
+    foreach ([FleetResource::class, ParentFleetResource::class, SubFleetResource::class] as $resourceClass) {
+        $payload = (new $resourceClass($fleet))->resolve($request);
+        $webhook = (new $resourceClass($fleet))->toWebhookPayload();
+
+        expect($payload)->toMatchArray([
+            'id'                    => 101,
+            'uuid'                  => 'fixture-uuid',
+            'public_id'             => 'fixture_public',
+            'name'                  => 'Downtown Fleet',
+            'task'                  => 'delivery',
+            'status'                => 'active',
+            'drivers_count'         => 5,
+            'drivers_online_count'  => 3,
+            'vehicles_count'        => 4,
+            'vehicles_online_count' => 2,
+        ])
+            ->and($webhook)->toMatchArray([
+                'id'           => 'fixture_public',
+                'name'         => 'Downtown Fleet',
+                'task'         => 'delivery',
+                'status'       => 'active',
+                'service_area' => 'area_public',
+                'zone'         => 'zone_public',
+            ]);
+    }
+});
+
+test('tracking status resource serializes current scan and tracking number details', function () {
+    $request = fleetopsCompactResourceRequest(true);
+    $status  = fleetopsCompactResourceFixture([
+        'tracking_number_uuid' => 'tracking-uuid',
+        'proof_uuid'           => 'proof-uuid',
+        'status'               => 'Out for delivery',
+        'details'              => 'Driver departed hub.',
+        'code'                 => 'out_for_delivery',
+        'complete'             => false,
+        'trackingNumber'       => fleetopsCompactResourceFixture([
+            'tracking_number'  => 'TN-101',
+            'region'           => 'SG',
+            'last_status'      => 'Out for delivery',
+            'last_status_code' => 'out_for_delivery',
+            'owner_type'       => null,
+        ]),
+        'city'                 => 'Singapore',
+        'province'             => 'Central',
+        'postal_code'          => '100001',
+        'country'              => 'SG',
+        'location'             => null,
+    ]);
+
+    $payload = (new TrackingStatusResource($status))->resolve($request);
+    $webhook = (new TrackingStatusResource($status))->toWebhookPayload();
+
+    expect($payload)->toMatchArray([
+        'id'                   => 101,
+        'uuid'                 => 'fixture-uuid',
+        'public_id'            => 'fixture_public',
+        'tracking_number_uuid' => 'tracking-uuid',
+        'proof_uuid'           => 'proof-uuid',
+        'status'               => 'Out for delivery',
+        'details'              => 'Driver departed hub.',
+        'code'                 => 'out_for_delivery',
+        'complete'             => false,
+        'city'                 => 'Singapore',
+        'country'              => 'SG',
+    ])
+        ->and($webhook)->toMatchArray([
+            'id'      => 'fixture_public',
+            'status'  => 'Out for delivery',
+            'details' => 'Driver departed hub.',
+            'code'    => 'out_for_delivery',
+            'city'    => 'Singapore',
+            'country' => 'SG',
+        ]);
+});
+
+test('order config resource projects public flow activities', function () {
+    $request = fleetopsCompactResourceRequest(true);
+    $config  = fleetopsCompactResourceFixture([
+        'company_uuid' => 'company-uuid',
+        'key'          => 'delivery',
+        'name'         => 'Delivery',
+        'namespace'    => 'fleet-ops',
+        'description'  => 'Delivery order flow.',
+        'tags'         => ['last-mile'],
+        'status'       => 'active',
+        'version'      => 2,
+        'flow'         => [
+            [
+                'key'         => 'created',
+                'status'      => 'Created',
+                'details'     => 'Order created.',
+                'color'       => '#00ff00',
+                'complete'    => false,
+                'pod_method'  => 'photo',
+                'require_pod' => true,
+            ],
+            'skip-me',
+        ],
+    ]);
+
+    $payload = (new OrderConfigResource($config))->resolve($request);
+
+    expect($payload)->toMatchArray([
+        'id'           => 101,
+        'uuid'         => 'fixture-uuid',
+        'public_id'    => 'fixture_public',
+        'company_uuid' => 'company-uuid',
+        'key'          => 'delivery',
+        'name'         => 'Delivery',
+        'namespace'    => 'fleet-ops',
+        'description'  => 'Delivery order flow.',
+        'tags'         => ['last-mile'],
+        'status'       => 'active',
+        'version'      => 2,
+        'flow'         => [
+            [
+                'code'        => 'created',
+                'status'      => 'Created',
+                'details'     => 'Order created.',
+                'color'       => '#00ff00',
+                'complete'    => false,
+                'pod_method'  => 'photo',
+                'require_pod' => true,
+            ],
+        ],
+    ]);
+});
+
+test('purchase rate resource serializes transaction references', function () {
+    $request = fleetopsCompactResourceRequest(true);
+    $rate    = fleetopsCompactResourceFixture([
+        'service_quote_id' => 'quote_public',
+        'order_id'         => 'order_public',
+        'customer_id'      => 'customer_public',
+        'transaction_id'   => 'txn_public',
+        'amount'           => 25.75,
+        'currency'         => 'SGD',
+        'status'           => 'quoted',
+    ]);
+
+    $payload = (new PurchaseRateResource($rate))->resolve($request);
+    $webhook = (new PurchaseRateResource($rate))->toWebhookPayload();
+
+    expect($payload)->toMatchArray([
+        'id'          => 101,
+        'uuid'        => 'fixture-uuid',
+        'public_id'   => 'fixture_public',
+        'order'       => 'order_public',
+        'customer'    => 'customer_public',
+        'transaction' => 'txn_public',
+        'amount'      => 25.75,
+        'currency'    => 'SGD',
+        'status'      => 'quoted',
+    ])
+        ->and($webhook)->toMatchArray([
+            'id'            => 'fixture_public',
+            'service_quote' => 'quote_public',
+            'order'         => 'order_public',
+            'customer'      => 'customer_public',
+            'transaction'   => 'txn_public',
+            'amount'        => 25.75,
+            'currency'      => 'SGD',
+            'status'        => 'quoted',
+        ]);
+});
+
+test('service area and zone resources serialize geofence display fields', function () {
+    $request = fleetopsCompactResourceRequest(true);
+    $area    = fleetopsCompactResourceFixture([
+        'name'                    => 'Central',
+        'type'                    => 'service_area',
+        'location'                => null,
+        'border'                  => ['type' => 'Polygon'],
+        'color'                   => '#00ff00',
+        'stroke_color'            => '#004400',
+        'trigger_on_entry'        => true,
+        'trigger_on_exit'         => false,
+        'dwell_threshold_minutes' => 15,
+        'speed_limit_kmh'         => 50,
+        'country'                 => 'SG',
+        'status'                  => 'active',
+    ]);
+    $zone    = fleetopsCompactResourceFixture([
+        'service_area_uuid' => 'area-uuid',
+        'name'              => 'Downtown',
+        'description'       => 'Downtown service zone.',
+        'location'          => null,
+        'border'            => ['type' => 'Polygon'],
+        'color'             => '#0000ff',
+        'stroke_color'      => '#000044',
+        'status'            => 'active',
+    ]);
+
+    expect((new ServiceAreaResource($area))->resolve($request))->toMatchArray([
+        'id'                      => 101,
+        'uuid'                    => 'fixture-uuid',
+        'public_id'               => 'fixture_public',
+        'name'                    => 'Central',
+        'type'                    => 'service_area',
+        'border'                  => ['type' => 'Polygon'],
+        'trigger_on_entry'        => true,
+        'trigger_on_exit'         => false,
+        'dwell_threshold_minutes' => 15,
+        'speed_limit_kmh'         => 50,
+        'country'                 => 'SG',
+        'status'                  => 'active',
+    ])
+        ->and((new ServiceAreaResource($area))->toWebhookPayload())->toMatchArray([
+            'id'      => 'fixture_public',
+            'name'    => 'Central',
+            'type'    => 'service_area',
+            'country' => 'SG',
+            'status'  => 'active',
+        ])
+        ->and((new ZoneResource($zone))->resolve($request))->toMatchArray([
+            'id'                => 101,
+            'public_id'         => 'fixture_public',
+            'uuid'              => 'fixture-uuid',
+            'service_area_uuid' => 'area-uuid',
+            'name'              => 'Downtown',
+            'description'       => 'Downtown service zone.',
+            'border'            => ['type' => 'Polygon'],
+            'color'             => '#0000ff',
+            'stroke_color'      => '#000044',
+            'status'            => 'active',
+        ])
+        ->and((new ZoneResource($zone))->toWebhookPayload())->toMatchArray([
+            'id'          => 'fixture_public',
+            'name'        => 'Downtown',
+            'description' => 'Downtown service zone.',
+            'status'      => 'active',
         ]);
 });
