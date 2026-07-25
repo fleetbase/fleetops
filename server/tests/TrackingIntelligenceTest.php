@@ -6,6 +6,7 @@ use Fleetbase\FleetOps\Models\Payload;
 use Fleetbase\FleetOps\Models\Place;
 use Fleetbase\FleetOps\Tracking\Providers\CalculatedTrackingProvider;
 use Fleetbase\FleetOps\Tracking\Providers\GoogleRoutesTrackingProvider;
+use Fleetbase\FleetOps\Tracking\Providers\OsrmTrackingProvider;
 use Fleetbase\FleetOps\Tracking\Support\FakeTrackingProvider;
 use Fleetbase\FleetOps\Tracking\TrackingContext;
 use Fleetbase\FleetOps\Tracking\TrackingContextBuilder;
@@ -45,6 +46,16 @@ class GoogleRoutesTrackingProviderProbe extends GoogleRoutesTrackingProvider
     }
 }
 
+class OsrmTrackingProviderProbe extends OsrmTrackingProvider
+{
+    public array $response = [];
+
+    protected function routeResponse(TrackingContext $context): array
+    {
+        return $this->response;
+    }
+}
+
 function trackingModel(string $class): object
 {
     return (new ReflectionClass($class))->newInstanceWithoutConstructor();
@@ -66,6 +77,33 @@ function trackingPlace(string $uuid, float $lat, float $lng): Place
     ]);
 
     return $place;
+}
+
+function osrmTrackingContext(): TrackingContext
+{
+    $stop = new TrackingStop(
+        uuid: 'stop-uuid',
+        publicId: 'stop_public',
+        type: 'dropoff',
+        status: 'pending',
+        place: trackingPlace('dropoff-uuid', 1.31, 103.81),
+        completed: false,
+        sequence: 1,
+    );
+
+    return new TrackingContext(
+        order: trackingModel(TrackingTestOrder::class),
+        payload: null,
+        driver: null,
+        origin: new Point(1.30, 103.80),
+        driverLocation: null,
+        stops: collect([$stop]),
+        completedStops: collect(),
+        remainingStops: collect([$stop]),
+        activeStop: $stop,
+        nextStop: $stop,
+        driverLocationAgeSeconds: null,
+    );
 }
 
 function trackingOrderWithStops(): Order
@@ -220,6 +258,77 @@ test('calculated provider requires enough route points and guards minimum speed'
         ->and($method->invoke($provider, 1000.0, TrackingOptions::fromArray([
             'default_vehicle_speed_kph' => 0,
         ])))->toBe(3600.0);
+});
+
+test('osrm provider returns normalized route geometry legs and warnings', function () {
+    $provider           = new OsrmTrackingProviderProbe();
+    $provider->response = [
+        'code'   => 'Ok',
+        'routes' => [
+            [
+                'distance'  => 1234.5,
+                'duration'  => 321.0,
+                'geometry'  => 'encoded-polyline',
+                'waypoints' => [
+                    ['location' => [103.80, 1.30]],
+                    ['location' => [103.81, 1.31]],
+                ],
+                'legs'      => [
+                    ['distance' => 500.5, 'duration' => 120.0],
+                    ['distance' => 734.0, 'duration' => 201.0],
+                ],
+            ],
+        ],
+    ];
+
+    $result = $provider->track(osrmTrackingContext(), new TrackingOptions());
+
+    expect($provider->key())->toBe('osrm')
+        ->and($provider->capabilities()->toArray())->toBe([
+            'traffic'        => false,
+            'per_leg_eta'    => true,
+            'map_matching'   => false,
+            'route_geometry' => true,
+        ])
+        ->and($provider->canTrack(osrmTrackingContext()))->toBeTrue()
+        ->and($result->provider)->toBe('osrm')
+        ->and($result->distanceMeters)->toBe(1234.5)
+        ->and($result->durationSeconds)->toBe(321.0)
+        ->and($result->durationInTrafficSeconds)->toBeNull()
+        ->and($result->polyline)->toBe('encoded-polyline')
+        ->and($result->coordinates)->toHaveCount(2)
+        ->and($result->warnings)->toBe(['no_live_traffic'])
+        ->and($result->confidence)->toBe('medium')
+        ->and($result->legs)->toBe([
+            [
+                'index'                 => 0,
+                'distance_m'            => 500.5,
+                'duration_s'            => 120.0,
+                'duration_in_traffic_s' => null,
+                'provider'              => 'osrm',
+            ],
+            [
+                'index'                 => 1,
+                'distance_m'            => 734.0,
+                'duration_s'            => 201.0,
+                'duration_in_traffic_s' => null,
+                'provider'              => 'osrm',
+            ],
+        ])
+        ->and($result->raw)->toBe($provider->response['routes'][0]);
+});
+
+test('osrm provider rejects non ok and empty route responses', function () {
+    $provider = new OsrmTrackingProviderProbe();
+    $context  = osrmTrackingContext();
+
+    $provider->response = ['code' => 'NoRoute'];
+    expect(fn () => $provider->track($context, new TrackingOptions()))
+        ->toThrow(RuntimeException::class, 'OSRM did not return a routable response.');
+
+    $provider->response = ['code' => 'Ok', 'routes' => []];
+    expect(fn () => $provider->track($context, new TrackingOptions()))
+        ->toThrow(RuntimeException::class, 'OSRM returned no route.');
 });
 
 test('tracking route legs include cumulative stop eta values', function () {
