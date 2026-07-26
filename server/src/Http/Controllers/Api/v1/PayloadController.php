@@ -37,7 +37,7 @@ class PayloadController extends Controller
         $input['company_uuid'] = session('company');
 
         // create the payload
-        $payload = new Payload($this->payloadFillInputFromInput($input));
+        $payload = $this->newPayload($this->payloadFillInputFromInput($input));
 
         // set pickup point
         if ($pickup) {
@@ -68,7 +68,7 @@ class PayloadController extends Controller
         }
 
         // response the driver resource
-        return new PayloadResource($payload);
+        return $this->payloadResource($payload);
     }
 
     /**
@@ -83,9 +83,9 @@ class PayloadController extends Controller
     {
         // find for the payload
         try {
-            $payload = Payload::findRecordOrFail($id, ['waypoints']);
+            $payload = $this->findPayloadOrFail($id, ['waypoints']);
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $exception) {
-            return response()->json(
+            return $this->jsonResponse(
                 [
                     'error' => 'Payload resource not found.',
                 ],
@@ -147,7 +147,7 @@ class PayloadController extends Controller
         $payload->load(['entities', 'waypoints', 'pickup', 'dropoff', 'return']);
 
         // response the payload resource
-        return new PayloadResource($payload);
+        return $this->payloadResource($payload);
     }
 
     /**
@@ -157,9 +157,9 @@ class PayloadController extends Controller
      */
     public function query(Request $request)
     {
-        $results = Payload::queryWithRequest($request);
+        $results = $this->queryPayloads($request);
 
-        return PayloadResource::collection($results);
+        return $this->payloadResourceCollection($results);
     }
 
     /**
@@ -171,9 +171,9 @@ class PayloadController extends Controller
     {
         // find for the payload
         try {
-            $payload = Payload::findRecordOrFail($id);
+            $payload = $this->findPayloadOrFail($id);
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $exception) {
-            return response()->json(
+            return $this->jsonResponse(
                 [
                     'error' => 'Payload resource not found.',
                 ],
@@ -182,7 +182,7 @@ class PayloadController extends Controller
         }
 
         // response the payload resource
-        return new PayloadResource($payload);
+        return $this->payloadResource($payload);
     }
 
     /**
@@ -194,9 +194,9 @@ class PayloadController extends Controller
     {
         // find for the driver
         try {
-            $payload = Payload::findRecordOrFail($id);
+            $payload = $this->findPayloadOrFail($id);
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $exception) {
-            return response()->json(
+            return $this->jsonResponse(
                 [
                     'error' => 'Payload resource not found.',
                 ],
@@ -208,7 +208,7 @@ class PayloadController extends Controller
         $payload->delete();
 
         // response the payload resource
-        return new DeletedResource($payload);
+        return $this->deletedPayloadResource($payload);
     }
 
     protected function payloadRouteShapeFromInput(array $input): array
@@ -235,5 +235,40 @@ class PayloadController extends Controller
     protected function payloadFillInputFromInput(array $input): array
     {
         return Arr::only($input, ['type', 'provider', 'meta', 'cod_amount', 'cod_currency', 'cod_payment_method']);
+    }
+
+    protected function newPayload(array $input): Payload
+    {
+        return new Payload($input);
+    }
+
+    protected function findPayloadOrFail(string $id, array $with = []): Payload
+    {
+        return Payload::findRecordOrFail($id, $with);
+    }
+
+    protected function queryPayloads(Request $request): mixed
+    {
+        return Payload::queryWithRequest($request);
+    }
+
+    protected function payloadResource(Payload $payload)
+    {
+        return new PayloadResource($payload);
+    }
+
+    protected function payloadResourceCollection(mixed $results): mixed
+    {
+        return PayloadResource::collection($results);
+    }
+
+    protected function deletedPayloadResource(Payload $payload)
+    {
+        return new DeletedResource($payload);
+    }
+
+    protected function jsonResponse(array $payload, int $status)
+    {
+        return response()->json($payload, $status);
     }
 }
