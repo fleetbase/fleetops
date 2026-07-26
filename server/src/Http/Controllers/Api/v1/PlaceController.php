@@ -11,6 +11,7 @@ use Fleetbase\FleetOps\Support\PlaceSearch;
 use Fleetbase\FleetOps\Support\Utils;
 use Fleetbase\Http\Controllers\Controller;
 use Fleetbase\LaravelMysqlSpatial\Types\Point;
+use Geocoder\Laravel\Facades\Geocoder;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 
@@ -33,7 +34,7 @@ class PlaceController extends Controller
 
         // if address param is sent create from mixed
         if ($isNotAddressObject && $request->isString('address')) {
-            $place = Place::createFromGeocodingLookup($request->input('address'));
+            $place = $this->createPlaceFromGeocodingLookup($request->input('address'));
 
             if ($place instanceof Place) {
                 $input = $place->toArray();
@@ -42,7 +43,7 @@ class PlaceController extends Controller
 
         // if street1 is the only param
         if ($isNotAddressObject && $request->isString('street1')) {
-            $place = Place::createFromGeocodingLookup($request->input('street1'));
+            $place = $this->createPlaceFromGeocodingLookup($request->input('street1'));
 
             if ($place instanceof Place) {
                 $input = $place->toArray();
@@ -57,7 +58,7 @@ class PlaceController extends Controller
             $point = $this->pointFromCoordinateRequest($request);
 
             if ($point instanceof Point) {
-                $place = Place::createFromReverseGeocodingLookup($point);
+                $place = $this->createPlaceFromReverseGeocodingLookup($point);
 
                 if ($place instanceof Place) {
                     $input = $place->toArray();
@@ -80,7 +81,7 @@ class PlaceController extends Controller
                 $id = Str::replaceFirst('customer', 'contact', $id);
             }
 
-            $owner = Utils::getUuid(
+            $owner = $this->getUuid(
                 ['contacts', 'vendors'],
                 [
                     'public_id'    => $id,
@@ -92,16 +93,16 @@ class PlaceController extends Controller
             );
 
             if (is_array($owner)) {
-                $input['owner_uuid'] = Utils::get($owner, 'uuid');
-                $input['owner_type'] = Utils::getModelClassName(Utils::get($owner, 'table'));
+                $input['owner_uuid'] = $this->getValue($owner, 'uuid');
+                $input['owner_type'] = $this->getModelClassName($this->getValue($owner, 'table'));
             }
         }
 
         /** @var \Fleetbase\Models\Place */
-        $place = Place::firstOrNew([
+        $place = $this->firstOrNewPlace([
             'company_uuid' => session('company'),
             'owner_uuid'   => data_get($input, 'owner_uuid'),
-            'name'         => strtoupper(Utils::or($input, ['name', 'street1'])),
+            'name'         => strtoupper($this->orValue($input, ['name', 'street1'])),
             'street1'      => strtoupper($input['street1']),
         ]);
 
@@ -117,9 +118,7 @@ class PlaceController extends Controller
 
         // attempt to find and set latitude and longitude
         if ($isMissingLocation && $request->missing(['latitude', 'longitude', 'location'])) {
-            $geocoded = Geocoder::geocode($place->toAddressString(['name']))
-                ->get()
-                ->first();
+            $geocoded = $this->geocodeAddress($place->toAddressString(['name']));
 
             if ($geocoded) {
                 $place->fillWithGoogleAddress($geocoded);
@@ -131,7 +130,7 @@ class PlaceController extends Controller
         // Save place
         $place->save();
 
-        return new PlaceResource($place);
+        return $this->placeResource($place);
     }
 
     /**
@@ -145,9 +144,9 @@ class PlaceController extends Controller
     public function update($id, UpdatePlaceRequest $request)
     {
         try {
-            $place = Place::findRecordOrFail($id);
+            $place = $this->findPlaceOrFail($id);
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $exception) {
-            return response()->apiError('Place resource not found.');
+            return $this->apiError('Place resource not found.');
         }
 
         // get request input
@@ -173,7 +172,7 @@ class PlaceController extends Controller
                     $id = Str::replaceFirst('customer', 'contact', $id);
                 }
 
-                $owner = Utils::getUuid(
+                $owner = $this->getUuid(
                     ['contacts', 'vendors'],
                     [
                         'public_id'    => $id,
@@ -185,15 +184,15 @@ class PlaceController extends Controller
                 );
 
                 if (is_array($owner)) {
-                    $input['owner_uuid'] = Utils::get($owner, 'uuid');
-                    $input['owner_type'] = Utils::getModelClassName(Utils::get($owner, 'table'));
+                    $input['owner_uuid'] = $this->getValue($owner, 'uuid');
+                    $input['owner_type'] = $this->getModelClassName($this->getValue($owner, 'table'));
                 }
             }
         }
 
         // vendor assignment
         if ($request->has('vendor')) {
-            $input['vendor_uuid'] = Utils::getUuid('vendors', [
+            $input['vendor_uuid'] = $this->getUuid('vendors', [
                 'public_id'    => $request->input('vendor'),
                 'company_uuid' => session('company'),
             ]);
@@ -203,7 +202,7 @@ class PlaceController extends Controller
         $place->update($input);
         $place->flushAttributesCache();
 
-        return new PlaceResource($place);
+        return $this->placeResource($place);
     }
 
     /**
@@ -213,7 +212,7 @@ class PlaceController extends Controller
      */
     public function query(Request $request)
     {
-        $results = Place::queryWithRequest($request, function (&$query, $request) {
+        $results = $this->queryPlaces($request, function (&$query, $request) {
             if ($request->has('vendor')) {
                 $query->whereHas('vendor', function ($q) use ($request) {
                     $q->where('public_id', $request->input('vendor'));
@@ -223,7 +222,7 @@ class PlaceController extends Controller
 
         $results = $results->all();
 
-        return PlaceResource::collection($results);
+        return $this->placeResourceCollection($results);
     }
 
     /**
@@ -236,11 +235,11 @@ class PlaceController extends Controller
         $searchQuery = strtolower($request->input('query'));
         $options     = $this->placeSearchOptionsFromRequest($request);
 
-        $query = Place::where('company_uuid', session('company'))->whereNull('deleted_at');
+        $query = $this->basePlaceSearchQuery();
 
-        $results = PlaceSearch::search($query, $searchQuery, $options);
+        $results = $this->searchPlaces($query, $searchQuery, $options);
 
-        return PlaceResource::collection($results);
+        return $this->placeResourceCollection($results);
     }
 
     /**
@@ -252,12 +251,12 @@ class PlaceController extends Controller
     {
         // find for the place
         try {
-            $place = Place::findRecordOrFail($id);
+            $place = $this->findPlaceOrFail($id);
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $exception) {
-            return response()->apiError('Place resource not found.');
+            return $this->apiError('Place resource not found.');
         }
 
-        return new PlaceResource($place);
+        return $this->placeResource($place);
     }
 
     /**
@@ -268,14 +267,14 @@ class PlaceController extends Controller
     public function delete($id, Request $request)
     {
         try {
-            $place = Place::findRecordOrFail($id);
+            $place = $this->findPlaceOrFail($id);
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $exception) {
-            return response()->apiError('Place resource not found.');
+            return $this->apiError('Place resource not found.');
         }
 
         $place->delete();
 
-        return new DeletedResource($place);
+        return $this->deletedPlaceResource($place);
     }
 
     protected function placeInputFromRequest(Request $request): array
@@ -307,11 +306,11 @@ class PlaceController extends Controller
     protected function pointFromCoordinateRequest(Request $request): ?Point
     {
         if ($request->filled(['latitude', 'longitude'])) {
-            return Utils::getPointFromMixed($request->only(['latitude', 'longitude']));
+            return $this->pointFromMixed($request->only(['latitude', 'longitude']));
         }
 
         if ($request->filled(['location'])) {
-            return Utils::getPointFromMixed($request->input('location'));
+            return $this->pointFromMixed($request->input('location'));
         }
 
         return null;
@@ -320,9 +319,9 @@ class PlaceController extends Controller
     protected function withLocationFromRequest(array $input, Request $request): array
     {
         if ($request->has(['latitude', 'longitude'])) {
-            $input['location'] = Utils::getPointFromCoordinates($request->only(['latitude', 'longitude']));
+            $input['location'] = $this->pointFromCoordinates($request->only(['latitude', 'longitude']));
         } elseif ($request->filled(['location'])) {
-            $input['location'] = Utils::getPointFromMixed($request->input('location'));
+            $input['location'] = $this->pointFromMixed($request->input('location'));
         }
 
         return $input;
@@ -337,5 +336,95 @@ class PlaceController extends Controller
             'longitude'      => $request->input('longitude', false),
             'no_query_order' => 'name_desc',
         ];
+    }
+
+    protected function createPlaceFromGeocodingLookup(string $address): ?Place
+    {
+        return Place::createFromGeocodingLookup($address);
+    }
+
+    protected function createPlaceFromReverseGeocodingLookup(Point $point): ?Place
+    {
+        return Place::createFromReverseGeocodingLookup($point);
+    }
+
+    protected function getUuid(array|string $table, array $where, array $options = []): mixed
+    {
+        return Utils::getUuid($table, $where, $options);
+    }
+
+    protected function getValue(array|object $data, string $key): mixed
+    {
+        return Utils::get($data, $key);
+    }
+
+    protected function getModelClassName(?string $table): ?string
+    {
+        return $table ? Utils::getModelClassName($table) : null;
+    }
+
+    protected function orValue(array $input, array $keys): mixed
+    {
+        return Utils::or($input, $keys);
+    }
+
+    protected function firstOrNewPlace(array $attributes): Place
+    {
+        return Place::firstOrNew($attributes);
+    }
+
+    protected function geocodeAddress(string $address): mixed
+    {
+        return Geocoder::geocode($address)->get()->first();
+    }
+
+    protected function findPlaceOrFail(string $id): Place
+    {
+        return Place::findRecordOrFail($id);
+    }
+
+    protected function queryPlaces(Request $request, callable $callback): mixed
+    {
+        return Place::queryWithRequest($request, $callback);
+    }
+
+    protected function basePlaceSearchQuery(): mixed
+    {
+        return Place::where('company_uuid', session('company'))->whereNull('deleted_at');
+    }
+
+    protected function searchPlaces(mixed $query, string $searchQuery, array $options): mixed
+    {
+        return PlaceSearch::search($query, $searchQuery, $options);
+    }
+
+    protected function pointFromMixed(mixed $input): ?Point
+    {
+        return Utils::getPointFromMixed($input);
+    }
+
+    protected function pointFromCoordinates(array $coordinates): ?Point
+    {
+        return Utils::getPointFromCoordinates($coordinates);
+    }
+
+    protected function placeResource(Place $place)
+    {
+        return new PlaceResource($place);
+    }
+
+    protected function placeResourceCollection(mixed $results): mixed
+    {
+        return PlaceResource::collection($results);
+    }
+
+    protected function deletedPlaceResource(Place $place)
+    {
+        return new DeletedResource($place);
+    }
+
+    protected function apiError(string $message, int $status = 400)
+    {
+        return response()->apiError($message, $status);
     }
 }
