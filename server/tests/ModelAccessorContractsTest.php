@@ -34,6 +34,7 @@ use Fleetbase\FleetOps\Models\Place;
 use Fleetbase\FleetOps\Models\Position;
 use Fleetbase\FleetOps\Models\PurchaseRate;
 use Fleetbase\FleetOps\Models\Route;
+use Fleetbase\FleetOps\Models\ServiceQuote;
 use Fleetbase\FleetOps\Models\ServiceRate;
 use Fleetbase\FleetOps\Models\ServiceRateFee;
 use Fleetbase\FleetOps\Models\Telematic;
@@ -49,6 +50,7 @@ use Illuminate\Database\ConnectionResolver;
 use Illuminate\Database\Eloquent\Model as EloquentModel;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\SQLiteConnection;
+use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 
@@ -621,6 +623,65 @@ test('waypoint model mirrors tracking number status accessors', function () {
         ->and($waypoint->getStatusAttribute())->toBe('Out for delivery')
         ->and($waypoint->getStatusCodeAttribute())->toBe('out_for_delivery')
         ->and($waypoint->getCompleteAttribute())->toBeFalse();
+
+    $emptyWaypoint = new Waypoint();
+    $emptyWaypoint->setRelation('trackingNumber', null);
+
+    expect($emptyWaypoint->getTrackingAttribute())->toBeNull()
+        ->and($emptyWaypoint->getStatusAttribute())->toBeNull()
+        ->and($emptyWaypoint->getStatusCodeAttribute())->toBeNull()
+        ->and($emptyWaypoint->getCompleteAttribute())->toBeNull();
+});
+
+test('service quote model exposes pure helpers and safe request resolution defaults', function () {
+    $quote = new ServiceQuote();
+    $quote->setRawAttributes([
+        'public_id'              => 'quote_public',
+        'amount'                 => 12345,
+        'currency'               => 'SGD',
+        'integrated_vendor_uuid' => null,
+        'meta'                   => [],
+    ], true);
+    $quote->setRelation('serviceRate', (object) ['service_name' => 'Same Day']);
+
+    $vendorQuote = new ServiceQuote();
+    $vendorQuote->setRawAttributes([
+        'integrated_vendor_uuid' => 'integrated-vendor-uuid',
+        'meta'                   => [],
+    ], true);
+
+    $metaVendorQuote = new ServiceQuote();
+    $metaVendorQuote->setRawAttributes(['meta' => ['from_integrated_vendor' => true]], true);
+
+    $customNames               = new ServiceQuote();
+    $customNames->pluralName   = 'offers';
+    $customNames->singularName = 'offer';
+
+    $payloadKey             = new ServiceQuote();
+    $payloadKey->payloadKey = 'rate_quote';
+
+    expect($quote->getServiceRateNameAttribute())->toBe('Same Day')
+        ->and($quote->fromIntegratedVendor())->toBeFalse()
+        ->and($vendorQuote->fromIntegratedVendor())->toBeTrue()
+        ->and($metaVendorQuote->fromIntegratedVendor())->toBeTrue()
+        ->and(ServiceQuote::resolveFromRequest(new class extends Request {
+            public function or(array $keys, mixed $default = null): mixed
+            {
+                return $default;
+            }
+        }))->toBeNull()
+        ->and(ServiceQuote::resolveFromRequest(new class extends Request {
+            public function or(array $keys, mixed $default = null): mixed
+            {
+                return '';
+            }
+        }))->toBeNull()
+        ->and($customNames->getPluralName())->toBe('offers')
+        ->and($customNames->getSingularName())->toBe('offer')
+        ->and($payloadKey->getPluralName())->toBe('rate_quotes')
+        ->and($payloadKey->getSingularName())->toBe('rate_quote')
+        ->and((new ServiceQuote())->getPluralName())->toBe('service_quotes')
+        ->and((new ServiceQuote())->getSingularName())->toBe('service_quote');
 });
 
 test('issue model mutators accessors and import defaults are stable', function () {

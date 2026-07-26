@@ -59,6 +59,10 @@ class FleetOpsEventDriver extends Driver
 {
     public function getAttribute($key)
     {
+        if ($key === 'vehicle') {
+            return $this->relations['vehicle'] ?? null;
+        }
+
         if (in_array($key, ['uuid', 'public_id', 'company_uuid', 'name', 'phone'], true)) {
             return $this->attributes[$key] ?? null;
         }
@@ -679,9 +683,51 @@ test('geofence entered listener calculates proximity and ignores terminal orders
     $listener = new HandleGeofenceEntered();
     $distance = new ReflectionMethod(HandleGeofenceEntered::class, 'haversineDistance');
     $distance->setAccessible(true);
+    $arrival = new ReflectionMethod(HandleGeofenceEntered::class, 'handleOrderArrival');
+    $arrival->setAccessible(true);
+
+    $driver = new FleetOpsEventDriver();
+    $driver->setRawAttributes([
+        'uuid'         => 'driver-uuid',
+        'public_id'    => 'driver_public',
+        'company_uuid' => 'company-uuid',
+        'name'         => 'Jane Driver',
+    ], true);
+    $geofence = (object) [
+        'uuid'      => 'zone-uuid',
+        'public_id' => 'zone_public',
+        'name'      => 'Destination Zone',
+    ];
+    $event = new GeofenceEntered($driver, $geofence, 'zone', new Point(1.3521, 103.8198));
+
+    $terminalOrder = new Order();
+    $terminalOrder->setRawAttributes([
+        'uuid'   => 'terminal-order-uuid',
+        'status' => 'completed',
+    ], true);
+    $terminalOrder->setRelation('trackingNumber', (object) ['last_status' => 'completed']);
+
+    $missingDestinationOrder = new Order();
+    $missingDestinationOrder->setRawAttributes([
+        'uuid'   => 'missing-destination-order-uuid',
+        'status' => 'created',
+    ], true);
+    $missingDestinationOrder->setRelation('trackingNumber', (object) ['last_status' => 'created']);
+    $missingDestinationOrder->setRelation('payload', new class {
+        public function getPickupOrCurrentWaypoint(): mixed
+        {
+            return null;
+        }
+    });
 
     expect($listener->tries)->toBe(3)
         ->and((int) round($distance->invoke($listener, 1.3000, 103.8000, 1.3010, 103.8010)))->toBe(157);
+
+    $arrival->invoke($listener, $driver, $geofence, $terminalOrder, $event);
+    $arrival->invoke($listener, $driver, $geofence, $missingDestinationOrder, $event);
+
+    expect($terminalOrder->status)->toBe('completed')
+        ->and($missingDestinationOrder->status)->toBe('created');
 });
 
 test('geofence exited and dwelled events broadcast vehicle subject payloads', function () {

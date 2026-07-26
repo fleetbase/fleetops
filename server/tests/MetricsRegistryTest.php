@@ -3,6 +3,7 @@
 use Fleetbase\FleetOps\Support\Metrics;
 use Fleetbase\FleetOps\Support\Metrics\AbstractMetric;
 use Fleetbase\FleetOps\Support\Metrics\ActiveRevenueQuery;
+use Fleetbase\FleetOps\Support\Metrics\AvgOrderValueMetric;
 use Fleetbase\FleetOps\Support\Metrics\EarningsMetric;
 use Fleetbase\FleetOps\Support\Metrics\MoneyMetric;
 use Fleetbase\FleetOps\Support\Metrics\OrdersInProgressMetric;
@@ -69,6 +70,26 @@ class TestFleetOpsMoneyMetric extends MoneyMetric
     protected function aggregate($query): float|int
     {
         return 0;
+    }
+}
+
+class TestFleetOpsAvgOrderValueMetric extends AvgOrderValueMetric
+{
+    public function aggregateForTest($query): float|int
+    {
+        return $this->aggregate($query);
+    }
+}
+
+class TestFleetOpsMetricCountQuery
+{
+    public function __construct(private int $count)
+    {
+    }
+
+    public function count(): int
+    {
+        return $this->count;
     }
 }
 
@@ -164,6 +185,18 @@ test('money metrics expose money format and company or override currency', funct
     $fallbackCompany = new Company();
 
     expect(TestFleetOpsMoneyMetric::forCompany($fallbackCompany)->currency())->toBe('USD');
+});
+
+test('average order value metric exposes slug and returns zero when there are no completed orders', function () {
+    $company = new Company();
+    $company->setRawAttributes(['uuid' => 'company-metrics', 'currency' => 'SGD'], true);
+
+    $metric = TestFleetOpsAvgOrderValueMetric::forCompany($company);
+
+    expect(TestFleetOpsAvgOrderValueMetric::slug())->toBe('avg_order_value')
+        ->and($metric->format())->toBe('money')
+        ->and($metric->currency())->toBe('SGD')
+        ->and($metric->aggregateForTest(new TestFleetOpsMetricCountQuery(0)))->toBe(0.0);
 });
 
 test('registry resolves unknown slugs to null', function () {
