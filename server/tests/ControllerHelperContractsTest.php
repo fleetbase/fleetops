@@ -25,11 +25,13 @@ use Fleetbase\FleetOps\Models\Contact;
 use Fleetbase\FleetOps\Models\Fleet;
 use Fleetbase\FleetOps\Models\Maintenance;
 use Fleetbase\FleetOps\Models\Order;
+use Fleetbase\FleetOps\Models\Payload;
 use Fleetbase\FleetOps\Models\Place;
 use Fleetbase\FleetOps\Models\ServiceQuote;
 use Fleetbase\FleetOps\Models\ServiceRate;
 use Fleetbase\FleetOps\Models\Vendor;
 use Fleetbase\FleetOps\Models\VendorPersonnel;
+use Fleetbase\FleetOps\Models\Waypoint;
 use Fleetbase\LaravelMysqlSpatial\Types\Point;
 use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
@@ -110,6 +112,38 @@ class FleetOpsApiOrderControllerProbe extends ApiOrderController
         $reflection->setAccessible(true);
 
         return $reflection->invoke($this, ...$arguments);
+    }
+}
+
+class FleetOpsServiceStopPayloadFake extends Payload
+{
+    public array $loadedMissing = [];
+    public bool $savedQuietly   = false;
+
+    public function loadMissing($relations)
+    {
+        $this->loadedMissing[] = $relations;
+
+        return $this;
+    }
+
+    public function saveQuietly(array $options = []): bool
+    {
+        $this->savedQuietly = true;
+
+        return true;
+    }
+}
+
+class FleetOpsServiceStopWaypointFake extends Waypoint
+{
+    public array $loadedMissing = [];
+
+    public function loadMissing($relations)
+    {
+        $this->loadedMissing[] = $relations;
+
+        return $this;
     }
 }
 
@@ -596,6 +630,98 @@ test('api order controller normalizes payload route shape metadata', function ()
         'has_dropoff_field'         => true,
         'has_route_endpoint_fields' => true,
     ]);
+});
+
+test('api order controller resolves service stop sequencing from payload relations', function () {
+    $controller = new FleetOpsApiOrderControllerProbe();
+
+    $pickup = new Place();
+    $pickup->setRawAttributes([
+        'id'        => 10,
+        'uuid'      => 'pickup-uuid',
+        'public_id' => 'place_pickup',
+        'country'   => 'SG',
+    ], true);
+
+    $dropoff = new Place();
+    $dropoff->setRawAttributes([
+        'id'        => 30,
+        'uuid'      => 'dropoff-uuid',
+        'public_id' => 'place_dropoff',
+    ], true);
+
+    $waypointPlace = new Place();
+    $waypointPlace->setRawAttributes([
+        'id'        => 20,
+        'uuid'      => 'waypoint-place-uuid',
+        'public_id' => 'place_waypoint',
+    ], true);
+
+    $waypoint = new FleetOpsServiceStopWaypointFake();
+    $waypoint->setRawAttributes([
+        'uuid'                 => 'waypoint-uuid',
+        'public_id'            => 'waypoint_public',
+        'place_uuid'           => 'waypoint-place-uuid',
+        'tracking_number_uuid' => null,
+        'order'                => 2,
+    ], true);
+    $waypoint->setRelation('place', $waypointPlace);
+
+    $payload = new FleetOpsServiceStopPayloadFake();
+    $payload->setRawAttributes([
+        'uuid'                         => 'payload-uuid',
+        'company_uuid'                 => 'company-uuid',
+        'current_waypoint_uuid'        => 'waypoint_public',
+        'pickup_tracking_number_uuid'  => 'pickup-tracking-uuid',
+        'dropoff_tracking_number_uuid' => null,
+    ], true);
+    $payload->setRelation('pickup', $pickup);
+    $payload->setRelation('dropoff', $dropoff);
+    $payload->setRelation('waypoints', collect());
+    $payload->setRelation('waypointMarkers', collect([$waypoint]));
+
+    $stops = $controller->callHelper('payloadServiceStops', $payload);
+
+    $subjectOrder = new Order(['payload_uuid' => 'payload-uuid']);
+    $subjectOrder->setRelation('payload', $payload);
+
+    expect($stops)->toHaveCount(3)
+        ->and($stops->pluck('type')->all())->toBe(['pickup', 'waypoint', 'dropoff'])
+        ->and($stops->pluck('sequence')->all())->toBe([1, 2, 3])
+        ->and($stops[1]['waypoint'])->toBe($waypoint)
+        ->and($waypoint->loadedMissing)->toContain('place')
+        ->and($controller->callHelper('payloadHasWaypoints', $payload))->toBeFalse()
+        ->and($controller->callHelper('payloadHasWaypointMarkers', $payload))->toBeTrue()
+        ->and($controller->callHelper('payloadUsesServiceStopActivity', $payload))->toBeTrue()
+        ->and($controller->callHelper('payloadCurrentServiceStop', $payload))->toBe($stops[1])
+        ->and($controller->callHelper('resolveServiceStopFromKey', $payload, 'waypoint-place-uuid'))->toBe($stops[1])
+        ->and($controller->callHelper('resolveSubject', $subjectOrder, 'waypoint', 'waypoint_public'))->toBe($waypoint);
+
+    $payload->current_waypoint_uuid = null;
+
+    expect($controller->callHelper('payloadCurrentServiceStop', $payload))->toBe($stops[0])
+        ->and($controller->callHelper('endpointTrackingNumberColumn', 'pickup'))->toBe('pickup_tracking_number_uuid')
+        ->and($controller->callHelper('endpointTrackingNumberColumn', 'return'))->toBeNull()
+        ->and($controller->callHelper('serviceStopTrackingNumberUuid', $payload, $stops[0]))->toBe('pickup-tracking-uuid')
+        ->and($controller->callHelper('serviceStopTrackingNumberUuid', $payload, $stops[1]))->toBeNull()
+        ->and($controller->callHelper('activityLocationPoint', [1.3521, 103.8198])->getLat())->toBe(1.3521)
+        ->and($controller->callHelper('serviceStopLocationPoint', new Place())->getLng())->toBe(0.0);
+
+    $order = new Order(['status' => 'created', 'company_uuid' => 'company-uuid']);
+    $order->setRelation('payload', $payload);
+
+    $nextStop = $controller->callHelper('advanceCurrentServiceStopDestination', $order, $payload);
+
+    expect($nextStop)->toBe($stops[1])
+        ->and($payload->current_waypoint_uuid)->toBe('waypoint-place-uuid')
+        ->and($payload->savedQuietly)->toBeTrue()
+        ->and($payload->currentWaypoint)->toBe($waypointPlace)
+        ->and($payload->currentWaypointMarker)->toBe($waypoint)
+        ->and($controller->callHelper('serviceStopIsComplete', new Order(['status' => 'completed']), $payload, $stops[1]))->toBeTrue()
+        ->and($controller->callHelper('payloadServiceStops', null))->toHaveCount(0)
+        ->and($controller->callHelper('payloadCurrentServiceStop', null))->toBeNull()
+        ->and($controller->callHelper('ensurePayloadCurrentServiceStop', null))->toBeNull()
+        ->and($controller->callHelper('resolveServiceStopFromKey', $payload))->toBeNull();
 });
 
 test('api contact controller normalizes create input and keeps update input narrow', function () {
