@@ -31,11 +31,14 @@ class HandleUserRemovedFromCompany implements ShouldQueue
 
     protected function driverQueryForCompanyUser(string $companyUuid, string $userUuid): mixed
     {
-        return Driver::where(
-            [
-                'company_uuid' => $companyUuid,
-                'user_uuid'    => $userUuid,
-            ]
-        );
+        return $this->driverQuery([
+            'company_uuid' => $companyUuid,
+            'user_uuid'    => $userUuid,
+        ]);
+    }
+
+    protected function driverQuery(array $criteria): mixed
+    {
+        return Driver::where($criteria);
     }
 }
