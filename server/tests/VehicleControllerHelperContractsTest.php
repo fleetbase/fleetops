@@ -2,18 +2,71 @@
 
 use Fleetbase\FleetOps\Http\Controllers\Internal\v1\VehicleController;
 use Fleetbase\FleetOps\Models\Device;
+use Fleetbase\FleetOps\Models\Driver;
 use Fleetbase\FleetOps\Models\Vehicle;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 
 class FleetOpsVehicleControllerProbe extends VehicleController
 {
+    public ?FleetOpsVehicleEndpointFake $vehicle = null;
+    public ?FleetOpsVehicleDriverFake $driver    = null;
+    public ?FleetOpsVehicleDeviceFake $device    = null;
+    public array $vehicleLookups                 = [];
+    public array $driverLookups                  = [];
+    public array $deviceLookups                  = [];
+    public array $driverSyncs                    = [];
+
     public function callHelper(string $method, mixed ...$arguments): mixed
     {
         $reflection = new ReflectionMethod(VehicleController::class, $method);
         $reflection->setAccessible(true);
 
         return $reflection->invoke($this, ...$arguments);
+    }
+
+    protected function findVehicle(string $id): Vehicle
+    {
+        $this->vehicleLookups[] = ['find', $id];
+
+        return $this->vehicle;
+    }
+
+    protected function resolveVehicle(string $id): ?Vehicle
+    {
+        $this->vehicleLookups[] = ['resolve', $id];
+
+        return $this->vehicle;
+    }
+
+    protected function findDriver(string $id): Driver
+    {
+        $this->driverLookups[] = $id;
+
+        return $this->driver;
+    }
+
+    protected function resolveDevice(string $id): ?Device
+    {
+        $this->deviceLookups[] = $id;
+
+        return $this->device;
+    }
+
+    protected function syncDriverAssignment(Vehicle $vehicle, ?string $identifier): void
+    {
+        $this->driverSyncs[] = [$vehicle, $identifier];
+
+        if (empty($identifier)) {
+            $vehicle->unassignDriver();
+
+            return;
+        }
+
+        if ($this->driver) {
+            $vehicle->assignDriver($this->driver);
+            $vehicle->setRelation('driver', $this->driver);
+        }
     }
 }
 
@@ -32,6 +85,132 @@ class FleetOpsVehicleActiveOrderFake extends Vehicle
     public function lastKnownPosition()
     {
         return $this->lastPosition;
+    }
+}
+
+class FleetOpsVehicleEndpointFake extends Vehicle
+{
+    public array $assignedDrivers     = [];
+    public bool $unassignedForTest    = false;
+    public array $loadedRelations     = [];
+    public array $freshRelations      = [];
+    public array $customFieldSyncs    = [];
+
+    public function toArray(): array
+    {
+        return [
+            'resource'  => 'vehicle',
+            'uuid'      => $this->uuid,
+            'public_id' => $this->public_id,
+        ];
+    }
+
+    public function assignDriver(Driver $driver)
+    {
+        $this->assignedDrivers[] = $driver;
+        $this->forceFill(['driver_uuid' => $driver->uuid]);
+
+        return $this;
+    }
+
+    public function unassignDriver(): self
+    {
+        $this->unassignedForTest = true;
+        $this->unsetRelation('driver');
+
+        return $this;
+    }
+
+    public function load($relations)
+    {
+        $this->loadedRelations[] = $relations;
+
+        return $this;
+    }
+
+    public function fresh($with = [])
+    {
+        $this->freshRelations[] = $with;
+
+        return [
+            'resource' => 'vehicle',
+            'uuid'     => $this->uuid,
+            'with'     => $with,
+        ];
+    }
+
+    public function syncCustomFieldValues(array $payload, array $options = []): array
+    {
+        $this->customFieldSyncs[] = [$payload, $options];
+
+        return $payload;
+    }
+}
+
+class FleetOpsVehicleDriverFake extends Driver
+{
+    public function toArray(): array
+    {
+        return [
+            'resource'  => 'driver',
+            'uuid'      => $this->uuid,
+            'public_id' => $this->public_id,
+        ];
+    }
+}
+
+class FleetOpsVehicleDeviceFake extends Device
+{
+    public array $attachedVehicles = [];
+    public bool $detachedForTest   = false;
+    public array $loadedRelations  = [];
+    public ?string $throwOnAction  = null;
+
+    public function toArray(): array
+    {
+        return [
+            'resource'        => 'device',
+            'uuid'            => $this->uuid,
+            'public_id'       => $this->public_id,
+            'attachable_uuid' => $this->attachable_uuid,
+        ];
+    }
+
+    public function attachTo(Fleetbase\Models\Model $attachable): bool
+    {
+        if ($this->throwOnAction === 'attach') {
+            throw new RuntimeException('attach failed');
+        }
+
+        $this->attachedVehicles[] = $attachable;
+        $this->forceFill([
+            'attachable_type' => get_class($attachable),
+            'attachable_uuid' => $attachable->uuid,
+        ]);
+
+        return true;
+    }
+
+    public function detach(): bool
+    {
+        if ($this->throwOnAction === 'detach') {
+            throw new RuntimeException('detach failed');
+        }
+
+        $this->detachedForTest = true;
+        $this->forceFill([
+            'attachable_type' => null,
+            'attachable_uuid' => null,
+        ]);
+
+        return true;
+    }
+
+    public function load($relations)
+    {
+        $this->loadedRelations[] = $relations;
+
+        return $this;
     }
 }
 
@@ -169,4 +348,112 @@ test('vehicle controller records device attachment lookup and exception context'
             ],
         ],
     ]);
+});
+
+test('vehicle controller assigns and unassigns drivers through endpoint contracts', function () {
+    $controller          = new FleetOpsVehicleControllerProbe();
+    $controller->vehicle = new FleetOpsVehicleEndpointFake();
+    $controller->driver  = new FleetOpsVehicleDriverFake();
+    $controller->vehicle->setRawAttributes(['uuid' => 'vehicle-uuid', 'public_id' => 'vehicle-public'], true);
+    $controller->driver->setRawAttributes(['uuid' => 'driver-uuid', 'public_id' => 'driver-public'], true);
+
+    $assigned = $controller->assignDriver(new Request(['driver' => 'driver-public']), 'vehicle-public')->getData(true);
+
+    expect($assigned)->toMatchArray([
+        'status'  => 'ok',
+        'message' => 'Driver assigned to vehicle.',
+    ])
+        ->and($controller->vehicleLookups)->toBe([['find', 'vehicle-public']])
+        ->and($controller->driverLookups)->toBe(['driver-public'])
+        ->and($controller->vehicle->assignedDrivers)->toBe([$controller->driver])
+        ->and($controller->vehicle->loadedRelations)->toBe([['driver', 'devices']]);
+
+    $unassigned = $controller->unassignDriver('vehicle-public')->getData(true);
+
+    expect($unassigned)->toMatchArray([
+        'status'  => 'ok',
+        'message' => 'Driver unassigned from vehicle.',
+    ])
+        ->and($controller->vehicle->unassignedForTest)->toBeTrue()
+        ->and($controller->vehicle->loadedRelations)->toBe([['driver', 'devices'], ['driver', 'devices']]);
+});
+
+test('vehicle controller attaches and detaches devices through endpoint contracts', function () {
+    $controller          = new FleetOpsVehicleControllerProbe();
+    $controller->vehicle = new FleetOpsVehicleEndpointFake();
+    $controller->device  = new FleetOpsVehicleDeviceFake();
+    $controller->vehicle->setRawAttributes(['uuid' => 'vehicle-uuid', 'public_id' => 'vehicle-public'], true);
+    $controller->device->setRawAttributes(['uuid' => 'device-uuid', 'public_id' => 'device-public'], true);
+
+    $attached = $controller->attachDevice(new Request(['device' => 'device-public']), 'vehicle-public')->getData(true);
+
+    expect($attached)->toMatchArray([
+        'status'  => 'ok',
+        'message' => 'Device attached to vehicle.',
+    ])
+        ->and($controller->vehicleLookups)->toBe([['resolve', 'vehicle-public']])
+        ->and($controller->deviceLookups)->toBe(['device-public'])
+        ->and($controller->device->attachedVehicles)->toBe([$controller->vehicle])
+        ->and($controller->device->loadedRelations)->toBe([['telematic', 'warranty', 'attachable']])
+        ->and($controller->vehicle->loadedRelations)->toBe([['driver', 'devices']]);
+
+    $detached = $controller->detachDevice(new Request(['device' => 'device-public']), 'vehicle-public')->getData(true);
+
+    expect($detached)->toMatchArray([
+        'status'  => 'ok',
+        'message' => 'Device detached from vehicle.',
+    ])
+        ->and($controller->device->detachedForTest)->toBeTrue()
+        ->and($controller->device->loadedRelations)->toBe([
+            ['telematic', 'warranty', 'attachable'],
+            ['telematic', 'warranty', 'attachable'],
+        ]);
+});
+
+test('vehicle controller returns device attachment endpoint errors', function () {
+    $controller          = new FleetOpsVehicleControllerProbe();
+    $controller->vehicle = null;
+    $controller->device  = new FleetOpsVehicleDeviceFake();
+
+    expect($controller->attachDevice(new Request(['device' => 'device-public']), 'missing-vehicle')->getData(true))
+        ->toBe(['error' => 'Vehicle not found or not available for this organization.']);
+
+    $controller          = new FleetOpsVehicleControllerProbe();
+    $controller->vehicle = new FleetOpsVehicleEndpointFake();
+    $controller->device  = null;
+
+    expect($controller->attachDevice(new Request(['device' => 'missing-device']), 'vehicle-public')->getData(true))
+        ->toBe(['error' => 'Device not found or not available for this organization.']);
+
+    $controller          = new FleetOpsVehicleControllerProbe();
+    $controller->vehicle = new FleetOpsVehicleEndpointFake();
+    $controller->device  = new FleetOpsVehicleDeviceFake();
+    $controller->vehicle->setRawAttributes(['uuid' => 'vehicle-uuid', 'public_id' => 'vehicle-public'], true);
+    $controller->device->setRawAttributes(['uuid' => 'device-uuid', 'attachable_uuid' => 'other-vehicle'], true);
+
+    expect($controller->detachDevice(new Request(['device' => 'device-public']), 'vehicle-public')->getData(true))
+        ->toBe(['error' => 'This device is not attached to the selected vehicle.']);
+
+    $controller->device->forceFill(['attachable_uuid' => 'vehicle-uuid']);
+    $controller->device->throwOnAction = 'detach';
+
+    expect($controller->detachDevice(new Request(['device' => 'device-public']), 'vehicle-public')->getData(true))
+        ->toBe(['error' => 'Unable to detach device from vehicle. Please try again or contact support.']);
+});
+
+test('vehicle controller after save syncs driver input and custom fields', function () {
+    $controller          = new FleetOpsVehicleControllerProbe();
+    $controller->vehicle = new FleetOpsVehicleEndpointFake();
+    $vehicle             = new FleetOpsVehicleEndpointFake();
+
+    $controller->afterSave(new Request([
+        'vehicle' => [
+            'driver'              => ['uuid' => null],
+            'custom_field_values' => ['temperature_zone' => 'cold'],
+        ],
+    ]), $vehicle);
+
+    expect($vehicle->unassignedForTest)->toBeTrue()
+        ->and($controller->driverSyncs)->toBe([[$vehicle, null]])
+        ->and($vehicle->customFieldSyncs)->toBe([[['temperature_zone' => 'cold'], []]]);
 });
