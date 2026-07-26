@@ -32,6 +32,7 @@ use Fleetbase\FleetOps\Models\FuelProviderTransaction;
 use Fleetbase\FleetOps\Models\FuelReport;
 use Fleetbase\FleetOps\Models\GeofenceEventLog;
 use Fleetbase\FleetOps\Models\Order;
+use Fleetbase\FleetOps\Models\TrackingStatus;
 use Fleetbase\FleetOps\Models\Vehicle;
 use Fleetbase\FleetOps\Models\Waypoint;
 use Fleetbase\FleetOps\Notifications\OrderAssigned as OrderAssignedNotification;
@@ -111,6 +112,41 @@ class FleetOpsGeofenceEventLogFake extends GeofenceEventLog
 {
     public function __construct()
     {
+    }
+}
+
+class FleetOpsGeofenceArrivalOrderFake extends Order
+{
+    public array $calls = [];
+
+    public function setStatus(?string $status, $andSave = true)
+    {
+        $this->calls[]              = ['setStatus', $status, $andSave];
+        $this->attributes['status'] = $status;
+
+        return $this;
+    }
+
+    public function createActivity(Activity $activity, $location = [], $proof = null): TrackingStatus
+    {
+        $this->calls[] = ['createActivity', $activity, $location, $proof];
+
+        return new TrackingStatus();
+    }
+}
+
+class FleetOpsGeofenceArrivalCustomerFake
+{
+    public array $notifications = [];
+    public bool $shouldThrow    = false;
+
+    public function notify($notification): void
+    {
+        if ($this->shouldThrow) {
+            throw new RuntimeException('notification failed');
+        }
+
+        $this->notifications[] = $notification;
     }
 }
 
@@ -728,6 +764,169 @@ test('geofence entered listener calculates proximity and ignores terminal orders
 
     expect($terminalOrder->status)->toBe('completed')
         ->and($missingDestinationOrder->status)->toBe('created');
+});
+
+test('geofence entered listener handles arrival branch outcomes', function () {
+    $listener = new HandleGeofenceEntered();
+    $arrival  = new ReflectionMethod(HandleGeofenceEntered::class, 'handleOrderArrival');
+    $arrival->setAccessible(true);
+
+    $driver = new FleetOpsEventDriver();
+    $driver->setRawAttributes([
+        'uuid'         => 'driver-uuid',
+        'public_id'    => 'driver_public',
+        'company_uuid' => 'company-uuid',
+        'name'         => 'Jane Driver',
+    ], true);
+
+    $event = new GeofenceEntered($driver, (object) [
+        'uuid'      => 'event-zone-uuid',
+        'public_id' => 'event_zone_public',
+        'name'      => 'Event Zone',
+    ], 'zone', new Point(1.3521, 103.8198));
+
+    $place        = (object) ['location' => new Point(1.3521, 103.8198)];
+    $destination  = (object) ['place' => $place];
+    $nearGeofence = new class {
+        public string $uuid      = 'near-zone-uuid';
+        public string $public_id = 'near_zone_public';
+        public string $name      = 'Near Destination';
+
+        public function getLatitudeAttribute(): float
+        {
+            return 1.3521;
+        }
+
+        public function getLongitudeAttribute(): float
+        {
+            return 103.8198;
+        }
+    };
+    $farGeofence = new class {
+        public string $uuid      = 'far-zone-uuid';
+        public string $public_id = 'far_zone_public';
+        public string $name      = 'Far Destination';
+
+        public function getLatitudeAttribute(): float
+        {
+            return 1.0;
+        }
+
+        public function getLongitudeAttribute(): float
+        {
+            return 103.0;
+        }
+    };
+    $throwingGeofence = new class {
+        public string $uuid      = 'bad-zone-uuid';
+        public string $public_id = 'bad_zone_public';
+        public string $name      = 'Bad Destination';
+
+        public function getLatitudeAttribute(): float
+        {
+            throw new RuntimeException('missing centroid');
+        }
+
+        public function getLongitudeAttribute(): float
+        {
+            return 103.8198;
+        }
+    };
+
+    $makeOrder = function ($payload, mixed $customer = null): FleetOpsGeofenceArrivalOrderFake {
+        $order = new FleetOpsGeofenceArrivalOrderFake();
+        $order->setRawAttributes([
+            'uuid'      => 'arrival-order-uuid',
+            'public_id' => 'arrival_order_public',
+            'status'    => 'dispatched',
+        ], true);
+        $order->setRelation('trackingNumber', (object) ['last_status' => 'dispatched']);
+        $order->setRelation('payload', $payload);
+        if ($customer) {
+            $order->setRelation('customer', $customer);
+        }
+
+        return $order;
+    };
+
+    $missingPlaceOrder = $makeOrder((object) [
+        'getPickupOrCurrentWaypoint' => null,
+    ]);
+    $missingPlaceOrder->setRelation('payload', new class($destination) {
+        public function __construct(private object $destination)
+        {
+        }
+
+        public function getPickupOrCurrentWaypoint(): object
+        {
+            return (object) ['place' => (object) ['location' => null]];
+        }
+    });
+
+    $farOrder = $makeOrder(new class($destination) {
+        public function __construct(private object $destination)
+        {
+        }
+
+        public function getPickupOrCurrentWaypoint(): object
+        {
+            return $this->destination;
+        }
+    });
+
+    $badCentroidOrder = $makeOrder(new class($destination) {
+        public function __construct(private object $destination)
+        {
+        }
+
+        public function getPickupOrCurrentWaypoint(): object
+        {
+            return $this->destination;
+        }
+    });
+
+    $customer     = new FleetOpsGeofenceArrivalCustomerFake();
+    $successOrder = $makeOrder(new class($destination) {
+        public function __construct(private object $destination)
+        {
+        }
+
+        public function getPickupOrCurrentWaypoint(): object
+        {
+            return $this->destination;
+        }
+    }, $customer);
+
+    $throwingCustomer              = new FleetOpsGeofenceArrivalCustomerFake();
+    $throwingCustomer->shouldThrow = true;
+    $notificationFailureOrder      = $makeOrder(new class($destination) {
+        public function __construct(private object $destination)
+        {
+        }
+
+        public function getPickupOrCurrentWaypoint(): object
+        {
+            return $this->destination;
+        }
+    }, $throwingCustomer);
+
+    $arrival->invoke($listener, $driver, $nearGeofence, $missingPlaceOrder, $event);
+    $arrival->invoke($listener, $driver, $farGeofence, $farOrder, $event);
+    $arrival->invoke($listener, $driver, $throwingGeofence, $badCentroidOrder, $event);
+    $arrival->invoke($listener, $driver, $nearGeofence, $successOrder, $event);
+    $arrival->invoke($listener, $driver, $nearGeofence, $notificationFailureOrder, $event);
+
+    expect($missingPlaceOrder->calls)->toBe([])
+        ->and($farOrder->calls)->toBe([])
+        ->and($badCentroidOrder->calls)->toBe([])
+        ->and($successOrder->calls[0])->toBe(['setStatus', 'arrived', true])
+        ->and($successOrder->calls[1][0])->toBe('createActivity')
+        ->and($successOrder->calls[1][1]->get('status'))->toBe('arrived')
+        ->and($successOrder->calls[1][1]->get('code'))->toBe('arrived')
+        ->and($successOrder->calls[1][1]->get('details'))->toBe('Driver entered destination geofence "Near Destination".')
+        ->and($customer->notifications)->toHaveCount(1)
+        ->and($notificationFailureOrder->calls[0])->toBe(['setStatus', 'arrived', true])
+        ->and($throwingCustomer->notifications)->toBe([]);
 });
 
 test('geofence exited and dwelled events broadcast vehicle subject payloads', function () {
