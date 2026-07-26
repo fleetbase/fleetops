@@ -1677,6 +1677,98 @@ test('order accessors mutators and payload association helpers are stable', func
     Carbon::setTestNow();
 });
 
+test('order location driver and customer helper branches prefer loaded relations', function () {
+    $pickup           = new FleetOpsPlainPlaceFake();
+    $pickup->location = new Point(1.1, 2.2);
+
+    $dropoff           = new FleetOpsPlainPlaceFake();
+    $dropoff->location = new Point(3.3, 4.4);
+
+    $currentWaypoint = new FleetOpsPlainPlaceFake();
+    $currentWaypoint->setRawAttributes(['uuid' => 'current-waypoint'], true);
+    $currentWaypoint->location = new Point(5.5, 6.6);
+
+    $firstWaypoint = new FleetOpsPlainPlaceFake();
+    $firstWaypoint->setRawAttributes(['uuid' => 'first-waypoint'], true);
+    $firstWaypoint->location = new Point(7.7, 8.8);
+
+    $payload = new FleetOpsLoadedPayloadFake();
+    $payload->setRawAttributes(['current_waypoint_uuid' => 'current-waypoint'], true);
+    $payload->setRelation('pickup', $pickup);
+    $payload->setRelation('dropoff', $dropoff);
+    $payload->setRelation('waypoints', collect([$firstWaypoint, $currentWaypoint]));
+
+    $driver = new Driver();
+    $driver->setRawAttributes([
+        'uuid'      => 'driver-uuid',
+        'public_id' => 'driver-public',
+    ], true);
+    $driver->location = new Point(9.9, 10.1);
+
+    $order = new Order([
+        'driver_assigned_uuid' => 'driver-uuid',
+        'adhoc'                => true,
+    ]);
+    $order->setRelation('payload', $payload);
+    $order->setRelation('driverAssigned', $driver);
+
+    $waypointOnlyPayload = new FleetOpsLoadedPayloadFake();
+    $waypointOnlyPayload->setRawAttributes(['current_waypoint_uuid' => 'current-waypoint'], true);
+    $waypointOnlyPayload->setRelation('dropoff', null);
+    $waypointOnlyPayload->setRelation('pickup', null);
+    $waypointOnlyPayload->setRelation('waypoints', collect([$firstWaypoint, $currentWaypoint]));
+
+    $waypointOnlyOrder = new Order();
+    $waypointOnlyOrder->setRelation('payload', $waypointOnlyPayload);
+    $waypointOnlyOrder->setRelation('driverAssigned', null);
+
+    $firstWaypointPayload = new FleetOpsLoadedPayloadFake();
+    $firstWaypointPayload->setRelation('dropoff', null);
+    $firstWaypointPayload->setRelation('pickup', null);
+    $firstWaypointPayload->setRelation('waypoints', collect([$firstWaypoint]));
+
+    $firstWaypointOrder = new Order();
+    $firstWaypointOrder->setRelation('payload', $firstWaypointPayload);
+    $firstWaypointOrder->setRelation('driverAssigned', null);
+
+    $emptyPayload = new FleetOpsLoadedPayloadFake();
+    $emptyPayload->setRelation('dropoff', null);
+    $emptyPayload->setRelation('pickup', null);
+    $emptyPayload->setRelation('waypoints', collect());
+
+    $emptyOrder = new Order();
+    $emptyOrder->setRelation('payload', $emptyPayload);
+    $emptyOrder->setRelation('driverAssigned', null);
+
+    $customer = new Contact();
+    $customer->setRawAttributes(['uuid' => 'contact-uuid'], true);
+
+    $customerOrder = new Order();
+    $customerOrder->setCustomer($customer);
+    $customerOrder->customer_type    = 'vendor';
+    $customerOrder->facilitator_type = 'contact';
+
+    expect($order->getCurrentDestinationLocation())->toBe($dropoff->location)
+        ->and($order->getLastLocation())->toBe($driver->location)
+        ->and($order->isDriver($driver))->toBeTrue()
+        ->and($order->isDriver('driver-uuid'))->toBeTrue()
+        ->and($order->isDriver('driver-public'))->toBeTrue()
+        ->and($order->isDriver($order->driverAssigned))->toBeTrue()
+        ->and($order->isDriver('other-driver'))->toBeFalse()
+        ->and($order->is_ready_for_dispatch)->toBeTrue()
+        ->and($waypointOnlyOrder->getCurrentDestinationLocation())->toBe($currentWaypoint->location)
+        ->and($waypointOnlyOrder->getLastLocation())->toBe($currentWaypoint->location)
+        ->and($firstWaypointOrder->getCurrentDestinationLocation())->toBe($firstWaypoint->location)
+        ->and($firstWaypointOrder->getLastLocation())->toBe($firstWaypoint->location)
+        ->and($emptyOrder->getCurrentDestinationLocation())->toBeInstanceOf(Point::class)
+        ->and($emptyOrder->getCurrentDestinationLocation()->getLat())->toBe(0.0)
+        ->and($emptyOrder->getLastLocation())->toBeInstanceOf(Point::class)
+        ->and($emptyOrder->getLastLocation()->getLng())->toBe(0.0)
+        ->and($customerOrder->customer_uuid)->toBe('contact-uuid')
+        ->and($customerOrder->customer_type)->toBe(Vendor::class)
+        ->and($customerOrder->facilitator_type)->toBe(Contact::class);
+});
+
 test('payload and place pure accessors normalize fallback data', function () {
     $pickup = new FleetOpsPlainPlaceFake();
     $pickup->setRawAttributes(['name' => 'Pickup name', 'country' => 'SG', 'uuid' => '11111111-1111-4111-8111-111111111111'], true);
