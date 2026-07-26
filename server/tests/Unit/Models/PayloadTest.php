@@ -211,6 +211,33 @@ test('payload resolves pickup and dropoff fallbacks from waypoints and driver-lo
     expect($payload->getPickupOrCurrentWaypoint())->toBe($dropoff);
 });
 
+test('payload resolves index pickup and dropoff fallbacks from waypoint marker places', function () {
+    $firstPlace  = fleetopsPayloadUnitPlace('first-place-uuid');
+    $lastPlace   = fleetopsPayloadUnitPlace('last-place-uuid');
+    $pickup      = fleetopsPayloadUnitPlace('pickup-uuid');
+    $dropoff     = fleetopsPayloadUnitPlace('dropoff-uuid');
+    $firstMarker = new Waypoint();
+    $lastMarker  = new Waypoint();
+
+    $firstMarker->setRelation('place', $firstPlace);
+    $lastMarker->setRelation('place', $lastPlace);
+
+    $payload = fleetopsPayloadUnitPayload();
+    $payload->setRelation('firstWaypointMarker', $firstMarker);
+    $payload->setRelation('lastWaypointMarker', $lastMarker);
+
+    expect($payload->index_pickup_place)->toBe($firstPlace)
+        ->and($payload->index_dropoff_place)->toBe($lastPlace)
+        ->and($payload->loadedMissingRelations)->toContain('firstWaypointMarker.place')
+        ->and($payload->loadedMissingRelations)->toContain('lastWaypointMarker.place');
+
+    $payload->setRelation('pickup', $pickup);
+    $payload->setRelation('dropoff', $dropoff);
+
+    expect($payload->index_pickup_place)->toBe($pickup)
+        ->and($payload->index_dropoff_place)->toBe($dropoff);
+});
+
 test('payload composes stops and pickup locations with sensible fallbacks', function () {
     $pickup   = fleetopsPayloadUnitPlace('pickup-uuid', ['location' => new Point(1.23, 4.56)]);
     $dropoff  = fleetopsPayloadUnitPlace('dropoff-uuid');
@@ -288,6 +315,19 @@ test('payload sets current first and next waypoint destinations without database
     expect($payload->setNextWaypointDestination())->toBe($payload)
         ->and($payload->currentWaypointWrites)->toBe([['second-place-uuid', true]])
         ->and($payload->getRelation('currentWaypoint'))->toBe($secondPlace);
+
+    $empty = fleetopsPayloadUnitPayload();
+
+    expect($empty->setFirstWaypoint())->toBe($empty)
+        ->and($empty->quietlySaved)->toBeFalse();
+
+    $multipleDrop = fleetopsPayloadUnitPayload();
+    $multipleDrop->setRelation('pickup', null);
+    $multipleDrop->setRelation('waypoints', collect([$firstPlace, $secondPlace]));
+
+    expect($multipleDrop->is_multiple_drop_order)->toBeTrue()
+        ->and($multipleDrop->setFirstWaypoint())->toBe($multipleDrop)
+        ->and($multipleDrop->current_waypoint_uuid)->toBe('first-place-uuid');
 });
 
 test('payload resolves order distance updates and destination keys', function () {
@@ -314,5 +354,7 @@ test('payload resolves order distance updates and destination keys', function ()
 
     $payloadWithoutOrder = fleetopsPayloadUnitPayload();
 
-    expect($payloadWithoutOrder->updateOrderDistanceAndTime())->toBeNull();
+    expect($payloadWithoutOrder->getOrder())->toBeNull()
+        ->and($payloadWithoutOrder->loadedRelations)->toContain('order')
+        ->and($payloadWithoutOrder->updateOrderDistanceAndTime())->toBeNull();
 });
