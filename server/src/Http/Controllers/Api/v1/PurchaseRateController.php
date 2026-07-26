@@ -196,9 +196,9 @@ class PurchaseRateController extends Controller
      */
     public function query(Request $request)
     {
-        $results = PurchaseRate::queryWithRequest($request);
+        $results = $this->queryPurchaseRates($request);
 
-        return PurchaseRateResource::collection($results);
+        return $this->purchaseRateResourceCollection($results);
     }
 
     /**
@@ -210,9 +210,9 @@ class PurchaseRateController extends Controller
     {
         // find for the purchaseRate
         try {
-            $purchaseRate = PurchaseRate::findRecordOrFail($id);
+            $purchaseRate = $this->findPurchaseRate($id);
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $exception) {
-            return response()->json(
+            return $this->jsonResponse(
                 [
                     'error' => 'PurchaseRate resource not found.',
                 ],
@@ -221,6 +221,31 @@ class PurchaseRateController extends Controller
         }
 
         // response the purchaseRate resource
+        return $this->purchaseRateResource($purchaseRate);
+    }
+
+    protected function queryPurchaseRates(Request $request)
+    {
+        return PurchaseRate::queryWithRequest($request);
+    }
+
+    protected function findPurchaseRate(string $id): PurchaseRate
+    {
+        return PurchaseRate::findRecordOrFail($id);
+    }
+
+    protected function purchaseRateResource(PurchaseRate $purchaseRate)
+    {
         return new PurchaseRateResource($purchaseRate);
+    }
+
+    protected function purchaseRateResourceCollection($results)
+    {
+        return PurchaseRateResource::collection($results);
+    }
+
+    protected function jsonResponse(array $payload, int $status)
+    {
+        return response()->json($payload, $status);
     }
 }
