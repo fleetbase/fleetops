@@ -357,18 +357,18 @@ class ServiceQuoteController extends FleetOpsController
     public function createStripeCheckoutSession(Request $request)
     {
         $redirectUri          = $request->input('uri');
-        $serviceQuote         = ServiceQuote::where('uuid', $request->input('service_quote'))->first();
+        $serviceQuote         = $this->findServiceQuoteForPurchase($request->input('service_quote'));
         if (!$serviceQuote) {
-            return response()->error('The service quote to purchase does not exist.');
+            return $this->errorResponse('The service quote to purchase does not exist.');
         }
 
         try {
-            $checkoutSession = $serviceQuote->createStripeCheckoutSession($redirectUri);
+            $checkoutSession = $this->createStripeCheckoutSessionForQuote($serviceQuote, $redirectUri);
         } catch (\Throwable $e) {
-            return response()->error($e->getMessage());
+            return $this->errorResponse($e->getMessage());
         }
 
-        return response()->json(['clientSecret' => $checkoutSession->client_secret]);
+        return $this->jsonResponse(['clientSecret' => $checkoutSession->client_secret]);
     }
 
     /**
@@ -384,37 +384,25 @@ class ServiceQuoteController extends FleetOpsController
      */
     public function getStripeCheckoutSessionStatus(Request $request)
     {
-        $serviceQuote         = ServiceQuote::where('uuid', $request->input('service_quote'))->first();
+        $serviceQuote         = $this->findServiceQuoteForPurchase($request->input('service_quote'));
         if (!$serviceQuote) {
-            return response()->error('The service quote to purchase does not exist.');
+            return $this->errorResponse('The service quote to purchase does not exist.');
         }
 
         // Flush cache for extension
-        if (method_exists($serviceQuote, 'flushCache')) {
-            $serviceQuote->flushCache();
-        }
+        $this->flushServiceQuoteCache($serviceQuote);
 
         // Check if already purchased
-        $purchaseRecordExists = PurchaseRate::where(['company_uuid' => session('company'), 'service_quote_uuid' => $serviceQuote->uuid])->exists();
+        $purchaseRecordExists = $this->purchaseRateExists($serviceQuote);
         if ($purchaseRecordExists) {
-            return response()->json($this->purchaseCompletePayload($serviceQuote));
+            return $this->jsonResponse($this->purchaseCompletePayload($serviceQuote));
         }
 
-        $stripe          = Payment::getStripeClient();
+        $stripe          = $this->stripeClient();
         try {
             $session = $stripe->checkout->sessions->retrieve($request->input('checkout_session_id'));
             if (isset($session->status) && $session->status === 'complete') {
-                $purchaseRate = PurchaseRate::firstOrCreate(
-                    [
-                        'company_uuid'       => session('company'),
-                        'service_quote_uuid' => $serviceQuote->uuid,
-                    ],
-                    [
-                        'company_uuid'       => session('company'),
-                        'service_quote_uuid' => $serviceQuote->uuid,
-                        'status'             => 'created',
-                    ]
-                );
+                $purchaseRate = $this->firstOrCreatePurchaseRate($serviceQuote);
 
                 // Set checkout data to meta
                 $purchaseRate->updateMetaProperties([
@@ -425,14 +413,64 @@ class ServiceQuoteController extends FleetOpsController
             }
 
             // Flush cache for extension
-            if (method_exists($serviceQuote, 'flushCache')) {
-                $serviceQuote->flushCache();
-            }
+            $this->flushServiceQuoteCache($serviceQuote);
 
-            return response()->json($this->checkoutStatusPayload($session->status, $serviceQuote, $purchaseRate));
+            return $this->jsonResponse($this->checkoutStatusPayload($session->status, $serviceQuote, $purchaseRate ?? null));
         } catch (\Error $e) {
-            return response()->error($e->getMessage());
+            return $this->errorResponse($e->getMessage());
         }
+    }
+
+    protected function findServiceQuoteForPurchase(?string $uuid): ?ServiceQuote
+    {
+        return ServiceQuote::where('uuid', $uuid)->first();
+    }
+
+    protected function createStripeCheckoutSessionForQuote(ServiceQuote $serviceQuote, string $redirectUri): mixed
+    {
+        return $serviceQuote->createStripeCheckoutSession($redirectUri);
+    }
+
+    protected function flushServiceQuoteCache(ServiceQuote $serviceQuote): void
+    {
+        if (method_exists($serviceQuote, 'flushCache')) {
+            $serviceQuote->flushCache();
+        }
+    }
+
+    protected function purchaseRateExists(ServiceQuote $serviceQuote): bool
+    {
+        return PurchaseRate::where(['company_uuid' => session('company'), 'service_quote_uuid' => $serviceQuote->uuid])->exists();
+    }
+
+    protected function firstOrCreatePurchaseRate(ServiceQuote $serviceQuote): PurchaseRate
+    {
+        return PurchaseRate::firstOrCreate(
+            [
+                'company_uuid'       => session('company'),
+                'service_quote_uuid' => $serviceQuote->uuid,
+            ],
+            [
+                'company_uuid'       => session('company'),
+                'service_quote_uuid' => $serviceQuote->uuid,
+                'status'             => 'created',
+            ]
+        );
+    }
+
+    protected function stripeClient(): mixed
+    {
+        return Payment::getStripeClient();
+    }
+
+    protected function jsonResponse(array $payload)
+    {
+        return response()->json($payload);
+    }
+
+    protected function errorResponse(string $message)
+    {
+        return response()->error($message);
     }
 
     protected function preliminaryInputFromRequest(Request $request): array
