@@ -1,8 +1,10 @@
 <?php
 
 use Fleetbase\FleetOps\Http\Controllers\Internal\v1\VehicleController;
+use Fleetbase\FleetOps\Models\Device;
 use Fleetbase\FleetOps\Models\Vehicle;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 
 class FleetOpsVehicleControllerProbe extends VehicleController
 {
@@ -30,6 +32,22 @@ class FleetOpsVehicleActiveOrderFake extends Vehicle
     public function lastKnownPosition()
     {
         return $this->lastPosition;
+    }
+}
+
+class FleetOpsVehicleLoggerFake
+{
+    public array $warnings = [];
+    public array $errors   = [];
+
+    public function warning(string $message, array $context = []): void
+    {
+        $this->warnings[] = [$message, $context];
+    }
+
+    public function error(string $message, array $context = []): void
+    {
+        $this->errors[] = [$message, $context];
     }
 }
 
@@ -97,4 +115,58 @@ test('vehicle controller active order falls back to last known position', functi
     $vehicle->lastPosition = ['order_uuid' => 'position-order-uuid'];
 
     expect($controller->callHelper('activeOrderUuid', $vehicle))->toBe('position-order-uuid');
+});
+
+test('vehicle controller records device attachment lookup and exception context', function () {
+    session(['company' => 'company-uuid']);
+    app()->instance('request', Request::create('/vehicles/vehicle-public/devices', 'POST', [], [], [], [
+        'HTTP_X_REQUEST_ID' => 'request-123',
+    ]));
+    $logger = new FleetOpsVehicleLoggerFake();
+    app()->instance('log', $logger);
+    Log::clearResolvedInstance('log');
+
+    $controller = new FleetOpsVehicleControllerProbe();
+    $vehicle    = new Vehicle();
+    $vehicle->setRawAttributes([
+        'uuid'      => 'vehicle-uuid',
+        'public_id' => 'vehicle-public',
+    ], true);
+    $device = new Device();
+    $device->setRawAttributes([
+        'uuid'      => 'device-uuid',
+        'public_id' => 'device-public',
+    ], true);
+
+    $controller->callHelper('logDeviceAttachmentLookupFailure', 'attach-device', 'device', 'vehicle-public', 'device-public');
+    $controller->callHelper('logDeviceAttachmentFailure', 'detach-device', $vehicle, $device, new RuntimeException('attach failed'));
+
+    expect($logger->warnings)->toBe([
+        [
+            'Vehicle device attachment lookup failed',
+            [
+                'action'           => 'attach-device',
+                'missing_resource' => 'device',
+                'vehicle_id'       => 'vehicle-public',
+                'device_id'        => 'device-public',
+                'company_uuid'     => 'company-uuid',
+                'request_id'       => 'request-123',
+            ],
+        ],
+    ])->and($logger->errors)->toBe([
+        [
+            'Vehicle device attachment failed',
+            [
+                'action'          => 'detach-device',
+                'vehicle_uuid'    => 'vehicle-uuid',
+                'vehicle_id'      => 'vehicle-public',
+                'device_uuid'     => 'device-uuid',
+                'device_id'       => 'device-public',
+                'company_uuid'    => 'company-uuid',
+                'request_id'      => 'request-123',
+                'exception_class' => RuntimeException::class,
+                'exception'       => 'attach failed',
+            ],
+        ],
+    ]);
 });
