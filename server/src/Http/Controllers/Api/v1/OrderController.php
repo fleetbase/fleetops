@@ -64,7 +64,7 @@ class OrderController extends Controller
         // Get order config
         $orderConfig = $this->resolveOrderConfig($request->only(['type', 'order_config']));
         if (!$orderConfig) {
-            return response()->apiError('Invalid order `type` or `order_config` provided.');
+            return $this->apiError('Invalid order `type` or `order_config` provided.');
         }
 
         // Set order config to input
@@ -72,7 +72,7 @@ class OrderController extends Controller
         $input['type']              = $orderConfig->key;
 
         // make sure company is set
-        $input['company_uuid'] = session('company');
+        $input['company_uuid'] = $this->sessionCompany();
 
         // resolve service quote if applicable
         $serviceQuote          = $this->resolveServiceQuote($request);
@@ -129,9 +129,9 @@ class OrderController extends Controller
 
             $input['payload_uuid'] = $payload->uuid;
         } elseif ($request->isString('payload')) {
-            $input['payload_uuid'] = Utils::getUuid('payloads', [
+            $input['payload_uuid'] = $this->getUuid('payloads', [
                 'public_id'    => $request->input('payload'),
-                'company_uuid' => session('company'),
+                'company_uuid' => $this->sessionCompany(),
             ]);
             unset($input['payload']);
         }
@@ -192,19 +192,19 @@ class OrderController extends Controller
 
         // driver assignment
         if ($request->has('vehicle') && $integratedVendorOrder === null) {
-            $input['vehicle_assigned_uuid'] = Utils::getUuid('vehicles', [
+            $input['vehicle_assigned_uuid'] = $this->getUuid('vehicles', [
                 'public_id'    => $request->input('vehicle'),
-                'company_uuid' => session('company'),
+                'company_uuid' => $this->sessionCompany(),
             ]);
         }
 
         // facilitator assignment
         if ($request->has('facilitator') && $integratedVendorOrder === null) {
-            $facilitator = Utils::getUuid(
+            $facilitator = $this->getUuid(
                 ['contacts', 'vendors', 'integrated_vendors'],
                 [
                     'public_id'    => $request->input('facilitator'),
-                    'company_uuid' => session('company'),
+                    'company_uuid' => $this->sessionCompany(),
                 ],
                 [
                     'with_table' => true,
@@ -213,11 +213,11 @@ class OrderController extends Controller
 
             if (is_array($facilitator)) {
                 $input['facilitator_uuid'] = Utils::get($facilitator, 'uuid');
-                $input['facilitator_type'] = Utils::getModelClassName(Utils::get($facilitator, 'table'));
+                $input['facilitator_type'] = $this->getModelClassName(Utils::get($facilitator, 'table'));
             }
         } elseif ($integratedVendorOrder) {
             $input['facilitator_uuid'] = $serviceQuote->integratedVendor->uuid;
-            $input['facilitator_type'] = Utils::getModelClassName('integrated_vendors');
+            $input['facilitator_type'] = $this->getModelClassName('integrated_vendors');
         }
 
         // customer assignment
@@ -225,11 +225,11 @@ class OrderController extends Controller
             $customer = $request->input('customer');
 
             if (is_string($customer)) {
-                $customer = Utils::getUuid(
+                $customer = $this->getUuid(
                     ['contacts', 'vendors'],
                     [
                         'public_id'    => $customer,
-                        'company_uuid' => session('company'),
+                        'company_uuid' => $this->sessionCompany(),
                     ],
                     [
                         'with_table' => true,
@@ -238,29 +238,29 @@ class OrderController extends Controller
 
                 if (is_array($customer)) {
                     $input['customer_uuid'] = Utils::get($customer, 'uuid');
-                    $input['customer_type'] = Utils::getModelClassName(Utils::get($customer, 'table'));
+                    $input['customer_type'] = $this->getModelClassName(Utils::get($customer, 'table'));
                 }
             } elseif (is_array($customer)) {
                 // create customer from input
                 $customer = Arr::only($customer, ['internal_id', 'name', 'title', 'email', 'phone', 'meta']);
 
                 try {
-                    $customerCandidate = new Contact([
+                    $customerCandidate = $this->newCustomerContact([
                         ...$customer,
-                        'company_uuid' => session('company'),
+                        'company_uuid' => $this->sessionCompany(),
                         'type'         => 'customer',
                     ]);
                     $customerCandidate->assertCustomerIdentityIsAvailable();
 
-                    $customer = Contact::firstOrCreate(
+                    $customer = $this->firstOrCreateCustomerContact(
                         [
-                            'company_uuid' => session('company'),
+                            'company_uuid' => $this->sessionCompany(),
                             'email'        => $customer['email'],
                             'type'         => 'customer',
                         ],
                         [
                             ...$customer,
-                            'company_uuid' => session('company'),
+                            'company_uuid' => $this->sessionCompany(),
                             'type'         => 'customer',
                         ]
                     );
@@ -278,7 +278,7 @@ class OrderController extends Controller
 
                 if ($customer instanceof Contact) {
                     $input['customer_uuid'] = $customer->uuid;
-                    $input['customer_type'] = Utils::getModelClassName($customer);
+                    $input['customer_type'] = $this->getModelClassName($customer);
                 }
             }
         }
@@ -412,9 +412,9 @@ class OrderController extends Controller
 
             $input['payload_uuid'] = $payload->uuid;
         } elseif ($request->has('payload')) {
-            $input['payload_uuid'] = Utils::getUuid('payloads', [
+            $input['payload_uuid'] = $this->getUuid('payloads', [
                 'public_id'    => $request->input('payload'),
-                'company_uuid' => session('company'),
+                'company_uuid' => $this->sessionCompany(),
             ]);
             unset($input['payload']);
         }
@@ -473,27 +473,27 @@ class OrderController extends Controller
 
         // driver assignment
         if ($request->has('driver')) {
-            $input['driver_assigned_uuid'] = Utils::getUuid('drivers', [
+            $input['driver_assigned_uuid'] = $this->getUuid('drivers', [
                 'public_id'    => $request->input('driver'),
-                'company_uuid' => session('company'),
+                'company_uuid' => $this->sessionCompany(),
             ]);
         }
 
         // vehicle assignment
         if ($request->has('vehicle')) {
-            $input['vehicle_assigned_uuid'] = Utils::getUuid('vehicles', [
+            $input['vehicle_assigned_uuid'] = $this->getUuid('vehicles', [
                 'public_id'    => $request->input('vehicle'),
-                'company_uuid' => session('company'),
+                'company_uuid' => $this->sessionCompany(),
             ]);
         }
 
         // facilitator assignment
         if ($request->has('facilitator')) {
-            $facilitator = Utils::getUuid(
+            $facilitator = $this->getUuid(
                 ['contacts', 'vendors'],
                 [
                     'public_id'    => $request->input('facilitator'),
-                    'company_uuid' => session('company'),
+                    'company_uuid' => $this->sessionCompany(),
                 ],
                 [
                     'with_table' => true,
@@ -502,17 +502,17 @@ class OrderController extends Controller
 
             if (is_array($facilitator)) {
                 $input['facilitator_uuid'] = Utils::get($facilitator, 'uuid');
-                $input['facilitator_type'] = Utils::getModelClassName(Utils::get($facilitator, 'table'));
+                $input['facilitator_type'] = $this->getModelClassName(Utils::get($facilitator, 'table'));
             }
         }
 
         // customer assignment
         if ($request->has('customer')) {
-            $customer = Utils::getUuid(
+            $customer = $this->getUuid(
                 ['contacts', 'vendors'],
                 [
                     'public_id'    => $request->input('customer'),
-                    'company_uuid' => session('company'),
+                    'company_uuid' => $this->sessionCompany(),
                 ],
                 [
                     'with_table' => true,
@@ -521,7 +521,7 @@ class OrderController extends Controller
 
             if (is_array($customer)) {
                 $input['customer_uuid'] = Utils::get($customer, 'uuid');
-                $input['customer_type'] = Utils::getModelClassName(Utils::get($customer, 'table'));
+                $input['customer_type'] = $this->getModelClassName(Utils::get($customer, 'table'));
             }
         }
 
@@ -1872,6 +1872,31 @@ class OrderController extends Controller
     protected function findPayloadByUuid(?string $uuid): ?Payload
     {
         return Payload::where('uuid', $uuid)->withoutGlobalScopes()->with(['waypoints', 'waypointMarkers', 'entities'])->first();
+    }
+
+    protected function sessionCompany(): ?string
+    {
+        return session('company');
+    }
+
+    protected function getUuid(array|string $table, array $where, array $options = []): mixed
+    {
+        return Utils::getUuid($table, $where, $options);
+    }
+
+    protected function getModelClassName(mixed $tableOrModel): ?string
+    {
+        return Utils::getModelClassName($tableOrModel);
+    }
+
+    protected function newCustomerContact(array $attributes): Contact
+    {
+        return new Contact($attributes);
+    }
+
+    protected function firstOrCreateCustomerContact(array $attributes, array $values): Contact
+    {
+        return Contact::firstOrCreate($attributes, $values);
     }
 
     protected function defaultCompanyTimezone(): string
