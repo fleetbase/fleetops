@@ -41,18 +41,19 @@ class IntegratedVendorController extends FleetOpsController
         $ids = $request->input('ids', []);
 
         if (!$ids) {
-            return response()->error('Nothing to delete.');
+            return $this->errorResponse('Nothing to delete.');
         }
 
         /** @var \Fleetbase\Models\IntegratedVendor */
-        $count   = IntegratedVendor::whereIn('uuid', $ids)->count();
-        $deleted = IntegratedVendor::whereIn('uuid', $ids)->delete();
+        $query   = $this->integratedVendorQuery($ids);
+        $count   = $query->count();
+        $deleted = $query->delete();
 
         if (!$deleted) {
-            return response()->error('Failed to bulk delete vendors.');
+            return $this->errorResponse('Failed to bulk delete vendors.');
         }
 
-        return response()->json(
+        return $this->jsonResponse(
             [
                 'status'  => 'OK',
                 'message' => 'Deleted ' . $count . ' integrated vendors',
@@ -64,5 +65,20 @@ class IntegratedVendorController extends FleetOpsController
     protected function supportedIntegratedVendors()
     {
         return IntegratedVendors::all();
+    }
+
+    protected function integratedVendorQuery(array $ids)
+    {
+        return IntegratedVendor::whereIn('uuid', $ids);
+    }
+
+    protected function jsonResponse(array $payload, int $status = 200)
+    {
+        return response()->json($payload, $status);
+    }
+
+    protected function errorResponse(string $message)
+    {
+        return response()->error($message);
     }
 }

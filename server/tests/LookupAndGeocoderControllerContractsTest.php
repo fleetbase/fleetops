@@ -8,6 +8,10 @@ if (!function_exists('Fleetbase\Models\config')) {
     eval('namespace Fleetbase\Models; function config($key = null, $default = null) { return $key === "fleetbase.connection.db" ? "mysql" : $default; }');
 }
 
+if (!class_exists('Fleetbase\Http\Requests\Internal\BulkDeleteRequest', false)) {
+    eval('namespace Fleetbase\Http\Requests\Internal; class BulkDeleteRequest extends \Illuminate\Http\Request {}');
+}
+
 use Fleetbase\FleetOps\Http\Controllers\Internal\v1\FleetOpsLookupController;
 use Fleetbase\FleetOps\Http\Controllers\Internal\v1\GeocoderController;
 use Fleetbase\FleetOps\Http\Controllers\Internal\v1\IntegratedVendorController;
@@ -109,7 +113,9 @@ class FleetOpsIntegratedVendorControllerProbe extends IntegratedVendorController
 {
     public Collection $supported;
     public FleetOpsIntegratedVendorQueryFake $query;
-    public array $queryIds = [];
+    public array $queryIds      = [];
+    public array $errors        = [];
+    public array $jsonResponses = [];
 
     public function __construct()
     {
@@ -127,6 +133,20 @@ class FleetOpsIntegratedVendorControllerProbe extends IntegratedVendorController
         $this->queryIds[] = $ids;
 
         return $this->query;
+    }
+
+    protected function jsonResponse(array $payload, int $status = 200)
+    {
+        $this->jsonResponses[] = [$payload, $status];
+
+        return ['json' => $payload, 'status' => $status];
+    }
+
+    protected function errorResponse(string $message)
+    {
+        $this->errors[] = $message;
+
+        return ['error' => $message];
     }
 }
 
@@ -297,4 +317,40 @@ test('integrated vendor controller returns supported vendors', function () {
 
     expect($supported->getData(true))->toBe([['key' => 'lalamove', 'name' => 'Lalamove']])
         ->and($controller->queryIds)->toBe([]);
+});
+
+test('integrated vendor controller bulk deletes selected vendors', function () {
+    $controller                 = new FleetOpsIntegratedVendorControllerProbe();
+    $controller->query->count   = 2;
+    $controller->query->deleted = 2;
+
+    $response = $controller->bulkDelete(new Fleetbase\Http\Requests\Internal\BulkDeleteRequest([
+        'ids' => ['vendor-a', 'vendor-b'],
+    ]));
+
+    expect($response)->toBe([
+        'json' => [
+            'status'  => 'OK',
+            'message' => 'Deleted 2 integrated vendors',
+        ],
+        'status' => 200,
+    ])->and($controller->queryIds)->toBe([['vendor-a', 'vendor-b']])
+        ->and($controller->errors)->toBe([]);
+});
+
+test('integrated vendor controller reports empty or failed bulk deletes', function () {
+    $empty = new FleetOpsIntegratedVendorControllerProbe();
+
+    expect($empty->bulkDelete(new Fleetbase\Http\Requests\Internal\BulkDeleteRequest()))->toBe([
+        'error' => 'Nothing to delete.',
+    ])->and($empty->queryIds)->toBe([]);
+
+    $failed               = new FleetOpsIntegratedVendorControllerProbe();
+    $failed->query->count = 2;
+
+    expect($failed->bulkDelete(new Fleetbase\Http\Requests\Internal\BulkDeleteRequest([
+        'ids' => ['vendor-a', 'vendor-b'],
+    ])))->toBe([
+        'error' => 'Failed to bulk delete vendors.',
+    ])->and($failed->queryIds)->toBe([['vendor-a', 'vendor-b']]);
 });
