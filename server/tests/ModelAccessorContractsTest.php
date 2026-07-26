@@ -21,6 +21,7 @@ if (!function_exists('Fleetbase\FleetOps\Models\activity')) {
 }
 
 use Fleetbase\FleetOps\Exceptions\CustomerUserConflictException;
+use Fleetbase\FleetOps\Flow\Activity;
 use Fleetbase\FleetOps\Models\Contact;
 use Fleetbase\FleetOps\Models\Device;
 use Fleetbase\FleetOps\Models\Driver;
@@ -34,6 +35,7 @@ use Fleetbase\FleetOps\Models\Maintenance;
 use Fleetbase\FleetOps\Models\Manifest;
 use Fleetbase\FleetOps\Models\ManifestStop;
 use Fleetbase\FleetOps\Models\Order;
+use Fleetbase\FleetOps\Models\OrderConfig;
 use Fleetbase\FleetOps\Models\Payload;
 use Fleetbase\FleetOps\Models\Place;
 use Fleetbase\FleetOps\Models\Position;
@@ -463,6 +465,103 @@ class FleetOpsSavingOrderFake extends Order
         $this->setRawAttributes(array_merge($this->getAttributes(), $attributes), true);
 
         return true;
+    }
+}
+
+class FleetOpsActivityOrderConfigFake extends OrderConfig
+{
+    public ?Activity $next = null;
+    public array $flow     = [];
+
+    public function setOrderContext(Order $order): self
+    {
+        return $this;
+    }
+
+    public function activities(): Collection
+    {
+        return collect($this->flow);
+    }
+
+    public function nextActivity(Order|Waypoint|null $context = null): Collection
+    {
+        return $this->next ? collect([$this->next]) : collect();
+    }
+}
+
+class FleetOpsActivityOrderFake extends FleetOpsSavingOrderFake
+{
+    public ?FleetOpsActivityOrderConfigFake $fakeConfig = null;
+    public array $insertedActivities                    = [];
+    public array $statuses                              = [];
+    public int $dispatches                              = 0;
+
+    public function config(): ?OrderConfig
+    {
+        return $this->fakeConfig;
+    }
+
+    public function insertActivity(Activity $activity, $location = [], $proof = null): string
+    {
+        $this->insertedActivities[] = [$activity->code, $location, $proof];
+
+        return 'tracking-status-public';
+    }
+
+    public function setStatus(?string $status, $andSave = true)
+    {
+        $this->statuses[] = [$status, $andSave];
+        $this->status     = $status;
+
+        return $this;
+    }
+
+    public function dispatch(bool $save = true): self
+    {
+        $this->dispatches++;
+        $this->dispatched = true;
+
+        return $this;
+    }
+}
+
+class FleetOpsOrderPayloadPositionFake extends Payload
+{
+    public array $pickupAssignments = [];
+    public ?Place $origin           = null;
+    public ?Place $destination      = null;
+    public bool $pickupFromDriver   = false;
+
+    public function hasMeta($keys): bool
+    {
+        return $keys === 'pickup_is_driver_location' && $this->pickupFromDriver;
+    }
+
+    public function load($relations)
+    {
+        return $this;
+    }
+
+    public function loadMissing($relations)
+    {
+        return $this;
+    }
+
+    public function setPickup($location = null, $options = [])
+    {
+        $this->pickupAssignments[] = [$location, $options];
+
+        return $this;
+    }
+
+    public function getPickupOrCurrentWaypoint(): ?Place
+    {
+        return $this->origin;
+    }
+
+    public function getDropoffOrLastWaypoint(): ?Place
+    {
+        return $this->destination;
     }
 }
 
@@ -2534,6 +2633,118 @@ test('order helper accessors expose cache integrated vendor and dispatch branch 
         ->and($order->authenticatableCustomer()->getForeignKeyName())->toBe('customer_uuid')
         ->and($order->comments()->getForeignKeyName())->toBe('subject_uuid')
         ->and($order->proofs()->getForeignKeyName())->toBe('subject_uuid');
+});
+
+test('order assignment payload position and activity branches remain stable without persistence', function () {
+    Carbon::setTestNow(Carbon::parse('2026-02-03 12:00:00'));
+
+    $driver = new Driver();
+    $driver->setRawAttributes([
+        'uuid'      => 'driver-uuid',
+        'public_id' => 'driver_public',
+    ], true);
+    $driver->location = new Point(12.34, 56.78);
+
+    $payload                        = new FleetOpsOrderPayloadPositionFake();
+    $payload->pickupFromDriver      = true;
+    $payload->origin                = new FleetOpsPlainPlaceFake();
+    $payload->origin->location      = new Point(1.23, 4.56);
+    $payload->destination           = new FleetOpsPlainPlaceFake();
+    $payload->destination->location = new Point(7.89, 0.12);
+
+    $order = new FleetOpsActivityOrderFake([
+        'uuid'                 => 'order-uuid',
+        'driver_assigned_uuid' => 'driver-uuid',
+        'dispatched'           => false,
+    ]);
+    $order->setRelation('driverAssigned', $driver);
+    $order->setRelation('payload', $payload);
+
+    expect($order->assignDriver($driver, true))->toBe($order)
+        ->and($order->saved)->toBeFalse();
+
+    $replacement = new Driver();
+    $replacement->setRawAttributes(['uuid' => 'driver-two'], true);
+    $replacement->location = new Point(9.87, 6.54);
+
+    expect($order->assignDriver($replacement, true))->toBe($order)
+        ->and($order->driver_assigned_uuid)->toBe('driver-two')
+        ->and($order->driverAssigned)->toBe($replacement)
+        ->and($order->saved)->toBeTrue();
+
+    $uuidOrder = new FleetOpsActivityOrderFake();
+    expect($uuidOrder->assignDriver('driver-uuid-string', true))->toBe($uuidOrder)
+        ->and($uuidOrder->driver_assigned_uuid)->toBe('driver-uuid-string')
+        ->and($uuidOrder->saved)->toBeTrue();
+
+    $order->setDriverLocationAsPickup(true);
+    $order->syncOriginalAttribute('driver_assigned_uuid');
+    $order->driver_assigned_uuid = 'driver-three';
+    $order->setRelation('driverAssigned', $replacement);
+    $order->setDriverLocationAsPickup();
+
+    expect($payload->pickupAssignments)->toHaveCount(3)
+        ->and($payload->pickupAssignments[0])->toBe([$replacement->location, ['save' => true]])
+        ->and($payload->pickupAssignments[1])->toBe([$replacement->location, ['save' => true]])
+        ->and($payload->pickupAssignments[2])->toBe([$replacement->location, ['save' => true]])
+        ->and($order->isPickupIsFromDriverLocation())->toBeTrue()
+        ->and($order->getCurrentOriginPosition())->toBe($replacement->location)
+        ->and($order->getDestinationPosition())->toBe($payload->destination->location);
+
+    $noDriverOrder = new FleetOpsActivityOrderFake(['driver_assigned_uuid' => null]);
+    $noDriverOrder->setRelation('payload', $payload);
+
+    expect($noDriverOrder->getCurrentOriginPosition())->toBe($payload->origin->location)
+        ->and($noDriverOrder->getDestinationPosition())->toBe($payload->destination->location);
+
+    $activity = new Activity(['code' => 'arrived', 'events' => []]);
+
+    expect($order->updateActivity(null))->toBe($order)
+        ->and($order->insertedActivities)->toBe([]);
+
+    expect($order->updateActivity($activity, 'proof-public'))->toBe($order)
+        ->and($order->insertedActivities[0][0])->toBe('arrived')
+        ->and($order->insertedActivities[0][2])->toBe('proof-public')
+        ->and($order->statuses[0])->toBe(['arrived', true]);
+
+    Carbon::setTestNow();
+});
+
+test('order status updates use configured activities and dispatch readiness branches', function () {
+    $config       = new FleetOpsActivityOrderConfigFake();
+    $created      = new Activity(['code' => 'created', 'events' => []]);
+    $dispatched   = new Activity(['code' => 'dispatched', 'events' => []]);
+    $config->flow = [$created, $dispatched];
+    $config->next = $created;
+
+    $order             = new FleetOpsActivityOrderFake(['adhoc' => true]);
+    $order->fakeConfig = $config;
+    $payload           = new FleetOpsLoadedPayloadFake();
+    $payload->setRelation('pickup', null);
+    $payload->setRelation('waypoints', collect());
+    $order->setRelation('payload', $payload);
+    $order->setRelation('driverAssigned', null);
+
+    expect($order->updateStatus())->toBeFalse()
+        ->and($order->updateStatus('dispatched'))->toBeTrue()
+        ->and($order->dispatches)->toBe(1)
+        ->and($order->statuses[0])->toBe(['dispatched', true])
+        ->and($order->insertedActivities[0][0])->toBe('dispatched')
+        ->and($order->updateStatus(['created', 'missing']))->toBeFalse();
+
+    $singleConfig       = new FleetOpsActivityOrderConfigFake();
+    $singleConfig->flow = [$created];
+
+    $singleFlowOrder             = new FleetOpsActivityOrderFake();
+    $singleFlowOrder->fakeConfig = $singleConfig;
+    $singlePayload               = new FleetOpsLoadedPayloadFake();
+    $singlePayload->setRelation('pickup', null);
+    $singlePayload->setRelation('waypoints', collect());
+    $singleFlowOrder->setRelation('payload', $singlePayload);
+    $singleFlowOrder->setRelation('driverAssigned', null);
+
+    expect($singleFlowOrder->updateStatus())->toBeTrue()
+        ->and($singleFlowOrder->statuses[0])->toBe(['created', true]);
 });
 
 test('payload and place pure accessors normalize fallback data', function () {
