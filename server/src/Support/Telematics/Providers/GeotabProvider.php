@@ -34,14 +34,14 @@ class GeotabProvider extends AbstractProvider
      */
     protected function authenticate(): void
     {
-        $response = Http::post($this->baseUrl, [
+        $response = $this->postGeotab([
             'method' => 'Authenticate',
             'params' => [
                 'database' => $this->credentials['database'],
                 'userName' => $this->credentials['username'],
                 'password' => $this->credentials['password'],
             ],
-        ])->json();
+        ]);
 
         if (isset($response['result']['credentials']['sessionId'])) {
             $this->sessionId = $response['result']['credentials']['sessionId'];
@@ -223,10 +223,15 @@ class GeotabProvider extends AbstractProvider
             'sessionId' => $this->sessionId,
         ];
 
-        return Http::post($this->baseUrl, [
+        return $this->postGeotab([
             'method' => $method,
             'params' => $params,
-        ])->json() ?? [];
+        ]) ?? [];
+    }
+
+    protected function postGeotab(array $payload): ?array
+    {
+        return Http::post($this->baseUrl, $payload)->json();
     }
 
     protected function fetchLatestLogRecords(array $devices, array $options = []): array
