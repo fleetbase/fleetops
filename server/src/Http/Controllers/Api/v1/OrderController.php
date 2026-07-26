@@ -806,9 +806,9 @@ class OrderController extends Controller
     {
         // find for the order
         try {
-            $order = Order::findRecordOrFail($id, ['trackingNumber', 'trackingStatuses', 'driverAssigned', 'vehicleAssigned', 'purchaseRate.serviceQuote.items', 'customer', 'facilitator']);
+            $order = $this->findOrder($id, ['trackingNumber', 'trackingStatuses', 'driverAssigned', 'vehicleAssigned', 'purchaseRate.serviceQuote.items', 'customer', 'facilitator']);
         } catch (ModelNotFoundException $exception) {
-            return response()->json(
+            return $this->jsonResponse(
                 [
                     'error' => 'Order resource not found.',
                 ],
@@ -817,7 +817,7 @@ class OrderController extends Controller
         }
 
         // response the order resource
-        return new OrderResource($order);
+        return $this->orderResource($order);
     }
 
     /**
@@ -829,9 +829,9 @@ class OrderController extends Controller
     {
         // find for the driver
         try {
-            $order = Order::findRecordOrFail($id);
+            $order = $this->findOrder($id);
         } catch (ModelNotFoundException $exception) {
-            return response()->json(
+            return $this->jsonResponse(
                 [
                     'error' => 'Order resource not found.',
                 ],
@@ -843,7 +843,7 @@ class OrderController extends Controller
         $order->delete();
 
         // response the order resource
-        return new DeletedResource($order);
+        return $this->deletedOrderResource($order);
     }
 
     /**
@@ -855,9 +855,9 @@ class OrderController extends Controller
     {
         // find the order
         try {
-            $order = Order::findRecordOrFail($id);
+            $order = $this->findOrder($id);
         } catch (ModelNotFoundException $exception) {
-            return response()->json(
+            return $this->jsonResponse(
                 [
                     'error' => 'Order resource not found.',
                 ],
@@ -870,12 +870,12 @@ class OrderController extends Controller
         $origin      = $order->payload->pickup ?? $order->payload->waypoints->first();
         $destination = $order->payload->dropoff ?? $order->payload->waypoints->firstWhere('current_waypoint_uuid', $order->current_waypoint_uuid);
 
-        $matrix = Utils::getDrivingDistanceAndTime($origin, $destination);
+        $matrix = $this->drivingDistanceAndTime($origin, $destination);
 
         $order->update(['distance' => $matrix->distance, 'time' => $matrix->time]);
 
         // response distance and time matrix
-        return response()->json($matrix);
+        return $this->jsonResponse($matrix);
     }
 
     /**
@@ -886,9 +886,9 @@ class OrderController extends Controller
     public function dispatchOrder(string $id)
     {
         try {
-            $order = Order::findRecordOrFail($id, ['trackingNumber', 'trackingStatuses', 'driverAssigned', 'vehicleAssigned', 'purchaseRate.serviceQuote.items', 'customer', 'facilitator']);
+            $order = $this->findOrder($id, ['trackingNumber', 'trackingStatuses', 'driverAssigned', 'vehicleAssigned', 'purchaseRate.serviceQuote.items', 'customer', 'facilitator']);
         } catch (ModelNotFoundException $exception) {
-            return response()->json(
+            return $this->jsonResponse(
                 [
                     'error' => 'Order resource not found.',
                 ],
@@ -897,17 +897,17 @@ class OrderController extends Controller
         }
 
         if (!$order->hasDriverAssigned && !$order->adhoc) {
-            return response()->apiError('No driver assigned to dispatch!');
+            return $this->apiError('No driver assigned to dispatch!');
         }
 
         if ($order->dispatched) {
-            return response()->apiError('Order has already been dispatched!');
+            return $this->apiError('Order has already been dispatched!');
         }
 
         $order->dispatch();
         $order->insertDispatchActivity();
 
-        return new OrderResource($order);
+        return $this->orderResource($order);
     }
 
     /**
@@ -928,9 +928,9 @@ class OrderController extends Controller
         $timezoneInput = $request->input('timezone', $defaultTz);
 
         try {
-            $order = Order::findRecordOrFail($id);
+            $order = $this->findOrder($id);
         } catch (ModelNotFoundException $exception) {
-            return response()->json(
+            return $this->jsonResponse(
                 [
                     'error' => 'Order resource not found.',
                 ],
@@ -953,7 +953,7 @@ class OrderController extends Controller
         $order->scheduled_at = $date;
         $order->save();
 
-        return new OrderResource($order);
+        return $this->orderResource($order);
     }
 
     /**
@@ -1249,9 +1249,9 @@ class OrderController extends Controller
     public function completeOrder(string $id)
     {
         try {
-            $order = Order::findRecordOrFail($id);
+            $order = $this->findOrder($id);
         } catch (ModelNotFoundException $exception) {
-            return response()->json(
+            return $this->jsonResponse(
                 [
                     'error' => 'Order resource not found.',
                 ],
@@ -1281,7 +1281,7 @@ class OrderController extends Controller
         $order->insertActivity($activity, $location);
         $order->notifyCompleted();
 
-        return new OrderResource($order);
+        return $this->orderResource($order);
     }
 
     /**
@@ -1292,9 +1292,9 @@ class OrderController extends Controller
     public function cancelOrder(string $id)
     {
         try {
-            $order = Order::findRecordOrFail($id);
+            $order = $this->findOrder($id);
         } catch (ModelNotFoundException $exception) {
-            return response()->json(
+            return $this->jsonResponse(
                 [
                     'error' => 'Order resource not found.',
                 ],
@@ -1304,7 +1304,7 @@ class OrderController extends Controller
 
         $order->cancel();
 
-        return new OrderResource($order);
+        return $this->orderResource($order);
     }
 
     /**
@@ -1354,14 +1354,14 @@ class OrderController extends Controller
     public function optimize(string $id)
     {
         try {
-            $order = Order::findRecordOrFail($id);
+            $order = $this->findOrder($id);
         } catch (ModelNotFoundException $e) {
-            return response()->apiError('Order resource not found.', 404);
+            return $this->apiError('Order resource not found.', 404);
         }
 
         // do this code
 
-        return new OrderResource($order);
+        return $this->orderResource($order);
     }
 
     /**
@@ -1374,17 +1374,17 @@ class OrderController extends Controller
         set_time_limit(280);
 
         try {
-            $order = Order::findRecordOrFail($id);
+            $order = $this->findOrder($id);
             $data  = $order->tracker()->toArray($request->only(['provider', 'fallbacks', 'traffic_enabled']));
 
-            return response()->json($data);
+            return $this->jsonResponse($data);
         } catch (ModelNotFoundException $e) {
-            return response()->apiError('Order resource not found.', 404);
+            return $this->apiError('Order resource not found.', 404);
         } catch (\Throwable $e) {
-            return response()->apiError('An error occured trying to track order.', 404);
+            return $this->apiError('An error occured trying to track order.', 404);
         }
 
-        return response()->apiError('An error occured trying to track order.', 404);
+        return $this->apiError('An error occured trying to track order.', 404);
     }
 
     /**
@@ -1395,17 +1395,17 @@ class OrderController extends Controller
     public function etaData(Request $request, string $id)
     {
         try {
-            $order = Order::findRecordOrFail($id);
+            $order = $this->findOrder($id);
             $data  = $order->tracker()->eta($request->only(['provider', 'fallbacks', 'traffic_enabled']));
 
-            return response()->json($data);
+            return $this->jsonResponse($data);
         } catch (ModelNotFoundException $e) {
-            return response()->apiError('Order resource not found.', 404);
+            return $this->apiError('Order resource not found.', 404);
         } catch (\Throwable $e) {
-            return response()->apiError('An error occured trying to track order.', 404);
+            return $this->apiError('An error occured trying to track order.', 404);
         }
 
-        return response()->apiError('An error occured trying to track order.', 404);
+        return $this->apiError('An error occured trying to track order.', 404);
     }
 
     /**
@@ -1421,26 +1421,26 @@ class OrderController extends Controller
         $type    = $subjectId ? strtok($subjectId, '_') : null;
 
         if (!$code) {
-            return response()->apiError('No QR code data to capture.');
+            return $this->apiError('No QR code data to capture.');
         }
 
         // Load Order
         try {
-            $order = Order::findRecordOrFail($id, ['payload.pickup', 'payload.dropoff', 'payload.return', 'payload.waypoints', 'payload.waypointMarkers.place']);
+            $order = $this->findOrder($id, ['payload.pickup', 'payload.dropoff', 'payload.return', 'payload.waypoints', 'payload.waypointMarkers.place']);
         } catch (ModelNotFoundException $e) {
-            return response()->apiError('Order resource not found.', 404);
+            return $this->apiError('Order resource not found.', 404);
         }
 
         // Resolve subject
         $subject = $this->resolveSubject($order, $type, $subjectId);
         if (!$subject) {
-            return response()->apiError('Unable to capture QR code data.');
+            return $this->apiError('Unable to capture QR code data.');
         }
 
         // validate
         if ($subject && $code === $subject->uuid) {
             // create verification proof
-            $proof = Proof::create([
+            $proof = $this->createProof([
                 'company_uuid' => session('company'),
                 'order_uuid'   => $order->uuid,
                 'subject_uuid' => $subject->uuid,
@@ -1450,10 +1450,10 @@ class OrderController extends Controller
                 'data'         => $data,
             ]);
 
-            return new ProofResource($proof);
+            return $this->proofResource($proof);
         }
 
-        return response()->apiError('Unable to validate QR code data.');
+        return $this->apiError('Unable to validate QR code data.');
     }
 
     /**
@@ -1849,5 +1849,45 @@ class OrderController extends Controller
         }
 
         return response()->apiError('An error occured trying to get order comments.', 404);
+    }
+
+    protected function findOrder(string $id, array $with = [], array $withCount = []): Order
+    {
+        return Order::findRecordOrFail($id, $with, $withCount);
+    }
+
+    protected function drivingDistanceAndTime(mixed $origin, mixed $destination): mixed
+    {
+        return Utils::getDrivingDistanceAndTime($origin, $destination);
+    }
+
+    protected function createProof(array $input): Proof
+    {
+        return Proof::create($input);
+    }
+
+    protected function orderResource(Order $order)
+    {
+        return new OrderResource($order);
+    }
+
+    protected function deletedOrderResource(Order $order)
+    {
+        return new DeletedResource($order);
+    }
+
+    protected function proofResource(Proof $proof)
+    {
+        return new ProofResource($proof);
+    }
+
+    protected function jsonResponse(mixed $payload, int $status = 200)
+    {
+        return response()->json($payload, $status);
+    }
+
+    protected function apiError(string $message, int $status = 400)
+    {
+        return response()->apiError($message, $status);
     }
 }
