@@ -55,6 +55,8 @@ use Illuminate\Database\Eloquent\Model as EloquentModel;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasManyThrough;
+use Illuminate\Database\Eloquent\Relations\MorphMany;
+use Illuminate\Database\Eloquent\Relations\MorphOne;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
 use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Database\SQLiteConnection;
@@ -1679,6 +1681,80 @@ test('driver license expiry status avatar and current order helpers handle edge 
         ->and($emptyDriver->loadedMissing)->toBe(['currentOrder'])
         ->and($parsed->getActivitylogOptions())->toBeInstanceOf(Spatie\Activitylog\LogOptions::class)
         ->and($parsed->getSlugOptions()->slugField)->toBe('slug');
+
+    Carbon::setTestNow();
+});
+
+test('driver relationships expose fleet ops relation contracts', function () {
+    fleetopsModelAccessorsUseInMemoryRelationConnection();
+    Illuminate\Support\Facades\DB::swap(new class {
+        public function raw(string $value): Illuminate\Database\Query\Expression
+        {
+            return new Illuminate\Database\Query\Expression($value);
+        }
+    });
+    Carbon::setTestNow(Carbon::parse('2026-07-26 10:00:00'));
+
+    $driver = new Driver();
+    $driver->setRawAttributes([
+        'uuid'         => 'driver-uuid',
+        'user_uuid'    => 'user-uuid',
+        'company_uuid' => 'company-uuid',
+    ], true);
+
+    $user           = $driver->user();
+    $company        = $driver->company();
+    $vehicle        = $driver->vehicle();
+    $vendor         = $driver->vendor();
+    $currentJob     = $driver->currentJob();
+    $currentOrder   = $driver->currentOrder();
+    $jobs           = $driver->jobs();
+    $orders         = $driver->orders();
+    $positions      = $driver->positions();
+    $fleets         = $driver->fleets();
+    $devices        = $driver->devices();
+    $schedules      = $driver->schedules();
+    $scheduleItems  = $driver->scheduleItems();
+    $currentShift   = $driver->currentShift();
+    $availabilities = $driver->availabilities();
+
+    expect($user)->toBeInstanceOf(BelongsTo::class)
+        ->and($user->getRelated())->toBeInstanceOf(Fleetbase\Models\User::class)
+        ->and($user->getForeignKeyName())->toBe('user_uuid')
+        ->and($company)->toBeInstanceOf(BelongsTo::class)
+        ->and($company->getRelated())->toBeInstanceOf(Fleetbase\Models\Company::class)
+        ->and($vehicle)->toBeInstanceOf(BelongsTo::class)
+        ->and($vehicle->getRelated())->toBeInstanceOf(Vehicle::class)
+        ->and($vendor)->toBeInstanceOf(BelongsTo::class)
+        ->and($vendor->getRelated())->toBeInstanceOf(Vendor::class)
+        ->and($currentJob)->toBeInstanceOf(BelongsTo::class)
+        ->and($currentJob->getRelated())->toBeInstanceOf(Order::class)
+        ->and($currentOrder)->toBeInstanceOf(BelongsTo::class)
+        ->and($currentOrder->getForeignKeyName())->toBe('current_job_uuid')
+        ->and($currentOrder->getRelated())->toBeInstanceOf(Order::class)
+        ->and($jobs)->toBeInstanceOf(HasMany::class)
+        ->and($jobs->getForeignKeyName())->toBe('driver_assigned_uuid')
+        ->and($orders)->toBeInstanceOf(HasMany::class)
+        ->and($orders->getForeignKeyName())->toBe('driver_assigned_uuid')
+        ->and($positions)->toBeInstanceOf(HasMany::class)
+        ->and($positions->getForeignKeyName())->toBe('subject_uuid')
+        ->and($fleets)->toBeInstanceOf(HasManyThrough::class)
+        ->and($fleets->getRelated())->toBeInstanceOf(Fleet::class)
+        ->and($devices)->toBeInstanceOf(HasMany::class)
+        ->and($devices->getForeignKeyName())->toBe('user_uuid')
+        ->and($devices->getLocalKeyName())->toBe('user_uuid')
+        ->and($schedules)->toBeInstanceOf(MorphMany::class)
+        ->and($schedules->getMorphType())->toBe('subject_type')
+        ->and($schedules->getForeignKeyName())->toBe('subject_uuid')
+        ->and($scheduleItems)->toBeInstanceOf(MorphMany::class)
+        ->and($scheduleItems->getMorphType())->toBe('assignee_type')
+        ->and($scheduleItems->getForeignKeyName())->toBe('assignee_uuid')
+        ->and($currentShift)->toBeInstanceOf(MorphOne::class)
+        ->and($currentShift->getMorphType())->toBe('assignee_type')
+        ->and($currentShift->getForeignKeyName())->toBe('assignee_uuid')
+        ->and($availabilities)->toBeInstanceOf(MorphMany::class)
+        ->and($availabilities->getMorphType())->toBe('subject_type')
+        ->and($availabilities->getForeignKeyName())->toBe('subject_uuid');
 
     Carbon::setTestNow();
 });
