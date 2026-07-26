@@ -5,6 +5,7 @@ use Fleetbase\FleetOps\Support\Ai\Capabilities\AssetStatusCapability;
 use Fleetbase\FleetOps\Support\Ai\Capabilities\OperationalQueryCapability;
 use Fleetbase\FleetOps\Support\Ai\Capabilities\OrderInsightsCapability;
 use Fleetbase\FleetOps\Support\Ai\FleetOpsAiQueryResources;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Carbon;
 
 function fleetopsAiOperationalCapability()
@@ -33,6 +34,29 @@ function fleetopsOrderInsightsProtectedMethod(string $method): ReflectionMethod
     $method->setAccessible(true);
 
     return $method;
+}
+
+class FleetOpsOperationalQueryBuilderRecorder extends Builder
+{
+    public array $calls = [];
+
+    public function __construct()
+    {
+    }
+
+    public function whereNotNull($columns, $boolean = 'and')
+    {
+        $this->calls[] = ['whereNotNull', $columns, $boolean];
+
+        return $this;
+    }
+
+    public function whereRaw($sql, $bindings = [], $boolean = 'and')
+    {
+        $this->calls[] = ['whereRaw', trim($sql), $bindings, $boolean];
+
+        return $this;
+    }
 }
 
 class FleetOpsAssetStatusCapabilityProbe extends AssetStatusCapability
@@ -93,6 +117,66 @@ test('operational query capability matches common fleet-ops data questions', fun
     'How many active orders have no assigned driver?',
     'Break down orders by status for this month.',
 ]);
+
+test('operational query capability exposes metadata and helper contracts', function () {
+    $capability        = fleetopsAiOperationalCapability();
+    $dateFilters       = fleetopsAiOperationalProtectedMethod('dateFilters');
+    $dateWindowPayload = fleetopsAiOperationalProtectedMethod('dateWindowPayload');
+    $mentions          = fleetopsAiOperationalProtectedMethod('mentions');
+    $validLocation     = fleetopsAiOperationalProtectedMethod('whereValidDriverLocation');
+
+    $start  = Carbon::parse('2026-07-01 00:00:00', 'Asia/Singapore');
+    $end    = Carbon::parse('2026-07-31 23:59:59', 'Asia/Singapore');
+    $window = [
+        'label'    => 'this month',
+        'timezone' => 'Asia/Singapore',
+        'start'    => $start,
+        'end'      => $end,
+    ];
+    $builder = new FleetOpsOperationalQueryBuilderRecorder();
+
+    expect($capability->key())->toBe('fleet-ops.operational_query')
+        ->and($capability->label())->toBe('Fleet-Ops operational query')
+        ->and($capability->description())->toContain('allowlisted Fleet-Ops')
+        ->and($capability->permissions())->toBe([
+            'fleet-ops list driver',
+            'fleet-ops list vehicle',
+            'fleet-ops list device',
+            'fleet-ops list order',
+            'fleet-ops list fleet',
+            'fleet-ops list service-area',
+            'fleet-ops list zone',
+        ])
+        ->and($dateFilters->invoke($capability, $window, 'updated_at'))->toBe([
+            ['field' => 'updated_at', 'operator' => '>=', 'value' => $start],
+            ['field' => 'updated_at', 'operator' => '<=', 'value' => $end],
+        ])
+        ->and($dateWindowPayload->invoke($capability, $window, 'last_online_at'))->toBe([
+            'label'    => 'this month',
+            'timezone' => 'Asia/Singapore',
+            'field'    => 'last_online_at',
+            'start'    => '2026-07-01T00:00:00+08:00',
+            'end'      => '2026-07-31T23:59:59+08:00',
+        ])
+        ->and($mentions->invoke($capability, 'where are online drivers located?', ['driver', 'vehicle']))->toBeTrue()
+        ->and($mentions->invoke($capability, 'show warehouse notes', ['driver', 'vehicle']))->toBeFalse()
+        ->and($validLocation->invoke($capability, $builder))->toBe($builder)
+        ->and($builder->calls)->toBe([
+            ['whereNotNull', 'location', 'and'],
+            ['whereRaw', 'ST_Y(location) BETWEEN -90 AND 90
+            AND ST_X(location) BETWEEN -180 AND 180
+            AND NOT (ST_X(location) = 0 AND ST_Y(location) = 0)', [], 'and'],
+        ]);
+});
+
+test('operational query capability rejects unrelated prompts', function () {
+    $capability = fleetopsAiOperationalCapability();
+    $method     = fleetopsAiOperationalProtectedMethod('matchesPrompt');
+
+    expect($method->invoke($capability, 'show support tickets'))->toBeFalse()
+        ->and($method->invoke($capability, 'drivers'))->toBeFalse()
+        ->and($method->invoke($capability, 'how many invoices are overdue'))->toBeFalse();
+});
 
 test('asset status capability includes driver online prompts', function () {
     $capability = (new ReflectionClass(AssetStatusCapability::class))->newInstanceWithoutConstructor();
