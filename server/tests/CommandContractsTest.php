@@ -25,6 +25,7 @@ use Fleetbase\FleetOps\Models\MaintenanceSchedule;
 use Fleetbase\FleetOps\Models\Order;
 use Fleetbase\FleetOps\Models\OrderConfig;
 use Fleetbase\FleetOps\Models\Vehicle;
+use Fleetbase\FleetOps\Models\WorkOrder;
 use Fleetbase\FleetOps\Notifications\OrderAssigned;
 use Fleetbase\FleetOps\Notifications\OrderPing;
 use Fleetbase\FleetOps\Support\Telematics\TelematicProviderRegistry;
@@ -108,6 +109,75 @@ class FleetOpsProcessMaintenanceTriggersProbe extends ProcessMaintenanceTriggers
         $reflection->setAccessible(true);
 
         return $reflection->invoke($this, ...$arguments);
+    }
+}
+
+class FleetOpsProcessMaintenanceTriggersHandleFake extends ProcessMaintenanceTriggers
+{
+    public array $createdWorkOrders = [];
+    public array $dispatchedEvents  = [];
+    public array $messages          = [];
+    public array $operations        = [];
+    public Illuminate\Support\Collection $testSchedules;
+    public bool $existingOpen  = false;
+    public int $workOrderCount = 0;
+
+    public function __construct(private array $testOptions)
+    {
+        parent::__construct();
+        $this->testSchedules = collect();
+    }
+
+    public function option($key = null)
+    {
+        return $key === null ? $this->testOptions : ($this->testOptions[$key] ?? null);
+    }
+
+    public function info($string, $verbosity = null)
+    {
+        $this->messages[] = ['info', $string];
+    }
+
+    public function line($string, $style = null, $verbosity = null)
+    {
+        $this->messages[] = ['line', $string];
+    }
+
+    protected function schedules(string $conn)
+    {
+        $this->operations[] = ['schedules', $conn];
+
+        return $this->testSchedules;
+    }
+
+    protected function openWorkOrderExists(string $conn, MaintenanceSchedule $schedule): bool
+    {
+        $this->operations[] = ['openWorkOrderExists', $conn, $schedule->uuid];
+
+        return $this->existingOpen;
+    }
+
+    protected function workOrderCount(string $conn): int
+    {
+        $this->operations[] = ['workOrderCount', $conn];
+
+        return $this->workOrderCount;
+    }
+
+    protected function createWorkOrder(string $conn, array $attributes): WorkOrder
+    {
+        $this->operations[]        = ['createWorkOrder', $conn];
+        $this->createdWorkOrders[] = $attributes;
+
+        $workOrder = new WorkOrder();
+        $workOrder->setRawAttributes(array_merge(['public_id' => 'work_order_created'], $attributes), true);
+
+        return $workOrder;
+    }
+
+    protected function dispatchTriggeredEvent(MaintenanceSchedule $schedule, WorkOrder $workOrder): void
+    {
+        $this->dispatchedEvents[] = [$schedule->uuid, $workOrder->public_id];
     }
 }
 
@@ -1373,6 +1443,30 @@ function fleetOpsReminderSchedule(string $uuid, string $publicId, string $name, 
     return $schedule;
 }
 
+function fleetOpsMaintenanceTriggerSchedule(string $uuid, string $publicId, string $name, string $nextDueDate, int $nextOdometer, int $nextEngineHours, Vehicle $subject): MaintenanceSchedule
+{
+    $schedule = (new ReflectionClass(MaintenanceSchedule::class))->newInstanceWithoutConstructor();
+    $schedule->setRawAttributes([
+        'uuid'                  => $uuid,
+        'public_id'             => $publicId,
+        'company_uuid'          => 'company-uuid',
+        'subject_type'          => Vehicle::class,
+        'subject_uuid'          => $subject->uuid,
+        'name'                  => $name,
+        'status'                => 'active',
+        'next_due_date'         => Carbon::parse($nextDueDate),
+        'next_due_odometer'     => $nextOdometer,
+        'next_due_engine_hours' => $nextEngineHours,
+        'default_priority'      => null,
+        'default_assignee_type' => 'user',
+        'default_assignee_uuid' => 'assignee-uuid',
+        'instructions'          => 'Inspect brakes and tires.',
+    ], true);
+    $schedule->setRelation('subject', $subject);
+
+    return $schedule;
+}
+
 function fleetOpsSimulationDriver(string $uuid = 'driver-uuid', string $publicId = 'driver_public', string $name = 'Jane Driver'): Driver
 {
     $driver            = new FleetOpsDispatchAdhocOrdersDriverFake();
@@ -1513,6 +1607,98 @@ test('process maintenance triggers exposes deterministic command helpers', funct
         ->and($command->callHelper('workOrderCode', 7, Carbon::parse('2026-02-03')))->toBe('WO-20260203-0007')
         ->and($command->callHelper('processedSummary', 2, false))->toBe('Processed 2 schedule trigger(s).')
         ->and($command->callHelper('processedSummary', 2, true))->toBe('Processed 2 schedule trigger(s) (dry run — no work orders created)');
+
+    Carbon::setTestNow();
+});
+
+test('process maintenance triggers handles dry run create and duplicate branches', function () {
+    Carbon::setTestNow(Carbon::parse('2026-02-03 04:05:06'));
+
+    $vehicle               = new Vehicle();
+    $vehicle->uuid         = 'vehicle-uuid';
+    $vehicle->odometer     = 12500;
+    $vehicle->engine_hours = 450;
+
+    $due = fleetOpsMaintenanceTriggerSchedule(
+        'schedule-due',
+        'schedule_public',
+        'Brake Service',
+        '2026-02-01',
+        12000,
+        300,
+        $vehicle
+    );
+    $notDue = fleetOpsMaintenanceTriggerSchedule(
+        'schedule-not-due',
+        'schedule_future',
+        'Future Service',
+        '2026-03-01',
+        13000,
+        600,
+        $vehicle
+    );
+
+    $dryRun                = new FleetOpsProcessMaintenanceTriggersHandleFake(['sandbox' => true, 'dry-run' => true]);
+    $dryRun->testSchedules = collect([$due, $notDue]);
+    $dryRun->handle();
+
+    $create                 = new FleetOpsProcessMaintenanceTriggersHandleFake(['sandbox' => false, 'dry-run' => false]);
+    $create->testSchedules  = collect([$due, $notDue]);
+    $create->workOrderCount = 6;
+    $create->handle();
+
+    $skipOpen                = new FleetOpsProcessMaintenanceTriggersHandleFake(['sandbox' => false, 'dry-run' => false]);
+    $skipOpen->testSchedules = collect([$due]);
+    $skipOpen->existingOpen  = true;
+    $skipOpen->handle();
+
+    expect($dryRun->operations)->toBe([['schedules', 'sandbox']])
+        ->and($dryRun->createdWorkOrders)->toBe([])
+        ->and($dryRun->dispatchedEvents)->toBe([])
+        ->and($dryRun->messages)->toContain(
+            ['info', 'Processing maintenance schedule triggers [DRY RUN] at 2026-02-03 04:05:06'],
+            ['info', 'Processed 1 schedule trigger(s) (dry run — no work orders created)']
+        )
+        ->and($dryRun->messages[1][1])->toContain('Triggered: schedule schedule_public (Brake Service)')
+        ->and($create->operations)->toBe([
+            ['schedules', 'mysql'],
+            ['openWorkOrderExists', 'mysql', 'schedule-due'],
+            ['workOrderCount', 'mysql'],
+            ['createWorkOrder', 'mysql'],
+        ])
+        ->and($create->createdWorkOrders)->toHaveCount(1)
+        ->and($create->createdWorkOrders[0])->toMatchArray([
+            'company_uuid'    => 'company-uuid',
+            'schedule_uuid'   => 'schedule-due',
+            'subject'         => 'Brake Service',
+            'category'        => 'preventive_maintenance',
+            'code'            => 'WO-20260203-0007',
+            'status'          => 'open',
+            'priority'        => 'normal',
+            'target_type'     => Vehicle::class,
+            'target_uuid'     => 'vehicle-uuid',
+            'assignee_type'   => 'user',
+            'assignee_uuid'   => 'assignee-uuid',
+            'instructions'    => 'Inspect brakes and tires.',
+            'created_by_uuid' => null,
+        ])
+        ->and($create->createdWorkOrders[0]['due_at']->toDateString())->toBe('2026-02-01')
+        ->and($create->createdWorkOrders[0]['opened_at']->toDateTimeString())->toBe('2026-02-03 04:05:06')
+        ->and($create->dispatchedEvents)->toBe([['schedule-due', 'work_order_created']])
+        ->and($create->messages)->toContain(
+            ['line', '  → Created work order work_order_created'],
+            ['info', 'Processed 1 schedule trigger(s).']
+        )
+        ->and($skipOpen->operations)->toBe([
+            ['schedules', 'mysql'],
+            ['openWorkOrderExists', 'mysql', 'schedule-due'],
+        ])
+        ->and($skipOpen->createdWorkOrders)->toBe([])
+        ->and($skipOpen->dispatchedEvents)->toBe([])
+        ->and($skipOpen->messages)->toContain(
+            ['line', '  → Skipped: open work order already exists for this schedule.'],
+            ['info', 'Processed 0 schedule trigger(s).']
+        );
 
     Carbon::setTestNow();
 });

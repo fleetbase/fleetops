@@ -59,17 +59,7 @@ class ProcessMaintenanceTriggers extends Command
         // ------------------------------------------------------------------
         // Load all active schedules that have at least one threshold set
         // ------------------------------------------------------------------
-        $schedules = MaintenanceSchedule::on($conn)
-            ->withoutGlobalScopes()
-            ->where('status', 'active')
-            ->where(function ($q) {
-                $q->whereNotNull('next_due_date')
-                  ->orWhereNotNull('next_due_odometer')
-                  ->orWhereNotNull('next_due_engine_hours');
-            })
-            ->whereNull('deleted_at')
-            ->with('subject')
-            ->get();
+        $schedules = $this->schedules($conn);
 
         foreach ($schedules as $schedule) {
             $subject                             = $schedule->subject;
@@ -87,12 +77,7 @@ class ProcessMaintenanceTriggers extends Command
             if (!$dryRun) {
                 // Check if a pending work order already exists for this schedule
                 // to avoid duplicates on repeated runs before the WO is completed
-                $existingOpen = WorkOrder::on($conn)
-                    ->withoutGlobalScopes()
-                    ->where('schedule_uuid', $schedule->uuid)
-                    ->whereIn('status', ['open', 'in_progress'])
-                    ->whereNull('deleted_at')
-                    ->exists();
+                $existingOpen = $this->openWorkOrderExists($conn, $schedule);
 
                 if ($existingOpen) {
                     $this->line('  → Skipped: open work order already exists for this schedule.');
@@ -101,10 +86,10 @@ class ProcessMaintenanceTriggers extends Command
 
                 // Auto-generate a work order from the schedule defaults
                 // Generate a sequential WO code: WO-YYYYMMDD-XXXX
-                $woCount = WorkOrder::on($conn)->withoutGlobalScopes()->whereNull('deleted_at')->count() + 1;
+                $woCount = $this->workOrderCount($conn) + 1;
                 $woCode  = $this->workOrderCode($woCount, now());
 
-                $workOrder = WorkOrder::on($conn)->create([
+                $workOrder = $this->createWorkOrder($conn, [
                     'company_uuid'    => $schedule->company_uuid,
                     'schedule_uuid'   => $schedule->uuid,
                     'subject'         => $schedule->name,
@@ -124,7 +109,7 @@ class ProcessMaintenanceTriggers extends Command
 
                 $this->line("  → Created work order {$workOrder->public_id}");
 
-                event('maintenance.triggered', [$schedule, $workOrder]);
+                $this->dispatchTriggeredEvent($schedule, $workOrder);
             }
 
             $triggered++;
@@ -136,6 +121,46 @@ class ProcessMaintenanceTriggers extends Command
     protected function connectionName(bool $sandbox): string
     {
         return $sandbox ? 'sandbox' : 'mysql';
+    }
+
+    protected function schedules(string $conn)
+    {
+        return MaintenanceSchedule::on($conn)
+            ->withoutGlobalScopes()
+            ->where('status', 'active')
+            ->where(function ($q) {
+                $q->whereNotNull('next_due_date')
+                  ->orWhereNotNull('next_due_odometer')
+                  ->orWhereNotNull('next_due_engine_hours');
+            })
+            ->whereNull('deleted_at')
+            ->with('subject')
+            ->get();
+    }
+
+    protected function openWorkOrderExists(string $conn, MaintenanceSchedule $schedule): bool
+    {
+        return WorkOrder::on($conn)
+            ->withoutGlobalScopes()
+            ->where('schedule_uuid', $schedule->uuid)
+            ->whereIn('status', ['open', 'in_progress'])
+            ->whereNull('deleted_at')
+            ->exists();
+    }
+
+    protected function workOrderCount(string $conn): int
+    {
+        return WorkOrder::on($conn)->withoutGlobalScopes()->whereNull('deleted_at')->count();
+    }
+
+    protected function createWorkOrder(string $conn, array $attributes): WorkOrder
+    {
+        return WorkOrder::on($conn)->create($attributes);
+    }
+
+    protected function dispatchTriggeredEvent(MaintenanceSchedule $schedule, WorkOrder $workOrder): void
+    {
+        event('maintenance.triggered', [$schedule, $workOrder]);
     }
 
     protected function currentReadingsFromSubject(mixed $subject): array
