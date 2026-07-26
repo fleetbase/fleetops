@@ -2,12 +2,17 @@
 
 use Fleetbase\FleetOps\Casts\MultiPolygon;
 use Fleetbase\FleetOps\Casts\OrderConfigEntities;
+use Fleetbase\FleetOps\Casts\Point as PointCast;
 use Fleetbase\FleetOps\Casts\Polygon;
 use Fleetbase\FleetOps\Rules\ComputableAlgo;
 use Fleetbase\FleetOps\Rules\CustomerIdOrDetails;
 use Fleetbase\FleetOps\Rules\ResolvablePoint;
 use Fleetbase\FleetOps\Rules\ResolvableVehicle;
+use Fleetbase\LaravelMysqlSpatial\Eloquent\SpatialExpression;
+use Fleetbase\LaravelMysqlSpatial\Types\MultiPolygon as SpatialMultiPolygon;
 use Fleetbase\LaravelMysqlSpatial\Types\Point;
+use Fleetbase\LaravelMysqlSpatial\Types\Polygon as SpatialPolygon;
+use Illuminate\Database\Query\Expression;
 
 class FleetOpsOrderConfigEntitiesCastProbe extends OrderConfigEntities
 {
@@ -111,4 +116,56 @@ test('polygon casts reject unsupported values with helpful field names', functio
         ->toThrow(Exception::class, 'Invalid Polygon provided for border')
         ->and(fn () => (new MultiPolygon())->set($model, 'coverage_area', 'invalid', []))
         ->toThrow(Exception::class, 'Invalid MultiPolygon provided for coverage_area');
+});
+
+test('spatial casts preserve valid geometry expressions and geojson payloads', function () {
+    $model             = new stdClass();
+    $model->geometries = [];
+
+    $polygonGeoJson = [
+        'type'        => 'Polygon',
+        'coordinates' => [[
+            [106.0, 47.0],
+            [107.0, 47.0],
+            [107.0, 48.0],
+            [106.0, 47.0],
+        ]],
+    ];
+    $multiPolygonGeoJson = [
+        'type'        => 'MultiPolygon',
+        'coordinates' => [[[
+            [106.0, 47.0],
+            [107.0, 47.0],
+            [107.0, 48.0],
+            [106.0, 47.0],
+        ]]],
+    ];
+    $pointGeoJson = [
+        'type'        => 'Point',
+        'coordinates' => [106.9338169, 47.9131423],
+    ];
+
+    $polygonCast      = new Polygon();
+    $multiPolygonCast = new MultiPolygon();
+    $pointCast        = new PointCast();
+    $polygon          = SpatialPolygon::fromJson(json_encode($polygonGeoJson));
+    $multiPolygon     = SpatialMultiPolygon::fromJson(json_encode($multiPolygonGeoJson));
+    $pointExpression  = new SpatialExpression(new Point(47.9131423, 106.9338169));
+    $sqlExpression    = new Expression("ST_PointFromText('POINT(106.9338169 47.9131423)')");
+
+    expect($polygonCast->get($model, 'border', 'stored-polygon', []))->toBe('stored-polygon')
+        ->and($polygonCast->set($model, 'border', $polygon, []))->toBe($polygon)
+        ->and($polygonCast->set($model, 'border_expression', new SpatialExpression($polygon), []))->toBeInstanceOf(SpatialExpression::class)
+        ->and($polygonCast->set($model, 'border_geojson', $polygonGeoJson, []))->toBeInstanceOf(SpatialPolygon::class)
+        ->and($multiPolygonCast->get($model, 'coverage', 'stored-multipolygon', []))->toBe('stored-multipolygon')
+        ->and($multiPolygonCast->set($model, 'coverage', $multiPolygon, []))->toBeInstanceOf(SpatialExpression::class)
+        ->and($multiPolygonCast->set($model, 'coverage_expression', new SpatialExpression($multiPolygon), []))->toBeInstanceOf(SpatialExpression::class)
+        ->and($multiPolygonCast->set($model, 'coverage_geojson', $multiPolygonGeoJson, []))->toBeInstanceOf(SpatialMultiPolygon::class)
+        ->and($pointCast->get($model, 'location', 'stored-point', []))->toBe('stored-point')
+        ->and($pointCast->set($model, 'location_sql', $sqlExpression, []))->toBe($sqlExpression)
+        ->and($pointCast->set($model, 'location_geometry', new Point(47.9131423, 106.9338169), []))->toBeInstanceOf(SpatialExpression::class)
+        ->and($pointCast->set($model, 'location_geojson', $pointGeoJson, []))->toBeInstanceOf(SpatialExpression::class)
+        ->and($pointCast->set($model, 'location_coordinates', '47.9131423,106.9338169', []))->toBeInstanceOf(Point::class)
+        ->and($pointCast->set($model, 'location_expression', $pointExpression, []))->toBe($pointExpression)
+        ->and($pointCast->set($model, 'location_empty', 'notcoordinates', []))->toBeInstanceOf(SpatialExpression::class);
 });

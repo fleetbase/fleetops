@@ -12,6 +12,7 @@ namespace Fleetbase\Support {
 namespace {
     use Fleetbase\FleetOps\Casts\Point;
     use Fleetbase\FleetOps\Contracts\TelematicProviderDescriptor;
+    use Fleetbase\FleetOps\Support\DistanceMatrix;
     use Fleetbase\FleetOps\Support\Encoding\Polyline;
     use Fleetbase\FleetOps\Support\FuelProviders\FuelProviderDescriptor;
     use Fleetbase\FleetOps\Tracking\TrackingProviderCapabilities;
@@ -102,6 +103,18 @@ namespace {
             'route_geometry' => true,
             'snap_to_road'   => true,
         ])->and($capabilities->jsonSerialize())->toBe($capabilities->toArray());
+    });
+
+    test('distance matrix serializes nullable distance and time values', function () {
+        $matrix = new DistanceMatrix(1234.5, null);
+
+        expect($matrix->distance)->toBe(1234.5)
+            ->and($matrix->time)->toBeNull()
+            ->and($matrix->jsonSerialize())->toBe([
+                'distance' => 1234.5,
+                'time'     => null,
+            ])
+            ->and(json_encode($matrix))->toBe('{"distance":1234.5,"time":null}');
     });
 
     test('point cast helpers normalize coordinate geometry and raw binary detection', function () {

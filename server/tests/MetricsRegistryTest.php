@@ -2,10 +2,12 @@
 
 use Fleetbase\FleetOps\Support\Metrics;
 use Fleetbase\FleetOps\Support\Metrics\AbstractMetric;
+use Fleetbase\FleetOps\Support\Metrics\ActiveLiveOrdersMetric;
 use Fleetbase\FleetOps\Support\Metrics\ActiveRevenueQuery;
 use Fleetbase\FleetOps\Support\Metrics\AvgOrderValueMetric;
 use Fleetbase\FleetOps\Support\Metrics\DriversOnlineMetric;
 use Fleetbase\FleetOps\Support\Metrics\EarningsMetric;
+use Fleetbase\FleetOps\Support\Metrics\FuelCostsMetric;
 use Fleetbase\FleetOps\Support\Metrics\MoneyMetric;
 use Fleetbase\FleetOps\Support\Metrics\OpenIssuesMetric;
 use Fleetbase\FleetOps\Support\Metrics\OrdersCanceledMetric;
@@ -79,6 +81,30 @@ class TestFleetOpsMoneyMetric extends MoneyMetric
     protected function aggregate($query): float|int
     {
         return 0;
+    }
+}
+
+class TestFleetOpsFuelCostsMetric extends FuelCostsMetric
+{
+    public function aggregateForTest($query): float
+    {
+        return $this->aggregate($query);
+    }
+}
+
+class TestFleetOpsEarningsMetric extends EarningsMetric
+{
+    public function aggregateForTest($query): float
+    {
+        return $this->aggregate($query);
+    }
+}
+
+class TestFleetOpsActiveLiveOrdersMetric extends ActiveLiveOrdersMetric
+{
+    public function aggregateForTest($query): int
+    {
+        return $this->aggregate($query);
     }
 }
 
@@ -306,6 +332,27 @@ test('average order value metric exposes slug and returns zero when there are no
         ->and($metric->format())->toBe('money')
         ->and($metric->currency())->toBe('SGD')
         ->and($metric->aggregateForTest(new TestFleetOpsMetricCountQuery(0)))->toBe(0.0);
+});
+
+test('money and live order metrics expose concrete aggregation contracts', function () {
+    $company = new Company();
+    $company->setRawAttributes(['uuid' => 'company-concrete-metrics', 'currency' => 'AED'], true);
+
+    $fuelCosts = TestFleetOpsFuelCostsMetric::forCompany($company);
+    $earnings  = TestFleetOpsEarningsMetric::forCompany($company);
+    $live      = TestFleetOpsActiveLiveOrdersMetric::forCompany($company);
+
+    expect(TestFleetOpsFuelCostsMetric::slug())->toBe('fuel_costs')
+        ->and($fuelCosts->format())->toBe('money')
+        ->and($fuelCosts->currency())->toBe('AED')
+        ->and($fuelCosts->aggregateForTest(new TestFleetOpsMetricSumQuery(123.45)))->toBe(123.45)
+        ->and(TestFleetOpsEarningsMetric::slug())->toBe('earnings')
+        ->and($earnings->format())->toBe('money')
+        ->and($earnings->currency())->toBe('AED')
+        ->and($earnings->aggregateForTest(new TestFleetOpsMetricSumQuery(456.78)))->toBe(456.78)
+        ->and(TestFleetOpsActiveLiveOrdersMetric::slug())->toBe('active_live_orders')
+        ->and($live->format())->toBe('count')
+        ->and($live->aggregateForTest(new TestFleetOpsMetricCountQuery(12)))->toBe(12);
 });
 
 test('registry resolves unknown slugs to null', function () {
