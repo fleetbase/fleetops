@@ -543,18 +543,14 @@ class OrchestrationController extends Controller
     {
         $companyUuid = session('company');
 
-        $configs = OrderConfig::where('company_uuid', $companyUuid)
-            ->with('customFields')
-            ->get(['uuid', 'public_id', 'name', 'key'])
+        $configs = $this->getOrderConfigFieldConfigs($companyUuid)
             ->map(function ($config) {
                 // customFields is a morphMany on subject_uuid/subject_type.
                 // If the eager load returned nothing (e.g. subject_type mismatch),
                 // fall back to a direct query by subject_uuid.
                 $customFields = $config->customFields;
                 if ($customFields->isEmpty()) {
-                    $customFields = \Fleetbase\Models\CustomField::where('subject_uuid', $config->uuid)
-                        ->orderBy('order')
-                        ->get();
+                    $customFields = $this->getCustomFieldsForOrderConfig($config->uuid);
                 }
 
                 $fields = $customFields
@@ -579,6 +575,20 @@ class OrchestrationController extends Controller
         $configs = $configs->filter(fn ($config) => count($config['fields']) > 0)->values();
 
         return response()->json(['configs' => $configs]);
+    }
+
+    protected function getOrderConfigFieldConfigs(string $companyUuid)
+    {
+        return OrderConfig::where('company_uuid', $companyUuid)
+            ->with('customFields')
+            ->get(['uuid', 'public_id', 'name', 'key']);
+    }
+
+    protected function getCustomFieldsForOrderConfig(string $orderConfigUuid)
+    {
+        return \Fleetbase\Models\CustomField::where('subject_uuid', $orderConfigUuid)
+            ->orderBy('order')
+            ->get();
     }
 
     /**

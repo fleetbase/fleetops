@@ -5,12 +5,15 @@ use Fleetbase\FleetOps\Models\Driver;
 use Fleetbase\FleetOps\Models\Manifest;
 use Fleetbase\FleetOps\Models\ManifestStop;
 use Fleetbase\FleetOps\Models\Order;
+use Fleetbase\FleetOps\Models\OrderConfig;
 use Fleetbase\FleetOps\Models\Payload;
 use Fleetbase\FleetOps\Models\Place;
 use Fleetbase\FleetOps\Models\Vehicle;
 use Fleetbase\FleetOps\Orchestration\Engines\GreedyOrchestrationEngine;
 use Fleetbase\FleetOps\Orchestration\OrchestrationEngineRegistry;
+use Fleetbase\Models\CustomField;
 use Illuminate\Http\Request;
+use Illuminate\Support\Str;
 
 class FleetOpsOrchestrationCommitControllerProbe extends OrchestrationController
 {
@@ -21,6 +24,8 @@ class FleetOpsOrchestrationCommitControllerProbe extends OrchestrationController
     public array $manifestStops        = [];
     public array $waypointUpdates      = [];
     public array $transactions         = [];
+    public array $fieldConfigs         = [];
+    public array $fallbackCustomFields = [];
     public bool $throwOnCreateManifest = false;
     public int $transactionLevel       = 0;
 
@@ -90,6 +95,16 @@ class FleetOpsOrchestrationCommitControllerProbe extends OrchestrationController
     protected function updateWaypointSequence(string $payloadUuid, string $waypointPublicId, int|string $sequence): void
     {
         $this->waypointUpdates[] = [$payloadUuid, $waypointPublicId, $sequence];
+    }
+
+    protected function getOrderConfigFieldConfigs(string $companyUuid)
+    {
+        return collect($this->fieldConfigs);
+    }
+
+    protected function getCustomFieldsForOrderConfig(string $orderConfigUuid)
+    {
+        return collect($this->fallbackCustomFields[$orderConfigUuid] ?? []);
     }
 }
 
@@ -163,6 +178,28 @@ function fleetopsOrchestrationOrder(string $publicId, ?string $dropoffUuid = 'dr
     return $order;
 }
 
+function fleetopsOrchestrationOrderConfig(string $uuid, string $publicId, array $attributes = [], array $customFields = []): OrderConfig
+{
+    $config = new OrderConfig();
+    $config->setRawAttributes(array_merge([
+        'uuid'      => $uuid,
+        'public_id' => $publicId,
+        'name'      => Str::headline($publicId),
+        'key'       => Str::slug($publicId, '_'),
+    ], $attributes), true);
+    $config->setRelation('customFields', collect($customFields));
+
+    return $config;
+}
+
+function fleetopsOrchestrationCustomField(array $attributes): CustomField
+{
+    $field = new CustomField();
+    $field->setRawAttributes($attributes, true);
+
+    return $field;
+}
+
 function callOrchestrationControllerHelper(OrchestrationController $controller, string $method, mixed ...$arguments): mixed
 {
     $reflection = new ReflectionMethod(OrchestrationController::class, $method);
@@ -189,6 +226,90 @@ test('orchestration controller exposes engines and rejects empty commits before 
     ])
         ->and($commit->getStatusCode())->toBe(422)
         ->and($commit->getData(true))->toBe(['error' => 'No assignments provided.']);
+});
+
+test('orchestration controller maps order config card fields with fallback lookups', function () {
+    session(['company' => 'company-uuid']);
+
+    $controller = fleetopsOrchestrationCommitController();
+
+    $controller->fieldConfigs = [
+        fleetopsOrchestrationOrderConfig('config-loaded', 'config_loaded', [
+            'name' => 'Loaded Config',
+            'key'  => 'loaded',
+        ], [
+            fleetopsOrchestrationCustomField([
+                'name'     => 'eta_window',
+                'label'    => 'ETA Window',
+                'type'     => 'datetime',
+                'required' => 1,
+            ]),
+            fleetopsOrchestrationCustomField([
+                'name'     => null,
+                'label'    => 'Special Instructions',
+                'type'     => null,
+                'required' => 0,
+            ]),
+        ]),
+        fleetopsOrchestrationOrderConfig('config-fallback', 'config_fallback', [
+            'name' => 'Fallback Config',
+            'key'  => 'fallback',
+        ]),
+        fleetopsOrchestrationOrderConfig('config-empty', 'config_empty', [
+            'name' => 'Empty Config',
+            'key'  => 'empty',
+        ]),
+    ];
+
+    $controller->fallbackCustomFields['config-fallback'] = [
+        fleetopsOrchestrationCustomField([
+            'name'     => 'dock_code',
+            'label'    => null,
+            'type'     => 'text',
+            'required' => true,
+        ]),
+    ];
+
+    $payload = $controller->orderConfigFields()->getData(true);
+
+    expect($payload)->toBe([
+        'configs' => [
+            [
+                'id'     => 'config_loaded',
+                'uuid'   => 'config-loaded',
+                'name'   => 'Loaded Config',
+                'key'    => 'loaded',
+                'fields' => [
+                    [
+                        'key'      => 'eta_window',
+                        'label'    => 'ETA Window',
+                        'type'     => 'datetime',
+                        'required' => true,
+                    ],
+                    [
+                        'key'      => 'special_instructions',
+                        'label'    => 'Special Instructions',
+                        'type'     => 'text',
+                        'required' => false,
+                    ],
+                ],
+            ],
+            [
+                'id'     => 'config_fallback',
+                'uuid'   => 'config-fallback',
+                'name'   => 'Fallback Config',
+                'key'    => 'fallback',
+                'fields' => [
+                    [
+                        'key'      => 'dock_code',
+                        'label'    => 'dock_code',
+                        'type'     => 'text',
+                        'required' => true,
+                    ],
+                ],
+            ],
+        ],
+    ]);
 });
 
 test('orchestration commit creates manifests stops assignments and waypoint ordering', function () {
