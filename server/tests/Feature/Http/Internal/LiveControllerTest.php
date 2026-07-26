@@ -83,7 +83,7 @@ test('live viewport limit defaults and clamps', function () {
 });
 
 test('live viewport query avoids spatial constructors with fixed srids', function () {
-    $controller = file_get_contents(dirname(__DIR__) . '/src/Http/Controllers/Internal/v1/LiveController.php');
+    $controller = file_get_contents(dirname(__DIR__, 4) . '/src/Http/Controllers/Internal/v1/LiveController.php');
 
     expect($controller)->toContain('protected function applyLiveLocationGuards')
         ->and($controller)->toContain('protected function applyLiveViewportBounds')
