@@ -1,5 +1,6 @@
 <?php
 
+use Fleetbase\Ai\Models\AiTask;
 use Fleetbase\Ai\Support\AiQueryRegistry;
 use Fleetbase\FleetOps\Support\Ai\Capabilities\AssetStatusCapability;
 use Fleetbase\FleetOps\Support\Ai\Capabilities\OperationalQueryCapability;
@@ -7,6 +8,10 @@ use Fleetbase\FleetOps\Support\Ai\Capabilities\OrderInsightsCapability;
 use Fleetbase\FleetOps\Support\Ai\FleetOpsAiQueryResources;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Carbon;
+
+if (!class_exists('Fleetbase\Ai\Services\AiQueryExecutor')) {
+    eval('namespace Fleetbase\Ai\Services; class AiQueryExecutor {}');
+}
 
 function fleetopsAiOperationalCapability()
 {
@@ -57,6 +62,101 @@ class FleetOpsOperationalQueryBuilderRecorder extends Builder
 
         return $this;
     }
+}
+
+class FleetOpsAiQueryExecutorRecorder extends Fleetbase\Ai\Services\AiQueryExecutor
+{
+    public array $calls = [];
+
+    public function count(string $resource, array $filters = []): int
+    {
+        $this->calls[] = ['count', $resource, $filters];
+
+        return count($this->calls);
+    }
+
+    public function countsBy(string $resource, string $field, array $filters = []): array
+    {
+        $this->calls[] = ['countsBy', $resource, $field, $filters];
+
+        return [
+            ['value' => 'active', 'count' => 2],
+            ['value' => 'inactive', 'count' => 1],
+        ];
+    }
+
+    public function samples(string $resource, array $filters = [], int $limit = 10): array
+    {
+        $this->calls[] = ['samples', $resource, $filters, $limit];
+
+        return [['public_id' => 'DRV-1']];
+    }
+
+    public function locationSummary(string $resource, array $filters = [], int $limit = 250): array
+    {
+        $this->calls[] = ['locationSummary', $resource, $filters, $limit];
+
+        return [
+            'resource' => $resource,
+            'filters'  => $filters,
+            'limit'    => $limit,
+        ];
+    }
+}
+
+class FleetOpsOperationalQueryCapabilityProbe extends OperationalQueryCapability
+{
+    public ?array $window     = null;
+    public array $permissions = [];
+
+    protected function can(string $permission): bool
+    {
+        return in_array($permission, $this->permissions, true);
+    }
+
+    protected function dateWindow(string $prompt): ?array
+    {
+        return $this->window;
+    }
+
+    public function callDriverQueries(string $prompt, Fleetbase\Ai\Services\AiQueryExecutor $executor): array
+    {
+        return $this->driverQueries($prompt, $executor);
+    }
+
+    public function callOnlineResourceQueries(string $resource, string $prompt, Fleetbase\Ai\Services\AiQueryExecutor $executor): array
+    {
+        return $this->onlineResourceQueries($resource, $prompt, $executor);
+    }
+
+    public function callOrderQueries(string $prompt, Fleetbase\Ai\Services\AiQueryExecutor $executor): array
+    {
+        return $this->orderQueries($prompt, $executor);
+    }
+
+    public function callDriverGeofenceDistribution(array $filters = []): array
+    {
+        return $this->driverGeofenceDistribution($filters);
+    }
+}
+
+function fleetopsOperationalQueryProbe(?array $window = null, array $permissions = []): FleetOpsOperationalQueryCapabilityProbe
+{
+    $capability              = (new ReflectionClass(FleetOpsOperationalQueryCapabilityProbe::class))->newInstanceWithoutConstructor();
+    $capability->window      = $window;
+    $capability->permissions = $permissions;
+
+    return $capability;
+}
+
+function fleetopsOperationalQueryWindow(): array
+{
+    return [
+        'label'    => 'this week',
+        'timezone' => 'Asia/Singapore',
+        'start'    => Carbon::parse('2026-07-20 00:00:00', 'Asia/Singapore'),
+        'end'      => Carbon::parse('2026-07-26 23:59:59', 'Asia/Singapore'),
+    ];
 }
 
 class FleetOpsAssetStatusCapabilityProbe extends AssetStatusCapability
@@ -176,6 +276,94 @@ test('operational query capability rejects unrelated prompts', function () {
     expect($method->invoke($capability, 'show support tickets'))->toBeFalse()
         ->and($method->invoke($capability, 'drivers'))->toBeFalse()
         ->and($method->invoke($capability, 'how many invoices are overdue'))->toBeFalse();
+});
+
+test('operational query capability composes driver location and assignment summaries', function () {
+    $executor   = new FleetOpsAiQueryExecutorRecorder();
+    $capability = fleetopsOperationalQueryProbe(fleetopsOperationalQueryWindow());
+    $queries    = $capability->callDriverQueries('where are online drivers without vehicle this week by service area', $executor);
+
+    expect($queries['date_window'])->toMatchArray([
+        'label'    => 'this week',
+        'timezone' => 'Asia/Singapore',
+        'field'    => 'updated_at',
+    ])
+        ->and($queries['without_vehicle']['samples'])->toBe([['public_id' => 'DRV-1']])
+        ->and($queries['location_summary']['resource'])->toBe('fleet-ops.drivers')
+        ->and($queries['location_summary']['limit'])->toBe(250)
+        ->and($queries['service_area_distribution'])->toBe([
+            'authorized' => false,
+            'resource'   => 'fleet-ops.drivers',
+        ])
+        ->and($executor->calls)->toContain(
+            ['count', 'fleet-ops.drivers', []],
+            ['count', 'fleet-ops.drivers', [['field' => 'online', 'operator' => '=', 'value' => true]]],
+            ['count', 'fleet-ops.drivers', [['field' => 'online', 'operator' => 'false_or_null']]],
+            ['countsBy', 'fleet-ops.drivers', 'status', []],
+            ['samples', 'fleet-ops.drivers', [['field' => 'vehicle_uuid', 'operator' => 'null']], 10]
+        );
+
+    $locationCall = collect($executor->calls)->firstWhere(0, 'locationSummary');
+
+    expect($locationCall[2])->toHaveCount(3)
+        ->and($locationCall[2][0])->toMatchArray(['field' => 'updated_at', 'operator' => '>='])
+        ->and($locationCall[2][1])->toMatchArray(['field' => 'updated_at', 'operator' => '<='])
+        ->and($locationCall[2][2])->toBe(['field' => 'online', 'operator' => '=', 'value' => true]);
+});
+
+test('operational query capability composes vehicle and device online summaries', function () {
+    $executor   = new FleetOpsAiQueryExecutorRecorder();
+    $capability = fleetopsOperationalQueryProbe(fleetopsOperationalQueryWindow());
+
+    $vehicleQueries = $capability->callOnlineResourceQueries('fleet-ops.vehicles', 'where are online vehicles this week', $executor);
+    $deviceQueries  = $capability->callOnlineResourceQueries('fleet-ops.devices', 'how many devices online this week', $executor);
+
+    expect($vehicleQueries['date_window'])->toMatchArray([
+        'field' => 'updated_at',
+        'label' => 'this week',
+    ])
+        ->and($vehicleQueries['location_summary']['resource'])->toBe('fleet-ops.vehicles')
+        ->and($deviceQueries['date_window'])->toMatchArray([
+            'field' => 'last_online_at',
+            'label' => 'this week',
+        ])
+        ->and($deviceQueries)->not->toHaveKey('location_summary');
+});
+
+test('operational query capability composes active order assignment summaries', function () {
+    $executor   = new FleetOpsAiQueryExecutorRecorder();
+    $capability = fleetopsOperationalQueryProbe(fleetopsOperationalQueryWindow());
+    $queries    = $capability->callOrderQueries('active orders without driver with driver without vehicle this week', $executor);
+
+    expect($queries['date_window'])->toMatchArray([
+        'field' => 'created_at',
+        'label' => 'this week',
+    ])
+        ->and($queries)->toHaveKeys(['total', 'counts_by_status', 'without_driver', 'with_driver', 'without_vehicle']);
+
+    $totalCall = $executor->calls[0];
+
+    expect($totalCall[0])->toBe('count')
+        ->and($totalCall[1])->toBe('fleet-ops.orders')
+        ->and($totalCall[2])->toHaveCount(3)
+        ->and($totalCall[2][0])->toMatchArray(['field' => 'created_at', 'operator' => '>='])
+        ->and($totalCall[2][1])->toMatchArray(['field' => 'created_at', 'operator' => '<='])
+        ->and($totalCall[2][2])->toBe(['field' => 'status', 'operator' => 'not_in', 'value' => ['canceled', 'completed', 'expired']]);
+});
+
+test('operational query capability resolves all mentioned resources through executor summaries', function () {
+    $executor = new FleetOpsAiQueryExecutorRecorder();
+
+    app()->instance(Fleetbase\Ai\Services\AiQueryExecutor::class, $executor);
+
+    $capability = fleetopsOperationalQueryProbe(fleetopsOperationalQueryWindow());
+    $result     = $capability->resolve(new AiTask(['prompt' => 'count drivers vehicles devices orders and fleets this week']));
+
+    expect($result['authorized'])->toBeTrue()
+        ->and($result['query_engine'])->toBe('fleetbase_ai_allowlisted_operational_query')
+        ->and($result['instruction'])->toContain('Answer only from these executed Fleetbase query summaries')
+        ->and($result['queries'])->toHaveKeys(['drivers', 'vehicles', 'devices', 'orders', 'fleets'])
+        ->and($result['queries']['fleets']['total'])->toBeInt();
 });
 
 test('asset status capability includes driver online prompts', function () {
