@@ -334,14 +334,7 @@ class DriverController extends FleetOpsController
      */
     public function statuses()
     {
-        $statuses = DB::table('drivers')
-            ->select('status')
-            ->where('company_uuid', session('company'))
-            ->distinct()
-            ->get()
-            ->pluck('status')
-            ->filter()
-            ->values();
+        $statuses = $this->statusOptionsForCompany(session('company'));
 
         return response()->json($statuses);
     }
@@ -353,7 +346,7 @@ class DriverController extends FleetOpsController
      */
     public function avatars()
     {
-        $options = Driver::getAvatarOptions();
+        $options = $this->driverAvatarOptions();
 
         return response()->json($options);
     }
@@ -369,7 +362,7 @@ class DriverController extends FleetOpsController
         $selections   = $request->array('selections');
         $fileName     = trim(Str::slug('drivers-' . date('Y-m-d-H:i')) . '.' . $format);
 
-        return Excel::download(new DriverExport($selections), $fileName);
+        return static::downloadExport(new DriverExport($selections), $fileName);
     }
 
     /**
@@ -771,8 +764,8 @@ class DriverController extends FleetOpsController
 
         foreach ($files as $file) {
             try {
-                $import = new DriverImport();
-                Excel::import($import, $file->path, $disk);
+                $import = $this->createImport();
+                $this->importFile($import, $file->path, $disk);
                 $importedCount += $import->imported;
             } catch (\Throwable $e) {
                 return response()->error('Invalid file, unable to proccess.');
@@ -780,5 +773,37 @@ class DriverController extends FleetOpsController
         }
 
         return response()->json(['status' => 'ok', 'message' => 'Import completed', 'imported' => $importedCount]);
+    }
+
+    protected function statusOptionsForCompany(?string $companyUuid)
+    {
+        return DB::table('drivers')
+            ->select('status')
+            ->where('company_uuid', $companyUuid)
+            ->distinct()
+            ->get()
+            ->pluck('status')
+            ->filter()
+            ->values();
+    }
+
+    protected function driverAvatarOptions(): array
+    {
+        return Driver::getAvatarOptions();
+    }
+
+    protected static function downloadExport(DriverExport $export, string $fileName)
+    {
+        return Excel::download($export, $fileName);
+    }
+
+    protected function createImport(): DriverImport
+    {
+        return new DriverImport();
+    }
+
+    protected function importFile(DriverImport $import, string $path, string $disk): void
+    {
+        Excel::import($import, $path, $disk);
     }
 }

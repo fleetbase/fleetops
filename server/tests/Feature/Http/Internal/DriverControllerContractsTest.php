@@ -1,14 +1,103 @@
 <?php
 
+use Fleetbase\FleetOps\Exports\DriverExport;
 use Fleetbase\FleetOps\Http\Controllers\Internal\v1\DriverController;
+use Fleetbase\FleetOps\Imports\DriverImport;
 use Fleetbase\FleetOps\Models\Driver;
 use Fleetbase\FleetOps\Models\Order;
 use Fleetbase\FleetOps\Models\Vehicle;
+use Fleetbase\Http\Requests\ExportRequest;
+use Fleetbase\Http\Requests\ImportRequest;
 use Fleetbase\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 use Illuminate\Support\Collection;
+
+if (!class_exists('Fleetbase\Http\Requests\ExportRequest', false)) {
+    eval('namespace Fleetbase\Http\Requests; class ExportRequest extends \Illuminate\Http\Request {}');
+}
+
+if (!class_exists('Fleetbase\Http\Requests\ImportRequest', false)) {
+    eval('namespace Fleetbase\Http\Requests; class ImportRequest extends \Illuminate\Http\Request {}');
+}
+
+class FleetOpsInternalDriverExportImportRequestFake extends ExportRequest
+{
+    public function array($key = null, $default = [])
+    {
+        $value = $this->input($key, $default);
+
+        return is_array($value) ? $value : $default;
+    }
+}
+
+class FleetOpsInternalDriverImportRequestFake extends ImportRequest
+{
+    public array $resolvedFiles = [];
+
+    public function resolveFilesFromIds(string $param = 'files')
+    {
+        return collect($this->resolvedFiles);
+    }
+}
+
+class FleetOpsInternalDriverImportFake extends DriverImport
+{
+    public function __construct(int $imported)
+    {
+        $this->imported = $imported;
+    }
+}
+
+class FleetOpsInternalDriverOptionsControllerProbe extends DriverController
+{
+    public static array $downloads = [];
+    public array $imports          = [];
+    public array $imported         = [3, 5];
+    public array $statuses         = ['available', null, 'busy'];
+    public array $avatars          = ['avatar-a.png', 'avatar-b.png'];
+    public bool $failImport        = false;
+    public ?string $statusCompany  = null;
+
+    public static function resetProbe(): void
+    {
+        static::$downloads = [];
+    }
+
+    protected function statusOptionsForCompany(?string $companyUuid)
+    {
+        $this->statusCompany = $companyUuid;
+
+        return collect($this->statuses)->filter()->values();
+    }
+
+    protected function driverAvatarOptions(): array
+    {
+        return $this->avatars;
+    }
+
+    protected static function downloadExport(DriverExport $export, string $fileName)
+    {
+        static::$downloads[] = [$export, $fileName];
+
+        return ['download' => $fileName, 'headings' => $export->headings()];
+    }
+
+    protected function createImport(): DriverImport
+    {
+        return new FleetOpsInternalDriverImportFake(array_shift($this->imported) ?? 0);
+    }
+
+    protected function importFile(DriverImport $import, string $path, string $disk): void
+    {
+        if ($this->failImport) {
+            throw new RuntimeException('invalid driver import');
+        }
+
+        $this->imports[] = [$import->imported, $path, $disk];
+    }
+}
 
 class FleetOpsInternalDriverAssignmentControllerProbe extends DriverController
 {
@@ -343,6 +432,84 @@ function fleetopsInternalDriverAuthDriver(string $uuid = 'driver-uuid'): Driver
     return $driver;
 }
 
+function fleetopsInternalDriverExportRequest(array $input): FleetOpsInternalDriverExportImportRequestFake
+{
+    return FleetOpsInternalDriverExportImportRequestFake::create('/internal/drivers/export', 'POST', $input);
+}
+
+function fleetopsInternalDriverImportRequest(array $input, array $files): FleetOpsInternalDriverImportRequestFake
+{
+    $request                = FleetOpsInternalDriverImportRequestFake::create('/internal/drivers/import', 'POST', $input);
+    $request->resolvedFiles = $files;
+
+    return $request;
+}
+
+function fleetopsInternalDriverExportSelections(DriverExport $export): array
+{
+    $property = new ReflectionProperty($export, 'selections');
+    $property->setAccessible(true);
+
+    return $property->getValue($export);
+}
+
+test('internal driver controller returns status and avatar options', function () {
+    session(['company' => 'company-uuid']);
+
+    $controller = new FleetOpsInternalDriverOptionsControllerProbe();
+
+    expect($controller->statuses()->getData(true))->toBe(['available', 'busy'])
+        ->and($controller->statusCompany)->toBe('company-uuid')
+        ->and($controller->avatars()->getData(true))->toBe(['avatar-a.png', 'avatar-b.png']);
+});
+
+test('internal driver controller downloads selected exports', function () {
+    FleetOpsInternalDriverOptionsControllerProbe::resetProbe();
+
+    $response = FleetOpsInternalDriverOptionsControllerProbe::export(fleetopsInternalDriverExportRequest([
+        'format'     => 'csv',
+        'selections' => ['driver-a', 'driver-b'],
+    ]));
+
+    expect($response['download'])->toMatch('/^drivers-[0-9-]+\\.csv$/')
+        ->and($response['headings'])->toContain('Name', 'Phone', 'Status')
+        ->and(FleetOpsInternalDriverOptionsControllerProbe::$downloads)->toHaveCount(1)
+        ->and(fleetopsInternalDriverExportSelections(FleetOpsInternalDriverOptionsControllerProbe::$downloads[0][0]))->toBe(['driver-a', 'driver-b']);
+});
+
+test('internal driver controller imports files and reports invalid files', function () {
+    $controller = new FleetOpsInternalDriverOptionsControllerProbe();
+
+    $response = $controller->import(fleetopsInternalDriverImportRequest([
+        'disk' => 'imports',
+    ], [
+        (object) ['path' => 'drivers/a.csv'],
+        (object) ['path' => 'drivers/b.csv'],
+    ]));
+
+    expect($response->getData(true))->toBe([
+        'status'   => 'ok',
+        'message'  => 'Import completed',
+        'imported' => 8,
+    ])
+        ->and($controller->imports)->toBe([
+            [3, 'drivers/a.csv', 'imports'],
+            [5, 'drivers/b.csv', 'imports'],
+        ]);
+
+    $controller             = new FleetOpsInternalDriverOptionsControllerProbe();
+    $controller->failImport = true;
+
+    $failed = $controller->import(fleetopsInternalDriverImportRequest([], [
+        (object) ['path' => 'drivers/bad.csv'],
+    ]));
+
+    expect($failed->getStatusCode())->toBe(500)
+        ->and($failed->getData(true))->toBe([
+            'error' => 'Invalid file, unable to proccess.',
+        ]);
+});
+
 test('internal driver controller assigns an order from route or request identifiers', function () {
     $controller = fleetopsInternalDriverAssignmentController();
 
@@ -654,4 +821,39 @@ test('internal driver controller verify code returns driver resource and handles
     expect($tokenFailure->getData(true))->toBe([
         'error' => 'Token service unavailable.',
     ]);
+});
+
+test('internal driver controller delegates login and create driver verification flows to api controller', function () {
+    $request = new Request(['for' => 'create_driver']);
+
+    $delegate = new class {
+        public array $calls = [];
+
+        public function login(Request $request): array
+        {
+            $this->calls[] = ['login', $request];
+
+            return ['delegated' => 'login'];
+        }
+
+        public function create(Request $request): array
+        {
+            $this->calls[] = ['create', $request];
+
+            return ['delegated' => 'create'];
+        }
+    };
+
+    app()->instance(Fleetbase\FleetOps\Http\Controllers\Api\v1\DriverController::class, $delegate);
+
+    $controller = new DriverController();
+
+    expect($controller->login($request))->toBe(['delegated' => 'login'])
+        ->and($controller->verifyCode($request))->toBe(['delegated' => 'create'])
+        ->and($delegate->calls)->toBe([
+            ['login', $request],
+            ['create', $request],
+        ]);
+
+    app()->forgetInstance(Fleetbase\FleetOps\Http\Controllers\Api\v1\DriverController::class);
 });
