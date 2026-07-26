@@ -25,6 +25,7 @@ use Fleetbase\FleetOps\Flow\Activity;
 use Fleetbase\FleetOps\Listeners\HandleGeofenceDwelled;
 use Fleetbase\FleetOps\Listeners\HandleGeofenceEntered;
 use Fleetbase\FleetOps\Listeners\HandleGeofenceExited;
+use Fleetbase\FleetOps\Listeners\HandleUserRemovedFromCompany;
 use Fleetbase\FleetOps\Listeners\NotifyOrderEvent;
 use Fleetbase\FleetOps\Models\Driver;
 use Fleetbase\FleetOps\Models\Entity;
@@ -42,6 +43,8 @@ use Fleetbase\FleetOps\Notifications\OrderDispatched as OrderDispatchedNotificat
 use Fleetbase\FleetOps\Notifications\OrderDispatchFailed as OrderDispatchFailedNotification;
 use Fleetbase\FleetOps\Notifications\OrderFailed as OrderFailedNotification;
 use Fleetbase\LaravelMysqlSpatial\Types\Point;
+use Fleetbase\Models\Company;
+use Fleetbase\Models\User;
 use Illuminate\Support\Carbon;
 
 if (!class_exists('Illuminate\Foundation\Auth\User')) {
@@ -224,6 +227,34 @@ class FleetOpsNotifyOrderEventProbe extends NotifyOrderEvent
     }
 }
 
+class FleetOpsUserRemovedDriverDeleteQueryFake
+{
+    public bool $deleted = false;
+
+    public function delete(): void
+    {
+        $this->deleted = true;
+    }
+}
+
+class FleetOpsUserRemovedListenerProbe extends HandleUserRemovedFromCompany
+{
+    public array $lookups = [];
+    public FleetOpsUserRemovedDriverDeleteQueryFake $query;
+
+    public function __construct()
+    {
+        $this->query = new FleetOpsUserRemovedDriverDeleteQueryFake();
+    }
+
+    protected function driverQueryForCompanyUser(string $companyUuid, string $userUuid): mixed
+    {
+        $this->lookups[] = [$companyUuid, $userUuid];
+
+        return $this->query;
+    }
+}
+
 class FleetOpsOrderCanceledNotificationEvent extends OrderCanceled
 {
     public ?Order $order = null;
@@ -312,6 +343,21 @@ function eventChannelNames(array $channels): array
 {
     return array_map(fn ($channel) => $channel->name, $channels);
 }
+
+test('user removed listener deletes driver rows matching removed company user', function () {
+    $user = new User();
+    $user->setRawAttributes(['uuid' => 'user-uuid'], true);
+
+    $company = new Company();
+    $company->setRawAttributes(['uuid' => 'company-uuid'], true);
+
+    $listener = new FleetOpsUserRemovedListenerProbe();
+    $listener->handle(new Fleetbase\Events\UserRemovedFromCompany($user, $company));
+
+    expect($listener->lookups)->toBe([
+        ['company-uuid', 'user-uuid'],
+    ])->and($listener->query->deleted)->toBeTrue();
+});
 
 test('driver location changed broadcasts driver telemetry payload', function () {
     session([

@@ -173,6 +173,16 @@ namespace {
         }
     }
 
+    class FleetOpsInternalUpdateDriverRequestProbe extends InternalUpdateDriverRequest
+    {
+        public bool $canUpdate = false;
+
+        protected function canUpdateDriver(): bool
+        {
+            return $this->canUpdate;
+        }
+    }
+
     test('device requests require names on create and protect paired location fields', function () {
         $createRules = requestRules(CreateDeviceRequest::class);
         $updateRules = requestRules(UpdateDeviceRequest::class, 'PATCH');
@@ -376,12 +386,18 @@ namespace {
         ])->rules();
         $patchRules  = InternalCreateDriverRequest::create('/fleetops-test', 'PATCH')->rules();
         $request     = new InternalCreateDriverRequest();
+        $updateProbe = new FleetOpsInternalUpdateDriverRequestProbe();
 
         expect(ruleStrings($createRules['name']))->toContain('required', 'nullable', 'string', 'max:255')
             ->and(ruleStrings($createRules['email']))->toContain('required')
             ->and(ruleStrings($createRules['phone']))->toContain('required')
             ->and(ruleStrings($userRules['name']))->not->toContain('required')
             ->and(ruleStrings($patchRules['name']))->not->toContain('required')
+            ->and($updateProbe->authorize())->toBeFalse();
+
+        $updateProbe->canUpdate = true;
+
+        expect($updateProbe->authorize())->toBeTrue()
             ->and($createRules['vehicle'][1])->toBeInstanceOf(ResolvableVehicle::class)
             ->and($createRules['location'][1])->toBeInstanceOf(ResolvablePoint::class)
             ->and($createRules['latitude'])->toBe(['nullable', 'required_with:longitude', 'numeric'])
