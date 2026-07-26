@@ -2,6 +2,8 @@
 
 use Fleetbase\FleetOps\Contracts\TelematicProviderInterface;
 use Fleetbase\FleetOps\Jobs\CheckGeofenceDwell;
+use Fleetbase\FleetOps\Jobs\FinalizeApiOrderCreation;
+use Fleetbase\FleetOps\Jobs\FinalizeInternalOrderCreation;
 use Fleetbase\FleetOps\Jobs\NotifyBulkAssignedDriver;
 use Fleetbase\FleetOps\Jobs\ReplayPositions;
 use Fleetbase\FleetOps\Jobs\SendPositionReplay;
@@ -14,6 +16,7 @@ use Fleetbase\FleetOps\Models\FuelProviderConnection;
 use Fleetbase\FleetOps\Models\FuelProviderSyncRun;
 use Fleetbase\FleetOps\Models\Order;
 use Fleetbase\FleetOps\Models\Position;
+use Fleetbase\FleetOps\Models\ServiceQuote;
 use Fleetbase\FleetOps\Models\Telematic;
 use Fleetbase\FleetOps\Models\Vehicle;
 use Fleetbase\FleetOps\Models\Zone;
@@ -154,6 +157,71 @@ class FleetOpsNotifyBulkAssignedDriverProbe extends NotifyBulkAssignedDriver
     protected function logNotificationFailure(Order $order, Throwable $e): void
     {
         $this->warnings[] = [$order->uuid, $e->getMessage()];
+    }
+}
+
+class FleetOpsFinalizeOrderFake extends Order
+{
+    public array $calls = [];
+
+    public function notifyDriverAssigned(): void
+    {
+        $this->calls[] = 'notifyDriverAssigned';
+    }
+
+    public function setPreliminaryDistanceAndTime(): void
+    {
+        $this->calls[] = 'setPreliminaryDistanceAndTime';
+    }
+
+    public function purchaseServiceQuote($serviceQuote, $meta = [])
+    {
+        $this->calls[] = ['purchaseServiceQuote', $serviceQuote?->uuid];
+    }
+
+    public function dispatchWithActivity(): Order
+    {
+        $this->calls[] = 'dispatchWithActivity';
+
+        return $this;
+    }
+}
+
+class FleetOpsFinalizeApiOrderCreationProbe extends FinalizeApiOrderCreation
+{
+    public ?Order $order               = null;
+    public ?ServiceQuote $serviceQuote = null;
+    public array $events               = [];
+
+    protected function findOrder(): ?Order
+    {
+        return $this->order;
+    }
+
+    protected function findServiceQuote(): ?ServiceQuote
+    {
+        return $this->serviceQuote;
+    }
+
+    protected function fireOrderReady(Order $order): void
+    {
+        $this->events[] = $order->uuid;
+    }
+}
+
+class FleetOpsFinalizeInternalOrderCreationProbe extends FinalizeInternalOrderCreation
+{
+    public ?Order $order = null;
+    public array $events = [];
+
+    protected function findOrder(): ?Order
+    {
+        return $this->order;
+    }
+
+    protected function fireOrderReady(Order $order): void
+    {
+        $this->events[] = $order->uuid;
     }
 }
 
@@ -531,6 +599,64 @@ test('notify bulk assigned driver updates orders and records notification failur
         ->and($job->warnings)->toBe([
             ['order-2', 'notification offline'],
         ]);
+});
+
+test('finalize api order creation job prepares optional dispatch and emits ready event', function () {
+    $missingOrderJob        = new FleetOpsFinalizeApiOrderCreationProbe('missing-order');
+    $missingOrderJob->order = null;
+    $missingOrderJob->handle();
+
+    expect($missingOrderJob->events)->toBe([]);
+
+    $order = new FleetOpsFinalizeOrderFake();
+    $order->setRawAttributes(['uuid' => 'order-uuid'], true);
+
+    $serviceQuote = new ServiceQuote();
+    $serviceQuote->setRawAttributes(['uuid' => 'service-quote-uuid'], true);
+
+    $job               = new FleetOpsFinalizeApiOrderCreationProbe('order-uuid', 'service-quote-uuid', true);
+    $job->order        = $order;
+    $job->serviceQuote = $serviceQuote;
+
+    $job->handle();
+
+    expect($order->calls)->toBe([
+        'notifyDriverAssigned',
+        'setPreliminaryDistanceAndTime',
+        ['purchaseServiceQuote', 'service-quote-uuid'],
+        'dispatchWithActivity',
+    ])
+        ->and($job->events)->toBe(['order-uuid']);
+
+    $withoutDispatch        = new FleetOpsFinalizeApiOrderCreationProbe('order-uuid', null, false);
+    $withoutDispatch->order = new FleetOpsFinalizeOrderFake();
+    $withoutDispatch->order->setRawAttributes(['uuid' => 'order-uuid-no-dispatch'], true);
+    $withoutDispatch->handle();
+
+    expect($withoutDispatch->order->calls)->toBe([
+        'notifyDriverAssigned',
+        'setPreliminaryDistanceAndTime',
+        ['purchaseServiceQuote', null],
+    ])
+        ->and($withoutDispatch->events)->toBe(['order-uuid-no-dispatch']);
+});
+
+test('finalize internal order creation job notifies driver and emits ready event', function () {
+    $missingOrderJob        = new FleetOpsFinalizeInternalOrderCreationProbe('missing-order');
+    $missingOrderJob->order = null;
+    $missingOrderJob->handle();
+
+    expect($missingOrderJob->events)->toBe([]);
+
+    $order = new FleetOpsFinalizeOrderFake();
+    $order->setRawAttributes(['uuid' => 'internal-order-uuid'], true);
+
+    $job        = new FleetOpsFinalizeInternalOrderCreationProbe('internal-order-uuid');
+    $job->order = $order;
+    $job->handle();
+
+    expect($order->calls)->toBe(['notifyDriverAssigned'])
+        ->and($job->events)->toBe(['internal-order-uuid']);
 });
 
 test('simulate driving route builds waypoint chain and dispatches the first waypoint', function () {

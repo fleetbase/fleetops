@@ -27,12 +27,12 @@ class FinalizeApiOrderCreation implements ShouldQueue
 
     public function handle(): void
     {
-        $order = Order::where('uuid', $this->orderUuid)->first();
+        $order = $this->findOrder();
         if (!$order) {
             return;
         }
 
-        $serviceQuote = $this->serviceQuoteUuid ? ServiceQuote::where('uuid', $this->serviceQuoteUuid)->first() : null;
+        $serviceQuote = $this->findServiceQuote();
 
         $order->notifyDriverAssigned();
         $order->setPreliminaryDistanceAndTime();
@@ -42,6 +42,21 @@ class FinalizeApiOrderCreation implements ShouldQueue
             $order->dispatchWithActivity();
         }
 
+        $this->fireOrderReady($order);
+    }
+
+    protected function findOrder(): ?Order
+    {
+        return Order::where('uuid', $this->orderUuid)->first();
+    }
+
+    protected function findServiceQuote(): ?ServiceQuote
+    {
+        return $this->serviceQuoteUuid ? ServiceQuote::where('uuid', $this->serviceQuoteUuid)->first() : null;
+    }
+
+    protected function fireOrderReady(Order $order): void
+    {
         event(new OrderReady($order));
     }
 }
