@@ -64,6 +64,186 @@ class FleetOpsAfaqyProviderProbe extends AfaqyProvider
     }
 }
 
+class FleetOpsSafeeProviderProbe extends SafeeProvider
+{
+    public array $postCalls      = [];
+    public array $postResponses  = [];
+    public array $postExceptions = [];
+
+    public function setCredentialsForTest(array $credentials): void
+    {
+        $this->credentials = $credentials;
+    }
+
+    public function setAuthContextForTest(array $authContext): void
+    {
+        $this->authContext = $authContext;
+    }
+
+    public function setTelematicMetaForTest(array $meta): void
+    {
+        $telematic       = new Telematic();
+        $telematic->meta = $meta;
+        $this->telematic = $telematic;
+    }
+
+    public function queuePostResponse(string $endpoint, array $response): void
+    {
+        $this->postResponses[$endpoint][] = $response;
+    }
+
+    public function queuePostException(string $endpoint, Throwable $exception): void
+    {
+        $this->postExceptions[$endpoint][] = $exception;
+    }
+
+    public function resolveBaseUrlForTest(): string
+    {
+        return $this->resolveBaseUrl();
+    }
+
+    public function filledCredentialForTest(string $key): ?string
+    {
+        return $this->filledCredential($key);
+    }
+
+    public function buildAuthContextForTest(string $tokenUrl): array
+    {
+        return $this->buildAuthContext($tokenUrl);
+    }
+
+    public function safeDiagnosticMetadataForTest(): array
+    {
+        return $this->safeDiagnosticMetadata();
+    }
+
+    public function resolveTelemetryWindowForTest(array $options = []): array
+    {
+        return $this->resolveTelemetryWindow($options);
+    }
+
+    public function currentSafeeTimestampForTest(): float
+    {
+        return $this->currentSafeeTimestamp();
+    }
+
+    public function resolveListInfoPayloadForTest(array $options = []): array
+    {
+        return $this->resolveListInfoPayload($options);
+    }
+
+    public function resolveListedVehicleIdsForTest(array $vehicles): array
+    {
+        return $this->resolveListedVehicleIds($vehicles);
+    }
+
+    public function summarizeVehicleIdentitiesForTest(array $vehicles, array $uniqueVehicleIds): array
+    {
+        return $this->summarizeVehicleIdentities($vehicles, $uniqueVehicleIds);
+    }
+
+    public function fetchLastStatesByVehicleForTest(array $vehicleIds, ?array &$endpointStats = null): array
+    {
+        return $this->fetchLastStatesByVehicle($vehicleIds, $endpointStats);
+    }
+
+    public function enrichVehicleSnapshotForTest(array $vehicle, array $window, array &$endpointStats): array
+    {
+        return $this->enrichVehicleSnapshot($vehicle, $window, $endpointStats);
+    }
+
+    public function fetchVehicleEndpointForTest(string $endpoint, array $payload, string $name, mixed $vehicleId, array &$endpointStats, mixed $default = null): mixed
+    {
+        return $this->fetchVehicleEndpoint($endpoint, $payload, $name, $vehicleId, $endpointStats, $default);
+    }
+
+    public function currentTelemetryPayloadForTest(array $payload): ?array
+    {
+        return $this->currentTelemetryPayload($payload);
+    }
+
+    public function resolveVehicleIdForTest(array $payload): mixed
+    {
+        return $this->resolveVehicleId($payload);
+    }
+
+    public function resolveCanonicalVehicleIdForTest(array $payload, array $identity, array $current = []): mixed
+    {
+        return $this->resolveCanonicalVehicleId($payload, $identity, $current);
+    }
+
+    public function resolveVehicleNameForTest(array $identity, array $current = [], mixed $vehicleId = null): string
+    {
+        return $this->resolveVehicleName($identity, $current, $vehicleId);
+    }
+
+    public function sanitizeProviderMessageForTest(string $message): string
+    {
+        return $this->sanitizeProviderMessage($message);
+    }
+
+    public function extractPositionForTest(array $payload): array
+    {
+        return $this->extractPosition($payload);
+    }
+
+    public function parseTimestampForTest($value): ?string
+    {
+        return $this->parseTimestamp($value);
+    }
+
+    public function normalizeVehicleStatusForTest(?string $status): string
+    {
+        return $this->normalizeVehicleStatus($status);
+    }
+
+    public function resolveOnlineForTest(array $payload): ?bool
+    {
+        return $this->resolveOnline($payload);
+    }
+
+    public function extractOdometerForTest(array $payload): mixed
+    {
+        return $this->extractOdometer($payload);
+    }
+
+    public function extractIgnitionForTest(array $payload): ?bool
+    {
+        return $this->extractIgnition($payload);
+    }
+
+    public function extractFuelLevelForTest(array $payload): mixed
+    {
+        return $this->extractFuelLevel($payload);
+    }
+
+    public function extractTelemetrySensorsForTest(array $payload): array
+    {
+        return $this->extractTelemetrySensors($payload);
+    }
+
+    public function extractSensorMapForTest(array $payload, array $keys): array
+    {
+        return $this->extractSensorMap($payload, $keys);
+    }
+
+    public function makeSafeeSensorPayloadForTest(array $sourcePayload, mixed $vehicleId, mixed $plateNo, string $type, string $name, mixed $value, ?string $unit = null): array
+    {
+        return $this->makeSafeeSensorPayload($sourcePayload, $vehicleId, $plateNo, $type, $name, $value, $unit);
+    }
+
+    protected function safeePost(string $endpoint, array|stdClass $payload = [], bool $dataEndpoint = false): array
+    {
+        $this->postCalls[] = compact('endpoint', 'payload', 'dataEndpoint');
+
+        if (!empty($this->postExceptions[$endpoint])) {
+            throw array_shift($this->postExceptions[$endpoint]);
+        }
+
+        return array_shift($this->postResponses[$endpoint]) ?? [];
+    }
+}
+
 test('device event model and migration expose lifecycle fields used by telematics workflows', function () {
     $model     = file_get_contents(__DIR__ . '/../src/Models/DeviceEvent.php');
     $migration = file_get_contents(__DIR__ . '/../migrations/2026_06_06_000001_harden_device_events_telematics_contract.php');
@@ -817,6 +997,227 @@ test('safee sensors normalize stable parent scoped identities and latest values'
     expect(data_get($open, 'meta.plate_no'))->toBe('ABC-1234');
     expect($closed['internal_id'])->toBe($open['internal_id']);
     expect($closed['value'])->toBe('Closed');
+});
+
+test('safee helper methods normalize credentials metadata and sync windows', function () {
+    Carbon::setTestNow(Carbon::parse('2026-06-23T09:15:40.250000Z'));
+
+    try {
+        $provider = new FleetOpsSafeeProviderProbe();
+        $provider->setCredentialsForTest([
+            'api_base_url' => ' https://tenant.safee.test/ ',
+            'server_uri'   => 'https://ignored.safee.test',
+            'realm_id'     => 'fleet-realm',
+            'blank'        => '   ',
+            'array_value'  => ['not-string'],
+        ]);
+        $provider->setAuthContextForTest([
+            'auth_host' => 'https://auth.safee.test',
+            'auth_path' => '',
+            'realm_id'  => 'fleet-realm',
+        ]);
+        $provider->setTelematicMetaForTest([
+            'safee_last_telemetry_synced_at' => 1782206000.5,
+        ]);
+
+        expect($provider->resolveBaseUrlForTest())->toBe('https://tenant.safee.test')
+            ->and($provider->filledCredentialForTest('blank'))->toBeNull()
+            ->and($provider->filledCredentialForTest('array_value'))->toBeNull()
+            ->and($provider->buildAuthContextForTest('https://auth.safee.test/auth/realms/fleet/protocol/openid-connect/token'))->toBe([
+                'auth_host' => 'https://auth.safee.test',
+                'auth_path' => '/auth/realms/fleet/protocol/openid-connect/token',
+                'realm_id'  => 'fleet-realm',
+            ])
+            ->and($provider->safeDiagnosticMetadataForTest())->toBe([
+                'auth_host' => 'https://auth.safee.test',
+                'realm_id'  => 'fleet-realm',
+            ])
+            ->and($provider->currentSafeeTimestampForTest())->toBe(1782206140.25)
+            ->and($provider->resolveTelemetryWindowForTest())->toBe([
+                'startDate' => 1782205880.5,
+                'endDate'   => 1782206140.25,
+            ])
+            ->and($provider->resolveTelemetryWindowForTest([
+                'start_date' => -50,
+                'end_date'   => 1782206100.5,
+            ]))->toBe([
+                'startDate' => 0,
+                'endDate'   => 1782206100.5,
+            ])
+            ->and($provider->resolveListInfoPayloadForTest([
+                'filter'     => (object) ['status' => 'ACTIVE'],
+                'page_size'  => 25,
+                'page_index' => 2,
+            ]))->toBe([
+                'status'    => 'ACTIVE',
+                'pageSize'  => 25,
+                'pageIndex' => 2,
+            ]);
+    } finally {
+        Carbon::setTestNow();
+    }
+});
+
+test('safee endpoint helpers account for identities enrichment and failures', function () {
+    $provider = new FleetOpsSafeeProviderProbe();
+    $vehicles = [
+        ['id' => 105],
+        ['_safee'  => ['vehicle_id' => 106]],
+        ['_safee'  => ['identity' => ['id' => 105]]],
+        ['plateNo' => 'missing'],
+        'not-array',
+    ];
+
+    $ids = $provider->resolveListedVehicleIdsForTest($vehicles);
+
+    expect($ids)->toBe([105, 106])
+        ->and($provider->summarizeVehicleIdentitiesForTest($vehicles, $ids))->toBe([
+            'unique_vehicle_ids'    => 2,
+            'missing_vehicle_ids'   => 2,
+            'duplicate_vehicle_ids' => ['105' => 2],
+        ]);
+
+    $provider->queuePostResponse('/api/v2/vehicle/last-state', [
+        'result' => [
+            ['vehicle' => ['id' => 105], 'status' => 'online'],
+            'ignored',
+            ['id' => 106, 'status' => 'offline'],
+        ],
+    ]);
+    $stats = ['failures' => []];
+
+    $lastStates = $provider->fetchLastStatesByVehicleForTest([105, 106], $stats);
+
+    expect($lastStates['105']['status'])->toBe('online')
+        ->and($lastStates['106']['status'])->toBe('offline');
+
+    $provider->queuePostException('/api/v2/vehicle/last-state', new RuntimeException('token=abc123 password=secret failed'));
+    $failedStats = ['failures' => []];
+
+    expect($provider->fetchLastStatesByVehicleForTest([107], $failedStats))->toBe([])
+        ->and($failedStats['failures'][0])->toMatchArray([
+            'endpoint'   => '/api/v2/vehicle/last-state',
+            'vehicle_id' => null,
+            'message'    => 'token=[redacted] password=[redacted] failed',
+        ]);
+
+    $provider->queuePostResponse('/api/v2/vehicle/positions', [
+        'result' => [
+            ['id' => 'p1'],
+            ['id' => 'p2'],
+        ],
+    ]);
+    $endpointStats = [
+        'last_info_fetched' => 0,
+        'positions_fetched' => 0,
+        'events_fetched'    => 0,
+        'failures'          => [],
+    ];
+
+    expect($provider->fetchVehicleEndpointForTest('/api/v2/vehicle/positions', ['vehicleId' => 105], 'positions', 105, $endpointStats, []))->toBe([
+        ['id' => 'p1'],
+        ['id' => 'p2'],
+    ])
+        ->and($endpointStats['positions_fetched'])->toBe(2)
+        ->and($provider->fetchVehicleEndpointForTest('/api/v2/vehicle/events', ['vehicleId' => null], 'events', null, $endpointStats, []))->toBe([]);
+
+    $provider->queuePostResponse('/api/v2/vehicle/last-info', [
+        'result' => [
+            'id'                 => 105,
+            'plateNo'            => 'ABC-1234',
+            'date'               => 1782206140.5,
+            'temperaturePerType' => ['Cargo' => 4.5],
+            'doorPerType'        => ['Rear' => 'Closed'],
+            'humidityPerType'    => ['Cabin' => 44],
+        ],
+    ]);
+    $provider->queuePostException('/api/v2/vehicle/positions', new RuntimeException('client_secret=secret failed'));
+    $provider->queuePostResponse('/api/v2/vehicle/events', ['result' => [['id' => 'event-1']]]);
+
+    $snapshotStats = [
+        'last_info_fetched' => 0,
+        'positions_fetched' => 0,
+        'events_fetched'    => 0,
+        'failures'          => [],
+    ];
+    $snapshot = $provider->enrichVehicleSnapshotForTest(['id' => 105, 'plateNo' => 'ABC-1234'], [
+        'startDate' => 1782206000.5,
+        'endDate'   => 1782206140.5,
+    ], $snapshotStats);
+
+    expect($snapshot['_safee']['current_info']['id'])->toBe(105)
+        ->and($snapshot['_safee']['positions'])->toBe([])
+        ->and($snapshot['_safee']['events'])->toBe([['id' => 'event-1']])
+        ->and($snapshot['sensors'])->toHaveCount(3)
+        ->and($snapshotStats)->toMatchArray([
+            'last_info_fetched' => 1,
+            'events_fetched'    => 1,
+            'failures'          => [
+                [
+                    'endpoint'   => '/api/v2/vehicle/positions',
+                    'vehicle_id' => 105,
+                    'message'    => 'client_secret=[redacted] failed',
+                ],
+            ],
+        ]);
+});
+
+test('safee normalization helpers cover status position sensor and timestamp variants', function () {
+    $provider = new FleetOpsSafeeProviderProbe();
+
+    expect($provider->currentTelemetryPayloadForTest([
+        '_safee' => [
+            'current_state' => ['status' => 'offline', 'speed' => 10],
+            'current_info'  => ['speed' => 12, 'odometer' => 500],
+        ],
+    ]))->toBe([
+        'status'   => 'offline',
+        'speed'    => 12,
+        'odometer' => 500,
+    ])
+        ->and($provider->currentTelemetryPayloadForTest(['_safee' => ['current_info' => ['speed' => 7]]]))->toBe(['speed' => 7])
+        ->and($provider->currentTelemetryPayloadForTest(['_safee' => ['current_state' => ['speed' => 6]]]))->toBe(['speed' => 6])
+        ->and($provider->currentTelemetryPayloadForTest(['_safee' => []]))->toBeNull()
+        ->and($provider->resolveVehicleIdForTest(['_safee' => ['vehicle_id' => 105]]))->toBe(105)
+        ->and($provider->resolveVehicleIdForTest(['vehicle' => ['id' => 106]]))->toBe(106)
+        ->and($provider->resolveCanonicalVehicleIdForTest([], ['_safee' => ['identity' => ['id' => 107]]]))->toBe(107)
+        ->and($provider->resolveVehicleNameForTest([], ['vehicle' => ['name' => 'Truck Name']], null))->toBe('Truck Name')
+        ->and($provider->resolveVehicleNameForTest([], [], 108))->toBe('Safee Vehicle 108')
+        ->and($provider->resolveVehicleNameForTest([], [], null))->toBe('Unknown Safee Vehicle')
+        ->and($provider->sanitizeProviderMessageForTest('access_token=abc&password=secret client_secret=top'))->toBe('access_token=[redacted]&password=[redacted] client_secret=[redacted]')
+        ->and($provider->extractPositionForTest(['loc' => ['coordinates' => [55.2, 25.2]]]))->toBe(['lat' => 25.2, 'lng' => 55.2])
+        ->and($provider->parseTimestampForTest(null))->toBeNull()
+        ->and($provider->parseTimestampForTest(1782206140500))->toBe(Carbon::createFromTimestamp(1782206140.5)->toDateTimeString())
+        ->and($provider->parseTimestampForTest('2026-06-23T09:15:40Z'))->toBe('2026-06-23 09:15:40')
+        ->and($provider->normalizeVehicleStatusForTest(null))->toBe('active')
+        ->and($provider->normalizeVehicleStatusForTest('expired'))->toBe('inactive')
+        ->and($provider->normalizeVehicleStatusForTest('moving'))->toBe('active')
+        ->and($provider->resolveOnlineForTest(['online' => 'false']))->toBeFalse()
+        ->and($provider->resolveOnlineForTest(['online' => 'not-bool']))->toBeTrue()
+        ->and($provider->resolveOnlineForTest(['vehicleStatus' => 'deleted']))->toBeFalse()
+        ->and($provider->resolveOnlineForTest([]))->toBeNull()
+        ->and($provider->extractOdometerForTest(['canbus' => ['odometer' => 10]]))->toBe(10)
+        ->and($provider->extractOdometerForTest(['vehicleCanbus' => ['odometer' => 11]]))->toBe(11)
+        ->and($provider->extractIgnitionForTest(['event' => ['code' => 'ignition_on']]))->toBeTrue()
+        ->and($provider->extractIgnitionForTest(['event' => ['code' => 'ignition_off']]))->toBeFalse()
+        ->and($provider->extractIgnitionForTest(['ignition' => '1']))->toBeTrue()
+        ->and($provider->extractIgnitionForTest([]))->toBeNull()
+        ->and($provider->extractFuelLevelForTest(['fuel' => ['level' => 80]]))->toBe(80)
+        ->and($provider->extractFuelLevelForTest(['vehicleFuel' => ['level' => 81]]))->toBe(81)
+        ->and($provider->extractSensorMapForTest(['temperaturePerType' => ['Cargo' => 4.5]], ['temperature', 'temperaturePerType']))->toBe(['Cargo' => 4.5])
+        ->and($provider->extractSensorMapForTest([], ['temperature']))->toBe([]);
+
+    $sensorPayload = $provider->makeSafeeSensorPayloadForTest([
+        'deviceTime' => '2026-06-23T09:15:40Z',
+    ], null, null, 'door', 'Rear', 'Open');
+
+    expect($sensorPayload)->toMatchArray([
+        'internal_id' => 'safee:unknown_vehicle:door:Rear',
+        'external_id' => 'safee:unknown_vehicle:door:Rear',
+        'recorded_at' => '2026-06-23T09:15:40Z',
+        'deviceTime'  => '2026-06-23T09:15:40Z',
+        'source'      => 'door',
+    ]);
 });
 
 test('geotab latest log record drives device and event telemetry', function () {
