@@ -108,6 +108,18 @@ class FleetOpsPartStockFake extends Part
     }
 }
 
+class FleetOpsPartSavingImportFake extends Part
+{
+    public bool $saved = false;
+
+    public function save(array $options = []): bool
+    {
+        $this->saved = true;
+
+        return true;
+    }
+}
+
 function fleetopsPartModelUseInMemoryConnection(): SQLiteConnection
 {
     $connection = new SQLiteConnection(new PDO('sqlite::memory:'));
@@ -121,6 +133,36 @@ function fleetopsPartModelUseInMemoryConnection(): SQLiteConnection
     $resolver->setDefaultConnection('mysql');
     EloquentModel::setConnectionResolver($resolver);
     app()->instance('db', new FleetOpsPartDatabaseProbe($connection));
+
+    return $connection;
+}
+
+function fleetopsPartModelUseAlertConnection(): SQLiteConnection
+{
+    $connection = fleetopsPartModelUseInMemoryConnection();
+    $connection->statement('create table alerts (
+        id integer primary key autoincrement,
+        uuid varchar(64) null,
+        public_id varchar(64) null,
+        company_uuid varchar(64),
+        type varchar(64),
+        severity varchar(64),
+        status varchar(64),
+        subject_type varchar(255),
+        subject_uuid varchar(64),
+        message text,
+        rule text null,
+        context text null,
+        triggered_at datetime null,
+        acknowledged_at datetime null,
+        resolved_at datetime null,
+        acknowledged_by_uuid varchar(64) null,
+        resolved_by_uuid varchar(64) null,
+        meta text null,
+        created_at datetime null,
+        updated_at datetime null,
+        deleted_at datetime null
+    )');
 
     return $connection;
 }
@@ -173,7 +215,8 @@ test('part accessors derive names urls inventory state and asset display names',
     $emptyPart->setRelation('asset', $displayOnlyAsset);
 
     expect($emptyPart->is_in_stock)->toBeFalse()
-        ->and($emptyPart->asset_name)->toBe('Display Asset');
+        ->and($emptyPart->asset_name)->toBe('Display Asset')
+        ->and((new Part())->asset_name)->toBeNull();
 });
 
 test('part scopes apply inventory and manufacturer constraints', function () {
@@ -305,4 +348,52 @@ test('part import maps spreadsheet aliases defaults and vendor lookup', function
         ->and($part->msrp)->toBe(2345)
         ->and($part->currency)->toBe('SGD')
         ->and($part->vendor_uuid)->toBe('vendor-uuid');
+});
+
+test('part low stock alert creation records alert context once when none exists', function () {
+    $connection = fleetopsPartModelUseAlertConnection();
+
+    $part = new Part();
+    $part->setRawAttributes([
+        'uuid'             => 'part-uuid',
+        'company_uuid'     => 'company-part',
+        'sku'              => 'PAD-2',
+        'name'             => 'Brake Pad',
+        'quantity_on_hand' => 2,
+        'specs'            => ['low_stock_threshold' => 4],
+    ], true);
+
+    $reflection = new ReflectionMethod(Part::class, 'createLowStockAlert');
+    $reflection->setAccessible(true);
+    $reflection->invoke($part);
+
+    $alert = $connection->table('alerts')->first();
+
+    expect($connection->table('alerts')->count())->toBe(1)
+        ->and($alert->company_uuid)->toBe('company-part')
+        ->and($alert->type)->toBe('low_stock')
+        ->and($alert->severity)->toBe('medium')
+        ->and($alert->status)->toBe('open')
+        ->and($alert->subject_type)->toBe(Part::class)
+        ->and($alert->subject_uuid)->toBe('part-uuid')
+        ->and($alert->message)->toBe("Part 'Brake Pad' (SKU: PAD-2) is low on stock (2 remaining)")
+        ->and(json_decode($alert->context, true))->toMatchArray([
+            'part_name'           => 'Brake Pad',
+            'sku'                 => 'PAD-2',
+            'current_quantity'    => 2,
+            'low_stock_threshold' => 4,
+        ]);
+});
+
+test('part import save branch persists through late static model', function () {
+    $part = FleetOpsPartSavingImportFake::createFromImport([
+        'sku'      => 'SAVE-1',
+        'name'     => 'Saved Part',
+        'currency' => null,
+    ], true);
+
+    expect($part)->toBeInstanceOf(FleetOpsPartSavingImportFake::class)
+        ->and($part->saved)->toBeTrue()
+        ->and($part->sku)->toBe('SAVE-1')
+        ->and($part->currency)->toBe('USD');
 });
