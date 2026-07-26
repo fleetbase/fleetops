@@ -2,6 +2,7 @@
 
 use Fleetbase\FleetOps\Contracts\TelematicProviderInterface;
 use Fleetbase\FleetOps\Jobs\CheckGeofenceDwell;
+use Fleetbase\FleetOps\Jobs\NotifyBulkAssignedDriver;
 use Fleetbase\FleetOps\Jobs\ReplayPositions;
 use Fleetbase\FleetOps\Jobs\SendPositionReplay;
 use Fleetbase\FleetOps\Jobs\SimulateDrivingRoute;
@@ -11,6 +12,7 @@ use Fleetbase\FleetOps\Jobs\TestTelematicConnectionJob;
 use Fleetbase\FleetOps\Models\Driver;
 use Fleetbase\FleetOps\Models\FuelProviderConnection;
 use Fleetbase\FleetOps\Models\FuelProviderSyncRun;
+use Fleetbase\FleetOps\Models\Order;
 use Fleetbase\FleetOps\Models\Position;
 use Fleetbase\FleetOps\Models\Telematic;
 use Fleetbase\FleetOps\Models\Vehicle;
@@ -115,6 +117,43 @@ class FleetOpsReplayPositionsProbe extends ReplayPositions
     protected function logInfo(string $message): void
     {
         $this->logs[] = $message;
+    }
+}
+
+class FleetOpsBulkAssignedOrderFake extends Order
+{
+    public bool $notified       = false;
+    public ?Throwable $throwing = null;
+
+    public function notifyDriverAssigned(): void
+    {
+        if ($this->throwing) {
+            throw $this->throwing;
+        }
+
+        $this->notified = true;
+    }
+}
+
+class FleetOpsNotifyBulkAssignedDriverProbe extends NotifyBulkAssignedDriver
+{
+    public ?Driver $driver = null;
+    public array $orders   = [];
+    public array $warnings = [];
+
+    protected function findDriver(): ?Driver
+    {
+        return $this->driver;
+    }
+
+    protected function ordersForNotification(): iterable
+    {
+        return $this->orders;
+    }
+
+    protected function logNotificationFailure(Order $order, Throwable $e): void
+    {
+        $this->warnings[] = [$order->uuid, $e->getMessage()];
     }
 }
 
@@ -457,6 +496,41 @@ test('replay positions schedules replay jobs using relative offsets and speed fl
     expect($slow->dispatches[1])->toBe(['position-slow-2', 1, 10.0]);
 
     Carbon::setTestNow();
+});
+
+test('notify bulk assigned driver updates orders and records notification failures', function () {
+    $missingDriverJob         = new FleetOpsNotifyBulkAssignedDriverProbe(['order-1'], 'missing-driver');
+    $missingDriverJob->orders = [new FleetOpsBulkAssignedOrderFake()];
+    $missingDriverJob->handle();
+
+    expect($missingDriverJob->orders[0]->notified)->toBeFalse()
+        ->and($missingDriverJob->warnings)->toBe([]);
+
+    $driver = new Driver();
+    $driver->setRawAttributes(['uuid' => 'driver-uuid'], true);
+
+    $first = new FleetOpsBulkAssignedOrderFake();
+    $first->setRawAttributes(['uuid' => 'order-1'], true);
+
+    $second           = new FleetOpsBulkAssignedOrderFake();
+    $second->throwing = new RuntimeException('notification offline');
+    $second->setRawAttributes(['uuid' => 'order-2'], true);
+
+    $job         = new FleetOpsNotifyBulkAssignedDriverProbe(['order-1', 'order-2'], 'driver-uuid');
+    $job->driver = $driver;
+    $job->orders = [$first, $second];
+
+    $job->handle();
+
+    expect($first->notified)->toBeTrue()
+        ->and($first->driver_assigned_uuid)->toBe('driver-uuid')
+        ->and($first->driverAssigned)->toBe($driver)
+        ->and($second->notified)->toBeFalse()
+        ->and($second->driver_assigned_uuid)->toBe('driver-uuid')
+        ->and($second->driverAssigned)->toBe($driver)
+        ->and($job->warnings)->toBe([
+            ['order-2', 'notification offline'],
+        ]);
 });
 
 test('simulate driving route builds waypoint chain and dispatches the first waypoint', function () {
