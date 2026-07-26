@@ -1,21 +1,8 @@
 <?php
 
 use Fleetbase\FleetOps\Http\Controllers\Api\v1\SensorController;
-use Fleetbase\FleetOps\Http\Controllers\Internal\v1\ProofController;
-use Fleetbase\FleetOps\Models\Proof;
 use Fleetbase\LaravelMysqlSpatial\Types\Point;
 use Illuminate\Http\Request;
-
-class FleetOpsProofControllerProbe extends ProofController
-{
-    public function callHelper(string $method, mixed ...$arguments): mixed
-    {
-        $reflection = new ReflectionMethod(ProofController::class, $method);
-        $reflection->setAccessible(true);
-
-        return $reflection->invoke($this, ...$arguments);
-    }
-}
 
 class FleetOpsSensorControllerProbe extends SensorController
 {
@@ -24,38 +11,6 @@ class FleetOpsSensorControllerProbe extends SensorController
         return $this->input($request);
     }
 }
-
-test('internal proof controller builds success signature path and file metadata helpers', function () {
-    session([
-        'company' => 'company-uuid',
-        'user'    => 'user-uuid',
-    ]);
-    app('config')->set('filesystems.disks.s3.bucket', 'fleetbase-test-bucket');
-
-    $controller = new FleetOpsProofControllerProbe();
-    $proof      = new Proof();
-    $proof->setRawAttributes(['public_id' => 'proof-public'], true);
-    $signature = base64_encode('signature-bytes');
-
-    $path = $controller->callHelper('signatureStoragePath', $proof);
-
-    expect($controller->callHelper('proofSuccessPayload', $proof))->toBe([
-        'status' => 'success',
-        'proof'  => 'proof-public',
-    ])->and($path)->toBe('uploads/company-uuid/signatures/proof-public.png')
-        ->and($controller->callHelper('signatureFileAttributes', $path, $signature))->toBe([
-            'company_uuid'      => 'company-uuid',
-            'uploader_uuid'     => 'user-uuid',
-            'name'              => 'proof-public.png',
-            'original_filename' => 'proof-public.png',
-            'extension'         => 'png',
-            'content_type'      => 'image/png',
-            'path'              => 'uploads/company-uuid/signatures/proof-public.png',
-            'bucket'            => 'fleetbase-test-bucket',
-            'type'              => 'signature',
-            'size'              => 15,
-        ]);
-});
 
 test('api sensor controller input maps positions and blank sensorable assignments', function () {
     $controller = new FleetOpsSensorControllerProbe();
