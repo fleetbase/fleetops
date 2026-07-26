@@ -58,6 +58,7 @@ if (!function_exists('Fleetbase\Support\config')) {
 use Fleetbase\FleetOps\Models\Order;
 use Fleetbase\FleetOps\Models\Waypoint;
 use Fleetbase\FleetOps\Notifications\OrderCompleted;
+use Fleetbase\FleetOps\Notifications\OrderDispatched;
 use Fleetbase\FleetOps\Notifications\OrderFailed;
 use Illuminate\Container\Container;
 
@@ -166,4 +167,19 @@ test('failed order notification formats mail and array payloads from waypoint tr
         )
         ->and($mail->actionText)->toBe('Track Order')
         ->and($mail->actionUrl)->toContain('order=WP-FAILED');
+});
+
+test('dispatched order notification formats mail from waypoint tracking fallback', function () {
+    $order        = fleetopsTerminalNotificationOrder();
+    $waypoint     = fleetopsTerminalNotificationWaypoint('WP-DISPATCHED');
+    $notification = new OrderDispatched($order, $waypoint);
+    $mail         = fleetopsTerminalNotificationWithConsoleConfig(fn () => $notification->toMail(null));
+
+    expect($notification->title)->toBe('Order WP-DISPATCHED has been dispatched!')
+        ->and($notification->message)->toBe('An order has just been dispatched to you and is ready to be started.')
+        ->and($notification->data)->toBe(['id' => 'order_public', 'type' => 'order_dispatched'])
+        ->and($mail->subject)->toBe('Order WP-DISPATCHED has been dispatched!')
+        ->and($mail->introLines)->toBe(['An order has just been dispatched to you and is ready to be started.'])
+        ->and($mail->actionText)->toBe('Track Order')
+        ->and($mail->actionUrl)->toContain('order=WP-DISPATCHED');
 });
