@@ -1,8 +1,14 @@
 <?php
 
+if (!function_exists('Fleetbase\FleetOps\Support\FuelProviders\event')) {
+    eval('namespace Fleetbase\FleetOps\Support\FuelProviders; function event($event = null) { \FleetOpsFuelProviderServiceEventRecorder::$events[] = $event; return $event; }');
+}
+
 use Fleetbase\FleetOps\Contracts\FuelProvider;
 use Fleetbase\FleetOps\Models\FuelProviderConnection;
+use Fleetbase\FleetOps\Models\FuelProviderSyncRun;
 use Fleetbase\FleetOps\Models\FuelProviderTransaction;
+use Fleetbase\FleetOps\Models\FuelReport;
 use Fleetbase\FleetOps\Models\Order;
 use Fleetbase\FleetOps\Models\Vehicle;
 use Fleetbase\FleetOps\Support\FuelProviders\FuelProviderDescriptor;
@@ -10,11 +16,40 @@ use Fleetbase\FleetOps\Support\FuelProviders\FuelProviderRegistry;
 use Fleetbase\FleetOps\Support\FuelProviders\FuelProviderService;
 use Fleetbase\FleetOps\Support\FuelProviders\Providers\AbstractFuelProvider;
 use Fleetbase\FleetOps\Support\FuelProviders\Providers\PetroAppFuelProvider;
+use Illuminate\Database\ConnectionResolver;
+use Illuminate\Database\Eloquent\Model as EloquentModel;
+use Illuminate\Database\SQLiteConnection;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 
+function fleetOpsFuelProviderUseInMemoryConnection(): void
+{
+    $connection = new SQLiteConnection(new PDO('sqlite::memory:'));
+    $resolver   = new ConnectionResolver([
+        'default' => $connection,
+        'mysql'   => $connection,
+    ]);
+
+    $resolver->setDefaultConnection('mysql');
+    EloquentModel::setConnectionResolver($resolver);
+}
+
+class FleetOpsFuelProviderServiceEventRecorder
+{
+    public static array $events = [];
+}
+
 class FuelProviderHarness extends AbstractFuelProvider
 {
+    public Collection $transactions;
+    public ?Throwable $listTransactionsException = null;
+    public array $listTransactionCalls           = [];
+
+    public function __construct()
+    {
+        $this->transactions = collect();
+    }
+
     public function key(): string
     {
         return 'harness';
@@ -32,7 +67,13 @@ class FuelProviderHarness extends AbstractFuelProvider
 
     public function listTransactions(FuelProviderConnection $connection, Carbon $from, Carbon $to, array $options = []): Collection
     {
-        return collect();
+        $this->listTransactionCalls[] = [$connection, $from, $to, $options];
+
+        if ($this->listTransactionsException) {
+            throw $this->listTransactionsException;
+        }
+
+        return $this->transactions;
     }
 
     public function exposedBaseUrl(FuelProviderConnection $connection): string
@@ -108,8 +149,14 @@ class FleetOpsFuelProviderRegistryHarness extends FuelProviderRegistry
 
 class FleetOpsFuelProviderServiceHarness extends FuelProviderService
 {
-    public array $vehicleResolutions = [];
-    public array $orderResolutions   = [];
+    public array $vehicleResolutions                         = [];
+    public array $orderResolutions                           = [];
+    public array $ingestedPayloads                           = [];
+    public array $matchedTransactions                        = [];
+    public array $createdFuelReports                         = [];
+    public array $syncRuns                                   = [];
+    public ?Throwable $ingestException                       = null;
+    public ?FuelProviderTransaction $ingestTransactionResult = null;
 
     public function exposedMatchingOrder(?FuelProviderConnection $connection = null): array
     {
@@ -134,6 +181,46 @@ class FleetOpsFuelProviderServiceHarness extends FuelProviderService
     public function exposedMatchTransaction(FuelProviderTransaction $transaction, ?FuelProviderConnection $connection = null): void
     {
         $this->matchTransaction($transaction, $connection);
+    }
+
+    public function ingestTransaction(FuelProviderConnection $connection, array $payload): FuelProviderTransaction
+    {
+        $this->ingestedPayloads[] = [$connection, $payload];
+
+        if ($this->ingestException) {
+            throw $this->ingestException;
+        }
+
+        if ($this->ingestTransactionResult) {
+            return $this->ingestTransactionResult;
+        }
+
+        return new FleetOpsFuelProviderTransactionHarness(array_merge([
+            'company_uuid'            => $connection->company_uuid,
+            'provider'                => $connection->provider,
+            'provider_transaction_id' => $payload['provider_transaction_id'] ?? 'txn-harness',
+            'volume'                  => $payload['volume'] ?? 0,
+            'amount'                  => $payload['amount'] ?? 0,
+            'sync_status'             => $payload['sync_status'] ?? 'unmatched',
+            'fuel_report_uuid'        => $payload['fuel_report_uuid'] ?? null,
+        ], $payload));
+    }
+
+    public function createSyncRun(FuelProviderConnection $connection, ?Carbon $from = null, ?Carbon $to = null, string $status = 'queued'): FuelProviderSyncRun
+    {
+        $syncRun = new FleetOpsFuelProviderSyncRunHarness();
+        $syncRun->setRawAttributes([
+            'company_uuid'                  => $connection->company_uuid,
+            'fuel_provider_connection_uuid' => $connection->uuid,
+            'provider'                      => $connection->provider,
+            'status'                        => $status,
+            'from'                          => $from,
+            'to'                            => $to,
+        ], true);
+
+        $this->syncRuns[] = $syncRun;
+
+        return $syncRun;
     }
 
     protected function resolveVehicle(FuelProviderTransaction $transaction, string $field): ?Vehicle
@@ -163,6 +250,22 @@ class FleetOpsFuelProviderServiceHarness extends FuelProviderService
 
         return null;
     }
+
+    protected function ensureFuelReport(FuelProviderTransaction $transaction): ?FuelReport
+    {
+        $this->createdFuelReports[] = $transaction;
+
+        if (!$transaction->vehicle_uuid) {
+            return null;
+        }
+
+        $fuelReport       = new FuelReport();
+        $fuelReport->uuid = 'fuel-report-uuid';
+
+        $transaction->fuel_report_uuid = $fuelReport->uuid;
+
+        return $fuelReport;
+    }
 }
 
 class FleetOpsFuelProviderConnectionHarness extends FuelProviderConnection
@@ -178,15 +281,36 @@ class FleetOpsFuelProviderConnectionHarness extends FuelProviderConnection
     }
 }
 
+class FleetOpsFuelProviderSyncRunHarness extends FuelProviderSyncRun
+{
+    public array $updates = [];
+
+    public function update(array $attributes = [], array $options = [])
+    {
+        $this->updates[] = $attributes;
+        $this->setRawAttributes(array_merge($this->getAttributes(), $attributes), true);
+
+        return true;
+    }
+}
+
 class FleetOpsFuelProviderTransactionHarness extends FuelProviderTransaction
 {
-    public int $saves = 0;
+    public int $saves        = 0;
+    public array $freshLoads = [];
 
     public function save(array $options = [])
     {
         $this->saves++;
 
         return true;
+    }
+
+    public function fresh($with = [])
+    {
+        $this->freshLoads[] = $with;
+
+        return $this;
     }
 }
 
@@ -412,6 +536,190 @@ test('fuel provider service matches transactions in configured field order', fun
         ->and($service->vehicleResolutions)->toBe([
             ['plate_number', null],
         ]);
+});
+
+test('fuel provider service summarizes successful sync transactions', function () {
+    Carbon::setTestNow(Carbon::parse('2026-07-26 09:00:00'));
+
+    $provider               = new FuelProviderHarness();
+    $provider->transactions = collect([
+        [
+            'provider_transaction_id' => 'txn-1',
+            'volume'                  => 12.5,
+            'amount'                  => 1500,
+            'sync_status'             => 'matched',
+            'fuel_report_uuid'        => 'fuel-report-1',
+        ],
+        [
+            'provider_transaction_id' => 'txn-2',
+            'volume'                  => 3.25,
+            'amount'                  => 400,
+            'sync_status'             => 'unmatched',
+        ],
+    ]);
+
+    $service    = new FleetOpsFuelProviderServiceHarness(new FleetOpsFuelProviderRegistryHarness($provider));
+    $connection = new FleetOpsFuelProviderConnectionHarness();
+    $connection->setRawAttributes([
+        'uuid'          => 'connection-uuid',
+        'company_uuid'  => 'company-uuid',
+        'provider'      => 'harness',
+        'sync_settings' => [
+            'window_days' => 3,
+        ],
+    ], true);
+
+    $summary = $service->syncTransactions($connection, Carbon::parse('2026-07-01'), Carbon::parse('2026-07-02'), ['page_size' => 50]);
+
+    expect($summary)->toBe([
+        'imported'             => 2,
+        'matched'              => 1,
+        'unmatched'            => 1,
+        'fuel_reports_created' => 1,
+        'liters'               => 15.75,
+        'amount'               => 1900,
+    ])
+        ->and($provider->listTransactionCalls)->toHaveCount(1)
+        ->and($provider->listTransactionCalls[0][3])->toBe(['page_size' => 50])
+        ->and($service->ingestedPayloads)->toHaveCount(2)
+        ->and($connection->updates[0]['status'])->toBe('active')
+        ->and($connection->updates[0]['last_error'])->toBeNull()
+        ->and($connection->updates[0]['last_sync_state']['from'])->toBe('2026-07-01T00:00:00+00:00')
+        ->and($connection->updates[0]['last_sync_state']['to'])->toBe('2026-07-02T00:00:00+00:00')
+        ->and($connection->updates[0]['last_sync_state']['summary'])->toBe($summary)
+        ->and($service->syncRuns[0]->updates[0])->toMatchArray([
+            'status'     => 'running',
+            'error'      => null,
+        ])
+        ->and($service->syncRuns[0]->updates[1])->toMatchArray([
+            'status'               => 'completed',
+            'imported'             => 2,
+            'matched'              => 1,
+            'unmatched'            => 1,
+            'fuel_reports_created' => 1,
+            'liters'               => 15.75,
+            'amount'               => 1900,
+            'error'                => null,
+        ]);
+
+    Carbon::setTestNow();
+});
+
+test('fuel provider service records sync errors before rethrowing', function () {
+    Carbon::setTestNow(Carbon::parse('2026-07-26 09:30:00'));
+
+    $provider                            = new FuelProviderHarness();
+    $provider->listTransactionsException = new RuntimeException('provider offline');
+
+    $service    = new FleetOpsFuelProviderServiceHarness(new FleetOpsFuelProviderRegistryHarness($provider));
+    $connection = new FleetOpsFuelProviderConnectionHarness();
+    $connection->setRawAttributes([
+        'uuid'          => 'connection-uuid',
+        'company_uuid'  => 'company-uuid',
+        'provider'      => 'harness',
+        'sync_settings' => [],
+    ], true);
+
+    expect(fn () => $service->syncTransactions($connection, Carbon::parse('2026-07-01'), Carbon::parse('2026-07-02')))
+        ->toThrow(RuntimeException::class, 'provider offline');
+
+    expect($service->syncRuns[0]->updates[1])->toMatchArray([
+        'status'  => 'error',
+        'error'   => 'provider offline',
+        'summary' => [
+            'imported'             => 0,
+            'matched'              => 0,
+            'unmatched'            => 0,
+            'fuel_reports_created' => 0,
+            'liters'               => 0,
+            'amount'               => 0,
+        ],
+    ])
+        ->and($connection->updates[0])->toMatchArray([
+            'status'     => 'error',
+            'last_error' => 'provider offline',
+        ]);
+
+    Carbon::setTestNow();
+});
+
+test('fuel provider service manually matches vehicle and order objects', function () {
+    fleetOpsFuelProviderUseInMemoryConnection();
+    FleetOpsFuelProviderServiceEventRecorder::$events = [];
+    Carbon::setTestNow(Carbon::parse('2026-07-26 10:00:00'));
+
+    $service = new FleetOpsFuelProviderServiceHarness(new FleetOpsFuelProviderRegistryHarness());
+
+    $vehicle       = new Vehicle();
+    $vehicle->uuid = 'vehicle-uuid';
+
+    $order       = new Order();
+    $order->uuid = 'order-uuid';
+
+    $transaction = new FleetOpsFuelProviderTransactionHarness([
+        'company_uuid' => 'company-uuid',
+        'provider'     => 'harness',
+    ]);
+
+    expect($service->matchVehicle($transaction, $vehicle))->toBe($transaction)
+        ->and($transaction->vehicle_uuid)->toBe('vehicle-uuid')
+        ->and($transaction->sync_status)->toBe('matched')
+        ->and($transaction->matched_at)->not->toBeNull()
+        ->and($transaction->fuel_report_uuid)->toBe('fuel-report-uuid')
+        ->and($transaction->saves)->toBe(1)
+        ->and($transaction->freshLoads)->toBe([['vehicle', 'driver', 'fuelReport']])
+        ->and(FleetOpsFuelProviderServiceEventRecorder::$events)->toHaveCount(1);
+
+    $service->matchOrder($transaction, $order);
+
+    expect($transaction->order_uuid)->toBe('order-uuid')
+        ->and($transaction->saves)->toBe(2)
+        ->and($transaction->freshLoads)->toBe([
+            ['vehicle', 'driver', 'fuelReport'],
+            ['vehicle', 'driver', 'fuelReport'],
+        ]);
+
+    Carbon::setTestNow();
+});
+
+test('fuel provider service reprocesses matched and unmatched transactions', function () {
+    fleetOpsFuelProviderUseInMemoryConnection();
+    FleetOpsFuelProviderServiceEventRecorder::$events = [];
+    Carbon::setTestNow(Carbon::parse('2026-07-26 11:00:00'));
+
+    $matchedService = new FleetOpsFuelProviderServiceHarness(new FleetOpsFuelProviderRegistryHarness());
+    $matched        = new FleetOpsFuelProviderTransactionHarness([
+        'company_uuid'  => 'company-uuid',
+        'provider'      => 'harness',
+        'plate_number'  => 'ABC-123',
+        'sync_status'   => 'unmatched',
+    ]);
+    $matched->setRelation('connection', fuelProviderConnection());
+
+    expect($matchedService->reprocessTransaction($matched))->toBe($matched)
+        ->and($matched->vehicle_uuid)->toBe('vehicle-uuid')
+        ->and($matched->sync_status)->toBe('matched')
+        ->and($matched->fuel_report_uuid)->toBe('fuel-report-uuid')
+        ->and($matched->saves)->toBe(2)
+        ->and($matched->freshLoads)->toBe([['vehicle', 'driver', 'fuelReport']]);
+
+    $unmatchedService = new FleetOpsFuelProviderServiceHarness(new FleetOpsFuelProviderRegistryHarness());
+    $unmatched        = new FleetOpsFuelProviderTransactionHarness([
+        'company_uuid' => 'company-uuid',
+        'provider'     => 'harness',
+        'sync_status'  => 'matched',
+    ]);
+    $unmatched->setRelation('connection', fuelProviderConnection());
+
+    $unmatchedService->reprocessTransaction($unmatched);
+
+    expect($unmatched->vehicle_uuid)->toBeNull()
+        ->and($unmatched->sync_status)->toBe('unmatched')
+        ->and($unmatched->fuel_report_uuid)->toBeNull()
+        ->and($unmatched->saves)->toBe(2)
+        ->and(FleetOpsFuelProviderServiceEventRecorder::$events)->toHaveCount(2);
+
+    Carbon::setTestNow();
 });
 
 test('fuel provider service reviews transactions with explicit statuses', function () {
