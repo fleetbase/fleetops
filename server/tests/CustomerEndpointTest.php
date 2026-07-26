@@ -4,10 +4,41 @@ use Fleetbase\FleetOps\Http\Controllers\Api\v1\CustomerController;
 use Fleetbase\FleetOps\Http\Middleware\AuthenticateCustomerToken;
 use Fleetbase\FleetOps\Http\Requests\CreateCustomerOrderRequest;
 use Fleetbase\FleetOps\Http\Requests\CreateCustomerRequest;
+use Fleetbase\FleetOps\Http\Requests\UpdateContactRequest;
 use Fleetbase\FleetOps\Http\Requests\VerifyCreateCustomerRequest;
 use Fleetbase\FleetOps\Http\Resources\v1\Customer as CustomerResource;
+use Fleetbase\FleetOps\Models\Contact;
 use Fleetbase\FleetOps\Models\Customer as CustomerModel;
 use Fleetbase\FleetOps\Support\CustomerAuth;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
+
+if (!function_exists('Fleetbase\FleetOps\Http\Controllers\Api\v1\response')) {
+    eval('namespace Fleetbase\FleetOps\Http\Controllers\Api\v1; function response() { return new class {
+        public function apiError(string $message, int $status = 400): \Illuminate\Http\JsonResponse
+        {
+            return new \Illuminate\Http\JsonResponse(["error" => $message], $status);
+        }
+
+        public function json(array $payload = [], int $status = 200): \Illuminate\Http\JsonResponse
+        {
+            return new \Illuminate\Http\JsonResponse($payload, $status);
+        }
+    }; }');
+}
+
+function fleetopsCustomerControllerProtectedMethod(string $method): ReflectionMethod
+{
+    $reflection = new ReflectionMethod(CustomerController::class, $method);
+    $reflection->setAccessible(true);
+
+    return $reflection;
+}
+
+function fleetopsCustomerEndpointJson(JsonResponse $response): array
+{
+    return $response->getData(true);
+}
 
 /*
 |--------------------------------------------------------------------------
@@ -153,12 +184,12 @@ test('CustomerAuth resolves tokens by contact UUID with company-preferred fallba
 test('CustomerAuth returns null when no customer token or binding exists', function () {
     app()->forgetInstance(CustomerAuth::APP_BINDING);
 
-    expect(CustomerAuth::resolveFromHeader(Illuminate\Http\Request::create('/customers/me', 'GET')))->toBeNull()
+    expect(CustomerAuth::resolveFromHeader(Request::create('/customers/me', 'GET')))->toBeNull()
         ->and(CustomerAuth::current())->toBeNull();
 });
 
 test('Customer model extends Contact with a type=customer global scope', function () {
-    expect(is_subclass_of(CustomerModel::class, Fleetbase\FleetOps\Models\Contact::class))->toBeTrue();
+    expect(is_subclass_of(CustomerModel::class, Contact::class))->toBeTrue();
 
     $source = file_get_contents(dirname(__DIR__) . '/src/Models/Customer.php');
     expect($source)
@@ -204,4 +235,100 @@ test('FormRequest validators are present and authorize via api credential', func
         ->toContain("'code'     => 'required|exists:verification_codes,code'")
         ->toContain("'password' => 'required|string|min:8'")
         ->and($verify)->toContain("'mode'     => 'required|in:email,sms'");
+});
+
+test('customer controller rejects invalid public auth inputs before persistence', function () {
+    $controller = new CustomerController();
+
+    $invalidEmail = $controller->requestCreationCode(new VerifyCreateCustomerRequest([
+        'mode'     => 'email',
+        'identity' => '+15551234567',
+    ]));
+    $missingLogin = $controller->login(Request::create('/v1/customers/login', 'POST', [
+        'identity' => 'jane@example.test',
+    ]));
+    $missingForgotPassword = $controller->forgotPassword(Request::create('/v1/customers/forgot-password', 'POST'));
+    $missingResetPassword  = $controller->resetPassword(Request::create('/v1/customers/reset-password', 'POST', [
+        'identity' => 'jane@example.test',
+        'code'     => '123456',
+    ]));
+    $shortResetPassword = $controller->resetPassword(Request::create('/v1/customers/reset-password', 'POST', [
+        'identity' => 'jane@example.test',
+        'code'     => '123456',
+        'password' => 'short',
+    ]));
+
+    expect($invalidEmail->getStatusCode())->toBe(400)
+        ->and(fleetopsCustomerEndpointJson($invalidEmail))->toBe(['error' => 'Invalid email provided for identity.'])
+        ->and($missingLogin->getStatusCode())->toBe(400)
+        ->and(fleetopsCustomerEndpointJson($missingLogin))->toBe(['error' => 'Identity and password are required.'])
+        ->and($missingForgotPassword->getStatusCode())->toBe(400)
+        ->and(fleetopsCustomerEndpointJson($missingForgotPassword))->toBe(['error' => 'Identity is required.'])
+        ->and($missingResetPassword->getStatusCode())->toBe(400)
+        ->and(fleetopsCustomerEndpointJson($missingResetPassword))->toBe(['error' => 'identity, code, and password are required.'])
+        ->and($shortResetPassword->getStatusCode())->toBe(400)
+        ->and(fleetopsCustomerEndpointJson($shortResetPassword))->toBe(['error' => 'Password must be at least 8 characters.']);
+});
+
+test('customer controller authenticated endpoints require a current customer', function () {
+    app()->forgetInstance(CustomerAuth::APP_BINDING);
+
+    $controller = new CustomerController();
+    $request    = Request::create('/v1/customers', 'GET');
+
+    foreach ([
+        $controller->me(),
+        $controller->updateMe(new UpdateContactRequest()),
+        $controller->logout($request),
+        $controller->logoutAll(),
+        $controller->orders($request),
+        $controller->findOrder('order_123'),
+        $controller->createOrder(new CreateCustomerOrderRequest()),
+        $controller->places($request),
+        $controller->registerDevice(Request::create('/v1/customers/devices', 'POST')),
+    ] as $response) {
+        expect($response->getStatusCode())->toBe(401)
+            ->and(fleetopsCustomerEndpointJson($response))->toBe(['error' => 'Not authenticated.']);
+    }
+});
+
+test('customer controller handles lightweight authenticated profile and logout flows', function () {
+    $customer = new Contact();
+    $customer->setRawAttributes([
+        'uuid'         => 'customer-uuid',
+        'public_id'    => 'contact_public',
+        'company_uuid' => 'company-uuid',
+        'type'         => 'customer',
+        'user_uuid'    => null,
+    ], true);
+
+    app()->instance(CustomerAuth::APP_BINDING, $customer);
+
+    $controller     = new CustomerController();
+    $profile        = $controller->me();
+    $logout         = $controller->logout(Request::create('/v1/customers/logout', 'POST'));
+    $logoutAllError = $controller->logoutAll();
+
+    expect($profile)->toBeInstanceOf(CustomerResource::class)
+        ->and($profile->resource)->toBe($customer)
+        ->and($logout->getStatusCode())->toBe(200)
+        ->and(fleetopsCustomerEndpointJson($logout))->toBe(['status' => 'ok'])
+        ->and($logoutAllError->getStatusCode())->toBe(401)
+        ->and(fleetopsCustomerEndpointJson($logoutAllError))->toBe(['error' => 'Not authenticated.']);
+});
+
+test('customer controller helper methods normalize phones and ignore empty place inputs', function () {
+    $controller = new CustomerController();
+    $resolver   = fleetopsCustomerControllerProtectedMethod('resolveCustomerPlace');
+    $customer   = new Contact();
+    $customer->setRawAttributes(['uuid' => 'customer-uuid'], true);
+
+    expect(CustomerController::phone(null))->toBe('')
+        ->and(CustomerController::phone(''))->toBe('')
+        ->and(CustomerController::phone(' 15551234567 '))->toBe('+15551234567')
+        ->and(CustomerController::phone('+15551234567'))->toBe('+15551234567')
+        ->and($resolver->invoke($controller, null, $customer, 'company-uuid'))->toBeNull()
+        ->and($resolver->invoke($controller, [], $customer, 'company-uuid'))->toBeNull()
+        ->and($resolver->invoke($controller, ['name' => '', 'phone' => null], $customer, 'company-uuid'))->toBeNull()
+        ->and($resolver->invoke($controller, 12345, $customer, 'company-uuid'))->toBeNull();
 });
