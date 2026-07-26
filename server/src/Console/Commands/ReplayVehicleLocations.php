@@ -44,7 +44,7 @@ class ReplayVehicleLocations extends Command
         $sleep           = $this->option('sleep') ? (int) $this->option('sleep') : null;
 
         // Validate file exists
-        if (!file_exists($filePath)) {
+        if (!$this->fileExists($filePath)) {
             $this->error("File not found: {$filePath}");
 
             return Command::FAILURE;
@@ -99,12 +99,12 @@ class ReplayVehicleLocations extends Command
         $this->newLine();
 
         // Initialize SocketCluster client
-        $socketClusterClient = new SocketClusterService();
+        $socketClusterClient = $this->socketClusterClient();
 
         // Statistics tracking
         $successCount      = 0;
         $errorCount        = 0;
-        $startTime         = microtime(true);
+        $startTime         = $this->currentMicrotime();
         $previousTimestamp = null;
 
         // Process each location event
@@ -115,7 +115,7 @@ class ReplayVehicleLocations extends Command
             $createdAt   = $event['created_at'] ?? null;
 
             // Get vehicle record
-            $vehicle = Vehicle::where('public_id', $vehicleId)->first();
+            $vehicle = $this->vehicleForPublicId($vehicleId);
             if (!$vehicle) {
                 continue;
             }
@@ -127,15 +127,15 @@ class ReplayVehicleLocations extends Command
 
                     if ($sleep) {
                         $this->info("[{$eventNumber}/{$totalEvents}] Waiting {$sleep}s (real: {$diffInSeconds}s)...");
-                        sleep((int) $sleep);
+                        $this->sleepSeconds((int) $sleep);
                     } elseif ($sleepDuration > 0) {
                         $this->info("[{$eventNumber}/{$totalEvents}] Waiting {$sleepDuration}s (real: {$diffInSeconds}s)...");
-                        sleep((int) $sleepDuration);
+                        $this->sleepSeconds((int) $sleepDuration);
 
                         // Handle fractional seconds
                         $fractional = $sleepDuration - floor($sleepDuration);
                         if ($fractional > 0) {
-                            usleep((int) ($fractional * 1000000));
+                            $this->sleepMicroseconds((int) ($fractional * 1000000));
                         }
                     }
                 } catch (\Exception $e) {
@@ -170,7 +170,7 @@ class ReplayVehicleLocations extends Command
         }
 
         // Summary
-        $endTime  = microtime(true);
+        $endTime  = $this->currentMicrotime();
         $duration = round($endTime - $startTime, 2);
 
         $this->newLine();
@@ -203,6 +203,36 @@ class ReplayVehicleLocations extends Command
         }
 
         return [$locationEvents, null];
+    }
+
+    protected function fileExists(string $filePath): bool
+    {
+        return file_exists($filePath);
+    }
+
+    protected function socketClusterClient(): mixed
+    {
+        return new SocketClusterService();
+    }
+
+    protected function vehicleForPublicId(string $vehicleId): ?Vehicle
+    {
+        return Vehicle::where('public_id', $vehicleId)->first();
+    }
+
+    protected function sleepSeconds(int $seconds): void
+    {
+        sleep($seconds);
+    }
+
+    protected function sleepMicroseconds(int $microseconds): void
+    {
+        usleep($microseconds);
+    }
+
+    protected function currentMicrotime(): float
+    {
+        return microtime(true);
     }
 
     protected function filterEventsForVehicle(array $locationEvents, ?string $vehicleFilter): array
