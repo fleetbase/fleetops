@@ -28,6 +28,7 @@ use Fleetbase\FleetOps\Models\Order;
 use Fleetbase\FleetOps\Models\Place;
 use Fleetbase\FleetOps\Models\ServiceQuote;
 use Fleetbase\FleetOps\Models\ServiceRate;
+use Fleetbase\FleetOps\Models\Vendor;
 use Fleetbase\FleetOps\Models\VendorPersonnel;
 use Fleetbase\LaravelMysqlSpatial\Types\Point;
 use Illuminate\Http\Request;
@@ -331,6 +332,18 @@ class FleetOpsInternalVendorControllerProbe extends InternalVendorController
         $reflection->setAccessible(true);
 
         return $reflection->invoke($this, ...$arguments);
+    }
+}
+
+class FleetOpsInternalVendorFake extends Vendor
+{
+    public array $syncedCustomFields = [];
+
+    public function syncCustomFieldValues(array $payload, array $options = []): array
+    {
+        $this->syncedCustomFields = $payload;
+
+        return $payload;
     }
 }
 
@@ -1085,6 +1098,25 @@ test('internal vendor controller serializes personnel payload defaults without c
         'status'          => 'active',
         'invited_by_uuid' => 'user-uuid',
         'contact'         => null,
+    ]);
+});
+
+test('internal vendor controller syncs custom fields after save', function () {
+    $controller = new FleetOpsInternalVendorControllerProbe();
+    $vendor     = new FleetOpsInternalVendorFake();
+
+    $controller->afterSave(new Request([
+        'vendor' => [
+            'custom_field_values' => [
+                'region'       => 'north',
+                'service_tier' => 'gold',
+            ],
+        ],
+    ]), $vendor);
+
+    expect($vendor->syncedCustomFields)->toBe([
+        'region'       => 'north',
+        'service_tier' => 'gold',
     ]);
 });
 
