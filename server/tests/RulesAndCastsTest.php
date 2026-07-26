@@ -9,6 +9,16 @@ use Fleetbase\FleetOps\Rules\ResolvablePoint;
 use Fleetbase\FleetOps\Rules\ResolvableVehicle;
 use Fleetbase\LaravelMysqlSpatial\Types\Point;
 
+class FleetOpsOrderConfigEntitiesCastProbe extends OrderConfigEntities
+{
+    public array $photoUrls = [];
+
+    protected function photoUrlFor(string $photoUuid): ?string
+    {
+        return $this->photoUrls[$photoUuid] ?? null;
+    }
+}
+
 test('customer detail validation accepts useful inline customer payloads', function () {
     $rule = new CustomerIdOrDetails();
 
@@ -71,6 +81,26 @@ test('order config entity cast serializes arrays for storage', function () {
     ];
 
     expect($cast->set(new stdClass(), 'entities', $data, []))->toBe(json_encode($data));
+});
+
+test('order config entity cast decodes entities and enriches available photos', function () {
+    $cast            = new FleetOpsOrderConfigEntitiesCastProbe();
+    $cast->photoUrls = [
+        'photo-uuid' => 'https://cdn.test/photo.png',
+    ];
+
+    $entities = [
+        ['name' => 'Parcel', 'photo_uuid' => 'photo-uuid'],
+        ['name' => 'Pallet', 'photo_uuid' => 'missing-photo'],
+        ['name' => 'Envelope'],
+    ];
+
+    expect($cast->get(new stdClass(), 'entities', json_encode($entities), []))->toBe([
+        ['name' => 'Parcel', 'photo_uuid' => 'photo-uuid', 'photo_url' => 'https://cdn.test/photo.png'],
+        ['name' => 'Pallet', 'photo_uuid' => 'missing-photo'],
+        ['name' => 'Envelope'],
+    ])
+        ->and($cast->get(new stdClass(), 'entities', '"not-an-array"', []))->toBe('not-an-array');
 });
 
 test('polygon casts reject unsupported values with helpful field names', function () {
