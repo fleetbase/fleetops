@@ -54,7 +54,9 @@ use Illuminate\Database\ConnectionResolver;
 use Illuminate\Database\Eloquent\Model as EloquentModel;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasManyThrough;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
+use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Database\SQLiteConnection;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
@@ -355,16 +357,33 @@ class FleetOpsTrackingNumberOwnerFake extends Fleetbase\Models\Model
 
 class FleetOpsSavingOrderFake extends Order
 {
-    public bool $saved = false;
+    public bool $saved         = false;
+    public array $loaded       = [];
+    public array $quietUpdates = [];
 
     public function getDateFormat()
     {
         return 'Y-m-d H:i:s';
     }
 
+    public function load($relations)
+    {
+        $this->loaded[] = $relations;
+
+        return $this;
+    }
+
     public function save(array $options = []): bool
     {
         $this->saved = true;
+
+        return true;
+    }
+
+    public function updateQuietly(array $attributes = [], array $options = []): bool
+    {
+        $this->quietUpdates[] = $attributes;
+        $this->setRawAttributes(array_merge($this->getAttributes(), $attributes), true);
 
         return true;
     }
@@ -1907,6 +1926,9 @@ test('payload accessors return loaded payloads and associated orders without que
 });
 
 test('order accessors mutators and payload association helpers are stable', function () {
+    fleetopsModelAccessorsUseInMemoryRelationConnection();
+    Order::boot();
+
     Carbon::setTestNow(Carbon::parse('2026-02-03 08:00:00'));
 
     $payload = new FleetOpsLoadedPayloadFake([
@@ -1946,7 +1968,39 @@ test('order accessors mutators and payload association helpers are stable', func
     $order->time_window_start = '09:00:00';
     $order->time_window_end   = '2026-02-05 17:00:00';
 
+    $timeOnlyOrder = new FleetOpsSavingOrderFake();
+    $timeOnlyOrder->setRawAttributes(['created_at' => '2026-02-06 10:00:00'], true);
+    $timeOnlyOrder->time_window_start = '10:15:00';
+    $timeOnlyOrder->time_window_end   = '';
+
     expect($order->driver_name)->toBe('Driver One')
+        ->and(Relation::getMorphedModel('Fleetbase\\Models\\Contact'))->toBe(Contact::class)
+        ->and(Relation::getMorphedModel('\\Fleetbase\\Models\\Driver'))->toBe(Driver::class)
+        ->and(Relation::getMorphedModel('Fleetbase\\Models\\Vendor'))->toBe(Vendor::class)
+        ->and($order->getActivitylogOptions())->toBeInstanceOf(Spatie\Activitylog\LogOptions::class)
+        ->and($order->attachFiles([]))->toBe($order)
+        ->and($order->orderConfig())->toBeInstanceOf(BelongsTo::class)
+        ->and($order->transaction())->toBeInstanceOf(BelongsTo::class)
+        ->and($order->route())->toBeInstanceOf(BelongsTo::class)
+        ->and($order->payload())->toBeInstanceOf(BelongsTo::class)
+        ->and($order->company())->toBeInstanceOf(BelongsTo::class)
+        ->and($order->createdBy())->toBeInstanceOf(BelongsTo::class)
+        ->and($order->updatedBy())->toBeInstanceOf(BelongsTo::class)
+        ->and($order->driverAssigned())->toBeInstanceOf(BelongsTo::class)
+        ->and($order->driver())->toBeInstanceOf(BelongsTo::class)
+        ->and($order->vehicleAssigned())->toBeInstanceOf(BelongsTo::class)
+        ->and($order->vehicle())->toBeInstanceOf(BelongsTo::class)
+        ->and($order->comments())->toBeInstanceOf(HasMany::class)
+        ->and($order->files())->toBeInstanceOf(HasMany::class)
+        ->and($order->drivers())->toBeInstanceOf(HasManyThrough::class)
+        ->and($order->trackingNumber())->toBeInstanceOf(BelongsTo::class)
+        ->and($order->trackingStatuses())->toBeInstanceOf(HasMany::class)
+        ->and($order->proofs())->toBeInstanceOf(HasMany::class)
+        ->and($order->purchaseRate())->toBeInstanceOf(BelongsTo::class)
+        ->and($order->facilitator())->toBeInstanceOf(MorphTo::class)
+        ->and($order->customer())->toBeInstanceOf(MorphTo::class)
+        ->and($order->authenticatableCustomer())->toBeInstanceOf(BelongsTo::class)
+        ->and($order->getAdhocDistance())->toBe(6000)
         ->and($order->vehicle_name)->toBe('Van 4')
         ->and($order->tracking)->toBe('TN123')
         ->and($order->transaction_amount)->toBe(1200)
@@ -1974,7 +2028,10 @@ test('order accessors mutators and payload association helpers are stable', func
         ->and($order->type)->toBe('express-delivery')
         ->and($order->status)->toBe('driver_assigned')
         ->and($order->time_window_start->toDateTimeString())->toBe('2026-02-03 09:00:00')
-        ->and($order->time_window_end->toDateTimeString())->toBe('2026-02-05 17:00:00');
+        ->and($order->time_window_end->toDateTimeString())->toBe('2026-02-05 17:00:00')
+        ->and($timeOnlyOrder->time_window_start->toDateTimeString())->toBe('2026-02-03 10:15:00')
+        ->and($timeOnlyOrder->time_window_end)->toBeNull()
+        ->and($order->setRoute())->toBe($order);
 
     $order->orchestrator_priority = 'not numeric';
     $order->type                  = null;
