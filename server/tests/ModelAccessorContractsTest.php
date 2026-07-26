@@ -92,6 +92,64 @@ class FleetOpsCountingRelationFake
     }
 }
 
+class FleetOpsContactImportSaveFake extends Contact
+{
+    public bool $saved = false;
+
+    public function save(array $options = []): bool
+    {
+        $this->saved = true;
+
+        return true;
+    }
+}
+
+class FleetOpsContactSyncUserFake extends Fleetbase\Models\User
+{
+    public array $updates = [];
+    public bool $deleted  = false;
+
+    public function update(array $attributes = [], array $options = []): bool
+    {
+        $this->updates[] = $attributes;
+        $this->setRawAttributes(array_merge($this->getAttributes(), $attributes), true);
+
+        return true;
+    }
+
+    public function delete()
+    {
+        $this->deleted = true;
+
+        return true;
+    }
+}
+
+class FleetOpsContactAccessorFake extends Contact
+{
+    public array $loadedMissing                   = [];
+    public ?FleetOpsContactSyncUserFake $fakeUser = null;
+
+    public function loadMissing($relations)
+    {
+        $this->loadedMissing[] = $relations;
+
+        return $this;
+    }
+
+    public function getUser(): ?Fleetbase\Models\User
+    {
+        return $this->fakeUser;
+    }
+
+    public function update(array $attributes = [], array $options = []): bool
+    {
+        $this->setRawAttributes(array_merge($this->getAttributes(), $attributes), true);
+
+        return true;
+    }
+}
+
 class FleetOpsDriverAccessorFake extends Driver
 {
     public array $loadedMissing = [];
@@ -527,6 +585,8 @@ class FleetOpsUpdatingWorkOrderFake extends WorkOrder
 }
 
 test('contact accessors imports notifications and customer identity helpers are stable', function () {
+    fleetopsModelAccessorsUseInMemoryRelationConnection();
+
     $contact = new Contact([
         'name'  => 'Jane Contact',
         'email' => 'jane@example.com',
@@ -543,6 +603,18 @@ test('contact accessors imports notifications and customer identity helpers are 
 
     expect($contact->isCustomer())->toBeTrue()
         ->and($contact->is_customer)->toBeTrue()
+        ->and($contact->getActivitylogOptions())->toBeInstanceOf(Spatie\Activitylog\LogOptions::class)
+        ->and($contact->getSlugOptions())->toBeInstanceOf(Spatie\Sluggable\SlugOptions::class)
+        ->and($contact->company())->toBeInstanceOf(BelongsTo::class)
+        ->and($contact->anyUser())->toBeInstanceOf(BelongsTo::class)
+        ->and($contact->user())->toBeInstanceOf(BelongsTo::class)
+        ->and($contact->photo())->toBeInstanceOf(BelongsTo::class)
+        ->and($contact->place())->toBeInstanceOf(BelongsTo::class)
+        ->and($contact->devices())->toBeInstanceOf(HasMany::class)
+        ->and($contact->places())->toBeInstanceOf(HasMany::class)
+        ->and($contact->facilitatorOrders())->toBeInstanceOf(HasMany::class)
+        ->and($contact->customerOrders())->toBeInstanceOf(HasMany::class)
+        ->and($contact->files())->toBeInstanceOf(HasMany::class)
         ->and($contact->routeNotificationForFcm())->toBe(['android-token'])
         ->and($contact->routeNotificationForApn())->toBe([1 => 'ios-token'])
         ->and($contact->routeNotificationForTwilio())->toContain('555')
@@ -559,13 +631,98 @@ test('contact accessors imports notifications and customer identity helpers are 
         ->and($imported->email)->toBe('imported@example.com')
         ->and($imported->type)->toBe('contact');
 
+    $savedImport = FleetOpsContactImportSaveFake::createFromImport([
+        'person'    => 'Saved Import',
+        'telephone' => '555-777-8888',
+    ], true);
+
+    $noPhoto = new Contact();
+    $noPhoto->setRelation('photo', null);
+
     $staffUser        = new Fleetbase\Models\User(['email' => 'staff@example.com', 'type' => 'admin']);
     $staffUser->phone = null;
 
     expect(fn () => $contact->assertCustomerUserCanBeAssigned($staffUser))
         ->toThrow(CustomerUserConflictException::class, 'existing staff user')
-        ->and(Contact::customerUserConflictMessage($staffUser))
-        ->toContain('email');
+        ->and(Contact::customerUserConflictMessage($staffUser))->toContain('email')
+        ->and(Contact::customerUserConflictMessage(new Fleetbase\Models\User(['phone' => '+15550001111'])))->toContain('phone number')
+        ->and(Contact::customerUserConflictMessage())->toContain('user account')
+        ->and($savedImport)->toBeInstanceOf(FleetOpsContactImportSaveFake::class)
+        ->and($savedImport->saved)->toBeTrue()
+        ->and($savedImport->name)->toBe('Saved Import')
+        ->and($noPhoto->photo_url)->toBe('https://s3.ap-southeast-1.amazonaws.com/flb-assets/static/no-avatar.png');
+
+    $customerUser = new Fleetbase\Models\User();
+    $customerUser->setRawAttributes(['type' => 'customer'], true);
+    expect($contact->assertCustomerUserCanBeAssigned($customerUser))->toBeNull();
+
+    $contactOnly = new Contact(['type' => 'contact']);
+    expect($contactOnly->isCustomer())->toBeFalse()
+        ->and($contactOnly->is_customer)->toBeFalse();
+});
+
+test('contact user sync lookup and deletion guards are stable', function () {
+    $user = new FleetOpsContactSyncUserFake();
+    $user->setRawAttributes([
+        'uuid'  => 'user-uuid',
+        'type'  => 'customer',
+        'name'  => 'Old Name',
+        'email' => 'old@example.com',
+        'phone' => '+15550000000',
+    ], true);
+
+    $contact           = new FleetOpsContactAccessorFake();
+    $contact->fakeUser = $user;
+    $contact->setRawAttributes([
+        'uuid'      => 'contact-uuid',
+        'user_uuid' => 'not-a-uuid',
+        'type'      => 'customer',
+        'name'      => 'Old Name',
+        'email'     => 'old@example.com',
+        'phone'     => '+15550000000',
+        'timezone'  => 'UTC',
+    ], true);
+
+    $contact->name     = 'New Name';
+    $contact->email    = 'new@example.com';
+    $contact->phone    = '+15551112222';
+    $contact->timezone = 'Asia/Singapore';
+
+    expect($contact->syncWithUser())->toBeTrue()
+        ->and($user->updates[0])->toBe([
+            'name'     => 'New Name',
+            'email'    => 'new@example.com',
+            'phone'    => '+15551112222',
+            'timezone' => 'Asia/Singapore',
+        ])
+        ->and($contact->getUser())->toBe($user)
+        ->and($contact->hasUser())->toBeTrue()
+        ->and($contact->doesntHaveUser())->toBeFalse();
+
+    $deleteContact       = new FleetOpsContactAccessorFake();
+    $deleteContact->type = 'customer';
+    $deleteContact->setRelation('user', $user);
+
+    expect($deleteContact->deleteUser())->toBeTrue()
+        ->and($user->deleted)->toBeTrue()
+        ->and($deleteContact->loadedMissing)->toBe(['user']);
+
+    $mismatchedUser = new FleetOpsContactSyncUserFake();
+    $mismatchedUser->setRawAttributes(['type' => 'admin'], true);
+
+    $mismatchedContact       = new FleetOpsContactAccessorFake();
+    $mismatchedContact->type = 'customer';
+    $mismatchedContact->setRelation('user', $mismatchedUser);
+
+    $emptyContact           = new FleetOpsContactAccessorFake();
+    $emptyContact->fakeUser = null;
+    $emptyContact->setRawAttributes(['user_uuid' => 'not-a-uuid'], true);
+
+    expect($mismatchedContact->deleteUser())->toBeFalse()
+        ->and($emptyContact->syncWithUser())->toBeFalse()
+        ->and($emptyContact->getUser())->toBeNull()
+        ->and($emptyContact->hasUser())->toBeFalse()
+        ->and($emptyContact->doesntHaveUser())->toBeTrue();
 });
 
 test('device accessors connection state configuration and command guards are stable', function () {
