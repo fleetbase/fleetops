@@ -1,9 +1,109 @@
 <?php
 
 use Fleetbase\FleetOps\Http\Controllers\Internal\v1\OrchestrationController;
+use Fleetbase\FleetOps\Models\Driver;
+use Fleetbase\FleetOps\Models\Manifest;
+use Fleetbase\FleetOps\Models\ManifestStop;
+use Fleetbase\FleetOps\Models\Order;
+use Fleetbase\FleetOps\Models\Payload;
+use Fleetbase\FleetOps\Models\Place;
+use Fleetbase\FleetOps\Models\Vehicle;
 use Fleetbase\FleetOps\Orchestration\Engines\GreedyOrchestrationEngine;
 use Fleetbase\FleetOps\Orchestration\OrchestrationEngineRegistry;
 use Illuminate\Http\Request;
+
+class FleetOpsOrchestrationCommitControllerProbe extends OrchestrationController
+{
+    public array $vehicles             = [];
+    public array $drivers              = [];
+    public array $orders               = [];
+    public array $manifests            = [];
+    public array $manifestStops        = [];
+    public array $waypointUpdates      = [];
+    public array $transactions         = [];
+    public bool $throwOnCreateManifest = false;
+    public int $transactionLevel       = 0;
+
+    protected function beginOrchestrationTransaction(): void
+    {
+        $this->transactions[] = 'begin';
+        $this->transactionLevel++;
+    }
+
+    protected function commitOrchestrationTransaction(): void
+    {
+        $this->transactions[]   = 'commit';
+        $this->transactionLevel = max(0, $this->transactionLevel - 1);
+    }
+
+    protected function rollBackOrchestrationTransaction(): void
+    {
+        $this->transactions[]   = 'rollback';
+        $this->transactionLevel = max(0, $this->transactionLevel - 1);
+    }
+
+    protected function orchestrationTransactionLevel(): int
+    {
+        return $this->transactionLevel;
+    }
+
+    protected function findVehicleByPublicId(string $publicId): ?Vehicle
+    {
+        return $this->vehicles[$publicId] ?? null;
+    }
+
+    protected function findDriverByPublicId(string $publicId): ?Driver
+    {
+        return $this->drivers[$publicId] ?? null;
+    }
+
+    protected function findOrderByPublicId(string $publicId): ?Order
+    {
+        return $this->orders[$publicId] ?? null;
+    }
+
+    protected function createManifest(array $attributes): Manifest
+    {
+        if ($this->throwOnCreateManifest) {
+            throw new RuntimeException('manifest boom');
+        }
+
+        $manifest = new Manifest();
+        $manifest->setRawAttributes(array_merge([
+            'uuid'      => 'manifest-' . (count($this->manifests) + 1),
+            'public_id' => 'manifest_public_' . (count($this->manifests) + 1),
+        ], $attributes), true);
+        $this->manifests[] = $attributes;
+
+        return $manifest;
+    }
+
+    protected function createManifestStop(array $attributes): ManifestStop
+    {
+        $stop = new ManifestStop();
+        $stop->setRawAttributes($attributes, true);
+        $this->manifestStops[] = $attributes;
+
+        return $stop;
+    }
+
+    protected function updateWaypointSequence(string $payloadUuid, string $waypointPublicId, int|string $sequence): void
+    {
+        $this->waypointUpdates[] = [$payloadUuid, $waypointPublicId, $sequence];
+    }
+}
+
+class FleetOpsOrchestrationCommitOrderFake extends Order
+{
+    public bool $saved = false;
+
+    public function save(array $options = []): bool
+    {
+        $this->saved = true;
+
+        return true;
+    }
+}
 
 function fleetopsOrchestrationController(): OrchestrationController
 {
@@ -11,6 +111,56 @@ function fleetopsOrchestrationController(): OrchestrationController
     $registry->register(new GreedyOrchestrationEngine());
 
     return new OrchestrationController($registry);
+}
+
+function fleetopsOrchestrationCommitController(): FleetOpsOrchestrationCommitControllerProbe
+{
+    $registry = new OrchestrationEngineRegistry();
+    $registry->register(new GreedyOrchestrationEngine());
+
+    return new FleetOpsOrchestrationCommitControllerProbe($registry);
+}
+
+function fleetopsOrchestrationVehicle(string $publicId = 'vehicle_public'): Vehicle
+{
+    $vehicle = new Vehicle();
+    $vehicle->setRawAttributes([
+        'uuid'      => $publicId . '-uuid',
+        'public_id' => $publicId,
+    ], true);
+
+    return $vehicle;
+}
+
+function fleetopsOrchestrationDriver(string $publicId = 'driver_public'): Driver
+{
+    $driver = new Driver();
+    $driver->setRawAttributes([
+        'uuid'      => $publicId . '-uuid',
+        'public_id' => $publicId,
+    ], true);
+
+    return $driver;
+}
+
+function fleetopsOrchestrationOrder(string $publicId, ?string $dropoffUuid = 'dropoff-uuid'): FleetOpsOrchestrationCommitOrderFake
+{
+    $dropoff = new Place();
+    $dropoff->setRawAttributes(['uuid' => $dropoffUuid], true);
+
+    $payload = new Payload();
+    $payload->setRawAttributes(['uuid' => 'payload-' . $publicId], true);
+    $payload->setRelation('dropoff', $dropoff);
+
+    $order = new FleetOpsOrchestrationCommitOrderFake();
+    $order->setRawAttributes([
+        'uuid'         => $publicId . '-uuid',
+        'public_id'    => $publicId,
+        'payload_uuid' => $payload->uuid,
+    ], true);
+    $order->setRelation('payload', $payload);
+
+    return $order;
 }
 
 function callOrchestrationControllerHelper(OrchestrationController $controller, string $method, mixed ...$arguments): mixed
@@ -39,6 +189,112 @@ test('orchestration controller exposes engines and rejects empty commits before 
     ])
         ->and($commit->getStatusCode())->toBe(422)
         ->and($commit->getData(true))->toBe(['error' => 'No assignments provided.']);
+});
+
+test('orchestration commit creates manifests stops assignments and waypoint ordering', function () {
+    session(['company' => 'company-uuid']);
+
+    $controller                          = fleetopsOrchestrationCommitController();
+    $controller->vehicles['vehicle_one'] = fleetopsOrchestrationVehicle('vehicle_one');
+    $controller->drivers['driver_one']   = fleetopsOrchestrationDriver('driver_one');
+    $first                               = fleetopsOrchestrationOrder('order_b');
+    $second                              = fleetopsOrchestrationOrder('order_a');
+    $controller->orders                  = [
+        'order_a' => $second,
+        'order_b' => $first,
+    ];
+
+    $response = $controller->commit(Request::create('/orchestrator/commit', 'POST', [
+        'scheduled_date' => '2026-08-01',
+        'assignments'    => [
+            [
+                'order_id'          => 'missing_vehicle_order',
+                'distance'          => 100,
+                'duration'          => 10,
+            ],
+            [
+                'vehicle_id'        => 'missing_vehicle',
+                'order_id'          => 'missing_vehicle_order',
+                'distance'          => 100,
+                'duration'          => 10,
+            ],
+            [
+                'vehicle_id'        => 'vehicle_one',
+                'driver_id'         => 'driver_one',
+                'order_id'          => 'missing_order',
+                'sequence'          => 9,
+                'distance'          => 300,
+                'duration'          => 30,
+            ],
+            [
+                'vehicle_id'        => 'vehicle_one',
+                'driver_id'         => 'driver_one',
+                'order_id'          => 'order_b',
+                'sequence'          => 2,
+                'arrival'           => 1785542400,
+                'distance'          => 200,
+                'duration'          => 20,
+                'waypoint_sequence' => ['waypoint_b', 'waypoint_c'],
+            ],
+            [
+                'vehicle_id'        => 'vehicle_one',
+                'driver_id'         => 'driver_one',
+                'order_id'          => 'order_a',
+                'sequence'          => 1,
+                'distance'          => 100,
+                'duration'          => 10,
+            ],
+        ],
+    ]));
+
+    $payload = $response->getData(true);
+
+    expect($response->getStatusCode())->toBe(200)
+        ->and($payload['committed'])->toBe(['order_a', 'order_b'])
+        ->and($payload['failed'])->toContain('missing_vehicle_order', 'missing_order')
+        ->and($payload['manifests'])->toBe(['manifest_public_1'])
+        ->and($controller->transactions)->toBe(['begin', 'commit'])
+        ->and($controller->manifests)->toHaveCount(1)
+        ->and($controller->manifests[0])->toMatchArray([
+            'company_uuid'     => 'company-uuid',
+            'vehicle_uuid'     => 'vehicle_one-uuid',
+            'driver_uuid'      => 'driver_one-uuid',
+            'scheduled_date'   => '2026-08-01',
+            'total_distance_m' => 600,
+            'total_duration_s' => 60,
+            'stop_count'       => 3,
+        ])
+        ->and(array_column($controller->manifestStops, 'order_uuid'))->toBe(['order_a-uuid', 'order_b-uuid'])
+        ->and($controller->manifestStops[1]['estimated_arrival']->timestamp)->toBe(1785542400)
+        ->and($controller->waypointUpdates)->toBe([
+            ['payload-order_b', 'waypoint_b', 0],
+            ['payload-order_b', 'waypoint_c', 1],
+        ])
+        ->and($first->saved)->toBeTrue()
+        ->and($first->vehicle_assigned_uuid)->toBe('vehicle_one-uuid')
+        ->and($first->driver_assigned_uuid)->toBe('driver_one-uuid')
+        ->and($first->is_route_optimized)->toBeTrue()
+        ->and($second->saved)->toBeTrue()
+        ->and($second->manifest_uuid)->toBe('manifest-1');
+});
+
+test('orchestration commit rolls back and reports persistence failures', function () {
+    session(['company' => 'company-uuid']);
+
+    $controller                          = fleetopsOrchestrationCommitController();
+    $controller->vehicles['vehicle_one'] = fleetopsOrchestrationVehicle('vehicle_one');
+    $controller->throwOnCreateManifest   = true;
+
+    $response = $controller->commit(Request::create('/orchestrator/commit', 'POST', [
+        'assignments' => [[
+            'vehicle_id' => 'vehicle_one',
+            'order_id'   => 'order_a',
+        ]],
+    ]));
+
+    expect($response->getStatusCode())->toBe(500)
+        ->and($response->getData(true))->toBe(['error' => 'Commit failed: manifest boom'])
+        ->and($controller->transactions)->toBe(['begin', 'rollback']);
 });
 
 test('orchestration import helpers build place points and entity payloads from rows', function () {
