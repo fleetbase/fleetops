@@ -2,6 +2,7 @@
 
 use Fleetbase\FleetOps\Exports\SensorExport;
 use Fleetbase\FleetOps\Exports\ServiceAreaExport;
+use Fleetbase\FleetOps\Http\Controllers\Api\v1\ContactController;
 use Fleetbase\FleetOps\Http\Controllers\Api\v1\LabelController;
 use Fleetbase\FleetOps\Http\Controllers\Api\v1\NavigatorController as PublicNavigatorController;
 use Fleetbase\FleetOps\Http\Controllers\Api\v1\OrderConfigController as PublicOrderConfigController;
@@ -252,6 +253,19 @@ class FleetOpsPublicNavigatorControllerProbe extends PublicNavigatorController
     }
 }
 
+class FleetOpsContactControllerProbe extends ContactController
+{
+    public function createInput(Request $request): array
+    {
+        return $this->contactCreateInputFromRequest($request);
+    }
+
+    public function updateInput(Request $request): array
+    {
+        return $this->contactUpdateInputFromRequest($request);
+    }
+}
+
 class FleetOpsSensorQueryRecorder
 {
     public array $calls = [];
@@ -395,5 +409,48 @@ test('public navigator controller returns configured or default driver onboardin
             'company-uuid',
             'company_public',
             'company-uuid',
+        ]);
+});
+
+test('public contact controller normalizes create input and preserves update fields', function () {
+    $controller = new FleetOpsContactControllerProbe();
+
+    expect($controller->createInput(new Request([
+        'name'  => 'Dispatch Desk',
+        'title' => 'Ops',
+        'email' => 'ops@example.test',
+        'phone' => '+1 (555) 010-2000',
+        'meta'  => ['region' => 'west'],
+    ])))->toMatchArray([
+        'name'  => 'Dispatch Desk',
+        'title' => 'Ops',
+        'email' => 'ops@example.test',
+        'type'  => 'contact',
+        'meta'  => ['region' => 'west'],
+    ])
+        ->and($controller->createInput(new Request([
+            'name'  => 'Customer',
+            'type'  => 'customer',
+            'phone' => ['raw' => '+15550102000'],
+        ])))->toMatchArray([
+            'name'  => 'Customer',
+            'type'  => 'customer',
+            'phone' => ['raw' => '+15550102000'],
+        ])
+        ->and($controller->updateInput(new Request([
+            'name'       => 'Updated',
+            'type'       => 'contact',
+            'title'      => 'Lead',
+            'email'      => 'lead@example.test',
+            'phone'      => '+65 8123 4567',
+            'meta'       => ['vip' => true],
+            'place_uuid' => 'ignored',
+        ])))->toBe([
+            'name'  => 'Updated',
+            'type'  => 'contact',
+            'title' => 'Lead',
+            'email' => 'lead@example.test',
+            'phone' => '+65 8123 4567',
+            'meta'  => ['vip' => true],
         ]);
 });

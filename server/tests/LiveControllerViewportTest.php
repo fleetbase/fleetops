@@ -2,6 +2,26 @@
 
 use Fleetbase\FleetOps\Http\Controllers\Internal\v1\LiveController;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
+
+class FleetOpsLiveQueryRecorder
+{
+    public array $calls = [];
+
+    public function whereNotNull(string $column): self
+    {
+        $this->calls[] = ['whereNotNull', $column];
+
+        return $this;
+    }
+
+    public function whereRaw(string $sql, array $bindings = []): self
+    {
+        $this->calls[] = ['whereRaw', trim($sql), $bindings];
+
+        return $this;
+    }
+}
 
 function callLiveControllerMethod(string $method, array $arguments = [])
 {
@@ -49,4 +69,67 @@ test('live viewport query avoids spatial constructors with fixed srids', functio
         ->and($controller)->toContain('ST_X(location) BETWEEN ? AND ?')
         ->and($controller)->not->toContain('ST_MakeEnvelope')
         ->and($controller)->not->toContain('ST_GeomFromText');
+});
+
+test('live controller applies location guards and optional viewport bounds', function () {
+    $query = new FleetOpsLiveQueryRecorder();
+
+    callLiveControllerMethod('applyLiveLocationGuards', [$query]);
+    callLiveControllerMethod('applyLiveViewportBounds', [$query, [1.1, 103.2, 1.4, 103.9]]);
+    callLiveControllerMethod('applyLiveViewportBounds', [$query, null]);
+
+    expect($query->calls)->toBe([
+        ['whereNotNull', 'location'],
+        [
+            'whereRaw',
+            'ST_Y(location) BETWEEN -90 AND 90
+                AND ST_X(location) BETWEEN -180 AND 180
+                AND NOT (ST_X(location) = 0 AND ST_Y(location) = 0)',
+            [],
+        ],
+        [
+            'whereRaw',
+            'ST_Y(location) BETWEEN ? AND ? AND ST_X(location) BETWEEN ? AND ?',
+            [1.1, 1.4, 103.2, 103.9],
+        ],
+    ]);
+});
+
+test('live controller builds operations monitor fleet trees', function () {
+    $fleetNodes = new Collection([
+        'root' => [
+            'uuid'              => 'root',
+            'parent_fleet_uuid' => null,
+            'subfleets'         => [],
+        ],
+        'child' => [
+            'uuid'              => 'child',
+            'parent_fleet_uuid' => 'root',
+            'subfleets'         => [],
+        ],
+        'orphan' => [
+            'uuid'              => 'orphan',
+            'parent_fleet_uuid' => 'missing',
+            'subfleets'         => [],
+        ],
+    ]);
+
+    expect(callLiveControllerMethod('buildOperationsMonitorFleetTree', [$fleetNodes]))->toBe([
+        [
+            'uuid'              => 'root',
+            'parent_fleet_uuid' => null,
+            'subfleets'         => [
+                [
+                    'uuid'              => 'child',
+                    'parent_fleet_uuid' => 'root',
+                    'subfleets'         => [],
+                ],
+            ],
+        ],
+        [
+            'uuid'              => 'orphan',
+            'parent_fleet_uuid' => 'missing',
+            'subfleets'         => [],
+        ],
+    ]);
 });
