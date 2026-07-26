@@ -236,18 +236,9 @@ class DriverController extends Controller
      */
     public function query(Request $request)
     {
-        $results = Driver::queryWithRequest(
-            $request,
-            function (&$query, $request) {
-                if ($request->has('vendor')) {
-                    $query->whereHas('vendor', function ($q) use ($request) {
-                        $q->where('public_id', $request->input('vendor'));
-                    });
-                }
-            }
-        );
+        $results = $this->queryDrivers($request);
 
-        return DriverResource::collection($results);
+        return $this->driverResourceCollection($results);
     }
 
     /**
@@ -261,9 +252,9 @@ class DriverController extends Controller
     {
         // find for the driver
         try {
-            $driver = Driver::findRecordOrFail($id, ['user', 'vehicle', 'vendor', 'currentJob']);
+            $driver = $this->findDriver($id, ['user', 'vehicle', 'vendor', 'currentJob']);
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $exception) {
-            return response()->json(
+            return $this->jsonResponse(
                 [
                     'error' => 'Driver resource not found.',
                 ],
@@ -272,7 +263,7 @@ class DriverController extends Controller
         }
 
         // response the driver resource
-        return new DriverResource($driver);
+        return $this->driverResource($driver);
     }
 
     /**
@@ -286,9 +277,9 @@ class DriverController extends Controller
     {
         // find for the driver
         try {
-            $driver = Driver::findRecordOrFail($id, ['user', 'vehicle', 'vendor', 'currentJob']);
+            $driver = $this->findDriver($id, ['user', 'vehicle', 'vendor', 'currentJob']);
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $exception) {
-            return response()->json(
+            return $this->jsonResponse(
                 [
                     'error' => 'Driver resource not found.',
                 ],
@@ -300,7 +291,7 @@ class DriverController extends Controller
         $driver->delete();
 
         // response the driver resource
-        return new DeletedResource($driver);
+        return $this->deletedDriverResource($driver);
     }
 
     /**
@@ -317,14 +308,14 @@ class DriverController extends Controller
         $speed     = $request->input('speed');
 
         try {
-            $driver = Driver::findRecordOrFail($id);
+            $driver = $this->findDriver($id);
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $exception) {
-            return response()->apiError('Driver resource not found.', 404);
+            return $this->apiError('Driver resource not found.', 404);
         }
 
         // If no lat/lng provided, maintain compatibility and just return existing driver resource
         if (empty($latitude) && empty($longitude)) {
-            return new DriverResource($driver);
+            return $this->driverResource($driver);
         }
 
         $isGeocodable = Carbon::parse($driver->updated_at)->diffInMinutes(Carbon::now(), false) > 10 || empty($driver->country) || empty($driver->city);
@@ -402,7 +393,7 @@ class DriverController extends Controller
             }
         }
 
-        return new DriverResource($driver);
+        return $this->driverResource($driver);
     }
 
     /**
@@ -420,9 +411,9 @@ class DriverController extends Controller
     public function toggleOnline(string $id, Request $request)
     {
         try {
-            $driver = Driver::findRecordOrFail($id);
+            $driver = $this->findDriver($id);
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $exception) {
-            return response()->json([
+            return $this->jsonResponse([
                 'error' => 'Driver resource not found.',
             ], 404);
         }
@@ -443,7 +434,7 @@ class DriverController extends Controller
         }
 
         // Return the updated resource
-        return new DriverResource($driver);
+        return $this->driverResource($driver);
     }
 
     /**
@@ -454,9 +445,9 @@ class DriverController extends Controller
     public function registerDevice(string $id, Request $request)
     {
         try {
-            $driver = Driver::findRecordOrFail($id);
+            $driver = $this->findDriver($id);
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $exception) {
-            return response()->json(
+            return $this->jsonResponse(
                 [
                     'error' => 'Driver resource not found.',
                 ],
@@ -468,14 +459,14 @@ class DriverController extends Controller
         $platform = $request->or(['platform', 'os']);
 
         if (!$token) {
-            return response()->apiError('Token is required to register device.');
+            return $this->apiError('Token is required to register device.');
         }
 
         if (!$platform) {
-            return response()->apiError('Platform is required to register device.');
+            return $this->apiError('Platform is required to register device.');
         }
 
-        $device = UserDevice::firstOrCreate(
+        $device = $this->firstOrCreateUserDevice(
             [
                 'token'    => $token,
                 'platform' => $platform,
@@ -488,9 +479,9 @@ class DriverController extends Controller
             ]
         );
 
-        return response()->json([
+        return $this->jsonResponse([
             'device' => $device->public_id,
-        ]);
+        ], 200);
     }
 
     /**
@@ -900,6 +891,55 @@ class DriverController extends Controller
         }
 
         return response()->json($route);
+    }
+
+    protected function findDriver(string $id, array $with = []): Driver
+    {
+        return Driver::findRecordOrFail($id, $with);
+    }
+
+    protected function queryDrivers(Request $request)
+    {
+        return Driver::queryWithRequest(
+            $request,
+            function (&$query, $request) {
+                if ($request->has('vendor')) {
+                    $query->whereHas('vendor', function ($q) use ($request) {
+                        $q->where('public_id', $request->input('vendor'));
+                    });
+                }
+            }
+        );
+    }
+
+    protected function firstOrCreateUserDevice(array $attributes, array $values): UserDevice
+    {
+        return UserDevice::firstOrCreate($attributes, $values);
+    }
+
+    protected function driverResource(Driver $driver)
+    {
+        return new DriverResource($driver);
+    }
+
+    protected function driverResourceCollection($results)
+    {
+        return DriverResource::collection($results);
+    }
+
+    protected function deletedDriverResource(Driver $driver)
+    {
+        return new DeletedResource($driver);
+    }
+
+    protected function jsonResponse(array $payload, int $status)
+    {
+        return response()->json($payload, $status);
+    }
+
+    protected function apiError(string $message, int $status = 400)
+    {
+        return response()->apiError($message, $status);
     }
 
     /**
