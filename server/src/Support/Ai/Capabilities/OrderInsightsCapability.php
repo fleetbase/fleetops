@@ -37,7 +37,7 @@ class OrderInsightsCapability extends AbstractFleetOpsAICapability
         $prompt = $this->prompt($task);
         $window = $this->dateWindow($prompt);
         $amount = $this->amountThreshold($prompt);
-        $query  = Order::where('company_uuid', session('company'));
+        $query  = $this->orderQuery(session('company'));
 
         if ($window) {
             $query->whereBetween('created_at', [$window['start'], $window['end']]);
@@ -86,6 +86,11 @@ class OrderInsightsCapability extends AbstractFleetOpsAICapability
     protected function dateWindow(string $prompt): ?array
     {
         return $this->relativeDateResolver()->resolveWindow($prompt);
+    }
+
+    protected function orderQuery(?string $companyUuid): mixed
+    {
+        return Order::where('company_uuid', $companyUuid);
     }
 
     protected function relativeDateResolver(): AiRelativeDateResolver
