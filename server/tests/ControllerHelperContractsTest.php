@@ -276,6 +276,42 @@ class FleetOpsInternalMaintenanceControllerProbe extends InternalMaintenanceCont
     }
 }
 
+class FleetOpsInternalMaintenanceFake extends Maintenance
+{
+    public array $loadedRelations = [];
+    public array $updates         = [];
+
+    public function load($relations)
+    {
+        $this->loadedRelations[] = $relations;
+
+        return $this;
+    }
+
+    public function update(array $attributes = [], array $options = [])
+    {
+        $this->updates[] = $attributes;
+
+        foreach ($attributes as $key => $value) {
+            $this->{$key} = $value;
+        }
+
+        return true;
+    }
+}
+
+class FleetOpsMaintenanceBuilderFake
+{
+    public array $withRelations = [];
+
+    public function with($relations): self
+    {
+        $this->withRelations[] = $relations;
+
+        return $this;
+    }
+}
+
 class FleetOpsInternalServiceQuoteControllerProbe extends InternalServiceQuoteController
 {
     public function callHelper(string $method, mixed ...$arguments): mixed
@@ -997,6 +1033,35 @@ test('internal maintenance controller exposes line item response payload', funct
         ],
         'total_cost' => 3000,
     ]);
+});
+
+test('internal maintenance controller loads relations and recalculates line item totals', function () {
+    $controller  = new FleetOpsInternalMaintenanceControllerProbe();
+    $maintenance = new FleetOpsInternalMaintenanceFake();
+    $builder     = new FleetOpsMaintenanceBuilderFake();
+
+    $maintenance->line_items = [
+        ['description' => 'Oil filter', 'quantity' => 2, 'unit_cost' => 1500],
+        ['description' => 'Inspection', 'quantity' => 1, 'unit_cost' => 2500],
+    ];
+    $maintenance->labor_cost = 4000;
+    $maintenance->tax        = 650;
+
+    $controller->onAfterCreate(new Request(), $maintenance, []);
+    $controller->onAfterUpdate(new Request(), $maintenance, []);
+    $controller->onFindRecord($builder, new Request());
+    $controller->callHelper('recalculateCosts', $maintenance);
+
+    expect($maintenance->loadedRelations)->toBe([
+        ['maintainable', 'performedBy'],
+        ['maintainable', 'performedBy'],
+    ])->and($builder->withRelations)->toBe([
+        ['maintainable', 'performedBy'],
+    ])->and($maintenance->updates)->toContain([
+        'parts_cost' => 5500,
+        'total_cost' => 10150,
+    ])->and($maintenance->parts_cost)->toBe(5500)
+        ->and($maintenance->total_cost)->toBe(10150);
 });
 
 test('internal vendor controller serializes personnel payload defaults without contact details', function () {
