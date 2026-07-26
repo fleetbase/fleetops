@@ -161,15 +161,13 @@ class CreateOrderPreviewCapability extends AbstractFleetOpsAICapability implemen
             'vehicle_query',
         ]);
 
-        /** @var OrderController $controller */
-        $controller = app(OrderController::class);
-        $response   = $controller->createRecord(new Request(['order' => $draft]));
+        $response = $this->orderController()->createRecord(new Request(['order' => $draft]));
 
-        if ($response instanceof JsonResponse && $response->getStatusCode() >= 400) {
+        if ($this->orderResponseFailed($response)) {
             throw new \RuntimeException((string) $response->getContent());
         }
 
-        $order = data_get($response, 'order');
+        $order = $this->orderFromResponse($response);
 
         return [
             'action'   => $this->key(),
@@ -183,6 +181,21 @@ class CreateOrderPreviewCapability extends AbstractFleetOpsAICapability implemen
                 'models' => array_filter([data_get($order, 'public_id') ?? data_get($order, 'uuid')]),
             ],
         ];
+    }
+
+    protected function orderController(): OrderController
+    {
+        return app(OrderController::class);
+    }
+
+    protected function orderResponseFailed($response): bool
+    {
+        return $response instanceof JsonResponse && $response->getStatusCode() >= 400;
+    }
+
+    protected function orderFromResponse($response)
+    {
+        return data_get($response, 'order');
     }
 
     protected function sanitizeDraftForApply(array $draft): array
