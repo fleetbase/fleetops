@@ -26,25 +26,25 @@ class OrderConfigController extends FleetOpsController
     public function createRecord(Request $request)
     {
         // Create validation request
-        $createOrderRequest  = CreateOrderConfigRequest::createFrom($request);
+        $createOrderRequest  = $this->createOrderConfigRequest($request);
         $rules               = $createOrderRequest->rules();
 
         // Manually validate request
-        $validator = Validator::make($request->input('orderConfig'), $rules);
+        $validator = $this->makeOrderConfigValidator($request, $rules);
         if ($validator->fails()) {
             return $createOrderRequest->responseWithErrors($validator);
         }
 
         try {
-            $record = $this->model->createRecordFromRequest($request);
+            $record = $this->createOrderConfigRecord($request);
 
-            return ['order_config' => new $this->resource($record)];
+            return $this->createdOrderConfigResource($record);
         } catch (\Exception $e) {
-            return response()->error($e->getMessage());
+            return $this->errorResponse($e->getMessage());
         } catch (\Illuminate\Database\QueryException $e) {
-            return response()->error($e->getMessage());
+            return $this->errorResponse($e->getMessage());
         } catch (FleetbaseRequestValidationException $e) {
-            return response()->error($e->getErrors());
+            return $this->errorResponse($e->getErrors());
         }
     }
 
@@ -79,6 +79,26 @@ class OrderConfigController extends FleetOpsController
     protected function findOrderConfig(string $id): ?OrderConfig
     {
         return OrderConfig::where('uuid', $id)->first();
+    }
+
+    protected function createOrderConfigRequest(Request $request)
+    {
+        return CreateOrderConfigRequest::createFrom($request);
+    }
+
+    protected function makeOrderConfigValidator(Request $request, array $rules)
+    {
+        return Validator::make($request->input('orderConfig'), $rules);
+    }
+
+    protected function createOrderConfigRecord(Request $request)
+    {
+        return $this->model->createRecordFromRequest($request);
+    }
+
+    protected function createdOrderConfigResource($record): array
+    {
+        return ['order_config' => new $this->resource($record)];
     }
 
     protected function wrapResource(): void
