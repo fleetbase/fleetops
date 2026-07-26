@@ -1,6 +1,7 @@
 <?php
 
 use Carbon\Carbon;
+use Fleetbase\Ai\Models\AiTask;
 use Fleetbase\FleetOps\Console\Commands\ProcessOperationalAlerts;
 use Fleetbase\FleetOps\Console\Commands\SimulateGeofenceEvents;
 use Fleetbase\FleetOps\Models\Driver;
@@ -147,6 +148,44 @@ class FleetOpsOperationalAlertPositionFake extends Position
     public function getAttribute($key)
     {
         return $this->attributes[$key] ?? null;
+    }
+}
+
+class FleetOpsOptimizeOrderRouteCapabilityProbe extends OptimizeOrderRouteCapability
+{
+    public array $permissions = [];
+    public $orders;
+
+    protected function can(string $permission): bool
+    {
+        return in_array($permission, $this->permissions, true);
+    }
+
+    protected function resolveOrders(AiTask $task)
+    {
+        return collect($this->orders ?? []);
+    }
+}
+
+class FleetOpsOptimizeOrderRouteOrderFake extends Order
+{
+    public array $loadedMissing = [];
+
+    public function loadMissing($relations)
+    {
+        $this->loadedMissing[] = $relations;
+
+        return $this;
+    }
+}
+
+class FleetOpsOptimizeOrderRouteAiTaskFake extends AiTask
+{
+    public string $prompt;
+
+    public function __construct(string $prompt)
+    {
+        $this->prompt = $prompt;
     }
 }
 
@@ -596,4 +635,104 @@ test('optimize order route capability exposes action metadata and route helpers'
         ->and(fleetopsInvoke($capability, 'distance', [$pickup, $near]))->toBeGreaterThan(0.0)
         ->and(fleetopsInvoke($capability, 'distance', [null, $near]))->toBe(PHP_FLOAT_MAX)
         ->and(fleetopsInvoke($capability, 'stopLabels', [$waypoints])->all())->toBe(['Far', 'Near']);
+});
+
+test('optimize order route capability previews order selection and route readiness branches', function () {
+    $task       = new FleetOpsOptimizeOrderRouteAiTaskFake('Optimize route for order ORD-1');
+    $capability = new FleetOpsOptimizeOrderRouteCapabilityProbe();
+
+    expect($capability->shouldPreview($task))->toBeTrue()
+        ->and($capability->resolve($task))->toMatchArray([
+            'action'         => 'fleet-ops.optimize_order_route',
+            'authorized'     => false,
+            'ready'          => false,
+            'message'        => 'Fleetbase AI needs a specific Fleet-Ops order ID before it can optimize a route.',
+            'apply_label'    => 'Optimize route',
+            'missing_fields' => ['order UUID or public ID'],
+            'fields'         => [],
+            'draft'          => [],
+        ]);
+
+    $firstOrder = new FleetOpsOptimizeOrderRouteOrderFake();
+    $firstOrder->setRawAttributes(['uuid' => 'order-uuid-a', 'public_id' => 'ORD-A'], true);
+    $secondOrder = new FleetOpsOptimizeOrderRouteOrderFake();
+    $secondOrder->setRawAttributes(['uuid' => 'order-uuid-b', 'public_id' => 'ORD-B'], true);
+
+    $capability->orders = collect([$firstOrder, $secondOrder]);
+
+    expect($capability->preview($task))->toMatchArray([
+        'ready'          => false,
+        'preview_only'   => true,
+        'apply_label'    => 'Open Orchestrator',
+        'missing_fields' => ['single order selection for direct route apply'],
+        'draft'          => ['orders' => ['ORD-A', 'ORD-B'], 'mode' => 'optimize_routes'],
+    ]);
+
+    $pickup = new Place(['name' => 'Pickup']);
+    $pickup->forceFill(['lat' => 1.30, 'lng' => 103.80]);
+    $near = new Place(['name' => 'Near']);
+    $near->forceFill(['lat' => 1.31, 'lng' => 103.81]);
+    $far = new Place(['name' => 'Far']);
+    $far->forceFill(['lat' => 1.40, 'lng' => 103.90]);
+
+    $order = new FleetOpsOptimizeOrderRouteOrderFake();
+    $order->setRawAttributes(['uuid' => 'order-uuid', 'public_id' => 'ORD-1'], true);
+    $order->setRelation('payload', (object) [
+        'pickup'    => $pickup,
+        'dropoff'   => null,
+        'waypoints' => collect([
+            (object) ['uuid' => 'wp-far', 'place_uuid' => 'far-place', 'place' => $far, 'type' => 'dropoff', 'order' => 0],
+            (object) ['uuid' => 'wp-near', 'place_uuid' => 'near-place', 'place' => $near, 'type' => null, 'order' => 1],
+        ]),
+    ]);
+
+    $capability->orders = collect([$order]);
+    $unauthorized       = $capability->preview($task);
+
+    expect($unauthorized['ready'])->toBeFalse()
+        ->and($unauthorized['authorized'])->toBeFalse()
+        ->and($unauthorized['missing_fields'])->toContain('permission to optimize and update Fleet-Ops order routes')
+        ->and($unauthorized['fields'][1])->toBe(['label' => 'Current sequence', 'value' => 'Far -> Near'])
+        ->and($unauthorized['fields'][2])->toBe(['label' => 'Proposed sequence', 'value' => 'Near -> Far'])
+        ->and($unauthorized['draft']['order_uuid'])->toBe('order-uuid')
+        ->and($unauthorized['draft']['waypoints'])->toBe([
+            ['place_uuid' => 'near-place', 'order' => 0, 'type' => 'dropoff'],
+            ['place_uuid' => 'far-place', 'order' => 1, 'type' => 'dropoff'],
+        ])
+        ->and($order->loadedMissing)->toBe([['payload.pickup', 'payload.dropoff', 'payload.waypoints.place']]);
+
+    $capability->permissions = $capability->permissions();
+    $ready                   = $capability->preview($task);
+
+    expect($ready['authorized'])->toBeTrue()
+        ->and($ready['ready'])->toBeTrue()
+        ->and($ready['missing_fields'])->toBe([])
+        ->and($ready['message'])->toBe('Fleetbase AI prepared an optimized waypoint sequence. Review it before applying.');
+
+    $alreadyOptimizedOrder = new FleetOpsOptimizeOrderRouteOrderFake();
+    $alreadyOptimizedOrder->setRawAttributes(['uuid' => 'order-uuid-ready', 'public_id' => 'ORD-READY'], true);
+    $alreadyOptimizedOrder->setRelation('payload', (object) [
+        'pickup'    => $pickup,
+        'dropoff'   => null,
+        'waypoints' => collect([
+            (object) ['uuid' => 'wp-near', 'place_uuid' => 'near-place', 'place' => $near, 'type' => 'dropoff', 'order' => 0],
+            (object) ['uuid' => 'wp-far', 'place_uuid' => 'far-place', 'place' => $far, 'type' => 'dropoff', 'order' => 1],
+        ]),
+    ]);
+    $capability->orders = collect([$alreadyOptimizedOrder]);
+    $unchanged          = $capability->preview($task);
+
+    expect($unchanged['ready'])->toBeFalse()
+        ->and($unchanged['missing_fields'])->toContain('a route with a different optimized waypoint sequence');
+});
+
+test('optimize order route capability apply rejects unauthorized and not ready previews', function () {
+    $task       = new FleetOpsOptimizeOrderRouteAiTaskFake('Optimize route for order ORD-1');
+    $capability = new FleetOpsOptimizeOrderRouteCapabilityProbe();
+
+    expect(fn () => $capability->apply($task, ['ready' => true]))->toThrow(RuntimeException::class, 'You do not have permission to optimize Fleet-Ops order routes.');
+
+    $capability->permissions = $capability->permissions();
+
+    expect(fn () => $capability->apply($task, ['ready' => false]))->toThrow(RuntimeException::class, 'This route optimization preview is not ready to apply.');
 });

@@ -128,7 +128,6 @@ class FleetOpsApiPurchaseRateCreateControllerProbe extends PurchaseRateControlle
 
         return $this->purchaseRate;
     }
-
 }
 
 class FleetOpsApiPurchaseRateOrderFake extends Order
