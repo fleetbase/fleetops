@@ -16,6 +16,10 @@ if (!function_exists('Fleetbase\FleetOps\Models\now')) {
     eval('namespace Fleetbase\FleetOps\Models; function now() { return \Illuminate\Support\Carbon::now(); }');
 }
 
+if (!function_exists('Fleetbase\FleetOps\Models\activity')) {
+    eval('namespace Fleetbase\FleetOps\Models; function activity($logName = null) { return new class($logName) { public array $properties = []; public function __construct(public $logName) {} public function performedOn($subject) { return $this; } public function withProperties(array $properties) { $this->properties = $properties; return $this; } public function log(string $message) { return true; } }; }');
+}
+
 use Fleetbase\FleetOps\Exceptions\CustomerUserConflictException;
 use Fleetbase\FleetOps\Models\Contact;
 use Fleetbase\FleetOps\Models\Device;
@@ -44,6 +48,7 @@ use Fleetbase\FleetOps\Models\TrackingStatus;
 use Fleetbase\FleetOps\Models\Vehicle;
 use Fleetbase\FleetOps\Models\VehicleDevice;
 use Fleetbase\FleetOps\Models\Vendor;
+use Fleetbase\FleetOps\Models\Warranty;
 use Fleetbase\FleetOps\Models\Waypoint;
 use Fleetbase\FleetOps\Models\WorkOrder;
 use Fleetbase\FleetOps\Models\Zone;
@@ -315,6 +320,61 @@ class FleetOpsUpdatingDeviceFake extends Device
         $this->forceFill($attributes);
 
         return true;
+    }
+}
+
+class FleetOpsDeviceTelematicCommandFake extends Telematic
+{
+    public array $commands = [];
+
+    public function sendCommand(string $command, array $parameters = []): bool
+    {
+        $this->commands[] = [$command, $parameters];
+
+        return $command !== 'fail';
+    }
+}
+
+class FleetOpsDeviceRecentEventsRelationFake
+{
+    public array $calls = [];
+
+    public function orderBy(string $column, string $direction): self
+    {
+        $this->calls[] = ['orderBy', $column, $direction];
+
+        return $this;
+    }
+
+    public function limit(int $limit): self
+    {
+        $this->calls[] = ['limit', $limit];
+
+        return $this;
+    }
+
+    public function get(): Collection
+    {
+        $this->calls[] = ['get'];
+
+        return collect(['event-a', 'event-b']);
+    }
+}
+
+class FleetOpsDeviceRecentEventsFake extends FleetOpsUpdatingDeviceFake
+{
+    public FleetOpsDeviceRecentEventsRelationFake $eventsRelation;
+
+    public function __construct(array $attributes = [])
+    {
+        parent::__construct($attributes);
+
+        $this->eventsRelation = new FleetOpsDeviceRecentEventsRelationFake();
+    }
+
+    protected function recentEventsQuery(): FleetOpsDeviceRecentEventsRelationFake
+    {
+        return $this->eventsRelation;
     }
 }
 
@@ -747,10 +807,13 @@ test('contact user sync lookup and deletion guards are stable', function () {
 });
 
 test('device accessors connection state configuration and command guards are stable', function () {
+    fleetopsModelAccessorsUseInMemoryRelationConnection();
     Carbon::setTestNow(Carbon::parse('2026-01-01 12:00:00'));
 
     $device = new FleetOpsUpdatingDeviceFake([
-        'options' => [
+        'uuid'         => 'device-uuid',
+        'company_uuid' => 'company-uuid',
+        'options'      => [
             'supported_features' => ['lock', 'reboot'],
             'sample_rate'        => 30,
         ],
@@ -772,6 +835,16 @@ test('device accessors connection state configuration and command guards are sta
         ->and($device->getConfiguration())->toMatchArray(['sample_rate' => 30])
         ->and($device->sendCommand('reboot'))->toBeFalse();
 
+    $namedAttachable = new FleetOpsUpdatingDeviceFake();
+    $namedAttachable->setRelation('attachable', (object) ['name' => 'Trailer 42', 'display_name' => 'Display Trailer']);
+
+    $emptyAttachable = new FleetOpsUpdatingDeviceFake();
+    $emptyAttachable->setRelation('attachable', null);
+
+    expect((new Device())->photo_url)->toBe('https://flb-assets.s3.ap-southeast-1.amazonaws.com/static/image-file-icon.png')
+        ->and($namedAttachable->attached_to_name)->toBe('Trailer 42')
+        ->and($emptyAttachable->attached_to_name)->toBeNull();
+
     $device->lastOnlineAtFake = Carbon::parse('2026-01-01 11:55:00');
     expect($device->is_online)->toBeTrue()
         ->and($device->connection_status)->toBe('online');
@@ -788,7 +861,101 @@ test('device accessors connection state configuration and command guards are sta
         ->and($device->updates)->toHaveCount(1)
         ->and($device->updates[0]['options'])->toMatchArray(['sample_rate' => 60, 'mode' => 'eco']);
 
+    expect($device->updateLastOnline())->toBeTrue()
+        ->and($device->updates[1])->toHaveKey('last_online_at');
+
+    $vehicle = new Vehicle();
+    $vehicle->setRawAttributes([
+        'uuid' => 'vehicle-uuid',
+        'name' => 'Vehicle One',
+    ], true);
+
+    expect($device->attachTo($vehicle))->toBeTrue()
+        ->and($device->updates[2])->toMatchArray([
+            'attachable_type' => Vehicle::class,
+            'attachable_uuid' => 'vehicle-uuid',
+        ]);
+
+    $device->attachable_type = Vehicle::class;
+    $device->attachable_uuid = 'vehicle-uuid';
+
+    expect($device->detach())->toBeTrue()
+        ->and($device->updates[3])->toBe([
+            'attachable_type' => null,
+            'attachable_uuid' => null,
+        ]);
+
+    $telematic = new FleetOpsDeviceTelematicCommandFake();
+    $telematic->setRawAttributes(['uuid' => 'telematic-uuid'], true);
+    $device->setRawAttributes(array_merge($device->getAttributes(), ['uuid' => 'device-uuid']), true);
+    $device->setRelation('telematic', $telematic);
+
+    expect($device->sendCommand('lock', ['door' => 'rear']))->toBeTrue()
+        ->and($telematic->commands)->toBe([
+            ['lock', ['door' => 'rear', 'target_device' => 'device-uuid']],
+        ]);
+
+    $recentEvents = new FleetOpsDeviceRecentEventsFake();
+    expect($recentEvents->getRecentEvents(2)->all())->toBe(['event-a', 'event-b'])
+        ->and($recentEvents->eventsRelation->calls)->toBe([
+            ['orderBy', 'created_at', 'desc'],
+            ['limit', 2],
+            ['get'],
+        ]);
+
+    $onlineSql     = Device::query()->online()->toSql();
+    $offlineSql    = Device::query()->offline()->toSql();
+    $attachedToSql = Device::query()->attachedTo(Vehicle::class)->toSql();
+
+    expect($onlineSql)->toContain('last_online_at')
+        ->and($offlineSql)->toContain('last_online_at')
+        ->and($attachedToSql)->toContain('attachable_type');
+
     Carbon::setTestNow();
+});
+
+test('device relationships expose fleet ops relation contracts', function () {
+    fleetopsModelAccessorsUseInMemoryRelationConnection();
+
+    $device = new Device();
+    $device->setRawAttributes([
+        'uuid'            => 'device-uuid',
+        'telematic_uuid'  => 'telematic-uuid',
+        'warranty_uuid'   => 'warranty-uuid',
+        'created_by_uuid' => 'creator-uuid',
+        'updated_by_uuid' => 'updater-uuid',
+    ], true);
+
+    $telematic  = $device->telematic();
+    $warranty   = $device->warranty();
+    $createdBy  = $device->createdBy();
+    $updatedBy  = $device->updatedBy();
+    $attachable = $device->attachable();
+    $events     = $device->events();
+    $sensors    = $device->sensors();
+    $photo      = $device->photo();
+
+    expect($device->getSlugOptions()->slugField)->toBe('slug')
+        ->and($device->getActivitylogOptions())->toBeInstanceOf(Spatie\Activitylog\LogOptions::class)
+        ->and($telematic)->toBeInstanceOf(BelongsTo::class)
+        ->and($telematic->getForeignKeyName())->toBe('telematic_uuid')
+        ->and($telematic->getRelated())->toBeInstanceOf(Telematic::class)
+        ->and($warranty)->toBeInstanceOf(BelongsTo::class)
+        ->and($warranty->getForeignKeyName())->toBe('warranty_uuid')
+        ->and($warranty->getRelated())->toBeInstanceOf(Warranty::class)
+        ->and($createdBy)->toBeInstanceOf(BelongsTo::class)
+        ->and($createdBy->getForeignKeyName())->toBe('created_by_uuid')
+        ->and($updatedBy)->toBeInstanceOf(BelongsTo::class)
+        ->and($updatedBy->getForeignKeyName())->toBe('updated_by_uuid')
+        ->and($attachable)->toBeInstanceOf(MorphTo::class)
+        ->and($attachable->getMorphType())->toBe('attachable_type')
+        ->and($attachable->getForeignKeyName())->toBe('attachable_uuid')
+        ->and($events)->toBeInstanceOf(HasMany::class)
+        ->and($events->getForeignKeyName())->toBe('device_uuid')
+        ->and($sensors)->toBeInstanceOf(HasMany::class)
+        ->and($sensors->getForeignKeyName())->toBe('device_uuid')
+        ->and($photo)->toBeInstanceOf(BelongsTo::class)
+        ->and($photo->getRelated())->toBeInstanceOf(Fleetbase\Models\File::class);
 });
 
 test('maintenance accessors lifecycle guards and import mapping are stable', function () {

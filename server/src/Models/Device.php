@@ -510,10 +510,15 @@ class Device extends Model
      */
     public function getRecentEvents(int $limit = 10)
     {
-        return $this->events()
+        return $this->recentEventsQuery()
             ->orderBy('created_at', 'desc')
             ->limit($limit)
             ->get();
+    }
+
+    protected function recentEventsQuery()
+    {
+        return $this->events();
     }
 
     /**
