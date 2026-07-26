@@ -8,7 +8,17 @@ if (!function_exists('Fleetbase\Models\config')) {
     eval('namespace Fleetbase\Models; function config($key = null, $default = null) { return $key === "fleetbase.connection.db" ? "mysql" : $default; }');
 }
 
+use Fleetbase\FleetOps\Models\IntegratedVendor;
+use Fleetbase\FleetOps\Models\Payload;
 use Fleetbase\FleetOps\Models\ServiceQuote;
+use Fleetbase\FleetOps\Models\ServiceQuoteItem;
+use Fleetbase\FleetOps\Models\ServiceRate;
+use Fleetbase\Models\Company;
+use Illuminate\Database\ConnectionResolver;
+use Illuminate\Database\Eloquent\Model as EloquentModel;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\SQLiteConnection;
 use Illuminate\Http\Request;
 
 function fleetopsServiceQuoteUnitRequestWithQuote(mixed $serviceQuote): Request
@@ -65,6 +75,73 @@ class FleetOpsServiceQuoteUnitCheckoutFake extends ServiceQuote
     }
 }
 
+class FleetOpsServiceQuoteUnitNamedFake extends ServiceQuote
+{
+    public ?string $pluralName   = null;
+    public ?string $singularName = null;
+    public ?string $payloadKey   = null;
+}
+
+function fleetopsServiceQuoteUseRelationConnection(): void
+{
+    $connection = new SQLiteConnection(new PDO('sqlite::memory:'));
+    $resolver   = new ConnectionResolver([
+        'default' => $connection,
+        'mysql'   => $connection,
+    ]);
+
+    $resolver->setDefaultConnection('mysql');
+    EloquentModel::setConnectionResolver($resolver);
+}
+
+test('service quote relationship and accessor contracts resolve expected models', function () {
+    fleetopsServiceQuoteUseRelationConnection();
+
+    $serviceRate = new ServiceRate();
+    $serviceRate->setRawAttributes(['service_name' => 'Same Day'], true);
+
+    $quote = new ServiceQuote();
+    $quote->setRelation('serviceRate', $serviceRate);
+
+    expect($quote->items())->toBeInstanceOf(HasMany::class)
+        ->and($quote->items()->getRelated())->toBeInstanceOf(ServiceQuoteItem::class)
+        ->and($quote->company())->toBeInstanceOf(BelongsTo::class)
+        ->and($quote->company()->getRelated())->toBeInstanceOf(Company::class)
+        ->and($quote->serviceRate())->toBeInstanceOf(BelongsTo::class)
+        ->and($quote->serviceRate()->getRelated())->toBeInstanceOf(ServiceRate::class)
+        ->and($quote->payload())->toBeInstanceOf(BelongsTo::class)
+        ->and($quote->payload()->getRelated())->toBeInstanceOf(Payload::class)
+        ->and($quote->integratedVendor())->toBeInstanceOf(BelongsTo::class)
+        ->and($quote->integratedVendor()->getRelated())->toBeInstanceOf(IntegratedVendor::class)
+        ->and($quote->service_rate_name)->toBe('Same Day');
+});
+
+test('service quote naming and integrated vendor helpers use explicit values fallbacks and metadata', function () {
+    $named               = new FleetOpsServiceQuoteUnitNamedFake();
+    $named->pluralName   = 'custom quotes';
+    $named->singularName = 'custom quote';
+
+    expect($named->getPluralName())->toBe('custom quotes')
+        ->and($named->getSingularName())->toBe('custom quote');
+
+    $payloadNamed             = new FleetOpsServiceQuoteUnitNamedFake();
+    $payloadNamed->payloadKey = 'shipment';
+
+    expect($payloadNamed->getPluralName())->toBe('shipments')
+        ->and($payloadNamed->getSingularName())->toBe('shipment');
+
+    $default = new ServiceQuote();
+
+    expect($default->getPluralName())->toBe('service_quotes')
+        ->and($default->getSingularName())->toBe('service_quote')
+        ->and($default->fromIntegratedVendor())->toBeFalse();
+
+    $vendorQuote = new ServiceQuote();
+    $vendorQuote->setRawAttributes(['integrated_vendor_uuid' => 'vendor-uuid'], true);
+
+    expect($vendorQuote->fromIntegratedVendor())->toBeTrue();
+});
+
 test('service quote resolves request references from uuid and public id', function () {
     $uuidQuote = new ServiceQuote();
     $uuidQuote->setRawAttributes([
@@ -113,7 +190,8 @@ test('service quote rejects unresolved request values and checkout without compa
     ], true);
     $quote->setRelation('company', null);
 
-    expect(fn () => FleetOpsServiceQuoteUnitResolvableFake::resolveFromRequest(fleetopsServiceQuoteUnitRequestWithQuote('not-a-public-id')))
+    expect(FleetOpsServiceQuoteUnitResolvableFake::resolveFromRequest(fleetopsServiceQuoteUnitRequestWithQuote(null)))->toBeNull()
+        ->and(fn () => FleetOpsServiceQuoteUnitResolvableFake::resolveFromRequest(fleetopsServiceQuoteUnitRequestWithQuote('not-a-public-id')))
         ->toThrow(TypeError::class, 'Return value must be of type')
         ->and(FleetOpsServiceQuoteUnitResolvableFake::$lookups)->toBe([])
         ->and(fn () => $quote->createStripeCheckoutSession('/checkout/return'))

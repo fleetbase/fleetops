@@ -9,11 +9,19 @@ if (!function_exists('Fleetbase\Models\config')) {
 }
 
 use Fleetbase\FleetOps\Flow\Activity;
+use Fleetbase\FleetOps\Models\Entity;
 use Fleetbase\FleetOps\Models\Order;
 use Fleetbase\FleetOps\Models\Payload;
 use Fleetbase\FleetOps\Models\Place;
 use Fleetbase\FleetOps\Models\Waypoint;
 use Fleetbase\LaravelMysqlSpatial\Types\Point;
+use Illuminate\Database\ConnectionResolver;
+use Illuminate\Database\Eloquent\Model as EloquentModel;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasManyThrough;
+use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Database\SQLiteConnection;
 
 class FleetOpsPayloadUnitRelationCountFake
 {
@@ -168,6 +176,47 @@ function fleetopsPayloadUnitPayload(array $attributes = []): FleetOpsPayloadUnit
 
     return $payload;
 }
+
+function fleetopsPayloadUnitUseRelationConnection(): void
+{
+    $connection = new SQLiteConnection(new PDO('sqlite::memory:'));
+    $resolver   = new ConnectionResolver([
+        'default' => $connection,
+        'mysql'   => $connection,
+    ]);
+
+    $resolver->setDefaultConnection('mysql');
+    EloquentModel::setConnectionResolver($resolver);
+}
+
+test('payload relationship contracts resolve expected relation types and models', function () {
+    fleetopsPayloadUnitUseRelationConnection();
+
+    $payload = new Payload();
+
+    expect($payload->entities())->toBeInstanceOf(HasMany::class)
+        ->and($payload->entities()->getRelated())->toBeInstanceOf(Entity::class)
+        ->and($payload->waypointMarkers())->toBeInstanceOf(HasMany::class)
+        ->and($payload->waypointMarkers()->getRelated())->toBeInstanceOf(Waypoint::class)
+        ->and($payload->firstWaypointMarker())->toBeInstanceOf(HasOne::class)
+        ->and($payload->firstWaypointMarker()->getRelated())->toBeInstanceOf(Waypoint::class)
+        ->and($payload->lastWaypointMarker())->toBeInstanceOf(HasOne::class)
+        ->and($payload->lastWaypointMarker()->getRelated())->toBeInstanceOf(Waypoint::class)
+        ->and($payload->order())->toBeInstanceOf(HasOne::class)
+        ->and($payload->order()->getRelated())->toBeInstanceOf(Order::class)
+        ->and($payload->dropoff())->toBeInstanceOf(BelongsTo::class)
+        ->and($payload->dropoff()->getRelated())->toBeInstanceOf(Place::class)
+        ->and($payload->pickup())->toBeInstanceOf(BelongsTo::class)
+        ->and($payload->pickup()->getRelated())->toBeInstanceOf(Place::class)
+        ->and($payload->return())->toBeInstanceOf(BelongsTo::class)
+        ->and($payload->return()->getRelated())->toBeInstanceOf(Place::class)
+        ->and($payload->currentWaypoint())->toBeInstanceOf(BelongsTo::class)
+        ->and($payload->currentWaypoint()->getRelated())->toBeInstanceOf(Place::class)
+        ->and($payload->currentWaypointMarker())->toBeInstanceOf(BelongsTo::class)
+        ->and($payload->currentWaypointMarker()->getRelated())->toBeInstanceOf(Waypoint::class)
+        ->and($payload->waypoints())->toBeInstanceOf(HasManyThrough::class)
+        ->and($payload->waypoints()->getRelated())->toBeInstanceOf(Place::class);
+});
 
 test('payload exposes endpoint names cod amount and relation count accessors', function () {
     $pickup   = fleetopsPayloadUnitPlace('pickup-uuid', ['address' => 'Pickup Address']);
