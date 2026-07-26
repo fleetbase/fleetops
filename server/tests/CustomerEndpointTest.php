@@ -270,6 +270,36 @@ test('customer controller rejects invalid public auth inputs before persistence'
         ->and(fleetopsCustomerEndpointJson($shortResetPassword))->toBe(['error' => 'Password must be at least 8 characters.']);
 });
 
+test('customer controller reports missing company before persistence', function () {
+    $controller = new CustomerController();
+
+    $missingEmailCompany = $controller->requestCreationCode(new VerifyCreateCustomerRequest([
+        'mode'     => 'email',
+        'identity' => 'jane@example.test',
+    ]));
+    $missingSmsCompany = $controller->requestCreationCode(new VerifyCreateCustomerRequest([
+        'mode'     => 'sms',
+        'identity' => '15551234567',
+    ]));
+
+    $customer = new Contact();
+    $customer->setRawAttributes([
+        'uuid'         => 'customer-uuid',
+        'company_uuid' => 'company-uuid',
+        'type'         => 'customer',
+    ], true);
+    app()->instance(CustomerAuth::APP_BINDING, $customer);
+
+    $missingOrderCompany = $controller->createOrder(new CreateCustomerOrderRequest());
+
+    expect($missingEmailCompany->getStatusCode())->toBe(500)
+        ->and(fleetopsCustomerEndpointJson($missingEmailCompany))->toBe(['error' => 'No company resolved from API credential.'])
+        ->and($missingSmsCompany->getStatusCode())->toBe(500)
+        ->and(fleetopsCustomerEndpointJson($missingSmsCompany))->toBe(['error' => 'No company resolved from API credential.'])
+        ->and($missingOrderCompany->getStatusCode())->toBe(500)
+        ->and(fleetopsCustomerEndpointJson($missingOrderCompany))->toBe(['error' => 'No company resolved from API credential.']);
+});
+
 test('customer controller authenticated endpoints require a current customer', function () {
     app()->forgetInstance(CustomerAuth::APP_BINDING);
 
