@@ -273,9 +273,9 @@ class OrderController extends FleetOpsController
         $hasWaypointsInput = $request->exists('waypoints');
 
         // Get the order
-        $order = Order::where('uuid', $id)->with(['payload'])->first();
+        $order = $this->findOrderRouteForEdit($id);
         if (!$order) {
-            return response()->error('Unable to find order to update route for.');
+            return $this->errorResponse('Unable to find order to update route for.');
         }
 
         if ($hasPickupInput) {
@@ -323,7 +323,7 @@ class OrderController extends FleetOpsController
 
         $order->load(['payload.pickup', 'payload.dropoff', 'payload.return', 'payload.waypoints']);
 
-        return ['order' => new $this->resource($order)];
+        return $this->orderResponse($order);
     }
 
     /**
@@ -631,6 +631,16 @@ class OrderController extends FleetOpsController
     protected function findOrderById(string $id, array $with = []): ?Order
     {
         return Order::findById($id, $with);
+    }
+
+    protected function findOrderRouteForEdit(string $uuid): ?Order
+    {
+        return Order::where('uuid', $uuid)->with(['payload'])->first();
+    }
+
+    protected function orderResponse(Order $order): array
+    {
+        return ['order' => new $this->resource($order)];
     }
 
     protected function assignDriverToOrders($orderUuids, Driver $driver): void

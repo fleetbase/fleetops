@@ -6,6 +6,8 @@ use Fleetbase\FleetOps\Http\Requests\CancelOrderRequest;
 use Fleetbase\FleetOps\Models\Driver;
 use Fleetbase\FleetOps\Models\Order;
 use Fleetbase\FleetOps\Models\OrderConfig;
+use Fleetbase\FleetOps\Models\Payload;
+use Fleetbase\FleetOps\Models\Place;
 use Fleetbase\FleetOps\Support\OrderTracker;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
@@ -20,6 +22,18 @@ class FleetOpsInternalOrderLifecycleControllerProbe extends OrderController
     public ?string $assignedDriverUuid                       = null;
     public array $bulkNotification                           = [];
     public int $transactions                                 = 0;
+
+    protected function findOrderRouteForEdit(string $uuid): ?Order
+    {
+        $this->order?->setAttribute('route_lookup_uuid', $uuid);
+
+        return $this->order;
+    }
+
+    protected function orderResponse(Order $order): array
+    {
+        return ['order' => $order];
+    }
 
     protected function ordersByUuid(array $ids)
     {
@@ -89,14 +103,46 @@ class FleetOpsInternalOrderLifecycleControllerProbe extends OrderController
 
 class FleetOpsInternalOrderLifecycleOrderFake extends Order
 {
-    public bool $canceledForTest                                      = false;
-    public bool $dispatchedForTest                                    = false;
-    public bool $dispatchedWithActivityForTest                        = false;
-    public bool $hasDriverAssignedForTest                             = true;
-    public bool $adhocForTest                                         = false;
-    public bool $dispatchedAttributeForTest                           = false;
-    public bool $hasOrderConfigForTest                                = true;
-    public ?FleetOpsInternalOrderLifecycleTrackerFake $trackerForTest = null;
+    public bool $canceledForTest                                       = false;
+    public bool $dispatchedForTest                                     = false;
+    public bool $dispatchedWithActivityForTest                         = false;
+    public bool $hasDriverAssignedForTest                              = true;
+    public bool $adhocForTest                                          = false;
+    public bool $dispatchedAttributeForTest                            = false;
+    public bool $hasOrderConfigForTest                                 = true;
+    public ?FleetOpsInternalOrderLifecycleTrackerFake $trackerForTest  = null;
+    public array $attachedFiles                                        = [];
+    public array $customFieldValues                                    = [];
+    public array $loadedMissing                                        = [];
+    public array $loadedRelations                                      = [];
+
+    public function attachFiles($files): self
+    {
+        $this->attachedFiles = $files;
+
+        return $this;
+    }
+
+    public function syncCustomFieldValues(array $customFieldValues, array $options = []): array
+    {
+        $this->customFieldValues = $customFieldValues;
+
+        return $customFieldValues;
+    }
+
+    public function loadMissing($relations)
+    {
+        $this->loadedMissing[] = $relations;
+
+        return $this;
+    }
+
+    public function load($relations)
+    {
+        $this->loadedRelations[] = $relations;
+
+        return $this;
+    }
 
     public function cancel()
     {
@@ -155,6 +201,74 @@ class FleetOpsInternalOrderLifecycleOrderFake extends Order
     }
 }
 
+class FleetOpsInternalOrderLifecyclePayloadFake extends Payload
+{
+    public array $calls                           = [];
+    public ?Place $pickupOrFirstWaypointForTest   = null;
+    public ?Place $dropoffOrLastWaypointForTest   = null;
+    public ?Place $currentWaypointForTest         = null;
+
+    public function setPickup($place, array $options = [])
+    {
+        $this->calls[] = ['setPickup', $place, $options];
+
+        return $this;
+    }
+
+    public function setDropoff($place, array $options = [])
+    {
+        $this->calls[] = ['setDropoff', $place, $options];
+
+        return $this;
+    }
+
+    public function setReturn($place, array $options = [])
+    {
+        $this->calls[] = ['setReturn', $place, $options];
+
+        return $this;
+    }
+
+    public function removePlace($property, array $options = [])
+    {
+        $this->calls[] = ['removePlace', $property, $options];
+
+        return $this;
+    }
+
+    public function updateWaypoints($waypoints = [])
+    {
+        $this->calls[] = ['updateWaypoints', $waypoints];
+
+        return $this;
+    }
+
+    public function removeWaypoints()
+    {
+        $this->calls[] = ['removeWaypoints'];
+
+        return $this;
+    }
+
+    public function getPickupOrFirstWaypoint(): ?Place
+    {
+        return $this->pickupOrFirstWaypointForTest;
+    }
+
+    public function getDropoffOrLastWaypoint(): ?Place
+    {
+        return $this->dropoffOrLastWaypointForTest;
+    }
+
+    public function setCurrentWaypoint(Place|Fleetbase\FleetOps\Models\Waypoint $destination, bool $save = true): Payload
+    {
+        $this->currentWaypointForTest = $destination instanceof Place ? $destination : null;
+        $this->calls[]                = ['setCurrentWaypoint', $destination, $save];
+
+        return $this;
+    }
+}
+
 class FleetOpsInternalOrderLifecycleDriverFake extends Driver
 {
 }
@@ -191,6 +305,23 @@ function fleetopsInternalOrderLifecycleOrder(string $uuid, string $status = 'cre
     return $order;
 }
 
+function fleetopsInternalOrderLifecyclePayload(?Place $startingDestination = null, ?Place $fallbackDestination = null): FleetOpsInternalOrderLifecyclePayloadFake
+{
+    $payload                                = new FleetOpsInternalOrderLifecyclePayloadFake();
+    $payload->pickupOrFirstWaypointForTest  = $startingDestination;
+    $payload->dropoffOrLastWaypointForTest  = $fallbackDestination;
+
+    return $payload;
+}
+
+function fleetopsInternalOrderLifecyclePlace(string $uuid = 'place-uuid'): Place
+{
+    $place = new Place();
+    $place->setRawAttributes(['uuid' => $uuid], true);
+
+    return $place;
+}
+
 function fleetopsInternalOrderLifecycleController(array $orders = []): FleetOpsInternalOrderLifecycleControllerProbe
 {
     $controller         = new FleetOpsInternalOrderLifecycleControllerProbe();
@@ -219,6 +350,80 @@ function fleetopsCancelOrderRequest(array $payload): CancelOrderRequest
 {
     return CancelOrderRequest::create('/internal/v1/orders/cancel', 'POST', $payload);
 }
+
+test('internal order controller after-update syncs files waypoints and custom fields', function () {
+    $order   = fleetopsInternalOrderLifecycleOrder('order-route');
+    $payload = fleetopsInternalOrderLifecyclePayload();
+    $order->setRelation('payload', $payload);
+
+    $controller = fleetopsInternalOrderLifecycleController([$order]);
+    $controller->onAfterUpdate(new Request([
+        'order' => [
+            'files'               => ['file-one', 'file-two'],
+            'payload'             => ['waypoints' => [['name' => 'Stop one']]],
+            'custom_field_values' => ['fragile' => true],
+        ],
+    ]), $order);
+
+    expect($order->attachedFiles)->toBe(['file-one', 'file-two'])
+        ->and($order->loadedMissing)->toBe(['payload'])
+        ->and($payload->calls)->toContain(['updateWaypoints', [['name' => 'Stop one']]])
+        ->and($order->customFieldValues)->toBe(['fragile' => true]);
+});
+
+test('internal order controller edits order routes and refreshes current destination', function () {
+    $startingDestination = fleetopsInternalOrderLifecyclePlace('starting-place');
+    $payload             = fleetopsInternalOrderLifecyclePayload($startingDestination);
+    $order               = fleetopsInternalOrderLifecycleOrder('order-route');
+    $order->setRelation('payload', $payload);
+    $controller = fleetopsInternalOrderLifecycleController([$order]);
+
+    $response = $controller->editOrderRoute('order-route', new Request([
+        'pickup'    => ['name' => 'Pickup'],
+        'dropoff'   => ['name' => 'Dropoff'],
+        'return'    => ['name' => 'Return'],
+        'waypoints' => [['name' => 'Waypoint']],
+    ]));
+
+    expect($response)->toBe(['order' => $order])
+        ->and($order->route_lookup_uuid)->toBe('order-route')
+        ->and($payload->calls)->toContain(['setPickup', ['name' => 'Pickup'], ['save' => true]])
+        ->and($payload->calls)->toContain(['setDropoff', ['name' => 'Dropoff'], ['save' => true]])
+        ->and($payload->calls)->toContain(['setReturn', ['name' => 'Return'], ['save' => true]])
+        ->and($payload->calls)->toContain(['updateWaypoints', [['name' => 'Waypoint']]])
+        ->and($payload->calls)->toContain(['setCurrentWaypoint', $startingDestination, true])
+        ->and($order->loadedRelations)->toBe([['payload.pickup', 'payload.dropoff', 'payload.return', 'payload.waypoints']]);
+});
+
+test('internal order controller clears route endpoints and falls back to dropoff destination', function () {
+    $fallbackDestination = fleetopsInternalOrderLifecyclePlace('fallback-place');
+    $payload             = fleetopsInternalOrderLifecyclePayload(null, $fallbackDestination);
+    $order               = fleetopsInternalOrderLifecycleOrder('order-route');
+    $order->setRelation('payload', $payload);
+    $controller = fleetopsInternalOrderLifecycleController([$order]);
+
+    $response = $controller->editOrderRoute('order-route', new Request([
+        'pickup'  => null,
+        'dropoff' => null,
+        'return'  => null,
+    ]));
+
+    expect($response)->toBe(['order' => $order])
+        ->and($payload->calls)->toContain(['removePlace', 'pickup', ['save' => true]])
+        ->and($payload->calls)->toContain(['removePlace', 'dropoff', ['save' => true]])
+        ->and($payload->calls)->toContain(['removePlace', 'return', ['save' => true]])
+        ->and($payload->calls)->toContain(['removeWaypoints'])
+        ->and($payload->calls)->toContain(['setCurrentWaypoint', $fallbackDestination, true]);
+});
+
+test('internal order controller reports missing order route edits', function () {
+    $controller        = fleetopsInternalOrderLifecycleController();
+    $controller->order = null;
+
+    expect($controller->editOrderRoute('missing-route', new Request())->getData(true))->toBe([
+        'error' => 'Unable to find order to update route for.',
+    ]);
+});
 
 test('internal order controller bulk cancel skips already canceled and canceled tracking statuses', function () {
     $created                                                               = fleetopsInternalOrderLifecycleOrder('order-created', 'created', 'tracking-created');
