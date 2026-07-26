@@ -373,12 +373,41 @@ class FleetOpsInternalFleetFake extends Fleet
 
 class FleetOpsInternalMaintenanceControllerProbe extends InternalMaintenanceController
 {
+    public ?FleetOpsInternalMaintenanceFake $maintenance = null;
+    public array $downloads                              = [];
+    public array $imports                                = [];
+    public bool $shouldFailImport                        = false;
+
     public function callHelper(string $method, mixed ...$arguments): mixed
     {
-        $reflection = new ReflectionMethod(InternalMaintenanceController::class, $method);
+        $reflection = new ReflectionMethod($this, $method);
         $reflection->setAccessible(true);
 
         return $reflection->invoke($this, ...$arguments);
+    }
+
+    protected function findMaintenanceForLineItem(string $id): Maintenance
+    {
+        $this->maintenance?->setAttribute('lookup_id', $id);
+
+        return $this->maintenance;
+    }
+
+    protected function downloadExport(Fleetbase\FleetOps\Exports\MaintenanceExport $export, string $fileName)
+    {
+        $this->downloads[] = [get_class($export), $fileName];
+
+        return ['download' => $fileName];
+    }
+
+    protected function importFile(Fleetbase\FleetOps\Imports\MaintenanceImport $import, string $path, string $disk): void
+    {
+        if ($this->shouldFailImport) {
+            throw new RuntimeException('invalid file');
+        }
+
+        $import->imported = 3;
+        $this->imports[]  = [$path, $disk];
     }
 }
 
@@ -386,6 +415,7 @@ class FleetOpsInternalMaintenanceFake extends Maintenance
 {
     public array $loadedRelations = [];
     public array $updates         = [];
+    public int $refreshes         = 0;
 
     public function load($relations)
     {
@@ -404,6 +434,36 @@ class FleetOpsInternalMaintenanceFake extends Maintenance
 
         return true;
     }
+
+    public function refresh()
+    {
+        $this->refreshes++;
+
+        return $this;
+    }
+
+    public function addLineItem(array $lineItem): bool
+    {
+        $lineItems   = $this->line_items ?? [];
+        $lineItems[] = $lineItem;
+
+        $this->line_items = $lineItems;
+
+        return true;
+    }
+
+    public function removeLineItem(int $index): bool
+    {
+        $lineItems = $this->line_items ?? [];
+        if (!isset($lineItems[$index])) {
+            return false;
+        }
+
+        array_splice($lineItems, $index, 1);
+        $this->line_items = array_values($lineItems);
+
+        return true;
+    }
 }
 
 class FleetOpsMaintenanceBuilderFake
@@ -416,6 +476,17 @@ class FleetOpsMaintenanceBuilderFake
 
         return $this;
     }
+}
+
+function fleetopsSuppressControllerHelperStrNullDeprecations(): Closure
+{
+    set_error_handler(function (int $severity, string $message): bool {
+        return $severity === E_DEPRECATED && str_contains($message, 'mb_strtolower(): Passing null');
+    });
+
+    return function (): void {
+        restore_error_handler();
+    };
 }
 
 class FleetOpsInternalServiceQuoteControllerProbe extends InternalServiceQuoteController
@@ -1229,49 +1300,137 @@ test('internal fleet controller syncs custom fields after save', function () {
 });
 
 test('internal maintenance controller exposes line item response payload', function () {
-    $controller              = new FleetOpsInternalMaintenanceControllerProbe();
-    $maintenance             = new Maintenance();
-    $maintenance->line_items = [
-        ['description' => 'Oil filter', 'quantity' => 2, 'unit_cost' => 1500],
-    ];
-    $maintenance->total_cost = 3000;
+    $restore = fleetopsSuppressControllerHelperStrNullDeprecations();
 
-    expect($controller->callHelper('lineItemPayload', $maintenance))->toBe([
-        'status'     => 'ok',
-        'line_items' => [
+    try {
+        $controller              = new FleetOpsInternalMaintenanceControllerProbe();
+        $maintenance             = new Maintenance();
+        $maintenance->line_items = [
             ['description' => 'Oil filter', 'quantity' => 2, 'unit_cost' => 1500],
-        ],
-        'total_cost' => 3000,
-    ]);
+        ];
+        $maintenance->total_cost = 3000;
+
+        expect($controller->callHelper('lineItemPayload', $maintenance))->toBe([
+            'status'     => 'ok',
+            'line_items' => [
+                ['description' => 'Oil filter', 'quantity' => 2, 'unit_cost' => 1500],
+            ],
+            'total_cost' => 3000,
+        ]);
+    } finally {
+        $restore();
+    }
 });
 
 test('internal maintenance controller loads relations and recalculates line item totals', function () {
-    $controller  = new FleetOpsInternalMaintenanceControllerProbe();
-    $maintenance = new FleetOpsInternalMaintenanceFake();
-    $builder     = new FleetOpsMaintenanceBuilderFake();
+    $restore = fleetopsSuppressControllerHelperStrNullDeprecations();
 
-    $maintenance->line_items = [
-        ['description' => 'Oil filter', 'quantity' => 2, 'unit_cost' => 1500],
-        ['description' => 'Inspection', 'quantity' => 1, 'unit_cost' => 2500],
-    ];
-    $maintenance->labor_cost = 4000;
-    $maintenance->tax        = 650;
+    try {
+        $controller  = new FleetOpsInternalMaintenanceControllerProbe();
+        $maintenance = new FleetOpsInternalMaintenanceFake();
+        $builder     = new FleetOpsMaintenanceBuilderFake();
 
-    $controller->onAfterCreate(new Request(), $maintenance, []);
-    $controller->onAfterUpdate(new Request(), $maintenance, []);
-    $controller->onFindRecord($builder, new Request());
-    $controller->callHelper('recalculateCosts', $maintenance);
+        $maintenance->line_items = [
+            ['description' => 'Oil filter', 'quantity' => 2, 'unit_cost' => 1500],
+            ['description' => 'Inspection', 'quantity' => 1, 'unit_cost' => 2500],
+        ];
+        $maintenance->labor_cost = 4000;
+        $maintenance->tax        = 650;
 
-    expect($maintenance->loadedRelations)->toBe([
-        ['maintainable', 'performedBy'],
-        ['maintainable', 'performedBy'],
-    ])->and($builder->withRelations)->toBe([
-        ['maintainable', 'performedBy'],
-    ])->and($maintenance->updates)->toContain([
-        'parts_cost' => 5500,
-        'total_cost' => 10150,
-    ])->and($maintenance->parts_cost)->toBe(5500)
-        ->and($maintenance->total_cost)->toBe(10150);
+        $controller->onAfterCreate(new Request(), $maintenance, []);
+        $controller->onAfterUpdate(new Request(), $maintenance, []);
+        $controller->onFindRecord($builder, new Request());
+        $controller->callHelper('recalculateCosts', $maintenance);
+
+        expect($maintenance->loadedRelations)->toBe([
+            ['maintainable', 'performedBy'],
+            ['maintainable', 'performedBy'],
+        ])->and($builder->withRelations)->toBe([
+            ['maintainable', 'performedBy'],
+        ])->and($maintenance->updates)->toContain([
+            'parts_cost' => 5500,
+            'total_cost' => 10150,
+        ])->and($maintenance->parts_cost)->toBe(5500)
+            ->and($maintenance->total_cost)->toBe(10150);
+    } finally {
+        $restore();
+    }
+});
+
+test('internal maintenance controller manages line item endpoints through resolved maintenance records', function () {
+    $restore = fleetopsSuppressControllerHelperStrNullDeprecations();
+
+    try {
+        $controller              = new FleetOpsInternalMaintenanceControllerProbe();
+        $maintenance             = new FleetOpsInternalMaintenanceFake();
+        $maintenance->line_items = [
+            ['description' => 'Labor', 'quantity' => 1, 'unit_cost' => 4000, 'currency' => 'USD'],
+        ];
+        $maintenance->labor_cost = 500;
+        $maintenance->tax        = 100;
+        $controller->maintenance = $maintenance;
+
+        $added = $controller->addLineItem('maint-public', new Request([
+            'description' => 'Oil filter',
+            'quantity'    => 2,
+            'unit_cost'   => 1500,
+            'currency'    => 'USD',
+        ]))->getData(true);
+
+        expect($maintenance->lookup_id)->toBe('maint-public')
+            ->and($added)->toMatchArray([
+                'status'     => 'ok',
+                'total_cost' => 7600,
+            ])
+            ->and($added['line_items'])->toHaveCount(2)
+            ->and($maintenance->refreshes)->toBe(1);
+
+        $updated = $controller->updateLineItem('maint-public', 0, new Request([
+            'description' => 'Updated labor',
+            'quantity'    => 3,
+            'unit_cost'   => 2000,
+            'currency'    => 'USD',
+        ]))->getData(true);
+
+        expect($updated['line_items'][0]['description'])->toBe('Updated labor')
+            ->and($updated['total_cost'])->toBe(9600)
+            ->and($maintenance->refreshes)->toBe(2);
+
+        expect($controller->updateLineItem('maint-public', 9, new Request([
+            'description' => 'Missing',
+            'quantity'    => 1,
+            'unit_cost'   => 100,
+            'currency'    => 'USD',
+        ]))->getData(true))->toBe(['error' => 'Line item not found.']);
+
+        $removed = $controller->removeLineItem('maint-public', 1)->getData(true);
+
+        expect($removed['line_items'])->toHaveCount(1)
+            ->and($removed['total_cost'])->toBe(6600)
+            ->and($controller->removeLineItem('maint-public', 9)->getData(true))->toBe(['error' => 'Line item not found.']);
+    } finally {
+        $restore();
+    }
+});
+
+test('internal maintenance controller export seam records maintenance downloads', function () {
+    $restore = fleetopsSuppressControllerHelperStrNullDeprecations();
+
+    try {
+        $controller = new FleetOpsInternalMaintenanceControllerProbe();
+
+        $export = $controller->callHelper(
+            'downloadExport',
+            new Fleetbase\FleetOps\Exports\MaintenanceExport(['maint-1', 'maint-2']),
+            'maintenances-test.csv'
+        );
+
+        expect($export)->toBe(['download' => 'maintenances-test.csv'])
+            ->and($controller->downloads[0][0])->toBe(Fleetbase\FleetOps\Exports\MaintenanceExport::class)
+            ->and($controller->downloads[0][1])->toBe('maintenances-test.csv');
+    } finally {
+        $restore();
+    }
 });
 
 test('internal vendor controller serializes personnel payload defaults without contact details', function () {
