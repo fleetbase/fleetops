@@ -43,6 +43,18 @@ class FleetOpsPayloadUnitRelationCountFake
     }
 }
 
+class FleetOpsPayloadUnitDatabaseProbe
+{
+    public function __construct(private SQLiteConnection $connection)
+    {
+    }
+
+    public function connection(): SQLiteConnection
+    {
+        return $this->connection;
+    }
+}
+
 class FleetOpsPayloadUnitOrderFake extends Order
 {
     public bool $distanceAndTimeSet = false;
@@ -229,6 +241,7 @@ function fleetopsPayloadUnitPayload(array $attributes = []): FleetOpsPayloadUnit
 function fleetopsPayloadUnitUseRelationConnection(): void
 {
     $connection = new SQLiteConnection(new PDO('sqlite::memory:'));
+    $connection->statement('create table waypoints (uuid varchar(64), payload_uuid varchar(64), place_uuid varchar(64), deleted_at datetime null, updated_at datetime null)');
     $resolver   = new ConnectionResolver([
         'default' => $connection,
         'mysql'   => $connection,
@@ -236,6 +249,7 @@ function fleetopsPayloadUnitUseRelationConnection(): void
 
     $resolver->setDefaultConnection('mysql');
     EloquentModel::setConnectionResolver($resolver);
+    app()->instance('db', new FleetOpsPayloadUnitDatabaseProbe($connection));
 }
 
 test('payload relationship contracts resolve expected relation types and models', function () {
@@ -383,6 +397,66 @@ test('payload removes places and invokes callbacks for single and bulk removals'
         ->and($payload->getRelation('dropoff'))->toBeNull()
         ->and($payload->quietUpdates)->toBe([['pickup_uuid' => null], ['dropoff_uuid' => null]])
         ->and($callbacks)->toBe(2);
+});
+
+test('payload real mutators remove waypoints set places and handle driver pickup meta', function () {
+    fleetopsPayloadUnitUseRelationConnection();
+
+    $pickup  = fleetopsPayloadUnitPlace('pickup-uuid');
+    $dropoff = fleetopsPayloadUnitPlace('dropoff-uuid');
+    $return  = fleetopsPayloadUnitPlace('return-uuid');
+
+    $payload = new Payload();
+    $payload->setRawAttributes(['uuid' => 'payload-uuid'], true);
+    $payload->setRelation('waypoints', collect([fleetopsPayloadUnitPlace('waypoint-uuid')]));
+
+    expect($payload->removeWaypoints())->toBe($payload)
+        ->and($payload->getRelation('waypoints'))->toHaveCount(0);
+
+    $callbacks = [];
+
+    expect($payload->setPlace('pickup', $pickup, [
+        'callback' => function ($place, Payload $payload) use (&$callbacks): void {
+            $callbacks[] = [$place->uuid, $payload->pickup_uuid];
+        },
+    ]))->toBe($payload)
+        ->and($payload->pickup_uuid)->toBe('pickup-uuid')
+        ->and($payload->getRelation('pickup'))->toBe($pickup)
+        ->and($callbacks)->toBe([['pickup-uuid', 'pickup-uuid']])
+        ->and($payload->setDropoff($dropoff))->toBe($payload)
+        ->and($payload->dropoff_uuid)->toBe('dropoff-uuid')
+        ->and($payload->setReturn($return))->toBe($payload)
+        ->and($payload->return_uuid)->toBe('return-uuid')
+        ->and($payload->setPickup('[driver]'))->toBeNull()
+        ->and($payload->getMeta('pickup_is_driver_location'))->toBeTrue();
+});
+
+test('payload real current waypoint and fallback helpers handle non uuid current destinations', function () {
+    $pickup     = fleetopsPayloadUnitPlace('pickup-uuid', ['country' => 'TH']);
+    $firstPlace = fleetopsPayloadUnitPlace('first-place-uuid', ['country' => 'MY']);
+    $waypoint   = new FleetOpsPayloadUnitWaypointFake($firstPlace);
+    $waypoint->setRawAttributes(['uuid' => 'waypoint-uuid', 'place_uuid' => 'first-place-uuid'], true);
+
+    $payload = fleetopsPayloadUnitPayload([
+        'current_waypoint_uuid' => 'not-a-uuid',
+    ]);
+    $payload->setRelation('waypoints', collect([$firstPlace]));
+
+    expect($payload->getPickupOrCurrentWaypoint())->toBe($firstPlace);
+
+    $payload->setRelation('pickup', $pickup);
+
+    expect($payload->getPickupOrFirstWaypoint())->toBe($pickup)
+        ->and($payload->getPickupOrCurrentWaypoint())->toBe($pickup)
+        ->and($payload->getPickupRegion())->toBe('TH');
+
+    $payload = new Payload();
+    $payload->setRawAttributes([
+        'uuid' => 'payload-uuid',
+    ], true);
+
+    expect($payload->setCurrentWaypoint($waypoint, false))->toBe($payload)
+        ->and($payload->current_waypoint_uuid)->toBe('first-place-uuid');
 });
 
 test('payload sets current first and next waypoint destinations without database writes in fakes', function () {
