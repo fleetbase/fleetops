@@ -22,7 +22,7 @@ class MetricsController extends Controller
         $discover = $request->array('discover', []);
 
         try {
-            $data = Metrics::forCompany($request->user()->company, $start, $end)->with($discover)->get();
+            $data = $this->metricsForCompany($request->user()->company, $start, $end)->with($discover)->get();
         } catch (\Exception $e) {
             return response()->error($e->getMessage());
         }
@@ -42,14 +42,14 @@ class MetricsController extends Controller
      */
     public function show(Request $request, string $slug)
     {
-        $class = Registry::resolve($slug);
+        $class = $this->resolveMetricClass($slug);
         if ($class === null) {
             return response()->json(['error' => "Unknown metric: {$slug}"], 404);
         }
 
         [$start, $end] = $this->resolvePeriod($request);
 
-        $metric = $class::forCompany($request->user()->company)->between($start, $end);
+        $metric = $this->metricForCompany($class, $request->user()->company)->between($start, $end);
 
         if ($request->boolean('compare', true)) {
             $duration     = $end->getTimestamp() - $start->getTimestamp();
@@ -66,11 +66,26 @@ class MetricsController extends Controller
         return response()->json($metric->get());
     }
 
+    protected function metricsForCompany($company, $start, $end)
+    {
+        return Metrics::forCompany($company, $start, $end);
+    }
+
+    protected function resolveMetricClass(string $slug): ?string
+    {
+        return Registry::resolve($slug);
+    }
+
+    protected function metricForCompany(string $class, $company)
+    {
+        return $class::forCompany($company);
+    }
+
     /**
      * Parse ?period=7d/30d/90d into a [start, end] pair, falling back to
      * explicit ?start=&end= ISO dates, then to a 30-day default.
      */
-    private function resolvePeriod(Request $request): array
+    protected function resolvePeriod(Request $request): array
     {
         $period = $request->string('period')->toString();
 
