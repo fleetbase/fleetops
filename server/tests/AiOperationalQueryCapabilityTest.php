@@ -162,10 +162,34 @@ function fleetopsOperationalQueryWindow(): array
 class FleetOpsAssetStatusCapabilityProbe extends AssetStatusCapability
 {
     public array $permissions = [];
+    public array $totals      = [];
+    public array $online      = [];
+    public array $offline     = [];
+    public array $statuses    = [];
 
     protected function can(string $permission): bool
     {
         return in_array($permission, $this->permissions, true);
+    }
+
+    protected function totalForModel(string $modelClass): int
+    {
+        return $this->totals[$modelClass] ?? 0;
+    }
+
+    protected function onlineCountForModel(string $modelClass): int
+    {
+        return $this->online[$modelClass] ?? 0;
+    }
+
+    protected function offlineCountForModel(string $modelClass): int
+    {
+        return $this->offline[$modelClass] ?? 0;
+    }
+
+    protected function countsByStatusForModel(string $modelClass): array
+    {
+        return $this->statuses[$modelClass] ?? [];
     }
 
     public function callStatusCounts(string $modelClass, string $permission): array
@@ -390,6 +414,67 @@ test('asset status capability exposes metadata and denied branches', function ()
         ->and($capability->callStatusCounts(Fleetbase\FleetOps\Models\Vehicle::class, 'fleet-ops see vehicle'))->toBe(['authorized' => false])
         ->and($capability->callDeviceStatus())->toBe(['authorized' => false])
         ->and($capability->callDriverStatus())->toBe(['authorized' => false]);
+});
+
+test('asset status capability resolves authorized status summaries', function () {
+    $capability = fleetopsAssetStatusCapabilityProbe([
+        'fleet-ops see driver',
+        'fleet-ops see vehicle',
+        'fleet-ops see device',
+        'fleet-ops see sensor',
+        'fleet-ops see telematic',
+    ]);
+
+    $capability->totals = [
+        Fleetbase\FleetOps\Models\Driver::class    => 7,
+        Fleetbase\FleetOps\Models\Vehicle::class   => 9,
+        Fleetbase\FleetOps\Models\Device::class    => 5,
+        Fleetbase\FleetOps\Models\Sensor::class    => 3,
+        Fleetbase\FleetOps\Models\Telematic::class => 2,
+    ];
+    $capability->online = [
+        Fleetbase\FleetOps\Models\Driver::class => 4,
+        Fleetbase\FleetOps\Models\Device::class => 2,
+    ];
+    $capability->offline = [
+        Fleetbase\FleetOps\Models\Driver::class => 3,
+        Fleetbase\FleetOps\Models\Device::class => 3,
+    ];
+    $capability->statuses = [
+        Fleetbase\FleetOps\Models\Driver::class    => ['available' => 5, 'offline' => 2],
+        Fleetbase\FleetOps\Models\Vehicle::class   => ['available' => 8, 'maintenance' => 1],
+        Fleetbase\FleetOps\Models\Device::class    => ['active' => 4, 'inactive' => 1],
+        Fleetbase\FleetOps\Models\Sensor::class    => ['online' => 3],
+        Fleetbase\FleetOps\Models\Telematic::class => ['connected' => 2],
+    ];
+
+    $result = $capability->resolve(new AiTask(['prompt' => 'show asset status']));
+
+    expect($result['drivers'])->toBe([
+        'authorized'       => true,
+        'total'            => 7,
+        'online'           => 4,
+        'offline'          => 3,
+        'counts_by_status' => ['available' => 5, 'offline' => 2],
+    ])->and($result['vehicles'])->toBe([
+        'authorized'       => true,
+        'total'            => 9,
+        'counts_by_status' => ['available' => 8, 'maintenance' => 1],
+    ])->and($result['devices'])->toBe([
+        'authorized'       => true,
+        'total'            => 5,
+        'online'           => 2,
+        'offline'          => 3,
+        'counts_by_status' => ['active' => 4, 'inactive' => 1],
+    ])->and($result['sensors'])->toBe([
+        'authorized'       => true,
+        'total'            => 3,
+        'counts_by_status' => ['online' => 3],
+    ])->and($result['telematics'])->toBe([
+        'authorized'       => true,
+        'total'            => 2,
+        'counts_by_status' => ['connected' => 2],
+    ]);
 });
 
 test('operational query date filters use resolved local windows', function () {
