@@ -42,7 +42,7 @@ class VehicleController extends Controller
 
         // vendor assignment
         if ($request->has('vendor')) {
-            $input['vendor_uuid'] = Utils::getUuid('vendors', [
+            $input['vendor_uuid'] = $this->getVendorUuid('vendors', [
                 'public_id'    => $request->input('vendor'),
                 'company_uuid' => session('company'),
             ]);
@@ -52,15 +52,15 @@ class VehicleController extends Controller
         $input = $this->withCoordinateLocation($input, $request);
 
         // create the vehicle (fires 'created' event for billing resource tracking)
-        $vehicle = Vehicle::create($input);
+        $vehicle = $this->createVehicle($input);
 
         // driver assignment
         if ($request->exists('driver') && !empty($request->input('driver'))) {
             // set this vehicle to the driver
             try {
-                $driver = Driver::findRecordOrFail($request->input('driver'));
+                $driver = $this->findDriver($request->input('driver'));
             } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $exception) {
-                return response()->json(
+                return $this->jsonResponse(
                     [
                         'error' => 'The driver attempted to assign this vehicle was not found.',
                     ],
@@ -72,7 +72,7 @@ class VehicleController extends Controller
         }
 
         // response the driver resource
-        return new VehicleResource($vehicle);
+        return $this->vehicleResource($vehicle);
     }
 
     /**
@@ -87,9 +87,9 @@ class VehicleController extends Controller
     {
         // find for the vehicle
         try {
-            $vehicle = Vehicle::findRecordOrFail($id);
+            $vehicle = $this->findVehicle($id);
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $exception) {
-            return response()->json(
+            return $this->jsonResponse(
                 [
                     'error' => 'Vehicle resource not found.',
                 ],
@@ -102,7 +102,7 @@ class VehicleController extends Controller
 
         // vendor assignment
         if ($request->has('vendor')) {
-            $input['vendor_uuid'] = Utils::getUuid('vendors', [
+            $input['vendor_uuid'] = $this->getVendorUuid('vendors', [
                 'public_id'    => $request->input('vendor'),
                 'company_uuid' => session('company'),
             ]);
@@ -130,10 +130,10 @@ class VehicleController extends Controller
                 $vehicle->unassignDriver();
             } else {
                 try {
-                    $driver = Driver::findRecordOrFail($request->input('driver'));
+                    $driver = $this->findDriver($request->input('driver'));
                     $vehicle->assignDriver($driver);
                 } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $exception) {
-                    return response()->json(
+                    return $this->jsonResponse(
                         [
                             'error' => 'The driver attempted to assign this vehicle was not found.',
                         ],
@@ -147,7 +147,7 @@ class VehicleController extends Controller
         $vehicle = $vehicle->refresh();
 
         // response the vehicle resource
-        return new VehicleResource($vehicle);
+        return $this->vehicleResource($vehicle);
     }
 
     /**
@@ -157,15 +157,9 @@ class VehicleController extends Controller
      */
     public function query(Request $request)
     {
-        $results = Vehicle::queryWithRequest($request, function (&$query, $request) {
-            if ($request->has('vendor')) {
-                $query->whereHas('vendor', function ($q) use ($request) {
-                    $q->where('public_id', $request->input('vendor'));
-                });
-            }
-        });
+        $results = $this->queryVehicles($request);
 
-        return VehicleResource::collection($results);
+        return $this->vehicleResourceCollection($results);
     }
 
     /**
@@ -179,9 +173,9 @@ class VehicleController extends Controller
     {
         // find for the vehicle
         try {
-            $vehicle = Vehicle::findRecordOrFail($id);
+            $vehicle = $this->findVehicle($id);
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $exception) {
-            return response()->json(
+            return $this->jsonResponse(
                 [
                     'error' => 'Vehicle resource not found.',
                 ],
@@ -190,7 +184,7 @@ class VehicleController extends Controller
         }
 
         // response the vehicle resource
-        return new VehicleResource($vehicle);
+        return $this->vehicleResource($vehicle);
     }
 
     /**
@@ -204,9 +198,9 @@ class VehicleController extends Controller
     {
         // find for the driver
         try {
-            $vehicle = Vehicle::findRecordOrFail($id);
+            $vehicle = $this->findVehicle($id);
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $exception) {
-            return response()->json(
+            return $this->jsonResponse(
                 [
                     'error' => 'Vehicle resource not found.',
                 ],
@@ -218,7 +212,7 @@ class VehicleController extends Controller
         $vehicle->delete();
 
         // response the vehicle resource
-        return new DeletedResource($vehicle);
+        return $this->deletedVehicleResource($vehicle);
     }
 
     /**
@@ -235,14 +229,14 @@ class VehicleController extends Controller
         $speed     = $request->input('speed');
 
         try {
-            $vehicle = Vehicle::findRecordOrFail($id);
+            $vehicle = $this->findVehicle($id);
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $exception) {
-            return response()->apiError('Vehicle resource not found.', 404);
+            return $this->apiError('Vehicle resource not found.', 404);
         }
 
         // If no lat/lng provided, maintain compatibility and just return existing driver resource
         if (empty($latitude) && empty($longitude)) {
-            return new VehicleResource($vehicle);
+            return $this->vehicleResource($vehicle);
         }
 
         $positionData = $this->positionDataFromTrackingInput($latitude, $longitude, $altitude, $heading, $speed);
@@ -278,7 +272,7 @@ class VehicleController extends Controller
             }
         }
 
-        return new VehicleResource($vehicle);
+        return $this->vehicleResource($vehicle);
     }
 
     private function processVehicleGeofenceCrossings(Vehicle $vehicle, Point $newLocation, array $crossings): void
@@ -392,5 +386,61 @@ class VehicleController extends Controller
             'heading'   => $heading,
             'speed'     => $speed,
         ];
+    }
+
+    protected function getVendorUuid(string $table, array $where): ?string
+    {
+        return Utils::getUuid($table, $where);
+    }
+
+    protected function createVehicle(array $input): Vehicle
+    {
+        return Vehicle::create($input);
+    }
+
+    protected function findVehicle(string $id): Vehicle
+    {
+        return Vehicle::findRecordOrFail($id);
+    }
+
+    protected function findDriver(string $id): Driver
+    {
+        return Driver::findRecordOrFail($id);
+    }
+
+    protected function queryVehicles(Request $request)
+    {
+        return Vehicle::queryWithRequest($request, function (&$query, $request) {
+            if ($request->has('vendor')) {
+                $query->whereHas('vendor', function ($q) use ($request) {
+                    $q->where('public_id', $request->input('vendor'));
+                });
+            }
+        });
+    }
+
+    protected function vehicleResource(Vehicle $vehicle)
+    {
+        return new VehicleResource($vehicle);
+    }
+
+    protected function vehicleResourceCollection($results)
+    {
+        return VehicleResource::collection($results);
+    }
+
+    protected function deletedVehicleResource(Vehicle $vehicle)
+    {
+        return new DeletedResource($vehicle);
+    }
+
+    protected function jsonResponse(array $payload, int $status)
+    {
+        return response()->json($payload, $status);
+    }
+
+    protected function apiError(string $message, int $status = 400)
+    {
+        return response()->apiError($message, $status);
     }
 }
