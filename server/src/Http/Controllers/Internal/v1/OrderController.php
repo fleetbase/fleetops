@@ -35,7 +35,6 @@ use Fleetbase\FleetOps\Notifications\OrderPing;
 use Fleetbase\FleetOps\Support\ResolvesOrderServiceStops;
 use Fleetbase\FleetOps\Support\Utils;
 use Fleetbase\Http\Requests\ExportRequest;
-use Fleetbase\Http\Requests\Internal\BulkActionRequest;
 use Fleetbase\Models\File;
 use Fleetbase\Models\Type;
 use Fleetbase\Support\Auth;
@@ -403,10 +402,14 @@ class OrderController extends FleetOpsController
      *
      * @return \Illuminate\Http\Response
      */
-    public function bulkCancel(BulkActionRequest $request)
+    public function bulkCancel(Request $request)
     {
+        $request->validate([
+            'ids' => ['required', 'array'],
+        ]);
+
         /** @var \Illuminate\Database\Eloquent\Collection $orders */
-        $orders = Order::whereIn('uuid', $request->input('ids'))->get();
+        $orders = $this->ordersByUuid($request->input('ids'));
 
         $count      = $orders->count();
         $failed     = [];
@@ -418,7 +421,7 @@ class OrderController extends FleetOpsController
                 continue;
             }
 
-            $trackingStatusExists = TrackingStatus::where(['tracking_number_uuid' => $order->tracking_number_uuid, 'code' => 'CANCELED'])->exists();
+            $trackingStatusExists = $this->trackingStatusExists($order->tracking_number_uuid, 'CANCELED');
             if ($trackingStatusExists) {
                 $failed[] = $order->uuid;
                 continue;
@@ -428,7 +431,7 @@ class OrderController extends FleetOpsController
             $successful[] = $order->uuid;
         }
 
-        return response()->json(
+        return $this->jsonResponse(
             [
                 'status'     => 'OK',
                 'message'    => 'Canceled ' . $count . ' orders',
@@ -447,7 +450,7 @@ class OrderController extends FleetOpsController
     public function bulkDispatch(BulkDispatchRequest $request)
     {
         /** @var Order */
-        $orders = Order::whereIn('uuid', $request->input('ids'))->get();
+        $orders = $this->ordersByUuid($request->input('ids'));
 
         $count      = $orders->count();
         $failed     = [];
@@ -459,7 +462,7 @@ class OrderController extends FleetOpsController
                 continue;
             }
 
-            $trackingStatusExists = TrackingStatus::where(['tracking_number_uuid' => $order->tracking_number_uuid, 'code' => 'CANCELED'])->exists();
+            $trackingStatusExists = $this->trackingStatusExists($order->tracking_number_uuid, 'CANCELED');
             if ($trackingStatusExists) {
                 $failed[] = $order->uuid;
                 continue;
@@ -469,7 +472,7 @@ class OrderController extends FleetOpsController
             $successful[] = $order->uuid;
         }
 
-        return response()->json(
+        return $this->jsonResponse(
             [
                 'status'     => 'OK',
                 'message'    => 'Dispatched ' . $count . ' orders',
@@ -486,49 +489,42 @@ class OrderController extends FleetOpsController
      * The queued closure keeps payloads lean (just two UUID strings) and
      * prevents the HTTP request from blocking on network‑bound notification work.
      *
-     * @param BulkActionRequest $request Validated request with:
-     *                                   - ids    : string[] list of order UUIDs
-     *                                   - driver : string   driver UUID
+     * @param Request $request Validated request with:
+     *                         - ids    : string[] list of order UUIDs
+     *                         - driver : string   driver UUID
      *
      * @return \Illuminate\Http\Response
      */
-    public function bulkAssignDriver(BulkActionRequest $request)
+    public function bulkAssignDriver(Request $request)
     {
         // Validate Inputs
-        $data = $request->validate([
-            'ids'    => 'required|array',
-            'ids.*'  => 'uuid',
-            'driver' => 'required|uuid',
-        ]);
+        $data = $this->validateBulkAssignDriverRequest($request);
 
         // Resolve Driver
         /** @var Driver|null $driver */
-        $driver = Driver::whereUuid($data['driver'])->first();
+        $driver = $this->findDriverByUuid($data['driver']);
         if (!$driver) {
-            return response()->error('Invalid driver selected to assign orders to.');
+            return $this->errorResponse('Invalid driver selected to assign orders to.');
         }
 
         // Prepare Order UUID Collection
         $orderUuids = collect($data['ids'])->unique()->values();
 
         // Bulk Update Inside A Transaction
-        DB::transaction(function () use ($orderUuids, $driver): void {
-            Order::whereIn('uuid', $orderUuids)->update([
-                'driver_assigned_uuid' => $driver->uuid,
-                'updated_at'           => now(),
-            ]);
+        $this->runTransaction(function () use ($orderUuids, $driver): void {
+            $this->assignDriverToOrders($orderUuids, $driver);
         });
 
         // Queue Per‑Order Notifications
         if (!$request->boolean('silent')) {
-            NotifyBulkAssignedDriver::dispatch($orderUuids->all(), $driver->uuid)->afterCommit();
+            $this->dispatchBulkAssignedDriverNotification($orderUuids->all(), $driver);
         }
 
-        return response()->json([
+        return $this->jsonResponse([
             'status'  => 'OK',
             'message' => sprintf(
                 'Queued assignment of driver (%s) to %d orders',
-                $driver->name,
+                $this->driverDisplayName($driver),
                 $orderUuids->count()
             ),
             'count'   => $orderUuids->count(),
@@ -545,11 +541,11 @@ class OrderController extends FleetOpsController
     public function cancel(CancelOrderRequest $request)
     {
         /** @var Order */
-        $order = Order::where('uuid', $request->input('order'))->first();
+        $order = $this->findOrderByUuid($request->input('order'));
 
         $order->cancel();
 
-        return response()->json(
+        return $this->jsonResponse(
             [
                 'status'  => 'OK',
                 'message' => 'Order was canceled',
@@ -568,34 +564,101 @@ class OrderController extends FleetOpsController
         /**
          * @var Order
          */
-        $order = Order::findById($request->input('order'), ['orderConfig', 'driverAssigned']);
+        $order = $this->findOrderById($request->input('order'), ['orderConfig', 'driverAssigned']);
         if (!$order) {
-            return response()->error('No order found to dispatch.');
+            return $this->errorResponse('No order found to dispatch.');
         }
 
         // Ensure the order is normalized onto a real order config before
         // dispatching activities.
         if (!$order->ensureOrderConfig()) {
-            return response()->error('No order config found for dispatch.');
+            return $this->errorResponse('No order config found for dispatch.');
         }
 
         if (!$order->hasDriverAssigned && !$order->adhoc) {
-            return response()->error('No driver assigned to dispatch!');
+            return $this->errorResponse('No driver assigned to dispatch!');
         }
 
         if ($order->dispatched) {
-            return response()->error('Order has already been dispatched!');
+            return $this->errorResponse('Order has already been dispatched!');
         }
 
         $order->dispatchWithActivity();
 
-        return response()->json(
+        return $this->jsonResponse(
             [
                 'status'  => 'OK',
                 'message' => 'Order was dispatched',
                 'order'   => $order->uuid,
             ]
         );
+    }
+
+    protected function ordersByUuid(array $ids)
+    {
+        return Order::whereIn('uuid', $ids)->get();
+    }
+
+    protected function trackingStatusExists(?string $trackingNumberUuid, string $code): bool
+    {
+        return TrackingStatus::where(['tracking_number_uuid' => $trackingNumberUuid, 'code' => $code])->exists();
+    }
+
+    protected function findDriverByUuid(string $uuid): ?Driver
+    {
+        return Driver::whereUuid($uuid)->first();
+    }
+
+    protected function driverDisplayName(Driver $driver): string
+    {
+        return (string) $driver->name;
+    }
+
+    protected function validateBulkAssignDriverRequest(Request $request): array
+    {
+        return $request->validate([
+            'ids'    => 'required|array',
+            'ids.*'  => 'uuid',
+            'driver' => 'required|uuid',
+        ]);
+    }
+
+    protected function findOrderByUuid(string $uuid): ?Order
+    {
+        return Order::where('uuid', $uuid)->first();
+    }
+
+    protected function findOrderById(string $id, array $with = []): ?Order
+    {
+        return Order::findById($id, $with);
+    }
+
+    protected function assignDriverToOrders($orderUuids, Driver $driver): void
+    {
+        Order::whereIn('uuid', $orderUuids)->update([
+            'driver_assigned_uuid' => $driver->uuid,
+            'updated_at'           => now(),
+        ]);
+    }
+
+    protected function dispatchBulkAssignedDriverNotification(array $orderUuids, Driver $driver): void
+    {
+        NotifyBulkAssignedDriver::dispatch($orderUuids, $driver->uuid)->afterCommit();
+    }
+
+    protected function runTransaction(callable $callback): mixed
+    {
+        return DB::transaction($callback);
+    }
+
+    protected function jsonResponse(array $payload)
+    {
+        return response()->json($payload);
+    }
+
+    protected function errorResponse(string $message, int $status = 400)
+    {
+        return response()->error($message, $status);
     }
 
     /**
@@ -1251,22 +1314,22 @@ class OrderController extends FleetOpsController
      */
     public function trackerInfo(Request $request, string $id)
     {
-        $order = Order::findById($id);
+        $order = $this->findOrderById($id);
         if (!$order) {
-            return response()->error('No order found.');
+            return $this->errorResponse('No order found.');
         }
 
-        return response()->json($order->tracker()->toArray($request->only(['provider', 'fallbacks', 'traffic_enabled'])));
+        return $this->jsonResponse($order->tracker()->toArray($request->only(['provider', 'fallbacks', 'traffic_enabled'])));
     }
 
     public function waypointEtas(Request $request, string $id)
     {
-        $order = Order::findById($id);
+        $order = $this->findOrderById($id);
         if (!$order) {
-            return response()->error('No order found.');
+            return $this->errorResponse('No order found.');
         }
 
-        return response()->json($order->tracker()->eta($request->only(['provider', 'fallbacks', 'traffic_enabled'])));
+        return $this->jsonResponse($order->tracker()->eta($request->only(['provider', 'fallbacks', 'traffic_enabled'])));
     }
 
     /**
