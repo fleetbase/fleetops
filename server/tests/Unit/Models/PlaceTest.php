@@ -1,5 +1,17 @@
 <?php
 
+if (!function_exists('Fleetbase\Traits\config')) {
+    eval('namespace Fleetbase\Traits; function config($key = null, $default = null) { return $key === "api.cache.enabled" ? false : $default; }');
+}
+
+if (!function_exists('Fleetbase\Models\config')) {
+    eval('namespace Fleetbase\Models; function config($key = null, $default = null) { return $key === "fleetbase.connection.db" ? "mysql" : $default; }');
+}
+
+if (!function_exists('Fleetbase\FleetOps\Models\session')) {
+    eval('namespace Fleetbase\FleetOps\Models; function session($key = null, $default = null) { return match ($key) { "company" => "company-place", "api_key" => "console", default => $default }; }');
+}
+
 use Fleetbase\FleetOps\Models\Place;
 use Fleetbase\LaravelMysqlSpatial\Types\Point;
 use Geocoder\Provider\GoogleMaps\Model\GoogleAddress;
@@ -124,6 +136,7 @@ class FleetOpsPlaceMixedProbe extends Place
     public static ?Place $searchResult      = null;
     public static ?Place $sharedPlace       = null;
     public static ?array $sharedHydrateArgs = null;
+    public array $metaWrites                = [];
 
     public static function resetProbe(): void
     {
@@ -235,6 +248,32 @@ class FleetOpsPlaceMixedProbe extends Place
         static::$insertedValues[] = $values;
 
         return 'inserted-mixed-place-uuid';
+    }
+
+    public function setMeta($key, $value = null): self
+    {
+        $this->metaWrites[] = is_array($key) ? $key : [$key => $value];
+
+        return $this;
+    }
+
+    public function getMeta($key = null, $defaultValue = null)
+    {
+        $meta = array_merge(...$this->metaWrites ?: [[]]);
+
+        return $key === null ? $meta : ($meta[$key] ?? $defaultValue);
+    }
+}
+
+class FleetOpsPlaceHydrationProbe extends Place
+{
+    public bool $saved = false;
+
+    public function save(array $options = []): bool
+    {
+        $this->saved = true;
+
+        return true;
     }
 }
 
@@ -432,6 +471,89 @@ test('place creates from structured arrays using existing lookup geocoding and s
         ->and(FleetOpsPlaceMixedProbe::$geocodingLookups)->toContain(['20 Keppel Road', false])
         ->and(FleetOpsPlaceMixedProbe::$createdValues[0]['location'])->toBeInstanceOf(Point::class)
         ->and(FleetOpsPlaceMixedProbe::$createdValues[0]['phone'])->toBe('+65 5555 0000');
+});
+
+test('place normalizes structured attributes and hydrates safe fields on shared places', function () {
+    $existing = new FleetOpsPlaceHydrationProbe();
+    $existing->setRawAttributes([
+        'street1'     => '10 Port Road',
+        'city'        => 'Singapore',
+        'country'     => 'SG',
+        'name'        => null,
+        'street2'     => '',
+        'postal_code' => null,
+        'phone'       => null,
+        'location'    => new Point(0, 0),
+    ], true);
+
+    $merged = FleetOpsPlaceHydrationProbe::mergeStructuredPlaceAttributes([
+        'name'        => '  Main Gate  ',
+        'street1'     => '  10 Port Road  ',
+        'street2'     => '',
+        'city'        => ' Singapore ',
+        'country'     => ' SG ',
+        'postal_code' => '  089999 ',
+        'phone'       => ' +65 5555 1234 ',
+        'location'    => [1.29, 103.79],
+        'notes'       => '',
+    ], [
+        'province' => 'Central',
+    ]);
+
+    $hydrated = FleetOpsPlaceHydrationProbe::hydrateSharedPlace($existing, $merged);
+
+    expect(FleetOpsPlaceHydrationProbe::normalizePlaceValue(['not-scalar']))->toBeNull()
+        ->and(FleetOpsPlaceHydrationProbe::normalizePlaceValue('   '))->toBeNull()
+        ->and(FleetOpsPlaceHydrationProbe::composeGeocodingQuery([]))->toBeNull()
+        ->and(FleetOpsPlaceHydrationProbe::composeGeocodingQuery([
+            'street1'     => '10 Port Road',
+            'city'        => 'Singapore',
+            'country'     => 'SG',
+            'postal_code' => '089999',
+        ]))->toBe('10 Port Road, Singapore, 089999, SG')
+        ->and($merged['name'])->toBe('Main Gate')
+        ->and($merged['street2'])->toBeNull()
+        ->and($merged)->not->toHaveKey('notes')
+        ->and($merged['location'])->toBeInstanceOf(Point::class)
+        ->and($hydrated)->toBe($existing)
+        ->and($existing->name)->toBe('Main Gate')
+        ->and($existing->postal_code)->toBe('089999')
+        ->and($existing->phone)->toBe('+65 5555 1234')
+        ->and($existing->location)->toBeInstanceOf(Point::class)
+        ->and($existing->location->getLat())->toBe(1.29)
+        ->and($existing->saved)->toBeTrue();
+});
+
+test('place import rows build addresses coordinates metadata and import identifiers', function () {
+    FleetOpsPlaceMixedProbe::resetProbe();
+
+    expect(FleetOpsPlaceMixedProbe::createFromImportRow([]))->toBeNull();
+
+    $place = FleetOpsPlaceMixedProbe::createFromImportRow([
+        'street'        => 'Port Road',
+        'unit'          => 'Dock 4',
+        'town'          => 'Singapore',
+        'state'         => 'Central',
+        'postal'        => '089999',
+        'lat'           => '1.290000',
+        'lng'           => '103.790000',
+        'mobile_number' => '+65 5555 1234',
+        'external_ref'  => 'EXT-1',
+    ], 'import-42', 'SG');
+
+    expect($place)->toBeInstanceOf(FleetOpsPlaceMixedProbe::class)
+        ->and(FleetOpsPlaceMixedProbe::$geocodingLookups[0])->toBe(['1.290000, 103.790000', false])
+        ->and($place->street1)->toBe('1.290000, 103.790000')
+        ->and($place->street2)->toBe('Dock 4')
+        ->and($place->city)->toBe('Singapore')
+        ->and($place->province)->toBe('Central')
+        ->and($place->postal_code)->toBe('089999')
+        ->and($place->phone)->toBe('+65 5555 1234')
+        ->and($place->location)->toBeInstanceOf(Point::class)
+        ->and($place->location->getLat())->toBe(1.29)
+        ->and($place->location->getLng())->toBe(103.79)
+        ->and($place->_import_id)->toBe('import-42')
+        ->and($place->getMeta('external_ref'))->toBe('EXT-1');
 });
 
 test('place inserts from mixed values and returns existing identifiers when possible', function () {
