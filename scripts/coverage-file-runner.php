@@ -86,9 +86,15 @@ foreach ($targets as $target) {
     }
 
     if (is_dir($path)) {
-        $matched = glob($path . '/*.php') ?: [];
-        sort($matched);
-        array_push($files, ...$matched);
+        $iterator = new RecursiveIteratorIterator(
+            new RecursiveDirectoryIterator($path, FilesystemIterator::SKIP_DOTS)
+        );
+
+        foreach ($iterator as $fileInfo) {
+            if ($fileInfo->isFile() && $fileInfo->getExtension() === 'php') {
+                $files[] = $fileInfo->getPathname();
+            }
+        }
     }
 }
 
