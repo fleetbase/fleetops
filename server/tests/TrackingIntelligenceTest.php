@@ -10,6 +10,7 @@ use Fleetbase\FleetOps\Tracking\Providers\OsrmTrackingProvider;
 use Fleetbase\FleetOps\Tracking\Support\FakeTrackingProvider;
 use Fleetbase\FleetOps\Tracking\TrackingContext;
 use Fleetbase\FleetOps\Tracking\TrackingContextBuilder;
+use Fleetbase\FleetOps\Tracking\TrackingIntelligenceService;
 use Fleetbase\FleetOps\Tracking\TrackingOptions;
 use Fleetbase\FleetOps\Tracking\TrackingProviderManager;
 use Fleetbase\FleetOps\Tracking\TrackingProviderRegistry;
@@ -53,6 +54,25 @@ class OsrmTrackingProviderProbe extends OsrmTrackingProvider
     protected function routeResponse(TrackingContext $context): array
     {
         return $this->response;
+    }
+}
+
+class TrackingIntelligenceServiceProbe extends TrackingIntelligenceService
+{
+    public function __construct()
+    {
+        $registry = new TrackingProviderRegistry();
+        $registry->register(new FakeTrackingProvider('fake'));
+
+        parent::__construct(new TrackingContextBuilder(), new TrackingProviderManager($registry));
+    }
+
+    public function callHelper(string $method, mixed ...$arguments): mixed
+    {
+        $reflection = new ReflectionMethod(TrackingIntelligenceService::class, $method);
+        $reflection->setAccessible(true);
+
+        return $reflection->invoke($this, ...$arguments);
     }
 }
 
@@ -343,13 +363,187 @@ test('tracking route legs include cumulative stop eta values', function () {
             ['duration_s' => 180],
         ]
     );
-    $service = app(Fleetbase\FleetOps\Tracking\TrackingIntelligenceService::class);
+    $service = app(TrackingIntelligenceService::class);
     $method  = new ReflectionMethod($service, 'legs');
     $method->setAccessible(true);
     $legs = $method->invoke($service, $context, $result, Carbon::parse('2026-05-12 00:00:00'));
 
     expect($legs[0]['eta_seconds'])->toBeGreaterThan(0)
         ->and($legs[0]['eta_at'])->not->toBeNull();
+});
+
+test('tracking intelligence builds lifecycle aware result payloads', function () {
+    Carbon::setTestNow('2026-05-12 12:00:00');
+    app()->instance(TrackingProviderRegistry::class, tap(new TrackingProviderRegistry(), function ($registry) {
+        $registry->register(new FakeTrackingProvider('fake'));
+    }));
+
+    $order = trackingModel(TrackingTestOrder::class);
+    trackingSetAttributes($order, [
+        'uuid'                 => 'order-lifecycle',
+        'status'               => 'dispatched',
+        'driver_assigned_uuid' => 'driver-uuid',
+        'dispatched'           => true,
+        'started'              => false,
+        'started_at'           => null,
+        'updated_at'           => Carbon::parse('2026-05-12 11:55:00'),
+    ]);
+
+    $driver = trackingModel(Driver::class);
+    trackingSetAttributes($driver, [
+        'uuid'   => 'driver-uuid',
+        'online' => true,
+    ]);
+
+    $activeStop = new TrackingStop(
+        uuid: 'pickup-uuid',
+        publicId: 'place_pickup',
+        type: 'pickup',
+        status: 'pending',
+        place: trackingPlace('88888888-8888-8888-8888-888888888888', 1.30, 103.80),
+        completed: false,
+        sequence: 1,
+    );
+    $nextStop = new TrackingStop(
+        uuid: 'dropoff-uuid',
+        publicId: 'place_dropoff',
+        type: 'dropoff',
+        status: 'pending',
+        place: trackingPlace('99999999-9999-9999-9999-999999999999', 1.35, 103.85),
+        completed: false,
+        sequence: 2,
+    );
+
+    $context = new TrackingContext(
+        order: $order,
+        payload: null,
+        driver: $driver,
+        origin: new Point(1.29, 103.79),
+        driverLocation: new Point(1.28, 103.78),
+        stops: collect([$activeStop, $nextStop]),
+        completedStops: collect([$activeStop]),
+        remainingStops: collect([$activeStop, $nextStop]),
+        activeStop: $activeStop,
+        nextStop: $nextStop,
+        driverLocationAgeSeconds: 45,
+        warnings: ['stale_driver_location'],
+    );
+    $providerResult = new TrackingProviderResult(
+        provider: 'fake',
+        distanceMeters: 1500.5,
+        durationSeconds: 900.0,
+        durationInTrafficSeconds: 1200.0,
+        polyline: 'encoded-route',
+        coordinates: [[103.78, 1.28], [103.80, 1.30]],
+        legs: [
+            ['duration_s' => 300, 'duration_in_traffic_s' => 360],
+            ['duration_s' => 600],
+        ],
+        warnings: ['fallback_used'],
+        confidence: 'low',
+    );
+
+    $payload = (new TrackingIntelligenceServiceProbe())->callHelper('buildResult', $context, $providerResult, new TrackingOptions());
+
+    expect($payload['provider'])->toBe('fake')
+        ->and($payload['fallback_provider'])->toBe('fake')
+        ->and($payload['generated_at'])->toBe('2026-05-12T12:00:00.000000Z')
+        ->and($payload['warnings'])->toContain('stale_driver_location', 'fallback_used', 'low_confidence_eta')
+        ->and($payload['driver']['location'])->toBe([
+            'type'        => 'Point',
+            'coordinates' => [103.78, 1.28],
+        ])
+        ->and($payload['driver']['online'])->toBeTrue()
+        ->and($payload['progress'])->toMatchArray([
+            'percentage'           => 50.0,
+            'completed_stops'      => 1,
+            'remaining_stops'      => 2,
+            'total_stops'          => 2,
+            'remaining_distance_m' => 1500.5,
+        ])
+        ->and($payload['lifecycle'])->toMatchArray([
+            'mode'           => 'dispatched',
+            'show_live_eta'  => false,
+            'show_start_eta' => true,
+        ])
+        ->and($payload['eta']['active_stop_seconds'])->toBeNull()
+        ->and($payload['eta']['completion_seconds'])->toBeNull()
+        ->and($payload['eta']['start_seconds'])->toBe(360)
+        ->and($payload['eta']['start_at'])->toBe('2026-05-12T12:06:00.000000Z')
+        ->and($payload['route']['legs'][0]['eta_seconds'])->toBeNull()
+        ->and($payload['insights']['is_location_stale'])->toBeTrue()
+        ->and($payload['capabilities']['traffic'])->toBeTrue();
+
+    Carbon::setTestNow();
+});
+
+test('tracking intelligence lifecycle covers terminal unassigned prestart and active modes', function () {
+    $service = new TrackingIntelligenceServiceProbe();
+    $now     = Carbon::parse('2026-05-12 12:00:00');
+    $stop    = new TrackingStop(
+        uuid: 'stop-uuid',
+        publicId: 'stop_public',
+        type: 'dropoff',
+        status: 'pending',
+        place: null,
+        completed: false,
+        sequence: 1,
+    );
+    $contextFor = function (array $attributes) use ($stop): TrackingContext {
+        $order = trackingModel(TrackingTestOrder::class);
+        trackingSetAttributes($order, array_merge([
+            'uuid'                 => 'order-mode',
+            'status'               => 'created',
+            'driver_assigned_uuid' => null,
+            'dispatched'           => false,
+            'started'              => false,
+            'started_at'           => null,
+        ], $attributes));
+
+        return new TrackingContext(
+            order: $order,
+            payload: null,
+            driver: null,
+            origin: null,
+            driverLocation: null,
+            stops: collect([$stop]),
+            completedStops: collect(),
+            remainingStops: collect([$stop]),
+            activeStop: $stop,
+            nextStop: $stop,
+            driverLocationAgeSeconds: null,
+        );
+    };
+
+    expect($service->callHelper('lifecycle', $contextFor(['status' => 'completed']), 60, $now))->toMatchArray([
+        'mode'          => 'completed',
+        'is_terminal'   => true,
+        'show_live_eta' => false,
+    ])
+        ->and($service->callHelper('lifecycle', $contextFor(['status' => 'created']), 60, $now))->toMatchArray([
+            'mode'           => 'unassigned',
+            'show_live_eta'  => false,
+            'show_start_eta' => false,
+        ])
+        ->and($service->callHelper('lifecycle', $contextFor([
+            'status'               => 'created',
+            'driver_assigned_uuid' => 'driver-uuid',
+        ]), 60, $now))->toMatchArray([
+            'mode'           => 'pre_start',
+            'show_live_eta'  => false,
+            'show_start_eta' => false,
+        ])
+        ->and($service->callHelper('lifecycle', $contextFor([
+            'status'               => 'started',
+            'driver_assigned_uuid' => 'driver-uuid',
+        ]), 60, $now))->toMatchArray([
+            'mode'           => 'active',
+            'show_live_eta'  => true,
+            'show_start_eta' => false,
+        ])
+        ->and($service->callHelper('pointToGeoJson', null))->toBeNull()
+        ->and($service->callHelper('addSeconds', $now, null))->toBeNull()
+        ->and($service->callHelper('addSeconds', $now, 90.4))->toBe('2026-05-12T12:01:30.000000Z');
 });
 
 test('provider manager falls back to registered provider and records fallback warning', function () {
