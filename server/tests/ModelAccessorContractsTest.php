@@ -39,6 +39,8 @@ use Fleetbase\FleetOps\Models\ServiceQuote;
 use Fleetbase\FleetOps\Models\ServiceRate;
 use Fleetbase\FleetOps\Models\ServiceRateFee;
 use Fleetbase\FleetOps\Models\Telematic;
+use Fleetbase\FleetOps\Models\TrackingNumber;
+use Fleetbase\FleetOps\Models\TrackingStatus;
 use Fleetbase\FleetOps\Models\Vehicle;
 use Fleetbase\FleetOps\Models\VehicleDevice;
 use Fleetbase\FleetOps\Models\Vendor;
@@ -259,6 +261,37 @@ class FleetOpsLoadedVehicleDeviceFake extends VehicleDevice
     public function load($relations)
     {
         return $this;
+    }
+}
+
+class FleetOpsTrackingNumberAccessorFake extends TrackingNumber
+{
+    public array $loaded = [];
+
+    public function load($relations)
+    {
+        $this->loaded[] = $relations;
+
+        return $this;
+    }
+
+    protected static function ownerHasStatusColumn(Fleetbase\Models\Model $owner): bool
+    {
+        return true;
+    }
+}
+
+class FleetOpsTrackingNumberOwnerFake extends Fleetbase\Models\Model
+{
+    protected $fillable = ['status'];
+    protected $table    = 'orders';
+    public bool $saved  = false;
+
+    public function save(array $options = []): bool
+    {
+        $this->saved = true;
+
+        return true;
     }
 }
 
@@ -2183,4 +2216,65 @@ test('purchase rate accessors expose relation identifiers and customer type flag
         ->and($rate->getOrderIdAttribute())->toBe('order_public')
         ->and($rate->getCustomerIdAttribute())->toBe('contact_public')
         ->and($rate->getTransactionIdAttribute())->toBe('transaction_public');
+});
+
+test('tracking number and status accessors normalize status contracts', function () {
+    $createdAt = Carbon::parse('2026-08-01 12:30:00');
+    $status    = new TrackingStatus();
+    $status->setRawAttributes([
+        'status'     => 'Out for Delivery',
+        'code'       => 'OUT_FOR_DELIVERY',
+        'complete'   => true,
+        'created_at' => $createdAt,
+    ], true);
+
+    $trackingNumber = new FleetOpsTrackingNumberAccessorFake();
+    $trackingNumber->setRawAttributes([
+        'owner_type' => Order::class,
+    ], true);
+    $trackingNumber->setRelation('status', $status);
+
+    expect($trackingNumber->getLastStatusAttribute())->toBe('Out for Delivery')
+        ->and($trackingNumber->getLastStatusCodeAttribute())->toBe('OUT_FOR_DELIVERY')
+        ->and($trackingNumber->getLastStatusUpdatedAtAttribute()->toDateTimeString())->toBe($createdAt->toDateTimeString())
+        ->and($trackingNumber->getLastStatusCompleteAttribute())->toBeTrue()
+        ->and($trackingNumber->getTypeAttribute())->toBe('order')
+        ->and($trackingNumber->loaded)->toBe([
+            'status',
+            'status',
+            'status',
+            'status',
+        ]);
+
+    $normalized = new TrackingStatus();
+    $normalized->setCodeAttribute(' Out for delivery! ');
+    $normalized->setStatusAttribute('out for delivery');
+
+    expect($normalized->getAttribute('code'))->toBe('_OUT_FOR_DELIVERY_')
+        ->and($normalized->getAttribute('status'))->toBe('Out For Delivery')
+        ->and(TrackingStatus::prepareCode('arrived @ hub'))->toBe('ARRIVED__HUB')
+        ->and($status->isComplete())->toBeTrue();
+});
+
+test('tracking number updates fillable owner status when status changes', function () {
+    $trackingStatus = new TrackingStatus();
+    $trackingStatus->setRawAttributes([
+        'code' => 'IN_TRANSIT',
+    ], true);
+
+    $owner = new FleetOpsTrackingNumberOwnerFake();
+    $owner->setRawAttributes([
+        'uuid'   => 'owner-uuid',
+        'status' => 'created',
+    ], true);
+
+    $trackingNumber = new FleetOpsTrackingNumberAccessorFake();
+    $trackingNumber->setRelation('owner', $owner);
+
+    expect($trackingNumber->updateOwnerStatus($trackingStatus))->toBe($trackingNumber)
+        ->and($owner->status)->toBe('in_transit')
+        ->and($owner->saved)->toBeTrue()
+        ->and($trackingNumber->loaded)->toBe([
+            ['owner'],
+        ]);
 });
