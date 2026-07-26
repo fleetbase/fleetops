@@ -48,7 +48,7 @@ class OnTimeDelivery extends AbstractAnalytics
     }
 
     /** @return array{0:int,1:int,2:int} [onTime, late, total] */
-    private function bucketCounts(\DateTimeInterface $start, \DateTimeInterface $end): array
+    protected function bucketCounts(\DateTimeInterface $start, \DateTimeInterface $end): array
     {
         $slaSeconds = $this->slaMinutes * 60;
 

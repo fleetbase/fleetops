@@ -4,7 +4,9 @@ use Fleetbase\FleetOps\Support\Analytics\FuelProviderSummary;
 use Fleetbase\FleetOps\Support\Analytics\GeofenceViolations;
 use Fleetbase\FleetOps\Support\Analytics\IssuesInsights;
 use Fleetbase\FleetOps\Support\Analytics\MaintenanceOverview;
+use Fleetbase\FleetOps\Support\Analytics\OnTimeDelivery;
 use Fleetbase\FleetOps\Support\Analytics\OrdersByStatus;
+use Fleetbase\FleetOps\Support\Analytics\RevenueTrend;
 use Fleetbase\Models\Company;
 use Illuminate\Support\Carbon;
 
@@ -205,6 +207,46 @@ class FleetOpsIssuesInsightsAnalyticsProbe extends IssuesInsights
     }
 }
 
+class FleetOpsRevenueTrendAnalyticsProbe extends RevenueTrend
+{
+    public array $calls = [];
+    public Illuminate\Support\Collection $rows;
+    public float $previous = 0.0;
+
+    public function __construct()
+    {
+        $this->rows = collect();
+    }
+
+    protected function revenueRows(string $currency, DateTimeInterface $start, DateTimeInterface $end, string $format)
+    {
+        $this->calls[] = ['rows', $currency, $start, $end, $format];
+
+        return $this->rows;
+    }
+
+    protected function previousTotal(string $currency, DateTimeInterface $compareStart, DateTimeInterface $start): float
+    {
+        $this->calls[] = ['previous', $currency, $compareStart, $start];
+
+        return $this->previous;
+    }
+}
+
+class FleetOpsOnTimeDeliveryAnalyticsProbe extends OnTimeDelivery
+{
+    public array $calls    = [];
+    public array $current  = [0, 0, 0];
+    public array $previous = [0, 0, 0];
+
+    protected function bucketCounts(DateTimeInterface $start, DateTimeInterface $end): array
+    {
+        $this->calls[] = [$start, $end];
+
+        return count($this->calls) === 1 ? $this->current : $this->previous;
+    }
+}
+
 function fleetOpsAnalyticsCompany(string $uuid = 'company-uuid', string $currency = 'USD'): Company
 {
     $company = new Company();
@@ -260,6 +302,105 @@ test('orders by status analytics builds daily stacked datasets with empty bucket
                 'backgroundColor' => '#f59e0b',
             ],
         ]);
+});
+
+test('revenue trend analytics builds chart datasets summary and comparison windows', function () {
+    $start     = new DateTimeImmutable('2026-07-01 00:00:00');
+    $end       = new DateTimeImmutable('2026-07-31 23:59:59');
+    $analytics = FleetOpsRevenueTrendAnalyticsProbe::forCompany(fleetOpsAnalyticsCompany('company-revenue', 'SGD'))
+        ->between($start, $end)
+        ->groupBy('month');
+
+    $analytics->rows = collect([
+        (object) ['bucket' => '2026-07', 'total' => '1250.55'],
+        (object) ['bucket' => '2026-08', 'total' => '249.45'],
+    ]);
+    $analytics->previous = 1000.0;
+
+    $result = $analytics->get();
+
+    expect($result)->toBe([
+        'labels'   => ['2026-07', '2026-08'],
+        'datasets' => [
+            [
+                'label'           => 'Revenue',
+                'data'            => [1250.55, 249.45],
+                'borderColor'     => '#3485e2',
+                'backgroundColor' => 'rgba(52, 133, 226, 0.1)',
+                'fill'            => true,
+                'tension'         => 0.3,
+            ],
+        ],
+        'summary' => [
+            'total'     => 1500.0,
+            'currency'  => 'SGD',
+            'delta_pct' => 50.0,
+        ],
+    ])
+        ->and($analytics->calls[0])->toBe(['rows', 'SGD', $start, $end, '%Y-%m'])
+        ->and($analytics->calls[1][0])->toBe('previous')
+        ->and($analytics->calls[1][1])->toBe('SGD')
+        ->and($analytics->calls[1][2]->format('Y-m-d H:i:s'))->toBe('2026-05-31 00:00:01')
+        ->and($analytics->calls[1][3])->toBe($start);
+});
+
+test('revenue trend analytics reports zero and positive deltas when previous revenue is empty', function () {
+    $start     = new DateTimeImmutable('2026-07-01 00:00:00');
+    $end       = new DateTimeImmutable('2026-07-02 00:00:00');
+    $analytics = FleetOpsRevenueTrendAnalyticsProbe::forCompany(fleetOpsAnalyticsCompany('company-revenue', 'USD'))
+        ->between($start, $end);
+
+    expect($analytics->get()['summary']['delta_pct'])->toBe(0.0);
+
+    $analytics->rows = collect([(object) ['bucket' => '2026-07-01', 'total' => '10']]);
+
+    expect($analytics->get()['summary']['delta_pct'])->toBe(100.0);
+});
+
+test('on time delivery analytics summarizes current and previous sla performance', function () {
+    $start     = new DateTimeImmutable('2026-07-10 00:00:00');
+    $end       = new DateTimeImmutable('2026-07-11 00:00:00');
+    $analytics = FleetOpsOnTimeDeliveryAnalyticsProbe::forCompany(fleetOpsAnalyticsCompany('company-sla'))
+        ->between($start, $end)
+        ->slaMinutes(45);
+
+    $analytics->current  = [8, 2, 10];
+    $analytics->previous = [3, 3, 6];
+
+    $result = $analytics->get();
+
+    expect($result)->toBe([
+        'on_time_pct' => 80.0,
+        'on_time'     => 8,
+        'late'        => 2,
+        'total'       => 10,
+        'sla_minutes' => 45,
+        'delta_pct'   => 30.0,
+    ])
+        ->and($analytics->calls[0])->toBe([$start, $end])
+        ->and($analytics->calls[1][0]->format('Y-m-d H:i:s'))->toBe('2026-07-09 00:00:00')
+        ->and($analytics->calls[1][1]->format('Y-m-d H:i:s'))->toBe('2026-07-10 00:00:00')
+        ->and($analytics->calls[2][0]->format('Y-m-d H:i:s'))->toBe('2026-07-09 00:00:00')
+        ->and($analytics->calls[2][1]->format('Y-m-d H:i:s'))->toBe('2026-07-10 00:00:00');
+});
+
+test('on time delivery analytics handles empty buckets without division errors', function () {
+    Carbon::setTestNow(Carbon::parse('2026-07-26 09:30:00'));
+
+    $analytics = FleetOpsOnTimeDeliveryAnalyticsProbe::forCompany(fleetOpsAnalyticsCompany('company-empty-sla'));
+
+    expect($analytics->get())->toBe([
+        'on_time_pct' => 0.0,
+        'on_time'     => 0,
+        'late'        => 0,
+        'total'       => 0,
+        'sla_minutes' => 30,
+        'delta_pct'   => 0.0,
+    ])
+        ->and($analytics->calls[0][0]->format('Y-m-d H:i:s'))->toBe('2026-06-26 09:30:00')
+        ->and($analytics->calls[0][1]->format('Y-m-d H:i:s'))->toBe('2026-07-26 09:30:00');
+
+    Carbon::setTestNow();
 });
 
 test('geofence violations analytics maps dwell outliers and zone totals', function () {

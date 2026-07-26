@@ -32,11 +32,7 @@ class RevenueTrend extends AbstractAnalytics
             default => '%Y-%m-%d',
         };
 
-        $rows = ActiveRevenueQuery::forCompany($this->company, $currency, $start, $end)
-            ->selectRaw('DATE_FORMAT(created_at, ?) as bucket, SUM(amount) as total', [$format])
-            ->groupBy('bucket')
-            ->orderBy('bucket')
-            ->get();
+        $rows = $this->revenueRows($currency, $start, $end, $format);
 
         $labels = $rows->pluck('bucket')->all();
         $data   = $rows->pluck('total')->map(fn ($v) => (float) $v)->all();
@@ -45,7 +41,7 @@ class RevenueTrend extends AbstractAnalytics
         $duration       = $end->getTimestamp() - $start->getTimestamp();
         $compareStart   = (clone $start);
         $compareStart   = (new \DateTime())->setTimestamp($start->getTimestamp() - $duration);
-        $previousTotal  = (float) ActiveRevenueQuery::forCompany($this->company, $currency, $compareStart, $start)->sum('amount');
+        $previousTotal  = $this->previousTotal($currency, $compareStart, $start);
 
         $deltaPct = $previousTotal > 0
             ? round((($total - $previousTotal) / $previousTotal) * 100, 1)
@@ -69,5 +65,19 @@ class RevenueTrend extends AbstractAnalytics
                 'delta_pct' => $deltaPct,
             ],
         ];
+    }
+
+    protected function revenueRows(string $currency, \DateTimeInterface $start, \DateTimeInterface $end, string $format)
+    {
+        return ActiveRevenueQuery::forCompany($this->company, $currency, $start, $end)
+            ->selectRaw('DATE_FORMAT(created_at, ?) as bucket, SUM(amount) as total', [$format])
+            ->groupBy('bucket')
+            ->orderBy('bucket')
+            ->get();
+    }
+
+    protected function previousTotal(string $currency, \DateTimeInterface $compareStart, \DateTimeInterface $start): float
+    {
+        return (float) ActiveRevenueQuery::forCompany($this->company, $currency, $compareStart, $start)->sum('amount');
     }
 }
