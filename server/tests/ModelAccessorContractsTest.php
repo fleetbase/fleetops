@@ -917,6 +917,8 @@ test('waypoint model resolves loaded place and rejects unscoped place lookup', f
 });
 
 test('service quote model exposes pure helpers and safe request resolution defaults', function () {
+    fleetopsModelAccessorsUseInMemoryRelationConnection();
+
     $quote = new ServiceQuote();
     $quote->setRawAttributes([
         'public_id'              => 'quote_public',
@@ -926,6 +928,7 @@ test('service quote model exposes pure helpers and safe request resolution defau
         'meta'                   => [],
     ], true);
     $quote->setRelation('serviceRate', (object) ['service_name' => 'Same Day']);
+    $quote->setRelation('company', null);
 
     $vendorQuote = new ServiceQuote();
     $vendorQuote->setRawAttributes([
@@ -944,6 +947,11 @@ test('service quote model exposes pure helpers and safe request resolution defau
     $payloadKey->payloadKey = 'rate_quote';
 
     expect($quote->getServiceRateNameAttribute())->toBe('Same Day')
+        ->and($quote->items())->toBeInstanceOf(HasMany::class)
+        ->and($quote->company())->toBeInstanceOf(BelongsTo::class)
+        ->and($quote->serviceRate())->toBeInstanceOf(BelongsTo::class)
+        ->and($quote->payload())->toBeInstanceOf(BelongsTo::class)
+        ->and($quote->integratedVendor())->toBeInstanceOf(BelongsTo::class)
         ->and($quote->fromIntegratedVendor())->toBeFalse()
         ->and($vendorQuote->fromIntegratedVendor())->toBeTrue()
         ->and($metaVendorQuote->fromIntegratedVendor())->toBeTrue()
@@ -965,6 +973,9 @@ test('service quote model exposes pure helpers and safe request resolution defau
         ->and($payloadKey->getSingularName())->toBe('rate_quote')
         ->and((new ServiceQuote())->getPluralName())->toBe('service_quotes')
         ->and((new ServiceQuote())->getSingularName())->toBe('service_quote');
+
+    expect(fn () => $quote->createStripeCheckoutSession('/checkout/return'))
+        ->toThrow(Exception::class, 'company you attempted to purchase');
 });
 
 test('issue model mutators accessors and import defaults are stable', function () {
