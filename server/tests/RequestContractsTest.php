@@ -103,6 +103,7 @@ namespace {
     use Fleetbase\FleetOps\Http\Requests\Internal\CreateOrderConfigRequest;
     use Fleetbase\FleetOps\Http\Requests\Internal\CreateOrderRequest as InternalCreateOrderRequest;
     use Fleetbase\FleetOps\Http\Requests\Internal\FleetActionRequest;
+    use Fleetbase\FleetOps\Http\Requests\Internal\UpdateDriverRequest as InternalUpdateDriverRequest;
     use Fleetbase\FleetOps\Http\Requests\QueryServiceQuotesRequest;
     use Fleetbase\FleetOps\Http\Requests\ScheduleOrderRequest;
     use Fleetbase\FleetOps\Http\Requests\UpdateDeviceRequest;
@@ -219,6 +220,7 @@ namespace {
         $vehicleRules          = requestRules(CreateVehicleRequest::class);
         $fuelReportRules       = requestRules(CreateFuelReportRequest::class);
         $fuelReportUpdateRules = requestRules(UpdateFuelReportRequest::class, 'PATCH');
+        $internalDriverRules   = requestRules(InternalUpdateDriverRequest::class, 'PATCH');
 
         expect($vehicleRules['location'][1])->toBeInstanceOf(ResolvablePoint::class)
             ->and($vehicleRules['latitude'])->toBe(['nullable', 'required_with:longitude'])
@@ -228,7 +230,11 @@ namespace {
             ->and($fuelReportRules['driver'])->toBe(['required'])
             ->and($fuelReportRules['odometer'])->toBe(['required'])
             ->and($fuelReportRules['volume'])->toBe(['required'])
-            ->and($fuelReportUpdateRules['driver'])->toBe(['required']);
+            ->and($fuelReportUpdateRules['driver'])->toBe(['required'])
+            ->and($internalDriverRules['location'][1])->toBeInstanceOf(ResolvablePoint::class)
+            ->and($internalDriverRules['vehicle'][1])->toBeInstanceOf(ResolvableVehicle::class)
+            ->and($internalDriverRules['latitude'])->toBe(['nullable', 'required_with:longitude', 'numeric'])
+            ->and($internalDriverRules['longitude'])->toBe(['nullable', 'required_with:latitude', 'numeric']);
     });
 
     test('tracking status request switches between tracking number order and coordinate contracts', function () {

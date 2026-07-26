@@ -886,6 +886,48 @@ test('fuel report accessors mutators and meta helpers are stable', function () {
         ->and($report->source)->toBe('provider')
         ->and($report->provider)->toBe('fuelx')
         ->and($report->fuel_provider_transaction_uuid)->toBe('transaction_uuid');
+
+    $container     = app();
+    $hadDbBinding  = $container->bound('db');
+    $originalDb    = $hadDbBinding ? $container->make('db') : null;
+
+    try {
+        $container->instance('db', new class {
+            public function raw($value): Illuminate\Database\Query\Expression
+            {
+                return new Illuminate\Database\Query\Expression($value);
+            }
+        });
+
+        $imported = FuelReport::createFromImport([
+            'fuel_report'     => 'Imported fill-up',
+            'usage'           => '12034',
+            'cost'            => '$88.90',
+            'amount_currency' => 'sgd',
+            'gas_volume'      => '45.5',
+            'gas_unit'        => 'gal',
+            'fuel_status'     => 'approved',
+            'lat'             => 1.3521,
+            'lng'             => 103.8198,
+        ]);
+    } finally {
+        if ($hadDbBinding) {
+            $container->instance('db', $originalDb);
+        } else {
+            $container->forgetInstance('db');
+        }
+    }
+
+    expect($imported)->toBeInstanceOf(FuelReport::class)
+        ->and($imported->company_uuid)->toBe(session('company'))
+        ->and($imported->report)->toBe('Imported fill-up')
+        ->and($imported->odometer)->toBe('12034')
+        ->and($imported->amount)->toBe(8890)
+        ->and($imported->currency)->toBe('sgd')
+        ->and($imported->volume)->toBe('45.5')
+        ->and($imported->metric_unit)->toBe('gal')
+        ->and($imported->status)->toBe('approved')
+        ->and($imported->location->getValue(new Illuminate\Database\Query\Grammars\Grammar()))->toContain('POINT');
 });
 
 test('fuel provider transaction accessors expose related names and station points', function () {
