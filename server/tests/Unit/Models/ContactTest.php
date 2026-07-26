@@ -10,6 +10,8 @@ class FleetOpsContactUnitUserFake extends User
 {
     public array $quietSaves = [];
     public array $roles      = [];
+    public array $updates    = [];
+    public bool $deleted     = false;
 
     public function saveQuietly(array $options = [])
     {
@@ -23,6 +25,21 @@ class FleetOpsContactUnitUserFake extends User
         $this->roles[] = $role;
 
         return $this;
+    }
+
+    public function update(array $attributes = [], array $options = []): bool
+    {
+        $this->updates[] = $attributes;
+        $this->forceFill($attributes);
+
+        return true;
+    }
+
+    public function delete()
+    {
+        $this->deleted = true;
+
+        return true;
     }
 }
 
@@ -189,4 +206,128 @@ test('contact company assignment helper returns null when no company is loaded',
         ->and($contact->loadedMissing)->toBe(['company'])
         ->and($user->company_uuid)->toBeNull()
         ->and($user->quietSaves)->toBe([]);
+});
+
+test('contact notification routes import values and basic accessors are stable', function () {
+    session(['company' => 'company-import']);
+
+    $contact = new Contact([
+        'type'  => 'customer',
+        'phone' => '+1 (555) 100-2000',
+    ]);
+    $contact->setRelation('devices', collect([
+        (object) ['platform' => 'android', 'token' => 'android-token'],
+        (object) ['platform' => 'ios', 'token' => 'ios-token'],
+        (object) ['platform' => 'web', 'token' => 'web-token'],
+    ]));
+    $contact->setRelation('photo', (object) ['url' => 'https://example.test/photo.png']);
+
+    $imported = Contact::createFromImport([
+        'full_name'      => 'Imported Contact',
+        'mobile_number'  => '+1 555 333 4444',
+        'email_address'  => 'imported@example.test',
+        'empty_ignored'  => null,
+    ]);
+
+    expect($contact->routeNotificationForFcm())->toBe(['android-token'])
+        ->and(array_values($contact->routeNotificationForApn()))->toBe(['ios-token'])
+        ->and($contact->routeNotificationForTwilio())->toBe($contact->phone)
+        ->and($contact->photo_url)->toBe('https://example.test/photo.png')
+        ->and($contact->is_customer)->toBeTrue()
+        ->and($contact->isCustomer())->toBeTrue()
+        ->and((new Contact())->photo_url)->toBe('https://s3.ap-southeast-1.amazonaws.com/flb-assets/static/no-avatar.png')
+        ->and($imported->company_uuid)->toBe('company-import')
+        ->and($imported->name)->toBe('Imported Contact')
+        ->and($imported->email)->toBe('imported@example.test')
+        ->and($imported->type)->toBe('contact');
+});
+
+test('contact user conflict helpers guard staff users and allow customers', function () {
+    $staff = new User([
+        'type'  => 'admin',
+        'email' => 'staff@example.test',
+    ]);
+    $phoneStaff = new User([
+        'type'  => 'dispatcher',
+        'phone' => '+15551234567',
+    ]);
+    $customer = new FleetOpsContactUnitUserFake();
+    $customer->setRawAttributes(['type' => 'customer'], true);
+    $contact  = new Contact(['type' => 'customer']);
+
+    expect(Contact::customerUserConflictMessage($staff))->toContain('email')
+        ->and(Contact::customerUserConflictMessage($phoneStaff))->toContain('phone number')
+        ->and(Contact::customerUserConflictMessage())->toContain('user account')
+        ->and($contact->assertCustomerUserCanBeAssigned($customer))->toBeNull()
+        ->and(fn () => $contact->assertCustomerUserCanBeAssigned($staff))->toThrow(
+            Fleetbase\FleetOps\Exceptions\CustomerUserConflictException::class,
+            'existing staff user'
+        );
+});
+
+test('contact sync delete and user presence helpers use loaded user relations', function () {
+    $user = new FleetOpsContactUnitUserFake();
+    $user->setRawAttributes([
+        'uuid' => 'user-uuid',
+        'type' => 'customer',
+    ], true);
+
+    $contact = new FleetOpsContactUnitFake();
+    $contact->setRawAttributes([
+        'uuid'      => 'contact-uuid',
+        'type'      => 'customer',
+        'user_uuid' => 'user-uuid',
+        'name'      => 'Original Name',
+        'email'     => 'original@example.test',
+        'phone'     => '+15550000000',
+        'timezone'  => 'UTC',
+    ], true);
+    $contact->syncOriginal();
+    $contact->forceFill([
+        'name'     => 'Updated Name',
+        'email'    => 'updated@example.test',
+        'phone'    => '+15551112222',
+        'timezone' => 'Asia/Singapore',
+    ]);
+    $contact->setRelation('user', $user);
+    $contact->fakeUser = $user;
+
+    expect($contact->syncWithUser())->toBeTrue()
+        ->and($user->updates)->toBe([[
+            'name'     => 'Updated Name',
+            'email'    => 'updated@example.test',
+            'phone'    => '+15551112222',
+            'timezone' => 'Asia/Singapore',
+        ]])
+        ->and($contact->deleteUser())->toBeTrue()
+        ->and($user->deleted)->toBeTrue()
+        ->and($contact->getUser())->toBe($user)
+        ->and($contact->hasUser())->toBeTrue()
+        ->and($contact->doesntHaveUser())->toBeFalse();
+
+    $unlinked = new FleetOpsContactUnitFake(['type' => 'contact']);
+
+    expect($unlinked->syncWithUser())->toBeFalse()
+        ->and($unlinked->deleteUser())->toBeFalse()
+        ->and($unlinked->hasUser())->toBeFalse()
+        ->and($unlinked->doesntHaveUser())->toBeTrue();
+});
+
+test('contact real user helpers return loaded relations without database lookup', function () {
+    $user = new FleetOpsContactUnitUserFake();
+    $user->setRawAttributes([
+        'uuid' => 'loaded-user',
+        'type' => 'contact',
+    ], true);
+
+    $contact = new Contact([
+        'type'      => 'contact',
+        'user_uuid' => 'not-a-real-uuid',
+    ]);
+    $contact->setRelation('user', $user);
+
+    expect($contact->normalizeCustomerUser($user))->toBe($user)
+        ->and($contact->getUser())->toBe($user)
+        ->and($contact->hasUser())->toBeTrue()
+        ->and($contact->doesntHaveUser())->toBeFalse();
 });
