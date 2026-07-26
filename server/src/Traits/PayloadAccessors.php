@@ -99,7 +99,7 @@ trait PayloadAccessors
         // (3) Fallback: direct lookup by UUID (useful if relation is not properly hydrated).
         $uuid = $this->payload_uuid ?? null;
         if ($uuid && Str::isUuid($uuid)) {
-            $payloadQuery = Payload::query();
+            $payloadQuery = $this->payloadLookupQuery();
             if ($ignoreGlobalScopes) {
                 $payloadQuery->withoutGlobalScopes();
             }
@@ -115,6 +115,11 @@ trait PayloadAccessors
         }
 
         return null;
+    }
+
+    protected function payloadLookupQuery(): mixed
+    {
+        return Payload::query();
     }
 
     /**
