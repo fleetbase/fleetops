@@ -63,6 +63,32 @@ class FleetOpsInternalDriverControllerProbe extends InternalDriverController
     }
 }
 
+class FleetOpsApiDriverDelegationFake
+{
+    public array $calls = [];
+
+    public function track(string $id, Request $request): array
+    {
+        $this->calls[] = ['track', $id, $request];
+
+        return ['delegated' => 'track', 'id' => $id];
+    }
+
+    public function registerDevice(Request $request): array
+    {
+        $this->calls[] = ['registerDevice', $request];
+
+        return ['delegated' => 'register-device'];
+    }
+
+    public function login(Request $request): array
+    {
+        $this->calls[] = ['login', $request];
+
+        return ['delegated' => 'login'];
+    }
+}
+
 class FleetOpsEntityControllerProbe extends EntityController
 {
     public function callHelper(string $method, mixed ...$arguments): mixed
@@ -344,6 +370,25 @@ test('internal driver controller leaves scalar or missing vehicle input unchange
     'scalar vehicle'  => [['vehicle' => 'vehicle-public', 'name' => 'Ada Driver']],
     'missing vehicle' => [['name' => 'Ada Driver']],
 ]);
+
+test('internal driver controller delegates mobile API flows to the public driver controller', function () {
+    $delegate = new FleetOpsApiDriverDelegationFake();
+    app()->instance(DriverController::class, $delegate);
+
+    $controller = new InternalDriverController();
+    $request    = Request::create('/internal/v1/drivers/driver_123/track', 'POST', [
+        'location' => [103.8, 1.3],
+    ]);
+
+    expect($controller->track('driver_123', $request))->toBe(['delegated' => 'track', 'id' => 'driver_123'])
+        ->and($controller->registerDevice($request))->toBe(['delegated' => 'register-device'])
+        ->and($controller->login($request))->toBe(['delegated' => 'login'])
+        ->and($delegate->calls[0])->toBe(['track', 'driver_123', $request])
+        ->and($delegate->calls[1])->toBe(['registerDevice', $request])
+        ->and($delegate->calls[2])->toBe(['login', $request]);
+
+    app()->forgetInstance(DriverController::class);
+});
 
 test('entity controller request input keeps only entity attributes', function () {
     $controller = new FleetOpsEntityControllerProbe();
@@ -1098,11 +1143,14 @@ test('internal contact controller create update and after save hooks protect cus
 });
 
 test('api controller phone helpers normalize explicit values', function () {
-    $driverPhone   = fleetopsControllerStaticMethod(DriverController::class, 'phone');
-    $customerPhone = fleetopsControllerStaticMethod(CustomerController::class, 'phone');
+    $driverPhone         = fleetopsControllerStaticMethod(DriverController::class, 'phone');
+    $internalDriverPhone = fleetopsControllerStaticMethod(InternalDriverController::class, 'phone');
+    $customerPhone       = fleetopsControllerStaticMethod(CustomerController::class, 'phone');
 
     expect($driverPhone->invoke(null, '15551234567'))->toBe('+15551234567')
         ->and($driverPhone->invoke(null, '+15551234567'))->toBe('+15551234567')
+        ->and($internalDriverPhone->invoke(null, '15559876543'))->toBe('+15559876543')
+        ->and($internalDriverPhone->invoke(null, '+15559876543'))->toBe('+15559876543')
         ->and($customerPhone->invoke(null, ' 15551234567 '))->toBe('+15551234567')
         ->and($customerPhone->invoke(null, ''))->toBe('');
 });
