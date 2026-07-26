@@ -7,6 +7,7 @@ use Fleetbase\FleetOps\Flow\Flow;
 use Fleetbase\FleetOps\Flow\FlowResource;
 use Fleetbase\FleetOps\Flow\Logic;
 use Fleetbase\FleetOps\Models\Order;
+use Fleetbase\FleetOps\Models\Waypoint;
 
 class FlowTestOrder extends Order
 {
@@ -198,4 +199,27 @@ test('activities expose events child traversal next previous and completion stat
         ->and($activity->getNext(flowTestOrder(['status' => 'completed']))->first()?->code)->toBe('completed')
         ->and($activity->getNext(flowTestOrder(['status' => 'ready'])))->toHaveCount(0)
         ->and($activity->getPrevious()->first()?->code)->toBe('created');
+});
+
+test('flow events resolve names mutate context and no-op unresolved fires', function () {
+    $order    = flowTestOrder();
+    $activity = new Activity(['code' => 'ready'], flowFixture());
+    $waypoint = new Waypoint();
+    $event    = new Event('order_ready');
+
+    expect($event->resolve())->toBe('\\Fleetbase\\FleetOps\\Events\\OrderReady')
+        ->and($event->setOrder($order))->toBe($event)
+        ->and($event->setActivity($activity))->toBe($event)
+        ->and($event->setWaypoint($waypoint))->toBe($event)
+        ->and($event->order)->toBe($order)
+        ->and($event->activity)->toBe($activity)
+        ->and($event->waypoint)->toBe($waypoint)
+        ->and((new Event('missing_event_name'))->resolve())->toBeNull();
+
+    $unresolved = new Event('missing_event_name');
+    $unresolved->fire($order, $activity, $waypoint);
+
+    expect($unresolved->order)->toBe($order)
+        ->and($unresolved->activity)->toBe($activity)
+        ->and($unresolved->waypoint)->toBe($waypoint);
 });
