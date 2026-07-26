@@ -1,5 +1,17 @@
 <?php
 
+if (!function_exists('Fleetbase\Traits\config')) {
+    eval('namespace Fleetbase\Traits; function config($key = null, $default = null) { return $key === "api.cache.enabled" ? false : $default; }');
+}
+
+if (!function_exists('Fleetbase\Models\config')) {
+    eval('namespace Fleetbase\Models; function config($key = null, $default = null) { return $key === "fleetbase.connection.db" ? "mysql" : $default; }');
+}
+
+if (!function_exists('Fleetbase\FleetOps\Models\event')) {
+    eval('namespace Fleetbase\FleetOps\Models; function event($event = null) { \\ActivityFlowPayloadEventRecorder::$events[] = $event; return $event; }');
+}
+
 use Fleetbase\FleetOps\Models\Order;
 use Fleetbase\FleetOps\Models\Payload;
 use Fleetbase\FleetOps\Models\Place;
@@ -8,11 +20,56 @@ use Fleetbase\FleetOps\Models\Waypoint;
 use Fleetbase\FleetOps\Support\ResolvesOrderServiceStops;
 use Fleetbase\LaravelMysqlSpatial\Types\Point;
 
+class ActivityFlowRelationCountFake
+{
+    public function __construct(private int $count)
+    {
+    }
+
+    public function count(): int
+    {
+        return $this->count;
+    }
+}
+
+class ActivityFlowPayloadEventRecorder
+{
+    public static array $events = [];
+}
+
+class ActivityFlowPlaceFake extends Place
+{
+    public function getAttribute($key)
+    {
+        if ($this->relationLoaded($key)) {
+            return $this->getRelation($key);
+        }
+
+        return $this->attributes[$key] ?? null;
+    }
+}
+
 class ActivityFlowPayloadFake extends Payload
 {
+    public array $loaded = [];
+
     public function loadMissing($relations)
     {
+        $this->loaded[] = ['missing', $relations];
+
         return $this;
+    }
+
+    public function load($relations)
+    {
+        $this->loaded[] = ['load', $relations];
+
+        return $this;
+    }
+
+    public function waypoints()
+    {
+        return new ActivityFlowRelationCountFake($this->waypoints?->count() ?? 0);
     }
 
     public function saveQuietly(array $options = [])
@@ -23,9 +80,30 @@ class ActivityFlowPayloadFake extends Payload
 
 class ActivityFlowWaypointFake extends Waypoint
 {
+    public array $insertedActivities = [];
+
     public function loadMissing($relations)
     {
         return $this;
+    }
+
+    public function insertActivity(Fleetbase\FleetOps\Flow\Activity $activity, $location = [], $proof = null): string
+    {
+        $this->insertedActivities[] = [$activity, $location, $proof];
+
+        return 'waypoint-activity';
+    }
+}
+
+class ActivityFlowEntityFake extends Fleetbase\FleetOps\Models\Entity
+{
+    public array $insertedActivities = [];
+
+    public function insertActivity(Fleetbase\FleetOps\Flow\Activity $activity, $location = [], $proof = null): string
+    {
+        $this->insertedActivities[] = [$activity, $location, $proof];
+
+        return 'entity-activity';
     }
 }
 
@@ -68,11 +146,14 @@ function activity_flow_helper()
 
 function activity_flow_place(string $key): Place
 {
-    $place            = new Place();
-    $place->uuid      = (string) Illuminate\Support\Str::uuid();
-    $place->public_id = "place_{$key}";
-    $place->id        = "place_{$key}";
-    $place->name      = ucfirst($key);
+    $place = new ActivityFlowPlaceFake();
+    $place->setRawAttributes([
+        'uuid'      => (string) Illuminate\Support\Str::uuid(),
+        'public_id' => "place_{$key}",
+        'id'        => "place_{$key}",
+        'name'      => ucfirst($key),
+        'country'   => 'SG',
+    ], true);
 
     return $place;
 }
@@ -214,6 +295,132 @@ test('service stop helper resolves current stop and advances past completed stop
     expect($next['type'])->toBe('dropoff')
         ->and($payload->current_waypoint_uuid)->toBe($dropoff->uuid)
         ->and($payload->currentWaypoint)->toBe($dropoff);
+});
+
+test('payload accessors fall back across endpoints and waypoints', function () {
+    $pickup   = activity_flow_place('pickup');
+    $middle   = activity_flow_place('middle');
+    $dropoff  = activity_flow_place('dropoff');
+    $fallback = activity_flow_payload(null, null, [$pickup, $middle, $dropoff]);
+
+    $fallback->current_waypoint_uuid = $middle->uuid;
+
+    expect($fallback->getDropoffOrLastWaypoint())->toBe($dropoff)
+        ->and($fallback->getPickupOrFirstWaypoint())->toBe($pickup)
+        ->and($fallback->getPickupOrCurrentWaypoint())->toBe($middle)
+        ->and($fallback->getDropoffNameAttribute())->toBeString()
+        ->and($fallback->getPickupNameAttribute())->toBeString()
+        ->and($fallback->getPickupRegion())->toBe('SG');
+
+    $driverLocation = activity_flow_payload(null, $dropoff, [$pickup]);
+    $driverLocation->setMeta('pickup_is_driver_location', true);
+
+    expect($driverLocation->getPickupOrCurrentWaypoint())->toBe($dropoff)
+        ->and($driverLocation->getCountryCode())->toBe('SG');
+
+    $empty = activity_flow_payload();
+
+    expect($empty->getDropoffOrLastWaypoint())->toBeNull()
+        ->and($empty->getPickupOrFirstWaypoint())->toBeNull()
+        ->and($empty->getPickupOrCurrentWaypoint())->toBeNull();
+});
+
+test('payload index and stop helpers normalize loaded places', function () {
+    $payload = new ActivityFlowPayloadFake();
+    $first   = (object) ['place' => activity_flow_place('first')];
+    $last    = (object) ['place' => activity_flow_place('last')];
+
+    $payload->setRelation('pickup', null);
+    $payload->setRelation('dropoff', null);
+    $payload->setRelation('waypoints', collect([['name' => 'Array Stop'], (object) ['name' => 'ignored']]));
+    $payload->setRelation('firstWaypointMarker', $first);
+    $payload->setRelation('lastWaypointMarker', $last);
+
+    $stops = $payload->getAllStops()->values();
+
+    expect($payload->index_pickup_place)->toBe($first->place)
+        ->and($payload->index_dropoff_place)->toBe($last->place)
+        ->and($stops)->toHaveCount(1)
+        ->and($stops->first())->toBeInstanceOf(Place::class)
+        ->and($stops->first()->name)->toBe('Array Stop');
+});
+
+test('payload mutators remove places and choose first waypoint destinations without persistence', function () {
+    $pickup  = activity_flow_place('pickup');
+    $dropoff = activity_flow_place('dropoff');
+    $payload = activity_flow_payload($pickup, $dropoff, [$dropoff]);
+    $called  = false;
+
+    $payload->pickup_uuid  = $pickup->uuid;
+    $payload->dropoff_uuid = $dropoff->uuid;
+
+    expect($payload->removePlace(['pickup', 'dropoff'], [
+        'callback' => function (Payload $callbackPayload) use (&$called, $payload) {
+            $called = $callbackPayload === $payload;
+        },
+    ]))->toBe($payload)
+        ->and($payload->pickup_uuid)->toBeNull()
+        ->and($payload->dropoff_uuid)->toBeNull()
+        ->and($called)->toBeTrue();
+
+    expect($payload->setPickup('[driver]'))->toBeNull()
+        ->and($payload->hasMeta('pickup_is_driver_location'))->toBeTrue();
+
+    $waypointOnly = activity_flow_payload(null, null, [$dropoff]);
+
+    expect($waypointOnly->is_multiple_drop_order)->toBeTrue()
+        ->and($waypointOnly->setFirstWaypoint())->toBe($waypointOnly)
+        ->and($waypointOnly->current_waypoint_uuid)->toBe($dropoff->uuid);
+});
+
+test('payload destination resolution supports indexes ids and explicit endpoints', function () {
+    $pickup   = activity_flow_place('pickup');
+    $middle   = activity_flow_place('middle');
+    $dropoff  = activity_flow_place('dropoff');
+    $payload  = activity_flow_payload($pickup, $dropoff, [$middle]);
+    $uuidOnly = activity_flow_place('uuid-only');
+
+    $pickup->public_id   = 'place_pickup1';
+    $middle->public_id   = 'place_middle1';
+    $dropoff->public_id  = 'place_dropoff1';
+    $uuidOnly->public_id = null;
+    $payload->setRelation('waypoints', collect([$middle, $uuidOnly]));
+
+    expect($payload->findDestinationFromKey(null))->toBeNull()
+        ->and($payload->findDestinationFromKey('0'))->toBe($middle)
+        ->and($payload->findDestinationFromKey('pickup'))->toBe($pickup)
+        ->and($payload->findDestinationFromKey('dropoff'))->toBe($dropoff)
+        ->and($payload->findDestinationFromKey($middle->public_id))->toBe($middle)
+        ->and($payload->findDestinationFromKey($dropoff->public_id))->toBe($dropoff)
+        ->and($payload->findDestinationFromKey($uuidOnly->uuid))->toBe($uuidOnly)
+        ->and($payload->findDestinationFromKey($pickup->uuid))->toBe($pickup);
+});
+
+test('payload waypoint activity updates current waypoint entities and events', function () {
+    ActivityFlowPayloadEventRecorder::$events = [];
+
+    $place    = activity_flow_place('dropoff');
+    $payload  = activity_flow_payload(null, null, [$place]);
+    $order    = activity_flow_order($payload);
+    $waypoint = $payload->waypointMarkers->first();
+    $entity   = new ActivityFlowEntityFake();
+    $activity = new Fleetbase\FleetOps\Flow\Activity([
+        'code'     => 'delivered',
+        'complete' => true,
+    ]);
+
+    $payload->current_waypoint_uuid = $place->uuid;
+    $payload->setRelation('order', $order);
+    $payload->setRelation('entities', collect([$entity]));
+    $entity->destination_uuid = $place->uuid;
+
+    expect($payload->updateWaypointActivity($activity, new Point(1, 2), 'proof-public'))->toBe($payload)
+        ->and($waypoint->insertedActivities)->toHaveCount(1)
+        ->and($entity->insertedActivities)->toHaveCount(1)
+        ->and(collect(ActivityFlowPayloadEventRecorder::$events)->map(fn ($event) => $event::class)->all())->toContain(
+            Fleetbase\FleetOps\Events\EntityCompleted::class,
+            Fleetbase\FleetOps\Events\WaypointCompleted::class
+        );
 });
 
 test('service stop helper ensures defaults and normalizes locations without database work', function () {
