@@ -228,13 +228,17 @@ class TestFleetOpsMetricSumQuery
     }
 }
 
-class TestFleetOpsActiveRevenueQueryRecorder
+class TestFleetOpsActiveRevenueQueryRecorder extends Illuminate\Database\Eloquent\Builder
 {
     public array $calls = [];
 
-    public function whereNotNull(string $column): static
+    public function __construct()
     {
-        $this->calls[] = ['whereNotNull', $column];
+    }
+
+    public function whereNotNull($columns, $boolean = 'and'): static
+    {
+        $this->calls[] = ['whereNotNull', $columns, $boolean];
 
         return $this;
     }
@@ -269,18 +273,33 @@ class TestFleetOpsActiveRevenueQueryRecorder
         return $this;
     }
 
-    public function whereColumn(string $first, string $second): static
+    public function whereColumn($first, $operator = null, $second = null, $boolean = 'and'): static
     {
-        $this->calls[] = ['whereColumn', $first, $second];
+        $this->calls[] = ['whereColumn', $first, $operator, $second, $boolean];
 
         return $this;
     }
 
-    public function where(Closure $callback): static
+    public function where($column, $operator = null, $value = null, $boolean = 'and'): static
+    {
+        if ($column instanceof Closure) {
+            $nested = new static();
+            $column($nested);
+            $this->calls[] = ['where', $nested->calls];
+
+            return $this;
+        }
+
+        $this->calls[] = ['where', $column, $operator, $value, $boolean];
+
+        return $this;
+    }
+
+    public function whereNotExists($callback, $boolean = 'and'): static
     {
         $nested = new static();
         $callback($nested);
-        $this->calls[] = ['where', $nested->calls];
+        $this->calls[] = ['whereNotExists', $nested->calls, $boolean];
 
         return $this;
     }
@@ -482,12 +501,76 @@ test('active revenue query constraints mark inactive orders and invoices', funct
     $orderConstraint->invoke(null, $orderQuery);
     $invoiceConstraint->invoke(null, $invoiceQuery);
 
-    expect($orderQuery->calls)->toContain(['whereNotNull', 'orders.deleted_at'])
+    expect($orderQuery->calls)->toContain(['whereNotNull', 'orders.deleted_at', 'and'])
         ->and($orderQuery->calls)->toContain(['orWhereIn', 'orders.status', ActiveRevenueQuery::INACTIVE_ORDER_STATUSES])
-        ->and($invoiceQuery->calls)->toContain(['whereNotNull', 'ledger_invoices.deleted_at'])
+        ->and($invoiceQuery->calls)->toContain(['whereNotNull', 'ledger_invoices.deleted_at', 'and'])
         ->and($invoiceQuery->calls)->toContain(['orWhereIn', 'ledger_invoices.status', ActiveRevenueQuery::INACTIVE_INVOICE_STATUSES])
         ->and($invoiceQuery->calls)->toHaveCount(3)
         ->and($invoiceQuery->calls[2][0])->toBe('orWhereExists');
+});
+
+test('active revenue query adds anti joins for inactive order subjects contexts and transactions', function () {
+    app()->instance('db.schema', new class {
+        public function hasTable(string $table): bool
+        {
+            return $table === 'orders';
+        }
+    });
+
+    $query  = new TestFleetOpsActiveRevenueQueryRecorder();
+    $method = new ReflectionMethod(ActiveRevenueQuery::class, 'excludeInactiveOrders');
+    $method->setAccessible(true);
+    $method->invoke(null, $query);
+
+    expect($query->calls)->toHaveCount(3)
+        ->and($query->calls[0][0])->toBe('whereNotExists')
+        ->and($query->calls[0][1])->toContain(
+            ['selectRaw', '1'],
+            ['from', 'orders'],
+            ['whereColumn', 'orders.uuid', 'transactions.subject_uuid', null, 'and'],
+            ['where', 'transactions.subject_type', Fleetbase\FleetOps\Models\Order::class, null, 'and']
+        )
+        ->and($query->calls[1][1])->toContain(
+            ['whereColumn', 'orders.uuid', 'transactions.context_uuid', null, 'and'],
+            ['where', 'transactions.context_type', Fleetbase\FleetOps\Models\Order::class, null, 'and']
+        )
+        ->and($query->calls[2][1])->toContain(
+            ['whereColumn', 'orders.transaction_uuid', 'transactions.uuid', null, 'and']
+        );
+});
+
+test('active revenue query adds anti joins for inactive invoice subjects contexts and transactions', function () {
+    if (!class_exists('Fleetbase\Ledger\Models\Invoice')) {
+        eval('namespace Fleetbase\Ledger\Models; class Invoice {}');
+    }
+
+    app()->instance('db.schema', new class {
+        public function hasTable(string $table): bool
+        {
+            return in_array($table, ['orders', 'ledger_invoices'], true);
+        }
+    });
+
+    $query  = new TestFleetOpsActiveRevenueQueryRecorder();
+    $method = new ReflectionMethod(ActiveRevenueQuery::class, 'excludeInactiveInvoices');
+    $method->setAccessible(true);
+    $method->invoke(null, $query);
+
+    expect($query->calls)->toHaveCount(3)
+        ->and($query->calls[0][0])->toBe('whereNotExists')
+        ->and($query->calls[0][1])->toContain(
+            ['selectRaw', '1'],
+            ['from', 'ledger_invoices'],
+            ['whereColumn', 'ledger_invoices.uuid', 'transactions.subject_uuid', null, 'and'],
+            ['where', 'transactions.subject_type', 'Fleetbase\\Ledger\\Models\\Invoice', null, 'and']
+        )
+        ->and($query->calls[1][1])->toContain(
+            ['whereColumn', 'ledger_invoices.uuid', 'transactions.context_uuid', null, 'and'],
+            ['where', 'transactions.context_type', 'Fleetbase\\Ledger\\Models\\Invoice', null, 'and']
+        )
+        ->and($query->calls[2][1])->toContain(
+            ['whereColumn', 'ledger_invoices.transaction_uuid', 'transactions.uuid', null, 'and']
+        );
 });
 
 test('ordersInProgress uses an explicit allowlist rather than an exclusion list', function () {
