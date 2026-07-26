@@ -28,6 +28,7 @@ use Fleetbase\FleetOps\Models\Entity;
 use Fleetbase\FleetOps\Models\Fleet;
 use Fleetbase\FleetOps\Models\FuelProviderTransaction;
 use Fleetbase\FleetOps\Models\FuelReport;
+use Fleetbase\FleetOps\Models\IntegratedVendor;
 use Fleetbase\FleetOps\Models\Issue;
 use Fleetbase\FleetOps\Models\Maintenance;
 use Fleetbase\FleetOps\Models\Manifest;
@@ -419,9 +420,11 @@ class FleetOpsTrackingNumberOwnerFake extends Fleetbase\Models\Model
 
 class FleetOpsSavingOrderFake extends Order
 {
-    public bool $saved         = false;
-    public array $loaded       = [];
-    public array $quietUpdates = [];
+    public bool $saved          = false;
+    public array $loaded        = [];
+    public array $loadedMissing = [];
+    public array $quietUpdates  = [];
+    public array $cacheValues   = [];
 
     public function getDateFormat()
     {
@@ -433,6 +436,18 @@ class FleetOpsSavingOrderFake extends Order
         $this->loaded[] = $relations;
 
         return $this;
+    }
+
+    public function loadMissing($relations)
+    {
+        $this->loadedMissing[] = $relations;
+
+        return $this;
+    }
+
+    public function fromCache($key, $default = null, $ttl = null)
+    {
+        return $this->cacheValues[$key] ?? $default;
     }
 
     public function save(array $options = []): bool
@@ -2432,6 +2447,93 @@ test('order location driver and customer helper branches prefer loaded relations
         ->and($customerOrder->customer_uuid)->toBe('contact-uuid')
         ->and($customerOrder->customer_type)->toBe(Vendor::class)
         ->and($customerOrder->facilitator_type)->toBe(Contact::class);
+});
+
+test('order helper accessors expose cache integrated vendor and dispatch branch contracts', function () {
+    fleetopsModelAccessorsUseInMemoryRelationConnection();
+
+    $order = new FleetOpsSavingOrderFake([
+        'uuid'                 => 'order-uuid',
+        'payload_uuid'         => null,
+        'driver_assigned_uuid' => null,
+        'dispatched_at'        => '2026-02-03 10:00:00',
+        'scheduled_at'         => null,
+        'adhoc'                => false,
+        'adhoc_distance'       => 1250,
+        'facilitator_type'     => IntegratedVendor::class,
+    ]);
+    $order->cacheValues['payload.total_entities'] = '8';
+
+    $company = (object) [
+        'options' => [
+            'fleetops' => [
+                'adhoc_distance' => 4321,
+            ],
+        ],
+    ];
+    $order->setRelation('company', $company);
+
+    $companyBackedOrder = new FleetOpsSavingOrderFake([
+        'driver_assigned_uuid' => null,
+        'dispatched_at'        => '2026-02-03 10:00:00',
+        'scheduled_at'         => null,
+        'adhoc'                => false,
+        'facilitator_type'     => Contact::class,
+    ]);
+    $companyBackedOrder->setRelation('company', $company);
+
+    $readyByAdhocOrder = new FleetOpsSavingOrderFake([
+        'driver_assigned_uuid' => null,
+        'dispatched_at'        => null,
+        'scheduled_at'         => null,
+        'adhoc'                => true,
+        'facilitator_type'     => Vendor::class,
+    ]);
+
+    $payload           = new FleetOpsLoadedPayloadFake();
+    $payload->uuidFake = 'payload-loaded-uuid';
+
+    $payloadBackedOrder = new FleetOpsSavingOrderFake([
+        'payload_uuid' => null,
+    ]);
+    $payloadBackedOrder->setRelation('payload', $payload);
+
+    $payloadCallbackValue = null;
+    $missingCallbackValue = 'unchanged';
+
+    expect($order->total_entities)->toBe(8)
+        ->and($order->facilitator_is_integrated_vendor)->toBeTrue()
+        ->and($order->is_integrated_vendor_order)->toBeTrue()
+        ->and($order->isIntegratedVendorOrder())->toBeTrue()
+        ->and($order->getAdhocDistance())->toBe(1250)
+        ->and($order->getAdhocPingDistance())->toBe(1250)
+        ->and($order->has_driver_assigned)->toBeFalse()
+        ->and($order->is_ready_for_dispatch)->toBeFalse()
+        ->and($order->is_scheduled)->toBeFalse()
+        ->and($order->is_assigned_not_dispatched)->toBeFalse()
+        ->and($order->is_not_dispatched)->toBeFalse()
+        ->and($order->getPayload(function ($payload) use (&$missingCallbackValue) {
+            $missingCallbackValue = $payload;
+        }))->toBeNull()
+        ->and($missingCallbackValue)->toBeNull()
+        ->and($order->loadedMissing)->toBe(['payload'])
+        ->and($companyBackedOrder->getAdhocDistance())->toBe(4321)
+        ->and($companyBackedOrder->getAdhocPingDistance())->toBe(4321)
+        ->and($companyBackedOrder->facilitator_is_integrated_vendor)->toBeFalse()
+        ->and($companyBackedOrder->is_integrated_vendor_order)->toBeFalse()
+        ->and($readyByAdhocOrder->is_ready_for_dispatch)->toBeTrue()
+        ->and($readyByAdhocOrder->is_not_dispatched)->toBeTrue()
+        ->and($payloadBackedOrder->getPayload(function ($payload) use (&$payloadCallbackValue) {
+            $payloadCallbackValue = $payload;
+        }))->toBe($payload)
+        ->and($payloadCallbackValue)->toBe($payload)
+        ->and($payloadBackedOrder->loadedMissing)->toBe(['payload'])
+        ->and($order->driverAssigned()->getForeignKeyName())->toBe('driver_assigned_uuid')
+        ->and($order->vehicleAssigned()->getForeignKeyName())->toBe('vehicle_assigned_uuid')
+        ->and($order->trackingStatuses()->getForeignKeyName())->toBe('tracking_number_uuid')
+        ->and($order->authenticatableCustomer()->getForeignKeyName())->toBe('customer_uuid')
+        ->and($order->comments()->getForeignKeyName())->toBe('subject_uuid')
+        ->and($order->proofs()->getForeignKeyName())->toBe('subject_uuid');
 });
 
 test('payload and place pure accessors normalize fallback data', function () {
