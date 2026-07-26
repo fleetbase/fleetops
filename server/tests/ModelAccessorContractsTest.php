@@ -1013,6 +1013,8 @@ test('issue model mutators accessors and import defaults are stable', function (
 });
 
 test('entity model value accessors money mutators and customer assignment are stable', function () {
+    fleetopsModelAccessorsUseInMemoryRelationConnection();
+
     $entity = new Entity([
         'type'            => ' Fragile Parcel ',
         'price'           => '$12.99',
@@ -1046,7 +1048,37 @@ test('entity model value accessors money mutators and customer assignment are st
     $defaultPhoto = new Entity();
     $defaultPhoto->setRelation('photo', null);
 
+    $pickup = new Place();
+    $pickup->setRawAttributes(['uuid' => '11111111-1111-4111-8111-111111111111', 'public_id' => 'place_pickup'], true);
+
+    $dropoff = new Place();
+    $dropoff->setRawAttributes(['uuid' => '22222222-2222-4222-8222-222222222222', 'public_id' => 'place_dropoff'], true);
+
+    $waypoint = new Place();
+    $waypoint->setRawAttributes(['uuid' => '33333333-3333-4333-8333-333333333333', 'public_id' => 'place_waypoint'], true);
+
+    $payload = new Payload();
+    $payload->setRelation('pickup', $pickup);
+    $payload->setRelation('dropoff', $dropoff);
+    $payload->setRelation('waypoints', collect([$waypoint]));
+
+    $numericDestination = (new Entity())->setDestination(0, $payload, false);
+    $pickupDestination  = (new Entity())->setDestination('pickup', $payload, false);
+    $dropoffDestination = (new Entity())->setDestination('dropoff', $payload, false);
+    $publicDestination  = (new Entity())->setDestination('place_waypoint', $payload, false);
+    $uuidDestination    = (new Entity())->setDestination('22222222-2222-4222-8222-222222222222', $payload, false);
+
     expect($entity->type)->toBe('fragile_parcel')
+        ->and($entity->photo())->toBeInstanceOf(BelongsTo::class)
+        ->and($entity->files())->toBeInstanceOf(HasMany::class)
+        ->and($entity->proofs())->toBeInstanceOf(HasMany::class)
+        ->and($entity->destination())->toBeInstanceOf(BelongsTo::class)
+        ->and($entity->payload())->toBeInstanceOf(BelongsTo::class)
+        ->and($entity->supplier())->toBeInstanceOf(BelongsTo::class)
+        ->and($entity->driver())->toBeInstanceOf(BelongsTo::class)
+        ->and($entity->company())->toBeInstanceOf(BelongsTo::class)
+        ->and($entity->trackingNumber())->toBeInstanceOf(BelongsTo::class)
+        ->and($entity->customer())->toBeInstanceOf(MorphTo::class)
         ->and($entity->price)->toBe(1299)
         ->and($entity->sale_price)->toBe(1050)
         ->and($entity->declared_value)->toBe(4275)
@@ -1063,7 +1095,12 @@ test('entity model value accessors money mutators and customer assignment are st
         ->and($vendorEntity->customer_is_contact)->toBeFalse()
         ->and($contactEntity->customer_uuid)->toBe('contact-uuid')
         ->and($contactEntity->customer_is_contact)->toBeTrue()
-        ->and($contactEntity->customer_is_vendor)->toBeFalse();
+        ->and($contactEntity->customer_is_vendor)->toBeFalse()
+        ->and($numericDestination->destination_uuid)->toBe('33333333-3333-4333-8333-333333333333')
+        ->and($pickupDestination->destination_uuid)->toBe('11111111-1111-4111-8111-111111111111')
+        ->and($dropoffDestination->destination_uuid)->toBe('22222222-2222-4222-8222-222222222222')
+        ->and($publicDestination->destination_uuid)->toBe('33333333-3333-4333-8333-333333333333')
+        ->and($uuidDestination->destination_uuid)->toBe('22222222-2222-4222-8222-222222222222');
 });
 
 test('route position and vehicle device accessors use loaded relation data', function () {
