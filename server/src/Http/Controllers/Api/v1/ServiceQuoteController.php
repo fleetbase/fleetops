@@ -401,14 +401,29 @@ class ServiceQuoteController extends Controller
     {
         // find for the serviceQuote
         try {
-            $serviceQuote = ServiceQuote::findRecordOrFail($id);
+            $serviceQuote = $this->findServiceQuote($id);
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $exception) {
-            return response()->json([
+            return $this->jsonResponse([
                 'error' => 'ServiceQuote resource not found.',
             ], 404);
         }
 
         // response the serviceQuote resource
+        return $this->serviceQuoteResource($serviceQuote);
+    }
+
+    protected function findServiceQuote(string $id): ServiceQuote
+    {
+        return ServiceQuote::findRecordOrFail($id);
+    }
+
+    protected function serviceQuoteResource(ServiceQuote $serviceQuote)
+    {
         return new ServiceQuoteResource($serviceQuote);
+    }
+
+    protected function jsonResponse(array $payload, int $status)
+    {
+        return response()->json($payload, $status);
     }
 }
