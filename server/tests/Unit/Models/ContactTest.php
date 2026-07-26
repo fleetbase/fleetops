@@ -1,10 +1,41 @@
 <?php
 
 use Fleetbase\FleetOps\Models\Contact;
+use Fleetbase\Models\Company;
+use Fleetbase\Models\CompanyUser;
 use Fleetbase\Models\User;
 use Illuminate\Database\ConnectionResolver;
 use Illuminate\Database\Eloquent\Model as EloquentModel;
 use Illuminate\Database\SQLiteConnection;
+
+class FleetOpsContactUnitCompanyUserFake extends CompanyUser
+{
+    public array $roles = [];
+
+    public function assignSingleRole($role): self
+    {
+        $this->roles[] = $role;
+
+        return $this;
+    }
+}
+
+class FleetOpsContactUnitCompanyFake extends Company
+{
+    public array $addUserCalls                              = [];
+    public ?FleetOpsContactUnitCompanyUserFake $companyUser = null;
+
+    public function addUser(User $user, string $role = 'Administrator', string $status = 'active'): CompanyUser
+    {
+        $this->addUserCalls[] = [$user, $role, $status];
+
+        return $this->companyUser ??= new FleetOpsContactUnitCompanyUserFake([
+            'company_uuid' => $this->uuid,
+            'user_uuid'    => $user->uuid,
+            'status'       => $status,
+        ]);
+    }
+}
 
 class FleetOpsContactUnitUserFake extends User
 {
@@ -25,6 +56,11 @@ class FleetOpsContactUnitUserFake extends User
         $this->roles[] = $role;
 
         return $this;
+    }
+
+    public function getCompanyUser(?Company $company = null): ?CompanyUser
+    {
+        return $this->getRelation('companyUser');
     }
 
     public function update(array $attributes = [], array $options = []): bool
@@ -49,6 +85,7 @@ class FleetOpsContactUnitFake extends Contact
     public ?User $createdUser     = null;
     public ?User $normalizedUser  = null;
     public array $loadedMissing   = [];
+    public array $updates         = [];
     public bool $createUserCalled = false;
     public bool $normalizeCalled  = false;
 
@@ -78,6 +115,14 @@ class FleetOpsContactUnitFake extends Contact
 
         return $user;
     }
+
+    public function update(array $attributes = [], array $options = []): bool
+    {
+        $this->updates[] = $attributes;
+        $this->forceFill($attributes);
+
+        return true;
+    }
 }
 
 class FleetOpsContactUnitCreateUserFake extends Contact
@@ -97,6 +142,7 @@ function fleetopsContactUnitUseInMemoryConnection(): SQLiteConnection
 {
     $connection = new SQLiteConnection(new PDO('sqlite::memory:'));
     $connection->statement('create table orders (uuid varchar(64), customer_uuid varchar(64), deleted_at datetime null)');
+    $connection->statement('create table users (uuid varchar(64), company_uuid varchar(64) null, name varchar(255) null, email varchar(255) null, phone varchar(255) null, type varchar(64) null, deleted_at datetime null)');
     $resolver = new ConnectionResolver([
         'default' => $connection,
         'mysql'   => $connection,
@@ -242,6 +288,70 @@ test('contact notification routes import values and basic accessors are stable',
         ->and($imported->type)->toBe('contact');
 });
 
+test('contact import rows can persist when requested', function () {
+    $connection = fleetopsContactUnitUseInMemoryConnection();
+    $connection->statement('create table contacts (id integer primary key autoincrement, uuid varchar(64) null, company_uuid varchar(64) null, name varchar(255) null, email varchar(255) null, phone varchar(255) null, type varchar(64) null, created_at datetime null, updated_at datetime null)');
+
+    session(['company' => 'company-save-import']);
+
+    $contact = Contact::createFromImport([
+        'person'    => 'Saved Contact',
+        'telephone' => '+1 555 900 1000',
+        'email'     => 'saved@example.test',
+    ], true);
+
+    expect($contact->exists)->toBeTrue()
+        ->and($contact->company_uuid)->toBe('company-save-import')
+        ->and($contact->name)->toBe('Saved Contact')
+        ->and($connection->table('contacts')->where('email', 'saved@example.test')->exists())->toBeTrue();
+});
+
+test('contact assigns non customer users to company and contact role without invitations', function () {
+    $companyUser = new FleetOpsContactUnitCompanyUserFake([
+        'company_uuid' => 'company-uuid',
+        'user_uuid'    => 'user-uuid',
+    ]);
+    $companyUser->setRawAttributes([
+        'uuid'         => 'company-user-uuid',
+        'company_uuid' => 'company-uuid',
+        'user_uuid'    => 'user-uuid',
+        'status'       => 'active',
+    ], true);
+
+    $company = new FleetOpsContactUnitCompanyFake();
+    $company->setRawAttributes([
+        'uuid'     => 'company-uuid',
+        'timezone' => 'Asia/Singapore',
+    ], true);
+    $company->companyUser = $companyUser;
+
+    $user = new FleetOpsContactUnitUserFake();
+    $user->setRawAttributes([
+        'uuid' => 'user-uuid',
+        'type' => 'contact',
+    ], true);
+    $user->setRelation('companyUser', $companyUser);
+
+    $contact = new FleetOpsContactUnitFake([
+        'uuid'         => 'contact-uuid',
+        'company_uuid' => 'company-uuid',
+        'type'         => 'contact',
+    ]);
+    $contact->setRelation('company', $company);
+
+    expect($contact->assignUser($user))->toBe($contact)
+        ->and($contact->loadedMissing)->toContain('company')
+        ->and($company->addUserCalls)->toHaveCount(1)
+        ->and($company->addUserCalls[0][0])->toBe($user)
+        ->and($company->addUserCalls[0][1])->toBe('Fleet-Ops Contact')
+        ->and($user->company_uuid)->toBe('company-uuid')
+        ->and($user->quietSaves)->toBe([[]])
+        ->and($user->getRelation('companyUser'))->toBe($companyUser)
+        ->and($companyUser->roles)->toBe(['Fleet-Ops Contact'])
+        ->and($contact->updates)->toBe([['user_uuid' => 'user-uuid']])
+        ->and($contact->getRelation('user'))->toBe($user);
+});
+
 test('contact user conflict helpers guard staff users and allow customers', function () {
     $staff = new User([
         'type'  => 'admin',
@@ -311,6 +421,20 @@ test('contact sync delete and user presence helpers use loaded user relations', 
         ->and($unlinked->deleteUser())->toBeFalse()
         ->and($unlinked->hasUser())->toBeFalse()
         ->and($unlinked->doesntHaveUser())->toBeTrue();
+});
+
+test('contact delete user ignores mismatched relation types', function () {
+    $user = new FleetOpsContactUnitUserFake();
+    $user->setRawAttributes([
+        'uuid' => 'user-uuid',
+        'type' => 'customer',
+    ], true);
+
+    $contact = new FleetOpsContactUnitFake(['type' => 'contact']);
+    $contact->setRelation('user', $user);
+
+    expect($contact->deleteUser())->toBeFalse()
+        ->and($user->deleted)->toBeFalse();
 });
 
 test('contact real user helpers return loaded relations without database lookup', function () {
