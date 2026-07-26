@@ -1,8 +1,14 @@
 <?php
 
 use Fleetbase\FleetOps\Http\Controllers\Internal\v1\LiveController;
+use Fleetbase\FleetOps\Models\Driver;
+use Fleetbase\FleetOps\Models\Vehicle;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
+
+if (!class_exists('Illuminate\Foundation\Auth\User')) {
+    class_alias(Illuminate\Database\Eloquent\Model::class, 'Illuminate\Foundation\Auth\User');
+}
 
 class FleetOpsLiveQueryRecorder
 {
@@ -20,6 +26,22 @@ class FleetOpsLiveQueryRecorder
         $this->calls[] = ['whereRaw', trim($sql), $bindings];
 
         return $this;
+    }
+}
+
+class FleetOpsLiveMonitorDriverFake extends Driver
+{
+    public function getAttribute($key)
+    {
+        return $this->attributes[$key] ?? null;
+    }
+}
+
+class FleetOpsLiveMonitorVehicleFake extends Vehicle
+{
+    public function getAttribute($key)
+    {
+        return $this->attributes[$key] ?? null;
     }
 }
 
@@ -132,4 +154,126 @@ test('live controller builds operations monitor fleet trees', function () {
             'subfleets'         => [],
         ],
     ]);
+});
+
+test('live controller serializes operations monitor drivers and vehicles', function () {
+    $updatedAt = now()->subMinute();
+    $createdAt = now()->subHour();
+
+    $driver = new FleetOpsLiveMonitorDriverFake();
+    $driver->setRawAttributes([
+        'uuid'             => 'driver-uuid',
+        'public_id'        => 'driver_public',
+        'company_uuid'     => 'company-uuid',
+        'user_uuid'        => 'user-uuid',
+        'vehicle_uuid'     => 'vehicle-uuid',
+        'vendor_uuid'      => 'vendor-uuid',
+        'current_job_uuid' => 'job-uuid',
+        'name'             => 'Jamie Driver',
+        'email'            => 'jamie@example.test',
+        'phone'            => '+15550001111',
+        'photo_url'        => 'https://example.test/photo.jpg',
+        'vehicle_name'     => 'Van 9',
+        'status'           => 'active',
+        'location'         => ['latitude' => 1.3521, 'longitude' => 103.8198],
+        'heading'          => '270',
+        'altitude'         => '12',
+        'speed'            => '42',
+        'online'           => 1,
+        'updated_at'       => $updatedAt,
+        'created_at'       => $createdAt,
+    ], true);
+
+    $vehicle = new FleetOpsLiveMonitorVehicleFake();
+    $vehicle->setRawAttributes([
+        'uuid'             => 'vehicle-uuid',
+        'public_id'        => 'vehicle_public',
+        'company_uuid'     => 'company-uuid',
+        'vendor_uuid'      => 'vendor-uuid',
+        'photo_uuid'       => 'photo-uuid',
+        'internal_id'      => 'internal-9',
+        'name'             => 'Van 9',
+        'display_name'     => 'Delivery Van 9',
+        'driver_name'      => 'Jamie Driver',
+        'plate_number'     => 'SG-1234',
+        'serial_number'    => 'SERIAL9',
+        'fuel_card_number' => 'FUEL9',
+        'vin'              => 'VIN9',
+        'make'             => 'Ford',
+        'model'            => 'Transit',
+        'year'             => '2024',
+        'photo_url'        => 'https://example.test/vehicle.jpg',
+        'avatar_url'       => 'https://example.test/avatar.jpg',
+        'status'           => 'available',
+        'location'         => ['latitude' => 1.4, 'longitude' => 103.9],
+        'heading'          => '90',
+        'altitude'         => '8',
+        'speed'            => '35',
+        'online'           => true,
+        'updated_at'       => $updatedAt,
+        'created_at'       => $createdAt,
+    ], true);
+
+    $serializedDriver  = callLiveControllerMethod('serializeMonitorDriver', [$driver]);
+    $serializedVehicle = callLiveControllerMethod('serializeMonitorVehicle', [$vehicle]);
+
+    expect($serializedDriver)->toMatchArray([
+        'id'                    => 'driver-uuid',
+        'uuid'                  => 'driver-uuid',
+        'public_id'             => 'driver_public',
+        'company_uuid'          => 'company-uuid',
+        'user_uuid'             => 'user-uuid',
+        'vehicle_uuid'          => 'vehicle-uuid',
+        'vendor_uuid'           => 'vendor-uuid',
+        'current_job_uuid'      => 'job-uuid',
+        'name'                  => 'Jamie Driver',
+        'email'                 => 'jamie@example.test',
+        'phone'                 => '+15550001111',
+        'photo_url'             => 'https://example.test/photo.jpg',
+        'avatar_url'            => 'https://example.test/photo.jpg',
+        'vehicle_name'          => 'Van 9',
+        'status'                => 'active',
+        'heading'               => 270,
+        'altitude'              => 12,
+        'speed'                 => 42,
+        'online'                => true,
+        'assigned_orders_count' => null,
+        'meta'                  => ['_index_resource' => true],
+        'updated_at'            => $updatedAt,
+        'created_at'            => $createdAt,
+    ])
+        ->and($serializedDriver['location']->getLat())->toBe(1.3521)
+        ->and($serializedDriver['location']->getLng())->toBe(103.8198)
+        ->and($serializedVehicle)->toMatchArray([
+            'id'                    => 'vehicle-uuid',
+            'uuid'                  => 'vehicle-uuid',
+            'public_id'             => 'vehicle_public',
+            'company_uuid'          => 'company-uuid',
+            'vendor_uuid'           => 'vendor-uuid',
+            'photo_uuid'            => 'photo-uuid',
+            'internal_id'           => 'internal-9',
+            'name'                  => 'Van 9',
+            'display_name'          => 'Delivery Van 9',
+            'driver_name'           => 'Jamie Driver',
+            'plate_number'          => 'SG-1234',
+            'serial_number'         => 'SERIAL9',
+            'fuel_card_number'      => 'FUEL9',
+            'vin'                   => 'VIN9',
+            'make'                  => 'Ford',
+            'model'                 => 'Transit',
+            'year'                  => '2024',
+            'photo_url'             => 'https://example.test/vehicle.jpg',
+            'avatar_url'            => 'https://example.test/avatar.jpg',
+            'status'                => 'available',
+            'heading'               => 90,
+            'altitude'              => 8,
+            'speed'                 => 35,
+            'online'                => true,
+            'assigned_orders_count' => null,
+            'meta'                  => ['_index_resource' => true],
+            'updated_at'            => $updatedAt,
+            'created_at'            => $createdAt,
+        ])
+        ->and($serializedVehicle['location']->getLat())->toBe(1.4)
+        ->and($serializedVehicle['location']->getLng())->toBe(103.9);
 });
