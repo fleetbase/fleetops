@@ -8,6 +8,10 @@ if (!function_exists('Fleetbase\Models\config')) {
     eval('namespace Fleetbase\Models; function config($key = null, $default = null) { return $key === "fleetbase.connection.db" ? "mysql" : $default; }');
 }
 
+if (!function_exists('Fleetbase\FleetOps\Integrations\Lalamove\session')) {
+    eval('namespace Fleetbase\FleetOps\Integrations\Lalamove; function session($key = null, $default = null) { return $key === "company" ? "company-service-quote" : $default; }');
+}
+
 use Fleetbase\FleetOps\Models\IntegratedVendor;
 use Fleetbase\FleetOps\Models\Payload;
 use Fleetbase\FleetOps\Models\ServiceQuote;
@@ -50,6 +54,18 @@ class FleetOpsServiceQuoteUnitQueryFake
     }
 }
 
+class FleetOpsServiceQuoteUnitDatabaseProbe
+{
+    public function __construct(private SQLiteConnection $connection)
+    {
+    }
+
+    public function connection(): SQLiteConnection
+    {
+        return $this->connection;
+    }
+}
+
 class FleetOpsServiceQuoteUnitResolvableFake extends ServiceQuote
 {
     public static array $records = [];
@@ -75,6 +91,14 @@ class FleetOpsServiceQuoteUnitCheckoutFake extends ServiceQuote
     }
 }
 
+class FleetOpsServiceQuoteUnitNoPriceCheckoutFake extends FleetOpsServiceQuoteUnitCheckoutFake
+{
+    public function updateOrCreateStripePrice(): ?Stripe\Price
+    {
+        return null;
+    }
+}
+
 class FleetOpsServiceQuoteUnitNamedFake extends ServiceQuote
 {
     public ?string $pluralName   = null;
@@ -85,6 +109,9 @@ class FleetOpsServiceQuoteUnitNamedFake extends ServiceQuote
 function fleetopsServiceQuoteUseRelationConnection(): void
 {
     $connection = new SQLiteConnection(new PDO('sqlite::memory:'));
+    $connection->statement('create table service_quotes (uuid varchar(64), expired_at datetime null, deleted_at datetime null)');
+    $connection->statement('create table service_quote_items (uuid varchar(64), deleted_at datetime null)');
+
     $resolver   = new ConnectionResolver([
         'default' => $connection,
         'mysql'   => $connection,
@@ -92,6 +119,7 @@ function fleetopsServiceQuoteUseRelationConnection(): void
 
     $resolver->setDefaultConnection('mysql');
     EloquentModel::setConnectionResolver($resolver);
+    app()->instance('db', new FleetOpsServiceQuoteUnitDatabaseProbe($connection));
 }
 
 test('service quote relationship and accessor contracts resolve expected models', function () {
@@ -139,7 +167,41 @@ test('service quote naming and integrated vendor helpers use explicit values fal
     $vendorQuote = new ServiceQuote();
     $vendorQuote->setRawAttributes(['integrated_vendor_uuid' => 'vendor-uuid'], true);
 
-    expect($vendorQuote->fromIntegratedVendor())->toBeTrue();
+    $metadataQuote = new ServiceQuote();
+    $metadataQuote->setMeta('from_integrated_vendor', 'vendor_public');
+
+    expect($vendorQuote->fromIntegratedVendor())->toBeTrue()
+        ->and($metadataQuote->fromIntegratedVendor())->toBeTrue();
+});
+
+test('service quote converts lalamove quotations into quote items without persisting', function () {
+    fleetopsServiceQuoteUseRelationConnection();
+
+    $quotation = (object) [
+        'priceBreakdown' => (object) [
+            'currency'     => 'SGD',
+            'total'        => '19.95',
+            'base'         => '12.50',
+            'extraMileage' => '5.00',
+            'vat'          => '2.45',
+        ],
+    ];
+
+    $quote = ServiceQuote::fromLalamoveQuotation($quotation);
+    $items = collect($quote->getRelation('items'));
+
+    expect($quote)->toBeInstanceOf(ServiceQuote::class)
+        ->and($quote->amount)->toBe(1995)
+        ->and($quote->currency)->toBe('SGD')
+        ->and($quote->getMeta('provider'))->toBe('lalamove')
+        ->and($items)->toHaveCount(3)
+        ->and($items)->each->toBeInstanceOf(ServiceQuoteItem::class)
+        ->and($items->pluck('code')->all())->toBe(['BASE_FEE', 'EXTRA_MILEAGE_FEE', 'VAT_FEE']);
+
+    $wrapped = ServiceQuote::fromLalamoveQuotation((object) ['data' => $quotation]);
+
+    expect($wrapped)->toBeInstanceOf(ServiceQuote::class)
+        ->and($wrapped->amount)->toBe(1995);
 });
 
 test('service quote resolves request references from uuid and public id', function () {
@@ -196,5 +258,26 @@ test('service quote rejects unresolved request values and checkout without compa
         ->and(FleetOpsServiceQuoteUnitResolvableFake::$lookups)->toBe([])
         ->and(fn () => $quote->createStripeCheckoutSession('/checkout/return'))
         ->toThrow(Exception::class, 'company you attempted to purchase')
+        ->and($quote->loadedMissing)->toBe([['company']]);
+});
+
+test('service quote checkout rejects company quotes without an active stripe price', function () {
+    $company = new Company();
+    $company->setRawAttributes([
+        'uuid'              => 'company-uuid',
+        'stripe_connect_id' => 'acct_test',
+    ], true);
+
+    $quote = new FleetOpsServiceQuoteUnitNoPriceCheckoutFake();
+    $quote->setRawAttributes([
+        'uuid'      => 'service-quote-uuid',
+        'public_id' => 'quote_ABCDEFG',
+        'amount'    => 1500,
+        'currency'  => 'SGD',
+    ], true);
+    $quote->setRelation('company', $company);
+
+    expect(fn () => $quote->createStripeCheckoutSession('/checkout/return'))
+        ->toThrow(Exception::class, 'service quote you attempted to purchase')
         ->and($quote->loadedMissing)->toBe([['company']]);
 });
