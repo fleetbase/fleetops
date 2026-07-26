@@ -4,11 +4,19 @@ use Fleetbase\FleetOps\Support\Metrics;
 use Fleetbase\FleetOps\Support\Metrics\AbstractMetric;
 use Fleetbase\FleetOps\Support\Metrics\ActiveRevenueQuery;
 use Fleetbase\FleetOps\Support\Metrics\AvgOrderValueMetric;
+use Fleetbase\FleetOps\Support\Metrics\DriversOnlineMetric;
 use Fleetbase\FleetOps\Support\Metrics\EarningsMetric;
 use Fleetbase\FleetOps\Support\Metrics\MoneyMetric;
+use Fleetbase\FleetOps\Support\Metrics\OpenIssuesMetric;
+use Fleetbase\FleetOps\Support\Metrics\OrdersCanceledMetric;
+use Fleetbase\FleetOps\Support\Metrics\OrdersCompletedMetric;
 use Fleetbase\FleetOps\Support\Metrics\OrdersInProgressMetric;
 use Fleetbase\FleetOps\Support\Metrics\OrdersScheduledMetric;
 use Fleetbase\FleetOps\Support\Metrics\Registry;
+use Fleetbase\FleetOps\Support\Metrics\ResolvedIssuesMetric;
+use Fleetbase\FleetOps\Support\Metrics\TotalCustomersMetric;
+use Fleetbase\FleetOps\Support\Metrics\TotalDistanceTraveledMetric;
+use Fleetbase\FleetOps\Support\Metrics\TotalDriversMetric;
 use Fleetbase\FleetOps\Support\Metrics\TotalTimeTraveledMetric;
 use Fleetbase\Models\Company;
 use Illuminate\Support\Carbon;
@@ -90,6 +98,78 @@ class TestFleetOpsOrdersScheduledMetric extends OrdersScheduledMetric
     }
 }
 
+class TestFleetOpsOrdersCanceledMetric extends OrdersCanceledMetric
+{
+    public function aggregateForTest($query): int
+    {
+        return $this->aggregate($query);
+    }
+}
+
+class TestFleetOpsOrdersCompletedMetric extends OrdersCompletedMetric
+{
+    public function aggregateForTest($query): int
+    {
+        return $this->aggregate($query);
+    }
+}
+
+class TestFleetOpsOpenIssuesMetric extends OpenIssuesMetric
+{
+    public function aggregateForTest($query): int
+    {
+        return $this->aggregate($query);
+    }
+}
+
+class TestFleetOpsResolvedIssuesMetric extends ResolvedIssuesMetric
+{
+    public function aggregateForTest($query): int
+    {
+        return $this->aggregate($query);
+    }
+}
+
+class TestFleetOpsDriversOnlineMetric extends DriversOnlineMetric
+{
+    public function aggregateForTest($query): int
+    {
+        return $this->aggregate($query);
+    }
+}
+
+class TestFleetOpsTotalDriversMetric extends TotalDriversMetric
+{
+    public function aggregateForTest($query): int
+    {
+        return $this->aggregate($query);
+    }
+}
+
+class TestFleetOpsTotalCustomersMetric extends TotalCustomersMetric
+{
+    public function aggregateForTest($query): int
+    {
+        return $this->aggregate($query);
+    }
+}
+
+class TestFleetOpsTotalDistanceTraveledMetric extends TotalDistanceTraveledMetric
+{
+    public function aggregateForTest($query): float
+    {
+        return $this->aggregate($query);
+    }
+}
+
+class TestFleetOpsTotalTimeTraveledMetric extends TotalTimeTraveledMetric
+{
+    public function aggregateForTest($query): int
+    {
+        return $this->aggregate($query);
+    }
+}
+
 class TestFleetOpsMetricCountQuery
 {
     public function __construct(private int $count)
@@ -99,6 +179,18 @@ class TestFleetOpsMetricCountQuery
     public function count(): int
     {
         return $this->count;
+    }
+}
+
+class TestFleetOpsMetricSumQuery
+{
+    public function __construct(private int|float $sum)
+    {
+    }
+
+    public function sum(string $column): int|float
+    {
+        return $this->sum;
     }
 }
 
@@ -365,6 +457,50 @@ test('orders scheduled metric scopes to future created orders for the company', 
         ->and($source)->toContain("where('status', 'created')")
         ->and($source)->toContain("whereDate('scheduled_at', '>', Carbon::now())")
         ->and($source)->toContain("whereBetween('created_at', [\$start, \$end])");
+});
+
+test('simple count metrics expose query scopes and count aggregation', function (string $class, string $sourceFile, string $slug, array $expectedSource) {
+    $company = new Company();
+    $company->setRawAttributes(['uuid' => 'company-simple-metric'], true);
+
+    /** @var object $metric */
+    $metric = $class::forCompany($company);
+    $source = file_get_contents(dirname(__DIR__) . '/src/Support/Metrics/' . $sourceFile);
+
+    expect($class::slug())->toBe($slug)
+        ->and($metric->format())->toBe('count')
+        ->and($metric->aggregateForTest(new TestFleetOpsMetricCountQuery(11)))->toBe(11);
+
+    foreach ($expectedSource as $fragment) {
+        expect($source)->toContain($fragment);
+    }
+})->with([
+    [TestFleetOpsOrdersCanceledMetric::class, 'OrdersCanceledMetric.php', 'orders_canceled', ["where('company_uuid', \$this->company->uuid)", "where('status', 'canceled')", "whereBetween('created_at', [\$start, \$end])"]],
+    [TestFleetOpsOrdersCompletedMetric::class, 'OrdersCompletedMetric.php', 'orders_completed', ["where('company_uuid', \$this->company->uuid)", "where('status', 'completed')", "whereBetween('created_at', [\$start, \$end])"]],
+    [TestFleetOpsOpenIssuesMetric::class, 'OpenIssuesMetric.php', 'open_issues', ["where('company_uuid', \$this->company->uuid)", "where('status', 'pending')", "whereBetween('created_at', [\$start, \$end])"]],
+    [TestFleetOpsResolvedIssuesMetric::class, 'ResolvedIssuesMetric.php', 'resolved_issues', ["where('company_uuid', \$this->company->uuid)", 'whereNotNull(\'resolved_at\')', "whereBetween('resolved_at', [\$start, \$end])"]],
+    [TestFleetOpsDriversOnlineMetric::class, 'DriversOnlineMetric.php', 'drivers_online', ["where('company_uuid', \$this->company->uuid)", "where('online', true)", "whereNotNull('current_job_uuid')"]],
+    [TestFleetOpsTotalDriversMetric::class, 'TotalDriversMetric.php', 'total_drivers', ["where('company_uuid', \$this->company->uuid)"]],
+    [TestFleetOpsTotalCustomersMetric::class, 'TotalCustomersMetric.php', 'total_customers', ["where('company_uuid', \$this->company->uuid)", "where('type', 'customer')"]],
+]);
+
+test('distance and time metrics expose completed-order scopes and sum aggregation', function () {
+    $company = new Company();
+    $company->setRawAttributes(['uuid' => 'company-distance-time'], true);
+
+    $distance       = TestFleetOpsTotalDistanceTraveledMetric::forCompany($company);
+    $time           = TestFleetOpsTotalTimeTraveledMetric::forCompany($company);
+    $distanceSource = file_get_contents(dirname(__DIR__) . '/src/Support/Metrics/TotalDistanceTraveledMetric.php');
+    $timeSource     = file_get_contents(dirname(__DIR__) . '/src/Support/Metrics/TotalTimeTraveledMetric.php');
+
+    expect(TotalDistanceTraveledMetric::slug())->toBe('total_distance_traveled')
+        ->and($distance->format())->toBe('meters')
+        ->and($distanceSource)->toContain("where('status', 'completed')", "whereBetween('created_at', [\$start, \$end])", "\$query->sum('distance')")
+        ->and($distance->aggregateForTest(new TestFleetOpsMetricSumQuery(1234.5)))->toBe(1234.5)
+        ->and(TotalTimeTraveledMetric::slug())->toBe('total_time_traveled')
+        ->and($time->format())->toBe('duration')
+        ->and($timeSource)->toContain("where('status', 'completed')", "whereBetween('created_at', [\$start, \$end])", "\$query->sum('time')")
+        ->and($time->aggregateForTest(new TestFleetOpsMetricSumQuery(42)))->toBe(2520);
 });
 
 test('abstract metric builds value delta currency and sparkline payloads', function () {
