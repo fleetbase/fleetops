@@ -12,18 +12,73 @@ if (!function_exists('Fleetbase\FleetOps\Integrations\Lalamove\session')) {
     eval('namespace Fleetbase\FleetOps\Integrations\Lalamove; function session($key = null, $default = null) { return $key === "company" ? "company-service-quote" : $default; }');
 }
 
+if (!class_exists('Stripe\StripeClient')) {
+    eval('
+        namespace Stripe;
+
+        class Product
+        {
+            public function __construct(array $attributes = [])
+            {
+                foreach ($attributes as $key => $value) {
+                    $this->{$key} = $value;
+                }
+            }
+        }
+
+        class Price
+        {
+            public function __construct(array $attributes = [])
+            {
+                foreach ($attributes as $key => $value) {
+                    $this->{$key} = $value;
+                }
+            }
+        }
+
+        class StripeClient
+        {
+            public static ?object $nextClient = null;
+
+            public function __construct(array $options = [])
+            {
+                if (self::$nextClient) {
+                    foreach (get_object_vars(self::$nextClient) as $key => $value) {
+                        $this->{$key} = $value;
+                    }
+                }
+            }
+        }
+
+        namespace Stripe\Checkout;
+
+        class Session
+        {
+            public function __construct(array $attributes = [])
+            {
+                foreach ($attributes as $key => $value) {
+                    $this->{$key} = $value;
+                }
+            }
+        }
+    ');
+}
+
 use Fleetbase\FleetOps\Models\IntegratedVendor;
 use Fleetbase\FleetOps\Models\Payload;
 use Fleetbase\FleetOps\Models\ServiceQuote;
 use Fleetbase\FleetOps\Models\ServiceQuoteItem;
 use Fleetbase\FleetOps\Models\ServiceRate;
 use Fleetbase\Models\Company;
+use Illuminate\Config\Repository;
+use Illuminate\Container\Container;
 use Illuminate\Database\ConnectionResolver;
 use Illuminate\Database\Eloquent\Model as EloquentModel;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\SQLiteConnection;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Facade;
 
 function fleetopsServiceQuoteUnitRequestWithQuote(mixed $serviceQuote): Request
 {
@@ -104,6 +159,111 @@ class FleetOpsServiceQuoteUnitNamedFake extends ServiceQuote
     public ?string $pluralName   = null;
     public ?string $singularName = null;
     public ?string $payloadKey   = null;
+}
+
+class FleetOpsServiceQuoteUnitStripeProductsFake
+{
+    public array $created   = [];
+    public array $retrieved = [];
+
+    public function __construct(private ?Stripe\Product $retrievedProduct = null)
+    {
+    }
+
+    public function retrieve(string $id, array $params): ?Stripe\Product
+    {
+        $this->retrieved[] = [$id, $params];
+
+        return $this->retrievedProduct;
+    }
+
+    public function create(array $params): Stripe\Product
+    {
+        $this->created[] = $params;
+
+        return new Stripe\Product(['id' => 'prod_created']);
+    }
+}
+
+class FleetOpsServiceQuoteUnitStripePricesFake
+{
+    public array $all     = [];
+    public array $created = [];
+    public array $updated = [];
+
+    public function __construct(private ?Stripe\Price $activePrice = null)
+    {
+    }
+
+    public function all(array $params): object
+    {
+        $this->all[] = $params;
+
+        return (object) ['data' => $this->activePrice ? [$this->activePrice] : []];
+    }
+
+    public function update(string $id, array $params): Stripe\Price
+    {
+        $this->updated[] = [$id, $params];
+
+        return new Stripe\Price(['id' => $id, ...$params]);
+    }
+
+    public function create(array $params): Stripe\Price
+    {
+        $this->created[] = $params;
+
+        return new Stripe\Price(['id' => 'price_created', ...$params]);
+    }
+}
+
+class FleetOpsServiceQuoteUnitStripeSessionsFake
+{
+    public array $created = [];
+
+    public function create(array $params): Stripe\Checkout\Session
+    {
+        $this->created[] = $params;
+
+        return new Stripe\Checkout\Session(['id' => 'cs_created', 'params' => $params]);
+    }
+}
+
+function fleetopsServiceQuoteUseStripeClient(object $client): void
+{
+    if (property_exists(Stripe\StripeClient::class, 'nextClient')) {
+        Stripe\StripeClient::$nextClient = $client;
+    }
+}
+
+function fleetopsServiceQuoteUseConsoleContainer(): Container
+{
+    $previous = Container::getInstance();
+
+    $container = new class extends Container {
+        public function environment($environments = null): bool
+        {
+            return in_array('local', (array) $environments, true);
+        }
+    };
+
+    $container->instance('config', new Repository([
+        'fleetbase' => [
+            'console' => [
+                'host'      => 'console.test',
+                'secure'    => false,
+                'subdomain' => null,
+            ],
+        ],
+        'fleet-ops' => [
+            'facilitator_fee' => 0,
+        ],
+    ]));
+
+    Container::setInstance($container);
+    Facade::setFacadeApplication($container);
+
+    return $previous;
 }
 
 function fleetopsServiceQuoteUseRelationConnection(): void
@@ -280,4 +440,123 @@ test('service quote checkout rejects company quotes without an active stripe pri
     expect(fn () => $quote->createStripeCheckoutSession('/checkout/return'))
         ->toThrow(Exception::class, 'service quote you attempted to purchase')
         ->and($quote->loadedMissing)->toBe([['company']]);
+});
+
+test('service quote retrieves existing stripe products and stores product metadata', function () {
+    $products = new FleetOpsServiceQuoteUnitStripeProductsFake(new Stripe\Product(['id' => 'prod_existing']));
+    fleetopsServiceQuoteUseStripeClient((object) [
+        'products' => $products,
+    ]);
+
+    $quote = new ServiceQuote();
+    $quote->setRawAttributes([
+        'public_id' => 'quote_EXISTING',
+        'amount'    => 1995,
+        'currency'  => 'SGD',
+    ], true);
+    $quote->setMeta('stripe_product_id', 'prod_existing');
+
+    $product = $quote->getStripeProduct();
+
+    expect($product)->toBeInstanceOf(Stripe\Product::class)
+        ->and($product->id)->toBe('prod_existing')
+        ->and($products->retrieved)->toBe([['prod_existing', []]])
+        ->and($products->created)->toBe([])
+        ->and($quote->getMeta('stripe_product_id'))->toBe('prod_existing');
+});
+
+test('service quote creates stripe products and active prices through the local stripe client', function () {
+    $products = new FleetOpsServiceQuoteUnitStripeProductsFake();
+    $prices   = new FleetOpsServiceQuoteUnitStripePricesFake(new Stripe\Price(['id' => 'price_active', 'unit_amount' => 3250]));
+    fleetopsServiceQuoteUseStripeClient((object) [
+        'products' => $products,
+        'prices'   => $prices,
+    ]);
+
+    $quote = new ServiceQuote();
+    $quote->setRawAttributes([
+        'public_id' => 'quote_CREATE',
+        'amount'    => 3250,
+        'currency'  => 'USD',
+    ], true);
+
+    $product = $quote->getStripeProduct();
+    $price   = $quote->getStripePrice();
+
+    expect($product)->toBeInstanceOf(Stripe\Product::class)
+        ->and($product->id)->toBe('prod_created')
+        ->and($products->created)->toHaveCount(1)
+        ->and($products->created[0]['name'])->toBe('quote_CREATE')
+        ->and($products->created[0]['metadata'])->toBe(['fleetbase_id' => 'quote_CREATE'])
+        ->and($quote->getMeta('stripe_product_id'))->toBe('prod_created')
+        ->and($price)->toBeInstanceOf(Stripe\Price::class)
+        ->and($price->id)->toBe('price_active')
+        ->and($prices->all)->toBe([
+            ['product' => 'prod_created', 'limit' => 1, 'active' => true],
+        ]);
+});
+
+test('service quote replaces active stripe prices and creates embedded checkout sessions', function () {
+    $previousContainer = fleetopsServiceQuoteUseConsoleContainer();
+
+    $company = new Company();
+    $company->setRawAttributes([
+        'uuid'              => 'company-uuid',
+        'stripe_connect_id' => 'acct_vendor',
+    ], true);
+
+    $products = new FleetOpsServiceQuoteUnitStripeProductsFake();
+    $prices   = new FleetOpsServiceQuoteUnitStripePricesFake(new Stripe\Price(['id' => 'price_old', 'unit_amount' => 4500]));
+    $sessions = new FleetOpsServiceQuoteUnitStripeSessionsFake();
+    fleetopsServiceQuoteUseStripeClient((object) [
+        'products' => $products,
+        'prices'   => $prices,
+        'checkout' => (object) [
+            'sessions' => $sessions,
+        ],
+    ]);
+
+    $quote = new FleetOpsServiceQuoteUnitCheckoutFake();
+    $quote->setRawAttributes([
+        'uuid'      => 'service-quote-checkout',
+        'public_id' => 'quote_CHECKOUT',
+        'amount'    => 4500,
+        'currency'  => 'SGD',
+    ], true);
+    $quote->setRelation('company', $company);
+
+    try {
+        $createdPrice = $quote->updateOrCreateStripePrice();
+        $session      = $quote->createStripeCheckoutSession('/checkout/return');
+
+        expect($createdPrice)->toBeInstanceOf(Stripe\Price::class)
+            ->and($createdPrice->id)->toBe('price_created')
+            ->and($prices->updated)->toBe([
+                ['price_old', ['active' => false]],
+                ['price_old', ['active' => false]],
+            ])
+            ->and($prices->created)->toBe([
+                ['unit_amount' => 4500, 'currency' => 'SGD', 'product' => 'prod_created'],
+                ['unit_amount' => 4500, 'currency' => 'SGD', 'product' => 'prod_created'],
+            ])
+            ->and($session)->toBeInstanceOf(Stripe\Checkout\Session::class)
+            ->and($session->id)->toBe('cs_created')
+            ->and($sessions->created)->toHaveCount(1)
+            ->and($sessions->created[0]['ui_mode'])->toBe('embedded')
+            ->and($sessions->created[0]['line_items'])->toBe([
+                ['price' => 'price_created', 'quantity' => 1],
+            ])
+            ->and($sessions->created[0]['mode'])->toBe('payment')
+            ->and($sessions->created[0]['return_url'])->toContain('/checkout/return?service_quote=service-quote-checkout&checkout_session_id={CHECKOUT_SESSION_ID}&creating=1')
+            ->and($sessions->created[0]['payment_intent_data'])->toBe([
+                'application_fee_amount' => 0,
+                'transfer_data'          => [
+                    'destination' => 'acct_vendor',
+                ],
+            ])
+            ->and($quote->loadedMissing)->toBe([['company']]);
+    } finally {
+        Container::setInstance($previousContainer);
+        Facade::setFacadeApplication($previousContainer);
+    }
 });
