@@ -635,18 +635,14 @@ class DriverController extends FleetOpsController
         $phone = static::phone();
 
         // Check if user exists
-        $user = User::where('phone', $phone)->whereNull('deleted_at')->withoutGlobalScopes()->first();
+        $user = static::findLoginUserByPhone($phone);
 
         if (!$user) {
             return response()->error('No driver with this phone # found.');
         }
 
         // Generate verification token
-        VerificationCode::generateSmsVerificationFor($user, 'driver_login', [
-            'messageCallback' => function ($verification) {
-                return 'Your ' . config('app.name') . ' verification code is ' . $verification->code;
-            },
-        ]);
+        static::generateDriverLoginVerification($user);
 
         return response()->json(['status' => 'OK']);
     }
@@ -668,26 +664,26 @@ class DriverController extends FleetOpsController
         }
 
         // Check if user exists
-        $user = User::where('phone', $identity)->orWhere('email', $identity)->first();
+        $user = static::findVerificationUser($identity);
         if (!$user) {
             return response()->error('Unable to verify code.');
         }
 
         // Find and verify code
-        $verificationCode = VerificationCode::where(['subject_uuid' => $user->uuid, 'code' => $code, 'for' => $for])->exists();
+        $verificationCode = static::verificationCodeExists($user, $code, $for);
         if (!$verificationCode && $code !== config('fleetops.navigator.bypass_verification_code')) {
             return response()->error('Invalid verification code!');
         }
 
         // Get driver record
-        $driver = Driver::where('user_uuid', $user->uuid)->whereNull('deleted_at')->withoutGlobalScopes()->first();
+        $driver = static::findLoginDriverForUser($user);
         if (!$driver) {
             return response()->error('No driver/agent record found for login.');
         }
 
         // Generate auth token
         try {
-            $token = $user->createToken($driver->uuid);
+            $token = static::createDriverToken($user, $driver);
         } catch (\Exception $e) {
             return response()->error($e->getMessage());
         }
@@ -726,6 +722,40 @@ class DriverController extends FleetOpsController
             ?? null;
 
         $request->merge(['driver' => $input]);
+    }
+
+    protected static function findLoginUserByPhone(string $phone): ?User
+    {
+        return User::where('phone', $phone)->whereNull('deleted_at')->withoutGlobalScopes()->first();
+    }
+
+    protected static function generateDriverLoginVerification(User $user): void
+    {
+        VerificationCode::generateSmsVerificationFor($user, 'driver_login', [
+            'messageCallback' => function ($verification) {
+                return 'Your ' . config('app.name') . ' verification code is ' . $verification->code;
+            },
+        ]);
+    }
+
+    protected static function findVerificationUser(string $identity): ?User
+    {
+        return User::where('phone', $identity)->orWhere('email', $identity)->first();
+    }
+
+    protected static function verificationCodeExists(User $user, ?string $code, string $for): bool
+    {
+        return VerificationCode::where(['subject_uuid' => $user->uuid, 'code' => $code, 'for' => $for])->exists();
+    }
+
+    protected static function findLoginDriverForUser(User $user): ?Driver
+    {
+        return Driver::where('user_uuid', $user->uuid)->whereNull('deleted_at')->withoutGlobalScopes()->first();
+    }
+
+    protected static function createDriverToken(User $user, Driver $driver)
+    {
+        return $user->createToken($driver->uuid);
     }
 
     /**

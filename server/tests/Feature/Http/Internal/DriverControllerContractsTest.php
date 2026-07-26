@@ -4,8 +4,10 @@ use Fleetbase\FleetOps\Http\Controllers\Internal\v1\DriverController;
 use Fleetbase\FleetOps\Models\Driver;
 use Fleetbase\FleetOps\Models\Order;
 use Fleetbase\FleetOps\Models\Vehicle;
+use Fleetbase\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\Resources\Json\JsonResource;
 use Illuminate\Support\Collection;
 
 class FleetOpsInternalDriverAssignmentControllerProbe extends DriverController
@@ -193,6 +195,95 @@ class FleetOpsInternalDriverAssignmentVehicleFake extends Vehicle
     }
 }
 
+class FleetOpsInternalDriverAuthControllerProbe extends DriverController
+{
+    public static ?User $loginUser          = null;
+    public static ?User $verificationUser   = null;
+    public static ?Driver $loginDriver      = null;
+    public static bool $verificationExists  = false;
+    public static bool $tokenShouldFail     = false;
+    public static array $loginPhones        = [];
+    public static array $verifications      = [];
+    public static array $verificationChecks = [];
+    public static array $driverLookups      = [];
+    public static array $tokens             = [];
+
+    public function __construct()
+    {
+        $this->resource = FleetOpsInternalDriverResourceFake::class;
+    }
+
+    public static function resetProbe(): void
+    {
+        static::$loginUser          = null;
+        static::$verificationUser   = null;
+        static::$loginDriver        = null;
+        static::$verificationExists = false;
+        static::$tokenShouldFail    = false;
+        static::$loginPhones        = [];
+        static::$verifications      = [];
+        static::$verificationChecks = [];
+        static::$driverLookups      = [];
+        static::$tokens             = [];
+    }
+
+    protected static function findLoginUserByPhone(string $phone): ?User
+    {
+        static::$loginPhones[] = $phone;
+
+        return static::$loginUser;
+    }
+
+    protected static function generateDriverLoginVerification(User $user): void
+    {
+        static::$verifications[] = ['user' => $user->uuid, 'for' => 'driver_login'];
+    }
+
+    protected static function findVerificationUser(string $identity): ?User
+    {
+        static::$verificationChecks[] = ['identity' => $identity];
+
+        return static::$verificationUser;
+    }
+
+    protected static function verificationCodeExists(User $user, ?string $code, string $for): bool
+    {
+        static::$verificationChecks[] = ['user' => $user->uuid, 'code' => $code, 'for' => $for];
+
+        return static::$verificationExists;
+    }
+
+    protected static function findLoginDriverForUser(User $user): ?Driver
+    {
+        static::$driverLookups[] = $user->uuid;
+
+        return static::$loginDriver;
+    }
+
+    protected static function createDriverToken(User $user, Driver $driver)
+    {
+        static::$tokens[] = ['user' => $user->uuid, 'driver' => $driver->uuid];
+
+        if (static::$tokenShouldFail) {
+            throw new RuntimeException('Token service unavailable.');
+        }
+
+        return (object) ['plainTextToken' => 'plain-token'];
+    }
+}
+
+class FleetOpsInternalDriverResourceFake extends JsonResource
+{
+    public function toArray($request)
+    {
+        return [
+            'resource' => 'driver',
+            'uuid'     => $this->resource->uuid,
+            'token'    => $this->resource->token,
+        ];
+    }
+}
+
 function fleetopsInternalDriverAssignmentController(): FleetOpsInternalDriverAssignmentControllerProbe
 {
     $controller          = new FleetOpsInternalDriverAssignmentControllerProbe();
@@ -227,6 +318,29 @@ function fleetopsInternalDriverAssignmentOrder(string $uuid, string $publicId): 
     ], true);
 
     return $order;
+}
+
+function fleetopsInternalDriverAuthUser(string $uuid = 'user-uuid'): User
+{
+    $user = new User();
+    $user->setRawAttributes([
+        'uuid'  => $uuid,
+        'phone' => '+15551234567',
+        'email' => 'driver@example.com',
+    ], true);
+
+    return $user;
+}
+
+function fleetopsInternalDriverAuthDriver(string $uuid = 'driver-uuid'): Driver
+{
+    $driver = new Driver();
+    $driver->setRawAttributes([
+        'uuid'      => $uuid,
+        'user_uuid' => 'user-uuid',
+    ], true);
+
+    return $driver;
 }
 
 test('internal driver controller assigns an order from route or request identifiers', function () {
@@ -434,4 +548,110 @@ test('internal driver controller unassigns the current order fallback', function
     ])
         ->and($currentOrder->updates)->toBe([['driver_assigned_uuid' => null]])
         ->and($controller->driver->currentJobCleared)->toBeTrue();
+});
+
+test('internal driver controller login with phone normalizes identity and handles missing drivers', function () {
+    FleetOpsInternalDriverAuthControllerProbe::resetProbe();
+
+    app()->instance('request', Request::create('/', 'POST', ['phone' => '15551234567']));
+
+    $controller = new FleetOpsInternalDriverAuthControllerProbe();
+    $missing    = $controller->loginWithPhone();
+
+    expect($missing->getData(true))->toBe([
+        'error' => 'No driver with this phone # found.',
+    ])
+        ->and(FleetOpsInternalDriverAuthControllerProbe::$loginPhones)->toBe(['+15551234567']);
+
+    FleetOpsInternalDriverAuthControllerProbe::resetProbe();
+    FleetOpsInternalDriverAuthControllerProbe::$loginUser = fleetopsInternalDriverAuthUser();
+
+    $response = $controller->loginWithPhone();
+
+    expect($response->getData(true))->toBe(['status' => 'OK'])
+        ->and(FleetOpsInternalDriverAuthControllerProbe::$verifications)->toBe([
+            ['user' => 'user-uuid', 'for' => 'driver_login'],
+        ]);
+});
+
+test('internal driver controller verify code covers missing user invalid code and missing driver branches', function () {
+    app('config')->set('fleetops.navigator.bypass_verification_code', '000000');
+
+    FleetOpsInternalDriverAuthControllerProbe::resetProbe();
+    $controller = new FleetOpsInternalDriverAuthControllerProbe();
+
+    $missingUser = $controller->verifyCode(new Request([
+        'identity' => 'driver@example.com',
+        'code'     => '111111',
+    ]));
+
+    expect($missingUser->getData(true))->toBe([
+        'error' => 'Unable to verify code.',
+    ]);
+
+    FleetOpsInternalDriverAuthControllerProbe::resetProbe();
+    FleetOpsInternalDriverAuthControllerProbe::$verificationUser = fleetopsInternalDriverAuthUser();
+
+    $invalidCode = $controller->verifyCode(new Request([
+        'identity' => '+15551234567',
+        'code'     => '111111',
+    ]));
+
+    expect($invalidCode->getData(true))->toBe([
+        'error' => 'Invalid verification code!',
+    ]);
+
+    FleetOpsInternalDriverAuthControllerProbe::resetProbe();
+    FleetOpsInternalDriverAuthControllerProbe::$verificationUser   = fleetopsInternalDriverAuthUser();
+    FleetOpsInternalDriverAuthControllerProbe::$verificationExists = true;
+
+    $missingDriver = $controller->verifyCode(new Request([
+        'identity' => '+15551234567',
+        'code'     => '111111',
+    ]));
+
+    expect($missingDriver->getData(true))->toBe([
+        'error' => 'No driver/agent record found for login.',
+    ])
+        ->and(FleetOpsInternalDriverAuthControllerProbe::$driverLookups)->toBe(['user-uuid']);
+});
+
+test('internal driver controller verify code returns driver resource and handles token errors', function () {
+    app('config')->set('fleetops.navigator.bypass_verification_code', '000000');
+
+    FleetOpsInternalDriverAuthControllerProbe::resetProbe();
+    FleetOpsInternalDriverAuthControllerProbe::$verificationUser   = fleetopsInternalDriverAuthUser();
+    FleetOpsInternalDriverAuthControllerProbe::$loginDriver        = fleetopsInternalDriverAuthDriver();
+    FleetOpsInternalDriverAuthControllerProbe::$verificationExists = false;
+
+    $controller = new FleetOpsInternalDriverAuthControllerProbe();
+    $response   = $controller->verifyCode(new Request([
+        'identity' => '15551234567',
+        'code'     => '000000',
+    ]));
+
+    expect($response->resolve())->toBe([
+        'resource' => 'driver',
+        'uuid'     => 'driver-uuid',
+        'token'    => 'plain-token',
+    ])
+        ->and(FleetOpsInternalDriverAuthControllerProbe::$verificationChecks)->toContain(['identity' => '+15551234567'])
+        ->and(FleetOpsInternalDriverAuthControllerProbe::$tokens)->toBe([
+            ['user' => 'user-uuid', 'driver' => 'driver-uuid'],
+        ]);
+
+    FleetOpsInternalDriverAuthControllerProbe::resetProbe();
+    FleetOpsInternalDriverAuthControllerProbe::$verificationUser   = fleetopsInternalDriverAuthUser();
+    FleetOpsInternalDriverAuthControllerProbe::$loginDriver        = fleetopsInternalDriverAuthDriver();
+    FleetOpsInternalDriverAuthControllerProbe::$verificationExists = true;
+    FleetOpsInternalDriverAuthControllerProbe::$tokenShouldFail    = true;
+
+    $tokenFailure = $controller->verifyCode(new Request([
+        'identity' => 'driver@example.com',
+        'code'     => '222222',
+    ]));
+
+    expect($tokenFailure->getData(true))->toBe([
+        'error' => 'Token service unavailable.',
+    ]);
 });

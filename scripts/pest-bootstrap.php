@@ -237,6 +237,10 @@ if (!class_exists('Illuminate\Foundation\Http\FormRequest') && class_exists('Ill
     eval('namespace Illuminate\Foundation\Http; class FormRequest extends \Illuminate\Http\Request { public function authorize(): bool { return true; } public function rules(): array { return []; } public function responseWithErrors(\Illuminate\Contracts\Validation\Validator $validator) { return $validator; } }');
 }
 
+if (!class_exists('Illuminate\Foundation\Auth\User') && class_exists('Illuminate\Database\Eloquent\Model')) {
+    eval('namespace Illuminate\Foundation\Auth; class User extends \Illuminate\Database\Eloquent\Model {}');
+}
+
 if (!class_exists('Fleetbase\Models\ScheduleItem') && class_exists('Fleetbase\Models\Model')) {
     eval('namespace Fleetbase\Models; class ScheduleItem extends Model {}');
 }
