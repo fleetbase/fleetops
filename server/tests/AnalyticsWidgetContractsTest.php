@@ -5,6 +5,7 @@ use Fleetbase\FleetOps\Support\Analytics\GeofenceViolations;
 use Fleetbase\FleetOps\Support\Analytics\IssuesInsights;
 use Fleetbase\FleetOps\Support\Analytics\MaintenanceOverview;
 use Fleetbase\FleetOps\Support\Analytics\OnTimeDelivery;
+use Fleetbase\FleetOps\Support\Analytics\OperationsPulse;
 use Fleetbase\FleetOps\Support\Analytics\OrdersByStatus;
 use Fleetbase\FleetOps\Support\Analytics\RevenueTrend;
 use Fleetbase\Models\Company;
@@ -247,6 +248,67 @@ class FleetOpsOnTimeDeliveryAnalyticsProbe extends OnTimeDelivery
     }
 }
 
+class FleetOpsOperationsPulseAnalyticsProbe extends OperationsPulse
+{
+    public array $calls           = [];
+    public int $activeOrders      = 0;
+    public int $driversOnline     = 0;
+    public int $totalDrivers      = 0;
+    public int $vehiclesDeployed  = 0;
+    public int $totalVehicles     = 0;
+    public int $issuesOpen        = 0;
+    public array $completedCounts = [];
+
+    protected function activeOrders(string $companyUuid): int
+    {
+        $this->calls[] = ['active_orders', $companyUuid];
+
+        return $this->activeOrders;
+    }
+
+    protected function driversOnline(string $companyUuid): int
+    {
+        $this->calls[] = ['drivers_online', $companyUuid];
+
+        return $this->driversOnline;
+    }
+
+    protected function totalDrivers(string $companyUuid): int
+    {
+        $this->calls[] = ['total_drivers', $companyUuid];
+
+        return $this->totalDrivers;
+    }
+
+    protected function vehiclesDeployed(string $companyUuid): int
+    {
+        $this->calls[] = ['vehicles_deployed', $companyUuid];
+
+        return $this->vehiclesDeployed;
+    }
+
+    protected function totalVehicles(string $companyUuid): int
+    {
+        $this->calls[] = ['total_vehicles', $companyUuid];
+
+        return $this->totalVehicles;
+    }
+
+    protected function issuesOpen(string $companyUuid): int
+    {
+        $this->calls[] = ['issues_open', $companyUuid];
+
+        return $this->issuesOpen;
+    }
+
+    protected function completedOrdersBetween(string $companyUuid, Carbon $start, Carbon $end): int
+    {
+        $this->calls[] = ['completed', $companyUuid, $start->toDateTimeString(), $end->toDateTimeString()];
+
+        return array_shift($this->completedCounts) ?? 0;
+    }
+}
+
 function fleetOpsAnalyticsCompany(string $uuid = 'company-uuid', string $currency = 'USD'): Company
 {
     $company = new Company();
@@ -399,6 +461,59 @@ test('on time delivery analytics handles empty buckets without division errors',
     ])
         ->and($analytics->calls[0][0]->format('Y-m-d H:i:s'))->toBe('2026-06-26 09:30:00')
         ->and($analytics->calls[0][1]->format('Y-m-d H:i:s'))->toBe('2026-07-26 09:30:00');
+
+    Carbon::setTestNow();
+});
+
+test('operations pulse summarizes active operational counts and utilization', function () {
+    Carbon::setTestNow(Carbon::parse('2026-07-26 14:35:00'));
+
+    $analytics                   = FleetOpsOperationsPulseAnalyticsProbe::forCompany(fleetOpsAnalyticsCompany('company-pulse'));
+    $analytics->activeOrders     = 9;
+    $analytics->driversOnline    = 3;
+    $analytics->totalDrivers     = 4;
+    $analytics->vehiclesDeployed = 2;
+    $analytics->totalVehicles    = 5;
+    $analytics->issuesOpen       = 7;
+    $analytics->completedCounts  = [12, 8];
+
+    expect($analytics->get())->toBe([
+        'active_orders'     => ['value' => 9, 'delta_pct' => null],
+        'completed_today'   => ['value' => 12, 'delta_pct' => 50.0],
+        'drivers_online'    => ['value' => 3, 'of' => 4, 'pct_of_max' => 75.0],
+        'vehicles_deployed' => ['value' => 2, 'of' => 5, 'pct_of_max' => 40.0],
+        'issues_open'       => ['value' => 7, 'delta_pct' => null],
+    ])
+        ->and($analytics->calls)->toBe([
+            ['active_orders', 'company-pulse'],
+            ['drivers_online', 'company-pulse'],
+            ['total_drivers', 'company-pulse'],
+            ['vehicles_deployed', 'company-pulse'],
+            ['total_vehicles', 'company-pulse'],
+            ['issues_open', 'company-pulse'],
+            ['completed', 'company-pulse', '2026-07-26 00:00:00', '2026-07-26 14:35:00'],
+            ['completed', 'company-pulse', '2026-07-25 00:00:00', '2026-07-25 14:35:00'],
+        ]);
+
+    Carbon::setTestNow();
+});
+
+test('operations pulse handles empty utilization and previous completed counts', function () {
+    Carbon::setTestNow(Carbon::parse('2026-07-26 08:05:00'));
+
+    $analytics                  = FleetOpsOperationsPulseAnalyticsProbe::forCompany(fleetOpsAnalyticsCompany('company-empty-pulse'));
+    $analytics->completedCounts = [0, 0];
+
+    $result = $analytics->get();
+
+    expect($result['completed_today']['delta_pct'])->toBeNull()
+        ->and($result['drivers_online']['pct_of_max'])->toBe(0.0)
+        ->and($result['vehicles_deployed']['pct_of_max'])->toBe(0.0);
+
+    $positive                  = FleetOpsOperationsPulseAnalyticsProbe::forCompany(fleetOpsAnalyticsCompany('company-positive-pulse'));
+    $positive->completedCounts = [5, 0];
+
+    expect($positive->get()['completed_today']['delta_pct'])->toBe(100.0);
 
     Carbon::setTestNow();
 });
