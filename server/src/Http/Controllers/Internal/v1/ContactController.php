@@ -232,11 +232,16 @@ class ContactController extends FleetOpsController
             return;
         }
 
-        $input['user_uuid'] = User::where('uuid', $user)->orWhere('public_id', $user)->value('uuid') ?? $user;
+        $input['user_uuid'] = $this->resolveUserUuid($user);
         unset($input['user']);
     }
 
-    private function assertCustomerPortalCanSendWelcomeEmail(array $input): void
+    protected function resolveUserUuid(string $user): string
+    {
+        return User::where('uuid', $user)->orWhere('public_id', $user)->value('uuid') ?? $user;
+    }
+
+    protected function assertCustomerPortalCanSendWelcomeEmail(array $input): void
     {
         $type = data_get($input, 'type', 'contact');
         if ($type !== 'customer' || !data_get($input, 'meta.customer_portal.send_welcome_email')) {
@@ -248,7 +253,7 @@ class ContactController extends FleetOpsController
         }
     }
 
-    private function sendCustomerPortalWelcomeEmail(Contact $contact): void
+    protected function sendCustomerPortalWelcomeEmail(Contact $contact): void
     {
         if (!data_get($contact->meta, 'customer_portal.send_welcome_email')) {
             return;
@@ -258,29 +263,59 @@ class ContactController extends FleetOpsController
             throw new \Exception('Customer portal must be installed before sending a customer welcome email.');
         }
 
-        $user = $contact->getUser() ?? Contact::createUserFromContact($contact, false, true);
+        $user = $this->contactUser($contact) ?? $this->createCustomerUserFromContact($contact);
         if (!$user) {
             throw new \Exception('Unable to create customer portal login.');
         }
 
-        $password = Str::random(16);
+        $password = $this->customerPortalPassword();
         $user->changePassword($password);
 
         if ($user->status !== 'active') {
             $user->activate();
         }
 
-        Mail::to($user)->send(new CustomerCredentialsMail($password, $contact));
+        $this->sendCustomerCredentialsMail($user, $password, $contact);
 
         $meta = (array) $contact->meta;
         data_forget($meta, 'customer_portal.send_welcome_email');
-        $contact->forceFill(['meta' => $meta])->saveQuietly();
+        $this->saveContactMetaQuietly($contact, $meta);
         $contact->setAttribute('meta', $meta);
     }
 
-    private function isCustomerPortalInstalled(): bool
+    protected function contactUser(Contact $contact): ?User
     {
-        return $this->containsCustomerPortalExtension(Utils::getInstalledFleetbaseExtensions());
+        return $contact->getUser();
+    }
+
+    protected function createCustomerUserFromContact(Contact $contact): ?User
+    {
+        return Contact::createUserFromContact($contact, false, true);
+    }
+
+    protected function customerPortalPassword(): string
+    {
+        return Str::random(16);
+    }
+
+    protected function sendCustomerCredentialsMail(User $user, string $password, Contact $contact): void
+    {
+        Mail::to($user)->send(new CustomerCredentialsMail($password, $contact));
+    }
+
+    protected function saveContactMetaQuietly(Contact $contact, array $meta): void
+    {
+        $contact->forceFill(['meta' => $meta])->saveQuietly();
+    }
+
+    protected function isCustomerPortalInstalled(): bool
+    {
+        return $this->containsCustomerPortalExtension($this->installedFleetbaseExtensions());
+    }
+
+    protected function installedFleetbaseExtensions(): array
+    {
+        return Utils::getInstalledFleetbaseExtensions();
     }
 
     protected function containsCustomerPortalExtension(array $packages): bool

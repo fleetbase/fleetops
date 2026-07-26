@@ -1,5 +1,9 @@
 <?php
 
+if (!class_exists('Illuminate\Foundation\Auth\User')) {
+    eval('namespace Illuminate\Foundation\Auth; class User extends \Illuminate\Database\Eloquent\Model {}');
+}
+
 use Fleetbase\FleetOps\Http\Controllers\Api\v1\ContactController as ApiContactController;
 use Fleetbase\FleetOps\Http\Controllers\Api\v1\CustomerController;
 use Fleetbase\FleetOps\Http\Controllers\Api\v1\DriverController;
@@ -33,6 +37,7 @@ use Fleetbase\FleetOps\Models\Vendor;
 use Fleetbase\FleetOps\Models\VendorPersonnel;
 use Fleetbase\FleetOps\Models\Waypoint;
 use Fleetbase\LaravelMysqlSpatial\Types\Point;
+use Fleetbase\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Carbon;
@@ -248,12 +253,57 @@ class FleetOpsZoneControllerProbe extends ZoneController
 
 class FleetOpsInternalContactControllerProbe extends InternalContactController
 {
+    public array $installedPackages = [];
+    public array $resolvedUsers     = [];
+    public array $sentCredentials   = [];
+    public array $savedMetas        = [];
+    public ?User $contactUser       = null;
+    public ?User $createdUser       = null;
+    public string $password         = 'welcome-secret';
+
     public function callHelper(string $method, mixed ...$arguments): mixed
     {
         $reflection = new ReflectionMethod(InternalContactController::class, $method);
         $reflection->setAccessible(true);
 
         return $reflection->invoke($this, ...$arguments);
+    }
+
+    protected function resolveUserUuid(string $user): string
+    {
+        $this->resolvedUsers[] = $user;
+
+        return 'resolved-' . $user;
+    }
+
+    protected function installedFleetbaseExtensions(): array
+    {
+        return $this->installedPackages;
+    }
+
+    protected function contactUser(Contact $contact): ?User
+    {
+        return $this->contactUser;
+    }
+
+    protected function createCustomerUserFromContact(Contact $contact): ?User
+    {
+        return $this->createdUser;
+    }
+
+    protected function customerPortalPassword(): string
+    {
+        return $this->password;
+    }
+
+    protected function sendCustomerCredentialsMail(User $user, string $password, Contact $contact): void
+    {
+        $this->sentCredentials[] = [$user->uuid, $password, $contact->uuid];
+    }
+
+    protected function saveContactMetaQuietly(Contact $contact, array $meta): void
+    {
+        $this->savedMetas[] = [$contact->uuid, $meta];
     }
 }
 
@@ -262,7 +312,7 @@ class FleetOpsInternalContactHookFake extends Contact
     public bool $normalized          = false;
     public array $syncedCustomFields = [];
 
-    public function normalizeCustomerUser(?Fleetbase\Models\User $user = null, bool $quiet = false): ?Fleetbase\Models\User
+    public function normalizeCustomerUser(?User $user = null, bool $quiet = false): ?User
     {
         $this->normalized = true;
 
@@ -274,6 +324,27 @@ class FleetOpsInternalContactHookFake extends Contact
         $this->syncedCustomFields = $payload;
 
         return $payload;
+    }
+}
+
+class FleetOpsInternalContactUserFake extends User
+{
+    public array $passwords = [];
+    public int $activations = 0;
+
+    public function changePassword($newPassword): User
+    {
+        $this->passwords[] = $newPassword;
+
+        return $this;
+    }
+
+    public function activate(): User
+    {
+        $this->activations++;
+        $this->status = 'active';
+
+        return $this;
     }
 }
 
@@ -1374,7 +1445,7 @@ test('internal contact controller create update and after save hooks protect cus
             ],
         ],
     ]);
-    $input      = ['type' => 'contact'];
+    $input      = ['type' => 'contact', 'user' => ['id' => 'user_public']];
 
     $controller->onBeforeCreate($request, $input);
 
@@ -1390,11 +1461,56 @@ test('internal contact controller create update and after save hooks protect cus
 
     $controller->afterSave($request, $contact);
 
-    expect($input)->toBe(['type' => 'contact'])
+    expect($input)->toBe(['type' => 'contact', 'user_uuid' => 'resolved-user_public'])
+        ->and($controller->resolvedUsers)->toBe(['user_public'])
         ->and($contact->normalized)->toBeTrue()
         ->and($contact->syncedCustomFields)->toBe([
             ['key' => 'tier', 'value' => 'gold'],
         ]);
+});
+
+test('internal contact controller customer welcome hooks validate portal package and send credentials', function () {
+    $controller = new FleetOpsInternalContactControllerProbe();
+    $contact    = new FleetOpsInternalContactHookFake();
+    $contact->setRawAttributes([
+        'uuid' => 'contact-uuid',
+        'type' => 'customer',
+        'meta' => [
+            'customer_portal' => [
+                'send_welcome_email' => true,
+                'locale'             => 'en',
+            ],
+        ],
+    ], true);
+
+    $createdUser = new FleetOpsInternalContactUserFake();
+    $createdUser->setRawAttributes([
+        'uuid'   => 'created-user-uuid',
+        'status' => 'pending',
+    ], true);
+    $controller->createdUser = $createdUser;
+
+    expect(fn () => $controller->callHelper('assertCustomerPortalCanSendWelcomeEmail', [
+        'type' => 'customer',
+        'meta' => ['customer_portal' => ['send_welcome_email' => true]],
+    ]))->toThrow(Exception::class, 'Customer portal must be installed before sending a customer welcome email.');
+
+    $controller->installedPackages = [['name' => 'fleetbase/customer-portal-api']];
+    $controller->callHelper('assertCustomerPortalCanSendWelcomeEmail', [
+        'type' => 'customer',
+        'meta' => ['customer_portal' => ['send_welcome_email' => true]],
+    ]);
+    $controller->afterSave(new Request(), $contact);
+
+    expect($contact->normalized)->toBeTrue()
+        ->and($createdUser->passwords)->toBe(['welcome-secret'])
+        ->and($createdUser->activations)->toBe(1)
+        ->and($controller->sentCredentials)->toBe([['created-user-uuid', 'welcome-secret', 'contact-uuid']])
+        ->and($controller->savedMetas)->toBe([[
+            'contact-uuid',
+            ['customer_portal' => ['locale' => 'en']],
+        ]])
+        ->and($contact->meta)->toBe(['customer_portal' => ['locale' => 'en']]);
 });
 
 test('api controller phone helpers normalize explicit values', function () {
