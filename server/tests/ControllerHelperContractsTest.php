@@ -22,6 +22,7 @@ use Fleetbase\FleetOps\Http\Controllers\Internal\v1\PositionController;
 use Fleetbase\FleetOps\Http\Controllers\Internal\v1\ServiceQuoteController as InternalServiceQuoteController;
 use Fleetbase\FleetOps\Http\Controllers\Internal\v1\VendorController as InternalVendorController;
 use Fleetbase\FleetOps\Models\Contact;
+use Fleetbase\FleetOps\Models\Fleet;
 use Fleetbase\FleetOps\Models\Maintenance;
 use Fleetbase\FleetOps\Models\Order;
 use Fleetbase\FleetOps\Models\Place;
@@ -249,6 +250,18 @@ class FleetOpsInternalFleetControllerProbe extends InternalFleetController
         $reflection->setAccessible(true);
 
         return $reflection->invoke(null, ...$arguments);
+    }
+}
+
+class FleetOpsInternalFleetFake extends Fleet
+{
+    public array $syncedCustomFields = [];
+
+    public function syncCustomFieldValues(array $payload, array $options = []): array
+    {
+        $this->syncedCustomFields = $payload;
+
+        return $payload;
     }
 }
 
@@ -947,6 +960,25 @@ test('internal fleet controller exposes assignment and import payload helpers', 
         'status'   => 'ok',
         'message'  => 'Import completed',
         'imported' => 7,
+    ]);
+});
+
+test('internal fleet controller syncs custom fields after save', function () {
+    $controller = new FleetOpsInternalFleetControllerProbe();
+    $fleet      = new FleetOpsInternalFleetFake();
+
+    $controller->afterSave(new Request([
+        'fleet' => [
+            'custom_field_values' => [
+                'temperature_zone' => 'ambient',
+                'region'           => 'north',
+            ],
+        ],
+    ]), $fleet);
+
+    expect($fleet->syncedCustomFields)->toBe([
+        'temperature_zone' => 'ambient',
+        'region'           => 'north',
     ]);
 });
 

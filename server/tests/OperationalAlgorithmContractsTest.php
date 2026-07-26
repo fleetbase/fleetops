@@ -1,15 +1,19 @@
 <?php
 
+use Carbon\Carbon;
 use Fleetbase\FleetOps\Console\Commands\ProcessOperationalAlerts;
 use Fleetbase\FleetOps\Console\Commands\SimulateGeofenceEvents;
 use Fleetbase\FleetOps\Models\Driver;
 use Fleetbase\FleetOps\Models\Order;
 use Fleetbase\FleetOps\Models\Place;
+use Fleetbase\FleetOps\Models\ServiceArea;
 use Fleetbase\FleetOps\Models\Vehicle;
+use Fleetbase\FleetOps\Models\Zone;
 use Fleetbase\FleetOps\Orchestration\Engines\DriverAssignmentEngine;
 use Fleetbase\FleetOps\Orchestration\Engines\GreedyOrchestrationEngine;
 use Fleetbase\FleetOps\Support\Ai\Capabilities\OptimizeOrderRouteCapability;
 use Fleetbase\LaravelMysqlSpatial\Types\Point;
+use Illuminate\Support\Facades\DB;
 
 class FleetOpsAssignmentDriverFake extends Driver
 {
@@ -46,6 +50,56 @@ class FleetOpsAssignmentVehicleFake extends Vehicle
         }
 
         return parent::getAttribute($key);
+    }
+}
+
+class FleetOpsGeofenceStateDbFake
+{
+    public array $tables = [];
+
+    public function table(string $name): FleetOpsGeofenceStateTableFake
+    {
+        return new FleetOpsGeofenceStateTableFake($this, $name);
+    }
+}
+
+class FleetOpsGeofenceStateTableFake
+{
+    public array $wheres = [];
+
+    public function __construct(private FleetOpsGeofenceStateDbFake $db, private string $table)
+    {
+    }
+
+    public function where(string $column, mixed $value): static
+    {
+        $this->wheres[$column] = $value;
+
+        return $this;
+    }
+
+    public function first(): ?object
+    {
+        return $this->db->tables[$this->table]['first'] ?? null;
+    }
+
+    public function upsert(array $values, array $uniqueBy, array $update): void
+    {
+        $this->db->tables[$this->table]['upserts'][] = [$values, $uniqueBy, $update];
+    }
+
+    public function update(array $values): int
+    {
+        $this->db->tables[$this->table]['updates'][] = [$this->wheres, $values];
+
+        return 1;
+    }
+
+    public function delete(): int
+    {
+        $this->db->tables[$this->table]['deletes'][] = $this->wheres;
+
+        return 1;
     }
 }
 
@@ -152,6 +206,70 @@ test('geofence simulation parses events and selects state tables by subject type
         ->and(fleetopsInvoke($command, 'stateTable', ['driver']))->toBe('driver_geofence_states')
         ->and(fleetopsInvoke($command, 'subjectColumn', ['vehicle']))->toBe('vehicle_uuid')
         ->and(fleetopsInvoke($command, 'subjectColumn', ['driver']))->toBe('driver_uuid');
+});
+
+test('geofence simulation updates state records and derives dwell duration', function () {
+    Carbon::setTestNow('2026-07-26 12:00:00');
+    $db = new FleetOpsGeofenceStateDbFake();
+    DB::swap($db);
+
+    $command = new SimulateGeofenceEvents();
+    $vehicle = new Vehicle();
+    $vehicle->setRawAttributes(['uuid' => 'vehicle-uuid'], true);
+    $driver = new Driver();
+    $driver->setRawAttributes(['uuid' => 'driver-uuid'], true);
+    $serviceArea = new ServiceArea();
+    $serviceArea->setRawAttributes(['uuid' => 'service-area-uuid'], true);
+    $zone = new Zone();
+    $zone->setRawAttributes(['uuid' => 'zone-uuid'], true);
+    $enteredAt = Carbon::parse('2026-07-26 11:45:00');
+
+    fleetopsInvoke($command, 'markInside', ['vehicle', $vehicle, $serviceArea, $enteredAt]);
+    fleetopsInvoke($command, 'markOutside', ['vehicle', $vehicle, $serviceArea]);
+    fleetopsInvoke($command, 'resetState', ['driver', $driver, $zone]);
+
+    expect($db->tables['vehicle_geofence_states']['upserts'][0][0])->toMatchArray([
+        'vehicle_uuid'  => 'vehicle-uuid',
+        'geofence_uuid' => 'service-area-uuid',
+        'geofence_type' => 'service_area',
+        'is_inside'     => true,
+        'entered_at'    => $enteredAt,
+        'exited_at'     => null,
+        'dwell_job_id'  => null,
+    ])
+        ->and($db->tables['vehicle_geofence_states']['upserts'][0][1])->toBe(['vehicle_uuid', 'geofence_uuid'])
+        ->and($db->tables['vehicle_geofence_states']['updates'][0][0])->toBe([
+            'vehicle_uuid'  => 'vehicle-uuid',
+            'geofence_uuid' => 'service-area-uuid',
+        ])
+        ->and($db->tables['vehicle_geofence_states']['updates'][0][1])->toMatchArray([
+            'is_inside'    => false,
+            'dwell_job_id' => null,
+        ])
+        ->and($db->tables['driver_geofence_states']['deletes'][0])->toBe([
+            'driver_uuid'   => 'driver-uuid',
+            'geofence_uuid' => 'zone-uuid',
+        ])
+        ->and(fleetopsInvoke($command, 'calculateDwellMinutes', ['driver', $driver, $zone, 9]))->toBe(9);
+
+    $db->tables['driver_geofence_states']['first'] = (object) [
+        'entered_at' => '2026-07-26 11:30:00',
+    ];
+
+    expect(fleetopsInvoke($command, 'calculateDwellMinutes', ['driver', $driver, $zone, 9]))->toBe(30);
+
+    $db->tables['driver_geofence_states']['first'] = null;
+    fleetopsInvoke($command, 'ensureEnteredAt', ['driver', $driver, $zone, $enteredAt]);
+
+    expect($db->tables['driver_geofence_states']['upserts'][0][0])->toMatchArray([
+        'driver_uuid'   => 'driver-uuid',
+        'geofence_uuid' => 'zone-uuid',
+        'geofence_type' => 'zone',
+        'is_inside'     => true,
+        'entered_at'    => $enteredAt,
+    ]);
+
+    Carbon::setTestNow();
 });
 
 test('driver assignment helper scores skills online state and proximity', function () {
