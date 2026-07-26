@@ -29,7 +29,7 @@ class EntityController extends Controller
 
         // payload assignment
         if ($request->has('payload')) {
-            $input['payload_uuid'] = Utils::getUuid('payloads', [
+            $input['payload_uuid'] = $this->getUuid('payloads', [
                 'public_id'    => $request->input('payload'),
                 'company_uuid' => session('company'),
             ]);
@@ -37,7 +37,7 @@ class EntityController extends Controller
 
         // customer assignment
         if ($request->has('customer')) {
-            $customer = Utils::getUuid(
+            $customer = $this->getUuid(
                 ['contacts', 'vendors'],
                 [
                     'public_id'    => $request->input('customer'),
@@ -46,14 +46,14 @@ class EntityController extends Controller
             );
 
             if (is_array($customer)) {
-                $input['customer_uuid'] = Utils::get($customer, 'uuid');
-                $input['customer_type'] = Utils::getModelClassName(Utils::get($customer, 'table'));
+                $input['customer_uuid'] = $this->getValue($customer, 'uuid');
+                $input['customer_type'] = $this->getModelClassName($this->getValue($customer, 'table'));
             }
         }
 
         // driver assignment
         if ($request->has('driver')) {
-            $input['driver_uuid'] = Utils::getUuid('drivers', [
+            $input['driver_uuid'] = $this->getUuid('drivers', [
                 'public_id'    => $request->input('driver'),
                 'company_uuid' => session('company'),
             ]);
@@ -64,7 +64,7 @@ class EntityController extends Controller
             $destinationKey = $request->or(['destination', 'waypoint']);
 
             if ($request->has('payload')) {
-                $payload = Payload::where('public_id', $request->input('payload'))->first();
+                $payload = $this->findPayloadByPublicId($request->input('payload'));
 
                 if ($payload) {
                     // if a destination or waypoint is explicitly set
@@ -80,10 +80,10 @@ class EntityController extends Controller
         $input['company_uuid'] = session('company');
 
         // create the entity
-        $entity = Entity::create($input);
+        $entity = $this->createEntity($input);
 
         // response the driver resource
-        return new EntityResource($entity);
+        return $this->entityResource($entity);
     }
 
     /**
@@ -98,9 +98,9 @@ class EntityController extends Controller
     {
         // find for the entity
         try {
-            $entity = Entity::findRecordOrFail($id);
+            $entity = $this->findEntityOrFail($id);
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $exception) {
-            return response()->json(
+            return $this->jsonResponse(
                 [
                     'error' => 'Entity resource not found.',
                 ],
@@ -113,7 +113,7 @@ class EntityController extends Controller
 
         // payload assignment
         if ($request->has('payload')) {
-            $input['payload_uuid'] = Utils::getUuid('payloads', [
+            $input['payload_uuid'] = $this->getUuid('payloads', [
                 'public_id'    => $request->input('payload'),
                 'company_uuid' => session('company'),
             ]);
@@ -121,22 +121,22 @@ class EntityController extends Controller
 
         // customer assignment
         if ($request->has('customer')) {
-            $customer = Utils::getUuid(
+            $customer = $this->getUuid(
                 ['contacts', 'vendors'],
                 [
-                    'public_id'    => $request->input('payload'),
+                    'public_id'    => $request->input('customer'),
                     'company_uuid' => session('company'),
                 ]
             );
             if (is_array($customer)) {
-                $input['customer_uuid']   = Utils::get($customer, 'uuid');
-                $input['customer_object'] = Utils::singularize(Utils::get($customer, 'table'));
+                $input['customer_uuid']   = $this->getValue($customer, 'uuid');
+                $input['customer_object'] = $this->singularize($this->getValue($customer, 'table'));
             }
         }
 
         // driver assignment
         if ($request->has('driver')) {
-            $input['driver_uuid'] = Utils::getUuid('drivers', [
+            $input['driver_uuid'] = $this->getUuid('drivers', [
                 'public_id'    => $request->input('driver'),
                 'company_uuid' => session('company'),
             ]);
@@ -147,13 +147,13 @@ class EntityController extends Controller
             $destinationKey = $request->or(['destination', 'waypoint']);
 
             if ($request->has('payload')) {
-                $payload = Payload::where('public_id', $request->input('payload'))->first();
+                $payload = $this->findPayloadByPublicId($request->input('payload'));
 
                 if ($payload) {
                     // if a destination or waypoint is explicitly set
                     $destination = $payload->findDestinationFromKey($destinationKey);
                     if ($destination instanceof Place) {
-                        $attributes['destination_uuid'] = $destination->uuid;
+                        $input['destination_uuid'] = $destination->uuid;
                     }
                 }
             }
@@ -163,7 +163,7 @@ class EntityController extends Controller
         $entity->update($input);
 
         // response the entity resource
-        return new EntityResource($entity);
+        return $this->entityResource($entity);
     }
 
     /**
@@ -173,9 +173,9 @@ class EntityController extends Controller
      */
     public function query(Request $request)
     {
-        $results = Entity::queryWithRequest($request);
+        $results = $this->queryEntities($request);
 
-        return EntityResource::collection($results);
+        return $this->entityResourceCollection($results);
     }
 
     /**
@@ -187,9 +187,9 @@ class EntityController extends Controller
     {
         // find for the entity
         try {
-            $entity = Entity::findRecordOrFail($id);
+            $entity = $this->findEntityOrFail($id);
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $exception) {
-            return response()->json(
+            return $this->jsonResponse(
                 [
                     'error' => 'Entity resource not found.',
                 ],
@@ -198,7 +198,7 @@ class EntityController extends Controller
         }
 
         // response the entity resource
-        return new EntityResource($entity);
+        return $this->entityResource($entity);
     }
 
     /**
@@ -210,9 +210,9 @@ class EntityController extends Controller
     {
         // find for the driver
         try {
-            $entity = Entity::findRecordOrFail($id);
+            $entity = $this->findEntityOrFail($id);
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $exception) {
-            return response()->json(
+            return $this->jsonResponse(
                 [
                     'error' => 'Entity resource not found.',
                 ],
@@ -224,7 +224,7 @@ class EntityController extends Controller
         $entity->delete();
 
         // response the entity resource
-        return new DeletedResource($entity);
+        return $this->deletedEntityResource($entity);
     }
 
     protected function entityInputFromRequest(Request $request): array
@@ -249,5 +249,65 @@ class EntityController extends Controller
             'meta',
             'supplier_uuid',
         ]);
+    }
+
+    protected function getUuid(array|string $table, array $where): mixed
+    {
+        return Utils::getUuid($table, $where);
+    }
+
+    protected function getValue(array|object $data, string $key): mixed
+    {
+        return Utils::get($data, $key);
+    }
+
+    protected function getModelClassName(?string $table): ?string
+    {
+        return $table ? Utils::getModelClassName($table) : null;
+    }
+
+    protected function singularize(?string $value): ?string
+    {
+        return $value ? Utils::singularize($value) : null;
+    }
+
+    protected function findPayloadByPublicId(string $publicId): ?Payload
+    {
+        return Payload::where('public_id', $publicId)->first();
+    }
+
+    protected function createEntity(array $input): Entity
+    {
+        return Entity::create($input);
+    }
+
+    protected function findEntityOrFail(string $id): Entity
+    {
+        return Entity::findRecordOrFail($id);
+    }
+
+    protected function queryEntities(Request $request): mixed
+    {
+        return Entity::queryWithRequest($request);
+    }
+
+    protected function entityResource(Entity $entity)
+    {
+        return new EntityResource($entity);
+    }
+
+    protected function entityResourceCollection(mixed $results): mixed
+    {
+        return EntityResource::collection($results);
+    }
+
+    protected function deletedEntityResource(Entity $entity)
+    {
+        return new DeletedResource($entity);
+    }
+
+    protected function jsonResponse(array $payload, int $status)
+    {
+        return response()->json($payload, $status);
     }
 }
