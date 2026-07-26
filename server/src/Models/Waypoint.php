@@ -203,10 +203,10 @@ class Waypoint extends Model
             }
         }
 
-        $values['uuid']         = $uuid = static::generateUuid();
-        $values['public_id']    = static::generatePublicId('waypoint');
+        $values['uuid']         = $uuid = static::newUuid();
+        $values['public_id']    = static::newPublicId();
         $values['_key']         = session('api_key') ?? 'console';
-        $values['created_at']   = Carbon::now()->toDateTimeString();
+        $values['created_at']   = static::currentTimestamp();
         $values['company_uuid'] = session('company');
 
         if ($payload) {
@@ -217,21 +217,56 @@ class Waypoint extends Model
             $values['meta'] = json_encode($values['meta']);
         }
 
-        $result = static::insert($values);
+        $result = static::insertWaypoint($values);
         if ($result && $payload) {
             // create tracking number for entity
-            $trackingNumberId = TrackingNumber::insertGetUuid([
+            $trackingNumberId = static::createTrackingNumber([
                 'owner_uuid' => $uuid,
                 'owner_type' => Utils::getModelClassName('waypoint'),
                 'region'     => $payload->getPickupRegion(),
-                'location'   => Utils::parsePointToWkt($payload->getPickupLocation()),
+                'location'   => static::pickupLocationWkt($payload),
             ]);
 
             // set tracking number
-            static::where('uuid', $uuid)->update(['tracking_number_uuid' => $trackingNumberId]);
+            static::updateTrackingNumberUuid($uuid, $trackingNumberId);
         }
 
         return $result ? $uuid : false;
+    }
+
+    protected static function newUuid(): string
+    {
+        return static::generateUuid();
+    }
+
+    protected static function newPublicId(): string
+    {
+        return static::generatePublicId('waypoint');
+    }
+
+    protected static function currentTimestamp(): string
+    {
+        return Carbon::now()->toDateTimeString();
+    }
+
+    protected static function insertWaypoint(array $values): bool
+    {
+        return static::insert($values);
+    }
+
+    protected static function createTrackingNumber(array $values)
+    {
+        return TrackingNumber::insertGetUuid($values);
+    }
+
+    protected static function pickupLocationWkt(Payload $payload)
+    {
+        return Utils::parsePointToWkt($payload->getPickupLocation());
+    }
+
+    protected static function updateTrackingNumberUuid(string $uuid, mixed $trackingNumberId): void
+    {
+        static::where('uuid', $uuid)->update(['tracking_number_uuid' => $trackingNumberId]);
     }
 
     /**
