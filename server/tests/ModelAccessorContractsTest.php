@@ -34,6 +34,7 @@ use Fleetbase\FleetOps\Models\Place;
 use Fleetbase\FleetOps\Models\Position;
 use Fleetbase\FleetOps\Models\PurchaseRate;
 use Fleetbase\FleetOps\Models\Route;
+use Fleetbase\FleetOps\Models\ServiceArea;
 use Fleetbase\FleetOps\Models\ServiceQuote;
 use Fleetbase\FleetOps\Models\ServiceRate;
 use Fleetbase\FleetOps\Models\ServiceRateFee;
@@ -43,6 +44,7 @@ use Fleetbase\FleetOps\Models\VehicleDevice;
 use Fleetbase\FleetOps\Models\Vendor;
 use Fleetbase\FleetOps\Models\Waypoint;
 use Fleetbase\FleetOps\Models\WorkOrder;
+use Fleetbase\FleetOps\Models\Zone;
 use Fleetbase\FleetOps\Support\Telematics\TelematicProviderRegistry;
 use Fleetbase\FleetOps\Traits\PayloadAccessors;
 use Fleetbase\LaravelMysqlSpatial\Types\Point;
@@ -1015,6 +1017,131 @@ test('service rate accessors flags fee normalization and quote helpers are stabl
     ]);
 
     expect($rate->normalizeServiceRateFeePayload('bad payload'))->toBeNull();
+});
+
+test('service rate alternate calculation branches and relation predicates are stable', function () {
+    fleetopsModelAccessorsUseInMemoryRelationConnection();
+
+    $area = new ServiceArea();
+    $area->setRawAttributes(['name' => 'Central Area'], true);
+    $zone = new Zone();
+    $zone->setRawAttributes(['name' => 'Downtown Zone'], true);
+
+    $relationRate = new FleetOpsLoadedServiceRateFake([
+        'rate_calculation_method'       => 'algorithm',
+        'has_peak_hours_fee'            => false,
+        'peak_hours_calculation_method' => 'percentage',
+        'has_cod_fee'                   => false,
+        'cod_calculation_method'        => 'flat',
+        'base_fee'                      => 100,
+        'currency'                      => 'USD',
+    ]);
+    $relationRate->setRelation('serviceArea', $area);
+    $relationRate->setRelation('zone', $zone);
+
+    expect($relationRate->hasServiceArea())->toBeTrue()
+        ->and($relationRate->hasZone())->toBeTrue()
+        ->and($relationRate->isAlgorithm())->toBeTrue()
+        ->and($relationRate->isRateCalculationMethod(['fixed_meter', 'algorithm']))->toBeTrue()
+        ->and($relationRate->hasPeakHoursFee())->toBeFalse()
+        ->and($relationRate->hasPeakHoursFlatFee())->toBeFalse()
+        ->and($relationRate->hasPeakHoursPercentageFee())->toBeTrue()
+        ->and($relationRate->hasCodFee())->toBeFalse()
+        ->and($relationRate->hasCodFlatFee())->toBeTrue()
+        ->and($relationRate->hasCodPercentageFee())->toBeFalse();
+
+    $fixedRate = new FleetOpsLoadedServiceRateFake([
+        'rate_calculation_method' => 'fixed_rate',
+        'base_fee'                => 100,
+        'currency'                => 'USD',
+    ]);
+    $fixedFee = new ServiceRateFee(['distance' => 5, 'fee' => 250]);
+    $fixedRate->setRelation('rateFees', collect([$fixedFee]));
+
+    [$fixedTotal, $fixedLines] = $fixedRate->quoteFromPreliminaryData([], [], 3000, 0);
+
+    $dropRate = new FleetOpsLoadedServiceRateFake([
+        'rate_calculation_method' => 'per_drop',
+        'base_fee'                => 100,
+        'currency'                => 'USD',
+    ]);
+    $dropFee = new ServiceRateFee(['min' => 3, 'max' => 5, 'fee' => 175]);
+    $dropRate->setRelation('rateFees', collect([$dropFee]));
+
+    [$dropTotal, $dropLines] = $dropRate->quoteFromPreliminaryData([], [new Place(), new Place(), new Place()], 0, 0);
+
+    $algorithmRate = new FleetOpsLoadedServiceRateFake([
+        'rate_calculation_method' => 'algo',
+        'algorithm'               => '{base_fee} + {distance_km} + {stops}',
+        'base_fee'                => 100,
+        'currency'                => 'USD',
+    ]);
+
+    [$algorithmTotal, $algorithmLines] = $algorithmRate->quoteFromPreliminaryData([], [new Place(), new Place(), new Place()], 2500, 0, false, 2);
+
+    $reflection       = new ReflectionClass(ServiceRate::class);
+    $normalizer       = $reflection->getMethod('normalizeDistanceForUnit');
+    $weightNormalizer = $reflection->getMethod('normalizeEntityWeightToKilograms');
+    $multiZoneQuote   = $reflection->getMethod('quoteMultiZoneDistance');
+    $multiZoneCalc    = $reflection->getMethod('calculateMultiZoneDistances');
+    $geometryReader   = $reflection->getMethod('readRateRuleGeometry');
+    $placePoint       = $reflection->getMethod('getLngLatFromPlace');
+
+    $emptyMultiZoneRate = new FleetOpsLoadedServiceRateFake([
+        'rate_calculation_method' => 'multi_zone_distance',
+        'base_fee'                => 100,
+        'currency'                => 'USD',
+    ]);
+    $emptyMultiZoneRate->setRelation('rateFees', collect());
+
+    [$emptyMultiZoneTotal, $emptyMultiZoneLines] = $multiZoneQuote->invoke($emptyMultiZoneRate, [], 1500);
+
+    $fallbackFee = new ServiceRateFee([
+        'uuid'          => 'fallback-fee',
+        'is_fallback'   => true,
+        'priority'      => 10,
+        'distance_unit' => 'km',
+        'fee'           => 2,
+    ]);
+    $fallbackMultiZoneRate = new FleetOpsLoadedServiceRateFake([
+        'rate_calculation_method' => 'multi_zone_distance',
+        'base_fee'                => 100,
+        'currency'                => 'USD',
+    ]);
+    $fallbackMultiZoneRate->setRelation('rateFees', collect([$fallbackFee]));
+
+    [$fallbackMultiZoneTotal, $fallbackMultiZoneLines] = $multiZoneQuote->invoke($fallbackMultiZoneRate, [], 1500);
+    $fallbackDistances                                 = $multiZoneCalc->invoke($fallbackMultiZoneRate, [new Place()], collect(), $fallbackFee, 1500);
+    $invalidGeometry                                   = $geometryReader->invoke($fallbackMultiZoneRate, new ServiceRateFee(['zone' => ['border' => 'not-json']]), new Brick\Geo\IO\GeoJSONReader());
+
+    expect($fixedRate->isFixedMeter())->toBeTrue()
+        ->and($fixedRate->isFixedRate())->toBeTrue()
+        ->and($fixedTotal)->toBe(350)
+        ->and($fixedLines)->toHaveCount(2)
+        ->and($dropRate->isPerDrop())->toBeTrue()
+        ->and($dropTotal)->toBe(275)
+        ->and($dropLines)->toHaveCount(2)
+        ->and($algorithmRate->isAlgorithm())->toBeTrue()
+        ->and($algorithmTotal)->toBe(206)
+        ->and($algorithmLines)->toHaveCount(2)
+        ->and(round($normalizer->invoke($relationRate, 3.048, 'ft'), 1))->toBe(9.8)
+        ->and(round($normalizer->invoke($relationRate, 9.144, 'yd'), 1))->toBe(9.8)
+        ->and($normalizer->invoke($relationRate, 123, 'm'))->toBe(123.0)
+        ->and($normalizer->invoke($relationRate, null, 'km'))->toBe(0.0)
+        ->and($weightNormalizer->invoke($relationRate, ['weight' => null]))->toBe(0.0)
+        ->and($weightNormalizer->invoke($relationRate, ['weight' => 'heavy']))->toBe(0.0)
+        ->and($weightNormalizer->invoke($relationRate, ['weight' => 2, 'weight_unit' => 'tonnes']))->toBe(2000.0)
+        ->and($weightNormalizer->invoke($relationRate, ['weight' => 3, 'weight_unit' => 'kg']))->toBe(3.0)
+        ->and($emptyMultiZoneRate->isMultiZoneDistance())->toBeTrue()
+        ->and($emptyMultiZoneTotal)->toBe(0)
+        ->and($emptyMultiZoneLines)->toHaveCount(0)
+        ->and($fallbackMultiZoneTotal)->toBe(3)
+        ->and($fallbackMultiZoneLines)->toHaveCount(1)
+        ->and($fallbackMultiZoneLines->first()['code'])->toBe('MULTI_ZONE_DISTANCE_FEE')
+        ->and($fallbackDistances[0]['rule'])->toBe($fallbackFee)
+        ->and($fallbackDistances[0]['distance_m'])->toBe(1500.0)
+        ->and($invalidGeometry)->toBeNull()
+        ->and($placePoint->invoke($relationRate, null))->toBeNull();
 });
 
 test('fleet accessors expose photo fallback and online asset counts', function () {
