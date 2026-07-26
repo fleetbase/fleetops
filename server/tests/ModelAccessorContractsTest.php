@@ -19,6 +19,7 @@ if (!function_exists('Fleetbase\FleetOps\Models\now')) {
 use Fleetbase\FleetOps\Exceptions\CustomerUserConflictException;
 use Fleetbase\FleetOps\Models\Contact;
 use Fleetbase\FleetOps\Models\Device;
+use Fleetbase\FleetOps\Models\Driver;
 use Fleetbase\FleetOps\Models\Fleet;
 use Fleetbase\FleetOps\Models\FuelProviderTransaction;
 use Fleetbase\FleetOps\Models\FuelReport;
@@ -78,6 +79,55 @@ class FleetOpsCountingRelationFake
     public function count(): int
     {
         return $this->total;
+    }
+}
+
+class FleetOpsDriverAccessorFake extends Driver
+{
+    public array $loadedMissing = [];
+    public array $loaded        = [];
+    public array $updates       = [];
+    public bool $saved          = false;
+
+    public function loadMissing($relations)
+    {
+        $this->loadedMissing[] = $relations;
+
+        return $this;
+    }
+
+    public function load($relations)
+    {
+        $this->loaded[] = $relations;
+
+        return $this;
+    }
+
+    public function update(array $attributes = [], array $options = []): bool
+    {
+        $this->updates[] = $attributes;
+        $this->setRawAttributes(array_merge($this->getAttributes(), $attributes), true);
+
+        return true;
+    }
+
+    public function save(array $options = []): bool
+    {
+        $this->saved = true;
+
+        return true;
+    }
+}
+
+class FleetOpsDriverOrderAccessorFake extends Order
+{
+    public array $loadedMissing = [];
+
+    public function loadMissing($relations)
+    {
+        $this->loadedMissing[] = $relations;
+
+        return $this;
     }
 }
 
@@ -779,6 +829,106 @@ test('fleet accessors expose photo fallback and online asset counts', function (
         ->and($fleet->vehicles_online_count)->toBe(3)
         ->and($fleet->getActivitylogOptions()->logAttributes)->toBe(['name', 'task', 'service_area_uuid', 'zone_uuid'])
         ->and($fleet->getSlugOptions()->slugField)->toBe('slug');
+});
+
+test('driver accessors notification routes and assignment helpers are stable', function () {
+    $driver = new FleetOpsDriverAccessorFake();
+    $driver->setRawAttributes([
+        'uuid'                   => 'driver-uuid',
+        'public_id'              => 'driver_public',
+        'company_uuid'           => 'company-uuid',
+        'heading'                => 90,
+        'vehicle_uuid'           => null,
+        'drivers_license_number' => 'DL-123',
+    ], true);
+    $driver->setRelation('user', (object) [
+        'avatar'    => 'avatar-object',
+        'avatarUrl' => 'https://cdn.test/driver.png',
+        'name'      => 'Dana Driver',
+        'phone'     => '+15551234567',
+        'email'     => 'dana@example.test',
+    ]);
+    $driver->setRelation('devices', collect([
+        (object) ['platform' => 'android', 'token' => 'fcm-a'],
+        (object) ['platform' => 'ios', 'token' => 'apn-a'],
+        (object) ['platform' => 'android', 'token' => 'fcm-b'],
+        (object) ['platform' => 'web', 'token' => 'web-a'],
+    ]));
+
+    $vehicle = new Vehicle();
+    $vehicle->setRawAttributes([
+        'uuid'       => 'vehicle-uuid',
+        'avatar_url' => 'https://cdn.test/vehicle.png',
+    ], true);
+
+    expect($driver->photo)->toBe('avatar-object')
+        ->and($driver->photo_url)->toBe('https://cdn.test/driver.png')
+        ->and($driver->name)->toBe('Dana Driver')
+        ->and($driver->phone)->toBe('+15551234567')
+        ->and($driver->email)->toBe('dana@example.test')
+        ->and($driver->rotation)->toBe(180.0)
+        ->and($driver->routeNotificationForFcm())->toBe([0 => 'fcm-a', 2 => 'fcm-b'])
+        ->and($driver->routeNotificationForApn())->toBe([1 => 'apn-a'])
+        ->and((string) $driver->receivesBroadcastNotificationsOn(new stdClass()))->toBe('driver.driver_public')
+        ->and($driver->isVehicleNotAssigned())->toBeTrue()
+        ->and($driver->isVehicleAssigned())->toBeFalse()
+        ->and($driver->setVehicle($vehicle))->toBe($driver)
+        ->and($driver->vehicle_uuid)->toBe('vehicle-uuid')
+        ->and($driver->vehicle)->toBe($vehicle)
+        ->and($driver->isVehicleAssigned())->toBeTrue()
+        ->and($driver->unassignCurrentJob())->toBeTrue()
+        ->and($driver->updates)->toBe([['current_job_uuid' => null]])
+        ->and($driver->unassignCurrentOrder())->toBeTrue()
+        ->and($driver->updates[1])->toBe(['current_job_uuid' => null]);
+});
+
+test('driver license expiry status avatar and current order helpers handle edge cases', function () {
+    Carbon::setTestNow(Carbon::parse('2026-07-26 10:00:00'));
+
+    $fresh = new FleetOpsDriverAccessorFake();
+    $fresh->setLicenseExpiryAttribute(null);
+
+    $existing         = new FleetOpsDriverAccessorFake();
+    $existing->exists = true;
+    $existing->setRawAttributes(['license_expiry' => '2026-12-31'], true);
+    $existing->setLicenseExpiryAttribute('');
+
+    $parsed = new FleetOpsDriverAccessorFake();
+    $parsed->setLicenseExpiryAttribute('July 30 2026');
+    $parsed->status = 'active';
+    $parsed->status = null;
+    $parsed->status = 'off-duty';
+
+    $vehicle = new Vehicle();
+    $vehicle->setRawAttributes(['avatar_url' => 'https://cdn.test/vehicle-avatar.png'], true);
+
+    $avatarDriver = new FleetOpsDriverAccessorFake();
+    $avatarDriver->setRelation('vehicle', $vehicle);
+
+    $order = new FleetOpsDriverOrderAccessorFake();
+    $order->setRawAttributes(['uuid' => 'order-uuid'], true);
+
+    $orderDriver = new FleetOpsDriverAccessorFake();
+    $orderDriver->setRelation('currentOrder', $order);
+
+    $emptyDriver = new FleetOpsDriverAccessorFake();
+    $emptyDriver->setRelation('currentOrder', null);
+
+    expect($fresh->getAttributes()['license_expiry'])->toBeNull()
+        ->and($existing->getAttributes()['license_expiry'])->toBe('2026-12-31')
+        ->and($parsed->getAttributes()['license_expiry'])->toBe('2026-07-30')
+        ->and($parsed->status)->toBe('off-duty')
+        ->and($avatarDriver->getAvatarUrlAttribute(null))->toBe('https://cdn.test/vehicle-avatar.png')
+        ->and($avatarDriver->loadedMissing)->toBe(['vehicle'])
+        ->and($orderDriver->getCurrentOrder())->toBe($order)
+        ->and($orderDriver->loadedMissing)->toBe(['currentOrder'])
+        ->and($order->loadedMissing)->toBe(['payload'])
+        ->and($emptyDriver->getCurrentOrder())->toBeNull()
+        ->and($emptyDriver->loadedMissing)->toBe(['currentOrder'])
+        ->and($parsed->getActivitylogOptions())->toBeInstanceOf(Spatie\Activitylog\LogOptions::class)
+        ->and($parsed->getSlugOptions()->slugField)->toBe('slug');
+
+    Carbon::setTestNow();
 });
 
 test('vehicle accessors import mapping and mutable json helpers are stable', function () {
