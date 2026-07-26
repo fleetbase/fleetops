@@ -407,6 +407,18 @@ class FleetOpsPlainPlaceFake extends Place
     }
 }
 
+class FleetOpsHydratablePlaceFake extends Place
+{
+    public bool $saved = false;
+
+    public function save(array $options = []): bool
+    {
+        $this->saved = true;
+
+        return true;
+    }
+}
+
 class FleetOpsLoadedServiceRateFake extends ServiceRate
 {
     public function load($relations)
@@ -1561,6 +1573,56 @@ test('payload and place pure accessors normalize fallback data', function () {
             'country' => 'US',
             'phone'   => '+1555',
         ]);
+});
+
+test('shared place hydration fills only safe missing fields and zero locations', function () {
+    $existing = new FleetOpsHydratablePlaceFake();
+    $existing->setRawAttributes([
+        'name'        => null,
+        'street1'     => '1 Existing Street',
+        'street2'     => null,
+        'province'    => '',
+        'postal_code' => null,
+        'phone'       => ' +1555000 ',
+        'location'    => new Point(0, 0),
+    ], true);
+
+    $location = new Point(1.3521, 103.8198);
+
+    $hydrated = Place::hydrateSharedPlace($existing, [
+        'name'        => '  Warehouse A ',
+        'street2'     => ' Unit 4 ',
+        'province'    => ' Central ',
+        'postal_code' => ' 018956 ',
+        'phone'       => '+1555999',
+        'location'    => $location,
+    ]);
+
+    expect($hydrated)->toBe($existing)
+        ->and($existing->name)->toBe('Warehouse A')
+        ->and($existing->street2)->toBe('Unit 4')
+        ->and($existing->province)->toBe('Central')
+        ->and($existing->postal_code)->toBe('018956')
+        ->and($existing->phone)->toBe(' +1555000 ')
+        ->and($existing->location)->toBe($location)
+        ->and($existing->saved)->toBeTrue();
+
+    $complete = new FleetOpsHydratablePlaceFake();
+    $complete->setRawAttributes([
+        'name'     => 'Complete Place',
+        'street2'  => 'Level 2',
+        'location' => new Point(1, 2),
+    ], true);
+
+    Place::hydrateSharedPlace($complete, [
+        'name'     => 'Ignored',
+        'street2'  => 'Ignored',
+        'location' => new Point(3, 4),
+    ]);
+
+    expect($complete->name)->toBe('Complete Place')
+        ->and($complete->street2)->toBe('Level 2')
+        ->and($complete->saved)->toBeFalse();
 });
 
 test('telematic model accessors relationships scopes and heartbeat contracts are stable', function () {
