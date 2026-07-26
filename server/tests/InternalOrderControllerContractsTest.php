@@ -1,16 +1,30 @@
 <?php
 
+use Fleetbase\FleetOps\Flow\Activity;
 use Fleetbase\FleetOps\Http\Controllers\Internal\v1\OrderController;
 use Fleetbase\FleetOps\Http\Requests\BulkDispatchRequest;
 use Fleetbase\FleetOps\Http\Requests\CancelOrderRequest;
 use Fleetbase\FleetOps\Models\Driver;
+use Fleetbase\FleetOps\Models\Entity;
 use Fleetbase\FleetOps\Models\Order;
 use Fleetbase\FleetOps\Models\OrderConfig;
 use Fleetbase\FleetOps\Models\Payload;
 use Fleetbase\FleetOps\Models\Place;
+use Fleetbase\FleetOps\Models\Proof;
+use Fleetbase\FleetOps\Models\TrackingStatus;
+use Fleetbase\FleetOps\Models\Waypoint;
 use Fleetbase\FleetOps\Support\OrderTracker;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
+
+class FleetOpsInternalOrderLifecycleEventRecorder
+{
+    public static array $events = [];
+}
+
+if (!function_exists('Fleetbase\FleetOps\Http\Controllers\Internal\v1\event')) {
+    eval('namespace Fleetbase\FleetOps\Http\Controllers\Internal\v1; function event($event = null) { \FleetOpsInternalOrderLifecycleEventRecorder::$events[] = $event; return $event; }');
+}
 
 class FleetOpsInternalOrderLifecycleControllerProbe extends OrderController
 {
@@ -22,6 +36,15 @@ class FleetOpsInternalOrderLifecycleControllerProbe extends OrderController
     public ?string $assignedDriverUuid                       = null;
     public array $bulkNotification                           = [];
     public int $transactions                                 = 0;
+    public array $trackingNumberStatuses                     = [];
+
+    public function callHelper(string $method, mixed ...$arguments): mixed
+    {
+        $reflection = new ReflectionMethod(OrderController::class, $method);
+        $reflection->setAccessible(true);
+
+        return $reflection->invoke($this, ...$arguments);
+    }
 
     protected function findOrderRouteForEdit(string $uuid): ?Order
     {
@@ -98,6 +121,11 @@ class FleetOpsInternalOrderLifecycleControllerProbe extends OrderController
         $this->transactions++;
 
         return $callback();
+    }
+
+    protected function trackingNumberStatus(string $trackingNumberUuid): ?TrackingStatus
+    {
+        return $this->trackingNumberStatuses[$trackingNumberUuid] ?? null;
     }
 }
 
@@ -204,9 +232,13 @@ class FleetOpsInternalOrderLifecycleOrderFake extends Order
 class FleetOpsInternalOrderLifecyclePayloadFake extends Payload
 {
     public array $calls                           = [];
+    public array $loadedMissing                   = [];
+    public array $loadedRelations                 = [];
+    public array $unsetRelations                  = [];
     public ?Place $pickupOrFirstWaypointForTest   = null;
     public ?Place $dropoffOrLastWaypointForTest   = null;
     public ?Place $currentWaypointForTest         = null;
+    public ?Collection $waypointMarkersForTest    = null;
 
     public function setPickup($place, array $options = [])
     {
@@ -250,6 +282,31 @@ class FleetOpsInternalOrderLifecyclePayloadFake extends Payload
         return $this;
     }
 
+    public function loadMissing($relations)
+    {
+        $this->loadedMissing[] = $relations;
+
+        return $this;
+    }
+
+    public function load($relations)
+    {
+        $this->loadedRelations[] = $relations;
+
+        if ($this->waypointMarkersForTest && in_array('waypointMarkers.trackingNumber.status', (array) $relations, true)) {
+            $this->setRelation('waypointMarkers', $this->waypointMarkersForTest);
+        }
+
+        return $this;
+    }
+
+    public function unsetRelation($relation)
+    {
+        $this->unsetRelations[] = $relation;
+
+        return parent::unsetRelation($relation);
+    }
+
     public function getPickupOrFirstWaypoint(): ?Place
     {
         return $this->pickupOrFirstWaypointForTest;
@@ -260,7 +317,7 @@ class FleetOpsInternalOrderLifecyclePayloadFake extends Payload
         return $this->dropoffOrLastWaypointForTest;
     }
 
-    public function setCurrentWaypoint(Place|Fleetbase\FleetOps\Models\Waypoint $destination, bool $save = true): Payload
+    public function setCurrentWaypoint(Place|Waypoint $destination, bool $save = true): Payload
     {
         $this->currentWaypointForTest = $destination instanceof Place ? $destination : null;
         $this->calls[]                = ['setCurrentWaypoint', $destination, $save];
@@ -271,6 +328,43 @@ class FleetOpsInternalOrderLifecyclePayloadFake extends Payload
 
 class FleetOpsInternalOrderLifecycleDriverFake extends Driver
 {
+}
+
+class FleetOpsInternalOrderLifecycleWaypointFake extends Waypoint
+{
+    public array $activities    = [];
+    public array $loadedMissing = [];
+
+    public function loadMissing($relations)
+    {
+        $this->loadedMissing[] = $relations;
+
+        return $this;
+    }
+
+    public function insertActivity(Activity $activity, $location = [], $proof = null): string
+    {
+        $this->activities[] = [$activity->code, $location, $proof];
+
+        return 'activity-' . count($this->activities);
+    }
+
+    public function getPlace(): ?Place
+    {
+        return $this->place;
+    }
+}
+
+class FleetOpsInternalOrderLifecycleEntityFake extends Entity
+{
+    public array $activities = [];
+
+    public function insertActivity(Activity $activity, $location = [], $proof = null): string
+    {
+        $this->activities[] = [$activity->code, $location, $proof];
+
+        return 'activity-' . count($this->activities);
+    }
 }
 
 class FleetOpsInternalOrderLifecycleTrackerFake extends OrderTracker
@@ -317,7 +411,7 @@ function fleetopsInternalOrderLifecyclePayload(?Place $startingDestination = nul
 function fleetopsInternalOrderLifecyclePlace(string $uuid = 'place-uuid'): Place
 {
     $place = new Place();
-    $place->setRawAttributes(['uuid' => $uuid], true);
+    $place->setRawAttributes(['uuid' => $uuid, 'public_id' => $uuid], true);
 
     return $place;
 }
@@ -349,6 +443,17 @@ function fleetopsBulkDispatchRequest(array $payload): BulkDispatchRequest
 function fleetopsCancelOrderRequest(array $payload): CancelOrderRequest
 {
     return CancelOrderRequest::create('/internal/v1/orders/cancel', 'POST', $payload);
+}
+
+function fleetopsSuppressStrNullDeprecations(): Closure
+{
+    set_error_handler(function (int $severity, string $message): bool {
+        return $severity === E_DEPRECATED && str_contains($message, 'mb_strtolower(): Passing null');
+    });
+
+    return function (): void {
+        restore_error_handler();
+    };
 }
 
 test('internal order controller after-update syncs files waypoints and custom fields', function () {
@@ -642,4 +747,113 @@ test('internal order controller returns tracker info and waypoint etas', functio
         ->and($controller->waypointEtas(new Request(), 'missing-order')->getData(true))->toBe([
             'error' => 'No order found.',
         ]);
+});
+
+test('internal order controller waypoint helpers detect waypoint state and proof objects', function () {
+    $restore = fleetopsSuppressStrNullDeprecations();
+
+    try {
+        $controller = fleetopsInternalOrderLifecycleController();
+        $payload    = fleetopsInternalOrderLifecyclePayload();
+        $proof      = new Proof();
+        $proof->setRawAttributes(['uuid' => 'proof-uuid', 'public_id' => 'proof_public'], true);
+        $waypoint   = new FleetOpsInternalOrderLifecycleWaypointFake();
+        $waypoint->setRawAttributes([
+            'uuid'                 => 'waypoint-uuid',
+            'public_id'            => 'waypoint_public',
+            'place_uuid'           => 'place-current',
+            'tracking_number_uuid' => 'tracking-complete',
+            'order'                => 0,
+        ], true);
+        $payload->setRelation('waypoints', collect([fleetopsInternalOrderLifecyclePlace('waypoint-place')]));
+        $payload->setRelation('waypointMarkers', collect([$waypoint]));
+
+        $completeStatus = new TrackingStatus();
+        $completeStatus->setRawAttributes(['code' => 'completed', 'complete' => true], true);
+        $controller->trackingNumberStatuses['tracking-complete'] = $completeStatus;
+
+        expect($controller->callHelper('payloadHasWaypoints', null))->toBeFalse()
+            ->and($controller->callHelper('payloadHasWaypoints', $payload))->toBeTrue()
+            ->and($controller->callHelper('waypointMarkerIsComplete', $waypoint))->toBeTrue()
+            ->and($controller->callHelper('resolveProof', $proof))->toBe($proof)
+            ->and($controller->callHelper('resolveProof', ['not' => 'proof']))->toBeNull();
+
+        $waypointWithoutTracking = new FleetOpsInternalOrderLifecycleWaypointFake();
+        $waypointWithoutTracking->setRawAttributes(['uuid' => 'waypoint-no-tracking', 'public_id' => 'waypoint_no_tracking'], true);
+
+        expect($controller->callHelper('waypointMarkerIsComplete', $waypointWithoutTracking))->toBeFalse();
+    } finally {
+        $restore();
+    }
+});
+
+test('internal order controller updates current waypoint activity and advances incomplete destinations', function () {
+    $restore = fleetopsSuppressStrNullDeprecations();
+
+    try {
+        FleetOpsInternalOrderLifecycleEventRecorder::$events = [];
+        $controller                                          = fleetopsInternalOrderLifecycleController();
+        $order                                               = fleetopsInternalOrderLifecycleOrder('order-waypoint', 'started');
+        $payload                                             = fleetopsInternalOrderLifecyclePayload();
+        $payload->forceFill(['current_waypoint_uuid' => 'place-current']);
+        $order->setRelation('payload', $payload);
+        $payload->setRelation('order', $order);
+
+        $currentPlace = fleetopsInternalOrderLifecyclePlace('place-current');
+        $nextPlace    = fleetopsInternalOrderLifecyclePlace('place-next');
+        $current      = new FleetOpsInternalOrderLifecycleWaypointFake();
+        $current->setRawAttributes([
+            'uuid'                 => 'waypoint-current',
+            'public_id'            => 'waypoint_current',
+            'place_uuid'           => 'place-current',
+            'tracking_number_uuid' => 'tracking-current',
+            'order'                => 0,
+        ], true);
+        $current->setRelation('place', $currentPlace);
+
+        $next = new FleetOpsInternalOrderLifecycleWaypointFake();
+        $next->setRawAttributes([
+            'uuid'                 => 'waypoint-next',
+            'public_id'            => 'waypoint_next',
+            'place_uuid'           => 'place-next',
+            'tracking_number_uuid' => 'tracking-next',
+            'order'                => 1,
+        ], true);
+        $next->setRelation('place', $nextPlace);
+
+        $entity = new FleetOpsInternalOrderLifecycleEntityFake();
+        $entity->setRawAttributes(['uuid' => 'entity-current', 'destination_uuid' => 'place-current'], true);
+
+        $payload->waypointMarkersForTest = collect([$current, $next]);
+        $payload->setRelation('waypointMarkers', collect([$current, $next]));
+        $payload->setRelation('entities', collect([$entity]));
+
+        $completeStatus = new TrackingStatus();
+        $completeStatus->setRawAttributes(['code' => 'completed', 'complete' => true], true);
+        $incompleteStatus = new TrackingStatus();
+        $incompleteStatus->setRawAttributes(['code' => 'arrived', 'complete' => false], true);
+        $controller->trackingNumberStatuses = [
+            'tracking-current' => $completeStatus,
+            'tracking-next'    => $incompleteStatus,
+        ];
+
+        $activity = new Activity(['code' => 'arrived', 'complete' => true]);
+
+        expect($controller->callHelper('updateCurrentWaypointActivity', $payload, $activity, 'point', 'proof'))->toBe($current)
+            ->and($current->activities)->toBe([['arrived', 'point', 'proof']])
+            ->and($entity->activities)->toBe([['arrived', 'point', 'proof']])
+            ->and(FleetOpsInternalOrderLifecycleEventRecorder::$events)->toHaveCount(2)
+            ->and($controller->callHelper('allWaypointMarkersComplete', null))->toBeFalse()
+            ->and($controller->callHelper('allWaypointMarkersComplete', $payload))->toBeFalse()
+            ->and($controller->callHelper('advanceCurrentWaypointDestination', null))->toBeNull();
+
+        $advanced = $controller->callHelper('advanceCurrentWaypointDestination', $payload);
+
+        expect($advanced)->toBe($next)
+            ->and($payload->calls)->toContain(['setCurrentWaypoint', $next, true])
+            ->and($payload->currentWaypoint)->toBe($nextPlace)
+            ->and($payload->currentWaypointMarker)->toBe($next);
+    } finally {
+        $restore();
+    }
 });
