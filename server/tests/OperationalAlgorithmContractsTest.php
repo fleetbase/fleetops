@@ -6,9 +6,13 @@ use Fleetbase\FleetOps\Console\Commands\SimulateGeofenceEvents;
 use Fleetbase\FleetOps\Models\Driver;
 use Fleetbase\FleetOps\Models\Order;
 use Fleetbase\FleetOps\Models\Place;
+use Fleetbase\FleetOps\Models\Position;
 use Fleetbase\FleetOps\Models\ServiceArea;
 use Fleetbase\FleetOps\Models\Vehicle;
 use Fleetbase\FleetOps\Models\Zone;
+use Fleetbase\FleetOps\Notifications\LateDeparture;
+use Fleetbase\FleetOps\Notifications\ProlongedStoppage;
+use Fleetbase\FleetOps\Notifications\RouteDeviation;
 use Fleetbase\FleetOps\Orchestration\Engines\DriverAssignmentEngine;
 use Fleetbase\FleetOps\Orchestration\Engines\GreedyOrchestrationEngine;
 use Fleetbase\FleetOps\Support\Ai\Capabilities\OptimizeOrderRouteCapability;
@@ -103,6 +107,49 @@ class FleetOpsGeofenceStateTableFake
     }
 }
 
+class FleetOpsProcessOperationalAlertsProbe extends ProcessOperationalAlerts
+{
+    public ?Position $position  = null;
+    public array $notifications = [];
+    public bool $notifyResult   = true;
+
+    protected function latestPositionForOrder(Order $order): ?Position
+    {
+        return $this->position;
+    }
+
+    protected function notifyOnce(Order $order, string $key, string $notificationClass, array $context, bool $dryRun): bool
+    {
+        $this->notifications[] = [$order->uuid, $key, $notificationClass, $context, $dryRun];
+
+        return $this->notifyResult;
+    }
+}
+
+class FleetOpsOperationalAlertOrderFake extends Order
+{
+    public function getAttribute($key)
+    {
+        if (array_key_exists($key, $this->attributes)) {
+            return $this->attributes[$key];
+        }
+
+        if (array_key_exists($key, $this->relations)) {
+            return $this->relations[$key];
+        }
+
+        return null;
+    }
+}
+
+class FleetOpsOperationalAlertPositionFake extends Position
+{
+    public function getAttribute($key)
+    {
+        return $this->attributes[$key] ?? null;
+    }
+}
+
 function fleetopsInvoke(object $object, string $method, array $arguments = [])
 {
     $reflection = new ReflectionMethod($object, $method);
@@ -170,6 +217,37 @@ function fleetopsOrder(string $publicId, ?object $pickup = null, ?object $dropof
     return $order;
 }
 
+function fleetopsOperationalAlertOrder(array $attributes = [], mixed $routeDetails = null): Order
+{
+    $order = new FleetOpsOperationalAlertOrderFake();
+    $order->setRawAttributes(array_merge([
+        'uuid'         => 'order-uuid',
+        'company_uuid' => 'company-uuid',
+        'scheduled_at' => null,
+        'started_at'   => null,
+        'started'      => false,
+    ], $attributes), true);
+
+    if ($routeDetails !== null) {
+        $order->setRelation('route', (object) ['details' => $routeDetails]);
+    }
+
+    return $order;
+}
+
+function fleetopsOperationalAlertPosition(?Point $coordinates, float|int $speed = 0, ?string $createdAt = null): Position
+{
+    $position = new FleetOpsOperationalAlertPositionFake();
+    $position->setRawAttributes([
+        'uuid'       => 'position-uuid',
+        'speed'      => $speed,
+        'created_at' => $createdAt,
+    ], true);
+    $position->coordinates = $coordinates;
+
+    return $position;
+}
+
 test('operational alert command extracts route points and distances defensively', function () {
     $command = new ProcessOperationalAlerts();
 
@@ -194,6 +272,110 @@ test('operational alert command extracts route points and distances defensively'
             new Point(1.25, 103.85),
             $points,
         ]))->toBe(0.0);
+});
+
+test('operational alert command evaluates late departure route deviation and stoppage branches', function () {
+    Carbon::setTestNow('2026-07-26 12:00:00');
+
+    $command  = new FleetOpsProcessOperationalAlertsProbe();
+    $settings = [
+        'late_departures' => [
+            'enabled'              => true,
+            'grace_period_minutes' => 20,
+        ],
+        'route_deviations' => [
+            'enabled'                   => true,
+            'distance_threshold_meters' => 100,
+        ],
+        'prolonged_stoppages' => [
+            'enabled'                    => true,
+            'duration_threshold_minutes' => 30,
+        ],
+    ];
+
+    $lateOrder = fleetopsOperationalAlertOrder([
+        'uuid'         => 'late-order',
+        'scheduled_at' => '2026-07-26 10:00:00',
+    ]);
+    $futureOrder = fleetopsOperationalAlertOrder([
+        'uuid'         => 'future-order',
+        'scheduled_at' => '2026-07-26 11:50:00',
+    ]);
+
+    expect(fleetopsInvoke($command, 'processLateDeparture', [$lateOrder, ['late_departures' => ['enabled' => false]], true]))->toBeFalse()
+        ->and(fleetopsInvoke($command, 'processLateDeparture', [$futureOrder, $settings, true]))->toBeFalse()
+        ->and(fleetopsInvoke($command, 'processLateDeparture', [$lateOrder, $settings, true]))->toBeTrue()
+        ->and($command->notifications[0])->toMatchArray([
+            'late-order',
+            'late_departure',
+            LateDeparture::class,
+            [
+                'scheduled_at'         => '2026-07-26 10:00:00',
+                'grace_period_minutes' => 20,
+            ],
+            true,
+        ]);
+
+    $routeOrder = fleetopsOperationalAlertOrder([
+        'uuid' => 'route-order',
+    ], [
+        'geometry' => [
+            'coordinates' => [
+                [103.85, 1.25],
+                [103.86, 1.26],
+            ],
+        ],
+    ]);
+
+    $command->position = null;
+    expect(fleetopsInvoke($command, 'processRouteDeviation', [$routeOrder, ['route_deviations' => ['enabled' => false]], false]))->toBeFalse()
+        ->and(fleetopsInvoke($command, 'processRouteDeviation', [$routeOrder, $settings, false]))->toBeFalse();
+
+    $command->position = fleetopsOperationalAlertPosition(null);
+    expect(fleetopsInvoke($command, 'processRouteDeviation', [$routeOrder, $settings, false]))->toBeFalse();
+
+    $command->position = fleetopsOperationalAlertPosition(new Point(1.25, 103.85));
+    expect(fleetopsInvoke($command, 'processRouteDeviation', [$routeOrder, $settings, false]))->toBeFalse();
+
+    $command->position = fleetopsOperationalAlertPosition(new Point(1.5, 104.2));
+    expect(fleetopsInvoke($command, 'processRouteDeviation', [$routeOrder, $settings, false]))->toBeTrue();
+
+    $routeNotification = $command->notifications[1];
+    expect($routeNotification[1])->toBe('route_deviation')
+        ->and($routeNotification[2])->toBe(RouteDeviation::class)
+        ->and($routeNotification[3]['distance_meters'])->toBeGreaterThan(100)
+        ->and($routeNotification[3]['distance_threshold_meters'])->toBe(100)
+        ->and($routeNotification[3]['position_id'])->toBe('position-uuid');
+
+    $stoppageOrder = fleetopsOperationalAlertOrder([
+        'uuid'       => 'stoppage-order',
+        'started_at' => '2026-07-26 09:00:00',
+        'started'    => true,
+    ]);
+    $notStartedOrder = fleetopsOperationalAlertOrder(['uuid' => 'not-started-order']);
+
+    expect(fleetopsInvoke($command, 'processProlongedStoppage', [$stoppageOrder, ['prolonged_stoppages' => ['enabled' => false]], true]))->toBeFalse()
+        ->and(fleetopsInvoke($command, 'processProlongedStoppage', [$notStartedOrder, $settings, true]))->toBeFalse();
+
+    $command->position = fleetopsOperationalAlertPosition(new Point(1.25, 103.85), 12, '2026-07-26 10:00:00');
+    expect(fleetopsInvoke($command, 'processProlongedStoppage', [$stoppageOrder, $settings, true]))->toBeFalse();
+
+    $command->position = fleetopsOperationalAlertPosition(new Point(1.25, 103.85), 0, '2026-07-26 11:45:00');
+    expect(fleetopsInvoke($command, 'processProlongedStoppage', [$stoppageOrder, $settings, true]))->toBeFalse();
+
+    $command->position = fleetopsOperationalAlertPosition(new Point(1.25, 103.85), 0, '2026-07-26 10:45:00');
+    expect(fleetopsInvoke($command, 'processProlongedStoppage', [$stoppageOrder, $settings, true]))->toBeTrue();
+
+    $stoppageNotification = $command->notifications[2];
+    expect($stoppageNotification[1])->toBe('prolonged_stoppage')
+        ->and($stoppageNotification[2])->toBe(ProlongedStoppage::class)
+        ->and($stoppageNotification[3])->toBe([
+            'duration_threshold_minutes' => 30,
+            'position_id'                => 'position-uuid',
+            'stopped_since'              => '2026-07-26 10:45:00',
+        ]);
+
+    Carbon::setTestNow();
 });
 
 test('geofence simulation parses events and selects state tables by subject type', function () {
