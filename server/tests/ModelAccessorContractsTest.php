@@ -1062,6 +1062,8 @@ test('vendor accessors mutators options notifications and import mapping are sta
 });
 
 test('service rate accessors flags fee normalization and quote helpers are stable', function () {
+    fleetopsModelAccessorsUseInMemoryRelationConnection();
+
     $rate = new ServiceRate([
         'service_name'                  => 'Express',
         'rate_calculation_method'       => 'fixed_meter',
@@ -1078,7 +1080,12 @@ test('service rate accessors flags fee normalization and quote helpers are stabl
     $rate->setRelation('serviceArea', (object) ['name' => 'Central']);
     $rate->setRelation('zone', (object) ['name' => 'Zone A']);
 
-    expect($rate->service_area_name)->toBe('Central')
+    expect($rate->rateFees())->toBeInstanceOf(HasMany::class)
+        ->and($rate->parcelFees())->toBeInstanceOf(HasMany::class)
+        ->and($rate->orderConfig())->toBeInstanceOf(BelongsTo::class)
+        ->and($rate->serviceArea())->toBeInstanceOf(BelongsTo::class)
+        ->and($rate->zone())->toBeInstanceOf(BelongsTo::class)
+        ->and($rate->service_area_name)->toBe('Central')
         ->and($rate->zone_name)->toBe('Zone A')
         ->and($rate->isRateCalculationMethod('fixed_meter'))->toBeTrue()
         ->and($rate->isRateCalculationMethod(['per_meter', 'fixed_meter']))->toBeTrue()
@@ -1241,6 +1248,102 @@ test('service rate alternate calculation branches and relation predicates are st
         ->and($fallbackDistances[0]['distance_m'])->toBe(1500.0)
         ->and($invalidGeometry)->toBeNull()
         ->and($placePoint->invoke($relationRate, null))->toBeNull();
+});
+
+test('service rate multi zone geometry helpers match rule and fallback distances', function () {
+    fleetopsModelAccessorsUseInMemoryRelationConnection();
+
+    $rate = new FleetOpsLoadedServiceRateFake([
+        'rate_calculation_method' => 'multi_zone_distance',
+        'base_fee'                => 0,
+        'currency'                => 'USD',
+    ]);
+
+    $zonePolygon = json_encode([
+        'type'        => 'Polygon',
+        'coordinates' => [[
+            [103.70, 1.20],
+            [103.95, 1.20],
+            [103.95, 1.45],
+            [103.70, 1.45],
+            [103.70, 1.20],
+        ]],
+    ]);
+    $serviceAreaPolygon = [
+        'type'        => 'Polygon',
+        'coordinates' => [[
+            [103.00, 1.00],
+            [104.20, 1.00],
+            [104.20, 1.80],
+            [103.00, 1.80],
+            [103.00, 1.00],
+        ]],
+    ];
+
+    $zoneRule = new ServiceRateFee([
+        'uuid'          => 'zone-rule',
+        'label'         => 'Downtown',
+        'priority'      => 20,
+        'is_fallback'   => false,
+        'distance_unit' => 'km',
+        'fee'           => 3,
+    ]);
+    $zoneRule->setRelation('zone', (object) [
+        'name'   => 'Downtown',
+        'border' => $zonePolygon,
+    ]);
+
+    $serviceAreaRule = new ServiceRateFee([
+        'uuid'          => 'area-rule',
+        'label'         => 'Metro distance charge',
+        'priority'      => 10,
+        'is_fallback'   => false,
+        'distance_unit' => 'km',
+        'fee'           => 2,
+    ]);
+    $serviceAreaRule->setRelation('serviceArea', (object) [
+        'name'   => 'Metro',
+        'border' => $serviceAreaPolygon,
+    ]);
+
+    $fallbackRule = new ServiceRateFee([
+        'uuid'          => 'fallback-rule',
+        'priority'      => 1,
+        'is_fallback'   => true,
+        'distance_unit' => 'km',
+        'fee'           => 5,
+    ]);
+
+    $rate->setRelation('rateFees', collect([$fallbackRule, $serviceAreaRule, $zoneRule]));
+
+    $insideStart = new Place(['location' => new Point(1.30, 103.80)]);
+    $outsideEnd  = new Place(['location' => new Point(2.10, 104.80)]);
+
+    $reflection      = new ReflectionClass(ServiceRate::class);
+    $multiZoneQuote  = $reflection->getMethod('quoteMultiZoneDistance');
+    $multiZoneCalc   = $reflection->getMethod('calculateMultiZoneDistances');
+    $geometryReader  = $reflection->getMethod('readRateRuleGeometry');
+    $placePoint      = $reflection->getMethod('getLngLatFromPlace');
+
+    $reader        = new Brick\Geo\IO\GeoJSONReader();
+    $zoneGeometry  = $geometryReader->invoke($rate, $zoneRule, $reader);
+    $areaGeometry  = $geometryReader->invoke($rate, $serviceAreaRule, $reader);
+    $emptyGeometry = $geometryReader->invoke($rate, new ServiceRateFee(), $reader);
+
+    $rate->setRelation('rateFees', collect([$fallbackRule]));
+    [$fallbackTotal, $fallbackLines] = $multiZoneQuote->invoke($rate, [$insideStart, $outsideEnd], 2400);
+
+    $fallbackDistances = $multiZoneCalc->invoke($rate, [$insideStart, $outsideEnd], collect(), $fallbackRule, 2400);
+
+    expect($zoneGeometry)->not->toBeNull()
+        ->and($areaGeometry)->not->toBeNull()
+        ->and($emptyGeometry)->toBeNull()
+        ->and($fallbackTotal)->toBe(12)
+        ->and($fallbackLines)->toHaveCount(1)
+        ->and($fallbackLines->first()['details'])->toContain('Out-of-zone distance charge')
+        ->and($fallbackDistances[0]['rule'])->toBe($fallbackRule)
+        ->and($fallbackDistances[0]['distance_m'])->toBe(2400.0)
+        ->and($placePoint->invoke($rate, $insideStart))->toBe(['lat' => 1.3, 'lng' => 103.8]);
 });
 
 test('fleet accessors expose photo fallback and online asset counts', function () {
