@@ -31,7 +31,7 @@ class ServiceRateController extends Controller
 
         // service area assignment
         if ($request->has('service_area')) {
-            $input['service_area_uuid'] = Utils::getUuid('service_areas', [
+            $input['service_area_uuid'] = $this->resolveUuid('service_areas', [
                 'public_id'    => $request->input('service_area'),
                 'company_uuid' => session('company'),
             ]);
@@ -39,25 +39,25 @@ class ServiceRateController extends Controller
 
         // zone assignment
         if ($request->has('zone')) {
-            $input['zone_uuid'] = Utils::getUuid('zones', [
+            $input['zone_uuid'] = $this->resolveUuid('zones', [
                 'public_id'    => $request->input('zone'),
                 'company_uuid' => session('company'),
             ]);
         }
 
         // create the serviceRate
-        $serviceRate = ServiceRate::create($input);
+        $serviceRate = $this->createServiceRate($input);
 
         // create service rate fee's if applicable
         if ($this->shouldCreateMeterFees($request, $serviceRate)) {
             foreach ($request->input('meter_fees') as $meterFee) {
-                ServiceRateFee::create($this->meterFeeInputFromRequest($request, $serviceRate, $meterFee));
+                $this->createServiceRateFee($this->meterFeeInputFromRequest($request, $serviceRate, $meterFee));
             }
             $serviceRate->makeVisible('meter_fees');
         }
 
         // response the driver resource
-        return new ServiceRateResource($serviceRate);
+        return $this->serviceRateResource($serviceRate);
     }
 
     /**
@@ -72,7 +72,7 @@ class ServiceRateController extends Controller
     {
         // find for the serviceRate
         try {
-            $serviceRate = ServiceRate::findRecordOrFail($id);
+            $serviceRate = $this->findServiceRate($id);
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $exception) {
             return response()->json(
                 [
@@ -87,7 +87,7 @@ class ServiceRateController extends Controller
 
         // service area assignment
         if ($request->has('service_area')) {
-            $input['service_area_uuid'] = Utils::getUuid('service_areas', [
+            $input['service_area_uuid'] = $this->resolveUuid('service_areas', [
                 'public_id'    => $request->input('service_area'),
                 'company_uuid' => session('company'),
             ]);
@@ -95,7 +95,7 @@ class ServiceRateController extends Controller
 
         // zone assignment
         if ($request->has('zone')) {
-            $input['zone_uuid'] = Utils::getUuid('zones', [
+            $input['zone_uuid'] = $this->resolveUuid('zones', [
                 'public_id'    => $request->input('zone'),
                 'company_uuid' => session('company'),
             ]);
@@ -105,7 +105,7 @@ class ServiceRateController extends Controller
         $serviceRate->update($input);
 
         // response the serviceRate resource
-        return new ServiceRateResource($serviceRate);
+        return $this->serviceRateResource($serviceRate);
     }
 
     /**
@@ -115,9 +115,9 @@ class ServiceRateController extends Controller
      */
     public function query(Request $request)
     {
-        $results = ServiceRate::queryWithRequest($request);
+        $results = $this->queryServiceRates($request);
 
-        return ServiceRateResource::collection($results);
+        return $this->serviceRateResourceCollection($results);
     }
 
     /**
@@ -129,7 +129,7 @@ class ServiceRateController extends Controller
     {
         // find for the serviceRate
         try {
-            $serviceRate = ServiceRate::findRecordOrFail($id);
+            $serviceRate = $this->findServiceRate($id);
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $exception) {
             return response()->json(
                 [
@@ -140,7 +140,7 @@ class ServiceRateController extends Controller
         }
 
         // response the serviceRate resource
-        return new ServiceRateResource($serviceRate);
+        return $this->serviceRateResource($serviceRate);
     }
 
     /**
@@ -152,7 +152,7 @@ class ServiceRateController extends Controller
     {
         // find for the driver
         try {
-            $serviceRate = ServiceRate::findRecordOrFail($id);
+            $serviceRate = $this->findServiceRate($id);
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $exception) {
             return response()->json(
                 [
@@ -166,7 +166,7 @@ class ServiceRateController extends Controller
         $serviceRate->delete();
 
         // response the serviceRate resource
-        return new DeletedResource($serviceRate);
+        return $this->deletedServiceRateResource($serviceRate);
     }
 
     protected function serviceRateInputFromRequest(Request $request): array
@@ -214,5 +214,45 @@ class ServiceRateController extends Controller
             'fee'               => Utils::get($meterFee, 'fee'),
             'currency'          => $serviceRate->currency,
         ];
+    }
+
+    protected function resolveUuid(string $table, array $where): ?string
+    {
+        return Utils::getUuid($table, $where);
+    }
+
+    protected function createServiceRate(array $input): ServiceRate
+    {
+        return ServiceRate::create($input);
+    }
+
+    protected function createServiceRateFee(array $input): ServiceRateFee
+    {
+        return ServiceRateFee::create($input);
+    }
+
+    protected function findServiceRate(string $id): ServiceRate
+    {
+        return ServiceRate::findRecordOrFail($id);
+    }
+
+    protected function queryServiceRates(Request $request)
+    {
+        return ServiceRate::queryWithRequest($request);
+    }
+
+    protected function serviceRateResource(ServiceRate $serviceRate)
+    {
+        return new ServiceRateResource($serviceRate);
+    }
+
+    protected function serviceRateResourceCollection($serviceRates)
+    {
+        return ServiceRateResource::collection($serviceRates);
+    }
+
+    protected function deletedServiceRateResource(ServiceRate $serviceRate)
+    {
+        return new DeletedResource($serviceRate);
     }
 }
