@@ -14,7 +14,11 @@ use Fleetbase\FleetOps\Models\Proof;
 use Fleetbase\FleetOps\Models\TrackingStatus;
 use Fleetbase\FleetOps\Models\Waypoint;
 use Fleetbase\FleetOps\Support\OrderTracker;
+use Fleetbase\Http\Requests\ExportRequest;
+use Fleetbase\Models\Type;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Http\Request;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Collection;
 
 class FleetOpsInternalOrderLifecycleEventRecorder
@@ -26,17 +30,43 @@ if (!function_exists('Fleetbase\FleetOps\Http\Controllers\Internal\v1\event')) {
     eval('namespace Fleetbase\FleetOps\Http\Controllers\Internal\v1; function event($event = null) { \FleetOpsInternalOrderLifecycleEventRecorder::$events[] = $event; return $event; }');
 }
 
+if (!class_exists('Fleetbase\Http\Requests\ExportRequest', false)) {
+    eval('namespace Fleetbase\Http\Requests; class ExportRequest extends \Illuminate\Http\Request {}');
+}
+
 class FleetOpsInternalOrderLifecycleControllerProbe extends OrderController
 {
     public Collection $orders;
-    public ?FleetOpsInternalOrderLifecycleOrderFake $order   = null;
-    public ?FleetOpsInternalOrderLifecycleDriverFake $driver = null;
-    public array $trackingStatusExists                       = [];
-    public array $assignedOrderUuids                         = [];
-    public ?string $assignedDriverUuid                       = null;
-    public array $bulkNotification                           = [];
-    public int $transactions                                 = 0;
-    public array $trackingNumberStatuses                     = [];
+    public ?FleetOpsInternalOrderLifecycleOrderFake $order            = null;
+    public ?FleetOpsInternalOrderLifecycleDriverFake $driver          = null;
+    public array $trackingStatusExists                                = [];
+    public array $assignedOrderUuids                                  = [];
+    public ?string $assignedDriverUuid                                = null;
+    public array $bulkNotification                                    = [];
+    public int $transactions                                          = 0;
+    public array $trackingNumberStatuses                              = [];
+    public ?FleetOpsInternalOrderLifecycleOrderFake $startOrder       = null;
+    public ?FleetOpsInternalOrderLifecycleDriverFake $startDriver     = null;
+    public ?FleetOpsInternalOrderLifecyclePayloadFake $startPayload   = null;
+    public array $domainEvents                                        = [];
+    public array $activityUpdates                                     = [];
+    public bool $canPingDriver                                        = true;
+    public bool $pingOrderMissing                                     = false;
+    public bool $pingSendFails                                        = false;
+    public ?FleetOpsInternalOrderLifecycleOrderFake $pingOrder        = null;
+    public ?FleetOpsInternalOrderLifecycleOrderFake $labelOrder       = null;
+    public ?FleetOpsInternalOrderLifecycleWaypointFake $labelWaypoint = null;
+    public ?FleetOpsInternalOrderLifecycleEntityFake $labelEntity     = null;
+    public Collection $customTypes;
+    public array $defaultTypes                                        = [];
+    public ?FleetOpsInternalOrderLifecycleOrderFake $proofOrder       = null;
+    public ?FleetOpsInternalOrderLifecycleWaypointFake $proofWaypoint = null;
+    public ?FleetOpsInternalOrderLifecycleEntityFake $proofEntity     = null;
+    public Collection $proofResults;
+    public array $exportDownloads                                    = [];
+    public ?FleetOpsInternalOrderLifecycleOrderFake $trackingOrder   = null;
+    public ?FleetOpsInternalOrderLifecycleOrderFake $scheduleOrder   = null;
+    public ?FleetOpsInternalOrderLifecycleDriverFake $scheduleDriver = null;
 
     public function callHelper(string $method, mixed ...$arguments): mixed
     {
@@ -44,6 +74,174 @@ class FleetOpsInternalOrderLifecycleControllerProbe extends OrderController
         $reflection->setAccessible(true);
 
         return $reflection->invoke($this, ...$arguments);
+    }
+
+    public function appendProofInputsForTest(array &$incoming, mixed $value): void
+    {
+        $this->appendProofPhotoInputs($incoming, $value);
+    }
+
+    protected function findOrderForStart(?string $uuid): ?Order
+    {
+        $this->startOrder?->setAttribute('start_lookup_uuid', $uuid);
+
+        return $this->startOrder;
+    }
+
+    protected function findDriverForStart(?string $uuid): ?Driver
+    {
+        $this->startDriver?->setAttribute('start_lookup_uuid', $uuid);
+
+        return $this->startDriver;
+    }
+
+    protected function findPayloadForStart(?string $uuid): ?Payload
+    {
+        $this->startPayload?->setAttribute('start_lookup_uuid', $uuid);
+
+        return $this->startPayload;
+    }
+
+    protected function dispatchDomainEvent(object $event): object
+    {
+        $this->domainEvents[] = $event::class;
+
+        return $event;
+    }
+
+    protected function orderStartedEvent(Order $order): object
+    {
+        return new FleetOpsInternalOrderLifecycleStartedEventFake($order);
+    }
+
+    public function updateActivity(string $id, Request $request)
+    {
+        $this->activityUpdates[] = [$id, $request->input('activity')];
+
+        return response()->json(['updated' => $id, 'activity' => data_get($request->input('activity'), 'code')]);
+    }
+
+    protected function canPingDriver(): bool
+    {
+        return $this->canPingDriver;
+    }
+
+    protected function findOrderForDriverPing(string $id): Order
+    {
+        if ($this->pingOrderMissing) {
+            throw new ModelNotFoundException();
+        }
+
+        $this->pingOrder?->setAttribute('ping_lookup_id', $id);
+
+        return $this->pingOrder ?? fleetopsInternalOrderLifecycleOrder('ping-order');
+    }
+
+    protected function sendDriverPing(Driver $driver, Order $order): void
+    {
+        if ($this->pingSendFails) {
+            throw new RuntimeException('notification failed');
+        }
+
+        $driver->notifications[] = Fleetbase\FleetOps\Notifications\OrderPing::class;
+    }
+
+    protected function defaultOrderTypeConfig(): array
+    {
+        return $this->defaultTypes;
+    }
+
+    protected function customOrderTypes()
+    {
+        return $this->customTypes ?? collect();
+    }
+
+    protected function findOrderLabelSubject(string $id): ?Order
+    {
+        $this->labelOrder?->setAttribute('label_lookup_id', $id);
+
+        return $this->labelOrder;
+    }
+
+    protected function findWaypointLabelSubject(string $id): ?Waypoint
+    {
+        $this->labelWaypoint?->setAttribute('label_lookup_id', $id);
+
+        return $this->labelWaypoint;
+    }
+
+    protected function findEntityLabelSubject(string $id): ?Entity
+    {
+        $this->labelEntity?->setAttribute('label_lookup_id', $id);
+
+        return $this->labelEntity;
+    }
+
+    protected function findOrderForProofs(string $id): ?Order
+    {
+        $this->proofOrder?->setAttribute('proof_lookup_id', $id);
+
+        return $this->proofOrder;
+    }
+
+    protected function findWaypointProofSubject(Order $order, string $subjectId): ?Waypoint
+    {
+        $this->proofWaypoint?->setAttribute('proof_lookup_id', $subjectId);
+
+        return $this->proofWaypoint;
+    }
+
+    protected function findEntityProofSubject(string $subjectId): ?Entity
+    {
+        $this->proofEntity?->setAttribute('proof_lookup_id', $subjectId);
+
+        return $this->proofEntity;
+    }
+
+    protected function proofsForSubject(Order $order, Order|Waypoint|Entity $subject)
+    {
+        $this->proofResults ??= collect();
+        $this->proofResults->each(fn (Proof $proof) => $proof->setAttribute('queried_subject_uuid', $subject->uuid));
+
+        return $this->proofResults;
+    }
+
+    protected function downloadOrderExport(array $selections, string $fileName)
+    {
+        $this->exportDownloads[] = [$selections, $fileName];
+
+        return ['download' => $fileName, 'selections' => $selections];
+    }
+
+    protected function findOrderByTrackingNumber(string $trackingNumber): ?Order
+    {
+        $this->trackingOrder?->setAttribute('tracking_lookup', $trackingNumber);
+
+        return $this->trackingOrder;
+    }
+
+    protected function findOrderForSchedule(?string $id): ?Order
+    {
+        $this->scheduleOrder?->setAttribute('schedule_lookup_id', $id);
+
+        return $this->scheduleOrder;
+    }
+
+    protected function findDriverForSchedule(string $id): ?Driver
+    {
+        $this->scheduleDriver?->setAttribute('schedule_lookup_id', $id);
+
+        return $this->scheduleDriver;
+    }
+
+    protected function payloadUsesServiceStopActivity(?Payload $payload): bool
+    {
+        return false;
+    }
+
+    protected function makeTextResponse(string $text)
+    {
+        return $text;
     }
 
     protected function findOrderRouteForEdit(string $uuid): ?Order
@@ -143,6 +341,9 @@ class FleetOpsInternalOrderLifecycleOrderFake extends Order
     public array $customFieldValues                                    = [];
     public array $loadedMissing                                        = [];
     public array $loadedRelations                                      = [];
+    public bool $savedForTest                                          = false;
+    public bool $quietlySavedForTest                                   = false;
+    public ?FleetOpsInternalOrderLifecycleConfigFake $configForTest    = null;
 
     public function attachFiles($files): self
     {
@@ -163,6 +364,35 @@ class FleetOpsInternalOrderLifecycleOrderFake extends Order
         $this->loadedMissing[] = $relations;
 
         return $this;
+    }
+
+    public function save(array $options = [])
+    {
+        $this->savedForTest = true;
+
+        return true;
+    }
+
+    public function saveQuietly(array $options = [])
+    {
+        $this->quietlySavedForTest = true;
+
+        return true;
+    }
+
+    public function setStartedAtAttribute($value): void
+    {
+        $this->attributes['started_at'] = $value;
+    }
+
+    public function setScheduledAtAttribute($value): void
+    {
+        $this->attributes['scheduled_at'] = $value;
+    }
+
+    public function getScheduledAtAttribute($value)
+    {
+        return $this->attributes['scheduled_at'] ?? $value;
     }
 
     public function load($relations)
@@ -226,6 +456,21 @@ class FleetOpsInternalOrderLifecycleOrderFake extends Order
     public function tracker(): OrderTracker
     {
         return $this->trackerForTest ??= new FleetOpsInternalOrderLifecycleTrackerFake($this);
+    }
+
+    public function config(): ?OrderConfig
+    {
+        return $this->configForTest ??= new FleetOpsInternalOrderLifecycleConfigFake();
+    }
+
+    public function pdfLabelStream(): string
+    {
+        return 'stream:' . $this->uuid;
+    }
+
+    public function pdfLabel(): FleetOpsInternalOrderLifecyclePdfFake
+    {
+        return new FleetOpsInternalOrderLifecyclePdfFake('label:' . $this->uuid);
     }
 }
 
@@ -328,6 +573,25 @@ class FleetOpsInternalOrderLifecyclePayloadFake extends Payload
 
 class FleetOpsInternalOrderLifecycleDriverFake extends Driver
 {
+    public array $notifications = [];
+    public bool $savedForTest   = false;
+    public bool $throwOnNotify  = false;
+
+    public function save(array $options = [])
+    {
+        $this->savedForTest = true;
+
+        return true;
+    }
+
+    public function notify($instance)
+    {
+        if ($this->throwOnNotify) {
+            throw new RuntimeException('notification failed');
+        }
+
+        $this->notifications[] = $instance::class;
+    }
 }
 
 class FleetOpsInternalOrderLifecycleWaypointFake extends Waypoint
@@ -353,6 +617,16 @@ class FleetOpsInternalOrderLifecycleWaypointFake extends Waypoint
     {
         return $this->place;
     }
+
+    public function pdfLabelStream(): string
+    {
+        return 'stream:' . $this->uuid;
+    }
+
+    public function pdfLabel(): FleetOpsInternalOrderLifecyclePdfFake
+    {
+        return new FleetOpsInternalOrderLifecyclePdfFake('label:' . $this->uuid);
+    }
 }
 
 class FleetOpsInternalOrderLifecycleEntityFake extends Entity
@@ -364,6 +638,43 @@ class FleetOpsInternalOrderLifecycleEntityFake extends Entity
         $this->activities[] = [$activity->code, $location, $proof];
 
         return 'activity-' . count($this->activities);
+    }
+
+    public function pdfLabelStream(): string
+    {
+        return 'stream:' . $this->uuid;
+    }
+
+    public function pdfLabel(): FleetOpsInternalOrderLifecyclePdfFake
+    {
+        return new FleetOpsInternalOrderLifecyclePdfFake('label:' . $this->uuid);
+    }
+}
+
+class FleetOpsInternalOrderLifecycleConfigFake extends OrderConfig
+{
+    public function nextFirstActivity(Order|Waypoint|null $context = null): ?Activity
+    {
+        return new Activity(['code' => 'started']);
+    }
+}
+
+class FleetOpsInternalOrderLifecycleStartedEventFake
+{
+    public function __construct(public Order $order)
+    {
+    }
+}
+
+class FleetOpsInternalOrderLifecyclePdfFake
+{
+    public function __construct(private readonly string $contents)
+    {
+    }
+
+    public function output(): string
+    {
+        return $this->contents;
     }
 }
 
@@ -443,6 +754,28 @@ function fleetopsBulkDispatchRequest(array $payload): BulkDispatchRequest
 function fleetopsCancelOrderRequest(array $payload): CancelOrderRequest
 {
     return CancelOrderRequest::create('/internal/v1/orders/cancel', 'POST', $payload);
+}
+
+function fleetopsInternalOrderExportRequest(array $payload): ExportRequest
+{
+    return new class($payload) extends ExportRequest {
+        public function __construct(private readonly array $payload)
+        {
+            parent::__construct([], $payload);
+        }
+
+        public function input($key = null, $default = null)
+        {
+            return data_get($this->payload, $key, $default);
+        }
+
+        public function array($key = null, $default = [])
+        {
+            $value = $this->input($key, $default);
+
+            return is_array($value) ? $value : $default;
+        }
+    };
 }
 
 function fleetopsSuppressStrNullDeprecations(): Closure
@@ -749,6 +1082,238 @@ test('internal order controller returns tracker info and waypoint etas', functio
         ]);
 });
 
+test('internal order controller start validates order driver and payload workflow', function () {
+    $controller = fleetopsInternalOrderLifecycleController();
+
+    expect($controller->start(new Request(['order' => 'missing-order']))->getData(true))->toBe([
+        'error' => 'Unable to find order to start.',
+    ]);
+
+    $startedOrder = fleetopsInternalOrderLifecycleOrder('started-order', 'started');
+    $startedOrder->forceFill(['started' => true]);
+    $controller->startOrder = $startedOrder;
+
+    expect($controller->start(new Request(['order' => 'started-order']))->getData(true))->toBe([
+        'error' => 'Order has already been started.',
+    ]);
+
+    $order = fleetopsInternalOrderLifecycleOrder('start-order', 'dispatched');
+    $order->forceFill([
+        'driver_assigned_uuid' => 'driver-start',
+        'payload_uuid'         => 'payload-start',
+        'started'              => false,
+    ]);
+    $payload = fleetopsInternalOrderLifecyclePayload();
+
+    $controller               = fleetopsInternalOrderLifecycleController([$order]);
+    $controller->startOrder   = $order;
+    $controller->startPayload = $payload;
+
+    expect($controller->start(new Request(['order' => 'start-order']))->getData(true))->toBe([
+        'error' => 'No driver assigned to order.',
+    ]);
+
+    $driver                  = new FleetOpsInternalOrderLifecycleDriverFake();
+    $controller->startDriver = $driver;
+
+    $response = $controller->start(new Request(['order' => 'start-order']))->getData(true);
+
+    expect($response)->toBe([
+        'updated'  => 'start-order',
+        'activity' => 'started',
+    ])
+        ->and($order->start_lookup_uuid)->toBe('start-order')
+        ->and($driver->start_lookup_uuid)->toBe('driver-start')
+        ->and($payload->start_lookup_uuid)->toBe('payload-start')
+        ->and($order->started)->toBeTrue()
+        ->and($order->savedForTest)->toBeTrue()
+        ->and($driver->current_job_uuid)->toBe('start-order')
+        ->and($driver->savedForTest)->toBeTrue()
+        ->and($controller->domainEvents)->toBe([FleetOpsInternalOrderLifecycleStartedEventFake::class])
+        ->and($controller->activityUpdates[0][0])->toBe('start-order')
+        ->and($controller->activityUpdates[0][1])->toBeInstanceOf(Activity::class)
+        ->and($controller->activityUpdates[0][1]->code)->toBe('started');
+});
+
+test('internal order controller ping driver covers authorization and delivery outcomes', function () {
+    $controller                = fleetopsInternalOrderLifecycleController();
+    $controller->canPingDriver = false;
+
+    expect($controller->pingDriver('order-ping')->getData(true))->toBe([
+        'error' => 'Unauthorized.',
+    ]);
+
+    $controller                   = fleetopsInternalOrderLifecycleController();
+    $controller->pingOrderMissing = true;
+
+    expect($controller->pingDriver('order-ping')->getData(true))->toBe([
+        'error' => 'Order resource not found.',
+    ]);
+
+    $order                 = fleetopsInternalOrderLifecycleOrder('order-ping');
+    $order->setRelation('driverAssigned', null);
+    $controller            = fleetopsInternalOrderLifecycleController([$order]);
+    $controller->pingOrder = $order;
+
+    expect($controller->pingDriver('order-ping')->getData(true))->toBe([
+        'error' => 'Order does not have an assigned driver.',
+    ]);
+
+    $driver = new FleetOpsInternalOrderLifecycleDriverFake();
+    $order->setRelation('driverAssigned', $driver);
+
+    expect($controller->pingDriver('order-ping')->getData(true))->toBe([
+        'status'  => 'ok',
+        'message' => 'Driver app ping sent.',
+    ])
+        ->and($driver->notifications)->toBe([Fleetbase\FleetOps\Notifications\OrderPing::class]);
+
+    $controller->pingSendFails = true;
+
+    expect($controller->pingDriver('order-ping')->getData(true))->toBe([
+        'error' => 'Unable to ping driver app.',
+    ]);
+});
+
+test('internal order controller type list merges custom and default order types', function () {
+    $controller = fleetopsInternalOrderLifecycleController();
+    $custom     = new Type(['key' => 'parcel', 'name' => 'Custom Parcel']);
+
+    $controller->customTypes  = collect([$custom]);
+    $controller->defaultTypes = [
+        ['key' => 'parcel', 'name' => 'Default Parcel'],
+        ['key' => 'freight', 'name' => 'Freight'],
+    ];
+
+    $types = $controller->types()->getData(true);
+
+    expect(array_column($types, 'key'))->toBe(['parcel', 'freight'])
+        ->and($types[0]['name'])->toBe('Custom Parcel')
+        ->and($types[1]['name'])->toBe('Freight');
+});
+
+test('internal order controller label renders supported subject formats', function () {
+    $controller = fleetopsInternalOrderLifecycleController();
+    $order      = fleetopsInternalOrderLifecycleOrder('order-label');
+    $waypoint   = new FleetOpsInternalOrderLifecycleWaypointFake();
+    $entity     = new FleetOpsInternalOrderLifecycleEntityFake();
+    $waypoint->setRawAttributes(['uuid' => 'waypoint-label'], true);
+    $entity->setRawAttributes(['uuid' => 'entity-label'], true);
+
+    $controller->labelOrder    = $order;
+    $controller->labelWaypoint = $waypoint;
+    $controller->labelEntity   = $entity;
+
+    expect($controller->label('order_label', new Request()))->toBe('stream:order-label')
+        ->and($controller->label('waypoint_label', new Request(['format' => 'text'])))->toBe('label:waypoint-label')
+        ->and($controller->label('entity_label', new Request(['format' => 'base64']))->getData(true))->toBe([
+            'data' => base64_encode('label:entity-label'),
+        ]);
+
+    $controller->labelOrder = null;
+
+    expect($controller->label('order_missing', new Request())->getData(true))->toBe([
+        'error' => 'Unable to render label.',
+    ]);
+});
+
+test('internal order controller proof collection resolves order waypoint and entity subjects', function () {
+    $order = fleetopsInternalOrderLifecycleOrder('order-proof');
+    $order->forceFill(['payload_uuid' => 'payload-proof']);
+    $waypoint = new FleetOpsInternalOrderLifecycleWaypointFake();
+    $waypoint->setRawAttributes(['uuid' => 'waypoint-proof'], true);
+    $entity = new FleetOpsInternalOrderLifecycleEntityFake();
+    $entity->setRawAttributes(['uuid' => 'entity-proof'], true);
+    $proof = new Proof();
+    $proof->setRawAttributes(['uuid' => 'proof-one'], true);
+
+    $controller                = fleetopsInternalOrderLifecycleController([$order]);
+    $controller->proofOrder    = $order;
+    $controller->proofWaypoint = $waypoint;
+    $controller->proofEntity   = $entity;
+    $controller->proofResults  = collect([$proof]);
+
+    $orderProofs = $controller->proofs(new Request(), 'order-proof');
+
+    expect($orderProofs->collection)->toHaveCount(1)
+        ->and($proof->queried_subject_uuid)->toBe('order-proof');
+
+    $waypointProofs = $controller->proofs(new Request(), 'order-proof', 'waypoint_proof');
+
+    expect($waypointProofs->collection)->toHaveCount(1)
+        ->and($waypoint->proof_lookup_id)->toBe('waypoint_proof')
+        ->and($proof->queried_subject_uuid)->toBe('waypoint-proof');
+
+    $entityProofs = $controller->proofs(new Request(), 'order-proof', 'entity_proof');
+
+    expect($entityProofs->collection)->toHaveCount(1)
+        ->and($entity->proof_lookup_id)->toBe('entity_proof')
+        ->and($proof->queried_subject_uuid)->toBe('entity-proof');
+
+    $controller->proofWaypoint = null;
+
+    expect($controller->proofs(new Request(), 'order-proof', 'waypoint_missing')->getData(true))->toBe([
+        'error' => 'Unable to retrieve proof of delivery for subject.',
+    ]);
+});
+
+test('internal order controller export lookup and schedule endpoints use resolved resources', function () {
+    $controller = fleetopsInternalOrderLifecycleController();
+
+    $export = $controller->export(fleetopsInternalOrderExportRequest([
+        'format'     => 'csv',
+        'selections' => ['order-one', 'order-two'],
+    ]));
+
+    expect($export['download'])->toStartWith('order-')
+        ->and($export['download'])->toEndWith('.csv')
+        ->and($export['selections'])->toBe(['order-one', 'order-two'])
+        ->and($controller->exportDownloads[0][0])->toBe(['order-one', 'order-two']);
+
+    expect($controller->lookup(new Request())->getData(true))->toBe([
+        'error' => 'No tracking number provided for lookup.',
+    ])
+        ->and($controller->lookup(new Request(['tracking' => 'TN-404']))->getData(true))->toBe([
+            'error' => 'No order found using tracking number provided.',
+        ]);
+
+    $trackedOrder                 = fleetopsInternalOrderLifecycleOrder('tracked-order');
+    $trackedOrder->trackerForTest = new FleetOpsInternalOrderLifecycleTrackerFake($trackedOrder);
+    $controller->trackingOrder    = $trackedOrder;
+
+    $lookup = $controller->lookup(new Request(['tracking' => 'TN-100']));
+
+    expect($lookup->resource)->toBe($trackedOrder)
+        ->and($trackedOrder->tracking_lookup)->toBe('TN-100')
+        ->and($trackedOrder->loadedMissing)->toBe([['trackingNumber', 'payload', 'trackingStatuses']])
+        ->and($trackedOrder->tracker_data)->toBe(['tracker' => 'info', 'options' => []])
+        ->and($trackedOrder->eta)->toBe(['eta' => [['stop' => 'dropoff']], 'options' => []]);
+
+    expect($controller->scheduleOrder(new Request(['order' => 'missing-order']))->getData(true))->toBe([
+        'error' => 'No order found to schedule.',
+    ]);
+
+    $scheduledOrder = fleetopsInternalOrderLifecycleOrder('scheduled-order');
+    $driver         = new FleetOpsInternalOrderLifecycleDriverFake();
+    $driver->setRawAttributes(['uuid' => 'driver-scheduled'], true);
+    $controller->scheduleOrder  = $scheduledOrder;
+    $controller->scheduleDriver = $driver;
+
+    $scheduleResponse = $controller->scheduleOrder(new Request([
+        'order'        => 'scheduled-order',
+        'scheduled_at' => '2026-08-01 09:30:00',
+        'driver_id'    => 'driver-public',
+    ]))->getData(true);
+
+    expect($scheduleResponse['status'])->toBe('OK')
+        ->and($scheduleResponse['order'])->toBe('scheduled-order')
+        ->and($scheduledOrder->schedule_lookup_id)->toBe('scheduled-order')
+        ->and($driver->schedule_lookup_id)->toBe('driver-public')
+        ->and($scheduledOrder->driver_assigned_uuid)->toBe('driver-scheduled')
+        ->and($scheduledOrder->quietlySavedForTest)->toBeTrue()
+        ->and($scheduledOrder->scheduled_at->format('Y-m-d H:i:s'))->toBe('2026-08-01 09:30:00');
+});
+
 test('internal order controller waypoint helpers detect waypoint state and proof objects', function () {
     $restore = fleetopsSuppressStrNullDeprecations();
 
@@ -785,6 +1350,52 @@ test('internal order controller waypoint helpers detect waypoint state and proof
     } finally {
         $restore();
     }
+});
+
+test('internal order controller proof photo helpers normalize aliases and base64 inputs', function () {
+    $controller = fleetopsInternalOrderLifecycleController();
+    $encoded    = base64_encode('proof photo');
+    $dataUri    = 'data:image/png;base64,' . $encoded;
+    $invalid    = 'not-valid-base64';
+    $file       = UploadedFile::fake()->image('proof.png', 16, 16);
+
+    $request = new Request([
+        'photos' => [$dataUri, [$dataUri, 42]],
+        'photo'  => $encoded,
+        'files'  => [$invalid],
+        'file'   => null,
+    ]);
+    $request->files->set('file', $file);
+
+    expect($controller->callHelper('collectProofPhotoInputs', $request))->toHaveCount(3)
+        ->and($controller->callHelper('isValidBase64ProofPhoto', $dataUri))->toBeTrue()
+        ->and($controller->callHelper('isValidBase64ProofPhoto', $encoded))->toBeTrue()
+        ->and($controller->callHelper('isValidBase64ProofPhoto', ['not' => 'a string']))->toBeFalse()
+        ->and($controller->callHelper('isValidBase64ProofPhoto', $invalid))->toBeFalse()
+        ->and($controller->callHelper('proofPhotoInputFingerprint', $dataUri))->toBe($controller->callHelper('proofPhotoInputFingerprint', $encoded))
+        ->and($controller->callHelper('proofPhotoInputFingerprint', ['unsupported']))->toBeNull();
+
+    $incoming = [];
+    $controller->appendProofInputsForTest($incoming, [$encoded, [$file, null], 99]);
+
+    expect($incoming)->toBe([$encoded, $file, 99])
+        ->and($controller->callHelper('dedupeProofPhotoInputs', [$dataUri, $encoded, $file, $file, ['skip']]))->toBe([$dataUri, $file]);
+});
+
+test('internal order controller waypoint helpers handle empty activity branches', function () {
+    $controller = fleetopsInternalOrderLifecycleController();
+    $payload    = fleetopsInternalOrderLifecyclePayload();
+    $activity   = new Activity(['code' => 'arrived']);
+
+    $payload->forceFill(['current_waypoint_uuid' => null]);
+    $payload->waypointMarkersForTest = collect();
+    $payload->setRelation('waypointMarkers', collect());
+
+    expect($controller->callHelper('updateCurrentWaypointActivity', null, $activity, 'point'))->toBeNull()
+        ->and($controller->callHelper('updateCurrentWaypointActivity', $payload, $activity))->toBeNull()
+        ->and($controller->callHelper('payloadHasCurrentWaypointActivity', null, $activity))->toBeFalse()
+        ->and($controller->callHelper('payloadHasCurrentWaypointActivity', $payload, $activity))->toBeFalse()
+        ->and($controller->callHelper('advanceCurrentWaypointDestination', $payload))->toBeNull();
 });
 
 test('internal order controller updates current waypoint activity and advances incomplete destinations', function () {
