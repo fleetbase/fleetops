@@ -34,7 +34,7 @@ class ServiceQuoteController extends Controller
         $serviceType      = $request->input('service_type'); // the specific type of service rate to query
         $single           = $request->boolean('single');
         $isRouteOptimized = $request->boolean('is_route_optimized', true);
-        $requestId        = ServiceQuote::generatePublicId('request');
+        $requestId        = $this->generateServiceQuoteRequestId();
 
         if (Utils::isPublicId($payload)) {
             $payload = Payload::with(['pickup', 'dropoff', 'waypoints', 'entities'])
@@ -55,7 +55,7 @@ class ServiceQuoteController extends Controller
                 try {
                     $serviceQuotes = $integratedVendor->api()->setRequestId($requestId)->getQuoteFromPayload($payload, $serviceType, $scheduledAt, $isRouteOptimized);
                 } catch (\Exception $e) {
-                    return response()->json([
+                    return $this->jsonResponse([
                         'errors' => [$e->getMessage()],
                     ], 400);
                 }
@@ -63,14 +63,14 @@ class ServiceQuoteController extends Controller
 
             // send single quote back
             if ($single) {
-                return new ServiceQuoteResource($serviceQuotes);
+                return $this->serviceQuoteResource($serviceQuotes);
             }
 
             if (!is_array($serviceQuotes)) {
                 $serviceQuotes = [$serviceQuotes];
             }
 
-            return ServiceQuoteResource::collection($serviceQuotes);
+            return $this->serviceQuoteResourceCollection($serviceQuotes);
         }
 
         // get all waypoints
@@ -78,21 +78,13 @@ class ServiceQuoteController extends Controller
 
         // if quote for single service
         if ($service && $service !== 'all') {
-            $serviceRate = ServiceRate::where(
-                function ($query) use ($service) {
-                    $query->where('uuid', $service)->orWhere('public_id', $service);
-                })->where(
-                    function ($q) use ($currency) {
-                        if ($currency) {
-                            $q->where(DB::raw('lower(currency)'), strtolower($currency));
-                        }
-                    })->first();
+            $serviceRate   = $this->findServiceRateForQuote($service, $currency);
             $serviceQuotes = collect();
 
             if ($serviceRate) {
                 [$subTotal, $lines] = $serviceRate->quote($payload);
 
-                $quote = ServiceQuote::create([
+                $quote = $this->createServiceQuote([
                     'request_id'        => $requestId,
                     'company_uuid'      => $serviceRate->company_uuid,
                     'service_rate_uuid' => $serviceRate->uuid,
@@ -102,7 +94,7 @@ class ServiceQuoteController extends Controller
                 $quote->setRelation('serviceRate', $serviceRate);
 
                 $items = $lines->map(function ($line) use ($quote) {
-                    return ServiceQuoteItem::create($this->serviceQuoteItemInput($quote, $line));
+                    return $this->createServiceQuoteItem($this->serviceQuoteItemInput($quote, $line));
                 });
 
                 $quote->setRelation('items', $items);
@@ -110,15 +102,15 @@ class ServiceQuoteController extends Controller
 
                 // if single quotation requested
                 if ($single) {
-                    return new ServiceQuoteResource($quote);
+                    return $this->serviceQuoteResource($quote);
                 }
 
-                return ServiceQuoteResource::collection($serviceQuotes);
+                return $this->serviceQuoteResourceCollection($serviceQuotes);
             }
         }
 
         // get all service rates
-        $serviceRates = ServiceRate::getServicableForPlaces(
+        $serviceRates = $this->getServicableServiceRates(
             $waypoints,
             $serviceType,
             $currency,
@@ -132,7 +124,7 @@ class ServiceQuoteController extends Controller
         foreach ($serviceRates as $serviceRate) {
             [$subTotal, $lines] = $serviceRate->quote($payload);
 
-            $quote = ServiceQuote::create([
+            $quote = $this->createServiceQuote([
                 'request_id'        => $requestId,
                 'company_uuid'      => $serviceRate->company_uuid,
                 'service_rate_uuid' => $serviceRate->uuid,
@@ -142,7 +134,7 @@ class ServiceQuoteController extends Controller
             $quote->setRelation('serviceRate', $serviceRate);
 
             $items = $lines->map(function ($line) use ($quote) {
-                return ServiceQuoteItem::create([
+                return $this->createServiceQuoteItem([
                     'service_quote_uuid' => $quote->uuid,
                     'amount'             => $line['amount'],
                     'currency'           => $line['currency'],
@@ -160,10 +152,10 @@ class ServiceQuoteController extends Controller
             // find the best quotation
             $bestQuote = $this->bestQuote($serviceQuotes);
 
-            return new ServiceQuoteResource($bestQuote);
+            return $this->serviceQuoteResource($bestQuote);
         }
 
-        return ServiceQuoteResource::collection($serviceQuotes);
+        return $this->serviceQuoteResourceCollection($serviceQuotes);
     }
 
     /**
@@ -192,23 +184,23 @@ class ServiceQuoteController extends Controller
         $single           = $request->boolean('single');
         $isRouteOptimized = $request->boolean('is_route_optimized', true);
 
-        $requestId     = ServiceQuote::generatePublicId('request');
+        $requestId     = $this->generateServiceQuoteRequestId();
         $serviceQuotes = [];
 
         if (Utils::isNotScalar($pickup)) {
-            $pickup = Place::createFromMixed($pickup);
+            $pickup = $this->createPlaceFromMixed($pickup);
         }
 
         if (Utils::isNotScalar($dropoff)) {
-            $dropoff = Place::createFromMixed($dropoff);
+            $dropoff = $this->createPlaceFromMixed($dropoff);
         }
 
         if (Utils::isPublicId($pickup)) {
-            $pickup = Place::where('public_id', $pickup)->first();
+            $pickup = $this->findPlaceByPublicId($pickup);
         }
 
         if (Utils::isPublicId($dropoff)) {
-            $dropoff = Place::where('public_id', $dropoff)->first();
+            $dropoff = $this->findPlaceByPublicId($dropoff);
         }
 
         // convert waypoints to place instances
@@ -231,7 +223,7 @@ class ServiceQuoteController extends Controller
                     /** @var \Fleetbase\Models\ServiceQuote $serviceQuote */
                     $serviceQuote = $integratedVendor->api()->setRequestId($requestId)->getQuoteFromPreliminaryPayload($waypoints, $entities, $serviceType, $scheduledAt, $isRouteOptimized);
                 } catch (\Exception $e) {
-                    return response()->json([
+                    return $this->jsonResponse([
                         'errors' => [$e->getMessage()],
                     ], 400);
                 }
@@ -242,19 +234,19 @@ class ServiceQuoteController extends Controller
 
             // send single quote back
             if ($single) {
-                return new ServiceQuoteResource($serviceQuote);
+                return $this->serviceQuoteResource($serviceQuote);
             }
 
             if (!is_array($serviceQuote)) {
                 $serviceQuote = [$serviceQuote];
             }
 
-            return ServiceQuoteResource::collection($serviceQuote);
+            return $this->serviceQuoteResourceCollection($serviceQuote);
         }
 
         // if no total distance recalculate totalDistance and totalTime based on waypoints collected
         if (!$totalDistance) {
-            $matrix = Utils::distanceMatrix([$waypoints->first()], $waypoints->skip(1));
+            $matrix = $this->distanceMatrix([$waypoints->first()], $waypoints->skip(1));
 
             // set totalDistance and totalTime
             $totalDistance = $matrix->distance ?? 0;
@@ -263,13 +255,13 @@ class ServiceQuoteController extends Controller
 
         // if quote for single service
         if ($service !== 'all') {
-            $serviceRate   = ServiceRate::where('uuid', $service)->first();
+            $serviceRate   = $this->findServiceRateByUuid($service);
             $serviceQuotes = collect();
 
             if ($serviceRate) {
                 [$subTotal, $lines] = $serviceRate->quoteFromPreliminaryData($entities, $waypoints, $totalDistance, $totalTime, $isCashOnDelivery, $endpointCount);
 
-                $quote = ServiceQuote::create([
+                $quote = $this->createServiceQuote([
                     'request_id'        => $requestId,
                     'company_uuid'      => $serviceRate->company_uuid,
                     'service_rate_uuid' => $serviceRate->uuid,
@@ -282,22 +274,22 @@ class ServiceQuoteController extends Controller
                 $quote->updateMeta('preliminary_data', $preliminaryData);
 
                 $items = $lines->map(function ($line) use ($quote) {
-                    return ServiceQuoteItem::create($this->serviceQuoteItemInput($quote, $line));
+                    return $this->createServiceQuoteItem($this->serviceQuoteItemInput($quote, $line));
                 });
 
                 $quote->setRelation('items', $items);
                 $serviceQuotes->push($quote);
 
                 if ($single) {
-                    return new ServiceQuoteResource($quote);
+                    return $this->serviceQuoteResource($quote);
                 }
 
-                return ServiceQuoteResource::collection($serviceQuotes);
+                return $this->serviceQuoteResourceCollection($serviceQuotes);
             }
         }
 
         // get all service rates
-        $serviceRates = ServiceRate::getServicableForPlaces(
+        $serviceRates = $this->getServicableServiceRates(
             $waypoints,
             $serviceType,
             $currency,
@@ -311,7 +303,7 @@ class ServiceQuoteController extends Controller
         foreach ($serviceRates as $serviceRate) {
             [$subTotal, $lines] = $serviceRate->quoteFromPreliminaryData($entities, $waypoints, $totalDistance, $totalTime, $isCashOnDelivery, $endpointCount);
 
-            $quote = ServiceQuote::create([
+            $quote = $this->createServiceQuote([
                 'request_id'        => $requestId,
                 'company_uuid'      => $serviceRate->company_uuid,
                 'service_rate_uuid' => $serviceRate->uuid,
@@ -324,7 +316,7 @@ class ServiceQuoteController extends Controller
             $quote->updateMeta('preliminary_data', $preliminaryData);
 
             $items = $lines->map(function ($line) use ($quote) {
-                return ServiceQuoteItem::create($this->serviceQuoteItemInput($quote, $line));
+                return $this->createServiceQuoteItem($this->serviceQuoteItemInput($quote, $line));
             });
 
             $quote->setRelation('items', $items);
@@ -336,9 +328,72 @@ class ServiceQuoteController extends Controller
             // find the best quotation
             $bestQuote = $this->bestQuote($serviceQuotes);
 
-            return new ServiceQuoteResource($bestQuote);
+            return $this->serviceQuoteResource($bestQuote);
         }
 
+        return $this->serviceQuoteResourceCollection($serviceQuotes);
+    }
+
+    protected function generateServiceQuoteRequestId(): string
+    {
+        return ServiceQuote::generatePublicId('request');
+    }
+
+    protected function createPlaceFromMixed(mixed $value): Place
+    {
+        return Place::createFromMixed($value);
+    }
+
+    protected function findPlaceByPublicId(string $publicId): ?Place
+    {
+        return Place::where('public_id', $publicId)->first();
+    }
+
+    protected function distanceMatrix(array $origins, iterable $destinations): mixed
+    {
+        return Utils::distanceMatrix($origins, $destinations);
+    }
+
+    protected function findServiceRateForQuote(string $service, ?string $currency): ?ServiceRate
+    {
+        return ServiceRate::where(
+            function ($query) use ($service) {
+                $query->where('uuid', $service)->orWhere('public_id', $service);
+            })->where(
+                function ($q) use ($currency) {
+                    if ($currency) {
+                        $q->where(DB::raw('lower(currency)'), strtolower($currency));
+                    }
+                })->first();
+    }
+
+    protected function findServiceRateByUuid(string $service): ?ServiceRate
+    {
+        return ServiceRate::where('uuid', $service)->first();
+    }
+
+    protected function getServicableServiceRates(iterable $waypoints, ?string $serviceType, mixed $currency, callable $callback): iterable
+    {
+        return ServiceRate::getServicableForPlaces($waypoints, $serviceType, $currency, $callback);
+    }
+
+    protected function createServiceQuote(array $attributes): ServiceQuote
+    {
+        return ServiceQuote::create($attributes);
+    }
+
+    protected function createServiceQuoteItem(array $attributes): ServiceQuoteItem
+    {
+        return ServiceQuoteItem::create($attributes);
+    }
+
+    protected function serviceQuoteResource(ServiceQuote $serviceQuote)
+    {
+        return new ServiceQuoteResource($serviceQuote);
+    }
+
+    protected function serviceQuoteResourceCollection(iterable $serviceQuotes)
+    {
         return ServiceQuoteResource::collection($serviceQuotes);
     }
 
@@ -415,11 +470,6 @@ class ServiceQuoteController extends Controller
     protected function findServiceQuote(string $id): ServiceQuote
     {
         return ServiceQuote::findRecordOrFail($id);
-    }
-
-    protected function serviceQuoteResource(ServiceQuote $serviceQuote)
-    {
-        return new ServiceQuoteResource($serviceQuote);
     }
 
     protected function jsonResponse(array $payload, int $status)
