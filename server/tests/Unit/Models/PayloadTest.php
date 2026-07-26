@@ -8,6 +8,14 @@ if (!function_exists('Fleetbase\Models\config')) {
     eval('namespace Fleetbase\Models; function config($key = null, $default = null) { return $key === "fleetbase.connection.db" ? "mysql" : $default; }');
 }
 
+if (!function_exists('Fleetbase\FleetOps\Models\event')) {
+    eval('namespace Fleetbase\FleetOps\Models; function event($event = null) { \FleetOpsPayloadUnitEventRecorder::$events[] = $event; return $event; }');
+}
+
+use Fleetbase\FleetOps\Events\EntityActivityChanged;
+use Fleetbase\FleetOps\Events\EntityCompleted;
+use Fleetbase\FleetOps\Events\WaypointActivityChanged;
+use Fleetbase\FleetOps\Events\WaypointCompleted;
 use Fleetbase\FleetOps\Flow\Activity;
 use Fleetbase\FleetOps\Models\Entity;
 use Fleetbase\FleetOps\Models\Order;
@@ -47,11 +55,40 @@ class FleetOpsPayloadUnitOrderFake extends Order
     }
 }
 
+class FleetOpsPayloadUnitEventRecorder
+{
+    public static array $events = [];
+}
+
 class FleetOpsPayloadUnitPlaceFake extends Place
 {
     public function getAddressAttribute(): ?string
     {
         return $this->attributes['address'] ?? null;
+    }
+}
+
+class FleetOpsPayloadUnitActivityWaypointFake extends Waypoint
+{
+    public array $activityInserts = [];
+
+    public function insertActivity(Activity $activity, $location = [], $proof = null): string
+    {
+        $this->activityInserts[] = [$activity->code, $location, $proof];
+
+        return 'waypoint-activity-uuid';
+    }
+}
+
+class FleetOpsPayloadUnitActivityEntityFake extends Entity
+{
+    public array $activityInserts = [];
+
+    public function insertActivity(Activity $activity, $location = [], $proof = null): string
+    {
+        $this->activityInserts[] = [$activity->code, $location, $proof];
+
+        return 'entity-activity-uuid';
     }
 }
 
@@ -72,6 +109,18 @@ class FleetOpsPayloadUnitWaypointFake extends Waypoint
     public function getCompleteAttribute(): bool
     {
         return $this->completeForTest;
+    }
+}
+
+class FleetOpsPayloadUnitActivityFake extends Payload
+{
+    public array $loadedMissingRelations = [];
+
+    public function loadMissing($relations)
+    {
+        $this->loadedMissingRelations[] = $relations;
+
+        return $this;
     }
 }
 
@@ -380,8 +429,8 @@ test('payload sets current first and next waypoint destinations without database
 });
 
 test('payload resolves order distance updates and destination keys', function () {
-    $pickup   = fleetopsPayloadUnitPlace('pickup-uuid', ['public_id' => 'place_pickup']);
-    $dropoff  = fleetopsPayloadUnitPlace('dropoff-uuid', ['public_id' => 'place_dropoff']);
+    $pickup   = fleetopsPayloadUnitPlace('33333333-3333-4333-8333-333333333333', ['public_id' => 'place_PICKUP1']);
+    $dropoff  = fleetopsPayloadUnitPlace('44444444-4444-4444-8444-444444444444', ['public_id' => 'place_DROPOF1']);
     $waypoint = fleetopsPayloadUnitPlace('11111111-1111-4111-8111-111111111111', ['public_id' => 'place_waypoint']);
     $order    = new FleetOpsPayloadUnitOrderFake();
     $payload  = fleetopsPayloadUnitPayload();
@@ -398,7 +447,11 @@ test('payload resolves order distance updates and destination keys', function ()
         ->and($payload->findDestinationFromKey('pickup'))->toBe($pickup)
         ->and($payload->findDestinationFromKey('dropoff'))->toBe($dropoff)
         ->and($payload->findDestinationFromKey('place_waypoint'))->toBe($waypoint)
+        ->and($payload->findDestinationFromKey('place_PICKUP1'))->toBe($pickup)
+        ->and($payload->findDestinationFromKey('place_DROPOF1'))->toBe($dropoff)
         ->and($payload->findDestinationFromKey('11111111-1111-4111-8111-111111111111'))->toBe($waypoint)
+        ->and($payload->findDestinationFromKey('33333333-3333-4333-8333-333333333333'))->toBe($pickup)
+        ->and($payload->findDestinationFromKey('44444444-4444-4444-8444-444444444444'))->toBe($dropoff)
         ->and($payload->findDestinationFromKey('missing'))->toBeNull();
 
     $payloadWithoutOrder = fleetopsPayloadUnitPayload();
@@ -406,4 +459,58 @@ test('payload resolves order distance updates and destination keys', function ()
     expect($payloadWithoutOrder->getOrder())->toBeNull()
         ->and($payloadWithoutOrder->loadedRelations)->toContain('order')
         ->and($payloadWithoutOrder->updateOrderDistanceAndTime())->toBeNull();
+});
+
+test('payload updates waypoint activity for multiple drop orders and dispatches lifecycle events', function () {
+    FleetOpsPayloadUnitEventRecorder::$events = [];
+
+    $order = new Order();
+    $order->setRawAttributes(['uuid' => 'order-uuid'], true);
+
+    $currentWaypoint = new FleetOpsPayloadUnitActivityWaypointFake();
+    $currentWaypoint->setRawAttributes([
+        'uuid'       => 'waypoint-uuid',
+        'place_uuid' => 'current-place-uuid',
+    ], true);
+
+    $entity = new FleetOpsPayloadUnitActivityEntityFake();
+    $entity->setRawAttributes([
+        'uuid'             => 'entity-uuid',
+        'destination_uuid' => 'current-place-uuid',
+    ], true);
+
+    $payload = new FleetOpsPayloadUnitActivityFake();
+    $payload->setRawAttributes([
+        'uuid'                  => 'payload-uuid',
+        'current_waypoint_uuid' => 'current-place-uuid',
+    ], true);
+    $payload->setRelation('pickup', null);
+    $payload->setRelation('order', $order);
+    $payload->setRelation('waypoints', collect([fleetopsPayloadUnitPlace('current-place-uuid')]));
+    $payload->setRelation('waypointMarkers', collect([$currentWaypoint]));
+    $payload->setRelation('entities', collect([$entity]));
+
+    $activity = new Activity(['code' => 'arrived', 'complete' => false]);
+
+    expect($payload->updateWaypointActivity($activity, 'point', 'proof'))->toBe($payload)
+        ->and($payload->loadedMissingRelations)->toBe(['order'])
+        ->and($currentWaypoint->activityInserts)->toBe([['arrived', 'point', 'proof']])
+        ->and($entity->activityInserts)->toBe([['arrived', 'point', 'proof']])
+        ->and(array_map(fn ($event) => $event::class, FleetOpsPayloadUnitEventRecorder::$events))->toBe([
+            EntityActivityChanged::class,
+            WaypointActivityChanged::class,
+        ]);
+
+    FleetOpsPayloadUnitEventRecorder::$events = [];
+    $currentWaypoint->activityInserts         = [];
+    $entity->activityInserts                  = [];
+
+    $payload->updateWaypointActivity(new Activity(['code' => 'delivered', 'complete' => true]), 'dropoff', null);
+
+    expect($currentWaypoint->activityInserts)->toBe([['delivered', 'dropoff', null]])
+        ->and($entity->activityInserts)->toBe([['delivered', 'dropoff', null]])
+        ->and(array_map(fn ($event) => $event::class, FleetOpsPayloadUnitEventRecorder::$events))->toBe([
+            EntityCompleted::class,
+            WaypointCompleted::class,
+        ]);
 });
