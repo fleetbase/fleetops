@@ -43,6 +43,7 @@ use Fleetbase\FleetOps\Http\Resources\v1\Vendor as VendorResource;
 use Fleetbase\FleetOps\Http\Resources\v1\Waypoint as WaypointResource;
 use Fleetbase\FleetOps\Http\Resources\v1\WorkOrder as WorkOrderResource;
 use Fleetbase\FleetOps\Http\Resources\v1\Zone as ZoneResource;
+use Fleetbase\FleetOps\Models\Contact as ContactModel;
 use Illuminate\Http\Request;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Collection;
@@ -164,7 +165,32 @@ class FleetOpsCompactResourceFixture implements ArrayAccess
             };
         }
 
+        if (array_key_exists($method, $this->loaded)) {
+            return $this->loaded[$method];
+        }
+
+        if ($method === 'getAdhocDistance') {
+            return $this->attributes['adhoc_distance'] ?? 0;
+        }
+
+        if (array_key_exists($method, $this->attributes)) {
+            return $this->attributes[$method];
+        }
+
         return null;
+    }
+}
+
+class FleetOpsCompactOrderTrackerFixture
+{
+    public function toArray(): array
+    {
+        return ['state' => 'enroute', 'distance' => 4200];
+    }
+
+    public function eta(): array
+    {
+        return ['seconds' => 540, 'formatted' => '9 minutes'];
     }
 }
 
@@ -600,6 +626,163 @@ test('index order resource returns compact order table payloads', function () {
         'scheduled_at'          => '2026-07-27 09:00:00',
         'meta'                  => ['_index_resource' => true],
     ]);
+});
+
+test('order resource serializes internal order identifiers tracker data and timing state', function () {
+    $request = fleetopsCompactResourceRequest(true);
+    $request->query->set('with_tracker_data', '1');
+    $request->query->set('with_eta', '1');
+
+    $trackingNumber = fleetopsCompactResourceFixture([
+        'tracking_number' => 'TN-ORDER',
+        'barcode'         => 'barcode-order',
+        'qr_code'         => 'qr-order',
+    ]);
+    $order          = fleetopsCompactResourceFixture([
+        'internal_id'             => 'ORD-RESOURCE',
+        'company_uuid'            => 'company-uuid',
+        'transaction_uuid'        => 'transaction-uuid',
+        'customer_uuid'           => 'customer-uuid',
+        'customer_type'           => ContactModel::class,
+        'facilitator_uuid'        => 'facilitator-uuid',
+        'facilitator_type'        => 'Fleetbase\\FleetOps\\Models\\Vendor',
+        'payload_uuid'            => 'payload-uuid',
+        'route_uuid'              => 'route-uuid',
+        'purchase_rate_uuid'      => 'purchase-rate-uuid',
+        'tracking_number_uuid'    => 'tracking-number-uuid',
+        'driver_assigned_uuid'    => 'driver-uuid',
+        'vehicle_assigned_uuid'   => 'vehicle-uuid',
+        'has_driver_assigned'     => true,
+        'is_scheduled'            => true,
+        'order_config_uuid'       => 'order-config-uuid',
+        'orderConfig'             => fleetopsCompactResourceFixture(['public_id' => 'order_config_public']),
+        'payload'                 => null,
+        'trackingNumber'          => $trackingNumber,
+        'comments'                => collect(),
+        'files'                   => collect(),
+        'purchaseRate'            => null,
+        'notes'                   => 'Internal resource order.',
+        'type'                    => 'transport',
+        'status'                  => 'dispatched',
+        'pod_method'              => 'qr_scan',
+        'pod_required'            => 1,
+        'dispatched'              => 1,
+        'started'                 => 0,
+        'adhoc'                   => 1,
+        'adhoc_distance'          => 1234,
+        'distance'                => 9876,
+        'time'                    => 654,
+        'transaction_amount'      => 199.95,
+        'transaction_currency'    => 'SGD',
+        'tracker'                 => new FleetOpsCompactOrderTrackerFixture(),
+        'meta'                    => ['priority' => 'high'],
+        'dispatched_at'           => '2026-07-26 10:00:00',
+        'started_at'              => null,
+        'scheduled_at'            => '2026-07-27 09:00:00',
+    ], [
+        'orderConfig' => fleetopsCompactResourceFixture(['public_id' => 'order_config_public']),
+    ]);
+
+    $payload = (new OrderResource($order))->resolve($request);
+
+    expect($payload)->toMatchArray([
+        'id'                    => 101,
+        'uuid'                  => 'fixture-uuid',
+        'public_id'             => 'fixture_public',
+        'internal_id'           => 'ORD-RESOURCE',
+        'company_uuid'          => 'company-uuid',
+        'transaction_uuid'      => 'transaction-uuid',
+        'customer_uuid'         => 'customer-uuid',
+        'facilitator_uuid'      => 'facilitator-uuid',
+        'payload_uuid'          => 'payload-uuid',
+        'route_uuid'            => 'route-uuid',
+        'purchase_rate_uuid'    => 'purchase-rate-uuid',
+        'tracking_number_uuid'  => 'tracking-number-uuid',
+        'driver_assigned_uuid'  => 'driver-uuid',
+        'vehicle_assigned_uuid' => 'vehicle-uuid',
+        'has_driver_assigned'   => true,
+        'is_scheduled'          => true,
+        'order_config_uuid'     => 'order-config-uuid',
+        'tracking'              => 'TN-ORDER',
+        'barcode'               => 'barcode-order',
+        'qr_code'               => 'qr-order',
+        'notes'                 => 'Internal resource order.',
+        'type'                  => 'transport',
+        'status'                => 'dispatched',
+        'pod_method'            => 'qr_scan',
+        'pod_required'          => true,
+        'dispatched'            => true,
+        'started'               => false,
+        'adhoc'                 => true,
+        'adhoc_distance'        => 1234,
+        'distance'              => 9876,
+        'time'                  => 654,
+        'transaction_amount'    => 199.95,
+        'currency'              => 'SGD',
+        'tracker_data'          => ['state' => 'enroute', 'distance' => 4200],
+        'eta'                   => ['seconds' => 540, 'formatted' => '9 minutes'],
+        'meta'                  => ['priority' => 'high'],
+        'dispatched_at'         => '2026-07-26 10:00:00',
+        'started_at'            => null,
+        'scheduled_at'          => '2026-07-27 09:00:00',
+    ]);
+});
+
+test('order resource keeps public payload on public identifiers and applies customer facilitator type labels', function () {
+    $request = fleetopsCompactResourceRequest(false);
+    $order   = fleetopsCompactResourceFixture([
+        'internal_id'          => 'ORD-PUBLIC',
+        'customer_type'        => ContactModel::class,
+        'facilitator_type'     => 'Fleetbase\\FleetOps\\Models\\Vendor',
+        'orderConfig'          => fleetopsCompactResourceFixture(['public_id' => 'config_public']),
+        'payload'              => null,
+        'trackingNumber'       => null,
+        'trackingStatuses'     => collect(),
+        'comments'             => collect(),
+        'files'                => collect(),
+        'purchaseRate'         => null,
+        'notes'                => 'Public resource order.',
+        'type'                 => 'delivery',
+        'status'               => 'created',
+        'pod_required'         => false,
+        'dispatched'           => false,
+        'started'              => false,
+        'adhoc'                => false,
+        'distance'             => 0,
+        'time'                 => 0,
+        'transaction_amount'   => null,
+        'transaction_currency' => null,
+        'meta'                 => ['channel' => 'public-api'],
+    ]);
+    $resource = new OrderResource($order);
+    $payload  = $resource->resolve($request);
+
+    expect($payload['id'])->toBe('fixture_public')
+        ->and($payload)->not->toHaveKeys(['uuid', 'public_id', 'company_uuid', 'transaction_uuid', 'tracking', 'barcode', 'qr_code'])
+        ->and($payload)->toMatchArray([
+            'internal_id'   => 'ORD-PUBLIC',
+            'order_config'  => 'config_public',
+            'notes'         => 'Public resource order.',
+            'type'          => 'delivery',
+            'status'        => 'created',
+            'pod_required'  => false,
+            'dispatched'    => false,
+            'started'       => false,
+            'adhoc'         => false,
+            'meta'          => ['channel' => 'public-api'],
+        ])
+        ->and($resource->setCustomerType(['id' => 'customer_public']))->toMatchArray([
+            'id'            => 'customer_public',
+            'type'          => 'customer-contact',
+            'customer_type' => 'customer-contact',
+        ])
+        ->and($resource->setFacilitatorType(['id' => 'vendor_public']))->toMatchArray([
+            'id'               => 'vendor_public',
+            'type'             => 'facilitator-vendor',
+            'facilitator_type' => 'facilitator-vendor',
+        ])
+        ->and($resource->setCustomerType([]))->toBe([])
+        ->and($resource->setFacilitatorType(null))->toBeNull();
 });
 
 test('issue resource serializes internal issue details and webhook identifiers', function () {
