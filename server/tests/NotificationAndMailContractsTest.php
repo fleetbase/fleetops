@@ -7,10 +7,20 @@ if (!function_exists('url')) {
     }
 }
 
+if (!class_exists('Illuminate\Foundation\Auth\User')) {
+    class_alias(Illuminate\Database\Eloquent\Model::class, 'Illuminate\Foundation\Auth\User');
+}
+
+if (!function_exists('Fleetbase\Models\session')) {
+    eval('namespace Fleetbase\Models; function session($key = null, $default = null) { return $key === null ? new class { public function missing($key): bool { return true; } } : $default; }');
+}
+
 use Fleetbase\FleetOps\Events\OrderDispatchFailed as OrderDispatchFailedEvent;
 use Fleetbase\FleetOps\Flow\Activity;
+use Fleetbase\FleetOps\Mail\CustomerCredentialsMail;
 use Fleetbase\FleetOps\Mail\MaintenanceScheduleReminder;
 use Fleetbase\FleetOps\Mail\WorkOrderDispatched;
+use Fleetbase\FleetOps\Models\Contact;
 use Fleetbase\FleetOps\Models\MaintenanceSchedule;
 use Fleetbase\FleetOps\Models\Order;
 use Fleetbase\FleetOps\Models\Waypoint;
@@ -34,6 +44,7 @@ use Fleetbase\FleetOps\Support\Payment;
 use Fleetbase\FleetOps\Tracking\TrackingIntelligenceService;
 use Fleetbase\Models\Model;
 use Fleetbase\Models\ScheduleItem;
+use Fleetbase\Models\User;
 use Illuminate\Container\Container;
 use Illuminate\Support\Carbon;
 use Stripe\StripeClient;
@@ -80,6 +91,21 @@ class FleetOpsNotificationScheduleItemFake extends ScheduleItem
     public function getDateFormat()
     {
         return 'Y-m-d H:i:s';
+    }
+}
+
+class FleetOpsNotificationContactFake extends Contact
+{
+    public User $userForTest;
+
+    public function getUser(): ?User
+    {
+        return $this->userForTest;
+    }
+
+    public function loadMissing($relations)
+    {
+        return $this;
     }
 }
 
@@ -131,12 +157,18 @@ function fleetOpsNotificationChannelNames(array $channels): array
 function fleetOpsNotificationWithEnvironment(callable $callback): mixed
 {
     $previousApp = Container::getInstance();
-    Container::setInstance(new class extends Container {
+    $app         = new class extends Container {
         public function environment(...$environments)
         {
             return false;
         }
-    });
+    };
+
+    if ($previousApp->bound('config')) {
+        $app->instance('config', $previousApp->make('config'));
+    }
+
+    Container::setInstance($app);
 
     try {
         return $callback();
@@ -593,6 +625,29 @@ test('work order dispatched mail exposes subject and markdown context', function
             'assignee'  => $assignee,
             'target'    => $target,
         ]);
+});
+
+test('customer credentials mail exposes subject content and portal fallback', function () {
+    app('config')->set('fleetbase.console.host', 'console.fleetbase.test');
+    app('config')->set('fleetbase.console.secure', true);
+    app('config')->set('fleetbase.console.subdomain', null);
+    app('session.store')->forget('company');
+
+    $customer              = new FleetOpsNotificationContactFake();
+    $customer->userForTest = new User();
+    $customer->userForTest->setRawAttributes(['email' => 'customer@example.test'], true);
+    $customer->setRelation('company', (object) ['name' => 'Acme Logistics']);
+
+    $mail     = new CustomerCredentialsMail('plain-secret', $customer);
+    $envelope = $mail->envelope();
+    $content  = fleetOpsNotificationWithEnvironment(fn () => $mail->content());
+
+    expect($envelope->subject)->toBe('Your Acme Logistics customer portal access is ready')
+        ->and($content->markdown)->toBe('fleetops::mail.customer-credentials')
+        ->and($content->with['customer'])->toBe($customer)
+        ->and($content->with['plaintextPassword'])->toBe('plain-secret')
+        ->and($content->with['customerPortalUrl'])->toBe('https://console.fleetbase.test/customer-portal')
+        ->and($customer->getRelation('user'))->toBe($customer->userForTest);
 });
 
 test('maintenance schedule reminder mail exposes schedule context', function () {
