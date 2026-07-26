@@ -1,6 +1,8 @@
 <?php
 
 use Fleetbase\FleetOps\Models\Device;
+use Fleetbase\FleetOps\Models\DeviceEvent;
+use Fleetbase\FleetOps\Models\Position;
 use Fleetbase\FleetOps\Models\Telematic;
 use Fleetbase\FleetOps\Support\Telematics\TelematicProviderRegistry;
 use Fleetbase\FleetOps\Support\Telematics\TelematicService;
@@ -8,6 +10,9 @@ use Illuminate\Support\Carbon;
 
 class FleetOpsTelematicServiceDeviceFake extends Device
 {
+    public int $saveCount          = 0;
+    public array $loadMissingCalls = [];
+
     public function __construct(array $attributes = [])
     {
         $this->attributes = $attributes;
@@ -23,6 +28,38 @@ class FleetOpsTelematicServiceDeviceFake extends Device
         $this->attributes[$key] = $value;
 
         return $this;
+    }
+
+    public function save(array $options = [])
+    {
+        $this->saveCount++;
+        $this->exists = true;
+
+        return true;
+    }
+
+    public function loadMissing($relations)
+    {
+        $this->loadMissingCalls[] = $relations;
+
+        return $this;
+    }
+}
+
+class FleetOpsTelematicServiceEventFake extends DeviceEvent
+{
+    public array $positions = [];
+
+    public function __construct(array $attributes = [])
+    {
+        $this->attributes = $attributes;
+    }
+
+    public function createPosition(array $positionData = []): ?Position
+    {
+        $this->positions[] = $positionData;
+
+        return null;
     }
 }
 
@@ -203,6 +240,76 @@ test('telematic service reconciles device telemetry without overwriting protecte
         ->and($emptyDevice->last_position)->toBe(['latitude' => 0, 'longitude' => 0])
         ->and($emptyDevice->status)->toBe('never_connected')
         ->and($emptyDevice->online)->toBeFalse();
+
+    Carbon::setTestNow();
+});
+
+test('telematic service applies device event telemetry to devices and positions', function () {
+    Carbon::setTestNow(Carbon::parse('2026-07-23 12:00:00'));
+
+    $service   = fleetOpsTelematicService();
+    $telematic = new Telematic();
+    $telematic->setRawAttributes([
+        'uuid'         => 'telematic-uuid',
+        'public_id'    => 'telematic_public',
+        'company_uuid' => 'company-uuid',
+        'provider'     => 'flespi',
+    ], true);
+
+    $device         = new FleetOpsTelematicServiceDeviceFake([
+        'uuid'      => 'device-uuid',
+        'device_id' => 'device-1',
+        'status'    => 'active',
+        'meta'      => ['device_meta' => 'kept'],
+    ]);
+    $device->exists = true;
+
+    $event = new FleetOpsTelematicServiceEventFake([
+        'uuid'        => 'event-uuid',
+        'public_id'   => 'event_public',
+        'device_uuid' => 'device-uuid',
+        'event_type'  => 'ignition_on',
+        'provider'    => 'flespi',
+        'occurred_at' => Carbon::parse('2026-07-23 11:59:00'),
+    ]);
+
+    fleetOpsTelematicServiceInvoke($service, 'applyDeviceEventTelemetry', [$event, [
+        'device_id'    => 'device-1',
+        'location'     => ['latitude' => 1.25, 'longitude' => 103.75],
+        'online'       => false,
+        'speed'        => 38,
+        'heading'      => 90,
+        'altitude'     => 15,
+        'odometer'     => 12345,
+        'ignition'     => true,
+        'fuel_level'   => 66,
+        'occurred_at'  => '2026-07-23 11:59:00',
+    ], $device, true, $telematic]);
+
+    expect($device->saveCount)->toBe(1)
+        ->and($device->loadMissingCalls)->toBe(['attachable'])
+        ->and($device->last_position)->toBe(['latitude' => 1.25, 'longitude' => 103.75])
+        ->and($device->online)->toBeTrue()
+        ->and($device->status)->toBe('online')
+        ->and($device->meta['device_meta'])->toBe('kept')
+        ->and($device->meta['telemetry_summary'])->toMatchArray([
+            'last_seen_at' => '2026-07-23 11:59:00',
+            'status'       => 'online',
+            'speed'        => 38,
+            'heading'      => 90,
+            'altitude'     => 15,
+            'odometer'     => 12345,
+            'ignition'     => true,
+            'fuel_level'   => 66,
+        ])
+        ->and($event->positions)->toBe([[
+            'latitude'  => 1.25,
+            'longitude' => 103.75,
+            'heading'   => 90,
+            'bearing'   => 90,
+            'speed'     => 38,
+            'altitude'  => 15,
+        ]]);
 
     Carbon::setTestNow();
 });
