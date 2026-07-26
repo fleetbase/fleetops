@@ -44,7 +44,7 @@ class VendorController extends FleetOpsController
      */
     public function getAsFacilitator($id)
     {
-        $vendor = Vendor::where('uuid', $id)->withTrashed()->first();
+        $vendor = $this->findVendorWithTrashedByUuid($id);
 
         if (!$vendor) {
             return response()->error('Facilitator not found.');
@@ -62,7 +62,7 @@ class VendorController extends FleetOpsController
      */
     public function getAsCustomer($id)
     {
-        $vendor = Vendor::where('uuid', $id)->withTrashed()->first();
+        $vendor = $this->findVendorWithTrashedByUuid($id);
 
         if (!$vendor) {
             return response()->error('Customer not found.');
@@ -94,14 +94,7 @@ class VendorController extends FleetOpsController
      */
     public function statuses()
     {
-        $statuses = DB::table('vendors')
-            ->select('status')
-            ->where('company_uuid', session('company'))
-            ->distinct()
-            ->get()
-            ->pluck('status')
-            ->filter()
-            ->values();
+        $statuses = $this->vendorStatuses();
 
         return response()->json($statuses);
     }
@@ -119,8 +112,8 @@ class VendorController extends FleetOpsController
 
         foreach ($files as $file) {
             try {
-                $import = new VendorImport();
-                Excel::import($import, $file->path, $disk);
+                $import = $this->newVendorImport();
+                $this->importVendorFile($import, $file->path, $disk);
                 $importedCount += $import->imported;
             } catch (\Throwable $e) {
                 return response()->error('Invalid file, unable to proccess.');
@@ -143,13 +136,13 @@ class VendorController extends FleetOpsController
         }
 
         // Find driver
-        $driver = Driver::where('uuid', $request->input('driver'))->first();
+        $driver = $this->findDriverByUuid($request->input('driver'));
         if (!$driver) {
             return response()->error('Selected driver cannot be found.');
         }
 
         // Validate vendor
-        $vendor = Vendor::where('uuid', $id)->first();
+        $vendor = $this->findVendorByUuid($id);
         if (!$vendor) {
             return response()->error('Vendor attempting to assign driver to is invalid.');
         }
@@ -175,13 +168,13 @@ class VendorController extends FleetOpsController
         }
 
         // Find driver
-        $driver = Driver::where('uuid', $request->input('driver'))->first();
+        $driver = $this->findDriverByUuid($request->input('driver'));
         if (!$driver) {
             return response()->error('Selected driver cannot be found.');
         }
 
         // Validate vendor
-        $vendor = Vendor::where('uuid', $id)->first();
+        $vendor = $this->findVendorByUuid($id);
         if (!$vendor) {
             return response()->error('Vendor attempting to remove driver from is invalid.');
         }
@@ -196,12 +189,9 @@ class VendorController extends FleetOpsController
 
     public function vendorPersonnels(string $vendorId)
     {
-        $vendor = Vendor::findByIdOrFail($vendorId);
+        $vendor = $this->findVendorByIdOrFail($vendorId);
 
-        $personnels = VendorPersonnel::where('vendor_uuid', $vendor->uuid)
-            ->with('contact')
-            ->latest()
-            ->get()
+        $personnels = $this->queryVendorPersonnel($vendor->uuid)
             ->map(fn (VendorPersonnel $personnel) => $this->vendorPersonnelPayload($personnel));
 
         return response()->json(['personnels' => $personnels->values()]);
@@ -209,10 +199,10 @@ class VendorController extends FleetOpsController
 
     public function addVendorPersonnel(Request $request, string $vendorId)
     {
-        $vendor  = Vendor::findByIdOrFail($vendorId);
+        $vendor  = $this->findVendorByIdOrFail($vendorId);
         $contact = $this->resolveOrCreatePersonnelContact($request);
 
-        $personnel = VendorPersonnel::updateOrCreate(
+        $personnel = $this->updateOrCreateVendorPersonnel(
             ['vendor_uuid' => $vendor->uuid, 'contact_uuid' => $contact->uuid],
             [
                 'role'            => $request->input('role', 'member'),
@@ -232,10 +222,10 @@ class VendorController extends FleetOpsController
 
     public function removeVendorPersonnel(string $vendorId, string $contactId)
     {
-        $vendor  = Vendor::findByIdOrFail($vendorId);
-        $contact = Contact::findByIdOrFail($contactId);
+        $vendor  = $this->findVendorByIdOrFail($vendorId);
+        $contact = $this->findContactByIdOrFail($contactId);
 
-        VendorPersonnel::where(['vendor_uuid' => $vendor->uuid, 'contact_uuid' => $contact->uuid])->delete();
+        $this->deleteVendorPersonnel($vendor->uuid, $contact->uuid);
 
         return response()->json(['status' => 'ok']);
     }
@@ -244,14 +234,10 @@ class VendorController extends FleetOpsController
     {
         $contactId = $request->input('contact');
         if ($contactId) {
-            return Contact::where('company_uuid', session('company'))
-                ->where(function ($query) use ($contactId) {
-                    $query->where('uuid', $contactId)->orWhere('public_id', $contactId);
-                })
-                ->firstOrFail();
+            return $this->findPersonnelContact($contactId);
         }
 
-        return Contact::create([
+        return $this->createPersonnelContact([
             'company_uuid' => session('company'),
             'name'         => $request->input('name'),
             'email'        => $request->input('email'),
@@ -276,7 +262,91 @@ class VendorController extends FleetOpsController
             'role'            => $personnel->role ?? 'member',
             'status'          => $personnel->status ?? 'active',
             'invited_by_uuid' => $personnel->invited_by_uuid,
-            'contact'         => $contact ? (new ContactResource($contact))->resolve() : null,
+            'contact'         => $contact ? $this->contactResourcePayload($contact) : null,
         ];
+    }
+
+    protected function contactResourcePayload(Contact $contact): array
+    {
+        return (new ContactResource($contact))->resolve();
+    }
+
+    protected function findVendorWithTrashedByUuid(string $id): ?Vendor
+    {
+        return Vendor::where('uuid', $id)->withTrashed()->first();
+    }
+
+    protected function vendorStatuses()
+    {
+        return DB::table('vendors')
+            ->select('status')
+            ->where('company_uuid', session('company'))
+            ->distinct()
+            ->get()
+            ->pluck('status')
+            ->filter()
+            ->values();
+    }
+
+    protected function newVendorImport(): mixed
+    {
+        return new VendorImport();
+    }
+
+    protected function importVendorFile(mixed $import, string $path, string $disk): void
+    {
+        Excel::import($import, $path, $disk);
+    }
+
+    protected function findDriverByUuid(string $uuid): ?Driver
+    {
+        return Driver::where('uuid', $uuid)->first();
+    }
+
+    protected function findVendorByUuid(string $uuid): ?Vendor
+    {
+        return Vendor::where('uuid', $uuid)->first();
+    }
+
+    protected function findVendorByIdOrFail(string $id): Vendor
+    {
+        return Vendor::findByIdOrFail($id);
+    }
+
+    protected function findContactByIdOrFail(string $id): Contact
+    {
+        return Contact::findByIdOrFail($id);
+    }
+
+    protected function queryVendorPersonnel(string $vendorUuid)
+    {
+        return VendorPersonnel::where('vendor_uuid', $vendorUuid)
+            ->with('contact')
+            ->latest()
+            ->get();
+    }
+
+    protected function updateOrCreateVendorPersonnel(array $where, array $attributes): VendorPersonnel
+    {
+        return VendorPersonnel::updateOrCreate($where, $attributes);
+    }
+
+    protected function deleteVendorPersonnel(string $vendorUuid, string $contactUuid): void
+    {
+        VendorPersonnel::where(['vendor_uuid' => $vendorUuid, 'contact_uuid' => $contactUuid])->delete();
+    }
+
+    protected function findPersonnelContact(string $contactId): Contact
+    {
+        return Contact::where('company_uuid', session('company'))
+            ->where(function ($query) use ($contactId) {
+                $query->where('uuid', $contactId)->orWhere('public_id', $contactId);
+            })
+            ->firstOrFail();
+    }
+
+    protected function createPersonnelContact(array $attributes): Contact
+    {
+        return Contact::create($attributes);
     }
 }
