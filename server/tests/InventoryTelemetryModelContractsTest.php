@@ -8,6 +8,10 @@ if (!function_exists('Fleetbase\FleetOps\Models\auth')) {
     eval('namespace Fleetbase\FleetOps\Models; function auth() { return new class { public function id() { return "test-user"; } }; }');
 }
 
+if (!function_exists('Fleetbase\FleetOps\Models\activity')) {
+    eval('namespace Fleetbase\FleetOps\Models; function activity($logName = null) { return new class { public function performedOn($subject) { return $this; } public function withProperties(array $properties) { return $this; } public function log(string $message) { return true; } }; }');
+}
+
 use Fleetbase\FleetOps\Models\Asset;
 use Fleetbase\FleetOps\Models\DeviceEvent;
 use Fleetbase\FleetOps\Models\Order;
@@ -222,6 +226,173 @@ test('sensor accessors thresholds calibration and history are stable', function 
 
     $sensor->forceFill(['status' => 'offline']);
     expect($sensor->is_active)->toBeFalse();
+
+    Carbon::setTestNow();
+});
+
+test('device event direct helper methods cover telemetry export and alert variants', function () {
+    Carbon::setTestNow(Carbon::parse('2026-01-01 12:00:00'));
+
+    $event = new FleetOpsUpdatingDeviceEventFake([
+        'uuid'         => 'event-uuid',
+        'company_uuid' => 'company-uuid',
+        'device_uuid'  => 'device-uuid',
+        'event_type'   => 'critical_failure',
+        'severity'     => 'critical',
+        'message'      => 'Power loss',
+        'ident'        => 'provider-ident',
+        'occurred_at'  => Carbon::parse('2026-01-01 11:40:00'),
+        'processed_at' => Carbon::parse('2026-01-01 11:55:00'),
+        'created_at'   => Carbon::parse('2026-01-01 11:30:00'),
+        'data'         => ['engine' => ['rpm' => 1800]],
+    ]);
+    $event->forceFill(['public_id' => 'device_event_public']);
+
+    $event->setRelation('device', (object) [
+        'name'              => 'Telemetry Box',
+        'device_id'         => 'device-provider-id',
+        'imei'              => 'imei-1',
+        'serial_number'     => 'serial-1',
+        'connection_status' => 'recently_offline',
+        'status'            => 'maintenance',
+        'photo_url'         => 'https://cdn.example/device-photo.png',
+        'telematic_uuid'    => 'telematic-uuid',
+        'telematic'         => (object) [
+            'name'                => 'Telematic One',
+            'provider_descriptor' => ['key' => 'provider-key'],
+        ],
+    ]);
+
+    expect($event->getDeviceNameAttribute())->toBe('Telemetry Box')
+        ->and($event->getDeviceIdAttribute())->toBe('device-provider-id')
+        ->and($event->getDeviceImeiAttribute())->toBe('imei-1')
+        ->and($event->getDeviceSerialNumberAttribute())->toBe('serial-1')
+        ->and($event->getDeviceConnectionStatusAttribute())->toBe('recently_offline')
+        ->and($event->getDeviceStatusAttribute())->toBe('maintenance')
+        ->and($event->getDevicePhotoUrlAttribute())->toBe('https://cdn.example/device-photo.png')
+        ->and($event->getTelematicUuidAttribute())->toBe('telematic-uuid')
+        ->and($event->getTelematicNameAttribute())->toBe('Telematic One')
+        ->and($event->getProviderDescriptorAttribute())->toBe(['key' => 'provider-key'])
+        ->and($event->getIsProcessedAttribute())->toBeTrue()
+        ->and($event->getAgeMinutesAttribute())->toBe(20)
+        ->and($event->getProcessingDelayMinutesAttribute())->toBe(15)
+        ->and($event->getSeverityLevel())->toBe(4)
+        ->and($event->getData('engine.rpm'))->toBe(1800)
+        ->and($event->getData('engine.load', 'unknown'))->toBe('unknown')
+        ->and($event->shouldTriggerAlert())->toBeTrue()
+        ->and($event->exportForAnalysis())->toMatchArray([
+            'event_id'                 => 'device_event_public',
+            'device_uuid'              => 'device-uuid',
+            'device_name'              => 'Telemetry Box',
+            'event_type'               => 'critical_failure',
+            'severity'                 => 'critical',
+            'message'                  => 'Power loss',
+            'processing_delay_minutes' => 15,
+            'data'                     => ['engine' => ['rpm' => 1800]],
+        ]);
+
+    $fallbackEvent = new FleetOpsUpdatingDeviceEventFake(['ident' => 'fallback-ident']);
+    $fallbackEvent->setRelation('device', null);
+    expect($fallbackEvent->getDeviceIdAttribute())->toBe('fallback-ident')
+        ->and($fallbackEvent->createAlert())->toBeNull();
+
+    expect(fleetopsInvokeHidden($event, 'generateAlertMessage'))->toBe("Critical failure detected on device 'Telemetry Box': Power loss");
+
+    foreach ([
+        ['error', "Device 'Telemetry Box' reported an error: Power loss"],
+        ['security_breach', "Security breach detected on device 'Telemetry Box': Power loss"],
+        ['maintenance_required', "Device 'Telemetry Box' requires maintenance: Power loss"],
+        ['threshold_exceeded', "Threshold exceeded on device 'Telemetry Box': Power loss"],
+        ['telemetry_update', "Device 'Telemetry Box' event (telemetry_update): Power loss"],
+    ] as [$type, $message]) {
+        $event->forceFill(['event_type' => $type]);
+        expect(fleetopsInvokeHidden($event, 'generateAlertMessage'))->toBe($message);
+    }
+
+    foreach ([
+        'high'     => 3,
+        'medium'   => 2,
+        'low'      => 1,
+        'info'     => 0,
+    ] as $severity => $level) {
+        $event->forceFill(['severity' => $severity, 'event_type' => 'telemetry_update']);
+        expect($event->getSeverityLevel())->toBe($level);
+    }
+
+    $unprocessed = new FleetOpsUpdatingDeviceEventFake([
+        'occurred_at'  => Carbon::parse('2026-01-01 11:50:00'),
+        'processed_at' => null,
+    ]);
+
+    expect($unprocessed->getProcessingDelayMinutesAttribute())->toBeNull()
+        ->and($unprocessed->markAsProcessed())->toBeTrue()
+        ->and($unprocessed->updates[0]['processed_at'])->toBeInstanceOf(Carbon::class)
+        ->and((new FleetOpsUpdatingDeviceEventFake(['processed_at' => Carbon::parse('2026-01-01 11:59:00')]))->markAsProcessed())->toBeFalse();
+
+    Carbon::setTestNow();
+});
+
+test('sensor direct helper methods cover threshold branches and formatted data', function () {
+    Carbon::setTestNow(Carbon::parse('2026-01-01 12:00:00'));
+
+    $sensor = new FleetOpsUpdatingSensorFake([
+        'name'                 => 'Fuel level',
+        'sensor_type'          => 'fuel',
+        'unit'                 => '%',
+        'status'               => 'active',
+        'last_value'           => 50,
+        'min_threshold'        => 20,
+        'max_threshold'        => 80,
+        'threshold_inclusive'  => true,
+        'last_reading_at'      => Carbon::parse('2026-01-01 11:58:00'),
+        'report_frequency_sec' => 120,
+        'calibration'          => ['offset' => -2, 'scale' => 1.5],
+    ]);
+    $sensor->forceFill(['uuid' => 'sensor-uuid']);
+
+    $sensor->setRelation('device', (object) ['name' => 'Device One']);
+    $sensor->setRelation('warranty', (object) ['name' => 'Warranty One']);
+    $sensor->setRelation('sensorable', (object) ['name' => 'Trailer One']);
+    $sensor->setRelation('photo', null);
+
+    $history = $sensor->getReadingHistory(10, 6);
+
+    expect($sensor->getPhotoUrlAttribute())->toBe('https://flb-assets.s3.ap-southeast-1.amazonaws.com/static/image-file-icon.png')
+        ->and($sensor->getDeviceNameAttribute())->toBe('Device One')
+        ->and($sensor->getWarrantyNameAttribute())->toBe('Warranty One')
+        ->and($sensor->getAttachedToNameAttribute())->toBe('Trailer One')
+        ->and($sensor->getIsActiveAttribute())->toBeTrue()
+        ->and($sensor->getThresholdStatusAttribute())->toBe('normal')
+        ->and($sensor->getLastReadingFormattedAttribute())->toBe('50 %')
+        ->and($sensor->applyCalibratedValue(10))->toBe(13.0)
+        ->and($history['sensor_uuid'])->toBe('sensor-uuid')
+        ->and($history['sensor_name'])->toBe('Fuel level')
+        ->and($history['readings'])->toBe([])
+        ->and($history['summary'])->toMatchArray(['count' => 0, 'last' => 50]);
+
+    $sensor->forceFill(['last_value' => 10, 'min_threshold' => 20, 'max_threshold' => null, 'threshold_inclusive' => true]);
+    expect($sensor->getThresholdStatusAttribute())->toBe('below_minimum')
+        ->and(fleetopsInvokeHidden($sensor, 'getSeverityForThresholdStatus', ['below_minimum']))->toBe('medium')
+        ->and(fleetopsInvokeHidden($sensor, 'generateThresholdAlertMessage', [10, 'below_minimum']))
+        ->toBe("Sensor 'Fuel level' reading (10 %) is below minimum threshold (20 %)");
+
+    $sensor->forceFill(['last_value' => 90, 'min_threshold' => null, 'max_threshold' => 80, 'threshold_inclusive' => false]);
+    expect($sensor->getThresholdStatusAttribute())->toBe('above_maximum')
+        ->and(fleetopsInvokeHidden($sensor, 'generateThresholdAlertMessage', [90, 'above_maximum']))
+        ->toBe("Sensor 'Fuel level' reading (90 %) exceeds maximum threshold (80 %)");
+
+    $sensor->forceFill(['last_value' => null]);
+    expect($sensor->getThresholdStatusAttribute())->toBe('normal')
+        ->and($sensor->getLastReadingFormattedAttribute())->toBeNull()
+        ->and(fleetopsInvokeHidden($sensor, 'getSeverityForThresholdStatus', ['unknown']))->toBe('low')
+        ->and(fleetopsInvokeHidden($sensor, 'generateThresholdAlertMessage', [0, 'unknown']))
+        ->toBe("Sensor 'Fuel level' threshold violation detected");
+
+    $sensor->forceFill(['status' => 'active', 'last_reading_at' => Carbon::parse('2026-01-01 11:00:00')]);
+    expect($sensor->getIsActiveAttribute())->toBeFalse();
+
+    $sensor->forceFill(['status' => 'active', 'last_reading_at' => null, 'report_frequency_sec' => null]);
+    expect($sensor->getIsActiveAttribute())->toBeTrue();
 
     Carbon::setTestNow();
 });
