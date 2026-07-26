@@ -7,6 +7,7 @@ use Fleetbase\FleetOps\Support\Metrics\AvgOrderValueMetric;
 use Fleetbase\FleetOps\Support\Metrics\EarningsMetric;
 use Fleetbase\FleetOps\Support\Metrics\MoneyMetric;
 use Fleetbase\FleetOps\Support\Metrics\OrdersInProgressMetric;
+use Fleetbase\FleetOps\Support\Metrics\OrdersScheduledMetric;
 use Fleetbase\FleetOps\Support\Metrics\Registry;
 use Fleetbase\FleetOps\Support\Metrics\TotalTimeTraveledMetric;
 use Fleetbase\Models\Company;
@@ -76,6 +77,14 @@ class TestFleetOpsMoneyMetric extends MoneyMetric
 class TestFleetOpsAvgOrderValueMetric extends AvgOrderValueMetric
 {
     public function aggregateForTest($query): float|int
+    {
+        return $this->aggregate($query);
+    }
+}
+
+class TestFleetOpsOrdersScheduledMetric extends OrdersScheduledMetric
+{
+    public function aggregateForTest($query): int
     {
         return $this->aggregate($query);
     }
@@ -340,6 +349,22 @@ test('ordersInProgress uses an explicit allowlist rather than an exclusion list'
     expect($statuses)->not->toBeEmpty();
     expect($statuses)->toContain('dispatched');
     expect($statuses)->toContain('started');
+});
+
+test('orders scheduled metric scopes to future created orders for the company', function () {
+    $company = new Company();
+    $company->setRawAttributes(['uuid' => 'company-scheduled'], true);
+
+    $metric = TestFleetOpsOrdersScheduledMetric::forCompany($company);
+    $source = file_get_contents(dirname(__DIR__) . '/src/Support/Metrics/OrdersScheduledMetric.php');
+
+    expect(OrdersScheduledMetric::slug())->toBe('orders_scheduled')
+        ->and($metric->format())->toBe('count')
+        ->and($metric->aggregateForTest(new TestFleetOpsMetricCountQuery(7)))->toBe(7)
+        ->and($source)->toContain("where('company_uuid', \$this->company->uuid)")
+        ->and($source)->toContain("where('status', 'created')")
+        ->and($source)->toContain("whereDate('scheduled_at', '>', Carbon::now())")
+        ->and($source)->toContain("whereBetween('created_at', [\$start, \$end])");
 });
 
 test('abstract metric builds value delta currency and sparkline payloads', function () {
