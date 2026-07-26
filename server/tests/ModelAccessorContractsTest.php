@@ -49,6 +49,8 @@ use Fleetbase\LaravelMysqlSpatial\Types\Point;
 use Illuminate\Database\ConnectionResolver;
 use Illuminate\Database\Eloquent\Model as EloquentModel;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\MorphTo;
 use Illuminate\Database\SQLiteConnection;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
@@ -631,6 +633,40 @@ test('waypoint model mirrors tracking number status accessors', function () {
         ->and($emptyWaypoint->getStatusAttribute())->toBeNull()
         ->and($emptyWaypoint->getStatusCodeAttribute())->toBeNull()
         ->and($emptyWaypoint->getCompleteAttribute())->toBeNull();
+});
+
+test('waypoint model exposes relationship contracts without resolving records', function () {
+    fleetopsModelAccessorsUseInMemoryRelationConnection();
+
+    $waypoint = new Waypoint();
+    $waypoint->setRawAttributes([
+        'uuid'         => 'waypoint-uuid',
+        'payload_uuid' => 'payload-uuid',
+        'place_uuid'   => 'place-uuid',
+    ], true);
+
+    expect($waypoint->place())->toBeInstanceOf(BelongsTo::class)
+        ->and($waypoint->trackingNumber())->toBeInstanceOf(BelongsTo::class)
+        ->and($waypoint->payload())->toBeInstanceOf(BelongsTo::class)
+        ->and($waypoint->company())->toBeInstanceOf(BelongsTo::class)
+        ->and($waypoint->proofs())->toBeInstanceOf(HasMany::class)
+        ->and($waypoint->entities())->toBeInstanceOf(HasMany::class)
+        ->and($waypoint->customer())->toBeInstanceOf(MorphTo::class);
+});
+
+test('waypoint model resolves loaded place and rejects unscoped place lookup', function () {
+    fleetopsModelAccessorsUseInMemoryRelationConnection();
+
+    $place = new Place();
+    $place->setRawAttributes(['uuid' => 'place-uuid'], true);
+
+    $waypoint = new Waypoint();
+    $waypoint->setRawAttributes(['place_uuid' => 'place-uuid'], true);
+    $waypoint->setRelation('place', $place);
+
+    expect($waypoint->getPlace())->toBe($place)
+        ->and(fn () => Waypoint::findByPlace('place_public', new Order()))
+        ->toThrow(InvalidArgumentException::class, 'Missing payload UUID for lookup.');
 });
 
 test('service quote model exposes pure helpers and safe request resolution defaults', function () {
@@ -1461,16 +1497,23 @@ test('order accessors mutators and payload association helpers are stable', func
 });
 
 test('payload and place pure accessors normalize fallback data', function () {
-    $pickup  = new FleetOpsPlainPlaceFake(['name' => 'Pickup name', 'country' => 'SG']);
-    $dropoff = new FleetOpsPlainPlaceFake(['street1' => 'Dropoff street', 'country' => 'MY']);
-    $return  = new FleetOpsPlainPlaceFake(['street1' => 'Return address']);
+    $pickup = new FleetOpsPlainPlaceFake();
+    $pickup->setRawAttributes(['name' => 'Pickup name', 'country' => 'SG', 'uuid' => '11111111-1111-4111-8111-111111111111'], true);
+
+    $dropoff = new FleetOpsPlainPlaceFake();
+    $dropoff->setRawAttributes(['street1' => 'Dropoff street', 'country' => 'MY', 'uuid' => '22222222-2222-4222-8222-222222222222'], true);
+
+    $return = new FleetOpsPlainPlaceFake(['street1' => 'Return address']);
+
+    $waypoint = new Place();
+    $waypoint->setRawAttributes(['name' => 'Waypoint one', 'uuid' => '33333333-3333-4333-8333-333333333333'], true);
 
     $payload = new FleetOpsLoadedPayloadFake(['cod_amount' => '$12.34']);
     $payload->setRelation('pickup', $pickup);
     $payload->setRelation('dropoff', $dropoff);
     $payload->setRelation('return', $return);
     $payload->setRelation('waypoints', collect([
-        new Place(['name' => 'Waypoint one']),
+        $waypoint,
         ['name' => 'Waypoint array'],
         (object) ['name' => 'Ignored object'],
     ]));
@@ -1481,8 +1524,17 @@ test('payload and place pure accessors normalize fallback data', function () {
         ->and($payload->return_name)->toBe('Return address')
         ->and($payload->getPickupRegion())->toBe('SG')
         ->and($payload->getCountryCode())->toBe('SG')
+        ->and($payload->index_pickup_place)->toBe($pickup)
+        ->and($payload->index_dropoff_place)->toBe($dropoff)
+        ->and($payload->is_multiple_drop_order)->toBeFalse()
         ->and($payload->getAllStops())->toHaveCount(4)
-        ->and($payload->getPickupLocation())->toBeInstanceOf(Point::class);
+        ->and($payload->getPickupLocation())->toBeInstanceOf(Point::class)
+        ->and($payload->findDestinationFromKey())->toBeNull()
+        ->and($payload->findDestinationFromKey('0'))->toBe($waypoint)
+        ->and($payload->findDestinationFromKey('pickup'))->toBe($pickup)
+        ->and($payload->findDestinationFromKey('dropoff'))->toBe($dropoff)
+        ->and($payload->findDestinationFromKey('33333333-3333-4333-8333-333333333333'))->toBe($waypoint)
+        ->and($payload->findDestinationFromKey('22222222-2222-4222-8222-222222222222'))->toBe($dropoff);
 
     $place = new Place([
         'street1'     => '  1 Main Street  ',
