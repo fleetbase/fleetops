@@ -421,6 +421,30 @@ class FleetOpsHydratablePlaceFake extends Place
     }
 }
 
+class FleetOpsImportablePlaceFake extends Place
+{
+    public static ?string $lastGeocodedAddress = null;
+    public bool $saved                         = false;
+
+    public static function createFromGeocodingLookup(string $address, $saveInstance = false): ?Place
+    {
+        static::$lastGeocodedAddress = $address;
+
+        return new static([
+            'name'     => 'Geocoded Place',
+            'street1'  => null,
+            'location' => null,
+        ]);
+    }
+
+    public function save(array $options = []): bool
+    {
+        $this->saved = true;
+
+        return true;
+    }
+}
+
 class FleetOpsLoadedServiceRateFake extends ServiceRate
 {
     public function load($relations)
@@ -1884,6 +1908,50 @@ test('shared place hydration fills only safe missing fields and zero locations',
     expect($complete->name)->toBe('Complete Place')
         ->and($complete->street2)->toBe('Level 2')
         ->and($complete->saved)->toBeFalse();
+});
+
+test('place import rows use aliases coordinates metadata and save options without geocoding', function () {
+    FleetOpsImportablePlaceFake::$lastGeocodedAddress = null;
+
+    $imported = FleetOpsImportablePlaceFake::createFromImportRow([
+        'house_number'   => '42',
+        'street'         => 'Depot Road',
+        'unit_number'    => 'Dock 5',
+        'town'           => 'Singapore',
+        'district'       => 'Central',
+        'state'          => 'SG',
+        'zip'            => '018956',
+        'lat'            => '1.3001',
+        'lng'            => '103.8002',
+        'mobile_number'  => '+6512345678',
+        'custom_context' => 'fragile',
+    ], 'import-uuid', 'SG');
+
+    expect(FleetOpsImportablePlaceFake::$lastGeocodedAddress)->toBe('1.3001, 103.8002')
+        ->and($imported)->toBeInstanceOf(FleetOpsImportablePlaceFake::class)
+        ->and($imported->street1)->toBe('Depot Road')
+        ->and($imported->street2)->toBe('Dock 5')
+        ->and($imported->city)->toBe('Singapore')
+        ->and($imported->neighborhood)->toBe('Central')
+        ->and($imported->province)->toBe('SG')
+        ->and($imported->postal_code)->toBe('018956')
+        ->and($imported->phone)->toBe('+6512345678')
+        ->and($imported->location)->not->toBeNull()
+        ->and($imported->getAttribute('_import_id'))->toBe('import-uuid')
+        ->and(data_get($imported->meta, 'custom_context'))->toBe('fragile');
+
+    FleetOpsImportablePlaceFake::$lastGeocodedAddress = null;
+
+    $saved = FleetOpsImportablePlaceFake::createFromImport([
+        'street' => '55 Warehouse Way',
+        'city'   => 'Singapore',
+        'phone'  => '+6500000000',
+    ], true);
+
+    expect(FleetOpsImportablePlaceFake::$lastGeocodedAddress)->toBe('55 Warehouse Way Singapore')
+        ->and($saved)->toBeInstanceOf(FleetOpsImportablePlaceFake::class)
+        ->and($saved->company_uuid)->toBe(session('company'))
+        ->and($saved->saved)->toBeTrue();
 });
 
 test('telematic model accessors relationships scopes and heartbeat contracts are stable', function () {
