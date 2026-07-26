@@ -54,9 +54,9 @@ class OrchestrationController extends Controller
      */
     public function orders(Request $request): JsonResponse
     {
-        $companyUuid = session('company');
+        $companyUuid = $this->companyUuid();
 
-        $query = Order::where('company_uuid', $companyUuid)->whereIn('status', ['created', 'dispatched', 'started']);
+        $query = $this->orchestratorOrdersQuery($companyUuid);
 
         $query->whereHas('payload', function ($payloadQuery) {
             $payloadQuery->where(function ($q) {
@@ -118,7 +118,7 @@ class OrchestrationController extends Controller
      */
     public function run(Request $request): JsonResponse
     {
-        $companyUuid       = session('company');
+        $companyUuid       = $this->companyUuid();
         $mode              = $request->input('mode', 'assign_vehicles');
         $orderIds          = $request->input('order_ids', []);
         $vehicleIds        = $request->input('vehicle_ids', []);
@@ -130,9 +130,7 @@ class OrchestrationController extends Controller
             ->keyBy('order_id');
 
         // ── Resolve orders ────────────────────────────────────────────────────
-        $ordersQuery = Order::where('company_uuid', $companyUuid)
-            ->whereIn('status', ['created', 'dispatched', 'started'])
-            ->with(['payload.dropoff', 'payload.pickup', 'payload.waypoints', 'payload.waypointMarkers', 'payload.entities']);
+        $ordersQuery = $this->orchestrationRunOrdersQuery($companyUuid);
 
         if ($mode === 'assign_vehicles' || $mode === 'allocate') {
             // Exclude orders that already have a vehicle assigned in the DB
@@ -190,9 +188,7 @@ class OrchestrationController extends Controller
                 ->toArray();
             $priorDriverMap = collect();
             if (!empty($priorDriverIds)) {
-                $priorDriverMap = Driver::whereIn('public_id', $priorDriverIds)
-                    ->get()
-                    ->keyBy('public_id');
+                $priorDriverMap = $this->driversByPublicId($priorDriverIds);
             }
 
             foreach ($orders as $order) {
@@ -205,9 +201,7 @@ class OrchestrationController extends Controller
                 // so engines that group by this field work correctly.
                 if (!empty($prior['vehicle_id']) && !$order->vehicle_assigned_uuid) {
                     // Resolve the Vehicle model and attach it
-                    $vehicle = Vehicle::where('public_id', $prior['vehicle_id'])
-                        ->with(['driver' => fn ($q) => $q->with(['scheduleItems'])])
-                        ->first();
+                    $vehicle = $this->vehicleByPublicIdWithDriver($prior['vehicle_id']);
                     if ($vehicle) {
                         $order->vehicle_assigned_uuid = $vehicle->uuid;
 
@@ -239,8 +233,7 @@ class OrchestrationController extends Controller
         }
 
         // ── Resolve vehicles ──────────────────────────────────────────────────
-        $vehiclesQuery = Vehicle::where('company_uuid', $companyUuid)
-            ->with(['driver' => fn ($q) => $q->with(['scheduleItems'])]);
+        $vehiclesQuery = $this->orchestrationRunVehiclesQuery($companyUuid);
 
         if (!empty($vehicleIds)) {
             $vehiclesQuery->whereIn('public_id', $vehicleIds);
@@ -276,11 +269,11 @@ class OrchestrationController extends Controller
         // ── Run engine ────────────────────────────────────────────────────────
         $engineId = $mode === 'assign_drivers'
             ? 'driver_assignment'
-            : ($request->input('options.engine') ?? Setting::lookup('fleetops.orchestrator_engine', 'greedy'));
+            : ($request->input('options.engine') ?? $this->orchestratorEngineSetting());
 
         try {
             if ($mode === 'assign_drivers') {
-                $engine = new DriverAssignmentEngine();
+                $engine = $this->driverAssignmentEngine();
                 $result = $engine->assign($orders, $vehicles, $options);
             } elseif ($mode === 'optimize_routes') {
                 // optimize_routes sequences stops within each vehicle's already-assigned
@@ -297,15 +290,13 @@ class OrchestrationController extends Controller
                 // (i.e. standalone optimize_routes without a prior assign_drivers phase).
                 foreach ($orders as $order) {
                     if (!$order->relationLoaded('vehicle') && $order->vehicle_assigned_uuid) {
-                        $vehicle = Vehicle::where('uuid', $order->vehicle_assigned_uuid)
-                            ->with(['driver'])
-                            ->first();
+                        $vehicle = $this->vehicleByUuidWithDriver($order->vehicle_assigned_uuid);
                         if ($vehicle) {
                             $order->setRelation('vehicle', $vehicle);
                         }
                     }
                 }
-                $engine = new RouteSequencingEngine();
+                $engine = $this->routeSequencingEngine();
                 $result = $engine->sequence($orders, $options);
             } else {
                 $engine = $this->registry->resolve($engineId);
@@ -333,6 +324,65 @@ class OrchestrationController extends Controller
     public function preview(Request $request): JsonResponse
     {
         return $this->run($request);
+    }
+
+    protected function companyUuid(): ?string
+    {
+        return session('company');
+    }
+
+    protected function orchestratorOrdersQuery(?string $companyUuid): mixed
+    {
+        return Order::where('company_uuid', $companyUuid)->whereIn('status', ['created', 'dispatched', 'started']);
+    }
+
+    protected function orchestrationRunOrdersQuery(?string $companyUuid): mixed
+    {
+        return Order::where('company_uuid', $companyUuid)
+            ->whereIn('status', ['created', 'dispatched', 'started'])
+            ->with(['payload.dropoff', 'payload.pickup', 'payload.waypoints', 'payload.waypointMarkers', 'payload.entities']);
+    }
+
+    protected function orchestrationRunVehiclesQuery(?string $companyUuid): mixed
+    {
+        return Vehicle::where('company_uuid', $companyUuid)
+            ->with(['driver' => fn ($q) => $q->with(['scheduleItems'])]);
+    }
+
+    protected function driversByPublicId(array $publicIds)
+    {
+        return Driver::whereIn('public_id', $publicIds)
+            ->get()
+            ->keyBy('public_id');
+    }
+
+    protected function vehicleByPublicIdWithDriver(string $publicId): ?Vehicle
+    {
+        return Vehicle::where('public_id', $publicId)
+            ->with(['driver' => fn ($q) => $q->with(['scheduleItems'])])
+            ->first();
+    }
+
+    protected function vehicleByUuidWithDriver(string $uuid): ?Vehicle
+    {
+        return Vehicle::where('uuid', $uuid)
+            ->with(['driver'])
+            ->first();
+    }
+
+    protected function orchestratorEngineSetting(): string
+    {
+        return Setting::lookup('fleetops.orchestrator_engine', 'greedy');
+    }
+
+    protected function driverAssignmentEngine(): DriverAssignmentEngine
+    {
+        return new DriverAssignmentEngine();
+    }
+
+    protected function routeSequencingEngine(): RouteSequencingEngine
+    {
+        return new RouteSequencingEngine();
     }
 
     /**

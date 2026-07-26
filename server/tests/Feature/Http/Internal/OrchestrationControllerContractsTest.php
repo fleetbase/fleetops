@@ -9,25 +9,86 @@ use Fleetbase\FleetOps\Models\OrderConfig;
 use Fleetbase\FleetOps\Models\Payload;
 use Fleetbase\FleetOps\Models\Place;
 use Fleetbase\FleetOps\Models\Vehicle;
+use Fleetbase\FleetOps\Orchestration\Contracts\OrchestrationEngineInterface;
+use Fleetbase\FleetOps\Orchestration\Engines\DriverAssignmentEngine;
 use Fleetbase\FleetOps\Orchestration\Engines\GreedyOrchestrationEngine;
+use Fleetbase\FleetOps\Orchestration\Engines\RouteSequencingEngine;
 use Fleetbase\FleetOps\Orchestration\OrchestrationEngineRegistry;
 use Fleetbase\Models\CustomField;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Str;
 
 class FleetOpsOrchestrationCommitControllerProbe extends OrchestrationController
 {
-    public array $vehicles             = [];
-    public array $drivers              = [];
-    public array $orders               = [];
-    public array $manifests            = [];
-    public array $manifestStops        = [];
-    public array $waypointUpdates      = [];
-    public array $transactions         = [];
-    public array $fieldConfigs         = [];
-    public array $fallbackCustomFields = [];
-    public bool $throwOnCreateManifest = false;
-    public int $transactionLevel       = 0;
+    public array $vehicles                                   = [];
+    public array $drivers                                    = [];
+    public array $orders                                     = [];
+    public array $manifests                                  = [];
+    public array $manifestStops                              = [];
+    public array $waypointUpdates                            = [];
+    public array $transactions                               = [];
+    public array $fieldConfigs                               = [];
+    public array $fallbackCustomFields                       = [];
+    public array $vehiclesByUuid                             = [];
+    public array $driverMap                                  = [];
+    public ?FleetOpsOrchestrationQueryFake $orderQuery       = null;
+    public ?FleetOpsOrchestrationQueryFake $vehicleQuery     = null;
+    public ?FleetOpsDriverAssignmentEngineFake $driverEngine = null;
+    public ?FleetOpsRouteSequencingEngineFake $routeEngine   = null;
+    public string $engineSetting                             = 'greedy';
+    public bool $throwOnCreateManifest                       = false;
+    public int $transactionLevel                             = 0;
+
+    protected function companyUuid(): ?string
+    {
+        return 'company-uuid';
+    }
+
+    protected function orchestratorOrdersQuery(?string $companyUuid): mixed
+    {
+        return $this->orderQuery ??= new FleetOpsOrchestrationQueryFake();
+    }
+
+    protected function orchestrationRunOrdersQuery(?string $companyUuid): mixed
+    {
+        return $this->orderQuery ??= new FleetOpsOrchestrationQueryFake();
+    }
+
+    protected function orchestrationRunVehiclesQuery(?string $companyUuid): mixed
+    {
+        return $this->vehicleQuery ??= new FleetOpsOrchestrationQueryFake();
+    }
+
+    protected function driversByPublicId(array $publicIds)
+    {
+        return collect($this->driverMap)->only($publicIds);
+    }
+
+    protected function vehicleByPublicIdWithDriver(string $publicId): ?Vehicle
+    {
+        return $this->vehicles[$publicId] ?? null;
+    }
+
+    protected function vehicleByUuidWithDriver(string $uuid): ?Vehicle
+    {
+        return $this->vehiclesByUuid[$uuid] ?? null;
+    }
+
+    protected function orchestratorEngineSetting(): string
+    {
+        return $this->engineSetting;
+    }
+
+    protected function driverAssignmentEngine(): DriverAssignmentEngine
+    {
+        return $this->driverEngine ??= new FleetOpsDriverAssignmentEngineFake();
+    }
+
+    protected function routeSequencingEngine(): RouteSequencingEngine
+    {
+        return $this->routeEngine ??= new FleetOpsRouteSequencingEngineFake();
+    }
 
     protected function beginOrchestrationTransaction(): void
     {
@@ -120,6 +181,102 @@ class FleetOpsOrchestrationCommitOrderFake extends Order
     }
 }
 
+class FleetOpsOrchestrationQueryFake
+{
+    public array $calls = [];
+
+    public function __construct(public Collection $results = new Collection())
+    {
+    }
+
+    public function __call(string $method, array $arguments): self
+    {
+        $this->calls[] = [$method, $arguments];
+
+        foreach ($arguments as $argument) {
+            if ($argument instanceof Closure) {
+                $argument($this);
+            }
+        }
+
+        return $this;
+    }
+
+    public function get(): Collection
+    {
+        $this->calls[] = ['get', []];
+
+        return $this->results;
+    }
+
+    public function first(): mixed
+    {
+        $this->calls[] = ['first', []];
+
+        return $this->results->first();
+    }
+}
+
+class FleetOpsDriverAssignmentEngineFake extends DriverAssignmentEngine
+{
+    public array $calls = [];
+
+    public function assign(Collection $orders, Collection $vehicles, array $options = []): array
+    {
+        $this->calls[] = compact('orders', 'vehicles', 'options');
+
+        return [
+            'assignments' => [[
+                'order_id'   => $orders->first()?->public_id,
+                'vehicle_id' => $vehicles->first()?->public_id,
+                'driver_id'  => $orders->first()?->driverAssigned?->public_id,
+                'sequence'   => null,
+            ]],
+            'unassigned'  => [],
+            'summary'     => ['engine' => 'driver_assignment_fake'],
+        ];
+    }
+}
+
+class FleetOpsRouteSequencingEngineFake extends RouteSequencingEngine
+{
+    public array $calls = [];
+
+    public function sequence(Collection $orders, array $options = []): array
+    {
+        $this->calls[] = compact('orders', 'options');
+
+        return [
+            'assignments' => [[
+                'order_id'   => $orders->first()?->public_id,
+                'vehicle_id' => $orders->first()?->vehicle?->public_id,
+                'driver_id'  => $orders->first()?->vehicle?->driver?->public_id,
+                'sequence'   => 1,
+            ]],
+            'unassigned'  => [],
+            'summary'     => ['engine' => 'route_sequence_fake'],
+        ];
+    }
+}
+
+class FleetOpsThrowingOrchestrationEngineFake implements OrchestrationEngineInterface
+{
+    public function allocate(Collection $orders, Collection $vehicles, array $options = []): array
+    {
+        throw new RuntimeException('orchestration unavailable');
+    }
+
+    public function getName(): string
+    {
+        return 'Throwing Engine';
+    }
+
+    public function getIdentifier(): string
+    {
+        return 'throwing';
+    }
+}
+
 function fleetopsOrchestrationController(): OrchestrationController
 {
     $registry = new OrchestrationEngineRegistry();
@@ -207,6 +364,171 @@ function callOrchestrationControllerHelper(OrchestrationController $controller, 
 
     return $reflection->invoke($controller, ...$arguments);
 }
+
+test('orchestration orders endpoint applies workbench filters and caps limits', function () {
+    $controller             = fleetopsOrchestrationCommitController();
+    $controller->orderQuery = new FleetOpsOrchestrationQueryFake();
+    $request                = Request::create('/orchestrator/orders', 'GET', [
+        'unassigned' => '1',
+        'limit'      => 1500,
+    ]);
+    app()->instance('request', $request);
+
+    $response = $controller->orders($request);
+
+    $methods    = array_column($controller->orderQuery->calls, 0);
+    $limitCalls = array_values(array_filter(
+        $controller->orderQuery->calls,
+        fn ($call) => $call[0] === 'limit'
+    ));
+    $whereNullCalls = array_values(array_filter(
+        $controller->orderQuery->calls,
+        fn ($call) => $call[0] === 'whereNull'
+    ));
+
+    expect($response->getStatusCode())->toBe(200)
+        ->and($response->getData(true))->toBe(['orders' => []])
+        ->and($methods)->toContain('whereHas', 'whereNotNull', 'orWhereHas', 'with', 'limit', 'get')
+        ->and($limitCalls[0][1])->toBe([1000])
+        ->and($whereNullCalls)->toContain(['whereNull', ['vehicle_assigned_uuid']]);
+});
+
+test('orchestration run reports empty criteria and preview delegates to run', function () {
+    $vehicle = fleetopsOrchestrationVehicle();
+    $vehicle->setRelation('driver', fleetopsOrchestrationDriver());
+
+    $controller               = fleetopsOrchestrationCommitController();
+    $controller->orderQuery   = new FleetOpsOrchestrationQueryFake();
+    $controller->vehicleQuery = new FleetOpsOrchestrationQueryFake(collect([$vehicle]));
+
+    $response = $controller->run(Request::create('/orchestrator/run', 'POST', [
+        'mode'              => 'allocate',
+        'prior_assignments' => [
+            ['order_id' => 'order_taken', 'vehicle_id' => 'vehicle_one'],
+        ],
+    ]));
+
+    $preview = $controller->preview(Request::create('/orchestrator/preview', 'GET', [
+        'mode' => 'assign_vehicles',
+    ]));
+
+    $orderMethods = array_column($controller->orderQuery->calls, 0);
+
+    expect($response->getStatusCode())->toBe(200)
+        ->and($response->getData(true))->toBe([
+            'message'     => 'No orders found for the given criteria.',
+            'assignments' => [],
+            'unassigned'  => [],
+        ])
+        ->and($preview->getData(true)['message'])->toBe('No orders found for the given criteria.')
+        ->and($orderMethods)->toContain('whereNull', 'whereNotIn', 'get');
+});
+
+test('orchestration run reports unavailable vehicles with selected order ids', function () {
+    $order                    = fleetopsOrchestrationOrder('order_one');
+    $controller               = fleetopsOrchestrationCommitController();
+    $controller->orderQuery   = new FleetOpsOrchestrationQueryFake(collect([$order]));
+    $controller->vehicleQuery = new FleetOpsOrchestrationQueryFake();
+
+    $response = $controller->run(Request::create('/orchestrator/run', 'POST', [
+        'mode'        => 'assign_vehicles',
+        'order_ids'   => ['order_one'],
+        'vehicle_ids' => ['vehicle_missing'],
+    ]));
+
+    $orderMethods   = array_column($controller->orderQuery->calls, 0);
+    $vehicleMethods = array_column($controller->vehicleQuery->calls, 0);
+
+    expect($response->getStatusCode())->toBe(200)
+        ->and($response->getData(true))->toBe([
+            'message'     => 'No available vehicles found.',
+            'assignments' => [],
+            'unassigned'  => ['order_one'],
+        ])
+        ->and($orderMethods)->toContain('whereIn')
+        ->and($vehicleMethods)->toContain('whereIn');
+});
+
+test('orchestration assign drivers augments orders from prior assignments before engine dispatch', function () {
+    $order   = fleetopsOrchestrationOrder('order_one');
+    $driver  = fleetopsOrchestrationDriver('driver_one');
+    $vehicle = fleetopsOrchestrationVehicle('vehicle_one');
+    $vehicle->setRelation('driver', fleetopsOrchestrationDriver('old_driver'));
+
+    $controller                          = fleetopsOrchestrationCommitController();
+    $controller->orderQuery              = new FleetOpsOrchestrationQueryFake(collect([$order]));
+    $controller->vehicleQuery            = new FleetOpsOrchestrationQueryFake(collect([$vehicle]));
+    $controller->vehicles['vehicle_one'] = $vehicle;
+    $controller->driverMap               = ['driver_one' => $driver];
+    $controller->driverEngine            = new FleetOpsDriverAssignmentEngineFake();
+
+    $response = $controller->run(Request::create('/orchestrator/run', 'POST', [
+        'mode'              => 'assign_drivers',
+        'options'           => ['respect_skills' => false],
+        'prior_assignments' => [
+            [
+                'order_id'   => 'order_one',
+                'vehicle_id' => 'vehicle_one',
+                'driver_id'  => 'driver_one',
+            ],
+        ],
+    ]));
+
+    $payload = $response->getData(true);
+
+    expect($response->getStatusCode())->toBe(200)
+        ->and($payload['summary'])->toBe(['engine' => 'driver_assignment_fake'])
+        ->and($order->vehicle_assigned_uuid)->toBe('vehicle_one-uuid')
+        ->and($order->driver_assigned_uuid)->toBe('driver_one-uuid')
+        ->and($order->vehicle->driver->public_id)->toBe('driver_one')
+        ->and($order->driverAssigned->public_id)->toBe('driver_one')
+        ->and($controller->driverEngine->calls[0]['options'])->toBe(['respect_skills' => false]);
+});
+
+test('orchestration optimize routes hydrates missing vehicle relations before sequencing', function () {
+    $order                        = fleetopsOrchestrationOrder('order_one');
+    $order->vehicle_assigned_uuid = 'vehicle-one-uuid';
+
+    $driver        = fleetopsOrchestrationDriver('driver_one');
+    $vehicle       = fleetopsOrchestrationVehicle('vehicle_one');
+    $vehicle->uuid = 'vehicle-one-uuid';
+    $vehicle->setRelation('driver', $driver);
+
+    $controller                                     = fleetopsOrchestrationCommitController();
+    $controller->orderQuery                         = new FleetOpsOrchestrationQueryFake(collect([$order]));
+    $controller->vehicleQuery                       = new FleetOpsOrchestrationQueryFake(collect([$vehicle]));
+    $controller->vehiclesByUuid['vehicle-one-uuid'] = $vehicle;
+    $controller->routeEngine                        = new FleetOpsRouteSequencingEngineFake();
+
+    $response = $controller->run(Request::create('/orchestrator/run', 'POST', [
+        'mode' => 'optimize_routes',
+    ]));
+
+    expect($response->getStatusCode())->toBe(200)
+        ->and($response->getData(true)['summary'])->toBe(['engine' => 'route_sequence_fake'])
+        ->and($order->relationLoaded('vehicle'))->toBeTrue()
+        ->and($order->vehicle->driver->public_id)->toBe('driver_one')
+        ->and($controller->routeEngine->calls)->toHaveCount(1);
+});
+
+test('orchestration run returns structured engine failures', function () {
+    $registry = new OrchestrationEngineRegistry();
+    $registry->register(new FleetOpsThrowingOrchestrationEngineFake());
+
+    $controller               = new FleetOpsOrchestrationCommitControllerProbe($registry);
+    $controller->orderQuery   = new FleetOpsOrchestrationQueryFake(collect([fleetopsOrchestrationOrder('order_one')]));
+    $controller->vehicleQuery = new FleetOpsOrchestrationQueryFake(collect([fleetopsOrchestrationVehicle('vehicle_one')]));
+
+    $response = $controller->run(Request::create('/orchestrator/run', 'POST', [
+        'options' => ['engine' => 'throwing'],
+    ]));
+
+    expect($response->getStatusCode())->toBe(503)
+        ->and($response->getData(true))->toMatchArray([
+            'error'  => 'orchestration unavailable',
+            'engine' => 'throwing',
+        ]);
+});
 
 test('orchestration controller exposes engines and rejects empty commits before persistence', function () {
     $controller = fleetopsOrchestrationController();
