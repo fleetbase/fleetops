@@ -1,17 +1,25 @@
 <?php
 
 use Fleetbase\FleetOps\Http\Controllers\Api\v1\OrderController;
+use Fleetbase\FleetOps\Http\Requests\ScheduleOrderRequest;
 use Fleetbase\FleetOps\Models\Order;
 use Fleetbase\FleetOps\Models\Proof;
 use Fleetbase\FleetOps\Support\OrderTracker;
+use Fleetbase\Models\File;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
 
 class FleetOpsApiOrderCrudControllerProbe extends OrderController
 {
     public ?FleetOpsApiOrderCrudFake $order = null;
     public mixed $matrix                    = null;
     public array $createdProofs             = [];
+    public array $createdFiles              = [];
+    public array $storedFiles               = [];
+    public array $proofCollections          = [];
+    public array $commentCollections        = [];
+    public mixed $entityEditingSettings     = null;
     public bool $orderNotFound              = false;
     public mixed $resolvedSubject           = null;
 
@@ -41,10 +49,35 @@ class FleetOpsApiOrderCrudControllerProbe extends OrderController
     {
         $this->createdProofs[] = $input;
 
-        $proof = new Proof();
-        $proof->setRawAttributes(array_merge(['uuid' => 'proof-uuid'], $input));
+        $proof = new FleetOpsApiOrderProofFake();
+        $proof->setRawAttributes(array_merge(['uuid' => 'proof-uuid', 'public_id' => 'proof_public'], $input));
 
         return $proof;
+    }
+
+    protected function createFile(array $input): File
+    {
+        $this->createdFiles[] = $input;
+
+        $file = new FleetOpsApiOrderFileFake();
+        $file->setRawAttributes(array_merge(['uuid' => 'file-uuid'], $input));
+
+        return $file;
+    }
+
+    protected function putStorage(string $disk, string $path, string $contents): void
+    {
+        $this->storedFiles[] = compact('disk', 'path', 'contents');
+    }
+
+    protected function entityEditingSettings(): mixed
+    {
+        return $this->entityEditingSettings;
+    }
+
+    protected function defaultCompanyTimezone(): string
+    {
+        return 'UTC';
     }
 
     protected function orderResource(Order $order)
@@ -60,6 +93,31 @@ class FleetOpsApiOrderCrudControllerProbe extends OrderController
     protected function proofResource(Proof $proof)
     {
         return ['resource' => 'proof', 'proof' => $proof];
+    }
+
+    protected function proofsForSubject(Order $order, mixed $subject): Collection
+    {
+        return collect([
+            (new FleetOpsApiOrderProofFake())->setRawAttributes([
+                'uuid'         => 'proof-one',
+                'order_uuid'   => $order->uuid,
+                'subject_uuid' => $subject->uuid,
+            ]),
+        ]);
+    }
+
+    protected function proofResourceCollection($proofs)
+    {
+        $this->proofCollections[] = $proofs;
+
+        return ['resource' => 'proofs', 'proofs' => $proofs->values()->all()];
+    }
+
+    protected function commentResourceCollection($comments)
+    {
+        $this->commentCollections[] = $comments;
+
+        return ['resource' => 'comments', 'comments' => $comments->values()->all()];
     }
 
     protected function jsonResponse(mixed $payload, int $status = 200)
@@ -85,6 +143,8 @@ class FleetOpsApiOrderCrudFake extends Order
     public bool $hasDriverAssignedForTest  = true;
     public bool $adhocForTest              = false;
     public bool $dispatchedFlagForTest     = false;
+    public bool $savedForTest              = false;
+    public bool $refreshedForTest          = false;
     public FleetOpsApiOrderTrackerFake $trackerFake;
 
     public function __construct(array $attributes = [])
@@ -93,11 +153,13 @@ class FleetOpsApiOrderCrudFake extends Order
 
         $this->trackerFake = new FleetOpsApiOrderTrackerFake($this);
         $this->uuid        = $attributes['uuid'] ?? 'order-uuid';
+        $this->status      = $attributes['status'] ?? 'created';
         $this->payload     = (object) [
             'pickup'    => (object) ['public_id' => 'pickup-public'],
             'dropoff'   => (object) ['public_id' => 'dropoff-public'],
             'waypoints' => collect([(object) ['public_id' => 'waypoint-public']]),
         ];
+        $this->comments = collect([(object) ['body' => 'Looks good']]);
     }
 
     public function getHasDriverAssignedAttribute(): bool
@@ -118,6 +180,34 @@ class FleetOpsApiOrderCrudFake extends Order
     public function load($relations)
     {
         $this->loaded[] = $relations;
+
+        return $this;
+    }
+
+    public function setAttribute($key, $value)
+    {
+        $this->attributes[$key] = $value;
+
+        return $this;
+    }
+
+    public function loadMissing($relations)
+    {
+        $this->loaded[] = $relations;
+
+        return $this;
+    }
+
+    public function save(array $options = []): bool
+    {
+        $this->savedForTest = true;
+
+        return true;
+    }
+
+    public function refresh()
+    {
+        $this->refreshedForTest = true;
 
         return $this;
     }
@@ -164,6 +254,39 @@ class FleetOpsApiOrderCrudFake extends Order
     }
 }
 
+class FleetOpsApiOrderProofFake extends Proof
+{
+    public array $updates = [];
+    public bool $saved    = false;
+
+    public function save(array $options = []): bool
+    {
+        $this->saved = true;
+
+        return true;
+    }
+
+    public function update(array $attributes = [], array $options = []): bool
+    {
+        $this->updates[] = $attributes;
+        $this->setRawAttributes(array_merge($this->getAttributes(), $attributes));
+
+        return true;
+    }
+}
+
+class FleetOpsApiOrderFileFake extends File
+{
+    public mixed $keyedTo = null;
+
+    public function setKey($model, $type = null): File
+    {
+        $this->keyedTo = $model;
+
+        return $this;
+    }
+}
+
 class FleetOpsApiOrderTrackerFake extends OrderTracker
 {
     public array $toArrayOptions = [];
@@ -193,6 +316,23 @@ class FleetOpsApiOrderTrackerFake extends OrderTracker
     }
 }
 
+class FleetOpsApiOrderScheduleRequestFake extends ScheduleOrderRequest
+{
+    public function __construct(private readonly array $inputForTest)
+    {
+        parent::__construct();
+    }
+
+    public function input($key = null, $default = null)
+    {
+        if ($key === null) {
+            return $this->inputForTest;
+        }
+
+        return data_get($this->inputForTest, $key, $default);
+    }
+}
+
 test('api order controller finds deletes and updates distance matrices without database records', function () {
     $order              = new FleetOpsApiOrderCrudFake();
     $controller         = new FleetOpsApiOrderCrudControllerProbe();
@@ -210,6 +350,149 @@ test('api order controller finds deletes and updates distance matrices without d
         ->and($order->deletedForTest)->toBeTrue()
         ->and($order->lookups[0][0])->toBe('order-public')
         ->and($order->loaded)->toContain(['payload', 'payload.waypoints', 'payload.pickup', 'payload.dropoff']);
+});
+
+test('api order controller schedules orders with timezone normalized dates', function () {
+    $order             = new FleetOpsApiOrderCrudFake();
+    $controller        = new FleetOpsApiOrderCrudControllerProbe();
+    $controller->order = $order;
+
+    $request = new FleetOpsApiOrderScheduleRequestFake([
+        'date'     => '2026-08-15',
+        'time'     => '09:30:15',
+        'timezone' => 'Asia/Singapore',
+    ]);
+
+    $response = $controller->scheduleOrder('order-public', $request);
+
+    expect($response)->toBe(['resource' => 'order', 'order' => $order])
+        ->and($order->savedForTest)->toBeTrue()
+        ->and($order->scheduled_at->timezoneName)->toBe('Asia/Singapore')
+        ->and($order->scheduled_at->format('Y-m-d H:i:s'))->toBe('2026-08-15 09:30:15');
+});
+
+test('api order controller captures signature proof and stores file metadata', function () {
+    session(['company' => 'company-uuid', 'user' => 'user-uuid']);
+
+    $subject = (object) ['uuid' => 'subject-uuid'];
+
+    $controller                  = new FleetOpsApiOrderCrudControllerProbe();
+    $controller->order           = new FleetOpsApiOrderCrudFake();
+    $controller->resolvedSubject = $subject;
+
+    $response = $controller->captureSignature(new Request([
+        'signature' => 'data:image/png;base64,' . base64_encode('signature-bytes'),
+        'remarks'   => 'Signed by receiver',
+        'data'      => ['receiver' => 'Ada'],
+        'disk'      => 'local',
+        'bucket'    => 'local-bucket',
+    ]), 'order-public', 'waypoint_subject');
+
+    expect($response['resource'])->toBe('proof')
+        ->and($controller->createdProofs[0])->toMatchArray([
+            'company_uuid' => 'company-uuid',
+            'order_uuid'   => 'order-uuid',
+            'subject_uuid' => 'subject-uuid',
+            'remarks'      => 'Signed by receiver',
+            'data'         => ['receiver' => 'Ada'],
+        ])
+        ->and($controller->createdFiles[0])->toMatchArray([
+            'company_uuid'  => 'company-uuid',
+            'uploader_uuid' => 'user-uuid',
+            'bucket'        => 'local-bucket',
+            'type'          => 'signature',
+        ])
+        ->and($response['proof']->file_uuid)->toBe('file-uuid')
+        ->and($response['proof']->saved)->toBeTrue()
+        ->and($controller->storedFiles[0])->toBe([
+            'disk'     => 'local',
+            'path'     => 'uploads/company-uuid/signatures/proof_public.png',
+            'contents' => 'signature-bytes',
+        ]);
+});
+
+test('api order controller captures base64 photo proofs and links stored files', function () {
+    session(['company' => 'company-uuid', 'user' => 'user-uuid']);
+
+    $subject = (object) ['uuid' => 'subject-uuid'];
+
+    $controller                  = new FleetOpsApiOrderCrudControllerProbe();
+    $controller->order           = new FleetOpsApiOrderCrudFake();
+    $controller->resolvedSubject = $subject;
+
+    $response = $controller->capturePhoto(new Request([
+        'photos'      => [base64_encode('photo-bytes')],
+        'remarks'     => 'Photo received',
+        'data'        => ['angle' => 'front'],
+        'disk'        => 'local',
+        'filesystems' => ['disks' => ['local' => ['bucket' => 'local-bucket']]],
+    ]), 'order-public', 'waypoint_subject');
+
+    expect($response['resource'])->toBe('proof')
+        ->and($controller->createdProofs[0])->toMatchArray([
+            'company_uuid' => 'company-uuid',
+            'order_uuid'   => 'order-uuid',
+            'subject_uuid' => 'subject-uuid',
+            'remarks'      => 'Photo received',
+            'raw_data'     => base64_encode('photo-bytes'),
+            'data'         => ['angle' => 'front'],
+        ])
+        ->and($controller->createdFiles[0])->toMatchArray([
+            'company_uuid'  => 'company-uuid',
+            'uploader_uuid' => 'user-uuid',
+            'bucket'        => 'local-bucket',
+            'type'          => 'photo',
+            'size'          => strlen('photo-bytes'),
+        ])
+        ->and($response['proof']->updates[0])->toBe(['file_uuid' => 'file-uuid'])
+        ->and($controller->storedFiles[0])->toBe([
+            'disk'     => 'local',
+            'path'     => 'uploads/company-uuid/photos/proof_public.png',
+            'contents' => 'photo-bytes',
+        ]);
+});
+
+test('api order controller returns proof comment and editable field resources through seams', function () {
+    session(['company' => 'company-uuid']);
+
+    $subject = (object) ['uuid' => 'subject-uuid'];
+
+    $controller                         = new FleetOpsApiOrderCrudControllerProbe();
+    $controller->order                  = new FleetOpsApiOrderCrudFake(['order_config_uuid' => 'config-uuid']);
+    $controller->resolvedSubject        = $subject;
+    $controller->entityEditingSettings  = ['config-uuid' => ['recipient_name' => true]];
+
+    $proofs   = $controller->proofs(new Request(), 'order-public', 'waypoint_subject');
+    $settings = $controller->getEditableEntityFields('order-public', new Request());
+    $comments = $controller->orderComments('order-public');
+
+    expect($proofs['resource'])->toBe('proofs')
+        ->and($proofs['proofs'][0]->subject_uuid)->toBe('subject-uuid')
+        ->and($settings)->toBe(['json' => ['recipient_name' => true], 'status' => 200])
+        ->and($comments)->toBe(['resource' => 'comments', 'comments' => $controller->order->comments->values()->all()])
+        ->and($controller->order->loaded)->toContain('comments');
+});
+
+test('api order controller reports proof signature photo and comments error branches', function () {
+    $controller = new FleetOpsApiOrderCrudControllerProbe();
+
+    expect($controller->captureSignature(new Request(), 'order-public'))->toBe(['apiError' => 'No signature data to capture.', 'status' => 400]);
+
+    $controller                = new FleetOpsApiOrderCrudControllerProbe();
+    $controller->orderNotFound = true;
+
+    expect($controller->captureSignature(new Request(['signature' => base64_encode('signature')]), 'missing-order'))->toBe(['apiError' => 'Order resource not found.', 'status' => 404])
+        ->and($controller->capturePhoto(new Request(['photos' => [base64_encode('photo')]]), 'missing-order'))->toBe(['apiError' => 'Order resource not found.', 'status' => 404])
+        ->and($controller->proofs(new Request(), 'missing-order'))->toBe(['apiError' => 'Order resource not found.', 'status' => 404])
+        ->and($controller->getEditableEntityFields('missing-order', new Request()))->toBe(['apiError' => 'Order resource not found.', 'status' => 404])
+        ->and($controller->orderComments('missing-order'))->toBe(['apiError' => 'Order resource not found.', 'status' => 404]);
+
+    $controller        = new FleetOpsApiOrderCrudControllerProbe();
+    $controller->order = new FleetOpsApiOrderCrudFake();
+
+    expect($controller->captureSignature(new Request(['signature' => base64_encode('signature')]), 'order-public', 'waypoint_missing'))->toBe(['apiError' => 'Unable to capture signature data.', 'status' => 400])
+        ->and($controller->capturePhoto(new Request(['photos' => [base64_encode('photo')]]), 'order-public', 'waypoint_missing'))->toBe(['apiError' => 'Unable to capture photo as proof.', 'status' => 400])
+        ->and($controller->proofs(new Request(), 'order-public', 'waypoint_missing'))->toBe(['apiError' => 'Unable to retrieve proof of delivery for subject.', 'status' => 400]);
 });
 
 test('api order controller dispatches cancels optimizes tracks and estimates orders', function () {

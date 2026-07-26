@@ -62,7 +62,7 @@ class OrderController extends Controller
         $input = $this->orderCreateInputFromRequest($request);
 
         // Get order config
-        $orderConfig = OrderConfig::resolveFromIdentifier($request->only(['type', 'order_config']));
+        $orderConfig = $this->resolveOrderConfig($request->only(['type', 'order_config']));
         if (!$orderConfig) {
             return response()->apiError('Invalid order `type` or `order_config` provided.');
         }
@@ -75,7 +75,7 @@ class OrderController extends Controller
         $input['company_uuid'] = session('company');
 
         // resolve service quote if applicable
-        $serviceQuote          = ServiceQuote::resolveFromRequest($request);
+        $serviceQuote          = $this->resolveServiceQuote($request);
         $integratedVendorOrder = null;
 
         // if service quote is applied, resolve it
@@ -90,7 +90,7 @@ class OrderController extends Controller
 
         // create payload
         if ($request->has('payload') && $request->isArray('payload')) {
-            $payload                = new Payload();
+            $payload                = $this->newPayload();
             [
                 'entities'  => $entities,
                 'waypoints' => $waypoints,
@@ -138,7 +138,7 @@ class OrderController extends Controller
 
         // create a payload if missing payload[] but has pickup/dropoff/etc
         if ($request->missing('payload')) {
-            $payload      = new Payload();
+            $payload      = $this->newPayload();
             [
                 'entities'  => $entities,
                 'waypoints' => $waypoints,
@@ -180,7 +180,7 @@ class OrderController extends Controller
 
         // driver assignment
         if ($request->has('driver') && $integratedVendorOrder === null) {
-            $driver = Driver::where(['public_id' => $request->input('driver'), 'company_uuid' => session('company')])->first();
+            $driver = $this->findDriverByPublicId($request->input('driver'));
             if ($driver) {
                 $input['driver_assigned_uuid'] = $driver->uuid;
                 // set vehicle assignmend from driver
@@ -309,7 +309,7 @@ class OrderController extends Controller
         }
 
         // create the order
-        $order = Order::create($input);
+        $order = $this->createOrder($input);
 
         // if it's integrated vendor order apply to meta
         if ($integratedVendorOrder) {
@@ -325,14 +325,14 @@ class OrderController extends Controller
         // Determine if order should be dispatched on creation
         $shouldDispatch = $request->boolean('dispatch') && $integratedVendorOrder === null;
 
-        FinalizeApiOrderCreation::dispatch(
+        $this->dispatchFinalizeApiOrderCreation(
             $order->uuid,
             $serviceQuote instanceof ServiceQuote ? $serviceQuote->uuid : null,
             $shouldDispatch
-        )->afterCommit();
+        );
 
         // response the driver resource
-        return new OrderResource($order);
+        return $this->orderResource($order);
     }
 
     /**
@@ -348,7 +348,7 @@ class OrderController extends Controller
 
         // find for the order
         try {
-            $order = Order::findRecordOrFail($id, ['trackingNumber', 'driverAssigned', 'purchaseRate.serviceQuote.items', 'customer', 'facilitator']);
+            $order = $this->findOrder($id, ['trackingNumber', 'driverAssigned', 'purchaseRate.serviceQuote.items', 'customer', 'facilitator']);
         } catch (ModelNotFoundException $exception) {
             return response()->json(
                 [
@@ -363,7 +363,7 @@ class OrderController extends Controller
 
         // update payload if new input or change payload by id
         if ($request->isArray('payload')) {
-            $payload = data_get($order, 'payload', new Payload());
+            $payload = data_get($order, 'payload', $this->newPayload());
             [
                 'entities'                  => $entities,
                 'waypoints'                 => $waypoints,
@@ -421,7 +421,7 @@ class OrderController extends Controller
 
         // create a payload if missing payload[] but has pickup/dropoff/etc
         if ($request->missing('payload')) {
-            $payload = data_get($order, 'payload', new Payload());
+            $payload = data_get($order, 'payload', $this->newPayload());
             [
                 'entities'                  => $entities,
                 'waypoints'                 => $waypoints,
@@ -526,7 +526,7 @@ class OrderController extends Controller
         }
 
         // If adding a service quote for a purchase
-        $serviceQuote = ServiceQuote::resolveFromRequest($request);
+        $serviceQuote = $this->resolveServiceQuote($request);
         if ($serviceQuote) {
             $order->purchaseServiceQuote($serviceQuote);
         }
@@ -550,7 +550,7 @@ class OrderController extends Controller
         $order->load(['trackingNumber', 'trackingStatuses', 'driverAssigned', 'vehicleAssigned', 'purchaseRate.serviceQuote.items', 'customer', 'facilitator']);
 
         // response the order resource
-        return new OrderResource($order);
+        return $this->orderResource($order);
     }
 
     protected function orderCreateInputFromRequest(Request $request): array
@@ -923,8 +923,7 @@ class OrderController extends Controller
         $timeInput = $request->input('time');
 
         // get the default tz
-        $company       = Auth::getCompany();
-        $defaultTz     = data_get($company, 'timezone', config('app.timezone'));
+        $defaultTz     = $this->defaultCompanyTimezone();
         $timezoneInput = $request->input('timezone', $defaultTz);
 
         try {
@@ -968,7 +967,7 @@ class OrderController extends Controller
         $assignAdhocDriver = $request->input('assign');
 
         try {
-            $order = Order::findRecordOrFail($id, ['payload.waypoints', 'driverAssigned'], []);
+            $order = $this->findOrder($id, ['payload.waypoints', 'driverAssigned']);
         } catch (ModelNotFoundException $exception) {
             return response()->json(
                 [
@@ -988,10 +987,10 @@ class OrderController extends Controller
         }
 
         /** @var \Fleetbase\Models\Driver */
-        $driver = Driver::where('uuid', $order->driver_assigned_uuid)->withoutGlobalScopes()->first();
+        $driver = $this->findDriverByUuid($order->driver_assigned_uuid);
 
         /** @var \Fleetbase\Models\Payload */
-        $payload = Payload::where('uuid', $order->payload_uuid)->withoutGlobalScopes()->with(['waypoints', 'waypointMarkers', 'entities'])->first();
+        $payload = $this->findPayloadByUuid($order->payload_uuid);
 
         if ($order->adhoc && !$driver) {
             return response()->apiError('You must send driver to accept adhoc order.');
@@ -1065,7 +1064,7 @@ class OrderController extends Controller
         // if string $id
         if (!$order) {
             try {
-                $order = Order::findRecordOrFail($id, [
+                $order = $this->findOrder($id, [
                     'driverAssigned',
                     'payload.entities',
                     'payload.pickup',
@@ -1120,7 +1119,7 @@ class OrderController extends Controller
 
             $order->dispatch();
 
-            return new OrderResource($order);
+            return $this->orderResource($order);
         }
 
         /** @var \Fleetbase\LaravelMysqlSpatial\Types\Point */
@@ -1150,7 +1149,7 @@ class OrderController extends Controller
                 $order->complete($this->resolveProof($proof));
             }
 
-            return new OrderResource($order->refresh());
+            return $this->orderResource($order->refresh());
         }
 
         if (!$order->started && in_array($order->status, ['created', 'dispatched'], true)) {
@@ -1166,7 +1165,7 @@ class OrderController extends Controller
             $order->driverAssigned?->unassignCurrentJob();
             $order->cancel();
 
-            return new OrderResource($order->refresh());
+            return $this->orderResource($order->refresh());
         }
 
         if (Utils::isActivity($activity) && $activity->completesOrder()) {
@@ -1178,7 +1177,7 @@ class OrderController extends Controller
             }
         }
 
-        return new OrderResource($order->refresh());
+        return $this->orderResource($order->refresh());
     }
 
     /**
@@ -1191,7 +1190,7 @@ class OrderController extends Controller
         $waypointId = $request->input('waypoint');
 
         try {
-            $order = Order::findRecordOrFail($id, [
+            $order = $this->findOrder($id, [
                 'payload.pickup',
                 'payload.dropoff',
                 'payload.return',
@@ -1316,7 +1315,7 @@ class OrderController extends Controller
     public function setDestination(string $id, string $placeId)
     {
         try {
-            $order = Order::findRecordOrFail($id, [
+            $order = $this->findOrder($id, [
                 'payload.pickup',
                 'payload.dropoff',
                 'payload.return',
@@ -1343,7 +1342,7 @@ class OrderController extends Controller
         // Persist destination choice
         $this->setPayloadCurrentServiceStop($payload, $stop);
 
-        return new OrderResource($order->refresh());
+        return $this->orderResource($order->refresh());
     }
 
     /**
@@ -1471,24 +1470,24 @@ class OrderController extends Controller
         $type         = $subjectId ? strtok($subjectId, '_') : null;
 
         if (!$signature) {
-            return response()->apiError('No signature data to capture.');
+            return $this->apiError('No signature data to capture.');
         }
 
         // Load Order
         try {
-            $order = Order::findRecordOrFail($id);
+            $order = $this->findOrder($id);
         } catch (ModelNotFoundException $e) {
-            return response()->apiError('Order resource not found.', 404);
+            return $this->apiError('Order resource not found.', 404);
         }
 
         // Resolve subject
         $subject = $this->resolveSubject($order, $type, $subjectId);
         if (!$subject) {
-            return response()->apiError('Unable to capture signature data.');
+            return $this->apiError('Unable to capture signature data.');
         }
 
         // create proof instance
-        $proof = Proof::create([
+        $proof = $this->createProof([
             'company_uuid' => session('company'),
             'order_uuid'   => $order->uuid,
             'subject_uuid' => $subject->uuid,
@@ -1502,10 +1501,10 @@ class OrderController extends Controller
         $path = 'uploads/' . session('company') . '/signatures/' . $proof->public_id . '.png';
 
         // upload signature
-        Storage::disk($disk)->put($path, base64_decode(str_replace('data:image/png;base64,', '', $signature)));
+        $this->putStorage($disk, $path, base64_decode(str_replace('data:image/png;base64,', '', $signature)));
 
         // create file record for upload
-        $file = File::create([
+        $file = $this->createFile([
             'company_uuid'      => session('company'),
             'uploader_uuid'     => session('user'),
             'name'              => basename($path),
@@ -1522,7 +1521,7 @@ class OrderController extends Controller
         $proof->file_uuid = $file->uuid;
         $proof->save();
 
-        return new ProofResource($proof);
+        return $this->proofResource($proof);
     }
 
     /**
@@ -1586,7 +1585,7 @@ class OrderController extends Controller
         } catch (ValidationException $e) {
             $errorMessage = collect($e->errors())->flatten()->first();
 
-            return response()->apiError($errorMessage, 422);
+            return $this->apiError($errorMessage, 422);
         }
 
         // Determine storage disk & bucket
@@ -1616,25 +1615,25 @@ class OrderController extends Controller
         $incoming = array_merge($rawInputs, $base64Inputs);
 
         if (empty($incoming)) {
-            return response()->apiError('No photo data to capture.');
+            return $this->apiError('No photo data to capture.');
         }
 
         // Load Order
         try {
-            $order = Order::findRecordOrFail($id, ['payload.pickup', 'payload.dropoff', 'payload.return', 'payload.waypoints', 'payload.waypointMarkers.place']);
+            $order = $this->findOrder($id, ['payload.pickup', 'payload.dropoff', 'payload.return', 'payload.waypoints', 'payload.waypointMarkers.place']);
         } catch (ModelNotFoundException $e) {
-            return response()->apiError('Order resource not found.', 404);
+            return $this->apiError('Order resource not found.', 404);
         }
 
         // Resolve subject
         $subject = $this->resolveSubject($order, $type, $subjectId);
         if (!$subject) {
-            return response()->apiError('Unable to capture photo as proof.');
+            return $this->apiError('Unable to capture photo as proof.');
         }
 
         // 5) Loop through each item, create Proof + File
         foreach ($incoming as $item) {
-            $proof = Proof::create([
+            $proof = $this->createProof([
                 'company_uuid' => session('company'),
                 'order_uuid'   => $order->uuid,
                 'subject_uuid' => $subject->uuid,
@@ -1655,7 +1654,7 @@ class OrderController extends Controller
         }
 
         // Return the last Proof resource created
-        return new ProofResource($proof);
+        return $this->proofResource($proof);
     }
 
     /**
@@ -1683,9 +1682,9 @@ class OrderController extends Controller
         $company = session('company');
         $path    = "uploads/{$company}/photos/{$proof->public_id}.{$extension}";
 
-        Storage::disk($disk)->put($path, $contents);
+        $this->putStorage($disk, $path, $contents);
 
-        return File::create([
+        return $this->createFile([
             'company_uuid'      => $company,
             'uploader_uuid'     => session('user'),
             'name'              => basename($path),
@@ -1760,9 +1759,9 @@ class OrderController extends Controller
     public function proofs(Request $request, string $id, ?string $subjectId = null)
     {
         try {
-            $order = Order::findRecordOrFail($id);
+            $order = $this->findOrder($id);
         } catch (ModelNotFoundException $e) {
-            return response()->apiError('Order resource not found.', 404);
+            return $this->apiError('Order resource not found.', 404);
         }
 
         $subject = $order;
@@ -1772,23 +1771,12 @@ class OrderController extends Controller
         }
 
         if (!$subject) {
-            return response()->apiError('Unable to retrieve proof of delivery for subject.');
+            return $this->apiError('Unable to retrieve proof of delivery for subject.');
         }
 
-        $proofsQuery = Proof::where([
-            'company_uuid' => session('company'),
-            'order_uuid'   => $order->uuid,
-        ]);
+        $proofs = $this->proofsForSubject($order, $subject);
 
-        // if subject is not the order then filter by subject
-        if ($order->uuid !== $subject->uuid) {
-            $proofsQuery->where('subject_uuid', $subject->uuid);
-        }
-
-        // get proofs
-        $proofs = $proofsQuery->get();
-
-        return ProofResource::collection($proofs);
+        return $this->proofResourceCollection($proofs);
     }
 
     /**
@@ -1810,9 +1798,9 @@ class OrderController extends Controller
     public function getEditableEntityFields(string $id, Request $request)
     {
         try {
-            $order = Order::findRecordOrFail($id);
+            $order = $this->findOrder($id);
         } catch (ModelNotFoundException $e) {
-            return response()->apiError('Order resource not found.', 404);
+            return $this->apiError('Order resource not found.', 404);
         }
 
         // Define settings as array
@@ -1822,12 +1810,12 @@ class OrderController extends Controller
         $orderConfigId = data_get($order, 'order_config_uuid');
 
         // Get entity editing settings
-        $savedEntityEditingSettings = Setting::where('key', 'fleet-ops.entity-editing-settings')->value('value');
+        $savedEntityEditingSettings = $this->entityEditingSettings();
         if ($orderConfigId && $savedEntityEditingSettings) {
             $entityEditingSettings = data_get($savedEntityEditingSettings, $orderConfigId, []);
         }
 
-        return response()->json($entityEditingSettings);
+        return $this->jsonResponse($entityEditingSettings);
     }
 
     /**
@@ -1838,22 +1826,67 @@ class OrderController extends Controller
     public function orderComments(string $id)
     {
         try {
-            $order = Order::findRecordOrFail($id);
+            $order = $this->findOrder($id);
             $order->loadMissing('comments');
 
-            return CommentResource::collection($order->comments);
+            return $this->commentResourceCollection($order->comments);
         } catch (ModelNotFoundException $e) {
-            return response()->apiError('Order resource not found.', 404);
+            return $this->apiError('Order resource not found.', 404);
         } catch (\Throwable $e) {
-            return response()->apiError('An error occured trying to get order comments.', 404);
+            return $this->apiError('An error occured trying to get order comments.', 404);
         }
 
-        return response()->apiError('An error occured trying to get order comments.', 404);
+        return $this->apiError('An error occured trying to get order comments.', 404);
     }
 
     protected function findOrder(string $id, array $with = [], array $withCount = []): Order
     {
         return Order::findRecordOrFail($id, $with, $withCount);
+    }
+
+    protected function resolveOrderConfig(array $input): ?OrderConfig
+    {
+        return OrderConfig::resolveFromIdentifier($input);
+    }
+
+    protected function resolveServiceQuote(Request $request): ?ServiceQuote
+    {
+        return ServiceQuote::resolveFromRequest($request);
+    }
+
+    protected function newPayload(): Payload
+    {
+        return new Payload();
+    }
+
+    protected function findDriverByPublicId(string $publicId): ?Driver
+    {
+        return Driver::where(['public_id' => $publicId, 'company_uuid' => session('company')])->first();
+    }
+
+    protected function findDriverByUuid(?string $uuid): ?Driver
+    {
+        return Driver::where('uuid', $uuid)->withoutGlobalScopes()->first();
+    }
+
+    protected function findPayloadByUuid(?string $uuid): ?Payload
+    {
+        return Payload::where('uuid', $uuid)->withoutGlobalScopes()->with(['waypoints', 'waypointMarkers', 'entities'])->first();
+    }
+
+    protected function defaultCompanyTimezone(): string
+    {
+        return data_get(Auth::getCompany(), 'timezone', config('app.timezone'));
+    }
+
+    protected function createOrder(array $input): Order
+    {
+        return Order::create($input);
+    }
+
+    protected function dispatchFinalizeApiOrderCreation(string $orderUuid, ?string $serviceQuoteUuid, bool $shouldDispatch): void
+    {
+        FinalizeApiOrderCreation::dispatch($orderUuid, $serviceQuoteUuid, $shouldDispatch)->afterCommit();
     }
 
     protected function drivingDistanceAndTime(mixed $origin, mixed $destination): mixed
@@ -1864,6 +1897,35 @@ class OrderController extends Controller
     protected function createProof(array $input): Proof
     {
         return Proof::create($input);
+    }
+
+    protected function createFile(array $input): File
+    {
+        return File::create($input);
+    }
+
+    protected function putStorage(string $disk, string $path, string $contents): void
+    {
+        Storage::disk($disk)->put($path, $contents);
+    }
+
+    protected function proofsForSubject(Order $order, mixed $subject)
+    {
+        $proofsQuery = Proof::where([
+            'company_uuid' => session('company'),
+            'order_uuid'   => $order->uuid,
+        ]);
+
+        if ($order->uuid !== $subject->uuid) {
+            $proofsQuery->where('subject_uuid', $subject->uuid);
+        }
+
+        return $proofsQuery->get();
+    }
+
+    protected function entityEditingSettings(): mixed
+    {
+        return Setting::where('key', 'fleet-ops.entity-editing-settings')->value('value');
     }
 
     protected function orderResource(Order $order)
@@ -1879,6 +1941,16 @@ class OrderController extends Controller
     protected function proofResource(Proof $proof)
     {
         return new ProofResource($proof);
+    }
+
+    protected function proofResourceCollection($proofs)
+    {
+        return ProofResource::collection($proofs);
+    }
+
+    protected function commentResourceCollection($comments)
+    {
+        return CommentResource::collection($comments);
     }
 
     protected function jsonResponse(mixed $payload, int $status = 200)
