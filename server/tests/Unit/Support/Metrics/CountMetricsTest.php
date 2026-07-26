@@ -7,7 +7,9 @@ use Fleetbase\FleetOps\Support\Metrics\OrdersCompletedMetric;
 use Fleetbase\FleetOps\Support\Metrics\OrdersInProgressMetric;
 use Fleetbase\FleetOps\Support\Metrics\ResolvedIssuesMetric;
 use Fleetbase\FleetOps\Support\Metrics\TotalCustomersMetric;
+use Fleetbase\FleetOps\Support\Metrics\TotalDistanceTraveledMetric;
 use Fleetbase\FleetOps\Support\Metrics\TotalDriversMetric;
+use Fleetbase\FleetOps\Support\Metrics\TotalTimeTraveledMetric;
 use Fleetbase\Models\Company;
 use Illuminate\Database\ConnectionResolver;
 use Illuminate\Database\Eloquent\Model as EloquentModel;
@@ -28,7 +30,7 @@ class FleetOpsCountMetricsDatabaseProbe
 function fleetopsCountMetricsUseInMemoryConnection(): SQLiteConnection
 {
     $connection = new SQLiteConnection(new PDO('sqlite::memory:'));
-    $connection->statement('create table orders (uuid varchar(64), company_uuid varchar(64), status varchar(64), created_at datetime null, deleted_at datetime null)');
+    $connection->statement('create table orders (uuid varchar(64), company_uuid varchar(64), status varchar(64), distance numeric null, time integer null, created_at datetime null, deleted_at datetime null)');
     $connection->statement('create table issues (uuid varchar(64), company_uuid varchar(64), status varchar(64), resolved_at datetime null, created_at datetime null, deleted_at datetime null)');
     $connection->statement('create table contacts (uuid varchar(64), company_uuid varchar(64), type varchar(64), created_at datetime null, deleted_at datetime null)');
     $connection->statement('create table drivers (uuid varchar(64), company_uuid varchar(64), user_uuid varchar(64), online integer, current_job_uuid varchar(64) null, created_at datetime null, deleted_at datetime null)');
@@ -60,6 +62,8 @@ test('order count metrics filter company status and reporting period', function 
             'uuid'         => 'completed-in-period',
             'company_uuid' => 'company-count-metrics',
             'status'       => 'completed',
+            'distance'     => 1250.5,
+            'time'         => 12,
             'created_at'   => '2026-07-10 10:00:00',
             'deleted_at'   => null,
         ],
@@ -67,6 +71,8 @@ test('order count metrics filter company status and reporting period', function 
             'uuid'         => 'completed-outside-period',
             'company_uuid' => 'company-count-metrics',
             'status'       => 'completed',
+            'distance'     => 10000,
+            'time'         => 90,
             'created_at'   => '2026-06-10 10:00:00',
             'deleted_at'   => null,
         ],
@@ -74,6 +80,8 @@ test('order count metrics filter company status and reporting period', function 
             'uuid'         => 'canceled-in-period',
             'company_uuid' => 'company-count-metrics',
             'status'       => 'canceled',
+            'distance'     => 4000,
+            'time'         => 30,
             'created_at'   => '2026-07-11 10:00:00',
             'deleted_at'   => null,
         ],
@@ -81,6 +89,8 @@ test('order count metrics filter company status and reporting period', function 
             'uuid'         => 'assigned-in-period',
             'company_uuid' => 'company-count-metrics',
             'status'       => 'assigned',
+            'distance'     => 2200,
+            'time'         => 18,
             'created_at'   => '2026-07-12 10:00:00',
             'deleted_at'   => null,
         ],
@@ -88,6 +98,8 @@ test('order count metrics filter company status and reporting period', function 
             'uuid'         => 'driver-enroute-in-period',
             'company_uuid' => 'company-count-metrics',
             'status'       => 'driver_enroute',
+            'distance'     => 1800,
+            'time'         => 15,
             'created_at'   => '2026-07-13 10:00:00',
             'deleted_at'   => null,
         ],
@@ -95,6 +107,8 @@ test('order count metrics filter company status and reporting period', function 
             'uuid'         => 'created-ignored',
             'company_uuid' => 'company-count-metrics',
             'status'       => 'created',
+            'distance'     => 600,
+            'time'         => 9,
             'created_at'   => '2026-07-14 10:00:00',
             'deleted_at'   => null,
         ],
@@ -102,6 +116,8 @@ test('order count metrics filter company status and reporting period', function 
             'uuid'         => 'other-company',
             'company_uuid' => 'other-company',
             'status'       => 'completed',
+            'distance'     => 5000,
+            'time'         => 45,
             'created_at'   => '2026-07-10 10:00:00',
             'deleted_at'   => null,
         ],
@@ -117,7 +133,13 @@ test('order count metrics filter company status and reporting period', function 
         ->and(OrdersCanceledMetric::slug())->toBe('orders_canceled')
         ->and(OrdersCanceledMetric::forCompany($company)->between($start, $end)->value())->toBe(1)
         ->and(OrdersInProgressMetric::slug())->toBe('orders_in_progress')
-        ->and(OrdersInProgressMetric::forCompany($company)->between($start, $end)->value())->toBe(2);
+        ->and(OrdersInProgressMetric::forCompany($company)->between($start, $end)->value())->toBe(2)
+        ->and(TotalDistanceTraveledMetric::slug())->toBe('total_distance_traveled')
+        ->and(TotalDistanceTraveledMetric::forCompany($company)->between($start, $end)->format())->toBe('meters')
+        ->and(TotalDistanceTraveledMetric::forCompany($company)->between($start, $end)->value())->toBe(1250.5)
+        ->and(TotalTimeTraveledMetric::slug())->toBe('total_time_traveled')
+        ->and(TotalTimeTraveledMetric::forCompany($company)->between($start, $end)->format())->toBe('duration')
+        ->and(TotalTimeTraveledMetric::forCompany($company)->between($start, $end)->value())->toBe(720);
 });
 
 test('issue count metrics distinguish open and resolved issue periods', function () {
