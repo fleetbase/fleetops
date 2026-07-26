@@ -34,7 +34,7 @@ class ZoneController extends Controller
 
         // service area assignment
         if ($request->has('service_area')) {
-            $input['service_area_uuid'] = Utils::getUuid('service_areas', [
+            $input['service_area_uuid'] = $this->serviceAreaUuid($request->input('service_area'), [
                 'public_id'    => $request->input('service_area'),
                 'company_uuid' => session('company'),
             ]);
@@ -48,17 +48,17 @@ class ZoneController extends Controller
             $point     = new Point($latitude, $longitude);
 
             if ($point instanceof Point) {
-                $input['border'] = Zone::createPolygonFromPoint($point, $radius);
+                $input['border'] = $this->createBorderFromPoint($point, $radius);
             }
         }
 
         // if a location is provided
         if ($request->has('location')) {
             $location = $request->input('location');
-            $point    = Utils::getPointFromMixed($location);
+            $point    = $this->pointFromLocation($location);
 
             if ($point instanceof Point) {
-                $input['border'] = Zone::createPolygonFromPoint($point, $radius);
+                $input['border'] = $this->createBorderFromPoint($point, $radius);
             }
         }
 
@@ -68,11 +68,11 @@ class ZoneController extends Controller
          */
 
         // create the zone
-        $zone = Zone::create($input);
+        $zone = $this->createZone($input);
         $zone->refresh();
 
         // response the zone resource
-        return new ZoneResource($zone);
+        return $this->zoneResource($zone);
     }
 
     /**
@@ -87,9 +87,9 @@ class ZoneController extends Controller
     {
         // find for the zone
         try {
-            $zone = Zone::findRecordOrFail($id);
+            $zone = $this->findZoneRecord($id);
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $exception) {
-            return response()->json(
+            return $this->jsonResponse(
                 [
                     'error' => 'Zone resource not found.',
                 ],
@@ -105,7 +105,7 @@ class ZoneController extends Controller
 
         // service area assignment
         if ($request->has('service_area')) {
-            $input['service_area_uuid'] = Utils::getUuid('service_areas', [
+            $input['service_area_uuid'] = $this->serviceAreaUuid($request->input('service_area'), [
                 'public_id'    => $request->input('service_area'),
                 'company_uuid' => session('company'),
             ]);
@@ -119,17 +119,17 @@ class ZoneController extends Controller
             $point     = new Point($latitude, $longitude);
 
             if ($point instanceof Point) {
-                $input['border'] = Zone::createPolygonFromPoint($point, $radius);
+                $input['border'] = $this->createBorderFromPoint($point, $radius);
             }
         }
 
         // if a location is provided
         if ($request->has('location')) {
             $location = $request->input('location');
-            $point    = Utils::getPointFromMixed($location);
+            $point    = $this->pointFromLocation($location);
 
             if ($point instanceof Point) {
-                $input['border'] = Zone::createPolygonFromPoint($point, $radius);
+                $input['border'] = $this->createBorderFromPoint($point, $radius);
             }
         }
 
@@ -138,7 +138,7 @@ class ZoneController extends Controller
         $zone->refresh();
 
         // response the zone resource
-        return new ZoneResource($zone);
+        return $this->zoneResource($zone);
     }
 
     /**
@@ -148,9 +148,9 @@ class ZoneController extends Controller
      */
     public function query(Request $request)
     {
-        $results = Zone::queryWithRequest($request);
+        $results = $this->queryZones($request);
 
-        return ZoneResource::collection($results);
+        return $this->zoneResourceCollection($results);
     }
 
     /**
@@ -162,9 +162,9 @@ class ZoneController extends Controller
     {
         // find for the zone
         try {
-            $zone = Zone::findRecordOrFail($id);
+            $zone = $this->findZoneRecord($id);
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $exception) {
-            return response()->json(
+            return $this->jsonResponse(
                 [
                     'error' => 'Zone resource not found.',
                 ],
@@ -173,7 +173,7 @@ class ZoneController extends Controller
         }
 
         // response the zone resource
-        return new ZoneResource($zone);
+        return $this->zoneResource($zone);
     }
 
     /**
@@ -185,9 +185,9 @@ class ZoneController extends Controller
     {
         // find for the driver
         try {
-            $zone = Zone::findRecordOrFail($id);
+            $zone = $this->findZoneRecord($id);
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $exception) {
-            return response()->json(
+            return $this->jsonResponse(
                 [
                     'error' => 'Zone resource not found.',
                 ],
@@ -199,7 +199,7 @@ class ZoneController extends Controller
         $zone->delete();
 
         // response the zone resource
-        return new DeletedResource($zone);
+        return $this->deletedZoneResource($zone);
     }
 
     protected function zoneInputFromRequest(Request $request): array
@@ -210,5 +210,55 @@ class ZoneController extends Controller
     protected function radiusFromRequest(Request $request): int
     {
         return (int) $request->input('radius', 500);
+    }
+
+    protected function serviceAreaUuid(string $publicId, array $where): ?string
+    {
+        return Utils::getUuid('service_areas', $where);
+    }
+
+    protected function createBorderFromPoint(Point $point, int $radius)
+    {
+        return Zone::createPolygonFromPoint($point, $radius);
+    }
+
+    protected function pointFromLocation(mixed $location)
+    {
+        return Utils::getPointFromMixed($location);
+    }
+
+    protected function createZone(array $input): Zone
+    {
+        return Zone::create($input);
+    }
+
+    protected function findZoneRecord(string $id): Zone
+    {
+        return Zone::findRecordOrFail($id);
+    }
+
+    protected function queryZones(Request $request)
+    {
+        return Zone::queryWithRequest($request);
+    }
+
+    protected function zoneResource(Zone $zone)
+    {
+        return new ZoneResource($zone);
+    }
+
+    protected function zoneResourceCollection($results)
+    {
+        return ZoneResource::collection($results);
+    }
+
+    protected function deletedZoneResource(Zone $zone)
+    {
+        return new DeletedResource($zone);
+    }
+
+    protected function jsonResponse(array $payload, int $status)
+    {
+        return response()->json($payload, $status);
     }
 }

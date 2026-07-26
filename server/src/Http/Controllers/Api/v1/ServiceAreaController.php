@@ -34,7 +34,7 @@ class ServiceAreaController extends Controller
 
         // if parent service area set
         if ($request->filled('parent')) {
-            $input['parent_uuid'] = Utils::getUuid('service_areas', [
+            $input['parent_uuid'] = $this->serviceAreaUuid($request->input('parent'), [
                 'public_id'    => $request->input('parent'),
                 'company_uuid' => session('company'),
             ]);
@@ -48,32 +48,32 @@ class ServiceAreaController extends Controller
             $point     = new Point($latitude, $longitude);
 
             if ($point instanceof Point) {
-                $input['border'] = ServiceArea::createMultiPolygonFromPoint($point, $radius);
+                $input['border'] = $this->createBorderFromPoint($point, $radius);
             }
         }
 
         // if a location is provided
         if ($request->has('location')) {
             $location = $request->input('location');
-            $point    = Utils::getPointFromMixed($location);
+            $point    = $this->pointFromLocation($location);
 
             if ($point instanceof Point) {
-                $input['border'] = ServiceArea::createMultiPolygonFromPoint($point, $radius);
+                $input['border'] = $this->createBorderFromPoint($point, $radius);
             }
         }
 
         // create the serviceArea
         try {
-            $serviceArea = ServiceArea::create($input);
+            $serviceArea = $this->createServiceArea($input);
             $serviceArea->refresh();
         } catch (\Throwable $e) {
-            logger()->error('Unable to create service area.', ['error' => $e->getMessage()]);
+            $this->logServiceAreaCreateFailure($e);
 
-            return response()->apiError('Failed to create service area.');
+            return $this->apiError('Failed to create service area.');
         }
 
         // response the driver resource
-        return new ServiceAreaResource($serviceArea);
+        return $this->serviceAreaResource($serviceArea);
     }
 
     /**
@@ -88,9 +88,9 @@ class ServiceAreaController extends Controller
     {
         // find for the serviceArea
         try {
-            $serviceArea = ServiceArea::findRecordOrFail($id);
+            $serviceArea = $this->findServiceAreaRecord($id);
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $exception) {
-            return response()->json(
+            return $this->jsonResponse(
                 [
                     'error' => 'ServiceArea resource not found.',
                 ],
@@ -106,7 +106,7 @@ class ServiceAreaController extends Controller
 
         // if parent service area set
         if ($request->filled('parent')) {
-            $input['parent_uuid'] = Utils::getUuid('service_areas', [
+            $input['parent_uuid'] = $this->serviceAreaUuid($request->input('parent'), [
                 'public_id'    => $request->input('parent'),
                 'company_uuid' => session('company'),
             ]);
@@ -120,17 +120,17 @@ class ServiceAreaController extends Controller
             $point     = new Point($latitude, $longitude);
 
             if ($point instanceof Point) {
-                $input['border'] = ServiceArea::createMultiPolygonFromPoint($point, $radius);
+                $input['border'] = $this->createBorderFromPoint($point, $radius);
             }
         }
 
         // if a location is provided
         if ($request->has('location')) {
             $location = $request->input('location');
-            $point    = Utils::getPointFromMixed($location);
+            $point    = $this->pointFromLocation($location);
 
             if ($point instanceof Point) {
-                $input['border'] = ServiceArea::createMultiPolygonFromPoint($point, $radius);
+                $input['border'] = $this->createBorderFromPoint($point, $radius);
             }
         }
 
@@ -139,7 +139,7 @@ class ServiceAreaController extends Controller
         $serviceArea->refresh();
 
         // response the serviceArea resource
-        return new ServiceAreaResource($serviceArea);
+        return $this->serviceAreaResource($serviceArea);
     }
 
     /**
@@ -149,9 +149,9 @@ class ServiceAreaController extends Controller
      */
     public function query(Request $request)
     {
-        $results = ServiceArea::queryWithRequest($request);
+        $results = $this->queryServiceAreas($request);
 
-        return ServiceAreaResource::collection($results);
+        return $this->serviceAreaResourceCollection($results);
     }
 
     /**
@@ -163,9 +163,9 @@ class ServiceAreaController extends Controller
     {
         // find for the serviceArea
         try {
-            $serviceArea = ServiceArea::findRecordOrFail($id);
+            $serviceArea = $this->findServiceAreaRecord($id);
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $exception) {
-            return response()->json(
+            return $this->jsonResponse(
                 [
                     'error' => 'ServiceArea resource not found.',
                 ],
@@ -174,7 +174,7 @@ class ServiceAreaController extends Controller
         }
 
         // response the serviceArea resource
-        return new ServiceAreaResource($serviceArea);
+        return $this->serviceAreaResource($serviceArea);
     }
 
     /**
@@ -186,9 +186,9 @@ class ServiceAreaController extends Controller
     {
         // find for the driver
         try {
-            $serviceArea = ServiceArea::findRecordOrFail($id);
+            $serviceArea = $this->findServiceAreaRecord($id);
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $exception) {
-            return response()->json(
+            return $this->jsonResponse(
                 [
                     'error' => 'ServiceArea resource not found.',
                 ],
@@ -200,7 +200,7 @@ class ServiceAreaController extends Controller
         $serviceArea->delete();
 
         // response the serviceArea resource
-        return new DeletedResource($serviceArea);
+        return $this->deletedServiceAreaResource($serviceArea);
     }
 
     protected function serviceAreaInputFromRequest(Request $request): array
@@ -211,5 +211,65 @@ class ServiceAreaController extends Controller
     protected function radiusFromRequest(Request $request): int
     {
         return (int) $request->input('radius', 500);
+    }
+
+    protected function createBorderFromPoint(Point $point, int $radius)
+    {
+        return ServiceArea::createMultiPolygonFromPoint($point, $radius);
+    }
+
+    protected function serviceAreaUuid(string $publicId, array $where): ?string
+    {
+        return Utils::getUuid('service_areas', $where);
+    }
+
+    protected function pointFromLocation(mixed $location)
+    {
+        return Utils::getPointFromMixed($location);
+    }
+
+    protected function createServiceArea(array $input): ServiceArea
+    {
+        return ServiceArea::create($input);
+    }
+
+    protected function findServiceAreaRecord(string $id): ServiceArea
+    {
+        return ServiceArea::findRecordOrFail($id);
+    }
+
+    protected function queryServiceAreas(Request $request)
+    {
+        return ServiceArea::queryWithRequest($request);
+    }
+
+    protected function serviceAreaResource(ServiceArea $serviceArea)
+    {
+        return new ServiceAreaResource($serviceArea);
+    }
+
+    protected function serviceAreaResourceCollection($results)
+    {
+        return ServiceAreaResource::collection($results);
+    }
+
+    protected function deletedServiceAreaResource(ServiceArea $serviceArea)
+    {
+        return new DeletedResource($serviceArea);
+    }
+
+    protected function jsonResponse(array $payload, int $status)
+    {
+        return response()->json($payload, $status);
+    }
+
+    protected function apiError(string $message)
+    {
+        return response()->apiError($message);
+    }
+
+    protected function logServiceAreaCreateFailure(\Throwable $e): void
+    {
+        logger()->error('Unable to create service area.', ['error' => $e->getMessage()]);
     }
 }
