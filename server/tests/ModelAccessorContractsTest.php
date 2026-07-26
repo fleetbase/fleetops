@@ -20,9 +20,11 @@ use Fleetbase\FleetOps\Exceptions\CustomerUserConflictException;
 use Fleetbase\FleetOps\Models\Contact;
 use Fleetbase\FleetOps\Models\Device;
 use Fleetbase\FleetOps\Models\Driver;
+use Fleetbase\FleetOps\Models\Entity;
 use Fleetbase\FleetOps\Models\Fleet;
 use Fleetbase\FleetOps\Models\FuelProviderTransaction;
 use Fleetbase\FleetOps\Models\FuelReport;
+use Fleetbase\FleetOps\Models\Issue;
 use Fleetbase\FleetOps\Models\Maintenance;
 use Fleetbase\FleetOps\Models\Manifest;
 use Fleetbase\FleetOps\Models\ManifestStop;
@@ -619,6 +621,94 @@ test('waypoint model mirrors tracking number status accessors', function () {
         ->and($waypoint->getStatusAttribute())->toBe('Out for delivery')
         ->and($waypoint->getStatusCodeAttribute())->toBe('out_for_delivery')
         ->and($waypoint->getCompleteAttribute())->toBeFalse();
+});
+
+test('issue model mutators accessors and import defaults are stable', function () {
+    Carbon::setTestNow(Carbon::parse('2026-07-26 08:45:00'));
+    session(['company' => 'company-issue']);
+
+    $issue         = new Issue();
+    $issue->title  = null;
+    $issue->status = 'In Progress';
+    $issue->setRelation('driver', (object) ['name' => 'Driver One']);
+    $issue->setRelation('vehicle', (object) ['display_name' => 'Truck 42', 'public_id' => 'vehicle_public']);
+    $issue->setRelation('reporter', (object) ['name' => 'Reporter One', 'public_id' => 'reporter_public']);
+    $issue->setRelation('assignee', (object) ['name' => 'Assignee One', 'public_id' => 'assignee_public']);
+
+    $blankStatus         = new Issue();
+    $blankStatus->status = '';
+
+    $trimmedTitle        = new Issue();
+    $trimmedTitle->title = '  Loose bumper  ';
+
+    expect($issue->getAttributes()['title'])->toBe('Issue reported on 26 Jul 26, 08:45')
+        ->and($issue->status)->toBe('in-progress')
+        ->and($blankStatus->status)->toBe('pending')
+        ->and($trimmedTitle->getAttributes()['title'])->toBe('Loose bumper')
+        ->and($issue->driver_name)->toBe('Driver One')
+        ->and($issue->vehicle_name)->toBe('Truck 42')
+        ->and($issue->getVehicleIdAttribute())->toBe('vehicle_public')
+        ->and($issue->reporter_name)->toBe('Reporter One')
+        ->and($issue->getReporterIdAttribute())->toBe('reporter_public')
+        ->and($issue->assignee_name)->toBe('Assignee One')
+        ->and($issue->getAssigneeIdAttribute())->toBe('assignee_public')
+        ->and($issue->getActivitylogOptions())->toBeInstanceOf(Spatie\Activitylog\LogOptions::class);
+
+    Carbon::setTestNow();
+});
+
+test('entity model value accessors money mutators and customer assignment are stable', function () {
+    $entity = new Entity([
+        'type'            => ' Fragile Parcel ',
+        'price'           => '$12.99',
+        'sale_price'      => '10.50',
+        'declared_value'  => 'SGD 42.75',
+        'length'          => 10,
+        'width'           => 20,
+        'height'          => 30,
+        'dimensions_unit' => 'cm',
+        'weight'          => 2500,
+        'weight_unit'     => 'g',
+    ]);
+    $entity->setRelation('photo', (object) ['url' => 'https://cdn.test/entity.png']);
+    $entity->setRelation('trackingNumber', (object) [
+        'tracking_number' => 'TRK-ENTITY',
+        'last_status'     => 'Packed',
+    ]);
+
+    $vendorCustomer = new Vendor();
+    $vendorCustomer->setRawAttributes(['uuid' => 'vendor-uuid'], true);
+
+    $contactCustomer = new Contact();
+    $contactCustomer->setRawAttributes(['uuid' => 'contact-uuid'], true);
+
+    $vendorEntity = new Entity();
+    $vendorEntity->setCustomer($vendorCustomer);
+
+    $contactEntity = new Entity();
+    $contactEntity->setCustomer($contactCustomer);
+
+    $defaultPhoto = new Entity();
+    $defaultPhoto->setRelation('photo', null);
+
+    expect($entity->type)->toBe('fragile_parcel')
+        ->and($entity->price)->toBe(1299)
+        ->and($entity->sale_price)->toBe(1050)
+        ->and($entity->declared_value)->toBe(4275)
+        ->and($entity->photo_url)->toBe('https://cdn.test/entity.png')
+        ->and($defaultPhoto->photo_url)->toBe('https://s3.ap-southeast-1.amazonaws.com/flb-assets/static/parcels/medium.png')
+        ->and($entity->tracking)->toBe('TRK-ENTITY')
+        ->and($entity->status)->toBe('Packed')
+        ->and($entity->length_unit->getOriginalValue())->toBe(10)
+        ->and($entity->width_unit->getOriginalValue())->toBe(20)
+        ->and($entity->height_unit->getOriginalValue())->toBe(30)
+        ->and($entity->mass_unit->getOriginalValue())->toBe(2500)
+        ->and($vendorEntity->customer_uuid)->toBe('vendor-uuid')
+        ->and($vendorEntity->customer_is_vendor)->toBeTrue()
+        ->and($vendorEntity->customer_is_contact)->toBeFalse()
+        ->and($contactEntity->customer_uuid)->toBe('contact-uuid')
+        ->and($contactEntity->customer_is_contact)->toBeTrue()
+        ->and($contactEntity->customer_is_vendor)->toBeFalse();
 });
 
 test('route position and vehicle device accessors use loaded relation data', function () {
