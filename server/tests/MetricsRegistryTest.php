@@ -114,6 +114,14 @@ class TestFleetOpsOrdersCompletedMetric extends OrdersCompletedMetric
     }
 }
 
+class TestFleetOpsOrdersInProgressMetric extends OrdersInProgressMetric
+{
+    public function aggregateForTest($query): int
+    {
+        return $this->aggregate($query);
+    }
+}
+
 class TestFleetOpsOpenIssuesMetric extends OpenIssuesMetric
 {
     public function aggregateForTest($query): int
@@ -436,11 +444,23 @@ test('active revenue query constraints mark inactive orders and invoices', funct
 });
 
 test('ordersInProgress uses an explicit allowlist rather than an exclusion list', function () {
+    $company = new Company();
+    $company->setRawAttributes(['uuid' => 'company-orders-in-progress'], true);
+
+    $metric   = TestFleetOpsOrdersInProgressMetric::forCompany($company);
     $statuses = OrdersInProgressMetric::IN_PROGRESS_STATUSES;
-    expect($statuses)->toBeArray();
-    expect($statuses)->not->toBeEmpty();
-    expect($statuses)->toContain('dispatched');
-    expect($statuses)->toContain('started');
+    $source   = file_get_contents(dirname(__DIR__) . '/src/Support/Metrics/OrdersInProgressMetric.php');
+
+    expect(OrdersInProgressMetric::slug())->toBe('orders_in_progress')
+        ->and($metric->format())->toBe('count')
+        ->and($metric->aggregateForTest(new TestFleetOpsMetricCountQuery(9)))->toBe(9)
+        ->and($statuses)->toBeArray()
+        ->and($statuses)->not->toBeEmpty()
+        ->and($statuses)->toContain('dispatched')
+        ->and($statuses)->toContain('started')
+        ->and($source)->toContain("where('company_uuid', \$this->company->uuid)")
+        ->and($source)->toContain("whereIn('status', self::IN_PROGRESS_STATUSES)")
+        ->and($source)->toContain("whereBetween('created_at', [\$start, \$end])");
 });
 
 test('orders scheduled metric scopes to future created orders for the company', function () {
