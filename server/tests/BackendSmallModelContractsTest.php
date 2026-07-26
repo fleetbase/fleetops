@@ -3,6 +3,7 @@
 use Fleetbase\FleetOps\Http\Filter\ServiceQuoteFilter;
 use Fleetbase\FleetOps\Models\Contact;
 use Fleetbase\FleetOps\Models\Customer;
+use Fleetbase\FleetOps\Models\Equipment;
 use Fleetbase\FleetOps\Models\FleetDriver;
 use Fleetbase\FleetOps\Models\FleetVehicle;
 use Fleetbase\FleetOps\Models\FuelProviderConnection;
@@ -16,7 +17,11 @@ use Fleetbase\FleetOps\Models\VendorPersonnel;
 use Fleetbase\FleetOps\Support\ParsePhone;
 use Illuminate\Database\ConnectionResolver;
 use Illuminate\Database\Eloquent\Model as EloquentModel;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\MorphTo;
 use Illuminate\Database\SQLiteConnection;
+use Illuminate\Support\Carbon;
 use libphonenumber\PhoneNumberFormat;
 
 if (!class_exists('Illuminate\Foundation\Auth\User', false)) {
@@ -48,6 +53,27 @@ class FleetOpsScopeBuilderFake
     public function where(string $column, mixed $value): self
     {
         $this->wheres[] = [$column, $value];
+
+        return $this;
+    }
+
+    public function whereNotNull(string $column): self
+    {
+        $this->wheres[] = ['whereNotNull', $column];
+
+        return $this;
+    }
+
+    public function whereNull(string $column): self
+    {
+        $this->wheres[] = ['whereNull', $column];
+
+        return $this;
+    }
+
+    public function orWhereNull(string $column): self
+    {
+        $this->wheres[] = ['orWhereNull', $column];
 
         return $this;
     }
@@ -178,6 +204,91 @@ test('small model relationships keep their intended foreign keys', function () {
         ->and((new VehicleDeviceEvent())->device()->getForeignKeyName())->toBe('vehicle_device_uuid')
         ->and($proof->file()->getForeignKeyName())->toBe('file_uuid')
         ->and($proof->order()->getForeignKeyName())->toBe('order_uuid');
+});
+
+test('equipment model exposes relationship scope and pure accessor contracts', function () {
+    fleetopsUseInMemoryRelationConnection();
+    Carbon::setTestNow(Carbon::parse('2026-07-26 12:00:00'));
+
+    $equipment = new Equipment();
+    $equipment->setRawAttributes([
+        'uuid'           => 'equipment-uuid',
+        'name'           => 'Forklift battery',
+        'status'         => 'available',
+        'equipable_type' => 'fleet-ops:vehicle',
+        'equipable_uuid' => 'vehicle-uuid',
+        'purchased_at'   => Carbon::parse('2024-07-26 12:00:00'),
+        'purchase_price' => 1000,
+        'meta'           => [
+            'depreciation_rate'         => 0.25,
+            'replacement_cost'          => 1500.0,
+            'maintenance_interval_days' => 90,
+        ],
+    ], true);
+    $equipment->setRelation('warranty', (object) ['name' => 'Battery Warranty', 'is_active' => true]);
+    $equipment->setRelation('photo', (object) ['url' => 'https://cdn.test/equipment.png']);
+    $equipment->setRelation('equipable', (object) ['display_name' => 'Truck 12']);
+
+    $typeBuilder         = new FleetOpsScopeBuilderFake();
+    $activeBuilder       = new FleetOpsScopeBuilderFake();
+    $manufacturerBuilder = new FleetOpsScopeBuilderFake();
+    $equippedBuilder     = new FleetOpsScopeBuilderFake();
+    $unequippedBuilder   = new FleetOpsScopeBuilderFake();
+
+    expect($equipment->warranty())->toBeInstanceOf(BelongsTo::class)
+        ->and($equipment->photo())->toBeInstanceOf(BelongsTo::class)
+        ->and($equipment->createdBy())->toBeInstanceOf(BelongsTo::class)
+        ->and($equipment->updatedBy())->toBeInstanceOf(BelongsTo::class)
+        ->and($equipment->maintenances())->toBeInstanceOf(HasMany::class)
+        ->and($equipment->equipable())->toBeInstanceOf(MorphTo::class)
+        ->and($equipment->warranty_name)->toBe('Battery Warranty')
+        ->and($equipment->photo_url)->toBe('https://cdn.test/equipment.png')
+        ->and($equipment->equipped_to_name)->toBe('Truck 12')
+        ->and($equipment->is_equipped)->toBeTrue()
+        ->and($equipment->age_in_days)->toBe(730)
+        ->and($equipment->depreciated_value)->toBe(500.0)
+        ->and($equipment->getUtilizationRate())->toBe(75.0)
+        ->and($equipment->isUnderWarranty())->toBeTrue()
+        ->and($equipment->getReplacementCostEstimate())->toBe(1500.0)
+        ->and($equipment->scopeByType($typeBuilder, 'battery'))->toBe($typeBuilder)
+        ->and($equipment->scopeActive($activeBuilder))->toBe($activeBuilder)
+        ->and($equipment->scopeByManufacturer($manufacturerBuilder, 'Acme'))->toBe($manufacturerBuilder)
+        ->and($equipment->scopeEquipped($equippedBuilder))->toBe($equippedBuilder)
+        ->and($equipment->scopeUnequipped($unequippedBuilder))->toBe($unequippedBuilder)
+        ->and($typeBuilder->wheres)->toBe([['type', 'battery']])
+        ->and($activeBuilder->wheres)->toBe([['status', 'active']])
+        ->and($manufacturerBuilder->wheres)->toBe([['manufacturer', 'Acme']])
+        ->and($equippedBuilder->wheres)->toBe([
+            ['whereNotNull', 'equipable_uuid'],
+            ['whereNotNull', 'equipable_type'],
+        ])
+        ->and($unequippedBuilder->wheres)->toBe([
+            ['whereNull', 'equipable_uuid'],
+            ['orWhereNull', 'equipable_type'],
+        ]);
+
+    $imported = Equipment::createFromImport([
+        'name'            => 'Safety Kit',
+        'internal_id'     => 'KIT-1',
+        'serial'          => 'SER-1',
+        'make'            => 'Acme',
+        'equipment_model' => 'K-100',
+        'price'           => 2500,
+        'currency'        => 'sgd',
+        'purchase_date'   => '2026-01-15',
+    ]);
+
+    expect($imported->name)->toBe('Safety Kit')
+        ->and($imported->code)->toBe('KIT-1')
+        ->and($imported->type)->toBe('equipment')
+        ->and($imported->status)->toBe('operational')
+        ->and($imported->serial_number)->toBe('SER-1')
+        ->and($imported->manufacturer)->toBe('Acme')
+        ->and($imported->model)->toBe('K-100')
+        ->and($imported->currency)->toBe('SGD')
+        ->and($imported->purchased_at->toDateString())->toBe('2026-01-15');
+
+    Carbon::setTestNow();
 });
 
 test('fuel sync run and vehicle device event metadata stays aligned with storage contracts', function () {

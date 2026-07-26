@@ -8,7 +8,26 @@ use Fleetbase\FleetOps\Models\Warranty;
 use Fleetbase\FleetOps\Models\Zone;
 use Fleetbase\LaravelMysqlSpatial\Types\MultiPolygon;
 use Fleetbase\LaravelMysqlSpatial\Types\Point;
+use Illuminate\Database\ConnectionResolver;
+use Illuminate\Database\Eloquent\Model as EloquentModel;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Database\Eloquent\Relations\MorphTo;
+use Illuminate\Database\SQLiteConnection;
 use Illuminate\Support\Carbon;
+
+function fleetopsMaintenanceUseInMemoryRelationConnection(): void
+{
+    $connection = new SQLiteConnection(new PDO('sqlite::memory:'));
+    $resolver   = new ConnectionResolver([
+        'default' => $connection,
+        'mysql'   => $connection,
+    ]);
+
+    $resolver->setDefaultConnection('mysql');
+    EloquentModel::setConnectionResolver($resolver);
+}
 
 class FleetOpsUpdatingMaintenanceScheduleFake extends MaintenanceSchedule
 {
@@ -166,6 +185,8 @@ test('warranty accessors coverage limits and transfer guards are stable', functi
 });
 
 test('service area spatial factories and tracking number light accessors are stable', function () {
+    fleetopsMaintenanceUseInMemoryRelationConnection();
+
     $point = new Point(1.30, 103.80);
 
     expect(ServiceArea::createPolygonFromPoint($point, 100))->toBeInstanceOf(Fleetbase\LaravelMysqlSpatial\Types\Polygon::class)
@@ -207,5 +228,10 @@ test('service area spatial factories and tracking number light accessors are sta
         ->and($tracking->last_status_code)->toBe('CREATED')
         ->and($tracking->last_status_updated_at->toDateTimeString())->toBe('2026-01-01 12:00:00')
         ->and($tracking->last_status_complete)->toBeFalse()
-        ->and($tracking->type)->toBe('asset');
+        ->and($tracking->type)->toBe('asset')
+        ->and($tracking->status())->toBeInstanceOf(HasOne::class)
+        ->and($tracking->statuses())->toBeInstanceOf(HasMany::class)
+        ->and($tracking->order())->toBeInstanceOf(BelongsTo::class)
+        ->and($tracking->entity())->toBeInstanceOf(BelongsTo::class)
+        ->and($tracking->owner())->toBeInstanceOf(MorphTo::class);
 });
