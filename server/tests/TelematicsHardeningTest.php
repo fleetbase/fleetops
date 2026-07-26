@@ -11,6 +11,59 @@ use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Http;
 
+class FleetOpsAfaqyProviderProbe extends AfaqyProvider
+{
+    public function setCredentialsForTest(array $credentials): void
+    {
+        $this->credentials = $credentials;
+    }
+
+    public function buildAuthenticatedRequestForTest(string $endpoint, array $payload = [], bool $tokenInQuery = false): array
+    {
+        return $this->buildAuthenticatedRequest($endpoint, $payload, $tokenInQuery);
+    }
+
+    public function setTokenForTest(string $token): void
+    {
+        $this->setToken($token);
+    }
+
+    public function canRefreshTokenForTest(): bool
+    {
+        return $this->canRefreshToken();
+    }
+
+    public function providerErrorMessageForTest(array $json): ?string
+    {
+        return $this->providerErrorMessage($json);
+    }
+
+    public function transportErrorContextForTest(string $endpoint, array $payload, ConnectionException $e, bool $retryAttempted, float $startedAt, int $timeout, int $connectTimeout): array
+    {
+        return $this->transportErrorContext($endpoint, $payload, $e, $retryAttempted, $startedAt, $timeout, $connectTimeout);
+    }
+
+    public function compactLastUpdateForTest(array $lastUpdate): array
+    {
+        return $this->compactLastUpdate($lastUpdate);
+    }
+
+    public function parseTimestampForTest($value): ?string
+    {
+        return $this->parseTimestamp($value);
+    }
+
+    public function normalizeSensorTypeForTest(array $payload, string $sensorName): string
+    {
+        return $this->normalizeSensorType($payload, $sensorName);
+    }
+
+    public function sensorIdentityPartForTest(string $value): string
+    {
+        return $this->sensorIdentityPart($value);
+    }
+}
+
 test('device event model and migration expose lifecycle fields used by telematics workflows', function () {
     $model     = file_get_contents(__DIR__ . '/../src/Models/DeviceEvent.php');
     $migration = file_get_contents(__DIR__ . '/../migrations/2026_06_06_000001_harden_device_events_telematics_contract.php');
@@ -1071,6 +1124,175 @@ test('afaqy sensors reject event shaped payloads without scalar sensor values', 
             'speed' => 40,
         ],
     ]))->toThrow(InvalidArgumentException::class);
+});
+
+test('afaqy provider helpers build authenticated requests and sanitized diagnostics', function () {
+    Carbon::setTestNow(Carbon::parse('2026-06-23 10:00:00'));
+
+    try {
+        $provider = new FleetOpsAfaqyProviderProbe();
+        $provider->setCredentialsForTest([
+            'token'    => 'static-token',
+            'username' => 'user',
+            'password' => 'secret',
+        ]);
+
+        [$queryUrl, $queryBody] = $provider->buildAuthenticatedRequestForTest('/units/lists?existing=1', [
+            'data' => ['limit' => 25, 'offset' => 50],
+        ], true);
+        [$bodyUrl, $body] = $provider->buildAuthenticatedRequestForTest('/units/view', [
+            'data' => ['id' => 'unit-1'],
+        ]);
+
+        $provider->setTokenForTest('fresh-token');
+
+        expect($queryUrl)->toBe('https://api.afaqy.sa/units/lists?existing=1&token=static-token')
+            ->and($queryBody)->toBe(['data' => ['limit' => 25, 'offset' => 50]])
+            ->and($bodyUrl)->toBe('https://api.afaqy.sa/units/view')
+            ->and($body)->toBe(['token' => 'static-token', 'data' => ['id' => 'unit-1']])
+            ->and($provider->canRefreshTokenForTest())->toBeTrue()
+            ->and($provider->providerErrorMessageForTest(['error' => ['message' => 'Nested failure']]))->toBe('Nested failure')
+            ->and($provider->providerErrorMessageForTest(['error_description' => 'Description failure']))->toBe('Description failure')
+            ->and($provider->providerErrorMessageForTest(['error' => ['not_scalar' => true]]))->toBeNull()
+            ->and($provider->parseTimestampForTest(null))->toBeNull()
+            ->and($provider->parseTimestampForTest(1719136800000))->toBe('2024-06-23 10:00:00')
+            ->and($provider->parseTimestampForTest('2026-06-23T09:00:00Z'))->toBe('2026-06-23 09:00:00')
+            ->and($provider->compactLastUpdateForTest([
+                'dtt'    => '2026-06-23T09:00:00Z',
+                'lat'    => 25.2,
+                'lng'    => 55.2,
+                'speed'  => 64,
+                'angle'  => 180,
+                'alt'    => 12,
+                'params' => ['sat' => 8, 'protocol' => 'wialon'],
+            ]))->toMatchArray([
+                'occurred_at' => '2026-06-23 09:00:00',
+                'lat'         => 25.2,
+                'lng'         => 55.2,
+                'speed'       => 64,
+                'heading'     => 180,
+                'altitude'    => 12,
+                'satellites'  => 8,
+                'protocol'    => 'wialon',
+            ])
+            ->and($provider->transportErrorContextForTest('/units/lists', [
+                'data' => ['limit' => 500, 'offset' => 100],
+            ], new ConnectionException('timeout with 12345 bytes received'), true, microtime(true) - 0.25, 120, 15))->toMatchArray([
+                'provider'         => 'afaqy',
+                'endpoint'         => '/units/lists',
+                'requested_limit'  => 500,
+                'requested_offset' => 100,
+                'timeout'          => 120,
+                'connect_timeout'  => 15,
+                'bytes_received'   => 12345,
+                'retry_attempted'  => true,
+                'transport_error'  => 'connection_exception',
+            ]);
+    } finally {
+        Carbon::setTestNow();
+    }
+});
+
+test('afaqy normalization covers device event and sensor type variants', function () {
+    $provider = new FleetOpsAfaqyProviderProbe();
+
+    $payload = [
+        '_id'           => 'unit-123',
+        'name'          => null,
+        'imei'          => 'imei-123',
+        'sim_number'    => 'sim-123',
+        'device_serial' => 'serial-123',
+        'active'        => true,
+        'driver_id'     => 'driver-provider-id',
+        'device'        => 'tracker-model',
+        'profile'       => [
+            'plate_number' => 'ABC-123',
+            'vehicle_type' => 'truck',
+            'fuel_type'    => 'diesel',
+            'vin'          => 'vin-123',
+        ],
+        'counters' => [
+            'odometer' => 12345,
+            'last_acc' => '1',
+        ],
+        'last_update' => [
+            'dtt'    => '2026-06-23T09:00:00Z',
+            'lat'    => 25.2,
+            'lng'    => 55.2,
+            'speed'  => 64,
+            'angle'  => 180,
+            'alt'    => 12,
+            'params' => ['fuel' => 73, 'acc' => 'true'],
+        ],
+    ];
+
+    $device = $provider->normalizeDevice($payload);
+    $event  = $provider->normalizeEvent($payload + [
+        'event'   => 'ignition_on',
+        'message' => 'Ignition on',
+    ]);
+
+    expect($device)->toMatchArray([
+        'device_id'    => 'unit-123',
+        'external_id'  => 'unit-123',
+        'name'         => 'ABC-123',
+        'provider'     => 'afaqy',
+        'model'        => 'tracker-model',
+        'imei'         => 'imei-123',
+        'phone'        => 'sim-123',
+        'vin'          => 'vin-123',
+        'status'       => 'active',
+        'online'       => true,
+        'last_seen_at' => '2026-06-23 09:00:00',
+        'location'     => ['lat' => 25.2, 'lng' => 55.2],
+    ])
+        ->and(data_get($device, 'meta.capabilities'))->toBe([
+            'tracking'       => true,
+            'odometer'       => true,
+            'fuel_level'     => true,
+            'ignition_state' => true,
+        ])
+        ->and($event)->toMatchArray([
+            'external_id' => 'unit-123',
+            'device_id'   => 'unit-123',
+            'event_type'  => 'ignition_on',
+            'message'     => 'Ignition on',
+            'occurred_at' => '2026-06-23 09:00:00',
+            'online'      => true,
+            'location'    => ['lat' => 25.2, 'lng' => 55.2],
+            'speed'       => 64,
+            'heading'     => 180,
+            'altitude'    => 12,
+            'odometer'    => 12345,
+            'ignition'    => true,
+            'fuel_level'  => 73,
+        ]);
+
+    expect($provider->normalizeSensorTypeForTest(['type' => 'temperature'], 'Cargo temperature'))->toBe('temperature')
+        ->and($provider->normalizeSensorTypeForTest(['type' => 'humidity'], 'Cabin humidity'))->toBe('humidity')
+        ->and($provider->normalizeSensorTypeForTest(['param' => 'di2'], 'Digital input 2'))->toBe('digital')
+        ->and($provider->normalizeSensorTypeForTest(['param' => 'ai1'], 'Analog input 1'))->toBe('analog')
+        ->and($provider->normalizeSensorTypeForTest(['type' => 'battery'], 'Battery voltage'))->toBe('voltage')
+        ->and($provider->normalizeSensorTypeForTest(['type' => 'custom sensor'], 'Custom Sensor'))->toBe('custom_sensor_custom_sensor')
+        ->and($provider->sensorIdentityPartForTest(' Sensor / Name #1 '))->toBe('sensor_name_1');
+
+    $sensor = $provider->normalizeSensor([
+        'unit_id'     => 'unit-123',
+        'id'          => 'temp-1',
+        'sensor'      => ['name' => 'Temperature 1'],
+        'last_update' => [
+            'value' => 4.5,
+            'dtt'   => '2026-06-23T09:10:00Z',
+        ],
+    ]);
+
+    expect($sensor)->toMatchArray([
+        'internal_id' => 'afaqy:unit-123:temp_1',
+        'name'        => 'Temperature 1',
+        'type'        => 'temperature',
+        'value'       => 4.5,
+        'recorded_at' => '2026-06-23 09:10:00',
+    ]);
 });
 
 test('afaqy bad sensor cleanup migration targets only afaqy telematics sensors', function () {

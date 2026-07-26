@@ -17,6 +17,32 @@ XML;
     file_put_contents($path, $xml);
 }
 
+function writeCoverageFixtureWithoutCoveredClasses(string $path): void
+{
+    $xml = <<<XML
+<?xml version="1.0" encoding="UTF-8"?>
+<coverage>
+  <project>
+    <file name="/tmp/Foo.php">
+      <class name="Foo">
+        <metrics statements="2" coveredstatements="2" methods="1" coveredmethods="1"/>
+      </class>
+      <metrics statements="2" coveredstatements="2" methods="1" coveredmethods="1" classes="1"/>
+    </file>
+    <file name="/tmp/Bar.php">
+      <class name="Bar">
+        <metrics statements="2" coveredstatements="1" methods="1" coveredmethods="0"/>
+      </class>
+      <metrics statements="2" coveredstatements="1" methods="1" coveredmethods="0" classes="1"/>
+    </file>
+    <metrics statements="4" coveredstatements="3" methods="2" coveredmethods="1" classes="2"/>
+  </project>
+</coverage>
+XML;
+
+    file_put_contents($path, $xml);
+}
+
 function coverageSummaryPhpCommand(): string
 {
     $binary = escapeshellarg(PHP_BINARY);
@@ -38,6 +64,20 @@ test('coverage summary reports line method class directory and file coverage', f
         ->and(implode("\n", $output))->toContain('Class coverage: 0.00% (0/1 classes)')
         ->and(implode("\n", $output))->toContain('Lowest covered directories:')
         ->and(implode("\n", $output))->toContain('Lowest covered files:');
+});
+
+test('coverage summary derives class coverage when clover omits coveredclasses', function () {
+    $fixture = tempnam(sys_get_temp_dir(), 'fleetops-clover-');
+    writeCoverageFixtureWithoutCoveredClasses($fixture);
+
+    exec(coverageSummaryPhpCommand() . ' scripts/coverage-summary.php ' . escapeshellarg($fixture), $output, $exitCode);
+
+    @unlink($fixture);
+
+    expect($exitCode)->toBe(0)
+        ->and(implode("\n", $output))->toContain('Line coverage: 75.00% (3/4 statements)')
+        ->and(implode("\n", $output))->toContain('Method coverage: 50.00% (1/2 methods)')
+        ->and(implode("\n", $output))->toContain('Class coverage: 50.00% (1/2 classes)');
 });
 
 test('coverage summary fails when coverage is below the configured threshold', function () {
