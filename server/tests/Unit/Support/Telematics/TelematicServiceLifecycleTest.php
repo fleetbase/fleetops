@@ -5,6 +5,7 @@ use Fleetbase\FleetOps\Contracts\TelematicProviderInterface;
 use Fleetbase\FleetOps\Jobs\SyncTelematicDevicesJob;
 use Fleetbase\FleetOps\Jobs\TestTelematicConnectionJob;
 use Fleetbase\FleetOps\Models\Device;
+use Fleetbase\FleetOps\Models\DeviceEvent;
 use Fleetbase\FleetOps\Models\Telematic;
 use Fleetbase\FleetOps\Support\Telematics\TelematicProviderRegistry;
 use Fleetbase\FleetOps\Support\Telematics\TelematicService;
@@ -65,9 +66,10 @@ class FleetOpsTelematicLifecycleDeviceFake extends Device
 
 class FleetOpsTelematicLifecycleProvider implements TelematicProviderInterface
 {
-    public array $connectedTelematics = [];
-    public array $testedCredentials   = [];
-    public array $testResult          = ['success' => true, 'message' => 'Connected', 'metadata' => ['latency_ms' => 12]];
+    public array $connectedTelematics           = [];
+    public array $testedCredentials             = [];
+    public array $testResult                    = ['success' => true, 'message' => 'Connected', 'metadata' => ['latency_ms' => 12]];
+    public ?Throwable $normalizeEventsException = null;
 
     public function connect(Telematic $telematic): void
     {
@@ -99,6 +101,15 @@ class FleetOpsTelematicLifecycleProvider implements TelematicProviderInterface
     public function normalizeEvent(array $payload): array
     {
         return $payload;
+    }
+
+    public function normalizeEvents(array $payload): array
+    {
+        if ($this->normalizeEventsException) {
+            throw $this->normalizeEventsException;
+        }
+
+        return $payload['events'] ?? [];
     }
 
     public function normalizeSensor(array $payload): array
@@ -183,6 +194,47 @@ class FleetOpsTelematicLifecycleService extends TelematicService
     protected function encryptCredentials(array $credentials): string
     {
         return json_encode($credentials);
+    }
+}
+
+class FleetOpsTelematicLifecycleIngestService extends TelematicService
+{
+    public array $linkedDevices = [];
+    public array $storedEvents  = [];
+    public int $storedSensors   = 0;
+
+    public function linkDevice(Telematic $telematic, array $deviceData): Device
+    {
+        $this->linkedDevices[] = [$telematic, $deviceData];
+
+        $device = new FleetOpsTelematicLifecycleDeviceFake([
+            'uuid'      => 'device-uuid',
+            'device_id' => $deviceData['device_id'] ?? $deviceData['external_id'] ?? 'device-external',
+            'status'    => 'active',
+            'meta'      => [],
+        ]);
+        $device->exists = true;
+
+        return $device;
+    }
+
+    public function storeDeviceEvent(Telematic $telematic, array $eventData, ?Device $device = null): DeviceEvent
+    {
+        $this->storedEvents[] = [$telematic, $eventData, $device];
+
+        $event = new DeviceEvent();
+        $event->setRawAttributes([
+            'uuid'       => 'event-' . count($this->storedEvents),
+            'event_type' => $eventData['event_type'] ?? $eventData['type'] ?? 'telemetry_update',
+        ], true);
+        $event->exists = true;
+
+        return $event;
+    }
+
+    protected function storeSnapshotSensors(Telematic $telematic, TelematicProviderInterface $provider, array $payload, Device $device): int
+    {
+        return $this->storedSensors;
     }
 }
 
@@ -466,6 +518,92 @@ test('telematic service rejects missing device and sensor identities', function 
         ->and($device->online)->toBeTrue()
         ->and($device->status)->toBe('online')
         ->and($device->last_position)->toBe(['latitude' => 0, 'longitude' => 0]);
+
+    Carbon::setTestNow();
+});
+
+test('telematic service ingests snapshots with event signals and handles provider event failures', function () {
+    $provider               = new FleetOpsTelematicLifecycleProvider();
+    $service                = new FleetOpsTelematicLifecycleIngestService(new FleetOpsTelematicLifecycleRegistry());
+    $service->storedSensors = 2;
+
+    $telematic = new FleetOpsTelematicLifecycleFake();
+    $telematic->setRawAttributes([
+        'uuid'         => 'telematic-uuid',
+        'public_id'    => 'telematic_public',
+        'company_uuid' => 'company-uuid',
+        'provider'     => 'unit-provider',
+    ], true);
+
+    $snapshot = $service->ingestDeviceSnapshot($telematic, $provider, [
+        'device_id' => 'device-external',
+        'events'    => [
+            [],
+            ['event_id'  => 'evt-1', 'event_type' => 'ignition_on'],
+            ['timestamp' => '2026-07-24 12:45:00', 'speed' => 12],
+        ],
+    ]);
+
+    expect($service->linkedDevices)->toHaveCount(1)
+        ->and($service->linkedDevices[0][1])->toMatchArray(['device_id' => 'device-external'])
+        ->and($service->storedEvents)->toHaveCount(2)
+        ->and($service->storedEvents[0][1]['event_id'])->toBe('evt-1')
+        ->and($service->storedEvents[1][1]['timestamp'])->toBe('2026-07-24 12:45:00')
+        ->and($snapshot['device'])->toBeInstanceOf(Device::class)
+        ->and($snapshot['event'])->toBe($snapshot['events'][0])
+        ->and($snapshot['events'])->toHaveCount(2)
+        ->and($snapshot['sensors'])->toBe(2);
+
+    $provider->normalizeEventsException = new RuntimeException('provider normalization failed');
+    $failedSnapshot                     = $service->ingestDeviceSnapshot($telematic, $provider, [
+        'device_id' => 'device-external',
+        'events'    => [['event_id' => 'evt-2']],
+    ]);
+
+    expect($failedSnapshot['event'])->toBeNull()
+        ->and($failedSnapshot['events'])->toBe([])
+        ->and($failedSnapshot['sensors'])->toBe(2);
+});
+
+test('telematic service normalizes helper branch inputs', function () {
+    Carbon::setTestNow(Carbon::parse('2026-07-24 13:00:00'));
+
+    $service = new TelematicService(new FleetOpsTelematicLifecycleRegistry());
+    $device  = new FleetOpsTelematicLifecycleDeviceFake([
+        'uuid'           => 'device-uuid',
+        'device_id'      => 'device-external',
+        'last_online_at' => Carbon::parse('2026-07-24 12:30:00'),
+        'status'         => 'maintenance',
+        'meta'           => [],
+    ]);
+    $telematic = new FleetOpsTelematicLifecycleFake();
+    $telematic->setRawAttributes([
+        'uuid'      => 'telematic-uuid',
+        'public_id' => 'telematic_public',
+        'provider'  => 'unit-provider',
+    ], true);
+
+    expect(fleetOpsTelematicLifecycleInvoke($service, 'normalizeLocation', [['lat' => '1.25', 'lng' => '103.75']]))
+        ->toBe(['latitude' => 1.25, 'longitude' => 103.75])
+        ->and(fleetOpsTelematicLifecycleInvoke($service, 'normalizeLocation', [['lat' => '1.25']]))->toBeNull()
+        ->and(fleetOpsTelematicLifecycleInvoke($service, 'resolveTelemetryTimestamp', [['timestamp' => 'not-a-date']]))->toBeNull()
+        ->and(fleetOpsTelematicLifecycleInvoke($service, 'resolveTelemetryTimestamp', [['meta' => ['last_update' => ['occurred_at' => '2026-07-24 12:59:00']]]])?->toDateTimeString())->toBe('2026-07-24 12:59:00')
+        ->and(fleetOpsTelematicLifecycleInvoke($service, 'resolveReportedOnline', [['online' => 'definitely']]))->toBeTrue()
+        ->and(fleetOpsTelematicLifecycleInvoke($service, 'connectionStatusForDevice', [$device, Carbon::parse('2026-07-24 12:30:00'), null]))->toBe('recently_offline')
+        ->and(fleetOpsTelematicLifecycleInvoke($service, 'connectionStatusForDevice', [$device, Carbon::parse('2026-07-23 12:00:00'), null]))->toBe('long_offline')
+        ->and(fleetOpsTelematicLifecycleInvoke($service, 'isProtectedDeviceStatus', ['maintenance']))->toBeTrue()
+        ->and(fleetOpsTelematicLifecycleInvoke($service, 'resolveExternalId', [['unit_id' => 1234]]))->toBe('1234')
+        ->and(fleetOpsTelematicLifecycleInvoke($service, 'resolveProviderAccountId', [[], ['x-customer-id' => ['customer-from-header']]]))->toBe('customer-from-header')
+        ->and(fleetOpsTelematicLifecycleInvoke($service, 'resolveProviderAccountId', [['organization' => ['id' => 'org-from-payload']], []]))->toBe('org-from-payload')
+        ->and(fleetOpsTelematicLifecycleInvoke($service, 'makeEventKey', [$telematic, ['event_id' => 'evt-without-device'], null]))->toBeNull()
+        ->and(fleetOpsTelematicLifecycleInvoke($service, 'makeEventKey', [$telematic, ['timestamp' => '2026-07-24 12:59:00'], $device]))->toBe(sha1('unit-provider|telematic_public|device-external||telemetry_update|2026-07-24 12:59:00'))
+        ->and(fleetOpsTelematicLifecycleInvoke($service, 'makeSensorIdentity', [['sensor_type' => 'temperature', 'unit' => 'celsius'], $device]))->toBe(sha1('device-uuid|temperature|celsius'));
+
+    fleetOpsTelematicLifecycleInvoke($service, 'setDeviceAttributeIfPresent', [$device, 'name', '']);
+    expect($device->name)->toBeNull();
+
+    fleetOpsTelematicLifecycleInvoke($service, 'setDeviceAttributeIfPresent', [$device, 'name', 'Tracker A']);
+    expect($device->name)->toBe('Tracker A');
 
     Carbon::setTestNow();
 });
