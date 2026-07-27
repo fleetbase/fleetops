@@ -18,7 +18,9 @@ if (!function_exists('Fleetbase\FleetOps\Support\base_path')) {
 
 use Fleetbase\FleetOps\Models\Driver;
 use Fleetbase\FleetOps\Models\Order;
+use Fleetbase\FleetOps\Models\Position;
 use Fleetbase\FleetOps\Models\Vehicle;
+use Fleetbase\Models\ScheduleItem;
 use Fleetbase\Models\User;
 use Illuminate\Broadcasting\Channel;
 use Illuminate\Database\ConnectionResolver;
@@ -114,6 +116,37 @@ function fleetopsDriverUnitUseInMemoryConnection(): SQLiteConnection
         $table->string('url')->nullable();
         $table->string('type')->nullable();
         $table->string('original_filename')->nullable();
+        $table->timestamp('deleted_at')->nullable();
+    });
+    $schema->create('positions', function ($table) {
+        $table->increments('id');
+        $table->string('uuid')->nullable();
+        $table->string('company_uuid')->nullable();
+        $table->string('order_uuid')->nullable();
+        $table->string('destination_uuid')->nullable();
+        $table->string('subject_uuid')->nullable();
+        $table->string('subject_type')->nullable();
+        $table->text('coordinates')->nullable();
+        $table->integer('heading')->nullable();
+        $table->integer('bearing')->nullable();
+        $table->integer('speed')->nullable();
+        $table->integer('altitude')->nullable();
+        $table->timestamp('created_at')->nullable();
+        $table->timestamp('updated_at')->nullable();
+        $table->timestamp('deleted_at')->nullable();
+    });
+    $schema->create('schedule_items', function ($table) {
+        $table->increments('id');
+        $table->string('uuid')->nullable();
+        $table->string('public_id')->nullable();
+        $table->string('company_uuid')->nullable();
+        $table->string('assignee_uuid')->nullable();
+        $table->string('assignee_type')->nullable();
+        $table->timestamp('start_at')->nullable();
+        $table->timestamp('end_at')->nullable();
+        $table->string('status')->nullable();
+        $table->timestamp('created_at')->nullable();
+        $table->timestamp('updated_at')->nullable();
         $table->timestamp('deleted_at')->nullable();
     });
 
@@ -271,4 +304,98 @@ test('driver avatar options merge custom driver avatars with bundled defaults', 
         ->and(Driver::getAvatar('moto-driver'))->toBe($options->get('moto-driver'))
         ->and(Driver::getAvatar('11111111-1111-4111-8111-111111111111'))->toBeNull()
         ->and((new FleetOpsDriverUnitFake())->getAvatarUrlAttribute(null))->toBe($options->get('moto-driver'));
+});
+
+test('driver position and schedule helpers resolve scoped records', function () {
+    $connection = fleetopsDriverUnitUseInMemoryConnection();
+    Carbon::setTestNow(Carbon::parse('2026-07-27 12:00:00'));
+
+    $driver = new FleetOpsDriverUnitFake();
+    $driver->setRawAttributes([
+        'uuid'         => 'driver-uuid',
+        'company_uuid' => 'company-driver',
+        'location'     => null,
+        'altitude'     => 100,
+        'heading'      => 45,
+        'speed'        => 25,
+    ], true);
+    $driver->exists   = true;
+    $driverMorphClass = $driver->getMorphClass();
+
+    $connection->table('positions')->insert([
+        [
+            'uuid'         => 'old-position',
+            'company_uuid' => 'company-driver',
+            'subject_uuid' => 'driver-uuid',
+            'subject_type' => $driverMorphClass,
+            'created_at'   => '2026-07-27 09:00:00',
+            'updated_at'   => '2026-07-27 09:00:00',
+        ],
+        [
+            'uuid'         => 'latest-position',
+            'company_uuid' => 'company-driver',
+            'subject_uuid' => 'driver-uuid',
+            'subject_type' => $driverMorphClass,
+            'created_at'   => '2026-07-27 11:00:00',
+            'updated_at'   => '2026-07-27 11:00:00',
+        ],
+        [
+            'uuid'         => 'other-company-position',
+            'company_uuid' => 'other-company',
+            'subject_uuid' => 'driver-uuid',
+            'subject_type' => $driverMorphClass,
+            'created_at'   => '2026-07-27 12:00:00',
+            'updated_at'   => '2026-07-27 12:00:00',
+        ],
+    ]);
+
+    $connection->table('schedule_items')->insert([
+        [
+            'uuid'          => 'later-shift',
+            'company_uuid'  => 'company-driver',
+            'assignee_uuid' => 'driver-uuid',
+            'assignee_type' => $driverMorphClass,
+            'start_at'      => '2026-07-27 14:00:00',
+            'end_at'        => '2026-07-27 18:00:00',
+            'status'        => 'active',
+        ],
+        [
+            'uuid'          => 'first-shift',
+            'company_uuid'  => 'company-driver',
+            'assignee_uuid' => 'driver-uuid',
+            'assignee_type' => $driverMorphClass,
+            'start_at'      => '2026-07-27 08:00:00',
+            'end_at'        => '2026-07-27 12:00:00',
+            'status'        => 'pending',
+        ],
+        [
+            'uuid'          => 'complete-shift',
+            'company_uuid'  => 'company-driver',
+            'assignee_uuid' => 'driver-uuid',
+            'assignee_type' => $driverMorphClass,
+            'start_at'      => '2026-07-27 07:00:00',
+            'end_at'        => '2026-07-27 08:00:00',
+            'status'        => 'completed',
+        ],
+    ]);
+
+    $latest = $driver->getLastKnownPosition();
+    $shift  = $driver->activeShiftFor(Carbon::parse('2026-07-27'));
+
+    expect($latest)->toBeInstanceOf(Position::class)
+        ->and($latest->uuid)->toBe('latest-position')
+        ->and($shift)->toBeInstanceOf(ScheduleItem::class)
+        ->and($shift->uuid)->toBe('first-shift');
+
+    $connection->table('positions')->where('company_uuid', 'company-driver')->delete();
+
+    $created = $driver->createPositionWithOrderContext();
+
+    expect($created)->toBeInstanceOf(Position::class)
+        ->and($created->company_uuid)->toBe('company-driver')
+        ->and($created->subject_uuid)->toBe('driver-uuid')
+        ->and($created->heading)->toBe(45)
+        ->and($created->speed)->toBe(25);
+
+    Carbon::setTestNow();
 });
