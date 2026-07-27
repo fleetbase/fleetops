@@ -138,6 +138,48 @@ class FleetOpsContactUnitCreateUserFake extends Contact
     }
 }
 
+class FleetOpsContactUnitExistingContactQueryFake
+{
+    public array $whereNotCalls = [];
+    public array $whereHasCalls = [];
+
+    public function __construct(public ?Contact $result = null)
+    {
+    }
+
+    public function whereNot(string $column, mixed $value): self
+    {
+        $this->whereNotCalls[] = [$column, $value];
+
+        return $this;
+    }
+
+    public function whereHas(string $relation): self
+    {
+        $this->whereHasCalls[] = $relation;
+
+        return $this;
+    }
+
+    public function first(): ?Contact
+    {
+        return $this->result;
+    }
+}
+
+class FleetOpsContactUnitAssignableFake extends FleetOpsContactUnitFake
+{
+    public static ?FleetOpsContactUnitExistingContactQueryFake $query = null;
+    public static array $whereCalls                                   = [];
+
+    public static function where($column, $operator = null, $value = null, $boolean = 'and')
+    {
+        static::$whereCalls[] = [$column, $operator, $value, $boolean];
+
+        return static::$query;
+    }
+}
+
 function fleetopsContactUnitUseInMemoryConnection(): SQLiteConnection
 {
     $connection = new SQLiteConnection(new PDO('sqlite::memory:'));
@@ -350,6 +392,84 @@ test('contact assigns non customer users to company and contact role without inv
         ->and($companyUser->roles)->toBe(['Fleet-Ops Contact'])
         ->and($contact->updates)->toBe([['user_uuid' => 'user-uuid']])
         ->and($contact->getRelation('user'))->toBe($user);
+});
+
+test('contact assigns customer users after scoped duplicate contact lookup', function () {
+    $companyUser = new FleetOpsContactUnitCompanyUserFake([
+        'company_uuid' => 'company-uuid',
+        'user_uuid'    => 'customer-user',
+    ]);
+    $companyUser->setRawAttributes([
+        'uuid'         => 'company-user-uuid',
+        'company_uuid' => 'company-uuid',
+        'user_uuid'    => 'customer-user',
+        'status'       => 'active',
+    ], true);
+
+    $company = new FleetOpsContactUnitCompanyFake();
+    $company->setRawAttributes(['uuid' => 'company-uuid'], true);
+    $company->companyUser = $companyUser;
+
+    $user = new FleetOpsContactUnitUserFake();
+    $user->setRawAttributes([
+        'uuid' => 'customer-user',
+        'type' => 'customer',
+    ], true);
+    $user->setRelation('companyUser', $companyUser);
+
+    $query                                         = new FleetOpsContactUnitExistingContactQueryFake();
+    FleetOpsContactUnitAssignableFake::$query      = $query;
+    FleetOpsContactUnitAssignableFake::$whereCalls = [];
+
+    $contact = new FleetOpsContactUnitAssignableFake();
+    $contact->setRawAttributes([
+        'uuid'         => 'contact-uuid',
+        'company_uuid' => 'company-uuid',
+        'type'         => 'customer',
+    ], true);
+    $contact->setRelation('company', $company);
+
+    expect($contact->assignUser($user))->toBe($contact)
+        ->and(FleetOpsContactUnitAssignableFake::$whereCalls[0][0])->toBe([
+            'user_uuid'    => 'customer-user',
+            'company_uuid' => 'company-uuid',
+        ])
+        ->and($query->whereNotCalls)->toBe([['uuid', 'contact-uuid']])
+        ->and($query->whereHasCalls)->toBe(['user'])
+        ->and($company->addUserCalls[0][1])->toBe('Fleet-Ops Customer')
+        ->and($companyUser->roles)->toBe(['Fleet-Ops Customer'])
+        ->and($contact->updates)->toBe([['user_uuid' => 'customer-user']])
+        ->and($contact->getRelation('user'))->toBe($user);
+});
+
+test('contact customer assignment rejects users already linked to another contact', function () {
+    $query                                         = new FleetOpsContactUnitExistingContactQueryFake(new Contact());
+    FleetOpsContactUnitAssignableFake::$query      = $query;
+    FleetOpsContactUnitAssignableFake::$whereCalls = [];
+
+    $contact = new FleetOpsContactUnitAssignableFake();
+    $contact->setRawAttributes([
+        'uuid'         => 'contact-uuid',
+        'company_uuid' => 'company-uuid',
+        'type'         => 'customer',
+    ], true);
+
+    $user = new FleetOpsContactUnitUserFake();
+    $user->setRawAttributes([
+        'uuid' => 'customer-user',
+        'type' => 'customer',
+    ], true);
+
+    expect(fn () => $contact->assignUser($user))->toThrow(
+        Fleetbase\FleetOps\Exceptions\UserAlreadyExistsException::class,
+        'User already exists'
+    )
+        ->and(FleetOpsContactUnitAssignableFake::$whereCalls[0][0])->toBe([
+            'user_uuid'    => 'customer-user',
+            'company_uuid' => 'company-uuid',
+        ])
+        ->and($query->whereNotCalls)->toBe([['uuid', 'contact-uuid']])
+        ->and($query->whereHasCalls)->toBe(['user']);
 });
 
 test('contact user conflict helpers guard staff users and allow customers', function () {
