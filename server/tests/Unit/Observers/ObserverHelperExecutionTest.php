@@ -5,10 +5,13 @@ if (!function_exists('Fleetbase\Models\config')) {
 }
 
 use Fleetbase\FleetOps\Models\Driver;
+use Fleetbase\FleetOps\Models\OrderConfig;
 use Fleetbase\FleetOps\Models\Zone;
 use Fleetbase\FleetOps\Observers\CategoryObserver;
+use Fleetbase\FleetOps\Observers\CompanyObserver;
 use Fleetbase\FleetOps\Observers\UserObserver;
 use Fleetbase\FleetOps\Observers\ZoneObserver;
+use Fleetbase\Models\Company;
 use Fleetbase\Models\CustomField;
 use Illuminate\Database\ConnectionResolver;
 use Illuminate\Database\Eloquent\Model as EloquentModel;
@@ -32,6 +35,7 @@ function fleetopsObserverHelperConnection(): SQLiteConnection
     $connection->statement('create table custom_fields (uuid varchar(64) primary key, category_uuid varchar(64) null, company_uuid varchar(64) null, deleted_at datetime null, created_at datetime null, updated_at datetime null)');
     $connection->statement('create table users (uuid varchar(64) primary key, company_uuid varchar(64) null, public_id varchar(64) null, avatar_uuid varchar(64) null, name varchar(255) null, phone varchar(64) null, email varchar(255) null, type varchar(64) null, status varchar(64) null, last_login datetime null, deleted_at datetime null, created_at datetime null, updated_at datetime null)');
     $connection->statement('create table drivers (uuid varchar(64) primary key, user_uuid varchar(64) null, company_uuid varchar(64) null, deleted_at datetime null, created_at datetime null, updated_at datetime null)');
+    $connection->statement('create table order_configs (id integer primary key autoincrement, uuid varchar(64) null, public_id varchar(64) null, company_uuid varchar(64) null, author_uuid varchar(64) null, category_uuid varchar(64) null, icon_uuid varchar(64) null, name varchar(255) null, namespace varchar(255) null, description text null, key varchar(255) null, status varchar(64) null, version varchar(64) null, core_service tinyint null, flow text null, entities text null, tags text null, meta text null, deleted_at datetime null, created_at datetime null, updated_at datetime null)');
 
     $resolver = new ConnectionResolver([
         'default' => $connection,
@@ -82,6 +86,27 @@ test('user observer deletes scoped driver records for the removed user', functio
 
     expect(Driver::withTrashed()->withoutGlobalScopes()->where('user_uuid', 'user-uuid')->whereNotNull('deleted_at')->count())->toBe(2)
         ->and(Driver::withTrashed()->withoutGlobalScopes()->where('user_uuid', 'other-user')->whereNull('deleted_at')->count())->toBe(1);
+});
+
+test('company observer creates the default transport order config', function () {
+    fleetopsObserverHelperConnection();
+
+    $company = new Company();
+    $company->setRawAttributes(['uuid' => 'company-uuid'], true);
+
+    (new CompanyObserver())->created($company);
+
+    $transport = OrderConfig::where([
+        'company_uuid' => 'company-uuid',
+        'key'          => 'transport',
+        'namespace'    => 'system:order-config:transport',
+    ])->first();
+
+    expect($transport)->toBeInstanceOf(OrderConfig::class)
+        ->and($transport->name)->toBe('Transport')
+        ->and($transport->core_service)->toBe(1)
+        ->and($transport->tags)->toBe(['transport', 'delivery'])
+        ->and($transport->flow)->toHaveKeys(['created', 'enroute', 'started', 'completed', 'dispatched']);
 });
 
 test('zone observer invalidates service area cache only when a service area is present', function () {
