@@ -16,6 +16,10 @@ if (!function_exists('Fleetbase\FleetOps\Integrations\Lalamove\session')) {
     eval('namespace Fleetbase\FleetOps\Integrations\Lalamove; function session($key = null, $default = null) { return $key === "company" ? "company-session" : $default; }');
 }
 
+if (!function_exists('Fleetbase\\Support\\session')) {
+    eval('namespace Fleetbase\\Support; function session($key = null, $default = null) { if ($key === null) { return new class { public function has($k) { return \\session($k) !== null; } public function get($k, $d = null) { return \\session($k, $d); } }; } return \\session($key, $default); }');
+}
+
 use Fleetbase\FleetOps\Exceptions\IntegratedVendorException;
 use Fleetbase\FleetOps\Integrations\Lalamove\Lalamove;
 use Fleetbase\FleetOps\Integrations\Lalamove\LalamoveMarket;
@@ -57,15 +61,16 @@ function fleetopsLalamoveLifecycleProperty(object $target, string $property): mi
     return $reflection->getValue($target);
 }
 
-test('lalamove direct instances retain provided credentials while static dispatch exposes current argument ordering', function () {
+test('lalamove direct instances retain provided credentials and static dispatch forwards arguments in order', function () {
     $instance = Lalamove::instance('api-key', 'api-secret', true, 'SG');
 
     expect($instance)->toBeInstanceOf(Lalamove::class)
         ->and(fleetopsLalamoveLifecycleProperty($instance, 'apiKey'))->toBe('api-key')
-        ->and(fleetopsLalamoveLifecycleProperty($instance, 'apiSecret'))->toBe('api-secret');
+        ->and(fleetopsLalamoveLifecycleProperty($instance, 'apiSecret'))->toBe('api-secret')
+        ->and(fleetopsLalamoveLifecycleProperty($instance, 'isSandbox'))->toBeTrue();
 
-    expect(fn () => Lalamove::fromHostMissingMethod())
-        ->toThrow(TypeError::class, 'Argument #3 ($sandbox) must be of type bool');
+    // Unknown proxied methods resolve an instance and return null.
+    expect(Lalamove::fromHostMissingMethod())->toBeNull();
 });
 
 test('lalamove accepts market service type and integrated vendor objects', function () {

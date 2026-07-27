@@ -111,7 +111,7 @@ class Lalamove
 
     public static function instance(?string $apiKey = null, ?string $apiSecret = null, bool $sandbox = false, $market = null): Lalamove
     {
-        return new static($apiKey, $apiSecret, $market, $sandbox);
+        return new static($apiKey, $apiSecret, $sandbox, $market);
     }
 
     public static function __callStatic($name, $arguments)
@@ -182,7 +182,7 @@ class Lalamove
         return $serviceQuote->load(['items']);
     }
 
-    public static function serviceQuoteFromQuotation($quotation = null, $requestId = null, $integratedVendor = null, ?Payload $payload = null): ServiceQuote
+    public static function serviceQuoteFromQuotation($quotation = null, $requestId = null, $integratedVendor = null, ?Payload $payload = null): ?ServiceQuote
     {
         if (!$quotation) {
             return null;
