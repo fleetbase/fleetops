@@ -16,7 +16,10 @@ use Fleetbase\FleetOps\Models\Waypoint;
 use Fleetbase\FleetOps\Support\OrderTracker;
 use Fleetbase\Http\Requests\ExportRequest;
 use Fleetbase\Models\Type;
+use Illuminate\Database\ConnectionResolver;
+use Illuminate\Database\Eloquent\Model as EloquentModel;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
+use Illuminate\Database\SQLiteConnection;
 use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Collection;
@@ -698,6 +701,33 @@ class FleetOpsInternalOrderLifecycleTrackerFake extends OrderTracker
     }
 }
 
+class FleetOpsInternalOrderLifecycleDatabaseProbe
+{
+    public function __construct(private SQLiteConnection $connection)
+    {
+    }
+
+    public function table(string $table)
+    {
+        return $this->connection->table($table);
+    }
+
+    public function raw(mixed $value): mixed
+    {
+        return $this->connection->raw($value);
+    }
+
+    public function connection(): SQLiteConnection
+    {
+        return $this->connection;
+    }
+
+    public function transaction(callable $callback): mixed
+    {
+        return $callback();
+    }
+}
+
 function fleetopsInternalOrderLifecycleOrder(string $uuid, string $status = 'created', ?string $trackingNumberUuid = null): FleetOpsInternalOrderLifecycleOrderFake
 {
     $order = new FleetOpsInternalOrderLifecycleOrderFake();
@@ -739,6 +769,55 @@ function fleetopsInternalOrderLifecycleController(array $orders = []): FleetOpsI
     ], true);
 
     return $controller;
+}
+
+function fleetopsInternalOrderLifecycleUseStatusesDatabase(): SQLiteConnection
+{
+    $connection = new SQLiteConnection(new PDO('sqlite::memory:'));
+    $resolver   = new ConnectionResolver([
+        'default' => $connection,
+        'mysql'   => $connection,
+    ]);
+
+    $resolver->setDefaultConnection('mysql');
+    EloquentModel::setConnectionResolver($resolver);
+    app()->instance('db', new FleetOpsInternalOrderLifecycleDatabaseProbe($connection));
+
+    $schema = $connection->getSchemaBuilder();
+    $schema->create('orders', function ($table) {
+        $table->increments('id');
+        $table->string('uuid')->nullable();
+        $table->string('company_uuid')->nullable();
+        $table->string('order_config_uuid')->nullable();
+        $table->string('status')->nullable();
+        $table->timestamp('created_at')->nullable();
+        $table->timestamp('updated_at')->nullable();
+        $table->timestamp('deleted_at')->nullable();
+    });
+    $schema->create('order_configs', function ($table) {
+        $table->increments('id');
+        $table->string('uuid')->nullable();
+        $table->string('public_id')->nullable();
+        $table->string('company_uuid')->nullable();
+        $table->string('key')->nullable();
+        $table->string('name')->nullable();
+        $table->text('flow')->nullable();
+        $table->timestamp('created_at')->nullable();
+        $table->timestamp('updated_at')->nullable();
+        $table->timestamp('deleted_at')->nullable();
+    });
+
+    return $connection;
+}
+
+function fleetopsInternalOrderLifecycleStatusesRequest(array $input = [], ?string $companyUuid = null): Request
+{
+    $request = new Request($input);
+    $request->setUserResolver(function () use ($companyUuid) {
+        return $companyUuid ? (object) ['company_uuid' => $companyUuid] : null;
+    });
+
+    return $request;
 }
 
 function fleetopsBulkActionRequest(array $payload): Request
@@ -1190,6 +1269,199 @@ test('internal order controller type list merges custom and default order types'
     expect(array_column($types, 'key'))->toBe(['parcel', 'freight'])
         ->and($types[0]['name'])->toBe('Custom Parcel')
         ->and($types[1]['name'])->toBe('Freight');
+});
+
+test('internal order controller statuses merge scoped order statuses and config activities', function () {
+    $connection = fleetopsInternalOrderLifecycleUseStatusesDatabase();
+    $now        = now();
+
+    session(['company' => 'company-a']);
+
+    $connection->table('order_configs')->insert([
+        [
+            'uuid'         => 'config-parcel',
+            'public_id'    => 'order_config_parcel',
+            'company_uuid' => 'company-a',
+            'key'          => 'parcel',
+            'name'         => 'Parcel',
+            'flow'         => json_encode([
+                ['code' => 'created'],
+                ['code' => 'driver_assigned'],
+                ['code' => null],
+            ]),
+            'created_at'   => $now,
+            'updated_at'   => $now,
+        ],
+        [
+            'uuid'         => 'config-freight',
+            'public_id'    => 'order_config_freight',
+            'company_uuid' => 'company-a',
+            'key'          => 'freight',
+            'name'         => 'Freight',
+            'flow'         => json_encode([
+                ['code' => 'loaded'],
+                ['code' => 'completed'],
+            ]),
+            'created_at'   => $now,
+            'updated_at'   => $now,
+        ],
+        [
+            'uuid'         => 'config-other-company',
+            'public_id'    => 'order_config_other_company',
+            'company_uuid' => 'company-b',
+            'key'          => 'parcel',
+            'name'         => 'Other Parcel',
+            'flow'         => json_encode([
+                ['code' => 'other_activity'],
+            ]),
+            'created_at'   => $now,
+            'updated_at'   => $now,
+        ],
+    ]);
+    $connection->table('orders')->insert([
+        [
+            'uuid'              => 'order-created',
+            'company_uuid'      => 'company-a',
+            'order_config_uuid' => 'config-parcel',
+            'status'            => 'created',
+            'created_at'        => $now,
+            'updated_at'        => $now,
+            'deleted_at'        => null,
+        ],
+        [
+            'uuid'              => 'order-dispatched',
+            'company_uuid'      => 'company-a',
+            'order_config_uuid' => 'config-parcel',
+            'status'            => 'dispatched',
+            'created_at'        => $now,
+            'updated_at'        => $now,
+            'deleted_at'        => null,
+        ],
+        [
+            'uuid'              => 'order-loaded',
+            'company_uuid'      => 'company-a',
+            'order_config_uuid' => 'config-freight',
+            'status'            => 'loaded',
+            'created_at'        => $now,
+            'updated_at'        => $now,
+            'deleted_at'        => null,
+        ],
+        [
+            'uuid'              => 'order-null-status',
+            'company_uuid'      => 'company-a',
+            'order_config_uuid' => 'config-freight',
+            'status'            => null,
+            'created_at'        => $now,
+            'updated_at'        => $now,
+            'deleted_at'        => null,
+        ],
+        [
+            'uuid'              => 'order-deleted',
+            'company_uuid'      => 'company-a',
+            'order_config_uuid' => 'config-parcel',
+            'status'            => 'canceled',
+            'created_at'        => $now,
+            'updated_at'        => $now,
+            'deleted_at'        => $now,
+        ],
+        [
+            'uuid'              => 'order-other-company',
+            'company_uuid'      => 'company-b',
+            'order_config_uuid' => 'config-other-company',
+            'status'            => 'other_status',
+            'created_at'        => $now,
+            'updated_at'        => $now,
+            'deleted_at'        => null,
+        ],
+    ]);
+
+    $statuses = (new OrderController())->statuses(fleetopsInternalOrderLifecycleStatusesRequest([], 'company-a'))->getData(true);
+
+    expect($statuses)->toBe([
+        'created',
+        'dispatched',
+        'loaded',
+        'driver_assigned',
+        'completed',
+    ]);
+});
+
+test('internal order controller statuses honor config filters and activity flag', function () {
+    $connection = fleetopsInternalOrderLifecycleUseStatusesDatabase();
+    $now        = now();
+    $controller = new OrderController();
+
+    $connection->table('order_configs')->insert([
+        [
+            'uuid'         => 'config-parcel',
+            'public_id'    => 'order_config_parcel',
+            'company_uuid' => 'company-a',
+            'key'          => 'parcel',
+            'name'         => 'Parcel',
+            'flow'         => json_encode([
+                ['code' => 'driver_assigned'],
+                ['code' => 'completed'],
+            ]),
+            'created_at'   => $now,
+            'updated_at'   => $now,
+        ],
+        [
+            'uuid'         => 'config-freight',
+            'public_id'    => 'order_config_freight',
+            'company_uuid' => 'company-a',
+            'key'          => 'freight',
+            'name'         => 'Freight',
+            'flow'         => json_encode([
+                ['code' => 'loaded'],
+            ]),
+            'created_at'   => $now,
+            'updated_at'   => $now,
+        ],
+    ]);
+    $connection->table('orders')->insert([
+        [
+            'uuid'              => 'order-parcel-created',
+            'company_uuid'      => 'company-a',
+            'order_config_uuid' => 'config-parcel',
+            'status'            => 'created',
+            'created_at'        => $now,
+            'updated_at'        => $now,
+        ],
+        [
+            'uuid'              => 'order-parcel-completed',
+            'company_uuid'      => 'company-a',
+            'order_config_uuid' => 'config-parcel',
+            'status'            => 'completed',
+            'created_at'        => $now,
+            'updated_at'        => $now,
+        ],
+        [
+            'uuid'              => 'order-freight-loaded',
+            'company_uuid'      => 'company-a',
+            'order_config_uuid' => 'config-freight',
+            'status'            => 'loaded',
+            'created_at'        => $now,
+            'updated_at'        => $now,
+        ],
+    ]);
+
+    $keyFiltered = $controller->statuses(fleetopsInternalOrderLifecycleStatusesRequest([
+        'order_config_key' => 'parcel',
+    ], 'company-a'))->getData(true);
+
+    $uuidFilteredWithoutActivities = $controller->statuses(fleetopsInternalOrderLifecycleStatusesRequest([
+        'order_config_uuid'                  => 'config-freight',
+        'order_config_key'                   => 'parcel',
+        'include_order_config_activities'    => false,
+    ], 'company-a'))->getData(true);
+
+    expect($keyFiltered)->toBe([
+        'created',
+        'dispatched',
+        'driver_assigned',
+        'completed',
+    ])
+        ->and($uuidFilteredWithoutActivities)->toBe(['loaded']);
 });
 
 test('internal order controller label renders supported subject formats', function () {
