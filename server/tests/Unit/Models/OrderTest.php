@@ -8,6 +8,66 @@ if (!function_exists('Fleetbase\Models\config')) {
     eval('namespace Fleetbase\Models; function config($key = null, $default = null) { return $key === "fleetbase.connection.db" ? "mysql" : $default; }');
 }
 
+if (!function_exists('Fleetbase\Traits\app')) {
+    eval('namespace Fleetbase\Traits; function app($abstract = null) { return is_string($abstract) && class_exists($abstract) ? new $abstract() : new \stdClass(); }');
+}
+
+if (!function_exists('Fleetbase\FleetOps\Models\dispatch')) {
+    eval('namespace Fleetbase\FleetOps\Models; function dispatch($job) { return \FleetOpsOrderUnitDispatchRecorder::record($job); }');
+}
+
+if (!function_exists('Fleetbase\FleetOps\Models\event')) {
+    eval('namespace Fleetbase\FleetOps\Models; function event($event = null) { \FleetOpsOrderUnitDispatchRecorder::$events[] = $event; return $event; }');
+}
+
+if (!function_exists('Fleetbase\FleetOps\Models\now')) {
+    eval('namespace Fleetbase\FleetOps\Models; function now($tz = null) { return \Illuminate\Support\Carbon::now($tz); }');
+}
+
+if (!function_exists('Fleetbase\Events\session')) {
+    eval('namespace Fleetbase\Events; function session($key = null, $default = null) { return $default; }');
+}
+
+if (!function_exists('Fleetbase\Events\request')) {
+    eval('namespace Fleetbase\Events; function request() { return new class { public function method() { return "GET"; } }; }');
+}
+
+if (!function_exists('Fleetbase\Events\config')) {
+    eval('namespace Fleetbase\Events; function config($key = null, $default = null) { return $default; }');
+}
+
+if (!class_exists('Illuminate\Foundation\Auth\User')) {
+    class_alias('Illuminate\Database\Eloquent\Model', 'Illuminate\Foundation\Auth\User');
+}
+
+if (!trait_exists('Illuminate\Foundation\Events\Dispatchable')) {
+    eval('namespace Illuminate\Foundation\Events; trait Dispatchable {}');
+}
+
+if (!trait_exists('Illuminate\Broadcasting\InteractsWithSockets')) {
+    eval('namespace Illuminate\Broadcasting; trait InteractsWithSockets {}');
+}
+
+if (!trait_exists('Illuminate\Queue\SerializesModels')) {
+    eval('namespace Illuminate\Queue; trait SerializesModels {}');
+}
+
+if (!class_exists('Fleetbase\FleetOps\Events\OrderDispatched', false)) {
+    eval('namespace Fleetbase\FleetOps\Events; class OrderDispatched { public function __construct(public $order) {} }');
+}
+
+if (!class_exists('Fleetbase\FleetOps\Events\OrderDriverAssigned', false)) {
+    eval('namespace Fleetbase\FleetOps\Events; class OrderDriverAssigned { public function __construct(public $order) {} }');
+}
+
+if (!class_exists('Fleetbase\FleetOps\Events\OrderCanceled', false)) {
+    eval('namespace Fleetbase\FleetOps\Events; class OrderCanceled { public function __construct(public $order) {} }');
+}
+
+if (class_exists('Illuminate\Support\Str') && !Illuminate\Support\Str::hasMacro('humanize')) {
+    Illuminate\Support\Str::macro('humanize', fn ($value) => str_replace('_', ' ', Illuminate\Support\Str::snake((string) $value)));
+}
+
 use Fleetbase\FleetOps\Flow\Activity;
 use Fleetbase\FleetOps\Models\Contact;
 use Fleetbase\FleetOps\Models\Driver;
@@ -40,6 +100,8 @@ use Illuminate\Support\Collection;
 class FleetOpsOrderUnitFake extends Order
 {
     public bool $saved              = false;
+    public bool $quietSaved         = false;
+    public bool $flushed            = false;
     public array $loaded            = [];
     public array $loadedMissing     = [];
     public array $quietUpdates      = [];
@@ -74,6 +136,20 @@ class FleetOpsOrderUnitFake extends Order
     public function save(array $options = []): bool
     {
         $this->saved = true;
+
+        return true;
+    }
+
+    public function saveQuietly(array $options = []): bool
+    {
+        $this->quietSaved = true;
+
+        return true;
+    }
+
+    public function flushAttributesCache(): bool
+    {
+        $this->flushed = true;
 
         return true;
     }
@@ -156,8 +232,11 @@ class FleetOpsOrderUnitProbe extends FleetOpsOrderUnitFake
 
 class FleetOpsOrderUnitConfigFake extends OrderConfig
 {
-    public ?Order $context = null;
-    public array $flow     = [];
+    public ?Order $context              = null;
+    public array $flow                  = [];
+    public ?Activity $dispatchActivity  = null;
+    public ?Activity $canceledActivity  = null;
+    public ?Activity $completedActivity = null;
 
     public function setOrderContext(Order $order): self
     {
@@ -177,6 +256,49 @@ class FleetOpsOrderUnitConfigFake extends OrderConfig
     public function nextActivity(Order|Waypoint|null $context = null): Collection
     {
         return collect();
+    }
+
+    public function getDispatchActivity(): ?Activity
+    {
+        return $this->dispatchActivity;
+    }
+
+    public function getCanceledActivity(): ?Activity
+    {
+        return $this->canceledActivity;
+    }
+
+    public function getCompletedActivity(): ?Activity
+    {
+        return $this->completedActivity;
+    }
+}
+
+class FleetOpsOrderUnitDispatchRecorder
+{
+    public static array $jobs   = [];
+    public static array $events = [];
+
+    public static function reset(): void
+    {
+        static::$jobs   = [];
+        static::$events = [];
+    }
+
+    public static function record($job): object
+    {
+        static::$jobs[] = $job;
+
+        if ($job instanceof Closure) {
+            $job();
+        }
+
+        return new class {
+            public function afterCommit(): self
+            {
+                return $this;
+            }
+        };
     }
 }
 
@@ -531,4 +653,92 @@ test('order activity update status and dynamic notifiable fallbacks cover local 
     $order->facilitator_type = 'vendor';
     expect($order->getAttributes()['customer_type'])->toBe(Contact::class)
         ->and($order->getAttributes()['facilitator_type'])->toBe(Vendor::class);
+});
+
+test('order dispatch helpers mark state fire events and insert configured activity', function () {
+    Carbon::setTestNow(Carbon::parse('2026-07-27 12:45:00'));
+    FleetOpsOrderUnitDispatchRecorder::reset();
+
+    $config                   = new FleetOpsOrderUnitConfigFake();
+    $config->dispatchActivity = new Activity(['code' => 'dispatched']);
+
+    $order = new FleetOpsOrderUnitFake();
+    $order->setRawAttributes([
+        'uuid'                 => 'order-uuid',
+        'tracking_number_uuid' => 'tracking-number-uuid',
+        'dispatched'           => false,
+    ], true);
+    $order->fakeConfig = $config;
+    $order->setRelation('trackingStatuses', collect());
+
+    expect($order->dispatch())->toBe($order)
+        ->and($order->dispatched)->toBeTrue()
+        ->and($order->dispatched_at->toDateTimeString())->toBe('2026-07-27 12:45:00')
+        ->and($order->quietSaved)->toBeTrue()
+        ->and($order->flushed)->toBeTrue()
+        ->and(FleetOpsOrderUnitDispatchRecorder::$events[0])->toBeInstanceOf(Fleetbase\FleetOps\Events\OrderDispatched::class);
+
+    $order->activityRows = [];
+    $order->statuses     = [];
+
+    expect($order->insertDispatchActivity())->toBe($order)
+        ->and($order->activityRows[0][0])->toBe('dispatched')
+        ->and($order->statuses[0])->toBe(['dispatched', true]);
+
+    $freshOrder = new FleetOpsOrderUnitFake();
+    $freshOrder->setRawAttributes([
+        'uuid'                 => 'fresh-order-uuid',
+        'tracking_number_uuid' => 'fresh-tracking-number-uuid',
+        'dispatched'           => false,
+    ], true);
+    $freshOrder->fakeConfig = $config;
+    $freshOrder->setRelation('trackingStatuses', collect());
+
+    expect($freshOrder->dispatchWithActivity())->toBe($freshOrder)
+        ->and($freshOrder->dispatched)->toBeTrue()
+        ->and($freshOrder->activityRows[0][0])->toBe('dispatched');
+
+    $skippedOrder = new FleetOpsOrderUnitFake();
+    $skippedOrder->setRawAttributes([
+        'tracking_number_uuid' => 'skipped-tracking-number-uuid',
+        'dispatched'           => true,
+    ], true);
+    $skippedOrder->fakeConfig = $config;
+
+    expect($skippedOrder->firstDispatch())->toBe($skippedOrder)
+        ->and($skippedOrder->quietSaved)->toBeFalse();
+
+    $alreadyDispatchedStatus       = new TrackingStatus();
+    $alreadyDispatchedStatus->code = 'DISPATCHED';
+    $skippedOrder->setRelation('trackingStatuses', collect([$alreadyDispatchedStatus]));
+
+    expect($skippedOrder->firstDispatchWithActivity())->toBe($skippedOrder)
+        ->and($skippedOrder->activityRows)->toBe([]);
+
+    Carbon::setTestNow();
+});
+
+test('order cancel and assignment notifications fire expected domain events', function () {
+    FleetOpsOrderUnitDispatchRecorder::reset();
+
+    $config                   = new FleetOpsOrderUnitConfigFake();
+    $config->canceledActivity = new Activity(['code' => 'canceled']);
+
+    $order = new FleetOpsOrderUnitFake();
+    $order->setRawAttributes([
+        'uuid'                 => 'order-uuid',
+        'tracking_number_uuid' => 'tracking-number-uuid',
+        'driver_assigned_uuid' => 'driver-uuid',
+    ], true);
+    $order->setRelation('orderConfig', $config);
+
+    expect($order->notifyDriverAssigned())->toBeInstanceOf(Fleetbase\FleetOps\Events\OrderDriverAssigned::class);
+
+    $order->driver_assigned_uuid = null;
+
+    expect($order->cancel())->toBeObject()
+        ->and($order->status)->toBe('canceled')
+        ->and($order->activityRows[0][0])->toBe('canceled')
+        ->and(FleetOpsOrderUnitDispatchRecorder::$events[0])->toBeInstanceOf(Fleetbase\FleetOps\Events\OrderDriverAssigned::class)
+        ->and(FleetOpsOrderUnitDispatchRecorder::$events[1])->toBeInstanceOf(Fleetbase\FleetOps\Events\OrderCanceled::class);
 });
