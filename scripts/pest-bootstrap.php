@@ -71,6 +71,15 @@ if (class_exists('Illuminate\Container\Container') && class_exists('Illuminate\S
             {
                 return $this->json(['error' => $error], $status);
             }
+
+            public function apiError(mixed $error = null, int $statusCode = 400, ?array $data = []): mixed
+            {
+                if ($error instanceof Illuminate\Support\MessageBag) {
+                    $error = $error->all();
+                }
+
+                return $this->json(['error' => $error] + ($data ?? []), $statusCode);
+            }
         };
 
         $app->instance(Illuminate\Contracts\Routing\ResponseFactory::class, $responseFactory);
@@ -159,6 +168,15 @@ if (!function_exists('response')) {
             {
                 return $this->json(['error' => $error], $status);
             }
+
+            public function apiError(mixed $error = null, int $statusCode = 400, ?array $data = []): mixed
+            {
+                if ($error instanceof Illuminate\Support\MessageBag) {
+                    $error = $error->all();
+                }
+
+                return $this->json(['error' => $error] + ($data ?? []), $statusCode);
+            }
         };
     }
 }
@@ -209,8 +227,23 @@ if (!trait_exists('Illuminate\Foundation\Auth\Access\AuthorizesRequests')) {
     eval('namespace Illuminate\Foundation\Auth\Access; trait AuthorizesRequests {}');
 }
 
+if (!class_exists('Fleetbase\TestSupport\PendingDispatch')) {
+    eval('namespace Fleetbase\TestSupport; class PendingDispatch { public function __call($name, $arguments) { return $this; } public function __toString(): string { return \'\'; } }');
+}
+
+if (!class_exists('Fleetbase\TestSupport\DispatchRecorder')) {
+    eval('namespace Fleetbase\TestSupport; class DispatchRecorder { public static array $dispatched = []; public static function record(string $job, array $arguments): void { self::$dispatched[] = [\'job\' => $job, \'arguments\' => $arguments]; } }');
+}
+
 if (!trait_exists('Illuminate\Foundation\Bus\Dispatchable')) {
-    eval('namespace Illuminate\Foundation\Bus; trait Dispatchable {}');
+    eval('namespace Illuminate\Foundation\Bus; trait Dispatchable {
+        public static function dispatch(...$arguments) { \Fleetbase\TestSupport\DispatchRecorder::record(static::class, $arguments); return new \Fleetbase\TestSupport\PendingDispatch(); }
+        public static function dispatchIf($boolean, ...$arguments) { if ($boolean) { \Fleetbase\TestSupport\DispatchRecorder::record(static::class, $arguments); } return new \Fleetbase\TestSupport\PendingDispatch(); }
+        public static function dispatchUnless($boolean, ...$arguments) { if (!$boolean) { \Fleetbase\TestSupport\DispatchRecorder::record(static::class, $arguments); } return new \Fleetbase\TestSupport\PendingDispatch(); }
+        public static function dispatchSync(...$arguments) { \Fleetbase\TestSupport\DispatchRecorder::record(static::class, $arguments); return null; }
+        public static function dispatchAfterResponse(...$arguments) { \Fleetbase\TestSupport\DispatchRecorder::record(static::class, $arguments); return null; }
+        public static function dispatchNow(...$arguments) { \Fleetbase\TestSupport\DispatchRecorder::record(static::class, $arguments); return null; }
+    }');
 }
 
 if (!trait_exists('Illuminate\Foundation\Events\Dispatchable')) {
