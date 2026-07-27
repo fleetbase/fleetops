@@ -789,7 +789,7 @@ class DriverController extends FleetOpsController
 
     protected function driverAvatarOptions(): array
     {
-        return Driver::getAvatarOptions();
+        return Driver::getAvatarOptions()->all();
     }
 
     protected static function downloadExport(DriverExport $export, string $fileName)
