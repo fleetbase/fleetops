@@ -4,8 +4,16 @@ if (!function_exists('Fleetbase\Traits\config')) {
     eval('namespace Fleetbase\Traits; function config($key = null, $default = null) { return $key === "api.cache.enabled" ? false : $default; }');
 }
 
+if (!function_exists('Fleetbase\Traits\app')) {
+    eval('namespace Fleetbase\Traits; function app($abstract = null) { return new \stdClass(); }');
+}
+
 if (!function_exists('Fleetbase\Models\config')) {
     eval('namespace Fleetbase\Models; function config($key = null, $default = null) { return $key === "fleetbase.connection.db" ? "mysql" : $default; }');
+}
+
+if (!function_exists('Fleetbase\FleetOps\Integrations\Lalamove\session')) {
+    eval('namespace Fleetbase\FleetOps\Integrations\Lalamove; function session($key = null, $default = null) { return $key === "company" ? "company-session" : $default; }');
 }
 
 use Fleetbase\FleetOps\Exceptions\IntegratedVendorException;
@@ -15,6 +23,7 @@ use Fleetbase\FleetOps\Integrations\Lalamove\LalamoveServiceType;
 use Fleetbase\FleetOps\Models\Contact;
 use Fleetbase\FleetOps\Models\IntegratedVendor;
 use Fleetbase\FleetOps\Models\Order;
+use Fleetbase\LaravelMysqlSpatial\Types\Point;
 use GuzzleHttp\Client;
 use GuzzleHttp\Handler\MockHandler;
 use GuzzleHttp\HandlerStack;
@@ -77,6 +86,41 @@ test('lalamove accepts market service type and integrated vendor objects', funct
         ->and($lalamove->setIntegratedVendor($integratedVendor))->toBe($lalamove)
         ->and(fleetopsLalamoveLifecycleProperty($lalamove, 'integratedVendor'))->toBe($integratedVendor)
         ->and(fleetopsLalamoveLifecycleProperty($lalamove, 'market'))->toBe($market);
+});
+
+test('lalamove quotation requests include route options item cod and schedule data', function () {
+    $history  = [];
+    $lalamove = fleetopsLalamoveLifecycleWithResponses([
+        new Response(200, [], json_encode(['data' => ['quotationId' => 'quotation-1']])),
+    ], $history);
+
+    $response = $lalamove->getQuotations(
+        'MOTORCYCLE',
+        [
+            new Point(1.3001, 103.8002),
+            new Point(1.4001, 103.9002),
+        ],
+        '2026-08-15T12:30:00+00:00',
+        ['PURCHASE_SERVICE'],
+        false,
+        ['quantity' => '1', 'weight' => 'LESS_THAN_3KG'],
+        ['amount'   => '1000'],
+    );
+
+    $body = json_decode((string) $history[0]['request']->getBody(), true);
+
+    expect($response->data->quotationId)->toBe('quotation-1')
+        ->and($history[0]['request']->getMethod())->toBe('POST')
+        ->and((string) $history[0]['request']->getUri())->toContain('/v3/quotations')
+        ->and($history[0]['request']->getHeaderLine('Market'))->toBe('SG')
+        ->and($body['data']['serviceType'])->toBe('MOTORCYCLE')
+        ->and($body['data']['language'])->toBe('en_SG')
+        ->and($body['data']['stops'][0]['coordinates'])->toBe(['lat' => '1.3001', 'lng' => '103.8002'])
+        ->and($body['data']['isRouteOptimized'])->toBeFalse()
+        ->and($body['data']['specialRequests'])->toBe(['PURCHASE_SERVICE'])
+        ->and($body['data']['item'])->toBe(['quantity' => '1', 'weight' => 'LESS_THAN_3KG'])
+        ->and($body['data']['cashOnDelivery'])->toBe(['amount' => '1000'])
+        ->and($body['data']['scheduleAt'])->toBe('2026-08-15T12:30:00.000000Z');
 });
 
 test('lalamove normalizes contact senders and returns response data from order creation', function () {
