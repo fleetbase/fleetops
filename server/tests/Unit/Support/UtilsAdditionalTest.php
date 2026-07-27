@@ -4,6 +4,18 @@ if (!function_exists('Fleetbase\FleetOps\Support\resource_path')) {
     eval('namespace Fleetbase\FleetOps\Support; function resource_path($path = "") { return getcwd() . "/server/" . ltrim($path, "/"); }');
 }
 
+if (!function_exists('Fleetbase\FleetOps\Support\config')) {
+    eval('namespace Fleetbase\FleetOps\Support; function config($key = null, $default = null) { return $default; }');
+}
+
+if (!function_exists('Fleetbase\FleetOps\Support\env')) {
+    eval('namespace Fleetbase\FleetOps\Support; function env($key = null, $default = null) { return $default; }');
+}
+
+if (!function_exists('Fleetbase\Traits\config')) {
+    eval('namespace Fleetbase\Traits; function config($key = null, $default = null) { return $key === "api.cache.enabled" ? false : $default; }');
+}
+
 use Fleetbase\FleetOps\Models\Driver;
 use Fleetbase\FleetOps\Models\Place;
 use Fleetbase\FleetOps\Models\Vehicle;
@@ -15,6 +27,30 @@ use Fleetbase\LaravelMysqlSpatial\Types\Point;
 use Fleetbase\LaravelMysqlSpatial\Types\Polygon;
 use Fleetbase\Models\Company;
 use Illuminate\Database\Eloquent\Model as EloquentModel;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Redis;
+
+class FleetOpsUtilsRedisFake
+{
+    public array $sets = [];
+
+    public function __construct(private array $queuedGets = [])
+    {
+    }
+
+    public function get(string $key): mixed
+    {
+        return array_shift($this->queuedGets);
+    }
+
+    public function set(string $key, string $value): bool
+    {
+        $this->sets[] = [$key, $value];
+
+        return true;
+    }
+}
 
 function fleetopsUtilsAdditionalPoint(float $lat = 47.9131423, float $lng = 106.9338169): Point
 {
@@ -99,4 +135,61 @@ test('polygon helpers return centroids and coordinate rings from spatial shapes'
         ->and(Utils::getMultiPolygonCentroid($multiPolygon))->toBe([103.84, 1.34])
         ->and($coordinates)->toHaveCount(5)
         ->and($coordinates[0])->toBe([103.8, 1.3]);
+});
+
+test('distance matrix helpers return cached google results without http calls', function () {
+    Redis::swap(new FleetOpsUtilsRedisFake([
+        json_encode(['distance' => 1234, 'time' => 567]),
+    ]));
+
+    $matrix = Utils::getDistanceMatrixFromGoogle('47.9131423,106.9338169', '47.9141423,106.9348169');
+
+    expect($matrix->distance)->toBe(1234.0)
+        ->and($matrix->time)->toBe(567.0);
+});
+
+test('distance matrix helpers parse live google and osrm provider responses', function () {
+    Cache::swap(new Illuminate\Cache\Repository(new Illuminate\Cache\ArrayStore()));
+    Http::swap($http = new Illuminate\Http\Client\Factory());
+
+    $redis = new FleetOpsUtilsRedisFake([null, null]);
+    Redis::swap($redis);
+
+    $http->fake(function ($request) {
+        $url = (string) $request->url();
+
+        return match (true) {
+            str_contains($url, 'maps.googleapis.com/maps/api/distancematrix/json') => Http::response([
+                'rows' => [
+                    [
+                        'elements' => [
+                            [
+                                'distance' => ['value' => 2222],
+                                'duration' => ['value' => 333],
+                            ],
+                        ],
+                    ],
+                ],
+            ]),
+            str_contains($url, '/route/v1/driving/') => Http::response([
+                'code'   => 'Ok',
+                'routes' => [
+                    [
+                        'distance' => 4444,
+                        'duration' => 555,
+                    ],
+                ],
+            ]),
+            default => Http::response(['code' => 'Unexpected'], 500),
+        };
+    });
+
+    $google = Utils::getDrivingDistanceAndTime([47.9131423, 106.9338169], [47.9141423, 106.9348169], ['provider' => 'google']);
+    $osrm   = Utils::distanceMatrix([[47.9131423, 106.9338169]], [[47.9141423, 106.9348169]], ['provider' => 'osrm']);
+
+    expect($google->distance)->toBe(2222.0)
+        ->and($google->time)->toBe(333.0)
+        ->and($osrm->distance)->toBe(4444.0)
+        ->and($osrm->time)->toBe(555.0)
+        ->and($redis->sets)->toHaveCount(2);
 });
