@@ -4,6 +4,7 @@ use Fleetbase\FleetOps\Contracts\TelematicProviderDescriptor;
 use Fleetbase\FleetOps\Contracts\TelematicProviderInterface;
 use Fleetbase\FleetOps\Jobs\SyncTelematicDevicesJob;
 use Fleetbase\FleetOps\Jobs\TestTelematicConnectionJob;
+use Fleetbase\FleetOps\Models\Device;
 use Fleetbase\FleetOps\Models\Telematic;
 use Fleetbase\FleetOps\Support\Telematics\TelematicProviderRegistry;
 use Fleetbase\FleetOps\Support\Telematics\TelematicService;
@@ -39,6 +40,26 @@ class FleetOpsTelematicLifecycleFake extends Telematic
         $this->deleteCount++;
 
         return true;
+    }
+}
+
+class FleetOpsTelematicLifecycleDeviceFake extends Device
+{
+    public function __construct(array $attributes = [])
+    {
+        $this->attributes = $attributes;
+    }
+
+    public function getAttribute($key)
+    {
+        return $this->attributes[$key] ?? null;
+    }
+
+    public function setAttribute($key, $value)
+    {
+        $this->attributes[$key] = $value;
+
+        return $this;
     }
 }
 
@@ -210,6 +231,14 @@ class FleetOpsTelematicLifecycleDispatcher implements Dispatcher
 function fleetopsTelematicLifecycleService(?FleetOpsTelematicLifecycleRegistry $registry = null): FleetOpsTelematicLifecycleService
 {
     return new FleetOpsTelematicLifecycleService($registry ?? new FleetOpsTelematicLifecycleRegistry());
+}
+
+function fleetOpsTelematicLifecycleInvoke(TelematicService $service, string $method, array $arguments = []): mixed
+{
+    $reflection = new ReflectionMethod($service, $method);
+    $reflection->setAccessible(true);
+
+    return $reflection->invokeArgs($service, $arguments);
 }
 
 function fleetopsTelematicLifecycleUseInMemoryConnection(): SQLiteConnection
@@ -402,4 +431,41 @@ test('telematic service queues async connection tests', function () {
         ->and($dispatcher->commands[0])->toBeInstanceOf(TestTelematicConnectionJob::class);
 
     Str::createUuidsNormally();
+});
+
+test('telematic service rejects missing device and sensor identities', function () {
+    Carbon::setTestNow(Carbon::parse('2026-07-24 12:30:00'));
+    $service = new TelematicService(new FleetOpsTelematicLifecycleRegistry());
+
+    $telematic = new FleetOpsTelematicLifecycleFake();
+    $telematic->setRawAttributes([
+        'uuid'         => 'telematic-uuid',
+        'public_id'    => 'telematic_public',
+        'company_uuid' => 'company-uuid',
+        'provider'     => 'unit-provider',
+    ], true);
+
+    expect(fn () => $service->linkDevice($telematic, ['name' => 'Missing identity']))
+        ->toThrow(ValidationException::class);
+
+    expect(fn () => $service->storeSensor($telematic, ['name' => 'Missing identity']))
+        ->toThrow(ValidationException::class);
+
+    $device         = new FleetOpsTelematicLifecycleDeviceFake([
+        'status' => 'active',
+        'meta'   => [],
+    ]);
+    $device->exists = true;
+
+    fleetOpsTelematicLifecycleInvoke($service, 'reconcileDeviceTelemetry', [$device, $telematic, [
+        'device_id' => 'online-without-timestamp',
+        'online'    => true,
+    ]]);
+
+    expect($device->last_online_at?->toDateTimeString())->toBe('2026-07-24 12:30:00')
+        ->and($device->online)->toBeTrue()
+        ->and($device->status)->toBe('online')
+        ->and($device->last_position)->toBe(['latitude' => 0, 'longitude' => 0]);
+
+    Carbon::setTestNow();
 });
