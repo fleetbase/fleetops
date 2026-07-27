@@ -9,6 +9,9 @@ use Fleetbase\FleetOps\Models\Vehicle;
 use Fleetbase\Http\Requests\ExportRequest;
 use Fleetbase\Http\Requests\ImportRequest;
 use Fleetbase\Models\User;
+use Illuminate\Database\ConnectionResolver;
+use Illuminate\Database\Eloquent\Model as EloquentModel;
+use Illuminate\Database\SQLiteConnection;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
@@ -361,6 +364,81 @@ class FleetOpsInternalDriverAuthControllerProbe extends DriverController
     }
 }
 
+class FleetOpsInternalDriverHelperControllerProbe extends DriverController
+{
+    public function normalizeVehicleInput(Request $request, ?array &$input): void
+    {
+        $this->normalizeDriverVehicleInput($request, $input);
+    }
+
+    public function statusOptions(?string $companyUuid)
+    {
+        return $this->statusOptionsForCompany($companyUuid);
+    }
+
+    public function lookupDriver(?string $id): Driver
+    {
+        return $this->findDriver($id);
+    }
+
+    public function lookupOrder(?string $id): Order
+    {
+        return $this->findOrder($id);
+    }
+
+    public function lookupVehicle(?string $id): Vehicle
+    {
+        return $this->findVehicle($id);
+    }
+
+    public function assignedFor(Driver $driver)
+    {
+        return $this->assignedOrdersForDriver($driver);
+    }
+
+    public function selectedFor(Driver $driver, Collection $ids)
+    {
+        return $this->selectedAssignedOrdersForDriver($driver, $ids);
+    }
+
+    public function currentFor(Driver $driver): ?Order
+    {
+        return $this->currentAssignedOrderForDriver($driver);
+    }
+
+    public function clearAssignments($orders): void
+    {
+        $this->clearDriverAssignmentsForOrders($orders);
+    }
+
+    public function runInTransaction(callable $callback): mixed
+    {
+        return $this->runTransaction($callback);
+    }
+}
+
+class FleetOpsInternalDriverHelperDatabaseProbe
+{
+    public function __construct(private SQLiteConnection $connection)
+    {
+    }
+
+    public function table(string $table)
+    {
+        return $this->connection->table($table);
+    }
+
+    public function connection(): SQLiteConnection
+    {
+        return $this->connection;
+    }
+
+    public function transaction(callable $callback): mixed
+    {
+        return $callback();
+    }
+}
+
 class FleetOpsInternalDriverResourceFake extends JsonResource
 {
     public function toArray($request)
@@ -453,6 +531,57 @@ function fleetopsInternalDriverExportSelections(DriverExport $export): array
     return $property->getValue($export);
 }
 
+function fleetopsInternalDriverUseHelperDatabase(): SQLiteConnection
+{
+    $connection = new SQLiteConnection(new PDO('sqlite::memory:'));
+    $resolver   = new ConnectionResolver([
+        'default' => $connection,
+        'mysql'   => $connection,
+    ]);
+
+    $resolver->setDefaultConnection('mysql');
+    EloquentModel::setConnectionResolver($resolver);
+    app()->instance('db', new FleetOpsInternalDriverHelperDatabaseProbe($connection));
+
+    $schema = $connection->getSchemaBuilder();
+    $schema->create('users', function ($table) {
+        $table->increments('id');
+        $table->string('uuid')->nullable();
+        $table->timestamp('deleted_at')->nullable();
+    });
+    $schema->create('drivers', function ($table) {
+        $table->increments('id');
+        $table->string('uuid')->nullable();
+        $table->string('public_id')->nullable();
+        $table->string('company_uuid')->nullable();
+        $table->string('user_uuid')->nullable();
+        $table->string('current_job_uuid')->nullable();
+        $table->string('status')->nullable();
+        $table->timestamp('created_at')->nullable();
+        $table->timestamp('updated_at')->nullable();
+        $table->timestamp('deleted_at')->nullable();
+    });
+    $schema->create('vehicles', function ($table) {
+        $table->increments('id');
+        $table->string('uuid')->nullable();
+        $table->string('public_id')->nullable();
+        $table->string('company_uuid')->nullable();
+        $table->timestamp('deleted_at')->nullable();
+    });
+    $schema->create('orders', function ($table) {
+        $table->increments('id');
+        $table->string('uuid')->nullable();
+        $table->string('public_id')->nullable();
+        $table->string('company_uuid')->nullable();
+        $table->string('driver_assigned_uuid')->nullable();
+        $table->timestamp('created_at')->nullable();
+        $table->timestamp('updated_at')->nullable();
+        $table->timestamp('deleted_at')->nullable();
+    });
+
+    return $connection;
+}
+
 test('internal driver controller returns status and avatar options', function () {
     session(['company' => 'company-uuid']);
 
@@ -461,6 +590,127 @@ test('internal driver controller returns status and avatar options', function ()
     expect($controller->statuses()->getData(true))->toBe(['available', 'busy'])
         ->and($controller->statusCompany)->toBe('company-uuid')
         ->and($controller->avatars()->getData(true))->toBe(['avatar-a.png', 'avatar-b.png']);
+});
+
+test('internal driver controller helper branches normalize vehicles phone and default statuses', function () {
+    $connection = fleetopsInternalDriverUseHelperDatabase();
+    $connection->table('drivers')->insert([
+        ['company_uuid' => 'company-uuid', 'status' => 'available'],
+        ['company_uuid' => 'company-uuid', 'status' => 'busy'],
+        ['company_uuid' => 'company-uuid', 'status' => null],
+        ['company_uuid' => 'company-uuid', 'status' => 'available'],
+        ['company_uuid' => 'other-company', 'status' => 'offline'],
+    ]);
+
+    $controller = new FleetOpsInternalDriverHelperControllerProbe();
+    $request    = Request::create('/internal/drivers', 'POST', [
+        'driver' => [
+            'vehicle' => [
+                'public_id' => 'vehicle-public',
+                'uuid'      => 'vehicle-uuid',
+            ],
+        ],
+    ]);
+    $input      = $request->input('driver');
+
+    $controller->normalizeVehicleInput($request, $input);
+
+    $passthroughRequest = Request::create('/internal/drivers', 'POST', [
+        'driver' => ['vehicle' => 'vehicle-public'],
+    ]);
+    $passthroughInput = $passthroughRequest->input('driver');
+    $controller->normalizeVehicleInput($passthroughRequest, $passthroughInput);
+
+    app()->instance('request', Request::create('/', 'POST', ['phone' => '15551234567']));
+
+    expect($input['vehicle'])->toBe('vehicle-public')
+        ->and($request->input('driver.vehicle'))->toBe('vehicle-public')
+        ->and($passthroughInput['vehicle'])->toBe('vehicle-public')
+        ->and($passthroughRequest->input('driver.vehicle'))->toBe('vehicle-public')
+        ->and(DriverController::phone())->toBe('+15551234567')
+        ->and(DriverController::phone('+15550000000'))->toBe('+15550000000')
+        ->and($controller->statusOptions('company-uuid')->all())->toBe(['available', 'busy']);
+});
+
+test('internal driver controller query helpers resolve company scoped records', function () {
+    session(['company' => 'company-uuid']);
+
+    $connection = fleetopsInternalDriverUseHelperDatabase();
+    $connection->table('users')->insert([
+        ['uuid' => 'user-uuid'],
+    ]);
+    $connection->table('drivers')->insert([
+        [
+            'uuid'             => 'driver-uuid',
+            'public_id'        => 'driver-public',
+            'company_uuid'     => 'company-uuid',
+            'user_uuid'        => 'user-uuid',
+            'current_job_uuid' => 'order-current',
+            'status'           => 'available',
+        ],
+        [
+            'uuid'             => 'other-driver',
+            'public_id'        => 'other-driver-public',
+            'company_uuid'     => 'other-company',
+            'user_uuid'        => 'user-uuid',
+            'current_job_uuid' => null,
+            'status'           => 'busy',
+        ],
+    ]);
+    $connection->table('vehicles')->insert([
+        [
+            'uuid'         => 'vehicle-uuid',
+            'public_id'    => 'vehicle-public',
+            'company_uuid' => 'company-uuid',
+        ],
+    ]);
+    $connection->table('orders')->insert([
+        [
+            'uuid'                 => 'order-current',
+            'public_id'            => 'order-current-public',
+            'company_uuid'         => 'company-uuid',
+            'driver_assigned_uuid' => 'driver-uuid',
+            'created_at'           => '2026-07-27 12:00:00',
+            'updated_at'           => '2026-07-27 12:00:00',
+        ],
+        [
+            'uuid'                 => 'order-old',
+            'public_id'            => 'order-old-public',
+            'company_uuid'         => 'company-uuid',
+            'driver_assigned_uuid' => 'driver-uuid',
+            'created_at'           => '2026-07-27 08:00:00',
+            'updated_at'           => '2026-07-27 08:00:00',
+        ],
+        [
+            'uuid'                 => 'order-other-driver',
+            'public_id'            => 'order-other-public',
+            'company_uuid'         => 'company-uuid',
+            'driver_assigned_uuid' => 'other-driver',
+            'created_at'           => '2026-07-27 13:00:00',
+            'updated_at'           => '2026-07-27 13:00:00',
+        ],
+    ]);
+
+    $controller = new FleetOpsInternalDriverHelperControllerProbe();
+    $driver     = $controller->lookupDriver('driver-public');
+    $orders     = $controller->assignedFor($driver);
+    $selected   = $controller->selectedFor($driver, collect(['order-old-public', 'missing-order']));
+    $current    = $controller->currentFor($driver);
+
+    expect($driver)->toBeInstanceOf(Driver::class)
+        ->and($driver->uuid)->toBe('driver-uuid')
+        ->and($controller->lookupOrder('order-current-public')->uuid)->toBe('order-current')
+        ->and($controller->lookupVehicle('vehicle-public')->uuid)->toBe('vehicle-uuid')
+        ->and($orders->pluck('uuid')->all())->toBe(['order-current', 'order-old'])
+        ->and($selected->pluck('uuid')->all())->toBe(['order-old'])
+        ->and($current?->uuid)->toBe('order-current');
+
+    $controller->runInTransaction(function () use ($controller, $selected): void {
+        $controller->clearAssignments($selected);
+    });
+
+    expect($connection->table('orders')->where('uuid', 'order-old')->value('driver_assigned_uuid'))->toBeNull()
+        ->and($connection->table('orders')->where('uuid', 'order-current')->value('driver_assigned_uuid'))->toBe('driver-uuid');
 });
 
 test('internal driver controller downloads selected exports', function () {
