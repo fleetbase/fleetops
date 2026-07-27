@@ -17,6 +17,7 @@ use Fleetbase\FleetOps\Events\EntityCompleted;
 use Fleetbase\FleetOps\Events\WaypointActivityChanged;
 use Fleetbase\FleetOps\Events\WaypointCompleted;
 use Fleetbase\FleetOps\Flow\Activity;
+use Fleetbase\FleetOps\Models\Contact;
 use Fleetbase\FleetOps\Models\Entity;
 use Fleetbase\FleetOps\Models\Order;
 use Fleetbase\FleetOps\Models\Payload;
@@ -241,7 +242,13 @@ function fleetopsPayloadUnitPayload(array $attributes = []): FleetOpsPayloadUnit
 function fleetopsPayloadUnitUseRelationConnection(): void
 {
     $connection = new SQLiteConnection(new PDO('sqlite::memory:'));
-    $connection->statement('create table waypoints (uuid varchar(64), payload_uuid varchar(64), place_uuid varchar(64), deleted_at datetime null, updated_at datetime null)');
+    $connection->getPdo()->sqliteCreateFunction('ST_GeomFromText', fn ($wkt) => $wkt, -1);
+    $connection->getPdo()->sqliteCreateFunction('ST_Equals', fn () => 0, -1);
+    $connection->statement('create table payloads (uuid varchar(64) primary key, current_waypoint_uuid varchar(64) null, pickup_uuid varchar(64) null, dropoff_uuid varchar(64) null, return_uuid varchar(64) null, deleted_at datetime null, created_at datetime null, updated_at datetime null)');
+    $connection->statement('create table places (uuid varchar(64) primary key, public_id varchar(64) null, _key varchar(64) null, company_uuid varchar(64) null, owner_uuid varchar(64) null, owner_type varchar(255) null, name varchar(255) null, type varchar(64) null, street1 varchar(255) null, street2 varchar(255) null, city varchar(255) null, province varchar(255) null, postal_code varchar(64) null, neighborhood varchar(255) null, district varchar(255) null, building varchar(255) null, security_access_code varchar(255) null, country varchar(8) null, location text null, meta text null, phone varchar(64) null, deleted_at datetime null, created_at datetime null, updated_at datetime null)');
+    $connection->statement('create table contacts (uuid varchar(64) primary key, public_id varchar(64) null, _key varchar(64) null, internal_id varchar(64) null, company_uuid varchar(64) null, user_uuid varchar(64) null, place_uuid varchar(64) null, photo_uuid varchar(64) null, name varchar(255) null, title varchar(255) null, email varchar(255) null, phone varchar(64) null, type varchar(64) null, notes text null, meta text null, slug varchar(255) null, deleted_at datetime null, created_at datetime null, updated_at datetime null)');
+    $connection->statement('create table entities (uuid varchar(64) primary key, public_id varchar(64) null, internal_id varchar(64) null, _key varchar(64) null, company_uuid varchar(64) null, payload_uuid varchar(64) null, destination_uuid varchar(64) null, tracking_number_uuid varchar(64) null, name varchar(255) null, description text null, type varchar(64) null, meta text null, deleted_at datetime null, created_at datetime null, updated_at datetime null)');
+    $connection->statement('create table waypoints (uuid varchar(64) primary key, public_id varchar(64) null, _key varchar(64) null, company_uuid varchar(64) null, payload_uuid varchar(64), place_uuid varchar(64), tracking_number_uuid varchar(64) null, customer_uuid varchar(64) null, customer_type varchar(255) null, type varchar(64) null, "order" integer null, time_window_start datetime null, time_window_end datetime null, service_time integer null, notes text null, pod_method varchar(64) null, pod_required integer null, deleted_at datetime null, created_at datetime null, updated_at datetime null)');
     $resolver   = new ConnectionResolver([
         'default' => $connection,
         'mysql'   => $connection,
@@ -457,6 +464,119 @@ test('payload real current waypoint and fallback helpers handle non uuid current
 
     expect($payload->setCurrentWaypoint($waypoint, false))->toBe($payload)
         ->and($payload->current_waypoint_uuid)->toBe('first-place-uuid');
+});
+
+test('payload updates waypoint markers by reusing resolving creating and assigning persisted rows', function () {
+    fleetopsPayloadUnitUseRelationConnection();
+    session(['company' => 'company-uuid', 'api_key' => 'api-key']);
+
+    Payload::query()->insert(['uuid' => 'payload-uuid']);
+    Place::query()->insert([
+        ['uuid' => '11111111-1111-4111-8111-111111111111', 'public_id' => 'place_EXIST1', 'name' => 'Existing Place', 'company_uuid' => 'company-uuid'],
+        ['uuid' => '22222222-2222-4222-8222-222222222222', 'public_id' => 'place_PUBID1', 'name' => 'Public Place', 'company_uuid' => 'company-uuid'],
+        ['uuid' => '33333333-3333-4333-8333-333333333333', 'public_id' => 'place_STALE1', 'name' => 'Stale Place', 'company_uuid' => 'company-uuid'],
+    ]);
+    Contact::query()->insert([
+        ['uuid' => '44444444-4444-4444-8444-444444444444', 'public_id' => 'contact_PUBLIC1', 'name' => 'Existing Contact', 'company_uuid' => 'company-uuid'],
+    ]);
+    Waypoint::query()->insert([
+        ['uuid' => '55555555-5555-4555-8555-555555555555', 'payload_uuid' => 'payload-uuid', 'place_uuid' => '11111111-1111-4111-8111-111111111111', 'type' => 'dropoff', 'order' => 5],
+        ['uuid' => '66666666-6666-4666-8666-666666666666', 'payload_uuid' => 'payload-uuid', 'place_uuid' => '33333333-3333-4333-8333-333333333333', 'type' => 'dropoff', 'order' => 6],
+    ]);
+
+    $payload = Payload::query()->where('uuid', 'payload-uuid')->first();
+
+    $result = $payload->updateWaypoints([
+        [
+            'place_uuid'    => '11111111-1111-4111-8111-111111111111',
+            'type'          => 'pickup',
+            'customer_uuid' => '44444444-4444-4444-8444-444444444444',
+        ],
+        [
+            'id'          => 'place_PUBID1',
+            'type'        => 'dropoff',
+            'customer_id' => 'contact_PUBLIC1',
+        ],
+        [
+            'place' => [
+                'name'     => 'Created Stop',
+                'location' => [0, 0],
+            ],
+            'type'        => 'return',
+            'customer_id' => 'contact_MISSING1',
+        ],
+    ]);
+
+    $rows         = Waypoint::query()->whereNull('deleted_at')->orderBy('order')->get()->keyBy('place_uuid');
+    $createdPlace = Place::query()->where('name', 'Created Stop')->first();
+
+    expect($result)->toBeInstanceOf(Payload::class)
+        ->and($rows->has('11111111-1111-4111-8111-111111111111'))->toBeTrue()
+        ->and($rows->has('22222222-2222-4222-8222-222222222222'))->toBeTrue()
+        ->and($rows['11111111-1111-4111-8111-111111111111']->uuid)->toBe('55555555-5555-4555-8555-555555555555')
+        ->and($rows['11111111-1111-4111-8111-111111111111']->type)->toBe('pickup')
+        ->and($rows['11111111-1111-4111-8111-111111111111']->customer_uuid)->toBe('44444444-4444-4444-8444-444444444444')
+        ->and($rows['22222222-2222-4222-8222-222222222222']->type)->toBe('dropoff')
+        ->and($rows['22222222-2222-4222-8222-222222222222']->customer_uuid)->toBe('44444444-4444-4444-8444-444444444444')
+        ->and($createdPlace)->toBeInstanceOf(Place::class)
+        ->and($rows[$createdPlace->uuid]->type)->toBe('return')
+        ->and($rows[$createdPlace->uuid]->customer_uuid)->toBeNull();
+});
+
+test('payload sets waypoint markers from explicit uuids public ids nested places and customer lookups', function () {
+    fleetopsPayloadUnitUseRelationConnection();
+    session(['company' => 'company-uuid', 'api_key' => 'api-key']);
+
+    Payload::query()->insert(['uuid' => 'payload-uuid']);
+    Place::query()->insert([
+        ['uuid' => '11111111-1111-4111-8111-111111111111', 'public_id' => 'place_EXIST1', 'name' => 'Existing Place', 'company_uuid' => 'company-uuid'],
+        ['uuid' => '22222222-2222-4222-8222-222222222222', 'public_id' => 'place_UUID1', 'name' => 'Uuid Place', 'company_uuid' => 'company-uuid'],
+        ['uuid' => '33333333-3333-4333-8333-333333333333', 'public_id' => 'place_PUBLIC1', 'name' => 'Public Place', 'company_uuid' => 'company-uuid'],
+    ]);
+    Contact::query()->insert([
+        ['uuid' => '44444444-4444-4444-8444-444444444444', 'public_id' => 'contact_UUID1', 'name' => 'Uuid Contact', 'company_uuid' => 'company-uuid'],
+        ['uuid' => '55555555-5555-4555-8555-555555555555', 'public_id' => 'contact_PUBLIC1', 'name' => 'Public Contact', 'company_uuid' => 'company-uuid'],
+    ]);
+
+    $payload = Payload::query()->where('uuid', 'payload-uuid')->first();
+    $payload->setRelation('waypointMarkers', collect());
+
+    $result = $payload->setWaypoints([
+        [
+            'place_uuid'    => '11111111-1111-4111-8111-111111111111',
+            'type'          => 'pickup',
+            'customer_uuid' => '44444444-4444-4444-8444-444444444444',
+        ],
+        [
+            'uuid'        => '22222222-2222-4222-8222-222222222222',
+            'type'        => 'dropoff',
+            'customer_id' => 'contact_PUBLIC1',
+        ],
+        [
+            'id'          => 'place_PUBLIC1',
+            'type'        => 'return',
+            'customer_id' => 'contact_MISSING1',
+        ],
+        [
+            'place' => [
+                'name'     => 'Nested Created Stop',
+                'location' => [1, 1],
+            ],
+            'type' => 'dropoff',
+        ],
+    ]);
+
+    $rows         = Waypoint::query()->whereNull('deleted_at')->orderBy('order')->get()->keyBy('place_uuid');
+    $createdPlace = Place::query()->where('name', 'Nested Created Stop')->first();
+
+    expect($result)->toBe($payload)
+        ->and($payload->getRelation('waypointMarkers'))->toHaveCount(4)
+        ->and($rows['11111111-1111-4111-8111-111111111111']->type)->toBe('pickup')
+        ->and($rows['11111111-1111-4111-8111-111111111111']->customer_uuid)->toBe('44444444-4444-4444-8444-444444444444')
+        ->and($rows['22222222-2222-4222-8222-222222222222']->customer_uuid)->toBe('55555555-5555-4555-8555-555555555555')
+        ->and($rows['33333333-3333-4333-8333-333333333333']->customer_uuid)->toBeNull()
+        ->and($createdPlace)->toBeInstanceOf(Place::class)
+        ->and($rows[$createdPlace->uuid]->type)->toBe('dropoff');
 });
 
 test('payload sets current first and next waypoint destinations without database writes in fakes', function () {
