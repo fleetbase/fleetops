@@ -42,6 +42,38 @@ class FleetOpsServiceRateUnitFake extends ServiceRate
     }
 }
 
+class FleetOpsServiceRateUnitGeometryFake extends FleetOpsServiceRateUnitFake
+{
+    protected function readRateRuleGeometry(ServiceRateFee $rule, Brick\Geo\IO\GeoJSONReader $reader)
+    {
+        return new FleetOpsServiceRateUnitContainsGeometry();
+    }
+}
+
+class FleetOpsServiceRateUnitContainsGeometry
+{
+    public function __construct(private bool $contains = true)
+    {
+    }
+
+    public function contains($point): bool
+    {
+        return $this->contains;
+    }
+}
+
+class FleetOpsServiceRateUnitGeometryBorder
+{
+    public function __construct(private array $geojson)
+    {
+    }
+
+    public function toJson(): string
+    {
+        return json_encode($this->geojson);
+    }
+}
+
 class FleetOpsServiceRateUnitPayloadFake extends Payload
 {
     private Collection $stops;
@@ -118,6 +150,22 @@ function fleetopsServiceRateUnitParcelFee(array $overrides = []): ServiceRatePar
         'weight_unit'     => 'g',
         'fee'             => 125,
     ], $overrides));
+}
+
+function fleetopsServiceRateUnitPolygon(array $bounds = [103.70, 1.20, 103.95, 1.45]): array
+{
+    [$minLng, $minLat, $maxLng, $maxLat] = $bounds;
+
+    return [
+        'type'        => 'Polygon',
+        'coordinates' => [[
+            [$minLng, $minLat],
+            [$maxLng, $minLat],
+            [$maxLng, $maxLat],
+            [$minLng, $maxLat],
+            [$minLng, $minLat],
+        ]],
+    ];
 }
 
 beforeEach(function () {
@@ -231,4 +279,95 @@ test('service rate payload quote applies parcel cod and percentage peak hour fee
         ->and($lines)->toHaveCount(4)
         ->and($lines->pluck('code')->all())->toBe(['BASE_FEE', 'PARCEL_FEE', 'COD_FEE', 'PEAK_HOUR_FEE'])
         ->and($lines[1]['details'])->toBe('Document Pack parcel fee');
+});
+
+test('service rate multi zone distance pricing covers geometry matching scaling and guards', function () {
+    $rate = new FleetOpsServiceRateUnitGeometryFake([
+        'rate_calculation_method' => 'multi_zone_distance',
+        'base_fee'                => 100,
+        'currency'                => 'USD',
+    ]);
+
+    $zoneRule = new ServiceRateFee([
+        'uuid'          => 'zone-rule',
+        'label'         => 'Core',
+        'priority'      => 20,
+        'is_fallback'   => false,
+        'distance_unit' => 'km',
+        'fee'           => 3,
+    ]);
+    $zoneRule->setRelation('zone', (object) [
+        'name'   => 'Core',
+        'border' => new FleetOpsServiceRateUnitGeometryBorder(fleetopsServiceRateUnitPolygon()),
+    ]);
+
+    $fallbackRule = new ServiceRateFee([
+        'uuid'          => 'fallback-rule',
+        'priority'      => 1,
+        'is_fallback'   => true,
+        'distance_unit' => 'mi',
+        'fee'           => 10,
+    ]);
+
+    $rate->setRelation('rateFees', collect([$fallbackRule, $zoneRule]));
+
+    $pickup  = new Place(['location' => new Point(1.30, 103.80)]);
+    $dropoff = new Place(['location' => new Point(1.35, 103.85)]);
+
+    $reflection          = new ReflectionClass(ServiceRate::class);
+    $quoteMultiZone      = $reflection->getMethod('quoteMultiZoneDistance');
+    $calculateDistances  = $reflection->getMethod('calculateMultiZoneDistances');
+    $readGeometry        = $reflection->getMethod('readRateRuleGeometry');
+    $matchRule           = $reflection->getMethod('matchMultiZoneRule');
+    $placePoint          = $reflection->getMethod('getLngLatFromPlace');
+    $distanceNormalizer  = $reflection->getMethod('normalizeDistanceForUnit');
+    $endpointInferrer    = $reflection->getMethod('inferEndpointCountFromStops');
+    $weightNormalizer    = $reflection->getMethod('normalizeEntityWeightToKilograms');
+    $algorithmVariables  = $reflection->getMethod('buildAlgorithmVariables');
+
+    $reader       = new Brick\Geo\IO\GeoJSONReader();
+    $zoneGeometry = $readGeometry->invoke(new FleetOpsServiceRateUnitFake(), $zoneRule, $reader);
+    $arrayRule    = new ServiceRateFee(['is_fallback' => false]);
+    $arrayRule->setRelation('serviceArea', (object) [
+        'border' => fleetopsServiceRateUnitPolygon([103.00, 1.00, 104.20, 1.80]),
+    ]);
+    $arrayGeometry = $readGeometry->invoke(new FleetOpsServiceRateUnitFake(), $arrayRule, $reader);
+
+    [$total, $lines] = $quoteMultiZone->invoke($rate, [$pickup, $dropoff], 10000);
+    $distances       = $calculateDistances->invoke($rate, [$pickup, $dropoff], collect([$zoneRule]), $fallbackRule, 10000);
+    $matchedRule     = $matchRule->invoke($rate, ['lat' => 1.31, 'lng' => 103.81], collect([
+        ['rule' => $zoneRule, 'geometry' => new FleetOpsServiceRateUnitContainsGeometry()],
+    ]));
+    $missingRule = $matchRule->invoke($rate, ['lat' => 9.99, 'lng' => 9.99], collect([
+        ['rule' => $zoneRule, 'geometry' => new FleetOpsServiceRateUnitContainsGeometry(false)],
+    ]));
+
+    $variables = $algorithmVariables->invoke($rate, [
+        ['type' => 'parcel', 'weight' => 1000, 'weight_unit' => 'g'],
+        ['type' => 'parcel', 'weight' => 2, 'weight_unit' => 'pounds'],
+        ['type' => 'item', 'weight' => 1, 'weight_unit' => 'metric_ton'],
+    ], [$pickup, $dropoff, new Place()], 10000, 900, 2);
+
+    expect($zoneGeometry)->not->toBeNull()
+        ->and($arrayGeometry)->not->toBeNull()
+        ->and($total)->toBe(30)
+        ->and($lines)->toHaveCount(1)
+        ->and($lines->first()['details'])->toContain('Core distance charge')
+        ->and($distances[0]['rule'])->toBe($zoneRule)
+        ->and((int) round($distances[0]['distance_m']))->toBe(10000)
+        ->and($matchedRule)->toBe($zoneRule)
+        ->and($missingRule)->toBeNull()
+        ->and($placePoint->invoke($rate, $pickup))->toBe(['lat' => 1.3, 'lng' => 103.8])
+        ->and(round($distanceNormalizer->invoke($rate, 3218.688, 'mi'), 3))->toBe(2.0)
+        ->and($endpointInferrer->invoke($rate, []))->toBe(0)
+        ->and(round($weightNormalizer->invoke($rate, ['weight' => 16, 'weight_unit' => 'ounces']), 4))->toBe(0.4536)
+        ->and($variables)->toMatchArray([
+            'distance_m' => 10000,
+            'time_s'     => 900,
+            'stops'      => 3,
+            'waypoints'  => 1,
+            'parcels'    => 2,
+            'entities'   => 3,
+        ])
+        ->and(round($variables['weight_kg'], 4))->toBe(1001.9072);
 });
