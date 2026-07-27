@@ -3,6 +3,7 @@
 use Fleetbase\FleetOps\Contracts\TelematicProviderDescriptor;
 use Fleetbase\FleetOps\Contracts\TelematicProviderInterface;
 use Fleetbase\FleetOps\Jobs\SyncTelematicDevicesJob;
+use Fleetbase\FleetOps\Jobs\TestTelematicConnectionJob;
 use Fleetbase\FleetOps\Models\Telematic;
 use Fleetbase\FleetOps\Support\Telematics\TelematicProviderRegistry;
 use Fleetbase\FleetOps\Support\Telematics\TelematicService;
@@ -376,4 +377,29 @@ test('telematic service tests connections discovers devices and decodes credenti
 
     Str::createUuidsNormally();
     Carbon::setTestNow();
+});
+
+test('telematic service queues async connection tests', function () {
+    $dispatcher = new FleetOpsTelematicLifecycleDispatcher();
+    app()->instance(Dispatcher::class, $dispatcher);
+
+    Str::createUuidsUsingSequence([
+        '22222222-2222-4222-8222-222222222222',
+    ]);
+
+    $service   = fleetopsTelematicLifecycleService();
+    $telematic = new FleetOpsTelematicLifecycleFake();
+    $telematic->setRawAttributes([
+        'uuid'     => 'telematic-uuid',
+        'provider' => 'unit-provider',
+    ], true);
+
+    expect($service->testConnection($telematic, true))->toBe([
+        'job_id'  => '22222222-2222-4222-8222-222222222222',
+        'message' => 'Connection test queued',
+    ])
+        ->and($dispatcher->commands)->toHaveCount(1)
+        ->and($dispatcher->commands[0])->toBeInstanceOf(TestTelematicConnectionJob::class);
+
+    Str::createUuidsNormally();
 });
