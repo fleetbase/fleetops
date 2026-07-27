@@ -318,6 +318,8 @@ class FleetOpsOrderUnitPayloadFake extends Payload
 {
     public array $pickupUpdates           = [];
     public bool $pickupDriverLocationMeta = false;
+    public ?Place $origin                 = null;
+    public ?Place $destination            = null;
 
     public function hasMeta($keys): bool
     {
@@ -329,6 +331,16 @@ class FleetOpsOrderUnitPayloadFake extends Payload
         $this->pickupUpdates[] = [$placeOrLocation, $options];
 
         return $this;
+    }
+
+    public function getPickupOrCurrentWaypoint(): ?Place
+    {
+        return $this->origin;
+    }
+
+    public function getDropoffOrLastWaypoint(): ?Place
+    {
+        return $this->destination;
     }
 }
 
@@ -437,6 +449,81 @@ test('order mutators helper probes and loaded payload callbacks use local state'
         ->and($order->hasExistingPayloadPlaceUuidForTest(['pickup_uuid' => 'not-a-uuid'], 'pickup'))->toBeFalse()
         ->and($order->findClosestDrivers())->toBeInstanceOf(Collection::class)
         ->and($order->findClosestDrivers())->toBeEmpty();
+
+    Carbon::setTestNow();
+});
+
+test('order local payload file customer and position helpers use loaded state', function () {
+    Carbon::setTestNow(Carbon::parse('2026-07-27 14:00:00'));
+
+    $order = new FleetOpsOrderUnitFake();
+    $order->setRawAttributes([
+        'uuid'                 => 'order-uuid',
+        'driver_assigned_uuid' => null,
+        'created_at'           => '2026-07-26 08:00:00',
+    ], true);
+
+    expect($order->attachFiles([]))->toBe($order)
+        ->and($order->attachFiles(['', (object) []]))->toBe($order);
+
+    $payload = new FleetOpsOrderUnitPayloadFake();
+    $payload->setRawAttributes(['uuid' => 'payload-uuid'], true);
+
+    expect($order->setPayload($payload))->toBe($order)
+        ->and($order->payload_uuid)->toBe('payload-uuid')
+        ->and($order->payload)->toBe($payload)
+        ->and($order->saved)->toBeTrue();
+
+    $customer = new Contact();
+    $customer->setRawAttributes(['uuid' => 'customer-uuid'], true);
+    $order->setCustomer($customer);
+
+    expect($order->customer_uuid)->toBe('customer-uuid')
+        ->and($order->getAttributes()['customer_type'])->toBe(Contact::class);
+
+    $driver = new Driver();
+    $driver->setRawAttributes(['uuid' => 'driver-uuid'], true);
+    $driver->location = new Point(1.23, 4.56);
+    $order->setRelation('driverAssigned', $driver);
+
+    $payload->pickupDriverLocationMeta = true;
+    $order->setRawAttributes(array_merge($order->getAttributes(), ['driver_assigned_uuid' => null]), true);
+    $order->driver_assigned_uuid = 'driver-uuid';
+    $order->setDriverLocationAsPickup();
+
+    expect($payload->pickupUpdates[0])->toBe([$driver->location, ['save' => true]]);
+
+    $payload->pickupUpdates = [];
+    $order->setDriverLocationAsPickup(true);
+
+    $origin               = fleetopsOrderUnitPlace('origin-uuid', new Point(7.89, 10.11));
+    $destination          = fleetopsOrderUnitPlace('destination-uuid', new Point(12.13, 14.15));
+    $payload->origin      = $origin;
+    $payload->destination = $destination;
+
+    expect($payload->pickupUpdates[0])->toBe([$driver->location, ['save' => true]])
+        ->and($order->getCurrentOriginPosition())->toBe($driver->location)
+        ->and($order->getDestinationPosition())->toBe($destination->location);
+
+    $order->driver_assigned_uuid = null;
+
+    expect($order->getCurrentOriginPosition())->toBe($origin->location);
+
+    $payload->origin = null;
+    expect($order->getCurrentOriginPosition())->toBeNull();
+
+    $payload->destination = null;
+    expect($order->getDestinationPosition())->toBeNull();
+
+    $createdFallback = new FleetOpsOrderUnitProbe();
+    $createdFallback->setRawAttributes(['created_at' => '2026-07-25 08:00:00'], true);
+    $createdFallback->time_window_start = '06:30:00';
+
+    $nowFallback                    = new FleetOpsOrderUnitProbe();
+    $nowFallback->time_window_start = '07:45:00';
+
+    expect($createdFallback->time_window_start->toDateTimeString())->toBe('2026-07-27 06:30:00')
+        ->and($nowFallback->time_window_start->toDateTimeString())->toBe('2026-07-27 07:45:00');
 
     Carbon::setTestNow();
 });
