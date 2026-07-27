@@ -21,6 +21,7 @@ use Fleetbase\FleetOps\Models\Route;
 use Fleetbase\FleetOps\Models\TrackingNumber;
 use Fleetbase\FleetOps\Models\TrackingStatus;
 use Fleetbase\FleetOps\Models\Vehicle;
+use Fleetbase\FleetOps\Models\Vendor;
 use Fleetbase\FleetOps\Models\Waypoint;
 use Fleetbase\LaravelMysqlSpatial\Types\Point;
 use Fleetbase\Models\Company;
@@ -164,6 +165,19 @@ class FleetOpsOrderUnitConfigFake extends OrderConfig
 
         return $this;
     }
+
+    public function activities(): Collection
+    {
+        return collect(array_map(
+            fn ($activity) => $activity instanceof Activity ? $activity : new Activity($activity),
+            $this->flow
+        ));
+    }
+
+    public function nextActivity(Order|Waypoint|null $context = null): Collection
+    {
+        return collect();
+    }
 }
 
 class FleetOpsOrderUnitWaypointFake extends Waypoint
@@ -173,6 +187,24 @@ class FleetOpsOrderUnitWaypointFake extends Waypoint
     public function loadMissing($relations)
     {
         $this->loadedMissing[] = $relations;
+
+        return $this;
+    }
+}
+
+class FleetOpsOrderUnitPayloadFake extends Payload
+{
+    public array $pickupUpdates           = [];
+    public bool $pickupDriverLocationMeta = false;
+
+    public function hasMeta($keys): bool
+    {
+        return $keys === 'pickup_is_driver_location' && $this->pickupDriverLocationMeta;
+    }
+
+    public function setPickup($placeOrLocation, array $options = [])
+    {
+        $this->pickupUpdates[] = [$placeOrLocation, $options];
 
         return $this;
     }
@@ -381,4 +413,122 @@ test('order route driver config activity and dynamic resolution branches use loa
         ->and($order->resolveDynamicValue('missing_value'))->toBe('missing_value')
         ->and($order->resolveDynamicNotifiable('customer'))->toBe($waypointCustomer)
         ->and($order->resolveDynamicNotifiable('driverAssigned'))->toBe($driver);
+});
+
+test('order location and dispatch helper branches resolve from loaded model state', function () {
+    Carbon::setTestNow(Carbon::parse('2026-07-27 12:00:00'));
+
+    $dropoff       = fleetopsOrderUnitPlace('dropoff-uuid', new Point(10.1, 20.2));
+    $pickup        = fleetopsOrderUnitPlace('pickup-uuid', new Point(30.3, 40.4));
+    $currentMarker = fleetopsOrderUnitPlace('current-marker-uuid', new Point(50.5, 60.6));
+    $firstMarker   = fleetopsOrderUnitPlace('first-marker-uuid', new Point(70.7, 80.8));
+
+    $payload = new FleetOpsOrderUnitPayloadFake();
+    $payload->setRawAttributes(['current_waypoint_uuid' => 'current-marker-uuid'], true);
+    $payload->setRelation('dropoff', $dropoff);
+    $payload->setRelation('pickup', $pickup);
+    $payload->setRelation('waypoints', collect([$firstMarker, $currentMarker]));
+
+    $order = new FleetOpsOrderUnitFake();
+    $order->setRawAttributes([
+        'scheduled_at'         => '2026-07-27 12:00:30',
+        'dispatched'           => false,
+        'driver_assigned_uuid' => 'driver-uuid',
+        'adhoc'                => false,
+    ], true);
+    $order->setRelation('payload', $payload);
+
+    expect($order->getCurrentDestinationLocation())->toBe($dropoff->location);
+
+    $payload->unsetRelation('dropoff');
+    expect($order->getCurrentDestinationLocation())->toBe($currentMarker->location);
+
+    $payload->setRawAttributes(['current_waypoint_uuid' => null], true);
+    expect($order->getCurrentDestinationLocation())->toBe($firstMarker->location);
+
+    $order->unsetRelation('payload');
+    $zeroDestination = $order->getCurrentDestinationLocation();
+    expect($zeroDestination->getLat())->toBe(0.0)
+        ->and($zeroDestination->getLng())->toBe(0.0);
+
+    $driver = new Driver();
+    $driver->setRawAttributes(['uuid' => 'driver-uuid'], true);
+    $driver->location = new Point(11.1, 22.2);
+    $order->setRelation('driverAssigned', $driver);
+    $order->setRelation('payload', $payload);
+
+    expect($order->getLastLocation())->toBe($driver->location);
+
+    $order->unsetRelation('driverAssigned');
+    $order->driver_assigned_uuid = null;
+    $payload->setRelation('pickup', $pickup);
+    expect($order->getLastLocation())->toBe($pickup->location);
+
+    $payload->unsetRelation('pickup');
+    $payload->setRawAttributes(['current_waypoint_uuid' => 'current-marker-uuid'], true);
+    expect($order->getLastLocation())->toBe($currentMarker->location);
+
+    $payload->setRawAttributes(['current_waypoint_uuid' => null], true);
+    expect($order->getLastLocation())->toBe($firstMarker->location);
+
+    $payload->setRelation('waypoints', collect());
+    $zeroLastLocation            = $order->getLastLocation();
+    $order->driver_assigned_uuid = 'driver-uuid';
+    expect($zeroLastLocation->getLat())->toBe(0.0)
+        ->and($zeroLastLocation->getLng())->toBe(0.0)
+        ->and($order->has_driver_assigned)->toBeTrue()
+        ->and($order->is_ready_for_dispatch)->toBeFalse()
+        ->and(tap($order, fn ($model) => $model->adhoc = true)->is_ready_for_dispatch)->toBeTrue()
+        ->and($order->is_assigned_not_dispatched)->toBeTrue()
+        ->and($order->is_not_dispatched)->toBeTrue()
+        ->and($order->shouldDispatch())->toBeTrue();
+
+    Carbon::setTestNow();
+});
+
+test('order activity update status and dynamic notifiable fallbacks cover local branches', function () {
+    $order = new FleetOpsOrderUnitFake();
+    $order->setRawAttributes([
+        'tracking_number_uuid' => 'tracking-number-uuid',
+        'driver_assigned_uuid' => null,
+        'customer_type'        => null,
+        'facilitator_type'     => null,
+    ], true);
+
+    $activity = new Activity(['code' => 'arrived']);
+    expect($order->updateActivity(null))->toBe($order)
+        ->and($order->activityRows)->toBe([])
+        ->and($order->updateActivity($activity))->toBe($order)
+        ->and($order->activityRows[0][0])->toBe('arrived')
+        ->and($order->statuses)->toBe([['arrived', true]]);
+
+    $config            = new FleetOpsOrderUnitConfigFake();
+    $config->flow      = [['code' => 'only_step']];
+    $order->fakeConfig = $config;
+    expect($order->updateStatus())->toBeTrue()
+        ->and($order->statuses[1])->toBe(['only_step', true]);
+
+    $config->flow = [
+        ['code' => 'created'],
+        ['code' => 'packed'],
+    ];
+    expect($order->updateStatus('packed'))->toBeTrue()
+        ->and($order->statuses[2])->toBe(['packed', true])
+        ->and($order->updateStatus(['created', 'packed']))->toBeTrue()
+        ->and($order->updateStatus('missing'))->toBeFalse();
+
+    $fallbackCustomer = new Contact();
+    $fallbackCustomer->setRawAttributes(['uuid' => 'fallback-customer-uuid'], true);
+    $payload = new Payload();
+    $payload->setRawAttributes(['current_waypoint_uuid' => null], true);
+    $payload->setRelation('waypointMarkers', collect());
+    $order->setRelation('payload', $payload);
+    $order->setRelation('customer', $fallbackCustomer);
+
+    expect($order->resolveDynamicNotifiable('customer'))->toBe($fallbackCustomer);
+
+    $order->customer_type    = 'contact';
+    $order->facilitator_type = 'vendor';
+    expect($order->getAttributes()['customer_type'])->toBe(Contact::class)
+        ->and($order->getAttributes()['facilitator_type'])->toBe(Vendor::class);
 });

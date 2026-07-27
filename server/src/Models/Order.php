@@ -1243,7 +1243,7 @@ class Order extends Model
         $min = Carbon::now()->subMinutes($precision);
         $max = Carbon::now()->addMinutes($precision);
 
-        return !$this->dispatched && Carbon::fromString($this->scheduled_at)->between($min, $max);
+        return !$this->dispatched && Carbon::parse($this->scheduled_at)->between($min, $max);
     }
 
     /**
