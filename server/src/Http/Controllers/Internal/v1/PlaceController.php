@@ -150,6 +150,6 @@ class PlaceController extends FleetOpsController
 
     protected function avatarOptions(): array
     {
-        return Place::getAvatarOptions();
+        return Place::getAvatarOptions()->all();
     }
 }
