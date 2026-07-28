@@ -69,7 +69,7 @@ function fleetopsPayloadWaypointBoot(): SQLiteConnection
         'payloads'          => ['uuid', 'public_id', 'company_uuid', 'pickup_uuid', 'dropoff_uuid', 'return_uuid', 'current_waypoint_uuid', 'type', 'meta', '_key'],
         'places'            => ['uuid', 'public_id', 'company_uuid', 'owner_uuid', 'name', 'street1', 'city', 'country', 'location', 'meta', 'type', '_key', '_import_id'],
         'waypoints'         => ['uuid', 'public_id', 'company_uuid', 'payload_uuid', 'place_uuid', 'tracking_number_uuid', 'customer_uuid', 'customer_type', 'order', 'type', '_import_id', '_key'],
-        'entities'          => ['uuid', 'public_id', 'internal_id', 'company_uuid', 'payload_uuid', 'destination_uuid', 'tracking_number_uuid', 'customer_uuid', 'customer_type', 'photo_uuid', 'name', 'type', 'meta', '_import_id', '_key'],
+        'entities'          => ['uuid', 'public_id', 'internal_id', 'company_uuid', 'payload_uuid', 'destination_uuid', 'tracking_number_uuid', 'customer_uuid', 'customer_type', 'photo_uuid', 'name', 'type', 'meta', 'qr_code', 'barcode', '_import_id', '_key'],
         'contacts'          => ['uuid', 'public_id', 'company_uuid', 'name', 'type', 'meta', '_key'],
         'tracking_numbers'  => ['uuid', 'public_id', 'company_uuid', 'tracking_number', 'owner_uuid', 'owner_type', 'region', 'qr_code', 'barcode', 'status_uuid', '_key'],
         'companies'         => ['uuid', 'public_id', 'name', 'country'],
@@ -224,4 +224,40 @@ test('destination correction helpers match search and console metadata', functio
     $found = $payload->findDestinationFromKey('search-9');
     expect($found?->uuid)->toBe('11111111-1111-4111-8111-111111111111')
         ->and($payload->findDestinationFromKey(null))->toBeNull();
+});
+
+test('entity photos resolve files and temp waypoint uuids track search metadata', function () {
+    $connection = fleetopsPayloadWaypointBoot();
+    if (!EloquentModel::getEventDispatcher()) {
+        EloquentModel::setEventDispatcher(new Illuminate\Events\Dispatcher());
+    }
+    app()->instance(Fleetbase\Services\FileResolverService::class, new class {
+        public function resolve($photo, $path)
+        {
+            return (object) ['uuid' => 'file-photo-1'];
+        }
+    });
+
+    $connection->table('payloads')->insert(['uuid' => 'payload-1', 'company_uuid' => 'company-1']);
+    $payload = fleetopsPayloadWaypointFetch('payload-1');
+
+    // Entities with raw photo data resolve through the file resolver
+    $payload->setEntities([
+        ['name' => 'Photographed', 'type' => 'parcel', 'photo' => 'data:image/png;base64,' . base64_encode('img')],
+    ]);
+    expect($connection->table('entities')->where('name', 'Photographed')->value('photo_uuid'))->toBe('file-photo-1');
+
+    // Insert path resolves photos through the same seam
+    $payload->insertEntities([
+        ['name' => 'Photographed Insert', 'type' => 'parcel', 'photo' => 'data:image/png;base64,' . base64_encode('img2')],
+    ]);
+    expect($connection->table('entities')->where('name', 'Photographed Insert')->value('photo_uuid'))->toBe('file-photo-1');
+
+    // Waypoints created from raw attributes track their temp search uuid
+    $payload->setWaypoints([
+        ['uuid' => 'temp-search-99', 'name' => 'Search Stop', 'location' => ['lat' => 1.36, 'lng' => 103.86]],
+    ]);
+    $searchPlace = $connection->table('places')->where('name', 'Search Stop')->first();
+    expect($searchPlace)->not->toBeNull()
+        ->and((string) $searchPlace->meta)->toContain('temp-search-99');
 });
