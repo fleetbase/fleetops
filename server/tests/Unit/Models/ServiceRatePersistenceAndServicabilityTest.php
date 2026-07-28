@@ -367,3 +367,45 @@ test('point quote calculates distance and returns base fee line items', function
         ->and($lines->first()['code'])->toBe('BASE_FEE')
         ->and($lines->first()['currency'])->toBe('USD');
 });
+
+test('preliminary quotes add cod and peak hour fees by method', function () {
+    fleetopsServiceRatePersistenceBoot();
+
+    $flatRate = (new ServiceRate())->forceFill([
+        'uuid'                          => 'rate-cod-flat',
+        'base_fee'                      => 500,
+        'currency'                      => 'USD',
+        'has_cod_fee'                   => 1,
+        'cod_calculation_method'        => 'flat',
+        'cod_flat_fee'                  => 200,
+        'has_peak_hours_fee'            => 1,
+        'peak_hours_calculation_method' => 'flat',
+        'peak_hours_flat_fee'           => 300,
+        'peak_hours_start'              => '00:00',
+        'peak_hours_end'                => '23:59',
+    ]);
+
+    [$subTotal, $lines] = $flatRate->quoteFromPreliminaryData([], [], 1000, 60, true);
+    $codes              = $lines->pluck('code');
+
+    expect($codes)->toContain('COD_FEE')
+        ->and($subTotal)->toBeGreaterThanOrEqual(1000);
+
+    $percentRate = (new ServiceRate())->forceFill([
+        'uuid'                          => 'rate-cod-pct',
+        'base_fee'                      => 1000,
+        'currency'                      => 'USD',
+        'has_cod_fee'                   => 1,
+        'cod_calculation_method'        => 'percentage',
+        'cod_percent'                   => 10,
+        'has_peak_hours_fee'            => 1,
+        'peak_hours_calculation_method' => 'percentage',
+        'peak_hours_percent'            => 10,
+        'peak_hours_start'              => '00:00',
+        'peak_hours_end'                => '23:59',
+    ]);
+
+    [$pctSubTotal, $pctLines] = $percentRate->quoteFromPreliminaryData([], [], 1000, 60, true);
+    expect($pctLines->pluck('code'))->toContain('COD_FEE')
+        ->and($pctSubTotal)->toBeGreaterThan(1000);
+});

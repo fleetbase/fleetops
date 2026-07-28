@@ -228,3 +228,32 @@ test('switch organization rejects same-session foreign and profileless targets',
     $noProfile = $controller->switchOrganization('driver_switch1', SwitchOrganizationRequest::create('/x', 'POST', ['next' => 'company_switch2']));
     expect($noProfile->getData(true)['error'])->toContain('driver profile');
 });
+
+test('driver company resolution and response seams execute their bodies', function () {
+    $connection = fleetopsDriverSwitchBoot();
+    $connection->table('companies')->insert(['uuid' => 'company-1', 'public_id' => 'company_drvseam1', 'name' => 'Acme', 'country' => 'SG']);
+    $connection->table('users')->insert(['uuid' => 'user-1', 'public_id' => 'user_drvseam1', 'company_uuid' => 'company-1', 'name' => 'Casey', 'type' => 'driver']);
+    $connection->table('drivers')->insert(['uuid' => 'driver-1', 'public_id' => 'driver_drvseam1', 'company_uuid' => 'company-1', 'user_uuid' => 'user-1']);
+
+    $probe  = new FleetOpsDriverGeofenceProbe();
+    $method = function (string $name, ...$arguments) use ($probe) {
+        $reflection = new ReflectionMethod(DriverController::class, $name);
+        $reflection->setAccessible(true);
+
+        return $reflection->invoke($probe, ...$arguments);
+    };
+
+    expect($method('jsonResponse', ['ok' => true], 200)->getData(true))->toBe(['ok' => true])
+        ->and($method('apiError', 'nope', 400)->getStatusCode())->toBe(400);
+
+    $user   = Fleetbase\Models\User::where('uuid', 'user-1')->first();
+    $driver = Driver::where('uuid', 'driver-1')->first();
+    expect($method('driverResource', $driver))->not->toBeNull()
+        ->and($method('driverResourceCollection', collect([$driver])))->not->toBeNull()
+        ->and($method('deletedDriverResource', $driver))->not->toBeNull();
+
+    // Driver profile company resolution walks profiles then session fallback
+    $static = new ReflectionMethod(DriverController::class, 'getDriverCompanyFromUser');
+    $static->setAccessible(true);
+    expect($static->invoke(null, $user)?->uuid)->toBe('company-1');
+});
