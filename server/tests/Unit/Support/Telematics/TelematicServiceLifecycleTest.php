@@ -607,3 +607,55 @@ test('telematic service normalizes helper branch inputs', function () {
 
     Carbon::setTestNow();
 });
+
+test('real credential validation builds rules and encryption round trips', function () {
+    fleetopsTelematicLifecycleUseInMemoryConnection();
+    $service = new TelematicService(new FleetOpsTelematicLifecycleRegistry());
+
+    // A passing validator lets the real rule builder complete
+    app()->instance('validator', new class {
+        public function make($data = [], $rules = [], $messages = [], $attributes = [])
+        {
+            $GLOBALS['fleetopsTelematicRules'] = $rules;
+
+            return new class {
+                public function fails()
+                {
+                    return false;
+                }
+
+                public function errors()
+                {
+                    return new Illuminate\Support\MessageBag();
+                }
+            };
+        }
+    });
+    Illuminate\Support\Facades\Validator::clearResolvedInstance('validator');
+
+    $validate = new ReflectionMethod(TelematicService::class, 'validateCredentials');
+    $validate->setAccessible(true);
+    $validate->invoke($service, ['token' => 'abc', 'region' => 'sg'], [
+        ['name' => 'token', 'required' => true],
+        ['name' => 'region', 'required' => false, 'validation' => 'string|max:5'],
+    ]);
+
+    expect($GLOBALS['fleetopsTelematicRules']['token'])->toBe('required|string')
+        ->and($GLOBALS['fleetopsTelematicRules']['region'])->toBe('string|max:5');
+
+    // Encryption delegates to the encrypter seam
+    Illuminate\Support\Facades\Crypt::swap(new class {
+        public function encryptString($value)
+        {
+            return 'encrypted:' . $value;
+        }
+
+        public function __call($method, $arguments)
+        {
+            return null;
+        }
+    });
+    $encrypt = new ReflectionMethod(TelematicService::class, 'encryptCredentials');
+    $encrypt->setAccessible(true);
+    expect($encrypt->invoke($service, ['token' => 'abc']))->toContain('encrypted:');
+});
