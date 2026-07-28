@@ -183,3 +183,48 @@ test('geofence crossings upsert entries skip untriggered and close exits', funct
         ->and($state->exited_at)->not->toBeNull()
         ->and($GLOBALS['fleetopsDriverGeofenceEvents'])->toHaveCount(2);
 });
+
+test('geofence entries with dwell thresholds schedule dwell checks', function () {
+    $connection = fleetopsDriverSwitchBoot();
+    $connection->table('users')->insert(['uuid' => 'user-1', 'company_uuid' => 'company-1', 'type' => 'user']);
+    $connection->table('drivers')->insert(['uuid' => 'driver-1', 'public_id' => 'driver_dwell1', 'company_uuid' => 'company-1', 'user_uuid' => 'user-1']);
+
+    $driver = Driver::query()->where('uuid', 'driver-1')->first();
+    $driver->setRelation('vehicle', null);
+
+    $geofenceDwell = (object) ['uuid' => 'geo-3', 'public_id' => 'geofence_geo3', 'name' => 'Dwell Zone', 'trigger_on_entry' => true, 'trigger_on_exit' => false, 'dwell_threshold_minutes' => 5];
+
+    $GLOBALS['fleetopsDriverGeofenceEvents']            = [];
+    Fleetbase\TestSupport\DispatchRecorder::$dispatched = [];
+    (new FleetOpsDriverGeofenceProbe())->callGeofence($driver, new Point(1.30, 103.80), 'driver_geofence_states', 'driver_uuid', [
+        ['type' => 'entered', 'geofence' => $geofenceDwell, 'geofence_type' => 'zone'],
+    ]);
+
+    expect(collect(Fleetbase\TestSupport\DispatchRecorder::$dispatched)->pluck('job'))->toContain(Fleetbase\FleetOps\Jobs\CheckGeofenceDwell::class)
+        ->and($connection->table('driver_geofence_states')->value('dwell_job_id'))->not->toBeNull();
+});
+
+test('switch organization rejects same-session foreign and profileless targets', function () {
+    $connection = fleetopsDriverSwitchBoot();
+    $connection->table('companies')->insert([
+        ['uuid' => 'company-1', 'public_id' => 'company_switch1', 'name' => 'Acme A', 'country' => 'SG'],
+        ['uuid' => 'company-2', 'public_id' => 'company_switch2', 'name' => 'Acme B', 'country' => 'SG'],
+        ['uuid' => 'company-3', 'public_id' => 'company_switch3', 'name' => 'Acme C', 'country' => 'SG'],
+    ]);
+    $connection->table('users')->insert(['uuid' => 'user-1', 'public_id' => 'user_switch1', 'company_uuid' => 'company-1', 'name' => 'Casey', 'type' => 'user']);
+    $connection->table('company_users')->insert(['uuid' => 'cu-1', 'company_uuid' => 'company-2', 'user_uuid' => 'user-1']);
+    $connection->table('drivers')->insert(['uuid' => 'driver-1', 'public_id' => 'driver_switch1', 'company_uuid' => 'company-1', 'user_uuid' => 'user-1']);
+    $controller = new DriverController();
+
+    // Switching to the company the driver is already sessioned on
+    $same = $controller->switchOrganization('driver_switch1', SwitchOrganizationRequest::create('/x', 'POST', ['next' => 'company_switch1']));
+    expect($same->getData(true)['error'])->toContain('already on this organization');
+
+    // Switching to an organization the user has no membership in
+    $foreign = $controller->switchOrganization('driver_switch1', SwitchOrganizationRequest::create('/x', 'POST', ['next' => 'company_switch3']));
+    expect($foreign->getData(true)['error'])->toContain('does not belong');
+
+    // Member of the organization but without a driver profile there
+    $noProfile = $controller->switchOrganization('driver_switch1', SwitchOrganizationRequest::create('/x', 'POST', ['next' => 'company_switch2']));
+    expect($noProfile->getData(true)['error'])->toContain('driver profile');
+});
