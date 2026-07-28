@@ -12,7 +12,12 @@ if (!function_exists('Fleetbase\Models\session')) {
     eval('namespace Fleetbase\Models; function session($key = null, $default = null) { if ($key === null) { return new class { public function has($k) { return \session($k) !== null; } public function get($k, $d = null) { return \session($k, $d); } public function missing($k) { return \session($k) === null; } }; } return \session($key, $default); }');
 }
 
+if (!function_exists('Fleetbase\\Observers\\event')) {
+    eval('namespace Fleetbase\\Observers; function event($event = null, $payload = []) { return []; }');
+}
+
 use Fleetbase\FleetOps\Http\Controllers\Api\v1\CustomerController;
+use Fleetbase\FleetOps\Http\Requests\CreateCustomerRequest;
 use Fleetbase\FleetOps\Models\Contact;
 use Fleetbase\FleetOps\Models\Order;
 use Fleetbase\FleetOps\Models\Payload;
@@ -62,10 +67,51 @@ class FleetOpsCustomerControllerProbe extends CustomerController
 
 function fleetopsCustomerHelperBoot(): SQLiteConnection
 {
-    $connection = new SQLiteConnection(new PDO('sqlite::memory:'));
+    $pdo      = new PDO('sqlite::memory:');
+    $wkbPoint = fn (float $lng, float $lat) => pack('V', 0) . pack('C', 1) . pack('V', 1) . pack('d', $lng) . pack('d', $lat);
+    $pdo->sqliteCreateFunction('ST_PointFromText', function ($wkt, $srid = 0, $axisOrder = null) use ($wkbPoint) {
+        if (is_string($wkt) && sscanf($wkt, 'POINT(%f %f)', $lng, $lat) === 2) {
+            return $wkbPoint($lng, $lat);
+        }
+
+        return $wkt;
+    });
+    $pdo->sqliteCreateFunction('ST_GeomFromText', function ($wkt, $srid = 0, $axisOrder = null) use ($wkbPoint) {
+        if (is_string($wkt) && sscanf($wkt, 'POINT(%f %f)', $lng, $lat) === 2) {
+            return $wkbPoint($lng, $lat);
+        }
+
+        return $wkt;
+    });
+    $connection = new SQLiteConnection($pdo);
     $resolver   = new ConnectionResolver(['default' => $connection, 'mysql' => $connection]);
     $resolver->setDefaultConnection('mysql');
     EloquentModel::setConnectionResolver($resolver);
+    if (!Illuminate\Support\Str::hasMacro('humanize')) {
+        Illuminate\Support\Str::macro('humanize', fn ($value, $uppercase = true) => str_replace('_', ' ', Illuminate\Support\Str::snake((string) $value)));
+    }
+    // Model uuid hooks bind to the dispatcher present at class boot, so keep
+    // one dispatcher instance for the whole file run
+    if (!EloquentModel::getEventDispatcher()) {
+        EloquentModel::setEventDispatcher(new Illuminate\Events\Dispatcher());
+    }
+    $barcodeFake = new class {
+        public function __call($method, $arguments)
+        {
+            return 'barcode';
+        }
+    };
+    app()->instance('DNS2D', $barcodeFake);
+    app()->instance('DNS1D', $barcodeFake);
+    app()->instance('responsecache', new class {
+        public function __call($method, $arguments)
+        {
+            return null;
+        }
+    });
+    config()->set('activitylog.enabled', false);
+    config()->set('activitylog.default_auth_driver', 'web');
+    app()->bind(Illuminate\Contracts\Config\Repository::class, fn () => config());
     app()->instance('db', new class($connection) {
         public function __construct(public SQLiteConnection $c)
         {
@@ -113,12 +159,12 @@ function fleetopsCustomerHelperBoot(): SQLiteConnection
 
     $schema = $connection->getSchemaBuilder();
     $tables = [
-        'users'                  => ['uuid', 'public_id', 'company_uuid', 'name', 'email', 'phone', 'password', 'type', 'status', 'timezone', '_key'],
+        'users'                  => ['uuid', 'public_id', 'company_uuid', 'name', 'email', 'phone', 'password', 'type', 'status', 'timezone', 'slug', 'username', 'avatar_uuid', 'meta', '_key'],
         'contacts'               => ['uuid', 'public_id', 'company_uuid', 'user_uuid', 'name', 'email', 'phone', 'type', 'title', 'meta', 'photo_uuid', 'place_uuid', 'internal_id', 'slug', '_key'],
         'places'                 => ['uuid', 'public_id', 'company_uuid', 'owner_uuid', 'owner_type', 'name', 'street1', 'location', 'type', '_key', '_import_id'],
         'verification_codes'     => ['uuid', 'public_id', 'subject_uuid', 'subject_type', 'code', 'for', 'expires_at', 'meta', 'status', '_key'],
         'files'                  => ['uuid', 'public_id', 'company_uuid', 'uploader_uuid', 'name', 'original_filename', 'extension', 'content_type', 'path', 'bucket', 'disk', 'folder', 'meta', 'type', 'size', 'subject_uuid', 'subject_type', '_key'],
-        'orders'                 => ['uuid', 'public_id', 'internal_id', 'company_uuid', 'payload_uuid', 'customer_uuid', 'customer_type', 'tracking_number_uuid', 'order_config_uuid', 'status', 'type', 'meta', 'dispatched', 'started', 'adhoc', 'pod_required', 'orchestrator_priority', 'scheduled_at'],
+        'orders'                 => ['uuid', 'public_id', 'internal_id', 'company_uuid', 'payload_uuid', 'customer_uuid', 'customer_type', 'tracking_number_uuid', 'order_config_uuid', 'status', 'type', 'meta', 'dispatched', 'started', 'adhoc', 'pod_required', 'orchestrator_priority', 'scheduled_at', '_key'],
         'payloads'               => ['uuid', 'public_id', 'company_uuid', 'pickup_uuid', 'dropoff_uuid', 'current_waypoint_uuid', 'type', 'meta', '_key'],
         'order_configs'          => ['uuid', 'public_id', 'company_uuid', 'name', 'key', 'namespace', 'flow', 'entities', 'meta', 'version', 'core_service', 'status', 'type', '_key'],
         'personal_access_tokens' => ['tokenable_type', 'tokenable_id', 'name', 'token', 'abilities', 'last_used_at', 'expires_at'],
@@ -126,8 +172,9 @@ function fleetopsCustomerHelperBoot(): SQLiteConnection
         'service_quotes'         => ['uuid', 'public_id', 'request_id', 'company_uuid', 'payload_uuid', 'service_rate_uuid', 'amount', 'currency', 'meta', 'expired_at', '_key'],
         'waypoints'              => ['uuid', 'public_id', 'company_uuid', 'payload_uuid', 'place_uuid', 'customer_uuid', 'customer_type', 'order', 'type'],
         'entities'               => ['uuid', 'public_id', 'company_uuid', 'payload_uuid', 'destination_uuid', 'name', 'type'],
-        'tracking_numbers'       => ['uuid', 'public_id', 'company_uuid', 'tracking_number', 'owner_uuid', 'owner_type', '_key'],
+        'tracking_numbers'       => ['uuid', 'public_id', 'company_uuid', 'tracking_number', 'owner_uuid', 'owner_type', 'region', 'qr_code', 'barcode', 'status_uuid', 'location', '_key'],
         'companies'              => ['uuid', 'public_id', 'name', 'country'],
+        'tracking_statuses'      => ['uuid', 'public_id', 'company_uuid', 'tracking_number_uuid', 'proof_uuid', 'status', 'details', 'location', 'code', 'complete', '_key'],
         'directives'             => ['uuid', 'public_id', 'company_uuid', 'permission_uuid', 'key', 'rules', 'subject_type'],
     ];
     foreach ($tables as $table => $columns) {
@@ -309,4 +356,39 @@ test('sanctum tokens issue resolve and revoke for customer users', function () {
 
     expect(CustomerController::phone('6591234567'))->toBe('+6591234567')
         ->and(CustomerController::phone('  '))->toBe('');
+});
+
+test('create customer rejects invalid codes and backfills stub users', function () {
+    $connection = fleetopsCustomerHelperBoot();
+    $controller = new CustomerController();
+
+    // Invalid verification code
+    $invalid = $controller->create(CreateCustomerRequest::create('/v1/customers', 'POST', ['code' => '999999', 'identity' => 'stub@example.com']));
+    expect($invalid->getData(true)['error'])->toContain('Invalid verification code');
+
+    // Password-less stub user matched by email identity gets backfilled
+    $connection->table('users')->insert(['uuid' => 'user-stub', 'company_uuid' => 'company-1', 'email' => 'stub@example.com', 'status' => 'active']);
+    $connection->table('verification_codes')->insert(['uuid' => 'vc-stub', 'code' => '424242', 'for' => 'fleetops_create_customer', 'meta' => json_encode(['identity' => 'stub@example.com']), 'status' => 'active']);
+    $created = $controller->create(CreateCustomerRequest::create('/v1/customers', 'POST', [
+        'code' => '424242', 'identity' => 'stub@example.com', 'name' => 'Stubbed Customer', 'phone' => '+6591234567', 'password' => 'secret',
+    ]));
+    expect($connection->table('users')->where('uuid', 'user-stub')->value('name'))->toBe('Stubbed Customer')
+        ->and($connection->table('users')->where('uuid', 'user-stub')->value('phone'))->toBe('+6591234567')
+        ->and($connection->table('contacts')->where('user_uuid', 'user-stub')->count())->toBe(1);
+});
+
+test('create customer resolves existing phone users without overwriting credentials', function () {
+    $connection = fleetopsCustomerHelperBoot();
+    $controller = new CustomerController();
+
+    $connection->table('users')->insert(['uuid' => 'user-phone', 'company_uuid' => 'company-1', 'phone' => '+6598765432', 'password' => 'already-hashed', 'name' => 'Existing Phone User', 'status' => 'active', 'type' => 'customer']);
+    $connection->table('verification_codes')->insert(['uuid' => 'vc-phone', 'code' => '565656', 'for' => 'fleetops_create_customer', 'meta' => json_encode(['identity' => '+6598765432']), 'status' => 'active']);
+
+    $created = $controller->create(CreateCustomerRequest::create('/v1/customers', 'POST', [
+        'code' => '565656', 'identity' => '+6598765432', 'name' => 'New Name',
+    ]));
+
+    // Existing credentialed user keeps password/name, only a contact attaches
+    expect($connection->table('users')->where('uuid', 'user-phone')->value('password'))->toBe('already-hashed')
+        ->and($connection->table('contacts')->where('user_uuid', 'user-phone')->count())->toBe(1);
 });
