@@ -266,3 +266,98 @@ test('create order from service quote resolves senders recipients and metadata',
         ->and($sent['data']['metadata']['company'])->toBe('company_lala1')
         ->and($sent['data']['metadata']['service_quote'])->toBe('service_quote_lala1');
 });
+
+test('quotation errors raise lalamove exceptions', function () {
+    fleetopsLalamoveQuoteBoot();
+
+    $pickup  = fleetopsLalamoveQuotePlace('11111111-1111-4111-8111-111111111111', 'Depot');
+    $dropoff = fleetopsLalamoveQuotePlace('22222222-2222-4222-8222-222222222222', 'Customer');
+
+    $history  = [];
+    $lalamove = fleetopsLalamoveQuoteClient([
+        new Response(200, [], json_encode(['errors' => [['id' => 'ERR_INVALID', 'message' => 'invalid stops']]])),
+    ], $history);
+    $lalamove->setRequestId('req-err');
+
+    expect(fn () => $lalamove->getQuoteFromPreliminaryPayload([$pickup, $dropoff], [], null, null))
+        ->toThrow(Exception::class);
+
+    $payload = new Payload();
+    $payload->setRawAttributes(['uuid' => 'payload-err'], true);
+    $payload->setRelation('pickup', $pickup);
+    $payload->setRelation('dropoff', $dropoff);
+    $payload->setRelation('waypoints', collect());
+    $payload->setRelation('entities', collect());
+
+    $lalamoveErr2 = fleetopsLalamoveQuoteClient([
+        new Response(200, [], json_encode(['errors' => [['id' => 'ERR_INVALID', 'message' => 'invalid stops']]])),
+    ], $history);
+    $lalamoveErr2->setRequestId('req-err2');
+    expect(fn () => $lalamoveErr2->getQuoteFromPayload($payload, 'MOTORCYCLE'))->toThrow(Exception::class);
+});
+
+test('create order route variables resolve from metas and payloads', function () {
+    $connection = fleetopsLalamoveQuoteBoot();
+    $connection->table('places')->insert([
+        ['uuid' => '11111111-1111-4111-8111-111111111111', 'public_id' => 'place_lalameta1', 'company_uuid' => 'company-1', 'name' => 'Depot', 'street1' => 'Depot Street', 'country' => 'SG', 'phone' => '+6591234567'],
+        ['uuid' => '22222222-2222-4222-8222-222222222222', 'public_id' => 'place_lalameta2', 'company_uuid' => 'company-1', 'name' => 'Customer Stop', 'street1' => 'Customer Street', 'country' => 'SG', 'phone' => '+6598765432'],
+    ]);
+
+    $company = new Fleetbase\Models\Company();
+    $company->setRawAttributes(['uuid' => 'company-1', 'public_id' => 'company_lalameta', 'name' => 'Acme Logistics', 'phone' => '+6512345678', 'country' => 'SG'], true);
+
+    $makeQuote = function (array $meta) use ($company) {
+        $serviceQuote = new ServiceQuote();
+        $serviceQuote->setRawAttributes([
+            'uuid'      => 'sq-meta',
+            'public_id' => 'service_quote_lalameta',
+            'currency'  => 'SGD',
+            'meta'      => json_encode(array_merge([
+                'provider' => 'lalamove',
+                'data'     => [
+                    'quotationId' => 'quote-meta',
+                    'stops'       => [['stopId' => 'stop-0'], ['stopId' => 'stop-1']],
+                ],
+            ], $meta)),
+        ], true);
+        $serviceQuote->setRelation('company', $company);
+        $serviceQuote->setRelation('integratedVendor', null);
+        $serviceQuote->setRelation('payload', null);
+
+        return $serviceQuote;
+    };
+    $request = Request::create('/v1/orders', 'POST', []);
+
+    // Preliminary data meta supplies pickup, dropoff and waypoints
+    $history  = [];
+    $lalamove = fleetopsLalamoveQuoteClient([new Response(200, [], json_encode(['data' => ['orderId' => 'meta-order-1']]))], $history);
+    $result   = $lalamove->createOrderFromServiceQuote($makeQuote(['preliminary_data' => [
+        'pickup'    => ['uuid' => '11111111-1111-4111-8111-111111111111'],
+        'dropoff'   => ['uuid' => '22222222-2222-4222-8222-222222222222'],
+        'waypoints' => [],
+    ]]), $request);
+    expect($result->orderId)->toBe('meta-order-1');
+
+    // Origin arrays become waypoints while scalar origins become the pickup
+    $history2  = [];
+    $lalamove2 = fleetopsLalamoveQuoteClient([new Response(200, [], json_encode(['data' => ['orderId' => 'meta-order-2']]))], $history2);
+    $result2   = $lalamove2->createOrderFromServiceQuote($makeQuote([
+        'origin'      => '11111111-1111-4111-8111-111111111111',
+        'destination' => '22222222-2222-4222-8222-222222222222',
+    ]), $request);
+    expect($result2->orderId)->toBe('meta-order-2');
+
+    // Payload relations override the route variables entirely
+    $payload = new Payload();
+    $payload->setRawAttributes(['uuid' => 'payload-meta'], true);
+    $payload->setRelation('pickup', Place::where('uuid', '11111111-1111-4111-8111-111111111111')->first());
+    $payload->setRelation('dropoff', Place::where('uuid', '22222222-2222-4222-8222-222222222222')->first());
+    $payload->setRelation('waypoints', collect());
+    $quoteWithPayload = $makeQuote([]);
+    $quoteWithPayload->setRelation('payload', $payload);
+
+    $history3  = [];
+    $lalamove3 = fleetopsLalamoveQuoteClient([new Response(200, [], json_encode(['data' => ['orderId' => 'meta-order-3']]))], $history3);
+    $result3   = $lalamove3->createOrderFromServiceQuote($quoteWithPayload, $request);
+    expect($result3->orderId)->toBe('meta-order-3');
+});
