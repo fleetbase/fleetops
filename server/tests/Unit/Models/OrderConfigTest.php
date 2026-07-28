@@ -1,5 +1,13 @@
 <?php
 
+if (!function_exists('Fleetbase\Support\session')) {
+    eval('namespace Fleetbase\Support; function session($key = null, $default = null) { if ($key === null) { return new class { public function has($k) { return \session($k) !== null; } public function get($k, $d = null) { return \session($k, $d); } }; } return \session($key, $default); }');
+}
+
+if (!function_exists('Fleetbase\Support\auth')) {
+    eval('namespace Fleetbase\Support; function auth() { return new class { public function user() { return null; } public function id() { return null; } }; }');
+}
+
 if (!function_exists('Fleetbase\Traits\config')) {
     eval('namespace Fleetbase\Traits; function config($key = null, $default = null) { return $key === "api.cache.enabled" ? false : $default; }');
 }
@@ -27,6 +35,11 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Database\SQLiteConnection;
+
+// Model uuid hooks bind to the dispatcher present at class boot
+if (!EloquentModel::getEventDispatcher()) {
+    EloquentModel::setEventDispatcher(new Illuminate\Events\Dispatcher());
+}
 
 class FleetOpsOrderConfigIdentifierQueryFake
 {
@@ -261,4 +274,61 @@ test('order config identifier resolution and defaults use company scoped fallbac
         ->and(FleetOpsResolvableOrderConfigFake::resolveFromIdentifier('company:order-config:express', $company)->uuid)->toBe('company-config')
         ->and(FleetOpsResolvableOrderConfigFake::resolveFromIdentifier('express', $company)->uuid)->toBe('company-config')
         ->and(FleetOpsResolvableOrderConfigFake::resolveFromIdentifier('missing', $company))->toBeNull();
+});
+
+test('order config creation hooks build namespaces and contexts resolve waypoints', function () {
+    fleetopsOrderConfigUnitUseInMemoryConnection();
+    $connection = EloquentModel::resolveConnection('mysql');
+    app()->instance('db', new class($connection) {
+        public function __construct(public $c)
+        {
+        }
+
+        public function connection($name = null)
+        {
+            return $this->c;
+        }
+
+        public function __call($method, $arguments)
+        {
+            return $this->c->{$method}(...$arguments);
+        }
+    });
+    Illuminate\Support\Facades\DB::clearResolvedInstance('db');
+    app()->instance('responsecache', new class {
+        public function __call($method, $arguments)
+        {
+            return null;
+        }
+    });
+    config()->set('activitylog.enabled', false);
+    config()->set('activitylog.default_auth_driver', 'web');
+    app()->bind(Illuminate\Contracts\Config\Repository::class, fn () => config());
+    $schema = $connection->getSchemaBuilder();
+    foreach (['companies' => ['uuid', 'public_id', 'name'], 'orders' => ['uuid', 'public_id', 'company_uuid', 'payload_uuid', 'order_config_uuid', 'status', 'type'], 'waypoints' => ['uuid', 'public_id', 'company_uuid', 'payload_uuid', 'place_uuid', 'order', 'type']] as $table => $columns) {
+        $schema->create($table, function ($blueprint) use ($columns) {
+            $blueprint->increments('id');
+            foreach ($columns as $column) {
+                $blueprint->string($column)->nullable();
+            }
+            $blueprint->timestamps();
+            $blueprint->timestamp('deleted_at')->nullable();
+        });
+    }
+    $connection->table('companies')->insert(['uuid' => 'company-boot-1', 'name' => 'Boot Logistics']);
+    session(['company' => 'company-boot-1']);
+    // The creating hook slugs keys, versions and derives company namespaces
+    $config = OrderConfig::create(['name' => 'Boot Flow', 'company_uuid' => 'company-boot-1']);
+    expect($config->namespace)->toBe('boot-logistics:order-config:boot-flow')
+        ->and($config->key)->toBe('boot-flow')
+        ->and($config->version)->toBe('0.0.1');
+
+    // Waypoint contexts resolve their orders through the payload linkage
+    $connection->table('orders')->insert(['uuid' => 'order-ctx-1', 'public_id' => 'order_ctxone1', 'company_uuid' => 'company-boot-1', 'payload_uuid' => 'payload-ctx-1', 'status' => 'created']);
+    $connection->table('waypoints')->insert(['uuid' => 'wp-ctx-1', 'company_uuid' => 'company-boot-1', 'payload_uuid' => 'payload-ctx-1', 'order' => '0']);
+
+    $waypoint = Waypoint::where('uuid', 'wp-ctx-1')->first();
+    $context  = new ReflectionMethod(OrderConfig::class, 'getOrderContext');
+    $context->setAccessible(true);
+    expect($context->invoke($config, $waypoint)?->uuid)->toBe('order-ctx-1');
 });
