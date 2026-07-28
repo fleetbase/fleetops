@@ -315,3 +315,20 @@ test('import rows create places for address only and multi column rows', functio
     expect($multi)->toBeInstanceOf(Place::class)
         ->and($multi->location)->not->toBeNull();
 });
+
+test('single column imports reverse lookups and coordinate arrays create places', function () {
+    $connection = fleetopsPlaceCreationBoot();
+
+    // Single-column import rows resolve through geocoding then mixed fallback
+    $imported = Place::createFromImport(['address' => '88 Single Column'], true);
+    expect($imported)->toBeInstanceOf(Place::class);
+
+    // Reverse lookups surface the keyless geocoder rejection pre-network
+    expect(fn () => Place::createFromReverseGeocodingLookup(new Point(1.36, 103.86), true))
+        ->toThrow(Exception::class);
+
+    // Array coordinates resolve through the mixed point branch on insert
+    $uuid = Place::insertFromCoordinates([1.42, 103.92], ['name' => 'Array Inserted Stop']);
+    expect($uuid)->toBeString()
+        ->and($connection->table('places')->where('name', 'Array Inserted Stop')->count())->toBe(1);
+});
