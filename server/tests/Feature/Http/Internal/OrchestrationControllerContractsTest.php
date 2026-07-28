@@ -814,3 +814,48 @@ test('orchestration import helpers build place points and entity payloads from r
             'dimensions_unit' => 'cm',
         ]);
 });
+
+class FleetOpsPublicOrchestrationProbe extends Fleetbase\FleetOps\Http\Controllers\Api\v1\OrchestrationController
+{
+    public ?FleetOpsOrchestrationQueryFake $orderQuery   = null;
+    public ?FleetOpsOrchestrationQueryFake $vehicleQuery = null;
+
+    protected function companyUuid(): ?string
+    {
+        return 'company-uuid';
+    }
+
+    protected function orchestrationRunOrdersQuery(?string $companyUuid): mixed
+    {
+        return $this->orderQuery ??= new FleetOpsOrchestrationQueryFake();
+    }
+
+    protected function orchestrationRunVehiclesQuery(?string $companyUuid): mixed
+    {
+        return $this->vehicleQuery ??= new FleetOpsOrchestrationQueryFake();
+    }
+
+    public function callSanitize(mixed $payload): mixed
+    {
+        return $this->sanitizePublicPayload($payload);
+    }
+}
+
+test('public orchestration wrappers sanitize run and commit payloads', function () {
+    $registry = new OrchestrationEngineRegistry();
+    $registry->register(new GreedyOrchestrationEngine());
+    $controller = new FleetOpsPublicOrchestrationProbe($registry);
+
+    $run = $controller->run(Request::create('/v1/orchestration/run', 'POST', ['mode' => 'assign_vehicles']));
+    expect($run->getStatusCode())->toBe(200)
+        ->and($run->getData(true)['message'] ?? '')->toContain('No orders');
+
+    $commit = $controller->commit(Request::create('/v1/orchestration/commit', 'POST', []));
+    expect($commit)->not->toBeNull();
+
+    // Internal identifier keys are stripped recursively from public payloads
+    $sanitized = $controller->callSanitize(['uuid' => 'x', 'nested' => ['company_uuid' => 'y', 'name' => 'keep'], 'name' => 'top']);
+    expect($sanitized)->not->toHaveKey('uuid')
+        ->and($sanitized['nested'] ?? [])->not->toHaveKey('company_uuid')
+        ->and($sanitized['name'] ?? null)->toBe('top');
+});

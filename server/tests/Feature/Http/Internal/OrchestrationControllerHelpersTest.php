@@ -64,6 +64,8 @@ function fleetopsOrchestrationHelpersBoot(): SQLiteConnection
         'custom_fields'  => ['uuid', 'public_id', 'company_uuid', 'subject_uuid', 'subject_type', 'name', 'label', 'type', 'required', 'order'],
         'settings'       => ['key', 'value'],
         'schedule_items' => ['uuid', 'public_id', 'company_uuid', 'assignee_uuid', 'assignee_type', 'status'],
+        'manifests'      => ['uuid', 'public_id', 'company_uuid', 'vehicle_uuid', 'driver_uuid', 'status', 'meta', '_key'],
+        'manifest_stops' => ['uuid', 'public_id', 'company_uuid', 'manifest_uuid', 'order_uuid', 'waypoint_uuid', 'sequence', 'type', 'meta', '_key'],
     ];
     foreach ($tables as $table => $columns) {
         $schema->create($table, function ($blueprint) use ($columns) {
@@ -186,4 +188,27 @@ test('resolve or create vendor matches by email phone name or creates vendors', 
         ->and($connection->table('vendors')->count())->toBe(2);
 
     expect($probe->callProtected('resolveOrCreateVendor', [], 'company-1', 'facilitator'))->toBeNull();
+});
+
+test('record lookup and manifest creation helpers persist rows', function () {
+    $connection = fleetopsOrchestrationHelpersBoot();
+    $connection->table('orders')->insert(['uuid' => 'order-1', 'public_id' => 'order_manif1', 'company_uuid' => 'company-1', 'status' => 'created']);
+    $connection->table('users')->insert(['uuid' => 'user-1', 'company_uuid' => 'company-1']);
+    $connection->table('drivers')->insert(['uuid' => 'driver-1', 'public_id' => 'driver_manif1', 'company_uuid' => 'company-1', 'user_uuid' => 'user-1']);
+    $connection->table('vehicles')->insert(['uuid' => 'vehicle-1', 'public_id' => 'vehicle_manif1', 'company_uuid' => 'company-1']);
+
+    $probe = fleetopsOrchestrationHelpersProbe();
+
+    expect($probe->callProtected('findVehicleByPublicId', 'vehicle_manif1')?->uuid)->toBe('vehicle-1')
+        ->and($probe->callProtected('findDriverByPublicId', 'driver_manif1')?->uuid)->toBe('driver-1')
+        ->and($probe->callProtected('findOrderByPublicId', 'order_manif1')?->uuid)->toBe('order-1')
+        ->and($probe->callProtected('findVehicleByPublicId', 'vehicle_missing'))->toBeNull();
+
+    $manifest = $probe->callProtected('createManifest', ['company_uuid' => 'company-1', 'vehicle_uuid' => 'vehicle-1', 'status' => 'pending']);
+    expect($connection->table('manifests')->count())->toBe(1);
+
+    $probe->callProtected('createManifestStop', ['company_uuid' => 'company-1', 'manifest_uuid' => $manifest->uuid, 'order_uuid' => 'order-1', 'sequence' => 1]);
+    expect($connection->table('manifest_stops')->count())->toBe(1);
+
+    expect($probe->callProtected('orchestrationTransactionLevel'))->toBeInt();
 });
