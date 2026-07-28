@@ -16,6 +16,14 @@ if (!function_exists('Fleetbase\\Observers\\event')) {
     eval('namespace Fleetbase\\Observers; function event($event = null, $payload = []) { return []; }');
 }
 
+if (!function_exists('Fleetbase\\Models\\env')) {
+    eval('namespace Fleetbase\\Models; function env($key = null, $default = null) { return $default; }');
+}
+
+if (!function_exists('Fleetbase\\Support\\env')) {
+    eval('namespace Fleetbase\\Support; function env($key = null, $default = null) { return $default; }');
+}
+
 use Fleetbase\FleetOps\Http\Controllers\Api\v1\CustomerController;
 use Fleetbase\FleetOps\Http\Requests\CreateCustomerRequest;
 use Fleetbase\FleetOps\Models\Contact;
@@ -65,8 +73,49 @@ class FleetOpsCustomerControllerProbe extends CustomerController
     }
 }
 
+function fleetopsCustomerHelperContainer(): void
+{
+    $current = Illuminate\Container\Container::getInstance();
+    if (method_exists($current, 'hasDebugModeEnabled')) {
+        return;
+    }
+
+    $replacement = new class extends Illuminate\Container\Container {
+        public function environment(...$environments)
+        {
+            if (empty($environments)) {
+                return 'testing';
+            }
+
+            $checks = is_array($environments[0]) ? $environments[0] : $environments;
+
+            return in_array('testing', $checks, true);
+        }
+
+        public function hasDebugModeEnabled()
+        {
+            return true;
+        }
+    };
+
+    foreach (['bindings', 'instances', 'aliases', 'abstractAliases', 'resolved', 'extenders', 'tags', 'contextual', 'scopedInstances', 'reboundCallbacks', 'globalBeforeResolvingCallbacks', 'globalResolvingCallbacks', 'globalAfterResolvingCallbacks', 'beforeResolvingCallbacks', 'resolvingCallbacks', 'afterResolvingCallbacks'] as $property) {
+        if (!property_exists(Illuminate\Container\Container::class, $property)) {
+            continue;
+        }
+        $reflection = new ReflectionProperty(Illuminate\Container\Container::class, $property);
+        $reflection->setAccessible(true);
+        if ($reflection->isInitialized($current)) {
+            $reflection->setValue($replacement, $reflection->getValue($current));
+        }
+    }
+
+    Illuminate\Container\Container::setInstance($replacement);
+    Illuminate\Support\Facades\Facade::setFacadeApplication($replacement);
+}
+
 function fleetopsCustomerHelperBoot(): SQLiteConnection
 {
+    fleetopsCustomerHelperContainer();
     $pdo      = new PDO('sqlite::memory:');
     $wkbPoint = fn (float $lng, float $lat) => pack('V', 0) . pack('C', 1) . pack('V', 1) . pack('d', $lng) . pack('d', $lat);
     $pdo->sqliteCreateFunction('ST_PointFromText', function ($wkt, $srid = 0, $axisOrder = null) use ($wkbPoint) {
@@ -195,6 +244,8 @@ function fleetopsCustomerHelperBoot(): SQLiteConnection
     app()->instance('db.schema', $schema);
     Illuminate\Support\Facades\Schema::clearResolvedInstance('db.schema');
 
+    config()->set('filesystems.default', 'local');
+    config()->set('filesystems.disks.local', ['driver' => 'local']);
     session(['company' => 'company-1']);
     $connection->table('companies')->insert(['uuid' => 'company-1', 'name' => 'Acme', 'country' => 'SG']);
 
@@ -426,4 +477,28 @@ test('verify code delegates creation guards sessions and unknown identities', fu
     ]));
     expect($noCompany->getStatusCode())->toBe(500);
     session(['company' => 'company-1']);
+});
+
+test('creation codes fail gracefully and photos resolve by file public id', function () {
+    $connection = fleetopsCustomerHelperBoot();
+    $controller = new CustomerController();
+
+    // SMS creation codes fail through the guarded transport
+    $smsFailure = $controller->requestCreationCode(Fleetbase\FleetOps\Http\Requests\VerifyCreateCustomerRequest::create('/v1/customers/request-creation-code', 'POST', [
+        'identity' => '+6590009999',
+        'mode'     => 'sms',
+    ]));
+    expect($smsFailure->getData(true)['error'] ?? '')->not->toBeEmpty();
+
+    // Photos referencing stored files resolve to their uuid on create
+    $connection->table('files')->insert(['uuid' => 'file-cust-1', 'public_id' => 'file_custphoto1', 'company_uuid' => 'company-1', 'name' => 'avatar.png']);
+    $connection->table('verification_codes')->insert(['uuid' => 'vc-photo', 'code' => '313131', 'for' => 'fleetops_create_customer', 'meta' => json_encode(['identity' => 'photo@example.com']), 'status' => 'active']);
+    $created = $controller->create(CreateCustomerRequest::create('/v1/customers', 'POST', [
+        'identity' => 'photo@example.com',
+        'code'     => '313131',
+        'name'     => 'Photo Customer',
+        'password' => 'secret',
+        'photo'    => 'file_custphoto1',
+    ]));
+    expect($connection->table('contacts')->where('email', 'photo@example.com')->value('photo_uuid'))->toBe('file-cust-1');
 });
