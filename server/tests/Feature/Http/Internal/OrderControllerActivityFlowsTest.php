@@ -389,3 +389,53 @@ test('endpoint service stops create tracking numbers and resolve activities', fu
     $next  = $probe->callStop('nextActivitiesForServiceStop', $order, $order->payload, $stop);
     expect($next)->toHaveCount(0);
 });
+
+test('dispatched cancel and entity activities flow through update activity', function () {
+    $connection = fleetopsInternalActivityBoot();
+    $controller = new OrderController();
+
+    // Dispatched activity with an assigned driver dispatches the order
+    fleetopsInternalActivitySeedOrder($connection, ['driver_assigned_uuid' => 'driver-1']);
+    $connection->table('users')->insertOrIgnore(['uuid' => 'user-1', 'company_uuid' => 'company-1', 'name' => 'Driver One']);
+    $connection->table('drivers')->insertOrIgnore(['uuid' => 'driver-1', 'public_id' => 'driver_intact1', 'company_uuid' => 'company-1', 'user_uuid' => 'user-1']);
+    $dispatched = $controller->updateActivity('order_internal', Request::create('/x', 'POST', ['activity' => [
+        'key' => 'order_dispatched', 'code' => 'dispatched', 'status' => 'Dispatched', 'details' => 'Order dispatched',
+    ]]));
+    expect($dispatched->getData(true)['status'] ?? '')->toBe('dispatched');
+
+    // Classic payload entity activities insert per-entity statuses
+    $connection->table('entities')->insert(['uuid' => 'entity-1', 'public_id' => 'entity_intact1', 'company_uuid' => 'company-1', 'payload_uuid' => 'payload-1', 'name' => 'Parcel', 'tracking_number_uuid' => 'tn-ent']);
+    $connection->table('tracking_numbers')->insert(['uuid' => 'tn-ent', 'company_uuid' => 'company-1', 'tracking_number' => 'TRKENT', 'owner_uuid' => 'entity-1']);
+    $started = $controller->updateActivity('order_internal', Request::create('/x', 'POST', ['activity' => [
+        'key' => 'order_started', 'code' => 'started', 'status' => 'Started', 'details' => 'Order started',
+    ]]));
+    expect($connection->table('tracking_statuses')->where('tracking_number_uuid', 'tn-ent')->count())->toBeGreaterThanOrEqual(1);
+});
+
+test('canceled service stop activities unassign drivers and cancel orders', function () {
+    $connection = fleetopsInternalActivityBoot();
+    fleetopsInternalActivitySeedOrder($connection, ['driver_assigned_uuid' => 'driver-1', 'status' => 'started', 'started' => 1]);
+    fleetopsInternalActivitySeedWaypoints($connection);
+    $connection->table('users')->insertOrIgnore(['uuid' => 'user-1', 'company_uuid' => 'company-1', 'name' => 'Driver One']);
+    $connection->table('drivers')->insertOrIgnore(['uuid' => 'driver-1', 'public_id' => 'driver_intcan1', 'company_uuid' => 'company-1', 'user_uuid' => 'user-1', 'current_job_uuid' => 'order-1']);
+    $controller = new OrderController();
+
+    $canceled = $controller->updateActivity('order_internal', Request::create('/x', 'POST', ['activity' => [
+        'key' => 'order_canceled', 'code' => 'canceled', 'status' => 'Canceled', 'details' => 'Order canceled',
+    ]]));
+
+    expect($connection->table('orders')->value('status'))->toBe('canceled')
+        ->and($connection->table('drivers')->value('current_job_uuid'))->toBeNull();
+});
+
+test('next activity marks proof requirements on completing activities', function () {
+    $connection = fleetopsInternalActivityBoot();
+    fleetopsInternalActivitySeedOrder($connection, ['status' => 'started', 'started' => 1, 'pod_required' => 1, 'pod_method' => 'signature']);
+    $controller = new OrderController();
+
+    $response  = $controller->nextActivity('order_internal', Request::create('/x', 'GET'));
+    $payload   = method_exists($response, 'getData') ? $response->getData(true) : (array) $response;
+    $flattened = json_encode($payload);
+
+    expect($flattened)->toContain('require_pod');
+});
