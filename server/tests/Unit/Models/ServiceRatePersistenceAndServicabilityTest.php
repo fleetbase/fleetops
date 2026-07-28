@@ -409,3 +409,20 @@ test('preliminary quotes add cod and peak hour fees by method', function () {
     expect($pctLines->pluck('code'))->toContain('COD_FEE')
         ->and($pctSubTotal)->toBeGreaterThan(1000);
 });
+
+test('multi zone preliminary quotes fall through without matching rules', function () {
+    fleetopsServiceRatePersistenceBoot();
+
+    $rate = (new ServiceRate())->forceFill([
+        'uuid'                    => 'rate-multizone',
+        'base_fee'                => 700,
+        'currency'                => 'USD',
+        'rate_calculation_method' => 'multi_zone_distance',
+    ]);
+    $rate->setRelation('rateFees', collect());
+
+    [$subTotal, $lines] = $rate->quoteFromPreliminaryData([], [], 2000, 120, false);
+
+    expect($subTotal)->toBe(700)
+        ->and($lines->pluck('code'))->toContain('BASE_FEE');
+});
