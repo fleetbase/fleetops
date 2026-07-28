@@ -264,6 +264,14 @@ if (class_exists('Illuminate\Http\Request') && method_exists('Illuminate\Http\Re
 
     if (!method_exists('Illuminate\Http\Request', 'validate')) {
         Illuminate\Http\Request::macro('validate', function (array $rules, ...$parameters): array {
+            if (app()->bound('validator')) {
+                $validator = app('validator')->make($this->all(), $rules);
+                if (is_object($validator) && method_exists($validator, 'fails') && $validator->fails()) {
+                    $messages = method_exists($validator, 'errors') ? $validator->errors()->toArray() : ['error' => ['Validation failed.']];
+                    throw Illuminate\Validation\ValidationException::withMessages($messages);
+                }
+            }
+
             return $this->all();
         });
     }

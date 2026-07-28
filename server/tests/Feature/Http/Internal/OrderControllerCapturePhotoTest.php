@@ -95,7 +95,9 @@ function fleetopsCapturePhotoBoot(): SQLiteConnection
     $resolver   = new ConnectionResolver(['default' => $connection, 'mysql' => $connection]);
     $resolver->setDefaultConnection('mysql');
     EloquentModel::setConnectionResolver($resolver);
-    EloquentModel::setEventDispatcher(new Illuminate\Events\Dispatcher());
+    if (!EloquentModel::getEventDispatcher()) {
+        EloquentModel::setEventDispatcher(new Illuminate\Events\Dispatcher());
+    }
     app()->instance('db', new class($connection) {
         public function __construct(public SQLiteConnection $c)
         {
@@ -111,6 +113,7 @@ function fleetopsCapturePhotoBoot(): SQLiteConnection
             return $this->c->{$method}(...$arguments);
         }
     });
+    app()->instance('db.schema', $connection->getSchemaBuilder());
     Illuminate\Support\Facades\DB::clearResolvedInstance('db');
 
     // A minimal validation factory that enforces the required-photos rule
@@ -391,4 +394,26 @@ test('invalid photos missing orders and empty payloads error', function () {
     // Unknown orders return the error response
     $missing = $controller->capturePhoto(fleetopsCapturePhotoRequest(['photos' => [base64_encode('x')]]), 'order_missing99');
     expect($missing->getStatusCode())->toBeGreaterThanOrEqual(400);
+});
+
+test('public api capture photo validates and persists base64 proofs', function () {
+    $connection = fleetopsCapturePhotoBoot();
+    fleetopsCapturePhotoSeed($connection);
+
+    $apiController = new Fleetbase\FleetOps\Http\Controllers\Api\v1\OrderController();
+
+    // Invalid base64 rejects with the first validation message
+    $invalid = $apiController->capturePhoto(fleetopsCapturePhotoRequest(['photos' => ['!!not-base64!!']]), 'order_photoone1');
+    expect($invalid->getStatusCode())->toBe(422);
+
+    // Valid base64 photos persist proofs with stored files through the
+    // public api surface
+    $result = $apiController->capturePhoto(fleetopsCapturePhotoRequest([
+        'photos'  => [base64_encode('public-api-photo')],
+        'remarks' => 'Public capture',
+    ]), 'order_photoone1');
+
+    expect($result)->toBeInstanceOf(ProofResource::class)
+        ->and($connection->table('proofs')->count())->toBe(1)
+        ->and($connection->table('proofs')->whereNotNull('file_uuid')->count())->toBe(1);
 });
