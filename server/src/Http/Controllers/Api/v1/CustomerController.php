@@ -404,7 +404,7 @@ class CustomerController extends Controller
         $for      = $request->input('for', 'fleetops_customer_login');
 
         if ($for === 'fleetops_create_customer') {
-            return $this->create($request);
+            return $this->create(CreateCustomerRequest::createFrom($request));
         }
 
         $user = $this->findUserForVerification($identity);

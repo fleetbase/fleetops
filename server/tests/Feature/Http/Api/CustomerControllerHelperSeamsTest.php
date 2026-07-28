@@ -392,3 +392,38 @@ test('create customer resolves existing phone users without overwriting credenti
     expect($connection->table('users')->where('uuid', 'user-phone')->value('password'))->toBe('already-hashed')
         ->and($connection->table('contacts')->where('user_uuid', 'user-phone')->count())->toBe(1);
 });
+
+test('verify code delegates creation guards sessions and unknown identities', function () {
+    $connection = fleetopsCustomerHelperBoot();
+    $controller = new CustomerController();
+
+    // Unknown identities cannot verify
+    $unknown = $controller->verifyCode(Request::create('/v1/customers/verify-code', 'POST', [
+        'identity' => 'ghost@example.com',
+        'code'     => '111111',
+    ]));
+    expect($unknown->getData(true)['error'] ?? '')->toContain('Unable to verify');
+
+    // The create-customer intent delegates into the full creation flow
+    $connection->table('verification_codes')->insert(['uuid' => 'vc-del', 'code' => '777777', 'for' => 'fleetops_create_customer', 'meta' => json_encode(['identity' => 'delegate@example.com']), 'status' => 'active']);
+    $delegated = $controller->verifyCode(Request::create('/v1/customers/verify-code', 'POST', [
+        'identity' => 'delegate@example.com',
+        'code'     => '777777',
+        'for'      => 'fleetops_create_customer',
+        'name'     => 'Delegated Customer',
+        'password' => 'secret',
+    ]));
+    expect($delegated)->not->toBeNull()
+        ->and($connection->table('contacts')->where('email', 'delegate@example.com')->count())->toBe(1);
+
+    // Without a session company the create flow rejects with a 500
+    session(['company' => null]);
+    $connection->table('verification_codes')->insert(['uuid' => 'vc-nocompany', 'code' => '888888', 'for' => 'fleetops_create_customer', 'meta' => json_encode(['identity' => 'nocompany@example.com']), 'status' => 'active']);
+    $noCompany = $controller->create(CreateCustomerRequest::create('/v1/customers', 'POST', [
+        'identity' => 'nocompany@example.com',
+        'code'     => '888888',
+        'name'     => 'No Company',
+    ]));
+    expect($noCompany->getStatusCode())->toBe(500);
+    session(['company' => 'company-1']);
+});
