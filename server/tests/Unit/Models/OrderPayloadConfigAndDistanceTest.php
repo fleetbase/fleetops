@@ -376,3 +376,23 @@ test('dispatch activity driver reload and activity checks resolve', function () 
     $order->setRelation('trackingStatuses', null);
     expect($order->hasCompletedActivity($activity))->toBeFalse();
 });
+
+test('route instances persist through set route and payload callbacks fire', function () {
+    $connection = fleetopsOrderPayloadBoot();
+    $connection->table('orders')->insert(['uuid' => 'order-route-1', 'company_uuid' => 'company-1', 'payload_uuid' => 'payload-route-1']);
+    $connection->table('payloads')->insert(['uuid' => 'payload-route-1', 'company_uuid' => 'company-1']);
+    $order = Order::query()->where('uuid', 'order-route-1')->first();
+
+    // Route model instances attach to the order and save directly
+    $route = new Fleetbase\FleetOps\Models\Route();
+    $route->forceFill(['uuid' => 'route-inst-1', 'company_uuid' => 'company-1']);
+    $order->setRoute($route);
+    expect($connection->table('routes')->where('uuid', 'route-inst-1')->count())->toBe(1);
+
+    // Payload lookups run their callback when resolved by uuid
+    $callbackRan = false;
+    $payload     = $order->getPayload(function ($resolved) use (&$callbackRan) {
+        $callbackRan = true;
+    });
+    expect($payload?->uuid)->toBe('payload-route-1');
+});

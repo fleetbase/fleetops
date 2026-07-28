@@ -1003,14 +1003,14 @@ class Order extends Model
      *
      * @return self the Order instance for method chaining
      */
-    public function setRoute(?array $attributes = [])
+    public function setRoute(Route|array|null $attributes = [])
     {
         if (!$attributes) {
             return $this;
         }
 
         if ($attributes instanceof Route) {
-            $attributes->set('order_uuid', $this->order_uuid);
+            $attributes->setAttribute('order_uuid', $this->uuid);
             $attributes->save();
 
             return $this;
