@@ -263,3 +263,79 @@ test('dispatched activity without driver raises dispatch failed', function () {
     expect($response->getData(true)['error'])->toContain('No driver assigned')
         ->and(collect(FleetOpsOrderStartRecorder::$events)->first(fn ($event) => $event instanceof Fleetbase\FleetOps\Events\OrderDispatchFailed))->not->toBeNull();
 });
+
+function fleetopsOrderStartSeedWaypoints(SQLiteConnection $connection): void
+{
+    $connection->table('places')->insert([
+        ['uuid' => 'place-w1', 'company_uuid' => 'company-1', 'name' => 'Stop One'],
+        ['uuid' => 'place-w2', 'company_uuid' => 'company-1', 'name' => 'Stop Two'],
+    ]);
+    $connection->table('tracking_numbers')->insert([
+        ['uuid' => 'tn-w1', 'company_uuid' => 'company-1', 'tracking_number' => 'TRKW1', 'owner_uuid' => 'wp-1'],
+        ['uuid' => 'tn-w2', 'company_uuid' => 'company-1', 'tracking_number' => 'TRKW2', 'owner_uuid' => 'wp-2'],
+    ]);
+    $connection->table('waypoints')->insert([
+        ['uuid' => 'wp-1', 'public_id' => 'waypoint_apistop1', 'company_uuid' => 'company-1', 'payload_uuid' => 'payload-1', 'place_uuid' => 'place-w1', 'tracking_number_uuid' => 'tn-w1', 'order' => '0'],
+        ['uuid' => 'wp-2', 'public_id' => 'waypoint_apistop2', 'company_uuid' => 'company-1', 'payload_uuid' => 'payload-1', 'place_uuid' => 'place-w2', 'tracking_number_uuid' => 'tn-w2', 'order' => '1'],
+    ]);
+    $connection->table('payloads')->where('uuid', 'payload-1')->update(['pickup_uuid' => null, 'dropoff_uuid' => null]);
+}
+
+test('lifecycle activities update classic orders through to completion', function () {
+    $connection = fleetopsOrderStartBoot();
+    fleetopsOrderStartSeedOrder($connection, ['status' => 'dispatched', 'driver_assigned_uuid' => 'driver-1']);
+    $controller = new OrderController();
+
+    // Started lifecycle activity updates order and entity activities
+    $started = $controller->updateActivity('order_start', Request::create('/x', 'POST', ['activity' => [
+        'key' => 'order_started', 'code' => 'started', 'status' => 'Started', 'details' => 'Order started',
+    ]]));
+    expect($connection->table('tracking_statuses')->where('code', 'STARTED')->count())->toBeGreaterThanOrEqual(1);
+
+    // Completing activity completes the order and frees the driver
+    $controller->updateActivity('order_start', Request::create('/x', 'POST', ['activity' => [
+        'key' => 'order_completed', 'code' => 'completed', 'status' => 'Completed', 'details' => 'Order completed', 'complete' => true,
+    ]]));
+    expect($connection->table('tracking_statuses')->where('code', 'COMPLETED')->count())->toBeGreaterThanOrEqual(1);
+});
+
+test('waypoint activities gate on started and advance service stops', function () {
+    $connection = fleetopsOrderStartBoot();
+    fleetopsOrderStartSeedOrder($connection, ['status' => 'created', 'driver_assigned_uuid' => 'driver-1']);
+    fleetopsOrderStartSeedWaypoints($connection);
+    $controller = new OrderController();
+
+    $activity = ['key' => 'order_completed', 'code' => 'completed', 'status' => 'Completed', 'details' => 'Stop completed', 'complete' => true];
+
+    // Waypoint routes on created orders auto-start then advance stop by stop
+    $controller->updateActivity('order_start', Request::create('/x', 'POST', ['activity' => $activity]));
+    expect($connection->table('payloads')->value('current_waypoint_uuid'))->not->toBeNull();
+
+    $controller->updateActivity('order_start', Request::create('/x', 'POST', ['activity' => $activity]));
+    expect($connection->table('tracking_statuses')->where('code', 'COMPLETED')->count())->toBeGreaterThanOrEqual(1);
+});
+
+test('next activity and complete order resolve service stop flows', function () {
+    $connection = fleetopsOrderStartBoot();
+    fleetopsOrderStartSeedOrder($connection, ['status' => 'started', 'started' => 1, 'driver_assigned_uuid' => 'driver-1']);
+    fleetopsOrderStartSeedWaypoints($connection);
+    $controller = new OrderController();
+
+    $next = $controller->getNextActivity('order_start', Request::create('/x', 'GET'));
+    expect($next)->not->toBeNull();
+
+    $scoped = $controller->getNextActivity('order_start', Request::create('/x', 'GET', ['waypoint' => 'waypoint_apistop1']));
+    expect($scoped)->not->toBeNull();
+
+    // Completing with incomplete waypoints errors
+    $incomplete = $controller->completeOrder('order_start');
+    expect($incomplete->getData(true)['error'])->toContain('Not all waypoints');
+
+    // With every waypoint completed the order completes
+    $connection->table('tracking_numbers')->whereIn('uuid', ['tn-w1', 'tn-w2'])->update(['status_uuid' => 'ts-done']);
+    $connection->table('tracking_statuses')->insert([
+        ['uuid' => 'ts-done', 'company_uuid' => 'company-1', 'tracking_number_uuid' => 'tn-w1', 'code' => 'COMPLETED', 'status' => 'Completed'],
+    ]);
+    $completed = $controller->completeOrder('order_start');
+    expect($completed)->not->toBeNull();
+});
