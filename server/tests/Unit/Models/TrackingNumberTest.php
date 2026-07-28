@@ -154,3 +154,46 @@ test('tracking number insert defaults region location and skips side effects whe
         ->and(FleetOpsTrackingNumberInsertFake::$statusUpdates)->toBe([])
         ->and(FleetOpsTrackingNumberInsertFake::$ownerUpdates)->toBe([]);
 });
+
+test('tracking numbers generate unique values and resolve or fail lookups', function () {
+    $connection = new Illuminate\Database\SQLiteConnection(new PDO('sqlite::memory:'));
+    $resolver   = new Illuminate\Database\ConnectionResolver(['default' => $connection, 'mysql' => $connection]);
+    $resolver->setDefaultConnection('mysql');
+    Illuminate\Database\Eloquent\Model::setConnectionResolver($resolver);
+    app()->instance('db', new class($connection) {
+        public function __construct(public Illuminate\Database\SQLiteConnection $c)
+        {
+        }
+
+        public function connection($name = null): Illuminate\Database\SQLiteConnection
+        {
+            return $this->c;
+        }
+
+        public function __call($method, $arguments)
+        {
+            return $this->c->{$method}(...$arguments);
+        }
+    });
+    Illuminate\Support\Facades\DB::clearResolvedInstance('db');
+    $schema = $connection->getSchemaBuilder();
+    foreach (['companies' => ['uuid', 'public_id', 'name'], 'tracking_numbers' => ['uuid', 'public_id', 'company_uuid', 'tracking_number', 'region', 'status_uuid', 'owner_uuid', 'owner_type', '_key'], 'tracking_statuses' => ['uuid', 'public_id', 'company_uuid', 'tracking_number_uuid', 'code', 'status', 'details', '_key']] as $table => $columns) {
+        $schema->create($table, function ($blueprint) use ($columns) {
+            $blueprint->increments('id');
+            foreach ($columns as $column) {
+                $blueprint->string($column)->nullable();
+            }
+            $blueprint->timestamps();
+            $blueprint->timestamp('deleted_at')->nullable();
+        });
+    }
+
+    $number = TrackingNumber::generateNumber('SG');
+    expect($number)->toBeString()->toContain('SG');
+
+    $connection->table('tracking_numbers')->insert(['uuid' => 'tn-find-1', 'public_id' => 'track_findone1', 'company_uuid' => 'company-1', 'tracking_number' => $number]);
+
+    expect(TrackingNumber::findTrackingOrFail($number)->uuid)->toBe('tn-find-1')
+        ->and(TrackingNumber::findTrackingOrFail('track_findone1')->uuid)->toBe('tn-find-1')
+        ->and(fn () => TrackingNumber::findTrackingOrFail('missing-number'))->toThrow(Illuminate\Database\Eloquent\ModelNotFoundException::class);
+});
