@@ -226,3 +226,19 @@ test('missing integrated vendors return empty quote payloads', function () {
     ]));
     expect($preliminaryList->getData(true))->toBe([]);
 });
+
+test('unresolvable vendor providers raise through the internal quote bridge', function () {
+    $connection = fleetopsServiceQuotePreliminaryBoot();
+    $connection->table('integrated_vendors')->insert(['uuid' => 'iv-int-err', 'public_id' => 'integrated_vendor_ierr1', 'company_uuid' => 'company-1', 'provider' => 'unsupported_provider', 'credentials' => json_encode([]), 'sandbox' => '1', 'options' => json_encode([])]);
+    $controller = new ServiceQuoteController();
+
+    expect(fn () => $controller->queryRecord(fleetopsServiceQuotePreliminaryRequest([
+        'payload'     => 'payload_prelimq',
+        'facilitator' => 'integrated_vendor_ierr1',
+    ])))->toThrow(Error::class)
+        ->and(fn () => $controller->preliminaryQuery(fleetopsServiceQuotePreliminaryRequest([
+            'pickup'      => '11111111-1111-4111-8111-111111111111',
+            'dropoff'     => '22222222-2222-4222-8222-222222222222',
+            'facilitator' => 'integrated_vendor_ierr1',
+        ])))->toThrow(Error::class);
+});
