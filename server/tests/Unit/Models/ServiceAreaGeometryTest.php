@@ -73,3 +73,33 @@ test('centroid and location accessors require the geos engine', function () {
         expect($exception)->toBeInstanceOf(Throwable::class);
     }
 });
+
+test('polygon conversions build league and brick multipolygons from borders', function () {
+    $serviceArea = new ServiceArea();
+    $serviceArea->setRawAttributes(['uuid' => 'sa-multi', 'public_id' => 'service_area_multi', 'name' => 'Multi'], true);
+    $serviceArea->setAttribute('border', new MultiPolygon([new Polygon([new LineString([
+        new Point(1.0, 103.0),
+        new Point(1.0, 104.0),
+        new Point(2.0, 104.0),
+        new Point(2.0, 103.0),
+        new Point(1.0, 103.0),
+    ])])]));
+
+    // League multipolygon conversion walks every border ring
+    $league = $serviceArea->asMultiPolygon();
+    expect($league)->toBeInstanceOf(League\Geotools\Polygon\MultiPolygon::class);
+
+    // Brick multipolygon conversion mirrors the same border geometry
+    $brick = $serviceArea->toGeosMultiPolygon();
+    expect($brick)->toBeInstanceOf(Brick\Geo\MultiPolygon::class);
+
+    // Borderless areas surface the declared-return violation and null brick conversions
+    $empty = new ServiceArea();
+    $empty->setRawAttributes(['uuid' => 'sa-empty'], true);
+    expect(fn () => $empty->asMultiPolygon())->toThrow(TypeError::class)
+        ->and($empty->toGeosMultiPolygon())->toBeNull();
+
+    // Center polygons build from the open ring closure path
+    $polygon = ServiceArea::createPolygonFromPoint(new Point(1.3521, 103.8198), 400);
+    expect($polygon)->toBeInstanceOf(Polygon::class);
+});
