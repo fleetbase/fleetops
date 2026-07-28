@@ -69,7 +69,7 @@ function fleetopsDriverSwitchBoot(): SQLiteConnection
 
     $schema = $connection->getSchemaBuilder();
     $tables = [
-        'drivers'                => ['uuid', 'public_id', 'company_uuid', 'user_uuid', 'vehicle_uuid', 'location', 'online', 'status', 'token', '_key'],
+        'drivers'                => ['uuid', 'public_id', 'company_uuid', 'user_uuid', 'vehicle_uuid', 'location', 'online', 'status', 'token', 'auth_token', '_key'],
         'users'                  => ['uuid', 'public_id', 'company_uuid', 'name', 'email', 'phone', 'type', 'status', '_key'],
         'companies'              => ['uuid', 'public_id', 'name', 'country', 'owner_uuid', 'logo_uuid', 'backdrop_uuid', 'place_uuid', 'timezone', 'currency', 'options', 'slug', 'status', '_key'],
         'company_users'          => ['uuid', 'public_id', 'company_uuid', 'user_uuid', 'status', '_key'],
@@ -256,4 +256,40 @@ test('driver company resolution and response seams execute their bodies', functi
     $static = new ReflectionMethod(DriverController::class, 'getDriverCompanyFromUser');
     $static->setAccessible(true);
     expect($static->invoke(null, $user)?->uuid)->toBe('company-1');
+});
+
+test('verify code issues driver tokens and stores auth references', function () {
+    $connection = fleetopsDriverSwitchBoot();
+    $connection->table('companies')->insert(['uuid' => 'company-1', 'public_id' => 'company_vcode1', 'name' => 'Acme', 'country' => 'SG']);
+    $connection->table('users')->insert(['uuid' => 'user-1', 'public_id' => 'user_vcode1', 'company_uuid' => 'company-1', 'name' => 'Verified Driver', 'phone' => '+6591230001', 'type' => 'driver']);
+    $connection->table('drivers')->insert(['uuid' => 'driver-1', 'public_id' => 'driver_vcode1', 'company_uuid' => 'company-1', 'user_uuid' => 'user-1']);
+    $schema = $connection->getSchemaBuilder();
+    $schema->create('verification_codes', function ($blueprint) {
+        $blueprint->increments('id');
+        foreach (['uuid', 'public_id', 'subject_uuid', 'subject_type', 'code', 'for', 'expires_at', 'meta', 'status', '_key'] as $column) {
+            $blueprint->string($column)->nullable();
+        }
+        $blueprint->timestamps();
+        $blueprint->timestamp('deleted_at')->nullable();
+    });
+    $connection->table('verification_codes')->insert(['uuid' => 'vc-drv-1', 'subject_uuid' => 'user-1', 'code' => '424242', 'for' => 'driver_login']);
+    // The fleet-ops provider expands the user model with driver relations
+    Fleetbase\Models\User::expand('driver', function () {
+        return $this->hasOne(Driver::class, 'user_uuid', 'uuid');
+    });
+    $controller = new DriverController();
+
+    // Unknown identities reject before verification
+    $unknown = $controller->verifyCode(Illuminate\Http\Request::create('/x', 'POST', ['identity' => '+6500000000', 'code' => '424242']));
+    expect($unknown->getData(true)['error'] ?? '')->toContain('Unable to verify');
+
+    // Invalid codes reject after identity resolution
+    $invalid = $controller->verifyCode(Illuminate\Http\Request::create('/x', 'POST', ['identity' => '+6591230001', 'code' => '999999']));
+    expect($invalid->getData(true)['error'] ?? '')->toContain('Invalid verification');
+
+    // Valid codes mint sanctum tokens and persist the auth reference
+    $verified = $controller->verifyCode(Illuminate\Http\Request::create('/x', 'POST', ['identity' => '+6591230001', 'code' => '424242']));
+    expect($verified)->not->toBeNull()
+        ->and($connection->table('personal_access_tokens')->count())->toBe(1)
+        ->and($connection->table('drivers')->value('auth_token'))->not->toBeNull();
 });
