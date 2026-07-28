@@ -53,10 +53,15 @@ function fleetopsContactCustomerUserBoot(): SQLiteConnection
 
     $schema = $connection->getSchemaBuilder();
     $tables = [
-        'contacts'      => ['uuid', 'public_id', 'company_uuid', 'user_uuid', 'name', 'email', 'phone', 'type', 'title'],
-        'users'         => ['uuid', 'public_id', 'company_uuid', 'name', 'email', 'phone', 'username', 'password', 'timezone', 'status', 'type'],
-        'companies'     => ['uuid', 'public_id', 'name', 'timezone', 'owner_uuid'],
-        'company_users' => ['uuid', 'company_uuid', 'user_uuid', 'status'],
+        'contacts'              => ['uuid', 'public_id', 'company_uuid', 'user_uuid', 'name', 'email', 'phone', 'type', 'title'],
+        'users'                 => ['uuid', 'public_id', 'company_uuid', 'name', 'email', 'phone', 'username', 'password', 'timezone', 'status', 'type'],
+        'companies'             => ['uuid', 'public_id', 'name', 'timezone', 'owner_uuid'],
+        'company_users'         => ['uuid', 'company_uuid', 'user_uuid', 'status'],
+        'permissions'           => ['name', 'guard_name', 'service', 'description'],
+        'roles'                 => ['uuid', 'public_id', 'name', 'guard_name', 'company_uuid', 'service', 'description', '_key'],
+        'model_has_roles'       => ['role_id', 'model_type', 'model_uuid'],
+        'model_has_permissions' => ['permission_id', 'model_type', 'model_uuid'],
+        'role_has_permissions'  => ['permission_id', 'role_id'],
     ];
     foreach ($tables as $table => $columns) {
         $schema->create($table, function ($blueprint) use ($columns) {
@@ -69,7 +74,54 @@ function fleetopsContactCustomerUserBoot(): SQLiteConnection
         });
     }
 
+    app()->instance('cache', new class {
+        public function tags($tags = null)
+        {
+            return $this;
+        }
+
+        public function flush()
+        {
+            return true;
+        }
+
+        public function remember($key, $ttl, $callback)
+        {
+            return $callback();
+        }
+
+        public function store($name = null)
+        {
+            return $this;
+        }
+
+        public function __call($method, $arguments)
+        {
+            return null;
+        }
+    });
+    Illuminate\Support\Facades\Cache::clearResolvedInstance('cache');
+    config()->set('auth.defaults.guard', 'web');
+    config()->set('cache.default', 'array');
+    config()->set('cache.stores.array', ['driver' => 'array']);
+    config()->set('permission.cache.expiration_time', 60);
+    config()->set('permission.cache.key', 'spatie.permission.cache');
+    config()->set('permission.cache.store', 'default');
+    config()->set('permission.models.permission', Fleetbase\Models\Permission::class);
+    config()->set('permission.models.role', Fleetbase\Models\Role::class);
+    config()->set('permission.table_names', ['roles' => 'roles', 'permissions' => 'permissions', 'model_has_permissions' => 'model_has_permissions', 'model_has_roles' => 'model_has_roles', 'role_has_permissions' => 'role_has_permissions']);
+    config()->set('permission.column_names', ['role_pivot_key' => null, 'permission_pivot_key' => null, 'model_morph_key' => 'model_uuid', 'team_foreign_key' => 'team_id']);
+    config()->set('permission.teams', false);
+    config()->set('permission.events_enabled', false);
+    $cacheManager = new Illuminate\Cache\CacheManager(app());
+    app()->instance(Illuminate\Cache\CacheManager::class, $cacheManager);
+    app()->instance(Spatie\Permission\PermissionRegistrar::class, new Spatie\Permission\PermissionRegistrar($cacheManager));
+
     session(['company' => 'company-1']);
+    $connection->table('roles')->insert([
+        ['uuid' => 'role-fc-1', 'name' => 'Fleet-Ops Customer', 'guard_name' => 'web', 'company_uuid' => 'company-1'],
+        ['uuid' => 'role-fc-2', 'name' => 'Fleet-Ops Customer', 'guard_name' => 'sanctum', 'company_uuid' => 'company-1'],
+    ]);
 
     return $connection;
 }
@@ -227,4 +279,30 @@ test('get user resolves from relation database or returns null', function () {
     $none = fleetopsContactCustomerUserContact();
     $none->setRelation('user', null);
     expect($none->getUser())->toBeNull();
+});
+
+test('phone identities and update flags adopt users and persist assignment', function () {
+    $connection = fleetopsContactCustomerUserBoot();
+    $connection->table('users')->insert(['uuid' => 'user-p1', 'company_uuid' => 'company-1', 'name' => 'Phone Match', 'email' => 'other@example.com', 'phone' => '+6597770001', 'type' => 'customer', 'status' => 'active']);
+    $connection->table('contacts')->insert(['uuid' => 'contact-p1', 'company_uuid' => 'company-1', 'name' => 'Phone Contact', 'email' => 'nomatch@example.com', 'phone' => '+6597770001', 'type' => 'customer']);
+
+    $contact = Contact::where('uuid', 'contact-p1')->first();
+    $user    = Contact::createUserFromContact($contact, false, true);
+
+    expect($user->uuid)->toBe('user-p1')
+        ->and($connection->table('contacts')->where('uuid', 'contact-p1')->value('user_uuid'))->toBe('user-p1');
+});
+
+test('normalize customer user creates company membership and assigns the customer role', function () {
+    $connection = fleetopsContactCustomerUserBoot();
+    $connection->table('companies')->insert(['uuid' => 'company-1', 'name' => 'Acme']);
+    $connection->table('users')->insert(['uuid' => 'user-n1', 'company_uuid' => 'company-1', 'name' => 'Normalized', 'email' => 'norm@example.com', 'type' => 'customer', 'status' => 'active']);
+    $connection->table('contacts')->insert(['uuid' => 'contact-n1', 'company_uuid' => 'company-1', 'name' => 'Normalized Contact', 'email' => 'norm@example.com', 'type' => 'customer', 'user_uuid' => 'user-n1']);
+
+    $contact = Contact::where('uuid', 'contact-n1')->first();
+    $user    = User::where('uuid', 'user-n1')->first();
+    $contact->normalizeCustomerUser($user);
+
+    expect($connection->table('company_users')->where('user_uuid', 'user-n1')->count())->toBe(1)
+        ->and($connection->table('model_has_roles')->count())->toBeGreaterThanOrEqual(1);
 });
