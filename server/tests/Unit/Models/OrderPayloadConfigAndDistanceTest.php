@@ -84,13 +84,13 @@ function fleetopsOrderPayloadBoot(): SQLiteConnection
 
     $schema = $connection->getSchemaBuilder();
     $tables = [
-        'orders'              => ['uuid', 'public_id', 'internal_id', 'company_uuid', 'payload_uuid', 'order_config_uuid', 'customer_uuid', 'customer_type', 'purchase_rate_uuid', 'transaction_uuid', 'driver_assigned_uuid', 'tracking_number_uuid', 'status', 'type', 'meta', 'distance', 'time', 'dispatched', 'dispatched_at', 'scheduled_at', 'started', 'adhoc', 'pod_required'],
+        'orders'              => ['uuid', 'public_id', 'internal_id', 'company_uuid', 'payload_uuid', 'order_config_uuid', 'customer_uuid', 'customer_type', 'purchase_rate_uuid', 'transaction_uuid', 'driver_assigned_uuid', 'tracking_number_uuid', 'status', 'type', 'meta', 'distance', 'time', 'dispatched', 'dispatched_at', 'scheduled_at', 'started', 'adhoc', 'pod_required', 'route_uuid'],
         'payloads'            => ['uuid', 'public_id', 'company_uuid', 'pickup_uuid', 'dropoff_uuid', 'return_uuid', 'current_waypoint_uuid', 'type', 'meta', '_key'],
         'places'              => ['uuid', 'public_id', 'company_uuid', 'name', 'street1', 'location', 'type', '_import_id'],
         'waypoints'           => ['uuid', 'public_id', 'company_uuid', 'payload_uuid', 'place_uuid', 'tracking_number_uuid', 'customer_uuid', 'customer_type', 'order', 'type'],
         'entities'            => ['uuid', 'public_id', 'company_uuid', 'payload_uuid', 'destination_uuid', 'name', 'type'],
         'tracking_numbers'    => ['uuid', 'public_id', 'company_uuid', 'tracking_number', 'owner_uuid', 'owner_type', 'status_uuid', 'region', '_key'],
-        'tracking_statuses'   => ['uuid', 'public_id', 'company_uuid', 'tracking_number_uuid', 'code', 'status', 'details'],
+        'tracking_statuses'   => ['uuid', 'public_id', 'company_uuid', 'tracking_number_uuid', 'proof_uuid', 'code', 'status', 'details', 'location', 'complete', '_key'],
         'purchase_rates'      => ['uuid', 'public_id', 'company_uuid', 'customer_uuid', 'customer_type', 'service_quote_uuid', 'payload_uuid', 'transaction_uuid', 'status', 'meta', '_key'],
         'transactions'        => ['uuid', 'public_id', 'company_uuid', 'customer_uuid', 'customer_type', 'gateway_transaction_id', 'gateway', 'amount', 'currency', 'type', 'status', 'meta', '_key'],
         'order_configs'       => ['uuid', 'public_id', 'company_uuid', 'name', 'key', 'namespace', 'description', 'flow', 'entities', 'meta', 'version', 'core_service', 'status', 'type', '_key'],
@@ -99,6 +99,8 @@ function fleetopsOrderPayloadBoot(): SQLiteConnection
         'users'               => ['uuid', 'public_id', 'company_uuid', 'name', 'type', 'status'],
         'custom_fields'       => ['uuid', 'public_id', 'company_uuid', 'subject_uuid', 'subject_type', 'name', 'label', 'type', 'options', 'meta', 'required', 'order'],
         'custom_field_values' => ['uuid', 'public_id', 'company_uuid', 'custom_field_uuid', 'subject_uuid', 'subject_type', 'value', 'value_type'],
+        'files'               => ['uuid', 'public_id', 'company_uuid', 'subject_uuid', 'subject_type', 'name', 'original_filename', 'extension', 'content_type', 'path', 'bucket', 'disk', 'size', 'type', 'meta', '_key'],
+        'routes'              => ['uuid', 'public_id', 'company_uuid', 'order_uuid', 'details', 'total_time', 'total_distance', '_key'],
     ];
     foreach ($tables as $table => $columns) {
         $schema->create($table, function ($blueprint) use ($columns) {
@@ -291,4 +293,86 @@ test('driver loading notifiable resolution and dispatch helpers', function () {
 
     $order->firstDispatch();
     expect($GLOBALS['fleetopsOrderModelDispatches'])->toHaveCount(1);
+});
+
+test('file attachment and route persistence map inputs onto records', function () {
+    $connection = fleetopsOrderPayloadBoot();
+    $connection->table('orders')->insert(['uuid' => 'order-1', 'company_uuid' => 'company-1']);
+    $order = Order::query()->where('uuid', 'order-1')->first();
+
+    // Unresolvable upload shapes are a no-op
+    expect($order->attachFiles([null, []]))->toBe($order);
+
+    // String ids and array shapes filter and re-key files onto the order
+    $connection->table('files')->insert([
+        ['uuid' => 'file-1', 'company_uuid' => 'company-1', 'name' => 'a.jpg'],
+        ['uuid' => 'file-2', 'company_uuid' => 'company-1', 'name' => 'b.jpg'],
+    ]);
+    $order->attachFiles(['file-1', ['uuid' => 'file-2'], null]);
+    expect($connection->table('files')->whereNotNull('subject_uuid')->count())->toBe(2);
+
+    // setRoute maps a payload key into details and persists the route
+    $order->setRoute(['payload' => ['legs' => []], 'total_time' => 60]);
+    expect($connection->table('routes')->where('order_uuid', 'order-1')->count())->toBe(1);
+
+    // Empty attributes are a no-op
+    expect($order->setRoute([]))->toBe($order);
+});
+
+test('config lookups fall back to trashed rows and null without a company', function () {
+    $connection = fleetopsOrderPayloadBoot();
+    $flow       = json_encode([
+        'order_created'    => ['key' => 'order_created', 'code' => 'created', 'status' => 'Created', 'details' => 'Order created', 'activities' => ['order_dispatched']],
+        'order_dispatched' => ['key' => 'order_dispatched', 'code' => 'dispatched', 'status' => 'Dispatched', 'details' => 'Order dispatched', 'activities' => []],
+    ]);
+    $connection->table('order_configs')->insert(['uuid' => '55555555-5555-4555-8555-555555555555', 'public_id' => 'order_config_trashed', 'company_uuid' => 'company-1', 'name' => 'Custom', 'key' => 'custom', 'namespace' => 'company:order-config:custom', 'core_service' => 1, 'status' => 'active', 'version' => '0.0.1', 'flow' => $flow, 'deleted_at' => '2026-01-01 00:00:00']);
+    $connection->table('orders')->insert([
+        ['uuid' => 'order-1', 'company_uuid' => 'company-1', 'order_config_uuid' => '55555555-5555-4555-8555-555555555555'],
+        ['uuid' => 'order-2', 'company_uuid' => 'company-none', 'order_config_uuid' => null],
+    ]);
+
+    // Soft-deleted configs still resolve through the trashed uuid lookup
+    $order = Order::query()->where('uuid', 'order-1')->first();
+    expect($order->config()?->uuid)->toBe('55555555-5555-4555-8555-555555555555');
+
+    // Without a resolvable company the default config lookup type-errors
+    // (OrderConfig::default() declares a non-nullable return)
+    session(['company' => 'company-none']);
+    $orphan = Order::query()->where('uuid', 'order-2')->first();
+    expect(fn () => $orphan->config())->toThrow(TypeError::class);
+    session(['company' => 'company-1']);
+});
+
+test('dispatch activity driver reload and activity checks resolve', function () {
+    $connection = fleetopsOrderPayloadBoot();
+    $flow       = json_encode([
+        'order_created'    => ['key' => 'order_created', 'code' => 'created', 'status' => 'Created', 'details' => 'Order created', 'activities' => ['order_dispatched']],
+        'order_dispatched' => ['key' => 'order_dispatched', 'code' => 'dispatched', 'status' => 'Dispatched', 'details' => 'Order dispatched', 'activities' => []],
+    ]);
+    $connection->table('order_configs')->insert(['uuid' => '66666666-6666-4666-8666-666666666666', 'public_id' => 'order_config_transport', 'company_uuid' => 'company-1', 'name' => 'Transport', 'key' => 'transport', 'namespace' => 'system:order-config:transport', 'core_service' => 1, 'status' => 'active', 'version' => '0.0.1', 'flow' => $flow]);
+    $connection->table('users')->insert(['uuid' => 'user-1', 'company_uuid' => 'company-1', 'type' => 'user']);
+    $connection->table('drivers')->insert(['uuid' => '44444444-4444-4444-8444-444444444444', 'public_id' => 'driver_orddisp1', 'company_uuid' => 'company-1', 'user_uuid' => 'user-1']);
+    $connection->table('tracking_numbers')->insert(['uuid' => 'tn-1', 'company_uuid' => 'company-1', 'tracking_number' => 'TRKD1', 'owner_uuid' => 'order-1']);
+    $connection->table('orders')->insert(['uuid' => 'order-1', 'company_uuid' => 'company-1', 'order_config_uuid' => '66666666-6666-4666-8666-666666666666', 'tracking_number_uuid' => 'tn-1', 'driver_assigned_uuid' => '44444444-4444-4444-8444-444444444444', 'status' => 'created', 'dispatched' => 0]);
+
+    $order = Order::query()->where('uuid', 'order-1')->first();
+
+    // First dispatch with activity inserts the dispatched tracking status once
+    $order->firstDispatchWithActivity();
+    expect($connection->table('tracking_statuses')->where('code', 'DISPATCHED')->count())->toBe(1);
+    $order->firstDispatchWithActivity();
+    expect($connection->table('tracking_statuses')->where('code', 'DISPATCHED')->count())->toBe(1);
+
+    // A nulled driver relation reloads through the uuid branch
+    $order->setRelation('driverAssigned', null);
+    expect($order->loadAssignedDriver()->driverAssigned?->uuid)->toBe('44444444-4444-4444-8444-444444444444');
+
+    // Dynamic values prefer resolvable properties then fall back to raw input
+    expect($order->resolveDynamicValue('status'))->not->toBeNull();
+
+    // Completed activity checks match case-insensitively and handle no statuses
+    $activity = $order->config()->activities()->firstWhere('code', 'dispatched');
+    expect($order->hasCompletedActivity($activity))->toBeTrue();
+    $order->setRelation('trackingStatuses', null);
+    expect($order->hasCompletedActivity($activity))->toBeFalse();
 });
