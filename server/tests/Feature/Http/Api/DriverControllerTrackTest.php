@@ -248,3 +248,75 @@ test('api driver controller tracks driver locations and syncs vehicle telemetry'
 
     Carbon::setTestNow();
 });
+
+test('stale drivers geocode their locality and geofence failures stay silent', function () {
+    Carbon::setTestNow(Carbon::parse('2026-07-27 12:00:00'));
+    $GLOBALS['fleetops_api_driver_track_broadcasts'] = [];
+
+    $driver = new FleetOpsApiDriverTrackDriverFake();
+    $driver->setRawAttributes([
+        'uuid'       => 'driver-geo-uuid',
+        'public_id'  => 'driver_geopublic',
+        'name'       => 'Geocoded Driver',
+        'online'     => true,
+        'updated_at' => Carbon::now()->subHours(2),
+        'country'    => null,
+        'city'       => null,
+    ], true);
+    $driver->orderForTest = null;
+    $driver->setRelation('vehicle', null);
+
+    // Reverse geocoding resolves the locality onto the driver record
+    app()->instance('geocoder', new class {
+        public function reverse($lat, $lng)
+        {
+            return $this;
+        }
+
+        public function get()
+        {
+            return collect([new class {
+                public function getLocality()
+                {
+                    return 'Singapore';
+                }
+
+                public function getCountry()
+                {
+                    return new class {
+                        public function getCode()
+                        {
+                            return 'SG';
+                        }
+                    };
+                }
+            }]);
+        }
+
+        public function __call($method, $arguments)
+        {
+            return $this;
+        }
+    });
+    Geocoder\Laravel\Facades\Geocoder::clearResolvedInstance('geocoder');
+
+    // Geofence detection failures never block the tracking response
+    $throwingService = new class extends GeofenceIntersectionService {
+        public function detectDriverCrossings($driver, $location): array
+        {
+            throw new RuntimeException('geofence backend down');
+        }
+    };
+    Container::getInstance()->instance(GeofenceIntersectionService::class, $throwingService);
+
+    $controller         = new FleetOpsApiDriverTrackControllerProbe();
+    $controller->driver = $driver;
+
+    $response = $controller->track('driver_geopublic', new Request([
+        'latitude'  => '1.30',
+        'longitude' => '103.80',
+    ]));
+
+    expect($response)->toBe(['resource' => 'driver', 'driver' => $driver])
+        ->and(collect($driver->quietUpdates)->contains(fn ($update) => ($update['city'] ?? null) === 'Singapore'))->toBeTrue();
+});
