@@ -239,3 +239,31 @@ test('proofs endpoint resolves order waypoint and entity subjects', function () 
         ->and($probe->callHelper('proofsForSubject', $order, $order))->toHaveCount(2)
         ->and($probe->callHelper('proofsForSubject', $order, Fleetbase\FleetOps\Models\Waypoint::where('uuid', '44444444-4444-4444-8444-444444444421')->first()))->toHaveCount(1);
 });
+
+test('status options resolve config activities and proofs default subjects', function () {
+    $connection = fleetopsOrderHelperBoot();
+    fleetopsOrderHelperSeed($connection);
+    $connection->table('order_configs')->insert(['uuid' => '99999999-9999-4999-8999-999999999990', 'public_id' => 'order_config_status1', 'company_uuid' => 'company-1', 'name' => 'Status Transport', 'key' => 'transport', 'namespace' => 'system:order-config:transport', 'core_service' => '1', 'status' => 'active', 'flow' => json_encode([
+        'order_created' => ['key' => 'order_created', 'code' => 'created', 'status' => 'Created', 'details' => 'Order created', 'activities' => []],
+    ])]);
+    $connection->table('orders')->where('uuid', '44444444-4444-4444-8444-444444444401')->update(['order_config_uuid' => '99999999-9999-4999-8999-999999999990', 'status' => 'created']);
+    $controller = new OrderController();
+
+    // Status options with activity metadata honor uuid, key and implicit scopes
+    $byUuid = $controller->statuses(Request::create('/x', 'GET', ['include_activities' => 1, 'order_config_uuid' => '99999999-9999-4999-8999-999999999990']));
+    expect($byUuid)->not->toBeNull();
+
+    $byKey = $controller->statuses(Request::create('/x', 'GET', ['include_activities' => 1, 'order_config_key' => 'transport']));
+    expect($byKey)->not->toBeNull();
+
+    $implicit = $controller->statuses(Request::create('/x', 'GET', ['include_activities' => 1]));
+    expect($implicit)->not->toBeNull();
+
+    // Proof resolution accepts public ids and unknown subject prefixes default to the order
+    $probe = new FleetOpsInternalOrderHelperProbe();
+    $connection->table('proofs')->insert(['uuid' => 'proof-str-1', 'public_id' => 'proof_strone1', 'company_uuid' => 'company-1', 'order_uuid' => '44444444-4444-4444-8444-444444444401', 'subject_uuid' => '44444444-4444-4444-8444-444444444401', 'subject_type' => 'Fleetbase\FleetOps\Models\Order']);
+    expect($probe->callHelper('resolveProof', 'proof_strone1')?->uuid)->toBe('proof-str-1');
+
+    $defaultSubject = $controller->proofs(Request::create('/x', 'GET'), '44444444-4444-4444-8444-444444444401', 'unknown_subjectkey');
+    expect($defaultSubject)->not->toBeNull();
+});
