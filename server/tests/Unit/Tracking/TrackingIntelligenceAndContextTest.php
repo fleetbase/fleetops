@@ -251,3 +251,30 @@ test('waypoint statuses and stop construction resolve tracking codes', function 
     $completedStop     = $fromWaypoint->invoke($builder, $completedWaypoint, 4);
     expect($completedStop->completed)->toBeTrue();
 });
+
+test('context builder guards invalid drivers null payloads and fallback origins', function () {
+    $connection = fleetopsTrackingBoot();
+    $order      = fleetopsTrackingSeedOrder($connection, false);
+    $builder    = new TrackingContextBuilder();
+    $invoke     = function (string $name, ...$arguments) use ($builder) {
+        $reflection = new ReflectionMethod(TrackingContextBuilder::class, $name);
+        $reflection->setAccessible(true);
+
+        return $reflection->invoke($builder, ...$arguments);
+    };
+
+    // Null payloads produce empty stop collections and origins
+    expect($invoke('stops', null, $order))->toHaveCount(0)
+        ->and($invoke('fallbackOrigin', null))->toBeNull();
+
+    // Payload-backed fallback origins parse the pickup point
+    $order->loadMissing('payload');
+    expect($invoke('fallbackOrigin', $order->payload)?->getLat())->toBe(1.30);
+
+    // Drivers whose locations cannot resolve surface as missing locations
+    $connection->table('drivers')->insert(['uuid' => 'driver-invalid', 'public_id' => 'driver_ctxinv1', 'company_uuid' => 'company-1', 'user_uuid' => 'user-1', 'location' => null]);
+    $connection->table('orders')->where('uuid', $order->uuid)->update(['driver_assigned_uuid' => 'driver-invalid']);
+    $reloaded = Order::where('uuid', $order->uuid)->first();
+    $context  = $builder->build($reloaded, TrackingOptions::fromArray([]));
+    expect($context->driverLocation)->toBeNull();
+});
