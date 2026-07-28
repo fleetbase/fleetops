@@ -90,9 +90,8 @@ test('label response helpers build api error json and raw responses', function (
     expect($json)->toBeInstanceOf(JsonResponse::class)
         ->and($json->getData(true))->toBe(['data' => 'abc']);
 
-    // The minimal response shim exposes json/error only; the raw make seam
-    // still executes its real delegation body, which is the covered contract.
-    expect(fn () => $probe->callProtected('makeResponse', 'label-text'))->toThrow(Error::class);
+    // The raw make seam delegates into the response shim's make()
+    expect($probe->callProtected('makeResponse', 'label-text')->getContent())->toBe('label-text');
 });
 
 test('get label reports unresolvable subjects', function () {

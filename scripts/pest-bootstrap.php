@@ -67,6 +67,29 @@ if (class_exists('Illuminate\Container\Container') && class_exists('Illuminate\S
                 };
             }
 
+            public function make(mixed $content = '', int $status = 200, array $headers = []): mixed
+            {
+                if (class_exists('Illuminate\\Http\\Response')) {
+                    return new Illuminate\Http\Response($content, $status, $headers);
+                }
+
+                return new class($content, $status) {
+                    public function __construct(public mixed $content, public int $status)
+                    {
+                    }
+
+                    public function getContent(): mixed
+                    {
+                        return $this->content;
+                    }
+
+                    public function getStatusCode(): int
+                    {
+                        return $this->status;
+                    }
+                };
+            }
+
             public function error(mixed $error = null, int $status = 500): mixed
             {
                 return $this->json(['error' => $error], $status);
@@ -155,6 +178,29 @@ if (!function_exists('response')) {
                 return new class($data, $status) {
                     public function __construct(public mixed $data, public int $status)
                     {
+                    }
+
+                    public function getStatusCode(): int
+                    {
+                        return $this->status;
+                    }
+                };
+            }
+
+            public function make(mixed $content = '', int $status = 200, array $headers = []): mixed
+            {
+                if (class_exists('Illuminate\\Http\\Response')) {
+                    return new Illuminate\Http\Response($content, $status, $headers);
+                }
+
+                return new class($content, $status) {
+                    public function __construct(public mixed $content, public int $status)
+                    {
+                    }
+
+                    public function getContent(): mixed
+                    {
+                        return $this->content;
                     }
 
                     public function getStatusCode(): int
