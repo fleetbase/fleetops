@@ -160,3 +160,40 @@ test('device filter records empty relation attachment online and date branches',
 
     Carbon::setTestNow();
 });
+
+test('device relation identifiers resolve public and internal uuids', function () {
+    $connection = new Illuminate\Database\SQLiteConnection(new PDO('sqlite::memory:'));
+    $resolver   = new Illuminate\Database\ConnectionResolver(['default' => $connection, 'mysql' => $connection]);
+    $resolver->setDefaultConnection('mysql');
+    Illuminate\Database\Eloquent\Model::setConnectionResolver($resolver);
+    $schema = $connection->getSchemaBuilder();
+    foreach (['vehicles' => ['uuid', 'public_id', 'company_uuid', 'internal_id', 'name'], 'devices' => ['uuid', 'public_id', 'company_uuid', 'attachable_uuid', 'attachable_type', 'name']] as $table => $columns) {
+        $schema->create($table, function ($blueprint) use ($columns) {
+            $blueprint->increments('id');
+            foreach ($columns as $column) {
+                $blueprint->string($column)->nullable();
+            }
+            $blueprint->timestamps();
+            $blueprint->timestamp('deleted_at')->nullable();
+        });
+    }
+    $connection->table('vehicles')->insert(['uuid' => 'veh-flt-1', 'public_id' => 'vehicle_fltone1', 'company_uuid' => 'company-uuid', 'internal_id' => 'VEH-9', 'name' => 'Filter Van']);
+
+    $builder    = Fleetbase\FleetOps\Models\Device::query();
+    $filter     = fleetopsDeviceFilterUnitFilter(new FleetOpsDeviceFilterUnitQuery());
+    $reflection = new ReflectionProperty(Filter::class, 'builder');
+    $reflection->setAccessible(true);
+    $reflection->setValue($filter, $builder);
+
+    // Public ids and internal ids both resolve through the relation lookup
+    $filter->vehicle('vehicle_fltone1');
+    $filter->vehicle('VEH-9');
+    $sql = $builder->toSql();
+    expect(substr_count($sql, '"attachable_uuid" in'))->toBe(2);
+
+    // The offline connection status branch constrains stale devices
+    $offlineBuilder = new FleetOpsDeviceFilterUnitQuery();
+    $offlineFilter  = fleetopsDeviceFilterUnitFilter($offlineBuilder);
+    $offlineFilter->connectionStatus('offline');
+    expect(collect($offlineBuilder->calls)->where(0, 'whereNested'))->toHaveCount(1);
+});
