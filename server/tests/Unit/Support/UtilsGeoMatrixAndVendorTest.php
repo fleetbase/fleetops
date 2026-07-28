@@ -16,6 +16,10 @@ if (!function_exists('Cknow\Money\config')) {
     eval('namespace Cknow\Money; function config($key = null, $default = null) { return $default; }');
 }
 
+if (!function_exists('Fleetbase\\FleetOps\\Support\\env')) {
+    eval('namespace Fleetbase\\FleetOps\\Support; function env($key = null, $default = null) { return $default; }');
+}
+
 use Fleetbase\FleetOps\Models\Place;
 use Fleetbase\FleetOps\Support\Utils;
 use Fleetbase\LaravelMysqlSpatial\Eloquent\SpatialExpression;
@@ -285,4 +289,56 @@ test('formatting distance and geometry helpers cover unit and centroid math', fu
     expect(Utils::createSpatialExpressionFromGeoJson($polygonGeoJson))->toBeInstanceOf(SpatialExpression::class)
         ->and(Utils::createGeometryObjectFromGeoJson($polygonGeoJson))->toBeInstanceOf(Fleetbase\LaravelMysqlSpatial\Types\Geometry::class)
         ->and(Utils::createSpatialExpressionFromGeoJson('not geojson'))->toBeNull();
+});
+
+test('point resolution handles geojson dictionaries generic models and driver uuids', function () {
+    $connection = fleetopsUtilsGeoBoot();
+    $connection->table('users')->insert(['uuid' => 'user-2', 'company_uuid' => 'company-1', 'type' => 'user']);
+    $connection->table('drivers')->insert(['uuid' => '66666666-6666-4666-8666-666666666666', 'public_id' => 'driver_utilgeo2', 'company_uuid' => 'company-1', 'user_uuid' => 'user-2', 'location' => fleetopsUtilsPointWkb(1.36, 103.86)]);
+
+    // Drivers resolve by uuid when no place matches
+    expect(Utils::getPointFromMixed('66666666-6666-4666-8666-666666666666')?->getLat())->toBe(1.36);
+
+    // A generic model with a non-fillable location attribute still resolves
+    $generic = new class extends EloquentModel {};
+    $generic->setRawAttributes(['location' => new Point(1.37, 103.87)]);
+    expect(Utils::getPointFromMixed($generic)?->getLat())->toBe(1.37);
+
+    // GeoJSON with dictionary coordinates falls back to keyed extraction
+    $dictionary = ['type' => 'Point', 'coordinates' => ['x' => 1.38, 'y' => 103.88]];
+    $fromDict   = Utils::getPointFromMixed($dictionary);
+    expect($fromDict)->toBeInstanceOf(Point::class);
+
+    // GeoJSON strings decode before geometry construction
+    expect(Utils::getPointFromMixed('{"type":"Point","coordinates":[103.89,1.39]}')?->getLat())->toBe(1.39);
+
+    // Arrays keyed by place-prefixed public ids recurse into record lookups
+    expect(Utils::getPointFromMixed(['public_id' => 'place_missing99x']))->toBeNull();
+
+    // Expressions without a WKT point cannot resolve
+    expect(fn () => Utils::getPointFromMixed(new Expression('now()')))->toThrow(Exception::class);
+});
+
+test('google distance matrices fetch live then serve cached results', function () {
+    fleetopsUtilsGeoBoot();
+    $redis = $GLOBALS['fleetopsUtilsRedisFake'];
+
+    Http::clearResolvedInstances();
+    app()->forgetInstance(Illuminate\Http\Client\Factory::class);
+    Http::fake(['*' => Http::response(['rows' => [['elements' => [['distance' => ['value' => 2500], 'duration' => ['value' => 300]]]]]], 200)]);
+
+    $live = Utils::getDrivingDistanceAndTime([1.3, 103.8], [1.35, 103.85], ['provider' => 'google']);
+    expect($live->distance)->toBe(2500.0)
+        ->and($live->time)->toBe(300.0);
+
+    // The cached result now short-circuits the HTTP client entirely
+    $cached = Utils::getDrivingDistanceAndTime([1.3, 103.8], [1.35, 103.85], ['provider' => 'google']);
+    expect($cached->distance)->toBe(2500.0);
+
+    // OSRM passthrough keeps non-coordinate segments untouched
+    Http::clearResolvedInstances();
+    app()->forgetInstance(Illuminate\Http\Client\Factory::class);
+    Http::fake(['*' => Http::response(['code' => 'Ok', 'routes' => [['distance' => 100.0, 'duration' => 60.0]], 'waypoints' => []], 200)]);
+    $passthrough = Utils::getDistanceMatrixFromOSRM('not-a-coordinate', '1.35,103.85');
+    expect($passthrough->distance)->toBe(100.0);
 });
