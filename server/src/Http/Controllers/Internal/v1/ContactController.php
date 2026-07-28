@@ -195,7 +195,7 @@ class ContactController extends FleetOpsController
 
     protected function contactByUuidWithTrashed(string $id): ?Contact
     {
-        return Contact::where('uuid', $id)->withTrashes()->first();
+        return Contact::where('uuid', $id)->withTrashed()->first();
     }
 
     protected function contactByUuid(string $id): ?Contact

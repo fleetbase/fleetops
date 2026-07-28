@@ -237,3 +237,58 @@ test('customer portal welcome email guards and extension detection', function ()
         ->and($probe->callProtected('containsCustomerPortalExtension', [[['name' => 'fleetbase/other']]]))->toBeFalse()
         ->and($probe->callProtected('customerPortalPassword', []))->toBeString();
 });
+
+test('contact update guards types resolve users and portal seams persist', function () {
+    $connection = fleetopsInternalContactEndpointsBoot();
+    $connection->table('users')->insert(['uuid' => '88888888-8888-4888-8888-888888888881', 'public_id' => 'user_contactseam', 'company_uuid' => 'company-1', 'name' => 'Portal User', 'email' => 'portal@example.com', 'type' => 'contact']);
+    $connection->table('contacts')->insert(['uuid' => '88888888-8888-4888-8888-888888888882', 'public_id' => 'contact_seamone1', 'company_uuid' => 'company-1', 'user_uuid' => '88888888-8888-4888-8888-888888888881', 'name' => 'Seam Contact', 'email' => 'portal@example.com', 'type' => 'customer']);
+    $probe = new FleetOpsInternalContactEndpointsProbe();
+
+    // Customer contacts cannot change type
+    $contact = Contact::where('uuid', '88888888-8888-4888-8888-888888888882')->first();
+    $input   = ['type' => 'contact'];
+    expect(function () use ($probe, $contact, &$input) {
+        $request = Request::create('/x', 'PUT', []);
+        $probe->callProtected('assertContactInputIsValid', [$request, &$input, $contact]);
+    })->toThrow(Exception::class);
+
+    // User references resolve through uuid or public id
+    expect($probe->callProtected('resolveUserUuid', ['user_contactseam']))->toBe('88888888-8888-4888-8888-888888888881')
+        ->and($probe->callProtected('resolveUserUuid', ['88888888-8888-4888-8888-888888888881']))->toBe('88888888-8888-4888-8888-888888888881')
+        ->and($probe->callProtected('resolveUserUuid', ['unknown-user']))->toBe('unknown-user');
+
+    // Portal seams read users, mint passwords, and persist meta quietly
+    expect($probe->callProtected('contactUser', [$contact])?->uuid)->toBe('88888888-8888-4888-8888-888888888881')
+        ->and(strlen($probe->callProtected('customerPortalPassword', [])))->toBe(16);
+
+    Illuminate\Support\Facades\Mail::swap(new class {
+        public array $sent = [];
+
+        public function to($users)
+        {
+            return $this;
+        }
+
+        public function send($mailable)
+        {
+            $this->sent[] = $mailable;
+
+            return null;
+        }
+
+        public function __call($method, $arguments)
+        {
+            return $this;
+        }
+    });
+    $user = Fleetbase\Models\User::where('uuid', '88888888-8888-4888-8888-888888888881')->first();
+    $probe->callProtected('sendCustomerCredentialsMail', [$user, 'secret', $contact]);
+    expect(Illuminate\Support\Facades\Mail::getFacadeRoot()->sent)->toHaveCount(1);
+
+    $probe->callProtected('saveContactMetaQuietly', [$contact, ['portal' => true]]);
+    expect((string) $connection->table('contacts')->where('uuid', '88888888-8888-4888-8888-888888888882')->value('meta'))->toContain('portal');
+
+    // Trashed lookups include soft-deleted contacts
+    $connection->table('contacts')->where('uuid', '88888888-8888-4888-8888-888888888882')->update(['deleted_at' => now()]);
+    expect($probe->callProtected('contactByUuidWithTrashed', ['88888888-8888-4888-8888-888888888882']))->not->toBeNull();
+});
