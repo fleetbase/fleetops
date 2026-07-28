@@ -34,6 +34,10 @@ if (!function_exists('Fleetbase\Observers\event')) {
     eval('namespace Fleetbase\Observers; function event($event = null, $payload = []) { return []; }');
 }
 
+if (!function_exists('Fleetbase\FleetOps\Models\dispatch')) {
+    eval('namespace Fleetbase\FleetOps\Models; function dispatch($job = null) { $GLOBALS["fleetopsOrderStartDispatches"][] = $job; return new class { public function afterCommit() { return $this; } public function __call($m, $a) { return $this; } }; }');
+}
+
 if (!function_exists('Fleetbase\FleetOps\Models\event')) {
     eval('namespace Fleetbase\FleetOps\Models; function event($event = null) { \FleetOpsOrderStartRecorder::$events[] = $event; return $event; }');
 }
@@ -534,4 +538,29 @@ test('adhoc start assigns the driver and primes multi-stop payloads', function (
     expect($connection->table('orders')->value('started'))->toBe(1)
         ->and($connection->table('drivers')->value('current_job_uuid'))->toBe('order-1')
         ->and($connection->table('payloads')->value('current_waypoint_uuid'))->not->toBeNull();
+});
+
+test('dispatch entity and waypoint gating branches update activities', function () {
+    $connection = fleetopsOrderStartBoot();
+    fleetopsOrderStartSeedOrder($connection, ['status' => 'created', 'driver_assigned_uuid' => 'driver-1']);
+    $controller = new OrderController();
+
+    // Dispatched activity with an assigned driver dispatches the order
+    $dispatched = $controller->updateActivity('order_start', Request::create('/x', 'POST', ['activity' => [
+        'key' => 'order_dispatched', 'code' => 'dispatched', 'status' => 'Dispatched', 'details' => 'Order dispatched',
+    ]]));
+    expect($dispatched)->not->toBeNull()
+        ->and((int) $connection->table('orders')->value('dispatched'))->toBe(1);
+});
+
+test('waypoint activities require started orders before advancing stops', function () {
+    $connection = fleetopsOrderStartBoot();
+    fleetopsOrderStartSeedOrder($connection, ['status' => 'dispatched', 'started' => 0, 'driver_assigned_uuid' => 'driver-1']);
+    fleetopsOrderStartSeedWaypoints($connection);
+    $controller = new OrderController();
+
+    $gated = $controller->updateActivity('order_start', Request::create('/x', 'POST', ['activity' => [
+        'key' => 'custom_stop_activity', 'code' => 'at_stop', 'status' => 'At stop', 'details' => 'Arrived at stop',
+    ]]));
+    expect($gated->getStatusCode())->toBe(422);
 });
