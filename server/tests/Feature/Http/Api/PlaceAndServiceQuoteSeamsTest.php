@@ -2,6 +2,7 @@
 
 use Fleetbase\FleetOps\Http\Controllers\Api\v1\PlaceController;
 use Fleetbase\FleetOps\Http\Controllers\Api\v1\ServiceQuoteController;
+use Fleetbase\FleetOps\Http\Requests\CreatePlaceRequest;
 use Fleetbase\FleetOps\Models\Place;
 use Illuminate\Database\ConnectionResolver;
 use Illuminate\Database\Eloquent\Model as EloquentModel;
@@ -46,6 +47,17 @@ class FleetOpsApiPlaceControllerProbe extends PlaceController
 
 function fleetopsPlaceSeamsBoot(): SQLiteConnection
 {
+    if (!Request::hasMacro('isString')) {
+        Request::macro('isString', function ($key) {
+            return is_string($this->input($key));
+        });
+    }
+    if (!Request::hasMacro('isArray')) {
+        Request::macro('isArray', function ($key) {
+            return is_array($this->input($key));
+        });
+    }
+
     $pdo = new PDO('sqlite::memory:');
     $pdo->sqliteCreateFunction('ST_GeomFromText', fn ($wkt, $srid = 0, $axisOrder = null) => $wkt);
     $pdo->sqliteCreateFunction('ST_PointFromText', fn ($wkt, $srid = 0, $axisOrder = null) => $wkt);
@@ -124,7 +136,7 @@ function fleetopsPlaceSeamsBoot(): SQLiteConnection
 
     $schema = $connection->getSchemaBuilder();
     $tables = [
-        'places'                   => ['uuid', 'public_id', 'company_uuid', 'owner_uuid', 'name', 'street1', 'street2', 'city', 'province', 'postal_code', 'country', 'phone', 'location', 'meta', 'type', '_key'],
+        'places'                   => ['uuid', 'public_id', 'company_uuid', 'owner_uuid', 'owner_type', 'name', 'street1', 'street2', 'city', 'province', 'postal_code', 'country', 'phone', 'location', 'meta', 'type', '_key', '_import_id'],
         'service_quotes'           => ['uuid', 'public_id', 'request_id', 'company_uuid', 'payload_uuid', 'integrated_vendor_uuid', 'service_rate_uuid', 'amount', 'currency', 'meta', 'expired_at', '_key'],
         'service_quote_items'      => ['uuid', 'public_id', 'service_quote_uuid', 'amount', 'currency', 'details', 'code', '_key'],
         'service_rates'            => ['uuid', 'public_id', 'company_uuid', 'service_name', 'service_type', 'base_fee', 'currency', 'rate_calculation_method', 'per_meter_flat_rate_fee', 'per_meter_unit', 'duration_terms', 'estimated_days', 'zone_uuid', 'service_area_uuid', '_key'],
@@ -135,6 +147,8 @@ function fleetopsPlaceSeamsBoot(): SQLiteConnection
         'entities'                 => ['uuid', 'public_id', 'company_uuid', 'payload_uuid', 'name', 'type'],
         'integrated_vendors'       => ['uuid', 'public_id', 'company_uuid', 'provider', 'credentials', 'sandbox', 'options'],
         'companies'                => ['uuid', 'public_id', 'name', 'country'],
+        'contacts'                 => ['uuid', 'public_id', 'company_uuid', 'name', 'type', 'email', 'phone'],
+        'vendors'                  => ['uuid', 'public_id', 'company_uuid', 'name', 'email', 'phone'],
     ];
     foreach ($tables as $table => $columns) {
         $schema->create($table, function ($blueprint) use ($columns) {
@@ -259,4 +273,51 @@ test('integrated vendor branches respond for missing vendors and error seams', f
         'dropoff'     => 'place_sqivtwo22',
         'facilitator' => 'integrated_vendor_missing',
     ])))->toThrow(Error::class);
+});
+
+test('place creation covers street-only owner and location fallbacks', function () {
+    $connection = fleetopsPlaceSeamsBoot();
+    $connection->table('contacts')->insert(['uuid' => '44444444-4444-4444-8444-444444444444', 'public_id' => 'contact_placeown1', 'company_uuid' => 'company-1', 'name' => 'Owner Contact']);
+    $controller = new PlaceController();
+
+    // A street1-only request resolves through the geocoding lookup path
+    $streetOnly = $controller->create(CreatePlaceRequest::create('/v1/places', 'POST', [
+        'street1' => '99StreetOnlyRoad',
+    ]));
+    expect($connection->table('places')->where('street1', '99StreetOnlyRoad')->count())->toBe(1);
+
+    // Address objects without coordinates fall back to a zero-point location
+    // after the empty geocoder yields nothing; string owners resolve by
+    // public id including the customer prefix rewrite
+    $withOwner = $controller->create(CreatePlaceRequest::create('/v1/places', 'POST', [
+        'name'    => 'Owner Place',
+        'street1' => 'Owner Street 5',
+        'city'    => 'Singapore',
+        'country' => 'SG',
+        'owner'   => 'customer_placeown1',
+    ]));
+    expect($connection->table('places')->where('name', 'Owner Place')->value('owner_uuid'))->toBe('44444444-4444-4444-8444-444444444444');
+});
+
+test('place point and resource seams wrap coordinates and responses', function () {
+    $connection = fleetopsPlaceSeamsBoot();
+    $connection->table('places')->insert(['uuid' => '11111111-1111-4111-8111-111111111111', 'public_id' => 'place_seamtwo1', 'company_uuid' => 'company-1', 'name' => 'Depot', 'location' => fleetopsPlaceSeamsWkb(1.30, 103.80)]);
+    $probe = new FleetOpsApiPlaceControllerProbe();
+
+    // Location-shaped requests parse through the mixed-point seam
+    $fromLocation = $probe->callHelper('pointFromCoordinateRequest', fleetopsPlaceSeamsRequest('v1/places', ['location' => ['lat' => 1.32, 'lng' => 103.82]]));
+    expect($fromLocation?->getLat())->toBe(1.32);
+
+    $withLocation = $probe->callHelper('withLocationFromRequest', [], fleetopsPlaceSeamsRequest('v1/places', ['location' => ['lat' => 1.33, 'lng' => 103.83]]));
+    expect($withLocation)->toHaveKey('location');
+
+    // Reverse lookups surface the keyless geocoder rejection pre-network
+    expect(fn () => $probe->callHelper('createPlaceFromReverseGeocodingLookup', new Fleetbase\LaravelMysqlSpatial\Types\Point(1.3, 103.8)))
+        ->toThrow(Exception::class);
+
+    $place = Place::where('uuid', '11111111-1111-4111-8111-111111111111')->first();
+    expect($probe->callHelper('placeResource', $place))->not->toBeNull()
+        ->and($probe->callHelper('placeResourceCollection', collect([$place])))->not->toBeNull()
+        ->and($probe->callHelper('deletedPlaceResource', $place))->not->toBeNull()
+        ->and($probe->callHelper('apiError', 'nope', 400)->getStatusCode())->toBe(400);
 });
