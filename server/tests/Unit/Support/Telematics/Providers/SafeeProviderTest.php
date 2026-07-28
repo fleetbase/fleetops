@@ -438,3 +438,50 @@ test('safee provider normalizes device events sensors and schema contracts', fun
         Carbon::setTestNow();
     }
 });
+
+test('safee transport helpers fetch details guard credentials and surface failures', function () {
+    $provider = fleetopsSafeeProvider();
+    $invoke   = function (string $name, ...$arguments) use ($provider) {
+        $reflection = new ReflectionMethod(SafeeProvider::class, $name);
+        $reflection->setAccessible(true);
+
+        return $reflection->invoke($provider, ...$arguments);
+    };
+
+    // Missing oidc credentials raise per-field requirements
+    $bare = fleetopsSafeeProvider(['access_token' => null]);
+    expect(function () use ($bare) {
+        $reflection = new ReflectionMethod(SafeeProvider::class, 'authenticate');
+        $reflection->setAccessible(true);
+        $reflection->invoke($bare);
+    })->toThrow(InvalidArgumentException::class);
+
+    // Empty vehicle id lists skip the state lookup entirely
+    expect($invoke('fetchLastStatesByVehicle', []))->toBe([]);
+
+    // Device details post through the real safee transport with numeric coercion
+    $raw = new class extends SafeeProvider {
+        public function setCredentialsForTest(array $credentials): void
+        {
+            $this->credentials = $credentials;
+        }
+    };
+    $raw->setCredentialsForTest(['server_uri' => 'https://safee.example.test/', 'access_token' => 'static-token']);
+    $rawInvoke = function (string $name, ...$arguments) use ($raw) {
+        $reflection = new ReflectionMethod(SafeeProvider::class, $name);
+        $reflection->setAccessible(true);
+
+        return $reflection->invoke($raw, ...$arguments);
+    };
+    Http::clearResolvedInstances();
+    app()->forgetInstance(HttpFactory::class);
+    Http::fake(['*' => Http::response(['result' => ['id' => 42, 'name' => 'Vehicle 42']], 200)]);
+    expect($raw->fetchDeviceDetails('42'))->toBe(['id' => 42, 'name' => 'Vehicle 42']);
+
+    // Failed responses surface as runtime exceptions from both verbs
+    Http::clearResolvedInstances();
+    app()->forgetInstance(HttpFactory::class);
+    Http::fake(['*' => Http::response(['error' => 'nope'], 500)]);
+    expect(fn () => $rawInvoke('safeeGet', '/api/v2/broken'))->toThrow(RuntimeException::class)
+        ->and(fn () => $rawInvoke('safeePost', '/api/v2/broken', ['x' => 1]))->toThrow(RuntimeException::class);
+});
