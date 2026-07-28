@@ -321,3 +321,26 @@ test('place point and resource seams wrap coordinates and responses', function (
         ->and($probe->callHelper('deletedPlaceResource', $place))->not->toBeNull()
         ->and($probe->callHelper('apiError', 'nope', 400)->getStatusCode())->toBe(400);
 });
+
+test('integrated vendor api failures respond with quote errors', function () {
+    $connection = fleetopsPlaceSeamsBoot();
+    $connection->table('places')->insert([
+        ['uuid' => '11111111-1111-4111-8111-111111111111', 'public_id' => 'place_sqerrone1', 'company_uuid' => 'company-1', 'name' => 'Pickup', 'country' => 'SG', 'location' => fleetopsPlaceSeamsWkb(1.30, 103.80)],
+        ['uuid' => '22222222-2222-4222-8222-222222222222', 'public_id' => 'place_sqerrtwo2', 'company_uuid' => 'company-1', 'name' => 'Dropoff', 'country' => 'SG', 'location' => fleetopsPlaceSeamsWkb(1.35, 103.85)],
+    ]);
+    $connection->table('payloads')->insert(['uuid' => 'payload-err-1', 'public_id' => 'payload_sqerrone', 'company_uuid' => 'company-1', 'pickup_uuid' => '11111111-1111-4111-8111-111111111111', 'dropoff_uuid' => '22222222-2222-4222-8222-222222222222']);
+    $connection->table('integrated_vendors')->insert(['uuid' => 'iv-err-1', 'public_id' => 'integrated_vendor_err1', 'company_uuid' => 'company-1', 'provider' => 'unsupported_provider', 'credentials' => json_encode([]), 'sandbox' => '1', 'options' => json_encode([])]);
+
+    $controller = new ServiceQuoteController();
+
+    // Unresolvable providers raise through the vendor bridge on both flows
+    expect(fn () => $controller->query(fleetopsPlaceSeamsQuoteRequest('v1/service-quotes', [
+        'payload'     => 'payload_sqerrone',
+        'facilitator' => 'integrated_vendor_err1',
+    ])))->toThrow(Error::class)
+        ->and(fn () => $controller->queryFromPreliminary(fleetopsPlaceSeamsQuoteRequest('v1/service-quotes/preliminary', [
+            'pickup'      => 'place_sqerrone1',
+            'dropoff'     => 'place_sqerrtwo2',
+            'facilitator' => 'integrated_vendor_err1',
+        ])))->toThrow(Error::class);
+});
