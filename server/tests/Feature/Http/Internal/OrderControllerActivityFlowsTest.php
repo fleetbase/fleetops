@@ -459,6 +459,14 @@ test('edit order route updates waypoints and clears them for endpoint edits', fu
     expect($updated)->not->toBeNull()
         ->and($connection->table('waypoints')->where('place_uuid', '55555555-5555-4555-8555-555555555556')->count())->toBe(1);
 
+    // Explicit empty waypoint lists clear the stop list directly
+    $controller->editOrderRoute('order-1', Request::create('/x', 'PUT', ['waypoints' => []]));
+    expect($connection->table('waypoints')->whereNull('deleted_at')->count())->toBe(0);
+
+    $controller->editOrderRoute('order-1', Request::create('/x', 'PUT', [
+        'waypoints' => [['place_uuid' => '55555555-5555-4555-8555-555555555556']],
+    ]));
+
     // Endpoint-only edits clear residual waypoints
     $cleared = $controller->editOrderRoute('order-1', Request::create('/x', 'PUT', [
         'pickup'  => '55555555-5555-4555-8555-555555555557',

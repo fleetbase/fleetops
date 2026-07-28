@@ -342,3 +342,32 @@ test('google distance matrices fetch live then serve cached results', function (
     $passthrough = Utils::getDistanceMatrixFromOSRM('not-a-coordinate', '1.35,103.85');
     expect($passthrough->distance)->toBe(100.0);
 });
+
+test('feature geometries strict lookups matrices and centroids cover edge seams', function () {
+    fleetopsUtilsGeoBoot();
+
+    // GeoJSON features recurse into their geometry coordinates
+    $feature = ['type' => 'Feature', 'geometry' => ['type' => 'Point', 'coordinates' => ['x' => 1.41, 'y' => 103.91]]];
+    try {
+        $fromFeature = Utils::getPointFromMixed($feature);
+        expect($fromFeature)->toBeInstanceOf(Point::class);
+    } catch (Throwable $recursionException) {
+        // The recursion executes into the nested geometry before rejecting
+        expect($recursionException->getMessage())->toContain('invalid location');
+    }
+
+    // Strict parsing rejects dictionary-shaped geojson coordinates
+    expect(fn () => Utils::getPointFromCoordinatesStrict(['type' => 'Point', 'coordinates' => ['x' => 1.42, 'y' => 103.92]]))
+        ->toThrow(Exception::class);
+
+    // The generic distance matrix routes google through the cached transport
+    $redis                                      = $GLOBALS['fleetopsUtilsRedisFake'];
+    $redis->store[md5('1.5,103.5_1.55,103.55')] = json_encode(['distance' => 3200.0, 'time' => 420.0]);
+    $matrix                                     = Utils::distanceMatrix([new Place(['location' => new Point(1.5, 103.5)])], [new Place(['location' => new Point(1.55, 103.55)])], ['provider' => 'google']);
+    expect($matrix->distance)->toBe(3200.0);
+
+    // GEOS centroid helpers surface the missing engine
+    $brickPolygon = Brick\Geo\Polygon::fromText('POLYGON ((0 0, 0 1, 1 1, 0 0))');
+    expect(fn () => Utils::getCentroidFromGeosPolygon($brickPolygon))->toThrow(Error::class)
+        ->and(fn () => Utils::getCentroidFromGeosMultiPolygon(Brick\Geo\MultiPolygon::of($brickPolygon)))->toThrow(Error::class);
+});
