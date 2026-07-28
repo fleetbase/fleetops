@@ -440,3 +440,36 @@ test('valid update requests refresh driver and user details', function () {
         ->and($connection->table('users')->value('name'))->toBe('New Name')
         ->and($connection->table('drivers')->value('status'))->toBe('available');
 });
+
+test('create with user uuids provisions users guards conflicts and companies', function () {
+    $connection = fleetopsDriverAdoptionBoot([]);
+    Illuminate\Support\Facades\Cache::clearResolvedInstance('cache');
+
+    // Unknown user uuids provision a fresh user with generated credentials
+    $created = (new DriverController())->createRecord(fleetopsDriverAdoptionRequest([
+        'user_uuid'  => '99999999-9999-4999-8999-999999999901',
+        'name'       => 'Provisioned Driver',
+        'email'      => 'provisioned@example.com',
+        'phone'      => '+6591112222',
+        'photo_uuid' => '99999999-9999-4999-8999-999999999902',
+    ]));
+    expect($created)->toBeArray()->toHaveKey('driver')
+        ->and($connection->table('users')->where('email', 'provisioned@example.com')->count())->toBe(1)
+        ->and($connection->table('users')->where('email', 'provisioned@example.com')->value('avatar_uuid'))->toBe('99999999-9999-4999-8999-999999999902');
+
+    // Users already holding a driver profile in the company are rejected
+    $existingUserUuid = $connection->table('users')->where('email', 'provisioned@example.com')->value('uuid');
+    $conflict         = (new DriverController())->createRecord(fleetopsDriverAdoptionRequest([
+        'user_uuid' => $existingUserUuid,
+        'name'      => 'Duplicate Driver',
+    ]));
+    expect($conflict->getData(true)['error'] ?? '')->toContain('already belongs');
+
+    // Without a session company driver creation fails outright
+    session(['company' => null]);
+    $noCompany = (new DriverController())->createRecord(fleetopsDriverAdoptionRequest([
+        'name' => 'Companyless Driver',
+    ]));
+    expect($noCompany->getData(true)['error'] ?? '')->toContain('Unable to create driver');
+    session(['company' => 'company-1']);
+});
