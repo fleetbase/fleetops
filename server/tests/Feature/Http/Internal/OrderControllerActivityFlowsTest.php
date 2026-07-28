@@ -261,3 +261,57 @@ test('next activity resolves the flow and destination selection persists', funct
     $controller->setDestination('order_internal', 'place-d');
     expect($connection->table('payloads')->value('current_waypoint_uuid'))->toBe('place-d');
 });
+
+function fleetopsInternalActivitySeedWaypoints(SQLiteConnection $connection): void
+{
+    $connection->table('places')->insert([
+        ['uuid' => 'place-w1', 'company_uuid' => 'company-1', 'name' => 'Stop One'],
+        ['uuid' => 'place-w2', 'company_uuid' => 'company-1', 'name' => 'Stop Two'],
+    ]);
+    $connection->table('tracking_numbers')->insert([
+        ['uuid' => 'tn-w1', 'company_uuid' => 'company-1', 'tracking_number' => 'TRKW1', 'owner_uuid' => 'wp-1'],
+        ['uuid' => 'tn-w2', 'company_uuid' => 'company-1', 'tracking_number' => 'TRKW2', 'owner_uuid' => 'wp-2'],
+    ]);
+    $connection->table('waypoints')->insert([
+        ['uuid' => 'wp-1', 'public_id' => 'waypoint_stopone', 'company_uuid' => 'company-1', 'payload_uuid' => 'payload-1', 'place_uuid' => 'place-w1', 'tracking_number_uuid' => 'tn-w1', 'order' => '0'],
+        ['uuid' => 'wp-2', 'public_id' => 'waypoint_stoptwo', 'company_uuid' => 'company-1', 'payload_uuid' => 'payload-1', 'place_uuid' => 'place-w2', 'tracking_number_uuid' => 'tn-w2', 'order' => '1'],
+    ]);
+}
+
+test('waypoint service stop activities gate progress and advance to completion', function () {
+    $connection = fleetopsInternalActivityBoot();
+    $controller = new OrderController();
+
+    fleetopsInternalActivitySeedOrder($connection, ['driver_assigned_uuid' => 'driver-1']);
+    fleetopsInternalActivitySeedWaypoints($connection);
+    // Waypoint-only route so two completions exhaust the stops
+    $connection->table('payloads')->where('uuid', 'payload-1')->update(['pickup_uuid' => null, 'dropoff_uuid' => null]);
+
+    // Waypoint activity requires a started order first
+    $activity = ['key' => 'order_completed', 'code' => 'completed', 'status' => 'Completed', 'details' => 'Stop completed', 'complete' => true];
+    $gated    = $controller->updateActivity('order_internal', Request::create('/x', 'POST', ['activity' => $activity, 'bypass_proof' => 1]));
+    expect($gated->getStatusCode())->toBe(422);
+
+    // Started orders complete the current stop then advance to the next
+    $connection->table('orders')->where('uuid', 'order-1')->update(['started' => 1, 'status' => 'started']);
+    $controller->updateActivity('order_internal', Request::create('/x', 'POST', ['activity' => $activity, 'bypass_proof' => 1]));
+    expect($connection->table('payloads')->value('current_waypoint_uuid'))->not->toBeNull();
+
+    // Completing the final stop completes the order itself
+    $controller->updateActivity('order_internal', Request::create('/x', 'POST', ['activity' => $activity, 'bypass_proof' => 1]));
+    expect($connection->table('tracking_statuses')->where('code', 'COMPLETED')->count())->toBeGreaterThanOrEqual(1);
+});
+
+test('next activity resolves waypoint stops for started orders', function () {
+    $connection = fleetopsInternalActivityBoot();
+    $controller = new OrderController();
+
+    fleetopsInternalActivitySeedOrder($connection, ['driver_assigned_uuid' => 'driver-1', 'started' => 1, 'status' => 'started']);
+    fleetopsInternalActivitySeedWaypoints($connection);
+
+    $current = $controller->nextActivity('order_internal', Request::create('/x', 'GET'));
+    expect($current)->not->toBeNull();
+
+    $scoped = $controller->nextActivity('order_internal', Request::create('/x', 'GET', ['waypoint' => 'waypoint_stopone']));
+    expect($scoped)->not->toBeNull();
+});
