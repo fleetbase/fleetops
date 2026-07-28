@@ -1,5 +1,21 @@
 <?php
 
+if (!function_exists('Fleetbase\\Models\\env')) {
+    eval('namespace Fleetbase\\Models; function env($key = null, $default = null) { return $default; }');
+}
+
+if (!function_exists('Fleetbase\\Notifications\\env')) {
+    eval('namespace Fleetbase\\Notifications; function env($key = null, $default = null) { return $default; }');
+}
+
+if (!function_exists('Fleetbase\\Support\\env')) {
+    eval('namespace Fleetbase\\Support; function env($key = null, $default = null) { return $default; }');
+}
+
+if (!function_exists('Fleetbase\\FleetOps\\Http\\Controllers\\Internal\\v1\\env')) {
+    eval('namespace Fleetbase\\FleetOps\\Http\\Controllers\\Internal\\v1; function env($key = null, $default = null) { return $key === \'DEBUG\' ? true : $default; }');
+}
+
 use Fleetbase\FleetOps\Http\Controllers\Internal\v1\DriverController;
 use Illuminate\Database\ConnectionResolver;
 use Illuminate\Database\Eloquent\Model as EloquentModel;
@@ -71,8 +87,51 @@ if (!Request::hasMacro('or')) {
     });
 }
 
+function fleetopsDriverAdoptionContainer(): void
+{
+    $current = Illuminate\Container\Container::getInstance();
+    if (method_exists($current, 'hasDebugModeEnabled')) {
+        return;
+    }
+
+    // Core record mutation surfaces exceptions through app()->hasDebugModeEnabled()
+    // and app()->environment(), which the harness container lacks
+    $replacement = new class extends Illuminate\Container\Container {
+        public function environment(...$environments)
+        {
+            if (empty($environments)) {
+                return 'testing';
+            }
+
+            $checks = is_array($environments[0]) ? $environments[0] : $environments;
+
+            return in_array('testing', $checks, true);
+        }
+
+        public function hasDebugModeEnabled()
+        {
+            return true;
+        }
+    };
+
+    foreach (['bindings', 'instances', 'aliases', 'abstractAliases', 'resolved', 'extenders', 'tags', 'contextual', 'scopedInstances', 'reboundCallbacks', 'globalBeforeResolvingCallbacks', 'globalResolvingCallbacks', 'globalAfterResolvingCallbacks', 'beforeResolvingCallbacks', 'resolvingCallbacks', 'afterResolvingCallbacks'] as $property) {
+        if (!property_exists(Illuminate\Container\Container::class, $property)) {
+            continue;
+        }
+        $reflection = new ReflectionProperty(Illuminate\Container\Container::class, $property);
+        $reflection->setAccessible(true);
+        if ($reflection->isInitialized($current)) {
+            $reflection->setValue($replacement, $reflection->getValue($current));
+        }
+    }
+
+    Illuminate\Container\Container::setInstance($replacement);
+    Illuminate\Support\Facades\Facade::setFacadeApplication($replacement);
+}
+
 function fleetopsDriverAdoptionBoot(array $validatorErrors): SQLiteConnection
 {
+    fleetopsDriverAdoptionContainer();
     $pdo = new PDO('sqlite::memory:');
     $pdo->sqliteCreateFunction('ST_PointFromText', fn ($wkt, $srid = 0, $axisOrder = null) => $wkt);
     $pdo->sqliteCreateFunction('ST_GeomFromText', fn ($wkt, $srid = 0, $axisOrder = null) => $wkt);
@@ -80,7 +139,9 @@ function fleetopsDriverAdoptionBoot(array $validatorErrors): SQLiteConnection
     $resolver   = new ConnectionResolver(['default' => $connection, 'mysql' => $connection]);
     $resolver->setDefaultConnection('mysql');
     EloquentModel::setConnectionResolver($resolver);
-    EloquentModel::setEventDispatcher(new Illuminate\Events\Dispatcher());
+    if (!EloquentModel::getEventDispatcher()) {
+        EloquentModel::setEventDispatcher(new Illuminate\Events\Dispatcher());
+    }
     app()->instance('db', new class($connection) {
         public function __construct(public SQLiteConnection $c)
         {
@@ -110,7 +171,7 @@ function fleetopsDriverAdoptionBoot(array $validatorErrors): SQLiteConnection
             return new class implements Illuminate\Contracts\Validation\Validator {
                 public function fails()
                 {
-                    return true;
+                    return !empty($GLOBALS['fleetopsDriverAdoptionErrors']);
                 }
 
                 public function errors()
@@ -154,13 +215,23 @@ function fleetopsDriverAdoptionBoot(array $validatorErrors): SQLiteConnection
 
     $schema = $connection->getSchemaBuilder();
     $tables = [
-        'drivers'       => ['uuid', 'public_id', 'internal_id', 'company_uuid', 'user_uuid', 'vehicle_uuid', 'vendor_uuid', 'location', 'slug', 'status', 'country', 'city', 'online', '_key'],
-        'users'         => ['uuid', 'public_id', 'company_uuid', 'name', 'email', 'phone', 'password', 'status', 'type', 'username', 'avatar_uuid', 'slug', 'timezone', 'country', 'ip_address', 'meta', '_key'],
-        'companies'     => ['uuid', 'public_id', 'name', 'owner_uuid', 'timezone', 'options', 'status', '_key'],
-        'company_users' => ['uuid', 'public_id', 'company_uuid', 'user_uuid', 'status', '_key'],
-        'vehicles'      => ['uuid', 'public_id', 'company_uuid', 'driver_uuid'],
-        'custom_fields' => ['uuid', 'company_uuid', 'subject_uuid', 'subject_type', 'name', 'label'],
-        'settings'      => ['key', 'value'],
+        'drivers'               => ['uuid', 'public_id', 'internal_id', 'company_uuid', 'user_uuid', 'vehicle_uuid', 'vendor_uuid', 'current_job_uuid', 'auth_token', 'signup_token_used', 'avatar_url', 'drivers_license_number', 'license_expiry', 'location', 'heading', 'bearing', 'altitude', 'speed', 'currency', 'current_status', 'meta', 'location_updated_at', 'slug', 'status', 'country', 'city', 'online', '_key'],
+        'users'                 => ['uuid', 'public_id', 'company_uuid', 'name', 'email', 'phone', 'password', 'status', 'type', 'username', 'avatar_uuid', 'slug', 'timezone', 'country', 'ip_address', 'meta', '_key'],
+        'companies'             => ['uuid', 'public_id', 'name', 'owner_uuid', 'timezone', 'options', 'status', '_key'],
+        'company_users'         => ['uuid', 'public_id', 'company_uuid', 'user_uuid', 'status', '_key'],
+        'vehicles'              => ['uuid', 'public_id', 'company_uuid', 'driver_uuid'],
+        'custom_fields'         => ['uuid', 'company_uuid', 'subject_uuid', 'subject_type', 'name', 'label'],
+        'settings'              => ['key', 'value'],
+        'permissions'           => ['name', 'guard_name', 'service', 'description'],
+        'roles'                 => ['uuid', 'public_id', 'name', 'guard_name', 'company_uuid', 'service', 'description', '_key'],
+        'model_has_roles'       => ['role_id', 'model_type', 'model_uuid'],
+        'model_has_permissions' => ['permission_id', 'model_type', 'model_uuid'],
+        'role_has_permissions'  => ['permission_id', 'role_id'],
+        'policies'              => ['name', 'guard_name', 'company_uuid'],
+        'directives'            => ['uuid', 'public_id', 'company_uuid', 'permission_uuid', 'subject_type', 'subject_uuid', 'key', 'rules'],
+        'files'                 => ['uuid', 'public_id', 'company_uuid', 'uploader_uuid', 'subject_uuid', 'subject_type', 'name', 'original_filename', 'extension', 'content_type', 'path', 'bucket', 'disk', 'size', 'type', 'meta', '_key'],
+        'invites'               => ['uuid', 'public_id', 'company_uuid', 'created_by_uuid', 'subject_uuid', 'subject_type', 'code', 'uri', 'protocol', 'recipients', 'reason', 'expires_at', '_key'],
+        'notifications'         => ['type', 'notifiable_type', 'notifiable_id', 'data', 'read_at'],
     ];
     foreach ($tables as $table => $columns) {
         $schema->create($table, function ($blueprint) use ($columns) {
@@ -173,12 +244,79 @@ function fleetopsDriverAdoptionBoot(array $validatorErrors): SQLiteConnection
         });
     }
 
+    app()->instance('cache', new class {
+        public function tags($tags = null)
+        {
+            return $this;
+        }
+
+        public function flush()
+        {
+            return true;
+        }
+
+        public function remember($key, $ttl, $callback)
+        {
+            return $callback();
+        }
+
+        public function store($name = null)
+        {
+            return $this;
+        }
+
+        public function __call($method, $arguments)
+        {
+            return null;
+        }
+    });
+    Illuminate\Support\Facades\Cache::clearResolvedInstance('cache');
+    app()->instance(Illuminate\Contracts\Notifications\Dispatcher::class, new class {
+        public array $sent = [];
+
+        public function send($notifiables, $notification)
+        {
+            $this->sent[] = $notification;
+        }
+
+        public function sendNow($notifiables, $notification, ?array $channels = null)
+        {
+            $this->sent[] = $notification;
+        }
+
+        public function __call($method, $arguments)
+        {
+            return null;
+        }
+    });
+    config()->set('cache.default', 'array');
+    config()->set('cache.stores.array', ['driver' => 'array']);
+    config()->set('permission.cache.expiration_time', 60);
+    config()->set('permission.cache.key', 'spatie.permission.cache');
+    config()->set('permission.cache.store', 'default');
+    config()->set('permission.models.permission', Fleetbase\Models\Permission::class);
+    config()->set('permission.models.role', Fleetbase\Models\Role::class);
+    config()->set('permission.table_names', ['roles' => 'roles', 'permissions' => 'permissions', 'model_has_permissions' => 'model_has_permissions', 'model_has_roles' => 'model_has_roles', 'role_has_permissions' => 'role_has_permissions']);
+    config()->set('permission.column_names', ['role_pivot_key' => null, 'permission_pivot_key' => null, 'model_morph_key' => 'model_uuid', 'team_foreign_key' => 'team_id']);
+    config()->set('permission.teams', false);
+    config()->set('permission.events_enabled', false);
+    $cacheManager = new Illuminate\Cache\CacheManager(app());
+    app()->instance(Illuminate\Cache\CacheManager::class, $cacheManager);
+    app()->instance(Spatie\Permission\PermissionRegistrar::class, new Spatie\Permission\PermissionRegistrar($cacheManager));
     config()->set('activitylog.enabled', false);
     config()->set('activitylog.default_auth_driver', 'web');
+    config()->set('auth.defaults.guard', 'web');
+    config()->set('permission.models.role', Fleetbase\Models\Role::class);
     app()->bind(Illuminate\Contracts\Config\Repository::class, fn () => config());
 
     session(['company' => 'company-1']);
     $connection->table('companies')->insert(['uuid' => 'company-1', 'public_id' => 'company_adopt1', 'name' => 'Acme']);
+    $connection->table('roles')->insert([
+        ['uuid' => 'role-1', 'name' => 'Driver', 'guard_name' => 'web', 'company_uuid' => 'company-1'],
+        ['uuid' => 'role-2', 'name' => 'Driver', 'guard_name' => 'sanctum', 'company_uuid' => 'company-1'],
+        ['uuid' => 'role-3', 'name' => 'Administrator', 'guard_name' => 'web', 'company_uuid' => 'company-1'],
+        ['uuid' => 'role-4', 'name' => 'Administrator', 'guard_name' => 'sanctum', 'company_uuid' => 'company-1'],
+    ]);
 
     return $connection;
 }
@@ -227,4 +365,78 @@ test('non phone or email conflicts fall through to the error response', function
     expect(fn () => (new DriverController())->createRecord(fleetopsDriverAdoptionRequest([
         'phone' => '+6590000000',
     ])))->toThrow(TypeError::class);
+});
+
+test('valid create requests build the driver user and profile', function () {
+    $connection = fleetopsDriverAdoptionBoot([]);
+
+    fwrite(STDERR, "\nDBG guard: " . Spatie\Permission\Guard::getDefaultName(Fleetbase\Models\CompanyUser::class) . ' roles: ' . Fleetbase\Models\Role::query()->count() . "\n");
+    try {
+        Fleetbase\Models\Role::findByName('Driver', 'sanctum');
+        fwrite(STDERR, "DBG findByName sanctum: OK\n");
+    } catch (Throwable $e) {
+        fwrite(STDERR, 'DBG findByName sanctum failed: ' . get_class($e) . "\n");
+    }
+    putenv('DEBUG=1');
+    $_ENV['DEBUG'] = $_SERVER['DEBUG'] = '1';
+    $result        = (new DriverController())->createRecord(fleetopsDriverAdoptionRequest([
+        'name'  => 'Fresh Driver',
+        'email' => 'fresh@example.com',
+        'phone' => '+6590001111',
+    ]));
+
+    expect($result)->toBeArray()->toHaveKey('driver')
+        ->and($connection->table('users')->where('email', 'fresh@example.com')->value('type'))->toBe('driver')
+        ->and($connection->table('drivers')->whereNotNull('user_uuid')->count())->toBe(1)
+        ->and($connection->table('model_has_roles')->count())->toBeGreaterThanOrEqual(1);
+});
+
+test('valid update requests refresh driver and user details', function () {
+    $connection = fleetopsDriverAdoptionBoot([]);
+    $connection->table('users')->insert(['uuid' => '11111111-1111-4111-8111-111111111111', 'company_uuid' => 'company-1', 'name' => 'Old Name', 'email' => 'old@example.com', 'type' => 'driver']);
+    $connection->table('drivers')->insert(['uuid' => '22222222-2222-4222-8222-222222222222', 'public_id' => 'driver_updone1', 'company_uuid' => 'company-1', 'user_uuid' => '11111111-1111-4111-8111-111111111111']);
+
+    $request = Request::create('/int/v1/drivers/driver_updone1', 'PUT', ['driver' => [
+        'name'   => 'New Name',
+        'status' => 'active',
+    ]]);
+    $request->setRouteResolver(function () {
+        return new class {
+            public function getAction($key = null)
+            {
+                return $key === null ? ['controller' => DriverController::class . '@updateRecord'] : DriverController::class . '@updateRecord';
+            }
+
+            public function getActionMethod()
+            {
+                return 'updateRecord';
+            }
+
+            public function getName()
+            {
+                return 'internal.drivers.update';
+            }
+
+            public function uri()
+            {
+                return 'int/v1/drivers/{id}';
+            }
+
+            public function parameters()
+            {
+                return ['id' => 'driver_updone1'];
+            }
+
+            public function parameter($name = null, $default = null)
+            {
+                return $name === 'id' ? 'driver_updone1' : $default;
+            }
+        };
+    });
+
+    $result = (new DriverController())->updateRecord($request, 'driver_updone1');
+
+    expect($result)->toBeArray()->toHaveKey('driver')
+        ->and($connection->table('users')->value('name'))->toBe('New Name')
+        ->and($connection->table('drivers')->value('status'))->toBe('available');
 });
