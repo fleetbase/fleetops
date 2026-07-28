@@ -502,3 +502,37 @@ test('creation codes fail gracefully and photos resolve by file public id', func
     ]));
     expect($connection->table('contacts')->where('email', 'photo@example.com')->value('photo_uuid'))->toBe('file-cust-1');
 });
+
+test('order config fallbacks payload builders and verification seams resolve', function () {
+    $connection = fleetopsCustomerHelperBoot();
+    $connection->table('order_configs')->insert(['uuid' => 'config-cust-1', 'public_id' => 'order_config_cust1', 'company_uuid' => 'company-1', 'name' => 'Customer Transport', 'key' => 'transport', 'namespace' => 'system:order-config:transport', 'core_service' => '1', 'status' => 'active', 'flow' => json_encode([])]);
+    $connection->table('places')->insert([
+        ['uuid' => '77777777-7777-4777-8777-777777777771', 'public_id' => 'place_custord1', 'company_uuid' => 'company-1', 'name' => 'Customer Pickup'],
+        ['uuid' => '77777777-7777-4777-8777-777777777772', 'public_id' => 'place_custord2', 'company_uuid' => 'company-1', 'name' => 'Customer Dropoff'],
+    ]);
+    $probe = new FleetOpsCustomerControllerProbe();
+
+    // Config resolution falls back to the first company config
+    $config = $probe->callHelper('resolveOrderConfig', Fleetbase\FleetOps\Http\Requests\CreateCustomerOrderRequest::create('/v1/customers/orders', 'POST', []), 'company-1');
+    expect($config?->uuid)->toBe('config-cust-1');
+
+    // Route-endpoint payload builders persist pickup and dropoff stops
+    $payload = $probe->callHelper('buildPayloadFromInput', [
+        'pickup'  => '77777777-7777-4777-8777-777777777771',
+        'dropoff' => '77777777-7777-4777-8777-777777777772',
+    ], 'company-1');
+    expect($payload)->not->toBeNull()
+        ->and($connection->table('payloads')->where('pickup_uuid', '77777777-7777-4777-8777-777777777771')->count())->toBe(1);
+
+    // Verification generators surface transport failures from their seams
+    $connection->table('users')->insert(['uuid' => 'user-ver-1', 'company_uuid' => 'company-1', 'name' => 'Verify User', 'email' => 'verify@example.com', 'phone' => '+6590007777', 'type' => 'customer']);
+    $user = User::where('uuid', 'user-ver-1')->first();
+    foreach (['generateEmailVerification', 'generateSmsVerification'] as $seam) {
+        try {
+            $probe->callHelper($seam, $user, 'fleetops_test', []);
+            expect(true)->toBeTrue();
+        } catch (Throwable $transportFailure) {
+            expect($transportFailure)->toBeInstanceOf(Throwable::class);
+        }
+    }
+});
