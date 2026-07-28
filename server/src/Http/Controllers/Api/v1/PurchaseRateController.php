@@ -11,6 +11,7 @@ use Fleetbase\FleetOps\Models\ServiceQuote;
 use Fleetbase\FleetOps\Models\ServiceRate;
 use Fleetbase\FleetOps\Support\Utils;
 use Fleetbase\Http\Controllers\Controller;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 class PurchaseRateController extends Controller
@@ -134,7 +135,7 @@ class PurchaseRateController extends Controller
      *
      * @return \Fleetbase\Models\Order|null
      */
-    protected function createOrderFromServiceQuote(?ServiceQuote $serviceQuote, CreatePurchaseRateRequest $request): ?Order
+    protected function createOrderFromServiceQuote(?ServiceQuote $serviceQuote, CreatePurchaseRateRequest $request): Order|JsonResponse|null
     {
         // if integrated vendor service quote create order with vendor first then create fleetbase order
         $integratedVendorOrder = null;
@@ -164,7 +165,9 @@ class PurchaseRateController extends Controller
             $payload = new Payload();
             $payload->setPickup($pickup);
             $payload->setDropoff($dropoff);
-            $payload->setDropoff($return);
+            if ($return) {
+                $payload->setReturn($return);
+            }
             $payload->setWaypoints($waypoints);
             $payload->setEntities($entities);
             $payload->save();
