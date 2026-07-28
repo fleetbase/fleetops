@@ -118,3 +118,71 @@ test('geofence intersection algorithm detects entries exits and ignores unchange
         ])
         ->and($crossings[2]['geofence'])->toBe($exitedArea);
 });
+
+test('real geofence queries filter triggered borders and resolve records', function () {
+    $pdo = new PDO('sqlite::memory:');
+    $pdo->sqliteCreateFunction('MBRContains', fn ($border, $point) => 1);
+    $pdo->sqliteCreateFunction('ST_Contains', fn ($border, $point) => 1);
+    $pdo->sqliteCreateFunction('ST_GeomFromText', fn ($wkt, $srid = 0, $axisOrder = null) => $wkt);
+    $connection = new Illuminate\Database\SQLiteConnection($pdo);
+    $resolver   = new Illuminate\Database\ConnectionResolver(['default' => $connection, 'mysql' => $connection]);
+    $resolver->setDefaultConnection('mysql');
+    Illuminate\Database\Eloquent\Model::setConnectionResolver($resolver);
+    app()->instance('db', new class($connection) {
+        public function __construct(public Illuminate\Database\SQLiteConnection $c)
+        {
+        }
+
+        public function connection($name = null): Illuminate\Database\SQLiteConnection
+        {
+            return $this->c;
+        }
+
+        public function __call($method, $arguments)
+        {
+            return $this->c->{$method}(...$arguments);
+        }
+    });
+    Illuminate\Support\Facades\DB::clearResolvedInstance('db');
+
+    $schema = $connection->getSchemaBuilder();
+    foreach (['zones' => ['uuid', 'company_uuid', 'name', 'border', 'trigger_on_entry', 'trigger_on_exit', 'dwell_threshold_minutes', 'service_area_uuid', 'public_id'], 'service_areas' => ['uuid', 'company_uuid', 'name', 'border', 'trigger_on_entry', 'trigger_on_exit', 'dwell_threshold_minutes', 'public_id']] as $table => $columns) {
+        $schema->create($table, function ($blueprint) use ($columns) {
+            $blueprint->increments('id');
+            foreach ($columns as $column) {
+                $blueprint->string($column)->nullable();
+            }
+            $blueprint->timestamps();
+            $blueprint->timestamp('deleted_at')->nullable();
+        });
+    }
+    $schema->create('driver_geofence_states', function ($blueprint) {
+        $blueprint->increments('id');
+        foreach (['driver_uuid', 'geofence_uuid', 'geofence_type', 'entered_at', 'exited_at'] as $column) {
+            $blueprint->string($column)->nullable();
+        }
+        $blueprint->integer('is_inside')->nullable();
+        $blueprint->timestamps();
+    });
+
+    $connection->table('zones')->insert([
+        ['uuid' => 'zone-real-1', 'company_uuid' => 'company-1', 'name' => 'Triggered', 'border' => 'POLYGON', 'trigger_on_entry' => 1],
+        ['uuid' => 'zone-real-2', 'company_uuid' => 'company-1', 'name' => 'Untriggered', 'border' => null, 'trigger_on_entry' => null],
+    ]);
+    $connection->table('service_areas')->insert(['uuid' => 'sa-real-1', 'company_uuid' => 'company-1', 'name' => 'Area', 'border' => 'POLYGON', 'trigger_on_exit' => 1]);
+    $connection->table('driver_geofence_states')->insert(['driver_uuid' => 'driver-1', 'geofence_uuid' => 'zone-real-1', 'geofence_type' => 'zone', 'is_inside' => 1]);
+
+    $service = new GeofenceIntersectionService();
+    $invoke  = function (string $name, ...$arguments) use ($service) {
+        $reflection = new ReflectionMethod(GeofenceIntersectionService::class, $name);
+        $reflection->setAccessible(true);
+
+        return $reflection->invoke($service, ...$arguments);
+    };
+
+    expect($invoke('insideZones', 'company-1', 'POINT(103.8 1.3)'))->toHaveCount(1)
+        ->and($invoke('insideServiceAreas', 'company-1', 'POINT(103.8 1.3)'))->toHaveCount(1)
+        ->and($invoke('currentSubjectStates', 'driver_geofence_states', 'driver_uuid', 'driver-1')->has('zone-real-1'))->toBeTrue()
+        ->and($invoke('findGeofence', 'zone', 'zone-real-1')?->uuid)->toBe('zone-real-1')
+        ->and($invoke('findGeofence', 'service_area', 'sa-real-1')?->uuid)->toBe('sa-real-1');
+});
