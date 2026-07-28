@@ -91,7 +91,7 @@ function fleetopsInternalActivityBoot(): SQLiteConnection
         'orders'            => ['uuid', 'public_id', 'internal_id', 'company_uuid', 'payload_uuid', 'order_config_uuid', 'tracking_number_uuid', 'driver_assigned_uuid', 'status', 'type', 'adhoc', 'dispatched', 'dispatched_at', 'started', 'started_at', 'scheduled_at', 'meta', 'distance', 'time', 'pod_required', 'pod_method'],
         'payloads'          => ['uuid', 'public_id', 'company_uuid', 'pickup_uuid', 'dropoff_uuid', 'return_uuid', 'current_waypoint_uuid', 'pickup_tracking_number_uuid', 'dropoff_tracking_number_uuid', 'meta', 'type'],
         'places'            => ['uuid', 'public_id', 'company_uuid', 'name', 'street1', 'city', 'country', 'location', 'meta'],
-        'waypoints'         => ['uuid', 'public_id', 'company_uuid', 'payload_uuid', 'place_uuid', 'tracking_number_uuid', 'order', 'type'],
+        'waypoints'         => ['uuid', 'public_id', 'company_uuid', 'payload_uuid', 'place_uuid', 'tracking_number_uuid', 'customer_uuid', 'customer_type', 'order', 'type', '_key', '_import_id'],
         'drivers'           => ['uuid', 'public_id', 'company_uuid', 'user_uuid', 'vehicle_uuid', 'status', 'online', 'location', 'current_job_uuid'],
         'users'             => ['uuid', 'public_id', 'company_uuid', 'name', 'status', 'type'],
         'order_configs'     => ['uuid', 'public_id', 'company_uuid', 'name', 'key', 'namespace', 'description', 'flow', 'entities', 'meta', 'version', 'core_service', 'status', 'type', '_key'],
@@ -438,4 +438,35 @@ test('next activity marks proof requirements on completing activities', function
     $flattened = json_encode($payload);
 
     expect($flattened)->toContain('require_pod');
+});
+
+test('edit order route updates waypoints and clears them for endpoint edits', function () {
+    $connection = fleetopsInternalActivityBoot();
+    fleetopsInternalActivitySeedOrder($connection);
+    fleetopsInternalActivitySeedWaypoints($connection);
+    $connection->table('places')->insert([
+        ['uuid' => '55555555-5555-4555-8555-555555555556', 'company_uuid' => 'company-1', 'name' => 'Route Edit Stop'],
+        ['uuid' => '55555555-5555-4555-8555-555555555557', 'company_uuid' => 'company-1', 'name' => 'Route Edit Pickup'],
+        ['uuid' => '55555555-5555-4555-8555-555555555558', 'company_uuid' => 'company-1', 'name' => 'Route Edit Dropoff'],
+    ]);
+    app()->bind('Fleetbase\Fleetops\Models\Contact', fn () => new Fleetbase\FleetOps\Models\Contact());
+    $controller = new OrderController();
+
+    // Waypoint updates rewrite the stop list through the payload
+    $updated = $controller->editOrderRoute('order-1', Request::create('/x', 'PUT', [
+        'waypoints' => [['place_uuid' => '55555555-5555-4555-8555-555555555556']],
+    ]));
+    expect($updated)->not->toBeNull()
+        ->and($connection->table('waypoints')->where('place_uuid', '55555555-5555-4555-8555-555555555556')->count())->toBe(1);
+
+    // Endpoint-only edits clear residual waypoints
+    $cleared = $controller->editOrderRoute('order-1', Request::create('/x', 'PUT', [
+        'pickup'  => '55555555-5555-4555-8555-555555555557',
+        'dropoff' => '55555555-5555-4555-8555-555555555558',
+    ]));
+    expect($connection->table('waypoints')->whereNull('deleted_at')->count())->toBe(0);
+
+    // Unknown orders respond with the error seam
+    $missing = $controller->editOrderRoute('order-unknown', Request::create('/x', 'PUT', []));
+    expect($missing->getData(true)['error'] ?? '')->toContain('Unable to find order');
 });
