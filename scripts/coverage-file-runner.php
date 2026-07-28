@@ -5,6 +5,10 @@ declare(strict_types=1);
 use SebastianBergmann\CodeCoverage\CodeCoverage;
 use SebastianBergmann\CodeCoverage\Report\Clover;
 
+// Merging hundreds of per-file coverage snapshots into one clover report
+// needs more than the default 128M limit
+ini_set('memory_limit', '-1');
+
 $autoloadCandidates = [
     getcwd() . '/server_vendor/autoload.php',
     getcwd() . '/vendor/autoload.php',
