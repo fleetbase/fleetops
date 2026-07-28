@@ -1,6 +1,7 @@
 <?php
 
 use Fleetbase\FleetOps\Http\Controllers\Api\v1\OrderController;
+use Fleetbase\FleetOps\Http\Requests\UpdateOrderRequest;
 use Fleetbase\FleetOps\Models\Order;
 use Illuminate\Database\ConnectionResolver;
 use Illuminate\Database\Eloquent\Model as EloquentModel;
@@ -41,6 +42,12 @@ if (!Request::hasMacro('or')) {
         }
 
         return $default;
+    });
+}
+
+if (!Request::hasMacro('isArray')) {
+    Request::macro('isArray', function ($key) {
+        return is_array($this->input($key));
     });
 }
 
@@ -91,19 +98,25 @@ function fleetopsOrderStartBoot(): SQLiteConnection
     $schema = $connection->getSchemaBuilder();
     app()->instance('db.schema', $schema);
     $tables = [
-        'orders'            => ['uuid', 'public_id', 'internal_id', 'company_uuid', 'payload_uuid', 'order_config_uuid', 'tracking_number_uuid', 'driver_assigned_uuid', 'status', 'type', 'adhoc', 'dispatched', 'dispatched_at', 'started', 'started_at', 'scheduled_at', 'meta', 'distance', 'time', 'pod_required', 'pod_method'],
-        'payloads'          => ['uuid', 'public_id', 'company_uuid', 'pickup_uuid', 'dropoff_uuid', 'return_uuid', 'current_waypoint_uuid', 'pickup_tracking_number_uuid', 'dropoff_tracking_number_uuid', 'meta', 'type'],
-        'places'            => ['uuid', 'public_id', 'company_uuid', 'name', 'street1', 'city', 'country', 'location', 'meta'],
-        'waypoints'         => ['uuid', 'public_id', 'company_uuid', 'payload_uuid', 'place_uuid', 'tracking_number_uuid', 'order', 'type'],
-        'drivers'           => ['uuid', 'public_id', 'company_uuid', 'user_uuid', 'vehicle_uuid', 'status', 'online', 'location', 'current_job_uuid'],
-        'users'             => ['uuid', 'public_id', 'company_uuid', 'name', 'status', 'type'],
-        'order_configs'     => ['uuid', 'public_id', 'company_uuid', 'name', 'key', 'namespace', 'description', 'flow', 'entities', 'meta', 'version', 'core_service', 'status', 'type', '_key'],
-        'tracking_numbers'  => ['uuid', 'public_id', 'company_uuid', 'tracking_number', 'region', 'location', 'status_uuid', 'owner_uuid', 'owner_type', 'qr_code', 'barcode', '_key'],
-        'tracking_statuses' => ['uuid', 'public_id', 'company_uuid', 'tracking_number_uuid', 'proof_uuid', 'status', 'details', 'location', 'code', 'complete', '_key'],
-        'entities'          => ['uuid', 'public_id', 'company_uuid', 'payload_uuid', 'destination_uuid', 'tracking_number_uuid', 'name', 'type'],
-        'proofs'            => ['uuid', 'public_id', 'company_uuid', 'subject_uuid', 'subject_type', 'remarks', 'raw_data', 'data'],
-        'companies'         => ['uuid', 'public_id', 'name', 'country'],
-        'positions'         => ['uuid', 'public_id', 'company_uuid', 'subject_uuid', 'subject_type', 'destination_uuid', 'coordinates', 'heading', 'bearing', 'speed', 'altitude', 'order_uuid', '_key'],
+        'orders'              => ['uuid', 'public_id', 'internal_id', 'company_uuid', 'payload_uuid', 'order_config_uuid', 'tracking_number_uuid', 'driver_assigned_uuid', 'status', 'type', 'adhoc', 'dispatched', 'dispatched_at', 'started', 'started_at', 'scheduled_at', 'meta', 'distance', 'time', 'pod_required', 'pod_method'],
+        'payloads'            => ['uuid', 'public_id', 'company_uuid', 'pickup_uuid', 'dropoff_uuid', 'return_uuid', 'current_waypoint_uuid', 'pickup_tracking_number_uuid', 'dropoff_tracking_number_uuid', 'meta', 'type'],
+        'places'              => ['uuid', 'public_id', 'company_uuid', 'name', 'street1', 'city', 'country', 'location', 'meta'],
+        'waypoints'           => ['uuid', 'public_id', 'company_uuid', 'payload_uuid', 'place_uuid', 'tracking_number_uuid', 'order', 'type'],
+        'drivers'             => ['uuid', 'public_id', 'company_uuid', 'user_uuid', 'vehicle_uuid', 'status', 'online', 'location', 'current_job_uuid'],
+        'users'               => ['uuid', 'public_id', 'company_uuid', 'name', 'status', 'type'],
+        'order_configs'       => ['uuid', 'public_id', 'company_uuid', 'name', 'key', 'namespace', 'description', 'flow', 'entities', 'meta', 'version', 'core_service', 'status', 'type', '_key'],
+        'tracking_numbers'    => ['uuid', 'public_id', 'company_uuid', 'tracking_number', 'region', 'location', 'status_uuid', 'owner_uuid', 'owner_type', 'qr_code', 'barcode', '_key'],
+        'tracking_statuses'   => ['uuid', 'public_id', 'company_uuid', 'tracking_number_uuid', 'proof_uuid', 'status', 'details', 'location', 'code', 'complete', '_key'],
+        'entities'            => ['uuid', 'public_id', 'company_uuid', 'payload_uuid', 'destination_uuid', 'tracking_number_uuid', 'name', 'type'],
+        'proofs'              => ['uuid', 'public_id', 'company_uuid', 'subject_uuid', 'subject_type', 'remarks', 'raw_data', 'data'],
+        'companies'           => ['uuid', 'public_id', 'name', 'country'],
+        'positions'           => ['uuid', 'public_id', 'company_uuid', 'subject_uuid', 'subject_type', 'destination_uuid', 'coordinates', 'heading', 'bearing', 'speed', 'altitude', 'order_uuid', '_key'],
+        'purchase_rates'      => ['uuid', 'public_id', 'company_uuid', 'customer_uuid', 'customer_type', 'service_quote_uuid', 'payload_uuid', 'order_uuid', 'status', 'amount', 'currency', '_key'],
+        'service_quotes'      => ['uuid', 'public_id', 'company_uuid', 'request_id', 'service_rate_uuid', 'payload_uuid', 'amount', 'currency', 'meta', '_key'],
+        'service_quote_items' => ['uuid', 'service_quote_uuid', 'amount', 'details', 'code'],
+        'vehicles'            => ['uuid', 'public_id', 'company_uuid', 'name', 'plate_number', 'location', 'online'],
+        'contacts'            => ['uuid', 'public_id', 'company_uuid', 'name', 'type', 'email', 'phone'],
+        'vendors'             => ['uuid', 'public_id', 'company_uuid', 'name', 'email', 'phone'],
     ];
     foreach ($tables as $table => $columns) {
         $schema->create($table, function ($blueprint) use ($columns) {
@@ -332,10 +345,79 @@ test('next activity and complete order resolve service stop flows', function () 
     expect($incomplete->getData(true)['error'])->toContain('Not all waypoints');
 
     // With every waypoint completed the order completes
-    $connection->table('tracking_numbers')->whereIn('uuid', ['tn-w1', 'tn-w2'])->update(['status_uuid' => 'ts-done']);
     $connection->table('tracking_statuses')->insert([
-        ['uuid' => 'ts-done', 'company_uuid' => 'company-1', 'tracking_number_uuid' => 'tn-w1', 'code' => 'COMPLETED', 'status' => 'Completed'],
+        ['uuid' => 'ts-done1', 'company_uuid' => 'company-1', 'tracking_number_uuid' => 'tn-w1', 'code' => 'COMPLETED', 'status' => 'Completed'],
+        ['uuid' => 'ts-done2', 'company_uuid' => 'company-1', 'tracking_number_uuid' => 'tn-w2', 'code' => 'COMPLETED', 'status' => 'Completed'],
     ]);
     $completed = $controller->completeOrder('order_start');
-    expect($completed)->not->toBeNull();
+    expect(method_exists($completed, 'getData') ? $completed->getData(true) : [])->not->toHaveKey('error')
+        ->and($connection->table('orders')->value('status'))->toBe('completed');
+});
+
+test('update responds 404 for unknown orders and builds payloads from route fields', function () {
+    $connection = fleetopsOrderStartBoot();
+    fleetopsOrderStartSeedOrder($connection);
+    fleetopsOrderStartSeedWaypoints($connection);
+    Illuminate\Support\Facades\Cache::swap(new class {
+        public function tags($tags = null)
+        {
+            return $this;
+        }
+
+        public function flush()
+        {
+            return true;
+        }
+
+        public function remember($key, $ttl, $callback)
+        {
+            return $callback();
+        }
+
+        public function __call($method, $arguments)
+        {
+            return null;
+        }
+    });
+    // Waypoint customer resolution mutates 'fleetops:contact' into a miscased FQCN
+    app()->bind('Fleetbase\Fleetops\Models\Contact', fn () => new Fleetbase\FleetOps\Models\Contact());
+    $connection->table('places')->insert([
+        ['uuid' => '33333333-3333-4333-8333-333333333331', 'company_uuid' => 'company-1', 'name' => 'Route A'],
+        ['uuid' => '33333333-3333-4333-8333-333333333332', 'company_uuid' => 'company-1', 'name' => 'Route B'],
+        ['uuid' => '33333333-3333-4333-8333-333333333333', 'company_uuid' => 'company-1', 'name' => 'Route C'],
+    ]);
+    $controller = new OrderController();
+
+    $missing = $controller->update('order_missing', UpdateOrderRequest::create('/v1/orders/order_missing', 'PUT', []));
+    expect($missing->getStatusCode())->toBe(404);
+
+    // Waypoint-only route fields: first and last become pickup/dropoff, the middle stays a waypoint
+    $fromWaypoints = $controller->update('order_start', UpdateOrderRequest::create('/v1/orders/order_start', 'PUT', [
+        'waypoints' => ['33333333-3333-4333-8333-333333333331', '33333333-3333-4333-8333-333333333332', '33333333-3333-4333-8333-333333333333'],
+    ]));
+    expect($fromWaypoints)->not->toBeNull()
+        ->and($connection->table('payloads')->value('pickup_uuid'))->toBe('33333333-3333-4333-8333-333333333331')
+        ->and($connection->table('payloads')->value('dropoff_uuid'))->toBe('33333333-3333-4333-8333-333333333333')
+        ->and($connection->table('waypoints')->where('place_uuid', '33333333-3333-4333-8333-333333333332')->whereNull('deleted_at')->count())->toBe(1);
+
+    // Explicit pickup/dropoff/return with entities but no waypoints clears existing waypoints
+    $fromEndpoints = $controller->update('order_start', UpdateOrderRequest::create('/v1/orders/order_start', 'PUT', [
+        'pickup'   => '33333333-3333-4333-8333-333333333331',
+        'dropoff'  => '33333333-3333-4333-8333-333333333332',
+        'return'   => '33333333-3333-4333-8333-333333333333',
+        'entities' => [['name' => 'Box', 'type' => 'parcel']],
+    ]));
+    expect($fromEndpoints)->not->toBeNull()
+        ->and($connection->table('payloads')->value('pickup_uuid'))->toBe('33333333-3333-4333-8333-333333333331')
+        ->and($connection->table('payloads')->value('return_uuid'))->toBe('33333333-3333-4333-8333-333333333333')
+        ->and($connection->table('waypoints')->whereNull('deleted_at')->count())->toBe(0)
+        ->and($connection->table('entities')->where('name', 'Box')->count())->toBe(1);
+
+    // A payload[] array update flows through the same shape including the return stop
+    $fromPayloadArray = $controller->update('order_start', UpdateOrderRequest::create('/v1/orders/order_start', 'PUT', [
+        'payload' => ['pickup' => '33333333-3333-4333-8333-333333333332', 'dropoff' => '33333333-3333-4333-8333-333333333331', 'return' => '33333333-3333-4333-8333-333333333331'],
+    ]));
+    expect($fromPayloadArray)->not->toBeNull()
+        ->and($connection->table('payloads')->value('pickup_uuid'))->toBe('33333333-3333-4333-8333-333333333332')
+        ->and($connection->table('payloads')->value('return_uuid'))->toBe('33333333-3333-4333-8333-333333333331');
 });

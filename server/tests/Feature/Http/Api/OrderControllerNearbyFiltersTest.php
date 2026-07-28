@@ -191,6 +191,28 @@ test('nearby driver filter uses the resolved driver location', function () {
     expect($result->count())->toBeGreaterThanOrEqual(0);
 });
 
+test('nearby driver public ids without a stored location enter the driver branch', function () {
+    $connection = fleetopsOrderNearbyBoot();
+    fleetopsOrderNearbySeed($connection);
+    $connection->table('users')->insert(['uuid' => 'user-2', 'company_uuid' => 'company-1', 'type' => 'user']);
+    $connection->table('drivers')->insert(['uuid' => 'driver-2', 'public_id' => 'driver_nearby2', 'company_uuid' => 'company-1', 'user_uuid' => 'user-2', 'location' => null]);
+
+    // A located driver resolves as coordinates; a location-less driver falls
+    // through to the driver branch which fails building the distance query
+    // against the missing point
+    expect(fn () => (new OrderController())->query(fleetopsOrderNearbyRequest(['nearby' => 'driver_nearby2'])))
+        ->toThrow(Error::class);
+});
+
+test('nearby address names matching a stored place use its location', function () {
+    $connection = fleetopsOrderNearbyBoot();
+    fleetopsOrderNearbySeed($connection);
+    $connection->table('places')->insert(['uuid' => '22222222-2222-4222-8222-222222222222', 'public_id' => 'place_nearby2', 'company_uuid' => 'company-1', 'name' => 'NearbyDepot', 'location' => fleetopsOrderNearbyWkb(1.32, 103.82)]);
+
+    $result = (new OrderController())->query(fleetopsOrderNearbyRequest(['nearby' => 'NearbyDepot']));
+    expect($result->count())->toBeGreaterThanOrEqual(0);
+});
+
 test('nearby address strings resolve through place creation', function () {
     $connection = fleetopsOrderNearbyBoot();
     fleetopsOrderNearbySeed($connection);
