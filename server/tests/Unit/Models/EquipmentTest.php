@@ -4,6 +4,10 @@ if (!function_exists('Fleetbase\FleetOps\Models\session')) {
     eval('namespace Fleetbase\FleetOps\Models; function session($key = null, $default = null) { return $key === "company" ? "company-equipment" : $default; }');
 }
 
+if (!function_exists('Fleetbase\FleetOps\Models\auth')) {
+    eval('namespace Fleetbase\FleetOps\Models; function auth() { return new class { public function user() { return null; } public function id() { return null; } }; }');
+}
+
 if (!function_exists('Fleetbase\FleetOps\Models\activity')) {
     eval('namespace Fleetbase\FleetOps\Models; function activity($logName = null) { return \FleetOpsEquipmentActivityFake::start($logName); }');
 }
@@ -388,4 +392,43 @@ test('equipment replacement estimates and import rows hydrate defaults', functio
         ->and($equipment->model)->toBe('Heavy Lift')
         ->and($equipment->currency)->toBe('SGD')
         ->and($equipment->purchased_at->toDateString())->toBe('2025-05-01');
+});
+
+test('equipable types match maintenance scheduling and warranty imports resolve', function () {
+    $connection = app('db')->connection();
+    $schema     = $connection->getSchemaBuilder();
+    foreach (['maintenances' => ['uuid', 'public_id', 'company_uuid', 'maintainable_type', 'maintainable_uuid', 'type', 'status', 'scheduled_at', 'summary', 'notes', 'created_by_uuid', '_key'], 'warranties' => ['uuid', 'public_id', 'company_uuid', 'name', 'provider', 'expires_at', '_key'], 'equipments' => ['uuid', 'public_id', 'company_uuid', 'name', 'internal_id', 'code', 'type', 'status', 'serial_number', 'manufacturer', 'model', 'purchase_price', 'currency', 'purchased_at', 'warranty_uuid', 'equipable_type', 'equipable_uuid', '_key']] as $table => $columns) {
+        $schema->create($table, function ($blueprint) use ($columns) {
+            $blueprint->increments('id');
+            foreach ($columns as $column) {
+                $blueprint->string($column)->nullable();
+            }
+            $blueprint->timestamps();
+            $blueprint->timestamp('deleted_at')->nullable();
+        });
+    }
+
+    // Equipable type mutator maps known aliases through mutation types
+    $equipment                 = new Equipment();
+    $equipment->equipable_type = 'vehicle';
+    expect($equipment->getAttributes()['equipable_type'])->toContain('Vehicle');
+    $equipment->equipable_type = 'fleet-ops:driver';
+    expect($equipment->getAttributes()['equipable_type'])->toContain('Driver');
+    $equipment->equipable_type = 'Custom\\Type';
+    expect($equipment->getAttributes()['equipable_type'])->toBe('Custom\\Type');
+
+    // Scheduling maintenance persists a scheduled row against the equipment
+    $equipment->setRawAttributes(['uuid' => 'equip-sched-1', 'company_uuid' => 'company-equipment'], true);
+    $maintenance = $equipment->scheduleMaintenance('inspection', new DateTime('2026-08-01 10:00:00'), ['summary' => 'Quarterly check']);
+    expect($connection->table('maintenances')->where('type', 'inspection')->count())->toBe(1)
+        ->and($connection->table('maintenances')->value('summary'))->toBe('Quarterly check');
+
+    // Import rows resolve warranties by fuzzy name match
+    $connection->table('warranties')->insert(['uuid' => 'warranty-1', 'company_uuid' => 'company-equipment', 'name' => 'Extended Coverage Plan']);
+    $imported = Equipment::createFromImport([
+        'name'     => 'Imported Lift',
+        'warranty' => 'Extended Coverage',
+    ], true);
+    expect($imported->warranty_uuid)->toBe('warranty-1')
+        ->and($connection->table('equipments')->where('name', 'Imported Lift')->count())->toBe(1);
 });
