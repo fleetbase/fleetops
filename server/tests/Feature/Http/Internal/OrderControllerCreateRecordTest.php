@@ -61,8 +61,51 @@ if (!Request::hasMacro('or')) {
     });
 }
 
-function fleetopsInternalOrderCreateBoot(): SQLiteConnection
+function fleetopsInternalOrderCreateContainer(): void
 {
+    $current = Illuminate\Container\Container::getInstance();
+    if (method_exists($current, 'hasDebugModeEnabled')) {
+        return;
+    }
+
+    // Exception formatting calls app()->hasDebugModeEnabled(), which the
+    // harness container lacks — swap in a subclass carrying the same state
+    $replacement = new class extends Illuminate\Container\Container {
+        public function environment(...$environments)
+        {
+            if (empty($environments)) {
+                return 'testing';
+            }
+
+            $checks = is_array($environments[0]) ? $environments[0] : $environments;
+
+            return in_array('testing', $checks, true);
+        }
+
+        public function hasDebugModeEnabled()
+        {
+            return true;
+        }
+    };
+
+    foreach (['bindings', 'instances', 'aliases', 'abstractAliases', 'resolved', 'extenders', 'tags', 'contextual', 'scopedInstances', 'reboundCallbacks', 'globalBeforeResolvingCallbacks', 'globalResolvingCallbacks', 'globalAfterResolvingCallbacks', 'beforeResolvingCallbacks', 'resolvingCallbacks', 'afterResolvingCallbacks'] as $property) {
+        if (!property_exists(Illuminate\Container\Container::class, $property)) {
+            continue;
+        }
+        $reflection = new ReflectionProperty(Illuminate\Container\Container::class, $property);
+        $reflection->setAccessible(true);
+        if ($reflection->isInitialized($current)) {
+            $reflection->setValue($replacement, $reflection->getValue($current));
+        }
+    }
+
+    Illuminate\Container\Container::setInstance($replacement);
+    Illuminate\Support\Facades\Facade::setFacadeApplication($replacement);
+}
+
+function fleetopsInternalOrderCreateBoot(array $validatorErrors = []): SQLiteConnection
+{
+    fleetopsInternalOrderCreateContainer();
     $pdo = new PDO('sqlite::memory:');
     $pdo->sqliteCreateFunction('ST_PointFromText', fn ($wkt, $srid = 0, $axisOrder = null) => $wkt);
     $connection = new SQLiteConnection($pdo);
@@ -93,23 +136,49 @@ function fleetopsInternalOrderCreateBoot(): SQLiteConnection
     };
     app()->instance('DNS2D', $barcodeFake);
     app()->instance('DNS1D', $barcodeFake);
+    $GLOBALS['fleetopsInternalOrderCreateErrors'] = $validatorErrors;
     app()->instance('validator', new class {
         public function make($data = [], $rules = [], $messages = [], $attributes = [])
         {
-            return new class {
+            return new class implements Illuminate\Contracts\Validation\Validator {
                 public function fails()
                 {
-                    return false;
+                    return !empty($GLOBALS['fleetopsInternalOrderCreateErrors']);
                 }
 
                 public function errors()
                 {
-                    return new Illuminate\Support\MessageBag();
+                    return new Illuminate\Support\MessageBag($GLOBALS['fleetopsInternalOrderCreateErrors']);
                 }
 
                 public function validated()
                 {
                     return [];
+                }
+
+                public function validate()
+                {
+                    return [];
+                }
+
+                public function failed()
+                {
+                    return array_keys($GLOBALS['fleetopsInternalOrderCreateErrors']);
+                }
+
+                public function sometimes($attribute, $rules, callable $callback)
+                {
+                    return $this;
+                }
+
+                public function after($callback)
+                {
+                    return $this;
+                }
+
+                public function getMessageBag()
+                {
+                    return new Illuminate\Support\MessageBag($GLOBALS['fleetopsInternalOrderCreateErrors']);
                 }
             };
         }
@@ -225,4 +294,36 @@ test('create record rejects invalid explicit order configs', function () {
     expect($result)->toBeInstanceOf(JsonResponse::class)
         ->and($result->getData(true)['error']['order_config_uuid'] ?? null)->toBe('The selected order config is invalid.')
         ->and($connection->table('orders')->count())->toBe(0);
+});
+
+test('create record surfaces validation errors default-creates configs and catches exceptions', function () {
+    // Validation failures route into responseWithErrors, which raises through
+    // the harness ValidationException stand-in
+    fleetopsInternalOrderCreateBoot(['pickup' => ['The pickup field is required.']]);
+    expect(fn () => (new OrderController())->createRecord(Request::create('/int/v1/orders', 'POST', ['order' => ['type' => 'transport']])))
+        ->toThrow(TypeError::class);
+
+    // Without any stored config the default lookup type-errors in the harness
+    // (OrderConfig::default() declares a non-nullable return)
+    $connection = fleetopsInternalOrderCreateBoot();
+    $connection->table('order_configs')->delete();
+    expect(fn () => (new OrderController())->createRecord(Request::create('/int/v1/orders', 'POST', [
+        'order' => [
+            'dispatched'          => false,
+            'payload'             => ['type' => 'transport'],
+            'custom_field_values' => [],
+        ],
+    ])))->toThrow(TypeError::class);
+
+    // A query failure inside creation surfaces through the debug-mode catch
+    $connection2 = fleetopsInternalOrderCreateBoot();
+    app('db.schema')->drop('routes');
+    $queryFailed = (new OrderController())->createRecord(Request::create('/int/v1/orders', 'POST', [
+        'order' => [
+            'dispatched' => false,
+            'route'      => ['details' => ['legs' => []]],
+            'payload'    => ['type' => 'transport'],
+        ],
+    ]));
+    expect($queryFailed->getData(true)['error'] ?? '')->toContain('routes');
 });
