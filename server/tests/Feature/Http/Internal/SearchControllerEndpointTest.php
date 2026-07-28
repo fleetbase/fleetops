@@ -108,3 +108,44 @@ test('search generic types match columns and respect the limit', function () {
     $none = (new SearchController())->search(Request::create('/x', 'GET', ['query' => 'zzz-no-match', 'types' => 'vehicles']));
     expect($none->getData(true)['results'])->toBe([]);
 });
+
+test('search dispatches every registered type arm', function () {
+    $connection = fleetopsSearchEndpointBoot();
+
+    $schema = $connection->getSchemaBuilder();
+    $extra  = [
+        'vendors'                    => ['uuid', 'public_id', 'company_uuid', 'name', 'email', 'phone', 'business_id', 'status'],
+        'contacts'                   => ['uuid', 'public_id', 'company_uuid', 'name', 'email', 'phone', 'type'],
+        'places'                     => ['uuid', 'public_id', 'company_uuid', 'name', 'street1', 'street2', 'country', 'province', 'district', 'city', 'postal_code', 'phone'],
+        'issues'                     => ['uuid', 'public_id', 'company_uuid', 'issue_id', 'category', 'type', 'report', 'title', 'priority', 'status'],
+        'fuel_reports'               => ['uuid', 'public_id', 'company_uuid', 'report', 'status', 'currency'],
+        'fuel_provider_transactions' => ['uuid', 'public_id', 'company_uuid', 'provider', 'provider_transaction_id', 'vehicle_card_id', 'internal_number', 'plate_number', 'vin', 'serial_number', 'call_sign', 'station_name', 'trip_number', 'sync_status'],
+        'maintenance_schedules'      => ['uuid', 'public_id', 'company_uuid', 'name', 'type', 'status'],
+        'work_orders'                => ['uuid', 'public_id', 'company_uuid', 'code', 'subject', 'category', 'instructions', 'status', 'priority'],
+        'maintenances'               => ['uuid', 'public_id', 'company_uuid', 'summary', 'notes', 'type', 'status', 'priority'],
+        'equipments'                 => ['uuid', 'public_id', 'company_uuid', 'name', 'code', 'type', 'serial_number', 'manufacturer', 'model'],
+        'parts'                      => ['uuid', 'public_id', 'company_uuid', 'sku', 'name', 'manufacturer', 'model', 'serial_number', 'barcode'],
+        'fuel_provider_connections'  => ['uuid', 'public_id', 'company_uuid', 'name', 'provider', 'status', 'environment'],
+        'telematics'                 => ['uuid', 'public_id', 'company_uuid', 'name', 'provider', 'model', 'serial_number', 'imei'],
+        'devices'                    => ['uuid', 'public_id', 'company_uuid', 'name', 'model', 'serial_number', 'manufacturer', 'device_id', 'internal_id', 'imei'],
+        'sensors'                    => ['uuid', 'public_id', 'company_uuid', 'name', 'type', 'internal_id', 'unit'],
+        'device_events'              => ['uuid', 'public_id', 'company_uuid', 'event_type', 'message', 'ident', 'code', 'provider', 'severity'],
+        'service_rates'              => ['uuid', 'public_id', 'company_uuid', 'service_name', 'service_type', 'currency', 'algorithm', 'rate_calculation_method'],
+        'order_configs'              => ['uuid', 'public_id', 'company_uuid', 'name', 'description', 'key', 'namespace', 'status'],
+    ];
+    foreach ($extra as $table => $columns) {
+        $schema->create($table, function ($blueprint) use ($columns) {
+            $blueprint->increments('id');
+            foreach ($columns as $column) {
+                $blueprint->string($column)->nullable();
+            }
+            $blueprint->timestamps();
+            $blueprint->timestamp('deleted_at')->nullable();
+        });
+    }
+
+    $types = 'orders,drivers,vehicles,fleets,vendors,contacts,places,issues,fuel_reports,fuel_transactions,maintenance_schedules,work_orders,maintenances,equipment,parts,fuel_providers,telematics,devices,sensors,events,service_rates,order_configs';
+
+    $response = (new SearchController())->search(Request::create('/x', 'GET', ['query' => 'anything', 'types' => $types]));
+    expect($response->getData(true))->toBeArray();
+});
