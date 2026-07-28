@@ -478,3 +478,37 @@ test('edit order route updates waypoints and clears them for endpoint edits', fu
     $missing = $controller->editOrderRoute('order-unknown', Request::create('/x', 'PUT', []));
     expect($missing->getData(true)['error'] ?? '')->toContain('Unable to find order');
 });
+
+test('dispatch order endpoint guards and dispatches assigned orders', function () {
+    $connection = fleetopsInternalActivityBoot();
+    $controller = new OrderController();
+
+    // Unknown orders error first
+    $missing = $controller->dispatchOrder(Request::create('/x', 'POST', ['order' => 'order_missing99']));
+    expect($missing->getData(true)['error'] ?? '')->toContain('No order found');
+
+    // Orders without drivers cannot dispatch
+    fleetopsInternalActivitySeedOrder($connection, ['driver_assigned_uuid' => null, 'dispatched' => 0]);
+    $noDriver = $controller->dispatchOrder(Request::create('/x', 'POST', ['order' => 'order_internal']));
+    expect($noDriver->getData(true)['error'] ?? '')->toContain('No driver assigned');
+
+    // Assigned orders dispatch once and reject repeats
+    $connection->table('users')->insertOrIgnore(['uuid' => 'user-1', 'company_uuid' => 'company-1', 'name' => 'Driver One']);
+    $connection->table('drivers')->insertOrIgnore(['uuid' => 'driver-1', 'public_id' => 'driver_dispone1', 'company_uuid' => 'company-1', 'user_uuid' => 'user-1']);
+    $connection->table('orders')->where('uuid', 'order-1')->update(['driver_assigned_uuid' => 'driver-1']);
+    $dispatched = $controller->dispatchOrder(Request::create('/x', 'POST', ['order' => 'order_internal']));
+    expect($dispatched->getData(true)['status'] ?? '')->toBe('OK');
+
+    $repeat = $controller->dispatchOrder(Request::create('/x', 'POST', ['order' => 'order_internal']));
+    expect($repeat->getData(true)['error'] ?? '')->toContain('already been dispatched');
+});
+
+test('set destination rejects single stop orders', function () {
+    $connection = fleetopsInternalActivityBoot();
+    fleetopsInternalActivitySeedOrder($connection);
+    $controller = new OrderController();
+
+    $rejected = $controller->setDestination('order_internal', 'place-p');
+    expect($rejected->getStatusCode())->toBe(422)
+        ->and($rejected->getData(true)['error'] ?? '')->toContain('multi-waypoint');
+});
