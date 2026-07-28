@@ -52,6 +52,35 @@ function fleetopsEntityUnitUseConnection(): void
     $resolver->setDefaultConnection('mysql');
     EloquentModel::setConnectionResolver($resolver);
     app()->instance('db', new FleetOpsEntityUnitDatabaseProbe($connection));
+    Illuminate\Support\Facades\DB::clearResolvedInstance('db');
+    $connection->statement('create table if not exists places (id integer primary key autoincrement, uuid varchar(64) null, public_id varchar(64) null, company_uuid varchar(64) null, name varchar(255) null, meta text null, deleted_at datetime null, created_at datetime null, updated_at datetime null)');
+    app()->instance('responsecache', new class {
+        public function __call($method, $arguments)
+        {
+            return null;
+        }
+    });
+    app()->instance('geocoder', new class {
+        public function geocode($query)
+        {
+            return $this;
+        }
+
+        public function reverse($lat, $lng)
+        {
+            return $this;
+        }
+
+        public function get()
+        {
+            return collect();
+        }
+
+        public function __call($method, $arguments)
+        {
+            return $this;
+        }
+    });
 }
 
 function fleetopsEntityUnitPlace(string $uuid, string $publicId): Place
@@ -120,4 +149,23 @@ test('entity insert get uuid updates existing entities and inserts sanitized row
         ->and($created->type)->toBe('Box')
         ->and($created->meta)->toBe(['fragile' => true])
         ->and(array_key_exists('not_a_fillable_column', $created->getAttributes()))->toBeFalse();
+});
+
+test('entity destinations confirm places and resolve temp search uuids', function () {
+    fleetopsEntityUnitUseConnection();
+    $connection = EloquentModel::resolveConnection('mysql');
+    $connection->table('places')->insert(['uuid' => 'place-search-1', 'company_uuid' => 'company-1', 'name' => 'Search Resolved', 'meta' => json_encode(['search_uuid' => '99999999-9999-4999-8999-999999999999'])]);
+
+    $payload = new Payload();
+    $payload->setRawAttributes(['uuid' => 'payload-entity-1'], true);
+    $payload->setRelation('waypoints', collect());
+    $payload->setRelation('pickup', null);
+    $payload->setRelation('dropoff', null);
+
+    $entity = new Entity();
+    $entity->setRawAttributes(['uuid' => 'entity-search-1'], true);
+
+    // A temp search uuid with no matching waypoint resolves through place metadata
+    $entity->setDestination('99999999-9999-4999-8999-999999999999', $payload, false);
+    expect($entity->destination_uuid)->toBe('place-search-1');
 });

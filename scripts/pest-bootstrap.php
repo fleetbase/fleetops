@@ -110,6 +110,35 @@ if (class_exists('Illuminate\Container\Container') && class_exists('Illuminate\S
         $app->instance('response', $responseFactory);
     }
 
+    if (!$app->bound('db')) {
+        // Unbound 'db' resolutions recurse the container until memory is
+        // exhausted when model boot paths reach the DB facade — proxy to the
+        // Eloquent connection resolver instead. Fixture instance bindings
+        // override this fallback.
+        $app->singleton('db', function () {
+            return new class {
+                public function connection($name = null)
+                {
+                    return Illuminate\Database\Eloquent\Model::getConnectionResolver()
+                        ? Illuminate\Database\Eloquent\Model::resolveConnection($name)
+                        : null;
+                }
+
+                public function raw($value)
+                {
+                    return new Illuminate\Database\Query\Expression($value);
+                }
+
+                public function __call($method, $arguments)
+                {
+                    $connection = $this->connection();
+
+                    return $connection ? $connection->{$method}(...$arguments) : null;
+                }
+            };
+        });
+    }
+
     if (!$app->bound('http') && class_exists('Illuminate\Http\Client\Factory')) {
         $app->singleton('http', fn () => new Illuminate\Http\Client\Factory());
     }
