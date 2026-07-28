@@ -264,3 +264,56 @@ test('maintenance schedule import falls back to equipment and default values', f
             ['vendor', 'Missing Vendor', 'company-uuid'],
         ]);
 });
+
+test('activity log options and import lookups resolve maintainables', function () {
+    fleetopsMaintenanceScheduleUseRelationConnection();
+    $connection = EloquentModel::resolveConnection('mysql');
+    $connection->getPdo()->sqliteCreateFunction('CONCAT', fn (...$parts) => implode('', array_map(fn ($part) => (string) $part, $parts)));
+    app()->instance('db', new class($connection) {
+        public function __construct(public $c)
+        {
+        }
+
+        public function connection($name = null)
+        {
+            return $this->c;
+        }
+
+        public function __call($method, $arguments)
+        {
+            return $this->c->{$method}(...$arguments);
+        }
+    });
+    Illuminate\Support\Facades\DB::clearResolvedInstance('db');
+    $schema = $connection->getSchemaBuilder();
+    foreach (['vehicles' => ['uuid', 'public_id', 'company_uuid', 'plate_number', 'vin', 'internal_id', 'make', 'model', 'year', 'display_name'], 'equipments' => ['uuid', 'public_id', 'company_uuid', 'name', 'serial_number'], 'vendors' => ['uuid', 'public_id', 'company_uuid', 'name']] as $table => $columns) {
+        $schema->create($table, function ($blueprint) use ($columns) {
+            $blueprint->increments('id');
+            foreach ($columns as $column) {
+                $blueprint->string($column)->nullable();
+            }
+            $blueprint->timestamps();
+            $blueprint->timestamp('deleted_at')->nullable();
+        });
+    }
+    $connection->table('vehicles')->insert(['uuid' => 'veh-imp-1', 'company_uuid' => 'company-1', 'plate_number' => 'SGX1234', 'make' => 'Ford', 'model' => 'Transit', 'year' => '2022']);
+    $connection->table('equipments')->insert(['uuid' => 'eq-imp-1', 'public_id' => 'equipment_impone', 'company_uuid' => 'company-1', 'name' => 'Forklift Alpha', 'serial_number' => 'SN-100']);
+    $connection->table('vendors')->insert(['uuid' => 'ven-imp-1', 'company_uuid' => 'company-1', 'name' => 'Servicing Partners']);
+    session(['company' => 'company-1']);
+
+    $schedule = new MaintenanceSchedule();
+    expect($schedule->getActivitylogOptions())->toBeInstanceOf(Spatie\Activitylog\LogOptions::class);
+
+    $invoke = function (string $name, ...$arguments) {
+        $reflection = new ReflectionMethod(MaintenanceSchedule::class, $name);
+        $reflection->setAccessible(true);
+
+        return $reflection->invoke(null, ...$arguments);
+    };
+
+    expect($invoke('findImportVehicle', 'SGX1234')?->uuid)->toBe('veh-imp-1')
+        ->and($invoke('findImportEquipment', 'Forklift')?->uuid)->toBe('eq-imp-1')
+        ->and($invoke('findImportEquipment', 'SN-100')?->uuid)->toBe('eq-imp-1')
+        ->and($invoke('findImportVendor', 'Servicing')?->uuid)->toBe('ven-imp-1')
+        ->and($invoke('findImportVendor', 'Unknown Vendor'))->toBeNull();
+});
