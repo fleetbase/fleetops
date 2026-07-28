@@ -47,7 +47,13 @@ function fleetopsInternalActivityBoot(): SQLiteConnection
     }
 
     $pdo = new PDO('sqlite::memory:');
-    $pdo->sqliteCreateFunction('ST_PointFromText', fn ($wkt, $srid = 0, $axisOrder = null) => $wkt);
+    $pdo->sqliteCreateFunction('ST_PointFromText', function ($wkt, $srid = 0, $axisOrder = null) {
+        if (is_string($wkt) && sscanf($wkt, 'POINT(%f %f)', $lng, $lat) === 2) {
+            return pack('V', 0) . pack('C', 1) . pack('V', 1) . pack('d', $lng) . pack('d', $lat);
+        }
+
+        return $wkt;
+    });
     $pdo->sqliteCreateFunction('ST_GeomFromText', fn ($wkt, $srid = 0, $axisOrder = null) => $wkt);
     $connection = new SQLiteConnection($pdo);
     $resolver   = new ConnectionResolver(['default' => $connection, 'mysql' => $connection]);
@@ -314,4 +320,72 @@ test('next activity resolves waypoint stops for started orders', function () {
 
     $scoped = $controller->nextActivity('order_internal', Request::create('/x', 'GET', ['waypoint' => 'waypoint_stopone']));
     expect($scoped)->not->toBeNull();
+});
+
+if (!function_exists('Fleetbase\FleetOps\Support\event')) {
+    eval('namespace Fleetbase\FleetOps\Support; function event($event = null) { \FleetOpsInternalActivityRecorder::$events[] = $event; return $event; }');
+}
+
+class FleetOpsServiceStopProbe extends OrderController
+{
+    public function callStop(string $method, ...$arguments): mixed
+    {
+        $reflection = new ReflectionMethod(OrderController::class, $method);
+        $reflection->setAccessible(true);
+
+        return $reflection->invoke($this, ...$arguments);
+    }
+}
+
+test('service stop activity updates waypoints entities and endpoint stops', function () {
+    $connection = fleetopsInternalActivityBoot();
+    fleetopsInternalActivitySeedOrder($connection, ['driver_assigned_uuid' => 'driver-1', 'started' => 1, 'status' => 'started']);
+    fleetopsInternalActivitySeedWaypoints($connection);
+    $connection->table('payloads')->where('uuid', 'payload-1')->update(['pickup_uuid' => null, 'dropoff_uuid' => null]);
+    $connection->table('entities')->insert(['uuid' => 'ent-1', 'company_uuid' => 'company-1', 'payload_uuid' => 'payload-1', 'destination_uuid' => 'place-w1', 'name' => 'Crate']);
+
+    $probe = new FleetOpsServiceStopProbe();
+    $order = Fleetbase\FleetOps\Models\Order::query()->where('uuid', 'order-1')->first();
+
+    FleetOpsInternalActivityRecorder::$events = [];
+    $location                                 = new Fleetbase\LaravelMysqlSpatial\Types\Point(1.30, 103.80);
+
+    // Non-completing activity fires waypoint and entity change events
+    $progress = new Fleetbase\FleetOps\Flow\Activity(['key' => 'order_started', 'code' => 'started', 'status' => 'Started', 'details' => 'In progress'], $order->getConfigFlow());
+    $stop     = $probe->callStop('updateCurrentServiceStopActivity', $order, $progress, $location);
+    expect($stop)->toBeArray()
+        ->and(collect(FleetOpsInternalActivityRecorder::$events)->first(fn ($event) => $event instanceof Fleetbase\FleetOps\Events\WaypointActivityChanged))->not->toBeNull()
+        ->and(collect(FleetOpsInternalActivityRecorder::$events)->first(fn ($event) => $event instanceof Fleetbase\FleetOps\Events\EntityActivityChanged))->not->toBeNull();
+
+    // Completing activity fires completion events and updates tracking status
+    $complete = new Fleetbase\FleetOps\Flow\Activity(['key' => 'order_completed', 'code' => 'completed', 'status' => 'Completed', 'details' => 'Done', 'complete' => true], $order->getConfigFlow());
+    $probe->callStop('updateCurrentServiceStopActivity', $order->fresh(['payload']), $complete, $location);
+    expect(collect(FleetOpsInternalActivityRecorder::$events)->first(fn ($event) => $event instanceof Fleetbase\FleetOps\Events\WaypointCompleted))->not->toBeNull()
+        ->and(collect(FleetOpsInternalActivityRecorder::$events)->first(fn ($event) => $event instanceof Fleetbase\FleetOps\Events\EntityCompleted))->not->toBeNull()
+        ->and($connection->table('tracking_numbers')->where('uuid', 'tn-w1')->value('status_uuid'))->not->toBeNull();
+});
+
+test('endpoint service stops create tracking numbers and resolve activities', function () {
+    $connection = fleetopsInternalActivityBoot();
+    fleetopsInternalActivitySeedOrder($connection, ['driver_assigned_uuid' => 'driver-1', 'started' => 1, 'status' => 'started']);
+
+    $probe    = new FleetOpsServiceStopProbe();
+    $order    = Fleetbase\FleetOps\Models\Order::query()->where('uuid', 'order-1')->first();
+    $location = new Fleetbase\LaravelMysqlSpatial\Types\Point(1.30, 103.80);
+
+    $activity = new Fleetbase\FleetOps\Flow\Activity(['key' => 'order_started', 'code' => 'started', 'status' => 'Started', 'details' => 'Pickup activity'], $order->getConfigFlow());
+    $probe->callStop('updateCurrentServiceStopActivity', $order, $activity, $location);
+
+    expect($connection->table('payloads')->value('pickup_tracking_number_uuid'))->not->toBeNull()
+        ->and($connection->table('tracking_statuses')->where('code', 'STARTED')->count())->toBeGreaterThanOrEqual(1);
+
+    // Unknown current status codes resolve to no next activities
+    $tnUuid = $connection->table('payloads')->value('pickup_tracking_number_uuid');
+    $connection->table('tracking_statuses')->insert(['uuid' => 'ts-odd', 'company_uuid' => 'company-1', 'tracking_number_uuid' => $tnUuid, 'code' => 'ZZZUNKNOWN', 'status' => 'Odd']);
+    $connection->table('tracking_numbers')->where('uuid', $tnUuid)->update(['status_uuid' => 'ts-odd']);
+
+    $order = Fleetbase\FleetOps\Models\Order::query()->where('uuid', 'order-1')->first();
+    $stop  = $probe->callStop('payloadCurrentServiceStop', $order->payload);
+    $next  = $probe->callStop('nextActivitiesForServiceStop', $order, $order->payload, $stop);
+    expect($next)->toHaveCount(0);
 });
