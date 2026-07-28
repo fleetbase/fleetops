@@ -80,7 +80,10 @@ class ServiceQuoteController extends FleetOpsController
         }
 
         // get all waypoints
-        $waypoints = $payload->getAllStops()->mapInto(Place::class);
+        // getAllStops() already normalizes every stop into a Place instance;
+        // re-wrapping with mapInto(Place::class) would pass models into the
+        // model constructor and fatal.
+        $waypoints = $payload->getAllStops();
 
         // if quote for single service
         if ($service && $service !== 'all') {
