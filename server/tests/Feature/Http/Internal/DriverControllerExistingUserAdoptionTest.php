@@ -473,3 +473,36 @@ test('create with user uuids provisions users guards conflicts and companies', f
     expect($noCompany->getData(true)['error'] ?? '')->toContain('Unable to create driver');
     session(['company' => 'company-1']);
 });
+
+test('auth can resolves real permissions for requests and ping guards', function () {
+    $connection = fleetopsDriverAdoptionBoot([]);
+    $connection->table('users')->insert(['uuid' => '77777777-7777-4777-8777-777777777701', 'public_id' => 'user_authcan1', 'company_uuid' => 'company-1', 'name' => 'Permitted User', 'type' => 'user']);
+    $connection->table('company_users')->insert(['uuid' => '77777777-7777-4777-8777-777777777702', 'company_uuid' => 'company-1', 'user_uuid' => '77777777-7777-4777-8777-777777777701', 'status' => 'active']);
+    $connection->table('permissions')->insert([
+        ['name' => 'fleet-ops update driver', 'guard_name' => 'sanctum'],
+        ['name' => 'fleet-ops update order', 'guard_name' => 'sanctum'],
+    ]);
+    $companyUserMorph = (new Fleetbase\Models\CompanyUser())->getMorphClass();
+    $permissionIds    = $connection->table('permissions')->pluck('id', 'name');
+    $connection->table('model_has_permissions')->insert([
+        ['permission_id' => $permissionIds['fleet-ops update driver'], 'model_type' => $companyUserMorph, 'model_uuid' => '77777777-7777-4777-8777-777777777702'],
+        ['permission_id' => $permissionIds['fleet-ops update order'], 'model_type' => $companyUserMorph, 'model_uuid' => '77777777-7777-4777-8777-777777777702'],
+    ]);
+    session(['company' => 'company-1', 'user' => '77777777-7777-4777-8777-777777777701']);
+
+    // Granted permissions authorize, missing permissions deny
+    expect(Fleetbase\Support\Auth::can('fleet-ops update driver'))->toBeTrue()
+        ->and(Fleetbase\Support\Auth::can('fleet-ops delete driver'))->toBeFalse();
+
+    // The update driver form request authorizes through the same gate
+    $updateRequest = new Fleetbase\FleetOps\Http\Requests\Internal\UpdateDriverRequest();
+    expect($updateRequest->authorize())->toBeTrue();
+
+    // Driver ping authorization resolves through the order permission
+    $orderController = new Fleetbase\FleetOps\Http\Controllers\Internal\v1\OrderController();
+    $canPing         = new ReflectionMethod($orderController, 'canPingDriver');
+    $canPing->setAccessible(true);
+    expect($canPing->invoke($orderController))->toBeTrue();
+
+    session(['user' => null]);
+});
