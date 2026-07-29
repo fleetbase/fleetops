@@ -1274,10 +1274,14 @@ class Utils extends FleetbaseUtils
      */
     protected static function isSqliteConnection(): bool
     {
-        $connection = DB::connection();
+        try {
+            $connection = DB::connection();
+        } catch (\Throwable $e) {
+            return false;
+        }
 
         return $connection instanceof \Illuminate\Database\SQLiteConnection
-            || $connection->getDriverName() === 'sqlite';
+            || ($connection && $connection->getDriverName() === 'sqlite');
     }
 
     /**
