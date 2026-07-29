@@ -27,7 +27,7 @@ if (!function_exists('Fleetbase\Support\auth')) {
 }
 
 if (!function_exists('Fleetbase\FleetOps\Http\Controllers\Api\v1\event')) {
-    eval('namespace Fleetbase\FleetOps\Http\Controllers\Api\v1; function event($event = null) { \FleetOpsOrderStartRecorder::$events[] = $event; return $event; }');
+    eval('namespace Fleetbase\FleetOps\Http\Controllers\Api\v1; function event($event = null) { if (\FleetOpsOrderStartRecorder::$throwOnEvent) { throw new \RuntimeException(\'event listener blew up\'); } \FleetOpsOrderStartRecorder::$events[] = $event; return $event; }');
 }
 
 if (!function_exists('Fleetbase\Observers\event')) {
@@ -69,6 +69,9 @@ if (!Request::hasMacro('isArray')) {
 class FleetOpsOrderStartRecorder
 {
     public static array $events = [];
+
+    /** When set, the event() shim throws so failure branches can be reached. */
+    public static bool $throwOnEvent = false;
 }
 
 function fleetopsOrderStartBoot(): SQLiteConnection
@@ -576,6 +579,39 @@ test('dispatched activity with skip dispatch advances to the started activity', 
     ]));
 
     expect($connection->table('tracking_statuses')->where('code', 'STARTED')->count())->toBeGreaterThanOrEqual(1);
+});
+
+test('a failing order started listener does not block the order from starting', function () {
+    $connection = fleetopsOrderStartBoot();
+    fleetopsOrderStartSeedOrder($connection, ['driver_assigned_uuid' => 'driver-1']);
+
+    FleetOpsOrderStartRecorder::$throwOnEvent = true;
+
+    try {
+        (new OrderController())->startOrder('order_start', Request::create('/x', 'POST', ['skip_dispatch' => 1]));
+    } finally {
+        FleetOpsOrderStartRecorder::$throwOnEvent = false;
+    }
+
+    // The listener failure is logged and swallowed, so the order is still
+    // started and the job still assigned to the driver
+    expect($connection->table('orders')->value('started'))->toBe(1)
+        ->and($connection->table('drivers')->value('current_job_uuid'))->toBe('order-1');
+});
+
+test('canceling a waypoint activity unassigns the driver and cancels the order', function () {
+    $connection = fleetopsOrderStartBoot();
+    fleetopsOrderStartSeedOrder($connection, ['status' => 'started', 'started' => 1, 'driver_assigned_uuid' => 'driver-1']);
+    fleetopsOrderStartSeedWaypoints($connection);
+    $connection->table('drivers')->where('uuid', 'driver-1')->update(['current_job_uuid' => 'order-1']);
+
+    $response = (new OrderController())->updateActivity('order_start', Request::create('/x', 'POST', ['activity' => [
+        'key' => 'order_canceled', 'code' => 'canceled', 'status' => 'Canceled', 'details' => 'Customer canceled',
+    ]]));
+
+    expect($response)->not->toBeNull()
+        ->and($connection->table('orders')->value('status'))->toBe('canceled')
+        ->and($connection->table('drivers')->value('current_job_uuid'))->toBeNull();
 });
 
 test('classic lifecycle activities record activity against payload entities', function () {
