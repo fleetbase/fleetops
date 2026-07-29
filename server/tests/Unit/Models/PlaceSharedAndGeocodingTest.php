@@ -169,6 +169,30 @@ test('create from coordinates builds a located place without geocoder results', 
 });
 
 test('avatar resolution covers urls uuids and named defaults', function () {
+    config()->set('filesystems.default', 'local');
+    config()->set('filesystems.disks.local', ['driver' => 'local', 'root' => sys_get_temp_dir()]);
+    app()->instance('filesystem', new class {
+        public function disk($name = null)
+        {
+            return new class {
+                public function url($path)
+                {
+                    return 'https://files.example.test/' . ltrim((string) $path, '/');
+                }
+
+                public function __call($method, $arguments)
+                {
+                    return null;
+                }
+            };
+        }
+
+        public function __call($method, $arguments)
+        {
+            return null;
+        }
+    });
+    Illuminate\Support\Facades\Storage::clearResolvedInstances();
     $connection = fleetopsPlaceSharedBoot();
     $connection->table('files')->insert(['uuid' => '77777777-7777-4777-8777-777777777777', 'type' => 'place-avatar', 'original_filename' => 'depot.png', 'path' => 'uploads/depot.png', 'disk' => 'local']);
 
@@ -184,4 +208,13 @@ test('avatar resolution covers urls uuids and named defaults', function () {
 
     // Unknown uuid keys resolve to null
     expect(Place::getAvatar('88888888-8888-4888-8888-888888888888'))->toBeNull();
+});
+
+test('insert from coordinates reports failure when reverse geocoding is empty', function () {
+    fleetopsPlaceSharedBoot();
+
+    // The geocoder fake returns no results, so the insert reports failure
+    // rather than trying to read an address off a missing result
+    $point = new Point(1.30, 103.80);
+    expect(Place::insertFromCoordinates($point))->toBeFalse();
 });

@@ -644,7 +644,7 @@ class Place extends Model
 
         $results = \Geocoder\Laravel\Facades\Geocoder::reverse($latitude, $longitude)->get();
 
-        if (!$results->count() === 0) {
+        if ($results->count() === 0) {
             return false;
         }
 

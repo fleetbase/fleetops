@@ -251,9 +251,11 @@ test('reverse geocoding creation falls back to bare locations', function () {
     expect($fromCoords)->toBeInstanceOf(Place::class)
         ->and($connection->table('places')->where('name', 'Coord Stop')->count())->toBe(1);
 
-    $uuid = Place::insertFromCoordinates(new Point(1.40, 103.90), ['name' => 'Inserted Stop']);
-    expect($uuid)->toBeString()
-        ->and($connection->table('places')->where('uuid', $uuid)->count())->toBe(1);
+    // Without reverse-geocoding results there is no address to build the place
+    // from, so the insert reports failure. It must not fall through: the empty
+    // address array carries location 0,0 and would overwrite the real point.
+    expect(Place::insertFromCoordinates(new Point(1.40, 103.90), ['name' => 'Inserted Stop']))->toBeFalse()
+        ->and($connection->table('places')->where('name', 'Inserted Stop')->count())->toBe(0);
 });
 
 test('mixed input resolution matches uuids public ids and coordinates', function () {
@@ -327,8 +329,8 @@ test('single column imports reverse lookups and coordinate arrays create places'
     expect(fn () => Place::createFromReverseGeocodingLookup(new Point(1.36, 103.86), true))
         ->toThrow(Exception::class);
 
-    // Array coordinates resolve through the mixed point branch on insert
-    $uuid = Place::insertFromCoordinates([1.42, 103.92], ['name' => 'Array Inserted Stop']);
-    expect($uuid)->toBeString()
-        ->and($connection->table('places')->where('name', 'Array Inserted Stop')->count())->toBe(1);
+    // Array coordinates resolve through the mixed point branch, then report
+    // failure because the geocoder returns no address to build the place from
+    expect(Place::insertFromCoordinates([1.42, 103.92], ['name' => 'Array Inserted Stop']))->toBeFalse()
+        ->and($connection->table('places')->where('name', 'Array Inserted Stop')->count())->toBe(0);
 });
