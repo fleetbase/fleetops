@@ -252,3 +252,89 @@ test('import orders captures per group failures with rollback', function () {
         ->and(count($result['failed']))->toBe(1)
         ->and($result['failed'][0]['row'])->toBe(3);
 });
+
+test('import orders resolves swapped customer and facilitator entity types', function () {
+    $connection = fleetopsOrchImportBoot();
+
+    $response = fleetopsOrchImportController()->importOrders(Request::create('/x', 'POST', ['rows' => [[
+        'order_type'        => 'pickup_dropoff',
+        'type'              => 'transport',
+        // A vendor customer and a contact facilitator invert the defaults
+        'customer_type'     => 'vendor',
+        'customer_name'     => 'Wholesale Buyer',
+        'customer_email'    => 'buyer@example.test',
+        'facilitator_type'  => 'contact',
+        'facilitator_name'  => 'Broker Contact',
+        'facilitator_email' => 'broker@example.test',
+        'pickup_name'       => 'Warehouse',
+        'pickup_lat'        => '1.30',
+        'pickup_lng'        => '103.80',
+        'dropoff_name'      => 'Customer Site',
+        'dropoff_lat'       => '1.35',
+        'dropoff_lng'       => '103.85',
+    ]]]));
+
+    expect($response->getData(true)['failed'])->toBe([])
+        ->and($connection->table('orders')->value('customer_type'))->toContain('Vendor')
+        ->and($connection->table('orders')->value('facilitator_type'))->toContain('Contact')
+        ->and($connection->table('vendors')->where('email', 'buyer@example.test')->count())->toBe(1)
+        ->and($connection->table('contacts')->where('email', 'broker@example.test')->count())->toBe(1);
+});
+
+test('multi waypoint entities resolve destinations by index and by name', function () {
+    $connection = fleetopsOrchImportBoot();
+
+    $rows = [
+        [
+            'order_type'      => 'multi_waypoint',
+            'order_ref'       => 'GROUP-DEST',
+            'type'            => 'transport',
+            'dropoff_name'    => 'Stop One',
+            'dropoff_street1' => '1 First Road',
+            'dropoff_lat'     => '1.30',
+            'dropoff_lng'     => '103.80',
+        ],
+        [
+            'order_type'      => 'multi_waypoint',
+            'order_ref'       => 'GROUP-DEST',
+            'dropoff_name'    => 'Stop Two',
+            'dropoff_street1' => '2 Second Road',
+            'dropoff_lat'     => '1.35',
+            'dropoff_lng'     => '103.85',
+        ],
+        [
+            // No address of its own: the numeric destination points at stop one
+            'order_type'         => 'multi_waypoint',
+            'order_ref'          => 'GROUP-DEST',
+            'entity_name'        => 'Indexed Parcel',
+            'entity_destination' => '0',
+        ],
+        [
+            // A non-numeric destination is carried through as a name
+            'order_type'         => 'multi_waypoint',
+            'order_ref'          => 'GROUP-DEST',
+            'entity_name'        => 'Named Parcel',
+            'entity_destination' => 'dropoff',
+        ],
+    ];
+
+    $response = fleetopsOrchImportController()->importOrders(Request::create('/x', 'POST', ['rows' => $rows]));
+
+    expect($response->getData(true)['failed'])->toBe([])
+        ->and($connection->table('orders')->count())->toBe(1)
+        ->and($connection->table('entities')->whereIn('name', ['Indexed Parcel', 'Named Parcel'])->count())->toBe(2);
+});
+
+test('zero and blank coordinates resolve to no point', function () {
+    fleetopsOrchImportBoot();
+
+    $controller = fleetopsOrchImportController();
+    $reflection = new ReflectionMethod(OrchestrationController::class, 'buildLocationPoint');
+    $reflection->setAccessible(true);
+
+    // Blank coordinates and the null island both mean "no location given"
+    expect($reflection->invoke($controller, '', ''))->toBeNull()
+        // '0.0' is non-empty but still the null island
+        ->and($reflection->invoke($controller, '0.0', '0.0'))->toBeNull()
+        ->and($reflection->invoke($controller, '1.30', '103.80'))->not->toBeNull();
+});
