@@ -2,6 +2,7 @@
 
 use Fleetbase\FleetOps\Support\Analytics\OnTimeDelivery;
 use Fleetbase\FleetOps\Support\Analytics\OrdersByStatus;
+use Fleetbase\FleetOps\Support\Analytics\RevenueTrend;
 use Fleetbase\FleetOps\Support\Analytics\TopDrivers;
 use Fleetbase\FleetOps\Support\Utils;
 use Fleetbase\Models\Company;
@@ -41,7 +42,7 @@ function fleetopsAnalyticsBoot(): SQLiteConnection
 
     $schema = $connection->getSchemaBuilder();
     $tables = [
-        'orders'  => ['uuid', 'public_id', 'company_uuid', 'driver_assigned_uuid', 'status', 'scheduled_at', 'distance'],
+        'orders'  => ['uuid', 'public_id', 'company_uuid', 'driver_assigned_uuid', 'transaction_uuid', 'status', 'scheduled_at', 'distance'],
         'drivers' => ['uuid', 'public_id', 'company_uuid', 'user_uuid'],
         'users'   => ['uuid', 'public_id', 'company_uuid', 'name', 'avatar_uuid'],
     ];
@@ -178,6 +179,54 @@ test('orders by status buckets daily counts with the fixed palette', function ()
     expect($byLabel['Completed']['data'])->toBe([0, 2, 0, 0])
         ->and($byLabel['Canceled']['data'])->toBe([0, 0, 1, 0])
         ->and($byLabel['Failed']['data'])->toBe([0, 0, 0, 0]);
+
+    Carbon::setTestNow();
+});
+
+test('revenue trend buckets transactions with weekly grouping and deltas', function () {
+    $connection = fleetopsAnalyticsBoot();
+    app()->instance('db.schema', $connection->getSchemaBuilder());
+    Illuminate\Support\Facades\Schema::clearResolvedInstance('db.schema');
+    $connection->getPdo()->sqliteCreateFunction('DATE_FORMAT', function ($date, $format) {
+        $map = ['%Y' => 'Y', '%m' => 'm', '%d' => 'd', '%x' => 'o', '%v' => 'W'];
+
+        return date(strtr($format, $map), strtotime((string) $date));
+    });
+    Carbon::setTestNow(Carbon::parse('2026-07-20 12:00:00'));
+
+    $schema = $connection->getSchemaBuilder();
+    $schema->create('transactions', function ($blueprint) {
+        $blueprint->increments('id');
+        foreach (['uuid', 'public_id', 'company_uuid', 'customer_uuid', 'customer_type', 'subject_uuid', 'subject_type', 'context_uuid', 'context_type', 'parent_transaction_uuid', 'amount', 'currency', 'direction', 'status', 'meta', '_key'] as $column) {
+            $blueprint->string($column)->nullable();
+        }
+        $blueprint->timestamp('voided_at')->nullable();
+        $blueprint->timestamp('reversed_at')->nullable();
+        $blueprint->timestamps();
+        $blueprint->timestamp('deleted_at')->nullable();
+    });
+
+    $connection->table('transactions')->insert([
+        ['uuid' => 'txn-1', 'company_uuid' => 'company-1', 'amount' => '1000', 'currency' => 'USD', 'direction' => 'credit', 'status' => 'success', 'created_at' => '2026-07-14 10:00:00', 'updated_at' => '2026-07-14 10:00:00'],
+        ['uuid' => 'txn-2', 'company_uuid' => 'company-1', 'amount' => '2500', 'currency' => 'USD', 'direction' => 'credit', 'status' => 'success', 'created_at' => '2026-07-15 10:00:00', 'updated_at' => '2026-07-15 10:00:00'],
+        ['uuid' => 'txn-prev', 'company_uuid' => 'company-1', 'amount' => '500', 'currency' => 'USD', 'direction' => 'credit', 'status' => 'success', 'created_at' => '2026-07-05 10:00:00', 'updated_at' => '2026-07-05 10:00:00'],
+    ]);
+
+    $result = RevenueTrend::forCompany(fleetopsAnalyticsCompany())
+        ->between(Carbon::parse('2026-07-10 00:00:00'), Carbon::parse('2026-07-19 00:00:00'))
+        ->groupBy('week')
+        ->get();
+
+    expect($result['labels'])->not->toBeEmpty()
+        ->and(collect($result['datasets'][0]['data'])->sum())->toBeGreaterThan(0)
+        ->and($result['summary'])->toHaveKey('delta_pct');
+
+    // Invalid group-by units fall back to daily buckets
+    $daily = RevenueTrend::forCompany(fleetopsAnalyticsCompany())
+        ->between(Carbon::parse('2026-07-10 00:00:00'), Carbon::parse('2026-07-19 00:00:00'))
+        ->groupBy('hourly')
+        ->get();
+    expect($daily['labels'])->not->toBeEmpty();
 
     Carbon::setTestNow();
 });
