@@ -512,3 +512,100 @@ test('set destination rejects single stop orders', function () {
     expect($rejected->getStatusCode())->toBe(422)
         ->and($rejected->getData(true)['error'] ?? '')->toContain('multi-waypoint');
 });
+
+test('current waypoint activity guards markers and fires progress events', function () {
+    $connection = fleetopsInternalActivityBoot();
+    fleetopsInternalActivitySeedOrder($connection, ['driver_assigned_uuid' => 'driver-1', 'started' => 1, 'status' => 'started']);
+    fleetopsInternalActivitySeedWaypoints($connection);
+    $connection->table('entities')->insert(['uuid' => 'ent-wp-1', 'company_uuid' => 'company-1', 'payload_uuid' => 'payload-1', 'destination_uuid' => 'place-w1', 'name' => 'Parcel']);
+    $connection->table('payloads')->where('uuid', 'payload-1')->update(['current_waypoint_uuid' => 'place-w1']);
+
+    $probe    = new FleetOpsServiceStopProbe();
+    $order    = Fleetbase\FleetOps\Models\Order::query()->where('uuid', 'order-1')->first();
+    $location = new Fleetbase\LaravelMysqlSpatial\Types\Point(1.30, 103.80);
+    $payload  = $order->payload;
+
+    // Non-completing activities fire the change events for waypoint and entities
+    FleetOpsInternalActivityRecorder::$events = [];
+    $progress                                 = new Fleetbase\FleetOps\Flow\Activity(['key' => 'order_started', 'code' => 'started', 'status' => 'Started', 'details' => 'In progress'], $order->getConfigFlow());
+    $waypoint                                 = $probe->callStop('updateCurrentWaypointActivity', $payload, $progress, $location);
+
+    expect($waypoint)->not->toBeNull()
+        ->and(collect(FleetOpsInternalActivityRecorder::$events)->first(fn ($event) => $event instanceof Fleetbase\FleetOps\Events\WaypointActivityChanged))->not->toBeNull()
+        ->and(collect(FleetOpsInternalActivityRecorder::$events)->first(fn ($event) => $event instanceof Fleetbase\FleetOps\Events\EntityActivityChanged))->not->toBeNull();
+
+    // Payloads pointing at an unknown stop resolve to no waypoint at all
+    $connection->table('payloads')->where('uuid', 'payload-1')->update(['current_waypoint_uuid' => 'place-missing']);
+    $orphaned = Fleetbase\FleetOps\Models\Order::query()->where('uuid', 'order-1')->first()->payload;
+    expect($probe->callStop('updateCurrentWaypointActivity', $orphaned, $progress, $location))->toBeNull();
+});
+
+test('payload waypoint activity lookup reports existing tracking statuses', function () {
+    $connection = fleetopsInternalActivityBoot();
+    fleetopsInternalActivitySeedOrder($connection, ['driver_assigned_uuid' => 'driver-1']);
+    fleetopsInternalActivitySeedWaypoints($connection);
+
+    $probe    = new FleetOpsServiceStopProbe();
+    $order    = Fleetbase\FleetOps\Models\Order::query()->where('uuid', 'order-1')->first();
+    $activity = new Fleetbase\FleetOps\Flow\Activity(['key' => 'order_started', 'code' => 'started', 'status' => 'Started', 'details' => 'In progress'], $order->getConfigFlow());
+
+    // Payloads without a current waypoint never report an activity
+    expect($probe->callStop('payloadHasCurrentWaypointActivity', $order->payload, $activity))->toBeFalse();
+
+    // A current waypoint with no matching tracking status reports false
+    $connection->table('payloads')->where('uuid', 'payload-1')->update(['current_waypoint_uuid' => 'place-w1']);
+    $payload = Fleetbase\FleetOps\Models\Order::query()->where('uuid', 'order-1')->first()->payload;
+    expect($probe->callStop('payloadHasCurrentWaypointActivity', $payload, $activity))->toBeFalse();
+
+    // Once the tracking status exists for that stop the lookup reports true
+    $connection->table('tracking_statuses')->insert([
+        'uuid'                 => 'ts-wp-1',
+        'company_uuid'         => 'company-1',
+        'tracking_number_uuid' => 'tn-w1',
+        'code'                 => Fleetbase\FleetOps\Models\TrackingStatus::prepareCode('started'),
+        'status'               => 'Started',
+    ]);
+    $refreshed = Fleetbase\FleetOps\Models\Order::query()->where('uuid', 'order-1')->first()->payload;
+    expect($probe->callStop('payloadHasCurrentWaypointActivity', $refreshed, $activity))->toBeTrue();
+
+    // Stops without a tracking number short circuit before the query
+    $connection->table('waypoints')->where('uuid', 'wp-1')->update(['tracking_number_uuid' => null]);
+    $untracked = Fleetbase\FleetOps\Models\Order::query()->where('uuid', 'order-1')->first()->payload;
+    expect($probe->callStop('payloadHasCurrentWaypointActivity', $untracked, $activity))->toBeFalse();
+});
+
+test('driver ping notifies the assigned driver through the notification seam', function () {
+    $connection = fleetopsInternalActivityBoot();
+    fleetopsInternalActivitySeedOrder($connection, ['driver_assigned_uuid' => 'driver-1']);
+
+    $notified = [];
+    app()->instance(Illuminate\Contracts\Notifications\Dispatcher::class, new class($notified) {
+        public function __construct(public array &$sent)
+        {
+        }
+
+        public function send($notifiables, $notification)
+        {
+            $this->sent[] = $notification;
+        }
+
+        public function sendNow($notifiables, $notification, ?array $channels = null)
+        {
+            $this->sent[] = $notification;
+        }
+
+        public function __call($method, $arguments)
+        {
+            return null;
+        }
+    });
+
+    $probe  = new FleetOpsServiceStopProbe();
+    $order  = Fleetbase\FleetOps\Models\Order::query()->where('uuid', 'order-1')->first();
+    $driver = Fleetbase\FleetOps\Models\Driver::query()->where('uuid', 'driver-1')->first();
+
+    $probe->callStop('sendDriverPing', $driver, $order);
+
+    expect($notified)->toHaveCount(1)
+        ->and($notified[0])->toBeInstanceOf(Fleetbase\FleetOps\Notifications\OrderPing::class);
+});

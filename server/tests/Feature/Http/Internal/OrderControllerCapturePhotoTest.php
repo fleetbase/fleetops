@@ -439,3 +439,43 @@ test('public api capture photo stores uploaded files as proofs', function () {
 
     @unlink($temp);
 });
+
+test('internal capture photo accepts uploads and rejects unusable subjects', function () {
+    $connection = fleetopsCapturePhotoBoot();
+    fleetopsCapturePhotoSeed($connection);
+
+    $temp = tempnam(sys_get_temp_dir(), 'proof') . '.png';
+    file_put_contents($temp, base64_decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg=='));
+    $upload = new Illuminate\Http\UploadedFile($temp, 'proof.png', 'image/png', null, true);
+
+    $request = Request::create('/int/v1/orders/capture-photo', 'POST', [], [], ['photos' => [$upload]]);
+    $store   = app('session.store');
+    $store->put('company', 'company-1');
+    $request->setLaravelSession($store);
+
+    $result = (new OrderController())->capturePhoto($request, 'order_photoone1');
+    expect($result)->toBeInstanceOf(ProofResource::class)
+        ->and($connection->table('files')->where('content_type', 'image/png')->count())->toBe(1);
+
+    // Uploads with a disallowed extension fail the closure rule
+    $textFile = tempnam(sys_get_temp_dir(), 'proof') . '.txt';
+    file_put_contents($textFile, 'not really an image');
+    $badUpload  = new Illuminate\Http\UploadedFile($textFile, 'notes.txt', 'text/plain', null, true);
+    $badRequest = Request::create('/int/v1/orders/capture-photo', 'POST', [], [], ['photos' => [$badUpload]]);
+    $badRequest->setLaravelSession($store);
+
+    $rejected = (new OrderController())->capturePhoto($badRequest, 'order_photoone1');
+    expect($rejected->getStatusCode())->toBe(422);
+
+    // Subject ids that resolve to nothing on the order are refused
+    $unresolvable = (new OrderController())->capturePhoto(
+        fleetopsCapturePhotoRequest(['photos' => [base64_encode('subjectless')]]),
+        'order_photoone1',
+        'waypoint_notonthisorder'
+    );
+    expect($unresolvable->getStatusCode())->toBe(422)
+        ->and($unresolvable->getData(true)['error'] ?? '')->toContain('Unable to capture photo as proof');
+
+    @unlink($temp);
+    @unlink($textFile);
+});
