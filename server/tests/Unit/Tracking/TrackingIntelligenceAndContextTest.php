@@ -382,3 +382,96 @@ test('service stop resolution guards nulls and waypoint contexts', function () {
     $waypoint->setRawAttributes(['uuid' => 'wp-stops-1'], true);
     expect($invoke('serviceStopActivityContext', $order, $payload, ['waypoint' => $waypoint]))->toBe($waypoint);
 });
+
+/**
+ * A driver whose location reads once for the presence check then fails, as
+ * happens when a stored geometry cannot be rehydrated into a point.
+ */
+class FleetOpsTrackingCorruptLocationDriver extends Fleetbase\FleetOps\Models\Driver
+{
+    public int $locationReads = 0;
+
+    public function getAttribute($key)
+    {
+        if ($key === 'location') {
+            $this->locationReads++;
+            if ($this->locationReads > 1) {
+                throw new RuntimeException('corrupt location geometry');
+            }
+
+            return new Fleetbase\LaravelMysqlSpatial\Types\Point(1.30, 103.80);
+        }
+
+        return parent::getAttribute($key);
+    }
+}
+
+class FleetOpsTrackingCorruptLocationPlace extends Fleetbase\FleetOps\Models\Place
+{
+    public function getAttribute($key)
+    {
+        if ($key === 'location') {
+            throw new RuntimeException('corrupt place geometry');
+        }
+
+        return parent::getAttribute($key);
+    }
+}
+
+test('unresolvable driver and pickup geometries degrade to null locations', function () {
+    fleetopsTrackingBoot();
+    $builder = new TrackingContextBuilder();
+    $invoke  = function (string $name, ...$arguments) use ($builder) {
+        $reflection = new ReflectionMethod(TrackingContextBuilder::class, $name);
+        $reflection->setAccessible(true);
+
+        return $reflection->invoke($builder, ...$arguments);
+    };
+
+    // A driver location that throws while resolving yields no driver location
+    $driver = new FleetOpsTrackingCorruptLocationDriver();
+    $driver->setRawAttributes(['uuid' => 'driver-corrupt-1', 'public_id' => 'driver_corrupt1'], true);
+    $order = new Order();
+    $order->setRawAttributes(['uuid' => 'order-corrupt-1', 'public_id' => 'order_corrupt1'], true);
+    $order->setRelation('driverAssigned', $driver);
+    $order->setRelation('payload', null);
+
+    $context = $builder->build($order, TrackingOptions::fromArray([]));
+    expect($context->driverLocation)->toBeNull();
+
+    // A pickup place that throws while resolving yields no fallback origin
+    $payload = new class extends Fleetbase\FleetOps\Models\Payload {
+        public function getPickupOrCurrentWaypoint(): ?Fleetbase\FleetOps\Models\Place
+        {
+            $place = new FleetOpsTrackingCorruptLocationPlace();
+            $place->setRawAttributes(['uuid' => 'place-corrupt-1'], true);
+
+            return $place;
+        }
+    };
+    expect($invoke('fallbackOrigin', $payload))->toBeNull();
+});
+
+test('service stops without a resolved place are skipped', function () {
+    fleetopsTrackingBoot();
+
+    $builder = new class extends TrackingContextBuilder {
+        protected function payloadServiceStops(?Fleetbase\FleetOps\Models\Payload $payload): Illuminate\Support\Collection
+        {
+            return collect([
+                ['place' => null, 'waypoint' => null, 'type' => 'pickup'],
+                ['place' => 'not-a-place-model', 'waypoint' => null, 'type' => 'dropoff'],
+            ]);
+        }
+    };
+
+    $stops = new ReflectionMethod(TrackingContextBuilder::class, 'stops');
+    $stops->setAccessible(true);
+
+    $payload = new Fleetbase\FleetOps\Models\Payload();
+    $payload->setRawAttributes(['uuid' => 'payload-skip-1'], true);
+    $order = new Order();
+    $order->setRawAttributes(['uuid' => 'order-skip-1'], true);
+
+    expect($stops->invoke($builder, $payload, $order))->toHaveCount(0);
+});
