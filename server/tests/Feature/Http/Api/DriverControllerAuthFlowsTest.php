@@ -211,3 +211,77 @@ test('code verification handles unknown users invalid codes bypass and success',
         ->and($verified->token)->not->toBeEmpty()
         ->and($connection->table('drivers')->where('uuid', 'driver-1')->value('auth_token'))->not->toBeEmpty();
 });
+
+test('verification failures report to sentry and exhaust every channel', function () {
+    $connection = fleetopsDriverAuthBoot();
+    $controller = new DriverController();
+
+    $sentry = new class {
+        public array $captured = [];
+
+        public function captureException($exception)
+        {
+            $this->captured[] = $exception;
+
+            return null;
+        }
+
+        public function __call($method, $arguments)
+        {
+            return null;
+        }
+    };
+    app()->instance('sentry', $sentry);
+
+    // The SMS attempt fails in the harness and is reported before the
+    // controller falls back to the email channel
+    app()->instance('request', Request::create('/x', 'POST', ['phone' => '6591234567']));
+    $emailFallback = $controller->loginWithPhone();
+    expect($emailFallback->getData(true))->toBe(['status' => 'OK', 'method' => 'email'])
+        ->and($sentry->captured)->toHaveCount(1);
+
+    // When the mail channel also fails both failures are reported and the
+    // controller surfaces the generic error
+    app()->instance('mail.manager', new class {
+        public function to($users)
+        {
+            return $this;
+        }
+
+        public function send($mailable)
+        {
+            throw new RuntimeException('mail transport unavailable');
+        }
+    });
+    Illuminate\Support\Facades\Mail::clearResolvedInstance('mail.manager');
+
+    $noChannel = $controller->loginWithPhone();
+    expect($noChannel->getData(true)['error'])->toContain('Unable to send SMS Verification code')
+        ->and(count($sentry->captured))->toBeGreaterThanOrEqual(3);
+
+    app()->forgetInstance('sentry');
+});
+
+test('verify code delegates driver creation requests to the create flow', function () {
+    fleetopsDriverAuthBoot();
+
+    $probe = new class extends DriverController {
+        public array $created = [];
+
+        public function create(Request $request)
+        {
+            $this->created[] = $request->input('identity');
+
+            return 'delegated-create';
+        }
+    };
+
+    $result = $probe->verifyCode(Request::create('/x', 'POST', [
+        'identity' => 'newdriver@example.test',
+        'code'     => '123456',
+        'for'      => 'create_driver',
+    ]));
+
+    expect($result)->toBe('delegated-create')
+        ->and($probe->created)->toBe(['newdriver@example.test']);
+});
