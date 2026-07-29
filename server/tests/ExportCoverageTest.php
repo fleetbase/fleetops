@@ -131,3 +131,38 @@ test('all export classes expose stable spreadsheet headings and column formats',
         }
     }
 });
+
+test('vehicle export collection scopes selections and null location parts', function () {
+    $connection = new Illuminate\Database\SQLiteConnection(new PDO('sqlite::memory:'));
+    $resolver   = new Illuminate\Database\ConnectionResolver(['default' => $connection, 'mysql' => $connection]);
+    $resolver->setDefaultConnection('mysql');
+    Illuminate\Database\Eloquent\Model::setConnectionResolver($resolver);
+    $schema = $connection->getSchemaBuilder();
+    foreach (['vehicles' => ['uuid', 'public_id', 'company_uuid', 'driver_uuid', 'vendor_uuid', 'name', 'make', 'model', 'year', 'plate_number', 'status', '_key'], 'drivers' => ['uuid', 'public_id', 'company_uuid', 'user_uuid', 'vehicle_uuid', 'current_job_uuid', '_key'], 'vendors' => ['uuid', 'public_id', 'company_uuid', 'name', '_key'], 'users' => ['uuid', 'public_id', 'company_uuid', 'name', '_key'], 'orders' => ['uuid', 'public_id', 'company_uuid', 'status', '_key']] as $table => $columns) {
+        $schema->create($table, function ($blueprint) use ($columns) {
+            $blueprint->increments('id');
+            foreach ($columns as $column) {
+                $blueprint->string($column)->nullable();
+            }
+            $blueprint->timestamps();
+            $blueprint->timestamp('deleted_at')->nullable();
+        });
+    }
+    session(['company' => 'company-exp-1']);
+    $connection->table('vehicles')->insert([
+        ['uuid' => '77777777-7777-4777-8777-777777777801', 'company_uuid' => 'company-exp-1', 'name' => 'Selected Truck'],
+        ['uuid' => '77777777-7777-4777-8777-777777777802', 'company_uuid' => 'company-exp-1', 'name' => 'Unselected Truck'],
+    ]);
+
+    $export = new VehicleExport(['77777777-7777-4777-8777-777777777801']);
+    $rows   = $export->collection();
+    expect($rows)->toHaveCount(1)
+        ->and($rows->first()->name)->toBe('Selected Truck');
+
+    // Location parts guard unresolvable points
+    $reflection = new ReflectionMethod(VehicleExport::class, 'locationPart');
+    $reflection->setAccessible(true);
+    $nullish = $reflection->invoke($export, 'unparseable-location', 'lat');
+    expect($nullish === null || $nullish === 0.0)->toBeTrue()
+        ->and($reflection->invoke($export, new Fleetbase\LaravelMysqlSpatial\Types\Point(1.31, 103.81), 'lat'))->toBe(1.31);
+});
