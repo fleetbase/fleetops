@@ -127,3 +127,39 @@ test('tracking status helpers prepare codes look up numbers and wrap resources',
     $deleted = $helper('deletedTrackingStatusResource', $found);
     expect($deleted)->not->toBeNull();
 });
+
+test('unique status rule detects statuses already applied through orders', function () {
+    $connection = fleetopsTrackingStatusHelpersBoot();
+    $connection->table('tracking_numbers')->insert(['uuid' => '88888888-8888-4888-8888-888888888811', 'public_id' => 'tracking_number_uniq1', 'company_uuid' => 'company-1', 'tracking_number' => 'FLB-UNIQ-1']);
+    $connection->table('orders')->insert(['uuid' => '88888888-8888-4888-8888-888888888812', 'public_id' => 'order_uniqone1', 'company_uuid' => 'company-1', 'tracking_number_uuid' => '88888888-8888-4888-8888-888888888811', 'status' => 'created']);
+    $connection->table('tracking_statuses')->insert(['uuid' => '88888888-8888-4888-8888-888888888813', 'company_uuid' => 'company-1', 'tracking_number_uuid' => '88888888-8888-4888-8888-888888888811', 'code' => 'IN_TRANSIT', 'status' => 'In Transit']);
+
+    $makeRule = function (array $input) {
+        $request    = Fleetbase\FleetOps\Http\Requests\CreateTrackingStatusRequest::create('/v1/tracking-statuses', 'POST', $input);
+        $reflection = new ReflectionMethod(Fleetbase\FleetOps\Http\Requests\CreateTrackingStatusRequest::class, 'uniqueStatus');
+        $reflection->setAccessible(true);
+
+        return $reflection->invoke(null, $request);
+    };
+
+    // Orders whose tracking number already carries the status fail the rule
+    $failures = [];
+    $rule     = $makeRule(['order' => 'order_uniqone1', 'status' => 'in transit']);
+    $rule('status', 'in transit', function ($message) use (&$failures) {
+        $failures[] = $message;
+    });
+    expect($failures)->toHaveCount(1)
+        ->and($failures[0])->toContain('already been applied');
+
+    // Fresh statuses pass, and duplicate mode bypasses the check entirely
+    $cleanFailures = [];
+    $cleanRule     = $makeRule(['order' => 'order_uniqone1', 'status' => 'delivered']);
+    $cleanRule('status', 'delivered', function ($message) use (&$cleanFailures) {
+        $cleanFailures[] = $message;
+    });
+    $duplicateRule = $makeRule(['order' => 'order_uniqone1', 'status' => 'in transit', 'duplicate' => '1']);
+    $duplicateRule('status', 'in transit', function ($message) use (&$cleanFailures) {
+        $cleanFailures[] = $message;
+    });
+    expect($cleanFailures)->toBe([]);
+});
