@@ -3,6 +3,7 @@
 use Fleetbase\FleetOps\Http\Controllers\Api\v1\EquipmentController;
 use Fleetbase\FleetOps\Http\Controllers\Api\v1\FleetController;
 use Fleetbase\FleetOps\Http\Controllers\Api\v1\FuelReportController;
+use Fleetbase\FleetOps\Http\Controllers\Api\v1\FuelTransactionController;
 use Fleetbase\FleetOps\Http\Controllers\Api\v1\IssueController;
 use Fleetbase\FleetOps\Http\Controllers\Api\v1\PartController;
 use Fleetbase\FleetOps\Http\Controllers\Api\v1\ServiceRateController;
@@ -69,20 +70,21 @@ function fleetopsSmallApiHelpersBoot(): SQLiteConnection
 
     $schema = $connection->getSchemaBuilder();
     $tables = [
-        'vendors'                  => ['uuid', 'public_id', 'company_uuid', 'connect_company_uuid', 'place_uuid', 'name', 'email', 'phone', 'address', 'website', 'country', 'type', 'status', 'meta', 'internal_id', 'slug', '_key'],
-        'issues'                   => ['uuid', 'public_id', 'company_uuid', 'reported_by_uuid', 'assignee_uuid', 'driver_uuid', 'vehicle_uuid', 'type', 'category', 'priority', 'status', 'report', 'tags', 'meta', 'slug', 'internal_id', '_key'],
-        'fleets'                   => ['uuid', 'public_id', 'company_uuid', 'parent_fleet_uuid', 'service_area_uuid', 'zone_uuid', 'name', 'task', 'status', 'meta', 'slug', 'internal_id', '_key'],
-        'fuel_reports'             => ['uuid', 'public_id', 'company_uuid', 'reported_by_uuid', 'driver_uuid', 'vehicle_uuid', 'report', 'odometer', 'amount', 'currency', 'volume', 'metric_unit', 'status', 'location', 'meta', 'slug', 'internal_id', '_key'],
-        'drivers'                  => ['uuid', 'public_id', 'company_uuid', 'user_uuid', 'status', '_key'],
-        'users'                    => ['uuid', 'public_id', 'company_uuid', 'name', '_key'],
-        'places'                   => ['uuid', 'public_id', 'company_uuid', 'name', 'location', '_key'],
-        'service_areas'            => ['uuid', 'public_id', 'company_uuid', 'name', 'border', '_key'],
-        'companies'                => ['uuid', 'public_id', 'name', 'country', 'options'],
-        'service_rates'            => ['uuid', 'public_id', 'company_uuid', 'service_area_uuid', 'zone_uuid', 'service_name', 'service_type', 'base_fee', 'per_km_flat_rate_fee', 'rate_calculation_method', 'currency', 'estimated_days', 'duration_terms', 'meta', 'slug', 'internal_id', '_key'],
-        'service_rate_fees'        => ['uuid', 'public_id', 'service_rate_uuid', 'min', 'max', 'fee', 'distance_unit', '_key'],
-        'service_rate_parcel_fees' => ['uuid', 'public_id', 'service_rate_uuid', 'size', 'length', 'width', 'height', 'fee', '_key'],
-        'parts'                    => ['uuid', 'public_id', 'company_uuid', 'name', 'description', 'part_number', 'sku', 'category', 'quantity', 'price', 'currency', 'status', 'specs', 'meta', 'slug', 'internal_id', '_key'],
-        'equipments'               => ['uuid', 'public_id', 'company_uuid', 'name', 'description', 'type', 'status', 'specs', 'meta', 'slug', 'internal_id', '_key'],
+        'vendors'                    => ['uuid', 'public_id', 'company_uuid', 'connect_company_uuid', 'place_uuid', 'name', 'email', 'phone', 'address', 'website', 'country', 'type', 'status', 'meta', 'internal_id', 'slug', '_key'],
+        'issues'                     => ['uuid', 'public_id', 'company_uuid', 'reported_by_uuid', 'assignee_uuid', 'driver_uuid', 'vehicle_uuid', 'type', 'category', 'priority', 'status', 'report', 'tags', 'meta', 'slug', 'internal_id', '_key'],
+        'fleets'                     => ['uuid', 'public_id', 'company_uuid', 'parent_fleet_uuid', 'service_area_uuid', 'zone_uuid', 'name', 'task', 'status', 'meta', 'slug', 'internal_id', '_key'],
+        'fuel_reports'               => ['uuid', 'public_id', 'company_uuid', 'reported_by_uuid', 'driver_uuid', 'vehicle_uuid', 'report', 'odometer', 'amount', 'currency', 'volume', 'metric_unit', 'status', 'location', 'meta', 'slug', 'internal_id', '_key'],
+        'drivers'                    => ['uuid', 'public_id', 'company_uuid', 'user_uuid', 'status', '_key'],
+        'users'                      => ['uuid', 'public_id', 'company_uuid', 'name', '_key'],
+        'places'                     => ['uuid', 'public_id', 'company_uuid', 'name', 'location', '_key'],
+        'service_areas'              => ['uuid', 'public_id', 'company_uuid', 'name', 'border', '_key'],
+        'companies'                  => ['uuid', 'public_id', 'name', 'country', 'options'],
+        'service_rates'              => ['uuid', 'public_id', 'company_uuid', 'service_area_uuid', 'zone_uuid', 'service_name', 'service_type', 'base_fee', 'per_km_flat_rate_fee', 'rate_calculation_method', 'currency', 'estimated_days', 'duration_terms', 'meta', 'slug', 'internal_id', '_key'],
+        'service_rate_fees'          => ['uuid', 'public_id', 'service_rate_uuid', 'min', 'max', 'fee', 'distance_unit', '_key'],
+        'service_rate_parcel_fees'   => ['uuid', 'public_id', 'service_rate_uuid', 'size', 'length', 'width', 'height', 'fee', '_key'],
+        'fuel_provider_transactions' => ['uuid', 'public_id', 'company_uuid', 'connection_uuid', 'provider', 'external_id', 'status', 'amount', 'currency', 'volume', 'meta', 'slug', 'internal_id', '_key'],
+        'parts'                      => ['uuid', 'public_id', 'company_uuid', 'name', 'description', 'part_number', 'sku', 'category', 'quantity', 'price', 'currency', 'status', 'specs', 'meta', 'slug', 'internal_id', '_key'],
+        'equipments'                 => ['uuid', 'public_id', 'company_uuid', 'name', 'description', 'type', 'status', 'specs', 'meta', 'slug', 'internal_id', '_key'],
     ];
     foreach ($tables as $table => $columns) {
         $schema->create($table, function ($blueprint) use ($columns) {
@@ -253,4 +255,18 @@ test('part and equipment helper batteries execute against sqlite', function () {
         ->and($equipmentHelper('equipmentResourceCollection', collect([$equipment])))->toBeInstanceOf(Illuminate\Http\Resources\Json\ResourceCollection::class)
         ->and($equipmentHelper('deletedEquipmentResource', $equipment))->not->toBeNull()
         ->and($equipmentHelper('jsonResponse', ['ok' => true], 200))->toBeInstanceOf(Illuminate\Http\JsonResponse::class);
+});
+
+test('fuel transaction helper battery executes against sqlite', function () {
+    $connection = fleetopsSmallApiHelpersBoot();
+    $helper     = fleetopsSmallApiHelper((new ReflectionClass(FuelTransactionController::class))->newInstanceWithoutConstructor());
+
+    $transaction = $helper('createTransaction', ['company_uuid' => 'company-1', 'provider' => 'petroapp', 'status' => 'pending', 'amount' => '4200', 'currency' => 'SGD']);
+    expect($connection->table('fuel_provider_transactions')->count())->toBe(1);
+
+    $found = $helper('findTransaction', (string) $connection->table('fuel_provider_transactions')->value('public_id'));
+    expect($found->uuid)->toBe($transaction->uuid)
+        ->and($helper('fuelTransactionResource', $found))->not->toBeNull()
+        ->and($helper('fuelTransactionResourceCollection', collect([$found])))->toBeInstanceOf(Illuminate\Http\Resources\Json\ResourceCollection::class)
+        ->and($helper('deletedFuelTransactionResource', $found))->not->toBeNull();
 });
