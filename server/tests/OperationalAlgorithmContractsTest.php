@@ -736,3 +736,117 @@ test('optimize order route capability apply rejects unauthorized and not ready p
 
     expect(fn () => $capability->apply($task, ['ready' => false]))->toThrow(RuntimeException::class, 'This route optimization preview is not ready to apply.');
 });
+
+if (!function_exists('Fleetbase\Models\cache')) {
+    eval('namespace Fleetbase\Models; function cache($key = null, $default = null) { return new class { public function forget($k) { return true; } public function get($k, $d = null) { return $d; } public function put($k, $v = null, $ttl = null) { return true; } public function remember($k, $ttl, $cb) { return $cb(); } public function __call($m, $a) { return null; } }; }');
+}
+
+if (!function_exists('Fleetbase\Models\session')) {
+    eval('namespace Fleetbase\Models; function session($key = null, $default = null) { if ($key === null) { return new class { public function has($k) { return \session($k) !== null; } public function get($k, $d = null) { return \session($k, $d); } public function missing($k) { return \session($k) === null; } }; } return \session($key, $default); }');
+}
+
+test('notify once dedupes alerts and persists notification metadata', function () {
+    $connection = new Illuminate\Database\SQLiteConnection(new PDO('sqlite::memory:'));
+    $resolver   = new Illuminate\Database\ConnectionResolver(['default' => $connection, 'mysql' => $connection]);
+    $resolver->setDefaultConnection('mysql');
+    Illuminate\Database\Eloquent\Model::setConnectionResolver($resolver);
+    if (!Illuminate\Database\Eloquent\Model::getEventDispatcher()) {
+        Illuminate\Database\Eloquent\Model::setEventDispatcher(new Illuminate\Events\Dispatcher());
+    }
+    app()->instance('db', new class($connection) {
+        public function __construct(public Illuminate\Database\SQLiteConnection $c)
+        {
+        }
+
+        public function connection($name = null)
+        {
+            return $this->c;
+        }
+
+        public function __call($method, $arguments)
+        {
+            return $this->c->{$method}(...$arguments);
+        }
+    });
+    DB::clearResolvedInstance('db');
+    $schema = $connection->getSchemaBuilder();
+    foreach (['orders' => ['uuid', 'public_id', 'company_uuid', 'status', 'meta', '_key'], 'settings' => ['uuid', 'key', 'value', '_key']] as $table => $columns) {
+        $schema->create($table, function ($blueprint) use ($columns) {
+            $blueprint->increments('id');
+            foreach ($columns as $column) {
+                $blueprint->string($column)->nullable();
+            }
+            $blueprint->timestamps();
+            $blueprint->timestamp('deleted_at')->nullable();
+        });
+    }
+    session(['company' => 'company-1']);
+    $connection->table('orders')->insert(['uuid' => 'order-alert-1', 'company_uuid' => 'company-1', 'status' => 'started', 'meta' => json_encode([])]);
+
+    $order   = Order::where('uuid', 'order-alert-1')->first();
+    $command = new ProcessOperationalAlerts();
+    $helper  = function (...$arguments) use ($command) {
+        $reflection = new ReflectionMethod(ProcessOperationalAlerts::class, 'notifyOnce');
+        $reflection->setAccessible(true);
+
+        return $reflection->invoke($command, ...$arguments);
+    };
+
+    // First alert notifies and persists the notified-at marker
+    expect($helper($order, 'late_departure', LateDeparture::class, ['minutes_late' => 20], false))->toBeTrue()
+        ->and((string) $connection->table('orders')->value('meta'))->toContain('late_departure');
+
+    // A second identical alert is deduped by the stored marker
+    $order = Order::where('uuid', 'order-alert-1')->first();
+    expect($helper($order, 'late_departure', LateDeparture::class, ['minutes_late' => 25], false))->toBeFalse();
+
+    // Dry runs notify without persisting any marker
+    $order = Order::where('uuid', 'order-alert-1')->first();
+    expect($helper($order, 'route_deviation', RouteDeviation::class, ['distance' => 900], true))->toBeTrue()
+        ->and((string) $connection->table('orders')->value('meta'))->not->toContain('route_deviation');
+});
+
+test('late departure skips started orders and on-route positions stay quiet', function () {
+    Carbon::setTestNow(Carbon::parse('2026-07-26 12:00:00'));
+    $command  = new FleetOpsProcessOperationalAlertsProbe();
+    $settings = [
+        'late_departures'  => ['enabled' => true, 'grace_period_minutes' => 20],
+        'route_deviations' => ['enabled' => true, 'distance_threshold_meters' => 500],
+    ];
+
+    // Orders that already started never alert as late departures
+    $startedOrder = fleetopsOperationalAlertOrder([
+        'uuid'         => 'started-order',
+        'scheduled_at' => '2026-07-26 10:00:00',
+        'started'      => 1,
+    ]);
+    expect(fleetopsInvoke($command, 'processLateDeparture', [$startedOrder, $settings, true]))->toBeFalse();
+
+    // Positions on the planned route stay under the deviation threshold
+    $routeOrder = fleetopsOperationalAlertOrder([
+        'uuid' => 'on-route-order',
+    ], [
+        'geometry' => [
+            'coordinates' => [
+                [103.85, 1.25],
+                [103.86, 1.26],
+            ],
+        ],
+    ]);
+    $command->position = fleetopsOperationalAlertPosition(new Point(1.25, 103.85));
+    expect(fleetopsInvoke($command, 'processRouteDeviation', [$routeOrder, $settings, false]))->toBeFalse();
+
+    // Routes with fewer than two points cannot be checked for deviation
+    $shortRouteOrder = fleetopsOperationalAlertOrder([
+        'uuid' => 'short-route-order',
+    ], [
+        'geometry' => [
+            'coordinates' => [
+                [103.85, 1.25],
+            ],
+        ],
+    ]);
+    expect(fleetopsInvoke($command, 'processRouteDeviation', [$shortRouteOrder, $settings, false]))->toBeFalse();
+
+    Carbon::setTestNow();
+});
