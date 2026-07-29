@@ -142,3 +142,45 @@ test('driver company resolver reads the company from the matching driver profile
     expect($company)->toBeInstanceOf(Fleetbase\Models\Company::class)
         ->and($company->uuid)->toBe('company-uuid');
 });
+
+test('simulate routes drivers to order and route simulations', function () {
+    $connection = fleetopsApiDriverLookupBoot();
+    fleetopsApiDriverLookupSeedDriver($connection);
+    $connection->table('orders')->insert(['uuid' => 'order-uuid', 'public_id' => 'order_test']);
+
+    $probe = new class extends DriverController {
+        public array $calls = [];
+
+        public function simulateDrivingForOrder(Fleetbase\FleetOps\Models\Driver $driver, Fleetbase\FleetOps\Models\Order $order)
+        {
+            $this->calls[] = ['order', $order->public_id];
+
+            return 'order-simulation';
+        }
+
+        public function simulateDrivingForRoute(Fleetbase\FleetOps\Models\Driver $driver, $start, $end)
+        {
+            $this->calls[] = ['route', $start, $end];
+
+            return 'route-simulation';
+        }
+    };
+
+    // Orders resolve and delegate into the order simulation
+    $ordered = $probe->simulate('driver_test', DriverSimulationRequest::create('/x', 'POST', ['order' => 'order_test']));
+    expect($ordered)->toBe('order-simulation')
+        ->and($probe->calls[0])->toBe(['order', 'order_test']);
+
+    // Without an order the start/end pair drives the route simulation
+    $routed = $probe->simulate('driver_test', DriverSimulationRequest::create('/x', 'POST', [
+        'start' => '1.30,103.80',
+        'end'   => '1.35,103.85',
+    ]));
+    expect($routed)->toBe('route-simulation')
+        ->and($probe->calls[1])->toBe(['route', '1.30,103.80', '1.35,103.85']);
+
+    // Unknown orders report the order-not-found error
+    $missingOrder = $probe->simulate('driver_test', DriverSimulationRequest::create('/x', 'POST', ['order' => 'order_missing']));
+    expect($missingOrder->getStatusCode())->toBe(404)
+        ->and($missingOrder->getData(true))->toBe(['error' => 'Order resource not found.']);
+});

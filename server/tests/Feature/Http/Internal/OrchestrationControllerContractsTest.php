@@ -859,3 +859,56 @@ test('public orchestration wrappers sanitize run and commit payloads', function 
         ->and($sanitized['nested'] ?? [])->not->toHaveKey('company_uuid')
         ->and($sanitized['name'] ?? null)->toBe('top');
 });
+
+test('run modes scope orders by vehicle assignment and drivers by public id', function () {
+    // optimize only considers orders that already have a vehicle assigned
+    $optimize               = fleetopsOrchestrationCommitController();
+    $optimize->orderQuery   = new FleetOpsOrchestrationQueryFake();
+    $optimize->vehicleQuery = new FleetOpsOrchestrationQueryFake();
+    $optimize->run(Request::create('/orchestrator/run', 'POST', ['mode' => 'optimize']));
+    expect(array_column($optimize->orderQuery->calls, 0))->toContain('whereNotNull');
+
+    // standalone assign_drivers takes every driverless order regardless of vehicle
+    $assign               = fleetopsOrchestrationCommitController();
+    $assign->orderQuery   = new FleetOpsOrchestrationQueryFake();
+    $assign->vehicleQuery = new FleetOpsOrchestrationQueryFake();
+    $assign->run(Request::create('/orchestrator/run', 'POST', ['mode' => 'assign_drivers']));
+    expect(array_column($assign->orderQuery->calls, 0))->toContain('whereNull');
+
+    // driver ids narrow the vehicle pool through the driver relation
+    $order                  = fleetopsOrchestrationOrder('order_one');
+    $byDriver               = fleetopsOrchestrationCommitController();
+    $byDriver->orderQuery   = new FleetOpsOrchestrationQueryFake(collect([$order]));
+    $byDriver->vehicleQuery = new FleetOpsOrchestrationQueryFake();
+    $byDriver->run(Request::create('/orchestrator/run', 'POST', [
+        'mode'       => 'assign_vehicles',
+        'driver_ids' => ['driver_one'],
+    ]));
+    expect(array_column($byDriver->vehicleQuery->calls, 0))->toContain('whereHas');
+});
+
+test('assign drivers skips orders without a prior assignment entry', function () {
+    $matched   = fleetopsOrchestrationOrder('order_one');
+    $unmatched = fleetopsOrchestrationOrder('order_two');
+    $driver    = fleetopsOrchestrationDriver('driver_one');
+    $vehicle   = fleetopsOrchestrationVehicle('vehicle_one');
+    $vehicle->setRelation('driver', fleetopsOrchestrationDriver('old_driver'));
+
+    $controller                          = fleetopsOrchestrationCommitController();
+    $controller->orderQuery              = new FleetOpsOrchestrationQueryFake(collect([$matched, $unmatched]));
+    $controller->vehicleQuery            = new FleetOpsOrchestrationQueryFake(collect([$vehicle]));
+    $controller->vehicles['vehicle_one'] = $vehicle;
+    $controller->driverMap               = ['driver_one' => $driver];
+    $controller->driverEngine            = new FleetOpsDriverAssignmentEngineFake();
+
+    $controller->run(Request::create('/orchestrator/run', 'POST', [
+        'mode'              => 'assign_drivers',
+        'prior_assignments' => [
+            ['order_id' => 'order_one', 'vehicle_id' => 'vehicle_one', 'driver_id' => 'driver_one'],
+        ],
+    ]));
+
+    // Only the order named in prior_assignments is augmented
+    expect($matched->vehicle_assigned_uuid)->toBe('vehicle_one-uuid')
+        ->and($unmatched->vehicle_assigned_uuid)->toBeNull();
+});
