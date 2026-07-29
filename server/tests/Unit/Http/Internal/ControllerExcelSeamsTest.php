@@ -74,3 +74,16 @@ test('import seams hand the file to the excel facade with its disk', function (s
     'fuel reports' => [Fleetbase\FleetOps\Http\Controllers\Internal\v1\FuelReportController::class, Fleetbase\FleetOps\Imports\FuelReportImport::class],
     'parts'        => [Fleetbase\FleetOps\Http\Controllers\Internal\v1\PartController::class, Fleetbase\FleetOps\Imports\PartImport::class],
 ]);
+
+test('import factory seams build their importer', function (string $controllerClass, string $importClass) {
+    $reflection = new ReflectionMethod($controllerClass, 'createImport');
+    $reflection->setAccessible(true);
+    $target = $reflection->isStatic() ? null : (new ReflectionClass($controllerClass))->newInstanceWithoutConstructor();
+
+    expect($reflection->invoke($target))->toBeInstanceOf($importClass);
+})->with([
+    'equipment'    => [Fleetbase\FleetOps\Http\Controllers\Internal\v1\EquipmentController::class, Fleetbase\FleetOps\Imports\EquipmentImport::class],
+    'fleets'       => [Fleetbase\FleetOps\Http\Controllers\Internal\v1\FleetController::class, Fleetbase\FleetOps\Imports\FleetImport::class],
+    'fuel reports' => [Fleetbase\FleetOps\Http\Controllers\Internal\v1\FuelReportController::class, Fleetbase\FleetOps\Imports\FuelReportImport::class],
+    'parts'        => [Fleetbase\FleetOps\Http\Controllers\Internal\v1\PartController::class, Fleetbase\FleetOps\Imports\PartImport::class],
+]);
