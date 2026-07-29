@@ -327,3 +327,81 @@ test('create record surfaces validation errors default-creates configs and catch
     ]));
     expect($queryFailed->getData(true)['error'] ?? '')->toContain('routes');
 });
+
+test('integrated vendor orders attach metadata and surface bridge failures', function () {
+    $connection = fleetopsInternalOrderCreateBoot();
+    $schema     = $connection->getSchemaBuilder();
+    $schema->create('integrated_vendors', function ($blueprint) {
+        $blueprint->increments('id');
+        foreach (['uuid', 'public_id', 'company_uuid', 'provider', 'credentials', 'sandbox', 'options', '_key'] as $column) {
+            $blueprint->string($column)->nullable();
+        }
+        $blueprint->timestamps();
+        $blueprint->timestamp('deleted_at')->nullable();
+    });
+    $connection->table('integrated_vendors')->insert(['uuid' => 'iv-bridge-1', 'public_id' => 'integrated_vendor_bridge1', 'company_uuid' => 'company-1', 'provider' => 'lalamove', 'credentials' => json_encode([]), 'sandbox' => '1', 'options' => json_encode([])]);
+    $schema->table('service_quotes', function ($blueprint) {
+        $blueprint->string('integrated_vendor_uuid')->nullable();
+    });
+    $schema->create('purchase_rates', function ($blueprint) {
+        $blueprint->increments('id');
+        foreach (['uuid', 'public_id', 'company_uuid', 'customer_uuid', 'customer_type', 'service_quote_uuid', 'payload_uuid', 'order_uuid', 'transaction_uuid', 'status', 'meta', '_key'] as $column) {
+            $blueprint->string($column)->nullable();
+        }
+        $blueprint->timestamps();
+        $blueprint->timestamp('deleted_at')->nullable();
+    });
+    $connection->table('service_quotes')->insert(['uuid' => '66666666-6666-4666-8666-666666666601', 'public_id' => 'service_quote_bridge1', 'company_uuid' => 'company-1', 'amount' => '1500', 'currency' => 'SGD', 'meta' => json_encode([]), 'integrated_vendor_uuid' => 'iv-bridge-1']);
+
+    // Bind a stub vendor bridge through the container seam
+    $GLOBALS['fleetopsBridgeMode'] = 'ok';
+    app()->bind(Fleetbase\FleetOps\Integrations\Lalamove\Lalamove::class, function () {
+        return new class {
+            public function setIntegratedVendor($vendor)
+            {
+                return $this;
+            }
+
+            public function setRequestId($id)
+            {
+                return $this;
+            }
+
+            public function createOrderFromServiceQuote($serviceQuote, $request)
+            {
+                if ($GLOBALS['fleetopsBridgeMode'] === 'fail') {
+                    throw new Exception('vendor rejected the order');
+                }
+
+                return ['orderId' => 'bridge-order-1', 'metadata' => ['integrated_vendor' => 'integrated_vendor_bridge1']];
+            }
+
+            public function __call($method, $arguments)
+            {
+                return $this;
+            }
+        };
+    });
+
+    // A resolvable vendor quote attaches integrated metadata to the order
+    $created = (new OrderController())->createRecord(Request::create('/int/v1/orders', 'POST', [
+        'order' => [
+            'dispatched'         => false,
+            'service_quote_uuid' => '66666666-6666-4666-8666-666666666601',
+            'payload'            => ['type' => 'transport'],
+        ],
+    ]));
+    expect($created)->toBeArray()->toHaveKey('order')
+        ->and((string) $connection->table('orders')->value('meta'))->toContain('bridge-order-1');
+
+    // Bridge failures respond through the vendor error guard
+    $GLOBALS['fleetopsBridgeMode'] = 'fail';
+    $failed                        = (new OrderController())->createRecord(Request::create('/int/v1/orders', 'POST', [
+        'order' => [
+            'dispatched'         => false,
+            'service_quote_uuid' => '66666666-6666-4666-8666-666666666601',
+            'payload'            => ['type' => 'transport'],
+        ],
+    ]));
+    expect($failed->getData(true)['error'] ?? '')->toContain('vendor rejected');
+});

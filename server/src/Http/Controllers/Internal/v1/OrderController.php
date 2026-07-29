@@ -214,6 +214,11 @@ class OrderController extends FleetOpsController
                 }
             );
 
+            // Surface early error responses (e.g. integrated vendor failures) as-is
+            if ($record instanceof \Illuminate\Http\JsonResponse) {
+                return $record;
+            }
+
             // Reload payload and tracking number
             $record->load(['payload', 'trackingNumber']);
 
