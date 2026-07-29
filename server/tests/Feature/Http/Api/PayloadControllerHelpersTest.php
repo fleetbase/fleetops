@@ -111,3 +111,24 @@ test('payload helpers whitelist input build lookup and wrap resources', function
     $deleted = $helper('deletedPayloadResource', $found);
     expect($deleted)->not->toBeNull();
 });
+
+test('payload update assigns dropoff and return endpoints', function () {
+    $connection = fleetopsPayloadHelpersBoot();
+    $connection->table('payloads')->insert(['uuid' => '66666666-6666-4666-8666-666666666802', 'public_id' => 'payload_endpoints', 'company_uuid' => 'company-1', 'type' => 'transport']);
+    $connection->table('places')->insert([
+        ['uuid' => '77777777-7777-4777-8777-777777777801', 'public_id' => 'place_dropoffone', 'company_uuid' => 'company-1', 'name' => 'Dropoff Point'],
+        ['uuid' => '77777777-7777-4777-8777-777777777802', 'public_id' => 'place_returnone', 'company_uuid' => 'company-1', 'name' => 'Return Depot'],
+    ]);
+
+    $controller = new PayloadController();
+    $request    = Fleetbase\FleetOps\Http\Requests\UpdatePayloadRequest::create('/v1/payloads/payload_endpoints', 'PUT', [
+        'dropoff' => 'place_dropoffone',
+        'return'  => 'place_returnone',
+    ]);
+
+    $controller->update('payload_endpoints', $request);
+
+    // Both endpoints are stored against the payload
+    expect($connection->table('payloads')->where('uuid', '66666666-6666-4666-8666-666666666802')->value('dropoff_uuid'))->toBe('77777777-7777-4777-8777-777777777801')
+        ->and($connection->table('payloads')->where('uuid', '66666666-6666-4666-8666-666666666802')->value('return_uuid'))->toBe('77777777-7777-4777-8777-777777777802');
+});
