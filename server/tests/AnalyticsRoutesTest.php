@@ -229,7 +229,7 @@ test('top drivers on-time sorting uses a sql aggregate expression', function () 
     expect($widget)
         ->toContain("'on_time'")
         ->toContain('CASE')
-        ->toContain('TIMESTAMPDIFF(SECOND, orders.scheduled_at, orders.updated_at) <= 1800')
+        ->toContain("Utils::sqlSecondsDiff('orders.scheduled_at', 'orders.updated_at')")
         ->not->toContain("'on_time'  => 'on_time_pct'");
 });
 
