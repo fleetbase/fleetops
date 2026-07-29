@@ -154,3 +154,28 @@ test('fuel provider transaction controller delegates matching and review actions
             ['reviewTransaction', $transaction, 'reviewed'],
         ]);
 });
+
+test('fuel provider transaction real lookup scopes identifier and company', function () {
+    $connection = new Illuminate\Database\SQLiteConnection(new PDO('sqlite::memory:'));
+    $resolver   = new Illuminate\Database\ConnectionResolver(['default' => $connection, 'mysql' => $connection]);
+    $resolver->setDefaultConnection('mysql');
+    Illuminate\Database\Eloquent\Model::setConnectionResolver($resolver);
+    $schema = $connection->getSchemaBuilder();
+    $schema->create('fuel_provider_transactions', function ($blueprint) {
+        $blueprint->increments('id');
+        foreach (['uuid', 'public_id', 'company_uuid', 'connection_uuid', 'provider', 'status', 'amount', 'currency', 'meta', '_key'] as $column) {
+            $blueprint->string($column)->nullable();
+        }
+        $blueprint->timestamps();
+        $blueprint->timestamp('deleted_at')->nullable();
+    });
+    session(['company' => 'company-txn-1']);
+    $connection->table('fuel_provider_transactions')->insert(['uuid' => 'fpt-real-1', 'public_id' => 'fuel_provider_transaction_real1', 'company_uuid' => 'company-txn-1', 'provider' => 'petroapp', 'status' => 'pending']);
+
+    $controller = new FleetOpsFuelProviderTransactionControllerProbe(new FleetOpsFuelProviderTransactionServiceFake());
+    $reflection = new ReflectionMethod(FuelProviderTransactionController::class, 'findTransaction');
+    $reflection->setAccessible(true);
+
+    expect($reflection->invoke($controller, 'fpt-real-1')->public_id)->toBe('fuel_provider_transaction_real1')
+        ->and($reflection->invoke($controller, 'fuel_provider_transaction_real1')->uuid)->toBe('fpt-real-1');
+});
