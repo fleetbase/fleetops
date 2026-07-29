@@ -2601,3 +2601,60 @@ test('send driver notification real helpers resolve orders distances and notify 
     expect($failing->handle())->toBe(0)
         ->and($failing->messages)->toContain(['error', 'notification channel offline']);
 });
+
+if (!function_exists('Fleetbase\FleetOps\Console\Commands\event')) {
+    eval('namespace Fleetbase\FleetOps\Console\Commands; function event($event = null) { $GLOBALS["fleetopsSimulatedEvents"][] = $event; return []; }');
+}
+
+test('simulate order route navigation real helpers resolve lookups routes and events', function () {
+    $connection = new Illuminate\Database\SQLiteConnection(new PDO('sqlite::memory:'));
+    $resolver   = new Illuminate\Database\ConnectionResolver(['default' => $connection, 'mysql' => $connection]);
+    $resolver->setDefaultConnection('mysql');
+    Model::setConnectionResolver($resolver);
+    $schema = $connection->getSchemaBuilder();
+    foreach (['orders' => ['uuid', 'public_id', 'company_uuid', 'status', '_key'], 'drivers' => ['uuid', 'public_id', 'company_uuid', 'user_uuid', '_key'], 'users' => ['uuid', 'public_id', 'company_uuid', '_key']] as $table => $columns) {
+        $schema->create($table, function ($blueprint) use ($columns) {
+            $blueprint->increments('id');
+            foreach ($columns as $column) {
+                $blueprint->string($column)->nullable();
+            }
+            $blueprint->timestamps();
+            $blueprint->timestamp('deleted_at')->nullable();
+        });
+    }
+    $connection->table('orders')->insert(['uuid' => 'order-simnav-1', 'public_id' => 'order_simnav1', 'company_uuid' => 'company-1', 'status' => 'created']);
+    $connection->table('users')->insert(['uuid' => 'user-simnav-1', 'company_uuid' => 'company-1']);
+    $connection->table('drivers')->insert(['uuid' => 'driver-simnav-1', 'public_id' => 'driver_simnav1', 'company_uuid' => 'company-1', 'user_uuid' => 'user-simnav-1']);
+
+    $command = new SimulateOrderRouteNavigation();
+    $helper  = function (string $method, ...$arguments) use ($command) {
+        $reflection = new ReflectionMethod(SimulateOrderRouteNavigation::class, $method);
+        $reflection->setAccessible(true);
+
+        return $reflection->invoke($command, ...$arguments);
+    };
+
+    expect($helper('findOrder', 'order_simnav1')?->uuid)->toBe('order-simnav-1')
+        ->and($helper('findDriver', 'driver_simnav1')?->uuid)->toBe('driver-simnav-1');
+
+    // Route retrieval flows through the faked OSRM client and polyline decode
+    Cache::swap(new Illuminate\Cache\Repository(new Illuminate\Cache\ArrayStore()));
+    Illuminate\Support\Facades\Http::swap(new Illuminate\Http\Client\Factory());
+    Illuminate\Support\Facades\Http::fake(fn () => Illuminate\Support\Facades\Http::response(['code' => 'Ok', 'routes' => [['geometry' => '_p~iF~ps|U_ulLnnqC_mqNvxq`@']]]));
+    $route = $helper('getRoute', new Point(1.30, 103.80), new Point(1.31, 103.81));
+    expect($route['code'])->toBe('Ok');
+
+    $points = $helper('decodePolyline', '_p~iF~ps|U_ulLnnqC_mqNvxq`@');
+    expect($points)->toHaveCount(3);
+
+    // Location events dispatch through the namespaced event shim
+    $GLOBALS['fleetopsSimulatedEvents'] = [];
+    $driver                             = Driver::where('uuid', 'driver-simnav-1')->first();
+    $helper('dispatchLocationChanged', $driver, $points[0], ['progress' => 10]);
+    expect($GLOBALS['fleetopsSimulatedEvents'])->toHaveCount(1);
+
+    // The waypoint pacing pause simply sleeps between broadcasts
+    $paused = microtime(true);
+    $helper('pauseBetweenWaypoints');
+    expect(microtime(true) - $paused)->toBeGreaterThan(2.5);
+});
