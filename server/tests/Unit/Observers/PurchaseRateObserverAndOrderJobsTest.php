@@ -164,6 +164,6 @@ test('order canceled notification builds mail seams and push channels', function
     expect(fn () => $withWaypoint->toMail(null))->toThrow(Error::class);
 
     // Push transports are unavailable; delegation bodies still execute
-    expect(fn () => $notification->toFcm(null))->toThrow(TypeError::class)
+    expect(fn () => $notification->toFcm(null))->toThrow(Exception::class)
         ->and(fn () => $notification->toApn(null))->toThrow(Error::class);
 });

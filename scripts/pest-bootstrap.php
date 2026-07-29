@@ -15,7 +15,7 @@ foreach ($autoloadCandidates as $candidate) {
 }
 
 if (!function_exists('config')) {
-    function config(?string $key = null, mixed $default = null): mixed
+    function config(string|array|null $key = null, mixed $default = null): mixed
     {
         if (class_exists('Illuminate\Container\Container')) {
             $app = Illuminate\Container\Container::getInstance();
@@ -25,6 +25,15 @@ if (!function_exists('config')) {
 
                 if ($key === null) {
                     return $config;
+                }
+
+                // Laravel's helper doubles as a setter when handed an array
+                if (is_array($key)) {
+                    foreach ($key as $configKey => $configValue) {
+                        $config->set($configKey, $configValue);
+                    }
+
+                    return null;
                 }
 
                 return $config->get($key, $default);

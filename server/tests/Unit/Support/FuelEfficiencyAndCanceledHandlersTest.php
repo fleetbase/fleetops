@@ -159,6 +159,6 @@ test('order completed broadcasts on order channels and exposes push seams', func
 
     // Push transports are unavailable in the harness; the delegation bodies
     // still execute, which is the covered contract here.
-    expect(fn () => $notification->toFcm(null))->toThrow(TypeError::class)
+    expect(fn () => $notification->toFcm(null))->toThrow(Exception::class)
         ->and(fn () => $notification->toApn(null))->toThrow(Error::class);
 });

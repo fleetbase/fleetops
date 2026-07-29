@@ -492,6 +492,13 @@ test('auth can resolves real permissions for requests and ping guards', function
     $updateRequest = new Fleetbase\FleetOps\Http\Requests\Internal\UpdateDriverRequest();
     expect($updateRequest->authorize())->toBeTrue();
 
+    // Fleet action requests resolve their permission through the same gate
+    $fleetRequest = Fleetbase\FleetOps\Http\Requests\Internal\FleetActionRequest::create('/int/v1/fleets/assign-vehicle', 'POST');
+    $canMethod    = new ReflectionMethod(Fleetbase\FleetOps\Http\Requests\Internal\FleetActionRequest::class, 'can');
+    $canMethod->setAccessible(true);
+    expect($canMethod->invoke($fleetRequest, 'fleet-ops update driver'))->toBeTrue()
+        ->and($canMethod->invoke($fleetRequest, 'fleet-ops assign-vehicle-for fleet'))->toBeFalse();
+
     // Driver ping authorization resolves through the order permission
     $orderController = new Fleetbase\FleetOps\Http\Controllers\Internal\v1\OrderController();
     $canPing         = new ReflectionMethod($orderController, 'canPingDriver');

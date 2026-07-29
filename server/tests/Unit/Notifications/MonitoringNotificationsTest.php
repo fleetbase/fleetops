@@ -131,6 +131,6 @@ test('waypoint completed broadcasts on order channels and exposes push seams', f
     // Push transports and console urls are unavailable in the harness; the
     // delegation bodies still execute up to those seams.
     expect(fn () => $notification->toMail(null))->toThrow(Error::class)
-        ->and(fn () => $notification->toFcm(null))->toThrow(TypeError::class)
+        ->and(fn () => $notification->toFcm(null))->toThrow(Exception::class)
         ->and(fn () => $notification->toApn(null))->toThrow(Error::class);
 });

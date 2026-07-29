@@ -76,6 +76,6 @@ test('order dispatched push channel seams execute their delegation bodies', func
 
     // The fcm/apn transport packages are unavailable in the harness; the
     // delegation bodies still execute, which is the covered contract here.
-    expect(fn () => $notification->toFcm(null))->toThrow(TypeError::class)
+    expect(fn () => $notification->toFcm(null))->toThrow(Exception::class)
         ->and(fn () => $notification->toApn(null))->toThrow(Error::class);
 });

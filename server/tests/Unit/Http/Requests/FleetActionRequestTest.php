@@ -57,3 +57,24 @@ test('fleet action request exposes assignment validation rules', function () {
         'vehicle' => 'nullable|string|exists:vehicles,uuid',
     ]);
 });
+
+test('the real action method seam reads the resolved route action', function () {
+    // The probe above overrides actionMethod(); this exercises the real body
+    $request = FleetActionRequest::create('/int/v1/fleets/assign-vehicle', 'POST');
+    $request->setRouteResolver(fn () => new class {
+        public function getActionMethod()
+        {
+            return 'assignVehicle';
+        }
+
+        public function getAction($key = null)
+        {
+            return $key === null ? ['controller' => 'FleetController@assignVehicle'] : 'FleetController@assignVehicle';
+        }
+    });
+
+    $reflection = new ReflectionMethod(FleetActionRequest::class, 'actionMethod');
+    $reflection->setAccessible(true);
+
+    expect($reflection->invoke($request))->toBe('assignVehicle');
+});
