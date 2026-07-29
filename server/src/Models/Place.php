@@ -395,6 +395,16 @@ class Place extends Model
     }
 
     /**
+     * Inserts a new place into the database from a geocoding lookup on an address.
+     *
+     * @return string|bool the UUID of the newly created place or false if the place was not created
+     */
+    public static function insertFromGeocodingLookup(string $address)
+    {
+        return static::insertGetUuid(static::getValuesFromGeocodingLookup($address));
+    }
+
+    /**
      * Compose a fuller geocoding query from structured place attributes.
      */
     public static function composeGeocodingQuery(array $place): ?string
