@@ -41,7 +41,6 @@ use Spatie\Activitylog\Traits\CausesActivity;
 use Spatie\Activitylog\Traits\LogsActivity;
 use Spatie\Sluggable\HasSlug;
 use Spatie\Sluggable\SlugOptions;
-use WebSocket\Message\Ping;
 
 class Driver extends Model
 {
@@ -327,11 +326,6 @@ class Driver extends Model
     public function orders(): HasMany|Builder
     {
         return $this->hasMany(Order::class, 'driver_assigned_uuid')->without(['driver']);
-    }
-
-    public function pings(): HasMany
-    {
-        return $this->hasMany(Ping::class);
     }
 
     public function positions(): HasMany
