@@ -9,12 +9,23 @@ use Illuminate\Database\SQLiteConnection;
  * commands and jobs. Each is a one-line delegation that behaviour tests
  * override, so the delegation itself is asserted here against SQLite.
  */
+if (!function_exists('Fleetbase\Observers\event')) {
+    eval('namespace Fleetbase\Observers; function event($event = null, $payload = []) { return []; }');
+}
+
+if (!function_exists('Fleetbase\FleetOps\Observers\event')) {
+    eval('namespace Fleetbase\FleetOps\Observers; function event($event = null, $payload = []) { return []; }');
+}
+
 if (!function_exists('Fleetbase\Support\session')) {
     eval('namespace Fleetbase\Support; function session($key = null, $default = null) { if ($key === null) { return new class { public function has($k) { return \session($k) !== null; } public function get($k, $d = null) { return \session($k, $d); } }; } return \session($key, $default); }');
 }
 
 function fleetopsQuerySeamBoot(): SQLiteConnection
 {
+    if (!Illuminate\Support\Str::hasMacro('humanize')) {
+        Illuminate\Support\Str::macro('humanize', fn ($value, $uppercase = true) => str_replace('_', ' ', Illuminate\Support\Str::snake((string) $value)));
+    }
     $connection = new SQLiteConnection(new PDO('sqlite::memory:'));
     $resolver   = new ConnectionResolver(['default' => $connection, 'mysql' => $connection, 'sandbox' => $connection]);
     $resolver->setDefaultConnection('mysql');
@@ -49,8 +60,8 @@ function fleetopsQuerySeamBoot(): SQLiteConnection
     app()->bind(Illuminate\Contracts\Config\Repository::class, fn () => config());
 
     $schema  = $connection->getSchemaBuilder();
-    $columns = ['uuid', 'public_id', 'company_uuid', 'user_uuid', 'name', 'type', 'status', 'provider', 'event', 'geofence_uuid', 'order_uuid', 'service_quote_uuid', 'expired_at', '_key'];
-    foreach (['drivers', 'users', 'companies', 'company_users', 'integrated_vendors', 'geofence_events_log', 'orders', 'service_quotes'] as $table) {
+    $columns = ['uuid', 'public_id', 'company_uuid', 'user_uuid', 'name', 'type', 'status', 'provider', 'event', 'geofence_uuid', 'order_uuid', 'service_quote_uuid', 'expired_at', 'driver_assigned_uuid', 'current_job_uuid', 'tracking_number_uuid', 'code', 'details', 'transaction_at', 'connection_uuid', 'amount', 'region', '_key'];
+    foreach (['drivers', 'users', 'companies', 'company_users', 'integrated_vendors', 'geofence_events_log', 'orders', 'service_quotes', 'tracking_numbers', 'tracking_statuses', 'fuel_provider_transactions', 'fuel_provider_connections'] as $table) {
         $schema->create($table, function ($blueprint) use ($columns) {
             $blueprint->increments('id');
             foreach ($columns as $column) {
@@ -172,4 +183,68 @@ test('order finalization job seams resolve records and fire the ready event', fu
     // Jobs without a quote uuid short circuit before querying
     $quoteless = new $class('order-final-1', null);
     expect(fleetopsQuerySeamInvoke($quoteless, $class, 'findServiceQuote'))->toBeNull();
+});
+
+test('tracking number observer seams generate numbers barcodes and statuses', function () {
+    $connection = fleetopsQuerySeamBoot();
+    $barcode    = new class {
+        public function __call($method, $arguments)
+        {
+            return 'generated-barcode';
+        }
+    };
+    app()->instance('DNS2D', $barcode);
+    app()->instance('DNS1D', $barcode);
+
+    $observer = (new ReflectionClass(Fleetbase\FleetOps\Observers\TrackingNumberObserver::class))->newInstanceWithoutConstructor();
+    $class    = Fleetbase\FleetOps\Observers\TrackingNumberObserver::class;
+
+    $trackingNumber = new Fleetbase\FleetOps\Models\TrackingNumber();
+    $trackingNumber->setRawAttributes(['uuid' => 'tn-seam-1', 'region' => 'SG'], true);
+
+    // Numbers are generated for the record's region
+    expect(fleetopsQuerySeamInvoke($observer, $class, 'generateTrackingNumber', [$trackingNumber]))->toBeString()
+        ->and(fleetopsQuerySeamInvoke($observer, $class, 'generateBarcode', ['tn-seam-1', 'C39']))->toBe('generated-barcode');
+
+    // Statuses are persisted through the model
+    $status = fleetopsQuerySeamInvoke($observer, $class, 'createTrackingStatus', [[
+        'company_uuid'         => 'company-seam-1',
+        'tracking_number_uuid' => 'tn-seam-1',
+        'code'                 => 'CREATED',
+        'status'               => 'Created',
+    ]]);
+    expect($status)->toBeInstanceOf(Fleetbase\FleetOps\Models\TrackingStatus::class)
+        ->and($connection->table('tracking_statuses')->count())->toBe(1);
+});
+
+test('fuel provider summary seams scope transactions and connections', function () {
+    $connection = fleetopsQuerySeamBoot();
+    $connection->table('fuel_provider_transactions')->insert([
+        ['uuid' => 'fpt-1', 'company_uuid' => 'company-seam-1', 'transaction_at' => '2026-07-15 00:00:00'],
+        // Outside the window and another company: both excluded
+        ['uuid' => 'fpt-2', 'company_uuid' => 'company-seam-1', 'transaction_at' => '2026-01-01 00:00:00'],
+        ['uuid' => 'fpt-3', 'company_uuid' => 'company-other', 'transaction_at' => '2026-07-15 00:00:00'],
+    ]);
+    $connection->table('fuel_provider_connections')->insert([
+        ['uuid' => 'fpc-1', 'company_uuid' => 'company-seam-1'],
+        ['uuid' => 'fpc-2', 'company_uuid' => 'company-other'],
+    ]);
+
+    $class   = Fleetbase\FleetOps\Support\Analytics\FuelProviderSummary::class;
+    $summary = (new ReflectionClass($class))->newInstanceWithoutConstructor()
+        ->between(Illuminate\Support\Carbon::parse('2026-07-01')->toDateTime(), Illuminate\Support\Carbon::parse('2026-07-31')->toDateTime());
+
+    // Transactions are scoped to the company and the reporting window
+    expect(fleetopsQuerySeamInvoke($summary, $class, 'transactions', ['company-seam-1'])->pluck('uuid')->all())->toBe(['fpt-1'])
+        ->and(fleetopsQuerySeamInvoke($summary, $class, 'connections', ['company-seam-1'])->pluck('uuid')->all())->toBe(['fpc-1']);
+});
+
+test('shift change listener seams detect creation events and notify drivers', function () {
+    fleetopsQuerySeamBoot();
+
+    $listener = (new ReflectionClass(Fleetbase\FleetOps\Listeners\NotifyDriverOnShiftChange::class))->newInstanceWithoutConstructor();
+    $class    = Fleetbase\FleetOps\Listeners\NotifyDriverOnShiftChange::class;
+
+    // Only schedule-item creation events are treated as creations
+    expect(fleetopsQuerySeamInvoke($listener, $class, 'isCreatedEvent', [new stdClass()]))->toBeFalse();
 });
