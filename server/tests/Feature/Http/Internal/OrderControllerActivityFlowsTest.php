@@ -94,7 +94,7 @@ function fleetopsInternalActivityBoot(): SQLiteConnection
         'waypoints'         => ['uuid', 'public_id', 'company_uuid', 'payload_uuid', 'place_uuid', 'tracking_number_uuid', 'customer_uuid', 'customer_type', 'order', 'type', '_key', '_import_id'],
         'drivers'           => ['uuid', 'public_id', 'company_uuid', 'user_uuid', 'vehicle_uuid', 'status', 'online', 'location', 'current_job_uuid'],
         'users'             => ['uuid', 'public_id', 'company_uuid', 'name', 'status', 'type'],
-        'order_configs'     => ['uuid', 'public_id', 'company_uuid', 'name', 'key', 'namespace', 'description', 'flow', 'entities', 'meta', 'version', 'core_service', 'status', 'type', '_key'],
+        'order_configs'     => ['uuid', 'public_id', 'company_uuid', 'name', 'key', 'namespace', 'description', 'flow', 'entities', 'meta', 'tags', 'version', 'core_service', 'status', 'type', '_key'],
         'tracking_numbers'  => ['uuid', 'public_id', 'company_uuid', 'tracking_number', 'region', 'location', 'status_uuid', 'owner_uuid', 'owner_type', 'qr_code', 'barcode', '_key'],
         'tracking_statuses' => ['uuid', 'public_id', 'company_uuid', 'tracking_number_uuid', 'proof_uuid', 'status', 'details', 'location', 'code', 'complete', '_key'],
         'entities'          => ['uuid', 'public_id', 'company_uuid', 'payload_uuid', 'destination_uuid', 'tracking_number_uuid', 'name', 'type'],
@@ -608,4 +608,56 @@ test('driver ping notifies the assigned driver through the notification seam', f
 
     expect($notified)->toHaveCount(1)
         ->and($notified[0])->toBeInstanceOf(Fleetbase\FleetOps\Notifications\OrderPing::class);
+});
+
+test('starting multi stop orders seeds the first service stop', function () {
+    $connection = fleetopsInternalActivityBoot();
+    fleetopsInternalActivitySeedOrder($connection, ['driver_assigned_uuid' => 'driver-1', 'dispatched' => 1, 'status' => 'dispatched']);
+    fleetopsInternalActivitySeedWaypoints($connection);
+    $connection->table('payloads')->where('uuid', 'payload-1')->update(['pickup_uuid' => null, 'dropoff_uuid' => null]);
+
+    (new OrderController())->start(Request::create('/x', 'POST', ['order' => 'order-1']));
+
+    expect($connection->table('payloads')->value('current_waypoint_uuid'))->toBe('place-w1')
+        ->and($connection->table('orders')->value('started'))->toBe(1);
+});
+
+test('started activities seed the current stop on multi stop payloads', function () {
+    $connection = fleetopsInternalActivityBoot();
+    fleetopsInternalActivitySeedOrder($connection, ['driver_assigned_uuid' => 'driver-1', 'dispatched' => 1, 'status' => 'dispatched']);
+    fleetopsInternalActivitySeedWaypoints($connection);
+    $connection->table('payloads')->where('uuid', 'payload-1')->update(['pickup_uuid' => null, 'dropoff_uuid' => null]);
+
+    $started = ['key' => 'order_started', 'code' => 'started', 'status' => 'Started', 'details' => 'Order started'];
+    (new OrderController())->updateActivity('order_internal', Request::create('/x', 'POST', ['activity' => $started, 'bypass_proof' => 1]));
+
+    expect($connection->table('payloads')->value('current_waypoint_uuid'))->not->toBeNull();
+});
+
+test('completing activities release the assigned drivers current job', function () {
+    $connection = fleetopsInternalActivityBoot();
+    fleetopsInternalActivitySeedOrder($connection, ['driver_assigned_uuid' => 'driver-1', 'started' => 1, 'status' => 'started']);
+    $connection->table('drivers')->where('uuid', 'driver-1')->update(['current_job_uuid' => 'order-1']);
+
+    $completed = ['key' => 'order_completed', 'code' => 'completed', 'status' => 'Completed', 'details' => 'Order completed', 'complete' => true];
+    (new OrderController())->updateActivity('order_internal', Request::create('/x', 'POST', ['activity' => $completed, 'bypass_proof' => 1]));
+
+    expect($connection->table('drivers')->where('uuid', 'driver-1')->value('current_job_uuid'))->toBeNull()
+        ->and($connection->table('orders')->value('status'))->toBe('completed');
+});
+
+test('set destination and next activity guard missing orders and configs', function () {
+    $connection = fleetopsInternalActivityBoot();
+    fleetopsInternalActivitySeedOrder($connection, ['driver_assigned_uuid' => 'driver-1']);
+    $controller = new OrderController();
+
+    // Unknown orders are refused before any destination work happens
+    expect($controller->setDestination('order_missing99', 'place_any')->getData(true)['error'] ?? '')->toBe('No order found.');
+
+    // Orders whose company cannot be resolved have no config to fall back on
+    $connection->table('orders')->where('uuid', 'order-1')->update(['order_config_uuid' => null, 'type' => null]);
+    $connection->table('order_configs')->delete();
+    $connection->table('companies')->delete();
+    $noConfig = $controller->nextActivity('order_internal', Request::create('/x', 'GET'));
+    expect($noConfig->getData(true)['error'] ?? '')->toBe('No order config found for order.');
 });

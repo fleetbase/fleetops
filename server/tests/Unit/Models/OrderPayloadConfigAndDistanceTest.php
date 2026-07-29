@@ -335,11 +335,10 @@ test('config lookups fall back to trashed rows and null without a company', func
     $order = Order::query()->where('uuid', 'order-1')->first();
     expect($order->config()?->uuid)->toBe('55555555-5555-4555-8555-555555555555');
 
-    // Without a resolvable company the default config lookup type-errors
-    // (OrderConfig::default() declares a non-nullable return)
+    // Without a resolvable company there is no default config to fall back on
     session(['company' => 'company-none']);
     $orphan = Order::query()->where('uuid', 'order-2')->first();
-    expect(fn () => $orphan->config())->toThrow(TypeError::class);
+    expect($orphan->config())->toBeNull();
     session(['company' => 'company-1']);
 });
 

@@ -189,7 +189,7 @@ function fleetopsInternalOrderCreateBoot(array $validatorErrors = []): SQLiteCon
     $schema = $connection->getSchemaBuilder();
     $tables = [
         'orders'              => ['uuid', 'public_id', 'internal_id', 'company_uuid', 'payload_uuid', 'route_uuid', 'order_config_uuid', 'service_quote_uuid', 'purchase_rate_uuid', 'tracking_number_uuid', 'driver_assigned_uuid', 'vehicle_assigned_uuid', 'customer_uuid', 'customer_type', 'facilitator_uuid', 'facilitator_type', 'session_uuid', 'transaction_uuid', 'status', 'type', 'dispatched', 'dispatched_at', 'scheduled_at', 'distance', 'time', 'pod_required', 'pod_method', 'started', 'started_at', 'meta', 'orchestrator_priority', 'adhoc', 'adhoc_distance', 'created_by_uuid', 'updated_by_uuid', '_key'],
-        'order_configs'       => ['uuid', 'public_id', 'company_uuid', 'name', 'key', 'namespace', 'description', 'flow', 'entities', 'meta', 'version', 'core_service', 'status', 'type', '_key'],
+        'order_configs'       => ['uuid', 'public_id', 'company_uuid', 'name', 'key', 'namespace', 'description', 'flow', 'entities', 'meta', 'tags', 'version', 'core_service', 'status', 'type', '_key'],
         'payloads'            => ['uuid', 'public_id', 'company_uuid', 'pickup_uuid', 'dropoff_uuid', 'return_uuid', 'current_waypoint_uuid', 'type', 'meta', '_key'],
         'waypoints'           => ['uuid', 'public_id', 'company_uuid', 'payload_uuid', 'place_uuid', 'order', 'type', 'status', 'tracking_number_uuid', 'customer_uuid', 'customer_type', '_key'],
         'entities'            => ['uuid', 'public_id', 'company_uuid', 'payload_uuid', 'tracking_number_uuid', 'name', 'type', 'status', 'internal_id', 'customer_uuid', 'customer_type', 'destination_uuid', 'photo_uuid', 'meta', '_key'],
@@ -303,17 +303,19 @@ test('create record surfaces validation errors default-creates configs and catch
     expect(fn () => (new OrderController())->createRecord(Request::create('/int/v1/orders', 'POST', ['order' => ['type' => 'transport']])))
         ->toThrow(TypeError::class);
 
-    // Without any stored config the default lookup type-errors in the harness
-    // (OrderConfig::default() declares a non-nullable return)
+    // Without any stored config the default lookup provisions the transport
+    // config for the session company
     $connection = fleetopsInternalOrderCreateBoot();
     $connection->table('order_configs')->delete();
-    expect(fn () => (new OrderController())->createRecord(Request::create('/int/v1/orders', 'POST', [
+    $defaulted = (new OrderController())->createRecord(Request::create('/int/v1/orders', 'POST', [
         'order' => [
             'dispatched'          => false,
             'payload'             => ['type' => 'transport'],
             'custom_field_values' => [],
         ],
-    ])))->toThrow(TypeError::class);
+    ]));
+    expect($defaulted)->toBeArray()->toHaveKey('order')
+        ->and($connection->table('order_configs')->where('namespace', 'system:order-config:transport')->count())->toBe(1);
 
     // A query failure inside creation surfaces through the debug-mode catch
     $connection2 = fleetopsInternalOrderCreateBoot();
@@ -404,4 +406,49 @@ test('integrated vendor orders attach metadata and surface bridge failures', fun
         ],
     ]));
     expect($failed->getData(true)['error'] ?? '')->toContain('vendor rejected');
+});
+
+test('order config defaults are created dispatched and fall back to transport', function () {
+    // With no stored config the default lookup provisions one for the company
+    $connection = fleetopsInternalOrderCreateBoot();
+    $connection->table('order_configs')->delete();
+
+    $created = (new OrderController())->createRecord(Request::create('/int/v1/orders', 'POST', [
+        'order' => [
+            'dispatched' => false,
+            'payload'    => ['type' => 'transport'],
+        ],
+    ]));
+
+    expect($created)->toBeArray()->toHaveKey('order')
+        ->and($connection->table('order_configs')->where('namespace', 'system:order-config:transport')->count())->toBe(1)
+        ->and($connection->table('orders')->value('type'))->toBe('transport');
+
+    // Without a session company no config resolves and the type falls back
+    $connection2 = fleetopsInternalOrderCreateBoot();
+    $connection2->table('order_configs')->delete();
+    session(['company' => null]);
+    $fallback = (new OrderController())->createRecord(Request::create('/int/v1/orders', 'POST', [
+        'order' => [
+            'dispatched' => false,
+            'payload'    => ['type' => 'transport'],
+        ],
+    ]));
+    session(['company' => 'company-1']);
+
+    expect($fallback)->not->toBeNull()
+        ->and($connection2->table('order_configs')->count())->toBe(0);
+});
+
+test('create record dispatches orders when the dispatch flag is not disabled', function () {
+    $connection = fleetopsInternalOrderCreateBoot();
+
+    $result = (new OrderController())->createRecord(Request::create('/int/v1/orders', 'POST', [
+        'order' => [
+            'payload' => ['type' => 'transport'],
+        ],
+    ]));
+
+    expect($result)->toBeArray()->toHaveKey('order')
+        ->and($connection->table('orders')->value('dispatched'))->not->toBeNull();
 });
