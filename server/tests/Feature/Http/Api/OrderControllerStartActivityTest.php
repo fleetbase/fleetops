@@ -564,3 +564,37 @@ test('waypoint activities require started orders before advancing stops', functi
     ]]));
     expect($gated->getStatusCode())->toBe(422);
 });
+
+test('dispatched activity with skip dispatch advances to the started activity', function () {
+    $connection = fleetopsOrderStartBoot();
+    fleetopsOrderStartSeedOrder($connection, ['status' => 'created', 'driver_assigned_uuid' => 'driver-1']);
+
+    // Asking to skip dispatch swaps the dispatched activity for the started one
+    (new OrderController())->updateActivity('order_start', Request::create('/x', 'POST', [
+        'skip_dispatch' => 1,
+        'activity'      => ['key' => 'order_dispatched', 'code' => 'dispatched', 'status' => 'Dispatched', 'details' => 'Order dispatched'],
+    ]));
+
+    expect($connection->table('tracking_statuses')->where('code', 'STARTED')->count())->toBeGreaterThanOrEqual(1);
+});
+
+test('classic lifecycle activities record activity against payload entities', function () {
+    $connection = fleetopsOrderStartBoot();
+    fleetopsOrderStartSeedOrder($connection, ['status' => 'dispatched', 'driver_assigned_uuid' => 'driver-1']);
+    $connection->table('entities')->insert([
+        'uuid'         => 'entity-activity-1',
+        'public_id'    => 'entity_activityone',
+        'company_uuid' => 'company-1',
+        'payload_uuid' => 'payload-1',
+        'name'         => 'Crate',
+    ]);
+    $connection->table('tracking_numbers')->insert(['uuid' => 'tn-entity-1', 'company_uuid' => 'company-1', 'tracking_number' => 'TRK-E1', 'owner_uuid' => 'entity-activity-1']);
+    $connection->table('entities')->where('uuid', 'entity-activity-1')->update(['tracking_number_uuid' => 'tn-entity-1']);
+
+    (new OrderController())->updateActivity('order_start', Request::create('/x', 'POST', ['activity' => [
+        'key' => 'order_started', 'code' => 'started', 'status' => 'Started', 'details' => 'Order started',
+    ]]));
+
+    // The entity receives its own tracking status alongside the order
+    expect($connection->table('tracking_statuses')->where('tracking_number_uuid', 'tn-entity-1')->count())->toBeGreaterThanOrEqual(1);
+});
