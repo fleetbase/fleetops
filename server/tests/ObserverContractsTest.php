@@ -1287,3 +1287,77 @@ test('notify driver on shift change exits early and sends enabled driver notific
         ->and($listener->sent[0][0])->toBe($driver)
         ->and($listener->sent[0][1])->toBeInstanceOf(DriverShiftChanged::class);
 });
+
+if (!function_exists('Fleetbase\FleetOps\Observers\event')) {
+    eval('namespace Fleetbase\FleetOps\Observers; function event($event = null, $payload = null) { $GLOBALS["fleetopsObserverEvents"][] = [$event, $payload]; return []; }');
+}
+
+test('work order observer real helpers query maintenance schedules and events', function () {
+    $connection = new Illuminate\Database\SQLiteConnection(new PDO('sqlite::memory:'));
+    $resolver   = new Illuminate\Database\ConnectionResolver(['default' => $connection, 'mysql' => $connection]);
+    $resolver->setDefaultConnection('mysql');
+    Illuminate\Database\Eloquent\Model::setConnectionResolver($resolver);
+    if (!Illuminate\Database\Eloquent\Model::getEventDispatcher()) {
+        Illuminate\Database\Eloquent\Model::setEventDispatcher(new Illuminate\Events\Dispatcher());
+    }
+    $schema = $connection->getSchemaBuilder();
+    foreach (['maintenances' => ['uuid', 'public_id', 'company_uuid', 'work_order_uuid', 'maintainable_type', 'maintainable_uuid', 'type', 'status', 'scheduled_at', 'odometer', 'engine_hours', 'summary', '_key'], 'maintenance_schedules' => ['uuid', 'public_id', 'company_uuid', 'name', 'next_due_at', 'meta', '_key']] as $table => $columns) {
+        $schema->create($table, function ($blueprint) use ($columns) {
+            $blueprint->increments('id');
+            foreach ($columns as $column) {
+                $blueprint->string($column)->nullable();
+            }
+            $blueprint->timestamps();
+            $blueprint->timestamp('deleted_at')->nullable();
+        });
+    }
+    session(['company' => 'company-1']);
+    app()->instance('responsecache', new class {
+        public function __call($method, $arguments)
+        {
+            return null;
+        }
+    });
+    config()->set('activitylog.enabled', false);
+    config()->set('activitylog.default_auth_driver', 'web');
+    app()->bind(Illuminate\Contracts\Config\Repository::class, fn () => config());
+    $connection->table('maintenances')->insert(['uuid' => 'mnt-obs-1', 'work_order_uuid' => 'wo-obs-1', 'status' => 'completed']);
+    $connection->table('maintenance_schedules')->insert(['uuid' => 'sched-obs-1', 'company_uuid' => 'company-1', 'name' => 'Quarterly']);
+
+    $observer = new WorkOrderObserver();
+    $helper   = function (string $method, ...$arguments) use ($observer) {
+        $reflection = new ReflectionMethod(WorkOrderObserver::class, $method);
+        $reflection->setAccessible(true);
+
+        return $reflection->invoke($observer, ...$arguments);
+    };
+
+    $workOrder = new WorkOrder();
+    $workOrder->setRawAttributes(['uuid' => 'wo-obs-1', 'company_uuid' => 'company-1'], true);
+
+    // Real queries scope by work order and schedule identity
+    expect($helper('hasMaintenanceRecord', $workOrder))->toBeTrue()
+        ->and($helper('findSchedule', 'sched-obs-1'))->toBeInstanceOf(MaintenanceSchedule::class)
+        ->and($helper('findSchedule', 'sched-missing'))->toBeNull();
+
+    // Maintenance creation persists rows through the observer helper
+    $created = $helper('createMaintenance', ['company_uuid' => 'company-1', 'work_order_uuid' => 'wo-obs-2', 'status' => 'scheduled', 'type' => 'inspection']);
+    expect($created)->toBeInstanceOf(Maintenance::class)
+        ->and($connection->table('maintenances')->count())->toBe(2);
+
+    // Completed events dispatch through the observer event shim
+    $GLOBALS['fleetopsObserverEvents'] = [];
+    $helper('dispatchCompletedEvent', $workOrder);
+    expect($GLOBALS['fleetopsObserverEvents'][0][0])->toBe('work_order.completed');
+
+    // Schedule resets skip work orders without linked schedules
+    $unlinked = new WorkOrder();
+    $unlinked->setRawAttributes(['uuid' => 'wo-obs-3', 'company_uuid' => 'company-1', 'schedule_uuid' => null], true);
+    $helper('resetSchedule', $unlinked);
+
+    // And skip quietly when the linked schedule row is missing
+    $orphaned = new WorkOrder();
+    $orphaned->setRawAttributes(['uuid' => 'wo-obs-4', 'company_uuid' => 'company-1', 'schedule_uuid' => 'sched-missing'], true);
+    $helper('resetSchedule', $orphaned);
+    expect(true)->toBeTrue();
+});
