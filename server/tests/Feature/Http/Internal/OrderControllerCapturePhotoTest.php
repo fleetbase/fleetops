@@ -479,3 +479,29 @@ test('internal capture photo accepts uploads and rejects unusable subjects', fun
     @unlink($temp);
     @unlink($textFile);
 });
+
+test('public api capture photo rejects bad uploads and non string photos', function () {
+    $connection = fleetopsCapturePhotoBoot();
+    fleetopsCapturePhotoSeed($connection);
+    $apiController = new Fleetbase\FleetOps\Http\Controllers\Api\v1\OrderController();
+
+    // Uploads that are not images fail the file arm of the closure
+    $textFile = tempnam(sys_get_temp_dir(), 'proof') . '.txt';
+    file_put_contents($textFile, 'plain text, not an image');
+    $badUpload = new Illuminate\Http\UploadedFile($textFile, 'notes.txt', 'text/plain', null, true);
+    $request   = Request::create('/v1/orders/capture-photo', 'POST', [], [], ['photos' => [$badUpload]]);
+    $store     = app('session.store');
+    $store->put('company', 'company-1');
+    $request->setLaravelSession($store);
+
+    $rejected = $apiController->capturePhoto($request, 'order_photoone1');
+    expect($rejected->getStatusCode())->toBe(422)
+        ->and($rejected->getData(true)['error'] ?? '')->toContain('valid image file');
+
+    // Values that are neither uploads nor strings fail the final arm
+    $nonString = $apiController->capturePhoto(fleetopsCapturePhotoRequest(['photos' => [['nested' => 'array']]]), 'order_photoone1');
+    expect($nonString->getStatusCode())->toBe(422)
+        ->and($nonString->getData(true)['error'] ?? '')->toContain('image file or a Base64 string');
+
+    @unlink($textFile);
+});

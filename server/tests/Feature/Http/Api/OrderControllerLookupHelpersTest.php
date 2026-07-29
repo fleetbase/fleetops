@@ -174,6 +174,17 @@ test('order comments endpoint reports missing orders and load failures', functio
     $missing = $probe->orderComments('missing');
     expect($missing->getStatusCode())->toBe(404)
         ->and($missing->getData(true))->toBe(['error' => 'Order resource not found.']);
+
+    // Any other failure while loading comments reports the generic error
+    $failing = new class extends OrderController {
+        protected function findOrder(string $id, array $with = [], array $withCount = []): Order
+        {
+            throw new RuntimeException('comments backend unavailable');
+        }
+    };
+    $broken = $failing->orderComments('order_test');
+    expect($broken->getStatusCode())->toBe(404)
+        ->and($broken->getData(true))->toBe(['error' => 'An error occured trying to get order comments.']);
 });
 
 test('schedule order combines date time and timezone inputs', function () {
