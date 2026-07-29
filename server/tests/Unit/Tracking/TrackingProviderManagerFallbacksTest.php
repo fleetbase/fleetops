@@ -129,3 +129,80 @@ test('provider fallback chain warns skips failures and tags fallback results', f
         ->and($logRecorder->warnings)->toHaveCount(1)
         ->and($logRecorder->warnings[0][0])->toBe('Tracking provider failed.');
 });
+
+test('osrm tracking provider requests real routes through the http client', function () {
+    app()->instance('cache', new class {
+        public function remember($key, $ttl, $callback)
+        {
+            return $callback();
+        }
+
+        public function __call($method, $arguments)
+        {
+            return null;
+        }
+    });
+    Illuminate\Support\Facades\Cache::clearResolvedInstance('cache');
+    Illuminate\Support\Facades\Http::swap(new Illuminate\Http\Client\Factory());
+    Illuminate\Support\Facades\Http::fake(fn () => Illuminate\Support\Facades\Http::response([
+        'code'   => 'Ok',
+        'routes' => [[
+            'distance' => 5200,
+            'duration' => 780,
+            'geometry' => '_p~iF~ps|U_ulLnnqC',
+            'legs'     => [['distance' => 5200, 'duration' => 780]],
+        ]],
+    ]));
+
+    $order = new Order();
+    $order->setRawAttributes(['uuid' => 'order-osrm-1', 'public_id' => 'order_osrm1'], true);
+    $point   = new Fleetbase\LaravelMysqlSpatial\Types\Point(1.30, 103.80);
+    $stop    = null;
+    $context = new TrackingContext(
+        order: $order,
+        payload: null,
+        driver: null,
+        origin: $point,
+        driverLocation: $point,
+        stops: collect([]),
+        completedStops: collect([]),
+        remainingStops: collect([]),
+        activeStop: $stop,
+        nextStop: null,
+        driverLocationAgeSeconds: null,
+    );
+
+    // routePoints needs at least two points; add a destination stop whose
+    // place surfaces a concrete location
+    $destinationPlace = new class extends Fleetbase\FleetOps\Models\Place {
+        public ?object $locationFake = null;
+
+        public function getAttribute($key)
+        {
+            if ($key === 'location') {
+                return $this->locationFake;
+            }
+
+            return parent::getAttribute($key);
+        }
+    };
+    $destinationPlace->setRawAttributes(['uuid' => 'place-osrm-1'], true);
+    $destinationPlace->locationFake = new Fleetbase\LaravelMysqlSpatial\Types\Point(1.31, 103.81);
+
+    $destination = new Fleetbase\FleetOps\Tracking\TrackingStop(
+        uuid: 'stop-osrm-1',
+        publicId: 'stop_osrmone1',
+        type: 'dropoff',
+        status: null,
+        place: $destinationPlace,
+    );
+    $context->remainingStops->push($destination);
+
+    $provider = new Fleetbase\FleetOps\Tracking\Providers\OsrmTrackingProvider();
+    $result   = $provider->track($context, new TrackingOptions());
+
+    expect($result->provider)->toBe($provider->key())
+        ->and($result->distanceMeters)->toBe(5200.0)
+        ->and($result->legs)->toHaveCount(1)
+        ->and($result->warnings)->toContain('no_live_traffic');
+});
