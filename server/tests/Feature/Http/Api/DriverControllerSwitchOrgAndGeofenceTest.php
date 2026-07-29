@@ -293,3 +293,29 @@ test('verify code issues driver tokens and stores auth references', function () 
         ->and($connection->table('personal_access_tokens')->count())->toBe(1)
         ->and($connection->table('drivers')->value('auth_token'))->not->toBeNull();
 });
+
+test('switch organization reports token issuance failures', function () {
+    $connection = fleetopsDriverSwitchBoot();
+    $connection->table('companies')->insert([
+        ['uuid' => 'company-1', 'public_id' => 'company_switch1', 'name' => 'Acme A', 'country' => 'SG'],
+        ['uuid' => 'company-2', 'public_id' => 'company_switch2', 'name' => 'Acme B', 'country' => 'SG'],
+    ]);
+    $connection->table('users')->insert(['uuid' => 'user-1', 'public_id' => 'user_switch1', 'company_uuid' => 'company-1', 'name' => 'Casey', 'type' => 'user']);
+    $connection->table('company_users')->insert(['uuid' => 'cu-1', 'company_uuid' => 'company-2', 'user_uuid' => 'user-1']);
+    $connection->table('drivers')->insert([
+        ['uuid' => 'driver-1', 'public_id' => 'driver_switch1', 'company_uuid' => 'company-1', 'user_uuid' => 'user-1'],
+        ['uuid' => 'driver-2', 'public_id' => 'driver_switch2', 'company_uuid' => 'company-2', 'user_uuid' => 'user-1'],
+    ]);
+
+    // Without the token table the switch completes the company move but fails
+    // to issue the new session token
+    $connection->getSchemaBuilder()->drop('personal_access_tokens');
+
+    $response = (new DriverController())->switchOrganization(
+        'driver_switch1',
+        SwitchOrganizationRequest::create('/v1/drivers/driver_switch1/switch-organization', 'POST', ['next' => 'company_switch2'])
+    );
+
+    expect($response->getData(true))->toHaveKey('error')
+        ->and($connection->table('users')->where('uuid', 'user-1')->value('company_uuid'))->toBe('company-2');
+});
