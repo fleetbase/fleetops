@@ -1166,3 +1166,57 @@ test('setting controller normalizes map and tracking alert settings', function (
             ],
         ]);
 });
+
+test('place filter alternate date branches and spatial area scopes execute', function () {
+    // Scalar created-at and array updated-at hit the inverse date branches
+    $query  = new FleetOpsControllerFilterQuery();
+    $filter = fleetopsFilterWithBuilder(PlaceFilter::class, $query);
+    $filter->createdAt('2026-02-01');
+    $filter->updatedAt(['2026-01-01', '2026-01-31']);
+    expect(collect($query->calls)->where(0, 'whereDate')->values())->toHaveCount(1)
+        ->and(collect($query->calls)->where(0, 'whereBetween')->values())->toHaveCount(1);
+
+    // Service-area and zone scopes read borders from the database
+    $connection = new Illuminate\Database\SQLiteConnection(new PDO('sqlite::memory:'));
+    $resolver   = new Illuminate\Database\ConnectionResolver(['default' => $connection, 'mysql' => $connection]);
+    $resolver->setDefaultConnection('mysql');
+    Illuminate\Database\Eloquent\Model::setConnectionResolver($resolver);
+    $schema = $connection->getSchemaBuilder();
+    foreach (['service_areas', 'zones'] as $table) {
+        $schema->create($table, function ($blueprint) {
+            $blueprint->increments('id');
+            foreach (['uuid', 'public_id', 'company_uuid', 'service_area_uuid', 'name', 'border', 'status', 'type', '_key'] as $column) {
+                $blueprint->string($column)->nullable();
+            }
+            $blueprint->timestamps();
+            $blueprint->timestamp('deleted_at')->nullable();
+        });
+    }
+
+    $packPoints = function (string $body): string {
+        $points = array_map('trim', explode(',', $body));
+        $out    = pack('V', count($points));
+        foreach ($points as $pair) {
+            [$lng, $lat] = array_map('floatval', preg_split('/\s+/', trim($pair)));
+            $out .= pack('d', $lng) . pack('d', $lat);
+        }
+
+        return $out;
+    };
+    $ring     = '103.8 1.3, 103.9 1.3, 103.9 1.4, 103.8 1.4, 103.8 1.3';
+    $wkbMulti = pack('V', 0) . pack('C', 1) . pack('V', 6) . pack('V', 1) . pack('C', 1) . pack('V', 3) . pack('V', 1) . $packPoints($ring);
+
+    $connection->table('service_areas')->insert(['uuid' => '77777777-7777-4777-8777-777777777701', 'public_id' => 'sa_filterone1', 'company_uuid' => 'company-uuid', 'border' => $wkbMulti]);
+    $connection->table('zones')->insert(['uuid' => '77777777-7777-4777-8777-777777777702', 'public_id' => 'zone_filterone1', 'company_uuid' => 'company-uuid', 'service_area_uuid' => '77777777-7777-4777-8777-777777777701', 'border' => $wkbMulti]);
+
+    $spatialQuery  = new FleetOpsControllerFilterQuery();
+    $spatialFilter = fleetopsFilterWithBuilder(PlaceFilter::class, $spatialQuery);
+    $spatialFilter->withinServiceArea('77777777-7777-4777-8777-777777777701');
+    $spatialFilter->serviceArea('77777777-7777-4777-8777-777777777701');
+    $spatialFilter->withinZone('77777777-7777-4777-8777-777777777702');
+    $spatialFilter->zone('77777777-7777-4777-8777-777777777702');
+
+    $withinCalls = collect($spatialQuery->calls)->where(0, 'within')->values();
+    expect($withinCalls)->toHaveCount(4)
+        ->and($withinCalls[0][1])->toBe('location');
+});

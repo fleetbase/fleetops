@@ -8,6 +8,14 @@ if (!function_exists('Fleetbase\Models\config')) {
     eval('namespace Fleetbase\Models; function config($key = null, $default = null) { return $key === "fleetbase.connection.db" ? "mysql" : $default; }');
 }
 
+if (!function_exists('Fleetbase\Traits\app')) {
+    eval('namespace Fleetbase\Traits; function app($abstract = null, array $parameters = []) { return \app($abstract, $parameters); }');
+}
+
+if (!function_exists('Fleetbase\FleetOps\Models\view')) {
+    eval('namespace Fleetbase\FleetOps\Models; function view($name = null, $data = []) { \FleetOpsWaypointViewRecorder::$views[] = [$name, array_keys($data)]; return new class { public function render() { return "<html>waypoint-label</html>"; } }; }');
+}
+
 if (!function_exists('Fleetbase\FleetOps\Models\session')) {
     eval('namespace Fleetbase\FleetOps\Models; function session($key = null) { return \FleetOpsWaypointSessionStore::get($key); }');
 }
@@ -18,6 +26,11 @@ use Fleetbase\FleetOps\Models\Place;
 use Fleetbase\FleetOps\Models\Waypoint;
 use Fleetbase\FleetOps\Support\Utils;
 use Fleetbase\LaravelMysqlSpatial\Types\Point;
+
+class FleetOpsWaypointViewRecorder
+{
+    public static array $views = [];
+}
 
 class FleetOpsWaypointSessionStore
 {
@@ -280,4 +293,74 @@ test('waypoint find by place requires an order payload uuid', function () {
 
     expect(fn () => FleetOpsWaypointFindFake::findByPlace($place, $order))
         ->toThrow(InvalidArgumentException::class, 'Missing payload UUID for lookup.');
+});
+
+test('waypoint labels render views and stream pdf output', function () {
+    $connection = new Illuminate\Database\SQLiteConnection(new PDO('sqlite::memory:'));
+    $resolver   = new Illuminate\Database\ConnectionResolver(['default' => $connection, 'mysql' => $connection]);
+    $resolver->setDefaultConnection('mysql');
+    Illuminate\Database\Eloquent\Model::setConnectionResolver($resolver);
+    $schema = $connection->getSchemaBuilder();
+    $tables = [
+        'waypoints'        => ['uuid', 'public_id', 'company_uuid', 'payload_uuid', 'place_uuid', 'tracking_number_uuid', 'order', 'type', 'status', '_key'],
+        'places'           => ['uuid', 'public_id', 'company_uuid', 'name', 'location', '_key'],
+        'entities'         => ['uuid', 'public_id', 'company_uuid', 'payload_uuid', 'destination_uuid', 'name', 'type', '_key'],
+        'tracking_numbers' => ['uuid', 'public_id', 'company_uuid', 'tracking_number', 'owner_uuid', 'owner_type', '_key'],
+        'companies'        => ['uuid', 'public_id', 'name', 'country'],
+    ];
+    foreach ($tables as $table => $columns) {
+        $schema->create($table, function ($blueprint) use ($columns) {
+            $blueprint->increments('id');
+            foreach ($columns as $column) {
+                $blueprint->string($column)->nullable();
+            }
+            $blueprint->timestamps();
+            $blueprint->timestamp('deleted_at')->nullable();
+        });
+    }
+
+    $connection->table('waypoints')->insert(['uuid' => 'waypoint-label-1', 'company_uuid' => 'company-1', 'payload_uuid' => 'payload-1', 'place_uuid' => 'place-1', 'tracking_number_uuid' => 'tn-1']);
+    $connection->table('places')->insert(['uuid' => 'place-1', 'company_uuid' => 'company-1', 'name' => 'Label Stop']);
+    $connection->table('entities')->insert(['uuid' => 'entity-1', 'company_uuid' => 'company-1', 'payload_uuid' => 'payload-1', 'destination_uuid' => 'place-1', 'name' => 'Boxed Goods']);
+    $connection->table('tracking_numbers')->insert(['uuid' => 'tn-1', 'company_uuid' => 'company-1', 'tracking_number' => 'FLB-LABEL-1']);
+    $connection->table('companies')->insert(['uuid' => 'company-1', 'name' => 'Label Co']);
+
+    $waypoint = Waypoint::where('uuid', 'waypoint-label-1')->first();
+
+    // The label view renders with the waypoint context
+    FleetOpsWaypointViewRecorder::$views = [];
+    expect($waypoint->label())->toBe('<html>waypoint-label</html>')
+        ->and(FleetOpsWaypointViewRecorder::$views[0][0])->toBe('fleetops::labels/waypoint-label')
+        ->and(FleetOpsWaypointViewRecorder::$views[0][1])->toContain('waypoint', 'dropoff', 'entities', 'trackingNumber', 'company');
+
+    // Entities scope to the waypoint payload and destination place
+    expect($waypoint->entities()->count())->toBe(1);
+
+    // Pdf labels load through the shared renderer and stream output
+    $wrapper = new class {
+        public array $loadedHtml = [];
+
+        public function loadHTML(string $html, ?string $encoding = null): self
+        {
+            $this->loadedHtml[] = [$html, $encoding];
+
+            return $this;
+        }
+
+        public function stream()
+        {
+            return 'pdf-stream';
+        }
+
+        public function __call($method, $arguments)
+        {
+            return $this;
+        }
+    };
+    Illuminate\Container\Container::getInstance()->instance('dompdf.wrapper', $wrapper);
+    app()->instance('dompdf.wrapper', $wrapper);
+    Barryvdh\DomPDF\Facade\Pdf::clearResolvedInstance('dompdf.wrapper');
+
+    expect($waypoint->pdfLabel())->toBe($wrapper)
+        ->and($waypoint->pdfLabelStream())->toBe('pdf-stream');
 });

@@ -304,9 +304,8 @@ class Waypoint extends Model
         array $columns = ['*'],
     ): ?self {
         $payloadId = match (true) {
-            $order instanceof Order   => $order->payload_uuid,
-            $order instanceof Payload => $order->uuid,
-            default                   => null,
+            $order instanceof Order => $order->payload_uuid,
+            default                 => $order->uuid,
         };
 
         if (!$payloadId) {
