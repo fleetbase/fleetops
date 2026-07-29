@@ -1269,6 +1269,61 @@ class Utils extends FleetbaseUtils
      * alternative engines (or test doubles) can be injected without the
      * GEOS extension.
      */
+    /**
+     * Determine whether the active database connection speaks SQLite.
+     */
+    protected static function isSqliteConnection(): bool
+    {
+        $connection = DB::connection();
+
+        return $connection instanceof \Illuminate\Database\SQLiteConnection
+            || $connection->getDriverName() === 'sqlite';
+    }
+
+    /**
+     * Build a driver-aware SQL expression for whole-second differences
+     * between two datetime expressions.
+     */
+    public static function sqlSecondsDiff(string $start, string $end): string
+    {
+        if (static::isSqliteConnection()) {
+            return "CAST(ROUND((julianday($end) - julianday($start)) * 86400) AS INTEGER)";
+        }
+
+        return "TIMESTAMPDIFF(SECOND, $start, $end)";
+    }
+
+    /**
+     * Build a driver-aware SQL expression for whole-minute differences
+     * between two datetime expressions.
+     */
+    public static function sqlMinutesDiff(string $start, string $end): string
+    {
+        if (static::isSqliteConnection()) {
+            return "CAST(ROUND((julianday($end) - julianday($start)) * 1440) AS INTEGER)";
+        }
+
+        return "TIMESTAMPDIFF(MINUTE, $start, $end)";
+    }
+
+    /**
+     * Driver-aware SQL expression for the current timestamp.
+     */
+    public static function sqlNow(): string
+    {
+        return static::isSqliteConnection() ? "datetime('now')" : 'NOW()';
+    }
+
+    /**
+     * Driver-aware SQL scalar minimum of two expressions.
+     */
+    public static function sqlLeast(string $first, string $second): string
+    {
+        $function = static::isSqliteConnection() ? 'MIN' : 'LEAST';
+
+        return "$function($first, $second)";
+    }
+
     public static function resolveGeometryEngine(): \Brick\Geo\Engine\GeometryEngine
     {
         if (\Brick\Geo\Engine\GeometryEngineRegistry::has()) {

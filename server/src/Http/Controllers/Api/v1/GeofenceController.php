@@ -3,6 +3,7 @@
 namespace Fleetbase\FleetOps\Http\Controllers\Api\v1;
 
 use Fleetbase\FleetOps\Models\GeofenceEventLog;
+use Fleetbase\FleetOps\Support\Utils;
 use Fleetbase\Http\Controllers\Controller;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -109,7 +110,7 @@ class GeofenceController extends Controller
                 'dgs.geofence_uuid',
                 $this->raw('COALESCE(z.name, sa.name) as geofence_name'),
                 'dgs.geofence_type',
-                $this->raw('TIMESTAMPDIFF(MINUTE, dgs.entered_at, NOW()) as minutes_inside'),
+                $this->raw(Utils::sqlMinutesDiff('dgs.entered_at', Utils::sqlNow()) . ' as minutes_inside'),
             ])
             ->get();
 
@@ -137,7 +138,7 @@ class GeofenceController extends Controller
                 'vgs.geofence_uuid',
                 $this->raw('COALESCE(z.name, sa.name) as geofence_name'),
                 'vgs.geofence_type',
-                $this->raw('TIMESTAMPDIFF(MINUTE, vgs.entered_at, NOW()) as minutes_inside'),
+                $this->raw(Utils::sqlMinutesDiff('vgs.entered_at', Utils::sqlNow()) . ' as minutes_inside'),
             ])
             ->get();
 

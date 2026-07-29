@@ -3,6 +3,7 @@
 namespace Fleetbase\FleetOps\Http\Controllers\Internal\v1\Traits;
 
 use Fleetbase\FleetOps\Models\Driver;
+use Fleetbase\FleetOps\Support\Utils;
 use Fleetbase\Models\Schedule;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -232,8 +233,10 @@ trait DriverSchedulingTrait
 
     protected function hosDurationExpression()
     {
+        $now = Utils::sqlNow();
+
         return DB::raw(
-            'TIMESTAMPDIFF(MINUTE, start_at, LEAST(COALESCE(end_at, NOW()), NOW()))'
+            Utils::sqlMinutesDiff('start_at', Utils::sqlLeast("COALESCE(end_at, $now)", $now))
         );
     }
 }

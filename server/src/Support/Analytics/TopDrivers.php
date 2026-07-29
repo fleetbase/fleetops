@@ -4,6 +4,7 @@ namespace Fleetbase\FleetOps\Support\Analytics;
 
 use Fleetbase\FleetOps\Models\Driver;
 use Fleetbase\FleetOps\Models\Order;
+use Fleetbase\FleetOps\Support\Utils;
 use Illuminate\Support\Carbon;
 
 /**
@@ -42,7 +43,7 @@ class TopDrivers extends AbstractAnalytics
                 WHEN SUM(CASE WHEN orders.scheduled_at IS NOT NULL THEN 1 ELSE 0 END) > 0
                 THEN SUM(CASE
                     WHEN orders.scheduled_at IS NOT NULL
-                     AND TIMESTAMPDIFF(SECOND, orders.scheduled_at, orders.updated_at) <= 1800
+                     AND ' . Utils::sqlSecondsDiff('orders.scheduled_at', 'orders.updated_at') . ' <= 1800
                     THEN 1 ELSE 0 END)
                     / SUM(CASE WHEN orders.scheduled_at IS NOT NULL THEN 1 ELSE 0 END)
                 ELSE -1
@@ -68,7 +69,7 @@ class TopDrivers extends AbstractAnalytics
                 COALESCE(SUM(orders.distance), 0) as distance_m,
                 SUM(CASE
                     WHEN orders.scheduled_at IS NOT NULL
-                     AND TIMESTAMPDIFF(SECOND, orders.scheduled_at, orders.updated_at) <= 1800
+                     AND ' . Utils::sqlSecondsDiff('orders.scheduled_at', 'orders.updated_at') . ' <= 1800
                     THEN 1 ELSE 0 END) as on_time_count,
                 SUM(CASE WHEN orders.scheduled_at IS NOT NULL THEN 1 ELSE 0 END) as scheduled_count
             ')
