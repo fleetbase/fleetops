@@ -97,6 +97,33 @@ function fleetopsGeocodingInjectedBoot(): SQLiteConnection
         'country'      => 'Singapore',
     ]);
 
+    app()->instance('geocoder', new class($address) {
+        public function __construct(public GoogleAddress $address)
+        {
+        }
+
+        public function geocode($query)
+        {
+            return $this;
+        }
+
+        public function reverse($lat, $lng)
+        {
+            return $this;
+        }
+
+        public function get()
+        {
+            return collect([$this->address]);
+        }
+
+        public function __call($method, $arguments)
+        {
+            return $this;
+        }
+    });
+    Geocoder\Laravel\Facades\Geocoder::clearResolvedInstance('geocoder');
+
     app()->instance('fleetops.geocoder', new class($address) {
         public array $queries = [];
 
@@ -159,4 +186,22 @@ test('reverse geocoded places and google place search use the injected client', 
     $reverseOnly = PlaceSearch::geocode(null, 1.34, 103.84);
     expect($reverseOnly)->toHaveCount(1);
     config()->set('services.google_maps.api_key', null);
+});
+
+test('place creation flows consume injected geocoding results', function () {
+    $connection = fleetopsGeocodingInjectedBoot();
+
+    // Forward lookups resolve into google-address places
+    $fromLookup = Place::createFromGeocodingLookup('88 Injected Way');
+    expect($fromLookup)->toBeInstanceOf(Place::class)
+        ->and($fromLookup->street1)->toContain('Injected Way');
+
+    // Coordinate creation enriches the place from reverse results
+    $fromCoordinates = Place::createFromCoordinates([1.34, 103.84], [], true);
+    expect($fromCoordinates)->toBeInstanceOf(Place::class);
+
+    // Single-column imports adopt the first geocoding result
+    $imported = Place::createFromImport(['address' => '88 Injected Way'], true);
+    expect($imported)->toBeInstanceOf(Place::class)
+        ->and($connection->table('places')->count())->toBeGreaterThanOrEqual(1);
 });
