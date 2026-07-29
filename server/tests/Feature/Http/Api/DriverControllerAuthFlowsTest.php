@@ -303,3 +303,21 @@ test('token issuance failures surface as api errors', function () {
     expect($response)->toBeInstanceOf(JsonResponse::class)
         ->and($response->getData(true))->toHaveKey('error');
 });
+
+test('code verification reports token issuance failures', function () {
+    $connection = fleetopsDriverAuthBoot();
+    $controller = new DriverController();
+
+    // A bypass code authenticates without a stored verification code, so the
+    // flow reaches token issuance; without the token table that send fails
+    config()->set('fleetops.navigator.bypass_verification_code', '777777');
+    $connection->getSchemaBuilder()->drop('personal_access_tokens');
+
+    $response = $controller->verifyCode(Request::create('/x', 'POST', [
+        'identity' => 'driver@example.test',
+        'code'     => '777777',
+    ]));
+
+    expect($response)->toBeInstanceOf(JsonResponse::class)
+        ->and($response->getData(true))->toHaveKey('error');
+});
