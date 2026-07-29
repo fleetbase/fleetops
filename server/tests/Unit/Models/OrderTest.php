@@ -1,5 +1,16 @@
 <?php
 
+if (!class_exists('FleetOpsWaypointViewRecorder', false)) {
+    class FleetOpsWaypointViewRecorder
+    {
+        public static array $views = [];
+    }
+}
+
+if (!function_exists('Fleetbase\FleetOps\Models\view')) {
+    eval('namespace Fleetbase\FleetOps\Models; function view($name = null, $data = []) { \FleetOpsWaypointViewRecorder::$views[] = [$name, array_keys($data)]; return new class { public function render() { return "<html>waypoint-label</html>"; } }; }');
+}
+
 if (!function_exists('Fleetbase\Traits\config')) {
     eval('namespace Fleetbase\Traits; function config($key = null, $default = null) { return $key === "api.cache.enabled" ? false : $default; }');
 }
@@ -828,4 +839,79 @@ test('order cancel and assignment notifications fire expected domain events', fu
         ->and($order->activityRows[0][0])->toBe('canceled')
         ->and(FleetOpsOrderUnitDispatchRecorder::$events[0])->toBeInstanceOf(Fleetbase\FleetOps\Events\OrderDriverAssigned::class)
         ->and(FleetOpsOrderUnitDispatchRecorder::$events[1])->toBeInstanceOf(Fleetbase\FleetOps\Events\OrderCanceled::class);
+});
+
+test('order labels render views and stream pdf output', function () {
+    $connection = new SQLiteConnection(new PDO('sqlite::memory:'));
+    $resolver   = new ConnectionResolver(['default' => $connection, 'mysql' => $connection]);
+    $resolver->setDefaultConnection('mysql');
+    EloquentModel::setConnectionResolver($resolver);
+    $schema = $connection->getSchemaBuilder();
+    $tables = [
+        'orders'           => ['uuid', 'public_id', 'company_uuid', 'tracking_number_uuid', 'status', 'type', '_key'],
+        'tracking_numbers' => ['uuid', 'public_id', 'company_uuid', 'tracking_number', '_key'],
+        'companies'        => ['uuid', 'public_id', 'name', 'country'],
+    ];
+    foreach ($tables as $table => $columns) {
+        $schema->create($table, function ($blueprint) use ($columns) {
+            $blueprint->increments('id');
+            foreach ($columns as $column) {
+                $blueprint->string($column)->nullable();
+            }
+            $blueprint->timestamps();
+            $blueprint->timestamp('deleted_at')->nullable();
+        });
+    }
+    $connection->table('orders')->insert(['uuid' => 'order-label-1', 'company_uuid' => 'company-1', 'tracking_number_uuid' => 'tn-label-1', 'status' => 'created']);
+    $connection->table('tracking_numbers')->insert(['uuid' => 'tn-label-1', 'company_uuid' => 'company-1', 'tracking_number' => 'FLB-ORDLBL-1']);
+    $connection->table('companies')->insert(['uuid' => 'company-1', 'name' => 'Label Co']);
+
+    $order = Order::where('uuid', 'order-label-1')->first();
+
+    FleetOpsWaypointViewRecorder::$views = [];
+    expect($order->label())->toContain('<html>')
+        ->and(FleetOpsWaypointViewRecorder::$views[0][0])->toBe('fleetops::labels/default')
+        ->and(FleetOpsWaypointViewRecorder::$views[0][1])->toContain('order', 'trackingNumber', 'company');
+
+    $wrapper = new class {
+        public function loadHTML(string $html, ?string $encoding = null): self
+        {
+            return $this;
+        }
+
+        public function stream()
+        {
+            return 'order-pdf-stream';
+        }
+
+        public function __call($method, $arguments)
+        {
+            return $this;
+        }
+    };
+    Illuminate\Container\Container::getInstance()->instance('dompdf.wrapper', $wrapper);
+    app()->instance('dompdf.wrapper', $wrapper);
+
+    expect($order->pdfLabel())->toBe($wrapper)
+        ->and($order->pdfLabelStream())->toBe('order-pdf-stream');
+
+    // Uuid-referenced order configs resolve with the order context applied
+    $schema->create('order_configs', function ($blueprint) {
+        $blueprint->increments('id');
+        foreach (['uuid', 'public_id', 'company_uuid', 'name', 'key', 'namespace', 'flow', 'entities', 'meta', 'version', 'core_service', 'status', 'type', '_key'] as $column) {
+            $blueprint->string($column)->nullable();
+        }
+        $blueprint->timestamps();
+        $blueprint->timestamp('deleted_at')->nullable();
+    });
+    // Soft-deleted so the relation load misses and the withTrashed uuid branch runs
+    $connection->table('order_configs')->insert(['uuid' => 'b2b2b2b2-2222-4222-8222-222222222201', 'company_uuid' => 'company-1', 'name' => 'Transport', 'key' => 'transport', 'flow' => json_encode([]), 'deleted_at' => '2026-07-01 00:00:00']);
+    $order->order_config_uuid = 'b2b2b2b2-2222-4222-8222-222222222201';
+    $resolvedConfig           = $order->config();
+    expect($resolvedConfig)->toBeInstanceOf(OrderConfig::class)
+        ->and($resolvedConfig->uuid)->toBe('b2b2b2b2-2222-4222-8222-222222222201');
+
+    // Orders without any config reference resolve to null when defaults fail
+    $order->order_config_uuid = null;
+    $order->setRelation('orderConfig', null);
 });
