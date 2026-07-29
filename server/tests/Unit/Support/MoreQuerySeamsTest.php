@@ -147,3 +147,38 @@ test('order config entity cast resolves photo urls by file uuid', function () {
     // Unknown uuids resolve to nothing rather than erroring
     expect(fleetopsMoreSeamInvoke($cast, $class, 'photoUrlFor', ['file-missing-1']))->toBeNull();
 });
+
+test('customer token middleware seams delegate to the customer auth support', function () {
+    fleetopsMoreSeamBoot();
+
+    $class      = Fleetbase\FleetOps\Http\Middleware\AuthenticateCustomerToken::class;
+    $middleware = (new ReflectionClass($class))->newInstanceWithoutConstructor();
+
+    // Requests without a bearer token resolve to no customer
+    $resolved = fleetopsMoreSeamInvoke($middleware, $class, 'resolveCustomerFromHeader', [Illuminate\Http\Request::create('/v1/customers/me', 'GET')]);
+    expect($resolved)->toBeNull();
+
+    // Binding a customer makes it the current one for the request lifecycle
+    $contact = new Fleetbase\FleetOps\Models\Contact();
+    $contact->setRawAttributes(['uuid' => 'contact-mw-1', 'public_id' => 'contact_mwone'], true);
+    fleetopsMoreSeamInvoke($middleware, $class, 'setCurrentCustomer', [$contact]);
+
+    expect(Fleetbase\FleetOps\Support\CustomerAuth::current()?->uuid)->toBe('contact-mw-1');
+    app()->forgetInstance(Fleetbase\FleetOps\Support\CustomerAuth::APP_BINDING);
+});
+
+test('driving simulation seams build and chain waypoint jobs', function () {
+    fleetopsMoreSeamBoot();
+
+    $driver = new Fleetbase\FleetOps\Models\Driver();
+    $driver->setRawAttributes(['uuid' => 'driver-sim-1', 'public_id' => 'driver_simone'], true);
+
+    $class = Fleetbase\FleetOps\Jobs\SimulateDrivingRoute::class;
+    $job   = new $class($driver, []);
+
+    $waypoint = new Fleetbase\LaravelMysqlSpatial\Types\Point(1.30, 103.80);
+
+    // Each waypoint becomes its own follow-up job carrying the extra data
+    $made = fleetopsMoreSeamInvoke($job, $class, 'makeWaypointReachedJob', [$waypoint, ['index' => 3]]);
+    expect($made)->toBeInstanceOf(Fleetbase\FleetOps\Jobs\SimulateWaypointReached::class);
+});
