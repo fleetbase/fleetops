@@ -254,3 +254,50 @@ test('fuel provider connection controller runs synchronous sync with parsed wind
         ->and($service->syncs[0][4])->toBe($service->syncRuns[0][4])
         ->and($service->syncs[0][4]->freshForTest)->toBeTrue();
 });
+
+test('fuel provider sync queues async runs and finds real connections', function () {
+    // Async syncs queue the job and return a 202 with the queued run
+    $service    = new FleetOpsFuelProviderConnectionServiceFake();
+    $controller = fleetopsFuelProviderConnectionController($service);
+
+    $connection = new FleetOpsFuelProviderConnectionFake();
+    $connection->setRawAttributes([
+        'uuid'         => 'connection-uuid',
+        'company_uuid' => 'company-uuid',
+        'provider'     => 'petroapp',
+    ]);
+    $controller->connection = $connection;
+
+    $response = $controller->sync(new Request([
+        'async' => true,
+        'from'  => '2026-07-01',
+        'to'    => '2026-07-10',
+    ]), 'connection-public');
+
+    expect($response->getStatusCode())->toBe(202)
+        ->and($response->getData(true)['message'])->toBe('Fuel provider sync queued.')
+        ->and($service->syncRuns[0][3])->toBe('queued')
+        ->and($service->syncs)->toHaveCount(0);
+
+    // The real connection lookup scopes by identifier and session company
+    $dbConnection = new Illuminate\Database\SQLiteConnection(new PDO('sqlite::memory:'));
+    $resolver     = new Illuminate\Database\ConnectionResolver(['default' => $dbConnection, 'mysql' => $dbConnection]);
+    $resolver->setDefaultConnection('mysql');
+    Illuminate\Database\Eloquent\Model::setConnectionResolver($resolver);
+    $schema = $dbConnection->getSchemaBuilder();
+    $schema->create('fuel_provider_connections', function ($blueprint) {
+        $blueprint->increments('id');
+        foreach (['uuid', 'public_id', 'company_uuid', 'provider', 'name', 'credentials', 'sync_settings', 'status', 'meta', '_key'] as $column) {
+            $blueprint->string($column)->nullable();
+        }
+        $blueprint->timestamps();
+        $blueprint->timestamp('deleted_at')->nullable();
+    });
+    session(['company' => 'company-real-1']);
+    $dbConnection->table('fuel_provider_connections')->insert(['uuid' => 'fpc-real-1', 'public_id' => 'fuel_provider_connection_real1', 'company_uuid' => 'company-real-1', 'provider' => 'petroapp']);
+
+    $reflection = new ReflectionMethod(FuelProviderConnectionController::class, 'findConnection');
+    $reflection->setAccessible(true);
+    $found = $reflection->invoke(fleetopsFuelProviderConnectionController(new FleetOpsFuelProviderConnectionServiceFake()), 'fuel_provider_connection_real1');
+    expect($found->uuid)->toBe('fpc-real-1');
+});
