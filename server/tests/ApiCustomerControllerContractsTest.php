@@ -901,6 +901,15 @@ test('api customer controller finds and creates customer orders', function () {
     $stringPayload = fleetopsApiCustomerController();
     $stringPayload->createOrder(new FleetOpsApiCustomerOrderRequest(['payload' => 'payload_public']));
 
+    // Top-level pickup/dropoff/return inputs build a payload without a
+    // wrapping payload key
+    $inline        = fleetopsApiCustomerController();
+    $inlineCreated = $inline->createOrder(new FleetOpsApiCustomerOrderRequest([
+        'pickup'  => ['name' => 'Inline Pickup'],
+        'dropoff' => ['name' => 'Inline Dropoff'],
+        'return'  => ['name' => 'Inline Return'],
+    ]));
+
     $noConfig              = fleetopsApiCustomerController();
     $noConfig->orderConfig = null;
 
@@ -919,6 +928,8 @@ test('api customer controller finds and creates customer orders', function () {
         ])
         ->and($created['order']->purchasedQuotes[0])->toBeInstanceOf(ServiceQuote::class)
         ->and($stringPayload->uuidLookups[0][0])->toBe('payloads')
+        ->and($inlineCreated)->toMatchArray(['resource' => 'order'])
+        ->and($inline->createdOrders[0])->toMatchArray(['payload_uuid' => 'payload-built-uuid'])
         ->and(fleetopsApiCustomerJson($noConfig->createOrder(new FleetOpsApiCustomerOrderRequest())))->toBe([
             'error' => 'No order config available for this company.',
         ]);

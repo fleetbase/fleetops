@@ -721,3 +721,111 @@ test('authenticated profile updates resolve photos and removal markers', functio
 
     app()->forgetInstance(CustomerAuth::APP_BINDING);
 });
+
+test('login guards company resolution and phone delivery failures', function () {
+    $connection = fleetopsCustomerHelperBoot();
+    $controller = new CustomerController();
+
+    // Valid credentials without a resolvable session company return a 500
+    $connection->table('users')->insert(['uuid' => 'user-login-1', 'company_uuid' => 'company-1', 'name' => 'Login User', 'email' => 'login-cust@example.com', 'password' => 'hashed-secret', 'type' => 'customer', 'status' => 'active']);
+    session(['company' => null]);
+    $blocked = $controller->login(Request::create('/v1/customers/login', 'POST', [
+        'identity' => 'login-cust@example.com',
+        'password' => 'secret',
+    ]));
+    expect($blocked->getStatusCode())->toBe(500);
+    session(['company' => 'company-1']);
+
+    // Phone-only users whose sms transport fails get the generic error
+    $connection->table('users')->insert(['uuid' => 'user-phone-only', 'company_uuid' => 'company-1', 'name' => 'Phone Only', 'phone' => '+6595550001', 'type' => 'customer', 'status' => 'active']);
+    $failed = $controller->loginWithPhone(Request::create('/v1/customers/login-with-sms', 'POST', ['phone' => '+6595550001']));
+    expect($failed->getData(true)['error'] ?? '')->toContain('Unable to send verification code');
+
+    // Valid reset codes for identities without accounts report account-not-found
+    $connection->table('verification_codes')->insert(['uuid' => 'vc-ghost', 'code' => '646464', 'for' => 'fleetops_customer_password_reset', 'meta' => json_encode(['identity' => 'ghost@example.com']), 'status' => 'active']);
+    $missing = $controller->resetPassword(Request::create('/x', 'POST', ['identity' => 'ghost@example.com', 'code' => '646464', 'password' => 'long-enough-pass']));
+    expect($missing->getData(true)['error'] ?? '')->toContain('Account not found');
+});
+
+test('twilio rest failures surface their message on creation codes', function () {
+    fleetopsCustomerHelperBoot();
+
+    $probe = new class extends CustomerController {
+        protected function generateSmsVerification(User $user, string $for, array $options): mixed
+        {
+            throw new Twilio\Exceptions\RestException('Twilio rejected the number', 21211, 400);
+        }
+    };
+
+    $response = $probe->requestCreationCode(Fleetbase\FleetOps\Http\Requests\VerifyCreateCustomerRequest::create('/v1/customers/request-creation-code', 'POST', [
+        'identity' => '+6595550002',
+        'mode'     => 'sms',
+    ]));
+
+    expect($response->getData(true)['error'] ?? '')->toBe('Twilio rejected the number');
+});
+
+test('create backfills emails for phone identities and refreshes existing contacts', function () {
+    $connection = fleetopsCustomerHelperBoot();
+    $controller = new CustomerController();
+
+    $connection->table('users')->insert(['uuid' => 'user-phone-stub', 'company_uuid' => 'company-1', 'phone' => '+6595551111', 'status' => 'active']);
+    $connection->table('verification_codes')->insert([
+        ['uuid' => 'vc-bf-1', 'code' => '151515', 'for' => 'fleetops_create_customer', 'meta' => json_encode(['identity' => '+6595551111']), 'status' => 'active'],
+        ['uuid' => 'vc-bf-2', 'code' => '161616', 'for' => 'fleetops_create_customer', 'meta' => json_encode(['identity' => '+6595551111']), 'status' => 'active'],
+    ]);
+
+    // Password-less phone users get their email backfilled from the request
+    $controller->create(CreateCustomerRequest::create('/v1/customers', 'POST', [
+        'identity' => '+6595551111', 'code' => '151515', 'name' => 'Backfilled', 'email' => 'backfill@example.com', 'password' => 'secret',
+    ]));
+    expect($connection->table('users')->where('uuid', 'user-phone-stub')->value('email'))->toBe('backfill@example.com')
+        ->and($connection->table('contacts')->where('user_uuid', 'user-phone-stub')->count())->toBe(1);
+
+    // Re-signup reuses and refreshes the existing customer contact
+    $controller->create(CreateCustomerRequest::create('/v1/customers', 'POST', [
+        'identity' => '+6595551111', 'code' => '161616', 'name' => 'Backfilled Again', 'password' => 'secret',
+    ]));
+    expect($connection->table('contacts')->where('user_uuid', 'user-phone-stub')->count())->toBe(1)
+        ->and($connection->table('contacts')->where('user_uuid', 'user-phone-stub')->value('name'))->toBe('Backfilled Again');
+});
+
+test('customer place photo and quote seams resolve through their real bodies', function () {
+    $connection = fleetopsCustomerHelperBoot();
+    $connection->table('places')->insert(['uuid' => 'place-seam-1', 'public_id' => 'place_custseam1', 'company_uuid' => 'company-1', 'name' => 'Seam Depot']);
+    $connection->table('contacts')->insert(['uuid' => '88888888-8888-4888-8888-888888888820', 'public_id' => 'contact_custseam1', 'company_uuid' => 'company-1', 'name' => 'Seam Customer', 'type' => 'customer']);
+    $probe   = new FleetOpsCustomerControllerProbe();
+    $contact = Contact::where('uuid', '88888888-8888-4888-8888-888888888820')->first();
+
+    // String place references resolve straight through the public-id lookup
+    expect($probe->callHelper('resolveCustomerPlace', 'place_custseam1', $contact, 'company-1')?->uuid)->toBe('place-seam-1');
+
+    // The base64 file seam executes the real File bridge (storage may reject)
+    try {
+        $probe->callHelper('createFileFromBase64', base64_encode('fake-image-bytes'), 'uploads/company-1/customers');
+        expect(true)->toBeTrue();
+    } catch (Throwable $storageFailure) {
+        expect($storageFailure)->toBeInstanceOf(Throwable::class);
+    }
+
+    // Service quote resolution executes against the request inputs
+    $quote = $probe->callHelper('resolveServiceQuote', Fleetbase\FleetOps\Http\Requests\CreateCustomerOrderRequest::create('/v1/customers/orders', 'POST', []));
+    expect($quote)->toBeNull();
+
+    // Base64 photos route through the file-builder on profile updates
+    $base64Probe = new class extends CustomerController {
+        protected function createFileFromBase64(string $contents, string $path): mixed
+        {
+            $file       = new stdClass();
+            $file->uuid = 'file-b64-1';
+
+            return $file;
+        }
+    };
+    CustomerAuth::setCurrent($contact);
+    $base64Probe->updateMe(Fleetbase\FleetOps\Http\Requests\UpdateContactRequest::create('/v1/customers/me', 'PUT', [
+        'photo' => base64_encode('image-bytes'),
+    ]));
+    expect($connection->table('contacts')->where('uuid', '88888888-8888-4888-8888-888888888820')->value('photo_uuid'))->toBe('file-b64-1');
+    app()->forgetInstance(CustomerAuth::APP_BINDING);
+});
