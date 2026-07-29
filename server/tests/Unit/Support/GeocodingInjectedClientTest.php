@@ -205,3 +205,41 @@ test('place creation flows consume injected geocoding results', function () {
     expect($imported)->toBeInstanceOf(Place::class)
         ->and($connection->table('places')->count())->toBeGreaterThanOrEqual(1);
 });
+
+test('place search swallows geocoder failures and returns empty defaults', function () {
+    fleetopsGeocodingInjectedBoot();
+
+    // Failing injected geocoders are swallowed inside the google branch
+    config()->set('services.google_maps.api_key', 'injected-test-key');
+    app()->instance('fleetops.geocoder', new class {
+        public function geocodeQuery($query)
+        {
+            throw new RuntimeException('geocode backend down');
+        }
+
+        public function reverseQuery($query)
+        {
+            throw new RuntimeException('reverse backend down');
+        }
+    });
+    expect(PlaceSearch::geocode('88 Injected Way', 1.34, 103.84))->toHaveCount(0);
+
+    // Without a google key and no query the search returns empty
+    config()->set('services.google_maps.api_key', null);
+    expect(PlaceSearch::geocode(null))->toHaveCount(0);
+
+    // Failures in the fallback geocoder facade collapse to empty results
+    app()->instance('geocoder', new class {
+        public function geocode($query)
+        {
+            throw new RuntimeException('facade geocoder down');
+        }
+
+        public function __call($method, $arguments)
+        {
+            return $this;
+        }
+    });
+    Geocoder\Laravel\Facades\Geocoder::clearResolvedInstance('geocoder');
+    expect(PlaceSearch::geocode('anywhere'))->toHaveCount(0);
+});

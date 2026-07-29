@@ -230,3 +230,21 @@ test('revenue trend buckets transactions with weekly grouping and deltas', funct
 
     Carbon::setTestNow();
 });
+
+test('abstract analytics resolves every period shorthand and defaults', function () {
+    Carbon::setTestNow(Carbon::parse('2026-07-20 12:00:00'));
+
+    foreach (['7d' => 7, '14d' => 14, '30d' => 30, '90d' => 90, '180d' => 180, '365d' => 365] as $period => $days) {
+        [$start, $end] = Fleetbase\FleetOps\Support\Analytics\AbstractAnalytics::resolvePeriod($period, null, null);
+        expect(Carbon::instance($start)->toDateString())->toBe(Carbon::parse('2026-07-20')->subDays($days)->toDateString());
+    }
+
+    // Unknown periods fall through to explicit dates, then the default window
+    [$start, $end] = Fleetbase\FleetOps\Support\Analytics\AbstractAnalytics::resolvePeriod('fortnight', Carbon::parse('2026-06-01')->toDateTime(), Carbon::parse('2026-06-10')->toDateTime());
+    expect(Carbon::instance($start)->toDateString())->toBe('2026-06-01');
+
+    [$start, $end] = Fleetbase\FleetOps\Support\Analytics\AbstractAnalytics::resolvePeriod(null, null, null, 10);
+    expect(Carbon::instance($start)->toDateString())->toBe('2026-07-10');
+
+    Carbon::setTestNow();
+});
