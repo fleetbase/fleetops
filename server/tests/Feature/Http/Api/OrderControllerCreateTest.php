@@ -226,3 +226,54 @@ test('create rejects orders without a resolvable payload', function () {
     expect($response)->toBeInstanceOf(JsonResponse::class)
         ->and($response->getData(true))->toBe(['error' => 'Attempted to attach invalid payload to order.']);
 });
+
+test('create defaults the order type to transport', function () {
+    $connection = fleetopsApiOrderCreateBoot();
+    $connection->table('payloads')->insert(['uuid' => '66666666-6666-4666-8666-666666666666', 'public_id' => 'payload_test', 'company_uuid' => 'company-1']);
+
+    // Omitting the type falls back to transport
+    $request = CreateOrderRequest::create('/v1/orders', 'POST', [
+        'payload'  => 'payload_test',
+        'dispatch' => false,
+    ]);
+    $response = (new FleetOpsApiOrderCreateProbe())->create($request);
+
+    expect($response)->toBeInstanceOf(OrderResource::class)
+        ->and($connection->table('orders')->value('type'))->toBe('transport');
+});
+
+test('create surfaces customer identity conflicts as api errors', function () {
+    $connection = fleetopsApiOrderCreateBoot();
+    $connection->table('payloads')->insert(['uuid' => '66666666-6666-4666-8666-666666666666', 'public_id' => 'payload_test', 'company_uuid' => 'company-1']);
+
+    // Identity conflicts raised while resolving the customer are reported
+    // verbatim rather than aborting the request
+    $conflicting = new class extends OrderController {
+        protected function firstOrCreateCustomerContact(array $attributes, array $values): Fleetbase\FleetOps\Models\Contact
+        {
+            throw new Fleetbase\FleetOps\Exceptions\CustomerUserConflictException('A user already owns this email.');
+        }
+    };
+    $conflict = $conflicting->create(CreateOrderRequest::create('/v1/orders', 'POST', [
+        'type'     => 'transport',
+        'payload'  => 'payload_test',
+        'customer' => ['name' => 'Conflicted', 'email' => 'conflict@example.com'],
+        'dispatch' => false,
+    ]));
+    expect($conflict->getData(true)['error'] ?? '')->toBe('A user already owns this email.');
+
+    // Duplicate user accounts report their own message
+    $duplicate = new class extends OrderController {
+        protected function firstOrCreateCustomerContact(array $attributes, array $values): Fleetbase\FleetOps\Models\Contact
+        {
+            throw new Fleetbase\FleetOps\Exceptions\UserAlreadyExistsException('That user already exists.');
+        }
+    };
+    $existing = $duplicate->create(CreateOrderRequest::create('/v1/orders', 'POST', [
+        'type'     => 'transport',
+        'payload'  => 'payload_test',
+        'customer' => ['name' => 'Duplicate', 'email' => 'duplicate@example.com'],
+        'dispatch' => false,
+    ]));
+    expect($existing->getData(true)['error'] ?? '')->toBe('That user already exists.');
+});
