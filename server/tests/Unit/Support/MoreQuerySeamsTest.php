@@ -48,9 +48,9 @@ function fleetopsMoreSeamBoot(): SQLiteConnection
     config()->set('activitylog.default_auth_driver', 'web');
     app()->bind(Illuminate\Contracts\Config\Repository::class, fn () => config());
 
-    $columns = ['uuid', 'public_id', 'company_uuid', 'name', 'type', 'status', 'connection_uuid', 'sync_run_uuid', 'provider', 'url', 'path', 'disk', 'bucket', '_key'];
+    $columns = ['uuid', 'public_id', 'company_uuid', 'name', 'type', 'status', 'connection_uuid', 'sync_run_uuid', 'provider', 'url', 'path', 'disk', 'bucket', 'user_uuid', 'email', 'phone', 'street1', 'city', 'country', 'location', '_key'];
     $schema  = $connection->getSchemaBuilder();
-    foreach (['fuel_provider_connections', 'fuel_provider_sync_runs', 'files', 'settings'] as $table) {
+    foreach (['fuel_provider_connections', 'fuel_provider_sync_runs', 'files', 'settings', 'contacts', 'users', 'companies', 'places'] as $table) {
         $schema->create($table, function ($blueprint) use ($columns, $table) {
             $blueprint->increments('id');
             if ($table === 'settings') {
@@ -181,4 +181,48 @@ test('driving simulation seams build and chain waypoint jobs', function () {
     // Each waypoint becomes its own follow-up job carrying the extra data
     $made = fleetopsMoreSeamInvoke($job, $class, 'makeWaypointReachedJob', [$waypoint, ['index' => 3]]);
     expect($made)->toBeInstanceOf(Fleetbase\FleetOps\Jobs\SimulateWaypointReached::class);
+});
+
+test('geocoder controller seams call the geocoder and build places', function () {
+    fleetopsMoreSeamBoot();
+    app()->instance('geocoder', new class {
+        public function geocode($address)
+        {
+            return $this;
+        }
+
+        public function reverse($latitude, $longitude)
+        {
+            return $this;
+        }
+
+        public function get()
+        {
+            return collect();
+        }
+    });
+    Geocoder\Laravel\Facades\Geocoder::clearResolvedInstances();
+
+    $class      = Fleetbase\FleetOps\Http\Controllers\Internal\v1\GeocoderController::class;
+    $controller = (new ReflectionClass($class))->newInstanceWithoutConstructor();
+
+    // Both directions delegate to the configured geocoder
+    expect(fleetopsMoreSeamInvoke($controller, $class, 'reverseGeocode', [1.30, 103.80]))->toHaveCount(0)
+        ->and(fleetopsMoreSeamInvoke($controller, $class, 'forwardGeocode', ['1 Marina Bay']))->toHaveCount(0);
+});
+
+test('customer audit command scopes contacts to linked customer accounts', function () {
+    $connection = fleetopsMoreSeamBoot();
+    $connection->table('contacts')->insert([
+        ['uuid' => 'contact-audit-1', 'company_uuid' => 'company-seam-2', 'type' => 'customer', 'user_uuid' => 'user-audit-1'],
+        // Customers without a user, and non-customers, are both excluded
+        ['uuid' => 'contact-audit-2', 'company_uuid' => 'company-seam-2', 'type' => 'customer', 'user_uuid' => null],
+        ['uuid' => 'contact-audit-3', 'company_uuid' => 'company-seam-2', 'type' => 'contact', 'user_uuid' => 'user-audit-2'],
+    ]);
+
+    $class   = Fleetbase\FleetOps\Console\Commands\AuditCustomerUserConflicts::class;
+    $command = (new ReflectionClass($class))->newInstanceWithoutConstructor();
+
+    $query = fleetopsMoreSeamInvoke($command, $class, 'customerContactsQuery');
+    expect($query->pluck('uuid')->all())->toBe(['contact-audit-1']);
 });
