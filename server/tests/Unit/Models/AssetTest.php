@@ -371,3 +371,46 @@ test('asset maintenance helpers detect overdue and interval maintenance and sche
 
     Carbon::setTestNow();
 });
+
+test('asset display name prefers explicit names and schedules real maintenance rows', function () {
+    // Explicit names win over derived make/model/year names
+    $named = fleetopsAsset(['name' => 'Yard Tractor 7']);
+    expect($named->display_name)->toBe('Yard Tractor 7');
+
+    // Real maintenance scheduling persists a row bound to the asset
+    if (!function_exists('Fleetbase\\FleetOps\\Models\\auth')) {
+        eval('namespace Fleetbase\\FleetOps\\Models; function auth() { return new class { public function id() { return "user-1"; } public function user() { return null; } }; }');
+    }
+    $connection = fleetopsAssetUseRelationConnection();
+    if (!EloquentModel::getEventDispatcher()) {
+        EloquentModel::setEventDispatcher(new Illuminate\Events\Dispatcher());
+    }
+    app()->instance('responsecache', new class {
+        public function __call($method, $arguments)
+        {
+            return null;
+        }
+    });
+    config()->set('activitylog.enabled', false);
+    config()->set('activitylog.default_auth_driver', 'web');
+    app()->bind(Illuminate\Contracts\Config\Repository::class, fn () => config());
+    session(['company' => 'company-uuid']);
+    $connection->getSchemaBuilder()->create('maintenances', function ($blueprint) {
+        $blueprint->increments('id');
+        foreach (['uuid', 'public_id', 'company_uuid', 'maintainable_type', 'maintainable_uuid', 'type', 'status', 'scheduled_at', 'completed_at', 'odometer', 'engine_hours', 'summary', 'notes', 'created_by_uuid', '_key'] as $column) {
+            $blueprint->string($column)->nullable();
+        }
+        $blueprint->timestamps();
+        $blueprint->timestamp('deleted_at')->nullable();
+    });
+
+    $asset       = fleetopsAsset(['odometer' => 4200, 'engine_hours' => 210]);
+    $maintenance = $asset->scheduleMaintenance('inspection', new DateTime('2026-08-15 09:00:00'), ['summary' => 'Quarterly inspection']);
+
+    expect($maintenance)->toBeInstanceOf(Maintenance::class)
+        ->and($connection->table('maintenances')->count())->toBe(1)
+        ->and($connection->table('maintenances')->value('maintainable_uuid'))->toBe('asset-uuid')
+        ->and($connection->table('maintenances')->value('summary'))->toBe('Quarterly inspection')
+        ->and($connection->table('maintenances')->value('type'))->toBe('inspection')
+        ->and($connection->table('maintenances')->value('status'))->toBe('scheduled');
+});

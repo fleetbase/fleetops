@@ -426,3 +426,56 @@ test('device event delegates position creation to the attached device subject', 
 
     expect($eventWithoutAttachable->createPosition($positionData))->toBeNull();
 });
+
+test('device recent events and position creation persist through sqlite', function () {
+    $connection = fleetopsDeviceEventModelUseInMemoryConnection(true);
+    foreach (['ST_PointFromText', 'ST_GeomFromText'] as $fn) {
+        $connection->getPdo()->sqliteCreateFunction($fn, fn ($wkt, $srid = 0, $axisOrder = null) => $wkt);
+    }
+    if (!EloquentModel::getEventDispatcher()) {
+        EloquentModel::setEventDispatcher(new Illuminate\Events\Dispatcher());
+    }
+    app()->instance('responsecache', new class {
+        public function __call($method, $arguments)
+        {
+            return null;
+        }
+    });
+    config()->set('activitylog.enabled', false);
+    config()->set('activitylog.default_auth_driver', 'web');
+    app()->bind(Illuminate\Contracts\Config\Repository::class, fn () => config());
+    session(['company' => 'company-1']);
+
+    $schema = $connection->getSchemaBuilder();
+    $schema->create('positions', function ($table) {
+        $table->increments('id');
+        foreach (['uuid', 'public_id', 'company_uuid', 'subject_uuid', 'subject_type', 'destination_uuid', 'order_uuid', 'coordinates', 'heading', 'bearing', 'speed', 'altitude', '_key'] as $column) {
+            $table->string($column)->nullable();
+        }
+        $table->timestamps();
+        $table->softDeletes();
+    });
+
+    $device = new Device();
+    $device->setRawAttributes(['uuid' => 'device-pos-1', 'company_uuid' => 'company-1'], true);
+    $device->exists = true;
+
+    $connection->table('device_events')->insert([
+        ['uuid' => 'event-1', 'device_uuid' => 'device-pos-1', 'event_type' => 'ignition_on', 'created_at' => '2026-07-27 09:00:00', 'updated_at' => '2026-07-27 09:00:00'],
+        ['uuid' => 'event-2', 'device_uuid' => 'device-pos-1', 'event_type' => 'ignition_off', 'created_at' => '2026-07-27 10:00:00', 'updated_at' => '2026-07-27 10:00:00'],
+    ]);
+    $recent = $device->getRecentEvents(1);
+    expect($recent)->toHaveCount(1)
+        ->and($recent->first()->event_type)->toBe('ignition_off');
+
+    // Latitude/longitude attributes convert into a spatial coordinate point
+    $position = $device->createPosition(['latitude' => 1.30, 'longitude' => 103.80, 'speed' => '35'], 'a4f5e2aa-3c1e-4d55-9d38-9ea2f8d90210');
+    expect($position)->not->toBeNull()
+        ->and($connection->table('positions')->count())->toBe(1)
+        ->and($connection->table('positions')->value('subject_uuid'))->toBe('device-pos-1')
+        ->and($connection->table('positions')->value('destination_uuid'))->toBe('a4f5e2aa-3c1e-4d55-9d38-9ea2f8d90210');
+
+    // Location attributes alias into coordinates
+    $device->createPosition(['location' => 'POINT(103.8 1.3)']);
+    expect($connection->table('positions')->count())->toBe(2);
+});
