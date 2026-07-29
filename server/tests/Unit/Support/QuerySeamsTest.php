@@ -9,6 +9,19 @@ use Illuminate\Database\SQLiteConnection;
  * commands and jobs. Each is a one-line delegation that behaviour tests
  * override, so the delegation itself is asserted here against SQLite.
  */
+if (!function_exists('Fleetbase\Events\logger')) {
+    eval('namespace Fleetbase\Events; function logger($message = null, array $context = []) { return new class { public function __call($m, $a) { return null; } }; }');
+}
+
+class FleetOpsQuerySeamEventRecorder
+{
+    public static array $fired = [];
+}
+
+if (!function_exists('Fleetbase\FleetOps\Jobs\event')) {
+    eval('namespace Fleetbase\FleetOps\Jobs; function event($event = null) { \FleetOpsQuerySeamEventRecorder::$fired[] = $event; return $event; }');
+}
+
 if (!function_exists('Fleetbase\Observers\event')) {
     eval('namespace Fleetbase\Observers; function event($event = null, $payload = []) { return []; }');
 }
@@ -247,4 +260,50 @@ test('shift change listener seams detect creation events and notify drivers', fu
 
     // Only schedule-item creation events are treated as creations
     expect(fleetopsQuerySeamInvoke($listener, $class, 'isCreatedEvent', [new stdClass()]))->toBeFalse();
+});
+
+test('order finalization fires the order ready event', function () {
+    fleetopsQuerySeamBoot();
+    FleetOpsQuerySeamEventRecorder::$fired = [];
+
+    $order = new Fleetbase\FleetOps\Models\Order();
+    $order->setRawAttributes(['uuid' => 'order-ready-1', 'public_id' => 'order_readyone'], true);
+
+    $class = Fleetbase\FleetOps\Jobs\FinalizeApiOrderCreation::class;
+    $job   = new $class('order-ready-1');
+    fleetopsQuerySeamInvoke($job, $class, 'fireOrderReady', [$order]);
+
+    expect(FleetOpsQuerySeamEventRecorder::$fired)->toHaveCount(1)
+        ->and(FleetOpsQuerySeamEventRecorder::$fired[0])->toBeInstanceOf(Fleetbase\FleetOps\Events\OrderReady::class);
+});
+
+test('adhoc dispatch finds online drivers for the orders company', function () {
+    $connection = fleetopsQuerySeamBoot();
+    $connection->table('users')->insert([
+        ['uuid' => 'user-adhoc-a', 'company_uuid' => 'company-seam-1'],
+        ['uuid' => 'user-adhoc-b', 'company_uuid' => 'company-other'],
+    ]);
+    $connection->getSchemaBuilder()->table('drivers', function ($blueprint) {
+        $blueprint->string('online')->nullable();
+    });
+    $connection->table('drivers')->insert([
+        // Online and in the order's company
+        ['uuid' => 'driver-near-1', 'company_uuid' => 'company-seam-1', 'user_uuid' => 'user-adhoc-a', 'online' => '1'],
+        // Online but another company
+        ['uuid' => 'driver-near-2', 'company_uuid' => 'company-other', 'user_uuid' => 'user-adhoc-b', 'online' => '1'],
+        // Right company but offline
+        ['uuid' => 'driver-near-3', 'company_uuid' => 'company-seam-1', 'user_uuid' => 'user-adhoc-a', 'online' => '0'],
+    ]);
+
+    $order = new Fleetbase\FleetOps\Models\Order();
+    $order->setRawAttributes(['uuid' => 'order-adhoc-near', 'company_uuid' => 'company-seam-1'], true);
+
+    $class   = Fleetbase\FleetOps\Console\Commands\DispatchAdhocOrders::class;
+    $command = (new ReflectionClass($class))->newInstanceWithoutConstructor();
+    $pickup  = new Fleetbase\LaravelMysqlSpatial\Types\Point(1.30, 103.80);
+
+    // In testing mode the spatial predicates are skipped so the company and
+    // online filters can be asserted on their own
+    $drivers = $command->getNearbyDriversForOrder($order, $pickup, 5000, true);
+    expect($drivers->pluck('uuid')->all())->toBe(['driver-near-1']);
 });
