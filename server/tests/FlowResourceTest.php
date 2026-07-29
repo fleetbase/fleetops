@@ -146,6 +146,16 @@ test('flow conditions evaluate comparison operators and reject unknown operators
 
     expect(fn () => (new Condition(['field' => 'status', 'operator' => 'between', 'value' => []]))->eval($order))
         ->toThrow(Exception::class, 'Unknown operator: between');
+
+    // Remaining operator arms: existence, array membership, boolean logic
+    // and the strict lower-than comparison
+    expect((new Condition(['field' => 'status', 'operator' => 'exists', 'value' => null]))->eval($order))->toBeTrue()
+        ->and((new Condition(['field' => 'status', 'operator' => 'in', 'value' => ['ready']]))->eval($order))->toBeFalse()
+        ->and((new Condition(['field' => 'status', 'operator' => 'notIn', 'value' => ['ready']]))->eval($order))->toBeFalse()
+        ->and((new Condition(['field' => 'status', 'operator' => 'and', 'value' => true]))->eval($order))->toBeTrue()
+        ->and((new Condition(['field' => 'status', 'operator' => 'or', 'value' => false]))->eval($order))->toBeTrue()
+        ->and((new Condition(['field' => 'status', 'operator' => 'not', 'value' => null]))->eval($order))->toBeFalse()
+        ->and((new Condition(['field' => 'priority', 'operator' => 'lessThan', 'value' => 9]))->eval($order))->toBeTrue();
 });
 
 test('flow logic combines conditions with and or not and if semantics', function () {

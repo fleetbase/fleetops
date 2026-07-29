@@ -125,3 +125,34 @@ test('hos constraint validation returns every violation when limits are exceeded
             'warning',
         ]);
 });
+
+test('recent schedule items query scopes assignee and rolling window', function () {
+    $connection = new Illuminate\Database\SQLiteConnection(new PDO('sqlite::memory:'));
+    $resolver   = new Illuminate\Database\ConnectionResolver(['default' => $connection, 'mysql' => $connection]);
+    $resolver->setDefaultConnection('mysql');
+    Illuminate\Database\Eloquent\Model::setConnectionResolver($resolver);
+    $schema = $connection->getSchemaBuilder();
+    $schema->create('schedule_items', function ($blueprint) {
+        $blueprint->increments('id');
+        foreach (['uuid', 'public_id', 'company_uuid', 'schedule_uuid', 'assignee_type', 'assignee_uuid', 'status', 'start_at', 'end_at', '_key'] as $column) {
+            $blueprint->string($column)->nullable();
+        }
+        $blueprint->timestamps();
+        $blueprint->timestamp('deleted_at')->nullable();
+    });
+    $connection->table('schedule_items')->insert([
+        ['uuid' => 'shift-hos-current', 'assignee_type' => 'driver', 'assignee_uuid' => 'driver-hos-1', 'start_at' => '2026-07-27 08:00:00', 'end_at' => '2026-07-27 16:00:00'],
+        ['uuid' => 'shift-hos-recent', 'assignee_type' => 'driver', 'assignee_uuid' => 'driver-hos-1', 'start_at' => '2026-07-25 08:00:00', 'end_at' => '2026-07-25 16:00:00'],
+        ['uuid' => 'shift-hos-old', 'assignee_type' => 'driver', 'assignee_uuid' => 'driver-hos-1', 'start_at' => '2026-07-01 08:00:00', 'end_at' => '2026-07-01 16:00:00'],
+        ['uuid' => 'shift-hos-other', 'assignee_type' => 'driver', 'assignee_uuid' => 'driver-hos-2', 'start_at' => '2026-07-26 08:00:00', 'end_at' => '2026-07-26 16:00:00'],
+    ]);
+
+    $current    = ScheduleItem::where('uuid', 'shift-hos-current')->first();
+    $constraint = new HOSConstraint();
+    $reflection = new ReflectionMethod(HOSConstraint::class, 'getRecentScheduleItems');
+    $reflection->setAccessible(true);
+    $recent = $reflection->invoke($constraint, $current);
+
+    expect($recent)->toHaveCount(1)
+        ->and($recent->first()->uuid)->toBe('shift-hos-recent');
+});
