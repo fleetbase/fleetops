@@ -366,8 +366,17 @@ test('feature geometries strict lookups matrices and centroids cover edge seams'
     $matrix                                     = Utils::distanceMatrix([new Place(['location' => new Point(1.5, 103.5)])], [new Place(['location' => new Point(1.55, 103.55)])], ['provider' => 'google']);
     expect($matrix->distance)->toBe(3200.0);
 
-    // GEOS centroid helpers surface the missing engine
+    // Without a registered engine the GEOS fallback surfaces its missing extension
     $brickPolygon = Brick\Geo\Polygon::fromText('POLYGON ((0 0, 0 1, 1 1, 0 0))');
-    expect(fn () => Utils::getCentroidFromGeosPolygon($brickPolygon))->toThrow(Error::class)
-        ->and(fn () => Utils::getCentroidFromGeosMultiPolygon(Brick\Geo\MultiPolygon::of($brickPolygon)))->toThrow(Error::class);
+    expect(fn () => Utils::getCentroidFromGeosPolygon($brickPolygon))->toThrow(Error::class);
+
+    // A registry-injected engine computes centroids without GEOS
+    Brick\Geo\Engine\GeometryEngineRegistry::set(new class(new PDO('sqlite::memory:'), false) extends Brick\Geo\Engine\PDOEngine {
+        public function centroid(Brick\Geo\Geometry $g): Brick\Geo\Point
+        {
+            return Brick\Geo\Point::xy(103.81, 1.31);
+        }
+    });
+    expect(Utils::getCentroidFromGeosPolygon($brickPolygon)->x())->toBe(103.81)
+        ->and(Utils::getCentroidFromGeosMultiPolygon(Brick\Geo\MultiPolygon::of($brickPolygon))->y())->toBe(1.31);
 });

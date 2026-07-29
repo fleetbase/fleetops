@@ -103,3 +103,27 @@ test('polygon conversions build league and brick multipolygons from borders', fu
     $polygon = ServiceArea::createPolygonFromPoint(new Point(1.3521, 103.8198), 400);
     expect($polygon)->toBeInstanceOf(Polygon::class);
 });
+
+test('service area centroids resolve through injected engines', function () {
+    Brick\Geo\Engine\GeometryEngineRegistry::set(new class(new PDO('sqlite::memory:'), false) extends Brick\Geo\Engine\PDOEngine {
+        public function centroid(Brick\Geo\Geometry $g): Brick\Geo\Point
+        {
+            return Brick\Geo\Point::xy(1.33, 103.83);
+        }
+    });
+
+    $serviceArea = new ServiceArea();
+    $serviceArea->setRawAttributes(['uuid' => 'sa-centroid', 'public_id' => 'service_area_centroid', 'name' => 'Centroid Area'], true);
+    $serviceArea->setAttribute('border', new MultiPolygon([new Polygon([new LineString([
+        new Point(1.0, 103.0),
+        new Point(1.0, 104.0),
+        new Point(2.0, 104.0),
+        new Point(1.0, 103.0),
+    ])])]));
+
+    // FleetOps builds brick geometries with x=latitude, y=longitude
+    expect($serviceArea->getCentroid()->x())->toBe(1.33)
+        ->and($serviceArea->location->getLat())->toBe(1.33)
+        ->and($serviceArea->latitude)->toBe(1.33)
+        ->and($serviceArea->longitude)->toBe(103.83);
+});

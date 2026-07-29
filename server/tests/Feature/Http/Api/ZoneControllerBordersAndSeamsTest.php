@@ -232,3 +232,22 @@ test('helper seams parse radii build borders and wrap resources', function () {
         ->and($probe->callHelper('deletedZoneResource', $created))->not->toBeNull()
         ->and($probe->callHelper('jsonResponse', ['ok' => true], 200)->getData(true))->toBe(['ok' => true]);
 });
+
+test('zone centroids and location accessors resolve through injected engines', function () {
+    $connection = fleetopsZoneBoot();
+    Brick\Geo\Engine\GeometryEngineRegistry::set(new class(new PDO('sqlite::memory:'), false) extends Brick\Geo\Engine\PDOEngine {
+        public function centroid(Brick\Geo\Geometry $g): Brick\Geo\Point
+        {
+            return Brick\Geo\Point::xy(1.32, 103.82);
+        }
+    });
+
+    $connection->table('zones')->insert(['uuid' => '33333333-3333-4333-8333-333333333333', 'public_id' => 'zone_centroid1', 'company_uuid' => 'company-1', 'name' => 'Centroid Zone', 'border' => fleetopsZoneWkbFromWkt('POLYGON((103.8 1.3,103.9 1.3,103.9 1.4,103.8 1.3))')]);
+    $zone = Zone::where('uuid', '33333333-3333-4333-8333-333333333333')->first();
+
+    // FleetOps builds brick geometries with x=latitude, y=longitude
+    expect($zone->getCentroid()->x())->toBe(1.32)
+        ->and($zone->location->getLat())->toBe(1.32)
+        ->and($zone->latitude)->toBe(1.32)
+        ->and($zone->longitude)->toBe(103.82);
+});

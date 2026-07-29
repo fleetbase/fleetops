@@ -213,6 +213,12 @@ class Geocoding
 
     protected static function makeGeocoder(): object
     {
+        // Allow an alternative geocoder (or test double) to be injected
+        // through the container without constructing a live HTTP client.
+        if (app()->bound('fleetops.geocoder')) {
+            return app('fleetops.geocoder');
+        }
+
         $httpClient = new Client();
         $provider   = new GoogleMaps($httpClient, null, config('services.google_maps.api_key', env('GOOGLE_MAPS_API_KEY')));
 

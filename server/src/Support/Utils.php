@@ -1261,9 +1261,21 @@ class Utils extends FleetbaseUtils
      */
     public static function getCentroidFromGeosPolygon(\Brick\Geo\Polygon $polygon): \Brick\Geo\Point
     {
-        $geometryEngine = new \Brick\Geo\Engine\GEOSEngine();
+        return static::resolveGeometryEngine()->centroid($polygon);
+    }
 
-        return $geometryEngine->centroid($polygon);
+    /**
+     * Resolve the configured geometry engine, preferring the registry so
+     * alternative engines (or test doubles) can be injected without the
+     * GEOS extension.
+     */
+    public static function resolveGeometryEngine(): \Brick\Geo\Engine\GeometryEngine
+    {
+        if (\Brick\Geo\Engine\GeometryEngineRegistry::has()) {
+            return \Brick\Geo\Engine\GeometryEngineRegistry::get();
+        }
+
+        return new \Brick\Geo\Engine\GEOSEngine();
     }
 
     /**
@@ -1275,9 +1287,7 @@ class Utils extends FleetbaseUtils
      */
     public static function getCentroidFromGeosMultiPolygon(\Brick\Geo\MultiPolygon $multiPolygon): \Brick\Geo\Point
     {
-        $geometryEngine = new \Brick\Geo\Engine\GEOSEngine();
-
-        return $geometryEngine->centroid($multiPolygon);
+        return static::resolveGeometryEngine()->centroid($multiPolygon);
     }
 
     /**
