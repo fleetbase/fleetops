@@ -172,7 +172,7 @@ class DriverFilter extends Filter
         }
 
         // if wants to find nearby place or coordinates
-        if (Utils::isCoordinates($nearby)) {
+        if (Utils::isCoordinatesStrict($nearby)) {
             $location = Utils::getPointFromMixed($nearby);
 
             $this->builder->whereNotNull('location')->whereRaw('
@@ -191,7 +191,7 @@ class DriverFilter extends Filter
         if ($addedNearbyQuery === false && is_string($nearby)) {
             $place = Place::createFromMixed($nearby, [], false);
 
-            if ($nearby instanceof Place) {
+            if ($place instanceof Place) {
                 $this->builder->whereNotNull('location')->whereRaw('
                 ST_Y(location) BETWEEN -90 AND 90
                 AND ST_X(location) BETWEEN -180 AND 180

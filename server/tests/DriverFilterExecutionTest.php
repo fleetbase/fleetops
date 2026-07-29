@@ -166,3 +166,98 @@ test('driver filter date and nearby coordinate filters execute query operations'
         ->and($builder->called('distanceSphere'))->toBeTrue()
         ->and($builder->called('distanceSphereValue'))->toBeTrue();
 });
+
+test('driver filter covers alternate date branches company radius and address nearby', function () {
+    // Array created-at ranges and scalar updated-at dates hit the inverse branches
+    $builder = new FleetOpsRecordingDriverFilterBuilder();
+    $filter  = fleetopsDriverFilter($builder, ['radius' => 900]);
+    $filter->createdAt(['2026-01-01', '2026-01-31']);
+    $filter->updatedAt('2026-01-15');
+    expect($builder->called('whereBetween'))->toBeTrue()
+        ->and($builder->called('whereDate'))->toBeTrue();
+
+    // Without a radius input the company option and hard default provide distances
+    $connection = new Illuminate\Database\SQLiteConnection(new PDO('sqlite::memory:'));
+    $resolver   = new Illuminate\Database\ConnectionResolver(['default' => $connection, 'mysql' => $connection]);
+    $resolver->setDefaultConnection('mysql');
+    Illuminate\Database\Eloquent\Model::setConnectionResolver($resolver);
+    app()->instance('db', new class($connection) {
+        public function __construct(public Illuminate\Database\SQLiteConnection $c)
+        {
+        }
+
+        public function connection($name = null)
+        {
+            return $this->c;
+        }
+
+        public function __call($method, $arguments)
+        {
+            return $this->c->{$method}(...$arguments);
+        }
+    });
+    Illuminate\Support\Facades\DB::clearResolvedInstance('db');
+    $schema = $connection->getSchemaBuilder();
+    $schema->create('companies', function ($blueprint) {
+        $blueprint->increments('id');
+        foreach (['uuid', 'public_id', 'name', 'options'] as $column) {
+            $blueprint->string($column)->nullable();
+        }
+        $blueprint->timestamps();
+        $blueprint->timestamp('deleted_at')->nullable();
+    });
+    $schema->create('places', function ($blueprint) {
+        $blueprint->increments('id');
+        foreach (['uuid', 'public_id', 'company_uuid', 'name', 'street1', 'city', 'country', 'location', 'meta', '_key'] as $column) {
+            $blueprint->string($column)->nullable();
+        }
+        $blueprint->timestamps();
+        $blueprint->timestamp('deleted_at')->nullable();
+    });
+    $connection->table('companies')->insert(['uuid' => 'company_test', 'name' => 'Filter Co', 'options' => json_encode(['fleetops' => ['adhoc_distance' => 2500]])]);
+
+    // No radius, no company: the hard 6000m default applies
+    session(['company' => null]);
+    $defaultBuilder = new FleetOpsRecordingDriverFilterBuilder();
+    $defaultFilter  = fleetopsDriverFilter($defaultBuilder, []);
+    $defaultFilter->nearby('1.3000,103.8000');
+    expect($defaultBuilder->called('distanceSphere'))->toBeTrue();
+
+    session(['company' => 'company_test']);
+    $companyBuilder = new FleetOpsRecordingDriverFilterBuilder();
+    $companyFilter  = fleetopsDriverFilter($companyBuilder, []);
+    $companyFilter->nearby('1.3000,103.8000');
+    expect($companyBuilder->called('distanceSphere'))->toBeTrue();
+
+    // Address-string nearby lookups resolve places and add distance queries
+    $wkbPoint = pack('V', 0) . pack('C', 1) . pack('V', 1) . pack('d', 103.8) . pack('d', 1.3);
+    $connection->table('places')->insert(['uuid' => 'place-filter-1', 'company_uuid' => 'company_test', 'name' => 'Filter Depot', 'street1' => 'Filter Depot Road', 'location' => $wkbPoint]);
+    $address = Geocoder\Provider\GoogleMaps\Model\GoogleAddress::createFromArray([
+        'providedBy' => 'google',
+        'latitude'   => 1.3,
+        'longitude'  => 103.8,
+        'streetName' => 'Filter Depot Road',
+        'locality'   => 'Singapore',
+        'country'    => 'Singapore',
+    ]);
+    app()->instance('fleetops.geocoder', new class($address) {
+        public function __construct(public $address)
+        {
+        }
+
+        public function geocodeQuery($query)
+        {
+            return new Geocoder\Model\AddressCollection([$this->address]);
+        }
+
+        public function reverseQuery($query)
+        {
+            return new Geocoder\Model\AddressCollection([$this->address]);
+        }
+    });
+    $addressBuilder = new FleetOpsRecordingDriverFilterBuilder();
+    $addressFilter  = fleetopsDriverFilter($addressBuilder, ['radius' => 800]);
+    $addressFilter->nearby('Filter Depot');
+    expect($addressBuilder->called('distanceSphere'))->toBeTrue()
+        ->and($addressBuilder->called('distanceSphereValue'))->toBeTrue();
+});
