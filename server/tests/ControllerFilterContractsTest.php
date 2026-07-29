@@ -1220,3 +1220,54 @@ test('place filter alternate date branches and spatial area scopes execute', fun
     expect($withinCalls)->toHaveCount(4)
         ->and($withinCalls[0][1])->toBe('location');
 });
+
+test('vehicle and fuel report filters cover alternate identity and date branches', function () {
+    // Vehicle filter: unassigned drivers, vendor scoping, inverse date branches,
+    // fleet unassignment and blank telematic early return
+    $query  = new FleetOpsControllerFilterQuery();
+    $filter = fleetopsFilterWithBuilder(VehicleFilter::class, $query);
+    $filter->driver('unassigned');
+    $filter->driver('c4c4c4c4-4444-4444-8444-444444444444');
+    $filter->vendor('vendor-uuid-1');
+    $filter->createdAt('2026-02-01');
+    $filter->updatedAt(['2026-01-01', '2026-01-31']);
+    $filter->assignedFleet('false');
+    $filter->telematicUuid(null);
+    $filter->telematicUuid('telematic-1');
+
+    $nestedVehicle = collect($query->calls)->where(0, 'whereHas')->flatMap(fn ($call) => $call[2])->values()->all();
+    expect($query->calls)->toContain(['whereDoesntHave', 'driver'])
+        ->and($query->calls)->toContain(['whereDoesntHave', 'fleets'])
+        ->and(collect($query->calls)->where(0, 'whereDate')->values())->toHaveCount(1)
+        ->and(collect($query->calls)->where(0, 'whereBetween')->values())->toHaveCount(1)
+        ->and($nestedVehicle)->toContain(['where', ['uuid', 'c4c4c4c4-4444-4444-8444-444444444444']]);
+
+    // Fuel report filter: uuid, public-id and free-text identity branches
+    // plus the inverse date branches
+    $fuelQuery  = new FleetOpsControllerFilterQuery();
+    $fuelFilter = fleetopsFilterWithBuilder(FuelReportFilter::class, $fuelQuery);
+    $fuelFilter->reporter('d5d5d5d5-5555-4555-8555-555555555555');
+    $fuelFilter->reporter('user_reporterone1');
+    $fuelFilter->reporter('Jane Reporter');
+    $fuelFilter->driver('d5d5d5d5-5555-4555-8555-555555555556');
+    $fuelFilter->driver('driver_fuelone12');
+    $fuelFilter->driver('John Driver');
+    $fuelFilter->vehicle('d5d5d5d5-5555-4555-8555-555555555557');
+    $fuelFilter->vehicle('vehicle_fuelone1');
+    $fuelFilter->vehicle('Tail Lift Truck');
+    $fuelFilter->createdAt(['2026-01-01', '2026-01-31']);
+    $fuelFilter->createdAt('2026-02-02');
+    $fuelFilter->updatedAt('2026-02-03');
+    $fuelFilter->updatedAt(['2026-02-01', '2026-02-28']);
+
+    $nestedFuel = collect($fuelQuery->calls)->where(0, 'whereHas')->flatMap(fn ($call) => $call[2])->values()->all();
+    expect($nestedFuel)->toContain(['where', ['uuid', 'd5d5d5d5-5555-4555-8555-555555555555']])
+        ->and($nestedFuel)->toContain(['where', ['public_id', 'user_reporterone1']])
+        ->and($nestedFuel)->toContain(['search', 'Jane Reporter'])
+        ->and($nestedFuel)->toContain(['where', ['public_id', 'driver_fuelone12']])
+        ->and($nestedFuel)->toContain(['search', 'John Driver'])
+        ->and($nestedFuel)->toContain(['where', ['public_id', 'vehicle_fuelone1']])
+        ->and($nestedFuel)->toContain(['search', 'Tail Lift Truck'])
+        ->and(collect($fuelQuery->calls)->where(0, 'whereBetween')->values())->toHaveCount(2)
+        ->and(collect($fuelQuery->calls)->where(0, 'whereDate')->values())->toHaveCount(2);
+});
