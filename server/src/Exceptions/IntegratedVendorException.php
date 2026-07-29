@@ -19,9 +19,9 @@ class IntegratedVendorException extends \Exception implements Responsable
     public ?IntegratedVendor $integratedVendor;
 
     /**
-     * @var string the trigger method that caused the exception
+     * @var string|null the trigger method that caused the exception
      */
-    public string $triggerMethod;
+    public ?string $triggerMethod;
 
     /**
      * IntegratedVendorException constructor.
