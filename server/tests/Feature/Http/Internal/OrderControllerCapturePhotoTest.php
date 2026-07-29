@@ -417,3 +417,25 @@ test('public api capture photo validates and persists base64 proofs', function (
         ->and($connection->table('proofs')->count())->toBe(1)
         ->and($connection->table('proofs')->whereNotNull('file_uuid')->count())->toBe(1);
 });
+
+test('public api capture photo stores uploaded files as proofs', function () {
+    $connection = fleetopsCapturePhotoBoot();
+    fleetopsCapturePhotoSeed($connection);
+
+    $temp = tempnam(sys_get_temp_dir(), 'proof') . '.png';
+    file_put_contents($temp, base64_decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg=='));
+    $upload = new Illuminate\Http\UploadedFile($temp, 'proof.png', 'image/png', null, true);
+
+    $request = Request::create('/v1/orders/capture-photo', 'POST', [], [], ['photos' => [$upload]]);
+    $store   = app('session.store');
+    $store->put('company', 'company-1');
+    $request->setLaravelSession($store);
+
+    $result = (new Fleetbase\FleetOps\Http\Controllers\Api\v1\OrderController())->capturePhoto($request, 'order_photoone1');
+
+    expect($result)->toBeInstanceOf(ProofResource::class)
+        ->and($connection->table('proofs')->count())->toBe(1)
+        ->and($connection->table('files')->where('content_type', 'image/png')->count())->toBe(1);
+
+    @unlink($temp);
+});
