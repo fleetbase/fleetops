@@ -348,3 +348,37 @@ test('context builder resolves waypoint marker statuses and skips markers withou
     expect($context->stops)->toHaveCount(1)
         ->and($context->stops->first()->status)->toBe('enroute');
 });
+
+test('service stop resolution guards nulls and waypoint contexts', function () {
+    $connection = fleetopsTrackingBoot();
+    $builder    = new TrackingContextBuilder();
+    $invoke     = function (string $name, ...$arguments) use ($builder) {
+        $reflection = new ReflectionMethod(TrackingContextBuilder::class, $name);
+        $reflection->setAccessible(true);
+
+        return $reflection->invoke($builder, ...$arguments);
+    };
+
+    $order = new Order();
+    $order->setRawAttributes(['uuid' => 'order-stops-1', 'public_id' => 'order_stops1', 'company_uuid' => 'company-1'], true);
+    $payload = new Fleetbase\FleetOps\Models\Payload();
+    $payload->setRawAttributes(['uuid' => 'payload-stops-1', 'company_uuid' => 'company-1'], true);
+    $payload->exists = true;
+    $payload->setRelation('waypointMarkers', collect([]));
+
+    // Null payloads and marker-less payloads short-circuit
+    expect($invoke('payloadUsesServiceStopActivity', null))->toBeFalse()
+        ->and($invoke('payloadHasCurrentServiceStopActivity', $payload, new Fleetbase\FleetOps\Flow\Activity(['code' => 'dispatched'])))->toBeFalse();
+
+    // Endpoint tracking numbers require a typed column and place
+    expect($invoke('endpointServiceStopTrackingNumber', $order, $payload, ['type' => 'unknown-type']))->toBeNull()
+        ->and($invoke('endpointServiceStopTrackingNumber', $order, $payload, ['type' => 'pickup', 'place' => null]))->toBeNull();
+
+    // Activity inserts bail without a resolvable tracking number
+    expect($invoke('insertEndpointServiceStopActivity', $order, $payload, ['type' => 'unknown-type'], new Fleetbase\FleetOps\Flow\Activity(['code' => 'dispatched'])))->toBeNull();
+
+    // Waypoint-backed stops return the waypoint as the activity context
+    $waypoint = new Waypoint();
+    $waypoint->setRawAttributes(['uuid' => 'wp-stops-1'], true);
+    expect($invoke('serviceStopActivityContext', $order, $payload, ['waypoint' => $waypoint]))->toBe($waypoint);
+});
