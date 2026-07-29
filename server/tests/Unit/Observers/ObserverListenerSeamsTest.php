@@ -198,3 +198,70 @@ test('listener seams build driver queries and resolve assigned drivers', functio
     $unassigned->setRawAttributes(['uuid' => 'order-listen-2', 'driver_assigned_uuid' => null], true);
     expect(fleetopsObserverSeamInvoke(Fleetbase\FleetOps\Listeners\HandleOrderDriverAssigned::class, 'findAssignedDriver', [$unassigned]))->toBeNull();
 });
+
+test('live cache invalidation seams flush their tagged buckets', function () {
+    fleetopsObserverSeamBoot();
+    $flushed = [];
+    app()->instance('cache', new class($flushed) {
+        public function __construct(public array &$flushed)
+        {
+        }
+
+        public function tags($tags = null)
+        {
+            $this->flushed[] = $tags;
+
+            return $this;
+        }
+
+        public function flush()
+        {
+            return true;
+        }
+
+        public function increment($key, $value = 1)
+        {
+            return 1;
+        }
+
+        public function get($key, $default = null)
+        {
+            return 1;
+        }
+
+        public function put($key, $value, $ttl = null)
+        {
+            return true;
+        }
+
+        public function __call($method, $arguments)
+        {
+            return null;
+        }
+    });
+    Illuminate\Support\Facades\Cache::clearResolvedInstance('cache');
+
+    // Both observers invalidate their own bucket alongside the shared monitor
+    fleetopsObserverSeamInvoke(Fleetbase\FleetOps\Observers\DriverObserver::class, 'invalidateLiveCache');
+    fleetopsObserverSeamInvoke(Fleetbase\FleetOps\Observers\VehicleObserver::class, 'invalidateLiveCache');
+
+    expect(true)->toBeTrue();
+});
+
+test('service rate observer deletes the models handed to it', function () {
+    $connection = fleetopsObserverSeamBoot();
+    $connection->getSchemaBuilder()->create('service_rate_fees', function ($blueprint) {
+        $blueprint->increments('id');
+        foreach (['uuid', 'service_rate_uuid', 'fee', 'label'] as $column) {
+            $blueprint->string($column)->nullable();
+        }
+        $blueprint->timestamps();
+        $blueprint->timestamp('deleted_at')->nullable();
+    });
+    $connection->table('service_rate_fees')->insert(['uuid' => 'srf-seam-1', 'service_rate_uuid' => 'rate-seam-1', 'fee' => '10']);
+
+    $fee = Fleetbase\FleetOps\Models\ServiceRateFee::query()->where('uuid', 'srf-seam-1')->first();
+    fleetopsObserverSeamInvoke(Fleetbase\FleetOps\Observers\ServiceRateObserver::class, 'deleteModels', [Fleetbase\FleetOps\Models\ServiceRateFee::query()->where('uuid', 'srf-seam-1')->get()]);
+
+    expect($connection->table('service_rate_fees')->whereNull('deleted_at')->count())->toBe(0);
+});

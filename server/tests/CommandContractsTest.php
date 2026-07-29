@@ -2454,6 +2454,41 @@ test('test email command rejects unsupported email types before sending mail', f
         ->and($command->messages)->toContain(['error', 'Unknown email type: unknown']);
 });
 
+test('test email command reports send failures as a command failure', function () {
+    $command = new class extends TestEmail {
+        public array $messages = [];
+
+        public function argument($key = null)
+        {
+            $arguments = ['email' => 'customer@example.test'];
+
+            return $key === null ? $arguments : ($arguments[$key] ?? null);
+        }
+
+        public function option($key = null)
+        {
+            $options = ['type' => 'customer_credentials'];
+
+            return $key === null ? $options : ($options[$key] ?? null);
+        }
+
+        public function info($string, $verbosity = null)
+        {
+            $this->messages[] = ['info', $string];
+        }
+
+        public function error($string, $verbosity = null)
+        {
+            $this->messages[] = ['error', $string];
+        }
+    };
+
+    // The mail transport is unavailable in the harness, so the send throws and
+    // the command reports the failure rather than surfacing the exception
+    expect($command->handle())->toBe(Command::FAILURE)
+        ->and(collect($command->messages)->pluck(0))->toContain('error');
+});
+
 test('track order distance command exits early when no qualifying orders exist', function () {
     Carbon::setTestNow(Carbon::parse('2026-07-26 12:00:00'));
 
