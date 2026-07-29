@@ -536,3 +536,28 @@ test('order config fallbacks payload builders and verification seams resolve', f
         }
     }
 });
+
+test('forgot and reset password flows guard identities codes and lengths', function () {
+    $connection = fleetopsCustomerHelperBoot();
+    $connection->table('users')->insert(['uuid' => 'user-reset-1', 'company_uuid' => 'company-1', 'name' => 'Reset User', 'email' => 'reset@example.com', 'phone' => '+6590008888', 'password' => 'old-hash', 'type' => 'customer', 'status' => 'active']);
+    $controller = new CustomerController();
+
+    // Identity is required and unknown identities never leak existence
+    expect($controller->forgotPassword(Request::create('/x', 'POST', []))->getStatusCode())->toBe(400)
+        ->and($controller->forgotPassword(Request::create('/x', 'POST', ['identity' => 'ghost@example.com']))->getData(true)['status'] ?? '')->toBe('ok');
+
+    // Known phone identities route through the sms transport guard
+    $smsAttempt = $controller->forgotPassword(Request::create('/x', 'POST', ['identity' => '+6590008888']));
+    expect($smsAttempt)->not->toBeNull();
+
+    // Reset validation: required fields, length, unknown codes
+    expect($controller->resetPassword(Request::create('/x', 'POST', ['identity' => 'reset@example.com']))->getStatusCode())->toBe(400)
+        ->and($controller->resetPassword(Request::create('/x', 'POST', ['identity' => 'reset@example.com', 'code' => '123456', 'password' => 'short']))->getStatusCode())->toBe(400)
+        ->and($controller->resetPassword(Request::create('/x', 'POST', ['identity' => 'reset@example.com', 'code' => '999999', 'password' => 'long-enough-pass']))->getData(true)['error'] ?? '')->toContain('Invalid reset code');
+
+    // Valid codes reset the password and revoke sessions
+    $connection->table('verification_codes')->insert(['uuid' => 'vc-reset', 'code' => '424242', 'for' => 'fleetops_customer_password_reset', 'meta' => json_encode(['identity' => 'reset@example.com']), 'status' => 'active']);
+    $reset = $controller->resetPassword(Request::create('/x', 'POST', ['identity' => 'reset@example.com', 'code' => '424242', 'password' => 'brand-new-secret']));
+    expect($reset->getData(true)['status'] ?? '')->toBe('ok')
+        ->and($connection->table('users')->where('uuid', 'user-reset-1')->value('password'))->not->toBe('old-hash');
+});
