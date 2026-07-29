@@ -214,3 +214,31 @@ test('order filter sort exclude bulk and date filters execute their query operat
         ->and($builder->called('whereBetween'))->toBeTrue()
         ->and($builder->called('whereNull'))->toBeTrue();
 });
+
+test('order filter inverse date branches bulk public ids and eager scopes', function () {
+    $builder = new FleetOpsRecordingOrderFilterBuilder();
+    $filter  = fleetopsOrderFilter($builder);
+
+    // Inverse date branches and valid public-id bulk lookups
+    $filter->createdAt(['2026-01-01', '2026-01-31']);
+    $filter->updatedAt('2026-02-15');
+    $filter->scheduledAt('2026-02-20');
+    $filter->bulkQuery(['order_bulkhash01', 'order_bulkhash02']);
+
+    expect(collect($builder->methodCalls('whereBetween'))->count())->toBeGreaterThanOrEqual(1)
+        ->and(collect($builder->methodCalls('whereDate'))->count())->toBeGreaterThanOrEqual(2)
+        ->and($builder->called('whereIn'))->toBeTrue();
+
+    // The internal eager-load prunes driver and vehicle sub-relations
+    $scoped       = new FleetOpsRecordingOrderFilterBuilder();
+    $scopedFilter = fleetopsOrderFilter($scoped);
+    $scopedFilter->queryForInternal();
+    $withCall  = collect($scoped->methodCalls('with'))->first();
+    $relations = $withCall[1] ?? [];
+    foreach (['driverAssigned', 'vehicleAssigned'] as $relation) {
+        if (isset($relations[$relation]) && $relations[$relation] instanceof Closure) {
+            $relations[$relation]($scoped);
+        }
+    }
+    expect(collect($scoped->methodCalls('without'))->count())->toBeGreaterThanOrEqual(2);
+});
