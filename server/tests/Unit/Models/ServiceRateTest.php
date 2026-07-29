@@ -281,6 +281,166 @@ test('service rate payload quote applies parcel cod and percentage peak hour fee
         ->and($lines[1]['details'])->toBe('Document Pack parcel fee');
 });
 
+class FleetOpsServiceRateUnitMissGeometryFake extends FleetOpsServiceRateUnitFake
+{
+    protected function readRateRuleGeometry(ServiceRateFee $rule, Brick\Geo\IO\GeoJSONReader $reader)
+    {
+        return new FleetOpsServiceRateUnitContainsGeometry(false);
+    }
+}
+
+test('service rate quote covers multi zone flat fees and oversized parcel fallbacks', function () {
+    // multi_zone_distance quote path with a zero-distance route plus flat cod
+    // and peak hour fees
+    $rate = new FleetOpsServiceRateUnitFake([
+        'rate_calculation_method'       => 'multi_zone_distance',
+        'base_fee'                      => 100,
+        'currency'                      => 'USD',
+        'has_cod_fee'                   => true,
+        'cod_calculation_method'        => 'flat',
+        'cod_flat_fee'                  => 25,
+        'has_peak_hours_fee'            => true,
+        'peak_hours_calculation_method' => 'flat',
+        'peak_hours_flat_fee'           => 40,
+        'peak_hours_start'              => '00:00',
+        'peak_hours_end'                => '23:59',
+    ]);
+    $rate->setRelation('rateFees', collect([
+        new ServiceRateFee(['uuid' => 'fallback-rule', 'is_fallback' => true, 'distance_unit' => 'km', 'fee' => 3]),
+    ]));
+    $rate->setRelation('parcelFees', collect());
+
+    $sameSpot = fn () => new Place(['location' => new Point(1.30, 103.80)]);
+    $payload  = new FleetOpsServiceRateUnitPayloadFake(collect([$sameSpot(), $sameSpot()]), collect());
+
+    [$total, $lines] = $rate->quote($payload);
+
+    expect($total)->toBe(165)
+        ->and($lines->pluck('code')->all())->toBe(['BASE_FEE', 'COD_FEE', 'PEAK_HOUR_FEE']);
+
+    // parcels larger than every tier fall back to the last parcel fee
+    $parcelRate = new FleetOpsServiceRateUnitFake([
+        'rate_calculation_method' => 'parcel',
+        'base_fee'                => 50,
+        'currency'                => 'USD',
+    ]);
+    $parcelRate->setRelation('rateFees', collect());
+    $parcelRate->setRelation('parcelFees', collect([
+        fleetopsServiceRateUnitParcelFee(['size' => 'envelope', 'length' => 5, 'width' => 5, 'height' => 5, 'weight' => 100, 'fee' => 60]),
+        fleetopsServiceRateUnitParcelFee(['size' => 'odd_box', 'length' => 10, 'width' => 20, 'height' => 20, 'weight' => 1000, 'fee' => 75]),
+    ]));
+
+    // The standard parcel outsizes the envelope, part-fits the odd box; the
+    // huge parcel outsizes every tier and falls back to the priciest fee
+    [$parcelTotal, $parcelLines] = $parcelRate->quote(fleetopsServiceRateUnitPayload([
+        fleetopsServiceRateUnitParcel(),
+        fleetopsServiceRateUnitParcel(['length' => 100, 'width' => 100, 'height' => 100, 'weight' => 9000]),
+    ]));
+
+    expect($parcelTotal)->toBe(200)
+        ->and($parcelLines->pluck('code')->all())->toBe(['BASE_FEE', 'PARCEL_FEE', 'PARCEL_FEE'])
+        ->and($parcelLines[1]['details'])->toBe('Odd Box parcel fee');
+
+    // the preliminary-data quote applies the same oversized-parcel fallback
+    [$prelimTotal, $prelimLines] = $parcelRate->quoteFromPreliminaryData(
+        [fleetopsServiceRateUnitParcel(['length' => 100, 'width' => 100, 'height' => 100, 'weight' => 9000])],
+        [new Place(), new Place()],
+        0,
+        0,
+        true
+    );
+
+    expect($prelimTotal)->toBe(125)
+        ->and($prelimLines->pluck('code')->all())->toBe(['BASE_FEE', 'PARCEL_FEE']);
+});
+
+test('service rate multi zone guards skip foreign rules zero distances and unreadable borders', function () {
+    $reflection         = new ReflectionClass(ServiceRate::class);
+    $quoteMultiZone     = $reflection->getMethod('quoteMultiZoneDistance');
+    $calculateDistances = $reflection->getMethod('calculateMultiZoneDistances');
+    $readGeometry       = $reflection->getMethod('readRateRuleGeometry');
+
+    // Zero-distance fallback entries are skipped when pricing
+    $zeroRate = new FleetOpsServiceRateUnitFake(['currency' => 'USD']);
+    $zeroRate->setRelation('rateFees', collect([
+        new ServiceRateFee(['uuid' => 'fallback-rule', 'is_fallback' => true, 'distance_unit' => 'km', 'fee' => 3]),
+    ]));
+    [$zeroTotal, $zeroLines] = $quoteMultiZone->invoke($zeroRate, [], 0);
+    expect($zeroTotal)->toBe(0)->and($zeroLines)->toHaveCount(0);
+
+    // Samples matching no zone with no fallback rule stay unpriced
+    $missRate = new FleetOpsServiceRateUnitMissGeometryFake(['currency' => 'USD']);
+    $zoneRule = new ServiceRateFee(['uuid' => 'zone-rule', 'is_fallback' => false, 'distance_unit' => 'km', 'fee' => 3]);
+    $pickup   = new Place(['location' => new Point(1.30, 103.80)]);
+    $dropoff  = new Place(['location' => new Point(1.35, 103.85)]);
+    expect($calculateDistances->invoke($missRate, [$pickup, $dropoff], collect([$zoneRule]), null, 10000))->toBe([]);
+
+    // Unparseable and non-geometry borders resolve to null
+    $reader      = new Brick\Geo\IO\GeoJSONReader();
+    $plain       = new FleetOpsServiceRateUnitFake();
+    $invalidRule = new ServiceRateFee(['is_fallback' => false]);
+    $invalidRule->setRelation('zone', (object) ['border' => '{invalid geojson']);
+    $numericRule = new ServiceRateFee(['is_fallback' => false]);
+    $numericRule->setRelation('zone', (object) ['border' => 42]);
+    expect($readGeometry->invoke($plain, $invalidRule, $reader))->toBeNull()
+        ->and($readGeometry->invoke($plain, $numericRule, $reader))->toBeNull();
+});
+
+test('servicable rates reject zones with missing empty or invalid borders', function () {
+    $connection = new SQLiteConnection(new PDO('sqlite::memory:'));
+    $resolver   = new ConnectionResolver(['default' => $connection, 'mysql' => $connection]);
+    $resolver->setDefaultConnection('mysql');
+    EloquentModel::setConnectionResolver($resolver);
+
+    $schema = $connection->getSchemaBuilder();
+    $tables = [
+        'service_rates'            => ['uuid', 'public_id', 'company_uuid', 'service_area_uuid', 'zone_uuid', 'service_name', 'service_type', 'base_fee', 'currency', 'rate_calculation_method', 'meta', '_key'],
+        'service_areas'            => ['uuid', 'public_id', 'company_uuid', 'name', 'border', '_key'],
+        'zones'                    => ['uuid', 'public_id', 'company_uuid', 'service_area_uuid', 'name', 'border', '_key'],
+        'service_rate_fees'        => ['uuid', 'service_rate_uuid', 'zone_uuid', 'service_area_uuid', 'is_fallback', 'priority', 'fee', 'distance_unit', 'min', 'max', 'distance', 'label'],
+        'service_rate_parcel_fees' => ['uuid', 'service_rate_uuid', 'size', 'length', 'width', 'height', 'weight', 'dimensions_unit', 'weight_unit', 'fee'],
+        'places'                   => ['uuid', 'public_id', 'company_uuid', 'name', 'street1', 'location', '_key'],
+    ];
+    foreach ($tables as $table => $columns) {
+        $schema->create($table, function ($blueprint) use ($columns) {
+            $blueprint->increments('id');
+            foreach ($columns as $column) {
+                $blueprint->string($column)->nullable();
+            }
+            $blueprint->timestamps();
+            $blueprint->timestamp('deleted_at')->nullable();
+        });
+    }
+
+    // Zone borders: unparseable (short enough to skip WKB hydration),
+    // whitespace-only, and missing entirely — every rate must be rejected
+    $connection->table('zones')->insert([
+        ['uuid' => 'zone-throw', 'name' => 'Throw', 'border' => '{bad json'],
+        ['uuid' => 'zone-empty', 'name' => 'Empty', 'border' => '  '],
+        ['uuid' => 'zone-null', 'name' => 'Null', 'border' => null],
+    ]);
+    $connection->table('service_rates')->insert([
+        ['uuid' => 'rate-throw', 'zone_uuid' => 'zone-throw', 'currency' => 'SGD', 'service_type' => 'transport'],
+        ['uuid' => 'rate-empty', 'zone_uuid' => 'zone-empty', 'currency' => 'SGD', 'service_type' => 'transport'],
+        ['uuid' => 'rate-null', 'zone_uuid' => 'zone-null', 'currency' => 'SGD', 'service_type' => 'transport'],
+    ]);
+
+    $servicable = ServiceRate::getServicableForPlaces(
+        [
+            new Place(['location' => new Point(1.30, 103.80)]),
+            // unresolvable place references are dropped from the waypoint set
+            '00000000-0000-4000-8000-000000000001',
+        ],
+        'transport',
+        'sgd',
+        function ($query) {
+            $query->whereNull('deleted_at');
+        }
+    );
+
+    expect($servicable)->toBe([]);
+});
+
 test('service rate multi zone distance pricing covers geometry matching scaling and guards', function () {
     $rate = new FleetOpsServiceRateUnitGeometryFake([
         'rate_calculation_method' => 'multi_zone_distance',

@@ -856,7 +856,7 @@ class ServiceRate extends Model
 
                 // if no distance fee use the last
                 if ($serviceParcelFee === null) {
-                    $serviceParcelFee = $this->parcelFees->sortByDesc()->first();
+                    $serviceParcelFee = $this->parcelFees->sortByDesc('fee')->first();
                 }
 
                 $subTotal += $serviceParcelFee->fee;
@@ -1050,7 +1050,7 @@ class ServiceRate extends Model
 
                 // if no distance fee use the last
                 if ($serviceParcelFee === null) {
-                    $serviceParcelFee = $this->parcelFees->sortByDesc()->first();
+                    $serviceParcelFee = $this->parcelFees->sortByDesc('fee')->first();
                 }
 
                 $subTotal += $serviceParcelFee->fee;
