@@ -284,3 +284,37 @@ test('replay vehicle locations command handle supports sleep controls and report
         ->and($command->messages)->toContain(['error', '[2/2] ✗ Error for event event-3: socket unavailable'])
         ->and($command->messages)->toContain(['error', 'Failed: 4']);
 });
+
+test('replay handles socket exception flavors bad timestamps and the real client factory', function () {
+    // Connection and timeout websocket exceptions are reported distinctly
+    $command                     = fleetopsReplayCommandForHandle(fleetopsReplayTempFile(json_encode(fleetopsReplayEvents())));
+    $command->options['vehicle'] = 'vehicle-1';
+    $command->sendThrowable      = new WebSocket\ConnectionException('link severed');
+    expect($command->handle())->toBe(Command::FAILURE)
+        ->and(collect($command->messages)->contains(fn ($m) => $m[0] === 'error' && str_contains($m[1], 'Connection error')))->toBeTrue();
+
+    $timeoutCommand                     = fleetopsReplayCommandForHandle(fleetopsReplayTempFile(json_encode(fleetopsReplayEvents())));
+    $timeoutCommand->options['vehicle'] = 'vehicle-1';
+    $timeoutCommand->sendThrowable      = new WebSocket\TimeoutException('link timed out');
+    expect($timeoutCommand->handle())->toBe(Command::FAILURE)
+        ->and(collect($timeoutCommand->messages)->contains(fn ($m) => $m[0] === 'error' && str_contains($m[1], 'Timeout error')))->toBeTrue();
+
+    // Unparseable created-at values warn without aborting the replay
+    $events                             = fleetopsReplayEvents();
+    $events[0]['created_at']            = 'not-a-real-timestamp';
+    $events[2]['created_at']            = 'also-not-a-timestamp';
+    $badTimeCommand                     = fleetopsReplayCommandForHandle(fleetopsReplayTempFile(json_encode($events)));
+    $badTimeCommand->options['vehicle'] = 'vehicle-1';
+    $badTimeCommand->handle();
+    expect(collect($badTimeCommand->messages)->contains(fn ($m) => $m[0] === 'warn' && str_contains($m[1], 'Failed to calculate time difference')))->toBeTrue();
+
+    // The real client factory attempts to construct the socket cluster
+    // service (configuration-dependent, so both outcomes are acceptable)
+    $factory = new ReflectionMethod(ReplayVehicleLocations::class, 'socketClusterClient');
+    $factory->setAccessible(true);
+    try {
+        expect($factory->invoke(new ReplayVehicleLocations()))->toBeInstanceOf(Fleetbase\Support\SocketCluster\SocketClusterService::class);
+    } catch (Throwable $e) {
+        expect($e->getMessage())->toContain('URI');
+    }
+});

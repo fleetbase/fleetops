@@ -156,11 +156,11 @@ class ReplayVehicleLocations extends Command
                     $this->line($this->formatSentLine($eventNumber, $totalEvents, $eventId, $vehicleId, $channel, $event, $createdAt));
 
                     $successCount++;
-                } catch (\WebSocket\ConnectionException $e) {
-                    $this->error("[{$eventNumber}/{$totalEvents}] ✗ Connection error for event {$eventId}: {$e->getMessage()}");
-                    $errorCount++;
                 } catch (\WebSocket\TimeoutException $e) {
                     $this->error("[{$eventNumber}/{$totalEvents}] ✗ Timeout error for event {$eventId}: {$e->getMessage()}");
+                    $errorCount++;
+                } catch (\WebSocket\ConnectionException $e) {
+                    $this->error("[{$eventNumber}/{$totalEvents}] ✗ Connection error for event {$eventId}: {$e->getMessage()}");
                     $errorCount++;
                 } catch (\Throwable $e) {
                     $this->error("[{$eventNumber}/{$totalEvents}] ✗ Error for event {$eventId}: {$e->getMessage()}");
