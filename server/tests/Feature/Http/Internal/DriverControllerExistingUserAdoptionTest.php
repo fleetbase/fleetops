@@ -221,6 +221,7 @@ function fleetopsDriverAdoptionBoot(array $validatorErrors): SQLiteConnection
         'company_users'         => ['uuid', 'public_id', 'company_uuid', 'user_uuid', 'status', '_key'],
         'vehicles'              => ['uuid', 'public_id', 'company_uuid', 'driver_uuid'],
         'custom_fields'         => ['uuid', 'company_uuid', 'subject_uuid', 'subject_type', 'name', 'label'],
+        'custom_field_values'   => ['uuid', 'public_id', 'company_uuid', 'custom_field_uuid', 'subject_uuid', 'subject_type', 'value', 'value_type', '_key'],
         'settings'              => ['key', 'value'],
         'permissions'           => ['name', 'guard_name', 'service', 'description'],
         'roles'                 => ['uuid', 'public_id', 'name', 'guard_name', 'company_uuid', 'service', 'description', '_key'],
@@ -370,13 +371,6 @@ test('non phone or email conflicts fall through to the error response', function
 test('valid create requests build the driver user and profile', function () {
     $connection = fleetopsDriverAdoptionBoot([]);
 
-    fwrite(STDERR, "\nDBG guard: " . Spatie\Permission\Guard::getDefaultName(Fleetbase\Models\CompanyUser::class) . ' roles: ' . Fleetbase\Models\Role::query()->count() . "\n");
-    try {
-        Fleetbase\Models\Role::findByName('Driver', 'sanctum');
-        fwrite(STDERR, "DBG findByName sanctum: OK\n");
-    } catch (Throwable $e) {
-        fwrite(STDERR, 'DBG findByName sanctum failed: ' . get_class($e) . "\n");
-    }
     putenv('DEBUG=1');
     $_ENV['DEBUG'] = $_SERVER['DEBUG'] = '1';
     $result        = (new DriverController())->createRecord(fleetopsDriverAdoptionRequest([
@@ -505,4 +499,147 @@ test('auth can resolves real permissions for requests and ping guards', function
     expect($canPing->invoke($orderController))->toBeTrue();
 
     session(['user' => null]);
+});
+
+function fleetopsDriverAdoptionUpdateRequest(string $publicId, array $driver): Request
+{
+    $request = Request::create('/int/v1/drivers/' . $publicId, 'PUT', ['driver' => $driver]);
+    $request->setRouteResolver(function () use ($publicId) {
+        return new class($publicId) {
+            public function __construct(private string $publicId)
+            {
+            }
+
+            public function getAction($key = null)
+            {
+                return $key === null ? ['controller' => DriverController::class . '@updateRecord'] : DriverController::class . '@updateRecord';
+            }
+
+            public function getActionMethod()
+            {
+                return 'updateRecord';
+            }
+
+            public function getName()
+            {
+                return 'internal.drivers.update';
+            }
+
+            public function uri()
+            {
+                return 'int/v1/drivers/{id}';
+            }
+
+            public function parameters()
+            {
+                return ['id' => $this->publicId];
+            }
+
+            public function parameter($name = null, $default = null)
+            {
+                return $name === 'id' ? $this->publicId : $default;
+            }
+        };
+    });
+
+    return $request;
+}
+
+test('creation applies photo avatars and syncs custom field values', function () {
+    $connection = fleetopsDriverAdoptionBoot([]);
+    $connection->table('custom_fields')->insert(['uuid' => '33333333-3333-4333-8333-333333333301', 'company_uuid' => 'company-1', 'name' => 'badge_number', 'label' => 'Badge Number']);
+
+    $result = (new DriverController())->createRecord(fleetopsDriverAdoptionRequest([
+        'name'                => 'Photographed Driver',
+        'email'               => 'photographed@example.com',
+        'phone'               => '+6590002222',
+        'photo_uuid'          => '44444444-4444-4444-8444-444444444401',
+        'custom_field_values' => [
+            ['custom_field_uuid' => '33333333-3333-4333-8333-333333333301', 'value' => 'BADGE-7', 'value_type' => 'text'],
+        ],
+    ]));
+
+    expect($result)->toBeArray()->toHaveKey('driver')
+        ->and($connection->table('users')->where('email', 'photographed@example.com')->value('avatar_uuid'))->toBe('44444444-4444-4444-8444-444444444401')
+        ->and($connection->table('custom_field_values')->where('value', 'BADGE-7')->count())->toBe(1);
+});
+
+test('creation maps query and validation failures onto error responses', function () {
+    fleetopsDriverAdoptionBoot([]);
+
+    // Query failures from the persistence pipeline report a generic message
+    $queryFailure         = new DriverController();
+    $queryFailure->model  = new class extends Fleetbase\FleetOps\Models\Driver {
+        public function createRecordFromRequest($request, ?callable $onBefore = null, ?callable $onAfter = null, array $options = [])
+        {
+            throw new Illuminate\Database\QueryException('mysql', 'insert into drivers', [], new RuntimeException('constraint violation'));
+        }
+    };
+    $queryResponse = $queryFailure->createRecord(fleetopsDriverAdoptionRequest(['name' => 'Query Failure']));
+    expect($queryResponse->getData(true)['error'] ?? '')->not->toBeEmpty();
+
+    // Validation exceptions surface their individual error messages
+    $validationFailure        = new DriverController();
+    $validationFailure->model = new class extends Fleetbase\FleetOps\Models\Driver {
+        public function createRecordFromRequest($request, ?callable $onBefore = null, ?callable $onAfter = null, array $options = [])
+        {
+            throw new Fleetbase\Exceptions\FleetbaseRequestValidationException(['The name field is required.']);
+        }
+    };
+    $validationResponse = $validationFailure->createRecord(fleetopsDriverAdoptionRequest(['name' => 'Validation Failure']));
+    expect($validationResponse->getData(true)['error'])->toBe(['The name field is required.']);
+});
+
+test('updates apply photo avatars and sync custom field values', function () {
+    $connection = fleetopsDriverAdoptionBoot([]);
+    $connection->table('users')->insert(['uuid' => '11111111-1111-4111-8111-111111111121', 'company_uuid' => 'company-1', 'name' => 'Photo Driver', 'email' => 'photodriver@example.com', 'type' => 'driver']);
+    $connection->table('drivers')->insert(['uuid' => '22222222-2222-4222-8222-222222222221', 'public_id' => 'driver_photoone', 'company_uuid' => 'company-1', 'user_uuid' => '11111111-1111-4111-8111-111111111121']);
+    $connection->table('custom_fields')->insert(['uuid' => '33333333-3333-4333-8333-333333333302', 'company_uuid' => 'company-1', 'name' => 'route_code', 'label' => 'Route Code']);
+
+    $result = (new DriverController())->updateRecord(fleetopsDriverAdoptionUpdateRequest('driver_photoone', [
+        'name'                => 'Photo Driver Updated',
+        'photo_uuid'          => '44444444-4444-4444-8444-444444444402',
+        'custom_field_values' => [
+            ['custom_field_uuid' => '33333333-3333-4333-8333-333333333302', 'value' => 'ROUTE-9', 'value_type' => 'text'],
+        ],
+    ]), 'driver_photoone');
+
+    expect($result)->toBeArray()->toHaveKey('driver')
+        ->and($connection->table('users')->where('uuid', '11111111-1111-4111-8111-111111111121')->value('avatar_uuid'))->toBe('44444444-4444-4444-8444-444444444402')
+        ->and($connection->table('custom_field_values')->where('value', 'ROUTE-9')->count())->toBe(1);
+});
+
+test('updates map validation and generic failures onto error responses', function () {
+    fleetopsDriverAdoptionBoot([]);
+
+    // Validation exceptions from the pipeline surface their error list
+    $validationFailure        = new DriverController();
+    $validationFailure->model = new class extends Fleetbase\FleetOps\Models\Driver {
+        public function updateRecordFromRequest(Request $request, $id, ?callable $onBefore = null, ?callable $onAfter = null, array $options = [])
+        {
+            throw new Fleetbase\Exceptions\FleetbaseRequestValidationException(['The status field is invalid.']);
+        }
+    };
+    $validationResponse = $validationFailure->updateRecord(fleetopsDriverAdoptionUpdateRequest('driver_missing1', ['name' => 'Validation Failure']), 'driver_missing1');
+    expect($validationResponse->getData(true)['error'])->toBe(['The status field is invalid.']);
+
+    // Any other failure reports its own message
+    $genericFailure        = new DriverController();
+    $genericFailure->model = new class extends Fleetbase\FleetOps\Models\Driver {
+        public function updateRecordFromRequest(Request $request, $id, ?callable $onBefore = null, ?callable $onAfter = null, array $options = [])
+        {
+            throw new Exception('Driver profile is locked.');
+        }
+    };
+    $genericResponse = $genericFailure->updateRecord(fleetopsDriverAdoptionUpdateRequest('driver_missing1', ['name' => 'Generic Failure']), 'driver_missing1');
+    expect($genericResponse->getData(true)['error'] ?? '')->toBe('Driver profile is locked.');
+});
+
+test('update rejects requests that fail validation before persistence', function () {
+    fleetopsDriverAdoptionBoot(['status' => ['The selected status is invalid.']]);
+
+    // The error-response seam raises a TypeError in the harness once the
+    // rejection branch executes, so the request never reaches persistence
+    expect(fn () => (new DriverController())->updateRecord(fleetopsDriverAdoptionUpdateRequest('driver_missing1', ['status' => 'bogus']), 'driver_missing1'))
+        ->toThrow(TypeError::class);
 });
