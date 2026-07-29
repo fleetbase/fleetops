@@ -233,3 +233,24 @@ test('flow events resolve names mutate context and no-op unresolved fires', func
         ->and($unresolved->activity)->toBe($activity)
         ->and($unresolved->waypoint)->toBe($waypoint);
 });
+
+test('activity logic arms evaluate and or not if and unsupported types', function () {
+    $order = flowTestOrder([
+        'status'   => 'ready',
+        'priority' => 3,
+        'notes'    => 'note',
+    ]);
+
+    $makeActivity = fn (array $logic) => new Activity([
+        'code'  => 'conditional',
+        'logic' => $logic,
+    ]);
+
+    expect($makeActivity([['type' => 'and', 'conditions' => [['field' => 'status', 'operator' => 'equal', 'value' => 'ready']]]])->passes($order))->toBeTrue()
+        ->and($makeActivity([['type' => 'or', 'conditions' => [['field' => 'status', 'operator' => 'equal', 'value' => 'nope'], ['field' => 'status', 'operator' => 'equal', 'value' => 'ready']]]])->passes($order))->toBeTrue()
+        ->and($makeActivity([['type' => 'not', 'conditions' => [['field' => 'status', 'operator' => 'equal', 'value' => 'canceled']]]])->passes($order))->toBeTrue()
+        ->and($makeActivity([['type' => 'if', 'conditions' => [['field' => 'status', 'operator' => 'equal', 'value' => 'ready']]]])->passes($order))->toBeTrue();
+
+    expect(fn () => $makeActivity([['type' => 'xor', 'conditions' => [['field' => 'status', 'operator' => 'equal', 'value' => 'ready']]]])->passes($order))
+        ->toThrow(Exception::class, "Unsupported logic type 'xor' provided.");
+});
