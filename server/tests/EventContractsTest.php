@@ -1215,3 +1215,45 @@ test('order dispatch failed event exposes configured reason', function () {
     expect($event->eventName)->toBe('dispatch_failed')
         ->and($event->getReason())->toBe('No eligible driver');
 });
+
+test('geofence dwelled events broadcast to company driver and vehicle channels', function () {
+    $pdo = new PDO('sqlite::memory:');
+    $pdo->sqliteCreateFunction('CONCAT', fn (...$parts) => implode('', array_map(strval(...), $parts)));
+    $connection = new Illuminate\Database\SQLiteConnection($pdo);
+    $resolver   = new Illuminate\Database\ConnectionResolver(['default' => $connection, 'mysql' => $connection]);
+    $resolver->setDefaultConnection('mysql');
+    Illuminate\Database\Eloquent\Model::setConnectionResolver($resolver);
+    $schema         = $connection->getSchemaBuilder();
+    $vehicleColumns = ['uuid', 'public_id', 'company_uuid', 'driver_uuid', 'vendor_uuid', 'photo_uuid', 'avatar_url', 'name', 'internal_id', 'location', 'online', 'speed', 'heading', 'altitude', 'year', 'make', 'model', 'class', 'color', 'call_sign', 'status', 'specs', 'vin_data', 'telematics', 'meta', 'trim', 'plate_number', '_key'];
+    foreach (['vehicles' => $vehicleColumns, 'drivers' => ['uuid', 'public_id', 'company_uuid', 'user_uuid', 'vehicle_uuid', '_key'], 'users' => ['uuid', 'public_id', 'company_uuid', 'name', '_key']] as $table => $columns) {
+        $schema->create($table, function ($blueprint) use ($columns) {
+            $blueprint->increments('id');
+            foreach ($columns as $column) {
+                $blueprint->string($column)->nullable();
+            }
+            $blueprint->timestamps();
+            $blueprint->timestamp('deleted_at')->nullable();
+        });
+    }
+    $connection->table('vehicles')->insert(['uuid' => 'vehicle-dwell-1', 'public_id' => 'vehicle_dwellone', 'company_uuid' => 'company-1']);
+    $connection->table('users')->insert(['uuid' => 'user-dwell-1', 'company_uuid' => 'company-1']);
+    $connection->table('drivers')->insert(['uuid' => 'driver-dwell-1', 'public_id' => 'driver_dwellone', 'company_uuid' => 'company-1', 'user_uuid' => 'user-dwell-1', 'vehicle_uuid' => 'vehicle-dwell-1']);
+
+    $geofence = (object) ['uuid' => 'geofence-dwell-1', 'name' => 'Dwell Zone', 'dwell_threshold_minutes' => 10];
+
+    // Vehicle-subject events broadcast to company and vehicle channels
+    $vehicle = Vehicle::where('uuid', 'vehicle-dwell-1')->first();
+    $event   = new GeofenceDwelled($vehicle, $geofence, 'zone', \Carbon\Carbon::parse('2026-07-27 08:00:00'));
+    $names   = collect($event->broadcastOn())->map(fn ($channel) => (string) $channel->name);
+    expect($names)->toContain('company.company-1')
+        ->and($names)->toContain('vehicle.vehicle_dwellone')
+        ->and($names)->toContain('vehicle.vehicle-dwell-1');
+
+    // Driver-subject events include the driver channels
+    $driver      = Driver::where('uuid', 'driver-dwell-1')->first();
+    $driverEvent = new GeofenceDwelled($driver, $geofence, 'zone', \Carbon\Carbon::parse('2026-07-27 08:00:00'));
+    $driverNames = collect($driverEvent->broadcastOn())->map(fn ($channel) => (string) $channel->name);
+    expect($driverNames)->toContain('driver.driver_dwellone')
+        ->and($driverNames)->toContain('driver.driver-dwell-1')
+        ->and($driverNames)->toContain('vehicle.vehicle_dwellone');
+});
