@@ -321,3 +321,57 @@ test('code verification reports token issuance failures', function () {
     expect($response)->toBeInstanceOf(JsonResponse::class)
         ->and($response->getData(true))->toHaveKey('error');
 });
+
+test('token persistence failures are reported to sentry', function () {
+    $connection = fleetopsDriverAuthBoot();
+    $controller = new DriverController();
+
+    $sentry = new class {
+        public array $captured = [];
+
+        public function captureException($exception)
+        {
+            $this->captured[] = $exception;
+
+            return null;
+        }
+
+        public function __call($method, $arguments)
+        {
+            return null;
+        }
+    };
+    app()->instance('sentry', $sentry);
+
+    // Rebuild drivers without the auth_token column so persisting the issued
+    // token fails after the token itself was created successfully
+    $rows = $connection->table('drivers')->get();
+    $connection->getSchemaBuilder()->drop('drivers');
+    $connection->getSchemaBuilder()->create('drivers', function ($blueprint) {
+        $blueprint->increments('id');
+        foreach (['uuid', 'public_id', 'internal_id', 'company_uuid', 'user_uuid', 'vehicle_uuid', 'status', 'online', 'location', 'meta'] as $column) {
+            $blueprint->string($column)->nullable();
+        }
+        $blueprint->timestamps();
+        $blueprint->timestamp('deleted_at')->nullable();
+    });
+    foreach ($rows as $row) {
+        $connection->table('drivers')->insert([
+            'uuid'         => $row->uuid,
+            'public_id'    => $row->public_id,
+            'company_uuid' => $row->company_uuid,
+            'user_uuid'    => $row->user_uuid,
+        ]);
+    }
+
+    config()->set('fleetops.navigator.bypass_verification_code', '777777');
+    $response = $controller->verifyCode(Request::create('/x', 'POST', [
+        'identity' => 'driver@example.test',
+        'code'     => '777777',
+    ]));
+
+    expect($response->getData(true)['error'] ?? '')->toBe('Unable to authenticate driver.')
+        ->and($sentry->captured)->toHaveCount(1);
+
+    app()->forgetInstance('sentry');
+});
