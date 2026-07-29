@@ -213,10 +213,14 @@ class FuelReport extends Model
         $latitude       = Utils::or($row, ['latitude', 'lat']);
         $longitude      = Utils::or($row, ['longitude', 'lng', 'long']);
 
+        $locationValue = data_get($row, 'location');
         if ($latitude && $longitude) {
             $location = new Point($latitude, $longitude);
+        } elseif (filled($locationValue)) {
+            $location = Utils::getPointFromMixed(Utils::arrayFrom($locationValue));
         } else {
-            $location = Utils::getPointFromMixed(Utils::arrayFrom(data_get($row, 'location')));
+            // Rows without any location column fall back to the empty point below
+            $location = null;
         }
 
         // Resolve relations

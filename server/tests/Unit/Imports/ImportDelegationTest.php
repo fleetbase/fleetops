@@ -78,6 +78,10 @@ function fleetopsImportSeamBoot(): SQLiteConnection
         'maintainable_uuid', 'maintainable_type', 'target_uuid', 'target_type', 'interval', 'notes',
         'barcode', 'quantity_on_hand', 'unit_cost', 'msrp', 'subject', 'instructions', 'opened_at',
         'estimated_cost', 'approved_budget', 'actual_cost', 'cost_center', 'budget_code',
+        'summary', 'started_at', 'completed_at', 'engine_hours', 'labor_cost', 'parts_cost', 'tax',
+        'total_cost', 'interval_method', 'interval_type', 'interval_value', 'interval_unit',
+        'interval_distance', 'interval_engine_hours', 'last_service_odometer', 'last_service_engine_hours',
+        'last_service_date', 'next_due_date', 'next_due_odometer', 'next_due_engine_hours', 'default_priority',
     ];
 
     $schema = $connection->getSchemaBuilder();
@@ -94,6 +98,24 @@ function fleetopsImportSeamBoot(): SQLiteConnection
             $blueprint->timestamp('deleted_at')->nullable();
         });
     }
+
+    app()->instance('geocoder', new class {
+        public function geocode($address)
+        {
+            return $this;
+        }
+
+        public function reverse($latitude, $longitude)
+        {
+            return $this;
+        }
+
+        public function get()
+        {
+            return collect();
+        }
+    });
+    Geocoder\Laravel\Facades\Geocoder::clearResolvedInstances();
 
     session(['company' => 'company-import-1']);
     $connection->table('companies')->insert(['uuid' => 'company-import-1', 'name' => 'Import Co']);
@@ -113,12 +135,17 @@ test('importers delegate rows to their model import factory', function (string $
     expect($connection->table($table)->count())->toBe(1)
         ->and($connection->table($table)->value('company_uuid'))->toBe('company-import-1');
 })->with([
-    'contacts'    => [Fleetbase\FleetOps\Imports\ContactImport::class, 'contacts', ['name' => 'Imported Contact', 'email' => 'contact@example.test']],
-    'fleets'      => [Fleetbase\FleetOps\Imports\FleetImport::class, 'fleets', ['name' => 'Imported Fleet']],
-    'issues'      => [Fleetbase\FleetOps\Imports\IssueImport::class, 'issues', ['report' => 'Imported Issue', 'latitude' => 1.30, 'longitude' => 103.80]],
-    'vendors'     => [Fleetbase\FleetOps\Imports\VendorImport::class, 'vendors', ['name' => 'Imported Vendor']],
-    'vehicles'    => [Fleetbase\FleetOps\Imports\VehicleImport::class, 'vehicles', ['make' => 'Toyota', 'model' => 'HiAce', 'plate_number' => 'SG-1234']],
-    'equipment'   => [Fleetbase\FleetOps\Imports\EquipmentImport::class, 'equipments', ['name' => 'Imported Equipment']],
-    'parts'       => [Fleetbase\FleetOps\Imports\PartImport::class, 'parts', ['name' => 'Imported Part']],
-    'work orders' => [Fleetbase\FleetOps\Imports\WorkOrderImport::class, 'work_orders', ['name' => 'Imported Work Order']],
+    'contacts'                => [Fleetbase\FleetOps\Imports\ContactImport::class, 'contacts', ['name' => 'Imported Contact', 'email' => 'contact@example.test']],
+    'fleets'                  => [Fleetbase\FleetOps\Imports\FleetImport::class, 'fleets', ['name' => 'Imported Fleet']],
+    'issues'                  => [Fleetbase\FleetOps\Imports\IssueImport::class, 'issues', ['report' => 'Imported Issue', 'latitude' => 1.30, 'longitude' => 103.80]],
+    'vendors'                 => [Fleetbase\FleetOps\Imports\VendorImport::class, 'vendors', ['name' => 'Imported Vendor']],
+    'vehicles'                => [Fleetbase\FleetOps\Imports\VehicleImport::class, 'vehicles', ['make' => 'Toyota', 'model' => 'HiAce', 'plate_number' => 'SG-1234']],
+    'equipment'               => [Fleetbase\FleetOps\Imports\EquipmentImport::class, 'equipments', ['name' => 'Imported Equipment']],
+    'parts'                   => [Fleetbase\FleetOps\Imports\PartImport::class, 'parts', ['name' => 'Imported Part']],
+    'work orders'             => [Fleetbase\FleetOps\Imports\WorkOrderImport::class, 'work_orders', ['name' => 'Imported Work Order']],
+    'fuel reports'            => [Fleetbase\FleetOps\Imports\FuelReportImport::class, 'fuel_reports', ['report' => 'Imported Fuel Report', 'amount' => 50, 'volume' => 30]],
+    'issues with coordinates' => [Fleetbase\FleetOps\Imports\IssueImport::class, 'issues', ['report' => 'Located Issue', 'latitude' => 1.30, 'longitude' => 103.80]],
+    'maintenances'            => [Fleetbase\FleetOps\Imports\MaintenanceImport::class, 'maintenances', ['name' => 'Imported Maintenance']],
+    'maintenance schedules'   => [Fleetbase\FleetOps\Imports\MaintenanceScheduleImport::class, 'maintenance_schedules', ['name' => 'Imported Schedule']],
+    'places'                  => [Fleetbase\FleetOps\Imports\PlaceImport::class, 'places', ['name' => 'Imported Place', 'latitude' => 1.30, 'longitude' => 103.80]],
 ]);
