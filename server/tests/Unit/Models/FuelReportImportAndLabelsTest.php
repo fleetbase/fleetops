@@ -70,6 +70,7 @@ function fleetopsFuelReportBoot(): SQLiteConnection
         'places'           => ['uuid', 'public_id', 'company_uuid', 'name', 'location', '_key'],
         'tracking_numbers' => ['uuid', 'public_id', 'company_uuid', 'tracking_number', '_key'],
         'companies'        => ['uuid', 'public_id', 'name', 'country'],
+        'issues'           => ['uuid', 'public_id', 'company_uuid', 'reported_by_uuid', 'assigned_to_uuuid', 'driver_uuid', 'vehicle_uuid', 'priority', 'report', 'category', 'type', 'location', 'status', 'meta', 'slug', 'internal_id', '_key'],
     ];
     foreach ($tables as $table => $columns) {
         $schema->create($table, function ($blueprint) use ($columns) {
@@ -163,4 +164,30 @@ test('entity labels render views and stream pdf output', function () {
 
     expect($entity->pdfLabel())->toBe($wrapper)
         ->and($entity->pdfLabelStream())->toBe('entity-pdf-stream');
+});
+
+test('issue imports resolve drivers vehicles and locations', function () {
+    $connection = fleetopsFuelReportBoot();
+    session(['company' => 'company-1', 'user' => 'company-1']);
+    $connection->table('users')->insert(['uuid' => 'user-issue-1', 'company_uuid' => 'company-1', 'name' => 'Issue Reporter']);
+    $connection->table('drivers')->insert(['uuid' => 'driver-issue-1', 'public_id' => 'driver_issueimport', 'company_uuid' => 'company-1', 'user_uuid' => 'user-issue-1']);
+    $connection->table('vehicles')->insert(['uuid' => 'vehicle-issue-1', 'public_id' => 'vehicle_issueimport', 'company_uuid' => 'company-1', 'plate_number' => 'SGZ-1122', 'make' => 'Scania', 'model' => 'R500', 'display_name' => 'Scania R500']);
+
+    $imported = Fleetbase\FleetOps\Models\Issue::createFromImport([
+        'priority' => 'high',
+        'report'   => 'Engine overheating on route',
+        'reporter' => 'Issue Reporter',
+        'assignee' => 'Issue Reporter',
+        'category' => 'mechanical',
+        'type'     => 'vehicle',
+        'driver'   => 'driver_issueimport',
+        'vehicle'  => 'Scania R500',
+        'location' => ['latitude' => 1.33, 'longitude' => 103.85],
+    ], true);
+
+    expect($imported)->toBeInstanceOf(Fleetbase\FleetOps\Models\Issue::class)
+        ->and($imported->reported_by_uuid)->toBe('user-issue-1')
+        ->and($imported->driver_uuid)->toBe('driver-issue-1')
+        ->and($imported->vehicle_uuid)->toBe('vehicle-issue-1')
+        ->and($connection->table('issues')->count())->toBe(1);
 });
