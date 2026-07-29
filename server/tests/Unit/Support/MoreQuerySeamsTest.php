@@ -9,6 +9,10 @@ use Illuminate\Database\SQLiteConnection;
  * listeners, casts and request helpers whose real bodies are bypassed by the
  * stubs their behaviour tests install.
  */
+if (!function_exists('Fleetbase\Models\session')) {
+    eval('namespace Fleetbase\Models; function session($key = null, $default = null) { if ($key === null) { return new class { public function has($k) { return \session($k) !== null; } public function get($k, $d = null) { return \session($k, $d); } public function missing($k) { return \session($k) === null; } }; } return \session($key, $default); }');
+}
+
 if (!function_exists('Fleetbase\Support\session')) {
     eval('namespace Fleetbase\Support; function session($key = null, $default = null) { if ($key === null) { return new class { public function has($k) { return \session($k) !== null; } public function get($k, $d = null) { return \session($k, $d); } }; } return \session($key, $default); }');
 }
@@ -48,9 +52,9 @@ function fleetopsMoreSeamBoot(): SQLiteConnection
     config()->set('activitylog.default_auth_driver', 'web');
     app()->bind(Illuminate\Contracts\Config\Repository::class, fn () => config());
 
-    $columns = ['uuid', 'public_id', 'company_uuid', 'name', 'type', 'status', 'connection_uuid', 'sync_run_uuid', 'provider', 'url', 'path', 'disk', 'bucket', 'user_uuid', 'email', 'phone', 'street1', 'city', 'country', 'location', 'driver_uuid', 'driver_assigned_uuid', 'current_job_uuid', 'tracking', '_key'];
+    $columns = ['uuid', 'public_id', 'company_uuid', 'name', 'type', 'status', 'connection_uuid', 'sync_run_uuid', 'provider', 'url', 'path', 'disk', 'bucket', 'user_uuid', 'email', 'phone', 'street1', 'city', 'country', 'location', 'driver_uuid', 'driver_assigned_uuid', 'current_job_uuid', 'tracking', 'username', 'timezone', 'slug', 'password', 'avatar_uuid', 'model_uuid', 'model_type', 'role_id', 'permission_id', 'guard_name', '_key'];
     $schema  = $connection->getSchemaBuilder();
-    foreach (['fuel_provider_connections', 'fuel_provider_sync_runs', 'files', 'settings', 'contacts', 'users', 'companies', 'places', 'drivers', 'orders'] as $table) {
+    foreach (['fuel_provider_connections', 'fuel_provider_sync_runs', 'files', 'settings', 'contacts', 'users', 'companies', 'places', 'drivers', 'orders', 'company_users', 'roles', 'permissions', 'model_has_roles', 'model_has_permissions', 'role_has_permissions'] as $table) {
         $schema->create($table, function ($blueprint) use ($columns, $table) {
             $blueprint->increments('id');
             if ($table === 'settings') {
@@ -66,6 +70,7 @@ function fleetopsMoreSeamBoot(): SQLiteConnection
     }
 
     session(['company' => 'company-seam-2']);
+    $connection->table('companies')->insert(['uuid' => 'company-seam-2', 'public_id' => 'company_seamtwo', 'name' => 'Seam Co']);
 
     return $connection;
 }
@@ -246,4 +251,14 @@ test('index driver resource counts assigned orders and names the current one', f
     // Only this driver's orders are counted, and the current job is named
     expect(fleetopsMoreSeamInvoke($resource, $class, 'assignedOrdersCount'))->toBe(2)
         ->and(fleetopsMoreSeamInvoke($resource, $class, 'currentOrderReference'))->toBe('order_resone');
+});
+
+test('shift change listener reads company scheduling settings', function () {
+    fleetopsMoreSeamBoot();
+
+    $class    = Fleetbase\FleetOps\Listeners\NotifyDriverOnShiftChange::class;
+    $listener = (new ReflectionClass($class))->newInstanceWithoutConstructor();
+
+    // With nothing stored the lookup falls back to the empty default
+    expect(fleetopsMoreSeamInvoke($listener, $class, 'getSchedulingSettings'))->toBe([]);
 });
