@@ -453,7 +453,7 @@ class Lalamove
 
     public static function getQuotationForMarket($market, ...$params)
     {
-        $instance = static::instance(null, null, $market);
+        $instance = static::instance(null, null, false, $market);
 
         return $instance->getQuotations(...$params);
     }

@@ -152,3 +152,43 @@ test('static call proxy resolves instance sandbox and unknown methods', function
 
     expect(Lalamove::completelyUnknownMethod())->toBeNull();
 });
+
+/**
+ * Captures the resolved market so the market-scoped quotation helper can be
+ * asserted without reaching the Lalamove API.
+ */
+class FleetOpsLalamoveMarketProbe extends Lalamove
+{
+    public array $quotationCalls = [];
+
+    public function getQuotations(...$params)
+    {
+        $this->quotationCalls[] = $params;
+
+        return [
+            'market'  => $this->readPrivate('market')->getCode(),
+            'sandbox' => $this->readPrivate('isSandbox'),
+            'params'  => $params,
+        ];
+    }
+
+    private function readPrivate(string $property): mixed
+    {
+        $reflection = new ReflectionProperty(Lalamove::class, $property);
+        $reflection->setAccessible(true);
+
+        return $reflection->getValue($this);
+    }
+}
+
+test('market scoped quotations pass the market through to the instance', function () {
+    fleetopsLalamoveBoot();
+
+    // The market must land in the market slot, not the sandbox flag
+    $result = FleetOpsLalamoveMarketProbe::getQuotationForMarket('TH', ['pickup' => 'A', 'dropoff' => 'B']);
+
+    expect($result['market'])->toBe('TH')
+        // the market must not leak into the sandbox flag
+        ->and($result['sandbox'])->toBeFalse()
+        ->and($result['params'])->toBe([['pickup' => 'A', 'dropoff' => 'B']]);
+});

@@ -261,3 +261,19 @@ test('entity photos resolve files and temp waypoint uuids track search metadata'
     expect($searchPlace)->not->toBeNull()
         ->and((string) $searchPlace->meta)->toContain('temp-search-99');
 });
+
+test('waypoint setters ignore non array input and exhausted destinations', function () {
+    $connection = fleetopsPayloadWaypointBoot();
+    $connection->table('payloads')->insert(['uuid' => 'payload-guard-1', 'company_uuid' => 'company-1']);
+    $payload = Payload::where('uuid', 'payload-guard-1')->first();
+
+    // Non-array waypoint input is ignored by both setters
+    expect($payload->setWaypoints('not-an-array'))->toBe($payload)
+        ->and($payload->updateWaypoints('not-an-array'))->toBe($payload)
+        ->and($connection->table('waypoints')->where('payload_uuid', 'payload-guard-1')->count())->toBe(0);
+
+    // With no incomplete waypoints left there is no next destination to set
+    $payload->setRelation('waypointMarkers', collect());
+    expect($payload->setNextWaypointDestination())->toBe($payload)
+        ->and($connection->table('payloads')->where('uuid', 'payload-guard-1')->value('current_waypoint_uuid'))->toBeNull();
+});
