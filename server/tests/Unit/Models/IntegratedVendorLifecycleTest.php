@@ -183,3 +183,21 @@ test('webhook url mutator keeps explicit urls and derives defaults', function ()
     // unavailable in the harness — the derivation branch still executes.
     expect(fn () => $vendor->webhook_url = null)->toThrow(Error::class);
 });
+
+test('lalamove markets expose codes languages and lookups', function () {
+    $market = Fleetbase\FleetOps\Integrations\Lalamove\LalamoveMarket::find('sg');
+    if (!$market) {
+        $market = Fleetbase\FleetOps\Integrations\Lalamove\LalamoveMarket::all()->first();
+    }
+
+    expect($market)->toBeInstanceOf(Fleetbase\FleetOps\Integrations\Lalamove\LalamoveMarket::class)
+        ->and($market->getCode())->toBeString()
+        ->and($market->getLanguages())->toBeArray()
+        ->and($market->key)->toBeString()
+        ->and($market->CODE)->toBe($market->getCode())
+        ->and($market->missing_property)->toBeNull();
+
+    // Callable finders receive each market for matching
+    $vietnam = Fleetbase\FleetOps\Integrations\Lalamove\LalamoveMarket::find(fn ($candidate) => $candidate->code === 'VN');
+    expect($vietnam?->key)->toBe('vietnam');
+});
