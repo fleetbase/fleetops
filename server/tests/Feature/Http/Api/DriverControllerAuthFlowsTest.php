@@ -285,3 +285,21 @@ test('verify code delegates driver creation requests to the create flow', functi
     expect($result)->toBe('delegated-create')
         ->and($probe->created)->toBe(['newdriver@example.test']);
 });
+
+test('token issuance failures surface as api errors', function () {
+    $connection = fleetopsDriverAuthBoot();
+    $controller = new DriverController();
+
+    // Without the token table the sanctum call fails; the login endpoint
+    // reports the driver-facing error instead of leaking a query exception
+    $connection->getSchemaBuilder()->drop('personal_access_tokens');
+    app('hash')->checks = true;
+
+    $response = $controller->login(Request::create('/x', 'POST', [
+        'identity' => 'driver@example.test',
+        'password' => 'secret',
+    ]));
+
+    expect($response)->toBeInstanceOf(JsonResponse::class)
+        ->and($response->getData(true))->toHaveKey('error');
+});
