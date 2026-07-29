@@ -2518,3 +2518,86 @@ test('track order distance real query and progress bar builders execute', functi
     expect($barMethod->invoke($command, 7))->toBeInstanceOf(FleetOpsTrackProgressBarFake::class)
         ->and($output->bars)->toBe([7]);
 });
+
+class FleetOpsRecordedDriverNotification
+{
+    public static array $constructed = [];
+
+    public function __construct(...$args)
+    {
+        static::$constructed[] = $args;
+    }
+}
+
+class FleetOpsThrowingDriverNotificationCommandFake extends FleetOpsSendDriverNotificationCommandFake
+{
+    protected function notifyDriver($driver, string $notificationClass, Order $order, mixed $distance = null): void
+    {
+        throw new Exception('notification channel offline');
+    }
+}
+
+test('send driver notification real helpers resolve orders distances and notify branches', function () {
+    // Real order lookup against sqlite
+    $connection = new Illuminate\Database\SQLiteConnection(new PDO('sqlite::memory:'));
+    $resolver   = new Illuminate\Database\ConnectionResolver(['default' => $connection, 'mysql' => $connection]);
+    $resolver->setDefaultConnection('mysql');
+    Model::setConnectionResolver($resolver);
+    $schema = $connection->getSchemaBuilder();
+    $schema->create('orders', function ($blueprint) {
+        $blueprint->increments('id');
+        foreach (['uuid', 'public_id', 'company_uuid', 'status', 'meta', '_key'] as $column) {
+            $blueprint->string($column)->nullable();
+        }
+        $blueprint->timestamps();
+        $blueprint->timestamp('deleted_at')->nullable();
+    });
+    $connection->table('orders')->insert(['uuid' => 'order-sdn-1', 'public_id' => 'order_sdnreal1', 'company_uuid' => 'company-1', 'status' => 'created']);
+
+    $command = new SendDriverNotification();
+    $helper  = function (string $method, ...$arguments) use ($command) {
+        $reflection = new ReflectionMethod(SendDriverNotification::class, $method);
+        $reflection->setAccessible(true);
+
+        return $reflection->invoke($command, ...$arguments);
+    };
+
+    expect($helper('findOrder', 'order_sdnreal1')?->uuid)->toBe('order-sdn-1')
+        ->and($helper('findOrder', 'order_missing0'))->toBeNull();
+
+    // Real driving matrix from two points
+    $matrix = $helper('calculateDrivingDistanceAndTime', new Point(1.30, 103.80), new Point(1.31, 103.81));
+    expect($matrix->distance)->toBeGreaterThan(0);
+
+    // Both notify branches construct the notification with and without distance
+    $order = new Order();
+    $order->setRawAttributes(['uuid' => 'order-sdn-1', 'public_id' => 'order_sdnreal1'], true);
+    $driver = new class {
+        public array $notified = [];
+
+        public function notify($notification)
+        {
+            $this->notified[] = $notification;
+        }
+    };
+    FleetOpsRecordedDriverNotification::$constructed = [];
+    $helper('notifyDriver', $driver, FleetOpsRecordedDriverNotification::class, $order, 4321);
+    $helper('notifyDriver', $driver, FleetOpsRecordedDriverNotification::class, $order);
+    expect($driver->notified)->toHaveCount(2)
+        ->and(FleetOpsRecordedDriverNotification::$constructed[0])->toHaveCount(2)
+        ->and(FleetOpsRecordedDriverNotification::$constructed[1])->toHaveCount(1);
+
+    // Notification failures surface as command errors
+    $driverFake                       = new FleetOpsNotificationDriverCommandFake();
+    $orderFake                        = new FleetOpsNotificationOrderCommandFake();
+    $orderFake->driverAssignedForTest = $driverFake;
+
+    $failing        = new FleetOpsThrowingDriverNotificationCommandFake([
+        'id'    => 'order_public',
+        'event' => 'assigned',
+    ]);
+    $failing->order = $orderFake;
+
+    expect($failing->handle())->toBe(0)
+        ->and($failing->messages)->toContain(['error', 'notification channel offline']);
+});
