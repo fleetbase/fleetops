@@ -309,6 +309,29 @@ test('api vehicle controller updates queries finds deletes and tracks empty coor
         ->and($vehicle->deletedForTest)->toBeTrue();
 });
 
+test('api vehicle controller updates rerun vin decoding and assign drivers', function () {
+    session(['company' => 'company-uuid']);
+
+    $vehicle = new FleetOpsApiVehicleCrudFake();
+    $vehicle->setRawAttributes(['uuid' => 'vehicle-uuid', 'vin' => 'OLDVIN']);
+    $vehicle->dirtyVinForTest = true;
+
+    $driver              = new FleetOpsApiDriverCrudFake();
+    $controller          = new FleetOpsApiVehicleCrudControllerProbe();
+    $controller->vehicle = $vehicle;
+    $controller->driver  = $driver;
+
+    $updated = $controller->update('vehicle-public', fleetopsUpdateVehicleRequest([
+        'vin'    => 'NEWVIN',
+        'driver' => 'driver-public',
+    ]));
+
+    expect($updated)->toBe(['resource' => 'vehicle', 'vehicle' => $vehicle])
+        ->and($vehicle->vinAppliedForTest)->toBeTrue()
+        ->and($vehicle->assignedDrivers)->toBe([$driver])
+        ->and($vehicle->unassignedDriver)->toBeFalse();
+});
+
 test('api vehicle controller reports missing vehicle and missing driver branches', function () {
     $controller                  = new FleetOpsApiVehicleCrudControllerProbe();
     $controller->vehicleNotFound = true;

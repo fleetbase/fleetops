@@ -166,3 +166,30 @@ test('vehicle export collection scopes selections and null location parts', func
     expect($nullish === null || $nullish === 0.0)->toBeTrue()
         ->and($reflection->invoke($export, new Fleetbase\LaravelMysqlSpatial\Types\Point(1.31, 103.81), 'lat'))->toBe(1.31);
 });
+
+test('fuel report export scopes selections against the session company', function () {
+    $connection = new Illuminate\Database\SQLiteConnection(new PDO('sqlite::memory:'));
+    $resolver   = new Illuminate\Database\ConnectionResolver(['default' => $connection, 'mysql' => $connection]);
+    $resolver->setDefaultConnection('mysql');
+    Illuminate\Database\Eloquent\Model::setConnectionResolver($resolver);
+    $schema = $connection->getSchemaBuilder();
+    $schema->create('fuel_reports', function ($blueprint) {
+        $blueprint->increments('id');
+        foreach (['uuid', 'public_id', 'company_uuid', 'reported_by_uuid', 'driver_uuid', 'vehicle_uuid', 'report', 'amount', 'currency', 'volume', 'metric_unit', 'status', 'location', '_key'] as $column) {
+            $blueprint->string($column)->nullable();
+        }
+        $blueprint->timestamps();
+        $blueprint->timestamp('deleted_at')->nullable();
+    });
+    session(['company' => 'company-fexp-1']);
+    $connection->table('fuel_reports')->insert([
+        ['uuid' => '88888888-8888-4888-8888-888888888901', 'company_uuid' => 'company-fexp-1', 'report' => 'Selected'],
+        ['uuid' => '88888888-8888-4888-8888-888888888902', 'company_uuid' => 'company-fexp-1', 'report' => 'Everything'],
+    ]);
+
+    $selected = new FuelReportExport(['88888888-8888-4888-8888-888888888901']);
+    expect($selected->collection())->toHaveCount(1);
+
+    $all = new FuelReportExport([]);
+    expect($all->collection())->toHaveCount(2);
+});

@@ -201,6 +201,49 @@ test('order creation adopts the quote payload and service rate type', function (
         ->and($connection->table('orders')->value('type'))->toBe('express');
 });
 
+test('integrated vendor orders record the vendor order in order meta', function () {
+    $connection = fleetopsPurchaseRateOrderBoot();
+    app()->bind(Fleetbase\FleetOps\Integrations\Lalamove\Lalamove::class, function () {
+        return new class {
+            public function setIntegratedVendor($vendor)
+            {
+                return $this;
+            }
+
+            public function createOrderFromServiceQuote($serviceQuote, $request)
+            {
+                return ['id' => 'lalamove-order-1', 'status' => 'ASSIGNING_DRIVER'];
+            }
+
+            public function __call($method, $arguments)
+            {
+                return $this;
+            }
+        };
+    });
+
+    $connection->table('integrated_vendors')->insert([
+        'uuid'         => 'iv-2',
+        'public_id'    => 'integrated_vendor_meta',
+        'company_uuid' => 'company-1',
+        'provider'     => 'lalamove',
+        'credentials'  => json_encode(['api_key' => 'key', 'api_secret' => 'secret']),
+        'sandbox'      => '1',
+    ]);
+
+    $quote   = fleetopsPurchaseRateOrderQuote(['uuid' => 'sq-meta-1', 'integrated_vendor_uuid' => 'iv-2']);
+    $request = CreatePurchaseRateRequest::create('/x', 'POST', []);
+
+    $order = fleetopsPurchaseRateOrderProbe()->callHelper('createOrderFromServiceQuote', $quote, $request);
+
+    expect($order)->toBeInstanceOf(Order::class)
+        ->and($order->getMeta('integrated_vendor'))->toBe('integrated_vendor_meta')
+        ->and($order->getMeta('integrated_vendor_order'))->toMatchArray(['id' => 'lalamove-order-1']);
+
+    // Drop the stub binding so later tests resolve the real integration
+    app()->offsetUnset(Fleetbase\FleetOps\Integrations\Lalamove\Lalamove::class);
+});
+
 test('integrated vendor failures return an api error response', function () {
     $connection = fleetopsPurchaseRateOrderBoot();
     Http::fake(['*' => Http::response(['message' => 'vendor exploded'], 500)]);
