@@ -2453,3 +2453,68 @@ test('test email command rejects unsupported email types before sending mail', f
     expect($command->handle())->toBe(Command::FAILURE)
         ->and($command->messages)->toContain(['error', 'Unknown email type: unknown']);
 });
+
+test('track order distance command exits early when no qualifying orders exist', function () {
+    Carbon::setTestNow(Carbon::parse('2026-07-26 12:00:00'));
+
+    $command = new FleetOpsTrackOrderDistanceAndTimeProbe([
+        'provider' => null,
+        'days'     => 2,
+        'chunk'    => 100,
+        'dry'      => false,
+        'no-lock'  => true,
+    ], []);
+
+    expect($command->handle())->toBe(Command::SUCCESS)
+        ->and($command->messages)->toContain(['info', 'No qualifying orders found. Exiting.']);
+
+    Carbon::setTestNow();
+});
+
+test('track order distance real query and progress bar builders execute', function () {
+    $connection = new Illuminate\Database\SQLiteConnection(new PDO('sqlite::memory:'));
+    $resolver   = new Illuminate\Database\ConnectionResolver(['default' => $connection, 'mysql' => $connection]);
+    $resolver->setDefaultConnection('mysql');
+    Model::setConnectionResolver($resolver);
+    $schema = $connection->getSchemaBuilder();
+    foreach (['orders' => ['uuid', 'public_id', 'company_uuid', 'payload_uuid', 'status', 'started_at', '_key'], 'payloads' => ['uuid', 'public_id', 'company_uuid', '_key']] as $table => $columns) {
+        $schema->create($table, function ($blueprint) use ($columns) {
+            $blueprint->increments('id');
+            foreach ($columns as $column) {
+                $blueprint->string($column)->nullable();
+            }
+            $blueprint->timestamps();
+            $blueprint->timestamp('deleted_at')->nullable();
+        });
+    }
+    $connection->table('payloads')->insert(['uuid' => 'payload-track-1', 'company_uuid' => 'company-1']);
+    $connection->table('orders')->insert([
+        ['uuid' => 'order-track-active', 'company_uuid' => 'company-1', 'payload_uuid' => 'payload-track-1', 'status' => 'started', 'started_at' => '2026-07-25 10:00:00', 'created_at' => '2026-07-25 10:00:00', 'updated_at' => '2026-07-25 10:00:00'],
+        ['uuid' => 'order-track-done', 'company_uuid' => 'company-1', 'payload_uuid' => 'payload-track-1', 'status' => 'completed', 'started_at' => '2026-07-25 10:00:00', 'created_at' => '2026-07-25 10:00:00', 'updated_at' => '2026-07-25 10:00:00'],
+    ]);
+
+    $command    = new TrackOrderDistanceAndTime();
+    $reflection = new ReflectionMethod(TrackOrderDistanceAndTime::class, 'activeOrdersQuery');
+    $reflection->setAccessible(true);
+    $query = $reflection->invoke($command, Illuminate\Support\Carbon::parse('2026-07-20 00:00:00'));
+    expect($query->count('id'))->toBe(1);
+
+    $output = new class {
+        public array $bars = [];
+
+        public function createProgressBar(int $total)
+        {
+            $this->bars[] = $total;
+
+            return new FleetOpsTrackProgressBarFake();
+        }
+    };
+    $outputProperty = new ReflectionProperty(Command::class, 'output');
+    $outputProperty->setAccessible(true);
+    $outputProperty->setValue($command, $output);
+
+    $barMethod = new ReflectionMethod(TrackOrderDistanceAndTime::class, 'createProgressBar');
+    $barMethod->setAccessible(true);
+    expect($barMethod->invoke($command, 7))->toBeInstanceOf(FleetOpsTrackProgressBarFake::class)
+        ->and($output->bars)->toBe([7]);
+});

@@ -378,3 +378,71 @@ test('query vehicles helper filters by vendor through the request pipeline', fun
 
     expect($results->count())->toBe(1);
 });
+
+test('track appends current order context and reports geofence failures to sentry', function () {
+    fleetopsApiVehicleTrackingBoot();
+
+    $place = new Fleetbase\FleetOps\Models\Place();
+    $place->setRawAttributes(['uuid' => 'place-dest-1'], true);
+
+    $payload = new class extends Fleetbase\FleetOps\Models\Payload {
+        public ?Fleetbase\FleetOps\Models\Place $waypointFake = null;
+
+        public function getPickupOrCurrentWaypoint(): ?Fleetbase\FleetOps\Models\Place
+        {
+            return $this->waypointFake;
+        }
+    };
+    $payload->waypointFake = $place;
+
+    $order = new Fleetbase\FleetOps\Models\Order();
+    $order->setRawAttributes(['uuid' => 'order-track-1', 'company_uuid' => 'company-1'], true);
+    $order->setRelation('payload', $payload);
+
+    $driver = new class extends Driver {
+        public ?Fleetbase\FleetOps\Models\Order $currentOrderFake = null;
+
+        public function getCurrentOrder(): ?Fleetbase\FleetOps\Models\Order
+        {
+            return $this->currentOrderFake;
+        }
+    };
+    $driver->setRawAttributes(['uuid' => 'driver-track-1', 'company_uuid' => 'company-1'], true);
+    $driver->currentOrderFake = $order;
+
+    $vehicle = new FleetOpsApiVehicleTrackingVehicleFake();
+    $vehicle->setRawAttributes(['uuid' => 'vehicle-track-2', 'company_uuid' => 'company-1'], true);
+    $vehicle->setRelation('driver', $driver);
+
+    // Geofence detection failures surface through the sentry client
+    $sentry = new class {
+        public array $captured = [];
+
+        public function captureException($exception)
+        {
+            $this->captured[] = $exception->getMessage();
+        }
+    };
+    app()->instance('sentry', $sentry);
+    app()->bind(Fleetbase\FleetOps\Support\GeofenceIntersectionService::class, function () {
+        return new class {
+            public function detectVehicleCrossings($vehicle, $location)
+            {
+                throw new RuntimeException('geofence backend offline');
+            }
+        };
+    });
+
+    $probe          = new FleetOpsApiVehicleTrackingProbe();
+    $probe->vehicle = $vehicle;
+
+    $response = $probe->track('vehicle-track-2', Request::create('/v1/vehicles/vehicle-track-2/track', 'POST', [
+        'latitude'  => '1.30',
+        'longitude' => '103.80',
+    ]));
+
+    expect($response)->toBeInstanceOf(VehicleResource::class)
+        ->and($vehicle->quietUpdates[0]['order_uuid'])->toBe('order-track-1')
+        ->and($vehicle->quietUpdates[0]['destination_uuid'])->toBe('place-dest-1')
+        ->and($sentry->captured)->toBe(['geofence backend offline']);
+});
