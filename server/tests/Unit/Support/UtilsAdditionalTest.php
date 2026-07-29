@@ -193,3 +193,45 @@ test('distance matrix helpers parse live google and osrm provider responses', fu
         ->and($osrm->time)->toBe(555.0)
         ->and($redis->sets)->toHaveCount(2);
 });
+
+test('utils geojson features countries and sql fallbacks cover edge branches', function () {
+    // GeoJSON Feature wrappers resolve their nested geometry coordinates
+    $feature = [
+        'type'     => 'Feature',
+        'geometry' => [
+            'type'        => 'Point',
+            'coordinates' => [103.87, 1.36],
+        ],
+    ];
+    $point = Utils::getPointFromMixed($feature);
+    expect($point)->toBeInstanceOf(Point::class)
+        ->and($point->getLat())->toBe(1.36);
+
+    // Geometry objects build from raw geojson strings
+    $geometry = Utils::createGeometryObjectFromGeoJson(json_encode([
+        'type'        => 'Point',
+        'coordinates' => [103.88, 1.37],
+    ]));
+    expect($geometry)->toBeInstanceOf(Fleetbase\LaravelMysqlSpatial\Types\Geometry::class);
+
+    // Unknown countries scan every globe feature without matching
+    expect(Utils::createPolygonFromCountry('zz'))->toBeNull();
+
+    // Broken database bindings fall back to mysql-flavoured sql helpers
+    $previous = app('db');
+    app()->instance('db', new class {
+        public function connection($name = null)
+        {
+            throw new RuntimeException('db offline');
+        }
+
+        public function __call($method, $arguments)
+        {
+            throw new RuntimeException('db offline');
+        }
+    });
+    Illuminate\Support\Facades\DB::clearResolvedInstance('db');
+    expect(Utils::sqlNow())->toBe('NOW()');
+    app()->instance('db', $previous);
+    Illuminate\Support\Facades\DB::clearResolvedInstance('db');
+});
