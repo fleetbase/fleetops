@@ -1558,8 +1558,18 @@ class Utils extends FleetbaseUtils
         return $activity && $activity instanceof Activity && !empty($activity->code);
     }
 
-    public static function fixPhone(string $phone): string
+    /**
+     * Normalize a phone number to E.164-ish form by ensuring a leading `+`.
+     *
+     * Import rows frequently omit a phone column entirely, so a missing
+     * number is passed through untouched rather than becoming a bare `+`.
+     */
+    public static function fixPhone(?string $phone): ?string
     {
+        if ($phone === null || $phone === '') {
+            return $phone;
+        }
+
         if (!Str::startsWith($phone, '+')) {
             $phone = '+' . $phone;
         }
