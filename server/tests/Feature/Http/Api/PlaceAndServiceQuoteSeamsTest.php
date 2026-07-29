@@ -58,9 +58,17 @@ function fleetopsPlaceSeamsBoot(): SQLiteConnection
         });
     }
 
-    $pdo = new PDO('sqlite::memory:');
-    $pdo->sqliteCreateFunction('ST_GeomFromText', fn ($wkt, $srid = 0, $axisOrder = null) => $wkt);
-    $pdo->sqliteCreateFunction('ST_PointFromText', fn ($wkt, $srid = 0, $axisOrder = null) => $wkt);
+    $pdo      = new PDO('sqlite::memory:');
+    $wkbPoint = fn (float $lng, float $lat) => pack('V', 0) . pack('C', 1) . pack('V', 1) . pack('d', $lng) . pack('d', $lat);
+    foreach (['ST_GeomFromText', 'ST_PointFromText'] as $spatialFn) {
+        $pdo->sqliteCreateFunction($spatialFn, function ($wkt, $srid = 0, $axisOrder = null) use ($wkbPoint) {
+            if (is_string($wkt) && sscanf($wkt, 'POINT(%f %f)', $lng, $lat) === 2) {
+                return $wkbPoint($lng, $lat);
+            }
+
+            return $wkt;
+        });
+    }
     $pdo->sqliteCreateFunction('ST_Equals', fn ($a, $b) => $a === $b ? 1 : 0);
     $connection = new SQLiteConnection($pdo);
     $resolver   = new ConnectionResolver(['default' => $connection, 'mysql' => $connection]);
@@ -136,7 +144,7 @@ function fleetopsPlaceSeamsBoot(): SQLiteConnection
 
     $schema = $connection->getSchemaBuilder();
     $tables = [
-        'places'                   => ['uuid', 'public_id', 'company_uuid', 'owner_uuid', 'owner_type', 'name', 'street1', 'street2', 'city', 'province', 'postal_code', 'country', 'phone', 'location', 'meta', 'type', '_key', '_import_id'],
+        'places'                   => ['uuid', 'public_id', 'company_uuid', 'owner_uuid', 'owner_type', 'name', 'street1', 'street2', 'city', 'province', 'postal_code', 'country', 'phone', 'location', 'meta', 'type', 'neighborhood', 'building', 'district', '_key', '_import_id'],
         'service_quotes'           => ['uuid', 'public_id', 'request_id', 'company_uuid', 'payload_uuid', 'integrated_vendor_uuid', 'service_rate_uuid', 'amount', 'currency', 'meta', 'expired_at', '_key'],
         'service_quote_items'      => ['uuid', 'public_id', 'service_quote_uuid', 'amount', 'currency', 'details', 'code', '_key'],
         'service_rates'            => ['uuid', 'public_id', 'company_uuid', 'service_name', 'service_type', 'base_fee', 'currency', 'rate_calculation_method', 'per_meter_flat_rate_fee', 'per_meter_unit', 'duration_terms', 'estimated_days', 'zone_uuid', 'service_area_uuid', '_key'],
@@ -343,4 +351,48 @@ test('integrated vendor api failures respond with quote errors', function () {
             'dropoff'     => 'place_sqerrtwo2',
             'facilitator' => 'integrated_vendor_err1',
         ])))->toThrow(Error::class);
+});
+
+test('coordinate-only creation reverse geocodes and array owners resolve', function () {
+    $connection = fleetopsPlaceSeamsBoot();
+    $connection->table('contacts')->insert(['uuid' => '55555555-5555-4555-8555-555555555551', 'public_id' => 'contact_arrown1', 'company_uuid' => 'company-1', 'name' => 'Array Owner']);
+    $address = Geocoder\Provider\GoogleMaps\Model\GoogleAddress::createFromArray([
+        'providedBy'   => 'google',
+        'latitude'     => 1.36,
+        'longitude'    => 103.86,
+        'streetNumber' => '5',
+        'streetName'   => 'Reverse Row',
+        'locality'     => 'Singapore',
+    ]);
+    app()->instance('fleetops.geocoder', new class($address) {
+        public function __construct(public Geocoder\Provider\GoogleMaps\Model\GoogleAddress $address)
+        {
+        }
+
+        public function geocodeQuery($query)
+        {
+            return new Geocoder\Model\AddressCollection([$this->address]);
+        }
+
+        public function reverseQuery($query)
+        {
+            return new Geocoder\Model\AddressCollection([$this->address]);
+        }
+    });
+    $controller = new PlaceController();
+
+    // Latitude/longitude-only creation resolves through the reverse lookup
+    $created = $controller->create(CreatePlaceRequest::create('/v1/places', 'POST', [
+        'latitude'  => 1.36,
+        'longitude' => 103.86,
+    ]));
+    expect($connection->table('places')->where('street1', 'LIKE', '%Reverse Row%')->count())->toBeGreaterThanOrEqual(1);
+
+    // Array-shaped owners extract their id before the downstream string guard
+    expect(fn () => $controller->create(CreatePlaceRequest::create('/v1/places', 'POST', [
+        'name'    => 'Array Owner Place',
+        'street1' => 'Owner Array Street',
+        'city'    => 'Singapore',
+        'owner'   => ['id' => 'customer_arrown1'],
+    ])))->toThrow(TypeError::class);
 });
