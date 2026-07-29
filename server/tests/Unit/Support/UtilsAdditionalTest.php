@@ -235,3 +235,22 @@ test('utils geojson features countries and sql fallbacks cover edge branches', f
     app()->instance('db', $previous);
     Illuminate\Support\Facades\DB::clearResolvedInstance('db');
 });
+
+test('geojson features resolve points through their nested geometry', function () {
+    // isGeoJson() only accepts bare geometries and GeometryCollections, so a
+    // Feature envelope is resolved by the generic array/object branch
+    $feature = [
+        'type'       => 'Feature',
+        'properties' => [],
+        'geometry'   => [
+            'type'        => 'Point',
+            'coordinates' => [103.80, 1.30],
+        ],
+    ];
+
+    $point = Utils::getPointFromMixed($feature);
+
+    expect($point)->toBeInstanceOf(Point::class)
+        ->and(round($point->getLat(), 2))->toBe(1.30)
+        ->and(round($point->getLng(), 2))->toBe(103.80);
+});

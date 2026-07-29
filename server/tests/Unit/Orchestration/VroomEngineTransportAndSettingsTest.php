@@ -220,3 +220,34 @@ test('connection settings resolve organization then system values', function () 
     expect($result)->toBe(['ok' => true]);
     Http::assertSent(fn ($request) => $request->url() === 'https://org-vroom.test?api_key=sys-key');
 });
+
+test('unreachable vroom hosts raise a runtime error naming the host setting', function () {
+    fleetopsVroomBoot();
+    Http::fake(function () {
+        throw new Illuminate\Http\Client\ConnectionException('cURL error 7: Failed to connect');
+    });
+
+    $engine   = new VroomOrchestrationEngine();
+    $callable = new ReflectionMethod(VroomOrchestrationEngine::class, 'callVroom');
+    $callable->setAccessible(true);
+
+    expect(fn () => $callable->invoke($engine, ['jobs' => []]))
+        ->toThrow(RuntimeException::class, 'VROOM allocation engine is unavailable');
+});
+
+test('connection settings fall back to defaults when the settings table is absent', function () {
+    $connection = fleetopsVroomBoot();
+    $connection->getSchemaBuilder()->drop('settings');
+
+    $engine = new VroomOrchestrationEngine();
+    $call   = function (string $method) use ($engine) {
+        $reflection = new ReflectionMethod(VroomOrchestrationEngine::class, $method);
+        $reflection->setAccessible(true);
+
+        return $reflection->invoke($engine);
+    };
+
+    // Minimal installs without a settings table still resolve defaults
+    expect($call('resolveVroomBaseUri'))->toBeString()
+        ->and($call('resolveVroomApiKey'))->toBeIn([null, '']);
+});
