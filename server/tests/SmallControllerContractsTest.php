@@ -146,7 +146,7 @@ class FleetOpsInternalOrderConfigControllerProbe extends InternalOrderConfigCont
         return ['deleted' => $orderConfig->uuid];
     }
 
-    protected function errorResponse(string $message)
+    protected function errorResponse(string|array $message)
     {
         return ['error' => $message];
     }

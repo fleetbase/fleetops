@@ -1,6 +1,7 @@
 <?php
 
 use Fleetbase\FleetOps\Support\Analytics\OnTimeDelivery;
+use Fleetbase\FleetOps\Support\Analytics\OrdersByStatus;
 use Fleetbase\FleetOps\Support\Analytics\TopDrivers;
 use Fleetbase\FleetOps\Support\Utils;
 use Fleetbase\Models\Company;
@@ -155,4 +156,28 @@ test('hos duration and geofence dwell expressions build portable sql', function 
 
     expect($expression)->toContain('julianday')
         ->and($expression)->toContain('MIN(');
+});
+
+test('orders by status buckets daily counts with the fixed palette', function () {
+    $connection = fleetopsAnalyticsBoot();
+    Carbon::setTestNow(Carbon::parse('2026-07-20 12:00:00'));
+
+    $connection->table('orders')->insert([
+        ['uuid' => 'order-s1', 'company_uuid' => 'company-1', 'status' => 'completed', 'created_at' => '2026-07-15 09:00:00', 'updated_at' => '2026-07-15 09:00:00'],
+        ['uuid' => 'order-s2', 'company_uuid' => 'company-1', 'status' => 'completed', 'created_at' => '2026-07-15 10:00:00', 'updated_at' => '2026-07-15 10:00:00'],
+        ['uuid' => 'order-s3', 'company_uuid' => 'company-1', 'status' => 'canceled', 'created_at' => '2026-07-16 10:00:00', 'updated_at' => '2026-07-16 10:00:00'],
+        ['uuid' => 'order-s4', 'company_uuid' => 'company-1', 'status' => 'draft', 'created_at' => '2026-07-16 10:00:00', 'updated_at' => '2026-07-16 10:00:00'],
+    ]);
+
+    $result = OrdersByStatus::forCompany(fleetopsAnalyticsCompany())
+        ->between(Carbon::parse('2026-07-14 00:00:00'), Carbon::parse('2026-07-17 00:00:00'))
+        ->get();
+
+    expect($result['labels'])->toBe(['Jul 14', 'Jul 15', 'Jul 16', 'Jul 17']);
+    $byLabel = collect($result['datasets'])->keyBy('label');
+    expect($byLabel['Completed']['data'])->toBe([0, 2, 0, 0])
+        ->and($byLabel['Canceled']['data'])->toBe([0, 0, 1, 0])
+        ->and($byLabel['Failed']['data'])->toBe([0, 0, 0, 0]);
+
+    Carbon::setTestNow();
 });

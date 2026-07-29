@@ -39,12 +39,12 @@ class OrderConfigController extends FleetOpsController
             $record = $this->createOrderConfigRecord($request);
 
             return $this->createdOrderConfigResource($record);
-        } catch (\Exception $e) {
-            return $this->errorResponse($e->getMessage());
-        } catch (\Illuminate\Database\QueryException $e) {
-            return $this->errorResponse($e->getMessage());
         } catch (FleetbaseRequestValidationException $e) {
             return $this->errorResponse($e->getErrors());
+        } catch (\Illuminate\Database\QueryException $e) {
+            return $this->errorResponse($e->getMessage());
+        } catch (\Exception $e) {
+            return $this->errorResponse($e->getMessage());
         }
     }
 
@@ -65,15 +65,11 @@ class OrderConfigController extends FleetOpsController
             return $this->errorResponse('Core service order config\'s cannot be deleted.');
         }
 
-        if ($orderConfig) {
-            $orderConfig->delete();
+        $orderConfig->delete();
 
-            $this->wrapResource();
+        $this->wrapResource();
 
-            return $this->deletedResource($orderConfig);
-        }
-
-        return $this->errorResponse('Unable to delete order config.');
+        return $this->deletedResource($orderConfig);
     }
 
     protected function findOrderConfig(string $id): ?OrderConfig
@@ -111,7 +107,7 @@ class OrderConfigController extends FleetOpsController
         return new $this->resource($orderConfig);
     }
 
-    protected function errorResponse(string $message)
+    protected function errorResponse(string|array $message)
     {
         return response()->error($message);
     }
