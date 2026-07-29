@@ -278,3 +278,73 @@ test('context builder guards invalid drivers null payloads and fallback origins'
     $context  = $builder->build($reloaded, TrackingOptions::fromArray([]));
     expect($context->driverLocation)->toBeNull();
 });
+
+test('context builder handles corrupt driver locations endpoint statuses and unmatched waypoints', function () {
+    $connection = fleetopsTrackingBoot();
+    $connection->getSchemaBuilder()->table('payloads', function ($blueprint) {
+        $blueprint->string('pickup_tracking_number_uuid')->nullable();
+    });
+
+    $connection->table('places')->insert([
+        ['uuid' => '11111111-1111-4111-8111-111111111111', 'public_id' => 'place_ctx1', 'company_uuid' => 'company-1', 'name' => 'Pickup', 'location' => fleetopsTrackingWkb(1.30, 103.80)],
+        // Dropoff has no location → remaining stop point missing
+        ['uuid' => '22222222-2222-4222-8222-222222222222', 'public_id' => 'place_ctx2', 'company_uuid' => 'company-1', 'name' => 'Dropoff', 'location' => null],
+    ]);
+    $connection->table('tracking_numbers')->insert(['uuid' => '33333333-3333-4333-8333-333333333331', 'company_uuid' => 'company-1', 'tracking_number' => 'FLB-CTX-1', 'status_uuid' => '33333333-3333-4333-8333-333333333332']);
+    $connection->table('tracking_statuses')->insert(['uuid' => '33333333-3333-4333-8333-333333333332', 'company_uuid' => 'company-1', 'code' => 'CREATED', 'status' => 'Created']);
+    $connection->table('payloads')->insert([
+        'uuid'                        => 'payload-ctx-1', 'company_uuid' => 'company-1',
+        'pickup_uuid'                 => '11111111-1111-4111-8111-111111111111',
+        'dropoff_uuid'                => '22222222-2222-4222-8222-222222222222',
+        // Valid uuid that matches no stop: the active stop falls back to first remaining
+        'current_waypoint_uuid'       => '99999999-9999-4999-8999-999999999999',
+        'pickup_tracking_number_uuid' => '33333333-3333-4333-8333-333333333331',
+    ]);
+    $connection->table('users')->insert(['uuid' => 'user-ctx-1', 'company_uuid' => 'company-1', 'type' => 'user']);
+    $connection->table('drivers')->insert(['uuid' => '44444444-4444-4444-8444-444444444401', 'public_id' => 'driver_ctxnoloc', 'company_uuid' => 'company-1', 'user_uuid' => 'user-ctx-1', 'location' => null, 'updated_at' => now()]);
+    $connection->table('orders')->insert([
+        'uuid'                 => 'order-ctx-1', 'public_id' => 'order_ctx1', 'company_uuid' => 'company-1',
+        'payload_uuid'         => 'payload-ctx-1', 'status' => 'created', 'started' => 0,
+        'driver_assigned_uuid' => '44444444-4444-4444-8444-444444444401',
+    ]);
+
+    $order   = Order::query()->where('uuid', 'order-ctx-1')->first();
+    $context = (new TrackingContextBuilder())->build($order, TrackingOptions::fromArray([]));
+
+    expect($context->driverLocation)->toBeNull()
+        ->and($context->warnings)->toContain('missing_driver_location')
+        ->and($context->warnings)->toContain('missing_stop_location')
+        ->and($context->activeStop)->not->toBeNull()
+        ->and(collect($context->stops)->first(fn ($stop) => $stop->type === 'pickup')?->status)->toBe('created');
+});
+
+test('context builder clears driver locations that cannot convert to points', function () {
+    $builder = new TrackingContextBuilder();
+    $invoke  = new ReflectionMethod(TrackingContextBuilder::class, 'isValidPoint');
+    $invoke->setAccessible(true);
+
+    expect($invoke->invoke($builder, null))->toBeFalse()
+        ->and($invoke->invoke($builder, new Fleetbase\LaravelMysqlSpatial\Types\Point(0.0, 0.0)))->toBeFalse();
+});
+
+test('context builder resolves waypoint marker statuses and skips markers without places', function () {
+    $connection = fleetopsTrackingBoot();
+
+    $connection->table('places')->insert(['uuid' => '11111111-1111-4111-8111-111111111121', 'public_id' => 'place_ctxwp1', 'company_uuid' => 'company-1', 'name' => 'Stop A', 'location' => fleetopsTrackingWkb(1.31, 103.81)]);
+    $connection->table('tracking_numbers')->insert(['uuid' => '33333333-3333-4333-8333-333333333341', 'company_uuid' => 'company-1', 'tracking_number' => 'FLB-CTXWP-1', 'status_uuid' => '33333333-3333-4333-8333-333333333342']);
+    $connection->table('tracking_statuses')->insert(['uuid' => '33333333-3333-4333-8333-333333333342', 'company_uuid' => 'company-1', 'code' => 'ENROUTE', 'status' => 'En route']);
+    $connection->table('payloads')->insert(['uuid' => 'payload-ctx-2', 'company_uuid' => 'company-1']);
+    $connection->table('waypoints')->insert([
+        // Marker with a place and a tracked status
+        ['uuid' => 'wp-ctx-1', 'company_uuid' => 'company-1', 'payload_uuid' => 'payload-ctx-2', 'place_uuid' => '11111111-1111-4111-8111-111111111121', 'tracking_number_uuid' => '33333333-3333-4333-8333-333333333341', 'order' => '0'],
+        // Marker whose place is missing entirely: skipped from stops
+        ['uuid' => 'wp-ctx-2', 'company_uuid' => 'company-1', 'payload_uuid' => 'payload-ctx-2', 'place_uuid' => 'missing-place-uuid', 'tracking_number_uuid' => null, 'order' => '1'],
+    ]);
+    $connection->table('orders')->insert(['uuid' => 'order-ctx-2', 'public_id' => 'order_ctx2', 'company_uuid' => 'company-1', 'payload_uuid' => 'payload-ctx-2', 'status' => 'created', 'started' => 0]);
+
+    $order   = Order::query()->where('uuid', 'order-ctx-2')->first();
+    $context = (new TrackingContextBuilder())->build($order, TrackingOptions::fromArray([]));
+
+    expect($context->stops)->toHaveCount(1)
+        ->and($context->stops->first()->status)->toBe('enroute');
+});
