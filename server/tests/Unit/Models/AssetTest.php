@@ -397,7 +397,7 @@ test('asset display name prefers explicit names and schedules real maintenance r
     session(['company' => 'company-uuid']);
     $connection->getSchemaBuilder()->create('maintenances', function ($blueprint) {
         $blueprint->increments('id');
-        foreach (['uuid', 'public_id', 'company_uuid', 'maintainable_type', 'maintainable_uuid', 'type', 'status', 'scheduled_at', 'completed_at', 'odometer', 'engine_hours', 'summary', 'notes', 'created_by_uuid', '_key'] as $column) {
+        foreach (['uuid', 'public_id', 'company_uuid', 'maintainable_type', 'maintainable_uuid', 'maintainable_id', 'type', 'status', 'scheduled_at', 'completed_at', 'odometer', 'engine_hours', 'summary', 'notes', 'created_by_uuid', '_key'] as $column) {
             $blueprint->string($column)->nullable();
         }
         $blueprint->timestamps();
@@ -413,4 +413,57 @@ test('asset display name prefers explicit names and schedules real maintenance r
         ->and($connection->table('maintenances')->value('summary'))->toBe('Quarterly inspection')
         ->and($connection->table('maintenances')->value('type'))->toBe('inspection')
         ->and($connection->table('maintenances')->value('status'))->toBe('scheduled');
+});
+
+test('maintainable engine hour intervals and empty history averages', function () {
+    Carbon::setTestNow(Carbon::parse('2026-07-26 12:00:00'));
+
+    $connection = fleetopsAssetUseRelationConnection();
+    if (!EloquentModel::getEventDispatcher()) {
+        EloquentModel::setEventDispatcher(new Illuminate\Events\Dispatcher());
+    }
+    $schema = $connection->getSchemaBuilder();
+    $schema->create('maintenances', function ($blueprint) {
+        $blueprint->increments('id');
+        foreach (['uuid', 'public_id', 'company_uuid', 'maintainable_type', 'maintainable_uuid', 'maintainable_id', 'type', 'status', 'scheduled_at', 'started_at', 'completed_at', 'odometer', 'engine_hours', 'summary', 'notes', '_key'] as $column) {
+            $blueprint->string($column)->nullable();
+        }
+        $blueprint->timestamps();
+        $blueprint->timestamp('deleted_at')->nullable();
+    });
+    $schema->create('parts', function ($blueprint) {
+        $blueprint->increments('id');
+        foreach (['uuid', 'public_id', 'company_uuid', 'name', 'specs', 'meta', 'engine_hours', 'odometer', 'purchased_at', '_key'] as $column) {
+            $blueprint->string($column)->nullable();
+        }
+        $blueprint->timestamps();
+        $blueprint->timestamp('deleted_at')->nullable();
+    });
+
+    $part = new Part();
+    $part->setRawAttributes([
+        'uuid'         => 'part-hours-1',
+        'company_uuid' => 'company-uuid',
+        'engine_hours' => 900,
+        'specs'        => json_encode(['maintenance_interval_hours' => 250]),
+        'created_at'   => '2026-01-01 00:00:00',
+    ], true);
+    $part->exists = true;
+    $part->setAppends([]);
+
+    $connection->table('maintenances')->insert(['uuid' => 'mnt-part-1', 'maintainable_type' => Part::class, 'maintainable_uuid' => 'part-hours-1', 'maintainable_id' => 'part-hours-1', 'status' => 'completed', 'engine_hours' => '500', 'started_at' => '2026-07-01 08:00:00', 'completed_at' => '2026-07-01 12:00:00']);
+
+    // Engine-hour intervals trigger maintenance when hours accumulate
+    expect($part->needsMaintenance())->toBeTrue();
+
+    // Parts without completed maintenance report null averages and efficiency
+    $freshPart = new Part();
+    $freshPart->setRawAttributes(['uuid' => 'part-empty-1', 'company_uuid' => 'company-uuid', 'created_at' => '2026-07-20 00:00:00'], true);
+    $freshPart->exists = true;
+    $freshPart->setAppends([]);
+
+    expect($freshPart->getAverageMaintenanceDuration())->toBeNull()
+        ->and($freshPart->getMaintenanceEfficiency())->toBeNull();
+
+    Carbon::setTestNow();
 });
