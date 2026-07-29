@@ -301,3 +301,93 @@ test('driver assignment engine filters scheduled drivers without active shifts w
         'summary'     => ['message' => 'No available drivers found.'],
     ]);
 });
+
+test('standalone assignment ranks vehicle distances and strict skills can exhaust drivers', function () {
+    // A schedule-less driver passes the active-shift filter untouched
+    $unskilled = fleetopsDriverAssignmentDriver(
+        'driver-unskilled',
+        'driver_unskilled',
+        [],
+        true,
+        fleetopsDriverAssignmentLocation(1.301, 103.801),
+        false,
+        false,
+    );
+
+    // Place fake surfacing a real location attribute so pickup coords resolve
+    $pickupPlace = new class extends Place {
+        public ?object $locationFake = null;
+
+        public function getAttribute($key)
+        {
+            if ($key === 'location') {
+                return $this->locationFake;
+            }
+
+            return parent::getAttribute($key);
+        }
+    };
+    $pickupPlace->setRawAttributes(['uuid' => 'order-strict-pickup'], true);
+    $pickupPlace->setAppends([]);
+    $pickupPlace->locationFake = fleetopsDriverAssignmentLocation(1.300, 103.800);
+
+    $strictOrder = fleetopsDriverAssignmentOrder('order_strict', null, ['crane']);
+    $payload     = new Payload();
+    $payload->setRawAttributes(['uuid' => 'order-strict-payload'], true);
+    $payload->setAppends([]);
+    $payload->setRelation('pickup', $pickupPlace);
+    $strictOrder->setRelation('payload', $payload);
+
+    $engine = fleetopsDriverAssignmentEngine([$unskilled]);
+    $result = $engine->assign(collect([
+        $strictOrder,
+    ]), collect([
+        fleetopsDriverAssignmentVehicle('vehicle-no-loc', 'vehicle_noloc', null),
+        fleetopsDriverAssignmentVehicle('vehicle-near', 'vehicle_near2', fleetopsDriverAssignmentLocation(1.301, 103.801)),
+    ]), [
+        'require_active_shift' => true,
+        'respect_skills'       => true,
+    ]);
+
+    // The located vehicle outranks the location-less one, but no driver has
+    // the required skill so the order goes unassigned.
+    expect($result['assignments'])->toBe([])
+        ->and($result['unassigned'])->toBe(['order_strict']);
+});
+
+test('available drivers query loads company drivers with schedule items', function () {
+    $connection = new Illuminate\Database\SQLiteConnection(new PDO('sqlite::memory:'));
+    $resolver   = new Illuminate\Database\ConnectionResolver(['default' => $connection, 'mysql' => $connection]);
+    $resolver->setDefaultConnection('mysql');
+    Illuminate\Database\Eloquent\Model::setConnectionResolver($resolver);
+    $schema = $connection->getSchemaBuilder();
+    $tables = [
+        'drivers'        => ['uuid', 'public_id', 'company_uuid', 'user_uuid', 'status', '_key'],
+        'users'          => ['uuid', 'public_id', 'company_uuid', 'name', '_key'],
+        'schedule_items' => ['uuid', 'public_id', 'company_uuid', 'schedule_uuid', 'assignee_type', 'assignee_uuid', 'status', 'start_at', 'end_at', '_key'],
+    ];
+    foreach ($tables as $table => $columns) {
+        $schema->create($table, function ($blueprint) use ($columns) {
+            $blueprint->increments('id');
+            foreach ($columns as $column) {
+                $blueprint->string($column)->nullable();
+            }
+            $blueprint->timestamps();
+            $blueprint->timestamp('deleted_at')->nullable();
+        });
+    }
+    $connection->table('users')->insert(['uuid' => 'user-eng-1', 'company_uuid' => 'company-eng-1']);
+    $connection->table('drivers')->insert([
+        ['uuid' => 'driver-eng-1', 'user_uuid' => 'user-eng-1', 'company_uuid' => 'company-eng-1'],
+    ]);
+    $connection->table('schedule_items')->insert(['uuid' => 'shift-eng-1', 'company_uuid' => 'company-eng-1', 'assignee_type' => Driver::class, 'assignee_uuid' => 'driver-eng-1', 'status' => 'active', 'start_at' => '2026-07-27 08:00:00', 'end_at' => '2026-07-27 16:00:00']);
+
+    $engine     = new DriverAssignmentEngine();
+    $reflection = new ReflectionMethod(DriverAssignmentEngine::class, 'availableDriversForCompany');
+    $reflection->setAccessible(true);
+    $drivers = $reflection->invoke($engine, 'company-eng-1');
+
+    expect($drivers)->toHaveCount(1)
+        ->and($drivers->first()->uuid)->toBe('driver-eng-1')
+        ->and($drivers->first()->relationLoaded('scheduleItems'))->toBeTrue();
+});
