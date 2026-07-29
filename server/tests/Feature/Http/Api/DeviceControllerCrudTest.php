@@ -149,6 +149,24 @@ test('input mapping normalizes coordinates and logs attachment failures', functi
     expect($cleared['attachable_type'])->toBeNull()
         ->and($cleared['attachable_uuid'])->toBeNull();
 
+    // Coordinate-pair last positions parse through the point helper
+    $fromPair = $probe->callHelper('input', Request::create('/x', 'POST', [
+        'device_id'     => 'unit-9',
+        'last_position' => [103.82, 1.32],
+    ]));
+    expect($fromPair['last_position'])->toBeInstanceOf(Fleetbase\LaravelMysqlSpatial\Types\Point::class);
+
+    // Filled attachables resolve into morph type and uuid columns
+    $connection = app('db')->connection();
+    $connection->table('vehicles')->insert(['uuid' => 'vehicle-attach-1', 'public_id' => 'vehicle_attachone', 'company_uuid' => 'company-1']);
+    $attached = $probe->callHelper('input', Request::create('/x', 'POST', [
+        'device_id'       => 'unit-9',
+        'attachable'      => 'vehicle_attachone',
+        'attachable_type' => Fleetbase\FleetOps\Models\Vehicle::class,
+    ]));
+    expect($attached['attachable_uuid'])->toBe('vehicle-attach-1')
+        ->and($attached['attachable_type'])->toContain('Vehicle');
+
     // Failure logging helpers execute without a logger backend
     $device = new Device();
     $device->setRawAttributes(['uuid' => 'device-1', 'public_id' => 'device_api'], true);
