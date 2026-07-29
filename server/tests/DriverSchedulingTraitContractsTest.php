@@ -184,3 +184,76 @@ test('driver scheduling trait returns active shift payloads or null when none ex
         'data' => ['uuid' => 'shift-uuid', 'status' => 'active'],
     ]);
 });
+
+test('driver scheduling real helpers resolve drivers and schedule relations', function () {
+    $connection = new Illuminate\Database\SQLiteConnection(new PDO('sqlite::memory:'));
+    $resolver   = new Illuminate\Database\ConnectionResolver(['default' => $connection, 'mysql' => $connection]);
+    $resolver->setDefaultConnection('mysql');
+    Illuminate\Database\Eloquent\Model::setConnectionResolver($resolver);
+    app()->instance('db', new class($connection) {
+        public function __construct(public Illuminate\Database\SQLiteConnection $c)
+        {
+        }
+
+        public function connection($name = null)
+        {
+            return $this->c;
+        }
+
+        public function __call($method, $arguments)
+        {
+            return $this->c->{$method}(...$arguments);
+        }
+    });
+    Illuminate\Support\Facades\DB::clearResolvedInstance('db');
+    $schema = $connection->getSchemaBuilder();
+    $tables = [
+        'drivers'                 => ['uuid', 'public_id', 'company_uuid', 'user_uuid', 'status', '_key'],
+        'users'                   => ['uuid', 'public_id', 'company_uuid', 'name', '_key'],
+        'schedules'               => ['uuid', 'public_id', 'company_uuid', 'subject_type', 'subject_uuid', 'status', 'name', '_key'],
+        'schedule_items'          => ['uuid', 'public_id', 'company_uuid', 'schedule_uuid', 'assignee_type', 'assignee_uuid', 'status', 'start_at', 'end_at', '_key'],
+        'schedule_availability'   => ['uuid', 'public_id', 'company_uuid', 'subject_type', 'subject_uuid', 'type', 'start_at', 'end_at', '_key'],
+    ];
+    foreach ($tables as $table => $columns) {
+        $schema->create($table, function ($blueprint) use ($columns) {
+            $blueprint->increments('id');
+            foreach ($columns as $column) {
+                $blueprint->string($column)->nullable();
+            }
+            $blueprint->timestamps();
+            $blueprint->timestamp('deleted_at')->nullable();
+        });
+    }
+
+    session(['company' => 'company-1']);
+    $connection->table('users')->insert(['uuid' => 'user-sched-1', 'company_uuid' => 'company-1', 'name' => 'Sched Driver']);
+    $connection->table('drivers')->insert(['uuid' => 'a1a1a1a1-1111-4111-8111-111111111101', 'public_id' => 'driver_schedreal1', 'company_uuid' => 'company-1', 'user_uuid' => 'user-sched-1']);
+    $driverClass = Driver::class;
+    $connection->table('schedules')->insert([
+        ['uuid' => 'schedule-1', 'company_uuid' => 'company-1', 'subject_type' => $driverClass, 'subject_uuid' => 'a1a1a1a1-1111-4111-8111-111111111101', 'status' => 'active', 'name' => 'Week 31', 'created_at' => '2026-07-20 00:00:00', 'updated_at' => '2026-07-20 00:00:00'],
+        ['uuid' => 'schedule-2', 'company_uuid' => 'company-1', 'subject_type' => $driverClass, 'subject_uuid' => 'a1a1a1a1-1111-4111-8111-111111111101', 'status' => 'draft', 'name' => 'Week 32', 'created_at' => '2026-07-21 00:00:00', 'updated_at' => '2026-07-21 00:00:00'],
+    ]);
+    $connection->table('schedule_items')->insert(['uuid' => 'shift-1', 'company_uuid' => 'company-1', 'schedule_uuid' => 'schedule-1', 'assignee_type' => $driverClass, 'assignee_uuid' => 'a1a1a1a1-1111-4111-8111-111111111101', 'status' => 'pending', 'start_at' => '2026-07-27 08:00:00', 'end_at' => '2026-07-27 16:00:00']);
+    $connection->table('schedule_availability')->insert(['uuid' => 'avail-1', 'company_uuid' => 'company-1', 'subject_type' => $driverClass, 'subject_uuid' => 'a1a1a1a1-1111-4111-8111-111111111101', 'type' => 'time_off', 'start_at' => '2026-08-01 00:00:00', 'end_at' => '2026-08-02 00:00:00']);
+
+    $controller = new Fleetbase\FleetOps\Http\Controllers\Internal\v1\DriverController();
+    $helper     = function (string $method, ...$arguments) use ($controller) {
+        $reflection = new ReflectionMethod($controller, $method);
+        $reflection->setAccessible(true);
+
+        return $reflection->invoke($controller, ...$arguments);
+    };
+
+    // Drivers resolve by uuid and public id, and missing ids fail loudly
+    $byUuid   = $helper('resolveDriver', 'a1a1a1a1-1111-4111-8111-111111111101');
+    $byPublic = $helper('resolveDriver', 'driver_schedreal1');
+    expect($byUuid->uuid)->toBe('a1a1a1a1-1111-4111-8111-111111111101')
+        ->and($byPublic->uuid)->toBe('a1a1a1a1-1111-4111-8111-111111111101');
+    expect(fn () => $helper('resolveDriver', 'driver_missing0'))->toThrow(Illuminate\Database\Eloquent\ModelNotFoundException::class);
+
+    // Relation helpers proxy the driver schedule surfaces
+    expect($helper('scheduleItemsForDriver', $byUuid)->count())->toBe(1)
+        ->and($helper('availabilitiesForDriver', $byUuid)->count())->toBe(1)
+        ->and($helper('activeScheduleForDriver', $byUuid)->uuid)->toBe('schedule-1')
+        ->and($helper('activeShiftForDriver', $byUuid, new DateTime('2026-07-27 12:00:00'))->uuid)->toBe('shift-1');
+});
