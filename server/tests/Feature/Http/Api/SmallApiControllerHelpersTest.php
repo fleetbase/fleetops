@@ -183,3 +183,48 @@ test('service rate helper battery executes against sqlite', function () {
         ->and($helper('serviceRateResourceCollection', collect([$found])))->toBeInstanceOf(Illuminate\Http\Resources\Json\ResourceCollection::class)
         ->and($helper('deletedServiceRateResource', $found))->not->toBeNull();
 });
+
+test('issue resource resolves linked orders from relations and metadata', function () {
+    $connection = fleetopsSmallApiHelpersBoot();
+    $schema     = $connection->getSchemaBuilder();
+    foreach (['orders' => ['uuid', 'public_id', 'company_uuid', 'payload_uuid', 'tracking_number_uuid', 'customer_uuid', 'customer_type', 'status', 'meta', '_key'], 'payloads' => ['uuid', 'public_id', 'company_uuid', 'pickup_uuid', 'dropoff_uuid', 'meta', '_key'], 'tracking_numbers' => ['uuid', 'public_id', 'company_uuid', 'tracking_number', '_key'], 'contacts' => ['uuid', 'public_id', 'company_uuid', 'name', 'type', '_key']] as $table => $columns) {
+        $schema->create($table, function ($blueprint) use ($columns) {
+            $blueprint->increments('id');
+            foreach ($columns as $column) {
+                $blueprint->string($column)->nullable();
+            }
+            $blueprint->timestamps();
+            $blueprint->timestamp('deleted_at')->nullable();
+        });
+    }
+    $connection->table('orders')->insert(['uuid' => 'c7c7c7c7-7777-4777-8777-777777777701', 'public_id' => 'order_issuelink1', 'company_uuid' => 'company-1', 'status' => 'created']);
+
+    $resolve = function (Fleetbase\FleetOps\Models\Issue $issue) {
+        $resource   = new Fleetbase\FleetOps\Http\Resources\v1\Issue($issue);
+        $reflection = new ReflectionMethod(Fleetbase\FleetOps\Http\Resources\v1\Issue::class, 'resolveLinkedOrder');
+        $reflection->setAccessible(true);
+
+        return $reflection->invoke($resource);
+    };
+
+    // Loaded relations resolve directly into order resources
+    $order = Fleetbase\FleetOps\Models\Order::where('uuid', 'c7c7c7c7-7777-4777-8777-777777777701')->first();
+    $issue = new Fleetbase\FleetOps\Models\Issue();
+    $issue->setRawAttributes(['uuid' => 'issue-link-1', 'company_uuid' => 'company-1'], true);
+    $issue->setRelation('order', $order);
+    expect($resolve($issue))->toBeInstanceOf(Fleetbase\FleetOps\Http\Resources\v1\Order::class);
+
+    // Metadata order uuids look the order up in the database
+    $metaIssue = new Fleetbase\FleetOps\Models\Issue();
+    $metaIssue->setRawAttributes(['uuid' => 'issue-link-2', 'company_uuid' => 'company-1', 'meta' => json_encode(['order_uuid' => 'c7c7c7c7-7777-4777-8777-777777777701'])], true);
+    expect($resolve($metaIssue))->toBeInstanceOf(Fleetbase\FleetOps\Http\Resources\v1\Order::class);
+
+    // Unresolvable metadata orders return null
+    $missingIssue = new Fleetbase\FleetOps\Models\Issue();
+    $missingIssue->setRawAttributes(['uuid' => 'issue-link-3', 'company_uuid' => 'company-1', 'meta' => json_encode(['order_uuid' => 'c7c7c7c7-7777-4777-8777-777777777799'])], true);
+    expect($resolve($missingIssue))->toBeNull();
+
+    $bareIssue = new Fleetbase\FleetOps\Models\Issue();
+    $bareIssue->setRawAttributes(['uuid' => 'issue-link-4', 'company_uuid' => 'company-1'], true);
+    expect($resolve($bareIssue))->toBeNull();
+});
