@@ -395,3 +395,32 @@ test('route instances persist through set route and payload callbacks fire', fun
     });
     expect($payload?->uuid)->toBe('payload-route-1');
 });
+
+test('payload and driver lookups fall back to direct queries when relations are unset', function () {
+    $connection = fleetopsOrderPayloadBoot();
+    $connection->table('payloads')->insert(['uuid' => '99999999-9999-4999-8999-999999999901', 'company_uuid' => 'company-1']);
+    $connection->table('drivers')->insert(['uuid' => '99999999-9999-4999-8999-999999999902', 'public_id' => 'driver_fallback1', 'company_uuid' => 'company-1']);
+    $connection->table('orders')->insert([
+        'uuid'                 => 'order-fallback-1',
+        'company_uuid'         => 'company-1',
+        'payload_uuid'         => '99999999-9999-4999-8999-999999999901',
+        'driver_assigned_uuid' => '99999999-9999-4999-8999-999999999902',
+    ]);
+
+    // An explicitly unset payload relation still resolves by uuid, and the
+    // callback receives the record found by the fallback query
+    $order = Order::query()->where('uuid', 'order-fallback-1')->first();
+    $order->setRelation('payload', null);
+    $seen    = null;
+    $payload = $order->getPayload(function ($resolved) use (&$seen) {
+        $seen = $resolved;
+    });
+
+    expect($payload?->uuid)->toBe('99999999-9999-4999-8999-999999999901')
+        ->and($seen?->uuid)->toBe('99999999-9999-4999-8999-999999999901');
+
+    // The same fallback applies to the assigned driver when resolving origin
+    $originOrder = Order::query()->where('uuid', 'order-fallback-1')->first();
+    $originOrder->setRelation('driverAssigned', null);
+    expect(fn () => $originOrder->getCurrentOriginPosition())->not->toThrow(Error::class);
+});
