@@ -457,3 +457,32 @@ test('vehicle controller after save syncs driver input and custom fields', funct
         ->and($controller->driverSyncs)->toBe([[$vehicle, null]])
         ->and($vehicle->customFieldSyncs)->toBe([[['temperature_zone' => 'cold'], []]]);
 });
+
+test('vehicle controller reports detach lookup failures and attach exceptions', function () {
+    // Detach with an unknown vehicle
+    $controller          = new FleetOpsVehicleControllerProbe();
+    $controller->vehicle = null;
+    $controller->device  = new FleetOpsVehicleDeviceFake();
+    expect($controller->detachDevice(new Request(['device' => 'device-public']), 'missing-vehicle')->getData(true))
+        ->toBe(['error' => 'Vehicle not found or not available for this organization.']);
+
+    // Detach with an unknown device
+    $controller          = new FleetOpsVehicleControllerProbe();
+    $controller->vehicle = new FleetOpsVehicleEndpointFake();
+    $controller->device  = null;
+    expect($controller->detachDevice(new Request(['device' => 'missing-device']), 'vehicle-public')->getData(true))
+        ->toBe(['error' => 'Device not found or not available for this organization.']);
+
+    // Attach failures log and surface a friendly error
+    $controller          = new FleetOpsVehicleControllerProbe();
+    $controller->vehicle = new FleetOpsVehicleEndpointFake();
+    $controller->device  = new class extends FleetOpsVehicleDeviceFake {
+        public function attachTo(Fleetbase\Models\Model $attachable): bool
+        {
+            throw new RuntimeException('attachment backend offline');
+        }
+    };
+    $response = $controller->attachDevice(new Request(['device' => 'device-public']), 'vehicle-public');
+    expect($response->getData(true))->toBe(['error' => 'Unable to attach device to vehicle. Please try again or contact support.'])
+        ->and($response->getStatusCode())->toBe(500);
+});
