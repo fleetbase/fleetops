@@ -231,3 +231,46 @@ test('osrm support covers nearest table trip match tile and error fallback reque
 
     expect(fn () => OSRM::getRouteFromPoints([$points[0]]))->toThrow(InvalidArgumentException::class, 'At least two points');
 });
+
+test('osrm converts mixed points decodes route polylines and serves cached results', function () {
+    Cache::swap(new Illuminate\Cache\Repository(new Illuminate\Cache\ArrayStore()));
+    app('config')->set('fleetops.osrm.host', 'https://osrm-mixed.test/');
+
+    Http::swap(new Illuminate\Http\Client\Factory());
+    Http::fake(function ($request) {
+        $url = (string) $request->url();
+
+        return match (true) {
+            str_contains($url, '/route/v1/driving/')   => Http::response(['code' => 'Ok', 'routes' => [['geometry' => '_p~iF~ps|U_ulLnnqC_mqNvxq`@', 'distance' => 42]]]),
+            str_contains($url, '/nearest/v1/driving/') => Http::response(['code' => 'Ok', 'waypoints' => [['name' => 'cached-road']]]),
+            str_contains($url, '/table/v1/driving/')   => Http::response(['code' => 'Ok', 'durations' => [[0, 5], [5, 0]]]),
+            str_contains($url, '/trip/v1/driving/')    => Http::response(['code' => 'Ok', 'trips' => [['distance' => 77]]]),
+            str_contains($url, '/match/v1/driving/')   => Http::response(['code' => 'Ok', 'matchings' => [['confidence' => 0.9]]]),
+            default                                    => Http::response(['code' => 'Unexpected'], 500),
+        };
+    });
+
+    // Mixed point representations convert through getPointFromMixed, and the
+    // successful route response decodes its polyline into waypoints
+    $mixedPoints = [
+        ['latitude' => 1.42, 'longitude' => 103.92],
+        new Point(1.43, 103.93),
+    ];
+    $route = OSRM::getRouteFromPoints($mixedPoints);
+    expect($route['routes'][0]['waypoints'])->not->toBeEmpty()
+        ->and($route['routes'][0]['distance'])->toBe(42);
+
+    // Second identical calls come straight from the cache
+    $point = new Point(1.30, 103.80);
+    $first = OSRM::getNearest($point, ['number' => 2]);
+    expect(OSRM::getNearest($point, ['number' => 2]))->toBe($first);
+
+    $table = OSRM::getTable($mixedPoints, ['annotations' => 'distance']);
+    expect(OSRM::getTable($mixedPoints, ['annotations' => 'distance']))->toBe($table);
+
+    $trip = OSRM::getTrip($mixedPoints, ['roundtrip' => 'true']);
+    expect(OSRM::getTrip($mixedPoints, ['roundtrip' => 'true']))->toBe($trip);
+
+    $match = OSRM::getMatch($mixedPoints, ['geometries' => 'polyline6']);
+    expect(OSRM::getMatch($mixedPoints, ['geometries' => 'polyline6'])['matchings'][0]['confidence'])->toBe(0.9);
+});
