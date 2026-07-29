@@ -2212,3 +2212,22 @@ function telematics_activity_log_method(string $model): string
 
     return $matches['body'] ?? '';
 }
+
+if (!function_exists('Fleetbase\FleetOps\Models\activity')) {
+    eval('namespace Fleetbase\FleetOps\Models; function activity($logName = null) { $GLOBALS["fleetopsTelematicActivities"][] = $logName; return new class { public array $properties = []; public function performedOn($subject) { return $this; } public function withProperties(array $properties) { $this->properties = $properties; $GLOBALS["fleetopsTelematicActivityProps"][] = $properties; return $this; } public function log(string $message) { $GLOBALS["fleetopsTelematicActivityLogs"][] = $message; return true; } }; }');
+}
+
+test('telematic send command logs the activity and reports success', function () {
+    $GLOBALS['fleetopsTelematicActivities']    = [];
+    $GLOBALS['fleetopsTelematicActivityProps'] = [];
+    $GLOBALS['fleetopsTelematicActivityLogs']  = [];
+
+    $telematic = new Telematic();
+    $telematic->setRawAttributes(['uuid' => 'telematic-cmd-1', 'company_uuid' => 'company-1', 'provider' => 'flespi'], true);
+
+    expect($telematic->sendCommand('reboot', ['delay' => 5]))->toBeTrue()
+        ->and($GLOBALS['fleetopsTelematicActivities'])->toBe(['telematic_command'])
+        ->and($GLOBALS['fleetopsTelematicActivityProps'][0]['command'])->toBe('reboot')
+        ->and($GLOBALS['fleetopsTelematicActivityProps'][0]['parameters'])->toBe(['delay' => 5])
+        ->and($GLOBALS['fleetopsTelematicActivityLogs'][0])->toContain('reboot');
+});
