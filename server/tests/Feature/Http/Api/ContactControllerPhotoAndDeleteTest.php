@@ -169,3 +169,31 @@ test('contact deletion cascades to related users and seams resolve places', func
     $probe = new FleetOpsApiContactProbe();
     expect($probe->callHelper('getPlaceUuid', 'places', ['public_id' => 'place_contact1']))->toBe('77777777-7777-4777-8777-777777777777');
 });
+
+class FleetOpsApiContactThrowingProbe extends ContactController
+{
+    protected function findRelatedUser(Contact $contact): ?Fleetbase\Models\User
+    {
+        throw new Exception('related user lookup failed');
+    }
+}
+
+test('contact update and delete surface identity and lookup failures', function () {
+    $connection = fleetopsContactPhotoBoot();
+    $connection->table('users')->insert(['uuid' => 'user-conflict-1', 'company_uuid' => 'company-1', 'name' => 'Conflicting Admin', 'email' => 'conflict@example.com', 'type' => 'admin']);
+    $connection->table('contacts')->insert(['uuid' => '66666666-6666-4666-8666-666666666671', 'public_id' => 'contact_conflict1', 'company_uuid' => 'company-1', 'name' => 'Conflicted Customer', 'email' => 'original@example.com', 'type' => 'customer']);
+
+    // Updating a customer onto a non-customer user identity fails loudly
+    $controller = new ContactController();
+    $response   = $controller->update('contact_conflict1', UpdateContactRequest::create('/v1/contacts/contact_conflict1', 'PUT', [
+        'email' => 'conflict@example.com',
+    ]));
+    expect($response)->toBeInstanceOf(Illuminate\Http\JsonResponse::class)
+        ->and(json_encode($response->getData(true)))->toContain('error');
+
+    // Delete failures from related-user lookups surface as api errors
+    $connection->table('contacts')->insert(['uuid' => '66666666-6666-4666-8666-666666666672', 'public_id' => 'contact_faildel1', 'company_uuid' => 'company-1', 'name' => 'Fail Delete', 'type' => 'contact']);
+    $throwing = new FleetOpsApiContactThrowingProbe();
+    $failed   = $throwing->delete('contact_faildel1');
+    expect(json_encode($failed->getData(true)))->toContain('related user lookup failed');
+});
