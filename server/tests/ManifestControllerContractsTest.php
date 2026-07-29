@@ -240,3 +240,71 @@ test('manifest controller shows cancels destroys and updates stops through statu
         ->and($controller->stopQuery->record->updates)->toBe([['status' => 'rescheduled', 'sequence' => 4]])
         ->and($controller->stopQuery->record->freshes[0])->toBe(['place', 'order.trackingNumber']);
 });
+
+test('manifest real query helpers and stop endpoints hit the database', function () {
+    $connection = new Illuminate\Database\SQLiteConnection(new PDO('sqlite::memory:'));
+    $resolver   = new Illuminate\Database\ConnectionResolver(['default' => $connection, 'mysql' => $connection]);
+    $resolver->setDefaultConnection('mysql');
+    Illuminate\Database\Eloquent\Model::setConnectionResolver($resolver);
+    if (!Illuminate\Database\Eloquent\Model::getEventDispatcher()) {
+        Illuminate\Database\Eloquent\Model::setEventDispatcher(new Illuminate\Events\Dispatcher());
+    }
+    $schema = $connection->getSchemaBuilder();
+    $tables = [
+        'manifests'        => ['uuid', 'public_id', 'company_uuid', 'driver_uuid', 'vehicle_uuid', 'status', 'name', 'date', 'meta', '_key'],
+        'manifest_stops'   => ['uuid', 'public_id', 'company_uuid', 'manifest_uuid', 'place_uuid', 'order_uuid', 'waypoint_uuid', 'status', 'sequence', 'notes', 'actual_arrival', 'meta', '_key'],
+        'places'           => ['uuid', 'public_id', 'company_uuid', 'name', 'location', '_key'],
+        'orders'           => ['uuid', 'public_id', 'company_uuid', 'payload_uuid', 'tracking_number_uuid', 'status', 'meta', '_key'],
+        'payloads'         => ['uuid', 'public_id', 'company_uuid', 'pickup_uuid', 'dropoff_uuid', 'meta', '_key'],
+        'tracking_numbers' => ['uuid', 'public_id', 'company_uuid', 'tracking_number', '_key'],
+        'waypoints'        => ['uuid', 'public_id', 'company_uuid', 'payload_uuid', 'place_uuid', 'order', 'type', '_key'],
+        'drivers'          => ['uuid', 'public_id', 'company_uuid', 'user_uuid', '_key'],
+        'vehicles'         => ['uuid', 'public_id', 'company_uuid', 'name', '_key'],
+        'users'            => ['uuid', 'public_id', 'company_uuid', 'name', '_key'],
+    ];
+    foreach ($tables as $table => $columns) {
+        $schema->create($table, function ($blueprint) use ($columns) {
+            $blueprint->increments('id');
+            foreach ($columns as $column) {
+                $blueprint->string($column)->nullable();
+            }
+            $blueprint->timestamps();
+            $blueprint->timestamp('deleted_at')->nullable();
+        });
+    }
+
+    session(['company' => 'company-mfr-1']);
+    app()->instance('responsecache', new class {
+        public function __call($method, $arguments)
+        {
+            return null;
+        }
+    });
+    config()->set('activitylog.enabled', false);
+    config()->set('activitylog.default_auth_driver', 'web');
+    app()->bind(Illuminate\Contracts\Config\Repository::class, fn () => config());
+    $connection->table('manifests')->insert(['uuid' => 'manifest-real-1', 'public_id' => 'manifest_realone', 'company_uuid' => 'company-mfr-1', 'status' => 'active']);
+    $connection->table('manifest_stops')->insert(['uuid' => 'stop-real-1', 'public_id' => 'manifest_stop_realone', 'company_uuid' => 'company-mfr-1', 'manifest_uuid' => 'manifest-real-1', 'place_uuid' => 'place-mfr-1', 'status' => 'pending', 'sequence' => '1', 'meta' => json_encode([])]);
+    $connection->table('places')->insert(['uuid' => 'place-mfr-1', 'company_uuid' => 'company-mfr-1', 'name' => 'Manifest Stop Place']);
+
+    $controller = new ManifestController();
+    $helper     = function (string $method, ...$arguments) use ($controller) {
+        $reflection = new ReflectionMethod(ManifestController::class, $method);
+        $reflection->setAccessible(true);
+
+        return $reflection->invoke($controller, ...$arguments);
+    };
+
+    // Real query helpers scope by company and public ids
+    expect($helper('manifestQueryForCompany', 'company-mfr-1')->count())->toBe(1)
+        ->and($helper('manifestQueryByPublicId', 'manifest_realone')->count())->toBe(1)
+        ->and($helper('manifestStopQueryByPublicId', 'manifest_stop_realone')->count())->toBe(1);
+
+    // showStop loads the stop with its relations
+    $shown = $controller->showStop('manifest_stop_realone')->getData(true);
+    expect($shown['stop']['uuid'])->toBe('stop-real-1');
+
+    // Sequence-only updates persist without status transitions
+    $updated = $controller->updateStop(new Request(['sequence' => 7]), 'manifest_stop_realone')->getData(true);
+    expect((string) $connection->table('manifest_stops')->value('sequence'))->toBe('7');
+});
