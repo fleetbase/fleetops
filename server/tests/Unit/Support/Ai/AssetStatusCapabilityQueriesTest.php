@@ -34,6 +34,23 @@ function fleetopsAssetStatusCapabilityBoot(): SQLiteConnection
     Illuminate\Support\Facades\DB::clearResolvedInstance('db');
 
     $schema = $connection->getSchemaBuilder();
+    $tables = [
+        'orders'           => ['uuid', 'public_id', 'company_uuid', 'transaction_uuid', 'tracking_number_uuid', 'status', 'meta', '_key'],
+        'vehicles'         => ['uuid', 'public_id', 'company_uuid', 'name', '_key'],
+        'transactions'     => ['uuid', 'public_id', 'company_uuid', 'amount', 'currency', '_key'],
+        'tracking_numbers' => ['uuid', 'public_id', 'company_uuid', 'tracking_number', '_key'],
+        'contacts'         => ['uuid', 'public_id', 'company_uuid', 'name', 'type', '_key'],
+    ];
+    foreach ($tables as $table => $columns) {
+        $schema->create($table, function ($blueprint) use ($columns) {
+            $blueprint->increments('id');
+            foreach ($columns as $column) {
+                $blueprint->string($column)->nullable();
+            }
+            $blueprint->timestamps();
+            $blueprint->timestamp('deleted_at')->nullable();
+        });
+    }
     $schema->create('users', function ($blueprint) {
         $blueprint->increments('id');
         foreach (['uuid', 'public_id', 'company_uuid', 'name', 'email', 'type', 'status', '_key'] as $column) {
@@ -84,4 +101,20 @@ test('asset status count helpers partition drivers by presence and status', func
         ->and($helper('onlineCountForModel', Fleetbase\FleetOps\Models\Driver::class))->toBe(1)
         ->and($helper('offlineCountForModel', Fleetbase\FleetOps\Models\Driver::class))->toBe(2)
         ->and($helper('countsByStatusForModel', Fleetbase\FleetOps\Models\Driver::class))->toBe(['active' => 2, 'inactive' => 1]);
+});
+
+test('search capability queries scope companies with eager relations', function () {
+    fleetopsAssetStatusCapabilityBoot();
+    $capability = (new ReflectionClass(Fleetbase\FleetOps\Support\Ai\Capabilities\SearchResourcesCapability::class))->newInstanceWithoutConstructor();
+    $helper     = function (string $method, ...$arguments) use ($capability) {
+        $reflection = new ReflectionMethod(Fleetbase\FleetOps\Support\Ai\Capabilities\SearchResourcesCapability::class, $method);
+        $reflection->setAccessible(true);
+
+        return $reflection->invoke($capability, ...$arguments);
+    };
+
+    expect($helper('orderSearchQuery')->count())->toBe(0)
+        ->and($helper('vehicleSearchQuery')->count())->toBe(0)
+        ->and($helper('driverSearchQuery')->count())->toBe(3)
+        ->and($helper('genericSearchQuery', Fleetbase\FleetOps\Models\Contact::class)->count())->toBe(0);
 });
