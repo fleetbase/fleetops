@@ -1,8 +1,10 @@
 <?php
 
+use Fleetbase\FleetOps\Http\Controllers\Api\v1\EquipmentController;
 use Fleetbase\FleetOps\Http\Controllers\Api\v1\FleetController;
 use Fleetbase\FleetOps\Http\Controllers\Api\v1\FuelReportController;
 use Fleetbase\FleetOps\Http\Controllers\Api\v1\IssueController;
+use Fleetbase\FleetOps\Http\Controllers\Api\v1\PartController;
 use Fleetbase\FleetOps\Http\Controllers\Api\v1\ServiceRateController;
 use Fleetbase\FleetOps\Http\Controllers\Api\v1\VendorController;
 use Illuminate\Database\ConnectionResolver;
@@ -79,6 +81,8 @@ function fleetopsSmallApiHelpersBoot(): SQLiteConnection
         'service_rates'            => ['uuid', 'public_id', 'company_uuid', 'service_area_uuid', 'zone_uuid', 'service_name', 'service_type', 'base_fee', 'per_km_flat_rate_fee', 'rate_calculation_method', 'currency', 'estimated_days', 'duration_terms', 'meta', 'slug', 'internal_id', '_key'],
         'service_rate_fees'        => ['uuid', 'public_id', 'service_rate_uuid', 'min', 'max', 'fee', 'distance_unit', '_key'],
         'service_rate_parcel_fees' => ['uuid', 'public_id', 'service_rate_uuid', 'size', 'length', 'width', 'height', 'fee', '_key'],
+        'parts'                    => ['uuid', 'public_id', 'company_uuid', 'name', 'description', 'part_number', 'sku', 'category', 'quantity', 'price', 'currency', 'status', 'specs', 'meta', 'slug', 'internal_id', '_key'],
+        'equipments'               => ['uuid', 'public_id', 'company_uuid', 'name', 'description', 'type', 'status', 'specs', 'meta', 'slug', 'internal_id', '_key'],
     ];
     foreach ($tables as $table => $columns) {
         $schema->create($table, function ($blueprint) use ($columns) {
@@ -227,4 +231,26 @@ test('issue resource resolves linked orders from relations and metadata', functi
     $bareIssue = new Fleetbase\FleetOps\Models\Issue();
     $bareIssue->setRawAttributes(['uuid' => 'issue-link-4', 'company_uuid' => 'company-1'], true);
     expect($resolve($bareIssue))->toBeNull();
+});
+
+test('part and equipment helper batteries execute against sqlite', function () {
+    $connection = fleetopsSmallApiHelpersBoot();
+
+    // Part battery
+    $partHelper = fleetopsSmallApiHelper(new PartController());
+    $part       = $partHelper('createPart', ['company_uuid' => 'company-1', 'name' => 'Brake Pad', 'status' => 'available']);
+    expect($connection->table('parts')->count())->toBe(1)
+        ->and($partHelper('partResource', $part))->toBeInstanceOf(Fleetbase\FleetOps\Http\Resources\v1\Part::class)
+        ->and($partHelper('partResourceCollection', collect([$part])))->toBeInstanceOf(Illuminate\Http\Resources\Json\ResourceCollection::class)
+        ->and($partHelper('deletedPartResource', $part))->not->toBeNull()
+        ->and($partHelper('jsonResponse', ['ok' => true], 200))->toBeInstanceOf(Illuminate\Http\JsonResponse::class);
+
+    // Equipment battery
+    $equipmentHelper = fleetopsSmallApiHelper(new EquipmentController());
+    $equipment       = $equipmentHelper('createEquipment', ['company_uuid' => 'company-1', 'name' => 'Pallet Jack', 'status' => 'available']);
+    expect($connection->table('equipments')->count())->toBe(1)
+        ->and($equipmentHelper('equipmentResource', $equipment))->toBeInstanceOf(Fleetbase\FleetOps\Http\Resources\v1\Equipment::class)
+        ->and($equipmentHelper('equipmentResourceCollection', collect([$equipment])))->toBeInstanceOf(Illuminate\Http\Resources\Json\ResourceCollection::class)
+        ->and($equipmentHelper('deletedEquipmentResource', $equipment))->not->toBeNull()
+        ->and($equipmentHelper('jsonResponse', ['ok' => true], 200))->toBeInstanceOf(Illuminate\Http\JsonResponse::class);
 });
