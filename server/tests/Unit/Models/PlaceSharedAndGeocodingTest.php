@@ -39,8 +39,16 @@ class FleetOpsPlaceGeocoderFake
 function fleetopsPlaceSharedBoot(): SQLiteConnection
 {
     $pdo = new PDO('sqlite::memory:');
-    $pdo->sqliteCreateFunction('ST_PointFromText', fn ($wkt, $srid = 0, $axisOrder = null) => $wkt);
-    $pdo->sqliteCreateFunction('ST_GeomFromText', fn ($wkt, $srid = 0, $axisOrder = null) => $wkt);
+    // Store points as package WKB so models rehydrate them on read back
+    $wkbPoint = function ($wkt) {
+        if (is_string($wkt) && sscanf($wkt, 'POINT(%f %f)', $lng, $lat) === 2) {
+            return pack('V', 0) . pack('C', 1) . pack('V', 1) . pack('d', $lng) . pack('d', $lat);
+        }
+
+        return $wkt;
+    };
+    $pdo->sqliteCreateFunction('ST_PointFromText', fn ($wkt, $srid = 0, $axisOrder = null) => $wkbPoint($wkt));
+    $pdo->sqliteCreateFunction('ST_GeomFromText', fn ($wkt, $srid = 0, $axisOrder = null) => $wkbPoint($wkt));
     $pdo->sqliteCreateFunction('ST_Equals', fn ($a, $b) => $a === $b ? 1 : 0);
     $connection = new SQLiteConnection($pdo);
     $resolver   = new ConnectionResolver(['default' => $connection, 'mysql' => $connection]);
@@ -217,4 +225,47 @@ test('insert from coordinates reports failure when reverse geocoding is empty', 
     // rather than trying to read an address off a missing result
     $point = new Point(1.30, 103.80);
     expect(Place::insertFromCoordinates($point))->toBeFalse();
+});
+
+test('insert get uuid parses locations and reuses an existing shared place', function () {
+    $connection = fleetopsPlaceSharedBoot();
+
+    // The first insert stores the parsed point alongside the address
+    $first = Place::insertGetUuid([
+        'name'     => 'Shared Depot',
+        'street1'  => '5 Shared Way',
+        'city'     => 'Singapore',
+        'country'  => 'SG',
+        'location' => new Point(1.30, 103.80),
+    ]);
+
+    expect($connection->table('places')->count())->toBe(1)
+        ->and($connection->table('places')->value('location'))->not->toBeNull();
+
+    // Re-inserting the same unowned address reuses the stored record instead
+    // of creating a duplicate
+    $second = Place::insertGetUuid([
+        'name'     => 'Shared Depot Again',
+        'street1'  => '5 Shared Way',
+        'city'     => 'Singapore',
+        'country'  => 'SG',
+        'location' => new Point(1.30, 103.80),
+    ]);
+
+    expect($second)->toBe($first)
+        ->and($connection->table('places')->count())->toBe(1);
+});
+
+test('shared place lookup degrades unparseable locations to the empty point', function () {
+    fleetopsPlaceSharedBoot();
+
+    // An unusable location value is caught and replaced with the zero point,
+    // so the spatial fallback simply finds no match rather than erroring
+    expect(Place::findExistingSharedPlace([
+        'street1'     => '1 Main Street',
+        'city'        => 'Singapore',
+        'country'     => 'SG',
+        'postal_code' => '999999',
+        'location'    => 'not-a-point',
+    ]))->toBeNull();
 });
