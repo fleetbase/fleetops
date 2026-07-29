@@ -1,5 +1,9 @@
 <?php
 
+if (!function_exists('Fleetbase\Models\asset')) {
+    eval('namespace Fleetbase\Models; function asset($path = null, $secure = null) { return "https://assets.test/" . ltrim((string) $path, "/"); }');
+}
+
 if (!function_exists('Fleetbase\Support\session')) {
     eval('namespace Fleetbase\Support; function session($key = null, $default = null) { if ($key === null) { return new class { public function has($k) { return \session($k) !== null; } public function get($k, $d = null) { return \session($k, $d); } }; } return \session($key, $default); }');
 }
@@ -244,6 +248,132 @@ function fleetopsCustomerHelperBoot(): SQLiteConnection
     app()->instance('db.schema', $schema);
     Illuminate\Support\Facades\Schema::clearResolvedInstance('db.schema');
 
+    $contractDisk = new class implements Illuminate\Contracts\Filesystem\Filesystem {
+        public array $writes = [];
+
+        public function url($path)
+        {
+            return 'https://cdn.test/' . ltrim((string) $path, '/');
+        }
+
+        public function exists($path)
+        {
+            return true;
+        }
+
+        public function get($path)
+        {
+            return '';
+        }
+
+        public function readStream($path)
+        {
+            return null;
+        }
+
+        public function put($path, $contents, $options = [])
+        {
+            $this->writes[] = $path;
+
+            return true;
+        }
+
+        public function writeStream($path, $resource, array $options = [])
+        {
+            return true;
+        }
+
+        public function getVisibility($path)
+        {
+            return 'public';
+        }
+
+        public function setVisibility($path, $visibility)
+        {
+            return true;
+        }
+
+        public function prepend($path, $data)
+        {
+            return true;
+        }
+
+        public function append($path, $data)
+        {
+            return true;
+        }
+
+        public function delete($paths)
+        {
+            return true;
+        }
+
+        public function copy($from, $to)
+        {
+            return true;
+        }
+
+        public function move($from, $to)
+        {
+            return true;
+        }
+
+        public function size($path)
+        {
+            return 0;
+        }
+
+        public function lastModified($path)
+        {
+            return time();
+        }
+
+        public function files($directory = null, $recursive = false)
+        {
+            return [];
+        }
+
+        public function allFiles($directory = null)
+        {
+            return [];
+        }
+
+        public function directories($directory = null, $recursive = false)
+        {
+            return [];
+        }
+
+        public function allDirectories($directory = null)
+        {
+            return [];
+        }
+
+        public function makeDirectory($path)
+        {
+            return true;
+        }
+
+        public function deleteDirectory($directory)
+        {
+            return true;
+        }
+    };
+    app()->instance('filesystem', new class($contractDisk) {
+        public function __construct(public $contractDisk)
+        {
+        }
+
+        public function disk($name = null)
+        {
+            return $this->contractDisk;
+        }
+
+        public function __call($method, $arguments)
+        {
+            return $this->contractDisk->{$method}(...$arguments);
+        }
+    });
+    Illuminate\Support\Facades\Storage::clearResolvedInstance('filesystem');
     config()->set('filesystems.default', 'local');
     config()->set('filesystems.disks.local', ['driver' => 'local']);
     session(['company' => 'company-1']);
@@ -560,4 +690,34 @@ test('forgot and reset password flows guard identities codes and lengths', funct
     $reset = $controller->resetPassword(Request::create('/x', 'POST', ['identity' => 'reset@example.com', 'code' => '424242', 'password' => 'brand-new-secret']));
     expect($reset->getData(true)['status'] ?? '')->toBe('ok')
         ->and($connection->table('users')->where('uuid', 'user-reset-1')->value('password'))->not->toBe('old-hash');
+});
+
+test('authenticated profile updates resolve photos and removal markers', function () {
+    $connection = fleetopsCustomerHelperBoot();
+    app()->forgetInstance(CustomerAuth::APP_BINDING);
+    $controller = new CustomerController();
+
+    // Without a bound customer the profile endpoints reject
+    $unauthenticated = $controller->updateMe(Fleetbase\FleetOps\Http\Requests\UpdateContactRequest::create('/v1/customers/me', 'PUT', ['name' => 'Nobody']));
+    expect($unauthenticated->getStatusCode())->toBe(401);
+
+    // Bind the current customer and update profile fields with a stored photo
+    $connection->table('contacts')->insert(['uuid' => '88888888-8888-4888-8888-888888888810', 'public_id' => 'contact_meupdate1', 'company_uuid' => 'company-1', 'name' => 'Profile Customer', 'email' => 'me@example.com', 'type' => 'customer']);
+    $connection->table('files')->insert(['uuid' => 'file-me-1', 'public_id' => 'file_meavatar1', 'company_uuid' => 'company-1', 'name' => 'me.png']);
+    $customer = Contact::where('uuid', '88888888-8888-4888-8888-888888888810')->first();
+    CustomerAuth::setCurrent($customer);
+
+    $updated = $controller->updateMe(Fleetbase\FleetOps\Http\Requests\UpdateContactRequest::create('/v1/customers/me', 'PUT', [
+        'name'  => 'Profile Customer Updated',
+        'phone' => '+6590001234',
+        'photo' => 'file_meavatar1',
+    ]));
+    expect($connection->table('contacts')->where('uuid', '88888888-8888-4888-8888-888888888810')->value('name'))->toBe('Profile Customer Updated')
+        ->and($connection->table('contacts')->where('uuid', '88888888-8888-4888-8888-888888888810')->value('photo_uuid'))->toBe('file-me-1');
+
+    // The REMOVE marker clears the stored photo
+    $controller->updateMe(Fleetbase\FleetOps\Http\Requests\UpdateContactRequest::create('/v1/customers/me', 'PUT', ['photo' => 'REMOVE']));
+    expect($connection->table('contacts')->where('uuid', '88888888-8888-4888-8888-888888888810')->value('photo_uuid'))->toBeNull();
+
+    app()->forgetInstance(CustomerAuth::APP_BINDING);
 });
