@@ -48,9 +48,9 @@ function fleetopsMoreSeamBoot(): SQLiteConnection
     config()->set('activitylog.default_auth_driver', 'web');
     app()->bind(Illuminate\Contracts\Config\Repository::class, fn () => config());
 
-    $columns = ['uuid', 'public_id', 'company_uuid', 'name', 'type', 'status', 'connection_uuid', 'sync_run_uuid', 'provider', 'url', 'path', 'disk', 'bucket', 'user_uuid', 'email', 'phone', 'street1', 'city', 'country', 'location', '_key'];
+    $columns = ['uuid', 'public_id', 'company_uuid', 'name', 'type', 'status', 'connection_uuid', 'sync_run_uuid', 'provider', 'url', 'path', 'disk', 'bucket', 'user_uuid', 'email', 'phone', 'street1', 'city', 'country', 'location', 'driver_uuid', 'driver_assigned_uuid', 'current_job_uuid', 'tracking', '_key'];
     $schema  = $connection->getSchemaBuilder();
-    foreach (['fuel_provider_connections', 'fuel_provider_sync_runs', 'files', 'settings', 'contacts', 'users', 'companies', 'places'] as $table) {
+    foreach (['fuel_provider_connections', 'fuel_provider_sync_runs', 'files', 'settings', 'contacts', 'users', 'companies', 'places', 'drivers', 'orders'] as $table) {
         $schema->create($table, function ($blueprint) use ($columns, $table) {
             $blueprint->increments('id');
             if ($table === 'settings') {
@@ -225,4 +225,25 @@ test('customer audit command scopes contacts to linked customer accounts', funct
 
     $query = fleetopsMoreSeamInvoke($command, $class, 'customerContactsQuery');
     expect($query->pluck('uuid')->all())->toBe(['contact-audit-1']);
+});
+
+test('index driver resource counts assigned orders and names the current one', function () {
+    $connection = fleetopsMoreSeamBoot();
+    // Drivers are globally scoped to those with a surviving user account
+    $connection->table('users')->insert(['uuid' => 'user-res-1', 'company_uuid' => 'company-seam-2']);
+    $connection->table('drivers')->insert(['uuid' => 'driver-res-1', 'public_id' => 'driver_resone', 'company_uuid' => 'company-seam-2', 'user_uuid' => 'user-res-1', 'current_job_uuid' => 'order-res-1']);
+    $connection->table('orders')->insert([
+        ['uuid' => 'order-res-1', 'public_id' => 'order_resone', 'company_uuid' => 'company-seam-2', 'driver_assigned_uuid' => 'driver-res-1'],
+        ['uuid' => 'order-res-2', 'public_id' => 'order_restwo', 'company_uuid' => 'company-seam-2', 'driver_assigned_uuid' => 'driver-res-1'],
+        // Another driver's order must not be counted
+        ['uuid' => 'order-res-3', 'public_id' => 'order_resthree', 'company_uuid' => 'company-seam-2', 'driver_assigned_uuid' => 'driver-other'],
+    ]);
+
+    $driver   = Fleetbase\FleetOps\Models\Driver::query()->where('uuid', 'driver-res-1')->first();
+    $class    = Fleetbase\FleetOps\Http\Resources\v1\Index\Driver::class;
+    $resource = new $class($driver);
+
+    // Only this driver's orders are counted, and the current job is named
+    expect(fleetopsMoreSeamInvoke($resource, $class, 'assignedOrdersCount'))->toBe(2)
+        ->and(fleetopsMoreSeamInvoke($resource, $class, 'currentOrderReference'))->toBe('order_resone');
 });
