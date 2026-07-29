@@ -181,13 +181,32 @@ class TrackingNumberController extends Controller
 
     protected function findQrModel(array $tables, array $where)
     {
+        // Hydrate through the eloquent models so the resolved record can be
+        // wrapped in its typed resource — raw rows have no model class.
+        $modelMap = [
+            'entities' => \Fleetbase\FleetOps\Models\Entity::class,
+            'orders'   => \Fleetbase\FleetOps\Models\Order::class,
+        ];
+
+        foreach ($tables as $table) {
+            $modelClass = $modelMap[$table] ?? null;
+            if (!$modelClass) {
+                continue;
+            }
+
+            $model = $modelClass::where($where)->first();
+            if ($model) {
+                return $model;
+            }
+        }
+
         return Utils::findModel($tables, $where);
     }
 
     protected function qrModelResource($model)
     {
         $modelType         = class_basename($model);
-        $resourceNamespace = '\\Fleetbase\\Http\\Resources\\v1\\' . $modelType;
+        $resourceNamespace = '\\Fleetbase\\FleetOps\\Http\\Resources\\v1\\' . $modelType;
 
         return new $resourceNamespace($model);
     }
