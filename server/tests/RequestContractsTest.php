@@ -858,6 +858,16 @@ namespace {
             ->and(ruleStrings($rateRules['peak_hours_percent']))->toContain('required', 'integer')
             ->and(ruleStrings($rateRules['peak_hours_start']))->toContain('required', 'date_format:H:i')
             ->and(ruleStrings($rateRules['peak_hours_end']))->toContain('required', 'date_format:H:i');
+
+        // A street address alone satisfies the name requirement on create, and
+        // updates never require either field since the record already exists
+        $streetOnlyPlaceRules = CreatePlaceRequest::create('/fleetops-test', 'POST', ['street1' => '1 Marina Boulevard'])->rules();
+        $updatePlaceRules     = CreatePlaceRequest::create('/fleetops-test', 'PUT')->rules();
+
+        expect(ruleStrings($streetOnlyPlaceRules['name']))->toContain('nullable')
+            ->and(ruleStrings($streetOnlyPlaceRules['street1']))->toContain('required')
+            ->and(ruleStrings($updatePlaceRules['name']))->toContain('nullable')
+            ->and(ruleStrings($updatePlaceRules['street1']))->toContain('nullable');
     });
 
     test('issue vendor dispatch and verification requests expose session authorization and validation contracts', function () {
