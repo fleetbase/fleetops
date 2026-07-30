@@ -154,7 +154,10 @@ test('spatial casts preserve valid geometry expressions and geojson payloads', f
     $sqlExpression    = new Expression("ST_PointFromText('POINT(106.9338169 47.9131423)')");
 
     expect($polygonCast->get($model, 'border', 'stored-polygon', []))->toBe('stored-polygon')
-        ->and($polygonCast->set($model, 'border', $polygon, []))->toBe($polygon)
+        // Polygon wraps in a SpatialExpression like the Point and MultiPolygon
+        // casts do; BaseBuilder::cleanBindings() relies on that wrapper to supply
+        // the WKT and SRID bindings for ST_GeomFromText(?, ?)
+        ->and($polygonCast->set($model, 'border', $polygon, []))->toBeInstanceOf(SpatialExpression::class)
         ->and($polygonCast->set($model, 'border_expression', new SpatialExpression($polygon), []))->toBeInstanceOf(SpatialExpression::class)
         ->and($polygonCast->set($model, 'border_geojson', $polygonGeoJson, []))->toBeInstanceOf(SpatialPolygon::class)
         ->and($multiPolygonCast->get($model, 'coverage', 'stored-multipolygon', []))->toBe('stored-multipolygon')
@@ -168,4 +171,50 @@ test('spatial casts preserve valid geometry expressions and geojson payloads', f
         ->and($pointCast->set($model, 'location_coordinates', '47.9131423,106.9338169', []))->toBeInstanceOf(Point::class)
         ->and($pointCast->set($model, 'location_expression', $pointExpression, []))->toBe($pointExpression)
         ->and($pointCast->set($model, 'location_empty', 'notcoordinates', []))->toBeInstanceOf(SpatialExpression::class);
+});
+
+test('spatial cast output expands into wkt and srid query bindings', function () {
+    $model             = new stdClass();
+    $model->geometries = [];
+
+    $polygon = SpatialPolygon::fromJson(json_encode([
+        'type'        => 'Polygon',
+        'coordinates' => [[
+            [103.85, 1.35],
+            [103.95, 1.35],
+            [103.95, 1.45],
+            [103.85, 1.35],
+        ]],
+    ]));
+
+    // This is what makes the wrapper matter. Writes bind through BaseBuilder,
+    // whose cleanBindings() turns a SpatialExpression into the two bindings that
+    // ST_GeomFromText(?, ?) needs. A bare geometry is passed through untouched
+    // and PDO cannot bind it — Geometry has no __toString — so an update would
+    // fail. Inserts happen to survive either way because performInsert() wraps
+    // the attribute itself, which is why an insert test cannot catch this.
+    $builder = (new ReflectionClass(Fleetbase\LaravelMysqlSpatial\Eloquent\BaseBuilder::class))->newInstanceWithoutConstructor();
+
+    foreach ([
+        'polygon'      => (new Polygon())->set($model, 'border', $polygon, []),
+        'multipolygon' => (new MultiPolygon())->set($model, 'coverage', SpatialMultiPolygon::fromJson(json_encode([
+            'type'        => 'MultiPolygon',
+            'coordinates' => [[[
+                [103.85, 1.35],
+                [103.95, 1.35],
+                [103.95, 1.45],
+                [103.85, 1.35],
+            ]]],
+        ])), []),
+        'point' => (new PointCast())->set($model, 'location', new Point(1.35, 103.85), []),
+    ] as $label => $castOutput) {
+        expect($castOutput)->toBeInstanceOf(SpatialExpression::class);
+
+        $bindings = $builder->cleanBindings([$castOutput]);
+
+        expect($bindings)->toHaveCount(2)
+            ->and($bindings[0])->toBeString()
+            ->and($bindings[0])->toContain('(')
+            ->and($bindings[1])->toBeInt();
+    }
 });
