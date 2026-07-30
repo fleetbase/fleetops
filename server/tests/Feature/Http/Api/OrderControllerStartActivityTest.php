@@ -512,8 +512,6 @@ test('create builds payloads with waypoints and resolves customer uuids', functi
 
     // Customer contact creation is attempted; the harness user-provisioning
     // gap surfaces through the generic customer failure response
-    // Customer contact creation is attempted; the harness user-provisioning
-    // gap surfaces through the generic customer failure response
     expect($created->getData(true)['error'] ?? '')->toContain('customer');
 
     // Staff identities conflict before any contact is created
@@ -526,6 +524,35 @@ test('create builds payloads with waypoints and resolves customer uuids', functi
         'payload'  => ['pickup' => 'place-p', 'dropoff' => 'place-d'],
     ]));
     expect($conflicted->getData(true)['error'] ?? '')->not->toBeEmpty();
+});
+
+test('create builds a payload from top level places and defaults the order type', function () {
+    $connection = fleetopsOrderStartBoot();
+    fleetopsOrderStartSeedOrder($connection);
+    $connection->table('places')->insert(['uuid' => 'place-r', 'company_uuid' => 'company-1', 'name' => 'Return Depot']);
+    $connection->table('orders')->delete();
+    $connection->table('payloads')->delete();
+
+    // With no `payload` key the pickup/dropoff/return are read off the request
+    // root, and an order with no explicit type falls back to transport
+    (new OrderController())->create(CreateOrderRequest::create('/v1/orders', 'POST', [
+        'pickup'  => 'place-p',
+        'dropoff' => 'place-d',
+        'return'  => 'place-r',
+    ]));
+
+    // Each key is resolved through Place::createFromMixed, so the payload ends up
+    // pointing at three distinct places rather than the raw keys
+    $payload = $connection->table('payloads')->first();
+    expect($payload)->not->toBeNull()
+        ->and($payload->pickup_uuid)->not->toBeNull()
+        ->and($payload->dropoff_uuid)->not->toBeNull()
+        ->and($payload->return_uuid)->not->toBeNull()
+        ->and([$payload->pickup_uuid, $payload->dropoff_uuid, $payload->return_uuid])
+            ->toHaveCount(count(array_unique([$payload->pickup_uuid, $payload->dropoff_uuid, $payload->return_uuid])))
+        // the pickup callback also primes the payload's current waypoint
+        ->and($payload->current_waypoint_uuid)->toBe($payload->pickup_uuid)
+        ->and($connection->table('orders')->value('type'))->toBe('transport');
 });
 
 test('adhoc start assigns the driver and primes multi-stop payloads', function () {
