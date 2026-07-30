@@ -137,4 +137,18 @@ test('tracking number helpers look up owners create records and wrap resources',
     $qrModel = $helper('findQrModel', ['entities'], ['public_id' => 'entity_tnhelper1']);
     expect($qrModel)->not->toBeNull()
         ->and($helper('qrModelResource', $qrModel))->toBeInstanceOf(Fleetbase\FleetOps\Http\Resources\v1\Entity::class);
+
+    // Tables with no eloquent mapping are skipped and fall back to a raw row
+    // lookup, so the record still resolves but arrives unhydrated
+    $connection->table('tracking_statuses')->insert([
+        'uuid'      => '44444444-4444-4444-8444-444444444403',
+        'public_id' => 'tracking_status_tnhelper1',
+        'code'      => 'DISPATCHED',
+        'status'    => 'Dispatched',
+    ]);
+
+    $unmapped = $helper('findQrModel', ['tracking_statuses'], ['public_id' => 'tracking_status_tnhelper1']);
+    expect($unmapped)->not->toBeNull()
+        ->and($unmapped)->not->toBeInstanceOf(EloquentModel::class)
+        ->and($unmapped->uuid)->toBe('44444444-4444-4444-8444-444444444403');
 });
