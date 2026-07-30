@@ -166,6 +166,27 @@ test('schedule lookups and calendar queries resolve records', function () {
     expect(fn () => $probe->callHelper('icalResponse', 'BEGIN:VCALENDAR', ['Content-Type' => 'text/calendar']))->toThrow(TypeError::class);
 });
 
+test('the calendar feed defaults to a ninety day window from today', function () {
+    $connection = fleetopsMaintScheduleBoot();
+    $connection->table('maintenance_schedules')->insert([
+        // inside the default window
+        ['uuid' => 'ms-cal-1', 'public_id' => 'schedule_calnear', 'company_uuid' => 'company-1', 'name' => 'Near Service', 'status' => 'active', 'next_due_date' => Carbon::today()->addDays(10)->toDateTimeString()],
+        // beyond the default 90 day window, so it cannot produce an occurrence
+        ['uuid' => 'ms-cal-2', 'public_id' => 'schedule_calfar', 'company_uuid' => 'company-1', 'name' => 'Far Service', 'status' => 'active', 'next_due_date' => Carbon::today()->addDays(200)->toDateTimeString()],
+    ]);
+
+    // With no start/end supplied the window falls back to today through today+90
+    $feed = (new MaintenanceScheduleController())
+        ->calendarFeed(Request::create('/int/v1/maintenance-schedules/calendar-feed', 'GET'));
+
+    $events = $feed->getData(true)['events'];
+    $uuids  = collect($events)->pluck('uuid')->unique()->values()->all();
+
+    expect($events)->not->toBeEmpty()
+        ->and($uuids)->toContain('ms-cal-1')
+        ->and($uuids)->not->toContain('ms-cal-2');
+});
+
 test('work orders derive from schedule attributes', function () {
     $connection = fleetopsMaintScheduleBoot();
     $connection->table('maintenance_schedules')->insert([

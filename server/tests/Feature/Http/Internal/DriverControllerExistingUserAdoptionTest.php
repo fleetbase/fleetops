@@ -512,6 +512,20 @@ test('auth can resolves real permissions for requests and ping guards', function
     $canPing->setAccessible(true);
     expect($canPing->invoke($orderController))->toBeTrue();
 
+    // Creating an order is gated on its own permission, which was never granted
+    expect((new Fleetbase\FleetOps\Http\Requests\Internal\CreateOrderRequest())->authorize())->toBeFalse();
+
+    // Global search consults the same gate per result type. This user is not an
+    // admin and holds no `see` permissions, so every requested type is skipped
+    // and nothing is searched rather than leaking unpermitted records
+    $searchController = new Fleetbase\FleetOps\Http\Controllers\Internal\v1\SearchController();
+    $searchResponse   = $searchController->search(Request::create('/int/v1/search', 'GET', [
+        'query' => 'anything',
+        'types' => 'orders,drivers',
+    ]));
+
+    expect($searchResponse->getData(true))->toBe(['results' => []]);
+
     session(['user' => null]);
 });
 
