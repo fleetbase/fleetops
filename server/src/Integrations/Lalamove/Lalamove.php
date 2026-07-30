@@ -116,10 +116,6 @@ class Lalamove
 
     public static function __callStatic($name, $arguments)
     {
-        if ($name === 'instance') {
-            return static::instance(...$arguments);
-        }
-
         $sandbox = false;
 
         if (Str::contains($name, 'FromSandbox')) {

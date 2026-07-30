@@ -161,15 +161,11 @@ class Order extends FleetbaseResource
             return null;
         }
 
-        // Use Find to get the appropriate resource class for this model
+        // Find::httpResourceForModel() always resolves a class, falling back to
+        // FleetbaseResource, so there is no un-resolvable case to handle here
         $resourceClass = \Fleetbase\Support\Find::httpResourceForModel($model);
 
-        if ($resourceClass) {
-            return (new $resourceClass($model))->resolve();
-        }
-
-        // Fallback to generic resource
-        return (new \Illuminate\Http\Resources\Json\JsonResource($model))->resolve();
+        return (new $resourceClass($model))->resolve();
     }
 
     /**

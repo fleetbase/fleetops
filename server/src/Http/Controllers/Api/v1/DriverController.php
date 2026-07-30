@@ -72,14 +72,8 @@ class DriverController extends Controller
         // create user account for driver
         $user = $this->createUser($userDetails);
 
-        // Assign company
-        if ($company) {
-            $user->assignCompany($company);
-        } else {
-            $user->deleteQuietly();
-
-            return $this->apiError('Unable to assign driver to company.');
-        }
+        // Assign company — already guaranteed non-null by the guard above
+        $user->assignCompany($company);
 
         // Set user type
         $user->setUserType('driver');

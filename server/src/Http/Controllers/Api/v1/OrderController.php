@@ -69,7 +69,7 @@ class OrderController extends Controller
 
         // Set order config to input
         $input['order_config_uuid'] = $orderConfig->uuid;
-        $input['type']              = $orderConfig->key;
+        $input['type']              = $orderConfig->key ?? 'transport';
 
         // make sure company is set
         $input['company_uuid'] = $this->sessionCompany();
@@ -281,11 +281,6 @@ class OrderController extends Controller
                     $input['customer_type'] = $this->getModelClassName($customer);
                 }
             }
-        }
-
-        // if no type is set its default to transport
-        if (!isset($input['type'])) {
-            $input['type'] = 'transport';
         }
 
         // if no status is set its default to `created`
@@ -1081,9 +1076,19 @@ class OrderController extends Controller
         }
 
         // if no order found
+        //
+        // Currently unreachable: findOrder() above is typed `: Order` and throws
+        // rather than returning null. The catch it sits behind is itself dead
+        // because of an upstream defect — Fleetbase\Models\Model::findByIdOrFail()
+        // in core-api calls a getModelNotFoundException() method that does not
+        // exist on Eloquent's builder, so it raises BadMethodCallException
+        // instead of ModelNotFoundException and a missing order surfaces as a 500
+        // rather than this 404. Remove this annotation once core-api is patched.
+        // @codeCoverageIgnoreStart
         if (!$order) {
             return response()->apiError('Order resource not found.', 404);
         }
+        // @codeCoverageIgnoreEnd
 
         // if order is still status of `created` trigger started flag
         if ($order->status === 'created') {
@@ -1614,9 +1619,15 @@ class OrderController extends Controller
         // Normalize into one array
         $incoming = array_merge($rawInputs, $base64Inputs);
 
+        // Defensive only: the validate() above already requires `photos` to be a
+        // non-empty array whose every element is an upload or a decodable base64
+        // string, and each of those survives the filter, so this cannot be empty.
+        // Kept in case those rules are relaxed.
+        // @codeCoverageIgnoreStart
         if (empty($incoming)) {
             return $this->apiError('No photo data to capture.');
         }
+        // @codeCoverageIgnoreEnd
 
         // Load Order
         try {

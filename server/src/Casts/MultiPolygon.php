@@ -5,7 +5,6 @@ namespace Fleetbase\FleetOps\Casts;
 use Fleetbase\FleetOps\Support\Utils;
 use Fleetbase\LaravelMysqlSpatial\Eloquent\SpatialExpression;
 use Fleetbase\LaravelMysqlSpatial\Types\GeometryInterface;
-use Fleetbase\LaravelMysqlSpatial\Types\MultiPolygon as SpatialMultiPolygon;
 use Illuminate\Contracts\Database\Eloquent\CastsAttributes;
 
 class MultiPolygon implements CastsAttributes
@@ -35,12 +34,6 @@ class MultiPolygon implements CastsAttributes
             $model->geometries[$key] = $value;
 
             return new SpatialExpression($value);
-        }
-
-        if ($value instanceof SpatialMultiPolygon) {
-            $model->geometries[$key] = $value;
-
-            return $value;
         }
 
         if (Utils::isGeoJson($value)) {

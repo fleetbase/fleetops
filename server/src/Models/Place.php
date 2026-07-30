@@ -713,11 +713,6 @@ class Place extends Model
         }
         // If $place is an array
         elseif (is_array($place)) {
-            // If $place is an array of coordinates, create a new Place object
-            if (Utils::isCoordinatesStrict($place)) {
-                return static::createFromCoordinates($place, $attributes, $saveInstance);
-            }
-
             // Get uuid if set
             $uuid = data_get($place, 'uuid');
 
@@ -792,12 +787,11 @@ class Place extends Model
                 }
             }
 
-            // handle address if set
-            if (!empty($place['address'])) {
-                return static::insertFromGeocodingLookup($place['address']);
-            }
-
             return static::insertFromGeocodingLookup($place);
+        } elseif ($place instanceof \Geocoder\Provider\GoogleMaps\Model\GoogleAddress) {
+            // Must be tested before the array/object arm below, which would
+            // otherwise swallow it and flatten it to an array
+            return static::insertFromGoogleAddress($place);
         } elseif (is_array($place) || is_object($place)) {
             // if place already exists just return uuid
             if (static::isValidPlaceUuid(data_get($place, 'uuid'))) {
@@ -815,14 +809,17 @@ class Place extends Model
 
             $values = is_array($place) ? $place : (array) $place;
 
+            // handle address if set
+            if (!empty($values['address'])) {
+                return static::insertFromGeocodingLookup($values['address']);
+            }
+
             if ($existingPlace = static::findExistingSharedPlace($values)) {
                 return $existingPlace->uuid;
             }
 
             // create a new place
             return static::insertGetUuid((array) $values);
-        } elseif ($place instanceof \Geocoder\Provider\GoogleMaps\Model\GoogleAddress) {
-            return static::insertFromGoogleAddress($place);
         }
     }
 

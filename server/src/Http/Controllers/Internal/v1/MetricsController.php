@@ -108,16 +108,10 @@ class MetricsController extends Controller
             }
         }
 
+        // $request->date() yields a Carbon (a DateTime) or null, and both
+        // fallbacks are DateTime, so these are always DateTime instances
         $start = $request->date('start') ?? Carbon::now()->subDays(30)->toDateTime();
         $end   = $request->date('end') ?? Carbon::now()->toDateTime();
-
-        if (!$start instanceof \DateTime) {
-            $start = Carbon::parse($start)->toDateTime();
-        }
-
-        if (!$end instanceof \DateTime) {
-            $end = Carbon::parse($end)->toDateTime();
-        }
 
         return [$start, $end];
     }

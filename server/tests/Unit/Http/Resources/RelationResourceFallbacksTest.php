@@ -9,12 +9,11 @@ use Fleetbase\FleetOps\Http\Resources\v1\TrackingStatus;
  * relation off the underlying model; with nothing model-like to load from, the
  * accessor must fall through to null rather than error.
  *
- * Each accessor also has a middle branch guarded by
- * `method_exists($this, 'loadMissing')`. That can never be true: no class in the
- * resource hierarchy (PurchaseRate/TrackingStatus -> FleetbaseResource ->
- * JsonResource) declares `loadMissing`, it is only reachable through the
- * `__call` forwarding that `method_exists` does not see. Those branch bodies are
- * therefore unreachable, and only the guard itself executes.
+ * Each accessor previously carried a middle branch guarded by
+ * `method_exists($this, 'loadMissing')`, which could never be true: no class in
+ * the resource hierarchy (PurchaseRate/TrackingStatus -> FleetbaseResource ->
+ * JsonResource) declares `loadMissing`, it only resolves through `__call`, which
+ * `method_exists` does not see. That branch has since been removed.
  */
 test('relation accessors fall through to null without a loadable model', function () {
     // A resource wrapping nothing at all has no relation to resolve
