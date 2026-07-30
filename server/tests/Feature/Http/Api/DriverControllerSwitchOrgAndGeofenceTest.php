@@ -256,6 +256,14 @@ test('driver company resolution and response seams execute their bodies', functi
     $static = new ReflectionMethod(DriverController::class, 'getDriverCompanyFromUser');
     $static->setAccessible(true);
     expect($static->invoke(null, $user)?->uuid)->toBe('company-1');
+
+    // A user with no driver profile at all skips the profile lookup entirely
+    // and resolves the company through the session fallback instead
+    $connection->table('users')->insert(['uuid' => 'user-2', 'public_id' => 'user_drvseam2', 'company_uuid' => 'company-1', 'name' => 'Dana', 'type' => 'user']);
+    $connection->table('company_users')->insert(['uuid' => 'cu-2', 'company_uuid' => 'company-1', 'user_uuid' => 'user-2', 'status' => 'active']);
+    $profileless = Fleetbase\Models\User::where('uuid', 'user-2')->first();
+
+    expect($static->invoke(null, $profileless)?->uuid)->toBe('company-1');
 });
 
 test('verify code issues driver tokens and stores auth references', function () {

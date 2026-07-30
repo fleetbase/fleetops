@@ -475,12 +475,14 @@ test('auth can resolves real permissions for requests and ping guards', function
     $connection->table('permissions')->insert([
         ['name' => 'fleet-ops update driver', 'guard_name' => 'sanctum'],
         ['name' => 'fleet-ops update order', 'guard_name' => 'sanctum'],
+        ['name' => 'fleet-ops create driver', 'guard_name' => 'sanctum'],
     ]);
     $companyUserMorph = (new Fleetbase\Models\CompanyUser())->getMorphClass();
     $permissionIds    = $connection->table('permissions')->pluck('id', 'name');
     $connection->table('model_has_permissions')->insert([
         ['permission_id' => $permissionIds['fleet-ops update driver'], 'model_type' => $companyUserMorph, 'model_uuid' => '77777777-7777-4777-8777-777777777702'],
         ['permission_id' => $permissionIds['fleet-ops update order'], 'model_type' => $companyUserMorph, 'model_uuid' => '77777777-7777-4777-8777-777777777702'],
+        ['permission_id' => $permissionIds['fleet-ops create driver'], 'model_type' => $companyUserMorph, 'model_uuid' => '77777777-7777-4777-8777-777777777702'],
     ]);
     session(['company' => 'company-1', 'user' => '77777777-7777-4777-8777-777777777701']);
 
@@ -491,6 +493,11 @@ test('auth can resolves real permissions for requests and ping guards', function
     // The update driver form request authorizes through the same gate
     $updateRequest = new Fleetbase\FleetOps\Http\Requests\Internal\UpdateDriverRequest();
     expect($updateRequest->authorize())->toBeTrue();
+
+    // Create-driver is granted, create-order-config was never granted, so the
+    // two internal create requests resolve opposite ways through one gate
+    expect((new Fleetbase\FleetOps\Http\Requests\Internal\CreateDriverRequest())->authorize())->toBeTrue()
+        ->and((new Fleetbase\FleetOps\Http\Requests\Internal\CreateOrderConfigRequest())->authorize())->toBeFalse();
 
     // Fleet action requests resolve their permission through the same gate
     $fleetRequest = Fleetbase\FleetOps\Http\Requests\Internal\FleetActionRequest::create('/int/v1/fleets/assign-vehicle', 'POST');
