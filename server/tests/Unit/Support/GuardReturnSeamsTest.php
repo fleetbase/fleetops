@@ -72,6 +72,43 @@ test('maintenance efficiency needs both actual and estimated durations', functio
         ->and($maintenance->getEfficiencyRating())->toBeNull();
 });
 
+test('revenue exclusions skip tables the schema does not have', function () {
+    // A connection with no orders table means there is nothing to exclude, so the
+    // query must be left alone rather than referencing a missing table
+    $connection = new Illuminate\Database\SQLiteConnection(new PDO('sqlite::memory:'));
+    $resolver   = new Illuminate\Database\ConnectionResolver(['default' => $connection, 'mysql' => $connection]);
+    $resolver->setDefaultConnection('mysql');
+    Illuminate\Database\Eloquent\Model::setConnectionResolver($resolver);
+    app()->instance('db', new class($connection) {
+        public function __construct(public $c)
+        {
+        }
+
+        public function connection($name = null)
+        {
+            return $this->c;
+        }
+
+        public function __call($method, $arguments)
+        {
+            return $this->c->{$method}(...$arguments);
+        }
+    });
+    Illuminate\Support\Facades\DB::clearResolvedInstance('db');
+    Illuminate\Support\Facades\Schema::clearResolvedInstances();
+    app()->instance('db.schema', $connection->getSchemaBuilder());
+
+    // Deliberately create no `orders` table so the schema guard trips
+    $query  = Vehicle::query();
+    $before = $query->toSql();
+
+    $reflection = new ReflectionMethod(Fleetbase\FleetOps\Support\Metrics\ActiveRevenueQuery::class, 'excludeInactiveOrders');
+    $reflection->setAccessible(true);
+    $reflection->invoke(null, $query);
+
+    expect($query->toSql())->toBe($before);
+});
+
 test('non transferable warranties refuse to move to a new subject', function () {
     $warranty = new Warranty();
     $warranty->setRawAttributes([
