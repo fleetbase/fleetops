@@ -83,3 +83,43 @@ test('service area converts populated borders into geotools and geos shapes', fu
         ->and($polygon)->toBeInstanceOf(Brick\Geo\Polygon::class)
         ->and($geosMulti)->toBeInstanceOf(Brick\Geo\MultiPolygon::class);
 });
+
+test('service area builds a geotools polygon around its own center', function () {
+    // Centroid/location accessors resolve through an injected engine because the
+    // native GEOS extension is unavailable in this harness
+    Brick\Geo\Engine\GeometryEngineRegistry::set(new class(new PDO('sqlite::memory:'), false) extends Brick\Geo\Engine\PDOEngine {
+        public function centroid(Brick\Geo\Geometry $g): Brick\Geo\Point
+        {
+            return Brick\Geo\Point::xy(1.35, 103.85);
+        }
+    });
+
+    $area = new ServiceArea();
+    $area->setRawAttributes(['border' => fleetopsServiceAreaUnitBorder()], true);
+
+    // The center is the border's centroid rather than a stored point, so the
+    // ring is built around the injected engine's answer
+    $polygon = $area->createPolygonFromCenter(250);
+
+    expect($polygon)->toBeInstanceOf(League\Geotools\Polygon\Polygon::class)
+        ->and($area->latitude)->toBe(1.35)
+        ->and($area->longitude)->toBe(103.85)
+        ->and(count($polygon->getCoordinates()))->toBeGreaterThan(3);
+});
+
+test('service area centroids fall back to the null island without a border', function () {
+    Brick\Geo\Engine\GeometryEngineRegistry::set(new class(new PDO('sqlite::memory:'), false) extends Brick\Geo\Engine\PDOEngine {
+        public function centroid(Brick\Geo\Geometry $g): Brick\Geo\Point
+        {
+            return Brick\Geo\Point::xy(9.9, 9.9);
+        }
+    });
+
+    $area = new ServiceArea();
+    $area->setRawAttributes(['border' => null], true);
+
+    // With no border there is no geometry to take a centroid of, so the
+    // accessor reports 0,0 rather than failing
+    expect($area->toGeosMultiPolygon())->toBeNull()
+        ->and((string) $area->getCentroid())->toBe('POINT (0 0)');
+});
