@@ -396,3 +396,32 @@ test('coordinate-only creation reverse geocodes and array owners resolve', funct
         'owner'   => ['id' => 'customer_arrown1'],
     ])))->toThrow(TypeError::class);
 });
+
+test('updating a place accepts a plain string owner id', function () {
+    $connection = fleetopsPlaceSeamsBoot();
+    $connection->table('contacts')->insert([
+        'uuid'         => '55555555-5555-4555-8555-555555555552',
+        'public_id'    => 'contact_strown1',
+        'company_uuid' => 'company-1',
+        'name'         => 'String Owner',
+    ]);
+    $connection->table('places')->insert([
+        'uuid'         => '55555555-5555-4555-8555-555555555553',
+        'public_id'    => 'place_strown1',
+        'company_uuid' => 'company-1',
+        'name'         => 'Owned Place',
+        'street1'      => 'Owner String Street',
+    ]);
+
+    // An owner passed as a bare public id is taken as the id directly, rather
+    // than being read out of an array, and resolves onto the place
+    (new PlaceController())->update(
+        'place_strown1',
+        Fleetbase\FleetOps\Http\Requests\UpdatePlaceRequest::create('/v1/places/place_strown1', 'PUT', [
+            'owner' => 'contact_strown1',
+        ])
+    );
+
+    expect($connection->table('places')->where('uuid', '55555555-5555-4555-8555-555555555553')->value('owner_uuid'))
+        ->toBe('55555555-5555-4555-8555-555555555552');
+});

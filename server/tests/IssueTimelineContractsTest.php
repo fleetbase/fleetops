@@ -16,6 +16,34 @@ class FleetOpsIssueControllerProbe extends IssueController
     }
 }
 
+/**
+ * Supplies file activities directly so the real mapping closure runs without a
+ * database behind the activity-log query.
+ */
+class FleetOpsIssueFileEventsProbe extends IssueController
+{
+    public array $fileActivities = [];
+    public array $currentFiles   = [];
+
+    public function callFileEvents(Issue $issue): Illuminate\Support\Collection
+    {
+        $reflection = new ReflectionMethod(IssueController::class, 'fileEvents');
+        $reflection->setAccessible(true);
+
+        return $reflection->invoke($this, $issue);
+    }
+
+    protected function fileActivitiesForIssue(Issue $issue): Illuminate\Support\Collection
+    {
+        return collect($this->fileActivities);
+    }
+
+    protected function filesForIssue(Issue $issue): Illuminate\Support\Collection
+    {
+        return collect($this->currentFiles);
+    }
+}
+
 function fleetopsTimelineIssue(): Issue
 {
     $issue = new Issue();
@@ -134,4 +162,30 @@ test('issue timeline change descriptions normalize uuid suffixes and blank value
         ->toBe('Driver changed from none to Driver Uuid.')
         ->and($controller->callHelper('formatChangeDescription', 'resolved_at', null, null))
         ->toBe('Resolved At changed from none to none.');
+});
+
+test('removed document events fall back to a generic name', function () {
+    $probe = new FleetOpsIssueFileEventsProbe();
+    $issue = fleetopsTimelineIssue();
+
+    $named = fleetopsTimelineActivity(['uuid' => 'activity-file-1', 'event' => 'deleted']);
+    $named->setRawAttributes(array_merge($named->getAttributes(), [
+        'properties' => json_encode(['old' => ['original_filename' => 'inspection-report.pdf']]),
+    ]), true);
+
+    $unnamed = fleetopsTimelineActivity(['uuid' => 'activity-file-2', 'event' => 'deleted']);
+    $unnamed->setRawAttributes(array_merge($unnamed->getAttributes(), [
+        'properties' => json_encode(['old' => ['subject_uuid' => 'issue-uuid']]),
+    ]), true);
+
+    // Only deleted-file activities become removal events, and one with no
+    // recorded filename still reports something rather than an empty label
+    $probe->fileActivities = [$named, $unnamed, fleetopsTimelineActivity(['uuid' => 'activity-file-3', 'event' => 'updated'])];
+
+    $descriptions = $probe->callFileEvents($issue)
+        ->where('type', 'document_removed')
+        ->pluck('description')
+        ->all();
+
+    expect($descriptions)->toBe(['inspection-report.pdf', 'Document']);
 });
