@@ -4,6 +4,14 @@ namespace Illuminate\Validation {
     if (!class_exists(Rule::class)) {
         class Rule
         {
+            /**
+             * Constraints recorded from `where()` closures, so tests can assert
+             * how a unique rule scopes its lookup.
+             *
+             * @var array<int, array<int, mixed>>
+             */
+            public array $constraints = [];
+
             public function __construct(private string $rule)
             {
             }
@@ -35,6 +43,31 @@ namespace Illuminate\Validation {
 
             public function where($callback): self
             {
+                // The real rule defers the closure to validation time against a
+                // query builder; run it now against a recorder so the scoping
+                // logic inside it is exercised rather than discarded
+                if ($callback instanceof \Closure) {
+                    $callback(new class($this) {
+                        public function __construct(private Rule $rule)
+                        {
+                        }
+
+                        public function where($column, $value = null): self
+                        {
+                            $this->rule->constraints[] = ['where', $column, $value];
+
+                            return $this;
+                        }
+
+                        public function whereNull($column): self
+                        {
+                            $this->rule->constraints[] = ['whereNull', $column];
+
+                            return $this;
+                        }
+                    });
+                }
+
                 return $this;
             }
 
@@ -582,7 +615,7 @@ namespace {
 
         expect($request->authorize())->toBeTrue();
 
-        bindFleetOpsRequestSession(['api_credential' => 'credential-uuid']);
+        bindFleetOpsRequestSession(['api_credential' => 'credential-uuid', 'company' => 'company-uuid']);
 
         $rules = $request->rules();
 
@@ -594,6 +627,19 @@ namespace {
             ->and(ruleStrings($rules['email']))->toContain('email', 'nullable', 'unique:contacts')
             ->and(ruleStrings($rules['phone']))->toContain('nullable', 'string', 'unique:contacts')
             ->and($rules['meta'])->toBe('nullable|array');
+
+        // Both uniqueness rules scope their lookup to the session company and
+        // ignore soft-deleted contacts, so a customer may reuse an email or
+        // phone freed up by a deleted record or belonging to another company
+        foreach (['email', 'phone'] as $field) {
+            $uniqueRule = collect($rules[$field])->first(fn ($rule) => $rule instanceof Illuminate\Validation\Rule);
+
+            expect($uniqueRule)->not->toBeNull()
+                ->and($uniqueRule->constraints)->toBe([
+                    ['where', 'company_uuid', 'company-uuid'],
+                    ['whereNull', 'deleted_at'],
+                ]);
+        }
     });
 
     test('part request authorizes token sessions and exposes inventory metadata rules', function () {
