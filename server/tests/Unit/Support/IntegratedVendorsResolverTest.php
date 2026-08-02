@@ -171,6 +171,29 @@ test('resolver lookup exposes magic accessors and bridge instances', function ()
     expect(IntegratedVendors::getServiceTypes(fleetopsVendorResolverModel()))->not->toBeEmpty();
 });
 
+test('integrations without a service bridge offer no service types', function () {
+    fleetopsVendorResolverBoot();
+
+    // Lalamove is the only registered integration and it does declare a
+    // service bridge, so the empty case needs one that does not.
+    $supported                    = IntegratedVendors::$supported;
+    IntegratedVendors::$supported = [[
+        'name'   => 'Serviceless',
+        'code'   => 'serviceless',
+        'host'   => 'https://api.serviceless.test/',
+        'bridge' => Fleetbase\FleetOps\Integrations\Lalamove\Lalamove::class,
+    ]];
+
+    try {
+        $vendor = new IntegratedVendor();
+        $vendor->setRawAttributes(['uuid' => 'iv-serviceless', 'provider' => 'serviceless'], true);
+
+        expect(IntegratedVendors::getServiceTypes($vendor))->toBe([]);
+    } finally {
+        IntegratedVendors::$supported = $supported;
+    }
+});
+
 test('callbacks dispatch configured bridge methods with resolved params', function () {
     fleetopsVendorResolverBoot();
     FleetOpsVendorBridgeProbe::$calls = [];

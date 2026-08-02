@@ -141,6 +141,9 @@ test('draft from prompt extracts addresses schedule notes and pod flags', functi
     $connection = fleetopsOrderPreviewBoot();
     $connection->table('places')->insert([
         ['uuid' => '11111111-1111-4111-8111-111111111111', 'public_id' => 'place_preview1', 'company_uuid' => 'company-1', 'name' => 'Warehouse A', 'street1' => '1 Industrial Way', 'city' => 'Singapore', 'country' => 'SG', 'location' => fleetopsOrderPreviewWkb(1.30, 103.80)],
+        // Both ends of the prompt resolve to saved places, so the draft carries
+        // a dropoff uuid rather than only the query it was asked about
+        ['uuid' => '77777777-7777-4777-8777-777777777777', 'public_id' => 'place_preview3', 'company_uuid' => 'company-1', 'name' => 'Depot B', 'street1' => '3 Depot Loop', 'city' => 'Singapore', 'country' => 'SG', 'location' => fleetopsOrderPreviewWkb(1.32, 103.82)],
     ]);
 
     $capability = new CreateOrderPreviewCapability();
@@ -151,6 +154,7 @@ test('draft from prompt extracts addresses schedule notes and pod flags', functi
         ->and($draft['payload']['pickup_query'])->toBe('Warehouse A')
         ->and($draft['payload']['pickup_uuid'])->toBe('11111111-1111-4111-8111-111111111111')
         ->and($draft['payload']['dropoff_query'])->toBe('Depot B')
+        ->and($draft['payload']['dropoff_uuid'])->toBe('77777777-7777-4777-8777-777777777777')
         ->and($draft['dispatched'])->toBeTrue()
         ->and($draft['scheduled_at'])->toBeString()
         ->and($draft['notes'])->toBe('handle with care')
