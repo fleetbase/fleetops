@@ -211,6 +211,28 @@ class Geocoding
         return Utils::notEmpty(config('services.google_maps.api_key'));
     }
 
+    /**
+     * The language geocoding results are returned in — Google's `language`
+     * parameter, e.g. `en`, `ru`, `es`.
+     */
+    public static function getLocale(): string
+    {
+        // `?:` rather than a config() default: the settings table stores this
+        // key, so it exists-but-empty on installs that never filled it in, and
+        // config()'s default only applies when the key is absent entirely.
+        return config('services.google_maps.locale') ?: env('GOOGLE_MAPS_LOCALE', 'en');
+    }
+
+    /**
+     * The region requests are biased towards — Google's `region` parameter.
+     * This is a ccTLD (`us`, `ru`, `sg`), not a language code, and is a
+     * separate concern from the locale above.
+     */
+    public static function getRegion(): ?string
+    {
+        return config('services.google_maps.region') ?: env('GOOGLE_MAPS_REGION', 'us');
+    }
+
     protected static function makeGeocoder(): object
     {
         // Allow an alternative geocoder (or test double) to be injected
@@ -219,10 +241,13 @@ class Geocoding
             return app('fleetops.geocoder');
         }
 
+        // Region biases which results rank highest; locale controls the
+        // language they come back in. Applying both here covers every caller
+        // rather than each construction site repeating them.
         $httpClient = new Client();
-        $provider   = new GoogleMaps($httpClient, null, config('services.google_maps.api_key', env('GOOGLE_MAPS_API_KEY')));
+        $provider   = new GoogleMaps($httpClient, static::getRegion(), config('services.google_maps.api_key', env('GOOGLE_MAPS_API_KEY')));
 
-        return new StatefulGeocoder($provider, 'en');
+        return new StatefulGeocoder($provider, static::getLocale());
     }
 
     protected static function makePlaceFromGoogleAddress($googleAddress): Place

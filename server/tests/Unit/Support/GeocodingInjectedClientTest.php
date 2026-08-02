@@ -4,6 +4,10 @@ if (!function_exists('Fleetbase\Support\session')) {
     eval('namespace Fleetbase\Support; function session($key = null, $default = null) { if ($key === null) { return new class { public function has($k) { return \session($k) !== null; } public function get($k, $d = null) { return \session($k, $d); } }; } return \session($key, $default); }');
 }
 
+if (!function_exists('Fleetbase\\FleetOps\\Support\\env')) {
+    eval('namespace Fleetbase\\FleetOps\\Support; function env($key = null, $default = null) { return $default; }');
+}
+
 if (!function_exists('Fleetbase\\Observers\\event')) {
     eval('namespace Fleetbase\\Observers; function event($event = null, $payload = []) { return []; }');
 }
@@ -242,4 +246,23 @@ test('place search swallows geocoder failures and returns empty defaults', funct
     });
     Geocoder\Laravel\Facades\Geocoder::clearResolvedInstance('geocoder');
     expect(PlaceSearch::geocode('anywhere'))->toHaveCount(0);
+});
+
+test('locale and region resolve independently from configuration', function () {
+    // Google treats these as two different parameters: `language` decides what
+    // language results come back in, `region` (a ccTLD) only biases ranking.
+    // They are read from separate config keys so setting one cannot silently
+    // change the other.
+    config()->set('services.google_maps.locale', 'ru');
+    config()->set('services.google_maps.region', 'sg');
+
+    expect(Geocoding::getLocale())->toBe('ru')
+        ->and(Geocoding::getRegion())->toBe('sg');
+
+    // Unset, each falls back to its own documented default
+    config()->set('services.google_maps.locale', null);
+    config()->set('services.google_maps.region', null);
+
+    expect(Geocoding::getLocale())->toBe('en')
+        ->and(Geocoding::getRegion())->toBe('us');
 });
