@@ -212,4 +212,9 @@ test('place search keys support coordinates location fallback and empty geocode 
     expect(fleetopsPlaceSearchInvoke('placeKey', [$placeWithoutDirectCoordinates]))->toBe('location place|2.11112,104.22223')
         ->and(fleetopsPlaceSearchInvoke('placeKey', [fleetopsSearchPlace([])]))->toBeNull()
         ->and(PlaceSearch::geocode())->toHaveCount(0);
+
+    // Coordinates alone clear the first guard, but without a Google key the
+    // remaining path is text-only geocoding — which has nothing to search on.
+    config()->set('services.google_maps.api_key', null);
+    expect(PlaceSearch::geocode(null, 1.29027, 103.851959))->toHaveCount(0);
 });

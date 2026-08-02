@@ -143,6 +143,17 @@ test('live cache service invalidates endpoints with version bumps and optional t
     expect($cache->increments)->toBe(['live:company-1:vehicles:version'])
         ->and($cache->tags)->toBe([['live:company-1', 'live:company-1:vehicles']])
         ->and($cache->taggedCache->calls)->toBe([['flush']]);
+
+    // Stores without tag support still get the version bump, which is what
+    // actually invalidates; the failed flush is swallowed.
+    $untagged              = new FleetOpsLiveCacheFake();
+    $untagged->throwOnTags = true;
+    Cache::swap($untagged);
+
+    LiveCacheService::invalidate('vehicles');
+
+    expect($untagged->increments)->toBe(['live:company-1:vehicles:version'])
+        ->and($untagged->tags)->toBe([['live:company-1', 'live:company-1:vehicles']]);
 });
 
 test('live cache service invalidates all endpoints and ignores unsupported tag flushes', function () {

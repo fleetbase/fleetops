@@ -17,8 +17,16 @@ if (!function_exists('Fleetbase\Support\session')) {
     eval('namespace Fleetbase\Support; function session($key = null, $default = null) { if ($key === null) { return new class { public function has($k) { return \session($k) !== null; } public function get($k, $d = null) { return \session($k, $d); } }; } return \session($key, $default); }');
 }
 
+if (!function_exists('Fleetbase\Observers\event')) {
+    eval('namespace Fleetbase\Observers; function event($event = null) { return $event; }');
+}
+
 function fleetopsMoreSeamBoot(): SQLiteConnection
 {
+    if (!Illuminate\Support\Str::hasMacro('humanize')) {
+        Illuminate\Support\Str::macro('humanize', fn ($value, $uppercase = true) => str_replace('_', ' ', Illuminate\Support\Str::snake((string) $value)));
+    }
+
     $connection = new SQLiteConnection(new PDO('sqlite::memory:'));
     $resolver   = new ConnectionResolver(['default' => $connection, 'mysql' => $connection]);
     $resolver->setDefaultConnection('mysql');
@@ -52,7 +60,7 @@ function fleetopsMoreSeamBoot(): SQLiteConnection
     config()->set('activitylog.default_auth_driver', 'web');
     app()->bind(Illuminate\Contracts\Config\Repository::class, fn () => config());
 
-    $columns = ['uuid', 'public_id', 'company_uuid', 'name', 'type', 'status', 'connection_uuid', 'sync_run_uuid', 'provider', 'url', 'path', 'disk', 'bucket', 'user_uuid', 'email', 'phone', 'street1', 'city', 'country', 'location', 'driver_uuid', 'driver_assigned_uuid', 'current_job_uuid', 'tracking', 'username', 'timezone', 'slug', 'password', 'avatar_uuid', 'model_uuid', 'model_type', 'role_id', 'permission_id', 'guard_name', '_key'];
+    $columns = ['uuid', 'public_id', 'company_uuid', 'name', 'type', 'status', 'connection_uuid', 'sync_run_uuid', 'provider', 'url', 'path', 'disk', 'bucket', 'user_uuid', 'email', 'phone', 'street1', 'city', 'country', 'location', 'driver_uuid', 'driver_assigned_uuid', 'current_job_uuid', 'tracking', 'username', 'timezone', 'slug', 'password', 'avatar_uuid', 'model_uuid', 'model_type', 'role_id', 'permission_id', 'guard_name', '_key', 'uploader_uuid', 'original_filename', 'content_type', 'subject_uuid', 'subject_type', 'file_size', 'caption'];
     $schema  = $connection->getSchemaBuilder();
     foreach (['fuel_provider_connections', 'fuel_provider_sync_runs', 'files', 'settings', 'contacts', 'users', 'companies', 'places', 'drivers', 'orders', 'company_users', 'roles', 'permissions', 'model_has_roles', 'model_has_permissions', 'role_has_permissions'] as $table) {
         $schema->create($table, function ($blueprint) use ($columns, $table) {
@@ -186,6 +194,113 @@ test('driving simulation seams build and chain waypoint jobs', function () {
     // Each waypoint becomes its own follow-up job carrying the extra data
     $made = fleetopsMoreSeamInvoke($job, $class, 'makeWaypointReachedJob', [$waypoint, ['index' => 3]]);
     expect($made)->toBeInstanceOf(Fleetbase\FleetOps\Jobs\SimulateWaypointReached::class);
+
+    // Chaining hands the whole run to the queue. No queue connection is
+    // configured in the harness, so the dispatch fails inside the queue
+    // manager — after the chain has been built and handed over.
+    expect(fn () => fleetopsMoreSeamInvoke($job, $class, 'dispatchWaypointChain', [$waypoint, [$made]]))
+        ->toThrow(Error::class);
+});
+
+test('shift change listener resolves the schedule and notifies the driver', function () {
+    $connection = fleetopsMoreSeamBoot();
+    $connection->getSchemaBuilder()->create('schedules', function ($blueprint) {
+        $blueprint->increments('id');
+        foreach (['uuid', 'public_id', 'company_uuid', 'subject_uuid', 'subject_type', 'name'] as $column) {
+            $blueprint->string($column)->nullable();
+        }
+        $blueprint->timestamps();
+        $blueprint->timestamp('deleted_at')->nullable();
+    });
+    $connection->getSchemaBuilder()->create('schedule_items', function ($blueprint) {
+        $blueprint->increments('id');
+        foreach (['uuid', 'public_id', 'company_uuid', 'schedule_uuid', 'name'] as $column) {
+            $blueprint->string($column)->nullable();
+        }
+        $blueprint->timestamps();
+        $blueprint->timestamp('deleted_at')->nullable();
+    });
+    $connection->table('schedules')->insert(['uuid' => 'schedule-seam-1', 'company_uuid' => 'company-seam-2', 'name' => 'Morning Shift']);
+
+    $class    = Fleetbase\FleetOps\Listeners\NotifyDriverOnShiftChange::class;
+    $listener = (new ReflectionClass($class))->newInstanceWithoutConstructor();
+
+    $scheduleItem = new Fleetbase\Models\ScheduleItem();
+    $scheduleItem->setRawAttributes(['uuid' => 'schedule-item-seam-1', 'schedule_uuid' => 'schedule-seam-1'], true);
+
+    expect(fleetopsMoreSeamInvoke($listener, $class, 'getSchedule', [$scheduleItem])?->uuid)->toBe('schedule-seam-1');
+
+    // Items whose schedule has gone away resolve to nothing
+    $orphan = new Fleetbase\Models\ScheduleItem();
+    $orphan->setRawAttributes(['uuid' => 'schedule-item-seam-2', 'schedule_uuid' => 'schedule-missing'], true);
+    expect(fleetopsMoreSeamInvoke($listener, $class, 'getSchedule', [$orphan]))->toBeNull();
+
+    // Delivery goes through the driver's own notification routing, which has
+    // no channel configured here — the send is attempted regardless.
+    $driver = new Fleetbase\FleetOps\Models\Driver();
+    $driver->setRawAttributes(['uuid' => 'driver-shift-1', 'public_id' => 'driver_shiftone'], true);
+
+    $notification = new Fleetbase\FleetOps\Notifications\DriverShiftChanged($scheduleItem, true);
+    expect(fn () => fleetopsMoreSeamInvoke($listener, $class, 'notifyDriver', [$driver, $notification]))
+        ->toThrow(Exception::class);
+});
+
+test('fuel provider registry registers a descriptor per configured provider', function () {
+    config()->set('fuel-providers.providers', [
+        ['key' => 'petroapp', 'label' => 'PetroApp'],
+        ['key' => 'acme_fuel', 'label' => 'Acme Fuel'],
+    ]);
+
+    $registry = new Fleetbase\FleetOps\Support\FuelProviders\FuelProviderRegistry();
+
+    expect($registry->all()->pluck('key')->all())->toBe(['petroapp', 'acme_fuel']);
+
+    config()->set('fuel-providers.providers', []);
+});
+
+test('the abstract fuel provider sends no headers unless a driver adds them', function () {
+    $provider = new class extends Fleetbase\FleetOps\Support\FuelProviders\Providers\AbstractFuelProvider {
+        public function key(): string
+        {
+            return 'headerless';
+        }
+
+        public function name(): string
+        {
+            return 'Headerless';
+        }
+
+        public function testConnection(Fleetbase\FleetOps\Models\FuelProviderConnection $connection): array
+        {
+            return [];
+        }
+
+        public function listTransactions(Fleetbase\FleetOps\Models\FuelProviderConnection $connection, Illuminate\Support\Carbon $from, Illuminate\Support\Carbon $to, array $options = []): Illuminate\Support\Collection
+        {
+            return collect();
+        }
+    };
+
+    $connection = new Fleetbase\FleetOps\Models\FuelProviderConnection();
+    $connection->setRawAttributes(['uuid' => 'fpc-headers-1', 'credentials' => []], true);
+
+    $headers = new ReflectionMethod($provider, 'headers');
+    $headers->setAccessible(true);
+
+    // The default is deliberately empty; PetroApp overrides it with its bearer
+    expect($headers->invoke($provider, $connection))->toBe([]);
+});
+
+test('payload accessors expose the payload lookup query', function () {
+    fleetopsMoreSeamBoot();
+
+    $class    = Fleetbase\FleetOps\Models\Waypoint::class;
+    $waypoint = new $class();
+
+    $query = fleetopsMoreSeamInvoke($waypoint, $class, 'payloadLookupQuery');
+
+    expect($query)->toBeInstanceOf(Illuminate\Database\Eloquent\Builder::class)
+        ->and($query->getModel())->toBeInstanceOf(Fleetbase\FleetOps\Models\Payload::class);
 });
 
 test('geocoder controller seams call the geocoder and build places', function () {
