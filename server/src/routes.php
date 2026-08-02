@@ -382,6 +382,10 @@ Route::prefix(config('fleetops.api.routing.prefix'))->namespace('Fleetbase\Fleet
                             }
                         );
                         $router->fleetbaseRoutes('entities');
+                        // labels routes (needed within internal namespace for console access)
+                        $router->group(['prefix' => 'labels'], function () use ($router) {
+                            $router->get('{id}', '\Fleetbase\FleetOps\Http\Controllers\Api\v1\LabelController@getLabel');
+                        });
                         $router->fleetbaseRoutes(
                             'fleets',
                             function ($router, $controller) {

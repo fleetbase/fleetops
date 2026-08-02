@@ -15,6 +15,7 @@
     <Card.footer class={{@footerClass}}>
         <div class="flex flex-row items-center space-x-1">
             <Button @icon="pencil" @size="xs" @onClick={{fn this.entityActions.modal.edit @resource}} />
+            <Button @icon="barcode" @size="xs" @onClick={{fn this.entityActions.viewLabel @resource}} @permission="fleet-ops view entity" />
             <Button @icon="trash" @size="xs" @type="danger" @onClick={{fn this.entityActions.delete @resource}} />
         </div>
         {{#if (has-block "footer")}}
