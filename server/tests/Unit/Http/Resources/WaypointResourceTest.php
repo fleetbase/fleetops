@@ -5,7 +5,9 @@ if (!function_exists('Fleetbase\Traits\config')) {
 }
 
 use Fleetbase\FleetOps\Http\Resources\v1\Waypoint as WaypointResource;
+use Fleetbase\FleetOps\Models\Contact;
 use Fleetbase\FleetOps\Models\Place;
+use Fleetbase\FleetOps\Models\Waypoint as WaypointModel;
 use Fleetbase\LaravelMysqlSpatial\Types\Point;
 use Illuminate\Database\ConnectionResolver;
 use Illuminate\Database\Eloquent\Model as EloquentModel;
@@ -249,4 +251,45 @@ test('waypoint resource includes internal identifiers for internal requests', fu
         'pod_required'       => false,
     ])
         ->and($payload['location'])->toBeInstanceOf(Point::class);
+});
+
+/**
+ * Covers Waypoint::setCustomerType(), which stamps the ember-facing customer type
+ * onto an already-resolved customer payload. Unlike Entity's equivalent it reads
+ * the morph class off the resolved waypoint rather than the wrapped place, so the
+ * protected `waypoint` property has to be populated for the stamp to mean anything.
+ * Both are private, hence the reflection — toArray() only reaches this branch when
+ * the waypoint carries a customer that Resolve::resourceForMorph can actually load.
+ */
+test('waypoint customer payloads are stamped with the ember resource type', function () {
+    $resource = new WaypointResource(fleetopsWaypointResourcePlace());
+
+    $waypoint = new WaypointModel();
+    $waypoint->setRawAttributes([
+        'uuid'          => 'waypoint-customer-type-1',
+        'public_id'     => 'waypoint_customertype1',
+        'customer_uuid' => 'contact-customer-type-1',
+        'customer_type' => Contact::class,
+    ], true);
+
+    $reflection = new ReflectionClass($resource);
+
+    $property = $reflection->getProperty('waypoint');
+    $property->setAccessible(true);
+    $property->setValue($resource, $waypoint);
+
+    $method = $reflection->getMethod('setCustomerType');
+    $method->setAccessible(true);
+
+    $stamped = $method->invoke($resource, ['id' => 'contact_customertype1', 'name' => 'Stamped Customer']);
+
+    expect($stamped['type'])->toBe('customer')
+        ->and($stamped['name'])->toBe('Stamped Customer')
+        ->and($stamped['customer_type'])->toBe('customer-fleet-ops:contact');
+
+    // Nothing resolved means nothing to stamp, and the input is returned as-is —
+    // this is the arm both end-to-end tests above take, since their waypoints
+    // carry no customer at all.
+    expect($method->invoke($resource, []))->toBe([])
+        ->and($method->invoke($resource, null))->toBeNull();
 });

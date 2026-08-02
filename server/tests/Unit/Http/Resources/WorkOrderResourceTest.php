@@ -42,6 +42,15 @@ function fleetopsWorkOrderResourceBoot(): void
         'vehicles'            => ['uuid', 'public_id', 'company_uuid', 'plate_number', 'year', 'make', 'model'],
         'contacts'            => ['uuid', 'public_id', 'company_uuid', 'name', 'type'],
         'custom_field_values' => ['uuid', 'subject_uuid', 'subject_type', 'custom_field_uuid', 'value', 'value_type'],
+        // Serializing a loaded Vehicle target pulls in its avatar, driver and
+        // device relations; a loaded Contact assignee pulls in its user.
+        'files'               => ['uuid', 'public_id', 'company_uuid', 'type', 'path', 'disk'],
+        'drivers'             => ['uuid', 'public_id', 'company_uuid', 'user_uuid', 'vehicle_uuid', 'status'],
+        'users'               => ['uuid', 'public_id', 'company_uuid', 'name'],
+        'devices'             => ['uuid', 'public_id', 'company_uuid', 'attachable_uuid', 'attachable_type', 'device_id', 'status'],
+        'vehicle_devices'     => ['uuid', 'vehicle_uuid', 'device_uuid'],
+        'orders'              => ['uuid', 'public_id', 'company_uuid', 'vehicle_assigned_uuid', 'driver_assigned_uuid', 'status'],
+        'places'              => ['uuid', 'public_id', 'company_uuid', 'owner_uuid', 'owner_type', 'name'],
     ] as $table => $columns) {
         $schema->create($table, function ($blueprint) use ($columns) {
             $blueprint->increments('id');
@@ -85,6 +94,27 @@ test('work order resource serializes core attributes and computed fields', funct
         ->and($payload['status'])->toBe('open')
         ->and($payload['is_overdue'])->toBeFalse()
         ->and($payload['completion_percentage'])->toBe(0.0);
+});
+
+test('loaded polymorphic target and assignee serialize through the when loaded callbacks', function () {
+    fleetopsWorkOrderResourceBoot();
+
+    $vehicle = new Vehicle();
+    $vehicle->setRawAttributes(['uuid' => 'vehicle-1', 'public_id' => 'vehicle_test', 'plate_number' => 'SGX1234'], true);
+
+    $contact = new Fleetbase\FleetOps\Models\Contact();
+    $contact->setRawAttributes(['uuid' => 'contact-1', 'public_id' => 'contact_test', 'name' => 'Mechanic'], true);
+
+    $workOrder = fleetopsWorkOrderResourceModel();
+    $workOrder->setRelation('target', $vehicle);
+    $workOrder->setRelation('assignee', $contact);
+
+    $payload = (new WorkOrderResource($workOrder))->toArray(new Request());
+
+    // Unloaded relations are omitted entirely by whenLoaded, so reaching these
+    // keys at all is what proves the callbacks ran.
+    expect($payload['target']['subject_type'])->toBe('maintenance-subject-vehicle')
+        ->and($payload['assignee']['facilitator_type'])->toBe('facilitator-contact');
 });
 
 test('polymorphic type injection derives ember subject and facilitator slugs', function () {

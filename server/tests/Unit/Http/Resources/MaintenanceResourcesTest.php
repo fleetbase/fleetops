@@ -50,6 +50,12 @@ function fleetopsMaintenanceResourcesBoot(): void
         'orders'              => ['uuid', 'public_id', 'company_uuid', 'vehicle_assigned_uuid', 'driver_assigned_uuid', 'status'],
         'vehicle_devices'     => ['uuid', 'vehicle_uuid', 'device_uuid'],
         'equipment'           => ['uuid', 'public_id', 'company_uuid', 'name', 'status'],
+        // Serializing a loaded Vendor assignee eager-loads its owned places and
+        // its personnel; a loaded Contact performer pulls in vehicles.
+        'places'              => ['uuid', 'public_id', 'company_uuid', 'owner_uuid', 'owner_type', 'name'],
+        'contacts'            => ['uuid', 'public_id', 'company_uuid', 'user_uuid', 'name', 'type'],
+        'vendor_personnels'   => ['uuid', 'vendor_uuid', 'contact_uuid'],
+        'vehicles'            => ['uuid', 'public_id', 'company_uuid', 'plate_number', 'year', 'make', 'model'],
     ] as $table => $columns) {
         $schema->create($table, function ($blueprint) use ($columns) {
             $blueprint->increments('id');
@@ -140,17 +146,37 @@ test('loaded polymorphic relations serialize through the when loaded callbacks',
     $vehicle = new Vehicle();
     $vehicle->setRawAttributes(['uuid' => 'vehicle-1', 'public_id' => 'vehicle_test', 'name' => 'Truck'], true);
 
+    $vendor = new Fleetbase\FleetOps\Models\Vendor();
+    $vendor->setRawAttributes(['uuid' => 'vendor-1', 'public_id' => 'vendor_test', 'name' => 'Shop'], true);
+
+    $contact = new Fleetbase\FleetOps\Models\Contact();
+    $contact->setRawAttributes(['uuid' => 'contact-1', 'public_id' => 'contact_test', 'name' => 'Mechanic'], true);
+
     $schedule = new MaintenanceSchedule();
-    $schedule->setRawAttributes(['uuid' => 'ms-1', 'public_id' => 'maintenance_schedule_test', 'subject_type' => Vehicle::class], true);
+    $schedule->setRawAttributes([
+        'uuid'                  => 'ms-1',
+        'public_id'             => 'maintenance_schedule_test',
+        'subject_type'          => Vehicle::class,
+        'default_assignee_type' => Fleetbase\FleetOps\Models\Vendor::class,
+    ], true);
     $schedule->setRelation('subject', $vehicle);
+    $schedule->setRelation('defaultAssignee', $vendor);
 
     $payload = (new MaintenanceScheduleResource($schedule))->toArray(new Request());
-    expect($payload['subject']['type'])->toBe('maintenance-subject-vehicle');
+    expect($payload['subject']['type'])->toBe('maintenance-subject-vehicle')
+        ->and($payload['default_assignee']['facilitator_type'])->toBe('facilitator-vendor');
 
     $maintenance = new Maintenance();
-    $maintenance->setRawAttributes(['uuid' => 'mnt-1', 'public_id' => 'maintenance_test', 'maintainable_type' => Vehicle::class], true);
+    $maintenance->setRawAttributes([
+        'uuid'              => 'mnt-1',
+        'public_id'         => 'maintenance_test',
+        'maintainable_type' => Vehicle::class,
+        'performed_by_type' => Fleetbase\FleetOps\Models\Contact::class,
+    ], true);
     $maintenance->setRelation('maintainable', $vehicle);
+    $maintenance->setRelation('performedBy', $contact);
 
     $maintenancePayload = (new MaintenanceResource($maintenance))->toArray(new Request());
-    expect($maintenancePayload['maintainable'])->toBeArray();
+    expect($maintenancePayload['maintainable'])->toBeArray()
+        ->and($maintenancePayload['performed_by'])->toBeArray();
 });

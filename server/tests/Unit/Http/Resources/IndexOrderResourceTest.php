@@ -83,6 +83,70 @@ test('index order resource resolves loaded relations into lightweight payloads',
         ->and($resolved['meta'])->toBe(['_index_resource' => true]);
 });
 
+/**
+ * The index Payload resource only emits pickup/dropoff when the payload can
+ * actually produce a place. Both accessors short-circuit on a directly related
+ * Place and otherwise fall back to the first/last waypoint marker — this covers
+ * the short-circuit, which is the arm the index listing hits in practice.
+ */
+test('index payload resource emits lightweight pickup and dropoff places', function () {
+    $connection = new Illuminate\Database\SQLiteConnection(new PDO('sqlite::memory:'));
+    $resolver   = new Illuminate\Database\ConnectionResolver(['default' => $connection, 'mysql' => $connection]);
+    $resolver->setDefaultConnection('mysql');
+    Illuminate\Database\Eloquent\Model::setConnectionResolver($resolver);
+    app()->instance('request', Request::create('/v1/orders', 'GET'));
+
+    // whenLoaded's default argument is evaluated eagerly, so the count queries
+    // run even though both relations are loaded.
+    $schema = $connection->getSchemaBuilder();
+    foreach (['entities', 'waypoints', 'places'] as $table) {
+        $schema->create($table, function ($blueprint) {
+            $blueprint->increments('id');
+            $blueprint->string('uuid')->nullable();
+            $blueprint->string('payload_uuid')->nullable();
+            $blueprint->string('place_uuid')->nullable();
+            $blueprint->timestamps();
+            $blueprint->timestamp('deleted_at')->nullable();
+        });
+    }
+
+    $pickup = new Fleetbase\FleetOps\Models\Place();
+    $pickup->setRawAttributes([
+        'uuid'      => 'place-pickup-1',
+        'public_id' => 'place_indexpickup',
+        'name'      => 'Index Pickup',
+        'address'   => '1 Pickup Way',
+        'street1'   => '1 Pickup Way',
+        'city'      => 'Singapore',
+        'country'   => 'SG',
+    ], true);
+
+    $dropoff = new Fleetbase\FleetOps\Models\Place();
+    $dropoff->setRawAttributes([
+        'uuid'      => 'place-dropoff-1',
+        'public_id' => 'place_indexdropoff',
+        'name'      => 'Index Dropoff',
+        'address'   => '2 Dropoff Way',
+        'street1'   => '2 Dropoff Way',
+        'city'      => 'Singapore',
+        'country'   => 'SG',
+    ], true);
+
+    $payload = new Payload();
+    $payload->setRawAttributes(['uuid' => 'payload-index-1', 'public_id' => 'payload_indexone'], true);
+    $payload->setRelation('pickup', $pickup);
+    $payload->setRelation('dropoff', $dropoff);
+    $payload->setRelation('entities', collect([]));
+    $payload->setRelation('waypoints', collect([]));
+
+    $resolved = (new Fleetbase\FleetOps\Http\Resources\v1\Index\Payload($payload))->resolve(Request::create('/v1/orders', 'GET'));
+
+    expect($resolved['pickup'])->toBeInstanceOf(Fleetbase\FleetOps\Http\Resources\v1\Index\Place::class)
+        ->and($resolved['dropoff'])->toBeInstanceOf(Fleetbase\FleetOps\Http\Resources\v1\Index\Place::class)
+        ->and($resolved['entities_count'])->toBe(0)
+        ->and($resolved['waypoints_count'])->toBe(0);
+});
+
 test('v1 order resource resolves loaded relation closures and generic morphs', function () {
     $connection = new Illuminate\Database\SQLiteConnection(new PDO('sqlite::memory:'));
     $resolver   = new Illuminate\Database\ConnectionResolver(['default' => $connection, 'mysql' => $connection]);

@@ -349,7 +349,6 @@ test('service rate resource serializes pricing rules for internal and webhook co
         'service_area_uuid'             => 'area-uuid',
         'zone_uuid'                     => 'zone-uuid',
         'order_config_uuid'             => 'config-uuid',
-        'orderConfig'                   => (object) ['public_id' => 'config_public'],
         'serviceArea'                   => (object) ['name' => 'Central'],
         'zone'                          => (object) ['name' => 'Downtown'],
         'service_name'                  => 'Same Day',
@@ -377,6 +376,10 @@ test('service rate resource serializes pricing rules for internal and webhook co
         'currency'                      => 'SGD',
         'duration_terms'                => 'same_day',
         'estimated_days'                => 1,
+    ], [
+        // Loaded rather than a plain attribute: internal consumers get the full
+        // order config through whenLoaded, and only the public id otherwise.
+        'orderConfig' => (object) ['public_id' => 'config_public'],
     ]);
 
     $payload = (new ServiceRateResource($rate))->resolve($request);
@@ -410,6 +413,7 @@ test('service rate resource serializes pricing rules for internal and webhook co
         'duration_terms'                => 'same_day',
         'estimated_days'                => 1,
     ])
+        ->and($payload['order_config']->public_id)->toBe('config_public')
         ->and($webhook)->toMatchArray([
             'id'                            => 'fixture_public',
             'service_name'                  => 'Same Day',
