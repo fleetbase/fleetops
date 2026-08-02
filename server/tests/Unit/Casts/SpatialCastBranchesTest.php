@@ -38,24 +38,23 @@ test('typed geometries are stashed on the model and wrapped for binding', functi
     expect($returned)->toBeInstanceOf(SpatialExpression::class)
         ->and($model->geometries['border'])->toBe($multi);
 
-    // The polygon cast stashes the geometry and wraps it the same way, so that
-    // BaseBuilder::cleanBindings() can expand it into the WKT and SRID bindings
-    // that ST_GeomFromText(?, ?) needs on writes that skip performInsert()
+    // The polygon cast stashes the geometry but hands the value back directly
     $polygonModel = new FleetOpsSpatialCastModel();
     $polygon      = fleetopsSpatialCastSquare();
     $polygonCast  = (new Fleetbase\FleetOps\Casts\Polygon())->set($polygonModel, 'border', $polygon, []);
 
-    expect($polygonCast)->toBeInstanceOf(SpatialExpression::class)
+    expect($polygonCast)->toBe($polygon)
         ->and($polygonModel->geometries['border'])->toBe($polygon);
 
     // Expressions are already bind-ready, so the point cast returns them
-    // untouched without stashing a geometry to convert later
+    // untouched — but still stashes them, so the spatial trait can restore the
+    // attribute after an insert like it does for every other spatial input
     $pointModel = new FleetOpsSpatialCastModel();
     $expression = new SpatialExpression(new SpatialPoint(1.30, 103.80));
     $pointCast  = (new Fleetbase\FleetOps\Casts\Point())->set($pointModel, 'location', $expression, []);
 
     expect($pointCast)->toBe($expression)
-        ->and($pointModel->geometries)->toBe([]);
+        ->and($pointModel->geometries['location'])->toBe($expression);
 
     // A bare point is stashed and wrapped for binding
     $bareModel = new FleetOpsSpatialCastModel();

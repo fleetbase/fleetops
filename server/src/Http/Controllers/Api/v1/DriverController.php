@@ -72,7 +72,7 @@ class DriverController extends Controller
         // create user account for driver
         $user = $this->createUser($userDetails);
 
-        // Assign company — already guaranteed non-null by the guard above
+        // Assign company — the early return above guarantees $company is set
         $user->assignCompany($company);
 
         // Set user type

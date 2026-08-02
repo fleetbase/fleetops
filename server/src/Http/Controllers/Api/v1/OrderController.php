@@ -1077,13 +1077,10 @@ class OrderController extends Controller
 
         // if no order found
         //
-        // Currently unreachable: findOrder() above is typed `: Order` and throws
-        // rather than returning null. The catch it sits behind is itself dead
-        // because of an upstream defect — Fleetbase\Models\Model::findByIdOrFail()
-        // in core-api calls a getModelNotFoundException() method that does not
-        // exist on Eloquent's builder, so it raises BadMethodCallException
-        // instead of ModelNotFoundException and a missing order surfaces as a 500
-        // rather than this 404. Remove this annotation once core-api is patched.
+        // Unreachable: findOrder() above is typed `: Order`, so it either returns
+        // an order or throws — it never yields null. This is independent of the
+        // upstream findByIdOrFail defect and stays unreachable after that is
+        // fixed; the catch above is what becomes live then, not this guard.
         // @codeCoverageIgnoreStart
         if (!$order) {
             return response()->apiError('Order resource not found.', 404);

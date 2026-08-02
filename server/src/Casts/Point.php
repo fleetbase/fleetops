@@ -39,6 +39,16 @@ class Point implements CastsAttributes
      */
     public function set($model, $key, $value, $attributes)
     {
+        // Checked before the generic Expression guard below, which SpatialExpression
+        // also satisfies — otherwise this arm never fires and the geometry is never
+        // recorded on the model. Both arms return the value untouched, so ordering
+        // only affects the bookkeeping.
+        if ($value instanceof SpatialExpression) {
+            $model->geometries[$key] = $value;
+
+            return $value;
+        }
+
         if ($value instanceof Expression) {
             return $value;
         }
@@ -62,23 +72,6 @@ class Point implements CastsAttributes
 
             return $point;
         }
-
-        // Unreachable today: SpatialExpression extends Expression, so the guard
-        // above returns first. Deliberately kept rather than deleted, because
-        // that earlier guard returns WITHOUT recording $model->geometries[$key],
-        // and this block documents that a spatial expression is meant to be
-        // recorded. Note the recording would currently be a no-op anyway —
-        // SpatialTrait::performInsert restores the attribute from geometries[],
-        // which would assign the same expression back. Restoring it to a usable
-        // Point would mean recording the geometry behind the expression, which
-        // is a behaviour change and out of scope here.
-        // @codeCoverageIgnoreStart
-        if ($value instanceof SpatialExpression) {
-            $model->geometries[$key] = $value;
-
-            return $value;
-        }
-        // @codeCoverageIgnoreEnd
 
         return static::createEmptySpatialExpression();
     }
