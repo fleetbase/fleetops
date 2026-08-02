@@ -136,6 +136,16 @@ $timeoutBinary = trim((string) shell_exec('command -v timeout'));
 $memoryLimit   = getenv('FLEETOPS_COVERAGE_MEMORY_LIMIT') ?: '-1';
 $coverageFiles = [];
 
+// Opt-in: keep going after a file fails instead of aborting the whole run.
+//
+// By default a non-zero file exits immediately, which means every later file is
+// skipped, the merge below never runs, and no Clover report is written — the
+// previous report is silently left in place and reads as current. With this set,
+// failures are collected and reported, the report is still produced, and the
+// process still exits non-zero so a failure cannot be mistaken for success.
+$continueOnFailure = filter_var(getenv('FLEETOPS_COVERAGE_CONTINUE_ON_FAILURE') ?: '', FILTER_VALIDATE_BOOLEAN);
+$failedFiles       = [];
+
 foreach ($files as $index => $file) {
     $relativeFile = str_replace(getcwd() . '/', '', $file);
     $coverageFile = $tmpDir . '/' . str_pad((string) $index, 4, '0', STR_PAD_LEFT) . '.cov';
@@ -162,12 +172,31 @@ foreach ($files as $index => $file) {
 
     if ($exitCode === 124) {
         fwrite(STDERR, "\nTimed out after {$timeout} seconds while running {$relativeFile}.\n");
-        exit(1);
+
+        if (!$continueOnFailure) {
+            exit(1);
+        }
+
+        $failedFiles[] = $relativeFile . ' (timed out)';
+
+        continue;
     }
 
     if ($exitCode !== 0) {
         fwrite(STDERR, "\nPest coverage failed for {$relativeFile} with exit code {$exitCode}.\n");
-        exit($exitCode);
+
+        if (!$continueOnFailure) {
+            exit($exitCode);
+        }
+
+        $failedFiles[] = $relativeFile;
+
+        // A failing file may still have written partial coverage before it died
+        if (is_file($coverageFile)) {
+            $coverageFiles[] = $coverageFile;
+        }
+
+        continue;
     }
 
     $coverageFiles[] = $coverageFile;
@@ -197,3 +226,15 @@ if (!$merged instanceof CodeCoverage) {
 
 (new Clover())->process($merged, $cloverPath);
 fwrite(STDOUT, "Wrote Clover coverage to {$cloverPath}\n");
+
+if ($failedFiles !== []) {
+    fwrite(STDERR, "\n" . count($failedFiles) . " test file(s) failed:\n");
+
+    foreach ($failedFiles as $failedFile) {
+        fwrite(STDERR, "  - {$failedFile}\n");
+    }
+
+    fwrite(STDERR, "\nCoverage above excludes anything those files would have covered.\n");
+
+    exit(1);
+}
