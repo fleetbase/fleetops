@@ -19,7 +19,7 @@ class LiveOrderQuery
         $withRelations     = $options['with_relations'] ?? false;
         $applyPermissions  = $options['apply_permissions'] ?? true;
 
-        $query = Order::where('company_uuid', $companyUuid)
+        $query = static::newOrderQuery($companyUuid)
             ->whereHas('payload', function ($query) {
                 $query->where(function ($q) {
                     $q->whereHas('waypoints');
@@ -71,5 +71,10 @@ class LiveOrderQuery
         }
 
         return $query;
+    }
+
+    protected static function newOrderQuery(string $companyUuid): Builder
+    {
+        return Order::where('company_uuid', $companyUuid);
     }
 }

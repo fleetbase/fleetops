@@ -61,7 +61,7 @@ class DriverArrivedAtGeofence extends Notification
             ->greeting('Good news!')
             ->line("Your driver has arrived at {$geofenceName} for order #{$orderId}.")
             ->line('Please be ready to receive your delivery.')
-            ->action('Track Your Order', url("/tracking/{$this->order->tracking_number}"))
+            ->action('Track Your Order', \url("/tracking/{$this->order->tracking_number}"))
             ->line('Thank you for using our service.');
     }
 

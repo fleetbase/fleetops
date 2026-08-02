@@ -31,28 +31,16 @@ class ProofController extends FleetOpsController
         $code = $request->input('code');
         $type = $request->input('type', strtok($publicId, '_'));
 
-        switch ($type) {
-            case 'order':
-                $subject = Order::where('uuid', $code)->withoutGlobalScopes()->first();
-                break;
-
-            case 'waypoint':
-                $subject = Waypoint::where('uuid', $code)->withoutGlobalScopes()->first();
-                break;
-
-            case 'entity':
-                $subject = Entity::where('uuid', $code)->withoutGlobalScopes()->first();
-                break;
-        }
+        $subject = $this->findQrSubject($type, $code);
 
         if (!$subject) {
-            return response()->error('Unable to validate QR code data.');
+            return $this->errorResponse('Unable to validate QR code data.');
         }
 
         // validate
         if ($publicId === $subject->public_id) {
             // create verification proof
-            $proof = Proof::create([
+            $proof = $this->createProof([
                 'company_uuid' => session('company'),
                 'subject_uuid' => $subject->uuid,
                 'subject_type' => Utils::getModelClassName($subject),
@@ -61,13 +49,10 @@ class ProofController extends FleetOpsController
                 'data'         => $request->input('data'),
             ]);
 
-            return response()->json([
-                'status' => 'success',
-                'proof'  => $proof->public_id,
-            ]);
+            return $this->jsonResponse($this->proofSuccessPayload($proof));
         }
 
-        return response()->error('Unable to validate QR code data.');
+        return $this->errorResponse('Unable to validate QR code data.');
     }
 
     /**
@@ -80,26 +65,14 @@ class ProofController extends FleetOpsController
         $signature = $request->input('signature');
         $type      = $request->input('type', strtok($publicId, '_'));
 
-        switch ($type) {
-            case 'order':
-                $subject = Order::where('public_id', $publicId)->withoutGlobalScopes()->first();
-                break;
-
-            case 'waypoint':
-                $subject = Waypoint::where('public_id', $publicId)->withoutGlobalScopes()->first();
-                break;
-
-            case 'entity':
-                $subject = Entity::where('public_id', $publicId)->withoutGlobalScopes()->first();
-                break;
-        }
+        $subject = $this->findPublicSubject($type, $publicId);
 
         if (!$subject) {
-            return response()->error('Unable to capture signature data.');
+            return $this->errorResponse('Unable to capture signature data.');
         }
 
         // create proof instance
-        $proof = Proof::create([
+        $proof = $this->createProof([
             'company_uuid' => session('company'),
             'subject_uuid' => $subject->uuid,
             'subject_type' => Utils::getModelClassName($subject),
@@ -108,13 +81,82 @@ class ProofController extends FleetOpsController
         ]);
 
         // set the signature storage path
-        $path = 'uploads/' . session('company') . '/signatures/' . $proof->public_id . '.png';
+        $path = $this->signatureStoragePath($proof);
 
         // upload signature
-        Storage::disk('s3')->put($path, base64_decode($signature), 'public');
+        $this->storeSignature($path, base64_decode($signature), 'public');
 
         // create file record for upload
-        $file = File::create([
+        $file = $this->createSignatureFile($path, $signature, $proof);
+
+        // set file to proof
+        $proof->file_uuid = $file->uuid;
+        $proof->save();
+
+        return $this->jsonResponse($this->proofSuccessPayload($proof));
+    }
+
+    protected function findQrSubject(string $type, ?string $code): mixed
+    {
+        return match ($type) {
+            'order'    => Order::where('uuid', $code)->withoutGlobalScopes()->first(),
+            'waypoint' => Waypoint::where('uuid', $code)->withoutGlobalScopes()->first(),
+            'entity'   => Entity::where('uuid', $code)->withoutGlobalScopes()->first(),
+            default    => null,
+        };
+    }
+
+    protected function findPublicSubject(string $type, string $publicId): mixed
+    {
+        return match ($type) {
+            'order'    => Order::where('public_id', $publicId)->withoutGlobalScopes()->first(),
+            'waypoint' => Waypoint::where('public_id', $publicId)->withoutGlobalScopes()->first(),
+            'entity'   => Entity::where('public_id', $publicId)->withoutGlobalScopes()->first(),
+            default    => null,
+        };
+    }
+
+    protected function createProof(array $attributes): Proof
+    {
+        return Proof::create($attributes);
+    }
+
+    protected function storeSignature(string $path, string|false $contents, string $visibility): void
+    {
+        Storage::disk('s3')->put($path, $contents, $visibility);
+    }
+
+    protected function createSignatureFile(string $path, string $signature, Proof $proof): File
+    {
+        return File::create($this->signatureFileAttributes($path, $signature))->setKey($proof);
+    }
+
+    protected function jsonResponse(array $payload)
+    {
+        return response()->json($payload);
+    }
+
+    protected function errorResponse(string $message)
+    {
+        return response()->error($message);
+    }
+
+    protected function proofSuccessPayload(Proof $proof): array
+    {
+        return [
+            'status' => 'success',
+            'proof'  => $proof->public_id,
+        ];
+    }
+
+    protected function signatureStoragePath(Proof $proof): string
+    {
+        return 'uploads/' . session('company') . '/signatures/' . $proof->public_id . '.png';
+    }
+
+    protected function signatureFileAttributes(string $path, string $signature): array
+    {
+        return [
             'company_uuid'      => session('company'),
             'uploader_uuid'     => session('user'),
             'name'              => basename($path),
@@ -125,15 +167,6 @@ class ProofController extends FleetOpsController
             'bucket'            => config('filesystems.disks.s3.bucket'),
             'type'              => 'signature',
             'size'              => Utils::getBase64ImageSize($signature),
-        ])->setKey($proof);
-
-        // set file to proof
-        $proof->file_uuid = $file->uuid;
-        $proof->save();
-
-        return response()->json([
-            'status' => 'success',
-            'proof'  => $proof->public_id,
-        ]);
+        ];
     }
 }

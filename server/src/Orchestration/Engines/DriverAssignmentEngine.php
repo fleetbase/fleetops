@@ -40,9 +40,7 @@ class DriverAssignmentEngine
         // Collect all company drivers — online status and vehicle linkage are
         // treated as soft preferences (scored), not hard filters.
         $companyUuid      = $orders->first()?->company_uuid;
-        $availableDrivers = Driver::where('company_uuid', $companyUuid)
-            ->with(['scheduleItems'])
-            ->get();
+        $availableDrivers = $this->availableDriversForCompany($companyUuid);
 
         // Shift-awareness: if require_active_shift is explicitly set, filter
         // to drivers that have an active shift right now. Drivers with NO
@@ -240,6 +238,13 @@ class DriverAssignmentEngine
         })->filter()->sortByDesc('score');
 
         return $scored->first()['driver'] ?? null;
+    }
+
+    protected function availableDriversForCompany(?string $companyUuid): Collection
+    {
+        return Driver::where('company_uuid', $companyUuid)
+            ->with(['scheduleItems'])
+            ->get();
     }
 
     /**

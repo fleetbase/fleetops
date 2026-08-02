@@ -113,6 +113,11 @@ class GoogleRoutesTrackingProvider implements TrackingProviderInterface
 
     protected function apiKey(): ?string
     {
-        return config('services.google_maps.api_key') ?: env('GOOGLE_MAPS_API_KEY');
+        $configuredKey = config('services.google_maps.api_key');
+        if ($configuredKey) {
+            return $configuredKey;
+        }
+
+        return class_exists(\PhpOption\Option::class) ? env('GOOGLE_MAPS_API_KEY') : null;
     }
 }

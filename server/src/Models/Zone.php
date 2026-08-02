@@ -170,7 +170,7 @@ class Zone extends Model
      */
     public function getCentroid(): \Brick\Geo\Point
     {
-        $geometryEngine  = new \Brick\Geo\Engine\GEOSEngine();
+        $geometryEngine  = Utils::resolveGeometryEngine();
         $borderAsPolygon = $this->toGeosPolygon();
 
         if ($borderAsPolygon instanceof \Brick\Geo\Geometry) {

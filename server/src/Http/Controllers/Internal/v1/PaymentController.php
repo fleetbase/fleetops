@@ -21,14 +21,14 @@ class PaymentController extends Controller
      */
     public function hasStripeConnectAccount()
     {
-        $company = Auth::getCompany();
+        $company = $this->getCompany();
         if ($company) {
-            return response()->json([
-                'hasStripeConnectAccount' => !empty($company->stripe_connect_id) && Str::startsWith($company->stripe_connect_id, 'acct_'),
+            return $this->jsonResponse([
+                'hasStripeConnectAccount' => $this->hasStripeConnectId($company->stripe_connect_id),
             ]);
         }
 
-        return response()->json([
+        return $this->jsonResponse([
             'hasStripeConnectAccount' => false,
         ]);
     }
@@ -43,7 +43,7 @@ class PaymentController extends Controller
      */
     public function getStripeAccount()
     {
-        $stripe = Payment::getStripeClient();
+        $stripe = $this->stripeClient();
 
         try {
             $account = $stripe->accounts->create([
@@ -61,14 +61,14 @@ class PaymentController extends Controller
             ]);
 
             // Save account ID to current company session
-            $company = Auth::getCompany();
+            $company = $this->getCompany();
             if ($company) {
                 $company->update(['stripe_connect_id' => $account->id]);
             }
 
-            return response()->json(['account' => $account->id]);
+            return $this->jsonResponse(['account' => $account->id]);
         } catch (\Exception $e) {
-            return response()->error($e->getMessage());
+            return $this->errorResponse($e->getMessage());
         }
     }
 
@@ -84,8 +84,8 @@ class PaymentController extends Controller
      */
     public function getStripeAccountSession(Request $request)
     {
-        $stripe  = Payment::getStripeClient();
-        $company = Auth::getCompany();
+        $stripe  = $this->stripeClient();
+        $company = $this->getCompany();
 
         try {
             $accountSession = $stripe->accountSessions->create([
@@ -97,11 +97,11 @@ class PaymentController extends Controller
                 ],
             ]);
 
-            return response()->json([
+            return $this->jsonResponse([
                 'clientSecret' => $accountSession->client_secret,
             ]);
         } catch (\Exception $e) {
-            return response()->error($e->getMessage());
+            return $this->errorResponse($e->getMessage());
         }
     }
 
@@ -160,8 +160,40 @@ class PaymentController extends Controller
         $paymentsCollection         = $query->get();
 
         // Calculate totals grouped by currency
+        $totals = $this->totalsByServiceQuoteCurrency($paymentsCollection);
+
+        return FleetbaseResource::collection($payments)->additional(['amount_totals' => $totals]);
+    }
+
+    protected function hasStripeConnectId(?string $stripeConnectId): bool
+    {
+        return !empty($stripeConnectId) && Str::startsWith($stripeConnectId, 'acct_');
+    }
+
+    protected function getCompany(): mixed
+    {
+        return Auth::getCompany();
+    }
+
+    protected function stripeClient(): mixed
+    {
+        return Payment::getStripeClient();
+    }
+
+    protected function jsonResponse(array $payload)
+    {
+        return response()->json($payload);
+    }
+
+    protected function errorResponse(string $message)
+    {
+        return response()->error($message);
+    }
+
+    protected function totalsByServiceQuoteCurrency(iterable $payments): array
+    {
         $totals = [];
-        foreach ($paymentsCollection as $payment) {
+        foreach ($payments as $payment) {
             $currency = $payment->serviceQuote->currency;
             $amount   = $payment->serviceQuote->amount;
             if (!isset($totals[$currency])) {
@@ -171,6 +203,6 @@ class PaymentController extends Controller
             $totals[$currency] += $amount;
         }
 
-        return FleetbaseResource::collection($payments)->additional(['amount_totals' => $totals]);
+        return $totals;
     }
 }

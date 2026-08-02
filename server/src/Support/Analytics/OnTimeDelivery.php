@@ -3,6 +3,7 @@
 namespace Fleetbase\FleetOps\Support\Analytics;
 
 use Fleetbase\FleetOps\Models\Order;
+use Fleetbase\FleetOps\Support\Utils;
 use Illuminate\Support\Carbon;
 
 /**
@@ -48,7 +49,7 @@ class OnTimeDelivery extends AbstractAnalytics
     }
 
     /** @return array{0:int,1:int,2:int} [onTime, late, total] */
-    private function bucketCounts(\DateTimeInterface $start, \DateTimeInterface $end): array
+    protected function bucketCounts(\DateTimeInterface $start, \DateTimeInterface $end): array
     {
         $slaSeconds = $this->slaMinutes * 60;
 
@@ -57,7 +58,7 @@ class OnTimeDelivery extends AbstractAnalytics
             ->whereNotNull('scheduled_at')
             ->whereNotNull('updated_at')
             ->whereBetween('updated_at', [$start, $end])
-            ->selectRaw('TIMESTAMPDIFF(SECOND, scheduled_at, updated_at) as drift_seconds')
+            ->selectRaw(Utils::sqlSecondsDiff('scheduled_at', 'updated_at') . ' as drift_seconds')
             ->get();
 
         $onTime = 0;

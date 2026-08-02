@@ -25,8 +25,13 @@ class PartImport implements ToCollection, WithHeadingRow
                 continue;
             }
 
-            Part::createFromImport($row, true);
+            $this->createFromImport($row);
             $this->imported++;
         }
+    }
+
+    protected function createFromImport(array $row): void
+    {
+        Part::createFromImport($row, true);
     }
 }

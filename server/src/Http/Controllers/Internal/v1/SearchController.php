@@ -473,7 +473,7 @@ class SearchController extends Controller
         ]);
     }
 
-    private function searchGeneric(string $modelClass, array $columns, string $query, int $limit, callable $mapper): Collection
+    protected function searchGeneric(string $modelClass, array $columns, string $query, int $limit, callable $mapper): Collection
     {
         return $modelClass::where('company_uuid', session('company'))
             ->where(function (Builder $builder) use ($columns, $query) {

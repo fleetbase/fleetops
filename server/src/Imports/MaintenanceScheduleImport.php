@@ -25,8 +25,13 @@ class MaintenanceScheduleImport implements ToCollection, WithHeadingRow
                 continue;
             }
 
-            MaintenanceSchedule::createFromImport($row, true);
+            $this->createFromImport($row);
             $this->imported++;
         }
+    }
+
+    protected function createFromImport(array $row): void
+    {
+        MaintenanceSchedule::createFromImport($row, true);
     }
 }

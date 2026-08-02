@@ -32,14 +32,14 @@ class MorphController extends Controller
         $type           = Str::lower($request->segment(4));
         $resourceType   = Str::lower(Utils::singularize($type));
 
-        $contactsQuery = Contact::select('*')
+        $contactsQuery = $this->newContactQuery()
             ->searchWhere('name', $query)
             ->where('type', $resourceType === 'customer' ? '=' : '!=', 'customer')
             ->where('company_uuid', session('company'))
             ->applyDirectivesForPermissions('fleet-ops list contact')
             ->filter(new ContactFilter($request));
 
-        $vendorsQuery = Vendor::select('*')
+        $vendorsQuery = $this->newVendorQuery()
             ->searchWhere('name', $query)
             ->where('company_uuid', session('company'))
             ->applyDirectivesForPermissions('fleet-ops list vendor')
@@ -67,7 +67,7 @@ class MorphController extends Controller
 
         // insert integrated vendors if user has any
         if ($resourceType === 'facilitator') {
-            $integratedVendors = IntegratedVendor::where('company_uuid', session('company'))->get();
+            $integratedVendors = $this->newIntegratedVendorQuery(session('company'))->get();
 
             if ($integratedVendors->count()) {
                 $integratedVendors->each(
@@ -81,7 +81,7 @@ class MorphController extends Controller
 
         // if requesting single resource
         if ($single === true) {
-            return response()->json($results->first());
+            return $this->jsonResponse($results->first());
         }
 
         // set resource type
@@ -94,12 +94,12 @@ class MorphController extends Controller
         );
 
         // Create a LengthAwarePaginator instance
-        $results = new LengthAwarePaginator(
+        $results = $this->newLengthAwarePaginator(
             $results->forPage($page, $limit),
             $total,
             $limit,
             $page,
-            ['path' => URL::current()]
+            ['path' => $this->currentUrl()]
         );
 
         // Manually structure the response
@@ -117,7 +117,7 @@ class MorphController extends Controller
             ],
         ];
 
-        return response()->json($response);
+        return $this->jsonResponse($response);
     }
 
     public function queryCustomers(Request $request)
@@ -125,23 +125,23 @@ class MorphController extends Controller
         $query           = $request->input('query');
         $limit           = $request->input('limit', 12);
         $single          = $request->boolean('single');
-        $columns         = $request->array('columns');
+        $columns         = $this->arrayInput($request, 'columns');
         $type            = $request->input('type', 'contact');
 
         if ($type === 'vendor') {
-            $builder = Vendor::select('*')
+            $builder = $this->newVendorQuery()
                 ->searchWhere('name', $query)
                 ->where(['type' => 'customer', 'company_uuid' => session('company')])
                 ->applyDirectivesForPermissions('fleet-ops list vendor')
                 ->filter(new VendorFilter($request));
         } else {
-            $builder = Contact::select('*')
+            $builder = $this->newContactQuery()
                 ->where(['type' => 'customer', 'company_uuid' => session('company')])
                 ->applyDirectivesForPermissions('fleet-ops list contact')
                 ->filter(new ContactFilter($request));
 
             if ($request->has('user_uuid') || $request->has('user')) {
-                $userId = $request->or(['user_uuid', 'user']);
+                $userId = $this->firstInput($request, ['user_uuid', 'user']);
                 if ($userId) {
                     $builder->where('user_uuid', $userId);
                 }
@@ -161,10 +161,10 @@ class MorphController extends Controller
         }));
 
         if ($single) {
-            return $type === 'vendor' ? new VendorResource($results->first()) : new ContactResource($results->first());
+            return $type === 'vendor' ? $this->vendorResource($results->first()) : $this->contactResource($results->first());
         }
 
-        return $type === 'vendor' ? VendorResource::collection($results) : ContactResource::collection($results);
+        return $type === 'vendor' ? $this->vendorResourceCollection($results) : $this->contactResourceCollection($results);
     }
 
     public function queryFacilitators(Request $request)
@@ -172,17 +172,17 @@ class MorphController extends Controller
         $query           = $request->input('query');
         $limit           = $request->input('limit', 12);
         $single          = $request->boolean('single');
-        $columns         = $request->array('columns');
+        $columns         = $this->arrayInput($request, 'columns');
         $type            = $request->input('type', 'vendor');
 
         if ($type === 'contact') {
-            $builder = Contact::select('*')
+            $builder = $this->newContactQuery()
                 ->searchWhere('name', $query)
                 ->where(['type' => 'facilitator', 'company_uuid' => session('company')])
                 ->applyDirectivesForPermissions('fleet-ops list contact')
                 ->filter(new ContactFilter($request));
         } else {
-            $builder = Vendor::select('*')
+            $builder = $this->newVendorQuery()
                 ->searchWhere('name', $query)
                 ->where(['type' => 'facilitator', 'company_uuid' => session('company')])
                 ->applyDirectivesForPermissions('fleet-ops list vendor')
@@ -198,9 +198,81 @@ class MorphController extends Controller
         }));
 
         if ($single) {
-            return $type === 'contact' ? new ContactResource($results->first()) : new VendorResource($results->first());
+            return $type === 'contact' ? $this->contactResource($results->first()) : $this->vendorResource($results->first());
         }
 
-        return $type === 'contact' ? ContactResource::collection($results) : VendorResource::collection($results);
+        return $type === 'contact' ? $this->contactResourceCollection($results) : $this->vendorResourceCollection($results);
+    }
+
+    protected function newContactQuery()
+    {
+        return Contact::select('*');
+    }
+
+    protected function newVendorQuery()
+    {
+        return Vendor::select('*');
+    }
+
+    protected function newIntegratedVendorQuery(string $companyUuid)
+    {
+        return IntegratedVendor::where('company_uuid', $companyUuid);
+    }
+
+    protected function newLengthAwarePaginator($items, int $total, int $limit, int $page, array $options)
+    {
+        return new LengthAwarePaginator($items, $total, $limit, $page, $options);
+    }
+
+    protected function arrayInput(Request $request, string $key): array
+    {
+        $value = $request->input($key, []);
+
+        if ($value === null) {
+            return [];
+        }
+
+        return is_array($value) ? $value : [$value];
+    }
+
+    protected function firstInput(Request $request, array $keys): mixed
+    {
+        foreach ($keys as $key) {
+            if ($request->filled($key)) {
+                return $request->input($key);
+            }
+        }
+
+        return null;
+    }
+
+    protected function currentUrl(): string
+    {
+        return URL::current();
+    }
+
+    protected function jsonResponse(mixed $data)
+    {
+        return response()->json($data);
+    }
+
+    protected function contactResource($resource)
+    {
+        return new ContactResource($resource);
+    }
+
+    protected function vendorResource($resource)
+    {
+        return new VendorResource($resource);
+    }
+
+    protected function contactResourceCollection($resource)
+    {
+        return ContactResource::collection($resource);
+    }
+
+    protected function vendorResourceCollection($resource)
+    {
+        return VendorResource::collection($resource);
     }
 }

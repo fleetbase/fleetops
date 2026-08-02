@@ -25,8 +25,13 @@ class EquipmentImport implements ToCollection, WithHeadingRow
                 continue;
             }
 
-            Equipment::createFromImport($row, true);
+            $this->createFromImport($row);
             $this->imported++;
         }
+    }
+
+    protected function createFromImport(array $row): void
+    {
+        Equipment::createFromImport($row, true);
     }
 }

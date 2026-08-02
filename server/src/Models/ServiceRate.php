@@ -856,7 +856,7 @@ class ServiceRate extends Model
 
                 // if no distance fee use the last
                 if ($serviceParcelFee === null) {
-                    $serviceParcelFee = $this->parcelFees->sortByDesc()->first();
+                    $serviceParcelFee = $this->parcelFees->sortByDesc('fee')->first();
                 }
 
                 $subTotal += $serviceParcelFee->fee;
@@ -1050,7 +1050,7 @@ class ServiceRate extends Model
 
                 // if no distance fee use the last
                 if ($serviceParcelFee === null) {
-                    $serviceParcelFee = $this->parcelFees->sortByDesc()->first();
+                    $serviceParcelFee = $this->parcelFees->sortByDesc('fee')->first();
                 }
 
                 $subTotal += $serviceParcelFee->fee;
@@ -1367,11 +1367,9 @@ class ServiceRate extends Model
             return null;
         }
 
+        // getLocationAsPoint() is typed `: SpatialPoint`, which always exposes
+        // getLat()/getLng(), so no further guarding is possible here
         $point = $place->getLocationAsPoint();
-
-        if (!$point || !method_exists($point, 'getLat') || !method_exists($point, 'getLng')) {
-            return null;
-        }
 
         return ['lat' => (float) $point->getLat(), 'lng' => (float) $point->getLng()];
     }

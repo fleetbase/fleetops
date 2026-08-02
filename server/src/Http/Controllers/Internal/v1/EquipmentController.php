@@ -30,7 +30,7 @@ class EquipmentController extends FleetOpsController
         $selections = $request->array('selections');
         $fileName   = trim(Str::slug('equipment-' . date('Y-m-d-H:i')) . '.' . $format);
 
-        return Excel::download(new EquipmentExport($selections), $fileName);
+        return $this->downloadExport(new EquipmentExport($selections), $fileName);
     }
 
     /**
@@ -46,8 +46,8 @@ class EquipmentController extends FleetOpsController
 
         foreach ($files as $file) {
             try {
-                $import = new EquipmentImport();
-                Excel::import($import, $file->path, $disk);
+                $import = $this->createImport();
+                $this->importFile($import, $file->path, $disk);
                 $importedCount += $import->imported;
             } catch (\Throwable $e) {
                 return response()->error('Invalid file, unable to process.');
@@ -55,5 +55,20 @@ class EquipmentController extends FleetOpsController
         }
 
         return response()->json(['status' => 'ok', 'message' => 'Import completed', 'imported' => $importedCount]);
+    }
+
+    protected function downloadExport(EquipmentExport $export, string $fileName)
+    {
+        return Excel::download($export, $fileName);
+    }
+
+    protected function createImport(): EquipmentImport
+    {
+        return new EquipmentImport();
+    }
+
+    protected function importFile(EquipmentImport $import, string $path, string $disk): void
+    {
+        Excel::import($import, $path, $disk);
     }
 }

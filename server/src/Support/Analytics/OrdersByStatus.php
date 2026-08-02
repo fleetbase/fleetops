@@ -25,13 +25,7 @@ class OrdersByStatus extends AbstractAnalytics
         $start = $this->start ?? Carbon::now()->subDays(14)->toDateTime();
         $end   = $this->end ?? Carbon::now()->toDateTime();
 
-        $rows = Order::where('company_uuid', $this->company->uuid)
-            ->whereBetween('created_at', [$start, $end])
-            ->whereIn('status', array_keys(self::STATUS_PALETTE))
-            ->selectRaw('DATE(created_at) as bucket, status, COUNT(*) as total')
-            ->groupBy('bucket', 'status')
-            ->orderBy('bucket')
-            ->get();
+        $rows = $this->statusRows($start, $end);
 
         $cursor    = Carbon::instance($start)->startOfDay();
         $endDay    = Carbon::instance($end)->startOfDay();
@@ -60,5 +54,16 @@ class OrdersByStatus extends AbstractAnalytics
             'labels'   => $labels,
             'datasets' => $datasets,
         ];
+    }
+
+    protected function statusRows(\DateTimeInterface $start, \DateTimeInterface $end)
+    {
+        return Order::where('company_uuid', $this->company->uuid)
+            ->whereBetween('created_at', [$start, $end])
+            ->whereIn('status', array_keys(self::STATUS_PALETTE))
+            ->selectRaw('DATE(created_at) as bucket, status, COUNT(*) as total')
+            ->groupBy('bucket', 'status')
+            ->orderBy('bucket')
+            ->get();
     }
 }

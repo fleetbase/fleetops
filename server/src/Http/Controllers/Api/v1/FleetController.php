@@ -30,17 +30,17 @@ class FleetController extends Controller
 
         // service area assignment
         if ($request->has('service_area')) {
-            $input['service_area_uuid'] = Utils::getUuid('service_areas', [
+            $input['service_area_uuid'] = $this->getServiceAreaUuid('service_areas', [
                 'public_id'    => $request->input('service_area'),
                 'company_uuid' => session('company'),
             ]);
         }
 
         // create the fleet
-        $fleet = Fleet::create($input);
+        $fleet = $this->createFleet($input);
 
         // response the driver resource
-        return new FleetResource($fleet);
+        return $this->fleetResource($fleet);
     }
 
     /**
@@ -55,9 +55,9 @@ class FleetController extends Controller
     {
         // find for the fleet
         try {
-            $fleet = Fleet::findRecordOrFail($id);
+            $fleet = $this->findFleet($id);
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $exception) {
-            return response()->json(
+            return $this->jsonResponse(
                 [
                     'error' => 'Fleet resource not found.',
                 ],
@@ -70,7 +70,7 @@ class FleetController extends Controller
 
         // service area assignment
         if ($request->has('service_area')) {
-            $input['service_area_uuid'] = Utils::getUuid('service_areas', [
+            $input['service_area_uuid'] = $this->getServiceAreaUuid('service_areas', [
                 'public_id'    => $request->input('service_area'),
                 'company_uuid' => session('company'),
             ]);
@@ -80,7 +80,7 @@ class FleetController extends Controller
         $fleet->update($input);
 
         // response the fleet resource
-        return new FleetResource($fleet);
+        return $this->fleetResource($fleet);
     }
 
     /**
@@ -90,9 +90,9 @@ class FleetController extends Controller
      */
     public function query(Request $request)
     {
-        $results = Fleet::queryWithRequest($request);
+        $results = $this->queryFleets($request);
 
-        return FleetResource::collection($results);
+        return $this->fleetResourceCollection($results);
     }
 
     /**
@@ -104,9 +104,9 @@ class FleetController extends Controller
     {
         // find for the fleet
         try {
-            $fleet = Fleet::findRecordOrFail($id);
+            $fleet = $this->findFleet($id);
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $exception) {
-            return response()->json(
+            return $this->jsonResponse(
                 [
                     'error' => 'Fleet resource not found.',
                 ],
@@ -115,7 +115,7 @@ class FleetController extends Controller
         }
 
         // response the fleet resource
-        return new FleetResource($fleet);
+        return $this->fleetResource($fleet);
     }
 
     /**
@@ -127,9 +127,9 @@ class FleetController extends Controller
     {
         // find for the driver
         try {
-            $fleet = Fleet::findRecordOrFail($id);
+            $fleet = $this->findFleet($id);
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $exception) {
-            return response()->json(
+            return $this->jsonResponse(
                 [
                     'error' => 'Fleet resource not found.',
                 ],
@@ -141,6 +141,46 @@ class FleetController extends Controller
         $fleet->delete();
 
         // response the fleet resource
+        return $this->deletedFleetResource($fleet);
+    }
+
+    protected function getServiceAreaUuid(string $table, array $where): ?string
+    {
+        return Utils::getUuid($table, $where);
+    }
+
+    protected function createFleet(array $input): Fleet
+    {
+        return Fleet::create($input);
+    }
+
+    protected function findFleet(string $id): Fleet
+    {
+        return Fleet::findRecordOrFail($id);
+    }
+
+    protected function queryFleets(Request $request)
+    {
+        return Fleet::queryWithRequest($request);
+    }
+
+    protected function fleetResource(Fleet $fleet)
+    {
+        return new FleetResource($fleet);
+    }
+
+    protected function fleetResourceCollection($results)
+    {
+        return FleetResource::collection($results);
+    }
+
+    protected function deletedFleetResource(Fleet $fleet)
+    {
         return new DeletedResource($fleet);
+    }
+
+    protected function jsonResponse(array $payload, int $status)
+    {
+        return response()->json($payload, $status);
     }
 }

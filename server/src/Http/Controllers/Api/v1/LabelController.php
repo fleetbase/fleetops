@@ -19,45 +19,60 @@ class LabelController extends Controller
     {
         $format  = $request->input('format', 'stream');
         $type    = $request->input('type', strtok($publicId, '_'));
-        $subject = null;
-
-        switch ($type) {
-            case 'order':
-                $subject = Order::where('public_id', $publicId)->orWhere('uuid', $publicId)->withoutGlobalScopes()->first();
-                break;
-
-            case 'waypoint':
-                $subject = Waypoint::where('public_id', $publicId)->orWhere('uuid', $publicId)->withoutGlobalScopes()->first();
-                break;
-
-            case 'entity':
-                $subject = Entity::where('public_id', $publicId)->orWhere('uuid', $publicId)->withoutGlobalScopes()->first();
-                break;
-        }
+        $subject = $this->findLabelSubject($type, $publicId);
 
         if (!$subject) {
-            return response()->apiError('Unable to render label.');
+            return $this->apiError('Unable to render label.');
         }
 
         switch ($format) {
             case 'pdf':
             case 'stream':
             default:
-                $stream = $subject->pdfLabelStream();
-
-                return $stream;
+                return $subject->pdfLabelStream();
 
             case 'text':
                 $text = $subject->pdfLabel()->output();
 
-                return response()->make($text);
+                return $this->makeResponse($text);
 
             case 'base64':
                 $base64 = base64_encode($subject->pdfLabel()->output());
 
-                return response()->json(['data' => mb_convert_encoding($base64, 'UTF-8', 'UTF-8')]);
+                return $this->jsonResponse(['data' => mb_convert_encoding($base64, 'UTF-8', 'UTF-8')]);
         }
 
-        return response()->apiError('Unable to render label.');
+        return $this->apiError('Unable to render label.');
+    }
+
+    protected function findLabelSubject(?string $type, string $publicId): mixed
+    {
+        switch ($type) {
+            case 'order':
+                return Order::where('public_id', $publicId)->orWhere('uuid', $publicId)->withoutGlobalScopes()->first();
+
+            case 'waypoint':
+                return Waypoint::where('public_id', $publicId)->orWhere('uuid', $publicId)->withoutGlobalScopes()->first();
+
+            case 'entity':
+                return Entity::where('public_id', $publicId)->orWhere('uuid', $publicId)->withoutGlobalScopes()->first();
+        }
+
+        return null;
+    }
+
+    protected function apiError(string $message)
+    {
+        return response()->apiError($message);
+    }
+
+    protected function makeResponse(string $text)
+    {
+        return response()->make($text);
+    }
+
+    protected function jsonResponse(array $payload)
+    {
+        return response()->json($payload);
     }
 }

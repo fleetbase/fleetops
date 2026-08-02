@@ -31,13 +31,16 @@ class Polygon implements CastsAttributes
      */
     public function set($model, $key, $value, $attributes)
     {
-        if ($value instanceof GeometryInterface) {
+        // Checked before the broader GeometryInterface guard below, which a
+        // SpatialPolygon also satisfies — otherwise this arm never fires. Both
+        // arms behave identically, so ordering does not change what is stored.
+        if ($value instanceof SpatialPolygon) {
             $model->geometries[$key] = $value;
 
             return $value;
         }
 
-        if ($value instanceof SpatialPolygon) {
+        if ($value instanceof GeometryInterface) {
             $model->geometries[$key] = $value;
 
             return $value;

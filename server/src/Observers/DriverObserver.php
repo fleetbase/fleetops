@@ -30,7 +30,7 @@ class DriverObserver
      */
     public function created(Driver $driver)
     {
-        LiveCacheService::invalidateMultiple(['drivers', 'operations-monitor']);
+        $this->invalidateLiveCache();
     }
 
     /**
@@ -40,7 +40,7 @@ class DriverObserver
      */
     public function updated(Driver $driver)
     {
-        LiveCacheService::invalidateMultiple(['drivers', 'operations-monitor']);
+        $this->invalidateLiveCache();
     }
 
     /**
@@ -62,14 +62,29 @@ class DriverObserver
     public function deleted(Driver $driver)
     {
         // Unassign them from any order they are assigned to
-        Order::where(['driver_assigned_uuid' => $driver->uuid])->update(['driver_assigned_uuid' => null]);
+        $this->unassignOrders($driver);
 
         // If the driver had a user account with the role driver and type user delete it
-        $user = User::where(['uuid' => $driver->user_uuid, 'type' => 'user'])->first();
+        $user = $this->findDriverUser($driver);
         if ($user && $user->hasRole('Driver')) {
             $user->delete();
         }
 
+        $this->invalidateLiveCache();
+    }
+
+    protected function invalidateLiveCache(): void
+    {
         LiveCacheService::invalidateMultiple(['drivers', 'operations-monitor']);
+    }
+
+    protected function unassignOrders(Driver $driver): int
+    {
+        return Order::where(['driver_assigned_uuid' => $driver->uuid])->update(['driver_assigned_uuid' => null]);
+    }
+
+    protected function findDriverUser(Driver $driver): ?User
+    {
+        return User::where(['uuid' => $driver->user_uuid, 'type' => 'user'])->first();
     }
 }

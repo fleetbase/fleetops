@@ -414,10 +414,10 @@ class Entity extends Model
             }
         }
 
-        // confirm destination_uuid is indeed a place record
-        if (isset($attributes['destination_uuid']) && Place::where('uuid', $attributes['destination_uuid'])->doesntExist()) {
-            // search waypoints for search_uuid if any
-            $destination = Place::where('meta->search_uuid', $attributes['destination_uuid'])->first();
+        // confirm the resolved destination is indeed a place record — temp
+        // search uuids from imports resolve through place metadata
+        if ($this->destination_uuid === null && Str::isUuid($destinationKey)) {
+            $destination = Place::where('meta->search_uuid', $destinationKey)->first();
 
             if ($destination instanceof Place) {
                 $this->destination_uuid = $destination->uuid;

@@ -33,7 +33,7 @@ class MaintenanceController extends FleetOpsController
         $selections = $request->array('selections');
         $fileName   = trim(Str::slug('maintenances-' . date('Y-m-d-H:i')) . '.' . $format);
 
-        return Excel::download(new MaintenanceExport($selections), $fileName);
+        return $this->downloadExport(new MaintenanceExport($selections), $fileName);
     }
 
     /**
@@ -69,9 +69,7 @@ class MaintenanceController extends FleetOpsController
      */
     public function addLineItem(string $id, Request $request): JsonResponse
     {
-        $maintenance = Maintenance::where('uuid', $id)
-            ->orWhere('public_id', $id)
-            ->firstOrFail();
+        $maintenance = $this->findMaintenanceForLineItem($id);
 
         $validated = $request->validate([
             'description' => 'required|string|max:255',
@@ -84,11 +82,7 @@ class MaintenanceController extends FleetOpsController
         $maintenance->refresh();
         $this->recalculateCosts($maintenance);
 
-        return response()->json([
-            'status'     => 'ok',
-            'line_items' => $maintenance->line_items,
-            'total_cost' => $maintenance->total_cost,
-        ]);
+        return response()->json($this->lineItemPayload($maintenance));
     }
 
     /**
@@ -97,9 +91,7 @@ class MaintenanceController extends FleetOpsController
      */
     public function updateLineItem(string $id, int $index, Request $request): JsonResponse
     {
-        $maintenance = Maintenance::where('uuid', $id)
-            ->orWhere('public_id', $id)
-            ->firstOrFail();
+        $maintenance = $this->findMaintenanceForLineItem($id);
 
         $validated = $request->validate([
             'description' => 'required|string|max:255',
@@ -122,11 +114,7 @@ class MaintenanceController extends FleetOpsController
         $maintenance->refresh();
         $this->recalculateCosts($maintenance);
 
-        return response()->json([
-            'status'     => 'ok',
-            'line_items' => $maintenance->line_items,
-            'total_cost' => $maintenance->total_cost,
-        ]);
+        return response()->json($this->lineItemPayload($maintenance));
     }
 
     /**
@@ -135,9 +123,7 @@ class MaintenanceController extends FleetOpsController
      */
     public function removeLineItem(string $id, int $index): JsonResponse
     {
-        $maintenance = Maintenance::where('uuid', $id)
-            ->orWhere('public_id', $id)
-            ->firstOrFail();
+        $maintenance = $this->findMaintenanceForLineItem($id);
 
         if (!$maintenance->removeLineItem($index)) {
             return response()->json(['error' => 'Line item not found.'], 404);
@@ -146,11 +132,7 @@ class MaintenanceController extends FleetOpsController
         $maintenance->refresh();
         $this->recalculateCosts($maintenance);
 
-        return response()->json([
-            'status'     => 'ok',
-            'line_items' => $maintenance->line_items,
-            'total_cost' => $maintenance->total_cost,
-        ]);
+        return response()->json($this->lineItemPayload($maintenance));
     }
 
     /**
@@ -167,7 +149,7 @@ class MaintenanceController extends FleetOpsController
         foreach ($files as $file) {
             try {
                 $import = new MaintenanceImport();
-                Excel::import($import, $file->path, $disk);
+                $this->importFile($import, $file->path, $disk);
                 $importedCount += $import->imported;
             } catch (\Throwable $e) {
                 return response()->error('Invalid file, unable to process.');
@@ -193,5 +175,31 @@ class MaintenanceController extends FleetOpsController
             'parts_cost' => $partsCost,
             'total_cost' => $totalCost,
         ]);
+    }
+
+    protected function findMaintenanceForLineItem(string $id): Maintenance
+    {
+        return Maintenance::where('uuid', $id)
+            ->orWhere('public_id', $id)
+            ->firstOrFail();
+    }
+
+    protected function downloadExport(MaintenanceExport $export, string $fileName)
+    {
+        return Excel::download($export, $fileName);
+    }
+
+    protected function importFile(MaintenanceImport $import, string $path, string $disk): void
+    {
+        Excel::import($import, $path, $disk);
+    }
+
+    protected function lineItemPayload(Maintenance $maintenance): array
+    {
+        return [
+            'status'     => 'ok',
+            'line_items' => $maintenance->line_items,
+            'total_cost' => $maintenance->total_cost,
+        ];
     }
 }

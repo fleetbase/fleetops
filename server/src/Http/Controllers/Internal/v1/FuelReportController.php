@@ -43,7 +43,7 @@ class FuelReportController extends FleetOpsController
         $selections   = $request->array('selections');
         $fileName     = trim(Str::slug('fuel_report-' . date('Y-m-d-H:i')) . '.' . $format);
 
-        return Excel::download(new FuelReportExport($selections), $fileName);
+        return $this->downloadExport(new FuelReportExport($selections), $fileName);
     }
 
     public function import(ImportRequest $request)
@@ -54,8 +54,8 @@ class FuelReportController extends FleetOpsController
 
         foreach ($files as $file) {
             try {
-                $import = new FuelReportImport();
-                Excel::import($import, $file->path, $disk);
+                $import = $this->createImport();
+                $this->importFile($import, $file->path, $disk);
                 $importedCount += $import->imported;
             } catch (\Throwable $e) {
                 return response()->error('Invalid file, unable to proccess.');
@@ -63,5 +63,20 @@ class FuelReportController extends FleetOpsController
         }
 
         return response()->json(['status' => 'ok', 'message' => 'Import completed', 'imported' => $importedCount]);
+    }
+
+    protected function downloadExport(FuelReportExport $export, string $fileName)
+    {
+        return Excel::download($export, $fileName);
+    }
+
+    protected function createImport(): FuelReportImport
+    {
+        return new FuelReportImport();
+    }
+
+    protected function importFile(FuelReportImport $import, string $path, string $disk): void
+    {
+        Excel::import($import, $path, $disk);
     }
 }

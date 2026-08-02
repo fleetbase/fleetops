@@ -24,9 +24,9 @@ class EquipmentController extends Controller
         $input                 = $this->input($request);
         $input['company_uuid'] = session('company');
 
-        $equipment = Equipment::create($input)->load(['warranty', 'photo', 'equipable']);
+        $equipment = $this->createEquipment($input)->load(['warranty', 'photo', 'equipable']);
 
-        return new EquipmentResource($equipment);
+        return $this->equipmentResource($equipment);
     }
 
     public function update(string $id, UpdateEquipmentRequest $request)
@@ -36,23 +36,23 @@ class EquipmentController extends Controller
         try {
             $equipment = $this->resolveModel(Equipment::class, $id);
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $exception) {
-            return response()->json(['error' => 'Equipment resource not found.'], 404);
+            return $this->jsonResponse(['error' => 'Equipment resource not found.'], 404);
         }
 
         $equipment->update($this->input($request));
 
-        return new EquipmentResource($equipment->refresh()->load(['warranty', 'photo', 'equipable']));
+        return $this->equipmentResource($equipment->refresh()->load(['warranty', 'photo', 'equipable']));
     }
 
     public function query(Request $request)
     {
         $this->rejectUuidIdentifiers($request);
 
-        $results = Equipment::queryWithRequest($request, function (&$query) {
+        $results = $this->queryEquipment($request, function (&$query) {
             $query->with(['warranty', 'photo', 'equipable']);
         });
 
-        return EquipmentResource::collection($results);
+        return $this->equipmentResourceCollection($results);
     }
 
     public function find(string $id)
@@ -60,10 +60,10 @@ class EquipmentController extends Controller
         try {
             $equipment = $this->resolveModel(Equipment::class, $id)->load(['warranty', 'photo', 'equipable']);
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $exception) {
-            return response()->json(['error' => 'Equipment resource not found.'], 404);
+            return $this->jsonResponse(['error' => 'Equipment resource not found.'], 404);
         }
 
-        return new EquipmentResource($equipment);
+        return $this->equipmentResource($equipment);
     }
 
     public function delete(string $id)
@@ -71,12 +71,12 @@ class EquipmentController extends Controller
         try {
             $equipment = $this->resolveModel(Equipment::class, $id);
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $exception) {
-            return response()->json(['error' => 'Equipment resource not found.'], 404);
+            return $this->jsonResponse(['error' => 'Equipment resource not found.'], 404);
         }
 
         $equipment->delete();
 
-        return new DeletedResource($equipment);
+        return $this->deletedEquipmentResource($equipment);
     }
 
     protected function input(Request $request): array
@@ -110,5 +110,35 @@ class EquipmentController extends Controller
         }
 
         return $input;
+    }
+
+    protected function createEquipment(array $input): Equipment
+    {
+        return Equipment::create($input);
+    }
+
+    protected function queryEquipment(Request $request, callable $callback)
+    {
+        return Equipment::queryWithRequest($request, $callback);
+    }
+
+    protected function equipmentResource(Equipment $equipment)
+    {
+        return new EquipmentResource($equipment);
+    }
+
+    protected function equipmentResourceCollection($results)
+    {
+        return EquipmentResource::collection($results);
+    }
+
+    protected function deletedEquipmentResource(Equipment $equipment)
+    {
+        return new DeletedResource($equipment);
+    }
+
+    protected function jsonResponse(array $payload, int $status)
+    {
+        return response()->json($payload, $status);
     }
 }

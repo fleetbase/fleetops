@@ -23,9 +23,9 @@ class OrderConfigEntities implements CastsAttributes
         if (is_array($entities)) {
             $entities = array_map(function ($entity) {
                 if (isset($entity['photo_uuid'])) {
-                    $file = File::where('uuid', $entity['photo_uuid'])->first();
-                    if ($file) {
-                        $entity['photo_url'] = $file->url;
+                    $photoUrl = $this->photoUrlFor($entity['photo_uuid']);
+                    if ($photoUrl) {
+                        $entity['photo_url'] = $photoUrl;
                     }
                 }
 
@@ -49,5 +49,12 @@ class OrderConfigEntities implements CastsAttributes
     public function set($model, $key, $value, $attributes)
     {
         return json_encode($value);
+    }
+
+    protected function photoUrlFor(string $photoUuid): ?string
+    {
+        $file = File::where('uuid', $photoUuid)->first();
+
+        return $file?->url;
     }
 }

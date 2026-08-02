@@ -22,8 +22,11 @@ class GeocoderController extends Controller
         $query  = $request->or(['coordinates', 'query']);
         $single = $request->boolean('single');
 
-        /** @var \Fleetbase\LaravelMysqlSpatial\Types\Point $coordinates */
-        $coordinates = Utils::getPointFromCoordinates($query);
+        // Resolve strictly: getPointFromCoordinates() is typed `: Point` and
+        // falls back to Point(0, 0) for unusable input, which would silently
+        // reverse-geocode Null Island instead of reporting the bad request
+        /** @var \Fleetbase\LaravelMysqlSpatial\Types\Point|null $coordinates */
+        $coordinates = Utils::getPointFromCoordinatesStrict($query);
 
         // if not a valid point error
         if (!$coordinates instanceof \Fleetbase\LaravelMysqlSpatial\Types\Point) {
@@ -31,19 +34,19 @@ class GeocoderController extends Controller
         }
 
         // get results
-        $results = Geocoder::reverse($coordinates->getLat(), $coordinates->getLng())->get();
+        $results = $this->reverseGeocode($coordinates->getLat(), $coordinates->getLng());
 
         if ($results->count()) {
             if ($single) {
                 $googleAddress = $results->first();
 
-                return response()->json(Place::createFromGoogleAddress($googleAddress));
+                return response()->json($this->placeFromGoogleAddress($googleAddress));
             }
 
             return response()->json(
                 $results->map(
                     function ($googleAddress) {
-                        return Place::createFromGoogleAddress($googleAddress);
+                        return $this->placeFromGoogleAddress($googleAddress);
                     }
                 )
                     ->values()
@@ -71,19 +74,19 @@ class GeocoderController extends Controller
         }
 
         // lookup
-        $results = Geocoder::geocode($query)->get();
+        $results = $this->forwardGeocode($query);
 
         if ($results->count()) {
             if ($single) {
                 $googleAddress = $results->first();
 
-                return response()->json(Place::createFromGoogleAddress($googleAddress));
+                return response()->json($this->placeFromGoogleAddress($googleAddress));
             }
 
             return response()->json(
                 $results->map(
                     function ($googleAddress) {
-                        return Place::createFromGoogleAddress($googleAddress);
+                        return $this->placeFromGoogleAddress($googleAddress);
                     }
                 )
                     ->values()
@@ -92,5 +95,20 @@ class GeocoderController extends Controller
         }
 
         return response()->json([]);
+    }
+
+    protected function reverseGeocode(float $latitude, float $longitude)
+    {
+        return Geocoder::reverse($latitude, $longitude)->get();
+    }
+
+    protected function forwardGeocode(string $query)
+    {
+        return Geocoder::geocode($query)->get();
+    }
+
+    protected function placeFromGoogleAddress($googleAddress)
+    {
+        return Place::createFromGoogleAddress($googleAddress);
     }
 }

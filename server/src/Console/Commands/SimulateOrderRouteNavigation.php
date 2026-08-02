@@ -36,7 +36,7 @@ class SimulateOrderRouteNavigation extends Command
         ini_set('max_execution_time', 0);
 
         $orderId = $this->argument('order');
-        $order   = Order::where('public_id', $orderId)->orWhere('uuid', $orderId)->first();
+        $order   = $this->findOrder($orderId);
         $driver  = null;
         if (!$order) {
             return $this->error('Order not found to simulate driving for.');
@@ -45,7 +45,7 @@ class SimulateOrderRouteNavigation extends Command
         // If driver provided
         $driverId = $this->argument('driver');
         if ($driverId) {
-            $driver = Driver::where('public_id', $driverId)->orWhere('uuid', $driverId)->first();
+            $driver = $this->findDriver($driverId);
             if (!$driver) {
                 $this->error('The driver specified was not found, defaulting to driver assigned to order.');
             }
@@ -75,7 +75,7 @@ class SimulateOrderRouteNavigation extends Command
         $this->info('Found route starting point: ' . (string) $start . ' and route ending point: ' . (string) $end);
 
         // Send points to OSRM
-        $route = OSRM::getRoute($start, $end);
+        $route = $this->getRoute($start, $end);
         $this->info('Requesting route from OSRM.');
 
         // Create simulation events
@@ -85,7 +85,7 @@ class SimulateOrderRouteNavigation extends Command
             $this->info('Received route geometry from OSRM.');
 
             // Decode the waypoints if needed
-            $waypoints = OSRM::decodePolyline($routeGeometry);
+            $waypoints = $this->decodePolyline($routeGeometry);
             $this->info('Decoded OSRM route geometry.');
 
             // Loop through waypoints to calculate the heading for each point
@@ -107,8 +107,8 @@ class SimulateOrderRouteNavigation extends Command
                 }
 
                 $this->info('Simulating driver reaching waypoint #' . ($index + 1) . ' at ' . (string) $waypoint);
-                event(new DriverSimulatedLocationChanged($driver, $waypoint, $additionalData));
-                sleep(3);
+                $this->dispatchLocationChanged($driver, $waypoint, $additionalData);
+                $this->pauseBetweenWaypoints();
             }
         }
 
@@ -127,5 +127,35 @@ class SimulateOrderRouteNavigation extends Command
         return [
             'order' => 'Which order ID should be used to simulate driving the route for?',
         ];
+    }
+
+    protected function findOrder(string $orderId): ?Order
+    {
+        return Order::where('public_id', $orderId)->orWhere('uuid', $orderId)->first();
+    }
+
+    protected function findDriver(string $driverId): ?Driver
+    {
+        return Driver::where('public_id', $driverId)->orWhere('uuid', $driverId)->first();
+    }
+
+    protected function getRoute(mixed $start, mixed $end): array
+    {
+        return OSRM::getRoute($start, $end);
+    }
+
+    protected function decodePolyline(string $routeGeometry): array
+    {
+        return OSRM::decodePolyline($routeGeometry);
+    }
+
+    protected function dispatchLocationChanged(Driver $driver, mixed $waypoint, array $additionalData): void
+    {
+        event(new DriverSimulatedLocationChanged($driver, $waypoint, $additionalData));
+    }
+
+    protected function pauseBetweenWaypoints(): void
+    {
+        sleep(3);
     }
 }

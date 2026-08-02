@@ -36,7 +36,7 @@ class NotifyDriverOnShiftChange implements ShouldQueue
 
         // Load the parent schedule to find the subject (driver)
         /** @var Schedule|null $schedule */
-        $schedule = $scheduleItem->schedule()->with('subject')->first();
+        $schedule = $this->getSchedule($scheduleItem);
         if (!$schedule) {
             return;
         }
@@ -48,16 +48,36 @@ class NotifyDriverOnShiftChange implements ShouldQueue
         }
 
         // Check the company-level scheduling setting
-        $settings     = Setting::lookupFromCompany('fleet-ops.scheduling-settings', []);
+        $settings     = $this->getSchedulingSettings();
         $shouldNotify = (bool) data_get($settings, 'notify_drivers_on_shift_change', false);
         if (!$shouldNotify) {
             return;
         }
 
         // Determine if this is a new shift or an update
-        $isNew = $event instanceof \Fleetbase\Events\ScheduleItemCreated;
+        $isNew = $this->isCreatedEvent($event);
 
         // Send the notification to the driver
-        $subject->notify(new DriverShiftChanged($scheduleItem, $isNew));
+        $this->notifyDriver($subject, new DriverShiftChanged($scheduleItem, $isNew));
+    }
+
+    protected function getSchedule(ScheduleItem $scheduleItem): ?Schedule
+    {
+        return $scheduleItem->schedule()->with('subject')->first();
+    }
+
+    protected function getSchedulingSettings(): array
+    {
+        return Setting::lookupFromCompany('fleet-ops.scheduling-settings', []);
+    }
+
+    protected function isCreatedEvent(object $event): bool
+    {
+        return $event instanceof \Fleetbase\Events\ScheduleItemCreated;
+    }
+
+    protected function notifyDriver(Driver $driver, DriverShiftChanged $notification): void
+    {
+        $driver->notify($notification);
     }
 }

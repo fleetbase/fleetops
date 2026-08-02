@@ -10,7 +10,8 @@ use Illuminate\Support\Facades\Schema;
 
 class ActiveRevenueQuery
 {
-    public const ACTIVE_STATUSES               = [Transaction::STATUS_SUCCESS];
+    public const ACTIVE_STATUSES               = ['success'];
+    public const CREDIT_DIRECTION              = 'credit';
     public const INACTIVE_TRANSACTION_STATUSES = ['pending', 'failed', 'cancelled', 'canceled', 'void', 'voided', 'expired', 'reversed', 'refunded', 'ignored'];
     public const INACTIVE_ORDER_STATUSES       = ['canceled', 'cancelled', 'order_canceled'];
     public const INACTIVE_INVOICE_STATUSES     = ['void', 'voided', 'cancelled', 'canceled'];
@@ -20,7 +21,7 @@ class ActiveRevenueQuery
         $query = Transaction::query()
             ->where('company_uuid', $company->uuid)
             ->where('currency', $currency)
-            ->where('direction', Transaction::DIRECTION_CREDIT)
+            ->where('direction', self::CREDIT_DIRECTION)
             ->whereIn('status', self::ACTIVE_STATUSES)
             ->whereNotIn('status', self::INACTIVE_TRANSACTION_STATUSES)
             ->whereNull('deleted_at')

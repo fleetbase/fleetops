@@ -25,9 +25,9 @@ class PartController extends Controller
         $input                 = $this->input($request);
         $input['company_uuid'] = session('company');
 
-        $part = Part::create($input)->load(['vendor', 'warranty', 'photo', 'asset']);
+        $part = $this->createPart($input)->load(['vendor', 'warranty', 'photo', 'asset']);
 
-        return new PartResource($part);
+        return $this->partResource($part);
     }
 
     public function update(string $id, UpdatePartRequest $request)
@@ -37,23 +37,23 @@ class PartController extends Controller
         try {
             $part = $this->resolveModel(Part::class, $id);
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $exception) {
-            return response()->json(['error' => 'Part resource not found.'], 404);
+            return $this->jsonResponse(['error' => 'Part resource not found.'], 404);
         }
 
         $part->update($this->input($request));
 
-        return new PartResource($part->refresh()->load(['vendor', 'warranty', 'photo', 'asset']));
+        return $this->partResource($part->refresh()->load(['vendor', 'warranty', 'photo', 'asset']));
     }
 
     public function query(Request $request)
     {
         $this->rejectUuidIdentifiers($request);
 
-        $results = Part::queryWithRequest($request, function (&$query) {
+        $results = $this->queryParts($request, function (&$query) {
             $query->with(['vendor', 'warranty', 'photo', 'asset']);
         });
 
-        return PartResource::collection($results);
+        return $this->partResourceCollection($results);
     }
 
     public function find(string $id)
@@ -61,10 +61,10 @@ class PartController extends Controller
         try {
             $part = $this->resolveModel(Part::class, $id)->load(['vendor', 'warranty', 'photo', 'asset']);
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $exception) {
-            return response()->json(['error' => 'Part resource not found.'], 404);
+            return $this->jsonResponse(['error' => 'Part resource not found.'], 404);
         }
 
-        return new PartResource($part);
+        return $this->partResource($part);
     }
 
     public function delete(string $id)
@@ -72,12 +72,12 @@ class PartController extends Controller
         try {
             $part = $this->resolveModel(Part::class, $id);
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $exception) {
-            return response()->json(['error' => 'Part resource not found.'], 404);
+            return $this->jsonResponse(['error' => 'Part resource not found.'], 404);
         }
 
         $part->delete();
 
-        return new DeletedResource($part);
+        return $this->deletedPartResource($part);
     }
 
     protected function input(Request $request): array
@@ -116,5 +116,35 @@ class PartController extends Controller
         }
 
         return $input;
+    }
+
+    protected function createPart(array $input): Part
+    {
+        return Part::create($input);
+    }
+
+    protected function queryParts(Request $request, callable $callback)
+    {
+        return Part::queryWithRequest($request, $callback);
+    }
+
+    protected function partResource(Part $part)
+    {
+        return new PartResource($part);
+    }
+
+    protected function partResourceCollection($results)
+    {
+        return PartResource::collection($results);
+    }
+
+    protected function deletedPartResource(Part $part)
+    {
+        return new DeletedResource($part);
+    }
+
+    protected function jsonResponse(array $payload, int $status)
+    {
+        return response()->json($payload, $status);
     }
 }

@@ -36,16 +36,16 @@ class HandleOrderDispatched implements ShouldQueue
 
         /* make sure driver is assigned if not trigger failed dispatch */
         if (!$order->hasDriverAssigned && !$order->adhoc) {
-            return event(new OrderDispatchFailed($order, 'No driver assigned for order to dispatch to.'));
+            return $this->dispatchFailed($order, 'No driver assigned for order to dispatch to.');
         }
 
         /**
          * Check if dispatch activity already exists, if not -
          * Check for dispatch code in activity options, if there is the correct dispatch code update activity.
          **/
-        $doesntHaveDispatchActivity = TrackingStatus::where(['code' => 'DISPATCHED', 'tracking_number_uuid' => $order->tracking_number_uuid])->doesntExist();
+        $doesntHaveDispatchActivity = $this->doesntHaveDispatchActivity($order);
         if ($doesntHaveDispatchActivity) {
-            $activity = $order->config()->getDispatchActivity();
+            $activity = $this->getDispatchActivity($order);
             if ($activity) {
                 /** update order activity */
                 $location = $order->getLastLocation();
@@ -69,29 +69,11 @@ class HandleOrderDispatched implements ShouldQueue
                 return;
             }
 
-            $drivers = Driver::where(['status' => 'available', 'online' => 1])
-                ->whereHas('company', function ($q) {
-                    $q->whereHas('users', function ($q) {
-                        $q->whereHas('driver', function ($q) {
-                            $q->where(['status' => 'available', 'online' => 1]);
-                            $q->whereNull('deleted_at');
-                        });
-                    });
-                })
-                ->whereNull('deleted_at')
-                ->whereNotNull('location')->whereRaw('
-                ST_Y(location) BETWEEN -90 AND 90
-                AND ST_X(location) BETWEEN -180 AND 180
-                AND NOT (ST_X(location) = 0 AND ST_Y(location) = 0)
-            ')
-                ->distanceSphere('location', $pickup, $distance)
-                ->distanceSphereValue('location', $pickup)
-                ->withoutGlobalScopes()
-                ->get();
+            $drivers = $this->nearbyAvailableDrivers($pickup, $distance);
 
             return $drivers->each(function ($driver) use ($order) {
                 try {
-                    $driver->notify(new OrderPing($order, $driver->distance));
+                    $this->notifyAdhocDriver($driver, $order);
                 } catch (\Exception $exception) {
                     // failed to notify driver for order dispatch for reason uknown -- exit silently
                 }
@@ -99,17 +81,70 @@ class HandleOrderDispatched implements ShouldQueue
         }
 
         /** @var \Fleetbase\Models\Driver */
-        $driver = Driver::where('uuid', $order->driver_assigned_uuid)->withoutGlobalScopes()->first();
+        $driver = $this->findAssignedDriver($order);
 
         /* notify driver order has dispatched */
         if (!$driver) {
-            return event(new OrderDispatchFailed($order, 'Order was dispatched, but driver was unable to be notified.'));
+            return $this->dispatchFailed($order, 'Order was dispatched, but driver was unable to be notified.');
         }
 
         try {
-            $driver->notify(new OrderDispatchedNotification($order));
+            $this->notifyAssignedDriver($driver, $order);
         } catch (\Exception $exception) {
             // silently fail notifying driver for now
         }
+    }
+
+    protected function dispatchFailed($order, string $reason): mixed
+    {
+        return event(new OrderDispatchFailed($order, $reason));
+    }
+
+    protected function doesntHaveDispatchActivity($order): bool
+    {
+        return TrackingStatus::where(['code' => 'DISPATCHED', 'tracking_number_uuid' => $order->tracking_number_uuid])->doesntExist();
+    }
+
+    protected function getDispatchActivity($order): mixed
+    {
+        return $order->config()?->getDispatchActivity();
+    }
+
+    protected function nearbyAvailableDrivers($pickup, int|float $distance)
+    {
+        return Driver::where(['status' => 'available', 'online' => 1])
+            ->whereHas('company', function ($q) {
+                $q->whereHas('users', function ($q) {
+                    $q->whereHas('driver', function ($q) {
+                        $q->where(['status' => 'available', 'online' => 1]);
+                        $q->whereNull('deleted_at');
+                    });
+                });
+            })
+            ->whereNull('deleted_at')
+            ->whereNotNull('location')->whereRaw('
+                ST_Y(location) BETWEEN -90 AND 90
+                AND ST_X(location) BETWEEN -180 AND 180
+                AND NOT (ST_X(location) = 0 AND ST_Y(location) = 0)
+            ')
+            ->distanceSphere('location', $pickup, $distance)
+            ->distanceSphereValue('location', $pickup)
+            ->withoutGlobalScopes()
+            ->get();
+    }
+
+    protected function notifyAdhocDriver(Driver $driver, $order): void
+    {
+        $driver->notify(new OrderPing($order, $driver->distance));
+    }
+
+    protected function findAssignedDriver($order): ?Driver
+    {
+        return Driver::where('uuid', $order->driver_assigned_uuid)->withoutGlobalScopes()->first();
+    }
+
+    protected function notifyAssignedDriver(Driver $driver, $order): void
+    {
+        $driver->notify(new OrderDispatchedNotification($order));
     }
 }

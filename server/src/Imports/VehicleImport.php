@@ -24,8 +24,17 @@ class VehicleImport implements ToCollection, WithHeadingRow
                 $row = array_filter($row->toArray());
             }
 
-            Vehicle::createFromImport($row, true);
+            if (empty($row)) {
+                continue;
+            }
+
+            $this->createFromImport($row);
             $this->imported++;
         }
+    }
+
+    protected function createFromImport(array $row): void
+    {
+        Vehicle::createFromImport($row, true);
     }
 }

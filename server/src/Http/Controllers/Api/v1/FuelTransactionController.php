@@ -33,9 +33,9 @@ class FuelTransactionController extends Controller
         $input                 = $this->input($request);
         $input['company_uuid'] = session('company');
 
-        $transaction = FuelProviderTransaction::create($input)->load(['connection', 'vehicle', 'driver', 'order', 'fuelReport']);
+        $transaction = $this->createTransaction($input)->load(['connection', 'vehicle', 'driver', 'order', 'fuelReport']);
 
-        return new FuelTransactionResource($transaction);
+        return $this->fuelTransactionResource($transaction);
     }
 
     public function update(string $id, UpdateFuelTransactionRequest $request)
@@ -50,18 +50,18 @@ class FuelTransactionController extends Controller
 
         $transaction->update($this->input($request));
 
-        return new FuelTransactionResource($transaction->refresh()->load(['connection', 'vehicle', 'driver', 'order', 'fuelReport']));
+        return $this->fuelTransactionResource($transaction->refresh()->load(['connection', 'vehicle', 'driver', 'order', 'fuelReport']));
     }
 
     public function query(Request $request)
     {
         $this->rejectUuidIdentifiers($request);
 
-        $results = FuelProviderTransaction::queryWithRequest($request, function (&$query) {
+        $results = $this->queryTransactionsWithRequest($request, function (&$query) {
             $query->with(['connection', 'vehicle', 'driver', 'order', 'fuelReport']);
         });
 
-        return FuelTransactionResource::collection($results);
+        return $this->fuelTransactionResourceCollection($results);
     }
 
     public function find(string $id)
@@ -72,7 +72,7 @@ class FuelTransactionController extends Controller
             return response()->json(['error' => 'FuelTransaction resource not found.'], 404);
         }
 
-        return new FuelTransactionResource($transaction);
+        return $this->fuelTransactionResource($transaction);
     }
 
     public function delete(string $id)
@@ -85,7 +85,7 @@ class FuelTransactionController extends Controller
 
         $transaction->delete();
 
-        return new DeletedResource($transaction);
+        return $this->deletedFuelTransactionResource($transaction);
     }
 
     public function matchVehicle(Request $request, string $id): JsonResponse
@@ -98,7 +98,7 @@ class FuelTransactionController extends Controller
 
         return response()->json([
             'status'      => 'ok',
-            'transaction' => new FuelTransactionResource($this->fuelProviderService->matchVehicle($transaction, $vehicle)),
+            'transaction' => $this->fuelTransactionResource($this->fuelProviderService->matchVehicle($transaction, $vehicle)),
         ]);
     }
 
@@ -112,7 +112,7 @@ class FuelTransactionController extends Controller
 
         return response()->json([
             'status'      => 'ok',
-            'transaction' => new FuelTransactionResource($this->fuelProviderService->matchOrder($transaction, $order)),
+            'transaction' => $this->fuelTransactionResource($this->fuelProviderService->matchOrder($transaction, $order)),
         ]);
     }
 
@@ -122,7 +122,7 @@ class FuelTransactionController extends Controller
 
         return response()->json([
             'status'      => 'ok',
-            'transaction' => new FuelTransactionResource($this->fuelProviderService->reprocessTransaction($transaction)),
+            'transaction' => $this->fuelTransactionResource($this->fuelProviderService->reprocessTransaction($transaction)),
         ]);
     }
 
@@ -135,13 +135,38 @@ class FuelTransactionController extends Controller
 
         return response()->json([
             'status'      => 'ok',
-            'transaction' => new FuelTransactionResource($this->fuelProviderService->reviewTransaction($transaction, $request->input('status'))),
+            'transaction' => $this->fuelTransactionResource($this->fuelProviderService->reviewTransaction($transaction, $request->input('status'))),
         ]);
+    }
+
+    protected function createTransaction(array $input): FuelProviderTransaction
+    {
+        return FuelProviderTransaction::create($input);
+    }
+
+    protected function queryTransactionsWithRequest(Request $request, callable $callback)
+    {
+        return FuelProviderTransaction::queryWithRequest($request, $callback);
     }
 
     protected function findTransaction(string $id): FuelProviderTransaction
     {
         return $this->resolveModel(FuelProviderTransaction::class, $id);
+    }
+
+    protected function fuelTransactionResource(FuelProviderTransaction $transaction)
+    {
+        return new FuelTransactionResource($transaction);
+    }
+
+    protected function fuelTransactionResourceCollection($transactions)
+    {
+        return FuelTransactionResource::collection($transactions);
+    }
+
+    protected function deletedFuelTransactionResource(FuelProviderTransaction $transaction)
+    {
+        return new DeletedResource($transaction);
     }
 
     protected function input(Request $request): array

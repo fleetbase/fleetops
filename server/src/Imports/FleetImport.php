@@ -24,8 +24,17 @@ class FleetImport implements ToCollection, WithHeadingRow
                 $row = array_filter($row->toArray());
             }
 
-            Fleet::createFromImport($row, true);
+            if (empty($row)) {
+                continue;
+            }
+
+            $this->createFromImport($row);
             $this->imported++;
         }
+    }
+
+    protected function createFromImport(array $row): void
+    {
+        Fleet::createFromImport($row, true);
     }
 }

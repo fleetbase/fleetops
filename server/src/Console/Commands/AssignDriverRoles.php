@@ -29,18 +29,18 @@ class AssignDriverRoles extends Command
      */
     public function handle()
     {
-        $companies = Company::with('users', 'users.driver')->get();
+        $companies = $this->companies();
 
         foreach ($companies as $company) {
             /** @var Company $company */
             $company->loadMissing('users');
             foreach ($company->users as $user) {
-                if ($user instanceof User) {
-                    $user->setCompanyUserRelation($company);
-                    $driver = $user->driver()->where('company_uuid', $company->uuid)->first();
-                    if ($driver && $user->isNotAdmin()) {
+                if ($this->isUser($user)) {
+                    $this->setCompanyUserRelation($user, $company);
+                    $driver = $this->driverForCompany($user, $company->uuid);
+                    if ($driver && $this->isNotAdmin($user)) {
                         try {
-                            $user->assignSingleRole('Driver');
+                            $this->assignDriverRole($user);
                             $this->info($company->name . ' - Driver: ' . $user->email . ' has been made Driver.');
                         } catch (\Throwable $e) {
                             $this->error($e->getMessage());
@@ -51,5 +51,35 @@ class AssignDriverRoles extends Command
         }
 
         return Command::SUCCESS;
+    }
+
+    protected function companies()
+    {
+        return Company::with('users', 'users.driver')->get();
+    }
+
+    protected function isUser($user): bool
+    {
+        return $user instanceof User;
+    }
+
+    protected function setCompanyUserRelation($user, Company $company): void
+    {
+        $user->setCompanyUserRelation($company);
+    }
+
+    protected function driverForCompany($user, string $companyUuid)
+    {
+        return $user->driver()->where('company_uuid', $companyUuid)->first();
+    }
+
+    protected function isNotAdmin($user): bool
+    {
+        return $user->isNotAdmin();
+    }
+
+    protected function assignDriverRole($user): void
+    {
+        $user->assignSingleRole('Driver');
     }
 }

@@ -13,7 +13,7 @@ class FuelCostsMetric extends MoneyMetric
 
     protected function query(?\DateTimeInterface $start, ?\DateTimeInterface $end)
     {
-        $query = FuelReport::where('company_uuid', $this->company->uuid)
+        $query = $this->fuelReportQuery($this->company->uuid)
             ->where('currency', $this->currency());
 
         if ($start && $end) {
@@ -26,5 +26,10 @@ class FuelCostsMetric extends MoneyMetric
     protected function aggregate($query): float
     {
         return (float) $query->sum('amount');
+    }
+
+    protected function fuelReportQuery(string $companyUuid)
+    {
+        return FuelReport::where('company_uuid', $companyUuid);
     }
 }

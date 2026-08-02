@@ -18,31 +18,13 @@ class GeofenceViolations extends AbstractAnalytics
         $start       = $this->start ?? Carbon::now()->subDays(7)->toDateTime();
         $end         = $this->end ?? Carbon::now()->toDateTime();
 
-        $violationsToday = GeofenceEventLog::where('company_uuid', $companyUuid)
-            ->where('event_type', 'dwelled')
-            ->whereDate('occurred_at', Carbon::today())
-            ->count();
+        $violationsToday = $this->violationsToday($companyUuid);
 
-        $violationsPeriod = GeofenceEventLog::where('company_uuid', $companyUuid)
-            ->where('event_type', 'dwelled')
-            ->whereBetween('occurred_at', [$start, $end])
-            ->count();
+        $violationsPeriod = $this->violationsPeriod($companyUuid, $start, $end);
 
-        $topDwells = GeofenceEventLog::where('company_uuid', $companyUuid)
-            ->where('event_type', 'dwelled')
-            ->whereBetween('occurred_at', [$start, $end])
-            ->whereNotNull('dwell_duration_minutes')
-            ->orderByDesc('dwell_duration_minutes')
-            ->limit(8)
-            ->get(['subject_name', 'driver_uuid', 'geofence_name', 'dwell_duration_minutes', 'occurred_at']);
+        $topDwells = $this->topDwells($companyUuid, $start, $end);
 
-        $byZoneRows = GeofenceEventLog::where('company_uuid', $companyUuid)
-            ->whereBetween('occurred_at', [$start, $end])
-            ->selectRaw('geofence_name, COUNT(*) as total')
-            ->groupBy('geofence_name')
-            ->orderByRaw('total DESC')
-            ->limit(8)
-            ->get();
+        $byZoneRows = $this->byZoneRows($companyUuid, $start, $end);
 
         return [
             'violations_today'  => $violationsToday,
@@ -59,5 +41,43 @@ class GeofenceViolations extends AbstractAnalytics
                 'data'   => $byZoneRows->pluck('total')->map(fn ($v) => (int) $v)->all(),
             ],
         ];
+    }
+
+    protected function violationsToday(string $companyUuid): int
+    {
+        return GeofenceEventLog::where('company_uuid', $companyUuid)
+            ->where('event_type', 'dwelled')
+            ->whereDate('occurred_at', Carbon::today())
+            ->count();
+    }
+
+    protected function violationsPeriod(string $companyUuid, \DateTimeInterface $start, \DateTimeInterface $end): int
+    {
+        return GeofenceEventLog::where('company_uuid', $companyUuid)
+            ->where('event_type', 'dwelled')
+            ->whereBetween('occurred_at', [$start, $end])
+            ->count();
+    }
+
+    protected function topDwells(string $companyUuid, \DateTimeInterface $start, \DateTimeInterface $end)
+    {
+        return GeofenceEventLog::where('company_uuid', $companyUuid)
+            ->where('event_type', 'dwelled')
+            ->whereBetween('occurred_at', [$start, $end])
+            ->whereNotNull('dwell_duration_minutes')
+            ->orderByDesc('dwell_duration_minutes')
+            ->limit(8)
+            ->get(['subject_name', 'driver_uuid', 'geofence_name', 'dwell_duration_minutes', 'occurred_at']);
+    }
+
+    protected function byZoneRows(string $companyUuid, \DateTimeInterface $start, \DateTimeInterface $end)
+    {
+        return GeofenceEventLog::where('company_uuid', $companyUuid)
+            ->whereBetween('occurred_at', [$start, $end])
+            ->selectRaw('geofence_name, COUNT(*) as total')
+            ->groupBy('geofence_name')
+            ->orderByRaw('total DESC')
+            ->limit(8)
+            ->get();
     }
 }

@@ -159,10 +159,10 @@ class TrackingStatus extends Model
             }
         }
 
-        $values['uuid']         = $uuid = (string) Str::uuid();
-        $values['public_id']    = static::generatePublicId('status');
+        $values['uuid']         = $uuid = static::newUuid();
+        $values['public_id']    = static::newPublicId();
         $values['_key']         = session('api_key') ?? 'console';
-        $values['created_at']   = Carbon::now()->toDateTimeString();
+        $values['created_at']   = static::currentTimestamp();
         $values['company_uuid'] = session('company');
 
         if ($trackingNumber) {
@@ -175,9 +175,29 @@ class TrackingStatus extends Model
             $values['meta'] = json_encode($values['meta']);
         }
 
-        $result = static::insert($values);
+        $result = static::insertTrackingStatus($values);
 
         return $result ? $uuid : false;
+    }
+
+    protected static function newUuid(): string
+    {
+        return (string) Str::uuid();
+    }
+
+    protected static function newPublicId(): string
+    {
+        return static::generatePublicId('status');
+    }
+
+    protected static function currentTimestamp(): string
+    {
+        return Carbon::now()->toDateTimeString();
+    }
+
+    protected static function insertTrackingStatus(array $values): bool
+    {
+        return static::insert($values);
     }
 
     public function isComplete(): bool

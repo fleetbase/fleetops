@@ -24,9 +24,7 @@ class ContactController extends Controller
     public function create(CreateContactRequest $request)
     {
         // get request input
-        $input          = $request->only(['name', 'type', 'title', 'email', 'phone', 'meta', 'type']);
-        $input['phone'] = is_string($input['phone']) ? Utils::formatPhoneNumber($input['phone']) : $input['phone'];
-        $input['type']  = empty($input['type']) ? 'contact' : $input['type'];
+        $input = $this->contactCreateInputFromRequest($request);
 
         // Handle photo upload using FileResolverService
         if ($request->has('photo')) {
@@ -39,12 +37,12 @@ class ContactController extends Controller
         }
 
         try {
-            $contactCandidate               = new Contact($input);
+            $contactCandidate               = $this->newContact($input);
             $contactCandidate->company_uuid = session('company');
             $contactCandidate->assertCustomerIdentityIsAvailable();
 
             // create the contact
-            $contact = Contact::updateOrCreate(
+            $contact = $this->updateOrCreateContact(
                 [
                     'company_uuid' => session('company'),
                     'name'         => $input['name'],
@@ -53,11 +51,11 @@ class ContactController extends Controller
                 $input
             );
         } catch (\Exception $e) {
-            return response()->apiError($e->getMessage());
+            return $this->apiError($e->getMessage());
         }
 
         // response the driver resource
-        return new ContactResource($contact);
+        return $this->contactResource($contact);
     }
 
     /**
@@ -72,9 +70,9 @@ class ContactController extends Controller
     {
         // find for the contact
         try {
-            $contact = Contact::findRecordOrFail($id);
+            $contact = $this->findContact($id);
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $exception) {
-            return response()->json(
+            return $this->jsonResponse(
                 [
                     'error' => 'Contact resource not found.',
                 ],
@@ -83,11 +81,11 @@ class ContactController extends Controller
         }
 
         // get request input
-        $input = $request->only(['name', 'type', 'title', 'email', 'phone', 'meta']);
+        $input = $this->contactUpdateInputFromRequest($request);
 
         // If setting a default location for the contact
         if ($request->has('place')) {
-            $input['place_uuid'] = Utils::getUuid('places', [
+            $input['place_uuid'] = $this->getPlaceUuid('places', [
                 'public_id'    => $request->input('place'),
                 'company_uuid' => session('company'),
             ]);
@@ -120,13 +118,13 @@ class ContactController extends Controller
 
             $contact->update($input);
         } catch (\Exception $e) {
-            return response()->apiError($e->getMessage());
+            return $this->apiError($e->getMessage());
         }
 
         $contact->flushAttributesCache();
 
         // response the contact resource
-        return new ContactResource($contact);
+        return $this->contactResource($contact);
     }
 
     /**
@@ -136,9 +134,9 @@ class ContactController extends Controller
      */
     public function query(Request $request)
     {
-        $results = Contact::queryWithRequest($request);
+        $results = $this->queryContacts($request);
 
-        return ContactResource::collection($results);
+        return $this->contactResourceCollection($results);
     }
 
     /**
@@ -150,13 +148,13 @@ class ContactController extends Controller
     {
         // find for the contact
         try {
-            $contact = Contact::findRecordOrFail($id);
+            $contact = $this->findContact($id);
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $exception) {
-            return response()->apiError('Contact resource not found.', 404);
+            return $this->apiError('Contact resource not found.', 404);
         }
 
         // response the contact resource
-        return new ContactResource($contact);
+        return $this->contactResource($contact);
     }
 
     /**
@@ -167,9 +165,9 @@ class ContactController extends Controller
     public function delete($id)
     {
         try {
-            $contact = Contact::findRecordOrFail($id);
+            $contact = $this->findContact($id);
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $exception) {
-            return response()->json(
+            return $this->jsonResponse(
                 [
                     'error' => 'Contact resource not found.',
                 ],
@@ -182,15 +180,84 @@ class ContactController extends Controller
             $contact->delete();
 
             // Delete related user if any
-            $user = User::where(['uuid' => $contact->user_uuid, 'type' => $contact->type])->first();
+            $user = $this->findRelatedUser($contact);
             if ($user) {
                 $user->delete();
             }
         } catch (\Exception $e) {
-            return response()->apiError($e->getMessage());
+            return $this->apiError($e->getMessage());
         }
 
         // response the contact resource
+        return $this->deletedContactResource($contact);
+    }
+
+    protected function contactCreateInputFromRequest(Request $request): array
+    {
+        $input          = $request->only(['name', 'type', 'title', 'email', 'phone', 'meta', 'type']);
+        $input['phone'] = isset($input['phone']) && is_string($input['phone']) ? Utils::formatPhoneNumber($input['phone']) : ($input['phone'] ?? null);
+        $input['type']  = empty($input['type']) ? 'contact' : $input['type'];
+
+        return $input;
+    }
+
+    protected function contactUpdateInputFromRequest(Request $request): array
+    {
+        return $request->only(['name', 'type', 'title', 'email', 'phone', 'meta']);
+    }
+
+    protected function newContact(array $input): Contact
+    {
+        return new Contact($input);
+    }
+
+    protected function updateOrCreateContact(array $where, array $input): Contact
+    {
+        return Contact::updateOrCreate($where, $input);
+    }
+
+    protected function findContact(string $id): Contact
+    {
+        return Contact::findRecordOrFail($id);
+    }
+
+    protected function queryContacts(Request $request)
+    {
+        return Contact::queryWithRequest($request);
+    }
+
+    protected function getPlaceUuid(string $table, array $where): ?string
+    {
+        return Utils::getUuid($table, $where);
+    }
+
+    protected function findRelatedUser(Contact $contact): ?User
+    {
+        return User::where(['uuid' => $contact->user_uuid, 'type' => $contact->type])->first();
+    }
+
+    protected function contactResource(Contact $contact)
+    {
+        return new ContactResource($contact);
+    }
+
+    protected function contactResourceCollection($results)
+    {
+        return ContactResource::collection($results);
+    }
+
+    protected function deletedContactResource(Contact $contact)
+    {
         return new DeletedResource($contact);
+    }
+
+    protected function jsonResponse(array $payload, int $status)
+    {
+        return response()->json($payload, $status);
+    }
+
+    protected function apiError(string $message, int $status = 400)
+    {
+        return response()->apiError($message, $status);
     }
 }

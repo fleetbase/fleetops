@@ -354,7 +354,7 @@ class OrderFilter extends Filter
     {
         $exclude = Utils::arrayFrom($exclude);
         if (is_array($exclude)) {
-            $isUuids = Arr::every($exclude, function ($id) {
+            $isUuids = collect($exclude)->every(function ($id) {
                 return Str::isUuid($id);
             });
 

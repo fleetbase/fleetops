@@ -380,7 +380,7 @@ class ServiceArea extends Model
      */
     public function getCentroid(): \Brick\Geo\Point
     {
-        $geometryEngine       = new \Brick\Geo\Engine\GEOSEngine();
+        $geometryEngine       = Utils::resolveGeometryEngine();
         $borderAsMultiPolygon = $this->toGeosMultiPolygon();
 
         if ($borderAsMultiPolygon instanceof \Brick\Geo\Geometry) {

@@ -48,16 +48,7 @@ class DriverController extends FleetOpsController
     {
         $input = $request->input('driver');
 
-        // Normalize vehicle field - the frontend may send the full vehicle object,
-        // a UUID string, or a public_id string. Normalize to a single identifier
-        // so the ResolvableVehicle rule can validate it correctly.
-        if (isset($input['vehicle']) && is_array($input['vehicle'])) {
-            $input['vehicle'] = data_get($input['vehicle'], 'id')
-                ?? data_get($input['vehicle'], 'public_id')
-                ?? data_get($input['vehicle'], 'uuid')
-                ?? null;
-            $request->merge(['driver' => $input]);
-        }
+        $this->normalizeDriverVehicleInput($request, $input);
 
         // create validation request
         $createDriverRequest = CreateDriverRequest::createFrom($request);
@@ -276,16 +267,7 @@ class DriverController extends FleetOpsController
         // get input data
         $input = $request->input('driver');
 
-        // Normalize vehicle field - the frontend may send the full vehicle object,
-        // a UUID string, or a public_id string. Normalize to a single identifier
-        // so the ResolvableVehicle rule can validate it correctly.
-        if (isset($input['vehicle']) && is_array($input['vehicle'])) {
-            $input['vehicle'] = data_get($input['vehicle'], 'id')
-                ?? data_get($input['vehicle'], 'public_id')
-                ?? data_get($input['vehicle'], 'uuid')
-                ?? null;
-            $request->merge(['driver' => $input]);
-        }
+        $this->normalizeDriverVehicleInput($request, $input);
 
         // create validation request
         $updateDriverRequest = UpdateDriverRequest::createFrom($request);
@@ -352,14 +334,7 @@ class DriverController extends FleetOpsController
      */
     public function statuses()
     {
-        $statuses = DB::table('drivers')
-            ->select('status')
-            ->where('company_uuid', session('company'))
-            ->distinct()
-            ->get()
-            ->pluck('status')
-            ->filter()
-            ->values();
+        $statuses = $this->statusOptionsForCompany(session('company'));
 
         return response()->json($statuses);
     }
@@ -371,7 +346,7 @@ class DriverController extends FleetOpsController
      */
     public function avatars()
     {
-        $options = Driver::getAvatarOptions();
+        $options = $this->driverAvatarOptions();
 
         return response()->json($options);
     }
@@ -387,7 +362,7 @@ class DriverController extends FleetOpsController
         $selections   = $request->array('selections');
         $fileName     = trim(Str::slug('drivers-' . date('Y-m-d-H:i')) . '.' . $format);
 
-        return Excel::download(new DriverExport($selections), $fileName);
+        return static::downloadExport(new DriverExport($selections), $fileName);
     }
 
     /**
@@ -432,17 +407,12 @@ class DriverController extends FleetOpsController
     public function assignedOrders(string $id): JsonResponse
     {
         $driver = $this->findDriver($id);
-        $orders = Order::where('driver_assigned_uuid', $driver->uuid)
-            ->where('company_uuid', session('company'))
-            ->with(['payload', 'trackingNumber', 'orderConfig', 'driverAssigned', 'vehicleAssigned'])
-            ->orderByRaw('uuid = ? desc', [$driver->current_job_uuid])
-            ->latest()
-            ->get();
+        $orders = $this->assignedOrdersForDriver($driver);
 
-        return response()->json([
+        return $this->jsonResponse([
             'status'  => 'ok',
             'driver'  => $driver->fresh(['vehicle', 'currentOrder']),
-            'orders'  => IndexOrderResource::collection($orders)->resolve(),
+            'orders'  => $this->indexOrderCollection($orders),
             'current' => $driver->current_job_uuid,
             'count'   => $orders->count(),
         ]);
@@ -457,33 +427,25 @@ class DriverController extends FleetOpsController
 
         $driver = $this->findDriver($id);
         $ids    = collect($request->input('orders'))->filter()->unique()->values();
-        $orders = Order::where('driver_assigned_uuid', $driver->uuid)
-            ->where('company_uuid', session('company'))
-            ->where(function ($query) use ($ids) {
-                $query->whereIn('uuid', $ids)->orWhereIn('public_id', $ids);
-            })
-            ->get();
+        $orders = $this->selectedAssignedOrdersForDriver($driver, $ids);
 
         if ($orders->isEmpty()) {
-            return response()->error('No assigned orders were selected for this driver.');
+            return $this->errorResponse('No assigned orders were selected for this driver.');
         }
 
-        DB::transaction(function () use ($driver, $orders): void {
-            Order::whereIn('uuid', $orders->pluck('uuid'))->update([
-                'driver_assigned_uuid' => null,
-                'updated_at'           => now(),
-            ]);
+        $this->runTransaction(function () use ($driver, $orders): void {
+            $this->clearDriverAssignmentsForOrders($orders);
 
             if ($driver->current_job_uuid && $orders->contains('uuid', $driver->current_job_uuid)) {
                 $driver->update(['current_job_uuid' => null]);
             }
         });
 
-        return response()->json([
+        return $this->jsonResponse([
             'status'  => 'ok',
             'message' => 'Driver unassigned from selected orders.',
             'driver'  => $driver->fresh(['vehicle', 'currentOrder']),
-            'orders'  => IndexOrderResource::collection($orders->fresh(['driverAssigned', 'vehicleAssigned']))->resolve(),
+            'orders'  => $this->indexOrderCollection($this->freshOrders($orders, ['driverAssigned', 'vehicleAssigned'])),
             'count'   => $orders->count(),
         ]);
     }
@@ -491,9 +453,7 @@ class DriverController extends FleetOpsController
     public function unassignOrder(string $id): JsonResponse
     {
         $driver = $this->findDriver($id);
-        $order  = Order::where('driver_assigned_uuid', $driver->uuid)
-            ->where('company_uuid', session('company'))
-            ->first() ?? $driver->getCurrentOrder();
+        $order  = $this->currentAssignedOrderForDriver($driver) ?? $driver->getCurrentOrder();
 
         if ($order) {
             $order->update(['driver_assigned_uuid' => null]);
@@ -501,7 +461,7 @@ class DriverController extends FleetOpsController
 
         $driver->unassignCurrentJob();
 
-        return response()->json([
+        return $this->jsonResponse([
             'status'  => 'ok',
             'message' => 'Driver unassigned from order.',
             'driver'  => $driver->fresh(['vehicle', 'currentOrder']),
@@ -568,6 +528,66 @@ class DriverController extends FleetOpsController
             ->firstOrFail();
     }
 
+    protected function assignedOrdersForDriver(Driver $driver)
+    {
+        return Order::where('driver_assigned_uuid', $driver->uuid)
+            ->where('company_uuid', session('company'))
+            ->with(['payload', 'trackingNumber', 'orderConfig', 'driverAssigned', 'vehicleAssigned'])
+            ->orderByRaw('uuid = ? desc', [$driver->current_job_uuid])
+            ->latest()
+            ->get();
+    }
+
+    protected function selectedAssignedOrdersForDriver(Driver $driver, $ids)
+    {
+        return Order::where('driver_assigned_uuid', $driver->uuid)
+            ->where('company_uuid', session('company'))
+            ->where(function ($query) use ($ids) {
+                $query->whereIn('uuid', $ids)->orWhereIn('public_id', $ids);
+            })
+            ->get();
+    }
+
+    protected function currentAssignedOrderForDriver(Driver $driver): ?Order
+    {
+        return Order::where('driver_assigned_uuid', $driver->uuid)
+            ->where('company_uuid', session('company'))
+            ->first();
+    }
+
+    protected function clearDriverAssignmentsForOrders($orders): void
+    {
+        Order::whereIn('uuid', $orders->pluck('uuid'))->update([
+            'driver_assigned_uuid' => null,
+            'updated_at'           => now(),
+        ]);
+    }
+
+    protected function freshOrders($orders, array $with)
+    {
+        return $orders->fresh($with);
+    }
+
+    protected function indexOrderCollection($orders): array
+    {
+        return IndexOrderResource::collection($orders)->resolve();
+    }
+
+    protected function runTransaction(callable $callback): mixed
+    {
+        return DB::transaction($callback);
+    }
+
+    protected function jsonResponse(array $payload): JsonResponse
+    {
+        return response()->json($payload);
+    }
+
+    protected function errorResponse(string $message): JsonResponse
+    {
+        return response()->error($message);
+    }
+
     /**
      * Update drivers geolocation data.
      *
@@ -608,18 +628,14 @@ class DriverController extends FleetOpsController
         $phone = static::phone();
 
         // Check if user exists
-        $user = User::where('phone', $phone)->whereNull('deleted_at')->withoutGlobalScopes()->first();
+        $user = static::findLoginUserByPhone($phone);
 
         if (!$user) {
             return response()->error('No driver with this phone # found.');
         }
 
         // Generate verification token
-        VerificationCode::generateSmsVerificationFor($user, 'driver_login', [
-            'messageCallback' => function ($verification) {
-                return 'Your ' . config('app.name') . ' verification code is ' . $verification->code;
-            },
-        ]);
+        static::generateDriverLoginVerification($user);
 
         return response()->json(['status' => 'OK']);
     }
@@ -641,26 +657,26 @@ class DriverController extends FleetOpsController
         }
 
         // Check if user exists
-        $user = User::where('phone', $identity)->orWhere('email', $identity)->first();
+        $user = static::findVerificationUser($identity);
         if (!$user) {
             return response()->error('Unable to verify code.');
         }
 
         // Find and verify code
-        $verificationCode = VerificationCode::where(['subject_uuid' => $user->uuid, 'code' => $code, 'for' => $for])->exists();
+        $verificationCode = static::verificationCodeExists($user, $code, $for);
         if (!$verificationCode && $code !== config('fleetops.navigator.bypass_verification_code')) {
             return response()->error('Invalid verification code!');
         }
 
         // Get driver record
-        $driver = Driver::where('user_uuid', $user->uuid)->whereNull('deleted_at')->withoutGlobalScopes()->first();
+        $driver = static::findLoginDriverForUser($user);
         if (!$driver) {
             return response()->error('No driver/agent record found for login.');
         }
 
         // Generate auth token
         try {
-            $token = $user->createToken($driver->uuid);
+            $token = static::createDriverToken($user, $driver);
         } catch (\Exception $e) {
             return response()->error($e->getMessage());
         }
@@ -686,6 +702,55 @@ class DriverController extends FleetOpsController
         return $phone;
     }
 
+    protected function normalizeDriverVehicleInput(Request $request, ?array &$input): void
+    {
+        // Frontend forms may submit the full vehicle object; validation expects one identifier.
+        if (!isset($input['vehicle']) || !is_array($input['vehicle'])) {
+            return;
+        }
+
+        $input['vehicle'] = data_get($input['vehicle'], 'id')
+            ?? data_get($input['vehicle'], 'public_id')
+            ?? data_get($input['vehicle'], 'uuid')
+            ?? null;
+
+        $request->merge(['driver' => $input]);
+    }
+
+    protected static function findLoginUserByPhone(string $phone): ?User
+    {
+        return User::where('phone', $phone)->whereNull('deleted_at')->withoutGlobalScopes()->first();
+    }
+
+    protected static function generateDriverLoginVerification(User $user): void
+    {
+        VerificationCode::generateSmsVerificationFor($user, 'driver_login', [
+            'messageCallback' => function ($verification) {
+                return 'Your ' . config('app.name') . ' verification code is ' . $verification->code;
+            },
+        ]);
+    }
+
+    protected static function findVerificationUser(string $identity): ?User
+    {
+        return User::where('phone', $identity)->orWhere('email', $identity)->first();
+    }
+
+    protected static function verificationCodeExists(User $user, ?string $code, string $for): bool
+    {
+        return VerificationCode::where(['subject_uuid' => $user->uuid, 'code' => $code, 'for' => $for])->exists();
+    }
+
+    protected static function findLoginDriverForUser(User $user): ?Driver
+    {
+        return Driver::where('user_uuid', $user->uuid)->whereNull('deleted_at')->withoutGlobalScopes()->first();
+    }
+
+    protected static function createDriverToken(User $user, Driver $driver)
+    {
+        return $user->createToken($driver->uuid);
+    }
+
     /**
      * Process import files (excel,csv) into Fleetbase order data.
      *
@@ -699,8 +764,8 @@ class DriverController extends FleetOpsController
 
         foreach ($files as $file) {
             try {
-                $import = new DriverImport();
-                Excel::import($import, $file->path, $disk);
+                $import = $this->createImport();
+                $this->importFile($import, $file->path, $disk);
                 $importedCount += $import->imported;
             } catch (\Throwable $e) {
                 return response()->error('Invalid file, unable to proccess.');
@@ -708,5 +773,37 @@ class DriverController extends FleetOpsController
         }
 
         return response()->json(['status' => 'ok', 'message' => 'Import completed', 'imported' => $importedCount]);
+    }
+
+    protected function statusOptionsForCompany(?string $companyUuid)
+    {
+        return DB::table('drivers')
+            ->select('status')
+            ->where('company_uuid', $companyUuid)
+            ->distinct()
+            ->get()
+            ->pluck('status')
+            ->filter()
+            ->values();
+    }
+
+    protected function driverAvatarOptions(): array
+    {
+        return Driver::getAvatarOptions()->all();
+    }
+
+    protected static function downloadExport(DriverExport $export, string $fileName)
+    {
+        return Excel::download($export, $fileName);
+    }
+
+    protected function createImport(): DriverImport
+    {
+        return new DriverImport();
+    }
+
+    protected function importFile(DriverImport $import, string $path, string $disk): void
+    {
+        Excel::import($import, $path, $disk);
     }
 }

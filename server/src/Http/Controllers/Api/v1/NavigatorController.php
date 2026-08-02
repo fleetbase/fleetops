@@ -5,6 +5,7 @@ namespace Fleetbase\FleetOps\Http\Controllers\Api\v1;
 use Fleetbase\Http\Controllers\Controller;
 use Fleetbase\Models\Company;
 use Fleetbase\Models\Setting;
+use Illuminate\Http\JsonResponse;
 
 class NavigatorController extends Controller
 {
@@ -16,22 +17,37 @@ class NavigatorController extends Controller
      * then fetches the saved driver onboard settings. If settings for the current company are found, they are returned,
      * otherwise, default settings are provided.
      *
-     * @return \Illuminate\Http\JsonResponse
+     * @return JsonResponse
      */
 
     /**
      * Retrieve driver onboard settings.
      *
-     * @return \Illuminate\Http\JsonResponse
+     * @return JsonResponse
      */
     public function getDriverOnboardSettings($companyId)
     {
-        $company                = Company::select()->where('public_id', $companyId)->first();
-        $driverOnboardSettings  = Setting::where('key', 'fleet-ops.driver-onboard-settings.' . $company->uuid)->value('value');
+        $company                = $this->findCompanyByPublicId($companyId);
+        $driverOnboardSettings  = $this->driverOnboardSetting($company->uuid);
         if (!$driverOnboardSettings) {
             $driverOnboardSettings = [];
         }
 
-        return response()->json(['driverOnboardSettings' => $driverOnboardSettings]);
+        return $this->jsonResponse(['driverOnboardSettings' => $driverOnboardSettings]);
+    }
+
+    protected function findCompanyByPublicId(string $companyId): ?Company
+    {
+        return Company::select()->where('public_id', $companyId)->first();
+    }
+
+    protected function driverOnboardSetting(string $companyUuid): mixed
+    {
+        return Setting::where('key', 'fleet-ops.driver-onboard-settings.' . $companyUuid)->value('value');
+    }
+
+    protected function jsonResponse(array $payload): JsonResponse
+    {
+        return response()->json($payload);
     }
 }

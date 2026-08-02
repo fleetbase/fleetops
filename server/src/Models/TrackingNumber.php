@@ -264,10 +264,10 @@ class TrackingNumber extends Model
             }
         }
 
-        $values['uuid']         = $uuid = static::generateUuid();
-        $values['public_id']    = static::generatePublicId('track');
+        $values['uuid']         = $uuid = static::newUuid();
+        $values['public_id']    = static::newPublicId();
         $values['_key']         = session('api_key') ?? 'console';
-        $values['created_at']   = Carbon::now()->toDateTimeString();
+        $values['created_at']   = static::currentTimestamp();
         $values['company_uuid'] = session('company');
 
         if ($owner) {
@@ -275,15 +275,15 @@ class TrackingNumber extends Model
             $values['owner_type'] = Utils::getMutationType($owner);
         }
 
-        $values['tracking_number'] = TrackingNumber::generateNumber($values['region'] ?? 'SG');
-        $values['qr_code']         = DNS2D::getBarcodePNG($values['owner_uuid'], 'QRCODE');
-        $values['barcode']         = DNS2D::getBarcodePNG($values['owner_uuid'], 'PDF417');
+        $values['tracking_number'] = static::newTrackingNumber($values['region'] ?? 'SG');
+        $values['qr_code']         = static::newBarcode((string) ($values['owner_uuid'] ?? ''), 'QRCODE');
+        $values['barcode']         = static::newBarcode((string) ($values['owner_uuid'] ?? ''), 'PDF417');
 
         if (isset($values['meta']) && (is_object($values['meta']) || is_array($values['meta']))) {
             $values['meta'] = json_encode($values['meta']);
         }
 
-        $result = static::insert($values);
+        $result = static::insertTrackingNumber($values);
 
         if (!$result) {
             return false;
@@ -292,7 +292,7 @@ class TrackingNumber extends Model
         $ownerTypeName = class_basename($values['owner_type']);
 
         // create initial status
-        $trackingStatusId = TrackingStatus::insertGetUuid([
+        $trackingStatusId = static::createInitialTrackingStatus([
             'tracking_number_uuid' => $uuid,
             'status'               => Str::title($ownerTypeName . ' created'),
             'details'              => 'New ' . Str::lower($ownerTypeName) . ' created.',
@@ -301,7 +301,7 @@ class TrackingNumber extends Model
         ]);
 
         // update status of tracking number
-        TrackingNumber::where('uuid', $uuid)->update(['status_uuid' => $trackingStatusId]);
+        static::updateTrackingStatusUuid($uuid, $trackingStatusId);
 
         // update owner status
         if ($owner && $owner instanceof Model && static::ownerHasStatusColumn($owner) && $owner->isFillable('status')) {
@@ -309,10 +309,55 @@ class TrackingNumber extends Model
             // $model->update([ 'status' => 'created' ]);
 
             // silent update
-            DB::table($owner->getTable())->where('uuid', $owner->uuid)->update(['status' => 'created']);
+            static::updateOwnerStatusColumn($owner, 'created');
         }
 
         return $uuid;
+    }
+
+    protected static function newUuid(): string
+    {
+        return static::generateUuid();
+    }
+
+    protected static function newPublicId(): string
+    {
+        return static::generatePublicId('track');
+    }
+
+    protected static function currentTimestamp(): string
+    {
+        return Carbon::now()->toDateTimeString();
+    }
+
+    protected static function newTrackingNumber(string $region): string
+    {
+        return static::generateNumber($region);
+    }
+
+    protected static function newBarcode(string $value, string $type): string
+    {
+        return DNS2D::getBarcodePNG($value, $type);
+    }
+
+    protected static function insertTrackingNumber(array $values): bool
+    {
+        return static::insert($values);
+    }
+
+    protected static function createInitialTrackingStatus(array $values)
+    {
+        return TrackingStatus::insertGetUuid($values);
+    }
+
+    protected static function updateTrackingStatusUuid(string $uuid, mixed $trackingStatusId): void
+    {
+        TrackingNumber::where('uuid', $uuid)->update(['status_uuid' => $trackingStatusId]);
+    }
+
+    protected static function updateOwnerStatusColumn(Model $owner, string $status): void
+    {
+        DB::table($owner->getTable())->where('uuid', $owner->uuid)->update(['status' => $status]);
     }
 
     protected static function ownerHasStatusColumn(Model $owner): bool

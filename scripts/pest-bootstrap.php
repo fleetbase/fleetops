@@ -15,8 +15,31 @@ foreach ($autoloadCandidates as $candidate) {
 }
 
 if (!function_exists('config')) {
-    function config(?string $key = null, mixed $default = null): mixed
+    function config(string|array|null $key = null, mixed $default = null): mixed
     {
+        if (class_exists('Illuminate\Container\Container')) {
+            $app = Illuminate\Container\Container::getInstance();
+
+            if ($app->bound('config')) {
+                $config = $app->make('config');
+
+                if ($key === null) {
+                    return $config;
+                }
+
+                // Laravel's helper doubles as a setter when handed an array
+                if (is_array($key)) {
+                    foreach ($key as $configKey => $configValue) {
+                        $config->set($configKey, $configValue);
+                    }
+
+                    return null;
+                }
+
+                return $config->get($key, $default);
+            }
+        }
+
         return $default;
     }
 }
@@ -24,6 +47,106 @@ if (!function_exists('config')) {
 if (class_exists('Illuminate\Container\Container') && class_exists('Illuminate\Support\Facades\Facade')) {
     $app = Illuminate\Container\Container::getInstance();
     Illuminate\Support\Facades\Facade::setFacadeApplication($app);
+
+    if (!$app->bound('config') && class_exists('Illuminate\Config\Repository')) {
+        $app->singleton('config', fn () => new Illuminate\Config\Repository([
+            'fleetops'   => [],
+            'services'   => [],
+            'telematics' => [],
+        ]));
+    }
+
+    if (!$app->bound(Illuminate\Contracts\Routing\ResponseFactory::class)) {
+        $responseFactory = new class {
+            public function json(mixed $data = [], int $status = 200): mixed
+            {
+                if (class_exists('Illuminate\Http\JsonResponse')) {
+                    return new Illuminate\Http\JsonResponse($data, $status);
+                }
+
+                return new class($data, $status) {
+                    public function __construct(public mixed $data, public int $status)
+                    {
+                    }
+
+                    public function getStatusCode(): int
+                    {
+                        return $this->status;
+                    }
+                };
+            }
+
+            public function make(mixed $content = '', int $status = 200, array $headers = []): mixed
+            {
+                if (class_exists('Illuminate\\Http\\Response')) {
+                    return new Illuminate\Http\Response($content, $status, $headers);
+                }
+
+                return new class($content, $status) {
+                    public function __construct(public mixed $content, public int $status)
+                    {
+                    }
+
+                    public function getContent(): mixed
+                    {
+                        return $this->content;
+                    }
+
+                    public function getStatusCode(): int
+                    {
+                        return $this->status;
+                    }
+                };
+            }
+
+            public function error(mixed $error = null, int $status = 500): mixed
+            {
+                return $this->json(['error' => $error], $status);
+            }
+
+            public function apiError(mixed $error = null, int $statusCode = 400, ?array $data = []): mixed
+            {
+                if ($error instanceof Illuminate\Support\MessageBag) {
+                    $error = $error->all();
+                }
+
+                return $this->json(['error' => $error] + ($data ?? []), $statusCode);
+            }
+        };
+
+        $app->instance(Illuminate\Contracts\Routing\ResponseFactory::class, $responseFactory);
+        $app->instance('Illuminate\Contracts\Routing\ResponseFactory', $responseFactory);
+        $app->instance('response', $responseFactory);
+    }
+
+    if (!$app->bound('db')) {
+        // Unbound 'db' resolutions recurse the container until memory is
+        // exhausted when model boot paths reach the DB facade — proxy to the
+        // Eloquent connection resolver instead. Fixture instance bindings
+        // override this fallback.
+        $app->singleton('db', function () {
+            return new class {
+                public function connection($name = null)
+                {
+                    return Illuminate\Database\Eloquent\Model::getConnectionResolver()
+                        ? Illuminate\Database\Eloquent\Model::resolveConnection($name)
+                        : null;
+                }
+
+                public function raw($value)
+                {
+                    return new Illuminate\Database\Query\Expression($value);
+                }
+
+                public function __call($method, $arguments)
+                {
+                    $connection = $this->connection();
+
+                    return $connection ? $connection->{$method}(...$arguments) : null;
+                }
+            };
+        });
+    }
 
     if (!$app->bound('http') && class_exists('Illuminate\Http\Client\Factory')) {
         $app->singleton('http', fn () => new Illuminate\Http\Client\Factory());
@@ -64,6 +187,16 @@ if (!function_exists('app')) {
 if (!function_exists('request')) {
     function request(?string $key = null, mixed $default = null): mixed
     {
+        if (class_exists('Illuminate\Container\Container')) {
+            $container = Illuminate\Container\Container::getInstance();
+
+            if ($container->bound('request')) {
+                $request = $container->make('request');
+
+                return $key === null ? $request : $request->input($key, $default);
+            }
+        }
+
         $request = class_exists('Illuminate\Http\Request') ? Illuminate\Http\Request::create('/') : new stdClass();
 
         return $key === null ? $request : $default;
@@ -81,7 +214,32 @@ if (!function_exists('response')) {
                 }
 
                 return new class($data, $status) {
-                    public function __construct(public mixed $data, public int $status) {}
+                    public function __construct(public mixed $data, public int $status)
+                    {
+                    }
+
+                    public function getStatusCode(): int
+                    {
+                        return $this->status;
+                    }
+                };
+            }
+
+            public function make(mixed $content = '', int $status = 200, array $headers = []): mixed
+            {
+                if (class_exists('Illuminate\\Http\\Response')) {
+                    return new Illuminate\Http\Response($content, $status, $headers);
+                }
+
+                return new class($content, $status) {
+                    public function __construct(public mixed $content, public int $status)
+                    {
+                    }
+
+                    public function getContent(): mixed
+                    {
+                        return $this->content;
+                    }
 
                     public function getStatusCode(): int
                     {
@@ -93,6 +251,15 @@ if (!function_exists('response')) {
             public function error(mixed $error = null, int $status = 500): mixed
             {
                 return $this->json(['error' => $error], $status);
+            }
+
+            public function apiError(mixed $error = null, int $statusCode = 400, ?array $data = []): mixed
+            {
+                if ($error instanceof Illuminate\Support\MessageBag) {
+                    $error = $error->all();
+                }
+
+                return $this->json(['error' => $error] + ($data ?? []), $statusCode);
             }
         };
     }
@@ -120,12 +287,59 @@ if (!function_exists('now') && class_exists('Illuminate\Support\Carbon')) {
     }
 }
 
+if (!class_exists('Illuminate\Validation\ValidationException')) {
+    eval('namespace Illuminate\Validation; class ValidationException extends \Exception { public array $messages; public static function withMessages(array $messages): self { $exception = new self("The given data was invalid."); $exception->messages = $messages; return $exception; } public function errors(): array { return $this->messages; } }');
+}
+
+if (class_exists('Illuminate\Http\Request') && method_exists('Illuminate\Http\Request', 'macro')) {
+    if (!method_exists('Illuminate\Http\Request', 'array')) {
+        Illuminate\Http\Request::macro('array', function (string $key, array $default = []): array {
+            $value = $this->input($key, $default);
+
+            return is_array($value) ? $value : $default;
+        });
+    }
+
+    if (!method_exists('Illuminate\Http\Request', 'validate')) {
+        Illuminate\Http\Request::macro('validate', function (array $rules, ...$parameters): array {
+            if (app()->bound('validator')) {
+                $validator = app('validator')->make($this->all(), $rules);
+                if (is_object($validator) && method_exists($validator, 'fails') && $validator->fails()) {
+                    $messages = method_exists($validator, 'errors') ? $validator->errors()->toArray() : ['error' => ['Validation failed.']];
+                    throw Illuminate\Validation\ValidationException::withMessages($messages);
+                }
+            }
+
+            return $this->all();
+        });
+    }
+}
+
 if (!trait_exists('Illuminate\Foundation\Auth\Access\AuthorizesRequests')) {
     eval('namespace Illuminate\Foundation\Auth\Access; trait AuthorizesRequests {}');
 }
 
+if (!class_exists('Fleetbase\TestSupport\PendingDispatch')) {
+    eval('namespace Fleetbase\TestSupport; class PendingDispatch { public function __call($name, $arguments) { return $this; } public function __toString(): string { return \'\'; } }');
+}
+
+if (!class_exists('Fleetbase\TestSupport\DispatchRecorder')) {
+    eval('namespace Fleetbase\TestSupport; class DispatchRecorder { public static array $dispatched = []; public static function record(string $job, array $arguments): void { self::$dispatched[] = [\'job\' => $job, \'arguments\' => $arguments]; } }');
+}
+
 if (!trait_exists('Illuminate\Foundation\Bus\Dispatchable')) {
-    eval('namespace Illuminate\Foundation\Bus; trait Dispatchable {}');
+    eval('namespace Illuminate\Foundation\Bus; trait Dispatchable {
+        public static function dispatch(...$arguments) { \Fleetbase\TestSupport\DispatchRecorder::record(static::class, $arguments); return new \Fleetbase\TestSupport\PendingDispatch(); }
+        public static function dispatchIf($boolean, ...$arguments) { if ($boolean) { \Fleetbase\TestSupport\DispatchRecorder::record(static::class, $arguments); } return new \Fleetbase\TestSupport\PendingDispatch(); }
+        public static function dispatchUnless($boolean, ...$arguments) { if (!$boolean) { \Fleetbase\TestSupport\DispatchRecorder::record(static::class, $arguments); } return new \Fleetbase\TestSupport\PendingDispatch(); }
+        public static function dispatchSync(...$arguments) { \Fleetbase\TestSupport\DispatchRecorder::record(static::class, $arguments); return null; }
+        public static function dispatchAfterResponse(...$arguments) { \Fleetbase\TestSupport\DispatchRecorder::record(static::class, $arguments); return null; }
+        public static function dispatchNow(...$arguments) { \Fleetbase\TestSupport\DispatchRecorder::record(static::class, $arguments); return null; }
+    }');
+}
+
+if (!trait_exists('Illuminate\Foundation\Events\Dispatchable')) {
+    eval('namespace Illuminate\Foundation\Events; trait Dispatchable {}');
 }
 
 if (!trait_exists('Illuminate\Foundation\Bus\DispatchesJobs')) {
@@ -136,8 +350,24 @@ if (!trait_exists('Illuminate\Foundation\Validation\ValidatesRequests')) {
     eval('namespace Illuminate\Foundation\Validation; trait ValidatesRequests {}');
 }
 
+if (!trait_exists('Fleetbase\Traits\HasApiModelCache')) {
+    eval('namespace Fleetbase\Traits; trait HasApiModelCache {}');
+}
+
+if (!trait_exists('Fleetbase\Traits\HasCustomFields')) {
+    eval('namespace Fleetbase\Traits; trait HasCustomFields {}');
+}
+
 if (!class_exists('Illuminate\Foundation\Http\FormRequest') && class_exists('Illuminate\Http\Request')) {
     eval('namespace Illuminate\Foundation\Http; class FormRequest extends \Illuminate\Http\Request { public function authorize(): bool { return true; } public function rules(): array { return []; } public function responseWithErrors(\Illuminate\Contracts\Validation\Validator $validator) { return $validator; } }');
+}
+
+if (!class_exists('Illuminate\Foundation\Auth\User') && class_exists('Illuminate\Database\Eloquent\Model')) {
+    eval('namespace Illuminate\Foundation\Auth; class User extends \Illuminate\Database\Eloquent\Model {}');
+}
+
+if (!class_exists('Fleetbase\Models\ScheduleItem') && class_exists('Fleetbase\Models\Model')) {
+    eval('namespace Fleetbase\Models; class ScheduleItem extends Model {}');
 }
 
 if (!interface_exists('Fleetbase\Ai\Contracts\AIContextCapabilityInterface')) {

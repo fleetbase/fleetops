@@ -7,12 +7,12 @@ use Illuminate\Validation\Rule;
 
 class CreatePartRequest extends FleetbaseRequest
 {
-    public function authorize()
+    public function authorize(): bool
     {
         return request()->session()->has('api_credential') || request()->session()->has('is_sanctum_token');
     }
 
-    public function rules()
+    public function rules(): array
     {
         return [
             'sku'              => ['nullable', 'string'],

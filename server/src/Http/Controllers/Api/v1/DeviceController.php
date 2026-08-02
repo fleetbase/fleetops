@@ -30,9 +30,9 @@ class DeviceController extends Controller
         $input                 = $this->input($request);
         $input['company_uuid'] = session('company');
 
-        $device = Device::create($input)->load(['telematic', 'warranty', 'attachable', 'photo'])->loadCount('sensors');
+        $device = $this->loadDeviceRelations($this->createDevice($input));
 
-        return new DeviceResource($device);
+        return $this->deviceResource($device);
     }
 
     public function update(string $id, UpdateDeviceRequest $request)
@@ -45,32 +45,31 @@ class DeviceController extends Controller
             return response()->json(['error' => 'Device resource not found.'], 404);
         }
 
-        $device->update($this->input($request));
+        $this->updateDevice($device, $this->input($request));
 
-        return new DeviceResource($device->refresh()->load(['telematic', 'warranty', 'attachable', 'photo'])->loadCount('sensors'));
+        return $this->deviceResource($this->loadDeviceRelations($device->refresh()));
     }
 
     public function query(Request $request)
     {
         $this->rejectUuidIdentifiers($request);
 
-        $results = Device::queryWithRequest($request, function (&$query) {
+        $results = $this->queryDevicesWithRequest($request, function (&$query) {
             $query->with(['telematic', 'warranty', 'attachable', 'photo'])->withCount('sensors');
         });
 
-        return DeviceResource::collection($results);
+        return $this->deviceResourceCollection($results);
     }
 
     public function find(string $id)
     {
         try {
-            $device = $this->resolveModel(Device::class, $id)->load(['telematic', 'warranty', 'attachable', 'photo']);
-            $device->loadCount('sensors');
+            $device = $this->loadDeviceRelations($this->resolveModel(Device::class, $id));
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $exception) {
             return response()->json(['error' => 'Device resource not found.'], 404);
         }
 
-        return new DeviceResource($device);
+        return $this->deviceResource($device);
     }
 
     public function delete(string $id)
@@ -83,7 +82,7 @@ class DeviceController extends Controller
 
         $device->delete();
 
-        return new DeletedResource($device);
+        return $this->deletedDeviceResource($device);
     }
 
     public function attach(Request $request, string $id): JsonResponse
@@ -108,7 +107,7 @@ class DeviceController extends Controller
 
         try {
             $device->attachTo($vehicle);
-            $device->load(['telematic', 'warranty', 'attachable', 'photo'])->loadCount('sensors');
+            $this->loadDeviceRelations($device);
         } catch (\Throwable $e) {
             $this->logDeviceAttachmentFailure('attach', $device, $vehicle, $e);
 
@@ -117,7 +116,7 @@ class DeviceController extends Controller
 
         return response()->json([
             'status' => 'ok',
-            'device' => new DeviceResource($device),
+            'device' => $this->deviceResource($device),
         ]);
     }
 
@@ -133,7 +132,7 @@ class DeviceController extends Controller
 
         try {
             $device->detach();
-            $device->load(['telematic', 'warranty', 'attachable', 'photo'])->loadCount('sensors');
+            $this->loadDeviceRelations($device);
         } catch (\Throwable $e) {
             $this->logDeviceAttachmentFailure('detach', $device, null, $e);
 
@@ -142,8 +141,43 @@ class DeviceController extends Controller
 
         return response()->json([
             'status' => 'ok',
-            'device' => new DeviceResource($device),
+            'device' => $this->deviceResource($device),
         ]);
+    }
+
+    protected function createDevice(array $input): Device
+    {
+        return Device::create($input);
+    }
+
+    protected function updateDevice(Device $device, array $input): bool
+    {
+        return $device->update($input);
+    }
+
+    protected function queryDevicesWithRequest(Request $request, callable $callback): mixed
+    {
+        return Device::queryWithRequest($request, $callback);
+    }
+
+    protected function loadDeviceRelations(Device $device): Device
+    {
+        return $device->load(['telematic', 'warranty', 'attachable', 'photo'])->loadCount('sensors');
+    }
+
+    protected function deviceResource(Device $device): mixed
+    {
+        return new DeviceResource($device);
+    }
+
+    protected function deviceResourceCollection(mixed $results): mixed
+    {
+        return DeviceResource::collection($results);
+    }
+
+    protected function deletedDeviceResource(Device $device): mixed
+    {
+        return new DeletedResource($device);
     }
 
     protected function input(Request $request): array

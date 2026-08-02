@@ -30,7 +30,7 @@ class FixDriverCompanies extends Command
      */
     public function handle()
     {
-        $drivers = Driver::whereHas('user')->whereNotNull('company_uuid')->with(['user'])->get();
+        $drivers = $this->drivers();
 
         // Fix these drivers
         foreach ($drivers as $driver) {
@@ -44,10 +44,10 @@ class FixDriverCompanies extends Command
                 $user->syncProperty('phone', $driver);
 
                 // Check if customers user has a customer user record with the company
-                $doesntHaveCompanyUser = CompanyUser::where(['user_uuid' => $user->uuid, 'company_uuid' => $driver->company_uuid])->doesntExist();
+                $doesntHaveCompanyUser = $this->missingCompanyUser($user->uuid, $driver->company_uuid);
                 if ($doesntHaveCompanyUser) {
                     $this->line('Found driver ' . $user->name . ' (' . $user->email . ') which doesnt have correct company assignment.');
-                    $company = Company::where('uuid', $driver->company_uuid)->first();
+                    $company = $this->companyByUuid($driver->company_uuid);
                     if ($company) {
                         $user->assignCompany($company);
                         $this->line('Driver ' . $user->email . ' was assigned to company: ' . $company->name);
@@ -57,5 +57,20 @@ class FixDriverCompanies extends Command
         }
 
         return Command::SUCCESS;
+    }
+
+    protected function drivers()
+    {
+        return Driver::whereHas('user')->whereNotNull('company_uuid')->with(['user'])->get();
+    }
+
+    protected function missingCompanyUser(string $userUuid, string $companyUuid): bool
+    {
+        return CompanyUser::where(['user_uuid' => $userUuid, 'company_uuid' => $companyUuid])->doesntExist();
+    }
+
+    protected function companyByUuid(string $companyUuid): ?Company
+    {
+        return Company::where('uuid', $companyUuid)->first();
     }
 }

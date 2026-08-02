@@ -315,17 +315,12 @@ class MaintenanceSchedule extends Model
 
         // Attempt to resolve the subject (vehicle or equipment) by identifier
         if ($vehicleName) {
-            $vehicle = Vehicle::findByName($vehicleName);
+            $vehicle = static::findImportVehicle($vehicleName);
             if ($vehicle) {
                 $schedule->subject_type = Vehicle::class;
                 $schedule->subject_uuid = $vehicle->uuid;
             } else {
-                $equipment = Equipment::where('company_uuid', session('company'))
-                    ->where(function ($q) use ($vehicleName) {
-                        $q->where('name', 'like', '%' . $vehicleName . '%')
-                          ->orWhere('public_id', $vehicleName)
-                          ->orWhere('serial_number', $vehicleName);
-                    })->first();
+                $equipment = static::findImportEquipment($vehicleName);
                 if ($equipment) {
                     $schedule->subject_type = Equipment::class;
                     $schedule->subject_uuid = $equipment->uuid;
@@ -335,9 +330,7 @@ class MaintenanceSchedule extends Model
 
         // Attempt to resolve default assignee (vendor) by name
         if ($vendorName) {
-            $vendor = Vendor::where('company_uuid', session('company'))
-                ->where('name', 'like', '%' . $vendorName . '%')
-                ->first();
+            $vendor = static::findImportVendor($vendorName);
             if ($vendor) {
                 $schedule->default_assignee_type = Vendor::class;
                 $schedule->default_assignee_uuid = $vendor->uuid;
@@ -349,5 +342,27 @@ class MaintenanceSchedule extends Model
         }
 
         return $schedule;
+    }
+
+    protected static function findImportVehicle(string $vehicleName): ?Vehicle
+    {
+        return Vehicle::findByName($vehicleName);
+    }
+
+    protected static function findImportEquipment(string $vehicleName): ?Equipment
+    {
+        return Equipment::where('company_uuid', session('company'))
+            ->where(function ($q) use ($vehicleName) {
+                $q->where('name', 'like', '%' . $vehicleName . '%')
+                  ->orWhere('public_id', $vehicleName)
+                  ->orWhere('serial_number', $vehicleName);
+            })->first();
+    }
+
+    protected static function findImportVendor(string $vendorName): ?Vendor
+    {
+        return Vendor::where('company_uuid', session('company'))
+            ->where('name', 'like', '%' . $vendorName . '%')
+            ->first();
     }
 }

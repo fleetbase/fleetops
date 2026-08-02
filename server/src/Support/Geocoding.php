@@ -36,9 +36,7 @@ class Geocoding
      */
     public static function geocode(string $searchQuery, $latitude = null, $longitude = null): Collection
     {
-        $httpClient = new Client();
-        $provider   = new GoogleMaps($httpClient, null, config('services.google_maps.api_key', env('GOOGLE_MAPS_API_KEY')));
-        $geocoder   = new StatefulGeocoder($provider, 'en');
+        $geocoder = static::makeGeocoder();
 
         try {
             if ($latitude && $longitude) {
@@ -57,7 +55,7 @@ class Geocoding
 
             return collect($geoResults->all())->map(
                 function ($googleAddress) {
-                    return Place::createFromGoogleAddress($googleAddress);
+                    return static::makePlaceFromGoogleAddress($googleAddress);
                 }
             )->values();
         } catch (\Exception $e) {
@@ -81,10 +79,6 @@ class Geocoding
      */
     public static function reverseFromQuery(string $searchQuery, $latitude, $longitude): Collection
     {
-        $httpClient = new Client();
-        $provider   = new GoogleMaps($httpClient, null, config('services.google_maps.api_key', env('GOOGLE_MAPS_API_KEY')));
-        $geocoder   = new StatefulGeocoder($provider, 'en');
-
         if (empty($searchQuery)) {
             return collect();
         }
@@ -92,6 +86,8 @@ class Geocoding
         if (empty($latitude) && empty($longitude)) {
             return collect();
         }
+
+        $geocoder = static::makeGeocoder();
 
         try {
             $geoResults = $geocoder->reverseQuery(
@@ -103,7 +99,7 @@ class Geocoding
 
             return collect($geoResults->all())->map(
                 function ($googleAddress) {
-                    return Place::createFromGoogleAddress($googleAddress);
+                    return static::makePlaceFromGoogleAddress($googleAddress);
                 }
             )->values();
         } catch (\Exception $e) {
@@ -127,13 +123,11 @@ class Geocoding
      */
     public static function reverseFromCoordinates($latitude, $longitude, ?string $searchQuery = null): Collection
     {
-        $httpClient = new Client();
-        $provider   = new GoogleMaps($httpClient, null, config('services.google_maps.api_key', env('GOOGLE_MAPS_API_KEY')));
-        $geocoder   = new StatefulGeocoder($provider, 'en');
-
         if (empty($latitude) && empty($longitude)) {
             return collect();
         }
+
+        $geocoder = static::makeGeocoder();
 
         try {
             if ($searchQuery) {
@@ -153,7 +147,7 @@ class Geocoding
 
             return collect($geoResults->all())->map(
                 function ($googleAddress) {
-                    return Place::createFromGoogleAddress($googleAddress);
+                    return static::makePlaceFromGoogleAddress($googleAddress);
                 }
             )->values();
         } catch (\Exception $e) {
@@ -215,5 +209,24 @@ class Geocoding
     public static function canGoogleGeocode(): bool
     {
         return Utils::notEmpty(config('services.google_maps.api_key'));
+    }
+
+    protected static function makeGeocoder(): object
+    {
+        // Allow an alternative geocoder (or test double) to be injected
+        // through the container without constructing a live HTTP client.
+        if (app()->bound('fleetops.geocoder')) {
+            return app('fleetops.geocoder');
+        }
+
+        $httpClient = new Client();
+        $provider   = new GoogleMaps($httpClient, null, config('services.google_maps.api_key', env('GOOGLE_MAPS_API_KEY')));
+
+        return new StatefulGeocoder($provider, 'en');
+    }
+
+    protected static function makePlaceFromGoogleAddress($googleAddress): Place
+    {
+        return Place::createFromGoogleAddress($googleAddress);
     }
 }

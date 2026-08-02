@@ -11,28 +11,27 @@ class CreateOrderRequest extends FleetbaseRequest
 {
     /**
      * Determine if the user is authorized to make this request.
-     *
-     * @return bool
      */
-    public function authorize()
+    public function authorize(): bool
     {
         return Auth::can('fleet-ops create order');
     }
 
     /**
      * Get the validation rules that apply to the request.
-     *
-     * @return array
      */
-    public function rules()
+    public function rules(): array
     {
+        $podMethods = config('fleetops.pod_methods');
+        $podMethods = is_array($podMethods) ? implode(',', $podMethods) : (string) $podMethods;
+
         $validations = [
             'order_config_uuid' => ['required'],
             'adhoc'             => ['nullable', 'boolean'],
             'dispatch'          => ['nullable', 'boolean'],
             'adhoc_distance'    => ['nullable', 'numeric'],
             'pod_required'      => ['nullable', 'boolean'],
-            'pod_method'        => ['nullable', 'in:' . config('fleetops.pod_methods')],
+            'pod_method'        => ['nullable', 'in:' . $podMethods],
             'scheduled_at'      => ['nullable', 'date'],
             'driver'            => ['nullable', 'exists:drivers,uuid'],
             'service_quote'     => ['nullable', 'exists:service_quotes,uuid'],
@@ -45,7 +44,7 @@ class CreateOrderRequest extends FleetbaseRequest
 
         // Conditionally require 'pod_method' if 'pod_required' is truthy
         if (Utils::isTrue($this->input('order.pod_required'))) {
-            $validations['pod_method'] = ['required', 'in:' . config('fleetops.pod_methods')];
+            $validations['pod_method'] = ['required', 'in:' . $podMethods];
         }
 
         if ($this->has('payload')) {
