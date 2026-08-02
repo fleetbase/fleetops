@@ -169,3 +169,48 @@ test('spatial casts preserve valid geometry expressions and geojson payloads', f
         ->and($pointCast->set($model, 'location_expression', $pointExpression, []))->toBe($pointExpression)
         ->and($pointCast->set($model, 'location_empty', 'notcoordinates', []))->toBeInstanceOf(SpatialExpression::class);
 });
+
+test('spatial cast output expands into query bindings differently per cast', function () {
+    $model             = new stdClass();
+    $model->geometries = [];
+
+    $ring = [[
+        [103.85, 1.35],
+        [103.95, 1.35],
+        [103.95, 1.45],
+        [103.85, 1.35],
+    ]];
+
+    // Writes bind through BaseBuilder, whose cleanBindings() expands a
+    // SpatialExpression into the two bindings ST_GeomFromText(?, ?) expects.
+    // A bare geometry is passed straight through as a single binding instead.
+    // This matters on updates: SpatialTrait overrides performInsert() but not
+    // performUpdate(), so on update whatever the cast returned is bound as-is.
+    // Point and MultiPolygon wrap; Polygon does not. This test pins that
+    // divergence rather than asserting it away — see the PR notes.
+    $builder = (new ReflectionClass(Fleetbase\LaravelMysqlSpatial\Eloquent\BaseBuilder::class))->newInstanceWithoutConstructor();
+
+    $wrapped = [
+        'point'        => (new PointCast())->set($model, 'location', new Point(1.35, 103.85), []),
+        'multipolygon' => (new MultiPolygon())->set($model, 'coverage', SpatialMultiPolygon::fromJson(json_encode([
+            'type' => 'MultiPolygon', 'coordinates' => [$ring],
+        ])), []),
+    ];
+
+    foreach ($wrapped as $label => $castOutput) {
+        expect($castOutput)->toBeInstanceOf(SpatialExpression::class);
+
+        $bindings = $builder->cleanBindings([$castOutput]);
+        expect($bindings)->toHaveCount(2)
+            ->and($bindings[0])->toBeString()
+            ->and($bindings[1])->toBeInt();
+    }
+
+    // Polygon hands back the geometry itself, so it survives as one binding
+    $polygonOutput = (new Polygon())->set($model, 'border', SpatialPolygon::fromJson(json_encode([
+        'type' => 'Polygon', 'coordinates' => $ring,
+    ])), []);
+
+    expect($polygonOutput)->toBeInstanceOf(SpatialPolygon::class)
+        ->and($builder->cleanBindings([$polygonOutput]))->toHaveCount(1);
+});

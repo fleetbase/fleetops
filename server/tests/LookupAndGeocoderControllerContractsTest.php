@@ -208,8 +208,8 @@ function fleetopsLookupIntegratedVendor(string $name): IntegratedVendor
 test('geocoder controller handles invalid empty single and multiple reverse geocode responses', function () {
     $controller = new FleetOpsGeocoderControllerProbe();
 
-    $defaultPoint = $controller->reverse(new Request(['coordinates' => 'not-coordinates']));
-    $empty        = $controller->reverse(new Request(['coordinates' => [1.3, 103.8]]));
+    $invalid = $controller->reverse(new Request(['coordinates' => 'not-coordinates']));
+    $empty   = $controller->reverse(new Request(['coordinates' => [1.3, 103.8]]));
 
     $controller->reverseResults = collect([
         (object) ['address' => 'One Way', 'source' => 'reverse-a'],
@@ -219,7 +219,9 @@ test('geocoder controller handles invalid empty single and multiple reverse geoc
     $single = $controller->reverse(new Request(['coordinates' => [1.3, 103.8], 'single' => true]));
     $many   = $controller->reverse(new Request(['coordinates' => [1.3, 103.8]]));
 
-    expect($defaultPoint->getData(true))->toBe([])
+    // Unusable coordinates are rejected outright. They must not fall through to
+    // a Point(0, 0) and reverse-geocode Null Island, so no lookup is attempted
+    expect($invalid->getData(true))->toBe(['error' => 'Invalid coordinates provided.'])
         ->and($empty->getData(true))->toBe([])
         ->and($single->getData(true))->toBe(['address' => 'One Way', 'source' => 'reverse-a'])
         ->and($many->getData(true))->toBe([
@@ -227,7 +229,6 @@ test('geocoder controller handles invalid empty single and multiple reverse geoc
             ['address' => 'Two Way', 'source' => 'reverse-b'],
         ])
         ->and($controller->reverseCalls)->toBe([
-            [0.0, 0.0],
             [1.3, 103.8],
             [1.3, 103.8],
             [1.3, 103.8],

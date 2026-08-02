@@ -213,6 +213,47 @@ test('updating zones rebuilds borders and missing ids respond not found', functi
     expect($missing->getStatusCode())->toBe(404);
 });
 
+test('updating a zone border round trips the polygon through the cast', function () {
+    $connection = fleetopsZoneBoot();
+    $connection->table('zones')->insert([
+        'uuid'         => '22222222-2222-4222-8222-222222222299',
+        'public_id'    => 'zone_roundtrip1',
+        'company_uuid' => 'company-1',
+        'name'         => 'Round Trip Zone',
+        'border'       => fleetopsZoneWkbFromWkt('POLYGON((103.8 1.3,103.9 1.3,103.9 1.4,103.8 1.3))'),
+    ]);
+
+    // Updates do not pass through SpatialTrait::performInsert, so whatever the
+    // Polygon cast returns is bound directly. Rewrite the border and read the
+    // vertices back to prove the geometry survives that path intact.
+    $zone         = Zone::where('public_id', 'zone_roundtrip1')->first();
+    $zone->border = new Fleetbase\LaravelMysqlSpatial\Types\Polygon([
+        new Fleetbase\LaravelMysqlSpatial\Types\LineString([
+            new Point(1.35, 103.85),
+            new Point(1.35, 103.95),
+            new Point(1.45, 103.95),
+            new Point(1.35, 103.85),
+        ]),
+    ]);
+    $zone->save();
+
+    $reloaded = Zone::where('public_id', 'zone_roundtrip1')->first();
+    $border   = $reloaded->border;
+
+    expect($border)->toBeInstanceOf(Fleetbase\LaravelMysqlSpatial\Types\Polygon::class);
+
+    $vertices = collect($border->getLineStrings()[0]->getPoints())
+        ->map(fn ($point) => [round($point->getLat(), 6), round($point->getLng(), 6)])
+        ->all();
+
+    expect($vertices)->toBe([
+        [1.35, 103.85],
+        [1.35, 103.95],
+        [1.45, 103.95],
+        [1.35, 103.85],
+    ]);
+});
+
 test('helper seams parse radii build borders and wrap resources', function () {
     $connection = fleetopsZoneBoot();
     $connection->table('zones')->insert(['uuid' => '22222222-2222-4222-8222-222222222222', 'public_id' => 'zone_seams1', 'company_uuid' => 'company-1', 'name' => 'Seam Zone']);

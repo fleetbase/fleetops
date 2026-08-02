@@ -67,12 +67,10 @@ class PurchaseRate extends FleetbaseResource
             return $this->resource->serviceQuote ? new ServiceQuote($this->resource->serviceQuote) : null;
         }
 
-        if (method_exists($this, 'loadMissing')) {
-            $this->loadMissing('serviceQuote');
-
-            return $this->serviceQuote ? new ServiceQuote($this->serviceQuote) : null;
-        }
-
+        // A `loadMissing` fallback used to live here, guarded by
+        // method_exists($this, 'loadMissing'). No class in this resource's
+        // hierarchy declares that method — it only resolves through __call,
+        // which method_exists cannot see — so the branch never ran.
         return null;
     }
 }

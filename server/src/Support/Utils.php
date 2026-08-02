@@ -1162,9 +1162,13 @@ class Utils extends FleetbaseUtils
 
         $feature = collect($globe->features)->first(
             function ($feature) use ($country) {
+                // Every feature in the bundled resources/data/globe.json carries
+                // both codes, so this only guards against future data changes.
+                // @codeCoverageIgnoreStart
                 if (!isset($feature->properties->ISO_A3) || !isset($feature->properties->ISO_A2)) {
                     return false;
                 }
+                // @codeCoverageIgnoreEnd
 
                 return strtolower($feature->properties->ISO_A3) === $country || strtolower($feature->properties->ISO_A2) === $country;
             }
@@ -1199,8 +1203,10 @@ class Utils extends FleetbaseUtils
         $radius = ($meters * 1000) / 6378137;
         // create circle coordinates
         $coords = collect();
-        // loop through the array and write path linestrings
-        for ($i = 0; $i <= 360; $i += 3) {
+        // loop through the array and write path linestrings — stop short of 360
+        // so the ring is closed explicitly below rather than by re-computing the
+        // 0 degree vertex, which produced a duplicated point
+        for ($i = 0; $i < 360; $i += 3) {
             $radial   = deg2rad($i);
             $lat_rad  = asin(sin($latitude) * cos($radius) + cos($latitude) * sin($radius) * cos($radial));
             $dlon_rad = atan2(sin($radial) * sin($radius) * cos($latitude), cos($radius) - sin($latitude) * sin($lat_rad));

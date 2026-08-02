@@ -31,16 +31,21 @@ class MultiPolygon implements CastsAttributes
      */
     public function set($model, $key, $value, $attributes)
     {
-        if ($value instanceof GeometryInterface) {
+        // Checked before the broader GeometryInterface guard below, which a
+        // SpatialMultiPolygon also satisfies — otherwise this arm never fires.
+        // It must wrap in a SpatialExpression exactly as that guard does:
+        // returning the bare geometry here would change what is bound on writes
+        // that skip SpatialTrait::performInsert().
+        if ($value instanceof SpatialMultiPolygon) {
             $model->geometries[$key] = $value;
 
             return new SpatialExpression($value);
         }
 
-        if ($value instanceof SpatialMultiPolygon) {
+        if ($value instanceof GeometryInterface) {
             $model->geometries[$key] = $value;
 
-            return $value;
+            return new SpatialExpression($value);
         }
 
         if (Utils::isGeoJson($value)) {

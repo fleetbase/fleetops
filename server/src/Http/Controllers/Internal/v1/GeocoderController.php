@@ -22,8 +22,11 @@ class GeocoderController extends Controller
         $query  = $request->or(['coordinates', 'query']);
         $single = $request->boolean('single');
 
-        /** @var \Fleetbase\LaravelMysqlSpatial\Types\Point $coordinates */
-        $coordinates = Utils::getPointFromCoordinates($query);
+        // Resolve strictly: getPointFromCoordinates() is typed `: Point` and
+        // falls back to Point(0, 0) for unusable input, which would silently
+        // reverse-geocode Null Island instead of reporting the bad request
+        /** @var \Fleetbase\LaravelMysqlSpatial\Types\Point|null $coordinates */
+        $coordinates = Utils::getPointFromCoordinatesStrict($query);
 
         // if not a valid point error
         if (!$coordinates instanceof \Fleetbase\LaravelMysqlSpatial\Types\Point) {

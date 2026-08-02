@@ -109,6 +109,51 @@ test('revenue exclusions skip tables the schema does not have', function () {
     expect($query->toSql())->toBe($before);
 });
 
+test('export location parts bail out when the reference cannot be resolved', function () {
+    $connection = new Illuminate\Database\SQLiteConnection(new PDO('sqlite::memory:'));
+    $resolver   = new Illuminate\Database\ConnectionResolver(['default' => $connection, 'mysql' => $connection]);
+    $resolver->setDefaultConnection('mysql');
+    Illuminate\Database\Eloquent\Model::setConnectionResolver($resolver);
+    app()->instance('db', new class($connection) {
+        public function __construct(public $c)
+        {
+        }
+
+        public function connection($name = null)
+        {
+            return $this->c;
+        }
+
+        public function __call($method, $arguments)
+        {
+            return $this->c->{$method}(...$arguments);
+        }
+    });
+    Illuminate\Support\Facades\DB::clearResolvedInstance('db');
+
+    $connection->getSchemaBuilder()->create('places', function ($blueprint) {
+        $blueprint->increments('id');
+        foreach (['uuid', 'public_id', 'company_uuid', 'name', 'location'] as $column) {
+            $blueprint->string($column)->nullable();
+        }
+        $blueprint->timestamps();
+        $blueprint->timestamp('deleted_at')->nullable();
+    });
+
+    // An unresolvable place public id makes Utils::castPoint() hand back null
+    // (getPointFromMixed returns null rather than throwing for this input), so
+    // there is no coordinate to report for either axis
+    $export = new Fleetbase\FleetOps\Exports\VehicleExport();
+
+    expect(fleetopsGuardInvoke($export, 'locationPart', 'place_doesnotexist', 'lat'))->toBeNull()
+        ->and(fleetopsGuardInvoke($export, 'locationPart', 'place_doesnotexist', 'lng'))->toBeNull();
+
+    // A real point still reports both axes, so the guard is not swallowing work
+    $point = new Fleetbase\LaravelMysqlSpatial\Types\Point(1.2816, 103.8636);
+    expect(fleetopsGuardInvoke($export, 'locationPart', $point, 'lat'))->toBe(1.2816)
+        ->and(fleetopsGuardInvoke($export, 'locationPart', $point, 'lng'))->toBe(103.8636);
+});
+
 test('non transferable warranties refuse to move to a new subject', function () {
     $warranty = new Warranty();
     $warranty->setRawAttributes([

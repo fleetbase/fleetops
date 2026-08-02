@@ -911,14 +911,10 @@ class Payload extends Model
         $save     = data_get($options, 'save', false);
         $callback = data_get($options, 'callback', false);
 
-        if ($instance) {
-            if (Str::isUuid($instance)) {
-                $this->setAttribute($attr, $instance);
-            } elseif ($instance instanceof Model) {
-                $this->setAttribute($attr, $instance->uuid);
-            } else {
-                $this->setAttribute($attr, $instance);
-            }
+        // createFromMixed() returns a Place or null, so a resolved instance is
+        // always a model — the uuid-string and passthrough cases cannot occur
+        if ($instance instanceof Model) {
+            $this->setAttribute($attr, $instance->uuid);
         }
 
         // Get the ID property

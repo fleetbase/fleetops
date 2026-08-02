@@ -190,6 +190,48 @@ test('inserting from a mixed address string geocodes and persists', function () 
     expect($connection->table('places')->where('uuid', $uuid)->value('postal_code'))->toBe('238801');
 });
 
+test('inserting from a google address routes through the google address handler', function () {
+    $address = GoogleAddress::createFromArray([
+        'streetNumber' => '12',
+        'streetName'   => 'Marina View',
+        'locality'     => 'Singapore',
+        'postalCode'   => '018961',
+        'country'      => 'Singapore',
+        'countryCode'  => 'SG',
+        'latitude'     => 1.2795,
+        'longitude'    => 103.8543,
+    ]);
+
+    $connection = fleetopsPlaceGeocodeBoot([]);
+
+    // A GoogleAddress is an object, so it must be matched before the generic
+    // array/object arm — otherwise it gets flattened to an array and loses the
+    // address translation entirely
+    $uuid = Place::insertFromMixed($address);
+
+    expect($uuid)->toBeString();
+    $row = $connection->table('places')->where('uuid', $uuid)->first();
+    expect($row->city)->toBe('Singapore')
+        ->and($row->postal_code)->toBe('018961')
+        ->and($row->street1)->toBe('12 Marina View');
+});
+
+test('shared place lookups bail out when the location cannot be resolved', function () {
+    fleetopsPlaceGeocodeBoot([]);
+
+    // An unresolvable place public id makes Utils::getPointFromMixed() return
+    // null, so there is no point to match a shared place on
+    $resolved = Place::findExistingSharedPlace([
+        'company_uuid' => 'company-geo-1',
+        'street1'      => '1 Nonexistent Way',
+        'city'         => 'Singapore',
+        'country'      => 'SG',
+        'location'     => 'place_doesnotexist',
+    ]);
+
+    expect($resolved)->toBeNull();
+});
+
 test('import rows resolving to a coordinateless address fall back to the null island', function () {
     // A geocoding hit carrying no coordinates leaves the place without a
     // location, and the row supplies no latitude/longitude columns either
