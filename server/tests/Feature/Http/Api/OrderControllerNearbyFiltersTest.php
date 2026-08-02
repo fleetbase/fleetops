@@ -48,11 +48,52 @@ if (!Request::hasMacro('isArray')) {
 function fleetopsOrderNearbyBoot(): SQLiteConnection
 {
     $pdo = new PDO('sqlite::memory:');
-    $pdo->sqliteCreateFunction('ST_X', fn ($value) => 103.8);
-    $pdo->sqliteCreateFunction('ST_Y', fn ($value) => 1.3);
+
+    // Real implementations of the MySQL spatial functions the nearby query
+    // emits, so the distance filter is actually exercised rather than being
+    // handed a constant. These decode the same packed point the fixture writes
+    // and, for st_distance_sphere, use the haversine formula on MySQL's earth
+    // radius. This verifies selection semantics — which rows fall inside the
+    // radius — not MySQL's exact arithmetic, so assertions stay well clear of
+    // the boundary.
+    $decode = function ($value): ?array {
+        if (!is_string($value) || strlen($value) < 21) {
+            return null;
+        }
+
+        $parts = @unpack('Vsrid/Corder/Vtype/dlng/dlat', $value);
+
+        return $parts === false ? null : ['lng' => $parts['lng'], 'lat' => $parts['lat']];
+    };
+
+    $pdo->sqliteCreateFunction('ST_X', fn ($value) => $decode($value)['lng'] ?? null);
+    $pdo->sqliteCreateFunction('ST_Y', fn ($value) => $decode($value)['lat'] ?? null);
     $pdo->sqliteCreateFunction('ST_PointFromText', fn ($wkt, $srid = 0, $axisOrder = null) => $wkt);
-    $pdo->sqliteCreateFunction('ST_GeomFromText', fn ($wkt, $srid = 0, $axisOrder = null) => $wkt);
-    $pdo->sqliteCreateFunction('ST_Distance_Sphere', fn ($a, $b) => 100.0);
+    $pdo->sqliteCreateFunction('ST_GeomFromText', function ($wkt, $srid = 0, $axisOrder = null) {
+        if (is_string($wkt) && sscanf($wkt, 'POINT(%f %f)', $lng, $lat) === 2) {
+            return pack('V', 0) . pack('C', 1) . pack('V', 1) . pack('d', $lng) . pack('d', $lat);
+        }
+
+        return $wkt;
+    });
+    $pdo->sqliteCreateFunction('ST_Distance_Sphere', function ($a, $b) use ($decode) {
+        $from = $decode($a);
+        $to   = $decode($b);
+
+        if (!$from || !$to) {
+            return null;
+        }
+
+        $earthRadius = 6370986; // metres — the value MySQL's st_distance_sphere uses
+        $latFrom     = deg2rad($from['lat']);
+        $latTo       = deg2rad($to['lat']);
+        $deltaLat    = $latTo - $latFrom;
+        $deltaLng    = deg2rad($to['lng'] - $from['lng']);
+
+        $h = sin($deltaLat / 2) ** 2 + cos($latFrom) * cos($latTo) * sin($deltaLng / 2) ** 2;
+
+        return 2 * $earthRadius * asin(min(1.0, sqrt($h)));
+    });
     $connection = new SQLiteConnection($pdo);
     $resolver   = new ConnectionResolver(['default' => $connection, 'mysql' => $connection]);
     $resolver->setDefaultConnection('mysql');
