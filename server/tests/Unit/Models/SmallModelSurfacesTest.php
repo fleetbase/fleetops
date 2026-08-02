@@ -93,6 +93,8 @@ function fleetopsSmallModelBoot(): SQLiteConnection
         'tracking_statuses' => ['uuid', 'public_id', 'company_uuid', 'tracking_number_uuid', 'status', 'code'],
         'companies'         => ['uuid', 'public_id', 'name', 'country'],
         'places'            => ['uuid', 'public_id', 'company_uuid', 'owner_uuid', 'name', 'location'],
+        // Customer identity assertions widen the user lookup through this pivot
+        'company_users'     => ['uuid', 'company_uuid', 'user_uuid', 'status'],
     ];
     foreach ($tables as $table => $columns) {
         $schema->create($table, function ($blueprint) use ($columns) {
@@ -201,6 +203,46 @@ test('contact observer availability checks and deletion resolve against users', 
     // Deletion removes the associated user account
     $observer->deleted($contact);
     expect(true)->toBeTrue();
+});
+
+test('contact observer rejects saves whose email or phone belongs to another account', function () {
+    $connection = fleetopsSmallModelBoot();
+    $connection->table('users')->insert(['uuid' => '22222222-2222-4222-8222-222222222222', 'company_uuid' => 'company-1', 'email' => 'taken@example.test', 'phone' => '+6512345678']);
+
+    $observer = new ContactObserver();
+
+    // The availability checks are private, so the guards can only be reached
+    // through saving() with a contact that genuinely collides on a real table.
+    // hasUser() keys off a well-formed uuid, so a real one keeps saving() from
+    // detouring into account provisioning before it reaches the guards.
+    $contact = new Fleetbase\FleetOps\Models\Contact();
+    $contact->setRawAttributes([
+        'uuid'         => 'contact-collide',
+        'company_uuid' => 'company-1',
+        'user_uuid'    => '11111111-1111-4111-8111-111111111111',
+        'type'         => 'contact',
+        'email'        => 'free@example.test',
+        'phone'        => '+6599999999',
+    ], true);
+    $contact->exists = true;
+
+    // wasChanged() reads the post-save change set, which setRawAttributes does
+    // not populate — syncChanges promotes the pending edit into it.
+    $contact->email = 'taken@example.test';
+    $contact->syncChanges();
+
+    expect(fn () => $observer->saving($contact))
+        ->toThrow(Exception::class, 'Email attempting to update for contact is not available.');
+
+    // The phone guard sits behind the email one, so it only surfaces once the
+    // email is back to an available value
+    $contact->syncOriginal();
+    $contact->email = 'free@example.test';
+    $contact->phone = '+6512345678';
+    $contact->syncChanges();
+
+    expect(fn () => $observer->saving($contact))
+        ->toThrow(Exception::class, 'Phone attempting to update for contact is not available.');
 });
 
 test('tracking status request authorizes by session and rejects duplicates', function () {

@@ -39,6 +39,29 @@ test('point resolution rejects malformed feature points cleanly', function () {
     ]))->toThrow(Exception::class, 'Attempted to resolve Point from invalid location.');
 });
 
+test('point resolution falls back to nested geometry coordinates', function () {
+    // A geometry-typed envelope that also carries a nested `geometry` — the
+    // shape some upstream payloads produce when a Feature is flattened badly.
+    // The top-level coordinates are empty, so Point::fromJson fails and the
+    // resolution falls through to the nested pair rather than giving up.
+    $point = Utils::getPointFromMixed([
+        'type'        => 'Point',
+        'coordinates' => [],
+        'geometry'    => [
+            'type'        => 'Point',
+            'coordinates' => [103.851, 1.2816],
+        ],
+    ]);
+
+    // NOTE: this fallback recurses with the bare coordinate pair, which the
+    // array reader interprets positionally as [lat, lng] — the reverse of
+    // GeoJSON's [lng, lat]. The pair therefore comes back transposed. This
+    // asserts the behaviour as it stands rather than the intent; changing it
+    // affects every location write path and belongs in its own change.
+    expect($point->getLat())->toBe(103.851)
+        ->and($point->getLng())->toBe(1.2816);
+});
+
 test('coordinate helper does not collapse bbox GeoJSON point to zero', function () {
     $point = Utils::getPointFromCoordinates([
         'type'     => 'Feature',

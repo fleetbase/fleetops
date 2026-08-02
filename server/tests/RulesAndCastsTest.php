@@ -46,6 +46,36 @@ test('customer detail validation reports specific shape errors', function () {
         ->and($rule->message())->toBe('The :attribute must be either a string (customer ID) or an object with name and/or email.');
 });
 
+test('customer id validation resolves string identifiers against the customer tables', function () {
+    $connection = new Illuminate\Database\SQLiteConnection(new PDO('sqlite::memory:'));
+    $resolver   = new Illuminate\Database\ConnectionResolver(['default' => $connection, 'mysql' => $connection, 'sqlite' => $connection]);
+    $resolver->setDefaultConnection('mysql');
+    Illuminate\Database\Eloquent\Model::setConnectionResolver($resolver);
+    app()->instance('db', $resolver);
+    // ExistsInAny probes Schema::hasColumn before querying, which resolves the
+    // schema builder out of the container rather than off the connection.
+    app()->instance('db.schema', $connection->getSchemaBuilder());
+    Illuminate\Support\Facades\DB::clearResolvedInstance('db');
+    Illuminate\Support\Facades\Schema::clearResolvedInstance('db.schema');
+    config()->set('database.default', 'mysql');
+
+    foreach (['vendors', 'contacts'] as $table) {
+        $connection->getSchemaBuilder()->create($table, function ($blueprint) {
+            $blueprint->increments('id');
+            $blueprint->string('uuid')->nullable();
+            $blueprint->string('public_id')->nullable();
+        });
+    }
+    $connection->table('contacts')->insert(['uuid' => 'contact-rule-1', 'public_id' => 'contact_ruleone']);
+
+    // A scalar customer is an identifier rather than an inline payload, so it
+    // is delegated to an existence check across the customer-bearing tables.
+    $rule = new CustomerIdOrDetails();
+
+    expect($rule->passes('customer', 'contact_ruleone'))->toBeTrue()
+        ->and($rule->passes('customer', 'contact_missing'))->toBeFalse();
+});
+
 test('computable algorithm rule delegates to algorithm evaluation', function () {
     $rule = new ComputableAlgo();
 

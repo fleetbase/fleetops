@@ -1073,6 +1073,29 @@ test('order observer ignores non dispatched start transitions', function () {
         ->and($order->started_at)->toBeNull();
 });
 
+test('order observer invalidates cache on delete and forwards to integrated vendors', function () {
+    Cache::swap(new Repository(new ArrayStore()));
+    session(['company' => 'company-uuid']);
+
+    $order       = new FleetOpsOrderObserverOrderFake();
+    $order->uuid = 'order-deleted-uuid';
+
+    (new OrderObserver())->deleted($order);
+
+    expect(Cache::get('live:company-uuid:orders:version'))->toBe(1)
+        ->and(Cache::get('live:company-uuid:routes:version'))->toBe(1)
+        ->and(Cache::get('live:company-uuid:coordinates:version'))->toBe(1);
+
+    // Integrated vendor orders additionally notify the upstream provider. The
+    // provider is unreachable in the harness, so the assertion is that the
+    // forwarding is attempted rather than skipped.
+    $integrated                   = new FleetOpsOrderObserverOrderFake();
+    $integrated->uuid             = 'order-deleted-integrated';
+    $integrated->integratedVendor = true;
+
+    expect(fn () => (new OrderObserver())->deleted($integrated))->toThrow(Error::class);
+});
+
 test('contact observer creates syncs normalizes and deletes associated users', function () {
     $observer = new ContactObserver();
     $contact  = new FleetOpsContactObserverContactFake();
@@ -1092,6 +1115,24 @@ test('contact observer creates syncs normalizes and deletes associated users', f
         'normalizeCustomerUser',
         'syncWithUser',
         'deleteUser',
+    ]);
+});
+
+test('contact observer creates the user account on save when none exists yet', function () {
+    $observer = new ContactObserver();
+    $contact  = new FleetOpsContactObserverContactFake();
+    $contact->setRawAttributes(['type' => 'contact']);
+
+    // Saving without a prior creating() leaves the contact userless, which is
+    // the arm that provisions the account rather than reusing it.
+    $observer->saving($contact);
+
+    expect($contact->events)->toBe([
+        'assertCustomerIdentityIsAvailable',
+        'doesntHaveUser',
+        'createUser',
+        'isCustomer',
+        'syncWithUser',
     ]);
 });
 
@@ -1193,6 +1234,16 @@ test('service rate observer syncs rate and parcel fee inputs and deletes loaded 
 
     expect($serviceRate->rateFeeCalls)->toBe([[['fee' => 10]]])
         ->and($serviceRate->parcelFeeCalls)->toBe([]);
+
+    // Parcel services sync their parcel fees on update too, not only on create
+    $serviceRate->perDrop        = false;
+    $serviceRate->parcelService  = true;
+    $serviceRate->rateFeeCalls   = [];
+    $serviceRate->parcelFeeCalls = [];
+    $observer->updated($serviceRate);
+
+    expect($serviceRate->rateFeeCalls)->toBe([])
+        ->and($serviceRate->parcelFeeCalls)->toBe([[['parcel_fee' => 20]]]);
 
     $observer->deleted($serviceRate);
 
