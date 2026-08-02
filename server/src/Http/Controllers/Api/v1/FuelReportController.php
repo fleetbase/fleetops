@@ -35,9 +35,9 @@ class FuelReportController extends Controller
 
         // Find driver who is reporting
         try {
-            $driver = Driver::findRecordOrFail($request->input('driver'));
+            $driver = $this->findDriverRecord($request->input('driver'));
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $exception) {
-            return response()->json(
+            return $this->jsonResponse(
                 [
                     'error' => 'Driver reporting fuel report not found.',
                 ],
@@ -52,10 +52,10 @@ class FuelReportController extends Controller
         $input['vehicle_uuid']      = $driver->vehicle_uuid;
 
         // create the fuel report
-        $fuelReport = FuelReport::create($input);
+        $fuelReport = $this->createFuelReport($input);
 
         // response the driver resource
-        return new FuelReportResource($fuelReport);
+        return $this->fuelReportResource($fuelReport);
     }
 
     /**
@@ -70,9 +70,9 @@ class FuelReportController extends Controller
     {
         // find for the fuel report
         try {
-            $fuelReport = FuelReport::findRecordOrFail($id);
+            $fuelReport = $this->findFuelReportRecord($id);
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $exception) {
-            return response()->json(
+            return $this->jsonResponse(
                 [
                     'error' => 'FuelReport resource not found.',
                 ],
@@ -93,7 +93,7 @@ class FuelReportController extends Controller
         $fuelReport->update($input);
 
         // response the fuel report resource
-        return new FuelReportResource($fuelReport);
+        return $this->fuelReportResource($fuelReport);
     }
 
     /**
@@ -103,9 +103,9 @@ class FuelReportController extends Controller
      */
     public function query(Request $request)
     {
-        $results = FuelReport::queryWithRequest($request);
+        $results = $this->queryFuelReports($request);
 
-        return FuelReportResource::collection($results);
+        return $this->fuelReportResourceCollection($results);
     }
 
     /**
@@ -117,9 +117,9 @@ class FuelReportController extends Controller
     {
         // find for the fuel report
         try {
-            $fuelReport = FuelReport::findRecordOrFail($id);
+            $fuelReport = $this->findFuelReportRecord($id);
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $exception) {
-            return response()->json(
+            return $this->jsonResponse(
                 [
                     'error' => 'FuelReport resource not found.',
                 ],
@@ -128,7 +128,7 @@ class FuelReportController extends Controller
         }
 
         // response the fuel report resource
-        return new FuelReportResource($fuelReport);
+        return $this->fuelReportResource($fuelReport);
     }
 
     /**
@@ -140,9 +140,9 @@ class FuelReportController extends Controller
     {
         // find for the driver
         try {
-            $fuelReport = FuelReport::findRecordOrFail($id);
+            $fuelReport = $this->findFuelReportRecord($id);
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $exception) {
-            return response()->json(
+            return $this->jsonResponse(
                 [
                     'error' => 'FuelReport resource not found.',
                 ],
@@ -154,6 +154,46 @@ class FuelReportController extends Controller
         $fuelReport->delete();
 
         // response the fuel report resource
+        return $this->deletedFuelReportResource($fuelReport);
+    }
+
+    protected function findDriverRecord(string $id): Driver
+    {
+        return Driver::findRecordOrFail($id);
+    }
+
+    protected function createFuelReport(array $input): FuelReport
+    {
+        return FuelReport::create($input);
+    }
+
+    protected function findFuelReportRecord(string $id): FuelReport
+    {
+        return FuelReport::findRecordOrFail($id);
+    }
+
+    protected function queryFuelReports(Request $request)
+    {
+        return FuelReport::queryWithRequest($request);
+    }
+
+    protected function fuelReportResource(FuelReport $fuelReport)
+    {
+        return new FuelReportResource($fuelReport);
+    }
+
+    protected function fuelReportResourceCollection($results)
+    {
+        return FuelReportResource::collection($results);
+    }
+
+    protected function deletedFuelReportResource(FuelReport $fuelReport)
+    {
         return new DeletedFuelReport($fuelReport);
+    }
+
+    protected function jsonResponse(array $payload, int $status)
+    {
+        return response()->json($payload, $status);
     }
 }

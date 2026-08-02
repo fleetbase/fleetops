@@ -20,21 +20,21 @@ class PurchaseRateObserver
     public function creating(PurchaseRate $purchaseRate)
     {
         if (!$purchaseRate->uuid) {
-            $purchaseRate->uuid = PurchaseRate::generateUuid();
+            $purchaseRate->uuid = $this->generateUuid();
         }
 
-        $purchaseRate->load(['serviceQuote.items', 'serviceQuote.serviceRate']);
+        $this->loadRelations($purchaseRate);
         $order = $this->resolveOrder($purchaseRate);
 
         // get company
-        $company = Company::where('uuid', session('company', $purchaseRate->company_uuid))->first();
+        $company = $this->findCompany(session('company', $purchaseRate->company_uuid));
 
         // get currency to use
-        $currency = data_get($purchaseRate, 'serviceQuote.currency')
-            ?: Utils::getCompanyTransactionCurrency($company ?? $purchaseRate->company_uuid);
+        $currency = $this->getServiceQuoteCurrency($purchaseRate)
+            ?: $this->getCompanyTransactionCurrency($company ?? $purchaseRate->company_uuid);
 
         // create transaction and transaction items
-        $transaction = Transaction::create([
+        $transaction = $this->createTransaction([
             'company_uuid'           => session('company', $purchaseRate->company_uuid),
             'customer_uuid'          => $purchaseRate->customer_uuid,
             'customer_type'          => $purchaseRate->customer_type,
@@ -42,9 +42,9 @@ class PurchaseRateObserver
             'subject_type'           => $order ? Order::class : null,
             'context_uuid'           => $purchaseRate->uuid,
             'context_type'           => PurchaseRate::class,
-            'gateway_transaction_id' => $purchaseRate->getMeta('transaction_id', Transaction::generateNumber()),
+            'gateway_transaction_id' => $this->getTransactionId($purchaseRate),
             'gateway'                => 'internal',
-            'amount'                 => data_get($purchaseRate, 'serviceQuote.amount', 0),
+            'amount'                 => $this->getServiceQuoteAmount($purchaseRate),
             'currency'               => $currency,
             'description'            => 'Dispatch order',
             'type'                   => 'dispatch',
@@ -53,9 +53,9 @@ class PurchaseRateObserver
             'settlement_status'      => Transaction::SETTLEMENT_STATUS_UNPAID,
         ]);
 
-        if (isset($purchaseRate->serviceQuote)) {
-            $purchaseRate->serviceQuote->items->each(function ($serviceQuoteItem) use ($transaction, $currency) {
-                TransactionItem::create([
+        if ($this->hasServiceQuote($purchaseRate)) {
+            $this->getServiceQuoteItems($purchaseRate)->each(function ($serviceQuoteItem) use ($transaction, $currency) {
+                $this->createTransactionItem([
                     'transaction_uuid' => $transaction->uuid,
                     'amount'           => $serviceQuoteItem->amount ?? 0,
                     'currency'         => $currency,
@@ -67,6 +67,61 @@ class PurchaseRateObserver
 
         $purchaseRate->transaction_uuid = $transaction->uuid;
         $purchaseRate->status           = $purchaseRate->status ?: Transaction::STATUS_SUCCESS;
+    }
+
+    protected function generateUuid(): string
+    {
+        return PurchaseRate::generateUuid();
+    }
+
+    protected function loadRelations(PurchaseRate $purchaseRate): void
+    {
+        $purchaseRate->load(['serviceQuote.items', 'serviceQuote.serviceRate']);
+    }
+
+    protected function findCompany(?string $uuid): ?Company
+    {
+        return Company::where('uuid', $uuid)->first();
+    }
+
+    protected function getCompanyTransactionCurrency(mixed $company): string
+    {
+        return Utils::getCompanyTransactionCurrency($company);
+    }
+
+    protected function getServiceQuoteCurrency(PurchaseRate $purchaseRate): ?string
+    {
+        return data_get($purchaseRate, 'serviceQuote.currency');
+    }
+
+    protected function getServiceQuoteAmount(PurchaseRate $purchaseRate): int|float
+    {
+        return data_get($purchaseRate, 'serviceQuote.amount', 0);
+    }
+
+    protected function getTransactionId(PurchaseRate $purchaseRate): string
+    {
+        return $purchaseRate->getMeta('transaction_id', Transaction::generateNumber());
+    }
+
+    protected function hasServiceQuote(PurchaseRate $purchaseRate): bool
+    {
+        return isset($purchaseRate->serviceQuote);
+    }
+
+    protected function getServiceQuoteItems(PurchaseRate $purchaseRate): \Illuminate\Support\Collection
+    {
+        return $purchaseRate->serviceQuote->items;
+    }
+
+    protected function createTransaction(array $attributes): Transaction
+    {
+        return Transaction::create($attributes);
+    }
+
+    protected function createTransactionItem(array $attributes): TransactionItem
+    {
+        return TransactionItem::create($attributes);
     }
 
     protected function resolveOrder(PurchaseRate $purchaseRate): ?Order

@@ -54,7 +54,7 @@ class CustomerController extends Controller
     {
         $mode     = $request->input('mode', 'email');
         $identity = $request->input('identity');
-        $isEmail  = Utils::isEmail($identity);
+        $isEmail  = $this->isEmail($identity);
 
         if ($mode === 'email' && !$isEmail) {
             return response()->apiError('Invalid email provided for identity.');
@@ -64,7 +64,7 @@ class CustomerController extends Controller
             $identity = static::phone($identity);
         }
 
-        $sessionCompany = session('company');
+        $sessionCompany = $this->sessionCompany();
         if (!$sessionCompany) {
             return response()->apiError('No company resolved from API credential.', 500);
         }
@@ -80,14 +80,12 @@ class CustomerController extends Controller
         // template references `$user->name`). Look up — or create — the User
         // before sending. `create()` later backfills password + remaining fields
         // on this same row when the customer confirms the code.
-        $subject = $isEmail
-            ? User::where('email', $identity)->whereNull('deleted_at')->withoutGlobalScopes()->first()
-            : User::where('phone', $identity)->whereNull('deleted_at')->withoutGlobalScopes()->first();
+        $subject = $this->findActiveUserByIdentity($identity, $isEmail ? 'email' : 'phone');
 
         if (!$subject) {
             // `password` and `type` are guarded on User; assign type after create
             // via setUserType (saves the row).
-            $subject = User::create([
+            $subject = $this->createUser([
                 'company_uuid' => $sessionCompany,
                 'name'         => $providedName !== '' ? $providedName : $identity,
                 'email'        => $isEmail ? $identity : null,
@@ -108,13 +106,13 @@ class CustomerController extends Controller
 
         try {
             if ($mode === 'email') {
-                VerificationCode::generateEmailVerificationFor($subject, 'fleetops_create_customer', [
+                $this->generateEmailVerification($subject, 'fleetops_create_customer', [
                     'subject'         => config('app.name') . ' verification code',
                     'messageCallback' => fn ($verification) => 'Your ' . config('app.name') . ' verification code is ' . $verification->code,
                     'meta'            => $meta,
                 ]);
             } else {
-                VerificationCode::generateSmsVerificationFor($subject, 'fleetops_create_customer', [
+                $this->generateSmsVerification($subject, 'fleetops_create_customer', [
                     'messageCallback' => fn ($verification) => 'Your ' . config('app.name') . ' verification code is ' . $verification->code,
                     'meta'            => $meta,
                 ]);
@@ -135,22 +133,22 @@ class CustomerController extends Controller
     {
         $code     = $request->input('code');
         $identity = $request->input('identity');
-        $isEmail  = Utils::isEmail($identity);
+        $isEmail  = $this->isEmail($identity);
         if (!$isEmail) {
             $identity = static::phone($identity);
         }
 
         // Verify the code is one we sent for this identity.
-        $verificationCode = VerificationCode::where([
+        $verificationCode = $this->verificationCodeExists([
             'code'           => $code,
             'for'            => 'fleetops_create_customer',
             'meta->identity' => $identity,
-        ])->exists();
+        ]);
         if (!$verificationCode) {
             return response()->apiError('Invalid verification code provided.');
         }
 
-        $sessionCompany = session('company');
+        $sessionCompany = $this->sessionCompany();
         if (!$sessionCompany) {
             return response()->apiError('No company resolved from API credential.', 500);
         }
@@ -158,15 +156,15 @@ class CustomerController extends Controller
         // Attach to existing User if one matches the identity, otherwise create one.
         $user = null;
         if ($isEmail) {
-            $user = User::where('email', $identity)->whereNull('deleted_at')->withoutGlobalScopes()->first();
+            $user = $this->findActiveUserByIdentity($identity, 'email');
         } elseif (Str::startsWith($identity, '+')) {
-            $user = User::where('phone', $identity)->whereNull('deleted_at')->withoutGlobalScopes()->first();
+            $user = $this->findActiveUserByIdentity($identity, 'phone');
         }
 
         if (!$user) {
             // `password` and `type` are guarded on User; assign them after create
             // (setUserType saves the type, setPasswordAttribute hashes plaintext).
-            $user = User::create([
+            $user = $this->createUser([
                 'company_uuid' => $sessionCompany,
                 'name'         => $request->input('name'),
                 'email'        => $isEmail ? $identity : $request->input('email'),
@@ -215,15 +213,15 @@ class CustomerController extends Controller
         // Handle photo as either file id or base64 data.
         $photo = $request->input('photo');
         if ($photo) {
-            if (Utils::isPublicId($photo)) {
-                $file = File::where('public_id', $photo)->first();
+            if ($this->isPublicId($photo)) {
+                $file = $this->findFileByPublicId($photo);
                 if ($file) {
                     $input['photo_uuid'] = $file->uuid;
                 }
             }
-            if (Utils::isBase64String($photo)) {
+            if ($this->isBase64String($photo)) {
                 $path = implode('/', ['uploads', $sessionCompany, 'customers']);
-                $file = File::createFromBase64($photo, null, $path);
+                $file = $this->createFileFromBase64($photo, $path);
                 if ($file) {
                     $input['photo_uuid'] = $file->uuid;
                 }
@@ -232,22 +230,22 @@ class CustomerController extends Controller
 
         // Reuse an existing customer-Contact for this user+company if one exists
         // (idempotent re-signup), otherwise create one.
-        $contact = Contact::where([
+        $contact = $this->findCustomerContact([
             'company_uuid' => $sessionCompany,
             'user_uuid'    => $user->uuid,
             'type'         => 'customer',
-        ])->first();
+        ]);
         if ($contact) {
             $contact->fill(array_filter($input, fn ($v) => $v !== null && $v !== ''))->save();
         } else {
             try {
-                $contact = Contact::create($input);
+                $contact = $this->createContact($input);
             } catch (UserAlreadyExistsException $e) {
-                $contact = Contact::where([
+                $contact = $this->findCustomerContact([
                     'company_uuid' => $sessionCompany,
                     'user_uuid'    => $user->uuid,
                     'type'         => 'customer',
-                ])->first();
+                ]);
                 if (!$contact) {
                     return response()->apiError($e->getMessage());
                 }
@@ -272,10 +270,10 @@ class CustomerController extends Controller
             }
         }
 
-        $token          = $user->createToken($contact->uuid);
+        $token          = $this->createCustomerToken($user, $contact);
         $contact->token = $token->plainTextToken;
 
-        return new CustomerResource($contact);
+        return $this->customerResource($contact);
     }
 
     /**
@@ -293,7 +291,7 @@ class CustomerController extends Controller
         }
 
         if (is_string($input)) {
-            return Place::where(['public_id' => $input, 'company_uuid' => $companyUuid])->first();
+            return $this->findPlaceByPublicId($input, $companyUuid);
         }
 
         if (!is_array($input)) {
@@ -309,7 +307,7 @@ class CustomerController extends Controller
             return null;
         }
 
-        return Place::create(array_merge(
+        return $this->createPlace(array_merge(
             [
                 'company_uuid' => $companyUuid,
                 'owner_uuid'   => $contact->uuid,
@@ -330,20 +328,18 @@ class CustomerController extends Controller
             return response()->apiError('Identity and password are required.', 400);
         }
 
-        $user = User::where('email', $identity)
-            ->orWhere('phone', static::phone($identity))
-            ->first();
+        $user = $this->findUserForLogin($identity);
 
-        if (!$user || !$user->password || !Hash::check($password, $user->password)) {
+        if (!$user || !$user->password || !$this->passwordMatches($password, $user->password)) {
             return response()->apiError('Authentication failed using credentials provided.', 401);
         }
 
-        $sessionCompany = session('company');
+        $sessionCompany = $this->sessionCompany();
         if (!$sessionCompany) {
             return response()->apiError('No company resolved from API credential.', 500);
         }
 
-        $contact = Contact::firstOrCreate(
+        $contact = $this->firstOrCreateCustomerContact(
             [
                 'user_uuid'    => $user->uuid,
                 'company_uuid' => $sessionCompany,
@@ -356,10 +352,10 @@ class CustomerController extends Controller
             ]
         );
 
-        $token          = $user->createToken($contact->uuid);
+        $token          = $this->createCustomerToken($user, $contact);
         $contact->token = $token->plainTextToken;
 
-        return new CustomerResource($contact);
+        return $this->customerResource($contact);
     }
 
     /**
@@ -369,13 +365,13 @@ class CustomerController extends Controller
     {
         $phone = static::phone($request->input('phone') ?? $request->input('identity'));
 
-        $user = User::where('phone', $phone)->whereNull('deleted_at')->withoutGlobalScopes()->first();
+        $user = $this->findActiveUserByIdentity($phone, 'phone');
         if (!$user) {
             return response()->apiError('No customer with this phone number found.');
         }
 
         try {
-            VerificationCode::generateSmsVerificationFor($user, 'fleetops_customer_login', [
+            $this->generateSmsVerification($user, 'fleetops_customer_login', [
                 'messageCallback' => fn ($verification) => 'Your ' . config('app.name') . ' verification code is ' . $verification->code,
             ]);
 
@@ -383,7 +379,7 @@ class CustomerController extends Controller
         } catch (\Throwable $e) {
             if ($user->email) {
                 try {
-                    VerificationCode::generateEmailVerificationFor($user, 'fleetops_customer_login', [
+                    $this->generateEmailVerification($user, 'fleetops_customer_login', [
                         'subject'         => config('app.name') . ' verification code',
                         'messageCallback' => fn ($verification) => 'Your ' . config('app.name') . ' verification code is ' . $verification->code,
                     ]);
@@ -403,30 +399,30 @@ class CustomerController extends Controller
      */
     public function verifyCode(Request $request)
     {
-        $identity = Utils::isEmail($request->input('identity')) ? $request->input('identity') : static::phone($request->input('identity'));
+        $identity = $this->isEmail($request->input('identity')) ? $request->input('identity') : static::phone($request->input('identity'));
         $code     = $request->input('code');
         $for      = $request->input('for', 'fleetops_customer_login');
 
         if ($for === 'fleetops_create_customer') {
-            return $this->create($request);
+            return $this->create(CreateCustomerRequest::createFrom($request));
         }
 
-        $user = User::where('phone', $identity)->orWhere('email', $identity)->first();
+        $user = $this->findUserForVerification($identity);
         if (!$user) {
             return response()->apiError('Unable to verify code.');
         }
 
-        $verificationCode = VerificationCode::where([
+        $verificationCode = $this->verificationCodeExists([
             'subject_uuid' => $user->uuid,
             'code'         => $code,
             'for'          => $for,
-        ])->exists();
+        ]);
         if (!$verificationCode) {
             return response()->apiError('Invalid verification code.');
         }
 
-        $sessionCompany = session('company');
-        $contact        = Contact::firstOrCreate(
+        $sessionCompany = $this->sessionCompany();
+        $contact        = $this->firstOrCreateCustomerContact(
             [
                 'user_uuid'    => $user->uuid,
                 'company_uuid' => $sessionCompany,
@@ -439,10 +435,10 @@ class CustomerController extends Controller
             ]
         );
 
-        $token          = $user->createToken($contact->uuid);
+        $token          = $this->createCustomerToken($user, $contact);
         $contact->token = $token->plainTextToken;
 
-        return new CustomerResource($contact);
+        return $this->customerResource($contact);
     }
 
     /**
@@ -455,10 +451,8 @@ class CustomerController extends Controller
             return response()->apiError('Identity is required.', 400);
         }
 
-        $isEmail = Utils::isEmail($identity);
-        $user    = $isEmail
-            ? User::where('email', $identity)->first()
-            : User::where('phone', static::phone($identity))->first();
+        $isEmail = $this->isEmail($identity);
+        $user    = $this->findUserByIdentity($isEmail ? $identity : static::phone($identity), $isEmail ? 'email' : 'phone');
 
         if (!$user) {
             // Don't leak account existence — return success regardless.
@@ -468,13 +462,13 @@ class CustomerController extends Controller
         $meta = ['identity' => $isEmail ? $identity : static::phone($identity)];
         try {
             if ($isEmail) {
-                VerificationCode::generateEmailVerificationFor($user, 'fleetops_customer_password_reset', [
+                $this->generateEmailVerification($user, 'fleetops_customer_password_reset', [
                     'subject'         => config('app.name') . ' password reset',
                     'messageCallback' => fn ($v) => 'Your ' . config('app.name') . ' password reset code is ' . $v->code,
                     'meta'            => $meta,
                 ]);
             } else {
-                VerificationCode::generateSmsVerificationFor($user, 'fleetops_customer_password_reset', [
+                $this->generateSmsVerification($user, 'fleetops_customer_password_reset', [
                     'messageCallback' => fn ($v) => 'Your ' . config('app.name') . ' password reset code is ' . $v->code,
                     'meta'            => $meta,
                 ]);
@@ -501,21 +495,19 @@ class CustomerController extends Controller
             return response()->apiError('Password must be at least 8 characters.', 400);
         }
 
-        $isEmail = Utils::isEmail($identity);
+        $isEmail = $this->isEmail($identity);
         $needle  = $isEmail ? $identity : static::phone($identity);
 
-        $verificationCode = VerificationCode::where([
+        $verificationCode = $this->findVerificationCode([
             'code'           => $code,
             'for'            => 'fleetops_customer_password_reset',
             'meta->identity' => $needle,
-        ])->first();
+        ]);
         if (!$verificationCode) {
             return response()->apiError('Invalid reset code.');
         }
 
-        $user = $isEmail
-            ? User::where('email', $needle)->first()
-            : User::where('phone', $needle)->first();
+        $user = $this->findUserByIdentity($needle, $isEmail ? 'email' : 'phone');
         if (!$user) {
             return response()->apiError('Account not found.');
         }
@@ -524,7 +516,7 @@ class CustomerController extends Controller
         $user->password = $password;
         $user->save();
         // Invalidate all existing sessions for this user after a password reset.
-        $user->tokens()->delete();
+        $this->deleteUserTokens($user);
         $verificationCode->delete();
 
         return response()->json(['status' => 'ok']);
@@ -539,12 +531,12 @@ class CustomerController extends Controller
      */
     public function me()
     {
-        $customer = CustomerAuth::current();
+        $customer = $this->currentCustomer();
         if (!$customer) {
             return response()->apiError('Not authenticated.', 401);
         }
 
-        return new CustomerResource($customer);
+        return $this->customerResource($customer);
     }
 
     /**
@@ -552,7 +544,7 @@ class CustomerController extends Controller
      */
     public function updateMe(UpdateContactRequest $request)
     {
-        $customer = CustomerAuth::current();
+        $customer = $this->currentCustomer();
         if (!$customer) {
             return response()->apiError('Not authenticated.', 401);
         }
@@ -565,15 +557,15 @@ class CustomerController extends Controller
         // Photo handling.
         $photo = $request->input('photo');
         if ($photo) {
-            if (Utils::isPublicId($photo)) {
-                $file = File::where('public_id', $photo)->first();
+            if ($this->isPublicId($photo)) {
+                $file = $this->findFileByPublicId($photo);
                 if ($file) {
                     $input['photo_uuid'] = $file->uuid;
                 }
             }
-            if (Utils::isBase64String($photo)) {
-                $path = implode('/', ['uploads', session('company'), 'customers']);
-                $file = File::createFromBase64($photo, null, $path);
+            if ($this->isBase64String($photo)) {
+                $path = implode('/', ['uploads', $this->sessionCompany(), 'customers']);
+                $file = $this->createFileFromBase64($photo, $path);
                 if ($file) {
                     $input['photo_uuid'] = $file->uuid;
                 }
@@ -597,11 +589,11 @@ class CustomerController extends Controller
                 'phone' => $input['phone'] ?? null,
             ], fn ($v) => $v !== null);
             if (!empty($userUpdate)) {
-                User::where('uuid', $customer->user_uuid)->update($userUpdate);
+                $this->updateUserByUuid($customer->user_uuid, $userUpdate);
             }
         }
 
-        return new CustomerResource($customer->fresh());
+        return $this->customerResource($customer->fresh());
     }
 
     /**
@@ -609,13 +601,13 @@ class CustomerController extends Controller
      */
     public function logout(Request $request)
     {
-        $customer = CustomerAuth::current();
+        $customer = $this->currentCustomer();
         if (!$customer) {
             return response()->apiError('Not authenticated.', 401);
         }
 
         $tokenString = $request->header(CustomerAuth::HEADER);
-        $accessToken = $tokenString ? \Laravel\Sanctum\PersonalAccessToken::findToken($tokenString) : null;
+        $accessToken = $tokenString ? $this->findAccessToken($tokenString) : null;
         if ($accessToken) {
             $accessToken->delete();
         }
@@ -628,14 +620,14 @@ class CustomerController extends Controller
      */
     public function logoutAll()
     {
-        $customer = CustomerAuth::current();
+        $customer = $this->currentCustomer();
         if (!$customer || !$customer->user_uuid) {
             return response()->apiError('Not authenticated.', 401);
         }
 
-        $user = User::where('uuid', $customer->user_uuid)->first();
+        $user = $this->findUserByUuid($customer->user_uuid);
         if ($user) {
-            $user->tokens()->delete();
+            $this->deleteUserTokens($user);
         }
 
         return response()->json(['status' => 'ok']);
@@ -646,18 +638,18 @@ class CustomerController extends Controller
      */
     public function orders(Request $request)
     {
-        $customer = CustomerAuth::current();
+        $customer = $this->currentCustomer();
         if (!$customer) {
             return response()->apiError('Not authenticated.', 401);
         }
 
-        $results = Order::queryWithRequest($request, function (&$query) use ($customer) {
+        $results = $this->queryOrders($request, function (&$query) use ($customer) {
             $query->where('customer_uuid', $customer->uuid)
                 ->whereNull('deleted_at')
                 ->withoutGlobalScopes();
         });
 
-        return OrderResource::collection($results);
+        return $this->orderResourceCollection($results);
     }
 
     /**
@@ -665,13 +657,13 @@ class CustomerController extends Controller
      */
     public function findOrder(string $id)
     {
-        $customer = CustomerAuth::current();
+        $customer = $this->currentCustomer();
         if (!$customer) {
             return response()->apiError('Not authenticated.', 401);
         }
 
         try {
-            $order = Order::findRecordOrFail($id);
+            $order = $this->findOrderOrFail($id);
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
             return response()->apiError('Order not found.', 404);
         }
@@ -680,7 +672,7 @@ class CustomerController extends Controller
             return response()->apiError('Order not found.', 404);
         }
 
-        return new OrderResource($order);
+        return $this->orderResource($order);
     }
 
     /**
@@ -699,19 +691,18 @@ class CustomerController extends Controller
      */
     public function createOrder(CreateCustomerOrderRequest $request)
     {
-        $customer = CustomerAuth::current();
+        $customer = $this->currentCustomer();
         if (!$customer) {
             return response()->apiError('Not authenticated.', 401);
         }
 
-        $sessionCompany = session('company');
+        $sessionCompany = $this->sessionCompany();
         if (!$sessionCompany) {
             return response()->apiError('No company resolved from API credential.', 500);
         }
 
         // Resolve the order config for this order. Mirrors OrderController::create.
-        $orderConfig = OrderConfig::resolveFromIdentifier($request->only(['type', 'order_config']))
-            ?: OrderConfig::where('company_uuid', $sessionCompany)->first();
+        $orderConfig = $this->resolveOrderConfig($request, $sessionCompany);
         if (!$orderConfig) {
             return response()->apiError('No order config available for this company.', 422);
         }
@@ -725,7 +716,7 @@ class CustomerController extends Controller
             $payloadInput = (array) $request->input('payload');
             $payloadUuid  = $this->buildPayloadFromInput($payloadInput, $sessionCompany)->uuid;
         } elseif ($request->isString('payload')) {
-            $payloadUuid = Utils::getUuid('payloads', [
+            $payloadUuid = $this->getUuid('payloads', [
                 'public_id'    => $request->input('payload'),
                 'company_uuid' => $sessionCompany,
             ]);
@@ -736,10 +727,10 @@ class CustomerController extends Controller
             }
         }
 
-        $order = Order::create([
+        $order = $this->createOrderRecord([
             'company_uuid'      => $sessionCompany,
             'customer_uuid'     => $customer->uuid,
-            'customer_type'     => Utils::getModelClassName('contact'),
+            'customer_type'     => $this->getModelClassName('contact'),
             'payload_uuid'      => $payloadUuid,
             'order_config_uuid' => $orderConfig->uuid,
             'type'              => $orderConfig->key,
@@ -753,12 +744,12 @@ class CustomerController extends Controller
         // If the customer picked a ServiceQuote up front, consume it now to
         // lock the pricing onto the order's PurchaseRate (mirrors how
         // OrderController::create handles `service_quote`).
-        $serviceQuote = ServiceQuote::resolveFromRequest($request);
+        $serviceQuote = $this->resolveServiceQuote($request);
         if ($serviceQuote instanceof ServiceQuote) {
             $order->purchaseServiceQuote($serviceQuote);
         }
 
-        return new OrderResource($order->fresh(['payload', 'payload.pickup', 'payload.dropoff', 'payload.entities']));
+        return $this->orderResource($order->fresh(['payload', 'payload.pickup', 'payload.dropoff', 'payload.entities']));
     }
 
     /**
@@ -769,7 +760,7 @@ class CustomerController extends Controller
      */
     protected function buildPayloadFromInput(array $payloadInput, string $companyUuid): Payload
     {
-        $payload   = new Payload();
+        $payload   = $this->newPayload();
         $entities  = data_get($payloadInput, 'entities', []);
         $waypoints = data_get($payloadInput, 'waypoints', []);
         $pickup    = data_get($payloadInput, 'pickup');
@@ -810,16 +801,16 @@ class CustomerController extends Controller
      */
     public function places(Request $request)
     {
-        $customer = CustomerAuth::current();
+        $customer = $this->currentCustomer();
         if (!$customer) {
             return response()->apiError('Not authenticated.', 401);
         }
 
-        $results = Place::queryWithRequest($request, function (&$query) use ($customer) {
+        $results = $this->queryPlaces($request, function (&$query) use ($customer) {
             $query->where('owner_uuid', $customer->uuid);
         });
 
-        return PlaceResource::collection($results);
+        return $this->placeResourceCollection($results);
     }
 
     /**
@@ -827,12 +818,12 @@ class CustomerController extends Controller
      */
     public function registerDevice(Request $request)
     {
-        $customer = CustomerAuth::current();
+        $customer = $this->currentCustomer();
         if (!$customer) {
             return response()->apiError('Not authenticated.', 401);
         }
 
-        $device = UserDevice::firstOrCreate(
+        $device = $this->firstOrCreateDevice(
             [
                 'token'    => $request->input('token'),
                 'platform' => $request->input('platform', $request->input('os')),
@@ -854,6 +845,214 @@ class CustomerController extends Controller
     /* ============================================================
      | Helpers
      * ============================================================ */
+
+    protected function isEmail(?string $identity): bool
+    {
+        return Utils::isEmail($identity);
+    }
+
+    protected function isPublicId(?string $value): bool
+    {
+        return Utils::isPublicId($value);
+    }
+
+    protected function isBase64String(?string $value): bool
+    {
+        return Utils::isBase64String($value);
+    }
+
+    protected function sessionCompany(): ?string
+    {
+        return session('company');
+    }
+
+    protected function currentCustomer(): ?Contact
+    {
+        return CustomerAuth::current();
+    }
+
+    protected function findActiveUserByIdentity(string $identity, string $column): ?User
+    {
+        return User::where($column, $identity)->whereNull('deleted_at')->withoutGlobalScopes()->first();
+    }
+
+    protected function findUserByIdentity(string $identity, string $column): ?User
+    {
+        return User::where($column, $identity)->first();
+    }
+
+    protected function findUserForLogin(string $identity): ?User
+    {
+        return User::where('email', $identity)
+            ->orWhere('phone', static::phone($identity))
+            ->first();
+    }
+
+    protected function findUserForVerification(string $identity): ?User
+    {
+        return User::where('phone', $identity)->orWhere('email', $identity)->first();
+    }
+
+    protected function findUserByUuid(string $uuid): ?User
+    {
+        return User::where('uuid', $uuid)->first();
+    }
+
+    protected function createUser(array $attributes): User
+    {
+        return User::create($attributes);
+    }
+
+    protected function passwordMatches(string $password, string $hash): bool
+    {
+        return Hash::check($password, $hash);
+    }
+
+    protected function generateEmailVerification(User $user, string $for, array $options): mixed
+    {
+        return VerificationCode::generateEmailVerificationFor($user, $for, $options);
+    }
+
+    protected function generateSmsVerification(User $user, string $for, array $options): mixed
+    {
+        return VerificationCode::generateSmsVerificationFor($user, $for, $options);
+    }
+
+    protected function verificationCodeExists(array $attributes): bool
+    {
+        return VerificationCode::where($attributes)->exists();
+    }
+
+    protected function findVerificationCode(array $attributes): mixed
+    {
+        return VerificationCode::where($attributes)->first();
+    }
+
+    protected function findFileByPublicId(string $publicId): mixed
+    {
+        return File::where('public_id', $publicId)->first();
+    }
+
+    protected function createFileFromBase64(string $contents, string $path): mixed
+    {
+        return File::createFromBase64($contents, null, $path);
+    }
+
+    protected function findCustomerContact(array $attributes): ?Contact
+    {
+        return Contact::where($attributes)->first();
+    }
+
+    protected function createContact(array $attributes): Contact
+    {
+        return Contact::create($attributes);
+    }
+
+    protected function firstOrCreateCustomerContact(array $attributes, array $values): Contact
+    {
+        return Contact::firstOrCreate($attributes, $values);
+    }
+
+    protected function createCustomerToken(User $user, Contact $contact): mixed
+    {
+        return $user->createToken($contact->uuid);
+    }
+
+    protected function findPlaceByPublicId(string $publicId, string $companyUuid): ?Place
+    {
+        return Place::where(['public_id' => $publicId, 'company_uuid' => $companyUuid])->first();
+    }
+
+    protected function createPlace(array $attributes): Place
+    {
+        return Place::create($attributes);
+    }
+
+    protected function updateUserByUuid(string $uuid, array $attributes): mixed
+    {
+        return User::where('uuid', $uuid)->update($attributes);
+    }
+
+    protected function findAccessToken(string $token): mixed
+    {
+        return \Laravel\Sanctum\PersonalAccessToken::findToken($token);
+    }
+
+    protected function deleteUserTokens(User $user): void
+    {
+        $user->tokens()->delete();
+    }
+
+    protected function queryOrders(Request $request, callable $callback): mixed
+    {
+        return Order::queryWithRequest($request, $callback);
+    }
+
+    protected function findOrderOrFail(string $id): Order
+    {
+        return Order::findRecordOrFail($id);
+    }
+
+    protected function resolveOrderConfig(CreateCustomerOrderRequest $request, string $companyUuid): ?OrderConfig
+    {
+        return OrderConfig::resolveFromIdentifier($request->only(['type', 'order_config']))
+            ?: OrderConfig::where('company_uuid', $companyUuid)->first();
+    }
+
+    protected function getUuid(array|string $table, array $where, array $options = []): mixed
+    {
+        return Utils::getUuid($table, $where, $options);
+    }
+
+    protected function getModelClassName(?string $table): ?string
+    {
+        return Utils::getModelClassName($table);
+    }
+
+    protected function createOrderRecord(array $attributes): Order
+    {
+        return Order::create($attributes);
+    }
+
+    protected function resolveServiceQuote(CreateCustomerOrderRequest $request): mixed
+    {
+        return ServiceQuote::resolveFromRequest($request);
+    }
+
+    protected function newPayload(): Payload
+    {
+        return new Payload();
+    }
+
+    protected function queryPlaces(Request $request, callable $callback): mixed
+    {
+        return Place::queryWithRequest($request, $callback);
+    }
+
+    protected function firstOrCreateDevice(array $attributes, array $values): mixed
+    {
+        return UserDevice::firstOrCreate($attributes, $values);
+    }
+
+    protected function customerResource(Contact $contact): mixed
+    {
+        return new CustomerResource($contact);
+    }
+
+    protected function orderResource(Order $order): mixed
+    {
+        return new OrderResource($order);
+    }
+
+    protected function orderResourceCollection(mixed $results): mixed
+    {
+        return OrderResource::collection($results);
+    }
+
+    protected function placeResourceCollection(mixed $results): mixed
+    {
+        return PlaceResource::collection($results);
+    }
 
     /**
      * Normalize a phone number to international format (with leading `+`).

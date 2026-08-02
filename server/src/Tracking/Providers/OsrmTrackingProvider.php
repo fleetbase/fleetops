@@ -29,12 +29,7 @@ class OsrmTrackingProvider implements TrackingProviderInterface
 
     public function track(TrackingContext $context, TrackingOptions $options): TrackingProviderResult
     {
-        $response = OSRM::getRouteFromPoints($context->routePoints(), [
-            'overview'    => 'full',
-            'geometries'  => 'polyline',
-            'steps'       => 'false',
-            'annotations' => 'false',
-        ]);
+        $response = $this->routeResponse($context);
 
         if (data_get($response, 'code') !== 'Ok') {
             throw new \RuntimeException('OSRM did not return a routable response.');
@@ -67,5 +62,15 @@ class OsrmTrackingProvider implements TrackingProviderInterface
             confidence: 'medium',
             raw: $route
         );
+    }
+
+    protected function routeResponse(TrackingContext $context): array
+    {
+        return OSRM::getRouteFromPoints($context->routePoints(), [
+            'overview'    => 'full',
+            'geometries'  => 'polyline',
+            'steps'       => 'false',
+            'annotations' => 'false',
+        ]);
     }
 }

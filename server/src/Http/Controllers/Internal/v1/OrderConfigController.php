@@ -26,25 +26,25 @@ class OrderConfigController extends FleetOpsController
     public function createRecord(Request $request)
     {
         // Create validation request
-        $createOrderRequest  = CreateOrderConfigRequest::createFrom($request);
+        $createOrderRequest  = $this->createOrderConfigRequest($request);
         $rules               = $createOrderRequest->rules();
 
         // Manually validate request
-        $validator = Validator::make($request->input('orderConfig'), $rules);
+        $validator = $this->makeOrderConfigValidator($request, $rules);
         if ($validator->fails()) {
             return $createOrderRequest->responseWithErrors($validator);
         }
 
         try {
-            $record = $this->model->createRecordFromRequest($request);
+            $record = $this->createOrderConfigRecord($request);
 
-            return ['order_config' => new $this->resource($record)];
-        } catch (\Exception $e) {
-            return response()->error($e->getMessage());
-        } catch (\Illuminate\Database\QueryException $e) {
-            return response()->error($e->getMessage());
+            return $this->createdOrderConfigResource($record);
         } catch (FleetbaseRequestValidationException $e) {
-            return response()->error($e->getErrors());
+            return $this->errorResponse($e->getErrors());
+        } catch (\Illuminate\Database\QueryException $e) {
+            return $this->errorResponse($e->getMessage());
+        } catch (\Exception $e) {
+            return $this->errorResponse($e->getMessage());
         }
     }
 
@@ -55,24 +55,60 @@ class OrderConfigController extends FleetOpsController
      */
     public function deleteRecord($id, Request $request)
     {
-        $orderConfig = OrderConfig::where('uuid', $id)->first();
+        $orderConfig = $this->findOrderConfig($id);
         if (!$orderConfig) {
-            return response()->error('No order config found.');
+            return $this->errorResponse('No order config found.');
         }
 
         // `core_service` order configs cannot be deleted
         if ($orderConfig->core_service === 1) {
-            return response()->error('Core service order config\'s cannot be deleted.');
+            return $this->errorResponse('Core service order config\'s cannot be deleted.');
         }
 
-        if ($orderConfig) {
-            $orderConfig->delete();
+        $orderConfig->delete();
 
-            $this->resource::wrap($this->resourceSingularlName);
+        $this->wrapResource();
 
-            return new $this->resource($orderConfig);
-        }
+        return $this->deletedResource($orderConfig);
+    }
 
-        return response()->error('Unable to delete order config.');
+    protected function findOrderConfig(string $id): ?OrderConfig
+    {
+        return OrderConfig::where('uuid', $id)->first();
+    }
+
+    protected function createOrderConfigRequest(Request $request)
+    {
+        return CreateOrderConfigRequest::createFrom($request);
+    }
+
+    protected function makeOrderConfigValidator(Request $request, array $rules)
+    {
+        return Validator::make($request->input('orderConfig'), $rules);
+    }
+
+    protected function createOrderConfigRecord(Request $request)
+    {
+        return $this->model->createRecordFromRequest($request);
+    }
+
+    protected function createdOrderConfigResource($record): array
+    {
+        return ['order_config' => new $this->resource($record)];
+    }
+
+    protected function wrapResource(): void
+    {
+        $this->resource::wrap($this->resourceSingularlName);
+    }
+
+    protected function deletedResource(OrderConfig $orderConfig)
+    {
+        return new $this->resource($orderConfig);
+    }
+
+    protected function errorResponse(string|array $message)
+    {
+        return response()->error($message);
     }
 }

@@ -32,47 +32,35 @@ class VehicleController extends Controller
     public function create(CreateVehicleRequest $request)
     {
         // get request input
-        $input = $request->only([
-            'status', 'make', 'model', 'year', 'trim', 'type', 'plate_number', 'vin',
-            'meta', 'online', 'location', 'altitude', 'heading', 'speed',
-            // Capacity
-            'payload_capacity', 'payload_capacity_volume',
-            'payload_capacity_pallets', 'payload_capacity_parcels',
-            // Orchestrator constraints
-            'skills', 'max_tasks', 'time_window_start', 'time_window_end', 'return_to_depot',
-        ]);
+        $input = $this->vehicleInputFromRequest($request);
 
         // make sure company is set
         $input['company_uuid'] = session('company');
 
         // set default online
-        if (!isset($input['online'])) {
-            $input['online'] = 0;
-        }
+        $input = $this->withDefaultOnline($input);
 
         // vendor assignment
         if ($request->has('vendor')) {
-            $input['vendor_uuid'] = Utils::getUuid('vendors', [
+            $input['vendor_uuid'] = $this->getVendorUuid('vendors', [
                 'public_id'    => $request->input('vendor'),
                 'company_uuid' => session('company'),
             ]);
         }
 
         // latitude / longitude
-        if ($request->has(['latitude', 'longitude'])) {
-            $input['location'] = Utils::getPointFromCoordinates($request->only(['latitude', 'longitude']));
-        }
+        $input = $this->withCoordinateLocation($input, $request);
 
         // create the vehicle (fires 'created' event for billing resource tracking)
-        $vehicle = Vehicle::create($input);
+        $vehicle = $this->createVehicle($input);
 
         // driver assignment
         if ($request->exists('driver') && !empty($request->input('driver'))) {
             // set this vehicle to the driver
             try {
-                $driver = Driver::findRecordOrFail($request->input('driver'));
+                $driver = $this->findDriver($request->input('driver'));
             } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $exception) {
-                return response()->json(
+                return $this->jsonResponse(
                     [
                         'error' => 'The driver attempted to assign this vehicle was not found.',
                     ],
@@ -84,7 +72,7 @@ class VehicleController extends Controller
         }
 
         // response the driver resource
-        return new VehicleResource($vehicle);
+        return $this->vehicleResource($vehicle);
     }
 
     /**
@@ -99,9 +87,9 @@ class VehicleController extends Controller
     {
         // find for the vehicle
         try {
-            $vehicle = Vehicle::findRecordOrFail($id);
+            $vehicle = $this->findVehicle($id);
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $exception) {
-            return response()->json(
+            return $this->jsonResponse(
                 [
                     'error' => 'Vehicle resource not found.',
                 ],
@@ -110,33 +98,21 @@ class VehicleController extends Controller
         }
 
         // get request input
-        $input = $request->only([
-            'status', 'make', 'model', 'year', 'trim', 'type', 'plate_number', 'vin',
-            'meta', 'location', 'online', 'altitude', 'heading', 'speed',
-            // Capacity
-            'payload_capacity', 'payload_capacity_volume',
-            'payload_capacity_pallets', 'payload_capacity_parcels',
-            // Orchestrator constraints
-            'skills', 'max_tasks', 'time_window_start', 'time_window_end', 'return_to_depot',
-        ]);
+        $input = $this->vehicleInputFromRequest($request);
 
         // vendor assignment
         if ($request->has('vendor')) {
-            $input['vendor_uuid'] = Utils::getUuid('vendors', [
+            $input['vendor_uuid'] = $this->getVendorUuid('vendors', [
                 'public_id'    => $request->input('vendor'),
                 'company_uuid' => session('company'),
             ]);
         }
 
         // set default online
-        if (!isset($input['online'])) {
-            $input['online'] = 0;
-        }
+        $input = $this->withDefaultOnline($input);
 
         // latitude / longitude
-        if ($request->has(['latitude', 'longitude'])) {
-            $input['location'] = Utils::getPointFromCoordinates($request->only(['latitude', 'longitude']));
-        }
+        $input = $this->withCoordinateLocation($input, $request);
 
         // update the vehicle w/ user input
         $vehicle->fill($input);
@@ -154,10 +130,10 @@ class VehicleController extends Controller
                 $vehicle->unassignDriver();
             } else {
                 try {
-                    $driver = Driver::findRecordOrFail($request->input('driver'));
+                    $driver = $this->findDriver($request->input('driver'));
                     $vehicle->assignDriver($driver);
                 } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $exception) {
-                    return response()->json(
+                    return $this->jsonResponse(
                         [
                             'error' => 'The driver attempted to assign this vehicle was not found.',
                         ],
@@ -171,7 +147,7 @@ class VehicleController extends Controller
         $vehicle = $vehicle->refresh();
 
         // response the vehicle resource
-        return new VehicleResource($vehicle);
+        return $this->vehicleResource($vehicle);
     }
 
     /**
@@ -181,15 +157,9 @@ class VehicleController extends Controller
      */
     public function query(Request $request)
     {
-        $results = Vehicle::queryWithRequest($request, function (&$query, $request) {
-            if ($request->has('vendor')) {
-                $query->whereHas('vendor', function ($q) use ($request) {
-                    $q->where('public_id', $request->input('vendor'));
-                });
-            }
-        });
+        $results = $this->queryVehicles($request);
 
-        return VehicleResource::collection($results);
+        return $this->vehicleResourceCollection($results);
     }
 
     /**
@@ -203,9 +173,9 @@ class VehicleController extends Controller
     {
         // find for the vehicle
         try {
-            $vehicle = Vehicle::findRecordOrFail($id);
+            $vehicle = $this->findVehicle($id);
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $exception) {
-            return response()->json(
+            return $this->jsonResponse(
                 [
                     'error' => 'Vehicle resource not found.',
                 ],
@@ -214,7 +184,7 @@ class VehicleController extends Controller
         }
 
         // response the vehicle resource
-        return new VehicleResource($vehicle);
+        return $this->vehicleResource($vehicle);
     }
 
     /**
@@ -228,9 +198,9 @@ class VehicleController extends Controller
     {
         // find for the driver
         try {
-            $vehicle = Vehicle::findRecordOrFail($id);
+            $vehicle = $this->findVehicle($id);
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $exception) {
-            return response()->json(
+            return $this->jsonResponse(
                 [
                     'error' => 'Vehicle resource not found.',
                 ],
@@ -242,7 +212,7 @@ class VehicleController extends Controller
         $vehicle->delete();
 
         // response the vehicle resource
-        return new DeletedResource($vehicle);
+        return $this->deletedVehicleResource($vehicle);
     }
 
     /**
@@ -259,24 +229,17 @@ class VehicleController extends Controller
         $speed     = $request->input('speed');
 
         try {
-            $vehicle = Vehicle::findRecordOrFail($id);
+            $vehicle = $this->findVehicle($id);
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $exception) {
-            return response()->apiError('Vehicle resource not found.', 404);
+            return $this->apiError('Vehicle resource not found.', 404);
         }
 
         // If no lat/lng provided, maintain compatibility and just return existing driver resource
         if (empty($latitude) && empty($longitude)) {
-            return new VehicleResource($vehicle);
+            return $this->vehicleResource($vehicle);
         }
 
-        $positionData = [
-            'location'  => new Point($latitude, $longitude),
-            'latitude'  => $latitude,
-            'longitude' => $longitude,
-            'altitude'  => $altitude,
-            'heading'   => $heading,
-            'speed'     => $speed,
-        ];
+        $positionData = $this->positionDataFromTrackingInput($latitude, $longitude, $altitude, $heading, $speed);
 
         // Get vehicle driver
         $vehicle->loadMissing('driver');
@@ -309,7 +272,7 @@ class VehicleController extends Controller
             }
         }
 
-        return new VehicleResource($vehicle);
+        return $this->vehicleResource($vehicle);
     }
 
     private function processVehicleGeofenceCrossings(Vehicle $vehicle, Point $newLocation, array $crossings): void
@@ -382,5 +345,102 @@ class VehicleController extends Controller
                 }
             }
         }
+    }
+
+    protected function vehicleInputFromRequest(Request $request): array
+    {
+        return $request->only([
+            'status', 'make', 'model', 'year', 'trim', 'type', 'plate_number', 'vin',
+            'meta', 'online', 'location', 'altitude', 'heading', 'speed',
+            'payload_capacity', 'payload_capacity_volume',
+            'payload_capacity_pallets', 'payload_capacity_parcels',
+            'skills', 'max_tasks', 'time_window_start', 'time_window_end', 'return_to_depot',
+        ]);
+    }
+
+    protected function withDefaultOnline(array $input): array
+    {
+        if (!isset($input['online'])) {
+            $input['online'] = 0;
+        }
+
+        return $input;
+    }
+
+    protected function withCoordinateLocation(array $input, Request $request): array
+    {
+        if ($request->has(['latitude', 'longitude'])) {
+            $input['location'] = Utils::getPointFromCoordinates($request->only(['latitude', 'longitude']));
+        }
+
+        return $input;
+    }
+
+    protected function positionDataFromTrackingInput(float $latitude, float $longitude, mixed $altitude = null, mixed $heading = null, mixed $speed = null): array
+    {
+        return [
+            'location'  => new Point($latitude, $longitude),
+            'latitude'  => $latitude,
+            'longitude' => $longitude,
+            'altitude'  => $altitude,
+            'heading'   => $heading,
+            'speed'     => $speed,
+        ];
+    }
+
+    protected function getVendorUuid(string $table, array $where): ?string
+    {
+        return Utils::getUuid($table, $where);
+    }
+
+    protected function createVehicle(array $input): Vehicle
+    {
+        return Vehicle::create($input);
+    }
+
+    protected function findVehicle(string $id): Vehicle
+    {
+        return Vehicle::findRecordOrFail($id);
+    }
+
+    protected function findDriver(string $id): Driver
+    {
+        return Driver::findRecordOrFail($id);
+    }
+
+    protected function queryVehicles(Request $request)
+    {
+        return Vehicle::queryWithRequest($request, function (&$query, $request) {
+            if ($request->has('vendor')) {
+                $query->whereHas('vendor', function ($q) use ($request) {
+                    $q->where('public_id', $request->input('vendor'));
+                });
+            }
+        });
+    }
+
+    protected function vehicleResource(Vehicle $vehicle)
+    {
+        return new VehicleResource($vehicle);
+    }
+
+    protected function vehicleResourceCollection($results)
+    {
+        return VehicleResource::collection($results);
+    }
+
+    protected function deletedVehicleResource(Vehicle $vehicle)
+    {
+        return new DeletedResource($vehicle);
+    }
+
+    protected function jsonResponse(array $payload, int $status)
+    {
+        return response()->json($payload, $status);
+    }
+
+    protected function apiError(string $message, int $status = 400)
+    {
+        return response()->apiError($message, $status);
     }
 }

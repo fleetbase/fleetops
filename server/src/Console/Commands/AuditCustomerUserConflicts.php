@@ -13,7 +13,7 @@ class AuditCustomerUserConflicts extends Command
 
     public function handle(): int
     {
-        $query = Contact::where('type', 'customer')->whereNotNull('user_uuid')->with(['anyUser.companyUsers.roles', 'company']);
+        $query = $this->customerContactsQuery();
 
         if ($company = $this->option('company')) {
             $query->where('company_uuid', $company);
@@ -71,5 +71,10 @@ class AuditCustomerUserConflicts extends Command
         $this->table(array_keys($rows->first()), $rows->all());
 
         return self::SUCCESS;
+    }
+
+    protected function customerContactsQuery()
+    {
+        return Contact::where('type', 'customer')->whereNotNull('user_uuid')->with(['anyUser.companyUsers.roles', 'company']);
     }
 }

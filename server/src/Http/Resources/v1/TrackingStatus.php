@@ -74,12 +74,10 @@ class TrackingStatus extends FleetbaseResource
             return $this->resource->trackingNumber ? new TrackingNumber($this->resource->trackingNumber) : null;
         }
 
-        if (method_exists($this, 'loadMissing')) {
-            $this->loadMissing('trackingNumber');
-
-            return $this->trackingNumber ? new TrackingNumber($this->trackingNumber) : null;
-        }
-
+        // A `loadMissing` fallback used to live here, guarded by
+        // method_exists($this, 'loadMissing'). No class in this resource's
+        // hierarchy declares that method — it only resolves through __call,
+        // which method_exists cannot see — so the branch never ran.
         return null;
     }
 }

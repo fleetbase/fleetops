@@ -111,15 +111,11 @@ class Lalamove
 
     public static function instance(?string $apiKey = null, ?string $apiSecret = null, bool $sandbox = false, $market = null): Lalamove
     {
-        return new static($apiKey, $apiSecret, $market, $sandbox);
+        return new static($apiKey, $apiSecret, $sandbox, $market);
     }
 
     public static function __callStatic($name, $arguments)
     {
-        if ($name === 'instance') {
-            return static::instance(...$arguments);
-        }
-
         $sandbox = false;
 
         if (Str::contains($name, 'FromSandbox')) {
@@ -182,7 +178,7 @@ class Lalamove
         return $serviceQuote->load(['items']);
     }
 
-    public static function serviceQuoteFromQuotation($quotation = null, $requestId = null, $integratedVendor = null, ?Payload $payload = null): ServiceQuote
+    public static function serviceQuoteFromQuotation($quotation = null, $requestId = null, $integratedVendor = null, ?Payload $payload = null): ?ServiceQuote
     {
         if (!$quotation) {
             return null;
@@ -453,7 +449,7 @@ class Lalamove
 
     public static function getQuotationForMarket($market, ...$params)
     {
-        $instance = static::instance(null, null, $market);
+        $instance = static::instance(null, null, false, $market);
 
         return $instance->getQuotations(...$params);
     }

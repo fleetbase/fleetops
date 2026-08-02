@@ -36,9 +36,16 @@ class SendPositionReplay implements ShouldQueue
 
     public function handle(): void
     {
-        $socket = new SocketClusterService();
+        try {
+            $this->socket()->send($this->channelId, $this->eventData());
+        } catch (\Throwable $e) {
+            $this->logError("Failed to send replay event [{$this->position->uuid}]: {$e->getMessage()}");
+        }
+    }
 
-        $eventData = [
+    protected function eventData(): array
+    {
+        return [
             'id'          => uniqid('event_'),
             'api_version' => config('api.version'),
             'event'       => 'position.simulated',
@@ -55,11 +62,15 @@ class SendPositionReplay implements ShouldQueue
                 ],
             ],
         ];
+    }
 
-        try {
-            $socket->send($this->channelId, $eventData);
-        } catch (\Throwable $e) {
-            Log::error("Failed to send replay event [{$this->position->uuid}]: {$e->getMessage()}");
-        }
+    protected function socket()
+    {
+        return new SocketClusterService();
+    }
+
+    protected function logError(string $message): void
+    {
+        Log::error($message);
     }
 }

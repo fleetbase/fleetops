@@ -10,8 +10,18 @@ class GettingStartedController extends Controller
 {
     public function status(Request $request)
     {
-        return response()->json(
-            GettingStarted::forCompany($request->user()->company)->get()
+        return $this->jsonResponse(
+            $this->getStatusForCompany($request->user()->company)
         );
+    }
+
+    protected function getStatusForCompany($company): array
+    {
+        return GettingStarted::forCompany($company)->get();
+    }
+
+    protected function jsonResponse(array $payload)
+    {
+        return response()->json($payload);
     }
 }

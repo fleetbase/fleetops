@@ -243,7 +243,7 @@ class Equipment extends Model
         $this->attributes['equipable_type'] = match ($type) {
             'fleet-ops:vehicle', 'vehicle' => Utils::getMutationType('fleet-ops:vehicle'),
             'fleet-ops:driver', 'driver'   => Utils::getMutationType('fleet-ops:driver'),
-            default                       => $type,
+            default                        => $type,
         };
     }
 

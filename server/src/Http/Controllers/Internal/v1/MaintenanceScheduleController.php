@@ -73,9 +73,7 @@ class MaintenanceScheduleController extends FleetOpsController
      */
     public function pause(string $id): JsonResponse
     {
-        $schedule = MaintenanceSchedule::where('uuid', $id)
-            ->orWhere('public_id', $id)
-            ->firstOrFail();
+        $schedule = $this->findSchedule($id);
 
         $schedule->pause();
 
@@ -92,9 +90,7 @@ class MaintenanceScheduleController extends FleetOpsController
      */
     public function resume(string $id): JsonResponse
     {
-        $schedule = MaintenanceSchedule::where('uuid', $id)
-            ->orWhere('public_id', $id)
-            ->firstOrFail();
+        $schedule = $this->findSchedule($id);
 
         $schedule->resume();
 
@@ -111,25 +107,8 @@ class MaintenanceScheduleController extends FleetOpsController
      */
     public function trigger(string $id, Request $request): JsonResponse
     {
-        $schedule = MaintenanceSchedule::where('uuid', $id)
-            ->orWhere('public_id', $id)
-            ->firstOrFail();
-
-        $workOrder = WorkOrder::create([
-            'company_uuid'    => $schedule->company_uuid,
-            'schedule_uuid'   => $schedule->uuid,
-            'subject'         => $schedule->name,
-            'category'        => 'preventive_maintenance',
-            'status'          => 'open',
-            'priority'        => $schedule->default_priority ?? 'normal',
-            'target_type'     => $schedule->subject_type,
-            'target_uuid'     => $schedule->subject_uuid,
-            'assignee_type'   => $schedule->default_assignee_type,
-            'assignee_uuid'   => $schedule->default_assignee_uuid,
-            'instructions'    => $schedule->instructions,
-            'due_at'          => $schedule->next_due_date,
-            'created_by_uuid' => session('user'),
-        ]);
+        $schedule  = $this->findSchedule($id);
+        $workOrder = $this->createWorkOrderFromSchedule($schedule);
 
         return response()->json([
             'status'     => 'ok',
@@ -164,80 +143,93 @@ class MaintenanceScheduleController extends FleetOpsController
         // Fetch all active schedules whose next_due_date is on or before the
         // window end. Schedules that start after the window end can never
         // produce an occurrence inside the window.
-        $schedules = MaintenanceSchedule::withoutGlobalScopes()
-            ->where('status', 'active')
-            ->whereNotNull('next_due_date')
-            ->where('next_due_date', '<=', $windowEnd)
-            ->whereNull('deleted_at')
-            ->with(['subject', 'defaultAssignee'])
-            ->get();
+        $schedules = $this->activeCalendarSchedules($windowEnd);
 
+        $events = $this->calendarEventsForSchedules($schedules, $windowStart, $windowEnd);
+
+        return response()->json(['events' => $events]);
+    }
+
+    protected function calendarEventsForSchedules(iterable $schedules, Carbon $windowStart, Carbon $windowEnd): array
+    {
         $events = [];
 
         foreach ($schedules as $schedule) {
-            $assetName = $schedule->subject?->name
-                ?? $schedule->subject?->display_name
-                ?? $schedule->subject?->public_id
-                ?? 'Unknown Asset';
-
-            $assigneeName = $schedule->defaultAssignee?->name ?? null;
-            $color        = $this->eventColorForPriority($schedule->default_priority);
-
-            $baseEvent = [
-                'id'            => $schedule->public_id,
-                'uuid'          => $schedule->uuid,
-                'title'         => $schedule->name . ' — ' . $assetName,
-                'allDay'        => true,
-                'status'        => $schedule->status,
-                'priority'      => $schedule->default_priority,
-                'type'          => $schedule->type,
-                'subject_name'  => $assetName,
-                'assignee_name' => $assigneeName,
-                'color'         => $color,
-            ];
-
-            $intervalValue = (int) ($schedule->interval_value ?? 0);
-            $intervalUnit  = $schedule->interval_unit ?? null; // days | weeks | months | years
-            $firstDue      = $schedule->next_due_date->copy()->startOfDay();
-
-            if ($intervalValue > 0 && $intervalUnit) {
-                // --- Recurring schedule: expand all occurrences in the window ---
-                //
-                // Walk forward from next_due_date in steps of (interval_value interval_unit)
-                // and emit an event for every occurrence that falls inside [windowStart, windowEnd].
-                // We cap at 500 occurrences as a safety guard.
-                $occurrence     = $firstDue->copy();
-                $count          = 0;
-                $maxOccurrences = 500;
-
-                while ($occurrence->lte($windowEnd) && $count < $maxOccurrences) {
-                    if ($occurrence->gte($windowStart)) {
-                        $dateStr  = $occurrence->toDateString();
-                        $events[] = array_merge($baseEvent, [
-                            // Keep id as the plain public_id so the click
-                            // handler can navigate to the schedule details.
-                            'id'              => $schedule->public_id,
-                            'start'           => $dateStr,
-                            'end'             => $dateStr,
-                            'occurrence_date' => $dateStr,
-                        ]);
-                    }
-                    $occurrence->add($intervalValue . ' ' . $intervalUnit);
-                    $count++;
-                }
-            } else {
-                // --- One-off schedule: emit only if it falls in the window ---
-                if ($firstDue->between($windowStart, $windowEnd)) {
-                    $dateStr  = $firstDue->toDateString();
-                    $events[] = array_merge($baseEvent, [
-                        'start' => $dateStr,
-                        'end'   => $dateStr,
-                    ]);
-                }
-            }
+            array_push($events, ...$this->calendarEventsForSchedule($schedule, $windowStart, $windowEnd));
         }
 
-        return response()->json(['events' => $events]);
+        return $events;
+    }
+
+    protected function calendarEventsForSchedule(object $schedule, Carbon $windowStart, Carbon $windowEnd): array
+    {
+        $baseEvent     = $this->calendarBaseEvent($schedule);
+        $intervalValue = (int) ($schedule->interval_value ?? 0);
+        $intervalUnit  = $schedule->interval_unit ?? null; // days | weeks | months | years
+        $firstDue      = $schedule->next_due_date->copy()->startOfDay();
+
+        if ($intervalValue > 0 && $intervalUnit) {
+            return $this->recurringCalendarEvents($schedule, $baseEvent, $firstDue, $windowStart, $windowEnd, $intervalValue, $intervalUnit);
+        }
+
+        if ($firstDue->between($windowStart, $windowEnd)) {
+            $dateStr = $firstDue->toDateString();
+
+            return [array_merge($baseEvent, [
+                'start' => $dateStr,
+                'end'   => $dateStr,
+            ])];
+        }
+
+        return [];
+    }
+
+    protected function calendarBaseEvent(object $schedule): array
+    {
+        $assetName = $schedule->subject?->name
+            ?? $schedule->subject?->display_name
+            ?? $schedule->subject?->public_id
+            ?? 'Unknown Asset';
+
+        $assigneeName = $schedule->defaultAssignee?->name ?? null;
+
+        return [
+            'id'            => $schedule->public_id,
+            'uuid'          => $schedule->uuid,
+            'title'         => $schedule->name . ' — ' . $assetName,
+            'allDay'        => true,
+            'status'        => $schedule->status,
+            'priority'      => $schedule->default_priority,
+            'type'          => $schedule->type,
+            'subject_name'  => $assetName,
+            'assignee_name' => $assigneeName,
+            'color'         => $this->eventColorForPriority($schedule->default_priority),
+        ];
+    }
+
+    protected function recurringCalendarEvents(object $schedule, array $baseEvent, Carbon $firstDue, Carbon $windowStart, Carbon $windowEnd, int $intervalValue, string $intervalUnit): array
+    {
+        $events         = [];
+        $occurrence     = $firstDue->copy();
+        $count          = 0;
+        $maxOccurrences = 500;
+
+        while ($occurrence->lte($windowEnd) && $count < $maxOccurrences) {
+            if ($occurrence->gte($windowStart)) {
+                $dateStr  = $occurrence->toDateString();
+                $events[] = array_merge($baseEvent, [
+                    // Keep id as the plain public_id so the click handler can navigate to the schedule details.
+                    'id'              => $schedule->public_id,
+                    'start'           => $dateStr,
+                    'end'             => $dateStr,
+                    'occurrence_date' => $dateStr,
+                ]);
+            }
+            $occurrence->add($intervalValue . ' ' . $intervalUnit);
+            $count++;
+        }
+
+        return $events;
     }
 
     /**
@@ -247,10 +239,7 @@ class MaintenanceScheduleController extends FleetOpsController
      */
     public function ical(string $id): Response
     {
-        $schedule = MaintenanceSchedule::where('uuid', $id)
-            ->orWhere('public_id', $id)
-            ->with(['subject', 'defaultAssignee'])
-            ->firstOrFail();
+        $schedule = $this->findScheduleWithRelations($id, ['subject', 'defaultAssignee']);
 
         $assetName = $schedule->subject?->name
             ?? $schedule->subject?->display_name
@@ -300,16 +289,71 @@ class MaintenanceScheduleController extends FleetOpsController
 
         $filename = 'maintenance-' . $schedule->public_id . '.ics';
 
-        return response($calendar->get(), 200, [
+        return $this->icalResponse($calendar->get(), [
             'Content-Type'        => 'text/calendar; charset=utf-8',
             'Content-Disposition' => 'attachment; filename="' . $filename . '"',
         ]);
     }
 
+    protected function findSchedule(string $id): MaintenanceSchedule
+    {
+        return MaintenanceSchedule::where('uuid', $id)
+            ->orWhere('public_id', $id)
+            ->firstOrFail();
+    }
+
+    protected function findScheduleWithRelations(string $id, array $relations): MaintenanceSchedule
+    {
+        return MaintenanceSchedule::where('uuid', $id)
+            ->orWhere('public_id', $id)
+            ->with($relations)
+            ->firstOrFail();
+    }
+
+    protected function activeCalendarSchedules(Carbon $windowEnd): iterable
+    {
+        return MaintenanceSchedule::withoutGlobalScopes()
+            ->where('status', 'active')
+            ->whereNotNull('next_due_date')
+            ->where('next_due_date', '<=', $windowEnd)
+            ->whereNull('deleted_at')
+            ->with(['subject', 'defaultAssignee'])
+            ->get();
+    }
+
+    protected function createWorkOrderFromSchedule(MaintenanceSchedule $schedule): WorkOrder
+    {
+        return WorkOrder::create([
+            'company_uuid'    => $schedule->company_uuid,
+            'schedule_uuid'   => $schedule->uuid,
+            'subject'         => $schedule->name,
+            'category'        => 'preventive_maintenance',
+            'status'          => 'open',
+            'priority'        => $schedule->default_priority ?? 'normal',
+            'target_type'     => $schedule->subject_type,
+            'target_uuid'     => $schedule->subject_uuid,
+            'assignee_type'   => $schedule->default_assignee_type,
+            'assignee_uuid'   => $schedule->default_assignee_uuid,
+            'instructions'    => $schedule->instructions,
+            'due_at'          => $schedule->next_due_date,
+            'created_by_uuid' => $this->sessionUserUuid(),
+        ]);
+    }
+
+    protected function sessionUserUuid(): ?string
+    {
+        return session('user');
+    }
+
+    protected function icalResponse(string $content, array $headers): Response
+    {
+        return response($content, 200, $headers);
+    }
+
     /**
      * Map a priority string to a FullCalendar-compatible hex colour.
      */
-    private function eventColorForPriority(?string $priority): string
+    protected function eventColorForPriority(?string $priority): string
     {
         return match ($priority) {
             'critical'  => '#ef4444',

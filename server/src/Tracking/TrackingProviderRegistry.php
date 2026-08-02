@@ -3,16 +3,20 @@
 namespace Fleetbase\FleetOps\Tracking;
 
 use Fleetbase\FleetOps\Tracking\Contracts\TrackingProviderInterface;
-use Illuminate\Support\Str;
 
 class TrackingProviderRegistry
 {
     protected array $providers = [];
 
+    public static function normalizeKey(?string $key): string
+    {
+        return trim((string) preg_replace('/[^a-z0-9]+/', '_', strtolower((string) $key)), '_');
+    }
+
     public function register(TrackingProviderInterface|string $provider, ?string $key = null): self
     {
         $instance                      = is_string($provider) ? app($provider) : $provider;
-        $providerKey                   = Str::snake($key ?? $instance->key());
+        $providerKey                   = static::normalizeKey($key ?? $instance->key());
         $this->providers[$providerKey] = $instance;
 
         return $this;
@@ -20,12 +24,12 @@ class TrackingProviderRegistry
 
     public function has(string $key): bool
     {
-        return isset($this->providers[Str::snake($key)]);
+        return isset($this->providers[static::normalizeKey($key)]);
     }
 
     public function get(string $key): ?TrackingProviderInterface
     {
-        return $this->providers[Str::snake($key)] ?? null;
+        return $this->providers[static::normalizeKey($key)] ?? null;
     }
 
     public function all(): array

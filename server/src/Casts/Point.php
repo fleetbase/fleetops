@@ -39,6 +39,16 @@ class Point implements CastsAttributes
      */
     public function set($model, $key, $value, $attributes)
     {
+        // Checked before the generic Expression guard below, which SpatialExpression
+        // also satisfies — otherwise this arm never fires and the geometry is never
+        // recorded on the model. Both arms return the value untouched, so ordering
+        // only affects the bookkeeping.
+        if ($value instanceof SpatialExpression) {
+            $model->geometries[$key] = $value;
+
+            return $value;
+        }
+
         if ($value instanceof Expression) {
             return $value;
         }
@@ -61,12 +71,6 @@ class Point implements CastsAttributes
             $model->geometries[$key] = $point;
 
             return $point;
-        }
-
-        if ($value instanceof SpatialExpression) {
-            $model->geometries[$key] = $value;
-
-            return $value;
         }
 
         return static::createEmptySpatialExpression();

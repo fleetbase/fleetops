@@ -55,12 +55,8 @@ class AssetStatusCapability extends AbstractFleetOpsAICapability
 
         return [
             'authorized'       => true,
-            'total'            => $modelClass::where('company_uuid', session('company'))->count(),
-            'counts_by_status' => $modelClass::where('company_uuid', session('company'))
-                ->selectRaw('status, count(*) as aggregate')
-                ->groupBy('status')
-                ->pluck('aggregate', 'status')
-                ->all(),
+            'total'            => $this->totalForModel($modelClass),
+            'counts_by_status' => $this->countsByStatusForModel($modelClass),
         ];
     }
 
@@ -72,16 +68,10 @@ class AssetStatusCapability extends AbstractFleetOpsAICapability
 
         return [
             'authorized'       => true,
-            'total'            => Device::where('company_uuid', session('company'))->count(),
-            'online'           => Device::where('company_uuid', session('company'))->where('online', true)->count(),
-            'offline'          => Device::where('company_uuid', session('company'))->where(function ($query) {
-                $query->where('online', false)->orWhereNull('online');
-            })->count(),
-            'counts_by_status' => Device::where('company_uuid', session('company'))
-                ->selectRaw('status, count(*) as aggregate')
-                ->groupBy('status')
-                ->pluck('aggregate', 'status')
-                ->all(),
+            'total'            => $this->totalForModel(Device::class),
+            'online'           => $this->onlineCountForModel(Device::class),
+            'offline'          => $this->offlineCountForModel(Device::class),
+            'counts_by_status' => $this->countsByStatusForModel(Device::class),
         ];
     }
 
@@ -93,16 +83,36 @@ class AssetStatusCapability extends AbstractFleetOpsAICapability
 
         return [
             'authorized'       => true,
-            'total'            => Driver::where('company_uuid', session('company'))->count(),
-            'online'           => Driver::where('company_uuid', session('company'))->where('online', true)->count(),
-            'offline'          => Driver::where('company_uuid', session('company'))->where(function ($query) {
-                $query->where('online', false)->orWhereNull('online');
-            })->count(),
-            'counts_by_status' => Driver::where('company_uuid', session('company'))
-                ->selectRaw('status, count(*) as aggregate')
-                ->groupBy('status')
-                ->pluck('aggregate', 'status')
-                ->all(),
+            'total'            => $this->totalForModel(Driver::class),
+            'online'           => $this->onlineCountForModel(Driver::class),
+            'offline'          => $this->offlineCountForModel(Driver::class),
+            'counts_by_status' => $this->countsByStatusForModel(Driver::class),
         ];
+    }
+
+    protected function totalForModel(string $modelClass): int
+    {
+        return $modelClass::where('company_uuid', session('company'))->count();
+    }
+
+    protected function onlineCountForModel(string $modelClass): int
+    {
+        return $modelClass::where('company_uuid', session('company'))->where('online', true)->count();
+    }
+
+    protected function offlineCountForModel(string $modelClass): int
+    {
+        return $modelClass::where('company_uuid', session('company'))->where(function ($query) {
+            $query->where('online', false)->orWhereNull('online');
+        })->count();
+    }
+
+    protected function countsByStatusForModel(string $modelClass): array
+    {
+        return $modelClass::where('company_uuid', session('company'))
+            ->selectRaw('status, count(*) as aggregate')
+            ->groupBy('status')
+            ->pluck('aggregate', 'status')
+            ->all();
     }
 }

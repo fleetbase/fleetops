@@ -7,6 +7,6 @@ namespace Fleetbase\FleetOps\Exceptions;
  *
  * Exception thrown when provider rate limit is exceeded.
  */
-class TelematicRateLimitExceededException extends ProviderException
+class TelematicRateLimitExceededException extends TelematicProviderException
 {
 }

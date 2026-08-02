@@ -3,6 +3,7 @@
 namespace Fleetbase\FleetOps\Listeners;
 
 use Fleetbase\FleetOps\Events\GeofenceEntered;
+use Fleetbase\FleetOps\Flow\Activity;
 use Fleetbase\FleetOps\Models\GeofenceEventLog;
 use Fleetbase\FleetOps\Models\Order;
 use Fleetbase\FleetOps\Notifications\DriverArrivedAtGeofence;
@@ -140,10 +141,11 @@ class HandleGeofenceEntered implements ShouldQueue
         try {
             $order->setStatus('arrived');
             $order->createActivity(
-                [
+                new Activity([
                     'status'  => 'arrived',
+                    'code'    => 'arrived',
                     'details' => sprintf('Driver entered destination geofence "%s".', $geofence->name),
-                ],
+                ]),
                 $event->location
             );
         } catch (\Throwable $e) {

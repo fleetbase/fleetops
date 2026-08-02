@@ -34,7 +34,7 @@ class HandleGeofenceExited implements ShouldQueue
         $order   = $driver?->getCurrentOrder();
         $subject = $event->subjectType === 'vehicle' ? $vehicle : $driver;
 
-        GeofenceEventLog::create([
+        $this->createLog([
             'uuid'                   => Str::uuid()->toString(),
             'company_uuid'           => $event->getCompanyUuid(),
             'driver_uuid'            => $driver?->uuid,
@@ -52,5 +52,10 @@ class HandleGeofenceExited implements ShouldQueue
             'dwell_duration_minutes' => $event->dwellDurationMinutes,
             'occurred_at'            => $event->timestamp,
         ]);
+    }
+
+    protected function createLog(array $attributes): GeofenceEventLog
+    {
+        return GeofenceEventLog::create($attributes);
     }
 }

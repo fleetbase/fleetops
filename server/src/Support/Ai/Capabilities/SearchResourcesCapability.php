@@ -74,8 +74,7 @@ class SearchResourcesCapability extends AbstractFleetOpsAICapability
             return [];
         }
 
-        return Order::with(['transaction', 'trackingNumber'])
-            ->where('company_uuid', session('company'))
+        return $this->orderSearchQuery()
             ->where(function ($query) use ($terms) {
                 $this->whereLikeAny($query, ['public_id', 'internal_id', 'uuid', 'status', 'type'], $terms);
                 $query->orWhereHas('trackingNumber', fn ($tracking) => $this->whereLikeAny($tracking, ['tracking_number', 'barcode'], $terms));
@@ -103,7 +102,7 @@ class SearchResourcesCapability extends AbstractFleetOpsAICapability
             return [];
         }
 
-        return Vehicle::where('company_uuid', session('company'))
+        return $this->vehicleSearchQuery()
             ->where(fn ($query) => $this->whereLikeAny($query, ['name', 'make', 'model', 'plate_number', 'vin', 'public_id', 'internal_id'], $terms))
             ->limit(5)
             ->get()
@@ -126,8 +125,7 @@ class SearchResourcesCapability extends AbstractFleetOpsAICapability
             return [];
         }
 
-        return Driver::with('user')
-            ->where('company_uuid', session('company'))
+        return $this->driverSearchQuery()
             ->where(function ($query) use ($terms) {
                 $this->whereLikeAny($query, ['public_id', 'uuid', 'drivers_license_number', 'status'], $terms);
                 $query->orWhereHas('user', fn ($user) => $this->whereLikeAny($user, ['name', 'email', 'phone'], $terms));
@@ -177,7 +175,7 @@ class SearchResourcesCapability extends AbstractFleetOpsAICapability
             return [];
         }
 
-        return $modelClass::where('company_uuid', session('company'))
+        return $this->genericSearchQuery($modelClass)
             ->where(fn ($query) => $this->whereLikeAny($query, $columns, $terms))
             ->limit(5)
             ->get()
@@ -191,5 +189,27 @@ class SearchResourcesCapability extends AbstractFleetOpsAICapability
             ])
             ->values()
             ->all();
+    }
+
+    protected function orderSearchQuery()
+    {
+        return Order::with(['transaction', 'trackingNumber'])
+            ->where('company_uuid', session('company'));
+    }
+
+    protected function vehicleSearchQuery()
+    {
+        return Vehicle::where('company_uuid', session('company'));
+    }
+
+    protected function driverSearchQuery()
+    {
+        return Driver::with('user')
+            ->where('company_uuid', session('company'));
+    }
+
+    protected function genericSearchQuery(string $modelClass)
+    {
+        return $modelClass::where('company_uuid', session('company'));
     }
 }

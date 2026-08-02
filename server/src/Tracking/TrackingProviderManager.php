@@ -6,7 +6,6 @@ use Fleetbase\FleetOps\Tracking\Contracts\TrackingProviderInterface;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Str;
 
 class TrackingProviderManager
 {
@@ -33,7 +32,7 @@ class TrackingProviderManager
                 $result           = $this->trackWithProviderCache($provider, $context, $options);
                 $result->warnings = array_values(array_unique([...$warnings, ...$result->warnings]));
 
-                if (Str::snake($result->provider) !== Str::snake((string) $options->provider)) {
+                if (TrackingProviderRegistry::normalizeKey($result->provider) !== TrackingProviderRegistry::normalizeKey($options->provider)) {
                     $result->warnings[] = 'fallback_used';
                 }
 
@@ -62,7 +61,7 @@ class TrackingProviderManager
 
         return collect([$provider, ...$fallbacks])
             ->filter()
-            ->map(fn ($key) => Str::snake($key))
+            ->map(fn ($key) => TrackingProviderRegistry::normalizeKey($key))
             ->unique()
             ->values()
             ->all();

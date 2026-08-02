@@ -26,9 +26,9 @@ class OrderConfigController extends Controller
      */
     public function query(Request $request)
     {
-        $results = OrderConfig::queryWithRequest($request);
+        $results = $this->queryOrderConfigs($request);
 
-        return OrderConfigResource::collection($results);
+        return $this->orderConfigCollection($results);
     }
 
     /**
@@ -40,15 +40,45 @@ class OrderConfigController extends Controller
      */
     public function find(string $id)
     {
-        $orderConfig = OrderConfig::resolveFromIdentifier($id);
+        $orderConfig = $this->resolveOrderConfig($id);
         if (!$orderConfig) {
             try {
-                $orderConfig = OrderConfig::findRecordOrFail($id);
+                $orderConfig = $this->findOrderConfigOrFail($id);
             } catch (ModelNotFoundException $e) {
-                return response()->apiError('Order config not found.', 404);
+                return $this->apiError('Order config not found.', 404);
             }
         }
 
+        return $this->orderConfigResource($orderConfig);
+    }
+
+    protected function queryOrderConfigs(Request $request)
+    {
+        return OrderConfig::queryWithRequest($request);
+    }
+
+    protected function resolveOrderConfig(string $id): ?OrderConfig
+    {
+        return OrderConfig::resolveFromIdentifier($id);
+    }
+
+    protected function findOrderConfigOrFail(string $id): OrderConfig
+    {
+        return OrderConfig::findRecordOrFail($id);
+    }
+
+    protected function orderConfigCollection($results)
+    {
+        return OrderConfigResource::collection($results);
+    }
+
+    protected function orderConfigResource(OrderConfig $orderConfig)
+    {
         return new OrderConfigResource($orderConfig);
+    }
+
+    protected function apiError(string $message, int $status)
+    {
+        return response()->apiError($message, $status);
     }
 }

@@ -12,20 +12,16 @@ class CreateDriverRequest extends CreateDriverApiRequest
 {
     /**
      * Determine if the user is authorized to make this request.
-     *
-     * @return bool
      */
-    public function authorize()
+    public function authorize(): bool
     {
         return Auth::can('fleet-ops create driver');
     }
 
     /**
      * Get the validation rules that apply to the request.
-     *
-     * @return array
      */
-    public function rules()
+    public function rules(): array
     {
         $isCreating                   = $this->isMethod('POST');
         $isCreatingWithUser           = $this->filled('driver.user_uuid');
@@ -67,10 +63,8 @@ class CreateDriverRequest extends CreateDriverApiRequest
 
     /**
      * Get custom attributes for validator errors.
-     *
-     * @return array
      */
-    public function attributes()
+    public function attributes(): array
     {
         return [
             'name'                   => 'driver name',
@@ -85,10 +79,8 @@ class CreateDriverRequest extends CreateDriverApiRequest
 
     /**
      * Get custom messages for validator errors.
-     *
-     * @return array
      */
-    public function messages()
+    public function messages(): array
     {
         return [
             'name.required'  => 'Driver name is required.',

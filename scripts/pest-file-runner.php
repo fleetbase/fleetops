@@ -29,7 +29,19 @@ if (!is_file($runner)) {
 }
 
 $testsPath = getcwd() . '/server/tests';
-$files     = glob($testsPath . '/*.php') ?: [];
+$files     = [];
+
+$iterator = new RecursiveIteratorIterator(
+    new RecursiveDirectoryIterator($testsPath, FilesystemIterator::SKIP_DOTS)
+);
+
+foreach ($iterator as $fileInfo) {
+    if ($fileInfo->isFile() && $fileInfo->getExtension() === 'php') {
+        $files[] = $fileInfo->getPathname();
+    }
+}
+
+$files = array_values(array_unique($files));
 sort($files);
 
 if ($files === []) {

@@ -1003,14 +1003,14 @@ class Order extends Model
      *
      * @return self the Order instance for method chaining
      */
-    public function setRoute(?array $attributes = [])
+    public function setRoute(Route|array|null $attributes = [])
     {
         if (!$attributes) {
             return $this;
         }
 
         if ($attributes instanceof Route) {
-            $attributes->set('order_uuid', $this->order_uuid);
+            $attributes->setAttribute('order_uuid', $this->uuid);
             $attributes->save();
 
             return $this;
@@ -1243,7 +1243,7 @@ class Order extends Model
         $min = Carbon::now()->subMinutes($precision);
         $max = Carbon::now()->addMinutes($precision);
 
-        return !$this->dispatched && Carbon::fromString($this->scheduled_at)->between($min, $max);
+        return !$this->dispatched && Carbon::parse($this->scheduled_at)->between($min, $max);
     }
 
     /**
@@ -1777,9 +1777,9 @@ class Order extends Model
      * This function first attempts to load the 'orderConfig' relationship.
      * If 'orderConfig' is already loaded and is an instance of OrderConfig,
      * it returns this instance. If not, and if the 'order_config_uuid' is
-     * a valid UUID, it attempts to retrieve the OrderConfig by this UUID,
-     * including any trashed instances. If none of these conditions are met,
-     * it returns null.
+     * The orderConfig relation already includes trashed instances, so a
+     * soft-deleted config still resolves. Otherwise the company's default
+     * transport config is used, and null is returned when none can be made.
      *
      * @return OrderConfig|null the OrderConfig associated with this order, or null if not found
      *
@@ -1793,15 +1793,6 @@ class Order extends Model
             $this->orderConfig->setOrderContext($this);
 
             return $this->orderConfig;
-        }
-
-        if (Str::isUuid($this->order_config_uuid)) {
-            $orderConfig = OrderConfig::where('uuid', $this->order_config_uuid)->withTrashed()->first();
-            if ($orderConfig instanceof OrderConfig) {
-                $orderConfig->setOrderContext($this);
-
-                return $orderConfig;
-            }
         }
 
         $company     = $this->relationLoaded('company') ? $this->company : $this->company()->first();

@@ -30,7 +30,7 @@ class PartController extends FleetOpsController
         $selections = $request->array('selections');
         $fileName   = trim(Str::slug('parts-' . date('Y-m-d-H:i')) . '.' . $format);
 
-        return Excel::download(new PartExport($selections), $fileName);
+        return $this->downloadExport(new PartExport($selections), $fileName);
     }
 
     /**
@@ -46,8 +46,8 @@ class PartController extends FleetOpsController
 
         foreach ($files as $file) {
             try {
-                $import = new PartImport();
-                Excel::import($import, $file->path, $disk);
+                $import = $this->createImport();
+                $this->importFile($import, $file->path, $disk);
                 $importedCount += $import->imported;
             } catch (\Throwable $e) {
                 return response()->error('Invalid file, unable to process.');
@@ -55,5 +55,20 @@ class PartController extends FleetOpsController
         }
 
         return response()->json(['status' => 'ok', 'message' => 'Import completed', 'imported' => $importedCount]);
+    }
+
+    protected function downloadExport(PartExport $export, string $fileName)
+    {
+        return Excel::download($export, $fileName);
+    }
+
+    protected function createImport(): PartImport
+    {
+        return new PartImport();
+    }
+
+    protected function importFile(PartImport $import, string $path, string $disk): void
+    {
+        Excel::import($import, $path, $disk);
     }
 }

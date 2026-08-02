@@ -345,9 +345,9 @@ class Device extends Model
             return 'recently_offline';
         } elseif ($minutesOffline <= 1440) { // 24 hours
             return 'offline';
-        } else {
-            return 'long_offline';
         }
+
+        return 'long_offline';
     }
 
     /**
@@ -510,10 +510,15 @@ class Device extends Model
      */
     public function getRecentEvents(int $limit = 10)
     {
-        return $this->events()
+        return $this->recentEventsQuery()
             ->orderBy('created_at', 'desc')
             ->limit($limit)
             ->get();
+    }
+
+    protected function recentEventsQuery()
+    {
+        return $this->events();
     }
 
     /**

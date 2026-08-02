@@ -34,7 +34,7 @@ class WorkOrderController extends FleetOpsController
         $selections = $request->array('selections');
         $fileName   = trim(Str::slug('work-orders-' . date('Y-m-d-H:i')) . '.' . $format);
 
-        return Excel::download(new WorkOrderExport($selections), $fileName);
+        return $this->downloadExport(new WorkOrderExport($selections), $fileName);
     }
 
     /**
@@ -50,8 +50,8 @@ class WorkOrderController extends FleetOpsController
 
         foreach ($files as $file) {
             try {
-                $import = new WorkOrderImport();
-                Excel::import($import, $file->path, $disk);
+                $import = $this->createImport();
+                $this->importFile($import, $file->path, $disk);
                 $importedCount += $import->imported;
             } catch (\Throwable $e) {
                 return response()->error('Invalid file, unable to process.');
@@ -61,16 +61,28 @@ class WorkOrderController extends FleetOpsController
         return response()->json(['status' => 'ok', 'message' => 'Import completed', 'imported' => $importedCount]);
     }
 
+    protected function downloadExport(WorkOrderExport $export, string $fileName)
+    {
+        return Excel::download($export, $fileName);
+    }
+
+    protected function createImport(): WorkOrderImport
+    {
+        return new WorkOrderImport();
+    }
+
+    protected function importFile(WorkOrderImport $import, string $path, string $disk): void
+    {
+        Excel::import($import, $path, $disk);
+    }
+
     /**
      * Send a work order email to the assigned vendor.
      * POST /work-orders/{id}/send.
      */
     public function sendEmail(string $id): JsonResponse
     {
-        $workOrder = WorkOrder::where('uuid', $id)
-            ->orWhere('public_id', $id)
-            ->with(['assignee', 'target'])
-            ->firstOrFail();
+        $workOrder = $this->workOrderForEmail($id);
 
         // Resolve recipient email from the assignee (vendor or contact)
         $assignee = $workOrder->assignee;
@@ -85,16 +97,34 @@ class WorkOrderController extends FleetOpsController
             return response()->json(['error' => 'The assigned vendor has no email address on file.'], 422);
         }
 
-        Mail::to($email)->send(new WorkOrderDispatched($workOrder));
+        $this->sendWorkOrderDispatchedMail($email, $workOrder);
 
-        activity('work_order_sent')
-            ->performedOn($workOrder)
-            ->withProperties(['sent_to' => $email])
-            ->log('Work order emailed to vendor');
+        $this->recordWorkOrderSentActivity($workOrder, $email);
 
         return response()->json([
             'status'  => 'ok',
             'message' => 'Work order successfully sent to ' . $email,
         ]);
+    }
+
+    protected function workOrderForEmail(string $id): WorkOrder
+    {
+        return WorkOrder::where('uuid', $id)
+            ->orWhere('public_id', $id)
+            ->with(['assignee', 'target'])
+            ->firstOrFail();
+    }
+
+    protected function sendWorkOrderDispatchedMail(string $email, WorkOrder $workOrder): void
+    {
+        Mail::to($email)->send(new WorkOrderDispatched($workOrder));
+    }
+
+    protected function recordWorkOrderSentActivity(WorkOrder $workOrder, string $email): void
+    {
+        activity('work_order_sent')
+            ->performedOn($workOrder)
+            ->withProperties(['sent_to' => $email])
+            ->log('Work order emailed to vendor');
     }
 }

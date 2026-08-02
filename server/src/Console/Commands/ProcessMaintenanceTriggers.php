@@ -50,7 +50,7 @@ class ProcessMaintenanceTriggers extends Command
 
         $sandbox = (bool) $this->option('sandbox');
         $dryRun  = (bool) $this->option('dry-run');
-        $conn    = $sandbox ? 'sandbox' : 'mysql';
+        $conn    = $this->connectionName($sandbox);
 
         $this->info('Processing maintenance schedule triggers' . ($dryRun ? ' [DRY RUN]' : '') . ' at ' . Carbon::now()->toDateTimeString());
 
@@ -59,56 +59,25 @@ class ProcessMaintenanceTriggers extends Command
         // ------------------------------------------------------------------
         // Load all active schedules that have at least one threshold set
         // ------------------------------------------------------------------
-        $schedules = MaintenanceSchedule::on($conn)
-            ->withoutGlobalScopes()
-            ->where('status', 'active')
-            ->where(function ($q) {
-                $q->whereNotNull('next_due_date')
-                  ->orWhereNotNull('next_due_odometer')
-                  ->orWhereNotNull('next_due_engine_hours');
-            })
-            ->whereNull('deleted_at')
-            ->with('subject')
-            ->get();
+        $schedules = $this->schedules($conn);
 
         foreach ($schedules as $schedule) {
-            $subject         = $schedule->subject;
-            $currentOdometer = null;
-            $currentEngHours = null;
-
-            // Resolve current readings from the subject asset if it is a vehicle
-            if ($subject instanceof Vehicle) {
-                $currentOdometer = $subject->odometer;
-                $currentEngHours = $subject->engine_hours;
-            }
+            $subject                             = $schedule->subject;
+            [$currentOdometer, $currentEngHours] = $this->currentReadingsFromSubject($subject);
 
             if (!$schedule->isDue($currentOdometer, $currentEngHours)) {
                 continue;
             }
 
             // Build a human-readable reason string for logging
-            $reasons = [];
-            if ($schedule->next_due_date && now()->gte($schedule->next_due_date)) {
-                $reasons[] = 'date due ' . $schedule->next_due_date->toDateString();
-            }
-            if ($schedule->next_due_odometer && $currentOdometer !== null && $currentOdometer >= $schedule->next_due_odometer) {
-                $reasons[] = "odometer {$currentOdometer} >= {$schedule->next_due_odometer}";
-            }
-            if ($schedule->next_due_engine_hours && $currentEngHours !== null && $currentEngHours >= $schedule->next_due_engine_hours) {
-                $reasons[] = "engine hours {$currentEngHours} >= {$schedule->next_due_engine_hours}";
-            }
+            $reasons = $this->triggerReasons($schedule, $currentOdometer, $currentEngHours);
 
             $this->line("Triggered: schedule {$schedule->public_id} ({$schedule->name}) — " . implode(', ', $reasons));
 
             if (!$dryRun) {
                 // Check if a pending work order already exists for this schedule
                 // to avoid duplicates on repeated runs before the WO is completed
-                $existingOpen = WorkOrder::on($conn)
-                    ->withoutGlobalScopes()
-                    ->where('schedule_uuid', $schedule->uuid)
-                    ->whereIn('status', ['open', 'in_progress'])
-                    ->whereNull('deleted_at')
-                    ->exists();
+                $existingOpen = $this->openWorkOrderExists($conn, $schedule);
 
                 if ($existingOpen) {
                     $this->line('  → Skipped: open work order already exists for this schedule.');
@@ -117,10 +86,10 @@ class ProcessMaintenanceTriggers extends Command
 
                 // Auto-generate a work order from the schedule defaults
                 // Generate a sequential WO code: WO-YYYYMMDD-XXXX
-                $woCount = WorkOrder::on($conn)->withoutGlobalScopes()->whereNull('deleted_at')->count() + 1;
-                $woCode  = 'WO-' . now()->format('Ymd') . '-' . str_pad($woCount, 4, '0', STR_PAD_LEFT);
+                $woCount = $this->workOrderCount($conn) + 1;
+                $woCode  = $this->workOrderCode($woCount, now());
 
-                $workOrder = WorkOrder::on($conn)->create([
+                $workOrder = $this->createWorkOrder($conn, [
                     'company_uuid'    => $schedule->company_uuid,
                     'schedule_uuid'   => $schedule->uuid,
                     'subject'         => $schedule->name,
@@ -140,12 +109,95 @@ class ProcessMaintenanceTriggers extends Command
 
                 $this->line("  → Created work order {$workOrder->public_id}");
 
-                event('maintenance.triggered', [$schedule, $workOrder]);
+                $this->dispatchTriggeredEvent($schedule, $workOrder);
             }
 
             $triggered++;
         }
 
-        $this->info("Processed {$triggered} schedule trigger(s)" . ($dryRun ? ' (dry run — no work orders created)' : '.'));
+        $this->info($this->processedSummary($triggered, $dryRun));
+    }
+
+    protected function connectionName(bool $sandbox): string
+    {
+        return $sandbox ? 'sandbox' : 'mysql';
+    }
+
+    protected function schedules(string $conn)
+    {
+        return MaintenanceSchedule::on($conn)
+            ->withoutGlobalScopes()
+            ->where('status', 'active')
+            ->where(function ($q) {
+                $q->whereNotNull('next_due_date')
+                  ->orWhereNotNull('next_due_odometer')
+                  ->orWhereNotNull('next_due_engine_hours');
+            })
+            ->whereNull('deleted_at')
+            ->with('subject')
+            ->get();
+    }
+
+    protected function openWorkOrderExists(string $conn, MaintenanceSchedule $schedule): bool
+    {
+        return WorkOrder::on($conn)
+            ->withoutGlobalScopes()
+            ->where('schedule_uuid', $schedule->uuid)
+            ->whereIn('status', ['open', 'in_progress'])
+            ->whereNull('deleted_at')
+            ->exists();
+    }
+
+    protected function workOrderCount(string $conn): int
+    {
+        return WorkOrder::on($conn)->withoutGlobalScopes()->whereNull('deleted_at')->count();
+    }
+
+    protected function createWorkOrder(string $conn, array $attributes): WorkOrder
+    {
+        return WorkOrder::on($conn)->create($attributes);
+    }
+
+    protected function dispatchTriggeredEvent(MaintenanceSchedule $schedule, WorkOrder $workOrder): void
+    {
+        event('maintenance.triggered', [$schedule, $workOrder]);
+    }
+
+    protected function currentReadingsFromSubject(mixed $subject): array
+    {
+        if ($subject instanceof Vehicle) {
+            return [$subject->odometer, $subject->engine_hours];
+        }
+
+        return [null, null];
+    }
+
+    protected function triggerReasons(object $schedule, mixed $currentOdometer = null, mixed $currentEngHours = null): array
+    {
+        $reasons = [];
+
+        if ($schedule->next_due_date && now()->gte($schedule->next_due_date)) {
+            $reasons[] = 'date due ' . $schedule->next_due_date->toDateString();
+        }
+
+        if ($schedule->next_due_odometer && $currentOdometer !== null && $currentOdometer >= $schedule->next_due_odometer) {
+            $reasons[] = "odometer {$currentOdometer} >= {$schedule->next_due_odometer}";
+        }
+
+        if ($schedule->next_due_engine_hours && $currentEngHours !== null && $currentEngHours >= $schedule->next_due_engine_hours) {
+            $reasons[] = "engine hours {$currentEngHours} >= {$schedule->next_due_engine_hours}";
+        }
+
+        return $reasons;
+    }
+
+    protected function workOrderCode(int $count, \DateTimeInterface $now): string
+    {
+        return 'WO-' . $now->format('Ymd') . '-' . str_pad($count, 4, '0', STR_PAD_LEFT);
+    }
+
+    protected function processedSummary(int $triggered, bool $dryRun): string
+    {
+        return "Processed {$triggered} schedule trigger(s)" . ($dryRun ? ' (dry run — no work orders created)' : '.');
     }
 }

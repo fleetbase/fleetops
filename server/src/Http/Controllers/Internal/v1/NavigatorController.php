@@ -23,31 +23,20 @@ class NavigatorController extends Controller
      */
     public function linkApp(Request $request)
     {
-        $adminUser = User::where('type', 'admin')->first();
+        $adminUser = $this->findAdminUser();
 
         if (!$adminUser || !$adminUser->company) {
             return response()->error('Organization for linking not found.');
         }
 
-        $apiCredential = ApiCredential::firstOrCreate(
-            [
-                'user_uuid'    => $adminUser->uuid,
-                'company_uuid' => $adminUser->company_uuid,
-                'name'         => 'NavigationAppLinker',
-            ],
-            [
-                'user_uuid'    => $adminUser->uuid,
-                'company_uuid' => $adminUser->company->uuid,
-                'name'         => 'NavigationAppLinker',
-            ]
-        );
+        $apiCredential = $this->firstOrCreateNavigatorCredential($adminUser);
 
         $key           = $apiCredential->key;
-        $host          = url()->secure('/');
-        $socketHost    = env('SOCKETCLUSTER_HOST', 'socket');
-        $socketPort    = env('SOCKETCLUSTER_PORT', 8000);
-        $socketSecure  = Utils::castBoolean(env('SOCKETCLUSTER_SECURE', false));
-        $appIdentifier = config('fleetops.navigator.app_identifier', 'io.fleetbase.navigator');
+        $host          = $this->secureRootUrl();
+        $socketHost    = $this->socketClusterHost();
+        $socketPort    = $this->socketClusterPort();
+        $socketSecure  = $this->socketClusterSecure();
+        $appIdentifier = $this->navigatorAppIdentifier();
 
         $deepLinkParams = http_build_query([
             'key'                  => $key,
@@ -62,13 +51,13 @@ class NavigatorController extends Controller
             // Android: Use intent:// scheme
             $intentUrl = "intent://configure?$deepLinkParams#Intent;scheme=flbnavigator;package=" . $appIdentifier . ';end';
 
-            return Redirect::away($intentUrl);
+            return $this->redirectAway($intentUrl);
         }
 
         // Default to iOS (or fallback): Use flbnavigator://
         $iosUrl = "flbnavigator://configure?$deepLinkParams";
 
-        return Redirect::away($iosUrl);
+        return $this->redirectAway($iosUrl);
     }
 
     /**
@@ -100,19 +89,7 @@ class NavigatorController extends Controller
         $connection = Str::startsWith($token, 'flb_test_') ? 'sandbox' : 'mysql';
 
         // Find the API Credential record
-        $findApKey = ApiCredential::on($connection)
-            ->where(function ($query) use ($isSecretKey, $token) {
-                if ($isSecretKey) {
-                    $query->where('secret', $token);
-                } else {
-                    $query->where('key', $token);
-                }
-            })
-            ->with(['company.owner'])
-            ->withoutGlobalScopes();
-
-        // Get the api credential model record
-        $apiCredential = $findApKey->first();
+        $apiCredential = $this->findApiCredentialForToken($token, $connection, $isSecretKey);
 
         // Handle no api credential found
         if (!$apiCredential) {
@@ -120,7 +97,7 @@ class NavigatorController extends Controller
         }
 
         // Get the organization owning the API key
-        $organization = Company::where('uuid', $apiCredential->company_uuid)->first();
+        $organization = $this->findOrganization($apiCredential->company_uuid);
 
         return new Organization($organization);
     }
@@ -132,8 +109,84 @@ class NavigatorController extends Controller
      */
     public function getDriverOnboardSettings()
     {
-        $onBoardSettings  = Setting::where('key', 'fleet-ops.driver-onboard')->value('value');
+        $onBoardSettings = $this->driverOnboardSettings();
 
         return response()->json($onBoardSettings);
+    }
+
+    protected function findAdminUser(): ?User
+    {
+        return User::where('type', 'admin')->first();
+    }
+
+    protected function firstOrCreateNavigatorCredential(User $adminUser): ApiCredential
+    {
+        return ApiCredential::firstOrCreate(
+            [
+                'user_uuid'    => $adminUser->uuid,
+                'company_uuid' => $adminUser->company_uuid,
+                'name'         => 'NavigationAppLinker',
+            ],
+            [
+                'user_uuid'    => $adminUser->uuid,
+                'company_uuid' => $adminUser->company->uuid,
+                'name'         => 'NavigationAppLinker',
+            ]
+        );
+    }
+
+    protected function secureRootUrl(): string
+    {
+        return url()->secure('/');
+    }
+
+    protected function navigatorAppIdentifier(): string
+    {
+        return config('fleetops.navigator.app_identifier', 'io.fleetbase.navigator');
+    }
+
+    protected function socketClusterHost(): string
+    {
+        return env('SOCKETCLUSTER_HOST', 'socket');
+    }
+
+    protected function socketClusterPort(): int|string
+    {
+        return env('SOCKETCLUSTER_PORT', 8000);
+    }
+
+    protected function socketClusterSecure(): bool
+    {
+        return Utils::castBoolean(env('SOCKETCLUSTER_SECURE', false));
+    }
+
+    protected function redirectAway(string $url)
+    {
+        return Redirect::away($url);
+    }
+
+    protected function findApiCredentialForToken(?string $token, string $connection, bool $isSecretKey): ?ApiCredential
+    {
+        return ApiCredential::on($connection)
+            ->where(function ($query) use ($isSecretKey, $token) {
+                if ($isSecretKey) {
+                    $query->where('secret', $token);
+                } else {
+                    $query->where('key', $token);
+                }
+            })
+            ->with(['company.owner'])
+            ->withoutGlobalScopes()
+            ->first();
+    }
+
+    protected function findOrganization(string $companyUuid): ?Company
+    {
+        return Company::where('uuid', $companyUuid)->first();
+    }
+
+    protected function driverOnboardSettings(): mixed
+    {
+        return Setting::where('key', 'fleet-ops.driver-onboard')->value('value');
     }
 }

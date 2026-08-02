@@ -23,25 +23,38 @@ class NotifyBulkAssignedDriver implements ShouldQueue
 
     public function handle(): void
     {
-        $driver = Driver::where('uuid', $this->driverUuid)->first();
+        $driver = $this->findDriver();
         if (!$driver) {
             return;
         }
 
-        Order::whereIn('uuid', $this->orderUuids)
-            ->cursor()
-            ->each(function (Order $order) use ($driver): void {
-                $order->setRelation('driverAssigned', $driver);
-                $order->driver_assigned_uuid = $driver->uuid;
+        foreach ($this->ordersForNotification() as $order) {
+            $order->setRelation('driverAssigned', $driver);
+            $order->driver_assigned_uuid = $driver->uuid;
 
-                try {
-                    $order->notifyDriverAssigned();
-                } catch (\Throwable $e) {
-                    logger()->warning(
-                        'Failed notifying driver on order ' . $order->uuid,
-                        ['error' => $e->getMessage()]
-                    );
-                }
-            });
+            try {
+                $order->notifyDriverAssigned();
+            } catch (\Throwable $e) {
+                $this->logNotificationFailure($order, $e);
+            }
+        }
+    }
+
+    protected function findDriver(): ?Driver
+    {
+        return Driver::where('uuid', $this->driverUuid)->first();
+    }
+
+    protected function ordersForNotification(): iterable
+    {
+        return Order::whereIn('uuid', $this->orderUuids)->cursor();
+    }
+
+    protected function logNotificationFailure(Order $order, \Throwable $e): void
+    {
+        logger()->warning(
+            'Failed notifying driver on order ' . $order->uuid,
+            ['error' => $e->getMessage()]
+        );
     }
 }

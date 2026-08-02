@@ -911,14 +911,10 @@ class Payload extends Model
         $save     = data_get($options, 'save', false);
         $callback = data_get($options, 'callback', false);
 
-        if ($instance) {
-            if (Str::isUuid($instance)) {
-                $this->setAttribute($attr, $instance);
-            } elseif ($instance instanceof Model) {
-                $this->setAttribute($attr, $instance->uuid);
-            } else {
-                $this->setAttribute($attr, $instance);
-            }
+        // createFromMixed() returns a Place or null, so a resolved instance is
+        // always a model — the uuid-string and passthrough cases cannot occur
+        if ($instance instanceof Model) {
+            $this->setAttribute($attr, $instance->uuid);
         }
 
         // Get the ID property
@@ -1148,19 +1144,16 @@ class Payload extends Model
             }
         }
 
-        // confirm destination_uuid is indeed a place record
-        if (isset($attributes['destination_uuid']) && Place::where('uuid', $attributes['destination_uuid'])->doesntExist()) {
-            // search waypoints for search_uuid if any
-            $destination = Place::where('meta->search_uuid', $attributes['destination_uuid'])->first();
+        // confirm the key is indeed a place record, otherwise fall back to
+        // search-uuid metadata left by console place searches
+        if (Place::where('uuid', $destinationKey)->doesntExist()) {
+            $destination = Place::where('meta->search_uuid', $destinationKey)->first();
 
             if ($destination instanceof Place) {
                 return $destination;
             }
-        }
 
-        // Validate destination actually exists
-        if (isset($attributes['destination_uuid']) && Place::where('uuid', $attributes['destination_uuid'])->doesntExist()) {
-            $destination = $this->_findCorrectDestinationForEntity($attributes);
+            $destination = $this->_findCorrectDestinationForEntity(['destination_uuid' => $destinationKey]);
 
             if ($destination instanceof Place) {
                 return $destination;

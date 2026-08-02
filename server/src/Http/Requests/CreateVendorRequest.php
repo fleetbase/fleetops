@@ -9,20 +9,16 @@ class CreateVendorRequest extends FleetbaseRequest
 {
     /**
      * Determine if the user is authorized to make this request.
-     *
-     * @return bool
      */
-    public function authorize()
+    public function authorize(): bool
     {
         return request()->session()->has('api_credential');
     }
 
     /**
      * Get the validation rules that apply to the request.
-     *
-     * @return array
      */
-    public function rules()
+    public function rules(): array
     {
         return [
             'name'    => [Rule::requiredIf($this->isMethod('POST')), 'string'],

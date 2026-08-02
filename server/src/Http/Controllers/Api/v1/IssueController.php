@@ -36,9 +36,9 @@ class IssueController extends Controller
 
         // Find driver who is reporting
         try {
-            $driver = Driver::findRecordOrFail($request->input('driver'));
+            $driver = $this->findDriverRecord($request->input('driver'));
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $exception) {
-            return response()->json(
+            return $this->jsonResponse(
                 [
                     'error' => 'Driver reporting issue not found.',
                 ],
@@ -53,10 +53,10 @@ class IssueController extends Controller
         $input['vehicle_uuid']      = $driver->vehicle_uuid;
 
         // create the issue
-        $issue = Issue::create($input);
+        $issue = $this->createIssue($input);
 
         // response the driver resource
-        return new IssueResource($issue);
+        return $this->issueResource($issue);
     }
 
     /**
@@ -71,9 +71,9 @@ class IssueController extends Controller
     {
         // find for the issue
         try {
-            $issue = Issue::findRecordOrFail($id);
+            $issue = $this->findIssueRecord($id);
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $exception) {
-            return response()->json(
+            return $this->jsonResponse(
                 [
                     'error' => 'Issue resource not found.',
                 ],
@@ -94,7 +94,7 @@ class IssueController extends Controller
         $issue->update($input);
 
         // response the issue resource
-        return new IssueResource($issue);
+        return $this->issueResource($issue);
     }
 
     /**
@@ -104,9 +104,9 @@ class IssueController extends Controller
      */
     public function query(Request $request)
     {
-        $results = Issue::queryWithRequest($request);
+        $results = $this->queryIssues($request);
 
-        return IssueResource::collection($results);
+        return $this->issueResourceCollection($results);
     }
 
     /**
@@ -118,9 +118,9 @@ class IssueController extends Controller
     {
         // find for the issue
         try {
-            $issue = Issue::findRecordOrFail($id);
+            $issue = $this->findIssueRecord($id);
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $exception) {
-            return response()->json(
+            return $this->jsonResponse(
                 [
                     'error' => 'Issue resource not found.',
                 ],
@@ -129,7 +129,7 @@ class IssueController extends Controller
         }
 
         // response the issue resource
-        return new IssueResource($issue);
+        return $this->issueResource($issue);
     }
 
     /**
@@ -141,9 +141,9 @@ class IssueController extends Controller
     {
         // find for the driver
         try {
-            $issue = Issue::findRecordOrFail($id);
+            $issue = $this->findIssueRecord($id);
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $exception) {
-            return response()->json(
+            return $this->jsonResponse(
                 [
                     'error' => 'Issue resource not found.',
                 ],
@@ -155,6 +155,46 @@ class IssueController extends Controller
         $issue->delete();
 
         // response the issue resource
+        return $this->deletedIssueResource($issue);
+    }
+
+    protected function findDriverRecord(string $id): Driver
+    {
+        return Driver::findRecordOrFail($id);
+    }
+
+    protected function createIssue(array $input): Issue
+    {
+        return Issue::create($input);
+    }
+
+    protected function findIssueRecord(string $id): Issue
+    {
+        return Issue::findRecordOrFail($id);
+    }
+
+    protected function queryIssues(Request $request)
+    {
+        return Issue::queryWithRequest($request);
+    }
+
+    protected function issueResource(Issue $issue)
+    {
+        return new IssueResource($issue);
+    }
+
+    protected function issueResourceCollection($results)
+    {
+        return IssueResource::collection($results);
+    }
+
+    protected function deletedIssueResource(Issue $issue)
+    {
         return new DeletedIssue($issue);
+    }
+
+    protected function jsonResponse(array $payload, int $status)
+    {
+        return response()->json($payload, $status);
     }
 }

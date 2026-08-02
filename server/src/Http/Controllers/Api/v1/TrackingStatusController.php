@@ -41,7 +41,7 @@ class TrackingStatusController extends Controller
 
         // if no code set create a code from the status
         if (empty($input['code'])) {
-            $input['code'] = TrackingStatus::prepareCode($input['status']);
+            $input['code'] = $this->prepareTrackingStatusCode($input['status']);
         }
 
         // make sure company is set
@@ -49,7 +49,7 @@ class TrackingStatusController extends Controller
 
         // tracking number assignment
         if ($request->has('tracking_number')) {
-            $input['tracking_number_uuid'] = Utils::getUuid('tracking_numbers', [
+            $input['tracking_number_uuid'] = $this->getTrackingNumberUuid('tracking_numbers', [
                 'public_id'    => $request->input('tracking_number'),
                 'company_uuid' => session('company'),
             ]);
@@ -57,14 +57,14 @@ class TrackingStatusController extends Controller
 
         // tracking number assignment
         if ($request->has('order')) {
-            $input['tracking_number_uuid'] = Order::where('public_id', $request->input('order'))->value('tracking_number_uuid');
+            $input['tracking_number_uuid'] = $this->getOrderTrackingNumberUuid($request->input('order'));
         }
 
         // create the trackingStatus
-        $trackingStatus = TrackingStatus::create($input);
+        $trackingStatus = $this->createTrackingStatus($input);
 
         // response the driver resource
-        return new TrackingStatusResource($trackingStatus);
+        return $this->trackingStatusResource($trackingStatus);
     }
 
     /**
@@ -79,9 +79,9 @@ class TrackingStatusController extends Controller
     {
         // find for the trackingStatus
         try {
-            $trackingStatus = TrackingStatus::findRecordOrFail($id);
+            $trackingStatus = $this->findTrackingStatus($id);
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $exception) {
-            return response()->json(
+            return $this->jsonResponse(
                 [
                     'error' => 'TrackingStatus resource not found.',
                 ],
@@ -106,14 +106,14 @@ class TrackingStatusController extends Controller
 
         // if no code set create a code from the status
         if (empty($trackingStatus->code)) {
-            $input['code'] = TrackingStatus::prepareCode(data_get($input, 'status', $trackingStatus->status));
+            $input['code'] = $this->prepareTrackingStatusCode(data_get($input, 'status', $trackingStatus->status));
         }
 
         // update the trackingStatus
         $trackingStatus->update($input);
 
         // response the trackingStatus resource
-        return new TrackingStatusResource($trackingStatus);
+        return $this->trackingStatusResource($trackingStatus);
     }
 
     /**
@@ -123,9 +123,9 @@ class TrackingStatusController extends Controller
      */
     public function query(Request $request)
     {
-        $results = TrackingStatus::queryWithRequest($request);
+        $results = $this->queryTrackingStatuses($request);
 
-        return TrackingStatusResource::collection($results);
+        return $this->trackingStatusResourceCollection($results);
     }
 
     /**
@@ -137,9 +137,9 @@ class TrackingStatusController extends Controller
     {
         // find for the trackingStatus
         try {
-            $trackingStatus = TrackingStatus::findRecordOrFail($id);
+            $trackingStatus = $this->findTrackingStatus($id);
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $exception) {
-            return response()->json(
+            return $this->jsonResponse(
                 [
                     'error' => 'TrackingStatus resource not found.',
                 ],
@@ -148,7 +148,7 @@ class TrackingStatusController extends Controller
         }
 
         // response the trackingStatus resource
-        return new TrackingStatusResource($trackingStatus);
+        return $this->trackingStatusResource($trackingStatus);
     }
 
     /**
@@ -160,9 +160,9 @@ class TrackingStatusController extends Controller
     {
         // find for the driver
         try {
-            $trackingStatus = TrackingStatus::findRecordOrFail($id);
+            $trackingStatus = $this->findTrackingStatus($id);
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $exception) {
-            return response()->json(
+            return $this->jsonResponse(
                 [
                     'error' => 'TrackingStatus resource not found.',
                 ],
@@ -174,6 +174,56 @@ class TrackingStatusController extends Controller
         $trackingStatus->delete();
 
         // response the trackingStatus resource
+        return $this->deletedTrackingStatusResource($trackingStatus);
+    }
+
+    protected function prepareTrackingStatusCode(string $status): string
+    {
+        return TrackingStatus::prepareCode($status);
+    }
+
+    protected function getTrackingNumberUuid(string $table, array $where): ?string
+    {
+        return Utils::getUuid($table, $where);
+    }
+
+    protected function getOrderTrackingNumberUuid(string $orderId): ?string
+    {
+        return Order::where('public_id', $orderId)->value('tracking_number_uuid');
+    }
+
+    protected function createTrackingStatus(array $input): TrackingStatus
+    {
+        return TrackingStatus::create($input);
+    }
+
+    protected function findTrackingStatus(string $id): TrackingStatus
+    {
+        return TrackingStatus::findRecordOrFail($id);
+    }
+
+    protected function queryTrackingStatuses(Request $request)
+    {
+        return TrackingStatus::queryWithRequest($request);
+    }
+
+    protected function trackingStatusResource(TrackingStatus $trackingStatus)
+    {
+        return new TrackingStatusResource($trackingStatus);
+    }
+
+    protected function trackingStatusResourceCollection($results)
+    {
+        return TrackingStatusResource::collection($results);
+    }
+
+    protected function deletedTrackingStatusResource(TrackingStatus $trackingStatus)
+    {
         return new DeletedResource($trackingStatus);
+    }
+
+    protected function jsonResponse(array $payload, int $status)
+    {
+        return response()->json($payload, $status);
     }
 }

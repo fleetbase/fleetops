@@ -24,7 +24,7 @@ class SettingController extends Controller
         $entityEditingSettings  = $request->input('entityEditingSettings', []);
 
         // Save entity editing settings
-        Setting::configure('fleet-ops.entity-editing-settings', $entityEditingSettings);
+        $this->configureSetting('fleet-ops.entity-editing-settings', $entityEditingSettings);
 
         return response()->json(['entityEditingSettings' => $entityEditingSettings]);
     }
@@ -36,7 +36,7 @@ class SettingController extends Controller
      */
     public function getEntityEditingSettings()
     {
-        $entityEditingSettings  = Setting::where('key', 'fleet-ops.entity-editing-settings')->value('value');
+        $entityEditingSettings  = $this->settingValue('fleet-ops.entity-editing-settings');
         if (!$entityEditingSettings) {
             $entityEditingSettings = [];
         }
@@ -51,7 +51,7 @@ class SettingController extends Controller
      */
     public function getDriverOnboardSettings($companyId)
     {
-        $driverOnboardSettings  = Setting::where('key', 'fleet-ops.driver-onboard-settings.' . $companyId)->value('value');
+        $driverOnboardSettings  = $this->settingValue('fleet-ops.driver-onboard-settings.' . $companyId);
         if (!$driverOnboardSettings) {
             $driverOnboardSettings = [];
         }
@@ -75,7 +75,7 @@ class SettingController extends Controller
             $driverOnboardSettings['enableDriverOnboardFromApp']        = false;
         }
 
-        Setting::configure('fleet-ops.driver-onboard-settings.' . $driverOnboardSettings['companyId'], $driverOnboardSettings);
+        $this->configureSetting('fleet-ops.driver-onboard-settings.' . $driverOnboardSettings['companyId'], $driverOnboardSettings);
 
         return response()->json(['driverOnboardSettings' => $driverOnboardSettings]);
     }
@@ -83,14 +83,14 @@ class SettingController extends Controller
     public function saveCustomerEnabledOrderConfigs(Request $request)
     {
         $enabledOrderConfigs = array_values($request->array('enabledOrderConfigs'));
-        Setting::configureCompany('fleet-ops.customer-enabled-order-configs', $enabledOrderConfigs);
+        $this->configureCompanySetting('fleet-ops.customer-enabled-order-configs', $enabledOrderConfigs);
 
         return response()->json($enabledOrderConfigs);
     }
 
     public function getCustomerEnabledOrderConfigs()
     {
-        $enabledOrderConfigs = Setting::lookupFromCompany('fleet-ops.customer-enabled-order-configs', []);
+        $enabledOrderConfigs = $this->lookupFromCompanySetting('fleet-ops.customer-enabled-order-configs', []);
 
         return response()->json(array_values($enabledOrderConfigs));
     }
@@ -98,18 +98,18 @@ class SettingController extends Controller
     public function saveCustomerPortalPaymentConfig(Request $request)
     {
         $paymentsConfig = $request->array('paymentsConfig');
-        Setting::configureCompany('fleet-ops.customer-payments-configs', $paymentsConfig);
+        $this->configureCompanySetting('fleet-ops.customer-payments-configs', $paymentsConfig);
 
         return response()->json($paymentsConfig);
     }
 
     public function getCustomerPortalPaymentConfig()
     {
-        $paymentsConfig = Setting::lookupFromCompany('fleet-ops.customer-payments-configs', ['paymentsEnabled' => false]);
+        $paymentsConfig = $this->lookupFromCompanySetting('fleet-ops.customer-payments-configs', ['paymentsEnabled' => false]);
 
         if (is_array($paymentsConfig)) {
             // check if payments have been onboard
-            $company                                    = Auth::getCompany();
+            $company                                    = $this->currentCompany();
             $paymentsConfig['paymentsOnboardCompleted'] = $company && isset($company->stripe_connect_id);
         }
 
@@ -123,7 +123,7 @@ class SettingController extends Controller
      */
     public function getNotifiables()
     {
-        return response()->json(NotificationRegistry::getNotifiables());
+        return response()->json($this->notificationNotifiables());
     }
 
     /**
@@ -133,7 +133,7 @@ class SettingController extends Controller
      */
     public function getNotificationRegistry()
     {
-        return response()->json(NotificationRegistry::getNotificationsByPackage('fleet-ops'));
+        return response()->json($this->notificationsByPackage('fleet-ops'));
     }
 
     /**
@@ -151,8 +151,8 @@ class SettingController extends Controller
         if (!is_array($notificationSettings)) {
             throw new \Exception('Invalid notification settings data.');
         }
-        $currentNotificationSettings = Setting::lookupCompany('notification_settings', []);
-        Setting::configureCompany('notification_settings', array_merge($currentNotificationSettings, $notificationSettings));
+        $currentNotificationSettings = $this->lookupCompanySetting('notification_settings', []);
+        $this->configureCompanySetting('notification_settings', array_merge($currentNotificationSettings, $notificationSettings));
 
         return response()->json([
             'status'  => 'ok',
@@ -167,7 +167,7 @@ class SettingController extends Controller
      */
     public function getNotificationSettings()
     {
-        $notificationSettings = Setting::lookupCompany('notification_settings');
+        $notificationSettings = $this->lookupCompanySetting('notification_settings');
 
         return response()->json([
             'status'               => 'ok',
@@ -188,7 +188,7 @@ class SettingController extends Controller
         $displayEngine      = $request->input('display_engine', $request->input('router', 'osrm'));
         $optimizationEngine = $request->input('optimization_engine', $displayEngine);
         $unit               = $request->input('unit', 'km');
-        Setting::configureCompany('routing', [
+        $this->configureCompanySetting('routing', [
             'router'                      => $displayEngine,
             'display_engine'              => $displayEngine,
             'optimization_engine'         => $optimizationEngine,
@@ -210,7 +210,7 @@ class SettingController extends Controller
      */
     public function getRoutingSettings()
     {
-        $routingSettings = Setting::lookupCompany('routing', ['router' => 'osrm', 'unit' => 'km']);
+        $routingSettings = $this->lookupCompanySetting('routing', ['router' => 'osrm', 'unit' => 'km']);
 
         $displayEngine                                  = data_get($routingSettings, 'display_engine', data_get($routingSettings, 'routing_display_engine', data_get($routingSettings, 'router', 'osrm')));
         $optimizationEngine                             = data_get($routingSettings, 'optimization_engine', data_get($routingSettings, 'routing_optimization_engine', $displayEngine));
@@ -243,7 +243,7 @@ class SettingController extends Controller
             $fallbacks = array_values(array_filter(array_map('trim', explode(',', $fallbacks))));
         }
 
-        Setting::configureCompany('tracking', [
+        $this->configureCompanySetting('tracking', [
             'provider'                         => $request->input('provider', data_get($config, 'provider', 'google_routes')),
             'fallbacks'                        => $fallbacks,
             'traffic_enabled'                  => $request->boolean('traffic_enabled', data_get($config, 'traffic_enabled', true)),
@@ -268,7 +268,7 @@ class SettingController extends Controller
     public function getTrackingSettings()
     {
         $config           = $this->trackingDefaults();
-        $trackingSettings = Setting::lookupCompany('tracking', [
+        $trackingSettings = $this->lookupCompanySetting('tracking', [
             'provider'                         => data_get($config, 'provider', 'google_routes'),
             'fallbacks'                        => data_get($config, 'fallbacks', ['osrm', 'calculated']),
             'traffic_enabled'                  => data_get($config, 'traffic_enabled', true),
@@ -299,7 +299,7 @@ class SettingController extends Controller
             $fallbacks = array_values(array_filter(array_map('trim', explode(',', $fallbacks))));
         }
 
-        Setting::configure('fleet-ops.tracking-settings', [
+        $this->configureSetting('fleet-ops.tracking-settings', [
             'provider'                         => $request->input('provider', data_get($config, 'provider', 'google_routes')),
             'fallbacks'                        => $fallbacks,
             'traffic_enabled'                  => $request->boolean('traffic_enabled', data_get($config, 'traffic_enabled', true)),
@@ -333,15 +333,15 @@ class SettingController extends Controller
             'showGoogleMapsTransitLayer'  => false,
         ];
 
-        $systemMapSettings          = Setting::lookup('fleet-ops.map-settings', []);
-        $mapSettings                = Setting::lookupFromCompany('fleet-ops.map-settings', $defaults);
+        $systemMapSettings          = $this->lookupSetting('fleet-ops.map-settings', []);
+        $mapSettings                = $this->lookupFromCompanySetting('fleet-ops.map-settings', $defaults);
         $mapSettings['mapProvider'] = data_get($mapSettings, 'mapProvider') ?: data_get($systemMapSettings, 'mapProvider', 'leaflet');
         $mapSettings                = $this->normalizeCompanyMapSettings($mapSettings);
 
         // Source the Google Maps API key from the system-level services config
         // that is managed by the core-api admin settings panel. This ensures a
         // single source of truth and avoids duplicating key management.
-        $mapSettings['googleMapsApiKey'] = config('services.google_maps.api_key', env('GOOGLE_MAPS_API_KEY', ''));
+        $mapSettings['googleMapsApiKey'] = $this->googleMapsApiKey();
         $mapSettings['googleMapsMapId']  = data_get($systemMapSettings, 'googleMapsMapId', '');
 
         return response()->json($mapSettings);
@@ -368,7 +368,7 @@ class SettingController extends Controller
         // Validate provider value
         $settings = $this->normalizeCompanyMapSettings($settings);
 
-        Setting::configureCompany('fleet-ops.map-settings', $settings);
+        $this->configureCompanySetting('fleet-ops.map-settings', $settings);
 
         return response()->json($this->getMapSettings()->getData(true));
     }
@@ -380,7 +380,7 @@ class SettingController extends Controller
             'googleMapsMapId' => '',
         ];
 
-        return response()->json(Setting::lookup('fleet-ops.map-settings', $defaults));
+        return response()->json($this->lookupSetting('fleet-ops.map-settings', $defaults));
     }
 
     public function saveAdminMapSettings(Request $request)
@@ -396,7 +396,7 @@ class SettingController extends Controller
             'googleMapsMapId' => (string) $request->input('googleMapsMapId', ''),
         ];
 
-        Setting::configure('fleet-ops.map-settings', $settings);
+        $this->configureSetting('fleet-ops.map-settings', $settings);
 
         return response()->json($this->getAdminMapSettings()->getData(true));
     }
@@ -439,7 +439,7 @@ class SettingController extends Controller
             'auto_activate_schedule'         => true,
             'notify_drivers_on_shift_change' => false,
         ];
-        $settings = Setting::lookupFromCompany('fleet-ops.scheduling-settings', $defaults);
+        $settings = $this->lookupFromCompanySetting('fleet-ops.scheduling-settings', $defaults);
 
         return response()->json($settings);
     }
@@ -459,7 +459,7 @@ class SettingController extends Controller
             'auto_activate_schedule'         => (bool) $request->input('auto_activate_schedule', true),
             'notify_drivers_on_shift_change' => (bool) $request->input('notify_drivers_on_shift_change', false),
         ];
-        Setting::configureCompany('fleet-ops.scheduling-settings', $settings);
+        $this->configureCompanySetting('fleet-ops.scheduling-settings', $settings);
 
         return response()->json($settings);
     }
@@ -478,7 +478,7 @@ class SettingController extends Controller
             'max_travel_time_seconds'     => 3600,
             'balance_workload'            => false,
         ];
-        $settings = Setting::lookupFromCompany('fleet-ops.allocation-settings', $defaults);
+        $settings = $this->lookupFromCompanySetting('fleet-ops.allocation-settings', $defaults);
 
         return response()->json($settings);
     }
@@ -497,7 +497,7 @@ class SettingController extends Controller
             'max_travel_time_seconds'     => (int) $request->input('max_travel_time_seconds', 3600),
             'balance_workload'            => (bool) $request->input('balance_workload', false),
         ];
-        Setting::configureCompany('fleet-ops.allocation-settings', $settings);
+        $this->configureCompanySetting('fleet-ops.allocation-settings', $settings);
 
         return response()->json($settings);
     }
@@ -514,7 +514,7 @@ class SettingController extends Controller
             'byConfig'  => (object) [],
             'meta'      => [],
         ];
-        $settings = Setting::lookupFromCompany('fleet-ops.orchestrator-card-fields', $defaults);
+        $settings = $this->lookupFromCompanySetting('fleet-ops.orchestrator-card-fields', $defaults);
 
         return response()->json(['settings' => $settings]);
     }
@@ -533,7 +533,7 @@ class SettingController extends Controller
             'byConfig'  => $settings['byConfig'] ?? [],
             'meta'      => $settings['meta'] ?? [],
         ];
-        Setting::configureCompany('fleet-ops.orchestrator-card-fields', $normalized);
+        $this->configureCompanySetting('fleet-ops.orchestrator-card-fields', $normalized);
 
         return response()->json([
             'status'   => 'ok',
@@ -545,7 +545,7 @@ class SettingController extends Controller
     protected function trackingDefaults(): array
     {
         $config         = config('fleetops.tracking', []);
-        $systemSettings = Setting::lookup('fleet-ops.tracking-settings', []);
+        $systemSettings = $this->lookupSetting('fleet-ops.tracking-settings', []);
 
         $defaults           = array_merge($config, is_array($systemSettings) ? $systemSettings : []);
         $defaults['alerts'] = $this->normalizeTrackingAlertSettings(data_get($defaults, 'alerts', []));
@@ -593,9 +593,7 @@ class SettingController extends Controller
 
     protected function trackingProviderOptions(): array
     {
-        $registry = app(TrackingProviderRegistry::class);
-
-        return collect($registry->all())->map(function ($provider, $key) {
+        return collect($this->trackingProviders())->map(function ($provider, $key) {
             $label = $key === 'osrm' ? 'OSRM' : str($key)->replace('_', ' ')->title()->toString();
 
             return [
@@ -606,5 +604,60 @@ class SettingController extends Controller
                 'capabilities' => $provider->capabilities()->toArray(),
             ];
         })->values()->all();
+    }
+
+    protected function configureSetting(string $key, mixed $value): mixed
+    {
+        return Setting::configure($key, $value);
+    }
+
+    protected function configureCompanySetting(string $key, mixed $value): mixed
+    {
+        return Setting::configureCompany($key, $value);
+    }
+
+    protected function settingValue(string $key): mixed
+    {
+        return Setting::where('key', $key)->value('value');
+    }
+
+    protected function lookupSetting(string $key, mixed $defaultValue = null): mixed
+    {
+        return Setting::lookup($key, $defaultValue);
+    }
+
+    protected function lookupFromCompanySetting(string $key, mixed $defaultValue = null): mixed
+    {
+        return Setting::lookupFromCompany($key, $defaultValue);
+    }
+
+    protected function lookupCompanySetting(string $key, mixed $defaultValue = null): mixed
+    {
+        return Setting::lookupCompany($key, $defaultValue);
+    }
+
+    protected function currentCompany(): mixed
+    {
+        return Auth::getCompany();
+    }
+
+    protected function notificationNotifiables(): array
+    {
+        return NotificationRegistry::getNotifiables();
+    }
+
+    protected function notificationsByPackage(string $package): array
+    {
+        return NotificationRegistry::getNotificationsByPackage($package);
+    }
+
+    protected function trackingProviders(): array
+    {
+        return app(TrackingProviderRegistry::class)->all();
+    }
+
+    protected function googleMapsApiKey(): string
+    {
+        return config('services.google_maps.api_key', env('GOOGLE_MAPS_API_KEY', ''));
     }
 }

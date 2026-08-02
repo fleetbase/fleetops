@@ -79,7 +79,7 @@ class ContactController extends FleetOpsController
      */
     public function getAsFacilitator($id)
     {
-        $contact = Contact::where('uuid', $id)->withTrashes()->first();
+        $contact = $this->contactByUuidWithTrashed($id);
 
         if (!$contact) {
             return response()->error('Facilitator not found.');
@@ -97,7 +97,7 @@ class ContactController extends FleetOpsController
      */
     public function getAsCustomer($id)
     {
-        $contact = Contact::where('uuid', $id)->first();
+        $contact = $this->contactByUuid($id);
 
         if (!$contact) {
             return response()->error('Customer not found.');
@@ -110,15 +110,11 @@ class ContactController extends FleetOpsController
 
     public function convertToVendor(Request $request, string $id)
     {
-        $contact = Contact::where('company_uuid', session('company'))
-            ->where(function ($query) use ($id) {
-                $query->where('uuid', $id)->orWhere('public_id', $id)->orWhere('id', $id);
-            })
-            ->firstOrFail();
+        $contact = $this->contactForVendorConversion($id);
 
-        $vendor = DB::transaction(function () use ($contact, $request) {
+        $vendor = $this->runContactConversionTransaction(function () use ($contact, $request) {
             $originalType = $contact->type;
-            $vendor       = Vendor::create([
+            $vendor       = $this->createVendorFromContact([
                 'company_uuid' => $contact->company_uuid,
                 'place_uuid'   => $contact->place_uuid,
                 'name'         => $request->input('name', $contact->name),
@@ -134,7 +130,7 @@ class ContactController extends FleetOpsController
                 ],
             ]);
 
-            VendorPersonnel::updateOrCreate(
+            $this->updateOrCreateVendorPersonnel(
                 ['vendor_uuid' => $vendor->uuid, 'contact_uuid' => $contact->uuid],
                 ['role' => 'admin', 'status' => 'active', 'invited_by_uuid' => session('user')]
             );
@@ -155,7 +151,7 @@ class ContactController extends FleetOpsController
         });
 
         return response()->json([
-            'vendor' => (new VendorResource($vendor->load('personnels')))->resolve(),
+            'vendor' => $this->vendorResourcePayload($vendor),
         ]);
     }
 
@@ -197,27 +193,76 @@ class ContactController extends FleetOpsController
         return response()->json(['status' => 'ok', 'message' => 'Import completed', 'imported' => $importedCount]);
     }
 
-    private function migrateContactCustomerContextToVendor(Contact $contact, Vendor $vendor): void
+    protected function contactByUuidWithTrashed(string $id): ?Contact
+    {
+        return Contact::where('uuid', $id)->withTrashed()->first();
+    }
+
+    protected function contactByUuid(string $id): ?Contact
+    {
+        return Contact::where('uuid', $id)->first();
+    }
+
+    protected function contactForVendorConversion(string $id): Contact
+    {
+        return Contact::where('company_uuid', session('company'))
+            ->where(function ($query) use ($id) {
+                $query->where('uuid', $id)->orWhere('public_id', $id)->orWhere('id', $id);
+            })
+            ->firstOrFail();
+    }
+
+    protected function runContactConversionTransaction(callable $callback): mixed
+    {
+        return DB::transaction($callback);
+    }
+
+    protected function createVendorFromContact(array $attributes): Vendor
+    {
+        return Vendor::create($attributes);
+    }
+
+    protected function updateOrCreateVendorPersonnel(array $where, array $attributes): VendorPersonnel
+    {
+        return VendorPersonnel::updateOrCreate($where, $attributes);
+    }
+
+    protected function vendorResourcePayload(Vendor $vendor): array
+    {
+        return (new VendorResource($vendor->load('personnels')))->resolve();
+    }
+
+    protected function migrateContactCustomerContextToVendor(Contact $contact, Vendor $vendor): void
     {
         $contactType = Utils::getMutationType($contact);
         $vendorType  = Utils::getMutationType($vendor);
         $filter      = ['customer_uuid' => $contact->uuid, 'customer_type' => $contactType];
         $replacement = ['customer_uuid' => $vendor->uuid, 'customer_type' => $vendorType];
 
-        Order::where($filter)->update($replacement);
-        PurchaseRate::where($filter)->update($replacement);
-        Entity::where($filter)->update($replacement);
+        $this->bulkUpdateCustomerContext(Order::class, $filter, $replacement);
+        $this->bulkUpdateCustomerContext(PurchaseRate::class, $filter, $replacement);
+        $this->bulkUpdateCustomerContext(Entity::class, $filter, $replacement);
 
-        Issue::where('company_uuid', $contact->company_uuid)
-            ->where('meta->customer_portal->customer_uuid', $contact->uuid)
-            ->where('meta->customer_portal->customer_type', 'contact')
-            ->get()
+        $this->customerPortalIssuesForContact($contact)
             ->each(function (Issue $issue) use ($vendor) {
                 $meta = (array) $issue->meta;
                 data_set($meta, 'customer_portal.customer_uuid', $vendor->uuid);
                 data_set($meta, 'customer_portal.customer_type', 'vendor');
                 $issue->update(['meta' => $meta]);
             });
+    }
+
+    protected function bulkUpdateCustomerContext(string $modelClass, array $filter, array $replacement): void
+    {
+        $modelClass::where($filter)->update($replacement);
+    }
+
+    protected function customerPortalIssuesForContact(Contact $contact)
+    {
+        return Issue::where('company_uuid', $contact->company_uuid)
+            ->where('meta->customer_portal->customer_uuid', $contact->uuid)
+            ->where('meta->customer_portal->customer_type', 'contact')
+            ->get();
     }
 
     private function resolveUserInput(Request $request, array &$input): void
@@ -232,11 +277,16 @@ class ContactController extends FleetOpsController
             return;
         }
 
-        $input['user_uuid'] = User::where('uuid', $user)->orWhere('public_id', $user)->value('uuid') ?? $user;
+        $input['user_uuid'] = $this->resolveUserUuid($user);
         unset($input['user']);
     }
 
-    private function assertCustomerPortalCanSendWelcomeEmail(array $input): void
+    protected function resolveUserUuid(string $user): string
+    {
+        return User::where('uuid', $user)->orWhere('public_id', $user)->value('uuid') ?? $user;
+    }
+
+    protected function assertCustomerPortalCanSendWelcomeEmail(array $input): void
     {
         $type = data_get($input, 'type', 'contact');
         if ($type !== 'customer' || !data_get($input, 'meta.customer_portal.send_welcome_email')) {
@@ -248,7 +298,7 @@ class ContactController extends FleetOpsController
         }
     }
 
-    private function sendCustomerPortalWelcomeEmail(Contact $contact): void
+    protected function sendCustomerPortalWelcomeEmail(Contact $contact): void
     {
         if (!data_get($contact->meta, 'customer_portal.send_welcome_email')) {
             return;
@@ -258,29 +308,64 @@ class ContactController extends FleetOpsController
             throw new \Exception('Customer portal must be installed before sending a customer welcome email.');
         }
 
-        $user = $contact->getUser() ?? Contact::createUserFromContact($contact, false, true);
+        $user = $this->contactUser($contact) ?? $this->createCustomerUserFromContact($contact);
         if (!$user) {
             throw new \Exception('Unable to create customer portal login.');
         }
 
-        $password = Str::random(16);
+        $password = $this->customerPortalPassword();
         $user->changePassword($password);
 
         if ($user->status !== 'active') {
             $user->activate();
         }
 
-        Mail::to($user)->send(new CustomerCredentialsMail($password, $contact));
+        $this->sendCustomerCredentialsMail($user, $password, $contact);
 
         $meta = (array) $contact->meta;
         data_forget($meta, 'customer_portal.send_welcome_email');
-        $contact->forceFill(['meta' => $meta])->saveQuietly();
+        $this->saveContactMetaQuietly($contact, $meta);
         $contact->setAttribute('meta', $meta);
     }
 
-    private function isCustomerPortalInstalled(): bool
+    protected function contactUser(Contact $contact): ?User
     {
-        return collect(Utils::getInstalledFleetbaseExtensions())
+        return $contact->getUser();
+    }
+
+    protected function createCustomerUserFromContact(Contact $contact): ?User
+    {
+        return Contact::createUserFromContact($contact, false, true);
+    }
+
+    protected function customerPortalPassword(): string
+    {
+        return Str::random(16);
+    }
+
+    protected function sendCustomerCredentialsMail(User $user, string $password, Contact $contact): void
+    {
+        Mail::to($user)->send(new CustomerCredentialsMail($password, $contact));
+    }
+
+    protected function saveContactMetaQuietly(Contact $contact, array $meta): void
+    {
+        $contact->forceFill(['meta' => $meta])->saveQuietly();
+    }
+
+    protected function isCustomerPortalInstalled(): bool
+    {
+        return $this->containsCustomerPortalExtension($this->installedFleetbaseExtensions());
+    }
+
+    protected function installedFleetbaseExtensions(): array
+    {
+        return Utils::getInstalledFleetbaseExtensions();
+    }
+
+    protected function containsCustomerPortalExtension(array $packages): bool
+    {
+        return collect($packages)
             ->contains(fn ($package) => data_get($package, 'name') === 'fleetbase/customer-portal-api');
     }
 

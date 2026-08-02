@@ -70,16 +70,7 @@ class GeofenceIntersectionService
         //    - ST_Contains performs the precise polygon containment check
         //      on the reduced candidate set (accurate, no index needed).
         // ----------------------------------------------------------------
-        $insideZones = Zone::where('company_uuid', $companyUuid)
-            ->whereNotNull('border')
-            ->where(function ($q) {
-                $q->where('trigger_on_entry', true)
-                    ->orWhere('trigger_on_exit', true)
-                    ->orWhereNotNull('dwell_threshold_minutes');
-            })
-            ->whereRaw('MBRContains(`border`, ST_GeomFromText(?))', [$wkt])
-            ->whereRaw('ST_Contains(`border`, ST_GeomFromText(?))', [$wkt])
-            ->get();
+        $insideZones = $this->insideZones($companyUuid, $wkt);
 
         // ----------------------------------------------------------------
         // 2. Find all Service Areas the driver is currently inside.
@@ -87,16 +78,7 @@ class GeofenceIntersectionService
         //    Service areas use MultiPolygon borders, so we use
         //    ST_Contains which handles both Polygon and MultiPolygon.
         // ----------------------------------------------------------------
-        $insideServiceAreas = ServiceArea::where('company_uuid', $companyUuid)
-            ->whereNotNull('border')
-            ->where(function ($q) {
-                $q->where('trigger_on_entry', true)
-                    ->orWhere('trigger_on_exit', true)
-                    ->orWhereNotNull('dwell_threshold_minutes');
-            })
-            ->whereRaw('MBRContains(`border`, ST_GeomFromText(?))', [$wkt])
-            ->whereRaw('ST_Contains(`border`, ST_GeomFromText(?))', [$wkt])
-            ->get();
+        $insideServiceAreas = $this->insideServiceAreas($companyUuid, $wkt);
 
         // Merge into a unified collection with a type discriminator
         $currentlyInside = collect()
@@ -108,10 +90,7 @@ class GeofenceIntersectionService
         // ----------------------------------------------------------------
         // 3. Load the driver's current geofence state records.
         // ----------------------------------------------------------------
-        $currentStates = DB::table($stateTable)
-            ->where($subjectColumn, $subjectUuid)
-            ->get()
-            ->keyBy('geofence_uuid');
+        $currentStates = $this->currentSubjectStates($stateTable, $subjectColumn, $subjectUuid);
 
         // ----------------------------------------------------------------
         // 4. Detect ENTRIES: geofences the driver is now inside but
@@ -136,9 +115,7 @@ class GeofenceIntersectionService
         // ----------------------------------------------------------------
         foreach ($currentStates as $geofenceUuid => $state) {
             if ($state->is_inside && !in_array($geofenceUuid, $currentlyInsideUuids)) {
-                $geofence = $state->geofence_type === 'service_area'
-                    ? ServiceArea::where('uuid', $geofenceUuid)->first()
-                    : Zone::where('uuid', $geofenceUuid)->first();
+                $geofence = $this->findGeofence($state->geofence_type, $geofenceUuid);
 
                 if ($geofence) {
                     $crossings[] = [
@@ -151,6 +128,49 @@ class GeofenceIntersectionService
         }
 
         return $crossings;
+    }
+
+    protected function insideZones(string $companyUuid, string $wkt)
+    {
+        return Zone::where('company_uuid', $companyUuid)
+            ->whereNotNull('border')
+            ->where(function ($q) {
+                $q->where('trigger_on_entry', true)
+                    ->orWhere('trigger_on_exit', true)
+                    ->orWhereNotNull('dwell_threshold_minutes');
+            })
+            ->whereRaw('MBRContains(`border`, ST_GeomFromText(?))', [$wkt])
+            ->whereRaw('ST_Contains(`border`, ST_GeomFromText(?))', [$wkt])
+            ->get();
+    }
+
+    protected function insideServiceAreas(string $companyUuid, string $wkt)
+    {
+        return ServiceArea::where('company_uuid', $companyUuid)
+            ->whereNotNull('border')
+            ->where(function ($q) {
+                $q->where('trigger_on_entry', true)
+                    ->orWhere('trigger_on_exit', true)
+                    ->orWhereNotNull('dwell_threshold_minutes');
+            })
+            ->whereRaw('MBRContains(`border`, ST_GeomFromText(?))', [$wkt])
+            ->whereRaw('ST_Contains(`border`, ST_GeomFromText(?))', [$wkt])
+            ->get();
+    }
+
+    protected function currentSubjectStates(string $stateTable, string $subjectColumn, string $subjectUuid)
+    {
+        return DB::table($stateTable)
+            ->where($subjectColumn, $subjectUuid)
+            ->get()
+            ->keyBy('geofence_uuid');
+    }
+
+    protected function findGeofence(string $geofenceType, string $geofenceUuid)
+    {
+        return $geofenceType === 'service_area'
+            ? ServiceArea::where('uuid', $geofenceUuid)->first()
+            : Zone::where('uuid', $geofenceUuid)->first();
     }
 
     /**
