@@ -101,3 +101,48 @@ test('get label reports unresolvable subjects', function () {
 
     expect($response->getData(true))->toBe(['error' => 'Unable to render label.']);
 });
+
+test('label subject resolution refuses subjects belonging to another company', function () {
+    $connection = fleetopsLabelControllerBoot();
+    $connection->table('orders')->insert(['uuid' => 'order-1', 'public_id' => 'order_test', 'company_uuid' => 'company-2']);
+    $connection->table('waypoints')->insert(['uuid' => 'waypoint-1', 'public_id' => 'waypoint_test', 'company_uuid' => 'company-2']);
+    $connection->table('entities')->insert(['uuid' => 'entity-1', 'public_id' => 'entity_test', 'company_uuid' => 'company-2']);
+
+    $probe = new FleetOpsLabelControllerProbe();
+
+    expect($probe->callProtected('findLabelSubject', 'order', 'order_test'))->toBeNull()
+        ->and($probe->callProtected('findLabelSubject', 'waypoint', 'waypoint_test'))->toBeNull()
+        ->and($probe->callProtected('findLabelSubject', 'entity', 'entity_test'))->toBeNull();
+});
+
+test('label subject resolution scopes both identifier arms to the company', function () {
+    $connection = fleetopsLabelControllerBoot();
+    // Guards the `where(public_id)->orWhere(uuid)->where(company_uuid)` precedence trap: without
+    // grouping the identifier match, a foreign public_id hit bypasses the company constraint.
+    $connection->table('entities')->insert(['uuid' => 'entity-1', 'public_id' => 'entity_public', 'company_uuid' => 'company-2']);
+    $connection->table('entities')->insert(['uuid' => 'entity_uuid_only', 'public_id' => 'entity_other', 'company_uuid' => 'company-2']);
+
+    $probe = new FleetOpsLabelControllerProbe();
+
+    expect($probe->callProtected('findLabelSubject', 'entity', 'entity_public'))->toBeNull()
+        ->and($probe->callProtected('findLabelSubject', 'entity', 'entity_uuid_only'))->toBeNull();
+});
+
+test('label subject resolution fails closed without a company session', function () {
+    $connection = fleetopsLabelControllerBoot();
+    $connection->table('entities')->insert(['uuid' => 'entity-1', 'public_id' => 'entity_test', 'company_uuid' => 'company-1']);
+    session(['company' => null]);
+
+    $probe = new FleetOpsLabelControllerProbe();
+
+    expect($probe->callProtected('findLabelSubject', 'entity', 'entity_test'))->toBeNull();
+});
+
+test('get label refuses to render a label owned by another company', function () {
+    $connection = fleetopsLabelControllerBoot();
+    $connection->table('entities')->insert(['uuid' => 'entity-1', 'public_id' => 'entity_test', 'company_uuid' => 'company-2']);
+
+    $response = (new LabelController())->getLabel('entity_test', Illuminate\Http\Request::create('/x', 'GET'));
+
+    expect($response->getData(true))->toBe(['error' => 'Unable to render label.']);
+});

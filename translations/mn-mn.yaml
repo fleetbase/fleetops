@@ -692,6 +692,7 @@ order:
     order-metadata: Захиалгын мета өгөгдөл
     order-label: Захиалгын шошго
     waypoint-label: Замын цэгийн шошго
+    entity-label: Объектийн шошго
     current-eta: Одоогийн тооцоолсон хүрэх цаг
     ect: ECT
     current-destination: Одоогийн очих газар
@@ -708,6 +709,7 @@ order:
     no-driver-assigned-error: Энэ захиалгад жолооч томилогдоогүй байна.
     failed-to-load-order-label: Захиалгын шошгыг ачааллахад алдаа гарлаа.
     failed-to-load-waypoint-label: Замын цэгийн шошгыг ачааллахад алдаа гарлаа.
+    failed-to-load-entity-label: Объектийн шошгыг ачааллахад алдаа гарлаа.
     unable-to-add-entity: Захиалгад шинэ объект нэмэх боломжгүй байна.
     assign-driver-success: Жолооч ({driverName}) захиалга {orderId}-д томилогдлоо.
     cancel-title: Та энэ захиалгыг цуцлахдаа итгэлтэй байна уу?
