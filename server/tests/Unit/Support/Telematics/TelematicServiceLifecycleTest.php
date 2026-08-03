@@ -554,6 +554,19 @@ test('telematic service ingests snapshots with event signals and handles provide
         ->and($snapshot['events'])->toHaveCount(2)
         ->and($snapshot['sensors'])->toBe(2);
 
+    // A snapshot with no events list normalizes the payload itself as the single
+    // event rather than storing nothing
+    $service->storedEvents = [];
+    $single                = $service->ingestDeviceSnapshot($telematic, $provider, [
+        'device_id' => 'device-external',
+        'timestamp' => '2026-07-24 13:15:00',
+        'speed'     => 44,
+    ]);
+
+    expect($service->storedEvents)->toHaveCount(1)
+        ->and($service->storedEvents[0][1]['speed'])->toBe(44)
+        ->and($single['events'])->toHaveCount(1);
+
     $provider->normalizeEventsException = new RuntimeException('provider normalization failed');
     $failedSnapshot                     = $service->ingestDeviceSnapshot($telematic, $provider, [
         'device_id' => 'device-external',
@@ -658,4 +671,41 @@ test('real credential validation builds rules and encryption round trips', funct
     $encrypt = new ReflectionMethod(TelematicService::class, 'encryptCredentials');
     $encrypt->setAccessible(true);
     expect($encrypt->invoke($service, ['token' => 'abc']))->toContain('encrypted:');
+});
+
+test('credential validation raises the validator failures it collects', function () {
+    fleetopsTelematicLifecycleUseInMemoryConnection();
+    $service = new TelematicService(new FleetOpsTelematicLifecycleRegistry());
+
+    app()->instance('validator', new class {
+        public function make($data = [], $rules = [], $messages = [], $attributes = [])
+        {
+            return new class {
+                public function fails()
+                {
+                    return true;
+                }
+
+                public function errors()
+                {
+                    return new Illuminate\Support\MessageBag(['token' => ['The token field is required.']]);
+                }
+            };
+        }
+    });
+    Illuminate\Support\Facades\Validator::clearResolvedInstance('validator');
+
+    $validate = new ReflectionMethod(TelematicService::class, 'validateCredentials');
+    $validate->setAccessible(true);
+
+    // The failing validator is carried on the exception, not flattened to a string
+    try {
+        $validate->invoke($service, [], [['name' => 'token', 'required' => true]]);
+        $raised = null;
+    } catch (ValidationException $exception) {
+        $raised = $exception;
+    }
+
+    expect($raised)->not->toBeNull()
+        ->and($raised->errors())->toBe(['token' => ['The token field is required.']]);
 });

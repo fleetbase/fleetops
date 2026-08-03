@@ -273,6 +273,32 @@ test('vroom route allocation builds shipment payloads and maps delivery assignme
         ->and($payload['options'])->toBe(['g' => true]);
 });
 
+test('vroom route allocation sends single-stop orders as jobs and drops the shipments key', function () {
+    $engine  = new FleetOpsVroomLifecycleEngineProbe();
+    $driver  = fleetopsVroomLifecycleDriver('driver_job', fleetopsVroomLifecyclePoint(103.84, 1.27));
+    $vehicle = fleetopsVroomLifecycleVehicle('vehicle_job', fleetopsVroomLifecyclePoint(103.83, 1.26), $driver);
+    // A pickup and no other stop, so the order routes as a one-stop task
+    $order = fleetopsVroomLifecycleOrder('order_job', new class(fleetopsVroomLifecyclePlace(103.85, 1.28)) {
+        public Collection $entities;
+        public Collection $waypointMarkers;
+        public ?object $dropoff = null;
+
+        public function __construct(public ?object $pickup)
+        {
+            $this->entities        = collect();
+            $this->waypointMarkers = collect();
+        }
+    });
+
+    $engine->allocate(collect([$order]), collect([$vehicle]), ['profile' => 'driving']);
+
+    $payload = $engine->payloads[0];
+
+    expect($payload['jobs'])->toHaveCount(1)
+        ->and($payload['jobs'][0]['location'])->toBe([103.85, 1.28])
+        ->and($payload)->not->toHaveKey('shipments');
+});
+
 test('vroom route allocation merges invalid tasks without calling vroom', function () {
     $engine = new FleetOpsVroomLifecycleEngineProbe();
     $order  = fleetopsVroomLifecycleOrder('order_invalid', fleetopsVroomLifecyclePayload(

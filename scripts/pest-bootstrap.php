@@ -288,7 +288,9 @@ if (!function_exists('now') && class_exists('Illuminate\Support\Carbon')) {
 }
 
 if (!class_exists('Illuminate\Validation\ValidationException')) {
-    eval('namespace Illuminate\Validation; class ValidationException extends \Exception { public array $messages; public static function withMessages(array $messages): self { $exception = new self("The given data was invalid."); $exception->messages = $messages; return $exception; } public function errors(): array { return $this->messages; } }');
+    // Laravel's real constructor takes the failing validator, not a message —
+    // both shapes are accepted so `new ValidationException($validator)` works.
+    eval('namespace Illuminate\Validation; class ValidationException extends \Exception { public array $messages = []; public $validator; public function __construct($validator = null) { parent::__construct(is_string($validator) ? $validator : "The given data was invalid."); if (!is_string($validator) && is_object($validator)) { $this->validator = $validator; if (method_exists($validator, "errors")) { $errors = $validator->errors(); $this->messages = is_object($errors) && method_exists($errors, "messages") ? $errors->messages() : (array) $errors; } } } public static function withMessages(array $messages): self { $exception = new self("The given data was invalid."); $exception->messages = $messages; return $exception; } public function errors(): array { return $this->messages; } }');
 }
 
 if (class_exists('Illuminate\Http\Request') && method_exists('Illuminate\Http\Request', 'macro')) {

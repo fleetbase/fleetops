@@ -186,6 +186,15 @@ test('store sensor validates identity applies defaults and updates', function ()
     $device = $service->linkDevice($telematic, ['device_id' => 'unit-9']);
     $linked = $service->storeSensor($telematic, ['type' => 'fuel'], $device);
     expect($linked->device_uuid)->toBe($device->uuid);
+
+    // A reading carrying coordinates keeps them instead of the (0, 0) default
+    $located = $service->storeSensor($telematic, [
+        'sensor_id' => 'sensor-10',
+        'type'      => 'gps',
+        'location'  => ['lat' => '1.29', 'lng' => '103.85'],
+    ]);
+    expect($located->last_position->getLat())->toBe(1.29)
+        ->and($located->last_position->getLng())->toBe(103.85);
 });
 
 test('get devices filters by status and search terms', function () {

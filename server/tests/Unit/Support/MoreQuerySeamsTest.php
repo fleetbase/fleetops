@@ -377,3 +377,19 @@ test('shift change listener reads company scheduling settings', function () {
     // With nothing stored the lookup falls back to the empty default
     expect(fleetopsMoreSeamInvoke($listener, $class, 'getSchedulingSettings'))->toBe([]);
 });
+
+test('order insights capability builds its own company-scoped order query', function () {
+    $connection = fleetopsMoreSeamBoot();
+    $connection->table('orders')->insert([
+        ['uuid' => 'order-ins-1', 'public_id' => 'order_insone', 'company_uuid' => 'company-seam-2'],
+        ['uuid' => 'order-ins-2', 'public_id' => 'order_instwo', 'company_uuid' => 'company-other'],
+    ]);
+
+    // Behaviour tests override this seam with a query fake, so the real body
+    // only runs when it is invoked directly
+    $class      = Fleetbase\FleetOps\Support\Ai\Capabilities\OrderInsightsCapability::class;
+    $capability = (new ReflectionClass($class))->newInstanceWithoutConstructor();
+    $query      = fleetopsMoreSeamInvoke($capability, $class, 'orderQuery', ['company-seam-2']);
+
+    expect($query->pluck('public_id')->all())->toBe(['order_insone']);
+});
