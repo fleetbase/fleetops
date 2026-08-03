@@ -496,6 +496,61 @@ test('service quote creates stripe products and active prices through the local 
         ]);
 });
 
+test('persisted service quotes write the stripe product id rather than staging it', function () {
+    $products = new FleetOpsServiceQuoteUnitStripeProductsFake();
+    fleetopsServiceQuoteUseStripeClient((object) ['products' => $products]);
+
+    // An unsaved quote stages the id in memory; one that already exists has to
+    // persist it, which is the arm the in-memory fixtures never take.
+    $quote = new class extends ServiceQuote {
+        public array $metaUpdates = [];
+
+        public function updateMeta($key, $value = null): bool
+        {
+            $this->metaUpdates[$key] = $value;
+
+            return true;
+        }
+    };
+    $quote->setRawAttributes([
+        'uuid'      => 'service-quote-persisted',
+        'public_id' => 'quote_PERSISTED',
+        'amount'    => 4200,
+        'currency'  => 'SGD',
+    ], true);
+    $quote->exists = true;
+
+    $product = $quote->getStripeProduct();
+
+    expect($product->id)->toBe('prod_created')
+        ->and($products->created)->toHaveCount(1)
+        ->and($quote->metaUpdates)->toBe(['stripe_product_id' => 'prod_created']);
+});
+
+test('stripe price lookup provisions the product when the quote has none', function () {
+    $products = new FleetOpsServiceQuoteUnitStripeProductsFake();
+    $prices   = new FleetOpsServiceQuoteUnitStripePricesFake(new Stripe\Price(['id' => 'price_provisioned', 'unit_amount' => 500]));
+    fleetopsServiceQuoteUseStripeClient((object) [
+        'products' => $products,
+        'prices'   => $prices,
+    ]);
+
+    $quote = new ServiceQuote();
+    $quote->setRawAttributes([
+        'public_id' => 'quote_NOPRODUCT',
+        'amount'    => 500,
+        'currency'  => 'USD',
+    ], true);
+
+    // Asking for the price first — without a product id already stored — has to
+    // create the product on the way through
+    $price = $quote->getStripePrice();
+
+    expect($products->created)->toHaveCount(1)
+        ->and($quote->getMeta('stripe_product_id'))->toBe('prod_created')
+        ->and($price->id)->toBe('price_provisioned');
+});
+
 test('service quote replaces active stripe prices and creates embedded checkout sessions', function () {
     $previousContainer = fleetopsServiceQuoteUseConsoleContainer();
 

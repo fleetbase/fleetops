@@ -217,6 +217,13 @@ test('order config activity helpers cover order waypoint and empty-current branc
         ->and($config->nextActivity())->toHaveCount(0)
         ->and($config->nextFirstActivity())->toBeNull()
         ->and($config->afterNextActivity())->toBeNull()
+        // Reads back through the flow from the current activity, resolving the
+        // context off the config the same way the forward helpers do. Asserting
+        // the current activity in the same chain is what pins this to the
+        // resolved-activity arm — the no-activity fallback returns an empty
+        // collection too.
+        ->and($config->currentActivity())->not->toBeNull()
+        ->and($config->previousActivity())->toBeInstanceOf(Illuminate\Support\Collection::class)
         ->and($config->getActivityByCode('started')->status)->toBe('Started')
         ->and($config->getCanceledActivity()->status)->toBe('Canceled')
         ->and($config->getCompletedActivity()->status)->toBe('Completed')
