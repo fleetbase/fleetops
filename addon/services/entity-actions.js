@@ -43,18 +43,19 @@ export default class EntityActionsService extends ResourceActionService {
 
     @action async viewLabel(entity) {
         // render dialog to display label within
-        this.modalsManager.show(`modals/entity-label`, {
+        this.modalsManager.show(`modals/order-label`, {
             title: this.intl.t('order.fields.entity-label'),
             modalClass: 'modal-xl',
             acceptButtonText: this.intl.t('common.done'),
             hideDeclineButton: true,
-            entity,
+            subject: entity,
         });
-        try { 
+
+        try {
             // load the pdf label from base64
-            // eslint-disable-next-line no-undef 
+            // eslint-disable-next-line no-undef
             const fileReader = new FileReader();
-            const { data: pdfStream } = await this.fetch.get(`labels/${entity.public_id}?type=entity&format=base64`);
+            const { data: pdfStream } = await this.fetch.get(`orders/label/${entity.public_id}?format=base64`);
             // eslint-disable-next-line no-undef
             const base64 = await fetch(`data:application/pdf;base64,${pdfStream}`);
             const blob = await base64.blob();

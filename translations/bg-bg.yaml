@@ -696,6 +696,7 @@ order:
     order-metadata: Метаданни на поръчката
     order-label: Етикет на поръчката
     waypoint-label: Етикет на междинната точка
+    entity-label: Етикет на единицата
     current-eta: Текущо очаквано време на пристигане
     ect: ECT
     current-destination: Текуща дестинация
@@ -712,6 +713,7 @@ order:
     no-driver-assigned-error: Няма назначен шофьор за тази поръчка.
     failed-to-load-order-label: Неуспешно зареждане на етикета на поръчката.
     failed-to-load-waypoint-label: Неуспешно зареждане на етикета на точката.
+    failed-to-load-entity-label: Неуспешно зареждане на етикета на единицата.
     unable-to-add-entity: Не може да се добави нов обект към поръчката.
     assign-driver-success: Шофьорът ({driverName}) е назначен за поръчка {orderId}.
     cancel-title: Сигурни ли сте, че искате да отмените тази поръчка?

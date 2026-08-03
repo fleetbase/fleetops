@@ -704,6 +704,7 @@ order:
     order-metadata: Métadonnées de la commande
     order-label: Étiquette de la commande
     waypoint-label: Étiquette du point de passage
+    entity-label: Étiquette de l'entité
     current-eta: ETA actuel
     ect: ECT
     current-destination: Destination actuelle
@@ -721,6 +722,7 @@ order:
     failed-to-load-order-label: Échec du chargement de l'étiquette de la commande.
     failed-to-load-waypoint-label: Échec du chargement de l'étiquette du point de
       passage.
+    failed-to-load-entity-label: Échec du chargement de l'étiquette de l'entité.
     unable-to-add-entity: Impossible d'ajouter une nouvelle entité à la commande.
     assign-driver-success: Le conducteur ({driverName}) a été assigné à la commande
       {orderId}.

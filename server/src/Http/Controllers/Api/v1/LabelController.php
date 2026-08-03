@@ -49,16 +49,40 @@ class LabelController extends Controller
     {
         switch ($type) {
             case 'order':
-                return Order::where('public_id', $publicId)->orWhere('uuid', $publicId)->withoutGlobalScopes()->first();
+                return $this->findLabelSubjectFor(Order::class, $publicId);
 
             case 'waypoint':
-                return Waypoint::where('public_id', $publicId)->orWhere('uuid', $publicId)->withoutGlobalScopes()->first();
+                return $this->findLabelSubjectFor(Waypoint::class, $publicId);
 
             case 'entity':
-                return Entity::where('public_id', $publicId)->orWhere('uuid', $publicId)->withoutGlobalScopes()->first();
+                return $this->findLabelSubjectFor(Entity::class, $publicId);
         }
 
         return null;
+    }
+
+    /**
+     * Resolves a label subject by public id or uuid, constrained to the current company.
+     *
+     * The identifier match is grouped so the company constraint applies to both arms —
+     * without the closure it would read as `public_id = ? OR (uuid = ? AND company_uuid = ?)`
+     * and leak labels across organizations.
+     */
+    protected function findLabelSubjectFor(string $model, string $publicId): mixed
+    {
+        $companyUuid = $this->sessionCompany();
+        if (!$companyUuid) {
+            return null;
+        }
+
+        return $model::where(function ($query) use ($publicId) {
+            $query->where('public_id', $publicId)->orWhere('uuid', $publicId);
+        })->where('company_uuid', $companyUuid)->withoutGlobalScopes()->first();
+    }
+
+    protected function sessionCompany(): ?string
+    {
+        return session('company');
     }
 
     protected function apiError(string $message)

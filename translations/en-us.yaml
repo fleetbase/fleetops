@@ -744,7 +744,7 @@ order:
         no-driver-assigned-error: No driver assigned to this order.
         failed-to-load-order-label: Failed to load order label.
         failed-to-load-waypoint-label: Failed to load waypoint label.
-        failed-to-load-entity-label: Failed to load entity label.s
+        failed-to-load-entity-label: Failed to load entity label.
         unable-to-add-entity: Unable to add new entity to order.
         assign-driver-success: Driver ({driverName}) has been assigned to order {orderId}.
         cancel-title: Are you sure you wish to cancel this order?
@@ -1559,9 +1559,6 @@ modals:
         upload-queue: Upload Queue
 
     order-label:
-        loading: Loading Label...
-
-    entity-label:
         loading: Loading Label...
 
     order-new-activity:

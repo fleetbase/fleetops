@@ -176,6 +176,35 @@ test('order driver and label lookup helpers resolve records', function () {
         ->and($probe->callHelper('findEntityLabelSubject', 'entity_helper1')?->uuid)->toBe('44444444-4444-4444-8444-444444444431');
 });
 
+test('label lookup helpers refuse subjects from another company', function () {
+    $connection = fleetopsOrderHelperBoot();
+    fleetopsOrderHelperSeed($connection);
+    $connection->table('orders')->where('public_id', 'order_helper1')->update(['company_uuid' => 'company-2']);
+    $connection->table('waypoints')->where('public_id', 'waypoint_helper1')->update(['company_uuid' => 'company-2']);
+    $connection->table('entities')->where('public_id', 'entity_helper1')->update(['company_uuid' => 'company-2']);
+
+    $probe = new FleetOpsInternalOrderHelperProbe();
+
+    // Also covers the identifier-precedence trap: an unguarded
+    // `where(public_id)->orWhere(uuid)->where(company_uuid)` chain would still resolve these.
+    expect($probe->callHelper('findOrderLabelSubject', 'order_helper1'))->toBeNull()
+        ->and($probe->callHelper('findOrderLabelSubject', '44444444-4444-4444-8444-444444444401'))->toBeNull()
+        ->and($probe->callHelper('findWaypointLabelSubject', 'waypoint_helper1'))->toBeNull()
+        ->and($probe->callHelper('findEntityLabelSubject', 'entity_helper1'))->toBeNull();
+});
+
+test('label lookup helpers fail closed without a company session', function () {
+    $connection = fleetopsOrderHelperBoot();
+    fleetopsOrderHelperSeed($connection);
+    session(['company' => null]);
+
+    $probe = new FleetOpsInternalOrderHelperProbe();
+
+    expect($probe->callHelper('findOrderLabelSubject', 'order_helper1'))->toBeNull()
+        ->and($probe->callHelper('findWaypointLabelSubject', 'waypoint_helper1'))->toBeNull()
+        ->and($probe->callHelper('findEntityLabelSubject', 'entity_helper1'))->toBeNull();
+});
+
 test('bulk assignment transaction and response helpers persist and wrap', function () {
     $connection = fleetopsOrderHelperBoot();
     fleetopsOrderHelperSeed($connection);
