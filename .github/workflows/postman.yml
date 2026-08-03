@@ -13,6 +13,9 @@ on:
     branches: [main]
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 jobs:
   contract:
     uses: fleetbase/fleetbase/.github/workflows/api-contract.yml@dev-v0.7.53
