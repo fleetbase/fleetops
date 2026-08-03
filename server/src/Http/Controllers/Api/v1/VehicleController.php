@@ -410,13 +410,7 @@ class VehicleController extends Controller
 
     protected function queryVehicles(Request $request)
     {
-        return Vehicle::queryWithRequest($request, function (&$query, $request) {
-            if ($request->has('vendor')) {
-                $query->whereHas('vendor', function ($q) use ($request) {
-                    $q->where('public_id', $request->input('vendor'));
-                });
-            }
-        });
+        return Vehicle::queryWithRequest($request);
     }
 
     protected function vehicleResource(Vehicle $vehicle)
