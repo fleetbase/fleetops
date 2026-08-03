@@ -297,11 +297,20 @@ test('create record rejects invalid explicit order configs', function () {
 });
 
 test('create record surfaces validation errors default-creates configs and catches exceptions', function () {
-    // Validation failures route into responseWithErrors, which raises through
-    // the harness ValidationException stand-in
+    // Validation failures route into responseWithErrors, which raises a
+    // ValidationException carrying the 422 response
     fleetopsInternalOrderCreateBoot(['pickup' => ['The pickup field is required.']]);
-    expect(fn () => (new OrderController())->createRecord(Request::create('/int/v1/orders', 'POST', ['order' => ['type' => 'transport']])))
-        ->toThrow(TypeError::class);
+    $validationFailure = null;
+
+    try {
+        (new OrderController())->createRecord(Request::create('/int/v1/orders', 'POST', ['order' => ['type' => 'transport']]));
+    } catch (Illuminate\Validation\ValidationException $exception) {
+        $validationFailure = $exception;
+    }
+
+    expect($validationFailure)->not->toBeNull()
+        ->and($validationFailure->errors())->toBe(['pickup' => ['The pickup field is required.']])
+        ->and($validationFailure->getResponse()?->getStatusCode())->toBe(422);
 
     // Without any stored config the default lookup provisions the transport
     // config for the session company

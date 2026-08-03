@@ -932,9 +932,15 @@ class Order extends Model
 
         $result = Payload::insert($attributes);
 
+        // Unreachable: Laravel's connector forces PDO::ERRMODE_EXCEPTION and
+        // nothing here overrides it, so the insert either succeeds or throws —
+        // it never returns false. The fallback itself is sound (insertPayload
+        // regenerates the uuid and public id before delegating), just unreached.
+        // @codeCoverageIgnoreStart
         if (!$result) {
             return $this->createPayload($attributes);
         }
+        // @codeCoverageIgnoreEnd
 
         $payload = Payload::find($uuid);
 
@@ -1734,10 +1740,16 @@ class Order extends Model
         }
 
         // Fetch distance/time — bail early if external call fails
+        //
+        // Unreachable: `getDrivingDistanceAndTime()` is typed `: DistanceMatrix`
+        // and every provider path casts both fields to float before constructing
+        // it, so neither the null check nor the isset check can fail.
         $matrix = Utils::getDrivingDistanceAndTime($origin, $destination, $options);
+        // @codeCoverageIgnoreStart
         if (!$matrix || !isset($matrix->distance, $matrix->time)) {
             return $this;
         }
+        // @codeCoverageIgnoreEnd
 
         // Only update if values changed to prevent redundant writes
         if ($this->distance !== $matrix->distance || $this->time !== $matrix->time) {

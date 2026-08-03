@@ -361,11 +361,17 @@ test('email conflicts return the existing driver profile when present', function
 test('non phone or email conflicts fall through to the error response', function () {
     fleetopsDriverAdoptionBoot(['name' => ['The name field is required.']]);
 
-    // The error response seam raises a TypeError in the harness once the
+    // The error response seam raises the validation failure once the
     // fall-through branch executes
-    expect(fn () => (new DriverController())->createRecord(fleetopsDriverAdoptionRequest([
-        'phone' => '+6590000000',
-    ])))->toThrow(TypeError::class);
+    $failure = null;
+
+    try {
+        (new DriverController())->createRecord(fleetopsDriverAdoptionRequest(['phone' => '+6590000000']));
+    } catch (Illuminate\Validation\ValidationException $exception) {
+        $failure = $exception;
+    }
+
+    expect($failure?->errors())->toBe(['name' => ['The name field is required.']]);
 });
 
 test('valid create requests build the driver user and profile', function () {
@@ -666,8 +672,15 @@ test('updates map validation and generic failures onto error responses', functio
 test('update rejects requests that fail validation before persistence', function () {
     fleetopsDriverAdoptionBoot(['status' => ['The selected status is invalid.']]);
 
-    // The error-response seam raises a TypeError in the harness once the
-    // rejection branch executes, so the request never reaches persistence
-    expect(fn () => (new DriverController())->updateRecord(fleetopsDriverAdoptionUpdateRequest('driver_missing1', ['status' => 'bogus']), 'driver_missing1'))
-        ->toThrow(TypeError::class);
+    // The error-response seam raises the validation failure once the rejection
+    // branch executes, so the request never reaches persistence
+    $failure = null;
+
+    try {
+        (new DriverController())->updateRecord(fleetopsDriverAdoptionUpdateRequest('driver_missing1', ['status' => 'bogus']), 'driver_missing1');
+    } catch (Illuminate\Validation\ValidationException $exception) {
+        $failure = $exception;
+    }
+
+    expect($failure?->errors())->toBe(['status' => ['The selected status is invalid.']]);
 });

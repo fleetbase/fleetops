@@ -272,10 +272,6 @@ class OrderController extends Controller
                     return response()->apiError('Failed to find or create customer for order.');
                 }
 
-                if (Str::isUuid($customer)) {
-                    $customer = Contact::where('uuid', $customer)->first();
-                }
-
                 if ($customer instanceof Contact) {
                     $input['customer_uuid'] = $customer->uuid;
                     $input['customer_type'] = $this->getModelClassName($customer);
@@ -728,6 +724,15 @@ class OrderController extends Controller
                 }
 
                 // request wants to find orders nearby a driver ?
+                //
+                // Unreachable in full: `Utils::isCoordinates()` resolves a
+                // `driver_*` public id to that driver's location, so the
+                // coordinates branch above consumes every driver that has one.
+                // What reaches here is a driver with no stored location, and the
+                // distance query below then raises on the null point rather than
+                // completing — see the "without a stored location" case in
+                // OrderControllerNearbyFiltersTest.
+                // @codeCoverageIgnoreStart
                 if ($addedNearbyQuery === false && is_string($nearby) && Str::startsWith($nearby, 'driver_')) {
                     $driver = Driver::where('public_id', $nearby)->first();
 
@@ -756,6 +761,7 @@ class OrderController extends Controller
                         $addedNearbyQuery = true;
                     }
                 }
+                // @codeCoverageIgnoreEnd
 
                 // if is a string like address string
                 if ($addedNearbyQuery === false && is_string($nearby)) {

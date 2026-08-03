@@ -381,9 +381,14 @@ trait ResolvesOrderServiceStops
             'location'     => Utils::parsePointToWkt($this->serviceStopLocationPoint($place)),
         ], $place);
 
+        // Unreachable: insertGetUuid() only returns false when the underlying
+        // insert returns false, which Laravel's forced PDO::ERRMODE_EXCEPTION
+        // never does — the insert either succeeds or throws.
+        // @codeCoverageIgnoreStart
         if (!$trackingNumberUuid) {
             return null;
         }
+        // @codeCoverageIgnoreEnd
 
         DB::table($payload->getTable())->where('uuid', $payload->uuid)->update([$column => $trackingNumberUuid]);
         $payload->{$column} = $trackingNumberUuid;
@@ -415,9 +420,14 @@ trait ResolvesOrderServiceStops
             $trackingNumber->status_uuid = $activityId;
         }
 
+        // Unreachable: endpointServiceStopTrackingNumber() always hands back a
+        // freshly queried TrackingNumber, and TrackingNumber declares no $with,
+        // so the status relation is never already loaded here.
+        // @codeCoverageIgnoreStart
         if ($trackingNumber->relationLoaded('status')) {
             $trackingNumber->unsetRelation('status');
         }
+        // @codeCoverageIgnoreEnd
 
         return $activityId ?: null;
     }

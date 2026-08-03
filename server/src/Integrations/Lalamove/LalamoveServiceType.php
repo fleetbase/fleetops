@@ -123,16 +123,13 @@ class LalamoveServiceType
         return null;
     }
 
+    /**
+     * `__call` only ever fires for names this class does not define, and every
+     * method it does define — `all()` included — is public, so neither an
+     * `all` forward nor a `method_exists()` forward is reachable from here.
+     */
     public function __call(string $key, $arguments)
     {
-        if ($key === 'all') {
-            return collect(static::$serviceTypes)->mapInto(LalamoveServiceType::class);
-        }
-
-        if (method_exists($this, $key)) {
-            $this->{$key}(...$arguments);
-        }
-
         return null;
     }
 

@@ -658,10 +658,16 @@ class DriverController extends Controller
         }
 
         // Get the driver user account
+        //
+        // Unreachable: DriverScope adds a whereHas('user') to every driver
+        // query, so findRecordOrFail() never yields a driver whose user is
+        // missing. Kept as defence in depth if that scope is ever relaxed.
         $user = $driver->getUser();
+        // @codeCoverageIgnoreStart
         if (!$user) {
             return response()->apiError('Driver has not user account.');
         }
+        // @codeCoverageIgnoreEnd
 
         // Get the user account company
         $company = Auth::getCompanySessionForUser($user);
@@ -729,10 +735,16 @@ class DriverController extends Controller
         }
 
         // Get the driver user account
+        //
+        // Unreachable: the same user was already dereferenced above to compare
+        // company sessions, and DriverScope guarantees it exists in the first
+        // place. Kept as defence in depth if that scope is ever relaxed.
         $user = $driver->getUser();
+        // @codeCoverageIgnoreStart
         if (!$user) {
             return response()->apiError('Critial error, driver has not user account.');
         }
+        // @codeCoverageIgnoreEnd
 
         // Get the users driver profile for this company
         $driverProfile = Driver::where(['user_uuid' => $user->uuid, 'company_uuid' => $company->uuid])->first();

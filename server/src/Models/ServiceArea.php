@@ -180,12 +180,9 @@ class ServiceArea extends Model
      */
     public static function createMultiPolygonFromPoint(Point $point, int $meters = 500): MultiPolygon
     {
+        // coordsToCircle() already closes the ring, so first and last are
+        // equivalent on arrival and no re-closing is needed here
         $coordinates = Utils::coordsToCircle($point->getLat(), $point->getLng(), $meters);
-
-        // first and last positions should be equivalent
-        if (Arr::first($coordinates) !== Arr::last($coordinates)) {
-            $coordinates[] = Arr::first($coordinates);
-        }
 
         // conver the coordinate pairs to points
         $coordinates = array_map(

@@ -141,17 +141,11 @@ class OrderDispatched extends Notification implements ShouldQueue
      */
     public function toBroadcast($notifiable)
     {
+        // OrderResource declares toWebhookPayload(), so the fallback arms of the
+        // old method_exists() chain were never reachable
         $model        = $this->order;
         $resource     = new OrderResource($model);
-        $resourceData = [];
-
-        if ($resource) {
-            if (method_exists($resource, 'toWebhookPayload')) {
-                $resourceData = $resource->toWebhookPayload();
-            } elseif (method_exists($resource, 'toArray')) {
-                $resourceData = $resource->toArray(request());
-            }
-        }
+        $resourceData = $resource->toWebhookPayload();
 
         $resourceData = ResourceLifecycleEvent::transformResourceChildrenToId($resourceData);
 

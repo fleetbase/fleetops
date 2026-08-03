@@ -188,28 +188,25 @@ class PurchaseRateController extends Controller
             $input['type'] = 'default';
         }
 
-        // create the order
+        // create the order — Eloquent's create() always hands back a model
+        // instance, so there is no not-an-Order path to fall through to
         $order = Order::create($input);
 
-        if ($order instanceof Order) {
-            // notify driver if assigned
-            $order->notifyDriverAssigned();
+        // notify driver if assigned
+        $order->notifyDriverAssigned();
 
-            // set driving distance and time
-            $order->setPreliminaryDistanceAndTime();
+        // set driving distance and time
+        $order->setPreliminaryDistanceAndTime();
 
-            // if it's integrated vendor order apply to meta
-            if ($integratedVendorOrder) {
-                $order->updateMeta([
-                    'integrated_vendor'       => $serviceQuote->integratedVendor->public_id,
-                    'integrated_vendor_order' => $integratedVendorOrder,
-                ]);
-            }
-
-            return $order;
+        // if it's integrated vendor order apply to meta
+        if ($integratedVendorOrder) {
+            $order->updateMeta([
+                'integrated_vendor'       => $serviceQuote->integratedVendor->public_id,
+                'integrated_vendor_order' => $integratedVendorOrder,
+            ]);
         }
 
-        return null;
+        return $order;
     }
 
     /**
