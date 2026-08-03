@@ -329,6 +329,21 @@ test('geocoder controller seams call the geocoder and build places', function ()
     // Both directions delegate to the configured geocoder
     expect(fleetopsMoreSeamInvoke($controller, $class, 'reverseGeocode', [1.30, 103.80]))->toHaveCount(0)
         ->and(fleetopsMoreSeamInvoke($controller, $class, 'forwardGeocode', ['1 Marina Bay']))->toHaveCount(0);
+
+    // And a resolved address is turned into an unsaved place
+    $address = Geocoder\Provider\GoogleMaps\Model\GoogleAddress::createFromArray([
+        'providedBy'   => 'google',
+        'latitude'     => 1.28,
+        'longitude'    => 103.86,
+        'streetNumber' => '1',
+        'streetName'   => 'Marina Bay',
+        'locality'     => 'Singapore',
+    ]);
+    $place = fleetopsMoreSeamInvoke($controller, $class, 'placeFromGoogleAddress', [$address]);
+
+    expect($place)->toBeInstanceOf(Fleetbase\FleetOps\Models\Place::class)
+        ->and($place->street1)->toBe('1 Marina Bay')
+        ->and($place->city)->toBe('Singapore');
 });
 
 test('customer audit command scopes contacts to linked customer accounts', function () {
