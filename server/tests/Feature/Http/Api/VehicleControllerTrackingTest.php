@@ -1,6 +1,7 @@
 <?php
 
 use Fleetbase\FleetOps\Http\Controllers\Api\v1\VehicleController;
+use Fleetbase\FleetOps\Http\Filter\VehicleFilter;
 use Fleetbase\FleetOps\Http\Resources\v1\DeletedResource;
 use Fleetbase\FleetOps\Http\Resources\v1\Vehicle as VehicleResource;
 use Fleetbase\FleetOps\Jobs\CheckGeofenceDwell;
@@ -137,7 +138,7 @@ function fleetopsApiVehicleTrackingBoot(): SQLiteConnection
         'vehicles'                => ['uuid', 'public_id', 'internal_id', 'company_uuid', 'driver_uuid', 'vendor_uuid', 'status', 'make', 'model', 'plate_number', 'location', 'latitude', 'longitude', 'altitude', 'heading', 'speed', 'avatar_url', 'type', 'year', 'trim', 'vin', 'online'],
         'drivers'                 => ['uuid', 'public_id', 'internal_id', 'company_uuid', 'user_uuid', 'vehicle_uuid', 'status'],
         'users'                   => ['uuid', 'public_id', 'company_uuid'],
-        'vendors'                 => ['uuid', 'public_id', 'company_uuid', 'name'],
+        'vendors'                 => ['uuid', 'public_id', 'internal_id', 'company_uuid', 'name'],
         'vehicle_geofence_states' => ['vehicle_uuid', 'geofence_uuid', 'geofence_type', 'is_inside', 'entered_at', 'exited_at', 'dwell_job_id'],
         'directives'              => ['uuid', 'company_uuid', 'permission_uuid', 'subject_type', 'subject_uuid', 'key', 'rules'],
     ];
@@ -341,42 +342,72 @@ test('lookup create and response helpers execute their real implementations', fu
 test('query vehicles helper filters by vendor through the request pipeline', function () {
     $connection = fleetopsApiVehicleTrackingBoot();
     $connection->table('vehicles')->insert(['uuid' => 'vehicle-1', 'public_id' => 'vehicle_test', 'company_uuid' => 'company-1', 'vendor_uuid' => 'vendor-1']);
-    $connection->table('vendors')->insert(['uuid' => 'vendor-1', 'public_id' => 'vendor_test', 'company_uuid' => 'company-1', 'name' => 'Acme']);
+    $connection->table('vehicles')->insert(['uuid' => 'vehicle-2', 'public_id' => 'vehicle_other', 'company_uuid' => 'company-1', 'vendor_uuid' => 'vendor-2']);
+    $connection->table('vendors')->insert(['uuid' => 'vendor-1', 'public_id' => 'vendor_test', 'internal_id' => 'ACME-1', 'company_uuid' => 'company-1', 'name' => 'Acme']);
+    $connection->table('vendors')->insert(['uuid' => 'vendor-2', 'public_id' => 'vendor_other', 'internal_id' => 'OTHER-1', 'company_uuid' => 'company-1', 'name' => 'Other']);
 
-    $request = Request::create('/v1/vehicles', 'GET');
-    $store   = app('session.store');
-    $store->put('company', 'company-1');
-    $request->setLaravelSession($store);
-    $request->setRouteResolver(fn () => new class {
-        public function getAction($key = null)
-        {
-            return VehicleController::class . '@query';
-        }
+    $probe   = new FleetOpsApiVehicleTrackingProbe();
+    $request = function (array $parameters, string $uri = 'v1/vehicles') {
+        $request = Request::create('/' . $uri, 'GET', $parameters);
+        $store   = app('session.store');
+        $store->put('company', 'company-1');
+        $request->setLaravelSession($store);
+        $request->setRouteResolver(fn () => new class($uri) {
+            public function __construct(private string $uri)
+            {
+            }
 
-        public function getActionMethod()
-        {
-            return 'query';
-        }
+            public function getAction($key = null)
+            {
+                return VehicleController::class . '@query';
+            }
 
-        public function uri()
-        {
-            return 'v1/vehicles';
-        }
+            public function getActionMethod()
+            {
+                return 'query';
+            }
 
-        public function getName()
-        {
-            return 'api.v1.vehicles.query';
-        }
+            public function uri()
+            {
+                return $this->uri;
+            }
 
-        public function parameters()
-        {
-            return [];
-        }
-    });
+            public function getName()
+            {
+                return 'api.v1.vehicles.query';
+            }
 
-    $results = (new FleetOpsApiVehicleTrackingProbe())->callProtected('queryVehicles', [$request]);
+            public function parameters()
+            {
+                return [];
+            }
+        });
 
-    expect($results->count())->toBe(1);
+        return $request;
+    };
+
+    $query = fn (array $parameters) => $probe->callProtected('queryVehicles', [$request($parameters)]);
+
+    // no vendor constraint returns every vehicle for the company
+    expect($query([])->count())->toBe(2);
+
+    // the public API identifies a vendor by its public id or internal id
+    expect($query(['vendor' => 'vendor_test'])->pluck('uuid')->all())->toBe(['vehicle-1'])
+        ->and($query(['vendor' => 'ACME-1'])->pluck('uuid')->all())->toBe(['vehicle-1'])
+        ->and($query(['vendor' => 'vendor_other'])->pluck('uuid')->all())->toBe(['vehicle-2']);
+
+    // a uuid is not a public identifier, and unknown identifiers match nothing
+    expect($query(['vendor' => 'vendor-1'])->count())->toBe(0)
+        ->and($query(['vendor' => 'nope'])->count())->toBe(0);
+
+    // internal routes keep accepting the uuid the management console sends
+    $internal = fn (string $vendor) => (new VehicleFilter($request(['vendor' => $vendor], 'int/v1/vehicles')))
+        ->apply(Vehicle::query())
+        ->pluck('uuid')
+        ->all();
+
+    expect($internal('vendor-1'))->toBe(['vehicle-1'])
+        ->and($internal('vendor_test'))->toBe(['vehicle-1']);
 });
 
 test('track appends current order context and reports geofence failures to sentry', function () {

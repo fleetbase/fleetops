@@ -3,8 +3,10 @@
 namespace Fleetbase\FleetOps\Http\Filter;
 
 use Fleetbase\FleetOps\Models\Vehicle;
+use Fleetbase\FleetOps\Models\Vendor;
 use Fleetbase\FleetOps\Support\Utils;
 use Fleetbase\Http\Filter\Filter;
+use Fleetbase\Support\Http;
 
 class VehicleFilter extends Filter
 {
@@ -74,14 +76,26 @@ class VehicleFilter extends Filter
         );
     }
 
-    public function vendor(?string $vendorId)
+    public function vendor(?string $vendor)
     {
-        $this->builder->whereHas(
-            'vendor',
-            function ($query) use ($vendorId) {
-                $query->where('uuid', $vendorId);
-            }
-        );
+        if (!$vendor) {
+            return;
+        }
+
+        $this->builder->whereIn('vendor_uuid', Vendor::query()
+            ->where('company_uuid', $this->session->get('company'))
+            ->where(function ($query) use ($vendor) {
+                $query->where('public_id', $vendor);
+
+                if (in_array('internal_id', (new Vendor())->getFillable())) {
+                    $query->orWhere('internal_id', $vendor);
+                }
+
+                if (Http::isInternalRequest($this->request)) {
+                    $query->orWhere('uuid', $vendor);
+                }
+            })
+            ->pluck('uuid'));
     }
 
     public function driverUuid(?string $driverId)

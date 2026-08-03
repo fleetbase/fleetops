@@ -470,7 +470,7 @@ test('vehicle filter records identity relationship fleet and telematic filters',
     $filter->vehicleModel('Sprinter');
     $filter->vehicleYear('2026');
     $filter->driver('unassigned');
-    $filter->vendor('vendor-uuid');
+    $filter->vendor(null);
     $filter->driverUuid('driver-uuid');
     $filter->fleet('fleet-uuid');
     $filter->assignedFleet('false');
@@ -490,7 +490,7 @@ test('vehicle filter records identity relationship fleet and telematic filters',
         ->and($query->calls)->toContain(['whereDoesntHave', 'driver'])
         ->and($query->calls)->toContain(['whereDoesntHave', 'fleets']);
 
-    expect(collect($query->calls)->where(0, 'whereHas')->pluck(1)->all())->toContain('vendor', 'driver', 'fleets', 'devices')
+    expect(collect($query->calls)->where(0, 'whereHas')->pluck(1)->all())->toContain('driver', 'fleets', 'devices')
         ->and(collect($query->calls)->where(0, 'whereBetween')->values())->toHaveCount(1)
         ->and(collect($query->calls)->where(0, 'whereDate')->values())->toHaveCount(1);
 });
@@ -1222,13 +1222,13 @@ test('place filter alternate date branches and spatial area scopes execute', fun
 });
 
 test('vehicle and fuel report filters cover alternate identity and date branches', function () {
-    // Vehicle filter: unassigned drivers, vendor scoping, inverse date branches,
-    // fleet unassignment and blank telematic early return
+    // Vehicle filter: unassigned drivers, blank vendor early return, inverse date
+    // branches, fleet unassignment and blank telematic early return
     $query  = new FleetOpsControllerFilterQuery();
     $filter = fleetopsFilterWithBuilder(VehicleFilter::class, $query);
     $filter->driver('unassigned');
     $filter->driver('c4c4c4c4-4444-4444-8444-444444444444');
-    $filter->vendor('vendor-uuid-1');
+    $filter->vendor(null);
     $filter->createdAt('2026-02-01');
     $filter->updatedAt(['2026-01-01', '2026-01-31']);
     $filter->assignedFleet('false');
