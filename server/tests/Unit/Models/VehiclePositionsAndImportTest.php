@@ -109,7 +109,7 @@ function fleetopsVehiclePositionWkb(float $lat, float $lng): string
 }
 
 test('avatar urls resolve uuid keys through file lookups', function () {
-    fleetopsVehiclePositionBoot();
+    $connection = fleetopsVehiclePositionBoot();
 
     $vehicle = new Vehicle();
     $vehicle->setRawAttributes(['avatar_url' => 'https://cdn.example.com/van.png'], true);
@@ -119,6 +119,44 @@ test('avatar urls resolve uuid keys through file lookups', function () {
     $byUuid->setRawAttributes(['avatar_url' => '99999999-9999-4999-8999-999999999999'], true);
     expect($byUuid->avatar_url)->toBeNull()
         ->and(Vehicle::getAvatar('88888888-8888-4888-8888-888888888888'))->toBeNull();
+
+    // A stored file on a non-local disk hands back its url directly. The disk is
+    // a real FilesystemAdapter so `url()` runs its own path composition.
+    $adapter = new Illuminate\Filesystem\FilesystemAdapter(
+        new League\Flysystem\Filesystem(new League\Flysystem\Local\LocalFilesystemAdapter(sys_get_temp_dir())),
+        new League\Flysystem\Local\LocalFilesystemAdapter(sys_get_temp_dir()),
+        ['url' => 'https://cdn.example.com']
+    );
+    app()->instance('filesystem', new class($adapter) {
+        public function __construct(public $adapter)
+        {
+        }
+
+        public function disk($disk = null)
+        {
+            return $this->adapter;
+        }
+
+        public function __call($method, $arguments)
+        {
+            return $this->adapter->{$method}(...$arguments);
+        }
+    });
+    Illuminate\Support\Facades\Storage::clearResolvedInstance('filesystem');
+
+    $connection->table('files')->insert([
+        'uuid'         => '77777777-7777-4777-8777-777777777777',
+        'public_id'    => 'file_vehicleavatar',
+        'company_uuid' => 'company-1',
+        'disk'         => 'public',
+        'path'         => 'uploads/vehicle-avatar.png',
+    ]);
+
+    expect(Vehicle::getAvatar('77777777-7777-4777-8777-777777777777'))
+        ->toBe('https://cdn.example.com/uploads/vehicle-avatar.png');
+
+    app()->forgetInstance('filesystem');
+    Illuminate\Support\Facades\Storage::clearResolvedInstance('filesystem');
 });
 
 test('position creation with order context respects movement thresholds', function () {

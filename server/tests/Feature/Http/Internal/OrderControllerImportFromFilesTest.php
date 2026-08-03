@@ -139,6 +139,9 @@ test('spreadsheet rows import places and delimited entities', function () {
     $connection->table('files')->insert(['uuid' => '11111111-1111-4111-8111-111111111111', 'public_id' => 'file_ordimport1', 'company_uuid' => 'company-1', 'path' => 'uploads/orders.xlsx', 'disk' => 'local']);
     fleetopsOrderImportFilesExcelFake([[
         ['name' => 'Import Stop', 'street1' => 'Import Rd 1', 'city' => 'Singapore', 'items' => 'Box A|Box B'],
+        // populated, but with nothing that resolves to an address — the row is
+        // skipped rather than producing a place or its items
+        ['items' => 'Orphan Box'],
         [],
     ]]);
 
@@ -149,7 +152,8 @@ test('spreadsheet rows import places and delimited entities', function () {
     $data = $response->getData(true);
     expect($data['places'])->toHaveCount(1)
         ->and($data['entities'])->toHaveCount(2)
-        ->and($data['entities'][0]['name'])->toBe('Box A');
+        ->and($data['entities'][0]['name'])->toBe('Box A')
+        ->and(collect($data['entities'])->pluck('name')->all())->not->toContain('Orphan Box');
 });
 
 test('invalid file types and unreadable spreadsheets return errors', function () {

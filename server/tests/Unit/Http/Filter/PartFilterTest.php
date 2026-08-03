@@ -61,7 +61,29 @@ function fleetopsPartFilterUnitUseInMemoryConnection(): SQLiteConnection
     return $connection;
 }
 
-function fleetopsPartFilterUnitFilter(FleetOpsPartFilterUnitQuery $builder): PartFilter
+class FleetOpsPartFilterUnitRoute
+{
+    public array $action = [];
+
+    public function __construct(private string $uri)
+    {
+    }
+
+    public function uri(): string
+    {
+        return $this->uri;
+    }
+}
+
+function fleetopsPartFilterUnitInternalRequest(): Request
+{
+    $request = Request::create('/int/v1/fleet-ops/parts', 'GET');
+    $request->setRouteResolver(fn () => new FleetOpsPartFilterUnitRoute('int/v1/fleet-ops/parts'));
+
+    return $request;
+}
+
+function fleetopsPartFilterUnitFilter(FleetOpsPartFilterUnitQuery $builder, ?Request $request = null): PartFilter
 {
     $filter = (new ReflectionClass(PartFilter::class))->newInstanceWithoutConstructor();
 
@@ -73,7 +95,7 @@ function fleetopsPartFilterUnitFilter(FleetOpsPartFilterUnitQuery $builder): Par
                 return $key === 'company' ? 'company-uuid' : null;
             }
         },
-        'request' => new Request(),
+        'request' => $request ?? new Request(),
     ] as $property => $value) {
         $reflection = new ReflectionProperty(Filter::class, $property);
         $reflection->setAccessible(true);
@@ -127,4 +149,25 @@ test('part filter scopes tenant search and vendor public or internal identifiers
         ->and($builder->calls[4][0])->toBe('whereIn')
         ->and($builder->calls[4][1])->toBe('vendor_uuid')
         ->and($builder->calls[4][2]->all())->toBe(['vendor-internal-uuid']);
+});
+
+test('part filter only resolves a vendor by raw uuid on an internal request', function () {
+    $connection = fleetopsPartFilterUnitUseInMemoryConnection();
+    $connection->table('vendors')->insert([
+        'uuid'         => 'vendor-raw-uuid',
+        'public_id'    => 'vendor_raw',
+        'internal_id'  => 'VENDOR-RAW',
+        'company_uuid' => 'company-uuid',
+        'deleted_at'   => null,
+    ]);
+
+    $public = new FleetOpsPartFilterUnitQuery();
+    fleetopsPartFilterUnitFilter($public)->vendor('vendor-raw-uuid');
+
+    $internal = new FleetOpsPartFilterUnitQuery();
+    fleetopsPartFilterUnitFilter($internal, fleetopsPartFilterUnitInternalRequest())->vendor('vendor-raw-uuid');
+
+    // The public route has no uuid arm, so the same identifier resolves to nothing
+    expect($public->calls[0][2]->all())->toBe([])
+        ->and($internal->calls[0][2]->all())->toBe(['vendor-raw-uuid']);
 });

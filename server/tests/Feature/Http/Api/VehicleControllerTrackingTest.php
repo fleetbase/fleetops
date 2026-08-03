@@ -341,10 +341,14 @@ test('lookup create and response helpers execute their real implementations', fu
 
 test('query vehicles helper filters by vendor through the request pipeline', function () {
     $connection = fleetopsApiVehicleTrackingBoot();
-    $connection->table('vehicles')->insert(['uuid' => 'vehicle-1', 'public_id' => 'vehicle_test', 'company_uuid' => 'company-1', 'vendor_uuid' => 'vendor-1']);
-    $connection->table('vehicles')->insert(['uuid' => 'vehicle-2', 'public_id' => 'vehicle_other', 'company_uuid' => 'company-1', 'vendor_uuid' => 'vendor-2']);
-    $connection->table('vendors')->insert(['uuid' => 'vendor-1', 'public_id' => 'vendor_test', 'internal_id' => 'ACME-1', 'company_uuid' => 'company-1', 'name' => 'Acme']);
-    $connection->table('vendors')->insert(['uuid' => 'vendor-2', 'public_id' => 'vendor_other', 'internal_id' => 'OTHER-1', 'company_uuid' => 'company-1', 'name' => 'Other']);
+    $connection->table('vehicles')->insert([
+        ['uuid' => 'vehicle-1', 'public_id' => 'vehicle_test', 'company_uuid' => 'company-1', 'vendor_uuid' => 'vendor-1'],
+        ['uuid' => 'vehicle-2', 'public_id' => 'vehicle_other', 'company_uuid' => 'company-1', 'vendor_uuid' => 'vendor-2'],
+    ]);
+    $connection->table('vendors')->insert([
+        ['uuid' => 'vendor-1', 'public_id' => 'vendor_test', 'internal_id' => 'ACME-1', 'company_uuid' => 'company-1', 'name' => 'Acme'],
+        ['uuid' => 'vendor-2', 'public_id' => 'vendor_other', 'internal_id' => 'OTHER-1', 'company_uuid' => 'company-1', 'name' => 'Other'],
+    ]);
 
     $probe   = new FleetOpsApiVehicleTrackingProbe();
     $request = function (array $parameters, string $uri = 'v1/vehicles') {

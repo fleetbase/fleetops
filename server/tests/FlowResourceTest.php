@@ -9,6 +9,10 @@ use Fleetbase\FleetOps\Flow\Logic;
 use Fleetbase\FleetOps\Models\Order;
 use Fleetbase\FleetOps\Models\Waypoint;
 
+if (!Illuminate\Support\Str::hasMacro('humanize')) {
+    Illuminate\Support\Str::macro('humanize', fn ($value, $uppercase = true) => str_replace('_', ' ', Illuminate\Support\Str::snake((string) $value)));
+}
+
 class FlowTestOrder extends Order
 {
     public array $dynamicValues          = [];
@@ -232,6 +236,41 @@ test('flow events resolve names mutate context and no-op unresolved fires', func
     expect($unresolved->order)->toBe($order)
         ->and($unresolved->activity)->toBe($activity)
         ->and($unresolved->waypoint)->toBe($waypoint);
+});
+
+test('firing an activity passes the order and waypoint to each of its events', function () {
+    $order    = flowTestOrder();
+    $waypoint = new Waypoint();
+    // Event names that resolve to no class make the fire a no-op, which keeps
+    // this to the activity's own loop rather than the lifecycle event machinery
+    $activity = new Activity([
+        'code'   => 'ready',
+        'events' => ['missing_event_one', 'missing_event_two'],
+    ], flowFixture());
+
+    $dispatcher = new class {
+        public array $dispatched = [];
+
+        public function dispatch($event, $payload = [], $halt = false)
+        {
+            $this->dispatched[] = $event;
+
+            return [];
+        }
+
+        public function __call($method, $arguments)
+        {
+            return null;
+        }
+    };
+    app()->instance('events', $dispatcher);
+
+    $activity->fireEvents($order, $waypoint);
+
+    expect($activity->events)->toHaveCount(2)
+        ->and($dispatcher->dispatched)->toBe([]);
+
+    app()->forgetInstance('events');
 });
 
 test('activity logic arms evaluate and or not if and unsupported types', function () {

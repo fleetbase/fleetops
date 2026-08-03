@@ -329,6 +329,21 @@ test('geocoder controller seams call the geocoder and build places', function ()
     // Both directions delegate to the configured geocoder
     expect(fleetopsMoreSeamInvoke($controller, $class, 'reverseGeocode', [1.30, 103.80]))->toHaveCount(0)
         ->and(fleetopsMoreSeamInvoke($controller, $class, 'forwardGeocode', ['1 Marina Bay']))->toHaveCount(0);
+
+    // And a resolved address is turned into an unsaved place
+    $address = Geocoder\Provider\GoogleMaps\Model\GoogleAddress::createFromArray([
+        'providedBy'   => 'google',
+        'latitude'     => 1.28,
+        'longitude'    => 103.86,
+        'streetNumber' => '1',
+        'streetName'   => 'Marina Bay',
+        'locality'     => 'Singapore',
+    ]);
+    $place = fleetopsMoreSeamInvoke($controller, $class, 'placeFromGoogleAddress', [$address]);
+
+    expect($place)->toBeInstanceOf(Fleetbase\FleetOps\Models\Place::class)
+        ->and($place->street1)->toBe('1 Marina Bay')
+        ->and($place->city)->toBe('Singapore');
 });
 
 test('customer audit command scopes contacts to linked customer accounts', function () {
@@ -376,4 +391,20 @@ test('shift change listener reads company scheduling settings', function () {
 
     // With nothing stored the lookup falls back to the empty default
     expect(fleetopsMoreSeamInvoke($listener, $class, 'getSchedulingSettings'))->toBe([]);
+});
+
+test('order insights capability builds its own company-scoped order query', function () {
+    $connection = fleetopsMoreSeamBoot();
+    $connection->table('orders')->insert([
+        ['uuid' => 'order-ins-1', 'public_id' => 'order_insone', 'company_uuid' => 'company-seam-2'],
+        ['uuid' => 'order-ins-2', 'public_id' => 'order_instwo', 'company_uuid' => 'company-other'],
+    ]);
+
+    // Behaviour tests override this seam with a query fake, so the real body
+    // only runs when it is invoked directly
+    $class      = Fleetbase\FleetOps\Support\Ai\Capabilities\OrderInsightsCapability::class;
+    $capability = (new ReflectionClass($class))->newInstanceWithoutConstructor();
+    $query      = fleetopsMoreSeamInvoke($capability, $class, 'orderQuery', ['company-seam-2']);
+
+    expect($query->pluck('public_id')->all())->toBe(['order_insone']);
 });

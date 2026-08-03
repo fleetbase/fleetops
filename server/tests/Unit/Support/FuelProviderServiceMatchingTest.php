@@ -237,6 +237,15 @@ test('vehicle resolution matches by normalized columns and provider ids', functi
     $emptyProvider = new FuelProviderTransaction();
     $emptyProvider->setRawAttributes(['company_uuid' => 'company-1'], true);
     expect($probe->callProtected('resolveVehicleByProviderId', $emptyProvider))->toBeNull();
+
+    // The provider-id and structure-number fields are special-cased ahead of the
+    // generic field map, so they route through their own resolvers
+    expect($probe->callProtected('resolveVehicle', $providerTransaction, 'provider_vehicle_id')?->uuid)->toBe('vehicle-2');
+
+    $connection->table('vehicles')->insert(['uuid' => 'vehicle-3', 'company_uuid' => 'company-1', 'serial_number' => 'ST-77']);
+    $structureTransaction = new FuelProviderTransaction();
+    $structureTransaction->setRawAttributes(['company_uuid' => 'company-1', 'structure_number' => 'st77'], true);
+    expect($probe->callProtected('resolveVehicle', $structureTransaction, 'structure_number')?->uuid)->toBe('vehicle-3');
 });
 
 test('ensure fuel report reuses existing reports and skips vehicleless transactions', function () {
@@ -252,4 +261,20 @@ test('ensure fuel report reuses existing reports and skips vehicleless transacti
     $vehicleless = new FuelProviderTransaction();
     $vehicleless->setRawAttributes(['company_uuid' => 'company-1'], true);
     expect($probe->callProtected('ensureFuelReport', $vehicleless))->toBeNull();
+
+    // Station coordinates on the transaction become the report's location
+    // instead of the (0, 0) placeholder
+    $connection->table('vehicles')->insert(['uuid' => 'vehicle-1', 'company_uuid' => 'company-1']);
+    $located = new FuelProviderTransaction();
+    $located->setRawAttributes([
+        'company_uuid'      => 'company-1',
+        'vehicle_uuid'      => 'vehicle-1',
+        'provider'          => 'harness',
+        'station_latitude'  => '1.29',
+        'station_longitude' => '103.85',
+    ], true);
+
+    $report = $probe->callProtected('ensureFuelReport', $located);
+    expect($report)->not->toBeNull()
+        ->and($connection->table('fuel_reports')->where('uuid', $report->uuid)->value('location'))->toBe('POINT(103.85 1.29)');
 });

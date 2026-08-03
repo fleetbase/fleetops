@@ -114,6 +114,21 @@ test('distribution short circuits when no located drivers exist', function () {
         ->and($distribution['zones'])->toBe([]);
 });
 
+test('distribution skips drivers whose stored location is not a point', function () {
+    $connection = fleetopsAiDistributionBoot();
+    $connection->table('users')->insert(['uuid' => 'user-1', 'company_uuid' => 'company-1']);
+    // Too short to rehydrate as WKB, so the attribute stays a bare string and
+    // the geofence lookups below are skipped for this driver
+    $connection->table('drivers')->insert(['uuid' => 'driver-1', 'company_uuid' => 'company-1', 'user_uuid' => 'user-1', 'location' => 'bogus']);
+    $connection->table('service_areas')->insert(['uuid' => 'sa-1', 'public_id' => 'service_area_test', 'company_uuid' => 'company-1', 'name' => 'Central', 'border' => 'POLYGON(...)']);
+
+    $distribution = fleetopsAiDistribution();
+
+    expect($distribution['valid_location_count'])->toBe(1)
+        ->and($distribution['service_areas'])->toBe([])
+        ->and($distribution['zones'])->toBe([]);
+});
+
 test('distribution counts drivers per service area and zone with filters', function () {
     $connection = fleetopsAiDistributionBoot();
     $connection->table('users')->insert(['uuid' => 'user-1', 'company_uuid' => 'company-1']);
