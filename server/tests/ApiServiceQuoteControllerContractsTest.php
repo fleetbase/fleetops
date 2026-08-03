@@ -8,18 +8,31 @@ use Fleetbase\FleetOps\Models\ServiceQuoteItem;
 use Fleetbase\FleetOps\Models\ServiceRate;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 
+class FleetOpsApiServiceQuoteQueryRecorder
+{
+    public array $wheres = [];
+
+    public function where($column, $value = null): self
+    {
+        $this->wheres[] = [$column, $value];
+
+        return $this;
+    }
+}
+
 class FleetOpsApiServiceQuoteControllerProbe extends ServiceQuoteController
 {
-    public ?ServiceQuote $serviceQuote                   = null;
-    public ?FleetOpsApiServiceQuoteRateFake $serviceRate = null;
-    public array $serviceRates                           = [];
-    public array $createdQuotes                          = [];
-    public array $createdItems                           = [];
-    public array $placeLookups                           = [];
-    public array $distanceMatrixCalls                    = [];
-    public string $requestId                             = 'request_public';
-    public bool $serviceQuoteNotFound                    = false;
-    public array $findCalls                              = [];
+    public ?ServiceQuote $serviceQuote                             = null;
+    public ?FleetOpsApiServiceQuoteRateFake $serviceRate           = null;
+    public array $serviceRates                                     = [];
+    public array $createdQuotes                                    = [];
+    public array $createdItems                                     = [];
+    public array $placeLookups                                     = [];
+    public array $distanceMatrixCalls                              = [];
+    public string $requestId                                       = 'request_public';
+    public bool $serviceQuoteNotFound                              = false;
+    public array $findCalls                                        = [];
+    public ?FleetOpsApiServiceQuoteQueryRecorder $serviceRateQuery = null;
 
     protected function findServiceQuote(string $id): ServiceQuote
     {
@@ -84,6 +97,12 @@ class FleetOpsApiServiceQuoteControllerProbe extends ServiceQuoteController
 
     protected function getServicableServiceRates(iterable $waypoints, ?string $serviceType, mixed $currency, callable $callback): iterable
     {
+        // The real lookup hands the callback a query builder to narrow; running
+        // it against a recorder keeps the scoping the controller applies under
+        // test rather than stubbing it away with the query.
+        $this->serviceRateQuery = new FleetOpsApiServiceQuoteQueryRecorder();
+        $callback($this->serviceRateQuery);
+
         return $this->serviceRates;
     }
 
@@ -220,6 +239,57 @@ test('api service quote controller creates preliminary quotes for a single servi
         ]);
 });
 
+test('api service quote controller returns a collection for a single service when not asked for one quote', function () {
+    $controller              = new FleetOpsApiServiceQuoteControllerProbe();
+    $controller->serviceRate = new FleetOpsApiServiceQuoteRateFake('service-rate-uuid', 1500, 'USD');
+
+    // A named service still produces exactly one quote, but without `single`
+    // it comes back wrapped as a collection rather than a bare resource.
+    $response = $controller->queryFromPreliminary(QueryServiceQuotesRequest::create('/fleetops/service-quotes', 'POST', [
+        'pickup'   => 'place_pickup',
+        'dropoff'  => 'place_dropoff',
+        'service'  => 'service-rate-uuid',
+        'distance' => 1200,
+        'time'     => 300,
+        'currency' => 'USD',
+    ]));
+
+    expect($response['collection'])->toBe('service-quotes')
+        ->and($response['items'])->toHaveCount(1)
+        ->and($controller->createdQuotes)->toHaveCount(1)
+        ->and($controller->createdQuotes[0]['amount'])->toBe(1500);
+});
+
+test('api service quote controller picks the cheapest serviceable rate for a single quote', function () {
+    $controller               = new FleetOpsApiServiceQuoteControllerProbe();
+    $controller->serviceRates = [
+        new FleetOpsApiServiceQuoteRateFake('service-rate-a', 2500, 'USD'),
+        new FleetOpsApiServiceQuoteRateFake('service-rate-b', 900, 'USD'),
+        new FleetOpsApiServiceQuoteRateFake('service-rate-c', 1700, 'USD'),
+    ];
+
+    $request = QueryServiceQuotesRequest::create('/fleetops/service-quotes', 'POST', [
+        'pickup'   => 'place_pickup',
+        'dropoff'  => 'place_dropoff',
+        'single'   => true,
+        'currency' => 'USD',
+    ]);
+    $session = app('session.store');
+    $session->put('company', 'company-session-uuid');
+    $request->setLaravelSession($session);
+
+    $response = $controller->queryFromPreliminary($request);
+
+    // Every rate is quoted, and the cheapest is the one handed back
+    expect($controller->createdQuotes)->toHaveCount(3)
+        ->and($response['resource'])->toBe('service-quote')
+        ->and($response['serviceQuote']->amount)->toBe(900)
+        // The rate lookup is scoped to the requesting company
+        ->and($controller->serviceRateQuery->wheres)->toBe([
+            ['company_uuid', 'company-session-uuid'],
+        ]);
+});
+
 test('api service quote controller creates preliminary quote collections from serviceable rates', function () {
     $controller               = new FleetOpsApiServiceQuoteControllerProbe();
     $controller->serviceRates = [
@@ -227,12 +297,17 @@ test('api service quote controller creates preliminary quote collections from se
         new FleetOpsApiServiceQuoteRateFake('service-rate-b', 900, 'USD'),
     ];
 
-    $response = $controller->queryFromPreliminary(QueryServiceQuotesRequest::create('/fleetops/service-quotes', 'POST', [
+    $request = QueryServiceQuotesRequest::create('/fleetops/service-quotes', 'POST', [
         'pickup'    => 'place_pickup',
         'dropoff'   => 'place_dropoff',
         'waypoints' => [['public_id' => 'place_middle']],
         'currency'  => 'USD',
-    ]));
+    ]);
+    $session = app('session.store');
+    $session->put('company', 'company-session-uuid');
+    $request->setLaravelSession($session);
+
+    $response = $controller->queryFromPreliminary($request);
 
     expect($response['collection'])->toBe('service-quotes')
         ->and($response['items'])->toHaveCount(2)

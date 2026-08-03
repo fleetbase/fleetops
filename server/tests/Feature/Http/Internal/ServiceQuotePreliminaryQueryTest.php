@@ -176,6 +176,33 @@ test('preliminary single service quotes recalculate distance and persist items',
         ->and($connection->table('service_quotes')->count())->toBe(1);
 });
 
+test('a named service without single returns the quote wrapped in a list', function () {
+    $connection = fleetopsServiceQuotePreliminaryBoot();
+    $controller = new ServiceQuoteController();
+
+    // Both entry points quote exactly one rate when a service is named; the
+    // `single` flag only decides whether it comes back bare or in a list.
+    $record = $controller->queryRecord(fleetopsServiceQuotePreliminaryRequest([
+        'payload' => 'payload_prelimq',
+        'service' => '33333333-3333-4333-8333-333333333333',
+    ]));
+
+    $recordData = $record->getData(true);
+    expect($recordData)->toBeArray()->toHaveCount(1)
+        ->and((int) $recordData[0]['amount'])->toBe(1000);
+
+    $preliminary = $controller->preliminaryQuery(fleetopsServiceQuotePreliminaryRequest([
+        'pickup'  => '11111111-1111-4111-8111-111111111111',
+        'dropoff' => '22222222-2222-4222-8222-222222222222',
+        'service' => '33333333-3333-4333-8333-333333333333',
+    ]));
+
+    $preliminaryData = $preliminary->getData(true);
+    expect($preliminaryData)->toBeArray()->toHaveCount(1)
+        ->and((int) $preliminaryData[0]['amount'])->toBe(1000)
+        ->and($connection->table('service_quotes')->count())->toBe(2);
+});
+
 test('preliminary single requests across all rates pick the best quote', function () {
     fleetopsServiceQuotePreliminaryBoot();
 
