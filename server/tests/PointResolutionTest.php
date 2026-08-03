@@ -53,13 +53,44 @@ test('point resolution falls back to nested geometry coordinates', function () {
         ],
     ]);
 
-    // NOTE: this fallback recurses with the bare coordinate pair, which the
-    // array reader interprets positionally as [lat, lng] — the reverse of
-    // GeoJSON's [lng, lat]. The pair therefore comes back transposed. This
-    // asserts the behaviour as it stands rather than the intent; changing it
-    // affects every location write path and belongs in its own change.
-    expect($point->getLat())->toBe(103.851)
-        ->and($point->getLng())->toBe(1.2816);
+    // The nested pair is GeoJSON, so it is read as [lng, lat]
+    expect($point->getLat())->toBe(1.2816)
+        ->and($point->getLng())->toBe(103.851);
+});
+
+test('point resolution falls back to top level coordinates before nested geometry', function () {
+    // The top-level `coordinates` arm is preferred, and is read in the same
+    // GeoJSON order. Point::fromJson rejects the envelope because of the extra
+    // member, which is what pushes resolution into the fallback at all.
+    $point = Utils::getPointFromMixed([
+        'type'        => 'Point',
+        'coordinates' => [103.851, 1.2816],
+        'geometry'    => [
+            'type'        => 'Point',
+            'coordinates' => [1.0, 2.0],
+        ],
+    ]);
+
+    expect($point->getLat())->toBe(1.2816)
+        ->and($point->getLng())->toBe(103.851);
+});
+
+test('point resolution still hands nested rings to the positional reader', function () {
+    // A Polygon ring is not a coordinate pair, so the GeoJSON read declines and
+    // resolution falls through to the existing recursion unchanged.
+    $point = Utils::getPointFromMixed([
+        'type'        => 'Polygon',
+        'coordinates' => [
+            [
+                [103.0, 1.0],
+                [104.0, 1.0],
+                [104.0, 2.0],
+                [103.0, 1.0],
+            ],
+        ],
+    ]);
+
+    expect($point)->toBeInstanceOf(Fleetbase\LaravelMysqlSpatial\Types\Point::class);
 });
 
 test('coordinate helper does not collapse bbox GeoJSON point to zero', function () {
