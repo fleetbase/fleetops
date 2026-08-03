@@ -184,6 +184,7 @@ function fleetopsPlaceCreationBoot(): SQLiteConnection
     });
     Illuminate\Support\Facades\Storage::clearResolvedInstance('filesystem');
 
+    app()->forgetInstance('fleetops.geocoder');
     app()->instance('geocoder', new class {
         public function geocode($query)
         {
@@ -316,6 +317,41 @@ test('import rows create places for address only and multi column rows', functio
     ], 'import-1');
     expect($multi)->toBeInstanceOf(Place::class)
         ->and($multi->location)->not->toBeNull();
+});
+
+test('mixed insertion routes an address key through the geocoding lookup', function () {
+    $connection = fleetopsPlaceCreationBoot();
+
+    // Neither a uuid nor a public id, so the array falls through to the address
+    // branch; the geocoder returns nothing, so the address stands in as street1
+    $uuid = Place::insertFromMixed(['address' => '404 Nowhere Boulevard']);
+
+    expect($uuid)->toBeString()
+        ->and($connection->table('places')->where('uuid', $uuid)->value('street1'))->toBe('404 Nowhere Boulevard');
+});
+
+test('single column imports fall back to mixed creation when geocoding is empty', function () {
+    fleetopsPlaceCreationBoot();
+
+    // An injected geocoder returns no addresses instead of rejecting the
+    // request, so the import reaches the post-lookup fallback rather than the
+    // catch arm above it
+    app()->instance('fleetops.geocoder', new class {
+        public function geocodeQuery($query)
+        {
+            return new Geocoder\Model\AddressCollection([]);
+        }
+
+        public function reverseQuery($query)
+        {
+            return new Geocoder\Model\AddressCollection([]);
+        }
+    });
+
+    $place = Place::createFromImport(['address' => '77 Unmatched Way'], false);
+
+    expect($place)->toBeInstanceOf(Place::class)
+        ->and($place->street1)->toBe('77 Unmatched Way');
 });
 
 test('single column imports reverse lookups and coordinate arrays create places', function () {

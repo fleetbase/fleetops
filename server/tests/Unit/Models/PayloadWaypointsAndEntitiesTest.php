@@ -125,10 +125,14 @@ test('set and insert entities resolve destinations from imports keys and search 
     $payload->insertEntities([
         ['name' => 'Insert 1', '_import_id' => 'import-9'],
         ['name' => 'Insert 2', 'destination_uuid' => 'temp-search-1'],
+        ['name' => 'Insert 3', 'waypoint' => 'place_payent2'],
     ]);
 
     expect($connection->table('entities')->where('name', 'Insert 1')->value('destination_uuid'))->toBe('11111111-1111-4111-8111-111111111111')
-        ->and($connection->table('entities')->where('name', 'Insert 2')->value('destination_uuid'))->toBe('22222222-2222-4222-8222-222222222222');
+        ->and($connection->table('entities')->where('name', 'Insert 2')->value('destination_uuid'))->toBe('22222222-2222-4222-8222-222222222222')
+        // no destination_uuid and no import id, so the waypoint key is the only
+        // thing that can have resolved this entity's destination
+        ->and($connection->table('entities')->where('name', 'Insert 3')->value('destination_uuid'))->toBe('22222222-2222-4222-8222-222222222222');
 });
 
 test('insert waypoints resolve nested places existing uuids and customers', function () {
@@ -176,6 +180,36 @@ test('update waypoints resolve places by uuid public id and mixed input', functi
         '22222222-2222-4222-8222-222222222222',
         '33333333-3333-4333-8333-333333333333',
     ]);
+
+    app()->instance('geocoder', new class {
+        public function geocode($query)
+        {
+            return $this;
+        }
+
+        public function get()
+        {
+            return collect();
+        }
+
+        public function __call($method, $arguments)
+        {
+            return $this;
+        }
+    });
+    Geocoder\Laravel\Facades\Geocoder::clearResolvedInstances();
+
+    // A console place search hands back a uuid that no place carries yet. The
+    // waypoint is created from the rest of the attributes and keeps the search
+    // uuid in meta so later entity destinations can still be matched to it.
+    $payload->updateWaypoints([
+        ['uuid' => '44444444-4444-4444-8444-444444444444', 'street1' => 'Searched Street', 'city' => 'Singapore'],
+    ]);
+
+    $created = $connection->table('places')->where('street1', 'Searched Street')->first();
+    expect($created)->not->toBeNull()
+        ->and($created->uuid)->not->toBe('44444444-4444-4444-8444-444444444444')
+        ->and(json_decode($created->meta, true)['search_uuid'] ?? null)->toBe('44444444-4444-4444-8444-444444444444');
 });
 
 test('waypoint tracking setters advance current and next markers', function () {
@@ -224,6 +258,10 @@ test('destination correction helpers match search and console metadata', functio
     $found = $payload->findDestinationFromKey('search-9');
     expect($found?->uuid)->toBe('11111111-1111-4111-8111-111111111111')
         ->and($payload->findDestinationFromKey(null))->toBeNull();
+
+    // A console destination key matches no place uuid and no search_uuid, so it
+    // can only resolve through the entity-correction fallback below those
+    expect($payload->findDestinationFromKey('console-9')?->uuid)->toBe('22222222-2222-4222-8222-222222222222');
 });
 
 test('entity photos resolve files and temp waypoint uuids track search metadata', function () {
