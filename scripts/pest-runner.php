@@ -24,8 +24,24 @@ if ($pest === null) {
 
 $serverVendor = getcwd() . '/server_vendor';
 $vendor       = getcwd() . '/vendor';
+
+// Pest hardcodes its autoloader at ../../../vendor/autoload.php (pestphp/pest#920),
+// so it needs a `vendor` entry even though this package installs to server_vendor.
+// Create the symlink only for the duration of this run and remove it afterwards, so it
+// never persists to collide with other tooling — notably the console's Ember build,
+// whose addon `vendor/` convention breaks when a dev-linked package exposes this PHP
+// server_vendor symlink there.
+$createdVendorSymlink = false;
 if (!file_exists($vendor) && is_dir($serverVendor) && function_exists('symlink')) {
-    @symlink($serverVendor, $vendor);
+    $createdVendorSymlink = @symlink($serverVendor, $vendor);
+}
+
+if ($createdVendorSymlink) {
+    register_shutdown_function(static function () use ($vendor): void {
+        if (is_link($vendor)) {
+            @unlink($vendor);
+        }
+    });
 }
 
 $bootstrap = getcwd() . '/scripts/pest-bootstrap.php';
