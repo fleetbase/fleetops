@@ -347,6 +347,24 @@ test('create order route variables resolve from metas and payloads', function ()
     ]), $request);
     expect($result2->orderId)->toBe('meta-order-2');
 
+    // A network-cart origin arrives as an array of store locations, which become
+    // the waypoints; entries wrapping their place resolve through the place key
+    $history4  = [];
+    $lalamove4 = fleetopsLalamoveQuoteClient([new Response(200, [], json_encode(['data' => ['orderId' => 'meta-order-4']]))], $history4);
+    $result4   = $lalamove4->createOrderFromServiceQuote($makeQuote([
+        'origin' => [
+            ['place' => '11111111-1111-4111-8111-111111111111'],
+        ],
+        'destination' => '22222222-2222-4222-8222-222222222222',
+    ]), $request);
+    expect($result4->orderId)->toBe('meta-order-4');
+
+    // The store location is the only stop ahead of the destination, so it is
+    // what becomes the sender
+    $body4 = json_decode((string) $history4[0]['request']->getBody(), true);
+    expect($body4['data']['sender']['name'])->toBe('Depot')
+        ->and($body4['data']['recipients'][0]['name'])->toBe('Customer Stop');
+
     // Payload relations override the route variables entirely
     $payload = new Payload();
     $payload->setRawAttributes(['uuid' => 'payload-meta'], true);
