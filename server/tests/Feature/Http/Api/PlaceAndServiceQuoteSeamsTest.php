@@ -397,6 +397,58 @@ test('coordinate-only creation reverse geocodes and array owners resolve', funct
     ])))->toThrow(TypeError::class);
 });
 
+test('address-only creation fills the place from the geocoded result', function () {
+    $connection = fleetopsPlaceSeamsBoot();
+    $address    = Geocoder\Provider\GoogleMaps\Model\GoogleAddress::createFromArray([
+        'providedBy'   => 'google',
+        'latitude'     => 1.29,
+        'longitude'    => 103.85,
+        'streetNumber' => '10',
+        'streetName'   => 'Forward Lane',
+        'locality'     => 'Singapore',
+        'postalCode'   => '018956',
+    ]);
+    $geocoder = new class($address) {
+        public function __construct(private Geocoder\Provider\GoogleMaps\Model\GoogleAddress $address)
+        {
+        }
+
+        public function geocode($query): self
+        {
+            return $this;
+        }
+
+        public function geocodeQuery($query)
+        {
+            return new Geocoder\Model\AddressCollection([$this->address]);
+        }
+
+        public function get()
+        {
+            return collect([$this->address]);
+        }
+    };
+    app()->instance('geocoder', $geocoder);
+    app()->instance('fleetops.geocoder', $geocoder);
+    Geocoder\Laravel\Facades\Geocoder::clearResolvedInstances();
+
+    // No coordinates were submitted, so the address string is geocoded forward and
+    // the resolved address is filled onto the place rather than the (0, 0) default
+    (new PlaceController())->create(CreatePlaceRequest::create('/v1/places', 'POST', [
+        'name'    => 'Forward Geocoded',
+        'street1' => 'Forward Lane',
+        'city'    => 'Singapore',
+    ]));
+
+    $row = $connection->table('places')->where('name', 'Forward Geocoded')->first();
+
+    // Neither field was submitted, so both can only have come from the geocoded
+    // address being filled onto the place
+    expect($row)->not->toBeNull()
+        ->and($row->postal_code)->toBe('018956')
+        ->and($row->building)->toBe('10');
+});
+
 test('updating a place accepts a plain string owner id', function () {
     $connection = fleetopsPlaceSeamsBoot();
     $connection->table('contacts')->insert([

@@ -206,6 +206,21 @@ test('next activity resolves flow steps and missing orders 404', function () {
     expect(collect($decoded)->pluck('code')->all())->toContain('dispatched');
 });
 
+test('next activity errors when the order has no resolvable order config', function () {
+    $connection = fleetopsOrderLifecycleBoot();
+    fleetopsOrderLifecycleSeedOrder($connection, ['order_config_uuid' => null]);
+
+    // Without the order's own config, its company, or a default transport config
+    // for the session company, `ensureOrderConfig()` has nothing left to resolve
+    $connection->table('order_configs')->delete();
+    $connection->table('companies')->delete();
+
+    $response = (new OrderController())->getNextActivity('order_lifecycle', Request::create('/x', 'GET'));
+
+    expect($response)->toBeInstanceOf(JsonResponse::class)
+        ->and($response->getData(true))->toBe(['error' => 'No order config found for order.']);
+});
+
 test('next activity flags proof of delivery on completing activities', function () {
     $connection = fleetopsOrderLifecycleBoot();
     fleetopsOrderLifecycleSeedOrder($connection, ['status' => 'started', 'started' => 1, 'pod_required' => 1, 'pod_method' => 'signature']);

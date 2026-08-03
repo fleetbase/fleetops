@@ -194,8 +194,12 @@ class FleetOpsOrchestrationQueryFake
         $this->calls[] = [$method, $arguments];
 
         foreach ($arguments as $argument) {
-            if ($argument instanceof Closure) {
-                $argument($this);
+            // `with([...])` nests its constraint closures one level down inside the
+            // eager-load map, so descend into array arguments as well
+            foreach ($argument instanceof Closure ? [$argument] : (is_array($argument) ? $argument : []) as $candidate) {
+                if ($candidate instanceof Closure) {
+                    $candidate($this);
+                }
             }
         }
 
@@ -385,12 +389,22 @@ test('orchestration orders endpoint applies workbench filters and caps limits', 
         $controller->orderQuery->calls,
         fn ($call) => $call[0] === 'whereNull'
     ));
+    $withoutCalls = array_values(array_filter(
+        $controller->orderQuery->calls,
+        fn ($call) => $call[0] === 'without'
+    ));
 
     expect($response->getStatusCode())->toBe(200)
         ->and($response->getData(true))->toBe(['orders' => []])
         ->and($methods)->toContain('whereHas', 'whereNotNull', 'orWhereHas', 'with', 'limit', 'get')
         ->and($limitCalls[0][1])->toBe([1000])
-        ->and($whereNullCalls)->toContain(['whereNull', ['vehicle_assigned_uuid']]);
+        ->and($whereNullCalls)->toContain(['whereNull', ['vehicle_assigned_uuid']])
+        // the assigned driver and vehicle are eager loaded with their heavy
+        // relations trimmed off, so the workbench payload stays lean
+        ->and($withoutCalls)->toBe([
+            ['without', [['jobs', 'currentJob']]],
+            ['without', [['fleets', 'vendor']]],
+        ]);
 });
 
 test('orchestration run reports empty criteria and preview delegates to run', function () {

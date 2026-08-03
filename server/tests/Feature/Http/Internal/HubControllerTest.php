@@ -115,6 +115,44 @@ test('internal hub resources builds kpis sections docs and prioritized actions',
         ->and(array_unique($controller->countCalls))->toBe(['company-hub']);
 });
 
+test('internal hub prompts for fleet groups once drivers and vehicles exist without one', function () {
+    fleetopsHubControllerFeatureUseInMemoryRelationConnection();
+
+    // Every other action condition is deliberately unmet, so `create_fleets` is
+    // the only arm that can produce the single returned action
+    $controller = new FleetOpsHubControllerFeatureProbe([
+        2, // drivers
+        3, // vehicles
+        0, // fleets
+        1, // vendors
+        1, // contacts
+        1, // places
+        0, // issues
+        0, // drivers_without_vehicles
+        0, // vehicles_without_drivers
+        0, // vehicles_without_devices
+        0, // unattached_devices
+        0, // resource_issues
+        0, // overdue_vehicle_schedules
+        0, // upcoming_vehicle_schedules
+        0, // open_resource_work_orders
+        0, // overdue_resource_work_orders
+        0, // low_stock_parts
+        0, // unmatched_fuel_transactions
+        1, // fuel_reports
+        1, // fuel_transactions
+    ]);
+
+    $payload = $controller->resources(Request::create('/int/v1/fleet-ops/hubs/resources'))->getData(true);
+
+    expect(array_column($payload['actions'], 'key'))->toBe(['create_fleets'])
+        ->and($payload['actions'][0])->toMatchArray([
+            'label' => 'Create fleet groups',
+            'tone'  => 'info',
+            'route' => 'management.fleets',
+        ]);
+});
+
 test('internal hub maintenance builds kpis sections docs and service actions', function () {
     fleetopsHubControllerFeatureUseInMemoryRelationConnection();
 

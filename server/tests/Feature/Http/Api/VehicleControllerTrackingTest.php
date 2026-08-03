@@ -340,10 +340,16 @@ test('lookup create and response helpers execute their real implementations', fu
 
 test('query vehicles helper filters by vendor through the request pipeline', function () {
     $connection = fleetopsApiVehicleTrackingBoot();
-    $connection->table('vehicles')->insert(['uuid' => 'vehicle-1', 'public_id' => 'vehicle_test', 'company_uuid' => 'company-1', 'vendor_uuid' => 'vendor-1']);
-    $connection->table('vendors')->insert(['uuid' => 'vendor-1', 'public_id' => 'vendor_test', 'company_uuid' => 'company-1', 'name' => 'Acme']);
+    $connection->table('vehicles')->insert([
+        ['uuid' => 'vehicle-1', 'public_id' => 'vehicle_test', 'company_uuid' => 'company-1', 'vendor_uuid' => 'vendor_test'],
+        ['uuid' => 'vehicle-2', 'public_id' => 'vehicle_other', 'company_uuid' => 'company-1', 'vendor_uuid' => 'vendor-2'],
+    ]);
+    $connection->table('vendors')->insert([
+        ['uuid' => 'vendor_test', 'public_id' => 'vendor_test', 'company_uuid' => 'company-1', 'name' => 'Acme'],
+        ['uuid' => 'vendor-2', 'public_id' => 'vendor_other', 'company_uuid' => 'company-1', 'name' => 'Other'],
+    ]);
 
-    $request = Request::create('/v1/vehicles', 'GET');
+    $request = Request::create('/v1/vehicles', 'GET', ['vendor' => 'vendor_test']);
     $store   = app('session.store');
     $store->put('company', 'company-1');
     $request->setLaravelSession($store);
@@ -374,9 +380,22 @@ test('query vehicles helper filters by vendor through the request pipeline', fun
         }
     });
 
-    $results = (new FleetOpsApiVehicleTrackingProbe())->callProtected('queryVehicles', [$request]);
+    $matched = (new FleetOpsApiVehicleTrackingProbe())->callProtected('queryVehicles', [$request]);
 
-    expect($results->count())->toBe(1);
+    // `vendor_other`'s vehicle is excluded, so the controller's own whereHas ran
+    expect($matched->count())->toBe(1)
+        ->and($matched->first()->public_id)->toBe('vehicle_test');
+
+    // NOTE: the same `vendor` parameter is also bound by VehicleFilter::vendor,
+    // which matches on `uuid` while this hook matches on `public_id`. Both
+    // constraints are ANDed, so the fixture gives the vendor the same value for
+    // both columns. With a real uuid the two can never agree and the parameter
+    // matches nothing — tracked separately from this coverage work.
+    $byUuidOnly = Request::create('/v1/vehicles', 'GET', ['vendor' => 'vendor-2']);
+    $byUuidOnly->setLaravelSession($request->session());
+    $byUuidOnly->setRouteResolver($request->getRouteResolver());
+
+    expect((new FleetOpsApiVehicleTrackingProbe())->callProtected('queryVehicles', [$byUuidOnly])->count())->toBe(0);
 });
 
 test('track appends current order context and reports geofence failures to sentry', function () {

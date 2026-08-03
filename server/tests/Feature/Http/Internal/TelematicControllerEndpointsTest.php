@@ -345,6 +345,30 @@ test('logs endpoint merges metadata and activity logs', function () {
         ->and($logs[0]['type'])->toBe('sync_completed');
 });
 
+test('logs endpoint surfaces a failed connection test and scrubs sensitive errors', function () {
+    $connection = fleetopsInternalTelematicBoot();
+    fleetopsInternalTelematicSeed($connection, ['meta' => json_encode([
+        'last_test_result' => 'failed',
+        'last_error'       => 'Provider rejected the API key.',
+    ])]);
+
+    $logs = fleetopsInternalTelematicController()->logs(Request::create('/x', 'GET'), 'telematic_test')->getData(true)['logs'];
+
+    expect($logs[0]['type'])->toBe('connection_test_failed')
+        ->and($logs[0]['status'])->toBe('warning')
+        ->and($logs[0]['description'])->toBe('Provider rejected the API key.');
+
+    // A driver-level error leaks schema details, so the generic fallback stands in
+    $connection->table('telematics')->update(['meta' => json_encode([
+        'last_test_result' => 'failed',
+        'last_error'       => 'SQLSTATE[HY000]: connection refused',
+    ])]);
+
+    $scrubbed = fleetopsInternalTelematicController()->logs(Request::create('/x', 'GET'), 'telematic_test')->getData(true)['logs'];
+
+    expect($scrubbed[0]['description'])->toBe('Connection test failed. Review the provider credentials and try again.');
+});
+
 test('link device endpoint validates input and links through the service', function () {
     $connection = fleetopsInternalTelematicBoot();
     fleetopsInternalTelematicSeed($connection);

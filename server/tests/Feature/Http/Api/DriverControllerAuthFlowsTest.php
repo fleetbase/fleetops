@@ -21,6 +21,22 @@ use Illuminate\Http\Request;
  * forwards unknown methods to the query builder, bypassing Eloquent's
  * relation resolvers.
  */
+/**
+ * Nothing binds `twilio` in the harness, so the core SmsService fails and every
+ * phone login falls back to email. Binding this fake lets the SMS branch run.
+ */
+class FleetOpsDriverAuthTwilioFake
+{
+    public array $messages = [];
+
+    public function message($to, $text, $mediaUrls = [], $params = [])
+    {
+        $this->messages[] = [$to, $text];
+
+        return (object) ['sid' => 'SM-test-sid'];
+    }
+}
+
 class FleetOpsDriverAuthHasherFake implements Illuminate\Contracts\Hashing\Hasher
 {
     public bool $checks = true;
@@ -120,6 +136,9 @@ function fleetopsDriverAuthBoot(): SQLiteConnection
         return $this->hasOne(Driver::class, 'user_uuid', 'uuid')->withoutGlobalScopes();
     });
 
+    app()->forgetInstance('twilio');
+    Illuminate\Support\Facades\Facade::clearResolvedInstance('twilio');
+
     session(['company' => 'company-1']);
 
     $connection->table('users')->insert([
@@ -180,6 +199,22 @@ test('phone login falls back to email verification and errors without channels',
     $connection->table('users')->where('uuid', 'user-1')->update(['email' => null]);
     $noChannel = $controller->loginWithPhone();
     expect($noChannel->getData(true)['error'])->toContain('Unable to send SMS Verification code');
+});
+
+test('phone login reports the sms method when the transport delivers', function () {
+    $connection = fleetopsDriverAuthBoot();
+    $twilio     = new FleetOpsDriverAuthTwilioFake();
+    app()->instance('twilio', $twilio);
+    Fleetbase\Twilio\Support\Laravel\Facade::clearResolvedInstances();
+
+    app()->instance('request', Request::create('/x', 'POST', ['phone' => '6591234567']));
+    $response = (new DriverController())->loginWithPhone();
+
+    // No email fallback is attempted once the SMS itself goes out
+    expect($response->getData(true))->toBe(['status' => 'OK', 'method' => 'sms'])
+        ->and($twilio->messages)->toHaveCount(1)
+        ->and($twilio->messages[0][1])->toContain('Acme verification code is')
+        ->and($connection->table('verification_codes')->where('for', 'driver_login')->count())->toBe(1);
 });
 
 test('code verification handles unknown users invalid codes bypass and success', function () {
