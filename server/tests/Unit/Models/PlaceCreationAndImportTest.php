@@ -231,7 +231,7 @@ function fleetopsPlaceCreationBoot(): SQLiteConnection
 }
 
 test('avatar urls resolve file uuids keys and passthrough values', function () {
-    fleetopsPlaceCreationBoot();
+    $connection = fleetopsPlaceCreationBoot();
 
     $place = new Place();
     $place->setRawAttributes(['avatar_url' => 'https://cdn.example.com/avatar.png'], true);
@@ -243,6 +243,18 @@ test('avatar urls resolve file uuids keys and passthrough values', function () {
     $byUuid->setRawAttributes(['avatar_url' => '99999999-9999-4999-8999-999999999999'], true);
     expect($byUuid->avatar_url)->toBeNull()
         ->and(Place::getAvatar('88888888-8888-4888-8888-888888888888'))->toBeNull();
+
+    // A stored file on a non-local disk hands back its url directly
+    $connection->table('files')->insert([
+        'uuid'         => '77777777-7777-4777-8777-777777777777',
+        'public_id'    => 'file_placeavatar',
+        'company_uuid' => 'company-1',
+        'disk'         => 'public',
+        'path'         => 'uploads/place-avatar.png',
+    ]);
+
+    expect(Place::getAvatar('77777777-7777-4777-8777-777777777777'))
+        ->toBe('https://cdn.example.com/uploads/place-avatar.png');
 });
 
 test('reverse geocoding creation falls back to bare locations', function () {
