@@ -271,12 +271,20 @@ class Utils extends FleetbaseUtils
                 try {
                     $coordinates = Point::fromJson($coordinatesJson);
                 } catch (\Throwable $e) {
+                    // Both fallbacks carry a GeoJSON coordinate value, so they are
+                    // read as GeoJSON first: pointFromGeoJson() maps [lng, lat],
+                    // whereas recursing hands the pair to the positional array
+                    // reader below, which takes index 0 as the latitude. Nested
+                    // values (a Polygon or LineString ring rather than a single
+                    // pair) yield null there and still fall through to it.
                     if ($coordinatesInGeoJson) {
-                        return static::getPointFromMixed($coordinatesInGeoJson);
+                        return static::pointFromGeoJsonCoordinates($coordinatesInGeoJson)
+                            ?? static::getPointFromMixed($coordinatesInGeoJson);
                     }
 
                     if ($coordinatesInGeoJsonFeature) {
-                        return static::getPointFromMixed($coordinatesInGeoJsonFeature);
+                        return static::pointFromGeoJsonCoordinates($coordinatesInGeoJsonFeature)
+                            ?? static::getPointFromMixed($coordinatesInGeoJsonFeature);
                     }
                 }
             }
@@ -699,6 +707,19 @@ class Utils extends FleetbaseUtils
         }
 
         return new Point((float) $latitude, (float) $longitude);
+    }
+
+    /**
+     * Resolve a bare GeoJSON `coordinates` value — an `[longitude, latitude]`
+     * pair — into a Point, without the surrounding envelope.
+     *
+     * Returns null for anything that is not a usable pair, including the nested
+     * rings a Polygon or LineString carries, so callers can fall through to
+     * their own handling.
+     */
+    protected static function pointFromGeoJsonCoordinates($coordinates): ?Point
+    {
+        return static::pointFromGeoJson(['type' => 'Point', 'coordinates' => $coordinates]);
     }
 
     /**
