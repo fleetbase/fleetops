@@ -176,24 +176,6 @@ class Device extends Model
     ];
 
     /**
-     * Bootstrap the model.
-     *
-     * Devices require a non-null spatial `last_position` (the column is NOT NULL
-     * to support its spatial index), so default it to POINT(0,0) on create when
-     * the caller hasn't provided a position.
-     */
-    protected static function boot()
-    {
-        parent::boot();
-
-        static::creating(function (self $device) {
-            if (empty($device->last_position)) {
-                $device->last_position = new SpatialPoint(0, 0);
-            }
-        });
-    }
-
-    /**
      * Properties which activity needs to be logged.
      *
      * @var array
