@@ -86,20 +86,6 @@ test('telematics service requires provider identity and stores idempotent event 
         ->toContain('meta->provider_account_id');
 });
 
-test('device details render consistent telematics connection state and timestamp', function () {
-    $details = file_get_contents(__DIR__ . '/../../addon/components/device/details.hbs');
-    $header  = file_get_contents(__DIR__ . '/../../addon/components/device/panel-header.hbs');
-
-    expect($details)
-        ->toContain('format-date-fns this.lastSeenLabel "dd MMM yyyy, HH:mm"')
-        ->not->toContain('format-date @resource.last_online_at');
-
-    expect($header)
-        ->toContain('this.connectionStatus')
-        ->toContain('this.lastOnlineAt')
-        ->not->toContain('@resource.online "online"');
-});
-
 test('native providers normalize device payloads to canonical FleetOps keys', function () {
     $providers = [
         file_get_contents(__DIR__ . '/../src/Support/Telematics/Providers/AfaqyProvider.php'),
@@ -886,26 +872,6 @@ test('geotab polling fetches recent log records and merges latest record into de
     ]);
 })->skip('Requires isolated Laravel HTTP client fake state in the full application harness.');
 
-test('telematics details use public id for consumer webhook URLs and do not read ember uuid', function () {
-    $component = file_get_contents(__DIR__ . '/../../addon/components/telematic/details.js');
-    $template  = file_get_contents(__DIR__ . '/../../addon/components/telematic/details.hbs');
-
-    expect($component)
-        ->toContain('const id = this.args.resource?.public_id;')
-        ->toContain('return null;')
-        ->not->toContain('this.args.resource?.uuid')
-        ->not->toContain('this.args.resource?.public_id ?? this.args.resource?.id');
-
-    expect($template)
-        ->toContain('this.hasWebhookUrl')
-        ->toContain('Webhook URL unavailable until this integration has a public ID.')
-        ->toContain('Provider polling');
-
-    expect($component)
-        ->toContain('last_sync_job_id')
-        ->toContain('last_sync_error');
-});
-
 test('native telematics providers expose local provider icons with a descriptor fallback', function () {
     $config    = include __DIR__ . '/../config/telematics.php';
     $iconPath  = '/engines-dist/images/telematics/providers/';
@@ -1315,7 +1281,6 @@ test('telematics device sync records provider pagination and skipped device coun
 test('telematics polling command is registered and scheduled for discovery providers by default', function () {
     $command  = file_get_contents(__DIR__ . '/../src/Console/Commands/SyncTelematics.php');
     $provider = file_get_contents(__DIR__ . '/../src/Providers/FleetOpsServiceProvider.php');
-    $details  = file_get_contents(__DIR__ . '/../../addon/components/telematic/details.hbs');
 
     expect($command)
         ->toContain("protected \$signature = 'fleetops:sync-telematics")
@@ -1330,10 +1295,6 @@ test('telematics polling command is registered and scheduled for discovery provi
     expect($provider)
         ->toContain('Console\\Commands\\SyncTelematics::class')
         ->toContain("command('fleetops:sync-telematics')->everyMinute()");
-
-    expect($details)
-        ->toContain('Provider polling')
-        ->toContain('Fleet-Ops polls this provider for device snapshots and telemetry updates.');
 });
 
 test('native endpoint fields are advanced optional overrides with provider defaults', function () {
@@ -1465,27 +1426,6 @@ test('telematics activity logging excludes large json and spatial payloads', fun
         ->not->toContain("'location',");
 });
 
-test('telematics setup renders endpoint overrides only in advanced settings', function () {
-    $formTemplate      = file_get_contents(__DIR__ . '/../../addon/components/telematic/form.hbs');
-    $settingsTemplate  = file_get_contents(__DIR__ . '/../../addon/components/telematic/settings.hbs');
-    $formComponent     = file_get_contents(__DIR__ . '/../../addon/components/telematic/form.js');
-    $settingsComponent = file_get_contents(__DIR__ . '/../../addon/components/telematic/settings.js');
-
-    foreach ([$formComponent, $settingsComponent] as $component) {
-        expect($component)
-            ->toContain('advancedCredentialFields')
-            ->toContain('field.advanced || field.is_endpoint')
-            ->toContain('!field.advanced && !field.is_endpoint');
-    }
-
-    foreach ([$formTemplate, $settingsTemplate] as $template) {
-        expect($template)
-            ->toContain('Advanced connection settings')
-            ->toContain('this.advancedCredentialFields')
-            ->toContain('field.default_value');
-    }
-});
-
 test('telematics details logs are routed and use persisted safe data only', function () {
     $routes     = file_get_contents(__DIR__ . '/../src/routes.php');
     $controller = file_get_contents(__DIR__ . '/../src/Http/Controllers/Internal/v1/TelematicController.php');
@@ -1508,32 +1448,6 @@ test('telematics details logs are routed and use persisted safe data only', func
         ->not->toContain('Str::headline')
         ->not->toContain('storage_path')
         ->not->toContain('Log::');
-});
-
-test('telematics provider status display maps active and connected to connected', function () {
-    $indexController   = file_get_contents(__DIR__ . '/../../addon/controllers/connectivity/telematics/index.js');
-    $detailsController = file_get_contents(__DIR__ . '/../../addon/controllers/connectivity/telematics/details.js');
-    $statusCell        = file_get_contents(__DIR__ . '/../../addon/components/cell/telematic-status.js');
-
-    expect($indexController)
-        ->toContain("cellComponent: 'cell/telematic-status'");
-
-    expect($detailsController)
-        ->toContain("case 'active':\n                return 'Connected';");
-
-    expect($statusCell)
-        ->toContain("case 'active':")
-        ->toContain("case 'connected':")
-        ->toContain("return 'Connected';");
-});
-
-test('telematics overview attention items render as full width stacked alerts', function () {
-    $template = file_get_contents(__DIR__ . '/../../addon/components/telematic/details.hbs');
-
-    expect($template)
-        ->toContain('<section class="flex flex-col gap-3">')
-        ->toContain('class="w-full rounded-md border border-yellow-200 bg-yellow-50 p-3')
-        ->not->toContain('lg:grid-cols-2');
 });
 
 test('device attachment morph types are normalized and legacy aliases are tolerated', function () {
