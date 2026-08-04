@@ -118,15 +118,10 @@ class FleetOpsServiceProvider extends CoreServiceProvider
             fn () => new \Fleetbase\FleetOps\Tracking\TrackingProviderRegistry()
         );
 
-<<<<<<< Updated upstream
         // Register the fuel provider registry as a singleton so FleetOps core
         // and third-party extensions can share fuel card and fuel billing
         // providers. Extensions can register providers from their own service
         // providers with callAfterResolving(FuelProviderRegistry::class, ...).
-=======
-        // Register native fuel provider registry for PetroApp and future
-        // provider adapters.
->>>>>>> Stashed changes
         $this->app->singleton(
             \Fleetbase\FleetOps\Support\FuelProviders\FuelProviderRegistry::class,
             fn () => new \Fleetbase\FleetOps\Support\FuelProviders\FuelProviderRegistry()

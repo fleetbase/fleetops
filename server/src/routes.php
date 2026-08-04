@@ -774,19 +774,17 @@ Route::prefix(config('fleetops.api.routing.prefix'))->namespace('Fleetbase\Fleet
     }
 );
 
-if (filled(config('fleetops.api.routing.prefix'))) {
-    Route::prefix(config('fleetops.api.routing.internal_prefix', 'int') . '/v1')
-        ->namespace('Fleetbase\FleetOps\Http\Controllers\Internal\v1')
-        ->middleware([
-            'fleetbase.protected',
-            Fleetbase\FleetOps\Http\Middleware\TransformLocationMiddleware::class,
-            Fleetbase\FleetOps\Http\Middleware\SetupDriverSession::class,
-        ])
-        ->group(function ($router) {
-            $router->get('issues/{id}/timeline', 'IssueController@timeline');
-            $router->get('vendors/{id}/personnels', 'VendorController@vendorPersonnels');
-            $router->post('vendors/{id}/personnels', 'VendorController@addVendorPersonnel');
-            $router->delete('vendors/{id}/personnels/{contact}', 'VendorController@removeVendorPersonnel');
-            $router->post('contacts/{id}/convert-to-vendor', 'ContactController@convertToVendor');
-        });
-}
+Route::prefix(config('fleetops.api.routing.internal_prefix', 'int') . '/v1')
+    ->namespace('Fleetbase\FleetOps\Http\Controllers\Internal\v1')
+    ->middleware([
+        'fleetbase.protected',
+        Fleetbase\FleetOps\Http\Middleware\TransformLocationMiddleware::class,
+        Fleetbase\FleetOps\Http\Middleware\SetupDriverSession::class,
+    ])
+    ->group(function ($router) {
+        $router->get('issues/{id}/timeline', 'IssueController@timeline');
+        $router->get('vendors/{id}/personnels', 'VendorController@vendorPersonnels');
+        $router->post('vendors/{id}/personnels', 'VendorController@addVendorPersonnel');
+        $router->delete('vendors/{id}/personnels/{contact}', 'VendorController@removeVendorPersonnel');
+        $router->post('contacts/{id}/convert-to-vendor', 'ContactController@convertToVendor');
+    });
