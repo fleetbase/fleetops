@@ -605,7 +605,8 @@ class DriverController extends FleetOpsController
      */
     public function registerDevice(Request $request)
     {
-        return app(ApiDriverController::class)->registerDevice($request);
+        // The public controller resolves the driver from the request when no id is given.
+        return app(ApiDriverController::class)->registerDevice(null, $request);
     }
 
     /**

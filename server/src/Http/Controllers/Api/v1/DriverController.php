@@ -436,10 +436,13 @@ class DriverController extends Controller
      *
      * @return \Illuminate\Http\Response
      */
-    public function registerDevice(string $id, Request $request)
+    public function registerDevice(?string $id = null, ?Request $request = null)
     {
         try {
-            $driver = $this->findDriver($id);
+            // With an id (…/{id}/register-device) look the driver up directly; without
+            // one (…/register-device and the internal delegation) resolve the driver
+            // from the authenticated user.
+            $driver = $id ? $this->findDriver($id) : $this->currentDriver($request);
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $exception) {
             return $this->jsonResponse(
                 [
@@ -947,6 +950,17 @@ class DriverController extends Controller
     protected function findDriver(string $id, array $with = []): Driver
     {
         return Driver::findRecordOrFail($id, $with);
+    }
+
+    /**
+     * Resolve the driver for the authenticated request (used when no explicit
+     * driver id is supplied, e.g. a driver-authenticated session).
+     *
+     * @throws \Illuminate\Database\Eloquent\ModelNotFoundException
+     */
+    protected function currentDriver(?Request $request): Driver
+    {
+        return Driver::where('user_uuid', optional(optional($request)->user())->uuid)->firstOrFail();
     }
 
     protected function queryDrivers(Request $request)
