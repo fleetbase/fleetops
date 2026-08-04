@@ -113,6 +113,17 @@ class FleetOpsApiDriverControllerProbe extends DriverController
         return $this->driver;
     }
 
+    protected function currentDriver(?Request $request): Driver
+    {
+        $this->findCalls[] = ['current', $request];
+
+        if ($this->driverNotFound) {
+            throw new ModelNotFoundException();
+        }
+
+        return $this->driver ??= new FleetOpsApiDriverFake();
+    }
+
     protected function queryDrivers(Request $request)
     {
         return $this->queryResults ?? [['uuid' => 'driver-uuid']];
@@ -517,6 +528,28 @@ test('api driver controller registers devices and validates required inputs', fu
         ]);
 });
 
+test('api driver controller registers a device for the authenticated driver without an id', function () {
+    $driver = new FleetOpsApiDriverFake();
+    $driver->setRawAttributes([
+        'uuid'      => 'driver-uuid',
+        'public_id' => 'driver_public',
+        'user_uuid' => 'user-uuid',
+    ], true);
+
+    $controller         = new FleetOpsApiDriverControllerProbe();
+    $controller->driver = $driver;
+
+    $response = $controller->registerDevice(null, new FleetOpsApiDriverRegisterDeviceRequest([
+        'token'    => 'push-token',
+        'platform' => 'ios',
+    ]));
+
+    expect($response)->toBe([
+        'json'   => ['device' => 'device_public'],
+        'status' => 200,
+    ]);
+});
+
 test('api driver controller reports missing driver branches', function () {
     $controller                 = new FleetOpsApiDriverControllerProbe();
     $controller->driverNotFound = true;
@@ -530,6 +563,7 @@ test('api driver controller reports missing driver branches', function () {
         ->and($controller->delete('missing-driver', new Request()))->toBe($json404)
         ->and($controller->toggleOnline('missing-driver', new Request()))->toBe($json404)
         ->and($controller->registerDevice('missing-driver', new FleetOpsApiDriverRegisterDeviceRequest()))->toBe($json404)
+        ->and($controller->registerDevice(null, new FleetOpsApiDriverRegisterDeviceRequest()))->toBe($json404)
         ->and($controller->track('missing-driver', new Request(['latitude' => 1, 'longitude' => 2])))->toBe([
             'apiError' => 'Driver resource not found.',
             'status'   => 404,
