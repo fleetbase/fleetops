@@ -410,3 +410,42 @@ test('token persistence failures are reported to sentry', function () {
 
     app()->forgetInstance('sentry');
 });
+
+test('current driver resolves the authenticated users driver profile', function () {
+    $connection = fleetopsDriverAuthBoot();
+    $connection->table('users')->insert(['uuid' => 'user-current-1', 'public_id' => 'user_current1', 'company_uuid' => 'company-1', 'name' => 'Current Driver', 'email' => 'current@example.test', 'type' => 'driver']);
+    $connection->table('drivers')->insert(['uuid' => 'driver-current-1', 'public_id' => 'driver_current1', 'company_uuid' => 'company-1', 'user_uuid' => 'user-current-1']);
+
+    // registerDevice without an id resolves the driver from the request user
+    // rather than a route parameter, so exercise the real seam here — the
+    // contract probe overrides it and never runs this body
+    $currentDriver = new ReflectionMethod(DriverController::class, 'currentDriver');
+    $currentDriver->setAccessible(true);
+
+    $request = Request::create('/v1/drivers/register-device', 'POST');
+    $request->setUserResolver(fn () => $connection->table('users')->where('uuid', 'user-current-1')->first());
+
+    $resolved = $currentDriver->invoke(new DriverController(), $request);
+
+    expect($resolved)->toBeInstanceOf(Driver::class)
+        ->and($resolved->uuid)->toBe('driver-current-1');
+});
+
+test('current driver fails when the request has no matching driver', function () {
+    fleetopsDriverAuthBoot();
+
+    $currentDriver = new ReflectionMethod(DriverController::class, 'currentDriver');
+    $currentDriver->setAccessible(true);
+
+    // A request with no authenticated user resolves no driver, which the
+    // caller turns into a not-found response instead of a 500
+    $failure = null;
+
+    try {
+        $currentDriver->invoke(new DriverController(), Request::create('/v1/drivers/register-device', 'POST'));
+    } catch (Illuminate\Database\Eloquent\ModelNotFoundException $exception) {
+        $failure = $exception;
+    }
+
+    expect($failure)->toBeInstanceOf(Illuminate\Database\Eloquent\ModelNotFoundException::class);
+});

@@ -343,6 +343,30 @@ test('phone conflicts adopt existing organization members as drivers', function 
         ->and($connection->table('drivers')->value('company_uuid'))->toBe('company-1');
 });
 
+test('phone conflicts assign non members to the session company', function () {
+    $connection = fleetopsDriverAdoptionBoot(['phone' => ['The phone has already been taken.']]);
+
+    // Same conflict as above, but with no company_users row the user is not yet
+    // an organization member, so adoption must also attach them to the company
+    $connection->table('users')->insert(['uuid' => '11111111-1111-4111-8111-111111111112', 'name' => 'Outsider', 'phone' => '+6591234568', 'slug' => 'outsider', 'type' => 'driver']);
+
+    expect($connection->table('company_users')->count())->toBe(0);
+
+    $result = (new DriverController())->createRecord(fleetopsDriverAdoptionRequest([
+        'name'  => 'Outsider',
+        'phone' => '+6591234568',
+    ]));
+
+    expect($result)->toBeArray()
+        ->and($result['driver']->resource->user_uuid)->toBe('11111111-1111-4111-8111-111111111112')
+        ->and($connection->table('drivers')->count())->toBe(1)
+        // the assignCompany branch ran: the user is now a member of company-1
+        ->and($connection->table('company_users')->where([
+            'company_uuid' => 'company-1',
+            'user_uuid'    => '11111111-1111-4111-8111-111111111112',
+        ])->count())->toBe(1);
+});
+
 test('email conflicts return the existing driver profile when present', function () {
     $connection = fleetopsDriverAdoptionBoot(['email' => ['The email has already been taken.']]);
     $connection->table('users')->insert(['uuid' => '11111111-1111-4111-8111-111111111111', 'company_uuid' => 'company-1', 'name' => 'Member', 'email' => 'member@example.com', 'type' => 'driver']);

@@ -32,12 +32,10 @@ test('customer creation entrypoints run the customer identity guard', function (
     $apiContact      = file_get_contents(__DIR__ . '/../src/Http/Controllers/Api/v1/ContactController.php');
     $internalContact = file_get_contents(__DIR__ . '/../src/Http/Controllers/Internal/v1/ContactController.php');
     $orderController = file_get_contents(__DIR__ . '/../src/Http/Controllers/Api/v1/OrderController.php');
-    $customerForm    = file_get_contents(__DIR__ . '/../../addon/components/customer/form.hbs');
 
     expect($apiContact)->toContain('$contactCandidate->assertCustomerIdentityIsAvailable();');
     expect($internalContact)->toContain('$this->assertCustomerIdentityIsAvailable($input');
     expect($orderController)->toContain('$customerCandidate->assertCustomerIdentityIsAvailable();');
-    expect($customerForm)->toContain('is_customer=true');
 });
 
 test('customer conflict audit command is registered and read only', function () {

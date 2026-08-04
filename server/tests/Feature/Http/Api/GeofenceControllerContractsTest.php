@@ -110,10 +110,17 @@ class FleetOpsGeofenceTableQueryFake
         return $this;
     }
 
-    public function leftJoin(string $table, Closure $callback): self
+    public function leftJoin(string $table, Closure|string $first, ?string $operator = null, ?string $second = null): self
     {
+        // The builder accepts either a join closure or the plain column form.
+        if (!$first instanceof Closure) {
+            $this->calls[] = ['leftJoin', $table, $first, $operator, $second];
+
+            return $this;
+        }
+
         $join = new FleetOpsGeofenceJoinFake();
-        $callback($join);
+        $first($join);
         $this->calls[] = ['leftJoin', $table, $join->calls];
 
         return $this;

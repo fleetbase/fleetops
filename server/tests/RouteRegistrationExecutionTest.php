@@ -23,6 +23,13 @@ class FleetOpsRouteRecorder
         return $this;
     }
 
+    public function middleware(array|string $middleware): self
+    {
+        $this->pending['middleware'] = $middleware;
+
+        return $this;
+    }
+
     public function group(array|callable $attributes, ?callable $callback = null): self
     {
         if (is_callable($attributes) && $callback === null) {
