@@ -419,6 +419,15 @@ Route::prefix(config('fleetops.api.routing.prefix'))->namespace('Fleetbase\Fleet
                                 $router->post('{id}/review', $controller('review'));
                             }
                         );
+                        $router->fleetbaseRoutes(
+                            'fuel-provider-connections',
+                            function ($router, $controller) {
+                                $router->get('providers', $controller('providers'));
+                                $router->post('{id}/test-connection', $controller('testConnection'));
+                                $router->post('{id}/sync', $controller('sync'));
+                            }
+                        );
+                        $router->fleetbaseRoutes('fuel-provider-transactions');
                         $router->get('issues/{id}/timeline', 'IssueController@timeline');
                         $router->fleetbaseRoutes(
                             'issues',
