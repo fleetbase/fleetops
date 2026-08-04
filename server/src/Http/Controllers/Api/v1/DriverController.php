@@ -436,10 +436,27 @@ class DriverController extends Controller
      *
      * @return \Illuminate\Http\Response
      */
-    public function registerDevice(string $id, Request $request)
+    public function registerDevice(Request $request, ?string $id = null)
     {
         try {
-            $driver = $this->findDriver($id);
+            if ($id) {
+                $driver = $this->findDriver($id);
+            } else {
+                // No driver id in the route (the `register-device` route and the
+                // internal delegation both call this without one): resolve the driver
+                // from the authenticated user (e.g. a driver-authenticated session).
+                $user   = $request->user();
+                $driver = $user ? Driver::where('user_uuid', $user->uuid)->first() : null;
+
+                if (!$driver) {
+                    return $this->jsonResponse(
+                        [
+                            'error' => 'Driver resource not found.',
+                        ],
+                        404
+                    );
+                }
+            }
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $exception) {
             return $this->jsonResponse(
                 [

@@ -88,6 +88,8 @@ class GeofenceController extends Controller
 
         $driverStates = $this->table('driver_geofence_states as dgs')
             ->join('drivers as d', 'd.uuid', '=', 'dgs.driver_uuid')
+            // A driver's name lives on the related user record, not the drivers table.
+            ->leftJoin('users as u', 'u.uuid', '=', 'd.user_uuid')
             ->leftJoin('zones as z', function ($join) {
                 $join->on('z.uuid', '=', 'dgs.geofence_uuid')
                      ->where('dgs.geofence_type', '=', 'zone');
@@ -103,9 +105,9 @@ class GeofenceController extends Controller
                 $this->raw("'driver' as subject_type"),
                 'd.public_id as subject_id',
                 'd.uuid as subject_uuid',
-                'd.name as subject_name',
+                'u.name as subject_name',
                 'dgs.driver_uuid',
-                'd.name as driver_name',
+                'u.name as driver_name',
                 'dgs.entered_at',
                 'dgs.geofence_uuid',
                 $this->raw('COALESCE(z.name, sa.name) as geofence_name'),
