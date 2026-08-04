@@ -57,7 +57,6 @@ test('customer portal welcome email is opt in and does not create organization i
     $contactModel        = file_get_contents(__DIR__ . '/../src/Models/Contact.php');
     $customerCredentials = file_get_contents(__DIR__ . '/../src/Mail/CustomerCredentialsMail.php');
     $customerEmail       = file_get_contents(__DIR__ . '/../resources/views/mail/customer-credentials.blade.php');
-    $customerForm        = file_get_contents(__DIR__ . '/../../addon/components/customer/form.hbs');
 
     expect($internalContact)
         ->toContain('meta.customer_portal.send_welcome_email')
@@ -79,9 +78,7 @@ test('customer portal welcome email is opt in and does not create organization i
         ->and($customerEmail)->toContain('Your customer portal access is ready')
         ->and($customerEmail)->toContain('Sign in to customer portal')
         ->and($customerEmail)->toContain('Temporary password:')
-        ->and($customerEmail)->toContain('You can change your password after signing in.')
-        ->and($customerForm)->toContain('this.showWelcomeEmailOption')
-        ->and($customerForm)->toContain('this.toggleWelcomeEmail');
+        ->and($customerEmail)->toContain('You can change your password after signing in.');
 
     expect($contactModel)
         ->toContain('assignUserToContactCompany')

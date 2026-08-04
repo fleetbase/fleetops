@@ -46,4 +46,29 @@ module('Integration | Component | device/details', function (hooks) {
         assert.dom().includesText('Geotab');
         assert.dom().includesText('Online');
     });
+
+    test('it renders the last seen timestamp in the shared telematics format', async function (assert) {
+        this.set('device', {
+            displayName: 'Gateway 101',
+            connection_status: 'online',
+            device_id: 'VG-101',
+            last_online_at: new Date(2026, 5, 18, 15, 28),
+        });
+
+        await render(hbs`<Device::Details @resource={{this.device}} />`);
+
+        assert.dom().includesText('Last seen: 18 Jun 2026, 15:28');
+    });
+
+    test('it renders a placeholder when the device has never reported', async function (assert) {
+        this.set('device', {
+            displayName: 'Gateway 101',
+            connection_status: 'never_connected',
+            device_id: 'VG-101',
+        });
+
+        await render(hbs`<Device::Details @resource={{this.device}} />`);
+
+        assert.dom().includesText('Last seen: -');
+    });
 });
