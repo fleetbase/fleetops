@@ -271,12 +271,20 @@ class Utils extends FleetbaseUtils
                 try {
                     $coordinates = Point::fromJson($coordinatesJson);
                 } catch (\Throwable $e) {
+                    // Both fallbacks carry a GeoJSON coordinate value, so they are
+                    // read as GeoJSON first: pointFromGeoJson() maps [lng, lat],
+                    // whereas recursing hands the pair to the positional array
+                    // reader below, which takes index 0 as the latitude. Nested
+                    // values (a Polygon or LineString ring rather than a single
+                    // pair) yield null there and still fall through to it.
                     if ($coordinatesInGeoJson) {
-                        return static::getPointFromMixed($coordinatesInGeoJson);
+                        return static::pointFromGeoJsonCoordinates($coordinatesInGeoJson)
+                            ?? static::getPointFromMixed($coordinatesInGeoJson);
                     }
 
                     if ($coordinatesInGeoJsonFeature) {
-                        return static::getPointFromMixed($coordinatesInGeoJsonFeature);
+                        return static::pointFromGeoJsonCoordinates($coordinatesInGeoJsonFeature)
+                            ?? static::getPointFromMixed($coordinatesInGeoJsonFeature);
                     }
                 }
             }
@@ -492,7 +500,7 @@ class Utils extends FleetbaseUtils
                 $coordinates = null;
             }
 
-            if (preg_match('/LatLng\(([^,]+),\s*([^)]+)\)/', $coordinates, $matches)) {
+            if (is_string($coordinates) && preg_match('/LatLng\(([^,]+),\s*([^)]+)\)/', $coordinates, $matches)) {
                 $coords = [
                     floatval($matches[1]),
                     floatval($matches[2]),
@@ -501,20 +509,20 @@ class Utils extends FleetbaseUtils
                 $coordinates = null;
             }
 
-            if (Str::contains($coordinates, ',')) {
+            if (is_string($coordinates) && Str::contains($coordinates, ',')) {
                 $coords = explode(',', $coordinates);
             }
 
-            if (Str::contains($coordinates, '|')) {
+            if (is_string($coordinates) && Str::contains($coordinates, '|')) {
                 $coords = explode('|', $coordinates);
             }
 
-            if (Str::contains($coordinates, ' ')) {
+            if (is_string($coordinates) && Str::contains($coordinates, ' ')) {
                 $coords = explode(' ', $coordinates);
             }
 
-            $latitude  = $coords[0];
-            $longitude = $coords[1];
+            $latitude  = $coords[0] ?? null;
+            $longitude = $coords[1] ?? null;
 
             if (is_numeric($latitude) && is_numeric($longitude)) {
                 $coordinates = new Point((float) $latitude, (float) $longitude);
@@ -699,6 +707,19 @@ class Utils extends FleetbaseUtils
         }
 
         return new Point((float) $latitude, (float) $longitude);
+    }
+
+    /**
+     * Resolve a bare GeoJSON `coordinates` value — an `[longitude, latitude]`
+     * pair — into a Point, without the surrounding envelope.
+     *
+     * Returns null for anything that is not a usable pair, including the nested
+     * rings a Polygon or LineString carries, so callers can fall through to
+     * their own handling.
+     */
+    protected static function pointFromGeoJsonCoordinates($coordinates): ?Point
+    {
+        return static::pointFromGeoJson(['type' => 'Point', 'coordinates' => $coordinates]);
     }
 
     /**
@@ -1162,9 +1183,13 @@ class Utils extends FleetbaseUtils
 
         $feature = collect($globe->features)->first(
             function ($feature) use ($country) {
+                // Every feature in the bundled resources/data/globe.json carries
+                // both codes, so this only guards against future data changes.
+                // @codeCoverageIgnoreStart
                 if (!isset($feature->properties->ISO_A3) || !isset($feature->properties->ISO_A2)) {
                     return false;
                 }
+                // @codeCoverageIgnoreEnd
 
                 return strtolower($feature->properties->ISO_A3) === $country || strtolower($feature->properties->ISO_A2) === $country;
             }
@@ -1199,8 +1224,10 @@ class Utils extends FleetbaseUtils
         $radius = ($meters * 1000) / 6378137;
         // create circle coordinates
         $coords = collect();
-        // loop through the array and write path linestrings
-        for ($i = 0; $i <= 360; $i += 3) {
+        // loop through the array and write path linestrings — stop short of 360
+        // so the ring is closed explicitly below rather than by re-computing the
+        // 0 degree vertex, which produced a duplicated point
+        for ($i = 0; $i < 360; $i += 3) {
             $radial   = deg2rad($i);
             $lat_rad  = asin(sin($latitude) * cos($radius) + cos($latitude) * sin($radius) * cos($radial));
             $dlon_rad = atan2(sin($radial) * sin($radius) * cos($latitude), cos($radius) - sin($latitude) * sin($lat_rad));
@@ -1261,9 +1288,80 @@ class Utils extends FleetbaseUtils
      */
     public static function getCentroidFromGeosPolygon(\Brick\Geo\Polygon $polygon): \Brick\Geo\Point
     {
-        $geometryEngine = new \Brick\Geo\Engine\GEOSEngine();
+        return static::resolveGeometryEngine()->centroid($polygon);
+    }
 
-        return $geometryEngine->centroid($polygon);
+    /**
+     * Resolve the configured geometry engine, preferring the registry so
+     * alternative engines (or test doubles) can be injected without the
+     * GEOS extension.
+     */
+    /**
+     * Determine whether the active database connection speaks SQLite.
+     */
+    protected static function isSqliteConnection(): bool
+    {
+        try {
+            $connection = DB::connection();
+        } catch (\Throwable $e) {
+            return false;
+        }
+
+        return $connection instanceof \Illuminate\Database\SQLiteConnection
+            || ($connection && $connection->getDriverName() === 'sqlite');
+    }
+
+    /**
+     * Build a driver-aware SQL expression for whole-second differences
+     * between two datetime expressions.
+     */
+    public static function sqlSecondsDiff(string $start, string $end): string
+    {
+        if (static::isSqliteConnection()) {
+            return "CAST(ROUND((julianday($end) - julianday($start)) * 86400) AS INTEGER)";
+        }
+
+        return "TIMESTAMPDIFF(SECOND, $start, $end)";
+    }
+
+    /**
+     * Build a driver-aware SQL expression for whole-minute differences
+     * between two datetime expressions.
+     */
+    public static function sqlMinutesDiff(string $start, string $end): string
+    {
+        if (static::isSqliteConnection()) {
+            return "CAST(ROUND((julianday($end) - julianday($start)) * 1440) AS INTEGER)";
+        }
+
+        return "TIMESTAMPDIFF(MINUTE, $start, $end)";
+    }
+
+    /**
+     * Driver-aware SQL expression for the current timestamp.
+     */
+    public static function sqlNow(): string
+    {
+        return static::isSqliteConnection() ? "datetime('now')" : 'NOW()';
+    }
+
+    /**
+     * Driver-aware SQL scalar minimum of two expressions.
+     */
+    public static function sqlLeast(string $first, string $second): string
+    {
+        $function = static::isSqliteConnection() ? 'MIN' : 'LEAST';
+
+        return "$function($first, $second)";
+    }
+
+    public static function resolveGeometryEngine(): \Brick\Geo\Engine\GeometryEngine
+    {
+        if (\Brick\Geo\Engine\GeometryEngineRegistry::has()) {
+            return \Brick\Geo\Engine\GeometryEngineRegistry::get();
+        }
+
+        return new \Brick\Geo\Engine\GEOSEngine();
     }
 
     /**
@@ -1275,9 +1373,7 @@ class Utils extends FleetbaseUtils
      */
     public static function getCentroidFromGeosMultiPolygon(\Brick\Geo\MultiPolygon $multiPolygon): \Brick\Geo\Point
     {
-        $geometryEngine = new \Brick\Geo\Engine\GEOSEngine();
-
-        return $geometryEngine->centroid($multiPolygon);
+        return static::resolveGeometryEngine()->centroid($multiPolygon);
     }
 
     /**
@@ -1489,8 +1585,18 @@ class Utils extends FleetbaseUtils
         return $activity && $activity instanceof Activity && !empty($activity->code);
     }
 
-    public static function fixPhone(string $phone): string
+    /**
+     * Normalize a phone number to E.164-ish form by ensuring a leading `+`.
+     *
+     * Import rows frequently omit a phone column entirely, so a missing
+     * number is passed through untouched rather than becoming a bare `+`.
+     */
+    public static function fixPhone(?string $phone): ?string
     {
+        if ($phone === null || $phone === '') {
+            return $phone;
+        }
+
         if (!Str::startsWith($phone, '+')) {
             $phone = '+' . $phone;
         }

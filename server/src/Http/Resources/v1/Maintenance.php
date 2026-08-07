@@ -128,11 +128,10 @@ class Maintenance extends FleetbaseResource
             return null;
         }
 
+        // Find::httpResourceForModel() always resolves a class, falling back to
+        // FleetbaseResource, so there is no un-resolvable case to handle here
         $resourceClass = \Fleetbase\Support\Find::httpResourceForModel($model);
-        if ($resourceClass) {
-            return (new $resourceClass($model))->resolve();
-        }
 
-        return (new \Illuminate\Http\Resources\Json\JsonResource($model))->resolve();
+        return (new $resourceClass($model))->resolve();
     }
 }

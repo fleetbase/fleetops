@@ -37,13 +37,13 @@ class FixLegacyOrderConfigs extends Command
     {
         $shouldCreateConfigs = $this->option('create-configs');
         if ($shouldCreateConfigs) {
-            $companies      = Company::all();
+            $companies      = $this->companies();
             $totalCompanies = $companies->count();
             $this->info('Initializing transport config for ' . $totalCompanies . ' companies.');
-            $progressBar = $this->output->createProgressBar($totalCompanies);
+            $progressBar = $this->createProgressBar($totalCompanies);
             $progressBar->start();
             foreach ($companies as $company) {
-                FleetOps::createTransportConfig($company);
+                $this->createTransportConfig($company);
                 $progressBar->advance();
             }
             $progressBar->finish();
@@ -51,14 +51,14 @@ class FixLegacyOrderConfigs extends Command
             $this->info('All transport configs created.');
         }
 
-        $orders      = Order::whereNull('order_config_uuid')->get();
+        $orders      = $this->ordersWithoutConfig();
         $totalOrders = $orders->count();
         $this->info($totalOrders . ' orders found for updating.');
-        $progressBar = $this->output->createProgressBar($totalOrders);
+        $progressBar = $this->createProgressBar($totalOrders);
         $progressBar->start();
         foreach ($orders as $order) {
             try {
-                $orderConfig = OrderConfig::where(['company_uuid' => $order->company_uuid, 'namespace' => 'system:order-config:transport'])->first();
+                $orderConfig = $this->transportConfigForCompany($order->company_uuid);
                 if ($orderConfig) {
                     $order->update(['order_config_uuid' => $orderConfig->uuid]);
                 }
@@ -74,5 +74,30 @@ class FixLegacyOrderConfigs extends Command
         $progressBar->finish();
         $this->line('');
         $this->info('All orders have been processed.');
+    }
+
+    protected function companies()
+    {
+        return Company::all();
+    }
+
+    protected function createTransportConfig(Company $company): void
+    {
+        FleetOps::createTransportConfig($company);
+    }
+
+    protected function ordersWithoutConfig()
+    {
+        return Order::whereNull('order_config_uuid')->get();
+    }
+
+    protected function transportConfigForCompany(string $companyUuid): ?OrderConfig
+    {
+        return OrderConfig::where(['company_uuid' => $companyUuid, 'namespace' => 'system:order-config:transport'])->first();
+    }
+
+    protected function createProgressBar(int $total)
+    {
+        return $this->output->createProgressBar($total);
     }
 }

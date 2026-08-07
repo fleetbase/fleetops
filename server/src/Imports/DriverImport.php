@@ -24,8 +24,17 @@ class DriverImport implements ToCollection, WithHeadingRow
                 $row = array_filter($row->toArray());
             }
 
-            Driver::createFromImport($row, true);
+            if (empty($row)) {
+                continue;
+            }
+
+            $this->createFromImport($row);
             $this->imported++;
         }
+    }
+
+    protected function createFromImport(array $row): void
+    {
+        Driver::createFromImport($row, true);
     }
 }

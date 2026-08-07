@@ -24,17 +24,32 @@ class HandleOrderCanceled implements ShouldQueue
         /** @var \Fleetbase\FleetOps\Models\Order $order */
         $order    = $event->getModelRecord();
         if ($order->isIntegratedVendorOrder()) {
-            $order->facilitator->provider()->callback('onCanceled', $order);
+            $this->notifyIntegratedVendorCanceled($order);
         }
 
         // Notify driver assigned order was canceled
         if ($order->hasDriverAssigned) {
             /** @var \Fleetbase\Models\Driver */
-            $driver = Driver::where('uuid', $order->driver_assigned_uuid)->withoutGlobalScopes()->first();
+            $driver = $this->findAssignedDriver($order);
 
             if ($driver) {
-                $driver->notify(new OrderCanceledNotification($order));
+                $this->notifyAssignedDriver($driver, $order);
             }
         }
+    }
+
+    protected function notifyIntegratedVendorCanceled($order): void
+    {
+        $order->facilitator->provider()->callback('onCanceled', $order);
+    }
+
+    protected function findAssignedDriver($order): ?Driver
+    {
+        return Driver::where('uuid', $order->driver_assigned_uuid)->withoutGlobalScopes()->first();
+    }
+
+    protected function notifyAssignedDriver(Driver $driver, $order): void
+    {
+        $driver->notify(new OrderCanceledNotification($order));
     }
 }

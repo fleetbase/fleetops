@@ -691,6 +691,7 @@ order:
     order-metadata: Метаданные заказа
     order-label: Этикетка заказа
     waypoint-label: Этикетка промежуточной точки
+    entity-label: Этикетка сущности
     current-eta: Текущее время прибытия
     ect: Ожидаемое время прибытия
     current-destination: Текущее место назначения
@@ -707,6 +708,7 @@ order:
     no-driver-assigned-error: К этому заказу не назначен водитель.
     failed-to-load-order-label: Не удалось загрузить метку заказа.
     failed-to-load-waypoint-label: Не удалось загрузить метку контрольной точки.
+    failed-to-load-entity-label: Не удалось загрузить метку сущности.
     unable-to-add-entity: Невозможно добавить новый объект в заказ.
     assign-driver-success: Водитель ({driverName}) был назначен на заказ {orderId}.
     cancel-title: Вы уверены, что хотите отменить этот заказ?

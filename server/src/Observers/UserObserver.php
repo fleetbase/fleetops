@@ -15,6 +15,11 @@ class UserObserver
     public function deleted(User $user)
     {
         // if the user deleted is a driver, delete their driver record to
-        Driver::where('user_uuid', $user->uuid)->delete();
+        $this->deleteDrivers($user->uuid);
+    }
+
+    protected function deleteDrivers(string $userUuid): void
+    {
+        Driver::where('user_uuid', $userUuid)->delete();
     }
 }

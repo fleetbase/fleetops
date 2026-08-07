@@ -34,5 +34,6 @@ test('operations monitor cache is invalidated by live cache and resource mutatio
     expect($driverObserver)->toContain("LiveCacheService::invalidateMultiple(['drivers', 'operations-monitor'])");
     expect($vehicleObserver)->toContain("LiveCacheService::invalidateMultiple(['vehicles', 'operations-monitor'])");
     expect($fleetObserver)->toContain("LiveCacheService::invalidate('operations-monitor')");
-    expect(substr_count($fleetController, "LiveCacheService::invalidate('operations-monitor')"))->toBe(4);
+    expect(substr_count($fleetController, 'static::invalidateOperationsMonitor();'))->toBe(4);
+    expect($fleetController)->toContain("LiveCacheService::invalidate('operations-monitor')");
 });

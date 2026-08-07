@@ -19,41 +19,18 @@ class OperationsPulse extends AbstractAnalytics
     {
         $companyUuid = $this->company->uuid;
 
-        $activeOrders        = Order::where('company_uuid', $companyUuid)
-            ->whereIn('status', OrdersInProgressMetric::IN_PROGRESS_STATUSES)
-            ->count();
-
-        $driversOnline       = Driver::where('company_uuid', $companyUuid)
-            ->where('online', true)
-            ->whereNotNull('current_job_uuid')
-            ->count();
-
-        $totalDrivers        = Driver::where('company_uuid', $companyUuid)->count();
-
-        $vehiclesDeployed    = Vehicle::where('company_uuid', $companyUuid)
-            ->whereHas('driver', fn ($q) => $q->whereNotNull('current_job_uuid'))
-            ->count();
-
-        $totalVehicles       = Vehicle::where('company_uuid', $companyUuid)->count();
-
-        $issuesOpen          = Issue::where('company_uuid', $companyUuid)
-            ->where('status', 'pending')
-            ->count();
-
-        $todayStart          = Carbon::today();
-        $yesterdayStart      = Carbon::yesterday();
-        $todaySoFar          = Carbon::now();
-        $yesterdaySamePoint  = $yesterdayStart->copy()->setTime($todaySoFar->hour, $todaySoFar->minute);
-
-        $completedToday      = Order::where('company_uuid', $companyUuid)
-            ->where('status', 'completed')
-            ->whereBetween('updated_at', [$todayStart, $todaySoFar])
-            ->count();
-
-        $completedYesterdayToTime = Order::where('company_uuid', $companyUuid)
-            ->where('status', 'completed')
-            ->whereBetween('updated_at', [$yesterdayStart, $yesterdaySamePoint])
-            ->count();
+        $todayStart               = Carbon::today();
+        $yesterdayStart           = Carbon::yesterday();
+        $todaySoFar               = Carbon::now();
+        $yesterdaySamePoint       = $yesterdayStart->copy()->setTime($todaySoFar->hour, $todaySoFar->minute);
+        $activeOrders             = $this->activeOrders($companyUuid);
+        $driversOnline            = $this->driversOnline($companyUuid);
+        $totalDrivers             = $this->totalDrivers($companyUuid);
+        $vehiclesDeployed         = $this->vehiclesDeployed($companyUuid);
+        $totalVehicles            = $this->totalVehicles($companyUuid);
+        $issuesOpen               = $this->issuesOpen($companyUuid);
+        $completedToday           = $this->completedOrdersBetween($companyUuid, $todayStart, $todaySoFar);
+        $completedYesterdayToTime = $this->completedOrdersBetween($companyUuid, $yesterdayStart, $yesterdaySamePoint);
 
         return [
             'active_orders'     => ['value' => $activeOrders, 'delta_pct' => null],
@@ -73,6 +50,53 @@ class OperationsPulse extends AbstractAnalytics
             ],
             'issues_open'       => ['value' => $issuesOpen, 'delta_pct' => null],
         ];
+    }
+
+    protected function activeOrders(string $companyUuid): int
+    {
+        return Order::where('company_uuid', $companyUuid)
+            ->whereIn('status', OrdersInProgressMetric::IN_PROGRESS_STATUSES)
+            ->count();
+    }
+
+    protected function driversOnline(string $companyUuid): int
+    {
+        return Driver::where('company_uuid', $companyUuid)
+            ->where('online', true)
+            ->whereNotNull('current_job_uuid')
+            ->count();
+    }
+
+    protected function totalDrivers(string $companyUuid): int
+    {
+        return Driver::where('company_uuid', $companyUuid)->count();
+    }
+
+    protected function vehiclesDeployed(string $companyUuid): int
+    {
+        return Vehicle::where('company_uuid', $companyUuid)
+            ->whereHas('driver', fn ($q) => $q->whereNotNull('current_job_uuid'))
+            ->count();
+    }
+
+    protected function totalVehicles(string $companyUuid): int
+    {
+        return Vehicle::where('company_uuid', $companyUuid)->count();
+    }
+
+    protected function issuesOpen(string $companyUuid): int
+    {
+        return Issue::where('company_uuid', $companyUuid)
+            ->where('status', 'pending')
+            ->count();
+    }
+
+    protected function completedOrdersBetween(string $companyUuid, Carbon $start, Carbon $end): int
+    {
+        return Order::where('company_uuid', $companyUuid)
+            ->where('status', 'completed')
+            ->whereBetween('updated_at', [$start, $end])
+            ->count();
     }
 
     private function deltaPct(int $current, int $previous): ?float

@@ -1,0 +1,917 @@
+<?php
+
+if (!class_exists('FleetOpsWaypointViewRecorder', false)) {
+    class FleetOpsWaypointViewRecorder
+    {
+        public static array $views = [];
+    }
+}
+
+if (!function_exists('Fleetbase\FleetOps\Models\view')) {
+    eval('namespace Fleetbase\FleetOps\Models; function view($name = null, $data = []) { \FleetOpsWaypointViewRecorder::$views[] = [$name, array_keys($data)]; return new class { public function render() { return "<html>waypoint-label</html>"; } }; }');
+}
+
+if (!function_exists('Fleetbase\Traits\config')) {
+    eval('namespace Fleetbase\Traits; function config($key = null, $default = null) { return $key === "api.cache.enabled" ? false : $default; }');
+}
+
+if (!function_exists('Fleetbase\Models\config')) {
+    eval('namespace Fleetbase\Models; function config($key = null, $default = null) { return $key === "fleetbase.connection.db" ? "mysql" : $default; }');
+}
+
+if (!function_exists('Fleetbase\Traits\app')) {
+    eval('namespace Fleetbase\Traits; function app($abstract = null) { return is_string($abstract) && class_exists($abstract) ? new $abstract() : new \stdClass(); }');
+}
+
+if (!function_exists('Fleetbase\FleetOps\Models\dispatch')) {
+    eval('namespace Fleetbase\FleetOps\Models; function dispatch($job) { return \FleetOpsOrderUnitDispatchRecorder::record($job); }');
+}
+
+if (!function_exists('Fleetbase\FleetOps\Models\event')) {
+    eval('namespace Fleetbase\FleetOps\Models; function event($event = null) { \FleetOpsOrderUnitDispatchRecorder::$events[] = $event; return $event; }');
+}
+
+if (!function_exists('Fleetbase\FleetOps\Models\now')) {
+    eval('namespace Fleetbase\FleetOps\Models; function now($tz = null) { return \Illuminate\Support\Carbon::now($tz); }');
+}
+
+if (!function_exists('Fleetbase\Events\session')) {
+    eval('namespace Fleetbase\Events; function session($key = null, $default = null) { return $default; }');
+}
+
+if (!function_exists('Fleetbase\Events\request')) {
+    eval('namespace Fleetbase\Events; function request() { return new class { public function method() { return "GET"; } }; }');
+}
+
+if (!function_exists('Fleetbase\Events\config')) {
+    eval('namespace Fleetbase\Events; function config($key = null, $default = null) { return $default; }');
+}
+
+if (!class_exists('Illuminate\Foundation\Auth\User')) {
+    class_alias('Illuminate\Database\Eloquent\Model', 'Illuminate\Foundation\Auth\User');
+}
+
+if (!trait_exists('Illuminate\Foundation\Events\Dispatchable')) {
+    eval('namespace Illuminate\Foundation\Events; trait Dispatchable {}');
+}
+
+if (!trait_exists('Illuminate\Broadcasting\InteractsWithSockets')) {
+    eval('namespace Illuminate\Broadcasting; trait InteractsWithSockets {}');
+}
+
+if (!trait_exists('Illuminate\Queue\SerializesModels')) {
+    eval('namespace Illuminate\Queue; trait SerializesModels {}');
+}
+
+if (!class_exists('Fleetbase\FleetOps\Events\OrderDispatched', false)) {
+    eval('namespace Fleetbase\FleetOps\Events; class OrderDispatched { public function __construct(public $order) {} }');
+}
+
+if (!class_exists('Fleetbase\FleetOps\Events\OrderDriverAssigned', false)) {
+    eval('namespace Fleetbase\FleetOps\Events; class OrderDriverAssigned { public function __construct(public $order) {} }');
+}
+
+if (!class_exists('Fleetbase\FleetOps\Events\OrderCanceled', false)) {
+    eval('namespace Fleetbase\FleetOps\Events; class OrderCanceled { public function __construct(public $order) {} }');
+}
+
+if (class_exists('Illuminate\Support\Str') && !Illuminate\Support\Str::hasMacro('humanize')) {
+    Illuminate\Support\Str::macro('humanize', fn ($value) => str_replace('_', ' ', Illuminate\Support\Str::snake((string) $value)));
+}
+
+use Fleetbase\FleetOps\Flow\Activity;
+use Fleetbase\FleetOps\Models\Contact;
+use Fleetbase\FleetOps\Models\Driver;
+use Fleetbase\FleetOps\Models\Order;
+use Fleetbase\FleetOps\Models\OrderConfig;
+use Fleetbase\FleetOps\Models\Payload;
+use Fleetbase\FleetOps\Models\Place;
+use Fleetbase\FleetOps\Models\Proof;
+use Fleetbase\FleetOps\Models\PurchaseRate;
+use Fleetbase\FleetOps\Models\Route;
+use Fleetbase\FleetOps\Models\TrackingNumber;
+use Fleetbase\FleetOps\Models\TrackingStatus;
+use Fleetbase\FleetOps\Models\Vehicle;
+use Fleetbase\FleetOps\Models\Vendor;
+use Fleetbase\FleetOps\Models\Waypoint;
+use Fleetbase\LaravelMysqlSpatial\Types\Point;
+use Fleetbase\Models\Company;
+use Fleetbase\Models\Transaction;
+use Fleetbase\Models\User;
+use Illuminate\Database\ConnectionResolver;
+use Illuminate\Database\Eloquent\Model as EloquentModel;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasManyThrough;
+use Illuminate\Database\Eloquent\Relations\MorphTo;
+use Illuminate\Database\SQLiteConnection;
+use Illuminate\Support\Carbon;
+use Illuminate\Support\Collection;
+
+class FleetOpsOrderUnitFake extends Order
+{
+    public bool $saved              = false;
+    public bool $quietSaved         = false;
+    public bool $flushed            = false;
+    public array $loaded            = [];
+    public array $loadedMissing     = [];
+    public array $quietUpdates      = [];
+    public array $filled            = [];
+    public array $activityRows      = [];
+    public array $statuses          = [];
+    public ?OrderConfig $fakeConfig = null;
+    public mixed $customValue       = null;
+    public mixed $metaValue         = null;
+    public bool $customFieldExists  = false;
+    public bool $metaExists         = false;
+
+    public function getDateFormat()
+    {
+        return 'Y-m-d H:i:s';
+    }
+
+    public function load($relations)
+    {
+        $this->loaded[] = $relations;
+
+        return $this;
+    }
+
+    public function loadMissing($relations)
+    {
+        $this->loadedMissing[] = $relations;
+
+        return $this;
+    }
+
+    public function save(array $options = []): bool
+    {
+        $this->saved = true;
+
+        return true;
+    }
+
+    public function saveQuietly(array $options = []): bool
+    {
+        $this->quietSaved = true;
+
+        return true;
+    }
+
+    public function flushAttributesCache(): bool
+    {
+        $this->flushed = true;
+
+        return true;
+    }
+
+    public function updateQuietly(array $attributes = [], array $options = []): bool
+    {
+        $this->quietUpdates[] = $attributes;
+        $this->forceFill($attributes);
+
+        return true;
+    }
+
+    public function fill(array $attributes)
+    {
+        $this->filled[] = $attributes;
+
+        return parent::fill($attributes);
+    }
+
+    public function config(): ?OrderConfig
+    {
+        $this->fakeConfig?->setOrderContext($this);
+
+        return $this->fakeConfig;
+    }
+
+    public function insertActivity(Activity $activity, $location = [], $proof = null): string
+    {
+        $this->activityRows[] = [$activity->code, $location, $proof];
+
+        return 'tracking_status_public';
+    }
+
+    public function setStatus(?string $status, $andSave = true)
+    {
+        $this->statuses[] = [$status, $andSave];
+        $this->status     = $status;
+
+        return $this;
+    }
+
+    public function isCustomField(string $key): bool
+    {
+        return $this->customFieldExists && $key === 'doorCode';
+    }
+
+    public function getCustomFieldValueByKey(string $key, mixed $default = null): mixed
+    {
+        return $this->customValue ?? $default;
+    }
+
+    public function hasMeta($keys): bool
+    {
+        return $this->metaExists && $keys === 'priority_note';
+    }
+
+    public function getMeta($key = null, $defaultValue = null)
+    {
+        return $this->metaValue ?? $defaultValue;
+    }
+}
+
+class FleetOpsOrderUnitProbe extends FleetOpsOrderUnitFake
+{
+    public function shouldResolvePayloadPlaceForTest(?array $attributes, string $role): bool
+    {
+        return $this->shouldResolvePayloadPlace($attributes, $role);
+    }
+
+    public function hasExistingPayloadPlaceUuidForTest(?array $attributes, string $role): bool
+    {
+        return $this->hasExistingPayloadPlaceUuid($attributes, $role);
+    }
+
+    public function getPickupLocation()
+    {
+        return null;
+    }
+}
+
+class FleetOpsOrderUnitConfigFake extends OrderConfig
+{
+    public ?Order $context              = null;
+    public array $flow                  = [];
+    public ?Activity $dispatchActivity  = null;
+    public ?Activity $canceledActivity  = null;
+    public ?Activity $completedActivity = null;
+
+    public function setOrderContext(Order $order): self
+    {
+        $this->context = $order;
+
+        return $this;
+    }
+
+    public function activities(): Collection
+    {
+        return collect(array_map(
+            fn ($activity) => $activity instanceof Activity ? $activity : new Activity($activity),
+            $this->flow
+        ));
+    }
+
+    public function nextActivity(Order|Waypoint|null $context = null): Collection
+    {
+        return collect();
+    }
+
+    public function getDispatchActivity(): ?Activity
+    {
+        return $this->dispatchActivity;
+    }
+
+    public function getCanceledActivity(): ?Activity
+    {
+        return $this->canceledActivity;
+    }
+
+    public function getCompletedActivity(): ?Activity
+    {
+        return $this->completedActivity;
+    }
+}
+
+class FleetOpsOrderUnitDispatchRecorder
+{
+    public static array $jobs   = [];
+    public static array $events = [];
+
+    public static function reset(): void
+    {
+        static::$jobs   = [];
+        static::$events = [];
+    }
+
+    public static function record($job): object
+    {
+        static::$jobs[] = $job;
+
+        if ($job instanceof Closure) {
+            $job();
+        }
+
+        return new class {
+            public function afterCommit(): self
+            {
+                return $this;
+            }
+        };
+    }
+}
+
+class FleetOpsOrderUnitWaypointFake extends Waypoint
+{
+    public array $loadedMissing = [];
+
+    public function loadMissing($relations)
+    {
+        $this->loadedMissing[] = $relations;
+
+        return $this;
+    }
+}
+
+class FleetOpsOrderUnitPayloadFake extends Payload
+{
+    public array $pickupUpdates           = [];
+    public bool $pickupDriverLocationMeta = false;
+    public ?Place $origin                 = null;
+    public ?Place $destination            = null;
+
+    public function hasMeta($keys): bool
+    {
+        return $keys === 'pickup_is_driver_location' && $this->pickupDriverLocationMeta;
+    }
+
+    public function setPickup($placeOrLocation, array $options = [])
+    {
+        $this->pickupUpdates[] = [$placeOrLocation, $options];
+
+        return $this;
+    }
+
+    public function getPickupOrCurrentWaypoint(): ?Place
+    {
+        return $this->origin;
+    }
+
+    public function getDropoffOrLastWaypoint(): ?Place
+    {
+        return $this->destination;
+    }
+}
+
+function fleetopsOrderUnitUseRelationConnection(): void
+{
+    $connection = new SQLiteConnection(new PDO('sqlite::memory:'));
+    $resolver   = new ConnectionResolver([
+        'default' => $connection,
+        'mysql'   => $connection,
+    ]);
+
+    $resolver->setDefaultConnection('mysql');
+    EloquentModel::setConnectionResolver($resolver);
+}
+
+function fleetopsOrderUnitPlace(string $uuid, Point $location): Place
+{
+    $place = new Place();
+    $place->setRawAttributes(['uuid' => $uuid], true);
+    $place->location = $location;
+
+    return $place;
+}
+
+test('order relationship contracts resolve expected relation types and models', function () {
+    fleetopsOrderUnitUseRelationConnection();
+    Order::boot();
+
+    $order = new Order();
+
+    expect($order->orderConfig())->toBeInstanceOf(BelongsTo::class)
+        ->and($order->orderConfig()->getRelated())->toBeInstanceOf(OrderConfig::class)
+        ->and($order->transaction())->toBeInstanceOf(BelongsTo::class)
+        ->and($order->transaction()->getRelated())->toBeInstanceOf(Transaction::class)
+        ->and($order->route())->toBeInstanceOf(BelongsTo::class)
+        ->and($order->route()->getRelated())->toBeInstanceOf(Route::class)
+        ->and($order->payload())->toBeInstanceOf(BelongsTo::class)
+        ->and($order->payload()->getRelated())->toBeInstanceOf(Payload::class)
+        ->and($order->company())->toBeInstanceOf(BelongsTo::class)
+        ->and($order->company()->getRelated())->toBeInstanceOf(Company::class)
+        ->and($order->createdBy())->toBeInstanceOf(BelongsTo::class)
+        ->and($order->createdBy()->getRelated())->toBeInstanceOf(User::class)
+        ->and($order->updatedBy())->toBeInstanceOf(BelongsTo::class)
+        ->and($order->updatedBy()->getRelated())->toBeInstanceOf(User::class)
+        ->and($order->driverAssigned())->toBeInstanceOf(BelongsTo::class)
+        ->and($order->driverAssigned()->getRelated())->toBeInstanceOf(Driver::class)
+        ->and($order->driver())->toBeInstanceOf(BelongsTo::class)
+        ->and($order->driver()->getRelated())->toBeInstanceOf(Driver::class)
+        ->and($order->vehicleAssigned())->toBeInstanceOf(BelongsTo::class)
+        ->and($order->vehicleAssigned()->getRelated())->toBeInstanceOf(Vehicle::class)
+        ->and($order->vehicle())->toBeInstanceOf(BelongsTo::class)
+        ->and($order->vehicle()->getRelated())->toBeInstanceOf(Vehicle::class)
+        ->and($order->comments())->toBeInstanceOf(HasMany::class)
+        ->and($order->files())->toBeInstanceOf(HasMany::class)
+        ->and($order->drivers())->toBeInstanceOf(HasManyThrough::class)
+        ->and($order->trackingNumber())->toBeInstanceOf(BelongsTo::class)
+        ->and($order->trackingNumber()->getRelated())->toBeInstanceOf(TrackingNumber::class)
+        ->and($order->trackingStatuses())->toBeInstanceOf(HasMany::class)
+        ->and($order->trackingStatuses()->getRelated())->toBeInstanceOf(TrackingStatus::class)
+        ->and($order->proofs())->toBeInstanceOf(HasMany::class)
+        ->and($order->proofs()->getRelated())->toBeInstanceOf(Proof::class)
+        ->and($order->purchaseRate())->toBeInstanceOf(BelongsTo::class)
+        ->and($order->purchaseRate()->getRelated())->toBeInstanceOf(PurchaseRate::class)
+        ->and($order->facilitator())->toBeInstanceOf(MorphTo::class)
+        ->and($order->customer())->toBeInstanceOf(MorphTo::class)
+        ->and($order->authenticatableCustomer())->toBeInstanceOf(BelongsTo::class)
+        ->and($order->authenticatableCustomer()->getRelated())->toBeInstanceOf(Contact::class);
+});
+
+test('order mutators helper probes and loaded payload callbacks use local state', function () {
+    Carbon::setTestNow(Carbon::parse('2026-07-27 11:00:00'));
+
+    $order = new FleetOpsOrderUnitProbe();
+    $order->setRawAttributes(['created_at' => '2026-07-26 08:00:00'], true);
+
+    $order->orchestrator_priority = null;
+    $order->type                  = 'Express Service';
+    $order->status                = 'Driver Assigned';
+    $order->time_window_start     = '09:15:00';
+    $order->time_window_end       = '';
+
+    $scheduled = new FleetOpsOrderUnitProbe();
+    $scheduled->setRawAttributes(['scheduled_at' => '2026-08-03 13:00:00'], true);
+    $scheduled->time_window_start = '10:30:00';
+
+    $payload = new Payload();
+    $payload->setRawAttributes(['uuid' => 'payload-uuid'], true);
+    $order->setRelation('payload', $payload);
+
+    $callbackPayload = null;
+    $resolvedPayload = $order->getPayload(function ($loaded) use (&$callbackPayload): void {
+        $callbackPayload = $loaded;
+    });
+
+    expect($order->orchestrator_priority)->toBe(50)
+        ->and($order->type)->toBe('express-service')
+        ->and($order->status)->toBe('driver_assigned')
+        ->and($order->time_window_start->toDateTimeString())->toBe('2026-07-27 09:15:00')
+        ->and($order->time_window_end)->toBeNull()
+        ->and($scheduled->time_window_start->toDateTimeString())->toBe('2026-07-27 10:30:00')
+        ->and($resolvedPayload)->toBe($payload)
+        ->and($callbackPayload)->toBe($payload)
+        ->and($order->loadedMissing)->toBe(['payload'])
+        ->and($order->shouldResolvePayloadPlaceForTest(['pickup' => ['address' => 'A']], 'pickup'))->toBeTrue()
+        ->and($order->shouldResolvePayloadPlaceForTest(['pickup' => 'already resolved'], 'pickup'))->toBeFalse()
+        ->and($order->hasExistingPayloadPlaceUuidForTest(['pickup_uuid' => 'not-a-uuid'], 'pickup'))->toBeFalse()
+        ->and($order->findClosestDrivers())->toBeInstanceOf(Collection::class)
+        ->and($order->findClosestDrivers())->toBeEmpty();
+
+    Carbon::setTestNow();
+});
+
+test('order local payload file customer and position helpers use loaded state', function () {
+    Carbon::setTestNow(Carbon::parse('2026-07-27 14:00:00'));
+
+    $order = new FleetOpsOrderUnitFake();
+    $order->setRawAttributes([
+        'uuid'                 => 'order-uuid',
+        'driver_assigned_uuid' => null,
+        'created_at'           => '2026-07-26 08:00:00',
+    ], true);
+
+    expect($order->attachFiles([]))->toBe($order)
+        ->and($order->attachFiles(['', (object) []]))->toBe($order);
+
+    $payload = new FleetOpsOrderUnitPayloadFake();
+    $payload->setRawAttributes(['uuid' => 'payload-uuid'], true);
+
+    expect($order->setPayload($payload))->toBe($order)
+        ->and($order->payload_uuid)->toBe('payload-uuid')
+        ->and($order->payload)->toBe($payload)
+        ->and($order->saved)->toBeTrue();
+
+    $customer = new Contact();
+    $customer->setRawAttributes(['uuid' => 'customer-uuid'], true);
+    $order->setCustomer($customer);
+
+    expect($order->customer_uuid)->toBe('customer-uuid')
+        ->and($order->getAttributes()['customer_type'])->toBe(Contact::class);
+
+    $driver = new Driver();
+    $driver->setRawAttributes(['uuid' => 'driver-uuid'], true);
+    $driver->location = new Point(1.23, 4.56);
+    $order->setRelation('driverAssigned', $driver);
+
+    $payload->pickupDriverLocationMeta = true;
+    $order->setRawAttributes(array_merge($order->getAttributes(), ['driver_assigned_uuid' => null]), true);
+    $order->driver_assigned_uuid = 'driver-uuid';
+    $order->setDriverLocationAsPickup();
+
+    expect($payload->pickupUpdates[0])->toBe([$driver->location, ['save' => true]]);
+
+    $payload->pickupUpdates = [];
+    $order->setDriverLocationAsPickup(true);
+
+    $origin               = fleetopsOrderUnitPlace('origin-uuid', new Point(7.89, 10.11));
+    $destination          = fleetopsOrderUnitPlace('destination-uuid', new Point(12.13, 14.15));
+    $payload->origin      = $origin;
+    $payload->destination = $destination;
+
+    expect($payload->pickupUpdates[0])->toBe([$driver->location, ['save' => true]])
+        ->and($order->getCurrentOriginPosition())->toBe($driver->location)
+        ->and($order->getDestinationPosition())->toBe($destination->location);
+
+    $order->driver_assigned_uuid = null;
+
+    expect($order->getCurrentOriginPosition())->toBe($origin->location);
+
+    $payload->origin = null;
+    expect($order->getCurrentOriginPosition())->toBeNull();
+
+    $payload->destination = null;
+    expect($order->getDestinationPosition())->toBeNull();
+
+    $createdFallback = new FleetOpsOrderUnitProbe();
+    $createdFallback->setRawAttributes(['created_at' => '2026-07-25 08:00:00'], true);
+    $createdFallback->time_window_start = '06:30:00';
+
+    $nowFallback                    = new FleetOpsOrderUnitProbe();
+    $nowFallback->time_window_start = '07:45:00';
+
+    expect($createdFallback->time_window_start->toDateTimeString())->toBe('2026-07-27 06:30:00')
+        ->and($nowFallback->time_window_start->toDateTimeString())->toBe('2026-07-27 07:45:00');
+
+    Carbon::setTestNow();
+});
+
+test('order route driver config activity and dynamic resolution branches use loaded state', function () {
+    $order = new FleetOpsOrderUnitFake();
+    $order->setRawAttributes([
+        'uuid'                 => 'order-uuid',
+        'order_uuid'           => 'legacy-order-uuid',
+        'company_uuid'         => 'company-uuid',
+        'driver_assigned_uuid' => null,
+        'tracking_number_uuid' => 'tracking-number-uuid',
+        'type'                 => 'default',
+    ], true);
+
+    $driver = new Driver();
+    $driver->setRawAttributes([
+        'uuid'      => 'driver-uuid',
+        'public_id' => 'driver_PUBLIC',
+    ], true);
+
+    expect($order->assignDriver($driver, true))->toBe($order)
+        ->and($order->driver_assigned_uuid)->toBe('driver-uuid')
+        ->and($order->driverAssigned)->toBe($driver)
+        ->and($order->saved)->toBeTrue()
+        ->and($order->assignDriver($driver, true))->toBe($order)
+        ->and($order->isDriver($driver))->toBeTrue()
+        ->and($order->isDriver('driver-uuid'))->toBeTrue()
+        ->and($order->isDriver('driver_PUBLIC'))->toBeTrue()
+        ->and($order->isDriver(new stdClass()))->toBeFalse();
+
+    $config = new FleetOpsOrderUnitConfigFake();
+    $config->setRawAttributes([
+        'uuid' => 'config-uuid',
+        'key'  => 'scheduled-delivery',
+    ], true);
+    $config->flow      = [['code' => 'created']];
+    $order->fakeConfig = $config;
+
+    expect($order->ensureOrderConfig())->toBe($config)
+        ->and($config->context)->toBe($order)
+        ->and($order->filled)->toContain([
+            'order_config_uuid' => 'config-uuid',
+            'type'              => 'scheduled-delivery',
+        ])
+        ->and($order->orderConfig)->toBe($config)
+        ->and($order->getConfigFlow())->toBe([['code' => 'created']]);
+
+    $activity = new Activity(['code' => 'PICKED_UP']);
+    $order->setRelation('trackingStatuses', collect([
+        (object) ['code' => 'created'],
+        (object) ['code' => 'picked_up'],
+    ]));
+
+    expect($order->hasCompletedActivity($activity))->toBeTrue()
+        ->and($order->hasDispatchedStatus())->toBeFalse();
+
+    $order->setRelation('trackingStatuses', collect([(object) ['code' => 'DISPATCHED']]));
+    expect($order->hasDispatchedStatus())->toBeTrue();
+
+    $pickup        = fleetopsOrderUnitPlace('pickup-uuid', new Point(1.1, 2.2));
+    $dropoff       = fleetopsOrderUnitPlace('dropoff-uuid', new Point(3.3, 4.4));
+    $waypointPlace = fleetopsOrderUnitPlace('waypoint-place-uuid', new Point(5.5, 6.6));
+    $waypoint      = new FleetOpsOrderUnitWaypointFake();
+    $waypoint->setRawAttributes(['place_uuid' => 'waypoint-place-uuid', 'name' => null], true);
+    $waypoint->setRelation('place', $waypointPlace);
+
+    $payload = new Payload();
+    $payload->setRawAttributes(['current_waypoint_uuid' => 'waypoint-place-uuid'], true);
+    $payload->setRelation('pickup', $pickup);
+    $payload->setRelation('dropoff', $dropoff);
+    $payload->setRelation('currentWaypointMarker', $waypoint);
+    $payload->setRelation('waypointMarkers', collect([$waypoint]));
+
+    $customer = new Contact();
+    $customer->setRawAttributes(['uuid' => 'customer-uuid'], true);
+    $waypointCustomer = new Contact();
+    $waypointCustomer->setRawAttributes(['uuid' => 'waypoint-customer-uuid'], true);
+    $waypoint->setRelation('customer', $waypointCustomer);
+
+    $order->setRelation('payload', $payload);
+    $order->setRelation('customer', $customer);
+    $order->setRawAttributes(array_merge($order->getAttributes(), ['public_id' => 'order_public']), true);
+    $order->customFieldExists = true;
+    $order->customValue       = 'custom value';
+    $order->metaExists        = true;
+    $order->metaValue         = 'meta value';
+
+    expect($order->resolveDynamicProperty('pickup'))->toBe($pickup)
+        ->and($order->resolveDynamicProperty('dropoff.uuid'))->toBe('dropoff-uuid')
+        ->and($order->resolveDynamicProperty('waypoint.uuid'))->toBe('waypoint-place-uuid')
+        ->and($waypoint->loadedMissing)->toBe(['place'])
+        ->and($order->resolveDynamicProperty('publicId'))->toBe('order_public')
+        ->and($order->resolveDynamicProperty('doorCode'))->toBe('custom value')
+        ->and($order->resolveDynamicProperty('priority_note'))->toBe('meta value')
+        ->and($order->resolveDynamicValue('missing_value'))->toBe('missing_value')
+        ->and($order->resolveDynamicNotifiable('customer'))->toBe($waypointCustomer)
+        ->and($order->resolveDynamicNotifiable('driverAssigned'))->toBe($driver);
+});
+
+test('order location and dispatch helper branches resolve from loaded model state', function () {
+    Carbon::setTestNow(Carbon::parse('2026-07-27 12:00:00'));
+
+    $dropoff       = fleetopsOrderUnitPlace('dropoff-uuid', new Point(10.1, 20.2));
+    $pickup        = fleetopsOrderUnitPlace('pickup-uuid', new Point(30.3, 40.4));
+    $currentMarker = fleetopsOrderUnitPlace('current-marker-uuid', new Point(50.5, 60.6));
+    $firstMarker   = fleetopsOrderUnitPlace('first-marker-uuid', new Point(70.7, 80.8));
+
+    $payload = new FleetOpsOrderUnitPayloadFake();
+    $payload->setRawAttributes(['current_waypoint_uuid' => 'current-marker-uuid'], true);
+    $payload->setRelation('dropoff', $dropoff);
+    $payload->setRelation('pickup', $pickup);
+    $payload->setRelation('waypoints', collect([$firstMarker, $currentMarker]));
+
+    $order = new FleetOpsOrderUnitFake();
+    $order->setRawAttributes([
+        'scheduled_at'         => '2026-07-27 12:00:30',
+        'dispatched'           => false,
+        'driver_assigned_uuid' => 'driver-uuid',
+        'adhoc'                => false,
+    ], true);
+    $order->setRelation('payload', $payload);
+
+    expect($order->getCurrentDestinationLocation())->toBe($dropoff->location);
+
+    $payload->unsetRelation('dropoff');
+    expect($order->getCurrentDestinationLocation())->toBe($currentMarker->location);
+
+    $payload->setRawAttributes(['current_waypoint_uuid' => null], true);
+    expect($order->getCurrentDestinationLocation())->toBe($firstMarker->location);
+
+    $order->unsetRelation('payload');
+    $zeroDestination = $order->getCurrentDestinationLocation();
+    expect($zeroDestination->getLat())->toBe(0.0)
+        ->and($zeroDestination->getLng())->toBe(0.0);
+
+    $driver = new Driver();
+    $driver->setRawAttributes(['uuid' => 'driver-uuid'], true);
+    $driver->location = new Point(11.1, 22.2);
+    $order->setRelation('driverAssigned', $driver);
+    $order->setRelation('payload', $payload);
+
+    expect($order->getLastLocation())->toBe($driver->location);
+
+    $order->unsetRelation('driverAssigned');
+    $order->driver_assigned_uuid = null;
+    $payload->setRelation('pickup', $pickup);
+    expect($order->getLastLocation())->toBe($pickup->location);
+
+    $payload->unsetRelation('pickup');
+    $payload->setRawAttributes(['current_waypoint_uuid' => 'current-marker-uuid'], true);
+    expect($order->getLastLocation())->toBe($currentMarker->location);
+
+    $payload->setRawAttributes(['current_waypoint_uuid' => null], true);
+    expect($order->getLastLocation())->toBe($firstMarker->location);
+
+    $payload->setRelation('waypoints', collect());
+    $zeroLastLocation            = $order->getLastLocation();
+    $order->driver_assigned_uuid = 'driver-uuid';
+    expect($zeroLastLocation->getLat())->toBe(0.0)
+        ->and($zeroLastLocation->getLng())->toBe(0.0)
+        ->and($order->has_driver_assigned)->toBeTrue()
+        ->and($order->is_ready_for_dispatch)->toBeFalse()
+        ->and(tap($order, fn ($model) => $model->adhoc = true)->is_ready_for_dispatch)->toBeTrue()
+        ->and($order->is_assigned_not_dispatched)->toBeTrue()
+        ->and($order->is_not_dispatched)->toBeTrue()
+        ->and($order->shouldDispatch())->toBeTrue();
+
+    Carbon::setTestNow();
+});
+
+test('order activity update status and dynamic notifiable fallbacks cover local branches', function () {
+    $order = new FleetOpsOrderUnitFake();
+    $order->setRawAttributes([
+        'tracking_number_uuid' => 'tracking-number-uuid',
+        'driver_assigned_uuid' => null,
+        'customer_type'        => null,
+        'facilitator_type'     => null,
+    ], true);
+
+    $activity = new Activity(['code' => 'arrived']);
+    expect($order->updateActivity(null))->toBe($order)
+        ->and($order->activityRows)->toBe([])
+        ->and($order->updateActivity($activity))->toBe($order)
+        ->and($order->activityRows[0][0])->toBe('arrived')
+        ->and($order->statuses)->toBe([['arrived', true]]);
+
+    $config            = new FleetOpsOrderUnitConfigFake();
+    $config->flow      = [['code' => 'only_step']];
+    $order->fakeConfig = $config;
+    expect($order->updateStatus())->toBeTrue()
+        ->and($order->statuses[1])->toBe(['only_step', true]);
+
+    $config->flow = [
+        ['code' => 'created'],
+        ['code' => 'packed'],
+    ];
+    expect($order->updateStatus('packed'))->toBeTrue()
+        ->and($order->statuses[2])->toBe(['packed', true])
+        ->and($order->updateStatus(['created', 'packed']))->toBeTrue()
+        ->and($order->updateStatus('missing'))->toBeFalse();
+
+    $fallbackCustomer = new Contact();
+    $fallbackCustomer->setRawAttributes(['uuid' => 'fallback-customer-uuid'], true);
+    $payload = new Payload();
+    $payload->setRawAttributes(['current_waypoint_uuid' => null], true);
+    $payload->setRelation('waypointMarkers', collect());
+    $order->setRelation('payload', $payload);
+    $order->setRelation('customer', $fallbackCustomer);
+
+    expect($order->resolveDynamicNotifiable('customer'))->toBe($fallbackCustomer);
+
+    $order->customer_type    = 'contact';
+    $order->facilitator_type = 'vendor';
+    expect($order->getAttributes()['customer_type'])->toBe(Contact::class)
+        ->and($order->getAttributes()['facilitator_type'])->toBe(Vendor::class);
+});
+
+test('order dispatch helpers mark state fire events and insert configured activity', function () {
+    Carbon::setTestNow(Carbon::parse('2026-07-27 12:45:00'));
+    FleetOpsOrderUnitDispatchRecorder::reset();
+
+    $config                   = new FleetOpsOrderUnitConfigFake();
+    $config->dispatchActivity = new Activity(['code' => 'dispatched']);
+
+    $order = new FleetOpsOrderUnitFake();
+    $order->setRawAttributes([
+        'uuid'                 => 'order-uuid',
+        'tracking_number_uuid' => 'tracking-number-uuid',
+        'dispatched'           => false,
+    ], true);
+    $order->fakeConfig = $config;
+    $order->setRelation('trackingStatuses', collect());
+
+    expect($order->dispatch())->toBe($order)
+        ->and($order->dispatched)->toBeTrue()
+        ->and($order->dispatched_at->toDateTimeString())->toBe('2026-07-27 12:45:00')
+        ->and($order->quietSaved)->toBeTrue()
+        ->and($order->flushed)->toBeTrue()
+        ->and(FleetOpsOrderUnitDispatchRecorder::$events[0])->toBeInstanceOf(Fleetbase\FleetOps\Events\OrderDispatched::class);
+
+    $order->activityRows = [];
+    $order->statuses     = [];
+
+    expect($order->insertDispatchActivity())->toBe($order)
+        ->and($order->activityRows[0][0])->toBe('dispatched')
+        ->and($order->statuses[0])->toBe(['dispatched', true]);
+
+    $freshOrder = new FleetOpsOrderUnitFake();
+    $freshOrder->setRawAttributes([
+        'uuid'                 => 'fresh-order-uuid',
+        'tracking_number_uuid' => 'fresh-tracking-number-uuid',
+        'dispatched'           => false,
+    ], true);
+    $freshOrder->fakeConfig = $config;
+    $freshOrder->setRelation('trackingStatuses', collect());
+
+    expect($freshOrder->dispatchWithActivity())->toBe($freshOrder)
+        ->and($freshOrder->dispatched)->toBeTrue()
+        ->and($freshOrder->activityRows[0][0])->toBe('dispatched');
+
+    $skippedOrder = new FleetOpsOrderUnitFake();
+    $skippedOrder->setRawAttributes([
+        'tracking_number_uuid' => 'skipped-tracking-number-uuid',
+        'dispatched'           => true,
+    ], true);
+    $skippedOrder->fakeConfig = $config;
+
+    expect($skippedOrder->firstDispatch())->toBe($skippedOrder)
+        ->and($skippedOrder->quietSaved)->toBeFalse();
+
+    $alreadyDispatchedStatus       = new TrackingStatus();
+    $alreadyDispatchedStatus->code = 'DISPATCHED';
+    $skippedOrder->setRelation('trackingStatuses', collect([$alreadyDispatchedStatus]));
+
+    expect($skippedOrder->firstDispatchWithActivity())->toBe($skippedOrder)
+        ->and($skippedOrder->activityRows)->toBe([]);
+
+    Carbon::setTestNow();
+});
+
+test('order cancel and assignment notifications fire expected domain events', function () {
+    FleetOpsOrderUnitDispatchRecorder::reset();
+
+    $config                   = new FleetOpsOrderUnitConfigFake();
+    $config->canceledActivity = new Activity(['code' => 'canceled']);
+
+    $order = new FleetOpsOrderUnitFake();
+    $order->setRawAttributes([
+        'uuid'                 => 'order-uuid',
+        'tracking_number_uuid' => 'tracking-number-uuid',
+        'driver_assigned_uuid' => 'driver-uuid',
+    ], true);
+    $order->setRelation('orderConfig', $config);
+
+    expect($order->notifyDriverAssigned())->toBeInstanceOf(Fleetbase\FleetOps\Events\OrderDriverAssigned::class);
+
+    $order->driver_assigned_uuid = null;
+
+    expect($order->cancel())->toBeObject()
+        ->and($order->status)->toBe('canceled')
+        ->and($order->activityRows[0][0])->toBe('canceled')
+        ->and(FleetOpsOrderUnitDispatchRecorder::$events[0])->toBeInstanceOf(Fleetbase\FleetOps\Events\OrderDriverAssigned::class)
+        ->and(FleetOpsOrderUnitDispatchRecorder::$events[1])->toBeInstanceOf(Fleetbase\FleetOps\Events\OrderCanceled::class);
+});
+
+test('order labels render views and stream pdf output', function () {
+    $connection = new SQLiteConnection(new PDO('sqlite::memory:'));
+    $resolver   = new ConnectionResolver(['default' => $connection, 'mysql' => $connection]);
+    $resolver->setDefaultConnection('mysql');
+    EloquentModel::setConnectionResolver($resolver);
+    $schema = $connection->getSchemaBuilder();
+    $tables = [
+        'orders'           => ['uuid', 'public_id', 'company_uuid', 'tracking_number_uuid', 'status', 'type', '_key'],
+        'tracking_numbers' => ['uuid', 'public_id', 'company_uuid', 'tracking_number', '_key'],
+        'companies'        => ['uuid', 'public_id', 'name', 'country'],
+    ];
+    foreach ($tables as $table => $columns) {
+        $schema->create($table, function ($blueprint) use ($columns) {
+            $blueprint->increments('id');
+            foreach ($columns as $column) {
+                $blueprint->string($column)->nullable();
+            }
+            $blueprint->timestamps();
+            $blueprint->timestamp('deleted_at')->nullable();
+        });
+    }
+    $connection->table('orders')->insert(['uuid' => 'order-label-1', 'company_uuid' => 'company-1', 'tracking_number_uuid' => 'tn-label-1', 'status' => 'created']);
+    $connection->table('tracking_numbers')->insert(['uuid' => 'tn-label-1', 'company_uuid' => 'company-1', 'tracking_number' => 'FLB-ORDLBL-1']);
+    $connection->table('companies')->insert(['uuid' => 'company-1', 'name' => 'Label Co']);
+
+    $order = Order::where('uuid', 'order-label-1')->first();
+
+    FleetOpsWaypointViewRecorder::$views = [];
+    expect($order->label())->toContain('<html>')
+        ->and(FleetOpsWaypointViewRecorder::$views[0][0])->toBe('fleetops::labels/default')
+        ->and(FleetOpsWaypointViewRecorder::$views[0][1])->toContain('order', 'trackingNumber', 'company');
+
+    $wrapper = new class {
+        public function loadHTML(string $html, ?string $encoding = null): self
+        {
+            return $this;
+        }
+
+        public function stream()
+        {
+            return 'order-pdf-stream';
+        }
+
+        public function __call($method, $arguments)
+        {
+            return $this;
+        }
+    };
+    Illuminate\Container\Container::getInstance()->instance('dompdf.wrapper', $wrapper);
+    app()->instance('dompdf.wrapper', $wrapper);
+
+    expect($order->pdfLabel())->toBe($wrapper)
+        ->and($order->pdfLabelStream())->toBe('order-pdf-stream');
+
+    // Uuid-referenced order configs resolve with the order context applied
+    $schema->create('order_configs', function ($blueprint) {
+        $blueprint->increments('id');
+        foreach (['uuid', 'public_id', 'company_uuid', 'name', 'key', 'namespace', 'flow', 'entities', 'meta', 'version', 'core_service', 'status', 'type', '_key'] as $column) {
+            $blueprint->string($column)->nullable();
+        }
+        $blueprint->timestamps();
+        $blueprint->timestamp('deleted_at')->nullable();
+    });
+    // Soft-deleted so the relation load misses and the withTrashed uuid branch runs
+    $connection->table('order_configs')->insert(['uuid' => 'b2b2b2b2-2222-4222-8222-222222222201', 'company_uuid' => 'company-1', 'name' => 'Transport', 'key' => 'transport', 'flow' => json_encode([]), 'deleted_at' => '2026-07-01 00:00:00']);
+    $order->order_config_uuid = 'b2b2b2b2-2222-4222-8222-222222222201';
+    $resolvedConfig           = $order->config();
+    expect($resolvedConfig)->toBeInstanceOf(OrderConfig::class)
+        ->and($resolvedConfig->uuid)->toBe('b2b2b2b2-2222-4222-8222-222222222201');
+
+    // Orders without any config reference resolve to null when defaults fail
+    $order->order_config_uuid = null;
+    $order->setRelation('orderConfig', null);
+});

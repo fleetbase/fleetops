@@ -17,7 +17,7 @@ class ServiceAreaObserver
     {
         // if no border is set but country is, create the border from the country
         if (empty($serviceArea->border) && isset($serviceArea->country)) {
-            $serviceArea->border = FleetOpsUtils::createPolygonFromCountry($serviceArea->country);
+            $serviceArea->border = $this->createPolygonFromCountry($serviceArea->country);
         }
     }
 
@@ -30,6 +30,16 @@ class ServiceAreaObserver
     {
         $serviceArea->load(['zones']);
 
-        Utils::deleteModels($serviceArea->zones);
+        $this->deleteModels($serviceArea->zones);
+    }
+
+    protected function createPolygonFromCountry(string $country): mixed
+    {
+        return FleetOpsUtils::createPolygonFromCountry($country);
+    }
+
+    protected function deleteModels(mixed $models): void
+    {
+        Utils::deleteModels($models);
     }
 }

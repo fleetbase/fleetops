@@ -9,9 +9,15 @@ use Fleetbase\Support\NotificationRegistry;
 use Fleetbase\Support\Utils;
 use Illuminate\Database\Eloquent\Relations\Relation;
 
+// Never taken in any environment that can run this file: core-api is a hard
+// composer dependency, so the class is always present by the time the package
+// autoloads. It exists to give a readable failure to anyone assembling the
+// package tree by hand.
+// @codeCoverageIgnoreStart
 if (!Utils::classExists(CoreServiceProvider::class)) {
     throw new \Exception('FleetOps cannot be loaded without `fleetbase/core-api` installed!');
 }
+// @codeCoverageIgnoreEnd
 
 /**
  * FleetOps service provider.
@@ -194,9 +200,15 @@ class FleetOpsServiceProvider extends CoreServiceProvider
         $this->mergeConfigFrom(__DIR__ . '/../../config/dompdf.php', 'dompdf');
 
         // Register the GeometryEngine for GEOSEngine
+        //
+        // The geos extension is installed neither locally nor in CI, so this
+        // registration cannot be exercised here. Tests inject an engine through
+        // GeometryEngineRegistry directly instead.
+        // @codeCoverageIgnoreStart
         if (extension_loaded('geos')) {
             GeometryEngineRegistry::set(new GEOSEngine());
         }
+        // @codeCoverageIgnoreEnd
     }
 
     public function registerMorphMap(): void

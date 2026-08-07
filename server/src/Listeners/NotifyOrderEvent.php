@@ -32,29 +32,34 @@ class NotifyOrderEvent implements ShouldQueue
             // Send a notification for order events
             if ($event instanceof \Fleetbase\FleetOps\Events\OrderCanceled) {
                 $reason = $event->activity ? $event->activity->get('details') : '';
-                NotificationRegistry::notify(OrderCanceled::class, $order, $reason, $event->waypoint);
+                $this->notify(OrderCanceled::class, $order, $reason, $event->waypoint);
             }
 
             if ($event instanceof \Fleetbase\FleetOps\Events\OrderCompleted) {
-                NotificationRegistry::notify(OrderCompleted::class, $order, $event->waypoint);
+                $this->notify(OrderCompleted::class, $order, $event->waypoint);
             }
 
             if ($event instanceof \Fleetbase\FleetOps\Events\OrderFailed) {
                 $reason = $event->activity ? $event->activity->get('details') : '';
-                NotificationRegistry::notify(OrderFailed::class, $order, $reason, $event->waypoint);
+                $this->notify(OrderFailed::class, $order, $reason, $event->waypoint);
             }
 
             if ($event instanceof \Fleetbase\FleetOps\Events\OrderDispatchFailed) {
-                NotificationRegistry::notify(OrderDispatchFailed::class, $order);
+                $this->notify(OrderDispatchFailed::class, $order);
             }
 
             if ($event instanceof \Fleetbase\FleetOps\Events\OrderDispatched) {
-                NotificationRegistry::notify(OrderDispatched::class, $order, $event->waypoint);
+                $this->notify(OrderDispatched::class, $order, $event->waypoint);
             }
 
             if ($event instanceof \Fleetbase\FleetOps\Events\OrderDriverAssigned) {
-                NotificationRegistry::notify(OrderAssigned::class, $order);
+                $this->notify(OrderAssigned::class, $order);
             }
         }
+    }
+
+    protected function notify(string $notificationClass, mixed ...$arguments): void
+    {
+        NotificationRegistry::notify($notificationClass, ...$arguments);
     }
 }

@@ -9,43 +9,49 @@ class FleetActionRequest extends FleetbaseRequest
 {
     /**
      * Determine if the user is authorized to make this request.
-     *
-     * @return bool
      */
-    public function authorize()
+    public function authorize(): bool
     {
-        $action = $this->route()->getActionMethod();
+        $action = $this->actionMethod();
 
         if ($action === 'assignVehicle') {
-            return Auth::can('fleet-ops assign-vehicle-for fleet');
+            return $this->can('fleet-ops assign-vehicle-for fleet');
         }
 
         if ($action === 'assignDriver') {
-            return Auth::can('fleet-ops assign-driver-for fleet');
+            return $this->can('fleet-ops assign-driver-for fleet');
         }
 
         if ($action === 'removeVehicle') {
-            return Auth::can('fleet-ops remove-vehicle-for fleet');
+            return $this->can('fleet-ops remove-vehicle-for fleet');
         }
 
         if ($action === 'removeDriver') {
-            return Auth::can('fleet-ops remove-driver-for fleet');
+            return $this->can('fleet-ops remove-driver-for fleet');
         }
 
-        return Auth::can('fleet-ops update fleet');
+        return $this->can('fleet-ops update fleet');
     }
 
     /**
      * Get the validation rules that apply to the request.
-     *
-     * @return array
      */
-    public function rules()
+    public function rules(): array
     {
         return [
             'fleet'   => 'string|exists:fleets,uuid',
             'driver'  => 'nullable|string|exists:drivers,uuid',
             'vehicle' => 'nullable|string|exists:vehicles,uuid',
         ];
+    }
+
+    protected function actionMethod(): string
+    {
+        return $this->route()->getActionMethod();
+    }
+
+    protected function can(string $permission): bool
+    {
+        return Auth::can($permission);
     }
 }

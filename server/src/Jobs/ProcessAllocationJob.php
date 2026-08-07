@@ -53,45 +53,29 @@ class ProcessAllocationJob implements ShouldQueue
 
     public function handle(OrchestrationEngineRegistry $registry): void
     {
-        $ordersQuery = Order::where('company_uuid', $this->companyUuid)
-            ->whereNull('driver_assigned_uuid')
-            ->whereNotIn('status', ['completed', 'cancelled'])
-            ->with(['payload.dropoff', 'payload.waypoints']);
-
-        if (!empty($this->orderIds)) {
-            $ordersQuery->whereIn('public_id', $this->orderIds);
-        }
-
-        $orders = $ordersQuery->get();
+        $orders = $this->unassignedOrders();
 
         if ($orders->isEmpty()) {
-            Log::info("[ProcessAllocationJob] No unassigned orders for company {$this->companyUuid}.");
+            $this->logInfo("[ProcessAllocationJob] No unassigned orders for company {$this->companyUuid}.");
 
             return;
         }
 
-        $vehicles = Vehicle::where('company_uuid', $this->companyUuid)
-            ->with(['driver' => fn ($q) => $q->where('online', true)])
-            ->get()
-            ->filter(fn ($v) => $v->driver !== null);
+        $vehicles = $this->availableVehicles();
 
         if ($vehicles->isEmpty()) {
-            Log::info("[ProcessAllocationJob] No available vehicles for company {$this->companyUuid}.");
+            $this->logInfo("[ProcessAllocationJob] No available vehicles for company {$this->companyUuid}.");
 
             return;
         }
 
-        $engineId = Setting::lookup('fleetops.orchestrator_engine', 'greedy');
-        $engine   = $registry->resolve($engineId);
+        $engine = $registry->resolve($this->engineId());
 
-        $result = $engine->allocate($orders, $vehicles, [
-            'max_travel_time'  => Setting::lookup('fleetops.allocation_max_travel_time', 3600),
-            'balance_workload' => Setting::lookup('fleetops.allocation_balance_workload', false),
-        ]);
+        $result = $engine->allocate($orders, $vehicles, $this->allocationOptions());
 
         foreach ($result['assignments'] as $assignment) {
-            $order  = Order::where('public_id', $assignment['order_id'])->first();
-            $driver = Driver::where('public_id', $assignment['driver_id'])->first();
+            $order  = $this->findOrderByPublicId($assignment['order_id']);
+            $driver = $this->findDriverByPublicId($assignment['driver_id']);
 
             if (!$order || !$driver) {
                 continue;
@@ -107,7 +91,7 @@ class ProcessAllocationJob implements ShouldQueue
             $order->firstDispatchWithActivity();
         }
 
-        Log::info(
+        $this->logInfo(
             sprintf(
                 '[ProcessAllocationJob] Committed %d assignments, %d unassigned for company %s.',
                 count($result['assignments']),
@@ -115,5 +99,55 @@ class ProcessAllocationJob implements ShouldQueue
                 $this->companyUuid
             )
         );
+    }
+
+    protected function unassignedOrders()
+    {
+        $ordersQuery = Order::where('company_uuid', $this->companyUuid)
+            ->whereNull('driver_assigned_uuid')
+            ->whereNotIn('status', ['completed', 'cancelled'])
+            ->with(['payload.dropoff', 'payload.waypoints']);
+
+        if (!empty($this->orderIds)) {
+            $ordersQuery->whereIn('public_id', $this->orderIds);
+        }
+
+        return $ordersQuery->get();
+    }
+
+    protected function availableVehicles()
+    {
+        return Vehicle::where('company_uuid', $this->companyUuid)
+            ->with(['driver' => fn ($q) => $q->where('online', true)])
+            ->get()
+            ->filter(fn ($v) => $v->driver !== null);
+    }
+
+    protected function engineId(): string
+    {
+        return Setting::lookup('fleetops.orchestrator_engine', 'greedy');
+    }
+
+    protected function allocationOptions(): array
+    {
+        return [
+            'max_travel_time'  => Setting::lookup('fleetops.allocation_max_travel_time', 3600),
+            'balance_workload' => Setting::lookup('fleetops.allocation_balance_workload', false),
+        ];
+    }
+
+    protected function findOrderByPublicId(string $publicId): ?Order
+    {
+        return Order::where('public_id', $publicId)->first();
+    }
+
+    protected function findDriverByPublicId(string $publicId): ?Driver
+    {
+        return Driver::where('public_id', $publicId)->first();
+    }
+
+    protected function logInfo(string $message): void
+    {
+        Log::info($message);
     }
 }

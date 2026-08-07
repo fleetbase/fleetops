@@ -3,6 +3,7 @@
 namespace Fleetbase\FleetOps\Http\Controllers\Api\v1;
 
 use Fleetbase\FleetOps\Models\GeofenceEventLog;
+use Fleetbase\FleetOps\Support\Utils;
 use Fleetbase\Http\Controllers\Controller;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -35,7 +36,7 @@ class GeofenceController extends Controller
     {
         $companyUuid = session('company');
 
-        $query = GeofenceEventLog::where('company_uuid', $companyUuid)
+        $query = $this->geofenceEventLogQuery($companyUuid)
             ->with(['driver.vehicle', 'vehicle', 'order'])
             ->orderBy('occurred_at', 'desc');
 
@@ -85,8 +86,10 @@ class GeofenceController extends Controller
     {
         $companyUuid = session('company');
 
-        $driverStates = DB::table('driver_geofence_states as dgs')
+        $driverStates = $this->table('driver_geofence_states as dgs')
             ->join('drivers as d', 'd.uuid', '=', 'dgs.driver_uuid')
+            // A driver's name lives on the related user record, not the drivers table.
+            ->leftJoin('users as u', 'u.uuid', '=', 'd.user_uuid')
             ->leftJoin('zones as z', function ($join) {
                 $join->on('z.uuid', '=', 'dgs.geofence_uuid')
                      ->where('dgs.geofence_type', '=', 'zone');
@@ -99,21 +102,21 @@ class GeofenceController extends Controller
             ->where('dgs.is_inside', true)
             ->whereNull('d.deleted_at')
             ->select([
-                DB::raw("'driver' as subject_type"),
+                $this->raw("'driver' as subject_type"),
                 'd.public_id as subject_id',
                 'd.uuid as subject_uuid',
-                'd.name as subject_name',
+                'u.name as subject_name',
                 'dgs.driver_uuid',
-                'd.name as driver_name',
+                'u.name as driver_name',
                 'dgs.entered_at',
                 'dgs.geofence_uuid',
-                DB::raw('COALESCE(z.name, sa.name) as geofence_name'),
+                $this->raw('COALESCE(z.name, sa.name) as geofence_name'),
                 'dgs.geofence_type',
-                DB::raw('TIMESTAMPDIFF(MINUTE, dgs.entered_at, NOW()) as minutes_inside'),
+                $this->raw(Utils::sqlMinutesDiff('dgs.entered_at', Utils::sqlNow()) . ' as minutes_inside'),
             ])
             ->get();
 
-        $vehicleStates = DB::table('vehicle_geofence_states as vgs')
+        $vehicleStates = $this->table('vehicle_geofence_states as vgs')
             ->join('vehicles as v', 'v.uuid', '=', 'vgs.vehicle_uuid')
             ->leftJoin('zones as z', function ($join) {
                 $join->on('z.uuid', '=', 'vgs.geofence_uuid')
@@ -127,17 +130,17 @@ class GeofenceController extends Controller
             ->where('vgs.is_inside', true)
             ->whereNull('v.deleted_at')
             ->select([
-                DB::raw("'vehicle' as subject_type"),
+                $this->raw("'vehicle' as subject_type"),
                 'v.public_id as subject_id',
                 'v.uuid as subject_uuid',
-                DB::raw('COALESCE(v.name, v.plate_number, v.public_id) as subject_name'),
-                DB::raw('NULL as driver_uuid'),
-                DB::raw('NULL as driver_name'),
+                $this->raw('COALESCE(v.name, v.plate_number, v.public_id) as subject_name'),
+                $this->raw('NULL as driver_uuid'),
+                $this->raw('NULL as driver_name'),
                 'vgs.entered_at',
                 'vgs.geofence_uuid',
-                DB::raw('COALESCE(z.name, sa.name) as geofence_name'),
+                $this->raw('COALESCE(z.name, sa.name) as geofence_name'),
                 'vgs.geofence_type',
-                DB::raw('TIMESTAMPDIFF(MINUTE, vgs.entered_at, NOW()) as minutes_inside'),
+                $this->raw(Utils::sqlMinutesDiff('vgs.entered_at', Utils::sqlNow()) . ' as minutes_inside'),
             ])
             ->get();
 
@@ -163,7 +166,7 @@ class GeofenceController extends Controller
     {
         $companyUuid = session('company');
 
-        $query = GeofenceEventLog::where('company_uuid', $companyUuid)
+        $query = $this->geofenceEventLogQuery($companyUuid)
             ->where('event_type', 'exited')
             ->whereNotNull('dwell_duration_minutes');
 
@@ -181,11 +184,11 @@ class GeofenceController extends Controller
                 'geofence_uuid',
                 'geofence_name',
                 'geofence_type',
-                DB::raw('COUNT(*) as visit_count'),
-                DB::raw('ROUND(AVG(dwell_duration_minutes), 1) as avg_dwell_minutes'),
-                DB::raw('MAX(dwell_duration_minutes) as max_dwell_minutes'),
-                DB::raw('MIN(dwell_duration_minutes) as min_dwell_minutes'),
-                DB::raw('SUM(dwell_duration_minutes) as total_dwell_minutes'),
+                $this->raw('COUNT(*) as visit_count'),
+                $this->raw('ROUND(AVG(dwell_duration_minutes), 1) as avg_dwell_minutes'),
+                $this->raw('MAX(dwell_duration_minutes) as max_dwell_minutes'),
+                $this->raw('MIN(dwell_duration_minutes) as min_dwell_minutes'),
+                $this->raw('SUM(dwell_duration_minutes) as total_dwell_minutes'),
             ])
             ->orderBy('visit_count', 'desc')
             ->get();
@@ -203,7 +206,7 @@ class GeofenceController extends Controller
         $companyUuid = session('company');
         $perPage     = min((int) $request->input('per_page', 50), 200);
 
-        $events = GeofenceEventLog::where('company_uuid', $companyUuid)
+        $events = $this->geofenceEventLogQuery($companyUuid)
             ->where('driver_uuid', $driverUuid)
             ->with(['driver.vehicle', 'vehicle', 'order'])
             ->orderBy('occurred_at', 'desc')
@@ -259,5 +262,20 @@ class GeofenceController extends Controller
                 'status' => $event->order->status,
             ] : null,
         ];
+    }
+
+    protected function geofenceEventLogQuery(?string $companyUuid): mixed
+    {
+        return GeofenceEventLog::where('company_uuid', $companyUuid);
+    }
+
+    protected function table(string $table): mixed
+    {
+        return DB::table($table);
+    }
+
+    protected function raw(string $expression): mixed
+    {
+        return DB::raw($expression);
     }
 }

@@ -25,11 +25,21 @@ class HandleOrderDispatchFailed implements ShouldQueue
         $order = $event->getModelRecord();
 
         /** @var User */
-        $createdBy = User::where('uuid', $order->created_by_uuid)->first();
+        $createdBy = $this->findUser($order->created_by_uuid);
 
         // notify driver assigned order was canceled
         if ($createdBy) {
-            $createdBy->notify(new OrderDispatchFailedNotification($order, $event));
+            $this->notifyUser($createdBy, $order, $event);
         }
+    }
+
+    protected function findUser(?string $uuid): ?User
+    {
+        return User::where('uuid', $uuid)->first();
+    }
+
+    protected function notifyUser(User $user, $order, OrderDispatchFailed $event): void
+    {
+        $user->notify(new OrderDispatchFailedNotification($order, $event));
     }
 }

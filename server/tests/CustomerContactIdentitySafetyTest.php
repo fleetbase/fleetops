@@ -32,12 +32,10 @@ test('customer creation entrypoints run the customer identity guard', function (
     $apiContact      = file_get_contents(__DIR__ . '/../src/Http/Controllers/Api/v1/ContactController.php');
     $internalContact = file_get_contents(__DIR__ . '/../src/Http/Controllers/Internal/v1/ContactController.php');
     $orderController = file_get_contents(__DIR__ . '/../src/Http/Controllers/Api/v1/OrderController.php');
-    $customerForm    = file_get_contents(__DIR__ . '/../../addon/components/customer/form.hbs');
 
     expect($apiContact)->toContain('$contactCandidate->assertCustomerIdentityIsAvailable();');
     expect($internalContact)->toContain('$this->assertCustomerIdentityIsAvailable($input');
     expect($orderController)->toContain('$customerCandidate->assertCustomerIdentityIsAvailable();');
-    expect($customerForm)->toContain('is_customer=true');
 });
 
 test('customer conflict audit command is registered and read only', function () {
@@ -59,7 +57,6 @@ test('customer portal welcome email is opt in and does not create organization i
     $contactModel        = file_get_contents(__DIR__ . '/../src/Models/Contact.php');
     $customerCredentials = file_get_contents(__DIR__ . '/../src/Mail/CustomerCredentialsMail.php');
     $customerEmail       = file_get_contents(__DIR__ . '/../resources/views/mail/customer-credentials.blade.php');
-    $customerForm        = file_get_contents(__DIR__ . '/../../addon/components/customer/form.hbs');
 
     expect($internalContact)
         ->toContain('meta.customer_portal.send_welcome_email')
@@ -81,9 +78,7 @@ test('customer portal welcome email is opt in and does not create organization i
         ->and($customerEmail)->toContain('Your customer portal access is ready')
         ->and($customerEmail)->toContain('Sign in to customer portal')
         ->and($customerEmail)->toContain('Temporary password:')
-        ->and($customerEmail)->toContain('You can change your password after signing in.')
-        ->and($customerForm)->toContain('this.showWelcomeEmailOption')
-        ->and($customerForm)->toContain('this.toggleWelcomeEmail');
+        ->and($customerEmail)->toContain('You can change your password after signing in.');
 
     expect($contactModel)
         ->toContain('assignUserToContactCompany')

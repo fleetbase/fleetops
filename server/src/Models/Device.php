@@ -176,6 +176,24 @@ class Device extends Model
     ];
 
     /**
+     * Bootstrap the model.
+     *
+     * Devices require a non-null spatial `last_position` (the column is NOT NULL
+     * to support its spatial index), so default it to POINT(0,0) on create when
+     * the caller hasn't provided a position.
+     */
+    protected static function boot()
+    {
+        parent::boot();
+
+        static::creating(function (self $device) {
+            if (empty($device->last_position)) {
+                $device->last_position = new SpatialPoint(0, 0);
+            }
+        });
+    }
+
+    /**
      * Properties which activity needs to be logged.
      *
      * @var array
@@ -345,9 +363,9 @@ class Device extends Model
             return 'recently_offline';
         } elseif ($minutesOffline <= 1440) { // 24 hours
             return 'offline';
-        } else {
-            return 'long_offline';
         }
+
+        return 'long_offline';
     }
 
     /**
@@ -510,10 +528,15 @@ class Device extends Model
      */
     public function getRecentEvents(int $limit = 10)
     {
-        return $this->events()
+        return $this->recentEventsQuery()
             ->orderBy('created_at', 'desc')
             ->limit($limit)
             ->get();
+    }
+
+    protected function recentEventsQuery()
+    {
+        return $this->events();
     }
 
     /**

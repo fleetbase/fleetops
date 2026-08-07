@@ -46,9 +46,24 @@ jobs:
     - name: Generate Coverage Baseline
       run: XDEBUG_MODE=coverage composer coverage:baseline
 
+    # Asserts the gate against the report the step above just wrote.
+    # `composer coverage:check` would regenerate it first, which means running
+    # the whole suite under coverage a second time.
+    - name: Enforce Coverage Gate
+      run: php scripts/coverage-summary.php coverage/clover.xml --fail-under=100
+
     - name: Upload Coverage Baseline
       uses: actions/upload-artifact@v4
       with:
         name: fleetops-coverage-clover
         path: coverage/clover.xml
         if-no-files-found: error
+
+    - name: Upload coverage to Codecov
+      uses: codecov/codecov-action@v5
+      with:
+        token: ${{ secrets.CODECOV_TOKEN }}
+        files: coverage/clover.xml
+        disable_search: true
+        flags: backend
+        fail_ci_if_error: false

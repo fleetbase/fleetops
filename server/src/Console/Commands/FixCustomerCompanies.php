@@ -31,27 +31,24 @@ class FixCustomerCompanies extends Command
      */
     public function handle()
     {
-        $customers = Contact::where('type', 'customer')->whereNotNull('company_uuid')->get();
+        $customers = $this->customers();
 
         // Fix these customers
         foreach ($customers as $customer) {
             /** @var User $user */
-            $customer->loadMissing('user');
-            $user = $customer->user;
+            $user = $this->customerUser($customer);
             if (!$user) {
                 try {
-                    $customer->createUser();
+                    $this->createUserForCustomer($customer);
                     $this->info('User created for customer (' . $customer->name . ' - ' . $customer->email . ')');
-                    $customer->loadMissing('user');
-                    $user = $customer->user;
+                    $user = $this->customerUser($customer);
                 } catch (\Exception $e) {
                     $this->error($e->getMessage());
                     $this->error('Existing user: ' . $customer->email);
                     // Assign existing user to the contact/customer
-                    $existingUser = User::where('email', $customer->email)->first();
+                    $existingUser = $this->userByEmail($customer->email);
                     if ($existingUser) {
-                        $customer->updateQuietly(['user_uuid' => $existingUser->uuid]);
-                        $customer->setRelation('user', $existingUser);
+                        $this->assignExistingUserToCustomer($customer, $existingUser);
                         $this->info('Update customer user to existing user of the same email address.');
                         $user = $existingUser;
                     }
@@ -66,10 +63,10 @@ class FixCustomerCompanies extends Command
                 $user->syncProperty('phone', $customer);
 
                 // Check if customers user has a customer user record with the company
-                $doesntHaveCompanyUser = CompanyUser::where(['user_uuid' => $user->uuid, 'company_uuid' => $customer->company_uuid])->doesntExist();
+                $doesntHaveCompanyUser = $this->missingCompanyUser($user->uuid, $customer->company_uuid);
                 if ($doesntHaveCompanyUser) {
                     $this->line('Found user ' . $user->name . ' (' . $user->email . ') which doesnt have correct company assignment.');
-                    $company = Company::where('uuid', $customer->company_uuid)->first();
+                    $company = $this->companyByUuid($customer->company_uuid);
                     if ($company) {
                         $user->assignCompany($company);
                         $this->line('User ' . $user->email . ' was assigned to company: ' . $company->name);
@@ -79,5 +76,43 @@ class FixCustomerCompanies extends Command
         }
 
         return Command::SUCCESS;
+    }
+
+    protected function customers()
+    {
+        return Contact::where('type', 'customer')->whereNotNull('company_uuid')->get();
+    }
+
+    protected function customerUser(Contact $customer)
+    {
+        $customer->loadMissing('user');
+
+        return $customer->user;
+    }
+
+    protected function createUserForCustomer(Contact $customer)
+    {
+        return $customer->createUser();
+    }
+
+    protected function assignExistingUserToCustomer(Contact $customer, $existingUser): void
+    {
+        $customer->updateQuietly(['user_uuid' => $existingUser->uuid]);
+        $customer->setRelation('user', $existingUser);
+    }
+
+    protected function userByEmail(string $email)
+    {
+        return User::where('email', $email)->first();
+    }
+
+    protected function missingCompanyUser(string $userUuid, string $companyUuid): bool
+    {
+        return CompanyUser::where(['user_uuid' => $userUuid, 'company_uuid' => $companyUuid])->doesntExist();
+    }
+
+    protected function companyByUuid(string $companyUuid): ?Company
+    {
+        return Company::where('uuid', $companyUuid)->first();
     }
 }

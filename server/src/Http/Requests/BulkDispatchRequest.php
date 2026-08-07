@@ -8,20 +8,16 @@ class BulkDispatchRequest extends FleetbaseRequest
 {
     /**
      * Determine if the user is authorized to make this request.
-     *
-     * @return bool
      */
-    public function authorize()
+    public function authorize(): bool
     {
         return $this->session()->has('user');
     }
 
     /**
      * Get the validation rules that apply to the request.
-     *
-     * @return array
      */
-    public function rules()
+    public function rules(): array
     {
         return [
             'ids' => ['required', 'array'],
@@ -30,10 +26,8 @@ class BulkDispatchRequest extends FleetbaseRequest
 
     /**
      * Get the validation rules error messages.
-     *
-     * @return array
      */
-    public function messages()
+    public function messages(): array
     {
         return [
             'ids.required' => 'Please provide a resource ID.',

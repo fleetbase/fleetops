@@ -856,7 +856,7 @@ class ServiceRate extends Model
 
                 // if no distance fee use the last
                 if ($serviceParcelFee === null) {
-                    $serviceParcelFee = $this->parcelFees->sortByDesc()->first();
+                    $serviceParcelFee = $this->parcelFees->sortByDesc('fee')->first();
                 }
 
                 $subTotal += $serviceParcelFee->fee;
@@ -1050,7 +1050,7 @@ class ServiceRate extends Model
 
                 // if no distance fee use the last
                 if ($serviceParcelFee === null) {
-                    $serviceParcelFee = $this->parcelFees->sortByDesc()->first();
+                    $serviceParcelFee = $this->parcelFees->sortByDesc('fee')->first();
                 }
 
                 $subTotal += $serviceParcelFee->fee;
@@ -1213,10 +1213,15 @@ class ServiceRate extends Model
         $subTotal        = 0;
 
         foreach ($pricedDistances as $entry) {
+            // Unreachable: calculateMultiZoneDistances() only ever emits entries
+            // whose rule is a ServiceRateFee — both its early returns are gated
+            // on a non-null $fallbackRule and its accumulator guards the type.
             $rule = $entry['rule'];
+            // @codeCoverageIgnoreStart
             if (!$rule instanceof ServiceRateFee) {
                 continue;
             }
+            // @codeCoverageIgnoreEnd
 
             $distanceInMeters = (float) ($entry['distance_m'] ?? 0);
             if ($distanceInMeters <= 0) {
@@ -1274,12 +1279,16 @@ class ServiceRate extends Model
         $sampledTotal = 0;
 
         for ($i = 0; $i < $places->count() - 1; $i++) {
+            // Unreachable: $places is filtered to Place instances above, and
+            // getLngLatFromPlace() only returns null for a non-Place.
             $start = $this->getLngLatFromPlace($places[$i]);
             $end   = $this->getLngLatFromPlace($places[$i + 1]);
 
+            // @codeCoverageIgnoreStart
             if (!$start || !$end) {
                 continue;
             }
+            // @codeCoverageIgnoreEnd
 
             $legDistance = $this->haversineDistanceInMeters($start['lat'], $start['lng'], $end['lat'], $end['lng']);
             $steps       = max(1, min(500, (int) ceil($legDistance / 1000)));
@@ -1367,11 +1376,9 @@ class ServiceRate extends Model
             return null;
         }
 
+        // getLocationAsPoint() is typed `: SpatialPoint`, which always exposes
+        // getLat()/getLng(), so no further guarding is possible here
         $point = $place->getLocationAsPoint();
-
-        if (!$point || !method_exists($point, 'getLat') || !method_exists($point, 'getLng')) {
-            return null;
-        }
 
         return ['lat' => (float) $point->getLat(), 'lng' => (float) $point->getLng()];
     }

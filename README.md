@@ -13,6 +13,9 @@
     <a href="https://github.com/fleetbase/fleetops/blob/master/LICENSE.md">
         <img src="https://img.shields.io/badge/license-AGPL--3.0--or--later-blue?style=flat-square" alt="License: AGPL-3.0-or-later">
     </a>
+    <a href="https://codecov.io/gh/fleetbase/fleetops">
+        <img src="https://codecov.io/gh/fleetbase/fleetops/branch/main/graph/badge.svg" alt="Coverage">
+    </a>
     <a href="https://www.npmjs.com/package/@fleetbase/fleetops-engine">
         <img src="https://img.shields.io/badge/npm-%40fleetbase%2Ffleetops--engine-CB3837?style=flat-square" alt="NPM package">
     </a>

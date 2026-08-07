@@ -23,13 +23,23 @@ class FinalizeInternalOrderCreation implements ShouldQueue
 
     public function handle(): void
     {
-        $order = Order::where('uuid', $this->orderUuid)->first();
+        $order = $this->findOrder();
         if (!$order) {
             return;
         }
 
         $order->notifyDriverAssigned();
 
+        $this->fireOrderReady($order);
+    }
+
+    protected function findOrder(): ?Order
+    {
+        return Order::where('uuid', $this->orderUuid)->first();
+    }
+
+    protected function fireOrderReady(Order $order): void
+    {
         event(new OrderReady($order));
     }
 }

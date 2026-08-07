@@ -11,6 +11,7 @@ use Fleetbase\FleetOps\Models\ServiceQuote;
 use Fleetbase\FleetOps\Models\ServiceRate;
 use Fleetbase\FleetOps\Support\Utils;
 use Fleetbase\Http\Controllers\Controller;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 class PurchaseRateController extends Controller
@@ -24,7 +25,7 @@ class PurchaseRateController extends Controller
      */
     public function create(CreatePurchaseRateRequest $request)
     {
-        $input       = $request->only(['meta']);
+        $input       = $this->purchaseRateInputFromRequest($request);
         $createOrder = $request->boolean('create_order', false);
         $order       = null;
 
@@ -33,7 +34,7 @@ class PurchaseRateController extends Controller
 
         // service_quote assignment
         if ($request->has('service_quote')) {
-            $input['service_quote_uuid'] = Utils::getUuid('service_quotes', [
+            $input['service_quote_uuid'] = $this->getResourceUuid('service_quotes', [
                 'public_id'    => $request->input('service_quote'),
                 'company_uuid' => session('company'),
             ]);
@@ -41,28 +42,25 @@ class PurchaseRateController extends Controller
 
         // order assignment
         if ($request->has('order')) {
-            $orderUuid = Utils::getUuid('orders', [
+            $orderUuid = $this->getResourceUuid('orders', [
                 'public_id'    => $request->input('order'),
                 'company_uuid' => session('company'),
             ]);
 
-            $order = Order::where('uuid', $orderUuid)->first();
+            $order = $this->findOrderByUuid($orderUuid);
 
             if ($order instanceof Order) {
-                $input['payload_uuid']   = $order->payload_uuid;
-                $input['customer_uuid']  = $order->customer_uuid;
-                $input['customer_type']  = $order->customer_type;
-                $input['company_uuid']   = $order->company_uuid ?? $input['company_uuid'];
+                $input = array_merge($input, $this->purchaseRateInputFromOrder($order, $input['company_uuid']));
             }
         } elseif ($createOrder) {
             // create order from service quote
-            $serviceQuote = ServiceQuote::where('uuid', $input['service_quote_uuid'])->orWhere('public_id', $request->input('service_quote'))->first();
+            $serviceQuote = $this->findServiceQuoteForPurchaseRate($input['service_quote_uuid'], $request->input('service_quote'));
             $order        = $this->createOrderFromServiceQuote($serviceQuote, $request);
         }
 
         // customer assignment
         if ($request->has('customer')) {
-            $customer = Utils::getUuid(
+            $customer = $this->getResourceUuid(
                 ['contacts', 'vendors'],
                 [
                     'public_id'    => $request->input('customer'),
@@ -71,13 +69,12 @@ class PurchaseRateController extends Controller
             );
 
             if (is_array($customer)) {
-                $input['customer_uuid'] = Utils::get($customer, 'uuid');
-                $input['customer_type'] = Utils::getModelClassName(Utils::get($customer, 'table'));
+                $input = array_merge($input, $this->purchaseRateCustomerInputFromLookup($customer));
             }
         }
 
         // create the purchaseRate
-        $purchaseRate = PurchaseRate::create($input);
+        $purchaseRate = $this->createPurchaseRate($input);
 
         if ($order instanceof Order) {
             $order->attachPurchaseRate($purchaseRate);
@@ -85,6 +82,49 @@ class PurchaseRateController extends Controller
 
         // response the driver resource
         return new PurchaseRateResource($purchaseRate);
+    }
+
+    protected function getResourceUuid($tables, array $where)
+    {
+        return Utils::getUuid($tables, $where);
+    }
+
+    protected function findOrderByUuid(?string $uuid): ?Order
+    {
+        return Order::where('uuid', $uuid)->first();
+    }
+
+    protected function findServiceQuoteForPurchaseRate(?string $uuid, ?string $publicId): ?ServiceQuote
+    {
+        return ServiceQuote::where('uuid', $uuid)->orWhere('public_id', $publicId)->first();
+    }
+
+    protected function createPurchaseRate(array $input): PurchaseRate
+    {
+        return PurchaseRate::create($input);
+    }
+
+    protected function purchaseRateInputFromRequest(Request $request): array
+    {
+        return $request->only(['meta']);
+    }
+
+    protected function purchaseRateInputFromOrder(Order $order, ?string $fallbackCompanyUuid = null): array
+    {
+        return [
+            'payload_uuid'  => $order->payload_uuid,
+            'customer_uuid' => $order->customer_uuid,
+            'customer_type' => $order->customer_type,
+            'company_uuid'  => $order->company_uuid ?? $fallbackCompanyUuid,
+        ];
+    }
+
+    protected function purchaseRateCustomerInputFromLookup(array $customer): array
+    {
+        return [
+            'customer_uuid' => Utils::get($customer, 'uuid'),
+            'customer_type' => Utils::getModelClassName(Utils::get($customer, 'table')),
+        ];
     }
 
     /**
@@ -95,7 +135,7 @@ class PurchaseRateController extends Controller
      *
      * @return \Fleetbase\Models\Order|null
      */
-    private function createOrderFromServiceQuote(?ServiceQuote $serviceQuote, CreatePurchaseRateRequest $request): ?Order
+    protected function createOrderFromServiceQuote(?ServiceQuote $serviceQuote, CreatePurchaseRateRequest $request): Order|JsonResponse|null
     {
         // if integrated vendor service quote create order with vendor first then create fleetbase order
         $integratedVendorOrder = null;
@@ -125,7 +165,9 @@ class PurchaseRateController extends Controller
             $payload = new Payload();
             $payload->setPickup($pickup);
             $payload->setDropoff($dropoff);
-            $payload->setDropoff($return);
+            if ($return) {
+                $payload->setReturn($return);
+            }
             $payload->setWaypoints($waypoints);
             $payload->setEntities($entities);
             $payload->save();
@@ -146,28 +188,25 @@ class PurchaseRateController extends Controller
             $input['type'] = 'default';
         }
 
-        // create the order
+        // create the order — Eloquent's create() always hands back a model
+        // instance, so there is no not-an-Order path to fall through to
         $order = Order::create($input);
 
-        if ($order instanceof Order) {
-            // notify driver if assigned
-            $order->notifyDriverAssigned();
+        // notify driver if assigned
+        $order->notifyDriverAssigned();
 
-            // set driving distance and time
-            $order->setPreliminaryDistanceAndTime();
+        // set driving distance and time
+        $order->setPreliminaryDistanceAndTime();
 
-            // if it's integrated vendor order apply to meta
-            if ($integratedVendorOrder) {
-                $order->updateMeta([
-                    'integrated_vendor'       => $serviceQuote->integratedVendor->public_id,
-                    'integrated_vendor_order' => $integratedVendorOrder,
-                ]);
-            }
-
-            return $order;
+        // if it's integrated vendor order apply to meta
+        if ($integratedVendorOrder) {
+            $order->updateMeta([
+                'integrated_vendor'       => $serviceQuote->integratedVendor->public_id,
+                'integrated_vendor_order' => $integratedVendorOrder,
+            ]);
         }
 
-        return null;
+        return $order;
     }
 
     /**
@@ -177,9 +216,9 @@ class PurchaseRateController extends Controller
      */
     public function query(Request $request)
     {
-        $results = PurchaseRate::queryWithRequest($request);
+        $results = $this->queryPurchaseRates($request);
 
-        return PurchaseRateResource::collection($results);
+        return $this->purchaseRateResourceCollection($results);
     }
 
     /**
@@ -191,9 +230,9 @@ class PurchaseRateController extends Controller
     {
         // find for the purchaseRate
         try {
-            $purchaseRate = PurchaseRate::findRecordOrFail($id);
+            $purchaseRate = $this->findPurchaseRate($id);
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $exception) {
-            return response()->json(
+            return $this->jsonResponse(
                 [
                     'error' => 'PurchaseRate resource not found.',
                 ],
@@ -202,6 +241,31 @@ class PurchaseRateController extends Controller
         }
 
         // response the purchaseRate resource
+        return $this->purchaseRateResource($purchaseRate);
+    }
+
+    protected function queryPurchaseRates(Request $request)
+    {
+        return PurchaseRate::queryWithRequest($request);
+    }
+
+    protected function findPurchaseRate(string $id): PurchaseRate
+    {
+        return PurchaseRate::findRecordOrFail($id);
+    }
+
+    protected function purchaseRateResource(PurchaseRate $purchaseRate)
+    {
         return new PurchaseRateResource($purchaseRate);
+    }
+
+    protected function purchaseRateResourceCollection($results)
+    {
+        return PurchaseRateResource::collection($results);
+    }
+
+    protected function jsonResponse(array $payload, int $status)
+    {
+        return response()->json($payload, $status);
     }
 }

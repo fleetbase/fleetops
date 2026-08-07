@@ -15,13 +15,14 @@ module('Integration | Component | device/panel-header', function (hooks) {
             type: 'gps',
             imei: '864022084024776',
             attached_to_name: 'CLD-06',
-            last_online_at: '2026-06-18T15:28:00Z',
+            last_online_at: new Date(2026, 5, 18, 15, 28),
         });
 
         await render(hbs`<Device::PanelHeader @resource={{this.resource}} />`);
 
         assert.dom().includesText('BX-046');
         assert.dom().includesText('Offline');
+        assert.dom().includesText('18 Jun 2026, 15:28');
         assert.dom().includesText('Afaqy');
         assert.dom().includesText('864022084024776');
         assert.dom().includesText('CLD-06');
@@ -40,6 +41,19 @@ module('Integration | Component | device/panel-header', function (hooks) {
         assert.dom().includesText('SN-100');
         assert.dom().includesText('Online');
         assert.dom().includesText('No last online');
+    });
+
+    test('it prefers the telematics connection state over the raw online flag', async function (assert) {
+        this.set('resource', {
+            serial_number: 'SN-200',
+            connection_status: 'recently_offline',
+            online: true,
+            is_online: true,
+        });
+
+        await render(hbs`<Device::PanelHeader @resource={{this.resource}} />`);
+
+        assert.dom().includesText('Recently Offline');
     });
 
     test('it renders safe fallbacks without a resource', async function (assert) {

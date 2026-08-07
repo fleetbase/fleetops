@@ -670,6 +670,7 @@ order:
     order-metadata: Metadatos del pedido
     order-label: Etiqueta de pedido
     waypoint-label: Etiqueta de punto de referencia
+    entity-label: Etiqueta de entidad
     current-eta: ETA actual
     ect: TEC
     current-destination: Destino actual
@@ -686,6 +687,7 @@ order:
     no-driver-assigned-error: No hay ningún conductor asignado a este pedido.
     failed-to-load-order-label: No se pudo cargar la etiqueta del pedido.
     failed-to-load-waypoint-label: No se pudo cargar la etiqueta del waypoint.
+    failed-to-load-entity-label: No se pudo cargar la etiqueta de la entidad.
     unable-to-add-entity: No se puede agregar una nueva entidad al pedido.
     assign-driver-success: El conductor ({driverName}) ha sido asignado al pedido {orderId}.
     cancel-title: ¿Está seguro de que desea cancelar este pedido?

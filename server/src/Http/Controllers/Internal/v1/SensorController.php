@@ -28,7 +28,7 @@ class SensorController extends FleetOpsController
         $selections = $request->array('selections');
         $fileName   = trim(Str::slug('sensors-' . date('Y-m-d-H:i')) . '.' . $format);
 
-        return Excel::download(new SensorExport($selections), $fileName);
+        return $this->downloadExport(new SensorExport($selections), $fileName);
     }
 
     /**
@@ -40,5 +40,10 @@ class SensorController extends FleetOpsController
     public static function onQueryRecord($query, $request): void
     {
         $query->with(['telematic', 'device', 'warranty']);
+    }
+
+    protected function downloadExport(SensorExport $export, string $fileName)
+    {
+        return Excel::download($export, $fileName);
     }
 }

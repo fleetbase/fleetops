@@ -46,7 +46,7 @@ class Customer extends FleetbaseResource
         ];
     }
 
-    private function getOrdersCount(Request $request): int
+    protected function getOrdersCount(Request $request): int
     {
         return Order::where('customer_uuid', $this->uuid)
             ->whereNull('deleted_at')
@@ -61,7 +61,7 @@ class Customer extends FleetbaseResource
      * Currency falls back through company.currency → ledger base_currency
      * → "USD" via {@see Utils::getCompanyTransactionCurrency}.
      */
-    private function buildCompanyPayload(): ?array
+    protected function buildCompanyPayload(): ?array
     {
         $company = Company::find($this->company_uuid);
         if (!$company) {

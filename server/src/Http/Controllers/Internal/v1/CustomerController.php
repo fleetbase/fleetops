@@ -26,7 +26,7 @@ class CustomerController extends Controller
         }
 
         return response()->json([
-            'customer' => $this->customerPayload($customer->fresh()),
+            'customer' => $this->customerPayload($this->freshCustomer($customer)),
         ]);
     }
 
@@ -39,19 +39,19 @@ class CustomerController extends Controller
             return response()->error('Unable to send customer portal credentials.');
         }
 
-        $password = Str::random(16);
+        $password = $this->randomPassword();
         $user->changePassword($password);
-        Mail::to($user)->send(new CustomerCredentialsMail($password, $customer));
+        $this->sendCustomerCredentials($user, $password, $customer);
 
         return response()->json([
-            'customer' => $this->customerPayload($customer->fresh()),
+            'customer' => $this->customerPayload($this->freshCustomer($customer)),
         ]);
     }
 
     public function deactivatePortalLogin(Request $request)
     {
         $customer = $this->resolveCustomer($request);
-        $user     = $customer->user_uuid ? User::where('uuid', $customer->user_uuid)->first() : null;
+        $user     = $customer->user_uuid ? $this->findUser($customer->user_uuid) : null;
 
         if (!$user) {
             return response()->error('Customer portal login not found.');
@@ -60,14 +60,14 @@ class CustomerController extends Controller
         $user->deactivate();
 
         return response()->json([
-            'customer' => $this->customerPayload($customer->fresh()),
+            'customer' => $this->customerPayload($this->freshCustomer($customer)),
         ]);
     }
 
     public function reactivatePortalLogin(Request $request)
     {
         $customer = $this->resolveCustomer($request);
-        $user     = $customer->user_uuid ? User::where('uuid', $customer->user_uuid)->first() : null;
+        $user     = $customer->user_uuid ? $this->findUser($customer->user_uuid) : null;
 
         if (!$user) {
             return response()->error('Customer portal login not found.');
@@ -76,7 +76,7 @@ class CustomerController extends Controller
         $user->activate();
 
         return response()->json([
-            'customer' => $this->customerPayload($customer->fresh()),
+            'customer' => $this->customerPayload($this->freshCustomer($customer)),
         ]);
     }
 
@@ -154,12 +154,12 @@ class CustomerController extends Controller
 
         // Send credentials to customer if opted
         if ($sendCredentials) {
-            Mail::to($user)->send(new CustomerCredentialsMail($password, $customer));
+            $this->sendCustomerCredentials($user, $password, $customer);
         }
 
         return response()->json([
             'status'   => 'ok',
-            'customer' => $this->customerPayload($customer->fresh()),
+            'customer' => $this->customerPayload($this->freshCustomer($customer)),
         ]);
     }
 
@@ -180,7 +180,32 @@ class CustomerController extends Controller
 
     protected function resolveCustomerUser(Contact $customer): ?User
     {
-        return $customer->user_uuid ? User::where('uuid', $customer->user_uuid)->first() : Contact::createUserFromContact($customer, false, true);
+        return $customer->user_uuid ? $this->findUser($customer->user_uuid) : $this->createUserFromCustomer($customer);
+    }
+
+    protected function findUser(string $uuid): ?User
+    {
+        return User::where('uuid', $uuid)->first();
+    }
+
+    protected function createUserFromCustomer(Contact $customer): ?User
+    {
+        return Contact::createUserFromContact($customer, false, true);
+    }
+
+    protected function randomPassword(): string
+    {
+        return Str::random(16);
+    }
+
+    protected function sendCustomerCredentials(User $user, string $password, Contact $customer): void
+    {
+        Mail::to($user)->send(new CustomerCredentialsMail($password, $customer));
+    }
+
+    protected function freshCustomer(Contact $customer): Contact
+    {
+        return $customer->fresh();
     }
 
     protected function customerPayload(Contact $customer): array

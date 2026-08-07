@@ -1,0 +1,25 @@
+name: API Contract (Postman)
+
+# Boots a full Fleetbase stack (published image) and runs the FleetOps Postman
+# collection against the live API. Delegates to the reusable workflow in
+# fleetbase/fleetbase. Requires org secrets POSTMAN_API_KEY + _GITHUB_AUTH_TOKEN
+# (inherited); no-ops until POSTMAN_API_KEY is set.
+# TODO: change @dev-v0.7.53 to @main once that branch is merged.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  contract:
+    uses: fleetbase/fleetbase/.github/workflows/api-contract.yml@dev-v0.7.53
+    with:
+      collections: "Fleetbase API"
+      build-from-source: false
+    secrets: inherit

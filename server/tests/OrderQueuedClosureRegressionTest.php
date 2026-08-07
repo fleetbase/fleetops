@@ -16,7 +16,8 @@ test('order workflows dispatch named queue jobs instead of signed closures', fun
         ->and($internalController)
         ->not->toContain('dispatch(function')
         ->toContain('FinalizeInternalOrderCreation::dispatch($order->uuid)->afterCommit()')
-        ->toContain('NotifyBulkAssignedDriver::dispatch($orderUuids->all(), $driver->uuid)->afterCommit()');
+        ->toContain('$this->dispatchBulkAssignedDriverNotification($orderUuids->all(), $driver)')
+        ->toContain('NotifyBulkAssignedDriver::dispatch($orderUuids, $driver->uuid)->afterCommit()');
 });
 
 test('order queue jobs serialize only scalar identifiers and options', function () {

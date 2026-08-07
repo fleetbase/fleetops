@@ -73,8 +73,8 @@ class OrchestrationPayloadBuilder
                 $rawWeight  = (float) ($entity->weight ?? 0);
                 $weightUnit = strtolower($entity->weight_unit ?? 'kg');
                 $weightKg   = match ($weightUnit) {
-                    'g', 'gram', 'grams'              => $rawWeight / 1000,
-                    'lb', 'lbs', 'pound', 'pounds'    => $rawWeight * 0.453592,
+                    'g', 'gram', 'grams'               => $rawWeight / 1000,
+                    'lb', 'lbs', 'pound', 'pounds'     => $rawWeight * 0.453592,
                     'oz', 'ounce', 'ounces'            => $rawWeight * 0.0283495,
                     't', 'ton', 'tonne', 'tonnes'      => $rawWeight * 1000,
                     default                            => $rawWeight, // kg assumed

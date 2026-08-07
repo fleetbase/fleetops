@@ -24,8 +24,17 @@ class ContactImport implements ToCollection, WithHeadingRow
                 $row = array_filter($row->toArray());
             }
 
-            Contact::createFromImport($row, true);
+            if (empty($row)) {
+                continue;
+            }
+
+            $this->createFromImport($row);
             $this->imported++;
         }
+    }
+
+    protected function createFromImport(array $row): void
+    {
+        Contact::createFromImport($row, true);
     }
 }

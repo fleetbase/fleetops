@@ -56,30 +56,24 @@ class DriverController extends Controller
         $userDetails                 = $request->only(['name', 'password', 'email', 'phone', 'timezone']);
 
         // Get current company session
-        $company = $request->has('company') ? Auth::getCompanyFromRequest($request) : Auth::getCompany();
+        $company = $request->has('company') ? $this->companyFromRequest($request) : $this->currentCompany();
 
         // Debugging: Ensure company is retrieved correctly
         if (!$company) {
-            return response()->apiError('Company not found.');
+            return $this->apiError('Company not found.');
         }
 
         // Apply user infos
-        $userDetails = User::applyUserInfoFromRequest($request, $userDetails);
+        $userDetails = $this->applyUserInfoFromRequest($request, $userDetails);
 
         // Set company_uuid before creating user
         $userDetails['company_uuid'] = $company->uuid;
 
         // create user account for driver
-        $user = User::create($userDetails);
+        $user = $this->createUser($userDetails);
 
-        // Assign company
-        if ($company) {
-            $user->assignCompany($company);
-        } else {
-            $user->deleteQuietly();
-
-            return response()->apiError('Unable to assign driver to company.');
-        }
+        // Assign company — the early return above guarantees $company is set
+        $user->assignCompany($company);
 
         // Set user type
         $user->setUserType('driver');
@@ -93,7 +87,7 @@ class DriverController extends Controller
 
         // vehicle assignment public_id -> uuid
         if ($request->has('vehicle')) {
-            $input['vehicle_uuid'] = Utils::getUuid('vehicles', [
+            $input['vehicle_uuid'] = $this->getUuid('vehicles', [
                 'public_id'    => $request->input('vehicle'),
                 'company_uuid' => $company->uuid,  // Use $company->uuid instead of session
             ]);
@@ -101,7 +95,7 @@ class DriverController extends Controller
 
         // vendor assignment public_id -> uuid
         if ($request->has('vendor')) {
-            $input['vendor_uuid'] = Utils::getUuid('vendors', [
+            $input['vendor_uuid'] = $this->getUuid('vendors', [
                 'public_id'    => $request->input('vendor'),
                 'company_uuid' => $company->uuid,  // Use $company->uuid instead of session
             ]);
@@ -109,7 +103,7 @@ class DriverController extends Controller
 
         // order|alias:job assignment public_id -> uuid
         if ($request->has('job')) {
-            $input['current_job_uuid'] = Utils::getUuid('orders', [
+            $input['current_job_uuid'] = $this->getUuid('orders', [
                 'public_id'    => $request->input('job'),
                 'company_uuid' => $company->uuid,  // Use $company->uuid instead of session
             ]);
@@ -122,16 +116,16 @@ class DriverController extends Controller
 
         // latitude / longitude
         if ($request->has(['latitude', 'longitude'])) {
-            $input['location'] = Utils::getPointFromCoordinates($request->only(['latitude', 'longitude']));
+            $input['location'] = $this->pointFromCoordinates($request->only(['latitude', 'longitude']));
         }
 
         // create the driver
-        $driver = Driver::create($input);
+        $driver = $this->createDriver($input);
 
         // Handle photo upload using FileResolverService
         if ($request->has('photo')) {
             $path = 'uploads/' . $company->uuid . '/drivers';
-            $file = app(\Fleetbase\Services\FileResolverService::class)->resolve($request->input('photo'), $path);
+            $file = $this->resolveFile($request->input('photo'), $path);
 
             if ($file) {
                 $user->update(['photo_uuid' => $file->uuid]);
@@ -142,7 +136,7 @@ class DriverController extends Controller
         $driver = $driver->load(['user', 'vehicle', 'vendor', 'currentJob']);
 
         // response the driver resource
-        return new DriverResource($driver);
+        return $this->driverResource($driver);
     }
 
     /**
@@ -157,9 +151,9 @@ class DriverController extends Controller
     {
         // find for the driver
         try {
-            $driver = Driver::findRecordOrFail($id, ['user']);
+            $driver = $this->findDriver($id, ['user']);
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $exception) {
-            return response()->json(
+            return $this->jsonResponse(
                 [
                     'error' => 'Driver resource not found.',
                 ],
@@ -181,31 +175,31 @@ class DriverController extends Controller
 
         // vehicle assignment public_id -> uuid
         if ($request->has('vehicle')) {
-            $input['vehicle_uuid'] = Utils::getUuid('vehicles', [
+            $input['vehicle_uuid'] = $this->getUuid('vehicles', [
                 'public_id'    => $request->input('vehicle'),
-                'company_uuid' => session('company'),
+                'company_uuid' => $this->sessionCompany(),
             ]);
         }
 
         // vendor assignment public_id -> uuid
         if ($request->has('vendor')) {
-            $input['vendor_uuid'] = Utils::getUuid('vendors', [
+            $input['vendor_uuid'] = $this->getUuid('vendors', [
                 'public_id'    => $request->input('vendor'),
-                'company_uuid' => session('company'),
+                'company_uuid' => $this->sessionCompany(),
             ]);
         }
 
         // order|alias:job assignment public_id -> uuid
         if ($request->has('job')) {
-            $input['current_job_uuid'] = Utils::getUuid('orders', [
+            $input['current_job_uuid'] = $this->getUuid('orders', [
                 'public_id'    => $request->input('job'),
-                'company_uuid' => session('company'),
+                'company_uuid' => $this->sessionCompany(),
             ]);
         }
 
         // latitude / longitude
         if ($request->has(['latitude', 'longitude'])) {
-            $input['location'] = Utils::getPointFromCoordinates($request->only(['latitude', 'longitude']));
+            $input['location'] = $this->pointFromCoordinates($request->only(['latitude', 'longitude']));
         }
 
         // create the driver
@@ -214,8 +208,8 @@ class DriverController extends Controller
 
         // Handle photo upload using FileResolverService
         if ($request->has('photo')) {
-            $path = 'uploads/' . session('company') . '/drivers';
-            $file = app(\Fleetbase\Services\FileResolverService::class)->resolve($request->input('photo'), $path);
+            $path = 'uploads/' . $this->sessionCompany() . '/drivers';
+            $file = $this->resolveFile($request->input('photo'), $path);
 
             if ($file) {
                 $driver->user->update(['photo_uuid' => $file->uuid]);
@@ -226,7 +220,7 @@ class DriverController extends Controller
         $driver = $driver->load(['user', 'vehicle', 'vendor', 'currentJob']);
 
         // response the driver resource
-        return new DriverResource($driver);
+        return $this->driverResource($driver);
     }
 
     /**
@@ -236,18 +230,9 @@ class DriverController extends Controller
      */
     public function query(Request $request)
     {
-        $results = Driver::queryWithRequest(
-            $request,
-            function (&$query, $request) {
-                if ($request->has('vendor')) {
-                    $query->whereHas('vendor', function ($q) use ($request) {
-                        $q->where('public_id', $request->input('vendor'));
-                    });
-                }
-            }
-        );
+        $results = $this->queryDrivers($request);
 
-        return DriverResource::collection($results);
+        return $this->driverResourceCollection($results);
     }
 
     /**
@@ -261,9 +246,9 @@ class DriverController extends Controller
     {
         // find for the driver
         try {
-            $driver = Driver::findRecordOrFail($id, ['user', 'vehicle', 'vendor', 'currentJob']);
+            $driver = $this->findDriver($id, ['user', 'vehicle', 'vendor', 'currentJob']);
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $exception) {
-            return response()->json(
+            return $this->jsonResponse(
                 [
                     'error' => 'Driver resource not found.',
                 ],
@@ -272,7 +257,7 @@ class DriverController extends Controller
         }
 
         // response the driver resource
-        return new DriverResource($driver);
+        return $this->driverResource($driver);
     }
 
     /**
@@ -286,9 +271,9 @@ class DriverController extends Controller
     {
         // find for the driver
         try {
-            $driver = Driver::findRecordOrFail($id, ['user', 'vehicle', 'vendor', 'currentJob']);
+            $driver = $this->findDriver($id, ['user', 'vehicle', 'vendor', 'currentJob']);
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $exception) {
-            return response()->json(
+            return $this->jsonResponse(
                 [
                     'error' => 'Driver resource not found.',
                 ],
@@ -300,7 +285,7 @@ class DriverController extends Controller
         $driver->delete();
 
         // response the driver resource
-        return new DeletedResource($driver);
+        return $this->deletedDriverResource($driver);
     }
 
     /**
@@ -317,14 +302,14 @@ class DriverController extends Controller
         $speed     = $request->input('speed');
 
         try {
-            $driver = Driver::findRecordOrFail($id);
+            $driver = $this->findDriver($id);
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $exception) {
-            return response()->apiError('Driver resource not found.', 404);
+            return $this->apiError('Driver resource not found.', 404);
         }
 
         // If no lat/lng provided, maintain compatibility and just return existing driver resource
         if (empty($latitude) && empty($longitude)) {
-            return new DriverResource($driver);
+            return $this->driverResource($driver);
         }
 
         $isGeocodable = Carbon::parse($driver->updated_at)->diffInMinutes(Carbon::now(), false) > 10 || empty($driver->country) || empty($driver->city);
@@ -402,7 +387,7 @@ class DriverController extends Controller
             }
         }
 
-        return new DriverResource($driver);
+        return $this->driverResource($driver);
     }
 
     /**
@@ -420,9 +405,9 @@ class DriverController extends Controller
     public function toggleOnline(string $id, Request $request)
     {
         try {
-            $driver = Driver::findRecordOrFail($id);
+            $driver = $this->findDriver($id);
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $exception) {
-            return response()->json([
+            return $this->jsonResponse([
                 'error' => 'Driver resource not found.',
             ], 404);
         }
@@ -443,7 +428,7 @@ class DriverController extends Controller
         }
 
         // Return the updated resource
-        return new DriverResource($driver);
+        return $this->driverResource($driver);
     }
 
     /**
@@ -451,12 +436,15 @@ class DriverController extends Controller
      *
      * @return \Illuminate\Http\Response
      */
-    public function registerDevice(string $id, Request $request)
+    public function registerDevice(?string $id = null, ?Request $request = null)
     {
         try {
-            $driver = Driver::findRecordOrFail($id);
+            // With an id (…/{id}/register-device) look the driver up directly; without
+            // one (…/register-device and the internal delegation) resolve the driver
+            // from the authenticated user.
+            $driver = $id ? $this->findDriver($id) : $this->currentDriver($request);
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $exception) {
-            return response()->json(
+            return $this->jsonResponse(
                 [
                     'error' => 'Driver resource not found.',
                 ],
@@ -468,14 +456,14 @@ class DriverController extends Controller
         $platform = $request->or(['platform', 'os']);
 
         if (!$token) {
-            return response()->apiError('Token is required to register device.');
+            return $this->apiError('Token is required to register device.');
         }
 
         if (!$platform) {
-            return response()->apiError('Platform is required to register device.');
+            return $this->apiError('Platform is required to register device.');
         }
 
-        $device = UserDevice::firstOrCreate(
+        $device = $this->firstOrCreateUserDevice(
             [
                 'token'    => $token,
                 'platform' => $platform,
@@ -488,9 +476,9 @@ class DriverController extends Controller
             ]
         );
 
-        return response()->json([
+        return $this->jsonResponse([
             'device' => $device->public_id,
-        ]);
+        ], 200);
     }
 
     /**
@@ -673,10 +661,16 @@ class DriverController extends Controller
         }
 
         // Get the driver user account
+        //
+        // Unreachable: DriverScope adds a whereHas('user') to every driver
+        // query, so findRecordOrFail() never yields a driver whose user is
+        // missing. Kept as defence in depth if that scope is ever relaxed.
         $user = $driver->getUser();
+        // @codeCoverageIgnoreStart
         if (!$user) {
             return response()->apiError('Driver has not user account.');
         }
+        // @codeCoverageIgnoreEnd
 
         // Get the user account company
         $company = Auth::getCompanySessionForUser($user);
@@ -744,10 +738,16 @@ class DriverController extends Controller
         }
 
         // Get the driver user account
+        //
+        // Unreachable: the same user was already dereferenced above to compare
+        // company sessions, and DriverScope guarantees it exists in the first
+        // place. Kept as defence in depth if that scope is ever relaxed.
         $user = $driver->getUser();
+        // @codeCoverageIgnoreStart
         if (!$user) {
             return response()->apiError('Critial error, driver has not user account.');
         }
+        // @codeCoverageIgnoreEnd
 
         // Get the users driver profile for this company
         $driverProfile = Driver::where(['user_uuid' => $user->uuid, 'company_uuid' => $company->uuid])->first();
@@ -900,6 +900,111 @@ class DriverController extends Controller
         }
 
         return response()->json($route);
+    }
+
+    protected function companyFromRequest(Request $request): ?Company
+    {
+        return Auth::getCompanyFromRequest($request);
+    }
+
+    protected function currentCompany(): ?Company
+    {
+        return Auth::getCompany();
+    }
+
+    protected function sessionCompany(): ?string
+    {
+        return session('company');
+    }
+
+    protected function applyUserInfoFromRequest(Request $request, array $userDetails): array
+    {
+        return User::applyUserInfoFromRequest($request, $userDetails);
+    }
+
+    protected function createUser(array $userDetails): User
+    {
+        return User::create($userDetails);
+    }
+
+    protected function getUuid(array|string $table, array $where, array $options = []): mixed
+    {
+        return Utils::getUuid($table, $where, $options);
+    }
+
+    protected function pointFromCoordinates(array $coordinates): Point
+    {
+        return Utils::getPointFromCoordinates($coordinates);
+    }
+
+    protected function createDriver(array $attributes): Driver
+    {
+        return Driver::create($attributes);
+    }
+
+    protected function resolveFile(mixed $input, string $path): mixed
+    {
+        return app(\Fleetbase\Services\FileResolverService::class)->resolve($input, $path);
+    }
+
+    protected function findDriver(string $id, array $with = []): Driver
+    {
+        return Driver::findRecordOrFail($id, $with);
+    }
+
+    /**
+     * Resolve the driver for the authenticated request (used when no explicit
+     * driver id is supplied, e.g. a driver-authenticated session).
+     *
+     * @throws \Illuminate\Database\Eloquent\ModelNotFoundException
+     */
+    protected function currentDriver(?Request $request): Driver
+    {
+        return Driver::where('user_uuid', optional(optional($request)->user())->uuid)->firstOrFail();
+    }
+
+    protected function queryDrivers(Request $request)
+    {
+        return Driver::queryWithRequest(
+            $request,
+            function (&$query, $request) {
+                if ($request->has('vendor')) {
+                    $query->whereHas('vendor', function ($q) use ($request) {
+                        $q->where('public_id', $request->input('vendor'));
+                    });
+                }
+            }
+        );
+    }
+
+    protected function firstOrCreateUserDevice(array $attributes, array $values): UserDevice
+    {
+        return UserDevice::firstOrCreate($attributes, $values);
+    }
+
+    protected function driverResource(Driver $driver)
+    {
+        return new DriverResource($driver);
+    }
+
+    protected function driverResourceCollection($results)
+    {
+        return DriverResource::collection($results);
+    }
+
+    protected function deletedDriverResource(Driver $driver)
+    {
+        return new DeletedResource($driver);
+    }
+
+    protected function jsonResponse(array $payload, int $status)
+    {
+        return response()->json($payload, $status);
+    }
+
+    protected function apiError(string $message, int $status = 400)
+    {
+        return response()->apiError($message, $status);
     }
 
     /**

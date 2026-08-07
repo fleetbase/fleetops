@@ -35,8 +35,13 @@ class FleetObserver
     public function deleted(Fleet $fleet)
     {
         // If the fleet being deleted is set as parent fleet, remove it as the parent fleet
-        $subFleets = Fleet::where(['parent_fleet_uuid' => $fleet->uuid])->update(['parent_fleet_uuid' => null]);
+        $this->clearParentFleet($fleet->uuid);
 
         LiveCacheService::invalidate('operations-monitor');
+    }
+
+    protected function clearParentFleet(string $fleetUuid): void
+    {
+        Fleet::where(['parent_fleet_uuid' => $fleetUuid])->update(['parent_fleet_uuid' => null]);
     }
 }

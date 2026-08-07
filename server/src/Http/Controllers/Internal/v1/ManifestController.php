@@ -32,8 +32,7 @@ class ManifestController extends Controller
     public function index(Request $request): JsonResponse
     {
         $companyUuid = session('company');
-        $query       = Manifest::forCompany($companyUuid)
-            ->with(['driver', 'vehicle', 'stops.place', 'stops.order.trackingNumber']);
+        $query       = $this->manifestQueryForCompany($companyUuid);
 
         if ($request->filled('status')) {
             $query->where('status', $request->input('status'));
@@ -60,8 +59,8 @@ class ManifestController extends Controller
      */
     public function show(string $id): JsonResponse
     {
-        $manifest = Manifest::where('public_id', $id)
-            ->with(['driver', 'vehicle', 'stops' => fn ($q) => $q->orderBy('sequence')->with(['place', 'order.trackingNumber', 'order.payload.dropoff'])])
+        $manifest = $this->manifestQueryByPublicId($id)
+            ->with($this->manifestShowRelations())
             ->firstOrFail();
 
         return response()->json(['manifest' => $manifest]);
@@ -74,7 +73,7 @@ class ManifestController extends Controller
      */
     public function cancel(string $id): JsonResponse
     {
-        $manifest = Manifest::where('public_id', $id)->firstOrFail();
+        $manifest = $this->manifestQueryByPublicId($id)->firstOrFail();
         $manifest->cancel();
 
         return response()->json(['status' => 'cancelled', 'manifest' => $manifest]);
@@ -87,7 +86,7 @@ class ManifestController extends Controller
      */
     public function destroy(string $id): JsonResponse
     {
-        $manifest = Manifest::where('public_id', $id)->firstOrFail();
+        $manifest = $this->manifestQueryByPublicId($id)->firstOrFail();
         $manifest->delete();
 
         return response()->json(['deleted' => true]);
@@ -100,7 +99,7 @@ class ManifestController extends Controller
      */
     public function showStop(string $id): JsonResponse
     {
-        $stop = ManifestStop::where('public_id', $id)
+        $stop = $this->manifestStopQueryByPublicId($id)
             ->with(['place', 'order.trackingNumber', 'order.payload.dropoff', 'waypoint'])
             ->firstOrFail();
 
@@ -116,7 +115,7 @@ class ManifestController extends Controller
      */
     public function updateStop(Request $request, string $id): JsonResponse
     {
-        $stop = ManifestStop::where('public_id', $id)->firstOrFail();
+        $stop = $this->manifestStopQueryByPublicId($id)->firstOrFail();
 
         $allowed = ['status', 'sequence', 'actual_arrival', 'meta'];
         $data    = $request->only($allowed);
@@ -134,5 +133,26 @@ class ManifestController extends Controller
         }
 
         return response()->json(['stop' => $stop->fresh(['place', 'order.trackingNumber'])]);
+    }
+
+    protected function manifestQueryForCompany(?string $companyUuid)
+    {
+        return Manifest::forCompany($companyUuid)
+            ->with(['driver', 'vehicle', 'stops.place', 'stops.order.trackingNumber']);
+    }
+
+    protected function manifestQueryByPublicId(string $id)
+    {
+        return Manifest::where('public_id', $id);
+    }
+
+    protected function manifestStopQueryByPublicId(string $id)
+    {
+        return ManifestStop::where('public_id', $id);
+    }
+
+    protected function manifestShowRelations(): array
+    {
+        return ['driver', 'vehicle', 'stops' => fn ($q) => $q->orderBy('sequence')->with(['place', 'order.trackingNumber', 'order.payload.dropoff'])];
     }
 }

@@ -117,7 +117,7 @@ class IntegratedVendor extends Model
             function ($model) {
                 $provider = $model->provider();
 
-                if ($provider && method_exists($provider, 'onUpdated')) {
+                if ($provider && method_exists($provider, 'callback')) {
                     $provider->callback('onUpdated');
                 }
             }
@@ -127,7 +127,7 @@ class IntegratedVendor extends Model
             function ($model) {
                 $provider = $model->provider();
 
-                if ($provider && method_exists($provider, 'onDeleted')) {
+                if ($provider && method_exists($provider, 'callback')) {
                     $provider->callback('onDeleted');
                 }
             }

@@ -2,7 +2,20 @@
 
 declare(strict_types=1);
 
-$cloverPath = $argv[1] ?? 'coverage/clover.xml';
+$cloverPath = 'coverage/clover.xml';
+$failUnder  = null;
+
+foreach (array_slice($argv, 1) as $arg) {
+    if (str_starts_with($arg, '--fail-under=')) {
+        $failUnder = (float) substr($arg, strlen('--fail-under='));
+
+        continue;
+    }
+
+    if ($arg !== '') {
+        $cloverPath = $arg;
+    }
+}
 
 if (!is_file($cloverPath)) {
     fwrite(STDERR, "Coverage file not found: {$cloverPath}\n");
@@ -26,6 +39,27 @@ function intMetric(SimpleXMLElement $node, string $name): int
     return (int) ($node->metrics[$name] ?? 0);
 }
 
+function hasMetric(SimpleXMLElement $node, string $name): bool
+{
+    return isset($node->metrics[$name]);
+}
+
+function deriveCoveredClasses(SimpleXMLElement $project): int
+{
+    $coveredClasses = 0;
+
+    foreach ($project->xpath('.//class') ?: [] as $class) {
+        $methods        = intMetric($class, 'methods');
+        $coveredMethods = intMetric($class, 'coveredmethods');
+
+        if ($methods > 0 && $coveredMethods >= $methods) {
+            $coveredClasses++;
+        }
+    }
+
+    return $coveredClasses;
+}
+
 $project = $xml->project;
 $metrics = $project->metrics;
 
@@ -34,7 +68,7 @@ $coveredStatements = (int) ($metrics['coveredstatements'] ?? 0);
 $methods           = (int) ($metrics['methods'] ?? 0);
 $coveredMethods    = (int) ($metrics['coveredmethods'] ?? 0);
 $classes           = (int) ($metrics['classes'] ?? 0);
-$coveredClasses    = (int) ($metrics['coveredclasses'] ?? 0);
+$coveredClasses    = hasMetric($project, 'coveredclasses') ? (int) $metrics['coveredclasses'] : deriveCoveredClasses($project);
 
 $files       = [];
 $directories = [];
@@ -107,4 +141,9 @@ echo "\nLowest covered files:\n";
 foreach (array_slice($files, 0, 20) as $file) {
     $relativePath = preg_replace('#^' . preg_quote(getcwd(), '#') . '/?#', '', $file['path']);
     printf("  %6.2f%%  %5d/%-5d  %s\n", $file['percent'], $file['covered'], $file['statements'], $relativePath ?: $file['path']);
+}
+
+if ($failUnder !== null && coveragePercent($coveredStatements, $statements) < $failUnder) {
+    fwrite(STDERR, sprintf("\nCoverage %.2f%% is below the required %.2f%% line threshold.\n", coveragePercent($coveredStatements, $statements), $failUnder));
+    exit(1);
 }

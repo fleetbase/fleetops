@@ -695,6 +695,7 @@ order:
     order-metadata: Metadados do Pedido
     order-label: Etiqueta do Pedido
     waypoint-label: Etiqueta do Ponto de Passagem
+    entity-label: Etiqueta da Entidade
     current-eta: ETA Atual
     ect: ECT
     current-destination: Destino Atual
@@ -711,6 +712,7 @@ order:
     no-driver-assigned-error: Nenhum motorista atribuído a este pedido.
     failed-to-load-order-label: Falha ao carregar o rótulo do pedido.
     failed-to-load-waypoint-label: Falha ao carregar o rótulo do ponto de passagem.
+    failed-to-load-entity-label: Falha ao carregar o rótulo da entidade.
     unable-to-add-entity: Não foi possível adicionar nova entidade ao pedido.
     assign-driver-success: O motorista ({driverName}) foi atribuído ao pedido {orderId}.
     cancel-title: Tem certeza de que deseja cancelar este pedido?

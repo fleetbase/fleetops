@@ -36,12 +36,22 @@ class HandleDeliveryCompletion implements ShouldQueue
         $companyUuid = $order->company_uuid;
 
         // Only re-allocate if the setting is enabled for this company
-        if (!Setting::lookup('fleetops.auto_reallocate_on_complete', false)) {
+        if (!$this->autoReallocateOnCompleteEnabled()) {
             return;
         }
 
         // Dispatch the allocation job asynchronously so it does not block
         // the order completion response.
+        $this->dispatchAllocationJob($companyUuid);
+    }
+
+    protected function autoReallocateOnCompleteEnabled(): bool
+    {
+        return Setting::lookup('fleetops.auto_reallocate_on_complete', false);
+    }
+
+    protected function dispatchAllocationJob(?string $companyUuid): void
+    {
         ProcessAllocationJob::dispatch($companyUuid);
     }
 }

@@ -25,9 +25,9 @@ class WorkOrderController extends Controller
         $input                 = $this->input($request);
         $input['company_uuid'] = session('company');
 
-        $workOrder = WorkOrder::create($input)->load(['target', 'assignee']);
+        $workOrder = $this->createWorkOrder($input)->load(['target', 'assignee']);
 
-        return new WorkOrderResource($workOrder);
+        return $this->workOrderResource($workOrder);
     }
 
     public function update(string $id, UpdateWorkOrderRequest $request)
@@ -42,18 +42,18 @@ class WorkOrderController extends Controller
 
         $workOrder->update($this->input($request));
 
-        return new WorkOrderResource($workOrder->refresh()->load(['target', 'assignee']));
+        return $this->workOrderResource($workOrder->refresh()->load(['target', 'assignee']));
     }
 
     public function query(Request $request)
     {
         $this->rejectUuidIdentifiers($request);
 
-        $results = WorkOrder::queryWithRequest($request, function (&$query) {
+        $results = $this->queryWorkOrdersWithRequest($request, function (&$query) {
             $query->with(['target', 'assignee']);
         });
 
-        return WorkOrderResource::collection($results);
+        return $this->workOrderResourceCollection($results);
     }
 
     public function find(string $id)
@@ -64,7 +64,7 @@ class WorkOrderController extends Controller
             return response()->json(['error' => 'WorkOrder resource not found.'], 404);
         }
 
-        return new WorkOrderResource($workOrder);
+        return $this->workOrderResource($workOrder);
     }
 
     public function delete(string $id)
@@ -77,7 +77,7 @@ class WorkOrderController extends Controller
 
         $workOrder->delete();
 
-        return new DeletedResource($workOrder);
+        return $this->deletedWorkOrderResource($workOrder);
     }
 
     public function send(string $id): JsonResponse
@@ -98,12 +98,9 @@ class WorkOrderController extends Controller
             return response()->json(['error' => 'The assigned vendor has no email address on file.'], 422);
         }
 
-        Mail::to($email)->send(new WorkOrderDispatched($workOrder));
+        $this->sendWorkOrderDispatchedMail($email, $workOrder);
 
-        activity('work_order_sent')
-            ->performedOn($workOrder)
-            ->withProperties(['sent_to' => $email])
-            ->log('Work order emailed to vendor');
+        $this->recordWorkOrderSentActivity($workOrder, $email);
 
         return response()->json([
             'status'  => 'ok',
@@ -157,5 +154,43 @@ class WorkOrderController extends Controller
         }
 
         return $input;
+    }
+
+    protected function createWorkOrder(array $input): WorkOrder
+    {
+        return WorkOrder::create($input);
+    }
+
+    protected function queryWorkOrdersWithRequest(Request $request, callable $callback)
+    {
+        return WorkOrder::queryWithRequest($request, $callback);
+    }
+
+    protected function workOrderResource(WorkOrder $workOrder)
+    {
+        return new WorkOrderResource($workOrder);
+    }
+
+    protected function workOrderResourceCollection($workOrders)
+    {
+        return WorkOrderResource::collection($workOrders);
+    }
+
+    protected function deletedWorkOrderResource(WorkOrder $workOrder)
+    {
+        return new DeletedResource($workOrder);
+    }
+
+    protected function sendWorkOrderDispatchedMail(string $email, WorkOrder $workOrder): void
+    {
+        Mail::to($email)->send(new WorkOrderDispatched($workOrder));
+    }
+
+    protected function recordWorkOrderSentActivity(WorkOrder $workOrder, string $email): void
+    {
+        activity('work_order_sent')
+            ->performedOn($workOrder)
+            ->withProperties(['sent_to' => $email])
+            ->log('Work order emailed to vendor');
     }
 }

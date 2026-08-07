@@ -35,7 +35,7 @@ class WorkOrderObserver
         $this->createMaintenanceRecord($workOrder);
         $this->resetSchedule($workOrder);
 
-        event('work_order.completed', $workOrder);
+        $this->dispatchCompletedEvent($workOrder);
     }
 
     // -------------------------------------------------------------------------
@@ -45,17 +45,17 @@ class WorkOrderObserver
     /**
      * Create a Maintenance history record from the completed work order.
      */
-    private function createMaintenanceRecord(WorkOrder $workOrder): void
+    protected function createMaintenanceRecord(WorkOrder $workOrder): void
     {
         // Avoid duplicate records if one was already manually created for this WO
-        if (Maintenance::where('work_order_uuid', $workOrder->uuid)->exists()) {
+        if ($this->hasMaintenanceRecord($workOrder)) {
             return;
         }
 
         $meta           = $workOrder->meta ?? [];
         $completionData = $meta['completion_data'] ?? [];
 
-        Maintenance::create([
+        $this->createMaintenance([
             'company_uuid'       => $workOrder->company_uuid,
             'work_order_uuid'    => $workOrder->uuid,
             'maintainable_type'  => $workOrder->target_type,
@@ -84,13 +84,13 @@ class WorkOrderObserver
     /**
      * Reset the linked schedule's next-due thresholds after completion.
      */
-    private function resetSchedule(WorkOrder $workOrder): void
+    protected function resetSchedule(WorkOrder $workOrder): void
     {
         if (!$workOrder->schedule_uuid) {
             return;
         }
 
-        $schedule = MaintenanceSchedule::where('uuid', $workOrder->schedule_uuid)->first();
+        $schedule = $this->findSchedule($workOrder->schedule_uuid);
         if (!$schedule) {
             return;
         }
@@ -99,9 +99,29 @@ class WorkOrderObserver
         $completionData = $meta['completion_data'] ?? [];
 
         $schedule->resetAfterCompletion(
-            odometer: isset($completionData['odometer']) ? (int) $completionData['odometer'] : null,
+            completedOdometer: isset($completionData['odometer']) ? (int) $completionData['odometer'] : null,
             completedEngineHours: isset($completionData['engine_hours']) ? (int) $completionData['engine_hours'] : null,
             completedAt: $workOrder->closed_at ?? now()
         );
+    }
+
+    protected function hasMaintenanceRecord(WorkOrder $workOrder): bool
+    {
+        return Maintenance::where('work_order_uuid', $workOrder->uuid)->exists();
+    }
+
+    protected function createMaintenance(array $attributes): Maintenance
+    {
+        return Maintenance::create($attributes);
+    }
+
+    protected function findSchedule(string $uuid): ?MaintenanceSchedule
+    {
+        return MaintenanceSchedule::where('uuid', $uuid)->first();
+    }
+
+    protected function dispatchCompletedEvent(WorkOrder $workOrder): void
+    {
+        event('work_order.completed', $workOrder);
     }
 }

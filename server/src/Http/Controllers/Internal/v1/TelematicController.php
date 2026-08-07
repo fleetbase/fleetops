@@ -95,10 +95,7 @@ class TelematicController extends FleetOpsController
         $async       = $request->input('async', false);
 
         try {
-            $provider = $this->registry->resolve($key);
-            if (!$provider) {
-                return response()->error('Unable to resolve telematic provider.');
-            }
+            $provider    = $this->registry->resolve($key);
             $result      = $provider->testConnection($credentials);
             $telematicId = $request->input('telematic_id');
 

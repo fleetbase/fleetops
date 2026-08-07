@@ -211,11 +211,16 @@ class DeviceController extends FleetOpsController
     {
         $query->where(function ($vehicleQuery) use ($vehicle) {
             $vehicleQuery->where('attachable_uuid', $vehicle)
-                ->orWhereIn('attachable_uuid', Vehicle::query()
-                    ->where('company_uuid', session('company'))
-                    ->where('public_id', $vehicle)
-                    ->pluck('uuid'));
+                ->orWhereIn('attachable_uuid', static::vehicleUuidsForPublicId($vehicle));
         });
+    }
+
+    protected static function vehicleUuidsForPublicId(string $vehicle)
+    {
+        return Vehicle::query()
+            ->where('company_uuid', session('company'))
+            ->where('public_id', $vehicle)
+            ->pluck('uuid');
     }
 
     protected function logDeviceAttachmentLookupFailure(string $action, string $missingResource, string $deviceId, ?string $vehicleId): void

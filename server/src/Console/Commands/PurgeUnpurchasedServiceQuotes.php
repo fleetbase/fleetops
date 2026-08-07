@@ -32,19 +32,14 @@ class PurgeUnpurchasedServiceQuotes extends Command
     {
         $thresholdDate = now()->subHours(48);
 
-        Schema::disableForeignKeyConstraints();
-        DB::beginTransaction();
+        $this->disableForeignKeyConstraints();
+        $this->beginTransaction();
 
         try {
             // Get service quotes that are expired and have not been purchased
-            $deletedCount = ServiceQuote::where('created_at', '<', $thresholdDate)
-                ->whereNotIn('uuid', function ($query) {
-                    $query->select('service_quote_uuid')->from('purchase_rates')->whereNotNull('service_quote_uuid');
-                })
-                ->withTrashed()
-                ->forceDelete();
+            $deletedCount = $this->purgeServiceQuotes($thresholdDate);
 
-            DB::commit();
+            $this->commit();
 
             if ($deletedCount > 0) {
                 $this->info("Successfully deleted {$deletedCount} unpurchased service quotes.");
@@ -52,15 +47,50 @@ class PurgeUnpurchasedServiceQuotes extends Command
                 $this->info('No unpurchased service quotes found for deletion.');
             }
         } catch (\Exception $e) {
-            DB::rollBack();
-            Schema::enableForeignKeyConstraints();
+            $this->rollBack();
+            $this->enableForeignKeyConstraints();
             $this->error('Error deleting unpurchased service quotes: ' . $e->getMessage());
 
             return Command::FAILURE;
         }
 
-        Schema::enableForeignKeyConstraints();
+        $this->enableForeignKeyConstraints();
 
         return Command::SUCCESS;
+    }
+
+    protected function disableForeignKeyConstraints(): void
+    {
+        Schema::disableForeignKeyConstraints();
+    }
+
+    protected function enableForeignKeyConstraints(): void
+    {
+        Schema::enableForeignKeyConstraints();
+    }
+
+    protected function beginTransaction(): void
+    {
+        DB::beginTransaction();
+    }
+
+    protected function commit(): void
+    {
+        DB::commit();
+    }
+
+    protected function rollBack(): void
+    {
+        DB::rollBack();
+    }
+
+    protected function purgeServiceQuotes($thresholdDate): int
+    {
+        return ServiceQuote::where('created_at', '<', $thresholdDate)
+            ->whereNotIn('uuid', function ($query) {
+                $query->select('service_quote_uuid')->from('purchase_rates')->whereNotNull('service_quote_uuid');
+            })
+            ->withTrashed()
+            ->forceDelete();
     }
 }

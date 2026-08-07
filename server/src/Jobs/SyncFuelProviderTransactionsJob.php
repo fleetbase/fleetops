@@ -25,8 +25,8 @@ class SyncFuelProviderTransactionsJob implements ShouldQueue
 
     public function handle(FuelProviderService $fuelProviderService): void
     {
-        $connection = FuelProviderConnection::where('uuid', $this->connectionUuid)->firstOrFail();
-        $syncRun    = $this->syncRunUuid ? FuelProviderSyncRun::where('uuid', $this->syncRunUuid)->first() : null;
+        $connection = $this->findConnection();
+        $syncRun    = $this->findSyncRun();
 
         try {
             $fuelProviderService->syncTransactions(
@@ -53,5 +53,15 @@ class SyncFuelProviderTransactionsJob implements ShouldQueue
 
             throw $e;
         }
+    }
+
+    protected function findConnection(): FuelProviderConnection
+    {
+        return FuelProviderConnection::where('uuid', $this->connectionUuid)->firstOrFail();
+    }
+
+    protected function findSyncRun(): ?FuelProviderSyncRun
+    {
+        return $this->syncRunUuid ? FuelProviderSyncRun::where('uuid', $this->syncRunUuid)->first() : null;
     }
 }

@@ -3,7 +3,7 @@
 namespace Fleetbase\FleetOps\Events;
 
 use Fleetbase\FleetOps\Models\FuelProviderTransaction;
-use Illuminate\Foundation\Events\Dispatchable;
+use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\SerializesModels;
 
 class FuelProviderTransactionUnmatched

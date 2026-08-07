@@ -1,6 +1,6 @@
 {
     "name": "fleetbase/fleetops-api",
-    "version": "0.6.58",
+    "version": "0.6.59",
     "description": "Fleet & Transport Management Extension for Fleetbase",
     "keywords": [
         "fleetbase-extension",
@@ -22,7 +22,7 @@
     ],
     "require": {
         "php": "^8.0",
-        "barryvdh/laravel-dompdf": "^2.0",
+        "barryvdh/laravel-dompdf": "^3.1",
         "brick/geo": "0.7.2",
         "cknow/laravel-money": "^7.1",
         "fleetbase/core-api": "*",
@@ -80,6 +80,7 @@
         "vendor-dir": "./server_vendor",
         "sort-packages": true,
         "preferred-install": "dist",
+        "process-timeout": 0,
         "allow-plugins": {
             "pestphp/pest-plugin": true,
             "php-http/discovery": true
@@ -90,11 +91,15 @@
             "@test:coverage:clover",
             "@coverage:summary"
         ],
+        "coverage:check": [
+            "@test:coverage:clover",
+            "php scripts/coverage-summary.php coverage/clover.xml --fail-under=100"
+        ],
         "coverage:summary": "php scripts/coverage-summary.php coverage/clover.xml",
         "lint": "php-cs-fixer fix -v",
         "test:lint": "php-cs-fixer fix -v --dry-run",
         "test:coverage": "php scripts/coverage-runner.php --coverage --coverage-text --colors=always",
-        "test:coverage:clover": "mkdir -p coverage && php scripts/coverage-runner.php --coverage-clover=coverage/clover.xml --colors=always",
+        "test:coverage:clover": "mkdir -p coverage && php scripts/coverage-file-runner.php --coverage-clover=coverage/clover.xml --colors=always",
         "test:types": "phpstan analyse --ansi --memory-limit=4G",
         "test:unit": "php scripts/pest-file-runner.php --colors=always",
         "test": [

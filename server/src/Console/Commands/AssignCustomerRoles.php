@@ -28,17 +28,17 @@ class AssignCustomerRoles extends Command
      */
     public function handle()
     {
-        $customers = Contact::where('type', 'customer')->get();
+        $customers = $this->customers();
 
         foreach ($customers as $customer) {
-            $customer->loadMissing('user');
-            if (!$customer->user) {
-                $customer->createUser();
-                $customer->loadMissing('user');
+            $user = $this->customerUser($customer);
+            if (!$user) {
+                $this->createUserForCustomer($customer);
+                $user = $this->customerUser($customer);
             }
 
             try {
-                $customer->user->assignSingleRole('Fleet-Ops Customer');
+                $this->assignCustomerRole($user);
                 $this->info($customer->name . ' - Customer: ' . $customer->email . ' has been assigned the Customer role.');
             } catch (\Throwable $e) {
                 $this->error($e->getMessage());
@@ -46,5 +46,27 @@ class AssignCustomerRoles extends Command
         }
 
         return Command::SUCCESS;
+    }
+
+    protected function customers()
+    {
+        return Contact::where('type', 'customer')->get();
+    }
+
+    protected function customerUser(Contact $customer)
+    {
+        $customer->loadMissing('user');
+
+        return $customer->user;
+    }
+
+    protected function createUserForCustomer(Contact $customer)
+    {
+        return $customer->createUser();
+    }
+
+    protected function assignCustomerRole($user): void
+    {
+        $user->assignSingleRole('Fleet-Ops Customer');
     }
 }
