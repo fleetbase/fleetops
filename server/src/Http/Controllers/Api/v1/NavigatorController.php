@@ -10,25 +10,21 @@ use Illuminate\Http\JsonResponse;
 class NavigatorController extends Controller
 {
     /**
-     * Retrieve the driver onboard settings.
+     * Retrieve the driver onboard settings for an organization.
      *
-     * This method retrieves the driver onboard settings for the current company session. If no company session
-     * is found in the request, an error response is returned. The method retrieves the company ID from the session,
-     * then fetches the saved driver onboard settings. If settings for the current company are found, they are returned,
-     * otherwise, default settings are provided.
-     *
-     * @return JsonResponse
-     */
-
-    /**
-     * Retrieve driver onboard settings.
+     * The organization is resolved from its public id. An unknown public id is a client
+     * error, not a server error, so it answers 404 rather than dereferencing a null company.
      *
      * @return JsonResponse
      */
     public function getDriverOnboardSettings($companyId)
     {
-        $company                = $this->findCompanyByPublicId($companyId);
-        $driverOnboardSettings  = $this->driverOnboardSetting($company->uuid);
+        $company = $this->findCompanyByPublicId($companyId);
+        if (!$company) {
+            return $this->errorResponse('Organization not found.', 404);
+        }
+
+        $driverOnboardSettings = $this->driverOnboardSetting($company->uuid);
         if (!$driverOnboardSettings) {
             $driverOnboardSettings = [];
         }
@@ -49,5 +45,10 @@ class NavigatorController extends Controller
     protected function jsonResponse(array $payload): JsonResponse
     {
         return response()->json($payload);
+    }
+
+    protected function errorResponse(string $message, int $statusCode): JsonResponse
+    {
+        return response()->error($message, $statusCode);
     }
 }
