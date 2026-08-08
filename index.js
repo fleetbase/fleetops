@@ -38,6 +38,15 @@ module.exports = buildEngine({
         return trees;
     },
 
+    treeForLeafletImages: function () {
+        const leafletImagesPath = path.join(this.pathBase('leaflet'), 'dist', 'images');
+
+        return new Funnel(leafletImagesPath, {
+            destDir: 'assets/images',
+            include: ['marker-icon.png', 'marker-icon-2x.png', 'marker-shadow.png'],
+        });
+    },
+
     treeForJointJs: function () {
         const trees = [];
 
@@ -64,12 +73,14 @@ module.exports = buildEngine({
 
     mergeWithPublicTree: function (publicTree) {
         const leafletTree = this.treeForLeaflet();
+        const leafletImagesTree = this.treeForLeafletImages();
         const jointJsTree = this.treeForJointJs();
         const assetsTree = [
             new Funnel(path.join(__dirname, 'assets'), {
                 destDir: '',
             }),
             ...leafletTree,
+            leafletImagesTree,
             ...jointJsTree,
         ];
 
