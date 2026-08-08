@@ -2,6 +2,7 @@
 
 namespace Fleetbase\FleetOps\Http\Requests;
 
+use Fleetbase\FleetOps\Models\FuelProviderTransaction;
 use Fleetbase\Http\Requests\FleetbaseRequest;
 use Illuminate\Validation\Rule;
 
@@ -16,7 +17,7 @@ class CreateFuelTransactionRequest extends FleetbaseRequest
     {
         return [
             'provider'                => [Rule::requiredIf($this->isMethod('POST')), 'string'],
-            'provider_transaction_id' => [Rule::requiredIf($this->isMethod('POST')), 'string'],
+            'provider_transaction_id' => [Rule::requiredIf($this->isMethod('POST')), 'string', $this->uniqueProviderTransactionIdRule()],
             'connection'              => ['nullable', 'string'],
             'fuel_report'             => ['nullable', 'string'],
             'vehicle'                 => ['nullable', 'string'],
@@ -46,5 +47,67 @@ class CreateFuelTransactionRequest extends FleetbaseRequest
             'raw_payload'             => ['nullable', 'array'],
             'meta'                    => ['nullable', 'array'],
         ];
+    }
+
+    public function messages(): array
+    {
+        return [
+            'provider_transaction_id.unique' => 'A fuel transaction with this provider transaction id already exists for this provider.',
+        ];
+    }
+
+    /**
+     * Mirrors the fuel_provider_txn_company_provider_unique index.
+     *
+     * Provider transaction ids are natural idempotency keys, so a re-sent batch
+     * used to raise an unhandled UniqueConstraintViolationException — an HTTP 500
+     * rather than a duplicate signal the client could act on.
+     *
+     * @return \Illuminate\Validation\Rules\Unique
+     */
+    protected function uniqueProviderTransactionIdRule()
+    {
+        $provider = $this->resolveProvider();
+
+        $rule = Rule::unique('fuel_provider_transactions', 'provider_transaction_id')
+            ->where(function ($query) use ($provider) {
+                $query->where('company_uuid', session('company'));
+                $query->where('provider', $provider);
+
+                return $query->whereNull('deleted_at');
+            });
+
+        // On PUT the record re-sends its own provider_transaction_id. The v1 route
+        // parameter is a public_id (fuel_provider_transaction_xxxxx), not a uuid.
+        $id = $this->route('id');
+        if (!$this->isMethod('POST') && filled($id)) {
+            $rule->ignore($id, 'public_id');
+        }
+
+        return $rule;
+    }
+
+    /**
+     * The uniqueness scope is per provider, but `provider` is only required on
+     * POST — a PUT may change the transaction id while leaving the provider out of
+     * the body. Fall back to the stored value so the scope is never null, which
+     * would otherwise compare against the wrong set of rows.
+     */
+    protected function resolveProvider(): ?string
+    {
+        if ($this->filled('provider')) {
+            return $this->input('provider');
+        }
+
+        $id = $this->route('id');
+        if (blank($id)) {
+            return null;
+        }
+
+        return FuelProviderTransaction::where('company_uuid', session('company'))
+            ->where(function ($query) use ($id) {
+                $query->where('public_id', $id)->orWhere('uuid', $id);
+            })
+            ->value('provider');
     }
 }
