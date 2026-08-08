@@ -611,7 +611,7 @@ class DriverController extends Controller
 
         // find and verify code
         $verificationCode = VerificationCode::where(['subject_uuid' => $user->uuid, 'code' => $code, 'for' => $for])->exists();
-        if (!$verificationCode && $code !== config('fleetops.navigator.bypass_verification_code')) {
+        if (!$verificationCode && !static::verificationBypassMatches($code)) {
             return response()->apiError('Invalid verification code!');
         }
 
@@ -1033,6 +1033,35 @@ class DriverController extends Controller
         }
 
         return $company;
+    }
+
+    /**
+     * Whether the supplied code matches the configured testing bypass code.
+     *
+     * Three conditions, all required, mirroring the console equivalent in
+     * Fleetbase\Http\Controllers\Internal\v1\AuthController::authenticateWithVerificationCode:
+     *
+     *  - a bypass code must actually be configured. The previous
+     *    `$code !== config(...)` comparison meant that on a default install --
+     *    where the config resolves to null -- omitting `code` entirely made the
+     *    check `null !== null`, i.e. false, so the guard never fired and any
+     *    caller with a valid org API credential could mint a driver token for
+     *    any driver in the install without a code at all;
+     *  - the app must not be in production, so a code left set in a deployed
+     *    .env cannot be used against a live fleet;
+     *  - the comparison is constant-time.
+     *
+     * Shared with Internal\v1\DriverController so both verify-code paths cannot
+     * drift apart.
+     */
+    public static function verificationBypassMatches(?string $code): bool
+    {
+        $bypassCode = config('fleetops.navigator.bypass_verification_code');
+
+        return $bypassCode !== null
+            && $bypassCode !== ''
+            && !app()->environment('production')
+            && hash_equals((string) $bypassCode, (string) $code);
     }
 
     /**

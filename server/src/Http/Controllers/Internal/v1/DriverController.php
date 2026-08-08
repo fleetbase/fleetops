@@ -665,7 +665,7 @@ class DriverController extends FleetOpsController
 
         // Find and verify code
         $verificationCode = static::verificationCodeExists($user, $code, $for);
-        if (!$verificationCode && $code !== config('fleetops.navigator.bypass_verification_code')) {
+        if (!$verificationCode && !ApiDriverController::verificationBypassMatches($code)) {
             return response()->error('Invalid verification code!');
         }
 
