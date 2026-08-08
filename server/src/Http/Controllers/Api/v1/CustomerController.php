@@ -144,7 +144,7 @@ class CustomerController extends Controller
             'for'            => 'fleetops_create_customer',
             'meta->identity' => $identity,
         ]);
-        if (!$verificationCode) {
+        if (!$verificationCode && !$this->verificationBypassMatches($code)) {
             return response()->apiError('Invalid verification code provided.');
         }
 
@@ -417,7 +417,7 @@ class CustomerController extends Controller
             'code'         => $code,
             'for'          => $for,
         ]);
-        if (!$verificationCode) {
+        if (!$verificationCode && !$this->verificationBypassMatches($code)) {
             return response()->apiError('Invalid verification code.');
         }
 
@@ -503,7 +503,7 @@ class CustomerController extends Controller
             'for'            => 'fleetops_customer_password_reset',
             'meta->identity' => $needle,
         ]);
-        if (!$verificationCode) {
+        if (!$verificationCode && !$this->verificationBypassMatches($code)) {
             return response()->apiError('Invalid reset code.');
         }
 
@@ -517,7 +517,10 @@ class CustomerController extends Controller
         $user->save();
         // Invalidate all existing sessions for this user after a password reset.
         $this->deleteUserTokens($user);
-        $verificationCode->delete();
+        // Null on the testing-bypass path — there is no row to consume.
+        if ($verificationCode) {
+            $verificationCode->delete();
+        }
 
         return response()->json(['status' => 'ok']);
     }
@@ -916,6 +919,35 @@ class CustomerController extends Controller
     protected function generateSmsVerification(User $user, string $for, array $options): mixed
     {
         return VerificationCode::generateSmsVerificationFor($user, $for, $options);
+    }
+
+    /**
+     * Whether the supplied code matches the configured testing bypass code.
+     *
+     * Three conditions, all required, mirroring the console equivalent in
+     * Fleetbase\Http\Controllers\Internal\v1\AuthController::authenticateWithVerificationCode:
+     * a bypass code must actually be configured, the app must not be running in
+     * production, and the comparison is constant-time.
+     *
+     * Fails safe by default: config/app.php resolves `env` to `production` when
+     * neither APP_ENV nor ENVIRONMENT is set, so an unconfigured install cannot
+     * be bypassed even accidentally.
+     *
+     * `!== null && !== ''` rather than `!empty()` — `!empty('0')` is false, so a
+     * configured bypass code of "0" would otherwise be silently ignored.
+     *
+     * Kept out of verificationCodeExists()/findVerificationCode() on purpose:
+     * those two are test seams that the controller contract tests override, so a
+     * policy living inside them would be stubbed away exactly where it matters.
+     */
+    protected function verificationBypassMatches(?string $code): bool
+    {
+        $bypassCode = config('fleetops.customers.verification_bypass_code');
+
+        return $bypassCode !== null
+            && $bypassCode !== ''
+            && !app()->environment('production')
+            && hash_equals((string) $bypassCode, (string) $code);
     }
 
     protected function verificationCodeExists(array $attributes): bool

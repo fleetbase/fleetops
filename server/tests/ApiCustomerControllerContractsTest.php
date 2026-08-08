@@ -960,3 +960,158 @@ test('api customer controller handles verification delivery fallbacks and profil
             'name' => 'explode',
         ]))))->toBe(['error' => 'update failed']);
 });
+
+/**
+ * Run a callback with an app container that supports environment().
+ *
+ * The harness binds a bare Illuminate\Container\Container, which has no
+ * environment() — so CustomerController::verificationBypassMatches fatals with
+ * "Call to undefined method" without this. Mirrors the swap in
+ * NotificationAndMailContractsTest, but carries every existing binding across so
+ * the controller can still resolve config/request/db.
+ */
+function fleetopsApiCustomerWithEnvironment(string $environment, callable $callback): mixed
+{
+    $previousApp = Illuminate\Container\Container::getInstance();
+    $app         = new class extends Illuminate\Container\Container {
+        public string $fleetopsEnvironment = 'testing';
+
+        public function environment(...$environments)
+        {
+            if (empty($environments)) {
+                return $this->fleetopsEnvironment;
+            }
+
+            $environments = is_array($environments[0]) ? $environments[0] : $environments;
+
+            return in_array($this->fleetopsEnvironment, $environments, true);
+        }
+
+        public function hasDebugModeEnabled()
+        {
+            return false;
+        }
+    };
+    $app->fleetopsEnvironment = $environment;
+
+    $reflection = new ReflectionClass(Illuminate\Container\Container::class);
+    foreach (['bindings', 'instances', 'aliases', 'abstractAliases', 'resolved', 'scopedInstances'] as $property) {
+        if (!$reflection->hasProperty($property)) {
+            continue;
+        }
+        $handle = $reflection->getProperty($property);
+        $handle->setAccessible(true);
+        $handle->setValue($app, $handle->getValue($previousApp));
+    }
+
+    Illuminate\Container\Container::setInstance($app);
+
+    try {
+        return $callback();
+    } finally {
+        Illuminate\Container\Container::setInstance($previousApp);
+    }
+}
+
+test('api customer controller ignores the verification bypass unless it is configured', function () {
+    // Unset and empty-string are both inert. Without this the bypass would be a
+    // standing hole in every default install, which is the entire risk of shipping one.
+    foreach ([null, ''] as $bypassCode) {
+        config(['fleetops.customers.verification_bypass_code' => $bypassCode]);
+
+        fleetopsApiCustomerWithEnvironment('local', function () {
+            $create                     = fleetopsApiCustomerController();
+            $create->verificationExists = false;
+            $verify                     = fleetopsApiCustomerController();
+            $verify->verificationExists = false;
+            $reset                      = fleetopsApiCustomerController();
+            $reset->verificationCode    = null;
+
+            expect(fleetopsApiCustomerJson($create->create(new CreateCustomerRequest([
+                'code'     => '000000',
+                'identity' => 'jane@example.test',
+            ]))))->toBe(['error' => 'Invalid verification code provided.'])
+                ->and(fleetopsApiCustomerJson($verify->verifyCode(Request::create('/v1/customers/verify-code', 'POST', [
+                    'identity' => 'jane@example.test',
+                    'code'     => '000000',
+                ]))))->toBe(['error' => 'Invalid verification code.'])
+                ->and(fleetopsApiCustomerJson($reset->resetPassword(Request::create('/v1/customers/reset-password', 'POST', [
+                    'identity' => 'jane@example.test',
+                    'code'     => '000000',
+                    'password' => 'password-secret',
+                ]))))->toBe(['error' => 'Invalid reset code.']);
+        });
+    }
+
+    config(['fleetops.customers.verification_bypass_code' => null]);
+});
+
+test('api customer controller accepts a configured verification bypass outside production', function () {
+    config(['fleetops.customers.verification_bypass_code' => '000000']);
+
+    fleetopsApiCustomerWithEnvironment('local', function () {
+        $create                     = fleetopsApiCustomerController();
+        $create->verificationExists = false;
+        $verify                     = fleetopsApiCustomerController();
+        $verify->verificationExists = false;
+        // No VerificationCode row on the bypass path — resetPassword must not fatal
+        // calling ->delete() on null, and must still revoke existing sessions.
+        $reset                   = fleetopsApiCustomerController();
+        $reset->verificationCode = null;
+        // A non-matching code is still rejected while the bypass is live.
+        $wrong                     = fleetopsApiCustomerController();
+        $wrong->verificationExists = false;
+
+        expect($create->create(new CreateCustomerRequest([
+            'code'     => '000000',
+            'identity' => 'jane@example.test',
+            'name'     => 'Jane',
+            'password' => 'password-secret',
+        ])))->toMatchArray(['resource' => 'customer', 'token' => 'plain-token'])
+            ->and($verify->verifyCode(Request::create('/v1/customers/verify-code', 'POST', [
+                'identity' => 'jane@example.test',
+                'code'     => '000000',
+            ])))->toMatchArray(['resource' => 'customer', 'token' => 'plain-token'])
+            ->and(fleetopsApiCustomerJson($reset->resetPassword(Request::create('/v1/customers/reset-password', 'POST', [
+                'identity' => 'jane@example.test',
+                'code'     => '000000',
+                'password' => 'password-secret',
+            ]))))->toBe(['status' => 'ok'])
+            ->and($reset->genericUser->tokensDeleted)->toBeTrue()
+            ->and(fleetopsApiCustomerJson($wrong->create(new CreateCustomerRequest([
+                'code'     => '999999',
+                'identity' => 'jane@example.test',
+            ]))))->toBe(['error' => 'Invalid verification code provided.']);
+    });
+
+    config(['fleetops.customers.verification_bypass_code' => null]);
+});
+
+test('api customer controller refuses the verification bypass in production', function () {
+    config(['fleetops.customers.verification_bypass_code' => '000000']);
+
+    fleetopsApiCustomerWithEnvironment('production', function () {
+        $create                     = fleetopsApiCustomerController();
+        $create->verificationExists = false;
+        $verify                     = fleetopsApiCustomerController();
+        $verify->verificationExists = false;
+        $reset                      = fleetopsApiCustomerController();
+        $reset->verificationCode    = null;
+
+        expect(fleetopsApiCustomerJson($create->create(new CreateCustomerRequest([
+            'code'     => '000000',
+            'identity' => 'jane@example.test',
+        ]))))->toBe(['error' => 'Invalid verification code provided.'])
+            ->and(fleetopsApiCustomerJson($verify->verifyCode(Request::create('/v1/customers/verify-code', 'POST', [
+                'identity' => 'jane@example.test',
+                'code'     => '000000',
+            ]))))->toBe(['error' => 'Invalid verification code.'])
+            ->and(fleetopsApiCustomerJson($reset->resetPassword(Request::create('/v1/customers/reset-password', 'POST', [
+                'identity' => 'jane@example.test',
+                'code'     => '000000',
+                'password' => 'password-secret',
+            ]))))->toBe(['error' => 'Invalid reset code.']);
+    });
+
+    config(['fleetops.customers.verification_bypass_code' => null]);
+});

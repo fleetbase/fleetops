@@ -621,7 +621,7 @@ namespace {
 
         expect($request->authorize())->toBeTrue()
             ->and($rules['identity'])->toBe('required|string')
-            ->and($rules['code'])->toBe('required|exists:verification_codes,code')
+            ->and($rules['code'])->toBe('required|string')
             ->and($rules['name'])->toBe('required|string')
             ->and($rules['password'])->toBe('required|string|min:8')
             ->and(ruleStrings($rules['email']))->toContain('email', 'nullable', 'unique:contacts')
