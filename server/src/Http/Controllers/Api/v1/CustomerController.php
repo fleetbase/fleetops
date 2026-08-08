@@ -19,6 +19,7 @@ use Fleetbase\FleetOps\Models\ServiceQuote;
 use Fleetbase\FleetOps\Support\CustomerAuth;
 use Fleetbase\FleetOps\Support\Utils;
 use Fleetbase\Http\Controllers\Controller;
+use Fleetbase\LaravelMysqlSpatial\Types\Point as SpatialPoint;
 use Fleetbase\Models\File;
 use Fleetbase\Models\User;
 use Fleetbase\Models\UserDevice;
@@ -312,6 +313,14 @@ class CustomerController extends Controller
                 'company_uuid' => $companyUuid,
                 'owner_uuid'   => $contact->uuid,
                 'owner_type'   => get_class($contact),
+                // `places.location` is a NOT NULL POINT column with no database default,
+                // and $allowed above is address-only — a caller cannot supply coordinates
+                // here. Without this the insert fails with SQLSTATE[HY000] 1364 ("Field
+                // 'location' doesn't have a default value"), turning a documented signup
+                // payload into a 500. Point(0, 0) is the same placeholder the geocoding
+                // helpers fall back to when an address cannot be resolved — see
+                // Place::getGoogleAddressArray and Place::findExistingSharedPlace.
+                'location'     => new SpatialPoint(0, 0),
             ],
             $attributes,
         ));
