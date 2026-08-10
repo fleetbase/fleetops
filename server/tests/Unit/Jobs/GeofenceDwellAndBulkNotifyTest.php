@@ -180,4 +180,11 @@ test('navigator driver onboard settings endpoint resolves company settings', fun
     $connection->table('companies')->insert(['uuid' => 'company-2', 'public_id' => 'company_two', 'name' => 'Beta']);
     $empty = (new NavigatorController())->getDriverOnboardSettings('company_two');
     expect($empty->getData(true)['driverOnboardSettings'])->toBe([]);
+
+    // An unresolved public id is a client error. This drives the real
+    // errorResponse() seam, which the probe in SmallControllerContractsTest
+    // replaces — only the status is asserted, because the harness `response()`
+    // shim envelopes errors differently from the core-api macro it stands in for.
+    $missing = (new NavigatorController())->getDriverOnboardSettings('company_missing');
+    expect($missing->getStatusCode())->toBe(404);
 });
