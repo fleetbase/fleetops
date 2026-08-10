@@ -307,6 +307,11 @@ class FleetOpsInternalDriverAuthControllerProbe extends DriverController
 
     public static function resetProbe(): void
     {
+        // verifyCode() defers to DriverController::verificationBypassMatches(), which
+        // asks app()->environment('production'). The bare container this harness binds
+        // has no such method, so swap it before any verify-code test runs.
+        fleetopsInternalDriverAuthContainer();
+
         static::$loginUser          = null;
         static::$verificationUser   = null;
         static::$loginDriver        = null;
@@ -529,6 +534,53 @@ function fleetopsInternalDriverExportSelections(DriverExport $export): array
     $property->setAccessible(true);
 
     return $property->getValue($export);
+}
+
+/**
+ * Swap in a container that answers environment().
+ *
+ * Mirrors fleetopsCustomerHelperContainer() in CustomerControllerHelperSeamsTest and
+ * fleetopsDriverAuthContainer() in Api/DriverControllerAuthFlowsTest. Idempotent, so
+ * resetProbe() can call it per test.
+ */
+function fleetopsInternalDriverAuthContainer(): void
+{
+    $current = Illuminate\Container\Container::getInstance();
+    if (method_exists($current, 'hasDebugModeEnabled')) {
+        return;
+    }
+
+    $replacement = new class extends Illuminate\Container\Container {
+        public function environment(...$environments)
+        {
+            if (empty($environments)) {
+                return 'testing';
+            }
+
+            $checks = is_array($environments[0]) ? $environments[0] : $environments;
+
+            return in_array('testing', $checks, true);
+        }
+
+        public function hasDebugModeEnabled()
+        {
+            return true;
+        }
+    };
+
+    foreach (['bindings', 'instances', 'aliases', 'abstractAliases', 'resolved', 'extenders', 'tags', 'contextual', 'scopedInstances', 'reboundCallbacks', 'globalBeforeResolvingCallbacks', 'globalResolvingCallbacks', 'globalAfterResolvingCallbacks', 'beforeResolvingCallbacks', 'resolvingCallbacks', 'afterResolvingCallbacks'] as $property) {
+        if (!property_exists(Illuminate\Container\Container::class, $property)) {
+            continue;
+        }
+        $reflection = new ReflectionProperty(Illuminate\Container\Container::class, $property);
+        $reflection->setAccessible(true);
+        if ($reflection->isInitialized($current)) {
+            $reflection->setValue($replacement, $reflection->getValue($current));
+        }
+    }
+
+    Illuminate\Container\Container::setInstance($replacement);
+    Illuminate\Support\Facades\Facade::setFacadeApplication($replacement);
 }
 
 function fleetopsInternalDriverUseHelperDatabase(): SQLiteConnection
