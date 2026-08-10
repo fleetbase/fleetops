@@ -102,6 +102,28 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Customers
+    |--------------------------------------------------------------------------
+    |
+    | Testing-only verification-code bypass for the customer auth flows
+    | (POST /v1/customers, /customers/verify-code, /customers/reset-password).
+    | Intended for local development and staging QA, where signing up means
+    | waiting on a real email or paying for a real SMS.
+    |
+    | MUST be left unset in production. It is ignored outright when the app
+    | environment is `production`, and when unset no bypass is possible.
+    |
+    | Deliberately NOT wired to SMS_AUTH_BYPASS_CODE: that variable already
+    | gates operator console login and driver login, and reusing it here would
+    | make one leaked value unlock three different privilege tiers.
+    |
+    */
+    'customers' => [
+        'verification_bypass_code' => env('FLEETOPS_CUSTOMER_VERIFICATION_BYPASS_CODE'),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | API Events
     |--------------------------------------------------------------------------
     */
