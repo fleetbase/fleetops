@@ -173,8 +173,17 @@ class FuelProviderService
         return DB::transaction(function () use ($connection, $payload) {
             $provider              = $payload['provider'] ?? $connection->provider;
             $providerTransactionId = $payload['provider_transaction_id'];
+            // The match must include company_uuid. Provider transaction ids are only
+            // unique within the account they were issued for, so keying on
+            // (provider, provider_transaction_id) alone let one company's sync find
+            // and overwrite another company's transaction — reassigning its
+            // company_uuid. Mirrors fuel_provider_txn_company_provider_unique.
             $transaction           = FuelProviderTransaction::updateOrCreate(
-                ['provider' => $provider, 'provider_transaction_id' => $providerTransactionId],
+                [
+                    'company_uuid'            => $connection->company_uuid,
+                    'provider'                => $provider,
+                    'provider_transaction_id' => $providerTransactionId,
+                ],
                 array_merge($payload, [
                     'company_uuid'                  => $connection->company_uuid,
                     'fuel_provider_connection_uuid' => $connection->uuid,

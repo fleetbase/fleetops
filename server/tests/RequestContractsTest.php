@@ -76,6 +76,18 @@ namespace Illuminate\Validation {
                 return $this;
             }
 
+            /**
+             * Recorded so tests can assert the ignore-self clause on update
+             * requests, including which column it matches on — the v1 routes
+             * pass a public_id, not a uuid.
+             */
+            public function ignore($id, $idColumn = null): self
+            {
+                $this->constraints[] = ['ignore', $id, $idColumn];
+
+                return $this;
+            }
+
             public function __toString(): string
             {
                 return $this->rule;
@@ -245,11 +257,16 @@ namespace {
     });
 
     test('fuel transaction request requires provider identifiers on create', function () {
+        // The harness `session()` stand-in is a process-wide static, so seed it
+        // here rather than relying on an earlier test in the file having done so.
+        session(['company' => 'company-uuid']);
+        bindFleetOpsRequestSession(['api_credential' => 'credential-uuid', 'company' => 'company-uuid']);
+
         $createRules = requestRules(CreateFuelTransactionRequest::class);
         $patchRules  = requestRules(CreateFuelTransactionRequest::class, 'PATCH');
 
         expect(ruleStrings($createRules['provider']))->toContain('required', 'string')
-            ->and(ruleStrings($createRules['provider_transaction_id']))->toContain('required', 'string')
+            ->and(ruleStrings($createRules['provider_transaction_id']))->toContain('required', 'string', 'unique:fuel_provider_transactions,provider_transaction_id')
             ->and(ruleStrings($patchRules['provider']))->not->toContain('required')
             ->and(ruleStrings($patchRules['provider_transaction_id']))->not->toContain('required')
             ->and($createRules['station_latitude'])->toBe(['nullable', 'numeric'])
@@ -257,6 +274,19 @@ namespace {
             ->and($createRules['normalized_payload'])->toBe(['nullable', 'array'])
             ->and($createRules['raw_payload'])->toBe(['nullable', 'array'])
             ->and($createRules['meta'])->toBe(['nullable', 'array']);
+
+        // Mirrors fuel_provider_txn_company_provider_unique. The provider is part
+        // of the scope, and company_uuid is what stops one tenant's provider
+        // transaction id from colliding with another's — the old index was global.
+        $rulesWithProvider = CreateFuelTransactionRequest::create('/fleetops-test', 'POST', ['provider' => 'petroapp'])->rules();
+        $uniqueRule        = collect($rulesWithProvider['provider_transaction_id'])->first(fn ($rule) => $rule instanceof Illuminate\Validation\Rule);
+
+        expect($uniqueRule)->not->toBeNull()
+            ->and($uniqueRule->constraints)->toBe([
+                ['where', 'company_uuid', 'company-uuid'],
+                ['where', 'provider', 'petroapp'],
+                ['whereNull', 'deleted_at'],
+            ]);
     });
 
     test('vehicle and fuel report requests expose core validation contracts', function () {
@@ -649,13 +679,14 @@ namespace {
 
         expect($request->authorize())->toBeFalse();
 
-        bindFleetOpsRequestSession(['api_credential' => 'credential-uuid']);
+        session(['company' => 'company-uuid']);
+        bindFleetOpsRequestSession(['api_credential' => 'credential-uuid', 'company' => 'company-uuid']);
 
         $createRules = $request->rules();
         $patchRules  = CreatePartRequest::create('/fleetops-test', 'PATCH')->rules();
 
         expect($request->authorize())->toBeTrue()
-            ->and($createRules['sku'])->toBe(['nullable', 'string'])
+            ->and(ruleStrings($createRules['sku']))->toContain('nullable', 'string', 'unique:parts,sku')
             ->and(ruleStrings($createRules['name']))->toContain('required', 'string')
             ->and(ruleStrings($patchRules['name']))->not->toContain('required')
             ->and($createRules['manufacturer'])->toBe(['nullable', 'string'])
@@ -671,9 +702,64 @@ namespace {
             ->and($createRules['specs'])->toBe(['nullable', 'array'])
             ->and($createRules['meta'])->toBe(['nullable', 'array']);
 
+        // The SKU uniqueness rule mirrors parts_company_uuid_active_sku_unique:
+        // scoped to the session company and ignoring soft-deleted parts, so a SKU
+        // freed by a deleted part — or held by another company — stays available.
+        // Without it a duplicate reached the driver and returned a 500.
+        $skuRule = collect($createRules['sku'])->first(fn ($rule) => $rule instanceof Illuminate\Validation\Rule);
+
+        expect($skuRule)->not->toBeNull()
+            ->and($skuRule->constraints)->toBe([
+                ['where', 'company_uuid', 'company-uuid'],
+                ['whereNull', 'deleted_at'],
+            ]);
+
+        // On update the record re-sends its own SKU, so it must not collide with
+        // itself. The v1 route parameter is a public_id, not a uuid.
+        $updateRules = CreatePartRequest::create('/fleetops-test', 'PUT')
+            ->setRouteResolver(fn () => new class {
+                public function parameter($key, $default = null)
+                {
+                    return $key === 'id' ? 'part_abc123' : $default;
+                }
+            })
+            ->rules();
+
+        $updateSkuRule = collect($updateRules['sku'])->first(fn ($rule) => $rule instanceof Illuminate\Validation\Rule);
+
+        expect($updateSkuRule->constraints)->toContain(['ignore', 'part_abc123', 'public_id']);
+
         bindFleetOpsRequestSession(['is_sanctum_token' => true]);
 
         expect($request->authorize())->toBeTrue();
+    });
+
+    test('duplicate-key requests name the offending field and ignore themselves on update', function () {
+        session(['company' => 'company-uuid']);
+        bindFleetOpsRequestSession(['api_credential' => 'credential-uuid', 'company' => 'company-uuid']);
+
+        // Without these the violation surfaces as the framework's generic "has already
+        // been taken", which does not say which record collided or on what.
+        expect(CreatePartRequest::create('/fleetops-test', 'POST')->messages())
+            ->toBe(['sku.unique' => 'A part with this SKU already exists.'])
+            ->and(CreateFuelTransactionRequest::create('/fleetops-test', 'POST')->messages())
+            ->toBe(['provider_transaction_id.unique' => 'A fuel transaction with this provider transaction id already exists for this provider.']);
+
+        // `provider` is supplied here, so resolveProvider() short-circuits on the input
+        // and this exercises only the ignore-self clause. The stored-provider fallback
+        // needs a database and is covered in FuelProviderTransactionControllerContractsTest.
+        $updateRules = CreateFuelTransactionRequest::create('/fleetops-test', 'PUT', ['provider' => 'petroapp'])
+            ->setRouteResolver(fn () => new class {
+                public function parameter($key, $default = null)
+                {
+                    return $key === 'id' ? 'fuel_provider_transaction_abc123' : $default;
+                }
+            })
+            ->rules();
+
+        $updateRule = collect($updateRules['provider_transaction_id'])->first(fn ($rule) => $rule instanceof Illuminate\Validation\Rule);
+
+        expect($updateRule->constraints)->toContain(['ignore', 'fuel_provider_transaction_abc123', 'public_id']);
     });
 
     test('entity equipment payload and simulation requests expose conditional contracts', function () {
