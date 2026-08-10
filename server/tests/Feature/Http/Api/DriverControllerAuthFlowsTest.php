@@ -282,6 +282,7 @@ test('code verification handles unknown users invalid codes bypass and success',
 
     // Bypass code from config authenticates without a stored code
     config()->set('fleetops.navigator.bypass_verification_code', '777777');
+    config()->set('fleetops.navigator.review_accounts', ['driver@example.test']);
     $bypassed = $controller->verifyCode(Request::create('/x', 'POST', ['identity' => 'driver@example.test', 'code' => '777777']));
     expect($bypassed)->toBeInstanceOf(DriverResource::class);
 
@@ -397,6 +398,7 @@ test('code verification reports token issuance failures', function () {
     // A bypass code authenticates without a stored verification code, so the
     // flow reaches token issuance; without the token table that send fails
     config()->set('fleetops.navigator.bypass_verification_code', '777777');
+    config()->set('fleetops.navigator.review_accounts', ['driver@example.test']);
     $connection->getSchemaBuilder()->drop('personal_access_tokens');
 
     $response = $controller->verifyCode(Request::create('/x', 'POST', [
@@ -451,6 +453,7 @@ test('token persistence failures are reported to sentry', function () {
     }
 
     config()->set('fleetops.navigator.bypass_verification_code', '777777');
+    config()->set('fleetops.navigator.review_accounts', ['driver@example.test']);
     $response = $controller->verifyCode(Request::create('/x', 'POST', [
         'identity' => 'driver@example.test',
         'code'     => '777777',

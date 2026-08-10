@@ -1045,6 +1045,9 @@ test('internal driver controller login with phone normalizes identity and handle
 
 test('internal driver controller verify code covers missing user invalid code and missing driver branches', function () {
     app('config')->set('fleetops.navigator.bypass_verification_code', '000000');
+    // The bypass is only honoured for a listed identity. Both forms because
+    // verifyCode normalises a non-email identity through static::phone().
+    app('config')->set('fleetops.navigator.review_accounts', ['15551234567', '+15551234567', 'driver@example.test']);
 
     FleetOpsInternalDriverAuthControllerProbe::resetProbe();
     $controller = new FleetOpsInternalDriverAuthControllerProbe();
@@ -1087,6 +1090,9 @@ test('internal driver controller verify code covers missing user invalid code an
 
 test('internal driver controller verify code returns driver resource and handles token errors', function () {
     app('config')->set('fleetops.navigator.bypass_verification_code', '000000');
+    // The bypass is only honoured for a listed identity. Both forms because
+    // verifyCode normalises a non-email identity through static::phone().
+    app('config')->set('fleetops.navigator.review_accounts', ['15551234567', '+15551234567', 'driver@example.test']);
 
     FleetOpsInternalDriverAuthControllerProbe::resetProbe();
     FleetOpsInternalDriverAuthControllerProbe::$verificationUser   = fleetopsInternalDriverAuthUser();
