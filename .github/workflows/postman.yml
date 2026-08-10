@@ -30,4 +30,8 @@ jobs:
     with:
       collections: "Fleetbase API"
       build-from-source: false
+      # Without this the run tests the version of fleetbase/fleetops-api baked into the
+      # published image, not the branch under review. The workflow checks this
+      # repository out at the commit under test and swaps it into the container.
+      overlay-package: fleetbase/fleetops-api
     secrets: inherit
