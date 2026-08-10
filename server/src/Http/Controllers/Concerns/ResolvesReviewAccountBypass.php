@@ -28,7 +28,7 @@ trait ResolvesReviewAccountBypass
         string $accountsKey,
         ?string $identity,
         ?string $code,
-        string $channel
+        string $channel,
     ): bool {
         $bypassCode = config($codeKey);
 
