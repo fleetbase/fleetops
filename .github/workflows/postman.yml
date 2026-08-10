@@ -8,9 +8,9 @@ name: API Contract (Postman)
 
 on:
   push:
-    branches: [main]
+    branches: [main, 'dev-v*']
   pull_request:
-    branches: [main]
+    branches: [main, 'dev-v*']
   workflow_dispatch:
 
 permissions:
