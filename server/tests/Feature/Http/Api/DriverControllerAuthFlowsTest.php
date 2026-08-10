@@ -84,8 +84,59 @@ class FleetOpsDriverAuthMailerFake
     }
 }
 
+/**
+ * Swap in a container that answers environment().
+ *
+ * verificationBypassMatches() asks app()->environment('production'), which the bare
+ * Illuminate\Container\Container used by this harness does not implement. Mirrors
+ * fleetopsCustomerHelperContainer() in CustomerControllerHelperSeamsTest.
+ */
+function fleetopsDriverAuthContainer(): void
+{
+    $current = Illuminate\Container\Container::getInstance();
+    if (method_exists($current, 'hasDebugModeEnabled')) {
+        return;
+    }
+
+    $replacement = new class extends Illuminate\Container\Container {
+        public function environment(...$environments)
+        {
+            if (empty($environments)) {
+                return 'testing';
+            }
+
+            $checks = is_array($environments[0]) ? $environments[0] : $environments;
+
+            return in_array('testing', $checks, true);
+        }
+
+        public function hasDebugModeEnabled()
+        {
+            return true;
+        }
+    };
+
+    foreach (['bindings', 'instances', 'aliases', 'abstractAliases', 'resolved', 'extenders', 'tags', 'contextual', 'scopedInstances', 'reboundCallbacks', 'globalBeforeResolvingCallbacks', 'globalResolvingCallbacks', 'globalAfterResolvingCallbacks', 'beforeResolvingCallbacks', 'resolvingCallbacks', 'afterResolvingCallbacks'] as $property) {
+        if (!property_exists(Illuminate\Container\Container::class, $property)) {
+            continue;
+        }
+        $reflection = new ReflectionProperty(Illuminate\Container\Container::class, $property);
+        $reflection->setAccessible(true);
+        if ($reflection->isInitialized($current)) {
+            $reflection->setValue($replacement, $reflection->getValue($current));
+        }
+    }
+
+    Illuminate\Container\Container::setInstance($replacement);
+    Illuminate\Support\Facades\Facade::setFacadeApplication($replacement);
+}
+
 function fleetopsDriverAuthBoot(): SQLiteConnection
 {
+    // Must run before the app()->instance() calls below, so those bindings land on
+    // the replacement container rather than the one it supersedes.
+    fleetopsDriverAuthContainer();
+
     $connection = new SQLiteConnection(new PDO('sqlite::memory:'));
     $resolver   = new ConnectionResolver(['default' => $connection, 'mysql' => $connection]);
     $resolver->setDefaultConnection('mysql');
