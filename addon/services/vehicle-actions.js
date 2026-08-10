@@ -184,8 +184,10 @@ export default class VehicleActionsService extends ResourceActionService {
         },
     };
 
-    @action scheduleMaintenance(vehicle) {
-        this.maintenanceScheduleActions.modal.create({ subject: vehicle });
+    @action async scheduleMaintenance(vehicle, options = {}, saveOptions = {}) {
+        vehicle = await this.resolveVehicleResource(vehicle);
+
+        return this.maintenanceScheduleActions.modal.create({ subject: vehicle }, options, saveOptions);
     }
 
     @action createWorkOrder(vehicle) {
