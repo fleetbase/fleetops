@@ -178,4 +178,21 @@ test('fuel provider transaction real lookup scopes identifier and company', func
 
     expect($reflection->invoke($controller, 'fpt-real-1')->public_id)->toBe('fuel_provider_transaction_real1')
         ->and($reflection->invoke($controller, 'fuel_provider_transaction_real1')->uuid)->toBe('fpt-real-1');
+
+    // resolveProvider() falls back to the stored provider when a PUT omits it, so the
+    // uniqueness scope is never null — a null scope would compare the transaction id
+    // against the wrong set of rows. Needs a real connection, which is why this lives
+    // here rather than in RequestContractsTest.
+    $resolveProvider = new ReflectionMethod(Fleetbase\FleetOps\Http\Requests\CreateFuelTransactionRequest::class, 'resolveProvider');
+    $resolveProvider->setAccessible(true);
+
+    $withRouteId = Fleetbase\FleetOps\Http\Requests\CreateFuelTransactionRequest::create('/fleetops-test', 'PUT')
+        ->setRouteResolver(fn () => new class {
+            public function parameter($key, $default = null)
+            {
+                return $key === 'id' ? 'fuel_provider_transaction_real1' : $default;
+            }
+        });
+
+    expect($resolveProvider->invoke($withRouteId))->toBe('petroapp');
 });

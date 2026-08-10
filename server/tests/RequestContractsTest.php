@@ -734,6 +734,34 @@ namespace {
         expect($request->authorize())->toBeTrue();
     });
 
+    test('duplicate-key requests name the offending field and ignore themselves on update', function () {
+        session(['company' => 'company-uuid']);
+        bindFleetOpsRequestSession(['api_credential' => 'credential-uuid', 'company' => 'company-uuid']);
+
+        // Without these the violation surfaces as the framework's generic "has already
+        // been taken", which does not say which record collided or on what.
+        expect(CreatePartRequest::create('/fleetops-test', 'POST')->messages())
+            ->toBe(['sku.unique' => 'A part with this SKU already exists.'])
+            ->and(CreateFuelTransactionRequest::create('/fleetops-test', 'POST')->messages())
+            ->toBe(['provider_transaction_id.unique' => 'A fuel transaction with this provider transaction id already exists for this provider.']);
+
+        // `provider` is supplied here, so resolveProvider() short-circuits on the input
+        // and this exercises only the ignore-self clause. The stored-provider fallback
+        // needs a database and is covered in FuelProviderTransactionControllerContractsTest.
+        $updateRules = CreateFuelTransactionRequest::create('/fleetops-test', 'PUT', ['provider' => 'petroapp'])
+            ->setRouteResolver(fn () => new class {
+                public function parameter($key, $default = null)
+                {
+                    return $key === 'id' ? 'fuel_provider_transaction_abc123' : $default;
+                }
+            })
+            ->rules();
+
+        $updateRule = collect($updateRules['provider_transaction_id'])->first(fn ($rule) => $rule instanceof Illuminate\Validation\Rule);
+
+        expect($updateRule->constraints)->toContain(['ignore', 'fuel_provider_transaction_abc123', 'public_id']);
+    });
+
     test('entity equipment payload and simulation requests expose conditional contracts', function () {
         bindFleetOpsRequestSession();
 
