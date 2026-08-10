@@ -42,6 +42,8 @@ use Illuminate\Support\Str;
  */
 class CustomerController extends Controller
 {
+    use \Fleetbase\FleetOps\Http\Controllers\Concerns\ResolvesReviewAccountBypass;
+
     /* ============================================================
      | Public auth flows (API credential only, no Customer-Token)
      * ============================================================ */
@@ -145,7 +147,7 @@ class CustomerController extends Controller
             'for'            => 'fleetops_create_customer',
             'meta->identity' => $identity,
         ]);
-        if (!$verificationCode && !$this->verificationBypassMatches($code)) {
+        if (!$verificationCode && !$this->verificationBypassMatches($identity, $code)) {
             return response()->apiError('Invalid verification code provided.');
         }
 
@@ -426,7 +428,7 @@ class CustomerController extends Controller
             'code'         => $code,
             'for'          => $for,
         ]);
-        if (!$verificationCode && !$this->verificationBypassMatches($code)) {
+        if (!$verificationCode && !$this->verificationBypassMatches($identity, $code)) {
             return response()->apiError('Invalid verification code.');
         }
 
@@ -512,7 +514,9 @@ class CustomerController extends Controller
             'for'            => 'fleetops_customer_password_reset',
             'meta->identity' => $needle,
         ]);
-        if (!$verificationCode && !$this->verificationBypassMatches($code)) {
+        // $needle, not $identity: the other verify paths normalise in place, so an
+        // allowlisted phone must be compared in the same normalised form here too.
+        if (!$verificationCode && !$this->verificationBypassMatches($needle, $code)) {
             return response()->apiError('Invalid reset code.');
         }
 
@@ -949,14 +953,15 @@ class CustomerController extends Controller
      * those two are test seams that the controller contract tests override, so a
      * policy living inside them would be stubbed away exactly where it matters.
      */
-    protected function verificationBypassMatches(?string $code): bool
+    protected function verificationBypassMatches(?string $identity, ?string $code): bool
     {
-        $bypassCode = config('fleetops.customers.verification_bypass_code');
-
-        return $bypassCode !== null
-            && $bypassCode !== ''
-            && !app()->environment('production')
-            && hash_equals((string) $bypassCode, (string) $code);
+        return static::reviewAccountBypassMatches(
+            'fleetops.customers.verification_bypass_code',
+            'fleetops.customers.review_accounts',
+            $identity,
+            $code,
+            'fleetops-customer'
+        );
     }
 
     protected function verificationCodeExists(array $attributes): bool

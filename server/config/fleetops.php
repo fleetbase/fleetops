@@ -96,7 +96,24 @@ return [
     |--------------------------------------------------------------------------
     */
     'navigator' => [
+        /*
+        | App store reviewers cannot receive our SMS, so a fixed verification code has
+        | to keep working for them — including in production, which is where a review
+        | build is tested. Blocking the bypass outside production made review
+        | impossible; restricting it to named accounts makes it safe instead.
+        |
+        | Both values are required, and neither has a default. The code alone is not
+        | sufficient: it is only accepted for an identity listed in review_accounts, so
+        | a leaked code cannot be used to authenticate as an arbitrary driver.
+        |
+        |   NAVIGATOR_BYPASS_VERIFICATION_CODE=<a secret, rotated code>
+        |   NAVIGATOR_REVIEW_ACCOUNTS=+15555550100,apple-review@example.com
+        */
         'bypass_verification_code' => env('SMS_AUTH_BYPASS_CODE', env('NAVIGATOR_BYPASS_VERIFICATION_CODE')),
+        'review_accounts'          => array_values(array_filter(array_map(
+            'trim',
+            explode(',', (string) env('NAVIGATOR_REVIEW_ACCOUNTS', ''))
+        ))),
         'app_identifier'           => env('NAVIGATOR_APP_IDENTIFIER', 'io.fleetbase.navigator'),
     ],
 
@@ -120,6 +137,11 @@ return [
     */
     'customers' => [
         'verification_bypass_code' => env('FLEETOPS_CUSTOMER_VERIFICATION_BYPASS_CODE'),
+        // Identities the bypass code is accepted for. See the note on navigator below.
+        'review_accounts'          => array_values(array_filter(array_map(
+            'trim',
+            explode(',', (string) env('FLEETOPS_CUSTOMER_REVIEW_ACCOUNTS', ''))
+        ))),
     ],
 
     /*

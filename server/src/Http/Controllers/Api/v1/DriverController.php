@@ -39,6 +39,8 @@ use Illuminate\Support\Str;
 
 class DriverController extends Controller
 {
+    use \Fleetbase\FleetOps\Http\Controllers\Concerns\ResolvesReviewAccountBypass;
+
     /**
      * Creates a new Fleetbase Driver resource.
      *
@@ -611,7 +613,7 @@ class DriverController extends Controller
 
         // find and verify code
         $verificationCode = VerificationCode::where(['subject_uuid' => $user->uuid, 'code' => $code, 'for' => $for])->exists();
-        if (!$verificationCode && !static::verificationBypassMatches($code)) {
+        if (!$verificationCode && !static::verificationBypassMatches($identity, $code)) {
             return response()->apiError('Invalid verification code!');
         }
 
@@ -1054,14 +1056,15 @@ class DriverController extends Controller
      * Shared with Internal\v1\DriverController so both verify-code paths cannot
      * drift apart.
      */
-    public static function verificationBypassMatches(?string $code): bool
+    public static function verificationBypassMatches(?string $identity, ?string $code): bool
     {
-        $bypassCode = config('fleetops.navigator.bypass_verification_code');
-
-        return $bypassCode !== null
-            && $bypassCode !== ''
-            && !app()->environment('production')
-            && hash_equals((string) $bypassCode, (string) $code);
+        return static::reviewAccountBypassMatches(
+            'fleetops.navigator.bypass_verification_code',
+            'fleetops.navigator.review_accounts',
+            $identity,
+            $code,
+            'navigator'
+        );
     }
 
     /**
