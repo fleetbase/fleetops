@@ -440,6 +440,15 @@ class DriverController extends Controller
      */
     public function registerDevice(?string $id = null, ?Request $request = null)
     {
+        // Laravel does NOT inject a class-typed parameter that declares a default value —
+        // RouteDependencyResolverTrait skips it and the default (null) is used. So the
+        // router always called this with $request === null, which made
+        // POST /v1/drivers/{id}/register-device fail with "Call to a member function
+        // input() on null" and POST /v1/drivers/register-device answer 404 (the driver was
+        // looked up by a null user_uuid). The default has to stay, because the internal
+        // controller delegates to this method with an id only.
+        $request = $request ?? request();
+
         try {
             // With an id (…/{id}/register-device) look the driver up directly; without
             // one (…/register-device and the internal delegation) resolve the driver
@@ -962,7 +971,21 @@ class DriverController extends Controller
      */
     protected function currentDriver(?Request $request): Driver
     {
-        return Driver::where('user_uuid', optional(optional($request)->user())->uuid)->firstOrFail();
+        // $request->user() is never populated on the public API: the `fleetbase.api`
+        // middleware calls Auth::setSession($apiCredential), which writes the session keys
+        // but leaves $login false, so no user resolver is ever bound. Reading it alone
+        // meant POST /v1/drivers/register-device looked a driver up by a null user_uuid
+        // and answered 404 for every consumer of the route.
+        //
+        // Auth::getUserFromSession() encodes this same order, but it also calls auth() and
+        // session()->has(), neither of which exists in the SQLite test harness — so the
+        // two sources are read directly here.
+        $user = optional($request)->user();
+        if (!$user instanceof User) {
+            $user = User::where('uuid', session('user'))->first();
+        }
+
+        return Driver::where('user_uuid', optional($user)->uuid)->firstOrFail();
     }
 
     protected function queryDrivers(Request $request)

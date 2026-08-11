@@ -470,14 +470,16 @@ test('current driver resolves the authenticated users driver profile', function 
     $connection->table('users')->insert(['uuid' => 'user-current-1', 'public_id' => 'user_current1', 'company_uuid' => 'company-1', 'name' => 'Current Driver', 'email' => 'current@example.test', 'type' => 'driver']);
     $connection->table('drivers')->insert(['uuid' => 'driver-current-1', 'public_id' => 'driver_current1', 'company_uuid' => 'company-1', 'user_uuid' => 'user-current-1']);
 
-    // registerDevice without an id resolves the driver from the request user
+    // registerDevice without an id resolves the driver from the authenticated user
     // rather than a route parameter, so exercise the real seam here — the
     // contract probe overrides it and never runs this body
     $currentDriver = new ReflectionMethod(DriverController::class, 'currentDriver');
     $currentDriver->setAccessible(true);
 
     $request = Request::create('/v1/drivers/register-device', 'POST');
-    $request->setUserResolver(fn () => $connection->table('users')->where('uuid', 'user-current-1')->first());
+    // Auth::getUserFromSession only accepts a User model from the resolver — anything
+    // else falls through to the session, so this must be a real model, not a row object.
+    $request->setUserResolver(fn () => User::query()->where('uuid', 'user-current-1')->first());
 
     $resolved = $currentDriver->invoke(new DriverController(), $request);
 
@@ -485,8 +487,31 @@ test('current driver resolves the authenticated users driver profile', function 
         ->and($resolved->uuid)->toBe('driver-current-1');
 });
 
+test('current driver resolves from the session when the request has no user resolver', function () {
+    $connection = fleetopsDriverAuthBoot();
+    $connection->table('users')->insert(['uuid' => 'user-session-1', 'public_id' => 'user_session1', 'company_uuid' => 'company-1', 'name' => 'Session Driver', 'email' => 'session@example.test', 'type' => 'driver']);
+    $connection->table('drivers')->insert(['uuid' => 'driver-session-1', 'public_id' => 'driver_session1', 'company_uuid' => 'company-1', 'user_uuid' => 'user-session-1']);
+
+    // This is the production path for the public API. `fleetbase.api` authenticates with
+    // Auth::setSession($apiCredential), which writes session('user') but does NOT bind a
+    // user resolver — so reading $request->user() directly resolved nothing and
+    // POST /v1/drivers/register-device answered 404 for every consumer.
+    session(['user' => 'user-session-1']);
+
+    $currentDriver = new ReflectionMethod(DriverController::class, 'currentDriver');
+    $currentDriver->setAccessible(true);
+
+    $resolved = $currentDriver->invoke(new DriverController(), Request::create('/v1/drivers/register-device', 'POST'));
+
+    expect($resolved)->toBeInstanceOf(Driver::class)
+        ->and($resolved->uuid)->toBe('driver-session-1');
+});
+
 test('current driver fails when the request has no matching driver', function () {
     fleetopsDriverAuthBoot();
+    // Explicit, because the session survives between tests and a leftover `user` key
+    // would silently resolve a driver and make this assertion vacuous.
+    session(['user' => null]);
 
     $currentDriver = new ReflectionMethod(DriverController::class, 'currentDriver');
     $currentDriver->setAccessible(true);

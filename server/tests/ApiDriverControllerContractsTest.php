@@ -550,6 +550,38 @@ test('api driver controller registers a device for the authenticated driver with
     ]);
 });
 
+test('api driver controller falls back to the container request when the router injects null', function () {
+    // Laravel's ResolvesRouteDependencies::transformDependency() returns null — it does
+    // NOT resolve from the container — for any class-typed parameter that declares a
+    // default value. registerDevice() has to declare one, because the internal controller
+    // delegates with an id only, so every routed call arrived with $request === null.
+    // Every other test here passes a request explicitly, which is why they stayed green
+    // while POST /v1/drivers/{id}/register-device answered 500.
+    $driver = new FleetOpsApiDriverFake();
+    $driver->setRawAttributes([
+        'uuid'      => 'driver-uuid',
+        'public_id' => 'driver_public',
+        'user_uuid' => 'user-uuid',
+    ], true);
+
+    $controller         = new FleetOpsApiDriverControllerProbe();
+    $controller->driver = $driver;
+
+    $bound = new FleetOpsApiDriverRegisterDeviceRequest(['token' => 'push-token', 'platform' => 'android']);
+    app()->instance('request', $bound);
+
+    expect($controller->registerDevice('driver_public', null))->toBe([
+        'json'   => ['device' => 'device_public'],
+        'status' => 200,
+    ])
+        ->and($controller->deviceCreates)->toBe([
+            [
+                ['token' => 'push-token', 'platform' => 'android'],
+                ['user_uuid' => 'user-uuid', 'platform' => 'android', 'token' => 'push-token', 'status' => 'active'],
+            ],
+        ]);
+});
+
 test('api driver controller reports missing driver branches', function () {
     $controller                 = new FleetOpsApiDriverControllerProbe();
     $controller->driverNotFound = true;
