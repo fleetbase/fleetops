@@ -303,7 +303,13 @@ namespace {
             ->and($fuelReportRules['driver'])->toBe(['required'])
             ->and($fuelReportRules['odometer'])->toBe(['required'])
             ->and($fuelReportRules['volume'])->toBe(['required'])
-            ->and($fuelReportUpdateRules['driver'])->toBe(['required'])
+            // The update request inherits these rules, so `required` made every partial
+            // update fail — PUT with just {"status": "approved"} answered "The driver
+            // field is required.", and the update action's $request->only() list does not
+            // even include `driver`. This assertion previously pinned that behaviour.
+            ->and($fuelReportUpdateRules['driver'])->toBe(['sometimes'])
+            ->and($fuelReportUpdateRules['odometer'])->toBe(['sometimes'])
+            ->and($fuelReportUpdateRules['volume'])->toBe(['sometimes'])
             ->and($internalDriverRules['location'][1])->toBeInstanceOf(ResolvablePoint::class)
             ->and($internalDriverRules['vehicle'][1])->toBeInstanceOf(ResolvableVehicle::class)
             ->and($internalDriverRules['latitude'])->toBe(['nullable', 'required_with:longitude', 'numeric'])

@@ -10,6 +10,7 @@ namespace Illuminate\Foundation\Http {
 
 namespace {
     use Fleetbase\FleetOps\Http\Requests\CreateFuelReportRequest;
+    use Fleetbase\FleetOps\Http\Requests\UpdateFuelReportRequest;
 
     class FleetOpsCreateFuelReportSessionStore
     {
@@ -38,6 +39,26 @@ namespace {
 
         return CreateFuelReportRequest::create('/fleet-ops/fuel-reports', 'POST');
     }
+
+    test('fuel report create only fields are required on POST and optional on update', function () {
+        FleetOpsCreateFuelReportRequestState::$session = new FleetOpsCreateFuelReportSessionStore(['api_credential' => 'api-credential-uuid']);
+
+        // UpdateFuelReportRequest extends this class, so a flat `required` made every
+        // partial update fail — PUT with just {"status": "approved"} answered "The driver
+        // field is required." `driver` is the plainest case: the update action's
+        // $request->only() list does not include it, so the field was demanded and then
+        // discarded.
+        $create = CreateFuelReportRequest::create('/fleet-ops/fuel-reports', 'POST')->rules();
+        $update = UpdateFuelReportRequest::create('/fleet-ops/fuel-reports/report_1', 'PUT')->rules();
+
+        foreach (['driver', 'odometer', 'volume'] as $field) {
+            expect($create[$field])->toBe(['required'])
+                ->and($update[$field])->toBe(['sometimes']);
+        }
+
+        expect($create['metric_unit'])->toBe(['nullable'])
+            ->and($create['amount'])->toBe(['nullable']);
+    });
 
     test('create fuel report authorization accepts api credentials or sanctum sessions', function () {
         expect(fleetopsCreateFuelReportRequestWithSession([])->authorize())->toBeFalse()
