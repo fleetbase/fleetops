@@ -2697,6 +2697,10 @@ test('tracking number and waypoint webhook resources serialize tracking contract
         'scheduled_at'       => '2026-07-30 09:00:00',
     ]);
 
+    // The decoded QR content is a debug-only field and must never ride along on a webhook,
+    // which is a separate literal payload rather than a filtered toArray().
+    expect(array_key_exists('qr_code_content', (new TrackingNumberResource($trackingNumber))->toWebhookPayload()))->toBeFalse();
+
     expect((new TrackingNumberResource($trackingNumber))->toWebhookPayload())->toMatchArray([
         'id'              => 'fixture_public',
         'tracking_number' => 'TN-ZERO',
@@ -2742,4 +2746,81 @@ test('tracking number and waypoint webhook resources serialize tracking contract
             'currency'        => 'SGD',
             'meta'            => ['sequence' => 2],
         ]);
+});
+
+test('tracking number resource publishes the qr code content only in debug mode', function () {
+    // qr_code is a base64 PNG generated from owner_uuid, and the endpoints that consume a
+    // scanned code match on that uuid. Debug builds publish the value beside the image so
+    // an automated client can follow the flow without decoding a PNG; production must not.
+    $trackingNumber = fleetopsCompactResourceFixture([
+        'tracking_number' => 'TN-DEBUG',
+        'owner_uuid'      => 'owner-uuid-under-the-qr',
+        'owner_type'      => 'Fleetbase\\FleetOps\\Models\\Order',
+        'region'          => 'sg',
+        'qr_code'         => 'qr-data',
+        'barcode'         => 'barcode-data',
+        'last_status'     => 'created',
+        'last_status_code' => 'CREATED',
+    ]);
+    $request = Request::create('/v1/tracking-numbers', 'GET');
+
+    // The full resource builds a console url, which needs app()->environment(). The bare
+    // container this suite runs on has no such method, which is why the tests above only
+    // cover the index resource and the webhook payload.
+    $previousContainer = Illuminate\Container\Container::getInstance();
+    $container         = new class extends Illuminate\Container\Container {
+        public function environment(...$environments)
+        {
+            return in_array('testing', $environments, true) || $environments === [] ? 'testing' : false;
+        }
+    };
+    $container->instance('config', new Illuminate\Config\Repository([
+        'fleetbase' => ['console' => ['host' => 'console.fleetbase.test', 'subdomain' => null, 'secure' => true]],
+    ]));
+    Illuminate\Container\Container::setInstance($container);
+
+    $withDebug = new class ($trackingNumber) extends TrackingNumberResource {
+        protected static function exposesQrCodeContent(): bool
+        {
+            return true;
+        }
+    };
+    $withoutDebug = new class ($trackingNumber) extends TrackingNumberResource {
+        protected static function exposesQrCodeContent(): bool
+        {
+            return false;
+        }
+    };
+
+    try {
+        $debugPayload      = $withDebug->resolve($request);
+        $productionPayload = $withoutDebug->resolve($request);
+    } finally {
+        Illuminate\Container\Container::setInstance($previousContainer);
+    }
+
+    // Present and exactly the value the QR was generated from — not a public id.
+    expect($debugPayload['qr_code_content'])->toBe('owner-uuid-under-the-qr')
+        ->and($debugPayload['qr_code'])->toBe('qr-data')
+        // Absent, not null: `when()` drops the key entirely, so a production response is
+        // byte-identical to one from before the field existed.
+        ->and(array_key_exists('qr_code_content', $productionPayload))->toBeFalse()
+        ->and($productionPayload['qr_code'])->toBe('qr-data');
+});
+
+test('tracking number resource fails closed when the debug state cannot be determined', function () {
+    // Any failure to resolve the debug state must answer false rather than defaulting to
+    // exposure. The real accessor is exercised here with no usable application bound.
+    $expose = new ReflectionMethod(TrackingNumberResource::class, 'exposesQrCodeContent');
+    $expose->setAccessible(true);
+
+    $previous = Illuminate\Container\Container::getInstance();
+
+    try {
+        // A container that is not an Application has no hasDebugModeEnabled().
+        Illuminate\Container\Container::setInstance(new Illuminate\Container\Container());
+        expect($expose->invoke(null))->toBeFalse();
+    } finally {
+        Illuminate\Container\Container::setInstance($previous);
+    }
 });

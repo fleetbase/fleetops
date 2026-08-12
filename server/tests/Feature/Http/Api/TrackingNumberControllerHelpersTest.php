@@ -138,8 +138,14 @@ test('tracking number helpers look up owners create records and wrap resources',
     expect($qrModel)->not->toBeNull()
         ->and($helper('qrModelResource', $qrModel))->toBeInstanceOf(Fleetbase\FleetOps\Http\Resources\v1\Entity::class);
 
-    // Tables with no eloquent mapping are skipped and fall back to a raw row
-    // lookup, so the record still resolves but arrives unhydrated
+    // A table with no eloquent mapping resolves to null rather than a raw row.
+    //
+    // The raw-row fallback was removed: it passed the ARRAY of table names to
+    // DB::table(), which stringified it to the literal table "Array" and threw
+    // SQLSTATE[42S02], so every unresolvable QR code answered 500 instead of the 400 the
+    // caller already handles. It could not have helped either way — qrModelResource()
+    // serializes through a typed resource keyed on the model class, and a raw stdClass
+    // row has none.
     $connection->table('tracking_statuses')->insert([
         'uuid'      => '44444444-4444-4444-8444-444444444403',
         'public_id' => 'tracking_status_tnhelper1',
@@ -147,8 +153,8 @@ test('tracking number helpers look up owners create records and wrap resources',
         'status'    => 'Dispatched',
     ]);
 
-    $unmapped = $helper('findQrModel', ['tracking_statuses'], ['public_id' => 'tracking_status_tnhelper1']);
-    expect($unmapped)->not->toBeNull()
-        ->and($unmapped)->not->toBeInstanceOf(EloquentModel::class)
-        ->and($unmapped->uuid)->toBe('44444444-4444-4444-8444-444444444403');
+    expect($helper('findQrModel', ['tracking_statuses'], ['public_id' => 'tracking_status_tnhelper1']))->toBeNull()
+        // And a mapped table that simply matches nothing is also null, which is the path
+        // an unknown or unresolved code takes.
+        ->and($helper('findQrModel', ['entities', 'orders'], ['uuid' => '{{qr_code}}']))->toBeNull();
 });
