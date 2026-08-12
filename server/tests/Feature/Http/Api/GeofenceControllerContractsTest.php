@@ -183,6 +183,16 @@ class FleetOpsGeofenceControllerFake extends GeofenceController
     public ?FleetOpsGeofenceQueryFake $nextEventQuery = null;
     public array $serializedEvents                    = [];
 
+    public ?Fleetbase\FleetOps\Models\Driver $historyDriver = null;
+    public array $historyDriverLookups                      = [];
+
+    protected function findDriverForHistory(string $driverId): ?Fleetbase\FleetOps\Models\Driver
+    {
+        $this->historyDriverLookups[] = $driverId;
+
+        return $this->historyDriver;
+    }
+
     protected function geofenceEventLogQuery(?string $companyUuid): mixed
     {
         $query                = $this->nextEventQuery ?? new FleetOpsGeofenceQueryFake($companyUuid);
@@ -351,10 +361,17 @@ test('api geofence driver history applies driver filter and caps pagination', fu
         'per_page' => 75,
     ]);
 
-    $controller->driverHistory($request, 'driver-9');
+    // The endpoint is addressed by public_id and resolves the driver itself; the query
+    // still filters on the driver's uuid.
+    $historyDriver = new Fleetbase\FleetOps\Models\Driver();
+    $historyDriver->setRawAttributes(['uuid' => 'driver-9', 'public_id' => 'driver_public9'], true);
+    $controller->historyDriver = $historyDriver;
+
+    $controller->driverHistory($request, 'driver_public9');
     $query = $controller->eventQueries[0];
 
-    expect($query->companyUuid)->toBe('company-4')
+    expect($controller->historyDriverLookups)->toBe(['driver_public9'])
+        ->and($query->companyUuid)->toBe('company-4')
         ->and($query->calls)->toContain(
             ['where', 'driver_uuid', 'driver-9'],
             ['with', ['driver.vehicle', 'vehicle', 'order']],

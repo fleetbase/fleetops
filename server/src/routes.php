@@ -237,7 +237,7 @@ Route::prefix(config('fleetops.api.routing.prefix'))->namespace('Fleetbase\Fleet
                 $router->get('events', 'GeofenceController@events');
                 $router->get('inventory', 'GeofenceController@inventory');
                 $router->get('dwell-report', 'GeofenceController@dwellReport');
-                $router->get('driver/{driverUuid}/history', 'GeofenceController@driverHistory');
+                $router->get('driver/{driverId}/history', 'GeofenceController@driverHistory');
             });
             // service-rates routes
             $router->group(['prefix' => 'service-rates'], function () use ($router) {
