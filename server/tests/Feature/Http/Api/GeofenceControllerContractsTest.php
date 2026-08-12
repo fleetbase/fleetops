@@ -381,6 +381,21 @@ test('api geofence driver history applies driver filter and caps pagination', fu
         );
 });
 
+test('driver history answers 404 when the driver does not resolve', function () {
+    // The endpoint's own not-found branch: findDriverForHistory returns null and the
+    // request must not proceed to a query keyed on nothing.
+    $controller = new FleetOpsGeofenceControllerFake();
+    $controller->historyDriver = null;
+
+    $response = $controller->driverHistory(Request::create('/geofences/driver/driver_missing/history', 'GET'), 'driver_missing');
+
+    expect($response->getStatusCode())->toBe(404)
+        ->and($response->getData(true))->toBe(['error' => 'Driver resource not found.'])
+        ->and($controller->historyDriverLookups)->toBe(['driver_missing'])
+        // and no event query was ever built
+        ->and($controller->eventQueries)->toBe([]);
+});
+
 test('driver history resolves by public id, and by uuid only for internal requests', function () {
     // The contract tests above stub findDriverForHistory(), so the real lookup needs its
     // own coverage. It is the whole point of the change: the public endpoint used to take

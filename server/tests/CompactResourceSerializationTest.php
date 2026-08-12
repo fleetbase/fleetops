@@ -2769,9 +2769,17 @@ test('tracking number resource publishes the qr code content only in debug mode'
     // cover the index resource and the webhook payload.
     $previousContainer = Illuminate\Container\Container::getInstance();
     $container         = new class extends Illuminate\Container\Container {
+        public bool $debugMode = false;
+
         public function environment(...$environments)
         {
             return in_array('testing', $environments, true) || $environments === [] ? 'testing' : false;
+        }
+
+        // Stands in for the framework's Application::hasDebugModeEnabled().
+        public function hasDebugModeEnabled()
+        {
+            return $this->debugMode;
         }
     };
     $container->instance('config', new Illuminate\Config\Repository([
@@ -2779,22 +2787,16 @@ test('tracking number resource publishes the qr code content only in debug mode'
     ]));
     Illuminate\Container\Container::setInstance($container);
 
-    $withDebug = new class ($trackingNumber) extends TrackingNumberResource {
-        protected static function exposesQrCodeContent(): bool
-        {
-            return true;
-        }
-    };
-    $withoutDebug = new class ($trackingNumber) extends TrackingNumberResource {
-        protected static function exposesQrCodeContent(): bool
-        {
-            return false;
-        }
-    };
+    // Drive the REAL accessor through the container rather than overriding it, so the
+    // debug check itself is exercised and not just the resource's use of it.
+    $container->debugMode = true;
+    $withDebug            = new TrackingNumberResource($trackingNumber);
 
     try {
-        $debugPayload      = $withDebug->resolve($request);
-        $productionPayload = $withoutDebug->resolve($request);
+        $debugPayload = $withDebug->resolve($request);
+
+        $container->debugMode = false;
+        $productionPayload    = (new TrackingNumberResource($trackingNumber))->resolve($request);
     } finally {
         Illuminate\Container\Container::setInstance($previousContainer);
     }
@@ -2819,6 +2821,16 @@ test('tracking number resource fails closed when the debug state cannot be deter
     try {
         // A container that is not an Application has no hasDebugModeEnabled().
         Illuminate\Container\Container::setInstance(new Illuminate\Container\Container());
+        expect($expose->invoke(null))->toBeFalse();
+
+        // And an accessor that throws must also answer false rather than propagating —
+        // a resource must not be able to fail serialization over a debug check.
+        Illuminate\Container\Container::setInstance(new class extends Illuminate\Container\Container {
+            public function hasDebugModeEnabled()
+            {
+                throw new RuntimeException('debug state unavailable');
+            }
+        });
         expect($expose->invoke(null))->toBeFalse();
     } finally {
         Illuminate\Container\Container::setInstance($previous);
