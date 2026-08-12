@@ -21,6 +21,17 @@ on:
     branches: [main, 'dev-v*']
   workflow_dispatch:
 
+# A pull request from a branch in this repo fires BOTH `push` and `pull_request` for the
+# same commit, so the contract ran twice: two stack boots, two seeds, two collection runs.
+# Keying the group on the commit rather than the ref collapses them — the pull_request
+# event reports the head SHA, the push event reports the same commit as github.sha.
+#
+# Deduped rather than dropping a trigger, so a direct push to a release branch is still
+# verified instead of relying on someone remembering to dispatch it.
+concurrency:
+  group: api-contract-${{ github.event.pull_request.head.sha || github.sha }}
+  cancel-in-progress: true
+
 permissions:
   contents: read
 
