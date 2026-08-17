@@ -1,0 +1,46 @@
+name: Release Tag
+
+# Tags a release when a `dev-v*` branch is merged to main, and pushes the tag. Delegates
+# to the reusable workflow in fleetbase/fleetbase. Requires org secret _GITHUB_AUTH_TOKEN
+# (inherited); no-ops with a warning until it is set.
+#
+# It pushes the tag and nothing else — create-release.yml and the publish jobs in this
+# repository already chain off `push: tags: v*`.
+#
+# The version is never retyped: it comes from the branch name, and the tag is refused
+# unless the files below and RELEASE.md already agree with it. This repository is
+# an ember addon plus a server, so it carries composer.json, package.json and extension.json.
+#
+# RELEASE.md is required, and its first line must name the version being released. That
+# check is the only thing that can tell notes written for this release from the previous
+# release's notes nobody replaced.
+#
+# Deliberately unpinned, like postman.yml — it tracks the reusable workflow on main, so
+# there is no ref here to remember to bump.
+#
+# workflow_dispatch is the recovery path. Use it when a release failed validation and the
+# fix landed on main after the merge: re-running the merge event would check out the
+# merge commit and never see that fix.
+
+on:
+  pull_request:
+    types: [closed]
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version to tag, e.g. 1.2.3. Recovery only — a normal release reads it from the branch."
+        required: true
+permissions:
+  contents: read
+
+jobs:
+  tag:
+    if: github.event_name == 'workflow_dispatch' ||
+        (github.event.pull_request.merged == true &&
+         startsWith(github.event.pull_request.head.ref, 'dev-v'))
+    uses: fleetbase/fleetbase/.github/workflows/release-tag.yml@main
+    with:
+      version-files: composer.json,package.json,extension.json
+      version: ${{ github.event.inputs.version || '' }}
+    secrets: inherit
