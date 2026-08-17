@@ -14,7 +14,8 @@ jobs:
           with:
             tag_name: ${{ github.ref_name }}
             name: ${{ github.ref_name }}
-            generate_release_notes: true 
+            body_path: RELEASE.md
+            generate_release_notes: true
             draft: false
             prerelease: false
           env:
