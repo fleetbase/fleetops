@@ -6,6 +6,7 @@ use Fleetbase\Casts\Json;
 use Fleetbase\FleetOps\Casts\Point;
 use Fleetbase\FleetOps\Support\Utils;
 use Fleetbase\LaravelMysqlSpatial\Eloquent\SpatialTrait;
+use Fleetbase\LaravelMysqlSpatial\Types\Point as SpatialPoint;
 use Fleetbase\Models\Model;
 use Fleetbase\Models\User;
 use Fleetbase\Traits\HasApiModelBehavior;
@@ -147,6 +148,26 @@ class FuelReport extends Model
     public function reporter()
     {
         return $this->belongsTo(User::class, 'reported_by_uuid');
+    }
+
+    /**
+     * Bootstrap the model.
+     *
+     * `location` is declared nullable in CreateFuelReportRequest but the column is
+     * POINT NOT NULL, so a report created without one failed outright with
+     * SQLSTATE[HY000] 1364 "Field 'location' doesn't have a default value" — a 500 for
+     * a request the validator had just accepted. Mirrors Device and Sensor, which
+     * default their spatial columns the same way.
+     */
+    protected static function boot()
+    {
+        parent::boot();
+
+        static::creating(function (self $fuelReport) {
+            if (empty($fuelReport->location)) {
+                $fuelReport->location = new SpatialPoint(0, 0);
+            }
+        });
     }
 
     /**

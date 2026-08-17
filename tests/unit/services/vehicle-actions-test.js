@@ -15,12 +15,27 @@ class ResourceContextPanelStub extends Service {
     }
 }
 
+class FetchStub extends Service {}
+
+class MaintenanceScheduleActionsStub extends Service {
+    calls = [];
+
+    modal = {
+        create: (...args) => {
+            this.calls.push(args);
+            return 'opened';
+        },
+    };
+}
+
 module('Unit | Service | vehicle-actions', function (hooks) {
     setupTest(hooks);
 
     hooks.beforeEach(function () {
         this.owner.register('service:universe/menu-service', MenuServiceStub);
         this.owner.register('service:resource-context-panel', ResourceContextPanelStub);
+        this.owner.register('service:fetch', FetchStub);
+        this.owner.register('service:maintenance-schedule-actions', MaintenanceScheduleActionsStub);
     });
 
     test('it exists', function (assert) {
@@ -40,6 +55,22 @@ module('Unit | Service | vehicle-actions', function (hooks) {
 
         assert.strictEqual(config.vehicle, vehicle);
         assert.verifySteps(['vehicle reloaded']);
+    });
+
+    test('scheduleMaintenance resolves index vehicles and forwards modal save options', async function (assert) {
+        const fullVehicle = { id: 'vehicle-uuid', name: 'Truck 1' };
+        const indexVehicle = {
+            loadResource: async () => fullVehicle,
+        };
+        const options = { closeOnSuccess: true };
+        const saveOptions = { refresh: false, callback() {} };
+        const service = this.owner.lookup('service:vehicle-actions');
+
+        const result = await service.scheduleMaintenance(indexVehicle, options, saveOptions);
+        const maintenanceScheduleActions = this.owner.lookup('service:maintenance-schedule-actions');
+
+        assert.strictEqual(result, 'opened');
+        assert.deepEqual(maintenanceScheduleActions.calls, [[{ subject: fullVehicle }, options, saveOptions]]);
     });
 
     test('unassignOrders loads assigned orders, highlights the current job, and posts selected orders', async function (assert) {

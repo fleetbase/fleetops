@@ -96,8 +96,52 @@ return [
     |--------------------------------------------------------------------------
     */
     'navigator' => [
+        /*
+        | App store reviewers cannot receive our SMS, so a fixed verification code has
+        | to keep working for them — including in production, which is where a review
+        | build is tested. Blocking the bypass outside production made review
+        | impossible; restricting it to named accounts makes it safe instead.
+        |
+        | Both values are required, and neither has a default. The code alone is not
+        | sufficient: it is only accepted for an identity listed in review_accounts, so
+        | a leaked code cannot be used to authenticate as an arbitrary driver.
+        |
+        |   NAVIGATOR_BYPASS_VERIFICATION_CODE=<a secret, rotated code>
+        |   NAVIGATOR_REVIEW_ACCOUNTS=+15555550100,apple-review@example.com
+        */
         'bypass_verification_code' => env('SMS_AUTH_BYPASS_CODE', env('NAVIGATOR_BYPASS_VERIFICATION_CODE')),
+        'review_accounts'          => array_values(array_filter(array_map(
+            'trim',
+            explode(',', (string) env('NAVIGATOR_REVIEW_ACCOUNTS', ''))
+        ))),
         'app_identifier'           => env('NAVIGATOR_APP_IDENTIFIER', 'io.fleetbase.navigator'),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Customers
+    |--------------------------------------------------------------------------
+    |
+    | Testing-only verification-code bypass for the customer auth flows
+    | (POST /v1/customers, /customers/verify-code, /customers/reset-password).
+    | Intended for local development and staging QA, where signing up means
+    | waiting on a real email or paying for a real SMS.
+    |
+    | MUST be left unset in production. It is ignored outright when the app
+    | environment is `production`, and when unset no bypass is possible.
+    |
+    | Deliberately NOT wired to SMS_AUTH_BYPASS_CODE: that variable already
+    | gates operator console login and driver login, and reusing it here would
+    | make one leaked value unlock three different privilege tiers.
+    |
+    */
+    'customers' => [
+        'verification_bypass_code' => env('FLEETOPS_CUSTOMER_VERIFICATION_BYPASS_CODE'),
+        // Identities the bypass code is accepted for. See the note on navigator below.
+        'review_accounts'          => array_values(array_filter(array_map(
+            'trim',
+            explode(',', (string) env('FLEETOPS_CUSTOMER_REVIEW_ACCOUNTS', ''))
+        ))),
     ],
 
     /*

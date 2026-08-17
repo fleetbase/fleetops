@@ -2,11 +2,11 @@ name: PHP CI
 
 on:
   push:
-    branches: [ main ]
+    branches: [ main, 'dev-v*' ]
     tags:
       - 'v*'
   pull_request:
-    branches: [ main ]
+    branches: [ main, 'dev-v*' ]
 
 jobs:
   build:

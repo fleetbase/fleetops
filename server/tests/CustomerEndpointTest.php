@@ -231,8 +231,11 @@ test('FormRequest validators are present and authorize via api credential', func
     $create = file_get_contents(dirname(__DIR__) . '/src/Http/Requests/CreateCustomerRequest.php');
     $verify = file_get_contents(dirname(__DIR__) . '/src/Http/Requests/VerifyCreateCustomerRequest.php');
 
+    // These match against source text, so they have to be updated whenever the rule
+    // strings change. `code` is presence-only by design — the controller's own check
+    // (code + for + meta->identity) is strictly stronger than exists:verification_codes.
     expect($create)
-        ->toContain("'code'     => 'required|exists:verification_codes,code'")
+        ->toContain("'code'     => 'required|string'")
         ->toContain("'password' => 'required|string|min:8'")
         ->and($verify)->toContain("'mode'     => 'required|in:email,sms'");
 });

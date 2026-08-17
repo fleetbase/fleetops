@@ -2,11 +2,11 @@ name: Ember.js CI
 
 on:
   push:
-    branches: [ main ]
+    branches: [ main, 'dev-v*' ]
     tags:
       - 'v*'
   pull_request:
-    branches: [ main ]
+    branches: [ main, 'dev-v*' ]
 
 env:
   NODE_VERSION: 22.x

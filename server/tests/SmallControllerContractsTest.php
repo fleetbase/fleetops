@@ -227,17 +227,28 @@ class FleetOpsGettingStartedControllerProbe extends GettingStartedController
 
 class FleetOpsPublicNavigatorControllerProbe extends PublicNavigatorController
 {
-    public mixed $settings = ['require_photo' => true];
-    public array $lookups  = [];
+    public mixed $settings   = ['require_photo' => true];
+    public array $lookups    = [];
+    public bool $companyMiss = false;
 
     protected function findCompanyByPublicId(string $companyId): ?Company
     {
+        $this->lookups[] = $companyId;
+
+        // Mirrors the real lookup returning null for an unknown public id.
+        if ($this->companyMiss) {
+            return null;
+        }
+
         $company = new Company();
         $company->setRawAttributes(['uuid' => 'company-uuid', 'public_id' => $companyId], true);
 
-        $this->lookups[] = $companyId;
-
         return $company;
+    }
+
+    protected function errorResponse(string $message, int $statusCode): JsonResponse
+    {
+        return new JsonResponse(['errors' => [$message]], $statusCode);
     }
 
     protected function driverOnboardSetting(string $companyUuid): mixed
@@ -410,6 +421,19 @@ test('public navigator controller returns configured or default driver onboardin
             'company_public',
             'company-uuid',
         ]);
+});
+
+test('public navigator controller answers 404 for an organization public id that does not resolve', function () {
+    $controller               = new FleetOpsPublicNavigatorControllerProbe();
+    $controller->companyMiss  = true;
+
+    $response = $controller->getDriverOnboardSettings('company_does_not_exist');
+
+    // Regression: the unresolved company used to be dereferenced anyway, which threw a
+    // TypeError out of the controller and rendered an HTML stack trace with a 500.
+    expect($response->getStatusCode())->toBe(404)
+        ->and($response->getData(true))->toBe(['errors' => ['Organization not found.']])
+        ->and($controller->lookups)->toBe(['company_does_not_exist']);
 });
 
 test('public contact controller normalizes create input and preserves update fields', function () {

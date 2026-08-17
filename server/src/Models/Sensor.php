@@ -148,6 +148,30 @@ class Sensor extends Model
     protected $spatialFields = ['last_position'];
 
     /**
+     * Bootstrap the model.
+     *
+     * The same migration that made devices.last_position NOT NULL did it to
+     * sensors.last_position too, but only Device got a default. Creating a sensor
+     * without a position therefore failed outright:
+     *
+     *   SQLSTATE[HY000]: General error: 1364 Field 'last_position' doesn't have a
+     *   default value
+     *
+     * Position is not something a caller has when registering a sensor, so default
+     * it to POINT(0,0) on create, exactly as Device does.
+     */
+    protected static function boot()
+    {
+        parent::boot();
+
+        static::creating(function (self $sensor) {
+            if (empty($sensor->last_position)) {
+                $sensor->last_position = new SpatialPoint(0, 0);
+            }
+        });
+    }
+
+    /**
      * The attributes that should be cast to native types.
      *
      * @var array

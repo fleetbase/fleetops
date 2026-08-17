@@ -1,6 +1,7 @@
 <?php
 
 use Fleetbase\FleetOps\Http\Controllers\Api\v1\GeofenceController;
+use Fleetbase\FleetOps\Models\Driver;
 use Fleetbase\FleetOps\Models\GeofenceEventLog;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
@@ -183,6 +184,16 @@ class FleetOpsGeofenceControllerFake extends GeofenceController
     public ?FleetOpsGeofenceQueryFake $nextEventQuery = null;
     public array $serializedEvents                    = [];
 
+    public ?Fleetbase\FleetOps\Models\Driver $historyDriver = null;
+    public array $historyDriverLookups                      = [];
+
+    protected function findDriverForHistory(string $driverId): ?Fleetbase\FleetOps\Models\Driver
+    {
+        $this->historyDriverLookups[] = $driverId;
+
+        return $this->historyDriver;
+    }
+
     protected function geofenceEventLogQuery(?string $companyUuid): mixed
     {
         $query                = $this->nextEventQuery ?? new FleetOpsGeofenceQueryFake($companyUuid);
@@ -351,14 +362,100 @@ test('api geofence driver history applies driver filter and caps pagination', fu
         'per_page' => 75,
     ]);
 
-    $controller->driverHistory($request, 'driver-9');
+    // The endpoint is addressed by public_id and resolves the driver itself; the query
+    // still filters on the driver's uuid.
+    $historyDriver = new Fleetbase\FleetOps\Models\Driver();
+    $historyDriver->setRawAttributes(['uuid' => 'driver-9', 'public_id' => 'driver_public9'], true);
+    $controller->historyDriver = $historyDriver;
+
+    $controller->driverHistory($request, 'driver_public9');
     $query = $controller->eventQueries[0];
 
-    expect($query->companyUuid)->toBe('company-4')
+    expect($controller->historyDriverLookups)->toBe(['driver_public9'])
+        ->and($query->companyUuid)->toBe('company-4')
         ->and($query->calls)->toContain(
             ['where', 'driver_uuid', 'driver-9'],
             ['with', ['driver.vehicle', 'vehicle', 'order']],
             ['orderBy', 'occurred_at', 'desc'],
             ['paginate', 75],
         );
+});
+
+test('driver history answers 404 when the driver does not resolve', function () {
+    // The endpoint's own not-found branch: findDriverForHistory returns null and the
+    // request must not proceed to a query keyed on nothing.
+    $controller = new FleetOpsGeofenceControllerFake();
+    $controller->historyDriver = null;
+
+    $response = $controller->driverHistory(Request::create('/geofences/driver/driver_missing/history', 'GET'), 'driver_missing');
+
+    expect($response->getStatusCode())->toBe(404)
+        ->and($response->getData(true))->toBe(['error' => 'Driver resource not found.'])
+        ->and($controller->historyDriverLookups)->toBe(['driver_missing'])
+        // and no event query was ever built
+        ->and($controller->eventQueries)->toBe([]);
+});
+
+test('driver history resolves by public id, and by uuid only for internal requests', function () {
+    // The contract tests above stub findDriverForHistory(), so the real lookup needs its
+    // own coverage. It is the whole point of the change: the public endpoint used to take
+    // a uuid, which the public API never issues.
+    $connection = new Illuminate\Database\SQLiteConnection(new PDO('sqlite::memory:'));
+    $resolver   = new Illuminate\Database\ConnectionResolver(['default' => $connection, 'mysql' => $connection]);
+    $resolver->setDefaultConnection('mysql');
+    Illuminate\Database\Eloquent\Model::setConnectionResolver($resolver);
+
+    $schema = $connection->getSchemaBuilder();
+    // Driver carries a global scope requiring a related user, so both tables are needed.
+    $schema->create('users', function ($table) {
+        $table->increments('id');
+        $table->string('uuid')->nullable();
+        $table->timestamp('deleted_at')->nullable();
+        $table->timestamps();
+    });
+    $schema->create('drivers', function ($table) {
+        $table->increments('id');
+        $table->string('uuid')->nullable();
+        $table->string('public_id')->nullable();
+        $table->string('company_uuid')->nullable();
+        $table->string('user_uuid')->nullable();
+        $table->timestamp('deleted_at')->nullable();
+        $table->timestamps();
+    });
+    $connection->table('users')->insert(['uuid' => 'user-uuid-1']);
+    $connection->table('drivers')->insert([
+        'uuid'      => 'driver-uuid-1',
+        'public_id' => 'driver_public1',
+        'user_uuid' => 'user-uuid-1',
+    ]);
+
+    $resolve = new ReflectionMethod(GeofenceController::class, 'findDriverForHistory');
+    $resolve->setAccessible(true);
+    $controller = new GeofenceController();
+
+    $byPublicId = $resolve->invoke($controller, 'driver_public1');
+    // A uuid is NOT accepted on a public request — that is the contract this restores.
+    $byUuidPublic = $resolve->invoke($controller, 'driver-uuid-1');
+    $missing      = $resolve->invoke($controller, 'driver_nope');
+
+    expect($byPublicId)->toBeInstanceOf(Driver::class)
+        ->and($byPublicId->uuid)->toBe('driver-uuid-1')
+        ->and($byUuidPublic)->toBeNull()
+        ->and($missing)->toBeNull();
+
+    // The console reaches the same method through the internal route with a uuid.
+    // Http::isInternalRequest() decides from the ROUTE's uri — any route with an "int"
+    // segment — so the request has to carry one, not a header.
+    $internalRequest = Request::create('/fleet-ops/int/v1/geofences/driver/driver-uuid-1/history', 'GET');
+    $internalRequest->setRouteResolver(fn () => new Illuminate\Routing\Route(
+        ['GET'],
+        'fleet-ops/int/v1/geofences/driver/{driverUuid}/history',
+        ['uses' => fn () => null]
+    ));
+    app()->instance('request', $internalRequest);
+
+    $byUuidInternal = $resolve->invoke($controller, 'driver-uuid-1');
+
+    expect($byUuidInternal)->toBeInstanceOf(Driver::class)
+        ->and($byUuidInternal->public_id)->toBe('driver_public1');
 });
