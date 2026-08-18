@@ -54,6 +54,11 @@ class FleetOpsFixCommandsExcelFake
     public function import($import, $path, $disk = null): bool
     {
         $this->imports[] = [$import, $path, $disk];
+
+        if (str_contains((string) $path, 'unreadable')) {
+            throw new RuntimeException('Unable to read the spreadsheet.');
+        }
+
         $import->imported++;
 
         return true;
@@ -230,4 +235,22 @@ test('maintenance export import and cost recalculation execute', function () {
     $probe->callHelper('recalculateCosts', $maintenance);
     expect((int) $connection->table('maintenances')->value('parts_cost'))->toBe(1250)
         ->and((int) $connection->table('maintenances')->value('total_cost'))->toBe(2350);
+});
+
+test('maintenance import reports an unreadable file instead of surfacing the reader error', function () {
+    fleetopsFixCommandsBoot();
+    $controller = new MaintenanceController();
+
+    FleetOpsFixCommandsState::$files = [
+        (object) ['path' => 'uploads/maintenances.xlsx'],
+        (object) ['path' => 'uploads/unreadable.xlsx'],
+    ];
+
+    $response = $controller->import(Fleetbase\Http\Requests\ImportRequest::create('/int/v1/maintenances/import', 'POST', ['disk' => 'local']));
+
+    // The reader throws on the second file, so the whole import fails rather than
+    // reporting a partial count for the first
+    expect($response->getData(true)['errors'] ?? [$response->getData(true)['error'] ?? null])
+        ->toContain('Invalid file, unable to process.')
+        ->and($GLOBALS['fleetopsFixCommandsExcelFake']->imports)->toHaveCount(2);
 });

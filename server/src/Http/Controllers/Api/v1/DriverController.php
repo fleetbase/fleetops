@@ -39,6 +39,8 @@ use Illuminate\Support\Str;
 
 class DriverController extends Controller
 {
+    use \Fleetbase\FleetOps\Http\Controllers\Concerns\ResolvesReviewAccountBypass;
+
     /**
      * Creates a new Fleetbase Driver resource.
      *
@@ -436,10 +438,22 @@ class DriverController extends Controller
      *
      * @return \Illuminate\Http\Response
      */
-    public function registerDevice(string $id, Request $request)
+    public function registerDevice(?string $id = null, ?Request $request = null)
     {
+        // Laravel does NOT inject a class-typed parameter that declares a default value —
+        // RouteDependencyResolverTrait skips it and the default (null) is used. So the
+        // router always called this with $request === null, which made
+        // POST /v1/drivers/{id}/register-device fail with "Call to a member function
+        // input() on null" and POST /v1/drivers/register-device answer 404 (the driver was
+        // looked up by a null user_uuid). The default has to stay, because the internal
+        // controller delegates to this method with an id only.
+        $request = $request ?? request();
+
         try {
-            $driver = $this->findDriver($id);
+            // With an id (…/{id}/register-device) look the driver up directly; without
+            // one (…/register-device and the internal delegation) resolve the driver
+            // from the authenticated user.
+            $driver = $id ? $this->findDriver($id) : $this->currentDriver($request);
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $exception) {
             return $this->jsonResponse(
                 [
@@ -608,7 +622,7 @@ class DriverController extends Controller
 
         // find and verify code
         $verificationCode = VerificationCode::where(['subject_uuid' => $user->uuid, 'code' => $code, 'for' => $for])->exists();
-        if (!$verificationCode && $code !== config('fleetops.navigator.bypass_verification_code')) {
+        if (!$verificationCode && !static::verificationBypassMatches($identity, $code)) {
             return response()->apiError('Invalid verification code!');
         }
 
@@ -658,10 +672,16 @@ class DriverController extends Controller
         }
 
         // Get the driver user account
+        //
+        // Unreachable: DriverScope adds a whereHas('user') to every driver
+        // query, so findRecordOrFail() never yields a driver whose user is
+        // missing. Kept as defence in depth if that scope is ever relaxed.
         $user = $driver->getUser();
+        // @codeCoverageIgnoreStart
         if (!$user) {
             return response()->apiError('Driver has not user account.');
         }
+        // @codeCoverageIgnoreEnd
 
         // Get the user account company
         $company = Auth::getCompanySessionForUser($user);
@@ -729,10 +749,16 @@ class DriverController extends Controller
         }
 
         // Get the driver user account
+        //
+        // Unreachable: the same user was already dereferenced above to compare
+        // company sessions, and DriverScope guarantees it exists in the first
+        // place. Kept as defence in depth if that scope is ever relaxed.
         $user = $driver->getUser();
+        // @codeCoverageIgnoreStart
         if (!$user) {
             return response()->apiError('Critial error, driver has not user account.');
         }
+        // @codeCoverageIgnoreEnd
 
         // Get the users driver profile for this company
         $driverProfile = Driver::where(['user_uuid' => $user->uuid, 'company_uuid' => $company->uuid])->first();
@@ -937,6 +963,31 @@ class DriverController extends Controller
         return Driver::findRecordOrFail($id, $with);
     }
 
+    /**
+     * Resolve the driver for the authenticated request (used when no explicit
+     * driver id is supplied, e.g. a driver-authenticated session).
+     *
+     * @throws \Illuminate\Database\Eloquent\ModelNotFoundException
+     */
+    protected function currentDriver(?Request $request): Driver
+    {
+        // $request->user() is never populated on the public API: the `fleetbase.api`
+        // middleware calls Auth::setSession($apiCredential), which writes the session keys
+        // but leaves $login false, so no user resolver is ever bound. Reading it alone
+        // meant POST /v1/drivers/register-device looked a driver up by a null user_uuid
+        // and answered 404 for every consumer of the route.
+        //
+        // Auth::getUserFromSession() encodes this same order, but it also calls auth() and
+        // session()->has(), neither of which exists in the SQLite test harness — so the
+        // two sources are read directly here.
+        $user = optional($request)->user();
+        if (!$user instanceof User) {
+            $user = User::where('uuid', session('user'))->first();
+        }
+
+        return Driver::where('user_uuid', optional($user)->uuid)->firstOrFail();
+    }
+
     protected function queryDrivers(Request $request)
     {
         return Driver::queryWithRequest(
@@ -1007,6 +1058,36 @@ class DriverController extends Controller
         }
 
         return $company;
+    }
+
+    /**
+     * Whether the supplied code matches the configured testing bypass code.
+     *
+     * Three conditions, all required, mirroring the console equivalent in
+     * Fleetbase\Http\Controllers\Internal\v1\AuthController::authenticateWithVerificationCode:
+     *
+     *  - a bypass code must actually be configured. The previous
+     *    `$code !== config(...)` comparison meant that on a default install --
+     *    where the config resolves to null -- omitting `code` entirely made the
+     *    check `null !== null`, i.e. false, so the guard never fired and any
+     *    caller with a valid org API credential could mint a driver token for
+     *    any driver in the install without a code at all;
+     *  - the app must not be in production, so a code left set in a deployed
+     *    .env cannot be used against a live fleet;
+     *  - the comparison is constant-time.
+     *
+     * Shared with Internal\v1\DriverController so both verify-code paths cannot
+     * drift apart.
+     */
+    public static function verificationBypassMatches(?string $identity, ?string $code): bool
+    {
+        return static::reviewAccountBypassMatches(
+            'fleetops.navigator.bypass_verification_code',
+            'fleetops.navigator.review_accounts',
+            $identity,
+            $code,
+            'navigator'
+        );
     }
 
     /**

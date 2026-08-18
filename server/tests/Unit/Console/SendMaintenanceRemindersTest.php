@@ -153,6 +153,21 @@ test('handle skips assignees without email and future reminder windows', functio
             'subject_uuid'          => null,
             'subject_type'          => null,
         ],
+        [
+            // Passes the not-null column filter but carries no offsets to act on,
+            // so it is skipped before the assignee is even resolved
+            'uuid'                  => 'schedule-3',
+            'public_id'             => 'schedule_c',
+            'company_uuid'          => 'company-1',
+            'name'                  => 'Offsetless schedule',
+            'status'                => 'active',
+            'next_due_date'         => now()->addDays(2)->toDateString(),
+            'reminder_offsets'      => json_encode([]),
+            'default_assignee_uuid' => 'contact-2',
+            'default_assignee_type' => 'Fleetbase\\FleetOps\\Models\\Contact',
+            'subject_uuid'          => null,
+            'subject_type'          => null,
+        ],
     ]);
 
     $command = new FleetOpsMaintenanceRemindersProbe();

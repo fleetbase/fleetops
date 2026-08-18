@@ -211,7 +211,12 @@ class ServiceQuote extends Model
             return $product;
         }
 
+        // Unreachable: `Payment::getStripeClient()` is `?StripeClient` in its
+        // signature only — it unconditionally returns `new StripeClient([...])`,
+        // so the guard above never falls through.
+        // @codeCoverageIgnoreStart
         return null;
+        // @codeCoverageIgnoreEnd
     }
 
     /**

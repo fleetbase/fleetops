@@ -9,8 +9,14 @@ const path = require('path');
 module.exports = buildEngine({
     name,
 
+    // Lazy loading keeps the engine out of the host bundle, but it also keeps the
+    // engine's modules out of the dummy app that `ember test` builds, so every test
+    // importing `@fleetbase/fleetops-engine/*` fails to load. Eager loading is
+    // scoped to `ember test` run from this package, so host apps consuming the
+    // engine — including their own test builds — keep lazy loading. Addon index
+    // files are evaluated before ember-cli assigns EMBER_ENV, hence the argv check.
     lazyLoading: {
-        enabled: true,
+        enabled: !(process.argv.includes('test') && process.cwd() === __dirname),
     },
 
     treeForLeaflet: function () {

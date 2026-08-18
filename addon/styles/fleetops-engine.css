@@ -117,7 +117,6 @@ nav.next-sidebar {
 }
 
 /** places management css mods */
-
 .next-content-overlay.place-panel > .next-content-overlay-panel-container > .next-content-overlay-panel .next-content-overlay-panel-header,
 .next-content-overlay.place-form-panel > .next-content-overlay-panel-container > .next-content-overlay-panel .next-content-overlay-panel-header {
     display: grid;

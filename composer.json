@@ -1,6 +1,6 @@
 {
     "name": "fleetbase/fleetops-api",
-    "version": "0.6.59",
+    "version": "0.6.60",
     "description": "Fleet & Transport Management Extension for Fleetbase",
     "keywords": [
         "fleetbase-extension",
@@ -80,6 +80,7 @@
         "vendor-dir": "./server_vendor",
         "sort-packages": true,
         "preferred-install": "dist",
+        "process-timeout": 0,
         "allow-plugins": {
             "pestphp/pest-plugin": true,
             "php-http/discovery": true

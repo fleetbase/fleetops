@@ -541,6 +541,15 @@ test('tracking intelligence lifecycle covers terminal unassigned prestart and ac
             'show_live_eta'  => true,
             'show_start_eta' => false,
         ])
+        // Nothing on the order itself says started, so a loaded tracking status
+        // collection is the only thing that can answer the question
+        ->and($service->callHelper('hasOrderStarted', (function () {
+            $order = trackingModel(TrackingTestOrder::class);
+            trackingSetAttributes($order, ['uuid' => 'order-statuses', 'status' => 'created', 'started' => false, 'started_at' => null]);
+            $order->setRelation('trackingStatuses', collect([(object) ['code' => 'STARTED']]));
+
+            return $order;
+        })()))->toBeTrue()
         ->and($service->callHelper('pointToGeoJson', null))->toBeNull()
         ->and($service->callHelper('addSeconds', $now, null))->toBeNull()
         ->and($service->callHelper('addSeconds', $now, 90.4))->toBe('2026-05-12T12:01:30.000000Z');

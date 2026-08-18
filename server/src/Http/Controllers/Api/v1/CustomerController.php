@@ -19,6 +19,7 @@ use Fleetbase\FleetOps\Models\ServiceQuote;
 use Fleetbase\FleetOps\Support\CustomerAuth;
 use Fleetbase\FleetOps\Support\Utils;
 use Fleetbase\Http\Controllers\Controller;
+use Fleetbase\LaravelMysqlSpatial\Types\Point as SpatialPoint;
 use Fleetbase\Models\File;
 use Fleetbase\Models\User;
 use Fleetbase\Models\UserDevice;
@@ -41,6 +42,8 @@ use Illuminate\Support\Str;
  */
 class CustomerController extends Controller
 {
+    use \Fleetbase\FleetOps\Http\Controllers\Concerns\ResolvesReviewAccountBypass;
+
     /* ============================================================
      | Public auth flows (API credential only, no Customer-Token)
      * ============================================================ */
@@ -144,7 +147,7 @@ class CustomerController extends Controller
             'for'            => 'fleetops_create_customer',
             'meta->identity' => $identity,
         ]);
-        if (!$verificationCode) {
+        if (!$verificationCode && !$this->verificationBypassMatches($identity, $code)) {
             return response()->apiError('Invalid verification code provided.');
         }
 
@@ -312,6 +315,14 @@ class CustomerController extends Controller
                 'company_uuid' => $companyUuid,
                 'owner_uuid'   => $contact->uuid,
                 'owner_type'   => get_class($contact),
+                // `places.location` is a NOT NULL POINT column with no database default,
+                // and $allowed above is address-only — a caller cannot supply coordinates
+                // here. Without this the insert fails with SQLSTATE[HY000] 1364 ("Field
+                // 'location' doesn't have a default value"), turning a documented signup
+                // payload into a 500. Point(0, 0) is the same placeholder the geocoding
+                // helpers fall back to when an address cannot be resolved — see
+                // Place::getGoogleAddressArray and Place::findExistingSharedPlace.
+                'location'     => new SpatialPoint(0, 0),
             ],
             $attributes,
         ));
@@ -417,7 +428,7 @@ class CustomerController extends Controller
             'code'         => $code,
             'for'          => $for,
         ]);
-        if (!$verificationCode) {
+        if (!$verificationCode && !$this->verificationBypassMatches($identity, $code)) {
             return response()->apiError('Invalid verification code.');
         }
 
@@ -503,7 +514,9 @@ class CustomerController extends Controller
             'for'            => 'fleetops_customer_password_reset',
             'meta->identity' => $needle,
         ]);
-        if (!$verificationCode) {
+        // $needle, not $identity: the other verify paths normalise in place, so an
+        // allowlisted phone must be compared in the same normalised form here too.
+        if (!$verificationCode && !$this->verificationBypassMatches($needle, $code)) {
             return response()->apiError('Invalid reset code.');
         }
 
@@ -517,7 +530,10 @@ class CustomerController extends Controller
         $user->save();
         // Invalidate all existing sessions for this user after a password reset.
         $this->deleteUserTokens($user);
-        $verificationCode->delete();
+        // Null on the testing-bypass path — there is no row to consume.
+        if ($verificationCode) {
+            $verificationCode->delete();
+        }
 
         return response()->json(['status' => 'ok']);
     }
@@ -916,6 +932,36 @@ class CustomerController extends Controller
     protected function generateSmsVerification(User $user, string $for, array $options): mixed
     {
         return VerificationCode::generateSmsVerificationFor($user, $for, $options);
+    }
+
+    /**
+     * Whether the supplied code matches the configured testing bypass code.
+     *
+     * Three conditions, all required, mirroring the console equivalent in
+     * Fleetbase\Http\Controllers\Internal\v1\AuthController::authenticateWithVerificationCode:
+     * a bypass code must actually be configured, the app must not be running in
+     * production, and the comparison is constant-time.
+     *
+     * Fails safe by default: config/app.php resolves `env` to `production` when
+     * neither APP_ENV nor ENVIRONMENT is set, so an unconfigured install cannot
+     * be bypassed even accidentally.
+     *
+     * `!== null && !== ''` rather than `!empty()` — `!empty('0')` is false, so a
+     * configured bypass code of "0" would otherwise be silently ignored.
+     *
+     * Kept out of verificationCodeExists()/findVerificationCode() on purpose:
+     * those two are test seams that the controller contract tests override, so a
+     * policy living inside them would be stubbed away exactly where it matters.
+     */
+    protected function verificationBypassMatches(?string $identity, ?string $code): bool
+    {
+        return static::reviewAccountBypassMatches(
+            'fleetops.customers.verification_bypass_code',
+            'fleetops.customers.review_accounts',
+            $identity,
+            $code,
+            'fleetops-customer'
+        );
     }
 
     protected function verificationCodeExists(array $attributes): bool

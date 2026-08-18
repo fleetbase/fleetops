@@ -23,7 +23,15 @@ class CreateCustomerRequest extends FleetbaseRequest
     {
         return [
             'identity' => 'required|string',
-            'code'     => 'required|exists:verification_codes,code',
+            // Presence only — authorizing the code is the controller's job, and its
+            // check is strictly stronger: it matches code + for + meta->identity,
+            // whereas `exists:verification_codes,code` accepts any live code issued
+            // for any purpose to any user. The rule is also already unenforced on the
+            // proxy path, since verifyCode() with for=fleetops_create_customer calls
+            // create(CreateCustomerRequest::createFrom($request)), which never runs
+            // validateResolved(). Keeping it here only blocks the configured
+            // non-production testing bypass (fleetops.customers.verification_bypass_code).
+            'code'     => 'required|string',
             'name'     => 'required|string',
             'password' => 'required|string|min:8',
             'email'    => [

@@ -19,10 +19,21 @@ class CreateFuelReportRequest extends FleetbaseRequest
      */
     public function rules(): array
     {
+        // requiredIf(POST), not required: UpdateFuelReportRequest extends this class, so a
+        // flat `required` made every partial update fail — PUT /v1/fuel-reports/{id} with
+        // just {"status": "approved"} answered "The driver field is required."
+        //
+        // `driver` is the clearest case: the update action's $request->only() list does not
+        // even include it, so validation demanded a field the endpoint then discarded.
+        // CreateFuelTransactionRequest solves the same create/update inheritance with
+        // Rule::requiredIf(isMethod('POST')); a plain conditional is used here because
+        // illuminate/validation is not autoloadable in the package's test harness.
+        $requiredOnCreate = $this->isMethod('POST') ? ['required'] : ['sometimes'];
+
         return [
-            'driver'          => ['required'],
-            'odometer'        => ['required'],
-            'volume'          => ['required'],
+            'driver'          => $requiredOnCreate,
+            'odometer'        => $requiredOnCreate,
+            'volume'          => $requiredOnCreate,
             'metric_unit'     => ['nullable'],
             'location'        => ['nullable'],
             'amount'          => ['nullable'],

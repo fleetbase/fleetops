@@ -605,7 +605,8 @@ class DriverController extends FleetOpsController
      */
     public function registerDevice(Request $request)
     {
-        return app(ApiDriverController::class)->registerDevice($request);
+        // The public controller resolves the driver from the request when no id is given.
+        return app(ApiDriverController::class)->registerDevice(null, $request);
     }
 
     /**
@@ -664,7 +665,7 @@ class DriverController extends FleetOpsController
 
         // Find and verify code
         $verificationCode = static::verificationCodeExists($user, $code, $for);
-        if (!$verificationCode && $code !== config('fleetops.navigator.bypass_verification_code')) {
+        if (!$verificationCode && !ApiDriverController::verificationBypassMatches($identity, $code)) {
             return response()->error('Invalid verification code!');
         }
 

@@ -21,10 +21,19 @@ export default class MaintenanceSchedulesIndexEditController extends Controller 
             this.overlay?.close();
             yield this.hostRouter.refresh();
             yield this.hostRouter.transitionTo('console.fleet-ops.maintenance.schedules.index.details', schedule);
-            this.notifications.success(this.intl.t('common.resource-updated-success', { resource: this.intl.t('resource.maintenance-schedule') }));
+            this.notifyUpdateSuccess(schedule);
         } catch (err) {
             this.notifications.serverError(err);
         }
+    }
+
+    notifyUpdateSuccess(schedule) {
+        this.notifications.success(
+            this.intl.t('common.resource-updated-success', {
+                resource: this.intl.t('resource.maintenance-schedule'),
+                resourceName: schedule.name,
+            })
+        );
     }
 
     @action cancel() {

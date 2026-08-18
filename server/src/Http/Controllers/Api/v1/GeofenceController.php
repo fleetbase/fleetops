@@ -4,6 +4,7 @@ namespace Fleetbase\FleetOps\Http\Controllers\Api\v1;
 
 use Fleetbase\FleetOps\Models\GeofenceEventLog;
 use Fleetbase\FleetOps\Support\Utils;
+use Fleetbase\FleetOps\Models\Driver;
 use Fleetbase\Http\Controllers\Controller;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -88,6 +89,8 @@ class GeofenceController extends Controller
 
         $driverStates = $this->table('driver_geofence_states as dgs')
             ->join('drivers as d', 'd.uuid', '=', 'dgs.driver_uuid')
+            // A driver's name lives on the related user record, not the drivers table.
+            ->leftJoin('users as u', 'u.uuid', '=', 'd.user_uuid')
             ->leftJoin('zones as z', function ($join) {
                 $join->on('z.uuid', '=', 'dgs.geofence_uuid')
                      ->where('dgs.geofence_type', '=', 'zone');
@@ -103,9 +106,9 @@ class GeofenceController extends Controller
                 $this->raw("'driver' as subject_type"),
                 'd.public_id as subject_id',
                 'd.uuid as subject_uuid',
-                'd.name as subject_name',
+                'u.name as subject_name',
                 'dgs.driver_uuid',
-                'd.name as driver_name',
+                'u.name as driver_name',
                 'dgs.entered_at',
                 'dgs.geofence_uuid',
                 $this->raw('COALESCE(z.name, sa.name) as geofence_name'),
@@ -199,13 +202,22 @@ class GeofenceController extends Controller
      *
      * Returns the geofence event history for a specific driver.
      */
-    public function driverHistory(Request $request, string $driverUuid): JsonResponse
+    public function driverHistory(Request $request, string $driverId): JsonResponse
     {
         $companyUuid = session('company');
         $perPage     = min((int) $request->input('per_page', 50), 200);
 
+        // Addressed by public_id, like every other public endpoint. The route parameter
+        // was named driverUuid and matched against driver_uuid directly, so this was the
+        // one place in the public API asking a caller for an internal identifier — which
+        // the API does not hand out in the first place, making it unusable.
+        $driver = $this->findDriverForHistory($driverId);
+        if (!$driver) {
+            return response()->json(['error' => 'Driver resource not found.'], 404);
+        }
+
         $events = $this->geofenceEventLogQuery($companyUuid)
-            ->where('driver_uuid', $driverUuid)
+            ->where('driver_uuid', $driver->uuid)
             ->with(['driver.vehicle', 'vehicle', 'order'])
             ->orderBy('occurred_at', 'desc')
             ->paginate($perPage);
@@ -213,6 +225,28 @@ class GeofenceController extends Controller
         $events->getCollection()->transform(fn (GeofenceEventLog $event) => $this->serializeEvent($event));
 
         return response()->json($events);
+    }
+
+    /**
+     * Resolve the driver a history request addresses.
+     *
+     * Public callers use the public_id, like every other v1 endpoint. The console reaches
+     * the same method through the internal route with a uuid, so that is accepted there
+     * and ONLY there — the public contract stays public_id-only rather than quietly
+     * taking either.
+     *
+     * A seam, like geofenceEventLogQuery above, so the contract tests can drive this
+     * without a database.
+     */
+    protected function findDriverForHistory(string $driverId): ?Driver
+    {
+        $driver = Driver::where('public_id', $driverId)->first();
+
+        if (!$driver && \Fleetbase\Support\Http::isInternalRequest()) {
+            $driver = Driver::where('uuid', $driverId)->first();
+        }
+
+        return $driver;
     }
 
     protected function serializeEvent(GeofenceEventLog $event): array

@@ -21,6 +21,22 @@ use Illuminate\Http\Request;
  * forwards unknown methods to the query builder, bypassing Eloquent's
  * relation resolvers.
  */
+/**
+ * Nothing binds `twilio` in the harness, so the core SmsService fails and every
+ * phone login falls back to email. Binding this fake lets the SMS branch run.
+ */
+class FleetOpsDriverAuthTwilioFake
+{
+    public array $messages = [];
+
+    public function message($to, $text, $mediaUrls = [], $params = [])
+    {
+        $this->messages[] = [$to, $text];
+
+        return (object) ['sid' => 'SM-test-sid'];
+    }
+}
+
 class FleetOpsDriverAuthHasherFake implements Illuminate\Contracts\Hashing\Hasher
 {
     public bool $checks = true;
@@ -68,8 +84,59 @@ class FleetOpsDriverAuthMailerFake
     }
 }
 
+/**
+ * Swap in a container that answers environment().
+ *
+ * verificationBypassMatches() asks app()->environment('production'), which the bare
+ * Illuminate\Container\Container used by this harness does not implement. Mirrors
+ * fleetopsCustomerHelperContainer() in CustomerControllerHelperSeamsTest.
+ */
+function fleetopsDriverAuthContainer(): void
+{
+    $current = Illuminate\Container\Container::getInstance();
+    if (method_exists($current, 'hasDebugModeEnabled')) {
+        return;
+    }
+
+    $replacement = new class extends Illuminate\Container\Container {
+        public function environment(...$environments)
+        {
+            if (empty($environments)) {
+                return 'testing';
+            }
+
+            $checks = is_array($environments[0]) ? $environments[0] : $environments;
+
+            return in_array('testing', $checks, true);
+        }
+
+        public function hasDebugModeEnabled()
+        {
+            return true;
+        }
+    };
+
+    foreach (['bindings', 'instances', 'aliases', 'abstractAliases', 'resolved', 'extenders', 'tags', 'contextual', 'scopedInstances', 'reboundCallbacks', 'globalBeforeResolvingCallbacks', 'globalResolvingCallbacks', 'globalAfterResolvingCallbacks', 'beforeResolvingCallbacks', 'resolvingCallbacks', 'afterResolvingCallbacks'] as $property) {
+        if (!property_exists(Illuminate\Container\Container::class, $property)) {
+            continue;
+        }
+        $reflection = new ReflectionProperty(Illuminate\Container\Container::class, $property);
+        $reflection->setAccessible(true);
+        if ($reflection->isInitialized($current)) {
+            $reflection->setValue($replacement, $reflection->getValue($current));
+        }
+    }
+
+    Illuminate\Container\Container::setInstance($replacement);
+    Illuminate\Support\Facades\Facade::setFacadeApplication($replacement);
+}
+
 function fleetopsDriverAuthBoot(): SQLiteConnection
 {
+    // Must run before the app()->instance() calls below, so those bindings land on
+    // the replacement container rather than the one it supersedes.
+    fleetopsDriverAuthContainer();
+
     $connection = new SQLiteConnection(new PDO('sqlite::memory:'));
     $resolver   = new ConnectionResolver(['default' => $connection, 'mysql' => $connection]);
     $resolver->setDefaultConnection('mysql');
@@ -119,6 +186,9 @@ function fleetopsDriverAuthBoot(): SQLiteConnection
     User::expand('driver', function () {
         return $this->hasOne(Driver::class, 'user_uuid', 'uuid')->withoutGlobalScopes();
     });
+
+    app()->forgetInstance('twilio');
+    Illuminate\Support\Facades\Facade::clearResolvedInstance('twilio');
 
     session(['company' => 'company-1']);
 
@@ -182,6 +252,22 @@ test('phone login falls back to email verification and errors without channels',
     expect($noChannel->getData(true)['error'])->toContain('Unable to send SMS Verification code');
 });
 
+test('phone login reports the sms method when the transport delivers', function () {
+    $connection = fleetopsDriverAuthBoot();
+    $twilio     = new FleetOpsDriverAuthTwilioFake();
+    app()->instance('twilio', $twilio);
+    Fleetbase\Twilio\Support\Laravel\Facade::clearResolvedInstances();
+
+    app()->instance('request', Request::create('/x', 'POST', ['phone' => '6591234567']));
+    $response = (new DriverController())->loginWithPhone();
+
+    // No email fallback is attempted once the SMS itself goes out
+    expect($response->getData(true))->toBe(['status' => 'OK', 'method' => 'sms'])
+        ->and($twilio->messages)->toHaveCount(1)
+        ->and($twilio->messages[0][1])->toContain('Acme verification code is')
+        ->and($connection->table('verification_codes')->where('for', 'driver_login')->count())->toBe(1);
+});
+
 test('code verification handles unknown users invalid codes bypass and success', function () {
     $connection = fleetopsDriverAuthBoot();
     $controller = new DriverController();
@@ -196,6 +282,7 @@ test('code verification handles unknown users invalid codes bypass and success',
 
     // Bypass code from config authenticates without a stored code
     config()->set('fleetops.navigator.bypass_verification_code', '777777');
+    config()->set('fleetops.navigator.review_accounts', ['driver@example.test']);
     $bypassed = $controller->verifyCode(Request::create('/x', 'POST', ['identity' => 'driver@example.test', 'code' => '777777']));
     expect($bypassed)->toBeInstanceOf(DriverResource::class);
 
@@ -311,6 +398,7 @@ test('code verification reports token issuance failures', function () {
     // A bypass code authenticates without a stored verification code, so the
     // flow reaches token issuance; without the token table that send fails
     config()->set('fleetops.navigator.bypass_verification_code', '777777');
+    config()->set('fleetops.navigator.review_accounts', ['driver@example.test']);
     $connection->getSchemaBuilder()->drop('personal_access_tokens');
 
     $response = $controller->verifyCode(Request::create('/x', 'POST', [
@@ -365,6 +453,7 @@ test('token persistence failures are reported to sentry', function () {
     }
 
     config()->set('fleetops.navigator.bypass_verification_code', '777777');
+    config()->set('fleetops.navigator.review_accounts', ['driver@example.test']);
     $response = $controller->verifyCode(Request::create('/x', 'POST', [
         'identity' => 'driver@example.test',
         'code'     => '777777',
@@ -374,4 +463,68 @@ test('token persistence failures are reported to sentry', function () {
         ->and($sentry->captured)->toHaveCount(1);
 
     app()->forgetInstance('sentry');
+});
+
+test('current driver resolves the authenticated users driver profile', function () {
+    $connection = fleetopsDriverAuthBoot();
+    $connection->table('users')->insert(['uuid' => 'user-current-1', 'public_id' => 'user_current1', 'company_uuid' => 'company-1', 'name' => 'Current Driver', 'email' => 'current@example.test', 'type' => 'driver']);
+    $connection->table('drivers')->insert(['uuid' => 'driver-current-1', 'public_id' => 'driver_current1', 'company_uuid' => 'company-1', 'user_uuid' => 'user-current-1']);
+
+    // registerDevice without an id resolves the driver from the authenticated user
+    // rather than a route parameter, so exercise the real seam here — the
+    // contract probe overrides it and never runs this body
+    $currentDriver = new ReflectionMethod(DriverController::class, 'currentDriver');
+    $currentDriver->setAccessible(true);
+
+    $request = Request::create('/v1/drivers/register-device', 'POST');
+    // Auth::getUserFromSession only accepts a User model from the resolver — anything
+    // else falls through to the session, so this must be a real model, not a row object.
+    $request->setUserResolver(fn () => User::query()->where('uuid', 'user-current-1')->first());
+
+    $resolved = $currentDriver->invoke(new DriverController(), $request);
+
+    expect($resolved)->toBeInstanceOf(Driver::class)
+        ->and($resolved->uuid)->toBe('driver-current-1');
+});
+
+test('current driver resolves from the session when the request has no user resolver', function () {
+    $connection = fleetopsDriverAuthBoot();
+    $connection->table('users')->insert(['uuid' => 'user-session-1', 'public_id' => 'user_session1', 'company_uuid' => 'company-1', 'name' => 'Session Driver', 'email' => 'session@example.test', 'type' => 'driver']);
+    $connection->table('drivers')->insert(['uuid' => 'driver-session-1', 'public_id' => 'driver_session1', 'company_uuid' => 'company-1', 'user_uuid' => 'user-session-1']);
+
+    // This is the production path for the public API. `fleetbase.api` authenticates with
+    // Auth::setSession($apiCredential), which writes session('user') but does NOT bind a
+    // user resolver — so reading $request->user() directly resolved nothing and
+    // POST /v1/drivers/register-device answered 404 for every consumer.
+    session(['user' => 'user-session-1']);
+
+    $currentDriver = new ReflectionMethod(DriverController::class, 'currentDriver');
+    $currentDriver->setAccessible(true);
+
+    $resolved = $currentDriver->invoke(new DriverController(), Request::create('/v1/drivers/register-device', 'POST'));
+
+    expect($resolved)->toBeInstanceOf(Driver::class)
+        ->and($resolved->uuid)->toBe('driver-session-1');
+});
+
+test('current driver fails when the request has no matching driver', function () {
+    fleetopsDriverAuthBoot();
+    // Explicit, because the session survives between tests and a leftover `user` key
+    // would silently resolve a driver and make this assertion vacuous.
+    session(['user' => null]);
+
+    $currentDriver = new ReflectionMethod(DriverController::class, 'currentDriver');
+    $currentDriver->setAccessible(true);
+
+    // A request with no authenticated user resolves no driver, which the
+    // caller turns into a not-found response instead of a 500
+    $failure = null;
+
+    try {
+        $currentDriver->invoke(new DriverController(), Request::create('/v1/drivers/register-device', 'POST'));
+    } catch (Illuminate\Database\Eloquent\ModelNotFoundException $exception) {
+        $failure = $exception;
+    }
+
+    expect($failure)->toBeInstanceOf(Illuminate\Database\Eloquent\ModelNotFoundException::class);
 });

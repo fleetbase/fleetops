@@ -1028,9 +1028,14 @@ class OrderController extends FleetOpsController
         $remarks = $request->input('remarks', 'Verified by Photo');
         $data    = $metadata;
 
+        // Unreachable: the validate() above already requires `photos` to be a
+        // non-empty array, so an empty payload is rejected before this point.
+        // Kept as defence in depth against the rules being loosened.
+        // @codeCoverageIgnoreStart
         if (empty($incoming)) {
             return response()->error('No photo data to capture.', 422);
         }
+        // @codeCoverageIgnoreEnd
 
         foreach ($incoming as $item) {
             $proof = Proof::create([
@@ -1489,10 +1494,6 @@ class OrderController extends FleetOpsController
                     ->get();
 
                 foreach ($orderConfigs as $config) {
-                    if (!method_exists($config, 'activities')) {
-                        continue;
-                    }
-
                     $activities = $config->activities();
 
                     // Handle Collection/array gracefully

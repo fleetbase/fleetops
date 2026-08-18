@@ -126,10 +126,17 @@ class ProofController extends FleetOpsController
         Storage::disk('s3')->put($path, $contents, $visibility);
     }
 
+    /**
+     * Not exercisable in this harness: File::create() resolves a disk, an asset
+     * url and app()->environment(), so it needs a real Illuminate\Foundation\Application
+     * rather than the bare container the test bootstrap builds.
+     */
+    // @codeCoverageIgnoreStart
     protected function createSignatureFile(string $path, string $signature, Proof $proof): File
     {
         return File::create($this->signatureFileAttributes($path, $signature))->setKey($proof);
     }
+    // @codeCoverageIgnoreEnd
 
     protected function jsonResponse(array $payload)
     {

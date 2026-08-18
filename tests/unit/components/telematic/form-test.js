@@ -13,6 +13,12 @@ function makeResource(initial = {}) {
     };
 }
 
+function makeFormWithProvider(provider) {
+    return Object.create(TelematicFormComponent.prototype, {
+        selectedProvider: { value: provider, writable: true },
+    });
+}
+
 module('Unit | Component | telematic/form', function () {
     test('provider credential defaults include advanced endpoint values', function (assert) {
         const provider = {
@@ -30,6 +36,34 @@ module('Unit | Component | telematic/form', function () {
             client_id: null,
             password: null,
         });
+    });
+
+    test('endpoint and advanced fields are separated from the primary credential fields', function (assert) {
+        const component = makeFormWithProvider({
+            required_fields: [
+                { name: 'api_key' },
+                { name: 'server_uri', advanced: true, is_endpoint: true, default_value: 'https://api.safee.com' },
+                { name: 'base_url', is_endpoint: true, default_value: 'https://api.afaqy.com' },
+                { name: 'realm_id', advanced: true },
+            ],
+        });
+
+        assert.deepEqual(
+            component.credentialFields.map((field) => field.name),
+            ['api_key']
+        );
+        assert.deepEqual(
+            component.advancedCredentialFields.map((field) => field.name),
+            ['server_uri', 'base_url', 'realm_id']
+        );
+        assert.true(component.hasAdvancedCredentialFields);
+    });
+
+    test('providers without advanced fields do not render the advanced section', function (assert) {
+        const component = makeFormWithProvider({ required_fields: [{ name: 'api_key' }] });
+
+        assert.deepEqual(component.advancedCredentialFields, []);
+        assert.false(component.hasAdvancedCredentialFields);
     });
 
     test('editing server uri updates resource credentials', function (assert) {

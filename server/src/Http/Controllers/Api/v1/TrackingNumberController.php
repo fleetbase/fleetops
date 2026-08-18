@@ -200,7 +200,16 @@ class TrackingNumberController extends Controller
             }
         }
 
-        return Utils::findModel($tables, $where);
+        // No raw-row fallback. Utils::findModel() was called with the ARRAY of table names
+        // and, when nothing matched, passed that array to DB::table() — which stringified
+        // it to the literal table name "Array" and threw SQLSTATE[42S02]. Every
+        // unresolvable code became a 500 instead of the 400 this method's caller already
+        // handles.
+        //
+        // The fallback could not have helped anyway: qrModelResource() serializes through
+        // a typed resource keyed on the model class, and a raw stdClass row has none. The
+        // mapped models above are the endpoint's whole contract.
+        return null;
     }
 
     protected function qrModelResource($model)

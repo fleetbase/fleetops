@@ -83,9 +83,9 @@ class FleetOpsApiDriverDelegationFake
         return ['delegated' => 'track', 'id' => $id];
     }
 
-    public function registerDevice(Request $request): array
+    public function registerDevice(?string $id = null, ?Request $request = null): array
     {
-        $this->calls[] = ['registerDevice', $request];
+        $this->calls[] = ['registerDevice', $id, $request];
 
         return ['delegated' => 'register-device'];
     }
@@ -622,7 +622,7 @@ test('internal driver controller delegates mobile API flows to the public driver
         ->and($controller->registerDevice($request))->toBe(['delegated' => 'register-device'])
         ->and($controller->login($request))->toBe(['delegated' => 'login'])
         ->and($delegate->calls[0])->toBe(['track', 'driver_123', $request])
-        ->and($delegate->calls[1])->toBe(['registerDevice', $request])
+        ->and($delegate->calls[1])->toBe(['registerDevice', null, $request])
         ->and($delegate->calls[2])->toBe(['login', $request]);
 
     app()->forgetInstance(DriverController::class);

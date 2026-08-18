@@ -297,11 +297,20 @@ test('create record rejects invalid explicit order configs', function () {
 });
 
 test('create record surfaces validation errors default-creates configs and catches exceptions', function () {
-    // Validation failures route into responseWithErrors, which raises through
-    // the harness ValidationException stand-in
+    // Validation failures route into responseWithErrors, which raises a
+    // ValidationException carrying the 422 response
     fleetopsInternalOrderCreateBoot(['pickup' => ['The pickup field is required.']]);
-    expect(fn () => (new OrderController())->createRecord(Request::create('/int/v1/orders', 'POST', ['order' => ['type' => 'transport']])))
-        ->toThrow(TypeError::class);
+    $validationFailure = null;
+
+    try {
+        (new OrderController())->createRecord(Request::create('/int/v1/orders', 'POST', ['order' => ['type' => 'transport']]));
+    } catch (Illuminate\Validation\ValidationException $exception) {
+        $validationFailure = $exception;
+    }
+
+    expect($validationFailure)->not->toBeNull()
+        ->and($validationFailure->errors())->toBe(['pickup' => ['The pickup field is required.']])
+        ->and($validationFailure->getResponse()?->getStatusCode())->toBe(422);
 
     // Without any stored config the default lookup provisions the transport
     // config for the session company
@@ -328,6 +337,31 @@ test('create record surfaces validation errors default-creates configs and catch
         ],
     ]));
     expect($queryFailed->getData(true)['error'] ?? '')->toContain('routes');
+});
+
+test('create record converts an unexpected failure into an error response', function () {
+    fleetopsInternalOrderCreateBoot();
+
+    $controller        = new OrderController();
+    $controller->model = new class extends Fleetbase\FleetOps\Models\Order {
+        public function createRecordFromRequest($request, ?callable $onBefore = null, ?callable $onAfter = null, array $options = [])
+        {
+            throw new RuntimeException('Order creation collaborator blew up.');
+        }
+    };
+
+    // Anything that is neither a query failure nor a validation exception still
+    // has to come back as an error response rather than escaping the controller
+    $response = $controller->createRecord(Request::create('/int/v1/orders', 'POST', [
+        'order' => [
+            'dispatched' => false,
+            'payload'    => ['type' => 'transport'],
+        ],
+    ]));
+
+    expect($response)->toBeInstanceOf(JsonResponse::class)
+        ->and($response->getData(true)['errors'] ?? [$response->getData(true)['error'] ?? null])
+        ->toContain('Order creation collaborator blew up.');
 });
 
 test('integrated vendor orders attach metadata and surface bridge failures', function () {
