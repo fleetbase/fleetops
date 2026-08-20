@@ -37,7 +37,7 @@ class FleetSeeder extends Seeder
             $this->seedFuelReports($company, $users, $drivers, $vehicles);
             $this->seedIssues($company, $users, $drivers, $vehicles);
 
-            $this->command?->info('Seeded FleetOps testing fleet fixtures for company: ' . $company->public_id);
+            $this->command?->info('Seeded ' . $this->seedName() . ' fleet fixtures for company: ' . $company->public_id);
         });
     }
 
@@ -53,14 +53,23 @@ class FleetSeeder extends Seeder
         $this->purgeModel(User::class);
     }
 
-    protected function seedUsers(Company $company): array
+    /**
+     * [name, email, phone] keyed by seed id. Overridable: these strings are rendered in the
+     * console, so a fixture set destined for screenshots needs its own.
+     */
+    protected function userFixtures(): array
     {
-        $users = [
+        return [
             'driver_ava_user'  => ['Ava Driver', 'ava.driver.testing@example.test', '+6581000001'],
             'driver_ken_user'  => ['Ken Driver', 'ken.driver.testing@example.test', '+6581000002'],
             'driver_mira_user' => ['Mira Driver', 'mira.driver.testing@example.test', '+6581000003'],
             'dispatcher_user'  => ['Testing Dispatcher', 'dispatcher.testing@example.test', '+6581000004'],
         ];
+    }
+
+    protected function seedUsers(Company $company): array
+    {
+        $users = $this->userFixtures();
 
         $models = [];
         foreach ($users as $seedId => [$name, $email, $phone]) {
@@ -70,7 +79,7 @@ class FleetSeeder extends Seeder
                 'name'         => $name,
                 'email'        => $email,
                 'phone'        => $phone,
-                'password'     => Hash::make('fleetops-testing'),
+                'password'     => Hash::make($this->seedName()),
                 'type'         => str_contains($seedId, 'driver') ? 'driver' : 'user',
                 'status'       => 'active',
                 'timezone'     => 'Asia/Singapore',
@@ -330,8 +339,8 @@ class FleetSeeder extends Seeder
                 'category'          => $category,
                 'type'              => 'inspection',
                 'title'             => $title,
-                'report'            => $title . ' created as a FleetOps testing fixture.',
-                'tags'              => ['fixture', 'fleetops-testing'],
+                'report'            => $title . ' created as a ' . $this->seedLabel() . '.',
+                'tags'              => ['fixture', $this->seedName()],
                 'priority'          => $priority,
                 'status'            => $status,
                 'meta'              => $this->meta($seedId),

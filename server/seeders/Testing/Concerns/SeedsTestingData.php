@@ -22,6 +22,51 @@ trait SeedsTestingData
 
     protected const SEED_NAME = 'fleetops-testing';
 
+    /**
+     * The seed tag written to every record's meta, and the prefix of its _key.
+     *
+     * A method rather than a bare constant read because a class using this trait cannot
+     * redeclare a trait constant with a different value — PHP rejects the composition as
+     * incompatible. Overriding this is how a second fixture set (see the Demo seeders)
+     * shares all of this machinery while keeping its rows separately purgeable.
+     */
+    protected function seedName(): string
+    {
+        return static::SEED_NAME;
+    }
+
+    /**
+     * Human-readable phrase stamped into notes, descriptions and tags.
+     *
+     * Split out from seedName() because the two vary independently: the seed tag is
+     * infrastructure and never appears on screen, while this shows up in the UI and, for
+     * fixtures destined for marketing screenshots, must not read as test data.
+     */
+    protected function seedLabel(): string
+    {
+        return 'FleetOps testing fixture';
+    }
+
+    /**
+     * Prefix for human-facing identifiers — internal_id, tracking_number, work order ids.
+     */
+    protected function identifierPrefix(): string
+    {
+        return 'TEST';
+    }
+
+    /**
+     * The note/description text stamped onto a seeded record of the given kind.
+     *
+     * Centralised because these strings are the ones that actually appear on screen. The
+     * Testing default is deliberately unmistakable as test data; the Demo override replaces
+     * them with text that reads naturally in a screenshot.
+     */
+    protected function fixtureNote(string $noun): string
+    {
+        return $this->seedLabel() . ' ' . $noun . '.';
+    }
+
     protected function resolveCompany(): ?Company
     {
         return $this->resolveSeedCompany();
@@ -43,13 +88,13 @@ trait SeedsTestingData
 
     protected function fixtureKey(string $seedId): string
     {
-        return static::SEED_NAME . ':' . $seedId;
+        return $this->seedName() . ':' . $seedId;
     }
 
     protected function meta(string $seedId, array $extra = []): array
     {
         return array_merge([
-            'seed'    => static::SEED_NAME,
+            'seed'    => $this->seedName(),
             'seed_id' => $seedId,
         ], $extra);
     }
@@ -123,11 +168,11 @@ trait SeedsTestingData
         $query = $modelClass::query();
 
         if (Schema::hasColumn($table, 'meta')) {
-            return $query->where('meta->seed', static::SEED_NAME);
+            return $query->where('meta->seed', $this->seedName());
         }
 
         if (Schema::hasColumn($table, '_key')) {
-            return $query->where('_key', 'like', static::SEED_NAME . ':%');
+            return $query->where('_key', 'like', $this->seedName() . ':%');
         }
 
         return $query->whereRaw('1 = 0');
@@ -155,7 +200,7 @@ trait SeedsTestingData
         $table = $model->getTable();
 
         if (Schema::hasColumn($table, 'meta')) {
-            return $modelClass::where('meta->seed', static::SEED_NAME)->where('meta->seed_id', $seedId)->first();
+            return $modelClass::where('meta->seed', $this->seedName())->where('meta->seed_id', $seedId)->first();
         }
 
         if (Schema::hasColumn($table, '_key')) {

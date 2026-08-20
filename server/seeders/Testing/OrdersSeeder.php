@@ -35,7 +35,7 @@ class OrdersSeeder extends Seeder
             $this->purgeSeedData();
             $this->seedOrders($company);
 
-            $this->command?->info('Seeded FleetOps testing order fixtures for company: ' . $company->public_id);
+            $this->command?->info('Seeded ' . $this->seedName() . ' order fixtures for company: ' . $company->public_id);
         });
     }
 
@@ -47,6 +47,22 @@ class OrdersSeeder extends Seeder
         $this->purgeModel(Waypoint::class);
         $this->purgeModel(TrackingNumber::class);
         $this->purgeModel(Payload::class);
+    }
+
+    /**
+     * The human-facing order reference. Overridable because it is the most visible string on
+     * the orders table, and because src/resolve.mjs in the screenshots package looks a
+     * specific order up by exactly this value.
+     */
+    protected function orderInternalId(string $seedId): string
+    {
+        return $this->identifierPrefix() . '-' . strtoupper(str_replace('order_', '', $seedId));
+    }
+
+    /** The label shown for the nth item inside an order's payload. */
+    protected function entityNameFor(string $seedId, int $index): string
+    {
+        return 'Item ' . $index;
     }
 
     protected function seedOrders(Company $company): void
@@ -89,7 +105,7 @@ class OrdersSeeder extends Seeder
             $payload = $this->createPayload($company, $seedId, $places[$pickupSeedId], $places[$dropoffSeedId], array_map(fn ($placeSeedId) => $places[$placeSeedId], $waypointSeedIds));
             $order   = $this->createRecord(Order::class, [
                 '_key'                  => $this->fixtureKey($seedId),
-                'internal_id'           => 'TEST-' . strtoupper(str_replace('order_', '', $seedId)),
+                'internal_id'           => $this->orderInternalId($seedId),
                 'company_uuid'          => $company->uuid,
                 'payload_uuid'          => $payload->uuid,
                 'order_config_uuid'     => $orderConfig->uuid,
@@ -108,7 +124,7 @@ class OrdersSeeder extends Seeder
                 'started_at'            => $started ? $this->timestamp($hourOffset + 1) : null,
                 'type'                  => 'transport',
                 'status'                => $status,
-                'notes'                 => 'FleetOps testing fixture order: ' . $seedId,
+                'notes'                 => $this->fixtureNote('order'),
                 'pod_method'            => 'scan',
                 'pod_required'          => $status === 'completed',
                 'orchestrator_priority' => 50,
@@ -146,7 +162,7 @@ class OrdersSeeder extends Seeder
                 'type'         => 'dropoff',
                 'order'        => $index + 1,
                 'service_time' => 300,
-                'notes'        => 'FleetOps testing waypoint.',
+                'notes'        => $this->fixtureNote('waypoint'),
             ]);
         }
 
@@ -161,7 +177,7 @@ class OrdersSeeder extends Seeder
             'company_uuid'    => $company->uuid,
             'owner_uuid'      => $order->uuid,
             'owner_type'      => Order::class,
-            'tracking_number' => 'TEST-' . str_pad((string) crc32($seedId), 10, '0', STR_PAD_LEFT),
+            'tracking_number' => $this->identifierPrefix() . '-' . str_pad((string) crc32($seedId), 10, '0', STR_PAD_LEFT),
             'region'          => 'SG',
         ]);
 
@@ -179,10 +195,10 @@ class OrdersSeeder extends Seeder
                 'payload_uuid'         => $payload->uuid,
                 'tracking_number_uuid' => $trackingNumber->uuid,
                 'destination_uuid'     => $destination?->uuid,
-                'internal_id'          => 'TEST-ENTITY-' . strtoupper($seedId) . '-' . $i,
-                'name'                 => 'Item ' . $i,
+                'internal_id'          => $this->identifierPrefix() . '-ENTITY-' . strtoupper($seedId) . '-' . $i,
+                'name'                 => $this->entityNameFor($seedId, $i),
                 'type'                 => 'parcel',
-                'description'          => 'FleetOps testing fixture entity.',
+                'description'          => $this->fixtureNote('item'),
                 'weight'               => 5 + $i,
                 'weight_unit'          => 'kg',
                 'length'               => 40,

@@ -34,7 +34,7 @@ class ConnectivitySeeder extends Seeder
             $this->seedDeviceEvents($company, $devices);
             $this->seedGeofenceEvents($company);
 
-            $this->command?->info('Seeded FleetOps testing connectivity fixtures for company: ' . $company->public_id);
+            $this->command?->info('Seeded ' . $this->seedName() . ' connectivity fixtures for company: ' . $company->public_id);
         });
     }
 
@@ -74,7 +74,7 @@ class ConnectivitySeeder extends Seeder
                 'last_seen_at'     => $this->timestamp(1),
                 'last_metrics'     => ['signal' => 88, 'battery' => 94],
                 'config'           => ['fixture' => true],
-                'credentials'      => ['token' => 'testing-fixture-redacted'],
+                'credentials'      => ['token' => 'redacted'],
                 'meta'             => $this->meta($seedId),
             ]);
         }
@@ -112,7 +112,7 @@ class ConnectivitySeeder extends Seeder
                 'online'            => $online,
                 'status'            => $status,
                 'data_frequency'    => 60,
-                'notes'             => 'FleetOps testing fixture device.',
+                'notes'             => $this->fixtureNote('device'),
                 'data'              => ['speed_kmh' => 28, 'heading' => 92],
                 'options'           => ['fixture' => true],
                 'meta'              => $this->meta($seedId),
@@ -172,7 +172,7 @@ class ConnectivitySeeder extends Seeder
                 'severity'     => $severity,
                 'ident'        => strtoupper($seedId),
                 'protocol'     => 'testing',
-                'provider'     => 'fleetops-testing',
+                'provider'     => $this->seedName(),
                 'state'        => $severity,
                 'code'         => strtoupper($eventType),
                 'reason'       => $reason,

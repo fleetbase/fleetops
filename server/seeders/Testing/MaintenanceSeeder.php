@@ -34,7 +34,7 @@ class MaintenanceSeeder extends Seeder
             $workOrders = $this->seedWorkOrders($company, $schedules);
             $this->seedMaintenanceHistory($company, $equipment, $workOrders);
 
-            $this->command?->info('Seeded FleetOps testing maintenance fixtures for company: ' . $company->public_id);
+            $this->command?->info('Seeded ' . $this->seedName() . ' maintenance fixtures for company: ' . $company->public_id);
         });
     }
 
@@ -97,7 +97,7 @@ class MaintenanceSeeder extends Seeder
                 'name'             => $name,
                 'manufacturer'     => $manufacturer,
                 'model'            => $model,
-                'description'      => 'FleetOps testing fixture part.',
+                'description'      => $this->fixtureNote('part'),
                 'quantity_on_hand' => $quantity,
                 'unit_cost'        => $unitCost,
                 'msrp'             => $unitCost * 1.3,
@@ -141,7 +141,7 @@ class MaintenanceSeeder extends Seeder
                 'default_priority'        => $seedId === 'schedule_overdue' ? 'high' : 'medium',
                 'default_assignee_type'   => Driver::class,
                 'default_assignee_uuid'   => $driver?->uuid,
-                'instructions'            => 'FleetOps testing fixture maintenance schedule.',
+                'instructions'            => $this->fixtureNote('maintenance schedule'),
                 'reminder_offsets'        => [7, 1],
                 'meta'                    => $this->meta($seedId),
             ]);
@@ -155,9 +155,9 @@ class MaintenanceSeeder extends Seeder
         $driver     = $this->seededModel(Driver::class, 'driver_mira');
         $vehicle    = $this->seededModel(Vehicle::class, 'truck_maintenance');
         $workOrders = [
-            'work_order_open'      => ['WO-TEST-OPEN', 'Open Inspection', 'inspection_request', 'open', 'medium', $this->timestamp(-4), $this->timestamp(24), null, 'schedule_due_soon'],
-            'work_order_overdue'   => ['WO-TEST-OVERDUE', 'Overdue Service', 'preventive_maintenance', 'open', 'high', $this->timestamp(-120), $this->timestamp(-24), null, 'schedule_overdue'],
-            'work_order_completed' => ['WO-TEST-CLOSED', 'Completed Repair', 'general_repair', 'completed', 'low', $this->timestamp(-240), $this->timestamp(-120), $this->timestamp(-96), 'schedule_overdue'],
+            'work_order_open'      => [$this->identifierPrefix() . '-WO-OPEN', 'Open Inspection', 'inspection_request', 'open', 'medium', $this->timestamp(-4), $this->timestamp(24), null, 'schedule_due_soon'],
+            'work_order_overdue'   => [$this->identifierPrefix() . '-WO-OVERDUE', 'Overdue Service', 'preventive_maintenance', 'open', 'high', $this->timestamp(-120), $this->timestamp(-24), null, 'schedule_overdue'],
+            'work_order_completed' => [$this->identifierPrefix() . '-WO-CLOSED', 'Completed Repair', 'general_repair', 'completed', 'low', $this->timestamp(-240), $this->timestamp(-120), $this->timestamp(-96), 'schedule_overdue'],
         ];
 
         $models = [];
@@ -177,7 +177,7 @@ class MaintenanceSeeder extends Seeder
                 'opened_at'       => $openedAt,
                 'due_at'          => $dueAt,
                 'closed_at'       => $closedAt,
-                'instructions'    => 'FleetOps testing fixture work order.',
+                'instructions'    => $this->fixtureNote('work order'),
                 'checklist'       => [
                     ['label' => 'Inspect vehicle', 'completed' => $status === 'completed'],
                     ['label' => 'Record readings', 'completed' => $status === 'completed'],
@@ -187,7 +187,7 @@ class MaintenanceSeeder extends Seeder
                 'actual_cost'     => $status === 'completed' ? 22800 : null,
                 'currency'        => 'SGD',
                 'cost_breakdown'  => ['labor' => 12000, 'parts' => 10800],
-                'cost_center'     => 'testing-fixtures',
+                'cost_center'     => $this->seedName(),
                 'budget_code'     => 'FB-TEST',
                 'schedule_uuid'   => $schedules[$scheduleSeedId]?->uuid,
                 'meta'            => $this->meta($seedId),
@@ -224,7 +224,7 @@ class MaintenanceSeeder extends Seeder
                 'performed_by_type'   => Driver::class,
                 'performed_by_uuid'   => $driver?->uuid,
                 'summary'             => $summary,
-                'notes'               => 'FleetOps testing fixture maintenance history.',
+                'notes'               => $this->fixtureNote('maintenance history'),
                 'line_items'          => [['description' => 'Labor', 'amount' => 12000], ['description' => 'Parts', 'amount' => 10800]],
                 'labor_cost'          => 12000,
                 'parts_cost'          => 10800,
