@@ -1,0 +1,51 @@
+<Layout::Resource::Card ...attributes as |Card|>
+    <Card.header class="{{@headerClass}}">
+        <RegistryYield @registry="fleet-ops:component:driver:card:header:start" as |RegistryComponent|>
+            <RegistryComponent @order={{@resource}} @resource={{@resource}} />
+        </RegistryYield>
+        <div class="font-semibold w-full truncate">{{or @resource.name @resource.display_name}}</div>
+        <div class="text-gray-400 dark:text-gray-500 text-sm w-full truncate">{{n-a @resource.phone @resource.public_id}}</div>
+        {{#if (has-block "header")}}
+            {{yield to="header"}}
+        {{/if}}
+        <RegistryYield @registry="fleet-ops:component:driver:card:header:end" as |RegistryComponent|>
+            <RegistryComponent @order={{@resource}} @resource={{@resource}} />
+        </RegistryYield>
+    </Card.header>
+    <Card.body class="{{@bodyClass}} flex justify-center">
+        <div class="relative">
+            <Image src={{avatar-url @resource.photo_url}} @fallbackSrc={{this.fallbackImage}} class="card-img-lg rounded-full" />
+            <FaIcon @icon="circle" class="absolute right-0 top-0 -mr-1 -mt-1 {{this.statusToneClass}}" />
+        </div>
+        {{#if (has-block "body")}}
+            {{yield to="body"}}
+        {{/if}}
+    </Card.body>
+    <Card.footer class={{@footerClass}}>
+        <RegistryYield @registry="fleet-ops:component:driver:card:footer:start" as |RegistryComponent|>
+            <RegistryComponent @order={{@resource}} @resource={{@resource}} />
+        </RegistryYield>
+        <div class="flex flex-row items-center justify-between w-full">
+            <span class="inline-flex items-center rounded-lg bg-gray-200 dark:bg-gray-800 px-1.5 py-0.5 text-[10px] {{this.statusToneClass}}">
+                {{this.statusLabel}}
+            </span>
+            <div class="flex flex-row items-center space-x-1">
+                <Button @icon="eye" @size="xs" @onClick={{fn this.driverActions.transition.view @resource}} />
+                <Button @icon="pencil" @size="xs" @onClick={{fn this.driverActions.transition.edit @resource}} />
+                <Button @icon="trash" @size="xs" @type="danger" @onClick={{fn this.driverActions.delete @resource}} />
+            </div>
+        </div>
+        <RegistryYield @registry="fleet-ops:component:driver:card:footer:end" as |RegistryComponent|>
+            <RegistryComponent @order={{@resource}} @resource={{@resource}} />
+        </RegistryYield>
+        {{#if (has-block "footer")}}
+            {{yield to="footer"}}
+        {{/if}}
+        <div class="mt-1.5 w-full">
+            <div class="text-gray-400 dark:text-gray-500 text-xs truncate">
+                <FaIcon @icon="car" @prefix="fas" class="mr-1" />{{n-a this.assignedVehicleLabel}}
+            </div>
+            <div class="text-gray-400 dark:text-gray-500 text-xs">Last Modified: {{@resource.updatedAt}}</div>
+        </div>
+    </Card.footer>
+</Layout::Resource::Card>
