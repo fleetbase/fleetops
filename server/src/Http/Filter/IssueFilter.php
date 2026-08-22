@@ -88,6 +88,35 @@ class IssueFilter extends Filter
         });
     }
 
+    /**
+     * Aliases for {@see driver()}.
+     *
+     * The base filter resolves a query parameter to a method of the same name
+     * and **silently ignores anything it cannot match**. So a client scoping a
+     * list with `driver_uuid` — the column's own name, and the name every other
+     * part of the payload uses — matched nothing, the filter was dropped, and
+     * the response came back scoped only by company: every driver's records,
+     * with a 200 and no indication that the request had been narrowed at all.
+     *
+     * For a driver app that is a disclosure, not a nuisance: a driver asking
+     * for their own fuel reports received the whole company's.
+     */
+    public function driverUuid(?string $driver)
+    {
+        $this->driver($driver);
+    }
+
+    public function driverAssigned(?string $driver)
+    {
+        $this->driver($driver);
+    }
+
+    /** Alias for {@see vehicle()}, for the same reason. */
+    public function vehicleUuid(?string $vehicle)
+    {
+        $this->vehicle($vehicle);
+    }
+
     public function vehicle(?string $vehicle)
     {
         $this->builder->whereHas('vehicle', function ($q) use ($vehicle) {
