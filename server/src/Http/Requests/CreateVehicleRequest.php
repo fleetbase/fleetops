@@ -46,6 +46,11 @@ class CreateVehicleRequest extends FleetbaseRequest
                     'decommissioned',
                 ]),
             ],
+            // Validated rather than merely accepted: the model casts odometer
+            // to an integer, so an unchecked string would be stored as 0 — a
+            // vehicle reporting zero miles rather than an error.
+            'odometer'      => 'nullable|numeric|min:0',
+            'odometer_unit' => 'nullable|string|max:12',
             'vendor'    => 'nullable|exists:vendors,public_id',
             'driver'    => 'nullable|exists:drivers,public_id',
             'location'  => ['nullable', new ResolvablePoint()],

@@ -352,6 +352,12 @@ class VehicleController extends Controller
         return $request->only([
             'status', 'make', 'model', 'year', 'trim', 'type', 'plate_number', 'vin',
             'meta', 'online', 'location', 'altitude', 'heading', 'speed',
+            // Odometer is fillable on the model and unrestricted by the request
+            // rules, but was absent here — so a caller sending one received a
+            // 200 and a response body that looked correct while the reading was
+            // discarded. Recording mileage is the single most common write a
+            // driver app makes against a vehicle.
+            'odometer', 'odometer_unit',
             'payload_capacity', 'payload_capacity_volume',
             'payload_capacity_pallets', 'payload_capacity_parcels',
             'skills', 'max_tasks', 'time_window_start', 'time_window_end', 'return_to_depot',
