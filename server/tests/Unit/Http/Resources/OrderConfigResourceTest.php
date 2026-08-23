@@ -73,7 +73,7 @@ test('order config resource publishes the flow graph so consumers can sequence i
         ],
     ], true);
 
-    $flow = (new OrderConfigResource($config))->resolve($request)['flow'];
+    $flow   = (new OrderConfigResource($config))->resolve($request)['flow'];
     $byCode = collect($flow)->keyBy('code');
 
     expect($byCode['created']['activities'])->toBe(['dispatched'])
@@ -98,12 +98,18 @@ test('order config resource normalises transitions written as objects', function
         'name'      => 'Transport',
         'flow'      => [
             ['code' => 'created', 'activities' => [['code' => 'dispatched'], 'enroute', ['label' => 'no code here']]],
+            // A flow hand-edited down to a single transition can leave a bare
+            // string where the list belongs. Publish an empty list rather than
+            // letting the shape vary — a consumer iterating the field should
+            // never have to type-check it.
+            ['code' => 'dispatched', 'activities' => 'enroute'],
         ],
     ], true);
 
     $flow = (new OrderConfigResource($config))->resolve($request)['flow'];
 
-    expect($flow[0]['activities'])->toBe(['dispatched', 'enroute']);
+    expect($flow[0]['activities'])->toBe(['dispatched', 'enroute'])
+        ->and($flow[1]['activities'])->toBe([]);
 });
 
 test('order config resource keeps flow fields absent from a legacy activity null rather than missing', function () {
