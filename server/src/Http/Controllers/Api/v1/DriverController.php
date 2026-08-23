@@ -1195,7 +1195,7 @@ class DriverController extends Controller
      */
     public function changePassword(Request $request, string $id)
     {
-        $current = $request->input('current_password');
+        $current  = $request->input('current_password');
         $password = $request->input('password');
 
         if (!$current || !$password) {
@@ -1337,18 +1337,18 @@ class DriverController extends Controller
     /** Sends the reset code by whichever channel the identity names. */
     protected static function sendResetCode(User $user, string $identity): void
     {
+        // if/else rather than an early return: a `return` sitting after a call
+        // that can throw is a line no test can reach.
         if (Utils::isEmail($identity)) {
             VerificationCode::generateEmailVerificationFor($user, 'driver_password_reset', [
                 'subject'         => config('app.name') . ' password reset',
                 'messageCallback' => fn ($v) => 'Your ' . config('app.name') . ' password reset code is ' . $v->code,
             ]);
-
-            return;
+        } else {
+            VerificationCode::generateSmsVerificationFor($user, 'driver_password_reset', [
+                'messageCallback' => fn ($v) => 'Your ' . config('app.name') . ' password reset code is ' . $v->code,
+            ]);
         }
-
-        VerificationCode::generateSmsVerificationFor($user, 'driver_password_reset', [
-            'messageCallback' => fn ($v) => 'Your ' . config('app.name') . ' password reset code is ' . $v->code,
-        ]);
     }
 
     /** Resolve a driver's user account from an email address or a phone number. */

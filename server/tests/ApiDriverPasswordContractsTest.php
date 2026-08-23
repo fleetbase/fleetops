@@ -68,6 +68,7 @@ use Fleetbase\FleetOps\Http\Controllers\Api\v1\DriverController;
 use Fleetbase\FleetOps\Models\Driver;
 use Fleetbase\Models\User;
 use Illuminate\Http\Request;
+
 /** A user whose password writes and token operations are observable. */
 class FleetOpsPasswordUserFake extends User
 {
@@ -139,7 +140,7 @@ class FleetOpsPasswordControllerProbe extends DriverController
     public function findDriver(string $id, array $with = []): Driver
     {
         if (static::$driverMissing || !static::$driver) {
-            throw new \Illuminate\Database\Eloquent\ModelNotFoundException();
+            throw new Illuminate\Database\Eloquent\ModelNotFoundException();
         }
 
         return static::$driver;
@@ -175,7 +176,7 @@ class FleetOpsPasswordControllerProbe extends DriverController
     protected static function sendResetCode(User $user, string $identity): void
     {
         if (static::$sendThrows) {
-            throw new \RuntimeException('sms gateway down');
+            throw new RuntimeException('sms gateway down');
         }
 
         static::$sentCodes[] = $identity;
@@ -237,8 +238,8 @@ test('change password reports a missing driver', function () {
 });
 
 test('change password refuses a driver with no user account', function () {
-    $driver              = new FleetOpsPasswordDriverFake();
-    $driver->userForTest = null;
+    $driver                                  = new FleetOpsPasswordDriverFake();
+    $driver->userForTest                     = null;
     FleetOpsPasswordControllerProbe::$driver = $driver;
 
     $response = (new FleetOpsPasswordControllerProbe())->changePassword(
@@ -254,9 +255,9 @@ test('change password refuses when the current password is wrong, and changes no
      * The whole point of the endpoint. Without this check a borrowed handset or
      * a leaked token is a permanent account takeover.
      */
-    $user                = fleetopsPasswordUser('correct-horse');
-    $driver              = new FleetOpsPasswordDriverFake();
-    $driver->userForTest = $user;
+    $user                                    = fleetopsPasswordUser('correct-horse');
+    $driver                                  = new FleetOpsPasswordDriverFake();
+    $driver->userForTest                     = $user;
     FleetOpsPasswordControllerProbe::$driver = $driver;
 
     $response = (new FleetOpsPasswordControllerProbe())->changePassword(
@@ -270,9 +271,9 @@ test('change password refuses when the current password is wrong, and changes no
 });
 
 test('change password sets it, ends other sessions, and hands back a fresh token', function () {
-    $user                = fleetopsPasswordUser('correct-horse');
-    $driver              = new FleetOpsPasswordDriverFake();
-    $driver->userForTest = $user;
+    $user                                    = fleetopsPasswordUser('correct-horse');
+    $driver                                  = new FleetOpsPasswordDriverFake();
+    $driver->userForTest                     = $user;
     FleetOpsPasswordControllerProbe::$driver = $driver;
 
     $response = (new FleetOpsPasswordControllerProbe())->changePassword(
@@ -347,7 +348,7 @@ test('reset password gives one answer for an unknown identity and a bad code ali
 
     FleetOpsPasswordControllerProbe::$identityUser = fleetopsPasswordUser();
     FleetOpsPasswordControllerProbe::$resetCode    = null;
-    $badCode = (new FleetOpsPasswordControllerProbe())->resetPassword(
+    $badCode                                       = (new FleetOpsPasswordControllerProbe())->resetPassword(
         new Request(['identity' => 'driver@example.test', 'code' => 'wrong', 'password' => 'newpassword'])
     );
 
@@ -360,7 +361,7 @@ test('reset password sets the password, spends the code, and ends every session'
     $user                                          = fleetopsPasswordUser();
     FleetOpsPasswordControllerProbe::$identityUser = $user;
 
-    $deleted = false;
+    $deleted                                    = false;
     FleetOpsPasswordControllerProbe::$resetCode = new class($deleted) {
         public function __construct(public bool &$deleted)
         {
@@ -433,7 +434,7 @@ test('driver password helpers delegate rather than deciding for themselves', fun
     $reached = function (callable $call): bool {
         try {
             $call();
-        } catch (\Throwable $e) {
+        } catch (Throwable $e) {
             return true;
         }
 
