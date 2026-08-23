@@ -80,18 +80,12 @@ export default class ManagementDriversIndexController extends Controller {
                     {
                         label: this.intl.t('common.table-view'),
                         icon: 'table-list',
-                        onClick: () => {
-                            this.layout = 'table';
-                            this.appCache.set('fleetops:drivers:layout', 'table');
-                        },
+                        onClick: () => this.changeLayout('table'),
                     },
                     {
                         label: this.intl.t('common.grid-view'),
                         icon: 'grip',
-                        onClick: () => {
-                            this.layout = 'grid';
-                            this.appCache.set('fleetops:drivers:layout', 'grid');
-                        },
+                        onClick: () => this.changeLayout('grid'),
                     },
                 ],
                 renderInPlace: true,
@@ -399,6 +393,11 @@ export default class ManagementDriversIndexController extends Controller {
                 searchable: false,
             },
         ];
+    }
+
+    @action changeLayout(layout) {
+        this.layout = layout;
+        this.appCache.set('fleetops:drivers:layout', layout);
     }
 
     @action createIssue(driver) {

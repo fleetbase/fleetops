@@ -20,7 +20,7 @@ export default class DriverCardComponent extends Component {
     get resource() {
         return this.args.resource;
     }
-    
+
     get fallbackImage() {
         return config?.defaultValues?.driverImage;
     }
