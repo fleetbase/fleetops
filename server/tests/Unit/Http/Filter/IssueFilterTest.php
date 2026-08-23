@@ -157,3 +157,16 @@ test('issue filter driver aliases route uuids the same way driver does', functio
     $whereHas = collect($builder->calls)->where(0, 'whereHas')->firstWhere(1, 'driver');
     expect($whereHas[2][0][1][0])->toBe('uuid');
 });
+
+test('issue filter scopes by vehicle_uuid as well as vehicle', function () {
+    $builder = new FleetOpsIssueFilterUnitQuery();
+    $filter  = fleetopsIssueFilterUnitFilter($builder);
+
+    $filter->vehicleUuid('44444444-4444-4444-8444-444444444444');
+    $filter->vehicleUuid('vehicle_filterone');
+
+    $whereHasCalls = collect($builder->calls)->where(0, 'whereHas')->where(1, 'vehicle')->values();
+    expect($whereHasCalls)->toHaveCount(2)
+        ->and($whereHasCalls[0][2][0][1][0])->toBe('uuid')
+        ->and($whereHasCalls[1][2][0][1][0])->toBe('public_id');
+});
