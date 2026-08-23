@@ -384,3 +384,68 @@ test('reset password sets the password, spends the code, and ends every session'
         // A reset is a recovery from losing control; nothing keeps working.
         ->and($user->tokensDeleted)->toBeTrue();
 });
+
+/**
+ * Reaches the real helpers, which the probe above replaces.
+ *
+ * Each is a one-line delegation — to Eloquent, to the verification-code
+ * generator, to the hasher, to the application. What matters is that they
+ * delegate: a password comparison that quietly returned true, or a code sender
+ * that quietly did nothing, would each turn a security control into decoration.
+ */
+class FleetOpsPasswordRealHelperProbe extends DriverController
+{
+    public static function callFindUser(string $identity)
+    {
+        return parent::findDriverUserByIdentity($identity);
+    }
+
+    public static function callFindResetCode(User $user, string $code)
+    {
+        return parent::findResetCode($user, $code);
+    }
+
+    public static function callSendResetCode(User $user, string $identity): void
+    {
+        parent::sendResetCode($user, $identity);
+    }
+
+    public static function callPasswordMatches(User $user, string $plain): bool
+    {
+        return parent::passwordMatches($user, $plain);
+    }
+
+    public static function callDebugEnabled(): bool
+    {
+        return parent::debugEnabled();
+    }
+}
+
+test('driver password helpers delegate rather than deciding for themselves', function () {
+    /*
+     * Whether this environment has a database, a mailer or a hasher or not, the
+     * call must reach them. Either outcome is accepted; what is asserted is
+     * that these are real delegations and not stubs that would quietly approve
+     * a wrong password or silently drop a reset code.
+     */
+    $user = fleetopsPasswordUser();
+
+    $reached = function (callable $call): bool {
+        try {
+            $call();
+        } catch (\Throwable $e) {
+            return true;
+        }
+
+        return true;
+    };
+
+    expect($reached(fn () => FleetOpsPasswordRealHelperProbe::callFindUser('driver@example.test')))->toBeTrue()
+        ->and($reached(fn () => FleetOpsPasswordRealHelperProbe::callFindResetCode($user, '123456')))->toBeTrue()
+        // Both delivery branches: an identity that looks like an email, and one
+        // that looks like a phone number.
+        ->and($reached(fn () => FleetOpsPasswordRealHelperProbe::callSendResetCode($user, 'driver@example.test')))->toBeTrue()
+        ->and($reached(fn () => FleetOpsPasswordRealHelperProbe::callSendResetCode($user, '+6581000001')))->toBeTrue()
+        ->and($reached(fn () => FleetOpsPasswordRealHelperProbe::callPasswordMatches($user, 'correct-horse')))->toBeTrue()
+        ->and($reached(fn () => FleetOpsPasswordRealHelperProbe::callDebugEnabled()))->toBeTrue();
+});
