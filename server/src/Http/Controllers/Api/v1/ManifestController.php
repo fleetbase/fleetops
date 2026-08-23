@@ -36,14 +36,12 @@ class ManifestController extends Controller
      */
     public function forDriver(Request $request, string $id)
     {
-        $driver = Driver::where('public_id', $id)->orWhere('uuid', $id)->first();
+        $driver = static::findDriverRecord($id);
         if (!$driver) {
             return response()->apiError('Driver resource not found.', 404);
         }
 
-        $query = Manifest::where('driver_uuid', $driver->uuid)
-            ->with(['driver', 'vehicle'])
-            ->orderBy('scheduled_date', 'desc');
+        $query = static::manifestsFor($driver);
 
         if ($request->filled('status')) {
             $query->whereIn('status', Utils::arrayFrom($request->input('status')));
@@ -80,23 +78,24 @@ class ManifestController extends Controller
      */
     public function updateStop(Request $request, string $id)
     {
-        $stop = ManifestStop::where('public_id', $id)->orWhere('uuid', $id)->first();
+        $stop = static::findStop($id);
         if (!$stop) {
             return response()->apiError('Manifest stop resource not found.', 404);
         }
 
         $status = $request->input('status');
         if ($status) {
-            match ($status) {
-                'arrived'   => $stop->markArrived(),
-                'completed' => $stop->markCompleted(),
-                'skipped'   => $stop->markSkipped(),
-                default     => null,
-            };
-
+            // Checked before it is applied: an unknown status must change
+            // nothing, not fall through a match and then be refused.
             if (!in_array($status, ['arrived', 'completed', 'skipped'], true)) {
                 return response()->apiError('Status must be one of: arrived, completed, skipped.', 422);
             }
+
+            match ($status) {
+                'arrived'   => $stop->markArrived(),
+                'completed' => $stop->markCompleted(),
+                default     => $stop->markSkipped(),
+            };
         }
 
         if ($request->filled('meta')) {
@@ -159,11 +158,7 @@ class ManifestController extends Controller
                     continue;
                 }
 
-                $matrix = Utils::getPreliminaryDistanceMatrix(
-                    new Point($from['lat'], $from['lon']),
-                    new Point($to['lat'], $to['lon'])
-                );
-                $cost = $matrix->distance ?? PHP_INT_MAX;
+                $cost = static::drivingDistance($from, $to);
 
                 if ($closestCost === null || $cost < $closestCost) {
                     $closestCost  = $cost;
@@ -192,9 +187,38 @@ class ManifestController extends Controller
         return $this->show($id);
     }
 
+    /** The driver's manifests, newest first. Separated so it can be stubbed. */
+    protected static function manifestsFor(Driver $driver)
+    {
+        return Manifest::where('driver_uuid', $driver->uuid)
+            ->with(['driver', 'vehicle'])
+            ->orderBy('scheduled_date', 'desc');
+    }
+
+    protected static function findDriverRecord(string $id): ?Driver
+    {
+        return Driver::where('public_id', $id)->orWhere('uuid', $id)->first();
+    }
+
     protected static function findManifest(string $id): ?Manifest
     {
         return Manifest::where('public_id', $id)->orWhere('uuid', $id)->first();
+    }
+
+    protected static function findStop(string $id): ?ManifestStop
+    {
+        return ManifestStop::where('public_id', $id)->orWhere('uuid', $id)->first();
+    }
+
+    /** Distance between two coordinates, seam-separated so it can be stubbed. */
+    protected static function drivingDistance(array $from, array $to): float
+    {
+        $matrix = Utils::getPreliminaryDistanceMatrix(
+            new Point($from['lat'], $from['lon']),
+            new Point($to['lat'], $to['lon'])
+        );
+
+        return (float) ($matrix->distance ?? PHP_INT_MAX);
     }
 
     /** Latitude and longitude of a stop's place, when it has one. */
