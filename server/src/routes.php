@@ -37,6 +37,8 @@ Route::prefix(config('fleetops.api.routing.prefix'))->namespace('Fleetbase\Fleet
                 $router->get('/', 'DriverController@query');
                 $router->get('{id}', 'DriverController@find');
                 $router->get('{id}/organizations', 'DriverController@listOrganizations');
+                // A driver's own routes for the day.
+                $router->get('{id}/manifests', 'ManifestController@forDriver');
                 $router->get('{id}/current-organization', 'DriverController@currentOrganization');
                 $router->put('{id}', 'DriverController@update');
                 $router->delete('{id}', 'DriverController@delete');
@@ -185,6 +187,18 @@ Route::prefix(config('fleetops.api.routing.prefix'))->namespace('Fleetbase\Fleet
                 $router->delete('{id}', 'OrderController@delete');
                 $router->get('{id}/editable-entity-fields', 'OrderController@getEditableEntityFields');
             });
+            // manifests — a driver's route. Read and run only: creating,
+            // cancelling and deleting a manifest is dispatch work and stays on
+            // the internal namespace.
+            $router->group(['prefix' => 'manifests'], function () use ($router) {
+                $router->get('{id}', 'ManifestController@show');
+                $router->post('{id}/optimize', 'ManifestController@optimize');
+            });
+            $router->group(['prefix' => 'manifest-stops'], function () use ($router) {
+                $router->patch('{id}', 'ManifestController@updateStop');
+                $router->post('{id}', 'ManifestController@updateStop');
+            });
+
             // entities routes
             $router->group(['prefix' => 'entities'], function () use ($router) {
                 $router->post('/', 'EntityController@create');
