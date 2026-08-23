@@ -300,6 +300,11 @@ namespace {
             ->and($vehicleRules['longitude'])->toBe(['nullable', 'required_with:latitude'])
             ->and(ruleStrings($vehicleRules['status']))->toContain('nullable')
             ->and(implode('|', ruleStrings($vehicleRules['status'])))->toContain('operational')
+            // The model casts odometer to an integer, so an unvalidated string
+            // would land as 0 — a vehicle reporting zero miles rather than an
+            // error. These rules are what stop that.
+            ->and($vehicleRules['odometer'])->toBe('nullable|numeric|min:0')
+            ->and($vehicleRules['odometer_unit'])->toBe('nullable|string|max:12')
             ->and($fuelReportRules['driver'])->toBe(['required'])
             ->and($fuelReportRules['odometer'])->toBe(['required'])
             ->and($fuelReportRules['volume'])->toBe(['required'])

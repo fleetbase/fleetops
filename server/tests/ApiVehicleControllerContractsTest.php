@@ -366,3 +366,38 @@ test('api vehicle controller reports missing vehicle and missing driver branches
         'status' => 404,
     ]);
 });
+
+test('api vehicle controller keeps the odometer in the input it builds from a request', function () {
+    // Regression: `vehicleInputFromRequest` omitted odometer, so PUT
+    // /v1/vehicles/{id} answered 200 with a correct-looking body and discarded
+    // the reading. Recording mileage is the most common write a driver app
+    // makes against a vehicle, and a silent no-op is the worst possible answer.
+    $controller = new FleetOpsApiVehicleCrudControllerProbe();
+
+    $input = $controller->inputForTest(new Request([
+        'odometer'      => 211098,
+        'odometer_unit' => 'km',
+        'plate_number'  => 'SG-1234',
+    ]));
+
+    expect($input)->toHaveKey('odometer')
+        ->and($input['odometer'])->toBe(211098)
+        ->and($input['odometer_unit'])->toBe('km')
+        ->and($input['plate_number'])->toBe('SG-1234');
+});
+
+test('api vehicle controller input still drops fields that are not part of the contract', function () {
+    // The projection is an allowlist and must stay one — adding odometer must
+    // not turn it into "whatever the caller sent".
+    $controller = new FleetOpsApiVehicleCrudControllerProbe();
+
+    $input = $controller->inputForTest(new Request([
+        'odometer'     => 1,
+        'company_uuid' => 'someone-elses-company',
+        'uuid'         => 'forged',
+    ]));
+
+    expect($input)->toHaveKey('odometer')
+        ->and($input)->not->toHaveKey('company_uuid')
+        ->and($input)->not->toHaveKey('uuid');
+});
