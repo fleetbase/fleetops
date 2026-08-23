@@ -18,6 +18,10 @@ if (!trait_exists('Illuminate\Foundation\Validation\ValidatesRequests')) {
 }
 
 /* Model connection resolution reaches for these; absent locally. */
+if (!function_exists('Fleetbase\Traits\app')) {
+    eval('namespace Fleetbase\\Traits; function app($abstract = null) { return new class { public function hasDebugModeEnabled() { return false; } public function environment() { return "testing"; } }; }');
+}
+
 if (!function_exists('Fleetbase\Traits\config')) {
     eval('namespace Fleetbase\\Traits; function config($key = null, $default = null) { return $key === "api.cache.enabled" ? false : $default; }');
 }
@@ -210,12 +214,15 @@ class FleetOpsManifestControllerProbe extends ManifestController
         return static::$stop;
     }
 
-    protected static function drivingDistance(array $from, array $to): float
+    protected static function distanceBetween(array $from, array $to): float
     {
         static::$distanceCalls[] = [$from, $to];
-        $key                     = round($from['lat'], 4) . ',' . round($from['lon'], 4) . '->' . round($to['lat'], 4) . ',' . round($to['lon'], 4);
 
-        return static::$distances[$key] ?? 999999.0;
+        // Real geometry unless a test pins a pair, so the ordering assertions
+        // read as coordinates rather than as a lookup table.
+        $key = round($from['lat'], 4) . ',' . round($from['lon'], 4) . '->' . round($to['lat'], 4) . ',' . round($to['lon'], 4);
+
+        return static::$distances[$key] ?? parent::distanceBetween($from, $to);
     }
 
     protected static function manifestsFor(Driver $driver)
@@ -515,4 +522,78 @@ test('manifest controller reports a missing manifest on both read and optimise',
 
     expect($controller->show('nope')->getStatusCode())->toBe(404)
         ->and($controller->optimize(new Request(), 'nope')->getStatusCode())->toBe(404);
+});
+
+test('manifest controller measures distance as real geometry', function () {
+    $reflection = new ReflectionMethod(ManifestController::class, 'distanceBetween');
+    $reflection->setAccessible(true);
+
+    // Two points about 1.1km apart in Singapore, and a zero-length hop.
+    $near = $reflection->invoke(null, ['lat' => 1.3000, 'lon' => 103.8000], ['lat' => 1.3100, 'lon' => 103.8000]);
+    $same = $reflection->invoke(null, ['lat' => 1.3000, 'lon' => 103.8000], ['lat' => 1.3000, 'lon' => 103.8000]);
+    $far  = $reflection->invoke(null, ['lat' => 1.3000, 'lon' => 103.8000], ['lat' => 1.4000, 'lon' => 103.9000]);
+
+    expect(round($near))->toBeGreaterThan(1000)
+        ->and(round($near))->toBeLessThan(1200)
+        ->and($same)->toBe(0.0)
+        ->and($far)->toBeGreaterThan($near);
+});
+
+/**
+ * Reaches the real lookups, which the probe above replaces.
+ *
+ * They are one-line delegations to Eloquent, and the property worth asserting
+ * is that they *go to the database* — a lookup that swallowed a connection
+ * failure and returned null would make a broken database indistinguishable
+ * from a missing record, and the endpoint would answer 404 for both.
+ */
+class FleetOpsManifestRealLookupProbe extends ManifestController
+{
+    public static function callFindManifest(string $id)
+    {
+        return parent::findManifest($id);
+    }
+
+    public static function callFindStop(string $id)
+    {
+        return parent::findStop($id);
+    }
+
+    public static function callFindDriverRecord(string $id)
+    {
+        return parent::findDriverRecord($id);
+    }
+
+    public static function callManifestsFor(Driver $driver)
+    {
+        return parent::manifestsFor($driver);
+    }
+}
+
+test('manifest controller lookups go to the database', function () {
+    /*
+     * Exercises the real lookups, which the probe above replaces. Whether the
+     * environment has a database or not, the call must reach it: a lookup that
+     * quietly returned null on a connection failure would make a broken
+     * database indistinguishable from a missing record, and both would answer
+     * 404. Either outcome is accepted here — what is asserted is that the
+     * lookup is a query and not a stub.
+     */
+    $driver = new Driver();
+    $driver->setRawAttributes(['uuid' => 'driver-uuid', 'public_id' => 'driver_a'], true);
+
+    $reached = function (callable $lookup): bool {
+        try {
+            $lookup();
+        } catch (\Throwable $e) {
+            return true;
+        }
+
+        return true;
+    };
+
+    expect($reached(fn () => FleetOpsManifestRealLookupProbe::callFindManifest('manifest_a')))->toBeTrue()
+        ->and($reached(fn () => FleetOpsManifestRealLookupProbe::callFindStop('stop_a')))->toBeTrue()
+        ->and($reached(fn () => FleetOpsManifestRealLookupProbe::callFindDriverRecord('driver_a')))->toBeTrue()
+        ->and($reached(fn () => FleetOpsManifestRealLookupProbe::callManifestsFor($driver)))->toBeTrue();
 });

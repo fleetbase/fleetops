@@ -8,7 +8,6 @@ use Fleetbase\FleetOps\Models\Driver;
 use Fleetbase\FleetOps\Models\Manifest;
 use Fleetbase\FleetOps\Models\ManifestStop;
 use Fleetbase\FleetOps\Support\Utils;
-use Fleetbase\LaravelMysqlSpatial\Types\Point;
 use Fleetbase\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 
@@ -117,8 +116,8 @@ class ManifestController extends Controller
      *
      * **It is a nearest-neighbour heuristic, not a solved routing problem.** It
      * walks from the driver's current position to the closest remaining stop,
-     * then to the closest from there, using real road distances from OSRM. That
-     * is typically a large improvement over an arbitrary order and is not
+     * then to the closest from there, by straight-line distance. That is
+     * typically a large improvement over an arbitrary order and is not
      * guaranteed optimal; calling it anything stronger would be a claim the
      * implementation does not support. Completed and skipped stops keep their
      * place — a route already driven is not re-planned.
@@ -158,7 +157,7 @@ class ManifestController extends Controller
                     continue;
                 }
 
-                $cost = static::drivingDistance($from, $to);
+                $cost = static::distanceBetween($from, $to);
 
                 if ($closestCost === null || $cost < $closestCost) {
                     $closestCost  = $cost;
@@ -210,15 +209,32 @@ class ManifestController extends Controller
         return ManifestStop::where('public_id', $id)->orWhere('uuid', $id)->first();
     }
 
-    /** Distance between two coordinates, seam-separated so it can be stubbed. */
-    protected static function drivingDistance(array $from, array $to): float
+    /**
+     * Straight-line distance between two coordinates, in metres.
+     *
+     * Deliberately not a routing call. A nearest-neighbour walk compares every
+     * remaining stop at every step, so a twenty-stop route asks roughly four
+     * hundred distance questions — as road lookups that is four hundred network
+     * round trips for one tap, which is not a thing to do on a handset waiting
+     * on a driver.
+     *
+     * Straight-line ordering and road ordering rarely disagree about which of
+     * several stops is nearest, and where they do the result is still a valid
+     * route, just not the shortest one. Since the method is a heuristic either
+     * way, the cheap version is the honest choice.
+     */
+    protected static function distanceBetween(array $from, array $to): float
     {
-        $matrix = Utils::getPreliminaryDistanceMatrix(
-            new Point($from['lat'], $from['lon']),
-            new Point($to['lat'], $to['lon'])
-        );
+        $earthRadius = 6371000.0;
 
-        return (float) ($matrix->distance ?? PHP_INT_MAX);
+        $lat1 = deg2rad($from['lat']);
+        $lat2 = deg2rad($to['lat']);
+        $dLat = $lat2 - $lat1;
+        $dLon = deg2rad($to['lon'] - $from['lon']);
+
+        $a = sin($dLat / 2) ** 2 + cos($lat1) * cos($lat2) * sin($dLon / 2) ** 2;
+
+        return $earthRadius * 2 * atan2(sqrt($a), sqrt(1 - $a));
     }
 
     /** Latitude and longitude of a stop's place, when it has one. */
