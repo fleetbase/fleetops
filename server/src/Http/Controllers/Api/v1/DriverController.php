@@ -1195,10 +1195,20 @@ class DriverController extends Controller
      */
     public function changePassword(Request $request, string $id)
     {
-        $request->validate([
-            'current_password' => 'required|string',
-            'password'         => 'required|string|min:8|confirmed',
-        ]);
+        $current = $request->input('current_password');
+        $password = $request->input('password');
+
+        if (!$current || !$password) {
+            return response()->apiError('current_password and password are required.', 400);
+        }
+
+        if (strlen($password) < 8) {
+            return response()->apiError('Password must be at least 8 characters.', 400);
+        }
+
+        if ($request->filled('password_confirmation') && $request->input('password_confirmation') !== $password) {
+            return response()->apiError('Password confirmation does not match.', 422);
+        }
 
         try {
             $driver = $this->findDriver($id, ['user']);
@@ -1211,13 +1221,13 @@ class DriverController extends Controller
             return response()->apiError('Driver has no user account.', 422);
         }
 
-        if (!Hash::check($request->input('current_password'), $user->password)) {
+        if (!static::passwordMatches($user, $current)) {
             // Same wording whether the password was wrong or the account is odd
             // — a change endpoint should not become an oracle.
             return response()->apiError('The current password is incorrect.', 422);
         }
 
-        $user->password = $request->input('password');
+        $user->password = $password;
         $user->save();
 
         /*
@@ -1255,18 +1265,9 @@ class DriverController extends Controller
         }
 
         try {
-            if (Utils::isEmail($identity)) {
-                VerificationCode::generateEmailVerificationFor($user, 'driver_password_reset', [
-                    'subject'         => config('app.name') . ' password reset',
-                    'messageCallback' => fn ($v) => 'Your ' . config('app.name') . ' password reset code is ' . $v->code,
-                ]);
-            } else {
-                VerificationCode::generateSmsVerificationFor($user, 'driver_password_reset', [
-                    'messageCallback' => fn ($v) => 'Your ' . config('app.name') . ' password reset code is ' . $v->code,
-                ]);
-            }
+            static::sendResetCode($user, $identity);
         } catch (\Throwable $e) {
-            return response()->apiError(app()->hasDebugModeEnabled() ? $e->getMessage() : 'Unable to send reset code.');
+            return response()->apiError(static::debugEnabled() ? $e->getMessage() : 'Unable to send reset code.');
         }
 
         return response()->json(['status' => 'ok']);
@@ -1277,22 +1278,24 @@ class DriverController extends Controller
      */
     public function resetPassword(Request $request)
     {
-        $request->validate([
-            'identity' => 'required|string',
-            'code'     => 'required|string',
-            'password' => 'required|string|min:8|confirmed',
-        ]);
+        $identity = $request->input('identity');
+        $code     = $request->input('code');
+        $password = $request->input('password');
 
-        $user = static::findDriverUserByIdentity($request->input('identity'));
+        if (!$identity || !$code || !$password) {
+            return response()->apiError('identity, code, and password are required.', 400);
+        }
+
+        if (strlen($password) < 8) {
+            return response()->apiError('Password must be at least 8 characters.', 400);
+        }
+
+        $user = static::findDriverUserByIdentity($identity);
         if (!$user) {
             return response()->apiError('Invalid or expired reset code.', 422);
         }
 
-        $verification = VerificationCode::where([
-            'subject_uuid' => $user->uuid,
-            'code'         => $request->input('code'),
-            'for'          => 'driver_password_reset',
-        ])->where('expires_at', '>', now())->first();
+        $verification = static::findResetCode($user, $code);
 
         if (!$verification) {
             // One message for a wrong code, an expired code and an unknown
@@ -1300,13 +1303,52 @@ class DriverController extends Controller
             return response()->apiError('Invalid or expired reset code.', 422);
         }
 
-        $user->password = $request->input('password');
+        $user->password = $password;
         $user->save();
 
         $verification->delete();
         $user->tokens()->delete();
 
         return response()->json(['status' => 'ok']);
+    }
+
+    /** Whether the application is in debug mode, so an error may be echoed. */
+    protected static function debugEnabled(): bool
+    {
+        return app()->hasDebugModeEnabled();
+    }
+
+    /** Whether a plaintext password matches the stored hash. */
+    protected static function passwordMatches(User $user, string $plain): bool
+    {
+        return Hash::check($plain, $user->password);
+    }
+
+    /** The unexpired reset code for this user, if the one supplied matches. */
+    protected static function findResetCode(User $user, string $code)
+    {
+        return VerificationCode::where([
+            'subject_uuid' => $user->uuid,
+            'code'         => $code,
+            'for'          => 'driver_password_reset',
+        ])->where('expires_at', '>', now())->first();
+    }
+
+    /** Sends the reset code by whichever channel the identity names. */
+    protected static function sendResetCode(User $user, string $identity): void
+    {
+        if (Utils::isEmail($identity)) {
+            VerificationCode::generateEmailVerificationFor($user, 'driver_password_reset', [
+                'subject'         => config('app.name') . ' password reset',
+                'messageCallback' => fn ($v) => 'Your ' . config('app.name') . ' password reset code is ' . $v->code,
+            ]);
+
+            return;
+        }
+
+        VerificationCode::generateSmsVerificationFor($user, 'driver_password_reset', [
+            'messageCallback' => fn ($v) => 'Your ' . config('app.name') . ' password reset code is ' . $v->code,
+        ]);
     }
 
     /** Resolve a driver's user account from an email address or a phone number. */
