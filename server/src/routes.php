@@ -28,6 +28,13 @@ Route::prefix(config('fleetops.api.routing.prefix'))->namespace('Fleetbase\Fleet
                 $router->post('login-with-sms', 'DriverController@loginWithPhone');
                 $router->post('verify-code', 'DriverController@verifyCode');
                 $router->post('login', 'DriverController@login');
+                // Password management. Deliberately separate from the driver
+                // update: changing a password requires proving the old one, and
+                // resetting it requires a code, neither of which a general PUT
+                // can express.
+                $router->post('forgot-password', 'DriverController@forgotPassword');
+                $router->post('reset-password', 'DriverController@resetPassword');
+                $router->post('{id}/change-password', 'DriverController@changePassword');
                 $router->post('{id}/simulate', 'DriverController@simulate');
                 $router->match(['put', 'patch', 'post'], '{id}/track', 'DriverController@track');
                 $router->post('{id}/register-device', 'DriverController@registerDevice');

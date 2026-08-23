@@ -166,8 +166,14 @@ class DriverController extends Controller
         // get request input
         $input = $request->except(['name', 'password', 'email', 'phone', 'location', 'altitude', 'heading', 'speed', 'meta']);
 
-        // get user details for driver
-        $userDetails = $request->only(['name', 'password', 'email', 'phone']);
+        /*
+         * Deliberately no `password` here. Setting one through a general update
+         * meant anyone holding a driver's token — or an unlocked handset —
+         * could take the account without proving they knew the existing
+         * password. Changing a password is its own operation with its own
+         * proof: see changePassword(), forgotPassword() and resetPassword().
+         */
+        $userDetails = $request->only(['name', 'email', 'phone']);
 
         // update driver user details
         $driverUser = $driver->getUser();
@@ -1176,5 +1182,140 @@ class DriverController extends Controller
                 }
             }
         }
+    }
+
+    /**
+     * Change the authenticated driver's password, proving the current one.
+     *
+     * A password change is an authorisation decision, not an attribute update.
+     * Requiring the existing password is what stops a borrowed handset or a
+     * leaked token from becoming a permanent account takeover, and re-issuing
+     * the caller's token afterwards is what stops every *other* session from
+     * outliving the change.
+     */
+    public function changePassword(Request $request, string $id)
+    {
+        $request->validate([
+            'current_password' => 'required|string',
+            'password'         => 'required|string|min:8|confirmed',
+        ]);
+
+        try {
+            $driver = $this->findDriver($id, ['user']);
+        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $exception) {
+            return response()->apiError('Driver resource not found.', 404);
+        }
+
+        $user = $driver->getUser();
+        if (!$user) {
+            return response()->apiError('Driver has no user account.', 422);
+        }
+
+        if (!Hash::check($request->input('current_password'), $user->password)) {
+            // Same wording whether the password was wrong or the account is odd
+            // — a change endpoint should not become an oracle.
+            return response()->apiError('The current password is incorrect.', 422);
+        }
+
+        $user->password = $request->input('password');
+        $user->save();
+
+        /*
+         * Every other session dies with the old password. The caller keeps
+         * working by being handed a fresh token in the same response, so a
+         * driver who changes their password mid-shift is not signed out of the
+         * device in their hand.
+         */
+        $user->tokens()->delete();
+        $token = $user->createToken($request->input('device_name', 'navigator'));
+
+        return response()->json([
+            'status' => 'ok',
+            'token'  => $token->plainTextToken,
+        ]);
+    }
+
+    /**
+     * Send a password reset code to a driver who cannot sign in.
+     *
+     * Answers identically whether or not the identity exists: a reset endpoint
+     * that 404s on an unknown phone number is a way to enumerate a company's
+     * drivers.
+     */
+    public function forgotPassword(Request $request)
+    {
+        $identity = $request->input('identity');
+        if (!$identity) {
+            return response()->apiError('Identity is required.', 400);
+        }
+
+        $user = static::findDriverUserByIdentity($identity);
+        if (!$user) {
+            return response()->json(['status' => 'ok']);
+        }
+
+        try {
+            if (Utils::isEmail($identity)) {
+                VerificationCode::generateEmailVerificationFor($user, 'driver_password_reset', [
+                    'subject'         => config('app.name') . ' password reset',
+                    'messageCallback' => fn ($v) => 'Your ' . config('app.name') . ' password reset code is ' . $v->code,
+                ]);
+            } else {
+                VerificationCode::generateSmsVerificationFor($user, 'driver_password_reset', [
+                    'messageCallback' => fn ($v) => 'Your ' . config('app.name') . ' password reset code is ' . $v->code,
+                ]);
+            }
+        } catch (\Throwable $e) {
+            return response()->apiError(app()->hasDebugModeEnabled() ? $e->getMessage() : 'Unable to send reset code.');
+        }
+
+        return response()->json(['status' => 'ok']);
+    }
+
+    /**
+     * Set a new password using a code sent by forgotPassword().
+     */
+    public function resetPassword(Request $request)
+    {
+        $request->validate([
+            'identity' => 'required|string',
+            'code'     => 'required|string',
+            'password' => 'required|string|min:8|confirmed',
+        ]);
+
+        $user = static::findDriverUserByIdentity($request->input('identity'));
+        if (!$user) {
+            return response()->apiError('Invalid or expired reset code.', 422);
+        }
+
+        $verification = VerificationCode::where([
+            'subject_uuid' => $user->uuid,
+            'code'         => $request->input('code'),
+            'for'          => 'driver_password_reset',
+        ])->where('expires_at', '>', now())->first();
+
+        if (!$verification) {
+            // One message for a wrong code, an expired code and an unknown
+            // identity alike.
+            return response()->apiError('Invalid or expired reset code.', 422);
+        }
+
+        $user->password = $request->input('password');
+        $user->save();
+
+        $verification->delete();
+        $user->tokens()->delete();
+
+        return response()->json(['status' => 'ok']);
+    }
+
+    /** Resolve a driver's user account from an email address or a phone number. */
+    protected static function findDriverUserByIdentity(string $identity): ?User
+    {
+        $isEmail = Utils::isEmail($identity);
+        $column  = $isEmail ? 'email' : 'phone';
+        $value   = $isEmail ? $identity : static::phone($identity);
+
+        return User::whereHas('driver')->where($column, $value)->first();
     }
 }
