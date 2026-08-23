@@ -51,11 +51,11 @@ class CreateVehicleRequest extends FleetbaseRequest
             // vehicle reporting zero miles rather than an error.
             'odometer'      => 'nullable|numeric|min:0',
             'odometer_unit' => 'nullable|string|max:12',
-            'vendor'    => 'nullable|exists:vendors,public_id',
-            'driver'    => 'nullable|exists:drivers,public_id',
-            'location'  => ['nullable', new ResolvablePoint()],
-            'latitude'  => ['nullable', 'required_with:longitude'],
-            'longitude' => ['nullable', 'required_with:latitude'],
+            'vendor'        => 'nullable|exists:vendors,public_id',
+            'driver'        => 'nullable|exists:drivers,public_id',
+            'location'      => ['nullable', new ResolvablePoint()],
+            'latitude'      => ['nullable', 'required_with:longitude'],
+            'longitude'     => ['nullable', 'required_with:latitude'],
         ];
     }
 }
