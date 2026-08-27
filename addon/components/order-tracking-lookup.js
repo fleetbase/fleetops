@@ -10,6 +10,7 @@ import { task } from 'ember-concurrency';
 import { OSRMv1, Control as RoutingControl } from '@fleetbase/leaflet-routing-machine';
 import getRoutingHost from '@fleetbase/ember-core/utils/get-routing-host';
 import engineService from '@fleetbase/ember-core/decorators/engine-service';
+import { DEFAULT_LEAFLET_TILE_URL } from '../utils/leaflet-tile-url';
 
 export default class OrderTrackingLookupComponent extends Component {
     @service urlSearchParams;
@@ -28,7 +29,7 @@ export default class OrderTrackingLookupComponent extends Component {
     @tracked latitude;
     @tracked longitude;
     @tracked route;
-    @tracked tileSourceUrl = 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png';
+    @tracked tileSourceUrl = DEFAULT_LEAFLET_TILE_URL;
 
     constructor() {
         super(...arguments);

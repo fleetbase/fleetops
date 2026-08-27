@@ -328,6 +328,8 @@ class SettingController extends Controller
     {
         $defaults = [
             'mapProvider'                 => 'leaflet',
+            'leafletTileUrl'              => '',
+            'leafletDarkTileUrl'          => '',
             'googleMapsMapType'           => 'roadmap',
             'showGoogleMapsTrafficLayer'  => false,
             'showGoogleMapsTransitLayer'  => false,
@@ -418,10 +420,30 @@ class SettingController extends Controller
         return [
             ...$settings,
             'mapProvider'                => $mapProvider,
+            'leafletTileUrl'             => $this->sanitizeTileUrl(data_get($settings, 'leafletTileUrl', '')),
+            'leafletDarkTileUrl'         => $this->sanitizeTileUrl(data_get($settings, 'leafletDarkTileUrl', '')),
             'googleMapsMapType'          => $googleMapsMapType,
             'showGoogleMapsTrafficLayer' => filter_var(data_get($settings, 'showGoogleMapsTrafficLayer', false), FILTER_VALIDATE_BOOLEAN),
             'showGoogleMapsTransitLayer' => filter_var(data_get($settings, 'showGoogleMapsTransitLayer', false), FILTER_VALIDATE_BOOLEAN),
         ];
+    }
+
+    /**
+     * Sanitize a Leaflet XYZ tile URL template — only http(s) URLs are accepted,
+     * anything else is discarded so the frontend falls back to the default tiles.
+     */
+    protected function sanitizeTileUrl($url): string
+    {
+        if (!is_string($url)) {
+            return '';
+        }
+
+        $url = trim($url);
+        if ($url === '' || !preg_match('/^https?:\/\//i', $url)) {
+            return '';
+        }
+
+        return $url;
     }
 
     /**

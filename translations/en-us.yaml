@@ -2006,6 +2006,10 @@ settings:
         map-provider: Map Provider
         map-provider-help-text: Choose the map engine used to render the live operations map. Leaflet uses OpenStreetMap tiles and requires no API key. Google Maps requires a valid Google Maps JavaScript API key.
         select-map-provider: Select map provider
+        leaflet-tile-url: Leaflet Tile Provider URL
+        leaflet-tile-url-help-text: Optional custom XYZ tile provider URL template used by the Leaflet map. Leave blank to use the default OpenStreetMap tiles which require no API key. Use this to point Leaflet at your own tile provider, including keyed providers such as CARTO.
+        leaflet-dark-tile-url: Leaflet Dark Mode Tile Provider URL
+        leaflet-dark-tile-url-help-text: Optional tile provider URL used when the console is in dark mode. Leave blank to fall back to the tile provider URL above, or the default OpenStreetMap tiles.
         google-maps-map-type: Map Type
         google-maps-map-type-help-text: The default map style to display when Google Maps is active.
         select-map-type: Select map type
