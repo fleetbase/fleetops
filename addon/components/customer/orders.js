@@ -9,6 +9,7 @@ import { debug } from '@ember/debug';
 import { task, timeout } from 'ember-concurrency';
 import { Control as RoutingControl } from '@fleetbase/leaflet-routing-machine';
 import engineService from '@fleetbase/ember-core/decorators/engine-service';
+import { DEFAULT_LEAFLET_TILE_URL } from '../../utils/leaflet-tile-url';
 import registerComponent from '@fleetbase/ember-core/utils/register-component';
 import OrderProgressCardComponent from '../order-progress-card';
 import DisplayPlaceComponent from '../display-place';
@@ -38,7 +39,7 @@ export default class CustomerOrdersComponent extends Component {
     @tracked longitude;
     @tracked route;
     @tracked query;
-    @tracked tileSourceUrl = 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png';
+    @tracked tileSourceUrl = DEFAULT_LEAFLET_TILE_URL;
     @tracked scheduledAt;
     @tracked deliveryInstructions = {};
 

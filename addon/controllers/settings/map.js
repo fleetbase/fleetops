@@ -33,6 +33,8 @@ export default class SettingsMapController extends Controller {
      * @var {String}
      */
     @tracked mapProvider = 'leaflet';
+    @tracked leafletTileUrl = '';
+    @tracked leafletDarkTileUrl = '';
     @tracked googleMapsMapType = 'roadmap';
     @tracked showGoogleMapsTrafficLayer = false;
     @tracked showGoogleMapsTransitLayer = false;
@@ -62,6 +64,16 @@ export default class SettingsMapController extends Controller {
         return this.mapProvider === 'google';
     }
 
+    /**
+     * True when the user has selected Leaflet as the provider.
+     *
+     * @memberof SettingsMapController
+     * @return {Boolean}
+     */
+    get isLeafletSelected() {
+        return this.mapProvider === 'leaflet';
+    }
+
     // ─── Actions ───────────────────────────────────────────────────────────────
 
     /**
@@ -77,6 +89,8 @@ export default class SettingsMapController extends Controller {
     @task *saveSettings() {
         const settings = {
             mapProvider: this.mapProvider,
+            leafletTileUrl: (this.leafletTileUrl ?? '').trim(),
+            leafletDarkTileUrl: (this.leafletDarkTileUrl ?? '').trim(),
             googleMapsMapType: this.googleMapsMapType,
             showGoogleMapsTrafficLayer: this.showGoogleMapsTrafficLayer,
             showGoogleMapsTransitLayer: this.showGoogleMapsTransitLayer,
@@ -105,6 +119,8 @@ export default class SettingsMapController extends Controller {
             const response = yield this.mapSettings.load({ force: true });
 
             this.mapProvider = response?.mapProvider ?? 'leaflet';
+            this.leafletTileUrl = response?.leafletTileUrl ?? '';
+            this.leafletDarkTileUrl = response?.leafletDarkTileUrl ?? '';
             this.googleMapsMapType = response?.googleMapsMapType ?? 'roadmap';
             this.showGoogleMapsTrafficLayer = Boolean(response?.showGoogleMapsTrafficLayer);
             this.showGoogleMapsTransitLayer = Boolean(response?.showGoogleMapsTransitLayer);

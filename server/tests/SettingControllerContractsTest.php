@@ -408,3 +408,36 @@ test('setting controller handles map scheduling orchestrator and card field sett
             'settings' => ['standard' => ['tracking'], 'byConfig' => [], 'meta' => ['dense' => true]],
         ]);
 });
+
+test('setting controller sanitizes leaflet tile provider urls', function () {
+    $controller = new FleetOpsSettingControllerProbe();
+
+    $saved = fleetopsJsonPayload($controller->saveMapSettings(new Request([
+        'settings' => [
+            'leafletTileUrl'     => '  https://tile.openstreetmap.org/{z}/{x}/{y}.png  ',
+            'leafletDarkTileUrl' => 'javascript:alert(1)',
+        ],
+    ])));
+
+    expect($saved['leafletTileUrl'])->toBe('https://tile.openstreetmap.org/{z}/{x}/{y}.png')
+        ->and($saved['leafletDarkTileUrl'])->toBe('')
+        ->and($controller->configuredCompany['fleet-ops.map-settings'])->toMatchArray([
+            'leafletTileUrl'     => 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+            'leafletDarkTileUrl' => '',
+        ]);
+
+    $savedNonString = fleetopsJsonPayload($controller->saveMapSettings(new Request([
+        'settings' => [
+            'leafletTileUrl'     => ['not' => 'a-string'],
+            'leafletDarkTileUrl' => 'ftp://tiles.example.com/{z}/{x}/{y}.png',
+        ],
+    ])));
+
+    expect($savedNonString['leafletTileUrl'])->toBe('')
+        ->and($savedNonString['leafletDarkTileUrl'])->toBe('');
+
+    $defaults = fleetopsJsonPayload((new FleetOpsSettingControllerProbe())->getMapSettings());
+
+    expect($defaults['leafletTileUrl'])->toBe('')
+        ->and($defaults['leafletDarkTileUrl'])->toBe('');
+});

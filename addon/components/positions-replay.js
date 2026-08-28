@@ -15,6 +15,7 @@ export default class PositionsReplayComponent extends Component {
     @service positionPlayback;
     @service notifications;
     @service location;
+    @service mapSettings;
 
     /** Component ID */
     id = guidFor(this);
@@ -29,7 +30,9 @@ export default class PositionsReplayComponent extends Component {
     @tracked latitude = this.args.resource.latitude || this.location.getLatitude();
     @tracked longitude = this.args.resource.longitude || this.location.getLongitude();
     @tracked zoom = 14;
-    @tracked tileUrl = 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png';
+    get tileUrl() {
+        return this.mapSettings.getLeafletTileUrl('light');
+    }
 
     /** Computed properties - read state from service */
     get isReplaying() {

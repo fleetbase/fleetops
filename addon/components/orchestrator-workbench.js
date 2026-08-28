@@ -36,6 +36,7 @@ export default class OrchestratorWorkbenchComponent extends Component {
     @service modalsManager;
     @service location;
     @service mapManager;
+    @service mapSettings;
     @service routeEngine;
     @service('order-allocation') allocationService;
 
@@ -661,7 +662,7 @@ export default class OrchestratorWorkbenchComponent extends Component {
 
     get tileSourceUrl() {
         const isDark = document.documentElement.classList.contains('dark');
-        return isDark ? 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png' : 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png';
+        return this.mapSettings.getLeafletTileUrl(isDark ? 'dark' : 'light');
     }
 
     // ── Computed helpers ──────────────────────────────────────────────────────
