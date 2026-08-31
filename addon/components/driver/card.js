@@ -3,17 +3,6 @@ import { inject as service } from '@ember/service';
 import { get } from '@ember/object';
 import config from 'ember-get-config';
 
-const STATUS_TONES = {
-    available: 'text-green-500',
-    active: 'text-green-500',
-    on_duty: 'text-green-500',
-    busy: 'text-yellow-500',
-    assigned: 'text-yellow-500',
-    unavailable: 'text-gray-400',
-    offline: 'text-gray-400',
-    suspended: 'text-red-500',
-};
-
 export default class DriverCardComponent extends Component {
     @service driverActions;
 
@@ -31,10 +20,6 @@ export default class DriverCardComponent extends Component {
 
     get statusLabel() {
         return this.statusValue || '-';
-    }
-
-    get statusToneClass() {
-        return STATUS_TONES[this.statusValue] ?? STATUS_TONES[String(this.statusValue).toLowerCase()] ?? 'text-gray-400';
     }
 
     get assignedVehicleLabel() {

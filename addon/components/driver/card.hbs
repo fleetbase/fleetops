@@ -3,7 +3,10 @@
         <RegistryYield @registry="fleet-ops:component:driver:card:header:start" as |RegistryComponent|>
             <RegistryComponent @order={{@resource}} @resource={{@resource}} />
         </RegistryYield>
-        <div class="font-semibold w-full truncate">{{or @resource.name @resource.display_name}}</div>
+        <div class="flex items-center w-full min-w-0">
+            <div class="font-semibold flex-1 truncate" data-test-driver-name>{{or @resource.name @resource.display_name}}</div>
+            <FaIcon @icon="circle" @size="xs" class="ml-2 flex-none {{if @resource.online 'text-green-500' 'text-gray-400'}}" data-test-driver-online-indicator />
+        </div>
         <div class="text-gray-400 dark:text-gray-500 text-sm w-full truncate">{{n-a @resource.phone @resource.public_id}}</div>
         {{#if (has-block "header")}}
             {{yield to="header"}}
@@ -12,11 +15,8 @@
             <RegistryComponent @order={{@resource}} @resource={{@resource}} />
         </RegistryYield>
     </Card.header>
-    <Card.body class="{{@bodyClass}} flex justify-center">
-        <div class="relative">
-            <Image src={{avatar-url @resource.photo_url}} @fallbackSrc={{this.fallbackImage}} class="card-img-lg rounded-full" />
-            <FaIcon @icon="circle" class="absolute right-0 top-0 -mr-1 -mt-1 {{this.statusToneClass}}" />
-        </div>
+    <Card.body class="{{@bodyClass}} h-40 overflow-hidden">
+        <Image src={{avatar-url @resource.photo_url}} @fallbackSrc={{this.fallbackImage}} class="block w-full h-full object-cover rounded-none" data-test-driver-photo />
         {{#if (has-block "body")}}
             {{yield to="body"}}
         {{/if}}
@@ -26,9 +26,7 @@
             <RegistryComponent @order={{@resource}} @resource={{@resource}} />
         </RegistryYield>
         <div class="flex flex-row items-center justify-between w-full">
-            <span class="inline-flex items-center rounded-lg bg-gray-200 dark:bg-gray-800 px-1.5 py-0.5 text-[10px] {{this.statusToneClass}}">
-                {{this.statusLabel}}
-            </span>
+            <Badge @status={{or this.statusValue "default"}} @size="xs" data-test-driver-status-badge>{{this.statusLabel}}</Badge>
             <div class="flex flex-row items-center space-x-1">
                 <Button @icon="eye" @size="xs" @onClick={{fn this.driverActions.transition.view @resource}} />
                 <Button @icon="pencil" @size="xs" @onClick={{fn this.driverActions.transition.edit @resource}} />
