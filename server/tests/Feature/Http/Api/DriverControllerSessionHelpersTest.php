@@ -10,6 +10,7 @@ use Illuminate\Database\ConnectionResolver;
 use Illuminate\Database\Eloquent\Model as EloquentModel;
 use Illuminate\Database\SQLiteConnection;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Hash;
 
 /**
  * Covers the API DriverController protected session/persistence helpers
@@ -72,6 +73,35 @@ function fleetopsDriverSessionHelpersBoot(): SQLiteConnection
         }
     });
     Illuminate\Support\Facades\DB::clearResolvedInstance('db');
+
+    /*
+     * Only the hashing contract ships with this package, not an implementation,
+     * so the User password mutator has nothing to call. Bind PHP's own hashing
+     * behind the contract: the point of the assertions below is that a password
+     * is stored hashed and verifies, not which algorithm did it.
+     */
+    app()->instance('hash', new class implements Illuminate\Contracts\Hashing\Hasher {
+        public function info($hashedValue): array
+        {
+            return password_get_info($hashedValue);
+        }
+
+        public function make($value, array $options = []): string
+        {
+            return password_hash($value, PASSWORD_BCRYPT);
+        }
+
+        public function check($value, $hashedValue, array $options = []): bool
+        {
+            return is_string($hashedValue) && password_verify($value, $hashedValue);
+        }
+
+        public function needsRehash($hashedValue, array $options = []): bool
+        {
+            return false;
+        }
+    });
+    Hash::clearResolvedInstance('hash');
 
     $schema = $connection->getSchemaBuilder();
     app()->instance('db.schema', $schema);
@@ -163,6 +193,18 @@ test('user and driver persistence helpers write records', function () {
     expect($user)->toBeInstanceOf(User::class)
         ->and($connection->table('users')->where('name', 'New User')->count())->toBe(1);
 
+    /*
+     * `password` is guarded on User, so mass assignment drops it without a
+     * word. The create endpoint has always documented and validated one, so
+     * unless the helper sets it explicitly a driver created through the API
+     * can never sign in with the password chosen for them.
+     */
+    $withPassword = $probe->callHelper('createUser', ['name' => 'Password User', 'password' => 'seeded-password']);
+    $stored       = $connection->table('users')->where('name', 'Password User')->value('password');
+    expect(Hash::check('seeded-password', $withPassword->password))->toBeTrue()
+        ->and($stored)->not->toBeNull()
+        ->and($stored)->not->toBe('seeded-password');
+
     $driver = $probe->callHelper('createDriver', ['company_uuid' => '22222222-2222-4222-8222-222222222222', 'user_uuid' => 'user-1']);
     expect($driver)->toBeInstanceOf(Driver::class);
 
@@ -171,6 +213,25 @@ test('user and driver persistence helpers write records', function () {
     expect($device)->toBeInstanceOf(UserDevice::class)
         ->and($again)->toBeInstanceOf(UserDevice::class)
         ->and($connection->table('user_devices')->count())->toBe(1);
+});
+
+test('the driver user loader reads the password column the relation omits', function () {
+    $connection = fleetopsDriverSessionHelpersBoot();
+    $probe      = new FleetOpsDriverSessionHelpersProbe();
+
+    $connection->table('users')->where('uuid', 'user-1')->update(['password' => 'stored-hash']);
+
+    /*
+     * The `user` relation selects a named subset of columns and `password` is
+     * not among them, so a password comparison made through it fails for
+     * everyone regardless of what they typed. Anything checking a password has
+     * to load the record itself.
+     */
+    $driver = Driver::where('public_id', 'driver_one')->first();
+    expect($probe->callHelper('findDriverUserRecord', $driver)->password)->toBe('stored-hash');
+
+    $unlinked = new Driver();
+    expect($probe->callHelper('findDriverUserRecord', $unlinked))->toBeNull();
 });
 
 test('lookup utility and resource helpers resolve records and wrappers', function () {
