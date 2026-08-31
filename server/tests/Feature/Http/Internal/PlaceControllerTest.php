@@ -36,6 +36,18 @@ if (!Request::hasMacro('resolveFilesFromIds')) {
     Request::macro('resolveFilesFromIds', fn () => FleetOpsInternalPlaceEndpointsState::$files);
 }
 
+if (!Request::hasMacro('or')) {
+    Request::macro('or', function (array $params = [], $default = null) {
+        foreach ($params as $param) {
+            if ($this->has($param)) {
+                return $this->input($param);
+            }
+        }
+
+        return $default;
+    });
+}
+
 class FleetOpsInternalPlaceEndpointsState
 {
     public static array $files = [];
@@ -78,6 +90,14 @@ class FleetOpsInternalPlaceEndpointsPlaceFake extends Place
         $this->syncedValues[] = $payload;
 
         return $payload;
+    }
+}
+
+class FleetOpsInternalPlaceUpdateFake extends Place
+{
+    public function applyDirectivesToQuery(Request $request, $builder)
+    {
+        return $builder;
     }
 }
 
@@ -128,6 +148,7 @@ function fleetopsInternalPlaceEndpointsBoot(): SQLiteConnection
         $table->string('postal_code')->nullable();
         $table->string('location')->nullable();
         $table->timestamp('created_at')->nullable();
+        $table->timestamp('updated_at')->nullable();
         $table->timestamp('deleted_at')->nullable();
     });
     $schema->create('files', function ($table) {
@@ -249,4 +270,28 @@ test('sync custom field values helper delegates to the place model', function ()
     (new FleetOpsInternalPlaceEndpointsProbe())->callProtected('syncCustomFieldValues', [$place, ['priority' => 'high']]);
 
     expect($place->syncedValues)->toBe([['priority' => 'high']]);
+});
+
+test('place updates accept serialized display-only attributes', function () {
+    $connection = fleetopsInternalPlaceEndpointsBoot();
+    $connection->table('places')->insert([
+        'uuid'         => '77777777-7777-4777-8777-777777777777',
+        'public_id'    => 'place_display1',
+        'company_uuid' => 'company-1',
+        'name'         => 'Original place',
+        'street1'      => '205 Dostyk Avenue',
+    ]);
+
+    $place = (new FleetOpsInternalPlaceUpdateFake())->updateRecordFromRequest(Request::create('/int/v1/places/place_display1', 'PUT', [
+        'place' => [
+            'name'         => 'Updated place',
+            'street2'      => 'Entrance 2',
+            'avatar_value' => 'basic-building',
+            'eta'          => '12 minutes',
+        ],
+    ]), 'place_display1', options: ['return_object' => true]);
+
+    expect($place->name)->toBe('Updated place')
+        ->and($place->street2)->toBe('Entrance 2')
+        ->and($connection->table('places')->where('public_id', 'place_display1')->value('name'))->toBe('Updated place');
 });
