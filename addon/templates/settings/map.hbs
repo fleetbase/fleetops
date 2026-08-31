@@ -31,6 +31,16 @@
                         />
                     </InputGroup>
 
+                    {{#if this.isLeafletSelected}}
+                        <InputGroup @name={{t "settings.map.leaflet-tile-url"}} @helpText={{t "settings.map.leaflet-tile-url-help-text"}}>
+                            <Input @type="text" @value={{this.leafletTileUrl}} placeholder="https://tile.openstreetmap.org/{z}/{x}/{y}.png" class="w-full form-input" />
+                        </InputGroup>
+
+                        <InputGroup @name={{t "settings.map.leaflet-dark-tile-url"}} @helpText={{t "settings.map.leaflet-dark-tile-url-help-text"}}>
+                            <Input @type="text" @value={{this.leafletDarkTileUrl}} placeholder="https://tile.openstreetmap.org/{z}/{x}/{y}.png" class="w-full form-input" />
+                        </InputGroup>
+                    {{/if}}
+
                     {{#if this.isGoogleMapsSelected}}
                         <InputGroup @name={{t "settings.map.google-maps-map-type"}} @helpText={{t "settings.map.google-maps-map-type-help-text"}}>
                             <Select

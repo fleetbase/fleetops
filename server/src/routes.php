@@ -28,6 +28,13 @@ Route::prefix(config('fleetops.api.routing.prefix'))->namespace('Fleetbase\Fleet
                 $router->post('login-with-sms', 'DriverController@loginWithPhone');
                 $router->post('verify-code', 'DriverController@verifyCode');
                 $router->post('login', 'DriverController@login');
+                // Password management. Deliberately separate from the driver
+                // update: changing a password requires proving the old one, and
+                // resetting it requires a code, neither of which a general PUT
+                // can express.
+                $router->post('forgot-password', 'DriverController@forgotPassword');
+                $router->post('reset-password', 'DriverController@resetPassword');
+                $router->post('{id}/change-password', 'DriverController@changePassword');
                 $router->post('{id}/simulate', 'DriverController@simulate');
                 $router->match(['put', 'patch', 'post'], '{id}/track', 'DriverController@track');
                 $router->post('{id}/register-device', 'DriverController@registerDevice');
@@ -37,6 +44,8 @@ Route::prefix(config('fleetops.api.routing.prefix'))->namespace('Fleetbase\Fleet
                 $router->get('/', 'DriverController@query');
                 $router->get('{id}', 'DriverController@find');
                 $router->get('{id}/organizations', 'DriverController@listOrganizations');
+                // A driver's own routes for the day.
+                $router->get('{id}/manifests', 'ManifestController@forDriver');
                 $router->get('{id}/current-organization', 'DriverController@currentOrganization');
                 $router->put('{id}', 'DriverController@update');
                 $router->delete('{id}', 'DriverController@delete');
@@ -185,6 +194,18 @@ Route::prefix(config('fleetops.api.routing.prefix'))->namespace('Fleetbase\Fleet
                 $router->delete('{id}', 'OrderController@delete');
                 $router->get('{id}/editable-entity-fields', 'OrderController@getEditableEntityFields');
             });
+            // manifests — a driver's route. Read and run only: creating,
+            // cancelling and deleting a manifest is dispatch work and stays on
+            // the internal namespace.
+            $router->group(['prefix' => 'manifests'], function () use ($router) {
+                $router->get('{id}', 'ManifestController@show');
+                $router->post('{id}/optimize', 'ManifestController@optimize');
+            });
+            $router->group(['prefix' => 'manifest-stops'], function () use ($router) {
+                $router->patch('{id}', 'ManifestController@updateStop');
+                $router->post('{id}', 'ManifestController@updateStop');
+            });
+
             // entities routes
             $router->group(['prefix' => 'entities'], function () use ($router) {
                 $router->post('/', 'EntityController@create');

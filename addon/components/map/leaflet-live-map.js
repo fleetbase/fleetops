@@ -48,7 +48,6 @@ export default class MapLeafletLiveMapComponent extends Component {
     @tracked latitude = this.location.getLatitude();
     @tracked longitude = this.location.getLongitude();
     @tracked contextmenuItems = [];
-    @tracked tileUrl = 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png';
     @tracked theme = 'light';
     @tracked routes = [];
     @tracked drivers = [];
@@ -56,6 +55,10 @@ export default class MapLeafletLiveMapComponent extends Component {
     @tracked places = [];
     @tracked leafletPluginsReady = hasLeafletPluginsReady();
     _viewportReloadLocks = new Set();
+
+    get tileUrl() {
+        return this.mapSettings.getLeafletTileUrl(this.theme);
+    }
 
     constructor() {
         super(...arguments);
@@ -887,23 +890,5 @@ export default class MapLeafletLiveMapComponent extends Component {
 
         // Fallback to default Singapore longitude
         return 103.8864;
-    }
-
-    #changeTileSource(source) {
-        switch (source) {
-            case 'dark':
-                this.theme = 'dark';
-                this.tileUrl = 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png';
-                break;
-            case 'custom':
-                this.theme = 'custom';
-                this.tileUrl = source.startsWith('https://') ? source : 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png';
-                break;
-            case 'light':
-            default:
-                this.theme = 'light';
-                this.tileUrl = 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png';
-                break;
-        }
     }
 }

@@ -5,6 +5,7 @@ import { action, get } from '@ember/object';
 import { task } from 'ember-concurrency';
 import { colorForId, routeColorForStatus, routeStyleForStatus } from '../../../utils/route-colors';
 import { buildRoutePointMarkerPresentation, buildRoutePointsFromPayload, describeRoutePoint } from '../../../utils/route-visualization';
+import preparePlaceForSave from '../../../utils/prepare-place-for-save';
 
 const ORDER_ROUTE_PREVIEW_PADDING_BOTTOM_RIGHT = [420, 0];
 const ORDER_ROUTE_PREVIEW_MAX_ZOOM_TWO_POINTS = 13;
@@ -153,6 +154,7 @@ export default class OrderFormRouteComponent extends Component {
     @action setWaypointPlace(index, place) {
         if (!this.args.resource.payload.waypoints[index]) return;
 
+        place = preparePlaceForSave(this.store, place);
         this.args.resource.payload.waypoints[index].place = place;
         this.args.resource.payload.waypoints[index]?.setProperties({
             street1: place.street1,
@@ -186,6 +188,7 @@ export default class OrderFormRouteComponent extends Component {
     }
 
     @action setPayloadPlace(prop, place) {
+        place = preparePlaceForSave(this.store, place);
         this.args.resource.payload[prop] = place;
         this.previewRoute();
         this.requestServiceQuoteRefresh(`route.${prop}.changed`);

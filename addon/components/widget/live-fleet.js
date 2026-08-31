@@ -8,15 +8,11 @@ import { task } from 'ember-concurrency';
 import { renderCompleted, waitForInsertedAndSized } from '@fleetbase/ember-ui/utils/dom';
 import LeafletTrackingMarkerComponent from '../leaflet-tracking-marker';
 import ensureLeafletDrawEditNamespace from '../../utils/leaflet-draw-namespace-guard';
+import { DEFAULT_LEAFLET_TILE_ATTRIBUTION } from '../../utils/leaflet-tile-url';
 
 const DEFAULT_CENTER = [1.31, 103.85];
 const DEFAULT_ZOOM = 11;
-// Match the rest of fleetops' Leaflet maps (light Carto basemap), which keeps the
-// dashboard styling consistent with the operational live map. Falls back gracefully
-// in dark mode via the next-leaflet-container-map theming.
-const TILE_URL = 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png';
-const TILE_URL_DARK = 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png';
-const TILE_ATTRIBUTION = '&copy; OpenStreetMap contributors &copy; CARTO';
+const TILE_ATTRIBUTION = DEFAULT_LEAFLET_TILE_ATTRIBUTION;
 const RECONCILE_INTERVAL_MS = 5 * 60_000;
 
 /**
@@ -30,6 +26,7 @@ export default class WidgetLiveFleetComponent extends Component {
     @service fetch;
     @service socket;
     @service currentUser;
+    @service mapSettings;
 
     @tracked data = null;
     @tracked error = null;
@@ -38,7 +35,7 @@ export default class WidgetLiveFleetComponent extends Component {
 
     get tileUrl() {
         const isDark = typeof document !== 'undefined' && document.documentElement?.dataset?.theme === 'dark';
-        return isDark ? TILE_URL_DARK : TILE_URL;
+        return this.mapSettings.getLeafletTileUrl(isDark ? 'dark' : 'light');
     }
 
     socketChannel = null;
@@ -78,6 +75,9 @@ export default class WidgetLiveFleetComponent extends Component {
         this.#ensureTrackingMarkerRegistered();
         this.#patchLeafletDrawInitHook();
         this.#resetMapDeferred();
+        // Widgets can render before the fleetops engine boots, so make sure the
+        // company's map settings (custom tile provider URL) are loaded.
+        this.mapSettings.load();
         this.load.perform();
         this.subscribe();
         this.reconcileTimer = setInterval(() => this.load.perform(), RECONCILE_INTERVAL_MS);

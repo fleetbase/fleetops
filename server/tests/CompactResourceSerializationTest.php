@@ -1400,6 +1400,12 @@ test('order config resource projects public flow activities', function () {
                 'complete'    => false,
                 'pod_method'  => 'photo',
                 'require_pod' => true,
+                // The flow's shape now rides along so consumers can sequence
+                // it. An activity that declares none of it still publishes the
+                // keys, so the payload shape does not vary per activity.
+                'sequence'    => null,
+                'activities'  => [],
+                'logic'       => null,
             ],
         ],
     ]);
@@ -2753,13 +2759,13 @@ test('tracking number resource publishes the qr code content only in debug mode'
     // scanned code match on that uuid. Debug builds publish the value beside the image so
     // an automated client can follow the flow without decoding a PNG; production must not.
     $trackingNumber = fleetopsCompactResourceFixture([
-        'tracking_number' => 'TN-DEBUG',
-        'owner_uuid'      => 'owner-uuid-under-the-qr',
-        'owner_type'      => 'Fleetbase\\FleetOps\\Models\\Order',
-        'region'          => 'sg',
-        'qr_code'         => 'qr-data',
-        'barcode'         => 'barcode-data',
-        'last_status'     => 'created',
+        'tracking_number'  => 'TN-DEBUG',
+        'owner_uuid'       => 'owner-uuid-under-the-qr',
+        'owner_type'       => 'Fleetbase\\FleetOps\\Models\\Order',
+        'region'           => 'sg',
+        'qr_code'          => 'qr-data',
+        'barcode'          => 'barcode-data',
+        'last_status'      => 'created',
         'last_status_code' => 'CREATED',
     ]);
     $request = Request::create('/v1/tracking-numbers', 'GET');

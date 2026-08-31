@@ -1,7 +1,7 @@
 <Modal::Default @modalIsOpened={{@modalIsOpened}} @options={{@options}} @confirm={{@onConfirm}} @decline={{@onDecline}}>
     <div class="fleetbase-leaflet-map-container">
         <LeafletMap class="map-height-base" @lat={{@options.latitude}} @lng={{@options.longitude}} @zoom={{12}} as |layers|>
-            <layers.tile @url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png" />
+            <layers.tile @url={{leaflet-tile-url}} />
 
             <layers.marker @icon={{@options.icon}} @location={{point-to-coordinates @options.location}} @riseOnHover={{true}} as |marker|>
                 <marker.popup @maxWidth="500" @minWidth="180">

@@ -1,34 +1,23 @@
-> v0.6.60 ~ "Closes an authentication bypass, and clears a run of API 500s"
+> v0.6.61 ~ "A grid view for drivers, a sequenceable order flow, and two silent API no-ops closed"
 
 ---
 ## Highlights
-A security fix and a broad sweep of public API defects surfaced by running the official Postman collection against a live stack. Several endpoints answered `500` where a `404` or `422` belonged, and a few were unreachable entirely.
+Two API defects in this release were silent: both answered `200` and neither did what the caller asked. A vehicle odometer update was discarded, and a driver-scoped list came back unscoped. Alongside them, the order config flow now publishes enough of its shape to be sequenced, and Drivers Management gains a card layout.
 
 ---
-## Security
-- **Closed a verify-code authentication bypass in the driver flow.** Please upgrade.
-- The non-production verification-code bypass is now scoped to explicitly designated review accounts, so a bypass code alone is not enough — the identity has to be on the allowlist too.
+## Features
+- **Drivers Management has a card view.** A layout toggle switches the index between the table and a card grid, and the choice is remembered across visits.
+- **The order config flow publishes its graph.** `activities`, `sequence` and `logic` now ride along with each activity, so a consumer can order the flow and offer a next step instead of rendering an unordered set. Transitions are normalised to a list of codes regardless of which of the two stored shapes a flow was authored in.
 
 ---
 ## Bug Fixes
-- **Driver `register-device` was unreachable on both driver routes.** Laravel never injects a class-typed parameter that declares a default, so the injected request was always null.
-- **Geofence driver history asked for a UUID the API never issues.** It now resolves the driver by the public id callers actually hold.
-- **`/from-qr` returned a 500**, and the QR code's content is now published in debug mode so the flow can be exercised.
-- **Fuel reports could not be created without a location**, and could not be updated.
-- **A sensor could not be created at all** — `last_position` had no default.
-- **Customer signup with a place failed** — the Place location now defaults.
-- Unknown onboard organization answers `404` instead of `500`.
-- Duplicate part SKU and fuel transaction answer `422` instead of `500`.
-- Restored the vehicle maintenance schedule workflows.
+- **`PUT /v1/vehicles/{id}` silently discarded the odometer.** The field is fillable on the model but was missing from the controller's input projection, so a driver app recording mileage received a `200` and a correct-looking body while the reading was dropped. `odometer` and `odometer_unit` are now accepted and validated.
+- **Issue and fuel-report lists scoped by `driver_uuid` came back scoped by nothing.** The base filter silently ignores a query parameter it cannot match to a method, so the filter was dropped and the response was narrowed only by company — every driver's records, with no sign the request had been narrowed at all. `driver_uuid`, `driver_assigned` and `vehicle_uuid` are now recognised on both filters.
+- **Leaflet marker icons are served from the leaflet package** rather than resolving to a broken URL.
 
 ---
 ## Testing
-- Coverage restored to 100% across the QR, geofence, driver auth, customer request and navigator changes.
-
----
-## Continuous Integration
-- The server, Ember and Postman workflows now run on `dev-v*` release branches.
-- The contract run tests this branch's API code rather than the published package.
+- Coverage held at 100% across the vehicle input projection, both driver-scoped filters, and the order config flow projection.
 
 ---
 ## Need help?

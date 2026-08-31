@@ -12,6 +12,7 @@ export default class ManagementDriversIndexController extends Controller {
     @service notifications;
     @service tableContext;
     @service intl;
+    @service appCache;
 
     /** query params */
     @tracked queryParams = [
@@ -45,7 +46,7 @@ export default class ManagementDriversIndexController extends Controller {
     @tracked status;
     @tracked created_at;
     @tracked updated_at;
-    @tracked layout = 'table';
+    @tracked layout = this.appCache.get('fleetops:drivers:layout', 'table');
     @tracked table;
 
     hasAssignedVehicle(driver) {
@@ -71,6 +72,25 @@ export default class ManagementDriversIndexController extends Controller {
     /** action buttons */
     get actionButtons() {
         return [
+            {
+                component: 'dropdown-button',
+                icon: 'display',
+                size: 'xs',
+                items: [
+                    {
+                        label: this.intl.t('common.table-view'),
+                        icon: 'table-list',
+                        onClick: () => this.changeLayout('table'),
+                    },
+                    {
+                        label: this.intl.t('common.grid-view'),
+                        icon: 'grip',
+                        onClick: () => this.changeLayout('grid'),
+                    },
+                ],
+                renderInPlace: true,
+                helpText: 'Change the layout',
+            },
             {
                 icon: 'refresh',
                 onClick: this.driverActions.refresh,
@@ -377,6 +397,7 @@ export default class ManagementDriversIndexController extends Controller {
 
     @action changeLayout(layout) {
         this.layout = layout;
+        this.appCache.set('fleetops:drivers:layout', layout);
     }
 
     @action createIssue(driver) {

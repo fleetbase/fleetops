@@ -166,8 +166,14 @@ class DriverController extends Controller
         // get request input
         $input = $request->except(['name', 'password', 'email', 'phone', 'location', 'altitude', 'heading', 'speed', 'meta']);
 
-        // get user details for driver
-        $userDetails = $request->only(['name', 'password', 'email', 'phone']);
+        /*
+         * Deliberately no `password` here. Setting one through a general update
+         * meant anyone holding a driver's token — or an unlocked handset —
+         * could take the account without proving they knew the existing
+         * password. Changing a password is its own operation with its own
+         * proof: see changePassword(), forgotPassword() and resetPassword().
+         */
+        $userDetails = $request->only(['name', 'email', 'phone']);
 
         // update driver user details
         $driverUser = $driver->getUser();
@@ -935,7 +941,24 @@ class DriverController extends Controller
 
     protected function createUser(array $userDetails): User
     {
-        return User::create($userDetails);
+        /*
+         * `password` is guarded on User, so mass assignment drops it without a
+         * word. The create endpoint has always accepted and validated one, so a
+         * driver created through the API could never sign in with the password
+         * their operator chose for them. Set it after the fact, where the
+         * model's mutator hashes it.
+         */
+        $password = $userDetails['password'] ?? null;
+        unset($userDetails['password']);
+
+        $user = User::create($userDetails);
+
+        if (is_string($password) && strlen($password)) {
+            $user->password = $password;
+            $user->save();
+        }
+
+        return $user;
     }
 
     protected function getUuid(array|string $table, array $where, array $options = []): mixed
@@ -1176,5 +1199,199 @@ class DriverController extends Controller
                 }
             }
         }
+    }
+
+    /**
+     * Change the authenticated driver's password, proving the current one.
+     *
+     * A password change is an authorisation decision, not an attribute update.
+     * Requiring the existing password is what stops a borrowed handset or a
+     * leaked token from becoming a permanent account takeover, and re-issuing
+     * the caller's token afterwards is what stops every *other* session from
+     * outliving the change.
+     */
+    public function changePassword(Request $request, string $id)
+    {
+        $current  = $request->input('current_password');
+        $password = $request->input('password');
+
+        if (!$current || !$password) {
+            return response()->apiError('current_password and password are required.', 400);
+        }
+
+        if (strlen($password) < 8) {
+            return response()->apiError('Password must be at least 8 characters.', 400);
+        }
+
+        if ($request->filled('password_confirmation') && $request->input('password_confirmation') !== $password) {
+            return response()->apiError('Password confirmation does not match.', 422);
+        }
+
+        try {
+            $driver = $this->findDriver($id, ['user']);
+        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $exception) {
+            return response()->apiError('Driver resource not found.', 404);
+        }
+
+        $user = static::findDriverUserRecord($driver);
+        if (!$user) {
+            return response()->apiError('Driver has no user account.', 422);
+        }
+
+        if (!static::passwordMatches($user, $current)) {
+            // Same wording whether the password was wrong or the account is odd
+            // — a change endpoint should not become an oracle.
+            return response()->apiError('The current password is incorrect.', 422);
+        }
+
+        $user->password = $password;
+        $user->save();
+
+        /*
+         * Every other session dies with the old password. The caller keeps
+         * working by being handed a fresh token in the same response, so a
+         * driver who changes their password mid-shift is not signed out of the
+         * device in their hand.
+         */
+        $user->tokens()->delete();
+        $token = $user->createToken($request->input('device_name', 'navigator'));
+
+        return response()->json([
+            'status' => 'ok',
+            'token'  => $token->plainTextToken,
+        ]);
+    }
+
+    /**
+     * Send a password reset code to a driver who cannot sign in.
+     *
+     * Answers identically whether or not the identity exists: a reset endpoint
+     * that 404s on an unknown phone number is a way to enumerate a company's
+     * drivers.
+     */
+    public function forgotPassword(Request $request)
+    {
+        $identity = $request->input('identity');
+        if (!$identity) {
+            return response()->apiError('Identity is required.', 400);
+        }
+
+        $user = static::findDriverUserByIdentity($identity);
+        if (!$user) {
+            return response()->json(['status' => 'ok']);
+        }
+
+        try {
+            static::sendResetCode($user, $identity);
+        } catch (\Throwable $e) {
+            return response()->apiError(static::debugEnabled() ? $e->getMessage() : 'Unable to send reset code.');
+        }
+
+        return response()->json(['status' => 'ok']);
+    }
+
+    /**
+     * Set a new password using a code sent by forgotPassword().
+     */
+    public function resetPassword(Request $request)
+    {
+        $identity = $request->input('identity');
+        $code     = $request->input('code');
+        $password = $request->input('password');
+
+        if (!$identity || !$code || !$password) {
+            return response()->apiError('identity, code, and password are required.', 400);
+        }
+
+        if (strlen($password) < 8) {
+            return response()->apiError('Password must be at least 8 characters.', 400);
+        }
+
+        $user = static::findDriverUserByIdentity($identity);
+        if (!$user) {
+            return response()->apiError('Invalid or expired reset code.', 422);
+        }
+
+        $verification = static::findResetCode($user, $code);
+
+        if (!$verification) {
+            // One message for a wrong code, an expired code and an unknown
+            // identity alike.
+            return response()->apiError('Invalid or expired reset code.', 422);
+        }
+
+        $user->password = $password;
+        $user->save();
+
+        $verification->delete();
+        $user->tokens()->delete();
+
+        return response()->json(['status' => 'ok']);
+    }
+
+    /** Whether the application is in debug mode, so an error may be echoed. */
+    protected static function debugEnabled(): bool
+    {
+        return app()->hasDebugModeEnabled();
+    }
+
+    /**
+     * Load a driver's user account with every column.
+     *
+     * The `user` relation selects a named subset of columns, and `password` is
+     * not among them — reading it through the relation yields an empty string,
+     * so a password comparison would fail for everyone regardless of what they
+     * typed. Anything checking a password has to load the record itself.
+     */
+    protected static function findDriverUserRecord(Driver $driver): ?User
+    {
+        if (!$driver->user_uuid) {
+            return null;
+        }
+
+        return User::where('uuid', $driver->user_uuid)->first();
+    }
+
+    /** Whether a plaintext password matches the stored hash. */
+    protected static function passwordMatches(User $user, string $plain): bool
+    {
+        return Hash::check($plain, $user->password);
+    }
+
+    /** The unexpired reset code for this user, if the one supplied matches. */
+    protected static function findResetCode(User $user, string $code)
+    {
+        return VerificationCode::where([
+            'subject_uuid' => $user->uuid,
+            'code'         => $code,
+            'for'          => 'driver_password_reset',
+        ])->where('expires_at', '>', now())->first();
+    }
+
+    /** Sends the reset code by whichever channel the identity names. */
+    protected static function sendResetCode(User $user, string $identity): void
+    {
+        // if/else rather than an early return: a `return` sitting after a call
+        // that can throw is a line no test can reach.
+        if (Utils::isEmail($identity)) {
+            VerificationCode::generateEmailVerificationFor($user, 'driver_password_reset', [
+                'subject'         => config('app.name') . ' password reset',
+                'messageCallback' => fn ($v) => 'Your ' . config('app.name') . ' password reset code is ' . $v->code,
+            ]);
+        } else {
+            VerificationCode::generateSmsVerificationFor($user, 'driver_password_reset', [
+                'messageCallback' => fn ($v) => 'Your ' . config('app.name') . ' password reset code is ' . $v->code,
+            ]);
+        }
+    }
+
+    /** Resolve a driver's user account from an email address or a phone number. */
+    protected static function findDriverUserByIdentity(string $identity): ?User
+    {
+        $isEmail = Utils::isEmail($identity);
+        $column  = $isEmail ? 'email' : 'phone';
+        $value   = $isEmail ? $identity : static::phone($identity);
+
+        return User::whereHas('driver')->where($column, $value)->first();
     }
 }

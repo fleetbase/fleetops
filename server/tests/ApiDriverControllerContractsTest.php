@@ -601,3 +601,36 @@ test('api driver controller reports missing driver branches', function () {
             'status'   => 404,
         ]);
 });
+
+test('api driver controller refuses to set a password through a general update', function () {
+    /*
+     * Regression for a takeover path: `update()` passed `password` straight
+     * through to the user, so anyone holding a driver's token — or an unlocked
+     * handset — could set a new one without proving they knew the old one, and
+     * the account was theirs. A password change is an authorisation decision
+     * and now has its own endpoint that demands the current password.
+     */
+    $user = new FleetOpsApiDriverUserFake();
+    $user->setRawAttributes(['uuid' => 'user-uuid'], true);
+    $driver = new FleetOpsApiDriverFake();
+    $driver->setRawAttributes([
+        'uuid'      => 'driver-uuid',
+        'public_id' => 'driver_public',
+        'user_uuid' => 'user-uuid',
+    ], true);
+    $driver->userForTest = $user;
+    $driver->setRelation('user', $user);
+
+    $controller                     = new FleetOpsApiDriverControllerProbe();
+    $controller->driver             = $driver;
+    $controller->sessionCompanyUuid = 'session-company-uuid';
+
+    $controller->update('driver_public', new UpdateDriverRequest([
+        'name'     => 'Driver Updated',
+        'password' => 'attacker-chosen-password',
+    ]));
+
+    expect($user->updates)->not->toBeEmpty()
+        ->and($user->updates[0])->not->toHaveKey('password')
+        ->and($user->updates[0])->toHaveKey('name');
+});
