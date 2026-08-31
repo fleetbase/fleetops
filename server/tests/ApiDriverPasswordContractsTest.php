@@ -151,6 +151,11 @@ class FleetOpsPasswordControllerProbe extends DriverController
         return static::$identityUser;
     }
 
+    protected static function findDriverUserRecord(Driver $driver): ?User
+    {
+        return $driver->getUser();
+    }
+
     protected static function findResetCode(User $user, string $code)
     {
         return static::$resetCode;

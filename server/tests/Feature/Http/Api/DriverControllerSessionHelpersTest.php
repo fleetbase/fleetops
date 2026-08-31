@@ -215,6 +215,25 @@ test('user and driver persistence helpers write records', function () {
         ->and($connection->table('user_devices')->count())->toBe(1);
 });
 
+test('the driver user loader reads the password column the relation omits', function () {
+    $connection = fleetopsDriverSessionHelpersBoot();
+    $probe      = new FleetOpsDriverSessionHelpersProbe();
+
+    $connection->table('users')->where('uuid', 'user-1')->update(['password' => 'stored-hash']);
+
+    /*
+     * The `user` relation selects a named subset of columns and `password` is
+     * not among them, so a password comparison made through it fails for
+     * everyone regardless of what they typed. Anything checking a password has
+     * to load the record itself.
+     */
+    $driver = Driver::where('public_id', 'driver_one')->first();
+    expect($probe->callHelper('findDriverUserRecord', $driver)->password)->toBe('stored-hash');
+
+    $unlinked = new Driver();
+    expect($probe->callHelper('findDriverUserRecord', $unlinked))->toBeNull();
+});
+
 test('lookup utility and resource helpers resolve records and wrappers', function () {
     fleetopsDriverSessionHelpersBoot();
     $probe = new FleetOpsDriverSessionHelpersProbe();

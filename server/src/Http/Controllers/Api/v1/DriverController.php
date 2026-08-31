@@ -1233,7 +1233,7 @@ class DriverController extends Controller
             return response()->apiError('Driver resource not found.', 404);
         }
 
-        $user = $driver->getUser();
+        $user = static::findDriverUserRecord($driver);
         if (!$user) {
             return response()->apiError('Driver has no user account.', 422);
         }
@@ -1333,6 +1333,23 @@ class DriverController extends Controller
     protected static function debugEnabled(): bool
     {
         return app()->hasDebugModeEnabled();
+    }
+
+    /**
+     * Load a driver's user account with every column.
+     *
+     * The `user` relation selects a named subset of columns, and `password` is
+     * not among them — reading it through the relation yields an empty string,
+     * so a password comparison would fail for everyone regardless of what they
+     * typed. Anything checking a password has to load the record itself.
+     */
+    protected static function findDriverUserRecord(Driver $driver): ?User
+    {
+        if (!$driver->user_uuid) {
+            return null;
+        }
+
+        return User::where('uuid', $driver->user_uuid)->first();
     }
 
     /** Whether a plaintext password matches the stored hash. */
