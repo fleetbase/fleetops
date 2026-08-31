@@ -941,7 +941,24 @@ class DriverController extends Controller
 
     protected function createUser(array $userDetails): User
     {
-        return User::create($userDetails);
+        /*
+         * `password` is guarded on User, so mass assignment drops it without a
+         * word. The create endpoint has always accepted and validated one, so a
+         * driver created through the API could never sign in with the password
+         * their operator chose for them. Set it after the fact, where the
+         * model's mutator hashes it.
+         */
+        $password = $userDetails['password'] ?? null;
+        unset($userDetails['password']);
+
+        $user = User::create($userDetails);
+
+        if (is_string($password) && strlen($password)) {
+            $user->password = $password;
+            $user->save();
+        }
+
+        return $user;
     }
 
     protected function getUuid(array|string $table, array $where, array $options = []): mixed
