@@ -1,5 +1,6 @@
 import { setupApplicationTest as upstreamSetupApplicationTest, setupRenderingTest as upstreamSetupRenderingTest, setupTest as upstreamSetupTest } from 'ember-qunit';
-import { setupIntl } from 'ember-intl/test-support';
+import { setupIntl, addTranslations } from 'ember-intl/test-support';
+import hostTranslations from './host-translations';
 
 // This file exists to provide wrappers around ember-qunit's
 // test setup functions. This way, you can easily extend the setup that is
@@ -33,6 +34,12 @@ function setupRenderingTest(hooks, options) {
     // lands in the same computation that already consumed the tag and Ember asserts
     // "You attempted to update `_locale` ... already used previously in the same computation".
     setupIntl(hooks, 'en-us');
+
+    // Keys the addon renders but the host console defines (this package's translations/ only
+    // carries `fleet-ops.*` and the shared menu/resource keys). Test-only; nothing ships.
+    hooks.beforeEach(function () {
+        addTranslations('en-us', hostTranslations);
+    });
 }
 
 function setupTest(hooks, options) {
