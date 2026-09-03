@@ -133,6 +133,8 @@ Route::prefix(config('fleetops.api.routing.prefix'))->namespace('Fleetbase\Fleet
                 $router->get('{id}', 'EquipmentController@find');
                 $router->put('{id}', 'EquipmentController@update');
                 $router->delete('{id}', 'EquipmentController@delete');
+                $router->post('{id}/attach', 'EquipmentController@attach');
+                $router->post('{id}/detach', 'EquipmentController@detach');
             });
             // parts routes
             $router->group(['prefix' => 'parts'], function () use ($router) {
@@ -297,6 +299,19 @@ Route::prefix(config('fleetops.api.routing.prefix'))->namespace('Fleetbase\Fleet
                 $router->put('{id}', 'VehicleController@update');
                 $router->delete('{id}', 'VehicleController@delete');
                 $router->match(['put', 'patch', 'post'], '{id}/track', 'VehicleController@track');
+                $router->get('{id}/trailers', 'TrailerController@vehicleTrailers');
+            });
+            // trailer routes
+            $router->group(['prefix' => 'trailers'], function () use ($router) {
+                $router->post('/', 'TrailerController@create');
+                $router->get('/', 'TrailerController@query');
+                $router->get('{id}', 'TrailerController@find');
+                $router->put('{id}', 'TrailerController@update');
+                $router->delete('{id}', 'TrailerController@delete');
+                $router->match(['put', 'patch', 'post'], '{id}/track', 'TrailerController@track');
+                $router->post('{id}/attach', 'TrailerController@attach');
+                $router->post('{id}/detach', 'TrailerController@detach');
+                $router->get('{id}/connections', 'TrailerController@connections');
             });
             // fleets routes
             $router->group(['prefix' => 'fleets'], function () use ($router) {
@@ -559,6 +574,16 @@ Route::prefix(config('fleetops.api.routing.prefix'))->namespace('Fleetbase\Fleet
                                 $router->post('import', $controller('import'));
                             }
                         );
+                        $router->fleetbaseRoutes('trailers', function ($router, $controller) {
+                            $router->post('{id}/attach', $controller('attach'));
+                            $router->post('{id}/detach', $controller('detach'));
+                            $router->post('{id}/attach-device', $controller('attachDevice'));
+                            $router->post('{id}/detach-device', $controller('detachDevice'));
+                            $router->post('{id}/attach-equipment', $controller('attachEquipment'));
+                            $router->post('{id}/detach-equipment', $controller('detachEquipment'));
+                            $router->match(['get', 'post'], 'export', $controller('export'));
+                            $router->post('import', $controller('import'));
+                        });
                         $router->fleetbaseRoutes('vehicle-devices');
                         $router->fleetbaseRoutes(
                             'vendors',

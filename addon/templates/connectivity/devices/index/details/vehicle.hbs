@@ -1,20 +1,20 @@
 <div class="flex flex-col gap-3 p-3">
     <div class="flex flex-col items-start justify-between gap-3">
         <div class="min-w-0">
-            <h2 class="text-base font-bold text-gray-900 dark:text-gray-100">Vehicle Attachment</h2>
-            <p class="mt-0.5 text-xs text-gray-500 dark:text-gray-300">Fleet context for telemetry from this device.</p>
+            <h2 class="text-base font-bold text-gray-900 dark:text-gray-100">{{t "device.attachment.title"}}</h2>
+            <p class="mt-0.5 text-xs text-gray-500 dark:text-gray-300">{{t "device.attachment.description"}}</p>
         </div>
 
         {{#if this.hasVehicle}}
             <div class="flex flex-nowrap items-center gap-2 whitespace-nowrap">
                 {{#if this.canOpenVehicle}}
-                    <Button @icon="eye" @text="Open Vehicle" @size="xs" @onClick={{this.openVehicle}} />
+                    <Button @icon="eye" @text={{t "device.attachment.open"}} @size="xs" @onClick={{this.openVehicle}} />
                 {{/if}}
                 {{#if this.canLocateVehicle}}
-                    <Button @icon="location-dot" @text="Locate" @size="xs" @onClick={{this.locateVehicle}} />
+                    <Button @icon="location-dot" @text={{t "device.attachment.locate"}} @size="xs" @onClick={{this.locateVehicle}} />
                 {{/if}}
-                <Button @icon="shuffle" @text="Change Vehicle" @size="xs" @onClick={{this.attachToVehicle}} />
-                <Button @icon="unlink" @text="Detach" @size="xs" @type="danger" @onClick={{this.detachFromVehicle}} />
+                <Button @icon="shuffle" @text={{t "device.attachment.change"}} @size="xs" @onClick={{this.attachToVehicle}} />
+                <Button @icon="unlink" @text={{t "device.attachment.detach"}} @size="xs" @type="danger" @onClick={{this.detachFromVehicle}} />
             </div>
         {{/if}}
     </div>
@@ -62,11 +62,11 @@
                             <div class="truncate text-gray-800 dark:text-gray-100">{{n-a this.yearMakeModel}}</div>
                         </div>
                         <div>
-                            <div class="font-semibold uppercase text-gray-400 dark:text-gray-500">Attached Device</div>
+                            <div class="font-semibold uppercase text-gray-400 dark:text-gray-500">{{t "device.attachment.attached-device"}}</div>
                             <div class="truncate text-gray-800 dark:text-gray-100">{{n-a this.device.displayName}}</div>
                         </div>
                         <div>
-                            <div class="font-semibold uppercase text-gray-400 dark:text-gray-500">Device Last Seen</div>
+                            <div class="font-semibold uppercase text-gray-400 dark:text-gray-500">{{t "device.attachment.last-seen"}}</div>
                             <div class="truncate text-gray-800 dark:text-gray-100">{{n-a (format-date-fns this.device.last_online_at "dd MMM yyyy, HH:mm")}}</div>
                         </div>
                     </div>
@@ -77,11 +77,11 @@
         <section class="overflow-hidden rounded-md border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-800">
             <div class="flex items-start justify-between gap-3 border-b border-gray-200 px-3 py-2 dark:border-gray-700">
                 <div class="min-w-0">
-                    <h3 class="text-sm font-bold text-gray-900 dark:text-gray-100">Latest Positions</h3>
-                    <p class="mt-0.5 text-xs text-gray-500 dark:text-gray-300">Recent vehicle coordinates reported through this device attachment.</p>
+                    <h3 class="text-sm font-bold text-gray-900 dark:text-gray-100">{{t "device.attachment.latest-positions"}}</h3>
+                    <p class="mt-0.5 text-xs text-gray-500 dark:text-gray-300">{{t "device.attachment.positions-description"}}</p>
                 </div>
                 {{#if this.canOpenVehicle}}
-                    <Button @icon="route" @text="Full History" @size="xs" @onClick={{this.openVehiclePositions}} />
+                    <Button @icon="route" @text={{t "device.attachment.full-history"}} @size="xs" @onClick={{this.openVehiclePositions}} />
                 {{/if}}
             </div>
 
@@ -125,9 +125,9 @@
                     <Telematic::TabEmptyState
                         @tone="info"
                         @icon="location-dot"
-                        @title="No recent positions"
-                        @message="This attached vehicle does not have recent position history available yet."
-                        @primaryText="Locate Vehicle"
+                        @title={{t "device.attachment.no-positions"}}
+                        @message={{t "device.attachment.no-positions-message"}}
+                        @primaryText={{t "device.attachment.locate"}}
                         @primaryIcon="location-dot"
                         @primaryAction={{this.locateVehicle}}
                     />
@@ -138,9 +138,9 @@
         <Telematic::TabEmptyState
             @tone="warning"
             @icon="link-slash"
-            @title="No vehicle attached"
-            @message="Attach this device to a vehicle so telemetry has fleet context."
-            @primaryText="Attach Vehicle"
+            @title={{t "device.attachment.none-title"}}
+            @message={{t "device.attachment.none-message"}}
+            @primaryText={{t "device.actions.attach-to-asset"}}
             @primaryIcon="link"
             @primaryAction={{this.attachToVehicle}}
         />

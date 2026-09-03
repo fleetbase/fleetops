@@ -64,12 +64,16 @@ export default function buildDeviceTableColumns(controller, options = {}) {
         filterComponent: 'filter/string',
     };
     const vehicleColumn = {
-        label: 'Vehicle',
+        label: controller.intl?.t('device.attachment.asset') ?? 'Attached asset',
         valuePath: 'attached_to_name',
         cellComponent: 'cell/vehicle-identity',
         action: async (vehicle) => {
             const resolvedVehicle = vehicle?.loadResource ? ((await vehicle.loadResource()) ?? vehicle) : vehicle;
 
+            const type = `${vehicle?.attachable_type ?? resolvedVehicle?.constructor?.modelName ?? ''}`.toLowerCase();
+            if (type.includes('trailer') && resolvedVehicle?.id && controller.trailerActions?.transition?.view) {
+                return controller.trailerActions.transition.view(resolvedVehicle);
+            }
             if (resolvedVehicle?.id && controller.vehicleActions?.panel?.view) {
                 return controller.vehicleActions.panel.view(resolvedVehicle);
             }
@@ -81,7 +85,7 @@ export default function buildDeviceTableColumns(controller, options = {}) {
         resourcePath: (device) => {
             const attachableType = `${device?.attachable_type ?? ''}`.toLowerCase();
 
-            if (!device?.attachable_uuid || (attachableType && !attachableType.includes('vehicle'))) {
+            if (!device?.attachable_uuid || (attachableType && !attachableType.includes('vehicle') && !attachableType.includes('trailer'))) {
                 return null;
             }
 
@@ -238,12 +242,12 @@ export default function buildDeviceTableColumns(controller, options = {}) {
                     permission: 'fleet-ops update device',
                 },
                 {
-                    label: 'Attach or change vehicle',
+                    label: controller.intl.t('device.attachment.attach-or-change'),
                     fn: controller.openAttachDeviceModal ?? controller.deviceActions.attachToVehicle,
                     permission: 'fleet-ops update device',
                 },
                 {
-                    label: controller.intl.t('device.actions.detach-from-vehicle'),
+                    label: controller.intl.t('device.attachment.detach'),
                     fn: controller.deviceActions.detachFromVehicle,
                     permission: 'fleet-ops update device',
                     isVisible: controller.hasAttachedVehicle,
@@ -253,13 +257,13 @@ export default function buildDeviceTableColumns(controller, options = {}) {
                     isVisible: controller.hasAttachedVehicle,
                 },
                 {
-                    label: 'View attached vehicle',
+                    label: controller.intl.t('device.attachment.view-attached'),
                     fn: controller.viewAttachedVehicle,
                     permission: 'fleet-ops view vehicle',
                     isVisible: controller.hasAttachedVehicle,
                 },
                 {
-                    label: 'Locate attached vehicle on map',
+                    label: controller.intl.t('device.attachment.locate-attached'),
                     fn: controller.locateAttachedVehicle,
                     permission: 'fleet-ops view vehicle',
                     isVisible: controller.hasAttachedVehicle,

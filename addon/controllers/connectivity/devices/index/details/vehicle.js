@@ -9,6 +9,7 @@ export default class ConnectivityDevicesIndexDetailsVehicleController extends Co
     @service intl;
     @service mapManager;
     @service vehicleActions;
+    @service trailerActions;
 
     @tracked queryParams = [];
 
@@ -18,6 +19,10 @@ export default class ConnectivityDevicesIndexDetailsVehicleController extends Co
 
     get vehicle() {
         return this.device?.attachable;
+    }
+
+    get isTrailer() {
+        return `${this.device?.attachable_type ?? ''}`.toLowerCase().includes('trailer');
     }
 
     get positions() {
@@ -86,12 +91,18 @@ export default class ConnectivityDevicesIndexDetailsVehicleController extends Co
 
     @action openVehicle() {
         if (this.vehicle?.id) {
+            if (this.isTrailer) {
+                return this.trailerActions.transition.view(this.vehicle);
+            }
             return this.hostRouter.transitionTo('console.fleet-ops.management.vehicles.index.details', this.vehicle.public_id);
         }
     }
 
     @action openVehiclePositions() {
         if (this.vehicle?.id) {
+            if (this.isTrailer) {
+                return this.hostRouter.transitionTo('console.fleet-ops.management.trailers.index.details.positions', this.vehicle.public_id);
+            }
             return this.hostRouter.transitionTo('console.fleet-ops.management.vehicles.index.details.positions', this.vehicle.public_id);
         }
     }

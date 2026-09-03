@@ -62,6 +62,10 @@ class FleetOps
             'actions' => ['assign-driver-for', 'export', 'import'],
         ],
         [
+            'name'    => 'trailer',
+            'actions' => ['export', 'import', 'attach-vehicle-for', 'detach-vehicle-for', 'attach-device-for', 'detach-device-for', 'attach-equipment-for', 'detach-equipment-for'],
+        ],
+        [
             'name'    => 'fleet',
             'actions' => ['assign-driver-for', 'assign-vehicle-for', 'remove-driver-for', 'remove-vehicle-for', 'export', 'import'],
         ],
@@ -217,6 +221,7 @@ class FleetOps
                 '* fleet',
                 '* driver',
                 '* vehicle',
+                '* trailer',
             ],
         ],
         [
@@ -294,6 +299,7 @@ class FleetOps
                 '* work-order',
                 '* equipment',
                 '* part',
+                '* trailer',
                 'see vehicle',
                 'list vehicle',
                 'view vehicle',
@@ -318,6 +324,7 @@ class FleetOps
                 '* work-order',
                 '* equipment',
                 '* part',
+                '* trailer',
             ],
         ],
         [

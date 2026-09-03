@@ -3,6 +3,7 @@
 use Fleetbase\FleetOps\Models\Driver;
 use Fleetbase\FleetOps\Models\Equipment;
 use Fleetbase\FleetOps\Models\TrackingNumber;
+use Fleetbase\FleetOps\Models\Trailer;
 use Fleetbase\FleetOps\Models\Vehicle;
 use Fleetbase\FleetOps\Models\VehicleDevice;
 use Illuminate\Database\ConnectionResolver;
@@ -114,16 +115,19 @@ test('vehicle devices fall back to a direct vehicle lookup by uuid', function ()
         ->and($seen)->toBe(['vehicle_lookupone']);
 });
 
-test('unrecognised equipable types are stored verbatim', function () {
+test('known equipable aliases are normalized and unrecognised types are stored verbatim', function () {
     $equipment = new Equipment();
 
     // Known short names map onto their fully qualified model class
     $equipment->equipable_type = 'vehicle';
     expect($equipment->getAttributes()['equipable_type'])->toContain('Vehicle');
 
-    // Anything else is kept as given rather than silently dropped
     $equipment->equipable_type = 'trailer';
-    expect($equipment->getAttributes()['equipable_type'])->toBe('trailer');
+    expect($equipment->getAttributes()['equipable_type'])->toBe(Trailer::class);
+
+    // Anything else is kept as given rather than silently dropped
+    $equipment->equipable_type = 'cargo-bay';
+    expect($equipment->getAttributes()['equipable_type'])->toBe('cargo-bay');
 });
 
 test('tracking number generation redraws when the first number is already taken', function () {

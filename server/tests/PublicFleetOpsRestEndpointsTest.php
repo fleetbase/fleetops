@@ -5,18 +5,20 @@ use Fleetbase\FleetOps\Http\Controllers\Api\v1\EquipmentController;
 use Fleetbase\FleetOps\Http\Controllers\Api\v1\FuelTransactionController;
 use Fleetbase\FleetOps\Http\Controllers\Api\v1\PartController;
 use Fleetbase\FleetOps\Http\Controllers\Api\v1\SensorController;
+use Fleetbase\FleetOps\Http\Controllers\Api\v1\TrailerController;
 use Fleetbase\FleetOps\Http\Controllers\Api\v1\WorkOrderController;
 use Fleetbase\FleetOps\Http\Resources\v1\Device;
 use Fleetbase\FleetOps\Http\Resources\v1\Equipment;
 use Fleetbase\FleetOps\Http\Resources\v1\FuelTransaction;
 use Fleetbase\FleetOps\Http\Resources\v1\Part;
 use Fleetbase\FleetOps\Http\Resources\v1\Sensor;
+use Fleetbase\FleetOps\Http\Resources\v1\Trailer;
 use Fleetbase\FleetOps\Http\Resources\v1\WorkOrder;
 
 test('new first-class fleetops rest routes are registered in the consumable v1 namespace', function () {
     $routes = file_get_contents(dirname(__DIR__) . '/src/routes.php');
 
-    foreach (['equipment', 'parts', 'work-orders', 'devices', 'sensors', 'fuel-transactions'] as $prefix) {
+    foreach (['equipment', 'parts', 'work-orders', 'devices', 'sensors', 'fuel-transactions', 'trailers'] as $prefix) {
         expect($routes)->toContain("\$router->group(['prefix' => '{$prefix}']");
     }
 
@@ -30,7 +32,12 @@ test('new first-class fleetops rest routes are registered in the consumable v1 n
         ->toContain('FuelTransactionController@matchVehicle')
         ->toContain('FuelTransactionController@matchOrder')
         ->toContain('FuelTransactionController@reprocess')
-        ->toContain('FuelTransactionController@review');
+        ->toContain('FuelTransactionController@review')
+        ->toContain('TrailerController@track')
+        ->toContain('TrailerController@attach')
+        ->toContain('TrailerController@detach')
+        ->toContain('TrailerController@connections')
+        ->toContain('TrailerController@vehicleTrailers');
 });
 
 test('public fuel transaction api keeps provider naming internal only', function () {
@@ -54,6 +61,7 @@ test('new public controllers expose the expected rest methods', function () {
         WorkOrderController::class       => ['create', 'query', 'find', 'update', 'delete', 'send'],
         DeviceController::class          => ['create', 'query', 'find', 'update', 'delete', 'attach', 'detach'],
         SensorController::class          => ['create', 'query', 'find', 'update', 'delete'],
+        TrailerController::class         => ['create', 'query', 'find', 'update', 'delete', 'track', 'attach', 'detach', 'connections', 'vehicleTrailers'],
         FuelTransactionController::class => ['create', 'query', 'find', 'update', 'delete', 'matchVehicle', 'matchOrder', 'reprocess', 'review'],
     ];
 
@@ -65,7 +73,7 @@ test('new public controllers expose the expected rest methods', function () {
 });
 
 test('new public resources preserve internal uuid fields behind internal request checks', function () {
-    foreach ([Equipment::class, Part::class, WorkOrder::class, Device::class, Sensor::class, FuelTransaction::class] as $resource) {
+    foreach ([Equipment::class, Part::class, WorkOrder::class, Device::class, Sensor::class, FuelTransaction::class, Trailer::class] as $resource) {
         expect(class_exists($resource))->toBeTrue();
     }
 
@@ -76,6 +84,7 @@ test('new public resources preserve internal uuid fields behind internal request
         'Sensor.php'          => ['uuid', 'company_uuid', 'device_uuid', 'warranty_uuid', 'telematic_uuid', 'photo_uuid', 'sensorable_uuid'],
         'FuelTransaction.php' => ['uuid', 'fuel_provider_connection_uuid', 'fuel_report_uuid', 'vehicle_uuid', 'driver_uuid', 'order_uuid'],
         'WorkOrder.php'       => ['uuid', 'company_uuid', 'schedule_uuid', 'created_by_uuid', 'updated_by_uuid', 'target_uuid', 'assignee_uuid'],
+        'Trailer.php'         => ['uuid', 'company_uuid'],
     ];
 
     foreach ($internalFields as $resourceFile => $fields) {
@@ -99,6 +108,7 @@ test('new shared resources do not expose unguarded uuid fields', function () {
         'Sensor.php',
         'FuelTransaction.php',
         'WorkOrder.php',
+        'Trailer.php',
     ] as $resourceFile) {
         $source = file_get_contents(dirname(__DIR__) . '/src/Http/Resources/v1/' . $resourceFile);
 
@@ -147,6 +157,7 @@ test('public controllers reject uuid shaped request keys', function () {
         'DeviceController.php',
         'SensorController.php',
         'FuelTransactionController.php',
+        'TrailerController.php',
     ] as $controllerFile) {
         $source = file_get_contents(dirname(__DIR__) . '/src/Http/Controllers/Api/v1/' . $controllerFile);
 
@@ -162,6 +173,7 @@ test('new public list endpoints have company scoped filters', function () {
         'DeviceFilter.php',
         'SensorFilter.php',
         'FuelProviderTransactionFilter.php',
+        'TrailerFilter.php',
     ] as $filterFile) {
         $source = file_get_contents(dirname(__DIR__) . '/src/Http/Filter/' . $filterFile);
 

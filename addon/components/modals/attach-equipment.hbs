@@ -1,0 +1,9 @@
+<Modal::Default @modalIsOpened={{@modalIsOpened}} @options={{@options}} @confirm={{@onConfirm}} @decline={{@onDecline}}>
+    <div class="modal-body-container">
+        <InputGroup @name={{t "common.select-field" field=(t "resource.equipment")}} @value={{@options.selectedEquipment}}>
+            <ModelSelect @modelName="equipment" @selectedModel={{@options.selectedEquipment}} @query={{hash attachment_state="detached"}} @placeholder={{t "trailer.messages.select-equipment"}} @triggerClass="form-select form-input" @infiniteScroll={{true}} @renderInPlace={{true}} @onChange={{fn (mut @options.selectedEquipment)}} as |equipment|>
+                {{or equipment.name equipment.public_id}}
+            </ModelSelect>
+        </InputGroup>
+    </div>
+</Modal::Default>

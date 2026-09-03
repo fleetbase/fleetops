@@ -1,0 +1,5 @@
+<Layout::Resource::Card ...attributes as |Card|>
+    <Card.header><div class="font-semibold truncate">{{or @resource.name @resource.yearMakeModel}}</div><div class="text-gray-500 text-sm truncate">{{or @resource.plate_number @resource.vin @resource.public_id}}</div></Card.header>
+    <Card.body><Image src={{@resource.photo_url}} class="card-img-lg" /><div class="mt-2"><Badge @status={{@resource.status}}>{{@resource.status}}</Badge></div></Card.body>
+    <Card.footer><div class="flex space-x-1"><Button @icon="eye" @size="xs" @onClick={{fn this.trailerActions.transition.view @resource}} /><Button @icon="pencil" @size="xs" @onClick={{fn this.trailerActions.transition.edit @resource}} /><Button @icon="trash" @size="xs" @type="danger" @onClick={{fn this.trailerActions.delete @resource}} /></div><div class="mt-1 text-xs text-gray-500">{{t "trailer.fields.updated"}}: {{@resource.updatedAt}}</div></Card.footer>
+</Layout::Resource::Card>

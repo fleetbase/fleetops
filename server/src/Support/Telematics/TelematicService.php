@@ -3,6 +3,7 @@
 namespace Fleetbase\FleetOps\Support\Telematics;
 
 use Fleetbase\FleetOps\Contracts\TelematicProviderInterface;
+use Fleetbase\FleetOps\Events\TrailerLocationChanged;
 use Fleetbase\FleetOps\Events\VehicleLocationChanged;
 use Fleetbase\FleetOps\Jobs\SyncTelematicDevicesJob;
 use Fleetbase\FleetOps\Jobs\TestTelematicConnectionJob;
@@ -10,6 +11,7 @@ use Fleetbase\FleetOps\Models\Device;
 use Fleetbase\FleetOps\Models\DeviceEvent;
 use Fleetbase\FleetOps\Models\Sensor;
 use Fleetbase\FleetOps\Models\Telematic;
+use Fleetbase\FleetOps\Models\Trailer;
 use Fleetbase\FleetOps\Models\Vehicle;
 use Fleetbase\LaravelMysqlSpatial\Types\Point as SpatialPoint;
 use Illuminate\Support\Carbon;
@@ -654,7 +656,40 @@ class TelematicService
         $attachable = $device?->attachable;
         if ($attachable instanceof Vehicle) {
             $this->updateVehicleTelemetry($attachable, $location, $eventData, $event);
+        } elseif ($attachable instanceof Trailer) {
+            $this->updateTrailerTelemetry($attachable, $location, $eventData, $event);
         }
+    }
+
+    protected function updateTrailerTelemetry(Trailer $trailer, array $location, array $eventData, DeviceEvent $event): void
+    {
+        $observedAt = $event->occurred_at ?? $event->created_at ?? now();
+        $currentAt  = data_get($trailer->telematics, 'last_event_at');
+        if ($currentAt && $observedAt->lt(Carbon::parse($currentAt))) {
+            return;
+        }
+
+        $trailer->location       = new SpatialPoint($location['latitude'], $location['longitude']);
+        $trailer->online         = array_key_exists('online', $eventData) && $eventData['online'] !== null ? (bool) $eventData['online'] : true;
+        $trailer->last_online_at = $observedAt;
+        foreach (['speed', 'heading', 'altitude', 'odometer', 'reefer_engine_hours'] as $field) {
+            if (array_key_exists($field, $eventData) && $eventData[$field] !== null) {
+                $trailer->{$field} = $eventData[$field];
+            }
+        }
+
+        $trailer->telematics = array_merge($trailer->telematics ?? [], [
+            'last_event_uuid'     => $event->uuid,
+            'last_event_id'       => $event->public_id,
+            'last_event_type'     => $event->event_type,
+            'last_event_at'       => $observedAt->toISOString(),
+            'last_device_uuid'    => $event->device_uuid,
+            'last_provider'       => $event->provider,
+            'last_telemetry_data' => array_filter($eventData, fn ($value) => $value !== null),
+        ]);
+        $trailer->save();
+
+        broadcast(new TrailerLocationChanged($trailer, ['source' => 'telematics', 'device_event_uuid' => $event->uuid, 'provider' => $event->provider]));
     }
 
     protected function updateVehicleTelemetry(Vehicle $vehicle, array $location, array $eventData, DeviceEvent $event): void

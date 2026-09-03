@@ -17,7 +17,7 @@ export default class ConnectivityDevicesIndexDetailsController extends Controlle
             },
             {
                 route: 'connectivity.devices.index.details.vehicle',
-                label: this.intl.t('resource.vehicle'),
+                label: this.intl.t('device.attachment.asset'),
             },
             {
                 route: 'connectivity.devices.index.details.sensors',
@@ -44,7 +44,7 @@ export default class ConnectivityDevicesIndexDetailsController extends Controlle
                 renderInPlace: true,
                 items: [
                     {
-                        text: this.intl.t('device.actions.attach-to-vehicle'),
+                        text: this.intl.t('device.actions.attach-to-asset'),
                         icon: 'link',
                         fn: () => this.deviceActions.attachToVehicle(this.model),
                         permission: 'fleet-ops update device',
@@ -52,7 +52,7 @@ export default class ConnectivityDevicesIndexDetailsController extends Controlle
                     ...(this.model.attachable_uuid || this.model.attached_to_name || this.model.attachable
                         ? [
                               {
-                                  text: this.intl.t('device.actions.detach-from-vehicle'),
+                                  text: this.intl.t('device.attachment.detach'),
                                   icon: 'unlink',
                                   fn: () => this.deviceActions.detachFromVehicle(this.model),
                                   permission: 'fleet-ops update device',

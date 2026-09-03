@@ -214,8 +214,10 @@ class FleetOpsServiceProvider extends CoreServiceProvider
     public function registerMorphMap(): void
     {
         Relation::morphMap([
-            'Fleetbase\\Models\\Vehicle'   => \Fleetbase\FleetOps\Models\Vehicle::class,
-            '\\Fleetbase\\Models\\Vehicle' => \Fleetbase\FleetOps\Models\Vehicle::class,
+            'Fleetbase\\Models\\Vehicle'    => \Fleetbase\FleetOps\Models\Vehicle::class,
+            '\\Fleetbase\\Models\\Vehicle'  => \Fleetbase\FleetOps\Models\Vehicle::class,
+            'fleet-ops:vehicle'             => \Fleetbase\FleetOps\Models\Vehicle::class,
+            'fleet-ops:trailer'             => \Fleetbase\FleetOps\Models\Trailer::class,
         ]);
     }
 

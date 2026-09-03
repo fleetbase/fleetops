@@ -1,0 +1,18 @@
+<Modal::Default @modalIsOpened={{@modalIsOpened}} @options={{@options}} @confirm={{@onConfirm}} @decline={{@onDecline}}>
+    <div class="modal-body-container">
+        <InputGroup @name={{t "trailer.fields.vehicle"}}>
+            <ModelSelect
+                @modelName="vehicle"
+                @selectedModel={{@options.selectedVehicle}}
+                @placeholder={{t "trailer.messages.select-vehicle"}}
+                @triggerClass="form-select form-input"
+                @infiniteScroll={{true}}
+                @renderInPlace={{true}}
+                @onChange={{fn (mut @options.selectedVehicle)}}
+                as |vehicle|
+            >
+                <Vehicle::Pill @vehicle={{vehicle}} />
+            </ModelSelect>
+        </InputGroup>
+    </div>
+</Modal::Default>

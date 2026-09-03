@@ -280,6 +280,11 @@ class Device extends Model
         return $this->morphTo(__FUNCTION__, 'attachable_type', 'attachable_uuid');
     }
 
+    public function installations(): HasMany
+    {
+        return $this->hasMany(DeviceInstallation::class, 'device_uuid', 'uuid')->latest('installed_at');
+    }
+
     public function events(): HasMany
     {
         return $this->hasMany(DeviceEvent::class, 'device_uuid', 'uuid');
@@ -420,10 +425,26 @@ class Device extends Model
      */
     public function attachTo(Model $attachable): bool
     {
-        $updated = $this->update([
-            'attachable_type' => get_class($attachable),
-            'attachable_uuid' => $attachable->uuid,
-        ]);
+        if ($attachable->company_uuid && $this->company_uuid && $attachable->company_uuid !== $this->company_uuid) {
+            throw new \DomainException('Devices cannot be attached across companies.');
+        }
+
+        if ($this->attachable_type === get_class($attachable) && $this->attachable_uuid === $attachable->uuid) {
+            return true;
+        }
+
+        $historyEnabled = app()->bound('db.schema') && \Illuminate\Support\Facades\Schema::hasTable('device_installations');
+        $updated        = \Illuminate\Support\Facades\DB::transaction(function () use ($attachable, $historyEnabled) {
+            if ($historyEnabled) {
+                DeviceInstallation::where('company_uuid', $this->company_uuid)->where('device_uuid', $this->uuid)->whereNull('removed_at')->lockForUpdate()->update(['removed_at' => now(), 'active_device_uuid' => null]);
+            }
+            $updated = $this->update(['attachable_type' => get_class($attachable), 'attachable_uuid' => $attachable->uuid]);
+            if ($historyEnabled) {
+                DeviceInstallation::create(['company_uuid' => $this->company_uuid, 'device_uuid' => $this->uuid, 'attachable_type' => get_class($attachable), 'attachable_uuid' => $attachable->uuid, 'active_device_uuid' => $this->uuid, 'installed_at' => now(), 'source' => 'manual']);
+            }
+
+            return $updated;
+        });
 
         if ($updated) {
             activity('device_attached')
@@ -447,10 +468,14 @@ class Device extends Model
         $oldAttachableType = $this->attachable_type;
         $oldAttachableUuid = $this->attachable_uuid;
 
-        $updated = $this->update([
-            'attachable_type' => null,
-            'attachable_uuid' => null,
-        ]);
+        $historyEnabled = app()->bound('db.schema') && \Illuminate\Support\Facades\Schema::hasTable('device_installations');
+        $updated        = \Illuminate\Support\Facades\DB::transaction(function () use ($historyEnabled) {
+            if ($historyEnabled) {
+                DeviceInstallation::where('company_uuid', $this->company_uuid)->where('device_uuid', $this->uuid)->whereNull('removed_at')->lockForUpdate()->update(['removed_at' => now(), 'active_device_uuid' => null]);
+            }
+
+            return $this->update(['attachable_type' => null, 'attachable_uuid' => null]);
+        });
 
         if ($updated) {
             activity('device_detached')

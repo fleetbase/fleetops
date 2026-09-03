@@ -41,7 +41,7 @@ class CreateDeviceRequest extends FleetbaseRequest
             'telematic'             => ['nullable', 'string'],
             'warranty'              => ['nullable', 'string'],
             'photo'                 => ['nullable', 'string'],
-            'attachable_type'       => ['nullable', 'string'],
+            'attachable_type'       => ['nullable', Rule::in(['fleet-ops:vehicle', 'fleet-ops:trailer', 'vehicle', 'trailer'])],
             'attachable'            => ['nullable', 'required_with:attachable_type', 'string'],
             'meta'                  => ['nullable', 'array'],
             'data'                  => ['nullable', 'array'],

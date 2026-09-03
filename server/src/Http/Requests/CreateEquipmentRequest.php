@@ -24,7 +24,7 @@ class CreateEquipmentRequest extends FleetbaseRequest
             'model'          => ['nullable', 'string'],
             'warranty'       => ['nullable', 'string'],
             'photo'          => ['nullable', 'string'],
-            'equipable_type' => ['nullable', 'string'],
+            'equipable_type' => ['nullable', Rule::in(['fleet-ops:vehicle', 'fleet-ops:trailer', 'fleet-ops:driver', 'vehicle', 'trailer', 'driver'])],
             'equipable'      => ['nullable', 'required_with:equipable_type', 'string'],
             'purchased_at'   => ['nullable', 'date'],
             'purchase_price' => ['nullable'],

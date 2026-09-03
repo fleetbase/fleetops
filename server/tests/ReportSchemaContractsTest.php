@@ -214,6 +214,7 @@ test('fleetops report schema registers every table with columns computed columns
         'orders',
         'drivers',
         'vehicles',
+        'assets',
         'places',
         'contacts',
         'vendors',
@@ -241,6 +242,9 @@ test('fleetops report schema registers every table with columns computed columns
         ->and(fleetOpsReportTableName(fleetOpsReportRelationship($tables['drivers'], 'current_vehicle')))->toBe('vehicles')
         ->and(fleetOpsReportTableMeta($tables['vehicles'], 'category'))->toBe('Fleet')
         ->and(fleetOpsReportTableName(fleetOpsReportRelationship($tables['vehicles'], 'current_driver')))->toBe('drivers')
+        ->and(fleetOpsReportTableMeta($tables['assets'], 'label'))->toBe('Trailers and Assets')
+        ->and(fleetOpsReportTableMeta($tables['assets'], 'category'))->toBe('Fleet')
+        ->and(fleetOpsReportColumnFlag(fleetOpsReportColumn($tables['assets'], 'asset_class'), 'filterable'))->toBeTrue()
         ->and(fleetOpsReportTableMeta($tables['places'], 'category'))->toBe('Geography')
         ->and(fleetOpsReportTableMeta($tables['contacts'], 'category'))->toBe('CRM')
         ->and(fleetOpsReportTableMeta($tables['vendors'], 'category'))->toBe('CRM')

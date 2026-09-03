@@ -1,0 +1,12 @@
+{{#if (eq this.layout "table")}}
+    <Layout::Resource::Tabular
+        @resource="trailer" @title={{t "resource.trailers"}} @searchQuery={{this.query}} @onSearch={{perform this.trailerActions.controllerSearchTask this}}
+        @data={{@model}} @columns={{this.columns}} @page={{this.page}} @onPageChange={{fn (mut this.page)}} @setupTable={{fn (mut this.table)}}
+        @actionButtons={{this.actionButtons}} @controller={{this}}
+        @emptyStateComponent={{component "table/empty-state" icon="trailer" title=(t "trailer.empty.title") description=(t "trailer.empty.description") filteredTitle=(t "trailer.empty.filtered-title") filteredDescription=(t "trailer.empty.filtered-description") primaryText=(t "trailer.actions.new") primaryIcon="plus" primaryAction=this.trailerActions.transition.create secondaryText=(t "common.import") secondaryIcon="upload" secondaryAction=this.trailerActions.import docsSlug="fleet-ops/resources/trailers/overview" docsTitle=(t "trailer.docs.title") docsText=(t "trailer.docs.link") docsSource="fleet-ops-empty-trailers"}}
+    />
+{{else}}
+    <Layout::Section::Header @title={{t "resource.trailers"}}><Layout::Resource::TabularActions @searchQuery={{this.query}} @onSearch={{perform this.trailerActions.controllerSearchTask this}} @columns={{this.columns}} @page={{this.page}} @onPageChange={{fn (mut this.page)}} @actionButtons={{this.actionButtons}} @controller={{this}} @hideColumnsPicker={{true}} /></Layout::Section::Header>
+    <Layout::Section::Body class="overflow-y-scroll-i h-full"><Layout::Resource::CardsGrid @resource="trailer" @data={{@model}} @columns="4" @showPagination={{true}} @page={{this.page}} @onPageChange={{fn (mut this.page)}} @paginationMeta={{@model.meta}} @containerClass="p-4" class="h-full" as |Item|><Trailer::Card @resource={{Item.model}} /></Layout::Resource::CardsGrid></Layout::Section::Body>
+{{/if}}
+{{outlet}}

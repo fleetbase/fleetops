@@ -57,6 +57,7 @@ menu:
   resources: Ресурсы
   drivers: Водители
   vehicles: Транспортные средства
+  trailers: Прицепы
   fleets: Автопарки
   vendors: Поставщики
   contacts: Контакты
@@ -87,6 +88,8 @@ menu:
 resource:
   asset: Актив
   assets: Активы
+  trailer: Прицеп
+  trailers: Прицепы
   activity: Активность
   activities: Активности
   contact: Контакт
@@ -434,6 +437,30 @@ driver:
     unassign-vehicle-success: Unassigned {vehicleName} from {driverName}.
     issue-title: Issue reported for {driverName}
 device:
+  attachment:
+    title: Подключённый актив
+    description: Контекст автопарка для телеметрии этого устройства.
+    open: Открыть актив
+    asset: Подключённый актив
+    synced-device: Синхронизированное устройство
+    asset-type: Тип актива
+    select-asset-type: Выберите тип актива
+    locate: Найти
+    change: Сменить актив
+    detach: Отключить
+    attached-device: Подключённое устройство
+    last-seen: Последний сигнал устройства
+    none-title: Актив не подключён
+    none-message: Подключите устройство к транспортному средству или прицепу для контекста телеметрии.
+    latest-positions: Последние позиции
+    positions-description: Последние координаты актива, переданные этим устройством.
+    full-history: Полная история
+    no-positions: Нет недавних позиций
+    no-positions-message: Для этого актива пока нет недавней истории позиций.
+    attach-or-change: Подключить или сменить актив
+    view-attached: Открыть подключённый актив
+    locate-attached: Найти подключённый актив на карте
+    unknown: Неизвестный актив
   fields:
     title: Данные устройства
     device-name: Название устройства
@@ -468,6 +495,7 @@ device:
   actions:
     attach-to-vehicle: Attach to Vehicle
     detach-from-vehicle: Detach from Vehicle
+    attach-to-asset: Подключить к активу
   prompts:
     attach-to-vehicle-title: Attach device to vehicle
     attach-device-to-vehicle-title: "Attach {deviceName} to vehicle"
@@ -477,6 +505,12 @@ device:
     detach-from-vehicle-title: "Detach {deviceName} from vehicle?"
     detach-from-vehicle-body: "This detaches {deviceName} from {vehicleName} and stops vehicle telemetry updates until it is attached again."
     detach-from-vehicle-success: Device detached from vehicle.
+    attach-to-asset-title: Подключить устройство к активу
+    select-asset-warning: Выберите транспортное средство или прицеп.
+    attach-to-asset-success: Устройство подключено к активу.
+    detach-from-asset-title: "Отключить {deviceName} от актива?"
+    detach-from-asset-body: "Устройство {deviceName} будет отключено от {assetName}; обновления телематики прекратятся до нового подключения."
+    detach-from-asset-success: Устройство отключено от актива.
 entity:
   fields:
     declare: Заявить
@@ -1904,3 +1938,136 @@ settings:
       button-continue: Продолжить
       button-start: Начать регистрацию сейчас
       button-in-progress: Регистрация в процессе
+
+trailer:
+  navigation-description: Управление буксируемыми активами, сцепками, оборудованием и телематикой.
+  sections:
+    identity: Идентификация и классификация
+    registration: Регистрация
+    dimensions: Размеры и вместимость
+    running-gear: Оси, тормоза и сцепное устройство
+    refrigeration: Охлаждение и возможности
+    ownership: Владение и финансовые данные
+    connection: Текущая сцепка с транспортным средством
+    telemetry: Местоположение и телематика
+  fields:
+    code: Код
+    description: Описание
+    type: Тип прицепа
+    body-type: Тип кузова
+    color: Цвет
+    vin: VIN
+    serial-number: Серийный номер
+    vehicle: Тягач
+    attachment-state: Состояние сцепки
+    connectivity: Подключение
+    devices-count: Устройства
+    equipment-count: Оборудование
+    length: Длина
+    width: Ширина
+    height: Высота
+    tare: Масса без груза
+    gvwr: Разрешённая полная масса
+    payload: Грузоподъёмность
+    cargo-volume: Объём груза
+    measurement: Система измерений
+    hubometer: Одометр или хубометр
+    axles: Количество осей
+    tires: Количество шин
+    coupling: Тип сцепного устройства
+    brakes: Тип тормозов
+    abs: Оснащён ABS
+    ebs: Оснащён EBS
+    refrigerated: Рефрижератор
+    doors: Количество дверей
+    temperature-min: Минимальная температура
+    temperature-max: Максимальная температура
+    reefer-hours: Моточасы холодильной установки
+    ownership: Тип владения
+    currency: Валюта
+    purchase-date: Дата покупки
+    lease-expiry: Окончание аренды
+    acquisition-cost: Стоимость приобретения
+    current-value: Текущая стоимость
+    vendor: Поставщик
+    warranty: Гарантия
+    last-online: Последний сеанс связи
+    updated: Последнее обновление
+    connected-at: Сцеплен
+    disconnected-at: Расцеплен
+  actions:
+    new: Новый прицеп
+    attach: Сцепить
+    attach-vehicle: Сцепить с транспортным средством
+    detach-vehicle: Расцепить
+    attach-device: Подключить устройство
+    attach-equipment: Прикрепить оборудование
+    schedule-maintenance: Запланировать обслуживание
+    create-work-order: Создать рабочий заказ
+    log-maintenance: Записать обслуживание
+  messages:
+    select-vehicle: Выберите транспортное средство
+    select-trailer: Выберите прицеп
+    select-device: Выберите устройство
+    select-equipment: Выберите оборудование
+    attached: Прицеп успешно сцеплен.
+    detached: Прицеп успешно расцеплен.
+    device-attached: Устройство успешно подключено.
+    equipment-attached: Оборудование успешно прикреплено.
+    equipment-detached: Оборудование успешно отсоединено.
+    detach-confirm: Текущая сцепка будет завершена и сохранена в истории.
+    created: Прицеп успешно создан.
+    updated: Прицеп успешно обновлён.
+    photo-error: "Не удалось загрузить фотографию: {message}"
+  empty:
+    title: Добавьте первый прицеп
+    description: Управляйте идентификацией, сцепками, обслуживанием, оборудованием и телеметрией.
+    filtered-title: Нет прицепов, соответствующих фильтрам
+    filtered-description: Измените поиск или фильтры, чтобы найти другой прицеп.
+    connections: История сцепок отсутствует.
+    equipment: К этому прицепу не прикреплено оборудование.
+    related: Связанные записи отсутствуют.
+  docs:
+    title: Руководство по прицепам
+    link: Открыть руководство по прицепам
+  tabs:
+    connections: История сцепок
+    schedules: Графики
+    work-orders: Рабочие заказы
+    maintenance: Обслуживание
+  statuses:
+    available: Доступен
+    in_use: Используется
+    maintenance: На обслуживании
+    out_of_service: Не эксплуатируется
+    retired: Списан
+  attachment:
+    attached: Сцеплен
+    detached: Не сцеплен
+  connectivity:
+    online: В сети
+    recently_offline: Недавно не в сети
+    offline: Не в сети
+    never_connected: Никогда не подключался
+  measurement:
+    metric: Метрическая
+    imperial: Имперская
+  placeholders:
+    type: Выберите тип прицепа
+  types:
+    dry_van: Закрытый фургон
+    reefer: Рефрижератор
+    flatbed: Бортовая платформа
+    step_deck: Ступенчатая платформа
+    lowboy: Низкорамный трал
+    tanker: Цистерна
+    bulk: Для сыпучих грузов
+    dump: Самосвальный
+    chassis: Контейнерное шасси
+    curtain_side: Шторный
+    car_carrier: Автовоз
+    livestock: Скотoвоз
+    logging: Лесовоз
+    dolly: Подкатная тележка
+    specialty: Специальный
+    other: Другой
