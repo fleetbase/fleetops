@@ -305,6 +305,70 @@ through to `row`.
 `this.args.column ?? {}`: the getter is only read from the compact template, which the
 `this.args.column?.compact` check already gated on a column being present.
 
+## 18. `addon/utils/geojson/geo-json.js` — dead duplicate of the fleetops-data base class
+
+**Status:** FIXED (deleted)
+**Found:** Unit-utility sweep; its scaffold died with "Class constructor GeoJson cannot be invoked without 'new'".
+**Evidence:** The file imported `./calculate-bounds`, which does not exist in this package (it lives
+in `@fleetbase/fleetops-data/utils/geojson/`, together with the identical `GeoJson` class every
+other util here already imports). Nothing in `addon/` imported it; only the generated `app/` shim
+and the scaffold test referenced it.
+**Impact:** None at runtime; it could never have been used without the build failing.
+**Fix:** Deleted with its `app/utils/geojson/geo-json.js` shim and the scaffold test.
+
+## 19. `addon/utils/leaflet-to-geojson.js` — `createFeatureCollectionFromLayers` always threw
+
+**Status:** FIXED
+**Found:** First real test of the function.
+**Evidence:** It called `new FeatureCollection({ features })`, but the fleetops-data constructor
+accepts either a GeoJSON `FeatureCollection` object or a plain array of features, and throws
+`GeoJSON: invalid input for new FeatureCollection` for anything else. No caller in `addon/`
+survived to notice; the function is exported API.
+**Impact:** Any consumer batching drawn layers into a collection got an exception instead.
+**Fix:** Pass the array. Also in this file: `normalizeToRings` ended with two identical
+`return latlngs` paths (one behind a guard, one as fallthrough); merged into one.
+
+## 20. `tests/unit/utils/map-drawer-dropdown-position-test.js` — stale against commit f784e710
+
+**Status:** FIXED (test updated to the source contract)
+**Found:** Two red assertions in the unit-utility sweep.
+**Evidence:** The June test expected `position: 'fixed'`, a numeric `zIndex` and a vertical clamp
+of `bottom - height - gap`. Commit f784e710 (2026-07-01) deliberately changed the util to
+`position: 'absolute'`, a string `zIndex` and a `bottom - height + 8` clamp, and never touched the
+test. The source is the intended behaviour (the menu is positioned inside the drawer panel).
+**Impact:** None for users; the suite was red.
+**Fix:** Expectations follow the source. The util now imports `window` from `ember-window-mock`
+so the viewport fallback (no drawer panel) is testable deterministically.
+
+## 21. `addon/utils/leaflet-plugin-loader.js` — dead defaults and non-browser guards
+
+**Status:** FIXED
+**Found:** Coverage residue after the loader suite was made deterministic.
+**Evidence:** `normalizePath(path = '')`, `waitForLeafletGlobal({ timeoutMs = 8000 } = {})` and
+`loadScript(src, { timeoutMs = 8000, isReady = null } = {})` are module-private and each has one
+caller that always passes every value (`ensureLeafletPluginsReady` resolves the public defaults
+first), so none of those defaults can apply. The three `typeof window/document === 'undefined'`
+guards cannot be true under Testem, which only ever runs this module in Chrome.
+**Impact:** None.
+**Fix:** Defaults deleted; the guards carry `istanbul ignore if` with that reason. The former
+test asserted on script elements synchronously after the call, but the loader appends them after
+the Leaflet-global promise settles; the suite now waits for the loader's listeners and neutralises
+its own script elements so no network request is made.
+
+## 22. Three utils — defensive fallbacks with no reachable input
+
+**Status:** FIXED (deleted)
+**Found:** Coverage residue in the unit-utility sweep.
+**Evidence:** `setup-customer-portal.js` guarded `customerPortalEngine?._fleetopsSetupCompleted`
+two lines above an unconditional `customerPortalEngine._fleetopsSetupCompleted = true`; a null
+engine threw either way. `to-calendar-date.js` used `parts.find(...)?.value ?? '0'`, but
+`Intl.DateTimeFormat#formatToParts` always emits every requested part, and the surrounding
+`try/catch` already returns the input date on any failure. `to-multi-polygon.js` used
+`geom.coordinates ?? input.coordinates` where `geom` is either `input` or `input.geometry`, so the
+fallback can only ever produce the same value.
+**Impact:** None.
+**Fix:** All three deleted.
+
 ## 4. `tests/` — 223 blueprint scaffolds that were never green
 
 **Status:** OPEN (this is the bulk of Phase B)
