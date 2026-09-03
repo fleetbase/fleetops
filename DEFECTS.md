@@ -537,6 +537,22 @@ the moment the tooltip opens.
 and crashed on hover.
 **Fix:** `@resource={{this.resource}}` and `{{or this.resource.name this.resource.yearMakeModel}}`.
 
+## 33. `addon/components/fleet/form.js`, `order-progress-bar.js` — fields nothing reads
+
+**Status:** FIXED (deleted)
+**Found:** Coverage residue after the first real tests of both components.
+**Evidence:** `FleetFormComponent#writePermission` and `@tracked statusOptions` are referenced
+by nothing: not by `fleet/form.hbs` (it reads `get-fleet-ops-options "fleetStatuses"` and
+`cannot-write`), and `grep -rn "writePermission\|statusOptions" addon` finds no other reader.
+`OrderProgressBarComponent` initialised `@tracked progress = 0` and stored `@tracked order`,
+but its constructor always assigns `progress` before any read (so Ember's lazy tracked
+initializer can never run — the same shape as DEFECTS #15) and `order` is read by nothing:
+`order-progress-bar.hbs` uses the `@progress`/`@firstWaypointCompleted`/`@lastWaypointCompleted`
+arguments only.
+**Impact:** None.
+**Fix:** All four deleted; the constructor keeps its `progress = 0` default, which is the live
+default for a bar rendered without `@progress`.
+
 ## 4. `tests/` — 223 blueprint scaffolds that were never green
 
 **Status:** OPEN (this is the bulk of Phase B)

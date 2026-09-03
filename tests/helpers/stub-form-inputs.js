@@ -11,7 +11,7 @@ export default function stubFormInputs(owner) {
     registerTemplateOnly(
         owner,
         'model-select',
-        hbs`<button type="button" data-test-model-select={{@modelName}} disabled={{@disabled}} {{on "click" (fn (or @onChange (noop)) (hash id="picked_1" name="Picked" display_name="Picked"))}}>{{@placeholder}}</button>`
+        hbs`<button type="button" data-test-model-select={{@modelName}} disabled={{@disabled}} {{on "click" (fn (or @onChange (noop)) (hash id="picked_1" name="Picked" display_name="Picked"))}}>{{@placeholder}}</button><button type="button" data-test-model-select-clear={{@modelName}} {{on "click" (fn (or @onChange (noop)) null)}}></button>`
     );
     registerTemplateOnly(owner, 'country-select', hbs`<select data-test-country-select disabled={{@disabled}}></select>`);
     registerTemplateOnly(owner, 'date-picker', hbs`<input data-test-date-picker={{@placeholder}} disabled={{@disabled}} />`);
