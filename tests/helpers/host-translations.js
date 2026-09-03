@@ -6,5 +6,9 @@
 export default {
     common: {
         'create-new-resource': 'Create new {resource}',
+        'create-a-new-resource': 'Create a new {resource}',
+        'view-resource-details': 'View {resource} Details',
+        'edit-resource-details': 'Edit {resource} Details',
+        'delete-resource': 'Delete {resource}',
     },
 };
