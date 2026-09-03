@@ -234,6 +234,31 @@ re-export stays; it is harmless and outside the gate).
 **Impact:** None.
 **Fix:** Deleted.
 
+## 15. `addon/components/layout/fleet-ops-sidebar.js` — five defensive defaults no caller can reach
+
+**Status:** FIXED (defaults removed; one `istanbul ignore if` with the caller named)
+**Found:** Coverage residue after the module's suite was green: `default-arg` branches at
+`createBranch` (`keywords = []`), `createHubItem` (`keywords = []`), `sortByPriority`
+(`items = []`), `shouldSyncInitialActiveParent` (`activePath = []`), `searchNavigation`
+(`limit = 12`), plus the `!trimmedQuery` early return.
+**Evidence:** `createBranch` has 7 call sites and `createHubItem` 5, all in this file, all passing
+`keywords`. `sortByPriority` is called from `registryRootItems`, `registryPanelItems` (twice) and
+`withRegistryItems`, always with an array literal or `.map()` result. The two actions are only
+invoked by ember-ui's `Layout::Sidebar::Navigator`: `shouldSyncInitialActiveParent` is called with
+`{ activePath, routeName, currentURL, router }` (navigator.js `shouldSyncInitialActiveParent`),
+and `searchProvider` is called with `{ query, items, limit: this.maxSearchResults }` only after the
+navigator has itself returned on an empty trimmed query (navigator.js `searchProvider`).
+Four more unreachable fallbacks in the same file: the `= []` initializers on the eight
+`@tracked universe*` list fields (the constructor's `createMenuItemsFromUniverseRegistry()` assigns
+all eight before any read, and Ember's legacy `@tracked` runs a field initializer lazily on first
+read, so the initializer can never execute); `?? []` in `withRegistryItems` (the same lists are
+always arrays); the `!route || route.startsWith('console.')` guard in `fullRoute` (all 14 call
+sites pass an unprefixed engine route); and `?? 0` in `defaultPriorityForRoute` (every route passed
+by `createItem`/`createHubItem` is a key of the priorities map — verified by diffing the two lists).
+**Impact:** None; none of these fallbacks could ever take effect.
+**Fix:** All deleted. The empty-query guard is kept (the arg is public API on the component)
+behind `istanbul ignore if` naming the navigator as the reason.
+
 ## 4. `tests/` — 223 blueprint scaffolds that were never green
 
 **Status:** OPEN (this is the bulk of Phase B)
