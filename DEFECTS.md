@@ -774,6 +774,30 @@ block.
 call, not taken here).
 **Fix:** The field and the two injections are deleted.
 
+## 48. `addon/components/order/details/tracking.js` — the active stop matched on undefined ids
+
+**Status:** FIXED (separate commit, `fix(order): match the active tracking stop …`)
+**Found:** The tracking suite's first test expected "STOP 2 OF 3" and got stop 1.
+**Evidence:** `matchesStop` returned `stop.uuid === activeStop.uuid || stop.public_id === activeStop.public_id || stop.id === activeStop.id`; provider stops are keyed by `uuid`/`public_id` and carry no `id`, so the third comparison was `undefined === undefined` for every stop and `findIndex` returned 0.
+**Impact:** The "now heading to" label and marker named the first stop regardless of progress whenever stops lacked an `id`.
+**Fix:** Compare only identifiers both objects define; the suite covers `id`, `uuid` and `public_id` keyed stops.
+
+## 49. `tests/integration/components/order/details/tracking-test.js` — eleven tests never green, one stale expectation
+
+**Status:** FIXED
+**Found:** All eleven failed with "You must pass a function as the `fn` helper's first argument".
+**Evidence:** The template binds `(fn this.orderActions.viewLabel @resource)` and the suite's `order-actions` stub only defined `assignDriver`; `buildOrder` spread `...overrides` after building the merged `tracker_data`, so any override replaced the whole tracker payload; and "Due now" for a zero-second ETA was added in 4092d3ad and removed in 9356fb67 (`Tighten tracking route UI refinements`) while the test kept expecting it — a zero ETA renders `0s` today.
+**Impact:** None for users.
+**Fix:** The stub gains `viewLabel` and an abilities stub (the label button is permission-gated), the builder keeps overrides out of the merged payload, and the zero-ETA test asserts the current rendering with the removing commit cited.
+
+## 50. `addon/components/order/details/tracking.js` — three getters nothing renders and six guards the template already makes
+
+**Status:** FIXED
+**Found:** Profiling the file after the suite went green.
+**Evidence:** `hasCompletionEta`, `driverSignalClass` and `routeQualityItems` appear in no template or class (`grep -rn` across `addon/` and `tests/`; the route component has its own `hasCompletionEta`). `smartAdjustedEtaSeconds`, `displayedReportedEtaSeconds` and `isReportedEtaUntrusted` returned early on `!showLiveEta`, but the template reads all three only inside `{{else if this.showLiveEta}}`; `isReportedEtaUntrusted`, `diagnostics` and `operatorWarning` returned early on `!trackerData`, but everything inside `{{#if this.hasTrackerData}}` already requires it; `pingDriver` returned on `!order` from a button that only exists inside that block; and `activeStopLabel` tested `|| !this.totalStops` after `!this.activeStopIndex`, which cannot be truthy with zero stops since the index derives from them; `totalStops` likewise defaulted a missing stops array to 0, but it is only read once `activeStopIndex` has found a stop in that array.
+**Impact:** None.
+**Fix:** Deleted; the template's own guards are the contract.
+
 ## 4. `tests/` — 223 blueprint scaffolds that were never green
 
 **Status:** OPEN (this is the bulk of Phase B)
