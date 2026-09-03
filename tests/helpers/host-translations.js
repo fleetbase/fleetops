@@ -5,6 +5,8 @@
  */
 export default {
     common: {
+        'edit-address': 'Edit Address',
+        'new-address': 'New Address',
         online: 'Online',
         offline: 'Offline',
         'create-new-resource': 'Create new {resource}',

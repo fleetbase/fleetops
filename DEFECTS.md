@@ -553,6 +553,23 @@ arguments only.
 **Fix:** All four deleted; the constructor keeps its `progress = 0` default, which is the live
 default for a bar rendered without `@progress`.
 
+## 34. `addon/components/sensor/form.js`, `order-progress-card.js` — an uninvoked upload task and a guard that could only throw
+
+**Status:** FIXED
+**Found:** Writing the first real tests of both components.
+**Evidence:** `SensorFormComponent#handlePhotoUpload` (with the `fetch`, `currentUser` and
+`notifications` injections it alone used) is referenced by nothing: `sensor/form.hbs` mounts no
+`UploadButton`, unlike `contact/form.hbs`, whose identical task is wired through
+`@onFileAdded={{perform this.handlePhotoUpload}}`; a component task is reachable only from its own
+template. `OrderProgressCardComponent#loadTrackerData` guarded
+`!isBlank(this.order.tracker_data) || !this.order || !this.order.isNew`: the `!this.order` test
+came after `this.order.tracker_data` had already been dereferenced, so a missing order threw a
+TypeError from the task 100ms after render instead of returning.
+**Impact:** None for the sensor form. A progress card rendered without an order raised an
+uncaught error in the task rather than skipping the load.
+**Fix:** The sensor task and its injections deleted; the card's guard reordered to test the order
+first (same conditions, now reachable), covered by a card rendered without an order.
+
 ## 4. `tests/` — 223 blueprint scaffolds that were never green
 
 **Status:** OPEN (this is the bulk of Phase B)
