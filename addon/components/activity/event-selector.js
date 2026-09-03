@@ -13,7 +13,7 @@ export default class ActivityEventSelectorComponent extends Component {
      *
      * @type {Array}
      */
-    @tracked events = [];
+    @tracked events;
 
     /**
      * An object representing available events, each with a name and description.
@@ -25,19 +25,19 @@ export default class ActivityEventSelectorComponent extends Component {
         return {
             'order.dispatched': {
                 name: 'order.dispatched',
-                description: this.intl?.t?.('activity.form.event-selector.events.order.dispatched') ?? 'Triggers when an order is successfully dispatched.',
+                description: this.intl.t('activity.form.event-selector.events.order.dispatched'),
             },
             'order.failed': {
                 name: 'order.failed',
-                description: this.intl?.t?.('activity.form.event-selector.events.order.failed') ?? 'Triggers when an order fails due to an error or exception.',
+                description: this.intl.t('activity.form.event-selector.events.order.failed'),
             },
             'order.canceled': {
                 name: 'order.canceled',
-                description: this.intl?.t?.('activity.form.event-selector.events.order.canceled') ?? 'Triggers when an order is canceled by a user, driver, or system process.',
+                description: this.intl.t('activity.form.event-selector.events.order.canceled'),
             },
             'order.completed': {
                 name: 'order.completed',
-                description: this.intl?.t?.('activity.form.event-selector.events.order.completed') ?? 'Triggers when an order is completed by a driver, or system process.',
+                description: this.intl.t('activity.form.event-selector.events.order.completed'),
             },
         };
     }

@@ -646,7 +646,11 @@ listener, installed after the spread, writes the raw element value back; the sui
 `type === 'Big Box'` after typing `Big Box`, and on blur the `change` listener writes the raw
 value again. The handler is therefore a no-op in production; the test characterises this.
 **Impact:** Custom entity types are stored as typed (`Big Box`) rather than as the slug the code
-intends (`big-box`); anything matching on the slug downstream misses.
+intends (`big-box`); anything matching on the slug downstream misses. `activity/form.hbs` has the
+same shape twice: the `key` and `code` InputGroups bind `@value` two-way and attach
+`{{on "input" this.setActivityKey}}` / `setActivityCode`, so the underscored key/code never sticks
+either (the derived `status` does, since it is not the bound field); its suite characterises the
+key case.
 **Fix:** Either bind the field read-only (`@value={{readonly @resource.type}}`) so the handler is
 the sole writer — the user then sees the slug form while typing — or drop the handler and
 dasherize when the entity is saved. Which one is a UX choice.
@@ -663,6 +667,42 @@ rejects, never to a falsy value, so the guard could not run. `CustomEntityForm#s
 neither for this component); saving goes through the panel's `saveTask`.
 **Impact:** None.
 **Fix:** Both deleted.
+
+## 40. `addon/components/customer/admin-settings.hbs` — the payments toggle was never disabled
+
+**Status:** FIXED (separate commit, `fix(customer): disable the payments toggle …`)
+**Found:** Writing the first real suite; the toggle stayed enabled while the warning below it said
+onboarding had to complete first.
+**Evidence:** The template passed `@disable={{not this.paymentsOnboardCompleted}}`; ember-ui's
+`Toggle` reads `@disabled` (`toggle.js` constructor destructures `disabled`, the template renders
+`data-disabled={{this.disabled}}`) and has no `@disable` argument, so the value was dropped.
+**Impact:** A company that had not finished payments onboarding could switch customer payments on
+from the portal settings.
+**Fix:** `@disabled`; the suite asserts `data-disabled` follows `paymentsOnboardCompleted`.
+
+## 41. `customer/admin-settings.js`, `activity/form.js`, `activity/event-selector.js`, `device/manager.js` — dead fields, a dead task, dead optional chains and a dead guard
+
+**Status:** FIXED
+**Found:** Profiling the four files after their first real suites.
+**Evidence:** `CustomerAdminSettings` declared `@tracked paymentGateway = 'stripe'` that nothing
+reads (`grep -rn paymentGateway addon` finds only the literal in the POST body) and
+`@tracked enabledOrderConfigs = []` — a lazy initializer that the fetch assigns before the template
+can read it; it turned out to be reachable when the settings fetch fails and the order types still
+list, so the suite covers it and it stays. `ActivityForm#save` was the DEFECTS #39 shape again: a
+task checking `typeof this.onSave === 'function'` on a class with no `onSave`, no `@onSave`
+argument, and no `this.save` in the template (the panel saves through its own `saveTask`).
+`ActivityEventSelector#availableEvents` wrote `this.intl?.t?.(key) ?? 'fallback'` four times:
+`intl` is an injected service, `t` always a function, and `t()` returns a string (a missing key
+yields "Missing translation …", never `null`), so the twelve short-circuit branches could not run,
+and all four keys exist in `translations/en-us.yaml`; its `@tracked events = []` initializer is
+assigned in the constructor before any read. `DeviceManager#resourceName` returned `'resource'`
+without a resource and `loadDevices` returned early without one, but the component's single mount
+(`management/vehicles/index/details/devices.hbs`) passes the route model and the template's empty
+state calls `(get-model-name @resource)`, which throws on `undefined` — so no render without a
+resource exists for the guards to serve.
+**Impact:** None.
+**Fix:** The field, task, optional chains, initializer and guards are deleted; `intl.t` is called
+directly.
 
 ## 4. `tests/` — 223 blueprint scaffolds that were never green
 

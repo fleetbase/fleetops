@@ -16,7 +16,6 @@ export default class DeviceManagerComponent extends Component {
 
     get resourceName() {
         const record = this.args.resource;
-        if (!record) return 'resource';
 
         return (
             get(record, this.args.namePath ?? 'name') ??
@@ -80,8 +79,6 @@ export default class DeviceManagerComponent extends Component {
     }
 
     @task *loadDevices() {
-        if (!this.args.resource) return;
-
         try {
             const devices = yield this.store.query('device', { attachable_uuid: this.args.resource.id });
             this.devices = devices;

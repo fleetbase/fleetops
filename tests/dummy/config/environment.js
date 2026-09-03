@@ -6,6 +6,10 @@ module.exports = function (environment) {
         environment,
         rootURL: '/',
         locationType: 'history',
+        // Mirrors the console's `stripe` block; `customer/admin-settings` reads `publishableKey`.
+        stripe: {
+            publishableKey: '',
+        },
         EmberENV: {
             // The engine only ever runs inside the Fleetbase console, whose config sets
             // `EXTEND_PROTOTYPES: true`; addon code relies on it (`[].pushObject`, `.uniqBy`, ...).
