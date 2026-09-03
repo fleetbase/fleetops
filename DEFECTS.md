@@ -291,6 +291,20 @@ array already answers `toArray()` one line earlier — kept behind `istanbul ign
 **Fix:** Getters, guards, initializer, `?? 0`s and defaults deleted; the environment guards and the
 element guard carry `istanbul ignore` comments naming the reason.
 
+## 17. `addon/components/cell/attached-vehicle.js`, `telematic-provider.js` — click guards their templates already enforce
+
+**Status:** FIXED (deleted)
+**Found:** Coverage residue in the cell suites.
+**Evidence:** `attached-vehicle.hbs` renders the `Cell::VehicleIdentity` that carries
+`@onClick={{this.onClick}}` only inside `{{#if this.hasVehicle}}`, so `onClick`'s
+`if (!this.hasVehicle) return;` can never be true. `telematic-provider.hbs` renders both click
+targets only inside `{{#if this.telematic}}`, so `this.telematic ?? row` in `onClick` never falls
+through to `row`.
+**Impact:** None.
+**Fix:** Both fallbacks deleted. Likewise `driver-identity.js` `assignedVehicleLabel`'s
+`this.args.column ?? {}`: the getter is only read from the compact template, which the
+`this.args.column?.compact` check already gated on a column being present.
+
 ## 4. `tests/` — 223 blueprint scaffolds that were never green
 
 **Status:** OPEN (this is the bulk of Phase B)
