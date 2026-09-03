@@ -195,6 +195,31 @@ the engine never sees.
 **Fix:** Done. Note for Phase B: do not "fix" addon code that relies on prototype extensions; the
 host guarantees them.
 
+## 12. `addon/helpers/is-active-route.js` — re-exported a console module that does not exist anywhere
+
+**Status:** FIXED (file deleted)
+**Found:** Gate: "missing from the coverage report". The module throws on evaluation so istanbul never
+registers it.
+**Evidence:** One line: `export { default, isActiveRoute } from '@fleetbase/console/helpers/is-active-route'`.
+No file named `is-active-route` exists in the console app (`app/`, `addon/`), in ember-ui or in
+ember-core; nothing in `addon/`, `app/` or any template references `is-active-route`/`isActiveRoute`.
+Untouched since the 2023-10-09 monorepo import. It has no `app/` re-export, so no host could ever
+resolve it as a helper either.
+**Impact:** None; it was unreachable dead weight.
+**Fix:** Deleted.
+
+## 13. `addon/components/order/details/proof.js` — imported `ember-concurrency-decorators`, which this package does not depend on
+
+**Status:** FIXED (import switched to `ember-concurrency`, which the rest of the addon already uses)
+**Found:** Gate: "missing from the coverage report" — module evaluation throws "Could not find
+module `ember-concurrency-decorators`".
+**Evidence:** The only importer in `addon/`; the package is absent from this package.json and
+node_modules and only resolves in the console because the console declares it. ember-concurrency 4
+exports the same `task` decorator (used by every other component here).
+**Impact:** In a host without that transitive package the order proof panel would fail to load.
+Not a behaviour change here: same decorator, same semantics.
+**Fix:** Done.
+
 ## 4. `tests/` — 223 blueprint scaffolds that were never green
 
 **Status:** OPEN (this is the bulk of Phase B)
