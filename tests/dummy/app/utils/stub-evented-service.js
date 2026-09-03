@@ -24,6 +24,15 @@ export default class StubEventedService extends Service {
         return this;
     }
 
+    one(eventName, callback) {
+        const once = (...args) => {
+            this.off(eventName, once);
+            callback(...args);
+        };
+
+        return this.on(eventName, once);
+    }
+
     trigger(eventName, ...args) {
         const listeners = [...(this._listeners.get(eventName) ?? [])];
         for (const listener of listeners) {

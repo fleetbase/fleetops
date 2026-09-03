@@ -220,6 +220,20 @@ exports the same `task` decorator (used by every other component here).
 Not a behaviour change here: same decorator, same semantics.
 **Fix:** Done.
 
+## 14. `addon/helpers/format-duration.js` — pure re-export that istanbul never instruments and nothing imports
+
+**Status:** FIXED (file deleted)
+**Found:** Gate: the only addon file "missing from the coverage report" after #12/#13.
+**Evidence:** One line, `export { default, formatDurationValue } from '@fleetbase/ember-ui/helpers/format-duration'`;
+it is the only file in `addon/` with no statement at all, and babel-plugin-istanbul emits no coverage
+object for such a file. No JS in `addon/`, `app/` or `tests/` imports
+`@fleetbase/fleetops-engine/helpers/format-duration`. The three templates that use
+`{{format-duration}}` resolve the helper from the app namespace, which ember-ui already provides via
+its own `app/helpers/format-duration.js` (this package's identical `app/helpers/format-duration.js`
+re-export stays; it is harmless and outside the gate).
+**Impact:** None.
+**Fix:** Deleted.
+
 ## 4. `tests/` — 223 blueprint scaffolds that were never green
 
 **Status:** OPEN (this is the bulk of Phase B)
