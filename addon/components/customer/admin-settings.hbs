@@ -21,7 +21,7 @@
             @onToggle={{perform this.togglePayments}}
             @label="Enable customer to make payments through portal"
             @wrapperClass={{if (or this.togglePayments.isRunning this.loadOrderConfigs.isRunning) "pointer-events-none opacity-50" ""}}
-            @disable={{not this.paymentsOnboardCompleted}}
+            @disabled={{not this.paymentsOnboardCompleted}}
         />
         {{#if this.toggleOrderConfig.isIdle}}
             <div class="space-y-4 mt-4">
