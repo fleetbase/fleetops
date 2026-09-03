@@ -369,6 +369,42 @@ fallback can only ever produce the same value.
 **Impact:** None.
 **Fix:** All three deleted.
 
+## 23. `tests/helpers/index.js` — ember-local-storage proxies outlive the test app that created them
+
+**Status:** FIXED (harness)
+**Found:** Five `Unit | Service` suites died in `it exists` with "Cannot create a new tag for
+`<(unknown):ember2993>` after it has been destroyed"; the same object id across three different
+modules pointed at something shared outside the container.
+**Evidence:** `ember-local-storage/helpers/storage` caches every `storageFor` proxy in a
+module-level map. `currentUser.options`, `currentUser.cache` and `appCache.localCache` are such
+proxies; the first test app to tear down destroys them, and every later app that reads
+`currentUser.getOption` (the `defaultCurrency` read in the action-service constructors) or
+`appCache.get` (the order-list-overlay constructor) trips the destroyed-tag assertion.
+**Impact:** None for users; any test that touched user options after the first module was red.
+**Fix:** `setupTest`/`setupRenderingTest`/`setupApplicationTest` now clear browser storage and
+call the addon's own `_resetStorages()` after every test.
+
+## 24. `tests/unit/services/*` — service tests that were never green
+
+**Status:** FIXED (tests corrected to the source contract)
+**Found:** Remaining red `Unit | Service` tests once #23 was fixed.
+**Evidence:** `driver-actions`, `vehicle-actions` and `device-event-actions` assigned over
+`service.refresh` / `service.transitionTo`, which `@action` defines as getter-only accessors
+(TypeError in strict mode); the stubs now sit on the host-router the base service delegates to,
+and the transition test asserts the mount-prefixed route the base service actually produces.
+`leaflet-contextmenu-manager` expected one `removeAllItems` call after removal, but registration
+has cleared native items before adding its own since 2023 (`createContextMenu`), so removal is
+the second call. `device-actions` expected `panel.view()` without a device to return `undefined`,
+but it returns the notification from `notifications.warning`. `geofence` awaited one microtask
+while the canonical reload chains several promises; the tests now wait for the polygon to show.
+`route-optimization` / `leaflet-routing-control` register into the application registry through
+`universe.getApplicationInstance()`, which only the console sets while booting engines; those two
+suites now hand the universe the test owner (an eager dummy instance-initializer was tried and
+rejected: cascading `setApplicationInstance` instantiates the real `universe/menu-service`
+before a suite can register its stub).
+**Impact:** None.
+**Fix:** As above; no source change.
+
 ## 4. `tests/` — 223 blueprint scaffolds that were never green
 
 **Status:** OPEN (this is the bulk of Phase B)
