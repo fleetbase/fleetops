@@ -591,6 +591,25 @@ integration; a mislabelled phone field; skills lists without spaces.
 **Fix:** `@resource.isIntegratedVendor` and `@vendor={{@resource}}`; `common.phone`;
 `{{join ", " ...}}` in both templates; the initializer and the null guard removed.
 
+## 36. `driver-onboard-settings.js`, `widget/fleet-ops-key-metrics.js` — a null payload that crashed, and dead defaults
+
+**Status:** FIXED
+**Found:** Writing the first real tests of both components (both were self-fetching scaffolds
+named by the DEFECTS #28 victim list).
+**Evidence:** `DriverOnboardSettingsComponent#getDriverOnboardSettings` assigned the response's
+`driverOnboardSettings` verbatim and then read `.companyId` from it, so a `null` payload threw a
+TypeError inside the task; the `?? {}` guard sat later, in `updateDriverOnboardSettings`, where
+it could never apply, and `saveDriverOnboardSettings` tested `driverOnboardSettings &&` on a
+value that is always an object. `updateDriverOnboardSettings(props = {})` has five callers, all
+passing an object. Both components initialised a `@tracked` field (`driverOnboardSettings = {}`,
+`metrics = {}`) that their load tasks assign before any read (the DEFECTS #15 shape), and the
+widget's `if (!this.metrics) return []` guarded a value that is assigned an object by the only
+writer.
+**Impact:** A company whose onboarding settings came back null saw the panel never finish
+loading; the rest none.
+**Fix:** The load coalesces `null` to `{}` at the source (covered by a null-payload test), the
+unreachable guards, defaults and initializers are deleted.
+
 ## 4. `tests/` — 223 blueprint scaffolds that were never green
 
 **Status:** OPEN (this is the bulk of Phase B)
