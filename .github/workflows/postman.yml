@@ -33,4 +33,8 @@ jobs:
       # published image, not the branch under review. The workflow checks this
       # repository out at the commit under test and swaps it into the container.
       overlay-package: fleetbase/fleetops-api
+      # This coordinated PR adds the Trailer lifecycle to fleetbase/postman#58.
+      # Exercise that immutable collection revision during PR review; once merged,
+      # normal main-branch runs continue following the Postman main branch.
+      postman-ref: ${{ github.event_name == 'pull_request' && '0a95306557d19d77b0e7eae8b7ef8403554b73f3' || 'main' }}
     secrets: inherit
