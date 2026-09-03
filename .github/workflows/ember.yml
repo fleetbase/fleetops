@@ -37,8 +37,54 @@ jobs:
     - name: Build
       run: pnpm run build
 
+  test:
+    name: Test with coverage
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: Setup Node.js ${{ env.NODE_VERSION }}
+      uses: actions/setup-node@v2
+      with:
+        node-version: ${{ env.NODE_VERSION }}
+
+    - name: Setup pnpm
+      uses: pnpm/action-setup@v2.0.1
+      with:
+        version: latest
+
+    - name: Install Dependencies
+      run: pnpm install
+
+    - name: Coverage gate self-test
+      run: pnpm run coverage:selftest
+
+    - name: Run full test suite with coverage
+      run: pnpm run test:coverage
+
+    - name: Enforce 100% coverage gate
+      run: pnpm run coverage:check
+
+    - name: Verify LCOV report exists
+      if: always()
+      run: test -s coverage/lcov.info || (echo 'coverage/lcov.info missing or empty' && exit 1)
+
+    # `if: always()` is deliberate: the gate above fails the build, but Codecov must still receive
+    # this run's report. The backend workflow gates before uploading without it, and Codecov saw
+    # nothing at all for this repo until that suite went green.
+    - name: Upload coverage to Codecov
+      if: always()
+      uses: codecov/codecov-action@v5
+      with:
+        files: coverage/lcov.info
+        flags: frontend
+        fail_ci_if_error: false
+        disable_search: true
+        token: ${{ secrets.CODECOV_TOKEN }}
+
   npm_publish:
-    needs: build
+    needs: [build, test]
     runs-on: ubuntu-latest
     if: startsWith(github.ref, 'refs/tags/')
     steps:
@@ -67,7 +113,7 @@ jobs:
       run: npm publish --access public
 
   github_publish:
-    needs: build
+    needs: [build, test]
     runs-on: ubuntu-latest
     if: startsWith(github.ref, 'refs/tags/')
     steps:

@@ -31,7 +31,9 @@ module.exports = {
         'n/no-unpublished-require': [
             'error',
             {
-                allowModules: ['resolve'],
+                // devDependencies required from index.js: `resolve` for asset paths, ember-cli-code-coverage
+                // only behind `COVERAGE=true` (see coverageBabelPlugin in index.js).
+                allowModules: ['resolve', 'ember-cli-code-coverage'],
             },
         ],
     },

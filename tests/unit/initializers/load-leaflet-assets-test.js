@@ -1,7 +1,7 @@
 import Application from '@ember/application';
 
 import config from 'dummy/config/environment';
-import { initialize } from 'dummy/initializers/load-leaflet-assets';
+import { initialize } from '@fleetbase/fleetops-engine/initializers/load-leaflet-assets';
 import { module, test } from 'qunit';
 import Resolver from 'ember-resolver';
 import { run } from '@ember/runloop';

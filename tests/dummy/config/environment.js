@@ -7,7 +7,10 @@ module.exports = function (environment) {
         rootURL: '/',
         locationType: 'history',
         EmberENV: {
-            EXTEND_PROTOTYPES: false,
+            // The engine only ever runs inside the Fleetbase console, whose config sets
+            // `EXTEND_PROTOTYPES: true`; addon code relies on it (`[].pushObject`, `.uniqBy`, ...).
+            // The test app mirrors the host so tests exercise the code as it actually runs.
+            EXTEND_PROTOTYPES: true,
             FEATURES: {
                 // Here you can enable experimental features on an ember canary build
                 // e.g. EMBER_NATIVE_DECORATOR_SUPPORT: true
@@ -38,6 +41,20 @@ module.exports = function (environment) {
 
         ENV.APP.rootElement = '#ember-testing';
         ENV.APP.autoboot = false;
+
+        // `@fleetbase/ember-core/services/fetch` reads `config.API.host` / `config.API.namespace` from the
+        // consuming app's config via ember-get-config at module load; without them it throws
+        // "Cannot read properties of undefined (reading 'host')" as an uncaught error during render.
+        // Nothing in the test suite is expected to reach this host; tests stub `service:fetch`.
+        ENV.API = {
+            host: 'http://localhost:8000',
+            namespace: 'int/v1',
+        };
+
+        // Tells tests/test-helper.js which coverage-upload hook to use: `Testem.afterTests` is the
+        // reliable path in CI mode but does not fire in `ember test --server` mode.
+        // See https://github.com/ember-cli-code-coverage/ember-cli-code-coverage/issues/420
+        ENV.APP.isRunningWithServerArgs = process.argv.includes('--server') || process.argv.includes('-s');
     }
 
     if (environment === 'production') {

@@ -10,3 +10,6 @@
 # server
 /server/
 /server_vendor/
+
+# generated coverage report
+/coverage/

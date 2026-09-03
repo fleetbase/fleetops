@@ -6,17 +6,39 @@ const MergeTrees = require('broccoli-merge-trees');
 const resolve = require('resolve');
 const path = require('path');
 
+// Only require ember-cli-code-coverage (a devDependency) when coverage is requested, so consuming
+// applications never need it installed. ember-cli-code-coverage 3.x has no `included` hook: the
+// istanbul babel plugin must be added to this addon's babel options explicitly, otherwise
+// `window.__coverage__` is never defined and `sendCoverage()` silently writes nothing.
+function coverageBabelPlugin() {
+    if (process.env.COVERAGE === 'true') {
+        return require('ember-cli-code-coverage').buildBabelPlugin();
+    }
+
+    return [];
+}
+
 module.exports = buildEngine({
     name,
+
+    // NOTE: `buildEngine` assigns this whole object to `this.options` (ember-engines'
+    // `engine-addon.js` init), so ember-cli-babel reads the addon's babel options from HERE —
+    // a nested `options: { babel }` key, the plain-addon shape, is silently ignored.
+    babel: {
+        plugins: [...coverageBabelPlugin()],
+    },
 
     // Lazy loading keeps the engine out of the host bundle, but it also keeps the
     // engine's modules out of the dummy app that `ember test` builds, so every test
     // importing `@fleetbase/fleetops-engine/*` fails to load. Eager loading is
     // scoped to `ember test` run from this package, so host apps consuming the
     // engine — including their own test builds — keep lazy loading. Addon index
-    // files are evaluated before ember-cli assigns EMBER_ENV, hence the argv check.
+    // files are evaluated before ember-cli assigns EMBER_ENV, hence the argv check;
+    // an explicit `EMBER_ENV=test` in the shell is honoured too so that
+    // `EMBER_ENV=test ember build --environment=test --output-path=<dir>` produces a
+    // dist that `ember test --path <dir> --filter ...` can re-run without rebuilding.
     lazyLoading: {
-        enabled: !(process.argv.includes('test') && process.cwd() === __dirname),
+        enabled: !((process.argv.includes('test') || process.env.EMBER_ENV === 'test') && process.cwd() === __dirname),
     },
 
     treeForLeaflet: function () {

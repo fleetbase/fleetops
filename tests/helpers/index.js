@@ -1,4 +1,5 @@
 import { setupApplicationTest as upstreamSetupApplicationTest, setupRenderingTest as upstreamSetupRenderingTest, setupTest as upstreamSetupTest } from 'ember-qunit';
+import { setupIntl } from 'ember-intl/test-support';
 
 // This file exists to provide wrappers around ember-qunit's
 // test setup functions. This way, you can easily extend the setup that is
@@ -26,7 +27,12 @@ function setupApplicationTest(hooks, options) {
 function setupRenderingTest(hooks, options) {
     upstreamSetupRenderingTest(hooks, options);
 
-    // Additional setup for rendering tests can be done here.
+    // Instantiate the intl service before the first render. ember-intl's constructor calls
+    // `setLocale`, which writes the tracked `_locale`; when the service is first looked up lazily
+    // from inside a render (any component with `@service intl` or a `{{t}}` helper) that write
+    // lands in the same computation that already consumed the tag and Ember asserts
+    // "You attempted to update `_locale` ... already used previously in the same computation".
+    setupIntl(hooks, 'en-us');
 }
 
 function setupTest(hooks, options) {

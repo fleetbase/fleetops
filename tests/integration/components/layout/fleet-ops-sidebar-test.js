@@ -4,6 +4,7 @@ import { click, fillIn, render, settled, waitFor } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 import Service from '@ember/service';
 import window from 'ember-window-mock';
+import { setupWindowMock } from 'ember-window-mock/test-support';
 import { getOwner } from '@ember/application';
 
 class RouterStubService extends Service {
@@ -46,6 +47,10 @@ class AbilitiesStub extends Service {
 
 module('Integration | Component | layout/fleet-ops-sidebar', function (hooks) {
     setupRenderingTest(hooks);
+    // Without this the `window` import above is the REAL window: the virtual-route test's
+    // `window.location.href = ...` navigates the browser away from the test harness, testem loses
+    // it, and the run dies with "Browser timeout exceeded: 120s" during the next test.
+    setupWindowMock(hooks);
 
     hooks.beforeEach(function () {
         this.owner.register('service:router', RouterStubService);

@@ -1,6 +1,6 @@
 import { module, test } from 'qunit';
 import TooltipLayer from 'ember-leaflet/components/tooltip-layer';
-import { initialize } from 'dummy/initializers/patch-ember-leaflet-tooltip-layer';
+import { initialize } from '@fleetbase/fleetops-engine/initializers/patch-ember-leaflet-tooltip-layer';
 
 module('Unit | Initializer | patch-ember-leaflet-tooltip-layer', function () {
     test('it tolerates tooltip setup after the parent layer has been destroyed', function (assert) {
