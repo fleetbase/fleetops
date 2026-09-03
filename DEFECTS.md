@@ -704,6 +704,41 @@ resource exists for the guards to serve.
 **Fix:** The field, task, optional chains, initializer and guards are deleted; `intl.t` is called
 directly.
 
+## 42. `vehicle/form.hbs`, `driver/form.hbs` — registry components never received the controller
+
+**Status:** FIXED (separate commit, `fix(vehicle,driver): pass the controller …`)
+**Found:** Reading the vehicle form's five `RegistryYield` blocks before writing its suite.
+**Evidence:** All five (and the driver form's two) passed `@controller={{this.controller}}`;
+neither component class defines `controller`, while both routes mount the forms with
+`@controller={{this}}` (`management/vehicles/index/{new,edit}.hbs`) and the place form already
+uses `@controller={{@controller}}`.
+**Impact:** Any extension registered on `fleet-ops:component:vehicle:form*` or the driver form's
+registries got `undefined` for its controller.
+**Fix:** `@controller={{@controller}}` at all seven sites.
+
+## 43. `vehicle/form.hbs` — twenty-three fields ignored the write permission
+
+**Status:** FIXED (same separate commit as #42)
+**Found:** The no-write test found 13 of the 36 text inputs disabled.
+**Evidence:** Four `<Input>`s (seating capacity, depreciation rate, both service-life estimates)
+carried no `disabled=`, and all nineteen shorthand `<InputGroup @value=…>`s (trim, colour,
+serial, fuel card, class, call sign, both odometers, the seven engine fields, both RPMs, emission
+standard, loan payments) carried no `@disabled`, while the rest of the form gates on
+`cannot-write @resource`.
+**Impact:** A read-only user could edit those fields in the form (the API still refuses the save).
+**Fix:** Every bound field now gates on `cannot-write @resource`; the suite asserts all 36.
+
+## 44. `addon/components/vehicle/form.js` — two actions and a field nothing uses
+
+**Status:** FIXED
+**Found:** Profiling the file before its suite.
+**Evidence:** `updateAvatarUrl`, `updateSelectedImage` and `@tracked statusOptions` are referenced
+by no template or class (`grep -rn` across `addon/` finds only their definitions); the template's
+avatar is handled by `<AvatarPicker @model={{@resource}}>` and its status select reads
+`get-fleet-ops-options "vehicleStatuses"`.
+**Impact:** None.
+**Fix:** Deleted.
+
 ## 4. `tests/` — 223 blueprint scaffolds that were never green
 
 **Status:** OPEN (this is the bulk of Phase B)
