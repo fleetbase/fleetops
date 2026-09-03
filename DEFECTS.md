@@ -748,7 +748,31 @@ avatar is handled by `<AvatarPicker @model={{@resource}}>` and its status select
 `subject_uuid`; `grep -rn "subject_uui\b" addon` found exactly these two sites.
 **Impact:** A photo uploaded while creating a user from the driver or customer form was stored
 without a subject, so it never attached to the new user.
-**Fix:** `subject_uuid` at both sites; the driver suite asserts the option name.
+**Fix:** `subject_uuid` at both sites; the driver suite asserts the option name. The customer
+form's copy turned out to be dead (DEFECTS #47) and was deleted a commit later.
+
+## 46. `translations/en-us.yaml` — "New Adddress"
+
+**Status:** FIXED (separate commit, `fix(i18n): spell the customer form's new address label …`)
+**Found:** The customer form suite could not find a "New Address" button.
+**Evidence:** `customer.fields.new-address` read `New Adddress`; the customer form renders it as the
+address button's text when the customer has no place yet.
+**Impact:** A misspelt button label on every new customer.
+**Fix:** One character removed; the suite matches the corrected label.
+
+## 47. `addon/components/customer/form.js` — an action-button list nothing rendered
+
+**Status:** FIXED
+**Found:** Profiling the file after rewriting its suite.
+**Evidence:** `userAccountActionButtons` (the "create user" button with its modal, upload and save
+closures, copied from the driver form) is referenced by no template: `customer/form.hbs` mounts
+its ContentPanel without `@actionButtons`, and `grep -rn userAccountActionButtons addon` finds only
+the driver form, which does render it. The `store` and `modalsManager` injections served only that
+block.
+**Impact:** None; the customer form has no "create user" affordance today (if it should, wiring
+`@actionButtons` on its first ContentPanel would bring the driver form's behaviour back — a product
+call, not taken here).
+**Fix:** The field and the two injections are deleted.
 
 ## 4. `tests/` — 223 blueprint scaffolds that were never green
 

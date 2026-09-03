@@ -18,6 +18,8 @@ export default {
         'upload-image-supported': 'Supports PNGs, JPEGs and GIFs',
         'select-field': 'Select {field}',
         type: 'Type',
+        edit: 'Edit',
+        address: 'Address',
         status: 'Status',
     },
 };
