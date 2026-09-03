@@ -36,7 +36,7 @@ export default class CustomerFormComponent extends Component {
                             file,
                             {
                                 path: `uploads/${this.currentUser.companyId}/users/${user.slug}`,
-                                subject_uui: user.id,
+                                subject_uuid: user.id,
                                 subject_type: 'user',
                                 type: 'user_photo',
                             },
