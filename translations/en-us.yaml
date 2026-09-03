@@ -404,7 +404,7 @@ customer:
     fields:
         customer-details: Customer Details
         select-address: Select Address
-        new-address: New Adddress
+        new-address: New Address
         select-user: Select User
         send-welcome-email: Send customer portal welcome email
         send-welcome-email-help-text: Generate a temporary password and email this customer a link to sign in to the customer portal.
