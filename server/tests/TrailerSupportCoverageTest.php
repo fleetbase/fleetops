@@ -9,12 +9,14 @@ use Fleetbase\FleetOps\Http\Requests\UpdateTrailerRequest;
 use Fleetbase\FleetOps\Http\Resources\v1\AssetConnection as AssetConnectionResource;
 use Fleetbase\FleetOps\Http\Resources\v1\Trailer as TrailerResource;
 use Fleetbase\FleetOps\Imports\TrailerImport;
+use Fleetbase\FleetOps\Models\Asset;
 use Fleetbase\FleetOps\Models\AssetConnection;
 use Fleetbase\FleetOps\Models\Device;
 use Fleetbase\FleetOps\Models\DeviceInstallation;
 use Fleetbase\FleetOps\Models\Equipment;
 use Fleetbase\FleetOps\Models\Trailer;
 use Fleetbase\FleetOps\Models\Vehicle;
+use Fleetbase\LaravelMysqlSpatial\Eloquent\SpatialTrait;
 use Illuminate\Config\Repository;
 use Illuminate\Database\ConnectionResolver;
 use Illuminate\Database\Eloquent\Model as EloquentModel;
@@ -341,6 +343,10 @@ test('connection and installation models expose every polymorphic relation', fun
         ->and($device->installations())->toBeInstanceOf(HasMany::class)
         ->and($installation->device())->toBeInstanceOf(BelongsTo::class)
         ->and($installation->attachable())->toBeInstanceOf(MorphTo::class);
+});
+
+test('asset model uses the spatial query builder for location updates', function () {
+    expect(class_uses_recursive(Asset::class))->toContain(SpatialTrait::class);
 });
 
 test('device installation history closes active rows for attach and detach transitions', function () {

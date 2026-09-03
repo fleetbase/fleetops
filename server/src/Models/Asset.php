@@ -5,6 +5,7 @@ namespace Fleetbase\FleetOps\Models;
 use Fleetbase\Casts\Json;
 use Fleetbase\Casts\PolymorphicType;
 use Fleetbase\FleetOps\Casts\Point;
+use Fleetbase\LaravelMysqlSpatial\Eloquent\SpatialTrait;
 use Fleetbase\Models\Category;
 use Fleetbase\Models\File;
 use Fleetbase\Models\Model;
@@ -33,6 +34,7 @@ use Spatie\Sluggable\SlugOptions;
  */
 class Asset extends Model
 {
+    use SpatialTrait;
     use HasUuid;
     use HasPublicId;
     use TracksApiCredential;
