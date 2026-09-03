@@ -491,6 +491,24 @@ rendered `{{helper 1234}}` and expected `1234` back.
 match module names containing `\|`-escaped pipes, so a slice can silently run fewer tests than
 intended — count the `ok` lines per module before trusting a slice profile.
 
+## 30. Five map templates — `@url={{leaflet-tile-url}}` cannot render under Ember 5
+
+**Status:** FIXED
+**Found:** The first real rendering tests of `place/details`, `service-area/details` and
+`zone/details` died with "A resolved helper cannot be passed as a named argument as the syntax is
+ambiguously a pass-by-reference or invocation".
+**Evidence:** `<layers.tile @url={{leaflet-tile-url}} />` passes a bare helper name as a named
+argument; Ember 5's template compiler rejects that at render time (the same shape broke the
+resource-identities suite in DEFECTS #17's iteration). `grep -rn "={{leaflet-tile-url}}" addon`
+found five templates: `place/details.hbs`, `service-area/details.hbs`, `zone/details.hbs`,
+`modals/place-details.hbs`, `modals/point-map.hbs`. The helper's own doc comment showed the same
+form.
+**Impact:** Those five map views throw when rendered on Ember 5 — a place's details panel, a
+service area's and a zone's details, and the two map modals show nothing.
+**Fix:** `@url={{(leaflet-tile-url)}}` in all five templates and the doc comment; the three
+details views now render a Leaflet map in tests. Also trimmed the helper's `= {}` default on its
+hash parameter: Ember always passes a hash object to `compute`, so the default cannot apply.
+
 ## 4. `tests/` — 223 blueprint scaffolds that were never green
 
 **Status:** OPEN (this is the bulk of Phase B)
