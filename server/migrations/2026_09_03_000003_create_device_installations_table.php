@@ -19,6 +19,7 @@ return new class extends Migration {
             $table->timestamp('removed_at')->nullable();
             $table->string('source')->default('manual');
             $table->json('metadata')->nullable();
+            $table->softDeletes();
             $table->timestamps();
             $table->index(['company_uuid', 'attachable_type', 'attachable_uuid'], 'device_installations_attachable_index');
             $table->index(['device_uuid', 'installed_at'], 'device_installations_history_index');

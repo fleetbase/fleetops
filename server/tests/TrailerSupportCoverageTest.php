@@ -366,6 +366,12 @@ test('device installation history closes active rows for attach and detach trans
         ->and($connection->table('device_installations')->whereNull('removed_at')->count())->toBe(0);
 });
 
+test('device installation migration supports the base model soft delete scope', function () {
+    $migration = file_get_contents(__DIR__ . '/../migrations/2026_09_03_000003_create_device_installations_table.php');
+
+    expect($migration)->toContain('$table->softDeletes()');
+});
+
 test('search controller maps first class trailers into navigation results', function () {
     $connection = fleetOpsTrailerSupportDatabase();
     $connection->table('assets')->insert(['uuid' => 'trailer-search', 'public_id' => 'trailer_search', 'company_uuid' => 'company-trailer-support', 'name' => 'Search Reefer', 'description' => 'Cold', 'type' => 'reefer', 'asset_class' => 'trailer', 'status' => 'available', 'plate_number' => 'COLD-1']);
