@@ -523,6 +523,20 @@ only from its own template, and both templates are the only renderers of these c
 **Impact:** None.
 **Fix:** Both removed; the classes are now empty shells like the other four form components.
 
+## 32. `addon/components/vehicle/pill.hbs` — the pill never received its vehicle
+
+**Status:** FIXED
+**Found:** Writing the first real rendering test of the vehicle pill.
+**Evidence:** The template passed `@this.resource={{this.resource}}` to ember-ui's `Pill` instead
+of `@resource=...`, so the pill's click handler, online indicator (`get @resource "online"`) and
+image alt never saw the vehicle: `@onClick` was invoked without the vehicle and the online dot
+was always the offline colour. Its tooltip block also read `{{this.resource.name
+this.resource.yearMakeModel}}`, which Glimmer treats as invoking a string as a helper and throws
+the moment the tooltip opens.
+**Impact:** Vehicle pills reported every vehicle offline, handed no vehicle to click handlers,
+and crashed on hover.
+**Fix:** `@resource={{this.resource}}` and `{{or this.resource.name this.resource.yearMakeModel}}`.
+
 ## 4. `tests/` — 223 blueprint scaffolds that were never green
 
 **Status:** OPEN (this is the bulk of Phase B)

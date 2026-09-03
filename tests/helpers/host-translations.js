@@ -5,6 +5,8 @@
  */
 export default {
     common: {
+        online: 'Online',
+        offline: 'Offline',
         'create-new-resource': 'Create new {resource}',
         'create-a-new-resource': 'Create a new {resource}',
         'view-resource-details': 'View {resource} Details',
