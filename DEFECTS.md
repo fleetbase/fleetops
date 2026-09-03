@@ -259,6 +259,38 @@ by `createItem`/`createHubItem` is a key of the priorities map — verified by d
 **Fix:** All deleted. The empty-query guard is kept (the arg is public API on the component)
 behind `istanbul ignore if` naming the navigator as the reason.
 
+## 16. `addon/components/layout/fleet-ops-sidebar/operations-monitor.js` — three unreferenced getters and two guards nothing can trip
+
+**Status:** FIXED (deleted; three host-environment guards kept behind `istanbul ignore` with the reason)
+**Found:** Coverage residue while covering the component.
+**Evidence:** `activeResources`, `emptyMessage` and `subtitle` are referenced by neither
+`operations-monitor.hbs` nor the class itself (`grep -c 'this\.<name>'` is 0 in both); the
+template renders the equivalent data inline via `{{or ...}}` and `this.emptyState`.
+`focusResource(resource)` is only reached from `locateDriver`/`locateVehicle`, whose only callers are
+the template's `(fn this.locateDriver row.driver)` / `(fn this.locateVehicle row.vehicle)` and the
+driver/vehicle row buttons — every one passes an existing row resource. In `updateListHeight` the
+last fallback `this.monitorElement.parentElement` is the element `did-insert` registered, which is
+mounted, so `boundary` is never null. The `typeof window` / `typeof ResizeObserver` /
+`typeof requestAnimationFrame` checks guard non-browser hosts and can only be false outside Chrome.
+Also unreachable: the `= new Set()` initializer on `@tracked expandedFleetIds` (assigned by
+`loadFallbackResources` together with `fallbackFleets`, and only read by `isFleetExpanded`/
+`toggleFleet` once fleets exist — Ember's legacy `@tracked` initializes lazily on read); the
+`!query` early return in `resourceMatches` (its only callers `fleetMatches`/`driverMatches`/
+`vehicleMatches` are only reached from `buildFilteredFleetRows`, which `fleetRows` calls only when
+`hasQuery`); `.length ?? 0` in both count helpers (`length` is never nullish); and nine default
+arguments whose every caller passes the value (`filterResources` both, `resourceMatches#fields`,
+`buildFleetRows#fleets`, `buildFilteredFleetRows#fleets`, `buildExpandedFleetRows#depth`,
+`collectFleetKeys`, `sortOnlineFirst`, `resourcesById`). The `!listElement || !monitorElement`
+guard in `updateListHeight` cannot trip either: both `did-insert` registrations happen in the same
+render before the scheduled frame, and teardown cancels the frame. In `performEmptyStateAction` the
+final `if (this.activeTab === 'fleets')` follows early returns for the only other two tabs, so it is
+always true (made unconditional). In `resourceArray` the `Array.isArray(resources) ? resources : []`
+consequent is unreachable while `EXTEND_PROTOTYPES` is on (the console's setting): every native
+array already answers `toArray()` one line earlier — kept behind `istanbul ignore next`.
+**Impact:** None.
+**Fix:** Getters, guards, initializer, `?? 0`s and defaults deleted; the environment guards and the
+element guard carry `istanbul ignore` comments naming the reason.
+
 ## 4. `tests/` — 223 blueprint scaffolds that were never green
 
 **Status:** OPEN (this is the bulk of Phase B)
