@@ -107,7 +107,13 @@ function fleetOpsTrailerControllerDatabase(): SQLiteConnection
 {
     $pdo = new PDO('sqlite::memory:');
     $pdo->sqliteCreateFunction('ST_PointFromText', fn ($wkt, $srid = 0, $axisOrder = null) => $wkt);
-    $pdo->sqliteCreateFunction('ST_GeomFromText', fn ($wkt, $srid = 0, $axisOrder = null) => $wkt);
+    $pdo->sqliteCreateFunction('ST_GeomFromText', function ($wkt, $srid = 0, $axisOrder = null) {
+        if (is_string($wkt) && sscanf($wkt, 'POINT(%f %f)', $longitude, $latitude) === 2) {
+            return pack('V', (int) $srid) . pack('C', 1) . pack('V', 1) . pack('d', $longitude) . pack('d', $latitude);
+        }
+
+        return $wkt;
+    });
     $connection = new SQLiteConnection($pdo);
     $resolver   = new ConnectionResolver(['default' => $connection, 'mysql' => $connection]);
     $resolver->setDefaultConnection('mysql');
