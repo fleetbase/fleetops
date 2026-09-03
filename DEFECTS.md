@@ -450,20 +450,23 @@ register through `universe.getApplicationInstance()`, see #24).
 **Impact:** None.
 **Fix:** As above; no source change.
 
-## 28. `tests/integration/components/vendor/form-test.js` (and siblings) — un-awaited fetches spill "Failed to fetch" onto the next test
+## 28. `tests/integration/components/vendor/panel-header-test.js` (and two scaffolds) — un-awaited fetches spill "Failed to fetch" onto the next test
 
-**Status:** OPEN (resolves with the scaffold sweep, #4)
+**Status:** FIXED
 **Found:** `vendor/panel-header: it falls back when vendor values are missing` went red in one
 of four otherwise identical full runs with `global failure: TypeError: Failed to fetch`.
-**Evidence:** Every full run logs exactly four `Failed to fetch` rejections. They originate in
-`it renders` scaffolds that mount real forms (`vendor/form` runs immediately before the affected
-test) whose `ModelSelect`/fetch-backed children issue requests to the unreachable API host; the
-rejection is not awaited by the scaffold, so QUnit attributes it to whichever test is running when
-it settles. Usually that is the next scaffold, which is red anyway; timing decides.
+**Evidence:** Every full run logged four `Failed to fetch` rejections. Two came from the
+self-fetching `it renders` scaffolds of `driver-onboard-settings` and
+`widget/fleet-ops-key-metrics` (gone with their real suites, DEFECTS #36). The stack of the last
+two named the origin exactly: ember-ui's `CountryName`, mounted by `Vendor::PanelHeader` for the
+`country` chip, calls `fetch.get('lookup/country/US')` 300ms after it renders and nothing awaits
+it, so QUnit attributed the rejection to whichever test was running when the request failed.
 **Impact:** None for users; one flaky green test per run at worst.
-**Fix:** Replace those scaffolds with tests that stub `service:fetch` (the pattern every real
-suite here already uses). Until then, treat a lone `Failed to fetch` global failure on an
-otherwise green test as this defect.
+**Fix:** The panel-header suite stands `country-name` in with a template-only component (the same
+stand-in `driver/details` and the place suites already use). A full run now logs zero
+`Failed to fetch` rejections; a returning one means a new suite mounts a fetching ember-ui child
+without a stand-in — the `awk` in the iteration-16 ledger notes finds the victim and its
+predecessor.
 
 ## 29. Eight stale or scaffold unit/helper tests
 
@@ -609,6 +612,57 @@ writer.
 loading; the rest none.
 **Fix:** The load coalesces `null` to `{}` at the source (covered by a null-payload test), the
 unreachable guards, defaults and initializers are deleted.
+
+## 37. `addon/components/custom-entity/form.js` — the image upload reads a config that is never provided
+
+**Status:** NEEDS DECISION
+**Found:** Writing the first real suite for the form; `onFileAdded` could not be exercised without
+throwing.
+**Evidence:** `onFileAdded` builds the upload path from `this.config.id` and sends
+`subject_uuid: this.config.id`, but `config` is a bare `@tracked config;` that nothing assigns:
+no `this.config =` in the class, no `@config` argument in the template, and the only mount
+(`order-config-manager/entities.js#editCustomEntity`) opens the form through
+`resourceContextPanel.open({ content: 'custom-entity/form', resource, ... })`, whose panel forwards
+a fixed set of arguments (`resource`, `saveTask`, `pojoResource`, ...) and no `config`. So the
+first statement of the action dereferences `undefined` and every custom-entity image upload
+throws before the request is built. `simpleHash` has this action as its only caller.
+**Impact:** Uploading an image for a custom entity from the order-config manager fails silently
+(the TypeError surfaces only in the console); the entity keeps the default image.
+**Fix:** A product call on where the upload should attach: the order config the entity belongs
+to (then the entities component must pass the config through — e.g. stamp `order_config_uuid`
+on the entity it opens, or extend the panel's forwarded arguments) or the entity itself (then
+`subject_uuid`/`subject_type` and the path change to the entity's own id). Until decided the two
+functions stay uncovered; the suite covers everything else in the file.
+
+## 38. `addon/components/custom-entity/form.hbs` — the dasherized type never sticks
+
+**Status:** NEEDS DECISION
+**Found:** The first real test of `setCustomEntityType` observed the raw text after the handler
+ran.
+**Evidence:** The type `InputGroup` binds `@value={{@resource.type}}` (two-way through ember-ui's
+`Input`) and attaches `{{on "input" this.setCustomEntityType}}` via `...attributes` on the same
+`<input>`. On each `input` event the handler writes `dasherize(value)` and the Input's own
+listener, installed after the spread, writes the raw element value back; the suite shows
+`type === 'Big Box'` after typing `Big Box`, and on blur the `change` listener writes the raw
+value again. The handler is therefore a no-op in production; the test characterises this.
+**Impact:** Custom entity types are stored as typed (`Big Box`) rather than as the slug the code
+intends (`big-box`); anything matching on the slug downstream misses.
+**Fix:** Either bind the field read-only (`@value={{readonly @resource.type}}`) so the handler is
+the sole writer — the user then sees the slug form while typing — or drop the handler and
+dasherize when the entity is saved. Which one is a UX choice.
+
+## 39. `avatar-picker.js`, `custom-entity/form.js` — a dead post-load guard and an action nothing calls
+
+**Status:** FIXED
+**Found:** Profiling the two files after their first real suites.
+**Evidence:** `AvatarPicker#selectAvatar` followed `file = await this.store.findRecord(...)` (inside
+a try whose catch returns) with `if (!file) return;`; `findRecord` resolves to a record or
+rejects, never to a falsy value, so the guard could not run. `CustomEntityForm#save` checked
+`typeof this.onSave === 'function'`, but the class defines no `onSave`, the panel passes no
+`@onSave`, and no template invokes `this.save` (`grep -rn "this.save\|@onSave" addon` finds
+neither for this component); saving goes through the panel's `saveTask`.
+**Impact:** None.
+**Fix:** Both deleted.
 
 ## 4. `tests/` — 223 blueprint scaffolds that were never green
 

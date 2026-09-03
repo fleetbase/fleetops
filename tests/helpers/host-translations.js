@@ -14,5 +14,10 @@ export default {
         'view-resource-details': 'View {resource} Details',
         'edit-resource-details': 'Edit {resource} Details',
         'delete-resource': 'Delete {resource}',
+        'upload-image': 'Upload Image',
+        'upload-image-supported': 'Supports PNGs, JPEGs and GIFs',
+        'select-field': 'Select {field}',
+        type: 'Type',
+        status: 'Status',
     },
 };
