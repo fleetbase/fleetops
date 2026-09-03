@@ -11,20 +11,24 @@ import { task } from 'ember-concurrency';
 const TYPE_TO_MODEL = {
     'fleet-ops:vehicle': 'vehicle',
     'fleet-ops:driver': 'driver',
+    'fleet-ops:trailer': 'trailer',
     'Fleetbase\\FleetOps\\Models\\Vehicle': 'vehicle',
     'Fleetbase\\FleetOps\\Models\\Driver': 'driver',
+    'Fleetbase\\FleetOps\\Models\\Trailer': 'trailer',
     'fleet-ops:equipment': 'equipment',
 };
 
 const TYPE_TO_OPTION_VALUE = {
     'Fleetbase\\FleetOps\\Models\\Vehicle': 'fleet-ops:vehicle',
     'Fleetbase\\FleetOps\\Models\\Driver': 'fleet-ops:driver',
+    'Fleetbase\\FleetOps\\Models\\Trailer': 'fleet-ops:trailer',
 };
 
 export default class EquipmentFormComponent extends Component {
     @service fetch;
     @service currentUser;
     @service notifications;
+    @service intl;
 
     /** Equipment type options. */
     equipmentTypeOptions = ['ppe', 'refrigeration_unit', 'tool', 'liftgate', 'ramp', 'container', 'pallet_jack', 'forklift', 'safety_equipment', 'communication_device', 'other'];
@@ -36,10 +40,13 @@ export default class EquipmentFormComponent extends Component {
      * Polymorphic equipable type options — the asset this equipment is attached to.
      * Each entry has a `value` (stored on the model) and a `label` (displayed in the UI).
      */
-    equipableTypeOptions = [
-        { value: 'fleet-ops:vehicle', label: 'Vehicle' },
-        { value: 'fleet-ops:driver', label: 'Driver' },
-    ];
+    get equipableTypeOptions() {
+        return [
+            { value: 'fleet-ops:vehicle', label: this.intl.t('resource.vehicle') },
+            { value: 'fleet-ops:trailer', label: this.intl.t('resource.trailer') },
+            { value: 'fleet-ops:driver', label: this.intl.t('resource.driver') },
+        ];
+    }
 
     /** Derived Ember Data model name for the currently selected equipable type. */
     @tracked equipableModelName = null;

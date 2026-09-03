@@ -5,6 +5,7 @@ export default {
         const menuService = universe.getService('menu');
         const registryService = universe.getService('registry');
         const widgetService = universe.getService('widget');
+        const intlService = universe.getService('intl');
 
         // Register header navigation
         menuService.registerHeaderMenuItem('Fleet-Ops', 'console.fleet-ops', {
@@ -35,6 +36,12 @@ export default {
                     description: 'View and manage your vehicle fleet and telematics.',
                     icon: 'truck',
                     route: 'console.fleet-ops.management.vehicles',
+                },
+                {
+                    title: intlService.t('menu.trailers'),
+                    description: intlService.t('trailer.navigation-description'),
+                    icon: 'trailer',
+                    route: 'console.fleet-ops.management.trailers',
                 },
                 {
                     title: 'Fleets',

@@ -57,6 +57,7 @@ menu:
   resources: Ressources
   drivers: Chauffeurs
   vehicles: Véhicules
+  trailers: Remorques
   fleets: Flottes
   vendors: Fournisseurs
   contacts: Contacts
@@ -87,6 +88,8 @@ menu:
 resource:
   asset: Actif
   assets: Actifs
+  trailer: Remorque
+  trailers: Remorques
   activity: Activité
   activities: Activités
   contact: Contact
@@ -441,6 +444,30 @@ driver:
     unassign-vehicle-success: Unassigned {vehicleName} from {driverName}.
     issue-title: Issue reported for {driverName}
 device:
+  attachment:
+    title: Actif attaché
+    description: Contexte de flotte pour la télémétrie de cet appareil.
+    open: Ouvrir l'actif
+    asset: Actif attaché
+    synced-device: Appareil synchronisé
+    asset-type: Type d'actif
+    select-asset-type: Sélectionnez un type d'actif
+    locate: Localiser
+    change: Changer d'actif
+    detach: Détacher
+    attached-device: Appareil attaché
+    last-seen: Dernier signal de l'appareil
+    none-title: Aucun actif attaché
+    none-message: Attachez cet appareil à un véhicule ou une remorque pour fournir le contexte de flotte.
+    latest-positions: Positions récentes
+    positions-description: Coordonnées récentes de l'actif transmises par cet appareil.
+    full-history: Historique complet
+    no-positions: Aucune position récente
+    no-positions-message: Cet actif ne possède pas encore d'historique de position récent.
+    attach-or-change: Attacher ou changer d'actif
+    view-attached: Voir l'actif attaché
+    locate-attached: Localiser l'actif attaché sur la carte
+    unknown: Actif inconnu
   fields:
     title: Détails de l'appareil
     device-name: Nom de l'appareil
@@ -475,6 +502,7 @@ device:
   actions:
     attach-to-vehicle: Attach to Vehicle
     detach-from-vehicle: Detach from Vehicle
+    attach-to-asset: Attacher à un actif
   prompts:
     attach-to-vehicle-title: Attach device to vehicle
     attach-device-to-vehicle-title: "Attach {deviceName} to vehicle"
@@ -484,6 +512,12 @@ device:
     detach-from-vehicle-title: "Detach {deviceName} from vehicle?"
     detach-from-vehicle-body: "This detaches {deviceName} from {vehicleName} and stops vehicle telemetry updates until it is attached again."
     detach-from-vehicle-success: Device detached from vehicle.
+    attach-to-asset-title: Attacher l'appareil à un actif
+    select-asset-warning: Sélectionnez un véhicule ou une remorque.
+    attach-to-asset-success: Appareil attaché à l'actif.
+    detach-from-asset-title: "Détacher {deviceName} de l'actif ?"
+    detach-from-asset-body: "Cette action détache {deviceName} de {assetName} et arrête les mises à jour télématiques jusqu'à un nouvel attachement."
+    detach-from-asset-success: Appareil détaché de l'actif.
 entity:
   fields:
     declare: Déclarer
@@ -1946,3 +1980,136 @@ settings:
       button-continue: Continuer
       button-start: Commencer l'intégration maintenant
       button-in-progress: Intégration en cours
+
+trailer:
+  navigation-description: Gérez les actifs remorqués, les connexions, l'équipement et la télématique.
+  sections:
+    identity: Identité et classification
+    registration: Immatriculation
+    dimensions: Dimensions et capacité
+    running-gear: Essieux, freins et attelage
+    refrigeration: Réfrigération et capacités
+    ownership: Propriété et informations financières
+    connection: Connexion actuelle au véhicule
+    telemetry: Localisation et télématique
+  fields:
+    code: Code
+    description: Description
+    type: Type de remorque
+    body-type: Type de carrosserie
+    color: Couleur
+    vin: VIN
+    serial-number: Numéro de série
+    vehicle: Véhicule attaché
+    attachment-state: État d'attachement
+    connectivity: Connectivité
+    devices-count: Appareils
+    equipment-count: Équipement
+    length: Longueur
+    width: Largeur
+    height: Hauteur
+    tare: Poids à vide
+    gvwr: Poids total autorisé en charge
+    payload: Charge utile
+    cargo-volume: Volume de chargement
+    measurement: Système de mesure
+    hubometer: Odomètre ou hubodomètre
+    axles: Nombre d'essieux
+    tires: Nombre de pneus
+    coupling: Type d'attelage
+    brakes: Type de frein
+    abs: ABS installé
+    ebs: EBS installé
+    refrigerated: Réfrigérée
+    doors: Nombre de portes
+    temperature-min: Température minimale
+    temperature-max: Température maximale
+    reefer-hours: Heures moteur frigorifique
+    ownership: Type de propriété
+    currency: Devise
+    purchase-date: Date d'achat
+    lease-expiry: Fin du crédit-bail
+    acquisition-cost: Coût d'acquisition
+    current-value: Valeur actuelle
+    vendor: Fournisseur
+    warranty: Garantie
+    last-online: Dernière connexion
+    updated: Dernière mise à jour
+    connected-at: Attachée le
+    disconnected-at: Détachée le
+  actions:
+    new: Nouvelle remorque
+    attach: Attacher
+    attach-vehicle: Attacher au véhicule
+    detach-vehicle: Détacher du véhicule
+    attach-device: Attacher un appareil
+    attach-equipment: Attacher un équipement
+    schedule-maintenance: Planifier la maintenance
+    create-work-order: Créer un ordre de travail
+    log-maintenance: Enregistrer la maintenance
+  messages:
+    select-vehicle: Sélectionnez un véhicule
+    select-trailer: Sélectionnez une remorque
+    select-device: Sélectionnez un appareil
+    select-equipment: Sélectionnez un équipement
+    attached: Remorque attachée avec succès.
+    detached: Remorque détachée avec succès.
+    device-attached: Appareil attaché avec succès.
+    equipment-attached: Équipement attaché avec succès.
+    equipment-detached: Équipement détaché avec succès.
+    detach-confirm: Cette action termine la connexion de remorquage actuelle et la conserve dans l'historique.
+    created: Remorque créée avec succès.
+    updated: Remorque mise à jour avec succès.
+    photo-error: "Impossible de téléverser la photo : {message}"
+  empty:
+    title: Ajoutez votre première remorque
+    description: Gérez l'identité, les connexions, la maintenance, l'équipement et la télémétrie en direct.
+    filtered-title: Aucune remorque ne correspond aux filtres
+    filtered-description: Modifiez la recherche ou les filtres pour trouver une autre remorque.
+    connections: Aucun historique de connexion disponible.
+    equipment: Aucun équipement n'est attaché à cette remorque.
+    related: Aucun enregistrement associé disponible.
+  docs:
+    title: Guide des remorques
+    link: Ouvrir le guide des remorques
+  tabs:
+    connections: Historique des connexions
+    schedules: Planifications
+    work-orders: Ordres de travail
+    maintenance: Maintenance
+  statuses:
+    available: Disponible
+    in_use: En service
+    maintenance: En maintenance
+    out_of_service: Hors service
+    retired: Retirée
+  attachment:
+    attached: Attachée
+    detached: Détachée
+  connectivity:
+    online: En ligne
+    recently_offline: Hors ligne récemment
+    offline: Hors ligne
+    never_connected: Jamais connectée
+  measurement:
+    metric: Métrique
+    imperial: Impérial
+  placeholders:
+    type: Sélectionnez un type de remorque
+  types:
+    dry_van: Fourgon sec
+    reefer: Frigorifique
+    flatbed: Plateau
+    step_deck: Plateau surbaissé
+    lowboy: Porte-engins surbaissé
+    tanker: Citerne
+    bulk: Vrac
+    dump: Benne
+    chassis: Châssis
+    curtain_side: Bâchée coulissante
+    car_carrier: Porte-voitures
+    livestock: Bétaillère
+    logging: Forestière
+    dolly: Dolly
+    specialty: Spéciale
+    other: Autre

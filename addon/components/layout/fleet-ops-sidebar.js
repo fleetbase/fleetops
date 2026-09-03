@@ -142,6 +142,7 @@ export default class LayoutFleetOpsSidebarComponent extends Component {
             ]),
             this.createItem('menu.drivers', 'id-card', 'management.drivers', 'fleet-ops list driver', 'fleet-ops see driver', ['driver', 'online drivers']),
             this.createItem('menu.vehicles', 'truck', 'management.vehicles', 'fleet-ops list vehicle', 'fleet-ops see vehicle', ['vehicle', 'track vehicles', 'online vehicles']),
+            this.createItem('menu.trailers', 'trailer', 'management.trailers', 'fleet-ops list trailer', 'fleet-ops see trailer', ['trailer', 'towed asset', 'reefer', 'flatbed']),
             this.createItem('menu.fleets', 'user-group', 'management.fleets', 'fleet-ops list fleet', 'fleet-ops see fleet', ['fleet', 'teams']),
             this.createItem('menu.vendors', 'warehouse', 'management.vendors', 'fleet-ops list vendor', 'fleet-ops see vendor'),
             this.createItem('menu.contacts', 'address-book', 'management.contacts', 'fleet-ops list contact', 'fleet-ops see contact'),

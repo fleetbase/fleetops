@@ -168,6 +168,7 @@ class Equipment extends Model
         Relation::morphMap([
             'fleet-ops:vehicle' => Vehicle::class,
             'fleet-ops:driver'  => Driver::class,
+            'fleet-ops:trailer' => Trailer::class,
         ]);
     }
 
@@ -243,6 +244,7 @@ class Equipment extends Model
         $this->attributes['equipable_type'] = match ($type) {
             'fleet-ops:vehicle', 'vehicle' => Utils::getMutationType('fleet-ops:vehicle'),
             'fleet-ops:driver', 'driver'   => Utils::getMutationType('fleet-ops:driver'),
+            'fleet-ops:trailer', 'trailer' => Utils::getMutationType('fleet-ops:trailer'),
             default                        => $type,
         };
     }

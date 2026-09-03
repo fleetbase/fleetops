@@ -70,6 +70,7 @@ menu:
     resources: Resources
     drivers: Drivers
     vehicles: Vehicles
+    trailers: Trailers
     fleets: Fleets
     vendors: Vendors
     contacts: Contacts
@@ -106,9 +107,144 @@ menu:
     orchestrator: Orchestrator
     orchestrator-settings: Orchestrator Settings
 
+trailer:
+    navigation-description: Manage towed assets, connections, equipment, and telematics.
+    sections:
+        identity: Identity and classification
+        registration: Registration
+        dimensions: Dimensions and capacity
+        running-gear: Axles, brakes, and coupling
+        refrigeration: Refrigeration and capabilities
+        ownership: Ownership and financial details
+        connection: Current vehicle connection
+        telemetry: Location and telematics
+    fields:
+        code: Code
+        description: Description
+        type: Trailer type
+        body-type: Body type
+        color: Color
+        vin: VIN
+        serial-number: Serial number
+        vehicle: Attached vehicle
+        attachment-state: Attachment state
+        connectivity: Connectivity
+        devices-count: Devices
+        equipment-count: Equipment
+        length: Length
+        width: Width
+        height: Height
+        tare: Tare weight
+        gvwr: Gross vehicle weight rating
+        payload: Payload capacity
+        cargo-volume: Cargo volume
+        measurement: Measurement system
+        hubometer: Odometer or hubometer
+        axles: Axle count
+        tires: Tire count
+        coupling: Coupling type
+        brakes: Brake type
+        abs: ABS equipped
+        ebs: EBS equipped
+        refrigerated: Refrigerated
+        doors: Door count
+        temperature-min: Minimum temperature
+        temperature-max: Maximum temperature
+        reefer-hours: Reefer engine hours
+        ownership: Ownership type
+        currency: Currency
+        purchase-date: Purchase date
+        lease-expiry: Lease expiry
+        acquisition-cost: Acquisition cost
+        current-value: Current value
+        vendor: Vendor
+        warranty: Warranty
+        last-online: Last online
+        updated: Last updated
+        connected-at: Connected at
+        disconnected-at: Disconnected at
+    actions:
+        new: New Trailer
+        attach: Attach
+        attach-vehicle: Attach to Vehicle
+        detach-vehicle: Detach from Vehicle
+        attach-device: Attach Device
+        attach-equipment: Attach Equipment
+        schedule-maintenance: Schedule Maintenance
+        create-work-order: Create Work Order
+        log-maintenance: Log Maintenance
+    messages:
+        select-vehicle: Select a vehicle
+        select-trailer: Select a trailer
+        select-device: Select a device
+        select-equipment: Select equipment
+        attached: Trailer attached successfully.
+        detached: Trailer detached successfully.
+        device-attached: Device attached successfully.
+        equipment-attached: Equipment attached successfully.
+        equipment-detached: Equipment detached successfully.
+        detach-confirm: This ends the current towing connection and preserves it in history.
+        created: Trailer created successfully.
+        updated: Trailer updated successfully.
+        photo-error: "Unable to upload photo: {message}"
+    empty:
+        title: Add your first trailer
+        description: Manage trailer identity, towing connections, maintenance, equipment, and live telemetry.
+        filtered-title: No trailers match your filters
+        filtered-description: Adjust the search or filters to find another trailer.
+        connections: No connection history is available.
+        equipment: No equipment is attached to this trailer.
+        related: No related records are available.
+    docs:
+        title: Trailers guide
+        link: Open the Trailer guide
+    tabs:
+        connections: Connection history
+        schedules: Schedules
+        work-orders: Work orders
+        maintenance: Maintenance
+    statuses:
+        available: Available
+        in_use: In use
+        maintenance: Maintenance
+        out_of_service: Out of service
+        retired: Retired
+    attachment:
+        attached: Attached
+        detached: Unattached
+    connectivity:
+        online: Online
+        recently_offline: Recently offline
+        offline: Offline
+        never_connected: Never connected
+    measurement:
+        metric: Metric
+        imperial: Imperial
+    placeholders:
+        type: Select a trailer type
+    types:
+        dry_van: Dry van
+        reefer: Reefer
+        flatbed: Flatbed
+        step_deck: Step deck
+        lowboy: Lowboy
+        tanker: Tanker
+        bulk: Bulk trailer
+        dump: Dump trailer
+        chassis: Chassis
+        curtain_side: Curtain side
+        car_carrier: Car carrier
+        livestock: Livestock
+        logging: Logging
+        dolly: Dolly
+        specialty: Specialty
+        other: Other
+
 resource:
     asset: Asset
     assets: Assets
+    trailer: Trailer
+    trailers: Trailers
     activity: Activity
     activities: Activities
     contact: Contact
@@ -470,6 +606,30 @@ driver:
         unassign-vehicle-success: Unassigned {vehicleName} from {driverName}.
         issue-title: Issue reported for {driverName}
 device:
+    attachment:
+        title: Attached asset
+        description: Fleet context for telemetry from this device.
+        open: Open asset
+        asset: Attached asset
+        synced-device: Synced device
+        asset-type: Asset type
+        select-asset-type: Select an asset type
+        locate: Locate
+        change: Change asset
+        detach: Detach
+        attached-device: Attached device
+        last-seen: Device last seen
+        none-title: No asset attached
+        none-message: Attach this device to a vehicle or trailer so telemetry has fleet context.
+        latest-positions: Latest positions
+        positions-description: Recent asset coordinates reported through this device attachment.
+        full-history: Full history
+        no-positions: No recent positions
+        no-positions-message: This attached asset does not have recent position history available yet.
+        attach-or-change: Attach or change asset
+        view-attached: View attached asset
+        locate-attached: Locate attached asset on map
+        unknown: Unknown asset
     fields:
         title: Device Details
         device-name: Device Name
@@ -507,11 +667,18 @@ device:
         attach-device: Attach Device
         attach-to-vehicle: Attach to Vehicle
         detach-from-vehicle: Detach from Vehicle
+        attach-to-asset: Attach to Asset
     prompts:
         attach-to-vehicle-title: Attach device to vehicle
         attach-device-to-vehicle-title: "Attach {deviceName} to vehicle"
         select-vehicle-warning: Select a vehicle to attach this device to.
         attach-to-vehicle-success: Device attached to vehicle.
+        attach-to-asset-title: Attach device to asset
+        select-asset-warning: Select a vehicle or trailer to attach this device to.
+        attach-to-asset-success: Device attached to asset.
+        detach-from-asset-title: "Detach {deviceName} from asset?"
+        detach-from-asset-body: "This detaches {deviceName} from {assetName} and stops asset telemetry updates until it is attached again."
+        detach-from-asset-success: Device detached from asset.
         not-attached-warning: "{deviceName} is not attached to a vehicle."
         detach-from-vehicle-title: "Detach {deviceName} from vehicle?"
         detach-from-vehicle-body: "This detaches {deviceName} from {vehicleName} and stops vehicle telemetry updates until it is attached again."
@@ -1021,6 +1188,7 @@ vehicle:
         vin-number: VIN Number
         year: Year
     actions:
+        attach-trailer: Attach Trailer
         attach-device: Attach Device
         unassign-orders: Unassign Orders
         create-issue: Create Issue
@@ -1028,6 +1196,9 @@ vehicle:
         schedule-maintenance: Schedule Maintenance
         create-work-order: Create Work Order
         log-maintenance: Log Maintenance
+    empty:
+        trailers: No trailers are currently attached to this vehicle.
+        equipment: No equipment is currently attached to this vehicle.
 
     prompts:
         attach-device-title: Attach device to {vehicleName}

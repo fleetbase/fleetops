@@ -11,10 +11,10 @@ use Fleetbase\FleetOps\Models\FuelReport;
 use Fleetbase\FleetOps\Models\Order;
 use Fleetbase\FleetOps\Models\Part;
 use Fleetbase\FleetOps\Models\Telematic;
+use Fleetbase\FleetOps\Models\Trailer;
 use Fleetbase\FleetOps\Models\Vehicle;
 use Fleetbase\FleetOps\Models\Vendor;
 use Fleetbase\FleetOps\Models\Warranty;
-use Fleetbase\FleetOps\Support\Utils;
 use Fleetbase\Models\File;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
@@ -65,7 +65,10 @@ trait ResolvesFleetOpsApiResources
             return [null, null];
         }
 
-        $modelClass = Utils::getMutationType($type);
+        $modelClass = $this->allowedMorphTypes()[$type] ?? null;
+        if (!$modelClass) {
+            throw ValidationException::withMessages(['type' => ['Unsupported resource type.']]);
+        }
         $model      = $this->resolveModel($modelClass, $id);
 
         return [$modelClass, $model->uuid];
@@ -131,6 +134,9 @@ trait ResolvesFleetOpsApiResources
             'fleet-ops:vehicle'                  => Vehicle::class,
             'vehicle'                            => Vehicle::class,
             Vehicle::class                       => Vehicle::class,
+            'fleet-ops:trailer'                  => Trailer::class,
+            'trailer'                            => Trailer::class,
+            Trailer::class                       => Trailer::class,
             'fleet-ops:driver'                   => Driver::class,
             'driver'                             => Driver::class,
             Driver::class                        => Driver::class,

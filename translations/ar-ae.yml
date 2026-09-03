@@ -1,6 +1,140 @@
 menu:
   fuel-providers: تكاملات الوقود
   fuel-transactions: معاملات الوقود
+  trailers: المقطورات
+
+trailer:
+  navigation-description: إدارة الأصول المقطورة والارتباطات والمعدات والبيانات عن بُعد.
+  sections:
+    identity: الهوية والتصنيف
+    registration: التسجيل
+    dimensions: الأبعاد والسعة
+    running-gear: المحاور والمكابح وأداة الربط
+    refrigeration: التبريد والإمكانات
+    ownership: الملكية والتفاصيل المالية
+    connection: الارتباط الحالي بالمركبة
+    telemetry: الموقع والبيانات عن بُعد
+  fields:
+    code: الرمز
+    description: الوصف
+    type: نوع المقطورة
+    body-type: نوع الهيكل
+    color: اللون
+    vin: رقم تعريف المركبة
+    serial-number: الرقم التسلسلي
+    vehicle: المركبة المرتبطة
+    attachment-state: حالة الارتباط
+    connectivity: الاتصال
+    devices-count: الأجهزة
+    equipment-count: المعدات
+    length: الطول
+    width: العرض
+    height: الارتفاع
+    tare: الوزن الفارغ
+    gvwr: إجمالي وزن المركبة المسموح
+    payload: سعة الحمولة
+    cargo-volume: حجم الحمولة
+    measurement: نظام القياس
+    hubometer: عداد المسافات أو العجلات
+    axles: عدد المحاور
+    tires: عدد الإطارات
+    coupling: نوع أداة الربط
+    brakes: نوع المكابح
+    abs: مزودة بنظام ABS
+    ebs: مزودة بنظام EBS
+    refrigerated: مبردة
+    doors: عدد الأبواب
+    temperature-min: الحد الأدنى لدرجة الحرارة
+    temperature-max: الحد الأقصى لدرجة الحرارة
+    reefer-hours: ساعات تشغيل وحدة التبريد
+    ownership: نوع الملكية
+    currency: العملة
+    purchase-date: تاريخ الشراء
+    lease-expiry: انتهاء عقد الإيجار
+    acquisition-cost: تكلفة الشراء
+    current-value: القيمة الحالية
+    vendor: المورد
+    warranty: الضمان
+    last-online: آخر اتصال
+    updated: آخر تحديث
+    connected-at: وقت الارتباط
+    disconnected-at: وقت الفصل
+  actions:
+    new: مقطورة جديدة
+    attach: ربط
+    attach-vehicle: ربط بمركبة
+    detach-vehicle: فصل عن المركبة
+    attach-device: ربط جهاز
+    attach-equipment: ربط معدات
+    schedule-maintenance: جدولة الصيانة
+    create-work-order: إنشاء أمر عمل
+    log-maintenance: تسجيل الصيانة
+  messages:
+    select-vehicle: اختر مركبة
+    select-trailer: اختر مقطورة
+    select-device: اختر جهازًا
+    select-equipment: اختر معدات
+    attached: تم ربط المقطورة بنجاح.
+    detached: تم فصل المقطورة بنجاح.
+    device-attached: تم ربط الجهاز بنجاح.
+    equipment-attached: تم ربط المعدات بنجاح.
+    equipment-detached: تم فصل المعدات بنجاح.
+    detach-confirm: سيؤدي هذا إلى إنهاء ارتباط السحب الحالي مع الاحتفاظ به في السجل.
+    created: تم إنشاء المقطورة بنجاح.
+    updated: تم تحديث المقطورة بنجاح.
+    photo-error: "تعذر تحميل الصورة: {message}"
+  empty:
+    title: أضف مقطورتك الأولى
+    description: إدارة هوية المقطورة وارتباطات السحب والصيانة والمعدات والبيانات المباشرة.
+    filtered-title: لا توجد مقطورات تطابق عوامل التصفية
+    filtered-description: عدّل البحث أو عوامل التصفية للعثور على مقطورة أخرى.
+    connections: لا يتوفر سجل ارتباطات.
+    equipment: لا توجد معدات مرتبطة بهذه المقطورة.
+    related: لا توجد سجلات مرتبطة.
+  docs:
+    title: دليل المقطورات
+    link: فتح دليل المقطورات
+  tabs:
+    connections: سجل الارتباطات
+    schedules: الجداول
+    work-orders: أوامر العمل
+    maintenance: الصيانة
+  statuses:
+    available: متاحة
+    in_use: قيد الاستخدام
+    maintenance: صيانة
+    out_of_service: خارج الخدمة
+    retired: متقاعدة
+  attachment:
+    attached: مرتبطة
+    detached: غير مرتبطة
+  connectivity:
+    online: متصلة
+    recently_offline: انقطع اتصالها مؤخرًا
+    offline: غير متصلة
+    never_connected: لم تتصل من قبل
+  measurement:
+    metric: متري
+    imperial: إمبراطوري
+  placeholders:
+    type: اختر نوع المقطورة
+  types:
+    dry_van: صندوق جاف
+    reefer: مبردة
+    flatbed: مسطحة
+    step_deck: سطح متدرج
+    lowboy: منخفضة
+    tanker: صهريج
+    bulk: حمولة سائبة
+    dump: قلاب
+    chassis: هيكل حاوية
+    curtain_side: ستائر جانبية
+    car_carrier: ناقلة سيارات
+    livestock: ناقلة مواشٍ
+    logging: ناقلة أخشاب
+    dolly: عربة ربط
+    specialty: متخصصة
+    other: أخرى
 
 fleet-ops:
   extension-name: Fleet-Ops

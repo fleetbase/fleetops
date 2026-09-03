@@ -9,6 +9,7 @@ use Fleetbase\FleetOps\Models\Driver;
 use Fleetbase\FleetOps\Models\Fleet;
 use Fleetbase\FleetOps\Models\Order;
 use Fleetbase\FleetOps\Models\ServiceArea;
+use Fleetbase\FleetOps\Models\Trailer;
 use Fleetbase\FleetOps\Models\Vehicle;
 use Fleetbase\FleetOps\Models\Zone;
 
@@ -79,6 +80,27 @@ class FleetOpsAiQueryResources
             ],
             sampleFields: ['public_id', 'name', 'status', 'online', 'provider', 'telematic_uuid', 'attachable_uuid'],
             directivePermission: 'fleet-ops list device',
+            maxLimit: 500,
+        ));
+
+        $registry->register(new AiQueryableResource(
+            key: 'fleet-ops.trailers',
+            label: 'Fleet-Ops trailers',
+            module: 'fleet-ops',
+            modelClass: Trailer::class,
+            permission: 'fleet-ops see trailer',
+            aliases: ['trailers', 'trailer'],
+            fields: [
+                'online'         => ['column' => 'online', 'type' => 'boolean'],
+                'status'         => ['column' => 'status', 'type' => 'string'],
+                'type'           => ['column' => 'type', 'type' => 'string'],
+                'plate_number'   => ['column' => 'plate_number', 'type' => 'string'],
+                'last_online_at' => ['column' => 'last_online_at', 'type' => 'datetime'],
+                'updated_at'     => ['column' => 'updated_at', 'type' => 'datetime'],
+            ],
+            sampleFields: ['public_id', 'name', 'type', 'status', 'online', 'plate_number', 'last_online_at'],
+            locationField: 'location',
+            directivePermission: 'fleet-ops list trailer',
             maxLimit: 500,
         ));
 

@@ -1,6 +1,8 @@
 import Controller from '@ember/controller';
+import { inject as service } from '@ember/service';
 
 export default class SettingsCustomFieldsController extends Controller {
+    @service intl;
     get subjects() {
         return [
             {
@@ -13,6 +15,12 @@ export default class SettingsCustomFieldsController extends Controller {
                 model: 'vehicle',
                 type: 'fleet-ops:vehicle',
                 label: 'Vehicle',
+                groups: [],
+            },
+            {
+                model: 'trailer',
+                type: 'fleet-ops:trailer',
+                label: this.intl.t('resource.trailer'),
                 groups: [],
             },
             {

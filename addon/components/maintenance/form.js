@@ -1,12 +1,14 @@
 import Component from '@glimmer/component';
 import { tracked } from '@glimmer/tracking';
 import { action } from '@ember/object';
+import { inject as service } from '@ember/service';
 
 /**
  * Maps a polymorphic type value to the Ember Data model name used by ModelSelect.
  */
 const TYPE_TO_MODEL = {
     'fleet-ops:vehicle': 'vehicle',
+    'fleet-ops:trailer': 'trailer',
     'fleet-ops:driver': 'driver',
     'fleet-ops:equipment': 'equipment',
     'fleet-ops:vendor': 'vendor',
@@ -20,9 +22,11 @@ const TYPE_TO_MODEL = {
  */
 const MAINTAINABLE_MODEL_TO_TYPE = {
     'maintenance-subject-vehicle': 'fleet-ops:vehicle',
+    'maintenance-subject-trailer': 'fleet-ops:trailer',
     'maintenance-subject-equipment': 'fleet-ops:equipment',
     // Fall-through for raw models passed from vehicle-actions.js
     vehicle: 'fleet-ops:vehicle',
+    trailer: 'fleet-ops:trailer',
     equipment: 'fleet-ops:equipment',
 };
 
@@ -40,6 +44,7 @@ const PERFORMED_BY_MODEL_TO_TYPE = {
 };
 
 export default class MaintenanceFormComponent extends Component {
+    @service intl;
     /** Maintenance type options — the category of maintenance activity. */
     maintenanceTypeOptions = ['preventive', 'corrective', 'predictive', 'routine', 'emergency', 'inspection', 'repair', 'replacement', 'calibration'];
 
@@ -54,10 +59,13 @@ export default class MaintenanceFormComponent extends Component {
      * Uses label/value objects so the PowerSelect trigger shows a human-readable
      * label instead of the raw model type string.
      */
-    maintainableTypeOptions = [
-        { value: 'fleet-ops:vehicle', label: 'Vehicle' },
-        { value: 'fleet-ops:equipment', label: 'Equipment' },
-    ];
+    get maintainableTypeOptions() {
+        return [
+            { value: 'fleet-ops:vehicle', label: this.intl.t('resource.vehicle') },
+            { value: 'fleet-ops:trailer', label: this.intl.t('resource.trailer') },
+            { value: 'fleet-ops:equipment', label: this.intl.t('resource.equipment') },
+        ];
+    }
 
     /**
      * Polymorphic performed-by type options — who carried out the maintenance.

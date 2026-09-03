@@ -82,9 +82,9 @@ class FleetOpsApiDeviceControllerEndpointProbe extends DeviceController
         $this->lookupLogs[] = [$action, $deviceId, $vehicleId];
     }
 
-    protected function logDeviceAttachmentFailure(string $action, Device $device, ?Vehicle $vehicle, Throwable $exception): void
+    protected function logDeviceAttachmentFailure(string $action, Device $device, ?EloquentModel $attachable, Throwable $exception): void
     {
-        $this->failureLogs[] = [$action, $device->uuid, $vehicle?->uuid, $exception->getMessage()];
+        $this->failureLogs[] = [$action, $device->uuid, $attachable?->uuid, $exception->getMessage()];
     }
 }
 
@@ -339,9 +339,9 @@ test('api device controller attaches detaches and reports failures', function ()
         ])
         ->and($device->detaches)->toBe(['device-uuid'])
         ->and($missing)->toBe(['error' => 'Device resource not found.'])
-        ->and($attachFailure)->toBe(['error' => 'Unable to attach device to vehicle.'])
+        ->and($attachFailure)->toBe(['error' => 'Unable to attach device to resource.'])
         ->and($attachFailureController->failureLogs)->toBe([['attach', 'attach-failure', 'vehicle-uuid', 'attach exploded']])
-        ->and($detachFailure)->toBe(['error' => 'Unable to detach device from vehicle.'])
+        ->and($detachFailure)->toBe(['error' => 'Unable to detach device from resource.'])
         ->and($detachFailureController->failureLogs)->toBe([['detach', 'detach-failure', null, 'detach exploded']])
-        ->and($lookupFailure)->toBe(['error' => 'Device or vehicle resource not found.']);
+        ->and($lookupFailure)->toBe(['error' => 'Device or attachable resource not found.']);
 });

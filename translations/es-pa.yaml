@@ -53,6 +53,7 @@ menu:
   resources: Recursos
   drivers: Conductores
   vehicles: Vehículos
+  trailers: Remolques
   fleets: Flotas
   vendors: Proveedores
   contacts: Contactos
@@ -85,6 +86,8 @@ menu:
 resource:
   asset: Activo
   assets: Activos
+  trailer: Remolque
+  trailers: Remolques
   activity: Actividad
   activities: Actividades
   contact: Contacto
@@ -425,6 +428,30 @@ driver:
     unassign-vehicle-success: Unassigned {vehicleName} from {driverName}.
     issue-title: Issue reported for {driverName}
 device:
+  attachment:
+    title: Activo conectado
+    description: Contexto de flota para la telemetría de este dispositivo.
+    open: Abrir activo
+    asset: Activo conectado
+    synced-device: Dispositivo sincronizado
+    asset-type: Tipo de activo
+    select-asset-type: Seleccione un tipo de activo
+    locate: Localizar
+    change: Cambiar activo
+    detach: Desconectar
+    attached-device: Dispositivo conectado
+    last-seen: Última señal del dispositivo
+    none-title: Ningún activo conectado
+    none-message: Conecte este dispositivo a un vehículo o remolque para aportar contexto de flota.
+    latest-positions: Posiciones recientes
+    positions-description: Coordenadas recientes del activo informadas mediante este dispositivo.
+    full-history: Historial completo
+    no-positions: Sin posiciones recientes
+    no-positions-message: Este activo aún no tiene historial de posiciones reciente.
+    attach-or-change: Conectar o cambiar activo
+    view-attached: Ver activo conectado
+    locate-attached: Localizar activo conectado en el mapa
+    unknown: Activo desconocido
   fields:
     title: Detalles del dispositivo
     device-name: Nombre del dispositivo
@@ -461,6 +488,7 @@ device:
   actions:
     attach-to-vehicle: Attach to Vehicle
     detach-from-vehicle: Detach from Vehicle
+    attach-to-asset: Conectar a activo
   prompts:
     attach-to-vehicle-title: Attach device to vehicle
     attach-device-to-vehicle-title: "Attach {deviceName} to vehicle"
@@ -470,6 +498,12 @@ device:
     detach-from-vehicle-title: "Detach {deviceName} from vehicle?"
     detach-from-vehicle-body: "This detaches {deviceName} from {vehicleName} and stops vehicle telemetry updates until it is attached again."
     detach-from-vehicle-success: Device detached from vehicle.
+    attach-to-asset-title: Conectar dispositivo a activo
+    select-asset-warning: Seleccione un vehículo o remolque.
+    attach-to-asset-success: Dispositivo conectado al activo.
+    detach-from-asset-title: "¿Desconectar {deviceName} del activo?"
+    detach-from-asset-body: "Esto desconecta {deviceName} de {assetName} y detiene sus actualizaciones telemáticas hasta volver a conectarlo."
+    detach-from-asset-success: Dispositivo desconectado del activo.
 entity:
   fields:
     declare: Declarar
@@ -1799,3 +1833,136 @@ settings:
       button-continue: Continuar
       button-start: Empiece a bordo ahora
       button-in-progress: A bordo en progreso
+
+trailer:
+  navigation-description: Administre activos remolcados, conexiones, equipos y telemática.
+  sections:
+    identity: Identidad y clasificación
+    registration: Registro
+    dimensions: Dimensiones y capacidad
+    running-gear: Ejes, frenos y acoplamiento
+    refrigeration: Refrigeración y capacidades
+    ownership: Propiedad y detalles financieros
+    connection: Conexión actual al vehículo
+    telemetry: Ubicación y telemática
+  fields:
+    code: Código
+    description: Descripción
+    type: Tipo de remolque
+    body-type: Tipo de carrocería
+    color: Color
+    vin: VIN
+    serial-number: Número de serie
+    vehicle: Vehículo conectado
+    attachment-state: Estado de conexión
+    connectivity: Conectividad
+    devices-count: Dispositivos
+    equipment-count: Equipos
+    length: Longitud
+    width: Ancho
+    height: Altura
+    tare: Peso en vacío
+    gvwr: Peso bruto vehicular
+    payload: Capacidad de carga
+    cargo-volume: Volumen de carga
+    measurement: Sistema de medida
+    hubometer: Odómetro o hubómetro
+    axles: Número de ejes
+    tires: Número de neumáticos
+    coupling: Tipo de acoplamiento
+    brakes: Tipo de freno
+    abs: ABS equipado
+    ebs: EBS equipado
+    refrigerated: Refrigerado
+    doors: Número de puertas
+    temperature-min: Temperatura mínima
+    temperature-max: Temperatura máxima
+    reefer-hours: Horas del motor frigorífico
+    ownership: Tipo de propiedad
+    currency: Moneda
+    purchase-date: Fecha de compra
+    lease-expiry: Vencimiento del arrendamiento
+    acquisition-cost: Costo de adquisición
+    current-value: Valor actual
+    vendor: Proveedor
+    warranty: Garantía
+    last-online: Última conexión
+    updated: Última actualización
+    connected-at: Conectado el
+    disconnected-at: Desconectado el
+  actions:
+    new: Nuevo remolque
+    attach: Conectar
+    attach-vehicle: Conectar a vehículo
+    detach-vehicle: Desconectar del vehículo
+    attach-device: Conectar dispositivo
+    attach-equipment: Conectar equipo
+    schedule-maintenance: Programar mantenimiento
+    create-work-order: Crear orden de trabajo
+    log-maintenance: Registrar mantenimiento
+  messages:
+    select-vehicle: Seleccione un vehículo
+    select-trailer: Seleccione un remolque
+    select-device: Seleccione un dispositivo
+    select-equipment: Seleccione un equipo
+    attached: Remolque conectado correctamente.
+    detached: Remolque desconectado correctamente.
+    device-attached: Dispositivo conectado correctamente.
+    equipment-attached: Equipo conectado correctamente.
+    equipment-detached: Equipo desconectado correctamente.
+    detach-confirm: Esto finaliza la conexión de remolque actual y la conserva en el historial.
+    created: Remolque creado correctamente.
+    updated: Remolque actualizado correctamente.
+    photo-error: "No se pudo cargar la foto: {message}"
+  empty:
+    title: Agregue su primer remolque
+    description: Administre identidad, conexiones, mantenimiento, equipos y telemetría en vivo.
+    filtered-title: Ningún remolque coincide con los filtros
+    filtered-description: Ajuste la búsqueda o los filtros para encontrar otro remolque.
+    connections: No hay historial de conexiones disponible.
+    equipment: No hay equipos conectados a este remolque.
+    related: No hay registros relacionados disponibles.
+  docs:
+    title: Guía de remolques
+    link: Abrir la guía de remolques
+  tabs:
+    connections: Historial de conexiones
+    schedules: Programaciones
+    work-orders: Órdenes de trabajo
+    maintenance: Mantenimiento
+  statuses:
+    available: Disponible
+    in_use: En uso
+    maintenance: Mantenimiento
+    out_of_service: Fuera de servicio
+    retired: Retirado
+  attachment:
+    attached: Conectado
+    detached: Sin conectar
+  connectivity:
+    online: En línea
+    recently_offline: Desconectado recientemente
+    offline: Fuera de línea
+    never_connected: Nunca conectado
+  measurement:
+    metric: Métrico
+    imperial: Imperial
+  placeholders:
+    type: Seleccione un tipo de remolque
+  types:
+    dry_van: Caja seca
+    reefer: Frigorífico
+    flatbed: Plataforma
+    step_deck: Plataforma escalonada
+    lowboy: Cama baja
+    tanker: Cisterna
+    bulk: Remolque para granel
+    dump: Volquete
+    chassis: Chasis
+    curtain_side: Cortina lateral
+    car_carrier: Portavehículos
+    livestock: Ganadero
+    logging: Maderero
+    dolly: Dolly
+    specialty: Especial
+    other: Otro

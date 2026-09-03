@@ -11,6 +11,7 @@ use Fleetbase\FleetOps\Models\FuelReport;
 use Fleetbase\FleetOps\Models\Order;
 use Fleetbase\FleetOps\Models\Part;
 use Fleetbase\FleetOps\Models\Telematic;
+use Fleetbase\FleetOps\Models\Trailer;
 use Fleetbase\FleetOps\Models\Vehicle;
 use Fleetbase\FleetOps\Models\Vendor;
 use Fleetbase\FleetOps\Models\Warranty;
@@ -246,6 +247,9 @@ test('public api resource resolver exposes every supported morph alias', functio
         'fleet-ops:vehicle'                  => Vehicle::class,
         'vehicle'                            => Vehicle::class,
         Vehicle::class                       => Vehicle::class,
+        'fleet-ops:trailer'                  => Trailer::class,
+        'trailer'                            => Trailer::class,
+        Trailer::class                       => Trailer::class,
         'fleet-ops:driver'                   => Driver::class,
         'driver'                             => Driver::class,
         Driver::class                        => Driver::class,
@@ -282,6 +286,13 @@ test('public api resource resolver exposes every supported morph alias', functio
         'file'                               => File::class,
         File::class                          => File::class,
     ]);
+});
+
+test('public api resource resolver rejects unsupported morph aliases', function () {
+    $controller = new FleetOpsWorkOrderControllerProbe();
+
+    expect(fn () => $controller->callHelper('resolveMorph', 'unsupported-resource', 'resource_public'))
+        ->toThrow(ValidationException::class);
 });
 
 test('public api resource resolver detects fillable columns and primary keys', function () {

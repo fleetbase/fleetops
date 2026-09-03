@@ -5,6 +5,7 @@ namespace Fleetbase\FleetOps\Models;
 use Fleetbase\Casts\Json;
 use Fleetbase\Casts\PolymorphicType;
 use Fleetbase\FleetOps\Casts\Point;
+use Fleetbase\LaravelMysqlSpatial\Eloquent\SpatialTrait;
 use Fleetbase\Models\Category;
 use Fleetbase\Models\File;
 use Fleetbase\Models\Model;
@@ -33,6 +34,7 @@ use Spatie\Sluggable\SlugOptions;
  */
 class Asset extends Model
 {
+    use SpatialTrait;
     use HasUuid;
     use HasPublicId;
     use TracksApiCredential;
@@ -117,13 +119,37 @@ class Asset extends Model
         'odometer_unit',
         'transmission',
         'fuel_volume_unit',
-        'fuel_Type',
+        'fuel_type',
         'ownership_type',
         'engine_hours',
         'gvw',
         'capacity',
         'specs',
         'attributes',
+        'asset_class',
+        'online',
+        'last_online_at',
+        'telematics',
+        'purchased_at',
+        'length',
+        'width',
+        'height',
+        'tare_weight',
+        'gvwr',
+        'payload_capacity',
+        'cargo_volume',
+        'axle_count',
+        'tire_count',
+        'door_count',
+        'body_type',
+        'coupling_type',
+        'brake_type',
+        'abs_equipped',
+        'ebs_equipped',
+        'refrigerated',
+        'temperature_min',
+        'temperature_max',
+        'reefer_engine_hours',
         'notes',
         'slug',
     ];
@@ -158,15 +184,18 @@ class Asset extends Model
      * @var array
      */
     protected $casts = [
-        'year'             => 'integer',
-        'odometer'         => 'integer',
-        'engine_hours'     => 'integer',
-        'gvw'              => 'decimal:2',
-        'capacity'         => Json::class,
-        'specs'            => Json::class,
-        'attributes'       => Json::class,
-        'location'         => Point::class,
-        'assigned_to_type' => PolymorphicType::class,
+        'year'              => 'integer',
+        'odometer'          => 'integer',
+        'engine_hours'      => 'integer',
+        'gvw'               => 'decimal:2',
+        'capacity'          => Json::class,
+        'specs'             => Json::class,
+        'attributes'        => Json::class,
+        'location'          => Point::class,
+        'assigned_to_type'  => PolymorphicType::class,
+        'online'            => 'boolean',
+        'last_online_at'    => 'datetime',
+        'telematics'        => Json::class,
     ];
 
     /**

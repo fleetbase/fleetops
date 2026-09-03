@@ -9,7 +9,6 @@ use Fleetbase\FleetOps\Http\Resources\v1\DeletedResource;
 use Fleetbase\FleetOps\Http\Resources\v1\Device as DeviceResource;
 use Fleetbase\FleetOps\Models\Device;
 use Fleetbase\FleetOps\Models\Telematic;
-use Fleetbase\FleetOps\Models\Vehicle;
 use Fleetbase\FleetOps\Models\Warranty;
 use Fleetbase\FleetOps\Support\Utils;
 use Fleetbase\Http\Controllers\Controller;
@@ -90,28 +89,32 @@ class DeviceController extends Controller
         $this->rejectUuidIdentifiers($request);
 
         $request->validate([
-            'vehicle' => 'required_without:attachable|string|nullable',
+            'vehicle'         => 'required_without:attachable|string|nullable',
+            'attachable'      => 'required_without:vehicle|string|nullable',
+            'attachable_type' => 'nullable|in:fleet-ops:vehicle,fleet-ops:trailer,vehicle,trailer',
         ]);
 
-        $deviceId  = $id;
-        $vehicleId = $request->input('vehicle') ?? $request->input('attachable');
+        $deviceId       = $id;
+        $attachableId   = $request->input('vehicle') ?? $request->input('attachable');
+        $attachableType = $request->filled('vehicle') ? 'fleet-ops:vehicle' : $request->input('attachable_type', 'fleet-ops:vehicle');
 
         try {
-            $device  = $this->resolveModel(Device::class, $deviceId);
-            $vehicle = $this->resolveModel(Vehicle::class, $vehicleId);
+            $device       = $this->resolveModel(Device::class, $deviceId);
+            [$modelClass] = $this->resolveMorph($attachableType, $attachableId);
+            $attachable   = $this->resolveModel($modelClass, $attachableId);
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $exception) {
-            $this->logDeviceAttachmentLookupFailure('attach', $deviceId, $vehicleId);
+            $this->logDeviceAttachmentLookupFailure('attach', $deviceId, $attachableId);
 
-            return response()->json(['error' => 'Device or vehicle resource not found.'], 404);
+            return response()->json(['error' => 'Device or attachable resource not found.'], 404);
         }
 
         try {
-            $device->attachTo($vehicle);
+            $device->attachTo($attachable);
             $this->loadDeviceRelations($device);
         } catch (\Throwable $e) {
-            $this->logDeviceAttachmentFailure('attach', $device, $vehicle, $e);
+            $this->logDeviceAttachmentFailure('attach', $device, $attachable, $e);
 
-            return response()->json(['error' => 'Unable to attach device to vehicle.'], 500);
+            return response()->json(['error' => 'Unable to attach device to resource.'], 500);
         }
 
         return response()->json([
@@ -136,7 +139,7 @@ class DeviceController extends Controller
         } catch (\Throwable $e) {
             $this->logDeviceAttachmentFailure('detach', $device, null, $e);
 
-            return response()->json(['error' => 'Unable to detach device from vehicle.'], 500);
+            return response()->json(['error' => 'Unable to detach device from resource.'], 500);
         }
 
         return response()->json([
@@ -242,14 +245,15 @@ class DeviceController extends Controller
         ]);
     }
 
-    protected function logDeviceAttachmentFailure(string $action, Device $device, ?Vehicle $vehicle, \Throwable $exception): void
+    protected function logDeviceAttachmentFailure(string $action, Device $device, ?\Illuminate\Database\Eloquent\Model $attachable, \Throwable $exception): void
     {
         Log::error('Public API device attachment failed', [
             'action'          => $action,
             'device_uuid'     => $device->uuid,
             'device_id'       => $device->public_id,
-            'vehicle_uuid'    => $vehicle?->uuid,
-            'vehicle_id'      => $vehicle?->public_id,
+            'attachable_type' => $attachable ? get_class($attachable) : null,
+            'attachable_uuid' => $attachable?->uuid,
+            'attachable_id'   => $attachable?->public_id,
             'company_uuid'    => session('company'),
             'request_id'      => request()->headers->get('X-Request-ID') ?? request()->headers->get('X-Correlation-ID'),
             'exception_class' => get_class($exception),

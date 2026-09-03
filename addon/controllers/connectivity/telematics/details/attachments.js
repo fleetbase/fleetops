@@ -57,32 +57,33 @@ export default class ConnectivityTelematicsDetailsAttachmentsController extends 
         return this.syncedDevices.filter((device) => !device.attachable_uuid).length;
     }
 
-    get mappedVehiclesCount() {
+    get mappedAssetsCount() {
         const vehicleIds = new Set(this.syncedDevices.filter((device) => device.attachable_uuid).map((device) => device.attachable_uuid));
 
         return vehicleIds.size;
     }
 
-    get vehicleGroups() {
+    get assetGroups() {
         const groups = new Map();
 
         for (const device of this.attachedDevices) {
-            this.addDeviceToVehicleGroup(groups, device);
+            this.addDeviceToAssetGroup(groups, device);
         }
 
-        return this.sortVehicleGroups(groups);
+        return this.sortAssetGroups(groups);
     }
 
-    addDeviceToVehicleGroup(groups, device) {
+    addDeviceToAssetGroup(groups, device) {
         const key = device.attachable_uuid;
 
         if (!groups.has(key)) {
-            const vehicle = device.attachable;
+            const asset = device.attachable;
 
             groups.set(key, {
                 id: key,
-                name: this.getDeviceVehicleName(device),
-                vehicle,
+                name: this.getDeviceAssetName(device),
+                asset,
+                attachableType: device.attachable_type,
                 devices: [],
             });
         }
@@ -90,7 +91,7 @@ export default class ConnectivityTelematicsDetailsAttachmentsController extends 
         groups.get(key).devices.push(device);
     }
 
-    sortVehicleGroups(groups) {
+    sortAssetGroups(groups) {
         return Array.from(groups.values()).sort((a, b) => String(a.name).localeCompare(String(b.name)));
     }
 
@@ -146,11 +147,11 @@ export default class ConnectivityTelematicsDetailsAttachmentsController extends 
     }
 
     get hasOnlyUnattachedDevices() {
-        return this.unattachedDevices.length > 0 && this.vehicleGroups.length === 0 && !this.hasActiveFilters;
+        return this.unattachedDevices.length > 0 && this.assetGroups.length === 0 && !this.hasActiveFilters;
     }
 
     get allMapped() {
-        return this.hasSyncedDevices && this.unattachedDevices.length === 0 && this.vehicleGroups.length > 0 && !this.hasActiveFilters;
+        return this.hasSyncedDevices && this.unattachedDevices.length === 0 && this.assetGroups.length > 0 && !this.hasActiveFilters;
     }
 
     get emptyStateVariant() {
@@ -234,7 +235,7 @@ export default class ConnectivityTelematicsDetailsAttachmentsController extends 
     get metrics() {
         return [
             { label: 'Synced devices', value: this.totalSyncedDevices, icon: 'microchip', accentClass: 'fleetops-connectivity-kpi-accent-blue' },
-            { label: 'Vehicles mapped', value: this.mappedVehiclesCount, icon: 'truck', accentClass: 'fleetops-connectivity-kpi-accent-blue' },
+            { label: 'Assets mapped', value: this.mappedAssetsCount, icon: 'truck', accentClass: 'fleetops-connectivity-kpi-accent-blue' },
             { label: 'Attached devices', value: this.attachedDevicesCount, icon: 'link', accentClass: 'fleetops-connectivity-kpi-accent-green' },
             { label: 'Unattached devices', value: this.unattachedDevicesCount, icon: 'link-slash', accentClass: 'fleetops-connectivity-kpi-accent-amber' },
             { label: 'Online devices', value: this.onlineDevicesCount, icon: 'signal', accentClass: 'fleetops-connectivity-kpi-accent-green' },
@@ -320,40 +321,20 @@ export default class ConnectivityTelematicsDetailsAttachmentsController extends 
             return;
         }
 
-        return this.attachDeviceToVehicle(this.selectedDevice, group.vehicle ?? { id: group.id, name: group.name });
+        return this.attachDeviceToAsset(this.selectedDevice, group.asset ?? { id: group.id, name: group.name }, group.attachableType);
     }
 
     @action openAttachDeviceModal(device) {
-        this.modalsManager.show('modals/attach-telematic-device', {
-            title: this.intl.t('device.prompts.attach-device-to-vehicle-title', { deviceName: device.displayName ?? device.name ?? device.device_id ?? this.intl.t('resource.device') }),
-            acceptButtonText: this.intl.t('device.actions.attach-to-vehicle'),
-            device,
-            selectedVehicle: null,
-            confirm: async (modal) => {
-                const selectedVehicle = modal.getOption('selectedVehicle');
-                if (!selectedVehicle) {
-                    return;
-                }
-
-                modal.startLoading();
-
-                try {
-                    await this.attachDeviceToVehicle(device, selectedVehicle);
-                    modal.done();
-                } catch (error) {
-                    this.notifications.serverError(error);
-                    modal.stopLoading();
-                }
-            },
-        });
+        return this.deviceActions.attachToAsset(device, { callback: this.refresh });
     }
 
-    async attachDeviceToVehicle(device, selectedVehicle) {
-        const response = await this.fetch.post(`devices/${device.id}/attach`, { vehicle: selectedVehicle.id });
+    async attachDeviceToAsset(device, selectedAsset, attachableType) {
+        const normalizedType = `${attachableType ?? ''}`.toLowerCase().includes('trailer') ? 'fleet-ops:trailer' : 'fleet-ops:vehicle';
+        const response = await this.fetch.post(`devices/${device.id}/attach`, { attachable_type: normalizedType, attachable: selectedAsset.id });
 
-        this.applyDeviceAttachment(device, selectedVehicle, response?.device);
+        this.applyDeviceAttachment(device, selectedAsset, response?.device, normalizedType);
         this.selectedDevice = null;
-        this.notifications.success(this.intl.t('device.prompts.attach-to-vehicle-success'));
+        this.notifications.success(this.intl.t('device.prompts.attach-to-asset-success'));
     }
 
     @action detachDevice(device) {
@@ -369,7 +350,7 @@ export default class ConnectivityTelematicsDetailsAttachmentsController extends 
                     const response = await this.fetch.post(`devices/${device.id}/detach`);
 
                     this.applyDeviceDetachment(device, response?.device);
-                    this.notifications.success(this.intl.t('device.prompts.detach-from-vehicle-success'));
+                    this.notifications.success(this.intl.t('device.prompts.detach-from-asset-success'));
                     modal.done();
                 } catch (error) {
                     this.notifications.serverError(error);
@@ -379,16 +360,16 @@ export default class ConnectivityTelematicsDetailsAttachmentsController extends 
         });
     }
 
-    getDeviceVehicleName(device) {
-        return device.attached_to_name ?? device.attachable?.display_name ?? device.attachable?.name ?? 'Unknown vehicle';
+    getDeviceAssetName(device) {
+        return device.attached_to_name ?? device.attachable?.display_name ?? device.attachable?.name ?? this.intl.t('device.attachment.unknown');
     }
 
-    applyDeviceAttachment(device, selectedVehicle, serverDevice = {}) {
+    applyDeviceAttachment(device, selectedAsset, serverDevice = {}, attachableType = 'fleet-ops:vehicle') {
         this.updateDevice(device, {
-            attachable_uuid: serverDevice.attachable_uuid ?? selectedVehicle.id,
-            attachable_type: serverDevice.attachable_type ?? 'fleet-ops:vehicle',
-            attached_to_name: serverDevice.attached_to_name ?? selectedVehicle.displayName ?? selectedVehicle.display_name ?? selectedVehicle.name,
-            attachable: serverDevice.attachable ?? selectedVehicle,
+            attachable_uuid: serverDevice.attachable_uuid ?? selectedAsset.id,
+            attachable_type: serverDevice.attachable_type ?? attachableType,
+            attached_to_name: serverDevice.attached_to_name ?? selectedAsset.displayName ?? selectedAsset.display_name ?? selectedAsset.name,
+            attachable: serverDevice.attachable ?? selectedAsset,
         });
     }
 

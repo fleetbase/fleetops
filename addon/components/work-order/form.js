@@ -1,6 +1,7 @@
 import Component from '@glimmer/component';
 import { tracked } from '@glimmer/tracking';
 import { action } from '@ember/object';
+import { inject as service } from '@ember/service';
 import { workOrderCategories, workOrderStatuses } from '../../utils/fleet-ops-options';
 
 /**
@@ -9,6 +10,7 @@ import { workOrderCategories, workOrderStatuses } from '../../utils/fleet-ops-op
  */
 const TYPE_TO_MODEL = {
     'fleet-ops:vehicle': 'vehicle',
+    'fleet-ops:trailer': 'trailer',
     'fleet-ops:equipment': 'equipment',
     'fleet-ops:vendor': 'vendor',
     'fleet-ops:contact': 'contact',
@@ -22,9 +24,11 @@ const TYPE_TO_MODEL = {
  */
 const TARGET_MODEL_TO_TYPE = {
     'maintenance-subject-vehicle': 'fleet-ops:vehicle',
+    'maintenance-subject-trailer': 'fleet-ops:trailer',
     'maintenance-subject-equipment': 'fleet-ops:equipment',
     // Fall-through for raw models passed from vehicle-actions.js
     vehicle: 'fleet-ops:vehicle',
+    trailer: 'fleet-ops:trailer',
     equipment: 'fleet-ops:equipment',
 };
 
@@ -42,6 +46,7 @@ const ASSIGNEE_MODEL_TO_TYPE = {
 };
 
 export default class WorkOrderFormComponent extends Component {
+    @service intl;
     /** Status options for work orders. */
     statusOptions = workOrderStatuses;
 
@@ -54,10 +59,13 @@ export default class WorkOrderFormComponent extends Component {
     /**
      * Polymorphic target type options — the asset a work order is raised against.
      */
-    targetTypeOptions = [
-        { value: 'fleet-ops:vehicle', label: 'Vehicle' },
-        { value: 'fleet-ops:equipment', label: 'Equipment' },
-    ];
+    get targetTypeOptions() {
+        return [
+            { value: 'fleet-ops:vehicle', label: this.intl.t('resource.vehicle') },
+            { value: 'fleet-ops:trailer', label: this.intl.t('resource.trailer') },
+            { value: 'fleet-ops:equipment', label: this.intl.t('resource.equipment') },
+        ];
+    }
 
     /**
      * Polymorphic assignee type options — who is responsible for completing
