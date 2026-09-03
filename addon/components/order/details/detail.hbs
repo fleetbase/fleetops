@@ -138,7 +138,7 @@
             {{#if @resource.required_skills.length}}
                 <div class="field-info-container col-span-2">
                     <div class="field-name">Required Skills</div>
-                    <div class="field-value">{{join @resource.required_skills ", "}}</div>
+                    <div class="field-value">{{join ", " @resource.required_skills}}</div>
                 </div>
             {{/if}}
             {{#if @resource.orchestrator_priority}}

@@ -570,6 +570,27 @@ uncaught error in the task rather than skipping the load.
 **Fix:** The sensor task and its injections deleted; the card's guard reordered to test the order
 first (same conditions, now reachable), covered by a card rendered without an order.
 
+## 35. `vendor/details.hbs`, `customer/details.hbs`, `driver/details.hbs`, `order/details/detail.hbs`, `entity/form.js` — five template and guard findings
+
+**Status:** FIXED
+**Found:** Writing the first real tests of the vendor, customer and driver details views and the
+entity form.
+**Evidence:** `vendor/details.hbs` branched on `this.isIntegratedVendor`, a property that does not
+exist on its empty component class (`vendor/details.js`), so the integrated branch could never
+render; and that branch passed `@resource=` to `IntegratedVendor::Details`, which reads `@vendor`
+(its own template uses `@vendor.provider_settings`), so even when reached it would have rendered
+nothing. `customer/details.hbs` labelled the phone field with `common.email`. `driver/details.hbs`
+and `order/details/detail.hbs` called `{{join array ", "}}`; ember-composable-helpers' `join`
+takes the separator first and, given an array there, silently substitutes `","`, so skills
+rendered as `hazmat,forklift`. `entity/form.js` initialised `@tracked useCustomType = false`
+although its constructor always assigns it (dead lazy initializer, DEFECTS #15 shape), and
+`selectEntityType` guarded `option?.value ?? null` for a PowerSelect mounted without
+`@allowClear`, which never yields a null option.
+**Impact:** Integrated vendors' details panel showed the regular vendor fields instead of the
+integration; a mislabelled phone field; skills lists without spaces.
+**Fix:** `@resource.isIntegratedVendor` and `@vendor={{@resource}}`; `common.phone`;
+`{{join ", " ...}}` in both templates; the initializer and the null guard removed.
+
 ## 4. `tests/` — 223 blueprint scaffolds that were never green
 
 **Status:** OPEN (this is the bulk of Phase B)

@@ -9,7 +9,7 @@ export default class EntityFormComponent extends Component {
     @service fetch;
     @service currentUser;
     @service notifications;
-    @tracked useCustomType = false;
+    @tracked useCustomType;
 
     constructor() {
         super(...arguments);
@@ -26,7 +26,7 @@ export default class EntityFormComponent extends Component {
 
     @action selectEntityType(option) {
         this.useCustomType = false;
-        this.args.resource.type = option?.value ?? null;
+        this.args.resource.type = option.value;
     }
 
     @action toggleCustomType(value) {

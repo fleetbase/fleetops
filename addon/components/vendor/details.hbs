@@ -1,5 +1,5 @@
-{{#if this.isIntegratedVendor}}
-    <IntegratedVendor::Details @resource={{@resource}} />
+{{#if @resource.isIntegratedVendor}}
+    <IntegratedVendor::Details @vendor={{@resource}} />
 {{else}}
     <div class="details-wrapper" ...attributes>
         <ContentPanel @title="Details" @open={{true}} @wrapperClass="bordered-top">
