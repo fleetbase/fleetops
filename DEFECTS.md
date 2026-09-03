@@ -465,6 +465,32 @@ it settles. Usually that is the next scaffold, which is red anyway; timing decid
 suite here already uses). Until then, treat a lone `Failed to fetch` global failure on an
 otherwise green test as this defect.
 
+## 29. Eight stale or scaffold unit/helper tests
+
+**Status:** FIXED (tests corrected to the source contract)
+**Found:** The last red non-scaffold unit tests after #27.
+**Evidence:** `connectivity/devices/index/details/vehicle` expected the vehicle record as the
+transition model, but commit a9eed9cb ("Fix vehicle attachment navigation", 2026-06-23)
+deliberately passes `vehicle.public_id`. `settings/map` expected a payload without the
+`leafletTileUrl`/`leafletDarkTileUrl` keys the controller has sent since tile URLs became
+settings. `leaflet-tracking-marker` and `telematic/form` built fakes with
+`Object.create(prototype)` and then assigned properties that ember-leaflet's BaseLayer exposes as
+getters, or called an `@action` through the prototype (which binds `this` to the prototype);
+both now shadow via property descriptors on an object that inherits the prototype.
+`load-leaflet-assets` asserted synchronously on a 100ms poll and, with a stub `window.L`, let the
+plugin loader append real Draw/contextmenu scripts that would execute against the stub. Worse,
+both it and `leaflet-intersects-polyfill` left their 100ms polls running after the test ended
+(the interval is not tied to the application), and in a full run the polyfill's leaked poll fired
+while the next test had swapped `window.L` for `{}`, crashing on `L.Bounds.prototype`. Both
+tests now capture `setInterval`/`clearInterval` and drive the poll by hand, keep any appended
+script inert, and assert the poll is cleared; the loader's rejection is observed through
+`console.debug` so the initializer's catch is covered too. The three `Integration | Helper` scaffolds
+rendered `{{helper 1234}}` and expected `1234` back.
+**Impact:** None.
+**Fix:** As above; no source change. Note for slice runs: QUnit's `--filter "/regex/"` did not
+match module names containing `\|`-escaped pipes, so a slice can silently run fewer tests than
+intended — count the `ok` lines per module before trusting a slice profile.
+
 ## 4. `tests/` — 223 blueprint scaffolds that were never green
 
 **Status:** OPEN (this is the bulk of Phase B)

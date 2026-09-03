@@ -78,6 +78,8 @@ module('Unit | Controller | settings/map', function (hooks) {
         assert.deepEqual(fetch.lastPost.payload, {
             settings: {
                 mapProvider: 'google',
+                leafletTileUrl: '',
+                leafletDarkTileUrl: '',
                 googleMapsMapType: 'satellite',
                 showGoogleMapsTrafficLayer: true,
                 showGoogleMapsTransitLayer: true,
