@@ -595,7 +595,7 @@ export default class OrderDetailsTrackingComponent extends Component {
             return false;
         }
 
-        return stop.uuid === activeStop.uuid || stop.public_id === activeStop.public_id || stop.id === activeStop.id;
+        return ['uuid', 'public_id', 'id'].some((key) => stop[key] !== undefined && stop[key] !== null && stop[key] === activeStop[key]);
     }
 
     @action assignDriver() {
