@@ -9,11 +9,11 @@ class DeviceActionsStub extends Service {
     };
 }
 
-module('Unit | Controller | connectivity/telematics/index/details/devices', function (hooks) {
+module('Unit | Controller | connectivity/telematics/details/devices', function (hooks) {
     setupTest(hooks);
 
     test('device tab toolbar actions use small Fleetbase controls', function (assert) {
-        const controller = this.owner.lookup('controller:connectivity/telematics/index/details/devices');
+        const controller = this.owner.lookup('controller:connectivity/telematics/details/devices');
 
         assert.ok(controller);
         assert.deepEqual(
@@ -24,7 +24,7 @@ module('Unit | Controller | connectivity/telematics/index/details/devices', func
     });
 
     test('device filters expose vehicle and connection query contracts', function (assert) {
-        const controller = this.owner.lookup('controller:connectivity/telematics/index/details/devices');
+        const controller = this.owner.lookup('controller:connectivity/telematics/details/devices');
         const deviceColumn = controller.columns.find((column) => column.label === 'Telematic Device');
         const vehicleColumn = controller.columns.find((column) => column.label === 'Vehicle');
         const connectionColumn = controller.columns.find((column) => column.label === 'Connection');
@@ -69,7 +69,7 @@ module('Unit | Controller | connectivity/telematics/index/details/devices', func
     });
 
     test('clearFilters resets every device table filter', function (assert) {
-        const controller = this.owner.lookup('controller:connectivity/telematics/index/details/devices');
+        const controller = this.owner.lookup('controller:connectivity/telematics/details/devices');
 
         controller.query = 'abc';
         controller.status = 'active';
@@ -103,7 +103,7 @@ module('Unit | Controller | connectivity/telematics/index/details/devices', func
     test('device row view actions open overlay panels', function (assert) {
         this.owner.register('service:device-actions', DeviceActionsStub);
 
-        const controller = this.owner.lookup('controller:connectivity/telematics/index/details/devices');
+        const controller = this.owner.lookup('controller:connectivity/telematics/details/devices');
         const nameColumn = controller.columns.find((column) => column.valuePath === 'displayName');
         const actionsColumn = controller.columns.find((column) => column.cellComponent === 'table/cell/dropdown');
         const [viewAction, editAction] = actionsColumn.actions;
@@ -115,7 +115,7 @@ module('Unit | Controller | connectivity/telematics/index/details/devices', func
     });
 
     test('attached vehicle actions only show for vehicle-attached devices', async function (assert) {
-        const controller = this.owner.lookup('controller:connectivity/telematics/index/details/devices');
+        const controller = this.owner.lookup('controller:connectivity/telematics/details/devices');
         const actionsColumn = controller.columns.find((column) => column.cellComponent === 'table/cell/dropdown');
         const separator = actionsColumn.actions.find((action) => action.separator && action.isVisible);
         const viewVehicleAction = actionsColumn.actions.find((action) => action.label === 'View attached vehicle');
@@ -195,7 +195,7 @@ module('Unit | Controller | connectivity/telematics/index/details/devices', func
         this.owner.register('service:host-router', HostRouterStub);
         this.owner.register('service:map-manager', MapManagerStub);
 
-        const controller = this.owner.lookup('controller:connectivity/telematics/index/details/devices');
+        const controller = this.owner.lookup('controller:connectivity/telematics/details/devices');
 
         await controller.viewAttachedVehicle(device);
         await controller.locateAttachedVehicle(device);

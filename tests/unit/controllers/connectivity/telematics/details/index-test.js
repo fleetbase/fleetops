@@ -1,12 +1,12 @@
 import { module, test } from 'qunit';
 import { setupTest } from 'dummy/tests/helpers';
 
-module('Unit | Controller | connectivity/telematics/index/edit', function (hooks) {
+module('Unit | Controller | connectivity/telematics/details/index', function (hooks) {
     setupTest(hooks);
 
     // TODO: Replace this with your real tests.
     test('it exists', function (assert) {
-        let controller = this.owner.lookup('controller:connectivity/telematics/index/edit');
+        let controller = this.owner.lookup('controller:connectivity/telematics/details/index');
         assert.ok(controller);
     });
 });

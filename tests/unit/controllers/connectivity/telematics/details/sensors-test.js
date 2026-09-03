@@ -17,7 +17,7 @@ class DeviceActionsStub extends Service {
     transition = { view() {} };
 }
 
-module('Unit | Controller | connectivity/telematics/index/details/sensors', function (hooks) {
+module('Unit | Controller | connectivity/telematics/details/sensors', function (hooks) {
     setupTest(hooks);
 
     hooks.beforeEach(function () {
@@ -27,12 +27,12 @@ module('Unit | Controller | connectivity/telematics/index/details/sensors', func
     });
 
     test('it exists', function (assert) {
-        let controller = this.owner.lookup('controller:connectivity/telematics/index/details/sensors');
+        let controller = this.owner.lookup('controller:connectivity/telematics/details/sensors');
         assert.ok(controller);
     });
 
     test('sensor type and status filters use option label and value contracts', function (assert) {
-        let controller = this.owner.lookup('controller:connectivity/telematics/index/details/sensors');
+        let controller = this.owner.lookup('controller:connectivity/telematics/details/sensors');
         let typeColumn = controller.columns.find((column) => column.label === 'Type');
         let statusColumn = controller.columns.find((column) => column.label === 'column.status');
 

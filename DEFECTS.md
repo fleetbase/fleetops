@@ -405,6 +405,66 @@ before a suite can register its stub).
 **Impact:** None.
 **Fix:** As above; no source change.
 
+## 25. `tests/unit/{controllers,routes}/connectivity/telematics/index/**` — tests left behind by the telematics route move
+
+**Status:** FIXED (relocated)
+**Found:** 16 red `it exists` / real tests whose lookups returned `undefined`.
+**Evidence:** `addon/` has `connectivity/telematics/{details,edit,new}` and
+`connectivity/telematics/details/{devices,events,index,sensors}`; there is no
+`connectivity/telematics/index/*` subtree in either controllers or routes. The tests still looked
+up the old `index/` names. Sixteen files were `git mv`'d to the new paths with their lookup strings
+rewritten; the stale `index/details` controller scaffold duplicated the real
+`telematics/details-test.js` and was deleted, as was
+`tests/unit/routes/addon/routes/management/places/index/new-test.js`, a mis-generated duplicate of
+`tests/unit/routes/management/places/index/new-test.js`. Every relocated test passes against the
+current sources unchanged.
+**Impact:** None for users.
+**Fix:** As above.
+
+## 26. `app/controllers/operations/{orders,routes}/index.js` — missing re-export shims
+
+**Status:** FIXED (shims added)
+**Found:** `controller:operations/routes/index` resolved to `undefined` in the dummy app, and the
+`@controller('operations.orders.index')` injection in `operations/orders/index/details`
+asserted "unknown injection".
+**Evidence:** `addon/controllers/operations/orders/index.js` and
+`addon/controllers/operations/routes/index.js` both exist, but `app/controllers/operations/orders/`
+and `app/controllers/operations/routes/` only carried their child directories; the two one-line
+shims the blueprint generates alongside every addon module were never committed. Inside the
+engine the resolver reads `addon/` directly, so the console never noticed; a host that merges
+`app/` (the dummy app, and any non-engine consumer) cannot resolve those two controllers.
+**Impact:** None inside the engine.
+**Fix:** The two shims added.
+
+## 27. `tests/unit/routes/operations/orders/index/details-test.js`, `.../attachments-test.js`, `register-osrm-test.js` — stale or scaffold tests
+
+**Status:** FIXED (tests corrected to the source contract)
+**Found:** Remaining red unit tests after #25.
+**Evidence:** The order-details route no longer stops sockets or removes routing controls itself;
+`willTransition` delegates to the controller's `teardownRealtime()` and
+`teardownRoutingControls()`, which the test never stubbed. The attachments test declared
+`assert.expect(3)` for a body that makes six assertions (three `assert.step` calls, two state
+checks, `verifySteps`). The register-osrm scaffold only booted an instance; it now asserts the
+three registrations and hands the universe its application instance first (the routing services
+register through `universe.getApplicationInstance()`, see #24).
+**Impact:** None.
+**Fix:** As above; no source change.
+
+## 28. `tests/integration/components/vendor/form-test.js` (and siblings) — un-awaited fetches spill "Failed to fetch" onto the next test
+
+**Status:** OPEN (resolves with the scaffold sweep, #4)
+**Found:** `vendor/panel-header: it falls back when vendor values are missing` went red in one
+of four otherwise identical full runs with `global failure: TypeError: Failed to fetch`.
+**Evidence:** Every full run logs exactly four `Failed to fetch` rejections. They originate in
+`it renders` scaffolds that mount real forms (`vendor/form` runs immediately before the affected
+test) whose `ModelSelect`/fetch-backed children issue requests to the unreachable API host; the
+rejection is not awaited by the scaffold, so QUnit attributes it to whichever test is running when
+it settles. Usually that is the next scaffold, which is red anyway; timing decides.
+**Impact:** None for users; one flaky green test per run at worst.
+**Fix:** Replace those scaffolds with tests that stub `service:fetch` (the pattern every real
+suite here already uses). Until then, treat a lone `Failed to fetch` global failure on an
+otherwise green test as this defect.
+
 ## 4. `tests/` — 223 blueprint scaffolds that were never green
 
 **Status:** OPEN (this is the bulk of Phase B)
