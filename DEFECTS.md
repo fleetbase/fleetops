@@ -509,6 +509,20 @@ service area's and a zone's details, and the two map modals show nothing.
 details views now render a Leaflet map in tests. Also trimmed the helper's `= {}` default on its
 hash parameter: Ember always passes a hash object to `compute`, so the default cannot apply.
 
+## 31. `addon/components/fuel-report/form.js`, `integrated-vendor/form.js` — actions no template invokes
+
+**Status:** FIXED (deleted)
+**Found:** Writing the first real rendering tests for the six form components.
+**Evidence:** `FuelReportFormComponent#onAutocomplete` is referenced nowhere in
+`fuel-report/form.hbs` (its `ModelCoordinatesInput` is mounted without an `@onAutocomplete`),
+and `IntegratedVendorFormComponent`'s `showAdvancedOptions`/`toggleAdvancedOptions` are
+referenced nowhere in `integrated-vendor/form.hbs` (the advanced options live in a collapsed
+`ContentPanel`, which manages its own open state). A Glimmer component's actions are reachable
+only from its own template, and both templates are the only renderers of these classes
+(`grep -rn "FuelReport::Form\|IntegratedVendor::Form" addon`).
+**Impact:** None.
+**Fix:** Both removed; the classes are now empty shells like the other four form components.
+
 ## 4. `tests/` — 223 blueprint scaffolds that were never green
 
 **Status:** OPEN (this is the bulk of Phase B)
