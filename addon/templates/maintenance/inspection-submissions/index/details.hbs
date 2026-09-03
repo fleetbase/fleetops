@@ -1,0 +1,14 @@
+<Layout::Resource::Panel
+    @resource={{@model}}
+    @controller={{this}}
+    @headerTitle={{or @model.public_id "Inspection"}}
+    @actionButtons={{this.actionButtons}}
+    @onPressCancel={{transition-to "maintenance.inspection-submissions.index"}}
+    @onOverlayReady={{fn (mut this.overlay)}}
+    @headerClass="no-bottom-border"
+    @bodyClass="no-scroll"
+>
+    <TabNavigation @tabs={{array (hash route="maintenance.inspection-submissions.index.details.index" label="Overview")}} @contentClass="scrollable" @tablistClass="pl-2">
+        {{outlet}}
+    </TabNavigation>
+</Layout::Resource::Panel>

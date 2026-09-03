@@ -1,0 +1,59 @@
+<div class="inspection-form-form" ...attributes>
+    <ContentPanel @title="Form Details" @open={{true}} @wrapperClass="bordered-top">
+        <div class="grid grid-cols-1 gap-2 lg:grid-cols-2 no-input-group-padding text-xs">
+            <InputGroup @name="Name" @wrapperClass="lg:col-span-2">
+                <Input @value={{@resource.name}} @type="text" class="w-full form-input" placeholder="Daily vehicle inspection" disabled={{cannot-write @resource}} />
+            </InputGroup>
+            <InputGroup @name="Type">
+                <PowerSelect @options={{this.typeOptions}} @selected={{@resource.type}} @onChange={{fn (mut @resource.type)}} @triggerClass="form-select form-input" @disabled={{cannot-write @resource}} as |type|>
+                    {{smart-humanize type}}
+                </PowerSelect>
+            </InputGroup>
+            <InputGroup @name="Status">
+                <PowerSelect @options={{this.statusOptions}} @selected={{@resource.status}} @onChange={{fn (mut @resource.status)}} @triggerClass="form-select form-input" @disabled={{cannot-write @resource}} as |status|>
+                    {{smart-humanize status}}
+                </PowerSelect>
+            </InputGroup>
+            <InputGroup @name="Frequency">
+                <PowerSelect @options={{this.frequencyOptions}} @selected={{@resource.frequency}} @onChange={{fn (mut @resource.frequency)}} @triggerClass="form-select form-input" @disabled={{cannot-write @resource}} as |frequency|>
+                    {{smart-humanize frequency}}
+                </PowerSelect>
+            </InputGroup>
+            <InputGroup @name="Description" @wrapperClass="lg:col-span-2">
+                <Textarea @value={{@resource.description}} class="w-full form-input" rows={{3}} placeholder="What this inspection covers" disabled={{cannot-write @resource}} />
+            </InputGroup>
+        </div>
+    </ContentPanel>
+
+    <ContentPanel @title="Checklist Items" @open={{true}} @wrapperClass="bordered-top">
+        <div class="space-y-3">
+            {{#each this.items as |item index|}}
+                <div class="rounded border border-gray-200 dark:border-gray-700 p-3">
+                    <div class="grid grid-cols-1 gap-2 lg:grid-cols-4 no-input-group-padding text-xs">
+                        <InputGroup @name="Label" @wrapperClass="lg:col-span-2">
+                            <Input @value={{item.label}} @type="text" class="w-full form-input" placeholder="Brake lights" {{on "input" (fn this.updateItem index "label" item.label)}} />
+                        </InputGroup>
+                        <InputGroup @name="Category">
+                            <Input @value={{item.category}} @type="text" class="w-full form-input" placeholder="Lights" {{on "input" (fn this.updateItem index "category" item.category)}} />
+                        </InputGroup>
+                        <InputGroup @name="Severity">
+                            <PowerSelect @options={{this.severityOptions}} @selected={{item.severity}} @onChange={{fn this.updateItem index "severity"}} @triggerClass="form-select form-input" as |severity|>
+                                {{smart-humanize severity}}
+                            </PowerSelect>
+                        </InputGroup>
+                    </div>
+                    <div class="mt-2 flex justify-end">
+                        <Button @text="Remove" @icon="trash" @size="xs" @type="danger" @onClick={{fn this.removeItem index}} />
+                    </div>
+                </div>
+            {{/each}}
+            <Button @text="Add item" @icon="plus" @size="sm" @onClick={{this.addItem}} />
+        </div>
+    </ContentPanel>
+
+    <ContentPanel @title="Settings" @open={{false}} @wrapperClass="bordered-top">
+        <MetadataEditor @value={{@resource.settings}} @onChange={{fn (mut @resource.settings)}} />
+    </ContentPanel>
+
+    <CustomField::Yield @subject={{@resource}} @wrapperClass="bordered-top" />
+</div>
