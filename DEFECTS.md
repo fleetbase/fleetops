@@ -739,6 +739,17 @@ avatar is handled by `<AvatarPicker @model={{@resource}}>` and its status select
 **Impact:** None.
 **Fix:** Deleted.
 
+## 45. `driver/form.js`, `customer/form.js` — the new user's photo upload was never linked to the user
+
+**Status:** FIXED (separate commit, `fix(driver,customer): link the new user's photo upload …`)
+**Found:** Asserting the upload options sent by the driver form's "create user" action button.
+**Evidence:** Both `userAccountActionButtons` handlers built the upload options with
+`subject_uui: user.id` while every other upload in the addon (and the API's upload endpoint) uses
+`subject_uuid`; `grep -rn "subject_uui\b" addon` found exactly these two sites.
+**Impact:** A photo uploaded while creating a user from the driver or customer form was stored
+without a subject, so it never attached to the new user.
+**Fix:** `subject_uuid` at both sites; the driver suite asserts the option name.
+
 ## 4. `tests/` — 223 blueprint scaffolds that were never green
 
 **Status:** OPEN (this is the bulk of Phase B)
