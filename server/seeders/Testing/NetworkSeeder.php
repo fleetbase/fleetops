@@ -36,7 +36,7 @@ class NetworkSeeder extends Seeder
             $vendors = $this->seedVendors($company, $places);
             $this->seedServiceRates($company, $vendors);
 
-            $this->command?->info('Seeded FleetOps testing network fixtures for company: ' . $company->public_id);
+            $this->command?->info('Seeded ' . $this->seedName() . ' network fixtures for company: ' . $company->public_id);
         });
     }
 
@@ -115,7 +115,7 @@ class NetworkSeeder extends Seeder
                 'company_uuid'            => $company->uuid,
                 'service_area_uuid'       => $serviceArea?->uuid,
                 'name'                    => $zone['name'],
-                'description'             => 'Fixture zone for FleetOps testing assertions.',
+                'description'             => $this->fixtureNote('zone'),
                 'border'                  => $this->polygon($zone['border']),
                 'color'                   => $zone['color'],
                 'stroke_color'            => $zone['color'],
@@ -156,13 +156,22 @@ class NetworkSeeder extends Seeder
         return $models;
     }
 
-    protected function seedContacts(Company $company, array $places): void
+    /**
+     * [name, type, email, phone, place seed id] keyed by seed id. Overridable for the same
+     * reason as userFixtures(): these names and addresses are rendered in the console.
+     */
+    protected function contactFixtures(): array
     {
-        $contacts = [
+        return [
             'customer_alice' => ['Alice Tan', 'customer', 'alice.testing@example.test', '+6591000001', 'orchard_store'],
             'customer_ben'   => ['Ben Lim', 'customer', 'ben.testing@example.test', '+6591000002', 'rochor_store'],
             'ops_manager'    => ['Nadia Rahman', 'contact', 'nadia.testing@example.test', '+6591000003', 'central_depot'],
         ];
+    }
+
+    protected function seedContacts(Company $company, array $places): void
+    {
+        $contacts = $this->contactFixtures();
 
         foreach ($contacts as $seedId => [$name, $type, $email, $phone, $placeSeedId]) {
             $this->createRecord(Contact::class, [
@@ -174,18 +183,24 @@ class NetworkSeeder extends Seeder
                 'email'        => $email,
                 'phone'        => $phone,
                 'type'         => $type,
-                'notes'        => 'FleetOps testing fixture contact.',
+                'notes'        => $this->fixtureNote('contact'),
                 'meta'         => $this->meta($seedId),
             ]);
         }
     }
 
-    protected function seedVendors(Company $company, array $places): array
+    /** [name, type, email, phone, place seed id] keyed by seed id. */
+    protected function vendorFixtures(): array
     {
-        $vendors = [
+        return [
             'facilitator_fastline' => ['Fastline Logistics', 'facilitator', 'ops@fastline.example.test', '+6592000001', 'central_depot'],
             'supplier_parts'       => ['Apex Parts Supply', 'supplier', 'parts@example.test', '+6592000002', 'west_depot'],
         ];
+    }
+
+    protected function seedVendors(Company $company, array $places): array
+    {
+        $vendors = $this->vendorFixtures();
 
         $models = [];
         foreach ($vendors as $seedId => [$name, $type, $email, $phone, $placeSeedId]) {
@@ -199,7 +214,7 @@ class NetworkSeeder extends Seeder
                 'country'      => 'SG',
                 'status'       => 'active',
                 'type'         => $type,
-                'notes'        => 'FleetOps testing fixture vendor.',
+                'notes'        => $this->fixtureNote('vendor'),
                 'meta'         => $this->meta($seedId),
             ]);
         }
