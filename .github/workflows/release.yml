@@ -1,6 +1,6 @@
 name: Release Tag
 
-# Tags a release when a `dev-v*` branch is merged to main, and pushes the tag. Delegates
+# Tags a release when a release branch is merged to main, and pushes the tag. Delegates
 # to the reusable workflow in fleetbase/fleetbase. Requires org secret _GITHUB_AUTH_TOKEN
 # (inherited); no-ops with a warning until it is set.
 #
@@ -38,7 +38,8 @@ jobs:
   tag:
     if: github.event_name == 'workflow_dispatch' ||
         (github.event.pull_request.merged == true &&
-         startsWith(github.event.pull_request.head.ref, 'dev-v'))
+         (startsWith(github.event.pull_request.head.ref, 'release/v') ||
+          startsWith(github.event.pull_request.head.ref, 'dev-v')))
     uses: fleetbase/fleetbase/.github/workflows/release-tag.yml@main
     with:
       version-files: composer.json,package.json,extension.json
