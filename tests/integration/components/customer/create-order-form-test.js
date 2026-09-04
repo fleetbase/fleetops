@@ -7,6 +7,7 @@ import Component from '@glimmer/component';
 import { setComponentTemplate } from '@ember/component';
 import { inject as service } from '@ember/service';
 import registerTemplateOnly from 'dummy/tests/helpers/register-template-only';
+import { A } from '@ember/array';
 
 class ModelSelectStub extends Component {
     @service orderFormTestBed;
@@ -108,11 +109,22 @@ module('Integration | Component | customer/create-order-form', function (hooks) 
                 }
             }
         );
+        this.checkouts = [];
         this.owner.register(
             'service:customer-payment',
             class extends Service {
+                get loaded() {
+                    return test.paymentLoaded === true;
+                }
                 loadAndInitialize() {
                     test.paymentInitialized = true;
+                }
+                initEmbeddedCheckout(options) {
+                    test.checkouts.push(options);
+                    return Promise.resolve({
+                        mount: (el) => test.checkouts.push(['mount', el]),
+                        destroy: () => test.checkouts.push(['destroy']),
+                    });
                 }
             }
         );
@@ -494,7 +506,8 @@ module('Integration | Component | customer/create-order-form', function (hooks) 
 
     test('a routed order asks for preliminary quotes and takes the first', async function (assert) {
         this.givenOrderConfigs({ id: 'config_1', key: 'transport', name: 'Transport' });
-        this.postResponses['service-quotes/preliminary'] = [{ id: 'quote_1' }, { id: 'quote_2' }];
+        // The component reads `serviceQuotes.firstObject`, so the response has to be an Ember array.
+        this.postResponses['service-quotes/preliminary'] = A([{ id: 'quote_1' }, { id: 'quote_2' }]);
 
         await render(hbs`<Customer::CreateOrderForm @order={{this.order}} @map={{this.map}} />`);
         await chooseRoute(this);
@@ -554,5 +567,23 @@ module('Integration | Component | customer/create-order-form', function (hooks) 
             [],
             'the form is finishing a purchase, not re-pricing it'
         );
+    });
+
+    test('returning from a checkout puts up the completing-purchase dialog', async function (assert) {
+        this.givenOrderConfigs({ id: 'config_1', key: 'transport', name: 'Transport' });
+        this.searchParams = { checkout_session_id: 'cs_1', service_quote: 'quote_1' };
+        this.store.findRecord = () =>
+            Promise.resolve({
+                id: 'quote_1',
+                get(key) {
+                    return this[key];
+                },
+            });
+
+        await render(hbs`<Customer::CreateOrderForm @order={{this.order}} @map={{this.map}} />`);
+
+        const dialog = this.modals.find(([name]) => name === 'modals/confirm-service-quote-purchase');
+        assert.ok(dialog, 'the customer is told the purchase is being finalised');
+        assert.false(dialog[1].backdropClose, 'and cannot dismiss it by clicking away');
     });
 });
