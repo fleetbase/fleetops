@@ -2719,4 +2719,186 @@ module('Unit | Service | map-adapter/google', function (hooks) {
             assert.strictEqual(this.owner.resolveRegistration, originalResolve, 'the owner is left as it was');
         }
     });
+
+    test('a marker tooltip can carry markup, and positions itself when the pointer says nothing', async function (assert) {
+        this.useMap();
+        this.service._supportsAdvancedMarkers = true;
+
+        const marker = await this.service.addMarker('marker_html', 1.3, 103.8, {
+            iconUrl: '/assets/pin.png',
+            tooltip: '<b>Depot</b>',
+            tooltipOptions: { html: true },
+        });
+
+        marker.content.dispatchEvent(new MouseEvent('mouseenter', { clientX: 40, clientY: 90 }));
+        const tip = document.querySelector('.fleetops-google-hover-tooltip');
+        assert.strictEqual(tip.innerHTML, '<b>Depot</b>', 'the markup is set as html rather than text');
+        assert.strictEqual(tip.style.left, '52px', 'offset from the pointer');
+        assert.strictEqual(tip.style.top, '78px');
+
+        // A move event carrying no coordinates at all still leaves the tooltip somewhere sane.
+        marker.content.dispatchEvent(new Event('mousemove'));
+        assert.strictEqual(tip.style.left, '12px', 'a pointerless move falls back to the origin');
+        assert.strictEqual(tip.style.top, '-12px');
+
+        marker.__tooltipCleanup();
+        assert.notOk(document.querySelector('.fleetops-google-hover-tooltip'));
+    });
+
+    test('a layer stamped with a label after the fact gets one when it is next shown', function (assert) {
+        const map = this.useMap();
+
+        // google-live-map stamps __labelText/__labelPaths onto a polygon it did not create with
+        // a tooltip — a service area that had no name when its polygon was first drawn.
+        const polygon = this.service.addPolygon('zone_1', [
+            [0, 0],
+            [0, 30],
+            [30, 30],
+        ]);
+        assert.strictEqual(polygon.__labelMarker, undefined, 'it starts with no label at all');
+
+        polygon.__labelText = 'Zone A';
+        polygon.__labelPaths = [
+            { lat: 0, lng: 0 },
+            { lat: 0, lng: 30 },
+            { lat: 30, lng: 30 },
+        ];
+
+        this.service.showLayer(polygon);
+
+        const label = polygon.__labelMarker;
+        assert.ok(label, 'showing it builds the label from the remembered ring');
+        assert.deepEqual(label.position, { lat: 10, lng: 20 }, "at that ring's centroid");
+        assert.strictEqual(label.content.textContent, 'Zone A');
+        assert.strictEqual(label.title, 'Zone A');
+        assert.strictEqual(label.setMapCalls.at(-1), map, 'and puts it on the map');
+    });
+
+    test('a label cannot be built without a map, or without a ring to centre on', function (assert) {
+        const stamped = (text, paths) => {
+            const layer = { __labelText: text, setOptions() {} };
+            if (paths !== undefined) {
+                layer.__labelPaths = paths;
+            }
+            return layer;
+        };
+
+        this.useMap();
+        const ringless = stamped('Zone A');
+        this.service.showLayer(ringless);
+        assert.strictEqual(ringless.__labelMarker, null, 'a layer that remembers no ring gets no label');
+
+        const empty = stamped('Zone A', []);
+        this.service.showLayer(empty);
+        assert.strictEqual(empty.__labelMarker, null, 'nor does an empty one');
+
+        this.service._map = null;
+        const mapless = stamped('Zone A', [
+            { lat: 0, lng: 0 },
+            { lat: 0, lng: 30 },
+            { lat: 30, lng: 30 },
+        ]);
+        this.service.showLayer(mapless);
+        assert.strictEqual(mapless.__labelMarker, null, 'and neither does a layer shown with no map to draw on');
+    });
+
+    test('a label is centred on a ring of rings, and on points given as plain numbers', function (assert) {
+        this.useMap();
+        const polygon = this.service.addPolygon(
+            'zone_1',
+            [
+                [0, 0],
+                [0, 30],
+                [30, 30],
+            ],
+            { tooltip: 'Zone A' }
+        );
+
+        // Google hands back LatLng objects; a caller that has already read them hands back numbers.
+        polygon.getPath = () => ({
+            getArray: () => [
+                { lat: 0, lng: 0 },
+                { lat: 0, lng: 60 },
+                { lat: 60, lng: 60 },
+            ],
+        });
+        this.service.showLayer(polygon);
+        assert.deepEqual(polygon.__labelMarker.position, { lat: 20, lng: 40 }, 'plain numbers are read as they are');
+
+        // A path object that cannot list its points falls back to the remembered ring.
+        polygon.getPath = () => ({});
+        polygon.__labelPaths = [
+            [
+                { lat: 0, lng: 0 },
+                { lat: 0, lng: 90 },
+                { lat: 90, lng: 90 },
+            ],
+        ];
+        this.service.showLayer(polygon);
+        assert.deepEqual(polygon.__labelMarker.position, { lat: 30, lng: 60 }, 'and a ring of rings is centred on its first ring');
+    });
+
+    test('the label overlay stays put when the map cannot place it', function (assert) {
+        this.useMap();
+        const polygon = this.service.addPolygon(
+            'zone_1',
+            [
+                [0, 0],
+                [0, 30],
+                [30, 30],
+            ],
+            { tooltip: 'Zone A' }
+        );
+        this.service.showLayer(polygon);
+        const container = this.panes.overlayMouseTarget.firstElementChild;
+        const placed = [container.style.left, container.style.top];
+
+        this.projection = null;
+        polygon.__labelMarker.draw();
+        assert.deepEqual([container.style.left, container.style.top], placed, 'an overlay with no projection yet is left alone');
+
+        this.projection = { fromLatLngToDivPixel: () => null };
+        polygon.__labelMarker.draw();
+        assert.deepEqual([container.style.left, container.style.top], placed, 'and so is a point the projection cannot give');
+    });
+
+    test('bounds are collected through the gaps in a loose list of points', function (assert) {
+        const map = this.useMap();
+
+        this.service.fitBounds([[1.2, 103.6], null, { lat: 1.5, lng: 104.0 }]);
+
+        const [name, bounds] = map.calls.at(-1);
+        assert.strictEqual(name, 'fitBounds');
+        assert.deepEqual(
+            bounds.extended,
+            [
+                { lat: 1.2, lng: 103.6 },
+                { lat: 1.5, lng: 104 },
+            ],
+            'the empty entry is stepped over and the rest are extended in'
+        );
+    });
+
+    test('hovering a polygon whose map has already gone leaves the label alone', function (assert) {
+        this.useMap();
+        const polygon = this.service.addPolygon(
+            'zone_1',
+            [
+                [0, 0],
+                [0, 30],
+                [30, 30],
+            ],
+            { tooltip: 'Zone A' }
+        );
+        this.service.showLayer(polygon);
+        const label = polygon.__labelMarker;
+
+        // The hover listeners outlive the map itself: destroyMap detaches the overlays but the
+        // pointer can still be over the shape while the browser tears the canvas down.
+        this.service._map = null;
+        polygon.fire('mouseover', { domEvent: { clientX: 100, clientY: 50 } });
+
+        assert.false(label.__followCursor, 'with no map there is nothing to measure the pointer against');
+        assert.strictEqual(label.__cursorPoint, null, 'so the label keeps its anchor');
+    });
 });

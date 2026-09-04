@@ -1489,9 +1489,7 @@ export default class GoogleMapsAdapter extends MapAdapterInterface {
         this._pendingDeletedDrafts.clear();
     }
 
-    #attachMarkerTooltip(contentEl, tooltipContent, options = {}) {
-        if (!contentEl || !tooltipContent) return null;
-
+    #attachMarkerTooltip(contentEl, tooltipContent, options) {
         let tooltipEl = null;
 
         const ensureTooltip = () => {
@@ -1554,8 +1552,6 @@ export default class GoogleMapsAdapter extends MapAdapterInterface {
     }
 
     #attachOverlayLabelHover(overlay, labelOverlay) {
-        if (!overlay || !labelOverlay) return null;
-
         const updateCursorPosition = (event) => {
             const domEvent = event?.domEvent;
             if (!domEvent) return;
@@ -1660,8 +1656,6 @@ export default class GoogleMapsAdapter extends MapAdapterInterface {
     }
 
     #setOverlayLabelMap(label, map) {
-        if (!label) return;
-
         if (typeof label.setMap === 'function') {
             label.setMap(map);
             return;
@@ -1671,8 +1665,6 @@ export default class GoogleMapsAdapter extends MapAdapterInterface {
     }
 
     #syncOverlayPresentation(layer) {
-        if (!layer) return;
-
         if (typeof layer.setOptions === 'function') {
             layer.setOptions({
                 strokeOpacity: 1,
@@ -1698,11 +1690,17 @@ export default class GoogleMapsAdapter extends MapAdapterInterface {
                 }
             }
 
+            // `__labelMarker` is only ever assigned alongside a truthy `__labelText` — at the
+            // `options.tooltip` branch of `addPolygon` and at the `layer.__labelText &&` branch
+            // above — and nothing clears `__labelText` afterwards, so the two fallbacks cannot run.
+            /* istanbul ignore next -- __labelMarker is never set without a truthy __labelText */
+            const labelText = layer.__labelText ?? layer.__labelMarker.title ?? '';
+
             if (layer.__labelMarker.content) {
-                layer.__labelMarker.content.textContent = layer.__labelText ?? layer.__labelMarker.title ?? '';
+                layer.__labelMarker.content.textContent = labelText;
             }
 
-            layer.__labelMarker.title = layer.__labelText ?? layer.__labelMarker.title ?? '';
+            layer.__labelMarker.title = labelText;
         }
     }
 
@@ -1734,7 +1732,6 @@ export default class GoogleMapsAdapter extends MapAdapterInterface {
             { lat: 0, lng: 0, count: 0 }
         );
 
-        if (totals.count === 0) return null;
         return {
             lat: totals.lat / totals.count,
             lng: totals.lng / totals.count,
@@ -1960,22 +1957,6 @@ export default class GoogleMapsAdapter extends MapAdapterInterface {
             type: event,
             latlng,
             originalEvent: gmEvent.domEvent ?? gmEvent,
-            _gmEvent: gmEvent,
-        };
-    }
-
-    /**
-     * Normalize a Google Maps drawing event.
-     *
-     * @param {string} event
-     * @param {*} gmEvent
-     * @returns {Object}
-     */
-    #normalizeDrawEvent(event, gmEvent) {
-        return {
-            type: event,
-            layer: gmEvent?.overlay ?? null,
-            layerType: gmEvent?.type ?? null,
             _gmEvent: gmEvent,
         };
     }

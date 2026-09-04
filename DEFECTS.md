@@ -1102,6 +1102,14 @@ call, not taken here).
 **Impact:** none; every one of them was already supplied by the caller.
 **Fix:** deleted the four defaults. The two `#private` methods and the module-local function have no external callers, so no published surface changed.
 
+## 89. `addon/services/map-adapter/google.js` — a second unreferenced private method, and five guards their callers already make
+
+**Status:** FIXED (deleted this iteration; one fallback pragma'd instead)
+**Found:** profiling the polygon-label block for uncovered arms — six `if (!x) return` guards and a whole method had no reachable input.
+**Evidence:** `#normalizeDrawEvent` is the same shape as #87: a `#private` method, so its name can only appear in the class body, and `grep -n "#normalizeDrawEvent"` returned exactly one line — its own declaration. The five guards each duplicate a test the immediate caller has already made: `#attachMarkerTooltip`'s `if (!contentEl || !tooltipContent)` sits below `if (options.tooltip && content)` at its only call site; `#attachOverlayLabelHover`'s `if (!overlay || !labelOverlay)` receives the polygon `addPolygon` has just built and a label from `#createOverlayLabel`, which can only return null without a map or without a centroid — neither possible for a ring `addPolygon` accepted; every call site of `#setOverlayLabelMap` is inside an `if (layer.__labelMarker)`; `#syncOverlayPresentation`'s `if (!layer)` sits below `showLayer`'s own; and `#getPolygonLabelPosition`'s `if (totals.count === 0)` is below a `firstRing.length === 0` return, so the reduce has always run at least once.
+**Impact:** none — every one of them was already guaranteed by the caller.
+**Fix:** deleted the method and the five guards. The one remaining unreachable arm, `layer.__labelText ?? layer.__labelMarker.title ?? ''`, was **not** deleted: `__labelMarker` is only ever assigned alongside a truthy `__labelText` and nothing clears it, but the fallback is the contract for `google-live-map.js`, which stamps `__labelText` from outside this file, so it was hoisted into one `const` behind an `istanbul ignore next` naming that reason rather than removed.
+
 ## 4. `tests/` — 223 blueprint scaffolds that were never green
 
 **Status:** OPEN (this is the bulk of Phase B)
