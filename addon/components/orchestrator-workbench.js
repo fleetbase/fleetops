@@ -43,14 +43,15 @@ export default class OrchestratorWorkbenchComponent extends Component {
     /** Routing controls added to the map for the current proposed plan. */
     _routingControls = [];
 
-    // ── Data ──────────────────────────────────────────────────────────────────
+    // -- Data ------------------------------------------------------------------
 
     @tracked unassignedOrders = [];
     @tracked availableVehicles = [];
     @tracked availableDrivers = [];
+    /* istanbul ignore next -- the only reader is Orchestrator::PhaseBuilder, which renders only while the panel is open, so loadEngines assigns this before anything reads it */
     @tracked availableEngines = [];
 
-    // ── Plan state ────────────────────────────────────────────────────────────
+    // -- Plan state ------------------------------------------------------------
 
     @tracked proposedPlan = null;
     /* istanbul ignore next -- runOrchestration assigns this before anything reads it, so the initialiser never evaluates */
@@ -69,7 +70,7 @@ export default class OrchestratorWorkbenchComponent extends Component {
     /* istanbul ignore next -- runOrchestration assigns this before anything reads it, so the initialiser never evaluates */
     @tracked ranPhaseTypes = new Set();
 
-    // ── Phase builder ─────────────────────────────────────────────────────────
+    // -- Phase builder ---------------------------------------------------------
 
     /**
      * User-composed list of phases to execute in sequence.
@@ -84,7 +85,7 @@ export default class OrchestratorWorkbenchComponent extends Component {
     /** Whether the card fields settings panel is visible. */
     @tracked showCardFieldsSettings = false;
 
-    // ── Configurable card fields ──────────────────────────────────────────────
+    // -- Configurable card fields ----------------------------------------------
 
     /**
      * Loaded from company settings. Shape:
@@ -92,7 +93,7 @@ export default class OrchestratorWorkbenchComponent extends Component {
      */
     @tracked cardFields = null;
 
-    // ── UI state ──────────────────────────────────────────────────────────────
+    // -- UI state --------------------------------------------------------------
 
     @tracked leftPanelCollapsed = false;
     @tracked rightPanelCollapsed = false;
@@ -103,18 +104,18 @@ export default class OrchestratorWorkbenchComponent extends Component {
     @tracked selectedVehicleIds = new Set();
     @tracked selectedDriverIds = new Set();
 
-    // ── Map ───────────────────────────────────────────────────────────────────
+    // -- Map -------------------------------------------------------------------
 
     @tracked mapCenter = { lat: 1.369, lng: 103.8864 };
     @tracked mapZoom = 11;
     /* istanbul ignore next -- onMapLoad assigns this before anything reads it, so the initialiser never evaluates */
     @tracked leafletMap = null;
 
-    // ── Lifecycle ─────────────────────────────────────────────────────────────
+    // -- Lifecycle -------------------------------------------------------------
 
     constructor() {
         super(...arguments);
-        // ── Map center diagnostic ──────────────────────────────────────────────
+        // -- Map center diagnostic ----------------------------------------------
         // Track whether _centerMapOnOrders() has run so getUserLocation() cannot
         // override it even if it resolves before loadOrders completes.
         this._mapCenteredOnOrders = false;
@@ -155,7 +156,7 @@ export default class OrchestratorWorkbenchComponent extends Component {
         super.willDestroy(...arguments);
     }
 
-    // ── Data loading ──────────────────────────────────────────────────────────
+    // -- Data loading ----------------------------------------------------------
 
     @task *loadData() {
         yield Promise.all([this.loadOrders.perform(), this.loadAvailableVehicles.perform(), this.loadAvailableDrivers.perform()]);
@@ -213,7 +214,7 @@ export default class OrchestratorWorkbenchComponent extends Component {
         }
     }
 
-    // ── Orchestration ─────────────────────────────────────────────────────────
+    // -- Orchestration ---------------------------------------------------------
 
     /**
      * Run all configured phases in sequence. If no phases are configured,
@@ -381,7 +382,7 @@ export default class OrchestratorWorkbenchComponent extends Component {
         this.ranPhaseTypes = new Set();
     }
 
-    // ── Phase management ──────────────────────────────────────────────────────
+    // -- Phase management ------------------------------------------------------
 
     @action onPhasesChange(phases) {
         this.phases = phases;
@@ -408,7 +409,7 @@ export default class OrchestratorWorkbenchComponent extends Component {
         };
     }
 
-    // ── Panel toggles ─────────────────────────────────────────────────────────
+    // -- Panel toggles ---------------------------------------------------------
 
     @action toggleLeftPanel() {
         this.leftPanelCollapsed = !this.leftPanelCollapsed;
@@ -432,7 +433,7 @@ export default class OrchestratorWorkbenchComponent extends Component {
         this.loadCardFields.perform();
     }
 
-    // ── Import ────────────────────────────────────────────────────────────────
+    // -- Import ----------------------------------------------------------------
 
     @action openImportModal() {
         this.modalsManager.show('modals/orchestrator-import', {
@@ -444,13 +445,13 @@ export default class OrchestratorWorkbenchComponent extends Component {
         });
     }
 
-    // ── Run message ───────────────────────────────────────────────────────────
+    // -- Run message -----------------------------------------------------------
 
     @action dismissRunMessage() {
         this.orchestratorRunMessage = null;
     }
 
-    // ── Order selection ───────────────────────────────────────────────────────
+    // -- Order selection -------------------------------------------------------
 
     @action toggleOrderSelection(order) {
         const ids = new Set(this.selectedOrderIds);
@@ -462,7 +463,7 @@ export default class OrchestratorWorkbenchComponent extends Component {
         this.selectedOrderIds = new Set();
     }
 
-    // ── Vehicle selection ─────────────────────────────────────────────────────
+    // -- Vehicle selection -----------------------------------------------------
 
     @action toggleVehicleSelection(vehicle) {
         const ids = new Set(this.selectedVehicleIds);
@@ -474,7 +475,7 @@ export default class OrchestratorWorkbenchComponent extends Component {
         this.selectedVehicleIds = new Set();
     }
 
-    // ── Driver selection ──────────────────────────────────────────────────────
+    // -- Driver selection ------------------------------------------------------
 
     @action toggleDriverSelection(driver) {
         const ids = new Set(this.selectedDriverIds);
@@ -487,7 +488,7 @@ export default class OrchestratorWorkbenchComponent extends Component {
         this.selectedVehicleIds = new Set();
     }
 
-    // ── Drag-and-drop ─────────────────────────────────────────────────────────
+    // -- Drag-and-drop ---------------------------------------------------------
 
     @action onOrderDragStart(order, event) {
         event.dataTransfer.setData('text/plain', order.public_id);
@@ -533,7 +534,7 @@ export default class OrchestratorWorkbenchComponent extends Component {
         }
     }
 
-    // ── Map ───────────────────────────────────────────────────────────────────
+    // -- Map -------------------------------------------------------------------
 
     @action onMapLoad({ target: map }) {
         this.leafletMap = map;
@@ -658,7 +659,7 @@ export default class OrchestratorWorkbenchComponent extends Component {
         return this.mapSettings.getLeafletTileUrl(isDark ? 'dark' : 'light');
     }
 
-    // ── Computed helpers ──────────────────────────────────────────────────────
+    // -- Computed helpers ------------------------------------------------------
 
     get hasProposedPlan() {
         return isArray(this.proposedPlan) && this.proposedPlan.length > 0;
@@ -956,7 +957,7 @@ export default class OrchestratorWorkbenchComponent extends Component {
         return this.phases.length;
     }
 
-    // ── Formatters ────────────────────────────────────────────────────────────
+    // -- Formatters ------------------------------------------------------------
 
     formatDuration(seconds) {
         if (!seconds) return '';
@@ -1002,7 +1003,7 @@ export default class OrchestratorWorkbenchComponent extends Component {
         return s || e || '';
     }
 
-    // ── Panel resize ──────────────────────────────────────────────────────────
+    // -- Panel resize ----------------------------------------------------------
 
     /**
      * Begin dragging the left panel resize handle.

@@ -110,6 +110,7 @@ function stubPanels(owner) {
         'orchestrator/order-pool',
         hbs`<div data-test-order-pool>
             <span data-test-order-count>{{@orders.length}}</span>
+            <span data-test-pool-card-fields>{{@cardFields.standard.length}}</span>
             <span data-test-selected-orders>{{@selectedOrderIds.size}}</span>
             <button type="button" data-test-toggle-order {{on "click" (fn @onToggleSelection (get @orders 0))}}></button>
             <button type="button" data-test-clear-orders {{on "click" @onClearSelection}}></button>
@@ -338,6 +339,7 @@ module('Integration | Component | orchestrator-workbench', function (hooks) {
         );
 
         assert.dom('[data-test-order-count]').hasText('2', 'the pool is handed the orders');
+        assert.dom('[data-test-pool-card-fields]').hasText('1', 'and the card fields the settings endpoint returned');
         assert.dom('[data-test-resource-counts]').hasText('1/2', 'and the resource panel its vehicles and drivers');
         assert.dom('[data-test-plan-viewer]').doesNotExist('with no plan there is nothing to view');
     });
