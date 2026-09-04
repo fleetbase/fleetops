@@ -158,6 +158,26 @@ function installGoogleMapsStub(context) {
         get(key) {
             return this[key];
         }
+
+        setEditable(editable) {
+            this.editable = editable;
+        }
+
+        setPath(path) {
+            this.restoredPath = path;
+        }
+
+        setBounds(bounds) {
+            this.restoredBounds = bounds;
+        }
+
+        setCenter(center) {
+            this.restoredCenter = center;
+        }
+
+        setRadius(radius) {
+            this.restoredRadius = radius;
+        }
     }
 
     class StubInfoWindow {
@@ -1878,5 +1898,213 @@ module('Unit | Service | map-adapter/google', function (hooks) {
 
         this.service.removeMarker('marker_1');
         assert.notOk(document.querySelector('.fleetops-google-hover-tooltip'), 'and removing the marker takes it away');
+    });
+
+    /** Puts a draft polygon on the map and opens the toolbar that can edit or delete it. */
+    function selectDraftPolygon(test, { latlngs = null } = {}) {
+        const overlay = test.service.addPolygon('zone_1', [
+            [0, 0],
+            [0, 30],
+            [30, 30],
+        ]);
+        overlay.__overlayType = 'polygon';
+        overlay.getPath = () => ({
+            getArray: () =>
+                latlngs ?? [
+                    { lat: () => 0, lng: () => 0 },
+                    { lat: () => 0, lng: () => 30 },
+                    { lat: () => 30, lng: () => 30 },
+                ],
+        });
+        test.service._draftOverlays.add(overlay);
+        test.service._selectedOverlay = overlay;
+        test.service.showDrawControl({ allowEdit: true, allowDelete: true });
+        return overlay;
+    }
+
+    const clickToolbar = (service, which) =>
+        service._drawControlEl.__actionGroup.querySelector(`.fleetops-google-draw-edit-${which}`).dispatchEvent(new MouseEvent('click', { cancelable: true }));
+
+    const clickAction = (service, label) =>
+        [...service._drawActionEl.querySelectorAll('.fleetops-google-draw-action-link')].find((el) => el.textContent === label).dispatchEvent(new MouseEvent('click', { cancelable: true }));
+
+    test('editing is offered only for a selected draft that can be edited', function (assert) {
+        this.useMap();
+        this.service.showDrawControl({ allowEdit: true });
+
+        clickToolbar(this.service, 'edit');
+        assert.strictEqual(this.service._drawActionEl, null, 'nothing is selected');
+
+        const overlay = this.service.addPolygon('zone_1', [
+            [0, 0],
+            [0, 30],
+            [30, 30],
+        ]);
+        this.service._selectedOverlay = overlay;
+        clickToolbar(this.service, 'edit');
+        assert.strictEqual(this.service._drawActionEl, null, 'the selection is not a draft');
+
+        this.service._draftOverlays.add(overlay);
+        overlay.setEditable = undefined;
+        clickToolbar(this.service, 'edit');
+        assert.strictEqual(this.service._drawActionEl, null, 'the draft cannot be edited');
+
+        overlay.setEditable = () => {};
+        overlay.getPath = undefined;
+        overlay.getBounds = undefined;
+        overlay.getCenter = undefined;
+        clickToolbar(this.service, 'edit');
+        assert.strictEqual(this.service._drawActionEl, null, 'and its shape cannot be captured');
+    });
+
+    test('editing a draft opens the action bar and saves the edited shape', function (assert) {
+        this.useMap();
+        const overlay = selectDraftPolygon(this);
+        const edited = [];
+        this.service.on('draw:edited', (payload) => edited.push(payload));
+
+        clickToolbar(this.service, 'edit');
+        assert.true(overlay.editable, 'the shape becomes editable');
+        assert.ok(this.service._drawActionEl, 'and an action bar appears');
+        assert.deepEqual(
+            [...this.service._drawActionEl.querySelectorAll('.fleetops-google-draw-action-link')].map((el) => el.textContent),
+            ['Save', 'Cancel'],
+            'offering save and cancel'
+        );
+
+        clickAction(this.service, 'Save');
+        assert.false(overlay.editable, 'saving ends the edit');
+        assert.strictEqual(this.service._drawActionEl, null, 'and takes the bar away');
+        assert.strictEqual(edited.length, 1);
+        assert.strictEqual(edited[0].type, 'draw:edited');
+        assert.strictEqual(edited[0].layer, overlay);
+        assert.strictEqual(edited[0].layerType, 'polygon');
+        assert.strictEqual(edited[0].toGeoJSON(), edited[0].geoJson, 'the payload carries its own geometry');
+    });
+
+    test('cancelling an edit puts the shape back as it was', function (assert) {
+        this.useMap();
+        const overlay = selectDraftPolygon(this);
+
+        clickToolbar(this.service, 'edit');
+        clickAction(this.service, 'Cancel');
+
+        assert.deepEqual(
+            overlay.restoredPath,
+            [
+                { lat: 0, lng: 0 },
+                { lat: 0, lng: 30 },
+                { lat: 30, lng: 30 },
+            ],
+            'the captured ring is written back'
+        );
+        assert.false(overlay.editable);
+        assert.strictEqual(this.service._drawActionEl, null);
+    });
+
+    test('a rectangle and a circle are captured and restored by their own geometry', function (assert) {
+        this.useMap();
+        this.service.showDrawControl({ allowEdit: true });
+
+        const rectangle = this.service.addCircle('rect_1', 0, 0, 10);
+        rectangle.setEditable = (value) => (rectangle.editable = value);
+        rectangle.getCenter = undefined;
+        rectangle.getRadius = undefined;
+        rectangle.getBounds = () => ({
+            getNorthEast: () => ({ lat: () => 30, lng: () => 40 }),
+            getSouthWest: () => ({ lat: () => 10, lng: () => 20 }),
+        });
+        this.service._draftOverlays.add(rectangle);
+        this.service._selectedOverlay = rectangle;
+
+        clickToolbar(this.service, 'edit');
+        clickAction(this.service, 'Cancel');
+        assert.deepEqual(rectangle.restoredBounds, { north: 30, east: 40, south: 10, west: 20 }, 'a rectangle restores its bounds');
+
+        const circle = this.service.addCircle('circle_1', 1.3, 103.8, 250);
+        circle.setEditable = (value) => (circle.editable = value);
+        circle.getCenter = () => ({ lat: () => 1.3, lng: () => 103.8 });
+        circle.getRadius = () => 250;
+        this.service._draftOverlays.add(circle);
+        this.service._selectedOverlay = circle;
+
+        clickToolbar(this.service, 'edit');
+        clickAction(this.service, 'Cancel');
+        assert.deepEqual(circle.restoredCenter, { lat: 1.3, lng: 103.8 }, 'a circle restores its centre');
+        assert.strictEqual(circle.restoredRadius, 250, 'and its radius');
+    });
+
+    test('deleting is offered only for a selected draft', function (assert) {
+        this.useMap();
+        this.service.showDrawControl({ allowDelete: true });
+
+        clickToolbar(this.service, 'remove');
+        assert.strictEqual(this.service._drawActionEl, null, 'nothing is selected');
+
+        const overlay = this.service.addPolygon('zone_1', [
+            [0, 0],
+            [0, 30],
+            [30, 30],
+        ]);
+        this.service._selectedOverlay = overlay;
+        clickToolbar(this.service, 'remove');
+        assert.strictEqual(this.service._drawActionEl, null, 'and the selection is not a draft');
+    });
+
+    test('deleting a draft holds it aside until the delete is saved', function (assert) {
+        this.useMap();
+        const overlay = selectDraftPolygon(this);
+        const deleted = [];
+        this.service.on('draw:deleted', (payload) => deleted.push(payload));
+
+        clickToolbar(this.service, 'remove');
+        assert.true(this.service._pendingDeletedDrafts.has(overlay), 'the draft is held aside');
+        assert.true(overlay.__hidden, 'and hidden from the map');
+        assert.deepEqual(
+            [...this.service._drawActionEl.querySelectorAll('.fleetops-google-draw-action-link')].map((el) => el.textContent),
+            ['Save', 'Cancel', 'Clear All'],
+            'a delete also offers clearing everything'
+        );
+
+        clickAction(this.service, 'Save');
+        assert.strictEqual(deleted.length, 1);
+        assert.strictEqual(deleted[0].type, 'draw:deleted');
+        assert.strictEqual(deleted[0].layer, overlay);
+        assert.strictEqual(deleted[0].layerType, 'polygon');
+        assert.strictEqual(this.service._draftOverlays.size, 0, 'the draft is gone for good');
+        assert.strictEqual(this.service._pendingDeletedDrafts.size, 0);
+        assert.strictEqual(this.service._selectedOverlay, null, 'and nothing is left selected');
+        assert.strictEqual(this.service._drawActionEl, null);
+    });
+
+    test('cancelling a delete brings the draft back', function (assert) {
+        this.useMap();
+        const overlay = selectDraftPolygon(this);
+
+        clickToolbar(this.service, 'remove');
+        assert.true(overlay.__hidden);
+
+        clickAction(this.service, 'Cancel');
+        assert.false(overlay.__hidden, 'the draft is put back on the map');
+        assert.strictEqual(this.service._pendingDeletedDrafts.size, 0);
+        assert.true(this.service._draftOverlays.has(overlay), 'and is still a draft');
+    });
+
+    test('clear all sweeps every draft into the pending delete', function (assert) {
+        this.useMap();
+        const first = selectDraftPolygon(this);
+        const second = this.service.addPolygon('zone_2', [
+            [1, 1],
+            [1, 31],
+            [31, 31],
+        ]);
+        this.service._draftOverlays.add(second);
+
+        clickToolbar(this.service, 'remove');
+        clickAction(this.service, 'Clear All');
+
+        assert.strictEqual(this.service._pendingDeletedDrafts.size, 2, 'both drafts are held');
+        assert.true(first.__hidden);
+        assert.true(second.__hidden);
     });
 });
