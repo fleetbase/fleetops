@@ -667,16 +667,6 @@ export default class OrchestratorWorkbenchComponent extends Component {
 
     // ── Computed helpers ──────────────────────────────────────────────────────
 
-    get selectedOrderIdsArray() {
-        return [...this.selectedOrderIds];
-    }
-    get selectedVehicleIdsArray() {
-        return [...this.selectedVehicleIds];
-    }
-    get selectedDriverIdsArray() {
-        return [...this.selectedDriverIds];
-    }
-
     get hasProposedPlan() {
         return isArray(this.proposedPlan) && this.proposedPlan.length > 0;
     }

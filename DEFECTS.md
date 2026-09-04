@@ -1118,6 +1118,14 @@ call, not taken here).
 **Impact:** none.
 **Fix:** deleted all of them. The circle arms of `#restoreOverlayState` and `#geoJsonFromOverlay` became the unconditional fallback rather than a third test, which is what they always were.
 
+## 91. `addon/components/orchestrator-workbench.js` — three selection getters nothing reads
+
+**Status:** FIXED (deleted this iteration)
+**Found:** the last three uncovered functions in the file once the map block was rendering.
+**Evidence:** `grep -rn "selectedOrderIdsArray\|selectedVehicleIdsArray\|selectedDriverIdsArray" addon/` returns the three declarations here plus, separately, the sub-components' *own* identically-named getters — `orchestrator/order-pool.js:285`, `orchestrator/resource-panel.js:92` and `:96` — which each derive from the `Set` the workbench passes them as `@selectedOrderIds`/`@selectedVehicleIds`/`@selectedDriverIds`. Those are what `order-pool.hbs` and `resource-panel.hbs` read. `orchestrator-workbench.hbs` never mentions any of the three names, and no other file imports the component, so nothing can reach them.
+**Impact:** none — the panels already compute the same arrays from the Sets they are handed.
+**Fix:** deleted all three. The Sets they read stay; only the array views nothing consumed are gone.
+
 ## 4. `tests/` — 223 blueprint scaffolds that were never green
 
 **Status:** OPEN (this is the bulk of Phase B)

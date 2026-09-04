@@ -5,6 +5,8 @@ import { hbs } from 'ember-cli-htmlbars';
 import Service, { inject as service } from '@ember/service';
 import Component from '@glimmer/component';
 import { setComponentTemplate } from '@ember/component';
+import { helper } from '@ember/component/helper';
+import templateOnly from '@ember/component/template-only';
 import registerTemplateOnly from 'dummy/tests/helpers/register-template-only';
 
 /**
@@ -17,18 +19,45 @@ class PhaseBuilderStub extends Component {
 }
 
 /**
- * `ember-leaflet` is not installed in this package, so `<LeafletMap>` cannot resolve at all.
- * This stand-in reports a map instance the test can inspect and skips the map block entirely —
- * that block is half the template and needs `{{div-icon}}` from the same missing addon.
+ * `ember-leaflet` is not installed in this package, so `<LeafletMap>` and the `div-icon` / `icon` /
+ * `point-to-coordinates` helpers the map block uses cannot resolve at all. These stand-ins yield
+ * the same `layers` shape ember-leaflet does, which is what lets the block render — and the block
+ * is where `tileSourceUrl`, `getOrderStops` and `waypointIconHtml` are reached from.
  */
+function templateOnlyComponent(template) {
+    return setComponentTemplate(template, templateOnly());
+}
+
+const LeafletTileStub = templateOnlyComponent(hbs`<div data-test-tile data-url={{@url}}></div>`);
+const LeafletPopupStub = templateOnlyComponent(hbs`<div data-test-marker-popup>{{yield}}</div>`);
+const LeafletTooltipStub = templateOnlyComponent(hbs`<div data-test-marker-tooltip>{{yield}}</div>`);
+class LeafletMarkerStub extends Component {
+    popupComponent = LeafletPopupStub;
+    tooltipComponent = LeafletTooltipStub;
+}
+setComponentTemplate(
+    hbs`<div data-test-marker data-lat={{@lat}} data-lng={{@lng}} data-icon-html={{@icon.html}} data-location={{@location}}>
+        {{yield (hash popup=this.popupComponent tooltip=this.tooltipComponent)}}
+    </div>`,
+    LeafletMarkerStub
+);
+
 class LeafletMapStub extends Component {
     @service workbenchTestBed;
+
+    tileComponent = LeafletTileStub;
+    markerComponent = LeafletMarkerStub;
 
     get mapEvent() {
         return { target: this.workbenchTestBed.mapInstance };
     }
 }
-setComponentTemplate(hbs`<div data-test-map {{did-insert (fn @onLoad this.mapEvent)}}></div>`, LeafletMapStub);
+setComponentTemplate(
+    hbs`<div data-test-map {{did-insert (fn @onLoad this.mapEvent)}}>
+        {{yield (hash tile=this.tileComponent marker=this.markerComponent)}}
+    </div>`,
+    LeafletMapStub
+);
 setComponentTemplate(
     hbs`<div data-test-phase-builder>
         <span data-test-phase-count>{{@phases.length}}</span>
@@ -47,6 +76,19 @@ setComponentTemplate(
  */
 function stubPanels(owner) {
     owner.register('component:leaflet-map', LeafletMapStub);
+    // ember-leaflet's own helpers, reduced to what the workbench reads back off them.
+    owner.register(
+        'helper:div-icon',
+        helper((positional, named) => named)
+    );
+    owner.register(
+        'helper:icon',
+        helper((positional, named) => named)
+    );
+    owner.register(
+        'helper:point-to-coordinates',
+        helper(([location]) => location)
+    );
     owner.register('component:orchestrator/phase-builder', PhaseBuilderStub);
     registerTemplateOnly(
         owner,
@@ -798,5 +840,194 @@ module('Integration | Component | orchestrator-workbench', function (hooks) {
 
         await triggerEvent(document, 'mouseup');
         assert.strictEqual(document.body.style.userSelect, '', 'and text is selectable again');
+    });
+
+    test('unassigned orders are pinned on the map, each stop with its own badge', async function (assert) {
+        this.getResponses['fleet-ops/orchestrator/orders'] = {
+            orders: [
+                {
+                    public_id: 'order_1',
+                    tracking: 'TRK-1',
+                    payload: { pickup: { location: { coordinates: [103.8, 1.3] }, address: 'Depot' }, dropoff: { location: { coordinates: [103.9, 1.4] }, address: 'Site' } },
+                },
+            ],
+        };
+
+        await render(hbs`<OrchestratorWorkbench />`);
+
+        assert.dom('[data-test-tile]').hasAttribute('data-url', 'https://tiles.example/light/{z}/{x}/{y}.png', 'the tile layer takes the themed url');
+        assert.dom('[data-test-marker]').exists({ count: 2 }, 'a pickup and a dropoff marker');
+
+        const [pickup, dropoff] = [...document.querySelectorAll('[data-test-marker]')];
+        assert.strictEqual(pickup.getAttribute('data-lat'), '1.3');
+        assert.strictEqual(pickup.getAttribute('data-lng'), '103.8');
+        assert.true(pickup.getAttribute('data-icon-html').includes('#22C55E'), 'the pickup badge is green');
+        assert.true(pickup.getAttribute('data-icon-html').includes('>P<'), 'and lettered P');
+        assert.true(dropoff.getAttribute('data-icon-html').includes('#EF4444'), 'the dropoff badge is red');
+
+        assert.dom(pickup.querySelector('[data-test-marker-popup]')).containsText('TRK-1', 'the popup names the order by its tracking number');
+        assert.dom(pickup.querySelector('[data-test-marker-popup]')).containsText('Depot');
+        assert.dom(dropoff.querySelector('[data-test-marker-tooltip]')).containsText('Site');
+    });
+
+    test('a multi-drop order is pinned once per waypoint, numbered in order', async function (assert) {
+        this.getResponses['fleet-ops/orchestrator/orders'] = {
+            orders: [
+                {
+                    public_id: 'order_1',
+                    payload: {
+                        waypoints: [
+                            { order: 2, place: { location: { coordinates: [103.9, 1.4] }, address: 'Second' } },
+                            { order: 1, place: { location: { coordinates: [103.8, 1.3] }, address: 'First' } },
+                            { order: 3, place: { location: { coordinates: [0, 0] }, address: 'Null island' } },
+                        ],
+                    },
+                },
+            ],
+        };
+
+        await render(hbs`<OrchestratorWorkbench />`);
+
+        const markers = [...document.querySelectorAll('[data-test-marker]')];
+        assert.strictEqual(markers.length, 2, 'the waypoint at 0,0 is not a place and is dropped');
+        assert.strictEqual(markers[0].getAttribute('data-lat'), '1.3', 'the waypoints are pinned in their own order, not the given one');
+        assert.true(markers[0].getAttribute('data-icon-html').includes('>1<'), 'and numbered from one');
+        assert.true(markers[1].getAttribute('data-icon-html').includes('>2<'));
+    });
+
+    test('a place is read from any of the shapes the API returns it in', async function (assert) {
+        this.getResponses['fleet-ops/orchestrator/orders'] = {
+            orders: [
+                { public_id: 'flat', payload: { pickup: { location: { lat: '1.1', lng: '103.1' } } } },
+                { public_id: 'pair', payload: { pickup: { location: [1.2, 103.2] } } },
+                { public_id: 'direct', payload: { pickup: { latitude: 1.3, longitude: 103.3 } } },
+                { public_id: 'nowhere', payload: { pickup: { location: { coordinates: ['x', 'y'] } } } },
+                { public_id: 'placeless', payload: { pickup: null } },
+                { public_id: 'payloadless' },
+            ],
+        };
+
+        await render(hbs`<OrchestratorWorkbench />`);
+
+        assert.deepEqual(
+            [...document.querySelectorAll('[data-test-marker]')].map((el) => el.getAttribute('data-lat')),
+            ['1.1', '1.2', '1.3'],
+            'a flat lat/lng, a numeric pair and direct latitude/longitude all read; nothing else does'
+        );
+    });
+
+    test('a driver carrying a location is pinned with their status', async function (assert) {
+        this.storeResults.driver = [
+            { public_id: 'driver_1', name: 'Ada', location: { coordinates: [103.8, 1.3] }, online: true, vehicle_name: 'Truck 7', vehicle_avatar: '/assets/truck.png' },
+            { public_id: 'driver_2', name: 'Bo', online: false },
+        ];
+
+        await render(hbs`<OrchestratorWorkbench />`);
+
+        assert.dom('[data-test-marker]').exists({ count: 1 }, 'only the driver whose location is known is pinned');
+        assert.dom('[data-test-marker-popup]').containsText('Ada');
+        assert.dom('[data-test-marker-popup]').containsText('Truck 7');
+        assert.dom('[data-test-marker-tooltip]').containsText('Ada');
+    });
+
+    test('the map is centred on the orders once they arrive, and a later geolocation does not override it', async function (assert) {
+        this.latitude = 40;
+        this.longitude = -74;
+        let locate;
+        this.userLocation = new Promise((resolve) => {
+            locate = resolve;
+        });
+        this.getResponses['fleet-ops/orchestrator/orders'] = {
+            orders: [{ public_id: 'order_1', payload: { pickup: { location: { coordinates: [103.8, 1.2] } }, dropoff: { location: { coordinates: [104.0, 1.4] } } } }],
+        };
+
+        await render(hbs`<OrchestratorWorkbench />`);
+
+        assert.deepEqual(
+            this.mapFits.at(-1),
+            [
+                [
+                    [1.2, 103.8],
+                    [1.4, 104],
+                ],
+                { padding: [40, 40], maxZoom: 14 },
+            ],
+            'several stops are fitted as a bounding box'
+        );
+        assert.deepEqual(this.mapViews, [[[40, -74], 11]], 'the only setView is the one the constructor made from the known coords');
+
+        // The browser answers only now, with the orders already on screen.
+        locate({ latitude: 51.5, longitude: -0.12 });
+        await settled();
+        assert.deepEqual(this.mapViews, [[[40, -74], 11]], 'and a geolocation arriving after them is ignored');
+    });
+
+    test('a single stop is zoomed to rather than fitted', async function (assert) {
+        this.getResponses['fleet-ops/orchestrator/orders'] = {
+            orders: [{ public_id: 'order_1', payload: { pickup: { location: { coordinates: [103.8, 1.3] } } } }],
+        };
+
+        await render(hbs`<OrchestratorWorkbench />`);
+
+        assert.deepEqual(this.mapViews.at(-1), [[1.3, 103.8], 14], 'one point gets a sensible zoom instead of a box');
+        assert.deepEqual(this.mapFits, [], 'and nothing is fitted');
+    });
+
+    test('with no orders, the browser location centres the map', async function (assert) {
+        await render(hbs`<OrchestratorWorkbench />`);
+
+        assert.deepEqual(this.mapViews.at(-1), [[51.5, -0.12], 11], 'the geolocation is applied once it resolves');
+    });
+
+    test('a browser that refuses to say where it is leaves the map alone', async function (assert) {
+        this.userLocation = Promise.reject(new Error('permission denied'));
+
+        await render(hbs`<OrchestratorWorkbench />`);
+
+        assert.dom('[data-test-map]').exists('the refusal is swallowed and the workbench still comes up');
+        assert.deepEqual(this.mapViews, [[[1.369, 103.8864], 11]], 'and the map keeps its default centre');
+    });
+
+    test('a plan pins a numbered stop per order and labels the time window', async function (assert) {
+        this.getResponses['fleet-ops/orchestrator/orders'] = {
+            orders: [
+                {
+                    public_id: 'order_1',
+                    tracking: 'TRK-1',
+                    time_window_start: '2026-06-22T09:00:00.000Z',
+                    payload: { pickup: { location: { coordinates: [103.8, 1.3] }, address: 'Depot' }, dropoff: { location: { coordinates: [103.9, 1.4] }, address: 'Site' } },
+                },
+                { public_id: 'order_2', payload: { pickup: { location: { coordinates: [103.7, 1.2] }, address: 'Yard' } } },
+            ],
+        };
+        this.storeResults.vehicle = [{ public_id: 'vehicle_1' }];
+        this.storeResults.driver = [{ public_id: 'driver_1', vehicle_id: 'vehicle_1' }];
+        this.postResponses['fleet-ops/orchestrator/run'] = {
+            assignments: [
+                { order_id: 'order_1', vehicle_id: 'vehicle_1', sequence: 1, arrival: 43200 },
+                { order_id: 'order_2', vehicle_id: 'vehicle_1', sequence: 2 },
+            ],
+        };
+
+        await render(hbs`<OrchestratorWorkbench />`);
+        await click('button.btn-primary');
+
+        const labels = [...document.querySelectorAll('[data-test-marker]')].map((el) => el.getAttribute('data-icon-html').match(/>([^<]+)</)[1]);
+        assert.deepEqual(labels, ['A1', 'A2', 'B'], 'a two-stop order is lettered by stop, a one-stop order takes just its letter');
+        assert.dom('[data-test-marker-tooltip]').containsText('TRK-1');
+        assert.dom('[data-test-window]').matchesText(/^\d{2}:\d{2} – \d{2}:\d{2}$/, 'a start and an end read as a range');
+    });
+
+    test('a driver is matched to a group by their vehicle when the assignment names none', async function (assert) {
+        this.getResponses['fleet-ops/orchestrator/orders'] = { orders: [{ public_id: 'order_1' }] };
+        this.storeResults.vehicle = [{ public_id: 'vehicle_1' }];
+        this.storeResults.driver = [{ public_id: 'driver_1', vehicle_id: 'vehicle_1' }];
+        this.postResponses['fleet-ops/orchestrator/run'] = { assignments: [{ order_id: 'order_1', vehicle_id: 'vehicle_1' }] };
+
+        await render(hbs`<OrchestratorWorkbench />`);
+        await click('button.btn-primary');
+
+        assert.dom('[data-test-vehicle-count]').hasText('1', 'the group is built even with no driver_id on the assignment');
+        assert.dom('[data-test-duration]').hasText('1h 2m');
     });
 });
