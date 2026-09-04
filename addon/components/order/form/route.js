@@ -270,7 +270,7 @@ export default class OrderFormRouteComponent extends Component {
             });
             this.handleRouteOptimization(result);
         } catch (err) {
-            this.notifications.error(err.message ?? this.intl.t('fleet-ops.operations.orders.index.new.route-error'));
+            this.notifications.error(err.message ?? this.intl.t('order.fields.route-error'));
         }
     }
 
@@ -292,7 +292,7 @@ export default class OrderFormRouteComponent extends Component {
 
             this.handleRouteOptimization(result);
         } catch (err) {
-            this.notifications.error(this.intl.t('fleet-ops.operations.orders.index.new.route-error'));
+            this.notifications.error(this.intl.t('order.fields.route-error'));
         }
     }
 
