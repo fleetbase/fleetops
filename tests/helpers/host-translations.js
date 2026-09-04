@@ -19,6 +19,7 @@ export default {
         'select-field': 'Select {field}',
         type: 'Type',
         edit: 'Edit',
+        total: 'Total',
         address: 'Address',
         status: 'Status',
     },

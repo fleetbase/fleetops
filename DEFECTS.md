@@ -798,6 +798,14 @@ call, not taken here).
 **Impact:** None.
 **Fix:** Deleted; the template's own guards are the contract.
 
+## 51. `tests/integration/components/order/form/service-rate-test.js` — six tests never green
+
+**Status:** FIXED
+**Found:** All six failed: the scaffold `it renders`, a POJO resource crashing `cannot-write` (`model?.get is not a function`), and four tests constructing the Glimmer component by hand (`new OrderFormServiceRateComponent(this.owner, …)` throws "You must pass both the owner and args" under this harness).
+**Evidence:** The failure list in the iteration-23 gate log; the component assigns `resource.servicable` and `resource.service_quote_uuid` directly, which only re-renders when the fixture's fields are tracked, and it queries rates only from the toggle or from a refresh event on a servicable order with none loaded — a servicable order rendered on its own loads nothing.
+**Impact:** None for users.
+**Fix:** The suite is rewritten as six rendering tests on a tracked fixture class: toggle → rates → quotes → quote selection → refresh → stale-quote clearing → toggle off; the disabled states (no config, no route, no write access, integrated vendor); the debounced refresh for the matching order with existing quotes kept while updating; rate loading from a refresh; a refresh that loses its route mid-debounce; and the locked contract override with its loading, breakdown and currency fallbacks. `handleServiceQuoteRefreshRequest`'s `= {}` default is deleted — its only caller is `OrderCreationService#requestServiceQuoteRefresh`, which always triggers with `{ reason, order }`.
+
 ## 4. `tests/` — 223 blueprint scaffolds that were never green
 
 **Status:** OPEN (this is the bulk of Phase B)
