@@ -1,5 +1,9 @@
 fleet-ops:
     extension-name: Fleet-Ops
+    operations:
+        orders:
+            index:
+                bulk-assign-driver-helptext: Select the driver to assign to every selected order.
 
 common:
     proof-of-delivery: Proof of Delivery

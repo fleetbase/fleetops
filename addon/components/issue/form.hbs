@@ -196,6 +196,6 @@
     <CustomField::Yield @subject={{@resource}} @wrapperClass="bordered-top" />
 
     <RegistryYield @registry="fleet-ops:component:issue:form" as |RegistryComponent|>
-        <RegistryComponent @resource={{@resource}} @controller={{this.controller}} @permission={{get-write-permission @resource}} />
+        <RegistryComponent @resource={{@resource}} @controller={{@controller}} @permission={{get-write-permission @resource}} />
     </RegistryYield>
 </div>
