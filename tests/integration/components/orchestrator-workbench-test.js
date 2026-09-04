@@ -1,9 +1,43 @@
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'dummy/tests/helpers';
-import { click, render } from '@ember/test-helpers';
+import { click, render, settled, triggerEvent } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
-import Service from '@ember/service';
+import Service, { inject as service } from '@ember/service';
+import Component from '@glimmer/component';
+import { setComponentTemplate } from '@ember/component';
 import registerTemplateOnly from 'dummy/tests/helpers/register-template-only';
+
+/**
+ * The phase builder needs to hand the workbench a phase list the test chose, which a
+ * template-only stand-in cannot do — so this one is a real component reading the list off a
+ * service the test writes to.
+ */
+class PhaseBuilderStub extends Component {
+    @service workbenchTestBed;
+}
+
+/**
+ * `ember-leaflet` is not installed in this package, so `<LeafletMap>` cannot resolve at all.
+ * This stand-in reports a map instance the test can inspect and skips the map block entirely —
+ * that block is half the template and needs `{{div-icon}}` from the same missing addon.
+ */
+class LeafletMapStub extends Component {
+    @service workbenchTestBed;
+
+    get mapEvent() {
+        return { target: this.workbenchTestBed.mapInstance };
+    }
+}
+setComponentTemplate(hbs`<div data-test-map {{did-insert (fn @onLoad this.mapEvent)}}></div>`, LeafletMapStub);
+setComponentTemplate(
+    hbs`<div data-test-phase-builder>
+        <span data-test-phase-count>{{@phases.length}}</span>
+        <span data-test-engine-count>{{@availableEngines.length}}</span>
+        <button type="button" data-test-change-phases {{on "click" (fn @onPhasesChange this.workbenchTestBed.phases)}}></button>
+        <button type="button" data-test-run-phases {{on "click" (fn @onRunPhases this.workbenchTestBed.phases)}}></button>
+    </div>`,
+    PhaseBuilderStub
+);
 
 /**
  * The workbench owns cross-cutting state and delegates every panel to a sub-component, so the
@@ -12,10 +46,27 @@ import registerTemplateOnly from 'dummy/tests/helpers/register-template-only';
  * `<LeafletMap>` cannot resolve at all without a stand-in.
  */
 function stubPanels(owner) {
-    registerTemplateOnly(owner, 'leaflet-map', hbs`<div data-test-map></div>`);
-    registerTemplateOnly(owner, 'orchestrator/phase-builder', hbs`<div data-test-phase-builder></div>`);
-    registerTemplateOnly(owner, 'orchestrator/card-fields-settings', hbs`<div data-test-card-fields></div>`);
-    registerTemplateOnly(owner, 'orchestrator/order-pool', hbs`<div data-test-order-pool>{{@orders.length}}</div>`);
+    owner.register('component:leaflet-map', LeafletMapStub);
+    owner.register('component:orchestrator/phase-builder', PhaseBuilderStub);
+    registerTemplateOnly(
+        owner,
+        'orchestrator/card-fields-settings',
+        hbs`<div data-test-card-fields><button type="button" data-test-card-fields-saved {{on "click" @onSaved}}></button></div>`
+    );
+    // Each stand-in drives the callbacks the workbench hands it, which is what the real panel
+    // does — the wiring is the thing under test.
+    registerTemplateOnly(
+        owner,
+        'orchestrator/order-pool',
+        hbs`<div data-test-order-pool>
+            <span data-test-order-count>{{@orders.length}}</span>
+            <span data-test-selected-orders>{{@selectedOrderIds.size}}</span>
+            <button type="button" data-test-toggle-order {{on "click" (fn @onToggleSelection (get @orders 0))}}></button>
+            <button type="button" data-test-clear-orders {{on "click" @onClearSelection}}></button>
+            <button type="button" data-test-open-import {{on "click" @onOpenImport}}></button>
+            <div data-test-order-drag {{on "dragstart" (fn @onDragStart (get @orders 0))}}></div>
+        </div>`
+    );
     // The real PlanViewer calls each formatter the workbench hands it, so the stand-in does too —
     // that is the wiring under test, not an invention of the harness.
     registerTemplateOnly(
@@ -31,9 +82,25 @@ function stubPanels(owner) {
             <span data-test-unix>{{@formatUnixTime 43200}}</span>
             <span data-test-unix-empty>{{@formatUnixTime 0}}</span>
             <span data-test-stop-label>{{@getStopLabel 0}}/{{@getStopLabel 3}}</span>
+            <span data-test-window>{{@formatTimeWindow "2026-06-22T09:00:00.000Z" "2026-06-22T11:30:00.000Z"}}</span>
+            <button type="button" data-test-dismiss-message {{on "click" @onDismissMessage}}></button>
+            <div data-test-drop-target {{on "dragover" @onDragOver}} {{on "drop" (fn @onDropOnVehicle "vehicle_1" "driver_1")}}></div>
+            <div data-test-assigned-drag {{on "dragstart" (fn @onAssignedOrderDragStart (get (get (get (get @planByVehicle '0') 'orders') '0') 'order'))}}></div>
         </div>`
     );
-    registerTemplateOnly(owner, 'orchestrator/resource-panel', hbs`<div data-test-resource-panel>{{@vehicles.length}}/{{@drivers.length}}</div>`);
+    registerTemplateOnly(
+        owner,
+        'orchestrator/resource-panel',
+        hbs`<div data-test-resource-panel>
+            <span data-test-resource-counts>{{@vehicles.length}}/{{@drivers.length}}</span>
+            <span data-test-selected-vehicles>{{@selectedVehicleIds.size}}</span>
+            <span data-test-selected-drivers>{{@selectedDriverIds.size}}</span>
+            <button type="button" data-test-toggle-vehicle {{on "click" (fn @onToggleVehicle (get @vehicles 0))}}></button>
+            <button type="button" data-test-toggle-driver {{on "click" (fn @onToggleDriver (get @drivers 0))}}></button>
+            <button type="button" data-test-clear-vehicles {{on "click" @onClearVehicles}}></button>
+            <button type="button" data-test-clear-drivers {{on "click" @onClearDrivers}}></button>
+        </div>`
+    );
 }
 
 module('Integration | Component | orchestrator-workbench', function (hooks) {
@@ -144,6 +211,12 @@ module('Integration | Component | orchestrator-workbench', function (hooks) {
                 removeRoutingControl(handle) {
                     test.removedRoutes.push(handle);
                 }
+                setActiveProvider(provider) {
+                    test.activeProvider = provider;
+                }
+                setMapInstance(map) {
+                    test.mapInstance = map;
+                }
             }
         );
         this.owner.register(
@@ -163,6 +236,16 @@ module('Integration | Component | orchestrator-workbench', function (hooks) {
             }
         );
         this.owner.register('service:order-allocation', class extends Service {});
+
+        this.owner.register('service:workbench-test-bed', class extends Service {});
+        this.testBed = this.owner.lookup('service:workbench-test-bed');
+        this.testBed.phases = [];
+        this.mapViews = [];
+        this.mapFits = [];
+        this.testBed.mapInstance = {
+            setView: (center, zoom) => test.mapViews.push([center, zoom]),
+            fitBounds: (bounds, options) => test.mapFits.push([bounds, options]),
+        };
 
         stubPanels(this.owner);
     });
@@ -195,8 +278,8 @@ module('Integration | Component | orchestrator-workbench', function (hooks) {
             'and the resources come from the store'
         );
 
-        assert.dom('[data-test-order-pool]').hasText('2', 'the pool is handed the orders');
-        assert.dom('[data-test-resource-panel]').hasText('1/2', 'and the resource panel its vehicles and drivers');
+        assert.dom('[data-test-order-count]').hasText('2', 'the pool is handed the orders');
+        assert.dom('[data-test-resource-counts]').hasText('1/2', 'and the resource panel its vehicles and drivers');
         assert.dom('[data-test-plan-viewer]').doesNotExist('with no plan there is nothing to view');
     });
 
@@ -419,5 +502,301 @@ module('Integration | Component | orchestrator-workbench', function (hooks) {
         assert.strictEqual(this.removedRoutes.length, 1, 'discarding takes it off the map');
         assert.dom('[data-test-resource-panel]').exists('and returns to picking resources');
         assert.dom('[data-test-plan-viewer]').doesNotExist();
+    });
+
+    /** A DataTransfer stand-in: the browser gives a real one, a synthetic event needs this. */
+    function dataTransfer(orderId) {
+        const store = orderId ? { 'text/plain': orderId } : {};
+        return {
+            store,
+            effectAllowed: null,
+            dropEffect: null,
+            setData(type, value) {
+                store[type] = value;
+            },
+            getData(type) {
+                return store[type] ?? '';
+            },
+        };
+    }
+
+    test('orders, vehicles and drivers are selected and cleared from their panels', async function (assert) {
+        this.getResponses['fleet-ops/orchestrator/orders'] = { orders: [{ public_id: 'order_1' }, { public_id: 'order_2' }] };
+        this.storeResults.vehicle = [{ public_id: 'vehicle_1' }];
+        this.storeResults.driver = [{ public_id: 'driver_1' }];
+
+        await render(hbs`<OrchestratorWorkbench />`);
+
+        await click('[data-test-toggle-order]');
+        assert.dom('[data-test-selected-orders]').hasText('1', 'the first order is selected');
+        await click('[data-test-toggle-order]');
+        assert.dom('[data-test-selected-orders]').hasText('0', 'and selecting it again lets it go');
+
+        await click('[data-test-toggle-order]');
+        await click('[data-test-clear-orders]');
+        assert.dom('[data-test-selected-orders]').hasText('0', 'clearing takes the lot');
+
+        await click('[data-test-toggle-vehicle]');
+        assert.dom('[data-test-selected-vehicles]').hasText('1');
+        await click('[data-test-toggle-vehicle]');
+        assert.dom('[data-test-selected-vehicles]').hasText('0', 'vehicles toggle the same way');
+
+        await click('[data-test-toggle-driver]');
+        assert.dom('[data-test-selected-drivers]').hasText('1');
+        await click('[data-test-toggle-driver]');
+        assert.dom('[data-test-selected-drivers]').hasText('0', 'and so do drivers');
+
+        await click('[data-test-toggle-vehicle]');
+        await click('[data-test-clear-vehicles]');
+        assert.dom('[data-test-selected-vehicles]').hasText('0');
+
+        // Clearing drivers clears vehicles too: a driver selection implies its vehicle.
+        await click('[data-test-toggle-vehicle]');
+        await click('[data-test-toggle-driver]');
+        await click('[data-test-clear-drivers]');
+        assert.dom('[data-test-selected-drivers]').hasText('0');
+        assert.dom('[data-test-selected-vehicles]').hasText('0', 'clearing drivers releases their vehicles with them');
+    });
+
+    test('a selection narrows what the run is asked to place', async function (assert) {
+        this.getResponses['fleet-ops/orchestrator/orders'] = { orders: [{ public_id: 'order_1' }, { public_id: 'order_2' }] };
+        this.storeResults.vehicle = [{ public_id: 'vehicle_1' }, { public_id: 'vehicle_2' }];
+        this.storeResults.driver = [{ public_id: 'driver_1', vehicle_id: 'vehicle_2' }];
+
+        await render(hbs`<OrchestratorWorkbench />`);
+        await click('[data-test-toggle-order]');
+        await click('[data-test-toggle-driver]');
+        await click('button.btn-primary');
+
+        const [, payload] = this.posts.at(-1);
+        assert.deepEqual(payload.order_ids, ['order_1'], 'only the selected order is offered');
+        assert.deepEqual(payload.vehicle_ids, ['vehicle_2'], "and the selected driver's own vehicle, resolved from vehicle_id");
+        assert.deepEqual(payload.driver_ids, ['driver_1'], 'with the driver pinned');
+    });
+
+    test('dragging an unassigned order onto a vehicle assigns it', async function (assert) {
+        this.getResponses['fleet-ops/orchestrator/orders'] = { orders: [{ public_id: 'order_1' }, { public_id: 'order_2' }] };
+        this.storeResults.vehicle = [{ public_id: 'vehicle_1' }];
+        this.postResponses['fleet-ops/orchestrator/run'] = { assignments: [{ order_id: 'order_2', vehicle_id: 'vehicle_1' }] };
+
+        await render(hbs`<OrchestratorWorkbench />`);
+        await click('button.btn-primary');
+        assert.dom('[data-test-vehicle-count]').hasText('1');
+
+        const dragged = dataTransfer();
+        await triggerEvent('[data-test-order-drag]', 'dragstart', { dataTransfer: dragged });
+        assert.strictEqual(dragged.getData('text/plain'), 'order_1', 'the drag carries the order id');
+        assert.strictEqual(dragged.effectAllowed, 'move');
+
+        await triggerEvent('[data-test-drop-target]', 'dragover', { dataTransfer: dragged });
+        assert.strictEqual(dragged.dropEffect, 'move', 'the target says it will take it');
+
+        await triggerEvent('[data-test-drop-target]', 'drop', { dataTransfer: dragged });
+        await click('button.btn-success');
+        const [, payload] = this.posts.at(-1);
+        assert.deepEqual(
+            payload.assignments.map((a) => [a.order_id, a.vehicle_id, a.sequence]),
+            [
+                ['order_2', 'vehicle_1', undefined],
+                ['order_1', 'vehicle_1', 2],
+            ],
+            'the dropped order joins the plan behind the one already on that vehicle'
+        );
+    });
+
+    test('dragging an order already in the plan moves it rather than adding it again', async function (assert) {
+        this.getResponses['fleet-ops/orchestrator/orders'] = { orders: [{ public_id: 'order_1' }] };
+        this.storeResults.vehicle = [{ public_id: 'vehicle_1' }, { public_id: 'vehicle_9' }];
+        this.postResponses['fleet-ops/orchestrator/run'] = { assignments: [{ order_id: 'order_1', vehicle_id: 'vehicle_9', sequence: 1 }] };
+
+        await render(hbs`<OrchestratorWorkbench />`);
+        await click('button.btn-primary');
+
+        await triggerEvent('[data-test-drop-target]', 'drop', { dataTransfer: dataTransfer('order_1') });
+        await click('button.btn-success');
+
+        const [, payload] = this.posts.at(-1);
+        assert.deepEqual(
+            payload.assignments,
+            [{ order_id: 'order_1', vehicle_id: 'vehicle_1', driver_id: 'driver_1', sequence: 1, _overridden: true }],
+            'the existing assignment is rewritten in place, keeping its sequence'
+        );
+    });
+
+    test('a drop carrying nothing, or naming something unknown, changes no plan', async function (assert) {
+        this.getResponses['fleet-ops/orchestrator/orders'] = { orders: [{ public_id: 'order_1' }] };
+        this.storeResults.vehicle = [{ public_id: 'vehicle_1' }];
+        this.postResponses['fleet-ops/orchestrator/run'] = { assignments: [{ order_id: 'order_1', vehicle_id: 'vehicle_1' }] };
+
+        await render(hbs`<OrchestratorWorkbench />`);
+        await click('button.btn-primary');
+
+        await triggerEvent('[data-test-drop-target]', 'drop', { dataTransfer: dataTransfer() });
+        await triggerEvent('[data-test-drop-target]', 'drop', { dataTransfer: dataTransfer('order_nobody_knows') });
+        await click('button.btn-success');
+
+        const [, payload] = this.posts.at(-1);
+        assert.deepEqual(payload.assignments, [{ order_id: 'order_1', vehicle_id: 'vehicle_1' }], 'the plan is untouched by both');
+    });
+
+    test('the run message can be dismissed, and the import modal reloads the orders it brought in', async function (assert) {
+        this.storeResults.vehicle = [{ public_id: 'vehicle_1' }];
+        this.postResponses['fleet-ops/orchestrator/run'] = {
+            assignments: [{ order_id: 'order_1', vehicle_id: 'vehicle_1' }],
+            message: 'One placed',
+        };
+
+        await render(hbs`<OrchestratorWorkbench />`);
+        await click('button.btn-primary');
+        assert.dom('[data-test-run-message]').hasText('One placed');
+
+        await click('[data-test-dismiss-message]');
+        assert.dom('[data-test-run-message]').hasText('', 'dismissing takes it away');
+
+        await click('button:has(.fa-xmark)');
+        await click('[data-test-open-import]');
+        const [name, options] = this.modals.at(-1);
+        assert.strictEqual(name, 'modals/orchestrator-import');
+        assert.true(options.hideAcceptButton, 'the modal drives its own completion');
+
+        const getsBefore = this.gets.filter(([path]) => path.endsWith('/orders')).length;
+        options.onImportComplete();
+        await settled();
+        assert.strictEqual(this.gets.filter(([path]) => path.endsWith('/orders')).length, getsBefore + 1, 'and finishing the import reloads the pool');
+    });
+
+    test('phases replace the legacy run, and run in sequence carrying their results forward', async function (assert) {
+        this.getResponses['fleet-ops/orchestrator/orders'] = { orders: [{ public_id: 'order_1' }] };
+        this.storeResults.vehicle = [{ public_id: 'vehicle_1' }];
+
+        const runs = [
+            { assignments: [{ order_id: 'order_1', vehicle_id: 'vehicle_1', sequence: 1 }] },
+            { assignments: [{ order_id: 'order_1', vehicle_id: 'vehicle_1', driver_id: 'driver_7' }] },
+        ];
+        this.postResponses['fleet-ops/orchestrator/run'] = () => Promise.resolve(runs.shift());
+
+        await render(hbs`<OrchestratorWorkbench />`);
+        this.testBed.phases = [
+            { id: 'p1', mode: 'assign_vehicles', engine: 'vroom' },
+            { id: 'p2', mode: 'assign_drivers' },
+        ];
+        await click('button:has(.fa-list-ol)');
+        await click('[data-test-run-phases]');
+
+        const posted = this.posts.filter(([path]) => path.endsWith('/run'));
+        assert.strictEqual(posted.length, 2, 'each phase is its own request');
+        assert.strictEqual(posted[0][1].mode, 'assign_vehicles');
+        assert.strictEqual(posted[0][1].options.engine, 'vroom', 'a phase engine overrides the default');
+        assert.deepEqual(posted[0][1].prior_assignments, [], 'the first has nothing to build on');
+
+        assert.strictEqual(posted[1][1].mode, 'assign_drivers');
+        assert.deepEqual(posted[1][1].prior_assignments, [{ order_id: 'order_1', vehicle_id: 'vehicle_1', sequence: 1 }], 'the second is handed what the first decided');
+        assert.strictEqual(posted[1][1].options.engine, 'greedy', 'and falls back to the built-in engine');
+
+        assert.dom('[data-test-driver-phase]').hasText('yes', 'having run assign_drivers, the plan is shown by driver');
+        assert.strictEqual(this.notified.filter(([kind]) => kind === 'warning').length, 0);
+    });
+
+    test('a phase marked autoCommit commits before the next one starts', async function (assert) {
+        this.storeResults.vehicle = [{ public_id: 'vehicle_1' }];
+        this.postResponses['fleet-ops/orchestrator/run'] = { assignments: [{ order_id: 'order_1', vehicle_id: 'vehicle_1' }] };
+
+        await render(hbs`<OrchestratorWorkbench />`);
+        this.testBed.phases = [
+            { id: 'p1', mode: 'allocate', autoCommit: true },
+            { id: 'p2', mode: 'optimize_routes' },
+        ];
+        await click('button:has(.fa-list-ol)');
+        await click('[data-test-run-phases]');
+
+        const order = this.posts.map(([path]) => path.split('/').at(-1));
+        assert.deepEqual(order, ['run', 'commit', 'run'], 'the commit lands between the two runs');
+    });
+
+    test('a phase list edited without running is kept, and shows in the toolbar', async function (assert) {
+        await render(hbs`<OrchestratorWorkbench />`);
+        this.testBed.phases = [
+            { id: 'p1', mode: 'allocate' },
+            { id: 'p2', mode: 'optimize_routes' },
+        ];
+
+        await click('button:has(.fa-list-ol)');
+        await click('[data-test-change-phases]');
+
+        assert.dom('[data-test-phase-count]').hasText('2', 'the builder is handed back what it saved');
+        assert.dom('.orchestrator-workbench').containsText('2', 'and the toolbar counts them');
+        assert.strictEqual(this.posts.filter(([path]) => path.endsWith('/run')).length, 0, 'editing the list on its own runs nothing');
+    });
+
+    test('saving card fields closes the panel and reloads them', async function (assert) {
+        await render(hbs`<OrchestratorWorkbench />`);
+        const before = this.gets.filter(([path]) => path.endsWith('orchestrator-card-fields')).length;
+
+        await click('button:has(.fa-table-columns)');
+        await click('[data-test-card-fields-saved]');
+
+        assert.dom('[data-test-card-fields]').doesNotExist('the panel closes itself');
+        assert.strictEqual(this.gets.filter(([path]) => path.endsWith('orchestrator-card-fields')).length, before + 1, 'and the fields are read again');
+    });
+
+    test('the left panel collapses on its own toggle', async function (assert) {
+        await render(hbs`<OrchestratorWorkbench />`);
+        assert.dom('.order-pool-panel').doesNotHaveClass('w-0');
+
+        await click('.workbench-panel-toggle.border-r');
+        assert.dom('.order-pool-panel').hasClass('w-0', 'the left toggle collapses it');
+
+        await click('.workbench-panel-toggle.border-r');
+        assert.dom('.order-pool-panel').doesNotHaveClass('w-0');
+    });
+
+    test('an order already in the plan can be dragged out of it', async function (assert) {
+        this.getResponses['fleet-ops/orchestrator/orders'] = { orders: [{ public_id: 'order_1' }] };
+        this.storeResults.vehicle = [{ public_id: 'vehicle_1' }];
+        this.postResponses['fleet-ops/orchestrator/run'] = { assignments: [{ order_id: 'order_1', vehicle_id: 'vehicle_1' }] };
+
+        await render(hbs`<OrchestratorWorkbench />`);
+        await click('button.btn-primary');
+
+        const dragged = dataTransfer();
+        await triggerEvent('[data-test-assigned-drag]', 'dragstart', { dataTransfer: dragged });
+
+        assert.strictEqual(dragged.getData('text/plain'), 'order_1', 'the drag carries the assigned order');
+        assert.strictEqual(dragged.effectAllowed, 'move');
+    });
+
+    test('both panels are resized by dragging their handles', async function (assert) {
+        await render(hbs`<OrchestratorWorkbench />`);
+
+        const leftHandle = document.querySelectorAll('.workbench-resize-handle')[0];
+        const rightHandle = document.querySelectorAll('.workbench-resize-handle')[1];
+
+        await triggerEvent(leftHandle, 'mousedown', { clientX: 300 });
+        await triggerEvent(document, 'mousemove', { clientX: 360 });
+        assert.dom('.order-pool-panel').hasAttribute('style', /width:350px/, 'dragging right widens the left panel by the delta');
+
+        // Past the stops: the panel is held between 200 and 480.
+        await triggerEvent(document, 'mousemove', { clientX: 1000 });
+        assert.dom('.order-pool-panel').hasAttribute('style', /width:480px/, 'and stops at its maximum');
+        await triggerEvent(document, 'mousemove', { clientX: 0 });
+        assert.dom('.order-pool-panel').hasAttribute('style', /width:200px/, 'and at its minimum');
+
+        await triggerEvent(document, 'mouseup');
+        await triggerEvent(document, 'mousemove', { clientX: 400 });
+        assert.dom('.order-pool-panel').hasAttribute('style', /width:200px/, 'letting go stops it following the pointer');
+        assert.strictEqual(document.body.style.cursor, '', 'and puts the cursor back');
+
+        // The right handle is inverted: dragging left makes the panel wider.
+        await triggerEvent(rightHandle, 'mousedown', { clientX: 800 });
+        await triggerEvent(document, 'mousemove', { clientX: 740 });
+        assert.dom('.driver-panel').hasAttribute('style', /width:390px/, 'dragging left widens the right panel');
+
+        await triggerEvent(document, 'mousemove', { clientX: 0 });
+        assert.dom('.driver-panel').hasAttribute('style', /width:560px/, 'up to its own maximum');
+        await triggerEvent(document, 'mousemove', { clientX: 2000 });
+        assert.dom('.driver-panel').hasAttribute('style', /width:240px/, 'and down to its minimum');
+
+        await triggerEvent(document, 'mouseup');
+        assert.strictEqual(document.body.style.userSelect, '', 'and text is selectable again');
     });
 });
