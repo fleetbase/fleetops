@@ -124,8 +124,43 @@ function installGoogleMapsStub(context) {
         }
     }
 
+    /** Google's Polygon, Polyline and Circle share the surface the adapter uses. */
+    class StubOverlay {
+        constructor(options = {}) {
+            Object.assign(this, options);
+            this.listeners = [];
+            this.setMapCalls = [];
+            this.setOptionsCalls = [];
+            context.overlays.push(this);
+        }
+
+        addListener(event, handler) {
+            this.listeners.push([event, handler]);
+        }
+
+        fire(event, payload) {
+            this.listeners.filter(([name]) => name === event).forEach(([, handler]) => handler(payload));
+        }
+
+        setMap(map) {
+            this.setMapCalls.push(map);
+            this.map = map;
+        }
+
+        setOptions(options) {
+            this.setOptionsCalls.push(options);
+        }
+
+        get(key) {
+            return this[key];
+        }
+    }
+
     const googleStub = {
         maps: {
+            Polygon: StubOverlay,
+            Polyline: StubOverlay,
+            Circle: StubOverlay,
             LatLng: StubLatLng,
             LatLngBounds: StubLatLngBounds,
             Marker: StubMarker,
@@ -199,6 +234,7 @@ module('Unit | Service | map-adapter/google', function (hooks) {
         this.classicMarkers = [];
         this.advancedMarkers = [];
         this.onceListeners = [];
+        this.overlays = [];
         installGoogleMapsStub(this);
         this.service = this.owner.lookup('service:map-adapter/google');
 
@@ -656,5 +692,401 @@ module('Unit | Service | map-adapter/google', function (hooks) {
         const advanced = await this.service.addMarker('marker_2', 1.3, 103.8);
         this.service.removeMarker('marker_2');
         assert.strictEqual(advanced.map, null, 'an advanced marker is detached by clearing its map');
+    });
+
+    test('overlays are drawn with Fleet-Ops defaults and registered by id', function (assert) {
+        const ring = [
+            [1.3, 103.8],
+            [1.4, 103.9],
+            [1.5, 103.7],
+        ];
+
+        assert.strictEqual(this.service.addPolygon('zone_1', ring), null, 'nothing is drawn without a map');
+        assert.strictEqual(this.service.addPolyline('line_1', ring), null);
+        assert.strictEqual(this.service.addCircle('circle_1', 1.3, 103.8, 100), null);
+
+        this.useMap();
+
+        const polygon = this.service.addPolygon('zone_1', ring);
+        assert.strictEqual(polygon.strokeColor, '#3388ff', 'the default stroke');
+        assert.strictEqual(polygon.fillColor, '#3388ff', 'the fill follows the stroke');
+        assert.strictEqual(polygon.fillOpacity, 0.2);
+        assert.strictEqual(polygon.strokeWeight, 3);
+        assert.false(polygon.editable);
+        assert.true(polygon.clickable);
+        assert.strictEqual(polygon.zIndex, 1);
+        assert.strictEqual(this.service._overlays.get('zone_1'), polygon);
+
+        const styled = this.service.addPolygon('zone_2', ring, {
+            color: '#ff0000',
+            fillColor: '#00ff00',
+            fillOpacity: 0.6,
+            weight: 8,
+            editable: true,
+            clickable: false,
+            zIndex: 9,
+        });
+        assert.strictEqual(styled.strokeColor, '#ff0000');
+        assert.strictEqual(styled.fillColor, '#00ff00');
+        assert.strictEqual(styled.zIndex, 9);
+        assert.true(styled.editable);
+        assert.false(styled.clickable);
+
+        const polyline = this.service.addPolyline('line_1', ring, { color: '#123456', weight: 5, opacity: 0.5 });
+        assert.strictEqual(polyline.strokeColor, '#123456');
+        assert.strictEqual(polyline.strokeOpacity, 0.5);
+
+        const circle = this.service.addCircle('circle_1', 1.3, 103.8, 250, { color: '#abcdef' });
+        assert.strictEqual(circle.radius, 250);
+        assert.deepEqual(circle.center, { lat: 1.3, lng: 103.8 });
+        assert.strictEqual(circle.fillColor, '#abcdef', 'the fill follows the given stroke');
+    });
+
+    test('a shape with too few usable points is not drawn', function (assert) {
+        this.useMap();
+
+        assert.strictEqual(this.service.addPolygon('zone_1', []), null, 'an empty ring');
+        assert.strictEqual(this.service.addPolygon('zone_1', 'not a ring'), null, 'something that is not a list');
+        assert.strictEqual(
+            this.service.addPolygon('zone_1', [
+                [1.3, 103.8],
+                [1.4, 103.9],
+            ]),
+            null,
+            'a ring of two points'
+        );
+        assert.strictEqual(this.service.addPolyline('line_1', [[1.3, 103.8]]), null, 'a line of one point');
+        assert.strictEqual(this.service.addPolyline('line_1', 'not a line'), null);
+    });
+
+    test('a polygon accepts one ring or many, however the points are shaped', function (assert) {
+        this.useMap();
+
+        const flat = this.service.addPolygon('zone_flat', [
+            [1.3, 103.8],
+            [1.4, 103.9],
+            [1.5, 103.7],
+        ]);
+        assert.deepEqual(
+            flat.paths,
+            [
+                { lat: 1.3, lng: 103.8 },
+                { lat: 1.4, lng: 103.9 },
+                { lat: 1.5, lng: 103.7 },
+            ],
+            'a single ring stays flat'
+        );
+
+        const multi = this.service.addPolygon('zone_multi', [
+            [
+                [1.3, 103.8],
+                [1.4, 103.9],
+                [1.5, 103.7],
+            ],
+            [
+                [1.31, 103.81],
+                [1.41, 103.91],
+                [1.51, 103.71],
+            ],
+        ]);
+        assert.strictEqual(multi.paths.length, 2, 'nested rings stay nested');
+
+        const mixed = this.service.addPolygon('zone_mixed', [
+            [
+                [1.3, 103.8],
+                [1.4, 103.9],
+                [1.5, 103.7],
+            ],
+            [[1.31, 103.81]],
+        ]);
+        assert.deepEqual(mixed.paths[0], { lat: 1.3, lng: 103.8 }, 'a ring too short to close is dropped, leaving one');
+    });
+
+    test('a polygon remembers which overlay was last touched', function (assert) {
+        this.useMap();
+        const seen = [];
+        const polygon = this.service.addPolygon(
+            'zone_1',
+            [
+                [1.3, 103.8],
+                [1.4, 103.9],
+                [1.5, 103.7],
+            ],
+            { onRightClick: (event) => seen.push(event.type) }
+        );
+
+        polygon.fire('click');
+        assert.strictEqual(this.service._selectedOverlay, polygon, 'a click selects it');
+
+        this.service._selectedOverlay = null;
+        polygon.fire('rightclick', { latLng: { lat: () => 1.3, lng: () => 103.8 } });
+        assert.strictEqual(this.service._selectedOverlay, polygon, 'so does a right-click');
+        assert.deepEqual(seen, ['rightclick'], 'and the handler is told');
+    });
+
+    test('removing an overlay detaches it and forgets it', function (assert) {
+        this.useMap();
+        const polygon = this.service.addPolygon('zone_1', [
+            [1.3, 103.8],
+            [1.4, 103.9],
+            [1.5, 103.7],
+        ]);
+        let cleaned = 0;
+        polygon.__tooltipCleanup = () => (cleaned += 1);
+
+        this.service.removeOverlay('zone_1');
+        assert.strictEqual(cleaned, 1);
+        assert.deepEqual(polygon.setMapCalls, [null]);
+        assert.strictEqual(this.service._overlays.size, 0);
+
+        this.service.removeOverlay('zone_1');
+        assert.strictEqual(this.service._overlays.size, 0, 'removing an unknown overlay is harmless');
+    });
+
+    test('a routing control draws one polyline per style and registers its handle', async function (assert) {
+        assert.strictEqual(await this.service.addRoutingControl({ waypoints: [[1.3, 103.8]] }), null, 'nothing without a map');
+
+        this.useMap();
+        this.service._supportsAdvancedMarkers = false;
+        assert.strictEqual(await this.service.addRoutingControl(null), null, 'nor without a route');
+        assert.strictEqual(await this.service.addRoutingControl({ waypoints: [] }), null, 'nor for a route with no waypoints');
+
+        const route = {
+            engine: 'osrm',
+            raw: { source: 'osrm' },
+            bounds: 'the-bounds',
+            waypoints: [
+                [1.3, 103.8],
+                [1.4, 103.9],
+            ],
+            coordinates: [
+                [1.3, 103.8],
+                [1.35, 103.85],
+                [1.4, 103.9],
+            ],
+        };
+
+        const handle = await this.service.addRoutingControl(route, {
+            id: 'route_1',
+            tag: 'driver_1',
+            polylineOptions: {
+                styles: [
+                    { color: '#111111', weight: 7, opacity: 0.8 },
+                    { color: '#222222', weight: 3, opacity: 0.9 },
+                ],
+            },
+        });
+
+        assert.strictEqual(handle.id, 'route_1');
+        assert.strictEqual(handle.engine, 'osrm');
+        assert.strictEqual(handle.tag, 'driver_1');
+        assert.strictEqual(handle.raw, route.raw);
+        assert.strictEqual(handle.bounds, 'the-bounds');
+        assert.deepEqual(handle.polylineIds, ['route_1:polyline:0', 'route_1:polyline:1']);
+        assert.deepEqual(handle.markerIds, ['route_1:marker:0', 'route_1:marker:1']);
+        assert.strictEqual(this.service._overlays.get('route_1:polyline:0').strokeColor, '#111111');
+        assert.strictEqual(this.service._routingControls.get('route_1'), handle);
+    });
+
+    test('an unstyled routing control takes the Fleet-Ops route blue', async function (assert) {
+        this.useMap();
+        this.service._supportsAdvancedMarkers = false;
+        const route = {
+            waypoints: [[1.3, 103.8]],
+            coordinates: [
+                [1.3, 103.8],
+                [1.4, 103.9],
+            ],
+        };
+
+        const defaulted = await this.service.addRoutingControl(route, { id: 'route_default' });
+        const line = this.service._overlays.get('route_default:polyline:0');
+        assert.strictEqual(line.strokeColor, '#2563eb');
+        assert.strictEqual(line.strokeWeight, 4);
+        assert.strictEqual(line.strokeOpacity, 0.85);
+        assert.strictEqual(defaulted.tag, null);
+
+        await this.service.addRoutingControl(route, { id: 'route_colored', color: '#ff0000' });
+        assert.strictEqual(this.service._overlays.get('route_colored:polyline:0').strokeColor, '#ff0000', 'a bare colour is used when there are no polyline options');
+
+        await this.service.addRoutingControl(route, { id: 'route_styled', color: '#ff0000', polylineOptions: { color: '#00ff00', weight: 9, opacity: 0.5 } });
+        assert.strictEqual(this.service._overlays.get('route_styled:polyline:0').strokeColor, '#00ff00', 'polyline options win');
+
+        const noLine = await this.service.addRoutingControl({ waypoints: [[1.3, 103.8]] }, { id: 'route_bare' });
+        assert.deepEqual(noLine.polylineIds, [], 'a route with no coordinates draws no line');
+
+        const first = await this.service.addRoutingControl(route);
+        const second = await this.service.addRoutingControl(route);
+        assert.true(first.id.startsWith('route:'));
+        assert.notStrictEqual(first.id, second.id, 'generated ids do not collide');
+    });
+
+    test('route markers can be suppressed, overridden or skipped', async function (assert) {
+        this.useMap();
+        this.service._supportsAdvancedMarkers = false;
+        const route = {
+            waypoints: [
+                [1.3, 103.8],
+                [1.4, 103.9],
+            ],
+        };
+
+        const suppressed = await this.service.addRoutingControl(route, { id: 'route_bare', suppressMarkers: true });
+        assert.deepEqual(suppressed.markerIds, []);
+
+        const overridden = await this.service.addRoutingControl(route, { id: 'route_override', markerWaypoints: [[1.5, 103.5]] });
+        assert.deepEqual(overridden.markerIds, ['route_override:marker:0']);
+
+        const skipped = await this.service.addRoutingControl(route, {
+            id: 'route_skip',
+            createMarker: (waypoint, index) => (index === 0 ? null : false),
+        });
+        assert.deepEqual(skipped.markerIds, [], 'both null and false skip the marker');
+    });
+
+    test('removing a routing control takes its markers and lines with it', async function (assert) {
+        this.useMap();
+        this.service._supportsAdvancedMarkers = false;
+        const route = {
+            waypoints: [[1.3, 103.8]],
+            coordinates: [
+                [1.3, 103.8],
+                [1.4, 103.9],
+            ],
+        };
+
+        await this.service.addRoutingControl(route, { id: 'route_1' });
+        assert.strictEqual(this.service._markers.size, 1);
+        assert.strictEqual(this.service._overlays.size, 1);
+
+        assert.true(this.service.removeRoutingControl('route_1'), 'removal by id');
+        assert.strictEqual(this.service._markers.size, 0);
+        assert.strictEqual(this.service._overlays.size, 0);
+
+        const second = await this.service.addRoutingControl(route, { id: 'route_2' });
+        assert.true(this.service.removeRoutingControl(second), 'or by handle');
+        assert.false(this.service.removeRoutingControl('route_gone'), 'an unknown id reports nothing removed');
+        assert.true(this.service.removeRoutingControl({ id: 'route_empty' }), 'a handle with nothing on it is still accepted');
+    });
+
+    test('positionWaypoints flies to a lone point and fits a box for more', function (assert) {
+        assert.strictEqual(this.service.positionWaypoints([[1.3, 103.8]]), null, 'nothing without a map');
+
+        const map = this.useMap();
+        const pans = [];
+        this.service.panBy = (x, y) => pans.push([x, y]);
+
+        assert.true(this.service.positionWaypoints([[1.3, 103.8]], { singlePointZoom: 16, panBy: [10, 4] }));
+        assert.deepEqual(map.calls.at(-1), ['panTo', { lat: 1.3, lng: 103.8 }], 'a lone point is flown to');
+        this.onceListeners.at(-1)[1]();
+        assert.deepEqual(pans, [[10, 4]], 'and panned once the map settles');
+
+        const fits = [];
+        this.service.fitBounds = (bounds, options) => fits.push([bounds, options.maxZoom, options.paddingBottomRight]);
+
+        this.service.positionWaypoints([
+            [1.3, 103.8],
+            [1.4, 103.9],
+        ]);
+        assert.strictEqual(fits.at(-1)[1], 15, 'two points may zoom further in');
+        assert.deepEqual(fits.at(-1)[2], [300, 0], 'the default padding leaves room for the overlay');
+
+        this.service.positionWaypoints([
+            [1.3, 103.8],
+            [1.4, 103.9],
+            [1.5, 104.0],
+        ]);
+        assert.strictEqual(fits.at(-1)[1], 14, 'three or more stay further out');
+
+        this.service.positionWaypoints('the-bounds', { isBounds: true, maxZoom: 11, paddingBottomRight: [0, 20] });
+        assert.deepEqual(fits.at(-1), ['the-bounds', 11, [0, 20]], 'declared bounds are passed straight through');
+
+        this.onceListeners.at(-1)[1]();
+        assert.deepEqual(pans.at(-1), [0, 0], 'with no pan asked for, it pans by nothing');
+
+        assert.strictEqual(this.service.positionWaypoints([]), null, 'an empty list positions nothing');
+    });
+
+    test('removeLayer detaches a layer however it can and clears the selection', function (assert) {
+        this.useMap();
+        assert.strictEqual(this.service.removeLayer(null), undefined, 'nothing to remove');
+
+        const overlay = this.service.addPolygon('zone_1', [
+            [1.3, 103.8],
+            [1.4, 103.9],
+            [1.5, 103.7],
+        ]);
+        let cleaned = 0;
+        overlay.__tooltipCleanup = () => (cleaned += 1);
+        this.service._selectedOverlay = overlay;
+        this.service._draftOverlays.add(overlay);
+        this.service._pendingDeletedDrafts.add(overlay);
+
+        this.service.removeLayer(overlay);
+        assert.strictEqual(cleaned, 1);
+        assert.deepEqual(overlay.setMapCalls, [null]);
+        assert.strictEqual(this.service._selectedOverlay, null, 'the selection is cleared');
+        assert.strictEqual(this.service._draftOverlays.size, 0);
+        assert.strictEqual(this.service._pendingDeletedDrafts.size, 0);
+
+        const advanced = { map: this.service._map };
+        this.service.removeLayer(advanced);
+        assert.strictEqual(advanced.map, null, 'a layer with no setMap is detached by clearing its map');
+
+        this.service.removeLayer({ nothing: true });
+        assert.ok(true, 'and a layer with neither is left alone');
+    });
+
+    test('a layer is shown and hidden, and reports which it is', function (assert) {
+        const map = this.useMap();
+        const overlay = this.service.addPolygon('zone_1', [
+            [1.3, 103.8],
+            [1.4, 103.9],
+            [1.5, 103.7],
+        ]);
+
+        assert.true(this.service.isLayerHidden(null), 'a layer that is not there counts as hidden');
+        assert.false(this.service.isLayerVisible(null));
+        assert.strictEqual(this.service.showLayer(null), undefined);
+        assert.strictEqual(this.service.hideLayer(null), undefined);
+
+        this.service.hideLayer(overlay);
+        assert.deepEqual(overlay.setMapCalls.at(-1), null);
+        assert.true(this.service.isLayerHidden(overlay));
+
+        this.service.showLayer(overlay);
+        assert.strictEqual(overlay.setMapCalls.at(-1), map);
+        assert.true(this.service.isLayerVisible(overlay));
+        assert.deepEqual(overlay.setOptionsCalls.at(-1), { strokeOpacity: 1, fillOpacity: 0.2, visible: true }, 'showing restores the presentation');
+
+        const advanced = { map: null };
+        this.service.showLayer(advanced);
+        assert.strictEqual(advanced.map, map, 'a layer with no setMap is shown by setting its map');
+        this.service.hideLayer(advanced);
+        assert.strictEqual(advanced.map, null);
+    });
+
+    test('a layer carrying a label moves it along with the layer', function (assert) {
+        const map = this.useMap();
+        const labelSetMaps = [];
+        const overlay = this.service.addPolygon('zone_1', [
+            [1.3, 103.8],
+            [1.4, 103.9],
+            [1.5, 103.7],
+        ]);
+        overlay.__labelMarker = { setMap: (value) => labelSetMaps.push(value) };
+        let hidden = 0;
+        overlay.__tooltipCleanup = Object.assign(() => {}, { hide: () => (hidden += 1) });
+
+        this.service.hideLayer(overlay);
+        assert.deepEqual(labelSetMaps, [null], 'the label goes with it');
+        assert.strictEqual(hidden, 1, 'and the hover tooltip is told to hide');
+
+        this.service.showLayer(overlay);
+        assert.strictEqual(labelSetMaps.at(-1), map, 'and comes back with it');
+
+        const plainLabel = { map: 'stale' };
+        this.service.hideLayer(Object.assign({ setMap() {} }, { __labelMarker: plainLabel }));
+        assert.strictEqual(plainLabel.map, null, 'a label with no setMap is detached by its map property');
     });
 });
