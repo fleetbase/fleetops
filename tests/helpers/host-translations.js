@@ -25,9 +25,17 @@ export default {
         details: 'Details',
         name: 'Name',
         'resource-actions': '{resource} Actions',
+        'view-resource': 'View {resource}',
+        'edit-resource': 'Edit {resource}',
         'edit-resource-name': 'Edit: {resourceName}',
         'delete-resource-name': 'Delete: {resourceName}',
         address: 'Address',
         status: 'Status',
+    },
+    column: {
+        address: 'Address',
+        location: 'Location',
+        vehicle: 'Vehicle',
+        'last-seen': 'Last Seen',
     },
 };

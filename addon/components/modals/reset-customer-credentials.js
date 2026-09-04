@@ -7,7 +7,7 @@ const INTERNAL_NAMESPACE = 'int/v1';
 export default class ModalsResetCustomerCredentialsComponent extends Component {
     @service fetch;
     @service notifications;
-    @tracked options = {};
+    @tracked options;
     @tracked password;
     @tracked confirmPassword;
     @tracked sendCredentials = true;

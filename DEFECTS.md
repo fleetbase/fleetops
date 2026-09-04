@@ -870,6 +870,22 @@ call, not taken here).
 **Impact:** None.
 **Fix:** Both deleted. The scaffolds for map/drawer, route-optimization-wizard-panel, order/details/{metadata,custom-fields,detail,notes}, vehicle/details and map/toolbar/zones-panel are replaced by real suites; `AbilitiesStub` in the test helpers gained `cannot`, which ember-ui's Button calls.
 
+## 60. seven templates — every selected document or avatar uploaded twice
+
+**Status:** FIXED (separate commit, `fix(order): upload each selected document once`)
+**Found:** The documents suite recorded two uploads for one selected file.
+**Evidence:** Each template wraps its dropzone in `{{#let (file-queue name="files" onFileAdded=…)}}`, which registers a listener on the "files" queue, and mounts ember-ui's `<FileUpload @name="files" @onFileAdded=…>`, whose own template registers a second `file-queue` listener on the same queue with the same callback. ember-file-upload's `Queue#add` notifies every listener, so one `<input type="file">` change or one drop performed the upload task twice. Affected: `order/details/documents`, `order/form/documents`, `issue/details/documents`, `customer/order-form`, `customer/create-order-form`, `avatar-manager`, `admin/avatar-management`.
+**Impact:** Duplicate file records and double upload traffic for every document or avatar added through these panels.
+**Fix:** The `@onFileAdded` on the inner `FileUpload` is removed in all seven templates; the outer queue listener is the single handler. The documents suite asserts one upload per selection.
+
+## 61. `order/details/documents.js`, `modals/reset-customer-credentials.js` — guards the queue makes redundant, and a dead initializer
+
+**Status:** FIXED
+**Found:** Profiling after the six-scaffold sweep.
+**Evidence:** `queueFile` returned unless `file.state` was queued/failed/timed out/aborted, and its error callback tested `file.queue && typeof file.queue.remove === 'function'`; the task is only ever reached as a `file-queue` listener, and `Queue#add` sets `file.queue = this` and notifies with the freshly queued file, so neither condition can be false. `ModalsResetCustomerCredentials` initialised `@tracked options = {}` and assigns `this.options = options` in its constructor before any read (the DEFECTS #15 lazy-initializer shape).
+**Impact:** None.
+**Fix:** The guard, the queue check and the initializer are deleted.
+
 ## 4. `tests/` — 223 blueprint scaffolds that were never green
 
 **Status:** OPEN (this is the bulk of Phase B)
