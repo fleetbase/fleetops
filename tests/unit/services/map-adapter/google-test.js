@@ -47,7 +47,25 @@ function installGoogleMapsStub(context) {
     }
 
     class StubDrawingManager {
-        addListener() {}
+        constructor(options = {}) {
+            this.options = options;
+            this.listeners = [];
+            this.modes = [];
+            context.drawingManagers.push(this);
+        }
+
+        addListener(event, handler) {
+            this.listeners.push([event, handler]);
+        }
+
+        fire(event, payload) {
+            this.listeners.filter(([name]) => name === event).forEach(([, handler]) => handler(payload));
+        }
+
+        setDrawingMode(mode) {
+            this.modes.push(mode);
+        }
+
         setMap() {}
     }
 
@@ -358,6 +376,7 @@ module('Unit | Service | map-adapter/google', function (hooks) {
         this.imageMapTypes = [];
         this.removedListeners = [];
         this.overlayViews = [];
+        this.drawingManagers = [];
         this.panes = { overlayMouseTarget: document.createElement('div') };
         this.projection = { fromLatLngToDivPixel: () => ({ x: 40, y: 60 }) };
         installGoogleMapsStub(this);
@@ -2106,5 +2125,186 @@ module('Unit | Service | map-adapter/google', function (hooks) {
         assert.strictEqual(this.service._pendingDeletedDrafts.size, 2, 'both drafts are held');
         assert.true(first.__hidden);
         assert.true(second.__hidden);
+    });
+
+    /** Boots a real map so the DrawingManager is created and its overlaycomplete bridge is wired. */
+    async function bootDrawingManager(test) {
+        await test.service.initializeMap(document.createElement('div'));
+        return test.drawingManagers.at(-1);
+    }
+
+    const latLng = (lat, lng) => ({ lat: () => lat, lng: () => lng });
+
+    test('a finished polygon becomes a selected draft and is announced', async function (assert) {
+        const manager = await bootDrawingManager(this);
+        const created = [];
+        const announced = [];
+        this.service.on('draw:created', (payload) => created.push(payload));
+        this.service._drawingOnCreate = (payload) => announced.push(payload);
+
+        const overlay = {
+            getPath: () => ({ getArray: () => [latLng(0, 0), latLng(0, 30), latLng(30, 30)] }),
+            addListener() {},
+        };
+        manager.fire('overlaycomplete', { type: 'polygon', overlay });
+
+        assert.strictEqual(this.service._selectedOverlay, overlay, 'the new shape is selected');
+        assert.true(this.service._draftOverlays.has(overlay), 'and held as a draft');
+        assert.strictEqual(overlay.__overlayType, 'polygon');
+        assert.strictEqual(created.length, 1);
+        assert.strictEqual(created[0].layer, overlay);
+        assert.strictEqual(created[0].layerType, 'polygon');
+        assert.strictEqual(created[0].geoJson.type, 'Polygon');
+        assert.deepEqual(created[0].geoJson.coordinates[0].at(-1), [0, 0], 'the ring is closed');
+        assert.strictEqual(created[0].toGeoJSON(), created[0].geoJson);
+        assert.deepEqual(announced, created, 'the create handler hears the same payload');
+        assert.deepEqual(manager.modes.at(-1), null, 'and drawing stops');
+    });
+
+    test('a finished shape selects the overlay again when it is clicked', async function (assert) {
+        const manager = await bootDrawingManager(this);
+        const listeners = [];
+        const overlay = {
+            getPath: () => ({ getArray: () => [latLng(0, 0), latLng(0, 30), latLng(30, 30)] }),
+            addListener: (event, handler) => listeners.push([event, handler]),
+        };
+
+        manager.fire('overlaycomplete', { type: 'polygon', overlay });
+        assert.deepEqual(
+            listeners.map(([event]) => event),
+            ['click', 'rightclick'],
+            'the draft listens for its own selection'
+        );
+
+        this.service._selectedOverlay = null;
+        listeners[0][1]();
+        assert.strictEqual(this.service._selectedOverlay, overlay, 'a click selects it');
+
+        this.service._selectedOverlay = null;
+        listeners[1][1]();
+        assert.strictEqual(this.service._selectedOverlay, overlay, 'so does a right-click');
+
+        this.service._selectedOverlay = null;
+        manager.fire('overlaycomplete', { type: 'polygon', overlay: { getPath: overlay.getPath } });
+        assert.ok(this.service._selectedOverlay, 'a shape that cannot listen is still selected');
+    });
+
+    test('each finished shape is turned into its own geometry', async function (assert) {
+        const manager = await bootDrawingManager(this);
+        const created = [];
+        this.service.on('draw:created', (payload) => created.push(payload));
+
+        manager.fire('overlaycomplete', {
+            type: 'rectangle',
+            overlay: {
+                getBounds: () => ({ getNorthEast: () => latLng(30, 40), getSouthWest: () => latLng(10, 20) }),
+            },
+        });
+        assert.strictEqual(created.at(-1).layerType, 'rectangle');
+        assert.strictEqual(created.at(-1).geoJson.type, 'Polygon');
+        assert.strictEqual(created.at(-1).geoJson.coordinates[0].length, 5, 'a rectangle becomes a closed ring of five points');
+
+        manager.fire('overlaycomplete', {
+            type: 'circle',
+            overlay: { getCenter: () => latLng(1.3, 103.8), getRadius: () => 250 },
+        });
+        assert.strictEqual(created.at(-1).layerType, 'circle');
+        assert.strictEqual(created.at(-1).geoJson.type, 'Feature', 'the geojson Circle helper approximates the circle as a feature');
+        assert.strictEqual(created.at(-1).geoJson.geometry.type, 'Polygon');
+
+        manager.fire('overlaycomplete', {
+            type: 'polyline',
+            overlay: { getPath: () => ({ getArray: () => [latLng(0, 0), latLng(0, 30)] }) },
+        });
+        assert.strictEqual(created.at(-1).layerType, 'polyline');
+        assert.strictEqual(created.at(-1).geoJson.geometry.type, 'LineString', 'a polyline stays a feature');
+
+        manager.fire('overlaycomplete', { type: 'marker', overlay: {} });
+        assert.strictEqual(created.at(-1).layerType, 'marker');
+        assert.strictEqual(created.at(-1).geoJson, null, 'a marker has no shape to report');
+
+        manager.fire('overlaycomplete', { type: 'hexagon', overlay: {} });
+        assert.strictEqual(created.at(-1).layerType, 'hexagon', 'an unmapped type is passed through as it came');
+    });
+
+    test('the adapter carries on when the drawing library will not load', async function (assert) {
+        const originalImport = window.google.maps.importLibrary;
+        window.google.maps.importLibrary = (name) => (name === 'drawing' ? Promise.reject(new Error('offline')) : originalImport(name));
+
+        try {
+            await this.service.initializeMap(document.createElement('div'));
+            assert.strictEqual(this.service._drawingManager, null, 'no manager is built');
+            this.service.enableDrawingMode('polygon');
+            assert.ok(true, 'and asking to draw is simply ignored');
+        } finally {
+            window.google.maps.importLibrary = originalImport;
+        }
+    });
+
+    test('destroying the map clears every register', async function (assert) {
+        await this.service.initializeMap(document.createElement('div'));
+        this.service.addPolygon('zone_1', [
+            [0, 0],
+            [0, 30],
+            [30, 30],
+        ]);
+        this.service.openPopup('popup_1', 1.3, 103.8, 'Depot');
+        this.service.addGeoJson('geo_1', { type: 'Point', coordinates: [0, 0] });
+        this.service._draftOverlays.add({});
+        this.service._selectedOverlay = {};
+
+        this.service.destroyMap();
+
+        assert.strictEqual(this.service._map, null);
+        assert.strictEqual(this.service._markers.size, 0);
+        assert.strictEqual(this.service._overlays.size, 0);
+        assert.strictEqual(this.service._popups.size, 0);
+        assert.strictEqual(this.service._geojsonLayers.size, 0);
+        assert.strictEqual(this.service._drawingManager, null);
+        assert.strictEqual(this.service._selectedOverlay, null);
+        assert.strictEqual(this.service._draftOverlays.size, 0);
+        assert.false(this.service._supportsAdvancedMarkers, 'and advanced markers are no longer assumed');
+    });
+
+    test('advanced markers are used only when the map carries a real map id', async function (assert) {
+        await this.service.initializeMap(document.createElement('div'));
+        assert.false(this.service._supportsAdvancedMarkers, 'no map id, no advanced markers');
+
+        await this.service.destroyMap();
+        await this.service.initializeMap(document.createElement('div'), { mapId: 'FLEETOPS_MAP' });
+        assert.false(this.service._supportsAdvancedMarkers, 'the placeholder id does not count');
+
+        await this.service.destroyMap();
+        await this.service.initializeMap(document.createElement('div'), { mapId: 'a-real-map-id' });
+        assert.true(this.service._supportsAdvancedMarkers, 'a real id turns them on');
+    });
+
+    test('initialising again tears the old map down and builds a fresh one', async function (assert) {
+        const first = await this.service.initializeMap(document.createElement('div'));
+        this.service.addPolygon('zone_1', [
+            [0, 0],
+            [0, 30],
+            [30, 30],
+        ]);
+
+        const second = await this.service.initializeMap(document.createElement('div'));
+
+        assert.notStrictEqual(second, first, 'a new map is built rather than the old one returned');
+        assert.strictEqual(this.service._overlays.size, 0, 'and the old map takes its overlays with it');
+    });
+
+    test('registered markers and overlays are read back by id', function (assert) {
+        this.useMap();
+        // Both registers are torn down by destroyMap, which detaches whatever it holds.
+        const marker = { id: 'marker', setMap() {} };
+        const polygon = { id: 'polygon', setMap() {} };
+
+        this.service.registerMarker('marker_1', marker);
+        this.service.registerPolygon('zone_1', polygon);
+
+        assert.strictEqual(this.service.getMarker('marker_1'), marker);
+        assert.strictEqual(this.service.getOverlay('zone_1'), polygon);
+        assert.strictEqual(this.service.getMarker('nope'), null, 'an unknown id answers null');
+        assert.strictEqual(this.service.getOverlay('nope'), null);
     });
 });
