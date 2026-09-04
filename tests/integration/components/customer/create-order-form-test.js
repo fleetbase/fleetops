@@ -141,8 +141,25 @@ module('Integration | Component | customer/create-order-form', function (hooks) 
             }
         );
         this.owner.register('service:context-panel', class extends Service {});
-        this.owner.register('service:universe', class extends Service {});
-        this.owner.register('service:events', class extends Service {});
+        this.universeEvents = [];
+        this.owner.register(
+            'service:universe',
+            class extends Service {
+                trigger(name, subject) {
+                    test.universeEvents.push([name, subject]);
+                }
+            }
+        );
+
+        this.tracked = [];
+        this.owner.register(
+            'service:events',
+            class extends Service {
+                trackResourceCreated(resource) {
+                    test.tracked.push(resource);
+                }
+            }
+        );
 
         // Everything on this form is gated on `cannot "fleet-ops create order"`.
         this.owner.register(
@@ -187,7 +204,12 @@ module('Integration | Component | customer/create-order-form', function (hooks) 
                 loadSubjectCustomFields = {
                     perform: (orderConfig) => {
                         test.customFieldsLoaded.push(orderConfig);
-                        return Promise.resolve(test.customFieldsManager ?? { validateRequired: () => ({ isValid: true, errors: new Map() }) });
+                        return Promise.resolve(
+                            test.customFieldsManager ?? {
+                                validateRequired: () => test.customFieldsValidation ?? { isValid: true, errors: new Map() },
+                                saveTo: () => Promise.resolve({ created: [] }),
+                            }
+                        );
                     },
                 };
             }
@@ -367,5 +389,99 @@ module('Integration | Component | customer/create-order-form', function (hooks) 
         await click(pod);
         assert.false(this.order.pod_required);
         assert.strictEqual(this.order.pod_method, null, 'which is given up with it');
+    });
+
+    /** Fills in the pickup and dropoff the form needs before it will accept a submission. */
+    async function chooseRoute(test) {
+        const selects = [...document.querySelectorAll('[data-test-model-select="place"]')];
+        test.testBed.chosen = test.store.createRecord('place', { street1: 'Depot', location: { type: 'Point', coordinates: [103.8, 1.3] } });
+        await click(selects[0]);
+        test.testBed.chosen = test.store.createRecord('place', { street1: 'Site', location: { type: 'Point', coordinates: [103.9, 1.4] } });
+        await click(selects[1]);
+    }
+
+    const submitButton = () => [...document.querySelectorAll('button')].find((el) => el.textContent.includes('Submit'));
+
+    test('submitting an order with no route does nothing at all', async function (assert) {
+        this.givenOrderConfigs({ id: 'config_1', key: 'transport', name: 'Transport' });
+        await render(hbs`<Customer::CreateOrderForm @order={{this.order}} @map={{this.map}} />`);
+
+        let saved = 0;
+        this.order.save = () => {
+            saved += 1;
+            return Promise.resolve(this.order);
+        };
+
+        await click(submitButton());
+
+        assert.strictEqual(saved, 0, 'an order with no pickup or dropoff is not saved');
+        assert.deepEqual(this.notified, [], 'and the refusal is silent — the disabled controls are the feedback');
+        assert.deepEqual(this.universeEvents, [], 'nothing is announced');
+    });
+
+    test('submitting a routed order saves it and announces it', async function (assert) {
+        this.givenOrderConfigs({ id: 'config_1', key: 'transport', name: 'Transport' });
+
+        let saved = 0;
+        this.order.save = () => {
+            saved += 1;
+            return Promise.resolve(this.order);
+        };
+        const created = [];
+        this.onOrderCreated = (order) => created.push(order);
+
+        await render(hbs`<Customer::CreateOrderForm @order={{this.order}} @map={{this.map}} @onOrderCreated={{this.onOrderCreated}} />`);
+        await chooseRoute(this);
+        await click(submitButton());
+
+        assert.strictEqual(saved, 1, 'the order is saved once');
+        assert.deepEqual(
+            this.universeEvents.map(([name]) => name),
+            ['fleet-ops.order.creating', 'fleet-ops.order.created'],
+            'and announced before and after'
+        );
+        assert.deepEqual(this.tracked, [this.order], 'the creation is tracked');
+        assert.deepEqual(created, [this.order], 'and handed back to the caller');
+    });
+
+    test('custom fields that do not validate stop the submission and say why', async function (assert) {
+        this.givenOrderConfigs({ id: 'config_1', key: 'transport', name: 'Transport' });
+        this.customFieldsValidation = {
+            isValid: false,
+            errors: new Map([
+                ['weight', 'Weight is required'],
+                ['ref', 'Reference is required'],
+            ]),
+        };
+        await render(hbs`<Customer::CreateOrderForm @order={{this.order}} @map={{this.map}} />`);
+        await chooseRoute(this);
+
+        let saved = 0;
+        this.order.save = () => {
+            saved += 1;
+            return Promise.resolve(this.order);
+        };
+
+        await click(submitButton());
+
+        assert.strictEqual(saved, 0, 'nothing is saved');
+        assert.deepEqual(this.notified.at(-1), ['error', 'Weight is required\nReference is required'], 'every missing field is listed at once');
+    });
+
+    test('a save the server refuses is reported and the order is kept', async function (assert) {
+        this.givenOrderConfigs({ id: 'config_1', key: 'transport', name: 'Transport' });
+        await render(hbs`<Customer::CreateOrderForm @order={{this.order}} @map={{this.map}} />`);
+        await chooseRoute(this);
+
+        this.order.save = () => Promise.reject(new Error('the order was rejected'));
+
+        await click(submitButton());
+
+        assert.deepEqual(this.notified.at(-1), ['serverError', 'the order was rejected']);
+        assert.deepEqual(
+            this.universeEvents.map(([name]) => name),
+            ['fleet-ops.order.creating'],
+            'the creating event fired, but nothing claims it was created'
+        );
     });
 });
