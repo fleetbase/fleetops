@@ -1062,6 +1062,14 @@ call, not taken here).
 **Impact:** None today — the code cannot run. The 170 units it contributes sit in the coverage denominator.
 **Fix:** Ron's call, because it turns on intent. Either **wire it up** — inject `notifications`, give it a real map handle (the sibling `leaflet-layer-visibility-manager` takes its map from `leafletMapManager.map`, which is the obvious shape), and call `setDrawRestrictionPolygon` from wherever service-area drawing happens — or **delete it** as abandoned work. I have not picked one; covering an inert service to 100% would be busywork if the answer is delete.
 
+## 84. `addon/services/map-adapter/google.js` — `destroyMap` leaves every GeoJSON layer behind
+
+**Status:** FIXED
+**Found:** Asserting that destroying the map clears every register; `_geojsonLayers` was the one that still held an entry.
+**Evidence:** `destroyMap` clears `_markers`, `_overlays`, `_routingControls`, `_popups` (closing each first), `_contextMenuEls`, `_contextMenus`, `_eventListeners`, `_draftOverlays` and `_pendingDeletedDrafts`, and nulls the drawing manager, tooltip overlay and traffic/transit layers — but `grep -c "_geojsonLayers.clear()" addon/services/map-adapter/google.js` returns **0**. The register is only ever touched by `addGeoJson` and `removeGeoJson`. The sibling `map-adapter/leaflet.js` does clear it (line 116), so this adapter is the outlier rather than the pattern.
+**Impact:** Two things outlive a map that was destroyed. The `google.maps.Data` layers are never detached, so they keep a reference to the old map; and the ids stay in the register, so a rebuilt map starts with stale entries — `removeGeoJson('geo_1')` on the new map would call `setMap(null)` on a layer belonging to the old one. `initializeMap` calls `destroyMap()` first, so every re-initialisation accumulates this.
+**Fix:** `destroyMap` detaches each layer with `setMap(null)` and clears the register, in the same shape the method already uses for popups.
+
 ## 4. `tests/` — 223 blueprint scaffolds that were never green
 
 **Status:** OPEN (this is the bulk of Phase B)

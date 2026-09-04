@@ -228,6 +228,12 @@ export default class GoogleMapsAdapter extends MapAdapterInterface {
         }
         this._popups.clear();
 
+        // Detach GeoJSON layers
+        for (const layer of this._geojsonLayers.values()) {
+            layer.setMap(null);
+        }
+        this._geojsonLayers.clear();
+
         // Remove context menus
         for (const el of this._contextMenuEls.values()) {
             el.remove();
