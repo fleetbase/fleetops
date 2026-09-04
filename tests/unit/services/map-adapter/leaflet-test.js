@@ -1,6 +1,6 @@
 import { module, test } from 'qunit';
 import { setupTest } from 'dummy/tests/helpers';
-import { settled } from '@ember/test-helpers';
+import { settled, waitUntil } from '@ember/test-helpers';
 import { resetLeafletPluginLoaderForTesting } from 'dummy/utils/leaflet-plugin-loader';
 
 const L = window.L;
@@ -29,14 +29,89 @@ function stubLeafletPlugins() {
     add(L, 'Edit', { ...(L.Edit ?? {}), Marker: function MarkerEdit() {}, Poly: function PolyEdit() {} });
     add(L.Control, 'Draw', function DrawControl() {});
     add(L.Map, 'ContextMenu', function ContextMenu() {});
+    // leaflet-draw's mode constructors: each is `new Mode(map).enable()`, so the stub records the
+    // map it was handed and whether it was enabled.
+    add(L, 'Draw', {
+        ...(L.Draw ?? {}),
+        Polygon: makeDrawMode('polygon'),
+        Circle: makeDrawMode('circle'),
+        Rectangle: makeDrawMode('rectangle'),
+        Polyline: makeDrawMode('polyline'),
+        Marker: makeDrawMode('marker'),
+    });
 
     return () => restore.forEach((undo) => undo());
+}
+
+/** Records every drawing mode leaflet-draw is asked to start. */
+const drawModesEnabled = [];
+
+function makeDrawMode(name) {
+    return function DrawMode(map) {
+        this.enable = () => drawModesEnabled.push([name, map]);
+    };
+}
+
+/**
+ * A stand-in for the `L.Control.Draw` instance ember-leaflet hands the adapter. Leaflet's own
+ * `map.removeControl(control)` just calls `control.remove()`, so tracking `_map` here is enough
+ * for the adapter's `_drawControl._map` checks to behave like the real thing.
+ */
+function makeDrawControl({ withEditHandler = true } = {}) {
+    const container = document.createElement('div');
+    const editHandler = {
+        enabled: 0,
+        disabled: 0,
+        enable() {
+            this.enabled += 1;
+        },
+        disable() {
+            this.disabled += 1;
+        },
+    };
+    const control = {
+        _map: null,
+        container,
+        editHandler,
+        addTo(map) {
+            this._map = map;
+            return this;
+        },
+        remove() {
+            this._map = null;
+            return this;
+        },
+        getContainer() {
+            return container;
+        },
+    };
+
+    if (withEditHandler) {
+        control._toolbars = { edit: { _modes: { edit: { handler: editHandler } } } };
+    }
+
+    return control;
+}
+
+/** A stand-in for the draw feature group the adapter adds its edit proxy to. */
+function makeFeatureGroup() {
+    const layers = [];
+    return {
+        layers,
+        addLayer: (layer) => layers.push(layer),
+        removeLayer: (layer) => {
+            const index = layers.indexOf(layer);
+            if (index > -1) layers.splice(index, 1);
+        },
+        hasLayer: (layer) => layers.includes(layer),
+    };
 }
 
 module('Unit | Service | map-adapter/leaflet', function (hooks) {
     setupTest(hooks);
 
     hooks.beforeEach(function () {
+        drawModesEnabled.length = 0;
         this.restoreLeafletPlugins = stubLeafletPlugins();
         resetLeafletPluginLoaderForTesting();
 
@@ -404,13 +479,18 @@ module('Unit | Service | map-adapter/leaflet', function (hooks) {
         assert.notOk(this.adapter._overlays.has('zone_1'), 'removing an unknown overlay is harmless');
     });
 
-    test('distanceBetween measures in metres', function (assert) {
-        const metres = this.adapter.distanceBetween(1.3521, 103.8198, 1.3621, 103.8198);
+    test('distanceBetween measures in metres, with or without a map', function (assert) {
+        const withoutMap = this.adapter.distanceBetween(1.3521, 103.8198, 1.3621, 103.8198);
+        assert.true(withoutMap > 1050 && withoutMap < 1150, 'the fallback puts a hundredth of a degree of latitude at about 1.1km');
 
-        assert.true(metres > 1050 && metres < 1150, 'a tenth of a degree of latitude is about 1.1km');
+        this.initialize();
+        const withMap = this.adapter.distanceBetween(1.3521, 103.8198, 1.3621, 103.8198);
+        assert.strictEqual(Math.round(withMap), Math.round(withoutMap), 'the map agrees with the fallback');
     });
 
     test('geojson layers are added and removed by id', function (assert) {
+        assert.strictEqual(this.adapter.addGeoJson('geo_1', { type: 'Point', coordinates: [0, 0] }), null, 'nothing is added without a map');
+
         this.initialize();
         const geojson = { type: 'Point', coordinates: [103.8198, 1.3521] };
 
@@ -424,6 +504,8 @@ module('Unit | Service | map-adapter/leaflet', function (hooks) {
     });
 
     test('setTileLayer replaces the layer already on the map', function (assert) {
+        assert.strictEqual(this.adapter.setTileLayer('https://tiles.example.test/{z}/{x}/{y}.png'), undefined, 'there is nothing to tile without a map');
+
         this.initialize({ tileUrl: 'https://tiles.example.test/{z}/{x}/{y}.png' });
         const first = this.adapter._tileLayer;
 
@@ -868,5 +950,479 @@ module('Unit | Service | map-adapter/leaflet', function (hooks) {
         assert.true(this.adapter.isLayerHidden(null), 'a layer that is not there counts as hidden');
         assert.false(this.adapter.isLayerHidden({}), 'a layer with nothing on the page counts as visible');
         assert.true(this.adapter.isLayerVisible({}));
+    });
+
+    test('drawing modes only start once a draw control exists', function (assert) {
+        this.initialize();
+
+        this.adapter.enableDrawingMode('polygon');
+        assert.deepEqual(drawModesEnabled, [], 'nothing starts before ember-leaflet hands over the control');
+
+        this.adapter.setDrawControl(makeDrawControl(), makeFeatureGroup());
+        for (const type of ['polygon', 'circle', 'rectangle', 'polyline', 'marker']) {
+            this.adapter.enableDrawingMode(type);
+        }
+        assert.deepEqual(
+            drawModesEnabled.map(([name]) => name),
+            ['polygon', 'circle', 'rectangle', 'polyline', 'marker'],
+            'every supported shape maps to its leaflet-draw mode'
+        );
+        assert.strictEqual(drawModesEnabled[0][1], this.adapter._map, 'the mode is started against the map');
+
+        this.adapter.enableDrawingMode('hexagon');
+        assert.strictEqual(drawModesEnabled.length, 5, 'an unsupported shape starts nothing');
+    });
+
+    test('a drawing mode can carry a one-shot create handler', function (assert) {
+        const map = this.initialize();
+        this.adapter.setDrawControl(makeDrawControl(), makeFeatureGroup());
+
+        const created = [];
+        this.adapter.enableDrawingMode('polygon', { onCreate: (event) => created.push(event) });
+        this.adapter.enableDrawingMode('circle', { onCreate: 'not a function' });
+
+        map.fire('draw:created', { layerType: 'polygon' });
+        assert.strictEqual(created.length, 1, 'the handler runs once');
+        map.fire('draw:created', { layerType: 'polygon' });
+        assert.strictEqual(created.length, 1, 'and not again');
+        assert.strictEqual(created[0].type, 'draw:created', 'the payload is normalised');
+    });
+
+    test('disableDrawingMode tells listeners drawing stopped', function (assert) {
+        const stops = [];
+        this.adapter.disableDrawingMode();
+
+        const map = this.initialize();
+        map.on('draw:drawstop', () => stops.push('stopped'));
+        this.adapter.disableDrawingMode();
+
+        assert.deepEqual(stops, ['stopped'], 'the synthetic stop reaches listeners, and is harmless without a map');
+    });
+
+    test('the draw control is shown, hidden and toggled, and remembers a config given early', function (assert) {
+        const map = this.initialize();
+
+        // Config can arrive before ember-leaflet has created the control.
+        this.adapter.showDrawControl({ defaultMode: 'polygon' });
+        assert.deepEqual(drawModesEnabled, [], 'nothing happens yet');
+
+        const control = makeDrawControl();
+        this.adapter.setDrawControl(control);
+        assert.strictEqual(control._map, map, 'the stored config is applied as soon as the control arrives');
+        assert.deepEqual(
+            drawModesEnabled.map(([name]) => name),
+            ['polygon'],
+            'including its default mode'
+        );
+        assert.strictEqual(control.container.style.display, '');
+
+        this.adapter.hideDrawControl();
+        assert.strictEqual(control.container.style.display, 'none');
+        assert.strictEqual(control._map, null, 'the control leaves the map');
+
+        this.adapter.toggleDrawControl();
+        assert.strictEqual(control._map, map, 'toggling puts it back');
+        this.adapter.toggleDrawControl();
+        assert.strictEqual(control._map, null, 'and takes it away again');
+    });
+
+    test('draw control calls are no-ops without a control or a map', function (assert) {
+        this.adapter.showDrawControl({ defaultMode: 'polygon' });
+        this.adapter.hideDrawControl();
+        this.adapter.toggleDrawControl();
+        assert.deepEqual(drawModesEnabled, [], 'nothing is drawn without a map');
+
+        this.initialize();
+        this.adapter.hideDrawControl();
+        this.adapter.toggleDrawControl();
+        assert.ok(true, 'and nothing throws without a control');
+
+        this.adapter.setDrawControl(makeDrawControl(), null);
+        assert.strictEqual(this.adapter._drawFeatureGroup, null, 'a control given no feature group leaves the old one');
+    });
+
+    test('marker and polygon registration is delegated to the shared adapter', function (assert) {
+        const marker = { id: 'marker' };
+        const polygon = { id: 'polygon' };
+
+        this.adapter.registerMarker('marker_1', marker);
+        this.adapter.registerPolygon('zone_1', polygon);
+
+        assert.strictEqual(this.adapter._markers.get('marker_1'), marker);
+        assert.strictEqual(this.adapter._overlays.get('zone_1'), polygon);
+    });
+
+    test('context menu items, coordinates and centring read off the event', function (assert) {
+        const map = this.initialize();
+
+        assert.deepEqual(this.adapter.getContextMenuItems({ contextmenuItems: [{ label: 'Edit' }] }), [{ label: 'Edit' }]);
+        assert.deepEqual(this.adapter.getContextMenuItems({}), [], 'a target with no menu offers nothing');
+        assert.deepEqual(this.adapter.getContextMenuItems(), []);
+
+        assert.deepEqual(this.adapter.showCoordinates({ latlng: { wrap: () => ({ lat: 1.3, lng: 103.8 }) } }), { lat: 1.3, lng: 103.8 }, 'a wrappable point is wrapped first');
+        assert.deepEqual(this.adapter.showCoordinates({ latlng: { lat: 40.7, lng: -74 } }), { lat: 40.7, lng: -74 }, 'a plain point is read as-is');
+        assert.deepEqual(this.adapter.showCoordinates(), { lat: undefined, lng: undefined });
+
+        const panned = [];
+        map.panTo = (latlng) => panned.push(latlng);
+        this.adapter.centerMap({ latlng: { lat: 1.3, lng: 103.8 } });
+        this.adapter.centerMap({});
+        this.adapter.centerMap();
+        assert.deepEqual(panned, [{ lat: 1.3, lng: 103.8 }], 'only an event carrying a point moves the map');
+    });
+
+    test('panBy forwards to the map when there is one', function (assert) {
+        this.adapter.panBy(10);
+
+        const map = this.initialize();
+        const pans = [];
+        map.panBy = (offset) => pans.push(offset);
+
+        this.adapter.panBy(10);
+        this.adapter.panBy(10, 4);
+
+        assert.deepEqual(pans, [
+            [10, 0],
+            [10, 4],
+        ]);
+    });
+
+    test('editPolygon reports what it cannot do', async function (assert) {
+        const shape = () =>
+            L.polygon([
+                [1.3, 103.8],
+                [1.4, 103.9],
+                [1.5, 103.7],
+            ]);
+
+        assert.deepEqual(await this.adapter.editPolygon(shape()), { type: 'unsupported' }, 'no map');
+
+        this.initialize();
+        assert.deepEqual(await this.adapter.editPolygon(shape()), { type: 'unsupported' }, 'no draw control');
+
+        this.adapter.setDrawControl(makeDrawControl(), makeFeatureGroup());
+        assert.deepEqual(await this.adapter.editPolygon(null), { type: 'unsupported' }, 'no layer');
+
+        await assert.rejects(this.adapter.editPolygon({ getLatLngs: () => [] }), /layer has no coordinates/, 'a layer with no shape cannot be edited');
+    });
+
+    test('editPolygon gives up when leaflet-draw exposes no edit handler', async function (assert) {
+        this.initialize();
+        const group = makeFeatureGroup();
+        this.adapter.setDrawControl(makeDrawControl({ withEditHandler: false }), group);
+
+        const layer = L.polygon([
+            [1.3, 103.8],
+            [1.4, 103.9],
+            [1.5, 103.7],
+        ]).addTo(this.adapter._map);
+
+        await assert.rejects(this.adapter.editPolygon(layer), /edit handler unavailable/);
+        assert.deepEqual(group.layers, [], 'the edit proxy is taken back off the map');
+        assert.notOk(layer.__hidden, 'and the layer the user was editing is shown again');
+    });
+
+    test('editPolygon writes the edited shape back onto the original layer', async function (assert) {
+        const map = this.initialize();
+        const control = makeDrawControl();
+        const group = makeFeatureGroup();
+        this.adapter.setDrawControl(control, group);
+
+        const layer = L.polygon(
+            [
+                [1.3, 103.8],
+                [1.4, 103.9],
+                [1.5, 103.7],
+            ],
+            { color: '#ff0000', fillOpacity: 0.5 }
+        ).addTo(map);
+
+        const pending = this.adapter.editPolygon(layer, {
+            focusBounds: [
+                [1.2, 103.6],
+                [1.6, 104.0],
+            ],
+        });
+
+        assert.strictEqual(group.layers.length, 1, 'an editable proxy stands in for the layer');
+        assert.strictEqual(group.layers[0].options.color, '#ff0000', 'the proxy takes the layer s colour');
+        assert.strictEqual(group.layers[0].options.fillOpacity, 0.5);
+        assert.strictEqual(control.editHandler.enabled, 1, 'the edit handler is switched on');
+        assert.true(layer.__hidden, 'the original is hidden while its proxy is edited');
+
+        group.layers[0].setLatLngs([
+            [2.1, 100.1],
+            [2.2, 100.2],
+            [2.3, 100.3],
+        ]);
+        map.fire('draw:edited');
+
+        const result = await pending;
+        assert.strictEqual(result.type, 'edited');
+        assert.strictEqual(result.layer, layer);
+        assert.strictEqual(Math.round(layer.getLatLngs()[0][0].lat * 10) / 10, 2.1, 'the edited shape is written back');
+        assert.strictEqual(result.geoJson.type, 'Polygon', 'and handed back as a GeoJSON geometry');
+        assert.strictEqual(result.toGeoJSON(), result.geoJson);
+        assert.strictEqual(control.editHandler.disabled, 1, 'the handler is switched off again');
+        assert.deepEqual(group.layers, [], 'and the proxy is gone');
+        assert.false(layer.__hidden, 'the original comes back');
+    });
+
+    test('editPolygon resolves as a cancel when the user stops editing', async function (assert) {
+        const map = this.initialize();
+        const control = makeDrawControl();
+        this.adapter.setDrawControl(control, makeFeatureGroup());
+
+        const layer = L.polygon([
+            [1.3, 103.8],
+            [1.4, 103.9],
+            [1.5, 103.7],
+        ]).addTo(map);
+        this.adapter.hideLayer(layer, { soft: true });
+
+        const pending = this.adapter.editPolygon(layer);
+        map.fire('draw:editstop');
+        map.fire('draw:edited');
+
+        assert.deepEqual(await pending, { type: 'cancel' }, 'the first outcome wins');
+        assert.strictEqual(control.editHandler.disabled, 1, 'cleanup runs exactly once');
+    });
+
+    test('editPolygon survives a focus that cannot be fitted and a cleanup that throws', async function (assert) {
+        const map = this.initialize();
+        const control = makeDrawControl();
+        const group = makeFeatureGroup();
+        this.adapter.setDrawControl(control, group);
+        map.fitBounds = () => {
+            throw new Error('bad bounds');
+        };
+        control.editHandler.disable = () => {
+            throw new Error('handler gone');
+        };
+        group.removeLayer = () => {
+            throw new Error('group gone');
+        };
+
+        const layer = L.polygon([
+            [1.3, 103.8],
+            [1.4, 103.9],
+            [1.5, 103.7],
+        ]).addTo(map);
+
+        const pending = this.adapter.editPolygon(layer, { focusBounds: 'nonsense' });
+        group.layers[0].remove = () => {
+            throw new Error('proxy gone');
+        };
+        map.fire('draw:editstop');
+
+        assert.deepEqual(await pending, { type: 'cancel' }, 'every failure along the way is absorbed');
+    });
+
+    test('editPolygon reports an edit it could not apply as an edit with no geometry', async function (assert) {
+        const map = this.initialize();
+        this.adapter.setDrawControl(makeDrawControl(), makeFeatureGroup());
+
+        const layer = L.polygon([
+            [1.3, 103.8],
+            [1.4, 103.9],
+            [1.5, 103.7],
+        ]).addTo(map);
+        layer.setLatLngs = () => {
+            throw new Error('read only');
+        };
+
+        const pending = this.adapter.editPolygon(layer);
+        map.fire('draw:edited');
+        const result = await pending;
+
+        assert.strictEqual(result.type, 'edited');
+        assert.strictEqual(result.geoJson, null, 'no geometry is invented when the write fails');
+    });
+
+    test('popups open and close by id', function (assert) {
+        assert.strictEqual(this.adapter.openPopup('popup_1', 1.3, 103.8, '<b>Depot</b>'), null, 'nothing opens without a map');
+
+        this.initialize();
+        const popup = this.adapter.openPopup('popup_1', 1.3, 103.8, '<b>Depot</b>');
+        assert.strictEqual(this.adapter._popups.get('popup_1'), popup);
+        assert.true(popup.getContent().includes('Depot'));
+
+        this.adapter.closePopup('popup_1');
+        assert.strictEqual(this.adapter._popups.size, 0);
+        this.adapter.closePopup('popup_1');
+        assert.strictEqual(this.adapter._popups.size, 0, 'closing an unknown popup is harmless');
+    });
+
+    test('a map context menu goes through the leaflet plugin when it is loaded', function (assert) {
+        assert.strictEqual(this.adapter.registerContextMenu('map', []), undefined, 'no menu is registered before there is a map');
+
+        const map = this.initialize();
+        const added = [];
+        map.contextmenu = { addItem: (item) => added.push(item), removeAllItems: () => added.splice(0, added.length) };
+
+        const centred = [];
+        this.adapter.registerContextMenu('map', [{ label: 'Centre here', action: () => centred.push('centred'), icon: 'crosshairs' }, { separator: true }]);
+
+        assert.strictEqual(added.length, 2);
+        assert.strictEqual(added[0].text, 'Centre here');
+        assert.strictEqual(added[0].icon, 'crosshairs');
+        added[0].callback();
+        assert.deepEqual(centred, ['centred'], 'the item runs the action it was given');
+        assert.deepEqual(added[1], { separator: true });
+
+        this.adapter.removeContextMenu('map');
+        assert.strictEqual(added.length, 0);
+    });
+
+    test('a marker context menu binds to the marker itself', function (assert) {
+        this.initialize();
+        const marker = this.adapter.addMarker('marker_1', 1.3, 103.8);
+        let bound = null;
+        let unbound = 0;
+        marker.bindContextMenu = (config) => (bound = config);
+        marker.unbindContextMenu = () => (unbound += 1);
+
+        this.adapter.registerContextMenu('marker_1', [{ label: 'Open order', action: () => {} }]);
+        assert.true(bound.contextmenu);
+        assert.strictEqual(bound.contextmenuItems[0].text, 'Open order');
+
+        this.adapter.removeContextMenu('marker_1');
+        assert.strictEqual(unbound, 1);
+
+        this.adapter.registerContextMenu('marker_gone', [{ label: 'Nothing' }]);
+        this.adapter.removeContextMenu('marker_gone');
+        assert.ok(true, 'an unknown marker is ignored on both sides');
+
+        const plain = this.adapter.addMarker('marker_2', 1.3, 103.8);
+        delete plain.bindContextMenu;
+        this.adapter.registerContextMenu('marker_2', [{ label: 'Nothing' }]);
+        assert.ok(true, 'so is a marker the plugin has not extended');
+    });
+
+    test('without the contextmenu plugin the adapter renders its own menu', async function (assert) {
+        const map = this.initialize();
+        const chosen = [];
+
+        const originalAddEventListener = document.addEventListener;
+        let closeListener = null;
+        document.addEventListener = function (type, listener, ...rest) {
+            if (type === 'click') closeListener = listener;
+            return originalAddEventListener.call(this, type, listener, ...rest);
+        };
+
+        try {
+            this.adapter.registerContextMenu('map', [
+                { label: 'Centre here', action: (payload) => chosen.push(payload) },
+                { separator: true },
+                { label: 'Add place', action: () => chosen.push('place') },
+            ]);
+
+            const latlng = { lat: 1.3, lng: 103.8 };
+            map.fire('contextmenu', { latlng, originalEvent: { clientX: 120, clientY: 80 } });
+
+            const menu = document.querySelector('.fleetops-map-contextmenu');
+            assert.ok(menu, 'the fallback menu is rendered');
+            assert.strictEqual(menu.style.left, '120px', 'at the pointer');
+            assert.strictEqual(menu.style.top, '80px');
+            assert.strictEqual(menu.children.length, 3, 'two items and a separator');
+
+            const item = menu.children[0];
+            item.dispatchEvent(new MouseEvent('mouseenter'));
+            assert.strictEqual(item.style.background, 'rgb(243, 244, 246)', 'hovering highlights the item');
+            item.dispatchEvent(new MouseEvent('mouseleave'));
+            assert.strictEqual(item.style.background, '');
+
+            item.dispatchEvent(new MouseEvent('click'));
+            assert.deepEqual(chosen, [{ latlng, originalEvent: { clientX: 120, clientY: 80 } }], 'the action is handed the point that was clicked');
+            assert.notOk(document.querySelector('.fleetops-map-contextmenu'), 'and the menu closes itself');
+
+            map.fire('contextmenu', { latlng, originalEvent: { clientX: 10, clientY: 10 } });
+            const reopened = document.querySelector('.fleetops-map-contextmenu');
+            assert.ok(reopened, 'a second right-click opens a fresh menu');
+            map.fire('contextmenu', { latlng, originalEvent: { clientX: 20, clientY: 20 } });
+            assert.strictEqual(document.querySelectorAll('.fleetops-map-contextmenu').length, 1, 'never two at once');
+
+            await waitUntil(() => closeListener !== null);
+            closeListener({ target: document.querySelector('.fleetops-map-contextmenu').children[0] });
+            assert.ok(document.querySelector('.fleetops-map-contextmenu'), 'a click inside the menu leaves it open');
+            closeListener({ target: document.body });
+            assert.notOk(document.querySelector('.fleetops-map-contextmenu'), 'a click outside closes it');
+        } finally {
+            document.addEventListener = originalAddEventListener;
+            document.querySelector('.fleetops-map-contextmenu')?.remove();
+        }
+    });
+
+    test('map events are subscribed, normalised and unsubscribed', function (assert) {
+        const seen = [];
+        const handler = (payload) => seen.push(payload);
+
+        this.adapter.on('click', handler);
+        this.adapter.off('click', handler);
+        this.adapter.once('click', handler);
+        assert.strictEqual(this.adapter._eventHandlers.size, 0, 'nothing is wired before there is a map');
+
+        const map = this.initialize();
+        this.adapter.on('click', handler);
+        map.fire('click', { id: 'first' });
+        assert.deepEqual(
+            seen.map((event) => event.id),
+            ['first'],
+            'a plain event is passed through untouched'
+        );
+
+        this.adapter.on('rightclick', handler);
+        map.fire('contextmenu', { id: 'menu' });
+        assert.strictEqual(seen.at(-1).id, 'menu', 'rightclick listens for Leaflet s contextmenu');
+
+        this.adapter.off('click', handler);
+        map.fire('click', { id: 'ignored' });
+        assert.strictEqual(seen.length, 2, 'an unsubscribed handler stops hearing');
+        assert.deepEqual(this.adapter._eventHandlers.get('click'), [], 'and is forgotten');
+
+        this.adapter.off('click', () => {});
+        assert.ok(true, 'unsubscribing a handler that was never subscribed is harmless');
+    });
+
+    test('draw events are handed over as normalised payloads carrying GeoJSON', function (assert) {
+        const map = this.initialize();
+        const seen = [];
+
+        this.adapter.on('draw:created', (payload) => seen.push(payload));
+        const layer = L.polygon([
+            [1.3, 103.8],
+            [1.4, 103.9],
+            [1.5, 103.7],
+        ]);
+        map.fire('draw:created', { layer, layerType: 'polygon' });
+
+        assert.strictEqual(seen[0].type, 'draw:created');
+        assert.strictEqual(seen[0].layer, layer);
+        assert.strictEqual(seen[0].layerType, 'polygon');
+        assert.strictEqual(seen[0].geoJson.type, 'Polygon');
+        assert.strictEqual(seen[0].toGeoJSON(), seen[0].geoJson);
+
+        // leaflet-draw always sends `layerType`; the `?? payload.type` fallback is belt and
+        // braces, and since Leaflet's own `fire` overwrites `type` with the event name, that is
+        // what an event missing `layerType` ends up classified as.
+        map.fire('draw:created', { layer });
+        assert.strictEqual(seen[1].layerType, 'draw:created', 'an event with no layerType falls back to the event name');
+
+        map.fire('draw:created', {});
+        assert.strictEqual(seen[2].type, 'draw:created', 'an event with no layer still carries its name');
+        assert.strictEqual(seen[2].geoJson, undefined, 'and no geometry');
+
+        this.adapter.on('draw:deleted', (payload) => seen.push(payload));
+        map.fire('draw:deleted', { layers: 'some' });
+        assert.strictEqual(seen.at(-1).layers, 'some');
+        assert.strictEqual(seen.at(-1).type, 'draw:deleted');
+
+        const onceSeen = [];
+        this.adapter.once('draw:edited', (payload) => onceSeen.push(payload));
+        map.fire('draw:edited', { id: 'edit' });
+        map.fire('draw:edited', { id: 'again' });
+        assert.strictEqual(onceSeen.length, 1, 'a one-shot draw listener fires once');
+        assert.strictEqual(onceSeen[0].id, 'edit');
+        assert.strictEqual(onceSeen[0].type, 'draw:edited', 'and is normalised too');
     });
 });
