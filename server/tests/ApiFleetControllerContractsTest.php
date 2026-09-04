@@ -358,6 +358,11 @@ test('api fleet controller rejects relationships that belong to another company'
     session(['company' => 'company-uuid']);
 
     foreach (['parent_fleet', 'vendor', 'zone', 'service_area'] as $relation) {
+        $expected = [
+            'json'   => ['error' => 'No ' . str_replace('_', ' ', $relation) . ' resource found for the identifier provided.'],
+            'status' => 404,
+        ];
+
         $controller               = new FleetOpsApiFleetControllerProbe();
         $controller->unresolvable = ['other_company_id'];
 
@@ -366,12 +371,20 @@ test('api fleet controller rejects relationships that belong to another company'
             $relation => 'other_company_id',
         ]));
 
+        $updateController               = new FleetOpsApiFleetControllerProbe();
+        $updateController->unresolvable = ['other_company_id'];
+        $updateController->fleet        = fleetopsFleetFake(['uuid' => 'fleet-uuid', 'public_id' => 'fleet_123']);
+
+        $updated = $updateController->update('fleet_123', fleetopsUpdateFleetRequest([
+            $relation => 'other_company_id',
+        ]));
+
         // A cross-company identifier is answered exactly as a missing one, so
         // the response cannot be used to discover another organization's data.
-        expect($created)->toBe([
-            'json'   => ['error' => 'No ' . str_replace('_', ' ', $relation) . ' resource found for the identifier provided.'],
-            'status' => 404,
-        ]);
+        // Update answers the same way create does, and writes nothing.
+        expect($created)->toBe($expected)
+            ->and($updated)->toBe($expected)
+            ->and($updateController->fleet->updates)->toBe([]);
     }
 });
 
@@ -480,6 +493,17 @@ test('api fleet controller treats an unavailable fleet or resource as not found 
     ])->and($missingResource->assignDriver('fleet_123', 'driver_other'))->toBe([
         'json'   => ['error' => 'Fleet or driver resource not found.'],
         'status' => 404,
-    ])->and($missingFleet->membershipCalls)->toBe([])
+    ])
+        // Removal answers the same way assignment does when either side is
+        // unavailable, so all four operations stay consistent.
+        ->and($missingResource->removeVehicle('fleet_123', 'vehicle_other'))->toBe([
+            'json'   => ['error' => 'Fleet or vehicle resource not found.'],
+            'status' => 404,
+        ])
+        ->and($missingResource->removeDriver('fleet_123', 'driver_other'))->toBe([
+            'json'   => ['error' => 'Fleet or driver resource not found.'],
+            'status' => 404,
+        ])
+        ->and($missingFleet->membershipCalls)->toBe([])
         ->and($missingResource->membershipCalls)->toBe([]);
 });

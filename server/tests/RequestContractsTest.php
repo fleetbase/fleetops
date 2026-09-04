@@ -501,6 +501,12 @@ namespace {
                 ['where', 'company_uuid', 'company-uuid'],
                 ['whereNull', 'deleted_at'],
             ])
+            // A validation message naming `parent_fleet` reads worse than one
+            // naming "parent fleet".
+            ->and(CreateFleetRequest::create('/fleetops-test', 'POST')->attributes())->toBe([
+                'service_area' => 'service area',
+                'parent_fleet' => 'parent fleet',
+            ])
             ->and(requestRules(CancelOrderRequest::class))->toBe(['order' => 'required|exists:orders,uuid'])
             ->and(requestRules(DecodeTrackingNumberQR::class))->toBe(['code' => 'required|string'])
             ->and(requestRules(CreateServiceQuoteRequest::class))->toBe([]);

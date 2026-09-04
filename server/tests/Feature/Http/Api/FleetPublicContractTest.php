@@ -5,6 +5,32 @@ use Fleetbase\FleetOps\Http\Resources\v1\Fleet as FleetResource;
 use Fleetbase\FleetOps\Models\Fleet;
 use Illuminate\Http\Request;
 
+// The query pipeline reaches Fleetbase\Support helpers that call the framework's
+// auth() and session() helpers; neither exists in the bare-container harness.
+if (!function_exists('Fleetbase\Support\auth')) {
+    eval('namespace Fleetbase\Support; function auth() { return new class { public function user() { return null; } public function id() { return null; } }; }');
+}
+
+if (!function_exists('Fleetbase\Support\session')) {
+    eval('namespace Fleetbase\Support; function session($key = null, $default = null) { if ($key === null) { return new class { public function has($k) { return \session($k) !== null; } public function get($k, $d = null) { return \session($k, $d); } }; } return \session($key, $default); }');
+}
+
+if (!Request::hasMacro('getController')) {
+    Request::macro('getController', fn () => new FleetController());
+}
+
+if (!Request::hasMacro('or')) {
+    Request::macro('or', function (array $params = [], $default = null) {
+        foreach ($params as $param) {
+            if ($this->has($param)) {
+                return $this->input($param);
+            }
+        }
+
+        return $default;
+    });
+}
+
 class FleetOpsFleetResourceRouteFixture
 {
     public array $action = [];
@@ -16,6 +42,26 @@ class FleetOpsFleetResourceRouteFixture
     public function uri(): string
     {
         return $this->uri;
+    }
+
+    public function getAction($key = null): string
+    {
+        return FleetController::class . '@query';
+    }
+
+    public function getActionMethod(): string
+    {
+        return 'query';
+    }
+
+    public function getName(): string
+    {
+        return 'api.v1.fleets.query';
+    }
+
+    public function parameters(): array
+    {
+        return [];
     }
 }
 
@@ -59,6 +105,7 @@ function fleetopsFleetResourceDatabase(): Illuminate\Database\SQLiteConnection
             return $this->c->{$method}(...$arguments);
         }
     });
+    app()->instance('db.schema', $connection->getSchemaBuilder());
     Illuminate\Support\Facades\DB::clearResolvedInstance('db');
 
     $schema = $connection->getSchemaBuilder();
@@ -108,6 +155,26 @@ function fleetopsFleetResourceDatabase(): Illuminate\Database\SQLiteConnection
             $blueprint->timestamp('deleted_at')->nullable();
         });
     }
+
+    // Permission directives are consulted by the query pipeline.
+    $schema->create('directives', function ($blueprint) {
+        $blueprint->increments('id');
+        foreach (['uuid', 'company_uuid', 'permission_uuid', 'subject_type', 'subject_uuid', 'key', 'rules'] as $column) {
+            $blueprint->string($column)->nullable();
+        }
+        $blueprint->timestamps();
+        $blueprint->timestamp('deleted_at')->nullable();
+    });
+
+    // The fleet image relation is eager loaded alongside the others.
+    $schema->create('files', function ($blueprint) {
+        $blueprint->increments('id');
+        foreach (['uuid', 'public_id', 'company_uuid', 'disk', 'path', 'bucket', 'type', 'original_filename'] as $column) {
+            $blueprint->string($column)->nullable();
+        }
+        $blueprint->timestamps();
+        $blueprint->timestamp('deleted_at')->nullable();
+    });
 
     $schema->create('custom_field_values', function ($blueprint) {
         $blueprint->increments('id');
@@ -229,4 +296,65 @@ test('the public fleet controller exposes the membership actions', function () {
     foreach (['create', 'query', 'find', 'update', 'delete', 'assignVehicle', 'removeVehicle', 'assignDriver', 'removeDriver'] as $method) {
         expect(method_exists(FleetController::class, $method))->toBeTrue();
     }
+});
+
+test('the fleet controller lookup query and eager-load helpers run their real bodies', function () {
+    $connection = fleetopsFleetResourceDatabase();
+    session(['company' => 'company-uuid']);
+
+    $connection->table('fleets')->insert([
+        ['uuid' => 'fleet-uuid', 'public_id' => 'fleet_123', 'company_uuid' => 'company-uuid', 'name' => 'Haulers', 'service_area_uuid' => 'service-area-uuid', 'parent_fleet_uuid' => 'parent-uuid'],
+        ['uuid' => 'other-company-fleet', 'public_id' => 'fleet_elsewhere', 'company_uuid' => 'another-company', 'name' => 'Theirs', 'service_area_uuid' => null, 'parent_fleet_uuid' => null],
+    ]);
+    $connection->table('vehicles')->insert(['uuid' => 'vehicle-uuid', 'public_id' => 'vehicle_123', 'company_uuid' => 'company-uuid']);
+    $connection->table('users')->insert(['uuid' => 'user-uuid', 'company_uuid' => 'company-uuid']);
+    $connection->table('drivers')->insert(['uuid' => 'driver-uuid', 'public_id' => 'driver_123', 'company_uuid' => 'company-uuid', 'user_uuid' => 'user-uuid']);
+
+    $controller = new FleetController();
+    $call       = function (string $method, ...$arguments) use ($controller) {
+        $reflection = new ReflectionMethod(FleetController::class, $method);
+        $reflection->setAccessible(true);
+
+        return $reflection->invoke($controller, ...$arguments);
+    };
+
+    $fleet = $call('findFleet', 'fleet_123');
+
+    expect($fleet->uuid)->toBe('fleet-uuid')
+        ->and($call('findVehicle', 'vehicle_123')->uuid)->toBe('vehicle-uuid')
+        ->and($call('findDriver', 'driver_123')->uuid)->toBe('driver-uuid');
+
+    // A fleet in another company is unavailable, not forbidden.
+    expect(fn () => $call('findFleet', 'fleet_elsewhere'))
+        ->toThrow(Illuminate\Database\Eloquent\ModelNotFoundException::class);
+
+    // The relations the public resource reports as public ids are eager loaded
+    // rather than resolved one query at a time.
+    $loaded = $call('withPublicRelations', $fleet);
+
+    expect($loaded->relationLoaded('serviceArea'))->toBeTrue()
+        ->and($loaded->relationLoaded('zone'))->toBeTrue()
+        ->and($loaded->relationLoaded('vendor'))->toBeTrue()
+        ->and($loaded->relationLoaded('parentFleet'))->toBeTrue()
+        ->and($loaded->relationLoaded('photo'))->toBeTrue()
+        ->and($loaded->serviceArea->public_id)->toBe('service_area_123');
+
+    // The query pipeline scopes to the caller's company and eager loads the
+    // same relations for every row in the page.
+    $uri     = 'v1/fleets';
+    $request = Request::create('/' . $uri, 'GET');
+    $store   = app('session.store');
+    $store->put('company', 'company-uuid');
+    $request->setLaravelSession($store);
+    $request->setRouteResolver(fn () => new FleetOpsFleetResourceRouteFixture($uri));
+    app()->instance('request', $request);
+
+    $results = $call('queryFleets', $request);
+
+    $returned = $results->pluck('uuid')->all();
+
+    expect($returned)->toContain('fleet-uuid', 'parent-uuid')
+        ->and($returned)->not->toContain('other-company-fleet')
+        ->and($results->first()->relationLoaded('serviceArea'))->toBeTrue()
+        ->and($results->first()->relationLoaded('parentFleet'))->toBeTrue();
 });

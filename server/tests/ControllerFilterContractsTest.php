@@ -607,6 +607,8 @@ test('fleet filter records hierarchy relationship scalar status and date filters
     $filter->zone($publicIds['zones']);
     $filter->parentFleet($publicIds['fleets']);
     $filter->vendor($publicIds['vendors']);
+    // A blank identifier resolves to nothing without reaching the database.
+    $filter->vendor('');
     $filter->publicId('fleet-public');
     $filter->task('delivery');
     $filter->name('North Fleet');
@@ -631,6 +633,7 @@ test('fleet filter records hierarchy relationship scalar status and date filters
         ->and($query->calls)->toContain(['whereIn', 'zone_uuid', [$uuids['zones']]])
         ->and($query->calls)->toContain(['whereIn', 'parent_fleet_uuid', [$uuids['fleets']]])
         ->and($query->calls)->toContain(['whereIn', 'vendor_uuid', [$uuids['vendors']]])
+        ->and($query->calls)->toContain(['whereIn', 'vendor_uuid', []])
         // `?query=` searches the fleet's own columns; it used to reach for a
         // `user` relation Fleet does not have.
         ->and(collect($query->calls)->where(0, 'whereHas')->pluck(1)->all())->not->toContain('user')

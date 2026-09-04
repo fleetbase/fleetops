@@ -94,6 +94,42 @@ class FleetOpsRecordingDriverFilterBuilder
     }
 }
 
+/**
+ * A filter whose request resolves to an internal console route.
+ *
+ * `Http::isInternalRequest()` reads the resolved route's uri, not the request
+ * path, so a filter built without a route resolver is always public — which is
+ * why the console's uuid branch needs a route to be reached at all.
+ */
+function fleetopsInternalDriverFilter(FleetOpsRecordingDriverFilterBuilder $builder): DriverFilter
+{
+    $uri     = 'int/v1/fleet-ops/drivers';
+    $request = Request::create('/' . $uri, 'GET');
+    $session = app('session.store');
+    $session->put('company', 'company_test');
+    $request->setLaravelSession($session);
+    $request->setRouteResolver(fn () => new class($uri) {
+        public array $action = [];
+
+        public function __construct(private string $uri)
+        {
+        }
+
+        public function uri(): string
+        {
+            return $this->uri;
+        }
+    });
+
+    $filter     = new DriverFilter($request);
+    $reflection = new ReflectionClass($filter);
+    $property   = $reflection->getParentClass()->getProperty('builder');
+    $property->setAccessible(true);
+    $property->setValue($filter, $builder);
+
+    return $filter;
+}
+
 function fleetopsDriverFilter(FleetOpsRecordingDriverFilterBuilder $builder, array $query = []): DriverFilter
 {
     $request = Request::create('/int/v1/drivers', 'GET', $query);
@@ -336,4 +372,16 @@ test('driver filter covers alternate date branches company radius and address ne
     $addressFilter->nearby('Filter Depot');
     expect($addressBuilder->called('distanceSphere'))->toBeTrue()
         ->and($addressBuilder->called('distanceSphereValue'))->toBeTrue();
+});
+
+test('driver filter keeps the console uuid branch for internal requests only', function () {
+    $uuid = (string) Str::uuid();
+
+    $internalBuilder = new FleetOpsRecordingDriverFilterBuilder();
+    fleetopsInternalDriverFilter($internalBuilder)->vehicle($uuid);
+
+    // The console sends a vehicle uuid and must keep matching on it directly,
+    // without a lookup.
+    expect(collect($internalBuilder->methodCalls('where'))->map(fn ($call) => [$call[1], $call[2]])->all())
+        ->toContain(['vehicle_uuid', [$uuid]]);
 });
