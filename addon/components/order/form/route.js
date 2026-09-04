@@ -27,15 +27,6 @@ export default class OrderFormRouteComponent extends Component {
     @tracked routingControl;
     @tracked route;
 
-    focusPlace(place, zoom = 18) {
-        if (place?.hasValidCoordinates) {
-            this.mapManager.positionWaypoints([[place.latitude, place.longitude]], {
-                singlePointZoom: zoom,
-                panBy: ORDER_ROUTE_PREVIEW_SINGLE_POINT_PANBY,
-            });
-        }
-    }
-
     get coordinates() {
         return this.routePoints.map(({ place }) => [place.latitude, place.longitude]);
     }
@@ -153,8 +144,6 @@ export default class OrderFormRouteComponent extends Component {
     }
 
     @action setWaypointPlace(index, place) {
-        if (!this.args.resource.payload.waypoints[index]) return;
-
         place = preparePlaceForSave(this.store, place);
         this.args.resource.payload.waypoints[index].place = place;
         this.args.resource.payload.waypoints[index]?.setProperties({
@@ -176,7 +165,6 @@ export default class OrderFormRouteComponent extends Component {
     }
 
     @action removeWaypoint(waypoint) {
-        if (this.multipleWaypoints && this.args.resource.payload.waypoints.length === 1) return;
         this.args.resource.payload.waypoints.removeObject(waypoint);
         this.previewRoute();
         this.requestServiceQuoteRefresh('route.waypoint.removed');

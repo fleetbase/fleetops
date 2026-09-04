@@ -1006,6 +1006,14 @@ call, not taken here).
 **Impact:** A failed route optimization showed the user nothing and swallowed the engine's error.
 **Fix:** `@service intl` injected; both call sites now use `order.fields.route-error`.
 
+## 77. `addon/components/order/form/route.js` — a method with no caller and two guards the template makes
+
+**Status:** FIXED
+**Found:** Profiling the file's last uncovered statements after its suite reached 115/131.
+**Evidence:** `focusPlace(place, zoom = 18)` is referenced nowhere — `grep -rn focusPlace addon/` returns only its own definition, and the component's template never names it. The two guards are unreachable through the only caller each has: `setWaypointPlace`'s `if (!waypoints[index]) return` is invoked solely by the row's place select, which exists only for a row already in the list, so the index is always valid; and `removeWaypoint`'s `if (multipleWaypoints && waypoints.length === 1) return` is invoked solely by the row's remove Button, which the template withholds from index 0 (`{{#unless (eq index 0)}}`), so a click can never take the list below two. The same-named actions in `order/route-editor.js` and `customer/create-order-form.js` are separate copies with their own callers and are untouched.
+**Impact:** None.
+**Fix:** `focusPlace` and the two guards are deleted.
+
 ## 4. `tests/` — 223 blueprint scaffolds that were never green
 
 **Status:** OPEN (this is the bulk of Phase B)

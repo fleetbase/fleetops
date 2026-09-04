@@ -307,6 +307,132 @@ module('Integration | Component | order/form/route', function (hooks) {
         assert.deepEqual(this.calls.at(-1), ['error', 'vroom refused the trip'], 'the engine error reaches the user verbatim');
     });
 
+    test('reordering the waypoints previews the new order, and a no-op drag does nothing', async function (assert) {
+        // DragSortList only calls @dragEndAction from a real drag; the stand-in yields the same
+        // block and exposes a button that hands the action a drag payload.
+        const test = this;
+        class DragSortListStub extends Component {
+            @action end() {
+                this.args.dragEndAction(test.nextSort(this.args.items));
+            }
+        }
+        this.owner.register(
+            'component:drag-sort-list',
+            setComponentTemplate(
+                hbs`<button type="button" data-test-drag-end {{on "click" this.end}}></button>{{#each @items as |item index|}}{{yield item index}}{{/each}}`,
+                DragSortListStub
+            )
+        );
+        this.set('resource', this.makeOrder());
+
+        await render(hbs`<Order::Form::Route @resource={{this.resource}} />`);
+        await click('[role="checkbox"]');
+        await click('[data-test-waypoint-add]');
+        const [first, second] = this.resource.payload.waypoints.slice();
+
+        this.nextSort = (items) => ({ sourceList: items, sourceIndex: 0, targetList: items, targetIndex: 0 });
+        this.calls.length = 0;
+        await click('[data-test-drag-end]');
+        assert.deepEqual(this.calls, [], 'dropping a waypoint where it started changes nothing');
+        assert.deepEqual(this.resource.payload.waypoints.slice(), [first, second]);
+
+        this.nextSort = (items) => ({ sourceList: items, sourceIndex: 0, targetList: items, targetIndex: 1 });
+        await click('[data-test-drag-end]');
+        assert.deepEqual(this.resource.payload.waypoints.slice(), [second, first], 'the waypoint moves');
+        assert.deepEqual(this.calls.at(-1), ['refresh', 'route.waypoints.reordered', 'order_1']);
+    });
+
+    test('a waypoint carries the customer picked for it', async function (assert) {
+        this.set('resource', this.makeOrder());
+
+        await render(hbs`<Order::Form::Route @resource={{this.resource}} />`);
+        await click('[role="checkbox"]');
+
+        const customer = this.store.createRecord('customer', { name: 'Acme', customer_type: 'contact' });
+        this.nextSelection = customer;
+        await click(waypointRows()[0].querySelector('[data-test-model-select="customer"]'));
+
+        const waypoint = this.resource.payload.waypoints[0];
+        assert.strictEqual(waypoint.customer, customer);
+        assert.strictEqual(waypoint.customer_type, 'fleet-ops:contact', 'the type is namespaced');
+    });
+
+    test('the preview colours the route by the order status', async function (assert) {
+        this.set('resource', this.makeOrder({ status: 'completed' }));
+        this.resource.payload.pickup = this.makePlace({ public_id: 'place_pickup' });
+
+        await render(hbs`<Order::Form::Route @resource={{this.resource}} />`);
+        await click('[role="checkbox"]');
+
+        assert.strictEqual(this.lastRoutingOptions.status, 'completed', 'the order status drives the preview');
+        assert.ok(this.lastRoutingOptions.polylineOptions.color, 'a status colour is chosen');
+        assert.ok(this.lastRoutingOptions.polylineOptions.weight > 0, 'the polyline takes a weight');
+        assert.ok(this.lastRoutingOptions.polylineOptions.opacity > 0);
+    });
+
+    test('an optimized trip reports totals under either naming, and none at all', async function (assert) {
+        this.set('resource', this.makeOrder());
+        this.resource.payload.pickup = this.makePlace({ public_id: 'place_pickup' });
+        this.resource.payload.dropoff = this.makePlace({ public_id: 'place_dropoff', latitude: 32.78, longitude: -96.8 });
+
+        await render(hbs`<Order::Form::Route @resource={{this.resource}} />`);
+        await click('[role="checkbox"]');
+        await click('[data-test-waypoint-add]');
+
+        const sorted = this.resource.payload.waypoints.slice();
+        const optimize = async () => click(findAll('button').find((button) => /Optimize/i.test(button.textContent)));
+
+        this.optimizeResult = { sortedWaypoints: sorted, route: [[30.27, -97.74]], trip: { totalDistance: 500, totalTime: 60 }, result: { waypoints: sorted } };
+        await optimize();
+        assert.strictEqual(this.resource.route.summary.totalDistance, 500, 'totalDistance is read when distance is absent');
+        assert.strictEqual(this.resource.route.summary.totalTime, 60);
+
+        this.optimizeResult = { sortedWaypoints: sorted, route: [[30.27, -97.74]], result: { waypoints: sorted }, engine: 'vroom' };
+        await optimize();
+        assert.strictEqual(this.resource.route.summary.totalDistance, 0, 'a trip-less result reports zero');
+        assert.strictEqual(this.resource.route.summary.totalTime, 0);
+        assert.strictEqual(this.resource.route.engine, 'vroom', 'the result names the engine that produced it');
+    });
+
+    test('an engine error with no message still reports the translated failure', async function (assert) {
+        this.owner.lookup('service:route-optimization').availableEngines = ['vroom'];
+        registerTemplateOnly(this.owner, 'route-optimization-engine-select-button', hbs`<button type="button" data-test-engine-select {{on "click" (fn @onClick "vroom")}}></button>`);
+        this.set('resource', this.makeOrder());
+        this.resource.payload.pickup = this.makePlace({ public_id: 'place_pickup' });
+
+        await render(hbs`<Order::Form::Route @resource={{this.resource}} />`);
+        await click('[role="checkbox"]');
+
+        this.optimizeError = { name: 'EngineRejection' };
+        this.calls.length = 0;
+        await click('[data-test-engine-select]');
+        assert.deepEqual(this.calls.at(-1), ['error', 'Route optimization failed, check route entry and try again.'], 'a message-less error falls back to the translation');
+    });
+
+    test('the preview identifies the order by public id, then id, then as new', async function (assert) {
+        const previewWith = async (attributes) => {
+            this.set('resource', this.makeOrder(attributes));
+            this.resource.payload.pickup = this.makePlace({ public_id: 'place_pickup' });
+            await render(hbs`<Order::Form::Route @resource={{this.resource}} />`);
+            await click('[role="checkbox"]');
+            return this.lastRoutingOptions.orderId;
+        };
+
+        assert.strictEqual(await previewWith({}), 'ORD-1', 'the public id names the route');
+        assert.strictEqual(await previewWith({ public_id: undefined }), 'order_1', 'without one it falls back to the id');
+        assert.strictEqual(await previewWith({ public_id: undefined, id: undefined }), 'new-order', 'an unsaved order is "new-order"');
+    });
+
+    test('adding a waypoint carries the order customer onto it', async function (assert) {
+        const customer = this.store.createRecord('customer', { name: 'Acme', customer_type: 'contact' });
+        this.set('resource', this.makeOrder({ customer }));
+
+        await render(hbs`<Order::Form::Route @resource={{this.resource}} />`);
+        await click('[role="checkbox"]');
+
+        assert.strictEqual(this.resource.payload.waypoints[0].customer, customer, 'the order customer seeds the waypoint');
+    });
+
     test('an assigned pickup and dropoff can be edited or cleared inline', async function (assert) {
         this.set('resource', this.makeOrder());
         const pickup = this.makePlace({ public_id: 'place_pickup' });
