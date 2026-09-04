@@ -2,7 +2,6 @@ import Component from '@glimmer/component';
 import { tracked } from '@glimmer/tracking';
 import { inject as service } from '@ember/service';
 import { action } from '@ember/object';
-import { isArray } from '@ember/array';
 import { getOwner } from '@ember/application';
 import { later } from '@ember/runloop';
 import { debug } from '@ember/debug';
@@ -91,10 +90,8 @@ export default class OrderTrackingLookupComponent extends Component {
     @action startTrackingDriverPosition(event) {
         const { target } = event;
         const driver = this.order.driver_assigned;
-        if (driver) {
-            driver.set('_layer', target);
-            this.movementTracker.track(driver);
-        }
+        driver.set('_layer', target);
+        this.movementTracker.track(driver);
     }
 
     @action locateDriver() {
@@ -108,13 +105,11 @@ export default class OrderTrackingLookupComponent extends Component {
     }
 
     @action locateOrderRoute() {
-        if (this.order) {
-            const waypoints = this.getRouteCoordinatesFromOrder(this.order);
-            this.map.flyToBounds(waypoints, {
-                maxZoom: waypoints.length === 2 ? 12 : 11,
-                animate: true,
-            });
-        }
+        const waypoints = this.getRouteCoordinatesFromOrder(this.order);
+        this.map.flyToBounds(waypoints, {
+            maxZoom: waypoints.length === 2 ? 12 : 11,
+            animate: true,
+        });
     }
 
     @action displayOrderRoute() {
@@ -125,13 +120,8 @@ export default class OrderTrackingLookupComponent extends Component {
         }
 
         // center on first coordinate
-        try {
-            this.map.stop();
-            this.map.flyTo(waypoints.firstObject);
-        } catch (error) {
-            // unable to stop map
-            debug(`Leaflet Map Error: ${error.message}`);
-        }
+        this.map.stop();
+        this.map.flyTo(waypoints.firstObject);
 
         const router = new OSRMv1({
             serviceUrl: `${routingHost}/route/v1`,
@@ -183,8 +173,8 @@ export default class OrderTrackingLookupComponent extends Component {
         this.displayOrderRoute();
     }
 
-    cannotRouteWaypoints(waypoints = []) {
-        return !this.map || !isArray(waypoints) || waypoints.length < 2;
+    cannotRouteWaypoints(waypoints) {
+        return waypoints.length < 2;
     }
 
     getRouteCoordinatesFromOrder(order) {

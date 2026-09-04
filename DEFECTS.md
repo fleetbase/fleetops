@@ -830,6 +830,30 @@ call, not taken here).
 **Impact:** None for users.
 **Fix:** Fees in the fixtures are integer minor units — the template runs per-drop, multi-zone and parcel fees through `f-to-int` (which strips non-digits) before `format-currency`, so a decimal fee like `2.5` renders as `$0.25`; the form stores them as integers.
 
+## 55. `addon/components/order-tracking-lookup.hbs` — the lookup form reloaded the page
+
+**Status:** FIXED (separate commit, `fix(order): stop the tracking lookup form from reloading …`)
+**Found:** The first rendering test that clicked "Lookup Order" navigated the test page away; testem restarted the whole suite without the filter (§7's navigation trap, observed directly).
+**Evidence:** The form bound `{{on "submit" (perform this.lookupOrder)}}` and its `@buttonType="submit"` Button also bound `@onClick={{perform this.lookupOrder}}`. Neither ember-ui's Button (`button.js#onClick`) nor ember-concurrency's `perform` helper calls `preventDefault`, so a press performed the task twice (click, then submit) and then let the browser submit the form to the current URL, reloading the page while the lookup was in flight. The input has no `name`, so the reload also lost the tracking number.
+**Impact:** A customer pressing the button (or Enter) on the public tracking page got a reload instead of their order; only a lookup arriving via the `?order=` URL parameter worked.
+**Fix:** One `submitLookup` action prevents the default and performs the task once; the Button no longer double-performs. The suite clicks the real submit button.
+
+## 56. `tests/integration/components/order-tracking-lookup-test.js`, `tests/dummy/config/environment.js` — tracking marker never registered in the dummy, no default images
+
+**Status:** FIXED
+**Found:** The rendered map showed the route control's markers but never the driver's, and `@onAdd` never fired; then the marker threw "iconUrl not set in Icon options".
+**Evidence:** `layers.tracking-marker` is registered with ember-leaflet by `addon/instance-initializers/register-leaflet-tracking-marker.js`, which only runs when the engine boots — this addon ships no `app/instance-initializers`, so a dummy rendering test yields no such component and the invocation renders nothing. The marker's icon reads `config "defaultValues.vehicleAvatar"`, which the dummy config lacked (the console defines the whole `defaultValues` block).
+**Impact:** None for users; the engine boots in the console.
+**Fix:** The suite calls the initializer's `initialize(owner)` in `beforeEach`; the dummy config mirrors the console's `defaultValues` with an inline SVG data URI per key — ember-ui's `fallback-img-src` modifier runs `new URL(fallback)` when a photo fails to load and throws on a relative path (that broke `cell/driver-name` on the first attempt with local paths), and Leaflet icons need a URL too, so the value must be absolute yet never leave the browser. The routing control's OSRM request goes through `@mapbox/corslite`'s global `XMLHttpRequest`, which the suite replaces per test with a fake it answers itself (a canned `Ok` route, or a 500), so no request reaches `router.project-osrm.org`.
+
+## 57. `addon/components/order-tracking-lookup.js` — guards the template already makes
+
+**Status:** FIXED
+**Found:** Profiling after the suite went green.
+**Evidence:** `startTrackingDriverPosition` tested `if (driver)` but is only reachable as the tracking marker's `@onAdd`, rendered inside `{{#if driver}}` over the same `this.order.driver_assigned`; `locateOrderRoute` tested `if (this.order)` but its button renders inside `{{#if this.order}}`; `cannotRouteWaypoints` tested `!this.map || !isArray(waypoints)` with a `= []` default, but it is only called from `displayOrderRoute`, which `setupMap` runs after assigning `this.map` inside `whenReady`, with the array `getRouteCoordinatesFromOrder` always returns; and `displayOrderRoute` wrapped `map.stop()`/`map.flyTo()` in a try/catch that only a broken Leaflet map could enter. `locateDriver`'s `if (driver)` stays — `has_driver_assigned` (which enables the button) and `driver_assigned` are separate API fields and the suite covers them disagreeing.
+**Impact:** None.
+**Fix:** The three guards and the try/catch are deleted; `cannotRouteWaypoints` is `waypoints.length < 2`.
+
 ## 4. `tests/` — 223 blueprint scaffolds that were never green
 
 **Status:** OPEN (this is the bulk of Phase B)

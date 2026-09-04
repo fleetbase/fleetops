@@ -6,6 +6,23 @@ module.exports = function (environment) {
         environment,
         rootURL: '/',
         locationType: 'history',
+        // Mirrors the console's `defaultValues` block. The console points these at absolute S3 URLs;
+        // ember-ui's `fallback-img-src` and Leaflet icons need a URL that parses, so the test app uses
+        // an inline SVG data URI — a valid absolute URL that never leaves the browser.
+        defaultValues: {
+            categoryImage: 'data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 width=%2724%27 height=%2724%27/%3E',
+            placeholderImage: 'data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 width=%2724%27 height=%2724%27/%3E',
+            placeholderImageOld: 'data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 width=%2724%27 height=%2724%27/%3E',
+            driverImage: 'data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 width=%2724%27 height=%2724%27/%3E',
+            userImage: 'data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 width=%2724%27 height=%2724%27/%3E',
+            contactImage: 'data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 width=%2724%27 height=%2724%27/%3E',
+            entityImage: 'data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 width=%2724%27 height=%2724%27/%3E',
+            vendorImage: 'data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 width=%2724%27 height=%2724%27/%3E',
+            vehicleImage: 'data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 width=%2724%27 height=%2724%27/%3E',
+            vehicleAvatar: 'data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 width=%2724%27 height=%2724%27/%3E',
+            driverAvatar: 'data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 width=%2724%27 height=%2724%27/%3E',
+            placeAvatar: 'data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 width=%2724%27 height=%2724%27/%3E',
+        },
         // Mirrors the console's `stripe` block; `customer/admin-settings` reads `publishableKey`.
         stripe: {
             publishableKey: '',
