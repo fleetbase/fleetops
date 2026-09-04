@@ -39,7 +39,8 @@ export default class MapDrawerDeviceEventListingComponent extends Component {
                 label: 'Device',
                 valuePath: 'device.displayName',
                 cellComponent: 'table/cell/anchor',
-                action: this.deviceActions.panel.view,
+                // `table/cell/anchor` hands its action the row, so resolve the device off it.
+                action: (deviceEvent) => this.deviceActions.panel.view(deviceEvent.device),
                 permission: 'fleet-ops view device',
                 resizable: true,
                 sortable: true,
