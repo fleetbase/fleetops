@@ -942,6 +942,30 @@ call, not taken here).
 **Impact:** None.
 **Fix:** The initializer, the default and the guard are deleted.
 
+## 69. `app/components/**/*.hbs` — four app-tree templates shadowed the addon's co-located ones
+
+**Status:** FIXED (9bef934a)
+**Found:** The whole `device-event/details` module died with a resolution error, including its test that only calls `factoryFor`.
+**Evidence:** `app/` held exactly four `.hbs` files — `device-event/details.hbs` and `device/panel-tabs/{vehicle,sensors,events}.hbs` — each byte-identical to the addon's co-located template beside its class. Their `app/components/*.js` neighbours are plain `export { default }` re-exports, and Ember rejects that pairing outright: "`components/device-event/details.js` contains an `export { default }` re-export, but it has a co-located template. You must explicitly extend the component to assign it a different template." The addon class already carries its template via `setComponentTemplate`, so the app-tree copy is a second template for the same resolved component. `git log` attributes the device-event copy to f905cc5d and the three panel tabs to d292033e.
+**Impact:** All four components threw on resolution instead of rendering, in the host console as well as in tests — the device-event details panel, and the vehicle, sensors and events tabs that `device-actions.panel.view` opens by name.
+**Fix:** The four app-tree templates are deleted; the addon's co-located templates are the only ones. See #70 — the three panel tabs needed a second fix, because their app-tree `.js` files were copies rather than re-exports.
+
+## 70. `app/components/device/panel-tabs/*.js` — the app tree held copies of the classes, not re-exports
+
+**Status:** FIXED (9b63c72c)
+**Found:** After #69 the three tabs stopped erroring and started rendering an empty node; a probe showed the component produced `<!---->` and not even its own heading.
+**Evidence:** `app/components/device/panel-tabs/{sensors,events,vehicle}.js` were byte-identical to the addon classes they should have re-exported (2505, 3821 and 2891 bytes against a one-line re-export everywhere else). A sweep of the whole `app/` tree found these three and no others. Both they and the templates removed in #69 come from d292033e. While the duplicated templates were present the copies resolved with a template; removing them left an app-tree class with none, so the tab rendered nothing.
+**Impact:** Once #69 was fixed, the device panel's sensors, events and vehicle tabs rendered blank. Before it, all three threw. Either way the tabs never worked.
+**Fix:** The three app-tree files are now `export { default } from '@fleetbase/fleetops-engine/components/device/panel-tabs/<name>'`, so the addon classes and their co-located templates are what resolve.
+
+## 71. `addon/components/device/panel-tabs/vehicle.js` — a guard the template already makes
+
+**Status:** FIXED
+**Found:** Profiling the last uncovered lines after the tab's first suite.
+**Evidence:** `locateVehicle` opened with `if (!this.vehicle?.id) { return; }`, but the only caller is the Locate button, which the template renders under `{{#if this.canLocateVehicle}}` — and `canLocateVehicle` is `Boolean(this.vehicle?.id && (this.vehicle?.location || this.vehicle?.last_position))`. The guard can never be true.
+**Impact:** None.
+**Fix:** The guard is deleted; `canLocateVehicle` remains the single gate.
+
 ## 4. `tests/` — 223 blueprint scaffolds that were never green
 
 **Status:** OPEN (this is the bulk of Phase B)

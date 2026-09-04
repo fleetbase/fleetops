@@ -2,9 +2,14 @@ import { module, test } from 'qunit';
 import { setupRenderingTest } from 'dummy/tests/helpers';
 import { render } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
+import registerTemplateOnly from 'dummy/tests/helpers/register-template-only';
 
 module('Integration | Component | device/details', function (hooks) {
     setupRenderingTest(hooks);
+
+    hooks.beforeEach(function () {
+        registerTemplateOnly(this.owner, 'custom-field/yield', hbs`<div data-test-custom-fields></div>`);
+    });
 
     test('it renders the operational overview without optional associations', async function (assert) {
         this.set('device', {

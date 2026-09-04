@@ -3,6 +3,7 @@ import { setupRenderingTest } from 'dummy/tests/helpers';
 import { click, render } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 import Service from '@ember/service';
+import registerTemplateOnly from 'dummy/tests/helpers/register-template-only';
 
 class HostRouterServiceStub extends Service {
     transitions = [];
@@ -17,6 +18,7 @@ module('Integration | Component | device-event/details', function (hooks) {
 
     hooks.beforeEach(function () {
         this.owner.register('service:host-router', HostRouterServiceStub);
+        registerTemplateOnly(this.owner, 'custom-field/yield', hbs`<div data-test-custom-fields></div>`);
     });
 
     test('it resolves through the string-based component resolver', function (assert) {
