@@ -990,6 +990,22 @@ call, not taken here).
 **Impact:** None; an unmapped value would give `undefined` rather than `null`, and both are falsy where the template tests it.
 **Fix:** The `?? null` is deleted.
 
+## 75. `packages/fleetops-data` — six models declare a `custom-field-value` relationship that no package defines
+
+**Status:** OPEN (outside this package; worked around in the dummy app)
+**Found:** A route-form test that assigns a place to a waypoint died with "No model was found for 'custom-field-value' and no schema handles the type".
+**Evidence:** `fleetops-data/addon/models/{place,asset,contact,driver,device,equipment}.js` each declare `@hasMany('custom-field-value', { async: false })`, but `find packages -name 'custom-field-value.js' -path '*models*'` returns nothing anywhere in the workspace — not in fleetops-data, ember-core or ember-ui. Materializing the relationship therefore throws.
+**Impact:** Unknown in production: the relationship is `async: false`, so it only throws where something actually reads `custom_field_values` off one of these records. It reliably throws in a rendering test that creates a `place` and attaches it to a `waypoint`.
+**Fix:** The model belongs in `fleetops-data`, which is a sibling package and outside this campaign's scope (`addon/` of fleetops only). `tests/dummy/app/models/custom-field-value.js` supplies a minimal one so this package's tests can create the records; the real fix is Ron's call on where the model should live.
+
+## 76. `addon/components/order/form/route.js` — the optimization error message reached no one
+
+**Status:** FIXED (ae253756, c6d52e7f)
+**Found:** Covering the two optimization tasks; the failure path threw instead of notifying.
+**Evidence:** Two independent faults on the same line. First, both tasks call `this.intl.t(...)` in their catch, but the class injected no `intl` — and in `optimizeRoute` that expression is evaluated unconditionally, so every optimization failure threw "Cannot read properties of undefined (reading 't')" from inside the catch. Second, the key they ask for, `fleet-ops.operations.orders.index.new.route-error`, is defined in no translation file; the string lives at `order.fields.route-error`, next to `order.fields.route-label` which this component's own template already uses. `optimizeRouteWithService` only reached the second fault when the error carried no message, since `??` short-circuits.
+**Impact:** A failed route optimization showed the user nothing and swallowed the engine's error.
+**Fix:** `@service intl` injected; both call sites now use `order.fields.route-error`.
+
 ## 4. `tests/` — 223 blueprint scaffolds that were never green
 
 **Status:** OPEN (this is the bulk of Phase B)
