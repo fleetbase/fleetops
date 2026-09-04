@@ -974,6 +974,22 @@ call, not taken here).
 **Impact:** Any host app consuming this package as an addon — the dummy, and any non-engine consumer — cannot resolve these seven. Whether the console is also affected depends on the engine resolving its own `addon/` tree for engine-internal templates, which this campaign has not verified; the re-export is what the other 265 components rely on either way.
 **Fix:** Added the seven missing `export { default }` re-exports. Every addon component now has exactly one, and `app/` holds no templates and no copied classes (#69, #70).
 
+## 73. `addon/components/order/form.js` — five actions the form's own template never wires
+
+**Status:** FIXED
+**Found:** A new suite covering the form's composition passed while its coverage stayed at 2/20 statements and 1/6 functions.
+**Evidence:** `order/form.hbs` contains no `this.` reference at all — it renders `@resource`, `@customFields` and a yielded hash of `(component ...)` entries, and nothing else. The hash exposes only components, so a caller cannot reach the class either; the two call sites (`operations/orders/index/new.hbs` and `customer/order-form.hbs`) render it as a component, and `order-actions.js` opens it as a panel's `content`/`component`, both of which only render. The five uncovered functions were exactly `selectFacilitator`, `selectOrderConfig`, `selectDriver`, `toggleAdhoc` and `toggleProofOfDelivery` — each a duplicate of a same-named action in `order/form/details.js`, which its template does wire. Only the constructor was reachable. `@tracked customFields` was written by `selectOrderConfig` alone, and the `store`, `customFieldsRegistry`, `mapManager` and `currentUser` injections were used only by the deleted actions.
+**Impact:** None — `order/form/details.js` carries the live copies.
+**Fix:** The class keeps the `orderConfigActions` injection and the constructor that primes the order configs; everything else is deleted.
+
+## 74. `addon/components/equipment/form.js` — a fallback the selector's options cannot reach
+
+**Status:** FIXED
+**Found:** The last uncovered branch after the form's suite.
+**Evidence:** `onEquipableTypeChange` ended with `TYPE_TO_MODEL[option.value] ?? null`, but the only source of `option` is the Asset Type PowerSelect, whose `equipableTypeOptions` are exactly `fleet-ops:vehicle` and `fleet-ops:driver` — both keys of `TYPE_TO_MODEL`. The right-hand side can never evaluate. (The constructor's separate lookup does need its fallback: it reads `resource.equipable_type`, which can hold an unmapped value, and a test covers that.)
+**Impact:** None; an unmapped value would give `undefined` rather than `null`, and both are falsy where the template tests it.
+**Fix:** The `?? null` is deleted.
+
 ## 4. `tests/` — 223 blueprint scaffolds that were never green
 
 **Status:** OPEN (this is the bulk of Phase B)
