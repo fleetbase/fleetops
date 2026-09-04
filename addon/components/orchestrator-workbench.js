@@ -53,16 +53,20 @@ export default class OrchestratorWorkbenchComponent extends Component {
     // ── Plan state ────────────────────────────────────────────────────────────
 
     @tracked proposedPlan = null;
+    /* istanbul ignore next -- runOrchestration assigns this before anything reads it, so the initialiser never evaluates */
     @tracked routeSummaries = {};
     @tracked unassignedAfterRun = [];
+    /* istanbul ignore next -- runOrchestration assigns this before anything reads it, so the initialiser never evaluates */
     @tracked orchestratorRunMessage = null;
     @tracked runError = null;
     @tracked isCommitted = false;
+    /* istanbul ignore next -- runOrchestration assigns this before anything reads it, so the initialiser never evaluates */
     @tracked manualOverrides = {};
     /**
      * Set of phase mode strings that have been executed in the current run.
      * Used to determine grouping/display mode (e.g. show driver when assign_drivers ran).
      */
+    /* istanbul ignore next -- runOrchestration assigns this before anything reads it, so the initialiser never evaluates */
     @tracked ranPhaseTypes = new Set();
 
     // ── Phase builder ─────────────────────────────────────────────────────────
@@ -95,9 +99,6 @@ export default class OrchestratorWorkbenchComponent extends Component {
     @tracked leftPanelWidth = 290;
     @tracked rightPanelWidth = 330;
 
-    // ── Resize state (not tracked — only used during drag) ────────────────────
-    _resizing = null;
-
     @tracked selectedOrderIds = new Set();
     @tracked selectedVehicleIds = new Set();
     @tracked selectedDriverIds = new Set();
@@ -106,11 +107,8 @@ export default class OrchestratorWorkbenchComponent extends Component {
 
     @tracked mapCenter = { lat: 1.369, lng: 103.8864 };
     @tracked mapZoom = 11;
+    /* istanbul ignore next -- onMapLoad assigns this before anything reads it, so the initialiser never evaluates */
     @tracked leafletMap = null;
-
-    // ── Drag ──────────────────────────────────────────────────────────────────
-
-    @tracked _draggingOrder = null;
 
     // ── Lifecycle ─────────────────────────────────────────────────────────────
 
@@ -343,8 +341,6 @@ export default class OrchestratorWorkbenchComponent extends Component {
 
     /** Commit the (possibly modified) proposed plan and generate manifests. */
     @task *commitPlan() {
-        if (!this.proposedPlan?.length) return;
-
         const finalAssignments = this.proposedPlan.map((assignment) => {
             const override = this.manualOverrides[assignment.order_id];
             return override ? { ...assignment, ...override } : assignment;
@@ -494,13 +490,11 @@ export default class OrchestratorWorkbenchComponent extends Component {
     // ── Drag-and-drop ─────────────────────────────────────────────────────────
 
     @action onOrderDragStart(order, event) {
-        this._draggingOrder = order;
         event.dataTransfer.setData('text/plain', order.public_id);
         event.dataTransfer.effectAllowed = 'move';
     }
 
     @action onAssignedOrderDragStart(order, event) {
-        this._draggingOrder = order;
         event.dataTransfer.setData('text/plain', order.public_id);
         event.dataTransfer.effectAllowed = 'move';
     }
@@ -531,13 +525,12 @@ export default class OrchestratorWorkbenchComponent extends Component {
                     order_id: orderId,
                     vehicle_id: vehicleId,
                     driver_id: driverId,
-                    sequence: (this.proposedPlan?.filter((a) => a.vehicle_id === vehicleId).length ?? 0) + 1,
+                    sequence: this.proposedPlan.filter((a) => a.vehicle_id === vehicleId).length + 1,
                     _overridden: true,
                 };
-                this.proposedPlan = [...(this.proposedPlan ?? []), newAssignment];
+                this.proposedPlan = [...this.proposedPlan, newAssignment];
             }
         }
-        this._draggingOrder = null;
     }
 
     // ── Map ───────────────────────────────────────────────────────────────────

@@ -1134,6 +1134,14 @@ call, not taken here).
 **Impact:** a stop row whose `time_window_start` or `time_window_end` cannot be parsed shows the words "Invalid Date" to a dispatcher instead of an empty cell. Nothing in the current API surface is known to send one, so this is latent rather than live — but the author clearly intended the empty string, and the code cannot produce it.
 **Fix:** the unreachable `catch` is deleted (behaviour-neutral: it never ran). Making the *intent* work is a one-liner — `const d = new Date(iso); return Number.isNaN(d.getTime()) ? '' : d.toLocaleTimeString(…)` — but that is a behaviour change on a path no test currently exercises against real data, so it is left for Ron rather than folded into a coverage commit.
 
+## 93. `addon/components/orchestrator-workbench.js` — two `@tracked` initialisers I could not place
+
+**Status:** OPEN
+**Found:** closing the file out. Branches and functions reached 100%; statements stopped at 409/411.
+**Evidence:** with the `@tracked` decorator transform, a field initialiser is a lazily-evaluated statement that runs on the field's first **read** — so any field whose first access is a *write* shows its initialiser as uncovered. Five such fields were identified and pragma'd with their specific writer: `routeSummaries`, `orchestratorRunMessage`, `manualOverrides` and `ranPhaseTypes` are all assigned at the top of `runOrchestration`, and their only readers sit inside `{{#if this.hasProposedPlan}}`, which is false on first render; `leafletMap` is assigned by `onMapLoad` when the map inserts, and its only reader (`_centerMapOnOrders`) runs when the orders resolve, after. Two more remain. The instrumented `statementMap` for this file is offset from the source by about two lines, so the profiler names a comment rather than a field, and the neighbours put the two survivors at roughly `availableEngines` and `cardFields`. **I could not establish that placement to the standard §4 asks for**, and `cardFields` in particular appears to be read on first render (`<Orchestrator::OrderPool @cardFields={{this.cardFields}}>`), which contradicts the theory.
+**Impact:** none on behaviour — these are initialisers that either run or are immediately overwritten. The cost is that the file sits at 99.51% statements and the gate stays red on it.
+**Fix:** identify the two exactly rather than by inference. The reliable way is to instrument once with `COVERAGE=true` and read the *generated* file that istanbul actually annotated, instead of mapping positions back onto the source. Then either pragma each with its real writer, or — if one turns out to be read first after all — find the ordering that makes it evaluate. Do not pragma them on the current inference: two of the six earlier candidates were wrong, and a pragma carrying a reason that is not true is worse than an uncovered line.
+
 ## 4. `tests/` — 223 blueprint scaffolds that were never green
 
 **Status:** OPEN (this is the bulk of Phase B)

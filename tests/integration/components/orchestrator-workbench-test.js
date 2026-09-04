@@ -1200,4 +1200,141 @@ module('Integration | Component | orchestrator-workbench', function (hooks) {
         // meant to catch this cannot fire. See DEFECTS #92.
         assert.dom('[data-test-window-unreadable]').hasText('Invalid Date', 'an unparseable date is shown as-is rather than blanked');
     });
+
+    test('a run that reports no assignments key at all is taken as none', async function (assert) {
+        this.postResponses['fleet-ops/orchestrator/run'] = { message: 'nothing to do' };
+
+        await render(hbs`<OrchestratorWorkbench />`);
+        await click('button.btn-primary');
+
+        assert.dom('[data-test-plan-viewer]').doesNotExist('there is no plan');
+        assert.deepEqual(this.notified.at(-1), ['warning', 'nothing to do'], 'and it is raised as a warning');
+    });
+
+    test('dropping onto a plan of several leaves the others where they were', async function (assert) {
+        this.getResponses['fleet-ops/orchestrator/orders'] = { orders: [{ public_id: 'order_1' }, { public_id: 'order_2' }] };
+        this.storeResults.vehicle = [{ public_id: 'vehicle_1' }, { public_id: 'vehicle_9' }];
+        this.postResponses['fleet-ops/orchestrator/run'] = {
+            assignments: [
+                { order_id: 'order_1', vehicle_id: 'vehicle_9', sequence: 1 },
+                { order_id: 'order_2', vehicle_id: 'vehicle_9', sequence: 2 },
+            ],
+        };
+
+        await render(hbs`<OrchestratorWorkbench />`);
+        await click('button.btn-primary');
+
+        await triggerEvent('[data-test-drop-target]', 'drop', { dataTransfer: dataTransfer('order_1') });
+        await click('button.btn-success');
+
+        const [, payload] = this.posts.at(-1);
+        assert.deepEqual(
+            payload.assignments.map((a) => [a.order_id, a.vehicle_id]),
+            [
+                ['order_1', 'vehicle_1'],
+                ['order_2', 'vehicle_9'],
+            ],
+            'only the dropped order moves'
+        );
+    });
+
+    test('the tile layer follows the dark theme', async function (assert) {
+        document.documentElement.classList.add('dark');
+
+        try {
+            await render(hbs`<OrchestratorWorkbench />`);
+            assert.dom('[data-test-tile]').hasAttribute('data-url', 'https://tiles.example/dark/{z}/{x}/{y}.png');
+        } finally {
+            document.documentElement.classList.remove('dark');
+        }
+    });
+
+    test('a stop on the equator is pinned but cannot anchor a route leg', async function (assert) {
+        this.getResponses['fleet-ops/orchestrator/orders'] = {
+            orders: [
+                {
+                    public_id: 'order_1',
+                    // lat 0 is a real place; `_placeCoords` accepts it because the pair is not 0,0.
+                    payload: { pickup: { location: { coordinates: [103.8, 0] } }, dropoff: { location: { coordinates: [103.9, 1.4] } } },
+                },
+            ],
+        };
+        this.storeResults.vehicle = [{ public_id: 'vehicle_1' }];
+        this.postResponses['fleet-ops/orchestrator/run'] = { assignments: [{ order_id: 'order_1', vehicle_id: 'vehicle_1' }] };
+
+        await render(hbs`<OrchestratorWorkbench />`);
+        assert.dom('[data-test-marker]').exists({ count: 2 }, 'both stops are pinned');
+
+        await click('button.btn-primary');
+        assert.deepEqual(this.routed, [], 'but one usable point is not enough to ask for a route');
+    });
+
+    test('null island is not a place, in any of the shapes it can arrive in', async function (assert) {
+        this.getResponses['fleet-ops/orchestrator/orders'] = {
+            orders: [
+                { public_id: 'geojson', payload: { pickup: { location: { coordinates: [0, 0] } } } },
+                { public_id: 'flat', payload: { pickup: { location: { lat: 0, lng: 0 } } } },
+                { public_id: 'pair', payload: { pickup: { location: [0, 0] } } },
+                { public_id: 'direct', payload: { pickup: { latitude: 0, longitude: 0 } } },
+                { public_id: 'real', payload: { pickup: { location: { coordinates: [103.8, 1.3] } } } },
+            ],
+        };
+
+        await render(hbs`<OrchestratorWorkbench />`);
+
+        assert.dom('[data-test-marker]').exists({ count: 1 }, 'only the one real place is pinned');
+        assert.dom('[data-test-marker]').hasAttribute('data-lat', '1.3');
+    });
+
+    test('waypoints and stops with no order of their own keep the order they came in', async function (assert) {
+        this.getResponses['fleet-ops/orchestrator/orders'] = {
+            orders: [
+                {
+                    public_id: 'order_1',
+                    payload: {
+                        waypoints: [{ place: { location: { coordinates: [103.8, 1.3] }, address: 'First' } }, { place: { location: { coordinates: [103.9, 1.4] }, address: 'Second' } }],
+                    },
+                },
+                { public_id: 'order_2', payload: { pickup: { location: { coordinates: [103.7, 1.2] } } } },
+            ],
+        };
+        this.storeResults.vehicle = [{ public_id: 'vehicle_1' }];
+        this.postResponses['fleet-ops/orchestrator/run'] = {
+            assignments: [
+                { order_id: 'order_1', vehicle_id: 'vehicle_1' },
+                { order_id: 'order_2', vehicle_id: 'vehicle_1' },
+            ],
+        };
+
+        await render(hbs`<OrchestratorWorkbench />`);
+        assert.deepEqual(
+            [...document.querySelectorAll('[data-test-marker]')].map((el) => el.getAttribute('data-lat')),
+            ['1.3', '1.4', '1.2'],
+            'unnumbered waypoints stay in the order the payload listed them'
+        );
+
+        await click('button.btn-primary');
+        assert.deepEqual(
+            this.routed.at(-1)[0],
+            [
+                [1.3, 103.8],
+                [1.4, 103.9],
+                [1.2, 103.7],
+            ],
+            'and unsequenced assignments are threaded in the order they were returned'
+        );
+    });
+
+    test('a card-fields read that fails before it returns a promise is survived', async function (assert) {
+        // The `.catch(() => null)` chained on the request only covers a rejected promise; a
+        // service that raises before returning one lands in the surrounding try/catch instead.
+        this.getResponses['fleet-ops/settings/orchestrator-card-fields'] = () => {
+            throw new Error('no fetch adapter');
+        };
+
+        await render(hbs`<OrchestratorWorkbench />`);
+
+        assert.dom('[data-test-order-pool]').exists('the workbench still comes up');
+        assert.deepEqual(this.notified, [], 'and the card fields failing is not worth telling anyone about');
+    });
 });
