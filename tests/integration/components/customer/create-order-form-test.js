@@ -1,9 +1,17 @@
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'dummy/tests/helpers';
-import { render } from '@ember/test-helpers';
+import { click, render } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 import Service from '@ember/service';
+import Component from '@glimmer/component';
+import { setComponentTemplate } from '@ember/component';
+import { inject as service } from '@ember/service';
 import registerTemplateOnly from 'dummy/tests/helpers/register-template-only';
+
+class ModelSelectStub extends Component {
+    @service orderFormTestBed;
+}
+setComponentTemplate(hbs`<button type="button" data-test-model-select={{@modelName}} {{on "click" (fn @onChange this.orderFormTestBed.chosen)}}>{{@modelName}}</button>`, ModelSelectStub);
 
 /**
  * The customer order form is invoked from the customer portal with an order it has already
@@ -15,7 +23,30 @@ function stubComponents(owner) {
     registerTemplateOnly(owner, 'file-dropzone', hbs`<div data-test-dropzone>{{yield}}</div>`);
     registerTemplateOnly(owner, 'file-upload', hbs`<div data-test-file-upload>{{yield}}</div>`);
     registerTemplateOnly(owner, 'custom-field/input', hbs`<div data-test-custom-field></div>`);
-    registerTemplateOnly(owner, 'drag-sort-list', hbs`<div data-test-drag-sort-list></div>`);
+    // The real DragSortList yields each item with its index and reports a reorder through
+    // `@dragEndAction`; the stand-in does both so the waypoint rows actually render.
+    registerTemplateOnly(
+        owner,
+        'drag-sort-list',
+        hbs`<div data-test-drag-sort-list>
+            {{#each @items as |item index|}}
+                <div data-test-drag-item>{{yield item index}}</div>
+            {{/each}}
+            <button
+                type="button"
+                data-test-drag-end
+                {{on "click" (fn @dragEndAction (hash sourceList=@items sourceIndex=1 targetList=@items targetIndex=0))}}
+            ></button>
+            <button
+                type="button"
+                data-test-drag-noop
+                {{on "click" (fn @dragEndAction (hash sourceList=@items sourceIndex=0 targetList=@items targetIndex=0))}}
+            ></button>
+        </div>`
+    );
+    // ModelSelect is a power-select in production; here it is a button that reports the choice
+    // the test put on the test bed, which is the same `@onChange` contract.
+    owner.register('component:model-select', ModelSelectStub);
 }
 
 module('Integration | Component | customer/create-order-form', function (hooks) {
@@ -45,6 +76,9 @@ module('Integration | Component | customer/create-order-form', function (hooks) 
             class extends Service {
                 serverError(error) {
                     test.notified.push(['serverError', error?.message ?? error]);
+                }
+                warning(message) {
+                    test.notified.push(['warning', message]);
                 }
                 error(message) {
                     test.notified.push(['error', message]);
@@ -104,6 +138,23 @@ module('Integration | Component | customer/create-order-form', function (hooks) 
         this.owner.register('service:context-panel', class extends Service {});
         this.owner.register('service:universe', class extends Service {});
         this.owner.register('service:events', class extends Service {});
+
+        // Everything on this form is gated on `cannot "fleet-ops create order"`.
+        this.owner.register(
+            'service:abilities',
+            class extends Service {
+                denied = new Set();
+                can(permission) {
+                    return !this.denied.has(permission);
+                }
+                cannot(permission) {
+                    return !this.can(permission);
+                }
+            }
+        );
+
+        this.owner.register('service:order-form-test-bed', class extends Service {});
+        this.testBed = this.owner.lookup('service:order-form-test-bed');
 
         stubComponents(this.owner);
 
@@ -198,5 +249,20 @@ module('Integration | Component | customer/create-order-form', function (hooks) 
         await render(hbs`<Customer::CreateOrderForm @order={{this.order}} />`);
 
         assert.dom('[data-test-dropzone]').exists("the form comes up on the order's own customer");
+    });
+
+    test('adding an item to the order creates an entity', async function (assert) {
+        this.givenOrderConfigs({ id: 'config_1', key: 'transport', name: 'Transport' });
+        await render(hbs`<Customer::CreateOrderForm @order={{this.order}} />`);
+
+        const addItem = [...document.querySelectorAll('button')].find((el) => el.textContent.includes('Add Item'));
+        assert.ok(addItem, 'the add-item button is rendered');
+        assert.false(addItem.disabled, 'and is available once a config is chosen');
+
+        const rows = () => [...document.querySelectorAll('button')].filter((el) => el.textContent.includes('Edit Item')).length;
+        const before = rows();
+        await click(addItem);
+
+        assert.strictEqual(rows(), before + 1, 'one more item row is rendered');
     });
 });
