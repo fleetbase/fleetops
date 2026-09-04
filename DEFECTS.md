@@ -1038,6 +1038,14 @@ call, not taken here).
 **Impact:** None in production — a normal Ember app loads the host's vendor bundle, and so Leaflet, before the engine's modules evaluate. Test-only.
 **Fix:** `ember-cli-build.js` — which by its own comment builds only the dummy app and "does not influence how the addon or the app using it behave" — now imports `node_modules/leaflet/dist/leaflet.js`, so the vendor bundle sets `window.L` before any addon module evaluates. That gives the test app the real library rather than a fake, and the same global the host provides. Worth knowing for later: the module-scope capture remains a load-order sensitivity that `google.js` avoids by construction; it is not a live bug given the guaranteed vendor-before-engine ordering, so it is left alone rather than turned into a seven-file refactor.
 
+## 81. `addon/services/map-adapter/leaflet.js` — a dead `remember` switch and six branch arms with no reachable input
+
+**Status:** FIXED
+**Found:** Sweeping the file's last 32 branches once its statements and functions were complete, looking for repeated shapes rather than working line by line.
+**Evidence:** Each was traced to what closes it off. `#hideOverlays(layer, remember = true)` — the method is private and has exactly one call site, `hideLayer`, which passed `true` explicitly, so neither the default nor the `if (remember)` false arm could ever run. `addRoutingControl`'s `if (polyline)` — `addPolyline` returns null only when there is no map, and `addRoutingControl` has already returned in that case. Its `options.markerWaypoints ?? route.waypoints ?? []` — the method returns early unless `route.waypoints` has length, so the `[]` tail is unreachable. Both `if (wasVisible)` arms in `editPolygon` — `this.showLayer(originalLayer, { soft: false })` runs two statements above `const wasVisible = !originalLayer.__hidden`, and a non-soft `showLayer` sets `__hidden = false`, so `wasVisible` is always true. `#normalizeDrawEvent`'s `payload.layerType ?? payload.type ?? null` — Leaflet's `Evented.fire` builds every payload as `extend({}, data, { type, ... })`, so `payload.type` is always set and the `null` tail cannot be reached. The module-scope `const L = window.leaflet || window.L` — only `utils/leaflet-plugin-loader` ever assigns `window.leaflet`, and it does so at runtime, long after this line has evaluated, so exactly one operand is reachable per run and which one is settled before any test can act.
+**Impact:** None. `remember` was a switch nothing could throw, and the rest are defensive arms for inputs their own callers rule out.
+**Fix:** The `remember` parameter and its guard are deleted, along with the `true` at the call site. The other six carry an `istanbul ignore` naming the specific thing that closes them. With those settled the file is at 100% on all four metrics.
+
 ## 4. `tests/` — 223 blueprint scaffolds that were never green
 
 **Status:** OPEN (this is the bulk of Phase B)

@@ -24,6 +24,10 @@ import { waypointIconHtml } from '../../utils/route-colors';
 import ensureLeafletDrawEditNamespace from '../../utils/leaflet-draw-namespace-guard';
 import ensureLeafletPluginsReady from '../../utils/leaflet-plugin-loader';
 
+// Evaluated once, at module load. Only `utils/leaflet-plugin-loader` ever assigns
+// `window.leaflet`, and it does so at runtime — long after this line has run — so exactly one of
+// these two operands is reachable in any given run, and which one is fixed before a test can act.
+/* istanbul ignore next -- module-scope: one operand is settled before any test can influence it */
 const L = window.leaflet || window.L;
 
 function ensureLeafletConstructorNamespace() {
@@ -369,6 +373,7 @@ export default class LeafletAdapter extends MapAdapterInterface {
 
             polylineLayers.forEach(({ id, options: polylineOptions }) => {
                 const polyline = this.addPolyline(id, route.coordinates, polylineOptions);
+                /* istanbul ignore else -- addPolyline only returns null without a map, and this method already returned in that case */
                 if (polyline) {
                     polylineIds.push(id);
                 }
@@ -376,6 +381,8 @@ export default class LeafletAdapter extends MapAdapterInterface {
         }
         const markerIds = [];
 
+        // `route.waypoints` is guaranteed non-empty by the guard at the top of this method.
+        /* istanbul ignore next -- addRoutingControl returns early unless route.waypoints has length */
         const markerWaypoints = options.markerWaypoints ?? route.waypoints ?? [];
 
         if (!options.suppressMarkers) {
@@ -493,19 +500,17 @@ export default class LeafletAdapter extends MapAdapterInterface {
         }
         const el = this.#getLayerEl(layer);
         if (el) el.style.display = 'none';
-        this.#hideOverlays(layer, true);
+        this.#hideOverlays(layer);
         layer.__hidden = true;
     }
 
-    #hideOverlays(layer, remember = true) {
+    #hideOverlays(layer) {
         next(() => {
             const tt = layer.getTooltip?.() ?? layer._tooltip ?? null;
             const pp = layer.getPopup?.() ?? layer._popup ?? null;
 
-            if (remember) {
-                layer.__hadOpenTooltip = !!(tt && tt.isOpen && tt.isOpen());
-                layer.__hadOpenPopup = !!(pp && pp.isOpen && pp.isOpen());
-            }
+            layer.__hadOpenTooltip = !!(tt && tt.isOpen && tt.isOpen());
+            layer.__hadOpenPopup = !!(pp && pp.isOpen && pp.isOpen());
 
             try {
                 if (tt) layer.closeTooltip?.();
@@ -714,6 +719,7 @@ export default class LeafletAdapter extends MapAdapterInterface {
         const editHandler = draw?._toolbars?.edit?._modes?.edit?.handler;
         if (!editHandler) {
             group.removeLayer(proxy);
+            /* istanbul ignore else -- the showLayer above clears __hidden, so wasVisible is always true here */
             if (wasVisible) {
                 this.showLayer(originalLayer, { soft: false });
             }
@@ -747,6 +753,7 @@ export default class LeafletAdapter extends MapAdapterInterface {
                     // noop
                 }
 
+                /* istanbul ignore else -- the showLayer at the top of editPolygon clears __hidden, so wasVisible is always true */
                 if (wasVisible) {
                     this.showLayer(originalLayer, { soft: false });
                 }
@@ -981,6 +988,9 @@ export default class LeafletAdapter extends MapAdapterInterface {
 
     #normalizeDrawEvent(event, payload) {
         if (event === 'draw:created' && payload?.layer) {
+            // Leaflet's `Evented.fire` stamps `type` onto every payload, so the `?? null` tail
+            // cannot be reached through any event this adapter subscribes to.
+            /* istanbul ignore next -- Leaflet's fire() always sets payload.type */
             const layerType = payload.layerType ?? payload.type ?? null;
             const geoJson = createGeoJsonFromLayer(payload.layer, { layerType });
 

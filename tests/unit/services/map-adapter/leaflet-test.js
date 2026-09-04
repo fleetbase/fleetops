@@ -1425,4 +1425,205 @@ module('Unit | Service | map-adapter/leaflet', function (hooks) {
         assert.strictEqual(onceSeen[0].id, 'edit');
         assert.strictEqual(onceSeen[0].type, 'draw:edited', 'and is normalised too');
     });
+
+    test('ensureInteractive can be called with nothing at all', async function (assert) {
+        const map = this.initialize();
+
+        assert.strictEqual(await this.adapter.ensureInteractive(), map, 'it falls back to its own map and the default timeout');
+    });
+
+    test('an overlay drawn with no options at all takes every Fleet-Ops default', function (assert) {
+        this.initialize();
+
+        const circle = this.adapter.addCircle('circle_1', 1.3, 103.8, 100);
+        assert.strictEqual(circle.options.color, '#3388ff');
+        assert.strictEqual(circle.options.fillColor, '#3388ff', 'with no colour of any kind the fill takes the default too');
+        assert.strictEqual(circle.options.fillOpacity, 0.2);
+        assert.strictEqual(circle.options.weight, 3);
+    });
+
+    test('a styled route polyline needs no shared leaflet options', function (assert) {
+        this.initialize();
+
+        const handle = this.adapter.addRoutingControl(
+            {
+                waypoints: [[1.3, 103.8]],
+                coordinates: [
+                    [1.3, 103.8],
+                    [1.4, 103.9],
+                ],
+            },
+            { id: 'route_1', polylineOptions: { styles: [{ color: '#111111', weight: 5, opacity: 0.7 }] } }
+        );
+
+        assert.deepEqual(handle.polylineIds, ['route_1:polyline:0']);
+        assert.strictEqual(this.adapter._overlays.get('route_1:polyline:0').options.weight, 5);
+    });
+
+    test('a route marker built as something other than an object is ignored', function (assert) {
+        this.initialize();
+
+        const handle = this.adapter.addRoutingControl({ waypoints: [[1.3, 103.8]] }, { id: 'route_1', createMarker: () => 'a label' });
+
+        assert.deepEqual(handle.markerIds, ['route_1:marker:0'], 'the marker is still placed');
+        assert.strictEqual(this.adapter._markers.get('route_1:marker:0').options.icon.options.iconUrl, '/assets/images/marker-icon.png', 'from the bundled default');
+    });
+
+    test('a layer that can neither restyle nor fade is left alone by a soft change', function (assert) {
+        this.initialize();
+        const inert = {};
+
+        this.adapter.hideLayer(inert, { soft: true });
+        assert.true(inert.__hidden, 'it is still marked hidden');
+        this.adapter.showLayer(inert, { soft: true });
+        assert.false(inert.__hidden);
+    });
+
+    test('a layer with nothing on the page is hidden and shown without touching the DOM', async function (assert) {
+        this.initialize();
+        const layer = { getTooltip: () => null, getPopup: () => null };
+
+        this.adapter.hideLayer(layer);
+        await settled();
+        assert.true(layer.__hidden);
+
+        this.adapter.showLayer(layer);
+        assert.false(layer.__hidden);
+    });
+
+    test('a tooltip that was closed and is not permanent stays closed', async function (assert) {
+        this.initialize();
+        const calls = [];
+        const layer = {
+            _path: document.createElement('div'),
+            getTooltip: () => ({ _container: document.createElement('div'), isOpen: () => false, options: {} }),
+            getPopup: () => null,
+            closeTooltip: () => calls.push('closeTooltip'),
+            openTooltip: () => calls.push('openTooltip'),
+        };
+
+        this.adapter.hideLayer(layer);
+        await settled();
+        this.adapter.showLayer(layer);
+
+        assert.deepEqual(calls, ['closeTooltip'], 'it is not reopened');
+    });
+
+    test('a layer hidden by display alone still reads as hidden', function (assert) {
+        this.initialize();
+        const icon = document.createElement('div');
+        icon.style.display = 'none';
+
+        assert.true(this.adapter.isLayerHidden({ _icon: icon }), 'the DOM is the fallback answer');
+        assert.false(this.adapter.isLayerHidden({ _icon: document.createElement('div') }));
+    });
+
+    test('the draw control copes with being shown twice and with having no container', function (assert) {
+        const map = this.initialize();
+        const control = makeDrawControl();
+        this.adapter.setDrawControl(control, makeFeatureGroup());
+
+        this.adapter.showDrawControl();
+        assert.strictEqual(control._map, map, 'a bare call still puts the control on the map');
+
+        this.adapter.showDrawControl({});
+        assert.strictEqual(control._map, map, 'showing it again leaves it where it is');
+
+        control.getContainer = () => null;
+        this.adapter.showDrawControl({});
+        this.adapter.hideDrawControl();
+        assert.strictEqual(control._map, null, 'a control with no container is still removed');
+
+        this.adapter.hideDrawControl();
+        assert.strictEqual(control._map, null, 'and hiding an already-hidden control is harmless');
+    });
+
+    test('toggling a draw control that was never configured shows it with no config', function (assert) {
+        const map = this.initialize();
+        const control = makeDrawControl();
+        this.adapter._drawControl = control;
+
+        this.adapter.toggleDrawControl();
+
+        assert.strictEqual(control._map, map);
+        assert.deepEqual(drawModesEnabled, [], 'no default mode is started');
+    });
+
+    test('editPolygon paints its proxy with the defaults when the layer has no style', async function (assert) {
+        const map = this.initialize();
+        const group = makeFeatureGroup();
+        this.adapter.setDrawControl(makeDrawControl(), group);
+
+        // A real `L.polygon` inherits Leaflet's own style defaults through its options prototype,
+        // so deleting the keys does not make them absent. A layer that simply carries no style is
+        // what reaches these fallbacks.
+        const layer = {
+            options: {},
+            getLatLngs: () => [[L.latLng(1.3, 103.8), L.latLng(1.4, 103.9), L.latLng(1.5, 103.7)]],
+        };
+
+        const pending = this.adapter.editPolygon(layer);
+        assert.strictEqual(group.layers[0].options.color, '#3388ff');
+        assert.strictEqual(group.layers[0].options.fillOpacity, 0.2);
+
+        map.fire('draw:editstop');
+        await pending;
+    });
+
+    test('an edit that produces no ring leaves the original shape alone', async function (assert) {
+        const map = this.initialize();
+        const group = makeFeatureGroup();
+        this.adapter.setDrawControl(makeDrawControl(), group);
+
+        const layer = L.polygon([
+            [1.3, 103.8],
+            [1.4, 103.9],
+            [1.5, 103.7],
+        ]).addTo(map);
+        const before = layer.getLatLngs();
+
+        const pending = this.adapter.editPolygon(layer);
+        group.layers[0].getLatLngs = () => [];
+        map.fire('draw:edited');
+
+        const result = await pending;
+        assert.strictEqual(result.type, 'edited');
+        assert.strictEqual(result.geoJson, null, 'nothing is reported when there is nothing to report');
+        assert.strictEqual(layer.getLatLngs(), before, 'and the original ring is untouched');
+    });
+
+    test('subscribing twice to one event keeps both handlers, and unsubscribing an unknown event is harmless', function (assert) {
+        const map = this.initialize();
+        const seen = [];
+        const first = () => seen.push('first');
+        const second = () => seen.push('second');
+
+        this.adapter.on('click', first);
+        this.adapter.on('click', second);
+        map.fire('click');
+        assert.deepEqual(seen, ['first', 'second'], 'the second handler joins the first');
+        assert.strictEqual(this.adapter._eventHandlers.get('click').length, 2);
+
+        this.adapter.off('zoomend', first);
+        assert.ok(true, 'unsubscribing from an event that was never subscribed does nothing');
+    });
+
+    test('a one-shot listener for a plain event is passed through unwrapped', function (assert) {
+        const map = this.initialize();
+        const seen = [];
+
+        this.adapter.once('click', (payload) => seen.push(payload.id));
+        map.fire('click', { id: 'only' });
+        map.fire('click', { id: 'ignored' });
+
+        assert.deepEqual(seen, ['only']);
+    });
+
+    test('setTileLayer works on a map that has no tiles yet', function (assert) {
+        this.initialize();
+        assert.strictEqual(this.adapter._tileLayer, null, 'no tile url was given');
+
+        this.adapter.setTileLayer('https://tiles.example.test/{z}/{x}/{y}.png');
+        assert.ok(this.adapter._tileLayer, 'the first layer is simply added');
+    });
 });
