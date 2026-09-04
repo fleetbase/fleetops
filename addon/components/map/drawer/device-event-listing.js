@@ -176,7 +176,7 @@ export default class MapDrawerDeviceEventListingComponent extends Component {
             }
 
             const events = yield this.store.query('device-event', params);
-            this.positions = isArray(events) ? events : [];
+            this.events = isArray(events) ? events : [];
         } catch (error) {
             this.notifications.serverError(error);
         }
