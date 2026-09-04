@@ -1,26 +1,29 @@
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'dummy/tests/helpers';
-import { render } from '@ember/test-helpers';
+import { click, render } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
+import stubFormInputs from 'dummy/tests/helpers/stub-form-inputs';
 
 module('Integration | Component | modals/attach-device', function (hooks) {
     setupRenderingTest(hooks);
 
-    test('it renders', async function (assert) {
-        // Set any properties with this.set('myProperty', 'value');
-        // Handle any actions with this.set('myAction', function(val) { ... });
+    hooks.beforeEach(function () {
+        stubFormInputs(this.owner);
+    });
 
-        await render(hbs`<Modals::AttachDevice />`);
+    test('it renders the unattached-device select and writes the choice onto the options', async function (assert) {
+        this.set('options', { title: 'Attach Device', selectedDevice: null });
 
-        assert.dom().hasText('');
+        await render(hbs`<Modals::AttachDevice @modalIsOpened={{true}} @options={{this.options}} />`);
 
-        // Template block usage:
-        await render(hbs`
-      <Modals::AttachDevice>
-        template block text
-      </Modals::AttachDevice>
-    `);
+        assert.dom().includesText('Attach Device');
+        assert.dom('label').hasText('Select Device');
+        assert.dom('[data-test-model-select="device"]').hasText('Select Device');
 
-        assert.dom().hasText('template block text');
+        await click('[data-test-model-select="device"]');
+        assert.strictEqual(this.options.selectedDevice.id, 'picked_1');
+
+        await click('[data-test-model-select-clear="device"]');
+        assert.strictEqual(this.options.selectedDevice, null);
     });
 });

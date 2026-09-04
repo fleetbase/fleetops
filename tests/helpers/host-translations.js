@@ -31,6 +31,7 @@ export default {
         'delete-resource-name': 'Delete: {resourceName}',
         address: 'Address',
         status: 'Status',
+        metadata: 'Metadata',
     },
     column: {
         address: 'Address',

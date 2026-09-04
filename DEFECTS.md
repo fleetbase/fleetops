@@ -886,6 +886,22 @@ call, not taken here).
 **Impact:** None.
 **Fix:** The guard, the queue check and the initializer are deleted.
 
+## 62. `contact/details.hbs`, `order/pill.hbs`, `issue/form.hbs`, `modals/bulk-assign-driver.hbs` — four template slips
+
+**Status:** FIXED (cff7b292)
+**Found:** Reading the 23 empty-class components' templates before writing their suites.
+**Evidence:** `contact/details` labelled the phone field with `common.email`, so the details panel showed two "Email" rows. `order/pill` resolved `resource` from `(or @order @resource)` for the QR code and tracking number but read `status`, `dispatched_at`, `dispatchedAt`, `createdAt` and `type` from `@resource`, so an `@order`-only caller rendered a pill without status, dates or type (no addon template passes `@order`, but the argument is the one the component advertises first). `issue/form` handed its second `RegistryYield` `@controller={{this.controller}}`; the class is empty, so registry components received `undefined` while the sibling registry already used `@controller` (the DEFECTS #42 shape). `modals/bulk-assign-driver` rendered `t "fleet-ops.operations.orders.index.bulk-assign-driver-helptext"`, a key defined in no translation file in the workspace, so the driver select's help tooltip showed a missing-translation string.
+**Impact:** Mislabelled phone number; a pill with no status for `@order` callers; issue registry extensions without their controller; a broken help tooltip in the bulk-assign modal.
+**Fix:** `common.phone` for the label, `resource.*` throughout the pill, `@controller` for both registries, and the help-text key defined in `translations/en-us.yaml` under `fleet-ops.operations.orders.index`.
+
+## 63. `addon/components/order-list-overlay/` — a stale pre-monorepo copy of the map overlay row and driver title
+
+**Status:** FIXED
+**Found:** The scaffold sweep's regex filter matched a second `driver-panel-title` module.
+**Evidence:** `addon/components/order-list-overlay/{order.js,order.hbs,driver-panel-title.hbs}` are older copies of `map/order-list-overlay/*` (no intersection observer, `@context.orderPanelActiveJobs` instead of `_panelActiveJobs`, which the `order-list-overlay` service actually sets). No template invokes `OrderListOverlay::Order` or `OrderListOverlay::DriverPanelTitle` and no string references `"order-list-overlay/order"` or `"order-list-overlay/driver-panel-title"` in `addon/` or `app/`; the only consumers are the two blueprint scaffolds, and `git log` shows the files untouched since the monorepo import. `order.js` counted 27 statements in the denominator that nothing could ever reach.
+**Impact:** None for users; dead files in the coverage denominator.
+**Fix:** The addon directory, its two `app/` re-exports and the two scaffolds are deleted.
+
 ## 4. `tests/` — 223 blueprint scaffolds that were never green
 
 **Status:** OPEN (this is the bulk of Phase B)
