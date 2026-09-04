@@ -48,12 +48,20 @@ class LeafletMapStub extends Component {
     tileComponent = LeafletTileStub;
     markerComponent = LeafletMarkerStub;
 
-    get mapEvent() {
-        return { target: this.workbenchTestBed.mapInstance };
-    }
+    /**
+     * ember-leaflet calls `@onLoad` when the map mounts. A test that needs the map to arrive
+     * *after* the orders — which is when `_mapCenteredOnOrders` matters — holds it back here.
+     */
+    registerLoad = (onLoad) => {
+        const bed = this.workbenchTestBed;
+        bed.loadMap = () => onLoad({ target: bed.mapInstance });
+        if (!bed.deferMapLoad) {
+            bed.loadMap();
+        }
+    };
 }
 setComponentTemplate(
-    hbs`<div data-test-map {{did-insert (fn @onLoad this.mapEvent)}}>
+    hbs`<div data-test-map {{did-insert (fn this.registerLoad @onLoad)}}>
         {{yield (hash tile=this.tileComponent marker=this.markerComponent)}}
     </div>`,
     LeafletMapStub
@@ -119,12 +127,21 @@ function stubPanels(owner) {
             <span data-test-vehicle-count>{{@planByVehicle.length}}</span>
             <span data-test-unassigned-count>{{@unassignedAfterRun.length}}</span>
             <span data-test-driver-phase>{{if @hasDriverPhase "yes" "no"}}</span>
+            <span data-test-summary-duration>{{get (get (get @planByVehicle "0") "summary") "duration"}}</span>
             <span data-test-duration>{{@formatDuration 3725}}</span>
+            <span data-test-short-duration>{{@formatDuration 300}}</span>
+            <span data-test-no-duration>{{@formatDuration 0}}</span>
             <span data-test-distance>{{@formatDistance 4520}}</span>
+            <span data-test-short-distance>{{@formatDistance 400}}</span>
+            <span data-test-no-distance>{{@formatDistance 0}}</span>
             <span data-test-unix>{{@formatUnixTime 43200}}</span>
             <span data-test-unix-empty>{{@formatUnixTime 0}}</span>
             <span data-test-stop-label>{{@getStopLabel 0}}/{{@getStopLabel 3}}</span>
             <span data-test-window>{{@formatTimeWindow "2026-06-22T09:00:00.000Z" "2026-06-22T11:30:00.000Z"}}</span>
+            <span data-test-window-open>{{@formatTimeWindow "2026-06-22T09:00:00.000Z" null}}</span>
+            <span data-test-window-instant>{{@formatTimeWindow "2026-06-22T09:00:00.000Z" "2026-06-22T09:00:00.000Z"}}</span>
+            <span data-test-window-none>{{@formatTimeWindow null null}}</span>
+            <span data-test-window-unreadable>{{@formatTimeWindow "not a date" null}}</span>
             <button type="button" data-test-dismiss-message {{on "click" @onDismissMessage}}></button>
             <div data-test-drop-target {{on "dragover" @onDragOver}} {{on "drop" (fn @onDropOnVehicle "vehicle_1" "driver_1")}}></div>
             <div data-test-assigned-drag {{on "dragstart" (fn @onAssignedOrderDragStart (get (get (get (get @planByVehicle '0') 'orders') '0') 'order'))}}></div>
@@ -445,6 +462,7 @@ module('Integration | Component | orchestrator-workbench', function (hooks) {
             'threaded through both orders in sequence order, pickup then dropoff'
         );
         assert.strictEqual(routeOptions.tag, 'orchestrator:vehicle_1');
+        assert.dom('[data-test-summary-duration]').hasText('900', 'the run timings are carried into the group summary');
         assert.true(routeOptions.suppressMarkers);
         assert.strictEqual(this.fitted.length, 1, 'and the map is fitted to what was drawn');
     });
@@ -1029,5 +1047,157 @@ module('Integration | Component | orchestrator-workbench', function (hooks) {
 
         assert.dom('[data-test-vehicle-count]').hasText('1', 'the group is built even with no driver_id on the assignment');
         assert.dom('[data-test-duration]').hasText('1h 2m');
+    });
+
+    test('a response missing the key it was asked for is taken as empty', async function (assert) {
+        this.getResponses['fleet-ops/orchestrator/orders'] = {};
+        this.getResponses['fleet-ops/orchestrator/engines'] = {};
+
+        await render(hbs`<OrchestratorWorkbench />`);
+
+        assert.dom('[data-test-order-count]').hasText('0', 'no orders key means no orders');
+        await click('button:has(.fa-list-ol)');
+        assert.dom('[data-test-engine-count]').hasText('1', 'and no engines key falls back to the built-in one');
+        assert.deepEqual(this.notified, [], 'neither is treated as an error');
+    });
+
+    test('a selected driver with no vehicle of their own pins none', async function (assert) {
+        this.getResponses['fleet-ops/orchestrator/orders'] = { orders: [{ public_id: 'order_1' }] };
+        this.storeResults.vehicle = [{ public_id: 'vehicle_1' }];
+        this.storeResults.driver = [{ public_id: 'driver_1' }];
+
+        await render(hbs`<OrchestratorWorkbench />`);
+        await click('[data-test-toggle-driver]');
+        await click('button.btn-primary');
+
+        const [, payload] = this.posts.at(-1);
+        assert.deepEqual(payload.vehicle_ids, ['vehicle_1'], 'with nothing resolved, every available vehicle is offered again');
+        assert.deepEqual(payload.driver_ids, ['driver_1'], 'though the driver is still pinned');
+    });
+
+    test('a commit that reports no count is announced by what was sent', async function (assert) {
+        this.storeResults.vehicle = [{ public_id: 'vehicle_1' }];
+        this.postResponses['fleet-ops/orchestrator/run'] = { assignments: [{ order_id: 'order_1', vehicle_id: 'vehicle_1' }] };
+        this.postResponses['fleet-ops/orchestrator/commit'] = {};
+
+        await render(hbs`<OrchestratorWorkbench />`);
+        await click('button.btn-primary');
+        await click('button.btn-success');
+
+        assert.strictEqual(this.notified.at(-1)[0], 'success', 'the commit is still reported');
+    });
+
+    test('a route the engine could not draw is skipped without taking the others down', async function (assert) {
+        this.getResponses['fleet-ops/orchestrator/orders'] = {
+            orders: [
+                { public_id: 'order_1', payload: { pickup: { location: { coordinates: [103.8, 1.3] } }, dropoff: { location: { coordinates: [103.9, 1.4] } } } },
+                { public_id: 'order_2', payload: { pickup: { location: { coordinates: [103.7, 1.2] } }, dropoff: { location: { coordinates: [103.6, 1.1] } } } },
+            ],
+        };
+        this.storeResults.vehicle = [{ public_id: 'vehicle_1' }, { public_id: 'vehicle_2' }];
+        this.postResponses['fleet-ops/orchestrator/run'] = {
+            assignments: [
+                { order_id: 'order_1', vehicle_id: 'vehicle_1' },
+                { order_id: 'order_2', vehicle_id: 'vehicle_2' },
+            ],
+        };
+        // The first vehicle's route comes back with no geometry; the second is fine.
+        let call = 0;
+        this.routeHandleFor = (waypoints) => (call++ === 0 ? { route: { coordinates: [] } } : { route: { coordinates: waypoints } });
+
+        await render(hbs`<OrchestratorWorkbench />`);
+        await click('button.btn-primary');
+
+        assert.strictEqual(this.routed.length, 2, 'both were attempted');
+        assert.strictEqual(this.fitted.length, 1, 'and the map is fitted to the one that came back');
+        assert.deepEqual(this.fitted[0][0], [
+            [1.2, 103.7],
+            [1.1, 103.6],
+        ]);
+    });
+
+    test('a plan naming a vehicle nobody has is still drawn, tagged as unknown', async function (assert) {
+        this.getResponses['fleet-ops/orchestrator/orders'] = {
+            orders: [{ public_id: 'order_1', payload: { pickup: { location: { coordinates: [103.8, 1.3] } }, dropoff: { location: { coordinates: [103.9, 1.4] } } } }],
+        };
+        this.storeResults.vehicle = [];
+        this.postResponses['fleet-ops/orchestrator/run'] = { assignments: [{ order_id: 'order_1', vehicle_id: 'vehicle_ghost' }] };
+
+        await render(hbs`<OrchestratorWorkbench />`);
+        await click('button.btn-primary');
+
+        assert.strictEqual(this.routed.at(-1)[1].tag, 'orchestrator:unknown', 'the tag falls all the way through');
+        assert.dom('[data-test-duration]').hasText('1h 2m', 'and the group still reaches the plan viewer');
+    });
+
+    test('a stop with no summary and a waypoint that is its own place are both read', async function (assert) {
+        this.getResponses['fleet-ops/orchestrator/orders'] = {
+            orders: [
+                {
+                    public_id: 'order_1',
+                    payload: {
+                        waypoints: [
+                            { order: 1, location: { coordinates: [103.8, 1.3] } },
+                            { order: 2, place: { location: { coordinates: [103.9, 1.4] } } },
+                        ],
+                    },
+                },
+            ],
+        };
+        this.storeResults.vehicle = [{ public_id: 'vehicle_1' }];
+        this.postResponses['fleet-ops/orchestrator/run'] = { assignments: [{ order_id: 'order_1', vehicle_id: 'vehicle_1' }] };
+
+        await render(hbs`<OrchestratorWorkbench />`);
+
+        assert.dom('[data-test-marker]').exists({ count: 2 }, 'a waypoint that is itself the place is read the same as one wrapping it');
+        assert.dom('[data-test-marker-tooltip]').hasText('order_1 —', 'a place with no address contributes none, leaving the order id alone');
+
+        await click('button.btn-primary');
+        assert.dom('[data-test-summary-duration]').hasText('', 'a group the run reported no timings for has an empty summary');
+    });
+
+    test('a map that mounts after the orders re-centres on them', async function (assert) {
+        this.testBed.deferMapLoad = true;
+        this.getResponses['fleet-ops/orchestrator/orders'] = {
+            orders: [{ public_id: 'order_1', payload: { pickup: { location: { coordinates: [103.8, 1.2] } }, dropoff: { location: { coordinates: [104.0, 1.4] } } } }],
+        };
+
+        await render(hbs`<OrchestratorWorkbench />`);
+        assert.deepEqual(this.mapFits, [], 'nothing is fitted while the map is still coming up');
+
+        this.testBed.loadMap();
+        await settled();
+
+        assert.deepEqual(
+            this.mapFits.at(-1),
+            [
+                [
+                    [1.2, 103.8],
+                    [1.4, 104],
+                ],
+                { padding: [40, 40], maxZoom: 14 },
+            ],
+            'the map is fitted to the orders that were already loaded, not to the default centre'
+        );
+        assert.deepEqual(this.mapViews, [], 'and no setView is made from the default');
+    });
+
+    test('the formatters answer sensibly at their edges', async function (assert) {
+        this.storeResults.vehicle = [{ public_id: 'vehicle_1' }];
+        this.postResponses['fleet-ops/orchestrator/run'] = { assignments: [{ order_id: 'order_1', vehicle_id: 'vehicle_1' }] };
+
+        await render(hbs`<OrchestratorWorkbench />`);
+        await click('button.btn-primary');
+
+        assert.dom('[data-test-short-duration]').hasText('5m', 'under an hour is minutes alone');
+        assert.dom('[data-test-no-duration]').hasText('', 'and no duration is nothing at all');
+        assert.dom('[data-test-short-distance]').hasText('400 m', 'under a kilometre stays in metres');
+        assert.dom('[data-test-no-distance]').hasText('');
+        assert.dom('[data-test-window-open]').matchesText(/^\d{2}:\d{2}$/, 'a window with only a start reads as that time');
+        assert.dom('[data-test-window-instant]').matchesText(/^\d{2}:\d{2}$/, 'and one that starts and ends together reads once');
+        assert.dom('[data-test-window-none]').hasText('', 'no window reads as nothing');
+        // A date the browser cannot parse renders the words "Invalid Date" — the guard that was
+        // meant to catch this cannot fire. See DEFECTS #92.
+        assert.dom('[data-test-window-unreadable]').hasText('Invalid Date', 'an unparseable date is shown as-is rather than blanked');
     });
 });

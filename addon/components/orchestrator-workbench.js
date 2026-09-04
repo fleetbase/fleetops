@@ -990,11 +990,9 @@ export default class OrchestratorWorkbenchComponent extends Component {
      */
     @action formatIsoTime(iso) {
         if (!iso) return '';
-        try {
-            return new Date(iso).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false });
-        } catch {
-            return '';
-        }
+        // No catch here: `new Date(x)` never throws, and `toLocaleTimeString` on an invalid date
+        // returns the string 'Invalid Date' rather than throwing — see DEFECTS #92.
+        return new Date(iso).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false });
     }
     /**
      * Build a compact time-window label from ISO start/end strings.

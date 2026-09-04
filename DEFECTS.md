@@ -1126,6 +1126,14 @@ call, not taken here).
 **Impact:** none — the panels already compute the same arrays from the Sets they are handed.
 **Fix:** deleted all three. The Sets they read stay; only the array views nothing consumed are gone.
 
+## 92. `addon/components/orchestrator-workbench.js` — `formatIsoTime` renders "Invalid Date" where it means to render nothing
+
+**Status:** NEEDS DECISION (the dead `catch` is removed; whether to guard the value is Ron's call)
+**Found:** covering the formatter edges. A test passing `"not a date"` expected `''` and got the literal string `Invalid Date`.
+**Evidence:** the method read `try { return new Date(iso).toLocaleTimeString(…) } catch { return '' }`. Neither call can throw: `new Date(x)` returns an Invalid Date object for anything unparseable rather than raising, and `Date.prototype.toLocaleTimeString` on an Invalid Date returns the string `"Invalid Date"` (ECMA-402 §16.4.1 — only `toISOString`/`toJSON` throw a RangeError). So the `catch` arm was unreachable, and the `''` it was written to produce could never be returned. Confirmed in the harness: `formatTimeWindow('not a date', null)` renders `Invalid Date`, and through `formatTimeWindow` that string is also truthy, so it wins the `s || e || ''` fallback.
+**Impact:** a stop row whose `time_window_start` or `time_window_end` cannot be parsed shows the words "Invalid Date" to a dispatcher instead of an empty cell. Nothing in the current API surface is known to send one, so this is latent rather than live — but the author clearly intended the empty string, and the code cannot produce it.
+**Fix:** the unreachable `catch` is deleted (behaviour-neutral: it never ran). Making the *intent* work is a one-liner — `const d = new Date(iso); return Number.isNaN(d.getTime()) ? '' : d.toLocaleTimeString(…)` — but that is a behaviour change on a path no test currently exercises against real data, so it is left for Ron rather than folded into a coverage commit.
+
 ## 4. `tests/` — 223 blueprint scaffolds that were never green
 
 **Status:** OPEN (this is the bulk of Phase B)
