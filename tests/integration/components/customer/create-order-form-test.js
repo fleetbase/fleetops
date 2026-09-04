@@ -304,4 +304,68 @@ module('Integration | Component | customer/create-order-form', function (hooks) 
 
         assert.dom('.leaflet-routing-container, .leaflet-overlay-pane').exists('the routing control is attached to the map');
     });
+
+    test('turning on multiple dropoffs opens the waypoint list with one row', async function (assert) {
+        this.givenOrderConfigs({ id: 'config_1', key: 'transport', name: 'Transport' });
+        await render(hbs`<Customer::CreateOrderForm @order={{this.order}} @map={{this.map}} />`);
+
+        assert.dom('[data-test-drag-item]').doesNotExist('a single-drop order has no waypoint rows');
+
+        // ember-ui's Toggle is a `<span role="checkbox">`; the first one is the multi-drop switch.
+        const [multiDrop] = document.querySelectorAll('[role="checkbox"]');
+        await click(multiDrop);
+
+        assert.dom('[data-test-drag-item]').exists({ count: 1 }, 'switching on adds the first waypoint');
+        assert.strictEqual(multiDrop.getAttribute('aria-checked'), 'true');
+    });
+
+    test('a waypoint takes a place, and one of several can be removed', async function (assert) {
+        this.givenOrderConfigs({ id: 'config_1', key: 'transport', name: 'Transport' });
+        await render(hbs`<Customer::CreateOrderForm @order={{this.order}} @map={{this.map}} />`);
+
+        const [multiDrop] = document.querySelectorAll('[role="checkbox"]');
+        await click(multiDrop);
+
+        // Give the first waypoint a place, which previews the route through it.
+        this.testBed.chosen = this.store.createRecord('place', {
+            street1: 'Depot',
+            location: { type: 'Point', coordinates: [103.8, 1.3] },
+        });
+        const waypointSelect = document.querySelector('[data-test-drag-item] [data-test-model-select="place"]');
+        assert.ok(waypointSelect, 'each waypoint row carries its own place select');
+        await click(waypointSelect);
+
+        // A second waypoint, so that removing one leaves something to route between.
+        const addWaypoint = [...document.querySelectorAll('button')].find((el) => el.textContent.includes('Add Waypoint') || el.textContent.includes('Waypoint'));
+        assert.ok(addWaypoint, 'there is a control to add another waypoint');
+        await click(addWaypoint);
+        assert.dom('[data-test-drag-item]').exists({ count: 2 });
+
+        this.testBed.chosen = this.store.createRecord('place', {
+            street1: 'Site',
+            location: { type: 'Point', coordinates: [103.9, 1.4] },
+        });
+        await click([...document.querySelectorAll('[data-test-drag-item] [data-test-model-select="place"]')][1]);
+
+        const remove = [...document.querySelectorAll('[data-test-drag-item] button')].filter((el) => el.querySelector('.fa-trash'));
+        assert.strictEqual(remove.length, 2, 'each row has its own remove button');
+        await click(remove[1]);
+        assert.dom('[data-test-drag-item]').exists({ count: 1 }, 'removing one leaves the other');
+    });
+
+    test('proof of delivery carries a default method, and giving it up clears one', async function (assert) {
+        this.givenOrderConfigs({ id: 'config_1', key: 'transport', name: 'Transport' });
+        await render(hbs`<Customer::CreateOrderForm @order={{this.order}} @map={{this.map}} />`);
+
+        const toggles = [...document.querySelectorAll('[role="checkbox"]')];
+        const pod = toggles.at(-1);
+
+        await click(pod);
+        assert.true(this.order.pod_required, 'the order is marked as needing proof');
+        assert.strictEqual(this.order.pod_method, 'scan', 'and takes the default method');
+
+        await click(pod);
+        assert.false(this.order.pod_required);
+        assert.strictEqual(this.order.pod_method, null, 'which is given up with it');
+    });
 });

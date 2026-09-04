@@ -1151,6 +1151,14 @@ call, not taken here).
 **Fix:** a one-line `return` after the warning, which is what the `canPreviewRoute` name implies was intended. It is a behaviour change on a path no test covered until now, so it is not folded into this coverage commit.
 **Note on testing it:** the defect currently **cannot be pinned by a test**. The exception escapes Ember's error handling completely — it does not reject the `click` promise, so `assert.rejects` does not see it, and `setupOnerror` does not intercept it either, because Leaflet throws from inside `flyToBounds`' own deferred animation frame rather than from the action. QUnit's global handler catches it and fails the test outright. Once the `return` lands, the path becomes ordinary and a test asserting "warns once and draws nothing" will work; until then this entry is the record.
 
+## 95. `addon/components/customer/create-order-form.js` — `clearWaypoints` calls a method that does not exist
+
+**Status:** OPEN
+**Found:** reading `clearWaypoints` while planning the multi-drop tests, before writing one.
+**Evidence:** line 533 is `this.previewRoute(false);`. **`previewRoute` is not defined anywhere.** `grep -n "previewRoute" addon/components/customer/create-order-form.js` returns that single call site and no declaration; the class is `extends Component` from `@glimmer/component` with no mixins, so nothing supplies it by inheritance. The near-miss names in this file are `previewDraftOrderRoute` and `removeRoutingControlPreview` — the second is almost certainly what was meant, since the call passes `false` where `previewDraftOrderRoute` takes `(payload, waypoints, isMultipleDropoffOrder)`. The guard above it is `if (this.isViewingRoutePreview)`, and `isViewingRoutePreview` is set true by `previewDraftOrderRoute`, so the call is reached as soon as a route has been previewed once.
+**Impact:** turning multiple-dropoffs **off** after entering any waypoint address throws `TypeError: this.previewRoute is not a function`. `toggleMultiDropOrder`'s else-branch reads the first two waypoint places, calls `setPayloadPlace` for each — which previews the route and sets `isViewingRoutePreview` — and then calls `clearWaypoints()`, which takes the exception. The waypoints are never cleared and the pickup/dropoff the user was being switched back to are left half-applied.
+**Fix:** almost certainly `this.removeRoutingControlPreview()`, matching what `previewDraftOrderRoute` itself calls first. Worth confirming the intent against the near-identical `components/order/form/route.js`, which has the same toggle but no such call. Not folded into a coverage commit: it is a behaviour change on a path that has never run.
+
 ## 4. `tests/` — 223 blueprint scaffolds that were never green
 
 **Status:** OPEN (this is the bulk of Phase B)
