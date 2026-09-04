@@ -1159,6 +1159,14 @@ call, not taken here).
 **Impact:** turning multiple-dropoffs **off** after entering any waypoint address throws `TypeError: this.previewRoute is not a function`. `toggleMultiDropOrder`'s else-branch reads the first two waypoint places, calls `setPayloadPlace` for each — which previews the route and sets `isViewingRoutePreview` — and then calls `clearWaypoints()`, which takes the exception. The waypoints are never cleared and the pickup/dropoff the user was being switched back to are left half-applied.
 **Fix:** almost certainly `this.removeRoutingControlPreview()`, matching what `previewDraftOrderRoute` itself calls first. Worth confirming the intent against the near-identical `components/order/form/route.js`, which has the same toggle but no such call. Not folded into a coverage commit: it is a behaviour change on a path that has never run.
 
+## 96. `addon/components/customer/create-order-form.js` — the quote request sends Ember's `inject` decorator as its `service`
+
+**Status:** OPEN
+**Found:** reading `getQuotes` before writing its tests, then confirmed by asserting on the request body the component actually posts.
+**Evidence:** `getQuotes` builds the `service-quotes/preliminary` body as `{ payload, distance, time, service, service_type, facilitator, scheduled_at, is_route_optimized }`. Every other key is a local declared a few lines above — **`service` is not**. `grep -n "let service\b\|const service\b\|var service\b"` over the file returns nothing, and the only `service` in scope is line 4's `import { inject as service } from '@ember/service'`. So the shorthand resolves to Ember's `inject` **decorator function**, not to any value from this form. No linter catches it: `no-undef` is satisfied by the import, and `no-unused-vars` sees `service` used. The harness confirms it — the stubbed `fetch.post` receives a body whose `service` is `typeof 'function'`.
+**Impact:** the preliminary quote request never carries a service. `JSON.stringify` drops function-valued keys, so the field is simply absent from the wire payload rather than malformed — quotes come back priced without whatever `service` was meant to select. Nothing throws, which is why it has gone unnoticed.
+**Fix:** decide what was intended and declare it. The neighbouring locals suggest `service` was meant to be the selected service rate — `this.selectedServiceRate?.id` or similar, matching `service_type` being `this.order.type`. That is a product question about what the endpoint expects, so it is Ron's call rather than a mechanical fix; the test added alongside this entry pins the current behaviour and names this defect.
+
 ## 4. `tests/` — 223 blueprint scaffolds that were never green
 
 **Status:** OPEN (this is the bulk of Phase B)

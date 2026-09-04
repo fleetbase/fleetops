@@ -60,6 +60,8 @@ module('Integration | Component | customer/create-order-form', function (hooks) 
     hooks.beforeEach(function () {
         const test = this;
         this.gets = [];
+        this.posts = [];
+        this.postResponses = {};
         this.notified = [];
         this.getResponses = {
             'fleet-ops/settings/customer-enabled-order-configs': ['config_1'],
@@ -72,6 +74,11 @@ module('Integration | Component | customer/create-order-form', function (hooks) 
                 get(path, params, options) {
                     test.gets.push([path, params, options]);
                     const answer = test.getResponses[path];
+                    return typeof answer === 'function' ? answer() : Promise.resolve(answer);
+                }
+                post(path, body, options) {
+                    test.posts.push([path, body, options]);
+                    const answer = test.postResponses[path];
                     return typeof answer === 'function' ? answer() : Promise.resolve(answer);
                 }
             }
@@ -482,6 +489,70 @@ module('Integration | Component | customer/create-order-form', function (hooks) 
             this.universeEvents.map(([name]) => name),
             ['fleet-ops.order.creating'],
             'the creating event fired, but nothing claims it was created'
+        );
+    });
+
+    test('a routed order asks for preliminary quotes and takes the first', async function (assert) {
+        this.givenOrderConfigs({ id: 'config_1', key: 'transport', name: 'Transport' });
+        this.postResponses['service-quotes/preliminary'] = [{ id: 'quote_1' }, { id: 'quote_2' }];
+
+        await render(hbs`<Customer::CreateOrderForm @order={{this.order}} @map={{this.map}} />`);
+        await chooseRoute(this);
+
+        const quoteRequests = this.posts.filter(([path]) => path === 'service-quotes/preliminary');
+        assert.true(quoteRequests.length >= 1, 'quotes are asked for once there is a route');
+
+        const [, body, options] = quoteRequests.at(-1);
+        assert.strictEqual(body.service_type, 'transport', "the order config's key is sent as the service type");
+        assert.deepEqual(options, { normalizeToEmberData: true, normalizeModelType: 'service-quote' }, 'and the response is normalised into records');
+
+        // The `service` key resolves to Ember's `inject` decorator rather than any value from
+        // this form, so it goes over as a function and JSON drops it — see DEFECTS #96.
+        assert.strictEqual(typeof body.service, 'function', 'the service field is the imported decorator, not a service');
+    });
+
+    test('quotes that come back as something other than a list are taken as none', async function (assert) {
+        this.givenOrderConfigs({ id: 'config_1', key: 'transport', name: 'Transport' });
+        this.postResponses['service-quotes/preliminary'] = { error: 'no rates configured' };
+
+        await render(hbs`<Customer::CreateOrderForm @order={{this.order}} @map={{this.map}} />`);
+        await chooseRoute(this);
+
+        assert.deepEqual(this.notified, [], 'a shapeless response is not an error');
+        assert.true(
+            this.posts.some(([path]) => path === 'service-quotes/preliminary'),
+            'the request was still made'
+        );
+    });
+
+    test('a quote request the server refuses is reported', async function (assert) {
+        this.givenOrderConfigs({ id: 'config_1', key: 'transport', name: 'Transport' });
+        this.postResponses['service-quotes/preliminary'] = () => Promise.reject(new Error('rating is down'));
+
+        await render(hbs`<Customer::CreateOrderForm @order={{this.order}} @map={{this.map}} />`);
+        await chooseRoute(this);
+
+        assert.deepEqual(this.notified.at(-1), ['serverError', 'rating is down']);
+    });
+
+    test('quotes are not asked for while a checkout session is being completed', async function (assert) {
+        this.givenOrderConfigs({ id: 'config_1', key: 'transport', name: 'Transport' });
+        this.searchParams = { checkout_session_id: 'cs_1', service_quote: 'quote_1' };
+        // `restoreFromServiceQuote` reads the quote with `.get(...)`, so it needs a record-like object.
+        this.store.findRecord = () =>
+            Promise.resolve({
+                id: 'quote_1',
+                get(key) {
+                    return this[key];
+                },
+            });
+
+        await render(hbs`<Customer::CreateOrderForm @order={{this.order}} @map={{this.map}} />`);
+
+        assert.deepEqual(
+            this.posts.filter(([path]) => path === 'service-quotes/preliminary'),
+            [],
+            'the form is finishing a purchase, not re-pricing it'
         );
     });
 });
