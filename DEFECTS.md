@@ -1046,6 +1046,22 @@ call, not taken here).
 **Impact:** None. `remember` was a switch nothing could throw, and the rest are defensive arms for inputs their own callers rule out.
 **Fix:** The `remember` parameter and its guard are deleted, along with the `true` at the call site. The other six carry an `istanbul ignore` naming the specific thing that closes them. With those settled the file is at 100% on all four metrics.
 
+## 82. `addon/services/leaflet-layer-visibility-manager.js` — `assignPane` put a pane *object* where Leaflet wants a pane name
+
+**Status:** FIXED
+**Found:** Reading the service before covering it; `ensurePane` returns a pair but `assignPane` treats the whole return value as the name.
+**Evidence:** `ensurePane` returns `{ pane, paneName }`. `assignPane` does `const paneName = this.ensurePane(category)` and then `layer.options = { ...layer.options, pane: paneName }` — so `options.pane` holds the `{ pane, paneName }` object, not the string. Leaflet's `Map.getPane` is `typeof pane === 'string' ? this._panes[pane] : pane` (leaflet-src.js:4047), so it hands that object straight back, and the object is then used where a DOM parent is expected. The service's own `#getPaneForLayer` reads the same `layer.options.pane`, gets the object back, and `pane.style?.display` is `undefined` — so `isLayerHidden`'s category check silently never fires for a layer routed this way.
+**Impact:** Latent rather than live: `grep -rn "assignPane\|ensurePane" addon/` finds no caller outside the service, so nothing currently routes a layer through it. Any consumer that started to would get a layer with a broken `pane` option and a category check that never reports it hidden.
+**Fix:** `assignPane` takes `.paneName` off the pair. One line, in its own commit.
+
+## 83. `addon/services/leaflet-draw-restriction.js` — an entire service nothing uses, reading two collaborators it never declares
+
+**Status:** NEEDS DECISION
+**Found:** Picking the next batch from the files the Leaflet unlock opened.
+**Evidence:** Nothing in `addon/` references the service: `grep -rn "leaflet-draw-restriction\|leafletDrawRestriction"` finds only its own file, the generated `app/` re-export and the blueprint scaffold test. Inside it, `#bindRestrictionGuards` returns immediately on `if (!this.map ...)` and `this.map` is never declared, injected or assigned anywhere in the class — so the guards can only ever bind if something outside reaches in and sets `.map` on the service instance. It also calls `this.notifications?.warning?.()` and `this.notifications?.error?.()` in six places, and `notifications` is likewise never injected, so every one of those is a no-op. The `app/` re-export does make it resolvable to the host console, so a host lookup is possible in principle — but a host that looked it up would get an inert object unless it also assigned `.map` itself, which is undocumented.
+**Impact:** None today — the code cannot run. The 170 units it contributes sit in the coverage denominator.
+**Fix:** Ron's call, because it turns on intent. Either **wire it up** — inject `notifications`, give it a real map handle (the sibling `leaflet-layer-visibility-manager` takes its map from `leafletMapManager.map`, which is the obvious shape), and call `setDrawRestrictionPolygon` from wherever service-area drawing happens — or **delete it** as abandoned work. I have not picked one; covering an inert service to 100% would be busywork if the answer is delete.
+
 ## 4. `tests/` — 223 blueprint scaffolds that were never green
 
 **Status:** OPEN (this is the bulk of Phase B)
