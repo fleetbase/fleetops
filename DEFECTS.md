@@ -1022,6 +1022,14 @@ call, not taken here).
 **Impact:** None.
 **Fix:** The two unused parameter defaults are deleted. The three fallbacks keep their behaviour — they are the contrast and shape guards for inputs this component does not currently produce — and each carries an `istanbul ignore` naming the specific thing that makes it unreachable. The polyline pair is hoisted into one `primaryStyle` const so a single pragma covers both; two adjacent pragmas on consecutive object properties did not both attach.
 
+## 79. `addon/components/work-order/form.js` — six `?? null` defaults on lookups that always hit
+
+**Status:** FIXED
+**Found:** Profiling the file's branches after its suite reached 58/59 statements with 6 of 30 branches still unreached, all the same shape.
+**Evidence:** All six guard a lookup whose key is itself drawn from a module constant in the same file. `TYPE_TO_MODEL[typeValue] ?? null` (twice, in the constructor) — `typeValue` can only be a *value* of `TARGET_MODEL_TO_TYPE` or `ASSIGNEE_MODEL_TO_TYPE`, and every one of those (`fleet-ops:vehicle`, `fleet-ops:equipment`, `fleet-ops:vendor`, `fleet-ops:contact`, `Auth:User`) is a key of `TYPE_TO_MODEL`; the `if (typeValue)` above has already rejected the only miss the table itself can produce. `targetTypeOptions.find(...) ?? null` and `assigneeTypeOptions.find(...) ?? null` — those two option lists hold exactly the values those tables map to, so the find always matches. `TYPE_TO_MODEL[option.value] ?? null` in `onTargetTypeChange` and `onAssigneeTypeChange` — `option` is handed over by the PowerSelect whose `@options` are those same two lists. The two `?? null` on the `TARGET_MODEL_TO_TYPE` / `ASSIGNEE_MODEL_TO_TYPE` lookups themselves are *not* dead — an unrecognised relationship reaches them — and are kept, with a test.
+**Impact:** None. Even on an impossible miss the field would hold `undefined` rather than `null`, and every consumer — `{{#if this.targetModelName}}` and PowerSelect's `@selected` — treats the two identically.
+**Fix:** The six unreachable `?? null` are deleted.
+
 ## 4. `tests/` — 223 blueprint scaffolds that were never green
 
 **Status:** OPEN (this is the bulk of Phase B)
