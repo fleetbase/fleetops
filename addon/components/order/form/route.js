@@ -22,6 +22,7 @@ export default class OrderFormRouteComponent extends Component {
     @service notifications;
     @service placeActions;
     @service orderCreation;
+    @service intl;
     @tracked multipleWaypoints = false;
     @tracked routingControl;
     @tracked route;
