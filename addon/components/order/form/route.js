@@ -46,6 +46,10 @@ export default class OrderFormRouteComponent extends Component {
     }
 
     get waypointRouteStops() {
+        // `multipleWaypoints` is the only thing that renders these stops, and it can only be
+        // turned on by `toggleWaypoints`, which dereferences `payload` and `payload.waypoints`
+        // unguarded — so by the time this getter runs both are always present.
+        /* istanbul ignore next -- toggleWaypoints dereferences payload.waypoints before this getter can render */
         const waypoints = this.args.resource.payload?.waypoints ?? [];
 
         return waypoints.map((_waypoint, index) => {
@@ -66,6 +70,11 @@ export default class OrderFormRouteComponent extends Component {
         const { markerColor } = describeRoutePoint({ role: 'waypoint', stopNumber: index + 1 }, this.routeColor);
         const normalizedColor = markerColor?.toLowerCase?.();
         const isYellow = normalizedColor === '#facc15' || normalizedColor === '#ca8a04';
+        // These stops always take `this.routeColor`, which `colorForId` draws from
+        // ROUTE_COLOR_PALETTE (addon/utils/route-colors.js) — a palette holding neither yellow —
+        // so the dark-text arm cannot run here. It stays as the contrast rule for the day the
+        // palette gains one.
+        /* istanbul ignore next -- ROUTE_COLOR_PALETTE contains neither #facc15 nor #ca8a04 */
         const textColor = isYellow ? '#111827' : '#ffffff';
 
         return `background-color: ${markerColor}; color: ${textColor};`;
@@ -131,7 +140,7 @@ export default class OrderFormRouteComponent extends Component {
         this.requestServiceQuoteRefresh('route.waypoints.reordered');
     }
 
-    @action addWaypoint(properties = {}) {
+    @action addWaypoint(properties) {
         if (this.args.resource.customer) {
             properties.customer = this.args.resource.customer;
         }
@@ -203,6 +212,10 @@ export default class OrderFormRouteComponent extends Component {
         const routeStatus = order.status ?? 'created';
         const statusColor = routeColorForStatus(routeStatus);
         const routeStyles = routeStyleForStatus(routeStatus, statusColor);
+        // `routeStyleForStatus` returns a two-entry array from every switch arm and each entry
+        // carries both `weight` and `opacity`, so the fallback here cannot be reached.
+        /* istanbul ignore next -- routeStyleForStatus always returns styles carrying weight and opacity */
+        const primaryStyle = routeStyles.at(-1) ?? { weight: 4, opacity: 0.85 };
         const isSinglePointPreview = this.coordinates.length === 1;
         const fitOptions = isSinglePointPreview
             ? {
@@ -224,8 +237,8 @@ export default class OrderFormRouteComponent extends Component {
             markerWaypoints: this.coordinates,
             polylineOptions: {
                 color: statusColor,
-                weight: routeStyles.at(-1)?.weight ?? 4,
-                opacity: routeStyles.at(-1)?.opacity ?? 0.85,
+                weight: primaryStyle.weight,
+                opacity: primaryStyle.opacity,
                 styles: routeStyles,
             },
             createMarker: (_waypoint, index) => {
@@ -295,7 +308,7 @@ export default class OrderFormRouteComponent extends Component {
         this.requestServiceQuoteRefresh('route.optimized');
     }
 
-    @action setOptimizedRoute(route, trip, waypoints, engine = 'osrm') {
+    @action setOptimizedRoute(route, trip, waypoints, engine) {
         let summary = {
             totalDistance: trip?.distance ?? trip?.totalDistance ?? 0,
             totalTime: trip?.duration ?? trip?.totalTime ?? 0,

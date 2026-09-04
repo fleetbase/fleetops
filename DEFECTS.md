@@ -1014,6 +1014,14 @@ call, not taken here).
 **Impact:** None.
 **Fix:** `focusPlace` and the two guards are deleted.
 
+## 78. `addon/components/order/form/route.js` — two parameter defaults no caller omits and three defensive fallbacks with no reachable input
+
+**Status:** FIXED
+**Found:** Profiling the file's last 2 statements and 8 branches after its suite reached 123/125.
+**Evidence:** Each was traced to the thing that makes it unreachable. `addWaypoint(properties = {})` — all four call sites pass attributes: the three inside `toggleWaypoints` and `{{fn this.addWaypoint (hash)}}` on line 27 of the template. `setOptimizedRoute(route, trip, waypoints, engine = 'osrm')` — its only caller is `handleRouteOptimization`, which already applies that same default while destructuring, so it never passes `undefined`. `waypointRouteStops`'s `payload?.waypoints ?? []` — the getter only renders under `{{#if this.multipleWaypoints}}`, and the only thing that turns that flag on is `toggleWaypoints`, which dereferences `payload` and pushes into `payload.waypoints` unguarded first. `badgeStyleForWaypoint`'s dark-text arm — `role` is hardcoded `'waypoint'`, so `describeRoutePoint` returns `this.routeColor`, which `colorForId` draws from `ROUTE_COLOR_PALETTE`; that ten-colour palette holds neither `#facc15` nor `#ca8a04`. `routeStyles.at(-1)?.weight ?? 4` and `?? 0.85` — `routeStyleForStatus` returns a two-entry array from every switch arm and each entry carries both keys.
+**Impact:** None.
+**Fix:** The two unused parameter defaults are deleted. The three fallbacks keep their behaviour — they are the contrast and shape guards for inputs this component does not currently produce — and each carries an `istanbul ignore` naming the specific thing that makes it unreachable. The polyline pair is hoisted into one `primaryStyle` const so a single pragma covers both; two adjacent pragmas on consecutive object properties did not both attach.
+
 ## 4. `tests/` — 223 blueprint scaffolds that were never green
 
 **Status:** OPEN (this is the bulk of Phase B)

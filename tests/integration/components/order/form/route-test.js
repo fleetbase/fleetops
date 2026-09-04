@@ -300,10 +300,25 @@ module('Integration | Component | order/form/route', function (hooks) {
         await render(hbs`<Order::Form::Route @resource={{this.resource}} />`);
         await click('[role="checkbox"]');
 
-        this.optimizeError = new Error('vroom refused the trip');
+        const sorted = this.resource.payload.waypoints.slice().reverse();
+        this.optimizeResult = {
+            sortedWaypoints: sorted,
+            route: [[30.27, -97.74]],
+            trip: { distance: 4200, duration: 1800 },
+            result: { waypoints: sorted },
+            engine: 'vroom',
+        };
         this.calls.length = 0;
         await click('[data-test-engine-select]');
         assert.strictEqual(this.calls.find(([kind]) => kind === 'optimize')[1], 'vroom', 'the chosen engine is used');
+        assert.true(this.resource.optimized);
+        assert.strictEqual(this.resource.route.engine, 'vroom', 'the route records the engine that produced it');
+        assert.strictEqual(this.resource.route.summary.totalDistance, 4200);
+
+        this.optimizeResult = null;
+        this.optimizeError = new Error('vroom refused the trip');
+        this.calls.length = 0;
+        await click('[data-test-engine-select]');
         assert.deepEqual(this.calls.at(-1), ['error', 'vroom refused the trip'], 'the engine error reaches the user verbatim');
     });
 
@@ -470,5 +485,50 @@ module('Integration | Component | order/form/route', function (hooks) {
         }
         assert.strictEqual(this.resource.payload.dropoff, null, 'the dropoff is cleared');
         assert.ok(this.calls.some(([kind, reason]) => kind === 'refresh' && reason === 'route.dropoff.changed'));
+    });
+
+    test('collapsing a route of unplaced stops leaves the payload places empty', async function (assert) {
+        this.set('resource', this.makeOrder());
+
+        await render(hbs`<Order::Form::Route @resource={{this.resource}} />`);
+        await click('[role="checkbox"]');
+        await click('[data-test-waypoint-add]');
+        assert.strictEqual(waypointRows().length, 2, 'two stops, neither of them placed');
+
+        this.calls.length = 0;
+        await click('[role="checkbox"]');
+
+        assert.strictEqual(waypointRows().length, 0, 'the stops are cleared');
+        assert.strictEqual(this.resource.payload.pickup, null, 'an unplaced first stop promotes nothing to pickup');
+        assert.strictEqual(this.resource.payload.dropoff, null, 'nor the second to dropoff');
+        assert.deepEqual(
+            this.calls.filter(([kind]) => kind === 'refresh').map(([, reason]) => reason),
+            ['route.waypoints.cleared', 'route.waypoints.toggled'],
+            'only the clear and the toggle are reported'
+        );
+    });
+
+    test('the preview tags its routing control with the assigned driver', async function (assert) {
+        this.set('resource', this.makeOrder({ driver_assigned: { id: 'driver_1' } }));
+        this.resource.payload.pickup = this.makePlace({ public_id: 'place_pickup' });
+
+        await render(hbs`<Order::Form::Route @resource={{this.resource}} />`);
+        // Nothing previews on render; switching the route on is what draws it.
+        await click('[role="checkbox"]');
+
+        assert.strictEqual(this.lastRoutingOptions.tag, 'driver_1', 'the control is tagged with the driver it belongs to');
+
+        // The map adapter runs this filter over the handles already on the map to decide which of
+        // them this preview may replace.
+        const { filter } = this.lastRoutingOptions.removeOptions;
+        assert.true(filter({ tag: 'driver_1' }), "a handle for this order's driver is replaced");
+        assert.false(filter({ tag: 'driver_2' }), "another driver's handle is left alone");
+        assert.false(filter(undefined), 'and an absent handle matches nothing');
+
+        // The adapter hands the drawn route back once the engine answers.
+        this.calls.length = 0;
+        this.lastRoutingOptions.onRouteFound({ coordinates: [[30.27, -97.74]], summary: { totalDistance: 900, totalTime: 300 } });
+        assert.strictEqual(this.resource.route.summary.totalDistance, 900, 'the found route is stored on the order');
+        assert.deepEqual(this.calls.at(-1), ['refresh', 'route.changed', 'order_1']);
     });
 });
