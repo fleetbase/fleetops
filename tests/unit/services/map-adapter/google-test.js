@@ -156,8 +156,65 @@ function installGoogleMapsStub(context) {
         }
     }
 
+    class StubInfoWindow {
+        constructor(options = {}) {
+            Object.assign(this, options);
+            this.openCalls = [];
+            this.closeCalls = 0;
+            context.infoWindows.push(this);
+        }
+
+        open(options) {
+            this.openCalls.push(options);
+        }
+
+        close() {
+            this.closeCalls += 1;
+        }
+    }
+
+    class StubDataLayer {
+        constructor(options = {}) {
+            Object.assign(this, options);
+            this.geoJson = [];
+            this.styles = [];
+            this.setMapCalls = [];
+            context.dataLayers.push(this);
+        }
+
+        addGeoJson(geojson) {
+            this.geoJson.push(geojson);
+        }
+
+        setStyle(style) {
+            this.styles.push(style);
+        }
+
+        setMap(map) {
+            this.setMapCalls.push(map);
+        }
+    }
+
     const googleStub = {
         maps: {
+            InfoWindow: StubInfoWindow,
+            Data: StubDataLayer,
+            ImageMapType: class StubImageMapType {
+                constructor(options = {}) {
+                    Object.assign(this, options);
+                    context.imageMapTypes.push(this);
+                }
+            },
+            geometry: {
+                spherical: {
+                    computeDistanceBetween(from, to) {
+                        // Rough metres-per-degree, enough to assert the arguments arrived intact.
+                        const dLat = to.lat() - from.lat();
+                        const dLng = to.lng() - from.lng();
+                        return Math.sqrt(dLat * dLat + dLng * dLng) * 111320;
+                    },
+                },
+            },
             Polygon: StubOverlay,
             Polyline: StubOverlay,
             Circle: StubOverlay,
@@ -191,7 +248,12 @@ function installGoogleMapsStub(context) {
             event: {
                 trigger() {},
                 addListenerOnce(target, eventName, handler) {
-                    context.onceListeners.push([eventName, handler]);
+                    const entry = [eventName, handler];
+                    context.onceListeners.push(entry);
+                    return entry;
+                },
+                removeListener(listener) {
+                    context.removedListeners.push(listener);
                 },
             },
             importLibrary(name) {
@@ -235,6 +297,10 @@ module('Unit | Service | map-adapter/google', function (hooks) {
         this.advancedMarkers = [];
         this.onceListeners = [];
         this.overlays = [];
+        this.infoWindows = [];
+        this.dataLayers = [];
+        this.imageMapTypes = [];
+        this.removedListeners = [];
         installGoogleMapsStub(this);
         this.service = this.owner.lookup('service:map-adapter/google');
 
@@ -243,11 +309,28 @@ module('Unit | Service | map-adapter/google', function (hooks) {
             const calls = [];
             const map = {
                 calls,
+                listeners: [],
                 setCenter: (center) => calls.push(['setCenter', center]),
                 setZoom: (zoom) => calls.push(['setZoom', zoom]),
                 panTo: (center) => calls.push(['panTo', center]),
                 fitBounds: (bounds, padding) => calls.push(['fitBounds', bounds, padding]),
                 getZoom: () => 12,
+                addListener: (event, handler) => {
+                    const entry = { event, handler };
+                    calls.push(['addListener', event]);
+                    map.listeners.push(entry);
+                    return entry;
+                },
+                overlayMapTypes: {
+                    cleared: 0,
+                    inserted: [],
+                    clear() {
+                        this.cleared += 1;
+                    },
+                    insertAt(index, layer) {
+                        this.inserted.push([index, layer]);
+                    },
+                },
                 ...overrides,
             };
             this.service._map = map;
@@ -1088,5 +1171,298 @@ module('Unit | Service | map-adapter/google', function (hooks) {
         const plainLabel = { map: 'stale' };
         this.service.hideLayer(Object.assign({ setMap() {} }, { __labelMarker: plainLabel }));
         assert.strictEqual(plainLabel.map, null, 'a label with no setMap is detached by its map property');
+    });
+
+    test('drawing modes only start once a drawing manager exists', function (assert) {
+        this.useMap();
+
+        this.service.enableDrawingMode('polygon');
+        assert.strictEqual(this.service._drawingOnCreate, undefined, 'nothing is armed without a manager');
+
+        const modes = [];
+        const maps = [];
+        this.service._drawingManager = {
+            setDrawingMode: (mode) => modes.push(mode),
+            setMap: (map) => maps.push(map),
+        };
+
+        for (const type of ['polygon', 'circle', 'rectangle', 'polyline', 'marker']) {
+            this.service.enableDrawingMode(type);
+        }
+        assert.deepEqual(modes, ['polygon', 'circle', 'rectangle', 'polyline', 'marker'], 'every shape maps to its overlay type');
+        assert.strictEqual(maps.at(-1), this.service._map, 'the manager is put on the map');
+
+        this.service.enableDrawingMode('hexagon');
+        assert.strictEqual(modes.at(-1), null, 'an unsupported shape clears the mode');
+
+        const created = [];
+        this.service.enableDrawingMode('polygon', { onCreate: (shape) => created.push(shape) });
+        assert.strictEqual(typeof this.service._drawingOnCreate, 'function', 'a create handler is armed');
+        this.service.enableDrawingMode('polygon', { onCreate: 'not a function' });
+        assert.strictEqual(this.service._drawingOnCreate, null, 'and cleared when none is given');
+    });
+
+    test('disabling drawing tells listeners it stopped', function (assert) {
+        this.useMap();
+        const stops = [];
+        this.service.on('draw:drawstop', (payload) => stops.push(payload));
+
+        const modes = [];
+        this.service._drawingManager = { setDrawingMode: (mode) => modes.push(mode), setMap() {} };
+        this.service._drawingOnCreate = () => {};
+
+        this.service.disableDrawingMode();
+        assert.deepEqual(modes, [null], 'the mode is cleared');
+        assert.strictEqual(this.service._drawingOnCreate, null);
+        assert.deepEqual(stops, [{}], 'and the synthetic stop reaches listeners');
+
+        this.service._drawingManager = null;
+        this.service.disableDrawingMode();
+        assert.strictEqual(stops.length, 2, 'it still fires without a manager');
+    });
+
+    test('a listener that throws does not stop the others hearing the event', function (assert) {
+        this.useMap();
+        const seen = [];
+
+        this.service.on('draw:drawstop', () => {
+            throw new Error('bad listener');
+        });
+        this.service.on('draw:drawstop', () => seen.push('second'));
+
+        this.service.disableDrawingMode();
+        assert.deepEqual(seen, ['second'], 'the second handler still runs');
+    });
+
+    test('popups open on the map and close by id', function (assert) {
+        assert.strictEqual(this.service.openPopup('popup_1', 1.3, 103.8, '<b>Depot</b>'), null, 'nothing opens without a map');
+
+        const map = this.useMap();
+        const popup = this.service.openPopup('popup_1', 1.3, 103.8, '<b>Depot</b>');
+
+        assert.strictEqual(this.service._popups.get('popup_1'), popup);
+        assert.strictEqual(popup.content, '<b>Depot</b>');
+        assert.deepEqual(popup.position, { lat: 1.3, lng: 103.8 });
+        assert.deepEqual(popup.openCalls, [{ map }]);
+
+        const element = document.createElement('div');
+        const fromElement = this.service.openPopup('popup_2', 1.3, 103.8, element);
+        assert.strictEqual(fromElement.content, element, 'an element is passed through as content');
+
+        this.service.closePopup('popup_1');
+        assert.strictEqual(popup.closeCalls, 1);
+        assert.strictEqual(this.service._popups.size, 1);
+
+        this.service.closePopup('popup_1');
+        assert.strictEqual(popup.closeCalls, 1, 'closing an unknown popup is harmless');
+    });
+
+    test('context menus are registered, read back and removed', function (assert) {
+        const items = [{ label: 'Centre here' }];
+
+        assert.deepEqual(this.service.getContextMenuItems('map'), [], 'an unregistered target offers nothing');
+
+        this.service.registerContextMenu('map', items);
+        assert.strictEqual(this.service.getContextMenuItems('map'), items);
+
+        const el = document.createElement('div');
+        document.body.appendChild(el);
+        this.service._contextMenuEls.set('map', el);
+
+        this.service.removeContextMenu('map');
+        assert.deepEqual(this.service.getContextMenuItems('map'), [], 'the items are gone');
+        assert.notOk(el.parentNode, 'and the element it rendered is detached');
+
+        this.service.removeContextMenu('map');
+        assert.ok(true, 'removing an unregistered target is harmless');
+    });
+
+    test('a context menu renders at the pointer and closes when an item is chosen', function (assert) {
+        this.useMap();
+        const chosen = [];
+
+        try {
+            this.service.showContextMenu(null, [{ label: 'Centre here' }]);
+            this.service.showContextMenu({ latlng: { lat: 1.3, lng: 103.8 } }, []);
+            assert.notOk(document.querySelector('.fleetops-google-contextmenu'), 'neither a missing point nor an empty menu opens anything');
+
+            this.service.showContextMenu({ latlng: { lat: 'nowhere', lng: 'nowhere' } }, [{ label: 'Centre here', action() {} }]);
+            assert.notOk(document.querySelector('.fleetops-google-contextmenu'), 'nor a point that is not a point');
+
+            this.service.showContextMenu({ latlng: { lat: 1.3, lng: 103.8 }, originalEvent: { clientX: 120, clientY: 80 } }, [
+                { label: 'Centre here', action: (payload) => chosen.push(payload.latlng) },
+                { separator: true },
+                { label: 'Add place', action() {} },
+            ]);
+
+            const menu = document.querySelector('.fleetops-google-contextmenu');
+            assert.ok(menu, 'the menu is rendered');
+            assert.strictEqual(menu.style.left, '120px', 'at the pointer');
+            assert.strictEqual(menu.style.top, '80px');
+            assert.strictEqual(menu.querySelectorAll('.fleetops-google-contextmenu-item').length, 2);
+            assert.strictEqual(menu.querySelectorAll('.fleetops-google-contextmenu-separator').length, 1);
+
+            menu.querySelector('.fleetops-google-contextmenu-item').dispatchEvent(new MouseEvent('click', { cancelable: true }));
+            assert.deepEqual(chosen, [{ lat: 1.3, lng: 103.8 }], 'the action is handed the point that was clicked');
+            assert.notOk(document.querySelector('.fleetops-google-contextmenu'), 'and choosing an item closes the menu');
+
+            this.service.showContextMenu({ latlng: { lat: () => 1.3, lng: () => 103.8 } }, [{ label: 'Centre here', action() {} }]);
+            const fromFunctions = document.querySelector('.fleetops-google-contextmenu');
+            assert.ok(fromFunctions, 'a point exposed as functions is read the same way');
+            assert.strictEqual(fromFunctions.style.left, '0px', 'and with no pointer it sits at the origin');
+
+            this.service.showContextMenu({ latlng: { lat: 1.4, lng: 103.9 } }, [{ label: 'Second', action() {} }]);
+            assert.strictEqual(document.querySelectorAll('.fleetops-google-contextmenu').length, 1, 'a second menu replaces the first');
+        } finally {
+            this.service.closeContextMenu();
+            document.querySelector('.fleetops-google-contextmenu')?.remove();
+        }
+    });
+
+    test('closeContextMenu runs the cleanup once and forgets it', function (assert) {
+        let cleaned = 0;
+        this.service._contextMenuCleanup = () => (cleaned += 1);
+
+        this.service.closeContextMenu();
+        this.service.closeContextMenu();
+
+        assert.strictEqual(cleaned, 1, 'the cleanup runs once and is dropped');
+        assert.strictEqual(this.service._contextMenuCleanup, null);
+    });
+
+    test('map events are subscribed under their Google names and unsubscribed', function (assert) {
+        const handler = () => {};
+        this.service.on('click', handler);
+        assert.strictEqual(this.service._eventListeners.size, 0, 'nothing is wired before there is a map');
+
+        const map = this.useMap();
+        const seen = [];
+
+        this.service.on('click', (payload) => seen.push(payload));
+        assert.deepEqual(map.calls.at(-1), ['addListener', 'click']);
+
+        this.service.on('moveend', () => {});
+        assert.deepEqual(map.calls.at(-1), ['addListener', 'idle'], 'moveend listens for Google s idle');
+        this.service.on('zoomend', () => {});
+        assert.deepEqual(map.calls.at(-1), ['addListener', 'zoom_changed']);
+        this.service.on('load', () => {});
+        assert.deepEqual(map.calls.at(-1), ['addListener', 'tilesloaded']);
+        this.service.on('contextmenu', () => {});
+        assert.deepEqual(map.calls.at(-1), ['addListener', 'rightclick']);
+
+        map.listeners[0].handler({ latLng: { lat: () => 1.3, lng: () => 103.8 }, domEvent: 'the-dom-event' });
+        assert.deepEqual(seen[0].latlng, { lat: 1.3, lng: 103.8 }, 'the payload is normalised');
+        assert.strictEqual(seen[0].type, 'click');
+        assert.strictEqual(seen[0].originalEvent, 'the-dom-event');
+
+        map.listeners[0].handler(null);
+        assert.deepEqual(seen[1], { type: 'click' }, 'an empty event carries only its name');
+
+        map.listeners[0].handler({ noLatLng: true });
+        assert.strictEqual(seen[2].latlng, null, 'an event with no point reports none');
+        assert.deepEqual(seen[2].originalEvent, { noLatLng: true }, 'and falls back to the raw event');
+    });
+
+    test('a draw listener is held on the adapter rather than the map', function (assert) {
+        const map = this.useMap();
+        const seen = [];
+        const handler = (payload) => seen.push(payload);
+
+        this.service.on('draw:created', handler);
+        assert.deepEqual(
+            map.calls.filter(([kind]) => kind === 'addListener'),
+            [],
+            'nothing is wired onto the Google map'
+        );
+        assert.strictEqual(this.service._eventListeners.get('draw:created').length, 1);
+
+        this.service.on('draw:created', () => seen.push('second'));
+        assert.strictEqual(this.service._eventListeners.get('draw:created').length, 2, 'a second listener joins the first');
+
+        this.service.off('draw:created', handler);
+        assert.strictEqual(this.service._eventListeners.get('draw:created').length, 1, 'and can be removed on its own');
+    });
+
+    test('unsubscribing removes the Google listener too', function (assert) {
+        const map = this.useMap();
+        const handler = () => {};
+
+        this.service.on('click', handler);
+        const listener = map.listeners[0];
+
+        this.service.off('click', handler);
+        assert.deepEqual(this.removedListeners, [listener], 'the Google listener is released');
+        assert.strictEqual(this.service._eventListeners.get('click').length, 0);
+
+        this.service.off('click', handler);
+        this.service.off('zoomend', handler);
+        assert.strictEqual(this.removedListeners.length, 1, 'unsubscribing something that is not there does nothing');
+    });
+
+    test('a one-shot listener fires once, for map and draw events alike', function (assert) {
+        const handler = () => {};
+        assert.strictEqual(this.service.once('click', handler), undefined, 'nothing is wired before there is a map');
+
+        this.useMap();
+        const seen = [];
+
+        const listener = this.service.once('click', (payload) => seen.push(payload.type));
+        assert.strictEqual(this.onceListeners.at(-1)[0], 'click', 'a map event goes through Google s own once');
+        assert.strictEqual(listener, this.onceListeners.at(-1));
+        this.onceListeners.at(-1)[1]({ latLng: { lat: () => 1.3, lng: () => 103.8 } });
+        assert.deepEqual(seen, ['click']);
+
+        const drawSeen = [];
+        this.service.once('draw:created', (payload) => drawSeen.push(payload));
+        assert.strictEqual(this.service._eventListeners.get('draw:created').length, 1);
+        this.service._eventListeners.get('draw:created')[0].handler('first');
+        assert.deepEqual(drawSeen, ['first']);
+        assert.strictEqual(this.service._eventListeners.get('draw:created').length, 0, 'a draw one-shot removes itself');
+    });
+
+    test('distanceBetween measures through the geometry library', function (assert) {
+        const metres = this.service.distanceBetween(1.3521, 103.8198, 1.3621, 103.8198);
+
+        assert.true(metres > 1050 && metres < 1150, 'a hundredth of a degree of latitude is about 1.1km');
+    });
+
+    test('geojson layers are added, styled and removed by id', function (assert) {
+        const geojson = { type: 'Point', coordinates: [103.8198, 1.3521] };
+        assert.strictEqual(this.service.addGeoJson('geo_1', geojson), null, 'nothing is added without a map');
+
+        const map = this.useMap();
+        const layer = this.service.addGeoJson('geo_1', geojson, { style: { strokeColor: '#ff0000' } });
+        assert.strictEqual(this.service._geojsonLayers.get('geo_1'), layer);
+        assert.strictEqual(layer.map, map);
+        assert.deepEqual(layer.geoJson, [geojson]);
+        assert.deepEqual(layer.styles, [{ strokeColor: '#ff0000' }]);
+
+        const unstyled = this.service.addGeoJson('geo_2', geojson);
+        assert.deepEqual(unstyled.styles, [], 'a layer with no style is left alone');
+
+        this.service.removeGeoJson('geo_1');
+        assert.deepEqual(layer.setMapCalls, [null]);
+        assert.strictEqual(this.service._geojsonLayers.size, 1);
+
+        this.service.removeGeoJson('geo_1');
+        assert.strictEqual(this.service._geojsonLayers.size, 1, 'removing an unknown layer is harmless');
+    });
+
+    test('a custom tile layer is built from the url template and replaces the last one', function (assert) {
+        assert.strictEqual(this.service.setTileLayer('https://tiles.example.test/{z}/{x}/{y}.png'), undefined, 'nothing to tile without a map');
+
+        const map = this.useMap();
+        this.service.setTileLayer('https://tiles.example.test/{z}/{x}/{y}.png');
+
+        const first = this.imageMapTypes.at(-1);
+        assert.strictEqual(first.getTileUrl({ x: 2, y: 3 }, 10), 'https://tiles.example.test/10/2/3.png', 'the template is filled in');
+        assert.strictEqual(map.overlayMapTypes.cleared, 0, 'the first layer replaces nothing');
+        assert.deepEqual(map.overlayMapTypes.inserted.at(-1), [0, first], 'and goes on top');
+        assert.strictEqual(first.name, 'Custom Tiles', 'the default layer name');
+        assert.strictEqual(first.opacity, 1);
+
+        this.service.setTileLayer('https://other.example.test/{z}/{x}/{y}.png');
+        assert.strictEqual(map.overlayMapTypes.cleared, 1, 'a second layer clears the first');
+        assert.notStrictEqual(this.service._customTileLayer, first);
     });
 });
