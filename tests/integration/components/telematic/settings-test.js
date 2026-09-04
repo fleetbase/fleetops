@@ -2,6 +2,7 @@ import { module, test } from 'qunit';
 import { setupRenderingTest } from 'dummy/tests/helpers';
 import { render } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
+import registerTemplateOnly from 'dummy/tests/helpers/register-template-only';
 
 const SAFEE_DESCRIPTOR = {
     key: 'safee',
@@ -24,6 +25,10 @@ function makeResource(initial = {}) {
 
 module('Integration | Component | telematic/settings', function (hooks) {
     setupRenderingTest(hooks);
+
+    hooks.beforeEach(function () {
+        registerTemplateOnly(this.owner, 'custom-field/yield', hbs`<div data-test-custom-fields></div>`);
+    });
 
     test('endpoint overrides render inside the advanced section with provider defaults', async function (assert) {
         this.set(

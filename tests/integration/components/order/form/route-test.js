@@ -1,25 +1,38 @@
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'dummy/tests/helpers';
-import { click, render, settled } from '@ember/test-helpers';
+import { click, render } from '@ember/test-helpers';
 import { A } from '@ember/array';
 import Service from '@ember/service';
 import { hbs } from 'ember-cli-htmlbars';
+import stubFormInputs, { AbilitiesStub, makeRecord } from 'dummy/tests/helpers/stub-form-inputs';
 
 module('Integration | Component | order/form/route', function (hooks) {
     setupRenderingTest(hooks);
 
+    hooks.beforeEach(function () {
+        this.owner.register('service:abilities', AbilitiesStub);
+        stubFormInputs(this.owner);
+        // `route-optimization` builds its engine registry against
+        // `universe.getApplicationInstance()`, which the host sets during boot; a rendering test
+        // has no boot, so point it at the test container.
+        this.owner.lookup('service:universe').applicationInstance = this.owner;
+    });
+
     test('it marks pickup and dropoff as required in single-route mode', async function (assert) {
-        this.set('resource', {
-            facilitator: {
-                isIntegratedVendor: false,
-            },
-            payload: {
-                pickup: null,
-                dropoff: null,
-                return: null,
-                waypoints: A([]),
-            },
-        });
+        this.set(
+            'resource',
+            makeRecord('order', {
+                facilitator: {
+                    isIntegratedVendor: false,
+                },
+                payload: {
+                    pickup: null,
+                    dropoff: null,
+                    return: null,
+                    waypoints: A([]),
+                },
+            })
+        );
 
         await render(hbs`<Order::Form::Route @resource={{this.resource}} />`);
 
@@ -31,29 +44,25 @@ module('Integration | Component | order/form/route', function (hooks) {
     });
 
     test('it renders route-list style waypoint badges and required tabs for the first two waypoints', async function (assert) {
-        this.set('resource', {
-            customer: null,
-            driver_assigned: null,
-            id: 'test-order',
-            facilitator: {
-                isIntegratedVendor: false,
-            },
-            payload: {
-                pickup: null,
-                dropoff: null,
-                return: null,
-                waypoints: A([]),
-                setProperties(properties) {
-                    Object.assign(this, properties);
+        this.set(
+            'resource',
+            makeRecord('order', {
+                customer: null,
+                driver_assigned: null,
+                id: 'test-order',
+                facilitator: {
+                    isIntegratedVendor: false,
                 },
-            },
-        });
+                payload: this.owner.lookup('service:store').createRecord('payload'),
+            })
+        );
 
         await render(hbs`<Order::Form::Route @resource={{this.resource}} />`);
+        // Toggling to multi-drop adds the first waypoint; the component's own add-waypoint
+        // affordance adds the rest, the way a user would.
         await click('[role="checkbox"]');
-        this.resource.payload.waypoints.pushObject({ type: 'dropoff' });
-        this.resource.payload.waypoints.pushObject({ type: 'dropoff' });
-        await settled();
+        await click('[data-test-waypoint-add]');
+        await click('[data-test-waypoint-add]');
 
         assert.dom('[data-test-waypoint-row="1"] .fleetops-route-stop-badge').hasText('1');
         assert.dom('[data-test-waypoint-row="2"] .fleetops-route-stop-badge').hasText('2');
@@ -74,23 +83,18 @@ module('Integration | Component | order/form/route', function (hooks) {
         }
 
         this.owner.register('service:order-creation', OrderCreationStub);
-        this.set('resource', {
-            customer: null,
-            driver_assigned: null,
-            id: 'test-order',
-            facilitator: {
-                isIntegratedVendor: false,
-            },
-            payload: {
-                pickup: null,
-                dropoff: null,
-                return: null,
-                waypoints: A([]),
-                setProperties(properties) {
-                    Object.assign(this, properties);
+        this.set(
+            'resource',
+            makeRecord('order', {
+                customer: null,
+                driver_assigned: null,
+                id: 'test-order',
+                facilitator: {
+                    isIntegratedVendor: false,
                 },
-            },
-        });
+                payload: this.owner.lookup('service:store').createRecord('payload'),
+            })
+        );
 
         await render(hbs`<Order::Form::Route @resource={{this.resource}} />`);
         await click('[role="checkbox"]');

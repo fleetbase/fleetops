@@ -1,9 +1,10 @@
 import { module, test } from 'qunit';
 import Service from '@ember/service';
 import { setupRenderingTest } from 'dummy/tests/helpers';
-import { render } from '@ember/test-helpers';
+import { click, render } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
-import OrderFormDetailsComponent from '@fleetbase/fleetops-engine/components/order/form/details';
+import stubFormInputs, { AbilitiesStub, makeRecord } from 'dummy/tests/helpers/stub-form-inputs';
+import registerTemplateOnly from 'dummy/tests/helpers/register-template-only';
 
 module('Integration | Component | order/form/details', function (hooks) {
     setupRenderingTest(hooks);
@@ -17,18 +18,23 @@ module('Integration | Component | order/form/details', function (hooks) {
         }
 
         this.owner.register('service:order-config-actions', OrderConfigActionsStub);
+        this.owner.register('service:abilities', AbilitiesStub);
+        stubFormInputs(this.owner);
     });
 
     test('it marks required create-order detail fields', async function (assert) {
-        this.set('resource', {
-            facilitator: {
-                isIntegratedVendor: false,
-            },
-            order_config: null,
-            payload: {},
-            pod_required: true,
-            required_skills: [],
-        });
+        this.set(
+            'resource',
+            makeRecord('order', {
+                facilitator: {
+                    isIntegratedVendor: false,
+                },
+                order_config: null,
+                payload: {},
+                pod_required: true,
+                required_skills: [],
+            })
+        );
 
         await render(hbs`<Order::Form::Details @resource={{this.resource}} />`);
 
@@ -40,15 +46,18 @@ module('Integration | Component | order/form/details', function (hooks) {
     });
 
     test('it does not render orchestrator constraint inputs', async function (assert) {
-        this.set('resource', {
-            facilitator: {
-                isIntegratedVendor: false,
-            },
-            order_config: null,
-            payload: {},
-            pod_required: false,
-            required_skills: [],
-        });
+        this.set(
+            'resource',
+            makeRecord('order', {
+                facilitator: {
+                    isIntegratedVendor: false,
+                },
+                order_config: null,
+                payload: {},
+                pod_required: false,
+                required_skills: [],
+            })
+        );
 
         await render(hbs`<Order::Form::Details @resource={{this.resource}} />`);
 
@@ -58,16 +67,8 @@ module('Integration | Component | order/form/details', function (hooks) {
         assert.dom().doesNotContainText('Orchestrator Priority');
     });
 
-    test('quote-relevant detail changes request service quote refresh', function (assert) {
+    test('quote-relevant detail changes request service quote refresh', async function (assert) {
         const requests = [];
-        const resource = {
-            payload: {
-                set() {},
-            },
-            set(field, value) {
-                this[field] = value;
-            },
-        };
 
         class OrderCreationStub extends Service {
             requestServiceQuoteRefresh(reason, order) {
@@ -76,20 +77,48 @@ module('Integration | Component | order/form/details', function (hooks) {
         }
 
         this.owner.register('service:order-creation', OrderCreationStub);
+        // The scheduled-at picker and the service-type select are the two controls that reach
+        // these actions; stand them in so the test can drive them.
+        registerTemplateOnly(this.owner, 'date-time-input', hbs`<button type="button" data-test-date-time-input {{on "click" (fn @onUpdate "2026-06-17T12:00:00Z")}}></button>`);
+        registerTemplateOnly(this.owner, 'select', hbs`<button type="button" data-test-select {{on "click" (fn @onSelect "express")}}></button>`);
 
-        const component = new OrderFormDetailsComponent(this.owner, { resource });
+        const payloadWrites = [];
+        this.set(
+            'resource',
+            makeRecord('order', {
+                order_config: null,
+                required_skills: [],
+                facilitator: {
+                    isIntegratedVendor: true,
+                    name: 'Integrated Vendor',
+                    service_types: [{ key: 'express', description: 'Express' }],
+                },
+                payload: {
+                    set(key, value) {
+                        payloadWrites.push([key, value]);
+                    },
+                },
+            })
+        );
 
-        component.selectFacilitator({ id: 'facilitator-1' });
-        component.setScheduledAt('2026-06-17T12:00:00Z');
-        component.selectIntegratedServiceType('express');
+        await render(hbs`<Order::Form::Details @resource={{this.resource}} />`);
+
+        await click('[data-test-model-select="facilitator"]');
+        await click('[data-test-date-time-input]');
+        await click('[data-test-select]');
 
         assert.deepEqual(
             requests.map((request) => request.reason),
             ['details.facilitator.changed', 'details.scheduled_at.changed', 'details.integrated_service_type.changed']
         );
         assert.true(
-            requests.every((request) => request.order === resource),
+            requests.every((request) => request.order === this.resource),
             'requests refresh for the current order'
         );
+        assert.strictEqual(this.resource.facilitator.id, 'picked_1', 'the picked facilitator is assigned');
+        assert.strictEqual(this.resource.driver, null, 'changing the facilitator clears the driver');
+        assert.strictEqual(this.resource.scheduled_at, '2026-06-17T12:00:00Z');
+        assert.strictEqual(this.resource.type, 'express');
+        assert.deepEqual(payloadWrites, [['type', 'express']], 'the service type is mirrored onto the payload');
     });
 });
