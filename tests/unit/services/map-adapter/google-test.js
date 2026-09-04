@@ -2307,4 +2307,169 @@ module('Unit | Service | map-adapter/google', function (hooks) {
         assert.strictEqual(this.service.getMarker('nope'), null, 'an unknown id answers null');
         assert.strictEqual(this.service.getOverlay('nope'), null);
     });
+
+    test('a right-click reports the point it happened at, and centres the map on it', function (assert) {
+        const map = this.useMap();
+        const panned = [];
+        map.panTo = (center) => panned.push(center);
+
+        assert.deepEqual(this.service.showCoordinates({ latlng: { lat: 1.3, lng: 103.8 } }), { lat: 1.3, lng: 103.8 });
+        assert.deepEqual(this.service.showCoordinates({}), { lat: undefined, lng: undefined }, 'an event with no point reports none');
+        assert.deepEqual(this.service.showCoordinates(), { lat: undefined, lng: undefined });
+
+        this.service.centerMap({ latlng: { lat: 1.3, lng: 103.8 } });
+        assert.deepEqual(panned, [{ lat: 1.3, lng: 103.8 }]);
+
+        this.service.centerMap({ latlng: { lat: 'nowhere', lng: 'nowhere' } });
+        this.service.centerMap({});
+        this.service.centerMap();
+        assert.strictEqual(panned.length, 1, 'nothing without a usable point');
+
+        this.service._map = null;
+        this.service.centerMap({ latlng: { lat: 1.3, lng: 103.8 } });
+        assert.strictEqual(panned.length, 1, 'nor without a map');
+    });
+
+    test('invalidateSize tells Google the map resized', function (assert) {
+        const triggered = [];
+        const originalTrigger = window.google.maps.event.trigger;
+        window.google.maps.event.trigger = (target, event) => triggered.push(event);
+
+        try {
+            this.service.invalidateSize();
+            assert.deepEqual(triggered, [], 'nothing to resize without a map');
+
+            this.useMap();
+            this.service.invalidateSize();
+            assert.deepEqual(triggered, ['resize']);
+        } finally {
+            window.google.maps.event.trigger = originalTrigger;
+        }
+    });
+
+    test('view settings add and remove the traffic and transit layers', async function (assert) {
+        await this.service.applyViewSettings({ showTrafficLayer: true });
+        assert.strictEqual(this.trafficLayers.length, 0, 'nothing applies without a map');
+
+        await this.service.initializeMap(document.createElement('div'));
+        await this.service.applyViewSettings({ showTrafficLayer: true, showTransitLayer: true });
+        assert.strictEqual(this.trafficLayers.length, 1);
+        assert.strictEqual(this.transitLayers.length, 1);
+
+        await this.service.applyViewSettings({ showTrafficLayer: true, showTransitLayer: true });
+        assert.strictEqual(this.trafficLayers.length, 1, 'asking again reuses the layers already made');
+        assert.strictEqual(this.transitLayers.length, 1);
+
+        await this.service.applyViewSettings({});
+        assert.deepEqual(this.trafficLayers[0].setMapCalls.at(-1), null, 'and turning them off detaches them');
+        assert.deepEqual(this.transitLayers[0].setMapCalls.at(-1), null);
+
+        await this.service.applyViewSettings({});
+        assert.strictEqual(this.trafficLayers[0].setMapCalls.length, 3, 'turning off what is already off adds nothing further');
+    });
+
+    test('caller styles are appended to the Fleet-Ops base styles', async function (assert) {
+        await this.service.initializeMap(document.createElement('div'));
+
+        await this.service.applyViewSettings({ googleOptions: { styles: [{ featureType: 'water', stylers: [] }] } });
+        const withCustom = this.map.setOptionsCalls.at(-1).styles;
+        assert.strictEqual(withCustom.at(-1).featureType, 'water', 'the caller style goes last');
+        assert.true(withCustom.length > 1, 'on top of the base styles');
+
+        await this.service.applyViewSettings({});
+        const baseOnly = this.map.setOptionsCalls.at(-1).styles;
+        assert.notOk(
+            baseOnly.some((style) => style.featureType === 'water'),
+            'and no caller styles means the base set alone'
+        );
+    });
+
+    test('toggleDrawControl builds the toolbar and swaps it in and out', function (assert) {
+        this.service.toggleDrawControl();
+        assert.strictEqual(this.service._drawControlEl, null, 'there is nothing to toggle without a map');
+
+        this.useMap();
+        this.service.toggleDrawControl();
+        const toolbar = this.service._drawControlEl;
+        assert.ok(toolbar, 'the first toggle builds the toolbar');
+        assert.strictEqual(toolbar.style.display, '', 'and shows it');
+        assert.deepEqual(
+            [...toolbar.__actionGroup.children].map((el) => el.getAttribute('aria-label')),
+            ['edit', 'delete'],
+            'with the default config, which allows both'
+        );
+
+        this.service.toggleDrawControl();
+        assert.strictEqual(toolbar.style.display, 'none', 'the second toggle hides it');
+
+        this.service.toggleDrawControl();
+        assert.strictEqual(toolbar.style.display, '', 'and the third brings it back');
+    });
+
+    test('panBy moves the map by a pixel offset', function (assert) {
+        this.service.panBy(10);
+
+        const map = this.useMap();
+        const panned = [];
+        map.panBy = (x, y) => panned.push([x, y]);
+
+        this.service.panBy(10);
+        this.service.panBy(10, 4);
+
+        assert.deepEqual(panned, [
+            [10, 0],
+            [10, 4],
+        ]);
+    });
+
+    test('a labelled route marker is drawn as a badge on the advanced path', async function (assert) {
+        this.useMap();
+        this.service._supportsAdvancedMarkers = true;
+
+        const handle = await this.service.addRoutingControl({ waypoints: [[1.3, 103.8]] }, { id: 'route_1', createMarker: () => ({ waypointLabel: 'P', waypointColor: '#22c55e' }) });
+        const badged = this.service._markers.get(handle.markerIds[0]);
+
+        assert.strictEqual(badged.content.className, 'fleetops-map-marker');
+        assert.true(badged.content.innerHTML.includes('#22c55e'), 'the badge is drawn in the waypoint colour');
+        assert.true(badged.content.innerHTML.includes('P'), 'and carries its label');
+
+        const defaulted = await this.service.addRoutingControl({ waypoints: [[1.3, 103.8]] }, { id: 'route_2', createMarker: () => ({ waypointLabel: '1' }) });
+        const blue = this.service._markers.get(defaulted.markerIds[0]);
+        assert.true(blue.content.innerHTML.includes('#2563eb'), 'an unstated colour falls back to the route blue');
+    });
+
+    test('the Google Maps script is loaded once, and a load failure is reported', async function (assert) {
+        const originalGoogle = window.google;
+        const originalGlobal = globalThis.google;
+        const appended = [];
+        const originalAppendChild = document.head.appendChild.bind(document.head);
+        document.head.appendChild = (node) => {
+            appended.push(node);
+            return node;
+        };
+
+        try {
+            // With the API already on the page the loader resolves without touching the DOM.
+            await this.service.initializeMap(document.createElement('div'));
+            assert.deepEqual(appended, [], 'an API already present is simply used');
+
+            window.google = undefined;
+            globalThis.google = undefined;
+            this.service._apiLoaded = false;
+
+            const pending = this.service.initializeMap(document.createElement('div'), { apiKey: 'a-key' });
+            const script = appended.at(-1);
+            assert.ok(script, 'a script tag is added');
+            assert.true(script.src.includes('key=a-key'), 'carrying the key');
+            assert.true(script.src.includes('libraries=drawing,geometry,marker,routes'));
+            assert.true(script.async);
+
+            script.onerror();
+            await assert.rejects(pending, /Failed to load Google Maps API/, 'a script that will not load is reported');
+        } finally {
+            document.head.appendChild = originalAppendChild;
+            window.google = originalGoogle;
+            globalThis.google = originalGlobal;
+        }
+    });
 });
