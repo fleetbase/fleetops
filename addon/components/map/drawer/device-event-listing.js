@@ -172,9 +172,7 @@ export default class MapDrawerDeviceEventListingComponent extends Component {
                 params.device = this.device.id;
             }
 
-            if (isArray(this.dateFilter) && this.dateFilter.length === 2) {
-                params.created_at = this.dateFilter.join(',');
-            }
+            params.created_at = this.dateFilter.join(',');
 
             const events = yield this.store.query('device-event', params);
             this.events = isArray(events) ? events : [];

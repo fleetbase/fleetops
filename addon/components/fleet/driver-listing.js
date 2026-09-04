@@ -13,7 +13,7 @@ export default class FleetDriverListingComponent extends Component {
     @service universe;
     @service notifications;
     @tracked selected = [];
-    @tracked selectable = false;
+    @tracked selectable;
     @tracked drivers = [];
     @tracked fleet;
 

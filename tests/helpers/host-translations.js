@@ -32,6 +32,8 @@ export default {
         address: 'Address',
         status: 'Status',
         metadata: 'Metadata',
+        remove: 'Remove',
+        'loading-resource': 'Loading {resource}...',
     },
     column: {
         address: 'Address',

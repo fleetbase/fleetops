@@ -902,6 +902,46 @@ call, not taken here).
 **Impact:** None for users; dead files in the coverage denominator.
 **Fix:** The addon directory, its two `app/` re-exports and the two scaffolds are deleted.
 
+## 64. `addon/components/map/drawer/device-event-listing.js` — loaded events were written to the wrong property
+
+**Status:** FIXED (4019861f)
+**Found:** Reading the component before writing its suite; the template renders a property the load task never assigns.
+**Evidence:** The class declares `@tracked events = []` and the template passes `@rows={{this.events}}`, but `loadEvents` ended with `this.positions = isArray(events) ? events : []` — `positions` is declared nowhere in the class. `git log -S` dates the line to dc759dc5 ("added positions & events drawer tab"), and the sibling `map/drawer/position-listing.js` does declare `@tracked positions = []`, so the tab was copied from the positions tab and its assignment was never renamed.
+**Impact:** The device-events drawer tab always rendered its empty state. Every telematic, device and date-range filter re-queried the API and threw the result away.
+**Fix:** Assign `this.events`.
+
+## 65. `addon/components/fleet-panel/` — a pre-refactor copy of the fleet detail panel and its listings
+
+**Status:** FIXED
+**Found:** Sizing the batch: `fleet-panel/{driver,vehicle}-listing` and `fleet/{driver,vehicle}-listing` are the same components twice.
+**Evidence:** No template invokes `FleetPanel::Details`, `FleetPanel::DriverListing` or `FleetPanel::VehicleListing`, and no string names `fleet-panel/...` anywhere in `addon/` or `app/` — the only consumers were the three blueprint scaffolds. The `fleet/` equivalents are live: `management/fleets/index/details/{index,drivers,vehicles}.hbs` render `Fleet::Details`, `Fleet::DriverListing` and `Fleet::VehicleListing`, and `services/fleet-actions.js` opens `component: 'fleet/details'`. `git log` puts the `fleet-panel/` files at the "major release and cleanup incoming" era and the `fleet/` set at "v0.6.19 ~ management and operations refactor underway". Corroborating: the dead templates render `t "fleet-panel.driver-listing.search-driver"`, `t "fleet-panel.vehicle-listing.loading-vehicle"`, `t "common.driver"` and `t "common.vehicle"` — no `fleet-panel:` root exists in any translation file in the workspace and the live `fleet/` copies use `fleet.driver-listing.search-driver` and `resource.driver` for the same strings, so the panel could only ever have rendered missing-translation text. `fleet-panel/vehicle-listing.js` had also drifted: it never declared `@tracked vehicles` (its async search task assigned an untracked property, so the list could not render) and called `this.notifications.serverError` without injecting the service, which would throw on any assignment failure. The live `fleet/vehicle-listing.js` has both.
+**Impact:** None for users; 60 statements, 17 branches and 14 functions of unreachable code in the coverage denominator.
+**Fix:** The `addon/components/fleet-panel/` directory, its three `app/` re-exports and its three scaffolds are deleted.
+
+## 66. `addon/components/map/drawer/device-event-listing.js` — the Device column opened a panel bound to the event
+
+**Status:** FIXED (33d8d538)
+**Found:** A rendering test clicked the Device cell and the device-event service answered instead of the device service.
+**Evidence:** `table/cell/anchor` renders `column.valuePath` but its click handler calls `column.action(row)` — it never resolves the value path for the action. The Device column set `valuePath: 'device.displayName'` and `action: this.deviceActions.panel.view`, so the click handed the service a device-event record. `deviceActions.panel.view` only guards `!device?.id`, which a device-event satisfies, so it opened the panel: the overview tab renders `device/details` against the event, and the vehicle, sensors and events tabs query by the event's id. This is the only column in `addon/` pairing a nested `valuePath` with an action on `table/cell/anchor`.
+**Impact:** Clicking a device name in the device-events drawer opened a device panel showing another record's data.
+**Fix:** The column resolves the device off the row. A row without one now falls into the service's existing invalid-resource warning.
+
+## 67. `addon/components/fleet/{driver,vehicle}-listing.js` — the search debounced on a key no caller sends
+
+**Status:** FIXED (c79f8382)
+**Found:** Profiling the last uncovered branch in both listings: `if (!params.value)` had no false path.
+**Evidence:** The only two callers are the constructor (`this.search.perform({ limit: -1 })`) and `onInput` (`this.search.perform({ query: value })`); neither passes `value`, so `!params.value` was always true. The pre-refactor copy deleted in #65 read `if (!isBlank(params.value)) { yield timeout(300); }` — it waited when a value *was* present — so the surviving copies both renamed the caller's key to `query` and inverted the test. The two mistakes cancelled into "always wait 300ms".
+**Impact:** Opening a fleet's drivers or vehicles tab sat on an empty list for 300ms before the query was even issued. Typing was still coalesced, by accident.
+**Fix:** Debounce on `params.query`, which is the key `onInput` sends. The initial load now queries immediately and typing still coalesces.
+
+## 68. three components — a lazy initializer, an unused default and a guard the field makes redundant
+
+**Status:** FIXED
+**Found:** Profiling the tail of this iteration's four listing suites.
+**Evidence:** `fleet/{driver,vehicle}-listing.js` declared `@tracked selectable = false` and assigned `this.selectable` in the constructor before any read, so Babel's legacy-decorator lazy initializer never ran (the DEFECTS #15 shape). The same task signature carried `*search(params = {})` while both callers pass an object, so the default never evaluated. In `map/drawer/device-event-listing.js`, `if (isArray(this.dateFilter) && this.dateFilter.length === 2)` can never be false: the field is initialised to a two-element range and its only writer, `onDateRangeChanged`, assigns only when `formattedDate` has exactly two entries.
+**Impact:** None.
+**Fix:** The initializer, the default and the guard are deleted.
+
 ## 4. `tests/` — 223 blueprint scaffolds that were never green
 
 **Status:** OPEN (this is the bulk of Phase B)
