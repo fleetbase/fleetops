@@ -1142,6 +1142,15 @@ call, not taken here).
 **Impact:** none on behaviour. The lesson is the one worth keeping: a stub that accepts an argument without consuming it silently withholds coverage from the parent, and that reads exactly like unreachable code.
 **Fix:** `availableEngines` carries an `istanbul ignore next` naming the panel that gates its only reader. The order-pool stand-in now renders `{{@cardFields.standard.length}}`, as the real component does, and a test asserts the settings endpoint's fields arrive. Also converted this file's `─` box-drawing dividers to ASCII while chasing this — it realigned the HTML report's source view, though it was not the cause.
 
+## 94. `addon/components/customer/create-order-form.js` — clearing the only address throws out of the route preview
+
+**Status:** OPEN
+**Found:** covering `setPayloadPlace` once the harness had a real Leaflet map. A test that cleared the pickup failed with `TypeError: Cannot read properties of undefined (reading 'lat')` thrown from Leaflet's `getNorth`.
+**Evidence:** `previewDraftOrderRoute` computes `const canPreviewRoute = this.routePreviewArray.length > 0;` and, when false, calls `this.notifications.warning(...)` — **and then keeps going**. There is no `return`. It builds the `RoutingControl`, and at the end runs `this.map.flyToBounds(this.routePreviewCoordinates, …)` with an empty array; Leaflet's `flyToBounds` → `_getBoundsCenterZoom` → `getBoundsZoom` → `getNorthWest` → `getNorth` reads `.lat` off an undefined corner and throws. The path is live, not hypothetical: `previewDraftOrderRoute` is called from `setPayloadPlace`, which the template wires to the pickup, dropoff and return selects *and* to the "remove address" links (`{{on "click" (fn this.setPayloadPlace "pickup" null)}}`, template lines 116 and 152). So a customer who removes the only address they had entered takes the exception.
+**Impact:** the route preview stops working for the rest of the session — the exception escapes the action, so nothing after it in `setPayloadPlace` runs and the map keeps whatever it was last showing. The user sees the "no route" warning and then a broken panel.
+**Fix:** a one-line `return` after the warning, which is what the `canPreviewRoute` name implies was intended. It is a behaviour change on a path no test covered until now, so it is not folded into this coverage commit.
+**Note on testing it:** the defect currently **cannot be pinned by a test**. The exception escapes Ember's error handling completely — it does not reject the `click` promise, so `assert.rejects` does not see it, and `setupOnerror` does not intercept it either, because Leaflet throws from inside `flyToBounds`' own deferred animation frame rather than from the action. QUnit's global handler catches it and fails the test outright. Once the `return` lands, the path becomes ordinary and a test asserting "warns once and draws nothing" will work; until then this entry is the record.
+
 ## 4. `tests/` — 223 blueprint scaffolds that were never green
 
 **Status:** OPEN (this is the bulk of Phase B)

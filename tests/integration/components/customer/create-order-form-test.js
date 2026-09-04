@@ -52,6 +52,11 @@ function stubComponents(owner) {
 module('Integration | Component | customer/create-order-form', function (hooks) {
     setupRenderingTest(hooks);
 
+    hooks.afterEach(function () {
+        this.map?.remove();
+        this.mapElement?.remove();
+    });
+
     hooks.beforeEach(function () {
         const test = this;
         this.gets = [];
@@ -155,6 +160,16 @@ module('Integration | Component | customer/create-order-form', function (hooks) 
 
         this.owner.register('service:order-form-test-bed', class extends Service {});
         this.testBed = this.owner.lookup('service:order-form-test-bed');
+
+        // `previewDraftOrderRoute` builds a leaflet-routing-machine control and does
+        // `control.addTo(this.map)`; the library reads the map's size from inside its own `onAdd`,
+        // so nothing short of a real Leaflet map on a sized element will do. The dummy app has
+        // Leaflet on the global (see ember-cli-build.js).
+        this.mapElement = document.createElement('div');
+        this.mapElement.style.width = '400px';
+        this.mapElement.style.height = '300px';
+        document.getElementById('ember-testing').appendChild(this.mapElement);
+        this.map = window.L.map(this.mapElement).setView([1.3, 103.8], 12);
 
         stubComponents(this.owner);
 
@@ -264,5 +279,29 @@ module('Integration | Component | customer/create-order-form', function (hooks) 
         await click(addItem);
 
         assert.strictEqual(rows(), before + 1, 'one more item row is rendered');
+    });
+
+    test('choosing a pickup and a dropoff draws a route preview between them', async function (assert) {
+        this.givenOrderConfigs({ id: 'config_1', key: 'transport', name: 'Transport' });
+        await render(hbs`<Customer::CreateOrderForm @order={{this.order}} @map={{this.map}} />`);
+
+        const selects = [...document.querySelectorAll('[data-test-model-select="place"]')];
+        assert.strictEqual(selects.length, 3, 'pickup, dropoff and return each get a select');
+
+        this.testBed.chosen = this.store.createRecord('place', {
+            street1: 'Depot',
+            location: { type: 'Point', coordinates: [103.8, 1.3] },
+        });
+        await click(selects[0]);
+
+        assert.deepEqual(this.notified.filter(([kind]) => kind === 'warning').length, 0, 'one usable place is enough to start a preview without warning');
+
+        this.testBed.chosen = this.store.createRecord('place', {
+            street1: 'Site',
+            location: { type: 'Point', coordinates: [103.9, 1.4] },
+        });
+        await click(selects[1]);
+
+        assert.dom('.leaflet-routing-container, .leaflet-overlay-pane').exists('the routing control is attached to the map');
     });
 });
