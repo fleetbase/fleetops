@@ -814,6 +814,22 @@ call, not taken here).
 **Impact:** None for users.
 **Fix:** The suite registers the `custom-field/yield` stand-in and gains five tests over the health cards (untested/unsynced, verified/synced with hardware identity, failed and synchronizing states), the sensitive-error masking and the query-string webhook URL; the component is at 100% on all four metrics. Date details are asserted with a local-time-tolerant pattern since `format-date-fns` renders in the browser's zone.
 
+## 53. `addon/components/tracking-stop-progress.js` — every uuid-keyed stop rendered as active
+
+**Status:** FIXED (separate commit, `fix(order): mark only the matching stop active …`)
+**Found:** The component's one test expected a single active dot and found three.
+**Evidence:** `matches` returned `stop.uuid === activeStop.uuid || stop.public_id === activeStop.public_id`; stops keyed by `uuid` alone carry no `public_id`, so the second comparison was `undefined === undefined` for every stop. Same shape as DEFECTS #48 in the parent tracking panel.
+**Impact:** The stop rail in order tracking highlighted every stop as the active one whenever stops had no `public_id`.
+**Fix:** Compare only identifiers both objects define; the suite covers uuid- and public-id-keyed stops, a completed active stop, labels and titles, location and place fallbacks, and the empty rail.
+
+## 54. `tests/integration/components/service-rate/details-test.js` — scaffold replaced
+
+**Status:** FIXED
+**Found:** The `it renders` scaffold was red; the template mounts `CustomField::Yield` (see #52) and renders nothing meaningful without a resource.
+**Evidence:** Three rendering tests now cover the fixed-rate, per-drop, multi-zone, per-meter, algorithm and parcel panels, the COD and peak-hour fee blocks in both modes, the restriction panel, and the unknown-method and empty-list fallbacks. The component class is empty, so this is template-only coverage that turns a red test green.
+**Impact:** None for users.
+**Fix:** Fees in the fixtures are integer minor units — the template runs per-drop, multi-zone and parcel fees through `f-to-int` (which strips non-digits) before `format-currency`, so a decimal fee like `2.5` renders as `$0.25`; the form stores them as integers.
+
 ## 4. `tests/` — 223 blueprint scaffolds that were never green
 
 **Status:** OPEN (this is the bulk of Phase B)
