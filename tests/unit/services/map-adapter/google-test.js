@@ -288,6 +288,7 @@ module('Unit | Service | map-adapter/google', function (hooks) {
     setupTest(hooks);
 
     hooks.beforeEach(function () {
+        const test = this;
         this.originalGoogle = window.google;
         this.originalGlobalGoogle = globalThis.google;
         this.map = null;
@@ -304,6 +305,10 @@ module('Unit | Service | map-adapter/google', function (hooks) {
         installGoogleMapsStub(this);
         this.service = this.owner.lookup('service:map-adapter/google');
 
+        // The draw toolbar and the label overlays append into the map's own element.
+        this.mapDiv = document.createElement('div');
+        document.getElementById('ember-testing').appendChild(this.mapDiv);
+
         // A map stand-in for the viewport and marker work, which does not need a real Google map.
         this.useMap = (overrides = {}) => {
             const calls = [];
@@ -315,6 +320,7 @@ module('Unit | Service | map-adapter/google', function (hooks) {
                 panTo: (center) => calls.push(['panTo', center]),
                 fitBounds: (bounds, padding) => calls.push(['fitBounds', bounds, padding]),
                 getZoom: () => 12,
+                getDiv: () => test.mapDiv,
                 addListener: (event, handler) => {
                     const entry = { event, handler };
                     calls.push(['addListener', event]);
@@ -341,6 +347,7 @@ module('Unit | Service | map-adapter/google', function (hooks) {
     hooks.afterEach(function () {
         const service = this.owner.lookup('service:map-adapter/google');
         service.destroyMap();
+        this.mapDiv?.remove();
         window.google = this.originalGoogle;
         globalThis.google = this.originalGlobalGoogle;
     });
@@ -1464,5 +1471,147 @@ module('Unit | Service | map-adapter/google', function (hooks) {
         this.service.setTileLayer('https://other.example.test/{z}/{x}/{y}.png');
         assert.strictEqual(map.overlayMapTypes.cleared, 1, 'a second layer clears the first');
         assert.notStrictEqual(this.service._customTileLayer, first);
+    });
+
+    test('the draw toolbar is built once, into the map element, and remembers its config', function (assert) {
+        this.service.showDrawControl({ tools: ['polygon'] });
+        assert.notOk(this.mapDiv.querySelector('.fleetops-google-draw'), 'nothing is built without a map');
+        assert.deepEqual(this.service._drawControlConfig, { tools: ['polygon'] }, 'but the config is remembered');
+
+        this.useMap();
+        this.service.showDrawControl({ tools: ['polygon'] });
+
+        const toolbar = this.mapDiv.querySelector('.fleetops-google-draw');
+        assert.ok(toolbar, 'the toolbar goes into the map element');
+        assert.strictEqual(toolbar.style.display, '', 'and is shown');
+        assert.strictEqual(this.service._drawControlEl, toolbar);
+
+        this.service.showDrawControl({ tools: ['polygon'] });
+        assert.strictEqual(this.mapDiv.querySelectorAll('.fleetops-google-draw').length, 1, 'showing it again does not build a second');
+    });
+
+    test('the toolbar renders the tools it is asked for and starts their drawing mode', function (assert) {
+        this.useMap();
+        const modes = [];
+        this.service._drawingManager = { setDrawingMode: (mode) => modes.push(mode), setMap() {} };
+
+        this.service.showDrawControl();
+        const toolbar = this.service._drawControlEl;
+        assert.deepEqual(
+            [...toolbar.__toolGroup.children].map((el) => el.getAttribute('aria-label')),
+            ['polygon', 'rectangle', 'circle'],
+            'all three shapes by default'
+        );
+        assert.strictEqual(toolbar.__actionSection.style.display, 'none', 'with no edit or delete, the action bar is hidden');
+
+        toolbar.__toolGroup.querySelector('.fleetops-google-draw-draw-polygon').dispatchEvent(new MouseEvent('click', { cancelable: true }));
+        assert.deepEqual(modes, ['polygon'], 'a tool button starts its drawing mode');
+
+        this.service.showDrawControl({ tools: ['circle'] });
+        assert.deepEqual(
+            [...toolbar.__toolGroup.children].map((el) => el.getAttribute('aria-label')),
+            ['circle'],
+            'a narrower config re-renders the group'
+        );
+
+        assert.strictEqual(toolbar.__toolGroup.querySelector('.sr-only').textContent, 'circle', 'each button is labelled for screen readers');
+    });
+
+    test('the toolbar shows edit and delete only when they are allowed', function (assert) {
+        this.useMap();
+        this.service.showDrawControl({ allowEdit: true, allowDelete: true });
+
+        const toolbar = this.service._drawControlEl;
+        assert.deepEqual(
+            [...toolbar.__actionGroup.children].map((el) => el.getAttribute('aria-label')),
+            ['edit', 'delete']
+        );
+        assert.strictEqual(toolbar.__actionSection.style.display, '', 'the action bar is shown');
+
+        this.service.showDrawControl({ allowEdit: true });
+        assert.deepEqual(
+            [...toolbar.__actionGroup.children].map((el) => el.getAttribute('aria-label')),
+            ['edit'],
+            'delete alone can be withheld'
+        );
+
+        this.service.showDrawControl({ allowDelete: true });
+        assert.deepEqual(
+            [...toolbar.__actionGroup.children].map((el) => el.getAttribute('aria-label')),
+            ['delete']
+        );
+    });
+
+    test('a config carrying a default mode starts drawing straight away', function (assert) {
+        this.useMap();
+        const modes = [];
+        this.service._drawingManager = { setDrawingMode: (mode) => modes.push(mode), setMap() {} };
+
+        this.service.showDrawControl({ defaultMode: 'rectangle' });
+
+        assert.deepEqual(modes, ['rectangle']);
+    });
+
+    test('hiding the draw control puts back anything a delete was holding', function (assert) {
+        const map = this.useMap();
+        this.service.showDrawControl({ allowDelete: true });
+
+        // A draft the user deleted but has not saved is held aside until the toolbar closes.
+        const held = {
+            setMapCalls: [],
+            setMap(value) {
+                this.setMapCalls.push(value);
+            },
+        };
+        this.service._pendingDeletedDrafts.add(held);
+
+        const modes = [];
+        this.service._drawingManager = { setDrawingMode: (mode) => modes.push(mode), setMap() {} };
+        this.service._drawActionEl = document.createElement('div');
+        this.mapDiv.appendChild(this.service._drawActionEl);
+        const actionEl = this.service._drawActionEl;
+
+        this.service.hideDrawControl();
+
+        assert.strictEqual(this.service._drawControlEl.style.display, 'none', 'the toolbar is hidden');
+        assert.notOk(actionEl.parentNode, 'the action bar is detached');
+        assert.strictEqual(this.service._drawActionEl, null);
+        assert.deepEqual(held.setMapCalls, [map], 'the held draft is put back on the map');
+        assert.strictEqual(this.service._pendingDeletedDrafts.size, 0);
+        assert.deepEqual(modes, [null], 'and drawing is switched off');
+    });
+
+    test('hiding a draw control that was never shown is harmless', function (assert) {
+        this.useMap();
+
+        this.service.hideDrawControl();
+
+        assert.strictEqual(this.service._drawControlEl, null, 'there was nothing to hide');
+        assert.ok(true, 'and nothing threw');
+    });
+
+    test('the toolbar sits below the map topbar when there is one', function (assert) {
+        this.useMap();
+
+        this.service.showDrawControl();
+        assert.strictEqual(this.service._drawControlEl.style.top, '16px', 'with no topbar it takes the minimum offset');
+
+        const topbar = document.createElement('div');
+        topbar.id = 'map-topbar-container';
+        topbar.style.height = '120px';
+        document.getElementById('ember-testing').appendChild(topbar);
+
+        try {
+            // The testing container is scaled, so the offset is derived from what the browser
+            // actually measures rather than from the height that was set.
+            const measured = topbar.getBoundingClientRect().height;
+            assert.true(measured > 0, 'the topbar has a height to clear');
+
+            this.service.showDrawControl();
+            assert.strictEqual(this.service._drawControlEl.style.top, `${Math.round(measured + 12)}px`, 'and clears the topbar when one is on the page');
+            assert.true(Math.round(measured + 12) > 16, 'which is past the minimum offset');
+        } finally {
+            topbar.remove();
+        }
     });
 });
