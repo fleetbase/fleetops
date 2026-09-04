@@ -22,6 +22,8 @@ module.exports = function (environment) {
             vehicleAvatar: 'data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 width=%2724%27 height=%2724%27/%3E',
             driverAvatar: 'data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 width=%2724%27 height=%2724%27/%3E',
             placeAvatar: 'data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 width=%2724%27 height=%2724%27/%3E',
+            equipmentImage: 'data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 width=%2724%27 height=%2724%27/%3E',
+            partImage: 'data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 width=%2724%27 height=%2724%27/%3E',
         },
         // Mirrors the console's `stripe` block; `customer/admin-settings` reads `publishableKey`.
         stripe: {

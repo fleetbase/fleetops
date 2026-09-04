@@ -966,6 +966,14 @@ call, not taken here).
 **Impact:** None.
 **Fix:** The guard is deleted; `canLocateVehicle` remains the single gate.
 
+## 72. seven components had no `app/` re-export at all
+
+**Status:** FIXED (b6c4b6f1)
+**Found:** Sweeping the `app/` tree after #69 and #70 for the inverse mistake.
+**Evidence:** `equipment/{card,panel-header}`, `part/{card,panel-header}`, `work-order/panel-header`, `issue/timeline` and `admin/navigator-app` were the only 7 of 272 addon components with no `app/components/<path>.js`; their direct siblings `device/panel-header` and `vehicle/panel-header` both have one. All seven are invoked by live addon templates — `issue/details.hbs` renders `<Issue::Timeline>`, `maintenance/{equipment,parts}/index.hbs` render `<Equipment::Card>` and `<Part::Card>`, the three detail templates resolve the panel headers by string through `{{component "equipment/panel-header"}}`, and `extension.js` registers `admin/navigator-app` by name. A rendering test proved the consequence directly: "Attempted to resolve `equipment/card`, which was expected to be a component, but nothing was found."
+**Impact:** Any host app consuming this package as an addon — the dummy, and any non-engine consumer — cannot resolve these seven. Whether the console is also affected depends on the engine resolving its own `addon/` tree for engine-internal templates, which this campaign has not verified; the re-export is what the other 265 components rely on either way.
+**Fix:** Added the seven missing `export { default }` re-exports. Every addon component now has exactly one, and `app/` holds no templates and no copied classes (#69, #70).
+
 ## 4. `tests/` — 223 blueprint scaffolds that were never green
 
 **Status:** OPEN (this is the bulk of Phase B)
