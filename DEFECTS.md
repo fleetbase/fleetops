@@ -854,6 +854,22 @@ call, not taken here).
 **Impact:** None.
 **Fix:** The three guards and the try/catch are deleted; `cannotRouteWaypoints` is `waypoints.length < 2`.
 
+## 58. `addon/components/vehicle/details.hbs` — skills joined without a separator
+
+**Status:** FIXED (separate commit, `fix(vehicle): join the vehicle skills …`)
+**Found:** The vehicle details suite expected "refrigerated, hazmat".
+**Evidence:** `{{join @resource.skills ", "}}` passes the array first; ember-composable-helpers' `join` is `(join separator array)` and tolerates the reversed order by joining with a bare comma — the DEFECTS #35 shape, missed there because this template was not in that sweep.
+**Impact:** Vehicle skills rendered as `refrigerated,hazmat`.
+**Fix:** Arguments swapped.
+
+## 59. `route-optimization-wizard-panel.js`, `map/toolbar/zones-panel.js` — an action and a getter nothing renders
+
+**Status:** FIXED
+**Found:** Profiling after the eight-scaffold sweep.
+**Evidence:** `RouteOptimizationWizardPanel#onPressCancel` is referenced by no template (its cancel Button has no `@onClick`; `grep -rn onPressCancel addon` finds only other panels' own handlers), and `MapToolbarZonesPanel#serviceAreas` is unused — the template iterates `this.serviceAreaActions.serviceAreas` directly.
+**Impact:** None.
+**Fix:** Both deleted. The scaffolds for map/drawer, route-optimization-wizard-panel, order/details/{metadata,custom-fields,detail,notes}, vehicle/details and map/toolbar/zones-panel are replaced by real suites; `AbilitiesStub` in the test helpers gained `cannot`, which ember-ui's Button calls.
+
 ## 4. `tests/` — 223 blueprint scaffolds that were never green
 
 **Status:** OPEN (this is the bulk of Phase B)

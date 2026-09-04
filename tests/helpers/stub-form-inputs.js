@@ -62,4 +62,8 @@ export class AbilitiesStub {
         this.asked.push(permission);
         return this.allow;
     }
+
+    cannot(permission) {
+        return !this.can(permission);
+    }
 }
