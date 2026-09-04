@@ -1030,6 +1030,14 @@ call, not taken here).
 **Impact:** None. Even on an impossible miss the field would hold `undefined` rather than `null`, and every consumer — `{{#if this.targetModelName}}` and PowerSelect's `@selected` — treats the two identically.
 **Fix:** The six unreachable `?? null` are deleted.
 
+## 80. `tests/dummy` — the addon reads Leaflet off a global the test app never had
+
+**Status:** FIXED
+**Found:** Sizing `services/map-adapter/leaflet.js`, the largest remaining file, stuck at 13/478 statements.
+**Evidence:** Seven addon modules take Leaflet from `window` — `services/map-adapter/leaflet.js`, `services/leaflet-draw-restriction.js`, `services/leaflet-layer-visibility-manager.js`, `services/service-areas.js`, `components/leaflet-tracking-marker.js`, `components/leaflet-draw-control.js` and `components/map/drawer/position-listing.js` — and five of them capture it at module scope as `const L = window.leaflet || window.L`. The host console loads Leaflet before the engine, but the dummy app has no host, and this package's `index.js` funnels only the leaflet *plugin* assets (leaflet-draw, leaflet-contextmenu) into `public/`; `grep -n "app.import" index.js` returns nothing, so the library itself is never put on the page. In the test app `window.L` was therefore undefined and `L` was permanently undefined in all five modules, putting every method that touches it out of reach. The sibling `services/map-adapter/google.js` does not have this problem: it reads `window.google` inside each method rather than at module scope.
+**Impact:** None in production — a normal Ember app loads the host's vendor bundle, and so Leaflet, before the engine's modules evaluate. Test-only.
+**Fix:** `ember-cli-build.js` — which by its own comment builds only the dummy app and "does not influence how the addon or the app using it behave" — now imports `node_modules/leaflet/dist/leaflet.js`, so the vendor bundle sets `window.L` before any addon module evaluates. That gives the test app the real library rather than a fake, and the same global the host provides. Worth knowing for later: the module-scope capture remains a load-order sensitivity that `google.js` avoids by construction; it is not a live bug given the guaranteed vendor-before-engine ordering, so it is left alone rather than turned into a seven-file refactor.
+
 ## 4. `tests/` — 223 blueprint scaffolds that were never green
 
 **Status:** OPEN (this is the bulk of Phase B)
