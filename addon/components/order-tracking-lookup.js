@@ -62,6 +62,11 @@ export default class OrderTrackingLookupComponent extends Component {
         }
     }
 
+    @action submitLookup(event) {
+        event.preventDefault();
+        return this.lookupOrder.perform();
+    }
+
     @action lookupAnother() {
         this.urlSearchParams.removeParamFromCurrentUrl('order');
         this.trackingNumber = null;
