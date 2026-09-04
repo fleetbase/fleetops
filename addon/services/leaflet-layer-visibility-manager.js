@@ -99,7 +99,7 @@ export default class LeafletLayerVisibilityService extends Service {
 
     /** Assign a layer to a category pane (call this once when the layer is created/added) */
     assignPane(layer, category) {
-        const paneName = this.ensurePane(category);
+        const paneName = this.ensurePane(category)?.paneName;
         if (!paneName || !layer) return;
         // move the layer into the pane; a redraw typically moves it immediately
         layer.options = { ...(layer.options || {}), pane: paneName };
