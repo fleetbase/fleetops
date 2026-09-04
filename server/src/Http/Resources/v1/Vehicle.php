@@ -2,12 +2,15 @@
 
 namespace Fleetbase\FleetOps\Http\Resources\v1;
 
+use Fleetbase\FleetOps\Http\Resources\v1\Concerns\ResolvesPublicRelationFields;
 use Fleetbase\FleetOps\Support\Utils;
 use Fleetbase\Http\Resources\FleetbaseResource;
 use Fleetbase\Support\Http;
 
 class Vehicle extends FleetbaseResource
 {
+    use ResolvesPublicRelationFields;
+
     /**
      * Transform the resource into an array.
      *
@@ -17,6 +20,8 @@ class Vehicle extends FleetbaseResource
      */
     public function toArray($request)
     {
+        $with = $this->requestedRelations($request);
+
         return $this->withCustomFields([
             // Identity
             'id'                     => $this->when(Http::isInternalRequest(), $this->id, $this->public_id),
@@ -41,8 +46,12 @@ class Vehicle extends FleetbaseResource
             'vendor_name'            => $this->when(Http::isInternalRequest(), $this->vendor_name),
             'assigned_orders_count'  => $this->when(Http::isInternalRequest(), $this->assignedOrdersCount()),
             'current_order_reference'=> $this->when(Http::isInternalRequest(), $this->currentOrderReference()),
-            // Relationships
-            'driver'                 => $this->whenLoaded('driver', fn () => new Driver($this->driver)),
+            // Relationships. A public caller receives the assignment as a public id
+            // so a write can be read back; `?with=driver` still returns the object.
+            'driver'                 => $this->publicRelationField('driver', null, $with, fn () => new Driver($this->driver)),
+            'vendor'                 => $this->publicRelationField('vendor', 'vendor_uuid', $with, fn () => new Vendor($this->vendor)),
+            'category'               => $this->when(Http::isPublicRequest(), fn () => $this->publicIdForRelation('category', 'category_uuid')),
+            'warranty'               => $this->when(Http::isPublicRequest(), fn () => $this->publicIdForRelation('warranty', 'warranty_uuid')),
             'devices'                => $this->whenLoaded('devices', fn () => $this->devices),
             // Vehicle identification
             'make'                   => $this->make,
@@ -139,6 +148,15 @@ class Vehicle extends FleetbaseResource
             'altitude'               => (int) data_get($this, 'altitude', 0),
             'speed'                  => (int) data_get($this, 'speed', 0),
             'telematics'             => data_get($this, 'telematics'),
+            // Orchestrator constraints
+            'skills'                   => data_get($this, 'skills'),
+            'payload_capacity_volume'  => $this->payload_capacity_volume,
+            'payload_capacity_pallets' => $this->payload_capacity_pallets,
+            'payload_capacity_parcels' => $this->payload_capacity_parcels,
+            'max_tasks'                => $this->max_tasks,
+            'time_window_start'        => $this->time_window_start,
+            'time_window_end'          => $this->time_window_end,
+            'return_to_depot'          => $this->return_to_depot,
             // Notes & meta
             'notes'                  => $this->notes,
             'meta'                   => data_get($this, 'meta', Utils::createObject()),
@@ -273,6 +291,15 @@ class Vehicle extends FleetbaseResource
             'vin_data'                    => data_get($this, 'vin_data', Utils::createObject()),
             'specs'                       => data_get($this, 'specs', Utils::createObject()),
             'details'                     => data_get($this, 'details', Utils::createObject()),
+            // Orchestrator constraints
+            'skills'                     => data_get($this, 'skills'),
+            'payload_capacity_volume'    => $this->payload_capacity_volume,
+            'payload_capacity_pallets'   => $this->payload_capacity_pallets,
+            'payload_capacity_parcels'   => $this->payload_capacity_parcels,
+            'max_tasks'                  => $this->max_tasks,
+            'time_window_start'          => $this->time_window_start,
+            'time_window_end'            => $this->time_window_end,
+            'return_to_depot'            => $this->return_to_depot,
             // Notes & meta
             'notes'                      => $this->notes,
             'meta'                       => data_get($this, 'meta', Utils::createObject()),

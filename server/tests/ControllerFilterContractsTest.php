@@ -272,6 +272,91 @@ function fleetopsProtectedMethod(string $class, string $method): ReflectionMetho
     return $reflection;
 }
 
+/**
+ * Boot an in-memory database holding one row per relationship a public filter
+ * can be asked about.
+ *
+ * Relationship filters no longer compare a caller-supplied value against a uuid
+ * column: the public API deals in public ids, so the filter resolves the id to
+ * the uuids it stands for first. That resolution is a real query, so these
+ * assertions need a real connection.
+ *
+ * @return array<string, string> uuids keyed by table
+ */
+function fleetopsFilterRelationDatabase(): array
+{
+    $connection = new Illuminate\Database\SQLiteConnection(new PDO('sqlite::memory:'));
+    $resolver   = new Illuminate\Database\ConnectionResolver(['default' => $connection, 'mysql' => $connection]);
+    $resolver->setDefaultConnection('mysql');
+    Illuminate\Database\Eloquent\Model::setConnectionResolver($resolver);
+
+    app()->instance('db', new class($connection) {
+        public function __construct(public Illuminate\Database\SQLiteConnection $c)
+        {
+        }
+
+        public function connection($name = null): Illuminate\Database\SQLiteConnection
+        {
+            return $this->c;
+        }
+
+        public function __call($method, $arguments)
+        {
+            return $this->c->{$method}(...$arguments);
+        }
+    });
+    Illuminate\Support\Facades\DB::clearResolvedInstance('db');
+
+    $schema = $connection->getSchemaBuilder();
+    foreach (['fleets', 'vendors', 'zones', 'service_areas', 'drivers', 'vehicles', 'users'] as $table) {
+        if ($schema->hasTable($table)) {
+            $schema->drop($table);
+        }
+
+        $schema->create($table, function ($blueprint) {
+            $blueprint->increments('id');
+            foreach (['uuid', 'public_id', 'internal_id', 'company_uuid', 'user_uuid', 'name', '_key'] as $column) {
+                $blueprint->string($column)->nullable();
+            }
+            $blueprint->timestamps();
+            $blueprint->timestamp('deleted_at')->nullable();
+        });
+    }
+
+    $uuids = [
+        'fleets'        => '99999999-9999-4999-8999-999999999001',
+        'vendors'       => '99999999-9999-4999-8999-999999999002',
+        'zones'         => '99999999-9999-4999-8999-999999999003',
+        'service_areas' => '99999999-9999-4999-8999-999999999004',
+        'drivers'       => '99999999-9999-4999-8999-999999999005',
+        'vehicles'      => '99999999-9999-4999-8999-999999999006',
+        'users'         => '99999999-9999-4999-8999-999999999007',
+    ];
+
+    $publicIds = [
+        'fleets'        => 'fleet_filterone12',
+        'vendors'       => 'vendor_filterone1',
+        'zones'         => 'zone_filterone123',
+        'service_areas' => 'service_area_fone',
+        'drivers'       => 'driver_filterone1',
+        'vehicles'      => 'vehicle_filterone',
+        'users'         => 'user_filterone123',
+    ];
+
+    foreach ($uuids as $table => $uuid) {
+        $connection->table($table)->insert([
+            'uuid'         => $uuid,
+            'public_id'    => $publicIds[$table],
+            'company_uuid' => 'company-uuid',
+        ]);
+    }
+
+    // The driver scope requires a linked user row to exist.
+    $connection->table('drivers')->where('uuid', $uuids['drivers'])->update(['user_uuid' => $uuids['users']]);
+
+    return ['uuids' => $uuids, 'publicIds' => $publicIds];
+}
+
 function fleetopsFilterWithBuilder(string $class, FleetOpsControllerFilterQuery $builder): object
 {
     $filter = (new ReflectionClass($class))->newInstanceWithoutConstructor();
@@ -456,6 +541,8 @@ test('device event controller skips processed scope when states are empty', func
 });
 
 test('vehicle filter records identity relationship fleet and telematic filters', function () {
+    ['uuids' => $uuids, 'publicIds' => $publicIds] = fleetopsFilterRelationDatabase();
+
     $query  = new FleetOpsControllerFilterQuery();
     $filter = fleetopsFilterWithBuilder(VehicleFilter::class, $query);
 
@@ -465,14 +552,17 @@ test('vehicle filter records identity relationship fleet and telematic filters',
     $filter->display_name('sprinter');
     $filter->vin('vin-123');
     $filter->publicId('vehicle-public');
+    $filter->internalId('VEH-42');
     $filter->plateNumber('ABC-123');
     $filter->vehicleMake('Mercedes');
     $filter->vehicleModel('Sprinter');
     $filter->vehicleYear('2026');
     $filter->driver('unassigned');
+    $filter->driver($publicIds['drivers']);
     $filter->vendor(null);
+    $filter->vendor($publicIds['vendors']);
     $filter->driverUuid('driver-uuid');
-    $filter->fleet('fleet-uuid');
+    $filter->fleet($publicIds['fleets']);
     $filter->assignedFleet('false');
     $filter->telematicUuid('telematic-uuid');
     $filter->createdAt(['2026-01-01', '2026-01-31']);
@@ -483,19 +573,28 @@ test('vehicle filter records identity relationship fleet and telematic filters',
         ->and($query->calls)->toContain(['searchWhere', ['year', 'make', 'model', 'plate_number'], 'sprinter'])
         ->and($query->calls)->toContain(['searchWhere', 'vin', 'vin-123'])
         ->and($query->calls)->toContain(['searchWhere', 'public_id', 'vehicle-public'])
+        ->and($query->calls)->toContain(['searchWhere', 'internal_id', 'VEH-42'])
         ->and($query->calls)->toContain(['searchWhere', 'plate_number', 'ABC-123'])
         ->and($query->calls)->toContain(['searchWhere', 'make', 'Mercedes'])
         ->and($query->calls)->toContain(['searchWhere', 'model', 'Sprinter'])
         ->and($query->calls)->toContain(['searchWhere', 'year', '2026'])
         ->and($query->calls)->toContain(['whereDoesntHave', 'driver'])
-        ->and($query->calls)->toContain(['whereDoesntHave', 'fleets']);
+        ->and($query->calls)->toContain(['whereDoesntHave', 'fleets'])
+        // Public ids are resolved to the uuids the columns actually hold.
+        ->and($query->calls)->toContain(['whereIn', 'vendor_uuid', [$uuids['vendors']]]);
+
+    $nested = collect($query->calls)->where(0, 'whereHas')->flatMap(fn ($call) => $call[2])->values()->all();
 
     expect(collect($query->calls)->where(0, 'whereHas')->pluck(1)->all())->toContain('driver', 'fleets', 'devices')
+        ->and($nested)->toContain(['whereIn', 'uuid', [$uuids['drivers']]])
+        ->and($nested)->toContain(['whereIn', 'fleet_uuid', [$uuids['fleets']]])
         ->and(collect($query->calls)->where(0, 'whereBetween')->values())->toHaveCount(1)
         ->and(collect($query->calls)->where(0, 'whereDate')->values())->toHaveCount(1);
 });
 
 test('fleet filter records hierarchy relationship scalar status and date filters', function () {
+    ['uuids' => $uuids, 'publicIds' => $publicIds] = fleetopsFilterRelationDatabase();
+
     $query  = new FleetOpsControllerFilterQuery();
     $filter = fleetopsFilterWithBuilder(FleetFilter::class, $query);
 
@@ -504,10 +603,10 @@ test('fleet filter records hierarchy relationship scalar status and date filters
     $filter->query('dispatch');
     $filter->parentsOnly(true);
     $filter->parentsOnly(false);
-    $filter->serviceArea('service-area-uuid');
-    $filter->zone('zone-uuid');
-    $filter->parentFleet('parent-fleet-uuid');
-    $filter->vendor('vendor-uuid');
+    $filter->serviceArea($publicIds['service_areas']);
+    $filter->zone($publicIds['zones']);
+    $filter->parentFleet($publicIds['fleets']);
+    $filter->vendor($publicIds['vendors']);
     $filter->publicId('fleet-public');
     $filter->task('delivery');
     $filter->name('North Fleet');
@@ -515,16 +614,26 @@ test('fleet filter records hierarchy relationship scalar status and date filters
     $filter->createdAt('2026-01-01');
     $filter->updatedAt(['2026-02-01', '2026-02-28']);
 
+    $nested = collect($query->calls)->where(0, 'where')->pluck(1)->all();
+
     expect($query->calls)->toContain(['where', ['company_uuid', 'company-uuid']])
         ->and($query->calls)->toContain(['with', ['serviceArea', 'zone']])
         ->and($query->calls)->toContain(['whereNull', 'parent_fleet_uuid'])
-        ->and($query->calls)->toContain(['searchWhere', 'parent_fleet_uuid', 'parent-fleet-uuid'])
         ->and($query->calls)->toContain(['searchWhere', 'public_id', 'fleet-public'])
         ->and($query->calls)->toContain(['searchWhere', 'task', 'delivery'])
         ->and($query->calls)->toContain(['searchWhere', 'name', 'North Fleet'])
-        ->and($query->calls)->toContain(['whereIn', 'status', ['active', 'inactive']]);
-
-    expect(collect($query->calls)->where(0, 'whereHas')->pluck(1)->all())->toContain('serviceArea', 'zone', 'parent_fleet', 'vendor')
+        ->and($query->calls)->toContain(['whereIn', 'status', ['active', 'inactive']])
+        // Every hierarchy and relationship filter now resolves a public id to
+        // the uuid column it stands for, rather than comparing the public id
+        // against a uuid — which never matched — or against a `zone_uuid`
+        // column that does not exist on `zones`.
+        ->and($query->calls)->toContain(['whereIn', 'service_area_uuid', [$uuids['service_areas']]])
+        ->and($query->calls)->toContain(['whereIn', 'zone_uuid', [$uuids['zones']]])
+        ->and($query->calls)->toContain(['whereIn', 'parent_fleet_uuid', [$uuids['fleets']]])
+        ->and($query->calls)->toContain(['whereIn', 'vendor_uuid', [$uuids['vendors']]])
+        // `?query=` searches the fleet's own columns; it used to reach for a
+        // `user` relation Fleet does not have.
+        ->and(collect($query->calls)->where(0, 'whereHas')->pluck(1)->all())->not->toContain('user')
         ->and(collect($query->calls)->where(0, 'whereDate')->values())->toHaveCount(1)
         ->and(collect($query->calls)->where(0, 'whereBetween')->values())->toHaveCount(1);
 });
@@ -1224,9 +1333,13 @@ test('place filter alternate date branches and spatial area scopes execute', fun
 test('vehicle and fuel report filters cover alternate identity and date branches', function () {
     // Vehicle filter: unassigned drivers, blank vendor early return, inverse date
     // branches, fleet unassignment and blank telematic early return
+    fleetopsFilterRelationDatabase();
+
     $query  = new FleetOpsControllerFilterQuery();
     $filter = fleetopsFilterWithBuilder(VehicleFilter::class, $query);
     $filter->driver('unassigned');
+    // A public request may not pass a uuid, so nothing resolves and the filter
+    // matches no vehicle rather than silently matching all of them.
     $filter->driver('c4c4c4c4-4444-4444-8444-444444444444');
     $filter->vendor(null);
     $filter->createdAt('2026-02-01');
@@ -1240,7 +1353,7 @@ test('vehicle and fuel report filters cover alternate identity and date branches
         ->and($query->calls)->toContain(['whereDoesntHave', 'fleets'])
         ->and(collect($query->calls)->where(0, 'whereDate')->values())->toHaveCount(1)
         ->and(collect($query->calls)->where(0, 'whereBetween')->values())->toHaveCount(1)
-        ->and($nestedVehicle)->toContain(['where', ['uuid', 'c4c4c4c4-4444-4444-8444-444444444444']]);
+        ->and($nestedVehicle)->toContain(['whereIn', 'uuid', []]);
 
     // Fuel report filter: uuid, public-id and free-text identity branches
     // plus the inverse date branches

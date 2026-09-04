@@ -1093,7 +1093,9 @@ test('api vehicle controller exposes input defaults and tracking payload helpers
         'time_window_start'        => '08:00',
         'time_window_end'          => '17:00',
         'return_to_depot'          => true,
-        'vendor'                   => 'vendor-public',
+        // `vendor` is deliberately absent: it is no longer a scalar in this
+        // projection but a public id resolved against the caller's company,
+        // which is asserted in ApiVehicleControllerContractsTest.
         'driver'                   => 'driver-public',
     ]);
     $locationInput = $controller->callHelper('withCoordinateLocation', [], new Request([
@@ -1102,8 +1104,8 @@ test('api vehicle controller exposes input defaults and tracking payload helpers
     ]));
     $tracking      = $controller->callHelper('positionDataFromTrackingInput', 1.2816, 103.851, 12, 180, 55);
 
+    // Key order follows the allowlist, not the request body.
     expect($controller->callHelper('vehicleInputFromRequest', $request))->toBe([
-        'status'                   => 'active',
         'make'                     => 'Toyota',
         'model'                    => 'HiAce',
         'year'                     => 2025,
@@ -1111,13 +1113,14 @@ test('api vehicle controller exposes input defaults and tracking payload helpers
         'type'                     => 'van',
         'plate_number'             => 'SG-1234',
         'vin'                      => 'VIN123',
-        'meta'                     => ['temperature' => 'ambient'],
         'online'                   => false,
+        'status'                   => 'active',
         'location'                 => ['latitude' => 1.30, 'longitude' => 103.80],
         'altitude'                 => 10,
         'heading'                  => 90,
         'speed'                    => 45,
         'payload_capacity'         => 1200,
+        'meta'                     => ['temperature' => 'ambient'],
         'payload_capacity_volume'  => 8,
         'payload_capacity_pallets' => 2,
         'payload_capacity_parcels' => 80,

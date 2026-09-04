@@ -302,6 +302,14 @@ Route::prefix(config('fleetops.api.routing.prefix'))->namespace('Fleetbase\Fleet
             $router->group(['prefix' => 'fleets'], function () use ($router) {
                 $router->post('/', 'FleetController@create');
                 $router->get('/', 'FleetController@query');
+                // Membership routes are declared ahead of the `{id}` routes so a
+                // literal `vehicles`/`drivers` segment can never be swallowed by
+                // the single-parameter patterns below. Both parameters are public
+                // ids; no internal uuid is ever accepted or returned here.
+                $router->post('{id}/vehicles/{vehicle}', 'FleetController@assignVehicle');
+                $router->delete('{id}/vehicles/{vehicle}', 'FleetController@removeVehicle');
+                $router->post('{id}/drivers/{driver}', 'FleetController@assignDriver');
+                $router->delete('{id}/drivers/{driver}', 'FleetController@removeDriver');
                 $router->get('{id}', 'FleetController@find');
                 $router->put('{id}', 'FleetController@update');
                 $router->delete('{id}', 'FleetController@delete');

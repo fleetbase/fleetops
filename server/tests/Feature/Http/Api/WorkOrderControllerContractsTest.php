@@ -44,7 +44,7 @@ class FleetOpsApiWorkOrderControllerProbe extends WorkOrderController
         ];
     }
 
-    protected function resolveModel(string $modelClass, string $id): Model
+    protected function resolveModel(string $modelClass, string $id, ?string $companyUuid = null): Model
     {
         $key = $modelClass . ':' . $id;
 

@@ -2,14 +2,21 @@
 
 namespace Fleetbase\FleetOps\Http\Filter;
 
+use Fleetbase\FleetOps\Http\Filter\Concerns\ResolvesPublicRelationUuids;
+use Fleetbase\FleetOps\Models\Fleet;
 use Fleetbase\FleetOps\Models\Place;
+use Fleetbase\FleetOps\Models\Vehicle;
+use Fleetbase\FleetOps\Models\Vendor;
 use Fleetbase\FleetOps\Support\Utils;
 use Fleetbase\Http\Filter\Filter;
 use Fleetbase\Models\Company;
+use Fleetbase\Support\Http;
 use Illuminate\Support\Str;
 
 class DriverFilter extends Filter
 {
+    use ResolvesPublicRelationUuids;
+
     public function queryForInternal()
     {
         $this->builder->where(
@@ -65,7 +72,7 @@ class DriverFilter extends Filter
 
     public function facilitator(string $facilitator)
     {
-        $this->builder->where('vendor_uuid', $facilitator);
+        $this->builder->whereIn('vendor_uuid', $this->resolvePublicRelationUuids(Vendor::class, $facilitator));
     }
 
     public function vehicle(string $vehicle)
@@ -76,16 +83,28 @@ class DriverFilter extends Filter
             return;
         }
 
-        if (Str::isUuid($vehicle)) {
+        // The console passes a uuid; the public API passes a public or internal id.
+        if (Str::isUuid($vehicle) && Http::isInternalRequest($this->request)) {
             $this->builder->where('vehicle_uuid', $vehicle);
-        } else {
-            $this->builder->whereHas(
-                'vehicle',
-                function ($query) use ($vehicle) {
-                    $query->search($vehicle);
-                }
-            );
+
+            return;
         }
+
+        $vehicleUuids = $this->resolvePublicRelationUuids(Vehicle::class, $vehicle);
+
+        if ($vehicleUuids !== []) {
+            $this->builder->whereIn('vehicle_uuid', $vehicleUuids);
+
+            return;
+        }
+
+        // Fall back to a search so a partial plate or model still narrows a list.
+        $this->builder->whereHas(
+            'vehicle',
+            function ($query) use ($vehicle) {
+                $query->search($vehicle);
+            }
+        );
     }
 
     public function driversLicenseNumber(?string $driversLicenseNumber)
@@ -93,12 +112,17 @@ class DriverFilter extends Filter
         $this->builder->searchWhere('drivers_license_number', $driversLicenseNumber);
     }
 
+    /**
+     * `phone` is an accessor sourced from the linked user, not a relation — the
+     * previous `whereHas('phone')` asked Eloquent for a relation that does not
+     * exist and raised a 500 for every caller of `?phone=`.
+     */
     public function phone(string $phone)
     {
         $this->builder->whereHas(
-            'phone',
+            'user',
             function ($query) use ($phone) {
-                $query->search($phone);
+                $query->searchWhere('phone', $phone);
             }
         );
     }
@@ -127,10 +151,12 @@ class DriverFilter extends Filter
 
     public function fleet(string $fleet)
     {
+        $fleetUuids = $this->resolvePublicRelationUuids(Fleet::class, $fleet);
+
         $this->builder->whereHas(
             'fleets',
-            function ($q) use ($fleet) {
-                $q->where('fleet_uuid', $fleet);
+            function ($q) use ($fleetUuids) {
+                $q->whereIn('fleet_uuid', $fleetUuids);
             }
         );
     }

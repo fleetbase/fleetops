@@ -110,7 +110,7 @@ class Driver extends Model
         'current_status',
         'slug',
         'status',
-        'meta,',
+        'meta',
         // Orchestrator
         'skills',
         'max_travel_time',
@@ -255,7 +255,7 @@ class Driver extends Model
      */
     public function user()
     {
-        return $this->belongsTo(User::class)->select(['uuid', 'company_uuid', 'public_id', 'avatar_uuid', 'name', 'phone', 'email', 'type', 'status', 'last_login'])->without(['driver'])->withTrashed();
+        return $this->belongsTo(User::class)->select(['uuid', 'company_uuid', 'public_id', 'avatar_uuid', 'name', 'phone', 'email', 'timezone', 'type', 'status', 'last_login'])->without(['driver'])->withTrashed();
     }
 
     /**

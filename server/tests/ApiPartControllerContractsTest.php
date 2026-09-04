@@ -26,7 +26,7 @@ class FleetOpsApiPartControllerProbe extends PartController
         return $part;
     }
 
-    protected function resolveModel(string $modelClass, string $id): Illuminate\Database\Eloquent\Model
+    protected function resolveModel(string $modelClass, string $id, ?string $companyUuid = null): Illuminate\Database\Eloquent\Model
     {
         if ($this->partNotFound) {
             throw new ModelNotFoundException();
@@ -37,7 +37,7 @@ class FleetOpsApiPartControllerProbe extends PartController
         return $this->part;
     }
 
-    protected function resolveUuid(string $modelClass, ?string $id): ?string
+    protected function resolveUuid(string $modelClass, ?string $id, ?string $companyUuid = null): ?string
     {
         $this->resolvedUuids[] = [$modelClass, $id];
 

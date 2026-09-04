@@ -2,14 +2,18 @@
 
 namespace Fleetbase\FleetOps\Http\Filter;
 
+use Fleetbase\FleetOps\Http\Filter\Concerns\ResolvesPublicRelationUuids;
+use Fleetbase\FleetOps\Models\Driver;
+use Fleetbase\FleetOps\Models\Fleet;
 use Fleetbase\FleetOps\Models\Vehicle;
 use Fleetbase\FleetOps\Models\Vendor;
 use Fleetbase\FleetOps\Support\Utils;
 use Fleetbase\Http\Filter\Filter;
-use Fleetbase\Support\Http;
 
 class VehicleFilter extends Filter
 {
+    use ResolvesPublicRelationUuids;
+
     public function queryForInternal()
     {
         $this->builder->where('company_uuid', $this->session->get('company'));
@@ -28,6 +32,18 @@ class VehicleFilter extends Filter
     public function display_name(?string $display_name)
     {
         $this->builder->searchWhere(['year', 'make', 'model', 'plate_number'], $display_name);
+    }
+
+    /**
+     * Match a vehicle by the identifier the operator's own system uses.
+     *
+     * `internal_id` is the column an importer keys on to decide whether a
+     * vehicle already exists, and it was the one identifier the filter did not
+     * support — so every lookup fell through to a create.
+     */
+    public function internalId(?string $internalId)
+    {
+        $this->builder->searchWhere('internal_id', $internalId);
     }
 
     public function vin(?string $vin)
@@ -68,10 +84,12 @@ class VehicleFilter extends Filter
             return;
         }
 
+        $driverUuids = $this->resolvePublicRelationUuids(Driver::class, $driverId);
+
         $this->builder->whereHas(
             'driver',
-            function ($query) use ($driverId) {
-                $query->where('uuid', $driverId);
+            function ($query) use ($driverUuids) {
+                $query->whereIn('uuid', $driverUuids);
             }
         );
     }
@@ -82,20 +100,7 @@ class VehicleFilter extends Filter
             return;
         }
 
-        $this->builder->whereIn('vendor_uuid', Vendor::query()
-            ->where('company_uuid', $this->session->get('company'))
-            ->where(function ($query) use ($vendor) {
-                $query->where('public_id', $vendor);
-
-                if (in_array('internal_id', (new Vendor())->getFillable())) {
-                    $query->orWhere('internal_id', $vendor);
-                }
-
-                if (Http::isInternalRequest($this->request)) {
-                    $query->orWhere('uuid', $vendor);
-                }
-            })
-            ->pluck('uuid'));
+        $this->builder->whereIn('vendor_uuid', $this->resolvePublicRelationUuids(Vendor::class, $vendor));
     }
 
     public function driverUuid(?string $driverId)
@@ -132,10 +137,12 @@ class VehicleFilter extends Filter
 
     public function fleet(string $fleet)
     {
+        $fleetUuids = $this->resolvePublicRelationUuids(Fleet::class, $fleet);
+
         $this->builder->whereHas(
             'fleets',
-            function ($q) use ($fleet) {
-                $q->where('fleet_uuid', $fleet);
+            function ($q) use ($fleetUuids) {
+                $q->whereIn('fleet_uuid', $fleetUuids);
             }
         );
     }

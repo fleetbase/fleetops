@@ -110,6 +110,63 @@ function fleetopsDriverFilter(FleetOpsRecordingDriverFilterBuilder $builder, arr
     return $filter;
 }
 
+/**
+ * Relationship filters resolve public ids to uuids, which is a real query.
+ *
+ * @return array<string, array<string, string>>
+ */
+function fleetopsDriverFilterRelationDatabase(): array
+{
+    $connection = new Illuminate\Database\SQLiteConnection(new PDO('sqlite::memory:'));
+    $resolver   = new Illuminate\Database\ConnectionResolver(['default' => $connection, 'mysql' => $connection]);
+    $resolver->setDefaultConnection('mysql');
+    Illuminate\Database\Eloquent\Model::setConnectionResolver($resolver);
+    app()->instance('db', new class($connection) {
+        public function __construct(public Illuminate\Database\SQLiteConnection $c)
+        {
+        }
+
+        public function connection($name = null)
+        {
+            return $this->c;
+        }
+
+        public function __call($method, $arguments)
+        {
+            return $this->c->{$method}(...$arguments);
+        }
+    });
+    Illuminate\Support\Facades\DB::clearResolvedInstance('db');
+
+    $schema = $connection->getSchemaBuilder();
+    foreach (['vendors', 'vehicles', 'fleets'] as $table) {
+        if ($schema->hasTable($table)) {
+            $schema->drop($table);
+        }
+
+        $schema->create($table, function ($blueprint) {
+            $blueprint->increments('id');
+            foreach (['uuid', 'public_id', 'internal_id', 'company_uuid', 'name', '_key'] as $column) {
+                $blueprint->string($column)->nullable();
+            }
+            $blueprint->timestamps();
+            $blueprint->timestamp('deleted_at')->nullable();
+        });
+    }
+
+    $rows = [
+        'vendors'  => ['uuid' => '88888888-8888-4888-8888-888888888801', 'public_id' => 'vendor_dfilterone1'],
+        'vehicles' => ['uuid' => '88888888-8888-4888-8888-888888888802', 'public_id' => 'vehicle_dfilteron'],
+        'fleets'   => ['uuid' => '88888888-8888-4888-8888-888888888803', 'public_id' => 'fleet_dfilterone1'],
+    ];
+
+    foreach ($rows as $table => $row) {
+        $connection->table($table)->insert($row + ['company_uuid' => 'company_test']);
+    }
+
+    return $rows;
+}
+
 test('driver filter applies internal public and text search scopes', function () {
     $builder = new FleetOpsRecordingDriverFilterBuilder();
     $filter  = fleetopsDriverFilter($builder);
@@ -128,27 +185,46 @@ test('driver filter applies internal public and text search scopes', function ()
 });
 
 test('driver filter assignment and identity filters execute uuid and public branches', function () {
+    $rows    = fleetopsDriverFilterRelationDatabase();
     $builder = new FleetOpsRecordingDriverFilterBuilder();
     $filter  = fleetopsDriverFilter($builder);
     $uuid    = (string) Str::uuid();
 
-    $filter->facilitator('vendor_uuid');
-    $filter->vendor('vendor_uuid');
+    $filter->facilitator($rows['vendors']['public_id']);
+    $filter->vendor($rows['vendors']['public_id']);
     $filter->vehicle('unassigned');
+    // The console's uuid branch — this filter is constructed on an /int route.
     $filter->vehicle($uuid);
+    $filter->vehicle($rows['vehicles']['public_id']);
+    // An identifier that resolves to nothing still narrows by search rather
+    // than raising.
     $filter->vehicle('vehicle_public');
     $filter->driversLicenseNumber('DL-123');
     $filter->phone('+15551112222');
     $filter->country('SG,MY');
     $filter->country('MN');
     $filter->status('available,offline');
-    $filter->fleet('fleet_uuid');
+    $filter->fleet($rows['fleets']['public_id']);
+
+    $whereIns = collect($builder->methodCalls('whereIn'))->map(fn ($call) => [$call[1], $call[2]])->all();
+    $nested   = collect($builder->methodCalls('whereHas'))
+        ->flatMap(fn ($call) => $call[2]->calls)
+        ->filter(fn ($call) => $call[0] === 'whereIn')
+        ->map(fn ($call) => [$call[1], $call[2]])
+        ->all();
 
     expect($builder->called('whereNull'))->toBeTrue()
-        ->and($builder->called('where'))->toBeTrue()
         ->and($builder->called('whereHas'))->toBeTrue()
-        ->and($builder->called('whereIn'))->toBeTrue()
-        ->and($builder->called('searchWhere'))->toBeTrue();
+        ->and($builder->called('searchWhere'))->toBeTrue()
+        // The vendor filter used to compare a public id against `vendor_uuid`
+        // directly, which could never match.
+        ->and($whereIns)->toContain(['vendor_uuid', [$rows['vendors']['uuid']]])
+        ->and($whereIns)->toContain(['vehicle_uuid', [$rows['vehicles']['uuid']]])
+        ->and($nested)->toContain(['fleet_uuid', [$rows['fleets']['uuid']]])
+        // `?phone=` reached for a relation that does not exist on Driver; it now
+        // searches the linked user.
+        ->and(collect($builder->methodCalls('whereHas'))->pluck(1)->all())->toContain('user')
+        ->and(collect($builder->methodCalls('whereHas'))->pluck(1)->all())->not->toContain('phone');
 });
 
 test('driver filter date and nearby coordinate filters execute query operations', function () {

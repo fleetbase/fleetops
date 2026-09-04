@@ -78,6 +78,9 @@ function fleetopsSmallApiHelpersBoot(): SQLiteConnection
         'users'                      => ['uuid', 'public_id', 'company_uuid', 'name', '_key'],
         'places'                     => ['uuid', 'public_id', 'company_uuid', 'name', 'location', '_key'],
         'service_areas'              => ['uuid', 'public_id', 'company_uuid', 'name', 'border', '_key'],
+        // ServiceArea eager loads its zones, so resolving one by public id
+        // reads this table too.
+        'zones'                      => ['uuid', 'public_id', 'company_uuid', 'service_area_uuid', 'name', 'border', '_key'],
         'companies'                  => ['uuid', 'public_id', 'name', 'country', 'options'],
         'service_rates'              => ['uuid', 'public_id', 'company_uuid', 'service_area_uuid', 'zone_uuid', 'service_name', 'service_type', 'base_fee', 'per_km_flat_rate_fee', 'rate_calculation_method', 'currency', 'estimated_days', 'duration_terms', 'meta', 'slug', 'internal_id', '_key'],
         'service_rate_fees'          => ['uuid', 'public_id', 'service_rate_uuid', 'min', 'max', 'fee', 'distance_unit', '_key'],
@@ -146,10 +149,13 @@ test('vendor issue fleet and fuel report helper batteries execute against sqlite
 
     // Fleet battery
     $fleetHelper = fleetopsSmallApiHelper(new FleetController());
-    expect($fleetHelper('getServiceAreaUuid', 'service_areas', ['public_id' => 'sa_smallone1']))->toBe('sa-sm-1');
+    // Relationship inputs resolve from a public id, scoped to the caller's company.
+    expect($fleetHelper('resolveUuid', Fleetbase\FleetOps\Models\ServiceArea::class, 'sa_smallone1'))->toBe('sa-sm-1');
     $fleet = $fleetHelper('createFleet', ['company_uuid' => 'company-1', 'name' => 'Battery Fleet']);
     expect($connection->table('fleets')->count())->toBe(1);
     $foundFleet = $fleetHelper('findFleet', (string) $connection->table('fleets')->value('public_id'));
+    // The hierarchy guard walks upward through this seam.
+    expect($fleetHelper('parentUuidOf', $foundFleet->uuid))->toBeNull();
     expect($foundFleet->uuid)->toBe($fleet->uuid)
         ->and($fleetHelper('fleetResource', $foundFleet))->toBeInstanceOf(Fleetbase\FleetOps\Http\Resources\v1\Fleet::class)
         ->and($fleetHelper('fleetResourceCollection', collect([$foundFleet])))->toBeInstanceOf(Illuminate\Http\Resources\Json\ResourceCollection::class)

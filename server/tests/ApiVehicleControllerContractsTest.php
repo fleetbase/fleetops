@@ -5,6 +5,9 @@ use Fleetbase\FleetOps\Http\Requests\CreateVehicleRequest;
 use Fleetbase\FleetOps\Http\Requests\UpdateVehicleRequest;
 use Fleetbase\FleetOps\Models\Driver;
 use Fleetbase\FleetOps\Models\Vehicle;
+use Fleetbase\FleetOps\Models\Vendor;
+use Fleetbase\FleetOps\Models\Warranty;
+use Fleetbase\Models\Category;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Http\Request;
 
@@ -13,7 +16,8 @@ class FleetOpsApiVehicleCrudControllerProbe extends VehicleController
     public ?FleetOpsApiVehicleCrudFake $vehicle = null;
     public ?FleetOpsApiDriverCrudFake $driver   = null;
     public array $createdVehicles               = [];
-    public array $vendorLookups                 = [];
+    public array $relationLookups               = [];
+    public array $unresolvable                  = [];
     public mixed $queryResults                  = null;
     public bool $vehicleNotFound                = false;
     public bool $driverNotFound                 = false;
@@ -23,11 +27,26 @@ class FleetOpsApiVehicleCrudControllerProbe extends VehicleController
         return $this->vehicleInputFromRequest($request);
     }
 
-    protected function getVendorUuid(string $table, array $where): ?string
+    /**
+     * Stand in for the company-scoped public-id lookup.
+     *
+     * Anything listed in `$unresolvable` behaves as a cross-company or missing
+     * identifier does in production: the lookup finds nothing inside the
+     * caller's company and raises.
+     */
+    protected function resolveUuid(string $modelClass, ?string $id, ?string $companyUuid = null): ?string
     {
-        $this->vendorLookups[] = [$table, $where];
+        if (empty($id)) {
+            return null;
+        }
 
-        return 'vendor-uuid';
+        $this->relationLookups[] = [$modelClass, $id];
+
+        if (in_array($id, $this->unresolvable, true)) {
+            throw (new ModelNotFoundException())->setModel($modelClass, $id);
+        }
+
+        return strtolower(class_basename($modelClass)) . '-uuid';
     }
 
     protected function createVehicle(array $input): Vehicle
@@ -240,8 +259,8 @@ test('api vehicle controller creates vehicles with defaults relation lookups and
     $vehicle = $response['vehicle'];
 
     expect($response['resource'])->toBe('vehicle')
-        ->and($controller->vendorLookups)->toBe([
-            ['vendors', ['public_id' => 'vendor-public', 'company_uuid' => 'company-uuid']],
+        ->and($controller->relationLookups)->toBe([
+            [Vendor::class, 'vendor-public'],
         ])
         ->and($controller->createdVehicles[0])->toMatchArray([
             'status'       => 'active',
@@ -292,9 +311,11 @@ test('api vehicle controller updates queries finds deletes and tracks empty coor
             'make'        => 'Nissan',
             'model'       => 'NV350',
             'vin'         => 'NEWVIN',
-            'online'      => 0,
             'vendor_uuid' => 'vendor-uuid',
         ])
+        // A partial update must not carry an unrequested `online` default: the
+        // absent key means "leave it alone", not "take the vehicle offline".
+        ->and($filledInput)->not->toHaveKey('online')
         ->and($filledInput)->toHaveKey('location')
         ->and($vehicle->unassignedDriver)->toBeTrue()
         ->and($vehicle->savedForTest)->toBeTrue()
@@ -400,4 +421,150 @@ test('api vehicle controller input still drops fields that are not part of the c
     expect($input)->toHaveKey('odometer')
         ->and($input)->not->toHaveKey('company_uuid')
         ->and($input)->not->toHaveKey('uuid');
+});
+
+test('api vehicle controller accepts every safe vehicle field the model exposes', function () {
+    // Data-driven rather than one test per column: the point is parity between
+    // what the model can store and what the public contract will accept, so the
+    // assertion is over the whole set.
+    session(['company' => 'company-uuid']);
+
+    $payload = [
+        // Identity and description
+        'internal_id'  => 'VEH-9001', 'name' => 'Depot Van', 'description' => 'City route van',
+        'make'         => 'Ford', 'model' => 'Transit', 'model_type' => 'Custom', 'year' => 2024,
+        'trim'         => 'Trend', 'color' => 'White', 'type' => 'van', 'class' => 'N1',
+        'plate_number' => 'SG-9001', 'vin' => '1FTBW3XG8NKA00001', 'serial_number' => 'SER-9001',
+        'call_sign'    => 'DEPOT-1', 'fuel_card_number' => 'FC-9001',
+        // Measurement and operation
+        'odometer'           => 41000, 'odometer_unit' => 'km', 'odometer_at_purchase' => 12,
+        'measurement_system' => 'metric', 'fuel_type' => 'diesel', 'fuel_volume_unit' => 'l',
+        'online'             => true, 'status' => 'available',
+        // Body, capacity and dimensions
+        'transmission'     => 'automatic', 'body_type' => 'panel_van', 'body_sub_type' => 'lwb',
+        'usage_type'       => 'commercial', 'ownership_type' => 'owned', 'cargo_volume' => 11.5,
+        'passenger_volume' => 3.2, 'interior_volume' => 14.7, 'weight' => 2100.5, 'width' => 2.06,
+        'length'           => 5.98, 'height' => 2.54, 'towing_capacity' => 2500, 'payload_capacity' => 1400,
+        'seating_capacity' => 3, 'ground_clearance' => 0.18, 'bed_length' => 3.4, 'fuel_capacity' => 70,
+        // Lifecycle and financing
+        'financing_status'                     => 'financed', 'loan_number_of_payments' => 48,
+        'loan_first_payment'                   => '2026-01-15', 'loan_amount' => 32000, 'currency' => 'SGD',
+        'estimated_service_life_distance_unit' => 'km', 'estimated_service_life_distance' => 400000,
+        'estimated_service_life_months'        => 96, 'insurance_value' => 41000, 'depreciation_rate' => 12.5,
+        'current_value'                        => 38000, 'acquisition_cost' => 52000,
+        'purchased_at'                         => '2026-01-02', 'lease_expires_at' => '2029-01-02',
+        // Regulatory and engine specifications
+        'emission_standard'   => 'euro6', 'dpf_equipped' => true, 'scr_equipped' => false,
+        'gvwr'                => 3500, 'gcwr' => 6000, 'engine_number' => 'ENG-9001', 'engine_model' => 'EcoBlue',
+        'engine_make'         => 'Ford', 'engine_family' => 'Puma', 'engine_configuration' => 'inline',
+        'engine_displacement' => 2.0, 'engine_size' => 1995, 'horsepower' => 168,
+        'horsepower_rpm'      => 3500, 'torque' => 405, 'torque_rpm' => 1750,
+        'number_of_cylinders' => 4, 'cylinder_arrangement' => 'I4',
+        // Structured and descriptive
+        'specs' => ['doors' => 4], 'details' => ['liftgate' => true], 'notes' => 'City pool',
+        'meta'  => ['depot' => 'north'],
+        // Orchestrator
+        'skills'                   => ['tail_lift'], 'payload_capacity_volume' => 11.25,
+        'payload_capacity_pallets' => 6, 'payload_capacity_parcels' => 320, 'max_tasks' => 40,
+        'time_window_start'        => '08:00', 'time_window_end' => '18:00', 'return_to_depot' => true,
+    ];
+
+    $controller = new FleetOpsApiVehicleCrudControllerProbe();
+    $input      = $controller->inputForTest(new Request($payload));
+
+    $missing = array_values(array_diff(array_keys($payload), array_keys($input)));
+
+    expect($missing)->toBe([])
+        ->and($input)->toMatchArray($payload);
+});
+
+test('api vehicle controller resolves every public relationship input to a scoped uuid', function () {
+    session(['company' => 'company-uuid']);
+
+    $controller = new FleetOpsApiVehicleCrudControllerProbe();
+    $input      = $controller->inputForTest(new Request([
+        'vendor'   => 'vendor_abc',
+        'category' => 'category_abc',
+        'warranty' => 'warranty_abc',
+        'photo'    => 'file_abc',
+    ]));
+
+    expect($input)->toMatchArray([
+        'vendor_uuid'   => 'vendor-uuid',
+        'category_uuid' => 'category-uuid',
+        'warranty_uuid' => 'warranty-uuid',
+        'photo_uuid'    => 'file-uuid',
+    ])
+        ->and($controller->relationLookups)->toBe([
+            [Vendor::class, 'vendor_abc'],
+            [Category::class, 'category_abc'],
+            [Warranty::class, 'warranty_abc'],
+            [Fleetbase\Models\File::class, 'file_abc'],
+        ]);
+});
+
+test('api vehicle controller clears a relationship when the input is sent empty', function () {
+    session(['company' => 'company-uuid']);
+
+    $controller = new FleetOpsApiVehicleCrudControllerProbe();
+    $input      = $controller->inputForTest(fleetopsUpdateVehicleRequest(['vendor' => null]));
+
+    expect($input)->toHaveKey('vendor_uuid')
+        ->and($input['vendor_uuid'])->toBeNull()
+        ->and($controller->relationLookups)->toBe([]);
+});
+
+test('api vehicle controller rejects a relationship that belongs to another company', function () {
+    session(['company' => 'company-uuid']);
+
+    $controller               = new FleetOpsApiVehicleCrudControllerProbe();
+    $controller->unresolvable = ['vendor_other_company'];
+
+    $created = $controller->create(fleetopsCreateVehicleRequest([
+        'make'   => 'Ford',
+        'vendor' => 'vendor_other_company',
+    ]));
+
+    $controller               = new FleetOpsApiVehicleCrudControllerProbe();
+    $controller->vehicle      = new FleetOpsApiVehicleCrudFake();
+    $controller->unresolvable = ['vendor_other_company'];
+
+    $updated = $controller->update('vehicle-public', fleetopsUpdateVehicleRequest([
+        'vendor' => 'vendor_other_company',
+    ]));
+
+    // A cross-company identifier is answered exactly as a missing one, so the
+    // response cannot be used to discover what another organization holds.
+    expect($created)->toBe([
+        'json'   => ['error' => 'No vendor resource found for the identifier provided.'],
+        'status' => 404,
+    ])->and($updated)->toBe([
+        'json'   => ['error' => 'No vendor resource found for the identifier provided.'],
+        'status' => 404,
+    ]);
+});
+
+test('api vehicle controller input still excludes server managed and internal columns', function () {
+    $controller = new FleetOpsApiVehicleCrudControllerProbe();
+
+    $input = $controller->inputForTest(new Request([
+        'make'           => 'Ford',
+        'company_uuid'   => 'someone-elses-company',
+        'uuid'           => 'forged',
+        '_key'           => 'forged',
+        'public_id'      => 'vehicle_forged',
+        'slug'           => 'forged',
+        'vendor_uuid'    => 'forged',
+        'category_uuid'  => 'forged',
+        'warranty_uuid'  => 'forged',
+        'photo_uuid'     => 'forged',
+        'telematic_uuid' => 'forged',
+        // Written by the VIN decoder and by telematics ingestion respectively;
+        // a caller must not be able to overwrite either.
+        'vin_data'       => ['manufacturer' => 'forged'],
+        'telematics'     => ['speed' => 999],
+        'avatar_url'     => 'forged',
+    ]));
+
+    expect(array_keys($input))->toBe(['make']);
 });

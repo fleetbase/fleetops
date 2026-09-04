@@ -44,14 +44,14 @@ class FleetOpsApiFuelTransactionControllerProbe extends FuelTransactionControlle
         ];
     }
 
-    protected function resolveUuid(string $modelClass, ?string $id): ?string
+    protected function resolveUuid(string $modelClass, ?string $id, ?string $companyUuid = null): ?string
     {
         $this->resolvedUuids[] = [$modelClass, $id];
 
         return filled($id) ? $id . '-uuid' : null;
     }
 
-    protected function resolveModel(string $modelClass, string $id): EloquentModel
+    protected function resolveModel(string $modelClass, string $id, ?string $companyUuid = null): EloquentModel
     {
         $key = $modelClass . ':' . $id;
 

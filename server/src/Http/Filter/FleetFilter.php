@@ -2,11 +2,18 @@
 
 namespace Fleetbase\FleetOps\Http\Filter;
 
+use Fleetbase\FleetOps\Http\Filter\Concerns\ResolvesPublicRelationUuids;
+use Fleetbase\FleetOps\Models\Fleet;
+use Fleetbase\FleetOps\Models\ServiceArea;
+use Fleetbase\FleetOps\Models\Vendor;
+use Fleetbase\FleetOps\Models\Zone;
 use Fleetbase\FleetOps\Support\Utils;
 use Fleetbase\Http\Filter\Filter;
 
 class FleetFilter extends Filter
 {
+    use ResolvesPublicRelationUuids;
+
     public function queryForInternal()
     {
         $this->builder->where('company_uuid', $this->session->get('company'))->with(['serviceArea', 'zone']);
@@ -17,15 +24,17 @@ class FleetFilter extends Filter
         $this->builder->where('company_uuid', $this->session->get('company'));
     }
 
+    /**
+     * Free-text search across a fleet's own columns.
+     *
+     * Previously matched against a `user` relation, which Fleet does not have —
+     * every `?query=` on the fleets endpoint raised a relation-not-found error
+     * rather than returning results.
+     */
     public function query(?string $searchQuery)
     {
         $this->builder->where(function ($query) use ($searchQuery) {
-            $query->orWhereHas(
-                'user',
-                function ($query) use ($searchQuery) {
-                    $query->searchWhere(['name', 'email', 'phone'], $searchQuery);
-                }
-            );
+            $query->searchWhere(['name', 'task', 'public_id'], $searchQuery);
         });
     }
 
@@ -38,44 +47,22 @@ class FleetFilter extends Filter
 
     public function serviceArea(?string $serviceArea)
     {
-        $this->builder->whereHas(
-            'serviceArea',
-            function ($query) use ($serviceArea) {
-                $query->where('uuid', $serviceArea);
-            }
-        );
+        $this->builder->whereIn('service_area_uuid', $this->resolvePublicRelationUuids(ServiceArea::class, $serviceArea));
     }
 
     public function zone(?string $zone)
     {
-        $this->builder->whereHas(
-            'zone',
-            function ($query) use ($zone) {
-                $query->where('zone_uuid', $zone);
-            }
-        );
+        $this->builder->whereIn('zone_uuid', $this->resolvePublicRelationUuids(Zone::class, $zone));
     }
 
     public function parentFleet(?string $fleet)
     {
-        $this->builder->whereHas(
-            'parent_fleet',
-            function ($query) use ($fleet) {
-                $query->where('uuid', $fleet);
-            }
-        );
-
-        $this->builder->searchWhere('parent_fleet_uuid', $fleet);
+        $this->builder->whereIn('parent_fleet_uuid', $this->resolvePublicRelationUuids(Fleet::class, $fleet));
     }
 
     public function vendor(?string $vendor)
     {
-        $this->builder->whereHas(
-            'vendor',
-            function ($query) use ($vendor) {
-                $query->where('uuid', $vendor);
-            }
-        );
+        $this->builder->whereIn('vendor_uuid', $this->resolvePublicRelationUuids(Vendor::class, $vendor));
     }
 
     public function publicId(?string $publicId)

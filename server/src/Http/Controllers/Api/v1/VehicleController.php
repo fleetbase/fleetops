@@ -5,6 +5,8 @@ namespace Fleetbase\FleetOps\Http\Controllers\Api\v1;
 use Fleetbase\FleetOps\Events\GeofenceEntered;
 use Fleetbase\FleetOps\Events\GeofenceExited;
 use Fleetbase\FleetOps\Events\VehicleLocationChanged;
+use Fleetbase\FleetOps\Exceptions\PublicRelationNotFoundException;
+use Fleetbase\FleetOps\Http\Controllers\Api\v1\Concerns\ResolvesFleetOpsApiResources;
 use Fleetbase\FleetOps\Http\Requests\CreateVehicleRequest;
 use Fleetbase\FleetOps\Http\Requests\UpdateVehicleRequest;
 use Fleetbase\FleetOps\Http\Resources\v1\DeletedResource;
@@ -12,16 +14,28 @@ use Fleetbase\FleetOps\Http\Resources\v1\Vehicle as VehicleResource;
 use Fleetbase\FleetOps\Jobs\CheckGeofenceDwell;
 use Fleetbase\FleetOps\Models\Driver;
 use Fleetbase\FleetOps\Models\Vehicle;
+use Fleetbase\FleetOps\Models\Vendor;
+use Fleetbase\FleetOps\Models\Warranty;
 use Fleetbase\FleetOps\Support\GeofenceIntersectionService;
 use Fleetbase\FleetOps\Support\Utils;
 use Fleetbase\Http\Controllers\Controller;
 use Fleetbase\LaravelMysqlSpatial\Types\Point;
+use Fleetbase\Models\Category;
+use Fleetbase\Models\File;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 
 class VehicleController extends Controller
 {
+    use ResolvesFleetOpsApiResources;
+
+    /**
+     * Relationships eager loaded so the public resource can report each
+     * assignment as a public id without a query per vehicle.
+     */
+    protected const PUBLIC_RELATIONS = ['vendor', 'category', 'warranty', 'driver'];
+
     /**
      * Creates a new Fleetbase Vehicle resource.
      *
@@ -32,21 +46,17 @@ class VehicleController extends Controller
     public function create(CreateVehicleRequest $request)
     {
         // get request input
-        $input = $this->vehicleInputFromRequest($request);
+        try {
+            $input = $this->vehicleInputFromRequest($request);
+        } catch (PublicRelationNotFoundException $exception) {
+            return $this->jsonResponse(['error' => $exception->getMessage()], 404);
+        }
 
         // make sure company is set
         $input['company_uuid'] = session('company');
 
         // set default online
         $input = $this->withDefaultOnline($input);
-
-        // vendor assignment
-        if ($request->has('vendor')) {
-            $input['vendor_uuid'] = $this->getVendorUuid('vendors', [
-                'public_id'    => $request->input('vendor'),
-                'company_uuid' => session('company'),
-            ]);
-        }
 
         // latitude / longitude
         $input = $this->withCoordinateLocation($input, $request);
@@ -98,18 +108,11 @@ class VehicleController extends Controller
         }
 
         // get request input
-        $input = $this->vehicleInputFromRequest($request);
-
-        // vendor assignment
-        if ($request->has('vendor')) {
-            $input['vendor_uuid'] = $this->getVendorUuid('vendors', [
-                'public_id'    => $request->input('vendor'),
-                'company_uuid' => session('company'),
-            ]);
+        try {
+            $input = $this->vehicleInputFromRequest($request);
+        } catch (PublicRelationNotFoundException $exception) {
+            return $this->jsonResponse(['error' => $exception->getMessage()], 404);
         }
-
-        // set default online
-        $input = $this->withDefaultOnline($input);
 
         // latitude / longitude
         $input = $this->withCoordinateLocation($input, $request);
@@ -347,23 +350,75 @@ class VehicleController extends Controller
         }
     }
 
+    /**
+     * The explicit public input allowlist for a vehicle.
+     *
+     * Mirrors every safe business field the model and the Fleet-Ops vehicle form
+     * expose. Deliberately absent: `company_uuid` and the raw `*_uuid` relation
+     * columns (resolved from public ids below), `public_id` / `uuid` / `_key` /
+     * `slug` (generated), `avatar_url` when given as a uuid, `vin_data` (written
+     * by the VIN decoder) and `telematics` (written by telematics ingestion).
+     *
+     * @throws PublicRelationNotFoundException
+     */
     protected function vehicleInputFromRequest(Request $request): array
     {
-        return $request->only([
-            'status', 'make', 'model', 'year', 'trim', 'type', 'plate_number', 'vin',
-            'meta', 'online', 'location', 'altitude', 'heading', 'speed',
+        $input = $request->only([
+            // Identity and description
+            'internal_id', 'name', 'description', 'make', 'model', 'model_type', 'year',
+            'trim', 'color', 'type', 'class', 'plate_number', 'vin', 'serial_number',
+            'call_sign', 'fuel_card_number',
+            // Measurement and operation.
+            //
             // Odometer is fillable on the model and unrestricted by the request
             // rules, but was absent here — so a caller sending one received a
             // 200 and a response body that looked correct while the reading was
             // discarded. Recording mileage is the single most common write a
             // driver app makes against a vehicle.
-            'odometer', 'odometer_unit',
-            'payload_capacity', 'payload_capacity_volume',
-            'payload_capacity_pallets', 'payload_capacity_parcels',
+            'odometer', 'odometer_unit', 'odometer_at_purchase', 'measurement_system',
+            'fuel_type', 'fuel_volume_unit', 'online', 'status',
+            'location', 'altitude', 'heading', 'speed',
+            // Body, capacity and dimensions
+            'transmission', 'body_type', 'body_sub_type', 'usage_type', 'ownership_type',
+            'cargo_volume', 'passenger_volume', 'interior_volume', 'weight', 'width',
+            'length', 'height', 'towing_capacity', 'payload_capacity', 'seating_capacity',
+            'ground_clearance', 'bed_length', 'fuel_capacity',
+            // Lifecycle and financing
+            'financing_status', 'loan_number_of_payments', 'loan_first_payment', 'loan_amount',
+            'estimated_service_life_distance_unit', 'estimated_service_life_distance',
+            'estimated_service_life_months', 'insurance_value', 'depreciation_rate',
+            'current_value', 'acquisition_cost', 'currency', 'purchased_at', 'lease_expires_at',
+            // Regulatory and engine specifications
+            'emission_standard', 'dpf_equipped', 'scr_equipped', 'gvwr', 'gcwr',
+            'engine_number', 'engine_model', 'engine_make', 'engine_family',
+            'engine_configuration', 'engine_displacement', 'engine_size', 'horsepower',
+            'horsepower_rpm', 'torque', 'torque_rpm', 'number_of_cylinders',
+            'cylinder_arrangement',
+            // Structured and descriptive fields
+            'specs', 'details', 'notes', 'meta',
+            // Orchestrator
+            'payload_capacity_volume', 'payload_capacity_pallets', 'payload_capacity_parcels',
             'skills', 'max_tasks', 'time_window_start', 'time_window_end', 'return_to_depot',
         ]);
+
+        $this->applyPublicIdRelations($input, [
+            'vendor'   => ['vendor_uuid', Vendor::class],
+            'category' => ['category_uuid', Category::class],
+            'warranty' => ['warranty_uuid', Warranty::class],
+            'photo'    => ['photo_uuid', File::class],
+        ], $request);
+
+        return $input;
     }
 
+    /**
+     * A vehicle that does not say otherwise starts offline.
+     *
+     * Applied on create only. Applying it on update too meant any partial write —
+     * a plate correction, an odometer reading — silently knocked the vehicle
+     * offline, because the absent key was read as "set it to false" rather than
+     * "leave it alone".
+     */
     protected function withDefaultOnline(array $input): array
     {
         if (!isset($input['online'])) {
@@ -394,11 +449,6 @@ class VehicleController extends Controller
         ];
     }
 
-    protected function getVendorUuid(string $table, array $where): ?string
-    {
-        return Utils::getUuid($table, $where);
-    }
-
     protected function createVehicle(array $input): Vehicle
     {
         return Vehicle::create($input);
@@ -416,7 +466,9 @@ class VehicleController extends Controller
 
     protected function queryVehicles(Request $request)
     {
-        return Vehicle::queryWithRequest($request);
+        return Vehicle::queryWithRequest($request, function (&$query) {
+            $query->with(static::PUBLIC_RELATIONS);
+        });
     }
 
     protected function vehicleResource(Vehicle $vehicle)
