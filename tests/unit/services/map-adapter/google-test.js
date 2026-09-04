@@ -102,6 +102,10 @@ function installGoogleMapsStub(context) {
             this.listeners.push([event, handler]);
         }
 
+        fire(event, payload) {
+            this.listeners.filter(([name]) => name === event).forEach(([, handler]) => handler(payload));
+        }
+
         setMap(map) {
             this.setMapCalls.push(map);
         }
@@ -195,8 +199,39 @@ function installGoogleMapsStub(context) {
         }
     }
 
+    /**
+     * The adapter builds its polygon labels as an OverlayView subclass, assigning its own
+     * `onAdd`/`draw`/`onRemove`. The stub supplies the two hooks those bodies call back into.
+     */
+    class StubOverlayView {
+        constructor() {
+            this.setMapCalls = [];
+            context.overlayViews.push(this);
+        }
+
+        setMap(map) {
+            this.setMapCalls.push(map);
+            this.map = map;
+            if (map) {
+                this.onAdd?.();
+                this.draw?.();
+            } else {
+                this.onRemove?.();
+            }
+        }
+
+        getPanes() {
+            return context.panes;
+        }
+
+        getProjection() {
+            return context.projection;
+        }
+    }
+
     const googleStub = {
         maps: {
+            OverlayView: StubOverlayView,
             InfoWindow: StubInfoWindow,
             Data: StubDataLayer,
             ImageMapType: class StubImageMapType {
@@ -302,6 +337,9 @@ module('Unit | Service | map-adapter/google', function (hooks) {
         this.dataLayers = [];
         this.imageMapTypes = [];
         this.removedListeners = [];
+        this.overlayViews = [];
+        this.panes = { overlayMouseTarget: document.createElement('div') };
+        this.projection = { fromLatLngToDivPixel: () => ({ x: 40, y: 60 }) };
         installGoogleMapsStub(this);
         this.service = this.owner.lookup('service:map-adapter/google');
 
@@ -1613,5 +1651,232 @@ module('Unit | Service | map-adapter/google', function (hooks) {
         } finally {
             topbar.remove();
         }
+    });
+
+    test('a polygon given a tooltip is labelled at the centre of its ring', function (assert) {
+        const map = this.useMap();
+
+        const polygon = this.service.addPolygon(
+            'zone_1',
+            [
+                [0, 0],
+                [0, 30],
+                [30, 30],
+                [30, 0],
+            ],
+            { tooltip: 'Zone A' }
+        );
+
+        assert.strictEqual(polygon.__labelText, 'Zone A');
+        const label = polygon.__labelMarker;
+        assert.ok(label, 'a label overlay is built');
+        assert.deepEqual(label.position, { lat: 15, lng: 15 }, 'at the centroid of the ring');
+        assert.strictEqual(label.title, 'Zone A');
+        assert.strictEqual(label.content.className, 'fleetops-google-polygon-label');
+        assert.strictEqual(label.content.textContent, 'Zone A');
+        assert.deepEqual(label.setMapCalls, [], 'built detached: google-live-map hides the polygon straight after creating it');
+        assert.strictEqual(typeof polygon.__tooltipCleanup, 'function', 'with hover handlers to clean up');
+
+        this.service.showLayer(polygon);
+        assert.strictEqual(label.setMapCalls.at(-1), map, 'and only attached once the layer is shown');
+    });
+
+    test('the label overlay draws itself into the map pane and cleans up after itself', function (assert) {
+        this.useMap();
+        this.service.addPolygon(
+            'zone_1',
+            [
+                [0, 0],
+                [0, 30],
+                [30, 30],
+            ],
+            { tooltip: 'Zone A' }
+        );
+
+        const label = this.overlayViews.at(-1);
+        // The overlay only renders once it is on the map, which is what showing the layer does.
+        this.service.showLayer(this.service._overlays.get('zone_1'));
+        const container = this.panes.overlayMouseTarget.firstElementChild;
+        assert.ok(container, 'the overlay adds a container to the map pane');
+        assert.strictEqual(container.firstElementChild, label.content, 'holding the label content');
+        assert.strictEqual(container.style.left, '40px', 'positioned from the projection');
+        assert.strictEqual(container.style.top, '60px');
+        assert.strictEqual(container.style.transform, 'translate(-50%, -50%)', 'and centred on the point');
+
+        label.setMap(null);
+        assert.notOk(this.panes.overlayMouseTarget.firstElementChild, 'removing it takes the container away');
+
+        label.draw();
+        assert.ok(true, 'and drawing after removal is harmless');
+    });
+
+    test('the label follows the cursor while the polygon is hovered', function (assert) {
+        this.useMap();
+        this.mapDiv.style.width = '400px';
+        this.mapDiv.style.height = '300px';
+
+        const polygon = this.service.addPolygon(
+            'zone_1',
+            [
+                [0, 0],
+                [0, 30],
+                [30, 30],
+            ],
+            { tooltip: 'Zone A' }
+        );
+        const label = polygon.__labelMarker;
+        this.service.showLayer(polygon);
+        const container = this.panes.overlayMouseTarget.firstElementChild;
+        const rect = this.mapDiv.getBoundingClientRect();
+
+        polygon.fire('mouseover', { domEvent: { clientX: rect.left + 100, clientY: rect.top + 50 } });
+        assert.true(label.__followCursor, 'the label leaves its anchor');
+        assert.strictEqual(container.style.transform, 'translate(0px, 0px)', 'and is placed at the pointer');
+        const afterOver = container.style.left;
+
+        polygon.fire('mousemove', { domEvent: { clientX: rect.left + 200, clientY: rect.top + 50 } });
+        assert.notStrictEqual(container.style.left, afterOver, 'and tracks it as it moves');
+
+        polygon.fire('mouseout', {});
+        assert.false(label.__followCursor, 'leaving the polygon returns it to the anchor');
+        assert.strictEqual(container.style.transform, 'translate(-50%, -50%)');
+
+        polygon.fire('mouseover', {});
+        assert.false(label.__followCursor, 'an event with no pointer is ignored');
+    });
+
+    test('the hover handlers are released when the overlay goes', function (assert) {
+        this.useMap();
+        const polygon = this.service.addPolygon(
+            'zone_1',
+            [
+                [0, 0],
+                [0, 30],
+                [30, 30],
+            ],
+            { tooltip: 'Zone A' }
+        );
+
+        this.service.removeOverlay('zone_1');
+
+        assert.strictEqual(this.removedListeners.length, 3, 'mouseover, mousemove and mouseout are all released');
+        assert.strictEqual(polygon.__labelMarker.setMapCalls.at(-1), null, 'and the label leaves the map');
+    });
+
+    test('a polygon with no usable ring gets no label', function (assert) {
+        this.useMap();
+
+        const noPoints = this.service.addPolygon('zone_1', [
+            [0, 0],
+            [0, 30],
+            [30, 30],
+        ]);
+        assert.strictEqual(noPoints.__labelMarker, undefined, 'no tooltip, no label');
+
+        // `#createOverlayLabel` needs a centroid; an empty ring cannot give one.
+        this.service._map = null;
+        const withoutMap = this.service.addPolygon(
+            'zone_2',
+            [
+                [0, 0],
+                [0, 30],
+                [30, 30],
+            ],
+            { tooltip: 'Zone B' }
+        );
+        assert.strictEqual(withoutMap, null, 'and nothing is drawn without a map at all');
+    });
+
+    test('showing a labelled layer rebuilds the label and re-centres it on the current shape', function (assert) {
+        const map = this.useMap();
+        const polygon = this.service.addPolygon(
+            'zone_1',
+            [
+                [0, 0],
+                [0, 30],
+                [30, 30],
+            ],
+            { tooltip: 'Zone A' }
+        );
+
+        // A layer that Ember re-created keeps its text but has lost the overlay.
+        polygon.__labelMarker = null;
+        polygon.getPath = () => ({
+            getArray: () => [
+                { lat: () => 0, lng: () => 0 },
+                { lat: () => 0, lng: () => 60 },
+                { lat: () => 60, lng: () => 60 },
+            ],
+        });
+
+        this.service.showLayer(polygon);
+
+        assert.ok(polygon.__labelMarker, 'the label is rebuilt');
+        assert.deepEqual(polygon.__labelMarker.position, { lat: 20, lng: 40 }, 'at the centroid of the shape as it is now');
+        assert.strictEqual(polygon.__labelMarker.setMapCalls.at(-1), map);
+        assert.strictEqual(polygon.__labelMarker.content.textContent, 'Zone A');
+    });
+
+    test('a layer whose path cannot be read falls back to the ring it was built with', function (assert) {
+        this.useMap();
+        const polygon = this.service.addPolygon(
+            'zone_1',
+            [
+                [0, 0],
+                [0, 30],
+                [30, 30],
+            ],
+            { tooltip: 'Zone A' }
+        );
+        const originalPaths = polygon.__labelPaths;
+
+        polygon.getPath = () => ({ getArray: () => [{ lat: () => NaN, lng: () => NaN }] });
+        this.service.showLayer(polygon);
+
+        assert.deepEqual(polygon.__labelPaths, originalPaths, 'the remembered ring is kept');
+        assert.deepEqual(polygon.__labelMarker.position, { lat: 10, lng: 20 }, 'and the label stays where it was');
+    });
+
+    test('a marker tooltip is shown on hover and torn down with the marker', async function (assert) {
+        this.useMap();
+        this.service._supportsAdvancedMarkers = true;
+
+        const marker = await this.service.addMarker('marker_1', 1.3, 103.8, { iconUrl: '/assets/pin.png', tooltip: 'Depot' });
+        const content = marker.content;
+
+        content.dispatchEvent(new MouseEvent('mouseenter', { clientX: 10, clientY: 10 }));
+        const tooltip = document.querySelector('.fleetops-google-hover-tooltip');
+        assert.ok(tooltip, 'hovering the marker shows a tooltip');
+        assert.strictEqual(tooltip.textContent, 'Depot');
+
+        content.dispatchEvent(new MouseEvent('mouseleave'));
+        assert.notOk(
+            document.querySelector('.fleetops-google-hover-tooltip')?.isConnected && document.querySelector('.fleetops-google-hover-tooltip').style.opacity === '1',
+            'and leaving hides it'
+        );
+
+        this.service.removeMarker('marker_1');
+        content.dispatchEvent(new MouseEvent('mouseenter', { clientX: 10, clientY: 10 }));
+        assert.notOk(document.querySelector('.fleetops-google-hover-tooltip'), 'once removed, the marker no longer shows one');
+    });
+
+    test('a classic marker tooltip is attached to the marker itself', async function (assert) {
+        this.useMap();
+        this.service._supportsAdvancedMarkers = false;
+
+        const marker = await this.service.addMarker('marker_1', 1.3, 103.8, { tooltip: 'Depot' });
+
+        assert.strictEqual(typeof marker.__tooltipCleanup, 'function', 'there is something to clean up');
+        assert.deepEqual(
+            marker.listeners.map(([event]) => event),
+            ['mouseover', 'mousemove', 'mouseout'],
+            'and it listens on the marker rather than a DOM node'
+        );
+
+        marker.fire('mouseover', { domEvent: { clientX: 10, clientY: 10 } });
+        assert.ok(document.querySelector('.fleetops-google-hover-tooltip'), 'hovering shows it');
+
+        this.service.removeMarker('marker_1');
+        assert.notOk(document.querySelector('.fleetops-google-hover-tooltip'), 'and removing the marker takes it away');
     });
 });
