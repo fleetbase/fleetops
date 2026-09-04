@@ -1024,15 +1024,15 @@ export default class GoogleMapsAdapter extends MapAdapterInterface {
     }
 
     showCoordinates(event) {
-        const lat = event?.latlng?.lat ?? event?.latlng?.lat?.();
-        const lng = event?.latlng?.lng ?? event?.latlng?.lng?.();
+        const lat = event?.latlng?.lat;
+        const lng = event?.latlng?.lng;
 
         return { lat, lng };
     }
 
     centerMap(event) {
-        const lat = event?.latlng?.lat ?? event?.latlng?.lat?.();
-        const lng = event?.latlng?.lng ?? event?.latlng?.lng?.();
+        const lat = event?.latlng?.lat;
+        const lng = event?.latlng?.lng;
 
         if (Number.isFinite(lat) && Number.isFinite(lng)) {
             this._map?.panTo({ lat, lng });
@@ -1043,7 +1043,7 @@ export default class GoogleMapsAdapter extends MapAdapterInterface {
         this.#ensureDrawToolbar();
         if (!this._drawControlEl) return;
 
-        const isHidden = this._drawControlEl.style.display === 'none' || this._drawControlEl.style.display === '';
+        const isHidden = this._drawControlEl.style.display === 'none';
         if (!isHidden) {
             this.hideDrawControl();
             return;

@@ -1070,6 +1070,22 @@ call, not taken here).
 **Impact:** Two things outlive a map that was destroyed. The `google.maps.Data` layers are never detached, so they keep a reference to the old map; and the ids stay in the register, so a rebuilt map starts with stale entries — `removeGeoJson('geo_1')` on the new map would call `setMap(null)` on a layer belonging to the old one. `initializeMap` calls `destroyMap()` first, so every re-initialisation accumulates this.
 **Fix:** `destroyMap` detaches each layer with `setMap(null)` and clears the register, in the same shape the method already uses for popups.
 
+## 85. `addon/services/map-adapter/google.js` — `showCoordinates`/`centerMap` cannot read a Google-shaped point
+
+**Status:** NEEDS DECISION
+**Found:** Sweeping the file's branch residue; four branches sat on the same `?? …?.()` shape in these two methods.
+**Evidence:** Both read `const lat = event?.latlng?.lat ?? event?.latlng?.lat?.()`. That fallback cannot do anything in any case: if `event.latlng.lat` is nullish then `event.latlng.lat?.()` is `undefined` too, and if it is a **function** the `??` returns the function itself rather than calling it — so the expression yields either the same value the left side already had, or `undefined`. It never produces a number from a function. Google's own `LatLng` exposes `lat()`/`lng()` as functions, so a raw Google event reaching here would give `{ lat: <function>, lng: <function> }`; `centerMap` then fails its `Number.isFinite` guard and silently does nothing. The only callers are the two context-menu items in `components/map/leaflet-live-map.js:523,528`, which pass a **Leaflet** event whose `latlng` carries numeric properties — so today the left side always wins and nothing is broken. The sibling `map-adapter/leaflet.js:656` handles its own shape properly with `event?.latlng?.wrap?.() ?? event?.latlng`.
+**Impact:** None today, because no caller passes a Google-shaped event. It matters the moment one does: the coordinates read back as functions and centring silently no-ops rather than failing loudly.
+**Fix:** Ron's call, because it turns on whether these methods are meant to accept Google-shaped events at all. If **yes**, read them properly — `typeof lat === 'function' ? lat() : lat` — and the context-menu wiring in `leaflet-live-map.js` should probably hand the active adapter its own event shape. If **no**, they are Leaflet-event helpers that happen to live on this adapter, and the honest thing is to say so in a comment. I have deleted only the provably-useless `?? …?.()` tail, which changes no value in any case, and left the question open rather than inventing support for a shape nothing currently sends.
+
+## 86. `addon/services/map-adapter/google.js` — the draw toolbar toggle could only ever open it
+
+**Status:** FIXED
+**Found:** Asserting that a second `toggleDrawControl()` hides the toolbar; it showed it again instead.
+**Evidence:** `toggleDrawControl` decided with `const isHidden = display === 'none' || display === '';`. The toolbar only ever holds two values: `'none'`, set by the `display:none` in the container's `cssText` when `#ensureDrawToolbar` builds it and again by `hideDrawControl` (line 856), and `''`, set by `showDrawControl` (line 844). Both satisfy that test, so `isHidden` was **always true**, the `if (!isHidden)` arm never ran, and `hideDrawControl()` was unreachable from the toggle. Every call fell through to `showDrawControl`.
+**Impact:** Real and user-facing on the Google map. The toolbar button wired through `components/map/leaflet-live-map.js:543` → `services/geofence.js:42` → `services/map-manager.js:723` → this adapter opens the drawing toolbar and can never close it again; the user has to reach for something else to dismiss it. The Leaflet adapter is unaffected — its own `toggleDrawControl` tests `this._drawControl._map`, which is a real two-state check.
+**Fix:** The test is now `display === 'none'`, which is the only state that means hidden. One line, in its own commit.
+
 ## 4. `tests/` — 223 blueprint scaffolds that were never green
 
 **Status:** OPEN (this is the bulk of Phase B)
