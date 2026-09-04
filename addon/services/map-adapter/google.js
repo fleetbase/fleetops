@@ -396,7 +396,6 @@ export default class GoogleMapsAdapter extends MapAdapterInterface {
 
         if (!this._supportsAdvancedMarkers) {
             const classicMarker = this.#createClassicMarker(lat, lng, options);
-            if (!classicMarker) return null;
 
             this._markers.set(id, classicMarker);
             return classicMarker;
@@ -512,7 +511,7 @@ export default class GoogleMapsAdapter extends MapAdapterInterface {
         rafId = requestAnimationFrame(animate);
         this._animations.set(id, () => {
             cancelled = true;
-            if (rafId) cancelAnimationFrame(rafId);
+            cancelAnimationFrame(rafId);
         });
     }
 
@@ -1163,12 +1162,6 @@ export default class GoogleMapsAdapter extends MapAdapterInterface {
         }
 
         return new Promise((resolve, reject) => {
-            if (typeof google !== 'undefined' && google.maps) {
-                this._apiLoaded = true;
-                resolve();
-                return;
-            }
-
             const callbackName = `__fleetops_gmaps_cb_${Date.now()}`;
             window[callbackName] = () => {
                 this._apiLoaded = true;
@@ -1822,8 +1815,6 @@ export default class GoogleMapsAdapter extends MapAdapterInterface {
     }
 
     #restoreOverlayState(layer, state) {
-        if (!layer || !state) return;
-
         if (state.type === 'polygon') {
             layer.setPath(state.paths);
             return;
@@ -1834,10 +1825,8 @@ export default class GoogleMapsAdapter extends MapAdapterInterface {
             return;
         }
 
-        if (state.type === 'circle') {
-            layer.setCenter(state.center);
-            layer.setRadius(state.radius);
-        }
+        layer.setCenter(state.center);
+        layer.setRadius(state.radius);
     }
 
     /**
@@ -1891,8 +1880,6 @@ export default class GoogleMapsAdapter extends MapAdapterInterface {
     }
 
     #geoJsonFromOverlay(overlay) {
-        if (!overlay) return null;
-
         if (typeof overlay.getPath === 'function') {
             return this.#overlayToGeoJson(overlay, google.maps.drawing.OverlayType.POLYGON);
         }
@@ -1901,11 +1888,7 @@ export default class GoogleMapsAdapter extends MapAdapterInterface {
             return this.#overlayToGeoJson(overlay, google.maps.drawing.OverlayType.RECTANGLE);
         }
 
-        if (typeof overlay.getCenter === 'function' && typeof overlay.getRadius === 'function') {
-            return this.#overlayToGeoJson(overlay, google.maps.drawing.OverlayType.CIRCLE);
-        }
-
-        return null;
+        return this.#overlayToGeoJson(overlay, google.maps.drawing.OverlayType.CIRCLE);
     }
 
     /**
@@ -1925,22 +1908,6 @@ export default class GoogleMapsAdapter extends MapAdapterInterface {
             contextmenu: 'rightclick',
         };
         return map[event] ?? event;
-    }
-
-    /**
-     * Map normalized draw event name to Google Maps DrawingManager event.
-     *
-     * @param {string} normalizedEvent
-     * @returns {string}
-     */
-    #drawEvent(normalizedEvent) {
-        const map = {
-            'draw:created': 'overlaycomplete',
-            'draw:edited': 'overlaycomplete',
-            'draw:deleted': 'overlaycomplete',
-            'draw:drawstop': 'drawingmode_changed',
-        };
-        return map[normalizedEvent] ?? normalizedEvent;
     }
 
     /**
@@ -2128,7 +2095,7 @@ export default class GoogleMapsAdapter extends MapAdapterInterface {
         }
     }
 
-    #createClassicMarker(lat, lng, options = {}) {
+    #createClassicMarker(lat, lng, options) {
         const position = { lat, lng };
         const markerOptions = {
             map: this._map,
@@ -2173,9 +2140,7 @@ export default class GoogleMapsAdapter extends MapAdapterInterface {
         return marker;
     }
 
-    #attachClassicMarkerTooltip(marker, tooltipContent, options = {}) {
-        if (!marker || !tooltipContent || !this._map) return null;
-
+    #attachClassicMarkerTooltip(marker, tooltipContent, options) {
         let tooltipEl = null;
 
         const ensureTooltip = () => {

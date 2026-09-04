@@ -1110,6 +1110,14 @@ call, not taken here).
 **Impact:** none — every one of them was already guaranteed by the caller.
 **Fix:** deleted the method and the five guards. The one remaining unreachable arm, `layer.__labelText ?? layer.__labelMarker.title ?? ''`, was **not** deleted: `__labelMarker` is only ever assigned alongside a truthy `__labelText` and nothing clears it, but the fallback is the contract for `google-live-map.js`, which stamps `__labelText` from outside this file, so it was hoisted into one `const` behind an `istanbul ignore next` naming that reason rather than removed.
 
+## 90. `addon/services/map-adapter/google.js` — a third unreferenced private method, and the last redundant arms
+
+**Status:** FIXED (deleted this iteration)
+**Found:** finishing the file — these were everything left after the coverable paths were tested.
+**Evidence:** `#drawEvent` is the third method of the shape #87 and #89 named: a `#private` method, so its name can only appear in the class body, and `grep -n "#drawEvent"` returned exactly one line — its own declaration. It mapped `draw:created`/`draw:edited`/`draw:deleted` to `overlaycomplete`, which is what `#normalizeEvent` already does for the paths that are wired up. The rest each duplicate a decision made a few lines earlier: `#createClassicMarker`'s `options = {}` and `addMarker`'s `if (!classicMarker) return null` (that method ends in an unconditional `new google.maps.Marker(...)`); `#attachClassicMarkerTooltip`'s `options = {}` and its `if (!marker || !tooltipContent || !this._map)` guard, whose only call site is inside `if (options.tooltip)` on a marker it has just constructed, below `addMarker`'s own no-map return; `#loadGoogleMapsApi`'s inner `if (typeof google !== 'undefined' && google.maps)`, which repeats the identical test three lines above with only a `??` and a `debug()` in between, neither of which can define `google`; `#restoreOverlayState`'s `if (!layer || !state)` and its `if (state.type === 'circle')`, which is the last of exactly three shapes `#captureOverlayState` can return after the other two have returned; `#geoJsonFromOverlay`'s `if (!overlay)` and its trailing `return null`, for the same reason; and `if (rafId) cancelAnimationFrame(rafId)`, where `rafId` is assigned from `requestAnimationFrame` before the closure holding it is registered and no browser hands back 0 for a live frame request.
+**Impact:** none.
+**Fix:** deleted all of them. The circle arms of `#restoreOverlayState` and `#geoJsonFromOverlay` became the unconditional fallback rather than a third test, which is what they always were.
+
 ## 4. `tests/` — 223 blueprint scaffolds that were never green
 
 **Status:** OPEN (this is the bulk of Phase B)

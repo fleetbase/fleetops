@@ -355,6 +355,7 @@ function installGoogleMapsStub(context) {
 
     window.google = googleStub;
     globalThis.google = googleStub;
+    context.googleStub = googleStub;
 }
 
 module('Unit | Service | map-adapter/google', function (hooks) {
@@ -2900,5 +2901,300 @@ module('Unit | Service | map-adapter/google', function (hooks) {
 
         assert.false(label.__followCursor, 'with no map there is nothing to measure the pointer against');
         assert.strictEqual(label.__cursorPoint, null, 'so the label keeps its anchor');
+    });
+
+    test('a rectangle and a circle draft each save as their own geometry', async function (assert) {
+        this.useMap();
+
+        const rectangle = this.service.addCircle('rect_1', 0, 0, 10);
+        rectangle.getCenter = undefined;
+        rectangle.getRadius = undefined;
+        rectangle.getBounds = () => ({
+            getNorthEast: () => ({ lat: () => 30, lng: () => 40 }),
+            getSouthWest: () => ({ lat: () => 10, lng: () => 20 }),
+        });
+
+        const rectanglePending = this.service.editPolygon(rectangle);
+        clickAction(this.service, 'Save');
+        const rectangleResult = await rectanglePending;
+
+        assert.strictEqual(rectangleResult.geoJson.type, 'Polygon', 'a rectangle saves as a polygon');
+        assert.deepEqual(
+            rectangleResult.geoJson.coordinates[0],
+            [
+                [20, 10],
+                [40, 10],
+                [40, 30],
+                [20, 30],
+                [20, 10],
+            ],
+            'traced round its corners and closed'
+        );
+
+        const circle = this.service.addCircle('circle_1', 1.3, 103.8, 250);
+        circle.getCenter = () => ({ lat: () => 1.3, lng: () => 103.8 });
+        circle.getRadius = () => 250;
+
+        const circlePending = this.service.editPolygon(circle);
+        clickAction(this.service, 'Save');
+        const circleResult = await circlePending;
+
+        assert.strictEqual(circleResult.geoJson.type, 'Feature', 'a circle is approximated as a feature');
+        assert.strictEqual(circleResult.geoJson.geometry.type, 'Polygon');
+    });
+
+    test('a draft that never said what shape it is is announced as a polygon', function (assert) {
+        this.useMap();
+        const edited = [];
+        const deleted = [];
+        this.service.on('draw:edited', (payload) => edited.push(payload));
+        this.service.on('draw:deleted', (payload) => deleted.push(payload));
+
+        // addPolygon does not stamp __overlayType — only the overlaycomplete handler does — so a
+        // shape drawn before the draw control was wired up reaches these payloads without one.
+        const overlay = this.service.addPolygon('zone_1', [
+            [0, 0],
+            [0, 30],
+            [30, 30],
+        ]);
+        overlay.getPath = () => ({
+            getArray: () => [
+                { lat: () => 0, lng: () => 0 },
+                { lat: () => 0, lng: () => 30 },
+                { lat: () => 30, lng: () => 30 },
+            ],
+        });
+        assert.strictEqual(overlay.__overlayType, undefined, 'it carries no type of its own');
+
+        this.service._draftOverlays.add(overlay);
+        this.service._selectedOverlay = overlay;
+        this.service.showDrawControl({ allowEdit: true, allowDelete: true });
+
+        clickToolbar(this.service, 'edit');
+        clickAction(this.service, 'Save');
+        assert.strictEqual(edited.at(-1).layerType, 'polygon', 'an edit falls back to polygon');
+
+        this.service._selectedOverlay = overlay;
+        clickToolbar(this.service, 'remove');
+        clickAction(this.service, 'Save');
+        assert.strictEqual(deleted.at(-1).layerType, 'polygon', 'and so does a delete');
+        assert.strictEqual(deleted.at(-1).toGeoJSON(), deleted.at(-1).geoJson, 'whose payload can hand back its geometry');
+    });
+
+    test('the Google Maps script resolves the loader when it calls back', async function (assert) {
+        const originalGoogle = window.google;
+        const originalGlobal = globalThis.google;
+        const appended = [];
+        const originalAppendChild = document.head.appendChild.bind(document.head);
+        document.head.appendChild = (node) => {
+            appended.push(node);
+            return node;
+        };
+
+        try {
+            window.google = undefined;
+            globalThis.google = undefined;
+            this.service._apiLoaded = false;
+
+            // No apiKey at all: the loader warns and asks for the script anyway.
+            const pending = this.service.initializeMap(document.createElement('div'));
+            const script = appended.at(-1);
+            assert.true(script.src.includes('key=&'), 'the key is left empty rather than undefined');
+
+            const callbackName = script.src.match(/callback=([^&]+)/)[1];
+            assert.strictEqual(typeof window[callbackName], 'function', 'and a callback is parked on window for it');
+
+            window.google = this.googleStub;
+            globalThis.google = this.googleStub;
+            window[callbackName]();
+
+            assert.true(this.service._apiLoaded, 'calling back marks the api loaded');
+            assert.notOk(callbackName in window, 'and takes the callback back off window');
+            await pending;
+            assert.ok(this.service._map, 'the map is built once the script has reported in');
+        } finally {
+            document.head.appendChild = originalAppendChild;
+            window.google = originalGoogle;
+            globalThis.google = originalGlobal;
+        }
+    });
+
+    test('a classic marker takes an unstated waypoint colour and a tooltip carrying markup', async function (assert) {
+        this.useMap();
+        this.service._supportsAdvancedMarkers = false;
+
+        const badged = await this.service.addMarker('marker_badge', 1.3, 103.8, { waypointLabel: 'P' });
+        assert.true(decodeURIComponent(badged.icon.url).includes('#2563eb'), 'an unstated waypoint colour falls back to the route blue');
+
+        const marker = await this.service.addMarker('marker_html', 1.3, 103.8, {
+            tooltip: '<b>Depot</b>',
+            tooltipOptions: { html: true, className: 'my-tip', zIndex: 42 },
+        });
+
+        marker.fire('mouseover', { domEvent: { clientX: 10, clientY: 20 } });
+        const tip = document.querySelector('.my-tip');
+        assert.strictEqual(tip.innerHTML, '<b>Depot</b>', 'the markup is set as html rather than wrapped in a title div');
+        assert.strictEqual(tip.style.zIndex, '42');
+
+        marker.fire('mouseover', {});
+        assert.strictEqual(tip.style.display, 'none', 'a hover carrying no dom event has nowhere to put it');
+
+        marker.__tooltipCleanup();
+        badged.__tooltipCleanup?.();
+    });
+
+    test('an advanced marker is moved by assignment, and a cancelled frame does nothing', async function (assert) {
+        this.useMap();
+        this.service._supportsAdvancedMarkers = true;
+        const marker = await this.service.addMarker('marker_1', 1.3, 103.8);
+        assert.strictEqual(typeof marker.setPosition, 'undefined', 'an advanced marker has no setPosition');
+
+        this.service.updateMarkerPosition('marker_1', 1.4, 103.9, false);
+        assert.deepEqual(marker.position, { lat: 1.4, lng: 103.9 }, 'so its position is assigned outright');
+
+        // Drive the frames by hand: a frame already dispatched when the cancel lands must do
+        // nothing, and that is a race no platform should get a vote on.
+        const frames = [];
+        const originalRaf = window.requestAnimationFrame;
+        const originalCancelRaf = window.cancelAnimationFrame;
+        window.requestAnimationFrame = (fn) => frames.push(fn);
+        window.cancelAnimationFrame = () => {};
+
+        try {
+            this.service.updateMarkerPosition('marker_1', 9, 9, true, 1000);
+            assert.strictEqual(frames.length, 1, 'the animation asked for its first frame');
+
+            const frame = frames[0];
+            this.service._animations.get('marker_1')();
+            frame(performance.now() + 10);
+
+            assert.deepEqual(marker.position, { lat: 1.4, lng: 103.9 }, 'the cancelled frame leaves the marker where it was');
+            assert.strictEqual(frames.length, 1, 'and asks for no more');
+        } finally {
+            window.requestAnimationFrame = originalRaf;
+            window.cancelAnimationFrame = originalCancelRaf;
+        }
+    });
+
+    test('a polyline accepts points given as objects, and steps over what it cannot read', function (assert) {
+        this.useMap();
+
+        const objects = this.service.addPolyline('line_objects', [
+            { lat: 1.3, lng: 103.8 },
+            { lat: 1.4, lng: 103.9 },
+        ]);
+        assert.deepEqual(
+            objects.path,
+            [
+                { lat: 1.3, lng: 103.8 },
+                { lat: 1.4, lng: 103.9 },
+            ],
+            'lat/lng objects are taken as they are'
+        );
+
+        const mixed = this.service.addPolyline('line_mixed', ['nonsense', [1.3, 103.8], { lat: 'x', lng: 'y' }, ['x', 'y'], [1.4, 103.9]]);
+        assert.deepEqual(
+            mixed.path,
+            [
+                { lat: 1.3, lng: 103.8 },
+                { lat: 1.4, lng: 103.9 },
+            ],
+            'and everything unreadable is dropped'
+        );
+    });
+
+    test('destroying the map stops running animations and clears registered context menus', async function (assert) {
+        this.useMap();
+        this.service._supportsAdvancedMarkers = false;
+        await this.service.addMarker('marker_1', 1.3, 103.8);
+
+        const target = document.createElement('div');
+        this.mapDiv.appendChild(target);
+        this.service.registerContextMenu(target, [{ label: 'Centre here', action() {} }]);
+        this.service._contextMenuEls.set(target, target);
+
+        this.service.updateMarkerPosition('marker_1', 9, 9, true, 3000);
+        assert.strictEqual(this.service._animations.size, 1, 'an animation is running');
+
+        this.service.destroyMap();
+
+        assert.strictEqual(this.service._animations.size, 0, 'destroying the map cancels it');
+        assert.strictEqual(this.service._contextMenuEls.size, 0, 'and forgets every registered menu');
+        assert.notOk(target.isConnected, 'taking their elements off the page');
+    });
+
+    test('a route marker keeps a custom shape that names no waypoint', async function (assert) {
+        this.useMap();
+        this.service._supportsAdvancedMarkers = false;
+
+        const handle = await this.service.addRoutingControl({ waypoints: [[1.3, 103.8]] }, { id: 'route_1', createMarker: () => ({ iconUrl: '/assets/custom.png', iconSize: [48, 48] }) });
+        const marker = this.service._markers.get(handle.markerIds[0]);
+
+        assert.strictEqual(marker.icon.url, '/assets/custom.png', "the caller's options are used unchanged");
+        assert.strictEqual(marker.icon.scaledSize.width, 48, 'with no waypoint badge layered on top');
+    });
+
+    test('the last gaps in the adapter are its defensive arms', async function (assert) {
+        this.useMap();
+
+        // A route whose coordinates cannot make a line still registers its handle.
+        const handle = await this.service.addRoutingControl({ waypoints: [[1.3, 103.8]], coordinates: ['nonsense'] }, { id: 'route_1', suppressMarkers: true });
+        assert.deepEqual(handle.polylineIds, [], 'no line is drawn, and none is remembered');
+
+        // A second handler for an event the adapter is already listening to joins the first.
+        const heard = [];
+        this.service.on('click', () => heard.push('first'));
+        this.service.on('click', () => heard.push('second'));
+        this.service._map.listeners.filter(({ event }) => event === 'click').forEach(({ handler }) => handler({}));
+        assert.deepEqual(heard, ['first', 'second'], 'both are registered under the one event and both hear it');
+        assert.strictEqual(this.service._eventListeners.get('click').length, 2, 'held in a single list');
+
+        // createMarker may answer with something that is not an options object at all.
+        this.service._supportsAdvancedMarkers = false;
+        const plain = await this.service.addRoutingControl({ waypoints: [[1.3, 103.8]] }, { id: 'route_2', createMarker: () => 'nonsense' });
+        const marker = this.service._markers.get(plain.markerIds[0]);
+        assert.strictEqual(marker.icon.url, '/assets/images/marker-icon.png', 'and the Fleet-Ops default marker is used instead');
+    });
+
+    test('an action bar cleanup only takes away the bar it opened', function (assert) {
+        this.useMap();
+        const overlay = selectDraftPolygon(this);
+
+        clickToolbar(this.service, 'edit');
+        const editBar = this.service._drawActionEl;
+
+        // Opening the delete bar replaces the edit bar; cancelling the edit must not now blank
+        // out the bar that took its place.
+        this.service._selectedOverlay = overlay;
+        clickToolbar(this.service, 'remove');
+        const deleteBar = this.service._drawActionEl;
+        assert.notStrictEqual(deleteBar, editBar, 'the delete bar has replaced it');
+
+        [...editBar.querySelectorAll('.fleetops-google-draw-action-link')].find((el) => el.textContent === 'Cancel').dispatchEvent(new MouseEvent('click', { cancelable: true }));
+        assert.strictEqual(this.service._drawActionEl, deleteBar, 'the stale cleanup leaves the current bar alone');
+    });
+
+    test('leaving a marker that was never hovered, and a label ring with nothing in it', async function (assert) {
+        this.useMap();
+        this.service._supportsAdvancedMarkers = true;
+
+        const marker = await this.service.addMarker('marker_1', 1.3, 103.8, { iconUrl: '/assets/pin.png', tooltip: 'Depot' });
+        marker.content.dispatchEvent(new MouseEvent('mouseleave'));
+        assert.notOk(document.querySelector('.fleetops-google-hover-tooltip'), 'there is nothing to hide yet');
+
+        const polygon = this.service.addPolygon(
+            'zone_1',
+            [
+                [0, 0],
+                [0, 30],
+                [30, 30],
+            ],
+            { tooltip: 'Zone A' }
+        );
+        const anchored = polygon.__labelMarker.position;
+
+        polygon.__labelPaths = [[]];
+        this.service.showLayer(polygon);
+        assert.strictEqual(polygon.__labelMarker.position, anchored, 'a remembered ring with no points leaves the label where it was');
     });
 });
