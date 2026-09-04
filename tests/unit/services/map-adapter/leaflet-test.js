@@ -1,5 +1,6 @@
 import { module, test } from 'qunit';
 import { setupTest } from 'dummy/tests/helpers';
+import { settled } from '@ember/test-helpers';
 import { resetLeafletPluginLoaderForTesting } from 'dummy/utils/leaflet-plugin-loader';
 
 const L = window.L;
@@ -430,5 +431,442 @@ module('Unit | Service | map-adapter/leaflet', function (hooks) {
 
         assert.notStrictEqual(this.adapter._tileLayer, first, 'a new layer takes over');
         assert.strictEqual(this.adapter._tileLayer.options.maxZoom, 15);
+    });
+
+    test('a routing control draws one polyline per style and registers its handle', function (assert) {
+        assert.strictEqual(this.adapter.addRoutingControl({ waypoints: [[1.3, 103.8]] }), null, 'nothing is drawn without a map');
+
+        this.initialize();
+        assert.strictEqual(this.adapter.addRoutingControl(null), null, 'nor without a route');
+        assert.strictEqual(this.adapter.addRoutingControl({ waypoints: [] }), null, 'nor for a route with no waypoints');
+
+        const route = {
+            engine: 'osrm',
+            raw: { source: 'osrm' },
+            bounds: [
+                [1.3, 103.8],
+                [1.4, 103.9],
+            ],
+            waypoints: [
+                [1.3, 103.8],
+                [1.4, 103.9],
+            ],
+            coordinates: [
+                [1.3, 103.8],
+                [1.35, 103.85],
+                [1.4, 103.9],
+            ],
+        };
+
+        const handle = this.adapter.addRoutingControl(route, {
+            id: 'route_1',
+            tag: 'driver_1',
+            polylineOptions: {
+                styles: [
+                    { color: '#111111', weight: 7, opacity: 0.8, lineCap: 'round', lineJoin: 'round' },
+                    { color: '#222222', weight: 3, opacity: 0.9, dashArray: '4' },
+                ],
+                leafletOptions: { interactive: false },
+            },
+        });
+
+        assert.strictEqual(handle.id, 'route_1');
+        assert.strictEqual(handle.engine, 'osrm');
+        assert.strictEqual(handle.tag, 'driver_1');
+        assert.strictEqual(handle.raw, route.raw);
+        assert.strictEqual(handle.bounds, route.bounds);
+        assert.deepEqual(handle.polylineIds, ['route_1:polyline:0', 'route_1:polyline:1'], 'one polyline per style');
+        assert.deepEqual(handle.markerIds, ['route_1:marker:0', 'route_1:marker:1'], 'one marker per waypoint');
+        assert.strictEqual(this.adapter._routingControls.get('route_1'), handle);
+
+        const under = this.adapter._overlays.get('route_1:polyline:0');
+        assert.strictEqual(under.options.color, '#111111');
+        assert.strictEqual(under.options.weight, 7);
+        assert.strictEqual(under.options.lineCap, 'round');
+        assert.false(under.options.interactive, 'the shared leaflet options reach every style');
+        assert.strictEqual(this.adapter._overlays.get('route_1:polyline:1').options.dashArray, '4');
+    });
+
+    test('a routing control with no styles draws one polyline, defaulted or configured', function (assert) {
+        this.initialize();
+        const route = {
+            waypoints: [[1.3, 103.8]],
+            coordinates: [
+                [1.3, 103.8],
+                [1.4, 103.9],
+            ],
+        };
+
+        const defaulted = this.adapter.addRoutingControl(route, { id: 'route_default' });
+        const line = this.adapter._overlays.get('route_default:polyline:0');
+        assert.deepEqual(defaulted.polylineIds, ['route_default:polyline:0']);
+        assert.strictEqual(line.options.color, '#2563eb', 'the Fleet-Ops route blue');
+        assert.strictEqual(line.options.weight, 4);
+        assert.strictEqual(line.options.opacity, 0.85);
+        assert.strictEqual(defaulted.tag, null, 'an untagged control carries a null tag');
+
+        this.adapter.addRoutingControl(route, { id: 'route_colored', color: '#ff0000' });
+        assert.strictEqual(this.adapter._overlays.get('route_colored:polyline:0').options.color, '#ff0000', 'a bare colour is used when there are no polyline options');
+
+        this.adapter.addRoutingControl(route, {
+            id: 'route_styled',
+            color: '#ff0000',
+            polylineOptions: { color: '#00ff00', weight: 9, opacity: 0.5, leafletOptions: { dashArray: '2' } },
+        });
+        const styled = this.adapter._overlays.get('route_styled:polyline:0');
+        assert.strictEqual(styled.options.color, '#00ff00', 'the polyline options win over the bare colour');
+        assert.strictEqual(styled.options.weight, 9);
+        assert.strictEqual(styled.options.opacity, 0.5);
+        assert.strictEqual(styled.options.dashArray, '2');
+    });
+
+    test('a route with no coordinates draws only its markers', function (assert) {
+        this.initialize();
+
+        const handle = this.adapter.addRoutingControl({ waypoints: [[1.3, 103.8]] }, { id: 'route_1' });
+
+        assert.deepEqual(handle.polylineIds, [], 'nothing to draw a line from');
+        assert.deepEqual(handle.markerIds, ['route_1:marker:0']);
+    });
+
+    test('route markers can be suppressed, overridden, built or skipped', function (assert) {
+        this.initialize();
+        const route = {
+            waypoints: [
+                [1.3, 103.8],
+                [1.4, 103.9],
+            ],
+        };
+
+        const suppressed = this.adapter.addRoutingControl(route, { id: 'route_bare', suppressMarkers: true });
+        assert.deepEqual(suppressed.markerIds, [], 'no markers are placed at all');
+
+        const overridden = this.adapter.addRoutingControl(route, {
+            id: 'route_override',
+            markerWaypoints: [[1.5, 103.5]],
+        });
+        assert.deepEqual(overridden.markerIds, ['route_override:marker:0'], 'the given waypoints replace the route s own');
+        assert.strictEqual(Math.round(this.adapter._markers.get('route_override:marker:0').getLatLng().lat * 1e4) / 1e4, 1.5);
+
+        const seen = [];
+        const skipped = this.adapter.addRoutingControl(route, {
+            id: 'route_skip',
+            createMarker: (waypoint, index, forRoute) => {
+                seen.push([index, forRoute === route]);
+                return index === 0 ? null : false;
+            },
+        });
+        assert.deepEqual(seen, [
+            [0, true],
+            [1, true],
+        ]);
+        assert.deepEqual(skipped.markerIds, [], 'both null and false skip the marker');
+
+        const built = this.adapter.addRoutingControl(route, {
+            id: 'route_built',
+            createMarker: (waypoint, index) => ({ title: `Stop ${index + 1}`, draggable: true }),
+        });
+        assert.deepEqual(built.markerIds, ['route_built:marker:0', 'route_built:marker:1']);
+        assert.strictEqual(this.adapter._markers.get('route_built:marker:0').options.title, 'Stop 1', 'a plain object is used as marker options');
+    });
+
+    test('a labelled route marker is rendered as a Fleet-Ops waypoint icon', function (assert) {
+        this.initialize();
+        const route = { waypoints: [[1.3, 103.8]] };
+
+        const labelled = this.adapter.addRoutingControl(route, {
+            id: 'route_labelled',
+            createMarker: () => ({ waypointLabel: 'P', waypointColor: '#22c55e', title: 'Pickup' }),
+        });
+        const marker = this.adapter._markers.get(labelled.markerIds[0]);
+        assert.strictEqual(marker.options.title, 'Pickup', 'the rest of the custom options survive');
+        assert.strictEqual(marker.options.icon.options.className, 'fleetops-waypoint-marker');
+        assert.deepEqual(marker.options.icon.options.iconSize, [32, 32], 'the default badge size');
+        assert.deepEqual(marker.options.icon.options.iconAnchor, [16, 16]);
+        assert.deepEqual(marker.options.icon.options.popupAnchor, [0, -20]);
+        assert.true(marker.options.icon.options.html.includes('#22c55e'), 'the badge is drawn in the waypoint colour');
+
+        const sized = this.adapter.addRoutingControl(route, {
+            id: 'route_sized',
+            createMarker: () => ({ waypointLabel: '1', iconSize: [48, 48], iconAnchor: [24, 24], popupAnchor: [0, -40] }),
+        });
+        const sizedIcon = this.adapter._markers.get(sized.markerIds[0]).options.icon.options;
+        assert.deepEqual(sizedIcon.iconSize, [48, 48]);
+        assert.deepEqual(sizedIcon.iconAnchor, [24, 24]);
+        assert.deepEqual(sizedIcon.popupAnchor, [0, -40]);
+        assert.true(sizedIcon.html.includes('#2563eb'), 'an unstated colour falls back to the route blue');
+    });
+
+    test('route markers fall back to the bundled pin, with caller overrides merged in', function (assert) {
+        this.initialize();
+
+        const handle = this.adapter.addRoutingControl({ waypoints: [[1.3, 103.8]] }, { id: 'route_1', markerOptions: { title: 'Depot', draggable: true } });
+        const marker = this.adapter._markers.get(handle.markerIds[0]);
+
+        assert.strictEqual(marker.options.icon.options.iconUrl, '/assets/images/marker-icon.png');
+        assert.deepEqual(marker.options.icon.options.iconSize, [25, 41]);
+        assert.deepEqual(marker.options.icon.options.iconAnchor, [12, 41]);
+        assert.strictEqual(marker.options.icon.options.shadowUrl, '/assets/images/marker-shadow.png');
+        assert.strictEqual(marker.options.title, 'Depot', 'caller marker options are merged over the defaults');
+        assert.true(marker.options.draggable);
+    });
+
+    test('a routing control without an id is given a unique one', function (assert) {
+        this.initialize();
+        const route = { waypoints: [[1.3, 103.8]] };
+
+        const first = this.adapter.addRoutingControl(route);
+        const second = this.adapter.addRoutingControl(route);
+
+        assert.true(first.id.startsWith('route:'), 'the id names what it is');
+        assert.notStrictEqual(first.id, second.id, 'two controls never collide');
+        assert.strictEqual(this.adapter._routingControls.size, 2);
+    });
+
+    test('removing a routing control takes its markers and lines with it', function (assert) {
+        this.initialize();
+        const route = {
+            waypoints: [[1.3, 103.8]],
+            coordinates: [
+                [1.3, 103.8],
+                [1.4, 103.9],
+            ],
+        };
+
+        this.adapter.addRoutingControl(route, { id: 'route_1' });
+        assert.strictEqual(this.adapter._markers.size, 1);
+        assert.strictEqual(this.adapter._overlays.size, 1);
+
+        assert.true(this.adapter.removeRoutingControl('route_1'), 'a control can be removed by id');
+        assert.strictEqual(this.adapter._markers.size, 0);
+        assert.strictEqual(this.adapter._overlays.size, 0);
+        assert.strictEqual(this.adapter._routingControls.size, 0);
+
+        const second = this.adapter.addRoutingControl(route, { id: 'route_2' });
+        assert.true(this.adapter.removeRoutingControl(second), 'or by handle');
+        assert.strictEqual(this.adapter._routingControls.size, 0);
+
+        assert.false(this.adapter.removeRoutingControl('route_gone'), 'an unknown id reports nothing removed');
+        assert.true(this.adapter.removeRoutingControl({ id: 'route_bare' }), 'a handle with no markers or lines is still accepted');
+    });
+
+    test('positionWaypoints flies to a lone waypoint and pans once the move ends', function (assert) {
+        assert.strictEqual(this.adapter.positionWaypoints([[1.3, 103.8]]), null, 'nothing to position without a map');
+
+        const map = this.initialize();
+        const pans = [];
+        this.adapter.panBy = (x, y) => pans.push([x, y]);
+
+        assert.true(this.adapter.positionWaypoints([[1.3, 103.8]], { singlePointZoom: 16, panBy: [10, 4] }));
+        map.fire('moveend');
+        assert.deepEqual(pans, [[10, 4]], 'the pan is deferred until the map settles');
+
+        this.adapter.positionWaypoints([[1.4, 103.9]]);
+        map.fire('moveend');
+        assert.deepEqual(pans.at(-1), [0, 0], 'with no pan asked for, it pans by nothing');
+    });
+
+    test('positionWaypoints fits a box for two or more waypoints, or a bounds object', function (assert) {
+        const map = this.initialize();
+        const fits = [];
+        this.adapter.fitBounds = (bounds, options) => fits.push([bounds, options.maxZoom, options.paddingBottomRight]);
+        this.adapter.panBy = () => {};
+
+        assert.true(
+            this.adapter.positionWaypoints([
+                [1.3, 103.8],
+                [1.4, 103.9],
+            ])
+        );
+        assert.strictEqual(fits.at(-1)[1], 15, 'a two-point route is allowed to zoom further in');
+        assert.deepEqual(fits.at(-1)[2], [300, 0], 'the default padding leaves room for the overlay');
+
+        this.adapter.positionWaypoints(
+            [
+                [1.3, 103.8],
+                [1.4, 103.9],
+                [1.5, 104.0],
+            ],
+            { maxZoom: 11, paddingBottomRight: [0, 20] }
+        );
+        assert.strictEqual(fits.at(-1)[1], 11);
+        assert.deepEqual(fits.at(-1)[2], [0, 20]);
+
+        this.adapter.positionWaypoints([
+            [1.3, 103.8],
+            [1.4, 103.9],
+            [1.5, 104.0],
+        ]);
+        assert.strictEqual(fits.at(-1)[1], 14, 'three or more points stay further out by default');
+
+        const bounds = L.latLngBounds([
+            [1.2, 103.6],
+            [1.6, 104.1],
+        ]);
+        this.adapter.positionWaypoints(bounds);
+        assert.strictEqual(fits.at(-1)[0], bounds, 'a Leaflet bounds object is passed straight through');
+
+        this.adapter.positionWaypoints('anything', { isBounds: true });
+        assert.strictEqual(fits.at(-1)[0], 'anything', 'the caller can declare the argument is bounds');
+
+        assert.strictEqual(this.adapter.positionWaypoints([]), null, 'an empty list positions nothing');
+        map.fire('moveend');
+    });
+
+    test('removeLayer detaches a layer however it can, and forgets a drawn one', function (assert) {
+        this.initialize();
+        assert.strictEqual(this.adapter.removeLayer(null), undefined, 'nothing to remove');
+
+        let removedSelf = 0;
+        this.adapter.removeLayer({
+            remove() {
+                removedSelf += 1;
+            },
+        });
+        assert.strictEqual(removedSelf, 1, 'a layer that can remove itself does');
+
+        const removedByMap = [];
+        const plainLayer = { id: 'plain' };
+        this.adapter._map.removeLayer = (layer) => removedByMap.push(layer);
+        this.adapter.removeLayer(plainLayer);
+        assert.deepEqual(removedByMap, [plainLayer], 'otherwise the map is asked to remove it');
+
+        this.adapter.removeLayer({
+            remove() {
+                throw new Error('already detached');
+            },
+        });
+        assert.ok(true, 'a layer that refuses to be removed does not take the caller down');
+
+        const drawn = { remove() {} };
+        const dropped = [];
+        this.adapter._drawFeatureGroup = {
+            hasLayer: (layer) => layer === drawn,
+            removeLayer: (layer) => dropped.push(layer),
+        };
+        this.adapter.removeLayer(drawn);
+        assert.deepEqual(dropped, [drawn], 'a drawn layer also leaves the draw group');
+
+        this.adapter.removeLayer({ remove() {} });
+        assert.strictEqual(dropped.length, 1, 'a layer the group does not hold is left alone');
+    });
+
+    test('hiding and showing a layer softly changes only its paint', function (assert) {
+        this.initialize();
+        const styles = [];
+        const shape = {
+            options: { fillOpacity: 0.4, fill: true },
+            setStyle: (style) => styles.push(style),
+        };
+
+        this.adapter.hideLayer(shape, { soft: true });
+        assert.deepEqual(styles.at(-1), { opacity: 0, fillOpacity: 0 });
+        assert.true(shape.__hidden);
+        assert.true(this.adapter.isLayerHidden(shape));
+
+        this.adapter.showLayer(shape, { soft: true });
+        assert.deepEqual(styles.at(-1), { opacity: 1, fillOpacity: 0.4 }, 'the layer s own fill opacity is restored');
+        assert.false(shape.__hidden);
+        assert.true(this.adapter.isLayerVisible(shape));
+
+        const unfilled = { options: { fill: null }, setStyle: (style) => styles.push(style) };
+        this.adapter.showLayer(unfilled, { soft: true });
+        assert.deepEqual(styles.at(-1), { opacity: 1, fillOpacity: 0 }, 'a layer with no fill is not given one');
+
+        const opacities = [];
+        const marker = { setOpacity: (value) => opacities.push(value) };
+        this.adapter.hideLayer(marker, { soft: true });
+        this.adapter.showLayer(marker, { soft: true });
+        assert.deepEqual(opacities, [0, 1], 'a layer that only knows opacity is faded instead');
+    });
+
+    test('hiding a layer outright also hides its tooltip and popup, and showing it brings them back', async function (assert) {
+        this.initialize();
+        const icon = document.createElement('div');
+        const tooltipContainer = document.createElement('div');
+        const popupContainer = document.createElement('div');
+        const calls = [];
+        const layer = {
+            _icon: icon,
+            getTooltip: () => ({ _container: tooltipContainer, isOpen: () => true, options: {} }),
+            getPopup: () => ({ _container: popupContainer, isOpen: () => true }),
+            closeTooltip: () => calls.push('closeTooltip'),
+            closePopup: () => calls.push('closePopup'),
+            openTooltip: () => calls.push('openTooltip'),
+            openPopup: () => calls.push('openPopup'),
+        };
+
+        this.adapter.hideLayer(layer);
+        assert.strictEqual(icon.style.display, 'none');
+        assert.true(this.adapter.isLayerHidden(layer));
+
+        await settled();
+        assert.deepEqual(calls, ['closeTooltip', 'closePopup'], 'both overlays are closed on the next turn');
+        assert.strictEqual(tooltipContainer.style.display, 'none');
+        assert.strictEqual(popupContainer.style.display, 'none');
+        assert.true(layer.__hadOpenTooltip, 'it remembers they were open');
+        assert.true(layer.__hadOpenPopup);
+
+        this.adapter.showLayer(layer);
+        assert.strictEqual(icon.style.display, '');
+        assert.strictEqual(tooltipContainer.style.display, '');
+        assert.strictEqual(popupContainer.style.display, '');
+        assert.deepEqual(calls, ['closeTooltip', 'closePopup', 'openTooltip', 'openPopup'], 'and reopens them');
+        assert.false('__hadOpenTooltip' in layer, 'the memory is cleared once used');
+        assert.false('__hadOpenPopup' in layer);
+    });
+
+    test('a permanent tooltip reopens even if it was closed, and overlay errors are swallowed', async function (assert) {
+        this.initialize();
+        const calls = [];
+        const permanent = {
+            _path: document.createElement('div'),
+            _tooltip: { options: { permanent: true } },
+            openTooltip: () => calls.push('openTooltip'),
+        };
+
+        this.adapter.showLayer(permanent);
+        assert.deepEqual(calls, ['openTooltip'], 'a permanent tooltip is always put back');
+
+        const angry = {
+            _container: document.createElement('div'),
+            _tooltip: { isOpen: () => true, options: {} },
+            _popup: { isOpen: () => true },
+            closeTooltip() {
+                throw new Error('no tooltip');
+            },
+            closePopup() {
+                throw new Error('no popup');
+            },
+            openTooltip() {
+                throw new Error('no tooltip');
+            },
+            openPopup() {
+                throw new Error('no popup');
+            },
+        };
+        this.adapter.hideLayer(angry);
+        await settled();
+        angry.__hadOpenTooltip = true;
+        angry.__hadOpenPopup = true;
+        this.adapter.showLayer(angry);
+        assert.ok(true, 'a layer whose overlays throw on both sides is survived');
+    });
+
+    test('layer visibility is a no-op without a map or a layer, and an unknown layer reads as visible', function (assert) {
+        const layer = { _icon: document.createElement('div') };
+
+        this.adapter.showLayer(layer);
+        this.adapter.hideLayer(layer);
+        assert.strictEqual(layer._icon.style.display, '', 'nothing happens before there is a map');
+
+        this.initialize();
+        this.adapter.showLayer(null);
+        this.adapter.hideLayer(null);
+        assert.ok(true, 'and nothing happens without a layer');
+
+        assert.true(this.adapter.isLayerHidden(null), 'a layer that is not there counts as hidden');
+        assert.false(this.adapter.isLayerHidden({}), 'a layer with nothing on the page counts as visible');
+        assert.true(this.adapter.isLayerVisible({}));
     });
 });
