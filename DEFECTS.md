@@ -1086,6 +1086,22 @@ call, not taken here).
 **Impact:** Real and user-facing on the Google map. The toolbar button wired through `components/map/leaflet-live-map.js:543` → `services/geofence.js:42` → `services/map-manager.js:723` → this adapter opens the drawing toolbar and can never close it again; the user has to reach for something else to dismiss it. The Leaflet adapter is unaffected — its own `toggleDrawControl` tests `this._drawControl._map`, which is a real two-state check.
 **Fix:** The test is now `display === 'none'`, which is the only state that means hidden. One line, in its own commit.
 
+## 87. `addon/services/map-adapter/google.js` — a private tooltip overlay-view builder nothing can call
+
+**Status:** FIXED (deleted this iteration)
+**Found:** profiling the file's uncovered functions — `#ensureTooltipOverlayView` and the three no-op lifecycle hooks it assigns were four uncovered functions with no visible entry point.
+**Evidence:** `#ensureTooltipOverlayView` is a `#private` method, so the only place its name can appear is the class body. `grep -n "ensureTooltipOverlayView" addon/services/map-adapter/google.js` returned exactly one line — its own declaration. It was therefore never called, and since it was the only writer of `_tooltipOverlayView` (`grep -n "_tooltipOverlayView"` gave the field initialiser, the two `destroyMap` teardown lines, and three lines inside the method itself), that field was permanently `null` and `destroyMap`'s `this._tooltipOverlayView?.setMap?.(null)` was a no-op kept alive only by its optional chaining.
+**Impact:** none — the hover tooltips are positioned from `domEvent.clientX/clientY` in `#attachClassicMarkerTooltip`, which needs no `OverlayView`. This was groundwork for a projection-based tooltip that was never wired up.
+**Fix:** deleted the method, the `_tooltipOverlayView` field and the two dead `destroyMap` lines. Nothing else referenced them.
+
+## 88. `addon/services/map-adapter/google.js` — four parameter/operand defaults no caller can reach
+
+**Status:** FIXED (deleted this iteration)
+**Found:** the same profiling pass — four `default-arg`/`binary-expr` branch arms with no reachable input.
+**Evidence:** each traced to its callers. `buildGoogleMapStyles` is module-local with exactly two call sites (L179 and L286), both passing an object literal, and both passing a `googleOptions` that is already `?? {}`-defaulted — so neither `= {}` could run (`showTransitLayer = false` *is* reachable from L179 and was kept). `#loadGoogleMapsApi(options = {})` has one call site, L173, which passes `initializeMap`'s own already-defaulted `options`. `#applyDrawToolbarConfig(config = {})` has one call site, L847, which passes `showDrawControl`'s own already-defaulted `config`. And in `addRoutingControl`, `options.markerWaypoints ?? route.waypoints ?? []` sits below a guard — `if (!this._map || !route?.waypoints?.length) return null;` — that has already proved `route.waypoints` non-empty, so the `[]` arm cannot be taken.
+**Impact:** none; every one of them was already supplied by the caller.
+**Fix:** deleted the four defaults. The two `#private` methods and the module-local function have no external callers, so no published surface changed.
+
 ## 4. `tests/` — 223 blueprint scaffolds that were never green
 
 **Status:** OPEN (this is the bulk of Phase B)

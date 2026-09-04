@@ -62,7 +62,7 @@ const DEFAULT_GOOGLE_MAP_STYLES = [
     },
 ];
 
-function buildGoogleMapStyles({ showTransitLayer = false, googleOptions = {} } = {}) {
+function buildGoogleMapStyles({ showTransitLayer = false, googleOptions }) {
     const baseStyles = showTransitLayer ? DEFAULT_GOOGLE_MAP_STYLES.filter((style) => style.featureType !== 'transit') : DEFAULT_GOOGLE_MAP_STYLES;
 
     if (googleOptions.styles === undefined) {
@@ -164,7 +164,6 @@ export default class GoogleMapsAdapter extends MapAdapterInterface {
     _contextMenuCleanup = null;
 
     /** @type {google.maps.OverlayView|null} */
-    _tooltipOverlayView = null;
 
     // ─── Lifecycle ─────────────────────────────────────────────────────────────
 
@@ -254,8 +253,6 @@ export default class GoogleMapsAdapter extends MapAdapterInterface {
         this._pendingDeletedDrafts.clear();
         this._contextMenuCleanup?.();
         this._contextMenuCleanup = null;
-        this._tooltipOverlayView?.setMap?.(null);
-        this._tooltipOverlayView = null;
         this._supportsAdvancedMarkers = false;
         this._trafficLayer?.setMap(null);
         this._trafficLayer = null;
@@ -673,7 +670,7 @@ export default class GoogleMapsAdapter extends MapAdapterInterface {
         }
         const markerIds = [];
 
-        const markerWaypoints = options.markerWaypoints ?? route.waypoints ?? [];
+        const markerWaypoints = options.markerWaypoints ?? route.waypoints;
 
         if (!options.suppressMarkers) {
             for (const [index, waypoint] of markerWaypoints.entries()) {
@@ -1153,7 +1150,7 @@ export default class GoogleMapsAdapter extends MapAdapterInterface {
      * @param {Object} options
      * @returns {Promise<void>}
      */
-    async #loadGoogleMapsApi(options = {}) {
+    async #loadGoogleMapsApi(options) {
         if (this._apiLoaded || (typeof google !== 'undefined' && google.maps)) {
             this._apiLoaded = true;
             return;
@@ -1292,7 +1289,7 @@ export default class GoogleMapsAdapter extends MapAdapterInterface {
         this._map.getDiv()?.appendChild(container);
     }
 
-    #applyDrawToolbarConfig(config = {}) {
+    #applyDrawToolbarConfig(config) {
         if (!this._drawControlEl) return;
 
         this._drawControlEl.style.top = `${this.#getToolbarTopOffset()}px`;
@@ -2265,23 +2262,5 @@ export default class GoogleMapsAdapter extends MapAdapterInterface {
             tooltipEl?.remove();
             tooltipEl = null;
         };
-    }
-
-    #ensureTooltipOverlayView() {
-        if (this._tooltipOverlayView || !this._map) {
-            return this._tooltipOverlayView;
-        }
-
-        const overlayView = new google.maps.OverlayView();
-
-        overlayView.onAdd = () => {};
-        overlayView.draw = () => {};
-        overlayView.onRemove = () => {};
-
-        overlayView.setMap(this._map);
-
-        this._tooltipOverlayView = overlayView;
-
-        return overlayView;
     }
 }

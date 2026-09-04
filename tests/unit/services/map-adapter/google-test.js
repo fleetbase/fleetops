@@ -2472,4 +2472,251 @@ module('Unit | Service | map-adapter/google', function (hooks) {
             globalThis.google = originalGlobal;
         }
     });
+
+    /** A draft polygon the public `editPolygon` can capture, edit and restore. */
+    function editableDraftPolygon(test) {
+        const overlay = test.service.addPolygon('zone_edit', [
+            [0, 0],
+            [0, 30],
+            [30, 30],
+        ]);
+        overlay.__overlayType = 'polygon';
+        overlay.getPath = () => ({
+            getArray: () => [
+                { lat: () => 0, lng: () => 0 },
+                { lat: () => 0, lng: () => 30 },
+                { lat: () => 30, lng: () => 30 },
+            ],
+        });
+        return overlay;
+    }
+
+    test('editPolygon refuses a layer it cannot edit or capture', async function (assert) {
+        this.useMap();
+
+        assert.deepEqual(await this.service.editPolygon(null), { type: 'unsupported' }, 'there is no layer');
+
+        const shapeless = this.service.addPolygon('zone_a', [
+            [0, 0],
+            [0, 1],
+            [1, 1],
+        ]);
+        shapeless.setEditable = undefined;
+        assert.deepEqual(await this.service.editPolygon(shapeless), { type: 'unsupported' }, 'the layer cannot be made editable');
+
+        shapeless.setEditable = () => {};
+        shapeless.getPath = undefined;
+        shapeless.getBounds = undefined;
+        shapeless.getCenter = undefined;
+        assert.deepEqual(await this.service.editPolygon(shapeless), { type: 'unsupported' }, 'and its shape cannot be captured');
+    });
+
+    test('editPolygon focuses the shape, then resolves with the geometry it was saved as', async function (assert) {
+        const map = this.useMap();
+        const overlay = editableDraftPolygon(this);
+
+        const pending = this.service.editPolygon(overlay, {
+            focusBounds: [
+                [0, 0],
+                [30, 30],
+            ],
+        });
+
+        assert.ok(
+            map.calls.some(([name]) => name === 'fitBounds'),
+            'the focus bounds are fitted before editing starts'
+        );
+        assert.true(overlay.editable, 'the shape becomes editable');
+
+        const bar = this.service._drawActionEl;
+        assert.ok(bar, 'an action bar appears');
+        assert.deepEqual(
+            [...bar.querySelectorAll('.fleetops-google-draw-action-link')].map((el) => el.textContent),
+            ['Save', 'Cancel'],
+            'offering save and cancel'
+        );
+
+        clickAction(this.service, 'Save');
+        const result = await pending;
+
+        assert.strictEqual(result.type, 'edited');
+        assert.strictEqual(result.layer, overlay);
+        assert.strictEqual(result.geoJson.type, 'Polygon', 'carrying the shape as it now stands');
+        assert.deepEqual(
+            result.geoJson.coordinates,
+            [
+                [
+                    [0, 0],
+                    [30, 0],
+                    [30, 30],
+                    [0, 0],
+                ],
+            ],
+            'as a closed ring in lng/lat order'
+        );
+        assert.strictEqual(result.toGeoJSON(), result.geoJson, 'which the caller can ask for again');
+        assert.false(overlay.editable, 'saving ends the edit');
+        assert.notOk(bar.isConnected, 'and takes the bar away with it');
+    });
+
+    test('editPolygon settles once, and a cancel puts the shape back', async function (assert) {
+        this.useMap();
+        const overlay = editableDraftPolygon(this);
+
+        const pending = this.service.editPolygon(overlay);
+        const bar = this.service._drawActionEl;
+
+        clickAction(this.service, 'Cancel');
+        assert.deepEqual(
+            overlay.restoredPath,
+            [
+                { lat: 0, lng: 0 },
+                { lat: 0, lng: 30 },
+                { lat: 30, lng: 30 },
+            ],
+            'the ring captured before the edit is written back'
+        );
+        assert.deepEqual(await pending, { type: 'cancel' });
+
+        // The bar is detached, so drive the buttons it still holds directly: a second
+        // decision must not reopen a promise that has already settled.
+        overlay.editable = 'untouched';
+        [...bar.querySelectorAll('.fleetops-google-draw-action-link')].forEach((el) => el.dispatchEvent(new MouseEvent('click', { cancelable: true })));
+        assert.strictEqual(overlay.editable, 'untouched', 'neither button does anything the second time');
+    });
+
+    test('a classic marker tooltip follows the pointer and hides itself', async function (assert) {
+        this.useMap();
+        this.service._supportsAdvancedMarkers = false;
+
+        const marker = await this.service.addMarker('marker_tip', 1.3, 103.8, {
+            tooltip: 'Depot',
+            tooltipOptions: { offsetX: 20, offsetY: 30 },
+        });
+
+        marker.fire('mousemove', { domEvent: { clientX: 10, clientY: 10 } });
+        assert.notOk(document.querySelector('.fleetops-google-hover-tooltip'), 'moving before hovering builds nothing');
+
+        marker.fire('mouseover', { domEvent: { clientX: 100, clientY: 200 } });
+        const tip = document.querySelector('.fleetops-google-hover-tooltip');
+        assert.ok(tip, 'hovering builds the tooltip');
+        assert.strictEqual(tip.style.display, 'block');
+        assert.strictEqual(tip.style.left, '120px', 'offset from the pointer');
+        assert.strictEqual(tip.style.top, '230px');
+
+        marker.fire('mousemove', { domEvent: { clientX: 140, clientY: 240 } });
+        assert.strictEqual(tip.style.left, '160px', 'and it follows the pointer');
+        assert.strictEqual(tip.style.top, '270px');
+
+        marker.fire('mousemove', {});
+        assert.strictEqual(tip.style.display, 'none', 'a move carrying no dom event hides it');
+
+        marker.fire('mouseover', { domEvent: { clientX: 140, clientY: 240 } });
+        marker.fire('mouseout');
+        assert.strictEqual(tip.style.display, 'none', 'and so does leaving the marker');
+
+        marker.__tooltipCleanup();
+        assert.notOk(document.querySelector('.fleetops-google-hover-tooltip'), 'the cleanup takes the element away');
+
+        // With nothing built, leaving the marker is still safe.
+        const bare = await this.service.addMarker('marker_bare', 1.3, 103.8, { tooltip: 'Depot' });
+        bare.fire('mouseout');
+        assert.notOk(document.querySelector('.fleetops-google-hover-tooltip'), 'a marker never hovered has nothing to hide');
+        bare.__tooltipCleanup();
+    });
+
+    test('a context menu closes on the next click outside it', async function (assert) {
+        this.useMap();
+        const originalAdd = document.addEventListener.bind(document);
+        const originalRemove = document.removeEventListener.bind(document);
+        let closeHandler = null;
+        let removed = 0;
+        document.addEventListener = (type, handler, ...rest) => {
+            if (type === 'click' && handler !== closeHandler) {
+                closeHandler = handler;
+            }
+            return originalAdd(type, handler, ...rest);
+        };
+        document.removeEventListener = (type, handler, ...rest) => {
+            if (handler === closeHandler) {
+                removed += 1;
+            }
+            return originalRemove(type, handler, ...rest);
+        };
+
+        try {
+            this.service.showContextMenu({ latlng: { lat: 1.3, lng: 103.8 } }, [{ label: 'Centre here', action() {} }]);
+            const menu = document.querySelector('.fleetops-google-contextmenu');
+            assert.ok(menu, 'the menu is open');
+
+            // The listener is attached on the next tick so the opening click cannot close it.
+            await waitUntil(() => closeHandler);
+
+            menu.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
+            assert.ok(menu.isConnected, 'a click inside the menu leaves it open');
+            assert.strictEqual(removed, 0, 'and keeps the listener');
+
+            document.getElementById('ember-testing').dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
+            assert.notOk(menu.isConnected, 'a click outside closes it');
+            assert.strictEqual(removed, 1, 'and unsubscribes');
+        } finally {
+            document.addEventListener = originalAdd;
+            document.removeEventListener = originalRemove;
+            this.service.closeContextMenu();
+            document.querySelector('.fleetops-google-contextmenu')?.remove();
+        }
+    });
+
+    test('the adapter stands up its own defaults when a caller states nothing', async function (assert) {
+        const setOptionsCalls = [];
+        const mapTypeIds = [];
+        const map = this.useMap({
+            setOptions: (options) => setOptionsCalls.push(options),
+            setMapTypeId: (id) => mapTypeIds.push(id),
+        });
+
+        await this.service.applyViewSettings();
+        assert.deepEqual(mapTypeIds, ['roadmap'], 'view settings with no options fall back to the road map');
+        assert.strictEqual(setOptionsCalls.at(-1).styles.length, 6, 'and to the full Fleet-Ops base style set');
+        assert.strictEqual(this.service._trafficLayer, null, 'leaving the optional layers off');
+
+        this.service.showContextMenu({ latlng: { lat: 1.3, lng: 103.8 } });
+        assert.notOk(document.querySelector('.fleetops-google-contextmenu'), 'a context menu with no items opens nothing');
+
+        const polyline = this.service.addPolyline('line_plain', [
+            [0, 0],
+            [1, 1],
+        ]);
+        assert.strictEqual(polyline.strokeColor, '#3388ff', 'an unstyled polyline takes the Fleet-Ops blue');
+        assert.strictEqual(polyline.strokeWeight, 3);
+        assert.strictEqual(polyline.strokeOpacity, 1);
+
+        this.service.fitBounds(
+            [
+                [0, 0],
+                [1, 1],
+            ],
+            { padding: [] }
+        );
+        assert.deepEqual(map.calls.at(-1)[2], { right: 0, bottom: 0 }, 'a padding stating nothing is filled in on both sides');
+    });
+
+    test('a missing or unreadable environment config leaves the map id unresolved', async function (assert) {
+        const originalResolve = this.owner.resolveRegistration;
+
+        try {
+            this.owner.resolveRegistration = () => undefined;
+            await this.service.initializeMap(document.createElement('div'));
+            assert.false(this.service._supportsAdvancedMarkers, 'no config means no map id, so no advanced markers');
+
+            this.owner.resolveRegistration = () => {
+                throw new Error('no registry');
+            };
+            await this.service.initializeMap(document.createElement('div'));
+            assert.false(this.service._supportsAdvancedMarkers, 'and a registry that throws is survived the same way');
+        } finally {
+            delete this.owner.resolveRegistration;
+            assert.strictEqual(this.owner.resolveRegistration, originalResolve, 'the owner is left as it was');
+        }
+    });
 });
