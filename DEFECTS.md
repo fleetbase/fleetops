@@ -806,6 +806,14 @@ call, not taken here).
 **Impact:** None for users.
 **Fix:** The suite is rewritten as six rendering tests on a tracked fixture class: toggle → rates → quotes → quote selection → refresh → stale-quote clearing → toggle off; the disabled states (no config, no route, no write access, integrated vendor); the debounced refresh for the matching order with existing quotes kept while updating; rate loading from a refresh; a refresh that loses its route mid-debounce; and the locked contract override with its loading, breakdown and currency fallbacks. `handleServiceQuoteRefreshRequest`'s `= {}` default is deleted — its only caller is `OrderCreationService#requestServiceQuoteRefresh`, which always triggers with `{ reason, order }`.
 
+## 52. `tests/integration/components/telematic/details-test.js` — five tests never green
+
+**Status:** FIXED
+**Found:** All five failed with "Expected id to be a string or number, received undefined" from `Store.peekRecord`.
+**Evidence:** The stack runs `CustomFieldYieldComponent.loadCustomFields → resolveOwner → CurrentUserService.loadCompany → Store.peekRecord`: the template mounts `<CustomField::Yield @subject={{@resource}} @viewMode={{true}}>`, whose load task looks the company up by an id the test app never sets. Every other suite that mounts the yield stands it in (`stubFormInputs` registers the same stand-in); this one did not.
+**Impact:** None for users.
+**Fix:** The suite registers the `custom-field/yield` stand-in and gains five tests over the health cards (untested/unsynced, verified/synced with hardware identity, failed and synchronizing states), the sensitive-error masking and the query-string webhook URL; the component is at 100% on all four metrics. Date details are asserted with a local-time-tolerant pattern since `format-date-fns` renders in the browser's zone.
+
 ## 4. `tests/` — 223 blueprint scaffolds that were never green
 
 **Status:** OPEN (this is the bulk of Phase B)
