@@ -6,7 +6,11 @@ import Service from '@ember/service';
 import Component from '@glimmer/component';
 import { setComponentTemplate } from '@ember/component';
 import { inject as service } from '@ember/service';
+import { helper } from '@ember/component/helper';
 import registerTemplateOnly from 'dummy/tests/helpers/register-template-only';
+
+/** Every `file-queue` the template builds, so a test can drop a file onto one. */
+const queueHandles = [];
 import { A } from '@ember/array';
 
 class ModelSelectStub extends Component {
@@ -22,6 +26,15 @@ setComponentTemplate(hbs`<button type="button" data-test-model-select={{@modelNa
  */
 function stubComponents(owner) {
     registerTemplateOnly(owner, 'file-dropzone', hbs`<div data-test-dropzone>{{yield}}</div>`);
+    // `file-queue` comes from ember-file-upload, which is not installed here. The stand-in hands
+    // the queue back and parks `onFileAdded` where a test can invoke it, as a dropped file would.
+    owner.register(
+        'helper:file-queue',
+        helper((positional, named) => {
+            queueHandles.push(named);
+            return { name: named.name, files: [], progress: 0, onFileAdded: named.onFileAdded, remove: () => {} };
+        })
+    );
     registerTemplateOnly(owner, 'file-upload', hbs`<div data-test-file-upload>{{yield}}</div>`);
     registerTemplateOnly(owner, 'custom-field/input', hbs`<div data-test-custom-field></div>`);
     // The real DragSortList yields each item with its index and reports a reorder through
@@ -77,6 +90,12 @@ module('Integration | Component | customer/create-order-form', function (hooks) 
                     const answer = test.getResponses[path];
                     return typeof answer === 'function' ? answer() : Promise.resolve(answer);
                 }
+                uploadFile = {
+                    perform: (file, meta, onSuccess, onError) => {
+                        test.uploads.push({ file, meta, onSuccess, onError });
+                        return Promise.resolve();
+                    },
+                };
                 post(path, body, options) {
                     test.posts.push([path, body, options]);
                     const answer = test.postResponses[path];
@@ -157,6 +176,19 @@ module('Integration | Component | customer/create-order-form', function (hooks) 
                     test.modalsDone += 1;
                     return Promise.resolve();
                 }
+                options = {};
+                setOption(key, value) {
+                    this.options[key] = value;
+                }
+                getOption(key) {
+                    return this.options[key];
+                }
+                startLoading() {
+                    test.modalLoading = true;
+                }
+                stopLoading() {
+                    test.modalLoading = false;
+                }
             }
         );
         this.owner.register('service:context-panel', class extends Service {});
@@ -207,6 +239,7 @@ module('Integration | Component | customer/create-order-form', function (hooks) 
         document.getElementById('ember-testing').appendChild(this.mapElement);
         this.map = window.L.map(this.mapElement).setView([1.3, 103.8], 12);
 
+        queueHandles.length = 0;
         stubComponents(this.owner);
 
         // The component calls `this.order.set(...)`, so the order has to be a real record.
@@ -217,6 +250,21 @@ module('Integration | Component | customer/create-order-form', function (hooks) 
         this.sessionCustomer = { id: 'customer_1', name: 'Ada' };
 
         this.customFieldsLoaded = [];
+        this.uploads = [];
+        this.owner.register(
+            'service:current-user',
+            class extends Service {
+                companyId = 'company_1';
+                options = {};
+                getOption(key) {
+                    return this.options[key];
+                }
+                setOption(key, value) {
+                    this.options[key] = value;
+                }
+            }
+        );
+
         this.owner.register(
             'service:custom-fields-registry',
             class extends Service {
@@ -585,5 +633,83 @@ module('Integration | Component | customer/create-order-form', function (hooks) 
         const dialog = this.modals.find(([name]) => name === 'modals/confirm-service-quote-purchase');
         assert.ok(dialog, 'the customer is told the purchase is being finalised');
         assert.false(dialog[1].backdropClose, 'and cannot dismiss it by clicking away');
+    });
+
+    test('the quotes that come back are offered, with the first already chosen', async function (assert) {
+        this.givenOrderConfigs({ id: 'config_1', key: 'transport', name: 'Transport' });
+        this.postResponses['service-quotes/preliminary'] = A([
+            { id: 'quote_1', amount: 1200 },
+            { id: 'quote_2', amount: 2400 },
+        ]);
+
+        await render(hbs`<Customer::CreateOrderForm @order={{this.order}} @map={{this.map}} />`);
+        await chooseRoute(this);
+
+        assert.dom('.radio-group-item').exists({ count: 2 }, 'both quotes are offered');
+        assert.dom('.radio-group-item.is-checked').exists({ count: 1 }, 'and exactly one is chosen');
+        assert.strictEqual(
+            [...document.querySelectorAll('.radio-group-item')].findIndex((el) => el.classList.contains('is-checked')),
+            0,
+            'the first quote is the one taken'
+        );
+    });
+
+    test('a dropped file is queued and uploaded, and lands on the order', async function (assert) {
+        this.givenOrderConfigs({ id: 'config_1', key: 'transport', name: 'Transport' });
+        await render(hbs`<Customer::CreateOrderForm @order={{this.order}} @map={{this.map}} />`);
+
+        const queue = queueHandles.at(-1);
+        assert.ok(queue, 'the template builds a file queue');
+        assert.true(queue.accept.includes('application/pdf'), 'restricted to the types the form accepts');
+
+        // A file the dropzone has accepted but not yet sent.
+        await queue.onFileAdded({ state: 'queued', queue: { remove: () => {} } });
+
+        assert.strictEqual(this.uploads.length, 1, 'the file is uploaded straight away');
+        assert.deepEqual(this.uploads[0].meta, { path: 'uploads/fleet-ops/order-files', type: 'order_file' }, 'under the order-files path');
+
+        const uploaded = this.store.createRecord('file', { original_filename: 'manifest.pdf' });
+        this.uploads[0].onSuccess(uploaded);
+        assert.deepEqual([...this.order.files], [uploaded], 'and once it lands it belongs to the order');
+    });
+
+    test('a file already sent is not queued twice, and a failed upload leaves the queue clean', async function (assert) {
+        this.givenOrderConfigs({ id: 'config_1', key: 'transport', name: 'Transport' });
+        await render(hbs`<Customer::CreateOrderForm @order={{this.order}} @map={{this.map}} />`);
+
+        const queue = queueHandles.at(-1);
+        await queue.onFileAdded({ state: 'uploaded', queue: { remove: () => {} } });
+        assert.strictEqual(this.uploads.length, 0, 'a file already sent is ignored — the dropzone calls this twice');
+
+        const removed = [];
+        await queue.onFileAdded({ state: 'failed', queue: { remove: (file) => removed.push(file) } });
+        assert.strictEqual(this.uploads.length, 1, 'but a failed one is retried');
+
+        this.uploads[0].onError();
+        assert.strictEqual(removed.length, 1, 'and a second failure takes it out of the queue');
+        assert.deepEqual([...this.order.files], [], 'with nothing attached to the order');
+    });
+
+    test('editing an item offers a photo upload, which differs for a saved item', async function (assert) {
+        this.givenOrderConfigs({ id: 'config_1', key: 'transport', name: 'Transport' });
+        await render(hbs`<Customer::CreateOrderForm @order={{this.order}} @map={{this.map}} />`);
+
+        const addItem = [...document.querySelectorAll('button')].find((el) => el.textContent.includes('Add Item'));
+        await click(addItem);
+
+        const editItem = [...document.querySelectorAll('button')].find((el) => el.textContent.includes('Edit Item'));
+        assert.ok(editItem, 'an added item can be edited');
+        await click(editItem);
+
+        const [name, options] = this.modals.at(-1);
+        assert.strictEqual(name, 'modals/entity-form');
+        assert.ok(options.entity, 'the item being edited is handed to the modal');
+
+        // A new item holds its photo back until the item itself is saved.
+        const newFileRemoved = [];
+        options.uploadNewPhoto({ file: new Blob(['x']), queue: { remove: (f) => newFileRemoved.push(f) } });
+        assert.strictEqual(this.uploads.length, 0, 'a new item does not upload yet');
+        assert.strictEqual(newFileRemoved.length, 1, 'the file is held aside instead');
+        assert.ok(options.entity.get('photo_url'), 'though it is shown straight away');
     });
 });
