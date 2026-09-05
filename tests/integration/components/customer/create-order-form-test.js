@@ -1,6 +1,6 @@
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'dummy/tests/helpers';
-import { click, fillIn, render } from '@ember/test-helpers';
+import { click, fillIn, render, settled } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 import Service from '@ember/service';
 import Component from '@glimmer/component';
@@ -45,7 +45,7 @@ function stubComponents(owner) {
         'drag-sort-list',
         hbs`<div data-test-drag-sort-list>
             {{#each @items as |item index|}}
-                <div data-test-drag-item>{{yield item index}}</div>
+                <div data-test-drag-item data-test-waypoint={{item.place.street1}}>{{yield item index}}</div>
             {{/each}}
             <button
                 type="button"
@@ -706,6 +706,140 @@ module('Integration | Component | customer/create-order-form', function (hooks) 
         this.uploads[0].onError();
         assert.strictEqual(removed.length, 1, 'and a second failure takes it out of the queue');
         assert.deepEqual([...this.order.files], [], 'with nothing attached to the order');
+    });
+
+    test('switching the order type takes the form to that config', async function (assert) {
+        this.givenOrderConfigs({ id: 'config_1', key: 'transport', name: 'Transport' }, { id: 'config_2', key: 'storage', name: 'Storage' });
+        // The form only offers the configs the settings call says are enabled for this customer.
+        this.getResponses['fleet-ops/settings/customer-enabled-order-configs'] = ['config_1', 'config_2'];
+        await render(hbs`<Customer::CreateOrderForm @order={{this.order}} @map={{this.map}} />`);
+
+        assert.strictEqual(this.order.order_config_uuid, 'config_1', 'the first config is taken to start with');
+
+        const typeSelect = document.querySelector('select.form-select');
+        await fillIn(typeSelect, 'config_2');
+
+        assert.strictEqual(this.order.order_config_uuid, 'config_2', 'choosing another moves the order onto it');
+        assert.deepEqual(
+            this.customFieldsLoaded.map((config) => config.id),
+            ['config_1', 'config_2'],
+            'and its custom fields are loaded in turn'
+        );
+    });
+
+    test('the overlay cancel button hands back to whoever opened the form', async function (assert) {
+        this.givenOrderConfigs({ id: 'config_1', key: 'transport', name: 'Transport' });
+        this.cancelled = 0;
+        this.onCancel = () => (this.cancelled += 1);
+
+        await render(hbs`<Customer::CreateOrderForm @order={{this.order}} @map={{this.map}} @onCancel={{this.onCancel}} />`);
+
+        await click('.next-content-overlay-panel-cancel-button');
+        assert.strictEqual(this.cancelled, 1, 'the caller is told the customer backed out');
+    });
+
+    test('an address that has been chosen can be opened for editing', async function (assert) {
+        this.givenOrderConfigs({ id: 'config_1', key: 'transport', name: 'Transport' });
+        await render(hbs`<Customer::CreateOrderForm @order={{this.order}} @map={{this.map}} />`);
+
+        const pickup = this.store.createRecord('place', { street1: 'Depot', location: { type: 'Point', coordinates: [103.8, 1.3] } });
+        this.testBed.chosen = pickup;
+        await click([...document.querySelectorAll('[data-test-model-select="place"]')][0]);
+
+        const editLinks = [...document.querySelectorAll('a')].filter((el) => el.querySelector('.fa-pen-to-square, .fa-edit'));
+        assert.ok(editLinks.length, 'a chosen address offers an edit control');
+        await click(editLinks[0]);
+
+        const [name, options] = this.modals.at(-1);
+        assert.strictEqual(name, 'modals/place-form');
+        assert.strictEqual(options.title, 'Edit Place', 'opened for editing, not for a new one');
+        assert.strictEqual(options.place, pickup, 'on the address that was clicked');
+    });
+
+    test('dragging a waypoint to a new position reorders the stops, and dropping it back does nothing', async function (assert) {
+        this.givenOrderConfigs({ id: 'config_1', key: 'transport', name: 'Transport' });
+        await render(hbs`<Customer::CreateOrderForm @order={{this.order}} @map={{this.map}} />`);
+
+        const [multiDrop] = document.querySelectorAll('[role="checkbox"]');
+        await click(multiDrop);
+
+        this.testBed.chosen = this.store.createRecord('place', { street1: 'Depot', location: { type: 'Point', coordinates: [103.8, 1.3] } });
+        await click(document.querySelector('[data-test-drag-item] [data-test-model-select="place"]'));
+
+        await click([...document.querySelectorAll('button')].find((el) => el.textContent.includes('Waypoint')));
+        this.testBed.chosen = this.store.createRecord('place', { street1: 'Site', location: { type: 'Point', coordinates: [103.9, 1.4] } });
+        await click([...document.querySelectorAll('[data-test-drag-item] [data-test-model-select="place"]')][1]);
+
+        const order = () => [...document.querySelectorAll('[data-test-drag-item]')].map((el) => el.getAttribute('data-test-waypoint'));
+        assert.deepEqual(order(), ['Depot', 'Site'], 'two stops, in the order they were added');
+
+        // The stand-in reports source 1 -> target 0, which is what DragSortList hands back.
+        await click('[data-test-drag-end]');
+        assert.deepEqual(order(), ['Site', 'Depot'], 'the stop that was dragged is now first');
+
+        // Dropping a stop back where it started is reported too, and has to be ignored.
+        await click('[data-test-drag-noop]');
+        assert.deepEqual(order(), ['Site', 'Depot'], 'putting it back where it was changes nothing');
+    });
+
+    test('the map is nudged off the panel once it has settled on the route', async function (assert) {
+        this.givenOrderConfigs({ id: 'config_1', key: 'transport', name: 'Transport' });
+        await render(hbs`<Customer::CreateOrderForm @order={{this.order}} @map={{this.map}} />`);
+
+        const panned = [];
+        this.map.panBy = (offset) => panned.push(offset);
+
+        // One address is a single point, which the form flies to rather than fitting bounds.
+        this.testBed.chosen = this.store.createRecord('place', { street1: 'Depot', location: { type: 'Point', coordinates: [103.8, 1.3] } });
+        await click([...document.querySelectorAll('[data-test-model-select="place"]')][0]);
+        this.map.fire('moveend');
+        assert.strictEqual(panned.length, 1, 'the single-point fly-to nudges the map once it lands');
+
+        // A second makes it two, which is fitted instead — a different arm, same nudge.
+        this.testBed.chosen = this.store.createRecord('place', { street1: 'Site', location: { type: 'Point', coordinates: [103.9, 1.4] } });
+        await click([...document.querySelectorAll('[data-test-model-select="place"]')][1]);
+        this.map.fire('moveend');
+        assert.strictEqual(panned.length, 2, 'and so does the fitted two-point route');
+    });
+
+    test('a file on the order can be taken off again', async function (assert) {
+        this.givenOrderConfigs({ id: 'config_1', key: 'transport', name: 'Transport' });
+        await render(hbs`<Customer::CreateOrderForm @order={{this.order}} @map={{this.map}} />`);
+
+        const queue = queueHandles.at(-1);
+        await queue.onFileAdded({ state: 'queued', queue: { remove: () => {} } });
+        const uploaded = this.store.createRecord('file', { original_filename: 'manifest.pdf' });
+        let destroyed = false;
+        uploaded.destroyRecord = () => {
+            destroyed = true;
+            return Promise.resolve(uploaded);
+        };
+        this.uploads[0].onSuccess(uploaded);
+        await settled();
+
+        const dropdownTrigger = document.querySelector('.ember-basic-dropdown-trigger');
+        assert.ok(dropdownTrigger, 'the attached file carries its own menu');
+        await click(dropdownTrigger);
+
+        const remove = [...document.querySelectorAll('[role="menuitem"]')].find((el) => el.querySelector('.fa-trash'));
+        assert.ok(remove, 'with a delete on it');
+        await click(remove);
+        assert.true(destroyed, 'and the file is deleted');
+    });
+
+    test('the payload sent for quoting is serialised model by model', async function (assert) {
+        this.givenOrderConfigs({ id: 'config_1', key: 'transport', name: 'Transport' });
+        await render(hbs`<Customer::CreateOrderForm @order={{this.order}} @map={{this.map}} />`);
+
+        await click([...document.querySelectorAll('button')].find((el) => el.textContent.includes('Add Item')));
+        await chooseRoute(this);
+
+        const [, body] = this.posts.find(([path]) => path === 'service-quotes/preliminary');
+        assert.ok(body.payload, 'the payload goes with the quote request');
+        assert.notOk(body.payload.pickup instanceof Object && typeof body.payload.pickup.save === 'function', 'the pickup is sent as plain attributes, not as a record');
+        assert.strictEqual(body.payload.pickup.street1, 'Depot', 'with the attributes the record carried');
+        assert.true(Array.isArray(body.payload.entities), 'and the items are serialised one by one');
+        assert.strictEqual(body.payload.entities.length, 1);
     });
 
     /**

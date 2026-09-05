@@ -1184,6 +1184,23 @@ call, not taken here).
 **Fix:** `modal.invoke('uploadNewPhoto', null, pendingFileUpload)` — the `null` is the modal id, and `invoke` then falls back to the top modal. One line. The test `confirming the item form saves the item, but the held-back photo is never replayed` asserts the current behaviour (`this.uploads.length === 0`) and names this entry, so whoever fixes it will see the assertion that has to change.
 
 
+## 99. `addon/components/customer/create-order-form.js` — an `isServicable` getter nothing reads
+
+**Status:** FIXED (deleted in the iteration-71 source commit)
+**Found:** the last function left uncovered in the file after the map and waypoint batch.
+**Evidence:** `@computed('payloadCoordinates.length', 'waypoints.[]') get isServicable()` had exactly one apparent caller in the package — `addon/components/order/form/service-rate.hbs:49`, which reads `this.isServicable`. But that `this` is `order/form/service-rate.js`, which **defines its own `isServicable` at line 30**. Different component, same name; the grep hit is the sub-component's own getter, not this one. `create-order-form.hbs` never names it, the class never reads it, and the template has no `{{yield}}`, so it cannot be handed to a child. Same shape as #91.
+**Impact:** none — a computed property that never evaluates.
+**Fix:** deleted. `order/form/service-rate.js`'s own getter is untouched and still covered by its own tests.
+
+## 100. `addon/components/customer/create-order-form.js` — a "New Place" action the form never offers
+
+**Status:** NEEDS DECISION
+**Found:** the last unreachable function in the file, alongside #99.
+**Evidence:** `@action createPlace()` (L441 before the pragma) builds a `place` owned by the current customer and opens `modals/place-form` with the title `'New Place'`. Nothing reaches it: `create-order-form.hbs` never names `createPlace` — its only place controls are `editPlace` (three call sites) and the `ModelSelect`s, which pick from existing places; the class never calls it; and the template has no `{{yield}}`, so it cannot be passed to a child. The other `createPlace`s in the package (`contact-actions.js:109`, `vendor-actions.js:128`, and the customer equivalent) are **service** methods that other forms call as `this.contactActions.createPlace(...)` — same name, different object.
+**Impact:** none today. The customer order form lets a customer pick an existing address but never add a new one; the code to add one exists and is simply not wired to anything.
+**Fix:** **this is Ron's call, not mine.** Either (a) wire it — a "New Address" button beside the pickup/dropoff selects, `@onClick={{this.createPlace}}`, plus deciding what happens when the modal is confirmed (the current body shows the modal and does not save, so a `confirm` handler is missing too); or (b) delete the action. I have neither wired nor deleted it: (a) is a feature and (b) throws away the intent. It carries an `istanbul ignore` naming the trace so the gate is not blocked meanwhile — remove the pragma along with whichever way this goes.
+
+
 ## 4. `tests/` — 223 blueprint scaffolds that were never green
 
 **Status:** OPEN (this is the bulk of Phase B)
