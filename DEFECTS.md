@@ -1201,6 +1201,15 @@ call, not taken here).
 **Fix:** **this is Ron's call, not mine.** Either (a) wire it — a "New Address" button beside the pickup/dropoff selects, `@onClick={{this.createPlace}}`, plus deciding what happens when the modal is confirmed (the current body shows the modal and does not save, so a `confirm` handler is missing too); or (b) delete the action. I have neither wired nor deleted it: (a) is a feature and (b) throws away the intent. It carries an `istanbul ignore` naming the trace so the gate is not blocked meanwhile — remove the pragma along with whichever way this goes.
 
 
+## 101. `addon/components/joint-graph.js` — the responsive handler leaks a window listener
+
+**Status:** FIXED (iteration 72, in its own commit)
+**Found:** importing `@joint/core` into the dummy app let `JointGraph` render for the first time, and two unrelated `layout/fleet-ops-sidebar/operations-monitor` tests immediately started failing with `Cannot read properties of null (reading 'offsetWidth')` from `JointGraphComponent.getFullGridSize`.
+**Evidence:** `createResponsiveHandler` did `window.addEventListener('resize', () => { ... })` with an inline arrow and the component had **no `willDestroy`**, so the listener outlived the component. Its guard, `if (!this.el) return`, never fired because `this.el` was never cleared — the element reference stayed set while the node itself was torn out of the DOM, so `el.parentElement` was `null` and `getFullGridSize` threw on `parentElement.offsetWidth`. The trace names `operations-monitor` only because that is the next test that dispatches a window `resize`; any later resize would have done it.
+**Impact:** real, and not test-only. The order config manager's activity-flow tab mounts a `JointGraph`; navigating away and then resizing the window throws inside the stale listener, and every mount leaves another one behind. It was invisible until now because nothing in the test suite could construct a `JointGraph` at all — `joint` was undefined in the dummy app.
+**Fix:** done. The handler is stored on `onWindowResize`, `willDestroy` removes it and nulls `el`, and the guard also checks `parentElement` so a detached-but-not-yet-destroyed element is skipped rather than throwing. Kept out of the coverage commit as §8 requires.
+
+
 ## 4. `tests/` — 223 blueprint scaffolds that were never green
 
 **Status:** OPEN (this is the bulk of Phase B)
