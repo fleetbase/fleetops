@@ -1,6 +1,6 @@
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'dummy/tests/helpers';
-import { render, settled } from '@ember/test-helpers';
+import { render, settled, waitUntil } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 import Service from '@ember/service';
 import Component from '@glimmer/component';
@@ -205,7 +205,13 @@ module('Integration | Component | map/leaflet-live-map', function (hooks) {
                     view: (record, options) => {
                         test.panelViews.push([name, record, options]);
                     },
+                    edit: (record, options) => {
+                        test.panelViews.push([`${name}:edit`, record, options]);
+                    },
                 };
+                delete(record) {
+                    test.panelViews.push([`${name}:delete`, record]);
+                }
             };
         this.owner.register('service:driver-actions', panelService('driver'));
         this.owner.register('service:vehicle-actions', panelService('vehicle'));
@@ -1007,5 +1013,210 @@ module('Integration | Component | map/leaflet-live-map', function (hooks) {
         options.onOpen();
         assert.strictEqual(this.testBed.mapHandlers.moveend.length, 2, 'the map is asked to nudge once it has settled');
         assert.ok(map, 'through the map it was given');
+    });
+
+    // -------------------------------------------------------------------------
+    // Context menu callbacks
+    // -------------------------------------------------------------------------
+
+    test('a driver menu can view, edit or delete the driver, and view its vehicle', async function (assert) {
+        await renderLeafletMap(this);
+        const component = this.universe.get('component:fleet-ops:live-map');
+
+        const vehicle = EmberObject.create({ id: 'v_1' });
+        const driver = EmberObject.create({ id: 'd_1', public_id: 'driver_d1', name: 'Ada', vehicle });
+        component.onDriverAdded(driver, { target: EmberObject.create({}) });
+
+        const [, , , items] = this.contextMenus.find(([action, key]) => action === 'create' && key === 'driver:driver_d1');
+        const run = (fragment) => items.find((item) => item.text?.includes(fragment)).callback();
+
+        run('View Driver');
+        assert.deepEqual(this.panelViews.at(-1).slice(0, 2), ['driver', driver], 'view opens the driver panel');
+
+        run('Edit Driver');
+        assert.deepEqual(this.panelViews.at(-1).slice(0, 2), ['driver:edit', driver], 'edit opens it for editing');
+        assert.true(this.panelViews.at(-1)[2].useDefaultSaveTask, 'with the standard save');
+
+        run('Delete Driver');
+        assert.deepEqual(this.panelViews.at(-1), ['driver:delete', driver]);
+
+        run('View Vehicle');
+        assert.deepEqual(this.panelViews.at(-1).slice(0, 2), ['vehicle', vehicle], 'and the driver’s vehicle can be opened from the same menu');
+    });
+
+    test('a vehicle menu can view, edit or delete the vehicle', async function (assert) {
+        await renderLeafletMap(this);
+        const component = this.universe.get('component:fleet-ops:live-map');
+
+        const vehicle = EmberObject.create({ id: 'v_1', public_id: 'vehicle_v1', display_name: 'Van 1' });
+        component.onVehicleAdded(vehicle, { target: EmberObject.create({}) });
+
+        const [, , , items] = this.contextMenus.find(([action, key]) => action === 'create' && key === 'vehicle:vehicle_v1');
+        const run = (fragment) => items.find((item) => item.text?.includes(fragment)).callback();
+
+        run('View Vehicle');
+        assert.deepEqual(this.panelViews.at(-1).slice(0, 2), ['vehicle', vehicle]);
+
+        run('Edit Vehicle');
+        assert.deepEqual(this.panelViews.at(-1).slice(0, 2), ['vehicle:edit', vehicle]);
+
+        run('Delete Vehicle');
+        assert.deepEqual(this.panelViews.at(-1), ['vehicle:delete', vehicle]);
+    });
+
+    test('a menu item registered elsewhere is invoked with the resource it was opened on', async function (assert) {
+        const invoked = [];
+        this.menuItems = [{ title: 'Send message', onClick: (context) => invoked.push(context) }];
+        await renderLeafletMap(this);
+        const component = this.universe.get('component:fleet-ops:live-map');
+
+        const driver = EmberObject.create({ id: 'd_1', public_id: 'driver_d1', name: 'Ada' });
+        const layer = EmberObject.create({ kind: 'driver-layer' });
+        component.onDriverAdded(driver, { target: layer });
+
+        const [, , , items] = this.contextMenus.find(([action, key]) => action === 'create' && key === 'driver:driver_d1');
+        items.find((item) => item.text === 'Send message').callback();
+
+        assert.strictEqual(invoked.length, 1, 'the registered handler runs');
+        assert.strictEqual(invoked[0].driver, driver, 'and is handed the driver');
+        assert.strictEqual(invoked[0].layer, layer, 'the layer it was opened on');
+        assert.ok(invoked[0].contextmenuService, 'and a way back to the context menu service');
+    });
+
+    // -------------------------------------------------------------------------
+    // Geofence crossings
+    // -------------------------------------------------------------------------
+
+    /**
+     * Two map layers for the same geofence: one still attached to the map, one already taken off.
+     * Both flash; only the attached one has its original style put back, which covers the
+     * `if (!layer._map) return` guard in the same pass rather than needing a second timed wait.
+     */
+    function givenGeofenceLayers(test, uuid = 'geofence_1') {
+        const make = (attached) => ({
+            _model: { uuid },
+            _map: attached ? {} : null,
+            options: { color: '#111111', fillColor: '#222222', weight: 1 },
+            styles: [],
+            setStyle(style) {
+                this.styles.push(style);
+            },
+        });
+        const onMap = make(true);
+        const removed = make(false);
+        test.testBed.map.eachLayer = (callback) => {
+            callback(onMap);
+            callback(removed);
+        };
+        return { onMap, removed };
+    }
+
+    test('a driver entering a geofence flashes it green, then puts the colour back', async function (assert) {
+        await renderLeafletMap(this);
+        const { onMap, removed } = givenGeofenceLayers(this);
+
+        this.universe.trigger('fleet-ops.geofence.entered', { geofenceUuid: 'geofence_1', driverName: 'Ada', geofenceName: 'North' });
+        await settled();
+
+        assert.deepEqual(onMap.styles.at(-1), { color: '#22c55e', fillColor: '#22c55e', weight: 3 }, 'the boundary flashes green');
+        assert.strictEqual(removed.styles.length, 1, 'a layer already off the map flashes too — nothing has checked yet');
+
+        await waitUntil(() => onMap.styles.length > 1, { timeout: 4000 });
+        assert.deepEqual(onMap.styles.at(-1), { color: '#111111', fillColor: '#222222', weight: 1 }, 'and goes back to how it was drawn');
+        assert.strictEqual(removed.styles.length, 1, 'while the one that is gone is left alone rather than restyled');
+    });
+
+    test('a driver leaving a geofence flashes it red', async function (assert) {
+        await renderLeafletMap(this);
+        const { onMap } = givenGeofenceLayers(this);
+
+        this.universe.trigger('fleet-ops.geofence.exited', { geofenceUuid: 'geofence_1', driverName: 'Ada', geofenceName: 'North' });
+        await settled();
+
+        assert.deepEqual(onMap.styles.at(-1), { color: '#ef4444', fillColor: '#ef4444', weight: 3 }, 'leaving is red');
+    });
+
+    test('a geofence event for something not on the map changes nothing', async function (assert) {
+        await renderLeafletMap(this);
+        const { onMap, removed } = givenGeofenceLayers(this, 'geofence_other');
+
+        this.universe.trigger('fleet-ops.geofence.entered', { geofenceUuid: 'geofence_1' });
+        this.universe.trigger('fleet-ops.geofence.entered', {});
+        await settled();
+
+        assert.deepEqual(onMap.styles, [], 'no layer is touched');
+        assert.deepEqual(removed.styles, []);
+    });
+
+    // -------------------------------------------------------------------------
+    // Viewport reload
+    // -------------------------------------------------------------------------
+
+    test('panning the map reloads only the resources that are placed', async function (assert) {
+        this.mapBounds = { getSouth: () => 1, getWest: () => 100, getNorth: () => 2, getEast: () => 101 };
+        await renderLeafletMap(this);
+
+        this.calls = [];
+        this.testBed.mapHandlers.moveend[0]();
+        await settled();
+
+        assert.deepEqual(
+            this.calls.filter(([name]) => name === 'get').map(([, path]) => path),
+            ['fleet-ops/live/vehicles', 'fleet-ops/live/drivers', 'fleet-ops/live/places'],
+            'routes and service areas are not tied to the viewport, so they are left alone'
+        );
+    });
+
+    test('a reload while the viewport is held back does nothing', async function (assert) {
+        this.mapBounds = { getSouth: () => 1, getWest: () => 100, getNorth: () => 2, getEast: () => 101 };
+        await renderLeafletMap(this);
+        const component = this.universe.get('component:fleet-ops:live-map');
+
+        component.suspendViewportReload('drawing');
+        this.calls = [];
+        this.testBed.mapHandlers.moveend[0]();
+        await settled();
+
+        assert.deepEqual(
+            this.calls.filter(([name]) => name === 'get'),
+            [],
+            'nothing is fetched while a lock is out'
+        );
+
+        component.resumeViewportReload('drawing');
+        this.testBed.mapHandlers.moveend[0]();
+        await settled();
+        assert.strictEqual(this.calls.filter(([name]) => name === 'get').length, 3, 'and it resumes once the lock is released');
+    });
+
+    test('a reload with bounds the map cannot give is abandoned', async function (assert) {
+        this.mapBounds = { nothing: true };
+        await renderLeafletMap(this);
+
+        this.calls = [];
+        this.testBed.mapHandlers.moveend[0]();
+        await settled();
+
+        assert.deepEqual(
+            this.calls.filter(([name]) => name === 'get'),
+            [],
+            'no request is made without usable bounds'
+        );
+    });
+
+    // -------------------------------------------------------------------------
+    // Plugin loading
+    // -------------------------------------------------------------------------
+
+    test('a Leaflet map whose plugins are not loaded asks for them', async function (assert) {
+        // No `markLeafletPluginsReady` here: the constructor sees Leaflet selected and the plugins
+        // missing, so it goes off to load them. The dummy app has no `engines-dist/leaflet` path,
+        // so that attempt fails — and the failure is swallowed rather than breaking the map.
+        this.isGoogleMaps = false;
+        await render(hbs`<Map::LeafletLiveMap />`);
+
+        assert.dom('[data-test-leaflet-map]').doesNotExist('the Leaflet branch waits for its plugins');
+        assert.dom('[data-test-google-live-map]').doesNotExist('and the Google branch is not used either');
+        assert.dom('.live-map-component').exists('the map area is still rendered, showing its spinner');
     });
 });
