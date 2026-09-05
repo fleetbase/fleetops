@@ -22,6 +22,13 @@ module.exports = function (defaults) {
     // unaffected.
     app.import('node_modules/leaflet/dist/leaflet.js');
 
+    // Same story for JointJS. `index.js` copies `@joint/core` into the host's public tree, so a
+    // real app has `joint` on the global by the time the engine boots; the dummy app has no host,
+    // so `joint` is undefined and `components/joint-graph.js` plus the whole of
+    // `order-config-manager/activity-flow.js` cannot run at all. Only `@joint/core` is needed —
+    // nothing in the addon reaches for `@joint/layout-directed-graph`.
+    app.import('node_modules/@joint/core/dist/joint.min.js');
+
     const { maybeEmbroider } = require('@embroider/test-setup');
     return maybeEmbroider(app, {
         skipBabel: [
