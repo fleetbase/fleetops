@@ -198,9 +198,14 @@ class VehicleController extends Controller
      */
     public function find($id, ?Request $request = null)
     {
-        if ($request instanceof Request) {
-            $this->applyPublicExpansions($request, static::EXPANDABLE);
-        }
+        // Falls back to the container's request rather than trusting injection:
+        // the parameter carries a default, and Laravel's controller dispatcher
+        // skips resolving a type-hinted dependency that has one. It arrives null,
+        // the expansions are never mapped, and an unsupported name reaches
+        // Eloquent — a 500 for a typo, on the one endpoint most likely to be
+        // handed one.
+        $request = $request instanceof Request ? $request : request();
+        $this->applyPublicExpansions($request, static::EXPANDABLE);
 
         // find for the vehicle
         try {

@@ -248,6 +248,11 @@ class DriverController extends Controller
      */
     public function find($id)
     {
+        // Retrieve carries no Request parameter, so the container's is used —
+        // otherwise an unsupported `with` on this endpoint would reach Eloquent
+        // unmapped.
+        $this->applyPublicExpansions(request(), static::EXPANDABLE);
+
         // find for the driver
         try {
             $driver = $this->findDriver($id, ['user', 'vehicle', 'vendor', 'currentJob']);

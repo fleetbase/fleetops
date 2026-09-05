@@ -432,3 +432,23 @@ test('the internal vehicle resource keeps its counters and its nested driver', f
         // Internal keeps the whenLoaded object shape it has always had.
         ->and($payload['driver'])->toBeObject();
 });
+
+test('an unsupported expansion on retrieve cannot reach eloquent', function () {
+    fleetopsVehicleContractBoot();
+
+    $controller    = new VehicleController();
+    $createRequest = fleetopsVehicleContractRequest(CreateVehicleRequest::class, 'POST', ['make' => 'Ford']);
+    $created       = $controller->create($createRequest)->resolve($createRequest);
+
+    // Retrieve is the endpoint a hand-written client is most likely to hand a
+    // stale relation name. The request parameter carries a default, and
+    // Laravel's dispatcher skips injecting a type-hinted dependency that has
+    // one — so the controller reads the container's request instead. Without
+    // that, `not_a_relation` reached load() and answered 500.
+    $request = fleetopsVehicleContractRequest(Request::class, 'GET', ['with' => ['vendor', 'not_a_relation']]);
+    $payload = $controller->find($created['id'])->resolve($request);
+
+    expect($payload['id'])->toBe($created['id'])
+        ->and($payload)->not->toHaveKey('not_a_relation')
+        ->and($request->input('with'))->toBe(['vendor']);
+});
