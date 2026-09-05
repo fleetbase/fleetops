@@ -9,6 +9,7 @@ use Fleetbase\FleetOps\Models\Vehicle;
 use Fleetbase\FleetOps\Models\Vendor;
 use Fleetbase\FleetOps\Support\Utils;
 use Fleetbase\Http\Filter\Filter;
+use Fleetbase\Support\Http;
 
 class VehicleFilter extends Filter
 {
@@ -41,9 +42,28 @@ class VehicleFilter extends Filter
      * vehicle already exists, and it was the one identifier the filter did not
      * support — so every lookup fell through to a create.
      */
+    /**
+     * Match a vehicle by the identifier the operator's own system uses.
+     *
+     * Two callers, two meanings. The Fleet-Ops console types into a search box
+     * and expects `VEH-10` to find `VEH-100`; an importer asks whether `VEH-10`
+     * exists and must not be told yes because `VEH-100` does. A partial match
+     * there produces a duplicate on every rerun.
+     *
+     * Core's ordinary fillable-column filtering is already equality — this
+     * method exists only because the console needs the looser behaviour, so it
+     * is the console that gets the exception. An unknown request context is
+     * treated as public: exact is the safe default of the two.
+     */
     public function internalId(?string $internalId)
     {
-        $this->builder->searchWhere('internal_id', $internalId);
+        if (Http::isInternalRequest($this->request)) {
+            $this->builder->searchWhere('internal_id', $internalId);
+
+            return;
+        }
+
+        $this->builder->where('internal_id', '=', $internalId);
     }
 
     public function vin(?string $vin)
@@ -51,9 +71,20 @@ class VehicleFilter extends Filter
         $this->builder->searchWhere('vin', $vin);
     }
 
+    /**
+     * A public id identifies exactly one record, so a public lookup matches it
+     * exactly. The console keeps the partial search its id column filter box
+     * has always had.
+     */
     public function publicId(?string $publicIc)
     {
-        $this->builder->searchWhere('public_id', $publicIc);
+        if (Http::isInternalRequest($this->request)) {
+            $this->builder->searchWhere('public_id', $publicIc);
+
+            return;
+        }
+
+        $this->builder->where('public_id', '=', $publicIc);
     }
 
     public function plateNumber(?string $plateNumber)

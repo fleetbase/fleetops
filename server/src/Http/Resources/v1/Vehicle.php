@@ -6,6 +6,7 @@ use Fleetbase\FleetOps\Http\Resources\v1\Concerns\ResolvesPublicRelationFields;
 use Fleetbase\FleetOps\Support\Utils;
 use Fleetbase\Http\Resources\FleetbaseResource;
 use Fleetbase\Support\Http;
+use Fleetbase\Support\Resolve;
 
 class Vehicle extends FleetbaseResource
 {
@@ -21,6 +22,10 @@ class Vehicle extends FleetbaseResource
     public function toArray($request)
     {
         $with = $this->requestedRelations($request);
+
+        if ($with !== []) {
+            $this->loadMissing($with);
+        }
 
         return $this->withCustomFields([
             // Identity
@@ -44,14 +49,24 @@ class Vehicle extends FleetbaseResource
             'description'            => $this->description,
             'driver_name'            => $this->when(Http::isInternalRequest(), $this->driver_name),
             'vendor_name'            => $this->when(Http::isInternalRequest(), $this->vendor_name),
-            'assigned_orders_count'  => $this->when(Http::isInternalRequest(), $this->assignedOrdersCount()),
-            'current_order_reference'=> $this->when(Http::isInternalRequest(), $this->currentOrderReference()),
-            // Relationships. A public caller receives the assignment as a public id
-            // so a write can be read back; `?with=driver` still returns the object.
-            'driver'                 => $this->publicRelationField('driver', null, $with, fn () => new Driver($this->driver)),
-            'vendor'                 => $this->publicRelationField('vendor', 'vendor_uuid', $with, fn () => new Vendor($this->vendor)),
-            'category'               => $this->when(Http::isPublicRequest(), fn () => $this->publicIdForRelation('category', 'category_uuid')),
-            'warranty'               => $this->when(Http::isPublicRequest(), fn () => $this->publicIdForRelation('warranty', 'warranty_uuid')),
+            'assigned_orders_count'  => $this->when(Http::isInternalRequest(), fn () => $this->assignedOrdersCount()),
+            'current_order_reference'=> $this->when(Http::isInternalRequest(), fn () => $this->currentOrderReference()),
+            // Relationships. The identifier is additive and always present so a
+            // write can be read back; the object beside it keeps the shape it
+            // has always had — absent unless loaded, an object when it is.
+            'driver_id'              => $this->publicIdForRelation('driver', null),
+            'vendor_id'              => $this->publicIdForRelation('vendor', 'vendor_uuid'),
+            'category_id'            => $this->publicIdForRelation('category', 'category_uuid'),
+            'warranty_id'            => $this->publicIdForRelation('warranty', 'warranty_uuid'),
+            'photo_id'               => $this->publicIdForRelation('photo', 'photo_uuid'),
+            'driver'                 => $this->publicRelationObject('driver', $with, fn () => new Driver($this->driver)),
+            'vendor'                 => $this->publicRelationObject('vendor', $with, fn () => new Vendor($this->vendor)),
+            // Resolved through the repository's own resource resolver rather than
+            // a hardcoded class: Category and File live in core, and Warranty has
+            // no v1 resource of its own.
+            'category'               => $this->publicRelationObject('category', $with, fn () => Resolve::httpResourceForModel($this->category)),
+            'warranty'               => $this->publicRelationObject('warranty', $with, fn () => Resolve::httpResourceForModel($this->warranty)),
+            'photo'                  => $this->publicRelationObject('photo', $with, fn () => Resolve::httpResourceForModel($this->photo)),
             'devices'                => $this->whenLoaded('devices', fn () => $this->devices),
             // Vehicle identification
             'make'                   => $this->make,

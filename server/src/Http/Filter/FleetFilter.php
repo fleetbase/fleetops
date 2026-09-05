@@ -9,6 +9,7 @@ use Fleetbase\FleetOps\Models\Vendor;
 use Fleetbase\FleetOps\Models\Zone;
 use Fleetbase\FleetOps\Support\Utils;
 use Fleetbase\Http\Filter\Filter;
+use Fleetbase\Support\Http;
 
 class FleetFilter extends Filter
 {
@@ -65,9 +66,20 @@ class FleetFilter extends Filter
         $this->builder->whereIn('vendor_uuid', $this->resolvePublicRelationUuids(Vendor::class, $vendor));
     }
 
+    /**
+     * A public id identifies exactly one record, so a public lookup matches it
+     * exactly. The console keeps the partial search its id column filter box
+     * has always had.
+     */
     public function publicId(?string $publicId)
     {
-        $this->builder->searchWhere('public_id', $publicId);
+        if (Http::isInternalRequest($this->request)) {
+            $this->builder->searchWhere('public_id', $publicId);
+
+            return;
+        }
+
+        $this->builder->where('public_id', '=', $publicId);
     }
 
     public function task(?string $task)

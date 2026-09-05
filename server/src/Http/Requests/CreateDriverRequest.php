@@ -3,6 +3,7 @@
 namespace Fleetbase\FleetOps\Http\Requests;
 
 use Fleetbase\FleetOps\Http\Requests\Concerns\ScopesPublicRelationRules;
+use Fleetbase\FleetOps\Models\Driver;
 use Fleetbase\FleetOps\Rules\ResolvablePoint;
 use Fleetbase\Http\Requests\FleetbaseRequest;
 use Illuminate\Validation\Rule;
@@ -41,8 +42,8 @@ class CreateDriverRequest extends FleetbaseRequest
              * are supplied; a driver created without them simply cannot sign in
              * to Navigator until credentials are added.
              */
-            'email'    => ['nullable', Rule::when($this->filled('email'), ['email']), Rule::when($isCreating, [Rule::unique('users')->whereNull('deleted_at')])],
-            'phone'    => ['nullable', 'string', Rule::when($isCreating, [Rule::unique('users')->whereNull('deleted_at')])],
+            'email'    => ['nullable', Rule::when($this->filled('email'), ['email']), $this->uniqueAmongUsers()],
+            'phone'    => ['nullable', 'string', $this->uniqueAmongUsers()],
             'password' => 'nullable|string',
             'timezone' => 'nullable|string|max:64',
 
@@ -81,6 +82,54 @@ class CreateDriverRequest extends FleetbaseRequest
             'vendor'  => $this->publicRelationRules('vendors'),
             'job'     => $this->publicRelationRules('orders'),
         ];
+    }
+
+    /**
+     * Uniqueness against every other live user account.
+     *
+     * Update used to skip this check entirely, so one driver could be given an
+     * address another driver already signs in with — and the two would then be
+     * indistinguishable to every identity lookup, including the password reset
+     * that matches on it. The driver's own linked user is ignored by uuid, so
+     * resending an unchanged address or number still succeeds.
+     *
+     * No return type: the pest harness substitutes its own
+     * `Illuminate\Validation\Rule`, which is not an instance of `Rules\Unique`.
+     */
+    protected function uniqueAmongUsers()
+    {
+        $rule = Rule::unique('users')->whereNull('deleted_at');
+
+        $ownUserUuid = $this->linkedUserUuid();
+
+        return $ownUserUuid ? $rule->ignore($ownUserUuid, 'uuid') : $rule;
+    }
+
+    /**
+     * The uuid of the user behind the driver this request is updating.
+     *
+     * Null on create, and null when there is no resolvable route parameter —
+     * which is also what keeps this from querying during rule construction in
+     * contexts that have no route bound.
+     */
+    protected function linkedUserUuid(): ?string
+    {
+        if ($this->isMethod('POST')) {
+            return null;
+        }
+
+        $id = $this->route('id');
+
+        if (!is_string($id) || $id === '') {
+            return null;
+        }
+
+        return Driver::withoutGlobalScopes()
+            ->where('company_uuid', session('company'))
+            ->where(function ($query) use ($id) {
+                $query->where('public_id', $id)->orWhere('internal_id', $id);
+            })
+            ->value('user_uuid');
     }
 
     /**

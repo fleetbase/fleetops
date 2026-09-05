@@ -7,6 +7,7 @@ use Fleetbase\FleetOps\Events\GeofenceExited;
 use Fleetbase\FleetOps\Events\VehicleLocationChanged;
 use Fleetbase\FleetOps\Exceptions\PublicRelationNotFoundException;
 use Fleetbase\FleetOps\Http\Controllers\Api\v1\Concerns\ResolvesFleetOpsApiResources;
+use Fleetbase\FleetOps\Http\Controllers\Api\v1\Concerns\ResolvesPublicExpansions;
 use Fleetbase\FleetOps\Http\Requests\CreateVehicleRequest;
 use Fleetbase\FleetOps\Http\Requests\UpdateVehicleRequest;
 use Fleetbase\FleetOps\Http\Resources\v1\DeletedResource;
@@ -29,12 +30,29 @@ use Illuminate\Support\Facades\DB;
 class VehicleController extends Controller
 {
     use ResolvesFleetOpsApiResources;
+    use ResolvesPublicExpansions;
 
     /**
      * Relationships eager loaded so the public resource can report each
      * assignment as a public id without a query per vehicle.
+     *
+     * Loading them does not expand them: the nested object is returned only for
+     * a relation the caller named in `with`, which is the shape the endpoint has
+     * always had.
      */
-    protected const PUBLIC_RELATIONS = ['vendor', 'category', 'warranty', 'driver'];
+    protected const PUBLIC_RELATIONS = ['vendor', 'category', 'warranty', 'driver', 'photo'];
+
+    /**
+     * Public expansion name => Eloquent relation name.
+     */
+    public const EXPANDABLE = [
+        'driver'   => 'driver',
+        'vendor'   => 'vendor',
+        'category' => 'category',
+        'warranty' => 'warranty',
+        'photo'    => 'photo',
+        'devices'  => 'devices',
+    ];
 
     /**
      * Creates a new Fleetbase Vehicle resource.
@@ -45,6 +63,8 @@ class VehicleController extends Controller
      */
     public function create(CreateVehicleRequest $request)
     {
+        $this->applyPublicExpansions($request, static::EXPANDABLE);
+
         // get request input
         try {
             $input = $this->vehicleInputFromRequest($request);
@@ -95,6 +115,8 @@ class VehicleController extends Controller
      */
     public function update($id, UpdateVehicleRequest $request)
     {
+        $this->applyPublicExpansions($request, static::EXPANDABLE);
+
         // find for the vehicle
         try {
             $vehicle = $this->findVehicle($id);
@@ -160,6 +182,8 @@ class VehicleController extends Controller
      */
     public function query(Request $request)
     {
+        $this->applyPublicExpansions($request, static::EXPANDABLE);
+
         $results = $this->queryVehicles($request);
 
         return $this->vehicleResourceCollection($results);
@@ -172,8 +196,12 @@ class VehicleController extends Controller
      *
      * @return \Fleetbase\Http\Resources\VehicleCollection
      */
-    public function find($id)
+    public function find($id, ?Request $request = null)
     {
+        if ($request instanceof Request) {
+            $this->applyPublicExpansions($request, static::EXPANDABLE);
+        }
+
         // find for the vehicle
         try {
             $vehicle = $this->findVehicle($id);
@@ -473,7 +501,21 @@ class VehicleController extends Controller
 
     protected function vehicleResource(Vehicle $vehicle)
     {
-        return new VehicleResource($vehicle);
+        return new VehicleResource($this->withPublicRelations($vehicle));
+    }
+
+    /**
+     * Load the relations the public resource reports as identifiers.
+     *
+     * One query per relation instead of one per relation per read, and it makes
+     * an assignment made moments earlier in the same request readable back
+     * immediately.
+     */
+    protected function withPublicRelations(Vehicle $vehicle): Vehicle
+    {
+        $vehicle->loadMissing(static::PUBLIC_RELATIONS);
+
+        return $vehicle;
     }
 
     protected function vehicleResourceCollection($results)

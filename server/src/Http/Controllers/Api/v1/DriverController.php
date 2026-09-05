@@ -8,6 +8,7 @@ use Fleetbase\FleetOps\Events\GeofenceExited;
 use Fleetbase\FleetOps\Events\VehicleLocationChanged;
 use Fleetbase\FleetOps\Exceptions\PublicRelationNotFoundException;
 use Fleetbase\FleetOps\Http\Controllers\Api\v1\Concerns\ResolvesFleetOpsApiResources;
+use Fleetbase\FleetOps\Http\Controllers\Api\v1\Concerns\ResolvesPublicExpansions;
 use Fleetbase\FleetOps\Http\Requests\CreateDriverRequest;
 use Fleetbase\FleetOps\Http\Requests\DriverSimulationRequest;
 use Fleetbase\FleetOps\Http\Requests\UpdateDriverRequest;
@@ -44,6 +45,22 @@ class DriverController extends Controller
 {
     use \Fleetbase\FleetOps\Http\Controllers\Concerns\ResolvesReviewAccountBypass;
     use ResolvesFleetOpsApiResources;
+    use ResolvesPublicExpansions;
+
+    /**
+     * Public expansion name => Eloquent relation name.
+     *
+     * `user` and `company` are deliberately absent. Both are already published
+     * as public-id strings, and Navigator interpolates `driver.user` directly
+     * into a socket channel name — expanding either would retype a released
+     * field and break it silently.
+     */
+    public const EXPANDABLE = [
+        'vehicle'     => 'vehicle',
+        'vendor'      => 'vendor',
+        'current_job' => 'currentJob',
+        'fleets'      => 'fleets',
+    ];
 
     /**
      * Creates a new Fleetbase Driver resource.
@@ -52,6 +69,8 @@ class DriverController extends Controller
      */
     public function create(CreateDriverRequest $request)
     {
+        $this->applyPublicExpansions($request, static::EXPANDABLE);
+
         // get user details for driver
         $userDetails                 = $request->only(['name', 'password', 'email', 'phone', 'timezone']);
 
@@ -141,6 +160,8 @@ class DriverController extends Controller
      */
     public function update($id, UpdateDriverRequest $request)
     {
+        $this->applyPublicExpansions($request, static::EXPANDABLE);
+
         // find for the driver
         try {
             $driver = $this->findDriver($id, ['user']);
@@ -167,7 +188,10 @@ class DriverController extends Controller
          * password. Changing a password is its own operation with its own
          * proof: see changePassword(), forgotPassword() and resetPassword().
          */
-        $userDetails = $request->only(['name', 'email', 'phone']);
+        // `timezone` is accepted and documented on update, but was never copied
+        // to the linked user — the request validated, answered 200, and dropped
+        // it. The driver's own record has no timezone column; the user's does.
+        $userDetails = $request->only(['name', 'email', 'phone', 'timezone']);
 
         // update driver user details
         $driverUser = $driver->getUser();
@@ -208,6 +232,8 @@ class DriverController extends Controller
      */
     public function query(Request $request)
     {
+        $this->applyPublicExpansions($request, static::EXPANDABLE);
+
         $results = $this->queryDrivers($request);
 
         return $this->driverResourceCollection($results);

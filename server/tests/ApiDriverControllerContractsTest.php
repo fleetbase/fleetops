@@ -836,3 +836,72 @@ test('api driver controller resolves driver relationships inside the company the
 
     expect($controller->relationCompanyScopes)->toBe(['company-uuid', 'company-uuid']);
 });
+
+test('api driver controller keeps every relationship the base contract returned', function () {
+    // The SDK stores what the API returns verbatim, and Navigator interpolates
+    // `driver.user` straight into a socket channel name — an object there would
+    // subscribe it to `user.[object Object]` and quietly stop delivering
+    // messages. These endpoints have always loaded user, vehicle, vendor and
+    // currentJob, so they must keep doing it without a `with` parameter.
+    $controller = new FleetOpsApiDriverControllerProbe();
+
+    $controller->create(new CreateDriverRequest([
+        'name'    => 'Driver One',
+        'vehicle' => 'vehicle_public',
+        'vendor'  => 'vendor_public',
+        'job'     => 'order_public',
+    ]));
+
+    expect($controller->driver->loaded)->toContain(['user', 'vehicle', 'vendor', 'currentJob']);
+
+    $updateController         = new FleetOpsApiDriverControllerProbe();
+    $updateController->update('driver_public', new UpdateDriverRequest(['name' => 'Renamed']));
+
+    expect($updateController->driver->loaded)->toContain(['user', 'vehicle', 'vendor', 'currentJob'])
+        ->and($updateController->findCalls)->toContain(['driver_public', ['user']]);
+});
+
+test('api driver controller copies timezone through to the linked user account', function () {
+    // `timezone` is documented and accepted on both create and update, but the
+    // update only ever copied name, email and phone — so the request validated,
+    // answered 200, and dropped it. The driver has no timezone column; the
+    // linked user does.
+    $create = new FleetOpsApiDriverControllerProbe();
+    $create->create(new CreateDriverRequest([
+        'name'     => 'Driver One',
+        'timezone' => 'Asia/Singapore',
+    ]));
+
+    $user = new FleetOpsApiDriverUserFake();
+    $user->setRawAttributes(['uuid' => 'user-uuid'], true);
+
+    $driver = new FleetOpsApiDriverFake();
+    $driver->setRawAttributes(['uuid' => 'driver-uuid', 'public_id' => 'driver_public', 'user_uuid' => 'user-uuid'], true);
+    $driver->userForTest = $user;
+    $driver->setRelation('user', $user);
+
+    $update         = new FleetOpsApiDriverControllerProbe();
+    $update->driver = $driver;
+    $update->update('driver_public', new UpdateDriverRequest([
+        'name'     => 'Driver One',
+        'timezone' => 'Europe/Amsterdam',
+    ]));
+
+    expect($create->createdUsers[0])->toMatchArray(['timezone' => 'Asia/Singapore'])
+        ->and($user->updates)->toContain([
+            'name'     => 'Driver One',
+            'timezone' => 'Europe/Amsterdam',
+        ]);
+});
+
+test('api driver controller only expands relationships the public contract allows', function () {
+    $controller = new FleetOpsApiDriverControllerProbe();
+    $request    = new CreateDriverRequest(['name' => 'Driver One', 'with' => ['vehicle', 'current_job', 'user', 'company', 'nope']]);
+
+    $controller->create($request);
+
+    // `user` and `company` are published as public-id strings. Expanding either
+    // would retype a released field, so neither is expandable at all; an unknown
+    // name is dropped rather than reaching Eloquent, where it would be a 500.
+    expect($request->input('with'))->toBe(['vehicle', 'currentJob']);
+});

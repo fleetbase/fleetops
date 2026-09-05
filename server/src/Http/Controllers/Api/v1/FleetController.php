@@ -4,6 +4,7 @@ namespace Fleetbase\FleetOps\Http\Controllers\Api\v1;
 
 use Fleetbase\FleetOps\Exceptions\PublicRelationNotFoundException;
 use Fleetbase\FleetOps\Http\Controllers\Api\v1\Concerns\ResolvesFleetOpsApiResources;
+use Fleetbase\FleetOps\Http\Controllers\Api\v1\Concerns\ResolvesPublicExpansions;
 use Fleetbase\FleetOps\Http\Requests\CreateFleetRequest;
 use Fleetbase\FleetOps\Http\Requests\UpdateFleetRequest;
 use Fleetbase\FleetOps\Http\Resources\v1\DeletedResource;
@@ -19,17 +20,45 @@ use Fleetbase\FleetOps\Models\Zone;
 use Fleetbase\Http\Controllers\Controller;
 use Fleetbase\Models\File;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
+use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Http\Request;
 
 class FleetController extends Controller
 {
     use ResolvesFleetOpsApiResources;
+    // Aliased so the fleet-specific override can still reach the shared
+    // resolution before adding the implicit subfleet nesting on top.
+    use ResolvesPublicExpansions {
+        resolvePublicExpansions as protected resolveAllowedExpansions;
+    }
 
     /**
-     * Relationships that are eager loaded so the public resource can report each
+     * Relationships eager loaded so the public resource can report each
      * assignment as a public id without issuing a query per fleet.
+     *
+     * Loading them does not expand them: the resource returns the nested object
+     * only for a relation the caller named in `with`, which is the shape the
+     * endpoint has always had.
      */
     protected const PUBLIC_RELATIONS = ['serviceArea', 'zone', 'vendor', 'parentFleet', 'photo'];
+
+    /**
+     * Public expansion name => Eloquent relation name.
+     *
+     * `subfleets` is the reason this map exists rather than a bare list: the
+     * public name and the relation differ only in case, and the automatic
+     * camelCase normalisation upstream turns `subfleets` into `subfleets`.
+     */
+    public const EXPANDABLE = [
+        'service_area' => 'serviceArea',
+        'zone'         => 'zone',
+        'vendor'       => 'vendor',
+        'parent_fleet' => 'parentFleet',
+        'photo'        => 'photo',
+        'subfleets'    => 'subFleets',
+        'drivers'      => 'drivers',
+        'vehicles'     => 'vehicles',
+    ];
 
     /**
      * Creates a new Fleetbase Fleet resource.
@@ -38,6 +67,8 @@ class FleetController extends Controller
      */
     public function create(CreateFleetRequest $request)
     {
+        $this->applyPublicExpansions($request, static::EXPANDABLE);
+
         try {
             $input = $this->fleetInputFromRequest($request);
         } catch (PublicRelationNotFoundException $exception) {
@@ -63,6 +94,8 @@ class FleetController extends Controller
      */
     public function update($id, UpdateFleetRequest $request)
     {
+        $this->applyPublicExpansions($request, static::EXPANDABLE);
+
         // find for the fleet
         try {
             $fleet = $this->findFleet($id);
@@ -101,6 +134,8 @@ class FleetController extends Controller
      */
     public function query(Request $request)
     {
+        $this->applyPublicExpansions($request, static::EXPANDABLE);
+
         $results = $this->queryFleets($request);
 
         return $this->fleetResourceCollection($results);
@@ -113,6 +148,8 @@ class FleetController extends Controller
      */
     public function find($id, Request $request)
     {
+        $this->applyPublicExpansions($request, static::EXPANDABLE);
+
         // find for the fleet
         try {
             $fleet = $this->findFleet($id);
@@ -242,6 +279,38 @@ class FleetController extends Controller
     }
 
     /**
+     * Preserve the implicit subfleet nesting the released contract had.
+     *
+     * `?with[]=subfleets&with[]=drivers` used to load the subfleets' drivers as
+     * well as the fleet's own, so the nested collections were part of that
+     * response. The explicit `?with[]=subfleets.drivers` form is the better
+     * spelling, but dropping the implicit one would remove data a caller is
+     * already receiving.
+     *
+     * @param array<string, string> $allowed
+     *
+     * @return array<int, string>
+     */
+    protected function resolvePublicExpansions(Request $request, array $allowed): array
+    {
+        $resolved = $this->resolveAllowedExpansions($request, $allowed);
+
+        if (!in_array('subFleets', $resolved, true)) {
+            return $resolved;
+        }
+
+        foreach (['drivers', 'vehicles'] as $nested) {
+            $path = 'subFleets.' . $nested;
+
+            if (in_array($nested, $resolved, true) && !in_array($path, $resolved, true)) {
+                $resolved[] = $path;
+            }
+        }
+
+        return $resolved;
+    }
+
+    /**
      * The explicit public input allowlist for a fleet.
      *
      * Everything outside this list is either generated (`public_id`, `slug`,
@@ -313,10 +382,28 @@ class FleetController extends Controller
 
     protected function assignVehicleToFleet(Fleet $fleet, Vehicle $vehicle): void
     {
-        $membership = FleetVehicle::withTrashed()->firstOrNew([
+        $this->assignMembership(FleetVehicle::class, [
             'fleet_uuid'   => $fleet->uuid,
             'vehicle_uuid' => $vehicle->uuid,
         ]);
+    }
+
+    /**
+     * Create or restore exactly one membership row for a pivot pair.
+     *
+     * Read-then-write is idempotent only against itself. Two requests arriving
+     * together both see no membership and both insert, which is precisely what
+     * an importer retrying a timed-out call produces. The composite unique index
+     * is the actual guarantee; this catches the violation the loser gets and
+     * finishes the winner's work, so both callers still receive the same
+     * successful answer.
+     *
+     * @param class-string          $pivotClass
+     * @param array<string, string> $attributes
+     */
+    protected function assignMembership(string $pivotClass, array $attributes): void
+    {
+        $membership = $pivotClass::withTrashed()->firstOrNew($attributes);
 
         if ($membership->trashed()) {
             $membership->restore();
@@ -324,8 +411,24 @@ class FleetController extends Controller
             return;
         }
 
-        if (!$membership->exists) {
+        if ($membership->exists) {
+            return;
+        }
+
+        try {
             $membership->save();
+        } catch (UniqueConstraintViolationException $exception) {
+            // Only this violation is swallowed. Anything else is a real failure
+            // and must not be reported as a successful assignment.
+            $winner = $pivotClass::withTrashed()->where($attributes)->first();
+
+            if (!$winner) {
+                throw $exception;
+            }
+
+            if ($winner->trashed()) {
+                $winner->restore();
+            }
         }
     }
 
@@ -339,20 +442,10 @@ class FleetController extends Controller
 
     protected function assignDriverToFleet(Fleet $fleet, Driver $driver): void
     {
-        $membership = FleetDriver::withTrashed()->firstOrNew([
+        $this->assignMembership(FleetDriver::class, [
             'fleet_uuid'  => $fleet->uuid,
             'driver_uuid' => $driver->uuid,
         ]);
-
-        if ($membership->trashed()) {
-            $membership->restore();
-
-            return;
-        }
-
-        if (!$membership->exists) {
-            $membership->save();
-        }
     }
 
     protected function removeDriverFromFleet(Fleet $fleet, Driver $driver): void

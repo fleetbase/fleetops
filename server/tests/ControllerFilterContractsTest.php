@@ -572,8 +572,11 @@ test('vehicle filter records identity relationship fleet and telematic filters',
         ->and($query->calls)->toContain(['search', 'van'])
         ->and($query->calls)->toContain(['searchWhere', ['year', 'make', 'model', 'plate_number'], 'sprinter'])
         ->and($query->calls)->toContain(['searchWhere', 'vin', 'vin-123'])
-        ->and($query->calls)->toContain(['searchWhere', 'public_id', 'vehicle-public'])
-        ->and($query->calls)->toContain(['searchWhere', 'internal_id', 'VEH-42'])
+        // A public id names exactly one record, so a public lookup is exact.
+        ->and($query->calls)->toContain(['where', ['public_id', '=', 'vehicle-public']])
+        // Exact, not partial: an importer asking whether VEH-42 exists must not
+        // be told yes because VEH-420 does.
+        ->and($query->calls)->toContain(['where', ['internal_id', '=', 'VEH-42']])
         ->and($query->calls)->toContain(['searchWhere', 'plate_number', 'ABC-123'])
         ->and($query->calls)->toContain(['searchWhere', 'make', 'Mercedes'])
         ->and($query->calls)->toContain(['searchWhere', 'model', 'Sprinter'])
@@ -621,7 +624,7 @@ test('fleet filter records hierarchy relationship scalar status and date filters
     expect($query->calls)->toContain(['where', ['company_uuid', 'company-uuid']])
         ->and($query->calls)->toContain(['with', ['serviceArea', 'zone']])
         ->and($query->calls)->toContain(['whereNull', 'parent_fleet_uuid'])
-        ->and($query->calls)->toContain(['searchWhere', 'public_id', 'fleet-public'])
+        ->and($query->calls)->toContain(['where', ['public_id', '=', 'fleet-public']])
         ->and($query->calls)->toContain(['searchWhere', 'task', 'delivery'])
         ->and($query->calls)->toContain(['searchWhere', 'name', 'North Fleet'])
         ->and($query->calls)->toContain(['whereIn', 'status', ['active', 'inactive']])

@@ -214,47 +214,71 @@ function fleetopsFleetResourceFixture(array $overrides = []): Fleet
     return Fleet::where('uuid', 'fleet-uuid')->firstOrFail();
 }
 
-test('the public fleet resource reports every writable field and each relationship as a public id', function () {
-    $payload = (new FleetResource(fleetopsFleetResourceFixture()))->resolve(fleetopsFleetResourceRequest(false));
+/**
+ * Resolve expansions the way a request does, then serialize.
+ *
+ * Going through the controller matters: it is what maps the public expansion
+ * name onto the relation name and drops anything outside the allowlist, and the
+ * resource is written to trust that mapping.
+ */
+function fleetopsFleetPayload(Fleet $fleet, bool $internal = false, array $query = []): array
+{
+    $request = fleetopsFleetResourceRequest($internal, $query);
 
-    // A caller that just wrote `parent_fleet: "fleet_parent123"` has to be able
-    // to read the assignment back, and the public contract never exposes the
-    // uuid the column actually holds.
+    $controller = new FleetController();
+    $reflection = new ReflectionMethod(FleetController::class, 'applyPublicExpansions');
+    $reflection->setAccessible(true);
+    $reflection->invoke($controller, $request, FleetController::EXPANDABLE);
+
+    return (new FleetResource($fleet))->resolve($request);
+}
+
+test('the public fleet resource reports every writable field and each relationship as an additive id', function () {
+    $payload = fleetopsFleetPayload(fleetopsFleetResourceFixture());
+
+    // The identifier is a new key beside the relationship, never a value under
+    // it. The SDK stores whatever the API returns verbatim, so a property that
+    // is an object on one call and a string on another breaks every consumer
+    // that dereferences it.
     expect($payload)->toMatchArray([
-        'id'           => 'fleet_123',
-        'name'         => 'Carpool',
-        'color'        => '#2563EB',
-        'task'         => 'Employee transport',
-        'status'       => 'active',
-        'service_area' => 'service_area_123',
-        'zone'         => 'zone_123',
-        'vendor'       => 'vendor_123',
-        'parent_fleet' => 'fleet_parent123',
-    ])->and($payload)->not->toHaveKeys([
-        'uuid',
-        'public_id',
-        'company_uuid',
-        'service_area_uuid',
-        'zone_uuid',
-        'vendor_uuid',
-        'parent_fleet_uuid',
-        'image_uuid',
-    ]);
+        'id'              => 'fleet_123',
+        'name'            => 'Carpool',
+        'color'           => '#2563EB',
+        'task'            => 'Employee transport',
+        'status'          => 'active',
+        'service_area_id' => 'service_area_123',
+        'zone_id'         => 'zone_123',
+        'vendor_id'       => 'vendor_123',
+        'parent_fleet_id' => 'fleet_parent123',
+    ])
+        // Unexpanded, the object keys stay absent exactly as they were before
+        // this contract gained the identifiers.
+        ->and($payload)->not->toHaveKeys(['service_area', 'zone', 'vendor', 'parent_fleet', 'photo'])
+        ->and($payload)->not->toHaveKeys([
+            'uuid',
+            'public_id',
+            'company_uuid',
+            'service_area_uuid',
+            'zone_uuid',
+            'vendor_uuid',
+            'parent_fleet_uuid',
+            'image_uuid',
+        ]);
 });
 
-test('the public fleet resource reports a root fleet with a null parent', function () {
-    $fleet = fleetopsFleetResourceFixture(['parent_fleet_uuid' => null]);
+test('the public fleet resource reports a root fleet with null relationship ids', function () {
+    $fleet = fleetopsFleetResourceFixture(['parent_fleet_uuid' => null, 'zone_uuid' => null]);
 
-    $payload = (new FleetResource($fleet))->resolve(fleetopsFleetResourceRequest(false));
+    $payload = fleetopsFleetPayload($fleet);
 
-    expect($payload)->toHaveKey('parent_fleet')
-        ->and($payload['parent_fleet'])->toBeNull();
+    expect($payload)->toHaveKeys(['parent_fleet_id', 'zone_id'])
+        ->and($payload['parent_fleet_id'])->toBeNull()
+        ->and($payload['zone_id'])->toBeNull();
 });
 
 test('the internal fleet resource keeps its nested relationship shape', function () {
-    $fleet = fleetopsFleetResourceFixture()->load(['serviceArea', 'zone', 'vendor', 'parentFleet']);
-
-    $payload = (new FleetResource($fleet))->resolve(fleetopsFleetResourceRequest(true));
+    $fleet   = fleetopsFleetResourceFixture()->load(['serviceArea', 'zone', 'vendor', 'parentFleet']);
+    $payload = fleetopsFleetPayload($fleet, true);
 
     // The console reads nested objects off these keys, and reads the counters;
     // expanding the public contract must not reshape either.
@@ -266,13 +290,56 @@ test('the internal fleet resource keeps its nested relationship shape', function
         ->and($payload['parent_fleet'])->toBeObject();
 });
 
-test('the public fleet resource still nests a relationship the caller asked for', function () {
-    $request = fleetopsFleetResourceRequest(false, ['with' => ['service_area']]);
-    $payload = (new FleetResource(fleetopsFleetResourceFixture()))->resolve($request);
+test('expanding a fleet relationship adds the object and leaves the id untouched', function () {
+    $payload = fleetopsFleetPayload(
+        fleetopsFleetResourceFixture(),
+        false,
+        ['with' => ['service_area', 'parent_fleet']]
+    );
 
     expect($payload['service_area'])->toBeObject()
-        // Relations that were not requested stay as public ids.
-        ->and($payload['vendor'])->toBe('vendor_123');
+        ->and($payload['parent_fleet'])->toBeObject()
+        // The identifier is unchanged by expansion, and agrees with the object.
+        ->and($payload['service_area_id'])->toBe('service_area_123')
+        ->and($payload['parent_fleet_id'])->toBe('fleet_parent123')
+        // The expanded object and the identifier agree. Asserted on the parent
+        // fleet: a ServiceArea serializes its border through GEOS, which the
+        // harness has no extension for.
+        ->and($payload['parent_fleet']->resolve()['id'])->toBe($payload['parent_fleet_id'])
+        // A relation that was not asked for is still absent, not a string.
+        ->and($payload)->not->toHaveKey('vendor')
+        ->and($payload['vendor_id'])->toBe('vendor_123');
+});
+
+test('fleet expansion accepts every documented input spelling', function () {
+    $scalar   = fleetopsFleetPayload(fleetopsFleetResourceFixture(), false, ['with' => 'service_area']);
+    $array    = fleetopsFleetPayload(fleetopsFleetResourceFixture(), false, ['with' => ['service_area']]);
+    $csv      = fleetopsFleetPayload(fleetopsFleetResourceFixture(), false, ['with' => 'service_area,vendor']);
+    $expand   = fleetopsFleetPayload(fleetopsFleetResourceFixture(), false, ['expand' => ['service_area']]);
+    $camel    = fleetopsFleetPayload(fleetopsFleetResourceFixture(), false, ['with' => 'serviceArea']);
+
+    // ?with=x, ?with[]=x, ?with=x,y and ?expand=x all mean the same thing.
+    expect($scalar['service_area'])->toBeObject()
+        ->and($array['service_area'])->toBeObject()
+        ->and($csv['service_area'])->toBeObject()
+        ->and($csv['vendor'])->toBeObject()
+        ->and($expand['service_area'])->toBeObject()
+        ->and($camel['service_area'])->toBeObject();
+});
+
+test('an unsupported fleet expansion is ignored rather than reaching eloquent', function () {
+    // Core hands `with` straight to load(), so an unknown name would be a 500
+    // for what is only a typo. The allowlist drops it and the response is
+    // otherwise unchanged.
+    $payload = fleetopsFleetPayload(
+        fleetopsFleetResourceFixture(),
+        false,
+        ['with' => ['not_a_relation', 'company', 'service_area']]
+    );
+
+    expect($payload['service_area'])->toBeObject()
+        ->and($payload)->not->toHaveKeys(['not_a_relation', 'company'])
+        ->and($payload['id'])->toBe('fleet_123');
 });
 
 test('public fleet membership routes are registered with public id parameters', function () {
@@ -357,4 +424,16 @@ test('the fleet controller lookup query and eager-load helpers run their real bo
         ->and($returned)->not->toContain('other-company-fleet')
         ->and($results->first()->relationLoaded('serviceArea'))->toBeTrue()
         ->and($results->first()->relationLoaded('parentFleet'))->toBeTrue();
+});
+
+test('the fleet resource accepts a scalar with parameter it was handed directly', function () {
+    // The controller normalises `with` into an array before the resource runs,
+    // but the resource is also reachable from code that passes the raw scalar
+    // through — it must read the same list either way.
+    $request = fleetopsFleetResourceRequest(false, ['with' => 'serviceArea,parentFleet']);
+    $payload = (new FleetResource(fleetopsFleetResourceFixture()))->resolve($request);
+
+    expect($payload['service_area'])->toBeObject()
+        ->and($payload['parent_fleet'])->toBeObject()
+        ->and($payload['service_area_id'])->toBe('service_area_123');
 });
