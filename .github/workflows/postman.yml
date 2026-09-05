@@ -29,12 +29,6 @@ jobs:
     with:
       collections: "Fleetbase API"
       build-from-source: false
-      # TEMPORARY — remove before merge.
-      # Pins the collection to the exact commit on fleetbase/postman#59 so this
-      # PR is validated against the contract that documents it, rather than
-      # against a collection on main that predates every endpoint added here.
-      # The revert commit that follows this one restores `main`.
-      postman-ref: 0fcdff3835bf208e3468bfe9fe72570e9d7cf5f2
       # Without this the run tests the version of fleetbase/fleetops-api baked into the
       # published image, not the branch under review. The workflow checks this
       # repository out at the commit under test and swaps it into the container.
