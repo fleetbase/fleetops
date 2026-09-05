@@ -6,21 +6,12 @@ import { hbs } from 'ember-cli-htmlbars';
 module('Integration | Component | cell/place-address', function (hooks) {
     setupRenderingTest(hooks);
 
-    test('it renders', async function (assert) {
-        // Set any properties with this.set('myProperty', 'value');
-        // Handle any actions with this.set('myAction', function(val) { ... });
+    test('it renders the row as a place address', async function (assert) {
+        this.set('place', { name: 'Depot', street1: '1 Main Street', city: 'Springfield', country: 'US' });
 
-        await render(hbs`<Cell::PlaceAddress />`);
+        await render(hbs`<Cell::PlaceAddress @row={{this.place}} />`);
 
-        assert.dom().hasText('');
-
-        // Template block usage:
-        await render(hbs`
-      <Cell::PlaceAddress>
-        template block text
-      </Cell::PlaceAddress>
-    `);
-
-        assert.dom().hasText('template block text');
+        assert.dom(this.element).includesText('1 Main Street');
+        assert.dom(this.element).includesText('Springfield');
     });
 });

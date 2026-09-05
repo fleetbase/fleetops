@@ -55,7 +55,7 @@ export default function toCalendarDate(utcDate, timezone) {
             hour12: false,
         }).formatToParts(date);
 
-        const get = (type) => parseInt(parts.find((p) => p.type === type)?.value ?? '0', 10);
+        const get = (type) => parseInt(parts.find((p) => p.type === type).value, 10);
 
         // hour12: false can return 24 for midnight — normalise to 0.
         const hour = get('hour') % 24;

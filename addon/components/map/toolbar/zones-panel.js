@@ -8,10 +8,6 @@ export default class MapToolbarZonesPanelComponent extends Component {
     @service serviceAreaActions;
     @service geofence;
 
-    get serviceAreas() {
-        return this.serviceAreaActions.serviceAreas ?? [];
-    }
-
     @action calculatePosition(trigger) {
         const position = calculateInPlacePosition(...arguments);
         const rect = trigger.getBoundingClientRect();

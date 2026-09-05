@@ -4,8 +4,7 @@ import { action, computed } from '@ember/object';
 import { htmlSafe } from '@ember/template';
 
 export default class OrderProgressBarComponent extends Component {
-    @tracked progress = 0;
-    @tracked order;
+    @tracked progress;
 
     @computed('progress') get progressionWidth() {
         return htmlSafe(`width: calc(${this.progress}% - 2rem);`);
@@ -15,9 +14,8 @@ export default class OrderProgressBarComponent extends Component {
         return htmlSafe(`padding-left: calc(${this.progress}% - 2rem);`);
     }
 
-    constructor(owner, { order, progress = 0 }) {
+    constructor(owner, { progress = 0 }) {
         super(...arguments);
-        this.order = order;
         this.progress = progress;
     }
 

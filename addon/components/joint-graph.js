@@ -14,6 +14,7 @@ export default class JointGraphComponent extends Component {
     @tracked panning = true;
     @tracked responsive = true;
     @tracked dragStartPosition = {};
+    onWindowResize;
 
     constructor(owner, { height = 400, width = 800, gridSize = 1, fullSize = true, panning = true, responsive = true }) {
         super(...arguments);
@@ -74,15 +75,28 @@ export default class JointGraphComponent extends Component {
     }
 
     createResponsiveHandler(paper) {
-        window.addEventListener('resize', () => {
-            if (!this.el) {
+        this.onWindowResize = () => {
+            if (!this.el || !this.el.parentElement) {
                 return;
             }
             const { width, height } = this.getFullGridSize(this.el);
             this.width = width;
             this.height = height;
             paper.setDimensions(width, height);
-        });
+        };
+
+        window.addEventListener('resize', this.onWindowResize);
+    }
+
+    willDestroy() {
+        super.willDestroy(...arguments);
+
+        if (this.onWindowResize) {
+            window.removeEventListener('resize', this.onWindowResize);
+            this.onWindowResize = undefined;
+        }
+
+        this.el = null;
     }
 
     createPanningHandler(paper) {

@@ -1,6 +1,6 @@
 <div class="form-wrapper" ...attributes>
     <RegistryYield @registry="fleet-ops:component:vehicle:form:start" as |RegistryComponent|>
-        <RegistryComponent @resource={{@resource}} @controller={{this.controller}} @permission={{get-write-permission @resource}} />
+        <RegistryComponent @resource={{@resource}} @controller={{@controller}} @permission={{get-write-permission @resource}} />
     </RegistryYield>
 
     {{! DETAILS / IDENTIFICATION }}
@@ -69,11 +69,11 @@
                 <Input @value={{@resource.year}} @type="text" class="w-full form-input" placeholder={{t "vehicle.fields.vehicle-year"}} disabled={{cannot-write @resource}} />
             </InputGroup>
 
-            <InputGroup @value={{@resource.trim}} @name="Trim" @placeholder="Trim" />
-            <InputGroup @value={{@resource.color}} @name="Color" @placeholder="Vehicle Color" />
-            <InputGroup @value={{@resource.serial_number}} @name="Serial Number" @placeholder="Serial Number" />
-            <InputGroup @value={{@resource.fuel_card_number}} @name="Fuel Card Number" @placeholder="Fuel Card Number" />
-            <InputGroup @value={{@resource.class}} @name="Class" @placeholder="Class" />
+            <InputGroup @value={{@resource.trim}} @name="Trim" @placeholder="Trim" @disabled={{cannot-write @resource}} />
+            <InputGroup @value={{@resource.color}} @name="Color" @placeholder="Vehicle Color" @disabled={{cannot-write @resource}} />
+            <InputGroup @value={{@resource.serial_number}} @name="Serial Number" @placeholder="Serial Number" @disabled={{cannot-write @resource}} />
+            <InputGroup @value={{@resource.fuel_card_number}} @name="Fuel Card Number" @placeholder="Fuel Card Number" @disabled={{cannot-write @resource}} />
+            <InputGroup @value={{@resource.class}} @name="Class" @placeholder="Class" @disabled={{cannot-write @resource}} />
 
             {{! Assignment & Status }}
             <div class="col-span-1 lg:col-span-2 text-[11px] uppercase tracking-wide text-gray-500 font-semibold mt-3">
@@ -115,7 +115,7 @@
                 </div>
             </InputGroup>
 
-            <InputGroup @value={{@resource.call_sign}} @name="Call Sign" @placeholder="Call Sign" />
+            <InputGroup @value={{@resource.call_sign}} @name="Call Sign" @placeholder="Call Sign" @disabled={{cannot-write @resource}} />
 
             {{! Location }}
             <div class="col-span-1 lg:col-span-2 text-[11px] uppercase tracking-wide text-gray-500 font-semibold mt-3">
@@ -128,12 +128,12 @@
         </div>
 
         <RegistryYield @registry="fleet-ops:component:vehicle:form:details" as |RegistryComponent|>
-            <RegistryComponent @resource={{@resource}} @controller={{this.controller}} @permission={{get-write-permission @resource}} />
+            <RegistryComponent @resource={{@resource}} @controller={{@controller}} @permission={{get-write-permission @resource}} />
         </RegistryYield>
     </ContentPanel>
 
     <RegistryYield @registry="fleet-ops:component:vehicle:form:after-details" as |RegistryComponent|>
-        <RegistryComponent @resource={{@resource}} @controller={{this.controller}} @permission={{get-write-permission @resource}} />
+        <RegistryComponent @resource={{@resource}} @controller={{@controller}} @permission={{get-write-permission @resource}} />
     </RegistryYield>
 
     {{! MEASUREMENT & UNITS / ODOMETER }}
@@ -185,7 +185,7 @@
                 Odometer & Usage
             </div>
 
-            <InputGroup @value={{@resource.odometer}} @name={{concat "Current Odometer (" @resource.odometer_unit ")"}} @type="number" @placeholder="Current Odometer Reading" />
+            <InputGroup @value={{@resource.odometer}} @name={{concat "Current Odometer (" @resource.odometer_unit ")"}} @type="number" @placeholder="Current Odometer Reading" @disabled={{cannot-write @resource}} />
 
             <InputGroup @name="Odometer Unit">
                 <div class="fleetbase-model-select fleetbase-power-select ember-model-select">
@@ -206,7 +206,7 @@
                 </div>
             </InputGroup>
 
-            <InputGroup @value={{@resource.odometer_at_purchase}} @name="Odometer at Purchase" @type="number" @placeholder="Odometer reading at purchase" />
+            <InputGroup @value={{@resource.odometer_at_purchase}} @name="Odometer at Purchase" @type="number" @placeholder="Odometer reading at purchase" @disabled={{cannot-write @resource}} />
         </div>
     </ContentPanel>
 
@@ -342,13 +342,13 @@
                 Powertrain & Engine
             </div>
 
-            <InputGroup @value={{@resource.engine_number}} @name="Engine Number" @placeholder="Engine Number" />
-            <InputGroup @value={{@resource.engine_make}} @name="Engine Make" @placeholder="Engine Manufacturer" />
-            <InputGroup @value={{@resource.engine_model}} @name="Engine Model" @placeholder="Engine Model" />
-            <InputGroup @value={{@resource.engine_family}} @name="Engine Family" @placeholder="Engine Family" />
-            <InputGroup @value={{@resource.engine_configuration}} @name="Engine Configuration" @placeholder="e.g., Inline-4, V6" />
-            <InputGroup @value={{@resource.cylinder_arrangement}} @name="Cylinder Arrangement" @placeholder="e.g., I, V, H" />
-            <InputGroup @value={{@resource.number_of_cylinders}} @name="Number of Cylinders" @type="number" @placeholder="e.g., 4, 6" />
+            <InputGroup @value={{@resource.engine_number}} @name="Engine Number" @placeholder="Engine Number" @disabled={{cannot-write @resource}} />
+            <InputGroup @value={{@resource.engine_make}} @name="Engine Make" @placeholder="Engine Manufacturer" @disabled={{cannot-write @resource}} />
+            <InputGroup @value={{@resource.engine_model}} @name="Engine Model" @placeholder="Engine Model" @disabled={{cannot-write @resource}} />
+            <InputGroup @value={{@resource.engine_family}} @name="Engine Family" @placeholder="Engine Family" @disabled={{cannot-write @resource}} />
+            <InputGroup @value={{@resource.engine_configuration}} @name="Engine Configuration" @placeholder="e.g., Inline-4, V6" @disabled={{cannot-write @resource}} />
+            <InputGroup @value={{@resource.cylinder_arrangement}} @name="Cylinder Arrangement" @placeholder="e.g., I, V, H" @disabled={{cannot-write @resource}} />
+            <InputGroup @value={{@resource.number_of_cylinders}} @name="Number of Cylinders" @type="number" @placeholder="e.g., 4, 6" @disabled={{cannot-write @resource}} />
 
             <InputGroup @name="Engine Size">
                 <UnitInput class="w-full" @value={{@resource.engine_size}} @unit="L" @type="number" @step="0.1" @placeholder="Engine Size" />
@@ -362,13 +362,13 @@
                 <UnitInput class="w-full" @value={{@resource.horsepower}} @unit="hp" @type="number" @placeholder="Horsepower" />
             </InputGroup>
 
-            <InputGroup @value={{@resource.horsepower_rpm}} @name="Horsepower RPM" @type="number" @placeholder="RPM at Max Horsepower" />
+            <InputGroup @value={{@resource.horsepower_rpm}} @name="Horsepower RPM" @type="number" @placeholder="RPM at Max Horsepower" @disabled={{cannot-write @resource}} />
 
             <InputGroup @name="Torque">
                 <UnitInput class="w-full" @value={{@resource.torque}} @unit="Nm" @type="number" @placeholder="Torque" />
             </InputGroup>
 
-            <InputGroup @value={{@resource.torque_rpm}} @name="Torque RPM" @type="number" @placeholder="RPM at Max Torque" />
+            <InputGroup @value={{@resource.torque_rpm}} @name="Torque RPM" @type="number" @placeholder="RPM at Max Torque" @disabled={{cannot-write @resource}} />
 
             {{! Capacity & Dimensions }}
             <div class="col-span-1 lg:col-span-2 text-[11px] uppercase tracking-wide text-gray-500 font-semibold mt-3">
@@ -389,7 +389,7 @@
                 </InputGroup>
 
                 <InputGroup @name="Seating Capacity">
-                    <Input @value={{@resource.seating_capacity}} @type="number" class="form-input w-full" placeholder="Number of Seats" />
+                    <Input @value={{@resource.seating_capacity}} @type="number" class="form-input w-full" placeholder="Number of Seats" disabled={{cannot-write @resource}} />
                 </InputGroup>
 
                 <InputGroup @name="Vehicle Weight">
@@ -446,7 +446,7 @@
                 Regulatory & Compliance
             </div>
 
-            <InputGroup @value={{@resource.emission_standard}} @name="Emission Standard" @placeholder="e.g., Euro 6, EPA Tier 3" />
+            <InputGroup @value={{@resource.emission_standard}} @name="Emission Standard" @placeholder="e.g., Euro 6, EPA Tier 3" @disabled={{cannot-write @resource}} />
 
             <div></div>
 
@@ -490,7 +490,7 @@
             </InputGroup>
 
             <InputGroup @name="Depreciation Rate (%)">
-                <Input @value={{@resource.depreciation_rate}} @type="number" step="0.01" class="form-input w-full" />
+                <Input @value={{@resource.depreciation_rate}} @type="number" step="0.01" class="form-input w-full" disabled={{cannot-write @resource}} />
             </InputGroup>
 
             <div class="col-span-1 lg:col-span-2 text-[11px] uppercase tracking-wide text-gray-500 font-semibold mt-3">
@@ -498,7 +498,7 @@
             </div>
 
             <InputGroup @name="Estimated Service Life (Distance)">
-                <Input @value={{@resource.estimated_service_life_distance}} @type="number" class="form-input w-full" placeholder="Total distance" />
+                <Input @value={{@resource.estimated_service_life_distance}} @type="number" class="form-input w-full" placeholder="Total distance" disabled={{cannot-write @resource}} />
             </InputGroup>
 
             <InputGroup @name="Service Life Distance Unit">
@@ -521,7 +521,7 @@
             </InputGroup>
 
             <InputGroup @name="Estimated Service Life (Months)">
-                <Input @value={{@resource.estimated_service_life_months}} @type="number" class="form-input w-full" />
+                <Input @value={{@resource.estimated_service_life_months}} @type="number" class="form-input w-full" disabled={{cannot-write @resource}} />
             </InputGroup>
 
             <InputGroup @name="Purchase Date">
@@ -550,7 +550,7 @@
                 <MoneyInput @value={{@resource.loan_amount}} @currency={{@resource.currency}} />
             </InputGroup>
 
-            <InputGroup @value={{@resource.loan_number_of_payments}} @name="Number of Payments" @type="number" @placeholder="Number of payments" />
+            <InputGroup @value={{@resource.loan_number_of_payments}} @name="Number of Payments" @type="number" @placeholder="Number of payments" @disabled={{cannot-write @resource}} />
 
             <InputGroup @name="First Payment Date">
                 <DatePicker
@@ -606,7 +606,7 @@
     <CustomField::Yield @subject={{@resource}} @wrapperClass="bordered-top" />
 
     <RegistryYield @registry="fleet-ops:component:vehicle:form" as |RegistryComponent|>
-        <RegistryComponent @resource={{@resource}} @controller={{this.controller}} @permission={{get-write-permission @resource}} />
+        <RegistryComponent @resource={{@resource}} @controller={{@controller}} @permission={{get-write-permission @resource}} />
     </RegistryYield>
 
     <ContentPanel @title={{t "avatar-picker.avatar"}} @open={{true}} @wrapperClass="bordered-top">
@@ -618,6 +618,6 @@
     </ContentPanel>
 
     <RegistryYield @registry="fleet-ops:component:vehicle:form:end" as |RegistryComponent|>
-        <RegistryComponent @resource={{@resource}} @controller={{this.controller}} @permission={{get-write-permission @resource}} />
+        <RegistryComponent @resource={{@resource}} @controller={{@controller}} @permission={{get-write-permission @resource}} />
     </RegistryYield>
 </div>

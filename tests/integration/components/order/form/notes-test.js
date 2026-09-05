@@ -1,26 +1,33 @@
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'dummy/tests/helpers';
-import { render } from '@ember/test-helpers';
+import { fillIn, render } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
+import { AbilitiesStub, makeRecord } from 'dummy/tests/helpers/stub-form-inputs';
 
 module('Integration | Component | order/form/notes', function (hooks) {
     setupRenderingTest(hooks);
 
-    test('it renders', async function (assert) {
-        // Set any properties with this.set('myProperty', 'value');
-        // Handle any actions with this.set('myAction', function(val) { ... });
+    hooks.beforeEach(function () {
+        this.abilities = AbilitiesStub.create();
+        this.owner.register('service:abilities', this.abilities, { instantiate: false });
+    });
 
-        await render(hbs`<Order::Form::Notes />`);
+    test('it edits the order notes and honours the row count and write permission', async function (assert) {
+        this.set('resource', makeRecord('order', { notes: '' }, { isNew: false }));
 
-        assert.dom().hasText('');
+        await render(hbs`<Order::Form::Notes @resource={{this.resource}} />`);
 
-        // Template block usage:
-        await render(hbs`
-      <Order::Form::Notes>
-        template block text
-      </Order::Form::Notes>
-    `);
+        assert.dom('.panel-title').hasText('Notes');
+        assert.dom('textarea').hasAttribute('placeholder', 'Enter order notes here....');
+        assert.dom('textarea').hasAttribute('rows', '4');
+        assert.dom('textarea').isNotDisabled();
 
-        assert.dom().hasText('template block text');
+        await fillIn('textarea', 'Leave at the side door.');
+        assert.strictEqual(this.resource.notes, 'Leave at the side door.');
+
+        this.abilities.allow = false;
+        await render(hbs`<Order::Form::Notes @resource={{this.resource}} @rows={{8}} />`);
+        assert.dom('textarea').hasAttribute('rows', '8');
+        assert.dom('textarea').isDisabled('a record the user cannot update is read-only');
     });
 });

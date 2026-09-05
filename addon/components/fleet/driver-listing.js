@@ -13,7 +13,7 @@ export default class FleetDriverListingComponent extends Component {
     @service universe;
     @service notifications;
     @tracked selected = [];
-    @tracked selectable = false;
+    @tracked selectable;
     @tracked drivers = [];
     @tracked fleet;
 
@@ -26,8 +26,8 @@ export default class FleetDriverListingComponent extends Component {
         this.search.perform({ limit: -1 });
     }
 
-    @task({ restartable: true }) *search(params = {}) {
-        if (!params.value) {
+    @task({ restartable: true }) *search(params) {
+        if (params.query) {
             yield timeout(300);
         }
 

@@ -20,14 +20,14 @@
         <:default>
             <div class="text-sm font-semibold">{{n-a resource.tracking}}</div>
             <div class="flex flex-row space-x-1">
-                <Badge @status={{@resource.status}} />
-                {{#if @resource.dispatched_at}}
-                    <Badge @status="dispatched">{{concat "Dispatched at " @resource.dispatchedAt}}</Badge>
+                <Badge @status={{resource.status}} />
+                {{#if resource.dispatched_at}}
+                    <Badge @status="dispatched">{{concat "Dispatched at " resource.dispatchedAt}}</Badge>
                 {{/if}}
             </div>
             <div class="mt-1">
-                <div class="text-xs text-gray-400 dark:text-gray-500">Date Created: {{@resource.createdAt}}</div>
-                <div class="text-xs text-gray-400 dark:text-gray-500">Type: {{smart-humanize @resource.type}}</div>
+                <div class="text-xs text-gray-400 dark:text-gray-500">Date Created: {{resource.createdAt}}</div>
+                <div class="text-xs text-gray-400 dark:text-gray-500">Type: {{smart-humanize resource.type}}</div>
             </div>
         </:default>
     </Pill>

@@ -74,6 +74,6 @@ export default class TrackingStopProgressComponent extends Component {
             return false;
         }
 
-        return stop.uuid === activeStop.uuid || stop.public_id === activeStop.public_id;
+        return ['uuid', 'public_id'].some((key) => stop[key] !== undefined && stop[key] !== null && stop[key] === activeStop[key]);
     }
 }

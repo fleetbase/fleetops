@@ -284,7 +284,8 @@ module('Unit | Controller | connectivity/telematics/details/attachments', functi
     });
 
     test('failed attach endpoint keeps the original attachment state', async function (assert) {
-        assert.expect(3);
+        // three steps, two state checks and the verifySteps call
+        assert.expect(6);
         const selectedVehicle = { id: 'vehicle_1', displayName: 'Truck 100' };
 
         class FetchStub extends Service {

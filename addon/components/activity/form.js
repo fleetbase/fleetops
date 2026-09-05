@@ -2,7 +2,6 @@ import Component from '@glimmer/component';
 import { tracked } from '@glimmer/tracking';
 import { action } from '@ember/object';
 import { underscore, capitalize, w } from '@ember/string';
-import { task } from 'ember-concurrency';
 
 export default class ActivityFormComponent extends Component {
     /**
@@ -11,17 +10,6 @@ export default class ActivityFormComponent extends Component {
      * @memberof ActivityFormComponent
      */
     @tracked podOptions = ['scan', 'signature', 'photo'];
-
-    /**
-     * Task to save the activity. It triggers an optional onSave callback
-     * with the current state of the activity.
-     * @task
-     */
-    @task *save() {
-        if (typeof this.onSave === 'function') {
-            yield this.onSave(this.args.resource);
-        }
-    }
 
     /**
      * Sets the proof of delivery method to be used for this activity.

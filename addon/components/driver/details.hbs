@@ -68,7 +68,7 @@
                 {{#if @resource.skills.length}}
                     <div class="field-info-container col-span-2">
                         <div class="field-name">Skills & Certifications</div>
-                        <div class="field-value">{{join @resource.skills ", "}}</div>
+                        <div class="field-value">{{join ", " @resource.skills}}</div>
                     </div>
                 {{/if}}
                 {{#if @resource.max_travel_time}}

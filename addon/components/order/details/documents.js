@@ -31,8 +31,6 @@ export default class OrderDetailsDocumentsComponent extends Component {
     ];
 
     @task *queueFile(file) {
-        if (['queued', 'failed', 'timed_out', 'aborted'].indexOf(file.state) === -1) return;
-
         try {
             this.uploadQueue.pushObject(file);
             yield this.fetch.uploadFile.perform(
@@ -49,9 +47,7 @@ export default class OrderDetailsDocumentsComponent extends Component {
                 },
                 () => {
                     this.uploadQueue.removeObject(file);
-                    if (file.queue && typeof file.queue.remove === 'function') {
-                        file.queue.remove(file);
-                    }
+                    file.queue.remove(file);
                 }
             );
         } catch (err) {

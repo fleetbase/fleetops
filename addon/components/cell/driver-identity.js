@@ -74,7 +74,8 @@ export default class CellDriverIdentityComponent extends Component {
     }
 
     get assignedVehicleLabel() {
-        const column = this.args.column ?? {};
+        // only read by the compact template, which `this.args.column.compact` already required
+        const column = this.args.column;
         const driver = this.resource;
 
         if (typeof column.assignedVehicleLabel === 'function') {

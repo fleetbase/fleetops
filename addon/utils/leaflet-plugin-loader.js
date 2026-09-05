@@ -9,7 +9,7 @@ const STYLESHEET_FLAG = 'fleetopsLeafletPluginStylesheet';
 
 let pluginReadyPromise = null;
 
-function normalizePath(path = '') {
+function normalizePath(path) {
     return `/${path.replace(/^\/+/, '')}`;
 }
 
@@ -33,6 +33,7 @@ function findAssetElement(tagName, srcAttribute, src) {
 }
 
 function normalizeLeafletGlobal() {
+    /* istanbul ignore if: browser-only module; Testem always runs it in Chrome where window exists */
     if (typeof window === 'undefined') {
         return null;
     }
@@ -61,7 +62,7 @@ export function hasLeafletPluginsReady() {
     return Boolean(leaflet && hasLeafletDrawPlugins(leaflet) && hasLeafletContextmenuPlugin(leaflet));
 }
 
-function waitForLeafletGlobal({ timeoutMs = 8000 } = {}) {
+function waitForLeafletGlobal({ timeoutMs }) {
     const leaflet = normalizeLeafletGlobal();
     if (leaflet) {
         return Promise.resolve(leaflet);
@@ -86,6 +87,7 @@ function waitForLeafletGlobal({ timeoutMs = 8000 } = {}) {
 }
 
 function appendStylesheet(href) {
+    /* istanbul ignore if: browser-only module; Testem always runs it in Chrome where document exists */
     if (typeof document === 'undefined') {
         return;
     }
@@ -103,7 +105,8 @@ function appendStylesheet(href) {
     document.head.appendChild(link);
 }
 
-function loadScript(src, { timeoutMs = 8000, isReady = null } = {}) {
+function loadScript(src, { timeoutMs, isReady }) {
+    /* istanbul ignore if: browser-only module; Testem always runs it in Chrome where document exists */
     if (typeof document === 'undefined') {
         return Promise.reject(new Error('[Fleet-Ops Leaflet] document is not available'));
     }

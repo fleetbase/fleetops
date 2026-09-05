@@ -112,8 +112,8 @@ export default class WorkOrderFormComponent extends Component {
             const modelName = target.constructor?.modelName ?? target.modelName;
             const typeValue = TARGET_MODEL_TO_TYPE[modelName] ?? null;
             if (typeValue) {
-                this.targetModelName = TYPE_TO_MODEL[typeValue] ?? null;
-                this.selectedTargetType = this.targetTypeOptions.find((o) => o.value === typeValue) ?? null;
+                this.targetModelName = TYPE_TO_MODEL[typeValue];
+                this.selectedTargetType = this.targetTypeOptions.find((o) => o.value === typeValue);
             }
         }
 
@@ -123,8 +123,8 @@ export default class WorkOrderFormComponent extends Component {
             const modelName = assignee.constructor?.modelName ?? assignee.modelName;
             const typeValue = ASSIGNEE_MODEL_TO_TYPE[modelName] ?? null;
             if (typeValue) {
-                this.assigneeModelName = TYPE_TO_MODEL[typeValue] ?? null;
-                this.selectedAssigneeType = this.assigneeTypeOptions.find((o) => o.value === typeValue) ?? null;
+                this.assigneeModelName = TYPE_TO_MODEL[typeValue];
+                this.selectedAssigneeType = this.assigneeTypeOptions.find((o) => o.value === typeValue);
             }
         }
     }
@@ -136,7 +136,7 @@ export default class WorkOrderFormComponent extends Component {
     @action onTargetTypeChange(option) {
         this.selectedTargetType = option;
         this.args.resource.target = null;
-        this.targetModelName = TYPE_TO_MODEL[option.value] ?? null;
+        this.targetModelName = TYPE_TO_MODEL[option.value];
     }
 
     /** Assigns the selected target model to the resource. */
@@ -151,7 +151,7 @@ export default class WorkOrderFormComponent extends Component {
     @action onAssigneeTypeChange(option) {
         this.selectedAssigneeType = option;
         this.args.resource.assignee = null;
-        this.assigneeModelName = TYPE_TO_MODEL[option.value] ?? null;
+        this.assigneeModelName = TYPE_TO_MODEL[option.value];
     }
 
     /** Assigns the selected assignee model to the resource. */

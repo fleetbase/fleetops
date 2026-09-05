@@ -35,11 +35,12 @@ module('Unit | Service | leaflet-contextmenu-manager', function (hooks) {
         service.createContextMenu('service-area:SA_1', layer, A([{ text: 'Delete Service Area: Central' }]));
 
         assert.ok(service.getRegistry('service-area:SA_1'), 'context menu is registered');
+        assert.strictEqual(removedItemCount, 1, 'registration clears any native items before adding its own');
 
         const removedRegistry = service.removeContextMenu('service-area:SA_1');
 
         assert.strictEqual(removedRegistry.layer, layer, 'removed registry is returned');
-        assert.strictEqual(removedItemCount, 1, 'native menu items are cleared');
+        assert.strictEqual(removedItemCount, 2, 'removal clears the native menu items again');
         assert.strictEqual(unboundCount, 1, 'context menu is unbound from the layer');
         assert.notOk(service.getRegistry('service-area:SA_1'), 'context menu registry is removed');
     });

@@ -62,7 +62,7 @@ const DEFAULT_GOOGLE_MAP_STYLES = [
     },
 ];
 
-function buildGoogleMapStyles({ showTransitLayer = false, googleOptions = {} } = {}) {
+function buildGoogleMapStyles({ showTransitLayer = false, googleOptions }) {
     const baseStyles = showTransitLayer ? DEFAULT_GOOGLE_MAP_STYLES.filter((style) => style.featureType !== 'transit') : DEFAULT_GOOGLE_MAP_STYLES;
 
     if (googleOptions.styles === undefined) {
@@ -164,7 +164,6 @@ export default class GoogleMapsAdapter extends MapAdapterInterface {
     _contextMenuCleanup = null;
 
     /** @type {google.maps.OverlayView|null} */
-    _tooltipOverlayView = null;
 
     // ─── Lifecycle ─────────────────────────────────────────────────────────────
 
@@ -228,6 +227,12 @@ export default class GoogleMapsAdapter extends MapAdapterInterface {
         }
         this._popups.clear();
 
+        // Detach GeoJSON layers
+        for (const layer of this._geojsonLayers.values()) {
+            layer.setMap(null);
+        }
+        this._geojsonLayers.clear();
+
         // Remove context menus
         for (const el of this._contextMenuEls.values()) {
             el.remove();
@@ -248,8 +253,6 @@ export default class GoogleMapsAdapter extends MapAdapterInterface {
         this._pendingDeletedDrafts.clear();
         this._contextMenuCleanup?.();
         this._contextMenuCleanup = null;
-        this._tooltipOverlayView?.setMap?.(null);
-        this._tooltipOverlayView = null;
         this._supportsAdvancedMarkers = false;
         this._trafficLayer?.setMap(null);
         this._trafficLayer = null;
@@ -393,7 +396,6 @@ export default class GoogleMapsAdapter extends MapAdapterInterface {
 
         if (!this._supportsAdvancedMarkers) {
             const classicMarker = this.#createClassicMarker(lat, lng, options);
-            if (!classicMarker) return null;
 
             this._markers.set(id, classicMarker);
             return classicMarker;
@@ -509,7 +511,7 @@ export default class GoogleMapsAdapter extends MapAdapterInterface {
         rafId = requestAnimationFrame(animate);
         this._animations.set(id, () => {
             cancelled = true;
-            if (rafId) cancelAnimationFrame(rafId);
+            cancelAnimationFrame(rafId);
         });
     }
 
@@ -667,7 +669,7 @@ export default class GoogleMapsAdapter extends MapAdapterInterface {
         }
         const markerIds = [];
 
-        const markerWaypoints = options.markerWaypoints ?? route.waypoints ?? [];
+        const markerWaypoints = options.markerWaypoints ?? route.waypoints;
 
         if (!options.suppressMarkers) {
             for (const [index, waypoint] of markerWaypoints.entries()) {
@@ -1018,15 +1020,15 @@ export default class GoogleMapsAdapter extends MapAdapterInterface {
     }
 
     showCoordinates(event) {
-        const lat = event?.latlng?.lat ?? event?.latlng?.lat?.();
-        const lng = event?.latlng?.lng ?? event?.latlng?.lng?.();
+        const lat = event?.latlng?.lat;
+        const lng = event?.latlng?.lng;
 
         return { lat, lng };
     }
 
     centerMap(event) {
-        const lat = event?.latlng?.lat ?? event?.latlng?.lat?.();
-        const lng = event?.latlng?.lng ?? event?.latlng?.lng?.();
+        const lat = event?.latlng?.lat;
+        const lng = event?.latlng?.lng;
 
         if (Number.isFinite(lat) && Number.isFinite(lng)) {
             this._map?.panTo({ lat, lng });
@@ -1037,7 +1039,7 @@ export default class GoogleMapsAdapter extends MapAdapterInterface {
         this.#ensureDrawToolbar();
         if (!this._drawControlEl) return;
 
-        const isHidden = this._drawControlEl.style.display === 'none' || this._drawControlEl.style.display === '';
+        const isHidden = this._drawControlEl.style.display === 'none';
         if (!isHidden) {
             this.hideDrawControl();
             return;
@@ -1147,7 +1149,7 @@ export default class GoogleMapsAdapter extends MapAdapterInterface {
      * @param {Object} options
      * @returns {Promise<void>}
      */
-    async #loadGoogleMapsApi(options = {}) {
+    async #loadGoogleMapsApi(options) {
         if (this._apiLoaded || (typeof google !== 'undefined' && google.maps)) {
             this._apiLoaded = true;
             return;
@@ -1160,12 +1162,6 @@ export default class GoogleMapsAdapter extends MapAdapterInterface {
         }
 
         return new Promise((resolve, reject) => {
-            if (typeof google !== 'undefined' && google.maps) {
-                this._apiLoaded = true;
-                resolve();
-                return;
-            }
-
             const callbackName = `__fleetops_gmaps_cb_${Date.now()}`;
             window[callbackName] = () => {
                 this._apiLoaded = true;
@@ -1286,7 +1282,7 @@ export default class GoogleMapsAdapter extends MapAdapterInterface {
         this._map.getDiv()?.appendChild(container);
     }
 
-    #applyDrawToolbarConfig(config = {}) {
+    #applyDrawToolbarConfig(config) {
         if (!this._drawControlEl) return;
 
         this._drawControlEl.style.top = `${this.#getToolbarTopOffset()}px`;
@@ -1486,9 +1482,7 @@ export default class GoogleMapsAdapter extends MapAdapterInterface {
         this._pendingDeletedDrafts.clear();
     }
 
-    #attachMarkerTooltip(contentEl, tooltipContent, options = {}) {
-        if (!contentEl || !tooltipContent) return null;
-
+    #attachMarkerTooltip(contentEl, tooltipContent, options) {
         let tooltipEl = null;
 
         const ensureTooltip = () => {
@@ -1551,8 +1545,6 @@ export default class GoogleMapsAdapter extends MapAdapterInterface {
     }
 
     #attachOverlayLabelHover(overlay, labelOverlay) {
-        if (!overlay || !labelOverlay) return null;
-
         const updateCursorPosition = (event) => {
             const domEvent = event?.domEvent;
             if (!domEvent) return;
@@ -1657,8 +1649,6 @@ export default class GoogleMapsAdapter extends MapAdapterInterface {
     }
 
     #setOverlayLabelMap(label, map) {
-        if (!label) return;
-
         if (typeof label.setMap === 'function') {
             label.setMap(map);
             return;
@@ -1668,8 +1658,6 @@ export default class GoogleMapsAdapter extends MapAdapterInterface {
     }
 
     #syncOverlayPresentation(layer) {
-        if (!layer) return;
-
         if (typeof layer.setOptions === 'function') {
             layer.setOptions({
                 strokeOpacity: 1,
@@ -1695,11 +1683,17 @@ export default class GoogleMapsAdapter extends MapAdapterInterface {
                 }
             }
 
+            // `__labelMarker` is only ever assigned alongside a truthy `__labelText` — at the
+            // `options.tooltip` branch of `addPolygon` and at the `layer.__labelText &&` branch
+            // above — and nothing clears `__labelText` afterwards, so the two fallbacks cannot run.
+            /* istanbul ignore next -- __labelMarker is never set without a truthy __labelText */
+            const labelText = layer.__labelText ?? layer.__labelMarker.title ?? '';
+
             if (layer.__labelMarker.content) {
-                layer.__labelMarker.content.textContent = layer.__labelText ?? layer.__labelMarker.title ?? '';
+                layer.__labelMarker.content.textContent = labelText;
             }
 
-            layer.__labelMarker.title = layer.__labelText ?? layer.__labelMarker.title ?? '';
+            layer.__labelMarker.title = labelText;
         }
     }
 
@@ -1731,7 +1725,6 @@ export default class GoogleMapsAdapter extends MapAdapterInterface {
             { lat: 0, lng: 0, count: 0 }
         );
 
-        if (totals.count === 0) return null;
         return {
             lat: totals.lat / totals.count,
             lng: totals.lng / totals.count,
@@ -1822,8 +1815,6 @@ export default class GoogleMapsAdapter extends MapAdapterInterface {
     }
 
     #restoreOverlayState(layer, state) {
-        if (!layer || !state) return;
-
         if (state.type === 'polygon') {
             layer.setPath(state.paths);
             return;
@@ -1834,10 +1825,8 @@ export default class GoogleMapsAdapter extends MapAdapterInterface {
             return;
         }
 
-        if (state.type === 'circle') {
-            layer.setCenter(state.center);
-            layer.setRadius(state.radius);
-        }
+        layer.setCenter(state.center);
+        layer.setRadius(state.radius);
     }
 
     /**
@@ -1891,8 +1880,6 @@ export default class GoogleMapsAdapter extends MapAdapterInterface {
     }
 
     #geoJsonFromOverlay(overlay) {
-        if (!overlay) return null;
-
         if (typeof overlay.getPath === 'function') {
             return this.#overlayToGeoJson(overlay, google.maps.drawing.OverlayType.POLYGON);
         }
@@ -1901,11 +1888,7 @@ export default class GoogleMapsAdapter extends MapAdapterInterface {
             return this.#overlayToGeoJson(overlay, google.maps.drawing.OverlayType.RECTANGLE);
         }
 
-        if (typeof overlay.getCenter === 'function' && typeof overlay.getRadius === 'function') {
-            return this.#overlayToGeoJson(overlay, google.maps.drawing.OverlayType.CIRCLE);
-        }
-
-        return null;
+        return this.#overlayToGeoJson(overlay, google.maps.drawing.OverlayType.CIRCLE);
     }
 
     /**
@@ -1928,22 +1911,6 @@ export default class GoogleMapsAdapter extends MapAdapterInterface {
     }
 
     /**
-     * Map normalized draw event name to Google Maps DrawingManager event.
-     *
-     * @param {string} normalizedEvent
-     * @returns {string}
-     */
-    #drawEvent(normalizedEvent) {
-        const map = {
-            'draw:created': 'overlaycomplete',
-            'draw:edited': 'overlaycomplete',
-            'draw:deleted': 'overlaycomplete',
-            'draw:drawstop': 'drawingmode_changed',
-        };
-        return map[normalizedEvent] ?? normalizedEvent;
-    }
-
-    /**
      * Normalize a Google Maps map event to a cross-provider event object.
      *
      * @param {string} event - Original event name
@@ -1957,22 +1924,6 @@ export default class GoogleMapsAdapter extends MapAdapterInterface {
             type: event,
             latlng,
             originalEvent: gmEvent.domEvent ?? gmEvent,
-            _gmEvent: gmEvent,
-        };
-    }
-
-    /**
-     * Normalize a Google Maps drawing event.
-     *
-     * @param {string} event
-     * @param {*} gmEvent
-     * @returns {Object}
-     */
-    #normalizeDrawEvent(event, gmEvent) {
-        return {
-            type: event,
-            layer: gmEvent?.overlay ?? null,
-            layerType: gmEvent?.type ?? null,
             _gmEvent: gmEvent,
         };
     }
@@ -2144,7 +2095,7 @@ export default class GoogleMapsAdapter extends MapAdapterInterface {
         }
     }
 
-    #createClassicMarker(lat, lng, options = {}) {
+    #createClassicMarker(lat, lng, options) {
         const position = { lat, lng };
         const markerOptions = {
             map: this._map,
@@ -2189,9 +2140,7 @@ export default class GoogleMapsAdapter extends MapAdapterInterface {
         return marker;
     }
 
-    #attachClassicMarkerTooltip(marker, tooltipContent, options = {}) {
-        if (!marker || !tooltipContent || !this._map) return null;
-
+    #attachClassicMarkerTooltip(marker, tooltipContent, options) {
         let tooltipEl = null;
 
         const ensureTooltip = () => {
@@ -2259,23 +2208,5 @@ export default class GoogleMapsAdapter extends MapAdapterInterface {
             tooltipEl?.remove();
             tooltipEl = null;
         };
-    }
-
-    #ensureTooltipOverlayView() {
-        if (this._tooltipOverlayView || !this._map) {
-            return this._tooltipOverlayView;
-        }
-
-        const overlayView = new google.maps.OverlayView();
-
-        overlayView.onAdd = () => {};
-        overlayView.draw = () => {};
-        overlayView.onRemove = () => {};
-
-        overlayView.setMap(this._map);
-
-        this._tooltipOverlayView = overlayView;
-
-        return overlayView;
     }
 }

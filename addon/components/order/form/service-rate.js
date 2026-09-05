@@ -96,7 +96,7 @@ export default class OrderFormServiceRateComponent extends Component {
         }
     }
 
-    handleServiceQuoteRefreshRequest({ order } = {}) {
+    handleServiceQuoteRefreshRequest({ order }) {
         if (order && order !== this.args.resource) {
             return;
         }

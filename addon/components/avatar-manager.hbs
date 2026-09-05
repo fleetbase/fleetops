@@ -50,7 +50,7 @@
                                     {{#if dropzone.supported}}
                                         <p class="text-sm my-5">{{t "dropzone.dropzone-supported-avatars"}}</p>
                                     {{/if}}
-                                    <FileUpload @name="files" @for="files" @accept={{join "," this.acceptedFileTypes}} @multiple={{true}} @onFileAdded={{this.queueFile}}>
+                                    <FileUpload @name="files" @for="files" @accept={{join "," this.acceptedFileTypes}} @multiple={{true}}>
                                         <a tabindex={{0}} class="btn btn-magic cursor-pointer ml-1">{{t "dropzone.or-select-button-text"}}</a>
                                     </FileUpload>
                                 </div>

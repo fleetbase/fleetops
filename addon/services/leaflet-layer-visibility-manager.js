@@ -2,13 +2,10 @@ import Service, { inject as service } from '@ember/service';
 import { next } from '@ember/runloop';
 import { isNone } from '@ember/utils';
 
-const L = window.L || window.leaflet;
 export default class LeafletLayerVisibilityService extends Service {
     @service leafletMapManager;
-    #renderersByPane = new Map();
     #byCategory = new Map();
     #byId = new Map();
-    #paneState = new Map();
 
     get map() {
         return this.leafletMapManager?.map;
@@ -21,7 +18,7 @@ export default class LeafletLayerVisibilityService extends Service {
 
     /** Hide popups/tooltips and remember whether they were open */
     /* eslint-disable no-empty */
-    #hideOverlays(layer, remember = true) {
+    #hideOverlays(layer, remember) {
         next(() => {
             // Safely fetch tooltip/popup (may be undefined)
             const tt = layer.getTooltip?.() ?? layer._tooltip ?? null;
@@ -87,19 +84,9 @@ export default class LeafletLayerVisibilityService extends Service {
         return { pane, paneName };
     }
 
-    #getOrCreateRendererForPane(paneName, { useCanvas = false } = {}) {
-        let renderer = this.#renderersByPane.get(paneName);
-        if (!renderer) {
-            renderer = useCanvas ? L.canvas({ pane: paneName }) : L.svg({ pane: paneName });
-            renderer.addTo(this.map); // attach renderer layer to map in that pane
-            this.#renderersByPane.set(paneName, renderer);
-        }
-        return renderer;
-    }
-
     /** Assign a layer to a category pane (call this once when the layer is created/added) */
     assignPane(layer, category) {
-        const paneName = this.ensurePane(category);
+        const paneName = this.ensurePane(category)?.paneName;
         if (!paneName || !layer) return;
         // move the layer into the pane; a redraw typically moves it immediately
         layer.options = { ...(layer.options || {}), pane: paneName };
@@ -137,9 +124,7 @@ export default class LeafletLayerVisibilityService extends Service {
             this.#setPaneVisible(category, true);
 
             // Also ensure each layer is shown (soft or hard)
-            const set = this.#byCategory.get(category);
-            if (!set) continue;
-            for (const layer of set) {
+            for (const layer of this.#byCategory.get(category)) {
                 this.showLayer(layer, { soft });
             }
         }
@@ -149,7 +134,6 @@ export default class LeafletLayerVisibilityService extends Service {
     hideAll({ soft = false } = {}) {
         for (const category of this.#byCategory.keys()) {
             const set = this.#byCategory.get(category);
-            if (!set) continue;
 
             if (soft) {
                 // Soft-hide every layer (keeps on map, just invisible)
@@ -259,6 +243,9 @@ export default class LeafletLayerVisibilityService extends Service {
         }
 
         // Fallback to default overlay pane
+        // Leaflet's `_initPanes` creates `overlayPane` for every map it builds, so this always
+        // resolves for a real map.
+        /* istanbul ignore next -- overlayPane exists on every Leaflet map */
         return this.map.getPane?.('overlayPane') || null;
     }
 

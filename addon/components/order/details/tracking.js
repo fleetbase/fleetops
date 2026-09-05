@@ -174,10 +174,6 @@ export default class OrderDetailsTrackingComponent extends Component {
     }
 
     get smartAdjustedEtaSeconds() {
-        if (!this.showLiveEta) {
-            return null;
-        }
-
         return (
             this.firstPositiveNumber(this.activeEtaSeconds) ??
             this.firstPositiveNumber(this.trackerData?.route?.duration_in_traffic_s) ??
@@ -201,10 +197,6 @@ export default class OrderDetailsTrackingComponent extends Component {
         }
 
         return 'Pending start';
-    }
-
-    get hasCompletionEta() {
-        return this.showLiveEta && Boolean(this.trackerData?.eta?.completion_at);
     }
 
     get hasRemainingDistance() {
@@ -252,41 +244,6 @@ export default class OrderDetailsTrackingComponent extends Component {
 
     get hasDriverLocationAge() {
         return this.trackerData?.driver?.location_age_seconds !== null && this.trackerData?.driver?.location_age_seconds !== undefined;
-    }
-
-    get driverSignalClass() {
-        switch (this.driverSignal) {
-            case 'Live':
-                return 'text-green-600 dark:text-green-400';
-            case 'Stale':
-                return 'text-yellow-600 dark:text-yellow-400';
-            case 'Missing':
-                return 'text-red-600 dark:text-red-400';
-            case 'Unassigned':
-                return 'text-yellow-600 dark:text-yellow-400';
-            default:
-                return 'text-gray-600 dark:text-gray-300';
-        }
-    }
-
-    get routeQualityItems() {
-        const trackerData = this.trackerData;
-
-        if (!trackerData) {
-            return [];
-        }
-
-        const items = [`${this.humanize(trackerData.provider)} route`];
-
-        if (trackerData.confidence) {
-            items.push(`${this.humanize(trackerData.confidence)} confidence`);
-        }
-
-        if (trackerData.fallback_provider) {
-            items.push(`Fallback: ${this.humanize(trackerData.fallback_provider)}`);
-        }
-
-        return items;
     }
 
     get confidenceLabel() {
@@ -351,11 +308,11 @@ export default class OrderDetailsTrackingComponent extends Component {
     }
 
     get totalStops() {
-        return this.trackerData?.stops?.length ?? 0;
+        return this.trackerData.stops.length;
     }
 
     get activeStopLabel() {
-        if (!this.activeStopIndex || !this.totalStops) {
+        if (!this.activeStopIndex) {
             return 'NOW HEADING TO';
         }
 
@@ -384,10 +341,6 @@ export default class OrderDetailsTrackingComponent extends Component {
     }
 
     get displayedReportedEtaSeconds() {
-        if (!this.showLiveEta) {
-            return null;
-        }
-
         return (
             this.firstPositiveNumber(this.reportedEtaSeconds) ??
             this.firstPositiveNumber(this.activeEtaSeconds) ??
@@ -403,14 +356,6 @@ export default class OrderDetailsTrackingComponent extends Component {
 
     get isReportedEtaUntrusted() {
         const trackerData = this.trackerData;
-
-        if (!trackerData) {
-            return false;
-        }
-
-        if (!this.showLiveEta) {
-            return false;
-        }
 
         return !trackerData?.driver?.location || trackerData?.insights?.is_location_stale || trackerData.fallback_provider || (trackerData.confidence && trackerData.confidence !== 'high');
     }
@@ -524,10 +469,6 @@ export default class OrderDetailsTrackingComponent extends Component {
     get diagnostics() {
         const trackerData = this.trackerData;
 
-        if (!trackerData) {
-            return [];
-        }
-
         return [
             { label: 'Provider', value: this.humanize(trackerData.provider) },
             { label: 'Fallback', value: trackerData.fallback_provider ? this.humanize(trackerData.fallback_provider) : 'No' },
@@ -540,10 +481,6 @@ export default class OrderDetailsTrackingComponent extends Component {
 
     get operatorWarning() {
         const trackerData = this.trackerData;
-
-        if (!trackerData) {
-            return null;
-        }
 
         if (this.isTerminalLifecycle || this.isPreStartLifecycle || this.isDispatchedLifecycle) {
             return null;
@@ -595,7 +532,7 @@ export default class OrderDetailsTrackingComponent extends Component {
             return false;
         }
 
-        return stop.uuid === activeStop.uuid || stop.public_id === activeStop.public_id || stop.id === activeStop.id;
+        return ['uuid', 'public_id', 'id'].some((key) => stop[key] !== undefined && stop[key] !== null && stop[key] === activeStop[key]);
     }
 
     @action assignDriver() {
@@ -610,10 +547,6 @@ export default class OrderDetailsTrackingComponent extends Component {
 
     @task *pingDriver() {
         const order = this.args.resource;
-
-        if (!order) {
-            return;
-        }
 
         try {
             yield this.fetch.post(`orders/${order.id}/ping-driver`);

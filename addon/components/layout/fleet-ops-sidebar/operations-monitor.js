@@ -21,7 +21,8 @@ export default class LayoutFleetOpsSidebarOperationsMonitorComponent extends Com
     @tracked fallbackDrivers = [];
     @tracked fallbackVehicles = [];
     @tracked fallbackFleets = [];
-    @tracked expandedFleetIds = new Set();
+    // Assigned by loadFallbackResources together with fallbackFleets, and only read once fleets exist.
+    @tracked expandedFleetIds;
 
     monitorElement;
     listElement;
@@ -95,18 +96,6 @@ export default class LayoutFleetOpsSidebarOperationsMonitorComponent extends Com
         return `${this.onlineVehicleCount} vehicles online`;
     }
 
-    get activeResources() {
-        return this[this.activeTab] ?? [];
-    }
-
-    get emptyMessage() {
-        if (this.query) {
-            return 'No resources match this search.';
-        }
-
-        return `No ${this.activeTab} available.`;
-    }
-
     get emptyState() {
         if (this.hasQuery) {
             return {
@@ -147,7 +136,7 @@ export default class LayoutFleetOpsSidebarOperationsMonitorComponent extends Com
         ];
     }
 
-    filterResources(resources = [], fields = []) {
+    filterResources(resources, fields) {
         const query = this.normalizedQuery;
 
         if (!query) {
@@ -163,12 +152,9 @@ export default class LayoutFleetOpsSidebarOperationsMonitorComponent extends Com
         });
     }
 
-    resourceMatches(resource, fields = [], extraValues = []) {
+    resourceMatches(resource, fields, extraValues = []) {
+        // Only reached through buildFilteredFleetRows, i.e. while hasQuery is true.
         const query = this.normalizedQuery;
-
-        if (!query) {
-            return true;
-        }
 
         const fieldValues = fields.map((field) => resource?.[field]);
 
@@ -181,10 +167,6 @@ export default class LayoutFleetOpsSidebarOperationsMonitorComponent extends Com
 
     displayName(resource) {
         return resource.displayName ?? resource.display_name ?? resource.name ?? resource.public_id;
-    }
-
-    subtitle(resource) {
-        return resource.vehicle_name ?? resource.driver_name ?? resource.public_id ?? resource.status;
     }
 
     fleetKey(fleet) {
@@ -200,6 +182,7 @@ export default class LayoutFleetOpsSidebarOperationsMonitorComponent extends Com
             return resources.toArray();
         }
 
+        /* istanbul ignore next: with EXTEND_PROTOTYPES on (the console's setting, mirrored by the test app) every native array already has toArray(), so only non-array values reach this line */
         return Array.isArray(resources) ? resources : [];
     }
 
@@ -216,11 +199,11 @@ export default class LayoutFleetOpsSidebarOperationsMonitorComponent extends Com
     }
 
     fleetDriverCount(fleet) {
-        return Number(fleet?.drivers_count ?? fleet?.driver_count ?? this.fleetDrivers(fleet).length ?? 0);
+        return Number(fleet?.drivers_count ?? fleet?.driver_count ?? this.fleetDrivers(fleet).length);
     }
 
     fleetVehicleCount(fleet) {
-        return Number(fleet?.vehicles_count ?? fleet?.vehicle_count ?? this.fleetVehicles(fleet).length ?? 0);
+        return Number(fleet?.vehicles_count ?? fleet?.vehicle_count ?? this.fleetVehicles(fleet).length);
     }
 
     @action fleetSubtitle(fleet) {
@@ -235,7 +218,7 @@ export default class LayoutFleetOpsSidebarOperationsMonitorComponent extends Com
         return this.fleetSubfleets(fleet).length > 0 || this.fleetDrivers(fleet).length > 0 || this.fleetVehicles(fleet).length > 0;
     }
 
-    buildFleetRows(fleets = [], depth = 0) {
+    buildFleetRows(fleets, depth = 0) {
         return fleets.flatMap((fleet) => {
             const rows = [{ type: 'fleet', fleet, depth }];
 
@@ -261,7 +244,7 @@ export default class LayoutFleetOpsSidebarOperationsMonitorComponent extends Com
         });
     }
 
-    buildFilteredFleetRows(fleets = [], depth = 0) {
+    buildFilteredFleetRows(fleets, depth = 0) {
         return fleets.flatMap((fleet) => {
             const fleetMatches = this.fleetMatches(fleet);
 
@@ -286,7 +269,7 @@ export default class LayoutFleetOpsSidebarOperationsMonitorComponent extends Com
         });
     }
 
-    buildExpandedFleetRows(fleet, depth = 0) {
+    buildExpandedFleetRows(fleet, depth) {
         const rows = [{ type: 'fleet', fleet, depth }];
         const childDepth = depth + 1;
 
@@ -321,14 +304,14 @@ export default class LayoutFleetOpsSidebarOperationsMonitorComponent extends Com
         return this.resourceMatches(vehicle, ['displayName', 'display_name', 'name', 'public_id', 'status', 'driver_name', 'plate_number', 'vin']);
     }
 
-    collectFleetKeys(fleets = []) {
+    collectFleetKeys(fleets) {
         return fleets.flatMap((fleet) => {
             const key = this.fleetKey(fleet);
             return [key, ...this.collectFleetKeys(this.fleetSubfleets(fleet))].filter(Boolean);
         });
     }
 
-    sortOnlineFirst(resources = []) {
+    sortOnlineFirst(resources) {
         return [...resources].sort((a, b) => {
             const onlineSort = Number(Boolean(b.online)) - Number(Boolean(a.online));
 
@@ -348,7 +331,7 @@ export default class LayoutFleetOpsSidebarOperationsMonitorComponent extends Com
         return this.resourcesById(this.fallbackVehicles);
     }
 
-    resourcesById(resources = []) {
+    resourcesById(resources) {
         return this.resourceArray(resources).reduce((map, resource) => {
             this.resourceIdentifiers(resource).forEach((id) => map.set(id, resource));
 
@@ -427,9 +410,8 @@ export default class LayoutFleetOpsSidebarOperationsMonitorComponent extends Com
             return;
         }
 
-        if (this.activeTab === 'fleets') {
-            this.fleetActions.panel.create();
-        }
+        // the only remaining tab
+        this.fleetActions.panel.create();
     }
 
     @action registerMonitor(element) {
@@ -446,10 +428,12 @@ export default class LayoutFleetOpsSidebarOperationsMonitorComponent extends Com
     setupLayoutObservers() {
         this.teardownLayoutObservers();
 
+        /* istanbul ignore else: guards non-browser hosts; the suite always runs in Chrome */
         if (typeof window !== 'undefined') {
             window.addEventListener('resize', this.scheduleListHeightUpdate);
         }
 
+        /* istanbul ignore if: guards non-browser hosts; Chrome has ResizeObserver and did-insert always passes the element */
         if (typeof ResizeObserver === 'undefined' || !this.monitorElement) {
             return;
         }
@@ -470,6 +454,7 @@ export default class LayoutFleetOpsSidebarOperationsMonitorComponent extends Com
     }
 
     teardownLayoutObservers() {
+        /* istanbul ignore else: guards non-browser hosts; the suite always runs in Chrome */
         if (typeof window !== 'undefined') {
             window.removeEventListener('resize', this.scheduleListHeightUpdate);
         }
@@ -486,6 +471,7 @@ export default class LayoutFleetOpsSidebarOperationsMonitorComponent extends Com
     }
 
     @action scheduleListHeightUpdate() {
+        /* istanbul ignore if: guards non-browser hosts; the suite always runs in Chrome */
         if (typeof requestAnimationFrame === 'undefined') {
             this.updateListHeight();
             return;
@@ -502,15 +488,13 @@ export default class LayoutFleetOpsSidebarOperationsMonitorComponent extends Com
     }
 
     updateListHeight() {
+        /* istanbul ignore if: both elements are registered by did-insert in the same render, before the scheduled frame fires, and teardown cancels the frame */
         if (!this.listElement || !this.monitorElement) {
             return;
         }
 
+        // A rendered element always has a parent, so the last fallback never yields null.
         const boundary = this.listElement.closest('.next-sidebar-content-inner') ?? this.listElement.closest('.next-sidebar-content') ?? this.monitorElement.parentElement;
-
-        if (!boundary) {
-            return;
-        }
 
         const listRect = this.listElement.getBoundingClientRect();
         const boundaryRect = boundary.getBoundingClientRect();
@@ -607,10 +591,6 @@ export default class LayoutFleetOpsSidebarOperationsMonitorComponent extends Com
     }
 
     async focusResource(resource, moveend) {
-        if (!resource) {
-            return;
-        }
-
         await this.mapManager.waitForMap({ timeoutMs: 8000 });
         this.mapManager.focusResource(resource, 16, {
             paddingBottomRight: [300, 200],

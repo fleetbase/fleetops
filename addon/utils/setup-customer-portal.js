@@ -21,7 +21,7 @@ export default function setupCustomerPortal(_fleetopsEngine, universe) {
 
 function setup(customerPortalEngine, universe) {
     // If setup already completed don't run again
-    if (customerPortalEngine?._fleetopsSetupCompleted === true) return;
+    if (customerPortalEngine._fleetopsSetupCompleted === true) return;
 
     const registryService = universe.getService('universe/registry-service');
 

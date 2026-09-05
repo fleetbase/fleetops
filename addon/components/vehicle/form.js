@@ -1,5 +1,4 @@
 import Component from '@glimmer/component';
-import { tracked } from '@glimmer/tracking';
 import { inject as service } from '@ember/service';
 import { action } from '@ember/object';
 import { task } from 'ember-concurrency';
@@ -10,15 +9,6 @@ export default class VehicleFormComponent extends Component {
     @service currentUser;
     @service notifications;
     @service modalsManager;
-    @tracked statusOptions = ['available', 'pending'];
-
-    @action updateAvatarUrl(option) {
-        this.args.resource.avatar_url = option.key === 'custom_avatar' ? option.value : [option.value];
-    }
-
-    @action updateSelectedImage(url) {
-        this.args.resource.avatar_url = url;
-    }
 
     @action assignDriver(driver) {
         this.args.resource.driver = driver;

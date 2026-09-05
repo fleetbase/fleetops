@@ -1,26 +1,27 @@
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'dummy/tests/helpers';
-import { render } from '@ember/test-helpers';
+import { click, render } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
+import registerTemplateOnly from 'dummy/tests/helpers/register-template-only';
 
 module('Integration | Component | order/form/metadata', function (hooks) {
     setupRenderingTest(hooks);
 
-    test('it renders', async function (assert) {
-        // Set any properties with this.set('myProperty', 'value');
-        // Handle any actions with this.set('myAction', function(val) { ... });
+    test('it edits the order metadata inside a panel', async function (assert) {
+        registerTemplateOnly(
+            this.owner,
+            'metadata-editor',
+            hbs`<button type="button" data-test-metadata-editor={{@value.priority}} {{on "click" (fn @onChange (hash priority="high"))}}></button>`
+        );
+        this.set('resource', { meta: { priority: 'low' } });
 
-        await render(hbs`<Order::Form::Metadata />`);
+        await render(hbs`<Order::Form::Metadata @resource={{this.resource}} />`);
 
-        assert.dom().hasText('');
+        assert.dom('.panel-title').hasText('Metadata');
+        assert.dom('[data-test-metadata-editor="low"]').exists();
 
-        // Template block usage:
-        await render(hbs`
-      <Order::Form::Metadata>
-        template block text
-      </Order::Form::Metadata>
-    `);
-
-        assert.dom().hasText('template block text');
+        await click('[data-test-metadata-editor]');
+        assert.deepEqual(this.resource.meta, { priority: 'high' });
+        assert.dom('[data-test-metadata-editor="high"]').exists();
     });
 });

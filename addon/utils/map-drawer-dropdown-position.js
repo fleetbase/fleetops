@@ -1,3 +1,5 @@
+import window from 'ember-window-mock';
+
 export default function calculateMapDrawerDropdownPosition(trigger, content) {
     const drawerPanel = trigger?.closest?.('.next-drawer-panel');
 

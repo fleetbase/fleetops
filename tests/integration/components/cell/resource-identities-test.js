@@ -1,6 +1,6 @@
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'dummy/tests/helpers';
-import { click, render } from '@ember/test-helpers';
+import { click, findAll, render } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 
 module('Integration | Component | cell resource identities', function (hooks) {
@@ -15,7 +15,7 @@ module('Integration | Component | cell resource identities', function (hooks) {
             vehicle_name: 'Truck 10',
         });
 
-        await render(hbs`<Cell::DriverIdentity @row={{this.driver}} @column={{hash}} />`);
+        await render(hbs`<Cell::DriverIdentity @row={{this.driver}} @column={{(hash)}} />`);
 
         assert.dom(this.element).includesText('Ada Driver');
         assert.dom(this.element).includesText('Active');
@@ -93,7 +93,7 @@ module('Integration | Component | cell resource identities', function (hooks) {
             is_online: true,
         });
 
-        await render(hbs`<Cell::DeviceIdentity @row={{this.device}} @column={{hash}} />`);
+        await render(hbs`<Cell::DeviceIdentity @row={{this.device}} @column={{(hash)}} />`);
 
         assert.dom(this.element).includesText('Device 42');
         assert.dom(this.element).includesText('IMEI-42');
@@ -265,7 +265,7 @@ module('Integration | Component | cell resource identities', function (hooks) {
             status: 'maintenance',
         });
 
-        await render(hbs`<Cell::EquipmentIdentity @row={{this.equipment}} @column={{hash}} />`);
+        await render(hbs`<Cell::EquipmentIdentity @row={{this.equipment}} @column={{(hash)}} />`);
 
         assert.dom(this.element).includesText('Generator');
         assert.dom(this.element).includesText('generator');
@@ -283,7 +283,7 @@ module('Integration | Component | cell resource identities', function (hooks) {
             is_in_stock: true,
         });
 
-        await render(hbs`<Cell::PartIdentity @row={{this.part}} @column={{hash}} />`);
+        await render(hbs`<Cell::PartIdentity @row={{this.part}} @column={{(hash)}} />`);
 
         assert.dom(this.element).includesText('Brake Pad');
         assert.dom(this.element).includesText('brake');
@@ -318,7 +318,10 @@ module('Integration | Component | cell resource identities', function (hooks) {
         assert.dom(this.element).doesNotIncludeText('Mercedes 1025');
         assert.dom(this.element).doesNotIncludeText('Ken Driver');
         assert.dom('[data-test-identity-empty-text]').exists({ count: 2 });
-        assert.dom('[data-test-identity-empty-text]').hasText('- -');
+        assert.deepEqual(
+            findAll('[data-test-identity-empty-text]').map((element) => element.textContent.trim()),
+            ['-', '-']
+        );
         assert.dom('.table-cell-resource-identity').doesNotExist();
         assert.dom('[data-test-resource-identity-image]').doesNotExist();
         assert.dom('[data-test-resource-identity-status-dot]').doesNotExist();
