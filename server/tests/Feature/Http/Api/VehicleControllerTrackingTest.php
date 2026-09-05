@@ -315,7 +315,9 @@ test('lookup create and response helpers execute their real implementations', fu
 
     expect($probe->callProtected('findVehicle', ['vehicle_test']))->toBeInstanceOf(Vehicle::class)
         ->and($probe->callProtected('findDriver', ['driver_test']))->toBeInstanceOf(Driver::class)
-        ->and($probe->callProtected('getVendorUuid', ['vendors', ['public_id' => 'vendor_test']]))->toBe('vendor-1');
+        // Vendor now resolves through the shared public-id resolver, which
+        // scopes the lookup to the session company.
+        ->and($probe->callProtected('resolveUuid', [Fleetbase\FleetOps\Models\Vendor::class, 'vendor_test']))->toBe('vendor-1');
 
     expect(fn () => $probe->callProtected('findVehicle', ['missing']))->toThrow(ModelNotFoundException::class)
         ->and(fn () => $probe->callProtected('findDriver', ['missing']))->toThrow(ModelNotFoundException::class);

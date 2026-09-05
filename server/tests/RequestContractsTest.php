@@ -290,6 +290,8 @@ namespace {
     });
 
     test('vehicle and fuel report requests expose core validation contracts', function () {
+        session(['company' => 'company-uuid']);
+
         $vehicleRules          = requestRules(CreateVehicleRequest::class);
         $fuelReportRules       = requestRules(CreateFuelReportRequest::class);
         $fuelReportUpdateRules = requestRules(UpdateFuelReportRequest::class, 'PATCH');
@@ -305,6 +307,53 @@ namespace {
             // error. These rules are what stop that.
             ->and($vehicleRules['odometer'])->toBe('nullable|numeric|min:0')
             ->and($vehicleRules['odometer_unit'])->toBe('nullable|string|max:12')
+            // Postman documented three statuses while the API accepted nineteen.
+            // This enum is the source of truth both must agree with; dropping a
+            // value would silently break an integration already sending it.
+            ->and(CreateVehicleRequest::STATUSES)->toContain(
+                'active',
+                'available',
+                'in_use',
+                'maintenance',
+                'out_of_service',
+                'reserved',
+                'retired',
+                'staging',
+                'on_route',
+                'idle',
+                'cleaning',
+                'awaiting_parts',
+                'inspection_due',
+                'inspection_failed',
+                'accident',
+                'compliance_hold',
+                'stolen',
+                'operational',
+                'decommissioned',
+            )
+            // Every newly exposed vehicle field carries a type-appropriate rule.
+            ->and($vehicleRules['year'])->toBe('nullable|integer|min:1900|max:2100')
+            ->and($vehicleRules['dpf_equipped'])->toBe('nullable|boolean')
+            ->and($vehicleRules['purchased_at'])->toBe('nullable|date')
+            ->and($vehicleRules['currency'])->toBe('nullable|string|size:3')
+            ->and($vehicleRules['specs'])->toBe('nullable|array')
+            ->and($vehicleRules['meta'])->toBe('nullable|array')
+            ->and($vehicleRules['seating_capacity'])->toBe('nullable|integer|min:0')
+            ->and($vehicleRules['weight'])->toBe('nullable|numeric|min:0')
+            ->and($vehicleRules['return_to_depot'])->toBe('nullable|boolean')
+            // Relationship inputs are confined to the caller's own company.
+            ->and(ruleStrings($vehicleRules['vendor']))->toContain('exists:vendors,public_id')
+            ->and(ruleStrings($vehicleRules['driver']))->toContain('exists:drivers,public_id')
+            ->and(ruleStrings($vehicleRules['category']))->toContain('exists:categories,public_id')
+            ->and(ruleStrings($vehicleRules['warranty']))->toContain('exists:warranties,public_id')
+            ->and($vehicleRules['vendor'][2]->constraints)->toBe([
+                ['where', 'company_uuid', 'company-uuid'],
+                ['whereNull', 'deleted_at'],
+            ])
+            ->and($vehicleRules['driver'][2]->constraints)->toBe([
+                ['where', 'company_uuid', 'company-uuid'],
+                ['whereNull', 'deleted_at'],
+            ])
             ->and($fuelReportRules['driver'])->toBe(['required'])
             ->and($fuelReportRules['odometer'])->toBe(['required'])
             ->and($fuelReportRules['volume'])->toBe(['required'])
@@ -434,7 +483,30 @@ namespace {
             ])
             ->and(ruleStrings($fleetCreateRules['name']))->toContain('required')
             ->and(ruleStrings($fleetPatchRules['name']))->not->toContain('required')
-            ->and($fleetCreateRules['service_area'])->toBe('exists:service_areas,public_id')
+            ->and(ruleStrings($fleetCreateRules['service_area']))->toContain('nullable', 'exists:service_areas,public_id')
+            ->and(ruleStrings($fleetCreateRules['zone']))->toContain('exists:zones,public_id')
+            ->and(ruleStrings($fleetCreateRules['vendor']))->toContain('exists:vendors,public_id')
+            ->and(ruleStrings($fleetCreateRules['parent_fleet']))->toContain('exists:fleets,public_id')
+            ->and($fleetCreateRules['color'])->toBe('nullable|string|max:64')
+            ->and($fleetCreateRules['task'])->toBe('nullable|string|max:191')
+            ->and($fleetCreateRules['status'])->toBe('nullable|string|max:64')
+            // Every fleet relationship input is confined to the caller's own
+            // company, so another organization's public id cannot be assigned
+            // — and cannot be probed for existence either.
+            ->and($fleetCreateRules['service_area'][2]->constraints)->toBe([
+                ['where', 'company_uuid', 'company-uuid'],
+                ['whereNull', 'deleted_at'],
+            ])
+            ->and($fleetCreateRules['parent_fleet'][2]->constraints)->toBe([
+                ['where', 'company_uuid', 'company-uuid'],
+                ['whereNull', 'deleted_at'],
+            ])
+            // A validation message naming `parent_fleet` reads worse than one
+            // naming "parent fleet".
+            ->and(CreateFleetRequest::create('/fleetops-test', 'POST')->attributes())->toBe([
+                'service_area' => 'service area',
+                'parent_fleet' => 'parent fleet',
+            ])
             ->and(requestRules(CancelOrderRequest::class))->toBe(['order' => 'required|exists:orders,uuid'])
             ->and(requestRules(DecodeTrackingNumberQR::class))->toBe(['code' => 'required|string'])
             ->and(requestRules(CreateServiceQuoteRequest::class))->toBe([]);
@@ -838,6 +910,9 @@ namespace {
     });
 
     test('driver request authorizes api sanctum and navigator sessions with identity rules', function () {
+        // The harness `session()` is a process-wide static independent of the
+        // bound store, and the company-scoped rule closures read it.
+        session(['company' => 'company-uuid']);
         bindFleetOpsRequestSession();
 
         $request = CreateDriverRequest::create('/fleetops-test', 'POST', [
@@ -854,15 +929,27 @@ namespace {
         expect($request->authorize())->toBeTrue()
             ->and(ruleStrings($createRules['name']))->toContain('required')
             ->and(ruleStrings($patchRules['name']))->not->toContain('required')
-            ->and(ruleStrings($createRules['email']))->toContain('required', 'email', 'unique:users')
-            ->and(ruleStrings($createRules['phone']))->toContain('required', 'unique:users')
+            // Contact details are optional but still validated and still unique:
+            // an operational driver record may legitimately have neither.
+            ->and(ruleStrings($createRules['email']))->toContain('nullable', 'email', 'unique:users')
+            ->and(ruleStrings($createRules['email']))->not->toContain('required')
+            ->and(ruleStrings($createRules['phone']))->toContain('nullable', 'unique:users')
+            ->and(ruleStrings($createRules['phone']))->not->toContain('required')
             ->and($createRules['password'])->toBe('nullable|string')
             ->and($createRules['country'])->toBe('nullable|size:2')
-            ->and($createRules['vehicle'])->toBe('nullable|string|starts_with:vehicle_|exists:vehicles,public_id')
+            ->and(ruleStrings($createRules['vehicle']))->toContain('nullable', 'string', 'starts_with:vehicle_', 'exists:vehicles,public_id')
             ->and($createRules['license_expiry'])->toBe('nullable|date')
             ->and($createRules['status'])->toBe('nullable|string|in:active,available,inactive')
-            ->and($createRules['vendor'])->toBe('nullable|exists:vendors,public_id')
-            ->and($createRules['job'])->toBe('nullable|exists:orders,public_id')
+            ->and(ruleStrings($createRules['vendor']))->toContain('nullable', 'exists:vendors,public_id')
+            ->and(ruleStrings($createRules['job']))->toContain('nullable', 'exists:orders,public_id')
+            ->and($createRules['vehicle'][3]->constraints)->toBe([
+                ['where', 'company_uuid', 'company-uuid'],
+                ['whereNull', 'deleted_at'],
+            ])
+            ->and($createRules['internal_id'])->toBe('nullable|string|max:191')
+            ->and($createRules['meta'])->toBe('nullable|array')
+            ->and($createRules['current_status'])->toBe('nullable|string|max:64')
+            ->and($createRules['max_travel_time'])->toBe('nullable|integer|min:0')
             ->and($createRules['location'][1])->toBeInstanceOf(ResolvablePoint::class)
             ->and($createRules['latitude'])->toBe(['nullable', 'required_with:longitude'])
             ->and($createRules['longitude'])->toBe(['nullable', 'required_with:latitude'])

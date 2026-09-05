@@ -11,6 +11,7 @@ namespace Illuminate\Foundation\Auth {
 namespace {
     use Fleetbase\FleetOps\Exceptions\CustomerUserConflictException;
     use Fleetbase\FleetOps\Exceptions\IntegratedVendorException;
+    use Fleetbase\FleetOps\Exceptions\PublicRelationNotFoundException;
     use Fleetbase\FleetOps\Exceptions\TelematicProviderException;
     use Fleetbase\FleetOps\Exceptions\TelematicRateLimitExceededException;
     use Fleetbase\FleetOps\Exceptions\UserAlreadyExistsException;
@@ -77,5 +78,19 @@ namespace {
                 'errors'             => ['Vendor trigger failed'],
                 'integratedVendorId' => 'vendor-1',
             ]);
+    });
+
+    test('public relation exceptions name the input that failed to resolve', function () {
+        $previous  = new Illuminate\Database\Eloquent\ModelNotFoundException();
+        $exception = new PublicRelationNotFoundException('parent_fleet', 'fleet_other_company', $previous);
+
+        // The message names the field in prose, so a client is told which input
+        // was at fault — while a cross-company id and a missing one produce the
+        // same answer, so neither can be used to probe another organization.
+        expect($exception->getMessage())->toBe('No parent fleet resource found for the identifier provided.')
+            ->and($exception->getRelation())->toBe('parent_fleet')
+            ->and($exception->getIdentifier())->toBe('fleet_other_company')
+            ->and($exception->getPrevious())->toBe($previous)
+            ->and((new PublicRelationNotFoundException('vendor'))->getIdentifier())->toBeNull();
     });
 }

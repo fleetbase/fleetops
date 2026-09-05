@@ -26,7 +26,7 @@ class FleetOpsApiEquipmentControllerProbe extends EquipmentController
         return $equipment;
     }
 
-    protected function resolveModel(string $modelClass, string $id): Illuminate\Database\Eloquent\Model
+    protected function resolveModel(string $modelClass, string $id, ?string $companyUuid = null): Illuminate\Database\Eloquent\Model
     {
         if ($this->equipmentNotFound) {
             throw new ModelNotFoundException();
@@ -37,7 +37,7 @@ class FleetOpsApiEquipmentControllerProbe extends EquipmentController
         return $this->equipment;
     }
 
-    protected function resolveUuid(string $modelClass, ?string $id): ?string
+    protected function resolveUuid(string $modelClass, ?string $id, ?string $companyUuid = null): ?string
     {
         $this->resolvedUuids[] = [$modelClass, $id];
 

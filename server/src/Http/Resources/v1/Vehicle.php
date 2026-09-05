@@ -2,12 +2,16 @@
 
 namespace Fleetbase\FleetOps\Http\Resources\v1;
 
+use Fleetbase\FleetOps\Http\Resources\v1\Concerns\ResolvesPublicRelationFields;
 use Fleetbase\FleetOps\Support\Utils;
 use Fleetbase\Http\Resources\FleetbaseResource;
 use Fleetbase\Support\Http;
+use Fleetbase\Support\Resolve;
 
 class Vehicle extends FleetbaseResource
 {
+    use ResolvesPublicRelationFields;
+
     /**
      * Transform the resource into an array.
      *
@@ -17,6 +21,12 @@ class Vehicle extends FleetbaseResource
      */
     public function toArray($request)
     {
+        $with = $this->requestedRelations($request);
+
+        if ($with !== []) {
+            $this->loadMissing($with);
+        }
+
         return $this->withCustomFields([
             // Identity
             'id'                     => $this->when(Http::isInternalRequest(), $this->id, $this->public_id),
@@ -39,10 +49,24 @@ class Vehicle extends FleetbaseResource
             'description'            => $this->description,
             'driver_name'            => $this->when(Http::isInternalRequest(), $this->driver_name),
             'vendor_name'            => $this->when(Http::isInternalRequest(), $this->vendor_name),
-            'assigned_orders_count'  => $this->when(Http::isInternalRequest(), $this->assignedOrdersCount()),
-            'current_order_reference'=> $this->when(Http::isInternalRequest(), $this->currentOrderReference()),
-            // Relationships
-            'driver'                 => $this->whenLoaded('driver', fn () => new Driver($this->driver)),
+            'assigned_orders_count'  => $this->when(Http::isInternalRequest(), fn () => $this->assignedOrdersCount()),
+            'current_order_reference'=> $this->when(Http::isInternalRequest(), fn () => $this->currentOrderReference()),
+            // Relationships. The identifier is additive and always present so a
+            // write can be read back; the object beside it keeps the shape it
+            // has always had — absent unless loaded, an object when it is.
+            'driver_id'              => $this->publicIdForRelation('driver', null),
+            'vendor_id'              => $this->publicIdForRelation('vendor', 'vendor_uuid'),
+            'category_id'            => $this->publicIdForRelation('category', 'category_uuid'),
+            'warranty_id'            => $this->publicIdForRelation('warranty', 'warranty_uuid'),
+            'photo_id'               => $this->publicIdForRelation('photo', 'photo_uuid'),
+            'driver'                 => $this->publicRelationObject('driver', $with, fn () => new Driver($this->driver)),
+            'vendor'                 => $this->publicRelationObject('vendor', $with, fn () => new Vendor($this->vendor)),
+            // Resolved through the repository's own resource resolver rather than
+            // a hardcoded class: Category and File live in core, and Warranty has
+            // no v1 resource of its own.
+            'category'               => $this->publicRelationObject('category', $with, fn () => Resolve::httpResourceForModel($this->category)),
+            'warranty'               => $this->publicRelationObject('warranty', $with, fn () => Resolve::httpResourceForModel($this->warranty)),
+            'photo'                  => $this->publicRelationObject('photo', $with, fn () => Resolve::httpResourceForModel($this->photo)),
             'devices'                => $this->whenLoaded('devices', fn () => $this->devices),
             // Vehicle identification
             'make'                   => $this->make,
@@ -139,6 +163,15 @@ class Vehicle extends FleetbaseResource
             'altitude'               => (int) data_get($this, 'altitude', 0),
             'speed'                  => (int) data_get($this, 'speed', 0),
             'telematics'             => data_get($this, 'telematics'),
+            // Orchestrator constraints
+            'skills'                   => data_get($this, 'skills'),
+            'payload_capacity_volume'  => $this->payload_capacity_volume,
+            'payload_capacity_pallets' => $this->payload_capacity_pallets,
+            'payload_capacity_parcels' => $this->payload_capacity_parcels,
+            'max_tasks'                => $this->max_tasks,
+            'time_window_start'        => $this->time_window_start,
+            'time_window_end'          => $this->time_window_end,
+            'return_to_depot'          => $this->return_to_depot,
             // Notes & meta
             'notes'                  => $this->notes,
             'meta'                   => data_get($this, 'meta', Utils::createObject()),
@@ -273,6 +306,15 @@ class Vehicle extends FleetbaseResource
             'vin_data'                    => data_get($this, 'vin_data', Utils::createObject()),
             'specs'                       => data_get($this, 'specs', Utils::createObject()),
             'details'                     => data_get($this, 'details', Utils::createObject()),
+            // Orchestrator constraints
+            'skills'                     => data_get($this, 'skills'),
+            'payload_capacity_volume'    => $this->payload_capacity_volume,
+            'payload_capacity_pallets'   => $this->payload_capacity_pallets,
+            'payload_capacity_parcels'   => $this->payload_capacity_parcels,
+            'max_tasks'                  => $this->max_tasks,
+            'time_window_start'          => $this->time_window_start,
+            'time_window_end'            => $this->time_window_end,
+            'return_to_depot'            => $this->return_to_depot,
             // Notes & meta
             'notes'                      => $this->notes,
             'meta'                       => data_get($this, 'meta', Utils::createObject()),
