@@ -1,6 +1,6 @@
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'dummy/tests/helpers';
-import { click, render } from '@ember/test-helpers';
+import { click, fillIn, render } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 import Service from '@ember/service';
 import Component from '@glimmer/component';
@@ -12,6 +12,7 @@ import registerTemplateOnly from 'dummy/tests/helpers/register-template-only';
 /** Every `file-queue` the template builds, so a test can drop a file onto one. */
 const queueHandles = [];
 import { A } from '@ember/array';
+import { get as emberGet } from '@ember/object';
 
 class ModelSelectStub extends Component {
     @service orderFormTestBed;
@@ -101,6 +102,12 @@ module('Integration | Component | customer/create-order-form', function (hooks) 
                     const answer = test.postResponses[path];
                     return typeof answer === 'function' ? answer() : Promise.resolve(answer);
                 }
+                // The real one is `store.push(store.normalize(type, attributes))`, which is what
+                // makes a restored record a *loaded* one rather than a new one — the whole
+                // difference the saved-item paths turn on. Keep it exact.
+                jsonToModel(attributes = {}, modelType) {
+                    return test.store.push(test.store.normalize(modelType, attributes));
+                }
             }
         );
         this.owner.register(
@@ -182,6 +189,17 @@ module('Integration | Component | customer/create-order-form', function (hooks) 
                 }
                 getOption(key) {
                     return this.options[key];
+                }
+                // Mirrors ember-ui's ModalsManager#invoke exactly: the second positional is the
+                // modal *id*, not a parameter. That signature is the whole of DEFECTS #98, so the
+                // stand-in has to keep it or the test would only be asserting its own shortcut.
+                invoke(fn, modalId = null, ...params) {
+                    const entry = modalId ? test.modals.find(([, options]) => options.id === modalId) : test.modals.at(-1);
+                    if (!entry) {
+                        return null;
+                    }
+                    const callable = entry[1][fn];
+                    return typeof callable === 'function' ? callable(...params) : null;
                 }
                 startLoading() {
                     test.modalLoading = true;
@@ -688,6 +706,230 @@ module('Integration | Component | customer/create-order-form', function (hooks) 
         this.uploads[0].onError();
         assert.strictEqual(removed.length, 1, 'and a second failure takes it out of the queue');
         assert.deepEqual([...this.order.files], [], 'with nothing attached to the order');
+    });
+
+    /**
+     * Put the form in the state it is in when the customer comes back from Stripe: the URL carries
+     * the checkout session and the quote, and the order the customer had built is sitting in the
+     * user's options under that quote's id. `restoreFromServiceQuote` reads it back from there.
+     */
+    function givenCheckoutReturn(test, { state, quotePayload = {}, checkoutResponse } = {}) {
+        test.searchParams = { checkout_session_id: 'cs_1', service_quote: 'quote_1' };
+        test.currentUser = test.owner.lookup('service:current-user');
+        // Restored waypoints are built with `{ place, customer }`, and `waypoint.customer` is a
+        // polymorphic belongsTo onto `customer` — a bare `contact` is refused by the graph.
+        test.sessionCustomer = test.store.createRecord('customer', { name: 'Ada', customer_type: 'contact' });
+        if (state) {
+            test.currentUser.setOption('order:state:quote_1', state);
+        }
+
+        const quote = {
+            id: 'quote_1',
+            amount: 1200,
+            meta: { preliminary_query: { payload: quotePayload } },
+            get(path) {
+                return emberGet(this, path);
+            },
+        };
+
+        test.store.findRecord = (modelName, id) => {
+            if (modelName === 'service-quote') {
+                return Promise.resolve(quote);
+            }
+            if (modelName === 'file') {
+                return Promise.resolve(test.store.push(test.store.normalize('file', { uuid: id, original_filename: `${id}.pdf` })));
+            }
+            return Promise.resolve(test.store.peekRecord(modelName, id));
+        };
+
+        if (checkoutResponse) {
+            test.getResponses['service-quotes/stripe-checkout-session'] = checkoutResponse;
+        }
+
+        return quote;
+    }
+
+    /** The two places a restored order is usually routed between. */
+    const RESTORED_PICKUP = { uuid: 'place_pickup', street1: 'Depot', location: { type: 'Point', coordinates: [103.8, 1.3] } };
+    const RESTORED_DROPOFF = { uuid: 'place_dropoff', street1: 'Site', location: { type: 'Point', coordinates: [103.9, 1.4] } };
+
+    test('returning from a checkout restores the order that was saved against the quote', async function (assert) {
+        this.givenOrderConfigs({ id: 'config_1', key: 'transport', name: 'Transport' });
+        givenCheckoutReturn(this, {
+            state: {
+                order_config_uuid: 'config_1',
+                pod_required: true,
+                pod_method: 'signature',
+                notes: 'Leave at reception',
+                customFieldValues: [{ id: 'cfv_1' }],
+                files: ['file_1'],
+                payload: {
+                    entities: [{ uuid: 'entity_saved', name: 'Crate' }, { name: 'Loose box' }],
+                },
+            },
+            quotePayload: { pickup: RESTORED_PICKUP, dropoff: RESTORED_DROPOFF },
+        });
+
+        await render(hbs`<Customer::CreateOrderForm @order={{this.order}} @map={{this.map}} />`);
+
+        assert.true(this.order.pod_required, 'the proof-of-delivery choice comes back');
+        assert.strictEqual(this.order.pod_method, 'signature');
+        assert.strictEqual(this.order.notes, 'Leave at reception', 'and so do the notes');
+
+        const items = [...document.querySelectorAll('button')].filter((el) => el.textContent.includes('Edit Item'));
+        assert.strictEqual(items.length, 2, 'both items are back — the one already saved and the one that never was');
+
+        assert.deepEqual(
+            [...this.order.files].map((file) => file.id),
+            ['file_1'],
+            'the files the customer had attached are fetched and reattached'
+        );
+        assert.dom('.leaflet-routing-container, .leaflet-overlay-pane').exists('and the route between the restored places is drawn again');
+    });
+
+    test('a multi-drop quote comes back as waypoints rather than a pickup and dropoff', async function (assert) {
+        this.givenOrderConfigs({ id: 'config_1', key: 'transport', name: 'Transport' });
+        givenCheckoutReturn(this, {
+            state: { payload: {} },
+            quotePayload: { waypoints: [RESTORED_PICKUP, RESTORED_DROPOFF] },
+        });
+
+        await render(hbs`<Customer::CreateOrderForm @order={{this.order}} @map={{this.map}} />`);
+
+        assert.dom('[data-test-drag-item]').exists({ count: 2 }, 'each restored waypoint gets its row back');
+        const [multiDrop] = document.querySelectorAll('[role="checkbox"]');
+        assert.strictEqual(multiDrop.getAttribute('aria-checked'), 'true', 'and the order is put back into multi-drop mode');
+    });
+
+    test('a completed checkout finishes the order and clears the state it was holding', async function (assert) {
+        this.givenOrderConfigs({ id: 'config_1', key: 'transport', name: 'Transport' });
+        givenCheckoutReturn(this, {
+            state: { payload: {} },
+            quotePayload: { pickup: RESTORED_PICKUP, dropoff: RESTORED_DROPOFF },
+            checkoutResponse: { status: 'complete', purchaseRate: { uuid: 'rate_1', amount: 1200 } },
+        });
+        this.order.save = () => Promise.resolve(this.order);
+
+        await render(hbs`<Customer::CreateOrderForm @order={{this.order}} @map={{this.map}} />`);
+
+        assert.deepEqual(this.removedParams, ['checkout_session_id'], 'the session id is taken back out of the URL');
+        assert.strictEqual(this.order.purchase_rate_uuid, 'rate_1', 'the rate that was purchased is put on the order');
+        assert.true(
+            this.universeEvents.some(([name]) => name === 'fleet-ops.order.created'),
+            'the order is created now that it is paid for'
+        );
+        assert.strictEqual(this.currentUser.getOption('order:state:quote_1'), undefined, 'and the saved state it was restored from is dropped');
+        // Twice, and both are deliberate: `displayCompletingOrderDialog` clears whatever was up
+        // before it puts the dialog there, and `checkForCheckoutSession` closes it at the end.
+        assert.strictEqual(this.modalsDone, 2, 'the dialog is cleared before it goes up, and closed again once the order is made');
+    });
+
+    test('a restored item uploads a new photo straight away', async function (assert) {
+        this.givenOrderConfigs({ id: 'config_1', key: 'transport', name: 'Transport' });
+        givenCheckoutReturn(this, {
+            state: { payload: { entities: [{ uuid: 'entity_saved', name: 'Crate' }] } },
+            quotePayload: {},
+        });
+
+        await render(hbs`<Customer::CreateOrderForm @order={{this.order}} @map={{this.map}} />`);
+
+        const editItem = [...document.querySelectorAll('button')].find((el) => el.textContent.includes('Edit Item'));
+        await click(editItem);
+
+        const [, options] = this.modals.at(-1);
+        assert.false(options.entity.get('isNew'), 'the restored item is a saved one, not a draft');
+
+        options.uploadNewPhoto({ file: new Blob(['x']), queue: { remove: () => assert.ok(false, 'a saved item does not hold its photo back') } });
+
+        assert.true(this.modalLoading, 'the modal shows it is working');
+        assert.strictEqual(this.uploads.length, 1, 'the photo goes up immediately');
+        assert.deepEqual(
+            this.uploads[0].meta,
+            { path: 'uploads/company_1/entities/entity_saved', subject_uuid: 'entity_saved', subject_type: 'fleet-ops:entity', type: 'entity_photo' },
+            'filed against the entity it belongs to'
+        );
+
+        const uploaded = this.store.createRecord('file', { url: 'https://files.test/crate.png' });
+        this.uploads[0].onSuccess(uploaded);
+        assert.strictEqual(options.entity.get('photo_uuid'), uploaded.id, 'and the item takes the uploaded photo');
+        assert.strictEqual(options.entity.get('photo_url'), 'https://files.test/crate.png');
+        assert.false(this.modalLoading, 'the modal stops working');
+
+        this.uploads[0].onError();
+        assert.false(this.modalLoading, 'an upload that fails also stops it');
+    });
+
+    test('confirming the item form saves the item, but the held-back photo is never replayed', async function (assert) {
+        this.givenOrderConfigs({ id: 'config_1', key: 'transport', name: 'Transport' });
+        await render(hbs`<Customer::CreateOrderForm @order={{this.order}} @map={{this.map}} />`);
+
+        const addItem = [...document.querySelectorAll('button')].find((el) => el.textContent.includes('Add Item'));
+        await click(addItem);
+        await click([...document.querySelectorAll('button')].find((el) => el.textContent.includes('Edit Item')));
+
+        const [, options] = this.modals.at(-1);
+        const heldBack = { file: new Blob(['x']), queue: { remove: () => {} } };
+        options.uploadNewPhoto(heldBack);
+
+        const modal = this.owner.lookup('service:modals-manager');
+        let saved = false;
+        options.entity.save = () => {
+            saved = true;
+            return Promise.resolve(options.entity);
+        };
+
+        await options.confirm(modal);
+
+        assert.true(saved, 'confirming saves the item');
+        assert.strictEqual(modal.getOption('pendingFileUpload'), heldBack, 'the photo it was holding is still there');
+        // DEFECTS #98: `modal.invoke('uploadNewPhoto', pendingFileUpload)` puts the file in
+        // `invoke`'s second parameter, which is `modalId` — so no modal is found and the
+        // callback is never reached. The photo the customer picked is silently dropped.
+        assert.strictEqual(this.uploads.length, 0, 'but it is never uploaded — the replay call passes it as a modal id');
+    });
+
+    test('the last item cannot be removed, and a saved one is deleted rather than dropped', async function (assert) {
+        this.givenOrderConfigs({ id: 'config_1', key: 'transport', name: 'Transport' });
+        givenCheckoutReturn(this, {
+            state: { payload: { entities: [{ name: 'Loose box' }, { uuid: 'entity_saved', name: 'Crate' }] } },
+            quotePayload: {},
+        });
+
+        await render(hbs`<Customer::CreateOrderForm @order={{this.order}} @map={{this.map}} />`);
+
+        const removeButtons = () => [...document.querySelectorAll('button')].filter((el) => el.querySelector('.fa-xmark'));
+        const itemRows = () => [...document.querySelectorAll('button')].filter((el) => el.textContent.includes('Edit Item')).length;
+        assert.strictEqual(itemRows(), 2, 'two items to start with');
+
+        // The saved one is second; removing it destroys the record rather than dropping the row.
+        let destroyed = false;
+        const savedEntity = this.store.peekRecord('entity', 'entity_saved');
+        savedEntity.destroyRecord = () => {
+            destroyed = true;
+            return Promise.resolve(savedEntity);
+        };
+        await click(removeButtons().at(-1));
+        assert.true(destroyed, 'a saved item is deleted on the server');
+        assert.strictEqual(itemRows(), 2, 'and stays on screen until that delete comes back');
+    });
+
+    test('choosing a destination for an item records it against that item', async function (assert) {
+        this.givenOrderConfigs({ id: 'config_1', key: 'transport', name: 'Transport' });
+        givenCheckoutReturn(this, {
+            state: { payload: { entities: [{ name: 'Loose box' }] } },
+            quotePayload: { waypoints: [RESTORED_PICKUP, RESTORED_DROPOFF] },
+        });
+
+        await render(hbs`<Customer::CreateOrderForm @order={{this.order}} @map={{this.map}} />`);
+
+        const destination = document.querySelector('select.form-input-sm');
+        assert.ok(destination, 'an item in a multi-drop order is asked which stop it is for');
+
+        await fillIn(destination, 'place_dropoff');
+
+        const editItem = [...document.querySelectorAll('button')].find((el) => el.textContent.includes('Edit Item'));
+        await click(editItem);
+        assert.strictEqual(this.modals.at(-1)[1].entity.get('destination_uuid'), 'place_dropoff', 'and the choice is kept on the item');
     });
 
     test('editing an item offers a photo upload, which differs for a saved item', async function (assert) {

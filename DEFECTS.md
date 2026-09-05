@@ -1175,6 +1175,15 @@ call, not taken here).
 **Impact:** none on users — this is about what the tests can reach. The payment and checkout block (`isPaymentRequired`, `fetchClientSecret`, `startCheckoutSession`, `saveCurrentOrderForCurrentServiceQuote`, and the tail of `checkForCheckoutSession`) is roughly 60 statements that no rendering test can currently enter.
 **Fix:** two options, both cheap for someone who can change the source. Either give the template something that reflects the payments state — even a `data-` attribute — so a test can confirm the flags landed; or, better, make `isPaymentRequired()` a getter so it can be exercised directly in a unit test with `setupTest` and the component built through `factoryFor`. Until then the block stays uncovered rather than covered by a test that fakes its way in. **Do not** attempt to force it by mutating `config` from the test — I tried, and it changes nothing, because `publishableKey` already satisfies its condition.
 
+## 98. `addon/components/customer/create-order-form.js` — an item's held-back photo is never uploaded
+
+**Status:** OPEN
+**Found:** covering the entity modal's `confirm`. Writing a faithful `invoke` stand-in meant reading the real signature, and the real signature does not match the call.
+**Evidence:** `editEntity`'s `uploadNewPhoto` holds a *new* item's photo aside — `modalsManager.setOption('pendingFileUpload', file)` — and `confirm` replays it after the item is saved with `modal.invoke('uploadNewPhoto', pendingFileUpload)` (L618). But ember-ui's `ModalsManager#invoke` is `invoke(fn, modalId = null, ...params)` (`node_modules/@fleetbase/ember-ui/addon/services/modals-manager.js:500`), so the file lands in the **`modalId`** slot. `getModalById` then does `this.modals.find((modal) => modal.id === modalId)` against a `File` object, finds nothing, and `invoke` returns `null` at the `if (!modal) return null` guard — the callback is never reached. L618 is the only `.invoke(` call site in the whole addon, so there is no second example to check the convention against. Nothing throws and nothing is logged.
+**Impact:** a customer who picks a photo while adding a *new* item sees it appear in the modal (it is shown from `URL.createObjectURL`), saves the item, and the photo is silently dropped. It is never uploaded and never reaches `photo_uuid`. Only new items are affected; a saved item uploads immediately down the other arm and is fine.
+**Fix:** `modal.invoke('uploadNewPhoto', null, pendingFileUpload)` — the `null` is the modal id, and `invoke` then falls back to the top modal. One line. The test `confirming the item form saves the item, but the held-back photo is never replayed` asserts the current behaviour (`this.uploads.length === 0`) and names this entry, so whoever fixes it will see the assertion that has to change.
+
+
 ## 4. `tests/` — 223 blueprint scaffolds that were never green
 
 **Status:** OPEN (this is the bulk of Phase B)
