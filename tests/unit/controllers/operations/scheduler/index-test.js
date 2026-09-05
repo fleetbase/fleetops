@@ -12,6 +12,10 @@ import { waitUntil } from '@ember/test-helpers';
 module('Unit | Controller | operations/scheduler/index', function (hooks) {
     setupTest(hooks);
 
+    hooks.afterEach(function () {
+        this.timeline?.remove();
+    });
+
     hooks.beforeEach(function () {
         const test = this;
         this.companyTimezone = 'Asia/Singapore';
@@ -37,10 +41,97 @@ module('Unit | Controller | operations/scheduler/index', function (hooks) {
             return test.store.push(test.store.normalize('order', { uuid: attrs.id ?? attrs.uuid, meta: {}, ...attrs }));
         };
 
+        this.assignments = [];
+        this.assignResult = { error: null, hasConflict: false };
+        this.owner.register(
+            'service:scheduling',
+            class extends Service {
+                assignOrder(order, driverId, scheduledAt) {
+                    test.assignments.push({ order, driverId, scheduledAt });
+                    return Promise.resolve(test.assignResult);
+                }
+                undo() {
+                    test.assignments.push('undo');
+                    return 'undone';
+                }
+                redo() {
+                    test.assignments.push('redo');
+                    return 'redone';
+                }
+            }
+        );
+
+        this.channels = [];
+        this.channelsClosed = 0;
+        this.owner.register(
+            'service:socket',
+            class extends Service {
+                listen(channel, handler) {
+                    test.channels.push({ channel, handler });
+                    return Promise.resolve();
+                }
+                closeChannels() {
+                    test.channelsClosed += 1;
+                }
+            }
+        );
+
+        this.notified = [];
+        this.owner.register(
+            'service:notifications',
+            class extends Service {
+                success(message) {
+                    test.notified.push(['success', message]);
+                }
+                serverError(error) {
+                    test.notified.push(['serverError', error?.message ?? error]);
+                }
+            }
+        );
+
+        this.modals = [];
+        this.owner.register(
+            'service:modals-manager',
+            class extends Service {
+                show(name, options) {
+                    test.modals.push([name, options]);
+                }
+                done() {
+                    return Promise.resolve();
+                }
+            }
+        );
+
+        /**
+         * The drag handlers reach for `#fleet-ops-scheduler-timeline` on the global document
+         * rather than through a component element, so the test puts a real one there.
+         */
+        this.timeline = document.createElement('div');
+        this.timeline.id = 'fleet-ops-scheduler-timeline';
+        this.ecMain = document.createElement('div');
+        this.ecMain.className = 'ec-main';
+        this.timeline.appendChild(this.ecMain);
+        document.getElementById('ember-testing').appendChild(this.timeline);
+
         /** A stand-in for the EventCalendar instance the template hands back on mount. */
+        this.calendarEventsById = {};
         this.calendarCalls = [];
         this.calendarOptions = { date: new Date('2026-03-10T00:00:00Z') };
         this.calendarApi = {
+            dateFromPoint(x, y) {
+                test.calendarCalls.push(['dateFromPoint', x, y]);
+                return test.dropInfo;
+            },
+            removeEventById(id) {
+                test.calendarCalls.push(['removeEventById', id]);
+            },
+            getEventById(id) {
+                test.calendarCalls.push(['getEventById', id]);
+                return test.calendarEventsById[id];
+            },
+            updateEvent(event) {
+                test.calendarCalls.push(['updateEvent', event]);
+            },
             setOption(key, value) {
                 test.calendarCalls.push(['setOption', key, value]);
                 test.calendarOptions[key] = value;
@@ -294,5 +385,353 @@ module('Unit | Controller | operations/scheduler/index', function (hooks) {
 
         this.givenOrder({ id: 'o_1', status: 'created', public_id: 'ORD_1', scheduled_at: '2026-03-10T09:00:00Z' });
         assert.strictEqual(this.controller.allCalendarEvents.length, 2, 'the calendar gets the orders and the shifts together');
+    });
+
+    // -------------------------------------------------------------------------
+    // Drag and drop
+    // -------------------------------------------------------------------------
+
+    /** A drag event carrying the dataTransfer the browser would supply. */
+    function dragEvent(overrides = {}) {
+        return {
+            preventDefault() {
+                this.defaultPrevented = true;
+            },
+            defaultPrevented: false,
+            clientX: 320,
+            clientY: 180,
+            dataTransfer: {
+                setData(key, value) {
+                    this.data = [key, value];
+                },
+                data: null,
+                effectAllowed: null,
+                dropEffect: null,
+            },
+            ...overrides,
+        };
+    }
+
+    test('dragging a card out of the sidebar remembers which order it was', function (assert) {
+        const order = this.givenOrder({ id: 'o_1', status: 'created', public_id: 'ORD_1' });
+        const event = dragEvent();
+
+        this.controller.onSidebarDragStart(order, event);
+
+        assert.deepEqual(event.dataTransfer.data, ['text/plain', 'o_1'], 'the id goes on the drag as a fallback');
+        assert.strictEqual(event.dataTransfer.effectAllowed, 'move');
+    });
+
+    test('dragging over the timeline highlights it and follows the pointer', function (assert) {
+        const event = dragEvent({ clientX: 500 });
+        this.controller.onCalendarDragOver(event);
+
+        assert.true(event.defaultPrevented, 'the default "no drop" behaviour is suppressed so a drop can fire');
+        assert.strictEqual(event.dataTransfer.dropEffect, 'move');
+        assert.strictEqual(this.timeline.dataset.draggingOver, 'true', 'the container is marked for the CSS highlight');
+
+        const cursor = this.ecMain.querySelector('.ec-drop-cursor');
+        assert.ok(cursor, 'a drop cursor is put on the timeline');
+
+        // Dragging again moves the same cursor rather than adding another.
+        this.controller.onCalendarDragOver(dragEvent({ clientX: 600 }));
+        assert.strictEqual(this.ecMain.querySelectorAll('.ec-drop-cursor').length, 1, 'and it is moved, not duplicated');
+    });
+
+    test('leaving the timeline clears the highlight, but moving between its children does not', function (assert) {
+        this.controller.onCalendarDragOver(dragEvent());
+        assert.strictEqual(this.timeline.dataset.draggingOver, 'true');
+
+        // relatedTarget inside the timeline means the pointer only moved to a child.
+        this.controller.onCalendarDragLeave({ relatedTarget: this.ecMain });
+        assert.strictEqual(this.timeline.dataset.draggingOver, 'true', 'moving onto a child is not leaving');
+
+        this.controller.onCalendarDragLeave({ relatedTarget: document.body });
+        assert.strictEqual(this.timeline.dataset.draggingOver, undefined, 'leaving for good clears the highlight');
+        assert.notOk(this.ecMain.querySelector('.ec-drop-cursor'), 'and takes the cursor with it');
+    });
+
+    test('dropping an order on the timeline assigns it to that driver and time', async function (assert) {
+        const order = this.givenOrder({ id: 'o_1', status: 'created', public_id: 'ORD_1' });
+        this.controller.setCalendarApi(this.calendarApi);
+        this.dropInfo = { date: new Date(2026, 2, 10, 14, 30), resource: { id: 'd_1' } };
+
+        this.controller.onSidebarDragStart(order, dragEvent());
+        await this.controller.onCalendarDrop(dragEvent());
+
+        assert.strictEqual(this.assignments.length, 1, 'the order is assigned');
+        const [assignment] = this.assignments;
+        assert.strictEqual(assignment.order, order);
+        assert.strictEqual(assignment.driverId, 'd_1', 'to the driver whose row it landed on');
+        // 14:30 on screen in Asia/Singapore is 06:30 UTC.
+        assert.strictEqual(assignment.scheduledAt.toISOString(), '2026-03-10T06:30:00.000Z', 'and to the wall-clock time it was dropped at, read as company time');
+        assert.strictEqual(this.controller._orderRevision, 1, 'the sidebar is told to recompute');
+        assert.strictEqual(this.timeline.dataset.draggingOver, undefined, 'the highlight is cleared');
+    });
+
+    test('a drop with nothing being dragged, or before the calendar mounts, does nothing', async function (assert) {
+        await this.controller.onCalendarDrop(dragEvent());
+        assert.deepEqual(this.assignments, [], 'no dragged order means no assignment');
+
+        const order = this.givenOrder({ id: 'o_1', status: 'created', public_id: 'ORD_1' });
+        this.controller.onSidebarDragStart(order, dragEvent());
+        await this.controller.onCalendarDrop(dragEvent());
+        assert.deepEqual(this.assignments, [], 'and neither does a drop before the calendar is there');
+    });
+
+    test('a drop the calendar cannot place is abandoned', async function (assert) {
+        const order = this.givenOrder({ id: 'o_1', status: 'created', public_id: 'ORD_1' });
+        this.controller.setCalendarApi(this.calendarApi);
+        this.dropInfo = null;
+
+        this.controller.onSidebarDragStart(order, dragEvent());
+        await this.controller.onCalendarDrop(dragEvent());
+
+        assert.deepEqual(this.assignments, [], 'a point outside the grid assigns nothing');
+    });
+
+    test('a drop onto no particular driver still schedules the order', async function (assert) {
+        const order = this.givenOrder({ id: 'o_1', status: 'created', public_id: 'ORD_1' });
+        this.controller.setCalendarApi(this.calendarApi);
+        this.dropInfo = { date: null, resource: null };
+
+        this.controller.onSidebarDragStart(order, dragEvent());
+        await this.controller.onCalendarDrop(dragEvent());
+
+        const [assignment] = this.assignments;
+        assert.strictEqual(assignment.driverId, null, 'with no driver');
+        assert.true(assignment.scheduledAt instanceof Date, 'and for now, when the calendar gives no date');
+    });
+
+    test('a drop the scheduler refuses leaves the sidebar alone', async function (assert) {
+        const order = this.givenOrder({ id: 'o_1', status: 'created', public_id: 'ORD_1' });
+        this.controller.setCalendarApi(this.calendarApi);
+        this.dropInfo = { date: new Date(2026, 2, 10, 14, 30), resource: { id: 'd_1' } };
+        this.assignResult = { error: new Error('nope'), hasConflict: false };
+
+        this.controller.onSidebarDragStart(order, dragEvent());
+        await this.controller.onCalendarDrop(dragEvent());
+
+        assert.strictEqual(this.controller._orderRevision, 0, 'the order stays where it was');
+    });
+
+    test('a drop that clashes puts up the conflict modal', async function (assert) {
+        const order = this.givenOrder({ id: 'o_1', status: 'created', public_id: 'ORD_1' });
+        this.controller.setCalendarApi(this.calendarApi);
+        this.dropInfo = { date: new Date(2026, 2, 10, 14, 30), resource: { id: 'd_1' } };
+        this.assignResult = { error: null, hasConflict: true, conflicts: [{ id: 'o_other' }] };
+
+        this.controller.onSidebarDragStart(order, dragEvent());
+        await this.controller.onCalendarDrop(dragEvent());
+
+        const modal = this.modals.at(-1);
+        assert.ok(modal, 'the clash is shown to the dispatcher');
+        assert.strictEqual(modal[1].order, order, 'naming the order that clashed');
+    });
+
+    // -------------------------------------------------------------------------
+    // Rescheduling an event already on the board
+    // -------------------------------------------------------------------------
+
+    test('dragging an order to a new slot reschedules it', async function (assert) {
+        const order = this.givenOrder({ id: 'o_1', status: 'created', public_id: 'ORD_1', scheduled_at: '2026-03-10T09:00:00Z' });
+        let reverted = 0;
+
+        await this.controller.rescheduleEventFromDrag({
+            event: { id: 'o_1', start: new Date(2026, 2, 11, 8, 0), end: new Date(2026, 2, 11, 9, 0), resourceIds: ['d_2'], extendedProps: {} },
+            revert: () => (reverted += 1),
+        });
+
+        assert.strictEqual(this.assignments.length, 1);
+        assert.strictEqual(this.assignments[0].order, order);
+        assert.strictEqual(this.assignments[0].driverId, 'd_2', 'onto the row it was dropped on');
+        assert.strictEqual(reverted, 0, 'nothing is put back');
+        assert.strictEqual(this.controller._orderRevision, 1);
+    });
+
+    test('a reschedule that clashes or fails is put back where it was', async function (assert) {
+        this.givenOrder({ id: 'o_1', status: 'created', public_id: 'ORD_1', scheduled_at: '2026-03-10T09:00:00Z' });
+        // An event drawn on the timeline always sits on a resource row, so `resourceIds` carries one.
+        const info = () => ({
+            event: { id: 'o_1', start: new Date(2026, 2, 11, 8, 0), end: new Date(2026, 2, 11, 9, 0), resourceIds: ['d_2'], extendedProps: {} },
+            revert: () => (reverted += 1),
+        });
+        let reverted = 0;
+
+        this.assignResult = { error: null, hasConflict: true, conflicts: [] };
+        await this.controller.rescheduleEventFromDrag(info());
+        assert.strictEqual(reverted, 1, 'a clash snaps the event back');
+        assert.ok(this.modals.at(-1), 'and says why');
+
+        this.assignResult = { error: new Error('nope'), hasConflict: false };
+        await this.controller.rescheduleEventFromDrag(info());
+        assert.strictEqual(reverted, 2, 'so does a refusal');
+        assert.strictEqual(this.controller._orderRevision, 0, 'neither counts as a change');
+    });
+
+    test('an event for an order that is no longer loaded is ignored', async function (assert) {
+        let reverted = 0;
+        await this.controller.rescheduleEventFromDrag({
+            event: { id: 'o_missing', start: new Date(), end: new Date(), resourceIds: [], extendedProps: {} },
+            revert: () => (reverted += 1),
+        });
+
+        assert.deepEqual(this.assignments, [], 'nothing is assigned');
+        assert.strictEqual(reverted, 0, 'and nothing is reverted — there is nothing to put back');
+    });
+
+    test('dragging a shift block moves the shift itself', async function (assert) {
+        const saved = [];
+        const scheduleItem = {
+            props: {},
+            set(key, value) {
+                this.props[key] = value;
+            },
+            save() {
+                saved.push({ ...this.props });
+                return Promise.resolve();
+            },
+        };
+
+        await this.controller.rescheduleEventFromDrag({
+            event: { start: new Date(2026, 2, 11, 8, 0), end: new Date(2026, 2, 11, 17, 0), resourceIds: ['d_2'], extendedProps: { scheduleItem } },
+            revert: () => assert.ok(false, 'a shift that saves is not reverted'),
+        });
+
+        assert.strictEqual(saved.length, 1, 'the shift is saved');
+        assert.strictEqual(saved[0].assignee_uuid, 'd_2', 'against the driver it was dragged to');
+        assert.strictEqual(saved[0].start_at.toISOString(), '2026-03-11T00:00:00.000Z', 'with 08:00 company time read back as UTC');
+        assert.deepEqual(this.notified.at(-1), ['success', 'Shift updated successfully.'], 'and the dispatcher is told');
+        assert.deepEqual(this.assignments, [], 'a shift never goes through order assignment');
+    });
+
+    test('a shift that will not save is reported and put back', async function (assert) {
+        let reverted = 0;
+        const scheduleItem = { set() {}, save: () => Promise.reject(new Error('server said no')) };
+
+        await this.controller.rescheduleEventFromDrag({
+            event: { start: new Date(2026, 2, 11, 8, 0), end: null, resourceIds: [], extendedProps: { scheduleItem } },
+            revert: () => (reverted += 1),
+        });
+
+        assert.deepEqual(this.notified.at(-1), ['serverError', 'server said no']);
+        assert.strictEqual(reverted, 1, 'and the block snaps back');
+    });
+
+    // -------------------------------------------------------------------------
+    // Real-time updates
+    // -------------------------------------------------------------------------
+
+    test('the board listens to its company and to every driver on it', async function (assert) {
+        this.controller.drivers = [
+            this.store.push(this.store.normalize('driver', { uuid: 'd_1', name: 'Ada' })),
+            this.store.push(this.store.normalize('driver', { uuid: 'd_2', name: 'Grace' })),
+        ];
+        this.owner.lookup('service:current-user').companyId = 'company_1';
+
+        await this.controller.subscribeToRealTimeUpdates();
+
+        assert.deepEqual(
+            this.channels.map((c) => c.channel),
+            ['company.company_1.orders', 'driver.d_1', 'driver.d_2'],
+            'one company channel and one per driver'
+        );
+
+        // The handlers the socket was given are what actually push records in.
+        this.channels[0].handler({ data: { id: 'o_socket', uuid: 'o_socket', status: 'created', public_id: 'ORD_S', meta: {} } });
+        assert.ok(this.store.peekRecord('order', 'o_socket'), 'the company channel pushes orders through');
+
+        this.channels[1].handler({ event: 'driver.updated', data: { id: 'd_3', uuid: 'd_3', name: 'Hopper' } });
+        assert.ok(this.store.peekRecord('driver', 'd_3'), 'and a driver channel pushes that driver through');
+
+        this.controller.unsubscribeFromRealTimeUpdates();
+        assert.strictEqual(this.channelsClosed, 1, 'and they are all closed again on the way out');
+    });
+
+    test('with no company there is nothing to listen to', async function (assert) {
+        this.companyTimezone = 'Asia/Singapore';
+        this.owner.lookup('service:current-user').companyId = undefined;
+        Object.defineProperty(this.owner.lookup('service:current-user'), 'company', { get: () => ({}), configurable: true });
+
+        await this.controller.subscribeToRealTimeUpdates();
+        assert.deepEqual(this.channels, [], 'no channels are opened');
+    });
+
+    test('an order pushed over the socket lands in the store', function (assert) {
+        this.controller._handleOrderSocketEvent({ data: { id: 'o_socket', uuid: 'o_socket', status: 'created', public_id: 'ORD_S', meta: {} } });
+        assert.ok(this.store.peekRecord('order', 'o_socket'), 'the order arrives without a page refresh');
+
+        // Neither of these should throw.
+        this.controller._handleOrderSocketEvent();
+        this.controller._handleOrderSocketEvent({ data: {} });
+        this.controller._handleOrderSocketEvent({ data: { id: 'o_bad', bogus: Symbol('unserialisable') } });
+        assert.true(true, 'an event with no usable payload is dropped rather than thrown');
+    });
+
+    test('driver location pings are ignored, other driver events are not', function (assert) {
+        this.controller._handleDriverSocketEvent({ event: 'driver.location_changed', data: { id: 'd_ping', uuid: 'd_ping', name: 'Ada' } });
+        assert.notOk(this.store.peekRecord('driver', 'd_ping'), 'location pings are far too frequent to push');
+
+        this.controller._handleDriverSocketEvent({ event: 'driver.updated', data: { id: 'd_1', uuid: 'd_1', name: 'Ada' } });
+        assert.ok(this.store.peekRecord('driver', 'd_1'), 'but a real change is pushed');
+
+        this.controller._handleDriverSocketEvent();
+        assert.true(true, 'and an empty event is dropped');
+    });
+
+    test('undo and redo go straight to the scheduling service', function (assert) {
+        assert.strictEqual(this.controller.undo(), 'undone');
+        assert.strictEqual(this.controller.redo(), 'redone');
+        assert.deepEqual(this.assignments, ['undo', 'redo']);
+    });
+
+    // -------------------------------------------------------------------------
+    // Calendar event helpers
+    // -------------------------------------------------------------------------
+
+    test('an event can be removed by object, by JSON or by id', function (assert) {
+        this.controller.setCalendarApi(this.calendarApi);
+
+        assert.true(this.controller.removeEvent({ id: 'e_1' }), 'an object carrying an id');
+        assert.true(this.controller.removeEvent('{"id":"e_2"}'), 'a JSON string');
+        assert.true(this.controller.removeEvent('e_3'), 'or the id on its own');
+        assert.deepEqual(
+            this.calendarCalls.filter(([name]) => name === 'removeEventById').map(([, id]) => id),
+            ['e_1', 'e_2', 'e_3']
+        );
+
+        assert.false(this.controller.removeEvent(42), 'anything else is refused');
+        assert.false(this.controller.removeEvent({ id: 7 }), 'including an object whose id is not a string');
+    });
+
+    test('an event can be looked up by JSON, by id, or handed back as it came', function (assert) {
+        this.controller.setCalendarApi(this.calendarApi);
+        this.calendarEventsById = { e_1: { id: 'e_1', title: 'ORD_1' } };
+
+        assert.deepEqual(this.controller.getEvent('{"id":"e_1"}'), { id: 'e_1', title: 'ORD_1' }, 'from JSON');
+        assert.deepEqual(this.controller.getEvent('e_1'), { id: 'e_1', title: 'ORD_1' }, 'from an id');
+
+        const alreadyAnEvent = { id: 'e_9', title: 'ORD_9' };
+        assert.strictEqual(this.controller.getEvent(alreadyAnEvent), alreadyAnEvent, 'an event object is returned unchanged');
+    });
+
+    test('setting a property on an event updates it on the calendar', function (assert) {
+        this.controller.setCalendarApi(this.calendarApi);
+        this.calendarEventsById = { e_1: { id: 'e_1', title: 'ORD_1' } };
+
+        assert.true(this.controller.setEventProperty('e_1', 'title', 'ORD_1 (rescheduled)'));
+        assert.deepEqual(this.calendarCalls.at(-1), ['updateEvent', { id: 'e_1', title: 'ORD_1 (rescheduled)' }], 'the whole event goes back with the change applied');
+
+        assert.false(this.controller.setEventProperty('e_missing', 'title', 'nothing'), 'an event the calendar does not have cannot be changed');
+    });
+
+    test('a wall-clock time is read back as an instant in the company timezone', function (assert) {
+        // 22:30 on screen in Asia/Singapore (UTC+8) is 14:30 UTC.
+        const result = this.controller._reinterpretDateInTimezone(new Date(2026, 3, 6, 22, 30, 0), 'Asia/Singapore');
+        assert.strictEqual(result.toISOString(), '2026-04-06T14:30:00.000Z');
+
+        // A timezone Intl cannot resolve leaves the date as it was rather than throwing.
+        const original = new Date(2026, 3, 6, 22, 30, 0);
+        assert.strictEqual(this.controller._reinterpretDateInTimezone(original, 'Not/AZone'), original, 'an unusable timezone is survived');
     });
 });
