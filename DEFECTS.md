@@ -1210,6 +1210,31 @@ call, not taken here).
 **Fix:** done. The handler is stored on `onWindowResize`, `willDestroy` removes it and nulls `el`, and the guard also checks `parentElement` so a detached-but-not-yet-destroyed element is skipped rather than throwing. Kept out of the coverage commit as §8 requires.
 
 
+## 102. `addon/controllers/operations/scheduler/index.js` — driver capacity is hard-coded at 10
+
+**Status:** OPEN
+**Found:** a fixture that set `max_daily_orders: 2` on a driver produced a capacity of 10, not 2.
+**Evidence:** `calendarResources` computes `const maxCapacity = driver.max_daily_orders ?? 10;` (L122). Grepping `max_daily_orders` across `addon/` and `node_modules/@fleetbase/fleetops-data/addon/` returns **exactly that one line** — `DriverModel` has no such attribute, and nothing anywhere else reads or writes it. So `driver.max_daily_orders` is always `undefined` and the `?? 10` fallback is the only path taken.
+**Impact:** every driver's workload bar is measured against 10 orders a day regardless of what they can actually take. A driver who can do 4 shows as 50% full at 5 orders; one who can do 30 shows as over capacity at 11. The number is presented to dispatchers as if it means something.
+**Fix:** a product call on where capacity comes from — an attribute on the driver, a company-wide setting, or a per-vehicle figure — then add it to `DriverModel` and the API. The `?? 10` line is correct as written and needs no change once the attribute exists; that is why this is recorded rather than patched.
+
+## 103. `addon/controllers/operations/scheduler/index.js` — the priority filter can never match
+
+**Status:** OPEN
+**Found:** a test that set a `priority` filter emptied the sidebar no matter which value it used.
+**Evidence:** `unscheduledOrders` filters with `if (filter.type === 'priority') orders = orders.filter((o) => o.priority === filter.value);` (L106). `OrderModel` has **no `priority` attribute** — grepping `priority` in `node_modules/@fleetbase/fleetops-data/addon/models/order.js` returns one line, `@attr('number') orchestrator_priority`. Every order therefore reads `undefined` for `o.priority`, which can only equal a filter value that is itself `undefined`. The sibling arm one line up, `filter.type === 'type'`, reads `o.type`, which does exist and works.
+**Impact:** none today, because nothing populates `activeFilters` (see #104). If the filter UI is wired up as written, choosing any priority hides every order and the board looks empty.
+**Fix:** read `orchestrator_priority`, or add a real `priority` attribute — whichever the filter is meant to mean. One line either way, but which one depends on #104.
+
+## 104. `addon/controllers/operations/scheduler/index.js` — `activeFilters` is never populated
+
+**Status:** NEEDS DECISION
+**Found:** tracing #103, to see whether the broken priority arm could actually run.
+**Evidence:** `@tracked activeFilters = []` (L69) has exactly three references in the whole of `addon/`: the declaration, the `@computed(… 'activeFilters.[]')` key (L96), and the `forEach` that reads it (L105). **Nothing assigns to it** — no action, no template, no route. `addon/templates/operations/scheduler/index.hbs` never mentions it. So the array is always empty and the filter block never executes in the product; the sidebar's only working narrowing is the search box.
+**Impact:** none today — it is a filter feature with no UI attached, not a broken one. Dispatchers have search but no type or priority filters.
+**Fix:** **Ron's call.** Either wire it — filter chips in the sidebar header that push and pop `{ type, value }` entries, at which point #103 must be fixed too — or delete the block and the tracked property. I have done neither: deleting throws away a half-built feature, and wiring it is a feature. The unit test drives `activeFilters` directly, so the code is covered either way and the gate is not blocked meanwhile.
+
+
 ## 4. `tests/` — 223 blueprint scaffolds that were never green
 
 **Status:** OPEN (this is the bulk of Phase B)
