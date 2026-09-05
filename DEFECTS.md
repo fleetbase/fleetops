@@ -1244,6 +1244,15 @@ call, not taken here).
 **Fix:** done. The expression is hoisted into a local `const` so the pragma attaches (an `istanbul ignore` does not attach to a `??` inside an arrow's expression body), and the comment names the specific thing that makes it unreachable: the six types requested are the six types asked for. Behaviour is unchanged. If the formatter's options are ever narrowed without changing the callers, delete the pragma along with the change.
 
 
+## 106. `addon/components/map/leaflet-live-map.js` — the coordinate validators are never called
+
+**Status:** OPEN
+**Found:** a test asserting that an unusable latitude falls back to the documented default got the unusable value back instead.
+**Evidence:** `#getValidLatitude()` and `#getValidLongitude()` each appear **exactly once** in the file — their own declarations at L867 and L883 — and grepping both names across `addon/`, `app/` and `tests/` returns nothing else. They are `#private`, so nothing outside the class could reach them even in principle. Meanwhile the constructor initialises the tracked fields from the **raw** service values: `@tracked latitude = this.location.getLatitude();` and the same for longitude (L48-49). The decisive detail is one line above them: `@tracked zoom = this.getValidZoom();` (L47) — the sibling validator **is** wired, and `getValidZoom` is a plain method while these two were written as `#private`. The three were clearly meant to be used the same way.
+**Impact:** a latitude or longitude the location service cannot supply reaches the map unfiltered. `getValidZoom` guards against `NaN`, strings and out-of-range values; the coordinates get none of that, so a `NaN` or an out-of-range value is handed straight to Leaflet as the map's centre. Every code path that would have replaced it with the Singapore default (1.369, 103.8864) is dead.
+**Fix:** call them — `@tracked latitude = this.#getValidLatitude();` and the longitude equivalent, matching the zoom line above. That is two lines, but it is a **behaviour change** (a map that currently centres on a bad coordinate would start centring on the default), so it is recorded rather than made inside a coverage commit. The two methods carry an `istanbul ignore` naming this entry meanwhile; remove both pragmas along with the fix. The test `a location the service cannot give is passed through unchecked` pins the current behaviour and names this entry, so whoever fixes it will see the assertion that has to change.
+
+
 ## 4. `tests/` — 223 blueprint scaffolds that were never green
 
 **Status:** OPEN (this is the bulk of Phase B)

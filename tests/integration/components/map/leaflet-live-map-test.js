@@ -309,6 +309,15 @@ module('Integration | Component | map/leaflet-live-map', function (hooks) {
                 setMapInstance(map) {
                     test.mapManagerCalls.push(['setMapInstance', map]);
                 }
+                get isGoogleMaps() {
+                    return test.mapManagerIsGoogleMaps === true;
+                }
+                registerMarker(...args) {
+                    test.mapManagerCalls.push(['registerMarker', ...args]);
+                }
+                registerPolygon(...args) {
+                    test.mapManagerCalls.push(['registerPolygon', ...args]);
+                }
                 getOverlay(id) {
                     return test.overlays?.[id];
                 }
@@ -354,6 +363,18 @@ module('Integration | Component | map/leaflet-live-map', function (hooks) {
                 }
                 createServiceArea() {
                     test.geofenceCalls.push('createServiceArea');
+                }
+                blurServiceArea(serviceArea) {
+                    test.geofenceCalls.push(['blurServiceArea', serviceArea]);
+                }
+                createZone(serviceArea) {
+                    test.geofenceCalls.push(['createZone', serviceArea]);
+                }
+                editServiceArea(serviceArea) {
+                    test.geofenceCalls.push(['editServiceArea', serviceArea]);
+                }
+                editZone(zone) {
+                    test.geofenceCalls.push(['editZone', zone]);
                 }
                 focusServiceArea(serviceArea) {
                     test.geofenceCalls.push(['focusServiceArea', serviceArea]);
@@ -1218,5 +1239,165 @@ module('Integration | Component | map/leaflet-live-map', function (hooks) {
         assert.dom('[data-test-leaflet-map]').doesNotExist('the Leaflet branch waits for its plugins');
         assert.dom('[data-test-google-live-map]').doesNotExist('and the Google branch is not used either');
         assert.dom('.live-map-component').exists('the map area is still rendered, showing its spinner');
+    });
+
+    // -------------------------------------------------------------------------
+    // Registering layers, and the coordinates the map opens on
+    // -------------------------------------------------------------------------
+
+    test('a resource layer is registered as a marker, a boundary as a polygon', async function (assert) {
+        await renderLeafletMap(this);
+        const component = this.universe.get('component:fleet-ops:live-map');
+
+        // `#setResourceLayer` types the layer with `getModelName(model)`, so these have to be
+        // real records rather than plain objects.
+        const store = this.owner.lookup('service:store');
+        const driver = store.push(store.normalize('driver', { uuid: 'd_1', public_id: 'driver_d1' }));
+        component.onDriverAdded(driver, { target: EmberObject.create({}) });
+        const marker = this.mapManagerCalls.find(([name]) => name === 'registerMarker');
+        assert.ok(marker, 'a driver is registered as a marker');
+        assert.deepEqual(marker[3], { type: 'driver', hidden: false }, 'visible, and typed by what it is');
+
+        const serviceArea = store.push(store.normalize('service-area', { uuid: 'sa_1', public_id: 'sa_1' }));
+        component.onServiceAreaLayerAdded(serviceArea, { target: EmberObject.create({}) });
+        const polygon = this.mapManagerCalls.find(([name]) => name === 'registerPolygon');
+        assert.ok(polygon, 'a service area is registered as a polygon');
+        assert.true(polygon[3].hidden, 'and starts hidden');
+
+        assert.deepEqual(
+            this.registeredLayers.map((entry) => entry.type),
+            ['drivers', 'service-areas'],
+            'the visibility manager is told in plural, which is how its layer groups are named'
+        );
+    });
+
+    test('a location the service cannot give is passed through unchecked', async function (assert) {
+        // DEFECTS #106: `#getValidLatitude` / `#getValidLongitude` exist and would replace an
+        // unusable coordinate with the Singapore default, but nothing calls them — the constructor
+        // reads the service raw. The sibling `getValidZoom()` one line above *is* wired, which is
+        // what makes this an oversight rather than a choice.
+        this.coordinates = { latitude: NaN, longitude: 999 };
+        await render(hbs`<Map::LeafletLiveMap />`);
+
+        assert.true(Number.isNaN(this.testBed.args.latitude), 'a latitude that is not a number reaches the map as-is');
+        assert.strictEqual(this.testBed.args.longitude, 999, 'and so does one well off the end of the earth');
+
+        this.coordinates = { latitude: -33.87, longitude: 151.21 };
+        await render(hbs`<Map::LeafletLiveMap />`);
+        assert.deepEqual([this.testBed.args.latitude, this.testBed.args.longitude], [-33.87, 151.21], 'a usable location is used');
+    });
+
+    test('the map re-centres itself when the user moves', async function (assert) {
+        const map = await renderLeafletMap(this);
+        const views = [];
+        map.setView = (centre, zoom) => views.push([centre, zoom]);
+
+        this.universe.trigger('user.located', { latitude: 51.5, longitude: -0.12 });
+        await settled();
+
+        assert.deepEqual(views, [[[51.5, -0.12], 14]], 'the map is moved to the new position at the current zoom');
+    });
+
+    // -------------------------------------------------------------------------
+    // The rest of the boundary menus
+    // -------------------------------------------------------------------------
+
+    test('a service area menu can blur it, add a zone to it, and edit its boundaries', async function (assert) {
+        const { serviceArea } = givenServiceArea(this);
+        await renderLeafletMap(this);
+        const component = this.universe.get('component:fleet-ops:live-map');
+        component.onServiceAreaLayerAdded(serviceArea, { target: serviceArea.leafletLayer });
+
+        const [, , , items] = this.contextMenus.find(([action, key]) => action === 'create' && key === 'service-area:sa_1');
+        const run = (fragment) => items.find((item) => item.text?.includes(fragment)).callback();
+
+        run('Hide Service Area');
+        assert.deepEqual(this.geofenceCalls.at(-1), ['blurServiceArea', serviceArea]);
+
+        run('Create Zone Within');
+        assert.deepEqual(this.geofenceCalls.at(-1), ['createZone', serviceArea]);
+
+        run('Edit Boundaries');
+        assert.deepEqual(this.geofenceCalls.at(-1), ['editServiceArea', serviceArea], 'editing boundaries is a Leaflet-only drawing operation');
+    });
+
+    test('on Google Maps the boundary-editing entry is left out', async function (assert) {
+        const { serviceArea } = givenServiceArea(this);
+        this.mapManagerIsGoogleMaps = true;
+        await renderLeafletMap(this);
+        const component = this.universe.get('component:fleet-ops:live-map');
+        component.onServiceAreaLayerAdded(serviceArea, { target: serviceArea.leafletLayer });
+
+        const [, , , items] = this.contextMenus.find(([action, key]) => action === 'create' && key === 'service-area:sa_1');
+        assert.notOk(
+            items.some((item) => item.text?.includes('Edit Boundaries')),
+            'Google Maps has no equivalent drawing tool, so the entry is not offered'
+        );
+        assert.ok(
+            items.some((item) => item.text?.includes('Hide Service Area')),
+            'the entries that do work are still there'
+        );
+    });
+
+    test('a zone menu offers boundary editing on Leaflet and not on Google', async function (assert) {
+        const { zone } = givenServiceArea(this);
+        await renderLeafletMap(this);
+        const component = this.universe.get('component:fleet-ops:live-map');
+        component.onZoneLayerAdd(zone, { target: zone.leafletLayer });
+
+        const [, , , items] = this.contextMenus.find(([action, key]) => action === 'create' && key === 'zone:z_1');
+        const boundaries = items.find((item) => item.text?.includes('Edit Boundaries'));
+        assert.ok(boundaries, 'a zone can have its shape edited');
+        boundaries.callback();
+        assert.deepEqual(this.geofenceCalls.at(-1), ['editZone', zone]);
+    });
+
+    test('a zone held in a plain array is removed as cleanly as one in an Ember array', async function (assert) {
+        await renderLeafletMap(this);
+        const component = this.universe.get('component:fleet-ops:live-map');
+
+        // A service area whose `zones` is a plain array has no `removeObject`, so the component
+        // has to write the filtered list back with `set` instead.
+        const zone = EmberObject.create({ id: 'z_plain', public_id: 'z_plain', leafletLayer: EmberObject.create({}) });
+        const serviceArea = EmberObject.create({ id: 'sa_plain', public_id: 'sa_plain', zones: [zone] });
+        this.owner.lookup('service:service-area-actions').serviceAreas = [serviceArea];
+
+        component.onZoneLayerAdd(zone, { target: zone.leafletLayer });
+        const zoneMenu = this.contextMenus.find(([action, key]) => action === 'create' && key === 'zone:z_plain');
+        zoneMenu[3].find((item) => item.text?.includes('Delete')).callback();
+
+        assert.deepEqual(Array.from(serviceArea.zones), [], 'the zone is taken out of its service area');
+        assert.deepEqual(
+            this.owner.lookup('service:service-area-actions').serviceAreas.map((sa) => sa.id),
+            ['sa_plain'],
+            'and the service area itself is untouched'
+        );
+    });
+
+    // -------------------------------------------------------------------------
+    // loadResource as an extension point
+    // -------------------------------------------------------------------------
+
+    test('a caller loading a resource can be told when it lands', async function (assert) {
+        this.getResponses = { 'fleet-ops/live/drivers': [{ id: 'd_1' }] };
+        await renderLeafletMap(this);
+        const component = this.universe.get('component:fleet-ops:live-map');
+
+        // The component publishes itself on the universe, so this is the shape an extension uses.
+        const loaded = [];
+        await component.loadResource.perform('drivers', { onLoaded: (data) => loaded.push(data) });
+
+        assert.deepEqual(loaded, [[{ id: 'd_1' }]], 'the caller is handed what came back');
+    });
+
+    test('a caller is told when a resource will not load', async function (assert) {
+        await renderLeafletMap(this);
+        const component = this.universe.get('component:fleet-ops:live-map');
+        this.owner.lookup('service:fetch').get = () => Promise.reject(new Error('server said no'));
+
+        const failures = [];
+        await component.loadResource.perform('drivers', { onFailure: (error) => failures.push(error.message) });
+
+        assert.deepEqual(failures, ['server said no'], 'the caller is told why');
     });
 });
