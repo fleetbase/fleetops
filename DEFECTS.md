@@ -1235,6 +1235,15 @@ call, not taken here).
 **Fix:** **Ron's call.** Either wire it — filter chips in the sidebar header that push and pop `{ type, value }` entries, at which point #103 must be fixed too — or delete the block and the tracked property. I have done neither: deleting throws away a half-built feature, and wiring it is a feature. The unit test drives `activeFilters` directly, so the code is covered either way and the gate is not blocked meanwhile.
 
 
+## 105. `addon/controllers/operations/scheduler/index.js` — an Intl part fallback that cannot run
+
+**Status:** FIXED (pragma'd with a traced reason, iteration 76)
+**Found:** the last uncovered branch in the file after everything else reached 100%.
+**Evidence:** inside `_reinterpretDateInTimezone`, `const get = (type) => parseInt(parts.find((p) => p.type === type)?.value ?? '0', 10)`. `parts` comes from an `Intl.DateTimeFormat` built three lines above with a **literal** options object requesting `year`, `month`, `day`, `hour`, `minute` and `second`; `get()` is called with exactly those six types and no others, all within the same function. ECMA-402 requires `formatToParts` to emit a part for every requested component, so `find` always hits and the `?? '0'` arm cannot be reached. Anything exotic enough to break that would throw, and the whole body is already inside a `try` whose `catch` hands the date back — that path *is* covered, by a test passing an unresolvable timezone.
+**Impact:** none — a defensive default that never applies.
+**Fix:** done. The expression is hoisted into a local `const` so the pragma attaches (an `istanbul ignore` does not attach to a `??` inside an arrow's expression body), and the comment names the specific thing that makes it unreachable: the six types requested are the six types asked for. Behaviour is unchanged. If the formatter's options are ever narrowed without changing the callers, delete the pragma along with the change.
+
+
 ## 4. `tests/` — 223 blueprint scaffolds that were never green
 
 **Status:** OPEN (this is the bulk of Phase B)

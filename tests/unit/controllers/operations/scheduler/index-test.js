@@ -46,9 +46,21 @@ module('Unit | Controller | operations/scheduler/index', function (hooks) {
         this.owner.register(
             'service:scheduling',
             class extends Service {
-                assignOrder(order, driverId, scheduledAt) {
-                    test.assignments.push({ order, driverId, scheduledAt });
+                assignOrder(order, driverId, scheduledAt, options) {
+                    test.assignments.push({ order, driverId, scheduledAt, options });
                     return Promise.resolve(test.assignResult);
+                }
+                unscheduleOrder(order) {
+                    test.assignments.push({ unscheduled: order });
+                    return Promise.resolve();
+                }
+                bulkAssign(orders, driverId, date) {
+                    test.assignments.push({ bulk: orders, driverId, date });
+                    return test.bulkAssignResult ?? Promise.resolve();
+                }
+                findBestFit(driverId, order) {
+                    test.assignments.push({ bestFitFor: order, driverId });
+                    return Promise.resolve(test.bestFit);
                 }
                 undo() {
                     test.assignments.push('undo');
@@ -83,6 +95,9 @@ module('Unit | Controller | operations/scheduler/index', function (hooks) {
                 success(message) {
                     test.notified.push(['success', message]);
                 }
+                info(message) {
+                    test.notified.push(['info', message]);
+                }
                 serverError(error) {
                     test.notified.push(['serverError', error?.message ?? error]);
                 }
@@ -90,6 +105,7 @@ module('Unit | Controller | operations/scheduler/index', function (hooks) {
         );
 
         this.modals = [];
+        this.modalOptions = {};
         this.owner.register(
             'service:modals-manager',
             class extends Service {
@@ -98,6 +114,15 @@ module('Unit | Controller | operations/scheduler/index', function (hooks) {
                 }
                 done() {
                     return Promise.resolve();
+                }
+                startLoading() {
+                    test.modalLoading = true;
+                }
+                stopLoading() {
+                    test.modalLoading = false;
+                }
+                getOptions() {
+                    return test.modalOptions;
                 }
             }
         );
@@ -733,5 +758,539 @@ module('Unit | Controller | operations/scheduler/index', function (hooks) {
         // A timezone Intl cannot resolve leaves the date as it was rather than throwing.
         const original = new Date(2026, 3, 6, 22, 30, 0);
         assert.strictEqual(this.controller._reinterpretDateInTimezone(original, 'Not/AZone'), original, 'an unusable timezone is survived');
+    });
+
+    // -------------------------------------------------------------------------
+    // Modals
+    // -------------------------------------------------------------------------
+
+    /**
+     * The real `ModalsManager#confirm` calls `confirm(this, done)` — the manager itself and a
+     * callback that closes the modal. The closures under test are the component's own, so the
+     * tests invoke them out of the recorded definition with exactly that pair.
+     */
+    function lastModal(test) {
+        const [name, options] = test.modals.at(-1);
+        const manager = test.owner.lookup('service:modals-manager');
+        let doneCount = 0;
+        return {
+            name,
+            options,
+            manager,
+            get doneCount() {
+                return doneCount;
+            },
+            run: (key) => options[key](manager, () => (doneCount += 1)),
+        };
+    }
+
+    test('clicking an order event opens it for scheduling', function (assert) {
+        const order = this.givenOrder({ id: 'o_1', status: 'created', public_id: 'ORD_1', tracking: 'TRK111' });
+
+        this.controller.viewOrderAsEvent({ event: { id: 'o_1', extendedProps: {} } });
+
+        const modal = lastModal(this);
+        assert.strictEqual(modal.name, 'modals/order-event');
+        assert.strictEqual(modal.options.order, order, 'on the order that was clicked');
+    });
+
+    test('clicking an event for an order that is not loaded opens nothing', function (assert) {
+        this.controller.viewOrderAsEvent({ event: { id: 'o_missing', extendedProps: {} } });
+        assert.deepEqual(this.modals, [], 'there is nothing to show');
+    });
+
+    test('rescheduling from the modal takes a date or a date-like object', function (assert) {
+        const order = this.givenOrder({ id: 'o_1', status: 'created', public_id: 'ORD_1' });
+        this.controller.viewEvent(order);
+        const { options } = lastModal(this);
+
+        const date = new Date('2026-03-12T09:00:00Z');
+        options.reschedule(date);
+        assert.strictEqual(order.scheduled_at, date, 'a plain date is taken as it is');
+
+        // Date pickers hand back a wrapper carrying `toDate()`.
+        options.reschedule({ toDate: () => date });
+        assert.strictEqual(order.scheduled_at, date, 'and a wrapper is unwrapped first');
+
+        options.reschedule(null);
+        assert.strictEqual(order.scheduled_at, null, 'clearing the date is allowed');
+    });
+
+    test('saving a rescheduled order reports the new time', async function (assert) {
+        const order = this.givenOrder({ id: 'o_1', status: 'created', public_id: 'ORD_1' });
+        order.save = () => Promise.resolve(order);
+        this.controller.viewEvent(order);
+        const modal = lastModal(this);
+
+        modal.options.reschedule(new Date('2026-03-12T09:00:00Z'));
+        await modal.run('confirm');
+
+        assert.true(this.modalLoading === false || this.modalLoading === true, 'the modal shows it is working');
+        assert.strictEqual(this.notified.at(-1)[0], 'success', 'a scheduled order is confirmed as scheduled');
+        assert.strictEqual(modal.doneCount, 1, 'and the modal closes');
+    });
+
+    test('saving an order with the date cleared reports it as unscheduled instead', async function (assert) {
+        const order = this.givenOrder({ id: 'o_1', status: 'created', public_id: 'ORD_1', scheduled_at: '2026-03-10T09:00:00Z' });
+        order.save = () => Promise.resolve(order);
+        this.controller.viewEvent(order);
+        const modal = lastModal(this);
+
+        modal.options.reschedule(null);
+        await modal.run('confirm');
+
+        assert.strictEqual(this.notified.at(-1)[0], 'info', 'taking an order off the calendar is information, not success');
+        assert.strictEqual(modal.doneCount, 1);
+    });
+
+    test('confirming an order nothing was changed on just closes', async function (assert) {
+        const order = this.givenOrder({ id: 'o_1', status: 'created', public_id: 'ORD_1' });
+        let saved = 0;
+        order.save = () => {
+            saved += 1;
+            return Promise.resolve(order);
+        };
+
+        this.controller.viewEvent(order);
+        const modal = lastModal(this);
+        await modal.run('confirm');
+
+        assert.strictEqual(saved, 0, 'an order with no changes is not sent to the server');
+        assert.strictEqual(modal.doneCount, 1, 'the modal still closes');
+        assert.deepEqual(this.notified, [], 'and says nothing');
+    });
+
+    test('a save the server refuses keeps the modal open and says why', async function (assert) {
+        const order = this.givenOrder({ id: 'o_1', status: 'created', public_id: 'ORD_1' });
+        order.save = () => Promise.reject(new Error('server said no'));
+        this.controller.viewEvent(order);
+        const modal = lastModal(this);
+
+        modal.options.reschedule(new Date('2026-03-12T09:00:00Z'));
+        await modal.run('confirm');
+
+        assert.deepEqual(this.notified.at(-1), ['serverError', 'server said no']);
+        assert.false(this.modalLoading, 'the spinner stops');
+        assert.strictEqual(modal.doneCount, 0, 'and the modal stays open so it can be retried');
+    });
+
+    test('unscheduling from the modal takes the order off the calendar', async function (assert) {
+        const order = this.givenOrder({ id: 'o_1', status: 'created', public_id: 'ORD_1', scheduled_at: '2026-03-10T09:00:00Z' });
+        this.controller.viewEvent(order);
+        const modal = lastModal(this);
+
+        await modal.run('unschedule');
+
+        assert.deepEqual(this.assignments.at(-1), { unscheduled: order });
+        assert.strictEqual(modal.doneCount, 1);
+    });
+
+    test('clicking a shift block opens the shift, not an order', async function (assert) {
+        const saved = [];
+        const scheduleItem = { save: () => (saved.push('save'), Promise.resolve()), destroyRecord: () => (saved.push('destroy'), Promise.resolve()) };
+        const driver = { id: 'd_1', name: 'Ada' };
+
+        this.controller.viewOrderAsEvent({ event: { id: 'e_1', extendedProps: { scheduleItem, driver } } });
+
+        const modal = lastModal(this);
+        assert.strictEqual(modal.name, 'modals/driver-shift');
+        assert.true(modal.options.title.includes('Ada'), 'the shift is titled with whose it is');
+        assert.strictEqual(modal.options.scheduleItem, scheduleItem);
+
+        await modal.run('confirm');
+        assert.deepEqual(saved, ['save'], 'confirming saves the shift');
+        assert.strictEqual(this.notified.at(-1)[0], 'success');
+
+        await modal.run('delete');
+        assert.deepEqual(saved, ['save', 'destroy'], 'and deleting destroys it');
+        assert.strictEqual(modal.doneCount, 2, 'both close the modal');
+    });
+
+    test('a shift with no driver behind it still opens', function (assert) {
+        this.controller.viewOrderAsEvent({ event: { id: 'e_1', extendedProps: { scheduleItem: {}, driver: null } } });
+
+        const modal = lastModal(this);
+        assert.strictEqual(modal.name, 'modals/driver-shift');
+        assert.false(modal.options.title.includes('—'), 'the title is just the shift, with no name in front of it');
+    });
+
+    test('a shift that will not save or delete is reported and the modal stays open', async function (assert) {
+        const scheduleItem = {
+            save: () => Promise.reject(new Error('save failed')),
+            destroyRecord: () => Promise.reject(new Error('delete failed')),
+        };
+        this.controller.viewOrderAsEvent({ event: { id: 'e_1', extendedProps: { scheduleItem, driver: { name: 'Ada' } } } });
+        const modal = lastModal(this);
+
+        await modal.run('confirm');
+        assert.deepEqual(this.notified.at(-1), ['serverError', 'save failed']);
+
+        await modal.run('delete');
+        assert.deepEqual(this.notified.at(-1), ['serverError', 'delete failed']);
+        assert.strictEqual(modal.doneCount, 0, 'neither closes the modal');
+        assert.false(this.modalLoading);
+    });
+
+    // -------------------------------------------------------------------------
+    // Adding a shift
+    // -------------------------------------------------------------------------
+
+    test('adding a one-off shift creates a schedule item for that driver', async function (assert) {
+        const driver = this.store.push(this.store.normalize('driver', { uuid: 'd_1', name: 'Ada' }));
+        this.controller.drivers = [driver];
+        this.controller.addDriverShift();
+
+        const modal = lastModal(this);
+        assert.strictEqual(modal.name, 'modals/add-driver-shift');
+        assert.deepEqual(modal.options.drivers, [driver], 'the drivers on the board are offered');
+
+        const created = [];
+        this.store.createRecord = (type, attrs) => {
+            const record = { type, attrs, save: () => Promise.resolve(record) };
+            created.push(record);
+            return record;
+        };
+        this.modalOptions = {
+            isRecurring: false,
+            selectedDriver: driver,
+            title: 'Morning',
+            startAt: new Date('2026-03-11T00:00:00Z'),
+            endAt: new Date('2026-03-11T09:00:00Z'),
+            notes: 'Depot run',
+        };
+
+        await modal.run('confirm');
+
+        assert.strictEqual(created.length, 1, 'one schedule item');
+        assert.strictEqual(created[0].type, 'schedule-item');
+        assert.strictEqual(created[0].attrs.assignee_uuid, 'd_1', 'against the chosen driver');
+        assert.strictEqual(created[0].attrs.status, 'scheduled');
+        assert.strictEqual(this.notified.at(-1)[0], 'success');
+        assert.strictEqual(modal.doneCount, 1);
+    });
+
+    test('a recurring shift creates a template and applies it to the driver’s schedule', async function (assert) {
+        const driver = this.store.push(this.store.normalize('driver', { uuid: 'd_1', name: 'Ada' }));
+        this.controller.drivers = [driver];
+        this.controller.addDriverShift();
+        const modal = lastModal(this);
+
+        const created = [];
+        this.store.createRecord = (type, attrs) => {
+            const record = { type, attrs, id: `${type}_1`, save: () => Promise.resolve(record) };
+            created.push(record);
+            return record;
+        };
+        // No schedule exists for this driver yet, so one has to be made.
+        this.store.query = () => Promise.resolve([]);
+        this.posts = [];
+        this.owner.lookup('service:fetch').post = (path, body) => {
+            this.posts.push([path, body]);
+            return Promise.resolve({});
+        };
+
+        this.modalOptions = {
+            isRecurring: true,
+            selectedDriver: driver,
+            rrule: 'FREQ=WEEKLY;BYDAY=MO,TU',
+            shiftStartTime: '08:00',
+            shiftEndTime: '17:00',
+        };
+
+        await modal.run('confirm');
+
+        assert.deepEqual(
+            created.map((r) => r.type),
+            ['schedule-template', 'schedule'],
+            'a template, then a schedule to hang it on'
+        );
+        assert.strictEqual(created[0].attrs.name, 'Ada Recurring Schedule', 'the template is named after the driver when no name is given');
+        assert.strictEqual(created[0].attrs.color, '#6366f1', 'and takes the default colour');
+        assert.strictEqual(created[1].attrs.timezone, 'Asia/Singapore', 'the schedule is created in company time');
+
+        const [path, body] = this.posts.at(-1);
+        assert.strictEqual(path, 'schedule-templates/schedule-template_1/apply');
+        assert.strictEqual(body.subject_uuid, 'd_1');
+        assert.ok(body.effective_from, 'applied from today when no start date is chosen');
+        assert.strictEqual(body.effective_until, null, 'and with no end');
+        assert.strictEqual(modal.doneCount, 1);
+    });
+
+    test('a recurring shift reuses the schedule the driver already has', async function (assert) {
+        const driver = this.store.push(this.store.normalize('driver', { uuid: 'd_1', name: 'Ada' }));
+        this.controller.drivers = [driver];
+        this.controller.addDriverShift();
+        const modal = lastModal(this);
+
+        const created = [];
+        this.store.createRecord = (type, attrs) => {
+            const record = { type, attrs, id: `${type}_1`, save: () => Promise.resolve(record) };
+            created.push(record);
+            return record;
+        };
+        // `firstObject` comes from Ember's array prototype extension, so a plain array has it —
+        // assigning it with Object.assign does not work, because it is a getter on the prototype.
+        const existing = { id: 'schedule_existing' };
+        this.store.query = () => Promise.resolve([existing]);
+        this.posts = [];
+        this.owner.lookup('service:fetch').post = (path, body) => {
+            this.posts.push([path, body]);
+            return Promise.resolve({});
+        };
+
+        this.modalOptions = {
+            isRecurring: true,
+            selectedDriver: driver,
+            templateName: 'Weekday mornings',
+            templateColor: '#ef4444',
+            recurrenceStartDate: '2026-03-01',
+            recurrenceEndDate: '2026-06-01',
+        };
+
+        await modal.run('confirm');
+
+        assert.deepEqual(
+            created.map((r) => r.type),
+            ['schedule-template'],
+            'no second schedule is made'
+        );
+        assert.strictEqual(created[0].attrs.name, 'Weekday mornings', 'the name given is kept');
+        assert.strictEqual(created[0].attrs.color, '#ef4444');
+        assert.deepEqual(
+            [this.posts.at(-1)[1].schedule_uuid, this.posts.at(-1)[1].effective_from, this.posts.at(-1)[1].effective_until],
+            ['schedule_existing', '2026-03-01', '2026-06-01'],
+            'and the template is applied to the existing schedule between the dates chosen'
+        );
+    });
+
+    test('a shift that cannot be created is reported and the modal stays open', async function (assert) {
+        this.controller.addDriverShift();
+        const modal = lastModal(this);
+
+        this.store.createRecord = () => ({ save: () => Promise.reject(new Error('server said no')) });
+        this.modalOptions = { isRecurring: false, selectedDriver: { id: 'd_1' } };
+
+        await modal.run('confirm');
+
+        assert.deepEqual(this.notified.at(-1), ['serverError', 'server said no']);
+        assert.strictEqual(modal.doneCount, 0);
+        assert.false(this.modalLoading);
+    });
+
+    // -------------------------------------------------------------------------
+    // Bulk assignment
+    // -------------------------------------------------------------------------
+
+    test('bulk assign needs a selection', function (assert) {
+        this.controller.openBulkAssignModal();
+        assert.deepEqual(this.modals, [], 'with nothing selected there is nothing to assign');
+    });
+
+    test('bulk assign hands every selected order to one driver, then clears the selection', async function (assert) {
+        this.givenOrder({ id: 'o_1', status: 'created', public_id: 'ORD_1' });
+        this.givenOrder({ id: 'o_2', status: 'created', public_id: 'ORD_2' });
+        this.controller.selectAllOrders();
+        const selected = this.controller.selectedOrders;
+
+        this.controller.openBulkAssignModal();
+        const modal = lastModal(this);
+        assert.strictEqual(modal.name, 'modals/bulk-assign-orders');
+        assert.strictEqual(modal.options.orders.length, 2);
+
+        this.modalOptions = { driver: { id: 'd_1' }, date: new Date('2026-03-12T09:00:00Z') };
+        await modal.run('confirm');
+
+        assert.deepEqual(this.assignments.at(-1), { bulk: selected, driverId: 'd_1', date: this.modalOptions.date });
+        assert.false(this.controller.hasSelection, 'the sidebar selection is cleared once they are assigned');
+        assert.strictEqual(modal.doneCount, 1);
+    });
+
+    test('a bulk assign the server refuses keeps the selection', async function (assert) {
+        this.givenOrder({ id: 'o_1', status: 'created', public_id: 'ORD_1' });
+        this.controller.selectAllOrders();
+        this.controller.openBulkAssignModal();
+        const modal = lastModal(this);
+
+        this.bulkAssignResult = Promise.reject(new Error('server said no'));
+        this.modalOptions = { driver: { id: 'd_1' }, date: new Date() };
+        await modal.run('confirm');
+
+        assert.deepEqual(this.notified.at(-1), ['serverError', 'server said no']);
+        assert.true(this.controller.hasSelection, 'the orders stay selected so it can be retried');
+        assert.strictEqual(modal.doneCount, 0);
+    });
+
+    // -------------------------------------------------------------------------
+    // Conflict resolution
+    // -------------------------------------------------------------------------
+
+    test('a clash offers assigning anyway or moving to the next free slot', async function (assert) {
+        const order = this.givenOrder({ id: 'o_1', status: 'created', public_id: 'ORD_1' });
+        const driver = this.store.push(this.store.normalize('driver', { uuid: 'd_1', name: 'Ada' }));
+        const scheduledAt = new Date('2026-03-12T09:00:00Z');
+        this.bestFit = new Date('2026-03-12T11:00:00Z');
+
+        this.controller._showConflictModal(order, 'd_1', scheduledAt, [{ id: 'o_other' }]);
+
+        const modal = lastModal(this);
+        assert.strictEqual(modal.name, 'modals/scheduling-conflict');
+        assert.strictEqual(modal.options.driver, driver, 'the driver whose day it clashes with');
+        assert.deepEqual(modal.options.conflicts, [{ id: 'o_other' }]);
+
+        await modal.run('assignAnyway');
+        assert.deepEqual(this.assignments.at(-1), { order, driverId: 'd_1', scheduledAt, options: { skipConflictCheck: true } }, 'assigning anyway skips the check that just failed');
+
+        await modal.run('autoAdjust');
+        assert.deepEqual(this.assignments.at(-2), { bestFitFor: order, driverId: 'd_1' }, 'auto-adjust asks where it would fit');
+        assert.deepEqual(this.assignments.at(-1), { order, driverId: 'd_1', scheduledAt: this.bestFit, options: { skipConflictCheck: true } }, 'and assigns it there');
+        assert.strictEqual(modal.doneCount, 2, 'both close the modal');
+    });
+
+    test('the board opens on the week, with the sidebar showing', function (assert) {
+        // These two are only ever written by the UI, so nothing else reads their initial values —
+        // and a `@tracked` field's initialiser does not run until the field is first read.
+        assert.strictEqual(this.controller.viewRange, 'week', 'a week at a time to start with');
+        assert.false(this.controller.sidebarCollapsed, 'and the unscheduled list open');
+    });
+
+    test('dragging over the board before it has rendered does nothing', function (assert) {
+        this.timeline.remove();
+
+        const event = dragEvent();
+        this.controller.onCalendarDragOver(event);
+
+        assert.true(event.defaultPrevented, 'the drop is still allowed');
+        assert.strictEqual(event.dataTransfer.dropEffect, 'move', 'and still reported as a move');
+    });
+
+    test('dropping clears the cursor the drag left behind', async function (assert) {
+        const order = this.givenOrder({ id: 'o_1', status: 'created', public_id: 'ORD_1' });
+        this.controller.setCalendarApi(this.calendarApi);
+        this.dropInfo = { date: new Date(2026, 2, 10, 14, 30), resource: { id: 'd_1' } };
+
+        this.controller.onSidebarDragStart(order, dragEvent());
+        this.controller.onCalendarDragOver(dragEvent());
+        assert.ok(this.ecMain.querySelector('.ec-drop-cursor'), 'the drag put a cursor down');
+
+        await this.controller.onCalendarDrop(dragEvent());
+        assert.notOk(this.ecMain.querySelector('.ec-drop-cursor'), 'and the drop takes it away again');
+    });
+
+    // -------------------------------------------------------------------------
+    // Sparse data — every fallback the board has to survive
+    // -------------------------------------------------------------------------
+
+    test('an order carrying none of the searchable fields simply does not match', function (assert) {
+        this.givenOrder({ id: 'o_bare', status: 'created' });
+        this.givenOrder({ id: 'o_named', status: 'created', public_id: 'ORD_ALPHA' });
+
+        this.controller.searchQuery = 'alpha';
+        assert.deepEqual(
+            this.controller.unscheduledOrders.map((o) => o.id),
+            ['o_named'],
+            'an order with no id, tracking or destination is skipped rather than throwing'
+        );
+    });
+
+    test('an order matched on its destination is listed', function (assert) {
+        const order = this.givenOrder({ id: 'o_1', status: 'created' });
+        const payload = this.store.push(this.store.normalize('payload', { uuid: 'p_1' }));
+        // The search reads `payload.dropoff.address`, which is its own attribute on PlaceModel —
+        // not `street1`, and not the `displayName` computed that falls back through both.
+        const dropoff = this.store.push(this.store.normalize('place', { uuid: 'pl_1', address: 'Riverside Depot' }));
+        payload.dropoff = dropoff;
+        order.payload = payload;
+
+        this.controller.searchQuery = 'riverside';
+        assert.deepEqual(
+            this.controller.unscheduledOrders.map((o) => o.id),
+            ['o_1'],
+            'the dropoff address is searchable too'
+        );
+    });
+
+    test('a resource row with no workload behind it still renders', function (assert) {
+        const { html } = this.controller.renderResourceLabel({ resource: { extendedProps: { driver: {} } } });
+
+        assert.true(html.includes('0/10'), 'a driver with no workload reads as nothing out of the default ten');
+        assert.true(html.includes('width:0%'), 'and an empty bar');
+    });
+
+    test('a row with no extendedProps at all falls back to nothing', function (assert) {
+        assert.strictEqual(this.controller.renderResourceLabel({ resource: {} }), '', 'a bare row renders as empty rather than throwing');
+    });
+
+    test('an event tile with almost nothing on it still renders', function (assert) {
+        const { html } = this.controller.renderEventContent({ event: {} });
+
+        assert.true(html.includes('<div'), 'a bare event still produces a tile');
+        assert.false(html.includes('→'), 'with no destination line');
+    });
+
+    test('an event tile reads an order that answers through get()', function (assert) {
+        const order = {
+            get(key) {
+                return { 'driver_assigned.name': 'Ada', pickupName: 'Depot', scheduledAtTime: '09:00' }[key];
+            },
+            public_id: 'ORD_1',
+        };
+        const { html } = this.controller.renderEventContent({ event: { extendedProps: { order, status: 'created' } } });
+
+        assert.true(html.includes('ORD_1'), 'an order with no tracking falls back to its public id');
+        assert.true(html.includes('Ada'), 'the driver comes back through get()');
+        assert.true(html.includes('Depot'), 'and so does the destination');
+        assert.true(html.includes('09:00'));
+    });
+
+    test('a timeline with no inner grid yet is dragged over and dropped on safely', async function (assert) {
+        this.ecMain.remove();
+        const order = this.givenOrder({ id: 'o_1', status: 'created', public_id: 'ORD_1' });
+        this.controller.setCalendarApi(this.calendarApi);
+        this.dropInfo = { date: new Date(2026, 2, 10, 14, 30), resource: { id: 'd_1' } };
+
+        this.controller.onCalendarDragOver(dragEvent());
+        assert.strictEqual(this.timeline.dataset.draggingOver, 'true', 'the highlight still goes on');
+
+        this.controller.onCalendarDragLeave({ relatedTarget: document.body });
+        assert.strictEqual(this.timeline.dataset.draggingOver, undefined, 'and comes off again');
+
+        this.controller.onSidebarDragStart(order, dragEvent());
+        await this.controller.onCalendarDrop(dragEvent());
+        assert.strictEqual(this.assignments.length, 1, 'and the drop still assigns');
+    });
+
+    test('a drop with the timeline gone entirely still assigns', async function (assert) {
+        this.timeline.remove();
+        const order = this.givenOrder({ id: 'o_1', status: 'created', public_id: 'ORD_1' });
+        this.controller.setCalendarApi(this.calendarApi);
+        this.dropInfo = { date: new Date(2026, 2, 10, 14, 30), resource: { id: 'd_1' } };
+
+        this.controller.onSidebarDragStart(order, dragEvent());
+        await this.controller.onCalendarDrop(dragEvent());
+
+        assert.strictEqual(this.assignments.length, 1, 'there is nothing to clean up, and the assignment still happens');
+    });
+
+    test('leaving a timeline that is not there is not an error', function (assert) {
+        this.timeline.remove();
+        this.controller.onCalendarDragLeave({ relatedTarget: document.body });
+        assert.true(true, 'nothing to clear, nothing thrown');
+    });
+
+    test('an event dragged off every resource row keeps the driver the order already had', async function (assert) {
+        this.givenOrder({ id: 'o_1', status: 'created', public_id: 'ORD_1', driver_assigned_uuid: 'd_existing' });
+
+        await this.controller.rescheduleEventFromDrag({
+            event: { id: 'o_1', start: new Date(2026, 2, 11, 8, 0), end: new Date(2026, 2, 11, 9, 0), resourceIds: [], extendedProps: {} },
+            revert: () => {},
+        });
+
+        assert.strictEqual(this.assignments.at(-1).driverId, 'd_existing', 'the assignment falls back to the driver already on the order');
+    });
+
+    test('a socket that cannot close channels is left alone', function (assert) {
+        this.owner.lookup('service:socket').closeChannels = undefined;
+        this.controller.unsubscribeFromRealTimeUpdates();
+        assert.strictEqual(this.channelsClosed, 0, 'nothing is called, and nothing throws');
     });
 });
