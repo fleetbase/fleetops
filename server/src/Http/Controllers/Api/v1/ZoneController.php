@@ -212,7 +212,7 @@ class ZoneController extends Controller
         return (int) $request->input('radius', 500);
     }
 
-    protected function serviceAreaUuid(string $publicId, array $where): ?string
+    protected function serviceAreaUuid(?string $publicId, array $where): ?string
     {
         return Utils::getUuid('service_areas', $where);
     }

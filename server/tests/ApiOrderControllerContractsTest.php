@@ -80,7 +80,7 @@ class FleetOpsApiOrderCrudControllerProbe extends OrderController
         return $this->payload = new FleetOpsApiOrderPayloadFake();
     }
 
-    protected function findDriverByPublicId(string $publicId): ?Fleetbase\FleetOps\Models\Driver
+    protected function findDriverByPublicId(?string $publicId): ?Fleetbase\FleetOps\Models\Driver
     {
         $this->driver ??= new FleetOpsApiOrderDriverFake();
         $this->driver->setRawAttributes([

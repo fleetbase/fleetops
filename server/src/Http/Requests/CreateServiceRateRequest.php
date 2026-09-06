@@ -25,8 +25,13 @@ class CreateServiceRateRequest extends FleetbaseRequest
         return [
             'service_name'                  => [Rule::requiredIf($this->isMethod('POST')), 'string'],
             'service_type'                  => [Rule::requiredIf($this->isMethod('POST')), 'string'],
-            'service_area'                  => [Rule::exists('service_areas', 'public_id')->whereNull('deleted_at')],
-            'zone'                          => [Rule::exists('zones', 'public_id')->whereNull('deleted_at')],
+            // `nullable` so an empty relationship is treated as absent rather than
+            // as an invalid one. Both are optional, but without it `exists` runs
+            // against the null that ConvertEmptyStringsToNull produced and answers
+            // "The selected service area is invalid" for a field the caller simply
+            // did not fill in.
+            'service_area'                  => ['nullable', Rule::exists('service_areas', 'public_id')->whereNull('deleted_at')],
+            'zone'                          => ['nullable', Rule::exists('zones', 'public_id')->whereNull('deleted_at')],
             'rate_calculation_method'       => [Rule::requiredIf($this->isMethod('POST')), 'string', 'in:fixed_meter,fixed_rate,per_meter,per_drop,algo,parcel'],
             'currency'                      => ['required', 'size:3'],
             'base_fee'                      => ['numeric'],

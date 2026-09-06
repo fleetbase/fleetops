@@ -2,6 +2,7 @@
 
 namespace Fleetbase\FleetOps\Http\Controllers\Api\v1\Concerns;
 
+use Fleetbase\FleetOps\Exceptions\PublicRelationNotFoundException;
 use Fleetbase\FleetOps\Models\Contact;
 use Fleetbase\FleetOps\Models\Device;
 use Fleetbase\FleetOps\Models\Driver;
@@ -23,16 +24,20 @@ use Illuminate\Validation\ValidationException;
 
 trait ResolvesFleetOpsApiResources
 {
-    protected function resolveUuid(string $modelClass, ?string $id): ?string
+    protected function resolveUuid(string $modelClass, ?string $id, ?string $companyUuid = null): ?string
     {
         if (empty($id)) {
             return null;
         }
 
-        return $this->resolveModel($modelClass, $id)->uuid;
+        return $this->resolveModel($modelClass, $id, $companyUuid)->uuid;
     }
 
-    protected function resolveModel(string $modelClass, string $id): Model
+    /**
+     * @param string|null $companyUuid the company to scope the lookup to; defaults
+     *                                 to the session company
+     */
+    protected function resolveModel(string $modelClass, string $id, ?string $companyUuid = null): Model
     {
         $instance = new $modelClass();
         $query    = $modelClass::query()->where(function ($query) use ($id, $instance) {
@@ -47,8 +52,10 @@ trait ResolvesFleetOpsApiResources
             }
         });
 
-        if (session('company') && $this->modelHasColumn($instance, 'company_uuid')) {
-            $query->where($instance->qualifyColumn('company_uuid'), session('company'));
+        $companyUuid = $companyUuid ?? session('company');
+
+        if ($companyUuid && $this->modelHasColumn($instance, 'company_uuid')) {
+            $query->where($instance->qualifyColumn('company_uuid'), $companyUuid);
         }
 
         $model = $query->first();
@@ -114,15 +121,43 @@ trait ResolvesFleetOpsApiResources
         return preg_match('/(^uuid$|_uuid$|Uuid$|UUID$)/', $key) === 1;
     }
 
-    protected function applyPublicIdRelation(array &$input, string $requestKey, string $column, string $modelClass, $request): void
+    protected function applyPublicIdRelation(array &$input, string $requestKey, string $column, string $modelClass, $request, ?string $companyUuid = null): void
     {
         if (!$request->exists($requestKey)) {
             return;
         }
 
         $input[$column] = filled($request->input($requestKey))
-            ? $this->resolveUuid($modelClass, $request->input($requestKey))
+            ? $this->resolveUuid($modelClass, $request->input($requestKey), $companyUuid)
             : null;
+    }
+
+    /**
+     * Apply a set of public-ID relationship inputs in one pass.
+     *
+     * `$map` is keyed by the public request key and holds `[column, modelClass]`,
+     * e.g. `['parent_fleet' => ['parent_fleet_uuid', Fleet::class]]`. A key that is
+     * absent from the request is left untouched; a key sent empty clears the column.
+     *
+     * Resolution failures are rethrown as a PublicRelationNotFoundException so the
+     * caller can say which input was at fault rather than answering with a bare
+     * "not found" that names no field.
+     *
+     * @param array<string, array{0: string, 1: class-string}> $map
+     *
+     * @throws PublicRelationNotFoundException
+     */
+    protected function applyPublicIdRelations(array &$input, array $map, $request, ?string $companyUuid = null): void
+    {
+        foreach ($map as $requestKey => [$column, $modelClass]) {
+            try {
+                $this->applyPublicIdRelation($input, $requestKey, $column, $modelClass, $request, $companyUuid);
+            } catch (ModelNotFoundException $exception) {
+                $identifier = $request->input($requestKey);
+
+                throw new PublicRelationNotFoundException($requestKey, is_scalar($identifier) ? (string) $identifier : null, $exception);
+            }
+        }
     }
 
     protected function allowedMorphTypes(): array
