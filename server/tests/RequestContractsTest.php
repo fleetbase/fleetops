@@ -1041,7 +1041,13 @@ namespace {
             ->and(ruleStrings($rateRules['peak_hours_calculation_method']))->toContain('required', 'in:percentage,flat')
             ->and(ruleStrings($rateRules['peak_hours_percent']))->toContain('required', 'integer')
             ->and(ruleStrings($rateRules['peak_hours_start']))->toContain('required', 'date_format:H:i')
-            ->and(ruleStrings($rateRules['peak_hours_end']))->toContain('required', 'date_format:H:i');
+            ->and(ruleStrings($rateRules['peak_hours_end']))->toContain('required', 'date_format:H:i')
+            // Both relationships are optional, so an empty one has to read as
+            // absent. Without `nullable` the `exists` rule runs against the null
+            // that ConvertEmptyStringsToNull produced and answers "the selected
+            // service area is invalid" for a field the caller left blank.
+            ->and(ruleStrings($rateRules['service_area']))->toContain('nullable')
+            ->and(ruleStrings($rateRules['zone']))->toContain('nullable');
 
         // A street address alone satisfies the name requirement on create, and
         // updates never require either field since the record already exists

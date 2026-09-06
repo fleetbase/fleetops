@@ -43,7 +43,7 @@ class FleetOpsApiEntityControllerProbe extends EntityController
         return $value === 'contacts' ? 'contact' : null;
     }
 
-    protected function findPayloadByPublicId(string $publicId): ?Payload
+    protected function findPayloadByPublicId(?string $publicId): ?Payload
     {
         $this->payload?->setAttribute('lookup_id', $publicId);
 

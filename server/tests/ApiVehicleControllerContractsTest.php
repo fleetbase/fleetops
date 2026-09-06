@@ -70,7 +70,7 @@ class FleetOpsApiVehicleCrudControllerProbe extends VehicleController
         return $this->vehicle;
     }
 
-    protected function findDriver(string $id): Driver
+    protected function findDriver(?string $id): Driver
     {
         if ($this->driverNotFound) {
             throw new ModelNotFoundException();

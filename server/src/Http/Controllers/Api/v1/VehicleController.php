@@ -492,7 +492,7 @@ class VehicleController extends Controller
         return Vehicle::findRecordOrFail($id);
     }
 
-    protected function findDriver(string $id): Driver
+    protected function findDriver(?string $id): Driver
     {
         return Driver::findRecordOrFail($id);
     }
