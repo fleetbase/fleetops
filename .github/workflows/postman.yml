@@ -29,10 +29,6 @@ jobs:
     with:
       collections: "Fleetbase API"
       build-from-source: false
-      # TEMPORARY — remove after this validation run.
-      # Pin to the exact current head of fleetbase/postman#59 so this PR runs
-      # the contract additions for empty public relationship inputs.
-      postman-ref: f64b1f741be69678f5657d694a6a861cfc53ccaa
       # Without this the run tests the version of fleetbase/fleetops-api baked into the
       # published image, not the branch under review. The workflow checks this
       # repository out at the commit under test and swaps it into the container.
