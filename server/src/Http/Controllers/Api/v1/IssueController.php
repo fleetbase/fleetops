@@ -158,7 +158,7 @@ class IssueController extends Controller
         return $this->deletedIssueResource($issue);
     }
 
-    protected function findDriverRecord(string $id): Driver
+    protected function findDriverRecord(?string $id): Driver
     {
         return Driver::findRecordOrFail($id);
     }

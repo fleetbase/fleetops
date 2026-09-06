@@ -4,7 +4,9 @@ use Fleetbase\FleetOps\Http\Controllers\Api\v1\DriverController;
 use Fleetbase\FleetOps\Http\Requests\CreateDriverRequest;
 use Fleetbase\FleetOps\Http\Requests\UpdateDriverRequest;
 use Fleetbase\FleetOps\Models\Driver;
+use Fleetbase\FleetOps\Models\Order;
 use Fleetbase\FleetOps\Models\Vehicle;
+use Fleetbase\FleetOps\Models\Vendor;
 use Fleetbase\LaravelMysqlSpatial\Types\Point;
 use Fleetbase\Models\Company;
 use Fleetbase\Models\User;
@@ -29,6 +31,9 @@ class FleetOpsApiDriverControllerProbe extends DriverController
     public array $companyCalls              = [];
     public array $createdUsers              = [];
     public array $uuidLookups               = [];
+    public array $relationLookups           = [];
+    public array $relationCompanyScopes     = [];
+    public array $unresolvable              = [];
     public array $pointInputs               = [];
     public array $createdDrivers            = [];
     public array $resolvedFiles             = [];
@@ -74,6 +79,33 @@ class FleetOpsApiDriverControllerProbe extends DriverController
         $this->uuidLookups[] = [$table, $where, $options];
 
         return $table . '-uuid';
+    }
+
+    /**
+     * Stand in for the company-scoped public-id lookup.
+     *
+     * Anything listed in `$unresolvable` behaves as a cross-company or missing
+     * identifier does in production.
+     */
+    protected function resolveUuid(string $modelClass, ?string $id, ?string $companyUuid = null): ?string
+    {
+        if (empty($id)) {
+            return null;
+        }
+
+        $this->relationLookups[]       = [$modelClass, $id];
+        $this->relationCompanyScopes[] = $companyUuid;
+
+        if (in_array($id, $this->unresolvable, true)) {
+            throw (new ModelNotFoundException())->setModel($modelClass, $id);
+        }
+
+        return strtolower(class_basename($modelClass)) . '-uuid';
+    }
+
+    public function inputForTest(Request $request): array
+    {
+        return $this->driverInputFromRequest($request);
     }
 
     protected function pointFromCoordinates(array $coordinates): Point
@@ -343,21 +375,23 @@ test('api driver controller creates drivers with user company assignment and rel
         ->and($controller->user->assignedRoles)->toBe(['Driver'])
         ->and($controller->createdDrivers[0])->toMatchArray([
             'status'           => 'available',
-            'vehicle_uuid'     => 'vehicles-uuid',
-            'vendor_uuid'      => 'vendors-uuid',
-            'current_job_uuid' => 'orders-uuid',
+            'vehicle_uuid'     => 'vehicle-uuid',
+            'vendor_uuid'      => 'vendor-uuid',
+            'current_job_uuid' => 'order-uuid',
             'online'           => 0,
             'user_uuid'        => 'user-uuid',
             'company_uuid'     => 'company-uuid',
         ])
         ->and($controller->createdDrivers[0]['location'])->toBeInstanceOf(Point::class)
-        ->and($controller->uuidLookups)->toContain(
-            ['vehicles', ['public_id' => 'vehicle_public', 'company_uuid' => 'company-uuid'], []],
-            ['vendors', ['public_id' => 'vendor_public', 'company_uuid' => 'company-uuid'], []],
-            ['orders', ['public_id'  => 'order_public', 'company_uuid' => 'company-uuid'], []]
-        )
+        ->and($controller->relationLookups)->toBe([
+            [Vehicle::class, 'vehicle_public'],
+            [Vendor::class, 'vendor_public'],
+            [Order::class, 'order_public'],
+        ])
         ->and($controller->resolvedFiles)->toBe([['file_public', 'uploads/company-uuid/drivers']])
-        ->and($controller->user->updates)->toContain(['photo_uuid' => 'photo-file-uuid'])
+        // `photo_uuid` is not a column on users; the avatar lives in `avatar_uuid`
+        // and the old key was silently dropped by mass assignment.
+        ->and($controller->user->updates)->toContain(['avatar_uuid' => 'photo-file-uuid'])
         ->and($controller->driver->loaded)->toContain(['user', 'vehicle', 'vendor', 'currentJob']);
 });
 
@@ -411,14 +445,14 @@ test('api driver controller updates drivers user details assignments location an
         ])
         ->and($driver->updates[0])->toMatchArray([
             'status'           => 'busy',
-            'vehicle_uuid'     => 'vehicles-uuid',
-            'vendor_uuid'      => 'vendors-uuid',
-            'current_job_uuid' => 'orders-uuid',
+            'vehicle_uuid'     => 'vehicle-uuid',
+            'vendor_uuid'      => 'vendor-uuid',
+            'current_job_uuid' => 'order-uuid',
         ])
         ->and($driver->updates[0]['location'])->toBeInstanceOf(Point::class)
         ->and($driver->flushedForTest)->toBeTrue()
         ->and($controller->resolvedFiles)->toBe([['photo-input', 'uploads/session-company-uuid/drivers']])
-        ->and($user->updates)->toContain(['photo_uuid' => 'photo-file-uuid'])
+        ->and($user->updates)->toContain(['avatar_uuid' => 'photo-file-uuid'])
         ->and($driver->loaded)->toContain(['user', 'vehicle', 'vendor', 'currentJob']);
 });
 
@@ -633,4 +667,241 @@ test('api driver controller refuses to set a password through a general update',
     expect($user->updates)->not->toBeEmpty()
         ->and($user->updates[0])->not->toHaveKey('password')
         ->and($user->updates[0])->toHaveKey('name');
+});
+
+test('api driver controller accepts every safe driver field the model exposes', function () {
+    $payload = [
+        // Identity
+        'internal_id'    => 'DRV-9001', 'drivers_license_number' => 'S1234567A',
+        'license_expiry' => '2030-06-30',
+        // Operational
+        'country'        => 'SG', 'currency' => 'SGD', 'city' => 'Singapore', 'online' => true,
+        'current_status' => 'on_break', 'status' => 'available',
+        'heading'        => 180, 'bearing' => 90, 'altitude' => 15, 'speed' => 42,
+        // Structured / orchestrator
+        'meta'              => ['depot' => 'north'], 'skills' => ['hazmat'],
+        'max_travel_time'   => 28800, 'max_distance' => 250000,
+        'time_window_start' => '08:00', 'time_window_end' => '18:00',
+    ];
+
+    $controller = new FleetOpsApiDriverControllerProbe();
+    $input      = $controller->inputForTest(new Request($payload));
+
+    $missing = array_values(array_diff(array_keys($payload), array_keys($input)));
+
+    expect($missing)->toBe([])
+        ->and($input)->toMatchArray($payload);
+});
+
+test('api driver controller input excludes authentication tenancy and generated columns', function () {
+    // The projection used to be an `except()` blocklist, so anything nobody had
+    // thought to name reached Driver::create() intact — including the auth token.
+    $controller = new FleetOpsApiDriverControllerProbe();
+
+    $input = $controller->inputForTest(new Request([
+        'internal_id'       => 'DRV-1',
+        'auth_token'        => 'forged',
+        'signup_token_used' => true,
+        'user_uuid'         => 'forged',
+        'company_uuid'      => 'someone-elses-company',
+        'vehicle_uuid'      => 'forged',
+        'vendor_uuid'       => 'forged',
+        'current_job_uuid'  => 'forged',
+        '_key'              => 'forged',
+        'uuid'              => 'forged',
+        'public_id'         => 'driver_forged',
+        'slug'              => 'forged',
+        'avatar_url'        => 'forged',
+    ]));
+
+    expect(array_keys($input))->toBe(['internal_id']);
+});
+
+test('api driver controller persists meta location and telemetry that the blocklist used to drop', function () {
+    // `location`, `heading`, `altitude`, `speed` and `meta` were all on the old
+    // `except()` list, so every write silently discarded them — and `meta` could
+    // not be mass assigned anyway because the model spelled it `meta,`.
+    $controller = new FleetOpsApiDriverControllerProbe();
+
+    $input = $controller->inputForTest(new Request([
+        'meta'     => ['badge' => 'A12'],
+        'heading'  => 270,
+        'altitude' => 8,
+        'speed'    => 55,
+    ]));
+
+    expect($input)->toMatchArray([
+        'meta'     => ['badge' => 'A12'],
+        'heading'  => 270,
+        'altitude' => 8,
+        'speed'    => 55,
+    ])->and(in_array('meta', (new Driver())->getFillable(), true))->toBeTrue();
+});
+
+test('api driver controller creates an operational driver with no email or phone', function () {
+    $controller = new FleetOpsApiDriverControllerProbe();
+
+    $response = $controller->create(new CreateDriverRequest([
+        'name'        => 'Yard Driver',
+        'internal_id' => 'DRV-7788',
+    ]));
+
+    // No invented address, no invented number: the user record simply carries
+    // neither, which the users table permits. The driver cannot sign in to
+    // Navigator until credentials are supplied.
+    expect($response)->toBe(['resource' => 'driver', 'driver' => $controller->driver])
+        ->and($controller->createdUsers[0])->toMatchArray(['name' => 'Yard Driver'])
+        ->and($controller->createdUsers[0]['email'] ?? null)->toBeNull()
+        ->and($controller->createdUsers[0]['phone'] ?? null)->toBeNull()
+        ->and($controller->createdDrivers[0])->toMatchArray([
+            'internal_id'  => 'DRV-7788',
+            'user_uuid'    => 'user-uuid',
+            'company_uuid' => 'company-uuid',
+            'status'       => 'available',
+        ])
+        // The Driver-to-User relationship, organization membership, user type
+        // and role are all preserved for a credential-less driver.
+        ->and($controller->user->assignedCompanies)->toBe(['company-uuid'])
+        ->and($controller->user->assignedTypes)->toBe(['driver'])
+        ->and($controller->user->assignedRoles)->toBe(['Driver']);
+});
+
+test('api driver controller creates a driver with only one contact method', function () {
+    $emailOnly = new FleetOpsApiDriverControllerProbe();
+    $emailOnly->create(new CreateDriverRequest([
+        'name'  => 'Email Only',
+        'email' => 'email.only@example.test',
+    ]));
+
+    $phoneOnly = new FleetOpsApiDriverControllerProbe();
+    $phoneOnly->create(new CreateDriverRequest([
+        'name'  => 'Phone Only',
+        'phone' => '+15550001111',
+    ]));
+
+    expect($emailOnly->createdUsers[0])->toMatchArray(['email' => 'email.only@example.test'])
+        ->and($emailOnly->createdUsers[0]['phone'] ?? null)->toBeNull()
+        ->and($phoneOnly->createdUsers[0])->toMatchArray(['phone' => '+15550001111'])
+        ->and($phoneOnly->createdUsers[0]['email'] ?? null)->toBeNull();
+});
+
+test('api driver controller rejects a relationship that belongs to another company', function () {
+    $controller               = new FleetOpsApiDriverControllerProbe();
+    $controller->unresolvable = ['vehicle_other_company'];
+
+    $created = $controller->create(new CreateDriverRequest([
+        'name'    => 'Driver One',
+        'vehicle' => 'vehicle_other_company',
+    ]));
+
+    $controller               = new FleetOpsApiDriverControllerProbe();
+    $controller->unresolvable = ['vendor_other_company'];
+
+    $updated = $controller->update('driver_public', new UpdateDriverRequest([
+        'vendor' => 'vendor_other_company',
+    ]));
+
+    expect($created)->toBe([
+        'json'   => ['error' => 'No vehicle resource found for the identifier provided.'],
+        'status' => 404,
+    ])->and($updated)->toBe([
+        'json'   => ['error' => 'No vendor resource found for the identifier provided.'],
+        'status' => 404,
+    ]);
+});
+
+test('api driver controller clears a relationship when the input is sent empty', function () {
+    $controller = new FleetOpsApiDriverControllerProbe();
+
+    $input = $controller->inputForTest(new Request(['vehicle' => null, 'vendor' => '', 'job' => null]));
+
+    expect($input)->toMatchArray([
+        'vehicle_uuid'     => null,
+        'vendor_uuid'      => null,
+        'current_job_uuid' => null,
+    ])->and($controller->relationLookups)->toBe([]);
+});
+
+test('api driver controller resolves driver relationships inside the company the driver is created in', function () {
+    // A create request may name a company explicitly, and the relationships must
+    // be looked up in that company rather than in whatever the session holds.
+    $controller = new FleetOpsApiDriverControllerProbe();
+
+    $controller->create(new CreateDriverRequest([
+        'company' => 'company_public',
+        'name'    => 'Driver One',
+        'vehicle' => 'vehicle_public',
+        'vendor'  => 'vendor_public',
+    ]));
+
+    expect($controller->relationCompanyScopes)->toBe(['company-uuid', 'company-uuid']);
+});
+
+test('api driver controller keeps every relationship the base contract returned', function () {
+    // The SDK stores what the API returns verbatim, and Navigator interpolates
+    // `driver.user` straight into a socket channel name — an object there would
+    // subscribe it to `user.[object Object]` and quietly stop delivering
+    // messages. These endpoints have always loaded user, vehicle, vendor and
+    // currentJob, so they must keep doing it without a `with` parameter.
+    $controller = new FleetOpsApiDriverControllerProbe();
+
+    $controller->create(new CreateDriverRequest([
+        'name'    => 'Driver One',
+        'vehicle' => 'vehicle_public',
+        'vendor'  => 'vendor_public',
+        'job'     => 'order_public',
+    ]));
+
+    expect($controller->driver->loaded)->toContain(['user', 'vehicle', 'vendor', 'currentJob']);
+
+    $updateController         = new FleetOpsApiDriverControllerProbe();
+    $updateController->update('driver_public', new UpdateDriverRequest(['name' => 'Renamed']));
+
+    expect($updateController->driver->loaded)->toContain(['user', 'vehicle', 'vendor', 'currentJob'])
+        ->and($updateController->findCalls)->toContain(['driver_public', ['user']]);
+});
+
+test('api driver controller copies timezone through to the linked user account', function () {
+    // `timezone` is documented and accepted on both create and update, but the
+    // update only ever copied name, email and phone — so the request validated,
+    // answered 200, and dropped it. The driver has no timezone column; the
+    // linked user does.
+    $create = new FleetOpsApiDriverControllerProbe();
+    $create->create(new CreateDriverRequest([
+        'name'     => 'Driver One',
+        'timezone' => 'Asia/Singapore',
+    ]));
+
+    $user = new FleetOpsApiDriverUserFake();
+    $user->setRawAttributes(['uuid' => 'user-uuid'], true);
+
+    $driver = new FleetOpsApiDriverFake();
+    $driver->setRawAttributes(['uuid' => 'driver-uuid', 'public_id' => 'driver_public', 'user_uuid' => 'user-uuid'], true);
+    $driver->userForTest = $user;
+    $driver->setRelation('user', $user);
+
+    $update         = new FleetOpsApiDriverControllerProbe();
+    $update->driver = $driver;
+    $update->update('driver_public', new UpdateDriverRequest([
+        'name'     => 'Driver One',
+        'timezone' => 'Europe/Amsterdam',
+    ]));
+
+    expect($create->createdUsers[0])->toMatchArray(['timezone' => 'Asia/Singapore'])
+        ->and($user->updates)->toContain([
+            'name'     => 'Driver One',
+            'timezone' => 'Europe/Amsterdam',
+        ]);
+});
+
+test('api driver controller only expands relationships the public contract allows', function () {
+    $controller = new FleetOpsApiDriverControllerProbe();
+    $request    = new CreateDriverRequest(['name' => 'Driver One', 'with' => ['vehicle', 'current_job', 'user', 'company', 'nope']]);
+
+    $controller->create($request);
+
+    // `user` and `company` are published as public-id strings. Expanding either
+    // would retype a released field, so neither is expandable at all; an unknown
+    // name is dropped rather than reaching Eloquent, where it would be a 500.
+    expect($request->input('with'))->toBe(['vehicle', 'currentJob']);
 });

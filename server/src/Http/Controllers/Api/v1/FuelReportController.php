@@ -157,7 +157,7 @@ class FuelReportController extends Controller
         return $this->deletedFuelReportResource($fuelReport);
     }
 
-    protected function findDriverRecord(string $id): Driver
+    protected function findDriverRecord(?string $id): Driver
     {
         return Driver::findRecordOrFail($id);
     }

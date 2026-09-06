@@ -187,7 +187,7 @@ class TrackingStatusController extends Controller
         return Utils::getUuid($table, $where);
     }
 
-    protected function getOrderTrackingNumberUuid(string $orderId): ?string
+    protected function getOrderTrackingNumberUuid(?string $orderId): ?string
     {
         return Order::where('public_id', $orderId)->value('tracking_number_uuid');
     }

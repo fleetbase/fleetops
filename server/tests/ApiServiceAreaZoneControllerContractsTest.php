@@ -23,7 +23,7 @@ class FleetOpsApiServiceAreaControllerProbe extends ApiServiceAreaController
     public bool $notFound            = false;
     public bool $createThrows        = false;
 
-    protected function serviceAreaUuid(string $publicId, array $where): ?string
+    protected function serviceAreaUuid(?string $publicId, array $where): ?string
     {
         $this->uuidLookups[] = [$publicId, $where];
 
@@ -116,7 +116,7 @@ class FleetOpsApiZoneControllerProbe extends ApiZoneController
     public mixed $queryResults = null;
     public bool $notFound      = false;
 
-    protected function serviceAreaUuid(string $publicId, array $where): ?string
+    protected function serviceAreaUuid(?string $publicId, array $where): ?string
     {
         $this->uuidLookups[] = [$publicId, $where];
 

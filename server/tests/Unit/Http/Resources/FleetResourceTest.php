@@ -1,5 +1,6 @@
 <?php
 
+use Fleetbase\FleetOps\Http\Controllers\Api\v1\FleetController;
 use Fleetbase\FleetOps\Http\Resources\v1\Fleet as FleetResource;
 use Fleetbase\FleetOps\Models\Fleet;
 use Illuminate\Database\ConnectionResolver;
@@ -81,22 +82,65 @@ function fleetopsFleetResourceBoot(): SQLiteConnection
     return $connection;
 }
 
+/**
+ * Resolve expansions the way a request does, then serialize.
+ */
+function fleetopsFleetResourcePayload(Fleet $fleet, array $query): array
+{
+    $request    = Request::create('/v1/fleets/fleet_parentone', 'GET', $query);
+    $controller = new FleetController();
+    $reflection = new ReflectionMethod(FleetController::class, 'applyPublicExpansions');
+    $reflection->setAccessible(true);
+    $reflection->invoke($controller, $request, FleetController::EXPANDABLE);
+
+    return (new FleetResource($fleet))->resolve($request);
+}
+
 test('fleet resource preloads requested subfleet driver and vehicle relations', function () {
     fleetopsFleetResourceBoot();
 
-    $fleet   = Fleet::where('uuid', 'fleet-parent-1')->first();
-    $request = Request::create('/v1/fleets/fleet_parentone', 'GET', ['with' => ['subfleets', 'drivers', 'vehicles']]);
+    $fleet    = Fleet::where('uuid', 'fleet-parent-1')->first();
+    $resolved = fleetopsFleetResourcePayload($fleet, ['with' => ['subfleets', 'drivers', 'vehicles']]);
 
-    $resolved = (new FleetResource($fleet))->resolve($request);
-
+    // `subFleets` is the relation Eloquent actually has. The public name differs
+    // from it only in case, and PHP method calls are case-insensitive, so
+    // `load('subfleets')` used to succeed and store a *second* copy under the
+    // mis-cased key — which `whenLoaded('subFleets')` then could not see.
     expect($resolved['name'])->toBe('Parent Fleet')
-        ->and($fleet->relationLoaded('subfleets'))->toBeTrue()
-        ->and($fleet->relationLoaded('subFleets'))->toBeTrue();
+        ->and($fleet->relationLoaded('subFleets'))->toBeTrue()
+        ->and($resolved)->toHaveKey('subfleets');
 
     $subFleet = $fleet->getRelation('subFleets')->first();
+
+    // Asking for subfleets alongside drivers and vehicles still nests them, as
+    // the released contract did.
     expect($subFleet)->not->toBeNull()
         ->and($subFleet->relationLoaded('drivers'))->toBeTrue()
         ->and($subFleet->relationLoaded('vehicles'))->toBeTrue()
         ->and($subFleet->drivers)->toHaveCount(1)
         ->and($subFleet->vehicles)->toHaveCount(1);
+});
+
+test('fleet resource resolves subfleets on its own, which the mis-cased load never did', function () {
+    fleetopsFleetResourceBoot();
+
+    $fleet    = Fleet::where('uuid', 'fleet-parent-1')->first();
+    $resolved = fleetopsFleetResourcePayload($fleet, ['with' => 'subfleets']);
+
+    // Before the mapping, this returned no `subfleets` key at all: the load
+    // landed under `subfleets` and the resource looked for `subFleets`.
+    expect($resolved)->toHaveKey('subfleets')
+        ->and($fleet->relationLoaded('subFleets'))->toBeTrue();
+});
+
+test('fleet resource accepts the explicit nested expansion spelling', function () {
+    fleetopsFleetResourceBoot();
+
+    $fleet = Fleet::where('uuid', 'fleet-parent-1')->first();
+    fleetopsFleetResourcePayload($fleet, ['with' => ['subfleets.drivers']]);
+
+    $subFleet = $fleet->getRelation('subFleets')->first();
+
+    expect($subFleet->relationLoaded('drivers'))->toBeTrue()
+        ->and($subFleet->relationLoaded('vehicles'))->toBeFalse();
 });

@@ -218,7 +218,7 @@ class ServiceAreaController extends Controller
         return ServiceArea::createMultiPolygonFromPoint($point, $radius);
     }
 
-    protected function serviceAreaUuid(string $publicId, array $where): ?string
+    protected function serviceAreaUuid(?string $publicId, array $where): ?string
     {
         return Utils::getUuid('service_areas', $where);
     }
