@@ -39,7 +39,7 @@ class FleetOpsVehicleControllerProbe extends VehicleController
         return $this->vehicle;
     }
 
-    protected function findDriver(string $id): Driver
+    protected function findDriver(?string $id): Driver
     {
         $this->driverLookups[] = $id;
 

@@ -17,7 +17,7 @@ class FleetOpsApiIssueControllerProbe extends IssueController
     public bool $driverNotFound = false;
     public bool $issueNotFound  = false;
 
-    protected function findDriverRecord(string $id): Driver
+    protected function findDriverRecord(?string $id): Driver
     {
         if ($this->driverNotFound) {
             throw new ModelNotFoundException();

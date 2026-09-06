@@ -271,7 +271,7 @@ class EntityController extends Controller
         return $value ? Utils::singularize($value) : null;
     }
 
-    protected function findPayloadByPublicId(string $publicId): ?Payload
+    protected function findPayloadByPublicId(?string $publicId): ?Payload
     {
         return Payload::where('public_id', $publicId)->first();
     }

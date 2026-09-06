@@ -1873,7 +1873,7 @@ class OrderController extends Controller
         return new Payload();
     }
 
-    protected function findDriverByPublicId(string $publicId): ?Driver
+    protected function findDriverByPublicId(?string $publicId): ?Driver
     {
         return Driver::where(['public_id' => $publicId, 'company_uuid' => session('company')])->first();
     }
