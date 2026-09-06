@@ -24,6 +24,8 @@ export default class ManagementFleetsIndexRoute extends Route {
     };
 
     model(params) {
-        return this.store.query('fleet', { ...params, with: ['parent_fleet', 'service_area', 'zone'] });
+        // Internal Fleet-Ops requests go directly to Eloquent's relation loader,
+        // so these must be the model method names rather than public API aliases.
+        return this.store.query('fleet', { ...params, with: ['parentFleet', 'serviceArea', 'zone'] });
     }
 }

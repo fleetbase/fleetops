@@ -100,6 +100,7 @@ module('Unit | Controller | management identity columns', function (hooks) {
         const controller = this.owner.lookup('controller:management/drivers/index');
         const labels = controller.columns.slice(0, 5).map((column) => column.label);
         const vehicleColumn = controller.columns.find((column) => column.label === 'column.vehicle');
+        const vendorColumn = controller.columns.find((column) => column.label === 'column.vendor');
         const vehicle = { id: 'vehicle_1', displayName: 'Truck 1' };
 
         assert.deepEqual(labels, ['column.name', 'column.id', 'column.phone', 'column.license', 'column.vehicle']);
@@ -108,6 +109,7 @@ module('Unit | Controller | management identity columns', function (hooks) {
         assert.strictEqual(vehicleColumn.cellComponent, 'cell/vehicle-identity');
         assert.true(vehicleColumn.compact);
         assert.strictEqual(vehicleColumn.showStatusBadge, true);
+        assert.strictEqual(vendorColumn.valuePath, 'vendor_name', 'vendor renders from the accessor returned by the driver list endpoint');
 
         await vehicleColumn.action({ loadResource: () => vehicle });
 

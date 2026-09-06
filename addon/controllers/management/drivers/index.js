@@ -241,7 +241,10 @@ export default class ManagementDriversIndexController extends Controller {
                         this.notifications.serverError(err);
                     }
                 },
-                valuePath: 'vendor.name',
+                // Driver list responses already include the vendor_name accessor,
+                // while the vendor relationship itself is not eager loaded. Use
+                // the scalar so assigned vendors do not render as blank cells.
+                valuePath: 'vendor_name',
                 modelNamePath: 'name',
                 resizable: true,
                 filterable: true,
