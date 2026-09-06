@@ -5,7 +5,7 @@ export default {
         const menuService = universe.getService('menu');
         const registryService = universe.getService('registry');
         const widgetService = universe.getService('widget');
-        const intlService = universe.getService('intl');
+        const intlService = app.lookup('service:intl');
 
         // Register header navigation
         menuService.registerHeaderMenuItem('Fleet-Ops', 'console.fleet-ops', {

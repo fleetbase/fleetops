@@ -12,6 +12,11 @@ class Trailer extends Asset
 {
     public const ASSET_CLASS = 'trailer';
 
+    /**
+     * Keep the API payload identity independent from the shared assets table.
+     */
+    protected string $payloadKey = 'trailer';
+
     protected $publicIdType = 'trailer';
 
     protected $appends = ['category_name', 'vendor_name', 'warranty_name', 'current_location', 'photo_url', 'display_name', 'is_online', 'last_maintenance', 'next_maintenance_due', 'attachment_state', 'connectivity_status'];
