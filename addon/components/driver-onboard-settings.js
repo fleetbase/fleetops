@@ -10,7 +10,7 @@ export default class DriverOnboardSettingsComponent extends Component {
     @service notifications;
     @tracked companyId;
     @tracked driverOnboardSettingsLoaded = false;
-    @tracked driverOnboardSettings = {};
+    @tracked driverOnboardSettings;
     @tracked driverOnboardMethods = ['invite', 'button'];
 
     constructor() {
@@ -47,7 +47,7 @@ export default class DriverOnboardSettingsComponent extends Component {
             return;
         }
 
-        if (driverOnboardSettingsResponse && driverOnboardSettings && driverOnboardSettings.enableDriverOnboardFromApp == false) {
+        if (driverOnboardSettingsResponse && driverOnboardSettings.enableDriverOnboardFromApp == false) {
             this.driverOnboardSettings = driverOnboardSettingsResponse.driverOnboardSettings;
         }
     }
@@ -55,7 +55,7 @@ export default class DriverOnboardSettingsComponent extends Component {
     @task *getDriverOnboardSettings() {
         const companyId = this.currentUser.companyId;
         const { driverOnboardSettings } = yield this.fetch.get(`fleet-ops/settings/driver-onboard-settings/${companyId}`);
-        this.driverOnboardSettings = driverOnboardSettings;
+        this.driverOnboardSettings = driverOnboardSettings ?? {};
 
         if (this.companyDoesntHaveDriverOnboardSettings()) {
             this.updateDriverOnboardSettings({
@@ -74,12 +74,11 @@ export default class DriverOnboardSettingsComponent extends Component {
         return companyId === undefined;
     }
 
-    updateDriverOnboardSettings(props = {}) {
+    updateDriverOnboardSettings(props) {
         const companyId = this.currentUser.companyId;
-        const driverOnboardSettings = this.driverOnboardSettings ?? {};
         this.driverOnboardSettings = {
             companyId: companyId,
-            ...driverOnboardSettings,
+            ...this.driverOnboardSettings,
             ...props,
         };
     }

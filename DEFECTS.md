@@ -1,0 +1,1268 @@
+# DEFECTS
+
+Findings from the `addon/` test-coverage campaign that need a decision or a fix. Fixed entries are
+removed once they ship — this file is a worklist, not a changelog. Git history is the changelog.
+
+Scope is the Ember addon under `addon/` only. The PHP backend under `server/` has its own suite and
+its own 100% gate; nothing here touches it.
+
+## Format
+
+```
+## N. `addon/path/to/file.js` — one-line summary
+
+**Status:** OPEN | FIXED (where) | WONTFIX (reason) | NEEDS DECISION
+**Found:** how it surfaced
+**Evidence:** what proves it, traced — callers, branch counts, grep results. Never "appears unused".
+**Impact:** what it costs a user, or none
+**Fix:** what to do, and what makes it more than a one-liner if it is
+```
+
+Earn the claim before writing it down. "Not referenced by a template" is not "dead code" is not
+"broken", and current behaviour is often deliberate. Use `NEEDS DECISION` when the resolution is a
+product choice; those are Ron's to make.
+
+## Conventions
+
+- **Every `istanbul ignore` in the addon carries a reason naming the specific thing that makes the
+  code unreachable** — the caller that always passes the argument, the template that disables the
+  control, the constructor that assigns the field first. An ignore without that trace is a bug
+  waiting to be reintroduced, not a coverage exemption.
+- **`istanbul ignore next` does not attach to an object-property value or to a destructured
+  parameter in some positions.** Where it will not take, hoist the expression into a local `const`
+  and put the comment above that.
+- **An ignore inside a method body does not ignore the method.** The statement stops counting, but
+  the function still has to be *called* to count as covered. Put the comment above the method when
+  the method itself is what cannot run.
+- **A local pass is not a CI pass, and the gap is usually window focus.** Headless Linux Chrome
+  never gives the page focus and macOS Chrome does, so anything downstream of focus differs.
+  Coverage that arrives incidentally, from an event the browser happened to send, is the coverage
+  that disappears in CI. Cover the path on purpose instead.
+- **`Browser timeout exceeded: 120s` naming a specific test is usually navigation, not a hang.**
+  Clicking a real `<LinkTo>` in a rendering test either starts a transition the test app cannot
+  service, or — for a modifier-held click — follows the `href` and navigates away from the
+  harness. Hold the modifier *and* suppress the default action.
+- **The coverage upload runs in `Testem.afterTests`, not `QUnit.done`.** See the comment in
+  `tests/test-helper.js`; a plain `QUnit.done` truncates the multi-MB POST on teardown.
+
+---
+
+# Open
+
+## 1. `@fleetbase/ember-core` — `tracked-built-ins` is imported but not declared, so every `universe/*` service fails to instantiate in this package's test app
+
+**Status:** FIXED (here, by adding `tracked-built-ins` as a devDependency — the upstream package.json gap remains in ember-core)
+**Found:** Baseline run of the pre-existing suite: 775 of 827 tests failed, ~490 of them with
+`Failed to create an instance of 'service:universe/registry-service'. Most likely an improperly
+defined class or an invalid module export.` In isolation the same tests fail differently, so it is
+a cascade.
+**Evidence:** In the browser after the first rendering test: `require('tracked-built-ins')` throws
+"Could not find module `tracked-built-ins`"; `require('@fleetbase/ember-core/contracts/universe-registry')`
+throws the same (it imports `TrackedMap` from it); `requirejs.entries['@fleetbase/ember-core/services/universe/registry-service'].state`
+is `pending` with `exports.default === undefined`. ember-core's package.json declares neither a
+dependency nor a peerDependency on `tracked-built-ins`; the host console supplies it in production.
+The first lookup throws inside the first test's render, the loader leaves the half-evaluated module
+in place, ember-resolver's `_extractDefaultExport` returns the namespace object (no `create`), the
+Application registry caches that resolution, and every later test asserts on it.
+**Impact:** None for users (the console bundles the package). For this repo it made the entire
+suite un-runnable.
+**Fix:** `pnpm add -D tracked-built-ins@^3.4.0` here (done; ember-auto-import bundles it into the
+dummy app). Upstream: ember-core should declare it as a peerDependency.
+
+## 2. `@fleetbase/ember-core` — top-level imports of host-console modules (`@fleetbase/console/config/environment` in the url utils, `@fleetbase/console/extensions` in `universe/extension-manager`)
+
+**Status:** FIXED (here, by `tests/helpers/console-config-shim.js`, imported first in `tests/test-helper.js`)
+**Found:** `tests/unit/utils/vendor-integration-test.js` could not be loaded: "Could not find module
+`@fleetbase/console/config/environment` imported from `@fleetbase/ember-core/utils/console-url`".
+**Evidence:** `addon/utils/vendor-integration.js` imports `@fleetbase/ember-core/utils/api-url`, which
+imports `./console-url`, which imports the host console's config module at load time. The dummy app
+has no such module. Under coverage `forceModulesToBeLoaded()` evaluates every addon module, so every
+transitive importer would be affected, not just this one test.
+**Impact:** None for users. Blocks testing anything that imports those utils.
+**Fix:** The shim `define`s the config module with `environment`, `API.host`, `API.namespace` and
+`osrm` keys (the only keys those utils read), and the extensions module with a `getExtensionLoader`
+that returns `undefined` (the extension manager then warns "no loader registered" and continues).
+Test-only; nothing ships. `universe/extension-manager` is instantiated by every rendering test
+through `universe` → so without the second shim every rendering test still failed.
+
+## 3. `tests/unit/initializers/*` and `tests/unit/instance-initializers/*` — import from `dummy/…` paths that do not exist
+
+**Status:** FIXED (imports now target `@fleetbase/fleetops-engine/initializers/…` and `…/instance-initializers/…`)
+**Found:** Eight "TestLoader Failures … could not be loaded" entries in the baseline run.
+**Evidence:** The engine's initializers live only under `addon/`; engines do not re-export
+initializers into `app/` (they run inside the engine instance), so `dummy/initializers/x` was never
+a module. The `ember generate` blueprint for an app wrote the `dummy/` path.
+**Impact:** None for users. Eight test files never executed.
+**Fix:** Done. Note these tests are still blueprint scaffolds (`assert.ok(true)` after boot) — see #4.
+
+## 5. ember-intl — `IntlService` hydrates every bundled locale and `@formatjs/intl` throws `MISSING_DATA` for `mn-mn`
+
+**Status:** FIXED (here, by `tests/dummy/config/ember-intl.js` with `includeLocales: ['en-us']`)
+**Found:** After #1–#3 were fixed, every rendering test failed in `setupIntl`'s `beforeEach` with
+`[@formatjs/intl Error MISSING_DATA] Missing locale data for locale: "mn-mn" in Intl.NumberFormat`,
+in headless Chrome 152 and in the Claude browser pane alike.
+**Evidence:** Stack: `new IntlService` → `hydrate` → `addTranslations` (for each of the eight
+bundled locales) → `getOrCreateIntl` → `createIntl`, which calls `onError` when
+`Intl.NumberFormat.supportedLocalesOf([locale])` is empty; ember-intl 6.3's `onError` rethrows.
+`Intl.NumberFormat.supportedLocalesOf(['mn-mn'])` returns `[]` in this Chrome while the other
+seven locales are supported.
+**Impact:** None for users (the console runs in browsers with full ICU, and a real user picks one
+locale). It blocked the whole suite here.
+**Fix:** Bundle only `en-us` into the dummy app. Tests needing another locale call
+`addTranslations` from `ember-intl/test-support`.
+
+## 6. `addon/components/admin/avatar-management.js`, `avatar-manager.js` — render creates a `file` record the dummy app has no model for
+
+**Status:** FIXED (here, by `tests/dummy/app/models/file.js`, a minimal stand-in declaring only the attributes the avatar components read)
+**Found:** Coverage run after #5: "Global error: Uncaught Error: Assertion Failed: No model was
+found for 'file' and no schema handles the type" while executing
+`Integration | Component | admin/avatar-management: it renders`; the same for `avatar-manager`.
+**Evidence:** `@fleetbase/fleetops-data` ships 59 models and `@fleetbase/ember-core` none; `file`
+is a model of the host console app. The error is thrown from an ember-concurrency task, so it
+surfaces as an uncaught global error rather than a test assertion.
+**Impact:** None for users. Two scaffold tests fail, and an uncaught error mid-run is exactly the
+kind of thing that destabilises the rest of the suite.
+**Fix:** Done. The same class of gap exists for other host-console models the addon queries and
+`@fleetbase/fleetops-data` does not ship — `category`, `comment`, `custom-field`,
+`fuel-provider-sync-run`, `report`, `schedule*`, `user` — add a stand-in under
+`tests/dummy/app/models/` the first time a test reaches one.
+
+## 7. testem — `bail_on_uncaught_error` (default `true`) ended the run at the first uncaught asynchronous error
+
+**Status:** FIXED (`testem.js`: `bail_on_uncaught_error: false`)
+**Found:** Two consecutive coverage runs reported only 5 and 7 tests out of 832 with a clean
+`1..N` summary and no disconnect message, both ending right where the avatar components threw
+their uncaught `file`-model error from an ember-concurrency task.
+**Evidence:** `testem/lib/runners/browser_test_runner.js` `onGlobalError`: when
+`bail_on_uncaught_error` is set it records one "Global error" result, calls `onAllTestResults()`
+and `finish()`; `testem/lib/config.js` defaults it to `true`. `ember-ui` never hit this because its
+suite has no uncaught async errors left.
+**Impact:** None for users. For the campaign, one stray rejection would hide every test after it
+and produce no coverage artifact.
+**Fix:** Done. Uncaught errors are still reported as failing "Global error" entries and still fail
+the run.
+
+## 8. `@fleetbase/ember-core/services/fetch` — reads `config.API.host` from the consuming app's config at module load
+
+**Status:** FIXED (here, `tests/dummy/config/environment.js` sets `ENV.API` in the test environment)
+**Found:** `avatar-picker` and `order/customer-avatar-stack` scaffolds: "Global error: TypeError:
+Cannot read properties of undefined (reading 'host')".
+**Evidence:** `fetch.js:13` imports `ember-get-config` (the dummy app's config, not the console
+shim from #2) and line 22 reads `config.API.host` at module evaluation; the dummy config had no
+`API` key.
+**Impact:** None for users. Uncaught error at module load for anything injecting `fetch`.
+**Fix:** Done; the host is `http://localhost:8000`, which nothing in the suite is expected to reach.
+
+## 9. `tests/integration/components/layout/fleet-ops-sidebar-test.js` — assigned `window.location.href` on the real window and navigated the browser away
+
+**Status:** FIXED (`setupWindowMock(hooks)` added to the module)
+**Found:** Two consecutive full runs died with "Browser timeout exceeded: 120s … while executing
+test: layout/fleet-ops-sidebar: it keeps block usage backwards compatible", i.e. the test *after*
+the one that did the damage. `QUnit.config.testTimeout` never fired, which rules out a hung
+promise: the page was gone.
+**Evidence:** The preceding test, "it opens registry item nested context on initial virtual route
+entry", does `window.location.href = '/fleet-ops/management/contracts'` via `import window from
+'ember-window-mock'` — but the module never called `setupWindowMock(hooks)`, and without it that
+import is a pass-through to the real `window`. The file was written before `ember-window-mock`
+was even a dependency (added today), so it had never run.
+**Impact:** None for users. It killed every full run at test 133 of 832 and starved the coverage
+upload; see the brief's trap #7.
+**Fix:** Done. Rule for Phase B: any test that imports `ember-window-mock` calls
+`setupWindowMock(hooks)`; any test touching `location`, `open`, storage or `matchMedia` uses it.
+
+## 10. Dummy app — no `hostRouter` service (110 failures: "Attempting to inject an unknown injection: 'service:hostRouter'")
+
+**Status:** FIXED (`tests/dummy/app/services/host-router.js`, a recorded-call router stub on `tests/dummy/app/utils/stub-evented-service.js`)
+**Found:** First complete run (832 tests): the single largest failure class.
+**Evidence:** `hostRouter` is one of the services the console injects into engines
+(`@fleetbase/ember-core/exports/services`); no package ships it. The addon uses
+`hostRouter.transitionTo` at 272 sites, `.refresh` 58, `.currentRouteName` 12, `.on/.off` once each.
+**Impact:** None for users. Every component/controller/route injecting `hostRouter` failed to
+instantiate in tests.
+**Fix:** Done; transitions resolve immediately and are recorded on `calls`.
+
+## 11. Dummy app — `EXTEND_PROTOTYPES: false` while the console runs with `true` (85 failures: "this.iconContainers.pushObject is not a function")
+
+**Status:** FIXED (`tests/dummy/config/environment.js` mirrors the console: `EXTEND_PROTOTYPES: true`)
+**Found:** First complete run: second-largest failure class.
+**Evidence:** `console/config/environment.js:16` sets `EXTEND_PROTOTYPES: true`. The failing call
+is in `@fleetbase/ember-ui/addon/components/content-panel.js:167` (`@tracked iconContainers = []`
+then `.pushObject`), which only works with array prototype extensions; ember-ui's own dummy app has
+them off, so that is a latent ember-ui finding, not a fleetops one. The blueprint dummy config here
+defaulted to `false`.
+**Impact:** None for users (the console enables them). Tests were exercising code under a runtime
+the engine never sees.
+**Fix:** Done. Note for Phase B: do not "fix" addon code that relies on prototype extensions; the
+host guarantees them.
+
+## 12. `addon/helpers/is-active-route.js` — re-exported a console module that does not exist anywhere
+
+**Status:** FIXED (file deleted)
+**Found:** Gate: "missing from the coverage report". The module throws on evaluation so istanbul never
+registers it.
+**Evidence:** One line: `export { default, isActiveRoute } from '@fleetbase/console/helpers/is-active-route'`.
+No file named `is-active-route` exists in the console app (`app/`, `addon/`), in ember-ui or in
+ember-core; nothing in `addon/`, `app/` or any template references `is-active-route`/`isActiveRoute`.
+Untouched since the 2023-10-09 monorepo import. It has no `app/` re-export, so no host could ever
+resolve it as a helper either.
+**Impact:** None; it was unreachable dead weight.
+**Fix:** Deleted.
+
+## 13. `addon/components/order/details/proof.js` — imported `ember-concurrency-decorators`, which this package does not depend on
+
+**Status:** FIXED (import switched to `ember-concurrency`, which the rest of the addon already uses)
+**Found:** Gate: "missing from the coverage report" — module evaluation throws "Could not find
+module `ember-concurrency-decorators`".
+**Evidence:** The only importer in `addon/`; the package is absent from this package.json and
+node_modules and only resolves in the console because the console declares it. ember-concurrency 4
+exports the same `task` decorator (used by every other component here).
+**Impact:** In a host without that transitive package the order proof panel would fail to load.
+Not a behaviour change here: same decorator, same semantics.
+**Fix:** Done.
+
+## 14. `addon/helpers/format-duration.js` — pure re-export that istanbul never instruments and nothing imports
+
+**Status:** FIXED (file deleted)
+**Found:** Gate: the only addon file "missing from the coverage report" after #12/#13.
+**Evidence:** One line, `export { default, formatDurationValue } from '@fleetbase/ember-ui/helpers/format-duration'`;
+it is the only file in `addon/` with no statement at all, and babel-plugin-istanbul emits no coverage
+object for such a file. No JS in `addon/`, `app/` or `tests/` imports
+`@fleetbase/fleetops-engine/helpers/format-duration`. The three templates that use
+`{{format-duration}}` resolve the helper from the app namespace, which ember-ui already provides via
+its own `app/helpers/format-duration.js` (this package's identical `app/helpers/format-duration.js`
+re-export stays; it is harmless and outside the gate).
+**Impact:** None.
+**Fix:** Deleted.
+
+## 15. `addon/components/layout/fleet-ops-sidebar.js` — five defensive defaults no caller can reach
+
+**Status:** FIXED (defaults removed; one `istanbul ignore if` with the caller named)
+**Found:** Coverage residue after the module's suite was green: `default-arg` branches at
+`createBranch` (`keywords = []`), `createHubItem` (`keywords = []`), `sortByPriority`
+(`items = []`), `shouldSyncInitialActiveParent` (`activePath = []`), `searchNavigation`
+(`limit = 12`), plus the `!trimmedQuery` early return.
+**Evidence:** `createBranch` has 7 call sites and `createHubItem` 5, all in this file, all passing
+`keywords`. `sortByPriority` is called from `registryRootItems`, `registryPanelItems` (twice) and
+`withRegistryItems`, always with an array literal or `.map()` result. The two actions are only
+invoked by ember-ui's `Layout::Sidebar::Navigator`: `shouldSyncInitialActiveParent` is called with
+`{ activePath, routeName, currentURL, router }` (navigator.js `shouldSyncInitialActiveParent`),
+and `searchProvider` is called with `{ query, items, limit: this.maxSearchResults }` only after the
+navigator has itself returned on an empty trimmed query (navigator.js `searchProvider`).
+Four more unreachable fallbacks in the same file: the `= []` initializers on the eight
+`@tracked universe*` list fields (the constructor's `createMenuItemsFromUniverseRegistry()` assigns
+all eight before any read, and Ember's legacy `@tracked` runs a field initializer lazily on first
+read, so the initializer can never execute); `?? []` in `withRegistryItems` (the same lists are
+always arrays); the `!route || route.startsWith('console.')` guard in `fullRoute` (all 14 call
+sites pass an unprefixed engine route); and `?? 0` in `defaultPriorityForRoute` (every route passed
+by `createItem`/`createHubItem` is a key of the priorities map — verified by diffing the two lists).
+**Impact:** None; none of these fallbacks could ever take effect.
+**Fix:** All deleted. The empty-query guard is kept (the arg is public API on the component)
+behind `istanbul ignore if` naming the navigator as the reason.
+
+## 16. `addon/components/layout/fleet-ops-sidebar/operations-monitor.js` — three unreferenced getters and two guards nothing can trip
+
+**Status:** FIXED (deleted; three host-environment guards kept behind `istanbul ignore` with the reason)
+**Found:** Coverage residue while covering the component.
+**Evidence:** `activeResources`, `emptyMessage` and `subtitle` are referenced by neither
+`operations-monitor.hbs` nor the class itself (`grep -c 'this\.<name>'` is 0 in both); the
+template renders the equivalent data inline via `{{or ...}}` and `this.emptyState`.
+`focusResource(resource)` is only reached from `locateDriver`/`locateVehicle`, whose only callers are
+the template's `(fn this.locateDriver row.driver)` / `(fn this.locateVehicle row.vehicle)` and the
+driver/vehicle row buttons — every one passes an existing row resource. In `updateListHeight` the
+last fallback `this.monitorElement.parentElement` is the element `did-insert` registered, which is
+mounted, so `boundary` is never null. The `typeof window` / `typeof ResizeObserver` /
+`typeof requestAnimationFrame` checks guard non-browser hosts and can only be false outside Chrome.
+Also unreachable: the `= new Set()` initializer on `@tracked expandedFleetIds` (assigned by
+`loadFallbackResources` together with `fallbackFleets`, and only read by `isFleetExpanded`/
+`toggleFleet` once fleets exist — Ember's legacy `@tracked` initializes lazily on read); the
+`!query` early return in `resourceMatches` (its only callers `fleetMatches`/`driverMatches`/
+`vehicleMatches` are only reached from `buildFilteredFleetRows`, which `fleetRows` calls only when
+`hasQuery`); `.length ?? 0` in both count helpers (`length` is never nullish); and nine default
+arguments whose every caller passes the value (`filterResources` both, `resourceMatches#fields`,
+`buildFleetRows#fleets`, `buildFilteredFleetRows#fleets`, `buildExpandedFleetRows#depth`,
+`collectFleetKeys`, `sortOnlineFirst`, `resourcesById`). The `!listElement || !monitorElement`
+guard in `updateListHeight` cannot trip either: both `did-insert` registrations happen in the same
+render before the scheduled frame, and teardown cancels the frame. In `performEmptyStateAction` the
+final `if (this.activeTab === 'fleets')` follows early returns for the only other two tabs, so it is
+always true (made unconditional). In `resourceArray` the `Array.isArray(resources) ? resources : []`
+consequent is unreachable while `EXTEND_PROTOTYPES` is on (the console's setting): every native
+array already answers `toArray()` one line earlier — kept behind `istanbul ignore next`.
+**Impact:** None.
+**Fix:** Getters, guards, initializer, `?? 0`s and defaults deleted; the environment guards and the
+element guard carry `istanbul ignore` comments naming the reason.
+
+## 17. `addon/components/cell/attached-vehicle.js`, `telematic-provider.js` — click guards their templates already enforce
+
+**Status:** FIXED (deleted)
+**Found:** Coverage residue in the cell suites.
+**Evidence:** `attached-vehicle.hbs` renders the `Cell::VehicleIdentity` that carries
+`@onClick={{this.onClick}}` only inside `{{#if this.hasVehicle}}`, so `onClick`'s
+`if (!this.hasVehicle) return;` can never be true. `telematic-provider.hbs` renders both click
+targets only inside `{{#if this.telematic}}`, so `this.telematic ?? row` in `onClick` never falls
+through to `row`.
+**Impact:** None.
+**Fix:** Both fallbacks deleted. Likewise `driver-identity.js` `assignedVehicleLabel`'s
+`this.args.column ?? {}`: the getter is only read from the compact template, which the
+`this.args.column?.compact` check already gated on a column being present.
+
+## 18. `addon/utils/geojson/geo-json.js` — dead duplicate of the fleetops-data base class
+
+**Status:** FIXED (deleted)
+**Found:** Unit-utility sweep; its scaffold died with "Class constructor GeoJson cannot be invoked without 'new'".
+**Evidence:** The file imported `./calculate-bounds`, which does not exist in this package (it lives
+in `@fleetbase/fleetops-data/utils/geojson/`, together with the identical `GeoJson` class every
+other util here already imports). Nothing in `addon/` imported it; only the generated `app/` shim
+and the scaffold test referenced it.
+**Impact:** None at runtime; it could never have been used without the build failing.
+**Fix:** Deleted with its `app/utils/geojson/geo-json.js` shim and the scaffold test.
+
+## 19. `addon/utils/leaflet-to-geojson.js` — `createFeatureCollectionFromLayers` always threw
+
+**Status:** FIXED
+**Found:** First real test of the function.
+**Evidence:** It called `new FeatureCollection({ features })`, but the fleetops-data constructor
+accepts either a GeoJSON `FeatureCollection` object or a plain array of features, and throws
+`GeoJSON: invalid input for new FeatureCollection` for anything else. No caller in `addon/`
+survived to notice; the function is exported API.
+**Impact:** Any consumer batching drawn layers into a collection got an exception instead.
+**Fix:** Pass the array. Also in this file: `normalizeToRings` ended with two identical
+`return latlngs` paths (one behind a guard, one as fallthrough); merged into one.
+
+## 20. `tests/unit/utils/map-drawer-dropdown-position-test.js` — stale against commit f784e710
+
+**Status:** FIXED (test updated to the source contract)
+**Found:** Two red assertions in the unit-utility sweep.
+**Evidence:** The June test expected `position: 'fixed'`, a numeric `zIndex` and a vertical clamp
+of `bottom - height - gap`. Commit f784e710 (2026-07-01) deliberately changed the util to
+`position: 'absolute'`, a string `zIndex` and a `bottom - height + 8` clamp, and never touched the
+test. The source is the intended behaviour (the menu is positioned inside the drawer panel).
+**Impact:** None for users; the suite was red.
+**Fix:** Expectations follow the source. The util now imports `window` from `ember-window-mock`
+so the viewport fallback (no drawer panel) is testable deterministically.
+
+## 21. `addon/utils/leaflet-plugin-loader.js` — dead defaults and non-browser guards
+
+**Status:** FIXED
+**Found:** Coverage residue after the loader suite was made deterministic.
+**Evidence:** `normalizePath(path = '')`, `waitForLeafletGlobal({ timeoutMs = 8000 } = {})` and
+`loadScript(src, { timeoutMs = 8000, isReady = null } = {})` are module-private and each has one
+caller that always passes every value (`ensureLeafletPluginsReady` resolves the public defaults
+first), so none of those defaults can apply. The three `typeof window/document === 'undefined'`
+guards cannot be true under Testem, which only ever runs this module in Chrome.
+**Impact:** None.
+**Fix:** Defaults deleted; the guards carry `istanbul ignore if` with that reason. The former
+test asserted on script elements synchronously after the call, but the loader appends them after
+the Leaflet-global promise settles; the suite now waits for the loader's listeners and neutralises
+its own script elements so no network request is made.
+
+## 22. Three utils — defensive fallbacks with no reachable input
+
+**Status:** FIXED (deleted)
+**Found:** Coverage residue in the unit-utility sweep.
+**Evidence:** `setup-customer-portal.js` guarded `customerPortalEngine?._fleetopsSetupCompleted`
+two lines above an unconditional `customerPortalEngine._fleetopsSetupCompleted = true`; a null
+engine threw either way. `to-calendar-date.js` used `parts.find(...)?.value ?? '0'`, but
+`Intl.DateTimeFormat#formatToParts` always emits every requested part, and the surrounding
+`try/catch` already returns the input date on any failure. `to-multi-polygon.js` used
+`geom.coordinates ?? input.coordinates` where `geom` is either `input` or `input.geometry`, so the
+fallback can only ever produce the same value.
+**Impact:** None.
+**Fix:** All three deleted.
+
+## 23. `tests/helpers/index.js` — ember-local-storage proxies outlive the test app that created them
+
+**Status:** FIXED (harness)
+**Found:** Five `Unit | Service` suites died in `it exists` with "Cannot create a new tag for
+`<(unknown):ember2993>` after it has been destroyed"; the same object id across three different
+modules pointed at something shared outside the container.
+**Evidence:** `ember-local-storage/helpers/storage` caches every `storageFor` proxy in a
+module-level map. `currentUser.options`, `currentUser.cache` and `appCache.localCache` are such
+proxies; the first test app to tear down destroys them, and every later app that reads
+`currentUser.getOption` (the `defaultCurrency` read in the action-service constructors) or
+`appCache.get` (the order-list-overlay constructor) trips the destroyed-tag assertion.
+**Impact:** None for users; any test that touched user options after the first module was red.
+**Fix:** `setupTest`/`setupRenderingTest`/`setupApplicationTest` now clear browser storage and
+call the addon's own `_resetStorages()` after every test.
+
+## 24. `tests/unit/services/*` — service tests that were never green
+
+**Status:** FIXED (tests corrected to the source contract)
+**Found:** Remaining red `Unit | Service` tests once #23 was fixed.
+**Evidence:** `driver-actions`, `vehicle-actions` and `device-event-actions` assigned over
+`service.refresh` / `service.transitionTo`, which `@action` defines as getter-only accessors
+(TypeError in strict mode); the stubs now sit on the host-router the base service delegates to,
+and the transition test asserts the mount-prefixed route the base service actually produces.
+`leaflet-contextmenu-manager` expected one `removeAllItems` call after removal, but registration
+has cleared native items before adding its own since 2023 (`createContextMenu`), so removal is
+the second call. `device-actions` expected `panel.view()` without a device to return `undefined`,
+but it returns the notification from `notifications.warning`. `geofence` awaited one microtask
+while the canonical reload chains several promises; the tests now wait for the polygon to show.
+`route-optimization` / `leaflet-routing-control` register into the application registry through
+`universe.getApplicationInstance()`, which only the console sets while booting engines; those two
+suites now hand the universe the test owner (an eager dummy instance-initializer was tried and
+rejected: cascading `setApplicationInstance` instantiates the real `universe/menu-service`
+before a suite can register its stub).
+**Impact:** None.
+**Fix:** As above; no source change.
+
+## 25. `tests/unit/{controllers,routes}/connectivity/telematics/index/**` — tests left behind by the telematics route move
+
+**Status:** FIXED (relocated)
+**Found:** 16 red `it exists` / real tests whose lookups returned `undefined`.
+**Evidence:** `addon/` has `connectivity/telematics/{details,edit,new}` and
+`connectivity/telematics/details/{devices,events,index,sensors}`; there is no
+`connectivity/telematics/index/*` subtree in either controllers or routes. The tests still looked
+up the old `index/` names. Sixteen files were `git mv`'d to the new paths with their lookup strings
+rewritten; the stale `index/details` controller scaffold duplicated the real
+`telematics/details-test.js` and was deleted, as was
+`tests/unit/routes/addon/routes/management/places/index/new-test.js`, a mis-generated duplicate of
+`tests/unit/routes/management/places/index/new-test.js`. Every relocated test passes against the
+current sources unchanged.
+**Impact:** None for users.
+**Fix:** As above.
+
+## 26. `app/controllers/operations/{orders,routes}/index.js` — missing re-export shims
+
+**Status:** FIXED (shims added)
+**Found:** `controller:operations/routes/index` resolved to `undefined` in the dummy app, and the
+`@controller('operations.orders.index')` injection in `operations/orders/index/details`
+asserted "unknown injection".
+**Evidence:** `addon/controllers/operations/orders/index.js` and
+`addon/controllers/operations/routes/index.js` both exist, but `app/controllers/operations/orders/`
+and `app/controllers/operations/routes/` only carried their child directories; the two one-line
+shims the blueprint generates alongside every addon module were never committed. Inside the
+engine the resolver reads `addon/` directly, so the console never noticed; a host that merges
+`app/` (the dummy app, and any non-engine consumer) cannot resolve those two controllers.
+**Impact:** None inside the engine.
+**Fix:** The two shims added.
+
+## 27. `tests/unit/routes/operations/orders/index/details-test.js`, `.../attachments-test.js`, `register-osrm-test.js` — stale or scaffold tests
+
+**Status:** FIXED (tests corrected to the source contract)
+**Found:** Remaining red unit tests after #25.
+**Evidence:** The order-details route no longer stops sockets or removes routing controls itself;
+`willTransition` delegates to the controller's `teardownRealtime()` and
+`teardownRoutingControls()`, which the test never stubbed. The attachments test declared
+`assert.expect(3)` for a body that makes six assertions (three `assert.step` calls, two state
+checks, `verifySteps`). The register-osrm scaffold only booted an instance; it now asserts the
+three registrations and hands the universe its application instance first (the routing services
+register through `universe.getApplicationInstance()`, see #24).
+**Impact:** None.
+**Fix:** As above; no source change.
+
+## 28. `tests/integration/components/vendor/panel-header-test.js` (and two scaffolds) — un-awaited fetches spill "Failed to fetch" onto the next test
+
+**Status:** FIXED
+**Found:** `vendor/panel-header: it falls back when vendor values are missing` went red in one
+of four otherwise identical full runs with `global failure: TypeError: Failed to fetch`.
+**Evidence:** Every full run logged four `Failed to fetch` rejections. Two came from the
+self-fetching `it renders` scaffolds of `driver-onboard-settings` and
+`widget/fleet-ops-key-metrics` (gone with their real suites, DEFECTS #36). The stack of the last
+two named the origin exactly: ember-ui's `CountryName`, mounted by `Vendor::PanelHeader` for the
+`country` chip, calls `fetch.get('lookup/country/US')` 300ms after it renders and nothing awaits
+it, so QUnit attributed the rejection to whichever test was running when the request failed.
+**Impact:** None for users; one flaky green test per run at worst.
+**Fix:** The panel-header suite stands `country-name` in with a template-only component (the same
+stand-in `driver/details` and the place suites already use). A full run now logs zero
+`Failed to fetch` rejections; a returning one means a new suite mounts a fetching ember-ui child
+without a stand-in — the `awk` in the iteration-16 ledger notes finds the victim and its
+predecessor.
+
+## 29. Eight stale or scaffold unit/helper tests
+
+**Status:** FIXED (tests corrected to the source contract)
+**Found:** The last red non-scaffold unit tests after #27.
+**Evidence:** `connectivity/devices/index/details/vehicle` expected the vehicle record as the
+transition model, but commit a9eed9cb ("Fix vehicle attachment navigation", 2026-06-23)
+deliberately passes `vehicle.public_id`. `settings/map` expected a payload without the
+`leafletTileUrl`/`leafletDarkTileUrl` keys the controller has sent since tile URLs became
+settings. `leaflet-tracking-marker` and `telematic/form` built fakes with
+`Object.create(prototype)` and then assigned properties that ember-leaflet's BaseLayer exposes as
+getters, or called an `@action` through the prototype (which binds `this` to the prototype);
+both now shadow via property descriptors on an object that inherits the prototype.
+`load-leaflet-assets` asserted synchronously on a 100ms poll and, with a stub `window.L`, let the
+plugin loader append real Draw/contextmenu scripts that would execute against the stub. Worse,
+both it and `leaflet-intersects-polyfill` left their 100ms polls running after the test ended
+(the interval is not tied to the application), and in a full run the polyfill's leaked poll fired
+while the next test had swapped `window.L` for `{}`, crashing on `L.Bounds.prototype`. Both
+tests now capture `setInterval`/`clearInterval` and drive the poll by hand, keep any appended
+script inert, and assert the poll is cleared; the loader's rejection is observed through
+`console.debug` so the initializer's catch is covered too. The three `Integration | Helper` scaffolds
+rendered `{{helper 1234}}` and expected `1234` back.
+**Impact:** None.
+**Fix:** As above; no source change. Note for slice runs: QUnit's `--filter "/regex/"` did not
+match module names containing `\|`-escaped pipes, so a slice can silently run fewer tests than
+intended — count the `ok` lines per module before trusting a slice profile.
+
+## 30. Five map templates — `@url={{leaflet-tile-url}}` cannot render under Ember 5
+
+**Status:** FIXED
+**Found:** The first real rendering tests of `place/details`, `service-area/details` and
+`zone/details` died with "A resolved helper cannot be passed as a named argument as the syntax is
+ambiguously a pass-by-reference or invocation".
+**Evidence:** `<layers.tile @url={{leaflet-tile-url}} />` passes a bare helper name as a named
+argument; Ember 5's template compiler rejects that at render time (the same shape broke the
+resource-identities suite in DEFECTS #17's iteration). `grep -rn "={{leaflet-tile-url}}" addon`
+found five templates: `place/details.hbs`, `service-area/details.hbs`, `zone/details.hbs`,
+`modals/place-details.hbs`, `modals/point-map.hbs`. The helper's own doc comment showed the same
+form.
+**Impact:** Those five map views throw when rendered on Ember 5 — a place's details panel, a
+service area's and a zone's details, and the two map modals show nothing.
+**Fix:** `@url={{(leaflet-tile-url)}}` in all five templates and the doc comment; the three
+details views now render a Leaflet map in tests. Also trimmed the helper's `= {}` default on its
+hash parameter: Ember always passes a hash object to `compute`, so the default cannot apply.
+
+## 31. `addon/components/fuel-report/form.js`, `integrated-vendor/form.js` — actions no template invokes
+
+**Status:** FIXED (deleted)
+**Found:** Writing the first real rendering tests for the six form components.
+**Evidence:** `FuelReportFormComponent#onAutocomplete` is referenced nowhere in
+`fuel-report/form.hbs` (its `ModelCoordinatesInput` is mounted without an `@onAutocomplete`),
+and `IntegratedVendorFormComponent`'s `showAdvancedOptions`/`toggleAdvancedOptions` are
+referenced nowhere in `integrated-vendor/form.hbs` (the advanced options live in a collapsed
+`ContentPanel`, which manages its own open state). A Glimmer component's actions are reachable
+only from its own template, and both templates are the only renderers of these classes
+(`grep -rn "FuelReport::Form\|IntegratedVendor::Form" addon`).
+**Impact:** None.
+**Fix:** Both removed; the classes are now empty shells like the other four form components.
+
+## 32. `addon/components/vehicle/pill.hbs` — the pill never received its vehicle
+
+**Status:** FIXED
+**Found:** Writing the first real rendering test of the vehicle pill.
+**Evidence:** The template passed `@this.resource={{this.resource}}` to ember-ui's `Pill` instead
+of `@resource=...`, so the pill's click handler, online indicator (`get @resource "online"`) and
+image alt never saw the vehicle: `@onClick` was invoked without the vehicle and the online dot
+was always the offline colour. Its tooltip block also read `{{this.resource.name
+this.resource.yearMakeModel}}`, which Glimmer treats as invoking a string as a helper and throws
+the moment the tooltip opens.
+**Impact:** Vehicle pills reported every vehicle offline, handed no vehicle to click handlers,
+and crashed on hover.
+**Fix:** `@resource={{this.resource}}` and `{{or this.resource.name this.resource.yearMakeModel}}`.
+
+## 33. `addon/components/fleet/form.js`, `order-progress-bar.js` — fields nothing reads
+
+**Status:** FIXED (deleted)
+**Found:** Coverage residue after the first real tests of both components.
+**Evidence:** `FleetFormComponent#writePermission` and `@tracked statusOptions` are referenced
+by nothing: not by `fleet/form.hbs` (it reads `get-fleet-ops-options "fleetStatuses"` and
+`cannot-write`), and `grep -rn "writePermission\|statusOptions" addon` finds no other reader.
+`OrderProgressBarComponent` initialised `@tracked progress = 0` and stored `@tracked order`,
+but its constructor always assigns `progress` before any read (so Ember's lazy tracked
+initializer can never run — the same shape as DEFECTS #15) and `order` is read by nothing:
+`order-progress-bar.hbs` uses the `@progress`/`@firstWaypointCompleted`/`@lastWaypointCompleted`
+arguments only.
+**Impact:** None.
+**Fix:** All four deleted; the constructor keeps its `progress = 0` default, which is the live
+default for a bar rendered without `@progress`.
+
+## 34. `addon/components/sensor/form.js`, `order-progress-card.js` — an uninvoked upload task and a guard that could only throw
+
+**Status:** FIXED
+**Found:** Writing the first real tests of both components.
+**Evidence:** `SensorFormComponent#handlePhotoUpload` (with the `fetch`, `currentUser` and
+`notifications` injections it alone used) is referenced by nothing: `sensor/form.hbs` mounts no
+`UploadButton`, unlike `contact/form.hbs`, whose identical task is wired through
+`@onFileAdded={{perform this.handlePhotoUpload}}`; a component task is reachable only from its own
+template. `OrderProgressCardComponent#loadTrackerData` guarded
+`!isBlank(this.order.tracker_data) || !this.order || !this.order.isNew`: the `!this.order` test
+came after `this.order.tracker_data` had already been dereferenced, so a missing order threw a
+TypeError from the task 100ms after render instead of returning.
+**Impact:** None for the sensor form. A progress card rendered without an order raised an
+uncaught error in the task rather than skipping the load.
+**Fix:** The sensor task and its injections deleted; the card's guard reordered to test the order
+first (same conditions, now reachable), covered by a card rendered without an order.
+
+## 35. `vendor/details.hbs`, `customer/details.hbs`, `driver/details.hbs`, `order/details/detail.hbs`, `entity/form.js` — five template and guard findings
+
+**Status:** FIXED
+**Found:** Writing the first real tests of the vendor, customer and driver details views and the
+entity form.
+**Evidence:** `vendor/details.hbs` branched on `this.isIntegratedVendor`, a property that does not
+exist on its empty component class (`vendor/details.js`), so the integrated branch could never
+render; and that branch passed `@resource=` to `IntegratedVendor::Details`, which reads `@vendor`
+(its own template uses `@vendor.provider_settings`), so even when reached it would have rendered
+nothing. `customer/details.hbs` labelled the phone field with `common.email`. `driver/details.hbs`
+and `order/details/detail.hbs` called `{{join array ", "}}`; ember-composable-helpers' `join`
+takes the separator first and, given an array there, silently substitutes `","`, so skills
+rendered as `hazmat,forklift`. `entity/form.js` initialised `@tracked useCustomType = false`
+although its constructor always assigns it (dead lazy initializer, DEFECTS #15 shape), and
+`selectEntityType` guarded `option?.value ?? null` for a PowerSelect mounted without
+`@allowClear`, which never yields a null option.
+**Impact:** Integrated vendors' details panel showed the regular vendor fields instead of the
+integration; a mislabelled phone field; skills lists without spaces.
+**Fix:** `@resource.isIntegratedVendor` and `@vendor={{@resource}}`; `common.phone`;
+`{{join ", " ...}}` in both templates; the initializer and the null guard removed.
+
+## 36. `driver-onboard-settings.js`, `widget/fleet-ops-key-metrics.js` — a null payload that crashed, and dead defaults
+
+**Status:** FIXED
+**Found:** Writing the first real tests of both components (both were self-fetching scaffolds
+named by the DEFECTS #28 victim list).
+**Evidence:** `DriverOnboardSettingsComponent#getDriverOnboardSettings` assigned the response's
+`driverOnboardSettings` verbatim and then read `.companyId` from it, so a `null` payload threw a
+TypeError inside the task; the `?? {}` guard sat later, in `updateDriverOnboardSettings`, where
+it could never apply, and `saveDriverOnboardSettings` tested `driverOnboardSettings &&` on a
+value that is always an object. `updateDriverOnboardSettings(props = {})` has five callers, all
+passing an object. Both components initialised a `@tracked` field (`driverOnboardSettings = {}`,
+`metrics = {}`) that their load tasks assign before any read (the DEFECTS #15 shape), and the
+widget's `if (!this.metrics) return []` guarded a value that is assigned an object by the only
+writer.
+**Impact:** A company whose onboarding settings came back null saw the panel never finish
+loading; the rest none.
+**Fix:** The load coalesces `null` to `{}` at the source (covered by a null-payload test), the
+unreachable guards, defaults and initializers are deleted.
+
+## 37. `addon/components/custom-entity/form.js` — the image upload reads a config that is never provided
+
+**Status:** NEEDS DECISION
+**Found:** Writing the first real suite for the form; `onFileAdded` could not be exercised without
+throwing.
+**Evidence:** `onFileAdded` builds the upload path from `this.config.id` and sends
+`subject_uuid: this.config.id`, but `config` is a bare `@tracked config;` that nothing assigns:
+no `this.config =` in the class, no `@config` argument in the template, and the only mount
+(`order-config-manager/entities.js#editCustomEntity`) opens the form through
+`resourceContextPanel.open({ content: 'custom-entity/form', resource, ... })`, whose panel forwards
+a fixed set of arguments (`resource`, `saveTask`, `pojoResource`, ...) and no `config`. So the
+first statement of the action dereferences `undefined` and every custom-entity image upload
+throws before the request is built. `simpleHash` has this action as its only caller.
+**Impact:** Uploading an image for a custom entity from the order-config manager fails silently
+(the TypeError surfaces only in the console); the entity keeps the default image.
+**Fix:** A product call on where the upload should attach: the order config the entity belongs
+to (then the entities component must pass the config through — e.g. stamp `order_config_uuid`
+on the entity it opens, or extend the panel's forwarded arguments) or the entity itself (then
+`subject_uuid`/`subject_type` and the path change to the entity's own id). Until decided the two
+functions stay uncovered; the suite covers everything else in the file.
+
+## 38. `addon/components/custom-entity/form.hbs` — the dasherized type never sticks
+
+**Status:** NEEDS DECISION
+**Found:** The first real test of `setCustomEntityType` observed the raw text after the handler
+ran.
+**Evidence:** The type `InputGroup` binds `@value={{@resource.type}}` (two-way through ember-ui's
+`Input`) and attaches `{{on "input" this.setCustomEntityType}}` via `...attributes` on the same
+`<input>`. On each `input` event the handler writes `dasherize(value)` and the Input's own
+listener, installed after the spread, writes the raw element value back; the suite shows
+`type === 'Big Box'` after typing `Big Box`, and on blur the `change` listener writes the raw
+value again. The handler is therefore a no-op in production; the test characterises this.
+**Impact:** Custom entity types are stored as typed (`Big Box`) rather than as the slug the code
+intends (`big-box`); anything matching on the slug downstream misses. `activity/form.hbs` has the
+same shape twice: the `key` and `code` InputGroups bind `@value` two-way and attach
+`{{on "input" this.setActivityKey}}` / `setActivityCode`, so the underscored key/code never sticks
+either (the derived `status` does, since it is not the bound field); its suite characterises the
+key case.
+**Fix:** Either bind the field read-only (`@value={{readonly @resource.type}}`) so the handler is
+the sole writer — the user then sees the slug form while typing — or drop the handler and
+dasherize when the entity is saved. Which one is a UX choice.
+
+## 39. `avatar-picker.js`, `custom-entity/form.js` — a dead post-load guard and an action nothing calls
+
+**Status:** FIXED
+**Found:** Profiling the two files after their first real suites.
+**Evidence:** `AvatarPicker#selectAvatar` followed `file = await this.store.findRecord(...)` (inside
+a try whose catch returns) with `if (!file) return;`; `findRecord` resolves to a record or
+rejects, never to a falsy value, so the guard could not run. `CustomEntityForm#save` checked
+`typeof this.onSave === 'function'`, but the class defines no `onSave`, the panel passes no
+`@onSave`, and no template invokes `this.save` (`grep -rn "this.save\|@onSave" addon` finds
+neither for this component); saving goes through the panel's `saveTask`.
+**Impact:** None.
+**Fix:** Both deleted.
+
+## 40. `addon/components/customer/admin-settings.hbs` — the payments toggle was never disabled
+
+**Status:** FIXED (separate commit, `fix(customer): disable the payments toggle …`)
+**Found:** Writing the first real suite; the toggle stayed enabled while the warning below it said
+onboarding had to complete first.
+**Evidence:** The template passed `@disable={{not this.paymentsOnboardCompleted}}`; ember-ui's
+`Toggle` reads `@disabled` (`toggle.js` constructor destructures `disabled`, the template renders
+`data-disabled={{this.disabled}}`) and has no `@disable` argument, so the value was dropped.
+**Impact:** A company that had not finished payments onboarding could switch customer payments on
+from the portal settings.
+**Fix:** `@disabled`; the suite asserts `data-disabled` follows `paymentsOnboardCompleted`.
+
+## 41. `customer/admin-settings.js`, `activity/form.js`, `activity/event-selector.js`, `device/manager.js` — dead fields, a dead task, dead optional chains and a dead guard
+
+**Status:** FIXED
+**Found:** Profiling the four files after their first real suites.
+**Evidence:** `CustomerAdminSettings` declared `@tracked paymentGateway = 'stripe'` that nothing
+reads (`grep -rn paymentGateway addon` finds only the literal in the POST body) and
+`@tracked enabledOrderConfigs = []` — a lazy initializer that the fetch assigns before the template
+can read it; it turned out to be reachable when the settings fetch fails and the order types still
+list, so the suite covers it and it stays. `ActivityForm#save` was the DEFECTS #39 shape again: a
+task checking `typeof this.onSave === 'function'` on a class with no `onSave`, no `@onSave`
+argument, and no `this.save` in the template (the panel saves through its own `saveTask`).
+`ActivityEventSelector#availableEvents` wrote `this.intl?.t?.(key) ?? 'fallback'` four times:
+`intl` is an injected service, `t` always a function, and `t()` returns a string (a missing key
+yields "Missing translation …", never `null`), so the twelve short-circuit branches could not run,
+and all four keys exist in `translations/en-us.yaml`; its `@tracked events = []` initializer is
+assigned in the constructor before any read. `DeviceManager#resourceName` returned `'resource'`
+without a resource and `loadDevices` returned early without one, but the component's single mount
+(`management/vehicles/index/details/devices.hbs`) passes the route model and the template's empty
+state calls `(get-model-name @resource)`, which throws on `undefined` — so no render without a
+resource exists for the guards to serve.
+**Impact:** None.
+**Fix:** The field, task, optional chains, initializer and guards are deleted; `intl.t` is called
+directly.
+
+## 42. `vehicle/form.hbs`, `driver/form.hbs` — registry components never received the controller
+
+**Status:** FIXED (separate commit, `fix(vehicle,driver): pass the controller …`)
+**Found:** Reading the vehicle form's five `RegistryYield` blocks before writing its suite.
+**Evidence:** All five (and the driver form's two) passed `@controller={{this.controller}}`;
+neither component class defines `controller`, while both routes mount the forms with
+`@controller={{this}}` (`management/vehicles/index/{new,edit}.hbs`) and the place form already
+uses `@controller={{@controller}}`.
+**Impact:** Any extension registered on `fleet-ops:component:vehicle:form*` or the driver form's
+registries got `undefined` for its controller.
+**Fix:** `@controller={{@controller}}` at all seven sites.
+
+## 43. `vehicle/form.hbs` — twenty-three fields ignored the write permission
+
+**Status:** FIXED (same separate commit as #42)
+**Found:** The no-write test found 13 of the 36 text inputs disabled.
+**Evidence:** Four `<Input>`s (seating capacity, depreciation rate, both service-life estimates)
+carried no `disabled=`, and all nineteen shorthand `<InputGroup @value=…>`s (trim, colour,
+serial, fuel card, class, call sign, both odometers, the seven engine fields, both RPMs, emission
+standard, loan payments) carried no `@disabled`, while the rest of the form gates on
+`cannot-write @resource`.
+**Impact:** A read-only user could edit those fields in the form (the API still refuses the save).
+**Fix:** Every bound field now gates on `cannot-write @resource`; the suite asserts all 36.
+
+## 44. `addon/components/vehicle/form.js` — two actions and a field nothing uses
+
+**Status:** FIXED
+**Found:** Profiling the file before its suite.
+**Evidence:** `updateAvatarUrl`, `updateSelectedImage` and `@tracked statusOptions` are referenced
+by no template or class (`grep -rn` across `addon/` finds only their definitions); the template's
+avatar is handled by `<AvatarPicker @model={{@resource}}>` and its status select reads
+`get-fleet-ops-options "vehicleStatuses"`.
+**Impact:** None.
+**Fix:** Deleted.
+
+## 45. `driver/form.js`, `customer/form.js` — the new user's photo upload was never linked to the user
+
+**Status:** FIXED (separate commit, `fix(driver,customer): link the new user's photo upload …`)
+**Found:** Asserting the upload options sent by the driver form's "create user" action button.
+**Evidence:** Both `userAccountActionButtons` handlers built the upload options with
+`subject_uui: user.id` while every other upload in the addon (and the API's upload endpoint) uses
+`subject_uuid`; `grep -rn "subject_uui\b" addon` found exactly these two sites.
+**Impact:** A photo uploaded while creating a user from the driver or customer form was stored
+without a subject, so it never attached to the new user.
+**Fix:** `subject_uuid` at both sites; the driver suite asserts the option name. The customer
+form's copy turned out to be dead (DEFECTS #47) and was deleted a commit later.
+
+## 46. `translations/en-us.yaml` — "New Adddress"
+
+**Status:** FIXED (separate commit, `fix(i18n): spell the customer form's new address label …`)
+**Found:** The customer form suite could not find a "New Address" button.
+**Evidence:** `customer.fields.new-address` read `New Adddress`; the customer form renders it as the
+address button's text when the customer has no place yet.
+**Impact:** A misspelt button label on every new customer.
+**Fix:** One character removed; the suite matches the corrected label.
+
+## 47. `addon/components/customer/form.js` — an action-button list nothing rendered
+
+**Status:** FIXED
+**Found:** Profiling the file after rewriting its suite.
+**Evidence:** `userAccountActionButtons` (the "create user" button with its modal, upload and save
+closures, copied from the driver form) is referenced by no template: `customer/form.hbs` mounts
+its ContentPanel without `@actionButtons`, and `grep -rn userAccountActionButtons addon` finds only
+the driver form, which does render it. The `store` and `modalsManager` injections served only that
+block.
+**Impact:** None; the customer form has no "create user" affordance today (if it should, wiring
+`@actionButtons` on its first ContentPanel would bring the driver form's behaviour back — a product
+call, not taken here).
+**Fix:** The field and the two injections are deleted.
+
+## 48. `addon/components/order/details/tracking.js` — the active stop matched on undefined ids
+
+**Status:** FIXED (separate commit, `fix(order): match the active tracking stop …`)
+**Found:** The tracking suite's first test expected "STOP 2 OF 3" and got stop 1.
+**Evidence:** `matchesStop` returned `stop.uuid === activeStop.uuid || stop.public_id === activeStop.public_id || stop.id === activeStop.id`; provider stops are keyed by `uuid`/`public_id` and carry no `id`, so the third comparison was `undefined === undefined` for every stop and `findIndex` returned 0.
+**Impact:** The "now heading to" label and marker named the first stop regardless of progress whenever stops lacked an `id`.
+**Fix:** Compare only identifiers both objects define; the suite covers `id`, `uuid` and `public_id` keyed stops.
+
+## 49. `tests/integration/components/order/details/tracking-test.js` — eleven tests never green, one stale expectation
+
+**Status:** FIXED
+**Found:** All eleven failed with "You must pass a function as the `fn` helper's first argument".
+**Evidence:** The template binds `(fn this.orderActions.viewLabel @resource)` and the suite's `order-actions` stub only defined `assignDriver`; `buildOrder` spread `...overrides` after building the merged `tracker_data`, so any override replaced the whole tracker payload; and "Due now" for a zero-second ETA was added in 4092d3ad and removed in 9356fb67 (`Tighten tracking route UI refinements`) while the test kept expecting it — a zero ETA renders `0s` today.
+**Impact:** None for users.
+**Fix:** The stub gains `viewLabel` and an abilities stub (the label button is permission-gated), the builder keeps overrides out of the merged payload, and the zero-ETA test asserts the current rendering with the removing commit cited.
+
+## 50. `addon/components/order/details/tracking.js` — three getters nothing renders and six guards the template already makes
+
+**Status:** FIXED
+**Found:** Profiling the file after the suite went green.
+**Evidence:** `hasCompletionEta`, `driverSignalClass` and `routeQualityItems` appear in no template or class (`grep -rn` across `addon/` and `tests/`; the route component has its own `hasCompletionEta`). `smartAdjustedEtaSeconds`, `displayedReportedEtaSeconds` and `isReportedEtaUntrusted` returned early on `!showLiveEta`, but the template reads all three only inside `{{else if this.showLiveEta}}`; `isReportedEtaUntrusted`, `diagnostics` and `operatorWarning` returned early on `!trackerData`, but everything inside `{{#if this.hasTrackerData}}` already requires it; `pingDriver` returned on `!order` from a button that only exists inside that block; and `activeStopLabel` tested `|| !this.totalStops` after `!this.activeStopIndex`, which cannot be truthy with zero stops since the index derives from them; `totalStops` likewise defaulted a missing stops array to 0, but it is only read once `activeStopIndex` has found a stop in that array.
+**Impact:** None.
+**Fix:** Deleted; the template's own guards are the contract.
+
+## 51. `tests/integration/components/order/form/service-rate-test.js` — six tests never green
+
+**Status:** FIXED
+**Found:** All six failed: the scaffold `it renders`, a POJO resource crashing `cannot-write` (`model?.get is not a function`), and four tests constructing the Glimmer component by hand (`new OrderFormServiceRateComponent(this.owner, …)` throws "You must pass both the owner and args" under this harness).
+**Evidence:** The failure list in the iteration-23 gate log; the component assigns `resource.servicable` and `resource.service_quote_uuid` directly, which only re-renders when the fixture's fields are tracked, and it queries rates only from the toggle or from a refresh event on a servicable order with none loaded — a servicable order rendered on its own loads nothing.
+**Impact:** None for users.
+**Fix:** The suite is rewritten as six rendering tests on a tracked fixture class: toggle → rates → quotes → quote selection → refresh → stale-quote clearing → toggle off; the disabled states (no config, no route, no write access, integrated vendor); the debounced refresh for the matching order with existing quotes kept while updating; rate loading from a refresh; a refresh that loses its route mid-debounce; and the locked contract override with its loading, breakdown and currency fallbacks. `handleServiceQuoteRefreshRequest`'s `= {}` default is deleted — its only caller is `OrderCreationService#requestServiceQuoteRefresh`, which always triggers with `{ reason, order }`.
+
+## 52. `tests/integration/components/telematic/details-test.js` — five tests never green
+
+**Status:** FIXED
+**Found:** All five failed with "Expected id to be a string or number, received undefined" from `Store.peekRecord`.
+**Evidence:** The stack runs `CustomFieldYieldComponent.loadCustomFields → resolveOwner → CurrentUserService.loadCompany → Store.peekRecord`: the template mounts `<CustomField::Yield @subject={{@resource}} @viewMode={{true}}>`, whose load task looks the company up by an id the test app never sets. Every other suite that mounts the yield stands it in (`stubFormInputs` registers the same stand-in); this one did not.
+**Impact:** None for users.
+**Fix:** The suite registers the `custom-field/yield` stand-in and gains five tests over the health cards (untested/unsynced, verified/synced with hardware identity, failed and synchronizing states), the sensitive-error masking and the query-string webhook URL; the component is at 100% on all four metrics. Date details are asserted with a local-time-tolerant pattern since `format-date-fns` renders in the browser's zone.
+
+## 53. `addon/components/tracking-stop-progress.js` — every uuid-keyed stop rendered as active
+
+**Status:** FIXED (separate commit, `fix(order): mark only the matching stop active …`)
+**Found:** The component's one test expected a single active dot and found three.
+**Evidence:** `matches` returned `stop.uuid === activeStop.uuid || stop.public_id === activeStop.public_id`; stops keyed by `uuid` alone carry no `public_id`, so the second comparison was `undefined === undefined` for every stop. Same shape as DEFECTS #48 in the parent tracking panel.
+**Impact:** The stop rail in order tracking highlighted every stop as the active one whenever stops had no `public_id`.
+**Fix:** Compare only identifiers both objects define; the suite covers uuid- and public-id-keyed stops, a completed active stop, labels and titles, location and place fallbacks, and the empty rail.
+
+## 54. `tests/integration/components/service-rate/details-test.js` — scaffold replaced
+
+**Status:** FIXED
+**Found:** The `it renders` scaffold was red; the template mounts `CustomField::Yield` (see #52) and renders nothing meaningful without a resource.
+**Evidence:** Three rendering tests now cover the fixed-rate, per-drop, multi-zone, per-meter, algorithm and parcel panels, the COD and peak-hour fee blocks in both modes, the restriction panel, and the unknown-method and empty-list fallbacks. The component class is empty, so this is template-only coverage that turns a red test green.
+**Impact:** None for users.
+**Fix:** Fees in the fixtures are integer minor units — the template runs per-drop, multi-zone and parcel fees through `f-to-int` (which strips non-digits) before `format-currency`, so a decimal fee like `2.5` renders as `$0.25`; the form stores them as integers.
+
+## 55. `addon/components/order-tracking-lookup.hbs` — the lookup form reloaded the page
+
+**Status:** FIXED (separate commit, `fix(order): stop the tracking lookup form from reloading …`)
+**Found:** The first rendering test that clicked "Lookup Order" navigated the test page away; testem restarted the whole suite without the filter (§7's navigation trap, observed directly).
+**Evidence:** The form bound `{{on "submit" (perform this.lookupOrder)}}` and its `@buttonType="submit"` Button also bound `@onClick={{perform this.lookupOrder}}`. Neither ember-ui's Button (`button.js#onClick`) nor ember-concurrency's `perform` helper calls `preventDefault`, so a press performed the task twice (click, then submit) and then let the browser submit the form to the current URL, reloading the page while the lookup was in flight. The input has no `name`, so the reload also lost the tracking number.
+**Impact:** A customer pressing the button (or Enter) on the public tracking page got a reload instead of their order; only a lookup arriving via the `?order=` URL parameter worked.
+**Fix:** One `submitLookup` action prevents the default and performs the task once; the Button no longer double-performs. The suite clicks the real submit button.
+
+## 56. `tests/integration/components/order-tracking-lookup-test.js`, `tests/dummy/config/environment.js` — tracking marker never registered in the dummy, no default images
+
+**Status:** FIXED
+**Found:** The rendered map showed the route control's markers but never the driver's, and `@onAdd` never fired; then the marker threw "iconUrl not set in Icon options".
+**Evidence:** `layers.tracking-marker` is registered with ember-leaflet by `addon/instance-initializers/register-leaflet-tracking-marker.js`, which only runs when the engine boots — this addon ships no `app/instance-initializers`, so a dummy rendering test yields no such component and the invocation renders nothing. The marker's icon reads `config "defaultValues.vehicleAvatar"`, which the dummy config lacked (the console defines the whole `defaultValues` block).
+**Impact:** None for users; the engine boots in the console.
+**Fix:** The suite calls the initializer's `initialize(owner)` in `beforeEach`; the dummy config mirrors the console's `defaultValues` with an inline SVG data URI per key — ember-ui's `fallback-img-src` modifier runs `new URL(fallback)` when a photo fails to load and throws on a relative path (that broke `cell/driver-name` on the first attempt with local paths), and Leaflet icons need a URL too, so the value must be absolute yet never leave the browser. The routing control's OSRM request goes through `@mapbox/corslite`'s global `XMLHttpRequest`, which the suite replaces per test with a fake it answers itself (a canned `Ok` route, or a 500), so no request reaches `router.project-osrm.org`.
+
+## 57. `addon/components/order-tracking-lookup.js` — guards the template already makes
+
+**Status:** FIXED
+**Found:** Profiling after the suite went green.
+**Evidence:** `startTrackingDriverPosition` tested `if (driver)` but is only reachable as the tracking marker's `@onAdd`, rendered inside `{{#if driver}}` over the same `this.order.driver_assigned`; `locateOrderRoute` tested `if (this.order)` but its button renders inside `{{#if this.order}}`; `cannotRouteWaypoints` tested `!this.map || !isArray(waypoints)` with a `= []` default, but it is only called from `displayOrderRoute`, which `setupMap` runs after assigning `this.map` inside `whenReady`, with the array `getRouteCoordinatesFromOrder` always returns; and `displayOrderRoute` wrapped `map.stop()`/`map.flyTo()` in a try/catch that only a broken Leaflet map could enter. `locateDriver`'s `if (driver)` stays — `has_driver_assigned` (which enables the button) and `driver_assigned` are separate API fields and the suite covers them disagreeing.
+**Impact:** None.
+**Fix:** The three guards and the try/catch are deleted; `cannotRouteWaypoints` is `waypoints.length < 2`.
+
+## 58. `addon/components/vehicle/details.hbs` — skills joined without a separator
+
+**Status:** FIXED (separate commit, `fix(vehicle): join the vehicle skills …`)
+**Found:** The vehicle details suite expected "refrigerated, hazmat".
+**Evidence:** `{{join @resource.skills ", "}}` passes the array first; ember-composable-helpers' `join` is `(join separator array)` and tolerates the reversed order by joining with a bare comma — the DEFECTS #35 shape, missed there because this template was not in that sweep.
+**Impact:** Vehicle skills rendered as `refrigerated,hazmat`.
+**Fix:** Arguments swapped.
+
+## 59. `route-optimization-wizard-panel.js`, `map/toolbar/zones-panel.js` — an action and a getter nothing renders
+
+**Status:** FIXED
+**Found:** Profiling after the eight-scaffold sweep.
+**Evidence:** `RouteOptimizationWizardPanel#onPressCancel` is referenced by no template (its cancel Button has no `@onClick`; `grep -rn onPressCancel addon` finds only other panels' own handlers), and `MapToolbarZonesPanel#serviceAreas` is unused — the template iterates `this.serviceAreaActions.serviceAreas` directly.
+**Impact:** None.
+**Fix:** Both deleted. The scaffolds for map/drawer, route-optimization-wizard-panel, order/details/{metadata,custom-fields,detail,notes}, vehicle/details and map/toolbar/zones-panel are replaced by real suites; `AbilitiesStub` in the test helpers gained `cannot`, which ember-ui's Button calls.
+
+## 60. seven templates — every selected document or avatar uploaded twice
+
+**Status:** FIXED (separate commit, `fix(order): upload each selected document once`)
+**Found:** The documents suite recorded two uploads for one selected file.
+**Evidence:** Each template wraps its dropzone in `{{#let (file-queue name="files" onFileAdded=…)}}`, which registers a listener on the "files" queue, and mounts ember-ui's `<FileUpload @name="files" @onFileAdded=…>`, whose own template registers a second `file-queue` listener on the same queue with the same callback. ember-file-upload's `Queue#add` notifies every listener, so one `<input type="file">` change or one drop performed the upload task twice. Affected: `order/details/documents`, `order/form/documents`, `issue/details/documents`, `customer/order-form`, `customer/create-order-form`, `avatar-manager`, `admin/avatar-management`.
+**Impact:** Duplicate file records and double upload traffic for every document or avatar added through these panels.
+**Fix:** The `@onFileAdded` on the inner `FileUpload` is removed in all seven templates; the outer queue listener is the single handler. The documents suite asserts one upload per selection.
+
+## 61. `order/details/documents.js`, `modals/reset-customer-credentials.js` — guards the queue makes redundant, and a dead initializer
+
+**Status:** FIXED
+**Found:** Profiling after the six-scaffold sweep.
+**Evidence:** `queueFile` returned unless `file.state` was queued/failed/timed out/aborted, and its error callback tested `file.queue && typeof file.queue.remove === 'function'`; the task is only ever reached as a `file-queue` listener, and `Queue#add` sets `file.queue = this` and notifies with the freshly queued file, so neither condition can be false. `ModalsResetCustomerCredentials` initialised `@tracked options = {}` and assigns `this.options = options` in its constructor before any read (the DEFECTS #15 lazy-initializer shape).
+**Impact:** None.
+**Fix:** The guard, the queue check and the initializer are deleted.
+
+## 62. `contact/details.hbs`, `order/pill.hbs`, `issue/form.hbs`, `modals/bulk-assign-driver.hbs` — four template slips
+
+**Status:** FIXED (cff7b292)
+**Found:** Reading the 23 empty-class components' templates before writing their suites.
+**Evidence:** `contact/details` labelled the phone field with `common.email`, so the details panel showed two "Email" rows. `order/pill` resolved `resource` from `(or @order @resource)` for the QR code and tracking number but read `status`, `dispatched_at`, `dispatchedAt`, `createdAt` and `type` from `@resource`, so an `@order`-only caller rendered a pill without status, dates or type (no addon template passes `@order`, but the argument is the one the component advertises first). `issue/form` handed its second `RegistryYield` `@controller={{this.controller}}`; the class is empty, so registry components received `undefined` while the sibling registry already used `@controller` (the DEFECTS #42 shape). `modals/bulk-assign-driver` rendered `t "fleet-ops.operations.orders.index.bulk-assign-driver-helptext"`, a key defined in no translation file in the workspace, so the driver select's help tooltip showed a missing-translation string.
+**Impact:** Mislabelled phone number; a pill with no status for `@order` callers; issue registry extensions without their controller; a broken help tooltip in the bulk-assign modal.
+**Fix:** `common.phone` for the label, `resource.*` throughout the pill, `@controller` for both registries, and the help-text key defined in `translations/en-us.yaml` under `fleet-ops.operations.orders.index`.
+
+## 63. `addon/components/order-list-overlay/` — a stale pre-monorepo copy of the map overlay row and driver title
+
+**Status:** FIXED
+**Found:** The scaffold sweep's regex filter matched a second `driver-panel-title` module.
+**Evidence:** `addon/components/order-list-overlay/{order.js,order.hbs,driver-panel-title.hbs}` are older copies of `map/order-list-overlay/*` (no intersection observer, `@context.orderPanelActiveJobs` instead of `_panelActiveJobs`, which the `order-list-overlay` service actually sets). No template invokes `OrderListOverlay::Order` or `OrderListOverlay::DriverPanelTitle` and no string references `"order-list-overlay/order"` or `"order-list-overlay/driver-panel-title"` in `addon/` or `app/`; the only consumers are the two blueprint scaffolds, and `git log` shows the files untouched since the monorepo import. `order.js` counted 27 statements in the denominator that nothing could ever reach.
+**Impact:** None for users; dead files in the coverage denominator.
+**Fix:** The addon directory, its two `app/` re-exports and the two scaffolds are deleted.
+
+## 64. `addon/components/map/drawer/device-event-listing.js` — loaded events were written to the wrong property
+
+**Status:** FIXED (4019861f)
+**Found:** Reading the component before writing its suite; the template renders a property the load task never assigns.
+**Evidence:** The class declares `@tracked events = []` and the template passes `@rows={{this.events}}`, but `loadEvents` ended with `this.positions = isArray(events) ? events : []` — `positions` is declared nowhere in the class. `git log -S` dates the line to dc759dc5 ("added positions & events drawer tab"), and the sibling `map/drawer/position-listing.js` does declare `@tracked positions = []`, so the tab was copied from the positions tab and its assignment was never renamed.
+**Impact:** The device-events drawer tab always rendered its empty state. Every telematic, device and date-range filter re-queried the API and threw the result away.
+**Fix:** Assign `this.events`.
+
+## 65. `addon/components/fleet-panel/` — a pre-refactor copy of the fleet detail panel and its listings
+
+**Status:** FIXED
+**Found:** Sizing the batch: `fleet-panel/{driver,vehicle}-listing` and `fleet/{driver,vehicle}-listing` are the same components twice.
+**Evidence:** No template invokes `FleetPanel::Details`, `FleetPanel::DriverListing` or `FleetPanel::VehicleListing`, and no string names `fleet-panel/...` anywhere in `addon/` or `app/` — the only consumers were the three blueprint scaffolds. The `fleet/` equivalents are live: `management/fleets/index/details/{index,drivers,vehicles}.hbs` render `Fleet::Details`, `Fleet::DriverListing` and `Fleet::VehicleListing`, and `services/fleet-actions.js` opens `component: 'fleet/details'`. `git log` puts the `fleet-panel/` files at the "major release and cleanup incoming" era and the `fleet/` set at "v0.6.19 ~ management and operations refactor underway". Corroborating: the dead templates render `t "fleet-panel.driver-listing.search-driver"`, `t "fleet-panel.vehicle-listing.loading-vehicle"`, `t "common.driver"` and `t "common.vehicle"` — no `fleet-panel:` root exists in any translation file in the workspace and the live `fleet/` copies use `fleet.driver-listing.search-driver` and `resource.driver` for the same strings, so the panel could only ever have rendered missing-translation text. `fleet-panel/vehicle-listing.js` had also drifted: it never declared `@tracked vehicles` (its async search task assigned an untracked property, so the list could not render) and called `this.notifications.serverError` without injecting the service, which would throw on any assignment failure. The live `fleet/vehicle-listing.js` has both.
+**Impact:** None for users; 60 statements, 17 branches and 14 functions of unreachable code in the coverage denominator.
+**Fix:** The `addon/components/fleet-panel/` directory, its three `app/` re-exports and its three scaffolds are deleted.
+
+## 66. `addon/components/map/drawer/device-event-listing.js` — the Device column opened a panel bound to the event
+
+**Status:** FIXED (33d8d538)
+**Found:** A rendering test clicked the Device cell and the device-event service answered instead of the device service.
+**Evidence:** `table/cell/anchor` renders `column.valuePath` but its click handler calls `column.action(row)` — it never resolves the value path for the action. The Device column set `valuePath: 'device.displayName'` and `action: this.deviceActions.panel.view`, so the click handed the service a device-event record. `deviceActions.panel.view` only guards `!device?.id`, which a device-event satisfies, so it opened the panel: the overview tab renders `device/details` against the event, and the vehicle, sensors and events tabs query by the event's id. This is the only column in `addon/` pairing a nested `valuePath` with an action on `table/cell/anchor`.
+**Impact:** Clicking a device name in the device-events drawer opened a device panel showing another record's data.
+**Fix:** The column resolves the device off the row. A row without one now falls into the service's existing invalid-resource warning.
+
+## 67. `addon/components/fleet/{driver,vehicle}-listing.js` — the search debounced on a key no caller sends
+
+**Status:** FIXED (c79f8382)
+**Found:** Profiling the last uncovered branch in both listings: `if (!params.value)` had no false path.
+**Evidence:** The only two callers are the constructor (`this.search.perform({ limit: -1 })`) and `onInput` (`this.search.perform({ query: value })`); neither passes `value`, so `!params.value` was always true. The pre-refactor copy deleted in #65 read `if (!isBlank(params.value)) { yield timeout(300); }` — it waited when a value *was* present — so the surviving copies both renamed the caller's key to `query` and inverted the test. The two mistakes cancelled into "always wait 300ms".
+**Impact:** Opening a fleet's drivers or vehicles tab sat on an empty list for 300ms before the query was even issued. Typing was still coalesced, by accident.
+**Fix:** Debounce on `params.query`, which is the key `onInput` sends. The initial load now queries immediately and typing still coalesces.
+
+## 68. three components — a lazy initializer, an unused default and a guard the field makes redundant
+
+**Status:** FIXED
+**Found:** Profiling the tail of this iteration's four listing suites.
+**Evidence:** `fleet/{driver,vehicle}-listing.js` declared `@tracked selectable = false` and assigned `this.selectable` in the constructor before any read, so Babel's legacy-decorator lazy initializer never ran (the DEFECTS #15 shape). The same task signature carried `*search(params = {})` while both callers pass an object, so the default never evaluated. In `map/drawer/device-event-listing.js`, `if (isArray(this.dateFilter) && this.dateFilter.length === 2)` can never be false: the field is initialised to a two-element range and its only writer, `onDateRangeChanged`, assigns only when `formattedDate` has exactly two entries.
+**Impact:** None.
+**Fix:** The initializer, the default and the guard are deleted.
+
+## 69. `app/components/**/*.hbs` — four app-tree templates shadowed the addon's co-located ones
+
+**Status:** FIXED (9bef934a)
+**Found:** The whole `device-event/details` module died with a resolution error, including its test that only calls `factoryFor`.
+**Evidence:** `app/` held exactly four `.hbs` files — `device-event/details.hbs` and `device/panel-tabs/{vehicle,sensors,events}.hbs` — each byte-identical to the addon's co-located template beside its class. Their `app/components/*.js` neighbours are plain `export { default }` re-exports, and Ember rejects that pairing outright: "`components/device-event/details.js` contains an `export { default }` re-export, but it has a co-located template. You must explicitly extend the component to assign it a different template." The addon class already carries its template via `setComponentTemplate`, so the app-tree copy is a second template for the same resolved component. `git log` attributes the device-event copy to f905cc5d and the three panel tabs to d292033e.
+**Impact:** All four components threw on resolution instead of rendering, in the host console as well as in tests — the device-event details panel, and the vehicle, sensors and events tabs that `device-actions.panel.view` opens by name.
+**Fix:** The four app-tree templates are deleted; the addon's co-located templates are the only ones. See #70 — the three panel tabs needed a second fix, because their app-tree `.js` files were copies rather than re-exports.
+
+## 70. `app/components/device/panel-tabs/*.js` — the app tree held copies of the classes, not re-exports
+
+**Status:** FIXED (9b63c72c)
+**Found:** After #69 the three tabs stopped erroring and started rendering an empty node; a probe showed the component produced `<!---->` and not even its own heading.
+**Evidence:** `app/components/device/panel-tabs/{sensors,events,vehicle}.js` were byte-identical to the addon classes they should have re-exported (2505, 3821 and 2891 bytes against a one-line re-export everywhere else). A sweep of the whole `app/` tree found these three and no others. Both they and the templates removed in #69 come from d292033e. While the duplicated templates were present the copies resolved with a template; removing them left an app-tree class with none, so the tab rendered nothing.
+**Impact:** Once #69 was fixed, the device panel's sensors, events and vehicle tabs rendered blank. Before it, all three threw. Either way the tabs never worked.
+**Fix:** The three app-tree files are now `export { default } from '@fleetbase/fleetops-engine/components/device/panel-tabs/<name>'`, so the addon classes and their co-located templates are what resolve.
+
+## 71. `addon/components/device/panel-tabs/vehicle.js` — a guard the template already makes
+
+**Status:** FIXED
+**Found:** Profiling the last uncovered lines after the tab's first suite.
+**Evidence:** `locateVehicle` opened with `if (!this.vehicle?.id) { return; }`, but the only caller is the Locate button, which the template renders under `{{#if this.canLocateVehicle}}` — and `canLocateVehicle` is `Boolean(this.vehicle?.id && (this.vehicle?.location || this.vehicle?.last_position))`. The guard can never be true.
+**Impact:** None.
+**Fix:** The guard is deleted; `canLocateVehicle` remains the single gate.
+
+## 72. seven components had no `app/` re-export at all
+
+**Status:** FIXED (b6c4b6f1)
+**Found:** Sweeping the `app/` tree after #69 and #70 for the inverse mistake.
+**Evidence:** `equipment/{card,panel-header}`, `part/{card,panel-header}`, `work-order/panel-header`, `issue/timeline` and `admin/navigator-app` were the only 7 of 272 addon components with no `app/components/<path>.js`; their direct siblings `device/panel-header` and `vehicle/panel-header` both have one. All seven are invoked by live addon templates — `issue/details.hbs` renders `<Issue::Timeline>`, `maintenance/{equipment,parts}/index.hbs` render `<Equipment::Card>` and `<Part::Card>`, the three detail templates resolve the panel headers by string through `{{component "equipment/panel-header"}}`, and `extension.js` registers `admin/navigator-app` by name. A rendering test proved the consequence directly: "Attempted to resolve `equipment/card`, which was expected to be a component, but nothing was found."
+**Impact:** Any host app consuming this package as an addon — the dummy, and any non-engine consumer — cannot resolve these seven. Whether the console is also affected depends on the engine resolving its own `addon/` tree for engine-internal templates, which this campaign has not verified; the re-export is what the other 265 components rely on either way.
+**Fix:** Added the seven missing `export { default }` re-exports. Every addon component now has exactly one, and `app/` holds no templates and no copied classes (#69, #70).
+
+## 73. `addon/components/order/form.js` — five actions the form's own template never wires
+
+**Status:** FIXED
+**Found:** A new suite covering the form's composition passed while its coverage stayed at 2/20 statements and 1/6 functions.
+**Evidence:** `order/form.hbs` contains no `this.` reference at all — it renders `@resource`, `@customFields` and a yielded hash of `(component ...)` entries, and nothing else. The hash exposes only components, so a caller cannot reach the class either; the two call sites (`operations/orders/index/new.hbs` and `customer/order-form.hbs`) render it as a component, and `order-actions.js` opens it as a panel's `content`/`component`, both of which only render. The five uncovered functions were exactly `selectFacilitator`, `selectOrderConfig`, `selectDriver`, `toggleAdhoc` and `toggleProofOfDelivery` — each a duplicate of a same-named action in `order/form/details.js`, which its template does wire. Only the constructor was reachable. `@tracked customFields` was written by `selectOrderConfig` alone, and the `store`, `customFieldsRegistry`, `mapManager` and `currentUser` injections were used only by the deleted actions.
+**Impact:** None — `order/form/details.js` carries the live copies.
+**Fix:** The class keeps the `orderConfigActions` injection and the constructor that primes the order configs; everything else is deleted.
+
+## 74. `addon/components/equipment/form.js` — a fallback the selector's options cannot reach
+
+**Status:** FIXED
+**Found:** The last uncovered branch after the form's suite.
+**Evidence:** `onEquipableTypeChange` ended with `TYPE_TO_MODEL[option.value] ?? null`, but the only source of `option` is the Asset Type PowerSelect, whose `equipableTypeOptions` are exactly `fleet-ops:vehicle` and `fleet-ops:driver` — both keys of `TYPE_TO_MODEL`. The right-hand side can never evaluate. (The constructor's separate lookup does need its fallback: it reads `resource.equipable_type`, which can hold an unmapped value, and a test covers that.)
+**Impact:** None; an unmapped value would give `undefined` rather than `null`, and both are falsy where the template tests it.
+**Fix:** The `?? null` is deleted.
+
+## 75. `packages/fleetops-data` — six models declare a `custom-field-value` relationship that no package defines
+
+**Status:** OPEN (outside this package; worked around in the dummy app)
+**Found:** A route-form test that assigns a place to a waypoint died with "No model was found for 'custom-field-value' and no schema handles the type".
+**Evidence:** `fleetops-data/addon/models/{place,asset,contact,driver,device,equipment}.js` each declare `@hasMany('custom-field-value', { async: false })`, but `find packages -name 'custom-field-value.js' -path '*models*'` returns nothing anywhere in the workspace — not in fleetops-data, ember-core or ember-ui. Materializing the relationship therefore throws.
+**Impact:** Unknown in production: the relationship is `async: false`, so it only throws where something actually reads `custom_field_values` off one of these records. It reliably throws in a rendering test that creates a `place` and attaches it to a `waypoint`.
+**Fix:** The model belongs in `fleetops-data`, which is a sibling package and outside this campaign's scope (`addon/` of fleetops only). `tests/dummy/app/models/custom-field-value.js` supplies a minimal one so this package's tests can create the records; the real fix is Ron's call on where the model should live.
+
+## 76. `addon/components/order/form/route.js` — the optimization error message reached no one
+
+**Status:** FIXED (ae253756, c6d52e7f)
+**Found:** Covering the two optimization tasks; the failure path threw instead of notifying.
+**Evidence:** Two independent faults on the same line. First, both tasks call `this.intl.t(...)` in their catch, but the class injected no `intl` — and in `optimizeRoute` that expression is evaluated unconditionally, so every optimization failure threw "Cannot read properties of undefined (reading 't')" from inside the catch. Second, the key they ask for, `fleet-ops.operations.orders.index.new.route-error`, is defined in no translation file; the string lives at `order.fields.route-error`, next to `order.fields.route-label` which this component's own template already uses. `optimizeRouteWithService` only reached the second fault when the error carried no message, since `??` short-circuits.
+**Impact:** A failed route optimization showed the user nothing and swallowed the engine's error.
+**Fix:** `@service intl` injected; both call sites now use `order.fields.route-error`.
+
+## 77. `addon/components/order/form/route.js` — a method with no caller and two guards the template makes
+
+**Status:** FIXED
+**Found:** Profiling the file's last uncovered statements after its suite reached 115/131.
+**Evidence:** `focusPlace(place, zoom = 18)` is referenced nowhere — `grep -rn focusPlace addon/` returns only its own definition, and the component's template never names it. The two guards are unreachable through the only caller each has: `setWaypointPlace`'s `if (!waypoints[index]) return` is invoked solely by the row's place select, which exists only for a row already in the list, so the index is always valid; and `removeWaypoint`'s `if (multipleWaypoints && waypoints.length === 1) return` is invoked solely by the row's remove Button, which the template withholds from index 0 (`{{#unless (eq index 0)}}`), so a click can never take the list below two. The same-named actions in `order/route-editor.js` and `customer/create-order-form.js` are separate copies with their own callers and are untouched.
+**Impact:** None.
+**Fix:** `focusPlace` and the two guards are deleted.
+
+## 78. `addon/components/order/form/route.js` — two parameter defaults no caller omits and three defensive fallbacks with no reachable input
+
+**Status:** FIXED
+**Found:** Profiling the file's last 2 statements and 8 branches after its suite reached 123/125.
+**Evidence:** Each was traced to the thing that makes it unreachable. `addWaypoint(properties = {})` — all four call sites pass attributes: the three inside `toggleWaypoints` and `{{fn this.addWaypoint (hash)}}` on line 27 of the template. `setOptimizedRoute(route, trip, waypoints, engine = 'osrm')` — its only caller is `handleRouteOptimization`, which already applies that same default while destructuring, so it never passes `undefined`. `waypointRouteStops`'s `payload?.waypoints ?? []` — the getter only renders under `{{#if this.multipleWaypoints}}`, and the only thing that turns that flag on is `toggleWaypoints`, which dereferences `payload` and pushes into `payload.waypoints` unguarded first. `badgeStyleForWaypoint`'s dark-text arm — `role` is hardcoded `'waypoint'`, so `describeRoutePoint` returns `this.routeColor`, which `colorForId` draws from `ROUTE_COLOR_PALETTE`; that ten-colour palette holds neither `#facc15` nor `#ca8a04`. `routeStyles.at(-1)?.weight ?? 4` and `?? 0.85` — `routeStyleForStatus` returns a two-entry array from every switch arm and each entry carries both keys.
+**Impact:** None.
+**Fix:** The two unused parameter defaults are deleted. The three fallbacks keep their behaviour — they are the contrast and shape guards for inputs this component does not currently produce — and each carries an `istanbul ignore` naming the specific thing that makes it unreachable. The polyline pair is hoisted into one `primaryStyle` const so a single pragma covers both; two adjacent pragmas on consecutive object properties did not both attach.
+
+## 79. `addon/components/work-order/form.js` — six `?? null` defaults on lookups that always hit
+
+**Status:** FIXED
+**Found:** Profiling the file's branches after its suite reached 58/59 statements with 6 of 30 branches still unreached, all the same shape.
+**Evidence:** All six guard a lookup whose key is itself drawn from a module constant in the same file. `TYPE_TO_MODEL[typeValue] ?? null` (twice, in the constructor) — `typeValue` can only be a *value* of `TARGET_MODEL_TO_TYPE` or `ASSIGNEE_MODEL_TO_TYPE`, and every one of those (`fleet-ops:vehicle`, `fleet-ops:equipment`, `fleet-ops:vendor`, `fleet-ops:contact`, `Auth:User`) is a key of `TYPE_TO_MODEL`; the `if (typeValue)` above has already rejected the only miss the table itself can produce. `targetTypeOptions.find(...) ?? null` and `assigneeTypeOptions.find(...) ?? null` — those two option lists hold exactly the values those tables map to, so the find always matches. `TYPE_TO_MODEL[option.value] ?? null` in `onTargetTypeChange` and `onAssigneeTypeChange` — `option` is handed over by the PowerSelect whose `@options` are those same two lists. The two `?? null` on the `TARGET_MODEL_TO_TYPE` / `ASSIGNEE_MODEL_TO_TYPE` lookups themselves are *not* dead — an unrecognised relationship reaches them — and are kept, with a test.
+**Impact:** None. Even on an impossible miss the field would hold `undefined` rather than `null`, and every consumer — `{{#if this.targetModelName}}` and PowerSelect's `@selected` — treats the two identically.
+**Fix:** The six unreachable `?? null` are deleted.
+
+## 80. `tests/dummy` — the addon reads Leaflet off a global the test app never had
+
+**Status:** FIXED
+**Found:** Sizing `services/map-adapter/leaflet.js`, the largest remaining file, stuck at 13/478 statements.
+**Evidence:** Seven addon modules take Leaflet from `window` — `services/map-adapter/leaflet.js`, `services/leaflet-draw-restriction.js`, `services/leaflet-layer-visibility-manager.js`, `services/service-areas.js`, `components/leaflet-tracking-marker.js`, `components/leaflet-draw-control.js` and `components/map/drawer/position-listing.js` — and five of them capture it at module scope as `const L = window.leaflet || window.L`. The host console loads Leaflet before the engine, but the dummy app has no host, and this package's `index.js` funnels only the leaflet *plugin* assets (leaflet-draw, leaflet-contextmenu) into `public/`; `grep -n "app.import" index.js` returns nothing, so the library itself is never put on the page. In the test app `window.L` was therefore undefined and `L` was permanently undefined in all five modules, putting every method that touches it out of reach. The sibling `services/map-adapter/google.js` does not have this problem: it reads `window.google` inside each method rather than at module scope.
+**Impact:** None in production — a normal Ember app loads the host's vendor bundle, and so Leaflet, before the engine's modules evaluate. Test-only.
+**Fix:** `ember-cli-build.js` — which by its own comment builds only the dummy app and "does not influence how the addon or the app using it behave" — now imports `node_modules/leaflet/dist/leaflet.js`, so the vendor bundle sets `window.L` before any addon module evaluates. That gives the test app the real library rather than a fake, and the same global the host provides. Worth knowing for later: the module-scope capture remains a load-order sensitivity that `google.js` avoids by construction; it is not a live bug given the guaranteed vendor-before-engine ordering, so it is left alone rather than turned into a seven-file refactor.
+
+## 81. `addon/services/map-adapter/leaflet.js` — a dead `remember` switch and six branch arms with no reachable input
+
+**Status:** FIXED
+**Found:** Sweeping the file's last 32 branches once its statements and functions were complete, looking for repeated shapes rather than working line by line.
+**Evidence:** Each was traced to what closes it off. `#hideOverlays(layer, remember = true)` — the method is private and has exactly one call site, `hideLayer`, which passed `true` explicitly, so neither the default nor the `if (remember)` false arm could ever run. `addRoutingControl`'s `if (polyline)` — `addPolyline` returns null only when there is no map, and `addRoutingControl` has already returned in that case. Its `options.markerWaypoints ?? route.waypoints ?? []` — the method returns early unless `route.waypoints` has length, so the `[]` tail is unreachable. Both `if (wasVisible)` arms in `editPolygon` — `this.showLayer(originalLayer, { soft: false })` runs two statements above `const wasVisible = !originalLayer.__hidden`, and a non-soft `showLayer` sets `__hidden = false`, so `wasVisible` is always true. `#normalizeDrawEvent`'s `payload.layerType ?? payload.type ?? null` — Leaflet's `Evented.fire` builds every payload as `extend({}, data, { type, ... })`, so `payload.type` is always set and the `null` tail cannot be reached. The module-scope `const L = window.leaflet || window.L` — only `utils/leaflet-plugin-loader` ever assigns `window.leaflet`, and it does so at runtime, long after this line has evaluated, so exactly one operand is reachable per run and which one is settled before any test can act.
+**Impact:** None. `remember` was a switch nothing could throw, and the rest are defensive arms for inputs their own callers rule out.
+**Fix:** The `remember` parameter and its guard are deleted, along with the `true` at the call site. The other six carry an `istanbul ignore` naming the specific thing that closes them. With those settled the file is at 100% on all four metrics.
+
+## 82. `addon/services/leaflet-layer-visibility-manager.js` — `assignPane` put a pane *object* where Leaflet wants a pane name
+
+**Status:** FIXED
+**Found:** Reading the service before covering it; `ensurePane` returns a pair but `assignPane` treats the whole return value as the name.
+**Evidence:** `ensurePane` returns `{ pane, paneName }`. `assignPane` does `const paneName = this.ensurePane(category)` and then `layer.options = { ...layer.options, pane: paneName }` — so `options.pane` holds the `{ pane, paneName }` object, not the string. Leaflet's `Map.getPane` is `typeof pane === 'string' ? this._panes[pane] : pane` (leaflet-src.js:4047), so it hands that object straight back, and the object is then used where a DOM parent is expected. The service's own `#getPaneForLayer` reads the same `layer.options.pane`, gets the object back, and `pane.style?.display` is `undefined` — so `isLayerHidden`'s category check silently never fires for a layer routed this way.
+**Impact:** Latent rather than live: `grep -rn "assignPane\|ensurePane" addon/` finds no caller outside the service, so nothing currently routes a layer through it. Any consumer that started to would get a layer with a broken `pane` option and a category check that never reports it hidden.
+**Fix:** `assignPane` takes `.paneName` off the pair. One line, in its own commit.
+
+## 83. `addon/services/leaflet-draw-restriction.js` — an entire service nothing uses, reading two collaborators it never declares
+
+**Status:** NEEDS DECISION
+**Found:** Picking the next batch from the files the Leaflet unlock opened.
+**Evidence:** Nothing in `addon/` references the service: `grep -rn "leaflet-draw-restriction\|leafletDrawRestriction"` finds only its own file, the generated `app/` re-export and the blueprint scaffold test. Inside it, `#bindRestrictionGuards` returns immediately on `if (!this.map ...)` and `this.map` is never declared, injected or assigned anywhere in the class — so the guards can only ever bind if something outside reaches in and sets `.map` on the service instance. It also calls `this.notifications?.warning?.()` and `this.notifications?.error?.()` in six places, and `notifications` is likewise never injected, so every one of those is a no-op. The `app/` re-export does make it resolvable to the host console, so a host lookup is possible in principle — but a host that looked it up would get an inert object unless it also assigned `.map` itself, which is undocumented.
+**Impact:** None today — the code cannot run. The 170 units it contributes sit in the coverage denominator.
+**Fix:** Ron's call, because it turns on intent. Either **wire it up** — inject `notifications`, give it a real map handle (the sibling `leaflet-layer-visibility-manager` takes its map from `leafletMapManager.map`, which is the obvious shape), and call `setDrawRestrictionPolygon` from wherever service-area drawing happens — or **delete it** as abandoned work. I have not picked one; covering an inert service to 100% would be busywork if the answer is delete.
+
+## 84. `addon/services/map-adapter/google.js` — `destroyMap` leaves every GeoJSON layer behind
+
+**Status:** FIXED
+**Found:** Asserting that destroying the map clears every register; `_geojsonLayers` was the one that still held an entry.
+**Evidence:** `destroyMap` clears `_markers`, `_overlays`, `_routingControls`, `_popups` (closing each first), `_contextMenuEls`, `_contextMenus`, `_eventListeners`, `_draftOverlays` and `_pendingDeletedDrafts`, and nulls the drawing manager, tooltip overlay and traffic/transit layers — but `grep -c "_geojsonLayers.clear()" addon/services/map-adapter/google.js` returns **0**. The register is only ever touched by `addGeoJson` and `removeGeoJson`. The sibling `map-adapter/leaflet.js` does clear it (line 116), so this adapter is the outlier rather than the pattern.
+**Impact:** Two things outlive a map that was destroyed. The `google.maps.Data` layers are never detached, so they keep a reference to the old map; and the ids stay in the register, so a rebuilt map starts with stale entries — `removeGeoJson('geo_1')` on the new map would call `setMap(null)` on a layer belonging to the old one. `initializeMap` calls `destroyMap()` first, so every re-initialisation accumulates this.
+**Fix:** `destroyMap` detaches each layer with `setMap(null)` and clears the register, in the same shape the method already uses for popups.
+
+## 85. `addon/services/map-adapter/google.js` — `showCoordinates`/`centerMap` cannot read a Google-shaped point
+
+**Status:** NEEDS DECISION
+**Found:** Sweeping the file's branch residue; four branches sat on the same `?? …?.()` shape in these two methods.
+**Evidence:** Both read `const lat = event?.latlng?.lat ?? event?.latlng?.lat?.()`. That fallback cannot do anything in any case: if `event.latlng.lat` is nullish then `event.latlng.lat?.()` is `undefined` too, and if it is a **function** the `??` returns the function itself rather than calling it — so the expression yields either the same value the left side already had, or `undefined`. It never produces a number from a function. Google's own `LatLng` exposes `lat()`/`lng()` as functions, so a raw Google event reaching here would give `{ lat: <function>, lng: <function> }`; `centerMap` then fails its `Number.isFinite` guard and silently does nothing. The only callers are the two context-menu items in `components/map/leaflet-live-map.js:523,528`, which pass a **Leaflet** event whose `latlng` carries numeric properties — so today the left side always wins and nothing is broken. The sibling `map-adapter/leaflet.js:656` handles its own shape properly with `event?.latlng?.wrap?.() ?? event?.latlng`.
+**Impact:** None today, because no caller passes a Google-shaped event. It matters the moment one does: the coordinates read back as functions and centring silently no-ops rather than failing loudly.
+**Fix:** Ron's call, because it turns on whether these methods are meant to accept Google-shaped events at all. If **yes**, read them properly — `typeof lat === 'function' ? lat() : lat` — and the context-menu wiring in `leaflet-live-map.js` should probably hand the active adapter its own event shape. If **no**, they are Leaflet-event helpers that happen to live on this adapter, and the honest thing is to say so in a comment. I have deleted only the provably-useless `?? …?.()` tail, which changes no value in any case, and left the question open rather than inventing support for a shape nothing currently sends.
+
+## 86. `addon/services/map-adapter/google.js` — the draw toolbar toggle could only ever open it
+
+**Status:** FIXED
+**Found:** Asserting that a second `toggleDrawControl()` hides the toolbar; it showed it again instead.
+**Evidence:** `toggleDrawControl` decided with `const isHidden = display === 'none' || display === '';`. The toolbar only ever holds two values: `'none'`, set by the `display:none` in the container's `cssText` when `#ensureDrawToolbar` builds it and again by `hideDrawControl` (line 856), and `''`, set by `showDrawControl` (line 844). Both satisfy that test, so `isHidden` was **always true**, the `if (!isHidden)` arm never ran, and `hideDrawControl()` was unreachable from the toggle. Every call fell through to `showDrawControl`.
+**Impact:** Real and user-facing on the Google map. The toolbar button wired through `components/map/leaflet-live-map.js:543` → `services/geofence.js:42` → `services/map-manager.js:723` → this adapter opens the drawing toolbar and can never close it again; the user has to reach for something else to dismiss it. The Leaflet adapter is unaffected — its own `toggleDrawControl` tests `this._drawControl._map`, which is a real two-state check.
+**Fix:** The test is now `display === 'none'`, which is the only state that means hidden. One line, in its own commit.
+
+## 87. `addon/services/map-adapter/google.js` — a private tooltip overlay-view builder nothing can call
+
+**Status:** FIXED (deleted this iteration)
+**Found:** profiling the file's uncovered functions — `#ensureTooltipOverlayView` and the three no-op lifecycle hooks it assigns were four uncovered functions with no visible entry point.
+**Evidence:** `#ensureTooltipOverlayView` is a `#private` method, so the only place its name can appear is the class body. `grep -n "ensureTooltipOverlayView" addon/services/map-adapter/google.js` returned exactly one line — its own declaration. It was therefore never called, and since it was the only writer of `_tooltipOverlayView` (`grep -n "_tooltipOverlayView"` gave the field initialiser, the two `destroyMap` teardown lines, and three lines inside the method itself), that field was permanently `null` and `destroyMap`'s `this._tooltipOverlayView?.setMap?.(null)` was a no-op kept alive only by its optional chaining.
+**Impact:** none — the hover tooltips are positioned from `domEvent.clientX/clientY` in `#attachClassicMarkerTooltip`, which needs no `OverlayView`. This was groundwork for a projection-based tooltip that was never wired up.
+**Fix:** deleted the method, the `_tooltipOverlayView` field and the two dead `destroyMap` lines. Nothing else referenced them.
+
+## 88. `addon/services/map-adapter/google.js` — four parameter/operand defaults no caller can reach
+
+**Status:** FIXED (deleted this iteration)
+**Found:** the same profiling pass — four `default-arg`/`binary-expr` branch arms with no reachable input.
+**Evidence:** each traced to its callers. `buildGoogleMapStyles` is module-local with exactly two call sites (L179 and L286), both passing an object literal, and both passing a `googleOptions` that is already `?? {}`-defaulted — so neither `= {}` could run (`showTransitLayer = false` *is* reachable from L179 and was kept). `#loadGoogleMapsApi(options = {})` has one call site, L173, which passes `initializeMap`'s own already-defaulted `options`. `#applyDrawToolbarConfig(config = {})` has one call site, L847, which passes `showDrawControl`'s own already-defaulted `config`. And in `addRoutingControl`, `options.markerWaypoints ?? route.waypoints ?? []` sits below a guard — `if (!this._map || !route?.waypoints?.length) return null;` — that has already proved `route.waypoints` non-empty, so the `[]` arm cannot be taken.
+**Impact:** none; every one of them was already supplied by the caller.
+**Fix:** deleted the four defaults. The two `#private` methods and the module-local function have no external callers, so no published surface changed.
+
+## 89. `addon/services/map-adapter/google.js` — a second unreferenced private method, and five guards their callers already make
+
+**Status:** FIXED (deleted this iteration; one fallback pragma'd instead)
+**Found:** profiling the polygon-label block for uncovered arms — six `if (!x) return` guards and a whole method had no reachable input.
+**Evidence:** `#normalizeDrawEvent` is the same shape as #87: a `#private` method, so its name can only appear in the class body, and `grep -n "#normalizeDrawEvent"` returned exactly one line — its own declaration. The five guards each duplicate a test the immediate caller has already made: `#attachMarkerTooltip`'s `if (!contentEl || !tooltipContent)` sits below `if (options.tooltip && content)` at its only call site; `#attachOverlayLabelHover`'s `if (!overlay || !labelOverlay)` receives the polygon `addPolygon` has just built and a label from `#createOverlayLabel`, which can only return null without a map or without a centroid — neither possible for a ring `addPolygon` accepted; every call site of `#setOverlayLabelMap` is inside an `if (layer.__labelMarker)`; `#syncOverlayPresentation`'s `if (!layer)` sits below `showLayer`'s own; and `#getPolygonLabelPosition`'s `if (totals.count === 0)` is below a `firstRing.length === 0` return, so the reduce has always run at least once.
+**Impact:** none — every one of them was already guaranteed by the caller.
+**Fix:** deleted the method and the five guards. The one remaining unreachable arm, `layer.__labelText ?? layer.__labelMarker.title ?? ''`, was **not** deleted: `__labelMarker` is only ever assigned alongside a truthy `__labelText` and nothing clears it, but the fallback is the contract for `google-live-map.js`, which stamps `__labelText` from outside this file, so it was hoisted into one `const` behind an `istanbul ignore next` naming that reason rather than removed.
+
+## 90. `addon/services/map-adapter/google.js` — a third unreferenced private method, and the last redundant arms
+
+**Status:** FIXED (deleted this iteration)
+**Found:** finishing the file — these were everything left after the coverable paths were tested.
+**Evidence:** `#drawEvent` is the third method of the shape #87 and #89 named: a `#private` method, so its name can only appear in the class body, and `grep -n "#drawEvent"` returned exactly one line — its own declaration. It mapped `draw:created`/`draw:edited`/`draw:deleted` to `overlaycomplete`, which is what `#normalizeEvent` already does for the paths that are wired up. The rest each duplicate a decision made a few lines earlier: `#createClassicMarker`'s `options = {}` and `addMarker`'s `if (!classicMarker) return null` (that method ends in an unconditional `new google.maps.Marker(...)`); `#attachClassicMarkerTooltip`'s `options = {}` and its `if (!marker || !tooltipContent || !this._map)` guard, whose only call site is inside `if (options.tooltip)` on a marker it has just constructed, below `addMarker`'s own no-map return; `#loadGoogleMapsApi`'s inner `if (typeof google !== 'undefined' && google.maps)`, which repeats the identical test three lines above with only a `??` and a `debug()` in between, neither of which can define `google`; `#restoreOverlayState`'s `if (!layer || !state)` and its `if (state.type === 'circle')`, which is the last of exactly three shapes `#captureOverlayState` can return after the other two have returned; `#geoJsonFromOverlay`'s `if (!overlay)` and its trailing `return null`, for the same reason; and `if (rafId) cancelAnimationFrame(rafId)`, where `rafId` is assigned from `requestAnimationFrame` before the closure holding it is registered and no browser hands back 0 for a live frame request.
+**Impact:** none.
+**Fix:** deleted all of them. The circle arms of `#restoreOverlayState` and `#geoJsonFromOverlay` became the unconditional fallback rather than a third test, which is what they always were.
+
+## 91. `addon/components/orchestrator-workbench.js` — three selection getters nothing reads
+
+**Status:** FIXED (deleted this iteration)
+**Found:** the last three uncovered functions in the file once the map block was rendering.
+**Evidence:** `grep -rn "selectedOrderIdsArray\|selectedVehicleIdsArray\|selectedDriverIdsArray" addon/` returns the three declarations here plus, separately, the sub-components' *own* identically-named getters — `orchestrator/order-pool.js:285`, `orchestrator/resource-panel.js:92` and `:96` — which each derive from the `Set` the workbench passes them as `@selectedOrderIds`/`@selectedVehicleIds`/`@selectedDriverIds`. Those are what `order-pool.hbs` and `resource-panel.hbs` read. `orchestrator-workbench.hbs` never mentions any of the three names, and no other file imports the component, so nothing can reach them.
+**Impact:** none — the panels already compute the same arrays from the Sets they are handed.
+**Fix:** deleted all three. The Sets they read stay; only the array views nothing consumed are gone.
+
+## 92. `addon/components/orchestrator-workbench.js` — `formatIsoTime` renders "Invalid Date" where it means to render nothing
+
+**Status:** NEEDS DECISION (the dead `catch` is removed; whether to guard the value is Ron's call)
+**Found:** covering the formatter edges. A test passing `"not a date"` expected `''` and got the literal string `Invalid Date`.
+**Evidence:** the method read `try { return new Date(iso).toLocaleTimeString(…) } catch { return '' }`. Neither call can throw: `new Date(x)` returns an Invalid Date object for anything unparseable rather than raising, and `Date.prototype.toLocaleTimeString` on an Invalid Date returns the string `"Invalid Date"` (ECMA-402 §16.4.1 — only `toISOString`/`toJSON` throw a RangeError). So the `catch` arm was unreachable, and the `''` it was written to produce could never be returned. Confirmed in the harness: `formatTimeWindow('not a date', null)` renders `Invalid Date`, and through `formatTimeWindow` that string is also truthy, so it wins the `s || e || ''` fallback.
+**Impact:** a stop row whose `time_window_start` or `time_window_end` cannot be parsed shows the words "Invalid Date" to a dispatcher instead of an empty cell. Nothing in the current API surface is known to send one, so this is latent rather than live — but the author clearly intended the empty string, and the code cannot produce it.
+**Fix:** the unreachable `catch` is deleted (behaviour-neutral: it never ran). Making the *intent* work is a one-liner — `const d = new Date(iso); return Number.isNaN(d.getTime()) ? '' : d.toLocaleTimeString(…)` — but that is a behaviour change on a path no test currently exercises against real data, so it is left for Ron rather than folded into a coverage commit.
+
+## 93. `addon/components/orchestrator-workbench.js` — the last two uncovered statements, found by experiment
+
+**Status:** FIXED (one pragma'd on a real trace, one covered)
+**Found:** the file stopped at 409/411 statements with branches and functions already complete.
+**Evidence:** the profiler could not place them — this file's `statementMap` positions land on the `// -- … --` divider comments rather than on a field — so I bisected instead: pragma one candidate, re-run, and watch whether the *uncovered* count falls or only the denominator does. That named them exactly. **`availableEngines`** is genuinely unreachable: its only reader is `Orchestrator::PhaseBuilder`, which the template renders only inside `{{#if this.showPhaseBuilder}}` — closed on first paint — so `loadEngines`' assignment is the first access and, with `@tracked`'s lazy-initialiser instrumentation, the initialiser never evaluates. **`cardFields`** was **not** a production problem at all: the real `Orchestrator::OrderPool` reads `@cardFields`, but the *test stand-in* for it did not, and Ember argument references are lazy — the getter runs only when a child actually consumes it. The harness, not the component, was leaving it unread.
+**Impact:** none on behaviour. The lesson is the one worth keeping: a stub that accepts an argument without consuming it silently withholds coverage from the parent, and that reads exactly like unreachable code.
+**Fix:** `availableEngines` carries an `istanbul ignore next` naming the panel that gates its only reader. The order-pool stand-in now renders `{{@cardFields.standard.length}}`, as the real component does, and a test asserts the settings endpoint's fields arrive. Also converted this file's `─` box-drawing dividers to ASCII while chasing this — it realigned the HTML report's source view, though it was not the cause.
+
+## 94. `addon/components/customer/create-order-form.js` — clearing the only address throws out of the route preview
+
+**Status:** OPEN
+**Found:** covering `setPayloadPlace` once the harness had a real Leaflet map. A test that cleared the pickup failed with `TypeError: Cannot read properties of undefined (reading 'lat')` thrown from Leaflet's `getNorth`.
+**Evidence:** `previewDraftOrderRoute` computes `const canPreviewRoute = this.routePreviewArray.length > 0;` and, when false, calls `this.notifications.warning(...)` — **and then keeps going**. There is no `return`. It builds the `RoutingControl`, and at the end runs `this.map.flyToBounds(this.routePreviewCoordinates, …)` with an empty array; Leaflet's `flyToBounds` → `_getBoundsCenterZoom` → `getBoundsZoom` → `getNorthWest` → `getNorth` reads `.lat` off an undefined corner and throws. The path is live, not hypothetical: `previewDraftOrderRoute` is called from `setPayloadPlace`, which the template wires to the pickup, dropoff and return selects *and* to the "remove address" links (`{{on "click" (fn this.setPayloadPlace "pickup" null)}}`, template lines 116 and 152). So a customer who removes the only address they had entered takes the exception.
+**Impact:** the route preview stops working for the rest of the session — the exception escapes the action, so nothing after it in `setPayloadPlace` runs and the map keeps whatever it was last showing. The user sees the "no route" warning and then a broken panel.
+**Fix:** a one-line `return` after the warning, which is what the `canPreviewRoute` name implies was intended. It is a behaviour change on a path no test covered until now, so it is not folded into this coverage commit.
+**Note on testing it:** the defect currently **cannot be pinned by a test**. The exception escapes Ember's error handling completely — it does not reject the `click` promise, so `assert.rejects` does not see it, and `setupOnerror` does not intercept it either, because Leaflet throws from inside `flyToBounds`' own deferred animation frame rather than from the action. QUnit's global handler catches it and fails the test outright. Once the `return` lands, the path becomes ordinary and a test asserting "warns once and draws nothing" will work; until then this entry is the record.
+
+## 95. `addon/components/customer/create-order-form.js` — `clearWaypoints` calls a method that does not exist
+
+**Status:** OPEN
+**Found:** reading `clearWaypoints` while planning the multi-drop tests, before writing one.
+**Evidence:** line 533 is `this.previewRoute(false);`. **`previewRoute` is not defined anywhere.** `grep -n "previewRoute" addon/components/customer/create-order-form.js` returns that single call site and no declaration; the class is `extends Component` from `@glimmer/component` with no mixins, so nothing supplies it by inheritance. The near-miss names in this file are `previewDraftOrderRoute` and `removeRoutingControlPreview` — the second is almost certainly what was meant, since the call passes `false` where `previewDraftOrderRoute` takes `(payload, waypoints, isMultipleDropoffOrder)`. The guard above it is `if (this.isViewingRoutePreview)`, and `isViewingRoutePreview` is set true by `previewDraftOrderRoute`, so the call is reached as soon as a route has been previewed once.
+**Impact:** turning multiple-dropoffs **off** after entering any waypoint address throws `TypeError: this.previewRoute is not a function`. `toggleMultiDropOrder`'s else-branch reads the first two waypoint places, calls `setPayloadPlace` for each — which previews the route and sets `isViewingRoutePreview` — and then calls `clearWaypoints()`, which takes the exception. The waypoints are never cleared and the pickup/dropoff the user was being switched back to are left half-applied.
+**Fix:** almost certainly `this.removeRoutingControlPreview()`, matching what `previewDraftOrderRoute` itself calls first. Worth confirming the intent against the near-identical `components/order/form/route.js`, which has the same toggle but no such call. Not folded into a coverage commit: it is a behaviour change on a path that has never run.
+
+## 96. `addon/components/customer/create-order-form.js` — the quote request sends Ember's `inject` decorator as its `service`
+
+**Status:** OPEN
+**Found:** reading `getQuotes` before writing its tests, then confirmed by asserting on the request body the component actually posts.
+**Evidence:** `getQuotes` builds the `service-quotes/preliminary` body as `{ payload, distance, time, service, service_type, facilitator, scheduled_at, is_route_optimized }`. Every other key is a local declared a few lines above — **`service` is not**. `grep -n "let service\b\|const service\b\|var service\b"` over the file returns nothing, and the only `service` in scope is line 4's `import { inject as service } from '@ember/service'`. So the shorthand resolves to Ember's `inject` **decorator function**, not to any value from this form. No linter catches it: `no-undef` is satisfied by the import, and `no-unused-vars` sees `service` used. The harness confirms it — the stubbed `fetch.post` receives a body whose `service` is `typeof 'function'`.
+**Impact:** the preliminary quote request never carries a service. `JSON.stringify` drops function-valued keys, so the field is simply absent from the wire payload rather than malformed — quotes come back priced without whatever `service` was meant to select. Nothing throws, which is why it has gone unnoticed.
+**Fix:** decide what was intended and declare it. The neighbouring locals suggest `service` was meant to be the selected service rate — `this.selectedServiceRate?.id` or similar, matching `service_type` being `this.order.type`. That is a product question about what the endpoint expects, so it is Ron's call rather than a mechanical fix; the test added alongside this entry pins the current behaviour and names this defect.
+
+## 97. `addon/components/customer/create-order-form.js` — `isPaymentRequired` cannot be driven from a rendering test
+
+**Status:** OPEN (a testability blocker, not a product defect)
+**Found:** trying to cover `startCheckoutSession`, `fetchClientSecret` and the rest of the payment block, which `createOrder` only reaches when `isPaymentRequired()` returns true.
+**Evidence:** the method ANDs four conditions. Three are verifiable from outside and all three hold in the harness. **`hasServiceQuote`** — confirmed by a test that asserts the returned quotes render as `.radio-group-item`s with exactly one `.is-checked`, so `selectedServiceQuote` is set. **`config.stripe.publishableKey`** — `tests/dummy/config/environment.js` sets it to `''` at the top level of `ENV`, and `typeof '' === 'string'` is true, so that conjunct passes without any test doing anything. **`customerPayment.loaded`** — the registered stand-in returns `true`, confirmed by looking the service up and reading it. The fourth pair, **`paymentsEnabled` and `paymentsOnboardCompleted`**, is set inside `loadCustomerOrderConfig` from the `fleet-ops/settings/customer-payments-config` response, and **the template never references either field** (`grep` over `create-order-form.hbs` returns nothing for both), so there is no way to observe them through the DOM. With all three observable inputs true the branch is still not taken: `createOrder` runs past it and fails later in `order.setPayload(...).setRoute(route)`, which surfaces as a `serverError`.
+**Impact:** none on users — this is about what the tests can reach. The payment and checkout block (`isPaymentRequired`, `fetchClientSecret`, `startCheckoutSession`, `saveCurrentOrderForCurrentServiceQuote`, and the tail of `checkForCheckoutSession`) is roughly 60 statements that no rendering test can currently enter.
+**Fix:** two options, both cheap for someone who can change the source. Either give the template something that reflects the payments state — even a `data-` attribute — so a test can confirm the flags landed; or, better, make `isPaymentRequired()` a getter so it can be exercised directly in a unit test with `setupTest` and the component built through `factoryFor`. Until then the block stays uncovered rather than covered by a test that fakes its way in. **Do not** attempt to force it by mutating `config` from the test — I tried, and it changes nothing, because `publishableKey` already satisfies its condition.
+
+## 98. `addon/components/customer/create-order-form.js` — an item's held-back photo is never uploaded
+
+**Status:** OPEN
+**Found:** covering the entity modal's `confirm`. Writing a faithful `invoke` stand-in meant reading the real signature, and the real signature does not match the call.
+**Evidence:** `editEntity`'s `uploadNewPhoto` holds a *new* item's photo aside — `modalsManager.setOption('pendingFileUpload', file)` — and `confirm` replays it after the item is saved with `modal.invoke('uploadNewPhoto', pendingFileUpload)` (L618). But ember-ui's `ModalsManager#invoke` is `invoke(fn, modalId = null, ...params)` (`node_modules/@fleetbase/ember-ui/addon/services/modals-manager.js:500`), so the file lands in the **`modalId`** slot. `getModalById` then does `this.modals.find((modal) => modal.id === modalId)` against a `File` object, finds nothing, and `invoke` returns `null` at the `if (!modal) return null` guard — the callback is never reached. L618 is the only `.invoke(` call site in the whole addon, so there is no second example to check the convention against. Nothing throws and nothing is logged.
+**Impact:** a customer who picks a photo while adding a *new* item sees it appear in the modal (it is shown from `URL.createObjectURL`), saves the item, and the photo is silently dropped. It is never uploaded and never reaches `photo_uuid`. Only new items are affected; a saved item uploads immediately down the other arm and is fine.
+**Fix:** `modal.invoke('uploadNewPhoto', null, pendingFileUpload)` — the `null` is the modal id, and `invoke` then falls back to the top modal. One line. The test `confirming the item form saves the item, but the held-back photo is never replayed` asserts the current behaviour (`this.uploads.length === 0`) and names this entry, so whoever fixes it will see the assertion that has to change.
+
+
+## 99. `addon/components/customer/create-order-form.js` — an `isServicable` getter nothing reads
+
+**Status:** FIXED (deleted in the iteration-71 source commit)
+**Found:** the last function left uncovered in the file after the map and waypoint batch.
+**Evidence:** `@computed('payloadCoordinates.length', 'waypoints.[]') get isServicable()` had exactly one apparent caller in the package — `addon/components/order/form/service-rate.hbs:49`, which reads `this.isServicable`. But that `this` is `order/form/service-rate.js`, which **defines its own `isServicable` at line 30**. Different component, same name; the grep hit is the sub-component's own getter, not this one. `create-order-form.hbs` never names it, the class never reads it, and the template has no `{{yield}}`, so it cannot be handed to a child. Same shape as #91.
+**Impact:** none — a computed property that never evaluates.
+**Fix:** deleted. `order/form/service-rate.js`'s own getter is untouched and still covered by its own tests.
+
+## 100. `addon/components/customer/create-order-form.js` — a "New Place" action the form never offers
+
+**Status:** NEEDS DECISION
+**Found:** the last unreachable function in the file, alongside #99.
+**Evidence:** `@action createPlace()` (L441 before the pragma) builds a `place` owned by the current customer and opens `modals/place-form` with the title `'New Place'`. Nothing reaches it: `create-order-form.hbs` never names `createPlace` — its only place controls are `editPlace` (three call sites) and the `ModelSelect`s, which pick from existing places; the class never calls it; and the template has no `{{yield}}`, so it cannot be passed to a child. The other `createPlace`s in the package (`contact-actions.js:109`, `vendor-actions.js:128`, and the customer equivalent) are **service** methods that other forms call as `this.contactActions.createPlace(...)` — same name, different object.
+**Impact:** none today. The customer order form lets a customer pick an existing address but never add a new one; the code to add one exists and is simply not wired to anything.
+**Fix:** **this is Ron's call, not mine.** Either (a) wire it — a "New Address" button beside the pickup/dropoff selects, `@onClick={{this.createPlace}}`, plus deciding what happens when the modal is confirmed (the current body shows the modal and does not save, so a `confirm` handler is missing too); or (b) delete the action. I have neither wired nor deleted it: (a) is a feature and (b) throws away the intent. It carries an `istanbul ignore` naming the trace so the gate is not blocked meanwhile — remove the pragma along with whichever way this goes.
+
+
+## 101. `addon/components/joint-graph.js` — the responsive handler leaks a window listener
+
+**Status:** FIXED (iteration 72, in its own commit)
+**Found:** importing `@joint/core` into the dummy app let `JointGraph` render for the first time, and two unrelated `layout/fleet-ops-sidebar/operations-monitor` tests immediately started failing with `Cannot read properties of null (reading 'offsetWidth')` from `JointGraphComponent.getFullGridSize`.
+**Evidence:** `createResponsiveHandler` did `window.addEventListener('resize', () => { ... })` with an inline arrow and the component had **no `willDestroy`**, so the listener outlived the component. Its guard, `if (!this.el) return`, never fired because `this.el` was never cleared — the element reference stayed set while the node itself was torn out of the DOM, so `el.parentElement` was `null` and `getFullGridSize` threw on `parentElement.offsetWidth`. The trace names `operations-monitor` only because that is the next test that dispatches a window `resize`; any later resize would have done it.
+**Impact:** real, and not test-only. The order config manager's activity-flow tab mounts a `JointGraph`; navigating away and then resizing the window throws inside the stale listener, and every mount leaves another one behind. It was invisible until now because nothing in the test suite could construct a `JointGraph` at all — `joint` was undefined in the dummy app.
+**Fix:** done. The handler is stored on `onWindowResize`, `willDestroy` removes it and nulls `el`, and the guard also checks `parentElement` so a detached-but-not-yet-destroyed element is skipped rather than throwing. Kept out of the coverage commit as §8 requires.
+
+
+## 102. `addon/controllers/operations/scheduler/index.js` — driver capacity is hard-coded at 10
+
+**Status:** OPEN
+**Found:** a fixture that set `max_daily_orders: 2` on a driver produced a capacity of 10, not 2.
+**Evidence:** `calendarResources` computes `const maxCapacity = driver.max_daily_orders ?? 10;` (L122). Grepping `max_daily_orders` across `addon/` and `node_modules/@fleetbase/fleetops-data/addon/` returns **exactly that one line** — `DriverModel` has no such attribute, and nothing anywhere else reads or writes it. So `driver.max_daily_orders` is always `undefined` and the `?? 10` fallback is the only path taken.
+**Impact:** every driver's workload bar is measured against 10 orders a day regardless of what they can actually take. A driver who can do 4 shows as 50% full at 5 orders; one who can do 30 shows as over capacity at 11. The number is presented to dispatchers as if it means something.
+**Fix:** a product call on where capacity comes from — an attribute on the driver, a company-wide setting, or a per-vehicle figure — then add it to `DriverModel` and the API. The `?? 10` line is correct as written and needs no change once the attribute exists; that is why this is recorded rather than patched.
+
+## 103. `addon/controllers/operations/scheduler/index.js` — the priority filter can never match
+
+**Status:** OPEN
+**Found:** a test that set a `priority` filter emptied the sidebar no matter which value it used.
+**Evidence:** `unscheduledOrders` filters with `if (filter.type === 'priority') orders = orders.filter((o) => o.priority === filter.value);` (L106). `OrderModel` has **no `priority` attribute** — grepping `priority` in `node_modules/@fleetbase/fleetops-data/addon/models/order.js` returns one line, `@attr('number') orchestrator_priority`. Every order therefore reads `undefined` for `o.priority`, which can only equal a filter value that is itself `undefined`. The sibling arm one line up, `filter.type === 'type'`, reads `o.type`, which does exist and works.
+**Impact:** none today, because nothing populates `activeFilters` (see #104). If the filter UI is wired up as written, choosing any priority hides every order and the board looks empty.
+**Fix:** read `orchestrator_priority`, or add a real `priority` attribute — whichever the filter is meant to mean. One line either way, but which one depends on #104.
+
+## 104. `addon/controllers/operations/scheduler/index.js` — `activeFilters` is never populated
+
+**Status:** NEEDS DECISION
+**Found:** tracing #103, to see whether the broken priority arm could actually run.
+**Evidence:** `@tracked activeFilters = []` (L69) has exactly three references in the whole of `addon/`: the declaration, the `@computed(… 'activeFilters.[]')` key (L96), and the `forEach` that reads it (L105). **Nothing assigns to it** — no action, no template, no route. `addon/templates/operations/scheduler/index.hbs` never mentions it. So the array is always empty and the filter block never executes in the product; the sidebar's only working narrowing is the search box.
+**Impact:** none today — it is a filter feature with no UI attached, not a broken one. Dispatchers have search but no type or priority filters.
+**Fix:** **Ron's call.** Either wire it — filter chips in the sidebar header that push and pop `{ type, value }` entries, at which point #103 must be fixed too — or delete the block and the tracked property. I have done neither: deleting throws away a half-built feature, and wiring it is a feature. The unit test drives `activeFilters` directly, so the code is covered either way and the gate is not blocked meanwhile.
+
+
+## 105. `addon/controllers/operations/scheduler/index.js` — an Intl part fallback that cannot run
+
+**Status:** FIXED (pragma'd with a traced reason, iteration 76)
+**Found:** the last uncovered branch in the file after everything else reached 100%.
+**Evidence:** inside `_reinterpretDateInTimezone`, `const get = (type) => parseInt(parts.find((p) => p.type === type)?.value ?? '0', 10)`. `parts` comes from an `Intl.DateTimeFormat` built three lines above with a **literal** options object requesting `year`, `month`, `day`, `hour`, `minute` and `second`; `get()` is called with exactly those six types and no others, all within the same function. ECMA-402 requires `formatToParts` to emit a part for every requested component, so `find` always hits and the `?? '0'` arm cannot be reached. Anything exotic enough to break that would throw, and the whole body is already inside a `try` whose `catch` hands the date back — that path *is* covered, by a test passing an unresolvable timezone.
+**Impact:** none — a defensive default that never applies.
+**Fix:** done. The expression is hoisted into a local `const` so the pragma attaches (an `istanbul ignore` does not attach to a `??` inside an arrow's expression body), and the comment names the specific thing that makes it unreachable: the six types requested are the six types asked for. Behaviour is unchanged. If the formatter's options are ever narrowed without changing the callers, delete the pragma along with the change.
+
+
+## 106. `addon/components/map/leaflet-live-map.js` — the coordinate validators are never called
+
+**Status:** OPEN
+**Found:** a test asserting that an unusable latitude falls back to the documented default got the unusable value back instead.
+**Evidence:** `#getValidLatitude()` and `#getValidLongitude()` each appear **exactly once** in the file — their own declarations at L867 and L883 — and grepping both names across `addon/`, `app/` and `tests/` returns nothing else. They are `#private`, so nothing outside the class could reach them even in principle. Meanwhile the constructor initialises the tracked fields from the **raw** service values: `@tracked latitude = this.location.getLatitude();` and the same for longitude (L48-49). The decisive detail is one line above them: `@tracked zoom = this.getValidZoom();` (L47) — the sibling validator **is** wired, and `getValidZoom` is a plain method while these two were written as `#private`. The three were clearly meant to be used the same way.
+**Impact:** a latitude or longitude the location service cannot supply reaches the map unfiltered. `getValidZoom` guards against `NaN`, strings and out-of-range values; the coordinates get none of that, so a `NaN` or an out-of-range value is handed straight to Leaflet as the map's centre. Every code path that would have replaced it with the Singapore default (1.369, 103.8864) is dead.
+**Fix:** call them — `@tracked latitude = this.#getValidLatitude();` and the longitude equivalent, matching the zoom line above. That is two lines, but it is a **behaviour change** (a map that currently centres on a bad coordinate would start centring on the default), so it is recorded rather than made inside a coverage commit. The two methods carry an `istanbul ignore` naming this entry meanwhile; remove both pragmas along with the fix. The test `a location the service cannot give is passed through unchecked` pins the current behaviour and names this entry, so whoever fixes it will see the assertion that has to change.
+
+
+## 4. `tests/` — 223 blueprint scaffolds that were never green
+
+**Status:** OPEN (this is the bulk of Phase B)
+**Found:** Baseline run.
+**Evidence:** 207 of 248 integration tests are the untouched `ember generate component` scaffold
+(`await render(hbs\`<X />\`); assert.dom().hasText('')` followed by the block-form render), and 16
+unit tests are `let result = fn(); assert.ok(result);` scaffolds. Most of the rendering scaffolds
+fail because the component asserts on a missing required argument, and the unit ones because the
+util needs input. The suite does not run in CI (`.github/workflows/ember.yml` only lints and
+builds), so nothing ever caught this.
+**Impact:** None for users. They contribute nothing to coverage and mask the true baseline.
+**Fix:** Replace each with a real test as its component/util is covered in Phase B. Never `skip`
+them; a scaffold that cannot be replaced yet stays red and is listed in `COVERAGE-PROGRESS.md`.

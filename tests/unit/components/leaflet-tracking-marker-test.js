@@ -22,10 +22,12 @@ module('Unit | Component | leaflet-tracking-marker', function (hooks) {
             assert.deepEqual(L.Edit, {});
         };
 
-        const component = Object.create(LeafletTrackingMarkerComponent.prototype);
-        component.args = { location: [1, 2] };
-        component.requiredOptions = [[1, 2]];
-        component.options = {};
+        // ember-leaflet's BaseLayer exposes requiredOptions/options as getters; own properties shadow them.
+        const component = Object.create(LeafletTrackingMarkerComponent.prototype, {
+            args: { value: { location: [1, 2] } },
+            requiredOptions: { value: [[1, 2]] },
+            options: { value: {} },
+        });
 
         assert.ok(component.createLayer());
     });

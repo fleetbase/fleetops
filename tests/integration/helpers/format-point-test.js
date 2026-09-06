@@ -6,12 +6,25 @@ import { hbs } from 'ember-cli-htmlbars';
 module('Integration | Helper | format-point', function (hooks) {
     setupRenderingTest(hooks);
 
-    // TODO: Replace this with your real tests.
-    test('it renders', async function (assert) {
-        this.set('inputValue', '1234');
+    test('it formats a latitude, longitude pair', async function (assert) {
+        this.set('point', [1.3, 103.8]);
+        await render(hbs`{{format-point this.point}}`);
+        assert.dom(this.element).hasText('(1.3, 103.8)');
+    });
 
-        await render(hbs`{{format-point this.inputValue}}`);
+    test('it swaps GeoJSON longitude, latitude coordinates into latitude, longitude', async function (assert) {
+        this.set('point', { type: 'Point', coordinates: [103.8, 1.3] });
+        await render(hbs`{{format-point this.point}}`);
+        assert.dom(this.element).hasText('(1.3, 103.8)');
+    });
 
-        assert.dom(this.element).hasText('1234');
+    test('anything else formats as the origin', async function (assert) {
+        this.set('point', null);
+        await render(hbs`{{format-point this.point}}`);
+        assert.dom(this.element).hasText('(0, 0)');
+
+        this.set('point', { coordinates: 'nope' });
+        await render(hbs`{{format-point this.point}}`);
+        assert.dom(this.element).hasText('(0, 0)');
     });
 });

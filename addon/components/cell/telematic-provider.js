@@ -60,8 +60,8 @@ export default class CellTelematicProviderComponent extends Component {
     }
 
     @action onClick(event) {
-        const { row, column, onClick } = this.args;
-        const resource = this.telematic ?? row;
+        const { column, onClick } = this.args;
+        const resource = this.telematic;
 
         if (typeof onClick === 'function') {
             onClick(resource, event);

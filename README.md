@@ -16,6 +16,9 @@
     <a href="https://codecov.io/gh/fleetbase/fleetops">
         <img src="https://codecov.io/gh/fleetbase/fleetops/branch/main/graph/badge.svg" alt="Coverage">
     </a>
+    <a href="https://codecov.io/gh/fleetbase/fleetops?flags%5B0%5D=frontend">
+        <img src="https://codecov.io/gh/fleetbase/fleetops/branch/main/graph/badge.svg?flag=frontend" alt="Frontend coverage">
+    </a>
     <a href="https://www.npmjs.com/package/@fleetbase/fleetops-engine">
         <img src="https://img.shields.io/badge/npm-%40fleetbase%2Ffleetops--engine-CB3837?style=flat-square" alt="NPM package">
     </a>

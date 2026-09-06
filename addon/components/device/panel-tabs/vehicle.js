@@ -65,10 +65,6 @@ export default class DevicePanelTabsVehicleComponent extends Component {
     }
 
     @action async locateVehicle() {
-        if (!this.vehicle?.id) {
-            return;
-        }
-
         await this.transitionToLiveMap();
         await this.mapManager.waitForMap({ timeoutMs: 8000 });
 

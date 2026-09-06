@@ -37,3 +37,15 @@ composer.lock
 *.swp
 *.swo
 .DS_Store
+
+# coverage
+# `/coverage/` above covers the normal case; these guard the reports istanbul writes for
+# workspace-linked siblings, whose relative paths resolve out of the coverage folder and into the
+# package root (see tests/dummy/config/coverage.js).
+/ember-core/
+/ember-ui/
+/fleetops-data/
+/*/addon/**/*.js.html
+
+# Written by scripts/stamp-coverage-run.js; proves the coverage artifacts belong to the last run
+.coverage-run-stamp.json

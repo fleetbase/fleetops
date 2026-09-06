@@ -10,17 +10,6 @@ export default class CustomEntityFormComponent extends Component {
     @tracked config;
 
     /**
-     * Action method to save the custom entity. It triggers an optional onSave callback
-     * with the current state of the custom entity.
-     * @action
-     */
-    @action save() {
-        if (typeof this.onSave === 'function') {
-            this.onSave(this.args.resource);
-        }
-    }
-
-    /**
      * Action method called when a file is added. It uploads the file
      * and updates the custom entity's photo information.
      * @param {File} file - The file that was added.

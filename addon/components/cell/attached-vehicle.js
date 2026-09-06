@@ -43,10 +43,6 @@ export default class CellAttachedVehicleComponent extends Component {
     @action onClick(_vehicle, event) {
         const { column, onClick } = this.args;
 
-        if (!this.hasVehicle) {
-            return;
-        }
-
         if (typeof onClick === 'function') {
             onClick(this.device, event);
         }

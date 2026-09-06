@@ -222,7 +222,7 @@
                     </div>
                 {{/let}}
             {{else}}
-                <form class="space-y-4" {{on "submit" (perform this.lookupOrder)}}>
+                <form class="space-y-4" {{on "submit" this.submitLookup}}>
                     <div>
                         <div class="text-base font-semibold dark:text-white mb-2">Enter your tracking number:</div>
                         <Input @value={{this.trackingNumber}} placeholder="Enter your tracking number" class="form-input form-input-lg w-full" disabled={{this.lookupOrder.isRunning}} />
@@ -235,7 +235,6 @@
                         @icon="check"
                         @disabled={{not this.trackingNumber}}
                         @isLoading={{this.lookupOrder.isRunning}}
-                        @onClick={{perform this.lookupOrder}}
                     />
                 </form>
             {{/if}}

@@ -84,7 +84,7 @@ module('Unit | Service | vehicle-actions', function (hooks) {
         };
 
         service.intl = { t: (key) => key };
-        service.refresh = () => assert.step('refreshed');
+        this.owner.lookup('service:host-router').refresh = () => assert.step('refreshed');
         service.notifications = {
             serverError: () => assert.ok(false, 'unexpected call'),
             success: (message) => assert.strictEqual(message, 'vehicle.prompts.unassign-orders-success'),

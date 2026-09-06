@@ -38,16 +38,6 @@ class DeviceEventActionsStub extends Service {
     }
 }
 
-class TabularStub extends Component {
-    get rowCount() {
-        return this.args.data?.length ?? 0;
-    }
-
-    get currentPage() {
-        return this.args.data?.meta?.current_page;
-    }
-}
-
 module('Integration | Component | device/panel-tabs', function (hooks) {
     setupRenderingTest(hooks);
 
@@ -57,6 +47,16 @@ module('Integration | Component | device/panel-tabs', function (hooks) {
         this.owner.register('service:store', StoreStub);
         this.owner.register('service:sensor-actions', SensorActionsStub);
         this.owner.register('service:device-event-actions', DeviceEventActionsStub);
+        class TabularStub extends Component {
+            get rowCount() {
+                return this.args.data?.length ?? 0;
+            }
+
+            get currentPage() {
+                return this.args.data?.meta?.current_page;
+            }
+        }
+
         this.owner.register(
             'component:layout/resource/tabular',
             setComponentTemplate(
@@ -78,7 +78,6 @@ module('Integration | Component | device/panel-tabs', function (hooks) {
 
     test('sensor tab renders compact array data with pagination disabled', async function (assert) {
         await render(hbs`<Device::PanelTabs::Sensors @resource={{this.device}} />`);
-
         assert.dom('[data-test-tabular]').hasAttribute('data-resource', 'sensor');
         assert.dom('[data-test-tabular]').hasAttribute('data-pagination', 'false');
         assert.dom('[data-test-tabular]').hasAttribute('data-row-count', '1');

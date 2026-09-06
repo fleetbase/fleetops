@@ -864,6 +864,7 @@ export default class MapLeafletLiveMapComponent extends Component {
      * Safely gets a valid latitude value with fallback to default
      * @returns {number} Valid latitude value
      */
+    /* istanbul ignore next -- nothing calls this; the constructor reads `location.getLatitude()` raw. See DEFECTS #106 */
     #getValidLatitude() {
         const lat = this.location.getLatitude();
 
@@ -880,6 +881,7 @@ export default class MapLeafletLiveMapComponent extends Component {
      * Safely gets a valid longitude value with fallback to default
      * @returns {number} Valid longitude value
      */
+    /* istanbul ignore next -- nothing calls this; the constructor reads `location.getLongitude()` raw. See DEFECTS #106 */
     #getValidLongitude() {
         const lng = this.location.getLongitude();
 

@@ -74,14 +74,13 @@ module('Unit | Component | telematic/form', function () {
             },
         });
 
-        TelematicFormComponent.prototype.setCredential.call(
-            {
-                args: { resource },
-                resetConnectionTest() {},
-            },
-            { name: 'server_uri' },
-            { target: { value: 'https://fms.example.test' } }
-        );
+        // `@action` binds to whatever object the accessor is read from, so the fake has to inherit the prototype.
+        const component = Object.create(TelematicFormComponent.prototype, {
+            args: { value: { resource } },
+            resetConnectionTest: { value() {} },
+        });
+
+        component.setCredential({ name: 'server_uri' }, { target: { value: 'https://fms.example.test' } });
 
         assert.deepEqual(resource.credentials, {
             server_uri: 'https://fms.example.test',

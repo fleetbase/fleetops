@@ -65,7 +65,7 @@ export default class EquipmentFormComponent extends Component {
         this.args.resource.equipable_type = option.value;
         this.args.resource.equipable_uuid = null;
         this.args.resource.equipable = null;
-        this.equipableModelName = TYPE_TO_MODEL[option.value] ?? null;
+        this.equipableModelName = TYPE_TO_MODEL[option.value];
     }
 
     /** Assigns the selected equipable model to the resource. */

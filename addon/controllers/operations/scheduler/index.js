@@ -895,7 +895,17 @@ export default class OperationsSchedulerIndexController extends Controller {
                 hour12: false,
             }).formatToParts(probe);
 
-            const get = (type) => parseInt(parts.find((p) => p.type === type)?.value ?? '0', 10);
+            const get = (type) => {
+                const part = parts.find((p) => p.type === type);
+                // The formatter above requests year, month, day, hour, minute and second, and
+                // those are exactly the six types this helper is ever called with. ECMA-402
+                // requires formatToParts to emit a part for every requested component, so
+                // `find` always hits and the `?? '0'` fallback cannot run. It stays as the guard
+                // for the day someone changes the options above without changing the callers.
+                /* istanbul ignore next -- every type asked for here is one the formatter above requests */
+                const value = part?.value ?? '0';
+                return parseInt(value, 10);
+            };
             const tzHour = get('hour') % 24;
             const probeLocal = Date.UTC(get('year'), get('month') - 1, get('day'), tzHour, get('minute'), get('second'));
             const offsetMs = probe.getTime() - probeLocal;

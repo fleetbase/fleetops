@@ -9,81 +9,54 @@ module('Unit | Route | operations/orders/index/details', function (hooks) {
         assert.ok(route);
     });
 
-    test('willTransition does not cleanup when switching inside order details tabs', function (assert) {
+    function stubController(route) {
+        const calls = [];
+        route.controllerFor = (name) => {
+            calls.push(['controllerFor', name]);
+            return {
+                teardownRealtime: () => calls.push(['teardownRealtime']),
+                teardownRoutingControls: () => calls.push(['teardownRoutingControls']),
+            };
+        };
+        return calls;
+    }
+
+    test('willTransition does not clean up when switching inside the order details tabs', function (assert) {
         const route = this.owner.lookup('route:operations/orders/index/details');
+        const calls = stubController(route);
 
-        let stopCalled = false;
-        let removeCalled = false;
-        let showCalled = false;
-
-        route.orderSocketEvents = {
-            stop() {
-                stopCalled = true;
-            },
-        };
-        route.leafletMapManager = {
-            removeRoutingControl() {
-                removeCalled = true;
-            },
-        };
-        route.universe = {
-            sidebarContext: {
-                show() {
-                    showCalled = true;
-                },
-            },
-        };
-        route.controllerFor = () => ({
-            model: { id: 'order_1' },
-            routingControl: { id: 'rc_1' },
-        });
-
-        route.willTransition({
+        const result = route.willTransition({
             from: { name: 'console.fleet-ops.operations.orders.index.details.virtual' },
             to: { name: 'console.fleet-ops.operations.orders.index.details.index' },
         });
 
-        assert.false(stopCalled);
-        assert.false(removeCalled);
-        assert.false(showCalled);
+        assert.true(result);
+        assert.deepEqual(calls, []);
     });
 
-    test('willTransition cleans up when leaving the order details route tree', function (assert) {
+    test('willTransition does not clean up on a refresh of the same details route', function (assert) {
         const route = this.owner.lookup('route:operations/orders/index/details');
-
-        let stopCalled = false;
-        let removeCalled = false;
-        let showCalled = false;
-
-        route.orderSocketEvents = {
-            stop() {
-                stopCalled = true;
-            },
-        };
-        route.leafletMapManager = {
-            removeRoutingControl() {
-                removeCalled = true;
-            },
-        };
-        route.universe = {
-            sidebarContext: {
-                show() {
-                    showCalled = true;
-                },
-            },
-        };
-        route.controllerFor = () => ({
-            model: { id: 'order_1' },
-            routingControl: { id: 'rc_1' },
-        });
+        const calls = stubController(route);
 
         route.willTransition({
+            from: { name: 'console.fleet-ops.operations.orders.index.details.index' },
+            to: { name: 'console.fleet-ops.operations.orders.index.details.index' },
+        });
+        route.willTransition({ from: null, to: { name: 'console.fleet-ops.operations.orders.index' } });
+
+        assert.deepEqual(calls, [], 'neither a refresh nor an entry transition tears anything down');
+    });
+
+    test('willTransition tears down realtime and routing controls when leaving the order details route tree', function (assert) {
+        const route = this.owner.lookup('route:operations/orders/index/details');
+        const calls = stubController(route);
+
+        const result = route.willTransition({
             from: { name: 'console.fleet-ops.operations.orders.index.details.index' },
             to: { name: 'console.fleet-ops.operations.orders.index' },
         });
 
-        assert.true(stopCalled);
-        assert.true(removeCalled);
-        assert.true(showCalled);
+        assert.true(result);
+        assert.deepEqual(calls, [['controllerFor', 'operations.orders.index.details'], ['teardownRealtime'], ['teardownRoutingControls']]);
     });
 });

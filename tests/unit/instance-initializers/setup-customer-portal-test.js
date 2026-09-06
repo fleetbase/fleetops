@@ -1,7 +1,7 @@
 import Application from '@ember/application';
 
 import config from 'dummy/config/environment';
-import { initialize } from 'dummy/instance-initializers/setup-customer-portal';
+import { initialize } from '@fleetbase/fleetops-engine/instance-initializers/setup-customer-portal';
 import { module, test } from 'qunit';
 import Resolver from 'ember-resolver';
 import { run } from '@ember/runloop';

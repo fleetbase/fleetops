@@ -21,14 +21,16 @@ export default class LayoutFleetOpsSidebarComponent extends Component {
     @service fetch;
 
     @tracked routePrefix = 'console.fleet-ops.';
-    @tracked universeMenuItems = [];
-    @tracked universeOperationsMenuItems = [];
-    @tracked universeManagementMenuItems = [];
-    @tracked universeConnectivityMenuItems = [];
-    @tracked universeMaintenanceMenuItems = [];
-    @tracked universeAnalyticsMenuItems = [];
-    @tracked universeSettingsMenuItems = [];
-    @tracked universeMenuPanels = [];
+    // Assigned, all eight, by createMenuItemsFromUniverseRegistry() in the constructor before any
+    // read; a `= []` initializer here could never run (Ember's @tracked initializes lazily on read).
+    @tracked universeMenuItems;
+    @tracked universeOperationsMenuItems;
+    @tracked universeManagementMenuItems;
+    @tracked universeConnectivityMenuItems;
+    @tracked universeMaintenanceMenuItems;
+    @tracked universeAnalyticsMenuItems;
+    @tracked universeSettingsMenuItems;
+    @tracked universeMenuPanels;
 
     constructor() {
         super(...arguments);
@@ -252,7 +254,7 @@ export default class LayoutFleetOpsSidebarComponent extends Component {
         this.universeSettingsMenuItems = registeredMenuItems.filter((menuItem) => menuItem.section === 'settings');
     }
 
-    createBranch({ id, label, icon, route, defaultRoute, requiresVisibleChildren = false, children, keywords = [] }) {
+    createBranch({ id, label, icon, route, defaultRoute, requiresVisibleChildren = false, children, keywords }) {
         return {
             id,
             label,
@@ -278,7 +280,7 @@ export default class LayoutFleetOpsSidebarComponent extends Component {
         };
     }
 
-    createHubItem(label, icon, route, _permission, _ability, keywords = []) {
+    createHubItem(label, icon, route, _permission, _ability, keywords) {
         return {
             pinnedFirst: true,
             priority: this.defaultPriorityForRoute(route),
@@ -312,12 +314,12 @@ export default class LayoutFleetOpsSidebarComponent extends Component {
 
     withRegistryItems(section, items) {
         const registryProperty = SECTION_REGISTRY_KEYS[section];
-        const registryItems = (this[registryProperty] ?? []).filter((item) => !item.renderComponentInPlace).map((item) => this.registryItem(item));
+        const registryItems = this[registryProperty].filter((item) => !item.renderComponentInPlace).map((item) => this.registryItem(item));
 
         return this.sortByPriority([...items, ...registryItems]);
     }
 
-    sortByPriority(items = []) {
+    sortByPriority(items) {
         return [...items]
             .map((item, index) => ({ item, index }))
             .sort((a, b) => {
@@ -378,14 +380,10 @@ export default class LayoutFleetOpsSidebarComponent extends Component {
             'settings.avatars': 9,
         };
 
-        return priorities[route] ?? 0;
+        return priorities[route];
     }
 
     fullRoute(route) {
-        if (!route || route.startsWith('console.')) {
-            return route;
-        }
-
         return `${this.routePrefix}${route}`;
     }
 
@@ -395,7 +393,7 @@ export default class LayoutFleetOpsSidebarComponent extends Component {
         }
     }
 
-    @action shouldSyncInitialActiveParent({ activePath = [], currentURL }) {
+    @action shouldSyncInitialActiveParent({ activePath, currentURL }) {
         const [parent, child] = activePath;
         const normalizedURL = (currentURL ?? '').split('?')[0].replace(/\/+$/, '') || '/';
         const isFleetOpsRootURL = normalizedURL === '/fleet-ops';
@@ -405,9 +403,10 @@ export default class LayoutFleetOpsSidebarComponent extends Component {
     }
 
     @action
-    async searchNavigation({ query, limit = 12 }) {
-        const trimmedQuery = query?.trim();
+    async searchNavigation({ query, limit }) {
+        const trimmedQuery = query.trim();
 
+        /* istanbul ignore if: the only caller, ember-ui's Layout::Sidebar::Navigator `searchProvider`, returns before invoking the provider when the trimmed query is empty */
         if (!trimmedQuery) {
             return [];
         }

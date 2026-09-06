@@ -14,11 +14,10 @@ module('Unit | Service | device-event-actions', function (hooks) {
         let service = this.owner.lookup('service:device-event-actions');
         let event = { id: 'event_1' };
 
-        service.transitionTo = (routeName, resource) => {
-            assert.strictEqual(routeName, 'connectivity.events.details');
-            assert.strictEqual(resource, event);
-        };
+        const hostRouter = this.owner.lookup('service:host-router');
 
         service.transition.view(event);
+
+        assert.deepEqual(hostRouter.calls, [{ method: 'transitionTo', args: ['console.fleet-ops.connectivity.events.details', event] }], 'the route is prefixed with the engine mount point');
     });
 });

@@ -2,25 +2,18 @@ import { module, test } from 'qunit';
 import { setupRenderingTest } from 'dummy/tests/helpers';
 import { render } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
+import registerTemplateOnly from 'dummy/tests/helpers/register-template-only';
 
 module('Integration | Component | order/details/comments', function (hooks) {
     setupRenderingTest(hooks);
 
-    test('it renders', async function (assert) {
-        // Set any properties with this.set('myProperty', 'value');
-        // Handle any actions with this.set('myAction', function(val) { ... });
+    test('it wraps the order comment thread in a panel', async function (assert) {
+        registerTemplateOnly(this.owner, 'comment-thread', hbs`<div data-test-comment-thread={{@subjectType}} data-test-subject={{@subject.id}}></div>`);
+        this.set('resource', { id: 'order_1' });
 
-        await render(hbs`<Order::Details::Comments />`);
+        await render(hbs`<Order::Details::Comments @resource={{this.resource}} />`);
 
-        assert.dom().hasText('');
-
-        // Template block usage:
-        await render(hbs`
-      <Order::Details::Comments>
-        template block text
-      </Order::Details::Comments>
-    `);
-
-        assert.dom().hasText('template block text');
+        assert.dom('.panel-title').hasText('Comments');
+        assert.dom('[data-test-comment-thread="fleet-ops:order"]').hasAttribute('data-test-subject', 'order_1');
     });
 });

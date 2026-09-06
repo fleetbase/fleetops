@@ -39,7 +39,8 @@ export default class MapDrawerDeviceEventListingComponent extends Component {
                 label: 'Device',
                 valuePath: 'device.displayName',
                 cellComponent: 'table/cell/anchor',
-                action: this.deviceActions.panel.view,
+                // `table/cell/anchor` hands its action the row, so resolve the device off it.
+                action: (deviceEvent) => this.deviceActions.panel.view(deviceEvent.device),
                 permission: 'fleet-ops view device',
                 resizable: true,
                 sortable: true,
@@ -171,12 +172,10 @@ export default class MapDrawerDeviceEventListingComponent extends Component {
                 params.device = this.device.id;
             }
 
-            if (isArray(this.dateFilter) && this.dateFilter.length === 2) {
-                params.created_at = this.dateFilter.join(',');
-            }
+            params.created_at = this.dateFilter.join(',');
 
             const events = yield this.store.query('device-event', params);
-            this.positions = isArray(events) ? events : [];
+            this.events = isArray(events) ? events : [];
         } catch (error) {
             this.notifications.serverError(error);
         }

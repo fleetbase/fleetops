@@ -14,7 +14,7 @@ export default class FleetVehicleListingComponent extends Component {
     @service notifications;
     @tracked vehicles = [];
     @tracked selected = [];
-    @tracked selectable = false;
+    @tracked selectable;
     @tracked fleet;
 
     constructor() {
@@ -26,8 +26,8 @@ export default class FleetVehicleListingComponent extends Component {
         this.search.perform({ limit: -1 });
     }
 
-    @task({ restartable: true }) *search(params = {}) {
-        if (!params.value) {
+    @task({ restartable: true }) *search(params) {
+        if (params.query) {
             yield timeout(300);
         }
 

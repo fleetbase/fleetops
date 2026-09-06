@@ -83,10 +83,6 @@ export default class CustomerCreateOrderFormComponent extends Component {
         'application/x-tar',
     ];
 
-    @computed('payloadCoordinates.length', 'waypoints.[]') get isServicable() {
-        return this.payloadCoordinates.length >= 2;
-    }
-
     @computed('routePreviewArray.[]') get routePreviewCoordinates() {
         return this.routePreviewArray.map((place) => place.get('latlng'));
     }
@@ -438,6 +434,13 @@ export default class CustomerCreateOrderFormComponent extends Component {
         return routePreviewArray;
     }
 
+    // Nothing can reach this. `create-order-form.hbs` never names `createPlace`, the class never
+    // calls it, and the template has no `{{yield}}`, so it cannot be handed to a child either.
+    // The `createPlace` the contact/customer/vendor forms call is a *service* method on
+    // `contact-actions` / `customer-actions` / `vendor-actions` — a different thing that happens
+    // to share the name. See DEFECTS #100: whether the order form should offer "new address" at
+    // all is a product call, so this stays until that is answered.
+    /* istanbul ignore next -- no template reference, no caller, and the component yields nothing */
     @action createPlace() {
         const place = this.store.createRecord('place', {
             owner_uuid: this.customer.id,

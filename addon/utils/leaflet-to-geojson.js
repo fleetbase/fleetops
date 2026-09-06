@@ -18,11 +18,6 @@ function normalizeToRings(latlngs) {
     }
 
     // Already [ [LatLng,...], ... ]
-    if (isArray(latlngs) && isArray(latlngs[0]) && !isArray(latlngs[0][0])) {
-        return latlngs;
-    }
-
-    // Multipolygon case handled elsewhere
     return latlngs;
 }
 
@@ -120,5 +115,5 @@ export function createFeatureCollectionFromLayers(layers, options) {
         .map((l) => createGeoJsonFromLayer(l, options))
         .filter(Boolean);
 
-    return new FeatureCollection({ features });
+    return new FeatureCollection(features);
 }

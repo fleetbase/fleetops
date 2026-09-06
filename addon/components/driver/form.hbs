@@ -172,7 +172,7 @@
             </InputGroup>
         </div>
         <RegistryYield @registry="fleet-ops:component:driver:form:details" as |RegistryComponent|>
-            <RegistryComponent @resource={{@resource}} @controller={{this.controller}} @permission={{get-write-permission @resource}} />
+            <RegistryComponent @resource={{@resource}} @controller={{@controller}} @permission={{get-write-permission @resource}} />
         </RegistryYield>
     </ContentPanel>
 
@@ -221,7 +221,7 @@
     <CustomField::Yield @subject={{@resource}} @wrapperClass="bordered-top" />
 
     <RegistryYield @registry="fleet-ops:component:driver:form" as |RegistryComponent|>
-        <RegistryComponent @resource={{@resource}} @controller={{this.controller}} @permission={{get-write-permission @resource}} />
+        <RegistryComponent @resource={{@resource}} @controller={{@controller}} @permission={{get-write-permission @resource}} />
     </RegistryYield>
 
     <ContentPanel @title={{t "avatar-picker.avatar"}} @open={{true}} @wrapperClass="bordered-top">

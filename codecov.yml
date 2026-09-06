@@ -1,0 +1,31 @@
+coverage:
+    precision: 2
+    round: down
+    status:
+        project:
+            default:
+                target: 100%
+                threshold: 0%
+        patch:
+            default:
+                target: 100%
+                threshold: 0%
+
+# Two independent workflows upload two flags: server.yml uploads `backend` (PHP, clover.xml) and
+# ember.yml uploads `frontend` (Ember addon, lcov.info). `carryforward: true` on both so a run in
+# which one workflow fails or is skipped keeps that side's last-known coverage in the repo total
+# instead of dropping it to zero.
+flags:
+    backend:
+        paths:
+            - server/src/
+        carryforward: true
+    frontend:
+        paths:
+            - addon/
+        carryforward: true
+
+comment:
+    layout: 'condensed_header, diff, flags, files'
+    behavior: default
+    require_changes: false

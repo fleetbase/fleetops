@@ -1,100 +1,195 @@
-import Component from '@glimmer/component';
-import Service from '@ember/service';
-import { setComponentTemplate } from '@ember/component';
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'dummy/tests/helpers';
-import { render, click } from '@ember/test-helpers';
+import { click, findAll, render, settled } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
+import Service from '@ember/service';
+import stubFormInputs, { makeRecord } from 'dummy/tests/helpers/stub-form-inputs';
+import registerTemplateOnly from 'dummy/tests/helpers/register-template-only';
 
-let modelSelectQueries;
-
-class ModelSelectStub extends Component {
-    constructor() {
-        super(...arguments);
-        modelSelectQueries.push({ modelName: this.args.modelName, query: this.args.query });
-    }
-}
-
-class ExtensionManagerStub extends Service {
-    installed = [];
-
-    isInstalled(name) {
-        return this.installed.includes(name);
-    }
-
-    ensureEngineLoaded() {
-        return Promise.resolve();
-    }
-}
-
-function makeResource(initial = {}) {
-    return {
-        ...initial,
-        set(key, value) {
-            this[key] = value;
-        },
-        setProperties(values) {
-            Object.assign(this, values);
-        },
-    };
+function buttonByText(pattern) {
+    return findAll('button').find((button) => pattern.test(button.textContent));
 }
 
 module('Integration | Component | customer/form', function (hooks) {
     setupRenderingTest(hooks);
 
     hooks.beforeEach(function () {
-        modelSelectQueries = [];
+        stubFormInputs(this.owner);
+        registerTemplateOnly(
+            this.owner,
+            'upload-button',
+            hbs`<button type="button" data-test-upload-button disabled={{@disabled}} {{on "click" (fn @onFileAdded (hash name="photo.png"))}}>{{@buttonText}}</button>`
+        );
+        const calls = (this.calls = []);
+        const test = this;
+        this.uploadFails = false;
+        this.allowWrite = true;
+        this.installed = [];
+        this.owner.register(
+            'service:abilities',
+            class extends Service {
+                can() {
+                    return test.allowWrite;
+                }
 
-        this.owner.register('service:universe/extension-manager', ExtensionManagerStub);
-        this.owner.register('component:model-select', setComponentTemplate(hbs`<div data-test-model-select={{@modelName}}></div>`, ModelSelectStub));
+                cannot() {
+                    return !test.allowWrite;
+                }
+            }
+        );
+        this.owner.register(
+            'service:universe/extension-manager',
+            class extends Service {
+                isInstalled(name) {
+                    return test.installed.includes(name);
+                }
+            }
+        );
+        this.owner.register(
+            'service:customer-actions',
+            class extends Service {
+                editPlace(resource) {
+                    calls.push(['editPlace', resource.id]);
+                }
+
+                createPlace(resource) {
+                    calls.push(['createPlace', resource.id]);
+                }
+            }
+        );
+        this.owner.register(
+            'service:current-user',
+            class extends Service {
+                companyId = 'company_1';
+            }
+        );
+        this.owner.register(
+            'service:notifications',
+            class extends Service {
+                error(message) {
+                    calls.push(['error', message]);
+                }
+            }
+        );
+        this.owner.register(
+            'service:fetch',
+            class extends Service {
+                uploadFile = {
+                    perform: async (file, options, callback) => {
+                        calls.push(['upload', file, options]);
+                        if (test.uploadFails) {
+                            throw new Error('disk full');
+                        }
+                        callback({ id: 'file_1', url: '/photo.png' });
+                    },
+                };
+            }
+        );
     });
 
-    test('the user account selector only offers customer users without a contact', async function (assert) {
-        this.set('customer', makeResource({ isNew: true }));
+    test('it renders the customer and manages the address', async function (assert) {
+        this.set(
+            'resource',
+            makeRecord(
+                'contact',
+                {
+                    id: 'customer_1',
+                    name: 'Acme',
+                    title: 'Buyer',
+                    email: 'buyer@example.test',
+                    phone: '+15550100',
+                    internal_id: 'INT-1',
+                    has_place: true,
+                    place: { id: 'place_1' },
+                    place_uuid: 'place_1',
+                },
+                { isNew: false }
+            )
+        );
 
-        await render(hbs`<Customer::Form @resource={{this.customer}} />`);
+        await render(hbs`<Customer::Form @resource={{this.resource}} />`);
 
-        const userSelect = modelSelectQueries.find((entry) => entry.modelName === 'user');
+        assert.deepEqual(
+            findAll('input:not([data-test-phone-input])').map((input) => input.value),
+            ['Acme', 'Buyer', 'buyer@example.test', 'INT-1']
+        );
+        assert.dom('[data-test-phone-input]').hasValue('+15550100');
+        assert.dom('[data-test-custom-fields]').exists();
+        assert.deepEqual(
+            findAll('[data-test-registry]').map((element) => element.getAttribute('data-test-registry')),
+            ['fleet-ops:component:customer:form:details', 'fleet-ops:component:customer:form']
+        );
+        assert.dom('.fleetbase-checkbox').doesNotExist('an existing customer gets no welcome email option');
 
-        assert.deepEqual(userSelect.query, { doesnt_have_contact: true, is_customer: true });
+        await click(buttonByText(/Edit/));
+        assert.deepEqual(this.calls, [['editPlace', 'customer_1']]);
+
+        await click(buttonByText(/Remove/));
+        assert.strictEqual(this.resource.place, null);
+        assert.strictEqual(this.resource.place_uuid, null);
+
+        await click('[data-test-model-select="place"]');
+        assert.strictEqual(this.resource.place.id, 'picked_1');
+        assert.strictEqual(this.resource.place_uuid, 'picked_1');
+        await click('[data-test-model-select-clear="place"]');
+        assert.strictEqual(this.resource.place_uuid, 'picked_1', 'clearing the select is ignored');
+
+        this.set('resource', makeRecord('contact', { id: 'customer_2', has_place: false }, { isNew: false }));
+        await settled();
+        assert.notOk(buttonByText(/Remove/), 'no remove button without a place');
+        await click(buttonByText(/New Address/));
+        assert.deepEqual(this.calls.at(-1), ['createPlace', 'customer_2']);
+
+        await click('[data-test-upload-button]');
+        assert.deepEqual(this.calls.at(-1)[2], { path: 'uploads/company_1/contacts/customer_2', subject_uuid: 'customer_2', subject_type: 'fleet-ops:contact', type: 'contact_photo' });
+        assert.strictEqual(this.resource.photo_uuid, 'file_1');
+        assert.strictEqual(this.resource.photo_url, '/photo.png');
+
+        this.uploadFails = true;
+        await click('[data-test-upload-button]');
+        assert.deepEqual(this.calls.at(-1), ['error', 'Unable to upload photo: disk full']);
     });
 
-    test('the welcome email option is offered when creating a customer with the portal installed', async function (assert) {
-        this.owner.lookup('service:universe/extension-manager').installed = ['@fleetbase/customer-portal-engine'];
-        this.set('customer', makeResource({ isNew: true }));
+    test('the welcome email option is offered for a new customer with the portal installed and stored on the meta', async function (assert) {
+        this.installed = ['@fleetbase/customer-portal-engine'];
+        this.set('resource', makeRecord('contact', { id: 'customer_3' }, { isNew: true }));
 
-        await render(hbs`<Customer::Form @resource={{this.customer}} />`);
+        await render(hbs`<Customer::Form @resource={{this.resource}} />`);
 
-        assert.dom('input[type="checkbox"]').exists({ count: 1 });
-        assert.dom('input[type="checkbox"]').isNotChecked('the welcome email is opt in');
+        assert.dom('.fleetbase-checkbox').exists({ count: 1 });
+        assert.dom('.fleetbase-checkbox').isNotChecked('the welcome email is opt in');
         assert.dom().includesText('Send customer portal welcome email');
+
+        await click('.fleetbase-checkbox');
+        assert.deepEqual(this.resource.meta, { customer_portal: { send_welcome_email: true } });
+        assert.dom('.fleetbase-checkbox').isChecked();
+
+        this.resource.set('meta', { note: 'kept', customer_portal: { theme: 'dark', send_welcome_email: true } });
+        await render(hbs`<Customer::Form @resource={{this.resource}} />`);
+        assert.dom('.fleetbase-checkbox').isChecked();
+        await click('.fleetbase-checkbox');
+        assert.deepEqual(this.resource.meta, { note: 'kept', customer_portal: { theme: 'dark', send_welcome_email: false } });
     });
 
-    test('opting in stores the welcome email flag on the customer portal meta', async function (assert) {
-        this.owner.lookup('service:universe/extension-manager').installed = ['@fleetbase/customer-portal-engine'];
-        this.set('customer', makeResource({ isNew: true }));
+    test('the welcome email option is hidden without the portal extension', async function (assert) {
+        this.set('resource', makeRecord('contact', { id: 'customer_4' }, { isNew: true }));
 
-        await render(hbs`<Customer::Form @resource={{this.customer}} />`);
-        await click('input[type="checkbox"]');
+        await render(hbs`<Customer::Form @resource={{this.resource}} />`);
 
-        assert.deepEqual(this.customer.meta, { customer_portal: { send_welcome_email: true } });
-    });
-
-    test('the welcome email option is hidden without the customer portal extension', async function (assert) {
-        this.set('customer', makeResource({ isNew: true }));
-
-        await render(hbs`<Customer::Form @resource={{this.customer}} />`);
-
-        assert.dom('input[type="checkbox"]').doesNotExist();
+        assert.dom('.fleetbase-checkbox').doesNotExist();
         assert.dom().doesNotIncludeText('Send customer portal welcome email');
     });
 
-    test('the welcome email option is hidden when editing an existing customer', async function (assert) {
-        this.owner.lookup('service:universe/extension-manager').installed = ['@fleetbase/customer-portal-engine'];
-        this.set('customer', makeResource({ isNew: false }));
+    test('without write access the inputs, buttons and select are disabled', async function (assert) {
+        this.allowWrite = false;
+        this.set('resource', makeRecord('contact', { id: 'customer_5', has_place: true, place: { id: 'place_1' } }, { isNew: false }));
 
-        await render(hbs`<Customer::Form @resource={{this.customer}} />`);
+        await render(hbs`<Customer::Form @resource={{this.resource}} />`);
 
-        assert.dom('input[type="checkbox"]').doesNotExist();
+        assert.strictEqual(findAll('input:not([disabled])').length, 0);
+        assert.dom('[data-test-upload-button]').isDisabled();
+        assert.dom('[data-test-model-select="place"]').isDisabled();
+        assert.ok(buttonByText(/Remove/).disabled);
+        assert.ok(buttonByText(/Edit/).disabled);
     });
 });

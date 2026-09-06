@@ -4,6 +4,7 @@ import { inject as service } from '@ember/service';
 import { isEmpty } from '@ember/utils';
 import { task } from 'ember-concurrency';
 import config from 'ember-get-config';
+import window from 'ember-window-mock';
 
 export default class CustomerAdminSettingsComponent extends Component {
     @service fetch;
@@ -13,7 +14,6 @@ export default class CustomerAdminSettingsComponent extends Component {
     @tracked enabledOrderConfigs = [];
     @tracked paymentsEnabled = false;
     @tracked paymentsOnboardCompleted = false;
-    @tracked paymentGateway = 'stripe';
 
     get isStripeEnabled() {
         return window.stripeInstance !== undefined || !isEmpty(config.stripe.publishableKey);

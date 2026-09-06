@@ -31,15 +31,4 @@ export default class RouteOptimizationWizardPanelComponent extends Component {
 
         contextComponentCallback(this, 'onLoad', ...arguments);
     }
-
-    /**
-     * Handles the cancel action.
-     *
-     * @method
-     * @action
-     * @returns {Boolean} Indicates whether the cancel action was overridden.
-     */
-    @action onPressCancel() {
-        return contextComponentCallback(this, 'onPressCancel');
-    }
 }

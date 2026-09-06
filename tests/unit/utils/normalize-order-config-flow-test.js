@@ -1,5 +1,5 @@
 import { module, test } from 'qunit';
-import normalizeOrderConfigFlow, { getOrderConfigFlowRootCode } from 'dummy/utils/normalize-order-config-flow';
+import normalizeOrderConfigFlow, { getOrderConfigFlowRootCode } from '@fleetbase/fleetops-engine/utils/normalize-order-config-flow';
 
 module('Unit | Utility | normalize-order-config-flow', function () {
     test('it preserves keyed flow graph configs', function (assert) {
@@ -71,5 +71,21 @@ module('Unit | Utility | normalize-order-config-flow', function () {
         ]);
 
         assert.deepEqual(Object.keys(flow), ['created']);
+    });
+
+    test('it falls back to an empty graph for missing or scalar flows', function (assert) {
+        assert.deepEqual(normalizeOrderConfigFlow(), {});
+        assert.deepEqual(normalizeOrderConfigFlow(null), {});
+        assert.deepEqual(normalizeOrderConfigFlow('created'), {});
+        assert.strictEqual(getOrderConfigFlowRootCode(), undefined);
+        assert.strictEqual(getOrderConfigFlowRootCode({ started: {} }), 'started', 'without a created activity the first key is the root');
+    });
+
+    test('it links flat activities by key when they carry no code', function (assert) {
+        const flow = normalizeOrderConfigFlow([{ code: 'created' }, { key: 'accepted' }]);
+
+        assert.deepEqual(Object.keys(flow), ['created', 'accepted']);
+        assert.deepEqual(flow.created, { code: 'created', key: 'created', activities: ['accepted'] }, 'a missing key falls back to the code');
+        assert.deepEqual(flow.accepted, { code: 'accepted', key: 'accepted', activities: [] });
     });
 });

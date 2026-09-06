@@ -6,21 +6,17 @@ import { hbs } from 'ember-cli-htmlbars';
 module('Integration | Component | map/order-list-overlay/driver-panel-title', function (hooks) {
     setupRenderingTest(hooks);
 
-    test('it renders', async function (assert) {
-        // Set any properties with this.set('myProperty', 'value');
-        // Handle any actions with this.set('myAction', function(val) { ... });
+    test('it renders the driver avatar, name and active order count', async function (assert) {
+        this.set('context', { vehicle_avatar: 'https://cdn.example.com/van.png', name: 'Sam Driver', _panelActiveJobs: [{}, {}] });
 
-        await render(hbs`<Map::OrderListOverlay::DriverPanelTitle />`);
+        await render(hbs`<Map::OrderListOverlay::DriverPanelTitle @context={{this.context}} />`);
 
-        assert.dom().hasText('');
+        assert.dom('img').hasAttribute('src', 'https://cdn.example.com/van.png');
+        assert.dom('img').hasAttribute('alt', 'Sam Driver');
+        assert.dom('.text-sm').hasText('Sam Driver');
+        assert.dom('.resource-count').hasText('2 Orders');
 
-        // Template block usage:
-        await render(hbs`
-      <Map::OrderListOverlay::DriverPanelTitle>
-        template block text
-      </Map::OrderListOverlay::DriverPanelTitle>
-    `);
-
-        assert.dom().hasText('template block text');
+        this.set('context', { ...this.context, _panelActiveJobs: [{}] });
+        assert.dom('.resource-count').hasText('1 Order');
     });
 });

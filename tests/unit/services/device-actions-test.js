@@ -60,10 +60,16 @@ module('Unit | Service | device-actions', function (hooks) {
         );
     });
 
-    test('panel.view ignores missing device resources', function (assert) {
+    test('panel.view warns instead of opening a panel for a missing device', function (assert) {
         let service = this.owner.lookup('service:device-actions');
+        let panel = this.owner.lookup('service:resource-context-panel');
+        let warnings = [];
+        service.notifications = { warning: (message) => warnings.push(message) && 'warning' };
+
         let result = service.panel.view();
 
-        assert.strictEqual(result, undefined);
+        assert.deepEqual(warnings, ['common.invalid-resource']);
+        assert.strictEqual(result, 'warning', 'the warning is what the caller gets back');
+        assert.strictEqual(panel.config, undefined, 'no panel is opened');
     });
 });

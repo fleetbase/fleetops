@@ -1,4 +1,6 @@
-const L = window.leaflet || window.L;
+function leaflet() {
+    return window.leaflet || window.L;
+}
 
 export function findLayer(map, findCallback) {
     const layers = [];
@@ -29,6 +31,8 @@ export function getLayerById(map, layerId) {
 
 export function flyToLayer(map, layer, zoom, options = {}) {
     if (!map || !layer) return;
+
+    const L = leaflet();
 
     let targetLatLng = layer instanceof L.Marker ? layer.getLatLng() : layer.getCenter ? layer.getCenter() : layer.getBounds ? layer.getBounds().getCenter() : null;
     if (!targetLatLng) return;

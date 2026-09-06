@@ -1,6 +1,7 @@
 import { module, test } from 'qunit';
 import { setupTest } from 'dummy/tests/helpers';
 import Service from '@ember/service';
+import { waitUntil } from '@ember/test-helpers';
 
 module('Unit | Service | geofence', function (hooks) {
     setupTest(hooks);
@@ -154,7 +155,8 @@ module('Unit | Service | geofence', function (hooks) {
 
         mapManager.overlays.set('sa_1', {});
         serviceAreaActions.saveOptions.callback(savedServiceArea);
-        await Promise.resolve();
+        // The canonical reload chains several promises before the polygon is shown.
+        await waitUntil(() => mapManager.shownPolygons.length > 0);
 
         assert.deepEqual(serviceAreaActions.serviceAreas, [canonicalServiceArea]);
         assert.deepEqual(mapManager.shownPolygons, ['sa_1']);
@@ -193,7 +195,7 @@ module('Unit | Service | geofence', function (hooks) {
 
         mapManager.overlays.set('zone_1', {});
         zoneActions.saveOptions.callback(zone);
-        await Promise.resolve();
+        await waitUntil(() => mapManager.shownPolygons.length > 0);
 
         assert.strictEqual(zoneActions.createdAttrs.service_area, serviceArea);
         assert.notOk(zoneActions.createdAttrs.serviceArea);

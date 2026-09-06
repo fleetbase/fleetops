@@ -46,8 +46,7 @@ export default function toMultiPolygon(input, { asFeature = false } = {}) {
     }
 
     if (geom?.type === 'Polygon' || input instanceof Polygon) {
-        const coords = geom.coordinates ?? input.coordinates;
-        const mp = new MultiPolygon([coords]);
+        const mp = new MultiPolygon([geom.coordinates]);
 
         // return asFeature || wasFeature ? new Feature({ type: 'MultiPolygon', coordinates: mp.coordinates, properties: props, id, bbox }) : mp;
         return mp;

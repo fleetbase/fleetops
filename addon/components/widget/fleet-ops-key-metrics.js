@@ -35,7 +35,7 @@ export default class WidgetFleetOpsKeyMetricsComponent extends Component {
      *
      * @memberof WidgetKeyMetricsComponent
      */
-    @tracked metrics = {};
+    @tracked metrics;
 
     /**
      * Creates an instance of WidgetKeyMetricsComponent.
@@ -108,7 +108,6 @@ export default class WidgetFleetOpsKeyMetricsComponent extends Component {
      * KPI widgets cover the long tail for users who want everything.
      */
     get topMetrics() {
-        if (!this.metrics) return [];
         return TOP_KEYS.filter((key) => this.metrics[key] !== undefined).map((key) => {
             const { value, format } = this.metrics[key];
             const formatter = FORMATTERS[format] ?? FORMATTERS.count;

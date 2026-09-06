@@ -647,7 +647,7 @@
                 {{#if @resource.skills.length}}
                     <div class="field-info-container col-span-2">
                         <div class="field-name">Skills & Capabilities</div>
-                        <div class="field-value">{{join @resource.skills ", "}}</div>
+                        <div class="field-value">{{join ", " @resource.skills}}</div>
                     </div>
                 {{/if}}
                 {{#if (or @resource.time_window_start @resource.time_window_end)}}

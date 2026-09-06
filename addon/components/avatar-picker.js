@@ -49,11 +49,9 @@ export default class AvatarPickerComponent extends Component {
                 try {
                     file = await this.store.findRecord('file', id);
                 } catch (e) {
-                    // Optional: surface a toast here if you want
                     return;
                 }
             }
-            if (!file) return;
 
             // No-op fast path
             if (this.model.avatar_url === file.id && this.model.avatar_custom_url === file.url) {

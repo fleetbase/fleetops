@@ -37,7 +37,7 @@ module('Unit | Controller | connectivity/devices/index/details/vehicle', functio
                     assert.strictEqual(route, 'console.fleet-ops.management.vehicles.index.details', 'opens vehicle detail route');
                 }
 
-                assert.strictEqual(model.id, 'vehicle_1', 'vehicle model is passed through');
+                assert.strictEqual(model, 'vehicle_public_1', 'the vehicle public id is the route model');
             }
         }
 
@@ -46,7 +46,7 @@ module('Unit | Controller | connectivity/devices/index/details/vehicle', functio
         const controller = this.owner.lookup('controller:connectivity/devices/index/details/vehicle');
         controller.model = {
             device: {
-                attachable: { id: 'vehicle_1', displayName: 'Truck 1' },
+                attachable: { id: 'vehicle_1', public_id: 'vehicle_public_1', displayName: 'Truck 1' },
             },
             positions: [],
         };

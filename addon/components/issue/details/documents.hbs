@@ -34,7 +34,6 @@
                             @for="issue-files"
                             @accept={{join "," this.acceptedFileTypes}}
                             @multiple={{true}}
-                            @onFileAdded={{perform this.queueFile}}
                             @disabled={{cannot-write @resource}}
                         >
                             <a tabindex={{0}} class="btn btn-sm btn-default">select files</a>

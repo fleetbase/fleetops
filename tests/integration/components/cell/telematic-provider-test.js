@@ -75,4 +75,65 @@ module('Integration | Component | cell/telematic-provider', function (hooks) {
         assert.dom('[data-test-telematic-provider-empty-text]').hasText('No provider');
         assert.dom('button').doesNotExist();
     });
+
+    test('the telematic resolves from a function path, a relation, or is synthesised from row fields', async function (assert) {
+        this.set('column', { resourcePath: (row) => row.nested });
+        this.set('row', { nested: { name: 'Function Provider', provider_descriptor: { description: 'via function' } } });
+        await render(hbs`<Cell::TelematicProvider @row={{this.row}} @column={{this.column}} />`);
+        assert.dom(this.element).includesText('Function Provider').includesText('via function');
+
+        this.set('column', { resourcePath: () => undefined });
+        await render(hbs`<Cell::TelematicProvider @row={{this.row}} @column={{this.column}} />`);
+        assert.dom('[data-test-telematic-provider-empty-text]').hasText('-');
+
+        this.set('column', { resourcePath: 'nested' });
+        await render(hbs`<Cell::TelematicProvider @row={{this.row}} @column={{this.column}} />`);
+        assert.dom(this.element).includesText('Function Provider');
+
+        this.set('column', { resourcePath: 'missing', emptyText: 'No provider' });
+        await render(hbs`<Cell::TelematicProvider @row={{this.row}} @column={{this.column}} />`);
+        assert.dom('[data-test-telematic-provider-empty-text]').hasText('No provider');
+
+        this.set('column', {});
+        this.set('row', { telematic: { name: 'Relation Provider', provider: 'geotab' } });
+        await render(hbs`<Cell::TelematicProvider @row={{this.row}} @column={{this.column}} />`);
+        assert.dom(this.element).includesText('Relation Provider').includesText('geotab');
+
+        this.set('row', { telematic_uuid: 't_1', telematic_name: 'Synth Provider', provider: 'samsara', provider_descriptor: { icon: '/samsara.png' } });
+        await render(hbs`<Cell::TelematicProvider @row={{this.row}} @column={{this.column}} />`);
+        assert.dom(this.element).includesText('Synth Provider').includesText('samsara');
+
+        this.set('row', { provider: 'plain', provider_descriptor: { label: 'Descriptor Label' } });
+        await render(hbs`<Cell::TelematicProvider @row={{this.row}} @column={{this.column}} />`);
+        assert.dom(this.element).includesText('Descriptor Label').includesText('plain');
+
+        this.set('row', { telematic_name: 'Name Only' });
+        await render(hbs`<Cell::TelematicProvider @row={{this.row}} @column={{this.column}} />`);
+        assert.dom(this.element).includesText('Name Only');
+    });
+
+    test('clicking delegates the telematic to the cell handler and both column handlers', async function (assert) {
+        const calls = [];
+        const telematic = { name: 'Clickable' };
+        this.set('row', { telematic });
+        this.set('column', { action: (resource) => calls.push(['action', resource]), onClick: (resource) => calls.push(['column.onClick', resource]) });
+        this.set('onClick', (resource) => calls.push(['onClick', resource]));
+
+        await render(hbs`<Cell::TelematicProvider @row={{this.row}} @column={{this.column}} @onClick={{this.onClick}} />`);
+        await click('button');
+
+        assert.deepEqual(
+            calls.map(([name, resource]) => [name, resource === telematic]),
+            [
+                ['onClick', true],
+                ['action', true],
+                ['column.onClick', true],
+            ]
+        );
+
+        this.set('column', {});
+        await render(hbs`<Cell::TelematicProvider @row={{this.row}} @column={{this.column}} />`);
+        await click('button');
+        assert.strictEqual(calls.length, 3, 'no handlers, no calls');
+    });
 });
