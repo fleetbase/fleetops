@@ -18,7 +18,10 @@ export default class MapSettingsService extends Service {
     @service fetch;
     @tracked settings = { ...DEFAULT_SETTINGS };
     @tracked isLoaded = false;
-    @tracked loadPromise = null;
+    // Internal request deduplication state is not rendered. Keeping this tracked
+    // makes load() read and then dirty the same tag when called during component
+    // construction, which Ember correctly rejects as a render-time mutation.
+    loadPromise = null;
 
     get mapProvider() {
         return this.settings.mapProvider ?? 'leaflet';
