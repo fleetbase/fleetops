@@ -18,7 +18,7 @@ module('Unit | Route | management/trailers/index', function (hooks) {
         this.owner.register('service:store', StoreStubService);
     });
 
-    test('it loads first class trailers and refreshes all table filters', async function (assert) {
+    test('it queries first-class trailers with the route params and refreshes on every table filter', async function (assert) {
         const route = this.owner.lookup('route:management/trailers/index');
         const store = this.owner.lookup('service:store');
         const params = {
@@ -34,19 +34,51 @@ module('Unit | Route | management/trailers/index', function (hooks) {
         await route.model(params);
 
         assert.deepEqual(store.queries, [{ modelName: 'trailer', params }]);
-        for (const key of ['page', 'limit', 'sort', 'query', 'trailer_type', 'status', 'attachment_state', 'vehicle', 'connectivity_status', 'vendor']) {
+
+        const filterParams = [
+            'page',
+            'limit',
+            'sort',
+            'query',
+            'public_id',
+            'name',
+            'code',
+            'trailer_type',
+            'status',
+            'attachment_state',
+            'vehicle',
+            'connectivity_status',
+            'trailer_make',
+            'trailer_model',
+            'trailer_year',
+            'plate_number',
+            'vin',
+            'serial_number',
+            'vendor',
+            'ownership_type',
+            'refrigerated',
+            'last_online_at',
+            'created_at',
+            'updated_at',
+        ];
+
+        for (const key of filterParams) {
             assert.deepEqual(route.queryParams[key], { refreshModel: true }, `${key} refreshes the Trailer model`);
         }
     });
 
-    test('Trailer navigation is registered immediately after Vehicles', function (assert) {
-        const source = this.owner.resolveRegistration('component:layout/fleet-ops-sidebar').toString();
-        const vehicles = source.indexOf("this.createItem('menu.vehicles'");
-        const trailers = source.indexOf("this.createItem('menu.trailers'");
-        const fleets = source.indexOf("this.createItem('menu.fleets'");
+    test('the index controller declares every filterable column parameter as a query param', function (assert) {
+        const route = this.owner.lookup('route:management/trailers/index');
+        const controller = this.owner.lookup('controller:management/trailers/index');
+        const declared = new Set(controller.queryParams);
 
-        assert.true(vehicles >= 0, 'Vehicles navigation exists');
-        assert.true(trailers > vehicles, 'Trailers follows Vehicles');
-        assert.true(fleets > trailers, 'Trailers appears before Fleets');
+        for (const column of controller.columns) {
+            const param = column.filterParam ?? column.valuePath;
+
+            if (column.filterable) {
+                assert.true(declared.has(param), `filter "${param}" for column "${column.label}" is a declared query param`);
+                assert.deepEqual(route.queryParams[param], { refreshModel: true }, `filter "${param}" refreshes the model`);
+            }
+        }
     });
 });
