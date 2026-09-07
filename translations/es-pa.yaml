@@ -43,6 +43,8 @@ common:
   select-address: Seleccionar dirección
 
   current-job: Current Job
+  "yes": Sí
+  "no": No
 menu:
   operations: Operaciones
   dashboard: Panel
@@ -1001,6 +1003,9 @@ vehicle:
     unassign-orders: Unassign Orders
     create-issue: Create Issue
     locate-vehicle: Localizar vehículo en el mapa
+    attach-trailer: Enganchar remolque
+    attach-equipment: Conectar equipamiento
+    detach-equipment: Desconectar equipamiento
 
   prompts:
     attach-device-title: Attach device to {vehicleName}
@@ -1013,6 +1018,18 @@ vehicle:
     confirm-unassign-orders-body: "This will remove {vehicleName} from these orders: {orders}."
     unassign-orders-success: Unassigned {vehicleName} from {count} order(s).
     issue-title: Issue reported for {vehicleName}
+    attach-trailer-title: "Enganchar un remolque a {vehicleName}"
+    select-trailer-warning: Seleccione un remolque para enganchar a este vehículo.
+    attach-trailer-success: "{trailerName} enganchado a {vehicleName}."
+  empty:
+    trailers: Sin remolques enganchados
+    trailers-description: Enganche un remolque desenganchado a este vehículo para iniciar un enganche.
+    equipment: Sin equipamiento conectado
+    equipment-description: Conecte equipamiento como plataformas elevadoras, herramientas o equipo de seguridad a este vehículo.
+  trailers:
+    description: Remolques actualmente enganchados a este vehículo.
+  equipment:
+    description: Equipamiento actualmente conectado a este vehículo.
 vendor:
   fields:
     setup-vendor: Proveedor de configuración
@@ -1835,134 +1852,350 @@ settings:
       button-in-progress: A bordo en progreso
 
 trailer:
-  navigation-description: Administre activos remolcados, conexiones, equipos y telemática.
+  navigation-description: Gestione los activos remolcados, los enganches, el equipamiento y la telemática.
   sections:
-    identity: Identidad y clasificación
+    details: Detalles
+    identification: Identificación del remolque
+    classification: Clasificación y estado
     registration: Registro
+    location: Ubicación
     dimensions: Dimensiones y capacidad
-    running-gear: Ejes, frenos y acoplamiento
-    refrigeration: Refrigeración y capacidades
-    ownership: Propiedad y detalles financieros
-    connection: Conexión actual al vehículo
+    measurement: Medición y uso
+    dimensions-fields: "Dimensiones ({unit})"
+    weight: "Peso ({unit})"
+    running-gear: Ejes, frenos y enganche
+    refrigeration: Refrigeración
+    ownership: Propiedad y finanzas
+    finance: Datos financieros
+    connection: Enganche al vehículo
     telemetry: Ubicación y telemática
+    notes: Notas e historial
   fields:
+    photo: Foto
+    id: ID
+    name: Nombre
     code: Código
     description: Descripción
     type: Tipo de remolque
     body-type: Tipo de carrocería
     color: Color
+    status: Estado
+    category: Categoría
     vin: VIN
+    plate-number: Placa
     serial-number: Número de serie
-    vehicle: Vehículo conectado
-    attachment-state: Estado de conexión
-    connectivity: Conectividad
-    devices-count: Dispositivos
-    equipment-count: Equipos
-    length: Longitud
-    width: Ancho
-    height: Altura
-    tare: Peso en vacío
-    gvwr: Peso bruto vehicular
-    payload: Capacidad de carga
-    cargo-volume: Volumen de carga
-    measurement: Sistema de medida
-    hubometer: Odómetro o hubómetro
-    axles: Número de ejes
-    tires: Número de neumáticos
-    coupling: Tipo de acoplamiento
-    brakes: Tipo de freno
-    abs: ABS equipado
-    ebs: EBS equipado
-    refrigerated: Refrigerado
-    doors: Número de puertas
-    temperature-min: Temperatura mínima
-    temperature-max: Temperatura máxima
-    reefer-hours: Horas del motor frigorífico
-    ownership: Tipo de propiedad
-    currency: Moneda
-    purchase-date: Fecha de compra
-    lease-expiry: Vencimiento del arrendamiento
-    acquisition-cost: Costo de adquisición
-    current-value: Valor actual
+    make: Marca
+    model: Modelo
+    year: Año
     vendor: Proveedor
     warranty: Garantía
+    vehicle: Vehículo remolcador
+    attachment-state: Estado de enganche
+    attached-at: Enganchado desde
+    position: Posición de remolque
+    source: Origen
+    connected-at: Enganchado el
+    disconnected-at: Desenganchado el
+    duration: Duración
+    connectivity: Conectividad
     last-online: Última conexión
-    updated: Última actualización
-    connected-at: Conectado el
-    disconnected-at: Desconectado el
+    last-provider: Proveedor telemático
+    last-event-at: Último evento telemático
+    coordinates: Coordenadas
+    speed: Velocidad
+    heading: Rumbo
+    altitude: Altitud
+    devices-count: Dispositivos conectados
+    equipment-count: Equipamiento conectado
+    measurement-system: Sistema de medición
+    odometer: "Odómetro / hubodómetro {unit}"
+    odometer-unit: Unidad del odómetro
+    length: "Longitud ({unit})"
+    width: "Ancho ({unit})"
+    height: "Altura ({unit})"
+    cargo-volume: "Volumen de carga ({unit})"
+    tare-weight: "Peso en vacío ({unit})"
+    gvwr: "Peso bruto máximo ({unit})"
+    payload-capacity: "Capacidad de carga ({unit})"
+    axle-count: Ejes
+    tire-count: Neumáticos
+    door-count: Puertas
+    coupling-type: Tipo de enganche
+    brake-type: Tipo de frenos
+    abs: ABS
+    ebs: EBS
+    refrigerated: Refrigerado
+    temperature-min: "Temperatura mínima ({unit})"
+    temperature-max: "Temperatura máxima ({unit})"
+    reefer-hours: Horas del equipo de frío
+    ownership-type: Propiedad
+    financing-status: Estado de financiación
+    currency: Moneda
+    acquisition-cost: Costo de adquisición
+    current-value: Valor actual
+    insurance-value: Valor asegurado
+    depreciation-rate: Tasa de depreciación (% anual)
+    purchased-at: Fecha de compra
+    lease-expires-at: Vencimiento del arrendamiento
+    notes: Notas
+    created-at: Creado
+    updated-at: Última actualización
+  placeholders:
+    filter-vendor: Filtrar por proveedor
+    name: p. ej. Refrigerado 12
+    code: Código interno de flota, p. ej. TRL-0012
+    description: Para qué se utiliza este remolque
+    type: Seleccione un tipo de remolque
+    status: Seleccione un estado
+    body-type: p. ej. Cerrado, lona corredera, plataforma
+    color: p. ej. Blanco
+    category: Seleccione una categoría (opcional)
+    vin: VIN de 17 caracteres
+    plate-number: Placa de matrícula
+    serial-number: Número de serie del fabricante
+    make: p. ej. Utility, Schmitz, Wabash
+    model: p. ej. 3000R
+    year: p. ej. 2024
+    vendor: Seleccione un proveedor (opcional)
+    warranty: Seleccione una garantía (opcional)
+    vehicle: Seleccione un vehículo
+    trailer: Seleccione un remolque
+    equipment: Seleccione equipamiento
+    filter-vehicle: Filtrar por vehículo remolcador
+    position: "1"
+    measurement-system: Seleccione un sistema de medición
+    odometer-unit: Seleccione una unidad
+    odometer: Lectura actual
+    length: "0.000"
+    width: "0.000"
+    height: "0.000"
+    cargo-volume: "0.000"
+    tare-weight: "0.000"
+    gvwr: "0.000"
+    payload-capacity: "0.000"
+    axle-count: p. ej. 2
+    tire-count: p. ej. 8
+    door-count: p. ej. 2
+    coupling-type: Seleccione un tipo de enganche
+    brake-type: Seleccione un tipo de frenos
+    temperature-min: p. ej. -20
+    temperature-max: p. ej. 4
+    reefer-hours: Horas del equipo de frío
+    ownership-type: Seleccione el tipo de propiedad
+    financing-status: p. ej. Pagado, financiado hasta 2028
+    depreciation-rate: p. ej. 10
+    date: DD-MM-AAAA
+    notes: Notas internas sobre este remolque
+  help:
+    photo: Suba una foto de este remolque.
+    name: El nombre que se muestra en Fleet-Ops. Obligatorio.
+    code: Su propia referencia de flota para este remolque.
+    type: El tipo determina qué secciones aplican, por ejemplo refrigeración para los refrigerados.
+    status: Estado del ciclo de vida. El enganche y la conectividad se registran por separado.
+    body-type: Descripción libre de la carrocería para clasificación y búsqueda.
+    category: Agrupación opcional compartida con otros recursos de la flota.
+    vin: El número de identificación del chasis grabado en el remolque.
+    coordinates: Última posición conocida o posición base. Los dispositivos telemáticos la actualizan automáticamente.
+    measurement-system: Determina las unidades de dimensiones, pesos, volumen y temperaturas.
+    odometer: Lectura del odómetro o hubodómetro en la unidad seleccionada.
+    cargo-volume: Volumen de carga útil de la caja.
+    tare-weight: Peso del remolque vacío.
+    gvwr: Peso bruto máximo autorizado, el peso máximo permitido cargado.
+    payload-capacity: Peso máximo de carga que el remolque puede transportar.
+    coupling-type: Cómo se engancha el remolque al vehículo remolcador.
+    abs: Sistema de frenos antibloqueo instalado.
+    ebs: Sistema de frenos electrónico instalado.
+    refrigerated: Actívelo en remolques con temperatura controlada para registrar la configuración del equipo de frío.
+    temperature: Rango de temperatura de operación del equipo de frío.
+    reefer-hours: Horas de funcionamiento registradas en el equipo de refrigeración.
+    ownership-type: Cómo se posee este remolque. Los datos de arrendamiento y financiación aparecen cuando corresponde.
+    lease-expires-at: Cuándo termina el contrato de arrendamiento, alquiler o financiación.
+    vendor: Proveedor o arrendador del que procede el remolque.
+    warranty: Póliza de garantía que cubre este remolque.
+    acquisition-cost: Precio de compra o costo capitalizado en la moneda seleccionada.
+    depreciation-rate: Depreciación anual utilizada para estimar el valor actual.
+    attach-vehicle: El remolque se enganchará al vehículo seleccionado. Un remolque solo puede estar enganchado a un vehículo a la vez.
+    select-trailer: Solo se muestran los remolques desenganchados.
+    select-equipment: Solo se muestra el equipamiento sin conectar.
+    position: Posición de remolque detrás del vehículo. La posición 1 es justo detrás del tractor; use 2 o más para trenes de carretera.
+  units:
+    length-metric: m
+    length-imperial: ft
+    weight-metric: kg
+    weight-imperial: lb
+    volume-metric: m³
+    volume-imperial: ft³
+    temperature-metric: °C
+    temperature-imperial: °F
   actions:
     new: Nuevo remolque
-    attach: Conectar
-    attach-vehicle: Conectar a vehículo
-    detach-vehicle: Desconectar del vehículo
+    locate: Ubicar en el mapa
+    attach-vehicle: Enganchar a un vehículo
+    detach-vehicle: Desenganchar del vehículo
     attach-device: Conectar dispositivo
-    attach-equipment: Conectar equipo
+    attach-equipment: Conectar equipamiento
+    detach-equipment: Desconectar equipamiento
     schedule-maintenance: Programar mantenimiento
     create-work-order: Crear orden de trabajo
     log-maintenance: Registrar mantenimiento
-  messages:
-    select-vehicle: Seleccione un vehículo
-    select-trailer: Seleccione un remolque
-    select-device: Seleccione un dispositivo
-    select-equipment: Seleccione un equipo
-    attached: Remolque conectado correctamente.
-    detached: Remolque desconectado correctamente.
-    device-attached: Dispositivo conectado correctamente.
-    equipment-attached: Equipo conectado correctamente.
-    equipment-detached: Equipo desconectado correctamente.
-    detach-confirm: Esto finaliza la conexión de remolque actual y la conserva en el historial.
-    created: Remolque creado correctamente.
-    updated: Remolque actualizado correctamente.
-    photo-error: "No se pudo cargar la foto: {message}"
+  prompts:
+    attach-vehicle-title: "Enganchar {trailerName} a un vehículo"
+    select-vehicle-warning: Seleccione un vehículo al que enganchar este remolque.
+    attach-vehicle-success: "{trailerName} enganchado a {vehicleName}."
+    detach-vehicle-title: "¿Desenganchar {trailerName}?"
+    detach-vehicle-body: "Esto finaliza el enganche actual entre {trailerName} y {vehicleName}. El enganche se conserva en el historial del remolque."
+    detach-vehicle-success: "{trailerName} desenganchado de {vehicleName}."
+    not-attached-warning: "{trailerName} no está enganchado a ningún vehículo."
+    attach-device-title: "Conectar un dispositivo a {trailerName}"
+    select-device-warning: Seleccione un dispositivo para conectar a este remolque.
+    attach-device-success: "Dispositivo conectado a {trailerName}."
+    attach-equipment-title: "Conectar equipamiento a {resourceName}"
+    select-equipment-warning: Seleccione el equipamiento a conectar.
+    attach-equipment-success: "{equipmentName} conectado a {resourceName}."
+    detach-equipment-title: "¿Desconectar {equipmentName}?"
+    detach-equipment-body: "{equipmentName} dejará de estar conectado a {resourceName}."
+    detach-equipment-success: "{equipmentName} desconectado de {resourceName}."
+    no-location-warning: "{trailerName} aún no tiene una ubicación registrada."
+    photo-upload-error: "No se pudo subir la foto: {message}"
   empty:
     title: Agregue su primer remolque
-    description: Administre identidad, conexiones, mantenimiento, equipos y telemetría en vivo.
-    filtered-title: Ningún remolque coincide con los filtros
+    description: Los remolques registran enganches, dispositivos y equipamiento conectados, telemetría en vivo y mantenimiento de sus activos remolcados.
+    filtered-title: Ningún remolque coincide con sus filtros
     filtered-description: Ajuste la búsqueda o los filtros para encontrar otro remolque.
-    connections: No hay historial de conexiones disponible.
-    equipment: No hay equipos conectados a este remolque.
-    related: No hay registros relacionados disponibles.
+    connections: Sin historial de enganches
+    connections-description: Enganche este remolque a un vehículo para empezar a registrar enganches.
+    equipment: Sin equipamiento conectado
+    equipment-description: Conecte equipamiento como plataformas elevadoras, correas o equipos de frío a este remolque.
+    schedules: Sin programas de mantenimiento
+    schedules-description: Cree un programa para planificar inspecciones o servicios recurrentes de este remolque.
+    work-orders: Sin órdenes de trabajo
+    work-orders-description: Cree una orden de trabajo para dar seguimiento a reparaciones o servicios de este remolque.
+    maintenance: Sin historial de mantenimiento
+    maintenance-description: Los mantenimientos registrados para este remolque aparecerán aquí.
   docs:
     title: Guía de remolques
     link: Abrir la guía de remolques
   tabs:
-    connections: Historial de conexiones
-    schedules: Programaciones
+    overview: Resumen
+    positions: Posiciones
+    devices: Dispositivos
+    equipment: Equipamiento
+    connections: Historial de enganches
+    schedules: Programas
     work-orders: Órdenes de trabajo
     maintenance: Mantenimiento
+  columns:
+    name: Nombre
+    id: ID
+    code: Código
+    type: Tipo
+    plate-number: Placa
+    status: Estado
+    vehicle: Vehículo remolcador
+    attachment-state: Enganche
+    connectivity: Conectividad
+    last-online: Última conexión
+    location: Ubicación
+    devices: Dispositivos
+    equipment: Equipamiento
+    vin: VIN
+    serial-number: Número de serie
+    make: Marca
+    model: Modelo
+    year: Año
+    vendor: Proveedor
+    ownership: Propiedad
+    axles: Ejes
+    gvwr: Peso bruto máximo
+    payload-capacity: Capacidad de carga
+    length: Longitud
+    refrigerated: Refrigerado
+    created-at: Creado el
+    updated-at: Actualizado el
+  filters:
+    created-between: Creado entre
+    updated-between: Actualizado entre
+    last-online-between: Última conexión entre
+  connections:
+    description: Todos los vehículos a los que se ha enganchado este remolque, del más reciente al más antiguo.
+    ongoing: En curso
+  equipment:
+    description: Equipamiento actualmente conectado a este remolque.
+  telemetry:
+    no-location: Sin ubicación registrada
+  maintenance:
+    interval: Intervalo
+    next-due: Próximo vencimiento
+    code: Código
+    subject: Asunto
+    priority: Prioridad
+    due: Vence
+    summary: Resumen
+    odometer: Odómetro
+    total-cost: Costo total
+    date: Fecha
   statuses:
     available: Disponible
     in_use: En uso
-    maintenance: Mantenimiento
+    maintenance: En mantenimiento
     out_of_service: Fuera de servicio
     retired: Retirado
+  status-descriptions:
+    available: Listo para ser despachado o enganchado.
+    in_use: Actualmente en un trabajo o enganchado a un vehículo.
+    maintenance: En servicio, inspección o reparación.
+    out_of_service: No utilizable hasta nuevo aviso.
+    retired: Retirado definitivamente del servicio activo.
   attachment:
-    attached: Conectado
-    detached: Sin conectar
+    attached: Enganchado
+    detached: Desenganchado
+    no-vehicle: No enganchado a ningún vehículo
   connectivity:
     online: En línea
-    recently_offline: Desconectado recientemente
-    offline: Fuera de línea
+    recently_offline: Recientemente desconectado
+    offline: Desconectado
     never_connected: Nunca conectado
   measurement:
     metric: Métrico
     imperial: Imperial
-  placeholders:
-    type: Seleccione un tipo de remolque
+  measurement-descriptions:
+    metric: Metros, kilogramos, metros cúbicos y Celsius.
+    imperial: Pies, libras, pies cúbicos y Fahrenheit.
+  odometer-units:
+    km: Kilómetros
+    mi: Millas
+  coupling-types:
+    fifth_wheel: Quinta rueda
+    pintle_hook: Gancho de remolque
+    ball_hitch: Bola de enganche
+    gooseneck: Cuello de cisne
+    drawbar: Barra de tiro
+    other: Otro
+  brake-types:
+    air: Frenos neumáticos
+    electric: Frenos eléctricos
+    hydraulic_surge: Frenos hidráulicos de inercia
+    none: Sin frenos
+    other: Otro
+  ownership-types:
+    owned: Propio
+    leased: En leasing
+    financed: Financiado
+    rented: Alquilado
   types:
-    dry_van: Caja seca
-    reefer: Frigorífico
+    dry_van: Furgón seco
+    reefer: Refrigerado
     flatbed: Plataforma
     step_deck: Plataforma escalonada
     lowboy: Cama baja
     tanker: Cisterna
-    bulk: Remolque para granel
+    bulk: Granelero
     dump: Volquete
-    chassis: Chasis
-    curtain_side: Cortina lateral
+    chassis: Chasis portacontenedores
+    curtain_side: Lona corredera
     car_carrier: Portavehículos
     livestock: Ganadero
     logging: Maderero
     dolly: Dolly
-    specialty: Especial
+    specialty: Especializado
     other: Otro

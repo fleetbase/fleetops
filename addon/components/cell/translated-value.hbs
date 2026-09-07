@@ -1,0 +1,9 @@
+{{#if this.label}}
+    {{#if this.isBadge}}
+        <Badge @status={{this.value}} @text={{this.label}} @icon={{this.icon}} @hideStatusDot={{unless this.icon false true}} ...attributes />
+    {{else}}
+        <span class={{@column.className}} ...attributes>{{this.label}}</span>
+    {{/if}}
+{{else}}
+    <span class="text-gray-400 dark:text-gray-500" ...attributes>{{this.emptyText}}</span>
+{{/if}}

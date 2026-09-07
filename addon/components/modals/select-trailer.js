@@ -1,1 +1,3 @@
-export { default } from '@fleetbase/ember-core/components/modal/base';
+import Component from '@glimmer/component';
+
+export default class ModalsSelectTrailerComponent extends Component {}

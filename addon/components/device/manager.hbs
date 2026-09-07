@@ -10,7 +10,7 @@
             <div class="flex flex-row justify-between px-3 py-4 border-t border-gray-200 dark:border-gray-700">
                 <Device::Pill @device={{device}} />
                 <div>
-                    <Button @type="danger" @icon="times" @text={{t "device.actions.detach-from-vehicle"}} @size="xs" @onClick={{fn this.removeDevice device}} />
+                    <Button @type="danger" @icon="times" @text={{t "device.attachment.detach"}} @size="xs" @onClick={{fn this.removeDevice device}} />
                 </div>
             </div>
         {{else}}

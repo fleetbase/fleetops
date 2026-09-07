@@ -47,6 +47,8 @@ common:
   notes: Notes
   schedule: Schedule
   current-job: Current Job
+  "yes": Sim
+  "no": Não
 menu:
   operations: Operações
   dashboard: Painel
@@ -1051,6 +1053,9 @@ vehicle:
     unassign-orders: Unassign Orders
     create-issue: Create Issue
     locate-vehicle: Localizar Veículo no Mapa
+    attach-trailer: Engatar reboque
+    attach-equipment: Conectar equipamento
+    detach-equipment: Desconectar equipamento
   prompts:
     attach-device-title: Attach device to {vehicleName}
     select-device-warning: Select a device to attach.
@@ -1062,6 +1067,18 @@ vehicle:
     confirm-unassign-orders-body: "This will remove {vehicleName} from these orders: {orders}."
     unassign-orders-success: Unassigned {vehicleName} from {count} order(s).
     issue-title: Issue reported for {vehicleName}
+    attach-trailer-title: "Engatar um reboque a {vehicleName}"
+    select-trailer-warning: Selecione um reboque para engatar a este veículo.
+    attach-trailer-success: "{trailerName} engatado a {vehicleName}."
+  empty:
+    trailers: Nenhum reboque engatado
+    trailers-description: Engate um reboque desengatado a este veículo para iniciar um engate.
+    equipment: Nenhum equipamento conectado
+    equipment-description: Conecte equipamentos como plataformas elevatórias, ferramentas ou itens de segurança a este veículo.
+  trailers:
+    description: Reboques atualmente engatados a este veículo.
+  equipment:
+    description: Equipamentos atualmente conectados a este veículo.
 vendor:
   fields:
     setup-vendor: Configurar Fornecedor
@@ -1947,134 +1964,350 @@ settings:
       button-in-progress: Integração em andamento
 
 trailer:
-  navigation-description: Gerencie ativos rebocados, conexões, equipamentos e telemática.
+  navigation-description: Gerencie ativos rebocados, engates, equipamentos e telemática.
   sections:
-    identity: Identidade e classificação
+    details: Detalhes
+    identification: Identificação do reboque
+    classification: Classificação e status
     registration: Registro
+    location: Localização
     dimensions: Dimensões e capacidade
-    running-gear: Eixos, freios e acoplamento
-    refrigeration: Refrigeração e recursos
-    ownership: Propriedade e detalhes financeiros
-    connection: Conexão atual com o veículo
+    measurement: Medição e uso
+    dimensions-fields: "Dimensões ({unit})"
+    weight: "Peso ({unit})"
+    running-gear: Eixos, freios e engate
+    refrigeration: Refrigeração
+    ownership: Propriedade e finanças
+    finance: Dados financeiros
+    connection: Engate ao veículo
     telemetry: Localização e telemática
+    notes: Observações e histórico
   fields:
+    photo: Foto
+    id: ID
+    name: Nome
     code: Código
     description: Descrição
     type: Tipo de reboque
     body-type: Tipo de carroceria
     color: Cor
-    vin: VIN
+    status: Status
+    category: Categoria
+    vin: Chassi (VIN)
+    plate-number: Placa
     serial-number: Número de série
-    vehicle: Veículo conectado
-    attachment-state: Estado da conexão
-    connectivity: Conectividade
-    devices-count: Dispositivos
-    equipment-count: Equipamentos
-    length: Comprimento
-    width: Largura
-    height: Altura
-    tare: Peso da tara
-    gvwr: Peso bruto total
-    payload: Capacidade de carga
-    cargo-volume: Volume de carga
-    measurement: Sistema de medidas
-    hubometer: Odômetro ou hubômetro
-    axles: Número de eixos
-    tires: Número de pneus
-    coupling: Tipo de acoplamento
-    brakes: Tipo de freio
-    abs: Equipado com ABS
-    ebs: Equipado com EBS
-    refrigerated: Refrigerado
-    doors: Número de portas
-    temperature-min: Temperatura mínima
-    temperature-max: Temperatura máxima
-    reefer-hours: Horas do motor frigorífico
-    ownership: Tipo de propriedade
-    currency: Moeda
-    purchase-date: Data da compra
-    lease-expiry: Vencimento do arrendamento
-    acquisition-cost: Custo de aquisição
-    current-value: Valor atual
+    make: Fabricante
+    model: Modelo
+    year: Ano
     vendor: Fornecedor
     warranty: Garantia
+    vehicle: Veículo tracionador
+    attachment-state: Estado do engate
+    attached-at: Engatado desde
+    position: Posição de reboque
+    source: Origem
+    connected-at: Engatado em
+    disconnected-at: Desengatado em
+    duration: Duração
+    connectivity: Conectividade
     last-online: Última conexão
-    updated: Última atualização
-    connected-at: Conectado em
-    disconnected-at: Desconectado em
+    last-provider: Provedor telemático
+    last-event-at: Último evento telemático
+    coordinates: Coordenadas
+    speed: Velocidade
+    heading: Direção
+    altitude: Altitude
+    devices-count: Dispositivos conectados
+    equipment-count: Equipamentos conectados
+    measurement-system: Sistema de medição
+    odometer: "Odômetro / hubodômetro {unit}"
+    odometer-unit: Unidade do odômetro
+    length: "Comprimento ({unit})"
+    width: "Largura ({unit})"
+    height: "Altura ({unit})"
+    cargo-volume: "Volume de carga ({unit})"
+    tare-weight: "Tara ({unit})"
+    gvwr: "PBT ({unit})"
+    payload-capacity: "Capacidade de carga ({unit})"
+    axle-count: Eixos
+    tire-count: Pneus
+    door-count: Portas
+    coupling-type: Tipo de engate
+    brake-type: Tipo de freio
+    abs: ABS
+    ebs: EBS
+    refrigerated: Refrigerado
+    temperature-min: "Temperatura mínima ({unit})"
+    temperature-max: "Temperatura máxima ({unit})"
+    reefer-hours: Horas do equipamento de refrigeração
+    ownership-type: Propriedade
+    financing-status: Status do financiamento
+    currency: Moeda
+    acquisition-cost: Custo de aquisição
+    current-value: Valor atual
+    insurance-value: Valor segurado
+    depreciation-rate: Taxa de depreciação (% ao ano)
+    purchased-at: Data de compra
+    lease-expires-at: Vencimento do leasing
+    notes: Observações
+    created-at: Criado em
+    updated-at: Última atualização
+  placeholders:
+    filter-vendor: Filtrar por fornecedor
+    name: ex. Refrigerado 12
+    code: Código interno da frota, ex. TRL-0012
+    description: Para que este reboque é usado
+    type: Selecione um tipo de reboque
+    status: Selecione um status
+    body-type: ex. Baú, sider, plataforma
+    color: ex. Branco
+    category: Selecione uma categoria (opcional)
+    vin: VIN com 17 caracteres
+    plate-number: Placa de registro
+    serial-number: Número de série do fabricante
+    make: ex. Randon, Schmitz, Wabash
+    model: ex. 3000R
+    year: ex. 2024
+    vendor: Selecione um fornecedor (opcional)
+    warranty: Selecione uma garantia (opcional)
+    vehicle: Selecione um veículo
+    trailer: Selecione um reboque
+    equipment: Selecione um equipamento
+    filter-vehicle: Filtrar por veículo tracionador
+    position: "1"
+    measurement-system: Selecione um sistema de medição
+    odometer-unit: Selecione uma unidade
+    odometer: Leitura atual
+    length: "0.000"
+    width: "0.000"
+    height: "0.000"
+    cargo-volume: "0.000"
+    tare-weight: "0.000"
+    gvwr: "0.000"
+    payload-capacity: "0.000"
+    axle-count: ex. 2
+    tire-count: ex. 8
+    door-count: ex. 2
+    coupling-type: Selecione um tipo de engate
+    brake-type: Selecione um tipo de freio
+    temperature-min: ex. -20
+    temperature-max: ex. 4
+    reefer-hours: Horas do equipamento de refrigeração
+    ownership-type: Selecione o tipo de propriedade
+    financing-status: ex. Quitado, financiado até 2028
+    depreciation-rate: ex. 10
+    date: DD-MM-AAAA
+    notes: Observações internas sobre este reboque
+  help:
+    photo: Envie uma foto deste reboque.
+    name: O nome exibido no Fleet-Ops. Obrigatório.
+    code: Sua própria referência de frota para este reboque.
+    type: O tipo define quais seções se aplicam, por exemplo refrigeração para reboques refrigerados.
+    status: Status do ciclo de vida. Engate e conectividade são acompanhados separadamente.
+    body-type: Descrição livre da carroceria usada para classificação e busca.
+    category: Agrupamento opcional compartilhado com outros recursos da frota.
+    vin: O número de identificação do chassi gravado no reboque.
+    coordinates: Última posição conhecida ou posição base. Dispositivos telemáticos a atualizam automaticamente.
+    measurement-system: Define as unidades usadas para dimensões, pesos, volume e temperaturas.
+    odometer: Leitura do odômetro ou hubodômetro na unidade selecionada.
+    cargo-volume: Volume útil de carga da carroceria.
+    tare-weight: Peso do reboque vazio.
+    gvwr: Peso bruto total, o peso máximo permitido carregado.
+    payload-capacity: Peso máximo de carga que o reboque pode transportar.
+    coupling-type: Como o reboque se engata ao veículo tracionador.
+    abs: Sistema de freios antitravamento instalado.
+    ebs: Sistema de freios eletrônico instalado.
+    refrigerated: Ative para reboques com temperatura controlada para registrar as configurações de refrigeração.
+    temperature: Faixa de temperatura de operação do equipamento de refrigeração.
+    reefer-hours: Horas de funcionamento registradas no equipamento de refrigeração.
+    ownership-type: Como este reboque é mantido. Detalhes de leasing e financiamento aparecem quando aplicável.
+    lease-expires-at: Quando o contrato de leasing, aluguel ou financiamento termina.
+    vendor: Fornecedor ou locador de onde o reboque foi adquirido.
+    warranty: Apólice de garantia que cobre este reboque.
+    acquisition-cost: Preço de compra ou custo capitalizado na moeda selecionada.
+    depreciation-rate: Depreciação anual usada para estimar o valor atual.
+    attach-vehicle: O reboque será engatado ao veículo selecionado. Um reboque só pode estar engatado a um veículo por vez.
+    select-trailer: Apenas reboques desengatados são listados.
+    select-equipment: Apenas equipamentos não conectados são listados.
+    position: Posição de reboque atrás do veículo. A posição 1 fica logo atrás do cavalo mecânico; use 2 ou mais para composições rodoviárias.
+  units:
+    length-metric: m
+    length-imperial: ft
+    weight-metric: kg
+    weight-imperial: lb
+    volume-metric: m³
+    volume-imperial: ft³
+    temperature-metric: °C
+    temperature-imperial: °F
   actions:
     new: Novo reboque
-    attach: Conectar
-    attach-vehicle: Conectar ao veículo
-    detach-vehicle: Desconectar do veículo
+    locate: Localizar no mapa
+    attach-vehicle: Engatar a um veículo
+    detach-vehicle: Desengatar do veículo
     attach-device: Conectar dispositivo
     attach-equipment: Conectar equipamento
+    detach-equipment: Desconectar equipamento
     schedule-maintenance: Agendar manutenção
     create-work-order: Criar ordem de serviço
     log-maintenance: Registrar manutenção
-  messages:
-    select-vehicle: Selecione um veículo
-    select-trailer: Selecione um reboque
-    select-device: Selecione um dispositivo
-    select-equipment: Selecione um equipamento
-    attached: Reboque conectado com sucesso.
-    detached: Reboque desconectado com sucesso.
-    device-attached: Dispositivo conectado com sucesso.
-    equipment-attached: Equipamento conectado com sucesso.
-    equipment-detached: Equipamento desconectado com sucesso.
-    detach-confirm: Isso encerra a conexão de reboque atual e a preserva no histórico.
-    created: Reboque criado com sucesso.
-    updated: Reboque atualizado com sucesso.
-    photo-error: "Não foi possível enviar a foto: {message}"
+  prompts:
+    attach-vehicle-title: "Engatar {trailerName} a um veículo"
+    select-vehicle-warning: Selecione um veículo para engatar este reboque.
+    attach-vehicle-success: "{trailerName} engatado a {vehicleName}."
+    detach-vehicle-title: "Desengatar {trailerName}?"
+    detach-vehicle-body: "Isso encerra o engate atual entre {trailerName} e {vehicleName}. O engate é mantido no histórico do reboque."
+    detach-vehicle-success: "{trailerName} desengatado de {vehicleName}."
+    not-attached-warning: "{trailerName} não está engatado a nenhum veículo."
+    attach-device-title: "Conectar um dispositivo a {trailerName}"
+    select-device-warning: Selecione um dispositivo para conectar a este reboque.
+    attach-device-success: "Dispositivo conectado a {trailerName}."
+    attach-equipment-title: "Conectar equipamento a {resourceName}"
+    select-equipment-warning: Selecione o equipamento a conectar.
+    attach-equipment-success: "{equipmentName} conectado a {resourceName}."
+    detach-equipment-title: "Desconectar {equipmentName}?"
+    detach-equipment-body: "{equipmentName} deixará de estar conectado a {resourceName}."
+    detach-equipment-success: "{equipmentName} desconectado de {resourceName}."
+    no-location-warning: "{trailerName} ainda não possui localização registrada."
+    photo-upload-error: "Não foi possível enviar a foto: {message}"
   empty:
     title: Adicione seu primeiro reboque
-    description: Gerencie identidade, conexões, manutenção, equipamentos e telemetria ao vivo.
-    filtered-title: Nenhum reboque corresponde aos filtros
-    filtered-description: Ajuste a pesquisa ou os filtros para encontrar outro reboque.
-    connections: Nenhum histórico de conexão disponível.
-    equipment: Nenhum equipamento está conectado a este reboque.
-    related: Nenhum registro relacionado disponível.
+    description: Reboques acompanham engates, dispositivos e equipamentos conectados, telemetria ao vivo e manutenção dos seus ativos rebocados.
+    filtered-title: Nenhum reboque corresponde aos seus filtros
+    filtered-description: Ajuste a busca ou os filtros para encontrar outro reboque.
+    connections: Sem histórico de engates
+    connections-description: Engate este reboque a um veículo para começar a registrar engates.
+    equipment: Nenhum equipamento conectado
+    equipment-description: Conecte equipamentos como plataformas elevatórias, cintas ou unidades de refrigeração a este reboque.
+    schedules: Sem programações de manutenção
+    schedules-description: Crie uma programação para planejar inspeções ou serviços recorrentes deste reboque.
+    work-orders: Sem ordens de serviço
+    work-orders-description: Abra uma ordem de serviço para acompanhar reparos ou serviços deste reboque.
+    maintenance: Sem histórico de manutenção
+    maintenance-description: As manutenções registradas para este reboque aparecerão aqui.
   docs:
     title: Guia de reboques
     link: Abrir o guia de reboques
   tabs:
-    connections: Histórico de conexões
-    schedules: Agendamentos
+    overview: Visão geral
+    positions: Posições
+    devices: Dispositivos
+    equipment: Equipamentos
+    connections: Histórico de engates
+    schedules: Programações
     work-orders: Ordens de serviço
     maintenance: Manutenção
+  columns:
+    name: Nome
+    id: ID
+    code: Código
+    type: Tipo
+    plate-number: Placa
+    status: Status
+    vehicle: Veículo tracionador
+    attachment-state: Engate
+    connectivity: Conectividade
+    last-online: Última conexão
+    location: Localização
+    devices: Dispositivos
+    equipment: Equipamentos
+    vin: Chassi (VIN)
+    serial-number: Número de série
+    make: Fabricante
+    model: Modelo
+    year: Ano
+    vendor: Fornecedor
+    ownership: Propriedade
+    axles: Eixos
+    gvwr: PBT
+    payload-capacity: Capacidade de carga
+    length: Comprimento
+    refrigerated: Refrigerado
+    created-at: Criado em
+    updated-at: Atualizado em
+  filters:
+    created-between: Criado entre
+    updated-between: Atualizado entre
+    last-online-between: Última conexão entre
+  connections:
+    description: Todos os veículos aos quais este reboque foi engatado, do mais recente ao mais antigo.
+    ongoing: Em andamento
+  equipment:
+    description: Equipamentos atualmente conectados a este reboque.
+  telemetry:
+    no-location: Nenhuma localização registrada
+  maintenance:
+    interval: Intervalo
+    next-due: Próximo vencimento
+    code: Código
+    subject: Assunto
+    priority: Prioridade
+    due: Vencimento
+    summary: Resumo
+    odometer: Odômetro
+    total-cost: Custo total
+    date: Data
   statuses:
     available: Disponível
     in_use: Em uso
     maintenance: Em manutenção
     out_of_service: Fora de serviço
-    retired: Retirado
+    retired: Desativado
+  status-descriptions:
+    available: Pronto para ser despachado ou engatado.
+    in_use: Atualmente em uma tarefa ou engatado a um veículo.
+    maintenance: Em serviço, inspeção ou reparo.
+    out_of_service: Indisponível até segunda ordem.
+    retired: Removido permanentemente do serviço ativo.
   attachment:
-    attached: Conectado
-    detached: Desconectado
+    attached: Engatado
+    detached: Desengatado
+    no-vehicle: Não engatado a nenhum veículo
   connectivity:
-    online: On-line
-    recently_offline: Desconectado recentemente
-    offline: Off-line
+    online: Online
+    recently_offline: Recentemente offline
+    offline: Offline
     never_connected: Nunca conectado
   measurement:
     metric: Métrico
     imperial: Imperial
-  placeholders:
-    type: Selecione um tipo de reboque
+  measurement-descriptions:
+    metric: Metros, quilogramas, metros cúbicos e Celsius.
+    imperial: Pés, libras, pés cúbicos e Fahrenheit.
+  odometer-units:
+    km: Quilômetros
+    mi: Milhas
+  coupling-types:
+    fifth_wheel: Quinta roda
+    pintle_hook: Engate tipo gancho
+    ball_hitch: Engate de bola
+    gooseneck: Pescoço de ganso
+    drawbar: Barra de tração
+    other: Outro
+  brake-types:
+    air: Freios a ar
+    electric: Freios elétricos
+    hydraulic_surge: Freios hidráulicos por inércia
+    none: Sem freios
+    other: Outro
+  ownership-types:
+    owned: Próprio
+    leased: Leasing
+    financed: Financiado
+    rented: Alugado
   types:
     dry_van: Baú seco
-    reefer: Frigorífico
-    flatbed: Plataforma
-    step_deck: Plataforma rebaixada
+    reefer: Refrigerado
+    flatbed: Prancha
+    step_deck: Prancha rebaixada
     lowboy: Prancha baixa
     tanker: Tanque
     bulk: Graneleiro
     dump: Basculante
-    chassis: Chassi
+    chassis: Chassi porta-contêiner
     curtain_side: Sider
     car_carrier: Cegonha
-    livestock: Transporte de gado
-    logging: Transporte de toras
+    livestock: Boiadeiro
+    logging: Florestal
     dolly: Dolly
     specialty: Especial
     other: Outro

@@ -2,6 +2,8 @@ fleet-ops:
     extension-name: Fleet-Ops
 
 common:
+    "yes": "Yes"
+    "no": "No"
     proof-of-delivery: Proof of Delivery
     ad-hoc: As-Hoc
     bulk-dispatch: Bulk Dispatch
@@ -108,110 +110,304 @@ menu:
     orchestrator-settings: Orchestrator Settings
 
 trailer:
-    navigation-description: Manage towed assets, connections, equipment, and telematics.
+    navigation-description: Manage towed assets, towing connections, equipment, and telematics.
     sections:
-        identity: Identity and classification
+        details: Details
+        identification: Trailer identification
+        classification: Classification and status
         registration: Registration
+        location: Location
         dimensions: Dimensions and capacity
+        measurement: Measurement and usage
+        dimensions-fields: "Dimensions ({unit})"
+        weight: "Weight ({unit})"
         running-gear: Axles, brakes, and coupling
-        refrigeration: Refrigeration and capabilities
-        ownership: Ownership and financial details
-        connection: Current vehicle connection
+        refrigeration: Refrigeration
+        ownership: Ownership and finance
+        finance: Financial details
+        connection: Towing connection
         telemetry: Location and telematics
+        notes: Notes and history
     fields:
+        photo: Photo
+        id: ID
+        name: Name
         code: Code
         description: Description
         type: Trailer type
         body-type: Body type
         color: Color
+        status: Status
+        category: Category
         vin: VIN
+        plate-number: Plate number
         serial-number: Serial number
-        vehicle: Attached vehicle
-        attachment-state: Attachment state
-        connectivity: Connectivity
-        devices-count: Devices
-        equipment-count: Equipment
-        length: Length
-        width: Width
-        height: Height
-        tare: Tare weight
-        gvwr: Gross vehicle weight rating
-        payload: Payload capacity
-        cargo-volume: Cargo volume
-        measurement: Measurement system
-        hubometer: Odometer or hubometer
-        axles: Axle count
-        tires: Tire count
-        coupling: Coupling type
-        brakes: Brake type
-        abs: ABS equipped
-        ebs: EBS equipped
-        refrigerated: Refrigerated
-        doors: Door count
-        temperature-min: Minimum temperature
-        temperature-max: Maximum temperature
-        reefer-hours: Reefer engine hours
-        ownership: Ownership type
-        currency: Currency
-        purchase-date: Purchase date
-        lease-expiry: Lease expiry
-        acquisition-cost: Acquisition cost
-        current-value: Current value
+        make: Make
+        model: Model
+        year: Year
         vendor: Vendor
         warranty: Warranty
-        last-online: Last online
-        updated: Last updated
+        vehicle: Towing vehicle
+        attachment-state: Attachment state
+        attached-at: Attached since
+        position: Towing position
+        source: Source
         connected-at: Connected at
         disconnected-at: Disconnected at
+        duration: Duration
+        connectivity: Connectivity
+        last-online: Last online
+        last-provider: Telemetry provider
+        last-event-at: Last telemetry event
+        coordinates: Coordinates
+        speed: Speed
+        heading: Heading
+        altitude: Altitude
+        devices-count: Attached devices
+        equipment-count: Attached equipment
+        measurement-system: Measurement system
+        odometer: "Odometer / hubometer {unit}"
+        odometer-unit: Odometer unit
+        length: "Length ({unit})"
+        width: "Width ({unit})"
+        height: "Height ({unit})"
+        cargo-volume: "Cargo volume ({unit})"
+        tare-weight: "Tare weight ({unit})"
+        gvwr: "GVWR ({unit})"
+        payload-capacity: "Payload capacity ({unit})"
+        axle-count: Axles
+        tire-count: Tires
+        door-count: Doors
+        coupling-type: Coupling type
+        brake-type: Brake type
+        abs: ABS
+        ebs: EBS
+        refrigerated: Refrigerated
+        temperature-min: "Minimum temperature ({unit})"
+        temperature-max: "Maximum temperature ({unit})"
+        reefer-hours: Reefer engine hours
+        ownership-type: Ownership
+        financing-status: Financing status
+        currency: Currency
+        acquisition-cost: Acquisition cost
+        current-value: Current value
+        insurance-value: Insured value
+        depreciation-rate: Depreciation rate (% per year)
+        purchased-at: Purchase date
+        lease-expires-at: Lease expiry
+        notes: Notes
+        created-at: Created
+        updated-at: Last updated
+    placeholders:
+        filter-vendor: Filter by vendor
+        name: e.g. Reefer 12
+        code: Internal fleet code, e.g. TRL-0012
+        description: What this trailer is used for
+        type: Select a trailer type
+        status: Select a status
+        body-type: e.g. Enclosed, curtain side, platform
+        color: e.g. White
+        category: Select a category (optional)
+        vin: 17-character VIN
+        plate-number: Registration plate
+        serial-number: Manufacturer serial number
+        make: e.g. Utility, Schmitz, Wabash
+        model: e.g. 3000R
+        year: e.g. 2024
+        vendor: Select a vendor (optional)
+        warranty: Select a warranty (optional)
+        vehicle: Select a vehicle
+        trailer: Select a trailer
+        equipment: Select equipment
+        filter-vehicle: Filter by towing vehicle
+        position: "1"
+        measurement-system: Select a measurement system
+        odometer-unit: Select a unit
+        odometer: Current reading
+        length: "0.000"
+        width: "0.000"
+        height: "0.000"
+        cargo-volume: "0.000"
+        tare-weight: "0.000"
+        gvwr: "0.000"
+        payload-capacity: "0.000"
+        axle-count: e.g. 2
+        tire-count: e.g. 8
+        door-count: e.g. 2
+        coupling-type: Select a coupling type
+        brake-type: Select a brake type
+        temperature-min: e.g. -20
+        temperature-max: e.g. 4
+        reefer-hours: Hours on the reefer unit
+        ownership-type: Select ownership
+        financing-status: e.g. Paid off, financed until 2028
+        depreciation-rate: e.g. 10
+        date: DD-MM-YYYY
+        notes: Internal notes about this trailer
+    help:
+        photo: Upload a photo of this trailer.
+        name: The name shown across Fleet-Ops. Required.
+        code: Your own fleet reference for this trailer.
+        type: The type drives which sections apply, for example refrigeration for reefers.
+        status: Lifecycle status. Attachment and connectivity are tracked separately.
+        body-type: Free-form body description used for classification and search.
+        category: Optional grouping shared with other fleet resources.
+        vin: The chassis or vehicle identification number stamped on the trailer.
+        coordinates: The last known or home position. Telematics devices update this automatically.
+        measurement-system: Determines the units used for dimensions, weights, volume, and temperatures.
+        odometer: Hubometer or odometer reading in the selected odometer unit.
+        cargo-volume: Usable cargo volume of the trailer body.
+        tare-weight: Weight of the empty trailer.
+        gvwr: Gross vehicle weight rating, the maximum loaded weight allowed.
+        payload-capacity: Maximum cargo weight the trailer may carry.
+        coupling-type: How the trailer couples to the towing vehicle.
+        abs: Anti-lock braking system fitted.
+        ebs: Electronic braking system fitted.
+        refrigerated: Enable for temperature-controlled trailers to record reefer settings.
+        temperature: Operating temperature range of the reefer unit.
+        reefer-hours: Running hours recorded on the refrigeration unit.
+        ownership-type: How this trailer is held. Lease and financing details appear when relevant.
+        lease-expires-at: When the lease, rental, or financing agreement ends.
+        vendor: The vendor or lessor the trailer was sourced from.
+        warranty: Warranty policy covering this trailer.
+        acquisition-cost: Purchase price or capitalised cost in the selected currency.
+        depreciation-rate: Annual depreciation used for the current value estimate.
+        attach-vehicle: The trailer will be coupled to the selected vehicle. A trailer can only be attached to one vehicle at a time.
+        select-trailer: Only detached trailers are listed.
+        select-equipment: Only unattached equipment is listed.
+        position: Towing position behind the vehicle. Position 1 is directly behind the tractor; use 2 or more for road trains.
+    units:
+        length-metric: m
+        length-imperial: ft
+        weight-metric: kg
+        weight-imperial: lb
+        volume-metric: m³
+        volume-imperial: ft³
+        temperature-metric: °C
+        temperature-imperial: °F
     actions:
-        new: New Trailer
-        attach: Attach
-        attach-vehicle: Attach to Vehicle
-        detach-vehicle: Detach from Vehicle
-        attach-device: Attach Device
-        attach-equipment: Attach Equipment
-        schedule-maintenance: Schedule Maintenance
-        create-work-order: Create Work Order
-        log-maintenance: Log Maintenance
-    messages:
-        select-vehicle: Select a vehicle
-        select-trailer: Select a trailer
-        select-device: Select a device
-        select-equipment: Select equipment
-        attached: Trailer attached successfully.
-        detached: Trailer detached successfully.
-        device-attached: Device attached successfully.
-        equipment-attached: Equipment attached successfully.
-        equipment-detached: Equipment detached successfully.
-        detach-confirm: This ends the current towing connection and preserves it in history.
-        created: Trailer created successfully.
-        updated: Trailer updated successfully.
-        photo-error: "Unable to upload photo: {message}"
+        new: New trailer
+        locate: Locate on map
+        attach-vehicle: Attach to vehicle
+        detach-vehicle: Detach from vehicle
+        attach-device: Attach device
+        attach-equipment: Attach equipment
+        detach-equipment: Detach equipment
+        schedule-maintenance: Schedule maintenance
+        create-work-order: Create work order
+        log-maintenance: Log maintenance
+    prompts:
+        attach-vehicle-title: "Attach {trailerName} to a vehicle"
+        select-vehicle-warning: Select a vehicle to attach this trailer to.
+        attach-vehicle-success: "Attached {trailerName} to {vehicleName}."
+        detach-vehicle-title: "Detach {trailerName}?"
+        detach-vehicle-body: "This ends the current towing connection between {trailerName} and {vehicleName}. The connection is kept in the trailer's history."
+        detach-vehicle-success: "Detached {trailerName} from {vehicleName}."
+        not-attached-warning: "{trailerName} is not attached to a vehicle."
+        attach-device-title: "Attach a device to {trailerName}"
+        select-device-warning: Select a device to attach to this trailer.
+        attach-device-success: "Device attached to {trailerName}."
+        attach-equipment-title: "Attach equipment to {resourceName}"
+        select-equipment-warning: Select equipment to attach.
+        attach-equipment-success: "Attached {equipmentName} to {resourceName}."
+        detach-equipment-title: "Detach {equipmentName}?"
+        detach-equipment-body: "{equipmentName} will no longer be equipped to {resourceName}."
+        detach-equipment-success: "Detached {equipmentName} from {resourceName}."
+        no-location-warning: "{trailerName} has no recorded location yet."
+        photo-upload-error: "Unable to upload photo: {message}"
     empty:
         title: Add your first trailer
-        description: Manage trailer identity, towing connections, maintenance, equipment, and live telemetry.
+        description: Trailers track towing connections, attached devices and equipment, live telemetry, and maintenance for your towed assets.
         filtered-title: No trailers match your filters
         filtered-description: Adjust the search or filters to find another trailer.
-        connections: No connection history is available.
-        equipment: No equipment is attached to this trailer.
-        related: No related records are available.
+        connections: No towing history yet
+        connections-description: Attach this trailer to a vehicle to start recording towing connections.
+        equipment: No equipment attached
+        equipment-description: Attach equipment such as liftgates, straps, or reefer units to this trailer.
+        schedules: No maintenance schedules
+        schedules-description: Create a schedule to plan recurring inspections or service for this trailer.
+        work-orders: No work orders
+        work-orders-description: Raise a work order to track repairs or service on this trailer.
+        maintenance: No maintenance history
+        maintenance-description: Logged maintenance for this trailer will appear here.
     docs:
         title: Trailers guide
-        link: Open the Trailer guide
+        link: Open the trailers guide
     tabs:
-        connections: Connection history
+        overview: Overview
+        positions: Positions
+        devices: Devices
+        equipment: Equipment
+        connections: Towing history
         schedules: Schedules
         work-orders: Work orders
         maintenance: Maintenance
+    columns:
+        name: Name
+        id: ID
+        code: Code
+        type: Type
+        plate-number: Plate number
+        status: Status
+        vehicle: Towing vehicle
+        attachment-state: Attachment
+        connectivity: Connectivity
+        last-online: Last online
+        location: Location
+        devices: Devices
+        equipment: Equipment
+        vin: VIN
+        serial-number: Serial number
+        make: Make
+        model: Model
+        year: Year
+        vendor: Vendor
+        ownership: Ownership
+        axles: Axles
+        gvwr: GVWR
+        payload-capacity: Payload capacity
+        length: Length
+        refrigerated: Refrigerated
+        created-at: Created at
+        updated-at: Updated at
+    filters:
+        created-between: Created between
+        updated-between: Updated between
+        last-online-between: Last online between
+    connections:
+        description: Every vehicle this trailer has been coupled to, newest first.
+        ongoing: Ongoing
+    equipment:
+        description: Equipment currently equipped to this trailer.
+    telemetry:
+        no-location: No location recorded
+    maintenance:
+        interval: Interval
+        next-due: Next due
+        code: Code
+        subject: Subject
+        priority: Priority
+        due: Due
+        summary: Summary
+        odometer: Odometer
+        total-cost: Total cost
+        date: Date
     statuses:
         available: Available
         in_use: In use
-        maintenance: Maintenance
+        maintenance: In maintenance
         out_of_service: Out of service
         retired: Retired
+    status-descriptions:
+        available: Ready to be dispatched or attached.
+        in_use: Currently working on a job or attached to a vehicle.
+        maintenance: Undergoing service, inspection, or repair.
+        out_of_service: Not usable until further notice.
+        retired: Permanently removed from active service.
     attachment:
         attached: Attached
-        detached: Unattached
+        detached: Detached
+        no-vehicle: Not attached to a vehicle
     connectivity:
         online: Online
         recently_offline: Recently offline
@@ -220,8 +416,30 @@ trailer:
     measurement:
         metric: Metric
         imperial: Imperial
-    placeholders:
-        type: Select a trailer type
+    measurement-descriptions:
+        metric: Metres, kilograms, cubic metres, and Celsius.
+        imperial: Feet, pounds, cubic feet, and Fahrenheit.
+    odometer-units:
+        km: Kilometres
+        mi: Miles
+    coupling-types:
+        fifth_wheel: Fifth wheel
+        pintle_hook: Pintle hook
+        ball_hitch: Ball hitch
+        gooseneck: Gooseneck
+        drawbar: Drawbar
+        other: Other
+    brake-types:
+        air: Air brakes
+        electric: Electric brakes
+        hydraulic_surge: Hydraulic surge brakes
+        none: No brakes
+        other: Other
+    ownership-types:
+        owned: Owned
+        leased: Leased
+        financed: Financed
+        rented: Rented
     types:
         dry_van: Dry van
         reefer: Reefer
@@ -229,8 +447,8 @@ trailer:
         step_deck: Step deck
         lowboy: Lowboy
         tanker: Tanker
-        bulk: Bulk trailer
-        dump: Dump trailer
+        bulk: Bulk
+        dump: Dump
         chassis: Chassis
         curtain_side: Curtain side
         car_carrier: Car carrier
@@ -1188,7 +1406,9 @@ vehicle:
         vin-number: VIN Number
         year: Year
     actions:
-        attach-trailer: Attach Trailer
+        attach-trailer: Attach trailer
+        attach-equipment: Attach equipment
+        detach-equipment: Detach equipment
         attach-device: Attach Device
         unassign-orders: Unassign Orders
         create-issue: Create Issue
@@ -1197,10 +1417,19 @@ vehicle:
         create-work-order: Create Work Order
         log-maintenance: Log Maintenance
     empty:
-        trailers: No trailers are currently attached to this vehicle.
-        equipment: No equipment is currently attached to this vehicle.
+        trailers: No trailers attached
+        trailers-description: Attach a detached trailer to this vehicle to start a towing connection.
+        equipment: No equipment attached
+        equipment-description: Attach equipment such as liftgates, tools, or safety gear to this vehicle.
+    trailers:
+        description: Trailers currently coupled to this vehicle.
+    equipment:
+        description: Equipment currently equipped to this vehicle.
 
     prompts:
+        attach-trailer-title: Attach a trailer to {vehicleName}
+        select-trailer-warning: Select a trailer to attach to this vehicle.
+        attach-trailer-success: Attached {trailerName} to {vehicleName}.
         attach-device-title: Attach device to {vehicleName}
         select-device-warning: Select a device to attach.
         attach-device-success: Device attached to {vehicleName}.

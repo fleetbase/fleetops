@@ -1,48 +1,55 @@
 import Component from '@glimmer/component';
-import { inject as service } from '@ember/service';
 import { tracked } from '@glimmer/tracking';
+import { inject as service } from '@ember/service';
 import { action } from '@ember/object';
 import { task } from 'ember-concurrency';
+
+/**
+ * Trailers currently coupled to a vehicle, with attach/detach controls.
+ */
 export default class VehicleDetailsTrailersComponent extends Component {
     @service store;
-    @service fetch;
     @service notifications;
-    @service modalsManager;
-    @service intl;
     @service trailerActions;
+    @service vehicleActions;
     @tracked trailers = [];
+
+    get vehicle() {
+        return this.args.resource ?? this.args.vehicle;
+    }
+
     constructor() {
         super(...arguments);
-        this.load.perform();
+        this.loadTrailers.perform();
     }
-    @task *load() {
+
+    @task *loadTrailers() {
         try {
-            this.trailers = yield this.store.query('trailer', { vehicle: this.args.resource.public_id ?? this.args.resource.id, sort: '-created_at' });
+            const trailers = yield this.store.query('trailer', {
+                vehicle: this.vehicle.id,
+                attachment_state: 'attached',
+                sort: '-created_at',
+            });
+
+            this.trailers = Array.from(trailers ?? []);
         } catch (error) {
             this.notifications.serverError(error);
         }
     }
+
     @action attach() {
-        this.modalsManager.show('modals/select-trailer', {
-            title: this.intl.t('vehicle.actions.attach-trailer'),
-            selectedTrailer: null,
-            confirm: async (modal) => {
-                const trailer = modal.getOption('selectedTrailer');
-                if (!trailer) return this.notifications.warning(this.intl.t('trailer.messages.select-trailer'));
-                modal.startLoading();
-                try {
-                    await this.fetch.post(`trailers/${trailer.id}/attach`, { vehicle: this.args.resource.id });
-                    modal.done();
-                    this.notifications.success(this.intl.t('trailer.messages.attached'));
-                    this.load.perform();
-                } catch (error) {
-                    this.notifications.serverError(error);
-                    modal.stopLoading();
-                }
-            },
-        });
+        return this.vehicleActions.attachTrailer(this.vehicle, { callback: () => this.loadTrailers.perform() });
     }
+
     @action detach(trailer) {
-        this.trailerActions.detachVehicle(trailer);
+        return this.trailerActions.detachVehicle(trailer, { callback: () => this.loadTrailers.perform() });
+    }
+
+    @action view(trailer) {
+        if (this.trailerActions.panel?.view) {
+            return this.trailerActions.panel.view(trailer);
+        }
+
+        return this.trailerActions.transition.view(trailer);
     }
 }

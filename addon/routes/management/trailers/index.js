@@ -3,6 +3,7 @@ import { inject as service } from '@ember/service';
 
 export default class ManagementTrailersIndexRoute extends Route {
     @service store;
+
     queryParams = {
         page: { refreshModel: true },
         limit: { refreshModel: true },
@@ -21,20 +22,20 @@ export default class ManagementTrailersIndexRoute extends Route {
         trailer_year: { refreshModel: true },
         plate_number: { refreshModel: true },
         vin: { refreshModel: true },
-        vendor: { refreshModel: true },
         serial_number: { refreshModel: true },
-        length: { refreshModel: true },
-        axle_count: { refreshModel: true },
-        gvwr: { refreshModel: true },
-        payload_capacity: { refreshModel: true },
+        vendor: { refreshModel: true },
         ownership_type: { refreshModel: true },
-        devices_count: { refreshModel: true },
-        equipment_count: { refreshModel: true },
+        refrigerated: { refreshModel: true },
         last_online_at: { refreshModel: true },
         created_at: { refreshModel: true },
         updated_at: { refreshModel: true },
     };
+
     model(params) {
-        return this.store.query('trailer', { ...params });
+        // Only forward meaningful filters; blank query params would otherwise be sent as
+        // empty strings and coerced into no-op or mismatching backend filters.
+        const query = Object.fromEntries(Object.entries(params).filter(([, value]) => value !== undefined && value !== null && value !== ''));
+
+        return this.store.query('trailer', query);
     }
 }

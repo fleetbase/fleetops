@@ -43,6 +43,16 @@ export default class VehicleActionsService extends ResourceActionService {
                 component: 'device/manager',
             },
             {
+                key: 'trailers',
+                label: this.intl.t('resource.trailers'),
+                component: 'vehicle/details/trailers',
+            },
+            {
+                key: 'equipment',
+                label: this.intl.t('resource.equipment'),
+                component: 'vehicle/details/equipment',
+            },
+            {
                 key: 'schedules',
                 label: 'Schedules',
                 component: 'vehicle/details/schedules',
@@ -220,6 +230,107 @@ export default class VehicleActionsService extends ResourceActionService {
                     this.notifications.success(this.intl.t('vehicle.prompts.attach-device-success', { vehicleName: vehicle.displayName ?? vehicle.name }));
                     modal.done();
                     this.refresh();
+                } catch (error) {
+                    this.notifications.serverError(error);
+                    modal.stopLoading();
+                }
+            },
+            ...options,
+        });
+    }
+
+    /**
+     * Couple a detached trailer to this vehicle. Attachment is owned by the trailer
+     * endpoint so the single-attachment and towing-position rules apply uniformly.
+     */
+    @action attachTrailer(vehicle, options = {}) {
+        const vehicleName = vehicle.displayName ?? vehicle.display_name ?? vehicle.name;
+
+        this.modalsManager.show('modals/select-trailer', {
+            title: this.intl.t('vehicle.prompts.attach-trailer-title', { vehicleName }),
+            acceptButtonText: this.intl.t('vehicle.actions.attach-trailer'),
+            acceptButtonIcon: 'link',
+            vehicle,
+            selectedTrailer: null,
+            position: 1,
+            confirm: async (modal) => {
+                const trailer = modal.getOption('selectedTrailer');
+                const position = Number(modal.getOption('position')) || 1;
+
+                if (!trailer) {
+                    return this.notifications.warning(this.intl.t('vehicle.prompts.select-trailer-warning'));
+                }
+
+                modal.startLoading();
+
+                try {
+                    await this.fetch.post(`trailers/${trailer.id}/attach`, { vehicle: vehicle.id, position });
+                    await trailer.reload?.();
+                    this.notifications.success(this.intl.t('vehicle.prompts.attach-trailer-success', { trailerName: trailer.displayName ?? trailer.name, vehicleName }));
+                    modal.done();
+                    this.refresh();
+                    options.callback?.(vehicle, trailer);
+                } catch (error) {
+                    this.notifications.serverError(error);
+                    modal.stopLoading();
+                }
+            },
+            ...options,
+        });
+    }
+
+    @action attachEquipment(vehicle, options = {}) {
+        const vehicleName = vehicle.displayName ?? vehicle.display_name ?? vehicle.name;
+
+        this.modalsManager.show('modals/attach-equipment', {
+            title: this.intl.t('trailer.prompts.attach-equipment-title', { resourceName: vehicleName }),
+            acceptButtonText: this.intl.t('vehicle.actions.attach-equipment'),
+            acceptButtonIcon: 'link',
+            vehicle,
+            selectedEquipment: null,
+            confirm: async (modal) => {
+                const equipment = modal.getOption('selectedEquipment');
+
+                if (!equipment) {
+                    return this.notifications.warning(this.intl.t('trailer.prompts.select-equipment-warning'));
+                }
+
+                modal.startLoading();
+
+                try {
+                    await this.fetch.post(`vehicles/${vehicle.id}/attach-equipment`, { equipment: equipment.id });
+                    this.notifications.success(this.intl.t('trailer.prompts.attach-equipment-success', { equipmentName: equipment.name, resourceName: vehicleName }));
+                    modal.done();
+                    this.refresh();
+                    options.callback?.(vehicle, equipment);
+                } catch (error) {
+                    this.notifications.serverError(error);
+                    modal.stopLoading();
+                }
+            },
+            ...options,
+        });
+    }
+
+    @action detachEquipment(vehicle, equipment, options = {}) {
+        const vehicleName = vehicle.displayName ?? vehicle.display_name ?? vehicle.name;
+        const equipmentName = equipment?.name ?? equipment?.public_id ?? this.intl.t('resource.equipment');
+
+        return this.modalsManager.confirm({
+            title: this.intl.t('trailer.prompts.detach-equipment-title', { equipmentName }),
+            body: this.intl.t('trailer.prompts.detach-equipment-body', { equipmentName, resourceName: vehicleName }),
+            acceptButtonText: this.intl.t('vehicle.actions.detach-equipment'),
+            acceptButtonIcon: 'unlink',
+            acceptButtonScheme: 'danger',
+            confirm: async (modal) => {
+                modal.startLoading();
+
+                try {
+                    await this.fetch.post(`vehicles/${vehicle.id}/detach-equipment`, { equipment: equipment.id });
+                    this.notifications.success(this.intl.t('trailer.prompts.detach-equipment-success', { equipmentName, resourceName: vehicleName }));
+                    modal.done();
+                    this.refresh();
+                    options.callback?.(vehicle, equipment);
                 } catch (error) {
                     this.notifications.serverError(error);
                     modal.stopLoading();

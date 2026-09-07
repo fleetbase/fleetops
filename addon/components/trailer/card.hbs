@@ -1,5 +1,48 @@
 <Layout::Resource::Card ...attributes as |Card|>
-    <Card.header><div class="font-semibold truncate">{{or @resource.name @resource.yearMakeModel}}</div><div class="text-gray-500 text-sm truncate">{{or @resource.plate_number @resource.vin @resource.public_id}}</div></Card.header>
-    <Card.body><Image src={{@resource.photo_url}} class="card-img-lg" /><div class="mt-2"><Badge @status={{@resource.status}}>{{@resource.status}}</Badge></div></Card.body>
-    <Card.footer><div class="flex space-x-1"><Button @icon="eye" @size="xs" @onClick={{fn this.trailerActions.transition.view @resource}} /><Button @icon="pencil" @size="xs" @onClick={{fn this.trailerActions.transition.edit @resource}} /><Button @icon="trash" @size="xs" @type="danger" @onClick={{fn this.trailerActions.delete @resource}} /></div><div class="mt-1 text-xs text-gray-500">{{t "trailer.fields.updated"}}: {{@resource.updatedAt}}</div></Card.footer>
+    <Card.header class={{@headerClass}}>
+        <RegistryYield @registry="fleet-ops:component:trailer:card:header:start" as |RegistryComponent|>
+            <RegistryComponent @resource={{@resource}} />
+        </RegistryYield>
+        <div class="font-semibold w-full truncate">{{@resource.displayName}}</div>
+        <div class="text-gray-400 dark:text-gray-500 text-sm w-full truncate">
+            {{#if @resource.type}}{{t (concat "trailer.types." @resource.type)}}{{/if}}
+            {{#if (or @resource.plate_number @resource.vin @resource.code)}}<span class="mx-1">·</span>{{or @resource.plate_number @resource.vin @resource.code}}{{/if}}
+        </div>
+        {{#if (has-block "header")}}
+            {{yield to="header"}}
+        {{/if}}
+        <RegistryYield @registry="fleet-ops:component:trailer:card:header:end" as |RegistryComponent|>
+            <RegistryComponent @resource={{@resource}} />
+        </RegistryYield>
+    </Card.header>
+    <Card.body class={{@bodyClass}}>
+        <Image src={{or @resource.photo_url (config "defaultValues.vehicleImage")}} @fallbackSrc={{config "defaultValues.vehicleImage"}} alt={{@resource.displayName}} class="card-img-lg" />
+        <div class="mt-2 flex flex-row flex-wrap items-center gap-1">
+            <Badge @status={{@resource.status}} @text={{t (concat "trailer.statuses." (or @resource.status "available"))}} />
+            <Badge @status={{if @resource.isAttached "attached" "detached"}} @icon={{if @resource.isAttached "link" "link-slash"}} @text={{if @resource.isAttached (n-a @resource.current_vehicle_name) (t "trailer.attachment.detached")}} />
+        </div>
+        {{#if (has-block "body")}}
+            {{yield to="body"}}
+        {{/if}}
+    </Card.body>
+    <Card.footer class={{@footerClass}}>
+        <RegistryYield @registry="fleet-ops:component:trailer:card:footer:start" as |RegistryComponent|>
+            <RegistryComponent @resource={{@resource}} />
+        </RegistryYield>
+        <div class="flex flex-row items-center space-x-1">
+            <Button @icon="eye" @size="xs" @helpText={{t "common.view"}} @onClick={{fn this.trailerActions.transition.view @resource}} @permission="fleet-ops view trailer" />
+            <Button @icon="pencil" @size="xs" @helpText={{t "common.edit"}} @onClick={{fn this.trailerActions.transition.edit @resource}} @permission="fleet-ops update trailer" />
+            <Button @icon="trash" @size="xs" @type="danger" @helpText={{t "common.delete"}} @onClick={{fn this.trailerActions.delete @resource}} @permission="fleet-ops delete trailer" />
+        </div>
+        <RegistryYield @registry="fleet-ops:component:trailer:card:footer:end" as |RegistryComponent|>
+            <RegistryComponent @resource={{@resource}} />
+        </RegistryYield>
+        {{#if (has-block "footer")}}
+            {{yield to="footer"}}
+        {{/if}}
+        <div class="mt-1.5">
+            <div class="text-gray-400 dark:text-gray-500 text-xs">{{t "trailer.fields.updated-at"}}: {{@resource.updatedAt}}</div>
+        </div>
+    </Card.footer>
 </Layout::Resource::Card>
+{{yield}}

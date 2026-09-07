@@ -5,6 +5,8 @@ import { inject as service } from '@ember/service';
 import { debug } from '@ember/debug';
 import { task } from 'ember-concurrency';
 import getModelName from '@fleetbase/ember-core/utils/get-model-name';
+import { pluralize } from 'ember-inflector';
+import { dasherize } from '@ember/string';
 
 export default class DeviceManagerComponent extends Component {
     @service store;
@@ -28,6 +30,21 @@ export default class DeviceManagerComponent extends Component {
         );
     }
 
+    /**
+     * The internal attach/detach endpoints are namespaced by the attachable resource
+     * (`vehicles/{id}/attach-device`, `trailers/{id}/attach-device`). Derive the prefix
+     * from the resource's model name unless an explicit `@endpoint` is given.
+     */
+    get endpoint() {
+        if (this.args.endpoint) {
+            return this.args.endpoint;
+        }
+
+        const modelName = getModelName(this.args.resource);
+
+        return modelName ? dasherize(pluralize(modelName)) : 'vehicles';
+    }
+
     constructor() {
         super(...arguments);
         this.loadDevices.perform();
@@ -45,7 +62,7 @@ export default class DeviceManagerComponent extends Component {
                 modal.startLoading();
 
                 try {
-                    await this.fetch.post(`vehicles/${this.args.resource.id}/attach-device`, { device: selectedDevice.id });
+                    await this.fetch.post(`${this.endpoint}/${this.args.resource.id}/attach-device`, { device: selectedDevice.id });
                     await this.loadDevices.perform();
                     this.notifications.success(this.intl.t('device.prompts.attach-device-success'));
                     modal.done();
@@ -67,7 +84,7 @@ export default class DeviceManagerComponent extends Component {
                 modal.startLoading();
 
                 try {
-                    await this.fetch.post(`vehicles/${this.args.resource.id}/detach-device`, { device: device.id });
+                    await this.fetch.post(`${this.endpoint}/${this.args.resource.id}/detach-device`, { device: device.id });
                     await this.loadDevices.perform();
                     this.notifications.success(this.intl.t('device.prompts.detach-from-resource-success', { deviceName, resourceName: this.resourceName }));
                     modal.done();
