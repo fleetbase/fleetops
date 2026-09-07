@@ -22,8 +22,13 @@ trait ResolvesPublicRelationFields
     /**
      * The relations the caller asked for, as real Eloquent relation names.
      *
-     * The controller has already normalised, mapped and allowlisted `with` /
-     * `expand` by the time a resource runs, so this is a plain read.
+     * The controller normalises, maps and allowlists `with` / `expand` for the
+     * resource it returns. That guarantee does not travel: this resource is also
+     * rendered nested inside Order and Driver responses, where the request's
+     * `with` names the parent's relations (`payload`, `driverAssigned.vehicle`).
+     * A nested resource re-reads the same request, so only relations the wrapped
+     * model actually defines are kept — a parent's expansion must never reach
+     * this model's loader, where it raises RelationNotFoundException.
      *
      * @return array<int, string>
      */
@@ -39,7 +44,28 @@ trait ResolvesPublicRelationFields
             return [];
         }
 
-        return array_values(array_filter(array_map('strval', $with), 'strlen'));
+        $with = array_values(array_filter(array_map('strval', $with), 'strlen'));
+
+        return array_values(array_filter($with, fn (string $relation): bool => $this->definesRelation($relation)));
+    }
+
+    /**
+     * Whether the wrapped model defines the root of a relation path.
+     *
+     * Only the first segment is checked: nested segments belong to the related
+     * model, and Eloquent validates those itself once the root exists.
+     */
+    private function definesRelation(string $relation): bool
+    {
+        $resource = $this->resource;
+
+        if (!is_object($resource) || !method_exists($resource, 'loadMissing')) {
+            return false;
+        }
+
+        $root = explode('.', $relation, 2)[0];
+
+        return $root !== '' && method_exists($resource, $root);
     }
 
     /**

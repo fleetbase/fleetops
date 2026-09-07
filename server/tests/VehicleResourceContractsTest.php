@@ -311,3 +311,42 @@ test('vehicle without driver resource omits driver relationships and serializes 
         ])
         ->and($webhook)->not->toHaveKey('driver');
 });
+
+/**
+ * Resolve the request's `with` list the way a nested resource does.
+ *
+ * @return array<int, string>
+ */
+function fleetopsVehicleResourceRequestedRelations(mixed $resource, array $query): array
+{
+    $request = Request::create('/api/v1/fleet-ops/orders', 'GET', $query);
+    $method  = new ReflectionMethod(VehicleResource::class, 'requestedRelations');
+    $method->setAccessible(true);
+
+    return $method->invoke(new VehicleResource($resource), $request);
+}
+
+test('requested relations keep only what the wrapped model defines', function () {
+    $vehicle = new class(['uuid' => 'vehicle-uuid']) extends FleetOpsVehicleResourceFixture {
+        public function driver(): void
+        {
+        }
+    };
+
+    // Nested under an Order, the request's `with` describes the order:
+    // `payload` and `driverAssigned.vehicle` are not vehicle relations and must
+    // never reach this model's loader. The vehicle's own relations still pass,
+    // including a nested path whose root the vehicle defines.
+    expect(fleetopsVehicleResourceRequestedRelations($vehicle, ['with' => ['payload', 'driverAssigned.vehicle', 'driver', 'driver.user', '']]))->toBe(['driver', 'driver.user'])
+        ->and(fleetopsVehicleResourceRequestedRelations($vehicle, ['with' => 'payload,driver']))->toBe(['driver'])
+        ->and(fleetopsVehicleResourceRequestedRelations($vehicle, ['with' => ['.driver']]))->toBe([])
+        ->and(fleetopsVehicleResourceRequestedRelations($vehicle, []))->toBe([]);
+});
+
+test('requested relations are empty when the resource cannot load any', function () {
+    // Webhook fixtures and compact serializers hand the resource plain data;
+    // there is no loader to feed, so nothing is requested from it.
+    expect(fleetopsVehicleResourceRequestedRelations(['uuid' => 'vehicle-uuid'], ['with' => ['driver']]))->toBe([])
+        ->and(fleetopsVehicleResourceRequestedRelations((object) ['uuid' => 'vehicle-uuid'], ['with' => ['driver']]))->toBe([])
+        ->and(fleetopsVehicleResourceRequestedRelations(fleetopsVehicleResourceFixture(), ['with' => ['driver']]))->toBe([]);
+});
