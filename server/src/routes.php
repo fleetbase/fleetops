@@ -578,11 +578,15 @@ Route::prefix(config('fleetops.api.routing.prefix'))->namespace('Fleetbase\Fleet
                                 $router->post('{id}/unassign-orders', $controller('unassignOrders'));
                                 $router->post('{id}/attach-device', $controller('attachDevice'));
                                 $router->post('{id}/detach-device', $controller('detachDevice'));
+                                $router->post('{id}/attach-equipment', $controller('attachEquipment'));
+                                $router->post('{id}/detach-equipment', $controller('detachEquipment'));
                                 $router->match(['get', 'post'], 'export', $controller('export'));
                                 $router->post('import', $controller('import'));
                             }
                         );
                         $router->fleetbaseRoutes('trailers', function ($router, $controller) {
+                            $router->get('statuses', $controller('statuses'));
+                            $router->get('types', $controller('types'));
                             $router->post('{id}/attach', $controller('attach'));
                             $router->post('{id}/detach', $controller('detach'));
                             $router->post('{id}/attach-device', $controller('attachDevice'));

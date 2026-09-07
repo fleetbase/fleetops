@@ -68,6 +68,8 @@ class Vehicle extends FleetbaseResource
             'warranty'               => $this->publicRelationObject('warranty', $with, fn () => Resolve::httpResourceForModel($this->warranty)),
             'photo'                  => $this->publicRelationObject('photo', $with, fn () => Resolve::httpResourceForModel($this->photo)),
             'devices'                => $this->whenLoaded('devices', fn () => $this->devices),
+            // Trailers currently coupled to this vehicle (`with=trailers` on the public API).
+            'trailers'               => $this->publicRelationObject('currentTrailers', $with, fn () => Trailer::collection($this->currentTrailers)),
             // Vehicle identification
             'make'                   => $this->make,
             'model'                  => $this->model,

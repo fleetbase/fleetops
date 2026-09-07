@@ -75,6 +75,9 @@ function fleetOpsTrailerSupportDatabase(): SQLiteConnection
     $resolver->setDefaultConnection('mysql');
     EloquentModel::setConnectionResolver($resolver);
     EloquentModel::setEventDispatcher(new Illuminate\Events\Dispatcher());
+    // Model hooks bind to the dispatcher present when a class boots; re-boot so the
+    // hooks of models booted by earlier test files land on this dispatcher.
+    EloquentModel::clearBootedModels();
     $config = new Repository(['activitylog' => ['enabled' => false, 'default_auth_driver' => null, 'default_log_name' => 'default']]);
     app()->instance('config', $config);
     app()->instance(Illuminate\Contracts\Config\Repository::class, $config);
@@ -149,9 +152,26 @@ function fleetOpsTrailerSupportDatabase(): SQLiteConnection
     return $connection;
 }
 
-function fleetOpsTrailerFilter(FleetOpsTrailerFilterBuilder $builder, array $query = []): TrailerFilter
+class FleetOpsTrailerSupportRoute
+{
+    public array $action = [];
+
+    public function __construct(private string $uri)
+    {
+    }
+
+    public function uri(): string
+    {
+        return $this->uri;
+    }
+}
+
+function fleetOpsTrailerFilter(FleetOpsTrailerFilterBuilder $builder, array $query = [], bool $internal = false): TrailerFilter
 {
     $request = Request::create('/int/v1/trailers', 'GET', $query);
+    if ($internal) {
+        $request->setRouteResolver(fn () => new FleetOpsTrailerSupportRoute('int/v1/trailers'));
+    }
     $session = app('session.store');
     $session->put('company', 'company-trailer-support');
     $request->setLaravelSession($session);
@@ -193,6 +213,15 @@ test('trailer filter executes text numeric state relationship and date branches'
         $table->softDeletes();
     });
     $connection->table('vendors')->insert(['uuid' => 'vendor-filter', 'public_id' => 'vendor_public', 'company_uuid' => 'company-trailer-support']);
+    $connection->getSchemaBuilder()->create('categories', function ($table) {
+        $table->increments('id');
+        foreach (['uuid', 'public_id', 'company_uuid', 'owner_uuid', 'owner_type', 'name', 'for', '_key'] as $column) {
+            $table->string($column)->nullable();
+        }
+        $table->timestamps();
+        $table->softDeletes();
+    });
+    $connection->table('categories')->insert(['uuid' => 'category-filter', 'public_id' => 'category_public', 'company_uuid' => 'company-trailer-support']);
 
     Carbon::setTestNow('2026-09-03 12:00:00');
     $builder = new FleetOpsTrailerFilterBuilder();
@@ -229,6 +258,20 @@ test('trailer filter executes text numeric state relationship and date branches'
     $filter->createdAt('2026-09-03');
     $filter->updatedAt(['2026-09-01', '2026-09-03']);
     $filter->lastOnlineAt('2026-09-03');
+    $filter->purchasedAt('2026-09-03');
+    $filter->bodyType('van');
+    $filter->refrigerated('true');
+    $filter->category('category_public');
+
+    // Console multi-option filters submit arrays; empty and mixed selections are safe.
+    $filter->trailerType(['reefer', 'flatbed']);
+    $filter->status([]);
+    $filter->status(['', 'available']);
+    $filter->connectivityStatus(['online', 'offline']);
+    $filter->connectivityStatus([]);
+    $filter->attachmentState(['attached', 'detached']);
+    $filter->attachmentState('');
+    $filter->vehicle([]);
 
     expect($builder->called('search'))->toBeTrue()
         ->and($builder->called('searchWhere'))->toBeTrue()
@@ -237,14 +280,49 @@ test('trailer filter executes text numeric state relationship and date branches'
         ->and($builder->called('whereHas'))->toBeTrue()
         ->and($builder->called('whereDoesntHave'))->toBeTrue()
         ->and($builder->called('whereIn'))->toBeTrue()
-        ->and($builder->called('whereDate'))->toBeTrue();
+        ->and($builder->called('whereDate'))->toBeTrue()
+        ->and(collect($builder->calls)->contains(fn ($call) => $call[0] === 'whereIn' && $call[1] === 'type' && $call[2] === ['reefer', 'flatbed']))->toBeTrue()
+        ->and(collect($builder->calls)->contains(fn ($call) => $call[0] === 'where' && $call[1] === 'status' && $call[2] === 'available'))->toBeTrue()
+        ->and(collect($builder->calls)->contains(fn ($call) => $call[0] === 'whereIn' && $call[1] === 'category_uuid' && $call[2] === ['category-filter']))->toBeTrue()
+        ->and(collect($builder->calls)->contains(fn ($call) => $call[0] === 'whereIn' && $call[1] === 'connector_uuid' && $call[2] === ['vehicle-filter']))->toBeTrue();
+
+    // Public requests never resolve relations by UUID; the console does.
+    $public = fleetOpsTrailerFilter($publicBuilder = new FleetOpsTrailerFilterBuilder());
+    $public->vehicle('vehicle-filter');
+    $internal = fleetOpsTrailerFilter($internalBuilder = new FleetOpsTrailerFilterBuilder(), [], true);
+    $internal->vehicle('vehicle-filter');
+    expect(collect($publicBuilder->calls)->contains(fn ($call) => $call[0] === 'whereIn' && $call[1] === 'connector_uuid' && $call[2] === []))->toBeTrue()
+        ->and(collect($internalBuilder->calls)->contains(fn ($call) => $call[0] === 'whereIn' && $call[1] === 'connector_uuid' && $call[2] === ['vehicle-filter']))->toBeTrue();
     Carbon::setTestNow();
 });
 
 test('equipment filters cover attachment state type aliases and public targets', function () {
+    $connection = fleetOpsTrailerSupportDatabase();
+    $connection->getSchemaBuilder()->create('drivers', function ($table) {
+        $table->increments('id');
+        foreach (['uuid', 'public_id', 'internal_id', 'company_uuid', 'user_uuid', 'name', '_key'] as $column) {
+            $table->string($column)->nullable();
+        }
+        $table->timestamps();
+        $table->softDeletes();
+    });
+    // The Driver model scopes itself to drivers whose user still exists.
+    $connection->getSchemaBuilder()->create('users', function ($table) {
+        $table->increments('id');
+        foreach (['uuid', 'public_id', 'company_uuid', 'name', 'email', '_key'] as $column) {
+            $table->string($column)->nullable();
+        }
+        $table->timestamps();
+        $table->softDeletes();
+    });
+    $connection->table('users')->insert(['uuid' => 'user-equipable', 'company_uuid' => 'company-trailer-support', 'name' => 'Dana']);
+    $connection->table('drivers')->insert(['uuid' => 'driver-equipable', 'public_id' => 'driver_equipable', 'user_uuid' => 'user-equipable', 'company_uuid' => 'company-trailer-support']);
+    $connection->table('vehicles')->insert(['uuid' => 'vehicle-equipable', 'public_id' => 'vehicle_equipable', 'company_uuid' => 'company-trailer-support']);
+    $connection->table('assets')->insert(['uuid' => 'trailer-equipable', 'public_id' => 'trailer_public', 'company_uuid' => 'company-trailer-support', 'asset_class' => 'trailer', 'name' => 'Trailer']);
     $builder         = new FleetOpsTrailerFilterBuilder();
     $filter          = fleetOpsTrailerFilter($builder);
     $request         = Request::create('/int/v1/equipment');
+    $request->setRouteResolver(fn () => new FleetOpsTrailerSupportRoute('int/v1/equipment'));
     $request->setLaravelSession(app('session.store'));
     $equipmentFilter = new EquipmentFilter($request);
     $reflection      = new ReflectionClass($equipmentFilter);
@@ -258,10 +336,26 @@ test('equipment filters cover attachment state type aliases and public targets',
         $equipmentFilter->equipableType($type);
     }
     $equipmentFilter->equipable('trailer_public');
+    $equipmentFilter->equipable('vehicle-equipable');
+    $equipmentFilter->equipable(['trailer_public', 'vehicle_equipable']);
+    $equipmentFilter->equipable('driver_equipable');
+    $equipmentFilter->equipable('');
     expect($builder->called('whereNotNull'))->toBeTrue()
         ->and($builder->called('whereNull'))->toBeTrue()
         ->and($builder->called('whereRaw'))->toBeTrue()
-        ->and($builder->called('whereHas'))->toBeTrue();
+        ->and(collect($builder->calls)->contains(fn ($call) => $call[0] === 'whereIn' && $call[1] === 'equipable_uuid' && $call[2] === ['trailer-equipable']))->toBeTrue()
+        ->and(collect($builder->calls)->contains(fn ($call) => $call[0] === 'whereIn' && $call[1] === 'equipable_uuid' && $call[2] === ['vehicle-equipable']))->toBeTrue()
+        ->and(collect($builder->calls)->contains(fn ($call) => $call[0] === 'whereIn' && $call[1] === 'equipable_uuid' && sort($call[2]) && $call[2] === ['trailer-equipable', 'vehicle-equipable']))->toBeTrue()
+        ->and(collect($builder->calls)->contains(fn ($call) => $call[0] === 'whereIn' && $call[1] === 'equipable_uuid' && $call[2] === ['driver-equipable']))->toBeTrue();
+
+    // Public requests only resolve public ids, never UUIDs.
+    $publicBuilder = new FleetOpsTrailerFilterBuilder();
+    $publicRequest = Request::create('/v1/equipment');
+    $publicRequest->setLaravelSession(app('session.store'));
+    $publicFilter  = new EquipmentFilter($publicRequest);
+    $property->setValue($publicFilter, $publicBuilder);
+    $publicFilter->equipable('vehicle-equipable');
+    expect(collect($publicBuilder->calls)->contains(fn ($call) => $call[0] === 'whereIn' && $call[1] === 'equipable_uuid' && $call[2] === []))->toBeTrue();
 });
 
 test('trailer import validates rows and export scopes and maps spreadsheet data', function () {
@@ -292,9 +386,9 @@ test('trailer and connection resources serialize loaded public relationships', f
     $vehicle->forceFill(['uuid' => 'vehicle-resource', 'public_id' => 'vehicle_public', 'name' => 'Road Tractor', 'plate_number' => 'TRUCK']);
     $trailer = new Trailer();
     $trailer->setAppends([]);
-    $trailer->forceFill(['uuid' => 'trailer-resource', 'public_id' => 'trailer_public', 'company_uuid' => 'company-trailer-support', 'name' => 'Reefer', 'type' => 'reefer', 'status' => 'available', 'last_online_at' => now()]);
+    $trailer->forceFill(['uuid' => 'trailer-resource', 'public_id' => 'trailer_public', 'company_uuid' => 'company-trailer-support', 'name' => 'Reefer', 'type' => 'reefer', 'status' => 'available', 'last_online_at' => now(), 'telematics' => ['last_provider' => 'flespi', 'last_device_uuid' => 'device-uuid']]);
     $connection = new AssetConnection(['relationship_type' => 'towing', 'position' => 1, 'connected_at' => now(), 'source' => 'manual']);
-    $connection->forceFill(['uuid' => 'connection-resource', 'public_id' => 'connection_public']);
+    $connection->forceFill(['uuid' => 'connection-resource', 'public_id' => 'connection_public', 'connector_uuid' => 'vehicle-resource', 'connected_uuid' => 'trailer-resource', 'connector_type' => Vehicle::class, 'connected_type' => Trailer::class]);
     $connection->setRelation('vehicle', $vehicle);
     $connection->setRelation('trailer', $trailer);
     $trailer->setRelation('currentConnection', $connection);
@@ -305,22 +399,57 @@ test('trailer and connection resources serialize loaded public relationships', f
 
     $request = Request::create('/v1/trailers/trailer_public');
     app()->instance('request', $request);
-    $serialized = (new TrailerResource($trailer))->toArray($request);
-    $connected  = (new AssetConnectionResource($connection))->toArray($request);
-    expect($serialized['current_vehicle']['id'])->toBe('vehicle_public')
+    $serialized = (new TrailerResource($trailer))->resolve($request);
+    $connected  = (new AssetConnectionResource($connection))->resolve($request);
+    expect($serialized['current_vehicle'])->toBe(['id' => 'vehicle_public', 'name' => 'Road Tractor', 'plate_number' => 'TRUCK'])
+        ->and($serialized['vehicle_id'])->toBe('vehicle_public')
+        ->and($serialized['current_vehicle_name'])->toBe('Road Tractor')
         ->and($serialized['connections'])->not->toBeNull()
         ->and($serialized['devices'])->not->toBeNull()
         ->and($serialized['equipment'])->not->toBeNull()
-        ->and($connected['vehicle'])->not->toBeNull()
-        ->and($connected['trailer'])->not->toBeNull()
+        ->and($serialized)->not->toHaveKeys(['equipments', 'uuid', 'category_name'])
+        ->and($serialized['telematics'])->toBe(['last_provider' => 'flespi'])
+        ->and($connected['vehicle'])->toBe(['id' => 'vehicle_public', 'name' => 'Road Tractor', 'plate_number' => 'TRUCK'])
+        ->and($connected['trailer'])->toBe(['id' => 'trailer_public', 'name' => 'Reefer', 'type' => 'reefer', 'plate_number' => null])
+        ->and($connected['vehicle_id'])->toBe('vehicle_public')
         ->and($connected['active'])->toBeTrue();
 
+    // The console receives fully embedded models and internal identifiers.
     $internalRequest = Request::create('/int/v1/trailers/trailer-resource');
+    $internalRequest->setRouteResolver(fn () => new FleetOpsTrailerSupportRoute('int/v1/trailers/{id}'));
     app()->instance('request', $internalRequest);
     $internal           = (new TrailerResource($trailer))->toArray($internalRequest);
     $internalConnection = (new AssetConnectionResource($connection))->toArray($internalRequest);
-    expect($internal['asset_class'])->not->toBeNull()
-        ->and($internalConnection['uuid'])->not->toBeNull();
+    expect($internal['asset_class'])->toBe('trailer')
+        ->and($internal['uuid'])->toBe('trailer-resource')
+        ->and($internal['current_vehicle'])->toBeInstanceOf(Illuminate\Http\Resources\Json\JsonResource::class)
+        ->and($internal['telematics'])->toBe(['last_provider' => 'flespi', 'last_device_uuid' => 'device-uuid'])
+        ->and($internalConnection['uuid'])->toBe('connection-resource')
+        ->and($internalConnection['connected_type'])->toBe('fleet-ops:trailer')
+        ->and($internalConnection['vehicle'])->toBeInstanceOf(Illuminate\Http\Resources\Json\JsonResource::class)
+        ->and($internalConnection['trailer'])->toBeInstanceOf(Illuminate\Http\Resources\Json\JsonResource::class);
+
+    // A connection whose vehicle record is gone still serializes, with an empty vehicle side.
+    $orphan = new AssetConnection(['relationship_type' => 'towing', 'position' => 1, 'connected_at' => now()]);
+    $orphan->setRelation('vehicle', null);
+    $orphaned = new Trailer();
+    $orphaned->setAppends([]);
+    $orphaned->forceFill(['uuid' => 'trailer-orphan', 'public_id' => 'trailer_orphan', 'company_uuid' => 'company-trailer-support', 'name' => 'Orphan']);
+    $orphaned->setRelation('currentConnection', $orphan);
+    app()->instance('request', $request);
+    $orphanSerialized = (new TrailerResource($orphaned))->resolve($request);
+    expect($orphanSerialized['current_vehicle'])->toBeNull()
+        ->and($orphanSerialized['vehicle_id'])->toBeNull()
+        ->and($orphanSerialized['current_vehicle_name'])->toBeNull()
+        ->and($orphanSerialized)->not->toHaveKeys(['connections', 'devices', 'equipment'], 'unloaded collections are omitted from the public API');
+
+    // The console always receives the embedded collections, even when they were not loaded.
+    app()->instance('request', $internalRequest);
+    $orphanInternal = (new TrailerResource($orphaned))->resolve($internalRequest);
+    expect($orphanInternal['connections'])->toBe([])
+        ->and($orphanInternal['devices'])->toBe([])
+        ->and($orphanInternal['equipments'])->toBe([])
+        ->and($orphanInternal)->not->toHaveKey('equipment');
 
     $emptyConnection = new AssetConnection(['disconnected_at' => now()]);
     $emptyConnection->setRelation('vehicle', null);

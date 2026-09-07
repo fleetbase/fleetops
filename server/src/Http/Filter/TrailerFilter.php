@@ -6,6 +6,8 @@ use Fleetbase\FleetOps\Models\Vehicle;
 use Fleetbase\FleetOps\Models\Vendor;
 use Fleetbase\FleetOps\Support\Utils;
 use Fleetbase\Http\Filter\Filter;
+use Fleetbase\Models\Category;
+use Fleetbase\Support\Http;
 
 class TrailerFilter extends Filter
 {
@@ -39,14 +41,14 @@ class TrailerFilter extends Filter
         $this->builder->searchWhere('code', $value);
     }
 
-    public function trailerType(?string $value)
+    public function trailerType($value)
     {
-        $this->builder->where('type', $value);
+        $this->whereOneOf('type', $value);
     }
 
-    public function status(?string $value)
+    public function status($value)
     {
-        $this->builder->where('status', $value);
+        $this->whereOneOf('status', $value);
     }
 
     public function trailerMake(?string $value)
@@ -59,9 +61,9 @@ class TrailerFilter extends Filter
         $this->builder->searchWhere('model', $value);
     }
 
-    public function trailerYear(?string $value)
+    public function trailerYear($value)
     {
-        $this->builder->where('year', $value);
+        $this->whereOneOf('year', $value);
     }
 
     public function plateNumber(?string $value)
@@ -79,69 +81,106 @@ class TrailerFilter extends Filter
         $this->builder->searchWhere('serial_number', $value);
     }
 
-    public function length(?string $value)
+    public function bodyType(?string $value)
     {
-        $this->builder->where('length', $value);
+        $this->builder->searchWhere('body_type', $value);
     }
 
-    public function axleCount(?string $value)
+    public function length($value)
     {
-        $this->builder->where('axle_count', $value);
+        $this->whereOneOf('length', $value);
     }
 
-    public function gvwr(?string $value)
+    public function axleCount($value)
     {
-        $this->builder->where('gvwr', $value);
+        $this->whereOneOf('axle_count', $value);
     }
 
-    public function payloadCapacity(?string $value)
+    public function gvwr($value)
     {
-        $this->builder->where('payload_capacity', $value);
+        $this->whereOneOf('gvwr', $value);
     }
 
-    public function ownershipType(?string $value)
+    public function payloadCapacity($value)
     {
-        $this->builder->where('ownership_type', $value);
+        $this->whereOneOf('payload_capacity', $value);
     }
 
-    public function devicesCount(?string $value)
+    public function ownershipType($value)
+    {
+        $this->whereOneOf('ownership_type', $value);
+    }
+
+    public function refrigerated($value)
+    {
+        $this->builder->where('refrigerated', filter_var($value, FILTER_VALIDATE_BOOLEAN));
+    }
+
+    public function devicesCount($value)
     {
         $this->builder->has('devices', '=', (int) $value);
     }
 
-    public function equipmentCount(?string $value)
+    public function equipmentCount($value)
     {
         $this->builder->has('equipments', '=', (int) $value);
     }
 
-    public function connectivityStatus(?string $value)
+    /**
+     * Connectivity is derived from `last_online_at`, mirroring
+     * Trailer::getConnectivityStatusAttribute(). Multiple states combine with OR.
+     */
+    public function connectivityStatus($value)
     {
-        if ($value === 'never_connected') {
-            $this->builder->whereNull('last_online_at');
-        } elseif ($value === 'online') {
-            $this->builder->where('last_online_at', '>=', now()->subMinutes(10));
-        } elseif ($value === 'recently_offline') {
-            $this->builder->whereBetween('last_online_at', [now()->subDay(), now()->subMinutes(10)]);
-        } elseif ($value === 'offline') {
-            $this->builder->where('last_online_at', '<', now()->subDay());
+        $states = array_values(array_filter(array_map('strval', (array) $value), 'strlen'));
+
+        if (empty($states)) {
+            return;
         }
+
+        $this->builder->where(function ($query) use ($states) {
+            foreach ($states as $state) {
+                $query->orWhere(function ($query) use ($state) {
+                    match ($state) {
+                        'never_connected'  => $query->whereNull('last_online_at'),
+                        'online'           => $query->where('last_online_at', '>=', now()->subMinutes(10)),
+                        'recently_offline' => $query->whereBetween('last_online_at', [now()->subDay(), now()->subMinutes(10)]),
+                        'offline'          => $query->where('last_online_at', '<', now()->subDay()),
+                        default            => $query->whereRaw('0 = 1'),
+                    };
+                });
+            }
+        });
     }
 
-    public function attachmentState(?string $value)
+    public function attachmentState($value)
     {
-        $method = $value === 'attached' ? 'whereHas' : 'whereDoesntHave';
+        $states = array_unique(array_values(array_filter(array_map('strval', (array) $value), 'strlen')));
+
+        // Asking for both states is the same as not filtering.
+        if (empty($states) || count($states) > 1) {
+            return;
+        }
+
+        $method = $states[0] === 'attached' ? 'whereHas' : 'whereDoesntHave';
         $this->builder->{$method}('currentConnection');
     }
 
-    public function vehicle(?string $value)
+    public function vehicle($value)
     {
-        $vehicle = Vehicle::where('company_uuid', $this->session->get('company'))->where('public_id', $value)->first();
-        $this->builder->whereHas('currentConnection', fn ($q) => $q->where('connector_uuid', $vehicle?->uuid ?? 'missing'));
+        $uuids = $this->resolveRelationUuids(Vehicle::class, $value);
+
+        $this->builder->whereHas('currentConnection', fn ($query) => $query->whereIn('connector_uuid', $uuids));
     }
 
-    public function vendor(?string $value)
+    public function vendor($value)
     {
-        $this->builder->whereIn('vendor_uuid', Vendor::where('company_uuid', $this->session->get('company'))->where('public_id', $value)->pluck('uuid'));
+        $this->builder->whereIn('vendor_uuid', $this->resolveRelationUuids(Vendor::class, $value));
+    }
+
+    public function category($value)
+    {
+        $this->builder->whereIn('category_uuid', $this->resolveRelationUuids(Category::class, $value, false));
     }
 
     public function createdAt($value)
@@ -159,9 +198,61 @@ class TrailerFilter extends Filter
         $this->dateFilter('last_online_at', $value);
     }
 
+    public function purchasedAt($value)
+    {
+        $this->dateFilter('purchased_at', $value);
+    }
+
+    /**
+     * Console multi-option filters submit arrays; the public API submits scalars.
+     */
+    private function whereOneOf(string $column, $value): void
+    {
+        $values = array_values(array_filter(array_map('strval', (array) $value), 'strlen'));
+
+        if (empty($values)) {
+            return;
+        }
+
+        count($values) === 1 ? $this->builder->where($column, $values[0]) : $this->builder->whereIn($column, $values);
+    }
+
+    /**
+     * Resolve related record identifiers to UUIDs. The console filters by the record's
+     * UUID; the public API filters by public id (or a vehicle's internal id).
+     */
+    private function resolveRelationUuids(string $modelClass, $identifiers, bool $scopeToCompany = true): array
+    {
+        $identifiers = array_values(array_filter(array_map('strval', (array) $identifiers), 'strlen'));
+
+        if (empty($identifiers)) {
+            return [];
+        }
+
+        $instance = new $modelClass();
+        $query    = $modelClass::query()->where(function ($query) use ($identifiers, $instance) {
+            $query->whereIn('public_id', $identifiers);
+
+            if (in_array('internal_id', $instance->getFillable(), true)) {
+                $query->orWhereIn('internal_id', $identifiers);
+            }
+
+            if (Http::isInternalRequest($this->request)) {
+                $query->orWhereIn('uuid', $identifiers);
+            }
+        });
+
+        if ($scopeToCompany) {
+            $query->where('company_uuid', $this->session->get('company'));
+        }
+
+        return $query->pluck('uuid')->all();
+    }
+
     private function dateFilter(string $column, $value): void
     {
         $range = Utils::dateRange($value);
+
         is_array($range) ? $this->builder->whereBetween($column, $range) : $this->builder->whereDate($column, $range);
     }
 }

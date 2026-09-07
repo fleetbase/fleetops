@@ -52,6 +52,7 @@ class VehicleController extends Controller
         'warranty' => 'warranty',
         'photo'    => 'photo',
         'devices'  => 'devices',
+        'trailers' => 'currentTrailers',
     ];
 
     /**

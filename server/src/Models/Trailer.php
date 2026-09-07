@@ -13,6 +13,21 @@ class Trailer extends Asset
     public const ASSET_CLASS = 'trailer';
 
     /**
+     * Lifecycle statuses. Attachment and connectivity are derived separately.
+     */
+    public const STATUSES = ['available', 'in_use', 'maintenance', 'out_of_service', 'retired'];
+
+    /**
+     * Stable trailer classification values shared by validation, import and the console.
+     */
+    public const TYPES = ['dry_van', 'reefer', 'flatbed', 'step_deck', 'lowboy', 'tanker', 'bulk', 'dump', 'chassis', 'curtain_side', 'car_carrier', 'livestock', 'logging', 'dolly', 'specialty', 'other'];
+
+    /**
+     * Ownership arrangements accepted for a trailer.
+     */
+    public const OWNERSHIP_TYPES = ['owned', 'leased', 'financed', 'rented'];
+
+    /**
      * Keep the API payload identity independent from the shared assets table.
      */
     protected string $payloadKey = 'trailer';
@@ -47,6 +62,34 @@ class Trailer extends Asset
             $trailer->status ??= 'available';
         });
         static::saving(fn (Trailer $trailer) => $trailer->asset_class = static::ASSET_CLASS);
+    }
+
+    /**
+     * Bulk removal never deletes a trailer that is still coupled to a vehicle: the
+     * active towing connection would be orphaned. Attached trailers are skipped, and
+     * the operation is refused outright when every selected trailer is attached.
+     */
+    public function bulkRemove($ids = [])
+    {
+        $ids      = array_values(array_filter(array_map('strval', (array) $ids), 'strlen'));
+        $selected = static::where('company_uuid', session('company'))
+            ->where(fn ($query) => $query->whereIn('uuid', $ids)->orWhereIn('public_id', $ids))
+            ->get(['uuid', 'public_id']);
+        $attachedUuids = AssetConnection::where('company_uuid', session('company'))
+            ->whereIn('active_connected_uuid', $selected->pluck('uuid'))
+            ->pluck('active_connected_uuid')
+            ->all();
+        $blocked = $selected
+            ->filter(fn (Trailer $trailer) => in_array($trailer->uuid, $attachedUuids, true))
+            ->flatMap(fn (Trailer $trailer) => [$trailer->uuid, $trailer->public_id])
+            ->all();
+        $deletable = array_values(array_filter($ids, fn ($id) => !in_array($id, $blocked, true)));
+
+        if (empty($deletable)) {
+            throw new \RuntimeException('Detach the selected trailers from their vehicles before deleting them.');
+        }
+
+        return parent::bulkRemove($deletable);
     }
 
     public function currentConnection(): HasOne

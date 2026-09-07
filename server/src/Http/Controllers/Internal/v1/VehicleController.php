@@ -8,10 +8,12 @@ use Fleetbase\FleetOps\Http\Resources\v1\Index\Order as IndexOrderResource;
 use Fleetbase\FleetOps\Imports\VehicleImport;
 use Fleetbase\FleetOps\Models\Device;
 use Fleetbase\FleetOps\Models\Driver;
+use Fleetbase\FleetOps\Models\Equipment;
 use Fleetbase\FleetOps\Models\Order;
 use Fleetbase\FleetOps\Models\Vehicle;
 use Fleetbase\Http\Requests\ExportRequest;
 use Fleetbase\Http\Requests\ImportRequest;
+use Fleetbase\Support\Resolve;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Arr;
@@ -256,6 +258,66 @@ class VehicleController extends FleetOpsController
         ]);
     }
 
+    /**
+     * Attach equipment to the vehicle. Equipment can only be equipped to one asset at a
+     * time, so attaching moves it from any previous vehicle or trailer.
+     */
+    public function attachEquipment(Request $request, string $id): JsonResponse
+    {
+        $request->validate(['equipment' => 'required|string']);
+
+        $vehicle   = $this->resolveVehicle($id);
+        $equipment = $this->resolveEquipment($request->input('equipment'));
+
+        if (!$vehicle) {
+            return response()->error('Vehicle not found or not available for this organization.', 404);
+        }
+
+        if (!$equipment) {
+            return response()->error('Equipment not found or not available for this organization.', 404);
+        }
+
+        DB::transaction(function () use ($equipment, $vehicle) {
+            Equipment::where('uuid', $equipment->uuid)->lockForUpdate()->firstOrFail()->update(['equipable_type' => Vehicle::class, 'equipable_uuid' => $vehicle->uuid]);
+        });
+
+        return response()->json([
+            'status'    => 'ok',
+            'message'   => 'Equipment attached to vehicle.',
+            'vehicle'   => Resolve::httpResourceForModel($vehicle->fresh(['equipments'])),
+            'equipment' => Resolve::httpResourceForModel($equipment->fresh(['equipable'])),
+        ]);
+    }
+
+    public function detachEquipment(Request $request, string $id): JsonResponse
+    {
+        $request->validate(['equipment' => 'required|string']);
+
+        $vehicle   = $this->resolveVehicle($id);
+        $equipment = $this->resolveEquipment($request->input('equipment'));
+
+        if (!$vehicle) {
+            return response()->error('Vehicle not found or not available for this organization.', 404);
+        }
+
+        if (!$equipment) {
+            return response()->error('Equipment not found or not available for this organization.', 404);
+        }
+
+        if ($equipment->equipable_uuid !== $vehicle->uuid || $equipment->equipable_type !== Vehicle::class) {
+            return response()->error('This equipment is not attached to the selected vehicle.', 422);
+        }
+
+        DB::transaction(fn () => Equipment::where('uuid', $equipment->uuid)->lockForUpdate()->update(['equipable_type' => null, 'equipable_uuid' => null]));
+
+        return response()->json([
+            'status'    => 'ok',
+            'message'   => 'Equipment detached from vehicle.',
+            'vehicle'   => Resolve::httpResourceForModel($vehicle->fresh(['equipments'])),
+            'equipment' => Resolve::httpResourceForModel($equipment->fresh(['equipable'])),
+        ]);
+    }
+
     protected function findVehicle(string $id): Vehicle
     {
         return Vehicle::where(function ($query) use ($id) {
@@ -281,6 +343,15 @@ class VehicleController extends FleetOpsController
         })
             ->where('company_uuid', session('company'))
             ->firstOrFail();
+    }
+
+    protected function resolveEquipment(string $id): ?Equipment
+    {
+        return Equipment::where(function ($query) use ($id) {
+            $query->where('uuid', $id)->orWhere('public_id', $id);
+        })
+            ->where('company_uuid', session('company'))
+            ->first();
     }
 
     protected function resolveDevice(string $id): ?Device
