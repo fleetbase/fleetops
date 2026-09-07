@@ -452,3 +452,26 @@ test('an unsupported expansion on retrieve cannot reach eloquent', function () {
         ->and($payload)->not->toHaveKey('not_a_relation')
         ->and($request->input('with'))->toBe(['vendor']);
 });
+
+test('a vehicle nested in an order response ignores the order expansions', function () {
+    fleetopsVehicleContractBoot();
+
+    $controller    = new VehicleController();
+    $createRequest = fleetopsVehicleContractRequest(CreateVehicleRequest::class, 'POST', ['make' => 'Ford', 'driver' => 'driver_contract1']);
+    $created       = $controller->create($createRequest)->resolve($createRequest);
+    $vehicle       = Vehicle::where('public_id', $created['id'])->firstOrFail();
+
+    // An order fetch expands the order's own relations. The Order resource nests
+    // the assigned vehicle as a full Vehicle resource, which re-reads the same
+    // request: `payload` is not a vehicle relation and used to reach load(),
+    // answering the whole order request with a RelationNotFoundException.
+    $orderRequest = fleetopsVehicleContractRequest(Request::class, 'GET', ['with' => ['payload', 'driverAssigned.vehicle', 'driver']], 'v1/orders');
+    $payload      = (new Fleetbase\FleetOps\Http\Resources\v1\Vehicle($vehicle))->resolve($orderRequest);
+
+    expect($payload['id'])->toBe($created['id'])
+        ->and($payload)->not->toHaveKey('payload')
+        ->and($vehicle->relationLoaded('payload'))->toBeFalse()
+        // The vehicle's own expansion in the same list still resolves.
+        ->and($payload['driver'])->toBeObject()
+        ->and($payload['driver_id'])->toBe('driver_contract1');
+});

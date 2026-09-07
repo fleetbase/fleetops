@@ -24,7 +24,9 @@ class Fleet extends FleetbaseResource
         // dropped anything outside the public allowlist, so they are safe to
         // hand to the loader. `subfleets` used to arrive here spelled exactly
         // that and reach `load('subfleets')`, which is not the relation —
-        // the documented expansion raised instead of resolving.
+        // the documented expansion raised instead of resolving. Relations the
+        // fleet does not define are dropped as well: nested under another
+        // response the request's `with` describes the parent, not the fleet.
         $with = $this->requestedRelations($request);
 
         if ($with !== []) {

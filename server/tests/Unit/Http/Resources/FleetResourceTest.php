@@ -144,3 +144,20 @@ test('fleet resource accepts the explicit nested expansion spelling', function (
     expect($subFleet->relationLoaded('drivers'))->toBeTrue()
         ->and($subFleet->relationLoaded('vehicles'))->toBeFalse();
 });
+
+test('fleet resource ignores expansions that describe a parent resource', function () {
+    fleetopsFleetResourceBoot();
+
+    $fleet = Fleet::where('uuid', 'fleet-parent-1')->first();
+
+    // Rendered inside another response, the request's `with` is the parent's
+    // list. `payload` is not a fleet relation and used to raise from load();
+    // the fleet's own relation in the same list still loads.
+    $request  = Request::create('/v1/orders', 'GET', ['with' => ['payload', 'drivers']]);
+    $resolved = (new FleetResource($fleet))->resolve($request);
+
+    expect($resolved['name'])->toBe('Parent Fleet')
+        ->and($resolved)->not->toHaveKey('payload')
+        ->and($fleet->relationLoaded('payload'))->toBeFalse()
+        ->and($fleet->relationLoaded('drivers'))->toBeTrue();
+});
