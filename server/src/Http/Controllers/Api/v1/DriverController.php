@@ -6,6 +6,9 @@ use Fleetbase\FleetOps\Events\DriverLocationChanged;
 use Fleetbase\FleetOps\Events\GeofenceEntered;
 use Fleetbase\FleetOps\Events\GeofenceExited;
 use Fleetbase\FleetOps\Events\VehicleLocationChanged;
+use Fleetbase\FleetOps\Exceptions\PublicRelationNotFoundException;
+use Fleetbase\FleetOps\Http\Controllers\Api\v1\Concerns\ResolvesFleetOpsApiResources;
+use Fleetbase\FleetOps\Http\Controllers\Api\v1\Concerns\ResolvesPublicExpansions;
 use Fleetbase\FleetOps\Http\Requests\CreateDriverRequest;
 use Fleetbase\FleetOps\Http\Requests\DriverSimulationRequest;
 use Fleetbase\FleetOps\Http\Requests\UpdateDriverRequest;
@@ -16,6 +19,7 @@ use Fleetbase\FleetOps\Jobs\SimulateDrivingRoute;
 use Fleetbase\FleetOps\Models\Driver;
 use Fleetbase\FleetOps\Models\Order;
 use Fleetbase\FleetOps\Models\Vehicle;
+use Fleetbase\FleetOps\Models\Vendor;
 use Fleetbase\FleetOps\Support\GeofenceIntersectionService;
 use Fleetbase\FleetOps\Support\OSRM;
 use Fleetbase\FleetOps\Support\Utils;
@@ -40,6 +44,23 @@ use Illuminate\Support\Str;
 class DriverController extends Controller
 {
     use \Fleetbase\FleetOps\Http\Controllers\Concerns\ResolvesReviewAccountBypass;
+    use ResolvesFleetOpsApiResources;
+    use ResolvesPublicExpansions;
+
+    /**
+     * Public expansion name => Eloquent relation name.
+     *
+     * `user` and `company` are deliberately absent. Both are already published
+     * as public-id strings, and Navigator interpolates `driver.user` directly
+     * into a socket channel name — expanding either would retype a released
+     * field and break it silently.
+     */
+    public const EXPANDABLE = [
+        'vehicle'     => 'vehicle',
+        'vendor'      => 'vendor',
+        'current_job' => 'currentJob',
+        'fleets'      => 'fleets',
+    ];
 
     /**
      * Creates a new Fleetbase Driver resource.
@@ -48,11 +69,7 @@ class DriverController extends Controller
      */
     public function create(CreateDriverRequest $request)
     {
-        // get request input
-        $input = $request->except(['name', 'password', 'email', 'phone', 'location', 'altitude', 'heading', 'speed', 'meta']);
-
-        // Add default status
-        $input['status'] = $request->input('status', 'available');
+        $this->applyPublicExpansions($request, static::EXPANDABLE);
 
         // get user details for driver
         $userDetails                 = $request->only(['name', 'password', 'email', 'phone', 'timezone']);
@@ -64,6 +81,18 @@ class DriverController extends Controller
         if (!$company) {
             return $this->apiError('Company not found.');
         }
+
+        // get request input. Relationship inputs resolve against the company the
+        // driver is being created in, which is not always the session company —
+        // a request may name one explicitly.
+        try {
+            $input = $this->driverInputFromRequest($request, $company->uuid);
+        } catch (PublicRelationNotFoundException $exception) {
+            return $this->jsonResponse(['error' => $exception->getMessage()], 404);
+        }
+
+        // Add default status
+        $input['status'] = $request->input('status', 'available');
 
         // Apply user infos
         $userDetails = $this->applyUserInfoFromRequest($request, $userDetails);
@@ -87,30 +116,6 @@ class DriverController extends Controller
         $input['user_uuid']    = $user->uuid;
         $input['company_uuid'] = $company->uuid;  // Ensure correct company_uuid is set
 
-        // vehicle assignment public_id -> uuid
-        if ($request->has('vehicle')) {
-            $input['vehicle_uuid'] = $this->getUuid('vehicles', [
-                'public_id'    => $request->input('vehicle'),
-                'company_uuid' => $company->uuid,  // Use $company->uuid instead of session
-            ]);
-        }
-
-        // vendor assignment public_id -> uuid
-        if ($request->has('vendor')) {
-            $input['vendor_uuid'] = $this->getUuid('vendors', [
-                'public_id'    => $request->input('vendor'),
-                'company_uuid' => $company->uuid,  // Use $company->uuid instead of session
-            ]);
-        }
-
-        // order|alias:job assignment public_id -> uuid
-        if ($request->has('job')) {
-            $input['current_job_uuid'] = $this->getUuid('orders', [
-                'public_id'    => $request->input('job'),
-                'company_uuid' => $company->uuid,  // Use $company->uuid instead of session
-            ]);
-        }
-
         // set default online
         if (!isset($input['online'])) {
             $input['online'] = 0;
@@ -130,7 +135,11 @@ class DriverController extends Controller
             $file = $this->resolveFile($request->input('photo'), $path);
 
             if ($file) {
-                $user->update(['photo_uuid' => $file->uuid]);
+                // `photo_uuid` is not a column on users — the avatar lives in
+                // `avatar_uuid`, and User guards mass assignment by fillable, so
+                // the old key was dropped without a word and every driver photo
+                // uploaded through the public API was discarded.
+                $user->update(['avatar_uuid' => $file->uuid]);
             }
         }
 
@@ -151,6 +160,8 @@ class DriverController extends Controller
      */
     public function update($id, UpdateDriverRequest $request)
     {
+        $this->applyPublicExpansions($request, static::EXPANDABLE);
+
         // find for the driver
         try {
             $driver = $this->findDriver($id, ['user']);
@@ -164,7 +175,11 @@ class DriverController extends Controller
         }
 
         // get request input
-        $input = $request->except(['name', 'password', 'email', 'phone', 'location', 'altitude', 'heading', 'speed', 'meta']);
+        try {
+            $input = $this->driverInputFromRequest($request);
+        } catch (PublicRelationNotFoundException $exception) {
+            return $this->jsonResponse(['error' => $exception->getMessage()], 404);
+        }
 
         /*
          * Deliberately no `password` here. Setting one through a general update
@@ -173,36 +188,15 @@ class DriverController extends Controller
          * password. Changing a password is its own operation with its own
          * proof: see changePassword(), forgotPassword() and resetPassword().
          */
-        $userDetails = $request->only(['name', 'email', 'phone']);
+        // `timezone` is accepted and documented on update, but was never copied
+        // to the linked user — the request validated, answered 200, and dropped
+        // it. The driver's own record has no timezone column; the user's does.
+        $userDetails = $request->only(['name', 'email', 'phone', 'timezone']);
 
         // update driver user details
         $driverUser = $driver->getUser();
         if ($driverUser) {
             $driverUser->update($userDetails);
-        }
-
-        // vehicle assignment public_id -> uuid
-        if ($request->has('vehicle')) {
-            $input['vehicle_uuid'] = $this->getUuid('vehicles', [
-                'public_id'    => $request->input('vehicle'),
-                'company_uuid' => $this->sessionCompany(),
-            ]);
-        }
-
-        // vendor assignment public_id -> uuid
-        if ($request->has('vendor')) {
-            $input['vendor_uuid'] = $this->getUuid('vendors', [
-                'public_id'    => $request->input('vendor'),
-                'company_uuid' => $this->sessionCompany(),
-            ]);
-        }
-
-        // order|alias:job assignment public_id -> uuid
-        if ($request->has('job')) {
-            $input['current_job_uuid'] = $this->getUuid('orders', [
-                'public_id'    => $request->input('job'),
-                'company_uuid' => $this->sessionCompany(),
-            ]);
         }
 
         // latitude / longitude
@@ -220,7 +214,7 @@ class DriverController extends Controller
             $file = $this->resolveFile($request->input('photo'), $path);
 
             if ($file) {
-                $driver->user->update(['photo_uuid' => $file->uuid]);
+                $driver->user->update(['avatar_uuid' => $file->uuid]);
             }
         }
 
@@ -238,6 +232,8 @@ class DriverController extends Controller
      */
     public function query(Request $request)
     {
+        $this->applyPublicExpansions($request, static::EXPANDABLE);
+
         $results = $this->queryDrivers($request);
 
         return $this->driverResourceCollection($results);
@@ -252,6 +248,11 @@ class DriverController extends Controller
      */
     public function find($id)
     {
+        // Retrieve carries no Request parameter, so the container's is used —
+        // otherwise an unsupported `with` on this endpoint would reach Eloquent
+        // unmapped.
+        $this->applyPublicExpansions(request(), static::EXPANDABLE);
+
         // find for the driver
         try {
             $driver = $this->findDriver($id, ['user', 'vehicle', 'vendor', 'currentJob']);
@@ -917,6 +918,41 @@ class DriverController extends Controller
         }
 
         return response()->json($route);
+    }
+
+    /**
+     * The explicit public input allowlist for a driver.
+     *
+     * Replaces an `except()` blocklist: anything not named here — `user_uuid`,
+     * `company_uuid`, `auth_token`, `signup_token_used`, `public_id`, `uuid`,
+     * `_key`, the generated `slug`, and the raw `*_uuid` relation columns — used
+     * to reach `Driver::create()` intact simply because nobody had thought to
+     * exclude it. `location`, `heading`, `altitude`, `speed` and `meta` were on
+     * that blocklist and so were dropped on every write, which is why a driver's
+     * metadata never persisted through the public API.
+     *
+     * @throws PublicRelationNotFoundException
+     */
+    protected function driverInputFromRequest(Request $request, ?string $companyUuid = null): array
+    {
+        $input = $request->only([
+            // Identity
+            'internal_id', 'drivers_license_number', 'license_expiry',
+            // Operational
+            'country', 'currency', 'city', 'online', 'current_status', 'status',
+            'location', 'heading', 'bearing', 'altitude', 'speed',
+            // Structured / orchestrator
+            'meta', 'skills', 'max_travel_time', 'max_distance',
+            'time_window_start', 'time_window_end',
+        ]);
+
+        $this->applyPublicIdRelations($input, [
+            'vehicle' => ['vehicle_uuid', Vehicle::class],
+            'vendor'  => ['vendor_uuid', Vendor::class],
+            'job'     => ['current_job_uuid', Order::class],
+        ], $request, $companyUuid);
+
+        return $input;
     }
 
     protected function companyFromRequest(Request $request): ?Company

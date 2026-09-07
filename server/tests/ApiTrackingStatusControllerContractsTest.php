@@ -32,7 +32,7 @@ class FleetOpsApiTrackingStatusControllerProbe extends TrackingStatusController
         return 'tracking-number-uuid';
     }
 
-    protected function getOrderTrackingNumberUuid(string $orderId): ?string
+    protected function getOrderTrackingNumberUuid(?string $orderId): ?string
     {
         $this->orderLookups[] = $orderId;
 

@@ -41,7 +41,7 @@ class FleetOpsApiDeviceControllerEndpointProbe extends DeviceController
         return [['uuid' => 'device-a'], ['uuid' => 'device-b']];
     }
 
-    protected function resolveModel(string $modelClass, string $id): EloquentModel
+    protected function resolveModel(string $modelClass, string $id, ?string $companyUuid = null): EloquentModel
     {
         $key = $modelClass . ':' . $id;
 

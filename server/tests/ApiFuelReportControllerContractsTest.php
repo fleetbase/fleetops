@@ -17,7 +17,7 @@ class FleetOpsApiFuelReportControllerProbe extends FuelReportController
     public bool $driverNotFound      = false;
     public bool $fuelReportNotFound  = false;
 
-    protected function findDriverRecord(string $id): Driver
+    protected function findDriverRecord(?string $id): Driver
     {
         if ($this->driverNotFound) {
             throw new ModelNotFoundException();
