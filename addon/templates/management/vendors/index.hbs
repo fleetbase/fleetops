@@ -1,33 +1,67 @@
-<Layout::Resource::Tabular
-    @resource="vendor"
-    @title={{t "resource.vendors"}}
-    @searchQuery={{this.query}}
-    @onSearch={{perform this.vendorActions.controllerSearchTask this}}
-    @data={{@model}}
-    @columns={{this.columns}}
-    @page={{this.page}}
-    @onPageChange={{fn (mut this.page)}}
-    @setupTable={{fn (mut this.table)}}
-    @actionButtons={{this.actionButtons}}
-    @bulkActions={{this.bulkActions}}
-    @controller={{this}}
-    @emptyStateComponent={{component
-        "table/empty-state"
-        icon="building"
-        title="Add your first vendor"
-        description="Vendors let your team manage external carriers, service providers, and operational partners."
-        filteredTitle="No vendors match your filters"
-        filteredDescription="Adjust the search or filters to find another vendor."
-        primaryText="New vendor"
-        primaryIcon="plus"
-        primaryAction=this.vendorActions.transition.create
-        secondaryText="Import"
-        secondaryIcon="upload"
-        secondaryAction=this.vendorActions.import
-        docsSlug="fleet-ops/resources/vendors/overview"
-        docsTitle="Vendors guide"
-        docsText="Vendor guide"
-        docsSource="fleet-ops-empty-vendors"
-    }}
-/>
+{{#if (eq this.layout "table")}}
+    <Layout::Resource::Tabular
+        @resource="vendor"
+        @title={{t "resource.vendors"}}
+        @searchQuery={{this.query}}
+        @onSearch={{perform this.vendorActions.controllerSearchTask this}}
+        @data={{@model}}
+        @columns={{this.columns}}
+        @page={{this.page}}
+        @onPageChange={{fn (mut this.page)}}
+        @setupTable={{fn (mut this.table)}}
+        @actionButtons={{this.actionButtons}}
+        @bulkActions={{this.bulkActions}}
+        @controller={{this}}
+        @emptyStateComponent={{component
+            "table/empty-state"
+            icon="building"
+            title="Add your first vendor"
+            description="Vendors let your team manage external carriers, service providers, and operational partners."
+            filteredTitle="No vendors match your filters"
+            filteredDescription="Adjust the search or filters to find another vendor."
+            primaryText="New vendor"
+            primaryIcon="plus"
+            primaryAction=this.vendorActions.transition.create
+            secondaryText="Import"
+            secondaryIcon="upload"
+            secondaryAction=this.vendorActions.import
+            docsSlug="fleet-ops/resources/vendors/overview"
+            docsTitle="Vendors guide"
+            docsText="Vendor guide"
+            docsSource="fleet-ops-empty-vendors"
+        }}
+    />
+{{else}}
+    <Layout::Section::Header @title={{t "resource.vendors"}} @actionsWrapperClass="space-x-1">
+        <Layout::Resource::TabularActions
+            @searchQuery={{this.query}}
+            @onSearch={{perform this.vendorActions.controllerSearchTask this}}
+            @columns={{this.columns}}
+            @page={{this.page}}
+            @onPageChange={{fn (mut this.page)}}
+            @setupTable={{fn (mut this.table)}}
+            @actionButtons={{this.actionButtons}}
+            @bulkActions={{this.bulkActions}}
+            @controller={{this}}
+            @hideColumnsPicker={{true}}
+        />
+    </Layout::Section::Header>
+
+    <Layout::Section::Body class="overflow-y-scroll-i h-full">
+        <Layout::Resource::CardsGrid
+            @resource="vendor"
+            @data={{@model}}
+            @columns="4"
+            @showPagination={{true}}
+            @page={{this.page}}
+            @onPageChange={{fn (mut this.page)}}
+            @paginationMeta={{@model.meta}}
+            @containerClass="p-4"
+            class="h-full"
+            as |Item|
+        >
+            <Vendor::Card @resource={{Item.model}} />
+        </Layout::Resource::CardsGrid>
+    </Layout::Section::Body>
+{{/if}}
 {{outlet}}
