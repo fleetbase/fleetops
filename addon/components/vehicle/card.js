@@ -5,6 +5,7 @@ import { action } from '@ember/object';
 export default class VehicleCardComponent extends Component {
     @service vehicleActions;
     @service driverActions;
+    @service trailerActions;
 
     get driverName() {
         const vehicle = this.args.resource;
@@ -24,5 +25,13 @@ export default class VehicleCardComponent extends Component {
         }
 
         return this.driverActions.transition.view(driver);
+    }
+
+    @action viewTrailer(trailer) {
+        if (this.trailerActions.panel?.view) {
+            return this.trailerActions.panel.view(trailer);
+        }
+
+        return this.trailerActions.transition.view(trailer);
     }
 }

@@ -1631,6 +1631,11 @@ scheduler:
   notes-placeholder: Optional additional notes
 
 common:
+  no-vehicle-assigned: Chưa gán phương tiện
+  last-modified: Sửa đổi lần cuối
+  table-view: Dạng bảng
+  grid-view: Dạng lưới
+  change-layout: Đổi bố cục
   online: Trực tuyến
   offline: Ngoại tuyến
   current-job: Current Job

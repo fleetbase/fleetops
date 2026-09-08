@@ -1,6 +1,7 @@
 fleet-ops:
   extension-name: Fleet-Ops
 common:
+  last-modified: Последнее изменение
   online: Онлайн
   offline: Офлайн
   proof-of-delivery: Подтверждение доставки
@@ -10,6 +11,7 @@ common:
   dispatch-order: Заказ на отправку
   assign-driver: Назначить водителя
   no-driver-assigned: Водитель не назначен
+  no-vehicle-assigned: Транспорт не назначен
   details: Детали
   name: Имя
   title: Заголовок

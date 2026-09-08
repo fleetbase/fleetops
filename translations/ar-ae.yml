@@ -2007,6 +2007,11 @@ vehicle:
     select-trailer-warning: اختر مقطورة لربطها بهذه المركبة.
     attach-trailer-success: "تم ربط {trailerName} بـ {vehicleName}."
 common:
+  no-vehicle-assigned: لا توجد مركبة مخصصة
+  last-modified: آخر تعديل
+  table-view: عرض الجدول
+  grid-view: عرض الشبكة
+  change-layout: تغيير التخطيط
   online: متصل
   offline: غير متصل
   "yes": نعم

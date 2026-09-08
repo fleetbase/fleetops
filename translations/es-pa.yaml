@@ -2,6 +2,8 @@ fleet-ops:
   extension-name: Fleet-Ops
 
 common:
+  last-modified: Última modificación
+  change-layout: Cambiar disposición
   online: En línea
   offline: Desconectado
   proof-of-delivery: Prueba de entrega
@@ -12,6 +14,7 @@ common:
   assign-driver: Asignar conductor
   assign-drivers: Asignar conductores
   no-driver-assigned: Ningún conductor asignado
+  no-vehicle-assigned: Sin vehículo asignado
   details: Detalles
   name: Nombre
   title: Título

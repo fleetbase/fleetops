@@ -3,6 +3,7 @@
 namespace Fleetbase\FleetOps\Http\Resources\v1\Index;
 
 use Fleetbase\FleetOps\Models\Order;
+use Fleetbase\FleetOps\Support\TrailerSummary;
 use Fleetbase\FleetOps\Support\Utils;
 use Fleetbase\Http\Resources\FleetbaseResource;
 use Fleetbase\Support\Http;
@@ -90,21 +91,7 @@ class Vehicle extends FleetbaseResource
      */
     protected function compactTrailers(): array
     {
-        return $this->currentTrailers->map(
-            fn ($trailer) => [
-                'id'                  => $trailer->uuid,
-                'uuid'                => $trailer->uuid,
-                'public_id'           => $trailer->public_id,
-                'name'                => $trailer->name,
-                'display_name'        => $trailer->display_name,
-                'type'                => $trailer->type,
-                'plate_number'        => $trailer->plate_number,
-                'status'              => $trailer->status,
-                'attachment_state'    => 'attached',
-                'connectivity_status' => $trailer->connectivity_status,
-                'online'              => (bool) $trailer->online,
-            ]
-        )->values()->all();
+        return TrailerSummary::collection($this->currentTrailers);
     }
 
     protected function currentOrderReference(): ?string

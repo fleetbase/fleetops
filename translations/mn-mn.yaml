@@ -1,6 +1,7 @@
 fleet-ops:
   extension-name: Fleet-Ops
 common:
+  last-modified: Сүүлд өөрчилсөн
   online: Онлайн
   offline: Офлайн
   proof-of-delivery: Хүргэлтийн баталгаа
@@ -10,6 +11,7 @@ common:
   dispatch-order: Илгээх захиалга
   assign-driver: Жолоочийг томилох
   no-driver-assigned: Жолооч томилогдоогүй
+  no-vehicle-assigned: Тээврийн хэрэгсэл томилогдоогүй
   details: Дэлгэрэнгүй
   name: Нэр
   title: Гарчиг

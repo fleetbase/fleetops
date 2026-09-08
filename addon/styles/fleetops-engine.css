@@ -8743,79 +8743,80 @@ body[data-theme='dark'] .fleetops-towing-entry-timeline-row {
     color: #e5e7eb;
 }
 
-/* Asset cards (trailers, vehicles): image stage plus a padded summary strip so badges never sit on the raw body. */
-.fleetops-asset-card .fleetops-asset-card-media {
+/* Resource cards (drivers, vehicles, trailers, vendors, contacts): one title row with an
+   optional online indicator, an image body on the card background, and footer meta rows
+   that style linked records the same way on every card. */
+.fleetops-card-title {
     display: flex;
     align-items: center;
-    justify-content: center;
-    background-color: #fff;
+    width: 100%;
+    min-width: 0;
 }
 
-body[data-theme='dark'] .fleetops-asset-card .fleetops-asset-card-media {
-    background-color: rgb(17 24 39 / 40%);
+.fleetops-card-title-indicator {
+    margin-left: 0.5rem;
+    flex: none;
 }
 
-.fleetops-asset-card .fleetops-asset-card-media img {
+.fleetops-card-image {
+    display: block;
+    width: 100%;
+    height: 100%;
+    border-radius: 0;
+}
+
+.fleetops-card-image--contain {
     object-fit: contain;
+    padding: 0.5rem;
 }
 
-.fleetops-asset-card .fleetops-asset-card-summary {
+.fleetops-card-image--cover {
+    object-fit: cover;
+}
+
+.fleetops-card-meta-list {
     display: flex;
     flex-direction: column;
+    gap: 0.125rem;
+    margin-top: 0.375rem;
+    width: 100%;
+}
+
+.fleetops-card-meta {
+    display: flex;
+    align-items: center;
     gap: 0.375rem;
-    padding: 0.5rem;
-    border-top: 1px solid #e5e7eb;
-}
-
-body[data-theme='dark'] .fleetops-asset-card .fleetops-asset-card-summary {
-    border-top-color: #374151;
-}
-
-.fleetops-asset-card .fleetops-asset-card-badges {
-    display: flex;
-    flex-flow: row wrap;
-    align-items: center;
-    gap: 0.25rem;
-}
-
-.fleetops-asset-card .fleetops-asset-card-link-row {
-    display: flex;
-    flex-direction: row;
-    align-items: center;
     min-width: 0;
     font-size: 0.75rem;
     line-height: 1rem;
-    color: #4b5563;
+    color: #9ca3af;
 }
 
-body[data-theme='dark'] .fleetops-asset-card .fleetops-asset-card-link-row {
-    color: #d1d5db;
+body[data-theme='dark'] .fleetops-card-meta {
+    color: #6b7280;
 }
 
-.fleetops-asset-card .fleetops-asset-card-link-icon {
-    margin-right: 0.375rem;
+.fleetops-card-meta > svg {
     flex-shrink: 0;
+    width: 0.75rem;
 }
 
-.fleetops-asset-card .fleetops-asset-card-link-label {
+.fleetops-card-meta-value {
+    min-width: 0;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
 }
 
-.fleetops-asset-card .fleetops-asset-card-link {
-    margin-left: 0.25rem;
+.fleetops-card-meta-link {
+    color: #3b82f6;
     font-weight: 500;
-    color: #2563eb;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
 }
 
-.fleetops-asset-card .fleetops-asset-card-link:hover {
+.fleetops-card-meta-link:hover {
     opacity: 0.75;
 }
 
-body[data-theme='dark'] .fleetops-asset-card .fleetops-asset-card-link {
+body[data-theme='dark'] .fleetops-card-meta-link {
     color: #60a5fa;
 }

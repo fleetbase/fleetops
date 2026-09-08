@@ -2,6 +2,7 @@ fleet-ops:
     extension-name: Fleet-Ops
 
 common:
+    last-modified: Last modified
     "yes": "Yes"
     "no": "No"
     proof-of-delivery: Proof of Delivery
@@ -13,6 +14,7 @@ common:
     unassign-driver: Unassign Driver
     assign-drivers: Assign Drivers
     no-driver-assigned: No driver assigned
+    no-vehicle-assigned: No vehicle assigned
     details: Details
     name: Name
     title: Title

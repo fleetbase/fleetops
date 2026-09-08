@@ -2592,6 +2592,10 @@ test('internal vehicle vendor and waypoint resources expose internal compact fie
         'status_code'          => 'arrived',
     ]);
 
+    $vehicle->setRelation('currentTrailers', new Collection([
+        (object) ['uuid' => 'trailer-uuid', 'public_id' => 'trailer_public', 'name' => 'Reefer 12', 'display_name' => 'Reefer 12', 'type' => 'reefer', 'plate_number' => 'TRL-12', 'status' => 'in_use', 'connectivity_status' => 'online', 'online' => 1],
+    ]));
+
     expect((new InternalVehicleResource($vehicle))->resolve($request))->toMatchArray([
         'id'                 => 101,
         'uuid'               => 'fixture-uuid',
@@ -2620,6 +2624,9 @@ test('internal vehicle vendor and waypoint resources expose internal compact fie
         'altitude'           => 4,
         'speed'              => 18,
         'meta'               => ['yard' => 'east'],
+        'trailers'           => [
+            ['id' => 'trailer-uuid', 'uuid' => 'trailer-uuid', 'public_id' => 'trailer_public', 'name' => 'Reefer 12', 'display_name' => 'Reefer 12', 'type' => 'reefer', 'plate_number' => 'TRL-12', 'status' => 'in_use', 'attachment_state' => 'attached', 'connectivity_status' => 'online', 'online' => true],
+        ],
     ])
         ->and((new VehicleWithoutDriverResource($vehicle))->toWebhookPayload())->toMatchArray([
             'id'                 => 'fixture_public',

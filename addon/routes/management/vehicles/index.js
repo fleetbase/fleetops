@@ -30,6 +30,7 @@ export default class ManagementVehiclesIndexRoute extends Route {
     };
 
     model(params) {
-        return this.store.query('vehicle', { ...params });
+        // Current trailers back the card view's towing line; the internal API camelizes `with`.
+        return this.store.query('vehicle', { ...params, with: ['currentTrailers'] });
     }
 }

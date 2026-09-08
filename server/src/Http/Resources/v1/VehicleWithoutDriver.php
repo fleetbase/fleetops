@@ -2,6 +2,7 @@
 
 namespace Fleetbase\FleetOps\Http\Resources\v1;
 
+use Fleetbase\FleetOps\Support\TrailerSummary;
 use Fleetbase\FleetOps\Support\Utils;
 use Fleetbase\Http\Resources\FleetbaseResource;
 use Fleetbase\Support\Http;
@@ -41,6 +42,8 @@ class VehicleWithoutDriver extends FleetbaseResource
             'vendor_name'            => $this->when(Http::isInternalRequest(), $this->vendor_name),
             // Relationships
             'devices'                => $this->whenLoaded('devices', fn () => $this->devices),
+            // Current towing connections, compact; the console vehicle cards list them.
+            'trailers'               => $this->whenLoaded('currentTrailers', fn () => TrailerSummary::collection($this->currentTrailers)),
             // Vehicle identification
             'make'                   => $this->make,
             'model'                  => $this->model,

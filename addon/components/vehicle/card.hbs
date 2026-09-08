@@ -1,9 +1,12 @@
-<Layout::Resource::Card class="fleetops-asset-card vehicle-card" ...attributes as |Card|>
+<Layout::Resource::Card class="fleetops-resource-card vehicle-card" ...attributes as |Card|>
     <Card.header class="{{@headerClass}}">
         <RegistryYield @registry="fleet-ops:component:vehicle:card:header:start" as |RegistryComponent|>
             <RegistryComponent @order={{@resource}} @resource={{@resource}} />
         </RegistryYield>
-        <div class="font-semibold w-full truncate">{{or @resource.name @resource.yearMakeModel}}</div>
+        <div class="fleetops-card-title">
+            <div class="font-semibold flex-1 truncate">{{or @resource.name @resource.yearMakeModel}}</div>
+            <FaIcon @icon="circle" @size="xs" class="fleetops-card-title-indicator {{if @resource.online 'text-green-500' 'text-gray-400'}}" />
+        </div>
         <div class="text-gray-400 dark:text-gray-500 text-sm w-full truncate">{{or @resource.plate_number @resource.vin @resource.serial_number @resource.call_sign @resource.public_id}}</div>
         {{#if (has-block "header")}}
             {{yield to="header"}}
@@ -12,32 +15,8 @@
             <RegistryComponent @order={{@resource}} @resource={{@resource}} />
         </RegistryYield>
     </Card.header>
-    <Card.body class={{@bodyClass}}>
-        <div class="fleetops-asset-card-media">
-            <Image src={{or @resource.photo_url (config "defaultValues.vehicleImage")}} @fallbackSrc={{config "defaultValues.vehicleImage"}} alt={{or @resource.name @resource.yearMakeModel}} class="card-img-lg" />
-        </div>
-        <div class="fleetops-asset-card-summary">
-            <div class="fleetops-asset-card-badges">
-                {{#if @resource.status}}
-                    <Badge @status={{@resource.status}} @size="xs" />
-                {{/if}}
-                <Badge @status={{if @resource.online "online" "offline"}} @size="xs" @text={{if @resource.online (t "common.online") (t "common.offline")}} />
-            </div>
-            <div class="fleetops-asset-card-link-row">
-                {{#if this.driverName}}
-                    <FaIcon @icon="id-card" class="fleetops-asset-card-link-icon text-blue-500 dark:text-blue-400" />
-                    <span class="fleetops-asset-card-link-label">{{t "vehicle.fields.driver-assigned"}}</span>
-                    {{#if @resource.driver}}
-                        <a href="javascript:;" class="fleetops-asset-card-link" {{on "click" this.viewDriver}}>{{this.driverName}}</a>
-                    {{else}}
-                        <span class="fleetops-asset-card-link">{{this.driverName}}</span>
-                    {{/if}}
-                {{else}}
-                    <FaIcon @icon="id-card" class="fleetops-asset-card-link-icon text-gray-400 dark:text-gray-500" />
-                    <span class="fleetops-asset-card-link-label">{{t "common.no-driver-assigned"}}</span>
-                {{/if}}
-            </div>
-        </div>
+    <Card.body class="{{@bodyClass}} h-40 overflow-hidden">
+        <Image src={{or @resource.photo_url (config "defaultValues.vehicleImage")}} @fallbackSrc={{config "defaultValues.vehicleImage"}} alt={{or @resource.name @resource.yearMakeModel}} class="fleetops-card-image fleetops-card-image--contain" />
         {{#if (has-block "body")}}
             {{yield to="body"}}
         {{/if}}
@@ -46,10 +25,13 @@
         <RegistryYield @registry="fleet-ops:component:vehicle:card:footer:start" as |RegistryComponent|>
             <RegistryComponent @order={{@resource}} @resource={{@resource}} />
         </RegistryYield>
-        <div class="flex flex-row items-center space-x-1">
-            <Button @icon="eye" @size="xs" @helpText={{t "common.view"}} @onClick={{fn this.vehicleActions.transition.view @resource}} @permission="fleet-ops view vehicle" />
-            <Button @icon="pencil" @size="xs" @helpText={{t "common.edit"}} @onClick={{fn this.vehicleActions.transition.edit @resource}} @permission="fleet-ops update vehicle" />
-            <Button @icon="trash" @size="xs" @type="danger" @helpText={{t "common.delete"}} @onClick={{fn this.vehicleActions.delete @resource}} @permission="fleet-ops delete vehicle" />
+        <div class="flex flex-row items-center justify-between w-full">
+            <Badge @status={{or @resource.status "default"}} @size="xs" />
+            <div class="flex flex-row items-center space-x-1">
+                <Button @icon="eye" @size="xs" @helpText={{t "common.view"}} @onClick={{fn this.vehicleActions.transition.view @resource}} @permission="fleet-ops view vehicle" />
+                <Button @icon="pencil" @size="xs" @helpText={{t "common.edit"}} @onClick={{fn this.vehicleActions.transition.edit @resource}} @permission="fleet-ops update vehicle" />
+                <Button @icon="trash" @size="xs" @type="danger" @helpText={{t "common.delete"}} @onClick={{fn this.vehicleActions.delete @resource}} @permission="fleet-ops delete vehicle" />
+            </div>
         </div>
         <RegistryYield @registry="fleet-ops:component:vehicle:card:footer:end" as |RegistryComponent|>
             <RegistryComponent @order={{@resource}} @resource={{@resource}} />
@@ -57,8 +39,33 @@
         {{#if (has-block "footer")}}
             {{yield to="footer"}}
         {{/if}}
-        <div class="mt-1.5">
-            <div class="text-gray-400 dark:text-gray-500 text-xs">{{t "vehicle.fields.updated-at"}}: {{@resource.updatedAt}}</div>
+        <div class="fleetops-card-meta-list">
+            <div class="fleetops-card-meta">
+                <FaIcon @icon="id-card" @prefix="fas" />
+                <span class="fleetops-card-meta-value">
+                    {{#if this.driverName}}
+                        {{#if @resource.driver}}
+                            <a href="javascript:;" class="fleetops-card-meta-link" {{on "click" this.viewDriver}}>{{this.driverName}}</a>
+                        {{else}}
+                            {{this.driverName}}
+                        {{/if}}
+                    {{else}}
+                        {{t "common.no-driver-assigned"}}
+                    {{/if}}
+                </span>
+            </div>
+            <div class="fleetops-card-meta">
+                <FaIcon @icon="trailer" @prefix="fas" />
+                <span class="fleetops-card-meta-value">
+                    {{#each @resource.trailers as |trailer index|}}
+                        {{#if index}}, {{/if}}
+                        <a href="javascript:;" class="fleetops-card-meta-link" {{on "click" (fn this.viewTrailer trailer)}}>{{trailer.displayName}}</a>
+                    {{else}}
+                        {{t "vehicle.empty.trailers"}}
+                    {{/each}}
+                </span>
+            </div>
+            <div class="fleetops-card-meta">{{t "common.last-modified"}}: {{@resource.updatedAt}}</div>
         </div>
     </Card.footer>
 </Layout::Resource::Card>
