@@ -1,28 +1,26 @@
-<div class="fleetops-device-manager" ...attributes>
-    <div class="flex flex-row items-center justify-between mb-4 px-3 pt-2">
-        <div></div>
-        <div>
-            <Button @icon="plus" @text={{t "device.actions.attach-device"}} @onClick={{this.addDevice}} @disabled={{not @resource}} />
-        </div>
-    </div>
-    <div>
-        {{#each this.devices as |device|}}
-            <div class="flex flex-row justify-between px-3 py-4 border-t border-gray-200 dark:border-gray-700">
-                <Device::Pill @device={{device}} />
-                <div>
-                    <Button @type="danger" @icon="times" @text={{t "device.attachment.detach"}} @size="xs" @onClick={{fn this.removeDevice device}} />
-                </div>
-            </div>
-        {{else}}
-            <div class="empty-state bg-white dark:bg-gray-800 rounded-lg shadow-sm p-12 text-center">
-                <FaIcon @icon="hard-drive" @size="2x" class="text-gray-400 mb-2" />
-                <h3 class="text-base font-semibold text-gray-700 dark:text-gray-300">
-                    {{t "device.prompts.no-devices-attached-title"}}
-                </h3>
-                <p class="text-sm text-gray-500 dark:text-gray-400">
-                    {{t "device.prompts.no-devices-attached-body" resourceType=(get-model-name @resource)}}
-                </p>
-            </div>
-        {{/each}}
-    </div>
-</div>
+<AttachmentList
+    @title={{t "resource.devices"}}
+    @description={{t "device.prompts.manager-description" resourceType=(get-model-name @resource)}}
+    @actionText={{t "device.actions.attach-device"}}
+    @actionIcon="plus"
+    @onAction={{this.addDevice}}
+    @actionDisabled={{not @resource}}
+    @isLoading={{this.loadDevices.isRunning}}
+    @items={{this.devices}}
+    @emptyIcon="hard-drive"
+    @emptyTitle={{t "device.prompts.no-devices-attached-title"}}
+    @emptyDescription={{t "device.prompts.no-devices-attached-body" resourceType=(get-model-name @resource)}}
+    class="fleetops-device-manager"
+    ...attributes
+>
+    <:item as |device|>
+        <Device::Pill @device={{device}} @onClick={{fn this.viewDevice device}} />
+        {{#if device.status}}
+            <Badge @status={{device.status}} @size="xs" class="fleetops-attachment-list-item-badge" />
+        {{/if}}
+    </:item>
+    <:itemActions as |device|>
+        <Button @icon="eye" @size="xs" @helpText={{t "common.view"}} @onClick={{fn this.viewDevice device}} />
+        <Button @type="danger" @icon="unlink" @size="xs" @helpText={{t "device.attachment.detach"}} @onClick={{fn this.removeDevice device}} />
+    </:itemActions>
+</AttachmentList>

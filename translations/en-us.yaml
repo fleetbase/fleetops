@@ -377,6 +377,9 @@ trailer:
     connections:
         description: Every vehicle this trailer has been coupled to, newest first.
         ongoing: Ongoing
+        connected: Connected {date}
+        disconnected: Disconnected {date}
+        still-attached: Still attached
     equipment:
         description: Equipment currently equipped to this trailer.
     telemetry:
@@ -408,6 +411,8 @@ trailer:
         attached: Attached
         detached: Detached
         no-vehicle: Not attached to a vehicle
+        towed-by: Towed by
+        position: Position {position}
     connectivity:
         online: Online
         recently_offline: Recently offline
@@ -909,6 +914,7 @@ device:
         detach-from-resource-success: "Detached {deviceName} from {resourceName}."
         detach-telematic-device-title: "Detach {deviceName} from vehicle?"
         detach-telematic-device-body: "{deviceName} will remain synced from the provider but will no longer be mapped to a vehicle."
+        manager-description: Telematics devices installed on this {resourceType}. Attach a device to start receiving positions and events.
         no-devices-attached-title: No Devices Attached
         no-devices-attached-body: "Click Attach Device above to start receiving telematic data for this {resourceType}."
 entity:

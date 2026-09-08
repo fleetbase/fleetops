@@ -1690,6 +1690,7 @@ device:
     detach-from-vehicle: Detach from Vehicle
     attach-to-asset: Gắn với tài sản
   prompts:
+    manager-description: "Thiết bị viễn thông được lắp trên {resourceType} này. Gắn thiết bị để bắt đầu nhận vị trí và sự kiện."
     attach-to-vehicle-title: Attach device to vehicle
     attach-device-to-vehicle-title: "Attach {deviceName} to vehicle"
     select-vehicle-warning: Select a vehicle to attach this device to.
@@ -2037,6 +2038,9 @@ trailer:
   connections:
     description: Tất cả các xe mà rơ-moóc này từng được nối, mới nhất trước.
     ongoing: Đang diễn ra
+    connected: "Đã kết nối {date}"
+    disconnected: "Đã ngắt kết nối {date}"
+    still-attached: Vẫn đang gắn
   equipment:
     description: Trang bị hiện đang gắn vào rơ-moóc này.
   telemetry:
@@ -2068,6 +2072,8 @@ trailer:
     attached: Đã nối
     detached: Chưa nối
     no-vehicle: Chưa nối với xe nào
+    towed-by: Được kéo bởi
+    position: "Vị trí {position}"
   connectivity:
     online: Trực tuyến
     recently_offline: Vừa ngoại tuyến

@@ -14,34 +14,42 @@ export default class ManagementVehiclesIndexDetailsController extends Controller
         const registeredTabs = this.menuService.getMenuItems('fleet-ops:component:vehicle:details');
         return [
             {
+                id: 'index',
                 route: 'management.vehicles.index.details.index',
                 label: 'Overview',
             },
             {
+                id: 'positions',
                 route: 'management.vehicles.index.details.positions',
                 label: 'Positions',
             },
             {
+                id: 'devices',
                 route: 'management.vehicles.index.details.devices',
                 label: 'Devices',
             },
             {
+                id: 'trailers',
                 route: 'management.vehicles.index.details.trailers',
                 label: this.intl.t('resource.trailers'),
             },
             {
+                id: 'equipment',
                 route: 'management.vehicles.index.details.equipment',
                 label: this.intl.t('resource.equipment'),
             },
             {
+                id: 'schedules',
                 route: 'management.vehicles.index.details.schedules',
                 label: 'Schedules',
             },
             {
+                id: 'work-orders',
                 route: 'management.vehicles.index.details.work-orders',
                 label: 'Work Orders',
             },
             {
+                id: 'maintenance-history',
                 route: 'management.vehicles.index.details.maintenance-history',
                 label: 'Maintenance',
             },

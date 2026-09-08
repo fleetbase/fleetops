@@ -12,14 +12,14 @@ export default class ManagementTrailersIndexDetailsController extends Controller
         const registeredTabs = this.menuService.getMenuItems('fleet-ops:component:trailer:details');
 
         return [
-            { route: 'management.trailers.index.details.index', label: this.intl.t('trailer.tabs.overview') },
-            { route: 'management.trailers.index.details.positions', label: this.intl.t('trailer.tabs.positions') },
-            { route: 'management.trailers.index.details.devices', label: this.intl.t('trailer.tabs.devices') },
-            { route: 'management.trailers.index.details.equipment', label: this.intl.t('trailer.tabs.equipment') },
-            { route: 'management.trailers.index.details.connections', label: this.intl.t('trailer.tabs.connections') },
-            { route: 'management.trailers.index.details.schedules', label: this.intl.t('trailer.tabs.schedules') },
-            { route: 'management.trailers.index.details.work-orders', label: this.intl.t('trailer.tabs.work-orders') },
-            { route: 'management.trailers.index.details.maintenance-history', label: this.intl.t('trailer.tabs.maintenance') },
+            { id: 'index', route: 'management.trailers.index.details.index', label: this.intl.t('trailer.tabs.overview') },
+            { id: 'positions', route: 'management.trailers.index.details.positions', label: this.intl.t('trailer.tabs.positions') },
+            { id: 'devices', route: 'management.trailers.index.details.devices', label: this.intl.t('trailer.tabs.devices') },
+            { id: 'equipment', route: 'management.trailers.index.details.equipment', label: this.intl.t('trailer.tabs.equipment') },
+            { id: 'connections', route: 'management.trailers.index.details.connections', label: this.intl.t('trailer.tabs.connections') },
+            { id: 'schedules', route: 'management.trailers.index.details.schedules', label: this.intl.t('trailer.tabs.schedules') },
+            { id: 'work-orders', route: 'management.trailers.index.details.work-orders', label: this.intl.t('trailer.tabs.work-orders') },
+            { id: 'maintenance-history', route: 'management.trailers.index.details.maintenance-history', label: this.intl.t('trailer.tabs.maintenance') },
             ...(isArray(registeredTabs) ? registeredTabs : []),
         ];
     }

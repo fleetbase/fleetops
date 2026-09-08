@@ -499,6 +499,7 @@ device:
     detach-from-vehicle: Detach from Vehicle
     attach-to-asset: Хөрөнгөд холбох
   prompts:
+    manager-description: "Энэ {resourceType}-д суурилуулсан телематик төхөөрөмжүүд. Байршил болон үйл явдлыг хүлээн авч эхлэхийн тулд төхөөрөмж холбоно уу."
     attach-to-vehicle-title: Attach device to vehicle
     attach-device-to-vehicle-title: "Attach {deviceName} to vehicle"
     select-vehicle-warning: Select a vehicle to attach this device to.
@@ -2210,6 +2211,9 @@ trailer:
   connections:
     description: Энэ чиргүүлтэй холбогдож байсан бүх тээврийн хэрэгсэл, хамгийн сүүлийнхээс эхлэн.
     ongoing: Үргэлжилж байна
+    connected: "{date}-нд холбогдсон"
+    disconnected: "{date}-нд салгасан"
+    still-attached: Одоо ч холбоотой
   equipment:
     description: Одоо энэ чиргүүлд холбогдсон тоног төхөөрөмж.
   telemetry:
@@ -2241,6 +2245,8 @@ trailer:
     attached: Холбогдсон
     detached: Салгасан
     no-vehicle: Тээврийн хэрэгсэлтэй холбогдоогүй
+    towed-by: Чирж буй
+    position: "Байрлал {position}"
   connectivity:
     online: Онлайн
     recently_offline: Саяхан офлайн болсон

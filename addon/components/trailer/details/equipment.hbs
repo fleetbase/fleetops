@@ -1,52 +1,25 @@
-<div class="trailer-details-equipment p-4">
-    <div class="flex flex-row items-center justify-between mb-3">
-        <div>
-            <h3 class="text-sm font-semibold text-gray-900 dark:text-gray-100">{{t "trailer.tabs.equipment"}}</h3>
-            <p class="text-xs text-gray-500 dark:text-gray-400">{{t "trailer.equipment.description"}}</p>
-        </div>
-        <Button @icon="plus" @text={{t "trailer.actions.attach-equipment"}} @size="xs" @type="primary" @onClick={{this.attach}} @permission="fleet-ops attach-equipment-for trailer" />
-    </div>
-
-    {{#if this.loadEquipment.isRunning}}
-        <div class="flex items-center justify-center py-10">
-            <Spinner />
-        </div>
-    {{else if this.equipment.length}}
-        <div class="overflow-x-auto">
-            <table class="min-w-full text-xs">
-                <thead>
-                    <tr class="border-b border-gray-200 dark:border-gray-700">
-                        <th class="text-left py-2 pr-4 font-semibold text-gray-500 uppercase tracking-wide">{{t "common.name"}}</th>
-                        <th class="text-left py-2 pr-4 font-semibold text-gray-500 uppercase tracking-wide">{{t "common.type"}}</th>
-                        <th class="text-left py-2 pr-4 font-semibold text-gray-500 uppercase tracking-wide">{{t "trailer.fields.serial-number"}}</th>
-                        <th class="text-left py-2 pr-4 font-semibold text-gray-500 uppercase tracking-wide">{{t "common.status"}}</th>
-                        <th class="py-2"></th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {{#each this.equipment as |item|}}
-                        <tr class="border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800">
-                            <td class="py-2 pr-4 font-medium">{{or item.name item.public_id}}</td>
-                            <td class="py-2 pr-4 text-gray-500">{{n-a (smart-humanize item.type)}}</td>
-                            <td class="py-2 pr-4 text-gray-500">{{n-a (or item.serial_number item.code)}}</td>
-                            <td class="py-2 pr-4"><Badge @status={{item.status}} /></td>
-                            <td class="py-2">
-                                <div class="flex flex-row items-center justify-end space-x-1">
-                                    <Button @icon="eye" @size="xs" @helpText={{t "common.view"}} @onClick={{fn this.view item}} @permission="fleet-ops view equipment" />
-                                    <Button @icon="unlink" @size="xs" @type="danger" @helpText={{t "trailer.actions.detach-equipment"}} @onClick={{fn this.detach item}} @permission="fleet-ops detach-equipment-for trailer" />
-                                </div>
-                            </td>
-                        </tr>
-                    {{/each}}
-                </tbody>
-            </table>
-        </div>
-    {{else}}
-        <div class="flex flex-col items-center justify-center py-10 text-gray-400 dark:text-gray-600">
-            <FaIcon @icon="toolbox" @size="2x" class="mb-3" />
-            <p class="text-sm font-semibold text-gray-600 dark:text-gray-300">{{t "trailer.empty.equipment"}}</p>
-            <p class="text-xs">{{t "trailer.empty.equipment-description"}}</p>
-            <Button @text={{t "trailer.actions.attach-equipment"}} @icon="plus" @size="xs" @type="primary" class="mt-3" @onClick={{this.attach}} @permission="fleet-ops attach-equipment-for trailer" />
-        </div>
-    {{/if}}
-</div>
+<AttachmentList
+    @title={{t "trailer.tabs.equipment"}}
+    @description={{t "trailer.equipment.description"}}
+    @actionText={{t "trailer.actions.attach-equipment"}}
+    @actionIcon="plus"
+    @onAction={{this.attach}}
+    @actionPermission="fleet-ops attach-equipment-for trailer"
+    @isLoading={{this.loadEquipment.isRunning}}
+    @items={{this.equipment}}
+    @emptyIcon="toolbox"
+    @emptyTitle={{t "trailer.empty.equipment"}}
+    @emptyDescription={{t "trailer.empty.equipment-description"}}
+    class="trailer-details-equipment"
+>
+    <:item as |item|>
+        <Equipment::Pill @equipment={{item}} @onClick={{fn this.view item}} />
+        {{#if item.status}}
+            <Badge @status={{item.status}} @size="xs" class="fleetops-attachment-list-item-badge" />
+        {{/if}}
+    </:item>
+    <:itemActions as |item|>
+        <Button @icon="eye" @size="xs" @helpText={{t "common.view"}} @onClick={{fn this.view item}} @permission="fleet-ops view equipment" />
+        <Button @icon="unlink" @size="xs" @type="danger" @helpText={{t "trailer.actions.detach-equipment"}} @onClick={{fn this.detach item}} @permission="fleet-ops detach-equipment-for trailer" />
+    </:itemActions>
+</AttachmentList>

@@ -271,6 +271,9 @@ trailer:
   connections:
     description: جميع المركبات التي رُبطت بها هذه المقطورة، الأحدث أولًا.
     ongoing: جارية
+    connected: "تم التوصيل {date}"
+    disconnected: "تم الفصل {date}"
+    still-attached: لا يزال متصلاً
   equipment:
     description: المعدات المربوطة حاليًا بهذه المقطورة.
   telemetry:
@@ -302,6 +305,8 @@ trailer:
     attached: مربوطة
     detached: مفصولة
     no-vehicle: غير مربوطة بمركبة
+    towed-by: مقطورة بواسطة
+    position: "الموضع {position}"
   connectivity:
     online: متصلة
     recently_offline: انقطعت مؤخرًا

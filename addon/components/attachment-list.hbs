@@ -1,0 +1,65 @@
+<div class="fleetops-attachment-list {{@wrapperClass}}" ...attributes>
+    <div class="fleetops-attachment-list-header">
+        <div class="min-w-0">
+            <h3 class="text-sm font-semibold text-gray-900 dark:text-gray-100">{{@title}}</h3>
+            {{#if @description}}
+                <p class="text-xs text-gray-500 dark:text-gray-400">{{@description}}</p>
+            {{/if}}
+        </div>
+        <div class="flex flex-row items-center space-x-2 shrink-0">
+            {{yield to="actions"}}
+            {{#if @actionText}}
+                <Button
+                    @icon={{or @actionIcon "plus"}}
+                    @text={{@actionText}}
+                    @size="xs"
+                    @type={{or @actionType "primary"}}
+                    @onClick={{@onAction}}
+                    @permission={{@actionPermission}}
+                    @disabled={{@actionDisabled}}
+                />
+            {{/if}}
+        </div>
+    </div>
+
+    {{#if @isLoading}}
+        <div class="fleetops-attachment-list-loading">
+            <Spinner />
+        </div>
+    {{else if @items.length}}
+        <div class="fleetops-attachment-list-items" role="list">
+            {{#each @items as |item index|}}
+                <div class="fleetops-attachment-list-item" role="listitem">
+                    <div class="fleetops-attachment-list-item-content">
+                        {{yield item index to="item"}}
+                    </div>
+                    {{#if (has-block "itemActions")}}
+                        <div class="fleetops-attachment-list-item-actions">
+                            {{yield item index to="itemActions"}}
+                        </div>
+                    {{/if}}
+                </div>
+            {{/each}}
+        </div>
+    {{else}}
+        <div class="fleetops-attachment-list-empty">
+            <FaIcon @icon={{or @emptyIcon "box-open"}} @size="2x" class="text-gray-400 dark:text-gray-500 mb-2" />
+            <h3 class="text-base font-semibold text-gray-700 dark:text-gray-300">{{@emptyTitle}}</h3>
+            {{#if @emptyDescription}}
+                <p class="text-sm text-gray-500 dark:text-gray-400">{{@emptyDescription}}</p>
+            {{/if}}
+            {{#if (and @actionText (not @hideEmptyAction))}}
+                <Button
+                    @icon={{or @actionIcon "plus"}}
+                    @text={{@actionText}}
+                    @size="xs"
+                    @type={{or @actionType "primary"}}
+                    @onClick={{@onAction}}
+                    @permission={{@actionPermission}}
+                    @disabled={{@actionDisabled}}
+                    class="mt-3"
+                />
+            {{/if}}
+        </div>
+    {{/if}}
+</div>

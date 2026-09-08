@@ -8534,3 +8534,288 @@ body[data-theme='dark'] .fleetbase-ai-create-order-preview__cancelled {
         animation: none;
     }
 }
+
+/* ── Trailer lifecycle, attachment & towing badges ──
+   ember-ui's badge palette has no entries for these values, so they would
+   otherwise render as unstyled `x-status-badge` elements. Colors follow the
+   ember-ui badge.css convention (800 background / 700 border / 100 text). */
+.status-badge.attached-status-badge > span,
+.status-badge.in-use-status-badge > span {
+    background-color: #1e40af;
+    border-color: #1d4ed8;
+    color: #dbeafe;
+}
+
+.status-badge.attached-status-badge > span svg,
+.status-badge.in-use-status-badge > span svg {
+    color: #93c5fd;
+}
+
+.status-badge.detached-status-badge > span,
+.status-badge.retired-status-badge > span {
+    background-color: #1f2937;
+    border-color: #374151;
+    color: #f3f4f6;
+}
+
+.status-badge.detached-status-badge > span svg,
+.status-badge.retired-status-badge > span svg {
+    color: #d1d5db;
+}
+
+.status-badge.out-of-service-status-badge > span {
+    background-color: #991b1b;
+    border-color: #b91c1c;
+    color: #fee2e2;
+}
+
+.status-badge.out-of-service-status-badge > span svg {
+    color: #fca5a5;
+}
+
+/* ── Attachment lists (devices, equipment, trailers, towing history) ── */
+.fleetops-attachment-list {
+    display: flex;
+    flex-direction: column;
+}
+
+.fleetops-attachment-list-header {
+    display: flex;
+    flex-direction: row;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 0.75rem;
+    padding: 1rem 1rem 0.75rem;
+}
+
+.fleetops-attachment-list-loading {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 2.5rem 0;
+}
+
+.fleetops-attachment-list-items {
+    display: flex;
+    flex-direction: column;
+}
+
+.fleetops-attachment-list-item {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    padding: 0.75rem 1rem;
+    border-top: 1px solid #e5e7eb;
+}
+
+.fleetops-attachment-list-item:last-child {
+    border-bottom: 1px solid #e5e7eb;
+}
+
+body[data-theme='dark'] .fleetops-attachment-list-item,
+body[data-theme='dark'] .fleetops-attachment-list-item:last-child {
+    border-color: #374151;
+}
+
+.fleetops-attachment-list-item-content {
+    display: flex;
+    flex-flow: row wrap;
+    align-items: center;
+    gap: 0.375rem 0.75rem;
+    min-width: 0;
+    flex: 1 1 auto;
+}
+
+.fleetops-attachment-list-item-actions {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 0.25rem;
+    flex-shrink: 0;
+}
+
+.fleetops-attachment-list-item-badge {
+    flex-shrink: 0;
+}
+
+.fleetops-attachment-list-item-meta {
+    display: flex;
+    flex-flow: row wrap;
+    align-items: center;
+    gap: 0.25rem 0.75rem;
+    min-width: 0;
+    font-size: 0.75rem;
+    line-height: 1rem;
+    color: #6b7280;
+}
+
+body[data-theme='dark'] .fleetops-attachment-list-item-meta {
+    color: #9ca3af;
+}
+
+.fleetops-attachment-list-item-meta-entry {
+    display: inline-flex;
+    align-items: center;
+    white-space: nowrap;
+}
+
+.fleetops-attachment-list-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    margin: 0 1rem 1rem;
+    padding: 3rem 1.5rem;
+    border-radius: 0.5rem;
+    border: 1px dashed #d1d5db;
+    background-color: #fff;
+}
+
+body[data-theme='dark'] .fleetops-attachment-list-empty {
+    border-color: #4b5563;
+    background-color: #1f2937;
+}
+
+/* Towing history entries: vehicle on the left, connect/disconnect timeline beside it. */
+.fleetops-towing-entry {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    width: 100%;
+    min-width: 0;
+}
+
+.fleetops-towing-entry-vehicle {
+    flex-shrink: 0;
+    min-width: 0;
+}
+
+.fleetops-towing-entry-timeline {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    min-width: 0;
+    flex: 1 1 auto;
+}
+
+@media (width >= 640px) {
+    .fleetops-towing-entry {
+        flex-direction: row;
+        align-items: center;
+    }
+
+    .fleetops-towing-entry-vehicle {
+        width: 14rem;
+    }
+
+    .fleetops-towing-entry-timeline {
+        padding-left: 0.75rem;
+        border-left: 2px solid #e5e7eb;
+    }
+
+    body[data-theme='dark'] .fleetops-towing-entry-timeline {
+        border-left-color: #374151;
+    }
+
+    .fleetops-towing-entry--active .fleetops-towing-entry-timeline {
+        border-left-color: #4ade80;
+    }
+
+    body[data-theme='dark'] .fleetops-towing-entry--active .fleetops-towing-entry-timeline {
+        border-left-color: #16a34a;
+    }
+}
+
+.fleetops-towing-entry-timeline-row {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.75rem;
+    line-height: 1rem;
+    color: #374151;
+}
+
+body[data-theme='dark'] .fleetops-towing-entry-timeline-row {
+    color: #e5e7eb;
+}
+
+/* Trailer card: image stage plus a padded summary strip so badges never sit on the raw body. */
+.trailer-card .trailer-card-media {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: #fff;
+}
+
+body[data-theme='dark'] .trailer-card .trailer-card-media {
+    background-color: rgb(17 24 39 / 40%);
+}
+
+.trailer-card .trailer-card-media img {
+    object-fit: contain;
+}
+
+.trailer-card .trailer-card-summary {
+    display: flex;
+    flex-direction: column;
+    gap: 0.375rem;
+    padding: 0.5rem;
+    border-top: 1px solid #e5e7eb;
+}
+
+body[data-theme='dark'] .trailer-card .trailer-card-summary {
+    border-top-color: #374151;
+}
+
+.trailer-card .trailer-card-badges {
+    display: flex;
+    flex-flow: row wrap;
+    align-items: center;
+    gap: 0.25rem;
+}
+
+.trailer-card .trailer-card-towing {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    min-width: 0;
+    font-size: 0.75rem;
+    line-height: 1rem;
+    color: #4b5563;
+}
+
+body[data-theme='dark'] .trailer-card .trailer-card-towing {
+    color: #d1d5db;
+}
+
+.trailer-card .trailer-card-towing-icon {
+    margin-right: 0.375rem;
+    flex-shrink: 0;
+}
+
+.trailer-card .trailer-card-towing-label {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.trailer-card .trailer-card-towing-vehicle {
+    margin-left: 0.25rem;
+    font-weight: 500;
+    color: #2563eb;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.trailer-card .trailer-card-towing-vehicle:hover {
+    opacity: 0.75;
+}
+
+body[data-theme='dark'] .trailer-card .trailer-card-towing-vehicle {
+    color: #60a5fa;
+}

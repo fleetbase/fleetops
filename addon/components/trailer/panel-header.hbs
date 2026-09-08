@@ -3,8 +3,8 @@
         <div class="flex flex-row space-x-3">
             <div class="flex items-start justify-start rounded-full">
                 <Image
-                    src={{or @resource.photo_url (config "defaultValues.vehicleImage")}}
-                    @fallbackSrc={{config "defaultValues.vehicleImage"}}
+                    src={{or @resource.photo_url (trailer-placeholder-image)}}
+                    @fallbackSrc={{(trailer-placeholder-image)}}
                     alt={{@resource.displayName}}
                     height="48"
                     width="48"

@@ -499,6 +499,7 @@ device:
     detach-from-vehicle: Detach from Vehicle
     attach-to-asset: Подключить к активу
   prompts:
+    manager-description: "Телематические устройства, установленные на этом {resourceType}. Подключите устройство, чтобы получать координаты и события."
     attach-to-vehicle-title: Attach device to vehicle
     attach-device-to-vehicle-title: "Attach {deviceName} to vehicle"
     select-vehicle-warning: Select a vehicle to attach this device to.
@@ -2224,6 +2225,9 @@ trailer:
   connections:
     description: Все транспортные средства, к которым был прицеплен этот прицеп, начиная с последнего.
     ongoing: Текущая
+    connected: "Подключён {date}"
+    disconnected: "Отключён {date}"
+    still-attached: Всё ещё прицеплен
   equipment:
     description: Оборудование, подключённое к этому прицепу в данный момент.
   telemetry:
@@ -2255,6 +2259,8 @@ trailer:
     attached: Прицеплен
     detached: Отцеплен
     no-vehicle: Не прицеплен к транспортному средству
+    towed-by: Буксируется
+    position: "Позиция {position}"
   connectivity:
     online: В сети
     recently_offline: Недавно не в сети

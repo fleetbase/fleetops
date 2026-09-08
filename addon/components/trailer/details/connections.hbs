@@ -1,68 +1,57 @@
-<div class="trailer-details-connections p-4">
-    <div class="flex flex-row items-center justify-between mb-3">
-        <div>
-            <h3 class="text-sm font-semibold text-gray-900 dark:text-gray-100">{{t "trailer.tabs.connections"}}</h3>
-            <p class="text-xs text-gray-500 dark:text-gray-400">{{t "trailer.connections.description"}}</p>
+<AttachmentList
+    @title={{t "trailer.tabs.connections"}}
+    @description={{t "trailer.connections.description"}}
+    @actionText={{if this.isAttached (t "trailer.actions.detach-vehicle") (t "trailer.actions.attach-vehicle")}}
+    @actionIcon={{if this.isAttached "unlink" "link"}}
+    @actionType={{if this.isAttached "danger" "primary"}}
+    @onAction={{if this.isAttached this.detachVehicle this.attachVehicle}}
+    @actionPermission={{if this.isAttached "fleet-ops detach-vehicle-for trailer" "fleet-ops attach-vehicle-for trailer"}}
+    @hideEmptyAction={{this.isAttached}}
+    @isLoading={{this.loadConnections.isRunning}}
+    @items={{this.connections}}
+    @emptyIcon="link-slash"
+    @emptyTitle={{t "trailer.empty.connections"}}
+    @emptyDescription={{t "trailer.empty.connections-description"}}
+    class="trailer-details-connections"
+>
+    <:item as |connection|>
+        <div class="fleetops-towing-entry {{if connection.isActive 'fleetops-towing-entry--active'}}">
+            <div class="fleetops-towing-entry-vehicle">
+                {{#if connection.vehicle}}
+                    <Vehicle::Pill @vehicle={{connection.vehicle}} @onClick={{fn this.viewVehicle connection.vehicle}} @noTooltip={{true}} />
+                {{else}}
+                    <span class="text-sm text-gray-400 dark:text-gray-500">{{t "trailer.attachment.no-vehicle"}}</span>
+                {{/if}}
+            </div>
+            <div class="fleetops-towing-entry-timeline">
+                <div class="fleetops-towing-entry-timeline-row">
+                    <FaIcon @icon="link" class="text-green-500 dark:text-green-400" />
+                    <span>{{t "trailer.connections.connected" date=(format-date-fns connection.connected_at "dd MMM yyyy, HH:mm")}}</span>
+                </div>
+                <div class="fleetops-towing-entry-timeline-row">
+                    {{#if connection.disconnected_at}}
+                        <FaIcon @icon="link-slash" class="text-gray-400 dark:text-gray-500" />
+                        <span>{{t "trailer.connections.disconnected" date=(format-date-fns connection.disconnected_at "dd MMM yyyy, HH:mm")}}</span>
+                    {{else}}
+                        <FaIcon @icon="circle" @size="2xs" class="text-green-500 dark:text-green-400 animate-pulse" />
+                        <span class="text-green-600 dark:text-green-400 font-medium">{{t "trailer.connections.still-attached"}}</span>
+                    {{/if}}
+                </div>
+                <div class="fleetops-attachment-list-item-meta">
+                    {{#if connection.position}}
+                        <span class="fleetops-attachment-list-item-meta-entry">{{t "trailer.attachment.position" position=connection.position}}</span>
+                    {{/if}}
+                    {{#if connection.duration}}
+                        <span class="fleetops-attachment-list-item-meta-entry"><FaIcon @icon="clock" class="mr-1" />{{connection.duration}}</span>
+                    {{/if}}
+                    {{#if connection.source}}
+                        <span class="fleetops-attachment-list-item-meta-entry">{{smart-humanize connection.source}}</span>
+                    {{/if}}
+                </div>
+            </div>
         </div>
-        <div class="flex flex-row items-center space-x-2">
-            {{#if this.isAttached}}
-                <Button @icon="unlink" @text={{t "trailer.actions.detach-vehicle"}} @size="xs" @type="danger" @onClick={{this.detachVehicle}} @permission="fleet-ops detach-vehicle-for trailer" />
-            {{else}}
-                <Button @icon="link" @text={{t "trailer.actions.attach-vehicle"}} @size="xs" @type="primary" @onClick={{this.attachVehicle}} @permission="fleet-ops attach-vehicle-for trailer" />
-            {{/if}}
-        </div>
-    </div>
-
-    {{#if this.loadConnections.isRunning}}
-        <div class="flex items-center justify-center py-10">
-            <Spinner />
-        </div>
-    {{else if this.connections.length}}
-        <div class="overflow-x-auto">
-            <table class="min-w-full text-xs">
-                <thead>
-                    <tr class="border-b border-gray-200 dark:border-gray-700">
-                        <th class="text-left py-2 pr-4 font-semibold text-gray-500 uppercase tracking-wide">{{t "trailer.fields.vehicle"}}</th>
-                        <th class="text-left py-2 pr-4 font-semibold text-gray-500 uppercase tracking-wide">{{t "trailer.fields.position"}}</th>
-                        <th class="text-left py-2 pr-4 font-semibold text-gray-500 uppercase tracking-wide">{{t "trailer.fields.connected-at"}}</th>
-                        <th class="text-left py-2 pr-4 font-semibold text-gray-500 uppercase tracking-wide">{{t "trailer.fields.disconnected-at"}}</th>
-                        <th class="text-left py-2 pr-4 font-semibold text-gray-500 uppercase tracking-wide">{{t "trailer.fields.duration"}}</th>
-                        <th class="text-left py-2 pr-4 font-semibold text-gray-500 uppercase tracking-wide">{{t "trailer.fields.source"}}</th>
-                        <th class="text-left py-2 pr-4 font-semibold text-gray-500 uppercase tracking-wide">{{t "trailer.fields.status"}}</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {{#each this.connections as |connection|}}
-                        <tr class="border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800 {{if connection.isActive 'bg-green-50/40 dark:bg-green-900/10'}}">
-                            <td class="py-2 pr-4 font-medium">
-                                {{#if connection.vehicle}}
-                                    <a href="javascript:;" class="text-blue-600 dark:text-blue-400 hover:opacity-50" {{on "click" (fn this.viewVehicle connection.vehicle)}}>{{or connection.vehicle.displayName connection.vehicle.display_name connection.vehicle.name}}</a>
-                                    {{#if connection.vehicle.plate_number}}<span class="ml-1 text-gray-400">({{connection.vehicle.plate_number}})</span>{{/if}}
-                                {{else}}
-                                    <span class="text-gray-400">{{t "trailer.attachment.no-vehicle"}}</span>
-                                {{/if}}
-                            </td>
-                            <td class="py-2 pr-4 text-gray-500">{{n-a connection.position}}</td>
-                            <td class="py-2 pr-4 text-gray-500">{{n-a (format-date-fns connection.connected_at "dd MMM yyyy, HH:mm")}}</td>
-                            <td class="py-2 pr-4 text-gray-500">{{#if connection.disconnected_at}}{{format-date-fns connection.disconnected_at "dd MMM yyyy, HH:mm"}}{{else}}<span class="text-green-600 dark:text-green-400">{{t "trailer.connections.ongoing"}}</span>{{/if}}</td>
-                            <td class="py-2 pr-4 text-gray-500">{{n-a connection.duration}}</td>
-                            <td class="py-2 pr-4 text-gray-500">{{n-a (smart-humanize connection.source)}}</td>
-                            <td class="py-2 pr-4">
-                                <Badge @status={{if connection.isActive "attached" "detached"}} @icon={{if connection.isActive "link" "link-slash"}} @text={{t (concat "trailer.attachment." (if connection.isActive "attached" "detached"))}} />
-                            </td>
-                        </tr>
-                    {{/each}}
-                </tbody>
-            </table>
-        </div>
-    {{else}}
-        <div class="flex flex-col items-center justify-center py-10 text-gray-400 dark:text-gray-600">
-            <FaIcon @icon="link-slash" @size="2x" class="mb-3" />
-            <p class="text-sm font-semibold text-gray-600 dark:text-gray-300">{{t "trailer.empty.connections"}}</p>
-            <p class="text-xs">{{t "trailer.empty.connections-description"}}</p>
-            {{#unless this.isAttached}}
-                <Button @text={{t "trailer.actions.attach-vehicle"}} @icon="link" @size="xs" @type="primary" class="mt-3" @onClick={{this.attachVehicle}} @permission="fleet-ops attach-vehicle-for trailer" />
-            {{/unless}}
-        </div>
-    {{/if}}
-</div>
+    </:item>
+    <:itemActions as |connection|>
+        <Badge @status={{if connection.isActive "attached" "detached"}} @size="xs" @icon={{if connection.isActive "link" "link-slash"}} @text={{t (concat "trailer.attachment." (if connection.isActive "attached" "detached"))}} />
+    </:itemActions>
+</AttachmentList>

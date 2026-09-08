@@ -501,6 +501,7 @@ device:
     detach-from-vehicle: Detach from Vehicle
     attach-to-asset: Conectar ao ativo
   prompts:
+    manager-description: "Dispositivos telemáticos instalados neste {resourceType}. Vincule um dispositivo para começar a receber posições e eventos."
     attach-to-vehicle-title: Attach device to vehicle
     attach-device-to-vehicle-title: "Attach {deviceName} to vehicle"
     select-vehicle-warning: Select a vehicle to attach this device to.
@@ -2231,6 +2232,9 @@ trailer:
   connections:
     description: Todos os veículos aos quais este reboque foi engatado, do mais recente ao mais antigo.
     ongoing: Em andamento
+    connected: "Conectado em {date}"
+    disconnected: "Desconectado em {date}"
+    still-attached: Ainda acoplado
   equipment:
     description: Equipamentos atualmente conectados a este reboque.
   telemetry:
@@ -2262,6 +2266,8 @@ trailer:
     attached: Engatado
     detached: Desengatado
     no-vehicle: Não engatado a nenhum veículo
+    towed-by: Rebocado por
+    position: "Posição {position}"
   connectivity:
     online: Online
     recently_offline: Recentemente offline

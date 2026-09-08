@@ -14,6 +14,7 @@ export default class DeviceManagerComponent extends Component {
     @service modalsManager;
     @service notifications;
     @service intl;
+    @service deviceActions;
     @tracked devices = [];
 
     get resourceName() {
@@ -72,6 +73,14 @@ export default class DeviceManagerComponent extends Component {
                 }
             },
         });
+    }
+
+    @action viewDevice(device) {
+        if (this.deviceActions.panel?.view) {
+            return this.deviceActions.panel.view(device);
+        }
+
+        return this.deviceActions.transition.view(device);
     }
 
     @action removeDevice(device) {
