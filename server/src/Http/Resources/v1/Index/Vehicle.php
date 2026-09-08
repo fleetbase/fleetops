@@ -47,6 +47,7 @@ class Vehicle extends FleetbaseResource
             'speed'                 => (int) data_get($this, 'speed', 0),
             'online'                => (bool) data_get($this, 'online', false),
             'devices'               => $this->whenLoaded('devices', fn () => $this->compactDevices()),
+            'trailers'              => $this->whenLoaded('currentTrailers', fn () => $this->compactTrailers()),
             'assigned_orders_count' => $this->when($isInternal, $this->assignedOrdersCount()),
 
             // Meta flag to indicate this is an index resource
@@ -80,6 +81,28 @@ class Vehicle extends FleetbaseResource
                 'imei'          => $device->imei,
                 'provider'      => $device->provider,
                 'status'        => $device->status,
+            ]
+        )->values()->all();
+    }
+
+    /**
+     * Trailers currently coupled to the vehicle, compacted for map popovers.
+     */
+    protected function compactTrailers(): array
+    {
+        return $this->currentTrailers->map(
+            fn ($trailer) => [
+                'id'                  => $trailer->uuid,
+                'uuid'                => $trailer->uuid,
+                'public_id'           => $trailer->public_id,
+                'name'                => $trailer->name,
+                'display_name'        => $trailer->display_name,
+                'type'                => $trailer->type,
+                'plate_number'        => $trailer->plate_number,
+                'status'              => $trailer->status,
+                'attachment_state'    => 'attached',
+                'connectivity_status' => $trailer->connectivity_status,
+                'online'              => (bool) $trailer->online,
             ]
         )->values()->all();
     }

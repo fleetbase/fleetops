@@ -230,6 +230,32 @@
                                         <div class="text-[11px] text-white leading-tight whitespace-normal break-words">{{n-a vehicle.driver_name}}</div>
                                     </div>
                                     <div class="rounded bg-gray-900 shadow-md px-1.5 py-1 min-w-0">
+                                        <div class="text-[9px] font-semibold uppercase text-gray-400 leading-none">{{t "resource.trailers"}}</div>
+                                        <div class="text-[11px] text-white leading-tight whitespace-normal break-words">
+                                            {{#each vehicle.trailers as |trailer|}}
+                                                <div class="flex items-center gap-1 min-w-0">
+                                                    <span class="inline-block w-1.5 h-1.5 rounded-full shrink-0 {{if trailer.online 'bg-green-400' 'bg-gray-500'}}"></span>
+                                                    <span class="truncate">{{or trailer.displayName trailer.display_name trailer.name trailer.public_id}}</span>
+                                                </div>
+                                            {{else}}
+                                                -
+                                            {{/each}}
+                                        </div>
+                                    </div>
+                                    <div class="rounded bg-gray-900 shadow-md px-1.5 py-1 min-w-0">
+                                        <div class="text-[9px] font-semibold uppercase text-gray-400 leading-none">{{t "resource.devices"}}</div>
+                                        <div class="text-[11px] text-white leading-tight whitespace-normal break-words">
+                                            {{#each vehicle.devices as |device|}}
+                                                <div class="flex items-center gap-1 min-w-0">
+                                                    <span class="inline-block w-1.5 h-1.5 rounded-full shrink-0 {{if device.online 'bg-green-400' 'bg-gray-500'}}"></span>
+                                                    <span class="truncate">{{or device.displayName device.display_name device.name device.device_id device.public_id}}</span>
+                                                </div>
+                                            {{else}}
+                                                -
+                                            {{/each}}
+                                        </div>
+                                    </div>
+                                    <div class="rounded bg-gray-900 shadow-md px-1.5 py-1 min-w-0">
                                         <div class="text-[9px] font-semibold uppercase text-gray-400 leading-none">Order</div>
                                         <div class="text-[11px] text-white leading-tight whitespace-normal break-words">{{n-a vehicle.meta.current_order_reference}}</div>
                                     </div>
@@ -275,6 +301,32 @@
                                     <div class="rounded bg-gray-900 shadow-md px-1.5 py-1 min-w-0">
                                         <div class="text-[9px] font-semibold uppercase text-gray-400 leading-none">Driver</div>
                                         <div class="text-[11px] text-white leading-tight whitespace-normal break-words">{{n-a vehicle.driver_name}}</div>
+                                    </div>
+                                    <div class="rounded bg-gray-900 shadow-md px-1.5 py-1 min-w-0">
+                                        <div class="text-[9px] font-semibold uppercase text-gray-400 leading-none">{{t "resource.trailers"}}</div>
+                                        <div class="text-[11px] text-white leading-tight whitespace-normal break-words">
+                                            {{#each vehicle.trailers as |trailer|}}
+                                                <div class="flex items-center gap-1 min-w-0">
+                                                    <span class="inline-block w-1.5 h-1.5 rounded-full shrink-0 {{if trailer.online 'bg-green-400' 'bg-gray-500'}}"></span>
+                                                    <span class="truncate">{{or trailer.displayName trailer.display_name trailer.name trailer.public_id}}</span>
+                                                </div>
+                                            {{else}}
+                                                -
+                                            {{/each}}
+                                        </div>
+                                    </div>
+                                    <div class="rounded bg-gray-900 shadow-md px-1.5 py-1 min-w-0">
+                                        <div class="text-[9px] font-semibold uppercase text-gray-400 leading-none">{{t "resource.devices"}}</div>
+                                        <div class="text-[11px] text-white leading-tight whitespace-normal break-words">
+                                            {{#each vehicle.devices as |device|}}
+                                                <div class="flex items-center gap-1 min-w-0">
+                                                    <span class="inline-block w-1.5 h-1.5 rounded-full shrink-0 {{if device.online 'bg-green-400' 'bg-gray-500'}}"></span>
+                                                    <span class="truncate">{{or device.displayName device.display_name device.name device.device_id device.public_id}}</span>
+                                                </div>
+                                            {{else}}
+                                                -
+                                            {{/each}}
+                                        </div>
                                     </div>
                                     <div class="rounded bg-gray-900 shadow-md px-1.5 py-1 min-w-0">
                                         <div class="text-[9px] font-semibold uppercase text-gray-400 leading-none">Order</div>
