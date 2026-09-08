@@ -1,6 +1,8 @@
 fleet-ops:
   extension-name: Fleet-Ops
 common:
+  online: Онлайн
+  offline: Офлайн
   proof-of-delivery: Хүргэлтийн баталгаа
   ad-hoc: Тусгай
   bulk-dispatch: Бөөнөөр илгээх
@@ -1030,6 +1032,7 @@ service-rate:
     cod-fee-label: Нийлүүлэлтийн төлбөрийн шошго
 vehicle:
   fields:
+    updated-at: Сүүлд шинэчилсэн
     avatar: Профайл зураг
     driver-assigned: Жолооч томилогдсон
     make: Үйлдвэрлэгч

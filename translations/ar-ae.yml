@@ -2007,5 +2007,7 @@ vehicle:
     select-trailer-warning: اختر مقطورة لربطها بهذه المركبة.
     attach-trailer-success: "تم ربط {trailerName} بـ {vehicleName}."
 common:
+  online: متصل
+  offline: غير متصل
   "yes": نعم
   "no": لا

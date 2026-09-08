@@ -1,6 +1,8 @@
 fleet-ops:
   extension-name: Fleet-Ops
 common:
+  online: En ligne
+  offline: Hors ligne
   proof-of-delivery: Preuve de livraison
   ad-hoc: Ad hoc
   bulk-dispatch: Envoi en masse
@@ -1060,6 +1062,7 @@ service-rate:
     cod-fee-label: Libellé des frais contre remboursement
 vehicle:
   fields:
+    updated-at: Dernière mise à jour
     avatar: Avatar
     driver-assigned: Conducteur assigné
     make: Marque

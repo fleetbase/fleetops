@@ -1,6 +1,8 @@
 fleet-ops:
   extension-name: Fleet-Ops
 common:
+  online: Онлайн
+  offline: Офлайн
   proof-of-delivery: Подтверждение доставки
   ad-hoc: По необходимости
   bulk-dispatch: Массовая отправка
@@ -1033,6 +1035,7 @@ service-rate:
     cod-fee-label: Надпись платы за наложенный платёж
 vehicle:
   fields:
+    updated-at: Последнее обновление
     avatar: Аватар
     driver-assigned: Водитель назначен
     make: Марка

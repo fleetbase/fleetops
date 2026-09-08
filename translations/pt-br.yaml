@@ -1,6 +1,8 @@
 fleet-ops:
   extension-name: Fleet-Ops
 common:
+  online: Online
+  offline: Offline
   proof-of-delivery: Comprovante de Entrega
   ad-hoc: Ad-Hoc
   bulk-dispatch: Despacho em Massa
@@ -1038,6 +1040,7 @@ service-rate:
     cod-fee-label: Etiqueta de Taxa COD
 vehicle:
   fields:
+    updated-at: Última atualização
     avatar: Avatar
     driver-assigned: Motorista Atribuído
     make: Marca

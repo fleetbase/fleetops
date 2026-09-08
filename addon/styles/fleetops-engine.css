@@ -8743,23 +8743,23 @@ body[data-theme='dark'] .fleetops-towing-entry-timeline-row {
     color: #e5e7eb;
 }
 
-/* Trailer card: image stage plus a padded summary strip so badges never sit on the raw body. */
-.trailer-card .trailer-card-media {
+/* Asset cards (trailers, vehicles): image stage plus a padded summary strip so badges never sit on the raw body. */
+.fleetops-asset-card .fleetops-asset-card-media {
     display: flex;
     align-items: center;
     justify-content: center;
     background-color: #fff;
 }
 
-body[data-theme='dark'] .trailer-card .trailer-card-media {
+body[data-theme='dark'] .fleetops-asset-card .fleetops-asset-card-media {
     background-color: rgb(17 24 39 / 40%);
 }
 
-.trailer-card .trailer-card-media img {
+.fleetops-asset-card .fleetops-asset-card-media img {
     object-fit: contain;
 }
 
-.trailer-card .trailer-card-summary {
+.fleetops-asset-card .fleetops-asset-card-summary {
     display: flex;
     flex-direction: column;
     gap: 0.375rem;
@@ -8767,18 +8767,18 @@ body[data-theme='dark'] .trailer-card .trailer-card-media {
     border-top: 1px solid #e5e7eb;
 }
 
-body[data-theme='dark'] .trailer-card .trailer-card-summary {
+body[data-theme='dark'] .fleetops-asset-card .fleetops-asset-card-summary {
     border-top-color: #374151;
 }
 
-.trailer-card .trailer-card-badges {
+.fleetops-asset-card .fleetops-asset-card-badges {
     display: flex;
     flex-flow: row wrap;
     align-items: center;
     gap: 0.25rem;
 }
 
-.trailer-card .trailer-card-towing {
+.fleetops-asset-card .fleetops-asset-card-link-row {
     display: flex;
     flex-direction: row;
     align-items: center;
@@ -8788,22 +8788,22 @@ body[data-theme='dark'] .trailer-card .trailer-card-summary {
     color: #4b5563;
 }
 
-body[data-theme='dark'] .trailer-card .trailer-card-towing {
+body[data-theme='dark'] .fleetops-asset-card .fleetops-asset-card-link-row {
     color: #d1d5db;
 }
 
-.trailer-card .trailer-card-towing-icon {
+.fleetops-asset-card .fleetops-asset-card-link-icon {
     margin-right: 0.375rem;
     flex-shrink: 0;
 }
 
-.trailer-card .trailer-card-towing-label {
+.fleetops-asset-card .fleetops-asset-card-link-label {
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
 }
 
-.trailer-card .trailer-card-towing-vehicle {
+.fleetops-asset-card .fleetops-asset-card-link {
     margin-left: 0.25rem;
     font-weight: 500;
     color: #2563eb;
@@ -8812,10 +8812,10 @@ body[data-theme='dark'] .trailer-card .trailer-card-towing {
     white-space: nowrap;
 }
 
-.trailer-card .trailer-card-towing-vehicle:hover {
+.fleetops-asset-card .fleetops-asset-card-link:hover {
     opacity: 0.75;
 }
 
-body[data-theme='dark'] .trailer-card .trailer-card-towing-vehicle {
+body[data-theme='dark'] .fleetops-asset-card .fleetops-asset-card-link {
     color: #60a5fa;
 }

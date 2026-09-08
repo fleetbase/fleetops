@@ -2,6 +2,8 @@ fleet-ops:
   extension-name: Fleet-Ops
 
 common:
+  online: En línea
+  offline: Desconectado
   proof-of-delivery: Prueba de entrega
   ad-hoc: Ad hoc
   bulk-dispatch: Envío masivo
@@ -987,6 +989,7 @@ service-rate:
 
 vehicle:
   fields:
+    updated-at: Última actualización
     avatar: Avatar
     driver-assigned: Conductor asignado
     make: Hacer

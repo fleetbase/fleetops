@@ -1,4 +1,4 @@
-<Layout::Resource::Card class="trailer-card" ...attributes as |Card|>
+<Layout::Resource::Card class="fleetops-asset-card trailer-card" ...attributes as |Card|>
     <Card.header class={{@headerClass}}>
         <RegistryYield @registry="fleet-ops:component:trailer:card:header:start" as |RegistryComponent|>
             <RegistryComponent @resource={{@resource}} />
@@ -16,22 +16,22 @@
         </RegistryYield>
     </Card.header>
     <Card.body class={{@bodyClass}}>
-        <div class="trailer-card-media">
+        <div class="fleetops-asset-card-media">
             <Image src={{or @resource.photo_url (trailer-placeholder-image)}} @fallbackSrc={{(trailer-placeholder-image)}} alt={{@resource.displayName}} class="card-img-lg" />
         </div>
-        <div class="trailer-card-summary">
-            <div class="trailer-card-badges">
+        <div class="fleetops-asset-card-summary">
+            <div class="fleetops-asset-card-badges">
                 <Badge @status={{or @resource.status "available"}} @size="xs" @text={{t (concat "trailer.statuses." (or @resource.status "available"))}} />
                 <Badge @status={{or @resource.connectivity_status "never_connected"}} @size="xs" @text={{t (concat "trailer.connectivity." (or @resource.connectivity_status "never_connected"))}} />
             </div>
-            <div class="trailer-card-towing">
+            <div class="fleetops-asset-card-link-row">
                 {{#if @resource.isAttached}}
-                    <FaIcon @icon="link" class="trailer-card-towing-icon text-blue-500 dark:text-blue-400" />
-                    <span class="trailer-card-towing-label">{{t "trailer.attachment.towed-by"}}</span>
-                    <a href="javascript:;" class="trailer-card-towing-vehicle" {{on "click" this.viewVehicle}}>{{n-a @resource.current_vehicle_name}}</a>
+                    <FaIcon @icon="link" class="fleetops-asset-card-link-icon text-blue-500 dark:text-blue-400" />
+                    <span class="fleetops-asset-card-link-label">{{t "trailer.attachment.towed-by"}}</span>
+                    <a href="javascript:;" class="fleetops-asset-card-link" {{on "click" this.viewVehicle}}>{{n-a @resource.current_vehicle_name}}</a>
                 {{else}}
-                    <FaIcon @icon="link-slash" class="trailer-card-towing-icon text-gray-400 dark:text-gray-500" />
-                    <span class="trailer-card-towing-label">{{t "trailer.attachment.no-vehicle"}}</span>
+                    <FaIcon @icon="link-slash" class="fleetops-asset-card-link-icon text-gray-400 dark:text-gray-500" />
+                    <span class="fleetops-asset-card-link-label">{{t "trailer.attachment.no-vehicle"}}</span>
                 {{/if}}
             </div>
         </div>

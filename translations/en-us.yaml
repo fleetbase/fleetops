@@ -57,6 +57,7 @@ common:
     optional: Optional
     unauthorized-access: You are not authorized to access this resource.
     online: Online
+    offline: Offline
     refresh: Refresh
     loading-route: Loading route...
     hover-to-load-route: Loading route preview...
@@ -1399,6 +1400,7 @@ service-rate:
 
 vehicle:
     fields:
+        updated-at: Last updated
         avatar: Avatar
         driver-assigned: Driver Assigned
         make: Make

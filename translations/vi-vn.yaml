@@ -1631,6 +1631,8 @@ scheduler:
   notes-placeholder: Optional additional notes
 
 common:
+  online: Trực tuyến
+  offline: Ngoại tuyến
   current-job: Current Job
   "yes": Có
   "no": Không
