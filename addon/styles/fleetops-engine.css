@@ -8854,3 +8854,32 @@ body[data-theme='dark'] .filter-multi-model > .clear-button {
     width: 100%;
     min-width: 0;
 }
+
+/* The small form-input height clips the multiple trigger and turns it into a scroller
+   before anything is selected; let it start at the input height and grow with chips. */
+.filter-multi-model .ember-power-select-multiple-trigger {
+    display: flex;
+    align-items: center;
+    height: auto !important;
+    min-height: 2.125rem;
+    max-height: none !important;
+    overflow: visible !important;
+    padding-top: 0.125rem;
+    padding-bottom: 0.125rem;
+    padding-right: 2.5rem;
+}
+
+.filter-multi-model .ember-power-select-multiple-options {
+    flex: 1 1 auto;
+    min-width: 0;
+    gap: 0.125rem;
+}
+
+.filter-multi-model .ember-power-select-multiple-option {
+    margin: 0.125rem 0.125rem 0.125rem 0;
+}
+
+.filter-multi-model .ember-power-select-trigger-multiple-input {
+    height: 1.625rem;
+    min-width: 4rem;
+}
