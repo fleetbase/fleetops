@@ -26,7 +26,7 @@
             <RegistryComponent @order={{@resource}} @resource={{@resource}} />
         </RegistryYield>
         <div class="flex flex-row items-center justify-between w-full">
-            <Badge @status={{or this.statusValue "default"}} @size="xs" data-test-driver-status-badge>{{this.statusLabel}}</Badge>
+            <Badge @status={{or this.statusValue "default"}} @text={{this.statusLabel}} @size="xs" data-test-driver-status-badge />
             <div class="flex flex-row items-center space-x-1">
                 <Button @icon="eye" @size="xs" @helpText={{t "common.view"}} @onClick={{fn this.driverActions.transition.view @resource}} @permission="fleet-ops view driver" />
                 <Button @icon="pencil" @size="xs" @helpText={{t "common.edit"}} @onClick={{fn this.driverActions.transition.edit @resource}} @permission="fleet-ops update driver" />

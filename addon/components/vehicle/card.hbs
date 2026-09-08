@@ -16,7 +16,7 @@
         </RegistryYield>
     </Card.header>
     <Card.body class="{{@bodyClass}} h-40 overflow-hidden">
-        <Image src={{or @resource.photo_url (config "defaultValues.vehicleImage")}} @fallbackSrc={{config "defaultValues.vehicleImage"}} alt={{or @resource.name @resource.yearMakeModel}} class="fleetops-card-image fleetops-card-image--contain" />
+        <Image src={{or @resource.photo_url (config "defaultValues.vehicleImage")}} @fallbackSrc={{config "defaultValues.vehicleImage"}} alt={{or @resource.name @resource.yearMakeModel}} class="fleetops-card-image fleetops-card-image--cover" />
         {{#if (has-block "body")}}
             {{yield to="body"}}
         {{/if}}
