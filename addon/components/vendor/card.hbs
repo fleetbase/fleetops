@@ -1,0 +1,58 @@
+<Layout::Resource::Card class="fleetops-resource-card vendor-card" ...attributes as |Card|>
+    <Card.header class={{@headerClass}}>
+        <RegistryYield @registry="fleet-ops:component:vendor:card:header:start" as |RegistryComponent|>
+            <RegistryComponent @resource={{@resource}} />
+        </RegistryYield>
+        <div class="fleetops-card-title">
+            <div class="font-semibold flex-1 truncate">{{n-a @resource.name}}</div>
+        </div>
+        <div class="text-gray-400 dark:text-gray-500 text-sm w-full truncate">{{n-a @resource.internal_id @resource.business_id @resource.public_id}}</div>
+        {{#if (has-block "header")}}
+            {{yield to="header"}}
+        {{/if}}
+        <RegistryYield @registry="fleet-ops:component:vendor:card:header:end" as |RegistryComponent|>
+            <RegistryComponent @resource={{@resource}} />
+        </RegistryYield>
+    </Card.header>
+    <Card.body class="{{@bodyClass}} h-40 overflow-hidden">
+        <Image src={{or @resource.logo_url (config "defaultValues.vendorImage") (config "defaultValues.placeholderImage")}} @fallbackSrc={{config "defaultValues.placeholderImage"}} alt={{@resource.name}} class="fleetops-card-image fleetops-card-image--contain" />
+        {{#if (has-block "body")}}
+            {{yield to="body"}}
+        {{/if}}
+    </Card.body>
+    <Card.footer class={{@footerClass}}>
+        <RegistryYield @registry="fleet-ops:component:vendor:card:footer:start" as |RegistryComponent|>
+            <RegistryComponent @resource={{@resource}} />
+        </RegistryYield>
+        <div class="flex flex-row items-center justify-between w-full">
+            <Badge @status={{or @resource.status "default"}} @size="xs" />
+            <div class="flex flex-row items-center space-x-1">
+                <Button @icon="eye" @size="xs" @helpText={{t "common.view"}} @onClick={{fn this.vendorActions.transition.view @resource}} @permission="fleet-ops view vendor" />
+                <Button @icon="pencil" @size="xs" @helpText={{t "common.edit"}} @onClick={{fn this.vendorActions.transition.edit @resource}} @permission="fleet-ops update vendor" />
+                <Button @icon="trash" @size="xs" @type="danger" @helpText={{t "common.delete"}} @onClick={{fn this.vendorActions.delete @resource}} @permission="fleet-ops delete vendor" />
+            </div>
+        </div>
+        <RegistryYield @registry="fleet-ops:component:vendor:card:footer:end" as |RegistryComponent|>
+            <RegistryComponent @resource={{@resource}} />
+        </RegistryYield>
+        {{#if (has-block "footer")}}
+            {{yield to="footer"}}
+        {{/if}}
+        <div class="fleetops-card-meta-list">
+            <div class="fleetops-card-meta">
+                <FaIcon @icon="envelope" @prefix="fas" />
+                <span class="fleetops-card-meta-value">{{#if @resource.email}}<a href="mailto:{{@resource.email}}" class="fleetops-card-meta-link">{{@resource.email}}</a>{{else}}-{{/if}}</span>
+            </div>
+            <div class="fleetops-card-meta">
+                <FaIcon @icon="phone" @prefix="fas" />
+                <span class="fleetops-card-meta-value">{{#if @resource.phone}}<a href="tel:{{@resource.phone}}" class="fleetops-card-meta-link">{{@resource.phone}}</a>{{else}}-{{/if}}</span>
+            </div>
+            <div class="fleetops-card-meta">
+                <FaIcon @icon="location-dot" @prefix="fas" />
+                <span class="fleetops-card-meta-value">{{n-a @resource.address @resource.place.address @resource.country}}</span>
+            </div>
+            <div class="fleetops-card-meta">{{t "common.last-modified"}}: {{@resource.updatedAt}}</div>
+        </div>
+    </Card.footer>
+</Layout::Resource::Card>
+{{yield}}
