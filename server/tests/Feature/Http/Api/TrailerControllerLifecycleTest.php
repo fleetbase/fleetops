@@ -464,11 +464,17 @@ test('internal trailer controller attaches and detaches devices with ownership g
     $connection = fleetOpsTrailerControllerDatabase();
     fleetOpsSeedTrailerApi($connection);
     $connection->table('devices')->insert([
-        ['uuid' => 'device-api-1', 'public_id' => 'device_api_one', 'company_uuid' => 'company-trailer-api', 'name' => 'Tracker'],
-        ['uuid' => 'device-api-2', 'public_id' => 'device_api_two', 'company_uuid' => 'company-trailer-api', 'name' => 'Other Tracker'],
+        ['uuid' => 'device-api-1', 'public_id' => 'device_api_one', 'company_uuid' => 'company-trailer-api', 'name' => 'Tracker', 'attachable_type' => null, 'attachable_uuid' => null],
+        ['uuid' => 'device-api-2', 'public_id' => 'device_api_two', 'company_uuid' => 'company-trailer-api', 'name' => 'Other Tracker', 'attachable_type' => null, 'attachable_uuid' => null],
+        // Already installed on Trailer Two: attaching it to Trailer One must be refused, not re-homed.
+        ['uuid' => 'device-api-3', 'public_id' => 'device_api_three', 'company_uuid' => 'company-trailer-api', 'name' => 'Installed Tracker', 'attachable_type' => 'Fleetbase\\FleetOps\\Models\\Trailer', 'attachable_uuid' => 'trailer-api-2'],
     ]);
     app()->forgetInstance('db.schema');
     $controller = new InternalTrailerController();
+    $conflict   = $controller->attachDevice(Request::create('/attach', 'POST', ['device' => 'device_api_three']), 'trailer-api-1');
+    expect($conflict->getStatusCode())->toBe(409)
+        ->and($conflict->getData(true)['errors'][0] ?? $conflict->getData(true)['error'] ?? null)->toBe('Device is already attached to Trailer Two. Detach it before attaching it elsewhere.')
+        ->and($connection->table('devices')->where('uuid', 'device-api-3')->value('attachable_uuid'))->toBe('trailer-api-2');
     expect($controller->attachDevice(Request::create('/attach', 'POST', ['device' => 'device_api_one']), 'trailer-api-1')->getStatusCode())->toBe(200)
         ->and($connection->table('devices')->where('uuid', 'device-api-1')->value('attachable_uuid'))->toBe('trailer-api-1')
         ->and($controller->detachDevice(Request::create('/detach', 'POST', ['device' => 'device_api_two']), 'trailer-api-1')->getStatusCode())->toBe(422)

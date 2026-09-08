@@ -2,6 +2,7 @@
 
 namespace Fleetbase\FleetOps\Http\Controllers\Internal\v1;
 
+use Fleetbase\FleetOps\Exceptions\DeviceAlreadyAttachedException;
 use Fleetbase\FleetOps\Exports\TrailerExport;
 use Fleetbase\FleetOps\Http\Controllers\FleetOpsController;
 use Fleetbase\FleetOps\Http\Resources\v1\AssetConnection as AssetConnectionResource;
@@ -171,7 +172,11 @@ class TrailerController extends FleetOpsController
             return response()->error('Device not found or not available for this organization.', 404);
         }
 
-        $device->attachTo($trailer);
+        try {
+            $device->attachTo($trailer);
+        } catch (DeviceAlreadyAttachedException $e) {
+            return response()->error($e->getMessage(), 409);
+        }
 
         return response()->json([
             'status'  => 'ok',

@@ -21,6 +21,7 @@ if (!function_exists('Fleetbase\FleetOps\Models\activity')) {
 }
 
 use Fleetbase\FleetOps\Exceptions\CustomerUserConflictException;
+use Fleetbase\FleetOps\Exceptions\DeviceAlreadyAttachedException;
 use Fleetbase\FleetOps\Flow\Activity;
 use Fleetbase\FleetOps\Models\Contact;
 use Fleetbase\FleetOps\Models\Device;
@@ -989,6 +990,15 @@ test('device accessors connection state configuration and command guards are sta
             'attachable_type' => Vehicle::class,
             'attachable_uuid' => 'vehicle-uuid',
         ]);
+
+    // An installed device must be detached before it can move to another asset;
+    // attaching used to silently re-home it with no feedback to the operator.
+    $device->attachable_type = Vehicle::class;
+    $device->attachable_uuid = 'other-vehicle-uuid';
+    expect(fn () => $device->attachTo($vehicle))->toThrow(DeviceAlreadyAttachedException::class, 'Detach it before attaching it elsewhere.');
+    expect(DeviceAlreadyAttachedException::for('Truck 99')->getMessage())->toBe('Device is already attached to Truck 99. Detach it before attaching it elsewhere.')
+        ->and(DeviceAlreadyAttachedException::for(null)->getMessage())->toBe('Device is already attached to another asset. Detach it before attaching it elsewhere.')
+        ->and($device->updates)->toHaveCount(3);
 
     $device->attachable_type = Vehicle::class;
     $device->attachable_uuid = 'vehicle-uuid';

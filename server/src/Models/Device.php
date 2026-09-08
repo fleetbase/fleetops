@@ -5,6 +5,7 @@ namespace Fleetbase\FleetOps\Models;
 use Fleetbase\Casts\Json;
 use Fleetbase\Casts\PolymorphicType;
 use Fleetbase\FleetOps\Casts\Point;
+use Fleetbase\FleetOps\Exceptions\DeviceAlreadyAttachedException;
 use Fleetbase\LaravelMysqlSpatial\Eloquent\SpatialTrait;
 use Fleetbase\LaravelMysqlSpatial\Types\Point as SpatialPoint;
 use Fleetbase\Models\File;
@@ -431,6 +432,11 @@ class Device extends Model
 
         if ($this->attachable_type === get_class($attachable) && $this->attachable_uuid === $attachable->uuid) {
             return true;
+        }
+
+        // Re-homing an installed device must be an explicit detach first, never a side effect.
+        if ($this->attachable_uuid) {
+            throw DeviceAlreadyAttachedException::for($this->attached_to_name);
         }
 
         $historyEnabled = app()->bound('db.schema') && \Illuminate\Support\Facades\Schema::hasTable('device_installations');

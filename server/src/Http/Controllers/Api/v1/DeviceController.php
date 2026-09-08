@@ -2,6 +2,7 @@
 
 namespace Fleetbase\FleetOps\Http\Controllers\Api\v1;
 
+use Fleetbase\FleetOps\Exceptions\DeviceAlreadyAttachedException;
 use Fleetbase\FleetOps\Http\Controllers\Api\v1\Concerns\ResolvesFleetOpsApiResources;
 use Fleetbase\FleetOps\Http\Requests\CreateDeviceRequest;
 use Fleetbase\FleetOps\Http\Requests\UpdateDeviceRequest;
@@ -111,6 +112,8 @@ class DeviceController extends Controller
         try {
             $device->attachTo($attachable);
             $this->loadDeviceRelations($device);
+        } catch (DeviceAlreadyAttachedException $e) {
+            return response()->json(['error' => $e->getMessage()], 409);
         } catch (\Throwable $e) {
             $this->logDeviceAttachmentFailure('attach', $device, $attachable, $e);
 

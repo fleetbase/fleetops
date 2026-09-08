@@ -1,5 +1,6 @@
 <?php
 
+use Fleetbase\FleetOps\Exceptions\DeviceAlreadyAttachedException;
 use Fleetbase\FleetOps\Http\Controllers\Internal\v1\VehicleController;
 use Fleetbase\FleetOps\Models\Device;
 use Fleetbase\FleetOps\Models\Driver;
@@ -485,4 +486,17 @@ test('vehicle controller reports detach lookup failures and attach exceptions', 
     $response = $controller->attachDevice(new Request(['device' => 'device-public']), 'vehicle-public');
     expect($response->getData(true))->toBe(['error' => 'Unable to attach device to vehicle. Please try again or contact support.'])
         ->and($response->getStatusCode())->toBe(500);
+
+    // A device installed on another asset is a conflict the operator must resolve by detaching first
+    $controller          = new FleetOpsVehicleControllerProbe();
+    $controller->vehicle = new FleetOpsVehicleEndpointFake();
+    $controller->device  = new class extends FleetOpsVehicleDeviceFake {
+        public function attachTo(Fleetbase\Models\Model $attachable): bool
+        {
+            throw DeviceAlreadyAttachedException::for('Truck 2');
+        }
+    };
+    $response = $controller->attachDevice(new Request(['device' => 'device-public']), 'vehicle-public');
+    expect($response->getData(true))->toBe(['error' => 'Device is already attached to Truck 2. Detach it before attaching it elsewhere.'])
+        ->and($response->getStatusCode())->toBe(409);
 });
