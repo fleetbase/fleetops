@@ -1974,6 +1974,8 @@ scheduler:
   notes-placeholder: Optional additional notes
 
 order:
+    placeholders:
+        filter-internal-id: اكتب أو امسح المعرفات الداخلية
     card:
       linked-order: Linked Order
       unknown-order: Unknown order
@@ -1989,6 +1991,17 @@ order:
       no-route-details: No route details available.
       no-order-linked: No order is linked to this issue.
 vehicle:
+  placeholders:
+    filter-internal-id: اكتب أو امسح المعرفات الداخلية
+  filters:
+    has-trailer: مقطورة متصلة
+    has-driver: سائق معيّن
+    has-device: جهاز متصل
+    any: الكل
+    attached: متصل
+    not-attached: غير متصل
+    assigned: معيّن
+    not-assigned: غير معيّن
   actions:
     attach-trailer: ربط مقطورة
     attach-equipment: ربط معدة
@@ -2007,6 +2020,7 @@ vehicle:
     select-trailer-warning: اختر مقطورة لربطها بهذه المركبة.
     attach-trailer-success: "تم ربط {trailerName} بـ {vehicleName}."
 common:
+  select-resource-filter-by: "اختر {resource} للتصفية"
   no-vehicle-assigned: لا توجد مركبة مخصصة
   last-modified: آخر تعديل
   table-view: عرض الجدول

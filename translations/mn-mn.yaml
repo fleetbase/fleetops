@@ -606,6 +606,8 @@ issue:
     tags: Асуудлын Тагууд
     type: Асуудлын Төрөл
 order:
+  placeholders:
+    filter-internal-id: Дотоод ID бичих эсвэл скан хийх
   card:
     linked-order: Linked Order
     unknown-order: Unknown order
@@ -1033,6 +1035,17 @@ service-rate:
     zone-placeholder: Бүсэд хязгаарлах
     cod-fee-label: Нийлүүлэлтийн төлбөрийн шошго
 vehicle:
+  placeholders:
+    filter-internal-id: Дотоод ID бичих эсвэл скан хийх
+  filters:
+    has-trailer: Чиргүүл холбогдсон
+    has-driver: Жолооч томилогдсон
+    has-device: Төхөөрөмж холбогдсон
+    any: Бүгд
+    attached: Холбогдсон
+    not-attached: Холбогдоогүй
+    assigned: Томилогдсон
+    not-assigned: Томилогдоогүй
   fields:
     updated-at: Сүүлд шинэчилсэн
     avatar: Профайл зураг

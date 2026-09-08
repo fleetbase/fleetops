@@ -29,6 +29,11 @@ export default class ManagementVehiclesIndexController extends Controller {
         'vehicle_make',
         'vehicle_model',
         'display_name',
+        'trailer',
+        'device',
+        'has_trailer',
+        'has_driver',
+        'has_device',
     ];
     @tracked query = null;
     @tracked page = 1;
@@ -45,6 +50,11 @@ export default class ManagementVehiclesIndexController extends Controller {
     @tracked fleet;
     @tracked vendor;
     @tracked driver;
+    @tracked trailer;
+    @tracked device;
+    @tracked has_trailer;
+    @tracked has_driver;
+    @tracked has_device;
     @tracked display_name;
     @tracked table;
     @tracked layout = this.appCache.get('fleetops:vehicles:layout', 'table');
@@ -118,6 +128,17 @@ export default class ManagementVehiclesIndexController extends Controller {
         ];
     }
 
+    /**
+     * Yes/no choices for the "has trailer / driver / device" filters. `kind` picks the
+     * wording: assets are attached, drivers are assigned.
+     */
+    presenceOptions(kind) {
+        return [
+            { value: 'true', label: this.intl.t(`vehicle.filters.${kind}`) },
+            { value: 'false', label: this.intl.t(`vehicle.filters.not-${kind}`) },
+        ];
+    }
+
     /** columns */
     get columns() {
         return [
@@ -157,7 +178,8 @@ export default class ManagementVehiclesIndexController extends Controller {
                 sortable: true,
                 filterable: true,
                 hidden: true,
-                filterComponent: 'filter/string',
+                filterComponent: 'filter/multi-input',
+                filterComponentPlaceholder: this.intl.t('vehicle.placeholders.filter-internal-id'),
                 filterParam: 'internal_id',
             },
             {
@@ -197,10 +219,62 @@ export default class ManagementVehiclesIndexController extends Controller {
                 },
                 resizable: true,
                 filterable: true,
-                filterComponent: 'filter/model',
-                filterComponentPlaceholder: 'Select driver to filter by',
+                filterComponent: 'filter/multi-model',
+                filterComponentPlaceholder: this.intl.t('common.select-resource-filter-by', { resource: this.intl.t('resource.driver') }),
                 filterParam: 'driver',
                 model: 'driver',
+            },
+            {
+                label: this.intl.t('resource.trailers'),
+                valuePath: 'trailers',
+                hidden: true,
+                filterable: true,
+                filterComponent: 'filter/multi-model',
+                filterComponentPlaceholder: this.intl.t('common.select-resource-filter-by', { resource: this.intl.t('resource.trailer') }),
+                filterParam: 'trailer',
+                model: 'trailer',
+                modelNamePath: 'displayName',
+            },
+            {
+                label: this.intl.t('resource.devices'),
+                valuePath: 'devices',
+                hidden: true,
+                filterable: true,
+                filterComponent: 'filter/multi-model',
+                filterComponentPlaceholder: this.intl.t('common.select-resource-filter-by', { resource: this.intl.t('resource.device') }),
+                filterParam: 'device',
+                model: 'device',
+                modelNamePath: 'displayName',
+            },
+            {
+                label: this.intl.t('vehicle.filters.has-trailer'),
+                valuePath: 'has_trailer',
+                hidden: true,
+                filterable: true,
+                filterComponent: 'filter/select',
+                filterComponentPlaceholder: this.intl.t('vehicle.filters.any'),
+                filterOptions: this.presenceOptions('attached'),
+                filterParam: 'has_trailer',
+            },
+            {
+                label: this.intl.t('vehicle.filters.has-driver'),
+                valuePath: 'has_driver',
+                hidden: true,
+                filterable: true,
+                filterComponent: 'filter/select',
+                filterComponentPlaceholder: this.intl.t('vehicle.filters.any'),
+                filterOptions: this.presenceOptions('assigned'),
+                filterParam: 'has_driver',
+            },
+            {
+                label: this.intl.t('vehicle.filters.has-device'),
+                valuePath: 'has_device',
+                hidden: true,
+                filterable: true,
+                filterComponent: 'filter/select',
+                filterComponentPlaceholder: this.intl.t('vehicle.filters.any'),
+                filterOptions: this.presenceOptions('attached'),
+                filterParam: 'has_device',
             },
             {
                 label: this.intl.t('column.id'),
@@ -257,7 +331,7 @@ export default class ManagementVehiclesIndexController extends Controller {
                 resizable: true,
                 filterable: true,
                 filterComponent: 'filter/model',
-                filterComponentPlaceholder: this.intl.t('select-resource-filter-by', { resource: this.intl.t('resource.vendor') }),
+                filterComponentPlaceholder: this.intl.t('common.select-resource-filter-by', { resource: this.intl.t('resource.vendor') }),
                 filterParam: 'vendor',
                 model: 'vendor',
             },

@@ -1,0 +1,19 @@
+<div class="filter-multi-model flex flex-row items-center" ...attributes>
+    <ModelSelectMultiple
+        @modelName={{@filter.model}}
+        @query={{@filter.query}}
+        @optionLabel={{or @filter.modelNamePath "name"}}
+        @selectedModel={{this.selectedModels}}
+        @placeholder={{@placeholder}}
+        @triggerClass="form-select form-input form-input-sm flex-1"
+        @infiniteScroll={{false}}
+        @renderInPlace={{true}}
+        @onChange={{this.onChange}}
+        as |model|
+    >
+        {{get model (or @filter.modelNamePath "name")}}
+    </ModelSelectMultiple>
+    <button type="button" class="clear-button" disabled={{not this.selectedModels.length}} aria-label={{t "common.clear"}} {{on "click" this.clear}}>
+        <FaIcon @icon="times" />
+    </button>
+</div>

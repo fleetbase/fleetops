@@ -157,7 +157,9 @@ export default class OperationsOrdersIndexController extends Controller {
                 resizable: true,
                 sortable: true,
                 filterable: true,
-                filterComponent: 'filter/string',
+                // Batch scanning: each scanned or pasted id becomes a chip and all of them match.
+                filterComponent: 'filter/multi-input',
+                filterComponentPlaceholder: this.intl.t('order.placeholders.filter-internal-id'),
             },
             {
                 label: this.intl.t('column.payload'),

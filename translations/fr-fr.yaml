@@ -614,6 +614,8 @@ issue:
     tags: Étiquettes du problème
     type: Type de problème
 order:
+  placeholders:
+    filter-internal-id: Saisissez ou scannez des ID internes
   card:
     linked-order: Linked Order
     unknown-order: Unknown order
@@ -1063,6 +1065,17 @@ service-rate:
     zone-placeholder: Restreindre à la zone
     cod-fee-label: Libellé des frais contre remboursement
 vehicle:
+  placeholders:
+    filter-internal-id: Saisissez ou scannez des ID internes
+  filters:
+    has-trailer: Remorque attelée
+    has-driver: Chauffeur assigné
+    has-device: Appareil associé
+    any: Tous
+    attached: Attelée
+    not-attached: Non attelée
+    assigned: Assigné
+    not-assigned: Non assigné
   fields:
     updated-at: Dernière mise à jour
     avatar: Avatar

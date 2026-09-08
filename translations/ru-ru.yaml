@@ -605,6 +605,8 @@ issue:
     tags: Теги проблемы
     type: Тип проблемы
 order:
+  placeholders:
+    filter-internal-id: Введите или отсканируйте внутренние ID
   card:
     linked-order: Linked Order
     unknown-order: Unknown order
@@ -1036,6 +1038,17 @@ service-rate:
     zone-placeholder: Ограничить зоной
     cod-fee-label: Надпись платы за наложенный платёж
 vehicle:
+  placeholders:
+    filter-internal-id: Введите или отсканируйте внутренние ID
+  filters:
+    has-trailer: Прицеп подключён
+    has-driver: Водитель назначен
+    has-device: Устройство подключено
+    any: Любой
+    attached: Подключён
+    not-attached: Не подключён
+    assigned: Назначен
+    not-assigned: Не назначен
   fields:
     updated-at: Последнее обновление
     avatar: Аватар

@@ -609,6 +609,8 @@ issue:
     tags: Етикети на проблема
     type: Тип на проблема
 order:
+  placeholders:
+    filter-internal-id: Въведете или сканирайте вътрешни ID
   card:
     linked-order: Linked Order
     unknown-order: Unknown order
@@ -1046,6 +1048,17 @@ service-rate:
     zone-placeholder: Ограничете до зона
     cod-fee-label: Етикет за такса при наложен платеж
 vehicle:
+  placeholders:
+    filter-internal-id: Въведете или сканирайте вътрешни ID
+  filters:
+    has-trailer: Прикачено ремарке
+    has-driver: Назначен шофьор
+    has-device: Прикачено устройство
+    any: Всички
+    attached: Прикачено
+    not-attached: Не е прикачено
+    assigned: Назначен
+    not-assigned: Не е назначен
   fields:
     updated-at: Последно обновено
     avatar: Аватар

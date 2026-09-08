@@ -8820,3 +8820,37 @@ body[data-theme='dark'] .fleetops-card-meta {
 body[data-theme='dark'] .fleetops-card-meta-link {
     color: #60a5fa;
 }
+
+/* ── Multi-model table filter (mirrors ember-ui's .filter-multi-input clear button) ── */
+.filter-multi-model {
+    position: relative;
+}
+
+.filter-multi-model > .clear-button {
+    position: absolute;
+    top: 0;
+    right: 0;
+    padding: 0.5rem 0.75rem 0 0;
+    color: #374151;
+}
+
+.filter-multi-model > .clear-button:hover {
+    opacity: 0.5;
+}
+
+.filter-multi-model > .clear-button:disabled {
+    opacity: 0.3;
+    cursor: default;
+}
+
+body[data-theme='dark'] .filter-multi-model > .clear-button {
+    color: #6b7280;
+}
+
+.filter-multi-model > .fleetbase-model-select,
+.filter-multi-model > .fleetbase-model-select > .ember-basic-dropdown,
+.filter-multi-model .ember-power-select-multiple-trigger {
+    flex: 1 1 auto;
+    width: 100%;
+    min-width: 0;
+}

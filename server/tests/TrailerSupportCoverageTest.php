@@ -255,6 +255,7 @@ test('trailer filter executes text numeric state relationship and date branches'
     $filter->vehicle('vehicle_public');
     $filter->vehicle('missing_vehicle');
     $filter->vendor('vendor_public');
+    $filter->device('device_public');
     $filter->createdAt('2026-09-03');
     $filter->updatedAt(['2026-09-01', '2026-09-03']);
     $filter->lastOnlineAt('2026-09-03');
@@ -284,7 +285,8 @@ test('trailer filter executes text numeric state relationship and date branches'
         ->and(collect($builder->calls)->contains(fn ($call) => $call[0] === 'whereIn' && $call[1] === 'type' && $call[2] === ['reefer', 'flatbed']))->toBeTrue()
         ->and(collect($builder->calls)->contains(fn ($call) => $call[0] === 'where' && $call[1] === 'status' && $call[2] === 'available'))->toBeTrue()
         ->and(collect($builder->calls)->contains(fn ($call) => $call[0] === 'whereIn' && $call[1] === 'category_uuid' && $call[2] === ['category-filter']))->toBeTrue()
-        ->and(collect($builder->calls)->contains(fn ($call) => $call[0] === 'whereIn' && $call[1] === 'connector_uuid' && $call[2] === ['vehicle-filter']))->toBeTrue();
+        ->and(collect($builder->calls)->contains(fn ($call) => $call[0] === 'whereIn' && $call[1] === 'connector_uuid' && $call[2] === ['vehicle-filter']))->toBeTrue()
+        ->and(collect($builder->calls)->contains(fn ($call) => $call[0] === 'whereHas' && $call[1] === 'devices'))->toBeTrue();
 
     // Public requests never resolve relations by UUID; the console does.
     $public = fleetOpsTrailerFilter($publicBuilder = new FleetOpsTrailerFilterBuilder());

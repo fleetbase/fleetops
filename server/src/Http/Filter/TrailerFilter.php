@@ -2,6 +2,7 @@
 
 namespace Fleetbase\FleetOps\Http\Filter;
 
+use Fleetbase\FleetOps\Models\Device;
 use Fleetbase\FleetOps\Models\Vehicle;
 use Fleetbase\FleetOps\Models\Vendor;
 use Fleetbase\FleetOps\Support\Utils;
@@ -176,6 +177,16 @@ class TrailerFilter extends Filter
     public function vendor($value)
     {
         $this->builder->whereIn('vendor_uuid', $this->resolveRelationUuids(Vendor::class, $value));
+    }
+
+    /**
+     * Trailers with any of the given devices installed.
+     */
+    public function device($value)
+    {
+        $uuids = $this->resolveRelationUuids(Device::class, $value);
+
+        $this->builder->whereHas('devices', fn ($query) => $query->whereIn('uuid', $uuids));
     }
 
     public function category($value)

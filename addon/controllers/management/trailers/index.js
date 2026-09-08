@@ -36,6 +36,7 @@ export default class ManagementTrailersIndexController extends Controller {
         'vendor',
         'ownership_type',
         'refrigerated',
+        'device',
         'last_online_at',
         'created_at',
         'updated_at',
@@ -61,6 +62,7 @@ export default class ManagementTrailersIndexController extends Controller {
     @tracked vendor;
     @tracked ownership_type;
     @tracked refrigerated;
+    @tracked device;
     @tracked last_online_at;
     @tracked created_at;
     @tracked updated_at;
@@ -455,18 +457,6 @@ export default class ManagementTrailersIndexController extends Controller {
                 filterable: false,
             },
             {
-                label: this.intl.t('trailer.columns.refrigerated'),
-                valuePath: 'refrigerated',
-                cellComponent: 'table/cell/checkbox',
-                resizable: true,
-                sortable: true,
-                hidden: true,
-                filterable: true,
-                filterParam: 'refrigerated',
-                filterComponent: 'filter/checkbox',
-                width: 110,
-            },
-            {
                 label: this.intl.t('trailer.columns.created-at'),
                 valuePath: 'createdAt',
                 sortParam: 'created_at',
@@ -574,6 +564,30 @@ export default class ManagementTrailersIndexController extends Controller {
                 filterable: false,
                 resizable: false,
                 searchable: false,
+            },
+            {
+                label: this.intl.t('resource.devices'),
+                valuePath: 'devices',
+                hidden: true,
+                filterable: true,
+                filterComponent: 'filter/multi-model',
+                filterComponentPlaceholder: this.intl.t('common.select-resource-filter-by', { resource: this.intl.t('resource.device') }),
+                filterParam: 'device',
+                model: 'device',
+                modelNamePath: 'displayName',
+            },
+            {
+                label: this.intl.t('trailer.columns.refrigerated'),
+                valuePath: 'refrigerated',
+                cellComponent: 'table/cell/checkbox',
+                resizable: true,
+                sortable: true,
+                hidden: true,
+                filterable: true,
+                filterParam: 'refrigerated',
+                filterComponent: 'filter/checkbox',
+                noFilterLabel: true,
+                width: 110,
             },
         ];
     }

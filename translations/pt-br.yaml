@@ -609,6 +609,8 @@ issue:
     tags: Tags do Problema
     type: Tipo de Problema
 order:
+  placeholders:
+    filter-internal-id: Digite ou escaneie IDs internos
   card:
     linked-order: Linked Order
     unknown-order: Unknown order
@@ -1041,6 +1043,17 @@ service-rate:
     zone-placeholder: Restringir à zona
     cod-fee-label: Etiqueta de Taxa COD
 vehicle:
+  placeholders:
+    filter-internal-id: Digite ou escaneie IDs internos
+  filters:
+    has-trailer: Reboque acoplado
+    has-driver: Motorista atribuído
+    has-device: Dispositivo vinculado
+    any: Qualquer
+    attached: Acoplado
+    not-attached: Não acoplado
+    assigned: Atribuído
+    not-assigned: Não atribuído
   fields:
     updated-at: Última atualização
     avatar: Avatar

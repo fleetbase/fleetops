@@ -1011,6 +1011,8 @@ issue:
         type: Issue Type
 
 order:
+    placeholders:
+        filter-internal-id: Type or scan internal IDs
     card:
       linked-order: Linked Order
       unknown-order: Unknown order
@@ -1401,6 +1403,17 @@ service-rate:
         cod-fee-label: Cod Fee Label
 
 vehicle:
+    placeholders:
+        filter-internal-id: Type or scan internal IDs
+    filters:
+        has-trailer: Trailer attached
+        has-driver: Driver assigned
+        has-device: Device attached
+        any: Any
+        attached: Attached
+        not-attached: Not attached
+        assigned: Assigned
+        not-assigned: Not assigned
     fields:
         updated-at: Last updated
         avatar: Avatar

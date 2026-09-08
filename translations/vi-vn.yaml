@@ -1631,6 +1631,7 @@ scheduler:
   notes-placeholder: Optional additional notes
 
 common:
+  select-resource-filter-by: "Chọn {resource} để lọc"
   no-vehicle-assigned: Chưa gán phương tiện
   last-modified: Sửa đổi lần cuối
   table-view: Dạng bảng
@@ -1724,6 +1725,17 @@ fleet:
     assign-driver-success: Driver assigned to {fleetName}.
     assign-vehicle-success: Vehicle assigned to {fleetName}.
 vehicle:
+  placeholders:
+    filter-internal-id: Nhập hoặc quét mã ID nội bộ
+  filters:
+    has-trailer: Đã gắn rơ-moóc
+    has-driver: Đã gán tài xế
+    has-device: Đã gắn thiết bị
+    any: Bất kỳ
+    attached: Đã gắn
+    not-attached: Chưa gắn
+    assigned: Đã gán
+    not-assigned: Chưa gán
   actions:
     attach-device: Attach Device
     unassign-orders: Unassign Orders
@@ -1762,6 +1774,8 @@ modals:
   assigned-orders:
 
 order:
+    placeholders:
+        filter-internal-id: Nhập hoặc quét mã ID nội bộ
     card:
       linked-order: Linked Order
       unknown-order: Unknown order

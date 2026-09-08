@@ -366,6 +366,21 @@ class OrderFilter extends Filter
         }
     }
 
+    /**
+     * Exact match on one or many operator-side ids. The console's tag-input filter
+     * joins scanned or pasted ids with commas so a batch of labels resolves in one query.
+     */
+    public function internalId($internalId)
+    {
+        $ids = array_values(array_filter(array_map('trim', explode(',', (string) $internalId)), 'strlen'));
+
+        if ($ids === []) {
+            return;
+        }
+
+        $this->builder->whereIn('internal_id', $ids);
+    }
+
     public function bulkQuery($ids)
     {
         $ids     = Utils::arrayFrom($ids);

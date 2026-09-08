@@ -26,6 +26,7 @@ export default class ManagementTrailersIndexRoute extends Route {
         vendor: { refreshModel: true },
         ownership_type: { refreshModel: true },
         refrigerated: { refreshModel: true },
+        device: { refreshModel: true },
         last_online_at: { refreshModel: true },
         created_at: { refreshModel: true },
         updated_at: { refreshModel: true },

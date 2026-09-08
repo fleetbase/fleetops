@@ -559,6 +559,8 @@ test('vehicle filter records identity relationship fleet and telematic filters',
     $filter->vehicleYear('2026');
     $filter->driver('unassigned');
     $filter->driver($publicIds['drivers']);
+    // The console's multi-select sends several drivers at once.
+    $filter->driver([$publicIds['drivers'], 'driver_missing']);
     $filter->vendor(null);
     $filter->vendor($publicIds['vendors']);
     $filter->driverUuid('driver-uuid');
@@ -567,6 +569,33 @@ test('vehicle filter records identity relationship fleet and telematic filters',
     $filter->telematicUuid('telematic-uuid');
     $filter->createdAt(['2026-01-01', '2026-01-31']);
     $filter->updatedAt('2026-02-01');
+
+    // Batch scans: a comma-separated list of internal ids is an exact match on each.
+    $filter->internalId('VEH-1, VEH-2');
+
+    // Towing, device and presence filters back the console's vehicle index filters.
+    $schema = Illuminate\Database\Eloquent\Model::resolveConnection()->getSchemaBuilder();
+    foreach (['assets' => 'trailer_filterone', 'devices' => 'device_filterone'] as $table => $publicId) {
+        $schema->create($table, function ($blueprint) {
+            $blueprint->increments('id');
+            foreach (['uuid', 'public_id', 'internal_id', 'company_uuid', 'asset_class', 'name'] as $column) {
+                $blueprint->string($column)->nullable();
+            }
+            $blueprint->timestamps();
+            $blueprint->timestamp('deleted_at')->nullable();
+        });
+        Illuminate\Database\Eloquent\Model::resolveConnection()->table($table)->insert(['uuid' => $table . '-filter-uuid', 'public_id' => $publicId, 'company_uuid' => 'company-uuid', 'asset_class' => 'trailer', 'name' => $table]);
+    }
+    $filter->trailer('trailer_filterone');
+    $filter->device(['device_filterone']);
+    $filter->hasTrailer('true');
+    $filter->hasDriver('false');
+    $filter->hasDevice('');
+
+    expect($query->calls)->toContain(['whereIn', 'internal_id', ['VEH-1', 'VEH-2']])
+        ->and($query->calls)->toContain(['whereDoesntHave', 'driver'])
+        ->and(collect($query->calls)->where(0, 'whereHas')->pluck(1)->all())->toContain('currentTrailers')
+        ->and(collect($query->calls)->where(0, 'whereHas')->flatMap(fn ($call) => $call[2])->values()->all())->toContain(['whereIn', 'assets.uuid', ['assets-filter-uuid']], ['whereIn', 'uuid', ['devices-filter-uuid']]);
 
     expect($query->calls)->toContain(['where', ['company_uuid', 'company-uuid']])
         ->and($query->calls)->toContain(['search', 'van'])

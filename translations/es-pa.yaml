@@ -603,6 +603,8 @@ issue:
     type: Tipo de problema
 
 order:
+  placeholders:
+    filter-internal-id: Escriba o escanee IDs internos
   card:
     linked-order: Linked Order
     unknown-order: Unknown order
@@ -991,6 +993,17 @@ service-rate:
     cod-fee-label: Etiqueta de tarifa de bacalao
 
 vehicle:
+  placeholders:
+    filter-internal-id: Escriba o escanee IDs internos
+  filters:
+    has-trailer: Remolque acoplado
+    has-driver: Conductor asignado
+    has-device: Dispositivo vinculado
+    any: Cualquiera
+    attached: Acoplado
+    not-attached: No acoplado
+    assigned: Asignado
+    not-assigned: No asignado
   fields:
     updated-at: Última actualización
     avatar: Avatar
