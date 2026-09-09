@@ -1,5 +1,6 @@
 <?php
 
+use Fleetbase\FleetOps\Exceptions\DeviceAlreadyAttachedException;
 use Fleetbase\FleetOps\Http\Controllers\Internal\v1\DeviceController;
 use Fleetbase\FleetOps\Models\Device;
 use Fleetbase\FleetOps\Models\Vehicle;
@@ -39,16 +40,21 @@ class FleetOpsInternalDeviceControllerProbe extends DeviceController
 
 class FleetOpsInternalDeviceFake extends Device
 {
-    public array $attachedTo = [];
-    public array $detaches   = [];
-    public array $loads      = [];
-    public bool $throwAttach = false;
-    public bool $throwDetach = false;
+    public array $attachedTo          = [];
+    public array $detaches            = [];
+    public array $loads               = [];
+    public bool $throwAttach          = false;
+    public bool $throwDetach          = false;
+    public bool $throwAlreadyAttached = false;
 
     public function attachTo(Model $attachable): bool
     {
         if ($this->throwAttach) {
             throw new RuntimeException('attach failed');
+        }
+
+        if ($this->throwAlreadyAttached) {
+            throw DeviceAlreadyAttachedException::for('Truck 1');
         }
 
         $this->attachedTo[] = [$attachable::class, $attachable->uuid];
@@ -350,6 +356,12 @@ test('internal device controller reports lookup and persistence failures', funct
             ->attach(new Request(['vehicle' => 'vehicle_public']), 'device_public')
     );
 
+    $conflictDevice                       = fleetopsInternalDevice();
+    $conflictDevice->throwAlreadyAttached = true;
+    $conflictResponse                     = fleetopsInternalDeviceController($conflictDevice, fleetopsInternalDeviceVehicle())
+        ->attach(new Request(['vehicle' => 'vehicle_public']), 'device_public');
+    $conflict = fleetopsInternalDeviceJson($conflictResponse);
+
     $detachFailureDevice              = fleetopsInternalDevice();
     $detachFailureDevice->throwDetach = true;
     $detachFailure                    = fleetopsInternalDeviceJson(
@@ -365,6 +377,9 @@ test('internal device controller reports lookup and persistence failures', funct
     expect($missingDevice['error'])->toBe('Device not found or not available for this organization.')
         ->and($missingVehicle['error'])->toBe('Vehicle not found or not available for this organization.')
         ->and($attachFailure['error'])->toBe('Unable to attach device to vehicle. Please try again or contact support.')
+        // A device installed elsewhere is refused with a conflict, not re-homed or reported as a crash.
+        ->and($conflict['error'])->toBe('Device is already attached to Truck 1. Detach it before attaching it elsewhere.')
+        ->and($conflictResponse->getStatusCode())->toBe(409)
         ->and($detachFailure['error'])->toBe('Unable to detach device from vehicle. Please try again or contact support.')
         ->and($missingDetachDevice['error'])->toBe('Device not found or not available for this organization.');
 });

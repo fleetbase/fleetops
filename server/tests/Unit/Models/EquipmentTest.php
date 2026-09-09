@@ -15,6 +15,7 @@ if (!function_exists('Fleetbase\FleetOps\Models\activity')) {
 use Fleetbase\FleetOps\Models\Driver;
 use Fleetbase\FleetOps\Models\Equipment;
 use Fleetbase\FleetOps\Models\Maintenance;
+use Fleetbase\FleetOps\Models\Trailer;
 use Fleetbase\FleetOps\Models\Vehicle;
 use Fleetbase\FleetOps\Models\Warranty;
 use Fleetbase\FleetOps\Support\Utils;
@@ -268,6 +269,27 @@ test('equipment mutators and appended accessors normalize assignment state', fun
         ->and($equipment->age_in_days)->toBeNull()
         ->and($equipment->depreciated_value)->toBeNull()
         ->and($equipment->getReplacementCostEstimate())->toBeNull();
+});
+
+test('equipment assignment supports first class trailers without changing vehicle compatibility', function () {
+    $trailer = new Trailer();
+    $trailer->forceFill(['uuid' => 'trailer-uuid', 'name' => 'Reefer 7']);
+
+    $trailerEquipment = new Equipment([
+        'equipable_type' => 'fleet-ops:trailer',
+        'equipable_uuid' => 'trailer-uuid',
+    ]);
+    $trailerEquipment->setRelation('equipable', $trailer);
+
+    $vehicleEquipment = new Equipment([
+        'equipable_type' => 'fleet-ops:vehicle',
+        'equipable_uuid' => 'vehicle-uuid',
+    ]);
+
+    expect($trailerEquipment->equipable_type)->toBe(Utils::getMutationType('fleet-ops:trailer'))
+        ->and($trailerEquipment->equipped_to_name)->toBe('Reefer 7')
+        ->and($trailerEquipment->is_equipped)->toBeTrue()
+        ->and($vehicleEquipment->equipable_type)->toBe(Utils::getMutationType('fleet-ops:vehicle'));
 });
 
 test('equipment query scopes add expected filters', function () {

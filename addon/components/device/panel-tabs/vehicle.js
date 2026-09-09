@@ -7,6 +7,7 @@ export default class DevicePanelTabsVehicleComponent extends Component {
     @service hostRouter;
     @service mapManager;
     @service vehicleActions;
+    @service trailerActions;
 
     get device() {
         return this.args.resource ?? this.args.model;
@@ -14,6 +15,10 @@ export default class DevicePanelTabsVehicleComponent extends Component {
 
     get vehicle() {
         return this.device?.attachable;
+    }
+
+    get isTrailer() {
+        return `${this.device?.attachable_type ?? ''}`.toLowerCase().includes('trailer');
     }
 
     get vehicleName() {
@@ -58,6 +63,9 @@ export default class DevicePanelTabsVehicleComponent extends Component {
 
     @action openVehicle() {
         if (this.vehicle?.id) {
+            if (this.isTrailer) {
+                return this.trailerActions.transition.view(this.vehicle);
+            }
             return this.vehicleActions.panel?.view
                 ? this.vehicleActions.panel.view(this.vehicle)
                 : this.hostRouter.transitionTo('console.fleet-ops.management.vehicles.index.details', this.vehicle);

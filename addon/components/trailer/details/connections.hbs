@@ -1,0 +1,57 @@
+<AttachmentList
+    @title={{t "trailer.tabs.connections"}}
+    @description={{t "trailer.connections.description"}}
+    @actionText={{if this.isAttached (t "trailer.actions.detach-vehicle") (t "trailer.actions.attach-vehicle")}}
+    @actionIcon={{if this.isAttached "unlink" "link"}}
+    @actionType={{if this.isAttached "danger" "primary"}}
+    @onAction={{if this.isAttached this.detachVehicle this.attachVehicle}}
+    @actionPermission={{if this.isAttached "fleet-ops detach-vehicle-for trailer" "fleet-ops attach-vehicle-for trailer"}}
+    @hideEmptyAction={{this.isAttached}}
+    @isLoading={{this.loadConnections.isRunning}}
+    @items={{this.connections}}
+    @emptyIcon="link-slash"
+    @emptyTitle={{t "trailer.empty.connections"}}
+    @emptyDescription={{t "trailer.empty.connections-description"}}
+    class="trailer-details-connections"
+>
+    <:item as |connection|>
+        <div class="fleetops-towing-entry {{if connection.isActive 'fleetops-towing-entry--active'}}">
+            <div class="fleetops-towing-entry-vehicle">
+                {{#if connection.vehicle}}
+                    <Vehicle::Pill @vehicle={{connection.vehicle}} @onClick={{fn this.viewVehicle connection.vehicle}} @noTooltip={{true}} />
+                {{else}}
+                    <span class="text-sm text-gray-400 dark:text-gray-500">{{t "trailer.attachment.no-vehicle"}}</span>
+                {{/if}}
+            </div>
+            <div class="fleetops-towing-entry-timeline">
+                <div class="fleetops-towing-entry-timeline-row">
+                    <FaIcon @icon="link" class="text-green-500 dark:text-green-400" />
+                    <span>{{t "trailer.connections.connected" date=(format-date-fns connection.connected_at "dd MMM yyyy, HH:mm")}}</span>
+                </div>
+                <div class="fleetops-towing-entry-timeline-row">
+                    {{#if connection.disconnected_at}}
+                        <FaIcon @icon="link-slash" class="text-gray-400 dark:text-gray-500" />
+                        <span>{{t "trailer.connections.disconnected" date=(format-date-fns connection.disconnected_at "dd MMM yyyy, HH:mm")}}</span>
+                    {{else}}
+                        <FaIcon @icon="circle" @size="2xs" class="text-green-500 dark:text-green-400 animate-pulse" />
+                        <span class="text-green-600 dark:text-green-400 font-medium">{{t "trailer.connections.still-attached"}}</span>
+                    {{/if}}
+                </div>
+                <div class="fleetops-attachment-list-item-meta">
+                    {{#if connection.position}}
+                        <span class="fleetops-attachment-list-item-meta-entry">{{t "trailer.attachment.position" position=connection.position}}</span>
+                    {{/if}}
+                    {{#if connection.duration}}
+                        <span class="fleetops-attachment-list-item-meta-entry"><FaIcon @icon="clock" class="mr-1" />{{connection.duration}}</span>
+                    {{/if}}
+                    {{#if connection.source}}
+                        <span class="fleetops-attachment-list-item-meta-entry">{{smart-humanize connection.source}}</span>
+                    {{/if}}
+                </div>
+            </div>
+        </div>
+    </:item>
+    <:itemActions as |connection|>
+        <Badge @status={{if connection.isActive "attached" "detached"}} @size="xs" @icon={{if connection.isActive "link" "link-slash"}} @text={{t (concat "trailer.attachment." (if connection.isActive "attached" "detached"))}} />
+    </:itemActions>
+</AttachmentList>

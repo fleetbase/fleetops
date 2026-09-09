@@ -31,13 +31,13 @@ export default class CellAttachedVehicleComponent extends Component {
     }
 
     get hasVehicle() {
-        return Boolean(this.device?.attachable_uuid && this.isVehicleAttachment);
+        return Boolean(this.device?.attachable_uuid && this.isSupportedAttachment);
     }
 
-    get isVehicleAttachment() {
+    get isSupportedAttachment() {
         const attachableType = `${this.device?.attachable_type ?? ''}`.toLowerCase();
 
-        return !attachableType || attachableType.includes('vehicle');
+        return !attachableType || attachableType.includes('vehicle') || attachableType.includes('trailer');
     }
 
     @action onClick(_vehicle, event) {

@@ -1,6 +1,6 @@
 import Component from '@glimmer/component';
 import { action, get } from '@ember/object';
-import config from 'ember-get-config';
+import { getPlaceholderImage, resolveResourceImage } from '../../utils/placeholder-images';
 import { resolveIdentityCellResource } from '../../utils/identity-cell-resource';
 
 const DEFAULT_STATUS_TONES = {
@@ -34,11 +34,11 @@ export default class CellDriverIdentityComponent extends Component {
     }
 
     get mediaUrl() {
-        return get(this.resource, 'photo_url');
+        return resolveResourceImage(get(this.resource, 'photo_url'), 'driver');
     }
 
     get fallbackImage() {
-        return config?.defaultValues?.driverImage;
+        return getPlaceholderImage('driver');
     }
 
     get hasCompactStatusDot() {
@@ -97,7 +97,7 @@ export default class CellDriverIdentityComponent extends Component {
             ...(this.args.column ?? {}),
             labelPath: 'name',
             mediaPath: 'photo_url',
-            fallbackImage: config?.defaultValues?.driverImage,
+            fallbackImage: getPlaceholderImage('driver'),
             statusPath: 'status',
             onlinePath: 'online',
             showStatusBadge: this.args.column?.showStatusBadge ?? true,

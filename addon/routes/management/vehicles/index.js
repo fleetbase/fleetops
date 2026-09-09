@@ -21,6 +21,11 @@ export default class ManagementVehiclesIndexRoute extends Route {
         fleet: { refreshModel: true },
         vendor: { refreshModel: true },
         driver: { refreshModel: true },
+        trailer: { refreshModel: true },
+        device: { refreshModel: true },
+        has_trailer: { refreshModel: true },
+        has_driver: { refreshModel: true },
+        has_device: { refreshModel: true },
         created_at: { refreshModel: true },
         updated_at: { refreshModel: true },
         'within[latitude]': { refreshModel: true, replace: true },
@@ -30,6 +35,7 @@ export default class ManagementVehiclesIndexRoute extends Route {
     };
 
     model(params) {
-        return this.store.query('vehicle', { ...params });
+        // Current trailers back the card view's towing line; the internal API camelizes `with`.
+        return this.store.query('vehicle', { ...params, with: ['currentTrailers'] });
     }
 }

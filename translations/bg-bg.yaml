@@ -1,6 +1,9 @@
 fleet-ops:
   extension-name: Fleet-Ops
 common:
+  last-modified: Последна промяна
+  online: Онлайн
+  offline: Офлайн
   proof-of-delivery: Доказателство за доставка
   ad-hoc: Спонтанно
   bulk-dispatch: Масово изпращане
@@ -8,6 +11,7 @@ common:
   dispatch-order: Поръчка за изпращане
   assign-driver: Назначаване на шофьор
   no-driver-assigned: Няма назначен шофьор
+  no-vehicle-assigned: Няма назначено превозно средство
   details: Подробности
   name: Име
   title: Заглавие
@@ -47,6 +51,8 @@ common:
   notes: Notes
   schedule: Schedule
   current-job: Current Job
+  "yes": Да
+  "no": Не
 menu:
   operations: Операции
   dashboard: Табло
@@ -57,6 +63,7 @@ menu:
   resources: Ресурси
   drivers: Шофьори
   vehicles: Превозни средства
+  trailers: Ремаркета
   fleets: Флотилии
   vendors: Доставчици
   contacts: Контакти
@@ -87,6 +94,8 @@ menu:
 resource:
   asset: Актив
   assets: Активи
+  trailer: Ремарке
+  trailers: Ремаркета
   activity: Дейност
   activities: Дейности
   contact: Контакт
@@ -438,6 +447,30 @@ driver:
     unassign-vehicle-success: Unassigned {vehicleName} from {driverName}.
     issue-title: Issue reported for {driverName}
 device:
+  attachment:
+    title: Прикачен актив
+    description: Контекст на флота за телеметрията от това устройство.
+    open: Отвори актива
+    asset: Прикачен актив
+    synced-device: Синхронизирано устройство
+    asset-type: Тип актив
+    select-asset-type: Изберете тип актив
+    locate: Намери
+    change: Смени актива
+    detach: Разкачи
+    attached-device: Прикачено устройство
+    last-seen: Последен сигнал от устройството
+    none-title: Няма прикачен актив
+    none-message: Прикачете устройството към превозно средство или ремарке за контекст на телеметрията.
+    latest-positions: Последни позиции
+    positions-description: Последни координати на актива, подадени от това устройство.
+    full-history: Пълна история
+    no-positions: Няма скорошни позиции
+    no-positions-message: Този актив все още няма скорошна история на позициите.
+    attach-or-change: Прикачи или смени актив
+    view-attached: Покажи прикачения актив
+    locate-attached: Намери прикачения актив на картата
+    unknown: Неизвестен актив
   fields:
     title: Детайли за устройството
     device-name: Име на устройството
@@ -472,7 +505,9 @@ device:
   actions:
     attach-to-vehicle: Attach to Vehicle
     detach-from-vehicle: Detach from Vehicle
+    attach-to-asset: Прикачи към актив
   prompts:
+    manager-description: "Телематични устройства, монтирани на този {resourceType}. Прикачете устройство, за да започнете да получавате местоположения и събития."
     attach-to-vehicle-title: Attach device to vehicle
     attach-device-to-vehicle-title: "Attach {deviceName} to vehicle"
     select-vehicle-warning: Select a vehicle to attach this device to.
@@ -481,6 +516,12 @@ device:
     detach-from-vehicle-title: "Detach {deviceName} from vehicle?"
     detach-from-vehicle-body: "This detaches {deviceName} from {vehicleName} and stops vehicle telemetry updates until it is attached again."
     detach-from-vehicle-success: Device detached from vehicle.
+    attach-to-asset-title: Прикачи устройството към актив
+    select-asset-warning: Изберете превозно средство или ремарке.
+    attach-to-asset-success: Устройството е прикачено към актива.
+    detach-from-asset-title: "Да се разкачи ли {deviceName} от актива?"
+    detach-from-asset-body: "Това разкача {deviceName} от {assetName} и спира телематичните актуализации до ново прикачване."
+    detach-from-asset-success: Устройството е разкачено от актива.
 entity:
   fields:
     declare: Декларирай
@@ -568,6 +609,8 @@ issue:
     tags: Етикети на проблема
     type: Тип на проблема
 order:
+  placeholders:
+    filter-internal-id: Въведете или сканирайте вътрешни ID
   card:
     linked-order: Linked Order
     unknown-order: Unknown order
@@ -1005,7 +1048,19 @@ service-rate:
     zone-placeholder: Ограничете до зона
     cod-fee-label: Етикет за такса при наложен платеж
 vehicle:
+  placeholders:
+    filter-internal-id: Въведете или сканирайте вътрешни ID
+  filters:
+    has-trailer: Прикачено ремарке
+    has-driver: Назначен шофьор
+    has-device: Прикачено устройство
+    any: Всички
+    attached: Прикачено
+    not-attached: Не е прикачено
+    assigned: Назначен
+    not-assigned: Не е назначен
   fields:
+    updated-at: Последно обновено
     avatar: Аватар
     driver-assigned: Назначен шофьор
     make: Марка
@@ -1022,6 +1077,9 @@ vehicle:
     unassign-orders: Unassign Orders
     create-issue: Create Issue
     locate-vehicle: Намери превозното средство на картата
+    attach-trailer: Прикачи ремарке
+    attach-equipment: Прикачи оборудване
+    detach-equipment: Откачи оборудване
   prompts:
     attach-device-title: Attach device to {vehicleName}
     select-device-warning: Select a device to attach.
@@ -1033,6 +1091,18 @@ vehicle:
     confirm-unassign-orders-body: "This will remove {vehicleName} from these orders: {orders}."
     unassign-orders-success: Unassigned {vehicleName} from {count} order(s).
     issue-title: Issue reported for {vehicleName}
+    attach-trailer-title: "Прикачване на ремарке към {vehicleName}"
+    select-trailer-warning: Изберете ремарке, което да прикачите към това превозно средство.
+    attach-trailer-success: "{trailerName} е прикачено към {vehicleName}."
+  empty:
+    trailers: Няма прикачени ремаркета
+    trailers-description: Прикачете откачено ремарке към това превозно средство, за да започнете прикачване.
+    equipment: Няма прикачено оборудване
+    equipment-description: Прикачете оборудване като хидроборд, инструменти или предпазни средства към това превозно средство.
+  trailers:
+    description: Ремаркета, прикачени в момента към това превозно средство.
+  equipment:
+    description: Оборудване, прикачено в момента към това превозно средство.
 vendor:
   fields:
     setup-vendor: Настройка на доставчик
@@ -1921,3 +1991,357 @@ settings:
       button-continue: Продължи
       button-start: Започнете регистрацията сега
       button-in-progress: Регистрацията е в процес
+
+trailer:
+  navigation-description: Управлявайте теглените активи, прикачванията, оборудването и телематиката.
+  sections:
+    details: Детайли
+    identification: Идентификация на ремаркето
+    classification: Класификация и статус
+    registration: Регистрация
+    location: Местоположение
+    dimensions: Размери и капацитет
+    measurement: Мерни единици и пробег
+    dimensions-fields: "Размери ({unit})"
+    weight: "Тегло ({unit})"
+    running-gear: Оси, спирачки и прикачване
+    refrigeration: Хладилна система
+    ownership: Собственост и финанси
+    finance: Финансови данни
+    connection: Прикачване към превозно средство
+    telemetry: Местоположение и телематика
+    notes: Бележки и история
+  fields:
+    photo: Снимка
+    id: ID
+    name: Име
+    code: Код
+    description: Описание
+    type: Тип ремарке
+    body-type: Тип каросерия
+    color: Цвят
+    status: Статус
+    category: Категория
+    vin: VIN
+    plate-number: Регистрационен номер
+    serial-number: Сериен номер
+    make: Марка
+    model: Модел
+    year: Година
+    vendor: Доставчик
+    warranty: Гаранция
+    vehicle: Теглещо превозно средство
+    attachment-state: Състояние на прикачване
+    attached-at: Прикачено от
+    position: Позиция при теглене
+    source: Източник
+    connected-at: Прикачено на
+    disconnected-at: Откачено на
+    duration: Продължителност
+    connectivity: Свързаност
+    last-online: Последно онлайн
+    last-provider: Телематичен доставчик
+    last-event-at: Последно телематично събитие
+    coordinates: Координати
+    speed: Скорост
+    heading: Курс
+    altitude: Надморска височина
+    devices-count: Прикачени устройства
+    equipment-count: Прикачено оборудване
+    measurement-system: Мерна система
+    odometer: "Одометър / хубометър {unit}"
+    odometer-unit: Единица на одометъра
+    length: "Дължина ({unit})"
+    width: "Ширина ({unit})"
+    height: "Височина ({unit})"
+    cargo-volume: "Товарен обем ({unit})"
+    tare-weight: "Собствено тегло ({unit})"
+    gvwr: "Допустима максимална маса ({unit})"
+    payload-capacity: "Товароносимост ({unit})"
+    axle-count: Оси
+    tire-count: Гуми
+    door-count: Врати
+    coupling-type: Тип прикачно устройство
+    brake-type: Тип спирачки
+    abs: ABS
+    ebs: EBS
+    refrigerated: Хладилно
+    temperature-min: "Минимална температура ({unit})"
+    temperature-max: "Максимална температура ({unit})"
+    reefer-hours: Моточасове на хладилния агрегат
+    ownership-type: Собственост
+    financing-status: Статус на финансиране
+    currency: Валута
+    acquisition-cost: Цена на придобиване
+    current-value: Текуща стойност
+    insurance-value: Застрахователна стойност
+    depreciation-rate: Амортизационна норма (% годишно)
+    purchased-at: Дата на покупка
+    lease-expires-at: Изтичане на лизинга
+    notes: Бележки
+    created-at: Създадено
+    updated-at: Последна актуализация
+  placeholders:
+    filter-vendor: Филтрирай по доставчик
+    name: напр. Хладилно 12
+    code: Вътрешен код на автопарка, напр. TRL-0012
+    description: За какво се използва това ремарке
+    type: Изберете тип ремарке
+    status: Изберете статус
+    body-type: напр. Фургон, брезент, платформа
+    color: напр. Бял
+    category: Изберете категория (по избор)
+    vin: VIN от 17 знака
+    plate-number: Регистрационна табела
+    serial-number: Сериен номер на производителя
+    make: напр. Schmitz, Krone, Wabash
+    model: напр. 3000R
+    year: напр. 2024
+    vendor: Изберете доставчик (по избор)
+    warranty: Изберете гаранция (по избор)
+    vehicle: Изберете превозно средство
+    trailer: Изберете ремарке
+    equipment: Изберете оборудване
+    filter-vehicle: Филтрирай по теглещо превозно средство
+    position: "1"
+    measurement-system: Изберете мерна система
+    odometer-unit: Изберете единица
+    odometer: Текущо показание
+    length: "0.000"
+    width: "0.000"
+    height: "0.000"
+    cargo-volume: "0.000"
+    tare-weight: "0.000"
+    gvwr: "0.000"
+    payload-capacity: "0.000"
+    axle-count: напр. 2
+    tire-count: напр. 8
+    door-count: напр. 2
+    coupling-type: Изберете тип прикачно устройство
+    brake-type: Изберете тип спирачки
+    temperature-min: напр. -20
+    temperature-max: напр. 4
+    reefer-hours: Моточасове на хладилния агрегат
+    ownership-type: Изберете форма на собственост
+    financing-status: напр. Изплатено, финансирано до 2028
+    depreciation-rate: напр. 10
+    date: ДД-ММ-ГГГГ
+    notes: Вътрешни бележки за това ремарке
+  help:
+    photo: Качете снимка на това ремарке.
+    name: Името, показвано в Fleet-Ops. Задължително.
+    code: Вашата собствена референция на автопарка за това ремарке.
+    type: Типът определя кои раздели са приложими, например хладилна система за хладилните ремаркета.
+    status: Статус на жизнения цикъл. Прикачването и свързаността се проследяват отделно.
+    body-type: Свободно описание на каросерията за класификация и търсене.
+    category: Незадължително групиране, споделено с другите ресурси на автопарка.
+    vin: Идентификационният номер на шасито, щампован върху ремаркето.
+    coordinates: Последно известно или базово местоположение. Телематичните устройства го обновяват автоматично.
+    measurement-system: Определя единиците за размери, тегла, обем и температури.
+    odometer: Показание на одометъра или хубометъра в избраната единица.
+    cargo-volume: Използваем товарен обем на каросерията.
+    tare-weight: Тегло на празното ремарке.
+    gvwr: Допустима максимална маса, най-голямото разрешено тегло в натоварено състояние.
+    payload-capacity: Максимално тегло на товара, което ремаркето може да превозва.
+    coupling-type: Как ремаркето се прикачва към теглещото превозно средство.
+    abs: Монтирана антиблокираща спирачна система.
+    ebs: Монтирана електронна спирачна система.
+    refrigerated: Активирайте за ремаркета с контролирана температура, за да записвате настройките на хладилния агрегат.
+    temperature: Работен температурен диапазон на хладилния агрегат.
+    reefer-hours: Отчетени работни часове на хладилния агрегат.
+    ownership-type: Как се държи това ремарке. Данните за лизинг и финансиране се показват при нужда.
+    lease-expires-at: Кога изтича договорът за лизинг, наем или финансиране.
+    vendor: Доставчикът или лизингодателят, от който е получено ремаркето.
+    warranty: Гаранционна полица, покриваща това ремарке.
+    acquisition-cost: Покупна цена или капитализирана стойност в избраната валута.
+    depreciation-rate: Годишна амортизация, използвана за оценка на текущата стойност.
+    attach-vehicle: Ремаркето ще бъде прикачено към избраното превозно средство. Ремаркето може да е прикачено само към едно превозно средство едновременно.
+    select-trailer: Показват се само откачените ремаркета.
+    select-equipment: Показва се само неприкаченото оборудване.
+    position: Позиция зад превозното средство. Позиция 1 е непосредствено зад влекача; използвайте 2 или повече за автовлакове.
+  units:
+    length-metric: м
+    length-imperial: фута
+    weight-metric: кг
+    weight-imperial: lb
+    volume-metric: м³
+    volume-imperial: фут³
+    temperature-metric: °C
+    temperature-imperial: °F
+  actions:
+    new: Ново ремарке
+    locate: Покажи на картата
+    attach-vehicle: Прикачи към превозно средство
+    detach-vehicle: Откачи от превозното средство
+    attach-device: Прикачи устройство
+    attach-equipment: Прикачи оборудване
+    detach-equipment: Откачи оборудване
+    schedule-maintenance: Планирай поддръжка
+    create-work-order: Създай работна поръчка
+    log-maintenance: Запиши поддръжка
+  prompts:
+    attach-vehicle-title: "Прикачване на {trailerName} към превозно средство"
+    select-vehicle-warning: Изберете превозно средство, към което да прикачите това ремарке.
+    attach-vehicle-success: "{trailerName} е прикачено към {vehicleName}."
+    detach-vehicle-title: "Откачване на {trailerName}?"
+    detach-vehicle-body: "Това прекратява текущото прикачване между {trailerName} и {vehicleName}. Прикачването се запазва в историята на ремаркето."
+    detach-vehicle-success: "{trailerName} е откачено от {vehicleName}."
+    not-attached-warning: "{trailerName} не е прикачено към превозно средство."
+    attach-device-title: "Прикачване на устройство към {trailerName}"
+    select-device-warning: Изберете устройство, което да прикачите към това ремарке.
+    attach-device-success: "Устройството е прикачено към {trailerName}."
+    attach-equipment-title: "Прикачване на оборудване към {resourceName}"
+    select-equipment-warning: Изберете оборудване за прикачване.
+    attach-equipment-success: "{equipmentName} е прикачено към {resourceName}."
+    detach-equipment-title: "Откачване на {equipmentName}?"
+    detach-equipment-body: "{equipmentName} вече няма да бъде прикачено към {resourceName}."
+    detach-equipment-success: "{equipmentName} е откачено от {resourceName}."
+    no-location-warning: "{trailerName} все още няма записано местоположение."
+    photo-upload-error: "Снимката не можа да бъде качена: {message}"
+  empty:
+    title: Добавете първото си ремарке
+    description: Ремаркетата проследяват прикачванията, прикачените устройства и оборудване, телематиката в реално време и поддръжката на теглените ви активи.
+    filtered-title: Няма ремаркета, отговарящи на филтрите
+    filtered-description: Променете търсенето или филтрите, за да намерите друго ремарке.
+    connections: Няма история на прикачвания
+    connections-description: Прикачете това ремарке към превозно средство, за да започнете да записвате прикачвания.
+    equipment: Няма прикачено оборудване
+    equipment-description: Прикачете оборудване като хидроборд, колани или хладилни агрегати към това ремарке.
+    schedules: Няма графици за поддръжка
+    schedules-description: Създайте график за планиране на периодични прегледи или обслужване на това ремарке.
+    work-orders: Няма работни поръчки
+    work-orders-description: Създайте работна поръчка за проследяване на ремонти или обслужване на това ремарке.
+    maintenance: Няма история на поддръжка
+    maintenance-description: Записаната поддръжка за това ремарке ще се показва тук.
+  docs:
+    title: Ръководство за ремаркета
+    link: Отвори ръководството за ремаркета
+  tabs:
+    overview: Преглед
+    positions: Позиции
+    devices: Устройства
+    equipment: Оборудване
+    connections: История на прикачвания
+    schedules: Графици
+    work-orders: Работни поръчки
+    maintenance: Поддръжка
+  columns:
+    name: Име
+    id: ID
+    code: Код
+    type: Тип
+    plate-number: Регистрационен номер
+    status: Статус
+    vehicle: Теглещо превозно средство
+    attachment-state: Прикачване
+    connectivity: Свързаност
+    last-online: Последно онлайн
+    location: Местоположение
+    devices: Устройства
+    equipment: Оборудване
+    vin: VIN
+    serial-number: Сериен номер
+    make: Марка
+    model: Модел
+    year: Година
+    vendor: Доставчик
+    ownership: Собственост
+    axles: Оси
+    gvwr: Допустима максимална маса
+    payload-capacity: Товароносимост
+    length: Дължина
+    refrigerated: Хладилно
+    created-at: Създадено на
+    updated-at: Актуализирано на
+  filters:
+    created-between: Създадено между
+    updated-between: Актуализирано между
+    last-online-between: Последно онлайн между
+  connections:
+    description: Всички превозни средства, към които е било прикачено това ремарке, от най-новото към най-старото.
+    ongoing: Текущо
+    connected: "Свързан на {date}"
+    disconnected: "Разкачен на {date}"
+    still-attached: Все още прикачено
+  equipment:
+    description: Оборудване, прикачено в момента към това ремарке.
+  telemetry:
+    no-location: Няма записано местоположение
+  maintenance:
+    interval: Интервал
+    next-due: Следващ срок
+    code: Код
+    subject: Тема
+    priority: Приоритет
+    due: Срок
+    summary: Обобщение
+    odometer: Одометър
+    total-cost: Обща стойност
+    date: Дата
+  statuses:
+    available: Налично
+    in_use: В употреба
+    maintenance: В поддръжка
+    out_of_service: Извън експлоатация
+    retired: Изведено от употреба
+  status-descriptions:
+    available: Готово за възлагане или прикачване.
+    in_use: В момента изпълнява задача или е прикачено към превозно средство.
+    maintenance: В процес на обслужване, преглед или ремонт.
+    out_of_service: Неизползваемо до второ нареждане.
+    retired: Окончателно изведено от активна експлоатация.
+  attachment:
+    attached: Прикачено
+    detached: Откачено
+    no-vehicle: Не е прикачено към превозно средство
+    towed-by: Теглено от
+    position: "Позиция {position}"
+  connectivity:
+    online: Онлайн
+    recently_offline: Наскоро офлайн
+    offline: Офлайн
+    never_connected: Никога не е свързвано
+  measurement:
+    metric: Метрична
+    imperial: Имперска
+  measurement-descriptions:
+    metric: Метри, килограми, кубични метри и Целзий.
+    imperial: Футове, фунтове, кубични футове и Фаренхайт.
+  odometer-units:
+    km: Километри
+    mi: Мили
+  coupling-types:
+    fifth_wheel: Седлово прикачно устройство
+    pintle_hook: Кука
+    ball_hitch: Сферично прикачно устройство
+    gooseneck: Гъша шия
+    drawbar: Теглич
+    other: Друго
+  brake-types:
+    air: Пневматични спирачки
+    electric: Електрически спирачки
+    hydraulic_surge: Хидравлични инерционни спирачки
+    none: Без спирачки
+    other: Друго
+  ownership-types:
+    owned: Собствено
+    leased: На лизинг
+    financed: Финансирано
+    rented: Под наем
+  types:
+    dry_van: Фургон
+    reefer: Хладилно
+    flatbed: Платформа
+    step_deck: Платформа със стъпало
+    lowboy: Нискорамна платформа
+    tanker: Цистерна
+    bulk: За насипни товари
+    dump: Самосвално
+    chassis: Контейнеровоз
+    curtain_side: Брезентово
+    car_carrier: Автовоз
+    livestock: За животни
+    logging: За дървесина
+    dolly: Доли
+    specialty: Специализирано
+    other: Друго

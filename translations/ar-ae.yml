@@ -1,7 +1,361 @@
 menu:
   fuel-providers: تكاملات الوقود
   fuel-transactions: معاملات الوقود
+  trailers: المقطورات
 
+trailer:
+  navigation-description: إدارة الأصول المقطورة ووصلات القطر والمعدات والتتبع عن بُعد.
+  sections:
+    details: التفاصيل
+    identification: تعريف المقطورة
+    classification: التصنيف والحالة
+    registration: التسجيل
+    location: الموقع
+    dimensions: الأبعاد والسعة
+    measurement: وحدات القياس والاستخدام
+    dimensions-fields: "الأبعاد ({unit})"
+    weight: "الوزن ({unit})"
+    running-gear: المحاور والمكابح وأداة الربط
+    refrigeration: التبريد
+    ownership: الملكية والتمويل
+    finance: البيانات المالية
+    connection: وصلة القطر
+    telemetry: الموقع والتتبع عن بُعد
+    notes: الملاحظات والسجل
+  fields:
+    photo: الصورة
+    id: المعرّف
+    name: الاسم
+    code: الرمز
+    description: الوصف
+    type: نوع المقطورة
+    body-type: نوع الهيكل
+    color: اللون
+    status: الحالة
+    category: الفئة
+    vin: رقم الهيكل (VIN)
+    plate-number: رقم اللوحة
+    serial-number: الرقم التسلسلي
+    make: الصانع
+    model: الطراز
+    year: السنة
+    vendor: المورّد
+    warranty: الضمان
+    vehicle: المركبة القاطرة
+    attachment-state: حالة الربط
+    attached-at: مربوطة منذ
+    position: موضع القطر
+    source: المصدر
+    connected-at: تاريخ الربط
+    disconnected-at: تاريخ الفصل
+    duration: المدة
+    connectivity: الاتصال
+    last-online: آخر اتصال
+    last-provider: مزوّد التتبع
+    last-event-at: آخر حدث تتبع
+    coordinates: الإحداثيات
+    speed: السرعة
+    heading: الاتجاه
+    altitude: الارتفاع
+    devices-count: الأجهزة المربوطة
+    equipment-count: المعدات المربوطة
+    measurement-system: نظام القياس
+    odometer: "عداد المسافة {unit}"
+    odometer-unit: وحدة عداد المسافة
+    length: "الطول ({unit})"
+    width: "العرض ({unit})"
+    height: "الارتفاع ({unit})"
+    cargo-volume: "حجم الحمولة ({unit})"
+    tare-weight: "الوزن الفارغ ({unit})"
+    gvwr: "الوزن الإجمالي المسموح ({unit})"
+    payload-capacity: "سعة الحمولة ({unit})"
+    axle-count: المحاور
+    tire-count: الإطارات
+    door-count: الأبواب
+    coupling-type: نوع أداة الربط
+    brake-type: نوع المكابح
+    abs: ABS
+    ebs: EBS
+    refrigerated: مبرّدة
+    temperature-min: "الحد الأدنى لدرجة الحرارة ({unit})"
+    temperature-max: "الحد الأقصى لدرجة الحرارة ({unit})"
+    reefer-hours: ساعات تشغيل وحدة التبريد
+    ownership-type: الملكية
+    financing-status: حالة التمويل
+    currency: العملة
+    acquisition-cost: تكلفة الاقتناء
+    current-value: القيمة الحالية
+    insurance-value: القيمة المؤمّنة
+    depreciation-rate: معدل الإهلاك (% سنويًا)
+    purchased-at: تاريخ الشراء
+    lease-expires-at: انتهاء الإيجار
+    notes: ملاحظات
+    created-at: تاريخ الإنشاء
+    updated-at: آخر تحديث
+  placeholders:
+    filter-vendor: تصفية حسب المورّد
+    name: "مثال: مقطورة مبرّدة 12"
+    code: رمز الأسطول الداخلي، مثال TRL-0012
+    description: فيمَ تُستخدم هذه المقطورة
+    type: اختر نوع المقطورة
+    status: اختر الحالة
+    body-type: "مثال: مغلقة، ستائر جانبية، مسطحة"
+    color: "مثال: أبيض"
+    category: اختر فئة (اختياري)
+    vin: رقم هيكل من 17 خانة
+    plate-number: لوحة التسجيل
+    serial-number: الرقم التسلسلي للصانع
+    make: "مثال: Utility، Schmitz، Wabash"
+    model: "مثال: 3000R"
+    year: "مثال: 2024"
+    vendor: اختر مورّدًا (اختياري)
+    warranty: اختر ضمانًا (اختياري)
+    vehicle: اختر مركبة
+    trailer: اختر مقطورة
+    equipment: اختر معدة
+    filter-vehicle: تصفية حسب المركبة القاطرة
+    position: "1"
+    measurement-system: اختر نظام القياس
+    odometer-unit: اختر وحدة
+    odometer: القراءة الحالية
+    length: "0.000"
+    width: "0.000"
+    height: "0.000"
+    cargo-volume: "0.000"
+    tare-weight: "0.000"
+    gvwr: "0.000"
+    payload-capacity: "0.000"
+    axle-count: "مثال: 2"
+    tire-count: "مثال: 8"
+    door-count: "مثال: 2"
+    coupling-type: اختر نوع أداة الربط
+    brake-type: اختر نوع المكابح
+    temperature-min: "مثال: -20"
+    temperature-max: "مثال: 4"
+    reefer-hours: ساعات تشغيل وحدة التبريد
+    ownership-type: اختر نوع الملكية
+    financing-status: "مثال: مسدّدة، ممولة حتى 2028"
+    depreciation-rate: "مثال: 10"
+    date: يوم-شهر-سنة
+    notes: ملاحظات داخلية حول هذه المقطورة
+  help:
+    photo: ارفع صورة لهذه المقطورة.
+    name: الاسم الظاهر في Fleet-Ops. مطلوب.
+    code: مرجع الأسطول الخاص بك لهذه المقطورة.
+    type: يحدد النوع الأقسام المنطبقة، مثل التبريد للمقطورات المبرّدة.
+    status: حالة دورة الحياة. يتم تتبع الربط والاتصال بشكل منفصل.
+    body-type: وصف حر للهيكل يُستخدم للتصنيف والبحث.
+    category: تجميع اختياري مشترك مع موارد الأسطول الأخرى.
+    vin: رقم تعريف الهيكل المطبوع على المقطورة.
+    coordinates: آخر موقع معروف أو الموقع الأساسي. تقوم أجهزة التتبع بتحديثه تلقائيًا.
+    measurement-system: يحدد الوحدات المستخدمة للأبعاد والأوزان والحجم ودرجات الحرارة.
+    odometer: قراءة عداد المسافة بالوحدة المختارة.
+    cargo-volume: حجم الحمولة القابل للاستخدام في الهيكل.
+    tare-weight: وزن المقطورة وهي فارغة.
+    gvwr: الوزن الإجمالي المسموح به، أقصى وزن مسموح عند التحميل.
+    payload-capacity: أقصى وزن حمولة يمكن للمقطورة نقله.
+    coupling-type: كيفية ربط المقطورة بالمركبة القاطرة.
+    abs: مزوّدة بنظام منع انغلاق المكابح.
+    ebs: مزوّدة بنظام مكابح إلكتروني.
+    refrigerated: فعّل للمقطورات ذات التحكم في درجة الحرارة لتسجيل إعدادات وحدة التبريد.
+    temperature: نطاق درجة حرارة تشغيل وحدة التبريد.
+    reefer-hours: ساعات التشغيل المسجلة على وحدة التبريد.
+    ownership-type: كيفية حيازة هذه المقطورة. تظهر تفاصيل الإيجار والتمويل عند الحاجة.
+    lease-expires-at: موعد انتهاء اتفاقية الإيجار أو الاستئجار أو التمويل.
+    vendor: المورّد أو المؤجّر الذي تم الحصول على المقطورة منه.
+    warranty: وثيقة الضمان التي تغطي هذه المقطورة.
+    acquisition-cost: سعر الشراء أو التكلفة المرسملة بالعملة المختارة.
+    depreciation-rate: الإهلاك السنوي المستخدم لتقدير القيمة الحالية.
+    attach-vehicle: سيتم ربط المقطورة بالمركبة المختارة. لا يمكن ربط المقطورة إلا بمركبة واحدة في كل مرة.
+    select-trailer: تُعرض المقطورات غير المربوطة فقط.
+    select-equipment: تُعرض المعدات غير المربوطة فقط.
+    position: موضع القطر خلف المركبة. الموضع 1 خلف القاطرة مباشرة؛ استخدم 2 أو أكثر للقطارات البرية.
+  units:
+    length-metric: م
+    length-imperial: قدم
+    weight-metric: كجم
+    weight-imperial: رطل
+    volume-metric: م³
+    volume-imperial: قدم³
+    temperature-metric: °م
+    temperature-imperial: °ف
+  actions:
+    new: مقطورة جديدة
+    locate: تحديد الموقع على الخريطة
+    attach-vehicle: ربط بمركبة
+    detach-vehicle: فصل عن المركبة
+    attach-device: ربط جهاز
+    attach-equipment: ربط معدة
+    detach-equipment: فصل المعدة
+    schedule-maintenance: جدولة صيانة
+    create-work-order: إنشاء أمر عمل
+    log-maintenance: تسجيل صيانة
+  prompts:
+    attach-vehicle-title: "ربط {trailerName} بمركبة"
+    select-vehicle-warning: اختر مركبة لربط هذه المقطورة بها.
+    attach-vehicle-success: "تم ربط {trailerName} بـ {vehicleName}."
+    detach-vehicle-title: "فصل {trailerName}؟"
+    detach-vehicle-body: "سيؤدي هذا إلى إنهاء وصلة القطر الحالية بين {trailerName} و{vehicleName}. تُحفظ الوصلة في سجل المقطورة."
+    detach-vehicle-success: "تم فصل {trailerName} عن {vehicleName}."
+    not-attached-warning: "{trailerName} غير مربوطة بأي مركبة."
+    attach-device-title: "ربط جهاز بـ {trailerName}"
+    select-device-warning: اختر جهازًا لربطه بهذه المقطورة.
+    attach-device-success: "تم ربط الجهاز بـ {trailerName}."
+    attach-equipment-title: "ربط معدة بـ {resourceName}"
+    select-equipment-warning: اختر معدة لربطها.
+    attach-equipment-success: "تم ربط {equipmentName} بـ {resourceName}."
+    detach-equipment-title: "فصل {equipmentName}؟"
+    detach-equipment-body: "لن تبقى {equipmentName} مربوطة بـ {resourceName}."
+    detach-equipment-success: "تم فصل {equipmentName} عن {resourceName}."
+    no-location-warning: "لا يوجد موقع مسجل لـ {trailerName} بعد."
+    photo-upload-error: "تعذّر رفع الصورة: {message}"
+  empty:
+    title: أضف مقطورتك الأولى
+    description: تتتبع المقطورات وصلات القطر والأجهزة والمعدات المربوطة والتتبع المباشر والصيانة لأصولك المقطورة.
+    filtered-title: لا توجد مقطورات مطابقة لعوامل التصفية
+    filtered-description: عدّل البحث أو عوامل التصفية للعثور على مقطورة أخرى.
+    connections: لا يوجد سجل قطر بعد
+    connections-description: اربط هذه المقطورة بمركبة لبدء تسجيل وصلات القطر.
+    equipment: لا توجد معدات مربوطة
+    equipment-description: اربط معدات مثل الرافعات الخلفية أو الأحزمة أو وحدات التبريد بهذه المقطورة.
+    schedules: لا توجد جداول صيانة
+    schedules-description: أنشئ جدولًا لتخطيط الفحوصات أو الخدمات الدورية لهذه المقطورة.
+    work-orders: لا توجد أوامر عمل
+    work-orders-description: أنشئ أمر عمل لتتبع الإصلاحات أو الخدمات لهذه المقطورة.
+    maintenance: لا يوجد سجل صيانة
+    maintenance-description: ستظهر هنا عمليات الصيانة المسجلة لهذه المقطورة.
+  docs:
+    title: دليل المقطورات
+    link: فتح دليل المقطورات
+  tabs:
+    overview: نظرة عامة
+    positions: المواقع
+    devices: الأجهزة
+    equipment: المعدات
+    connections: سجل القطر
+    schedules: الجداول
+    work-orders: أوامر العمل
+    maintenance: الصيانة
+  columns:
+    name: الاسم
+    id: المعرّف
+    code: الرمز
+    type: النوع
+    plate-number: رقم اللوحة
+    status: الحالة
+    vehicle: المركبة القاطرة
+    attachment-state: الربط
+    connectivity: الاتصال
+    last-online: آخر اتصال
+    location: الموقع
+    devices: الأجهزة
+    equipment: المعدات
+    vin: رقم الهيكل
+    serial-number: الرقم التسلسلي
+    make: الصانع
+    model: الطراز
+    year: السنة
+    vendor: المورّد
+    ownership: الملكية
+    axles: المحاور
+    gvwr: الوزن الإجمالي المسموح
+    payload-capacity: سعة الحمولة
+    length: الطول
+    refrigerated: مبرّدة
+    created-at: تاريخ الإنشاء
+    updated-at: تاريخ التحديث
+  filters:
+    created-between: أُنشئت بين
+    updated-between: حُدّثت بين
+    last-online-between: آخر اتصال بين
+  connections:
+    description: جميع المركبات التي رُبطت بها هذه المقطورة، الأحدث أولًا.
+    ongoing: جارية
+    connected: "تم التوصيل {date}"
+    disconnected: "تم الفصل {date}"
+    still-attached: لا يزال متصلاً
+  equipment:
+    description: المعدات المربوطة حاليًا بهذه المقطورة.
+  telemetry:
+    no-location: لا يوجد موقع مسجل
+  maintenance:
+    interval: الفاصل الزمني
+    next-due: الاستحقاق التالي
+    code: الرمز
+    subject: الموضوع
+    priority: الأولوية
+    due: الاستحقاق
+    summary: الملخص
+    odometer: عداد المسافة
+    total-cost: التكلفة الإجمالية
+    date: التاريخ
+  statuses:
+    available: متاحة
+    in_use: قيد الاستخدام
+    maintenance: قيد الصيانة
+    out_of_service: خارج الخدمة
+    retired: مُستبعدة
+  status-descriptions:
+    available: جاهزة للإرسال أو الربط.
+    in_use: تعمل حاليًا في مهمة أو مربوطة بمركبة.
+    maintenance: تخضع للخدمة أو الفحص أو الإصلاح.
+    out_of_service: غير قابلة للاستخدام حتى إشعار آخر.
+    retired: أُزيلت نهائيًا من الخدمة الفعلية.
+  attachment:
+    attached: مربوطة
+    detached: مفصولة
+    no-vehicle: غير مربوطة بمركبة
+    towed-by: مقطورة بواسطة
+    position: "الموضع {position}"
+  connectivity:
+    online: متصلة
+    recently_offline: انقطعت مؤخرًا
+    offline: غير متصلة
+    never_connected: لم تتصل مطلقًا
+  measurement:
+    metric: متري
+    imperial: إمبراطوري
+  measurement-descriptions:
+    metric: أمتار وكيلوغرامات وأمتار مكعبة ودرجات مئوية.
+    imperial: أقدام وأرطال وأقدام مكعبة ودرجات فهرنهايت.
+  odometer-units:
+    km: كيلومترات
+    mi: أميال
+  coupling-types:
+    fifth_wheel: العجلة الخامسة
+    pintle_hook: خطاف السحب
+    ball_hitch: كرة القطر
+    gooseneck: عنق الإوزة
+    drawbar: قضيب السحب
+    other: أخرى
+  brake-types:
+    air: مكابح هوائية
+    electric: مكابح كهربائية
+    hydraulic_surge: مكابح هيدروليكية بالقصور
+    none: بدون مكابح
+    other: أخرى
+  ownership-types:
+    owned: مملوكة
+    leased: مؤجّرة تمويليًا
+    financed: ممولة
+    rented: مستأجرة
+  types:
+    dry_van: مغلقة جافة
+    reefer: مبرّدة
+    flatbed: مسطحة
+    step_deck: مسطحة متدرجة
+    lowboy: منخفضة
+    tanker: صهريج
+    bulk: بضائع سائبة
+    dump: قلّابة
+    chassis: هيكل حاويات
+    curtain_side: ستائر جانبية
+    car_carrier: ناقلة سيارات
+    livestock: نقل مواشٍ
+    logging: نقل أخشاب
+    dolly: دولي
+    specialty: متخصصة
+    other: أخرى
 fleet-ops:
   extension-name: Fleet-Ops
   common:
@@ -1620,6 +1974,8 @@ scheduler:
   notes-placeholder: Optional additional notes
 
 order:
+    placeholders:
+        filter-internal-id: اكتب أو امسح المعرفات الداخلية
     card:
       linked-order: Linked Order
       unknown-order: Unknown order
@@ -1634,3 +1990,43 @@ order:
       no-dropoff-address: No dropoff address
       no-route-details: No route details available.
       no-order-linked: No order is linked to this issue.
+vehicle:
+  placeholders:
+    filter-internal-id: اكتب أو امسح المعرفات الداخلية
+  filters:
+    has-trailer: مقطورة متصلة
+    has-driver: سائق معيّن
+    has-device: جهاز متصل
+    any: الكل
+    attached: متصل
+    not-attached: غير متصل
+    assigned: معيّن
+    not-assigned: غير معيّن
+  actions:
+    attach-trailer: ربط مقطورة
+    attach-equipment: ربط معدة
+    detach-equipment: فصل المعدة
+  empty:
+    trailers: لا توجد مقطورات مربوطة
+    trailers-description: اربط مقطورة غير مربوطة بهذه المركبة لبدء وصلة قطر.
+    equipment: لا توجد معدات مربوطة
+    equipment-description: اربط معدات مثل الرافعات الخلفية أو الأدوات أو معدات السلامة بهذه المركبة.
+  trailers:
+    description: المقطورات المربوطة حاليًا بهذه المركبة.
+  equipment:
+    description: المعدات المربوطة حاليًا بهذه المركبة.
+  prompts:
+    attach-trailer-title: "ربط مقطورة بـ {vehicleName}"
+    select-trailer-warning: اختر مقطورة لربطها بهذه المركبة.
+    attach-trailer-success: "تم ربط {trailerName} بـ {vehicleName}."
+common:
+  select-resource-filter-by: "اختر {resource} للتصفية"
+  no-vehicle-assigned: لا توجد مركبة مخصصة
+  last-modified: آخر تعديل
+  table-view: عرض الجدول
+  grid-view: عرض الشبكة
+  change-layout: تغيير التخطيط
+  online: متصل
+  offline: غير متصل
+  "yes": نعم
+  "no": لا

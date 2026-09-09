@@ -23,6 +23,44 @@ function buildStatusBadge(status, label = status) {
         </div>`;
 }
 
+function escapeHtml(value) {
+    return `${value ?? ''}`.replace(/[&<>"']/g, (character) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[character]);
+}
+
+function toPlainArray(value) {
+    if (!value) {
+        return [];
+    }
+
+    if (typeof value.toArray === 'function') {
+        return value.toArray();
+    }
+
+    return isArray(value) ? Array.from(value) : [];
+}
+
+/**
+ * Stacked list of attached assets (trailers, devices) with an online dot per row,
+ * or a dash when nothing is attached. Names are user data, so they are escaped.
+ */
+function buildAttachmentList(items, resolveName) {
+    if (items.length === 0) {
+        return '-';
+    }
+
+    return items
+        .map((item) => {
+            const onlineClass = item.online ? 'bg-green-400' : 'bg-gray-500';
+
+            return `
+                <div class="flex items-center gap-1 min-w-0">
+                    <span class="inline-block w-1.5 h-1.5 rounded-full shrink-0 ${onlineClass}"></span>
+                    <span class="truncate">${escapeHtml(resolveName(item))}</span>
+                </div>`;
+        })
+        .join('');
+}
+
 function buildMetaCell(label, value, valueClass = '') {
     const shouldTruncate = valueClass.split(' ').includes('truncate');
     const flowClass = shouldTruncate ? 'min-w-0 w-full' : 'whitespace-normal break-words';
@@ -63,6 +101,22 @@ function resolveDriverId(driver) {
 
 function resolveVehicleNumber(vehicle) {
     return vehicle.internal_id ?? vehicle.public_id ?? vehicle.plate_number ?? vehicle.serial_number ?? vehicle.vin ?? '-';
+}
+
+function resolveTrailerName(trailer) {
+    return trailer.displayName ?? trailer.display_name ?? trailer.name ?? trailer.public_id ?? '-';
+}
+
+function resolveDeviceName(device) {
+    return device.displayName ?? device.display_name ?? device.name ?? device.device_id ?? device.public_id ?? '-';
+}
+
+export function resolveVehicleTrailers(vehicle) {
+    return toPlainArray(vehicle.trailers);
+}
+
+export function resolveVehicleDevices(vehicle) {
+    return toPlainArray(vehicle.devices);
 }
 
 function resolveVehicleStatus(vehicle) {
@@ -143,6 +197,8 @@ export function buildVehicleLiveMapContent(vehicle, framed = false) {
             <div class="grid grid-cols-2 gap-1">
                 ${buildMetaCell('Vehicle #', resolveVehicleNumber(vehicle))}
                 ${buildMetaCell('Driver', vehicle.driver_name ?? vehicle.driver?.name ?? '-')}
+                ${buildMetaCell('Trailers', buildAttachmentList(resolveVehicleTrailers(vehicle), resolveTrailerName))}
+                ${buildMetaCell('Devices', buildAttachmentList(resolveVehicleDevices(vehicle), resolveDeviceName))}
                 ${buildMetaCell('Order', vehicle.meta?.current_order_reference ?? '-')}
                 ${buildMetaCell('Speed', resolveVehicleSpeed(vehicle))}
                 ${buildMetaCell('Heading', resolveVehicleHeading(vehicle))}

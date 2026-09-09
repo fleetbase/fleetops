@@ -86,10 +86,27 @@ export default buildRoutes(function () {
                     this.route('positions');
                     this.route('devices');
                     this.route('equipment');
+                    this.route('trailers');
                     this.route('schedules');
                     this.route('work-orders');
                     this.route('maintenance-history');
                     this.route('virtual', { path: '/:slug' });
+                });
+                this.route('edit', { path: '/edit/:public_id' });
+            });
+        });
+        this.route('trailers', function () {
+            this.route('index', { path: '/' }, function () {
+                this.route('new');
+                this.route('details', { path: '/:public_id' }, function () {
+                    this.route('index', { path: '/' });
+                    this.route('positions');
+                    this.route('devices');
+                    this.route('equipment');
+                    this.route('connections');
+                    this.route('schedules');
+                    this.route('work-orders');
+                    this.route('maintenance-history');
                 });
                 this.route('edit', { path: '/edit/:public_id' });
             });

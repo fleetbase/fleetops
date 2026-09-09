@@ -1,13 +1,15 @@
-> v0.6.64 ~ "Order responses no longer fail when a vehicle is assigned"
+> v0.6.65 ~ "First-class trailer operations"
 
 ---
-## Bug Fixes
-- **Orders with an assigned vehicle serialize again when expansions are requested.** The Vehicle and Fleet resources read the request's `with` list and loaded it onto the model they wrap. That is correct on their own endpoints, where the controller has already allowlisted the list, but both resources are also rendered nested inside Order and Driver responses. There the same request carries the parent's expansions, so `GET /v1/orders?with=payload` on an order with a vehicle assigned failed during serialisation with `RelationNotFoundException: Call to undefined relationship [payload] on model Vehicle`. Navigator order fetches and the console scheduler both hit this. Nested resources now keep only the relations the wrapped model actually defines; direct endpoint behaviour is unchanged.
+## What's New
+- **Trailers become a first-class Fleet-Ops resource.** Create and manage trailers independently, attach them to vehicles, connect equipment and telematics devices, and review operational, maintenance, location, and towing details from dedicated Trailer screens.
+- **Vehicle and equipment relationships are easier to understand.** Vehicle details expose attached trailers and equipment, while Trailer details show the current towing vehicle and installed equipment.
+- **Trailer APIs support complete integrations.** Internal and public endpoints cover trailer lifecycle, filtering, towing connections, equipment, devices, telemetry, imports, and exports.
 
 ---
 ## Testing
-- Added resource-level regressions for parent expansions reaching a nested Vehicle or Fleet resource, for string and empty `with` forms, and for resources wrapping plain data.
-- Added end-to-end checks resolving a real vehicle and a real fleet against an order-shaped request.
+- Added frontend, backend, API-contract, attachment, telematics, spatial-data, permission, and serialization coverage for first-class trailers.
+- Expanded the Fleetbase Postman collection and documentation alongside the Fleet-Ops implementation.
 
 ---
 ## Need help?

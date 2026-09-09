@@ -10,8 +10,8 @@
                                     <div class="flex flex-row">
                                         <div>
                                             <Image
-                                                src={{avatar-url group.waypoint.customer.photo_url}}
-                                                @fallbackSrc={{config "defaultValues.contactImage"}}
+                                                src={{resource-image group.waypoint.customer.photo_url "customer"}}
+                                                @fallbackSrc={{(placeholder-image "customer")}}
                                                 class="w-8 h-8 rounded-md shadow-sm mr-2"
                                                 alt={{group.waypoint.customer.name}}
                                             />

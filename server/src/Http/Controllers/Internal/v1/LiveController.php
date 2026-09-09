@@ -176,7 +176,7 @@ class LiveController extends Controller
         return LiveCacheService::remember('vehicles', $cacheParams, function () use ($bounds, $limit) {
             // Fetch vehicles that are online
             $query = Vehicle::where(['company_uuid' => session('company')])
-                ->with(['devices', 'driver'])
+                ->with(['devices', 'driver', 'currentTrailers'])
                 ->applyDirectivesForPermissions('fleet-ops list vehicle');
 
             $this->applyLiveLocationGuards($query);

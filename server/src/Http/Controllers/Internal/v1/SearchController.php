@@ -21,6 +21,7 @@ use Fleetbase\FleetOps\Models\Place;
 use Fleetbase\FleetOps\Models\Sensor;
 use Fleetbase\FleetOps\Models\ServiceRate;
 use Fleetbase\FleetOps\Models\Telematic;
+use Fleetbase\FleetOps\Models\Trailer;
 use Fleetbase\FleetOps\Models\Vehicle;
 use Fleetbase\FleetOps\Models\Vendor;
 use Fleetbase\FleetOps\Models\WorkOrder;
@@ -38,6 +39,7 @@ class SearchController extends Controller
         'orders',
         'drivers',
         'vehicles',
+        'trailers',
         'fleets',
         'vendors',
         'contacts',
@@ -108,6 +110,7 @@ class SearchController extends Controller
             'orders'                => 'fleet-ops see order',
             'drivers'               => 'fleet-ops see driver',
             'vehicles'              => 'fleet-ops see vehicle',
+            'trailers'              => 'fleet-ops see trailer',
             'fleets'                => 'fleet-ops see fleet',
             'vendors'               => 'fleet-ops see vendor',
             'contacts'              => 'fleet-ops see contact',
@@ -144,6 +147,7 @@ class SearchController extends Controller
             'orders'                => $this->searchOrders($query, $limit),
             'drivers'               => $this->searchDrivers($query, $limit),
             'vehicles'              => $this->searchVehicles($query, $limit),
+            'trailers'              => $this->searchTrailers($query, $limit),
             'fleets'                => $this->searchFleets($query, $limit),
             'vendors'               => $this->searchVendors($query, $limit),
             'contacts'              => $this->searchContacts($query, $limit),
@@ -223,6 +227,18 @@ class SearchController extends Controller
             'route'       => 'console.fleet-ops.management.vehicles.index.details',
             'models'      => [$this->routeModel($vehicle)],
             'breadcrumb'  => 'Fleet-Ops > Resources > Vehicles',
+        ]);
+    }
+
+    private function searchTrailers(string $query, int $limit): Collection
+    {
+        return $this->searchGeneric(Trailer::class, ['name', 'description', 'code', 'make', 'model', 'year', 'plate_number', 'vin', 'serial_number', 'public_id', 'uuid'], $query, $limit, fn (Trailer $trailer) => [
+            'label'       => $trailer->display_name ?: $trailer->name ?: $trailer->public_id,
+            'description' => $this->description($trailer->type, $trailer->plate_number, $trailer->status),
+            'icon'        => 'trailer', 'type' => 'Trailer',
+            'route'       => 'console.fleet-ops.management.trailers.index.details',
+            'models'      => [$this->routeModel($trailer)],
+            'breadcrumb'  => 'Fleet-Ops > Resources > Trailers',
         ]);
     }
 

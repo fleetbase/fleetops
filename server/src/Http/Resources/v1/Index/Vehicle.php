@@ -3,6 +3,7 @@
 namespace Fleetbase\FleetOps\Http\Resources\v1\Index;
 
 use Fleetbase\FleetOps\Models\Order;
+use Fleetbase\FleetOps\Support\TrailerSummary;
 use Fleetbase\FleetOps\Support\Utils;
 use Fleetbase\Http\Resources\FleetbaseResource;
 use Fleetbase\Support\Http;
@@ -47,6 +48,7 @@ class Vehicle extends FleetbaseResource
             'speed'                 => (int) data_get($this, 'speed', 0),
             'online'                => (bool) data_get($this, 'online', false),
             'devices'               => $this->whenLoaded('devices', fn () => $this->compactDevices()),
+            'trailers'              => $this->whenLoaded('currentTrailers', fn () => $this->compactTrailers()),
             'assigned_orders_count' => $this->when($isInternal, $this->assignedOrdersCount()),
 
             // Meta flag to indicate this is an index resource
@@ -82,6 +84,14 @@ class Vehicle extends FleetbaseResource
                 'status'        => $device->status,
             ]
         )->values()->all();
+    }
+
+    /**
+     * Trailers currently coupled to the vehicle, compacted for map popovers.
+     */
+    protected function compactTrailers(): array
+    {
+        return TrailerSummary::collection($this->currentTrailers);
     }
 
     protected function currentOrderReference(): ?string

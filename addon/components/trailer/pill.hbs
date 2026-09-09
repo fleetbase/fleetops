@@ -1,0 +1,21 @@
+{{#let (or @trailer @resource) as |resource|}}
+    <Pill
+        @resource={{resource}}
+        @imageSrc={{resource.photo_url}}
+        @imageFallback={{(trailer-placeholder-image)}}
+        @showOnlineIndicator={{true}}
+        @noTooltip={{true}}
+        @onClick={{@onClick}}
+        @anchorClass={{@anchorClass}}
+        @imageClass={{@imageClass}}
+        @imageWrapperClass={{@imageWrapperClass}}
+        @contentWrapperClass="min-w-0 {{@contentWrapperClass}}"
+        ...attributes
+    >
+        <div class="text-sm truncate {{@titleClass}}">{{or resource.displayName resource.display_name resource.name resource.public_id}}</div>
+        <div class="text-xs text-gray-400 dark:text-gray-500 truncate {{@subtitleClass}}">
+            {{#if resource.type}}{{t (concat "trailer.types." resource.type)}}{{/if}}
+            {{#if (or resource.plate_number resource.vin resource.code)}}<span class="mx-1">·</span>{{or resource.plate_number resource.vin resource.code}}{{/if}}
+        </div>
+    </Pill>
+{{/let}}

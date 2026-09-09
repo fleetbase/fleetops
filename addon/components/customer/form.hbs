@@ -3,8 +3,8 @@
         <div class="flex flex-row space-x-3 mb-3">
             <div class="flex items-center justify-start rounded-full">
                 <Image
-                    src={{@resource.photo_url}}
-                    @fallbackSrc={{config "defaultValues.contactImage"}}
+                    src={{resource-image @resource.photo_url "customer"}}
+                    @fallbackSrc={{(placeholder-image "customer")}}
                     alt={{@resource.name}}
                     height="48"
                     width="48"

@@ -2,8 +2,8 @@
     {{#each this.entries as |entry idx|}}
         <div class="relative group {{if (gt idx 0) this.overlapClass}}" {{set-z-index (add 1 idx)}}>
             <Image
-                src={{avatar-url entry.photoUrl}}
-                @fallbackSrc={{config "defaultValues.contactImage"}}
+                src={{resource-image entry.photoUrl "customer"}}
+                @fallbackSrc={{(placeholder-image "customer")}}
                 alt={{or entry.name "Unknown customer"}}
                 class="{{this.sizeClass}} rounded-full ring-2 ring-gray-800 dark:ring-gray-700 shadow transition-shadow hover:shadow-md focus:shadow-md"
                 role="img"

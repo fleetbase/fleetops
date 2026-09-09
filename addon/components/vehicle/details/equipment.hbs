@@ -1,0 +1,25 @@
+<AttachmentList
+    @title={{t "resource.equipment"}}
+    @description={{t "vehicle.equipment.description"}}
+    @actionText={{t "vehicle.actions.attach-equipment"}}
+    @actionIcon="plus"
+    @onAction={{this.attach}}
+    @actionPermission="fleet-ops update vehicle"
+    @isLoading={{this.loadEquipment.isRunning}}
+    @items={{this.equipment}}
+    @emptyIcon="toolbox"
+    @emptyTitle={{t "vehicle.empty.equipment"}}
+    @emptyDescription={{t "vehicle.empty.equipment-description"}}
+    class="vehicle-details-equipment"
+>
+    <:item as |item|>
+        <Equipment::Pill @equipment={{item}} @onClick={{fn this.view item}} />
+        {{#if item.status}}
+            <Badge @status={{item.status}} @size="xs" class="fleetops-attachment-list-item-badge" />
+        {{/if}}
+    </:item>
+    <:itemActions as |item|>
+        <Button @icon="eye" @size="xs" @helpText={{t "common.view"}} @onClick={{fn this.view item}} @permission="fleet-ops view equipment" />
+        <Button @icon="unlink" @size="xs" @type="danger" @helpText={{t "vehicle.actions.detach-equipment"}} @onClick={{fn this.detach item}} @permission="fleet-ops update vehicle" />
+    </:itemActions>
+</AttachmentList>

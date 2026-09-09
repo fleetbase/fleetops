@@ -1,5 +1,6 @@
 <?php
 
+use Fleetbase\FleetOps\Exceptions\DeviceAlreadyAttachedException;
 use Fleetbase\FleetOps\Http\Controllers\Api\v1\DeviceController;
 use Fleetbase\FleetOps\Http\Requests\CreateDeviceRequest;
 use Fleetbase\FleetOps\Http\Requests\UpdateDeviceRequest;
@@ -82,22 +83,23 @@ class FleetOpsApiDeviceControllerEndpointProbe extends DeviceController
         $this->lookupLogs[] = [$action, $deviceId, $vehicleId];
     }
 
-    protected function logDeviceAttachmentFailure(string $action, Device $device, ?Vehicle $vehicle, Throwable $exception): void
+    protected function logDeviceAttachmentFailure(string $action, Device $device, ?EloquentModel $attachable, Throwable $exception): void
     {
-        $this->failureLogs[] = [$action, $device->uuid, $vehicle?->uuid, $exception->getMessage()];
+        $this->failureLogs[] = [$action, $device->uuid, $attachable?->uuid, $exception->getMessage()];
     }
 }
 
 class FleetOpsApiDeviceEndpointFake extends Device
 {
-    public array $loads       = [];
-    public array $loadCounts  = [];
-    public array $updates     = [];
-    public array $attachments = [];
-    public array $detaches    = [];
-    public bool $deleted      = false;
-    public bool $throwAttach  = false;
-    public bool $throwDetach  = false;
+    public array $loads               = [];
+    public array $loadCounts          = [];
+    public array $updates             = [];
+    public array $attachments         = [];
+    public array $detaches            = [];
+    public bool $deleted              = false;
+    public bool $throwAttach          = false;
+    public bool $throwDetach          = false;
+    public bool $throwAlreadyAttached = false;
 
     public function load($relations)
     {
@@ -137,6 +139,10 @@ class FleetOpsApiDeviceEndpointFake extends Device
     {
         if ($this->throwAttach) {
             throw new RuntimeException('attach exploded');
+        }
+
+        if ($this->throwAlreadyAttached) {
+            throw DeviceAlreadyAttachedException::for(null);
         }
 
         $this->attachments[] = [$attachable::class, $attachable->uuid];
@@ -316,6 +322,15 @@ test('api device controller attaches detaches and reports failures', function ()
     ];
     $attachFailure = $attachFailureController->attach(new Request(['attachable' => 'vehicle_public']), 'attach_failure')->getData(true);
 
+    $attachConflictDevice                       = fleetopsApiDeviceEndpointDevice('attach-conflict');
+    $attachConflictDevice->throwAlreadyAttached = true;
+    $attachConflictController                   = fleetopsApiDeviceControllerEndpoint();
+    $attachConflictController->models           = [
+        Device::class . ':attach_conflict'  => $attachConflictDevice,
+        Vehicle::class . ':vehicle_public'  => $vehicle,
+    ];
+    $attachConflict = $attachConflictController->attach(new Request(['attachable' => 'vehicle_public']), 'attach_conflict');
+
     $detachFailureDevice              = fleetopsApiDeviceEndpointDevice('detach-failure');
     $detachFailureDevice->throwDetach = true;
     $detachFailureController          = fleetopsApiDeviceControllerEndpoint();
@@ -339,9 +354,11 @@ test('api device controller attaches detaches and reports failures', function ()
         ])
         ->and($device->detaches)->toBe(['device-uuid'])
         ->and($missing)->toBe(['error' => 'Device resource not found.'])
-        ->and($attachFailure)->toBe(['error' => 'Unable to attach device to vehicle.'])
+        ->and($attachFailure)->toBe(['error' => 'Unable to attach device to resource.'])
+        ->and($attachConflict->getData(true))->toBe(['error' => 'Device is already attached to another asset. Detach it before attaching it elsewhere.'])
+        ->and($attachConflict->getStatusCode())->toBe(409)
         ->and($attachFailureController->failureLogs)->toBe([['attach', 'attach-failure', 'vehicle-uuid', 'attach exploded']])
-        ->and($detachFailure)->toBe(['error' => 'Unable to detach device from vehicle.'])
+        ->and($detachFailure)->toBe(['error' => 'Unable to detach device from resource.'])
         ->and($detachFailureController->failureLogs)->toBe([['detach', 'detach-failure', null, 'detach exploded']])
-        ->and($lookupFailure)->toBe(['error' => 'Device or vehicle resource not found.']);
+        ->and($lookupFailure)->toBe(['error' => 'Device or attachable resource not found.']);
 });

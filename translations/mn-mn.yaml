@@ -1,6 +1,9 @@
 fleet-ops:
   extension-name: Fleet-Ops
 common:
+  last-modified: Сүүлд өөрчилсөн
+  online: Онлайн
+  offline: Офлайн
   proof-of-delivery: Хүргэлтийн баталгаа
   ad-hoc: Тусгай
   bulk-dispatch: Бөөнөөр илгээх
@@ -8,6 +11,7 @@ common:
   dispatch-order: Илгээх захиалга
   assign-driver: Жолоочийг томилох
   no-driver-assigned: Жолооч томилогдоогүй
+  no-vehicle-assigned: Тээврийн хэрэгсэл томилогдоогүй
   details: Дэлгэрэнгүй
   name: Нэр
   title: Гарчиг
@@ -47,6 +51,8 @@ common:
   notes: Notes
   schedule: Schedule
   current-job: Current Job
+  "yes": Тийм
+  "no": Үгүй
 menu:
   operations: Үйл ажиллагаа
   dashboard: Хяналтын самбар
@@ -57,6 +63,7 @@ menu:
   resources: Нөөцүүд
   drivers: Жолооч нар
   vehicles: Тээврийн хэрэгслүүд
+  trailers: Чиргүүлүүд
   fleets: Флийтүүд
   vendors: Нийлүүлэгчид
   contacts: Холбоо барих
@@ -87,6 +94,8 @@ menu:
 resource:
   asset: Хөрөнгө
   assets: Хөрөнгүүд
+  trailer: Чиргүүл
+  trailers: Чиргүүлүүд
   activity: Үйл ажиллагаа
   activities: Үйл ажиллагаанууд
   contact: Холбоо барих
@@ -434,6 +443,30 @@ driver:
     unassign-vehicle-success: Unassigned {vehicleName} from {driverName}.
     issue-title: Issue reported for {driverName}
 device:
+  attachment:
+    title: Холбогдсон хөрөнгө
+    description: Энэ төхөөрөмжийн телеметрт зориулсан флийтийн нөхцөл.
+    open: Хөрөнгийг нээх
+    asset: Холбогдсон хөрөнгө
+    synced-device: Синк хийсэн төхөөрөмж
+    asset-type: Хөрөнгийн төрөл
+    select-asset-type: Хөрөнгийн төрөл сонгоно уу
+    locate: Байршлыг олох
+    change: Хөрөнгө солих
+    detach: Салгах
+    attached-device: Холбогдсон төхөөрөмж
+    last-seen: Төхөөрөмжийн сүүлийн дохио
+    none-title: Хөрөнгө холбоогүй
+    none-message: Телеметрийн нөхцөл үүсгэхийн тулд төхөөрөмжийг тээврийн хэрэгсэл эсвэл чиргүүлд холбоно уу.
+    latest-positions: Сүүлийн байршлууд
+    positions-description: Энэ төхөөрөмжөөс ирсэн хөрөнгийн сүүлийн координатууд.
+    full-history: Бүтэн түүх
+    no-positions: Сүүлийн байршил алга
+    no-positions-message: Энэ хөрөнгөд сүүлийн байршлын түүх алга.
+    attach-or-change: Хөрөнгө холбох эсвэл солих
+    view-attached: Холбогдсон хөрөнгийг харах
+    locate-attached: Холбогдсон хөрөнгийг газрын зураг дээр олох
+    unknown: Үл мэдэгдэх хөрөнгө
   fields:
     title: Төхөөрөмжийн дэлгэрэнгүй
     device-name: Төхөөрөмжийн нэр
@@ -468,7 +501,9 @@ device:
   actions:
     attach-to-vehicle: Attach to Vehicle
     detach-from-vehicle: Detach from Vehicle
+    attach-to-asset: Хөрөнгөд холбох
   prompts:
+    manager-description: "Энэ {resourceType}-д суурилуулсан телематик төхөөрөмжүүд. Байршил болон үйл явдлыг хүлээн авч эхлэхийн тулд төхөөрөмж холбоно уу."
     attach-to-vehicle-title: Attach device to vehicle
     attach-device-to-vehicle-title: "Attach {deviceName} to vehicle"
     select-vehicle-warning: Select a vehicle to attach this device to.
@@ -477,6 +512,12 @@ device:
     detach-from-vehicle-title: "Detach {deviceName} from vehicle?"
     detach-from-vehicle-body: "This detaches {deviceName} from {vehicleName} and stops vehicle telemetry updates until it is attached again."
     detach-from-vehicle-success: Device detached from vehicle.
+    attach-to-asset-title: Төхөөрөмжийг хөрөнгөд холбох
+    select-asset-warning: Тээврийн хэрэгсэл эсвэл чиргүүл сонгоно уу.
+    attach-to-asset-success: Төхөөрөмж хөрөнгөд холбогдлоо.
+    detach-from-asset-title: "{deviceName}-г хөрөнгөөс салгах уу?"
+    detach-from-asset-body: "Энэ нь {deviceName}-г {assetName}-с салгаж, дахин холбох хүртэл телеметрийн шинэчлэлтийг зогсооно."
+    detach-from-asset-success: Төхөөрөмж хөрөнгөөс салгагдлаа.
 entity:
   fields:
     declare: Мэдэгдэх
@@ -565,6 +606,8 @@ issue:
     tags: Асуудлын Тагууд
     type: Асуудлын Төрөл
 order:
+  placeholders:
+    filter-internal-id: Дотоод ID бичих эсвэл скан хийх
   card:
     linked-order: Linked Order
     unknown-order: Unknown order
@@ -992,7 +1035,19 @@ service-rate:
     zone-placeholder: Бүсэд хязгаарлах
     cod-fee-label: Нийлүүлэлтийн төлбөрийн шошго
 vehicle:
+  placeholders:
+    filter-internal-id: Дотоод ID бичих эсвэл скан хийх
+  filters:
+    has-trailer: Чиргүүл холбогдсон
+    has-driver: Жолооч томилогдсон
+    has-device: Төхөөрөмж холбогдсон
+    any: Бүгд
+    attached: Холбогдсон
+    not-attached: Холбогдоогүй
+    assigned: Томилогдсон
+    not-assigned: Томилогдоогүй
   fields:
+    updated-at: Сүүлд шинэчилсэн
     avatar: Профайл зураг
     driver-assigned: Жолооч томилогдсон
     make: Үйлдвэрлэгч
@@ -1009,6 +1064,9 @@ vehicle:
     unassign-orders: Unassign Orders
     create-issue: Create Issue
     locate-vehicle: Тээврийн хэрэгслийг газрын зураг дээр олох
+    attach-trailer: Чиргүүл холбох
+    attach-equipment: Тоног төхөөрөмж холбох
+    detach-equipment: Тоног төхөөрөмж салгах
   prompts:
     attach-device-title: Attach device to {vehicleName}
     select-device-warning: Select a device to attach.
@@ -1020,6 +1078,18 @@ vehicle:
     confirm-unassign-orders-body: "This will remove {vehicleName} from these orders: {orders}."
     unassign-orders-success: Unassigned {vehicleName} from {count} order(s).
     issue-title: Issue reported for {vehicleName}
+    attach-trailer-title: "{vehicleName}-д чиргүүл холбох"
+    select-trailer-warning: Энэ тээврийн хэрэгсэлтэй холбох чиргүүлийг сонгоно уу.
+    attach-trailer-success: "{trailerName}-г {vehicleName}-тэй холболоо."
+  empty:
+    trailers: Холбогдсон чиргүүл алга
+    trailers-description: Холболт эхлүүлэхийн тулд салгасан чиргүүлийг энэ тээврийн хэрэгсэлтэй холбоно уу.
+    equipment: Холбогдсон тоног төхөөрөмж алга
+    equipment-description: Энэ тээврийн хэрэгсэлд өргөгч, багаж хэрэгсэл эсвэл аюулгүй байдлын хэрэгсэл зэрэг тоног төхөөрөмж холбоно уу.
+  trailers:
+    description: Одоо энэ тээврийн хэрэгсэлтэй холбогдсон чиргүүлүүд.
+  equipment:
+    description: Одоо энэ тээврийн хэрэгсэлд холбогдсон тоног төхөөрөмж.
 vendor:
   fields:
     setup-vendor: Нийлүүлэгчийг тохируулах
@@ -1890,3 +1960,357 @@ settings:
       button-continue: Үргэлжлүүлэх
       button-start: Одоо бүртгэл эхлүүлэх
       button-in-progress: Бүртгэл явагдаж байна
+
+trailer:
+  navigation-description: Чиргүүл хөрөнгө, холболт, тоног төхөөрөмж болон телематикийг удирдах.
+  sections:
+    details: Дэлгэрэнгүй
+    identification: Чиргүүлийн таних мэдээлэл
+    classification: Ангилал ба төлөв
+    registration: Бүртгэл
+    location: Байршил
+    dimensions: Хэмжээ ба даац
+    measurement: Хэмжих нэгж ба ашиглалт
+    dimensions-fields: "Хэмжээ ({unit})"
+    weight: "Жин ({unit})"
+    running-gear: Тэнхлэг, тоормос, холбоос
+    refrigeration: Хөргөлт
+    ownership: Өмчлөл ба санхүү
+    finance: Санхүүгийн мэдээлэл
+    connection: Тээврийн хэрэгсэлтэй холболт
+    telemetry: Байршил ба телематик
+    notes: Тэмдэглэл ба түүх
+  fields:
+    photo: Зураг
+    id: ID
+    name: Нэр
+    code: Код
+    description: Тайлбар
+    type: Чиргүүлийн төрөл
+    body-type: Тэвшний төрөл
+    color: Өнгө
+    status: Төлөв
+    category: Ангилал
+    vin: VIN
+    plate-number: Улсын дугаар
+    serial-number: Серийн дугаар
+    make: Үйлдвэрлэгч
+    model: Загвар
+    year: Он
+    vendor: Нийлүүлэгч
+    warranty: Баталгаа
+    vehicle: Чирэгч тээврийн хэрэгсэл
+    attachment-state: Холболтын төлөв
+    attached-at: Холбогдсоноос хойш
+    position: Чирэх байрлал
+    source: Эх сурвалж
+    connected-at: Холбогдсон огноо
+    disconnected-at: Салгасан огноо
+    duration: Үргэлжилсэн хугацаа
+    connectivity: Холбоо
+    last-online: Сүүлд онлайн байсан
+    last-provider: Телематикийн үйлчилгээ үзүүлэгч
+    last-event-at: Сүүлийн телематик үйл явдал
+    coordinates: Координат
+    speed: Хурд
+    heading: Чиглэл
+    altitude: Өндөр
+    devices-count: Холбогдсон төхөөрөмж
+    equipment-count: Холбогдсон тоног төхөөрөмж
+    measurement-system: Хэмжих систем
+    odometer: "Одометр / хабометр {unit}"
+    odometer-unit: Одометрийн нэгж
+    length: "Урт ({unit})"
+    width: "Өргөн ({unit})"
+    height: "Өндөр ({unit})"
+    cargo-volume: "Ачааны эзлэхүүн ({unit})"
+    tare-weight: "Хоосон жин ({unit})"
+    gvwr: "Зөвшөөрөгдөх нийт жин ({unit})"
+    payload-capacity: "Даац ({unit})"
+    axle-count: Тэнхлэг
+    tire-count: Дугуй
+    door-count: Хаалга
+    coupling-type: Холбоосын төрөл
+    brake-type: Тоормосны төрөл
+    abs: ABS
+    ebs: EBS
+    refrigerated: Хөргөлттэй
+    temperature-min: "Хамгийн бага температур ({unit})"
+    temperature-max: "Хамгийн их температур ({unit})"
+    reefer-hours: Хөргөгчийн мотоцаг
+    ownership-type: Өмчлөл
+    financing-status: Санхүүжилтийн төлөв
+    currency: Валют
+    acquisition-cost: Худалдан авсан үнэ
+    current-value: Одоогийн үнэ цэнэ
+    insurance-value: Даатгалын үнэлгээ
+    depreciation-rate: Элэгдлийн хувь (жилд %)
+    purchased-at: Худалдан авсан огноо
+    lease-expires-at: Түрээс дуусах огноо
+    notes: Тэмдэглэл
+    created-at: Үүсгэсэн
+    updated-at: Сүүлд шинэчилсэн
+  placeholders:
+    filter-vendor: Нийлүүлэгчээр шүүх
+    name: ж. Хөргүүртэй чиргүүл 12
+    code: Дотоод паркийн код, ж. TRL-0012
+    description: Энэ чиргүүлийг юунд ашигладаг вэ
+    type: Чиргүүлийн төрөл сонгох
+    status: Төлөв сонгох
+    body-type: ж. Битүү, брезент, тавцан
+    color: ж. Цагаан
+    category: Ангилал сонгох (заавал биш)
+    vin: 17 тэмдэгттэй VIN
+    plate-number: Улсын дугаарын тэмдэг
+    serial-number: Үйлдвэрлэгчийн серийн дугаар
+    make: ж. Schmitz, Krone, Wabash
+    model: ж. 3000R
+    year: ж. 2024
+    vendor: Нийлүүлэгч сонгох (заавал биш)
+    warranty: Баталгаа сонгох (заавал биш)
+    vehicle: Тээврийн хэрэгсэл сонгох
+    trailer: Чиргүүл сонгох
+    equipment: Тоног төхөөрөмж сонгох
+    filter-vehicle: Чирэгч тээврийн хэрэгслээр шүүх
+    position: "1"
+    measurement-system: Хэмжих систем сонгох
+    odometer-unit: Нэгж сонгох
+    odometer: Одоогийн заалт
+    length: "0.000"
+    width: "0.000"
+    height: "0.000"
+    cargo-volume: "0.000"
+    tare-weight: "0.000"
+    gvwr: "0.000"
+    payload-capacity: "0.000"
+    axle-count: ж. 2
+    tire-count: ж. 8
+    door-count: ж. 2
+    coupling-type: Холбоосын төрөл сонгох
+    brake-type: Тоормосны төрөл сонгох
+    temperature-min: ж. -20
+    temperature-max: ж. 4
+    reefer-hours: Хөргөгчийн ажилласан цаг
+    ownership-type: Өмчлөлийн хэлбэр сонгох
+    financing-status: ж. Төлж дууссан, 2028 он хүртэл зээлтэй
+    depreciation-rate: ж. 10
+    date: ӨӨ-СС-ЖЖЖЖ
+    notes: Энэ чиргүүлийн тухай дотоод тэмдэглэл
+  help:
+    photo: Энэ чиргүүлийн зургийг оруулна уу.
+    name: Fleet-Ops-д харагдах нэр. Заавал.
+    code: Энэ чиргүүлд зориулсан таны паркийн лавлах код.
+    type: Төрөл нь хамаарах хэсгүүдийг тодорхойлно, жишээ нь хөргүүртэй чиргүүлд хөргөлт.
+    status: Амьдралын мөчлөгийн төлөв. Холболт ба холбоог тусад нь хянана.
+    body-type: Ангилал, хайлтад ашиглах тэвшний чөлөөт тайлбар.
+    category: Бусад паркийн нөөцтэй хуваалцах заавал биш бүлэглэл.
+    vin: Чиргүүл дээр дарсан явах эд ангийн таних дугаар.
+    coordinates: Сүүлд мэдэгдэж байсан эсвэл үндсэн байршил. Телематик төхөөрөмж автоматаар шинэчилнэ.
+    measurement-system: Хэмжээ, жин, эзлэхүүн, температурын нэгжийг тодорхойлно.
+    odometer: Сонгосон нэгжээр одометр эсвэл хабометрийн заалт.
+    cargo-volume: Тэвшний ашигтай ачааны эзлэхүүн.
+    tare-weight: Хоосон чиргүүлийн жин.
+    gvwr: Зөвшөөрөгдөх нийт жин, ачаатай үеийн хамгийн их зөвшөөрөгдөх жин.
+    payload-capacity: Чиргүүлийн тээвэрлэж болох ачааны хамгийн их жин.
+    coupling-type: Чиргүүл чирэгч тээврийн хэрэгсэлтэй хэрхэн холбогдох.
+    abs: Түгжигдэхээс хамгаалах тоормосны систем суурилуулсан.
+    ebs: Цахим тоормосны систем суурилуулсан.
+    refrigerated: Температур хянадаг чиргүүлд хөргөгчийн тохиргоог бүртгэхийн тулд идэвхжүүлнэ.
+    temperature: Хөргөгчийн ажлын температурын хүрээ.
+    reefer-hours: Хөргөх төхөөрөмж дээр бүртгэгдсэн ажилласан цаг.
+    ownership-type: Энэ чиргүүлийг хэрхэн эзэмшиж байгаа. Түрээс, санхүүжилтийн мэдээлэл шаардлагатай үед харагдана.
+    lease-expires-at: Түрээс, түрээслэлт эсвэл санхүүжилтийн гэрээ дуусах хугацаа.
+    vendor: Чиргүүлийг авсан нийлүүлэгч эсвэл түрээслүүлэгч.
+    warranty: Энэ чиргүүлийг хамарсан баталгааны бодлого.
+    acquisition-cost: Сонгосон валютаар худалдан авсан үнэ эсвэл капиталжуулсан өртөг.
+    depreciation-rate: Одоогийн үнэ цэнийг тооцоход ашиглах жилийн элэгдэл.
+    attach-vehicle: Чиргүүлийг сонгосон тээврийн хэрэгсэлтэй холбоно. Чиргүүл нэг удаад зөвхөн нэг тээврийн хэрэгсэлтэй холбогдож болно.
+    select-trailer: Зөвхөн салгасан чиргүүлүүд жагсаана.
+    select-equipment: Зөвхөн холбогдоогүй тоног төхөөрөмж жагсаана.
+    position: Тээврийн хэрэгслийн ард чирэх байрлал. 1-р байрлал нь чирэгчийн шууд ард; галт тэрэгний хувьд 2 ба түүнээс дээшийг ашиглана.
+  units:
+    length-metric: м
+    length-imperial: фут
+    weight-metric: кг
+    weight-imperial: фунт
+    volume-metric: м³
+    volume-imperial: фут³
+    temperature-metric: °C
+    temperature-imperial: °F
+  actions:
+    new: Шинэ чиргүүл
+    locate: Газрын зураг дээр харах
+    attach-vehicle: Тээврийн хэрэгсэлтэй холбох
+    detach-vehicle: Тээврийн хэрэгслээс салгах
+    attach-device: Төхөөрөмж холбох
+    attach-equipment: Тоног төхөөрөмж холбох
+    detach-equipment: Тоног төхөөрөмж салгах
+    schedule-maintenance: Засвар үйлчилгээ төлөвлөх
+    create-work-order: Ажлын захиалга үүсгэх
+    log-maintenance: Засвар үйлчилгээ бүртгэх
+  prompts:
+    attach-vehicle-title: "{trailerName}-г тээврийн хэрэгсэлтэй холбох"
+    select-vehicle-warning: Энэ чиргүүлийг холбох тээврийн хэрэгслийг сонгоно уу.
+    attach-vehicle-success: "{trailerName}-г {vehicleName}-тэй холболоо."
+    detach-vehicle-title: "{trailerName}-г салгах уу?"
+    detach-vehicle-body: "Энэ нь {trailerName} ба {vehicleName} хоорондын одоогийн холболтыг дуусгана. Холболт чиргүүлийн түүхэнд хадгалагдана."
+    detach-vehicle-success: "{trailerName}-г {vehicleName}-с салгалаа."
+    not-attached-warning: "{trailerName} ямар ч тээврийн хэрэгсэлтэй холбогдоогүй байна."
+    attach-device-title: "{trailerName}-д төхөөрөмж холбох"
+    select-device-warning: Энэ чиргүүлд холбох төхөөрөмжийг сонгоно уу.
+    attach-device-success: "Төхөөрөмжийг {trailerName}-д холболоо."
+    attach-equipment-title: "{resourceName}-д тоног төхөөрөмж холбох"
+    select-equipment-warning: Холбох тоног төхөөрөмжийг сонгоно уу.
+    attach-equipment-success: "{equipmentName}-г {resourceName}-д холболоо."
+    detach-equipment-title: "{equipmentName}-г салгах уу?"
+    detach-equipment-body: "{equipmentName} нь {resourceName}-д холбогдохгүй болно."
+    detach-equipment-success: "{equipmentName}-г {resourceName}-с салгалаа."
+    no-location-warning: "{trailerName} одоогоор бүртгэгдсэн байршилгүй байна."
+    photo-upload-error: "Зураг оруулж чадсангүй: {message}"
+  empty:
+    title: Анхны чиргүүлээ нэмнэ үү
+    description: Чиргүүл нь холболт, холбогдсон төхөөрөмж ба тоног төхөөрөмж, шууд телематик, засвар үйлчилгээг хянана.
+    filtered-title: Шүүлтүүрт тохирох чиргүүл алга
+    filtered-description: Өөр чиргүүл олохын тулд хайлт эсвэл шүүлтүүрийг өөрчилнө үү.
+    connections: Холболтын түүх алга
+    connections-description: Холболт бүртгэж эхлэхийн тулд энэ чиргүүлийг тээврийн хэрэгсэлтэй холбоно уу.
+    equipment: Холбогдсон тоног төхөөрөмж алга
+    equipment-description: Энэ чиргүүлд өргөгч, оосор эсвэл хөргөгч зэрэг тоног төхөөрөмж холбоно уу.
+    schedules: Засвар үйлчилгээний хуваарь алга
+    schedules-description: Энэ чиргүүлийн тогтмол үзлэг, үйлчилгээг төлөвлөхийн тулд хуваарь үүсгэнэ үү.
+    work-orders: Ажлын захиалга алга
+    work-orders-description: Энэ чиргүүлийн засвар, үйлчилгээг хянахын тулд ажлын захиалга үүсгэнэ үү.
+    maintenance: Засвар үйлчилгээний түүх алга
+    maintenance-description: Энэ чиргүүлд бүртгэсэн засвар үйлчилгээ энд харагдана.
+  docs:
+    title: Чиргүүлийн гарын авлага
+    link: Чиргүүлийн гарын авлагыг нээх
+  tabs:
+    overview: Тойм
+    positions: Байршил
+    devices: Төхөөрөмж
+    equipment: Тоног төхөөрөмж
+    connections: Холболтын түүх
+    schedules: Хуваарь
+    work-orders: Ажлын захиалга
+    maintenance: Засвар үйлчилгээ
+  columns:
+    name: Нэр
+    id: ID
+    code: Код
+    type: Төрөл
+    plate-number: Улсын дугаар
+    status: Төлөв
+    vehicle: Чирэгч тээврийн хэрэгсэл
+    attachment-state: Холболт
+    connectivity: Холбоо
+    last-online: Сүүлд онлайн байсан
+    location: Байршил
+    devices: Төхөөрөмж
+    equipment: Тоног төхөөрөмж
+    vin: VIN
+    serial-number: Серийн дугаар
+    make: Үйлдвэрлэгч
+    model: Загвар
+    year: Он
+    vendor: Нийлүүлэгч
+    ownership: Өмчлөл
+    axles: Тэнхлэг
+    gvwr: Зөвшөөрөгдөх нийт жин
+    payload-capacity: Даац
+    length: Урт
+    refrigerated: Хөргөлттэй
+    created-at: Үүсгэсэн
+    updated-at: Шинэчилсэн
+  filters:
+    created-between: Үүсгэсэн хугацаа
+    updated-between: Шинэчилсэн хугацаа
+    last-online-between: Сүүлд онлайн байсан хугацаа
+  connections:
+    description: Энэ чиргүүлтэй холбогдож байсан бүх тээврийн хэрэгсэл, хамгийн сүүлийнхээс эхлэн.
+    ongoing: Үргэлжилж байна
+    connected: "{date}-нд холбогдсон"
+    disconnected: "{date}-нд салгасан"
+    still-attached: Одоо ч холбоотой
+  equipment:
+    description: Одоо энэ чиргүүлд холбогдсон тоног төхөөрөмж.
+  telemetry:
+    no-location: Байршил бүртгэгдээгүй
+  maintenance:
+    interval: Давтамж
+    next-due: Дараагийн хугацаа
+    code: Код
+    subject: Сэдэв
+    priority: Чухал зэрэг
+    due: Хугацаа
+    summary: Хураангуй
+    odometer: Одометр
+    total-cost: Нийт зардал
+    date: Огноо
+  statuses:
+    available: Бэлэн
+    in_use: Ашиглагдаж байна
+    maintenance: Засварт байна
+    out_of_service: Ашиглалтаас гарсан
+    retired: Хасагдсан
+  status-descriptions:
+    available: Хуваарилах эсвэл холбоход бэлэн.
+    in_use: Одоогоор ажил гүйцэтгэж байгаа эсвэл тээврийн хэрэгсэлтэй холбогдсон.
+    maintenance: Үйлчилгээ, үзлэг эсвэл засварт байна.
+    out_of_service: Дараагийн мэдэгдэл хүртэл ашиглах боломжгүй.
+    retired: Идэвхтэй ашиглалтаас бүрмөсөн хасагдсан.
+  attachment:
+    attached: Холбогдсон
+    detached: Салгасан
+    no-vehicle: Тээврийн хэрэгсэлтэй холбогдоогүй
+    towed-by: Чирж буй
+    position: "Байрлал {position}"
+  connectivity:
+    online: Онлайн
+    recently_offline: Саяхан офлайн болсон
+    offline: Офлайн
+    never_connected: Хэзээ ч холбогдоогүй
+  measurement:
+    metric: Метрийн
+    imperial: Империал
+  measurement-descriptions:
+    metric: Метр, килограмм, куб метр, Цельс.
+    imperial: Фут, фунт, куб фут, Фаренгейт.
+  odometer-units:
+    km: Километр
+    mi: Миль
+  coupling-types:
+    fifth_wheel: Эмээл холбоос
+    pintle_hook: Дэгээ холбоос
+    ball_hitch: Бөмбөлөг холбоос
+    gooseneck: Галуун хүзүү
+    drawbar: Чирэгч татуурга
+    other: Бусад
+  brake-types:
+    air: Хийн тоормос
+    electric: Цахилгаан тоормос
+    hydraulic_surge: Гидравлик инерцийн тоормос
+    none: Тоормосгүй
+    other: Бусад
+  ownership-types:
+    owned: Өөрийн
+    leased: Лизингийн
+    financed: Зээлийн
+    rented: Түрээсийн
+  types:
+    dry_van: Битүү тэвш
+    reefer: Хөргүүртэй
+    flatbed: Тавцан
+    step_deck: Шаталсан тавцан
+    lowboy: Нам тавцан
+    tanker: Цистерн
+    bulk: Задгай ачаа
+    dump: Өөрөө буулгагч
+    chassis: Чингэлэг тээвэрлэгч
+    curtain_side: Брезентэн
+    car_carrier: Автомашин тээвэрлэгч
+    livestock: Мал тээвэрлэгч
+    logging: Мод тээвэрлэгч
+    dolly: Долли
+    specialty: Тусгай зориулалтын
+    other: Бусад

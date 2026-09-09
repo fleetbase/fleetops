@@ -16,7 +16,7 @@
                 >
                     <div class="flex flex-row">
                         <div class="mr-2 w-6">
-                            <Image src={{model.avatar_url}} @fallbackSrc={{config "defaultValues.userImage"}} alt={{model.name}} class="w-6 h-6 rounded-md" />
+                            <Image src={{resource-image model.avatar_url "contact"}} @fallbackSrc={{(placeholder-image "contact")}} alt={{model.name}} class="w-6 h-6 rounded-md" />
                         </div>
                         <div class="flex flex-col">
                             <div class="font-semibold">{{model.name}}</div>
@@ -52,8 +52,8 @@
         <div class="flex flex-row space-x-3 mb-3">
             <div class="flex items-center justify-start rounded-full">
                 <Image
-                    src={{@resource.photo_url}}
-                    @fallbackSrc={{config "defaultValues.driverImage"}}
+                    src={{resource-image @resource.photo_url "driver"}}
+                    @fallbackSrc={{(placeholder-image "driver")}}
                     alt={{@resource.name}}
                     height="48"
                     width="48"

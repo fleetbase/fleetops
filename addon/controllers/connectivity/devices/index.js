@@ -14,6 +14,7 @@ export default class ConnectivityDevicesIndexController extends Controller {
     @service notifications;
     @service store;
     @service vehicleActions;
+    @service trailerActions;
 
     /** query params */
     @tracked queryParams = [

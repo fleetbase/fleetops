@@ -1,6 +1,17 @@
 menu:
   fuel-providers: Tích hợp Nhiên liệu
   fuel-transactions: Giao dịch nhiên liệu
+  trailers: Rơ-moóc
+
+resource:
+  trailer: Rơ-moóc
+  trailers: Rơ-moóc
+  vehicle: Phương tiện
+  equipment: Thiết bị
+  driver: Tài xế
+  device: Thiết bị IoT
+  sensors: Cảm biến
+  device-events: Sự kiện thiết bị
 
 fleet-ops:
   extension-name: Fleet-Ops
@@ -1620,7 +1631,17 @@ scheduler:
   notes-placeholder: Optional additional notes
 
 common:
+  select-resource-filter-by: "Chọn {resource} để lọc"
+  no-vehicle-assigned: Chưa gán phương tiện
+  last-modified: Sửa đổi lần cuối
+  table-view: Dạng bảng
+  grid-view: Dạng lưới
+  change-layout: Đổi bố cục
+  online: Trực tuyến
+  offline: Ngoại tuyến
   current-job: Current Job
+  "yes": Có
+  "no": Không
 driver:
   actions:
     unassign-orders: Unassign Orders
@@ -1648,10 +1669,36 @@ driver:
     unassign-vehicle-success: Unassigned {vehicleName} from {driverName}.
     issue-title: Issue reported for {driverName}
 device:
+  attachment:
+    title: Tài sản đã gắn
+    description: Ngữ cảnh đội xe cho dữ liệu từ thiết bị này.
+    open: Mở tài sản
+    asset: Tài sản đã gắn
+    synced-device: Thiết bị đã đồng bộ
+    asset-type: Loại tài sản
+    select-asset-type: Chọn loại tài sản
+    locate: Định vị
+    change: Đổi tài sản
+    detach: Tháo
+    attached-device: Thiết bị đã gắn
+    last-seen: Tín hiệu thiết bị gần nhất
+    none-title: Chưa gắn tài sản
+    none-message: Gắn thiết bị với phương tiện hoặc rơ-moóc để có ngữ cảnh dữ liệu đội xe.
+    latest-positions: Vị trí gần đây
+    positions-description: Tọa độ gần đây của tài sản do thiết bị này báo cáo.
+    full-history: Toàn bộ lịch sử
+    no-positions: Chưa có vị trí gần đây
+    no-positions-message: Tài sản này chưa có lịch sử vị trí gần đây.
+    attach-or-change: Gắn hoặc đổi tài sản
+    view-attached: Xem tài sản đã gắn
+    locate-attached: Định vị tài sản đã gắn trên bản đồ
+    unknown: Tài sản không xác định
   actions:
     attach-to-vehicle: Attach to Vehicle
     detach-from-vehicle: Detach from Vehicle
+    attach-to-asset: Gắn với tài sản
   prompts:
+    manager-description: "Thiết bị viễn thông được lắp trên {resourceType} này. Gắn thiết bị để bắt đầu nhận vị trí và sự kiện."
     attach-to-vehicle-title: Attach device to vehicle
     attach-device-to-vehicle-title: "Attach {deviceName} to vehicle"
     select-vehicle-warning: Select a vehicle to attach this device to.
@@ -1660,6 +1707,12 @@ device:
     detach-from-vehicle-title: "Detach {deviceName} from vehicle?"
     detach-from-vehicle-body: "This detaches {deviceName} from {vehicleName} and stops vehicle telemetry updates until it is attached again."
     detach-from-vehicle-success: Device detached from vehicle.
+    attach-to-asset-title: Gắn thiết bị với tài sản
+    select-asset-warning: Chọn phương tiện hoặc rơ-moóc.
+    attach-to-asset-success: Đã gắn thiết bị với tài sản.
+    detach-from-asset-title: "Tháo {deviceName} khỏi tài sản?"
+    detach-from-asset-body: "Thao tác này tháo {deviceName} khỏi {assetName} và dừng cập nhật dữ liệu cho đến khi được gắn lại."
+    detach-from-asset-success: Đã tháo thiết bị khỏi tài sản.
 fleet:
   actions:
     assign-vehicle: Assign Vehicle to Fleet
@@ -1672,6 +1725,17 @@ fleet:
     assign-driver-success: Driver assigned to {fleetName}.
     assign-vehicle-success: Vehicle assigned to {fleetName}.
 vehicle:
+  placeholders:
+    filter-internal-id: Nhập hoặc quét mã ID nội bộ
+  filters:
+    has-trailer: Đã gắn rơ-moóc
+    has-driver: Đã gán tài xế
+    has-device: Đã gắn thiết bị
+    any: Bất kỳ
+    attached: Đã gắn
+    not-attached: Chưa gắn
+    assigned: Đã gán
+    not-assigned: Chưa gán
   actions:
     attach-device: Attach Device
     unassign-orders: Unassign Orders
@@ -1680,6 +1744,9 @@ vehicle:
     schedule-maintenance: Schedule Maintenance
     create-work-order: Create Work Order
     log-maintenance: Log Maintenance
+    attach-trailer: Nối rơ-moóc
+    attach-equipment: Gắn trang bị
+    detach-equipment: Tháo trang bị
   prompts:
     attach-device-title: Attach device to {vehicleName}
     select-device-warning: Select a device to attach.
@@ -1691,10 +1758,24 @@ vehicle:
     confirm-unassign-orders-body: "This will remove {vehicleName} from these orders: {orders}."
     unassign-orders-success: Unassigned {vehicleName} from {count} order(s).
     issue-title: Issue reported for {vehicleName}
+    attach-trailer-title: "Nối rơ-moóc với {vehicleName}"
+    select-trailer-warning: Chọn rơ-moóc để nối với xe này.
+    attach-trailer-success: "Đã nối {trailerName} với {vehicleName}."
+  empty:
+    trailers: Chưa nối rơ-moóc
+    trailers-description: Nối một rơ-moóc chưa kết nối với xe này để bắt đầu kết nối kéo.
+    equipment: Chưa gắn trang bị
+    equipment-description: Gắn trang bị như bửng nâng, dụng cụ hoặc thiết bị an toàn vào xe này.
+  trailers:
+    description: Rơ-moóc hiện đang nối với xe này.
+  equipment:
+    description: Trang bị hiện đang gắn vào xe này.
 modals:
   assigned-orders:
 
 order:
+    placeholders:
+        filter-internal-id: Nhập hoặc quét mã ID nội bộ
     card:
       linked-order: Linked Order
       unknown-order: Unknown order
@@ -1709,3 +1790,357 @@ order:
       no-dropoff-address: No dropoff address
       no-route-details: No route details available.
       no-order-linked: No order is linked to this issue.
+
+trailer:
+  navigation-description: Quản lý tài sản được kéo, kết nối kéo, thiết bị và viễn thông.
+  sections:
+    details: Chi tiết
+    identification: Nhận dạng rơ-moóc
+    classification: Phân loại và trạng thái
+    registration: Đăng ký
+    location: Vị trí
+    dimensions: Kích thước và tải trọng
+    measurement: Đơn vị đo và sử dụng
+    dimensions-fields: "Kích thước ({unit})"
+    weight: "Trọng lượng ({unit})"
+    running-gear: Trục, phanh và móc kéo
+    refrigeration: Làm lạnh
+    ownership: Sở hữu và tài chính
+    finance: Thông tin tài chính
+    connection: Kết nối kéo
+    telemetry: Vị trí và viễn thông
+    notes: Ghi chú và lịch sử
+  fields:
+    photo: Ảnh
+    id: ID
+    name: Tên
+    code: Mã
+    description: Mô tả
+    type: Loại rơ-moóc
+    body-type: Loại thùng
+    color: Màu sắc
+    status: Trạng thái
+    category: Danh mục
+    vin: Số VIN
+    plate-number: Biển số
+    serial-number: Số sê-ri
+    make: Hãng
+    model: Mẫu
+    year: Năm
+    vendor: Nhà cung cấp
+    warranty: Bảo hành
+    vehicle: Xe kéo
+    attachment-state: Trạng thái kết nối
+    attached-at: Kết nối từ
+    position: Vị trí kéo
+    source: Nguồn
+    connected-at: Kết nối lúc
+    disconnected-at: Ngắt kết nối lúc
+    duration: Thời lượng
+    connectivity: Kết nối mạng
+    last-online: Trực tuyến lần cuối
+    last-provider: Nhà cung cấp viễn thông
+    last-event-at: Sự kiện viễn thông gần nhất
+    coordinates: Tọa độ
+    speed: Tốc độ
+    heading: Hướng
+    altitude: Độ cao
+    devices-count: Thiết bị đã gắn
+    equipment-count: Trang bị đã gắn
+    measurement-system: Hệ đo lường
+    odometer: "Đồng hồ đo quãng đường {unit}"
+    odometer-unit: Đơn vị đồng hồ
+    length: "Chiều dài ({unit})"
+    width: "Chiều rộng ({unit})"
+    height: "Chiều cao ({unit})"
+    cargo-volume: "Thể tích hàng ({unit})"
+    tare-weight: "Tự trọng ({unit})"
+    gvwr: "Tổng trọng lượng cho phép ({unit})"
+    payload-capacity: "Tải trọng hàng ({unit})"
+    axle-count: Số trục
+    tire-count: Số lốp
+    door-count: Số cửa
+    coupling-type: Loại móc kéo
+    brake-type: Loại phanh
+    abs: ABS
+    ebs: EBS
+    refrigerated: Có làm lạnh
+    temperature-min: "Nhiệt độ tối thiểu ({unit})"
+    temperature-max: "Nhiệt độ tối đa ({unit})"
+    reefer-hours: Số giờ máy lạnh
+    ownership-type: Hình thức sở hữu
+    financing-status: Tình trạng tài chính
+    currency: Tiền tệ
+    acquisition-cost: Chi phí mua
+    current-value: Giá trị hiện tại
+    insurance-value: Giá trị bảo hiểm
+    depreciation-rate: Tỷ lệ khấu hao (% mỗi năm)
+    purchased-at: Ngày mua
+    lease-expires-at: Ngày hết hạn thuê
+    notes: Ghi chú
+    created-at: Ngày tạo
+    updated-at: Cập nhật lần cuối
+  placeholders:
+    filter-vendor: Lọc theo nhà cung cấp
+    name: vd. Rơ-moóc lạnh 12
+    code: Mã đội xe nội bộ, vd. TRL-0012
+    description: Rơ-moóc này dùng để làm gì
+    type: Chọn loại rơ-moóc
+    status: Chọn trạng thái
+    body-type: vd. Thùng kín, thùng bạt, sàn phẳng
+    color: vd. Trắng
+    category: Chọn danh mục (tùy chọn)
+    vin: Số VIN 17 ký tự
+    plate-number: Biển số đăng ký
+    serial-number: Số sê-ri của nhà sản xuất
+    make: vd. Utility, Schmitz, Wabash
+    model: vd. 3000R
+    year: vd. 2024
+    vendor: Chọn nhà cung cấp (tùy chọn)
+    warranty: Chọn bảo hành (tùy chọn)
+    vehicle: Chọn xe
+    trailer: Chọn rơ-moóc
+    equipment: Chọn trang bị
+    filter-vehicle: Lọc theo xe kéo
+    position: "1"
+    measurement-system: Chọn hệ đo lường
+    odometer-unit: Chọn đơn vị
+    odometer: Số đo hiện tại
+    length: "0.000"
+    width: "0.000"
+    height: "0.000"
+    cargo-volume: "0.000"
+    tare-weight: "0.000"
+    gvwr: "0.000"
+    payload-capacity: "0.000"
+    axle-count: vd. 2
+    tire-count: vd. 8
+    door-count: vd. 2
+    coupling-type: Chọn loại móc kéo
+    brake-type: Chọn loại phanh
+    temperature-min: vd. -20
+    temperature-max: vd. 4
+    reefer-hours: Số giờ hoạt động của máy lạnh
+    ownership-type: Chọn hình thức sở hữu
+    financing-status: vd. Đã trả hết, trả góp đến 2028
+    depreciation-rate: vd. 10
+    date: DD-MM-YYYY
+    notes: Ghi chú nội bộ về rơ-moóc này
+  help:
+    photo: Tải lên ảnh của rơ-moóc này.
+    name: Tên hiển thị trong Fleet-Ops. Bắt buộc.
+    code: Mã tham chiếu đội xe của riêng bạn cho rơ-moóc này.
+    type: Loại quyết định các mục áp dụng, ví dụ làm lạnh cho rơ-moóc lạnh.
+    status: Trạng thái vòng đời. Kết nối kéo và kết nối mạng được theo dõi riêng.
+    body-type: Mô tả tự do về thùng xe dùng để phân loại và tìm kiếm.
+    category: Nhóm tùy chọn dùng chung với các tài nguyên đội xe khác.
+    vin: Số nhận dạng khung được đóng trên rơ-moóc.
+    coordinates: Vị trí cuối cùng được biết hoặc vị trí gốc. Thiết bị viễn thông tự động cập nhật.
+    measurement-system: Xác định đơn vị dùng cho kích thước, trọng lượng, thể tích và nhiệt độ.
+    odometer: Số đo đồng hồ quãng đường theo đơn vị đã chọn.
+    cargo-volume: Thể tích chứa hàng hữu dụng của thùng.
+    tare-weight: Trọng lượng rơ-moóc khi không tải.
+    gvwr: Tổng trọng lượng cho phép, trọng lượng tối đa khi có tải.
+    payload-capacity: Trọng lượng hàng tối đa rơ-moóc có thể chở.
+    coupling-type: Cách rơ-moóc nối với xe kéo.
+    abs: Đã lắp hệ thống chống bó cứng phanh.
+    ebs: Đã lắp hệ thống phanh điện tử.
+    refrigerated: Bật cho rơ-moóc kiểm soát nhiệt độ để ghi thiết lập máy lạnh.
+    temperature: Dải nhiệt độ hoạt động của máy lạnh.
+    reefer-hours: Số giờ hoạt động ghi nhận trên máy lạnh.
+    ownership-type: Hình thức sở hữu rơ-moóc. Thông tin thuê và trả góp hiển thị khi cần.
+    lease-expires-at: Thời điểm hợp đồng thuê, mượn hoặc trả góp kết thúc.
+    vendor: Nhà cung cấp hoặc bên cho thuê rơ-moóc.
+    warranty: Chính sách bảo hành áp dụng cho rơ-moóc này.
+    acquisition-cost: Giá mua hoặc chi phí vốn hóa theo tiền tệ đã chọn.
+    depreciation-rate: Khấu hao hàng năm dùng để ước tính giá trị hiện tại.
+    attach-vehicle: Rơ-moóc sẽ được nối với xe đã chọn. Mỗi rơ-moóc chỉ có thể nối với một xe tại một thời điểm.
+    select-trailer: Chỉ liệt kê các rơ-moóc chưa kết nối.
+    select-equipment: Chỉ liệt kê trang bị chưa được gắn.
+    position: Vị trí kéo phía sau xe. Vị trí 1 ngay sau đầu kéo; dùng 2 trở lên cho đoàn xe.
+  units:
+    length-metric: m
+    length-imperial: ft
+    weight-metric: kg
+    weight-imperial: lb
+    volume-metric: m³
+    volume-imperial: ft³
+    temperature-metric: °C
+    temperature-imperial: °F
+  actions:
+    new: Rơ-moóc mới
+    locate: Xem trên bản đồ
+    attach-vehicle: Nối với xe
+    detach-vehicle: Tách khỏi xe
+    attach-device: Gắn thiết bị
+    attach-equipment: Gắn trang bị
+    detach-equipment: Tháo trang bị
+    schedule-maintenance: Lên lịch bảo trì
+    create-work-order: Tạo lệnh công việc
+    log-maintenance: Ghi nhận bảo trì
+  prompts:
+    attach-vehicle-title: "Nối {trailerName} với xe"
+    select-vehicle-warning: Chọn xe để nối rơ-moóc này.
+    attach-vehicle-success: "Đã nối {trailerName} với {vehicleName}."
+    detach-vehicle-title: "Tách {trailerName}?"
+    detach-vehicle-body: "Thao tác này kết thúc kết nối kéo hiện tại giữa {trailerName} và {vehicleName}. Kết nối được lưu trong lịch sử của rơ-moóc."
+    detach-vehicle-success: "Đã tách {trailerName} khỏi {vehicleName}."
+    not-attached-warning: "{trailerName} chưa được nối với xe nào."
+    attach-device-title: "Gắn thiết bị vào {trailerName}"
+    select-device-warning: Chọn thiết bị để gắn vào rơ-moóc này.
+    attach-device-success: "Đã gắn thiết bị vào {trailerName}."
+    attach-equipment-title: "Gắn trang bị vào {resourceName}"
+    select-equipment-warning: Chọn trang bị để gắn.
+    attach-equipment-success: "Đã gắn {equipmentName} vào {resourceName}."
+    detach-equipment-title: "Tháo {equipmentName}?"
+    detach-equipment-body: "{equipmentName} sẽ không còn được gắn vào {resourceName}."
+    detach-equipment-success: "Đã tháo {equipmentName} khỏi {resourceName}."
+    no-location-warning: "{trailerName} chưa có vị trí được ghi nhận."
+    photo-upload-error: "Không thể tải ảnh lên: {message}"
+  empty:
+    title: Thêm rơ-moóc đầu tiên của bạn
+    description: Rơ-moóc theo dõi kết nối kéo, thiết bị và trang bị đã gắn, viễn thông thời gian thực và bảo trì cho tài sản được kéo của bạn.
+    filtered-title: Không có rơ-moóc nào khớp với bộ lọc
+    filtered-description: Điều chỉnh tìm kiếm hoặc bộ lọc để tìm rơ-moóc khác.
+    connections: Chưa có lịch sử kéo
+    connections-description: Nối rơ-moóc này với xe để bắt đầu ghi nhận kết nối kéo.
+    equipment: Chưa gắn trang bị
+    equipment-description: Gắn trang bị như bửng nâng, dây chằng hoặc máy lạnh vào rơ-moóc này.
+    schedules: Chưa có lịch bảo trì
+    schedules-description: Tạo lịch để lên kế hoạch kiểm tra hoặc bảo dưỡng định kỳ cho rơ-moóc này.
+    work-orders: Chưa có lệnh công việc
+    work-orders-description: Tạo lệnh công việc để theo dõi sửa chữa hoặc bảo dưỡng rơ-moóc này.
+    maintenance: Chưa có lịch sử bảo trì
+    maintenance-description: Các lần bảo trì đã ghi nhận cho rơ-moóc này sẽ hiển thị tại đây.
+  docs:
+    title: Hướng dẫn về rơ-moóc
+    link: Mở hướng dẫn về rơ-moóc
+  tabs:
+    overview: Tổng quan
+    positions: Vị trí
+    devices: Thiết bị
+    equipment: Trang bị
+    connections: Lịch sử kéo
+    schedules: Lịch bảo trì
+    work-orders: Lệnh công việc
+    maintenance: Bảo trì
+  columns:
+    name: Tên
+    id: ID
+    code: Mã
+    type: Loại
+    plate-number: Biển số
+    status: Trạng thái
+    vehicle: Xe kéo
+    attachment-state: Kết nối
+    connectivity: Kết nối mạng
+    last-online: Trực tuyến lần cuối
+    location: Vị trí
+    devices: Thiết bị
+    equipment: Trang bị
+    vin: Số VIN
+    serial-number: Số sê-ri
+    make: Hãng
+    model: Mẫu
+    year: Năm
+    vendor: Nhà cung cấp
+    ownership: Sở hữu
+    axles: Số trục
+    gvwr: Tổng trọng lượng cho phép
+    payload-capacity: Tải trọng hàng
+    length: Chiều dài
+    refrigerated: Có làm lạnh
+    created-at: Ngày tạo
+    updated-at: Ngày cập nhật
+  filters:
+    created-between: Tạo trong khoảng
+    updated-between: Cập nhật trong khoảng
+    last-online-between: Trực tuyến lần cuối trong khoảng
+  connections:
+    description: Tất cả các xe mà rơ-moóc này từng được nối, mới nhất trước.
+    ongoing: Đang diễn ra
+    connected: "Đã kết nối {date}"
+    disconnected: "Đã ngắt kết nối {date}"
+    still-attached: Vẫn đang gắn
+  equipment:
+    description: Trang bị hiện đang gắn vào rơ-moóc này.
+  telemetry:
+    no-location: Chưa ghi nhận vị trí
+  maintenance:
+    interval: Chu kỳ
+    next-due: Đến hạn tiếp theo
+    code: Mã
+    subject: Chủ đề
+    priority: Ưu tiên
+    due: Đến hạn
+    summary: Tóm tắt
+    odometer: Đồng hồ quãng đường
+    total-cost: Tổng chi phí
+    date: Ngày
+  statuses:
+    available: Sẵn sàng
+    in_use: Đang sử dụng
+    maintenance: Đang bảo trì
+    out_of_service: Ngừng hoạt động
+    retired: Đã thanh lý
+  status-descriptions:
+    available: Sẵn sàng để điều phối hoặc nối với xe.
+    in_use: Đang thực hiện công việc hoặc đang nối với xe.
+    maintenance: Đang bảo dưỡng, kiểm tra hoặc sửa chữa.
+    out_of_service: Không sử dụng được cho đến khi có thông báo mới.
+    retired: Đã loại bỏ vĩnh viễn khỏi hoạt động.
+  attachment:
+    attached: Đã nối
+    detached: Chưa nối
+    no-vehicle: Chưa nối với xe nào
+    towed-by: Được kéo bởi
+    position: "Vị trí {position}"
+  connectivity:
+    online: Trực tuyến
+    recently_offline: Vừa ngoại tuyến
+    offline: Ngoại tuyến
+    never_connected: Chưa từng kết nối
+  measurement:
+    metric: Hệ mét
+    imperial: Hệ Anh
+  measurement-descriptions:
+    metric: Mét, kilôgam, mét khối và độ C.
+    imperial: Feet, pound, feet khối và độ F.
+  odometer-units:
+    km: Kilômét
+    mi: Dặm
+  coupling-types:
+    fifth_wheel: Mâm xoay
+    pintle_hook: Móc pintle
+    ball_hitch: Móc bi
+    gooseneck: Cổ ngỗng
+    drawbar: Thanh kéo
+    other: Khác
+  brake-types:
+    air: Phanh khí nén
+    electric: Phanh điện
+    hydraulic_surge: Phanh thủy lực quán tính
+    none: Không có phanh
+    other: Khác
+  ownership-types:
+    owned: Sở hữu
+    leased: Thuê dài hạn
+    financed: Trả góp
+    rented: Thuê
+  types:
+    dry_van: Thùng kín
+    reefer: Thùng lạnh
+    flatbed: Sàn phẳng
+    step_deck: Sàn bậc
+    lowboy: Sàn thấp
+    tanker: Bồn
+    bulk: Hàng rời
+    dump: Ben
+    chassis: Khung chở container
+    curtain_side: Thùng bạt
+    car_carrier: Chở ô tô
+    livestock: Chở gia súc
+    logging: Chở gỗ
+    dolly: Dolly
+    specialty: Chuyên dụng
+    other: Khác

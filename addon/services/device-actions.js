@@ -58,7 +58,7 @@ export default class DeviceActionsService extends ResourceActionService {
                     {
                         key: 'vehicle',
                         id: 'vehicle',
-                        label: this.intl.t('resource.vehicle'),
+                        label: this.intl.t('device.attachment.asset'),
                         component: 'device/panel-tabs/vehicle',
                     },
                     {
@@ -112,26 +112,61 @@ export default class DeviceActionsService extends ResourceActionService {
         },
     };
 
-    @action attachToVehicle(device, options = {}) {
+    @action attachToAsset(device, options = {}) {
         this.modalsManager.show('modals/attach-telematic-device', {
-            title: this.intl.t('device.prompts.attach-to-vehicle-title'),
-            acceptButtonText: this.intl.t('device.actions.attach-to-vehicle'),
+            title: this.intl.t('device.prompts.attach-to-asset-title'),
+            acceptButtonText: this.intl.t('device.actions.attach-to-asset'),
             acceptButtonIcon: 'link',
             device,
-            selectedVehicle: null,
+            selectedAssetType: null,
+            selectedAsset: null,
             confirm: async (modal) => {
-                const selectedVehicle = modal.getOption('selectedVehicle');
+                const selectedAssetType = modal.getOption('selectedAssetType');
+                const selectedAsset = modal.getOption('selectedAsset');
 
-                if (!selectedVehicle) {
-                    return this.notifications.warning(this.intl.t('device.prompts.select-vehicle-warning'));
+                if (!selectedAssetType || !selectedAsset) {
+                    return this.notifications.warning(this.intl.t('device.prompts.select-asset-warning'));
                 }
 
                 modal.startLoading();
 
                 try {
-                    await this.fetch.post(`devices/${device.id}/attach`, { vehicle: selectedVehicle.id });
+                    await this.fetch.post(`devices/${device.id}/attach`, { attachable_type: selectedAssetType.value, attachable: selectedAsset.id });
                     await device.reload?.();
-                    this.notifications.success(this.intl.t('device.prompts.attach-to-vehicle-success'));
+                    this.notifications.success(this.intl.t('device.prompts.attach-to-asset-success'));
+                    modal.done();
+                    this.refresh();
+                } catch (error) {
+                    this.notifications.serverError(error);
+                    modal.stopLoading();
+                }
+            },
+            ...options,
+        });
+    }
+
+    @action attachToVehicle(device, options = {}) {
+        return this.attachToAsset(device, options);
+    }
+
+    @action detachFromAsset(device, options = {}) {
+        const deviceName = device.displayName ?? device.name ?? this.intl.t('resource.device');
+        const assetName = device.attached_to_name ?? device.attachable?.display_name ?? device.attachable?.name;
+
+        if (!device.attachable_uuid && !assetName) {
+            return this.notifications.warning(this.intl.t('device.prompts.not-attached-warning', { deviceName }));
+        }
+
+        this.modalsManager.confirm({
+            title: this.intl.t('device.prompts.detach-from-asset-title', { deviceName }),
+            body: this.intl.t('device.prompts.detach-from-asset-body', { deviceName, assetName: assetName ?? this.intl.t('device.attachment.asset') }),
+            confirm: async (modal) => {
+                modal.startLoading();
+
+                try {
+                    await this.fetch.post(`devices/${device.id}/detach`);
+                    await device.reload?.();
+                    this.notifications.success(this.intl.t('device.prompts.detach-from-asset-success'));
                     modal.done();
                     this.refresh();
                 } catch (error) {
@@ -144,31 +179,6 @@ export default class DeviceActionsService extends ResourceActionService {
     }
 
     @action detachFromVehicle(device, options = {}) {
-        const deviceName = device.displayName ?? device.name ?? this.intl.t('resource.device');
-        const vehicleName = device.attached_to_name ?? device.attachable?.display_name ?? device.attachable?.name;
-
-        if (!device.attachable_uuid && !vehicleName) {
-            return this.notifications.warning(this.intl.t('device.prompts.not-attached-warning', { deviceName }));
-        }
-
-        this.modalsManager.confirm({
-            title: this.intl.t('device.prompts.detach-from-vehicle-title', { deviceName }),
-            body: this.intl.t('device.prompts.detach-from-vehicle-body', { deviceName, vehicleName: vehicleName ?? this.intl.t('resource.vehicle') }),
-            confirm: async (modal) => {
-                modal.startLoading();
-
-                try {
-                    await this.fetch.post(`devices/${device.id}/detach`);
-                    await device.reload?.();
-                    this.notifications.success(this.intl.t('device.prompts.detach-from-vehicle-success'));
-                    modal.done();
-                    this.refresh();
-                } catch (error) {
-                    this.notifications.serverError(error);
-                    modal.stopLoading();
-                }
-            },
-            ...options,
-        });
+        return this.detachFromAsset(device, options);
     }
 }

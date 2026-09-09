@@ -1,6 +1,9 @@
 fleet-ops:
   extension-name: Fleet-Ops
 common:
+  last-modified: Последнее изменение
+  online: Онлайн
+  offline: Офлайн
   proof-of-delivery: Подтверждение доставки
   ad-hoc: По необходимости
   bulk-dispatch: Массовая отправка
@@ -8,6 +11,7 @@ common:
   dispatch-order: Заказ на отправку
   assign-driver: Назначить водителя
   no-driver-assigned: Водитель не назначен
+  no-vehicle-assigned: Транспорт не назначен
   details: Детали
   name: Имя
   title: Заголовок
@@ -47,6 +51,8 @@ common:
   notes: Notes
   schedule: Schedule
   current-job: Current Job
+  "yes": Да
+  "no": Нет
 menu:
   operations: Операции
   dashboard: Панель управления
@@ -57,6 +63,7 @@ menu:
   resources: Ресурсы
   drivers: Водители
   vehicles: Транспортные средства
+  trailers: Прицепы
   fleets: Автопарки
   vendors: Поставщики
   contacts: Контакты
@@ -87,6 +94,8 @@ menu:
 resource:
   asset: Актив
   assets: Активы
+  trailer: Прицеп
+  trailers: Прицепы
   activity: Активность
   activities: Активности
   contact: Контакт
@@ -434,6 +443,30 @@ driver:
     unassign-vehicle-success: Unassigned {vehicleName} from {driverName}.
     issue-title: Issue reported for {driverName}
 device:
+  attachment:
+    title: Подключённый актив
+    description: Контекст автопарка для телеметрии этого устройства.
+    open: Открыть актив
+    asset: Подключённый актив
+    synced-device: Синхронизированное устройство
+    asset-type: Тип актива
+    select-asset-type: Выберите тип актива
+    locate: Найти
+    change: Сменить актив
+    detach: Отключить
+    attached-device: Подключённое устройство
+    last-seen: Последний сигнал устройства
+    none-title: Актив не подключён
+    none-message: Подключите устройство к транспортному средству или прицепу для контекста телеметрии.
+    latest-positions: Последние позиции
+    positions-description: Последние координаты актива, переданные этим устройством.
+    full-history: Полная история
+    no-positions: Нет недавних позиций
+    no-positions-message: Для этого актива пока нет недавней истории позиций.
+    attach-or-change: Подключить или сменить актив
+    view-attached: Открыть подключённый актив
+    locate-attached: Найти подключённый актив на карте
+    unknown: Неизвестный актив
   fields:
     title: Данные устройства
     device-name: Название устройства
@@ -468,7 +501,9 @@ device:
   actions:
     attach-to-vehicle: Attach to Vehicle
     detach-from-vehicle: Detach from Vehicle
+    attach-to-asset: Подключить к активу
   prompts:
+    manager-description: "Телематические устройства, установленные на этом {resourceType}. Подключите устройство, чтобы получать координаты и события."
     attach-to-vehicle-title: Attach device to vehicle
     attach-device-to-vehicle-title: "Attach {deviceName} to vehicle"
     select-vehicle-warning: Select a vehicle to attach this device to.
@@ -477,6 +512,12 @@ device:
     detach-from-vehicle-title: "Detach {deviceName} from vehicle?"
     detach-from-vehicle-body: "This detaches {deviceName} from {vehicleName} and stops vehicle telemetry updates until it is attached again."
     detach-from-vehicle-success: Device detached from vehicle.
+    attach-to-asset-title: Подключить устройство к активу
+    select-asset-warning: Выберите транспортное средство или прицеп.
+    attach-to-asset-success: Устройство подключено к активу.
+    detach-from-asset-title: "Отключить {deviceName} от актива?"
+    detach-from-asset-body: "Устройство {deviceName} будет отключено от {assetName}; обновления телематики прекратятся до нового подключения."
+    detach-from-asset-success: Устройство отключено от актива.
 entity:
   fields:
     declare: Заявить
@@ -564,6 +605,8 @@ issue:
     tags: Теги проблемы
     type: Тип проблемы
 order:
+  placeholders:
+    filter-internal-id: Введите или отсканируйте внутренние ID
   card:
     linked-order: Linked Order
     unknown-order: Unknown order
@@ -995,7 +1038,19 @@ service-rate:
     zone-placeholder: Ограничить зоной
     cod-fee-label: Надпись платы за наложенный платёж
 vehicle:
+  placeholders:
+    filter-internal-id: Введите или отсканируйте внутренние ID
+  filters:
+    has-trailer: Прицеп подключён
+    has-driver: Водитель назначен
+    has-device: Устройство подключено
+    any: Любой
+    attached: Подключён
+    not-attached: Не подключён
+    assigned: Назначен
+    not-assigned: Не назначен
   fields:
+    updated-at: Последнее обновление
     avatar: Аватар
     driver-assigned: Водитель назначен
     make: Марка
@@ -1012,6 +1067,9 @@ vehicle:
     unassign-orders: Unassign Orders
     create-issue: Create Issue
     locate-vehicle: Найти транспортное средство на карте
+    attach-trailer: Прицепить прицеп
+    attach-equipment: Подключить оборудование
+    detach-equipment: Отключить оборудование
   prompts:
     attach-device-title: Attach device to {vehicleName}
     select-device-warning: Select a device to attach.
@@ -1023,6 +1081,18 @@ vehicle:
     confirm-unassign-orders-body: "This will remove {vehicleName} from these orders: {orders}."
     unassign-orders-success: Unassigned {vehicleName} from {count} order(s).
     issue-title: Issue reported for {vehicleName}
+    attach-trailer-title: "Прицепить прицеп к {vehicleName}"
+    select-trailer-warning: Выберите прицеп для сцепки с этим транспортным средством.
+    attach-trailer-success: "{trailerName} прицеплен к {vehicleName}."
+  empty:
+    trailers: Прицепы не прицеплены
+    trailers-description: Прицепите отцепленный прицеп к этому транспортному средству, чтобы начать сцепку.
+    equipment: Оборудование не подключено
+    equipment-description: Подключите к этому транспортному средству оборудование, например гидроборт, инструменты или средства безопасности.
+  trailers:
+    description: Прицепы, сцепленные с этим транспортным средством в данный момент.
+  equipment:
+    description: Оборудование, подключённое к этому транспортному средству в данный момент.
 vendor:
   fields:
     setup-vendor: Настроить поставщика
@@ -1904,3 +1974,357 @@ settings:
       button-continue: Продолжить
       button-start: Начать регистрацию сейчас
       button-in-progress: Регистрация в процессе
+
+trailer:
+  navigation-description: Управляйте прицепами, сцепками, оборудованием и телематикой.
+  sections:
+    details: Сведения
+    identification: Идентификация прицепа
+    classification: Классификация и статус
+    registration: Регистрация
+    location: Местоположение
+    dimensions: Габариты и грузоподъёмность
+    measurement: Единицы измерения и пробег
+    dimensions-fields: "Габариты ({unit})"
+    weight: "Масса ({unit})"
+    running-gear: Оси, тормоза и сцепное устройство
+    refrigeration: Рефрижератор
+    ownership: Владение и финансы
+    finance: Финансовые данные
+    connection: Сцепка с транспортным средством
+    telemetry: Местоположение и телематика
+    notes: Заметки и история
+  fields:
+    photo: Фото
+    id: ID
+    name: Название
+    code: Код
+    description: Описание
+    type: Тип прицепа
+    body-type: Тип кузова
+    color: Цвет
+    status: Статус
+    category: Категория
+    vin: VIN
+    plate-number: Госномер
+    serial-number: Серийный номер
+    make: Производитель
+    model: Модель
+    year: Год
+    vendor: Поставщик
+    warranty: Гарантия
+    vehicle: Тягач
+    attachment-state: Состояние сцепки
+    attached-at: Прицеплен с
+    position: Позиция в сцепке
+    source: Источник
+    connected-at: Прицеплен
+    disconnected-at: Отцеплен
+    duration: Длительность
+    connectivity: Связь
+    last-online: Последний выход в сеть
+    last-provider: Провайдер телематики
+    last-event-at: Последнее телематическое событие
+    coordinates: Координаты
+    speed: Скорость
+    heading: Курс
+    altitude: Высота
+    devices-count: Подключённые устройства
+    equipment-count: Подключённое оборудование
+    measurement-system: Система измерения
+    odometer: "Одометр / хабометр {unit}"
+    odometer-unit: Единица одометра
+    length: "Длина ({unit})"
+    width: "Ширина ({unit})"
+    height: "Высота ({unit})"
+    cargo-volume: "Объём груза ({unit})"
+    tare-weight: "Снаряжённая масса ({unit})"
+    gvwr: "Полная масса ({unit})"
+    payload-capacity: "Грузоподъёмность ({unit})"
+    axle-count: Оси
+    tire-count: Шины
+    door-count: Двери
+    coupling-type: Тип сцепного устройства
+    brake-type: Тип тормозов
+    abs: ABS
+    ebs: EBS
+    refrigerated: Рефрижератор
+    temperature-min: "Минимальная температура ({unit})"
+    temperature-max: "Максимальная температура ({unit})"
+    reefer-hours: Моточасы холодильной установки
+    ownership-type: Владение
+    financing-status: Статус финансирования
+    currency: Валюта
+    acquisition-cost: Стоимость приобретения
+    current-value: Текущая стоимость
+    insurance-value: Страховая стоимость
+    depreciation-rate: Норма амортизации (% в год)
+    purchased-at: Дата покупки
+    lease-expires-at: Окончание аренды
+    notes: Заметки
+    created-at: Создан
+    updated-at: Последнее обновление
+  placeholders:
+    filter-vendor: Фильтр по поставщику
+    name: напр. Рефрижератор 12
+    code: Внутренний код парка, напр. TRL-0012
+    description: Для чего используется этот прицеп
+    type: Выберите тип прицепа
+    status: Выберите статус
+    body-type: напр. Фургон, тентованный, платформа
+    color: напр. Белый
+    category: Выберите категорию (необязательно)
+    vin: VIN из 17 символов
+    plate-number: Регистрационный номер
+    serial-number: Серийный номер производителя
+    make: напр. Schmitz, Krone, Wabash
+    model: напр. 3000R
+    year: напр. 2024
+    vendor: Выберите поставщика (необязательно)
+    warranty: Выберите гарантию (необязательно)
+    vehicle: Выберите транспортное средство
+    trailer: Выберите прицеп
+    equipment: Выберите оборудование
+    filter-vehicle: Фильтр по тягачу
+    position: "1"
+    measurement-system: Выберите систему измерения
+    odometer-unit: Выберите единицу
+    odometer: Текущее показание
+    length: "0.000"
+    width: "0.000"
+    height: "0.000"
+    cargo-volume: "0.000"
+    tare-weight: "0.000"
+    gvwr: "0.000"
+    payload-capacity: "0.000"
+    axle-count: напр. 2
+    tire-count: напр. 8
+    door-count: напр. 2
+    coupling-type: Выберите тип сцепного устройства
+    brake-type: Выберите тип тормозов
+    temperature-min: напр. -20
+    temperature-max: напр. 4
+    reefer-hours: Моточасы холодильной установки
+    ownership-type: Выберите форму владения
+    financing-status: напр. Выплачен, в кредите до 2028
+    depreciation-rate: напр. 10
+    date: ДД-ММ-ГГГГ
+    notes: Внутренние заметки об этом прицепе
+  help:
+    photo: Загрузите фотографию этого прицепа.
+    name: Название, отображаемое в Fleet-Ops. Обязательно.
+    code: Ваш собственный код парка для этого прицепа.
+    type: Тип определяет применимые разделы, например рефрижератор для холодильных прицепов.
+    status: Статус жизненного цикла. Сцепка и связь отслеживаются отдельно.
+    body-type: Произвольное описание кузова для классификации и поиска.
+    category: Необязательная группировка, общая с другими ресурсами парка.
+    vin: Идентификационный номер шасси, выбитый на прицепе.
+    coordinates: Последнее известное или базовое местоположение. Телематические устройства обновляют его автоматически.
+    measurement-system: Определяет единицы для габаритов, массы, объёма и температуры.
+    odometer: Показание одометра или хабометра в выбранной единице.
+    cargo-volume: Полезный объём грузового отсека.
+    tare-weight: Масса пустого прицепа.
+    gvwr: Разрешённая полная масса, максимально допустимая масса в загруженном состоянии.
+    payload-capacity: Максимальная масса груза, которую может перевозить прицеп.
+    coupling-type: Как прицеп сцепляется с тягачом.
+    abs: Установлена антиблокировочная система тормозов.
+    ebs: Установлена электронная тормозная система.
+    refrigerated: Включите для прицепов с контролем температуры, чтобы записывать настройки холодильной установки.
+    temperature: Диапазон рабочих температур холодильной установки.
+    reefer-hours: Наработка холодильной установки в часах.
+    ownership-type: Форма владения прицепом. Данные аренды и финансирования показываются при необходимости.
+    lease-expires-at: Дата окончания договора аренды, проката или финансирования.
+    vendor: Поставщик или арендодатель, у которого получен прицеп.
+    warranty: Гарантийный полис на этот прицеп.
+    acquisition-cost: Цена покупки или капитализированная стоимость в выбранной валюте.
+    depreciation-rate: Годовая амортизация для оценки текущей стоимости.
+    attach-vehicle: Прицеп будет сцеплен с выбранным транспортным средством. Прицеп может быть сцеплен только с одним транспортным средством одновременно.
+    select-trailer: Показаны только отцепленные прицепы.
+    select-equipment: Показано только неподключённое оборудование.
+    position: Позиция прицепа за транспортным средством. Позиция 1 — сразу за тягачом; используйте 2 и более для автопоездов.
+  units:
+    length-metric: м
+    length-imperial: фут
+    weight-metric: кг
+    weight-imperial: фунт
+    volume-metric: м³
+    volume-imperial: фут³
+    temperature-metric: °C
+    temperature-imperial: °F
+  actions:
+    new: Новый прицеп
+    locate: Показать на карте
+    attach-vehicle: Прицепить к транспортному средству
+    detach-vehicle: Отцепить от транспортного средства
+    attach-device: Подключить устройство
+    attach-equipment: Подключить оборудование
+    detach-equipment: Отключить оборудование
+    schedule-maintenance: Запланировать обслуживание
+    create-work-order: Создать заказ-наряд
+    log-maintenance: Записать обслуживание
+  prompts:
+    attach-vehicle-title: "Прицепить {trailerName} к транспортному средству"
+    select-vehicle-warning: Выберите транспортное средство, к которому прицепить этот прицеп.
+    attach-vehicle-success: "{trailerName} прицеплен к {vehicleName}."
+    detach-vehicle-title: "Отцепить {trailerName}?"
+    detach-vehicle-body: "Текущая сцепка между {trailerName} и {vehicleName} будет завершена. Сцепка сохранится в истории прицепа."
+    detach-vehicle-success: "{trailerName} отцеплен от {vehicleName}."
+    not-attached-warning: "{trailerName} не прицеплен к транспортному средству."
+    attach-device-title: "Подключить устройство к {trailerName}"
+    select-device-warning: Выберите устройство для подключения к этому прицепу.
+    attach-device-success: "Устройство подключено к {trailerName}."
+    attach-equipment-title: "Подключить оборудование к {resourceName}"
+    select-equipment-warning: Выберите оборудование для подключения.
+    attach-equipment-success: "{equipmentName} подключено к {resourceName}."
+    detach-equipment-title: "Отключить {equipmentName}?"
+    detach-equipment-body: "{equipmentName} больше не будет подключено к {resourceName}."
+    detach-equipment-success: "{equipmentName} отключено от {resourceName}."
+    no-location-warning: "У {trailerName} ещё нет записанного местоположения."
+    photo-upload-error: "Не удалось загрузить фото: {message}"
+  empty:
+    title: Добавьте первый прицеп
+    description: Прицепы отслеживают сцепки, подключённые устройства и оборудование, телематику в реальном времени и обслуживание ваших прицепных активов.
+    filtered-title: Нет прицепов, соответствующих фильтрам
+    filtered-description: Измените поиск или фильтры, чтобы найти другой прицеп.
+    connections: История сцепок пуста
+    connections-description: Прицепите этот прицеп к транспортному средству, чтобы начать запись сцепок.
+    equipment: Оборудование не подключено
+    equipment-description: Подключите к этому прицепу оборудование, например гидроборт, стяжные ремни или холодильную установку.
+    schedules: Графиков обслуживания нет
+    schedules-description: Создайте график, чтобы планировать регулярные осмотры или обслуживание этого прицепа.
+    work-orders: Заказ-нарядов нет
+    work-orders-description: Создайте заказ-наряд для учёта ремонта или обслуживания этого прицепа.
+    maintenance: Истории обслуживания нет
+    maintenance-description: Здесь появятся записи об обслуживании этого прицепа.
+  docs:
+    title: Руководство по прицепам
+    link: Открыть руководство по прицепам
+  tabs:
+    overview: Обзор
+    positions: Позиции
+    devices: Устройства
+    equipment: Оборудование
+    connections: История сцепок
+    schedules: Графики
+    work-orders: Заказ-наряды
+    maintenance: Обслуживание
+  columns:
+    name: Название
+    id: ID
+    code: Код
+    type: Тип
+    plate-number: Госномер
+    status: Статус
+    vehicle: Тягач
+    attachment-state: Сцепка
+    connectivity: Связь
+    last-online: Последний выход в сеть
+    location: Местоположение
+    devices: Устройства
+    equipment: Оборудование
+    vin: VIN
+    serial-number: Серийный номер
+    make: Производитель
+    model: Модель
+    year: Год
+    vendor: Поставщик
+    ownership: Владение
+    axles: Оси
+    gvwr: Полная масса
+    payload-capacity: Грузоподъёмность
+    length: Длина
+    refrigerated: Рефрижератор
+    created-at: Создан
+    updated-at: Обновлён
+  filters:
+    created-between: Создан в период
+    updated-between: Обновлён в период
+    last-online-between: Последний выход в сеть в период
+  connections:
+    description: Все транспортные средства, к которым был прицеплен этот прицеп, начиная с последнего.
+    ongoing: Текущая
+    connected: "Подключён {date}"
+    disconnected: "Отключён {date}"
+    still-attached: Всё ещё прицеплен
+  equipment:
+    description: Оборудование, подключённое к этому прицепу в данный момент.
+  telemetry:
+    no-location: Местоположение не записано
+  maintenance:
+    interval: Интервал
+    next-due: Следующий срок
+    code: Код
+    subject: Тема
+    priority: Приоритет
+    due: Срок
+    summary: Описание
+    odometer: Одометр
+    total-cost: Общая стоимость
+    date: Дата
+  statuses:
+    available: Доступен
+    in_use: Используется
+    maintenance: На обслуживании
+    out_of_service: Не в эксплуатации
+    retired: Списан
+  status-descriptions:
+    available: Готов к назначению или сцепке.
+    in_use: В данный момент выполняет задание или прицеплен к транспортному средству.
+    maintenance: Проходит обслуживание, осмотр или ремонт.
+    out_of_service: Непригоден к использованию до дальнейшего уведомления.
+    retired: Окончательно выведен из эксплуатации.
+  attachment:
+    attached: Прицеплен
+    detached: Отцеплен
+    no-vehicle: Не прицеплен к транспортному средству
+    towed-by: Буксируется
+    position: "Позиция {position}"
+  connectivity:
+    online: В сети
+    recently_offline: Недавно не в сети
+    offline: Не в сети
+    never_connected: Никогда не подключался
+  measurement:
+    metric: Метрическая
+    imperial: Имперская
+  measurement-descriptions:
+    metric: Метры, килограммы, кубические метры и градусы Цельсия.
+    imperial: Футы, фунты, кубические футы и градусы Фаренгейта.
+  odometer-units:
+    km: Километры
+    mi: Мили
+  coupling-types:
+    fifth_wheel: Седельно-сцепное устройство
+    pintle_hook: Крюковая сцепка
+    ball_hitch: Шаровая сцепка
+    gooseneck: Гусиная шея
+    drawbar: Дышло
+    other: Другое
+  brake-types:
+    air: Пневматические тормоза
+    electric: Электрические тормоза
+    hydraulic_surge: Гидравлические тормоза наката
+    none: Без тормозов
+    other: Другое
+  ownership-types:
+    owned: В собственности
+    leased: В лизинге
+    financed: В кредите
+    rented: В аренде
+  types:
+    dry_van: Фургон
+    reefer: Рефрижератор
+    flatbed: Бортовая платформа
+    step_deck: Платформа с уступом
+    lowboy: Низкорамный трал
+    tanker: Цистерна
+    bulk: Для сыпучих грузов
+    dump: Самосвальный
+    chassis: Контейнеровоз
+    curtain_side: Тентованный
+    car_carrier: Автовоз
+    livestock: Скотовоз
+    logging: Лесовоз
+    dolly: Подкатная тележка
+    specialty: Специальный
+    other: Другое

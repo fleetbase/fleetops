@@ -44,8 +44,8 @@
                         <div class="flex flex-row space-x-2">
                             <div>
                                 <Image
-                                    src={{avatar-url @resource.customer.photo_url}}
-                                    @fallbackSrc={{config "defaultValues.contactImage"}}
+                                    src={{resource-image @resource.customer.photo_url "customer"}}
+                                    @fallbackSrc={{(placeholder-image "customer")}}
                                     width="28"
                                     height="28"
                                     class="w-7 h-7 rounded-full ring-2 ring-gray-800 dark:ring-gray-700 shadow transition-shadow hover:shadow-md focus:shadow-md"
@@ -66,8 +66,8 @@
                     <div class="flex flex-row space-x-2">
                         <div>
                             <Image
-                                src={{avatar-url @resource.facilitator.photo_url}}
-                                @fallbackSrc={{config "defaultValues.contactImage"}}
+                                src={{resource-image @resource.facilitator.photo_url "vendor"}}
+                                @fallbackSrc={{(placeholder-image "vendor")}}
                                 width="28"
                                 height="28"
                                 class="w-7 h-7 rounded-full ring-2 ring-gray-800 dark:ring-gray-700 shadow transition-shadow hover:shadow-md focus:shadow-md"

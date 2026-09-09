@@ -16,6 +16,7 @@ export default class ConnectivityTelematicsDetailsDevicesController extends Cont
     @service notifications;
     @service store;
     @service vehicleActions;
+    @service trailerActions;
 
     @tracked queryParams = [
         'page',
