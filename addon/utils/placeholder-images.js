@@ -26,8 +26,24 @@ export const PLACEHOLDER_IMAGES = {
  */
 const LEGACY_DEFAULT_PATTERN = /(no-avatar|vehicle-placeholder|image-file-icon|fallback-placeholder|default-extension-icon)\.(png|svg|jpe?g)/i;
 
+const CONFIG_KEYS = {
+    vehicle: 'vehicleImage',
+    driver: 'driverImage',
+    vendor: 'vendorImage',
+    contact: 'contactImage',
+    customer: 'customerImage',
+    fleet: 'fleetImage',
+    trailer: 'trailerImage',
+};
+
 export function getPlaceholderImage(type = 'contact') {
-    return config?.defaultValues?.placeholders?.[type] || PLACEHOLDER_IMAGES[type] || PLACEHOLDER_IMAGES.contact;
+    const overrides = config?.defaultValues?.placeholders ?? {};
+    // A console that already replaced its hosted defaults with inline images wins;
+    // hosted PNG defaults are ignored so the silhouette set stays consistent.
+    const configured = config?.defaultValues?.[CONFIG_KEYS[type]];
+    const inlineConfigured = typeof configured === 'string' && configured.startsWith('data:') ? configured : null;
+
+    return overrides[type] || inlineConfigured || PLACEHOLDER_IMAGES[type] || PLACEHOLDER_IMAGES.contact;
 }
 
 export function isDefaultImage(url) {

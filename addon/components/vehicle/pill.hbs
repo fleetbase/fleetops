@@ -1,7 +1,7 @@
 <Pill
     @this.resource={{this.resource}}
-    @imageSrc={{this.resource.photo_url}}
-    @fallbackImageType="vehicleImage"
+    @imageSrc={{resource-image this.resource.photo_url "vehicle"}}
+    @imageFallback={{(placeholder-image "vehicle")}}
     @showOnlineIndicator={{if this.resource true false}}
     @noTooltip={{not this.resource}}
     @onClick={{@onClick}}

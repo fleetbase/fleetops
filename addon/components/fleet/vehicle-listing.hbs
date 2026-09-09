@@ -59,7 +59,7 @@
                                 <div class="flex flex-row items-start">
                                     <div class="mr-2">
                                         <div class="relative">
-                                            <Image src={{vehicle.photo_url}} alt={{vehicle.name}} class="w-5 h-5 rounded-md" @fallbackSrc={{config "defaultValues.vehicleImage"}} />
+                                            <Image src={{resource-image vehicle.photo_url "vehicle"}} alt={{vehicle.name}} class="w-5 h-5 rounded-md" @fallbackSrc={{(placeholder-image "vehicle")}} />
                                             <FaIcon @icon="circle" class="absolute right-0 top-0 -mr-1 -mt-1 {{if vehicle.online 'text-green-500' 'text-yellow-200'}}" />
                                         </div>
                                     </div>

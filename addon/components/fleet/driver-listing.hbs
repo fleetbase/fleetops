@@ -59,7 +59,7 @@
                                 <div class="flex flex-row items-start">
                                     <div class="mr-2">
                                         <div class="relative">
-                                            <Image src={{driver.photo_url}} alt={{driver.name}} class="w-5 h-5 rounded-md" @fallbackSrc={{config "defaultValues.driverImage"}} />
+                                            <Image src={{resource-image driver.photo_url "driver"}} alt={{driver.name}} class="w-5 h-5 rounded-md" @fallbackSrc={{(placeholder-image "driver")}} />
                                             <FaIcon @icon="circle" class="absolute right-0 top-0 -mr-1 -mt-1 {{if driver.online 'text-green-500' 'text-yellow-200'}}" />
                                         </div>
                                     </div>

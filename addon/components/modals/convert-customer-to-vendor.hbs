@@ -11,7 +11,7 @@
 
         <InputGroup @name="Primary Personnel" @wrapperClass="mb-0i">
             <div class="flex items-start rounded-md border border-gray-200 bg-gray-50 px-3 py-2 dark:border-gray-700 dark:bg-gray-800">
-                <Image src={{this.customer.photo_url}} @fallbackSrc={{config "defaultValues.contactImage"}} alt={{this.customer.name}} class="mr-2 h-6 w-6 rounded-md" />
+                <Image src={{resource-image this.customer.photo_url "customer"}} @fallbackSrc={{(placeholder-image "customer")}} alt={{this.customer.name}} class="mr-2 h-6 w-6 rounded-md" />
                 <div class="min-w-0">
                     <div class="leading-4 text-sm truncate font-semibold dark:text-gray-100">{{this.customer.name}}</div>
                     <div class="truncate text-sm text-gray-500 dark:text-gray-400">{{n-a this.customer.email}}</div>

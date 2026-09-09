@@ -23,8 +23,8 @@
         <section class="overflow-hidden rounded-md border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-800">
             <div class="flex gap-3 p-3">
                 <Image
-                    src={{this.vehiclePhotoUrl}}
-                    @fallbackSrc={{config "defaultValues.placeholderImage"}}
+                    src={{resource-image this.vehiclePhotoUrl "vehicle"}}
+                    @fallbackSrc={{(placeholder-image "vehicle")}}
                     alt={{this.vehicleName}}
                     class="h-20 w-20 flex-shrink-0 rounded-md object-cover shadow-sm"
                 />

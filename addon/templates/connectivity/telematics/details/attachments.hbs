@@ -174,8 +174,8 @@
                                         <div class="mb-2 flex items-center justify-between gap-3">
                                             <div class="flex min-w-0 items-center gap-3">
                                                 <Image
-                                                    src={{or group.asset.photo_url group.asset.avatar_url}}
-                                                    @fallbackSrc={{config "defaultValues.vehicleImage"}}
+                                                    src={{resource-image (or group.asset.photo_url group.asset.avatar_url) (if (eq group.asset.asset_class "trailer") "trailer" "vehicle")}}
+                                                    @fallbackSrc={{(placeholder-image (if (eq group.asset.asset_class "trailer") "trailer" "vehicle"))}}
                                                     alt={{group.name}}
                                                     class="h-10 w-9 flex-shrink-0 rounded-md object-cover"
                                                 />

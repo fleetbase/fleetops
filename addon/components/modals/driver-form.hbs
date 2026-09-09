@@ -3,8 +3,8 @@
         <div class="flex">
             <div class="w-32 mb-6 mr-6">
                 <Image
-                    src={{@options.driver.photo_url}}
-                    @fallbackSrc={{config "defaultValues.driverImage"}}
+                    src={{resource-image @options.driver.photo_url "driver"}}
+                    @fallbackSrc={{(placeholder-image "driver")}}
                     alt={{@options.driver.name}}
                     height="128"
                     width="128"
