@@ -8,6 +8,10 @@ export default class ManagementContactsCustomersController extends ManagementCon
         return this.contactActions;
     }
 
+    get layoutCacheKey() {
+        return 'fleetops:customers:layout';
+    }
+
     /** columns */
     get columns() {
         return [

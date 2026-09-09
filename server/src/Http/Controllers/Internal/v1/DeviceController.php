@@ -2,6 +2,7 @@
 
 namespace Fleetbase\FleetOps\Http\Controllers\Internal\v1;
 
+use Fleetbase\FleetOps\Exceptions\DeviceAlreadyAttachedException;
 use Fleetbase\FleetOps\Exports\DeviceExport;
 use Fleetbase\FleetOps\Http\Controllers\FleetOpsController;
 use Fleetbase\FleetOps\Models\Device;
@@ -134,6 +135,8 @@ class DeviceController extends FleetOpsController
         try {
             $device->attachTo($vehicle);
             $device->load(['telematic', 'warranty', 'attachable']);
+        } catch (DeviceAlreadyAttachedException $e) {
+            return response()->error($e->getMessage(), 409);
         } catch (\Throwable $e) {
             $this->logDeviceAttachmentFailure('attach', $device, $vehicle, $e);
 

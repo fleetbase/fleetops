@@ -74,8 +74,8 @@
                         <div class="resource-assigned">
                             <div class="resource-assigned-photo">
                                 <Image
-                                    src={{avatar-url @order.customer.photo_url}}
-                                    @fallbackSrc={{config "defaultValues.contactImage"}}
+                                    src={{resource-image @order.customer.photo_url "customer"}}
+                                    @fallbackSrc={{(placeholder-image "customer")}}
                                     width="32"
                                     height="32"
                                     class="w-8 h-8 rounded-lg shadow-sm mr-2"
@@ -93,8 +93,8 @@
                         <div class="resource-assigned">
                             <div class="resource-assigned-photo">
                                 <Image
-                                    src={{avatar-url @order.driver_assigned.photo_url}}
-                                    @fallbackSrc={{config "defaultValues.driverImage"}}
+                                    src={{resource-image @order.driver_assigned.photo_url "driver"}}
+                                    @fallbackSrc={{(placeholder-image "driver")}}
                                     width="32"
                                     height="32"
                                     class="w-8 h-8 rounded-lg shadow-sm mr-2"

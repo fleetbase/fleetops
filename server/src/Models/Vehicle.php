@@ -375,6 +375,19 @@ class Vehicle extends Model
         return $this->hasMany(Equipment::class, 'equipable_uuid', 'uuid')->where('equipable_type', static::class);
     }
 
+    public function trailerConnections(): HasMany
+    {
+        return $this->hasMany(AssetConnection::class, 'connector_uuid', 'uuid')->where('connector_type', static::class)->latest('connected_at');
+    }
+
+    public function currentTrailers(): HasManyThrough
+    {
+        return $this->hasManyThrough(Trailer::class, AssetConnection::class, 'connector_uuid', 'uuid', 'uuid', 'connected_uuid')
+            ->where('asset_connections.connector_type', static::class)
+            ->where('asset_connections.connected_type', Trailer::class)
+            ->whereNull('asset_connections.disconnected_at');
+    }
+
     public function maintenances(): HasMany
     {
         return $this->hasMany(Maintenance::class, 'maintainable_uuid', 'uuid')->where('maintainable_type', static::class);

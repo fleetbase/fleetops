@@ -3,8 +3,8 @@
         <div class="flex">
             <div class="w-32 mb-6 mr-6">
                 <Image
-                    src={{@options.contact.photo_url}}
-                    @fallbackSrc={{config "defaultValues.contactImage"}}
+                    src={{resource-image @options.contact.photo_url "contact"}}
+                    @fallbackSrc={{(placeholder-image "contact")}}
                     alt={{@options.contact.name}}
                     height="128"
                     width="128"

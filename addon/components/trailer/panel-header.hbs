@@ -1,0 +1,45 @@
+<div class="px-4 py-2">
+    <div class="flex flex-1 flex-row items-start justify-between">
+        <div class="flex flex-row space-x-3">
+            <div class="flex items-start justify-start rounded-full">
+                <Image
+                    src={{resource-image @resource.photo_url "trailer"}}
+                    @fallbackSrc={{(placeholder-image "trailer")}}
+                    alt={{@resource.displayName}}
+                    height="48"
+                    width="48"
+                    class="h-14 w-14 rounded-full shadow-sm"
+                />
+                <Attach::Tooltip @class="clean" @animation="scale" @placement="top">
+                    <InputInfo @text={{@resource.displayName}} />
+                </Attach::Tooltip>
+            </div>
+            <div class="flex flex-col">
+                <h1 class="text-gray-900 dark:text-white font-semibold text-2xl">{{@resource.displayName}}</h1>
+                <div class="-mt-1 text-sm text-gray-700 dark:text-gray-400">
+                    {{#if @resource.type}}{{t (concat "trailer.types." @resource.type)}}{{/if}}
+                    {{#if (or @resource.plate_number @resource.code)}}<span class="mx-1">·</span>{{or @resource.plate_number @resource.code}}{{/if}}
+                </div>
+                <div class="mt-1 flex flex-row items-center space-x-2">
+                    <Badge @status={{@resource.status}} @text={{t (concat "trailer.statuses." (or @resource.status "available"))}} />
+                    <Badge @status={{if @resource.isAttached "attached" "detached"}} @icon={{if @resource.isAttached "link" "link-slash"}} @text={{t (concat "trailer.attachment." (if @resource.isAttached "attached" "detached"))}} />
+                    <Badge @status={{or @resource.connectivity_status "never_connected"}} @text={{t (concat "trailer.connectivity." (or @resource.connectivity_status "never_connected"))}} />
+                </div>
+            </div>
+        </div>
+        <div class="next-view-header-right">
+            <Layout::Resource::Panel::HeaderActions
+                @resource={{@resource}}
+                @saveTask={{@saveTask}}
+                @saveOptions={{@saveOptions}}
+                @saveDisabled={{@saveDisabled}}
+                @pojoResource={{@pojoResource}}
+                @authSchema={{@authSchema}}
+                @actionButtons={{@actionButtons}}
+                @onPressCancel={{@onPressCancel}}
+            >
+                {{yield}}
+            </Layout::Resource::Panel::HeaderActions>
+        </div>
+    </div>
+</div>

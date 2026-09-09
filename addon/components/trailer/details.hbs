@@ -1,0 +1,399 @@
+<div class="details-wrapper trailer-details" ...attributes>
+    {{! CORE DETAILS }}
+    <ContentPanel @title={{t "trailer.sections.details"}} @open={{true}} @wrapperClass="bordered-top">
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-2 text-xs dark:text-gray-100">
+            <div class="col-span-2 text-[11px] uppercase tracking-wide text-gray-500 font-semibold mt-1">
+                {{t "trailer.sections.identification"}}
+            </div>
+
+            <div class="field-info-container">
+                <div class="field-name">{{t "trailer.fields.name"}}</div>
+                <div class="field-value">{{n-a @resource.name}}</div>
+            </div>
+
+            <div class="field-info-container">
+                <div class="field-name">{{t "trailer.fields.id"}}</div>
+                <div class="field-value"><ClickToCopy @value={{@resource.public_id}}>{{n-a @resource.public_id}}</ClickToCopy></div>
+            </div>
+
+            <div class="field-info-container">
+                <div class="field-name">{{t "trailer.fields.code"}}</div>
+                <div class="field-value">{{n-a @resource.code}}</div>
+            </div>
+
+            <div class="field-info-container">
+                <div class="field-name">{{t "trailer.fields.type"}}</div>
+                <div class="field-value">{{n-a this.typeLabel}}</div>
+            </div>
+
+            <div class="field-info-container">
+                <div class="field-name">{{t "trailer.fields.status"}}</div>
+                <div class="field-value"><Badge @status={{@resource.status}} @text={{this.statusLabel}} /></div>
+            </div>
+
+            <div class="field-info-container">
+                <div class="field-name">{{t "trailer.fields.body-type"}}</div>
+                <div class="field-value">{{n-a @resource.body_type}}</div>
+            </div>
+
+            <div class="field-info-container">
+                <div class="field-name">{{t "trailer.fields.color"}}</div>
+                <div class="field-value">{{n-a @resource.color}}</div>
+            </div>
+
+            <div class="field-info-container">
+                <div class="field-name">{{t "trailer.fields.category"}}</div>
+                <div class="field-value">{{n-a (or @resource.category.name @resource.category_name)}}</div>
+            </div>
+
+            <div class="field-info-container col-span-2">
+                <div class="field-name">{{t "trailer.fields.description"}}</div>
+                <div class="field-value">{{n-a @resource.description}}</div>
+            </div>
+
+            <div class="col-span-2 text-[11px] uppercase tracking-wide text-gray-500 font-semibold mt-3">
+                {{t "trailer.sections.registration"}}
+            </div>
+
+            <div class="field-info-container">
+                <div class="field-name">{{t "trailer.fields.vin"}}</div>
+                <div class="field-value">{{n-a @resource.vin}}</div>
+            </div>
+
+            <div class="field-info-container">
+                <div class="field-name">{{t "trailer.fields.plate-number"}}</div>
+                <div class="field-value">{{n-a @resource.plate_number}}</div>
+            </div>
+
+            <div class="field-info-container">
+                <div class="field-name">{{t "trailer.fields.serial-number"}}</div>
+                <div class="field-value">{{n-a @resource.serial_number}}</div>
+            </div>
+
+            <div class="field-info-container">
+                <div class="field-name">{{t "trailer.fields.make"}}</div>
+                <div class="field-value">{{n-a @resource.make}}</div>
+            </div>
+
+            <div class="field-info-container">
+                <div class="field-name">{{t "trailer.fields.model"}}</div>
+                <div class="field-value">{{n-a @resource.model}}</div>
+            </div>
+
+            <div class="field-info-container">
+                <div class="field-name">{{t "trailer.fields.year"}}</div>
+                <div class="field-value">{{n-a @resource.year}}</div>
+            </div>
+        </div>
+    </ContentPanel>
+
+    {{! TOWING CONNECTION }}
+    <ContentPanel @title={{t "trailer.sections.connection"}} @open={{true}} @wrapperClass="bordered-top">
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-2 text-xs dark:text-gray-100">
+            <div class="field-info-container">
+                <div class="field-name">{{t "trailer.fields.attachment-state"}}</div>
+                <div class="field-value">
+                    <Badge @status={{if this.isAttached "attached" "detached"}} @text={{this.attachmentLabel}} @icon={{if this.isAttached "link" "link-slash"}} />
+                </div>
+            </div>
+
+            <div class="field-info-container">
+                <div class="field-name">{{t "trailer.fields.vehicle"}}</div>
+                <div class="field-value">
+                    {{#if this.isAttached}}
+                        <a href="javascript:;" class="text-blue-600 dark:text-blue-400 hover:opacity-50" {{on "click" this.viewVehicle}}>{{n-a this.currentVehicleName}}</a>
+                    {{else}}
+                        <span class="text-gray-400 dark:text-gray-500">{{t "trailer.attachment.no-vehicle"}}</span>
+                    {{/if}}
+                </div>
+            </div>
+
+            {{#if this.isAttached}}
+                <div class="field-info-container">
+                    <div class="field-name">{{t "trailer.fields.attached-at"}}</div>
+                    <div class="field-value">{{n-a (format-date-fns @resource.attached_at "dd MMM yyyy, HH:mm")}}</div>
+                </div>
+
+                <div class="field-info-container">
+                    <div class="field-name">{{t "trailer.fields.position"}}</div>
+                    <div class="field-value">{{n-a @resource.current_connection.position}}</div>
+                </div>
+            {{/if}}
+
+            <div class="col-span-2 flex flex-row items-center space-x-2 mt-1">
+                {{#if this.isAttached}}
+                    <Button @icon="unlink" @text={{t "trailer.actions.detach-vehicle"}} @size="xs" @type="danger" @onClick={{this.detachVehicle}} @permission="fleet-ops detach-vehicle-for trailer" />
+                {{else}}
+                    <Button @icon="link" @text={{t "trailer.actions.attach-vehicle"}} @size="xs" @type="primary" @onClick={{this.attachVehicle}} @permission="fleet-ops attach-vehicle-for trailer" />
+                {{/if}}
+            </div>
+        </div>
+    </ContentPanel>
+
+    {{! LOCATION & TELEMATICS }}
+    <ContentPanel @title={{t "trailer.sections.telemetry"}} @open={{true}} @wrapperClass="bordered-top">
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-2 text-xs dark:text-gray-100">
+            <div class="field-info-container">
+                <div class="field-name">{{t "trailer.fields.connectivity"}}</div>
+                <div class="field-value"><Badge @status={{@resource.connectivity_status}} @text={{this.connectivityLabel}} /></div>
+            </div>
+
+            <div class="field-info-container">
+                <div class="field-name">{{t "trailer.fields.last-online"}}</div>
+                <div class="field-value">
+                    {{#if @resource.last_online_at}}
+                        {{format-date-fns @resource.last_online_at "dd MMM yyyy, HH:mm"}}
+                        <span class="text-gray-400 dark:text-gray-500">({{@resource.lastOnlineAgo}})</span>
+                    {{else}}
+                        {{t "trailer.connectivity.never_connected"}}
+                    {{/if}}
+                </div>
+            </div>
+
+            <div class="field-info-container">
+                <div class="field-name">{{t "trailer.fields.coordinates"}}</div>
+                <div class="field-value">
+                    {{#if @resource.hasValidCoordinates}}
+                        {{point-coordinates @resource.location}}
+                        <Button @icon="location-dot" @size="xs" @helpText={{t "trailer.actions.locate"}} @onClick={{this.locate}} class="ml-2" />
+                    {{else}}
+                        {{t "trailer.telemetry.no-location"}}
+                    {{/if}}
+                </div>
+            </div>
+
+            <div class="field-info-container">
+                <div class="field-name">{{t "trailer.fields.speed"}}</div>
+                <div class="field-value">{{n-a @resource.speed}}</div>
+            </div>
+
+            <div class="field-info-container">
+                <div class="field-name">{{t "trailer.fields.heading"}}</div>
+                <div class="field-value">{{n-a @resource.heading}}</div>
+            </div>
+
+            <div class="field-info-container">
+                <div class="field-name">{{t "trailer.fields.altitude"}}</div>
+                <div class="field-value">{{n-a @resource.altitude}}</div>
+            </div>
+
+            <div class="field-info-container">
+                <div class="field-name">{{t "trailer.fields.devices-count"}}</div>
+                <div class="field-value">{{or @resource.devices_count 0}}</div>
+            </div>
+
+            <div class="field-info-container">
+                <div class="field-name">{{t "trailer.fields.equipment-count"}}</div>
+                <div class="field-value">{{or @resource.equipment_count 0}}</div>
+            </div>
+
+            <div class="field-info-container">
+                <div class="field-name">{{t "trailer.fields.last-provider"}}</div>
+                <div class="field-value">{{n-a this.lastProvider}}</div>
+            </div>
+
+            <div class="field-info-container">
+                <div class="field-name">{{t "trailer.fields.last-event-at"}}</div>
+                <div class="field-value">{{n-a (format-date-fns this.lastEventAt "dd MMM yyyy, HH:mm")}}</div>
+            </div>
+        </div>
+    </ContentPanel>
+
+    {{! DIMENSIONS & CAPACITY }}
+    <ContentPanel @title={{t "trailer.sections.dimensions"}} @open={{false}} @wrapperClass="bordered-top">
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-2 text-xs dark:text-gray-100">
+            <div class="field-info-container">
+                <div class="field-name">{{t "trailer.fields.measurement-system"}}</div>
+                <div class="field-value">{{n-a this.measurementLabel}}</div>
+            </div>
+
+            <div class="field-info-container">
+                <div class="field-name">{{t "trailer.fields.odometer" unit=(or @resource.odometer_unit "")}}</div>
+                <div class="field-value">{{n-a @resource.odometer}}</div>
+            </div>
+
+            <div class="field-info-container">
+                <div class="field-name">{{t "trailer.fields.length" unit=this.units.length}}</div>
+                <div class="field-value">{{n-a @resource.length}}</div>
+            </div>
+
+            <div class="field-info-container">
+                <div class="field-name">{{t "trailer.fields.width" unit=this.units.length}}</div>
+                <div class="field-value">{{n-a @resource.width}}</div>
+            </div>
+
+            <div class="field-info-container">
+                <div class="field-name">{{t "trailer.fields.height" unit=this.units.length}}</div>
+                <div class="field-value">{{n-a @resource.height}}</div>
+            </div>
+
+            <div class="field-info-container">
+                <div class="field-name">{{t "trailer.fields.cargo-volume" unit=this.units.volume}}</div>
+                <div class="field-value">{{n-a @resource.cargo_volume}}</div>
+            </div>
+
+            <div class="field-info-container">
+                <div class="field-name">{{t "trailer.fields.tare-weight" unit=this.units.weight}}</div>
+                <div class="field-value">{{n-a @resource.tare_weight}}</div>
+            </div>
+
+            <div class="field-info-container">
+                <div class="field-name">{{t "trailer.fields.gvwr" unit=this.units.weight}}</div>
+                <div class="field-value">{{n-a @resource.gvwr}}</div>
+            </div>
+
+            <div class="field-info-container">
+                <div class="field-name">{{t "trailer.fields.payload-capacity" unit=this.units.weight}}</div>
+                <div class="field-value">{{n-a @resource.payload_capacity}}</div>
+            </div>
+        </div>
+    </ContentPanel>
+
+    {{! RUNNING GEAR }}
+    <ContentPanel @title={{t "trailer.sections.running-gear"}} @open={{false}} @wrapperClass="bordered-top">
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-2 text-xs dark:text-gray-100">
+            <div class="field-info-container">
+                <div class="field-name">{{t "trailer.fields.axle-count"}}</div>
+                <div class="field-value">{{n-a @resource.axle_count}}</div>
+            </div>
+
+            <div class="field-info-container">
+                <div class="field-name">{{t "trailer.fields.tire-count"}}</div>
+                <div class="field-value">{{n-a @resource.tire_count}}</div>
+            </div>
+
+            <div class="field-info-container">
+                <div class="field-name">{{t "trailer.fields.door-count"}}</div>
+                <div class="field-value">{{n-a @resource.door_count}}</div>
+            </div>
+
+            <div class="field-info-container">
+                <div class="field-name">{{t "trailer.fields.coupling-type"}}</div>
+                <div class="field-value">{{n-a this.couplingLabel}}</div>
+            </div>
+
+            <div class="field-info-container">
+                <div class="field-name">{{t "trailer.fields.brake-type"}}</div>
+                <div class="field-value">{{n-a this.brakeLabel}}</div>
+            </div>
+
+            <div class="field-info-container">
+                <div class="field-name">{{t "trailer.fields.abs"}}</div>
+                <div class="field-value">{{if @resource.abs_equipped (t "common.yes") (t "common.no")}}</div>
+            </div>
+
+            <div class="field-info-container">
+                <div class="field-name">{{t "trailer.fields.ebs"}}</div>
+                <div class="field-value">{{if @resource.ebs_equipped (t "common.yes") (t "common.no")}}</div>
+            </div>
+        </div>
+    </ContentPanel>
+
+    {{! REFRIGERATION }}
+    {{#if this.showRefrigeration}}
+        <ContentPanel @title={{t "trailer.sections.refrigeration"}} @open={{false}} @wrapperClass="bordered-top">
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-2 text-xs dark:text-gray-100">
+                <div class="field-info-container">
+                    <div class="field-name">{{t "trailer.fields.refrigerated"}}</div>
+                    <div class="field-value">{{if @resource.refrigerated (t "common.yes") (t "common.no")}}</div>
+                </div>
+
+                <div class="field-info-container">
+                    <div class="field-name">{{t "trailer.fields.reefer-hours"}}</div>
+                    <div class="field-value">{{n-a @resource.reefer_engine_hours}}</div>
+                </div>
+
+                <div class="field-info-container">
+                    <div class="field-name">{{t "trailer.fields.temperature-min" unit=this.units.temperature}}</div>
+                    <div class="field-value">{{n-a @resource.temperature_min}}</div>
+                </div>
+
+                <div class="field-info-container">
+                    <div class="field-name">{{t "trailer.fields.temperature-max" unit=this.units.temperature}}</div>
+                    <div class="field-value">{{n-a @resource.temperature_max}}</div>
+                </div>
+            </div>
+        </ContentPanel>
+    {{/if}}
+
+    {{! OWNERSHIP & FINANCE }}
+    <ContentPanel @title={{t "trailer.sections.ownership"}} @open={{false}} @wrapperClass="bordered-top">
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-2 text-xs dark:text-gray-100">
+            <div class="field-info-container">
+                <div class="field-name">{{t "trailer.fields.ownership-type"}}</div>
+                <div class="field-value">{{n-a this.ownershipLabel}}</div>
+            </div>
+
+            <div class="field-info-container">
+                <div class="field-name">{{t "trailer.fields.financing-status"}}</div>
+                <div class="field-value">{{n-a @resource.financing_status}}</div>
+            </div>
+
+            <div class="field-info-container">
+                <div class="field-name">{{t "trailer.fields.vendor"}}</div>
+                <div class="field-value">{{n-a (or @resource.vendor.name @resource.vendor_name)}}</div>
+            </div>
+
+            <div class="field-info-container">
+                <div class="field-name">{{t "trailer.fields.warranty"}}</div>
+                <div class="field-value">{{n-a (or @resource.warranty.name @resource.warranty_name)}}</div>
+            </div>
+
+            <div class="field-info-container">
+                <div class="field-name">{{t "trailer.fields.purchased-at"}}</div>
+                <div class="field-value">{{n-a (format-date-fns @resource.purchased_at "dd MMM yyyy")}}</div>
+            </div>
+
+            <div class="field-info-container">
+                <div class="field-name">{{t "trailer.fields.lease-expires-at"}}</div>
+                <div class="field-value">{{n-a (format-date-fns @resource.lease_expires_at "dd MMM yyyy")}}</div>
+            </div>
+
+            <div class="field-info-container">
+                <div class="field-name">{{t "trailer.fields.acquisition-cost"}}</div>
+                <div class="field-value">{{#if @resource.acquisition_cost}}{{format-currency @resource.acquisition_cost @resource.currency}}{{else}}-{{/if}}</div>
+            </div>
+
+            <div class="field-info-container">
+                <div class="field-name">{{t "trailer.fields.current-value"}}</div>
+                <div class="field-value">{{#if @resource.current_value}}{{format-currency @resource.current_value @resource.currency}}{{else}}-{{/if}}</div>
+            </div>
+
+            <div class="field-info-container">
+                <div class="field-name">{{t "trailer.fields.insurance-value"}}</div>
+                <div class="field-value">{{#if @resource.insurance_value}}{{format-currency @resource.insurance_value @resource.currency}}{{else}}-{{/if}}</div>
+            </div>
+
+            <div class="field-info-container">
+                <div class="field-name">{{t "trailer.fields.depreciation-rate"}}</div>
+                <div class="field-value">{{#if @resource.depreciation_rate}}{{@resource.depreciation_rate}}%{{else}}-{{/if}}</div>
+            </div>
+        </div>
+    </ContentPanel>
+
+    {{! NOTES & TIMESTAMPS }}
+    <ContentPanel @title={{t "trailer.sections.notes"}} @open={{false}} @wrapperClass="bordered-top">
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-2 text-xs dark:text-gray-100">
+            <div class="field-info-container col-span-2">
+                <div class="field-name">{{t "trailer.fields.notes"}}</div>
+                <div class="field-value whitespace-pre-line">{{n-a @resource.notes}}</div>
+            </div>
+
+            <div class="field-info-container">
+                <div class="field-name">{{t "trailer.fields.created-at"}}</div>
+                <div class="field-value">{{n-a (format-date-fns @resource.created_at "dd MMM yyyy, HH:mm")}}</div>
+            </div>
+
+            <div class="field-info-container">
+                <div class="field-name">{{t "trailer.fields.updated-at"}}</div>
+                <div class="field-value">{{n-a (format-date-fns @resource.updated_at "dd MMM yyyy, HH:mm")}}</div>
+            </div>
+        </div>
+    </ContentPanel>
+
+    <CustomField::Yield @subject={{@resource}} @viewMode={{true}} @wrapperClass="bordered-top" />
+
+    <RegistryYield @registry="fleet-ops:component:trailer:details" as |RegistryComponent|>
+        <RegistryComponent @resource={{@resource}} />
+    </RegistryYield>
+</div>

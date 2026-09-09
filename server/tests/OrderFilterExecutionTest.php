@@ -181,7 +181,12 @@ test('order filter identity and relation filters support uuid and public identif
     $filter->driver('driver_public');
     $filter->driverAssigned('driver_public');
 
+    // Batch label scans arrive as one comma-separated list of internal ids; blanks are ignored.
+    $filter->internalId('ORD-1, ORD-2,');
+    $filter->internalId(' ');
+
     expect($builder->called('whereIn'))->toBeTrue()
+        ->and($builder->calls)->toContain(['whereIn', 'internal_id', ['ORD-1', 'ORD-2']])
         ->and($builder->called('removeWhereFromQuery'))->toBeTrue()
         ->and($builder->called('whereHas'))->toBeTrue()
         ->and($builder->called('orWhereHas'))->toBeTrue();

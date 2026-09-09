@@ -1,0 +1,35 @@
+<AttachmentList
+    @title={{t "resource.trailers"}}
+    @description={{t "vehicle.trailers.description"}}
+    @actionText={{t "vehicle.actions.attach-trailer"}}
+    @actionIcon="link"
+    @onAction={{this.attach}}
+    @actionPermission="fleet-ops attach-vehicle-for trailer"
+    @isLoading={{this.loadTrailers.isRunning}}
+    @items={{this.trailers}}
+    @emptyIcon="trailer"
+    @emptyTitle={{t "vehicle.empty.trailers"}}
+    @emptyDescription={{t "vehicle.empty.trailers-description"}}
+    class="vehicle-details-trailers"
+>
+    <:item as |trailer|>
+        <Trailer::Pill @trailer={{trailer}} @onClick={{fn this.view trailer}} />
+        <div class="fleetops-attachment-list-item-meta">
+            {{#if trailer.current_connection.position}}
+                <span class="fleetops-attachment-list-item-meta-entry">
+                    <FaIcon @icon="arrow-down-1-9" class="mr-1" />{{t "trailer.attachment.position" position=trailer.current_connection.position}}
+                </span>
+            {{/if}}
+            {{#if trailer.attached_at}}
+                <span class="fleetops-attachment-list-item-meta-entry">
+                    <FaIcon @icon="link" class="mr-1" />{{t "trailer.connections.connected" date=(format-date-fns trailer.attached_at "dd MMM yyyy, HH:mm")}}
+                </span>
+            {{/if}}
+            <Badge @status={{or trailer.connectivity_status "never_connected"}} @size="xs" @text={{t (concat "trailer.connectivity." (or trailer.connectivity_status "never_connected"))}} />
+        </div>
+    </:item>
+    <:itemActions as |trailer|>
+        <Button @icon="eye" @size="xs" @helpText={{t "common.view"}} @onClick={{fn this.view trailer}} @permission="fleet-ops view trailer" />
+        <Button @icon="unlink" @size="xs" @type="danger" @helpText={{t "trailer.actions.detach-vehicle"}} @onClick={{fn this.detach trailer}} @permission="fleet-ops detach-vehicle-for trailer" />
+    </:itemActions>
+</AttachmentList>

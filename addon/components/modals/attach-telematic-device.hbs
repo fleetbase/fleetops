@@ -1,25 +1,30 @@
 <Modal::Default @modalIsOpened={{@modalIsOpened}} @options={{@options}} @confirm={{@onConfirm}} @decline={{@onDecline}}>
     <div class="modal-body-container">
         <div class="mb-4 rounded-md border border-gray-200 bg-gray-50 p-3 dark:border-gray-700 dark:bg-gray-800">
-            <div class="text-xs font-semibold uppercase text-gray-500 dark:text-gray-400">Synced device</div>
+            <div class="text-xs font-semibold uppercase text-gray-500 dark:text-gray-400">{{t "device.attachment.synced-device"}}</div>
             <div class="mt-2">
                 <Device::Pill @device={{@options.device}} />
             </div>
         </div>
 
-        <InputGroup @name={{t "common.select-field" field=(t "resource.vehicle")}} @value={{@options.selectedVehicle}}>
+        <InputGroup @name={{t "device.attachment.asset-type"}}>
+            <PowerSelect @options={{this.assetTypeOptions}} @selected={{@options.selectedAssetType}} @placeholder={{t "device.attachment.select-asset-type"}} @triggerClass="form-select form-input" @onChange={{fn (mut @options.selectedAssetType)}} as |option|>{{option.label}}</PowerSelect>
+        </InputGroup>
+        {{#if @options.selectedAssetType}}
+        <InputGroup @name={{t "common.select-field" field=@options.selectedAssetType.label}} @value={{@options.selectedAsset}}>
             <ModelSelect
-                @modelName="vehicle"
-                @selectedModel={{@options.selectedVehicle}}
-                @placeholder={{t "common.select-field" field=(t "resource.vehicle")}}
+                @modelName={{@options.selectedAssetType.model}}
+                @selectedModel={{@options.selectedAsset}}
+                @placeholder={{t "common.select-field" field=@options.selectedAssetType.label}}
                 @triggerClass="form-select form-input"
                 @infiniteScroll={{true}}
                 @renderInPlace={{true}}
-                @onChange={{fn (mut @options.selectedVehicle)}}
-                as |vehicle|
+                @onChange={{fn (mut @options.selectedAsset)}}
+                as |asset|
             >
-                <Vehicle::Pill @resource={{vehicle}} />
+                {{or asset.displayName asset.display_name asset.name asset.public_id}}
             </ModelSelect>
         </InputGroup>
+        {{/if}}
     </div>
 </Modal::Default>

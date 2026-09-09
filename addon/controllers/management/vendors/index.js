@@ -1,12 +1,14 @@
 import Controller from '@ember/controller';
 import { inject as service } from '@ember/service';
 import { tracked } from '@glimmer/tracking';
+import { action } from '@ember/object';
 import fleetOpsOptions from '../../../utils/fleet-ops-options';
 
 export default class ManagementVendorsIndexController extends Controller {
     @service vendorActions;
     @service tableContext;
     @service intl;
+    @service appCache;
 
     /** query params */
     @tracked queryParams = [
@@ -40,10 +42,35 @@ export default class ManagementVendorsIndexController extends Controller {
     @tracked email;
     @tracked country;
     @tracked table;
+    @tracked layout = this.appCache.get(this.layoutCacheKey, 'table');
+
+    /** cache key that remembers the chosen layout per listing */
+    get layoutCacheKey() {
+        return 'fleetops:vendors:layout';
+    }
 
     /** action buttons */
     get actionButtons() {
         return [
+            {
+                component: 'dropdown-button',
+                icon: 'display',
+                size: 'xs',
+                items: [
+                    {
+                        label: this.intl.t('common.table-view'),
+                        icon: 'table-list',
+                        onClick: () => this.setLayout('table'),
+                    },
+                    {
+                        label: this.intl.t('common.grid-view'),
+                        icon: 'grip',
+                        onClick: () => this.setLayout('grid'),
+                    },
+                ],
+                renderInPlace: true,
+                helpText: this.intl.t('common.change-layout'),
+            },
             {
                 icon: 'refresh',
                 onClick: this.vendorActions.refresh,
@@ -249,5 +276,10 @@ export default class ManagementVendorsIndexController extends Controller {
                 searchable: false,
             },
         ];
+    }
+
+    @action setLayout(layout) {
+        this.layout = layout;
+        this.appCache.set(this.layoutCacheKey, layout);
     }
 }

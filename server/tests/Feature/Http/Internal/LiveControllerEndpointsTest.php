@@ -123,6 +123,8 @@ function fleetopsLiveEndpointsBoot(): SQLiteConnection
         'users'             => ['uuid', 'public_id', 'company_uuid', 'name', 'phone', 'email', 'status', 'type', 'avatar_uuid'],
         'vehicles'          => ['uuid', 'public_id', 'company_uuid', 'vendor_uuid', 'photo_uuid', 'name', 'display_name', 'plate_number', 'serial_number', 'fuel_card_number', 'vin', 'vin_data', 'make', 'model', 'year', 'trim', 'class', 'color', 'call_sign', 'specs', 'telematics', 'status', 'online', 'location', 'meta', 'avatar_url', 'internal_id', 'speed', 'heading', 'altitude'],
         'devices'           => ['uuid', 'public_id', 'company_uuid', 'device_id', 'device_type', 'device_provider', 'owner_uuid', 'owner_type', 'attachable_uuid', 'attachable_type', 'status'],
+        'assets'            => ['uuid', 'public_id', 'company_uuid', 'asset_class', 'name', 'display_name', 'type', 'plate_number', 'status', 'last_online_at', 'online'],
+        'asset_connections' => ['uuid', 'public_id', 'company_uuid', 'connector_type', 'connector_uuid', 'connected_type', 'connected_uuid', 'active_connected_uuid', 'active_connector_position', 'relationship_type', 'position', 'connected_at', 'disconnected_at', 'source'],
         'vendors'           => ['uuid', 'public_id', 'company_uuid', 'name'],
         'files'             => ['uuid', 'public_id', 'company_uuid', 'type', 'path', 'disk'],
         'entities'          => ['uuid', 'public_id', 'company_uuid', 'payload_uuid', 'name', 'type'],
@@ -216,6 +218,16 @@ test('drivers and vehicles list located records within viewport bounds', functio
         ['uuid' => 'driver-2', 'company_uuid' => 'company-1', 'user_uuid' => 'user-1', 'online' => '1', 'location' => null],
     ]);
     $connection->table('vehicles')->insert(['uuid' => 'vehicle-1', 'company_uuid' => 'company-1', 'name' => 'Truck', 'location' => 'POINT(1 1)']);
+    $connection->table('assets')->insert([
+        ['uuid' => 'trailer-1', 'company_uuid' => 'company-1', 'asset_class' => 'trailer', 'name' => 'Reefer 12', 'type' => 'reefer', 'plate_number' => 'TRL-12', 'status' => 'in_use'],
+        ['uuid' => 'trailer-2', 'company_uuid' => 'company-1', 'asset_class' => 'trailer', 'name' => 'Flatbed 3', 'type' => 'flatbed', 'plate_number' => null, 'status' => 'available'],
+    ]);
+    $connection->table('asset_connections')->insert([
+        // Active towing connection: appears on the vehicle's map popover.
+        ['uuid' => 'connection-1', 'company_uuid' => 'company-1', 'connector_type' => 'Fleetbase\\FleetOps\\Models\\Vehicle', 'connector_uuid' => 'vehicle-1', 'connected_type' => 'Fleetbase\\FleetOps\\Models\\Trailer', 'connected_uuid' => 'trailer-1', 'active_connected_uuid' => 'trailer-1', 'relationship_type' => 'towing', 'position' => '1', 'connected_at' => '2026-09-01 08:00:00', 'source' => 'manual'],
+        // Ended connection: history only, never surfaced as a current trailer.
+        ['uuid' => 'connection-2', 'company_uuid' => 'company-1', 'connector_type' => 'Fleetbase\\FleetOps\\Models\\Vehicle', 'connector_uuid' => 'vehicle-1', 'connected_type' => 'Fleetbase\\FleetOps\\Models\\Trailer', 'connected_uuid' => 'trailer-2', 'relationship_type' => 'towing', 'position' => '1', 'connected_at' => '2026-08-01 08:00:00', 'disconnected_at' => '2026-08-02 08:00:00', 'source' => 'manual'],
+    ]);
 
     $drivers = (new LiveController())->drivers(Request::create('/x', 'GET'));
     expect($drivers->count())->toBe(1);
@@ -228,6 +240,13 @@ test('drivers and vehicles list located records within viewport bounds', functio
 
     $vehicles = (new LiveController())->vehicles(Request::create('/x', 'GET'));
     expect($vehicles->count())->toBe(1);
+
+    // The live feed eager-loads the trailers currently coupled to each vehicle so the
+    // map popover can list them without a second request per marker.
+    $vehicle = $vehicles->collection->first()->resource;
+    expect($vehicle->relationLoaded('currentTrailers'))->toBeTrue()
+        ->and($vehicle->relationLoaded('devices'))->toBeTrue()
+        ->and($vehicle->currentTrailers->pluck('uuid')->all())->toBe(['trailer-1']);
     expect((new LiveController())->vehicles(Request::create('/x', 'GET', ['bounds' => [0, 0, 1, 1]]))->count())->toBe(0);
 });
 

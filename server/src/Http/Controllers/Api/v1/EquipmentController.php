@@ -12,6 +12,7 @@ use Fleetbase\FleetOps\Models\Warranty;
 use Fleetbase\Http\Controllers\Controller;
 use Fleetbase\Models\File;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class EquipmentController extends Controller
 {
@@ -77,6 +78,52 @@ class EquipmentController extends Controller
         $equipment->delete();
 
         return $this->deletedEquipmentResource($equipment);
+    }
+
+    public function attach(Request $request, string $id)
+    {
+        $this->rejectUuidIdentifiers($request);
+        $request->validate(['attachable_type' => ['required', 'in:fleet-ops:vehicle,fleet-ops:trailer,vehicle,trailer'], 'attachable' => ['required', 'string']]);
+        try {
+            $equipment     = $this->resolveModel(Equipment::class, $id);
+            [$type, $uuid] = $this->resolveMorph($request->attachable_type, $request->attachable);
+        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException) {
+            return response()->json(['error' => 'Equipment or attachable resource not found.'], 404);
+        }
+        $equipment = DB::transaction(function () use ($equipment, $type, $uuid) {
+            $locked = Equipment::where('company_uuid', session('company'))->where('uuid', $equipment->uuid)->lockForUpdate()->firstOrFail();
+            if ($locked->equipable_type === $type && $locked->equipable_uuid === $uuid) {
+                return $locked;
+            }
+            $locked->update(['equipable_type' => $type, 'equipable_uuid' => $uuid]);
+            activity('equipment_attached')->performedOn($locked)->withProperties(['attachable_type' => $type, 'attachable_uuid' => $uuid])->log('Equipment attached');
+
+            return $locked;
+        });
+
+        return $this->equipmentResource($equipment->refresh()->load(['warranty', 'photo', 'equipable']));
+    }
+
+    public function detach(string $id)
+    {
+        try {
+            $equipment = $this->resolveModel(Equipment::class, $id);
+        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException) {
+            return response()->json(['error' => 'Equipment resource not found.'], 404);
+        }
+        $equipment = DB::transaction(function () use ($equipment) {
+            $locked = Equipment::where('company_uuid', session('company'))->where('uuid', $equipment->uuid)->lockForUpdate()->firstOrFail();
+            if (!$locked->equipable_uuid) {
+                return $locked;
+            }
+            $previous = ['attachable_type' => $locked->equipable_type, 'attachable_uuid' => $locked->equipable_uuid];
+            $locked->update(['equipable_type' => null, 'equipable_uuid' => null]);
+            activity('equipment_detached')->performedOn($locked)->withProperties($previous)->log('Equipment detached');
+
+            return $locked;
+        });
+
+        return $this->equipmentResource($equipment->refresh()->load(['warranty', 'photo', 'equipable']));
     }
 
     protected function input(Request $request): array

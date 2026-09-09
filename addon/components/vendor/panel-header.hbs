@@ -3,8 +3,8 @@
         <div class="flex min-w-0 flex-row items-start gap-3">
             <div class="relative flex flex-shrink-0 items-start justify-start">
                 <Image
-                    src={{this.imageUrl}}
-                    @fallbackSrc={{config "defaultValues.vendorImage"}}
+                    src={{resource-image this.imageUrl "vendor"}}
+                    @fallbackSrc={{(placeholder-image "vendor")}}
                     alt={{this.name}}
                     height="48"
                     width="48"

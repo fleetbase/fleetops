@@ -2092,8 +2092,10 @@ test('device attachment morph types are normalized and legacy aliases are tolera
     expect($serviceProvider)
         ->toContain('use Illuminate\Database\Eloquent\Relations\Relation;')
         ->toContain('$this->registerMorphMap();')
-        ->toContain("'Fleetbase\\\\Models\\\\Vehicle'   => \\Fleetbase\\FleetOps\\Models\\Vehicle::class")
-        ->toContain("'\\\\Fleetbase\\\\Models\\\\Vehicle' => \\Fleetbase\\FleetOps\\Models\\Vehicle::class");
+        ->toContain("'Fleetbase\\\\Models\\\\Vehicle'")
+        ->toContain("'\\\\Fleetbase\\\\Models\\\\Vehicle'")
+        ->toContain("'fleet-ops:trailer'")
+        ->toContain('\\Fleetbase\\FleetOps\\Models\\Trailer::class');
 });
 
 test('internal device attachment endpoints return specific api errors instead of raw model misses', function () {

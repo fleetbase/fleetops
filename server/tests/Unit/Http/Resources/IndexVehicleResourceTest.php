@@ -21,6 +21,11 @@ class FleetOpsIndexVehicleResourceProbe extends IndexVehicleResource
         return $this->compactDevices();
     }
 
+    public function compactTrailersForTest(): array
+    {
+        return $this->compactTrailers();
+    }
+
     public function locationCoordinatesForTest(): ?string
     {
         return $this->locationCoordinates();
@@ -147,8 +152,38 @@ test('index vehicle resource helper methods resolve devices and position labels'
         ],
     ]));
 
+    $vehicle->setRelation('currentTrailers', new Collection([
+        (object) [
+            'uuid'                => 'trailer-uuid',
+            'public_id'           => 'trailer_public',
+            'name'                => 'Reefer 12',
+            'display_name'        => 'Reefer 12',
+            'type'                => 'reefer',
+            'plate_number'        => 'TRL-12',
+            'status'              => 'in_use',
+            'connectivity_status' => 'online',
+            'online'              => 1,
+        ],
+    ]));
+
     $resource = new FleetOpsIndexVehicleResourceProbe($vehicle);
     fleetopsIndexVehicleResourceRequest(true);
+
+    expect($resource->compactTrailersForTest())->toBe([
+        [
+            'id'                  => 'trailer-uuid',
+            'uuid'                => 'trailer-uuid',
+            'public_id'           => 'trailer_public',
+            'name'                => 'Reefer 12',
+            'display_name'        => 'Reefer 12',
+            'type'                => 'reefer',
+            'plate_number'        => 'TRL-12',
+            'status'              => 'in_use',
+            'attachment_state'    => 'attached',
+            'connectivity_status' => 'online',
+            'online'              => true,
+        ],
+    ]);
 
     expect($resource->compactDevicesForTest())->toBe([
         [

@@ -3,8 +3,8 @@
         <div class="flex">
             <div class="w-32 mb-6 mr-6">
                 <Image
-                    src={{@options.vehicle.photo_url}}
-                    @fallbackSrc={{config "defaultValues.vehicleImage"}}
+                    src={{resource-image @options.vehicle.photo_url "vehicle"}}
+                    @fallbackSrc={{(placeholder-image "vehicle")}}
                     alt={{@options.vehicle.name}}
                     height="128"
                     width="128"

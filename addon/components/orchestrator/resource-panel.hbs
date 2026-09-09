@@ -232,10 +232,10 @@
                         {{! Avatar — online dot top-right }}
                         <div class="relative flex-shrink-0 mt-0.5">
                             <img
-                                src={{driver.photo_url}}
+                                src={{resource-image driver.photo_url "driver"}}
                                 alt={{or driver.name "Driver"}}
                                 class="w-9 h-9 rounded-full object-cover bg-gray-200 dark:bg-gray-700"
-                                {{fallback-img-src (config "defaultValues.driverImage")}}
+                                {{fallback-img-src (placeholder-image "driver")}}
                             />
                             <span
                                 class="absolute top-0 left-0 block w-2.5 h-2.5 rounded-full border-2 border-white dark:border-gray-900 {{if driver.online 'bg-green-500' 'bg-gray-400'}}"

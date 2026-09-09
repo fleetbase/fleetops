@@ -6,6 +6,7 @@ use Fleetbase\FleetOps\Models\DeviceEvent;
 use Fleetbase\FleetOps\Models\Position;
 use Fleetbase\FleetOps\Models\Sensor;
 use Fleetbase\FleetOps\Models\Telematic;
+use Fleetbase\FleetOps\Models\Trailer;
 use Fleetbase\FleetOps\Models\Vehicle;
 use Fleetbase\FleetOps\Support\Telematics\TelematicProviderRegistry;
 use Fleetbase\FleetOps\Support\Telematics\TelematicService;
@@ -76,6 +77,36 @@ class FleetOpsTelematicServiceTelemetryEventFake extends DeviceEvent
 }
 
 class FleetOpsTelematicServiceTelemetryVehicleFake extends Vehicle
+{
+    public int $saveCount = 0;
+
+    public function __construct(array $attributes = [])
+    {
+        $this->attributes = $attributes;
+    }
+
+    public function getAttribute($key)
+    {
+        return $this->attributes[$key] ?? null;
+    }
+
+    public function setAttribute($key, $value)
+    {
+        $this->attributes[$key] = $value;
+
+        return $this;
+    }
+
+    public function save(array $options = [])
+    {
+        $this->saveCount++;
+        $this->exists = true;
+
+        return true;
+    }
+}
+
+class FleetOpsTelematicServiceTelemetryTrailerFake extends Trailer
 {
     public int $saveCount = 0;
 
@@ -315,6 +346,68 @@ test('telematic service skips event positions and vehicle updates when event loc
         ->and($event->positions)->toBe([])
         ->and($vehicle->saveCount)->toBe(0)
         ->and($GLOBALS['fleetops_telematic_service_broadcasts'])->toBe([]);
+});
+
+test('telematic service updates trailer telemetry and rejects stale trailer snapshots', function () {
+    Carbon::setTestNow(Carbon::parse('2026-09-03 12:00:00'));
+    $GLOBALS['fleetops_telematic_service_broadcasts'] = [];
+
+    $service = new FleetOpsTelematicServiceTelemetryServiceFake();
+    $trailer = new FleetOpsTelematicServiceTelemetryTrailerFake([
+        'uuid'         => 'trailer-uuid',
+        'public_id'    => 'trailer_public',
+        'company_uuid' => 'company-uuid',
+        'telematics'   => ['last_event_at' => '2026-09-03T11:00:00.000000Z'],
+    ]);
+    $device = new FleetOpsTelematicServiceTelemetryDeviceFake(['uuid' => 'device-uuid', 'device_id' => 'device-1']);
+    $device->setRelation('attachable', $trailer);
+    $event = new FleetOpsTelematicServiceTelemetryEventFake([
+        'uuid'        => 'event-new',
+        'public_id'   => 'event_new',
+        'device_uuid' => 'device-uuid',
+        'event_type'  => 'telemetry_update',
+        'provider'    => 'samsara',
+        'occurred_at' => Carbon::parse('2026-09-03 11:30:00'),
+    ]);
+
+    fleetOpsTelematicServiceTelemetryInvoke($service, 'applyDeviceEventTelemetry', [$event, [
+        'location'            => ['latitude' => 47.918, 'longitude' => 106.917],
+        'speed'               => 42,
+        'heading'             => 180,
+        'odometer'            => 32000,
+        'reefer_engine_hours' => 800,
+    ], $device, true, null]);
+
+    expect($trailer->saveCount)->toBe(1)
+        ->and($trailer->location)->toBeInstanceOf(SpatialPoint::class)
+        ->and($trailer->speed)->toBe(42)
+        ->and($trailer->heading)->toBe(180)
+        ->and($trailer->odometer)->toBe(32000)
+        ->and($trailer->reefer_engine_hours)->toBe(800)
+        ->and($trailer->telematics['last_event_uuid'])->toBe('event-new')
+        ->and($trailer->telematics['last_provider'])->toBe('samsara')
+        ->and($GLOBALS['fleetops_telematic_service_broadcasts'])->toHaveCount(1);
+
+    $staleEvent = new FleetOpsTelematicServiceTelemetryEventFake([
+        'uuid'        => 'event-stale',
+        'public_id'   => 'event_stale',
+        'device_uuid' => 'device-uuid',
+        'event_type'  => 'telemetry_update',
+        'provider'    => 'samsara',
+        'occurred_at' => Carbon::parse('2026-09-03 10:30:00'),
+    ]);
+
+    fleetOpsTelematicServiceTelemetryInvoke($service, 'applyDeviceEventTelemetry', [$staleEvent, [
+        'location' => ['latitude' => 1, 'longitude' => 1],
+        'speed'    => 5,
+    ], $device, true, null]);
+
+    expect($trailer->saveCount)->toBe(1)
+        ->and($trailer->speed)->toBe(42)
+        ->and($trailer->telematics['last_event_uuid'])->toBe('event-new')
+        ->and($GLOBALS['fleetops_telematic_service_broadcasts'])->toHaveCount(1);
+
+    Carbon::setTestNow();
 });
 
 test('telematic service stores list snapshot sensors and skips provider failures', function () {

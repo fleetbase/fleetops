@@ -1,6 +1,9 @@
 fleet-ops:
   extension-name: Fleet-Ops
 common:
+  last-modified: Dernière modification
+  online: En ligne
+  offline: Hors ligne
   proof-of-delivery: Preuve de livraison
   ad-hoc: Ad hoc
   bulk-dispatch: Envoi en masse
@@ -8,6 +11,7 @@ common:
   dispatch-order: Ordre d'envoi
   assign-driver: Attribuer un chauffeur
   no-driver-assigned: Aucun chauffeur assigné
+  no-vehicle-assigned: Aucun véhicule assigné
   details: Détails
   name: Nom
   title: Titre
@@ -47,6 +51,8 @@ common:
   notes: Notes
   schedule: Schedule
   current-job: Current Job
+  "yes": Oui
+  "no": Non
 menu:
   operations: Opérations
   dashboard: Tableau de bord
@@ -57,6 +63,7 @@ menu:
   resources: Ressources
   drivers: Chauffeurs
   vehicles: Véhicules
+  trailers: Remorques
   fleets: Flottes
   vendors: Fournisseurs
   contacts: Contacts
@@ -87,6 +94,8 @@ menu:
 resource:
   asset: Actif
   assets: Actifs
+  trailer: Remorque
+  trailers: Remorques
   activity: Activité
   activities: Activités
   contact: Contact
@@ -441,6 +450,30 @@ driver:
     unassign-vehicle-success: Unassigned {vehicleName} from {driverName}.
     issue-title: Issue reported for {driverName}
 device:
+  attachment:
+    title: Actif attaché
+    description: Contexte de flotte pour la télémétrie de cet appareil.
+    open: Ouvrir l'actif
+    asset: Actif attaché
+    synced-device: Appareil synchronisé
+    asset-type: Type d'actif
+    select-asset-type: Sélectionnez un type d'actif
+    locate: Localiser
+    change: Changer d'actif
+    detach: Détacher
+    attached-device: Appareil attaché
+    last-seen: Dernier signal de l'appareil
+    none-title: Aucun actif attaché
+    none-message: Attachez cet appareil à un véhicule ou une remorque pour fournir le contexte de flotte.
+    latest-positions: Positions récentes
+    positions-description: Coordonnées récentes de l'actif transmises par cet appareil.
+    full-history: Historique complet
+    no-positions: Aucune position récente
+    no-positions-message: Cet actif ne possède pas encore d'historique de position récent.
+    attach-or-change: Attacher ou changer d'actif
+    view-attached: Voir l'actif attaché
+    locate-attached: Localiser l'actif attaché sur la carte
+    unknown: Actif inconnu
   fields:
     title: Détails de l'appareil
     device-name: Nom de l'appareil
@@ -475,7 +508,9 @@ device:
   actions:
     attach-to-vehicle: Attach to Vehicle
     detach-from-vehicle: Detach from Vehicle
+    attach-to-asset: Attacher à un actif
   prompts:
+    manager-description: "Appareils télématiques installés sur ce {resourceType}. Associez un appareil pour commencer à recevoir des positions et des événements."
     attach-to-vehicle-title: Attach device to vehicle
     attach-device-to-vehicle-title: "Attach {deviceName} to vehicle"
     select-vehicle-warning: Select a vehicle to attach this device to.
@@ -484,6 +519,12 @@ device:
     detach-from-vehicle-title: "Detach {deviceName} from vehicle?"
     detach-from-vehicle-body: "This detaches {deviceName} from {vehicleName} and stops vehicle telemetry updates until it is attached again."
     detach-from-vehicle-success: Device detached from vehicle.
+    attach-to-asset-title: Attacher l'appareil à un actif
+    select-asset-warning: Sélectionnez un véhicule ou une remorque.
+    attach-to-asset-success: Appareil attaché à l'actif.
+    detach-from-asset-title: "Détacher {deviceName} de l'actif ?"
+    detach-from-asset-body: "Cette action détache {deviceName} de {assetName} et arrête les mises à jour télématiques jusqu'à un nouvel attachement."
+    detach-from-asset-success: Appareil détaché de l'actif.
 entity:
   fields:
     declare: Déclarer
@@ -573,6 +614,8 @@ issue:
     tags: Étiquettes du problème
     type: Type de problème
 order:
+  placeholders:
+    filter-internal-id: Saisissez ou scannez des ID internes
   card:
     linked-order: Linked Order
     unknown-order: Unknown order
@@ -1022,7 +1065,19 @@ service-rate:
     zone-placeholder: Restreindre à la zone
     cod-fee-label: Libellé des frais contre remboursement
 vehicle:
+  placeholders:
+    filter-internal-id: Saisissez ou scannez des ID internes
+  filters:
+    has-trailer: Remorque attelée
+    has-driver: Chauffeur assigné
+    has-device: Appareil associé
+    any: Tous
+    attached: Attelée
+    not-attached: Non attelée
+    assigned: Assigné
+    not-assigned: Non assigné
   fields:
+    updated-at: Dernière mise à jour
     avatar: Avatar
     driver-assigned: Conducteur assigné
     make: Marque
@@ -1039,6 +1094,9 @@ vehicle:
     unassign-orders: Unassign Orders
     create-issue: Create Issue
     locate-vehicle: Localiser le véhicule sur la carte
+    attach-trailer: Atteler une remorque
+    attach-equipment: Attacher un équipement
+    detach-equipment: "Détacher l'équipement"
   prompts:
     attach-device-title: Attach device to {vehicleName}
     select-device-warning: Select a device to attach.
@@ -1050,6 +1108,18 @@ vehicle:
     confirm-unassign-orders-body: "This will remove {vehicleName} from these orders: {orders}."
     unassign-orders-success: Unassigned {vehicleName} from {count} order(s).
     issue-title: Issue reported for {vehicleName}
+    attach-trailer-title: "Atteler une remorque à {vehicleName}"
+    select-trailer-warning: Sélectionnez une remorque à atteler à ce véhicule.
+    attach-trailer-success: "{trailerName} attelée à {vehicleName}."
+  empty:
+    trailers: Aucune remorque attelée
+    trailers-description: Attelez une remorque dételée à ce véhicule pour démarrer un attelage.
+    equipment: Aucun équipement attaché
+    equipment-description: Attachez des équipements tels que hayons, outils ou équipements de sécurité à ce véhicule.
+  trailers:
+    description: Remorques actuellement attelées à ce véhicule.
+  equipment:
+    description: Équipements actuellement attachés à ce véhicule.
 vendor:
   fields:
     setup-vendor: Configurer le fournisseur
@@ -1946,3 +2016,357 @@ settings:
       button-continue: Continuer
       button-start: Commencer l'intégration maintenant
       button-in-progress: Intégration en cours
+
+trailer:
+  navigation-description: Gérez les actifs remorqués, les attelages, l'équipement et la télématique.
+  sections:
+    details: Détails
+    identification: Identification de la remorque
+    classification: Classification et statut
+    registration: Immatriculation
+    location: Localisation
+    dimensions: Dimensions et capacité
+    measurement: Mesures et utilisation
+    dimensions-fields: "Dimensions ({unit})"
+    weight: "Poids ({unit})"
+    running-gear: Essieux, freins et attelage
+    refrigeration: Réfrigération
+    ownership: Propriété et finances
+    finance: Informations financières
+    connection: Attelage au véhicule
+    telemetry: Localisation et télématique
+    notes: Notes et historique
+  fields:
+    photo: Photo
+    id: ID
+    name: Nom
+    code: Code
+    description: Description
+    type: Type de remorque
+    body-type: Type de carrosserie
+    color: Couleur
+    status: Statut
+    category: Catégorie
+    vin: VIN
+    plate-number: Immatriculation
+    serial-number: Numéro de série
+    make: Marque
+    model: Modèle
+    year: Année
+    vendor: Fournisseur
+    warranty: Garantie
+    vehicle: Véhicule tracteur
+    attachment-state: État d'attelage
+    attached-at: Attelée depuis
+    position: Position d'attelage
+    source: Source
+    connected-at: Attelée le
+    disconnected-at: Dételée le
+    duration: Durée
+    connectivity: Connectivité
+    last-online: Dernière connexion
+    last-provider: Fournisseur télématique
+    last-event-at: Dernier événement télématique
+    coordinates: Coordonnées
+    speed: Vitesse
+    heading: Cap
+    altitude: Altitude
+    devices-count: Appareils attachés
+    equipment-count: Équipements attachés
+    measurement-system: Système de mesure
+    odometer: "Odomètre / hubodomètre {unit}"
+    odometer-unit: Unité d'odomètre
+    length: "Longueur ({unit})"
+    width: "Largeur ({unit})"
+    height: "Hauteur ({unit})"
+    cargo-volume: "Volume de chargement ({unit})"
+    tare-weight: "Poids à vide ({unit})"
+    gvwr: "PTAC ({unit})"
+    payload-capacity: "Charge utile ({unit})"
+    axle-count: Essieux
+    tire-count: Pneus
+    door-count: Portes
+    coupling-type: Type d'attelage
+    brake-type: Type de freins
+    abs: ABS
+    ebs: EBS
+    refrigerated: Réfrigérée
+    temperature-min: "Température minimale ({unit})"
+    temperature-max: "Température maximale ({unit})"
+    reefer-hours: Heures du groupe frigorifique
+    ownership-type: Propriété
+    financing-status: Statut de financement
+    currency: Devise
+    acquisition-cost: Coût d'acquisition
+    current-value: Valeur actuelle
+    insurance-value: Valeur assurée
+    depreciation-rate: Taux d'amortissement (% par an)
+    purchased-at: Date d'achat
+    lease-expires-at: Fin du contrat de location
+    notes: Notes
+    created-at: Créée le
+    updated-at: Dernière mise à jour
+  placeholders:
+    filter-vendor: Filtrer par fournisseur
+    name: ex. Frigo 12
+    code: Code de flotte interne, ex. TRL-0012
+    description: À quoi sert cette remorque
+    type: Sélectionnez un type de remorque
+    status: Sélectionnez un statut
+    body-type: ex. Fourgon, bâchée, plateau
+    color: ex. Blanc
+    category: Sélectionnez une catégorie (facultatif)
+    vin: VIN à 17 caractères
+    plate-number: Plaque d'immatriculation
+    serial-number: Numéro de série du constructeur
+    make: ex. Utility, Schmitz, Wabash
+    model: ex. 3000R
+    year: ex. 2024
+    vendor: Sélectionnez un fournisseur (facultatif)
+    warranty: Sélectionnez une garantie (facultatif)
+    vehicle: Sélectionnez un véhicule
+    trailer: Sélectionnez une remorque
+    equipment: Sélectionnez un équipement
+    filter-vehicle: Filtrer par véhicule tracteur
+    position: "1"
+    measurement-system: Sélectionnez un système de mesure
+    odometer-unit: Sélectionnez une unité
+    odometer: Relevé actuel
+    length: "0.000"
+    width: "0.000"
+    height: "0.000"
+    cargo-volume: "0.000"
+    tare-weight: "0.000"
+    gvwr: "0.000"
+    payload-capacity: "0.000"
+    axle-count: ex. 2
+    tire-count: ex. 8
+    door-count: ex. 2
+    coupling-type: Sélectionnez un type d'attelage
+    brake-type: Sélectionnez un type de freins
+    temperature-min: ex. -20
+    temperature-max: ex. 4
+    reefer-hours: Heures du groupe frigorifique
+    ownership-type: Sélectionnez le mode de détention
+    financing-status: ex. Soldé, financé jusqu'en 2028
+    depreciation-rate: ex. 10
+    date: JJ-MM-AAAA
+    notes: Notes internes sur cette remorque
+  help:
+    photo: Téléversez une photo de cette remorque.
+    name: Le nom affiché dans Fleet-Ops. Obligatoire.
+    code: Votre propre référence de flotte pour cette remorque.
+    type: Le type détermine les sections applicables, par exemple la réfrigération pour les frigorifiques.
+    status: Statut du cycle de vie. L'attelage et la connectivité sont suivis séparément.
+    body-type: Description libre de la carrosserie utilisée pour la classification et la recherche.
+    category: Regroupement facultatif partagé avec les autres ressources de flotte.
+    vin: Le numéro d'identification du châssis gravé sur la remorque.
+    coordinates: Dernière position connue ou position de base. Les appareils télématiques la mettent à jour automatiquement.
+    measurement-system: Détermine les unités utilisées pour les dimensions, poids, volume et températures.
+    odometer: Relevé de l'odomètre ou hubodomètre dans l'unité sélectionnée.
+    cargo-volume: Volume de chargement utile de la caisse.
+    tare-weight: Poids de la remorque à vide.
+    gvwr: Poids total autorisé en charge, le poids maximal autorisé chargée.
+    payload-capacity: Poids maximal de marchandises que la remorque peut transporter.
+    coupling-type: Comment la remorque s'attelle au véhicule tracteur.
+    abs: Système de freinage antiblocage installé.
+    ebs: Système de freinage électronique installé.
+    refrigerated: Activez pour les remorques à température dirigée afin d'enregistrer les réglages du groupe frigorifique.
+    temperature: Plage de température de fonctionnement du groupe frigorifique.
+    reefer-hours: Heures de fonctionnement enregistrées sur le groupe frigorifique.
+    ownership-type: Mode de détention de la remorque. Les détails de location et de financement apparaissent le cas échéant.
+    lease-expires-at: Date de fin du contrat de location ou de financement.
+    vendor: Fournisseur ou loueur auprès duquel la remorque a été acquise.
+    warranty: Police de garantie couvrant cette remorque.
+    acquisition-cost: Prix d'achat ou coût capitalisé dans la devise sélectionnée.
+    depreciation-rate: Amortissement annuel utilisé pour estimer la valeur actuelle.
+    attach-vehicle: La remorque sera attelée au véhicule sélectionné. Une remorque ne peut être attelée qu'à un seul véhicule à la fois.
+    select-trailer: Seules les remorques dételées sont listées.
+    select-equipment: Seuls les équipements non attachés sont listés.
+    position: Position d'attelage derrière le véhicule. La position 1 est directement derrière le tracteur ; utilisez 2 ou plus pour les trains routiers.
+  units:
+    length-metric: m
+    length-imperial: ft
+    weight-metric: kg
+    weight-imperial: lb
+    volume-metric: m³
+    volume-imperial: ft³
+    temperature-metric: °C
+    temperature-imperial: °F
+  actions:
+    new: Nouvelle remorque
+    locate: Localiser sur la carte
+    attach-vehicle: Atteler à un véhicule
+    detach-vehicle: Dételer du véhicule
+    attach-device: Attacher un appareil
+    attach-equipment: Attacher un équipement
+    detach-equipment: Détacher l'équipement
+    schedule-maintenance: Planifier une maintenance
+    create-work-order: Créer un ordre de travail
+    log-maintenance: Consigner une maintenance
+  prompts:
+    attach-vehicle-title: "Atteler {trailerName} à un véhicule"
+    select-vehicle-warning: Sélectionnez un véhicule auquel atteler cette remorque.
+    attach-vehicle-success: "{trailerName} attelée à {vehicleName}."
+    detach-vehicle-title: "Dételer {trailerName} ?"
+    detach-vehicle-body: "Cette action met fin à l'attelage actuel entre {trailerName} et {vehicleName}. L'attelage est conservé dans l'historique de la remorque."
+    detach-vehicle-success: "{trailerName} dételée de {vehicleName}."
+    not-attached-warning: "{trailerName} n'est attelée à aucun véhicule."
+    attach-device-title: "Attacher un appareil à {trailerName}"
+    select-device-warning: Sélectionnez un appareil à attacher à cette remorque.
+    attach-device-success: "Appareil attaché à {trailerName}."
+    attach-equipment-title: "Attacher un équipement à {resourceName}"
+    select-equipment-warning: Sélectionnez un équipement à attacher.
+    attach-equipment-success: "{equipmentName} attaché à {resourceName}."
+    detach-equipment-title: "Détacher {equipmentName} ?"
+    detach-equipment-body: "{equipmentName} ne sera plus attaché à {resourceName}."
+    detach-equipment-success: "{equipmentName} détaché de {resourceName}."
+    no-location-warning: "{trailerName} n'a pas encore de position enregistrée."
+    photo-upload-error: "Impossible de téléverser la photo : {message}"
+  empty:
+    title: Ajoutez votre première remorque
+    description: Les remorques suivent les attelages, les appareils et équipements attachés, la télémétrie en direct et la maintenance de vos actifs remorqués.
+    filtered-title: Aucune remorque ne correspond à vos filtres
+    filtered-description: Ajustez la recherche ou les filtres pour trouver une autre remorque.
+    connections: Aucun historique d'attelage
+    connections-description: Attelez cette remorque à un véhicule pour commencer à enregistrer les attelages.
+    equipment: Aucun équipement attaché
+    equipment-description: Attachez des équipements tels que hayons, sangles ou groupes frigorifiques à cette remorque.
+    schedules: Aucun planning de maintenance
+    schedules-description: Créez un planning pour organiser les inspections ou entretiens récurrents de cette remorque.
+    work-orders: Aucun ordre de travail
+    work-orders-description: Créez un ordre de travail pour suivre les réparations ou entretiens de cette remorque.
+    maintenance: Aucun historique de maintenance
+    maintenance-description: Les maintenances consignées pour cette remorque apparaîtront ici.
+  docs:
+    title: Guide des remorques
+    link: Ouvrir le guide des remorques
+  tabs:
+    overview: Aperçu
+    positions: Positions
+    devices: Appareils
+    equipment: Équipement
+    connections: Historique d'attelage
+    schedules: Plannings
+    work-orders: Ordres de travail
+    maintenance: Maintenance
+  columns:
+    name: Nom
+    id: ID
+    code: Code
+    type: Type
+    plate-number: Immatriculation
+    status: Statut
+    vehicle: Véhicule tracteur
+    attachment-state: Attelage
+    connectivity: Connectivité
+    last-online: Dernière connexion
+    location: Localisation
+    devices: Appareils
+    equipment: Équipement
+    vin: VIN
+    serial-number: Numéro de série
+    make: Marque
+    model: Modèle
+    year: Année
+    vendor: Fournisseur
+    ownership: Propriété
+    axles: Essieux
+    gvwr: PTAC
+    payload-capacity: Charge utile
+    length: Longueur
+    refrigerated: Réfrigérée
+    created-at: Créée le
+    updated-at: Mise à jour le
+  filters:
+    created-between: Créée entre
+    updated-between: Mise à jour entre
+    last-online-between: Dernière connexion entre
+  connections:
+    description: Tous les véhicules auxquels cette remorque a été attelée, du plus récent au plus ancien.
+    ongoing: En cours
+    connected: "Attelée le {date}"
+    disconnected: "Dételée le {date}"
+    still-attached: Toujours attelée
+  equipment:
+    description: Équipements actuellement attachés à cette remorque.
+  telemetry:
+    no-location: Aucune position enregistrée
+  maintenance:
+    interval: Intervalle
+    next-due: Prochaine échéance
+    code: Code
+    subject: Objet
+    priority: Priorité
+    due: Échéance
+    summary: Résumé
+    odometer: Odomètre
+    total-cost: Coût total
+    date: Date
+  statuses:
+    available: Disponible
+    in_use: En service
+    maintenance: En maintenance
+    out_of_service: Hors service
+    retired: Retirée
+  status-descriptions:
+    available: Prête à être affectée ou attelée.
+    in_use: Actuellement en mission ou attelée à un véhicule.
+    maintenance: En entretien, inspection ou réparation.
+    out_of_service: Inutilisable jusqu'à nouvel ordre.
+    retired: Définitivement retirée du service actif.
+  attachment:
+    attached: Attelée
+    detached: Dételée
+    no-vehicle: Non attelée à un véhicule
+    towed-by: Tractée par
+    position: "Position {position}"
+  connectivity:
+    online: En ligne
+    recently_offline: Récemment hors ligne
+    offline: Hors ligne
+    never_connected: Jamais connectée
+  measurement:
+    metric: Métrique
+    imperial: Impérial
+  measurement-descriptions:
+    metric: Mètres, kilogrammes, mètres cubes et Celsius.
+    imperial: Pieds, livres, pieds cubes et Fahrenheit.
+  odometer-units:
+    km: Kilomètres
+    mi: Miles
+  coupling-types:
+    fifth_wheel: Sellette d'attelage
+    pintle_hook: Crochet d'attelage
+    ball_hitch: Boule d'attelage
+    gooseneck: Col de cygne
+    drawbar: Timon
+    other: Autre
+  brake-types:
+    air: Freins pneumatiques
+    electric: Freins électriques
+    hydraulic_surge: Freins hydrauliques à inertie
+    none: Sans freins
+    other: Autre
+  ownership-types:
+    owned: En propriété
+    leased: En leasing
+    financed: Financée
+    rented: En location
+  types:
+    dry_van: Fourgon sec
+    reefer: Frigorifique
+    flatbed: Plateau
+    step_deck: Plateau surbaissé
+    lowboy: Porte-engins
+    tanker: Citerne
+    bulk: Vrac
+    dump: Benne
+    chassis: Châssis porte-conteneur
+    curtain_side: Bâchée
+    car_carrier: Porte-voitures
+    livestock: Bétaillère
+    logging: Grumier
+    dolly: Dolly
+    specialty: Spécialisée
+    other: Autre

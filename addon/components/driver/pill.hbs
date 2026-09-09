@@ -1,9 +1,9 @@
 <Pill
     @resource={{this.resource}}
-    @imageSrc={{avatar-url this.resource.photo_url}}
+    @imageSrc={{resource-image this.resource.photo_url "driver"}}
     @titleFallback={{or @titleFallback "No driver"}}
     @subtitle={{n-a this.resource.phone (if this.resource "No phone" "-")}}
-    @fallbackImageType="driverImage"
+    @imageFallback={{(placeholder-image "driver")}}
     @showOnlineIndicator={{if this.resource true false}}
     @onClick={{@onClick}}
     @anchorClass={{@anchorClass}}

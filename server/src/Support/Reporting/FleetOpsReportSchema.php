@@ -24,6 +24,9 @@ class FleetOpsReportSchema implements ReportSchema
         // Register Vehicles table
         $registry->registerTable($this->createVehiclesTable());
 
+        // Assets includes first-class trailers; filter asset_class = trailer for trailer reports.
+        $registry->registerTable($this->createAssetsTable());
+
         // Register Places table
         $registry->registerTable($this->createPlacesTable());
 
@@ -589,6 +592,41 @@ class FleetOpsReportSchema implements ReportSchema
                         Column::make('email', 'string')->label('Driver Email'),
                         Column::make('phone', 'string')->label('Driver Phone'),
                     ]),
+            ]);
+    }
+
+    /**
+     * Create the independently managed assets definition, including Trailers.
+     */
+    protected function createAssetsTable(): Table
+    {
+        return Table::make('assets')
+            ->label('Trailers and Assets')
+            ->description('Independently managed fleet assets; Trailer rows use asset_class trailer')
+            ->category('Fleet')
+            ->extension('fleet-ops')
+            ->excludeColumns(['uuid', 'company_uuid', 'deleted_at', 'meta', 'attributes'])
+            ->maxRows(10000)
+            ->columns([
+                Column::make('public_id', 'string')->label('Asset ID')->searchable()->filterable()->sortable(),
+                Column::make('asset_class', 'string')->label('Asset Class')->filterable()->aggregatable(),
+                Column::make('name', 'string')->label('Name')->searchable()->filterable()->sortable(),
+                Column::make('code', 'string')->label('Code')->searchable()->filterable()->sortable(),
+                Column::make('type', 'string')->label('Trailer Type')->filterable()->aggregatable(),
+                Column::make('status', 'string')->label('Lifecycle Status')->filterable()->aggregatable(),
+                Column::make('plate_number', 'string')->label('Plate Number')->searchable()->filterable(),
+                Column::make('make', 'string')->label('Make')->filterable()->aggregatable(),
+                Column::make('model', 'string')->label('Model')->filterable()->aggregatable(),
+                Column::make('year', 'integer')->label('Year')->filterable()->sortable(),
+                Column::make('gvwr', 'decimal')->label('GVWR')->filterable()->sortable()->aggregatable(),
+                Column::make('payload_capacity', 'decimal')->label('Payload Capacity')->filterable()->sortable()->aggregatable(),
+                Column::make('axle_count', 'integer')->label('Axle Count')->filterable()->sortable(),
+                Column::make('online', 'boolean')->label('Online')->filterable()->aggregatable(),
+                Column::make('last_online_at', 'datetime')->label('Last Online')->filterable()->sortable(),
+                Column::make('created_at', 'datetime')->label('Created')->filterable()->sortable(),
+            ])
+            ->computedColumns([
+                Column::count('total_assets', 'id')->label('Total Assets')->description('Count of selected trailer or asset rows'),
             ]);
     }
 

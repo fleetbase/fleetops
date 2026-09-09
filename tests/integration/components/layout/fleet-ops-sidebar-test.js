@@ -32,6 +32,22 @@ class RouterStubService extends Service {
     }
 }
 
+class UniverseStub extends Service {
+    transitionMenuItem() {}
+    getService() {
+        return null;
+    }
+}
+
+class MenuServiceStub extends Service {
+    getMenuItems() {
+        return [];
+    }
+    getMenuPanels() {
+        return [];
+    }
+}
+
 class AbilitiesStub extends Service {
     denied = new Set();
 
@@ -93,6 +109,37 @@ module('Integration | Component | layout/fleet-ops-sidebar', function (hooks) {
 
         assert.dom('.next-sidebar-navigator-back').includesText('Resources', 'later route changes still sync nested state normally');
         assert.dom('.next-sidebar-navigator-view-in .next-sidebar-navigator-item').includesText('Vehicles');
+    });
+
+    test('it renders Trailers directly below Vehicles in the Resources menu after priority sorting', async function (assert) {
+        // The universe services boot console-only extension modules; the sidebar only reads registries from them.
+        this.owner.register('service:universe', UniverseStub);
+        this.owner.register('service:universe/menu-service', MenuServiceStub);
+        const router = this.owner.lookup('service:router');
+        router.currentRouteName = 'console.fleet-ops.management.vehicles.index';
+        router.currentURL = '/fleet-ops/manage/vehicles';
+
+        await render(hbs`<Layout::FleetOpsSidebar />`);
+
+        assert.dom('.next-sidebar-navigator-back').includesText('Resources');
+
+        const labels = Array.from(document.querySelectorAll('.next-sidebar-navigator-view-in .next-sidebar-navigator-item')).map((item) => item.textContent.trim());
+        const vehiclesIndex = labels.findIndex((label) => label.includes('Vehicles'));
+        const trailersIndex = labels.findIndex((label) => label.includes('Trailers'));
+
+        assert.ok(vehiclesIndex >= 0, `Vehicles is rendered (${labels.join(' | ')})`);
+        assert.ok(trailersIndex >= 0, `Trailers is rendered (${labels.join(' | ')})`);
+        assert.strictEqual(trailersIndex, vehiclesIndex + 1, 'Trailers is the item immediately after Vehicles in rendered order');
+        assert.ok(labels[trailersIndex + 1]?.includes('Fleets'), 'Fleets follows Trailers');
+
+        router.currentRouteName = 'console.fleet-ops.management.trailers.index';
+        router.currentURL = '/fleet-ops/manage/trailers';
+        router.triggerRouteDidChange();
+        await settled();
+
+        assert
+            .dom(`.next-sidebar-navigator-view-in .next-sidebar-navigator-item:nth-of-type(${trailersIndex + 1})`)
+            .hasClass('is-active', 'the Trailers item is active on the trailers route');
     });
 
     test('it treats root URL variants as FleetOps root entry', async function (assert) {

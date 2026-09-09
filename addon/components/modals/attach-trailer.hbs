@@ -1,0 +1,30 @@
+<Modal::Default @modalIsOpened={{@modalIsOpened}} @options={{@options}} @confirm={{@onConfirm}} @decline={{@onDecline}}>
+    <div class="modal-body-container">
+        {{#if @options.trailer}}
+            <div class="mb-4 rounded-md border border-gray-200 bg-gray-50 p-3 dark:border-gray-700 dark:bg-gray-800">
+                <div class="text-xs font-semibold uppercase text-gray-500 dark:text-gray-400">{{t "resource.trailer"}}</div>
+                <div class="mt-1 text-sm font-semibold text-gray-900 dark:text-gray-100">{{@options.trailer.displayName}}</div>
+                <div class="text-xs text-gray-500 dark:text-gray-400">{{n-a (or @options.trailer.plate_number @options.trailer.code @options.trailer.public_id)}}</div>
+            </div>
+        {{/if}}
+
+        <InputGroup @name={{t "trailer.fields.vehicle"}} @helpText={{t "trailer.help.attach-vehicle"}}>
+            <ModelSelect
+                @modelName="vehicle"
+                @selectedModel={{@options.selectedVehicle}}
+                @placeholder={{t "trailer.placeholders.vehicle"}}
+                @triggerClass="form-select form-input"
+                @infiniteScroll={{true}}
+                @renderInPlace={{true}}
+                @onChange={{fn (mut @options.selectedVehicle)}}
+                as |vehicle|
+            >
+                <Vehicle::Pill @vehicle={{vehicle}} />
+            </ModelSelect>
+        </InputGroup>
+
+        <InputGroup @name={{t "trailer.fields.position"}} @helpText={{t "trailer.help.position"}}>
+            <Input @type="number" @value={{@options.position}} min="1" step="1" class="w-full form-input" placeholder={{t "trailer.placeholders.position"}} />
+        </InputGroup>
+    </div>
+</Modal::Default>

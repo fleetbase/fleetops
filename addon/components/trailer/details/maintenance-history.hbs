@@ -1,0 +1,47 @@
+<div class="trailer-details-maintenance-history p-4">
+    <div class="flex flex-row items-center justify-end mb-3">
+        <Button @icon="plus" @text={{t "trailer.actions.log-maintenance"}} @size="xs" @type="primary" @onClick={{this.logMaintenance}} @permission="fleet-ops create maintenance" />
+    </div>
+
+    {{#if this.loadMaintenanceHistory.isRunning}}
+        <div class="flex items-center justify-center py-10">
+            <Spinner />
+        </div>
+    {{else if this.maintenanceHistory.length}}
+        <div class="overflow-x-auto">
+            <table class="min-w-full text-xs">
+                <thead>
+                    <tr class="border-b border-gray-200 dark:border-gray-700">
+                        <th class="text-left py-2 pr-4 font-semibold text-gray-500 uppercase tracking-wide">{{t "trailer.maintenance.summary"}}</th>
+                        <th class="text-left py-2 pr-4 font-semibold text-gray-500 uppercase tracking-wide">{{t "common.type"}}</th>
+                        <th class="text-left py-2 pr-4 font-semibold text-gray-500 uppercase tracking-wide">{{t "trailer.maintenance.odometer"}}</th>
+                        <th class="text-left py-2 pr-4 font-semibold text-gray-500 uppercase tracking-wide">{{t "trailer.maintenance.total-cost"}}</th>
+                        <th class="text-left py-2 pr-4 font-semibold text-gray-500 uppercase tracking-wide">{{t "trailer.maintenance.date"}}</th>
+                        <th class="py-2"></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {{#each this.maintenanceHistory as |record|}}
+                        <tr class="border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800">
+                            <td class="py-2 pr-4 font-medium">{{record.summary}}</td>
+                            <td class="py-2 pr-4 text-gray-500">{{n-a (smart-humanize record.type)}}</td>
+                            <td class="py-2 pr-4 text-gray-500">{{n-a record.odometer_reading}} {{record.odometer_unit}}</td>
+                            <td class="py-2 pr-4">{{#if record.total_cost}}{{format-currency record.total_cost record.currency}}{{else}}-{{/if}}</td>
+                            <td class="py-2 pr-4 text-gray-500">{{n-a (format-date-fns record.completed_at "dd MMM yyyy")}}</td>
+                            <td class="py-2 text-right">
+                                <Button @icon="eye" @size="xs" @helpText={{t "common.view"}} @onClick={{fn this.maintenanceActions.transition.view record}} />
+                            </td>
+                        </tr>
+                    {{/each}}
+                </tbody>
+            </table>
+        </div>
+    {{else}}
+        <div class="flex flex-col items-center justify-center py-10 text-gray-400 dark:text-gray-600">
+            <FaIcon @icon="wrench" @size="2x" class="mb-3" />
+            <p class="text-sm font-semibold text-gray-600 dark:text-gray-300">{{t "trailer.empty.maintenance"}}</p>
+            <p class="text-xs">{{t "trailer.empty.maintenance-description"}}</p>
+            <Button @text={{t "trailer.actions.log-maintenance"}} @icon="plus" @size="xs" @type="primary" class="mt-3" @onClick={{this.logMaintenance}} @permission="fleet-ops create maintenance" />
+        </div>
+    {{/if}}
+</div>
