@@ -65,11 +65,10 @@ class InspectionForm extends FleetbaseResource
             return null;
         }
 
+        // Always answers: a model with no resource of its own is served by the
+        // base FleetbaseResource, so there is no second fallback to keep here.
         $resourceClass = \Fleetbase\Support\Find::httpResourceForModel($model);
-        if ($resourceClass) {
-            return (new $resourceClass($model))->resolve();
-        }
 
-        return (new \Illuminate\Http\Resources\Json\JsonResource($model))->resolve();
+        return (new $resourceClass($model))->resolve();
     }
 }

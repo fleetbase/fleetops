@@ -212,6 +212,18 @@ Route::prefix(config('fleetops.api.routing.prefix'))->namespace('Fleetbase\Fleet
                 $router->patch('{id}', 'ManifestController@updateStop');
                 $router->post('{id}', 'ManifestController@updateStop');
             });
+            // inspections — a driver's DVIR. Read the published forms and file
+            // against them; authoring forms and reviewing submissions is fleet
+            // management and stays on the internal namespace.
+            $router->group(['prefix' => 'inspection-forms'], function () use ($router) {
+                $router->get('/', 'InspectionController@queryForms');
+                $router->get('{id}', 'InspectionController@findForm');
+            });
+            $router->group(['prefix' => 'inspections'], function () use ($router) {
+                $router->post('/', 'InspectionController@submit');
+                $router->get('/', 'InspectionController@query');
+                $router->get('{id}', 'InspectionController@find');
+            });
 
             // entities routes
             $router->group(['prefix' => 'entities'], function () use ($router) {
@@ -305,6 +317,8 @@ Route::prefix(config('fleetops.api.routing.prefix'))->namespace('Fleetbase\Fleet
                 $router->delete('{id}', 'VehicleController@delete');
                 $router->match(['put', 'patch', 'post'], '{id}/track', 'VehicleController@track');
                 $router->get('{id}/trailers', 'TrailerController@vehicleTrailers');
+                // A vehicle's inspection history, for the driver app's vehicle screen.
+                $router->get('{id}/inspections', 'InspectionController@forVehicle');
             });
             // trailer routes
             $router->group(['prefix' => 'trailers'], function () use ($router) {
