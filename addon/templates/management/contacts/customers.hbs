@@ -42,7 +42,7 @@
             class="h-full"
             as |Item|
         >
-            <Contact::Card @resource={{Item.model}} @resourceActions={{this.customerActions}} />
+            <Contact::Card @resource={{Item.model}} @resourceActions={{this.customerActions}} @placeholderType="customer" />
         </Layout::Resource::CardsGrid>
     </Layout::Section::Body>
 {{/if}}

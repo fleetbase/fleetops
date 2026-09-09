@@ -1,7 +1,6 @@
 import Component from '@glimmer/component';
 import { inject as service } from '@ember/service';
 import { action, get } from '@ember/object';
-import config from 'ember-get-config';
 
 export default class DriverCardComponent extends Component {
     @service driverActions;
@@ -9,10 +8,6 @@ export default class DriverCardComponent extends Component {
 
     get resource() {
         return this.args.resource;
-    }
-
-    get fallbackImage() {
-        return config?.defaultValues?.driverImage;
     }
 
     get statusValue() {

@@ -11,4 +11,9 @@ export default class ContactCardComponent extends Component {
     get resourceActions() {
         return this.args.resourceActions ?? this.contactActions;
     }
+
+    /** Customers get their own silhouette; plain contacts the generic one. */
+    get placeholderType() {
+        return this.args.placeholderType ?? 'contact';
+    }
 }
