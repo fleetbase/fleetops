@@ -24,17 +24,19 @@
             {{#if this.isFailed}}
                 <div class="grid grid-cols-1 lg:grid-cols-2 gap-2 no-input-group-padding text-xs pt-2">
                     <InputGroup @name={{t "inspection.answer.severity"}}>
-                        <PowerSelect
-                            @options={{this.severityOptions}}
-                            @selected={{this.severity}}
-                            @onChange={{this.setSeverity}}
-                            @triggerClass="form-select form-input"
-                            @renderInPlace={{true}}
-                            @disabled={{@disabled}}
-                            as |severity|
-                        >
-                            {{t (concat "inspection.severity." severity)}}
-                        </PowerSelect>
+                        <div class="fleetbase-model-select fleetbase-power-select ember-model-select">
+                            <PowerSelect
+                                @options={{this.severityOptions}}
+                                @selected={{this.severity}}
+                                @onChange={{this.setSeverity}}
+                                @triggerClass="form-select form-input"
+                                @renderInPlace={{true}}
+                                @disabled={{@disabled}}
+                                as |severity|
+                            >
+                                {{t (concat "inspection.severity." severity)}}
+                            </PowerSelect>
+                        </div>
                     </InputGroup>
                     <InputGroup>
                         <Toggle @isToggled={{this.answer.unsafe}} @onToggle={{this.setUnsafe}} @label={{t "inspection.answer.unsafe"}} @disabled={{@disabled}} />

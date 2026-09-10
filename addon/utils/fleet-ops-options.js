@@ -216,6 +216,41 @@ export const fuelReportStatuses = [
     { label: 'Reimbursed', value: 'reimbursed', description: 'Driver expense reimbursed' },
 ];
 
+export const inspectionFormTypes = [
+    { label: 'DVIR', value: 'dvir', description: "Driver vehicle inspection report — the daily walk-round a driver signs." },
+    { label: 'Pre-Trip', value: 'pre_trip', description: 'Completed before the vehicle leaves.' },
+    { label: 'Post-Trip', value: 'post_trip', description: 'Completed when the vehicle returns.' },
+    { label: 'Pre-Operational', value: 'pre_operational', description: 'Checks performed before operation begins.' },
+    { label: 'Post-Operational', value: 'post_operational', description: 'Checks performed after operation ends.' },
+    { label: 'Safety Inspection', value: 'safety_inspection', description: 'Comprehensive safety and compliance inspection.' },
+    { label: 'Maintenance Inspection', value: 'maintenance_inspection', description: 'Scheduled maintenance check and service inspection.' },
+    { label: 'Damage Assessment', value: 'damage_assessment', description: 'Inspection to assess damage or condition issues.' },
+    { label: 'Annual Inspection', value: 'annual_inspection', description: 'Yearly comprehensive vehicle inspection.' },
+    { label: 'Safety', value: 'safety', description: 'General safety checklist.' },
+    { label: 'Compliance', value: 'compliance', description: 'Regulatory or audit checklist.' },
+    { label: 'Maintenance', value: 'maintenance', description: 'Workshop or technician checklist.' },
+];
+
+export const inspectionFormStatuses = [
+    { label: 'Draft', value: 'draft', description: 'Still being written. Drivers cannot see it.' },
+    { label: 'Published', value: 'published', description: 'Available to drivers and to the public link.' },
+    { label: 'Archived', value: 'archived', description: 'Retired. Kept for the records already filed against it.' },
+];
+
+export const inspectionSeverities = [
+    { label: 'Minor', value: 'low', description: 'Monitor it. Nothing stops.' },
+    { label: 'Medium', value: 'medium', description: 'Book it in.' },
+    { label: 'High', value: 'high', description: 'Unsafe. Needs attention before the next trip.' },
+    { label: 'Critical', value: 'critical', description: 'Immobilise the vehicle.' },
+];
+
+export const inspectionSubmissionStatuses = [
+    { label: 'Draft', value: 'draft', description: 'Started but not filed.' },
+    { label: 'Submitted', value: 'submitted', description: 'Filed by the driver or the console.' },
+    { label: 'Needs Review', value: 'needs_review', description: 'Flagged for a supervisor to look at.' },
+    { label: 'Resolved', value: 'resolved', description: 'Follow-up is complete.' },
+];
+
 export const workOrderStatuses = [
     { label: 'Open', value: 'open', description: 'Work order has been created and is awaiting planning or assignment' },
     { label: 'Scheduled', value: 'scheduled', description: 'Work has been planned for a specific service window' },
@@ -945,6 +980,11 @@ export default function fleetOpsOptions(key) {
         routingConstraintOptions,
         serviceTimePresets,
         importColumnMappings,
+        // Inspections
+        inspectionFormTypes,
+        inspectionFormStatuses,
+        inspectionSeverities,
+        inspectionSubmissionStatuses,
     };
 
     return allOptions[key] ?? [];

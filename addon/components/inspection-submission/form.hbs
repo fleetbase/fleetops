@@ -18,9 +18,21 @@
                 </ModelSelect>
             </InputGroup>
             <InputGroup @name={{t "inspection.record.status"}}>
-                <PowerSelect @options={{this.statusOptions}} @selected={{@resource.status}} @onChange={{this.setStatus}} @triggerClass="form-select form-input" @disabled={{cannot-write @resource}} as |status|>
-                    {{smart-humanize status}}
-                </PowerSelect>
+                <div class="fleetbase-model-select fleetbase-power-select ember-model-select">
+                    <PowerSelect
+                        @options={{get-fleet-ops-options "inspectionSubmissionStatuses"}}
+                        @selected={{find-by "value" @resource.status (get-fleet-ops-options "inspectionSubmissionStatuses")}}
+                        @onChange={{this.setStatus}}
+                        @triggerClass="form-select form-input"
+                        @disabled={{cannot-write @resource}}
+                        as |option|
+                    >
+                        <div class="text-sm">
+                            <div class="font-semibold normalize-in-trigger">{{option.label}}</div>
+                            <div class="hide-from-trigger">{{option.description}}</div>
+                        </div>
+                    </PowerSelect>
+                </div>
             </InputGroup>
             <InputGroup @name={{t "inspection.record.vehicle"}}>
                 <ModelSelect

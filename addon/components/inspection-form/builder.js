@@ -4,6 +4,7 @@ import { inject as service } from '@ember/service';
 import { action } from '@ember/object';
 import { next } from '@ember/runloop';
 import { task } from 'ember-concurrency';
+import inlineTask from '@fleetbase/ember-core/utils/inline-task';
 import { createField, createFieldGroup } from '../../utils/inspection-form-structure';
 
 /**
@@ -23,6 +24,7 @@ import { createField, createFieldGroup } from '../../utils/inspection-form-struc
 export default class InspectionFormBuilderComponent extends Component {
     @service inspectionFormActions;
     @service modalsManager;
+    @service resourceContextPanel;
     @service notifications;
     @service intl;
 
@@ -116,22 +118,31 @@ export default class InspectionFormBuilderComponent extends Component {
         this.editField(group, createField('pass-fail', { label: this.intl.t('inspection.builder.untitled-field'), order: (group.fields?.length ?? 0) + 1 }), true);
     }
 
+    /**
+     * The field editor opens as a right-side overlay over the form's own
+     * panel rather than as a modal: a modal covers the form the author is
+     * building, and the two are read together. `xs` keeps it narrower than
+     * the form panel behind it, so the form stays visible alongside.
+     *
+     * The field is a plain object in the builder's draft, so there is nothing
+     * for the panel's default save to persist — `state` is the handle both
+     * sides hold, and the inline task applies whatever the editor last
+     * produced when the author saves.
+     */
     @action editField(group, field, isNew = false) {
         const state = { field };
 
-        this.modalsManager.show('modals/inspection-field', {
+        this.resourceContextPanel.open({
+            content: 'inspection-field/form',
             title: isNew ? this.intl.t('inspection.builder.new-field') : this.intl.t('inspection.builder.edit-field', { label: field.label }),
-            acceptButtonText: this.intl.t('inspection.builder.save-field'),
-            acceptButtonIcon: 'check',
-            acceptButtonIconPrefix: 'fas',
-            declineButtonIcon: 'times',
-            declineButtonIconPrefix: 'fas',
+            size: 'xs',
+            panelContentClass: 'py-2 px-4',
             state,
             disabled: this.args.disabled,
-            confirm: (modal) => {
+            saveTask: inlineTask((resource, { overlay } = {}) => {
                 this.applyField(group, state.field, isNew);
-                modal.done();
-            },
+                this.resourceContextPanel.close(overlay?.id);
+            }),
         });
     }
 

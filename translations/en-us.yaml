@@ -2767,6 +2767,14 @@ inspection:
         loading-structure: Loading form structure...
         no-structure: This form has no field groups yet.
         settings: Settings
+        type-placeholder: Select the kind of inspection this form is
+        status-placeholder: Select a status
+        setting-create-issue: Open a defect record when an item fails
+        setting-create-issue-help: A failed inspection files an issue against the vehicle, so the failure has somewhere to live.
+        setting-create-work-order: Open a work order when an item fails
+        setting-create-work-order-help: The failed items become a work order checklist for the workshop. Needs workshops enabled.
+        setting-require-signature: Require the driver to sign
+        setting-require-signature-help: The driver app will not submit without a signature. Add a signature field to the form instead if you want it in a particular place.
         legacy-checklist: Legacy Checklist
         legacy-checklist-help: The first cut's checklist, kept read-only. It is migrated into a "Checklist" group of pass/fail fields.
         create: Create inspection form

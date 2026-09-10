@@ -174,8 +174,8 @@ export default class InspectionSubmissionFormComponent extends Component {
         this.args.resource.driver = driver;
     }
 
-    @action setStatus(status) {
-        this.args.resource.status = status;
+    @action setStatus(option) {
+        this.args.resource.status = option?.value ?? null;
     }
 
     @action setOdometer(event) {

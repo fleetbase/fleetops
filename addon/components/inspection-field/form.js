@@ -25,8 +25,24 @@ export default class InspectionFieldFormComponent extends Component {
     severityOptions = INSPECTION_SEVERITIES;
     colSpanOptions = [1, 2, 3];
 
+    /**
+     * The field being edited, held locally so an edit re-renders.
+     *
+     * Invoked directly by the builder the field arrives as `@field`; rendered
+     * inside the resource context panel it arrives on the overlay
+     * definition's shared `state`, which is a plain object — mutating it
+     * would never re-render, so the component owns a tracked copy and writes
+     * through on every change. That shared handle is what the builder reads
+     * back when the author saves.
+     */
+    @tracked localField = this.args.field ?? this.args.overlay?.state?.field ?? {};
+
     get field() {
-        return this.args.field ?? {};
+        return this.localField;
+    }
+
+    get isDisabled() {
+        return this.args.disabled ?? this.args.overlay?.disabled ?? false;
     }
 
     get meta() {
@@ -56,8 +72,15 @@ export default class InspectionFieldFormComponent extends Component {
 
     /** Every change to the field goes through here, and only from an action. */
     change(attributes) {
+        const next = { ...this.field, ...attributes };
+        this.localField = next;
+
+        if (this.args.overlay?.state) {
+            this.args.overlay.state.field = next;
+        }
+
         if (typeof this.args.onChange === 'function') {
-            this.args.onChange({ ...this.field, ...attributes });
+            this.args.onChange(next);
         }
     }
 
