@@ -88,6 +88,50 @@ export function defectIncomplete(field, value) {
     return meta.require_photo_on_fail === true && !(Array.isArray(answer.photos) && answer.photos.length > 0);
 }
 
+/** The types that always need the full width of a group, whatever the answer. */
+export const ROOMY_FIELD_TYPES = ['textarea', 'file-upload', 'signature'];
+
+/**
+ * Whether a field leaves its group's grid and becomes a full-width band.
+ *
+ * This is what stops one answer changing the shape of another. A compact
+ * field sits in the column the author gave it; the moment it needs room — a
+ * pass-fail that failed and now owes a severity, a comment and photos, or a
+ * note, upload or signature that never fitted a column in the first place —
+ * it is promoted out of the grid entirely, so there is no neighbouring cell
+ * left to stretch.
+ */
+export function isPromoted(field, value) {
+    if (ROOMY_FIELD_TYPES.includes(field?.type)) {
+        return true;
+    }
+
+    return answerState(field, value) === 'fail';
+}
+
+/**
+ * The one-word state a group header's dot shows for a field: `pass`, `fail`,
+ * `na`, `outstanding` (required and unanswered, or a failure still owing its
+ * comment or photo), `done`, or `empty`.
+ */
+export function fieldMarker(field, value) {
+    const state = answerState(field, value);
+
+    if (state === 'fail') {
+        return defectIncomplete(field, value) ? 'outstanding' : 'fail';
+    }
+
+    if (state) {
+        return state;
+    }
+
+    if (field?.required && isBlank(field, value)) {
+        return 'outstanding';
+    }
+
+    return isBlank(field, value) ? 'empty' : 'done';
+}
+
 /**
  * The totals a section header and the sheet's foot both read.
  *
