@@ -8970,7 +8970,7 @@ body[data-theme='dark'] .inspection-sheet__body {
 }
 
 .inspection-sheet__groups {
-    padding: 0.875rem 1rem 0;
+    padding: 1rem;
 }
 
 /* --- group header ------------------------------------------------------- */
@@ -8983,8 +8983,8 @@ body[data-theme='dark'] .inspection-sheet__body {
     border-bottom: 1px solid var(--ins-border);
 }
 
-.inspection-group + .inspection-group .inspection-group__header {
-    padding-top: 1.125rem;
+.inspection-group + .inspection-group {
+    margin-top: 1.75rem;
 }
 
 .inspection-group__name {
@@ -9067,9 +9067,13 @@ body[data-theme='dark'] .inspection-sheet__body {
 
 .inspection-group__grid {
     display: grid;
-    gap: 0.625rem;
+    gap: 1rem 0.875rem;
     align-items: start;
-    padding-top: 0.75rem;
+    padding-top: 0.875rem;
+}
+
+.inspection-group__grid > .inspection-band {
+    grid-column: 1 / -1;
 }
 
 .inspection-group__grid[data-columns='1'] {
@@ -9100,31 +9104,6 @@ body[data-theme='dark'] .inspection-sheet__body {
     .inspection-group__grid {
         grid-template-columns: minmax(0, 1fr);
     }
-
-    .inspection-group__grid[data-columns='1'] .inspection-cell {
-        flex-direction: column;
-        align-items: stretch;
-    }
-
-    .inspection-group__grid[data-columns='1'] .inspection-cell__control {
-        flex: 1 1 auto;
-        width: 100%;
-        min-width: 0;
-    }
-}
-
-/* A one-column group reads as a list of rows, label beside control. */
-.inspection-group__grid[data-columns='1'] .inspection-cell {
-    flex-direction: row;
-    align-items: center;
-    justify-content: space-between;
-    gap: 0.75rem;
-}
-
-.inspection-group__grid[data-columns='1'] .inspection-cell__control {
-    flex: 0 0 auto;
-    width: auto;
-    min-width: 12rem;
 }
 
 /* --- a compact field --------------------------------------------------- */
@@ -9181,21 +9160,6 @@ body[data-theme='dark'] .inspection-sheet__body {
     color: var(--ins-text-faint);
 }
 
-/* Every control on the sheet is the same height, so a row of them lines up. */
-.inspection-sheet .form-input,
-.inspection-sheet .form-select,
-.inspection-sheet .ember-power-select-trigger {
-    height: 1.875rem;
-    min-height: 1.875rem;
-    font-size: 0.8125rem;
-}
-
-.inspection-sheet textarea.form-input {
-    height: auto;
-    min-height: 3.5rem;
-    line-height: 1.5;
-}
-
 /* A required answer that is still missing says so on its own edge. */
 .inspection-input--outstanding.form-input,
 .inspection-input--outstanding .ember-power-select-trigger {
@@ -9207,7 +9171,7 @@ body[data-theme='dark'] .inspection-sheet__body {
 .inspection-choice {
     display: flex;
     align-items: stretch;
-    height: 1.875rem;
+    min-height: 2.25rem;
     border: 1px solid var(--ins-border);
     border-radius: 0.375rem;
     overflow: hidden;
@@ -9230,8 +9194,8 @@ body[data-theme='dark'] .inspection-sheet__body {
     display: flex;
     align-items: center;
     justify-content: center;
-    padding: 0 0.5rem;
-    font-size: 0.75rem;
+    padding: 0.375rem 0.5rem;
+    font-size: 0.8125rem;
     font-weight: 500;
     line-height: 1;
     color: var(--ins-text-muted);
@@ -9283,7 +9247,6 @@ body[data-theme='dark'] .inspection-sheet__body {
 /* --- a promoted band ---------------------------------------------------- */
 
 .inspection-band {
-    margin-top: 0.625rem;
     border: 1px solid var(--ins-border);
     border-radius: 0.375rem;
     overflow: hidden;
@@ -9348,6 +9311,20 @@ body[data-theme='dark'] .inspection-sheet__body {
     padding: 0.25rem 0.3125rem;
 }
 
+.inspection-band--defect .form-input {
+    border-color: var(--ins-fail-edge);
+    background-color: transparent;
+}
+
+.inspection-band--defect .form-input:focus {
+    border-color: var(--ins-fail);
+}
+
+.inspection-band--defect .inspection-choice,
+.inspection-band--defect .inspection-slot {
+    border-color: var(--ins-fail-edge);
+}
+
 .inspection-defect__row {
     display: grid;
     grid-template-columns: minmax(0, 1fr) auto;
@@ -9366,7 +9343,7 @@ body[data-theme='dark'] .inspection-sheet__body {
     display: flex;
     align-items: center;
     gap: 0.4375rem;
-    height: 1.875rem;
+    min-height: 2.25rem;
     padding: 0 0.625rem;
     border: 1px solid var(--ins-fail);
     border-radius: 0.375rem;

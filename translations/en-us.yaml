@@ -2871,7 +2871,7 @@ inspection:
         note-placeholder: Add a note
         text-placeholder: Type an answer
         no-options: This field has no answers to choose from.
-        uploads-unavailable: Photos can be added from the console or the driver app.
+        uploads-unavailable: Can be added from the console or the driver app.
         promoted: Promoted
         comments-required: Say what is wrong, and what it needs
         comment-required: Comment mandatory on fail
@@ -2918,8 +2918,6 @@ inspection:
         group-has-no-fields: This section has no checks.
         outstanding: still to answer
         section-outstanding: "{count, plural, one {# outstanding} other {# outstanding}}"
-        columns: "{columns, plural, =1 {1 col} other {# col}}"
-        columns-and-promoted: "{columns, plural, =1 {1 col} other {# col}} · {promoted, plural, one {# promoted} other {# promoted}}"
         outstanding-field: "{label} is required before submitting"
         review: "Review →"
         jump-to: "Jump to →"

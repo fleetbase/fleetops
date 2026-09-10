@@ -8,7 +8,9 @@
                 {{/each}}
             </span>
         {{/if}}
-        <span class="inspection-group__meta" data-outstanding={{if this.hasOutstanding "true" "false"}}>{{this.meta}}</span>
+        {{#if this.hasOutstanding}}
+            <span class="inspection-group__meta">{{this.outstanding}}</span>
+        {{/if}}
     </div>
 
     {{#if @group.description}}
@@ -16,41 +18,23 @@
     {{/if}}
 
     {{#if this.fields}}
-        {{#if this.compactFields}}
-            <div class="inspection-group__grid" data-columns={{this.columns}}>
-                {{#each this.compactFields key="uuid" as |field|}}
-                    {{#if @readonly}}
-                        <InspectionField::Value @field={{field}} @value={{get @values field.uuid}} @targetId={{@targetId}} />
-                    {{else}}
-                        <InspectionField::Input
-                            @field={{field}}
-                            @value={{get @values field.uuid}}
-                            @subject={{@subject}}
-                            @onChange={{@onChange}}
-                            @disabled={{@disabled}}
-                            @allowUploads={{@allowUploads}}
-                            @targetId={{@targetId}}
-                        />
-                    {{/if}}
-                {{/each}}
-            </div>
-        {{/if}}
-
-        {{#each this.promotedFields key="uuid" as |field|}}
-            {{#if @readonly}}
-                <InspectionField::Value @field={{field}} @value={{get @values field.uuid}} @targetId={{@targetId}} />
-            {{else}}
-                <InspectionField::Input
-                    @field={{field}}
-                    @value={{get @values field.uuid}}
-                    @subject={{@subject}}
-                    @onChange={{@onChange}}
-                    @disabled={{@disabled}}
-                    @allowUploads={{@allowUploads}}
-                    @targetId={{@targetId}}
-                />
-            {{/if}}
-        {{/each}}
+        <div class="inspection-group__grid" data-columns={{this.columns}}>
+            {{#each this.fields key="uuid" as |field|}}
+                {{#if @readonly}}
+                    <InspectionField::Value @field={{field}} @value={{get @values field.uuid}} @targetId={{@targetId}} />
+                {{else}}
+                    <InspectionField::Input
+                        @field={{field}}
+                        @value={{get @values field.uuid}}
+                        @subject={{@subject}}
+                        @onChange={{@onChange}}
+                        @disabled={{@disabled}}
+                        @allowUploads={{@allowUploads}}
+                        @targetId={{@targetId}}
+                    />
+                {{/if}}
+            {{/each}}
+        </div>
     {{else}}
         <div class="inspection-group__empty">{{t "inspection.record.group-has-no-fields"}}</div>
     {{/if}}
