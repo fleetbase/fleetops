@@ -10,14 +10,14 @@
         </div>
     {{else}}
         <div class="space-y-4">
-            {{#each this.groups as |group groupIndex|}}
+            {{#each this.groups key="uuid" as |group groupIndex|}}
                 <ContentPanel @title={{or group.name (t "inspection.builder.untitled-group")}} @open={{true}} @wrapperClass="bordered">
                     <div class="grid grid-cols-1 lg:grid-cols-2 gap-2 no-input-group-padding text-xs mb-3">
                         <InputGroup @name={{t "inspection.builder.group-name"}}>
-                            <input type="text" value={{group.name}} class="w-full form-input" placeholder={{t "inspection.builder.group-name-placeholder"}} disabled={{@disabled}} {{on "input" (fn this.setGroupName group.uuid)}} />
+                            <input type="text" class="w-full form-input" placeholder={{t "inspection.builder.group-name-placeholder"}} disabled={{@disabled}} {{did-insert (fn this.setInitialValue group.name)}} {{on "input" (fn this.setGroupName group.uuid)}} />
                         </InputGroup>
                         <InputGroup @name={{t "inspection.builder.group-description"}}>
-                            <input type="text" value={{group.description}} class="w-full form-input" placeholder={{t "inspection.builder.group-description-placeholder"}} disabled={{@disabled}} {{on "input" (fn this.setGroupDescription group.uuid)}} />
+                            <input type="text" class="w-full form-input" placeholder={{t "inspection.builder.group-description-placeholder"}} disabled={{@disabled}} {{did-insert (fn this.setInitialValue group.description)}} {{on "input" (fn this.setGroupDescription group.uuid)}} />
                         </InputGroup>
                     </div>
 
@@ -43,7 +43,7 @@
                     </div>
 
                     <div class="grid grid-cols-1 lg:grid-cols-{{or group.meta.grid_size 1}} gap-2">
-                        {{#each group.fields as |field fieldIndex|}}
+                        {{#each group.fields key="uuid" as |field fieldIndex|}}
                             <div class="rounded-lg border border-gray-200 dark:border-gray-700 px-3 py-1.5 flex flex-row items-center justify-between">
                                 <div class="flex items-center space-x-2 min-w-0">
                                     <div class="font-semibold text-sm truncate">{{or field.label (t "inspection.builder.untitled-field")}}</div>

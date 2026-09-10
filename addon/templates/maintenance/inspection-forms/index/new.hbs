@@ -6,6 +6,6 @@
     @onPressCancel={{transition-to "maintenance.inspection-forms.index"}}
     @onOverlayReady={{fn (mut this.overlay)}}
 >
-    <InspectionForm::Form @resource={{this.inspectionForm}} @controller={{this}} @onStructureChange={{this.setStructure}} />
+    <InspectionForm::Form @resource={{this.inspectionForm}} @controller={{this}} @structure={{this.structure}} @onStructureChange={{this.setStructure}} />
     <Spacer @height="200px" />
 </Layout::Resource::Panel>

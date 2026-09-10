@@ -1,5 +1,4 @@
 import Component from '@glimmer/component';
-import { tracked } from '@glimmer/tracking';
 import { inject as service } from '@ember/service';
 import { action } from '@ember/object';
 import { next } from '@ember/runloop';
@@ -11,12 +10,18 @@ import { createField, createFieldGroup } from '../../utils/inspection-form-struc
  * The form builder: field groups, each with a grid size and its own typed
  * fields.
  *
- * A form is laid out before the form record exists, so the builder holds the
- * whole structure as a draft of plain objects and hands it up through
- * `@onChange`; the controller posts it with the save that creates or updates
- * the form, and `InspectionFormSync` writes it in one go. Plain objects rather
- * than Ember Data records because the `inspection-form` model belongs to
- * `@fleetbase/fleetops-data` and declares no structure attribute.
+ * A form is laid out before the form record exists, so the structure is a
+ * draft of plain objects rather than Ember Data records — the `inspection-form`
+ * model belongs to `@fleetbase/fleetops-data` and declares no attribute for it.
+ * The controller posts it with the save, and `InspectionFormSync` writes it in
+ * one go.
+ *
+ * **The draft lives on the controller, not here.** `ContentPanel` unrenders its
+ * body when it is collapsed, so this component is destroyed and rebuilt every
+ * time the author folds the builder away; state held here went with it and the
+ * form came back empty. So the component is controlled: it renders `@groups`
+ * and reports every change through `@onChange`, and owns nothing that a
+ * collapse can take.
  *
  * Nothing here mutates a group or a field in place. Every change builds new
  * objects and assigns them from an action — never during render.
@@ -28,9 +33,12 @@ export default class InspectionFormBuilderComponent extends Component {
     @service notifications;
     @service intl;
 
-    @tracked groups = [];
-
     gridSizeOptions = [1, 2, 3];
+
+    /** The draft, owned by the controller so it survives a panel collapse. */
+    get groups() {
+        return Array.isArray(this.args.groups) ? this.args.groups : [];
+    }
 
     constructor() {
         super(...arguments);
@@ -49,21 +57,27 @@ export default class InspectionFormBuilderComponent extends Component {
     }
 
     @task *load() {
+        // A form that does not exist yet has nothing to read back.
         if (this.isDraft) {
             return;
         }
 
+        // Already held by the controller — either loaded once before, or
+        // carrying edits the author has not saved. Re-reading here would
+        // throw those away every time the panel was reopened.
+        if (Array.isArray(this.args.groups)) {
+            return;
+        }
+
         try {
-            this.groups = yield this.inspectionFormActions.loadStructure(this.args.resource);
+            this.write(yield this.inspectionFormActions.loadStructure(this.args.resource));
         } catch (error) {
             this.notifications.serverError(error);
         }
     }
 
-    /** The one place the draft is written, and the one place it is announced. */
+    /** The one place the draft is announced. The controller stores it. */
     write(groups) {
-        this.groups = groups;
-
         if (typeof this.args.onChange === 'function') {
             this.args.onChange(groups);
         }
@@ -71,6 +85,18 @@ export default class InspectionFormBuilderComponent extends Component {
 
     replaceGroup(uuid, attributes) {
         this.write(this.groups.map((group) => (group.uuid === uuid ? { ...group, ...attributes } : group)));
+    }
+
+    /**
+     * Paints an input's starting value without binding it.
+     *
+     * The iteration is keyed, so the node survives an edit — but a bound
+     * `value` is rewritten on every render, and assigning to `value` mid-word
+     * moves the caret to the end. Setting it once on insert leaves the DOM to
+     * own the text, and `input` reports each change back.
+     */
+    @action setInitialValue(value, element) {
+        element.value = value ?? '';
     }
 
     @action addGroup() {
