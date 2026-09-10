@@ -44,19 +44,25 @@
 
                     <div class="grid grid-cols-1 lg:grid-cols-{{or group.meta.grid_size 1}} gap-2">
                         {{#each group.fields key="uuid" as |field fieldIndex|}}
-                            <div class="rounded-lg border border-gray-200 dark:border-gray-700 px-3 py-1.5 flex flex-row items-center justify-between">
+                            {{!
+                                The name reads first, on its own line. Sharing a
+                                row with four buttons left every label truncated
+                                to a few characters, which is unusable for
+                                keeping track of what is what while building.
+                            }}
+                            <div class="rounded-lg border border-gray-200 dark:border-gray-700 px-3 py-2 flex flex-col space-y-2">
                                 <div class="flex items-center space-x-2 min-w-0">
                                     <div class="font-semibold text-sm truncate">{{or field.label (t "inspection.builder.untitled-field")}}</div>
-                                    <div class="custom-field-custom-field-type-pill rounded-lg bg-gray-300 dark:bg-gray-700 text-black dark:text-gray-300 px-1.5 py-0.5 text-xs truncate font-mono">
+                                    {{#if field.required}}
+                                        <span class="text-red-500 text-xs flex-shrink-0">*</span>
+                                    {{/if}}
+                                    <div class="custom-field-custom-field-type-pill rounded-lg bg-gray-300 dark:bg-gray-700 text-black dark:text-gray-300 px-1.5 py-0.5 text-xs font-mono flex-shrink-0">
                                         {{field.type}}
                                     </div>
-                                    {{#if field.required}}
-                                        <span class="text-red-500 text-xs">*</span>
-                                    {{/if}}
                                 </div>
-                                <div class="flex flex-row items-center space-x-1 flex-shrink-0">
-                                    <Button @icon="arrow-up" @size="xs" @disabled={{@disabled}} @onClick={{fn this.moveField group fieldIndex -1}} />
-                                    <Button @icon="arrow-down" @size="xs" @disabled={{@disabled}} @onClick={{fn this.moveField group fieldIndex 1}} />
+                                <div class="flex flex-row items-center justify-end space-x-1">
+                                    <Button @icon="arrow-up" @size="xs" @disabled={{@disabled}} @helpText={{t "inspection.builder.move-up"}} @onClick={{fn this.moveField group fieldIndex -1}} />
+                                    <Button @icon="arrow-down" @size="xs" @disabled={{@disabled}} @helpText={{t "inspection.builder.move-down"}} @onClick={{fn this.moveField group fieldIndex 1}} />
                                     <Button @icon="pencil" @size="xs" @disabled={{@disabled}} @onClick={{fn this.editField group field}} />
                                     <Button @type="danger" @icon="trash" @size="xs" @disabled={{@disabled}} @onClick={{fn this.deleteField group field}} />
                                 </div>
