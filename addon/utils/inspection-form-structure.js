@@ -78,23 +78,40 @@ export function normalizeFieldGroups(payload) {
     const groups = Array.isArray(payload.field_groups) ? payload.field_groups : [];
     const fields = Array.isArray(payload.fields) ? payload.fields : [];
 
-    if (groups.length) {
-        return groups
-            .slice()
-            .sort(byOrder)
-            .map((group, index) => {
-                const groupUuid = group?.uuid ?? group?.id;
-                const own = fields.filter((field) => (field?.category_uuid ?? null) === groupUuid);
-                return normalizeGroup(group, index, own);
-            });
-    }
+    const fromFieldGroups = groups
+        .slice()
+        .sort(byOrder)
+        .map((group, index) => {
+            const groupUuid = group?.uuid ?? group?.id;
+            const own = fields.filter((field) => (field?.category_uuid ?? null) === groupUuid);
+            return normalizeGroup(group, index, own);
+        });
 
-    const grouped = Array.isArray(payload.grouped_fields) ? payload.grouped_fields : [];
-
-    return grouped
+    const fromGroupedFields = (Array.isArray(payload.grouped_fields) ? payload.grouped_fields : [])
         .slice()
         .sort(byOrder)
         .map((group, index) => normalizeGroup(group, index));
+
+    /*
+     * Two shapes describe the same structure. `field_groups` carries no fields
+     * of its own — they arrive in the sibling `fields` array, joined on
+     * `category_uuid` — while `grouped_fields` nests them. A public payload
+     * omits `category_uuid`, so the join finds nothing and every group comes
+     * back empty; take whichever shape actually produced fields.
+     *
+     * When neither did, prefer `field_groups`: a form whose groups are laid
+     * out but still empty is a real state in the builder, and returning
+     * nothing would lose those groups.
+     */
+    if (fromFieldGroups.some((group) => group.fields.length > 0)) {
+        return fromFieldGroups;
+    }
+
+    if (fromGroupedFields.some((group) => group.fields.length > 0)) {
+        return fromGroupedFields;
+    }
+
+    return fromFieldGroups.length ? fromFieldGroups : fromGroupedFields;
 }
 
 /** Every field of every group, flattened, in the order they are answered. */

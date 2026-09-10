@@ -6,6 +6,15 @@ import { task } from 'ember-concurrency';
 import { normalizeFieldGroups, flattenFields } from '../utils/inspection-form-structure';
 import { answerRows, seedAnswers, summarize } from '../utils/inspection-answers';
 
+/*
+ * FleetOps mounts its API at the application root — `fleetops.api.routing.prefix`
+ * is null, which is why its consumable routes are `/v1/...` and its internal
+ * ones `/int/v1/...` rather than sitting under an engine name the way ledger's
+ * do. The public inspection routes follow it, so the namespace here is `public`
+ * and not `fleet-ops/public`.
+ */
+const PUBLIC_NAMESPACE = 'public';
+
 /**
  * An inspection filled in from a tokenised link, outside the console.
  *
@@ -86,7 +95,7 @@ export default class PublicInspectionComponent extends Component {
         }
 
         try {
-            const response = yield this.fetch.get(`inspections/forms/${this.formId}`, { token: this.token }, { namespace: 'fleet-ops/public' });
+            const response = yield this.fetch.get(`inspections/forms/${this.formId}`, { token: this.token }, { namespace: PUBLIC_NAMESPACE });
 
             this.form = response?.form;
             this.identity = response?.identity;
@@ -111,7 +120,7 @@ export default class PublicInspectionComponent extends Component {
                     signature: this.signatureName ? { name: this.signatureName, signed_at: new Date().toISOString() } : null,
                     custom_field_values: answerRows(this.fields, this.values),
                 },
-                { namespace: 'fleet-ops/public' }
+                { namespace: PUBLIC_NAMESPACE }
             );
 
             this.submission = response?.submission;
