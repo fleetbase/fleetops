@@ -45,8 +45,11 @@ class InspectionFormSync
             ->where(['owner_uuid' => $form->uuid, 'for' => InspectionForm::GROUP_FOR])
             ->get()
             ->keyBy('uuid');
+        // Only the fields a driver answers. A custom field the console's
+        // generic panel added to the form *record* has the same subject and
+        // would otherwise be pruned as a field the builder no longer lists.
         $existingFields = CustomField::query()
-            ->where('subject_uuid', $form->uuid)
+            ->where(['subject_uuid' => $form->uuid, 'for' => InspectionForm::FIELD_FOR])
             ->get()
             ->keyBy('uuid');
 
@@ -213,7 +216,10 @@ class InspectionFormSync
     {
         $groupsToDelete = $existingGroups->keys()->diff($keptGroups)->values();
         if ($groupsToDelete->isNotEmpty()) {
-            CustomField::query()->where('subject_uuid', $form->uuid)->whereIn('category_uuid', $groupsToDelete)->delete();
+            CustomField::query()
+                ->where(['subject_uuid' => $form->uuid, 'for' => InspectionForm::FIELD_FOR])
+                ->whereIn('category_uuid', $groupsToDelete)
+                ->delete();
             Category::query()->whereIn('uuid', $groupsToDelete)->delete();
         }
 

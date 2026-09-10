@@ -304,6 +304,10 @@ test('the form writer builds groups of typed fields and prunes what a later draf
         ->and($fields['fuel']->component)->toBe('radio-button-select')
         ->and($fields['fuel']->options)->toBe(['full', 'half']);
 
+    // A custom field the console's generic panel added to the form record has
+    // the same subject; the builder must not take it for one of its own.
+    CustomField::create(['company_uuid' => 'company-insp', 'subject_uuid' => $form->uuid, 'subject_type' => $form->getMorphClass(), 'name' => 'depot', 'label' => 'Depot', 'type' => 'text']);
+
     // A second post with the same uuids updates rather than duplicates, and
     // what it no longer lists is deleted.
     $draft                          = fleetOpsInspectionFieldDraft();
@@ -321,7 +325,9 @@ test('the form writer builds groups of typed fields and prunes what a later draf
         ->and($form->fieldGroups->first()->name)->toBe('Exterior walk-around')
         ->and($form->fields)->toHaveCount(2)
         ->and($form->fields->firstWhere('uuid', $fields['mirrors']->uuid)->label)->toBe('Mirrors and glass')
-        ->and(CustomField::query()->count())->toBe(2)
+        // Two inspection fields, plus the unrelated one, left where it was.
+        ->and(CustomField::query()->count())->toBe(3)
+        ->and(CustomField::query()->where('name', 'depot')->exists())->toBeTrue()
         ->and(Category::query()->count())->toBe(1);
 });
 
