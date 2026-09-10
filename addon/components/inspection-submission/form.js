@@ -35,7 +35,13 @@ export default class InspectionSubmissionFormComponent extends Component {
 
     constructor() {
         super(...arguments);
-        next(() => this.load.perform(this.args.resource?.form));
+        next(() => {
+            if (this.isDestroying || this.isDestroyed) {
+                return;
+            }
+
+            this.load.perform(this.args.resource?.form);
+        });
     }
 
     get fields() {
@@ -152,7 +158,9 @@ export default class InspectionSubmissionFormComponent extends Component {
 
     @action assignForm(form) {
         this.args.resource.form = form;
-        this.args.resource.inspection_form_uuid = form?.id ?? null;
+        // The relationship is what the save sends; the column is kept in step
+        // with the form's own uuid, never the id the console addresses it by.
+        this.args.resource.inspection_form_uuid = form?.uuid ?? form?.id ?? null;
         this.args.resource.type = form?.type || this.args.resource.type || 'dvir';
 
         return this.load.perform(form);
