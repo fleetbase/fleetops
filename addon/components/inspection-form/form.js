@@ -4,69 +4,55 @@ import { action } from '@ember/object';
 const TYPE_OPTIONS = ['dvir', 'safety', 'compliance', 'maintenance', 'pre_trip', 'post_trip'];
 const STATUS_OPTIONS = ['draft', 'published', 'archived'];
 const FREQUENCY_OPTIONS = ['daily', 'weekly', 'monthly', 'pre_trip', 'post_trip', 'ad_hoc'];
-const SEVERITY_OPTIONS = ['low', 'medium', 'high', 'critical'];
 
 /**
- * Checklist editor for an inspection form.
+ * The inspection form screen: what the form is, and what it is built from.
  *
- * The model's `items` attribute is the single source of truth; the component
- * holds no copy of it. Every change builds a new array and assigns it to the
- * model from an action, never during render — the previous version wrote to
- * `@resource.items` in the constructor, which Glimmer refuses ("attempted to
- * update `items` ... already used in the same computation") because the
- * template had already read the attribute in the same render pass.
+ * The structure itself belongs to `inspection-form/builder`, which holds it as
+ * a draft so a form can be laid out before the record exists; this component
+ * only passes that draft up to the controller, which posts it with the save.
+ *
+ * Nothing writes to `@resource` during render — text inputs update from the
+ * DOM event, and every other change arrives from an action.
  */
 export default class InspectionFormFormComponent extends Component {
     typeOptions = TYPE_OPTIONS;
     statusOptions = STATUS_OPTIONS;
     frequencyOptions = FREQUENCY_OPTIONS;
-    severityOptions = SEVERITY_OPTIONS;
 
-    get items() {
+    /** The first cut's checklist, kept read-only until it has been migrated. */
+    get legacyItems() {
         const items = this.args.resource?.items;
         return Array.isArray(items) ? items : [];
     }
 
-    setItems(items) {
-        this.args.resource.items = items;
+    @action setName(event) {
+        this.args.resource.name = event.target.value;
     }
 
-    @action addItem() {
-        const items = this.items;
-        this.setItems([
-            ...items,
-            {
-                key: `item_${items.length + 1}`,
-                label: '',
-                category: '',
-                required: true,
-                severity: 'medium',
-            },
-        ]);
+    @action setDescription(event) {
+        this.args.resource.description = event.target.value;
     }
 
-    @action removeItem(index) {
-        this.setItems(this.items.filter((_, itemIndex) => itemIndex !== index));
+    @action setType(type) {
+        this.args.resource.type = type;
     }
 
-    /** For selects, which hand over the chosen value. */
-    @action updateItem(index, key, value) {
-        this.setItems(this.items.map((item, itemIndex) => (itemIndex === index ? { ...item, [key]: value } : item)));
+    @action setStatus(status) {
+        this.args.resource.status = status;
     }
 
-    /** For text inputs, which hand over the DOM event. */
-    @action updateItemField(index, key, event) {
-        this.updateItem(index, key, event.target.value);
+    @action setFrequency(frequency) {
+        this.args.resource.frequency = frequency;
     }
 
-    @action toggleItemRequired(index, event) {
-        this.updateItem(index, 'required', event.target.checked);
+    @action setStructure(groups) {
+        if (typeof this.args.onStructureChange === 'function') {
+            this.args.onStructureChange(groups);
+        }
     }
 
-    @action setSetting(key, value) {
-        this.args.resource.settings = {
-            ...(this.args.resource.settings ?? {}),
-            [key]: value,
-        };
+    @action setSettings(settings) {
+        this.args.resource.settings = settings;
     }
 }

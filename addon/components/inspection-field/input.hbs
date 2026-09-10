@@ -1,0 +1,149 @@
+<div class="inspection-field-input {{this.colSpanClass}}" ...attributes>
+    {{#if (eq this.field.type "pass-fail")}}
+        <div class="rounded-lg border border-gray-200 dark:border-gray-700 p-3 space-y-2">
+            <div class="flex flex-row items-start justify-between gap-3">
+                <div class="min-w-0">
+                    <div class="text-sm font-semibold dark:text-gray-100">
+                        {{this.field.label}}
+                        {{#if this.field.required}}<span class="text-red-500">*</span>{{/if}}
+                    </div>
+                    {{#if this.field.description}}
+                        <div class="text-xs text-gray-500">{{this.field.description}}</div>
+                    {{/if}}
+                    {{#if this.meta.instructions}}
+                        <div class="text-xs text-gray-500 whitespace-pre-wrap mt-1">{{this.meta.instructions}}</div>
+                    {{/if}}
+                </div>
+                <div class="flex flex-row items-center space-x-1 flex-shrink-0">
+                    <Button @type={{if this.isPassed "success" "default"}} @size="xs" @text={{t "inspection.answer.pass"}} @disabled={{@disabled}} @onClick={{this.markPassed}} />
+                    <Button @type={{if this.isFailed "danger" "default"}} @size="xs" @text={{t "inspection.answer.fail"}} @disabled={{@disabled}} @onClick={{this.markFailed}} />
+                    <Button @type={{if this.isNotApplicable "primary" "default"}} @size="xs" @text={{t "inspection.answer.not-applicable"}} @disabled={{@disabled}} @onClick={{this.markNotApplicable}} />
+                </div>
+            </div>
+
+            {{#if this.isFailed}}
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-2 no-input-group-padding text-xs pt-2">
+                    <InputGroup @name={{t "inspection.answer.severity"}}>
+                        <PowerSelect
+                            @options={{this.severityOptions}}
+                            @selected={{this.severity}}
+                            @onChange={{this.setSeverity}}
+                            @triggerClass="form-select form-input"
+                            @renderInPlace={{true}}
+                            @disabled={{@disabled}}
+                            as |severity|
+                        >
+                            {{t (concat "inspection.severity." severity)}}
+                        </PowerSelect>
+                    </InputGroup>
+                    <InputGroup>
+                        <Toggle @isToggled={{this.answer.unsafe}} @onToggle={{this.setUnsafe}} @label={{t "inspection.answer.unsafe"}} @disabled={{@disabled}} />
+                    </InputGroup>
+                    <InputGroup @name={{t "inspection.answer.comments"}} @required={{this.requiresComment}} @wrapperClass="lg:col-span-2">
+                        <textarea class="w-full form-input" rows="2" placeholder={{t "inspection.answer.comments-placeholder"}} disabled={{@disabled}} {{on "input" this.setComments}}>{{this.answer.comments}}</textarea>
+                    </InputGroup>
+                </div>
+
+                <div class="pt-1">
+                    <div class="text-[11px] uppercase tracking-wide text-gray-500 font-semibold mb-1">
+                        {{t "inspection.answer.photos"}}
+                        {{#if this.requiresPhoto}}<span class="text-red-500">*</span>{{/if}}
+                    </div>
+                    <div class="flex flex-row flex-wrap items-center gap-2">
+                        {{#each this.answerPhotos as |photo index|}}
+                            <div class="relative rounded border border-gray-200 dark:border-gray-700 overflow-hidden">
+                                {{#if photo.url}}
+                                    <Image src={{photo.url}} alt={{or photo.filename this.field.label}} class="h-16 w-16 object-cover" />
+                                {{else}}
+                                    <div class="h-16 w-16 flex items-center justify-center text-gray-400"><FaIcon @icon="image" /></div>
+                                {{/if}}
+                                {{#unless @disabled}}
+                                    <Button @type="danger" @icon="times" @size="xs" @wrapperClass="absolute top-0 right-0" @onClick={{fn this.removePhoto index}} />
+                                {{/unless}}
+                            </div>
+                        {{/each}}
+                        {{#unless @disabled}}
+                            <FileUpload @name={{concat this.field.uuid "-photos"}} @for={{concat this.field.uuid "-photos"}} @accept="image/*" @multiple={{true}} @onFileAdded={{this.addPhoto}}>
+                                <a tabindex={{0}} class="btn btn-default btn-xs cursor-pointer">
+                                    <FaIcon @icon="camera" @size="sm" class="mr-2" />{{t "inspection.answer.add-photo"}}
+                                </a>
+                            </FileUpload>
+                        {{/unless}}
+                        {{#if this.uploadProgress}}
+                            <span class="text-xs text-blue-600 dark:text-blue-400">{{round this.uploadProgress.progress}}%</span>
+                        {{/if}}
+                    </div>
+                </div>
+            {{/if}}
+        </div>
+    {{else if (eq this.field.type "signature")}}
+        <InputGroup @name={{this.field.label}} @required={{this.field.required}} @helpText={{this.field.help_text}}>
+            {{#if this.file.url}}
+                <Image src={{this.file.url}} alt={{this.field.label}} class="max-h-24 rounded border border-gray-200 dark:border-gray-700 bg-white" />
+            {{else if this.file.reference}}
+                <div class="text-xs font-mono text-gray-500">{{this.file.reference}}</div>
+            {{else}}
+                <div class="text-xs text-gray-500">{{t "inspection.answer.no-signature"}}</div>
+            {{/if}}
+            {{#unless @disabled}}
+                <div class="flex flex-row items-center space-x-2 mt-2">
+                    <FileUpload @name={{concat this.field.uuid "-signature"}} @for={{concat this.field.uuid "-signature"}} @accept="image/*" @multiple={{false}} @onFileAdded={{this.setFile}}>
+                        <a tabindex={{0}} class="btn btn-default btn-xs cursor-pointer">
+                            <FaIcon @icon="signature" @size="sm" class="mr-2" />{{t "inspection.answer.upload-signature"}}
+                        </a>
+                    </FileUpload>
+                    {{#if this.file.reference}}
+                        <Button @type="danger" @icon="trash" @size="xs" @onClick={{this.clearFile}} />
+                    {{/if}}
+                    {{#if this.uploadProgress}}
+                        <span class="text-xs text-blue-600 dark:text-blue-400">{{round this.uploadProgress.progress}}%</span>
+                    {{/if}}
+                </div>
+            {{/unless}}
+        </InputGroup>
+    {{else if (eq this.field.type "file-upload")}}
+        <InputGroup @name={{this.field.label}} @required={{this.field.required}} @helpText={{this.field.help_text}}>
+            {{#if this.file.url}}
+                <Image src={{this.file.url}} alt={{or this.file.filename this.field.label}} class="max-h-24 rounded border border-gray-200 dark:border-gray-700" />
+            {{else if this.file.reference}}
+                <div class="text-xs font-mono text-gray-500">{{this.file.reference}}</div>
+            {{else}}
+                <div class="text-xs text-gray-500">{{t "inspection.answer.no-photo"}}</div>
+            {{/if}}
+            {{#unless @disabled}}
+                <div class="flex flex-row items-center space-x-2 mt-2">
+                    <FileUpload @name={{concat this.field.uuid "-file"}} @for={{concat this.field.uuid "-file"}} @accept="image/*" @multiple={{false}} @onFileAdded={{this.setFile}}>
+                        <a tabindex={{0}} class="btn btn-default btn-xs cursor-pointer">
+                            <FaIcon @icon="upload" @size="sm" class="mr-2" />{{t "inspection.answer.upload-photo"}}
+                        </a>
+                    </FileUpload>
+                    {{#if this.file.reference}}
+                        <Button @type="danger" @icon="trash" @size="xs" @onClick={{this.clearFile}} />
+                    {{/if}}
+                    {{#if this.uploadProgress}}
+                        <span class="text-xs text-blue-600 dark:text-blue-400">{{round this.uploadProgress.progress}}%</span>
+                    {{/if}}
+                </div>
+            {{/unless}}
+        </InputGroup>
+    {{else if (eq this.field.type "textarea")}}
+        <InputGroup @name={{this.field.label}} @required={{this.field.required}} @helpText={{this.field.help_text}}>
+            <textarea class="w-full form-input" rows="3" placeholder={{this.field.description}} disabled={{@disabled}} {{on "input" this.setText}}>{{@value}}</textarea>
+        </InputGroup>
+    {{else if (eq this.field.type "number")}}
+        <InputGroup @name={{this.field.label}} @required={{this.field.required}} @helpText={{this.field.help_text}}>
+            <div class="flex flex-row items-center space-x-2">
+                <input type="number" value={{@value}} class="w-full form-input" placeholder={{this.field.description}} disabled={{@disabled}} {{on "input" this.setNumber}} />
+                {{#if this.meta.unit}}
+                    <span class="text-xs text-gray-500 flex-shrink-0">{{this.meta.unit}}</span>
+                {{/if}}
+            </div>
+        </InputGroup>
+    {{else if (eq this.field.type "boolean")}}
+        <InputGroup @required={{this.field.required}} @helpText={{this.field.help_text}}>
+            <Toggle @isToggled={{this.booleanValue}} @onToggle={{this.setBoolean}} @label={{this.field.label}} @disabled={{@disabled}} />
+        </InputGroup>
+    {{else}}
+        <CustomField::Input @customField={{this.delegatedField}} @subject={{this.delegatedSubject}} @onChange={{this.setDelegatedValue}} />
+    {{/if}}
+</div>

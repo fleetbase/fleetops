@@ -1,11 +1,11 @@
 <Layout::Resource::Panel
     @resource={{@model}}
     @controller={{this}}
-    @headerTitle={{concat "Edit " @model.public_id}}
+    @headerTitle={{t "common.edit-resource-name" resourceName=@model.public_id}}
     @saveTask={{this.save}}
     @onPressCancel={{this.cancel}}
     @onOverlayReady={{fn (mut this.overlay)}}
 >
-    <InspectionSubmission::Form @resource={{@model}} @controller={{this}} />
+    <InspectionSubmission::Form @resource={{@model}} @controller={{this}} @onAnswersChange={{this.setAnswers}} />
     <Spacer @height="200px" />
 </Layout::Resource::Panel>

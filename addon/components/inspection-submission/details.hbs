@@ -1,50 +1,70 @@
 <div class="next-content-panel-wrapper" ...attributes>
-    <ContentPanel @title="Overview" @open={{true}} @wrapperClass="bordered-top">
+    <ContentPanel @title={{t "inspection.record.overview"}} @open={{true}} @wrapperClass="bordered-top">
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-2 text-xs dark:text-gray-100">
             <div class="field-info-container">
-                <div class="field-name">Inspection</div>
+                <div class="field-name">{{t "inspection.record.inspection"}}</div>
                 <ClickToCopy @value={{@resource.public_id}} class="field-value font-mono">{{n-a @resource.public_id}}</ClickToCopy>
             </div>
             <div class="field-info-container">
-                <div class="field-name">Result</div>
+                <div class="field-name">{{t "inspection.record.result"}}</div>
                 <div class="field-value"><Badge @status={{if (eq @resource.result "failed") "danger" "success"}}>{{smart-humanize @resource.result}}</Badge></div>
             </div>
             <div class="field-info-container">
-                <div class="field-name">Form</div>
+                <div class="field-name">{{t "inspection.record.form"}}</div>
                 <div class="field-value">{{n-a (or @resource.form.name @resource.form_name)}}</div>
             </div>
             <div class="field-info-container">
-                <div class="field-name">Status</div>
+                <div class="field-name">{{t "inspection.record.status"}}</div>
                 <div class="field-value"><Badge @status={{@resource.status}}>{{smart-humanize @resource.status}}</Badge></div>
             </div>
             <div class="field-info-container">
-                <div class="field-name">Vehicle</div>
+                <div class="field-name">{{t "inspection.record.vehicle"}}</div>
                 <div class="field-value">{{n-a (or @resource.vehicle.displayName @resource.vehicle_name)}}</div>
             </div>
             <div class="field-info-container">
-                <div class="field-name">Driver</div>
+                <div class="field-name">{{t "inspection.record.driver"}}</div>
                 <div class="field-value">{{n-a (or @resource.driver.name @resource.driver_name)}}</div>
             </div>
             <div class="field-info-container">
-                <div class="field-name">Odometer</div>
+                <div class="field-name">{{t "inspection.record.odometer"}}</div>
                 <div class="field-value">{{n-a @resource.odometer}}</div>
             </div>
             <div class="field-info-container">
-                <div class="field-name">Engine Hours</div>
+                <div class="field-name">{{t "inspection.record.engine-hours"}}</div>
                 <div class="field-value">{{n-a @resource.engine_hours}}</div>
             </div>
             <div class="field-info-container">
-                <div class="field-name">Submitted</div>
+                <div class="field-name">{{t "inspection.record.submitted"}}</div>
                 <div class="field-value">{{n-a (format-date-fns @resource.submitted_at "dd MMM yyyy, HH:mm")}}</div>
             </div>
             <div class="field-info-container">
-                <div class="field-name">Resolved</div>
+                <div class="field-name">{{t "inspection.record.resolved"}}</div>
                 <div class="field-value">{{n-a (format-date-fns @resource.resolved_at "dd MMM yyyy, HH:mm")}}</div>
             </div>
         </div>
     </ContentPanel>
 
-    <ContentPanel @title="Item Results" @open={{true}} @wrapperClass="bordered-top">
+    {{#if this.load.isRunning}}
+        <ContentPanel @title={{t "inspection.record.answers"}} @open={{true}} @wrapperClass="bordered-top">
+            <div class="flex items-center justify-center p-6">
+                <Spinner @loadingMessage={{t "inspection.record.loading-answers"}} class="text-sm dark:text-gray-100" />
+            </div>
+        </ContentPanel>
+    {{else if this.hasAnswers}}
+        {{#each this.groups as |group|}}
+            {{#if group.fields.length}}
+                <ContentPanel @title={{or group.name (t "inspection.builder.untitled-group")}} @open={{true}} @wrapperClass="bordered-top">
+                    <div class="grid grid-cols-1 lg:grid-cols-{{or group.meta.grid_size 1}} gap-2 text-xs dark:text-gray-100">
+                        {{#each group.fields as |field|}}
+                            <InspectionField::Value @field={{field}} @value={{get this.values field.uuid}} />
+                        {{/each}}
+                    </div>
+                </ContentPanel>
+            {{/if}}
+        {{/each}}
+    {{/if}}
+
+    <ContentPanel @title={{t "inspection.record.item-results"}} @open={{true}} @wrapperClass="bordered-top">
         <div class="space-y-2 text-xs">
             {{#each @resource.item_results as |item|}}
                 <div class="rounded border border-gray-200 dark:border-gray-700 p-3">
@@ -57,25 +77,27 @@
                             {{/if}}
                         </div>
                         <div class="flex items-center gap-2">
-                            <Badge @status={{if item.passed "success" "danger"}}>{{if item.passed "Passed" "Failed"}}</Badge>
-                            <Badge @status={{if (eq item.severity "critical") "danger" "info"}}>{{smart-humanize item.severity}}</Badge>
+                            <Badge @status={{if item.passed "success" "danger"}}>{{if item.passed (t "inspection.answer.pass") (t "inspection.answer.fail")}}</Badge>
+                            {{#if item.severity}}
+                                <Badge @status={{if (eq item.severity "critical") "danger" "info"}}>{{smart-humanize item.severity}}</Badge>
+                            {{/if}}
                         </div>
                     </div>
                 </div>
             {{else}}
-                <div class="text-gray-500">No item results recorded.</div>
+                <div class="text-gray-500">{{t "inspection.record.no-item-results"}}</div>
             {{/each}}
         </div>
     </ContentPanel>
 
-    <ContentPanel @title="Follow Up" @open={{true}} @wrapperClass="bordered-top">
+    <ContentPanel @title={{t "inspection.record.follow-up"}} @open={{true}} @wrapperClass="bordered-top">
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-2 text-xs dark:text-gray-100">
             <div class="field-info-container">
-                <div class="field-name">Linked Issue</div>
+                <div class="field-name">{{t "inspection.record.linked-issue"}}</div>
                 <div class="field-value">{{n-a (or @resource.issue.public_id @resource.issue_uuid)}}</div>
             </div>
             <div class="field-info-container">
-                <div class="field-name">Linked Work Order</div>
+                <div class="field-name">{{t "inspection.record.linked-work-order"}}</div>
                 <div class="field-value">{{n-a (or @resource.work_order.public_id @resource.work_order_uuid)}}</div>
             </div>
         </div>

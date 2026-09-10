@@ -1,67 +1,53 @@
 <div class="inspection-form-form" ...attributes>
-    <ContentPanel @title="Form Details" @open={{true}} @wrapperClass="bordered-top">
+    <ContentPanel @title={{t "inspection.form.details"}} @open={{true}} @wrapperClass="bordered-top">
         <div class="grid grid-cols-1 gap-2 lg:grid-cols-2 no-input-group-padding text-xs">
-            <InputGroup @name="Name" @wrapperClass="lg:col-span-2">
-                <Input @value={{@resource.name}} @type="text" class="w-full form-input" placeholder="Daily vehicle inspection" disabled={{cannot-write @resource}} />
+            <InputGroup @name={{t "inspection.form.name"}} @wrapperClass="lg:col-span-2">
+                <input type="text" value={{@resource.name}} class="w-full form-input" placeholder={{t "inspection.form.name-placeholder"}} disabled={{cannot-write @resource}} {{on "input" this.setName}} />
             </InputGroup>
-            <InputGroup @name="Type">
-                <PowerSelect @options={{this.typeOptions}} @selected={{@resource.type}} @onChange={{fn (mut @resource.type)}} @triggerClass="form-select form-input" @disabled={{cannot-write @resource}} as |type|>
+            <InputGroup @name={{t "inspection.form.type"}}>
+                <PowerSelect @options={{this.typeOptions}} @selected={{@resource.type}} @onChange={{this.setType}} @triggerClass="form-select form-input" @disabled={{cannot-write @resource}} as |type|>
                     {{smart-humanize type}}
                 </PowerSelect>
             </InputGroup>
-            <InputGroup @name="Status">
-                <PowerSelect @options={{this.statusOptions}} @selected={{@resource.status}} @onChange={{fn (mut @resource.status)}} @triggerClass="form-select form-input" @disabled={{cannot-write @resource}} as |status|>
+            <InputGroup @name={{t "inspection.form.status"}}>
+                <PowerSelect @options={{this.statusOptions}} @selected={{@resource.status}} @onChange={{this.setStatus}} @triggerClass="form-select form-input" @disabled={{cannot-write @resource}} as |status|>
                     {{smart-humanize status}}
                 </PowerSelect>
             </InputGroup>
-            <InputGroup @name="Frequency">
-                <PowerSelect @options={{this.frequencyOptions}} @selected={{@resource.frequency}} @onChange={{fn (mut @resource.frequency)}} @triggerClass="form-select form-input" @disabled={{cannot-write @resource}} as |frequency|>
+            <InputGroup @name={{t "inspection.form.frequency"}}>
+                <PowerSelect @options={{this.frequencyOptions}} @selected={{@resource.frequency}} @onChange={{this.setFrequency}} @triggerClass="form-select form-input" @disabled={{cannot-write @resource}} as |frequency|>
                     {{smart-humanize frequency}}
                 </PowerSelect>
             </InputGroup>
-            <InputGroup @name="Description" @wrapperClass="lg:col-span-2">
-                <Textarea @value={{@resource.description}} class="w-full form-input" rows={{3}} placeholder="What this inspection covers" disabled={{cannot-write @resource}} />
+            <InputGroup @name={{t "inspection.form.description"}} @wrapperClass="lg:col-span-2">
+                <textarea class="w-full form-input" rows="3" placeholder={{t "inspection.form.description-placeholder"}} disabled={{cannot-write @resource}} {{on "input" this.setDescription}}>{{@resource.description}}</textarea>
             </InputGroup>
         </div>
     </ContentPanel>
 
-    <ContentPanel @title="Checklist Items" @open={{true}} @wrapperClass="bordered-top">
-        <div class="space-y-3">
-            {{#each this.items as |item index|}}
-                <div class="rounded border border-gray-200 dark:border-gray-700 p-3">
-                    <div class="grid grid-cols-1 gap-2 lg:grid-cols-4 no-input-group-padding text-xs">
-                        <InputGroup @name="Label" @wrapperClass="lg:col-span-2">
-                            <input type="text" value={{item.label}} class="w-full form-input" placeholder="Brake lights" disabled={{cannot-write @resource}} {{on "input" (fn this.updateItemField index "label")}} />
-                        </InputGroup>
-                        <InputGroup @name="Category">
-                            <input type="text" value={{item.category}} class="w-full form-input" placeholder="Lights" disabled={{cannot-write @resource}} {{on "input" (fn this.updateItemField index "category")}} />
-                        </InputGroup>
-                        <InputGroup @name="Severity">
-                            <PowerSelect @options={{this.severityOptions}} @selected={{item.severity}} @onChange={{fn this.updateItem index "severity"}} @triggerClass="form-select form-input" @disabled={{cannot-write @resource}} as |severity|>
-                                {{smart-humanize severity}}
-                            </PowerSelect>
-                        </InputGroup>
-                        <InputGroup @name="Description" @wrapperClass="lg:col-span-4">
-                            <input type="text" value={{item.description}} class="w-full form-input" placeholder="What to check, and what a pass looks like" disabled={{cannot-write @resource}} {{on "input" (fn this.updateItemField index "description")}} />
-                        </InputGroup>
-                    </div>
-                    <div class="mt-2 flex items-center justify-between">
-                        <label class="flex items-center gap-2 text-xs">
-                            <input type="checkbox" checked={{item.required}} class="form-checkbox" disabled={{cannot-write @resource}} {{on "change" (fn this.toggleItemRequired index)}} />
-                            <span>Required</span>
-                        </label>
-                        <Button @text="Remove" @icon="trash" @size="xs" @type="danger" @disabled={{cannot-write @resource}} @onClick={{fn this.removeItem index}} />
-                    </div>
-                </div>
-            {{else}}
-                <div class="text-xs text-gray-500">No checklist items yet. Add the things a driver must check.</div>
-            {{/each}}
-            <Button @text="Add item" @icon="plus" @size="sm" @disabled={{cannot-write @resource}} @onClick={{this.addItem}} />
-        </div>
+    <ContentPanel @title={{t "inspection.form.builder"}} @open={{true}} @wrapperClass="bordered-top">
+        <InspectionForm::Builder @resource={{@resource}} @onChange={{this.setStructure}} @disabled={{cannot-write @resource}} />
     </ContentPanel>
 
-    <ContentPanel @title="Settings" @open={{false}} @wrapperClass="bordered-top">
-        <MetadataEditor @value={{@resource.settings}} @onChange={{fn (mut @resource.settings)}} />
+    {{#if this.legacyItems.length}}
+        <ContentPanel @title={{t "inspection.form.legacy-checklist"}} @open={{false}} @wrapperClass="bordered-top">
+            <div class="text-xs text-gray-500 mb-2">{{t "inspection.form.legacy-checklist-help"}}</div>
+            <div class="space-y-2 text-xs">
+                {{#each this.legacyItems as |item|}}
+                    <div class="flex items-center justify-between rounded border border-gray-200 dark:border-gray-700 p-2">
+                        <div>
+                            <div class="font-semibold">{{n-a item.label}}</div>
+                            <div class="text-gray-500">{{n-a item.category}}</div>
+                        </div>
+                        <Badge @status={{if (eq item.severity "critical") "danger" "info"}}>{{smart-humanize item.severity}}</Badge>
+                    </div>
+                {{/each}}
+            </div>
+        </ContentPanel>
+    {{/if}}
+
+    <ContentPanel @title={{t "inspection.form.settings"}} @open={{false}} @wrapperClass="bordered-top">
+        <MetadataEditor @value={{@resource.settings}} @onChange={{this.setSettings}} />
     </ContentPanel>
 
     <CustomField::Yield @subject={{@resource}} @wrapperClass="bordered-top" />

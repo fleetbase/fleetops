@@ -2748,3 +2748,151 @@ orchestrator:
     stop-type-dropoff: Dropoff
     pod-required: POD
     no-pod: No POD
+
+inspection:
+    form:
+        overview: Overview
+        details: Form Details
+        name: Name
+        name-placeholder: Daily vehicle inspection
+        type: Type
+        status: Status
+        frequency: Frequency
+        description: Description
+        description-placeholder: What this inspection covers
+        builder: Form Builder
+        fields: Fields
+        published: Published
+        structure: Form Structure
+        loading-structure: Loading form structure...
+        no-structure: This form has no field groups yet.
+        settings: Settings
+        legacy-checklist: Legacy Checklist
+        legacy-checklist-help: The first cut's checklist, kept read-only. It is migrated into a "Checklist" group of pass/fail fields.
+        create: Create inspection form
+        created: Inspection form created.
+        updated: Inspection form updated.
+    builder:
+        help: Group the things a driver checks, then add a field for each one.
+        loading: Loading form builder...
+        new-group: New field group
+        new-field: New field
+        edit-field: 'Edit field: {label}'
+        save-field: Save field
+        untitled-group: Untitled group
+        untitled-field: Untitled field
+        group-name: Group name
+        group-name-placeholder: Exterior
+        group-description: Group description
+        group-description-placeholder: What this group covers
+        grid-size: Columns
+        move-up: Move up
+        move-down: Move down
+        no-fields: No fields in this group yet.
+        empty-title: No field groups
+        empty-description: Add your first field group to start building this form.
+        delete: Delete
+        delete-group-title: Delete this field group?
+        delete-group-body: Deleting this group deletes every field inside it. This cannot be undone once the form is saved.
+        delete-field-title: Delete this field?
+        delete-field-body: Deleting this field also deletes every answer already filed against it. This cannot be undone once the form is saved.
+    field:
+        label: Field label
+        label-placeholder: Brake lights
+        name: Field name
+        name-help: The machine name a submission refers to this field by. It follows the label until you set it yourself.
+        name-placeholder: brake-lights
+        type: Field type
+        description: Field description
+        description-placeholder: What to check, and what a pass looks like
+        help-text: Field help text
+        help-text-placeholder: Shown beside the field while it is answered
+        required: Field is required
+        editable: Field is editable
+        options: Field options
+        no-options: No options yet.
+        option-placeholder: Add an option
+        add-option: Add
+        unit: Unit
+        unit-help: Shown beside the number, for example km or hours.
+        unit-placeholder: km
+        odometer-role: This is the odometer reading
+        odometer-role-help: The answer is copied to the inspection's own odometer column.
+        on-fail: On fail
+        on-fail-help: What a failed answer means, and what the inspector must supply before it is accepted.
+        default-severity: Default severity
+        require-photo-on-fail: Require a photo on fail
+        require-comment-on-fail: Require a comment on fail
+        unsafe-on-fail: Mark the vehicle unsafe on fail
+        unsafe-on-fail-help: A failed answer defaults to unsafe, which is what an out-of-service defect is.
+        instructions: Instructions
+        instructions-placeholder: How to check this, shown to the driver
+        column-span: Column span
+    field-type:
+        pass-fail: Pass / Fail
+        input: Text
+        textarea: Long text
+        number: Number
+        select: Select
+        radio-button: Radio buttons
+        boolean: Yes / No
+        date-picker: Date
+        date-time-input: Date and time
+        file-upload: Photo or file
+        signature: Signature
+    severity:
+        low: Low
+        medium: Medium
+        high: High
+        critical: Critical
+    answer:
+        pass: Pass
+        fail: Fail
+        not-applicable: N/A
+        unanswered: Unanswered
+        severity: Severity
+        unsafe: Unsafe to operate
+        comments: Comments
+        comments-placeholder: What is wrong, and what it needs
+        photos: Photos
+        add-photo: Add photo
+        upload-photo: Upload photo
+        no-photo: No photo attached.
+        upload-signature: Upload signature
+        no-signature: No signature captured.
+    record:
+        overview: Overview
+        inspection: Inspection
+        details: Inspection Details
+        form: Form
+        select-form: Select inspection form
+        status: Status
+        result: Result
+        vehicle: Vehicle
+        select-vehicle: Select vehicle
+        driver: Driver
+        select-driver: Select driver
+        odometer: Odometer
+        odometer-placeholder: Current odometer
+        engine-hours: Engine Hours
+        engine-hours-placeholder: Current engine hours
+        answers: Answers
+        loading-form: Loading inspection form...
+        loading-answers: Loading answers...
+        form-has-no-fields: This form has no fields yet. Build it on the inspection form screen before filling it in.
+        summary: Summary
+        failed-of: '{failed} failed of {total} pass/fail checks'
+        metadata: Metadata
+        submitted: Submitted
+        resolved: Resolved
+        item-results: Item Results
+        no-item-results: No item results recorded.
+        follow-up: Follow Up
+        linked-issue: Linked Issue
+        linked-work-order: Linked Work Order
+        photos: Photos
+        loading-photos: Loading photos...
+        audit: Audit
+        create: Create inspection
+        saved: Inspection saved.
+        updated: Inspection updated.

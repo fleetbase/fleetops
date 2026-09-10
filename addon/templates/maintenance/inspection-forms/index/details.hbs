@@ -8,7 +8,7 @@
     @headerClass="no-bottom-border"
     @bodyClass="no-scroll"
 >
-    <TabNavigation @tabs={{array (hash route="maintenance.inspection-forms.index.details.index" label="Overview")}} @contentClass="scrollable" @tablistClass="pl-2">
+    <TabNavigation @tabs={{array (hash route="maintenance.inspection-forms.index.details.index" label=(t "inspection.form.overview"))}} @contentClass="scrollable" @tablistClass="pl-2">
         {{outlet}}
     </TabNavigation>
 </Layout::Resource::Panel>

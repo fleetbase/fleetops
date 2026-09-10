@@ -1,0 +1,44 @@
+<div class="field-info-container {{this.colSpanClass}}" ...attributes>
+    <div class="field-name">{{this.field.label}}</div>
+    <div class="field-value">
+        {{#if this.isPassFail}}
+            <div class="flex flex-row items-center flex-wrap gap-2">
+                <Badge @status={{this.resultStatus}}>{{t this.resultLabel}}</Badge>
+                {{#if this.answer.severity}}
+                    <Badge @status={{if (eq this.answer.severity "critical") "danger" "info"}}>{{t (concat "inspection.severity." this.answer.severity)}}</Badge>
+                {{/if}}
+                {{#if this.answer.unsafe}}
+                    <Badge @status="danger">{{t "inspection.answer.unsafe"}}</Badge>
+                {{/if}}
+            </div>
+            {{#if this.answer.comments}}
+                <div class="mt-1 whitespace-pre-wrap">{{this.answer.comments}}</div>
+            {{/if}}
+            {{#if this.photos.length}}
+                <div class="mt-2 flex flex-row flex-wrap gap-2">
+                    {{#each this.photos as |photo|}}
+                        {{#if photo.url}}
+                            <a href={{photo.url}} target="_blank" rel="noopener noreferrer" class="block">
+                                <Image src={{photo.url}} alt={{or photo.filename this.field.label}} class="h-16 w-16 object-cover rounded border border-gray-200 dark:border-gray-700" />
+                            </a>
+                        {{else}}
+                            <div class="text-xs font-mono text-gray-500">{{photo.reference}}</div>
+                        {{/if}}
+                    {{/each}}
+                </div>
+            {{/if}}
+        {{else if this.isFile}}
+            {{#if this.file.url}}
+                <a href={{this.file.url}} target="_blank" rel="noopener noreferrer" class="block">
+                    <Image src={{this.file.url}} alt={{or this.file.filename this.field.label}} class="max-h-24 rounded border border-gray-200 dark:border-gray-700 bg-white" />
+                </a>
+            {{else}}
+                {{n-a this.file.reference}}
+            {{/if}}
+        {{else if this.isBoolean}}
+            <Badge @status={{if this.booleanValue "success" ""}}>{{if this.booleanValue (t "common.yes") (t "common.no")}}</Badge>
+        {{else}}
+            <span class="whitespace-pre-wrap">{{n-a @value}}</span>
+        {{/if}}
+    </div>
+</div>

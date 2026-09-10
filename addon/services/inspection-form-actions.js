@@ -2,6 +2,7 @@ import ResourceActionService from '@fleetbase/ember-core/services/resource-actio
 import { action, set } from '@ember/object';
 import { inject as service } from '@ember/service';
 import copyToClipboard from '@fleetbase/ember-core/utils/copy-to-clipboard';
+import { normalizeFieldGroups, serializeFieldGroups } from '../utils/inspection-form-structure';
 
 export default class InspectionFormActionsService extends ResourceActionService {
     @service fetch;
@@ -29,6 +30,42 @@ export default class InspectionFormActionsService extends ResourceActionService 
         edit: (form) => this.transitionTo('maintenance.inspection-forms.index.edit', form),
         create: () => this.transitionTo('maintenance.inspection-forms.index.new'),
     };
+
+    /**
+     * A form's structure — its field groups and their fields.
+     *
+     * The `inspection-form` model belongs to `@fleetbase/fleetops-data` and
+     * declares no attribute for the structure, so Ember Data drops it on the
+     * way in and on the way out. Both directions go through the internal
+     * endpoint directly instead: a read carries `field_groups` beside a flat
+     * `fields` list, and a write posts the whole thing back under
+     * `inspection_form.field_groups`, which is the key
+     * `InspectionFormController::syncStructureFromRequest()` reads.
+     */
+    async loadStructure(form) {
+        if (!form?.id) {
+            return [];
+        }
+
+        const response = await this.fetch.get(`inspection-forms/${form.id}`);
+
+        return normalizeFieldGroups(response?.inspection_form ?? response?.inspectionForm ?? response);
+    }
+
+    /**
+     * Writes the whole structure. The builder always posts every group and
+     * every field, so the server prunes what the post no longer lists — a
+     * field the post dropped is a field the author deleted.
+     */
+    async saveStructure(form, groups) {
+        if (!form?.id || !Array.isArray(groups) || groups.length === 0) {
+            return null;
+        }
+
+        return this.fetch.put(`inspection-forms/${form.id}`, {
+            inspection_form: { field_groups: serializeFieldGroups(groups) },
+        });
+    }
 
     @action async publish(form) {
         try {

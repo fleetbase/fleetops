@@ -6,7 +6,16 @@ import { action } from '@ember/object';
 export default class MaintenanceInspectionSubmissionsIndexDetailsController extends Controller {
     @service inspectionSubmissionActions;
     @service hostRouter;
+    @service intl;
     @tracked overlay;
+
+    get tabs() {
+        return [
+            { route: 'maintenance.inspection-submissions.index.details.index', label: this.intl.t('inspection.record.overview') },
+            { route: 'maintenance.inspection-submissions.index.details.photos', label: this.intl.t('inspection.record.photos') },
+            { route: 'maintenance.inspection-submissions.index.details.audit', label: this.intl.t('inspection.record.audit') },
+        ];
+    }
 
     get actionButtons() {
         return [

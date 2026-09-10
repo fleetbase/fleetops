@@ -1,0 +1,82 @@
+<div class="inspection-form-builder" ...attributes>
+    <div class="flex flex-row items-center justify-between mb-4">
+        <div class="text-xs text-gray-500">{{t "inspection.builder.help"}}</div>
+        <Button @type="primary" @icon="square-plus" @size="sm" @text={{t "inspection.builder.new-group"}} @disabled={{@disabled}} @onClick={{this.addGroup}} />
+    </div>
+
+    {{#if this.load.isRunning}}
+        <div class="flex items-center justify-center p-6">
+            <Spinner @loadingMessage={{t "inspection.builder.loading"}} class="text-sm dark:text-gray-100" />
+        </div>
+    {{else}}
+        <div class="space-y-4">
+            {{#each this.groups as |group groupIndex|}}
+                <ContentPanel @title={{or group.name (t "inspection.builder.untitled-group")}} @open={{true}} @wrapperClass="bordered">
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-2 no-input-group-padding text-xs mb-3">
+                        <InputGroup @name={{t "inspection.builder.group-name"}}>
+                            <input type="text" value={{group.name}} class="w-full form-input" placeholder={{t "inspection.builder.group-name-placeholder"}} disabled={{@disabled}} {{on "input" (fn this.setGroupName group.uuid)}} />
+                        </InputGroup>
+                        <InputGroup @name={{t "inspection.builder.group-description"}}>
+                            <input type="text" value={{group.description}} class="w-full form-input" placeholder={{t "inspection.builder.group-description-placeholder"}} disabled={{@disabled}} {{on "input" (fn this.setGroupDescription group.uuid)}} />
+                        </InputGroup>
+                    </div>
+
+                    <div class="flex flex-row items-center justify-between mb-3">
+                        <div class="flex flex-row items-center space-x-2">
+                            <Button @type="primary" @icon="square-plus" @size="xs" @text={{t "inspection.builder.new-field"}} @disabled={{@disabled}} @onClick={{fn this.addField group}} />
+                            <span class="text-xs text-gray-500">{{t "inspection.builder.grid-size"}}</span>
+                            {{#each this.gridSizeOptions as |size|}}
+                                <Button
+                                    @type={{if (eq (or group.meta.grid_size 1) size) "primary" "default"}}
+                                    @size="xs"
+                                    @text={{size}}
+                                    @disabled={{@disabled}}
+                                    @onClick={{fn this.setGridSize group size}}
+                                />
+                            {{/each}}
+                        </div>
+                        <div class="flex flex-row items-center space-x-2">
+                            <Button @icon="arrow-up" @size="xs" @disabled={{@disabled}} @helpText={{t "inspection.builder.move-up"}} @onClick={{fn this.moveGroup groupIndex -1}} />
+                            <Button @icon="arrow-down" @size="xs" @disabled={{@disabled}} @helpText={{t "inspection.builder.move-down"}} @onClick={{fn this.moveGroup groupIndex 1}} />
+                            <Button @type="danger" @icon="trash" @size="xs" @disabled={{@disabled}} @onClick={{fn this.deleteGroup group}} />
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 lg:grid-cols-{{or group.meta.grid_size 1}} gap-2">
+                        {{#each group.fields as |field fieldIndex|}}
+                            <div class="rounded-lg border border-gray-200 dark:border-gray-700 px-3 py-1.5 flex flex-row items-center justify-between">
+                                <div class="flex items-center space-x-2 min-w-0">
+                                    <div class="font-semibold text-sm truncate">{{or field.label (t "inspection.builder.untitled-field")}}</div>
+                                    <div class="custom-field-custom-field-type-pill rounded-lg bg-gray-300 dark:bg-gray-700 text-black dark:text-gray-300 px-1.5 py-0.5 text-xs truncate font-mono">
+                                        {{field.type}}
+                                    </div>
+                                    {{#if field.required}}
+                                        <span class="text-red-500 text-xs">*</span>
+                                    {{/if}}
+                                </div>
+                                <div class="flex flex-row items-center space-x-1 flex-shrink-0">
+                                    <Button @icon="arrow-up" @size="xs" @disabled={{@disabled}} @onClick={{fn this.moveField group fieldIndex -1}} />
+                                    <Button @icon="arrow-down" @size="xs" @disabled={{@disabled}} @onClick={{fn this.moveField group fieldIndex 1}} />
+                                    <Button @icon="pencil" @size="xs" @disabled={{@disabled}} @onClick={{fn this.editField group field}} />
+                                    <Button @type="danger" @icon="trash" @size="xs" @disabled={{@disabled}} @onClick={{fn this.deleteField group field}} />
+                                </div>
+                            </div>
+                        {{else}}
+                            <div class="text-xs text-gray-500">{{t "inspection.builder.no-fields"}}</div>
+                        {{/each}}
+                    </div>
+                </ContentPanel>
+            {{else}}
+                <div class="min-h-24 p-4">
+                    <div class="flex items-center justify-center border border-dashed border-gray-300 dark:border-gray-600 p-6 rounded-xl bg-gray-50 dark:bg-gray-800">
+                        <div class="text-center">
+                            <FaIcon @icon="layer-group" @size="2x" class="text-gray-400 mb-2" />
+                            <div class="text-sm text-gray-600 dark:text-gray-400 font-medium">{{t "inspection.builder.empty-title"}}</div>
+                            <div class="text-xs text-gray-500 dark:text-gray-500 mt-1">{{t "inspection.builder.empty-description"}}</div>
+                        </div>
+                    </div>
+                </div>
+            {{/each}}
+        </div>
+    {{/if}}
+</div>

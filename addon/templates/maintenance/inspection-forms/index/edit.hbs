@@ -1,11 +1,11 @@
 <Layout::Resource::Panel
     @resource={{@model}}
     @controller={{this}}
-    @headerTitle={{concat "Edit " @model.name}}
+    @headerTitle={{t "common.edit-resource-name" resourceName=@model.name}}
     @saveTask={{this.save}}
     @onPressCancel={{this.cancel}}
     @onOverlayReady={{fn (mut this.overlay)}}
 >
-    <InspectionForm::Form @resource={{@model}} @controller={{this}} />
+    <InspectionForm::Form @resource={{@model}} @controller={{this}} @onStructureChange={{this.setStructure}} />
     <Spacer @height="200px" />
 </Layout::Resource::Panel>

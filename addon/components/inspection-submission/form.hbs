@@ -1,12 +1,12 @@
 <div class="inspection-submission-form" ...attributes>
-    <ContentPanel @title="Inspection" @open={{true}} @wrapperClass="bordered-top">
+    <ContentPanel @title={{t "inspection.record.details"}} @open={{true}} @wrapperClass="bordered-top">
         <div class="grid grid-cols-1 gap-2 lg:grid-cols-2 no-input-group-padding text-xs">
-            <InputGroup @name="Form">
+            <InputGroup @name={{t "inspection.record.form"}}>
                 <ModelSelect
                     @modelName="inspection-form"
                     @selectedModel={{@resource.form}}
                     @query={{hash status="published"}}
-                    @placeholder="Select inspection form"
+                    @placeholder={{t "inspection.record.select-form"}}
                     @triggerClass="form-select form-input"
                     @infiniteScroll={{false}}
                     @renderInPlace={{true}}
@@ -17,16 +17,16 @@
                     {{form.name}}
                 </ModelSelect>
             </InputGroup>
-            <InputGroup @name="Status">
-                <PowerSelect @options={{this.statusOptions}} @selected={{@resource.status}} @onChange={{fn (mut @resource.status)}} @triggerClass="form-select form-input" @disabled={{cannot-write @resource}} as |status|>
+            <InputGroup @name={{t "inspection.record.status"}}>
+                <PowerSelect @options={{this.statusOptions}} @selected={{@resource.status}} @onChange={{this.setStatus}} @triggerClass="form-select form-input" @disabled={{cannot-write @resource}} as |status|>
                     {{smart-humanize status}}
                 </PowerSelect>
             </InputGroup>
-            <InputGroup @name="Vehicle">
+            <InputGroup @name={{t "inspection.record.vehicle"}}>
                 <ModelSelect
                     @modelName="vehicle"
                     @selectedModel={{@resource.vehicle}}
-                    @placeholder="Select vehicle"
+                    @placeholder={{t "inspection.record.select-vehicle"}}
                     @triggerClass="form-select form-input"
                     @infiniteScroll={{false}}
                     @renderInPlace={{true}}
@@ -37,11 +37,11 @@
                     {{or vehicle.displayName vehicle.name vehicle.public_id}}
                 </ModelSelect>
             </InputGroup>
-            <InputGroup @name="Driver">
+            <InputGroup @name={{t "inspection.record.driver"}}>
                 <ModelSelect
                     @modelName="driver"
                     @selectedModel={{@resource.driver}}
-                    @placeholder="Select driver"
+                    @placeholder={{t "inspection.record.select-driver"}}
                     @triggerClass="form-select form-input"
                     @infiniteScroll={{false}}
                     @renderInPlace={{true}}
@@ -52,58 +52,49 @@
                     {{or driver.name driver.public_id}}
                 </ModelSelect>
             </InputGroup>
-            <InputGroup @name="Odometer">
-                <Input @value={{@resource.odometer}} @type="number" class="w-full form-input" placeholder="Current odometer" disabled={{cannot-write @resource}} />
+            <InputGroup @name={{t "inspection.record.odometer"}}>
+                <input type="number" value={{@resource.odometer}} class="w-full form-input" placeholder={{t "inspection.record.odometer-placeholder"}} disabled={{cannot-write @resource}} {{on "input" this.setOdometer}} />
             </InputGroup>
-            <InputGroup @name="Engine Hours">
-                <Input @value={{@resource.engine_hours}} @type="number" class="w-full form-input" placeholder="Current engine hours" disabled={{cannot-write @resource}} />
+            <InputGroup @name={{t "inspection.record.engine-hours"}}>
+                <input type="number" value={{@resource.engine_hours}} class="w-full form-input" placeholder={{t "inspection.record.engine-hours-placeholder"}} disabled={{cannot-write @resource}} {{on "input" this.setEngineHours}} />
             </InputGroup>
         </div>
     </ContentPanel>
 
-    <ContentPanel @title="Checklist" @open={{true}} @wrapperClass="bordered-top">
-        <div class="space-y-3">
-            {{#each this.itemResults as |item index|}}
-                <div class="rounded border border-gray-200 dark:border-gray-700 p-3">
-                    <div class="grid grid-cols-1 gap-2 lg:grid-cols-5 no-input-group-padding text-xs">
-                        <InputGroup @name="Item" @wrapperClass="lg:col-span-2">
-                            <input type="text" value={{item.label}} class="w-full form-input" placeholder="Inspection item" disabled={{cannot-write @resource}} {{on "input" (fn this.updateResultField index "label")}} />
-                        </InputGroup>
-                        <InputGroup @name="Category">
-                            <input type="text" value={{item.category}} class="w-full form-input" placeholder="Category" disabled={{cannot-write @resource}} {{on "input" (fn this.updateResultField index "category")}} />
-                        </InputGroup>
-                        <InputGroup @name="Result">
-                            <PowerSelect @options={{this.resultOptions}} @selected={{item.status}} @onChange={{fn this.updateResult index "status"}} @triggerClass="form-select form-input" @disabled={{cannot-write @resource}} as |result|>
-                                {{smart-humanize result}}
-                            </PowerSelect>
-                        </InputGroup>
-                        <InputGroup @name="Severity">
-                            <PowerSelect @options={{this.severityOptions}} @selected={{item.severity}} @onChange={{fn this.updateResult index "severity"}} @triggerClass="form-select form-input" @disabled={{cannot-write @resource}} as |severity|>
-                                {{smart-humanize severity}}
-                            </PowerSelect>
-                        </InputGroup>
-                        <InputGroup @name="Comments" @wrapperClass="lg:col-span-5">
-                            <textarea class="w-full form-input" rows="2" placeholder="Notes, defect description, or repair context" disabled={{cannot-write @resource}} {{on "input" (fn this.updateResultField index "comments")}}>{{item.comments}}</textarea>
-                        </InputGroup>
-                    </div>
-                    <div class="mt-2 flex justify-end">
-                        <Button @text="Remove" @icon="trash" @size="xs" @type="danger" @disabled={{cannot-write @resource}} @onClick={{fn this.removeResult index}} />
-                    </div>
-                </div>
-            {{/each}}
-            <div class="flex items-center justify-between text-xs">
-                <div>
-                    <span class="font-semibold">{{this.failedCount}}</span>
-                    failed of
-                    <span class="font-semibold">{{this.totalCount}}</span>
-                    items
-                </div>
-                <Button @text="Add result" @icon="plus" @size="sm" @disabled={{cannot-write @resource}} @onClick={{this.addResult}} />
+    {{#if this.load.isRunning}}
+        <ContentPanel @title={{t "inspection.record.answers"}} @open={{true}} @wrapperClass="bordered-top">
+            <div class="flex items-center justify-center p-6">
+                <Spinner @loadingMessage={{t "inspection.record.loading-form"}} class="text-sm dark:text-gray-100" />
             </div>
-        </div>
-    </ContentPanel>
+        </ContentPanel>
+    {{else if this.hasStructure}}
+        {{#each this.groups as |group|}}
+            <ContentPanel @title={{or group.name (t "inspection.builder.untitled-group")}} @open={{true}} @wrapperClass="bordered-top">
+                {{#if group.description}}
+                    <div class="text-xs text-gray-500 mb-2">{{group.description}}</div>
+                {{/if}}
+                <div class="grid grid-cols-1 lg:grid-cols-{{or group.meta.grid_size 1}} gap-2">
+                    {{#each group.fields as |field|}}
+                        <InspectionField::Input @field={{field}} @value={{get this.values field.uuid}} @subject={{@resource}} @onChange={{this.setValue}} @disabled={{cannot-write @resource}} />
+                    {{/each}}
+                </div>
+            </ContentPanel>
+        {{/each}}
 
-    <ContentPanel @title="Metadata" @open={{false}} @wrapperClass="bordered-top">
+        {{#if this.passFailCount}}
+            <ContentPanel @title={{t "inspection.record.summary"}} @open={{true}} @wrapperClass="bordered-top">
+                <div class="text-xs">
+                    {{t "inspection.record.failed-of" failed=this.failedCount total=this.passFailCount}}
+                </div>
+            </ContentPanel>
+        {{/if}}
+    {{else if @resource.form}}
+        <ContentPanel @title={{t "inspection.record.answers"}} @open={{true}} @wrapperClass="bordered-top">
+            <div class="text-xs text-gray-500">{{t "inspection.record.form-has-no-fields"}}</div>
+        </ContentPanel>
+    {{/if}}
+
+    <ContentPanel @title={{t "inspection.record.metadata"}} @open={{false}} @wrapperClass="bordered-top">
         <MetadataEditor @value={{@resource.meta}} @onChange={{fn (mut @resource.meta)}} />
     </ContentPanel>
 
