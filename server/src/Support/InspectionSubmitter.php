@@ -263,7 +263,7 @@ class InspectionSubmitter
         }
 
         $notApplicable = filter_var($value['not_applicable'] ?? $value['na'] ?? false, FILTER_VALIDATE_BOOLEAN)
-            || ($value['passed'] ?? $value['pass'] ?? true) === null;
+            || (array_key_exists('passed', $value) && $value['passed'] === null);
 
         return [
             'passed'         => $notApplicable ? true : filter_var($value['passed'] ?? $value['pass'] ?? true, FILTER_VALIDATE_BOOLEAN),

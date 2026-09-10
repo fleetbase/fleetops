@@ -79,13 +79,11 @@ class InspectionSubmission extends FleetbaseResource
      */
     protected function projectCustomFieldValues(): array
     {
-        if (!$this->resource || !$this->resource->relationLoaded('customFieldValues')) {
-            return [];
-        }
-
+        // `withCustomFields()` has already loaded the values and the fields
+        // they answer, so there is nothing to guard against here.
         $internal = Http::isInternalRequest();
 
-        return $this->resource->customFieldValues->map(function (CustomFieldValue $value) use ($internal) {
+        return collect($this->resource?->customFieldValues)->map(function (CustomFieldValue $value) use ($internal) {
             $field = $value->customField;
             $row   = [
                 'custom_field' => $value->custom_field_uuid,
@@ -126,6 +124,16 @@ class InspectionSubmission extends FleetbaseResource
             }
 
             return $decoded;
+        }
+
+        // A value column is a string, so a meter reading comes back as one.
+        // The app compares and charts these; hand it the number it wrote.
+        if ($value->value_type === 'number') {
+            return is_numeric($raw) ? $raw + 0 : $raw;
+        }
+
+        if ($value->value_type === 'boolean') {
+            return filter_var($raw, FILTER_VALIDATE_BOOLEAN);
         }
 
         return InspectionFileStore::project($raw);
