@@ -67,38 +67,38 @@
                 <div class="rounded border border-gray-200 dark:border-gray-700 p-3">
                     <div class="grid grid-cols-1 gap-2 lg:grid-cols-5 no-input-group-padding text-xs">
                         <InputGroup @name="Item" @wrapperClass="lg:col-span-2">
-                            <Input @value={{item.label}} @type="text" class="w-full form-input" placeholder="Inspection item" {{on "input" (fn this.updateResult index "label" item.label)}} />
+                            <input type="text" value={{item.label}} class="w-full form-input" placeholder="Inspection item" disabled={{cannot-write @resource}} {{on "input" (fn this.updateResultField index "label")}} />
                         </InputGroup>
                         <InputGroup @name="Category">
-                            <Input @value={{item.category}} @type="text" class="w-full form-input" placeholder="Category" {{on "input" (fn this.updateResult index "category" item.category)}} />
+                            <input type="text" value={{item.category}} class="w-full form-input" placeholder="Category" disabled={{cannot-write @resource}} {{on "input" (fn this.updateResultField index "category")}} />
                         </InputGroup>
                         <InputGroup @name="Result">
-                            <PowerSelect @options={{this.resultOptions}} @selected={{item.status}} @onChange={{fn this.updateResult index "status"}} @triggerClass="form-select form-input" as |result|>
+                            <PowerSelect @options={{this.resultOptions}} @selected={{item.status}} @onChange={{fn this.updateResult index "status"}} @triggerClass="form-select form-input" @disabled={{cannot-write @resource}} as |result|>
                                 {{smart-humanize result}}
                             </PowerSelect>
                         </InputGroup>
                         <InputGroup @name="Severity">
-                            <PowerSelect @options={{this.severityOptions}} @selected={{item.severity}} @onChange={{fn this.updateResult index "severity"}} @triggerClass="form-select form-input" as |severity|>
+                            <PowerSelect @options={{this.severityOptions}} @selected={{item.severity}} @onChange={{fn this.updateResult index "severity"}} @triggerClass="form-select form-input" @disabled={{cannot-write @resource}} as |severity|>
                                 {{smart-humanize severity}}
                             </PowerSelect>
                         </InputGroup>
                         <InputGroup @name="Comments" @wrapperClass="lg:col-span-5">
-                            <Textarea @value={{item.comments}} class="w-full form-input" rows={{2}} placeholder="Notes, defect description, or repair context" {{on "input" (fn this.updateResult index "comments" item.comments)}} />
+                            <textarea class="w-full form-input" rows="2" placeholder="Notes, defect description, or repair context" disabled={{cannot-write @resource}} {{on "input" (fn this.updateResultField index "comments")}}>{{item.comments}}</textarea>
                         </InputGroup>
                     </div>
                     <div class="mt-2 flex justify-end">
-                        <Button @text="Remove" @icon="trash" @size="xs" @type="danger" @onClick={{fn this.removeResult index}} />
+                        <Button @text="Remove" @icon="trash" @size="xs" @type="danger" @disabled={{cannot-write @resource}} @onClick={{fn this.removeResult index}} />
                     </div>
                 </div>
             {{/each}}
             <div class="flex items-center justify-between text-xs">
                 <div>
-                    <span class="font-semibold">{{@resource.failed_items}}</span>
+                    <span class="font-semibold">{{this.failedCount}}</span>
                     failed of
-                    <span class="font-semibold">{{@resource.total_items}}</span>
+                    <span class="font-semibold">{{this.totalCount}}</span>
                     items
                 </div>
-                <Button @text="Add result" @icon="plus" @size="sm" @onClick={{this.addResult}} />
+                <Button @text="Add result" @icon="plus" @size="sm" @disabled={{cannot-write @resource}} @onClick={{this.addResult}} />
             </div>
         </div>
     </ContentPanel>

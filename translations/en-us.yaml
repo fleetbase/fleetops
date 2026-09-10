@@ -86,6 +86,8 @@ menu:
     maintenance: Maintenance
     schedules: Schedules
     work-orders: Work Orders
+    inspection-forms: 'Inspection Forms'
+    inspections: 'Inspections'
     equipment: Equipment
     parts: Parts
     maintenance-history: Maintenance History

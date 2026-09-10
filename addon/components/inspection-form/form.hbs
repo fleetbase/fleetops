@@ -31,23 +31,32 @@
                 <div class="rounded border border-gray-200 dark:border-gray-700 p-3">
                     <div class="grid grid-cols-1 gap-2 lg:grid-cols-4 no-input-group-padding text-xs">
                         <InputGroup @name="Label" @wrapperClass="lg:col-span-2">
-                            <Input @value={{item.label}} @type="text" class="w-full form-input" placeholder="Brake lights" {{on "input" (fn this.updateItem index "label" item.label)}} />
+                            <input type="text" value={{item.label}} class="w-full form-input" placeholder="Brake lights" disabled={{cannot-write @resource}} {{on "input" (fn this.updateItemField index "label")}} />
                         </InputGroup>
                         <InputGroup @name="Category">
-                            <Input @value={{item.category}} @type="text" class="w-full form-input" placeholder="Lights" {{on "input" (fn this.updateItem index "category" item.category)}} />
+                            <input type="text" value={{item.category}} class="w-full form-input" placeholder="Lights" disabled={{cannot-write @resource}} {{on "input" (fn this.updateItemField index "category")}} />
                         </InputGroup>
                         <InputGroup @name="Severity">
-                            <PowerSelect @options={{this.severityOptions}} @selected={{item.severity}} @onChange={{fn this.updateItem index "severity"}} @triggerClass="form-select form-input" as |severity|>
+                            <PowerSelect @options={{this.severityOptions}} @selected={{item.severity}} @onChange={{fn this.updateItem index "severity"}} @triggerClass="form-select form-input" @disabled={{cannot-write @resource}} as |severity|>
                                 {{smart-humanize severity}}
                             </PowerSelect>
                         </InputGroup>
+                        <InputGroup @name="Description" @wrapperClass="lg:col-span-4">
+                            <input type="text" value={{item.description}} class="w-full form-input" placeholder="What to check, and what a pass looks like" disabled={{cannot-write @resource}} {{on "input" (fn this.updateItemField index "description")}} />
+                        </InputGroup>
                     </div>
-                    <div class="mt-2 flex justify-end">
-                        <Button @text="Remove" @icon="trash" @size="xs" @type="danger" @onClick={{fn this.removeItem index}} />
+                    <div class="mt-2 flex items-center justify-between">
+                        <label class="flex items-center gap-2 text-xs">
+                            <input type="checkbox" checked={{item.required}} class="form-checkbox" disabled={{cannot-write @resource}} {{on "change" (fn this.toggleItemRequired index)}} />
+                            <span>Required</span>
+                        </label>
+                        <Button @text="Remove" @icon="trash" @size="xs" @type="danger" @disabled={{cannot-write @resource}} @onClick={{fn this.removeItem index}} />
                     </div>
                 </div>
+            {{else}}
+                <div class="text-xs text-gray-500">No checklist items yet. Add the things a driver must check.</div>
             {{/each}}
-            <Button @text="Add item" @icon="plus" @size="sm" @onClick={{this.addItem}} />
+            <Button @text="Add item" @icon="plus" @size="sm" @disabled={{cannot-write @resource}} @onClick={{this.addItem}} />
         </div>
     </ContentPanel>
 
