@@ -8883,3 +8883,534 @@ body[data-theme='dark'] .filter-multi-model > .clear-button {
     height: 1.625rem;
     min-width: 4rem;
 }
+
+/* ==========================================================================
+   Inspection sheet
+   --------------------------------------------------------------------------
+   An inspection is a checklist, not a form: an inspector reads down it once
+   and answers every line. So every field is a row of the same shape — what is
+   being checked on the left, the control on the right — and the rows sit in
+   plain, always-open sections. Nothing collapses, nothing is in a grid, and
+   answering a row never changes the height of the row beside it, because
+   there is no row beside it.
+
+   Used by the console's submission form and by the public link page, so a
+   driver filling this in from a phone and a manager filling it in from the
+   console are reading the same sheet.
+   ========================================================================== */
+
+.inspection-sheet {
+    --inspection-border: #e5e7eb;
+    --inspection-border-strong: #d1d5db;
+    --inspection-surface: #fff;
+    --inspection-surface-sunken: #f9fafb;
+    --inspection-text: #111827;
+    --inspection-text-muted: #6b7280;
+    --inspection-accent: #2563eb;
+    --inspection-pass: #16a34a;
+    --inspection-fail: #dc2626;
+    --inspection-na: #6b7280;
+    --inspection-defect-border: #fecaca;
+    --inspection-defect-surface: #fef2f2;
+
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+body[data-theme='dark'] .inspection-sheet {
+    --inspection-border: #374151;
+    --inspection-border-strong: #4b5563;
+    --inspection-surface: #1f2937;
+    --inspection-surface-sunken: #111827;
+    --inspection-text: #f9fafb;
+    --inspection-text-muted: #9ca3af;
+    --inspection-accent: #3b82f6;
+    --inspection-pass: #22c55e;
+    --inspection-fail: #ef4444;
+    --inspection-na: #9ca3af;
+    --inspection-defect-border: #7f1d1d;
+    --inspection-defect-surface: rgb(127 29 29 / 18%);
+}
+
+/* --- sections ----------------------------------------------------------- */
+
+.inspection-section {
+    border: 1px solid var(--inspection-border);
+    border-radius: 0.5rem;
+    background-color: var(--inspection-surface);
+    overflow: hidden;
+}
+
+.inspection-section__header {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 0.625rem 1rem;
+    border-bottom: 1px solid var(--inspection-border);
+    background-color: var(--inspection-surface-sunken);
+}
+
+.inspection-section__title {
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--inspection-text);
+    margin: 0;
+}
+
+.inspection-section__description {
+    margin: 0.25rem 0 0;
+    font-size: 0.75rem;
+    line-height: 1.4;
+    color: var(--inspection-text-muted);
+}
+
+.inspection-section__count {
+    flex-shrink: 0;
+    font-size: 0.6875rem;
+    font-variant-numeric: tabular-nums;
+    color: var(--inspection-text-muted);
+}
+
+.inspection-section__count[data-complete='true'] {
+    color: var(--inspection-pass);
+    font-weight: 600;
+}
+
+.inspection-section__empty {
+    padding: 1rem;
+    font-size: 0.75rem;
+    color: var(--inspection-text-muted);
+}
+
+/* --- rows --------------------------------------------------------------- */
+
+.inspection-row {
+    padding: 0.75rem 1rem;
+}
+
+.inspection-row + .inspection-row {
+    border-top: 1px solid var(--inspection-border);
+}
+
+/*
+ * A failed check is marked down its own edge, so scanning a long sheet for
+ * what went wrong does not mean reading every label.
+ */
+.inspection-row[data-answer='fail'] {
+    box-shadow: inset 3px 0 0 var(--inspection-fail);
+}
+
+/*
+ * The label and the control share one line. The label takes the slack, so a
+ * long "Sidewall condition, offside rear" wraps in place instead of squeezing
+ * the control it belongs to.
+ */
+.inspection-row__main {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 1rem;
+}
+
+.inspection-row__label {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+.inspection-row__title {
+    font-size: 0.8125rem;
+    font-weight: 600;
+    line-height: 1.35;
+    color: var(--inspection-text);
+}
+
+.inspection-row__required {
+    color: var(--inspection-fail);
+    margin-left: 0.125rem;
+}
+
+.inspection-row__hint {
+    margin-top: 0.125rem;
+    font-size: 0.75rem;
+    line-height: 1.4;
+    color: var(--inspection-text-muted);
+    white-space: pre-wrap;
+}
+
+.inspection-row__control {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    max-width: 100%;
+}
+
+/* Typed controls get one width, so a column of them lines up. */
+.inspection-row__control--sized {
+    flex: 0 1 18rem;
+    width: 18rem;
+}
+
+/* Anything that needs the full width sits under its label rather than beside it. */
+.inspection-row--stacked .inspection-row__main {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.5rem;
+}
+
+.inspection-row--stacked .inspection-row__control,
+.inspection-row--stacked .inspection-row__control--sized {
+    flex: 1 1 auto;
+    width: 100%;
+}
+
+/* A select brings its own wrapper; let it take the control's width. */
+.inspection-row__control > .fleetbase-model-select,
+.inspection-row__control > .ember-basic-dropdown {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+.inspection-row__unit {
+    flex-shrink: 0;
+    font-size: 0.75rem;
+    color: var(--inspection-text-muted);
+}
+
+@media (width <= 640px) {
+    .inspection-row__main {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 0.5rem;
+    }
+
+    .inspection-row__control,
+    .inspection-row__control--sized {
+        flex: 1 1 auto;
+        width: 100%;
+    }
+}
+
+/* --- the pass / fail / n-a control -------------------------------------- */
+
+.inspection-choice {
+    display: inline-flex;
+    align-items: stretch;
+    border: 1px solid var(--inspection-border-strong);
+    border-radius: 0.375rem;
+    overflow: hidden;
+    background-color: var(--inspection-surface);
+}
+
+.inspection-choice__option {
+    appearance: none;
+    border: 0;
+    background: transparent;
+    padding: 0.3125rem 0.75rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    line-height: 1.25;
+    color: var(--inspection-text-muted);
+    cursor: pointer;
+    white-space: nowrap;
+    transition:
+        background-color 0.12s ease,
+        color 0.12s ease;
+}
+
+.inspection-choice__option + .inspection-choice__option {
+    border-left: 1px solid var(--inspection-border-strong);
+}
+
+.inspection-choice__option:hover:not(:disabled) {
+    color: var(--inspection-text);
+    background-color: var(--inspection-surface-sunken);
+}
+
+.inspection-choice__option:focus-visible {
+    outline: 2px solid var(--inspection-accent);
+    outline-offset: -2px;
+}
+
+.inspection-choice__option:disabled {
+    cursor: not-allowed;
+    opacity: 0.55;
+}
+
+.inspection-choice__option[aria-pressed='true'] {
+    color: #fff;
+}
+
+.inspection-choice__option[aria-pressed='true'][data-answer='pass'] {
+    background-color: var(--inspection-pass);
+}
+
+.inspection-choice__option[aria-pressed='true'][data-answer='fail'] {
+    background-color: var(--inspection-fail);
+}
+
+.inspection-choice__option[aria-pressed='true'][data-answer='na'] {
+    background-color: var(--inspection-na);
+}
+
+/* --- the defect block a failed row opens -------------------------------- */
+
+.inspection-row__detail {
+    margin-top: 0.75rem;
+    border: 1px solid var(--inspection-defect-border);
+    border-radius: 0.5rem;
+    background-color: var(--inspection-defect-surface);
+    padding: 0.75rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.inspection-detail__grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0.75rem;
+}
+
+@media (width >= 768px) {
+    .inspection-detail__grid {
+        grid-template-columns: minmax(0, 14rem) minmax(0, 1fr);
+        align-items: end;
+    }
+}
+
+.inspection-detail__label {
+    display: block;
+    margin-bottom: 0.25rem;
+    font-size: 0.6875rem;
+    font-weight: 600;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+    color: var(--inspection-text-muted);
+}
+
+.inspection-detail__photos {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.inspection-photo {
+    position: relative;
+    height: 4rem;
+    width: 4rem;
+    border-radius: 0.375rem;
+    border: 1px solid var(--inspection-border);
+    overflow: hidden;
+    background-color: var(--inspection-surface-sunken);
+}
+
+.inspection-photo img {
+    height: 100%;
+    width: 100%;
+    object-fit: cover;
+}
+
+.inspection-photo__placeholder {
+    display: flex;
+    height: 100%;
+    width: 100%;
+    align-items: center;
+    justify-content: center;
+    color: var(--inspection-text-muted);
+}
+
+/* --- the running total at the foot of the sheet ------------------------- */
+
+.inspection-summary {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.75rem 1.5rem;
+    border: 1px solid var(--inspection-border);
+    border-radius: 0.5rem;
+    background-color: var(--inspection-surface-sunken);
+    padding: 0.75rem 1rem;
+}
+
+.inspection-summary__item {
+    display: flex;
+    align-items: baseline;
+    gap: 0.375rem;
+    font-size: 0.75rem;
+    color: var(--inspection-text-muted);
+}
+
+.inspection-summary__value {
+    font-size: 0.875rem;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    color: var(--inspection-text);
+}
+
+.inspection-summary__value--fail {
+    color: var(--inspection-fail);
+}
+
+.inspection-summary__value--pass {
+    color: var(--inspection-pass);
+}
+
+.inspection-summary__unsafe {
+    margin-left: auto;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    border-radius: 9999px;
+    background-color: var(--inspection-fail);
+    color: #fff;
+    padding: 0.1875rem 0.625rem;
+    font-size: 0.6875rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+/* ==========================================================================
+   Inspection links
+   --------------------------------------------------------------------------
+   A generated link used to exist only as a toast. These are the rows that
+   replaced it: one per link, with the link itself, who and what it was for,
+   and whether it still works.
+   ========================================================================== */
+
+.inspection-link-list {
+    --inspection-border: #e5e7eb;
+    --inspection-surface: #fff;
+    --inspection-surface-sunken: #f9fafb;
+    --inspection-text: #111827;
+    --inspection-text-muted: #6b7280;
+}
+
+body[data-theme='dark'] .inspection-link-list {
+    --inspection-border: #374151;
+    --inspection-surface: #1f2937;
+    --inspection-surface-sunken: #111827;
+    --inspection-text: #f9fafb;
+    --inspection-text-muted: #9ca3af;
+}
+
+.inspection-link {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    padding: 0.75rem 1rem;
+}
+
+.inspection-link + .inspection-link {
+    border-top: 1px solid var(--inspection-border);
+}
+
+/* A link that can no longer be used recedes rather than disappearing. */
+.inspection-link:not([data-state='active']) {
+    opacity: 0.6;
+}
+
+.inspection-link__head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.inspection-link__state {
+    flex-shrink: 0;
+    border-radius: 9999px;
+    padding: 0.125rem 0.5rem;
+    font-size: 0.625rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    background-color: #e5e7eb;
+    color: #374151;
+}
+
+.inspection-link__state[data-state='active'] {
+    background-color: #16a34a;
+    color: #fff;
+}
+
+.inspection-link__state[data-state='expired'],
+.inspection-link__state[data-state='revoked'] {
+    background-color: #dc2626;
+    color: #fff;
+}
+
+.inspection-link__state[data-state='used'] {
+    background-color: #2563eb;
+    color: #fff;
+}
+
+.inspection-link__for {
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: var(--inspection-text);
+    min-width: 0;
+}
+
+.inspection-link__when {
+    margin-left: auto;
+    flex-shrink: 0;
+    font-size: 0.6875rem;
+    color: var(--inspection-text-muted);
+}
+
+.inspection-link__url {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    border: 1px solid var(--inspection-border);
+    border-radius: 0.375rem;
+    background-color: var(--inspection-surface-sunken);
+    padding: 0.375rem 0.5rem;
+}
+
+.inspection-link__code {
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow-x: auto;
+    white-space: nowrap;
+    font-size: 0.6875rem;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    color: var(--inspection-text-muted);
+}
+
+.inspection-link__note {
+    font-size: 0.6875rem;
+    font-style: italic;
+    color: var(--inspection-text-muted);
+}
+
+.inspection-link__foot {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.375rem;
+    font-size: 0.6875rem;
+    color: var(--inspection-text-muted);
+}
+
+.inspection-link__sep {
+    padding: 0 0.125rem;
+    color: var(--inspection-text-muted);
+}
+
+/* A stored answer, read back: the same row, with the value where the control was. */
+.inspection-row__answer {
+    font-size: 0.8125rem;
+    color: var(--inspection-text);
+}
+
+a.inspection-photo {
+    display: block;
+}

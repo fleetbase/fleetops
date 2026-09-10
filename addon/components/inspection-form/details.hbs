@@ -28,6 +28,10 @@
         </div>
     </ContentPanel>
 
+    <ContentPanel @title={{t "inspection.link.public-links"}} @open={{true}} @wrapperClass="bordered-top">
+        <InspectionLink::List @form={{@resource}} />
+    </ContentPanel>
+
     <ContentPanel @title={{t "inspection.form.structure"}} @open={{true}} @wrapperClass="bordered-top">
         {{#if this.load.isRunning}}
             <div class="flex items-center justify-center p-6">

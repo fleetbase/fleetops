@@ -5,20 +5,20 @@ import { action } from '@ember/object';
 import { next } from '@ember/runloop';
 import { task } from 'ember-concurrency';
 import { flattenFields } from '../../utils/inspection-form-structure';
-import { valueTypeForFieldType } from '../../utils/inspection-field-types';
+import { answerRows, seedAnswers } from '../../utils/inspection-answers';
 
 const STATUS_OPTIONS = ['draft', 'submitted', 'needs_review', 'resolved'];
 
 /**
  * An inspection being filled in.
  *
- * The header names the form and what is being inspected; the rest is the
- * selected form's field groups, each rendered as a panel of
- * `inspection-field/input`. The answers live here, keyed by field uuid, and
- * are handed up through `@onAnswersChange` as the rows the server accepts —
- * the same `custom_field_values` body the driver API takes, so the console and
- * the app write the same thing and the item results are derived from the
- * pass-fail answers among them.
+ * The details of the inspection come first, then the selected form's field
+ * groups as an `inspection-sheet` — the same sheet a public link renders, so
+ * the two cannot drift. The answers live here, keyed by field uuid, and are
+ * handed up through `@onAnswersChange` as the rows the server accepts — the
+ * same `custom_field_values` body the driver API takes, so the console, a
+ * link and the app all write the same thing and the item results are derived
+ * from the pass-fail answers among them.
  *
  * Nothing writes to `@resource` during render: the structure and the stored
  * answers are loaded in tasks, and every value change arrives from an event.
@@ -52,14 +52,6 @@ export default class InspectionSubmissionFormComponent extends Component {
         return this.fields.length > 0;
     }
 
-    get failedCount() {
-        return this.fields.filter((field) => field.type === 'pass-fail' && this.values[field.uuid]?.passed === false && this.values[field.uuid]?.not_applicable !== true).length;
-    }
-
-    get passFailCount() {
-        return this.fields.filter((field) => field.type === 'pass-fail').length;
-    }
-
     @task *load(form) {
         this.groups = [];
 
@@ -72,69 +64,16 @@ export default class InspectionSubmissionFormComponent extends Component {
             const stored = this.args.resource?.id && !this.args.resource?.isNew ? yield this.inspectionSubmissionActions.loadAnswers(this.args.resource) : {};
 
             this.groups = groups;
-            this.values = this.seed(groups, stored);
+            this.values = seedAnswers(groups, stored);
             this.announce();
         } catch (error) {
             this.notifications.serverError(error);
         }
     }
 
-    /**
-     * Every field starts with an answer, so a form saved untouched still files
-     * a complete set: a pass-fail field passes unless the inspector says
-     * otherwise, which is what the first cut did and what the app does.
-     */
-    seed(groups, stored = {}) {
-        return flattenFields(groups).reduce((carry, field) => {
-            if (stored[field.uuid] !== undefined) {
-                carry[field.uuid] = stored[field.uuid];
-                return carry;
-            }
-
-            carry[field.uuid] = field.type === 'pass-fail' ? { passed: true, not_applicable: false, severity: null, comments: '', photos: [], unsafe: false } : null;
-
-            return carry;
-        }, {});
-    }
-
     /** The answers, as the server accepts them. */
     get rows() {
-        return this.fields.map((field) => ({
-            custom_field: field.uuid,
-            value_type: valueTypeForFieldType(field.type),
-            value: this.serializeValue(field, this.values[field.uuid]),
-        }));
-    }
-
-    /**
-     * A file value read back from the server arrives resolved to an object; on
-     * the way out it has to be a reference again, which is what the file's
-     * public id is — `InspectionFileStore::normalize()` resolves a `file_…` id
-     * back to `file:<uuid>`.
-     */
-    serializeValue(field, value) {
-        if (field.type === 'pass-fail') {
-            const answer = value && typeof value === 'object' ? value : { passed: true, not_applicable: false };
-
-            return {
-                ...answer,
-                photos: (Array.isArray(answer.photos) ? answer.photos : []).map((photo) => this.serializeFile(photo)).filter(Boolean),
-            };
-        }
-
-        if (field.type === 'file-upload' || field.type === 'signature') {
-            return this.serializeFile(value);
-        }
-
-        return value;
-    }
-
-    serializeFile(value) {
-        if (value && typeof value === 'object') {
-            return value.id ?? null;
-        }
-
-        return typeof value === 'string' && value !== '' ? value : null;
+        return answerRows(this.fields, this.values);
     }
 
     announce() {

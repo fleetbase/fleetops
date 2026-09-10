@@ -2,46 +2,33 @@ import Component from '@glimmer/component';
 import { tracked } from '@glimmer/tracking';
 import { inject as service } from '@ember/service';
 import { action } from '@ember/object';
-import { componentForFieldType, INSPECTION_SEVERITIES } from '../../utils/inspection-field-types';
+import { INSPECTION_SEVERITIES } from '../../utils/inspection-field-types';
+import { answerState, isUnsafeAnswer } from '../../utils/inspection-answers';
 
 const PASS_FAIL_DEFAULT = { passed: true, not_applicable: false, severity: null, comments: '', photos: [], unsafe: false };
 
 /**
  * One inspection field, being answered.
  *
- * `pass-fail`, `signature` and the inspection flavour of `file-upload` are
- * FleetOps' own and are rendered here; `textarea`, `number` and `boolean` are
- * rendered here too, because the platform's custom-field type map has no
- * component for them. Everything else is handed to the platform's
- * `custom-field/input`, which is given a read-only view of this field's value
- * so an edit opens with what was answered before.
+ * Every one of the eleven field types is rendered here rather than some being
+ * handed to the platform's `custom-field/input`. Delegating made the sheet
+ * read as two different forms interleaved — its own label chrome, its own
+ * spacing, its own idea of what a control looks like — and an inspection is
+ * one list that an inspector reads straight down. Owning them all is what
+ * makes every row the same shape.
  *
  * The component owns no copy of the answer. `@value` in, `@onChange` out —
  * the answering screen holds the values, so nothing is written during render.
  */
 export default class InspectionFieldInputComponent extends Component {
     @service fetch;
+    @service intl;
     @tracked uploadProgress = null;
 
     /** Freshly uploaded files, so a photo can be shown before it is saved. */
     @tracked previews = {};
 
     severityOptions = INSPECTION_SEVERITIES;
-
-    constructor() {
-        super(...arguments);
-
-        const field = this.args.field ?? {};
-        const id = field.uuid ?? field.id;
-
-        // The platform's input reads both the field and its current value off
-        // objects it expects to be models. A plain field with an `id`, and a
-        // subject that answers `get('custom_field_values')`, is all it touches.
-        this.delegatedField = { ...field, id, component: componentForFieldType(field.type) };
-        this.delegatedSubject = {
-            get: (key) => (key === 'custom_field_values' ? [{ custom_field_uuid: id, value: this.args.value ?? null }] : undefined),
-        };
-    }
 
     get field() {
         return this.args.field ?? {};
@@ -52,9 +39,74 @@ export default class InspectionFieldInputComponent extends Component {
         return meta && typeof meta === 'object' ? meta : {};
     }
 
-    get colSpanClass() {
-        const colSpan = this.meta.colSpan;
-        return colSpan ? `col-span-${colSpan}` : '';
+    /** A field with no label still needs something to click on. */
+    get label() {
+        return this.field.label || this.field.name || this.intl.t('inspection.builder.untitled-field');
+    }
+
+    get instructions() {
+        return this.meta.instructions ?? null;
+    }
+
+    get unit() {
+        return this.meta.unit ?? null;
+    }
+
+    /**
+     * A control that needs the full width sits under its label instead of
+     * beside it: a note, a photo, a signature.
+     */
+    get isStacked() {
+        return ['textarea', 'file-upload', 'signature'].includes(this.field.type);
+    }
+
+    /** What this row currently says, for the row's own `data-answer`. */
+    get answerState() {
+        return answerState(this.field, this.args.value);
+    }
+
+    /**
+     * What an empty control should suggest. An author can write their own; a
+     * number otherwise shows a zero rather than nothing at all, which is what
+     * an inspector reaches for on a tread depth or a pressure.
+     */
+    get placeholder() {
+        if (this.meta.placeholder) {
+            return this.meta.placeholder;
+        }
+
+        switch (this.field.type) {
+            case 'number':
+                return '0';
+            case 'select':
+                return this.intl.t('inspection.answer.select-placeholder');
+            case 'textarea':
+                return this.intl.t('inspection.answer.note-placeholder');
+            default:
+                return this.intl.t('inspection.answer.text-placeholder');
+        }
+    }
+
+    /**
+     * Whether this row may offer an upload.
+     *
+     * A public link runs unauthenticated, and the file endpoint the uploader
+     * posts to does not. So a link renders the field and says the photo has
+     * to come from the console or the driver app, rather than showing a
+     * button that can only fail.
+     */
+    get canUpload() {
+        return this.args.allowUploads !== false && !this.args.disabled;
+    }
+
+    get uploadsBlocked() {
+        return this.args.allowUploads === false;
+    }
+
+    /** The answers a `select` or `radio-button` field offers. */
+    get choiceOptions() {
+        const options = this.field.options;
+        return Array.isArray(options) && options.length ? options : null;
     }
 
     // ---------- pass-fail ----------
@@ -88,6 +140,14 @@ export default class InspectionFieldInputComponent extends Component {
 
     get severity() {
         return this.answer.severity ?? this.meta.severity ?? 'medium';
+    }
+
+    get isUnsafe() {
+        return isUnsafeAnswer(this.field, this.args.value);
+    }
+
+    get comments() {
+        return this.answer.comments ?? '';
     }
 
     /** The photos on a failed pass-fail answer, ready to render. */
@@ -144,8 +204,8 @@ export default class InspectionFieldInputComponent extends Component {
         this.emit(Boolean(value));
     }
 
-    @action setDelegatedValue(value) {
-        this.emit(value);
+    @action setChoice(option) {
+        this.emit(option ?? null);
     }
 
     @action markPassed() {

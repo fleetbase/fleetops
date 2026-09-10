@@ -5,6 +5,7 @@ namespace Fleetbase\FleetOps\Http\Controllers\Internal\v1;
 use Fleetbase\FleetOps\Http\Controllers\FleetOpsController;
 use Fleetbase\FleetOps\Models\Driver;
 use Fleetbase\FleetOps\Models\InspectionForm;
+use Fleetbase\FleetOps\Http\Resources\v1\InspectionLink as InspectionLinkResource;
 use Fleetbase\FleetOps\Models\InspectionLink;
 use Fleetbase\FleetOps\Models\Vehicle;
 use Fleetbase\FleetOps\Support\InspectionFormSync;
@@ -133,24 +134,70 @@ class InspectionFormController extends FleetOpsController
             'vehicle_uuid'         => $vehicle?->uuid,
             'created_by_uuid'      => session('user'),
             'token_hash'           => InspectionLink::hashToken($token),
+            'token'                => $token,
             'status'               => 'active',
             'single_use'           => data_get($validated, 'single_use', true),
             'expires_at'           => data_get($validated, 'expires_at'),
         ]);
 
-        $path = '/inspection?id=' . urlencode($form->public_id ?? $form->uuid) . '&token=' . urlencode($token);
+        // `~/` is what puts the page outside the console: the host app routes
+        // `/~/:slug` at the top level, a sibling of `console`, so neither the
+        // console's chrome nor its authentication gate applies. Without it the
+        // link lands on the authenticated `console/:slug` route instead, which
+        // bounces a signed-out recipient to the login page and renders blank
+        // for everyone else.
+        $path = '/~/inspection?id=' . urlencode($form->public_id ?? $form->uuid) . '&token=' . urlencode($token);
 
         return response()->json([
             'status'  => 'ok',
             'message' => 'Inspection link generated.',
-            'link'    => [
-                'id'         => $link->public_id,
-                'path'       => $path,
-                'token'      => $token,
-                'expires_at' => $link->expires_at,
-                'driver'     => $driver ? ['id' => $driver->public_id, 'name' => $driver->name] : null,
-                'vehicle'    => $vehicle ? ['id' => $vehicle->public_id, 'name' => $vehicle->display_name ?? $vehicle->name] : null,
-            ],
+            'link'    => array_merge(
+                (new InspectionLinkResource($link->fresh(['form', 'driver', 'vehicle', 'createdBy'])))->resolve(),
+                ['path' => $path, 'token' => $token]
+            ),
+        ]);
+    }
+
+    /**
+     * Every link minted for this form, newest first.
+     *
+     * A link used to vanish the moment the modal that minted it closed. An
+     * operator needs to see what is outstanding: which vehicle and driver a
+     * link was for, when it was made, whether it has been opened, and whether
+     * it still works.
+     */
+    public function links(Request $request, string $id): JsonResponse
+    {
+        $form = $this->resolveForm($id)->firstOrFail();
+
+        $links = InspectionLink::where('inspection_form_uuid', $form->uuid)
+            ->with(['form', 'driver', 'vehicle', 'createdBy'])
+            ->orderByDesc('created_at')
+            ->limit((int) $request->input('limit', 50))
+            ->get();
+
+        return response()->json([
+            'links' => InspectionLinkResource::collection($links)->resolve(),
+        ]);
+    }
+
+    /** Take a link out of use, leaving the record of it in the list. */
+    public function revokeLink(Request $request, string $id, string $linkId): JsonResponse
+    {
+        $form = $this->resolveForm($id)->firstOrFail();
+
+        $link = InspectionLink::where('inspection_form_uuid', $form->uuid)
+            ->where(function ($query) use ($linkId) {
+                $query->where('uuid', $linkId)->orWhere('public_id', $linkId);
+            })
+            ->firstOrFail();
+
+        $link->revoke();
+
+        return response()->json([
+            'status'  => 'ok',
+            'message' => 'Inspection link revoked.',
+            'link'    => (new InspectionLinkResource($link->fresh(['form', 'driver', 'vehicle', 'createdBy'])))->resolve(),
         ]);
     }
 

@@ -1,8 +1,21 @@
-<div class="field-info-container {{this.colSpanClass}}" ...attributes>
-    <div class="field-name">{{this.field.label}}</div>
-    <div class="field-value">
-        {{#if this.isPassFail}}
-            <div class="flex flex-row items-center flex-wrap gap-2">
+{{!
+    One stored answer, read-only.
+
+    The same row as `inspection-field/input`, so a submitted inspection reads
+    exactly like the sheet it was filled in on — the check on the left, what
+    was answered on the right, and a failure's detail beneath its own row.
+}}
+<div class="inspection-row" data-field-type={{this.field.type}} data-answer={{this.answerState}} ...attributes>
+    <div class="inspection-row__main">
+        <div class="inspection-row__label">
+            <div class="inspection-row__title">{{this.label}}</div>
+            {{#if this.field.description}}
+                <div class="inspection-row__hint">{{this.field.description}}</div>
+            {{/if}}
+        </div>
+
+        <div class="inspection-row__control">
+            {{#if this.isPassFail}}
                 <Badge @status={{this.resultStatus}}>{{t this.resultLabel}}</Badge>
                 {{#if this.answer.severity}}
                     <Badge @status={{if (eq this.answer.severity "critical") "danger" "info"}}>
@@ -12,35 +25,52 @@
                 {{#if this.answer.unsafe}}
                     <Badge @status="danger">{{t "inspection.answer.unsafe"}}</Badge>
                 {{/if}}
-            </div>
-            {{#if this.answer.comments}}
-                <div class="mt-1 whitespace-pre-wrap">{{this.answer.comments}}</div>
+
+            {{else if this.isFile}}
+                {{#if this.file.url}}
+                    <a href={{this.file.url}} target="_blank" rel="noopener noreferrer" class="inspection-photo">
+                        <Image src={{this.file.url}} alt={{or this.file.filename this.label}} />
+                    </a>
+                {{else if this.file.reference}}
+                    <span class="inspection-row__unit">{{this.file.reference}}</span>
+                {{else}}
+                    <span class="inspection-row__unit">{{t "inspection.answer.unanswered"}}</span>
+                {{/if}}
+
+            {{else if this.isBoolean}}
+                <Badge @status={{if this.booleanValue "success" ""}}>{{if this.booleanValue (t "common.yes") (t "common.no")}}</Badge>
+
+            {{else}}
+                <span class="inspection-row__answer">{{n-a @value}}</span>
+                {{#if this.meta.unit}}<span class="inspection-row__unit">{{this.meta.unit}}</span>{{/if}}
             {{/if}}
-            {{#if this.photos.length}}
-                <div class="mt-2 flex flex-row flex-wrap gap-2">
-                    {{#each this.photos as |photo|}}
-                        {{#if photo.url}}
-                            <a href={{photo.url}} target="_blank" rel="noopener noreferrer" class="block">
-                                <Image src={{photo.url}} alt={{or photo.filename this.field.label}} class="h-16 w-16 object-cover rounded border border-gray-200 dark:border-gray-700" />
-                            </a>
-                        {{else}}
-                            <div class="text-xs font-mono text-gray-500">{{photo.reference}}</div>
-                        {{/if}}
-                    {{/each}}
+        </div>
+    </div>
+
+    {{#if this.hasDefectDetail}}
+        <div class="inspection-row__detail">
+            {{#if this.answer.comments}}
+                <div>
+                    <span class="inspection-detail__label">{{t "inspection.answer.comments"}}</span>
+                    <div class="inspection-row__answer whitespace-pre-wrap">{{this.answer.comments}}</div>
                 </div>
             {{/if}}
-        {{else if this.isFile}}
-            {{#if this.file.url}}
-                <a href={{this.file.url}} target="_blank" rel="noopener noreferrer" class="block">
-                    <Image src={{this.file.url}} alt={{or this.file.filename this.field.label}} class="max-h-24 rounded border border-gray-200 dark:border-gray-700 bg-white" />
-                </a>
-            {{else}}
-                {{n-a this.file.reference}}
+            {{#if this.photos.length}}
+                <div>
+                    <span class="inspection-detail__label">{{t "inspection.answer.photos"}}</span>
+                    <div class="inspection-detail__photos">
+                        {{#each this.photos key="reference" as |photo|}}
+                            {{#if photo.url}}
+                                <a href={{photo.url}} target="_blank" rel="noopener noreferrer" class="inspection-photo">
+                                    <Image src={{photo.url}} alt={{or photo.filename this.label}} />
+                                </a>
+                            {{else}}
+                                <div class="inspection-photo"><div class="inspection-photo__placeholder"><FaIcon @icon="image" /></div></div>
+                            {{/if}}
+                        {{/each}}
+                    </div>
+                </div>
             {{/if}}
-        {{else if this.isBoolean}}
-            <Badge @status={{if this.booleanValue "success" ""}}>{{if this.booleanValue (t "common.yes") (t "common.no")}}</Badge>
-        {{else}}
-            <span class="whitespace-pre-wrap">{{n-a @value}}</span>
-        {{/if}}
-    </div>
+        </div>
+    {{/if}}
 </div>

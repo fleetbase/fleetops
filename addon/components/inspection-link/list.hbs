@@ -1,0 +1,59 @@
+<div class="inspection-link-list" {{when-changed @reloadOn this.reload}} ...attributes>
+    {{#if this.load.isRunning}}
+        <div class="flex items-center justify-center p-6">
+            <Spinner @loadingMessage={{t "inspection.link.loading"}} class="text-sm dark:text-gray-100" />
+        </div>
+    {{else if this.error}}
+        <div class="inspection-section__empty">{{this.error}}</div>
+    {{else if this.hasLinks}}
+        <div>
+            {{#each this.links key="id" as |link|}}
+                <div class="inspection-link" data-state={{link.state}}>
+                    <div class="inspection-link__head">
+                        <span class="inspection-link__state" data-state={{link.state}}>{{t (concat "inspection.link.state-" link.state)}}</span>
+                        <span class="inspection-link__for">
+                            {{#if link.vehicle}}{{link.vehicle.name}}{{/if}}
+                            {{#if (and link.vehicle link.driver)}}<span class="inspection-link__sep">·</span>{{/if}}
+                            {{#if link.driver}}{{link.driver.name}}{{/if}}
+                            {{#unless (or link.vehicle link.driver)}}{{t "inspection.link.unassigned"}}{{/unless}}
+                        </span>
+                        <span class="inspection-link__when">{{t "inspection.link.generated"}} {{format-date-fns link.created_at "dd MMM yyyy, HH:mm"}}</span>
+                    </div>
+
+                    {{#if link.url}}
+                        <div class="inspection-link__url">
+                            <code class="inspection-link__code">{{link.url}}</code>
+                            <Button @type="default" @size="xs" @icon="copy" @text={{t "inspection.link.copy"}} @onClick={{fn this.copy link}} />
+                        </div>
+                    {{else}}
+                        <div class="inspection-link__url">
+                            <span class="inspection-link__note">{{t "inspection.link.url-not-kept"}}</span>
+                        </div>
+                    {{/if}}
+
+                    <div class="inspection-link__foot">
+                        <span>
+                            {{#if link.expires_at}}
+                                {{t "inspection.link.expires"}} {{format-date-fns link.expires_at "dd MMM yyyy, HH:mm"}}
+                            {{else}}
+                                {{t "inspection.link.no-expiry"}}
+                            {{/if}}
+                        </span>
+                        {{#if link.used_at}}
+                            <span><span class="inspection-link__sep">·</span> {{t "inspection.link.used"}} {{format-date-fns link.used_at "dd MMM yyyy, HH:mm"}}</span>
+                        {{else if link.last_viewed_at}}
+                            <span><span class="inspection-link__sep">·</span> {{t "inspection.link.viewed"}} {{format-date-fns link.last_viewed_at "dd MMM yyyy, HH:mm"}}</span>
+                        {{else}}
+                            <span><span class="inspection-link__sep">·</span> {{t "inspection.link.never-opened"}}</span>
+                        {{/if}}
+                        {{#if (eq link.state "active")}}
+                            <Button @type="danger" @size="xs" @icon="ban" @text={{t "inspection.link.revoke"}} @isLoading={{eq this.revokingId link.id}} @wrapperClass="ml-auto" @onClick={{fn (perform this.revoke) link}} />
+                        {{/if}}
+                    </div>
+                </div>
+            {{/each}}
+        </div>
+    {{else}}
+        <div class="inspection-section__empty">{{t "inspection.link.none"}}</div>
+    {{/if}}
+</div>

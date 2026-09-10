@@ -2867,6 +2867,11 @@ inspection:
         no-photo: No photo attached.
         upload-signature: Upload signature
         no-signature: No signature captured.
+        select-placeholder: Choose an answer
+        note-placeholder: Add a note
+        text-placeholder: Type an answer
+        no-options: This field has no answers to choose from.
+        uploads-unavailable: Photos can be added from the console or the driver app.
     record:
         overview: Overview
         inspection: Inspection
@@ -2903,3 +2908,47 @@ inspection:
         create: Create inspection
         saved: Inspection saved.
         updated: Inspection updated.
+        form-help: The published form this inspection is filled in from.
+        choose-a-form: Choose an inspection form to begin.
+        group-has-no-fields: This section has no checks.
+        outstanding: still to answer
+        section-failed: "{count, plural, one {# failed} other {# failed}}"
+        section-outstanding: "{count, plural, one {# to answer} other {# to answer}}"
+        section-clear: All clear
+    link:
+        public-links: Public Links
+        existing: Generated Links
+        modal-help: "Generate a single-use link for {form}. Whoever opens it can fill this published form in without signing in."
+        loading: Loading links...
+        none: No links have been generated for this form yet.
+        load-failed: These links could not be loaded.
+        copy: Copy
+        copied: Inspection link copied.
+        revoke: Revoke
+        revoked: Inspection link revoked.
+        generated: Generated
+        generated-toast: Inspection link generated.
+        publish-first: Publish this inspection form before generating a public link.
+        expires: Expires
+        no-expiry: No expiry
+        used: Used
+        viewed: Last opened
+        never-opened: Never opened
+        unassigned: Any vehicle or driver
+        url-not-kept: This link was generated before links were kept, so its URL cannot be shown again.
+        state-active: Active
+        state-expired: Expired
+        state-used: Used
+        state-revoked: Revoked
+    public:
+        submitted-title: Inspection submitted
+        submitted-body: Thank you. This inspection has been filed and the link is now closed.
+        unavailable-title: This inspection is not available
+        sign-off: Sign off
+        your-name: Your name
+        your-name-help: Recorded against this inspection as who filled it in.
+        your-name-placeholder: Full name
+        submit: Submit inspection
+        blocked-required: "{count, plural, one {# required answer is missing} other {# required answers are missing}}"
+        blocked-defects: "{count, plural, one {# failure still needs a comment or a photo} other {# failures still need a comment or a photo}}"
+        powered-by: Powered by Fleetbase FleetOps

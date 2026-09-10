@@ -7,6 +7,7 @@ import { normalizeFieldGroups, serializeFieldGroups } from '../utils/inspection-
 export default class InspectionFormActionsService extends ResourceActionService {
     @service fetch;
     @service notifications;
+    @service intl;
 
     constructor() {
         super(...arguments);
@@ -88,7 +89,7 @@ export default class InspectionFormActionsService extends ResourceActionService 
 
     @action generateLink(form) {
         if (form.status !== 'published') {
-            this.notifications.warning('Publish this inspection form before generating a public link.');
+            this.notifications.warning(this.intl.t('inspection.link.publish-first'));
             return;
         }
 
@@ -97,6 +98,7 @@ export default class InspectionFormActionsService extends ResourceActionService 
             vehicle: null,
             expires_at: null,
             generatedUrl: null,
+            generatedAt: null,
         };
 
         return this.modalsManager.show('modals/inspection-link', {
@@ -119,12 +121,17 @@ export default class InspectionFormActionsService extends ResourceActionService 
                     const url = path ? `${window.location.origin}${path}` : null;
                     set(formState, 'generatedUrl', url);
 
+                    // The list below the form watches this and reloads, so the
+                    // link that was just minted appears there to be read,
+                    // copied again, or revoked — rather than living only in the
+                    // clipboard until something else overwrites it.
+                    set(formState, 'generatedAt', Date.now());
+
                     if (url) {
                         await copyToClipboard(url);
-                        this.notifications.success('Inspection link generated and copied.');
-                    } else {
-                        this.notifications.success(response?.message ?? 'Inspection link generated.');
                     }
+
+                    this.notifications.success(this.intl.t('inspection.link.generated-toast'));
 
                     modal.stopLoading();
                 } catch (error) {

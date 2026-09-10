@@ -1,109 +1,155 @@
-<div class="inspection-submission-form" ...attributes>
-    <ContentPanel @title={{t "inspection.record.details"}} @open={{true}} @wrapperClass="bordered-top">
-        <div class="grid grid-cols-1 gap-2 lg:grid-cols-2 no-input-group-padding text-xs">
-            <InputGroup @name={{t "inspection.record.form"}}>
-                <ModelSelect
-                    @modelName="inspection-form"
-                    @selectedModel={{@resource.form}}
-                    @query={{hash status="published"}}
-                    @placeholder={{t "inspection.record.select-form"}}
-                    @triggerClass="form-select form-input"
-                    @infiniteScroll={{false}}
-                    @renderInPlace={{true}}
-                    @onChange={{this.assignForm}}
-                    @disabled={{cannot-write @resource}}
-                    as |form|
-                >
-                    {{form.name}}
-                </ModelSelect>
-            </InputGroup>
-            <InputGroup @name={{t "inspection.record.status"}}>
-                <div class="fleetbase-model-select fleetbase-power-select ember-model-select">
-                    <PowerSelect
-                        @options={{get-fleet-ops-options "inspectionSubmissionStatuses"}}
-                        @selected={{find-by "value" @resource.status (get-fleet-ops-options "inspectionSubmissionStatuses")}}
-                        @onChange={{this.setStatus}}
-                        @triggerClass="form-select form-input"
-                        @disabled={{cannot-write @resource}}
-                        as |option|
-                    >
-                        <div class="text-sm">
-                            <div class="font-semibold normalize-in-trigger">{{option.label}}</div>
-                            <div class="hide-from-trigger">{{option.description}}</div>
-                        </div>
-                    </PowerSelect>
-                </div>
-            </InputGroup>
-            <InputGroup @name={{t "inspection.record.vehicle"}}>
-                <ModelSelect
-                    @modelName="vehicle"
-                    @selectedModel={{@resource.vehicle}}
-                    @placeholder={{t "inspection.record.select-vehicle"}}
-                    @triggerClass="form-select form-input"
-                    @infiniteScroll={{false}}
-                    @renderInPlace={{true}}
-                    @onChange={{this.assignVehicle}}
-                    @disabled={{cannot-write @resource}}
-                    as |vehicle|
-                >
-                    {{or vehicle.displayName vehicle.name vehicle.public_id}}
-                </ModelSelect>
-            </InputGroup>
-            <InputGroup @name={{t "inspection.record.driver"}}>
-                <ModelSelect
-                    @modelName="driver"
-                    @selectedModel={{@resource.driver}}
-                    @placeholder={{t "inspection.record.select-driver"}}
-                    @triggerClass="form-select form-input"
-                    @infiniteScroll={{false}}
-                    @renderInPlace={{true}}
-                    @onChange={{this.assignDriver}}
-                    @disabled={{cannot-write @resource}}
-                    as |driver|
-                >
-                    {{or driver.name driver.public_id}}
-                </ModelSelect>
-            </InputGroup>
-            <InputGroup @name={{t "inspection.record.odometer"}}>
-                <input type="number" value={{@resource.odometer}} class="w-full form-input" placeholder={{t "inspection.record.odometer-placeholder"}} disabled={{cannot-write @resource}} {{on "input" this.setOdometer}} />
-            </InputGroup>
-            <InputGroup @name={{t "inspection.record.engine-hours"}}>
-                <input type="number" value={{@resource.engine_hours}} class="w-full form-input" placeholder={{t "inspection.record.engine-hours-placeholder"}} disabled={{cannot-write @resource}} {{on "input" this.setEngineHours}} />
-            </InputGroup>
+{{!
+    An inspection being filled in, in the console.
+
+    The details of the inspection and the form's own field groups are rendered
+    the same way — one row per line, label on the left, control on the right —
+    because to whoever is filling it in they are one sheet, not a settings
+    panel followed by a checklist.
+}}
+<div class="inspection-submission-form inspection-sheet" ...attributes>
+    <section class="inspection-section">
+        <div class="inspection-section__header">
+            <h3 class="inspection-section__title">{{t "inspection.record.details"}}</h3>
         </div>
-    </ContentPanel>
+
+        <div>
+            <div class="inspection-row">
+                <div class="inspection-row__main">
+                    <div class="inspection-row__label">
+                        <div class="inspection-row__title">{{t "inspection.record.form"}}<span class="inspection-row__required" aria-hidden="true">*</span></div>
+                        <div class="inspection-row__hint">{{t "inspection.record.form-help"}}</div>
+                    </div>
+                    <div class="inspection-row__control inspection-row__control--sized">
+                        <ModelSelect
+                            @modelName="inspection-form"
+                            @selectedModel={{@resource.form}}
+                            @query={{hash status="published"}}
+                            @placeholder={{t "inspection.record.select-form"}}
+                            @triggerClass="form-select form-input"
+                            @infiniteScroll={{false}}
+                            @renderInPlace={{true}}
+                            @onChange={{this.assignForm}}
+                            @disabled={{cannot-write @resource}}
+                            as |form|
+                        >
+                            {{form.name}}
+                        </ModelSelect>
+                    </div>
+                </div>
+            </div>
+
+            <div class="inspection-row">
+                <div class="inspection-row__main">
+                    <div class="inspection-row__label">
+                        <div class="inspection-row__title">{{t "inspection.record.status"}}</div>
+                    </div>
+                    <div class="inspection-row__control inspection-row__control--sized">
+                        <div class="fleetbase-model-select fleetbase-power-select ember-model-select w-full">
+                            <PowerSelect
+                                @options={{get-fleet-ops-options "inspectionSubmissionStatuses"}}
+                                @selected={{find-by "value" @resource.status (get-fleet-ops-options "inspectionSubmissionStatuses")}}
+                                @onChange={{this.setStatus}}
+                                @triggerClass="form-select form-input"
+                                @renderInPlace={{true}}
+                                @disabled={{cannot-write @resource}}
+                                as |option|
+                            >
+                                <div class="text-sm">
+                                    <div class="font-semibold normalize-in-trigger">{{option.label}}</div>
+                                    <div class="hide-from-trigger">{{option.description}}</div>
+                                </div>
+                            </PowerSelect>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="inspection-row">
+                <div class="inspection-row__main">
+                    <div class="inspection-row__label">
+                        <div class="inspection-row__title">{{t "inspection.record.vehicle"}}</div>
+                    </div>
+                    <div class="inspection-row__control inspection-row__control--sized">
+                        <ModelSelect
+                            @modelName="vehicle"
+                            @selectedModel={{@resource.vehicle}}
+                            @placeholder={{t "inspection.record.select-vehicle"}}
+                            @triggerClass="form-select form-input"
+                            @infiniteScroll={{false}}
+                            @renderInPlace={{true}}
+                            @onChange={{this.assignVehicle}}
+                            @disabled={{cannot-write @resource}}
+                            as |vehicle|
+                        >
+                            {{or vehicle.displayName vehicle.name vehicle.public_id}}
+                        </ModelSelect>
+                    </div>
+                </div>
+            </div>
+
+            <div class="inspection-row">
+                <div class="inspection-row__main">
+                    <div class="inspection-row__label">
+                        <div class="inspection-row__title">{{t "inspection.record.driver"}}</div>
+                    </div>
+                    <div class="inspection-row__control inspection-row__control--sized">
+                        <ModelSelect
+                            @modelName="driver"
+                            @selectedModel={{@resource.driver}}
+                            @placeholder={{t "inspection.record.select-driver"}}
+                            @triggerClass="form-select form-input"
+                            @infiniteScroll={{false}}
+                            @renderInPlace={{true}}
+                            @onChange={{this.assignDriver}}
+                            @disabled={{cannot-write @resource}}
+                            as |driver|
+                        >
+                            {{or driver.name driver.public_id}}
+                        </ModelSelect>
+                    </div>
+                </div>
+            </div>
+
+            <div class="inspection-row">
+                <div class="inspection-row__main">
+                    <div class="inspection-row__label">
+                        <div class="inspection-row__title">{{t "inspection.record.odometer"}}</div>
+                    </div>
+                    <div class="inspection-row__control inspection-row__control--sized">
+                        <input type="number" inputmode="decimal" class="w-full form-input" placeholder={{t "inspection.record.odometer-placeholder"}} disabled={{cannot-write @resource}} {{sync-value @resource.odometer}} {{on "input" this.setOdometer}} />
+                    </div>
+                </div>
+            </div>
+
+            <div class="inspection-row">
+                <div class="inspection-row__main">
+                    <div class="inspection-row__label">
+                        <div class="inspection-row__title">{{t "inspection.record.engine-hours"}}</div>
+                    </div>
+                    <div class="inspection-row__control inspection-row__control--sized">
+                        <input type="number" inputmode="decimal" class="w-full form-input" placeholder={{t "inspection.record.engine-hours-placeholder"}} disabled={{cannot-write @resource}} {{sync-value @resource.engine_hours}} {{on "input" this.setEngineHours}} />
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
 
     {{#if this.load.isRunning}}
-        <ContentPanel @title={{t "inspection.record.answers"}} @open={{true}} @wrapperClass="bordered-top">
+        <section class="inspection-section">
             <div class="flex items-center justify-center p-6">
                 <Spinner @loadingMessage={{t "inspection.record.loading-form"}} class="text-sm dark:text-gray-100" />
             </div>
-        </ContentPanel>
+        </section>
     {{else if this.hasStructure}}
-        {{#each this.groups as |group|}}
-            <ContentPanel @title={{or group.name (t "inspection.builder.untitled-group")}} @open={{true}} @wrapperClass="bordered-top">
-                {{#if group.description}}
-                    <div class="text-xs text-gray-500 mb-2">{{group.description}}</div>
-                {{/if}}
-                <div class="grid grid-cols-1 lg:grid-cols-{{or group.meta.grid_size 1}} gap-2">
-                    {{#each group.fields as |field|}}
-                        <InspectionField::Input @field={{field}} @value={{get this.values field.uuid}} @subject={{@resource}} @onChange={{this.setValue}} @disabled={{cannot-write @resource}} />
-                    {{/each}}
-                </div>
-            </ContentPanel>
-        {{/each}}
-
-        {{#if this.passFailCount}}
-            <ContentPanel @title={{t "inspection.record.summary"}} @open={{true}} @wrapperClass="bordered-top">
-                <div class="text-xs">
-                    {{t "inspection.record.failed-of" failed=this.failedCount total=this.passFailCount}}
-                </div>
-            </ContentPanel>
-        {{/if}}
+        <InspectionSheet @groups={{this.groups}} @values={{this.values}} @subject={{@resource}} @onChange={{this.setValue}} @disabled={{cannot-write @resource}} />
     {{else if @resource.form}}
-        <ContentPanel @title={{t "inspection.record.answers"}} @open={{true}} @wrapperClass="bordered-top">
-            <div class="text-xs text-gray-500">{{t "inspection.record.form-has-no-fields"}}</div>
-        </ContentPanel>
+        <section class="inspection-section">
+            <div class="inspection-section__empty">{{t "inspection.record.form-has-no-fields"}}</div>
+        </section>
+    {{else}}
+        <section class="inspection-section">
+            <div class="inspection-section__empty">{{t "inspection.record.choose-a-form"}}</div>
+        </section>
     {{/if}}
 
     <ContentPanel @title={{t "inspection.record.metadata"}} @open={{false}} @wrapperClass="bordered-top">

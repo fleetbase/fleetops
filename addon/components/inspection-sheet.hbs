@@ -1,0 +1,34 @@
+<div class="inspection-sheet" ...attributes>
+    {{#each this.groups key="uuid" as |group|}}
+        <InspectionSheet::Section @group={{group}} @values={{@values}} @subject={{@subject}} @onChange={{@onChange}} @disabled={{@disabled}} @allowUploads={{@allowUploads}} @readonly={{@readonly}} />
+    {{/each}}
+
+    {{#if this.summary.checks}}
+        <div class="inspection-summary">
+            <div class="inspection-summary__item">
+                <span class="inspection-summary__value inspection-summary__value--pass">{{this.summary.passed}}</span>
+                {{t "inspection.answer.pass"}}
+            </div>
+            <div class="inspection-summary__item">
+                <span class="inspection-summary__value {{if this.summary.failed 'inspection-summary__value--fail'}}">{{this.summary.failed}}</span>
+                {{t "inspection.answer.fail"}}
+            </div>
+            <div class="inspection-summary__item">
+                <span class="inspection-summary__value">{{this.summary.notApplicable}}</span>
+                {{t "inspection.answer.not-applicable"}}
+            </div>
+            {{#if this.summary.outstanding}}
+                <div class="inspection-summary__item">
+                    <span class="inspection-summary__value">{{this.summary.outstanding}}</span>
+                    {{t "inspection.record.outstanding"}}
+                </div>
+            {{/if}}
+            {{#if this.summary.unsafe}}
+                <span class="inspection-summary__unsafe">
+                    <FaIcon @icon="triangle-exclamation" @size="sm" />
+                    {{t "inspection.answer.unsafe"}}
+                </span>
+            {{/if}}
+        </div>
+    {{/if}}
+</div>

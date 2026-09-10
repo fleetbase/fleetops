@@ -1,5 +1,7 @@
 import Component from '@glimmer/component';
+import { inject as service } from '@ember/service';
 import { INSPECTION_SEVERITIES } from '../../utils/inspection-field-types';
+import { answerState } from '../../utils/inspection-answers';
 
 /**
  * One stored answer, read-only — what the record's Overview shows.
@@ -11,6 +13,8 @@ import { INSPECTION_SEVERITIES } from '../../utils/inspection-field-types';
  * writes.
  */
 export default class InspectionFieldValueComponent extends Component {
+    @service intl;
+
     get field() {
         return this.args.field ?? {};
     }
@@ -20,9 +24,17 @@ export default class InspectionFieldValueComponent extends Component {
         return meta && typeof meta === 'object' ? meta : {};
     }
 
-    get colSpanClass() {
-        const colSpan = this.meta.colSpan;
-        return colSpan ? `col-span-${colSpan}` : '';
+    get label() {
+        return this.field.label || this.field.name || this.intl.t('inspection.builder.untitled-field');
+    }
+
+    get answerState() {
+        return answerState(this.field, this.args.value);
+    }
+
+    /** A failure's comment and photos, shown only when there is something to show. */
+    get hasDefectDetail() {
+        return this.isPassFail && (Boolean(this.answer.comments) || this.photos.length > 0);
     }
 
     get isPassFail() {
