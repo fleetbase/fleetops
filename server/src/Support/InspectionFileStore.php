@@ -32,7 +32,17 @@ class InspectionFileStore
 
         $value = trim($value);
 
-        if (Str::startsWith($value, 'file:') || static::isUrl($value)) {
+        if (Str::startsWith($value, 'file:')) {
+            // The console uploads a photo as soon as it is picked and keeps
+            // the reference; the upload answers with the file's public id, not
+            // its uuid, so a reference that names one is rewritten to the uuid
+            // the rest of this class — and the platform's own cast — reads.
+            $reference = substr($value, 5);
+
+            return Str::isUuid($reference) ? $value : static::referenceByPublicId($reference, $value);
+        }
+
+        if (static::isUrl($value)) {
             return $value;
         }
 
@@ -41,9 +51,7 @@ class InspectionFileStore
         }
 
         if (Str::startsWith($value, 'file_')) {
-            $file = File::query()->where('public_id', $value)->first();
-
-            return $file ? 'file:' . $file->uuid : $value;
+            return static::referenceByPublicId($value, $value);
         }
 
         if (static::isBase64($value)) {
@@ -104,6 +112,14 @@ class InspectionFileStore
             ->whereIn('uuid', $uuids)
             ->whereNull('subject_uuid')
             ->update(['subject_uuid' => $submission->uuid, 'subject_type' => $submission->getMorphClass()]);
+    }
+
+    /** A file named by its public id, as `file:<uuid>`; the fallback when it is unknown. */
+    protected static function referenceByPublicId(string $publicId, string $fallback): string
+    {
+        $file = File::query()->where('public_id', $publicId)->first();
+
+        return $file ? 'file:' . $file->uuid : $fallback;
     }
 
     /** The uuid a `file:<uuid>` value points at, or null for anything else. */

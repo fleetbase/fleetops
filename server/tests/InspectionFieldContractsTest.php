@@ -471,7 +471,12 @@ test('the file store turns what a driver sends into a platform file', function (
         ->and(InspectionFileStore::normalize('not base64!', $submission))->toBe('not base64!')
         ->and(InspectionFileStore::normalize($file->uuid, $submission))->toBe('file:' . $file->uuid)
         ->and(InspectionFileStore::normalize($file->public_id, $submission))->toBe('file:' . $file->uuid)
-        ->and(InspectionFileStore::normalize('file_missing', $submission))->toBe('file_missing');
+        ->and(InspectionFileStore::normalize('file_missing', $submission))->toBe('file_missing')
+        // The console uploads a photo as soon as it is picked and keeps the
+        // reference the upload answered with, which names the file by its
+        // public id; that is rewritten to the uuid everything else reads.
+        ->and(InspectionFileStore::normalize('file:' . $file->public_id, $submission))->toBe('file:' . $file->uuid)
+        ->and(InspectionFileStore::normalize('file:file_missing', $submission))->toBe('file:file_missing');
 
     // A data URI carries its own content type; bare base64 is sniffed.
     $jpeg = InspectionFileStore::resolve(InspectionFileStore::normalize('data:image/jpeg;base64,' . fleetOpsInspectionFieldPhoto(), $submission, InspectionFileStore::TYPE_SIGNATURE));
@@ -575,6 +580,15 @@ test('a submission answers a form of fields, and the item results follow', funct
         ->and($results['brakes']->severity)->toBeNull()
         ->and($submission->meta['unsafe'])->toBeFalse()
         ->and($submission->result)->toBe('passed');
+
+    // Clearing an answer is not an answer: the value row goes rather than a
+    // null being written to a column that will not take one.
+    InspectionSubmitter::applyCustomFieldValues($submission, [
+        ['custom_field' => $fields['notes']->uuid, 'value' => null],
+        ['custom_field' => $fields['odometer']->uuid, 'value' => ''],
+    ]);
+    expect($submission->fresh()->customFieldValues()->where('custom_field_uuid', $fields['notes']->uuid)->count())->toBe(0)
+        ->and($submission->fresh()->customFieldValues()->where('custom_field_uuid', $fields['odometer']->uuid)->count())->toBe(0);
 
     // An answer that is taken away — the console clearing a field — takes its
     // result row with it; a row written any other way is left alone.

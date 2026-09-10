@@ -156,7 +156,9 @@ class InspectionSubmitter
             throw ValidationException::withMessages($errors);
         }
 
-        $summary = $submission->syncCustomFieldValues($payload);
+        // `custom_field_values.value` is a NOT NULL column, so an answer that
+        // is nothing is not an answer: it clears whatever was there instead.
+        $summary = $submission->syncCustomFieldValues($payload, ['treat_null_as_delete' => true]);
         $submission->syncItemResultsFromCustomFieldValues();
         $submission->syncResultCounts();
 
