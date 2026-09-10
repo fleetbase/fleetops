@@ -1,4 +1,5 @@
 import Component from '@glimmer/component';
+import { INSPECTION_SEVERITIES } from '../../utils/inspection-field-types';
 
 /**
  * One stored answer, read-only — what the record's Overview shows.
@@ -73,6 +74,12 @@ export default class InspectionFieldValueComponent extends Component {
         }
 
         return answer.passed === false ? 'danger' : 'success';
+    }
+
+    /** The severity's own label, or the raw value when it is not one of ours. */
+    get severityLabel() {
+        const severity = this.answer.severity;
+        return INSPECTION_SEVERITIES.includes(severity) ? `inspection.severity.${severity}` : null;
     }
 
     get photos() {
