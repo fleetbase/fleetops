@@ -27,7 +27,11 @@ class InspectionLink extends FleetbaseResource
         $internal = Http::isInternalRequest();
 
         return [
-            'id'             => $this->when($internal, $this->id, $this->public_id),
+            // Always the public id: it is what identifies a link back to the
+            // revoke endpoint. `$this->id` is the table's auto-increment
+            // column, which no lookup here resolves — a list built from it
+            // could show links but never revoke one.
+            'id'             => $this->public_id,
             'uuid'           => $this->when($internal, $this->uuid),
             'public_id'      => $this->when($internal, $this->public_id),
             'path'           => $this->path,

@@ -189,6 +189,10 @@ class InspectionFormController extends FleetOpsController
         $link = InspectionLink::where('inspection_form_uuid', $form->uuid)
             ->where(function ($query) use ($linkId) {
                 $query->where('uuid', $linkId)->orWhere('public_id', $linkId);
+
+                if (is_numeric($linkId)) {
+                    $query->orWhere('id', (int) $linkId);
+                }
             })
             ->firstOrFail();
 
