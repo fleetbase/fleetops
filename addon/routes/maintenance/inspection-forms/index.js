@@ -12,7 +12,6 @@ export default class MaintenanceInspectionFormsIndexRoute extends Route {
         public_id: { refreshModel: true },
         status: { refreshModel: true },
         type: { refreshModel: true },
-        frequency: { refreshModel: true },
         created_at: { refreshModel: true },
         updated_at: { refreshModel: true },
     };

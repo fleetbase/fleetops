@@ -7,15 +7,11 @@
             </div>
             <div class="field-info-container">
                 <div class="field-name">{{t "inspection.form.status"}}</div>
-                <div class="field-value"><Badge @status={{@resource.status}}>{{smart-humanize @resource.status}}</Badge></div>
+                <div class="field-value"><Badge @status={{@resource.status}}>{{or (get-fleet-ops-option-label "inspectionFormStatuses" @resource.status) (smart-humanize @resource.status)}}</Badge></div>
             </div>
             <div class="field-info-container">
                 <div class="field-name">{{t "inspection.form.type"}}</div>
-                <div class="field-value">{{smart-humanize @resource.type}}</div>
-            </div>
-            <div class="field-info-container">
-                <div class="field-name">{{t "inspection.form.frequency"}}</div>
-                <div class="field-value">{{smart-humanize @resource.frequency}}</div>
+                <div class="field-value">{{or (get-fleet-ops-option-label "inspectionFormTypes" @resource.type) (n-a (smart-humanize @resource.type))}}</div>
             </div>
             <div class="field-info-container">
                 <div class="field-name">{{t "inspection.form.fields"}}</div>

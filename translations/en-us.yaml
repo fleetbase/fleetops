@@ -2757,7 +2757,6 @@ inspection:
         name-placeholder: Daily vehicle inspection
         type: Type
         status: Status
-        frequency: Frequency
         description: Description
         description-placeholder: What this inspection covers
         builder: Form Builder

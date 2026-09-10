@@ -1,7 +1,6 @@
 import Component from '@glimmer/component';
 import { tracked } from '@glimmer/tracking';
 import { action } from '@ember/object';
-import { dasherize } from '@ember/string';
 import { INSPECTION_FIELD_TYPES, INSPECTION_SEVERITIES, componentForFieldType, isOptionFieldType } from '../../utils/inspection-field-types';
 
 /**
@@ -89,23 +88,40 @@ export default class InspectionFieldFormComponent extends Component {
     }
 
     /**
-     * The label names the field; the machine name follows it until the author
-     * types one of their own, matching the platform's editor.
+     * The name a label derives to. The label names the field; this machine
+     * name follows it until the author types one of their own.
+     *
+     * Not `dasherize`: it only rewrites spaces and underscores, so a label
+     * like "Sidewall condition, offside rear" kept its comma and produced
+     * `sidewall-condition,-offside-rear`. The name is an identifier — it
+     * travels as an item result's `item_key` and is what a report groups on —
+     * so anything that is not a letter or a digit becomes a separator, and
+     * runs of separators collapse.
      */
+    slugify(value) {
+        return String(value ?? '')
+            .trim()
+            .toLowerCase()
+            .replace(/[^a-z0-9]+/g, '-')
+            .replace(/^-+|-+$/g, '');
+    }
+
     @action setLabel(event) {
         const label = event.target.value;
-        const derived = dasherize((this.field.label ?? '').trim().toLowerCase());
+        const derived = this.slugify(this.field.label);
         const current = (this.field.name ?? '').trim();
+
+        // The name follows the label until an author types their own.
         const follows = current === '' || current === derived;
 
         this.change({
             label,
-            name: follows ? dasherize(label.trim().toLowerCase()) : current,
+            name: follows ? this.slugify(label) : current,
         });
     }
 
     @action setName(event) {
-        this.change({ name: dasherize(event.target.value.trim().toLowerCase()) });
+        this.change({ name: this.slugify(event.target.value) });
     }
 
     @action setDescription(event) {

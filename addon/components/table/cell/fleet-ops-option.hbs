@@ -1,0 +1,20 @@
+{{!
+    A table cell that shows an option's label rather than the value stored on
+    the record, so a Type column reads "DVIR" where the row holds "dvir".
+
+    The column names the list it draws from:
+
+        { valuePath: 'type', cellComponent: 'table/cell/fleet-ops-option', optionsKey: 'inspectionFormTypes' }
+
+    A value with no matching option is humanized rather than blanked, so a row
+    written before an option was retired is still legible.
+}}
+<div class="relative" aria-label={{or @value "-"}}>
+    <span class={{@column.cellClassNames}}>
+        {{#if @value}}
+            {{or (get-fleet-ops-option-label @column.optionsKey @value) (smart-humanize @value)}}
+        {{else}}
+            -
+        {{/if}}
+    </span>
+</div>

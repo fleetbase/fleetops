@@ -6,14 +6,13 @@ export default class MaintenanceInspectionFormsIndexController extends Controlle
     @service inspectionFormActions;
     @service intl;
 
-    @tracked queryParams = ['status', 'type', 'frequency', 'page', 'limit', 'sort', 'query', 'public_id', 'created_at', 'updated_at'];
+    @tracked queryParams = ['status', 'type', 'page', 'limit', 'sort', 'query', 'public_id', 'created_at', 'updated_at'];
     @tracked page = 1;
     @tracked limit;
     @tracked sort = '-created_at';
     @tracked public_id;
     @tracked status;
     @tracked type;
-    @tracked frequency;
 
     get actionButtons() {
         return [
@@ -43,8 +42,8 @@ export default class MaintenanceInspectionFormsIndexController extends Controlle
             {
                 label: 'Type',
                 valuePath: 'type',
-                cellComponent: 'table/cell/base',
-                humanize: true,
+                cellComponent: 'table/cell/fleet-ops-option',
+                optionsKey: 'inspectionFormTypes',
                 resizable: true,
                 sortable: true,
                 filterable: true,
@@ -59,17 +58,6 @@ export default class MaintenanceInspectionFormsIndexController extends Controlle
                 sortable: true,
                 filterable: true,
                 filterParam: 'status',
-                filterComponent: 'filter/string',
-            },
-            {
-                label: 'Frequency',
-                valuePath: 'frequency',
-                cellComponent: 'table/cell/base',
-                humanize: true,
-                resizable: true,
-                sortable: true,
-                filterable: true,
-                filterParam: 'frequency',
                 filterComponent: 'filter/string',
             },
             { label: 'Items', valuePath: 'item_count', resizable: true, sortable: false },

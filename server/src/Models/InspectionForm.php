@@ -61,7 +61,7 @@ class InspectionForm extends Model
     protected $table             = 'inspection_forms';
     protected $publicIdType      = 'inspection_form';
     protected $searchableColumns = ['name', 'description', 'type', 'public_id'];
-    protected $filterParams      = ['status', 'type', 'frequency', 'subject_type', 'subject_uuid'];
+    protected $filterParams      = ['status', 'type', 'subject_type', 'subject_uuid'];
 
     protected $fillable = [
         'company_uuid',
@@ -69,7 +69,6 @@ class InspectionForm extends Model
         'description',
         'type',
         'status',
-        'frequency',
         'subject_type',
         'subject_uuid',
         'items',

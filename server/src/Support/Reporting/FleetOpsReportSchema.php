@@ -1048,7 +1048,6 @@ class FleetOpsReportSchema implements ReportSchema
                     ->columns([
                         Column::make('name', 'string')->label('Form Name'),
                         Column::make('type', 'string')->label('Form Type'),
-                        Column::make('frequency', 'string')->label('Frequency'),
                     ]),
                 Relationship::hasAutoJoin('vehicle', 'vehicles')
                     ->label('Vehicle')

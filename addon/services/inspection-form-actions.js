@@ -14,7 +14,6 @@ export default class InspectionFormActionsService extends ResourceActionService 
             defaultAttributes: {
                 type: 'dvir',
                 status: 'draft',
-                frequency: 'daily',
                 items: [],
                 settings: {
                     require_signature: true,

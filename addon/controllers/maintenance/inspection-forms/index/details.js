@@ -8,10 +8,17 @@ export default class MaintenanceInspectionFormsIndexDetailsController extends Co
     @service hostRouter;
     @tracked overlay;
 
+    /**
+     * Publish disappears once the form is published — leaving it there invites
+     * an author to press a button that can only tell them it is already done.
+     * The public link needs a published form, so it appears at the same moment.
+     */
     get actionButtons() {
+        const isPublished = this.model?.is_published === true || this.model?.status === 'published';
+
         return [
-            { icon: 'check', fn: this.publish, text: 'Publish', permission: 'fleet-ops publish inspection-form' },
-            { icon: 'link', fn: this.generateLink, text: 'Generate Link', permission: 'fleet-ops view inspection-form' },
+            ...(isPublished ? [] : [{ icon: 'check', fn: this.publish, text: 'Publish', type: 'success', permission: 'fleet-ops publish inspection-form' }]),
+            ...(isPublished ? [{ icon: 'link', fn: this.generateLink, text: 'Generate Link', permission: 'fleet-ops view inspection-form' }] : []),
             { icon: 'edit', fn: this.edit, permission: 'fleet-ops update inspection-form' },
             { icon: 'trash', fn: this.delete, type: 'danger', permission: 'fleet-ops delete inspection-form' },
         ];

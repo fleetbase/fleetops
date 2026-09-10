@@ -11,10 +11,6 @@ import { inject as service } from '@ember/service';
  *
  * Nothing writes to `@resource` during render — text inputs update from the
  * DOM event, and every other change arrives from an action.
- *
- * `frequency` is deliberately not offered. The column exists and the API still
- * carries it, but nothing schedules an inspection from it, so a dropdown here
- * would ask an author to answer a question the product does not yet act on.
  */
 export default class InspectionFormFormComponent extends Component {
     @service intl;

@@ -37,7 +37,6 @@ class InspectionForm extends FleetbaseResource
             'description'    => $this->description,
             'type'           => $this->type,
             'status'         => $this->status,
-            'frequency'      => $this->frequency,
             'items'          => data_get($this, 'items', []),
             'grouped_fields' => array_map(fn (Category $group) => static::groupToArray($group, $internal), $this->grouped_fields),
             'field_groups'   => $this->whenLoaded('fieldGroups', fn () => $this->fieldGroups->map(fn (Category $group) => static::groupToArray($group, $internal, false))->values()->all()),
