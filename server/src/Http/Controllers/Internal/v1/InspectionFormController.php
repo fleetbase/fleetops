@@ -27,9 +27,9 @@ class InspectionFormController extends FleetOpsController
         $form->publish();
 
         return response()->json([
-            'status' => 'ok',
+            'status'  => 'ok',
             'message' => 'Inspection form published.',
-            'data' => $form->fresh(),
+            'data'    => $form->fresh(),
         ]);
     }
 
@@ -41,9 +41,9 @@ class InspectionFormController extends FleetOpsController
         $form->archive();
 
         return response()->json([
-            'status' => 'ok',
+            'status'  => 'ok',
             'message' => 'Inspection form archived.',
-            'data' => $form->fresh(),
+            'data'    => $form->fresh(),
         ]);
     }
 
@@ -65,9 +65,9 @@ class InspectionFormController extends FleetOpsController
             'single_use' => 'nullable|boolean',
         ]);
 
-        $driver = $this->resolveDriver(data_get($validated, 'driver'));
+        $driver  = $this->resolveDriver(data_get($validated, 'driver'));
         $vehicle = $this->resolveVehicle(data_get($validated, 'vehicle'));
-        $token = InspectionLink::generateToken();
+        $token   = InspectionLink::generateToken();
 
         $link = InspectionLink::create([
             'company_uuid'         => $form->company_uuid,
@@ -84,9 +84,9 @@ class InspectionFormController extends FleetOpsController
         $path = '/inspection?id=' . urlencode($form->public_id ?? $form->uuid) . '&token=' . urlencode($token);
 
         return response()->json([
-            'status' => 'ok',
+            'status'  => 'ok',
             'message' => 'Inspection link generated.',
-            'link' => [
+            'link'    => [
                 'id'         => $link->public_id,
                 'path'       => $path,
                 'token'      => $token,

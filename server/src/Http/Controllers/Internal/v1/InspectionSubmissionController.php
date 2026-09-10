@@ -44,9 +44,9 @@ class InspectionSubmissionController extends FleetOpsController
         $submission->syncResultCounts();
 
         return response()->json([
-            'status' => 'ok',
+            'status'  => 'ok',
             'message' => 'Inspection submitted.',
-            'data' => $submission->fresh(['itemResults', 'vehicle', 'driver', 'form']),
+            'data'    => $submission->fresh(['itemResults', 'vehicle', 'driver', 'form']),
         ]);
     }
 
@@ -61,10 +61,10 @@ class InspectionSubmissionController extends FleetOpsController
         $issue = $submission->createIssueFromFailures();
 
         return response()->json([
-            'status' => 'ok',
+            'status'  => 'ok',
             'message' => $issue ? 'Issue created from failed inspection items.' : 'No failed inspection items found.',
-            'issue' => $issue,
-            'data' => $submission->fresh(['itemResults', 'issue']),
+            'issue'   => $issue,
+            'data'    => $submission->fresh(['itemResults', 'issue']),
         ]);
     }
 
@@ -80,10 +80,10 @@ class InspectionSubmissionController extends FleetOpsController
         $workOrder = $submission->createWorkOrderFromFailures();
 
         return response()->json([
-            'status' => 'ok',
-            'message' => $workOrder ? 'Work order created from failed inspection items.' : 'No failed inspection items found.',
+            'status'     => 'ok',
+            'message'    => $workOrder ? 'Work order created from failed inspection items.' : 'No failed inspection items found.',
             'work_order' => $workOrder,
-            'data' => $submission->fresh(['itemResults', 'issue', 'workOrder']),
+            'data'       => $submission->fresh(['itemResults', 'issue', 'workOrder']),
         ]);
     }
 
@@ -94,14 +94,14 @@ class InspectionSubmissionController extends FleetOpsController
             ->firstOrFail();
 
         $submission->update([
-            'status' => 'resolved',
+            'status'      => 'resolved',
             'resolved_at' => now(),
         ]);
 
         return response()->json([
-            'status' => 'ok',
+            'status'  => 'ok',
             'message' => 'Inspection resolved.',
-            'data' => $submission->fresh(['itemResults', 'issue', 'workOrder']),
+            'data'    => $submission->fresh(['itemResults', 'issue', 'workOrder']),
         ]);
     }
 
@@ -114,19 +114,19 @@ class InspectionSubmissionController extends FleetOpsController
 
         $seen = [];
         foreach ($items as $item) {
-            $uuid = data_get($item, 'uuid');
+            $uuid    = data_get($item, 'uuid');
             $payload = [
-                'company_uuid' => $submission->company_uuid,
+                'company_uuid'               => $submission->company_uuid,
                 'inspection_submission_uuid' => $submission->uuid,
-                'item_key' => data_get($item, 'item_key'),
-                'label' => data_get($item, 'label', data_get($item, 'title', 'Inspection item')),
-                'category' => data_get($item, 'category'),
-                'status' => data_get($item, 'status', data_get($item, 'passed') === false ? 'failed' : 'passed'),
-                'severity' => data_get($item, 'severity'),
-                'passed' => (bool) data_get($item, 'passed', data_get($item, 'status') !== 'failed'),
-                'comments' => data_get($item, 'comments'),
-                'photos' => data_get($item, 'photos'),
-                'meta' => data_get($item, 'meta'),
+                'item_key'                   => data_get($item, 'item_key'),
+                'label'                      => data_get($item, 'label', data_get($item, 'title', 'Inspection item')),
+                'category'                   => data_get($item, 'category'),
+                'status'                     => data_get($item, 'status', data_get($item, 'passed') === false ? 'failed' : 'passed'),
+                'severity'                   => data_get($item, 'severity'),
+                'passed'                     => (bool) data_get($item, 'passed', data_get($item, 'status') !== 'failed'),
+                'comments'                   => data_get($item, 'comments'),
+                'photos'                     => data_get($item, 'photos'),
+                'meta'                       => data_get($item, 'meta'),
             ];
 
             $lookup = [

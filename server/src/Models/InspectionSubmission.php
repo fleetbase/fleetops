@@ -3,6 +3,11 @@
 namespace Fleetbase\FleetOps\Models;
 
 use Fleetbase\Casts\Json;
+use Fleetbase\FleetOps\Support\InspectionFileStore;
+use Fleetbase\Models\Category;
+use Fleetbase\Models\CustomField;
+use Fleetbase\Models\CustomFieldValue;
+use Fleetbase\Models\File;
 use Fleetbase\Models\Model;
 use Fleetbase\Models\User;
 use Fleetbase\Traits\HasApiModelBehavior;
@@ -29,10 +34,10 @@ class InspectionSubmission extends Model
     use Searchable;
     use HasCustomFields;
 
-    protected $table = 'inspection_submissions';
-    protected $publicIdType = 'inspection_submission';
+    protected $table             = 'inspection_submissions';
+    protected $publicIdType      = 'inspection_submission';
     protected $searchableColumns = ['public_id', 'type', 'status', 'result', 'vehicle.name', 'driver.name'];
-    protected $filterParams = ['status', 'result', 'type', 'source', 'vehicle', 'driver', 'inspection_form_uuid'];
+    protected $filterParams      = ['status', 'result', 'type', 'source', 'vehicle', 'driver', 'inspection_form_uuid'];
 
     protected $fillable = [
         'company_uuid',
@@ -76,10 +81,10 @@ class InspectionSubmission extends Model
     ];
 
     protected $appends = ['form_name', 'vehicle_name', 'driver_name', 'has_failures'];
-    protected $with = ['form', 'vehicle', 'driver'];
+    protected $with    = ['form', 'vehicle', 'driver'];
 
-    protected static $logName = 'inspection_submission';
-    protected static $logAttributes = '*';
+    protected static $logName         = 'inspection_submission';
+    protected static $logAttributes   = '*';
     protected static $submitEmptyLogs = false;
 
     public function getActivitylogOptions(): LogOptions
@@ -127,6 +132,128 @@ class InspectionSubmission extends Model
         return $this->itemResults()->where('passed', false);
     }
 
+    /**
+     * The photos and signatures filed with the inspection: platform files
+     * whose subject is the submission, however they arrived — inside the
+     * driver's submit body, or dropped on the console's Photos panel.
+     */
+    public function files(): HasMany
+    {
+        return $this->hasMany(File::class, 'subject_uuid', 'uuid')->orderBy('created_at');
+    }
+
+    /**
+     * Every `pass-fail` answer, as the row the rest of the platform reads.
+     *
+     * Issues, work orders and the history are all built from
+     * `inspection_item_results`; a form built from fields answers through
+     * custom-field values instead, so each pass-fail value is mirrored into
+     * a result row keyed the way the app keys it — the field's name, or its
+     * uuid when it has none. Rows for pass-fail fields the submission no
+     * longer answers are dropped; rows written any other way (a legacy
+     * checklist, the console's results editor) are left alone.
+     *
+     * @return int the number of result rows derived
+     */
+    public function syncItemResultsFromCustomFieldValues(): int
+    {
+        $this->unsetRelation('customFieldValues');
+        $this->load('customFieldValues.customField');
+
+        $answered = $this->customFieldValues->filter(fn (CustomFieldValue $value) => $value->customField?->type === 'pass-fail');
+        $groups   = Category::query()->whereIn('uuid', $answered->map(fn (CustomFieldValue $value) => $value->customField->category_uuid)->filter()->unique()->values())->pluck('name', 'uuid');
+        $unsafe   = false;
+        $kept     = [];
+
+        foreach ($answered as $value) {
+            /** @var CustomField $field */
+            $field         = $value->customField;
+            $answer        = is_array($value->value) ? $value->value : [];
+            $notApplicable = filter_var($answer['not_applicable'] ?? false, FILTER_VALIDATE_BOOLEAN);
+            $passed        = $notApplicable || filter_var($answer['passed'] ?? true, FILTER_VALIDATE_BOOLEAN);
+            $failed        = !$passed;
+            $isUnsafe      = $failed && filter_var($answer['unsafe'] ?? data_get($field->meta, 'unsafe_on_fail', false), FILTER_VALIDATE_BOOLEAN);
+            $unsafe        = $unsafe || $isUnsafe;
+            $itemKey       = static::itemKeyFor($field);
+
+            InspectionItemResult::updateOrCreate([
+                'inspection_submission_uuid' => $this->uuid,
+                'item_key'                   => $itemKey,
+            ], [
+                'company_uuid' => $this->company_uuid,
+                'label'        => $field->label ?? $field->name,
+                'category'     => $groups->get($field->category_uuid) ?? data_get($field->meta, 'category'),
+                'status'       => $notApplicable ? 'not_applicable' : ($passed ? 'passed' : 'failed'),
+                'severity'     => $failed ? ($answer['severity'] ?? data_get($field->meta, 'severity')) : null,
+                'passed'       => $passed,
+                'comments'     => $answer['comments'] ?? null,
+                'photos'       => array_values(array_filter((array) ($answer['photos'] ?? []), 'is_string')),
+                'meta'         => [
+                    'custom_field_uuid' => $field->uuid,
+                    'not_applicable'    => $notApplicable,
+                    'unsafe'            => $isUnsafe,
+                ],
+            ]);
+
+            $kept[] = $itemKey;
+        }
+
+        $stale = CustomField::query()
+            ->where('subject_uuid', $this->inspection_form_uuid)
+            ->where('for', InspectionForm::FIELD_FOR)
+            ->where('type', 'pass-fail')
+            ->get()
+            ->map(fn (CustomField $field) => static::itemKeyFor($field))
+            ->diff($kept)
+            ->values();
+        if ($stale->isNotEmpty()) {
+            $this->itemResults()->whereIn('item_key', $stale)->delete();
+        }
+
+        $meta = $this->meta ?? [];
+        if (($meta['unsafe'] ?? null) !== $unsafe) {
+            $this->update(['meta' => array_merge($meta, ['unsafe' => $unsafe])]);
+        }
+
+        InspectionFileStore::attachReferenced($this, $this->referencedFileUuids());
+        $this->unsetRelation('itemResults');
+
+        return count($kept);
+    }
+
+    /**
+     * The key a pass-fail field's result row is filed under. The app derives
+     * the same key (`field.name ?? field.id`), so a result the app built and
+     * one the server derived name the same item.
+     */
+    public static function itemKeyFor(CustomField $field): string
+    {
+        return $field->name ?: $field->uuid;
+    }
+
+    /**
+     * Every `file:<uuid>` the submission's values point at: file and
+     * signature values, and the photos inside a failed pass-fail answer.
+     *
+     * @return string[]
+     */
+    public function referencedFileUuids(): array
+    {
+        $uuids = [];
+        foreach ($this->customFieldValues as $value) {
+            $raw        = $value->getRawOriginal('value');
+            $candidates = is_array($value->value) ? (array) ($value->value['photos'] ?? []) : [$raw];
+            foreach ($candidates as $candidate) {
+                $uuid = InspectionFileStore::referencedUuid($candidate);
+                if ($uuid) {
+                    $uuids[] = $uuid;
+                }
+            }
+        }
+
+        return array_values(array_unique($uuids));
+    }
+
     public function getFormNameAttribute(): ?string
     {
         return $this->form?->name;
@@ -149,7 +276,7 @@ class InspectionSubmission extends Model
 
     public function syncResultCounts(): bool
     {
-        $total = $this->itemResults()->count();
+        $total  = $this->itemResults()->count();
         $failed = $this->failedItemResults()->count();
 
         return $this->update([
@@ -168,7 +295,7 @@ class InspectionSubmission extends Model
         }
 
         $failedLabels = $this->failedItemResults()->limit(6)->pluck('label')->filter()->values()->all();
-        $issue = Issue::create([
+        $issue        = Issue::create([
             'company_uuid'      => $this->company_uuid,
             'reported_by_uuid'  => $this->submitted_by_uuid,
             'vehicle_uuid'      => $this->vehicle_uuid,
@@ -199,7 +326,7 @@ class InspectionSubmission extends Model
         }
 
         $failedItems = $this->failedItemResults()->get();
-        $checklist = $failedItems->map(fn (InspectionItemResult $item) => [
+        $checklist   = $failedItems->map(fn (InspectionItemResult $item) => [
             'title'      => $item->label,
             'required'   => true,
             'completed'  => false,
@@ -210,19 +337,19 @@ class InspectionSubmission extends Model
         ])->values()->all();
 
         $workOrder = WorkOrder::create([
-            'company_uuid'  => $this->company_uuid,
-            'subject'       => 'Inspection repair: ' . ($this->vehicle_name ?? $this->public_id),
-            'status'        => 'open',
-            'priority'      => $this->highestFailureSeverity(),
-            'target_type'   => $this->vehicle_uuid ? Vehicle::class : null,
-            'target_uuid'   => $this->vehicle_uuid,
-            'opened_at'     => now(),
-            'due_at'        => now()->addDays($this->highestFailureSeverity() === 'critical' ? 1 : 7),
-            'instructions'  => 'Resolve failed inspection items and record completion details.',
-            'checklist'     => $checklist,
-            'currency'      => $this->vehicle?->currency,
+            'company_uuid'    => $this->company_uuid,
+            'subject'         => 'Inspection repair: ' . ($this->vehicle_name ?? $this->public_id),
+            'status'          => 'open',
+            'priority'        => $this->highestFailureSeverity(),
+            'target_type'     => $this->vehicle_uuid ? Vehicle::class : null,
+            'target_uuid'     => $this->vehicle_uuid,
+            'opened_at'       => now(),
+            'due_at'          => now()->addDays($this->highestFailureSeverity() === 'critical' ? 1 : 7),
+            'instructions'    => 'Resolve failed inspection items and record completion details.',
+            'checklist'       => $checklist,
+            'currency'        => $this->vehicle?->currency,
             'created_by_uuid' => $this->submitted_by_uuid,
-            'meta'          => [
+            'meta'            => [
                 'source'                     => 'inspection',
                 'inspection_submission_uuid' => $this->uuid,
                 'inspection_submission_id'   => $this->public_id,

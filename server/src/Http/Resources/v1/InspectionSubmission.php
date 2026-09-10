@@ -2,9 +2,12 @@
 
 namespace Fleetbase\FleetOps\Http\Resources\v1;
 
+use Fleetbase\FleetOps\Support\InspectionFileStore;
 use Fleetbase\FleetOps\Support\Utils;
 use Fleetbase\Http\Resources\FleetbaseResource;
 use Fleetbase\Http\Resources\User;
+use Fleetbase\Models\CustomFieldValue;
+use Fleetbase\Models\File;
 use Fleetbase\Support\Http;
 
 class InspectionSubmission extends FleetbaseResource
@@ -18,7 +21,7 @@ class InspectionSubmission extends FleetbaseResource
      */
     public function toArray($request)
     {
-        return $this->withCustomFields([
+        $data = $this->withCustomFields([
             'id'                   => $this->when(Http::isInternalRequest(), $this->id, $this->public_id),
             'uuid'                 => $this->when(Http::isInternalRequest(), $this->uuid),
             'public_id'            => $this->when(Http::isInternalRequest(), $this->public_id),
@@ -58,5 +61,92 @@ class InspectionSubmission extends FleetbaseResource
             'updated_at'           => $this->updated_at,
             'created_at'           => $this->created_at,
         ]);
+
+        // The platform's own `withCustomFields` puts the raw value models
+        // under `custom_field_values` for the console. What both consoles and
+        // the app want is the field's identity beside its answer, with file
+        // references resolved, so that projection replaces it.
+        $data['custom_field_values'] = $this->projectCustomFieldValues();
+        $data['files']               = $this->projectFiles();
+
+        return $data;
+    }
+
+    /**
+     * The answers, as the app and the console read them: which field, what it
+     * is called, its type, and the value with every `file:<uuid>` resolved to
+     * something fetchable.
+     */
+    protected function projectCustomFieldValues(): array
+    {
+        if (!$this->resource || !$this->resource->relationLoaded('customFieldValues')) {
+            return [];
+        }
+
+        $internal = Http::isInternalRequest();
+
+        return $this->resource->customFieldValues->map(function (CustomFieldValue $value) use ($internal) {
+            $field = $value->customField;
+            $row   = [
+                'custom_field' => $value->custom_field_uuid,
+                'name'         => $field?->name,
+                'label'        => $field?->label ?? $value->custom_field_label,
+                'type'         => $field?->type ?? $value->value_type,
+                'value_type'   => $value->value_type,
+                'value'        => static::projectValue($value),
+            ];
+
+            if ($internal) {
+                $row['uuid']          = $value->uuid;
+                $row['category_uuid'] = $field?->category_uuid;
+                $row['order']         = $field?->order === null ? null : (int) $field->order;
+                $row['meta']          = is_array($field?->meta) && !empty($field->meta) ? $field->meta : (object) [];
+            }
+
+            return $row;
+        })->values()->all();
+    }
+
+    /**
+     * One stored value, with file references resolved. A pass-fail answer
+     * carries its photos inside it, so those are resolved too.
+     */
+    protected static function projectValue(CustomFieldValue $value): mixed
+    {
+        $raw = $value->getRawOriginal('value');
+
+        if (in_array($value->value_type, ['object', 'array'], true)) {
+            $decoded = is_string($raw) ? json_decode($raw, true) : $raw;
+            if (!is_array($decoded)) {
+                return $decoded;
+            }
+
+            if (isset($decoded['photos']) && is_array($decoded['photos'])) {
+                $decoded['photos'] = array_values(array_map(fn ($photo) => InspectionFileStore::project($photo), $decoded['photos']));
+            }
+
+            return $decoded;
+        }
+
+        return InspectionFileStore::project($raw);
+    }
+
+    /** The photos and signatures filed with the inspection. */
+    protected function projectFiles(): array
+    {
+        if (!$this->resource || !$this->resource->relationLoaded('files')) {
+            return [];
+        }
+
+        return $this->resource->files->map(fn (File $file) => [
+            'id'                => $file->public_id ?? $file->uuid,
+            'uuid'              => $file->uuid,
+            'url'               => $file->url,
+            'original_filename' => $file->original_filename,
+            'content_type'      => $file->content_type,
+            'type'              => $file->type,
+            'caption'           => $file->caption,
+            'created_at'        => $file->created_at,
+        ])->values()->all();
     }
 }

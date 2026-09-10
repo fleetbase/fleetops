@@ -109,14 +109,15 @@ function fleetOpsInspectionControllerDatabase(): SQLiteConnection
         'companies'               => ['uuid', 'public_id', '_key', 'name', 'owner_uuid'],
         'company_users'           => ['uuid', '_key', 'company_uuid', 'user_uuid', 'role_uuid', 'status'],
         'settings'                => ['key', 'value'],
-        'files'                   => ['uuid', 'public_id', '_key', 'company_uuid', 'subject_uuid', 'subject_type', 'path', 'disk', 'type'],
+        'files'                   => ['uuid', 'public_id', '_key', 'company_uuid', 'uploader_uuid', 'subject_uuid', 'subject_type', 'path', 'disk', 'bucket', 'folder', 'etag', 'meta', 'original_filename', 'type', 'content_type', 'file_size', 'slug', 'caption'],
         'vendors'                 => ['uuid', 'public_id', '_key', 'company_uuid', 'name'],
         'orders'                  => ['uuid', 'public_id', '_key', 'company_uuid', 'driver_assigned_uuid', 'status'],
         'positions'               => ['uuid', 'public_id', '_key', 'company_uuid', 'subject_uuid', 'subject_type', 'coordinates'],
         'maintenances'            => ['uuid', 'public_id', '_key', 'company_uuid', 'maintainable_type', 'maintainable_uuid', 'status', 'completed_at'],
         'maintenance_schedules'   => ['uuid', 'public_id', '_key', 'company_uuid', 'subject_type', 'subject_uuid', 'status', 'next_due_at'],
         'custom_field_values'     => ['uuid', 'company_uuid', 'custom_field_uuid', 'subject_uuid', 'subject_type', 'value', 'value_type'],
-        'custom_fields'           => ['uuid', 'company_uuid', 'label', 'name', 'type'],
+        'custom_fields'           => ['uuid', 'company_uuid', 'category_uuid', 'subject_uuid', 'subject_type', 'name', 'label', 'type', 'for', 'component', 'options', 'required', 'editable', 'default_value', 'validation_rules', 'meta', 'description', 'help_text', 'order'],
+        'categories'              => ['uuid', 'public_id', '_key', 'company_uuid', 'owner_uuid', 'owner_type', 'parent_uuid', 'icon_file_uuid', 'internal_id', 'name', 'description', 'translations', 'meta', 'tags', 'icon', 'icon_color', 'slug', 'order', 'for', 'core_category'],
         'activity_log'            => ['uuid', 'company_uuid', 'log_name', 'description', 'subject_type', 'subject_id', 'causer_type', 'causer_id', 'properties', 'event', 'batch_uuid'],
     ];
 

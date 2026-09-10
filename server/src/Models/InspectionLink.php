@@ -8,8 +8,8 @@ use Fleetbase\Models\User;
 use Fleetbase\Traits\HasMetaAttributes;
 use Fleetbase\Traits\HasPublicId;
 use Fleetbase\Traits\HasUuid;
-use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Str;
 
 class InspectionLink extends Model
@@ -19,7 +19,7 @@ class InspectionLink extends Model
     use HasMetaAttributes;
     use SoftDeletes;
 
-    protected $table = 'inspection_links';
+    protected $table        = 'inspection_links';
     protected $publicIdType = 'inspection_link';
 
     protected $fillable = [

@@ -114,17 +114,17 @@ class HubController extends Controller
         $now     = Carbon::now();
         $next7   = Carbon::now()->addDays(7);
 
-        $overdueSchedules        = $this->count(MaintenanceSchedule::query()->where('status', 'active')->whereNotNull('next_due_date')->where('next_due_date', '<', $now), $company);
-        $upcomingSchedules       = $this->count(MaintenanceSchedule::query()->where('status', 'active')->whereBetween('next_due_date', [$now, $next7]), $company);
-        $openWorkOrders          = $this->count(WorkOrder::query()->whereIn('status', ['open', 'in_progress']), $company);
-        $overdueWorkOrders       = $this->count(WorkOrder::query()->whereNotIn('status', ['closed', 'canceled'])->whereNotNull('due_at')->where('due_at', '<', $now), $company);
-        $openMaintenance         = $this->count(Maintenance::query()->whereNotIn('status', ['completed', 'canceled']), $company);
-        $highPriorityMaintenance = $this->count(Maintenance::query()->whereNotIn('status', ['completed', 'canceled'])->whereIn('priority', ['high', 'urgent', 'critical']), $company);
+        $overdueSchedules         = $this->count(MaintenanceSchedule::query()->where('status', 'active')->whereNotNull('next_due_date')->where('next_due_date', '<', $now), $company);
+        $upcomingSchedules        = $this->count(MaintenanceSchedule::query()->where('status', 'active')->whereBetween('next_due_date', [$now, $next7]), $company);
+        $openWorkOrders           = $this->count(WorkOrder::query()->whereIn('status', ['open', 'in_progress']), $company);
+        $overdueWorkOrders        = $this->count(WorkOrder::query()->whereNotIn('status', ['closed', 'canceled'])->whereNotNull('due_at')->where('due_at', '<', $now), $company);
+        $openMaintenance          = $this->count(Maintenance::query()->whereNotIn('status', ['completed', 'canceled']), $company);
+        $highPriorityMaintenance  = $this->count(Maintenance::query()->whereNotIn('status', ['completed', 'canceled'])->whereIn('priority', ['high', 'urgent', 'critical']), $company);
         $publishedInspectionForms = $this->count(InspectionForm::query()->where('status', 'published'), $company);
-        $failedInspections       = $this->count(InspectionSubmission::query()->whereIn('status', ['submitted', 'needs_review'])->where('result', 'failed'), $company);
-        $unresolvedInspections   = $this->count(InspectionSubmission::query()->where('result', 'failed')->whereNull('resolved_at'), $company);
-        $lowStockParts           = $this->count(Part::query()->where('quantity_on_hand', '>', 0)->where('quantity_on_hand', '<=', 5), $company);
-        $equipment               = $this->count(Equipment::query(), $company);
+        $failedInspections        = $this->count(InspectionSubmission::query()->whereIn('status', ['submitted', 'needs_review'])->where('result', 'failed'), $company);
+        $unresolvedInspections    = $this->count(InspectionSubmission::query()->where('result', 'failed')->whereNull('resolved_at'), $company);
+        $lowStockParts            = $this->count(Part::query()->where('quantity_on_hand', '>', 0)->where('quantity_on_hand', '<=', 5), $company);
+        $equipment                = $this->count(Equipment::query(), $company);
 
         return response()->json([
             'kpis'     => [

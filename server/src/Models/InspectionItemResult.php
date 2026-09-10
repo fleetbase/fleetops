@@ -23,9 +23,9 @@ class InspectionItemResult extends Model
     use HasMetaAttributes;
     use Searchable;
 
-    protected $table = 'inspection_item_results';
+    protected $table             = 'inspection_item_results';
     protected $searchableColumns = ['label', 'category', 'comments'];
-    protected $filterParams = ['status', 'severity', 'passed', 'inspection_submission_uuid', 'issue_uuid', 'work_order_uuid'];
+    protected $filterParams      = ['status', 'severity', 'passed', 'inspection_submission_uuid', 'issue_uuid', 'work_order_uuid'];
 
     protected $fillable = [
         'company_uuid',
@@ -52,10 +52,10 @@ class InspectionItemResult extends Model
     ];
 
     protected $appends = ['submission_id'];
-    protected $with = [];
+    protected $with    = [];
 
-    protected static $logName = 'inspection_item_result';
-    protected static $logAttributes = '*';
+    protected static $logName         = 'inspection_item_result';
+    protected static $logAttributes   = '*';
     protected static $submitEmptyLogs = false;
 
     public function getActivitylogOptions(): LogOptions

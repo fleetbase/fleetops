@@ -34,7 +34,7 @@ class InspectionController extends Controller
      * The relations a submission is answered with, so the app never has to
      * make a second request to learn what its own submission produced.
      */
-    protected const SUBMISSION_RELATIONS = ['form', 'vehicle', 'driver', 'itemResults', 'issue', 'workOrder'];
+    protected const SUBMISSION_RELATIONS = ['form', 'vehicle', 'driver', 'itemResults', 'issue', 'workOrder', 'customFieldValues.customField', 'files'];
 
     /**
      * GET /v1/inspection-forms — the published forms a driver may fill in.
@@ -240,13 +240,16 @@ class InspectionController extends Controller
         return InspectionForm::where('company_uuid', session('company'))
             ->where('status', 'published')
             ->whereNotNull('published_at')
+            // The form's structure is the point of the read; loading it with
+            // the forms keeps a listing to two queries instead of two a form.
+            ->with(['fieldGroups', 'fields'])
             ->orderBy('published_at', 'desc');
     }
 
     protected static function submissions()
     {
         return InspectionSubmission::where('company_uuid', session('company'))
-            ->with(['form', 'vehicle', 'driver'])
+            ->with(['form', 'vehicle', 'driver', 'customFieldValues.customField', 'files'])
             ->orderBy('submitted_at', 'desc')
             ->orderBy('created_at', 'desc');
     }
