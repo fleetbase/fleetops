@@ -55,16 +55,7 @@ export default class PublicInspectionComponent extends Component {
             const response = yield this.fetch.get(`inspections/forms/${this.formId}`, { token: this.token }, { namespace: 'fleet-ops/public' });
             this.form = response?.form;
             this.identity = response?.identity;
-            this.itemResults = (this.form?.items ?? []).map((item, index) => ({
-                item_key: item.key || `item_${index + 1}`,
-                label: item.label,
-                category: item.category,
-                severity: item.severity || 'medium',
-                status: 'passed',
-                passed: true,
-                comments: '',
-                photos: [],
-            }));
+            this.itemResults = this.checklistOf(this.form);
         } catch (error) {
             this.error = error?.payload?.error ?? error?.message ?? 'Unable to load inspection.';
         }
@@ -90,6 +81,53 @@ export default class PublicInspectionComponent extends Component {
         } catch (error) {
             this.error = error?.payload?.error ?? error?.message ?? 'Unable to submit inspection.';
         }
+    }
+
+    /**
+     * The checklist a tokenised link offers.
+     *
+     * A form built from fields answers `grouped_fields`, not `items`, so the
+     * pass/fail fields among them are what the link asks about — keyed the way
+     * the server keys a derived result (`field.name ?? field.id`), so a link
+     * submission and an app submission name the same item. The other field
+     * types are not offered here: a public link is a checklist handed to a
+     * contractor with a phone number, not the app.
+     */
+    checklistOf(form) {
+        const items = Array.isArray(form?.items) ? form.items : [];
+        if (items.length) {
+            return items.map((item, index) => ({
+                item_key: item.key || `item_${index + 1}`,
+                label: item.label,
+                category: item.category,
+                severity: item.severity || 'medium',
+                status: 'passed',
+                passed: true,
+                comments: '',
+                photos: [],
+            }));
+        }
+
+        const groups = Array.isArray(form?.grouped_fields) ? form.grouped_fields : [];
+
+        return groups.reduce((carry, group) => {
+            const fields = Array.isArray(group?.fields) ? group.fields : [];
+
+            return carry.concat(
+                fields
+                    .filter((field) => field?.type === 'pass-fail')
+                    .map((field) => ({
+                        item_key: field.name || field.id,
+                        label: field.label,
+                        category: group.name ?? null,
+                        severity: field.meta?.severity || 'medium',
+                        status: 'passed',
+                        passed: true,
+                        comments: '',
+                        photos: [],
+                    }))
+            );
+        }, []);
     }
 
     @action updateReading(key, event) {
