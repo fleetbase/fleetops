@@ -2872,6 +2872,11 @@ inspection:
         text-placeholder: Type an answer
         no-options: This field has no answers to choose from.
         uploads-unavailable: Photos can be added from the console or the driver app.
+        promoted: Promoted
+        comments-required: Say what is wrong, and what it needs
+        comment-required: Comment mandatory on fail
+        photo-required: Photo mandatory on fail
+        comment-and-photo-required: Comment + photo mandatory on fail
     record:
         overview: Overview
         inspection: Inspection
@@ -2912,9 +2917,12 @@ inspection:
         choose-a-form: Choose an inspection form to begin.
         group-has-no-fields: This section has no checks.
         outstanding: still to answer
-        section-failed: "{count, plural, one {# failed} other {# failed}}"
-        section-outstanding: "{count, plural, one {# to answer} other {# to answer}}"
-        section-clear: All clear
+        section-outstanding: "{count, plural, one {# outstanding} other {# outstanding}}"
+        columns: "{columns, plural, =1 {1 col} other {# col}}"
+        columns-and-promoted: "{columns, plural, =1 {1 col} other {# col}} · {promoted, plural, one {# promoted} other {# promoted}}"
+        outstanding-field: "{label} is required before submitting"
+        review: "Review →"
+        jump-to: "Jump to →"
     link:
         public-links: Public Links
         existing: Generated Links

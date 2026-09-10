@@ -3,7 +3,10 @@ import { tracked } from '@glimmer/tracking';
 import { inject as service } from '@ember/service';
 import { action } from '@ember/object';
 import { INSPECTION_SEVERITIES } from '../../utils/inspection-field-types';
-import { answerState, isUnsafeAnswer } from '../../utils/inspection-answers';
+import { answerState, isUnsafeAnswer, isPromoted, isBlank, ROOMY_FIELD_TYPES } from '../../utils/inspection-answers';
+
+/** The date-ish types that are still one compact control. */
+const INPUT_TYPES = { 'date-picker': 'date', 'date-time-input': 'datetime-local' };
 
 const PASS_FAIL_DEFAULT = { passed: true, not_applicable: false, severity: null, comments: '', photos: [], unsafe: false };
 
@@ -28,8 +31,6 @@ export default class InspectionFieldInputComponent extends Component {
     /** Freshly uploaded files, so a photo can be shown before it is saved. */
     @tracked previews = {};
 
-    severityOptions = INSPECTION_SEVERITIES;
-
     get field() {
         return this.args.field ?? {};
     }
@@ -37,6 +38,79 @@ export default class InspectionFieldInputComponent extends Component {
     get meta() {
         const meta = this.field.meta;
         return meta && typeof meta === 'object' ? meta : {};
+    }
+
+    /** Whether this field has left the grid for a full-width band. */
+    get isPromoted() {
+        return isPromoted(this.field, this.args.value);
+    }
+
+    /** A failed check: the band that carries severity, comment and photos. */
+    get isDefect() {
+        return this.field.type === 'pass-fail' && this.answerState === 'fail';
+    }
+
+    /** A note, an upload or a signature — never a column, whatever the answer. */
+    get isRoomy() {
+        return ROOMY_FIELD_TYPES.includes(this.field.type);
+    }
+
+    /** A note puts its control under the label; a file puts it beside. */
+    get isStackedBand() {
+        return this.field.type === 'textarea';
+    }
+
+    get isTargeted() {
+        return Boolean(this.field.uuid) && this.args.targetId === this.field.uuid;
+    }
+
+    /** A required answer still missing, which its own edge says in amber. */
+    get isOutstanding() {
+        return Boolean(this.field.required) && isBlank(this.field, this.args.value);
+    }
+
+    get passFailOptions() {
+        return [
+            { value: 'pass', label: this.intl.t('inspection.answer.pass') },
+            { value: 'fail', label: this.intl.t('inspection.answer.fail') },
+            { value: 'na', label: this.intl.t('inspection.answer.not-applicable') },
+        ];
+    }
+
+    get severityOptions() {
+        return INSPECTION_SEVERITIES.map((severity) => ({
+            value: severity,
+            label: this.intl.t(`inspection.severity.${severity}`),
+        }));
+    }
+
+    get inputType() {
+        return INPUT_TYPES[this.field.type] ?? 'text';
+    }
+
+    get fileIcon() {
+        return this.field.type === 'signature' ? 'signature' : 'upload';
+    }
+
+    get uploadLabel() {
+        return this.field.type === 'signature' ? this.intl.t('inspection.answer.upload-signature') : this.intl.t('inspection.answer.upload-photo');
+    }
+
+    get emptyFileNote() {
+        return this.field.type === 'signature' ? this.intl.t('inspection.answer.no-signature') : this.intl.t('inspection.answer.no-photo');
+    }
+
+    /** What this failure still owes, said once beside the photo slots. */
+    get defectRequirement() {
+        if (this.requiresComment && this.requiresPhoto) {
+            return this.intl.t('inspection.answer.comment-and-photo-required');
+        }
+
+        if (this.requiresPhoto) {
+            return this.intl.t('inspection.answer.photo-required');
+        }
+
+        return this.requiresComment ? this.intl.t('inspection.answer.comment-required') : null;
     }
 
     /** A field with no label still needs something to click on. */
@@ -50,14 +124,6 @@ export default class InspectionFieldInputComponent extends Component {
 
     get unit() {
         return this.meta.unit ?? null;
-    }
-
-    /**
-     * A control that needs the full width sits under its label instead of
-     * beside it: a note, a photo, a signature.
-     */
-    get isStacked() {
-        return ['textarea', 'file-upload', 'signature'].includes(this.field.type);
     }
 
     /** What this row currently says, for the row's own `data-answer`. */
@@ -124,20 +190,6 @@ export default class InspectionFieldInputComponent extends Component {
         return { ...PASS_FAIL_DEFAULT };
     }
 
-    get isPassed() {
-        const answer = this.answer;
-        return answer.passed === true && answer.not_applicable !== true;
-    }
-
-    get isFailed() {
-        const answer = this.answer;
-        return answer.passed === false && answer.not_applicable !== true;
-    }
-
-    get isNotApplicable() {
-        return this.answer.not_applicable === true;
-    }
-
     get severity() {
         return this.answer.severity ?? this.meta.severity ?? 'medium';
     }
@@ -156,11 +208,11 @@ export default class InspectionFieldInputComponent extends Component {
     }
 
     get requiresComment() {
-        return this.isFailed && this.meta.require_comment_on_fail === true;
+        return this.isDefect && this.meta.require_comment_on_fail === true;
     }
 
     get requiresPhoto() {
-        return this.isFailed && this.meta.require_photo_on_fail === true;
+        return this.isDefect && this.meta.require_photo_on_fail === true;
     }
 
     // ---------- file / signature ----------
@@ -208,22 +260,32 @@ export default class InspectionFieldInputComponent extends Component {
         this.emit(option ?? null);
     }
 
-    @action markPassed() {
-        this.emit({ ...this.answer, passed: true, not_applicable: false, severity: null, unsafe: false });
-    }
+    /**
+     * One of pass, fail or n/a. Failing seeds the severity and the unsafe flag
+     * from what the field's author set as its default, so the common case is
+     * already answered; passing or marking n/a clears both, because a check
+     * that did not fail cannot carry a severity.
+     */
+    @action setPassFail(choice) {
+        if (choice === 'fail') {
+            this.emit({
+                ...this.answer,
+                passed: false,
+                not_applicable: false,
+                severity: this.answer.severity ?? this.meta.severity ?? 'medium',
+                unsafe: this.answer.unsafe ?? Boolean(this.meta.unsafe_on_fail),
+            });
 
-    @action markFailed() {
+            return;
+        }
+
         this.emit({
             ...this.answer,
-            passed: false,
-            not_applicable: false,
-            severity: this.answer.severity ?? this.meta.severity ?? 'medium',
-            unsafe: this.answer.unsafe ?? Boolean(this.meta.unsafe_on_fail),
+            passed: true,
+            not_applicable: choice === 'na',
+            severity: null,
+            unsafe: false,
         });
-    }
-
-    @action markNotApplicable() {
-        this.emit({ ...this.answer, passed: true, not_applicable: true, severity: null, unsafe: false });
     }
 
     @action setSeverity(severity) {

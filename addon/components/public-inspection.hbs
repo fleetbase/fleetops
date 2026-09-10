@@ -48,60 +48,60 @@
             </header>
 
             <div class="inspection-sheet mb-4">
-                <section class="inspection-section">
-                    <div class="inspection-section__header">
-                        <h3 class="inspection-section__title">{{t "inspection.record.details"}}</h3>
-                    </div>
-                    <div>
-                        <div class="inspection-row">
-                            <div class="inspection-row__main">
-                                <div class="inspection-row__label"><div class="inspection-row__title">{{t "inspection.record.odometer"}}</div></div>
-                                <div class="inspection-row__control inspection-row__control--sized">
-                                    <input type="number" inputmode="decimal" class="w-full form-input" placeholder={{t "inspection.record.odometer-placeholder"}} {{sync-value this.odometer}} {{on "input" (fn this.updateReading "odometer")}} />
+                <div class="inspection-sheet__body">
+                    <div class="inspection-sheet__groups">
+                        <section class="inspection-group">
+                            <div class="inspection-group__header">
+                                <span class="inspection-group__name">{{t "inspection.record.details"}}</span>
+                            </div>
+                            <div class="inspection-group__grid" data-columns="2">
+                                <div class="inspection-cell">
+                                    <span class="inspection-cell__label">{{t "inspection.record.odometer"}}</span>
+                                    <div class="inspection-cell__control">
+                                        <input type="number" inputmode="decimal" class="w-full form-input" aria-label={{t "inspection.record.odometer"}} placeholder={{t "inspection.record.odometer-placeholder"}} {{sync-value this.odometer}} {{on "input" (fn this.updateReading "odometer")}} />
+                                    </div>
+                                </div>
+                                <div class="inspection-cell">
+                                    <span class="inspection-cell__label">{{t "inspection.record.engine-hours"}}</span>
+                                    <div class="inspection-cell__control">
+                                        <input type="number" inputmode="decimal" class="w-full form-input" aria-label={{t "inspection.record.engine-hours"}} placeholder={{t "inspection.record.engine-hours-placeholder"}} {{sync-value this.engineHours}} {{on "input" (fn this.updateReading "engineHours")}} />
+                                    </div>
                                 </div>
                             </div>
-                        </div>
-                        <div class="inspection-row">
-                            <div class="inspection-row__main">
-                                <div class="inspection-row__label"><div class="inspection-row__title">{{t "inspection.record.engine-hours"}}</div></div>
-                                <div class="inspection-row__control inspection-row__control--sized">
-                                    <input type="number" inputmode="decimal" class="w-full form-input" placeholder={{t "inspection.record.engine-hours-placeholder"}} {{sync-value this.engineHours}} {{on "input" (fn this.updateReading "engineHours")}} />
-                                </div>
-                            </div>
-                        </div>
+                        </section>
                     </div>
-                </section>
+                </div>
             </div>
 
             {{#if this.hasSheet}}
                 <InspectionSheet @groups={{this.groups}} @values={{this.values}} @onChange={{this.setValue}} @allowUploads={{false}} />
             {{else}}
                 <div class="inspection-sheet">
-                    <section class="inspection-section">
-                        <div class="inspection-section__empty">{{t "inspection.record.form-has-no-fields"}}</div>
-                    </section>
+                    <div class="inspection-sheet__body">
+                        <div class="inspection-group__empty px-4">{{t "inspection.record.form-has-no-fields"}}</div>
+                    </div>
                 </div>
             {{/if}}
 
             <div class="inspection-sheet mt-4">
-                <section class="inspection-section">
-                    <div class="inspection-section__header">
-                        <h3 class="inspection-section__title">{{t "inspection.public.sign-off"}}</h3>
-                    </div>
-                    <div>
-                        <div class="inspection-row">
-                            <div class="inspection-row__main">
-                                <div class="inspection-row__label">
-                                    <div class="inspection-row__title">{{t "inspection.public.your-name"}}</div>
-                                    <div class="inspection-row__hint">{{t "inspection.public.your-name-help"}}</div>
-                                </div>
-                                <div class="inspection-row__control inspection-row__control--sized">
-                                    <input type="text" class="w-full form-input" placeholder={{t "inspection.public.your-name-placeholder"}} {{sync-value this.signatureName}} {{on "input" (fn this.updateReading "signatureName")}} />
+                <div class="inspection-sheet__body">
+                    <div class="inspection-sheet__groups">
+                        <section class="inspection-group">
+                            <div class="inspection-group__header">
+                                <span class="inspection-group__name">{{t "inspection.public.sign-off"}}</span>
+                            </div>
+                            <div class="inspection-group__grid" data-columns="1">
+                                <div class="inspection-cell">
+                                    <span class="inspection-cell__label">{{t "inspection.public.your-name"}}</span>
+                                    <span class="inspection-cell__hint">{{t "inspection.public.your-name-help"}}</span>
+                                    <div class="inspection-cell__control">
+                                        <input type="text" class="w-full form-input" aria-label={{t "inspection.public.your-name"}} placeholder={{t "inspection.public.your-name-placeholder"}} {{sync-value this.signatureName}} {{on "input" (fn this.updateReading "signatureName")}} />
+                                    </div>
                                 </div>
                             </div>
-                        </div>
+                        </section>
                     </div>
-                </section>
+                </div>
             </div>
 
             {{#if this.error}}

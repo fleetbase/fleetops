@@ -4,7 +4,7 @@
             <Spinner @loadingMessage={{t "inspection.link.loading"}} class="text-sm dark:text-gray-100" />
         </div>
     {{else if this.error}}
-        <div class="inspection-section__empty">{{this.error}}</div>
+        <div class="inspection-link-list__empty">{{this.error}}</div>
     {{else if this.hasLinks}}
         <div>
             {{#each this.links key="id" as |link|}}
@@ -54,6 +54,6 @@
             {{/each}}
         </div>
     {{else}}
-        <div class="inspection-section__empty">{{t "inspection.link.none"}}</div>
+        <div class="inspection-link-list__empty">{{t "inspection.link.none"}}</div>
     {{/if}}
 </div>

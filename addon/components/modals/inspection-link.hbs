@@ -40,13 +40,9 @@
             </InputGroup>
         </div>
 
-        <div class="inspection-sheet">
-            <section class="inspection-section">
-                <div class="inspection-section__header">
-                    <h3 class="inspection-section__title">{{t "inspection.link.existing"}}</h3>
-                </div>
-                <InspectionLink::List @form={{@options.form}} @reloadOn={{this.formState.generatedAt}} />
-            </section>
+        <div class="inspection-link-panel">
+            <div class="inspection-link-panel__header">{{t "inspection.link.existing"}}</div>
+            <InspectionLink::List @form={{@options.form}} @reloadOn={{this.formState.generatedAt}} />
         </div>
     </div>
 </Modal::Default>

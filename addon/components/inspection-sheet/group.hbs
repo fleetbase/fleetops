@@ -1,0 +1,57 @@
+<section class="inspection-group" ...attributes>
+    <div class="inspection-group__header">
+        <span class="inspection-group__name">{{this.title}}</span>
+        {{#if this.markers}}
+            <span class="inspection-group__dots" aria-hidden="true">
+                {{#each this.markers key="uuid" as |marker|}}
+                    <span class="inspection-dot" data-marker={{marker.marker}}></span>
+                {{/each}}
+            </span>
+        {{/if}}
+        <span class="inspection-group__meta" data-outstanding={{if this.hasOutstanding "true" "false"}}>{{this.meta}}</span>
+    </div>
+
+    {{#if @group.description}}
+        <p class="inspection-group__description">{{@group.description}}</p>
+    {{/if}}
+
+    {{#if this.fields}}
+        {{#if this.compactFields}}
+            <div class="inspection-group__grid" data-columns={{this.columns}}>
+                {{#each this.compactFields key="uuid" as |field|}}
+                    {{#if @readonly}}
+                        <InspectionField::Value @field={{field}} @value={{get @values field.uuid}} @targetId={{@targetId}} />
+                    {{else}}
+                        <InspectionField::Input
+                            @field={{field}}
+                            @value={{get @values field.uuid}}
+                            @subject={{@subject}}
+                            @onChange={{@onChange}}
+                            @disabled={{@disabled}}
+                            @allowUploads={{@allowUploads}}
+                            @targetId={{@targetId}}
+                        />
+                    {{/if}}
+                {{/each}}
+            </div>
+        {{/if}}
+
+        {{#each this.promotedFields key="uuid" as |field|}}
+            {{#if @readonly}}
+                <InspectionField::Value @field={{field}} @value={{get @values field.uuid}} @targetId={{@targetId}} />
+            {{else}}
+                <InspectionField::Input
+                    @field={{field}}
+                    @value={{get @values field.uuid}}
+                    @subject={{@subject}}
+                    @onChange={{@onChange}}
+                    @disabled={{@disabled}}
+                    @allowUploads={{@allowUploads}}
+                    @targetId={{@targetId}}
+                />
+            {{/if}}
+        {{/each}}
+    {{else}}
+        <div class="inspection-group__empty">{{t "inspection.record.group-has-no-fields"}}</div>
+    {{/if}}
+</section>

@@ -1,7 +1,7 @@
 import Component from '@glimmer/component';
 import { inject as service } from '@ember/service';
 import { INSPECTION_SEVERITIES } from '../../utils/inspection-field-types';
-import { answerState } from '../../utils/inspection-answers';
+import { answerState, isPromoted, ROOMY_FIELD_TYPES } from '../../utils/inspection-answers';
 
 /**
  * One stored answer, read-only — what the record's Overview shows.
@@ -30,6 +30,26 @@ export default class InspectionFieldValueComponent extends Component {
 
     get answerState() {
         return answerState(this.field, this.args.value);
+    }
+
+    get isPromoted() {
+        return isPromoted(this.field, this.args.value);
+    }
+
+    get isDefect() {
+        return this.isPassFail && this.answerState === 'fail';
+    }
+
+    get isRoomy() {
+        return ROOMY_FIELD_TYPES.includes(this.field.type);
+    }
+
+    get isStackedBand() {
+        return this.field.type === 'textarea';
+    }
+
+    get isTargeted() {
+        return Boolean(this.field.uuid) && this.args.targetId === this.field.uuid;
     }
 
     /** A failure's comment and photos, shown only when there is something to show. */

@@ -1,116 +1,223 @@
 {{!
-    One line of an inspection, being answered.
+    One field of an inspection, being answered.
 
-    Every field type renders the same row: what is being checked on the left,
-    the control on the right. A type that needs the full width (a note, a
-    photo, a signature) puts its control under the label instead. A failed
-    check opens its defect block *below* its own row, so answering one line
-    never changes the shape of another.
+    It renders in one of two places. Compact, it is a cell in its group's
+    grid: label above, control below, every control the same height so a row
+    of them lines up. Promoted, it is a full-width band below the grid —
+    because it failed and now owes a severity, a comment and photos, or
+    because it is a note, an upload or a signature that never fitted a column.
+
+    Promotion is what stops one answer changing the shape of another: once a
+    field leaves the grid it has no neighbouring cell left to stretch.
 }}
-<div class="inspection-row {{if this.isStacked 'inspection-row--stacked'}}" data-field-type={{this.field.type}} data-answer={{this.answerState}} ...attributes>
-    <div class="inspection-row__main">
-        <div class="inspection-row__label">
-            <div class="inspection-row__title">
-                {{this.label}}
-                {{#if this.field.required}}<span class="inspection-row__required" aria-hidden="true">*</span>{{/if}}
+{{#if this.isDefect}}
+    <div
+        class="inspection-band inspection-band--defect {{if this.isTargeted 'inspection-band--targeted'}}"
+        id="inspection-field-{{this.field.uuid}}"
+        data-field-type={{this.field.type}}
+        data-answer="fail"
+        ...attributes
+    >
+        <div class="inspection-band__head">
+            <span class="inspection-chip">{{t "inspection.answer.promoted"}}</span>
+            <span class="inspection-band__label">{{this.label}}</span>
+            <div class="inspection-choice inspection-choice--auto" role="group" aria-label={{this.label}}>
+                {{#each this.passFailOptions key="value" as |option|}}
+                    <button
+                        type="button"
+                        class="inspection-choice__option"
+                        data-answer={{option.value}}
+                        aria-pressed={{if (eq this.answerState option.value) "true" "false"}}
+                        disabled={{@disabled}}
+                        {{on "click" (fn this.setPassFail option.value)}}
+                    >
+                        {{option.label}}
+                    </button>
+                {{/each}}
             </div>
-            {{#if this.field.description}}
-                <div class="inspection-row__hint">{{this.field.description}}</div>
-            {{/if}}
-            {{#if this.instructions}}
-                <div class="inspection-row__hint">{{this.instructions}}</div>
-            {{/if}}
-            {{#if this.field.help_text}}
-                <div class="inspection-row__hint">{{this.field.help_text}}</div>
-            {{/if}}
         </div>
 
-        {{#if (eq this.field.type "pass-fail")}}
-            <div class="inspection-row__control">
-                <div class="inspection-choice" role="group" aria-label={{this.label}}>
-                    <button type="button" class="inspection-choice__option" data-answer="pass" aria-pressed={{if this.isPassed "true" "false"}} disabled={{@disabled}} {{on "click" this.markPassed}}>
-                        {{t "inspection.answer.pass"}}
-                    </button>
-                    <button type="button" class="inspection-choice__option" data-answer="fail" aria-pressed={{if this.isFailed "true" "false"}} disabled={{@disabled}} {{on "click" this.markFailed}}>
-                        {{t "inspection.answer.fail"}}
-                    </button>
-                    <button type="button" class="inspection-choice__option" data-answer="na" aria-pressed={{if this.isNotApplicable "true" "false"}} disabled={{@disabled}} {{on "click" this.markNotApplicable}}>
-                        {{t "inspection.answer.not-applicable"}}
-                    </button>
+        <div class="inspection-band__body">
+            <div class="inspection-defect__row">
+                <div class="inspection-choice" role="group" aria-label={{t "inspection.answer.severity"}}>
+                    {{#each this.severityOptions key="value" as |option|}}
+                        <button
+                            type="button"
+                            class="inspection-choice__option"
+                            data-answer="severity"
+                            aria-pressed={{if (eq this.severity option.value) "true" "false"}}
+                            disabled={{@disabled}}
+                            {{on "click" (fn this.setSeverity option.value)}}
+                        >
+                            {{option.label}}
+                        </button>
+                    {{/each}}
                 </div>
+                <span class="inspection-unsafe" data-on={{if this.isUnsafe "true" "false"}}>
+                    <Toggle @isToggled={{this.isUnsafe}} @onToggle={{this.setUnsafe}} @disabled={{@disabled}} @activeColor="red" />
+                    {{t "inspection.answer.unsafe"}}
+                </span>
             </div>
 
-        {{else if (eq this.field.type "boolean")}}
-            <div class="inspection-row__control">
+            <textarea
+                class="w-full form-input"
+                rows="2"
+                aria-label={{t "inspection.answer.comments"}}
+                placeholder={{if this.requiresComment (t "inspection.answer.comments-required") (t "inspection.answer.comments-placeholder")}}
+                disabled={{@disabled}}
+                {{sync-value this.comments}}
+                {{on "input" this.setComments}}
+            ></textarea>
+
+            <div class="inspection-slots">
+                {{#each this.answerPhotos key="reference" as |photo index|}}
+                    <div class="inspection-slot">
+                        {{#if photo.url}}
+                            <Image src={{photo.url}} alt={{or photo.filename this.label}} />
+                        {{else}}
+                            <span class="inspection-slot__icon"><FaIcon @icon="image" /></span>
+                        {{/if}}
+                        {{#unless @disabled}}
+                            <Button @type="danger" @icon="times" @size="xs" @wrapperClass="inspection-slot__remove" @onClick={{fn this.removePhoto index}} />
+                        {{/unless}}
+                    </div>
+                {{/each}}
+
+                {{#if this.canUpload}}
+                    <FileUpload @name={{concat this.field.uuid "-photos"}} @for={{concat this.field.uuid "-photos"}} @accept="image/*" @multiple={{true}} @onFileAdded={{this.addPhoto}}>
+                        <a tabindex={{0}} class="inspection-slot inspection-slot--add" title={{t "inspection.answer.add-photo"}} aria-label={{t "inspection.answer.add-photo"}}>+</a>
+                    </FileUpload>
+                {{/if}}
+
+                {{#if this.uploadProgress}}
+                    <span class="inspection-unit">{{round this.uploadProgress.progress}}%</span>
+                {{/if}}
+
+                {{#if this.defectRequirement}}
+                    <span class="inspection-slots__note">{{this.defectRequirement}}</span>
+                {{else if this.uploadsBlocked}}
+                    <span class="inspection-slots__note">{{t "inspection.answer.uploads-unavailable"}}</span>
+                {{/if}}
+            </div>
+        </div>
+    </div>
+
+{{else if this.isRoomy}}
+    <div
+        class="inspection-band {{if this.isStackedBand 'inspection-band--stacked'}} {{if this.isTargeted 'inspection-band--targeted'}}"
+        id="inspection-field-{{this.field.uuid}}"
+        data-field-type={{this.field.type}}
+        ...attributes
+    >
+        <div class="inspection-band__head">
+            <span class="inspection-band__label">
+                {{this.label}}
+                {{#if this.field.required}}<span class="inspection-required" aria-hidden="true">*</span>{{/if}}
+            </span>
+
+            {{#unless this.isStackedBand}}
+                <div class="inspection-band__aside">
+                    {{#if this.file.url}}
+                        <span class="inspection-slot"><Image src={{this.file.url}} alt={{or this.file.filename this.label}} /></span>
+                    {{else if this.file.reference}}
+                        <span class="inspection-slot"><span class="inspection-slot__icon"><FaIcon @icon={{this.fileIcon}} /></span></span>
+                    {{else}}
+                        <span class="inspection-note">{{this.emptyFileNote}}</span>
+                    {{/if}}
+
+                    {{#if this.canUpload}}
+                        <FileUpload @name={{concat this.field.uuid "-file"}} @for={{concat this.field.uuid "-file"}} @accept="image/*" @multiple={{false}} @onFileAdded={{this.setFile}}>
+                            <a tabindex={{0}} class="btn btn-default btn-xs cursor-pointer">
+                                <FaIcon @icon={{this.fileIcon}} @size="sm" class="mr-2" />{{this.uploadLabel}}
+                            </a>
+                        </FileUpload>
+                        {{#if this.file.reference}}
+                            <Button @type="danger" @icon="trash" @size="xs" @onClick={{this.clearFile}} />
+                        {{/if}}
+                    {{else if this.uploadsBlocked}}
+                        <span class="inspection-note">{{t "inspection.answer.uploads-unavailable"}}</span>
+                    {{/if}}
+
+                    {{#if this.uploadProgress}}
+                        <span class="inspection-unit">{{round this.uploadProgress.progress}}%</span>
+                    {{/if}}
+                </div>
+            {{/unless}}
+        </div>
+
+        {{#if this.isStackedBand}}
+            <div class="inspection-band__body">
+                {{#if this.field.description}}
+                    <span class="inspection-cell__hint">{{this.field.description}}</span>
+                {{/if}}
+                <textarea
+                    class="w-full form-input"
+                    rows="3"
+                    aria-label={{this.label}}
+                    placeholder={{this.placeholder}}
+                    disabled={{@disabled}}
+                    {{sync-value @value}}
+                    {{on "input" this.setText}}
+                ></textarea>
+            </div>
+        {{/if}}
+    </div>
+
+{{else}}
+    <div
+        class="inspection-cell {{if this.isTargeted 'inspection-cell--targeted'}}"
+        id="inspection-field-{{this.field.uuid}}"
+        data-field-type={{this.field.type}}
+        data-answer={{this.answerState}}
+        ...attributes
+    >
+        <span class="inspection-cell__label">
+            {{this.label}}
+            {{#if this.field.required}}<span class="inspection-required" aria-hidden="true">*</span>{{/if}}
+        </span>
+
+        {{#if this.field.description}}
+            <span class="inspection-cell__hint">{{this.field.description}}</span>
+        {{/if}}
+        {{#if this.instructions}}
+            <span class="inspection-cell__hint">{{this.instructions}}</span>
+        {{/if}}
+
+        <div class="inspection-cell__control">
+            {{#if (eq this.field.type "pass-fail")}}
+                <div class="inspection-choice" role="group" aria-label={{this.label}}>
+                    {{#each this.passFailOptions key="value" as |option|}}
+                        <button
+                            type="button"
+                            class="inspection-choice__option"
+                            data-answer={{option.value}}
+                            aria-pressed={{if (eq this.answerState option.value) "true" "false"}}
+                            disabled={{@disabled}}
+                            {{on "click" (fn this.setPassFail option.value)}}
+                        >
+                            {{option.label}}
+                        </button>
+                    {{/each}}
+                </div>
+
+            {{else if (eq this.field.type "boolean")}}
                 <Toggle @isToggled={{this.booleanValue}} @onToggle={{this.setBoolean}} @disabled={{@disabled}} />
-            </div>
 
-        {{else if (eq this.field.type "number")}}
-            <div class="inspection-row__control inspection-row__control--sized">
+            {{else if (eq this.field.type "number")}}
                 <input
                     type="number"
                     inputmode="decimal"
-                    class="w-full form-input"
+                    class="w-full form-input {{if this.isOutstanding 'inspection-input--outstanding'}}"
+                    aria-label={{this.label}}
                     placeholder={{this.placeholder}}
                     disabled={{@disabled}}
                     {{sync-value @value}}
                     {{on "input" this.setNumber}}
                 />
-                {{#if this.unit}}<span class="inspection-row__unit">{{this.unit}}</span>{{/if}}
-            </div>
+                {{#if this.unit}}<span class="inspection-unit">{{this.unit}}</span>{{/if}}
 
-        {{else if (eq this.field.type "input")}}
-            <div class="inspection-row__control inspection-row__control--sized">
-                <input
-                    type="text"
-                    class="w-full form-input"
-                    placeholder={{this.placeholder}}
-                    disabled={{@disabled}}
-                    {{sync-value @value}}
-                    {{on "input" this.setText}}
-                />
-            </div>
-
-        {{else if (eq this.field.type "date-picker")}}
-            <div class="inspection-row__control inspection-row__control--sized">
-                <input
-                    type="date"
-                    class="w-full form-input"
-                    disabled={{@disabled}}
-                    {{sync-value @value}}
-                    {{on "input" this.setText}}
-                />
-            </div>
-
-        {{else if (eq this.field.type "date-time-input")}}
-            <div class="inspection-row__control inspection-row__control--sized">
-                <input
-                    type="datetime-local"
-                    class="w-full form-input"
-                    disabled={{@disabled}}
-                    {{sync-value @value}}
-                    {{on "input" this.setText}}
-                />
-            </div>
-
-        {{else if (eq this.field.type "radio-button")}}
-            <div class="inspection-row__control">
-                {{#if this.choiceOptions}}
-                    <div class="inspection-choice" role="group" aria-label={{this.label}}>
-                        {{#each this.choiceOptions key="@index" as |option|}}
-                            <button type="button" class="inspection-choice__option" data-answer="selected" aria-pressed={{if (eq @value option) "true" "false"}} disabled={{@disabled}} {{on "click" (fn this.setChoice option)}}>
-                                {{option}}
-                            </button>
-                        {{/each}}
-                    </div>
-                {{else}}
-                    <span class="inspection-row__unit">{{t "inspection.answer.no-options"}}</span>
-                {{/if}}
-            </div>
-
-        {{else if (eq this.field.type "select")}}
-            <div class="inspection-row__control inspection-row__control--sized">
-                <div class="fleetbase-model-select fleetbase-power-select ember-model-select w-full">
+            {{else if (eq this.field.type "select")}}
+                <div class="fleetbase-model-select fleetbase-power-select ember-model-select {{if this.isOutstanding 'inspection-input--outstanding'}}">
                     <PowerSelect
                         @options={{this.choiceOptions}}
                         @selected={{@value}}
@@ -125,149 +232,37 @@
                         {{option}}
                     </PowerSelect>
                 </div>
-            </div>
 
-        {{else if (eq this.field.type "textarea")}}
-            <div class="inspection-row__control">
-                <textarea
-                    class="w-full form-input"
-                    rows="3"
+            {{else if (eq this.field.type "radio-button")}}
+                {{#if this.choiceOptions}}
+                    <div class="inspection-choice" role="group" aria-label={{this.label}}>
+                        {{#each this.choiceOptions key="@index" as |option|}}
+                            <button
+                                type="button"
+                                class="inspection-choice__option"
+                                aria-pressed={{if (eq @value option) "true" "false"}}
+                                disabled={{@disabled}}
+                                {{on "click" (fn this.setChoice option)}}
+                            >
+                                {{option}}
+                            </button>
+                        {{/each}}
+                    </div>
+                {{else}}
+                    <span class="inspection-note">{{t "inspection.answer.no-options"}}</span>
+                {{/if}}
+
+            {{else}}
+                <input
+                    type={{this.inputType}}
+                    class="w-full form-input {{if this.isOutstanding 'inspection-input--outstanding'}}"
+                    aria-label={{this.label}}
                     placeholder={{this.placeholder}}
                     disabled={{@disabled}}
                     {{sync-value @value}}
                     {{on "input" this.setText}}
-                ></textarea>
-            </div>
-
-        {{else if (eq this.field.type "signature")}}
-            <div class="inspection-row__control">
-                <div class="inspection-detail__photos">
-                    {{#if this.file.url}}
-                        <div class="inspection-photo"><Image src={{this.file.url}} alt={{this.label}} /></div>
-                    {{else if this.file.reference}}
-                        <div class="inspection-photo"><div class="inspection-photo__placeholder"><FaIcon @icon="signature" /></div></div>
-                    {{else}}
-                        <span class="inspection-row__unit">{{t "inspection.answer.no-signature"}}</span>
-                    {{/if}}
-                    {{#if this.canUpload}}
-                        <FileUpload @name={{concat this.field.uuid "-signature"}} @for={{concat this.field.uuid "-signature"}} @accept="image/*" @multiple={{false}} @onFileAdded={{this.setFile}}>
-                            <a tabindex={{0}} class="btn btn-default btn-xs cursor-pointer">
-                                <FaIcon @icon="signature" @size="sm" class="mr-2" />{{t "inspection.answer.upload-signature"}}
-                            </a>
-                        </FileUpload>
-                        {{#if this.file.reference}}
-                            <Button @type="danger" @icon="trash" @size="xs" @onClick={{this.clearFile}} />
-                        {{/if}}
-                    {{else if this.uploadsBlocked}}
-                        <span class="inspection-row__unit">{{t "inspection.answer.uploads-unavailable"}}</span>
-                    {{/if}}
-                    {{#if this.uploadProgress}}
-                        <span class="inspection-row__unit">{{round this.uploadProgress.progress}}%</span>
-                    {{/if}}
-                </div>
-            </div>
-
-        {{else if (eq this.field.type "file-upload")}}
-            <div class="inspection-row__control">
-                <div class="inspection-detail__photos">
-                    {{#if this.file.url}}
-                        <div class="inspection-photo"><Image src={{this.file.url}} alt={{or this.file.filename this.label}} /></div>
-                    {{else if this.file.reference}}
-                        <div class="inspection-photo"><div class="inspection-photo__placeholder"><FaIcon @icon="image" /></div></div>
-                    {{else}}
-                        <span class="inspection-row__unit">{{t "inspection.answer.no-photo"}}</span>
-                    {{/if}}
-                    {{#if this.canUpload}}
-                        <FileUpload @name={{concat this.field.uuid "-file"}} @for={{concat this.field.uuid "-file"}} @accept="image/*" @multiple={{false}} @onFileAdded={{this.setFile}}>
-                            <a tabindex={{0}} class="btn btn-default btn-xs cursor-pointer">
-                                <FaIcon @icon="upload" @size="sm" class="mr-2" />{{t "inspection.answer.upload-photo"}}
-                            </a>
-                        </FileUpload>
-                        {{#if this.file.reference}}
-                            <Button @type="danger" @icon="trash" @size="xs" @onClick={{this.clearFile}} />
-                        {{/if}}
-                    {{else if this.uploadsBlocked}}
-                        <span class="inspection-row__unit">{{t "inspection.answer.uploads-unavailable"}}</span>
-                    {{/if}}
-                    {{#if this.uploadProgress}}
-                        <span class="inspection-row__unit">{{round this.uploadProgress.progress}}%</span>
-                    {{/if}}
-                </div>
-            </div>
-        {{/if}}
-    </div>
-
-    {{#if this.isFailed}}
-        <div class="inspection-row__detail">
-            <div class="inspection-detail__grid">
-                <div>
-                    <span class="inspection-detail__label">{{t "inspection.answer.severity"}}</span>
-                    <div class="fleetbase-model-select fleetbase-power-select ember-model-select">
-                        <PowerSelect
-                            @options={{this.severityOptions}}
-                            @selected={{this.severity}}
-                            @onChange={{this.setSeverity}}
-                            @triggerClass="form-select form-input"
-                            @renderInPlace={{true}}
-                            @disabled={{@disabled}}
-                            as |severity|
-                        >
-                            {{t (concat "inspection.severity." severity)}}
-                        </PowerSelect>
-                    </div>
-                </div>
-                <div>
-                    <Toggle @isToggled={{this.isUnsafe}} @onToggle={{this.setUnsafe}} @label={{t "inspection.answer.unsafe"}} @disabled={{@disabled}} />
-                </div>
-            </div>
-
-            <div>
-                <span class="inspection-detail__label">
-                    {{t "inspection.answer.comments"}}
-                    {{#if this.requiresComment}}<span class="inspection-row__required" aria-hidden="true">*</span>{{/if}}
-                </span>
-                <textarea
-                    class="w-full form-input"
-                    rows="2"
-                    placeholder={{t "inspection.answer.comments-placeholder"}}
-                    disabled={{@disabled}}
-                    {{sync-value this.comments}}
-                    {{on "input" this.setComments}}
-                ></textarea>
-            </div>
-
-            <div>
-                <span class="inspection-detail__label">
-                    {{t "inspection.answer.photos"}}
-                    {{#if this.requiresPhoto}}<span class="inspection-row__required" aria-hidden="true">*</span>{{/if}}
-                </span>
-                <div class="inspection-detail__photos">
-                    {{#each this.answerPhotos key="reference" as |photo index|}}
-                        <div class="inspection-photo">
-                            {{#if photo.url}}
-                                <Image src={{photo.url}} alt={{or photo.filename this.label}} />
-                            {{else}}
-                                <div class="inspection-photo__placeholder"><FaIcon @icon="image" /></div>
-                            {{/if}}
-                            {{#unless @disabled}}
-                                <Button @type="danger" @icon="times" @size="xs" @wrapperClass="absolute top-0 right-0" @onClick={{fn this.removePhoto index}} />
-                            {{/unless}}
-                        </div>
-                    {{/each}}
-                    {{#if this.canUpload}}
-                        <FileUpload @name={{concat this.field.uuid "-photos"}} @for={{concat this.field.uuid "-photos"}} @accept="image/*" @multiple={{true}} @onFileAdded={{this.addPhoto}}>
-                            <a tabindex={{0}} class="btn btn-default btn-xs cursor-pointer">
-                                <FaIcon @icon="camera" @size="sm" class="mr-2" />{{t "inspection.answer.add-photo"}}
-                            </a>
-                        </FileUpload>
-                    {{else if this.uploadsBlocked}}
-                        <span class="inspection-row__unit">{{t "inspection.answer.uploads-unavailable"}}</span>
-                    {{/if}}
-                    {{#if this.uploadProgress}}
-                        <span class="inspection-row__unit">{{round this.uploadProgress.progress}}%</span>
-                    {{/if}}
-                </div>
-            </div>
+                />
+            {{/if}}
         </div>
-    {{/if}}
-</div>
+    </div>
+{{/if}}

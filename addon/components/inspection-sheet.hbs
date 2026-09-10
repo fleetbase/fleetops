@@ -1,34 +1,60 @@
 <div class="inspection-sheet" ...attributes>
-    {{#each this.groups key="uuid" as |group|}}
-        <InspectionSheet::Section @group={{group}} @values={{@values}} @subject={{@subject}} @onChange={{@onChange}} @disabled={{@disabled}} @allowUploads={{@allowUploads}} @readonly={{@readonly}} />
-    {{/each}}
-
-    {{#if this.summary.checks}}
-        <div class="inspection-summary">
-            <div class="inspection-summary__item">
-                <span class="inspection-summary__value inspection-summary__value--pass">{{this.summary.passed}}</span>
-                {{t "inspection.answer.pass"}}
-            </div>
-            <div class="inspection-summary__item">
-                <span class="inspection-summary__value {{if this.summary.failed 'inspection-summary__value--fail'}}">{{this.summary.failed}}</span>
-                {{t "inspection.answer.fail"}}
-            </div>
-            <div class="inspection-summary__item">
-                <span class="inspection-summary__value">{{this.summary.notApplicable}}</span>
-                {{t "inspection.answer.not-applicable"}}
-            </div>
-            {{#if this.summary.outstanding}}
-                <div class="inspection-summary__item">
-                    <span class="inspection-summary__value">{{this.summary.outstanding}}</span>
-                    {{t "inspection.record.outstanding"}}
-                </div>
-            {{/if}}
-            {{#if this.summary.unsafe}}
-                <span class="inspection-summary__unsafe">
-                    <FaIcon @icon="triangle-exclamation" @size="sm" />
-                    {{t "inspection.answer.unsafe"}}
-                </span>
-            {{/if}}
+    <div class="inspection-sheet__body">
+        <div class="inspection-sheet__groups">
+            {{#each this.groups key="uuid" as |group|}}
+                <InspectionSheet::Group
+                    @group={{group}}
+                    @values={{@values}}
+                    @subject={{@subject}}
+                    @onChange={{@onChange}}
+                    @disabled={{@disabled}}
+                    @allowUploads={{@allowUploads}}
+                    @readonly={{@readonly}}
+                    @targetId={{this.targetId}}
+                />
+            {{/each}}
         </div>
-    {{/if}}
+
+        {{#if this.hasFields}}
+            <div class="inspection-foot">
+                <div class="inspection-tallies">
+                    <div class="inspection-tally" data-kind="passed">
+                        <span class="inspection-tally__value">{{this.summary.passed}}</span>
+                        <span class="inspection-tally__label">{{t "inspection.answer.pass"}}</span>
+                    </div>
+                    <div class="inspection-tally" data-kind="failed">
+                        <span class="inspection-tally__value">{{this.summary.failed}}</span>
+                        <span class="inspection-tally__label">{{t "inspection.answer.fail"}}</span>
+                    </div>
+                    <div class="inspection-tally" data-kind="na">
+                        <span class="inspection-tally__value">{{this.summary.notApplicable}}</span>
+                        <span class="inspection-tally__label">{{t "inspection.answer.not-applicable"}}</span>
+                    </div>
+                    <div class="inspection-tally" data-kind="outstanding" data-any={{if this.summary.outstanding "true" "false"}}>
+                        <span class="inspection-tally__value">{{this.summary.outstanding}}</span>
+                        <span class="inspection-tally__label">{{t "inspection.record.outstanding"}}</span>
+                    </div>
+                </div>
+
+                {{#if this.summary.unsafeField}}
+                    <div class="inspection-banner inspection-banner--unsafe">
+                        <span class="inspection-banner__chip">{{t "inspection.answer.unsafe"}}</span>
+                        <span>{{this.unsafeDescription}}</span>
+                        <button type="button" class="inspection-banner__jump" {{on "click" (fn this.jumpTo this.summary.unsafeField)}}>
+                            {{t "inspection.record.review"}}
+                        </button>
+                    </div>
+                {{/if}}
+
+                {{#if this.summary.firstOutstanding}}
+                    <div class="inspection-banner">
+                        <span>{{this.outstandingDescription}}</span>
+                        <button type="button" class="inspection-banner__jump" {{on "click" (fn this.jumpTo this.summary.firstOutstanding)}}>
+                            {{t "inspection.record.jump-to"}}
+                        </button>
+                    </div>
+                {{/if}}
+            </div>
+        {{/if}}
+    </div>
 </div>

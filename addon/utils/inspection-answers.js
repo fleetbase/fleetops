@@ -104,6 +104,8 @@ export function summarize(fields = [], values = {}) {
         missingRequired: 0,
         incompleteDefects: 0,
         unsafe: false,
+        unsafeField: null,
+        firstOutstanding: null,
     };
 
     for (const field of fields) {
@@ -130,8 +132,18 @@ export function summarize(fields = [], values = {}) {
             summary.incompleteDefects += 1;
         }
 
+        // The banners name the field rather than counting it, so an inspector
+        // is told what to go and fix, not how many things are wrong.
+        if (!summary.firstOutstanding && fieldMarker(field, value) === 'outstanding') {
+            summary.firstOutstanding = field;
+        }
+
         if (isUnsafeAnswer(field, value)) {
             summary.unsafe = true;
+
+            if (!summary.unsafeField) {
+                summary.unsafeField = field;
+            }
         }
     }
 

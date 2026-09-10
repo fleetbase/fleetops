@@ -84,21 +84,21 @@
     <div class="inspection-sheet-inset">
         {{#if this.load.isRunning}}
             <div class="inspection-sheet">
-                <section class="inspection-section">
+                <div class="inspection-sheet__body">
                     <div class="flex items-center justify-center p-6">
                         <Spinner @loadingMessage={{t "inspection.record.loading-form"}} class="text-sm dark:text-gray-100" />
                     </div>
-                </section>
+                </div>
             </div>
         {{else if this.hasStructure}}
             <InspectionSheet @groups={{this.groups}} @values={{this.values}} @subject={{@resource}} @onChange={{this.setValue}} @disabled={{cannot-write @resource}} />
         {{else}}
             <div class="inspection-sheet">
-                <section class="inspection-section">
-                    <div class="inspection-section__empty">
+                <div class="inspection-sheet__body">
+                    <div class="inspection-group__empty px-4">
                         {{#if @resource.form}}{{t "inspection.record.form-has-no-fields"}}{{else}}{{t "inspection.record.choose-a-form"}}{{/if}}
                     </div>
-                </section>
+                </div>
             </div>
         {{/if}}
     </div>
