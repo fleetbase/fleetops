@@ -16,7 +16,13 @@ export default class InspectionFormDetailsComponent extends Component {
 
     constructor() {
         super(...arguments);
-        next(() => this.load.perform());
+        next(() => {
+            if (this.isDestroying || this.isDestroyed) {
+                return;
+            }
+
+            this.load.perform();
+        });
     }
 
     get fieldCount() {
