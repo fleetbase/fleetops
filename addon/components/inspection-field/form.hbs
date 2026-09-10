@@ -25,7 +25,7 @@
         <input type="text" value={{this.field.help_text}} class="w-full form-input" placeholder={{t "inspection.field.help-text-placeholder"}} disabled={{this.isDisabled}} {{on "input" this.setHelpText}} />
     </InputGroup>
 
-    <div class="flex flex-row items-center space-x-6">
+    <div class="flex flex-col space-y-3">
         <Toggle @isToggled={{this.field.required}} @onToggle={{this.setRequired}} @label={{t "inspection.field.required"}} @disabled={{this.isDisabled}} />
         <Toggle @isToggled={{this.field.editable}} @onToggle={{this.setEditable}} @label={{t "inspection.field.editable"}} @disabled={{this.isDisabled}} />
     </div>

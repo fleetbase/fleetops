@@ -163,6 +163,11 @@ export default class InspectionFormBuilderComponent extends Component {
             title: isNew ? this.intl.t('inspection.builder.new-field') : this.intl.t('inspection.builder.edit-field', { label: field.label }),
             size: 'xs',
             panelContentClass: 'py-2 px-4',
+            // The field is a plain object, not an Ember Data record. Without
+            // this the header's save falls through to `cannot-write` on a
+            // resource it cannot resolve, which denies by default and leaves
+            // the button disabled for good.
+            pojoResource: true,
             state,
             disabled: this.args.disabled,
             saveTask: inlineTask((resource, { overlay } = {}) => {
