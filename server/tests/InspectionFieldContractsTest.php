@@ -828,6 +828,61 @@ test('the internal submission controller records answers, item results and an ex
     expect($controller->export(FleetOpsInspectionExportRequestFake::create('/int/v1/inspection-submissions/export', 'POST'))['download'])->toEndWith('.xlsx');
 });
 
+test('the submitter takes the body the driver app builds, whole', function () {
+    fleetOpsInspectionFieldDatabase();
+    Carbon::setTestNow('2026-09-10 07:30:00');
+    $form = fleetOpsInspectionFieldForm();
+    InspectionFormSync::sync($form, fleetOpsInspectionFieldDraft());
+    $fields = $form->fields->keyBy('name');
+    $photo  = fleetOpsInspectionFieldPhoto();
+
+    // Exactly what `buildSubmission` in the app's useInspections.ts emits:
+    // both bodies, every pass-fail answer carrying `not_applicable` and
+    // `unsafe`, photos and the signature as bare base64.
+    $submission = InspectionSubmitter::submit($form, [
+        'odometer'            => 112480,
+        'engine_hours'        => null,
+        'custom_field_values' => [
+            ['custom_field' => $fields['brakes']->uuid, 'value_type' => 'object', 'value' => ['passed' => false, 'not_applicable' => false, 'severity' => 'critical', 'comments' => 'Soft pedal', 'photos' => [$photo], 'unsafe' => true]],
+            ['custom_field' => $fields['mirrors']->uuid, 'value_type' => 'object', 'value' => ['passed' => true, 'not_applicable' => true, 'severity' => null, 'comments' => null, 'photos' => [], 'unsafe' => false]],
+            ['custom_field' => $fields['odometer']->uuid, 'value_type' => 'number', 'value' => 112480],
+            ['custom_field' => $fields['signature']->uuid, 'value_type' => 'file', 'value' => $photo],
+            ['custom_field' => $fields['notes']->uuid, 'value_type' => 'text', 'value' => 'Nearside mirror scuffed'],
+        ],
+        'item_results' => [
+            ['item_key' => 'brakes', 'label' => 'Brakes', 'category' => 'Exterior', 'status' => 'failed', 'severity' => 'critical', 'passed' => false, 'comments' => 'Soft pedal', 'photos' => [$photo]],
+            ['item_key' => 'mirrors', 'label' => 'Mirrors', 'category' => 'Exterior', 'status' => 'not_applicable', 'severity' => null, 'passed' => true, 'comments' => null, 'photos' => []],
+        ],
+        'location'  => ['latitude' => 1.3521, 'longitude' => 103.8198],
+        'signature' => ['image' => $photo, 'signed_at' => '2026-09-10T07:30:00Z'],
+        'meta'      => ['source_app' => 'navigator', 'unsafe' => true],
+    ], [
+        'driver_uuid'       => 'driver-1',
+        'vehicle_uuid'      => 'vehicle-1',
+        'submitted_by_uuid' => 'user-driver',
+        'source'            => 'navigator',
+    ]);
+
+    $submission = $submission->fresh(['itemResults', 'customFieldValues.customField', 'files']);
+    $results    = $submission->itemResults->keyBy('item_key');
+
+    expect($submission->customFieldValues)->toHaveCount(5)
+        // The field values won; the duplicated `item_results` were ignored,
+        // so there is one row per pass-fail field and no more.
+        ->and($submission->itemResults)->toHaveCount(2)
+        ->and($results['brakes']->status)->toBe('failed')
+        ->and($results['brakes']->photos[0])->toStartWith('file:')
+        ->and($results['mirrors']->status)->toBe('not_applicable')
+        ->and($results['mirrors']->passed)->toBeTrue()
+        ->and($submission->total_items)->toBe(2)
+        ->and($submission->failed_items)->toBe(1)
+        ->and($submission->result)->toBe('failed')
+        ->and($submission->meta['unsafe'])->toBeTrue()
+        ->and($submission->odometer)->toBe(112480)
+        ->and($submission->files)->toHaveCount(2)
+        ->and($submission->source)->toBe('navigator');
+});
+
 test('the submitter takes field answers straight from a submit body', function () {
     fleetOpsInspectionFieldDatabase();
     $form = fleetOpsInspectionFieldForm(['settings' => ['create_issue_on_failure' => true, 'create_work_order_on_failure' => true]]);
