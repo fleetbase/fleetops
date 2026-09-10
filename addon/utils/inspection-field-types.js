@@ -35,8 +35,9 @@ export function componentForFieldType(type) {
 
 /**
  * How the server stores an answer of this type — the `value_type` a submitted
- * `custom_field_values` row carries. Mirrors
- * `InspectionSubmitter::normalizeValue()`.
+ * `custom_field_values` row carries. Mirrors `InspectionSubmitter::normalizeValue()`
+ * and the app's own `valueTypeFor` in `src/v3/data/useInspections.ts`, so the
+ * console and the driver app file the same rows.
  */
 export function valueTypeForFieldType(type) {
     switch (type) {
@@ -50,8 +51,9 @@ export function valueTypeForFieldType(type) {
         case 'boolean':
             return 'boolean';
         case 'date-picker':
-        case 'date-time-input':
             return 'date';
+        case 'date-time-input':
+            return 'datetime';
         default:
             return 'text';
     }
