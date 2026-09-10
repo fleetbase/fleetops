@@ -2,6 +2,7 @@
 
 namespace Fleetbase\FleetOps\Http\Resources\v1;
 
+use Fleetbase\FleetOps\Support\InspectionFormSync;
 use Fleetbase\FleetOps\Support\Utils;
 use Fleetbase\Http\Resources\FleetbaseResource;
 use Fleetbase\Models\Category;
@@ -97,7 +98,9 @@ class InspectionForm extends FleetbaseResource
             'description' => $field->description,
             'help_text'   => $field->help_text,
             'type'        => $field->type,
-            'component'   => $field->component,
+            // A field written straight into the table — by a seed, or by an
+            // older builder — may carry no component. The type names its own.
+            'component'   => $field->component ?: InspectionFormSync::componentFor((string) $field->type),
             'required'    => (bool) $field->required,
             'editable'    => $field->editable === null ? true : (bool) $field->editable,
             'options'     => is_array($field->options) ? array_values($field->options) : [],

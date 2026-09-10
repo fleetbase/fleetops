@@ -218,6 +218,11 @@ class FleetOpsServiceProvider extends CoreServiceProvider
             '\\Fleetbase\\Models\\Vehicle'  => \Fleetbase\FleetOps\Models\Vehicle::class,
             'fleet-ops:vehicle'             => \Fleetbase\FleetOps\Models\Vehicle::class,
             'fleet-ops:trailer'             => \Fleetbase\FleetOps\Models\Trailer::class,
+            // A photo or signature filed with an inspection is a platform file
+            // whose subject is the submission. The console names that subject
+            // the way Ember names it, so the alias has to resolve here.
+            'fleet-ops:inspection-submission' => \Fleetbase\FleetOps\Models\InspectionSubmission::class,
+            'fleet-ops:inspection-form'       => \Fleetbase\FleetOps\Models\InspectionForm::class,
         ]);
     }
 

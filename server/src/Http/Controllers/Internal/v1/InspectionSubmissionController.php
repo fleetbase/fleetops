@@ -2,11 +2,15 @@
 
 namespace Fleetbase\FleetOps\Http\Controllers\Internal\v1;
 
+use Fleetbase\FleetOps\Exports\InspectionExport;
 use Fleetbase\FleetOps\Http\Controllers\FleetOpsController;
 use Fleetbase\FleetOps\Models\InspectionItemResult;
 use Fleetbase\FleetOps\Models\InspectionSubmission;
+use Fleetbase\FleetOps\Support\InspectionSubmitter;
+use Fleetbase\Http\Requests\ExportRequest;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Str;
 
 class InspectionSubmissionController extends FleetOpsController
 {
@@ -17,21 +21,85 @@ class InspectionSubmissionController extends FleetOpsController
      */
     public $resource = 'inspection-submission';
 
+    /** What a submission has to carry for the console record to render. */
+    protected const RELATIONS = ['form', 'vehicle', 'driver', 'itemResults', 'customFieldValues.customField', 'files'];
+
     public function onAfterCreate($request, InspectionSubmission $record, array $input): void
     {
-        $this->syncItemResultsFromRequest($request, $record);
-        $record->load(['form', 'vehicle', 'driver', 'itemResults']);
+        $this->syncAnswersFromRequest($request, $record);
+        $record->load(static::RELATIONS);
     }
 
     public function onAfterUpdate($request, InspectionSubmission $record, array $input): void
     {
-        $this->syncItemResultsFromRequest($request, $record);
-        $record->load(['form', 'vehicle', 'driver', 'itemResults']);
+        $this->syncAnswersFromRequest($request, $record);
+        $record->load(static::RELATIONS);
     }
 
     public function onFindRecord($builder, $request): void
     {
-        $builder->with(['form', 'vehicle', 'driver', 'submittedBy', 'issue', 'workOrder', 'itemResults']);
+        $builder->with(array_merge(['submittedBy', 'issue', 'workOrder'], static::RELATIONS));
+    }
+
+    public function onQueryRecord($builder, $request): void
+    {
+        $builder->with(['form', 'vehicle', 'driver', 'itemResults']);
+    }
+
+    /**
+     * The answers, then the results derived from them.
+     *
+     * A form built from fields is answered with `custom_field_values`, exactly
+     * as the driver API answers it, so the console and the app write the same
+     * rows; the submitter stores any photo or signature and mirrors every
+     * pass-fail answer into an item result. A submission against a legacy
+     * checklist still posts `item_results` directly, and that door stays open.
+     */
+    protected function syncAnswersFromRequest(Request $request, InspectionSubmission $submission): void
+    {
+        $values = static::arrayInput($request, 'inspection_submission.custom_field_values', 'custom_field_values');
+        if (!empty($values)) {
+            InspectionSubmitter::applyCustomFieldValues($submission, $values, session('user'));
+
+            return;
+        }
+
+        $this->syncItemResultsFromRequest($request, $submission);
+    }
+
+    /**
+     * The first of the given keys that carries a list.
+     *
+     * The console posts a record under its resource name and the app posts it
+     * flat, so both spellings are read. `Request::array()` arrived in Laravel
+     * 11 and this runs on 10, where calling it is a BadMethodCallException.
+     *
+     * @return array<int, mixed>
+     */
+    protected static function arrayInput(Request $request, string ...$keys): array
+    {
+        foreach ($keys as $key) {
+            $value = $request->input($key);
+            if (is_array($value) && !empty($value)) {
+                return $value;
+            }
+        }
+
+        return [];
+    }
+
+    /**
+     * Export inspections to excel or csv.
+     *
+     * @return \Illuminate\Http\Response
+     */
+    public function export(ExportRequest $request)
+    {
+        $format     = $request->input('format', 'xlsx');
+        $selections = static::arrayInput($request, 'selections');
+        $fileName   = trim(Str::slug('inspections-' . date('Y-m-d-H:i')) . '.' . $format);
+
+        return $this->downloadExport(new InspectionExport($selections), $fileName);
     }
 
     public function submit(string $id): JsonResponse
@@ -107,7 +175,7 @@ class InspectionSubmissionController extends FleetOpsController
 
     protected function syncItemResultsFromRequest(Request $request, InspectionSubmission $submission): void
     {
-        $items = $request->array('inspection_submission.item_results', $request->array('item_results'));
+        $items = static::arrayInput($request, 'inspection_submission.item_results', 'item_results');
         if (empty($items)) {
             return;
         }

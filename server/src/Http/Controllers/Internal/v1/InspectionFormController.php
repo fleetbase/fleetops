@@ -7,6 +7,7 @@ use Fleetbase\FleetOps\Models\Driver;
 use Fleetbase\FleetOps\Models\InspectionForm;
 use Fleetbase\FleetOps\Models\InspectionLink;
 use Fleetbase\FleetOps\Models\Vehicle;
+use Fleetbase\FleetOps\Support\InspectionFormSync;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -18,6 +19,62 @@ class InspectionFormController extends FleetOpsController
      * @var string
      */
     public $resource = 'inspection-form';
+
+    /**
+     * The builder lays a form out before the form record exists, so the whole
+     * structure arrives with the save that creates it and is written in one
+     * go. `field_groups` is what this console posts; `draft` is what the fliit
+     * builder posts, and is accepted so a form authored there still saves.
+     *
+     * A save that mentions no structure at all leaves the structure alone —
+     * publishing a form, or renaming it, must not empty it.
+     */
+    public function onAfterCreate(Request $request, InspectionForm $inspectionForm): void
+    {
+        $this->syncStructureFromRequest($request, $inspectionForm);
+    }
+
+    public function onAfterUpdate(Request $request, InspectionForm $inspectionForm): void
+    {
+        $this->syncStructureFromRequest($request, $inspectionForm);
+    }
+
+    /** The console edits the structure, so a read has to carry it. */
+    public function onFindRecord($builder, $request): void
+    {
+        $builder->with(['fieldGroups', 'fields']);
+    }
+
+    public function onQueryRecord($builder, $request): void
+    {
+        $builder->with(['fieldGroups', 'fields']);
+    }
+
+    /**
+     * Writes the posted structure, pruning what the post no longer lists —
+     * the builder always posts the whole form, so a field it dropped is a
+     * field the author deleted.
+     */
+    protected function syncStructureFromRequest(Request $request, InspectionForm $form): void
+    {
+        $draft = null;
+        foreach (['inspection_form.field_groups', 'field_groups', 'inspection_form.draft', 'draft'] as $key) {
+            $posted = $request->input($key);
+            if (is_array($posted) && !empty($posted)) {
+                $draft = $posted;
+                break;
+            }
+        }
+
+        if ($draft === null) {
+            return;
+        }
+
+        InspectionFormSync::sync($form, $draft, true);
+        $form->unsetRelation('fieldGroups');
+        $form->unsetRelation('fields');
+        $form->load(['fieldGroups', 'fields']);
+    }
 
     public function publish(string $id): JsonResponse
     {

@@ -667,6 +667,7 @@ Route::prefix(config('fleetops.api.routing.prefix'))->namespace('Fleetbase\Fleet
                             $router->post('{id}/generate-link', $controller('generateLink'));
                         });
                         $router->fleetbaseRoutes('inspection-submissions', function ($router, $controller) {
+                            $router->match(['get', 'post'], 'export', $controller('export'));
                             $router->post('{id}/submit', $controller('submit'));
                             $router->post('{id}/create-issue', $controller('createIssue'));
                             $router->post('{id}/create-work-order', $controller('createWorkOrder'));
