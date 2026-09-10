@@ -54,7 +54,11 @@
                                     </div>
                                     <div class="flex items-center space-x-2 flex-shrink-0">
                                         {{#if (and (eq field.type "pass-fail") field.meta.severity)}}
-                                            <Badge @status={{if (eq field.meta.severity "critical") "danger" "info"}}>{{t (concat "inspection.severity." field.meta.severity)}}</Badge>
+                                            <Badge @status={{if (eq field.meta.severity "critical") "danger" "info"}}>
+                                                {{#let (get this.severityLabels field.meta.severity) as |severityLabel|}}
+                                                    {{#if severityLabel}}{{t severityLabel}}{{else}}{{smart-humanize field.meta.severity}}{{/if}}
+                                                {{/let}}
+                                            </Badge>
                                         {{/if}}
                                         <span class="custom-field-custom-field-type-pill rounded-lg bg-gray-300 dark:bg-gray-700 text-black dark:text-gray-300 px-1.5 py-0.5 font-mono">{{field.type}}</span>
                                     </div>

@@ -1,4 +1,5 @@
 import Component from '@glimmer/component';
+import { INSPECTION_SEVERITIES } from '../../utils/inspection-field-types';
 import { tracked } from '@glimmer/tracking';
 import { inject as service } from '@ember/service';
 import { debug } from '@ember/debug';
@@ -24,6 +25,14 @@ export default class InspectionFormDetailsComponent extends Component {
             this.load.perform();
         });
     }
+
+    /**
+     * The four severities that have a label of their own, as a lookup. A field
+     * converted from a hand-written first-cut item can carry anything, and
+     * asking for a translation of that would put "Missing translation" on the
+     * screen.
+     */
+    severityLabels = INSPECTION_SEVERITIES.reduce((carry, severity) => ({ ...carry, [severity]: `inspection.severity.${severity}` }), {});
 
     get fieldCount() {
         return this.groups.reduce((count, group) => count + (group.fields?.length ?? 0), 0);
