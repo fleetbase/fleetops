@@ -55,8 +55,8 @@
 
     {{#if this.load.isRunning}}
         <ContentPanel @title={{t "inspection.record.answers"}} @open={{true}} @wrapperClass="bordered-top">
-            <div class="p-6">
-                <Spinner @loadingMessage={{t "inspection.record.loading-answers"}} class="text-sm dark:text-gray-100" />
+            <div class="p-6 flex items-center justify-center">
+                <Spinner @loadingMessage={{t "inspection.record.loading-answers"}} class="text-sm dark:text-gray-100 flex items-center space-x-2" />
             </div>
         </ContentPanel>
     {{else if this.hasAnswers}}

@@ -80,6 +80,32 @@ class InspectionSubmission extends Model
         'failed_items' => 'integer',
     ];
 
+    /**
+     * The column defaults, restored when a client sends null for them.
+     *
+     * An explicit null in an insert overrides the column's default rather than
+     * falling back to it, and these columns are NOT NULL. The console's model
+     * serialises every attribute, so it sent `total_items: null` and the insert
+     * was refused before the counts could be worked out from the answers.
+     */
+    public const COLUMN_DEFAULTS = [
+        'type'         => 'dvir',
+        'status'       => 'draft',
+        'total_items'  => 0,
+        'failed_items' => 0,
+    ];
+
+    protected static function booted(): void
+    {
+        static::saving(function (InspectionSubmission $submission) {
+            foreach (static::COLUMN_DEFAULTS as $column => $default) {
+                if ($submission->getAttribute($column) === null) {
+                    $submission->setAttribute($column, $default);
+                }
+            }
+        });
+    }
+
     protected $appends = ['form_name', 'vehicle_name', 'driver_name', 'has_failures'];
     protected $with    = ['form', 'vehicle', 'driver'];
 

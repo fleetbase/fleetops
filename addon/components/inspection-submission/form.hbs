@@ -85,8 +85,8 @@
         {{#if this.load.isRunning}}
             <div class="inspection-sheet">
                 <div class="inspection-sheet__body">
-                    <div class="p-6">
-                        <Spinner @loadingMessage={{t "inspection.record.loading-form"}} class="text-sm dark:text-gray-100" />
+                    <div class="p-6 flex items-center justify-center">
+                        <Spinner @loadingMessage={{t "inspection.record.loading-form"}} class="text-sm dark:text-gray-100 flex items-center space-x-2" />
                     </div>
                 </div>
             </div>

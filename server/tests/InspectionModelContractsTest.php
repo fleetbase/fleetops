@@ -287,6 +287,28 @@ test('inspection submission counts its results and names what it belongs to', fu
     expect($unnamed->fresh()->vehicle_name)->toBe('2022 Isuzu NPR');
 });
 
+test('inspection submission falls back to its column defaults when sent null', function () {
+    fleetOpsInspectionModelDatabase();
+
+    $form = fleetOpsInspectionModelForm();
+
+    // The console's model sends every attribute, nulls included; an explicit
+    // null would override the column default and the insert would be refused.
+    $submission = InspectionSubmission::create([
+        'company_uuid'         => 'company-insp',
+        'inspection_form_uuid' => $form->uuid,
+        'type'                 => null,
+        'status'               => null,
+        'total_items'          => null,
+        'failed_items'         => null,
+    ])->fresh();
+
+    expect($submission->type)->toBe('dvir')
+        ->and($submission->status)->toBe('draft')
+        ->and($submission->total_items)->toBe(0)
+        ->and($submission->failed_items)->toBe(0);
+});
+
 test('inspection submission ranks failures by severity', function () {
     fleetOpsInspectionModelDatabase();
 

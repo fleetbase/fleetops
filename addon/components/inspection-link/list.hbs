@@ -1,7 +1,7 @@
 <div class="inspection-link-list" {{when-changed this.inspectionFormActions.linksChangedAt this.reload}} ...attributes>
     {{#if this.load.isRunning}}
-        <div class="p-6">
-            <Spinner @loadingMessage={{t "inspection.link.loading"}} class="text-sm dark:text-gray-100" />
+        <div class="p-6 flex items-center justify-center">
+            <Spinner @loadingMessage={{t "inspection.link.loading"}} class="text-sm dark:text-gray-100 flex items-center space-x-2" />
         </div>
     {{else if this.error}}
         <div class="inspection-link-list__empty">{{this.error}}</div>
