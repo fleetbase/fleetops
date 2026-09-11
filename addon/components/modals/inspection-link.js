@@ -1,6 +1,6 @@
 import Component from '@glimmer/component';
 import { inject as service } from '@ember/service';
-import { action, set } from '@ember/object';
+import { action, get, set } from '@ember/object';
 import copyToClipboard from '@fleetbase/ember-core/utils/copy-to-clipboard';
 import { toDatetimeLocal } from '../../services/inspection-form-actions';
 
@@ -20,9 +20,14 @@ export default class ModalsInspectionLinkComponent extends Component {
     /**
      * Who the PIN would be sent to: whoever the link is assigned to, or else
      * the driver's own account. The server makes the same choice.
+     *
+     * Read with `get`: the form state is a plain object changed with `set`,
+     * and a native read of it is not tracked, so a getter reading it directly
+     * never recomputed and email and SMS stayed disabled after a pick.
      */
     get recipientName() {
-        const { assignee, driver } = this.formState;
+        const assignee = get(this.formState, 'assignee');
+        const driver = get(this.formState, 'driver');
         return assignee?.name ?? driver?.name ?? null;
     }
 
@@ -33,7 +38,7 @@ export default class ModalsInspectionLinkComponent extends Component {
 
     /** With nobody left to send it to, the PIN goes back to being shared by hand. */
     keepDeliveryPossible() {
-        if (!this.recipientName && this.formState.pin_delivery !== 'none') {
+        if (!this.recipientName && get(this.formState, 'pin_delivery') !== 'none') {
             set(this.formState, 'pin_delivery', 'none');
         }
     }

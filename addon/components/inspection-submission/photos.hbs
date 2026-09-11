@@ -1,7 +1,7 @@
 <div class="next-content-panel-wrapper" ...attributes>
     <ContentPanel @title={{t "inspection.record.photos"}} @open={{true}} @wrapperClass="bordered-top">
         {{#if this.load.isRunning}}
-            <div class="flex items-center justify-center p-6">
+            <div class="p-6">
                 <Spinner @loadingMessage={{t "inspection.record.loading-photos"}} class="text-sm dark:text-gray-100" />
             </div>
         {{else}}

@@ -11,11 +11,12 @@ use Fleetbase\Support\Utils;
 use Illuminate\Support\Facades\Mail;
 
 /**
- * Sends an inspection link's PIN to whoever the link is for.
+ * Sends an inspection link and its PIN to whoever the link is for.
  *
- * It sends the PIN and never the link. A PIN only protects anything when it
- * travels a different way from the link: the dispatcher shares the link, and
- * the PIN arrives separately by email or SMS.
+ * The message carries both, so the recipient can open the inspection straight
+ * from it. The PIN still stops anyone who has only the link, such as a link
+ * copied or forwarded on its own, and it locks the link after a few wrong
+ * guesses.
  */
 class InspectionLinkPin
 {
@@ -66,7 +67,7 @@ class InspectionLinkPin
 
         try {
             if ($via === 'sms') {
-                $result = (new SmsService())->send($recipient->phone, static::smsText($link, $link->pin), static::smsOptions($link));
+                $result = (new SmsService())->send($recipient->phone, static::smsText($link, $link->pin, static::urlFor($link)), static::smsOptions($link));
 
                 if (is_array($result) && array_key_exists('success', $result) && !$result['success']) {
                     return ['sent' => false, 'via' => $via, 'to' => null, 'error' => 'The PIN could not be texted: ' . ($result['error'] ?? $result['message'] ?? 'the SMS provider refused it.')];
@@ -74,7 +75,7 @@ class InspectionLinkPin
 
                 $to = static::maskPhone($recipient->phone);
             } else {
-                Mail::to($recipient)->send(new InspectionLinkPinMail($link, $link->pin, $recipient));
+                Mail::to($recipient)->send(new InspectionLinkPinMail($link, $link->pin, $recipient, static::urlFor($link)));
                 $to = static::maskEmail($recipient->email);
             }
         } catch (\Throwable $e) {
@@ -88,13 +89,28 @@ class InspectionLinkPin
         return ['sent' => true, 'via' => $via, 'to' => $to, 'error' => null];
     }
 
-    /** Short enough for one SMS, and naming the organisation so it is recognised. */
-    public static function smsText(InspectionLink $link, string $pin): string
+    /**
+     * The link as the recipient opens it, on the console's own host. Null for a
+     * link minted before tokens were kept, whose URL cannot be rebuilt.
+     */
+    public static function urlFor(InspectionLink $link): ?string
+    {
+        $path = $link->path;
+
+        return $path ? Utils::consoleUrl($path) : null;
+    }
+
+    /** Naming the organisation so it is recognised, and short enough to read at a glance. */
+    public static function smsText(InspectionLink $link, string $pin, ?string $url = null): string
     {
         $company = Company::select(['uuid', 'name'])->find($link->company_uuid)?->name ?? config('app.name');
         $form    = $link->form?->name ?? 'inspection';
 
-        return "{$company}: your PIN for the {$form} inspection is {$pin}. You will get the link separately. Do not share this PIN.";
+        if ($url) {
+            return "{$company}: complete the {$form} inspection at {$url} using PIN {$pin}. Do not share this PIN.";
+        }
+
+        return "{$company}: your PIN for the {$form} inspection is {$pin}. Do not share this PIN.";
     }
 
     /**

@@ -11,9 +11,8 @@ use Illuminate\Mail\Mailables\Envelope;
 use Illuminate\Queue\SerializesModels;
 
 /**
- * The PIN for an inspection link, and nothing that would let the email alone
- * open it: the link itself is shared separately. Sent synchronously, so the
- * PIN never sits in a queue's payload.
+ * An inspection link and its PIN, with a button that opens the inspection.
+ * Sent synchronously, so the PIN never sits in a queue's payload.
  */
 class InspectionLinkPinMail extends Mailable
 {
@@ -23,18 +22,20 @@ class InspectionLinkPinMail extends Mailable
     public InspectionLink $link;
     public string $pin;
     public ?User $recipient;
+    public ?string $url;
 
-    public function __construct(InspectionLink $link, string $pin, ?User $recipient = null)
+    public function __construct(InspectionLink $link, string $pin, ?User $recipient = null, ?string $url = null)
     {
         $this->link      = $link;
         $this->pin       = $pin;
         $this->recipient = $recipient;
+        $this->url       = $url;
     }
 
     /** The PIN is kept out of the subject, which a locked phone shows. */
     public function envelope(): Envelope
     {
-        return new Envelope(subject: 'Your PIN for the ' . ($this->link->form?->name ?? 'inspection') . ' inspection');
+        return new Envelope(subject: 'Complete the ' . ($this->link->form?->name ?? 'inspection') . ' inspection');
     }
 
     public function content(): Content
@@ -43,6 +44,7 @@ class InspectionLinkPinMail extends Mailable
             markdown: 'fleetops::mail.inspection-link-pin',
             with: [
                 'pin'         => $this->pin,
+                'url'         => $this->url,
                 'recipient'   => $this->recipient,
                 'form'        => $this->link->form,
                 'vehicle'     => $this->link->vehicle,

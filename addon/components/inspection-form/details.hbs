@@ -34,7 +34,7 @@
 
     <ContentPanel @title={{t "inspection.form.structure"}} @open={{true}} @wrapperClass="bordered-top">
         {{#if this.load.isRunning}}
-            <div class="flex items-center justify-center p-6">
+            <div class="p-6">
                 <Spinner @loadingMessage={{t "inspection.form.loading-structure"}} class="text-sm dark:text-gray-100" />
             </div>
         {{else}}

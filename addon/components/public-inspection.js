@@ -22,6 +22,14 @@ const MAX_UPLOAD_BYTES = 10 * 1024 * 1024;
 /** How many digits a link's PIN has, matched to the server. */
 const PIN_LENGTH = 6;
 
+/*
+ * The fetch service turns a failed response carrying a string `error` into a
+ * bare Error of that message, dropping the rest of the body, so the page never
+ * saw `pin_required` and showed the PIN prompt as an error with nowhere to
+ * type. `rawError` rejects with the body itself.
+ */
+const REQUEST_OPTIONS = { namespace: PUBLIC_NAMESPACE, rawError: true };
+
 /**
  * An inspection filled in from a tokenised link, outside the console.
  *
@@ -120,7 +128,7 @@ export default class PublicInspectionComponent extends Component {
         }
 
         try {
-            const response = yield this.fetch.get(`inspections/forms/${this.formId}`, { token: this.token }, { namespace: PUBLIC_NAMESPACE, headers: this.pinHeaders });
+            const response = yield this.fetch.get(`inspections/forms/${this.formId}`, { token: this.token }, { ...REQUEST_OPTIONS, headers: this.pinHeaders });
 
             this.pinRequired = false;
             this.pinError = null;
@@ -160,7 +168,7 @@ export default class PublicInspectionComponent extends Component {
                     signature: this.signatureName ? { name: this.signatureName, signed_at: new Date().toISOString() } : null,
                     custom_field_values: answerRows(this.fields, this.values),
                 },
-                { namespace: PUBLIC_NAMESPACE, headers: this.pinHeaders }
+                { ...REQUEST_OPTIONS, headers: this.pinHeaders }
             );
 
             this.submission = response?.submission;
@@ -204,22 +212,37 @@ export default class PublicInspectionComponent extends Component {
      * says to wait rather than showing a bare status code.
      */
     async describeFailure(error, fallback, body = null) {
-        if (error?.status === 429) {
+        body = body ?? (await this.failureBody(error));
+
+        // Laravel's throttle answers with this message and nothing else.
+        if (error?.status === 429 || body?.message === 'Too Many Attempts.') {
             return 'Too many attempts from this device. Wait a minute and try again.';
         }
 
-        body = body ?? (await this.failureBody(error));
+        const message = body?.error ?? body?.errors?.[0] ?? body?.message ?? error?.message;
 
-        return body?.error ?? body?.errors?.[0] ?? body?.message ?? error?.message ?? fallback;
+        return typeof message === 'string' && message ? message : fallback;
     }
 
-    /** The JSON the server answered a failed request with, which can be read only once. */
+    /**
+     * The JSON the server answered a failed request with. A `rawError` request
+     * rejects with that body itself; an upload rejects with the response, whose
+     * body can be read only once.
+     */
     async failureBody(error) {
-        if (error?.payload) {
+        if (!error) {
+            return null;
+        }
+
+        if (error.payload) {
             return error.payload;
         }
 
-        return typeof error?.json === 'function' ? await error.json().catch(() => null) : null;
+        if (typeof error.json === 'function') {
+            return await error.json().catch(() => null);
+        }
+
+        return error instanceof Error ? null : error;
     }
 
     /** Digits only, and no more than a PIN has: pasted spaces or dashes are dropped. */

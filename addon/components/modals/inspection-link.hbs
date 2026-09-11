@@ -37,10 +37,11 @@
                     @infiniteScroll={{false}}
                     @renderInPlace={{true}}
                     @allowClear={{true}}
+                    @selectedItemComponent={{component "select-option/user" compact=true}}
                     @onChange={{this.assignAssignee}}
                     as |user|
                 >
-                    {{or user.name user.email}}
+                    <SelectOption::User @option={{user}} />
                 </ModelSelect>
             </InputGroup>
 
@@ -53,10 +54,11 @@
                     @infiniteScroll={{false}}
                     @renderInPlace={{true}}
                     @allowClear={{true}}
+                    @selectedItemComponent={{component "select-option/driver" compact=true}}
                     @onChange={{this.assignDriver}}
                     as |driver|
                 >
-                    {{or driver.name driver.public_id}}
+                    <SelectOption::Driver @option={{driver}} />
                 </ModelSelect>
             </InputGroup>
 
@@ -69,10 +71,11 @@
                     @infiniteScroll={{false}}
                     @renderInPlace={{true}}
                     @allowClear={{true}}
+                    @selectedItemComponent={{component "select-option/vehicle" compact=true}}
                     @onChange={{this.assignVehicle}}
                     as |vehicle|
                 >
-                    {{or vehicle.displayName vehicle.name vehicle.public_id}}
+                    <SelectOption::Vehicle @option={{vehicle}} />
                 </ModelSelect>
             </InputGroup>
 

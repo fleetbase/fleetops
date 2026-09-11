@@ -9854,6 +9854,82 @@ body[data-theme='dark'] .inspection-link__pin-code {
     }
 }
 
+/*
+ * A select option: photo, name, and a line of detail. Colours are inherited
+ * rather than set, so an option reads correctly on the dropdown's highlighted
+ * row and in dark mode without rules of its own for either.
+ */
+.select-option {
+    display: flex;
+    align-items: center;
+    gap: 0.625rem;
+    min-width: 0;
+    padding: 0.125rem 0;
+}
+
+.select-option__photo {
+    flex-shrink: 0;
+    width: 2rem;
+    height: 2rem;
+    object-fit: cover;
+    border-radius: 9999px;
+    background-color: rgb(156 163 175 / 20%);
+}
+
+.select-option__photo[data-shape='square'] {
+    border-radius: 0.375rem;
+}
+
+.select-option__text {
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
+    gap: 0.125rem;
+    min-width: 0;
+}
+
+.select-option__title,
+.select-option__details {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.select-option__title {
+    font-size: 0.8125rem;
+    font-weight: 600;
+    line-height: 1.2;
+}
+
+.select-option__details {
+    font-size: 0.6875rem;
+    line-height: 1.2;
+    opacity: 0.7;
+}
+
+/* In a closed select there is room for one line: a small photo, the name, then the detail. */
+.select-option--compact {
+    gap: 0.5rem;
+    padding: 0;
+}
+
+.select-option--compact .select-option__photo {
+    width: 1.25rem;
+    height: 1.25rem;
+}
+
+.select-option--compact .select-option__text {
+    flex-direction: row;
+    align-items: baseline;
+    gap: 0.375rem;
+}
+
+.select-option--compact .select-option__title {
+    flex-shrink: 0;
+    max-width: 60%;
+    font-weight: 500;
+}
+
 /* A link just generated, shown above the form until the modal closes. */
 .inspection-link-generated {
     display: flex;

@@ -2957,21 +2957,21 @@ inspection:
         assign-to-help: Optional. Anyone in your organisation can complete an inspection; the submission is credited to them.
         select-assignee: Select a user
         pin: PIN
-        pin-delivery: Send the PIN
+        pin-delivery: Send the link and PIN
         pin-delivery-none: Do not send it, I will share it myself
         pin-delivery-email: By email
         pin-delivery-sms: By text message
-        pin-delivery-help: "Sent to {name}. The message carries the PIN only; share the link with them yourself."
-        pin-delivery-no-recipient: Assign the link to someone, or pick a driver, to send them the PIN. Otherwise share it yourself; it is shown with the link.
+        pin-delivery-help: "Sent to {name}, with the link to open and the PIN to enter."
+        pin-delivery-no-recipient: Assign the link to someone, or pick a driver, to send it to them. Otherwise share the link and PIN yourself; both are shown once it is generated.
         generated-title: Link generated
-        generated-help: The link is copied to your clipboard. Share the link and the PIN separately, so that neither one alone opens the inspection.
+        generated-help: The link is copied to your clipboard. Whoever opens it needs the PIN too.
         copied-pin: PIN copied.
-        email-pin: Email PIN
-        text-pin: Text PIN
-        pin-sent-email: "PIN emailed to {to}."
-        pin-sent-sms: "PIN texted to {to}."
-        pin-not-sent: "The PIN was not sent: {reason}"
-        pin-sent-by: "PIN {via, select, email {emailed} sms {texted} other {sent}}"
+        email-pin: Email link
+        text-pin: Text link
+        pin-sent-email: "Link and PIN emailed to {to}."
+        pin-sent-sms: "Link and PIN texted to {to}."
+        pin-not-sent: "The link and PIN were not sent: {reason}"
+        pin-sent-by: "{via, select, email {Emailed} sms {Texted} other {Sent}}"
         wrong-pins: "{count, plural, one {# wrong PIN} other {# wrong PINs}}"
         no-pin: No PIN. This link was generated before links had PINs.
     public:
@@ -3006,3 +3006,8 @@ inspection:
     tray:
         title: Defects
         review: Review
+select-option:
+    vehicle:
+        vin: VIN
+        serial_number: S/N
+        call_sign: Call sign

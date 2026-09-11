@@ -5,7 +5,7 @@
     </div>
 
     {{#if this.load.isRunning}}
-        <div class="flex items-center justify-center p-6">
+        <div class="p-6">
             <Spinner @loadingMessage={{t "inspection.builder.loading"}} class="text-sm dark:text-gray-100" />
         </div>
     {{else}}
