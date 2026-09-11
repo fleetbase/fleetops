@@ -159,10 +159,6 @@ class PublicInspectionController extends Controller
             'meta'              => ['inspection_link_uuid' => $link->uuid],
         ]);
 
-        if ($file->company_uuid !== $link->company_uuid) {
-            $file->forceFill(['company_uuid' => $link->company_uuid])->save();
-        }
-
         return response()->json([
             'file' => [
                 'id'           => $file->public_id,

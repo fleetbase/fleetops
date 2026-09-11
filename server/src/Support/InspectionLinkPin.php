@@ -67,7 +67,9 @@ class InspectionLinkPin
 
         try {
             if ($via === 'sms') {
-                $result = (new SmsService())->send($recipient->phone, static::smsText($link, $link->pin, static::urlFor($link)), static::smsOptions($link));
+                // Resolved from the container rather than built here, so the
+                // provider can be swapped out without touching this class.
+                $result = app(SmsService::class)->send($recipient->phone, static::smsText($link, $link->pin, static::urlFor($link)), static::smsOptions($link));
 
                 if (is_array($result) && array_key_exists('success', $result) && !$result['success']) {
                     return ['sent' => false, 'via' => $via, 'to' => null, 'error' => 'The PIN could not be texted: ' . ($result['error'] ?? $result['message'] ?? 'the SMS provider refused it.')];
