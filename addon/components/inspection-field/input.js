@@ -3,7 +3,7 @@ import { tracked } from '@glimmer/tracking';
 import { inject as service } from '@ember/service';
 import { action } from '@ember/object';
 import { INSPECTION_SEVERITIES } from '../../utils/inspection-field-types';
-import { answerState, isUnsafeAnswer, isPromoted, isBlank, ROOMY_FIELD_TYPES } from '../../utils/inspection-answers';
+import { answerState, isUnsafeAnswer, isBlank, defectSummary, ROOMY_FIELD_TYPES } from '../../utils/inspection-answers';
 
 /** The date-ish types that are still one compact control. */
 const INPUT_TYPES = { 'date-picker': 'date', 'date-time-input': 'datetime-local' };
@@ -40,14 +40,48 @@ export default class InspectionFieldInputComponent extends Component {
         return meta && typeof meta === 'object' ? meta : {};
     }
 
-    /** Whether this field has left the grid for a full-width band. */
-    get isPromoted() {
-        return isPromoted(this.field, this.args.value);
-    }
-
-    /** A failed check: the band that carries severity, comment and photos. */
+    /** A failed check, which owes a severity, and maybe a comment and photos. */
     get isDefect() {
         return this.field.type === 'pass-fail' && this.answerState === 'fail';
+    }
+
+    /** This field's flyout is the one open on the sheet — only ever one is. */
+    get isFlyoutOpen() {
+        return this.isDefect && Boolean(this.field.uuid) && this.args.openFieldId === this.field.uuid;
+    }
+
+    /** What the failure has recorded, for the chip it leaves in the cell. */
+    get defect() {
+        return defectSummary(this.field, this.args.value);
+    }
+
+    get severityLabel() {
+        const severity = this.defect.severity;
+
+        if (!severity) {
+            return null;
+        }
+
+        return INSPECTION_SEVERITIES.includes(severity) ? this.intl.t(`inspection.severity.${severity}`) : severity;
+    }
+
+    /** What a closed failure still owes, said on its chip in amber. */
+    get defectStatus() {
+        const { needsComment, needsPhoto } = this.defect;
+
+        if (needsComment && needsPhoto) {
+            return this.intl.t('inspection.defect.needs-both');
+        }
+
+        if (needsComment) {
+            return this.intl.t('inspection.defect.needs-comment');
+        }
+
+        return needsPhoto ? this.intl.t('inspection.defect.needs-photo') : null;
+    }
+
+    get flyoutTitle() {
+        return this.intl.t('inspection.flyout.title', { label: this.label });
     }
 
     /** A note, an upload or a signature — never a column, whatever the answer. */
@@ -276,9 +310,14 @@ export default class InspectionFieldInputComponent extends Component {
                 unsafe: this.answer.unsafe ?? Boolean(this.meta.unsafe_on_fail),
             });
 
+            // Choosing Fail already means "record a defect": no second click.
+            this.openFlyout();
+
             return;
         }
 
+        // The comment and photos survive a switch away, so an accidental Pass
+        // followed by Fail again brings them back.
         this.emit({
             ...this.answer,
             passed: true,
@@ -286,6 +325,33 @@ export default class InspectionFieldInputComponent extends Component {
             severity: null,
             unsafe: false,
         });
+
+        if (typeof this.args.onCloseFlyout === 'function') {
+            this.args.onCloseFlyout(this.field);
+        }
+    }
+
+    @action openFlyout() {
+        if (typeof this.args.onOpenFlyout === 'function') {
+            this.args.onOpenFlyout(this.field);
+        }
+    }
+
+    /**
+     * Close this field's flyout. Focus goes back to its Fail button when the
+     * inspector closed it themselves, but not when they pressed somewhere
+     * else on the page — their attention is already there.
+     */
+    @action closeFlyout(reason) {
+        if (typeof this.args.onCloseFlyout === 'function') {
+            this.args.onCloseFlyout(this.field);
+        }
+
+        if (reason === 'outside') {
+            return;
+        }
+
+        document.querySelector(`#inspection-field-${this.field.uuid} [data-answer="fail"]`)?.focus({ preventScroll: true });
     }
 
     @action setSeverity(severity) {

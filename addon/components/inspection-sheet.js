@@ -3,7 +3,8 @@ import { tracked } from '@glimmer/tracking';
 import { action } from '@ember/object';
 import { inject as service } from '@ember/service';
 import { flattenFields } from '../utils/inspection-form-structure';
-import { summarize, passFailAnswer } from '../utils/inspection-answers';
+import { summarize, listDefects } from '../utils/inspection-answers';
+import { INSPECTION_SEVERITIES } from '../utils/inspection-field-types';
 
 /**
  * An inspection form, being filled in.
@@ -24,6 +25,9 @@ export default class InspectionSheetComponent extends Component {
     /** The field a banner last jumped to, held for a moment so the eye finds it. */
     @tracked targetId = null;
 
+    /** The one field whose defect flyout is open. Opening another closes it. */
+    @tracked openFieldId = null;
+
     get groups() {
         return Array.isArray(this.args.groups) ? this.args.groups : [];
     }
@@ -40,22 +44,53 @@ export default class InspectionSheetComponent extends Component {
         return this.fields.length > 0;
     }
 
-    /** "Lights and indicators · High" — the failure, and how bad it is. */
-    get unsafeDescription() {
-        const field = this.summary.unsafeField;
+    /**
+     * Every failure on the sheet, for the tray at its foot: the severity, the
+     * field, and what evidence it has or still owes. It is the record of a
+     * defect once its flyout is closed, and the review step before submitting.
+     */
+    get defects() {
+        return listDefects(this.fields, this.args.values ?? {}).map((defect) => ({
+            ...defect,
+            label: defect.field.label || this.intl.t('inspection.builder.untitled-field'),
+            severityLabel: this.severityLabel(defect.severity),
+            evidence: this.evidenceOf(defect),
+        }));
+    }
 
-        if (!field) {
-            return null;
-        }
-
-        const severity = passFailAnswer(this.args.values?.[field.uuid])?.severity;
-        const label = field.label || this.intl.t('inspection.builder.untitled-field');
-
+    severityLabel(severity) {
         if (!severity) {
-            return label;
+            return this.intl.t('inspection.answer.fail');
         }
 
-        return `${label} · ${this.intl.t(`inspection.severity.${severity}`)}`;
+        return INSPECTION_SEVERITIES.includes(severity) ? this.intl.t(`inspection.severity.${severity}`) : severity;
+    }
+
+    /** "2 photos · comment", or what is still owed, in the order it is owed. */
+    evidenceOf(defect) {
+        if (defect.needsComment && defect.needsPhoto) {
+            return this.intl.t('inspection.defect.needs-both');
+        }
+
+        if (defect.needsComment) {
+            return this.intl.t('inspection.defect.needs-comment');
+        }
+
+        if (defect.needsPhoto) {
+            return this.intl.t('inspection.defect.needs-photo');
+        }
+
+        const parts = [];
+
+        if (defect.photoCount) {
+            parts.push(this.intl.t('inspection.defect.photos', { count: defect.photoCount }));
+        }
+
+        if (defect.hasComment) {
+            parts.push(this.intl.t('inspection.defect.comment'));
+        }
+
+        return parts.length ? parts.join(' · ') : this.intl.t('inspection.defect.no-evidence');
     }
 
     get outstandingDescription() {
@@ -77,6 +112,29 @@ export default class InspectionSheetComponent extends Component {
      * between the grid and its band as the answer changes, so the element the
      * banner points at is not the one that existed when the banner rendered.
      */
+    @action openFlyout(field) {
+        this.openFieldId = field?.uuid ?? null;
+    }
+
+    /**
+     * Close a field's flyout — only if it is still the open one, so a close
+     * that arrives after another field has opened cannot shut the new one.
+     */
+    @action closeFlyout(field) {
+        if (!field || this.openFieldId === field.uuid) {
+            this.openFieldId = null;
+        }
+    }
+
+    /** From the tray: bring the defect into view and open it to be edited. */
+    @action reviewDefect(field) {
+        this.jumpTo(field);
+
+        if (!this.args.readonly && !this.args.disabled) {
+            this.openFieldId = field?.uuid ?? null;
+        }
+    }
+
     @action jumpTo(field) {
         if (!field?.uuid) {
             return;

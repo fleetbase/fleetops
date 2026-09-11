@@ -2872,7 +2872,6 @@ inspection:
         text-placeholder: Type an answer
         no-options: This field has no answers to choose from.
         uploads-unavailable: Can be added from the console or the driver app.
-        promoted: Promoted
         comments-required: Say what is wrong, and what it needs
         comment-required: Comment mandatory on fail
         photo-required: Photo mandatory on fail
@@ -2958,3 +2957,18 @@ inspection:
         blocked-required: "{count, plural, one {# required answer is missing} other {# required answers are missing}}"
         blocked-defects: "{count, plural, one {# failure still needs a comment or a photo} other {# failures still need a comment or a photo}}"
         powered-by: Powered by Fleetbase FleetOps
+    flyout:
+        title: "Defect: {label}"
+        done: Done
+        close: Close
+    defect:
+        edit: Edit defect
+        photos: "{count, plural, one {# photo} other {# photos}}"
+        comment: Comment
+        needs-comment: Needs a comment
+        needs-photo: Needs a photo
+        needs-both: Needs a comment and a photo
+        no-evidence: No comment or photo yet
+    tray:
+        title: Defects
+        review: Review

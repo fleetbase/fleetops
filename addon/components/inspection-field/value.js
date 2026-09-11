@@ -1,7 +1,7 @@
 import Component from '@glimmer/component';
 import { inject as service } from '@ember/service';
 import { INSPECTION_SEVERITIES } from '../../utils/inspection-field-types';
-import { answerState, isPromoted, ROOMY_FIELD_TYPES } from '../../utils/inspection-answers';
+import { answerState, ROOMY_FIELD_TYPES } from '../../utils/inspection-answers';
 
 /**
  * One stored answer, read-only — what the record's Overview shows.
@@ -30,10 +30,6 @@ export default class InspectionFieldValueComponent extends Component {
 
     get answerState() {
         return answerState(this.field, this.args.value);
-    }
-
-    get isPromoted() {
-        return isPromoted(this.field, this.args.value);
     }
 
     get isDefect() {

@@ -1,4 +1,7 @@
 <div class="inspection-sheet" ...attributes>
+    {{! Floating flyouts render here: inside the sheet so they scroll with their field, outside its card so they are never clipped. }}
+    <div class="inspection-sheet__flyouts"></div>
+
     <div class="inspection-sheet__body">
         <div class="inspection-sheet__groups">
             {{#each this.groups key="uuid" as |group|}}
@@ -11,6 +14,9 @@
                     @allowUploads={{@allowUploads}}
                     @readonly={{@readonly}}
                     @targetId={{this.targetId}}
+                    @openFieldId={{this.openFieldId}}
+                    @onOpenFlyout={{this.openFlyout}}
+                    @onCloseFlyout={{this.closeFlyout}}
                 />
             {{/each}}
         </div>
@@ -36,13 +42,23 @@
                     </div>
                 </div>
 
-                {{#if this.summary.unsafeField}}
-                    <div class="inspection-banner inspection-banner--unsafe">
-                        <span class="inspection-banner__chip">{{t "inspection.answer.unsafe"}}</span>
-                        <span>{{this.unsafeDescription}}</span>
-                        <button type="button" class="inspection-banner__jump" {{on "click" (fn this.jumpTo this.summary.unsafeField)}}>
-                            {{t "inspection.record.review"}}
-                        </button>
+                {{#if this.defects}}
+                    <div class="inspection-tray">
+                        <div class="inspection-tray__head">
+                            {{t "inspection.tray.title"}}
+                            <span class="inspection-tray__count">{{this.defects.length}}</span>
+                        </div>
+                        {{#each this.defects key="field.uuid" as |defect|}}
+                            <button type="button" class="inspection-tray__row" {{on "click" (fn this.reviewDefect defect.field)}}>
+                                <span class="inspection-tray__severity" data-severity={{defect.severity}}>{{defect.severityLabel}}</span>
+                                <span class="inspection-tray__label">{{defect.label}}</span>
+                                {{#if defect.unsafe}}
+                                    <span class="inspection-banner__chip">{{t "inspection.answer.unsafe"}}</span>
+                                {{/if}}
+                                <span class="inspection-tray__evidence" data-incomplete={{if defect.incomplete "true" "false"}}>{{defect.evidence}}</span>
+                                <span class="inspection-tray__action">{{t "inspection.tray.review"}}</span>
+                            </button>
+                        {{/each}}
                     </div>
                 {{/if}}
 

@@ -92,21 +92,44 @@ export function defectIncomplete(field, value) {
 export const ROOMY_FIELD_TYPES = ['textarea', 'file-upload', 'signature'];
 
 /**
- * Whether a field leaves its group's grid and becomes a full-width band.
+ * Whether a field spans the full width of its group's grid.
  *
- * This is what stops one answer changing the shape of another. A compact
- * field sits in the column the author gave it; the moment it needs room — a
- * pass-fail that failed and now owes a severity, a comment and photos, or a
- * note, upload or signature that never fitted a column in the first place —
- * it is promoted out of the grid entirely, so there is no neighbouring cell
- * left to stretch.
+ * Only the types whose size the form itself decides: a note, an upload, a
+ * signature. It depends on the field and never on the answer, so answering a
+ * field can never change the layout. A failure's detail used to widen its
+ * field too, which re-flowed the group every time a check failed; it now
+ * opens in a flyout instead, and the field stays the size it was.
  */
+// eslint-disable-next-line no-unused-vars
 export function isPromoted(field, value) {
-    if (ROOMY_FIELD_TYPES.includes(field?.type)) {
-        return true;
-    }
+    return ROOMY_FIELD_TYPES.includes(field?.type);
+}
 
-    return answerState(field, value) === 'fail';
+/**
+ * What a failed check has recorded, in one shape: for the chip a closed
+ * failure leaves behind in its field, and for the defects tray.
+ */
+export function defectSummary(field, value) {
+    const answer = passFailAnswer(value) ?? {};
+    const photos = Array.isArray(answer.photos) ? answer.photos : [];
+    const meta = field?.meta && typeof field.meta === 'object' ? field.meta : {};
+    const hasComment = Boolean(String(answer.comments ?? '').trim());
+
+    return {
+        field,
+        severity: answer.severity ?? meta.severity ?? null,
+        unsafe: answer.unsafe === true,
+        photoCount: photos.length,
+        hasComment,
+        needsComment: meta.require_comment_on_fail === true && !hasComment,
+        needsPhoto: meta.require_photo_on_fail === true && photos.length === 0,
+        incomplete: defectIncomplete(field, value),
+    };
+}
+
+/** Every failed check on the sheet, in the order they are answered. */
+export function listDefects(fields = [], values = {}) {
+    return fields.filter((field) => answerState(field, values?.[field.uuid]) === 'fail').map((field) => defectSummary(field, values?.[field.uuid]));
 }
 
 /**
