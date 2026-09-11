@@ -8928,7 +8928,7 @@ body[data-theme='dark'] .filter-multi-model > .clear-button {
     --ins-warn-strong: #b45309;
     --ins-hatch-a: #e5e7eb;
     --ins-hatch-b: #f3f4f6;
-    --ins-mono: ui-monospace, "IBM Plex Mono", sfmono-regular, menlo, monaco, consolas, monospace;
+    --ins-mono: ui-monospace, 'IBM Plex Mono', sfmono-regular, menlo, monaco, consolas, monospace;
 }
 
 .inspection-sheet {
@@ -9435,6 +9435,7 @@ body[data-theme='dark'] .inspection-sheet__body {
     line-height: 1;
     color: var(--ins-text-faint);
     padding: 0;
+    text-decoration: none;
 }
 
 .inspection-slot--add:hover {
@@ -9846,7 +9847,7 @@ body[data-theme='dark'] .inspection-link__pin-code {
 }
 
 /* On a phone the submit button spans the page, where a thumb can reach it. */
-@media (max-width: 639px) {
+@media (width <= 639px) {
     .public-inspection-submit__button,
     .public-inspection-submit__button > button {
         width: 100%;
@@ -9992,10 +9993,6 @@ body[data-theme='dark'] .inspection-link-generated .inspection-link__url {
     color: var(--ins-text-soft);
     white-space: pre-wrap;
     min-width: 0;
-}
-
-.inspection-slot--add {
-    text-decoration: none;
 }
 
 /* ==========================================================================

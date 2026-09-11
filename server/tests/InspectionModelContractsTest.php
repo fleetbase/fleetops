@@ -77,6 +77,42 @@ function fleetOpsInspectionModelDatabase(): SQLiteConnection
     });
     Illuminate\Support\Facades\DB::clearResolvedInstance('db');
     app()->instance('db.schema', $connection->getSchemaBuilder());
+    // The link's token and PIN are stored with the `encrypted` cast, which
+    // resolves the container's encrypter. A reversible stand-in is enough to
+    // show a value goes in encrypted and comes back as it was.
+    $encrypter = new class {
+        // Eloquent's `encrypted` cast calls encrypt($value, false) and
+        // decrypt($value, false); the string variants are here for anything
+        // that goes through Crypt::encryptString() instead.
+        public function encrypt($value, $serialize = true)
+        {
+            return 'enc:' . base64_encode($serialize ? serialize($value) : (string) $value);
+        }
+
+        public function decrypt($value, $unserialize = true)
+        {
+            if (!is_string($value) || !str_starts_with($value, 'enc:')) {
+                throw new RuntimeException('Unable to decrypt.');
+            }
+
+            $decoded = base64_decode(substr($value, 4), true);
+
+            return $unserialize ? unserialize($decoded) : $decoded;
+        }
+
+        public function encryptString($value)
+        {
+            return $this->encrypt($value, false);
+        }
+
+        public function decryptString($value)
+        {
+            return $this->decrypt($value, false);
+        }
+    };
+    app()->instance('encrypter', $encrypter);
+    Illuminate\Support\Facades\Crypt::clearResolvedInstance('encrypter');
+    EloquentModel::encryptUsing($encrypter);
     app()->instance('responsecache', new class {
         public function __call($method, $arguments)
         {

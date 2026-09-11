@@ -3,9 +3,9 @@
 namespace Fleetbase\FleetOps\Http\Controllers\Internal\v1;
 
 use Fleetbase\FleetOps\Http\Controllers\FleetOpsController;
+use Fleetbase\FleetOps\Http\Resources\v1\InspectionLink as InspectionLinkResource;
 use Fleetbase\FleetOps\Models\Driver;
 use Fleetbase\FleetOps\Models\InspectionForm;
-use Fleetbase\FleetOps\Http\Resources\v1\InspectionLink as InspectionLinkResource;
 use Fleetbase\FleetOps\Models\InspectionLink;
 use Fleetbase\FleetOps\Models\Vehicle;
 use Fleetbase\FleetOps\Support\InspectionFormSync;

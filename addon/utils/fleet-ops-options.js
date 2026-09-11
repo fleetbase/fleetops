@@ -217,7 +217,7 @@ export const fuelReportStatuses = [
 ];
 
 export const inspectionFormTypes = [
-    { label: 'DVIR', value: 'dvir', description: "Driver vehicle inspection report — the daily walk-round a driver signs." },
+    { label: 'DVIR', value: 'dvir', description: 'Driver vehicle inspection report — the daily walk-round a driver signs.' },
     { label: 'Pre-Trip', value: 'pre_trip', description: 'Completed before the vehicle leaves.' },
     { label: 'Post-Trip', value: 'post_trip', description: 'Completed when the vehicle returns.' },
     { label: 'Pre-Operational', value: 'pre_operational', description: 'Checks performed before operation begins.' },

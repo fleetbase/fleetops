@@ -12,6 +12,7 @@ use Fleetbase\FleetOps\Models\InspectionSubmission;
 use Fleetbase\FleetOps\Models\Issue;
 use Fleetbase\FleetOps\Models\Vehicle;
 use Fleetbase\FleetOps\Models\WorkOrder;
+use Fleetbase\FleetOps\Support\InspectionFormSync;
 use Illuminate\Config\Repository;
 use Illuminate\Database\ConnectionResolver;
 use Illuminate\Database\Eloquent\Model as EloquentModel;
@@ -87,6 +88,42 @@ function fleetOpsInspectionControllerDatabase(): SQLiteConnection
     });
     Illuminate\Support\Facades\DB::clearResolvedInstance('db');
     app()->instance('db.schema', $connection->getSchemaBuilder());
+    // The link's token and PIN are stored with the `encrypted` cast, which
+    // resolves the container's encrypter. A reversible stand-in is enough to
+    // show a value goes in encrypted and comes back as it was.
+    $encrypter = new class {
+        // Eloquent's `encrypted` cast calls encrypt($value, false) and
+        // decrypt($value, false); the string variants are here for anything
+        // that goes through Crypt::encryptString() instead.
+        public function encrypt($value, $serialize = true)
+        {
+            return 'enc:' . base64_encode($serialize ? serialize($value) : (string) $value);
+        }
+
+        public function decrypt($value, $unserialize = true)
+        {
+            if (!is_string($value) || !str_starts_with($value, 'enc:')) {
+                throw new RuntimeException('Unable to decrypt.');
+            }
+
+            $decoded = base64_decode(substr($value, 4), true);
+
+            return $unserialize ? unserialize($decoded) : $decoded;
+        }
+
+        public function encryptString($value)
+        {
+            return $this->encrypt($value, false);
+        }
+
+        public function decryptString($value)
+        {
+            return $this->decrypt($value, false);
+        }
+    };
+    app()->instance('encrypter', $encrypter);
+    Illuminate\Support\Facades\Crypt::clearResolvedInstance('encrypter');
+    EloquentModel::encryptUsing($encrypter);
     app()->instance('responsecache', new class {
         public function __call($method, $arguments)
         {
@@ -255,9 +292,29 @@ test('public inspection link files a submission and spends the link', function (
     Carbon::setTestNow('2026-09-09 08:30:00');
     $controller = new PublicInspectionController();
     $form       = fleetOpsInspectionControllerForm();
-    $link       = fleetOpsInspectionControllerLink($form, 'good-token');
+    InspectionFormSync::convertLegacyItems($form);
+    $link   = fleetOpsInspectionControllerLink($form, 'good-token');
+    $server = ['REMOTE_ADDR' => '203.0.113.9', 'HTTP_USER_AGENT' => 'Safari'];
 
-    $request = Request::create('/public/inspections/forms/x/submit', 'POST', fleetOpsInspectionControllerBody(['token' => 'good-token']), [], [], ['REMOTE_ADDR' => '203.0.113.9', 'HTTP_USER_AGENT' => 'Safari']);
+    // A link answers the form's fields. The first cut's flat checklist stores
+    // photo URLs as given, so it is refused, and refusing it spends nothing.
+    $flat = fleetOpsInspectionControllerRefusal(fn () => $controller->submit(
+        Request::create('/public/inspections/forms/x/submit', 'POST', fleetOpsInspectionControllerBody(['token' => 'good-token']), [], [], $server),
+        $form->public_id
+    ));
+    expect($flat->getStatusCode())->toBe(422)
+        ->and($flat->getData(true)['error'])->toContain('form fields')
+        ->and($link->fresh()->used_at)->toBeNull();
+
+    $request = Request::create('/public/inspections/forms/x/submit', 'POST', [
+        'token'               => 'good-token',
+        'odometer'            => 120400,
+        'signature'           => ['name' => 'Dana Driver'],
+        'custom_field_values' => [
+            ['custom_field' => 'brakes', 'value_type' => 'object', 'value' => ['passed' => false, 'severity' => 'critical', 'comments' => 'Soft pedal', 'photos' => []]],
+            ['custom_field' => 'lights', 'value_type' => 'object', 'value' => ['passed' => true]],
+        ],
+    ], [], [], $server);
     $payload = $controller->submit($request, $form->public_id)->getData(true);
 
     expect($payload['message'])->toBe('Inspection submitted.')
@@ -266,6 +323,10 @@ test('public inspection link files a submission and spends the link', function (
         ->and($payload['submission']['result'])->toBe('failed')
         ->and($payload['submission']['failed_items'])->toBe(1)
         ->and($payload['submission']['meta']['inspection_link_id'])->toBe($link->public_id)
+        // Who typed their name, beside the account the link credits, and
+        // whether a PIN stood between the link and the form.
+        ->and($payload['submission']['meta']['completed_by_name'])->toBe('Dana Driver')
+        ->and($payload['submission']['meta']['pin_verified'])->toBeFalse()
         ->and($payload['submission']['item_results'])->toHaveCount(2)
         ->and($payload['submission']['issue']['id'])->toStartWith('issue_')
         ->and($payload['submission']['work_order']['id'])->toStartWith('work_order_')
@@ -273,6 +334,7 @@ test('public inspection link files a submission and spends the link', function (
         ->and($payload['submission']['vehicle']['id'])->toBe('vehicle_one')
         ->and($payload['submission']['form']['id'])->toBe($form->public_id);
 
+    // Nobody is assigned, so the submission is credited to the driver's account.
     $submission = InspectionSubmission::query()->first();
     expect($submission->submitted_by_uuid)->toBe('user-driver')
         ->and($submission->driver_uuid)->toBe('driver-1')
