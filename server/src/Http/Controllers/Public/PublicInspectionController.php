@@ -22,6 +22,16 @@ class PublicInspectionController extends Controller
     /** How many files one link may upload, so a leaked link cannot fill the bucket. */
     public const MAX_UPLOADS_PER_LINK = 40;
 
+    /** The extension each accepted image type is stored under. */
+    protected const EXTENSIONS = [
+        'image/jpeg' => 'jpg',
+        'image/png'  => 'png',
+        'image/webp' => 'webp',
+        'image/gif'  => 'gif',
+        'image/heic' => 'heic',
+        'image/heif' => 'heif',
+    ];
+
     public function show(Request $request, string $id): JsonResponse
     {
         [$form, $link] = $this->resolvePublishedFormAndLink($request, $id);
@@ -111,7 +121,13 @@ class PublicInspectionController extends Controller
         $upload = $request->file('file');
         $disk   = config('filesystems.default');
         $bucket = config('filesystems.disks.' . $disk . '.bucket', config('filesystems.disks.s3.bucket'));
-        $stored = $upload->storeAs('inspections/links/' . $link->uuid, File::randomFileNameFromRequest($request), ['disk' => $disk]);
+        // The stored name's extension comes from the type the server found in
+        // the bytes, never from the name the device sent. Validation checks the
+        // content, so an image that is also valid PHP, uploaded as `photo.php`,
+        // would pass it — and stored under that extension on a web-served local
+        // disk, it would be an invitation to run it.
+        $extension = static::EXTENSIONS[$upload->getMimeType()] ?? 'jpg';
+        $stored    = $upload->storeAs('inspections/links/' . $link->uuid, File::randomFileNameFromRequest($request, 'file', $extension), ['disk' => $disk]);
 
         if ($stored === false) {
             abort(response()->json(['error' => 'This photo could not be stored.'], 500));
