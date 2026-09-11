@@ -31,6 +31,9 @@ export default class InspectionLinkListComponent extends Component {
     /** Which link is being revoked, so only its own button spins. */
     @tracked revokingId = null;
 
+    /** Which link's PIN is being sent, and how: `<id>:email` or `<id>:sms`. */
+    @tracked sendingKey = null;
+
     constructor() {
         super(...arguments);
         this.load.perform();
@@ -43,6 +46,12 @@ export default class InspectionLinkListComponent extends Component {
 
     get hasLinks() {
         return this.links.length > 0;
+    }
+
+    /** Who and what a link is for, in one line: its assignee, vehicle and driver. */
+    labelFor(link) {
+        const names = [link?.assignee?.name, link?.vehicle?.name, link?.driver?.name].filter(Boolean);
+        return [...new Set(names)].join(' · ');
     }
 
     /** The absolute URL for a link, which the server returns only as a path. */
@@ -60,7 +69,7 @@ export default class InspectionLinkListComponent extends Component {
 
         try {
             const response = yield this.fetch.get(`inspection-forms/${this.formId}/links`);
-            this.links = (response?.links ?? []).map((link) => ({ ...link, url: this.urlFor(link) }));
+            this.links = (response?.links ?? []).map((link) => ({ ...link, url: this.urlFor(link), label: this.labelFor(link) }));
         } catch (error) {
             this.error = error?.payload?.error ?? error?.message ?? this.intl.t('inspection.link.load-failed');
         }
@@ -78,6 +87,30 @@ export default class InspectionLinkListComponent extends Component {
 
         copyToClipboard(link.url);
         this.notifications.success(this.intl.t('inspection.link.copied'));
+    }
+
+    @action copyPin(link) {
+        if (!link.pin) {
+            return;
+        }
+
+        copyToClipboard(link.pin);
+        this.notifications.success(this.intl.t('inspection.link.copied-pin'));
+    }
+
+    /** Send the PIN again, to whoever the link is for. */
+    @task({ drop: true }) *sendPin(link, via) {
+        this.sendingKey = `${link.id}:${via}`;
+
+        try {
+            const response = yield this.fetch.post(`inspection-forms/${this.formId}/links/${link.id}/send-pin`, { via });
+            this.inspectionFormActions.notifyPinDelivery(response?.pin_delivery);
+            yield this.load.perform();
+        } catch (error) {
+            this.notifications.serverError(error);
+        } finally {
+            this.sendingKey = null;
+        }
     }
 
     @task({ drop: true }) *revoke(link) {

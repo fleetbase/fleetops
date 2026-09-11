@@ -7,6 +7,7 @@ use Fleetbase\FleetOps\Http\Resources\v1\InspectionSubmission as InspectionSubmi
 use Fleetbase\FleetOps\Models\InspectionForm;
 use Fleetbase\FleetOps\Models\InspectionLink;
 use Fleetbase\FleetOps\Support\InspectionFileStore;
+use Fleetbase\FleetOps\Support\InspectionLinkPin;
 use Fleetbase\FleetOps\Support\InspectionSubmitter;
 use Fleetbase\Models\File;
 use Illuminate\Http\JsonResponse;
@@ -21,6 +22,9 @@ class PublicInspectionController extends Controller
 
     /** How many files one link may upload, so a leaked link cannot fill the bucket. */
     public const MAX_UPLOADS_PER_LINK = 40;
+
+    /** What a locked link says, wherever the lock is found. */
+    protected const LOCKED_MESSAGE = 'This link is locked after too many incorrect PINs. Ask whoever sent it for a new one.';
 
     /** The extension each accepted image type is stored under. */
     protected const EXTENSIONS = [
@@ -69,11 +73,16 @@ class PublicInspectionController extends Controller
             $submission = InspectionSubmitter::submit($form, $validated, [
                 'vehicle_uuid'      => $link->vehicle_uuid,
                 'driver_uuid'       => $link->driver_uuid,
-                'submitted_by_uuid' => $link->driver?->user_uuid,
+                // The person the link is for: its assignee, or the driver's
+                // account. What they typed as their name is kept beside it,
+                // with whether a PIN stood between the link and the form.
+                'submitted_by_uuid' => InspectionLinkPin::recipientFor($link)?->uuid,
                 'source'            => 'public_link',
                 'meta'              => [
                     'inspection_link_uuid' => $link->uuid,
                     'inspection_link_id'   => $link->public_id,
+                    'completed_by_name'    => data_get($validated, 'signature.name'),
+                    'pin_verified'         => $link->hasPin(),
                 ],
             ]);
 
@@ -139,7 +148,7 @@ class PublicInspectionController extends Controller
         // name the device gave the file.
         $file = File::create([
             'company_uuid'      => $link->company_uuid,
-            'uploader_uuid'     => $link->driver?->user_uuid,
+            'uploader_uuid'     => InspectionLinkPin::recipientFor($link)?->uuid,
             'original_filename' => $upload->getClientOriginalName(),
             'content_type'      => $upload->getMimeType(),
             'disk'              => $disk,
@@ -187,8 +196,28 @@ class PublicInspectionController extends Controller
             abort(response()->json(['error' => 'Inspection link is invalid.'], 403));
         }
 
+        if ($link->status === 'locked') {
+            abort(response()->json(['error' => static::LOCKED_MESSAGE, 'locked' => true], 403));
+        }
+
         if (!$link->isUsable()) {
             abort(response()->json(['error' => 'Inspection link is expired, revoked, or already used.'], 403));
+        }
+
+        // A link with a PIN answers nothing, not even the form's name, until
+        // the PIN is given. Wrong guesses count against the link and lock it.
+        // Every refusal here is a 403, so the page handles them all one way.
+        // The page sends it as a header, so it stays out of URLs and the
+        // access logs that record them; a `pin` field is accepted as well.
+        switch ($link->verifyPin($request->header('X-Inspection-Pin') ?: $request->input('pin'))) {
+            case 'missing':
+                abort(response()->json(['error' => 'Enter the PIN you were given with this link.', 'pin_required' => true], 403));
+                // no break
+            case 'wrong':
+                abort(response()->json(['error' => 'That PIN is not right.', 'pin_required' => true, 'attempts_left' => $link->pinAttemptsLeft()], 403));
+                // no break
+            case 'locked':
+                abort(response()->json(['error' => static::LOCKED_MESSAGE, 'locked' => true], 403));
         }
 
         return [$form, $link];
@@ -197,6 +226,10 @@ class PublicInspectionController extends Controller
     protected function identityPayload(InspectionLink $link): array
     {
         return [
+            'assignee' => $link->assignee ? [
+                'id'   => $link->assignee->public_id,
+                'name' => $link->assignee->name,
+            ] : null,
             // Name, not phone number: whoever holds the link needs to know who
             // it is for, not how to reach them.
             'driver' => $link->driver ? [

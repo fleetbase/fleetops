@@ -2,6 +2,7 @@
 
 namespace Fleetbase\FleetOps\Http\Resources\v1;
 
+use Fleetbase\FleetOps\Support\InspectionLinkPin;
 use Fleetbase\Http\Resources\FleetbaseResource;
 use Fleetbase\Support\Http;
 
@@ -38,6 +39,30 @@ class InspectionLink extends FleetbaseResource
             'state'          => $this->state,
             'status'         => $this->status,
             'single_use'     => (bool) $this->single_use,
+            'has_pin'        => $this->hasPin(),
+            // Shown in the console, like the link, so a dispatcher can read it
+            // out or send it again. Never on a public request.
+            'pin'            => $this->when($internal, fn () => $this->pin),
+            'pin_sent_via'   => $this->pin_sent_via,
+            'pin_sent_at'    => $this->pin_sent_at,
+            'pin_attempts'   => $this->when($internal, fn () => (int) $this->pin_attempts),
+            'recipient'      => $this->when($internal, function () {
+                $recipient = InspectionLinkPin::recipientFor($this->resource);
+
+                return $recipient ? ['name' => $recipient->name] : null;
+            }),
+            'can_send_pin'   => $this->when($internal, function () {
+                $recipient = InspectionLinkPin::recipientFor($this->resource);
+
+                return [
+                    'email' => InspectionLinkPin::unavailableReason($recipient, 'email') === null,
+                    'sms'   => InspectionLinkPin::unavailableReason($recipient, 'sms') === null,
+                ];
+            }),
+            'assignee'       => $this->assignee ? [
+                'id'   => $this->assignee->public_id,
+                'name' => $this->assignee->name,
+            ] : null,
             'driver'         => $this->driver ? [
                 'id'   => $this->driver->public_id,
                 'name' => $this->driver->name,

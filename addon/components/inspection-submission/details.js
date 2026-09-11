@@ -16,6 +16,7 @@ import { task } from 'ember-concurrency';
 export default class InspectionSubmissionDetailsComponent extends Component {
     @service inspectionFormActions;
     @service inspectionSubmissionActions;
+    @service intl;
 
     @tracked groups = [];
     @tracked values = {};
@@ -29,6 +30,40 @@ export default class InspectionSubmissionDetailsComponent extends Component {
 
             this.load.perform();
         });
+    }
+
+    /**
+     * Who filed it: the account it is credited to — whoever signed in to the
+     * console, or whoever a public link was for — or else the name typed on
+     * the link, when the link was for nobody in particular.
+     */
+    get submitter() {
+        const submission = this.args.resource;
+        return submission?.submitted_by?.name ?? submission?.meta?.completed_by_name ?? null;
+    }
+
+    /**
+     * How that was established, for a submission that came through a public
+     * link: whether a PIN stood in the way, and what name was typed when it
+     * differs from the account or there is no account to check it against.
+     */
+    get submitterNote() {
+        const submission = this.args.resource;
+        if (submission?.source !== 'public_link') {
+            return null;
+        }
+
+        const typed = (submission.meta?.completed_by_name ?? '').trim();
+        const account = (submission.submitted_by?.name ?? '').trim();
+        const notes = [this.intl.t(submission.meta?.pin_verified ? 'inspection.record.via-link-pin' : 'inspection.record.via-link')];
+
+        if (typed && account && typed.toLowerCase() !== account.toLowerCase()) {
+            notes.push(this.intl.t('inspection.record.signed-as', { name: typed }));
+        } else if (typed && !account) {
+            notes.push(this.intl.t('inspection.record.name-unverified'));
+        }
+
+        return notes.join(' · ');
     }
 
     get hasAnswers() {

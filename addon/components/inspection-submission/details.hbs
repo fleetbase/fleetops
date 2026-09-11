@@ -26,6 +26,15 @@
                 <div class="field-value">{{n-a (or @resource.driver.name @resource.driver_name)}}</div>
             </div>
             <div class="field-info-container">
+                <div class="field-name">{{t "inspection.record.submitted-by"}}</div>
+                <div class="field-value">
+                    {{n-a this.submitter}}
+                    {{#if this.submitterNote}}
+                        <div class="mt-0.5 text-gray-500 dark:text-gray-400">{{this.submitterNote}}</div>
+                    {{/if}}
+                </div>
+            </div>
+            <div class="field-info-container">
                 <div class="field-name">{{t "inspection.record.odometer"}}</div>
                 <div class="field-value">{{n-a @resource.odometer}}</div>
             </div>

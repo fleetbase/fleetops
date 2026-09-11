@@ -98,7 +98,7 @@ function fleetOpsInspectionControllerDatabase(): SQLiteConnection
     $schema = $connection->getSchemaBuilder();
     $tables = [
         'inspection_forms'        => ['uuid', 'public_id', '_key', 'company_uuid', 'name', 'description', 'type', 'status', 'subject_type', 'subject_uuid', 'items', 'settings', 'meta', 'published_at', 'created_by_uuid', 'updated_by_uuid'],
-        'inspection_links'        => ['uuid', 'public_id', '_key', 'company_uuid', 'inspection_form_uuid', 'driver_uuid', 'vehicle_uuid', 'created_by_uuid', 'token_hash', 'token', 'status', 'single_use', 'expires_at', 'last_viewed_at', 'used_at', 'used_ip', 'used_user_agent', 'meta'],
+        'inspection_links'        => ['uuid', 'public_id', '_key', 'company_uuid', 'inspection_form_uuid', 'driver_uuid', 'vehicle_uuid', 'assignee_uuid', 'created_by_uuid', 'token_hash', 'token', 'pin_hash', 'pin', 'pin_attempts', 'pin_sent_via', 'pin_sent_at', 'status', 'single_use', 'expires_at', 'last_viewed_at', 'used_at', 'used_ip', 'used_user_agent', 'meta'],
         'inspection_submissions'  => ['uuid', 'public_id', '_key', 'company_uuid', 'inspection_form_uuid', 'vehicle_uuid', 'driver_uuid', 'submitted_by_uuid', 'issue_uuid', 'work_order_uuid', 'type', 'status', 'result', 'source', 'odometer', 'engine_hours', 'total_items', 'failed_items', 'started_at', 'submitted_at', 'resolved_at', 'location', 'signature', 'attachments', 'meta', 'created_by_uuid', 'updated_by_uuid'],
         'inspection_item_results' => ['uuid', '_key', 'company_uuid', 'inspection_submission_uuid', 'issue_uuid', 'work_order_uuid', 'item_key', 'label', 'category', 'status', 'severity', 'passed', 'comments', 'photos', 'meta', 'created_by_uuid', 'updated_by_uuid'],
         'issues'                  => ['uuid', 'public_id', '_key', 'company_uuid', 'reported_by_uuid', 'assigned_to_uuid', 'vehicle_uuid', 'driver_uuid', 'order_uuid', 'issue_id', 'location', 'category', 'type', 'report', 'title', 'tags', 'priority', 'meta', 'resolved_at', 'status'],
@@ -247,7 +247,7 @@ test('public inspection link shows the form with the identity it was minted for'
     // A link minted for nobody in particular carries no identity.
     fleetOpsInspectionControllerLink($form, 'anon-token', ['driver_uuid' => null, 'vehicle_uuid' => null]);
     $anonymous = $controller->show(Request::create('/public/inspections/forms/x', 'GET', ['token' => 'anon-token']), $form->public_id)->getData(true);
-    expect($anonymous['identity'])->toBe(['driver' => null, 'vehicle' => null, 'expires_at' => null]);
+    expect($anonymous['identity'])->toBe(['assignee' => null, 'driver' => null, 'vehicle' => null, 'expires_at' => null]);
 });
 
 test('public inspection link files a submission and spends the link', function () {

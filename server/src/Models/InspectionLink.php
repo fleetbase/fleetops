@@ -29,14 +29,26 @@ class InspectionLink extends Model
      */
     public const DEFAULT_TTL_HOURS = 72;
 
+    /** How many digits a PIN has. */
+    public const PIN_LENGTH = 6;
+
+    /** How many wrong PINs a link takes before it locks. */
+    public const MAX_PIN_ATTEMPTS = 5;
+
     protected $fillable = [
         'company_uuid',
         'inspection_form_uuid',
         'driver_uuid',
         'vehicle_uuid',
+        'assignee_uuid',
         'created_by_uuid',
         'token_hash',
         'token',
+        'pin_hash',
+        'pin',
+        'pin_attempts',
+        'pin_sent_via',
+        'pin_sent_at',
         'status',
         'single_use',
         'expires_at',
@@ -52,6 +64,11 @@ class InspectionLink extends Model
         // they minted; the hash beside it is what a public request is resolved
         // through. Encrypted at rest with the application key.
         'token'          => 'encrypted',
+        // Kept so the console can show the PIN again, like the link; the hash
+        // beside it is what a guess is checked against.
+        'pin'            => 'encrypted',
+        'pin_attempts'   => 'integer',
+        'pin_sent_at'    => 'datetime',
         'single_use'     => 'boolean',
         'expires_at'     => 'datetime',
         'last_viewed_at' => 'datetime',
@@ -59,7 +76,7 @@ class InspectionLink extends Model
         'meta'           => Json::class,
     ];
 
-    protected $with = ['form', 'driver', 'vehicle'];
+    protected $with = ['form', 'driver', 'vehicle', 'assignee'];
 
     public static function generateToken(): string
     {
@@ -86,9 +103,84 @@ class InspectionLink extends Model
         return $this->belongsTo(Vehicle::class, 'vehicle_uuid', 'uuid');
     }
 
+    /** Whoever in the organisation the link is meant for, if anyone. */
+    public function assignee(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'assignee_uuid', 'uuid');
+    }
+
     public function createdBy(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by_uuid', 'uuid');
+    }
+
+    /** A new PIN: six digits from a cryptographically secure source. */
+    public static function generatePin(): string
+    {
+        return str_pad((string) random_int(0, (10 ** static::PIN_LENGTH) - 1), static::PIN_LENGTH, '0', STR_PAD_LEFT);
+    }
+
+    /** Give the link a PIN, and forget any wrong guesses at the last one. */
+    public function setPin(string $pin): void
+    {
+        $this->pin_hash     = password_hash($pin, PASSWORD_BCRYPT);
+        $this->pin          = $pin;
+        $this->pin_attempts = 0;
+    }
+
+    /** Links minted before PINs existed have none, and ask for none. */
+    public function hasPin(): bool
+    {
+        return !empty($this->pin_hash);
+    }
+
+    public function pinAttemptsLeft(): int
+    {
+        return max(0, static::MAX_PIN_ATTEMPTS - (int) $this->pin_attempts);
+    }
+
+    /**
+     * Check a PIN given for this link: `ok`, `missing`, `wrong` or `locked`.
+     *
+     * A wrong guess is counted with an atomic increment, so guesses made at
+     * the same moment cannot all read the same count, and the link locks when
+     * the count reaches MAX_PIN_ATTEMPTS. A right one clears the count.
+     */
+    public function verifyPin(?string $pin): string
+    {
+        if (!$this->hasPin()) {
+            return 'ok';
+        }
+
+        if ($this->status === 'locked') {
+            return 'locked';
+        }
+
+        $pin = preg_replace('/\D/', '', (string) $pin);
+
+        if ($pin === '') {
+            return 'missing';
+        }
+
+        if (password_verify($pin, $this->pin_hash)) {
+            if ($this->pin_attempts) {
+                $this->forceFill(['pin_attempts' => 0])->save();
+            }
+
+            return 'ok';
+        }
+
+        static::query()->whereKey($this->getKey())->increment('pin_attempts');
+        $this->refresh();
+
+        if ($this->pin_attempts >= static::MAX_PIN_ATTEMPTS) {
+            static::query()->whereKey($this->getKey())->update(['status' => 'locked']);
+            $this->refresh();
+
+            return 'locked';
+        }
+
+        return 'wrong';
     }
 
     /**

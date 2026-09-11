@@ -11,12 +11,7 @@
                 <div class="inspection-link" data-state={{link.state}}>
                     <div class="inspection-link__head">
                         <span class="inspection-link__state" data-state={{link.state}}>{{t (concat "inspection.link.state-" link.state)}}</span>
-                        <span class="inspection-link__for">
-                            {{#if link.vehicle}}{{link.vehicle.name}}{{/if}}
-                            {{#if (and link.vehicle link.driver)}}<span class="inspection-link__sep">·</span>{{/if}}
-                            {{#if link.driver}}{{link.driver.name}}{{/if}}
-                            {{#unless (or link.vehicle link.driver)}}{{t "inspection.link.unassigned"}}{{/unless}}
-                        </span>
+                        <span class="inspection-link__for">{{if link.label link.label (t "inspection.link.unassigned")}}</span>
                         <span class="inspection-link__when">{{t "inspection.link.generated"}} {{format-date-fns link.created_at "dd MMM yyyy, HH:mm"}}</span>
                     </div>
 
@@ -29,6 +24,40 @@
                         <div class="inspection-link__url">
                             <span class="inspection-link__note">{{t "inspection.link.url-not-kept"}}</span>
                         </div>
+                    {{/if}}
+
+                    {{#if (eq link.state "active")}}
+                        {{#if link.has_pin}}
+                            <div class="inspection-link__pin">
+                                <span class="inspection-link__pin-label">{{t "inspection.link.pin"}}</span>
+                                <code class="inspection-link__pin-code">{{link.pin}}</code>
+                                <Button @type="default" @size="xs" @icon="copy" @text={{t "inspection.link.copy"}} @onClick={{fn this.copyPin link}} />
+                                {{#if link.can_send_pin.email}}
+                                    <Button
+                                        @type="default"
+                                        @size="xs"
+                                        @icon="envelope"
+                                        @text={{t "inspection.link.email-pin"}}
+                                        @isLoading={{eq this.sendingKey (concat link.id ":email")}}
+                                        @onClick={{fn (perform this.sendPin) link "email"}}
+                                    />
+                                {{/if}}
+                                {{#if link.can_send_pin.sms}}
+                                    <Button
+                                        @type="default"
+                                        @size="xs"
+                                        @icon="comment"
+                                        @text={{t "inspection.link.text-pin"}}
+                                        @isLoading={{eq this.sendingKey (concat link.id ":sms")}}
+                                        @onClick={{fn (perform this.sendPin) link "sms"}}
+                                    />
+                                {{/if}}
+                            </div>
+                        {{else}}
+                            <div class="inspection-link__pin">
+                                <span class="inspection-link__note">{{t "inspection.link.no-pin"}}</span>
+                            </div>
+                        {{/if}}
                     {{/if}}
 
                     <div class="inspection-link__foot">
@@ -45,6 +74,12 @@
                             <span><span class="inspection-link__sep">·</span> {{t "inspection.link.viewed"}} {{format-date-fns link.last_viewed_at "dd MMM yyyy, HH:mm"}}</span>
                         {{else}}
                             <span><span class="inspection-link__sep">·</span> {{t "inspection.link.never-opened"}}</span>
+                        {{/if}}
+                        {{#if link.pin_sent_at}}
+                            <span><span class="inspection-link__sep">·</span> {{t "inspection.link.pin-sent-by" via=link.pin_sent_via}} {{format-date-fns link.pin_sent_at "dd MMM yyyy, HH:mm"}}</span>
+                        {{/if}}
+                        {{#if link.pin_attempts}}
+                            <span class="inspection-link__warn"><span class="inspection-link__sep">·</span> {{t "inspection.link.wrong-pins" count=link.pin_attempts}}</span>
                         {{/if}}
                         {{#if (eq link.state "active")}}
                             <Button @type="danger" @size="xs" @icon="ban" @text={{t "inspection.link.revoke"}} @isLoading={{eq this.revokingId link.id}} @wrapperClass="ml-auto" @onClick={{fn (perform this.revoke) link}} />

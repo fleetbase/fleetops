@@ -26,8 +26,15 @@ class InspectionSubmissionController extends FleetOpsController
 
     public function onAfterCreate($request, InspectionSubmission $record, array $input): void
     {
+        // Filed from the console, a submission is the signed-in user's. It
+        // used to be nobody's, so issues and work orders raised from its
+        // failures had no reporter either.
+        if (!$record->submitted_by_uuid && session('user')) {
+            $record->forceFill(['submitted_by_uuid' => session('user')])->save();
+        }
+
         $this->syncAnswersFromRequest($request, $record);
-        $record->load(static::RELATIONS);
+        $record->load(array_merge(['submittedBy'], static::RELATIONS));
     }
 
     public function onAfterUpdate($request, InspectionSubmission $record, array $input): void

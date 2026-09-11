@@ -9118,8 +9118,13 @@ body[data-theme='dark'] .inspection-sheet__body {
     }
 }
 
+/*
+ * A phone-width sheet stacks every grid. Matched to the `[data-columns]`
+ * rules' specificity: as a bare class it lost to them, and an authored two- or
+ * three-column group stayed in two 160px columns on a phone.
+ */
 @container (width <= 420px) {
-    .inspection-group__grid {
+    .inspection-group__grid[data-columns] {
         grid-template-columns: minmax(0, 1fr);
     }
 }
@@ -9515,6 +9520,18 @@ body[data-theme='dark'] .inspection-sheet__body {
     color: var(--ins-text-muted);
 }
 
+/*
+ * On a phone, four tallies in a row leave "Outstanding" no room: two by two.
+ * A grid rather than wrapping flex items at half width, which only pairs up
+ * under border-box sizing; with padding added to the basis they stack one high.
+ */
+@container (width <= 420px) {
+    .inspection-tallies {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
 .inspection-tally[data-kind='outstanding'][data-any='true'] .inspection-tally__label {
     color: var(--ins-warn-strong);
 }
@@ -9714,6 +9731,12 @@ body[data-theme='dark'] .inspection-link-panel__header {
     color: #fff;
 }
 
+/* Locked after too many wrong PINs: stopped, but by a guesser, not by anyone here. */
+.inspection-link__state[data-state='locked'] {
+    background-color: #d97706;
+    color: #fff;
+}
+
 .inspection-link__for {
     font-size: 0.8125rem;
     font-weight: 600;
@@ -9771,6 +9794,112 @@ body[data-theme='dark'] .inspection-link__url {
 .inspection-link__sep {
     padding: 0 0.125rem;
     color: var(--inspection-text-muted);
+}
+
+.inspection-link__warn {
+    color: #b45309;
+}
+
+body[data-theme='dark'] .inspection-link__warn {
+    color: #fbbf24;
+}
+
+/* The PIN that goes with a link, with ways to copy it or send it again. */
+.inspection-link__pin {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.375rem;
+    font-size: 0.6875rem;
+    color: var(--inspection-text-muted);
+}
+
+.inspection-link__pin-label {
+    font-size: 0.625rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+}
+
+.inspection-link__pin-code {
+    margin-right: 0.25rem;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    font-size: 0.875rem;
+    font-weight: 700;
+    letter-spacing: 0.2em;
+    color: var(--inspection-text, #111827);
+}
+
+body[data-theme='dark'] .inspection-link__pin-code {
+    color: #f9fafb;
+}
+
+/* The PIN asked for before a public link shows its form: large, spaced, easy to type on a phone. */
+.public-inspection-pin input.public-inspection-pin__input.form-input {
+    height: auto;
+    padding: 0.625rem 0.75rem;
+    text-align: center;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    font-size: 1.5rem;
+    letter-spacing: 0.5em;
+    text-indent: 0.5em;
+}
+
+/* On a phone the submit button spans the page, where a thumb can reach it. */
+@media (max-width: 639px) {
+    .public-inspection-submit__button,
+    .public-inspection-submit__button > button {
+        width: 100%;
+        justify-content: center;
+    }
+}
+
+/* A link just generated, shown above the form until the modal closes. */
+.inspection-link-generated {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    border: 1px solid #bbf7d0;
+    border-radius: 0.5rem;
+    background-color: #f0fdf4;
+    padding: 0.625rem;
+}
+
+body[data-theme='dark'] .inspection-link-generated {
+    border-color: #166534;
+    background-color: rgb(22 101 52 / 20%);
+}
+
+.inspection-link-generated__title {
+    display: flex;
+    align-items: center;
+    gap: 0.375rem;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: #14532d;
+}
+
+body[data-theme='dark'] .inspection-link-generated__title {
+    color: #bbf7d0;
+}
+
+.inspection-link-generated__help {
+    margin: 0;
+    font-size: 0.6875rem;
+    color: #166534;
+}
+
+body[data-theme='dark'] .inspection-link-generated__help {
+    color: #86efac;
+}
+
+.inspection-link-generated .inspection-link__url {
+    background-color: #fff;
+}
+
+body[data-theme='dark'] .inspection-link-generated .inspection-link__url {
+    background-color: #1f2937;
+    border-color: #374151;
 }
 
 /* A stored answer, read back: the same row, with the value where the control was. */

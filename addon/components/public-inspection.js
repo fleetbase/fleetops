@@ -19,6 +19,9 @@ const PUBLIC_NAMESPACE = 'public';
 /** The largest photo the link's upload endpoint accepts, matched to the server's limit. */
 const MAX_UPLOAD_BYTES = 10 * 1024 * 1024;
 
+/** How many digits a link's PIN has, matched to the server. */
+const PIN_LENGTH = 6;
+
 /**
  * An inspection filled in from a tokenised link, outside the console.
  *
@@ -35,6 +38,7 @@ const MAX_UPLOAD_BYTES = 10 * 1024 * 1024;
 export default class PublicInspectionComponent extends Component {
     @service urlSearchParams;
     @service fetch;
+    @service intl;
 
     @tracked form = null;
     @tracked identity = null;
@@ -45,6 +49,11 @@ export default class PublicInspectionComponent extends Component {
     @tracked signatureName = '';
     @tracked error = null;
     @tracked submission = null;
+
+    /** The PIN given with the link, asked for before the form is shown. */
+    @tracked pin = '';
+    @tracked pinRequired = false;
+    @tracked pinError = null;
 
     constructor() {
         super(...arguments);
@@ -57,6 +66,18 @@ export default class PublicInspectionComponent extends Component {
 
     get token() {
         return this.urlSearchParams.get('token');
+    }
+
+    get pinIsComplete() {
+        return this.pin.length === PIN_LENGTH;
+    }
+
+    /**
+     * The PIN travels as a header on every request the page makes, so it
+     * stays out of the URL and the access logs that record URLs.
+     */
+    get pinHeaders() {
+        return this.pin ? { 'X-Inspection-Pin': this.pin } : {};
     }
 
     get fields() {
@@ -99,14 +120,29 @@ export default class PublicInspectionComponent extends Component {
         }
 
         try {
-            const response = yield this.fetch.get(`inspections/forms/${this.formId}`, { token: this.token }, { namespace: PUBLIC_NAMESPACE });
+            const response = yield this.fetch.get(`inspections/forms/${this.formId}`, { token: this.token }, { namespace: PUBLIC_NAMESPACE, headers: this.pinHeaders });
 
+            this.pinRequired = false;
+            this.pinError = null;
             this.form = response?.form;
             this.identity = response?.identity;
             this.groups = normalizeFieldGroups(this.form);
             this.values = seedAnswers(this.groups);
         } catch (error) {
-            this.error = yield this.describeFailure(error, 'This inspection could not be loaded.');
+            const body = yield this.failureBody(error);
+
+            // The link wants its PIN, or the one given was wrong: ask again,
+            // saying how many tries are left. Anything else, including a link
+            // locked by too many wrong PINs, is the page's error.
+            if (body?.pin_required) {
+                this.pinRequired = true;
+                this.pinError = this.pin ? this.intl.t('inspection.public.pin-wrong', { count: body.attempts_left ?? 0 }) : null;
+                this.pin = '';
+                return;
+            }
+
+            this.pinRequired = false;
+            this.error = yield this.describeFailure(error, 'This inspection could not be loaded.', body);
         }
     }
 
@@ -124,7 +160,7 @@ export default class PublicInspectionComponent extends Component {
                     signature: this.signatureName ? { name: this.signatureName, signed_at: new Date().toISOString() } : null,
                     custom_field_values: answerRows(this.fields, this.values),
                 },
-                { namespace: PUBLIC_NAMESPACE }
+                { namespace: PUBLIC_NAMESPACE, headers: this.pinHeaders }
             );
 
             this.submission = response?.submission;
@@ -150,7 +186,7 @@ export default class PublicInspectionComponent extends Component {
         const url = `${get(config, 'API.host')}/${PUBLIC_NAMESPACE}/inspections/forms/${encodeURIComponent(this.formId)}/files`;
 
         try {
-            const response = await file.upload(url, { data: { token: this.token, type }, headers: { Accept: 'application/json' } });
+            const response = await file.upload(url, { data: { token: this.token, type }, headers: { Accept: 'application/json', ...this.pinHeaders } });
             const body = await response.json();
 
             this.error = null;
@@ -167,18 +203,44 @@ export default class PublicInspectionComponent extends Component {
      * link that was already used or has expired says so; being rate limited
      * says to wait rather than showing a bare status code.
      */
-    async describeFailure(error, fallback) {
+    async describeFailure(error, fallback, body = null) {
         if (error?.status === 429) {
             return 'Too many attempts from this device. Wait a minute and try again.';
         }
 
-        let body = error?.payload ?? null;
-
-        if (!body && typeof error?.json === 'function') {
-            body = await error.json().catch(() => null);
-        }
+        body = body ?? (await this.failureBody(error));
 
         return body?.error ?? body?.errors?.[0] ?? body?.message ?? error?.message ?? fallback;
+    }
+
+    /** The JSON the server answered a failed request with, which can be read only once. */
+    async failureBody(error) {
+        if (error?.payload) {
+            return error.payload;
+        }
+
+        return typeof error?.json === 'function' ? await error.json().catch(() => null) : null;
+    }
+
+    /** Digits only, and no more than a PIN has: pasted spaces or dashes are dropped. */
+    @action updatePin(event) {
+        this.pin = String(event.target.value ?? '')
+            .replace(/\D/g, '')
+            .slice(0, PIN_LENGTH);
+        this.pinError = null;
+    }
+
+    @action submitPin() {
+        if (this.pinIsComplete && !this.loadInspection.isRunning) {
+            this.loadInspection.perform();
+        }
+    }
+
+    @action pinKeydown(event) {
+        if (event.key === 'Enter') {
+            event.preventDefault();
+            this.submitPin();
+        }
     }
 
     @action setValue(value, field) {

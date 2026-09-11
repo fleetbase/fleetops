@@ -109,17 +109,40 @@ export default class InspectionFormActionsService extends ResourceActionService 
         }
     }
 
+    /**
+     * Say whether a PIN went out, when one was asked to be sent. A delivery
+     * that failed is a warning and not an error: the link exists either way,
+     * and its PIN is on screen to share by hand.
+     */
+    notifyPinDelivery(delivery) {
+        if (!delivery) {
+            this.notifications.success(this.intl.t('inspection.link.generated-toast'));
+            return;
+        }
+
+        if (delivery.sent) {
+            this.notifications.success(this.intl.t(`inspection.link.pin-sent-${delivery.via}`, { to: delivery.to }));
+            return;
+        }
+
+        this.notifications.warning(this.intl.t('inspection.link.pin-not-sent', { reason: delivery.error }));
+    }
+
     @action generateLink(form) {
         if (form.status !== 'published') {
             this.notifications.warning(this.intl.t('inspection.link.publish-first'));
             return;
         }
 
+        // Who the link is for, and the driver and vehicle being inspected, are
+        // each optional: anyone in the organisation may complete an inspection.
         const formState = {
+            assignee: null,
             driver: null,
             vehicle: null,
             expires_at: defaultLinkExpiry(),
-            generatedUrl: null,
+            pin_delivery: 'none',
+            generated: null,
         };
 
         return this.modalsManager.show('modals/inspection-link', {
@@ -133,6 +156,7 @@ export default class InspectionFormActionsService extends ResourceActionService 
                 modal.startLoading();
                 try {
                     const response = await this.fetch.post(`inspection-forms/${form.id}/generate-link`, {
+                        assignee: formState.assignee?.id,
                         driver: formState.driver?.id,
                         vehicle: formState.vehicle?.id,
                         // The input holds local time with no zone; sent as it was,
@@ -141,10 +165,14 @@ export default class InspectionFormActionsService extends ResourceActionService 
                         // the dispatcher picked.
                         expires_at: formState.expires_at ? new Date(formState.expires_at).toISOString() : null,
                         single_use: true,
+                        pin_delivery: formState.pin_delivery,
                     });
-                    const path = response?.link?.path;
-                    const url = path ? `${window.location.origin}${path}` : null;
-                    set(formState, 'generatedUrl', url);
+                    const link = response?.link;
+                    const url = link?.path ? `${window.location.origin}${link.path}` : null;
+
+                    // Shown in the modal until it closes: the link, and the PIN to
+                    // share with it by some other way.
+                    set(formState, 'generated', { url, pin: link?.pin ?? null });
 
                     // Every open link list watches this and reloads, so the link
                     // that was just minted appears to be read, copied again or
@@ -155,7 +183,7 @@ export default class InspectionFormActionsService extends ResourceActionService 
                         await copyToClipboard(url);
                     }
 
-                    this.notifications.success(this.intl.t('inspection.link.generated-toast'));
+                    this.notifyPinDelivery(response?.pin_delivery);
 
                     modal.stopLoading();
                 } catch (error) {

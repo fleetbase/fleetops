@@ -672,6 +672,7 @@ Route::prefix(config('fleetops.api.routing.prefix'))->namespace('Fleetbase\Fleet
                             $router->post('{id}/generate-link', $controller('generateLink'));
                             $router->get('{id}/links', $controller('links'));
                             $router->delete('{id}/links/{linkId}', $controller('revokeLink'));
+                            $router->post('{id}/links/{linkId}/send-pin', $controller('sendPin'));
                         });
                         $router->fleetbaseRoutes('inspection-submissions', function ($router, $controller) {
                             $router->match(['get', 'post'], 'export', $controller('export'));

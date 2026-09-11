@@ -9,6 +9,8 @@ use Fleetbase\FleetOps\Http\Resources\v1\InspectionLink as InspectionLinkResourc
 use Fleetbase\FleetOps\Models\InspectionLink;
 use Fleetbase\FleetOps\Models\Vehicle;
 use Fleetbase\FleetOps\Support\InspectionFormSync;
+use Fleetbase\FleetOps\Support\InspectionLinkPin;
+use Fleetbase\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -117,21 +119,40 @@ class InspectionFormController extends FleetOpsController
         }
 
         $validated = $request->validate([
-            'driver'     => 'nullable|string',
-            'vehicle'    => 'nullable|string',
-            'expires_at' => 'nullable|date|after:now',
-            'single_use' => 'nullable|boolean',
+            'assignee'     => 'nullable|string',
+            'driver'       => 'nullable|string',
+            'vehicle'      => 'nullable|string',
+            'expires_at'   => 'nullable|date|after:now',
+            'single_use'   => 'nullable|boolean',
+            'pin_delivery' => 'nullable|in:none,email,sms',
         ]);
 
-        $driver  = $this->resolveDriver(data_get($validated, 'driver'));
-        $vehicle = $this->resolveVehicle(data_get($validated, 'vehicle'));
-        $token   = InspectionLink::generateToken();
+        // Who the link is for, and the inspection's driver and vehicle, are
+        // each optional and independent: anyone in the organisation may
+        // complete an inspection, not only a driver.
+        $assignee = $this->resolveAssignee(data_get($validated, 'assignee'));
+        $driver   = $this->resolveDriver(data_get($validated, 'driver'));
+        $vehicle  = $this->resolveVehicle(data_get($validated, 'vehicle'));
+        $delivery = data_get($validated, 'pin_delivery') ?: 'none';
+        $token    = InspectionLink::generateToken();
+
+        // A delivery that cannot happen is refused before anything is minted,
+        // so the dispatcher hears now rather than finding a link nobody got
+        // the PIN for.
+        if ($delivery !== 'none') {
+            $reason = InspectionLinkPin::unavailableReason($assignee ?? $driver?->user, $delivery);
+
+            if ($reason) {
+                return response()->json(['error' => $reason], 422);
+            }
+        }
 
         $link = InspectionLink::create([
             'company_uuid'         => $form->company_uuid,
             'inspection_form_uuid' => $form->uuid,
             'driver_uuid'          => $driver?->uuid,
             'vehicle_uuid'         => $vehicle?->uuid,
+            'assignee_uuid'        => $assignee?->uuid,
             'created_by_uuid'      => session('user'),
             'token_hash'           => InspectionLink::hashToken($token),
             'token'                => $token,
@@ -141,6 +162,15 @@ class InspectionFormController extends FleetOpsController
             // used or revoked. It now lasts DEFAULT_TTL_HOURS unless chosen.
             'expires_at'           => data_get($validated, 'expires_at') ?? now()->addHours(InspectionLink::DEFAULT_TTL_HOURS),
         ]);
+
+        // Every link minted here carries a PIN. It protects anything only when
+        // it travels a different way from the link, which is why a delivery
+        // sends the PIN and never the link.
+        $pin = InspectionLink::generatePin();
+        $link->setPin($pin);
+        $link->save();
+
+        $delivered = $delivery !== 'none' ? InspectionLinkPin::send($link, $delivery) : null;
 
         // `~/` is what puts the page outside the console: the host app routes
         // `/~/:slug` at the top level, a sibling of `console`, so neither the
@@ -154,9 +184,10 @@ class InspectionFormController extends FleetOpsController
             'status'  => 'ok',
             'message' => 'Inspection link generated.',
             'link'    => array_merge(
-                (new InspectionLinkResource($link->fresh(['form', 'driver', 'vehicle', 'createdBy'])))->resolve(),
-                ['path' => $path, 'token' => $token]
+                (new InspectionLinkResource($link->fresh(['form', 'driver', 'vehicle', 'assignee', 'createdBy'])))->resolve(),
+                ['path' => $path, 'token' => $token, 'pin' => $pin]
             ),
+            'pin_delivery' => $delivered,
         ]);
     }
 
@@ -173,7 +204,7 @@ class InspectionFormController extends FleetOpsController
         $form = $this->resolveForm($id)->firstOrFail();
 
         $links = InspectionLink::where('inspection_form_uuid', $form->uuid)
-            ->with(['form', 'driver', 'vehicle', 'createdBy'])
+            ->with(['form', 'driver', 'vehicle', 'assignee', 'createdBy'])
             ->orderByDesc('created_at')
             ->limit((int) $request->input('limit', 50))
             ->get();
@@ -205,6 +236,58 @@ class InspectionFormController extends FleetOpsController
             'message' => 'Inspection link revoked.',
             'link'    => (new InspectionLinkResource($link->fresh(['form', 'driver', 'vehicle', 'createdBy'])))->resolve(),
         ]);
+    }
+
+    /**
+     * Send a link's PIN again, by email or SMS, to whoever the link is for.
+     * A failed delivery answers 200 with `pin_delivery.sent` false and why, so
+     * the console shows it as a warning rather than an error.
+     */
+    public function sendPin(Request $request, string $id, string $linkId): JsonResponse
+    {
+        $form      = $this->resolveForm($id)->firstOrFail();
+        $validated = $request->validate(['via' => 'required|in:email,sms']);
+
+        $link = InspectionLink::where('inspection_form_uuid', $form->uuid)
+            ->where(function ($query) use ($linkId) {
+                $query->where('uuid', $linkId)->orWhere('public_id', $linkId);
+            })
+            ->firstOrFail();
+
+        if ($link->state !== 'active') {
+            return response()->json(['error' => 'Only an active link can have its PIN sent.'], 422);
+        }
+
+        $reason = InspectionLinkPin::unavailableReason(InspectionLinkPin::recipientFor($link), $validated['via']);
+
+        if ($reason) {
+            return response()->json(['error' => $reason], 422);
+        }
+
+        $result = InspectionLinkPin::send($link, $validated['via']);
+
+        return response()->json([
+            'status'       => $result['sent'] ? 'ok' : 'error',
+            'message'      => $result['sent'] ? 'PIN sent.' : $result['error'],
+            'pin_delivery' => $result,
+            'link'         => (new InspectionLinkResource($link->fresh(['form', 'driver', 'vehicle', 'assignee', 'createdBy'])))->resolve(),
+        ]);
+    }
+
+    /** A user a link may be assigned to: only a member of this organisation. */
+    protected function resolveAssignee(?string $id): ?User
+    {
+        if (!$id) {
+            return null;
+        }
+
+        return User::where(function ($query) use ($id) {
+            $query->where('uuid', $id)->orWhere('public_id', $id);
+        })
+            ->whereHas('companyUsers', function ($query) {
+                $query->where('company_uuid', session('company'));
+            })
+            ->firstOrFail();
     }
 
     protected function resolveDriver(?string $id): ?Driver

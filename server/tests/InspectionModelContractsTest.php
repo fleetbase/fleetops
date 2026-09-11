@@ -88,7 +88,7 @@ function fleetOpsInspectionModelDatabase(): SQLiteConnection
     $schema = $connection->getSchemaBuilder();
     $tables = [
         'inspection_forms'        => ['uuid', 'public_id', '_key', 'company_uuid', 'name', 'description', 'type', 'status', 'subject_type', 'subject_uuid', 'items', 'settings', 'meta', 'published_at', 'created_by_uuid', 'updated_by_uuid'],
-        'inspection_links'        => ['uuid', 'public_id', '_key', 'company_uuid', 'inspection_form_uuid', 'driver_uuid', 'vehicle_uuid', 'created_by_uuid', 'token_hash', 'token', 'status', 'single_use', 'expires_at', 'last_viewed_at', 'used_at', 'used_ip', 'used_user_agent', 'meta'],
+        'inspection_links'        => ['uuid', 'public_id', '_key', 'company_uuid', 'inspection_form_uuid', 'driver_uuid', 'vehicle_uuid', 'assignee_uuid', 'created_by_uuid', 'token_hash', 'token', 'pin_hash', 'pin', 'pin_attempts', 'pin_sent_via', 'pin_sent_at', 'status', 'single_use', 'expires_at', 'last_viewed_at', 'used_at', 'used_ip', 'used_user_agent', 'meta'],
         'inspection_submissions'  => ['uuid', 'public_id', '_key', 'company_uuid', 'inspection_form_uuid', 'vehicle_uuid', 'driver_uuid', 'submitted_by_uuid', 'issue_uuid', 'work_order_uuid', 'type', 'status', 'result', 'source', 'odometer', 'engine_hours', 'total_items', 'failed_items', 'started_at', 'submitted_at', 'resolved_at', 'location', 'signature', 'attachments', 'meta', 'created_by_uuid', 'updated_by_uuid'],
         'inspection_item_results' => ['uuid', '_key', 'company_uuid', 'inspection_submission_uuid', 'issue_uuid', 'work_order_uuid', 'item_key', 'label', 'category', 'status', 'severity', 'passed', 'comments', 'photos', 'meta', 'created_by_uuid', 'updated_by_uuid'],
         'issues'                  => ['uuid', 'public_id', '_key', 'company_uuid', 'reported_by_uuid', 'assigned_to_uuid', 'vehicle_uuid', 'driver_uuid', 'order_uuid', 'issue_id', 'location', 'category', 'type', 'report', 'title', 'tags', 'priority', 'meta', 'resolved_at', 'status'],
@@ -494,6 +494,50 @@ test('inspection link is usable only while active, unexpired and unused', functi
         ->and($used->used_ip)->toBe('203.0.113.9')
         ->and($used->used_user_agent)->toBe('NavigatorApp/3.0')
         ->and($used->isUsable())->toBeFalse();
+});
+
+test('inspection link asks for its PIN, counts wrong ones, and locks after too many', function () {
+    fleetOpsInspectionModelDatabase();
+
+    $form = fleetOpsInspectionModelForm();
+    $link = InspectionLink::create([
+        'company_uuid'         => 'company-insp',
+        'inspection_form_uuid' => $form->uuid,
+        'created_by_uuid'      => 'user-admin',
+        'token_hash'           => InspectionLink::hashToken(InspectionLink::generateToken()),
+        'status'               => 'active',
+        'single_use'           => true,
+    ]);
+
+    // A link minted before PINs existed asks for none.
+    expect($link->hasPin())->toBeFalse()
+        ->and($link->verifyPin(null))->toBe('ok');
+
+    $pin = InspectionLink::generatePin();
+    expect($pin)->toMatch('/^\d{6}$/');
+
+    $link->setPin($pin);
+    $link->save();
+    $wrong = $pin === '000000' ? '111111' : '000000';
+
+    expect($link->fresh()->pin)->toBe($pin)
+        ->and($link->verifyPin(''))->toBe('missing')
+        ->and($link->verifyPin($wrong))->toBe('wrong')
+        ->and($link->fresh()->pin_attempts)->toBe(1)
+        ->and($link->pinAttemptsLeft())->toBe(InspectionLink::MAX_PIN_ATTEMPTS - 1)
+        // Spaces and dashes typed with the PIN do not count against it.
+        ->and($link->verifyPin(substr($pin, 0, 3) . ' ' . substr($pin, 3)))->toBe('ok')
+        ->and($link->fresh()->pin_attempts)->toBe(0);
+
+    foreach (range(1, InspectionLink::MAX_PIN_ATTEMPTS - 1) as $attempt) {
+        expect($link->verifyPin($wrong))->toBe('wrong');
+    }
+
+    expect($link->verifyPin($wrong))->toBe('locked')
+        ->and($link->state)->toBe('locked')
+        ->and($link->isUsable())->toBeFalse()
+        // Once locked, even the right PIN is refused.
+        ->and($link->verifyPin($pin))->toBe('locked');
 });
 
 test('inspection submitter records a submission and the follow-up the form asks for', function () {

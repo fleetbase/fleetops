@@ -2900,6 +2900,11 @@ inspection:
         failed-of: '{failed} failed of {total} pass/fail checks'
         metadata: Metadata
         submitted: Submitted
+        submitted-by: Submitted By
+        via-link: Through a public link
+        via-link-pin: Through a public link, PIN verified
+        signed-as: 'Signed as "{name}"'
+        name-unverified: Name as typed, not a signed-in account
         resolved: Resolved
         item-results: Item Results
         no-item-results: No item results recorded.
@@ -2923,7 +2928,7 @@ inspection:
     link:
         public-links: Public Links
         existing: Generated Links
-        modal-help: "Generate a single-use link for {form}. Whoever opens it can fill this published form in without signing in."
+        modal-help: "Generate a single-use link for {form}. Whoever opens it enters its PIN, then fills in this published form without signing in."
         loading: Loading links...
         none: No links have been generated for this form yet.
         load-failed: These links could not be loaded.
@@ -2939,14 +2944,36 @@ inspection:
         used: Used
         viewed: Last opened
         never-opened: Never opened
-        unassigned: Any vehicle or driver
+        unassigned: Anyone with the link and its PIN
         url-not-kept: This link was generated before links were kept, so its URL cannot be shown again.
         state-active: Active
         state-expired: Expired
         state-used: Used
         state-revoked: Revoked
+        state-locked: Locked
         expires-at: Expires at
         expires-help: Links expire 72 hours after they are generated unless you choose a different time.
+        assign-to: Assign to
+        assign-to-help: Optional. Anyone in your organisation can complete an inspection; the submission is credited to them.
+        select-assignee: Select a user
+        pin: PIN
+        pin-delivery: Send the PIN
+        pin-delivery-none: Do not send it, I will share it myself
+        pin-delivery-email: By email
+        pin-delivery-sms: By text message
+        pin-delivery-help: "Sent to {name}. The message carries the PIN only; share the link with them yourself."
+        pin-delivery-no-recipient: Assign the link to someone, or pick a driver, to send them the PIN. Otherwise share it yourself; it is shown with the link.
+        generated-title: Link generated
+        generated-help: The link is copied to your clipboard. Share the link and the PIN separately, so that neither one alone opens the inspection.
+        copied-pin: PIN copied.
+        email-pin: Email PIN
+        text-pin: Text PIN
+        pin-sent-email: "PIN emailed to {to}."
+        pin-sent-sms: "PIN texted to {to}."
+        pin-not-sent: "The PIN was not sent: {reason}"
+        pin-sent-by: "PIN {via, select, email {emailed} sms {texted} other {sent}}"
+        wrong-pins: "{count, plural, one {# wrong PIN} other {# wrong PINs}}"
+        no-pin: No PIN. This link was generated before links had PINs.
     public:
         submitted-title: Inspection submitted
         submitted-body: Thank you. This inspection has been filed and the link is now closed.
@@ -2955,6 +2982,12 @@ inspection:
         your-name: Your name
         your-name-help: Recorded against this inspection as who filled it in.
         your-name-placeholder: Full name
+        for: For
+        pin-title: Enter your PIN
+        pin-help: Enter the 6-digit PIN you were given for this inspection.
+        pin-label: PIN
+        pin-continue: Continue
+        pin-wrong: "That PIN is not right. {count, plural, one {# attempt} other {# attempts}} left before this link locks."
         submit: Submit inspection
         blocked-required: "{count, plural, one {# required answer is missing} other {# required answers are missing}}"
         blocked-defects: "{count, plural, one {# failure still needs a comment or a photo} other {# failures still need a comment or a photo}}"
