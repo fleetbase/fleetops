@@ -5,6 +5,7 @@ namespace Fleetbase\FleetOps\Support;
 use Fleetbase\FleetOps\Models\InspectionSubmission;
 use Fleetbase\Models\File;
 use Illuminate\Support\Str;
+use Illuminate\Validation\ValidationException;
 
 /**
  * Turns what a driver sends for a photo or a signature into a platform file.
@@ -14,6 +15,12 @@ use Illuminate\Support\Str;
  * convention for a file held in a custom-field value is `file:<uuid>`, which
  * is what every value leaves here as — a URL, or a reference to a file that
  * already exists, is kept as it came.
+ *
+ * A reference is only ever kept for a file the submission may use: one that
+ * belongs to the submission's own company. A submission through a public
+ * link may go further than that only in one direction — it may reference
+ * nothing but files uploaded through that same link, and it may not use an
+ * outside URL as a photo at all.
  */
 class InspectionFileStore
 {
@@ -32,26 +39,21 @@ class InspectionFileStore
 
         $value = trim($value);
 
-        if (Str::startsWith($value, 'file:')) {
-            // The console uploads a photo as soon as it is picked and keeps
-            // the reference; the upload answers with the file's public id, not
-            // its uuid, so a reference that names one is rewritten to the uuid
-            // the rest of this class — and the platform's own cast — reads.
-            $reference = substr($value, 5);
+        $linkUuid = static::linkUuidOf($submission);
 
-            return Str::isUuid($reference) ? $value : static::referenceByPublicId($reference, $value);
+        // A reference to a file that already exists — `file:<uuid>`, a bare
+        // uuid, or the public id an upload answers with — is kept only for a
+        // file the submission may use.
+        if (Str::startsWith($value, 'file:') || Str::isUuid($value) || Str::startsWith($value, 'file_')) {
+            return static::ownedReference($value, $submission, $linkUuid);
         }
 
         if (static::isUrl($value)) {
+            if ($linkUuid) {
+                throw ValidationException::withMessages(['photos' => 'A photo on an inspection link must be uploaded through the link.']);
+            }
+
             return $value;
-        }
-
-        if (Str::isUuid($value)) {
-            return 'file:' . $value;
-        }
-
-        if (Str::startsWith($value, 'file_')) {
-            return static::referenceByPublicId($value, $value);
         }
 
         if (static::isBase64($value)) {
@@ -108,18 +110,66 @@ class InspectionFileStore
             return 0;
         }
 
-        return File::query()
+        // Only the submission's own company's files, and — for a submission
+        // through a public link — only files uploaded through that link. This
+        // claim was unscoped: any unattached file anywhere whose uuid appeared
+        // in an answer was taken.
+        $query = File::query()
             ->whereIn('uuid', $uuids)
-            ->whereNull('subject_uuid')
-            ->update(['subject_uuid' => $submission->uuid, 'subject_type' => $submission->getMorphClass()]);
+            ->where('company_uuid', $submission->company_uuid)
+            ->whereNull('subject_uuid');
+
+        if ($linkUuid = static::linkUuidOf($submission)) {
+            $query->where('meta->inspection_link_uuid', $linkUuid);
+        }
+
+        return $query->update(['subject_uuid' => $submission->uuid, 'subject_type' => $submission->getMorphClass()]);
     }
 
-    /** A file named by its public id, as `file:<uuid>`; the fallback when it is unknown. */
-    protected static function referenceByPublicId(string $publicId, string $fallback): string
+    /**
+     * The inspection link a submission came through, or null when it came
+     * through the console or the driver app.
+     */
+    protected static function linkUuidOf(InspectionSubmission $submission): ?string
     {
-        $file = File::query()->where('public_id', $publicId)->first();
+        if ($submission->source !== 'public_link') {
+            return null;
+        }
 
-        return $file ? 'file:' . $file->uuid : $fallback;
+        $uuid = data_get($submission->meta, 'inspection_link_uuid');
+
+        return is_string($uuid) && $uuid !== '' ? $uuid : null;
+    }
+
+    /**
+     * A reference to an existing file, as `file:<uuid>`, kept only when the
+     * file is the submission's to use.
+     *
+     * The lookup used to be unscoped, so a submission that named another
+     * company's file — by uuid or public id — kept the reference, the file was
+     * attached to it, and the submission resource then handed out that file's
+     * URL. It is now scoped to the submission's company; a submission through
+     * a public link must also have uploaded the file through that link, and is
+     * refused outright rather than silently losing a photo it named.
+     */
+    protected static function ownedReference(string $value, InspectionSubmission $submission, ?string $linkUuid): ?string
+    {
+        $reference = Str::startsWith($value, 'file:') ? substr($value, 5) : $value;
+
+        $file = File::query()
+            ->where('company_uuid', $submission->company_uuid)
+            ->where(Str::isUuid($reference) ? 'uuid' : 'public_id', $reference)
+            ->first();
+
+        if ($file && (!$linkUuid || data_get($file->meta, 'inspection_link_uuid') === $linkUuid)) {
+            return 'file:' . $file->uuid;
+        }
+
+        if ($linkUuid) {
+            throw ValidationException::withMessages(['photos' => 'A photo on an inspection link must be uploaded through the link.']);
+        }
+
+        return null;
     }
 
     /** The uuid a `file:<uuid>` value points at, or null for anything else. */

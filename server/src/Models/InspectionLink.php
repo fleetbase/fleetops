@@ -22,6 +22,13 @@ class InspectionLink extends Model
     protected $table        = 'inspection_links';
     protected $publicIdType = 'inspection_link';
 
+    /**
+     * How long a link lasts when nobody chooses: long enough to send one the
+     * evening before a pre-trip, short enough that a forgotten link does not
+     * stay live for good.
+     */
+    public const DEFAULT_TTL_HOURS = 72;
+
     protected $fillable = [
         'company_uuid',
         'inspection_form_uuid',
@@ -139,6 +146,33 @@ class InspectionLink extends Model
     public function markViewed(): void
     {
         $this->forceFill(['last_viewed_at' => now()])->save();
+    }
+
+    /**
+     * Take a single-use link for one submission, atomically.
+     *
+     * Checking `isUsable()` and then marking the link used once the submission
+     * was saved left a window in which two submits at the same moment could
+     * both pass the check. A claim is one conditional update instead: the
+     * database lets exactly one of them set `used_at`, and the other finds
+     * nothing left to update.
+     */
+    public function claim(?string $ip = null, ?string $userAgent = null): bool
+    {
+        $claimed = static::query()
+            ->whereKey($this->getKey())
+            ->where('status', 'active')
+            ->whereNull('used_at')
+            ->where(function ($query) {
+                $query->whereNull('expires_at')->orWhere('expires_at', '>', now());
+            })
+            ->update(['used_at' => now(), 'used_ip' => $ip, 'used_user_agent' => $userAgent]);
+
+        if ($claimed === 1) {
+            $this->refresh();
+        }
+
+        return $claimed === 1;
     }
 
     /** Take a link out of use without deleting the record of it. */

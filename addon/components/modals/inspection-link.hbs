@@ -35,8 +35,8 @@
                 </ModelSelect>
             </InputGroup>
 
-            <InputGroup @name="Expires At">
-                <input type="datetime-local" class="w-full form-input" {{sync-value this.formState.expires_at}} {{on "input" this.updateExpiry}} />
+            <InputGroup @name={{t "inspection.link.expires-at"}} @helpText={{t "inspection.link.expires-help"}}>
+                <input type="datetime-local" class="w-full form-input" min={{this.minExpiry}} {{sync-value this.formState.expires_at}} {{on "input" this.updateExpiry}} />
             </InputGroup>
         </div>
 

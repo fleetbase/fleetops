@@ -119,7 +119,7 @@ class InspectionFormController extends FleetOpsController
         $validated = $request->validate([
             'driver'     => 'nullable|string',
             'vehicle'    => 'nullable|string',
-            'expires_at' => 'nullable|date',
+            'expires_at' => 'nullable|date|after:now',
             'single_use' => 'nullable|boolean',
         ]);
 
@@ -137,7 +137,9 @@ class InspectionFormController extends FleetOpsController
             'token'                => $token,
             'status'               => 'active',
             'single_use'           => data_get($validated, 'single_use', true),
-            'expires_at'           => data_get($validated, 'expires_at'),
+            // A link nobody put a limit on used to stay live until it was
+            // used or revoked. It now lasts DEFAULT_TTL_HOURS unless chosen.
+            'expires_at'           => data_get($validated, 'expires_at') ?? now()->addHours(InspectionLink::DEFAULT_TTL_HOURS),
         ]);
 
         // `~/` is what puts the page outside the console: the host app routes

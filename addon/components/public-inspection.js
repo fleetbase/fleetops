@@ -1,7 +1,8 @@
 import Component from '@glimmer/component';
 import { tracked } from '@glimmer/tracking';
 import { inject as service } from '@ember/service';
-import { action } from '@ember/object';
+import { action, get } from '@ember/object';
+import config from 'ember-get-config';
 import { task } from 'ember-concurrency';
 import { normalizeFieldGroups, flattenFields } from '../utils/inspection-form-structure';
 import { answerRows, seedAnswers, summarize } from '../utils/inspection-answers';
@@ -14,6 +15,9 @@ import { answerRows, seedAnswers, summarize } from '../utils/inspection-answers'
  * and not `fleet-ops/public`.
  */
 const PUBLIC_NAMESPACE = 'public';
+
+/** The largest photo the link's upload endpoint accepts, matched to the server's limit. */
+const MAX_UPLOAD_BYTES = 10 * 1024 * 1024;
 
 /**
  * An inspection filled in from a tokenised link, outside the console.
@@ -102,7 +106,7 @@ export default class PublicInspectionComponent extends Component {
             this.groups = normalizeFieldGroups(this.form);
             this.values = seedAnswers(this.groups);
         } catch (error) {
-            this.error = error?.payload?.error ?? error?.message ?? 'This inspection could not be loaded.';
+            this.error = yield this.describeFailure(error, 'This inspection could not be loaded.');
         }
     }
 
@@ -125,8 +129,56 @@ export default class PublicInspectionComponent extends Component {
 
             this.submission = response?.submission;
         } catch (error) {
-            this.error = error?.payload?.error ?? error?.message ?? 'This inspection could not be submitted.';
+            this.error = yield this.describeFailure(error, 'This inspection could not be submitted.');
         }
+    }
+
+    /**
+     * Upload a photo or a signature through this link.
+     *
+     * The console's uploader posts to the platform's file endpoint, which
+     * needs a session a link does not have; this posts to the link's own
+     * upload endpoint with its token instead, and answers in the shape the
+     * sheet expects from the console.
+     */
+    @action async uploadFile(file, type) {
+        if (file?.size > MAX_UPLOAD_BYTES) {
+            this.error = 'That photo is larger than 10 MB. Try a smaller one.';
+            throw new Error(this.error);
+        }
+
+        const url = `${get(config, 'API.host')}/${PUBLIC_NAMESPACE}/inspections/forms/${encodeURIComponent(this.formId)}/files`;
+
+        try {
+            const response = await file.upload(url, { data: { token: this.token, type }, headers: { Accept: 'application/json' } });
+            const body = await response.json();
+
+            this.error = null;
+
+            return { id: body.file.id, url: body.file.url, filename: body.file.filename };
+        } catch (error) {
+            this.error = await this.describeFailure(error, 'This photo could not be uploaded.');
+            throw error;
+        }
+    }
+
+    /**
+     * What the server said went wrong, in words an inspector can act on. A
+     * link that was already used or has expired says so; being rate limited
+     * says to wait rather than showing a bare status code.
+     */
+    async describeFailure(error, fallback) {
+        if (error?.status === 429) {
+            return 'Too many attempts from this device. Wait a minute and try again.';
+        }
+
+        let body = error?.payload ?? null;
+
+        if (!body && typeof error?.json === 'function') {
+            body = await error.json().catch(() => null);
+        }
+
+        return body?.error ?? body?.errors?.[0] ?? body?.message ?? error?.message ?? fallback;
     }
 
     @action setValue(value, field) {

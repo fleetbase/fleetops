@@ -2945,6 +2945,8 @@ inspection:
         state-expired: Expired
         state-used: Used
         state-revoked: Revoked
+        expires-at: Expires at
+        expires-help: Links expire 72 hours after they are generated unless you choose a different time.
     public:
         submitted-title: Inspection submitted
         submitted-body: Thank you. This inspection has been filed and the link is now closed.

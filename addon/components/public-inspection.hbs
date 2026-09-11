@@ -74,7 +74,7 @@
             </div>
 
             {{#if this.hasSheet}}
-                <InspectionSheet @groups={{this.groups}} @values={{this.values}} @onChange={{this.setValue}} @allowUploads={{false}} />
+                <InspectionSheet @groups={{this.groups}} @values={{this.values}} @onChange={{this.setValue}} @uploader={{this.uploadFile}} />
             {{else}}
                 <div class="inspection-sheet">
                     <div class="inspection-sheet__body">

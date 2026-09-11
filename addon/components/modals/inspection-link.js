@@ -1,9 +1,15 @@
 import Component from '@glimmer/component';
 import { action, set } from '@ember/object';
+import { toDatetimeLocal } from '../../services/inspection-form-actions';
 
 export default class ModalsInspectionLinkComponent extends Component {
     get formState() {
         return this.args.options.formState;
+    }
+
+    /** A link cannot be made to expire in the past; the server refuses it too. */
+    get minExpiry() {
+        return toDatetimeLocal(new Date());
     }
 
     @action assignDriver(driver) {

@@ -239,7 +239,7 @@ test('public inspection link shows the form with the identity it was minted for'
     expect($payload['form']['id'])->toBe($form->public_id)
         ->and($payload['form']['items'])->toHaveCount(2)
         ->and($payload['form']['is_published'])->toBeTrue()
-        ->and($payload['identity']['driver'])->toBe(['id' => 'driver_one', 'name' => 'Dana Driver', 'phone' => '+15550001111'])
+        ->and($payload['identity']['driver'])->toBe(['id' => 'driver_one', 'name' => 'Dana Driver'])
         ->and($payload['identity']['vehicle'])->toBe(['id' => 'vehicle_one', 'name' => 'Truck 7', 'plate_number' => 'TRK-7'])
         ->and($payload['identity']['expires_at'])->toStartWith('2026-09-10')
         ->and($link->fresh()->last_viewed_at->toDateTimeString())->toBe('2026-09-09 08:00:00');

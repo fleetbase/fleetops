@@ -14,9 +14,14 @@ use Illuminate\Support\Facades\Route;
 */
 Route::prefix(config('fleetops.api.routing.prefix'))->namespace('Fleetbase\FleetOps\Http\Controllers')->group(
     function ($router) {
-        $router->prefix('public')->namespace('Public')->group(function ($router) {
+        // Tokenised inspection links, for people with no console login. The
+        // link itself is the credential, so what guards it lives here: a rate
+        // limit per address on every call, and a tighter one on uploads. Each
+        // limiter has its own prefix so the two do not share one counter.
+        $router->prefix('public')->namespace('Public')->middleware(['throttle:60,1,inspection-public'])->group(function ($router) {
             $router->get('inspections/forms/{id}', 'PublicInspectionController@show');
             $router->post('inspections/forms/{id}/submit', 'PublicInspectionController@submit');
+            $router->post('inspections/forms/{id}/files', 'PublicInspectionController@upload')->middleware('throttle:20,1,inspection-upload');
         });
 
         /*

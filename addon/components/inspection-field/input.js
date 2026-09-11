@@ -401,6 +401,29 @@ export default class InspectionFieldInputComponent extends Component {
 
         this.uploadProgress = file;
 
+        const done = (uploaded) => {
+            this.uploadProgress = null;
+            this.previews = { ...this.previews, [`file:${uploaded.id}`]: { url: uploaded.url, filename: uploaded.original_filename ?? uploaded.filename } };
+            onUploaded(uploaded);
+        };
+
+        const failed = () => {
+            this.uploadProgress = null;
+
+            if (file.queue && typeof file.queue.remove === 'function') {
+                file.queue.remove(file);
+            }
+        };
+
+        // A public link has no session to upload with, so it hands in an
+        // uploader of its own that posts through the link's token. It answers
+        // in the same shape, so nothing after this point knows the difference.
+        if (typeof this.args.uploader === 'function') {
+            return Promise.resolve()
+                .then(() => this.args.uploader(file, type))
+                .then(done, failed);
+        }
+
         return this.fetch.uploadFile.perform(
             file,
             {
@@ -408,17 +431,8 @@ export default class InspectionFieldInputComponent extends Component {
                 type,
                 ...this.#subjectParams(),
             },
-            (uploaded) => {
-                this.uploadProgress = null;
-                this.previews = { ...this.previews, [`file:${uploaded.id}`]: { url: uploaded.url, filename: uploaded.original_filename ?? uploaded.filename } };
-                onUploaded(uploaded);
-            },
-            () => {
-                this.uploadProgress = null;
-                if (file.queue && typeof file.queue.remove === 'function') {
-                    file.queue.remove(file);
-                }
-            }
+            done,
+            failed
         );
     }
 

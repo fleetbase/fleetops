@@ -469,7 +469,10 @@ test('the file store turns what a driver sends into a platform file', function (
         ->and($file->content_type)->toBe('image/png')
         ->and($file->path)->toStartWith('inspections/' . $submission->uuid . '/');
 
-    // Anything already a reference, a URL or not a string at all is left alone.
+    // A URL, or anything that is not a string at all, is left alone. A
+    // reference is kept only for a file the submission may use; one that
+    // names no file in its company is dropped rather than kept as given,
+    // because a kept reference is what the submission resource hands out.
     expect(InspectionFileStore::normalize($stored, $submission))->toBe($stored)
         ->and(InspectionFileStore::normalize('https://cdn.example.com/a.jpg', $submission))->toBe('https://cdn.example.com/a.jpg')
         ->and(InspectionFileStore::normalize('  ', $submission))->toBe('  ')
@@ -477,12 +480,12 @@ test('the file store turns what a driver sends into a platform file', function (
         ->and(InspectionFileStore::normalize('not base64!', $submission))->toBe('not base64!')
         ->and(InspectionFileStore::normalize($file->uuid, $submission))->toBe('file:' . $file->uuid)
         ->and(InspectionFileStore::normalize($file->public_id, $submission))->toBe('file:' . $file->uuid)
-        ->and(InspectionFileStore::normalize('file_missing', $submission))->toBe('file_missing')
+        ->and(InspectionFileStore::normalize('file_missing', $submission))->toBeNull()
         // The console uploads a photo as soon as it is picked and keeps the
         // reference the upload answered with, which names the file by its
         // public id; that is rewritten to the uuid everything else reads.
         ->and(InspectionFileStore::normalize('file:' . $file->public_id, $submission))->toBe('file:' . $file->uuid)
-        ->and(InspectionFileStore::normalize('file:file_missing', $submission))->toBe('file:file_missing');
+        ->and(InspectionFileStore::normalize('file:file_missing', $submission))->toBeNull();
 
     // A data URI carries its own content type; bare base64 is sniffed.
     $jpeg = InspectionFileStore::resolve(InspectionFileStore::normalize('data:image/jpeg;base64,' . fleetOpsInspectionFieldPhoto(), $submission, InspectionFileStore::TYPE_SIGNATURE));
@@ -933,6 +936,40 @@ test('a photo that cannot be stored is left as it arrived', function () {
 
     expect($left)->toBe($photo)
         ->and(File::query()->count())->toBe(0);
+});
+
+test('the file store keeps only references a submission may use', function () {
+    fleetOpsInspectionFieldDatabase();
+    $form = fleetOpsInspectionFieldForm();
+
+    // Another company's file, not yet attached to anything.
+    $foreign = File::create(['company_uuid' => 'company-other', 'disk' => 'uploads', 'path' => 'foreign.png', 'type' => 'inspection_photo']);
+    // This company's file, uploaded through a public link.
+    $viaLink = File::create(['company_uuid' => 'company-insp', 'disk' => 'uploads', 'path' => 'link.png', 'type' => 'inspection_photo', 'meta' => ['inspection_link_uuid' => 'link-one']]);
+    // This company's file, uploaded in the console.
+    $console = File::create(['company_uuid' => 'company-insp', 'disk' => 'uploads', 'path' => 'console.png', 'type' => 'inspection_photo']);
+
+    // Through the console or the app: the company's own files, and nothing
+    // else. Another company's file is neither kept nor claimed, whether it is
+    // named by uuid or by public id.
+    $consoleSubmission = fleetOpsInspectionFieldSubmission($form);
+    expect(InspectionFileStore::normalize('file:' . $foreign->uuid, $consoleSubmission))->toBeNull()
+        ->and(InspectionFileStore::normalize($foreign->public_id, $consoleSubmission))->toBeNull()
+        ->and(InspectionFileStore::normalize('file:' . $console->public_id, $consoleSubmission))->toBe('file:' . $console->uuid)
+        ->and(InspectionFileStore::attachReferenced($consoleSubmission, [$foreign->uuid]))->toBe(0)
+        ->and($foreign->fresh()->subject_uuid)->toBeNull();
+
+    // Through a public link: only files uploaded through that same link.
+    $linked = fleetOpsInspectionFieldSubmission($form, ['source' => 'public_link', 'meta' => ['inspection_link_uuid' => 'link-one']]);
+    expect(InspectionFileStore::normalize('file:' . $viaLink->public_id, $linked))->toBe('file:' . $viaLink->uuid)
+        ->and(InspectionFileStore::attachReferenced($linked, [$console->uuid, $viaLink->uuid]))->toBe(1)
+        ->and($viaLink->fresh()->subject_uuid)->toBe($linked->uuid)
+        ->and($console->fresh()->subject_uuid)->toBeNull();
+
+    // A link submission naming any other file, or an outside URL, is refused
+    // rather than silently losing a photo it named.
+    expect(fn () => InspectionFileStore::normalize('file:' . $console->uuid, $linked))->toThrow(ValidationException::class)
+        ->and(fn () => InspectionFileStore::normalize('https://cdn.example.com/a.jpg', $linked))->toThrow(ValidationException::class);
 });
 
 test('groups and fields sort the way the builder laid them out', function () {

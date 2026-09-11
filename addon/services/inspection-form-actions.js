@@ -5,6 +5,20 @@ import { inject as service } from '@ember/service';
 import copyToClipboard from '@fleetbase/ember-core/utils/copy-to-clipboard';
 import { normalizeFieldGroups, serializeFieldGroups } from '../utils/inspection-form-structure';
 
+/** A link's life when nobody chooses; the server applies the same when left blank. */
+const DEFAULT_LINK_TTL_HOURS = 72;
+
+/** A date as a `datetime-local` input reads it: local time, to the minute. */
+export function toDatetimeLocal(date) {
+    const pad = (n) => String(n).padStart(2, '0');
+    return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+}
+
+/** The default expiry, filled into the form so the dispatcher can see it. */
+function defaultLinkExpiry() {
+    return toDatetimeLocal(new Date(Date.now() + DEFAULT_LINK_TTL_HOURS * 60 * 60 * 1000));
+}
+
 export default class InspectionFormActionsService extends ResourceActionService {
     @service fetch;
     @service notifications;
@@ -104,7 +118,7 @@ export default class InspectionFormActionsService extends ResourceActionService 
         const formState = {
             driver: null,
             vehicle: null,
-            expires_at: null,
+            expires_at: defaultLinkExpiry(),
             generatedUrl: null,
         };
 
@@ -121,7 +135,11 @@ export default class InspectionFormActionsService extends ResourceActionService 
                     const response = await this.fetch.post(`inspection-forms/${form.id}/generate-link`, {
                         driver: formState.driver?.id,
                         vehicle: formState.vehicle?.id,
-                        expires_at: formState.expires_at || null,
+                        // The input holds local time with no zone; sent as it was,
+                        // the server read it as its own zone and the link expired
+                        // hours early or late. Sent as an instant, it means what
+                        // the dispatcher picked.
+                        expires_at: formState.expires_at ? new Date(formState.expires_at).toISOString() : null,
                         single_use: true,
                     });
                     const path = response?.link?.path;
