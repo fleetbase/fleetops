@@ -1,5 +1,6 @@
 import ResourceActionService from '@fleetbase/ember-core/services/resource-action';
 import { action, set } from '@ember/object';
+import { tracked } from '@glimmer/tracking';
 import { inject as service } from '@ember/service';
 import copyToClipboard from '@fleetbase/ember-core/utils/copy-to-clipboard';
 import { normalizeFieldGroups, serializeFieldGroups } from '../utils/inspection-form-structure';
@@ -8,6 +9,13 @@ export default class InspectionFormActionsService extends ResourceActionService 
     @service fetch;
     @service notifications;
     @service intl;
+
+    /**
+     * When a public link was last generated. Every open link list watches
+     * this — the one inside the generate modal and the one on the form's
+     * details panel — so a new link appears in both without a reload.
+     */
+    @tracked linksChangedAt = 0;
 
     constructor() {
         super(...arguments);
@@ -98,7 +106,6 @@ export default class InspectionFormActionsService extends ResourceActionService 
             vehicle: null,
             expires_at: null,
             generatedUrl: null,
-            generatedAt: null,
         };
 
         return this.modalsManager.show('modals/inspection-link', {
@@ -121,11 +128,10 @@ export default class InspectionFormActionsService extends ResourceActionService 
                     const url = path ? `${window.location.origin}${path}` : null;
                     set(formState, 'generatedUrl', url);
 
-                    // The list below the form watches this and reloads, so the
-                    // link that was just minted appears there to be read,
-                    // copied again, or revoked — rather than living only in the
-                    // clipboard until something else overwrites it.
-                    set(formState, 'generatedAt', Date.now());
+                    // Every open link list watches this and reloads, so the link
+                    // that was just minted appears to be read, copied again or
+                    // revoked — rather than living only in the clipboard.
+                    this.linksChangedAt = Date.now();
 
                     if (url) {
                         await copyToClipboard(url);

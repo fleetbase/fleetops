@@ -15,13 +15,15 @@ import copyToClipboard from '@fleetbase/ember-core/utils/copy-to-clipboard';
  * has been opened, and whether it is still live — with the link itself there
  * to copy again and a way to take it out of use.
  *
- * `@reloadOn` is any value the caller changes when it has minted a link; the
- * list reloads when it does.
+ * It reloads whenever a link is generated anywhere in the console, by
+ * watching the form actions service, so a list on the details panel stays
+ * current while the generate modal is used on top of it.
  */
 export default class InspectionLinkListComponent extends Component {
     @service fetch;
     @service notifications;
     @service intl;
+    @service inspectionFormActions;
 
     @tracked links = [];
     @tracked error = null;

@@ -8915,7 +8915,13 @@ body[data-theme='dark'] .filter-multi-model > .clear-button {
     --ins-fail: #dc2626;
     --ins-fail-text: #b91c1c;
     --ins-fail-edge: #fecaca;
-    --ins-fail-fill: transparent;
+    --ins-fail-fill: #fef2f2;
+    --ins-fail-fill-strong: #fee2e2;
+    --ins-fail-field: #fff;
+    --ins-fail-placeholder: #f87171;
+    --ins-fail-ring: rgb(220 38 38 / 22%);
+    --ins-fail-hatch-a: #fecaca;
+    --ins-fail-hatch-b: #fee2e2;
     --ins-na: #6b7280;
     --ins-warn: #d97706;
     --ins-warn-text: #92400e;
@@ -8954,6 +8960,12 @@ body[data-theme='dark'] .inspection-flyout {
     --ins-fail-text: #fca5a5;
     --ins-fail-edge: #4c2326;
     --ins-fail-fill: #241b1e;
+    --ins-fail-fill-strong: #3f1d1d;
+    --ins-fail-field: #1b1416;
+    --ins-fail-placeholder: #a86b6e;
+    --ins-fail-ring: rgb(239 68 68 / 28%);
+    --ins-fail-hatch-a: #3b2326;
+    --ins-fail-hatch-b: #2c1b1e;
     --ins-na: #9ca3af;
     --ins-warn: #b45309;
     --ins-warn-text: #fcd34d;
@@ -9360,7 +9372,7 @@ body[data-theme='dark'] .inspection-sheet__body {
 }
 
 .inspection-unsafe[data-on='true'] {
-    background-color: var(--ins-fail-fill);
+    background-color: var(--ins-fail-fill-strong);
 }
 
 /* --- photo slots -------------------------------------------------------- */
@@ -9877,7 +9889,7 @@ body[data-theme='dark'] .inspection-link__url {
 .inspection-flyout {
     display: flex;
     flex-direction: column;
-    background-color: var(--ins-bg);
+    background-color: var(--ins-fail-fill);
     color: var(--ins-text);
     border: 1px solid var(--ins-fail);
     border-radius: 0.5rem;
@@ -9926,7 +9938,7 @@ body[data-theme='dark'] .inspection-flyout {
     left: var(--flyout-caret-x, 1.5rem);
     width: 12px;
     height: 12px;
-    background-color: var(--ins-bg);
+    background-color: var(--ins-fail-fill);
     border: 1px solid var(--ins-fail);
     transform: translateX(-50%) rotate(45deg);
     pointer-events: none;
@@ -9992,7 +10004,7 @@ body[data-theme='dark'] .inspection-flyout {
     justify-content: flex-end;
     gap: 0.75rem;
     padding: 0.625rem 0.75rem;
-    border-top: 1px solid var(--ins-border);
+    border-top: 1px solid var(--ins-fail-edge);
 }
 
 .inspection-flyout__note {
@@ -10004,19 +10016,57 @@ body[data-theme='dark'] .inspection-flyout {
     color: var(--ins-warn-strong);
 }
 
-/* Inside a failure, the controls take the failure's edge colour. */
-.inspection-flyout .form-input {
+/* Inside a failure, every control takes the failure's colours. */
+.inspection-flyout .inspection-choice {
     border-color: var(--ins-fail-edge);
-    background-color: transparent;
 }
 
-.inspection-flyout .form-input:focus {
+.inspection-flyout .inspection-choice__option + .inspection-choice__option {
+    border-left-color: var(--ins-fail-edge);
+}
+
+.inspection-flyout .inspection-choice__option:hover:not(:disabled) {
+    background-color: var(--ins-fail-fill-strong);
+}
+
+/*
+ * The comment box belongs to the failure. ember-ui styles every console
+ * input with `body[data-theme='dark'] .fleetbase-console .form-input`, which
+ * outranks a plain `.inspection-flyout .form-input` — so an earlier attempt
+ * at this left a grey box inside a red panel. This selector is deliberately
+ * heavier than that rule, and takes its colours from the theme tokens.
+ */
+html body .inspection-flyout textarea.inspection-defect-comment.form-input {
+    background-color: var(--ins-fail-field);
+    border-color: var(--ins-fail-edge);
+    color: var(--ins-text);
+    box-shadow: none;
+}
+
+html body .inspection-flyout textarea.inspection-defect-comment.form-input::placeholder {
+    color: var(--ins-fail-placeholder);
+}
+
+html body .inspection-flyout textarea.inspection-defect-comment.form-input:focus {
     border-color: var(--ins-fail);
+    box-shadow: 0 0 0 3px var(--ins-fail-ring);
+    outline: none;
 }
 
-.inspection-flyout .inspection-choice,
-.inspection-flyout .inspection-slot {
+/* Photos sit in the failure too: red hatching, a red-edged slot for the next. */
+.inspection-flyout .inspection-slot:not(.inspection-slot--add) {
     border-color: var(--ins-fail-edge);
+    background: repeating-linear-gradient(45deg, var(--ins-fail-hatch-a) 0 6px, var(--ins-fail-hatch-b) 6px 12px);
+}
+
+.inspection-flyout .inspection-slot--add {
+    border-color: var(--ins-fail-edge);
+    color: var(--ins-fail-text);
+}
+
+.inspection-flyout .inspection-slot--add:hover {
+    border-color: var(--ins-fail);
+    color: var(--ins-fail);
 }
 
 /* --- on a phone, the same content as a bottom sheet --------------------- */
