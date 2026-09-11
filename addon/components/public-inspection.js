@@ -30,6 +30,9 @@ const PIN_LENGTH = 6;
  */
 const REQUEST_OPTIONS = { namespace: PUBLIC_NAMESPACE, rawError: true };
 
+/** Asked for explicitly: without it Laravel answers a refused request with a redirect. */
+const JSON_ACCEPT = { Accept: 'application/json' };
+
 /**
  * An inspection filled in from a tokenised link, outside the console.
  *
@@ -85,7 +88,7 @@ export default class PublicInspectionComponent extends Component {
      * stays out of the URL and the access logs that record URLs.
      */
     get pinHeaders() {
-        return this.pin ? { 'X-Inspection-Pin': this.pin } : {};
+        return this.pin ? { ...JSON_ACCEPT, 'X-Inspection-Pin': this.pin } : { ...JSON_ACCEPT };
     }
 
     get fields() {

@@ -38,9 +38,16 @@ class InspectionSubmitter
         return [
             'odometer'                            => 'nullable|integer|min:0',
             'engine_hours'                        => 'nullable|integer|min:0',
-            'custom_field_values'                 => 'required_without:item_results|array',
-            'custom_field_values.*.custom_field'  => 'required_without:custom_field_values.*.custom_field_uuid|string|max:191',
-            'custom_field_values.*.value_type'    => 'nullable|string|max:50',
+            // Every key of an answer needs a rule of its own. validate() returns
+            // only keys that have one, and with nested rules present an array's
+            // other keys are dropped: without these, `value` never reached the
+            // submitter, so every answer arrived empty and a failed check
+            // carrying its photo was refused for having none.
+            'custom_field_values'                   => 'required_without:item_results|array',
+            'custom_field_values.*.custom_field'    => 'required_without:custom_field_values.*.custom_field_uuid|string|max:191',
+            'custom_field_values.*.custom_field_uuid' => 'nullable|string|max:191',
+            'custom_field_values.*.value'           => 'nullable',
+            'custom_field_values.*.value_type'      => 'nullable|string|max:50',
             'item_results'                        => 'required_without:custom_field_values|array',
             'item_results.*.item_key'             => 'nullable|string|max:191',
             'item_results.*.label'                => 'required|string|max:255',
