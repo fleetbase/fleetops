@@ -221,12 +221,14 @@ Route::prefix(config('fleetops.api.routing.prefix'))->namespace('Fleetbase\Fleet
             });
             // inspections — a driver's DVIR. Read the published forms and file
             // against them; authoring forms and reviewing submissions is fleet
-            // management and stays on the internal namespace.
-            $router->group(['prefix' => 'inspection-forms'], function () use ($router) {
+            // management and stays on the internal namespace. A refused submit
+            // answers 422 in JSON: without ForceJsonResponse, a client that did
+            // not ask for JSON was redirected instead.
+            $router->group(['prefix' => 'inspection-forms', 'middleware' => [Fleetbase\FleetOps\Http\Middleware\ForceJsonResponse::class]], function () use ($router) {
                 $router->get('/', 'InspectionController@queryForms');
                 $router->get('{id}', 'InspectionController@findForm');
             });
-            $router->group(['prefix' => 'inspections'], function () use ($router) {
+            $router->group(['prefix' => 'inspections', 'middleware' => [Fleetbase\FleetOps\Http\Middleware\ForceJsonResponse::class]], function () use ($router) {
                 $router->post('/', 'InspectionController@submit');
                 $router->get('/', 'InspectionController@query');
                 $router->get('{id}', 'InspectionController@find');
@@ -325,7 +327,7 @@ Route::prefix(config('fleetops.api.routing.prefix'))->namespace('Fleetbase\Fleet
                 $router->match(['put', 'patch', 'post'], '{id}/track', 'VehicleController@track');
                 $router->get('{id}/trailers', 'TrailerController@vehicleTrailers');
                 // A vehicle's inspection history, for the driver app's vehicle screen.
-                $router->get('{id}/inspections', 'InspectionController@forVehicle');
+                $router->get('{id}/inspections', 'InspectionController@forVehicle')->middleware(Fleetbase\FleetOps\Http\Middleware\ForceJsonResponse::class);
             });
             // trailer routes
             $router->group(['prefix' => 'trailers'], function () use ($router) {
@@ -668,20 +670,25 @@ Route::prefix(config('fleetops.api.routing.prefix'))->namespace('Fleetbase\Fleet
                             $router->get('calendar-feed', $controller('calendarFeed'));
                             $router->get('{id}/ical', $controller('ical'));
                         });
-                        $router->fleetbaseRoutes('inspection-forms', function ($router, $controller) {
-                            $router->post('{id}/publish', $controller('publish'));
-                            $router->post('{id}/archive', $controller('archive'));
-                            $router->post('{id}/generate-link', $controller('generateLink'));
-                            $router->get('{id}/links', $controller('links'));
-                            $router->delete('{id}/links/{linkId}', $controller('revokeLink'));
-                            $router->post('{id}/links/{linkId}/send-pin', $controller('sendPin'));
-                        });
-                        $router->fleetbaseRoutes('inspection-submissions', function ($router, $controller) {
-                            $router->match(['get', 'post'], 'export', $controller('export'));
-                            $router->post('{id}/submit', $controller('submit'));
-                            $router->post('{id}/create-issue', $controller('createIssue'));
-                            $router->post('{id}/create-work-order', $controller('createWorkOrder'));
-                            $router->post('{id}/resolve', $controller('resolve'));
+                        // The console validates these with $request->validate(), which
+                        // redirects a request that did not ask for JSON; they answer
+                        // in JSON so a refusal reaches the console as a 422.
+                        $router->group(['middleware' => [Fleetbase\FleetOps\Http\Middleware\ForceJsonResponse::class]], function ($router) {
+                            $router->fleetbaseRoutes('inspection-forms', function ($router, $controller) {
+                                $router->post('{id}/publish', $controller('publish'));
+                                $router->post('{id}/archive', $controller('archive'));
+                                $router->post('{id}/generate-link', $controller('generateLink'));
+                                $router->get('{id}/links', $controller('links'));
+                                $router->delete('{id}/links/{linkId}', $controller('revokeLink'));
+                                $router->post('{id}/links/{linkId}/send-pin', $controller('sendPin'));
+                            });
+                            $router->fleetbaseRoutes('inspection-submissions', function ($router, $controller) {
+                                $router->match(['get', 'post'], 'export', $controller('export'));
+                                $router->post('{id}/submit', $controller('submit'));
+                                $router->post('{id}/create-issue', $controller('createIssue'));
+                                $router->post('{id}/create-work-order', $controller('createWorkOrder'));
+                                $router->post('{id}/resolve', $controller('resolve'));
+                            });
                         });
                         $router->fleetbaseRoutes('work-orders', function ($router, $controller) {
                             $router->match(['get', 'post'], 'export', $controller('export'));

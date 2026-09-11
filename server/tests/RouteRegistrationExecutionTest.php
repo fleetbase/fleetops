@@ -203,6 +203,23 @@ test('fleetops route file registers public internal analytics metrics and hub ro
         ->and($sendPin[0]['method'])->toBe('POST')
         ->and($sendPin[0]['action'])->toBe('InspectionFormController@sendPin');
 
+    // Every inspection route answers in JSON, so a refused request is a 422
+    // rather than a redirect: the driver API, the vehicle history and the
+    // console's form and submission routes.
+    $json    = Fleetbase\FleetOps\Http\Middleware\ForceJsonResponse::class;
+    $inGroup = fn (array $route) => in_array($json, array_merge(...array_map(fn ($group) => (array) ($group['middleware'] ?? []), $route['groups'])), true)
+        || in_array($json, (array) ($route['middleware'] ?? []), true);
+    foreach (['InspectionController@findForm', 'InspectionController@submit', 'InspectionController@forVehicle'] as $action) {
+        $route = collect($recorder->routes)->first(fn (array $route) => $route['action'] === $action);
+        expect($route)->not->toBeNull()
+            ->and($inGroup($route))->toBeTrue();
+    }
+    $console = array_filter($recorder->routes, fn (array $route) => str_contains($route['uri'], 'inspection-forms/{id}/generate-link') || str_contains($route['uri'], 'inspection-submissions/{id}/submit'));
+    expect($console)->toHaveCount(2);
+    foreach ($console as $route) {
+        expect($inGroup($route))->toBeTrue();
+    }
+
     // Uploads through a link have a tighter limit of their own, on top of the group's.
     $upload = collect($recorder->routes)->firstWhere('uri', 'public/inspections/forms/{id}/files');
     expect($upload['middleware'] ?? [])->toBe(['throttle:20,1,inspection-upload']);
