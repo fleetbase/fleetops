@@ -8,6 +8,7 @@ use Fleetbase\FleetOps\Models\Issue;
 use Fleetbase\FleetOps\Models\Vehicle;
 use Fleetbase\FleetOps\Models\WorkOrder;
 use Fleetbase\FleetOps\Rules\Base64OrUrl;
+use Fleetbase\LaravelMysqlSpatial\Types\Point;
 use Fleetbase\FleetOps\Support\InspectionSubmitter;
 use Illuminate\Config\Repository;
 use Illuminate\Database\ConnectionResolver;
@@ -34,8 +35,19 @@ if (!function_exists('Fleetbase\\Support\\auth')) {
 function fleetOpsInspectionModelDatabase(): SQLiteConnection
 {
     $pdo = new PDO('sqlite::memory:');
-    $pdo->sqliteCreateFunction('ST_PointFromText', fn ($wkt, $srid = 0, $axisOrder = null) => $wkt);
-    $pdo->sqliteCreateFunction('ST_GeomFromText', fn ($wkt, $srid = 0, $axisOrder = null) => $wkt);
+    // MySQL answers with a 4-byte SRID followed by the geometry's WKB, which is
+    // what the spatial trait parses when a row is read back. Handing back the
+    // WKT instead left a stored point unreadable ("Bad endian byte value").
+    $asStoredPoint = function ($wkt, $srid = 0, $axisOrder = null) {
+        if (!preg_match('/POINT\s*\(\s*(-?[\d.]+)\s+(-?[\d.]+)\s*\)/i', (string) $wkt, $pair)) {
+            return $wkt;
+        }
+
+        // WKB: little-endian marker, geometry type 1 (point), then x (lng) and y (lat).
+        return pack('V', (int) $srid) . pack('C', 1) . pack('V', 1) . pack('d', (float) $pair[1]) . pack('d', (float) $pair[2]);
+    };
+    $pdo->sqliteCreateFunction('ST_PointFromText', $asStoredPoint);
+    $pdo->sqliteCreateFunction('ST_GeomFromText', $asStoredPoint);
     $connection = new SQLiteConnection($pdo);
     $resolver   = new ConnectionResolver(['default' => $connection, 'mysql' => $connection]);
     $resolver->setDefaultConnection('mysql');
@@ -378,7 +390,7 @@ test('inspection submission ranks failures by severity', function () {
 });
 
 test('inspection submission raises an issue from its failed items once', function () {
-    fleetOpsInspectionModelDatabase();
+    $connection = fleetOpsInspectionModelDatabase();
 
     $form = fleetOpsInspectionModelForm();
 
@@ -391,7 +403,7 @@ test('inspection submission raises an issue from its failed items once', functio
         ['label' => 'Brakes', 'passed' => false, 'severity' => 'critical', 'item_key' => 'brakes'],
         ['label' => 'Lights', 'passed' => false, 'severity' => 'medium', 'item_key' => 'lights'],
         ['label' => 'Horn', 'passed' => true],
-    ]);
+    ], ['location' => ['latitude' => 1.3521, 'longitude' => 103.8198]]);
     $failed->syncResultCounts();
     $failed = $failed->fresh();
 
@@ -407,6 +419,11 @@ test('inspection submission raises an issue from its failed items once', functio
         ->and($issue->reported_by_uuid)->toBe('user-driver')
         ->and($issue->vehicle_uuid)->toBe('vehicle-1')
         ->and($issue->driver_uuid)->toBe('driver-1')
+        // `issues.location` has no default: an issue raised without one is
+        // refused by the database, so it takes where the inspection was filed.
+        ->and($issue->location)->toBeInstanceOf(Point::class)
+        ->and($issue->location->getLat())->toEqual(1.3521)
+        ->and($issue->location->getLng())->toEqual(103.8198)
         ->and($issue->meta['inspection_submission_uuid'])->toBe($failed->uuid)
         ->and($issue->meta['failed_items'])->toBe(['Brakes', 'Lights'])
         ->and($failed->fresh()->issue_uuid)->toBe($issue->uuid);
@@ -421,7 +438,25 @@ test('inspection submission raises an issue from its failed items once', functio
     $unassigned->syncResultCounts();
     $orphanIssue = $unassigned->fresh()->createIssueFromFailures();
     expect($orphanIssue->title)->toBe('Failed inspection: ' . $unassigned->public_id)
-        ->and($orphanIssue->report)->toBe('Failed items: Horn');
+        ->and($orphanIssue->report)->toBe('Failed items: Horn')
+        // Nowhere to take a position from: an empty point, which the column takes.
+        ->and($orphanIssue->location)->toBeInstanceOf(Point::class)
+        ->and($orphanIssue->location->getLat())->toEqual(0.0)
+        ->and($orphanIssue->location->getLng())->toEqual(0.0);
+
+    // The vehicle's last known position stands in when the submission has none,
+    // stored the way MySQL keeps it so the model reads it back as a point.
+    $connection->table('vehicles')->where('uuid', 'vehicle-1')->update([
+        'location' => pack('V', 0) . pack('C', 1) . pack('V', 1) . pack('d', 103.9915) . pack('d', 1.3644),
+    ]);
+
+    $atVehicle = fleetOpsInspectionModelSubmission($form, [['label' => 'Horn', 'passed' => false]]);
+    $atVehicle->syncResultCounts();
+    $atVehicleIssue = $atVehicle->fresh()->createIssueFromFailures();
+
+    expect($atVehicleIssue->location)->toBeInstanceOf(Point::class)
+        ->and(round($atVehicleIssue->location->getLat(), 4))->toEqual(1.3644)
+        ->and(round($atVehicleIssue->location->getLng(), 4))->toEqual(103.9915);
 });
 
 test('inspection submission opens a work order with a checklist of the failed items', function () {

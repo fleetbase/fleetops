@@ -17,6 +17,7 @@ use Fleetbase\Traits\HasPublicId;
 use Fleetbase\Traits\HasUuid;
 use Fleetbase\Traits\Searchable;
 use Fleetbase\Traits\TracksApiCredential;
+use Fleetbase\LaravelMysqlSpatial\Types\Point;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Str;
@@ -328,6 +329,7 @@ class InspectionSubmission extends Model
             'driver_uuid'       => $this->driver_uuid,
             'type'              => 'inspection',
             'category'          => 'inspection_failed',
+            'location'          => $this->failureLocation(),
             'title'             => 'Failed inspection: ' . ($this->vehicle_name ?? $this->public_id),
             'report'            => empty($failedLabels) ? 'Inspection failed.' : 'Failed items: ' . implode(', ', $failedLabels),
             'priority'          => $this->highestFailureSeverity(),
@@ -343,6 +345,36 @@ class InspectionSubmission extends Model
         $this->update(['issue_uuid' => $issue->uuid]);
 
         return $issue;
+    }
+
+    /**
+     * Where the failure was reported, for the issue it raises.
+     *
+     * `issues.location` is a spatial column with no default, so an insert that
+     * leaves it out is refused outright — MySQL 1364, which reached a driver
+     * filing a failed inspection as a 500. The submission's own coordinates
+     * come first, then the vehicle's last known position, then the driver's,
+     * and an empty point when nothing is known.
+     */
+    public function failureLocation(): Point
+    {
+        // Read here rather than through Utils::getPointFromMixed(), which
+        // throws when it cannot resolve a point: every source below is
+        // routinely empty, and an inspection must not fail for want of one.
+        foreach ([$this->location, $this->vehicle?->location, $this->driver?->location] as $candidate) {
+            if ($candidate instanceof Point) {
+                return $candidate;
+            }
+
+            $latitude  = data_get($candidate, 'latitude', data_get($candidate, 'lat'));
+            $longitude = data_get($candidate, 'longitude', data_get($candidate, 'lng'));
+
+            if (is_numeric($latitude) && is_numeric($longitude)) {
+                return new Point((float) $latitude, (float) $longitude);
+            }
+        }
+
+        return new Point(0, 0);
     }
 
     public function createWorkOrderFromFailures(): ?WorkOrder
