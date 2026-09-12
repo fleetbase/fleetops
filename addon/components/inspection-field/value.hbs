@@ -1,0 +1,80 @@
+{{!
+    One stored answer, read-only.
+
+    The same two shapes as `inspection-field/input` — a compact cell in the
+    group's grid, or a full-width band for a failure, a note, an upload or a
+    signature — so a submitted inspection reads exactly like the sheet it was
+    filled in on.
+}}
+{{#if this.isDefect}}
+    <div class="inspection-band inspection-band--defect {{if this.isTargeted 'inspection-band--targeted'}}" id="inspection-field-{{this.field.uuid}}" data-answer="fail" ...attributes>
+        <div class="inspection-band__head">
+            <span class="inspection-chip">{{t "inspection.answer.fail"}}</span>
+            <span class="inspection-band__label">{{this.label}}</span>
+            <span class="inspection-band__aside">
+                {{#if this.severityLabel}}<Badge @status={{if (eq this.answer.severity "critical") "danger" "info"}}>{{t this.severityLabel}}</Badge>{{/if}}
+                {{#if this.answer.unsafe}}<Badge @status="danger">{{t "inspection.answer.unsafe"}}</Badge>{{/if}}
+            </span>
+        </div>
+        {{#if this.hasDefectDetail}}
+            <div class="inspection-band__body">
+                {{#if this.answer.comments}}
+                    <p class="inspection-answer">{{this.answer.comments}}</p>
+                {{/if}}
+                {{#if this.photos.length}}
+                    <div class="inspection-slots">
+                        {{#each this.photos key="reference" as |photo|}}
+                            {{#if photo.url}}
+                                <a href={{photo.url}} target="_blank" rel="noopener noreferrer" class="inspection-slot">
+                                    <Image src={{photo.url}} alt={{or photo.filename this.label}} />
+                                </a>
+                            {{else}}
+                                <span class="inspection-slot"><span class="inspection-slot__icon"><FaIcon @icon="image" /></span></span>
+                            {{/if}}
+                        {{/each}}
+                    </div>
+                {{/if}}
+            </div>
+        {{/if}}
+    </div>
+
+{{else if this.isRoomy}}
+    <div class="inspection-band {{if this.isStackedBand 'inspection-band--stacked'}} {{if this.isTargeted 'inspection-band--targeted'}}" id="inspection-field-{{this.field.uuid}}" ...attributes>
+        <div class="inspection-band__head">
+            <span class="inspection-band__label">{{this.label}}</span>
+            {{#unless this.isStackedBand}}
+                <span class="inspection-band__aside">
+                    {{#if this.file.url}}
+                        <a href={{this.file.url}} target="_blank" rel="noopener noreferrer" class="inspection-slot">
+                            <Image src={{this.file.url}} alt={{or this.file.filename this.label}} />
+                        </a>
+                    {{else if this.file.reference}}
+                        <span class="inspection-slot"><span class="inspection-slot__icon"><FaIcon @icon="image" /></span></span>
+                    {{else}}
+                        <span class="inspection-note">{{t "inspection.answer.unanswered"}}</span>
+                    {{/if}}
+                </span>
+            {{/unless}}
+        </div>
+        {{#if this.isStackedBand}}
+            <div class="inspection-band__body">
+                <p class="inspection-answer">{{n-a @value}}</p>
+            </div>
+        {{/if}}
+    </div>
+
+{{else}}
+    <div class="inspection-cell {{if this.isTargeted 'inspection-cell--targeted'}}" id="inspection-field-{{this.field.uuid}}" data-answer={{this.answerState}} ...attributes>
+        <span class="inspection-cell__label">{{this.label}}</span>
+        <div class="inspection-cell__control">
+            {{#if this.isPassFail}}
+                <Badge @status={{this.resultStatus}}>{{t this.resultLabel}}</Badge>
+            {{else if this.isBoolean}}
+                <Badge @status={{if this.booleanValue "success" ""}}>{{if this.booleanValue (t "common.yes") (t "common.no")}}</Badge>
+            {{else}}
+                <span class="inspection-answer">{{n-a @value}}</span>
+                {{#if this.meta.unit}}<span class="inspection-unit">{{this.meta.unit}}</span>{{/if}}
+            {{/if}}
+        </div>
+    </div>
+{{/if}}

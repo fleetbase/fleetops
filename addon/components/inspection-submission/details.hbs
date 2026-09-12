@@ -1,0 +1,109 @@
+<div class="next-content-panel-wrapper" ...attributes>
+    <ContentPanel @title={{t "inspection.record.overview"}} @open={{true}} @wrapperClass="bordered-top">
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-2 text-xs dark:text-gray-100">
+            <div class="field-info-container">
+                <div class="field-name">{{t "inspection.record.inspection"}}</div>
+                <ClickToCopy @value={{@resource.public_id}} class="field-value font-mono">{{n-a @resource.public_id}}</ClickToCopy>
+            </div>
+            <div class="field-info-container">
+                <div class="field-name">{{t "inspection.record.result"}}</div>
+                <div class="field-value"><Badge @status={{if (eq @resource.result "failed") "danger" "success"}}>{{smart-humanize @resource.result}}</Badge></div>
+            </div>
+            <div class="field-info-container">
+                <div class="field-name">{{t "inspection.record.form"}}</div>
+                <div class="field-value">{{n-a (or @resource.form.name @resource.form_name)}}</div>
+            </div>
+            <div class="field-info-container">
+                <div class="field-name">{{t "inspection.record.status"}}</div>
+                <div class="field-value"><Badge @status={{@resource.status}}>{{smart-humanize @resource.status}}</Badge></div>
+            </div>
+            <div class="field-info-container">
+                <div class="field-name">{{t "inspection.record.vehicle"}}</div>
+                <div class="field-value">{{n-a (or @resource.vehicle.displayName @resource.vehicle_name)}}</div>
+            </div>
+            <div class="field-info-container">
+                <div class="field-name">{{t "inspection.record.driver"}}</div>
+                <div class="field-value">{{n-a (or @resource.driver.name @resource.driver_name)}}</div>
+            </div>
+            <div class="field-info-container">
+                <div class="field-name">{{t "inspection.record.submitted-by"}}</div>
+                <div class="field-value">
+                    {{n-a this.submitter}}
+                    {{#if this.submitterNote}}
+                        <div class="mt-0.5 text-gray-500 dark:text-gray-400">{{this.submitterNote}}</div>
+                    {{/if}}
+                </div>
+            </div>
+            <div class="field-info-container">
+                <div class="field-name">{{t "inspection.record.odometer"}}</div>
+                <div class="field-value">{{n-a @resource.odometer}}</div>
+            </div>
+            <div class="field-info-container">
+                <div class="field-name">{{t "inspection.record.engine-hours"}}</div>
+                <div class="field-value">{{n-a @resource.engine_hours}}</div>
+            </div>
+            <div class="field-info-container">
+                <div class="field-name">{{t "inspection.record.submitted"}}</div>
+                <div class="field-value">{{n-a (format-date-fns @resource.submitted_at "dd MMM yyyy, HH:mm")}}</div>
+            </div>
+            <div class="field-info-container">
+                <div class="field-name">{{t "inspection.record.resolved"}}</div>
+                <div class="field-value">{{n-a (format-date-fns @resource.resolved_at "dd MMM yyyy, HH:mm")}}</div>
+            </div>
+        </div>
+    </ContentPanel>
+
+    {{#if this.load.isRunning}}
+        <ContentPanel @title={{t "inspection.record.answers"}} @open={{true}} @wrapperClass="bordered-top">
+            <div class="p-6 flex items-center justify-center">
+                <Spinner @loadingMessage={{t "inspection.record.loading-answers"}} class="text-sm dark:text-gray-100 flex items-center space-x-2" />
+            </div>
+        </ContentPanel>
+    {{else if this.hasAnswers}}
+        <div class="inspection-sheet-inset">
+            <InspectionSheet @groups={{this.groups}} @values={{this.values}} @readonly={{true}} />
+        </div>
+    {{/if}}
+
+    <ContentPanel @title={{t "inspection.record.item-results"}} @open={{true}} @wrapperClass="bordered-top">
+        <div class="space-y-2 text-xs">
+            {{#each @resource.item_results as |item|}}
+                <div class="rounded border border-gray-200 dark:border-gray-700 p-3">
+                    <div class="flex items-start justify-between gap-3">
+                        <div>
+                            <div class="font-semibold">{{n-a item.label}}</div>
+                            <div class="text-gray-500">{{n-a item.category}}</div>
+                            {{#if item.comments}}
+                                <div class="mt-2 whitespace-pre-wrap">{{item.comments}}</div>
+                            {{/if}}
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <Badge @status={{if item.passed "success" "danger"}}>{{if item.passed (t "inspection.answer.pass") (t "inspection.answer.fail")}}</Badge>
+                            {{#if item.severity}}
+                                <Badge @status={{if (eq item.severity "critical") "danger" "info"}}>{{smart-humanize item.severity}}</Badge>
+                            {{/if}}
+                        </div>
+                    </div>
+                </div>
+            {{else}}
+                <div class="text-gray-500">{{t "inspection.record.no-item-results"}}</div>
+            {{/each}}
+        </div>
+    </ContentPanel>
+
+    <ContentPanel @title={{t "inspection.record.follow-up"}} @open={{true}} @wrapperClass="bordered-top">
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-2 text-xs dark:text-gray-100">
+            <div class="field-info-container">
+                <div class="field-name">{{t "inspection.record.linked-issue"}}</div>
+                <div class="field-value">{{n-a (or @resource.issue.public_id @resource.issue_uuid)}}</div>
+            </div>
+            <div class="field-info-container">
+                <div class="field-name">{{t "inspection.record.linked-work-order"}}</div>
+                <div class="field-value">{{n-a (or @resource.work_order.public_id @resource.work_order_uuid)}}</div>
+            </div>
+        </div>
+    </ContentPanel>
+
+    <CustomField::Yield @subject={{@resource}} @viewMode={{true}} @wrapperClass="bordered-top" />
+    <Spacer @height="200px" />
+</div>

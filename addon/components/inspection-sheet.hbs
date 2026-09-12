@@ -1,0 +1,77 @@
+<div class="inspection-sheet" ...attributes>
+    {{! Floating flyouts render here: inside the sheet so they scroll with their field, outside its card so they are never clipped. }}
+    <div class="inspection-sheet__flyouts"></div>
+
+    <div class="inspection-sheet__body">
+        <div class="inspection-sheet__groups">
+            {{#each this.groups key="uuid" as |group|}}
+                <InspectionSheet::Group
+                    @group={{group}}
+                    @values={{@values}}
+                    @subject={{@subject}}
+                    @onChange={{@onChange}}
+                    @disabled={{@disabled}}
+                    @allowUploads={{@allowUploads}}
+                    @uploader={{@uploader}}
+                    @readonly={{@readonly}}
+                    @targetId={{this.targetId}}
+                    @openFieldId={{this.openFieldId}}
+                    @onOpenFlyout={{this.openFlyout}}
+                    @onCloseFlyout={{this.closeFlyout}}
+                />
+            {{/each}}
+        </div>
+
+        {{#if this.hasFields}}
+            <div class="inspection-foot">
+                <div class="inspection-tallies">
+                    <div class="inspection-tally" data-kind="passed">
+                        <span class="inspection-tally__value">{{this.summary.passed}}</span>
+                        <span class="inspection-tally__label">{{t "inspection.answer.pass"}}</span>
+                    </div>
+                    <div class="inspection-tally" data-kind="failed">
+                        <span class="inspection-tally__value">{{this.summary.failed}}</span>
+                        <span class="inspection-tally__label">{{t "inspection.answer.fail"}}</span>
+                    </div>
+                    <div class="inspection-tally" data-kind="na">
+                        <span class="inspection-tally__value">{{this.summary.notApplicable}}</span>
+                        <span class="inspection-tally__label">{{t "inspection.answer.not-applicable"}}</span>
+                    </div>
+                    <div class="inspection-tally" data-kind="outstanding" data-any={{if this.summary.outstanding "true" "false"}}>
+                        <span class="inspection-tally__value">{{this.summary.outstanding}}</span>
+                        <span class="inspection-tally__label">{{t "inspection.record.outstanding"}}</span>
+                    </div>
+                </div>
+
+                {{#if this.defects}}
+                    <div class="inspection-tray">
+                        <div class="inspection-tray__head">
+                            {{t "inspection.tray.title"}}
+                            <span class="inspection-tray__count">{{this.defects.length}}</span>
+                        </div>
+                        {{#each this.defects key="field.uuid" as |defect|}}
+                            <button type="button" class="inspection-tray__row" {{on "click" (fn this.reviewDefect defect.field)}}>
+                                <span class="inspection-tray__severity" data-severity={{defect.severity}}>{{defect.severityLabel}}</span>
+                                <span class="inspection-tray__label">{{defect.label}}</span>
+                                {{#if defect.unsafe}}
+                                    <span class="inspection-banner__chip">{{t "inspection.answer.unsafe"}}</span>
+                                {{/if}}
+                                <span class="inspection-tray__evidence" data-incomplete={{if defect.incomplete "true" "false"}}>{{defect.evidence}}</span>
+                                <span class="inspection-tray__action">{{t "inspection.tray.review"}}</span>
+                            </button>
+                        {{/each}}
+                    </div>
+                {{/if}}
+
+                {{#if this.summary.firstOutstanding}}
+                    <div class="inspection-banner">
+                        <span>{{this.outstandingDescription}}</span>
+                        <button type="button" class="inspection-banner__jump" {{on "click" (fn this.jumpTo this.summary.firstOutstanding)}}>
+                            {{t "inspection.record.jump-to"}}
+                        </button>
+                    </div>
+                {{/if}}
+            </div>
+        {{/if}}
+    </div>
+</div>

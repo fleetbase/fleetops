@@ -1,0 +1,100 @@
+<Modal::Default @modalIsOpened={{@modalIsOpened}} @options={{@options}} @confirm={{@onConfirm}} @decline={{@onDecline}}>
+    <div class="modal-body-container space-y-4">
+        <div class="text-sm text-gray-600 dark:text-gray-400">
+            {{t "inspection.link.modal-help" form=@options.form.name}}
+        </div>
+
+        {{#if this.formState.generated}}
+            <div class="inspection-link-generated">
+                <div class="inspection-link-generated__title">
+                    <FaIcon @icon="circle-check" class="text-green-600 dark:text-green-400" />
+                    {{t "inspection.link.generated-title"}}
+                </div>
+                {{#if this.formState.generated.url}}
+                    <div class="inspection-link__url">
+                        <code class="inspection-link__code">{{this.formState.generated.url}}</code>
+                        <Button @type="default" @size="xs" @icon="copy" @text={{t "inspection.link.copy"}} @onClick={{this.copyLink}} />
+                    </div>
+                {{/if}}
+                {{#if this.formState.generated.pin}}
+                    <div class="inspection-link__pin">
+                        <span class="inspection-link__pin-label">{{t "inspection.link.pin"}}</span>
+                        <code class="inspection-link__pin-code">{{this.formState.generated.pin}}</code>
+                        <Button @type="default" @size="xs" @icon="copy" @text={{t "inspection.link.copy"}} @onClick={{this.copyPin}} />
+                    </div>
+                {{/if}}
+                <p class="inspection-link-generated__help">{{t "inspection.link.generated-help"}}</p>
+            </div>
+        {{/if}}
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-x-3 gap-y-1 text-xs">
+            <InputGroup @name={{t "inspection.link.assign-to"}} @helpText={{t "inspection.link.assign-to-help"}} @wrapperClass="sm:col-span-2">
+                <ModelSelect
+                    @modelName="user"
+                    @selectedModel={{this.formState.assignee}}
+                    @placeholder={{t "inspection.link.select-assignee"}}
+                    @triggerClass="form-select form-input"
+                    @infiniteScroll={{false}}
+                    @renderInPlace={{true}}
+                    @allowClear={{true}}
+                    @selectedItemComponent={{component "select-option/user" compact=true}}
+                    @onChange={{this.assignAssignee}}
+                    as |user|
+                >
+                    <SelectOption::User @option={{user}} />
+                </ModelSelect>
+            </InputGroup>
+
+            <InputGroup @name={{t "inspection.record.driver"}}>
+                <ModelSelect
+                    @modelName="driver"
+                    @selectedModel={{this.formState.driver}}
+                    @placeholder={{t "inspection.record.select-driver"}}
+                    @triggerClass="form-select form-input"
+                    @infiniteScroll={{false}}
+                    @renderInPlace={{true}}
+                    @allowClear={{true}}
+                    @selectedItemComponent={{component "select-option/driver" compact=true}}
+                    @onChange={{this.assignDriver}}
+                    as |driver|
+                >
+                    <SelectOption::Driver @option={{driver}} />
+                </ModelSelect>
+            </InputGroup>
+
+            <InputGroup @name={{t "inspection.record.vehicle"}}>
+                <ModelSelect
+                    @modelName="vehicle"
+                    @selectedModel={{this.formState.vehicle}}
+                    @placeholder={{t "inspection.record.select-vehicle"}}
+                    @triggerClass="form-select form-input"
+                    @infiniteScroll={{false}}
+                    @renderInPlace={{true}}
+                    @allowClear={{true}}
+                    @selectedItemComponent={{component "select-option/vehicle" compact=true}}
+                    @onChange={{this.assignVehicle}}
+                    as |vehicle|
+                >
+                    <SelectOption::Vehicle @option={{vehicle}} />
+                </ModelSelect>
+            </InputGroup>
+
+            <InputGroup @name={{t "inspection.link.expires-at"}} @helpText={{t "inspection.link.expires-help"}}>
+                <input type="datetime-local" class="w-full form-input" min={{this.minExpiry}} {{sync-value this.formState.expires_at}} {{on "input" this.updateExpiry}} />
+            </InputGroup>
+
+            <InputGroup @name={{t "inspection.link.pin-delivery"}} @helpText={{this.deliveryHelp}}>
+                <select class="w-full form-select form-input" aria-label={{t "inspection.link.pin-delivery"}} {{on "change" this.setPinDelivery}}>
+                    <option value="none" selected={{eq this.formState.pin_delivery "none"}}>{{t "inspection.link.pin-delivery-none"}}</option>
+                    <option value="email" selected={{eq this.formState.pin_delivery "email"}} disabled={{not this.recipientName}}>{{t "inspection.link.pin-delivery-email"}}</option>
+                    <option value="sms" selected={{eq this.formState.pin_delivery "sms"}} disabled={{not this.recipientName}}>{{t "inspection.link.pin-delivery-sms"}}</option>
+                </select>
+            </InputGroup>
+        </div>
+
+        <div class="inspection-link-panel">
+            <div class="inspection-link-panel__header">{{t "inspection.link.existing"}}</div>
+            <InspectionLink::List @form={{@options.form}} />
+        </div>
+    </div>
+</Modal::Default>

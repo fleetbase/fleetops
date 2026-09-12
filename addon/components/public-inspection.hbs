@@ -1,0 +1,174 @@
+{{!
+    An inspection filled in from a tokenised link.
+
+    Rendered by the host console's top-level `virtual` route at
+    `/~/inspection?id=…&token=…`, which sits outside the console's shell and
+    outside its authentication gate — so this page brings its own full-height
+    background and its own header, and never assumes a signed-in user.
+}}
+<div class="public-inspection-page min-h-screen bg-gray-50 dark:bg-gray-900 py-4 px-3 sm:py-8 sm:px-4">
+    <div class="max-w-3xl mx-auto">
+        {{#if (and this.pinRequired (not this.form))}}
+            <div class="public-inspection-pin mx-auto max-w-sm rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-6 sm:p-8 text-center">
+                <FaIcon @icon="lock" @size="2x" class="text-blue-500 mb-4" />
+                <h1 class="text-lg font-semibold text-gray-900 dark:text-white">{{t "inspection.public.pin-title"}}</h1>
+                <p class="mt-2 text-sm text-gray-500 dark:text-gray-400">{{t "inspection.public.pin-help"}}</p>
+                <div class="mt-5 space-y-3">
+                    <input
+                        type="text"
+                        inputmode="numeric"
+                        autocomplete="one-time-code"
+                        pattern="[0-9]*"
+                        maxlength="6"
+                        class="w-full form-input public-inspection-pin__input"
+                        aria-label={{t "inspection.public.pin-label"}}
+                        placeholder="••••••"
+                        {{sync-value this.pin}}
+                        {{on "input" this.updatePin}}
+                        {{on "keydown" this.pinKeydown}}
+                    />
+                    {{#if this.pinError}}
+                        <p class="text-sm text-red-600 dark:text-red-400" role="alert">{{this.pinError}}</p>
+                    {{/if}}
+                    <Button
+                        @type="primary"
+                        @size="lg"
+                        @icon="unlock"
+                        @text={{t "inspection.public.pin-continue"}}
+                        @disabled={{not this.pinIsComplete}}
+                        @isLoading={{this.loadInspection.isRunning}}
+                        @wrapperClass="w-full"
+                        class="w-full justify-center"
+                        @onClick={{this.submitPin}}
+                    />
+                </div>
+            </div>
+            <FleetbaseAttribution @showPoweredBy={{true}} class="mt-8" />
+
+        {{else if this.loadInspection.isRunning}}
+            <div class="py-24 flex items-center justify-center">
+                <Spinner @loadingMessage={{t "inspection.record.loading-form"}} class="text-sm dark:text-gray-100 flex items-center space-x-2" />
+            </div>
+
+        {{else if this.submission}}
+            <div class="rounded-lg border border-green-200 dark:border-green-800 bg-white dark:bg-gray-800 p-8 text-center">
+                <FaIcon @icon="circle-check" @size="2x" class="text-green-500 mb-4" />
+                <h1 class="text-lg font-semibold text-gray-900 dark:text-white">{{t "inspection.public.submitted-title"}}</h1>
+                <p class="mt-2 text-sm text-gray-500 dark:text-gray-400">{{t "inspection.public.submitted-body"}}</p>
+                <p class="mt-4 text-xs font-mono text-gray-400">{{this.submission.id}}</p>
+            </div>
+
+        {{else if (and this.error (not this.form))}}
+            <div class="rounded-lg border border-red-200 dark:border-red-800 bg-white dark:bg-gray-800 p-8 text-center">
+                <FaIcon @icon="triangle-exclamation" @size="2x" class="text-red-500 mb-4" />
+                <h1 class="text-lg font-semibold text-gray-900 dark:text-white">{{t "inspection.public.unavailable-title"}}</h1>
+                <p class="mt-2 text-sm text-gray-500 dark:text-gray-400">{{this.error}}</p>
+            </div>
+
+        {{else if this.form}}
+            <header class="mb-4">
+                <h1 class="text-lg sm:text-xl font-semibold text-gray-900 dark:text-white">{{this.form.name}}</h1>
+                {{#if this.form.description}}
+                    <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">{{this.form.description}}</p>
+                {{/if}}
+                <div class="mt-3 flex flex-wrap gap-x-6 gap-y-1 text-xs text-gray-500 dark:text-gray-400">
+                    {{#if this.identity.assignee}}
+                        <div><span class="font-semibold text-gray-700 dark:text-gray-200">{{t "inspection.public.for"}}:</span> {{this.identity.assignee.name}}</div>
+                    {{/if}}
+                    {{#if this.identity.vehicle}}
+                        <div><span class="font-semibold text-gray-700 dark:text-gray-200">{{t "inspection.record.vehicle"}}:</span> {{this.identity.vehicle.name}}</div>
+                    {{/if}}
+                    {{#if this.identity.driver}}
+                        <div><span class="font-semibold text-gray-700 dark:text-gray-200">{{t "inspection.record.driver"}}:</span> {{this.identity.driver.name}}</div>
+                    {{/if}}
+                    {{#if this.identity.expires_at}}
+                        <div><span class="font-semibold text-gray-700 dark:text-gray-200">{{t "inspection.link.expires"}}:</span> {{format-date-fns this.identity.expires_at "dd MMM yyyy, HH:mm"}}</div>
+                    {{/if}}
+                </div>
+            </header>
+
+            <div class="inspection-sheet mb-4">
+                <div class="inspection-sheet__body">
+                    <div class="inspection-sheet__groups">
+                        <section class="inspection-group">
+                            <div class="inspection-group__header">
+                                <span class="inspection-group__name">{{t "inspection.record.details"}}</span>
+                            </div>
+                            <div class="inspection-group__grid" data-columns="2">
+                                <div class="inspection-cell">
+                                    <span class="inspection-cell__label">{{t "inspection.record.odometer"}}</span>
+                                    <div class="inspection-cell__control">
+                                        <input type="number" inputmode="decimal" class="w-full form-input" aria-label={{t "inspection.record.odometer"}} placeholder={{t "inspection.record.odometer-placeholder"}} {{sync-value this.odometer}} {{on "input" (fn this.updateReading "odometer")}} />
+                                    </div>
+                                </div>
+                                <div class="inspection-cell">
+                                    <span class="inspection-cell__label">{{t "inspection.record.engine-hours"}}</span>
+                                    <div class="inspection-cell__control">
+                                        <input type="number" inputmode="decimal" class="w-full form-input" aria-label={{t "inspection.record.engine-hours"}} placeholder={{t "inspection.record.engine-hours-placeholder"}} {{sync-value this.engineHours}} {{on "input" (fn this.updateReading "engineHours")}} />
+                                    </div>
+                                </div>
+                            </div>
+                        </section>
+                    </div>
+                </div>
+            </div>
+
+            {{#if this.hasSheet}}
+                <InspectionSheet @groups={{this.groups}} @values={{this.values}} @onChange={{this.setValue}} @uploader={{this.uploadFile}} />
+            {{else}}
+                <div class="inspection-sheet">
+                    <div class="inspection-sheet__body">
+                        <div class="inspection-group__empty px-4">{{t "inspection.record.form-has-no-fields"}}</div>
+                    </div>
+                </div>
+            {{/if}}
+
+            <div class="inspection-sheet mt-4">
+                <div class="inspection-sheet__body">
+                    <div class="inspection-sheet__groups">
+                        <section class="inspection-group">
+                            <div class="inspection-group__header">
+                                <span class="inspection-group__name">{{t "inspection.public.sign-off"}}</span>
+                            </div>
+                            <div class="inspection-group__grid" data-columns="1">
+                                <div class="inspection-cell">
+                                    <span class="inspection-cell__label">{{t "inspection.public.your-name"}}</span>
+                                    <span class="inspection-cell__hint">{{t "inspection.public.your-name-help"}}</span>
+                                    <div class="inspection-cell__control">
+                                        <input type="text" class="w-full form-input" aria-label={{t "inspection.public.your-name"}} placeholder={{t "inspection.public.your-name-placeholder"}} {{sync-value this.signatureName}} {{on "input" (fn this.updateReading "signatureName")}} />
+                                    </div>
+                                </div>
+                            </div>
+                        </section>
+                    </div>
+                </div>
+            </div>
+
+            {{#if this.error}}
+                <div class="mt-4 rounded-lg border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/20 p-3 text-sm text-red-700 dark:text-red-300">{{this.error}}</div>
+            {{/if}}
+
+            <div class="public-inspection-submit mt-4 flex flex-col-reverse items-stretch gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
+                <div class="text-xs text-gray-500 dark:text-gray-400 text-center sm:text-left">
+                    {{#if (eq this.blockedReason "required")}}
+                        {{t "inspection.public.blocked-required" count=this.summary.missingRequired}}
+                    {{else if (eq this.blockedReason "defects")}}
+                        {{t "inspection.public.blocked-defects" count=this.summary.incompleteDefects}}
+                    {{/if}}
+                </div>
+                <Button
+                    @type="primary"
+                    @size="lg"
+                    @icon="paper-plane"
+                    @text={{t "inspection.public.submit"}}
+                    @disabled={{not this.canSubmit}}
+                    @isLoading={{this.submitInspection.isRunning}}
+                    @wrapperClass="public-inspection-submit__button"
+                    @onClick={{perform this.submitInspection}}
+                />
+            </div>
+
+            <FleetbaseAttribution @showPoweredBy={{true}} class="mt-8" />
+        {{/if}}
+    </div>
+</div>

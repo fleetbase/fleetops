@@ -1,0 +1,93 @@
+<div class="inspection-form-form" ...attributes>
+    <ContentPanel @title={{t "inspection.form.details"}} @open={{true}} @wrapperClass="bordered-top">
+        <div class="grid grid-cols-1 gap-2 lg:grid-cols-2 no-input-group-padding text-xs">
+            <InputGroup @name={{t "inspection.form.name"}} @wrapperClass="lg:col-span-2">
+                <input type="text" value={{@resource.name}} class="w-full form-input" placeholder={{t "inspection.form.name-placeholder"}} disabled={{cannot-write @resource}} {{on "input" this.setName}} />
+            </InputGroup>
+            <InputGroup @name={{t "inspection.form.type"}}>
+                <div class="fleetbase-model-select fleetbase-power-select ember-model-select">
+                    <PowerSelect
+                        @options={{get-fleet-ops-options "inspectionFormTypes"}}
+                        @selected={{find-by "value" @resource.type (get-fleet-ops-options "inspectionFormTypes")}}
+                        @onChange={{this.setType}}
+                        @placeholder={{t "inspection.form.type-placeholder"}}
+                        @triggerClass="form-select form-input"
+                        @disabled={{cannot-write @resource}}
+                        as |option|
+                    >
+                        <div class="text-sm">
+                            <div class="font-semibold normalize-in-trigger">{{option.label}}</div>
+                            <div class="hide-from-trigger">{{option.description}}</div>
+                        </div>
+                    </PowerSelect>
+                </div>
+            </InputGroup>
+            <InputGroup @name={{t "inspection.form.status"}}>
+                <div class="fleetbase-model-select fleetbase-power-select ember-model-select">
+                    <PowerSelect
+                        @options={{get-fleet-ops-options "inspectionFormStatuses"}}
+                        @selected={{find-by "value" @resource.status (get-fleet-ops-options "inspectionFormStatuses")}}
+                        @onChange={{this.setStatus}}
+                        @placeholder={{t "inspection.form.status-placeholder"}}
+                        @triggerClass="form-select form-input"
+                        @disabled={{cannot-write @resource}}
+                        as |option|
+                    >
+                        <div class="text-sm">
+                            <div class="font-semibold normalize-in-trigger">{{option.label}}</div>
+                            <div class="hide-from-trigger">{{option.description}}</div>
+                        </div>
+                    </PowerSelect>
+                </div>
+            </InputGroup>
+            <InputGroup @name={{t "inspection.form.description"}} @wrapperClass="lg:col-span-2">
+                <textarea class="w-full form-input" rows="3" placeholder={{t "inspection.form.description-placeholder"}} disabled={{cannot-write @resource}} {{on "input" this.setDescription}}>{{@resource.description}}</textarea>
+            </InputGroup>
+        </div>
+    </ContentPanel>
+
+    <ContentPanel @title={{t "inspection.form.settings"}} @open={{true}} @wrapperClass="bordered-top">
+        <div class="grid grid-cols-1 gap-1 no-input-group-padding text-xs">
+            {{#each this.settingOptions as |setting|}}
+                <InputGroup>
+                    <label class="flex flex-row items-start space-x-2 cursor-pointer">
+                        <input
+                            type="checkbox"
+                            class="form-checkbox mt-0.5"
+                            checked={{get this.settings setting.key}}
+                            disabled={{cannot-write @resource}}
+                            {{on "change" (fn this.setSetting setting.key)}}
+                        />
+                        <span>
+                            <span class="dark:text-gray-100 text-sm">{{setting.label}}</span>
+                            <span class="block mt-1 text-xs text-gray-500 dark:text-gray-400">{{setting.description}}</span>
+                        </span>
+                    </label>
+                </InputGroup>
+            {{/each}}
+        </div>
+    </ContentPanel>
+
+    <ContentPanel @title={{t "inspection.form.builder"}} @open={{true}} @wrapperClass="bordered-top">
+        <InspectionForm::Builder @resource={{@resource}} @groups={{@structure}} @onChange={{this.setStructure}} @disabled={{cannot-write @resource}} />
+    </ContentPanel>
+
+    {{#if this.legacyItems.length}}
+        <ContentPanel @title={{t "inspection.form.legacy-checklist"}} @open={{false}} @wrapperClass="bordered-top">
+            <div class="text-xs text-gray-500 mb-2">{{t "inspection.form.legacy-checklist-help"}}</div>
+            <div class="space-y-2 text-xs">
+                {{#each this.legacyItems as |item|}}
+                    <div class="flex items-center justify-between rounded border border-gray-200 dark:border-gray-700 p-2">
+                        <div>
+                            <div class="font-semibold">{{n-a item.label}}</div>
+                            <div class="text-gray-500">{{n-a item.category}}</div>
+                        </div>
+                        <Badge @status={{if (eq item.severity "critical") "danger" "info"}}>{{get-fleet-ops-option-label "inspectionSeverities" item.severity}}</Badge>
+                    </div>
+                {{/each}}
+            </div>
+        </ContentPanel>
+    {{/if}}
+
+    <CustomField::Yield @subject={{@resource}} @wrapperClass="bordered-top" />
+</div>

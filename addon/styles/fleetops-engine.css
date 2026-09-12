@@ -8883,3 +8883,1592 @@ body[data-theme='dark'] .filter-multi-model > .clear-button {
     height: 1.625rem;
     min-width: 4rem;
 }
+
+/* ==========================================================================
+   Inspection sheet — "Promotion"
+   --------------------------------------------------------------------------
+   The author's grid survives, but only for fields that stay compact. The
+   moment a field needs room — a pass-fail that failed and now owes a
+   severity, a comment and photos, or a note, upload or signature that never
+   fitted a column — it is promoted out of the grid into a full-width band at
+   the end of its group. Nothing stretches its neighbour, because after
+   promotion it has no neighbour.
+
+   Each group header carries one dot per field, so an inspector can see at a
+   glance what is still open without reading a label.
+
+   Rendered identically by the console's submission form, the read-only
+   record, and the public link a driver opens on a phone.
+   ========================================================================== */
+
+.inspection-sheet,
+.inspection-flyout {
+    --ins-bg: #fff;
+    --ins-bg-sunken: #f9fafb;
+    --ins-border: #e5e7eb;
+    --ins-border-strong: #d1d5db;
+    --ins-text: #111827;
+    --ins-text-soft: #374151;
+    --ins-text-muted: #6b7280;
+    --ins-text-faint: #9ca3af;
+    --ins-pass: #16a34a;
+    --ins-fail: #dc2626;
+    --ins-fail-text: #b91c1c;
+    --ins-fail-edge: #fecaca;
+    --ins-fail-fill: #fef2f2;
+    --ins-fail-fill-strong: #fee2e2;
+    --ins-fail-field: #fff;
+    --ins-fail-placeholder: #f87171;
+    --ins-fail-ring: rgb(220 38 38 / 22%);
+    --ins-fail-hatch-a: #fecaca;
+    --ins-fail-hatch-b: #fee2e2;
+    --ins-na: #6b7280;
+    --ins-warn: #d97706;
+    --ins-warn-text: #92400e;
+    --ins-warn-strong: #b45309;
+    --ins-hatch-a: #e5e7eb;
+    --ins-hatch-b: #f3f4f6;
+    --ins-mono: ui-monospace, 'IBM Plex Mono', sfmono-regular, menlo, monaco, consolas, monospace;
+}
+
+.inspection-sheet {
+    /* The floating flyouts are positioned against the sheet. */
+    position: relative;
+    display: flex;
+    flex-direction: column;
+
+    /*
+     * The sheet is measured, not the window. It renders in a ~600px overlay
+     * panel on a wide screen and full width on a phone, so a viewport media
+     * query would collapse the author's columns in exactly the wrong places.
+     */
+    container-type: inline-size;
+}
+
+body[data-theme='dark'] .inspection-sheet,
+body[data-theme='dark'] .inspection-flyout {
+    --ins-bg: #1f2937;
+    --ins-bg-sunken: #1f2937;
+    --ins-border: #374151;
+    --ins-border-strong: #4b5563;
+    --ins-text: #f9fafb;
+    --ins-text-soft: #e5e7eb;
+    --ins-text-muted: #9ca3af;
+    --ins-text-faint: #6b7280;
+    --ins-pass: #16a34a;
+    --ins-fail: #dc2626;
+    --ins-fail-text: #fca5a5;
+    --ins-fail-edge: #4c2326;
+    --ins-fail-fill: #241b1e;
+    --ins-fail-fill-strong: #3f1d1d;
+    --ins-fail-field: #1b1416;
+    --ins-fail-placeholder: #a86b6e;
+    --ins-fail-ring: rgb(239 68 68 / 28%);
+    --ins-fail-hatch-a: #3b2326;
+    --ins-fail-hatch-b: #2c1b1e;
+    --ins-na: #9ca3af;
+    --ins-warn: #b45309;
+    --ins-warn-text: #fcd34d;
+    --ins-warn-strong: #fbbf24;
+    --ins-hatch-a: #374151;
+    --ins-hatch-b: #2b3644;
+}
+
+/* The sheet is one card, not one card per group. */
+.inspection-sheet__body {
+    border: 1px solid var(--ins-border);
+    border-radius: 0.5rem;
+    background-color: var(--ins-bg);
+    box-shadow: 0 1px 2px rgb(0 0 0 / 6%);
+    overflow: hidden;
+}
+
+body[data-theme='dark'] .inspection-sheet__body {
+    box-shadow: 0 1px 3px rgb(0 0 0 / 35%);
+}
+
+.inspection-sheet__groups {
+    padding: 1rem;
+}
+
+/* --- group header ------------------------------------------------------- */
+
+.inspection-group__header {
+    display: flex;
+    align-items: center;
+    gap: 0.625rem;
+    padding-bottom: 0.5625rem;
+    border-bottom: 1px solid var(--ins-border);
+}
+
+.inspection-group + .inspection-group {
+    margin-top: 1.75rem;
+}
+
+.inspection-group__name {
+    font-size: 0.75rem;
+    font-weight: 600;
+    line-height: 1;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--ins-text-soft);
+    min-width: 0;
+}
+
+/* One dot per field: what is answered, what failed, what is still open. */
+.inspection-group__dots {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+    flex-shrink: 0;
+}
+
+.inspection-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    box-sizing: border-box;
+    background-color: var(--ins-text-faint);
+}
+
+.inspection-dot[data-marker='pass'] {
+    background-color: var(--ins-pass);
+}
+
+.inspection-dot[data-marker='fail'] {
+    background-color: var(--ins-fail);
+}
+
+.inspection-dot[data-marker='na'] {
+    background-color: var(--ins-na);
+}
+
+.inspection-dot[data-marker='outstanding'] {
+    background-color: var(--ins-warn-strong);
+}
+
+.inspection-dot[data-marker='empty'] {
+    background-color: transparent;
+    border: 1px solid var(--ins-text-faint);
+}
+
+.inspection-group__meta {
+    margin-left: auto;
+    flex-shrink: 0;
+    font-family: var(--ins-mono);
+    font-size: 0.6875rem;
+    line-height: 1;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+    color: var(--ins-text-faint);
+    white-space: nowrap;
+}
+
+.inspection-group__meta[data-outstanding='true'] {
+    color: var(--ins-warn-strong);
+}
+
+.inspection-group__description {
+    margin: 0.5rem 0 0;
+    font-size: 0.75rem;
+    line-height: 1.45;
+    color: var(--ins-text-muted);
+}
+
+.inspection-group__empty {
+    padding: 0.75rem 0;
+    font-size: 0.75rem;
+    color: var(--ins-text-muted);
+}
+
+/* --- the author's grid, for fields that stay compact -------------------- */
+
+.inspection-group__grid {
+    display: grid;
+    gap: 1rem 0.875rem;
+    align-items: start;
+    padding-top: 0.875rem;
+}
+
+.inspection-group__grid > .inspection-band {
+    grid-column: 1 / -1;
+}
+
+.inspection-group__grid[data-columns='1'] {
+    grid-template-columns: minmax(0, 1fr);
+}
+
+.inspection-group__grid[data-columns='2'] {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.inspection-group__grid[data-columns='3'] {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.inspection-group__grid[data-columns='4'] {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+/* A narrow sheet cannot hold the wider authored grids. */
+@container (width <= 660px) {
+    .inspection-group__grid[data-columns='3'],
+    .inspection-group__grid[data-columns='4'] {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+/*
+ * A phone-width sheet stacks every grid. Matched to the `[data-columns]`
+ * rules' specificity: as a bare class it lost to them, and an authored two- or
+ * three-column group stayed in two 160px columns on a phone.
+ */
+@container (width <= 420px) {
+    .inspection-group__grid[data-columns] {
+        grid-template-columns: minmax(0, 1fr);
+    }
+}
+
+/* --- a compact field --------------------------------------------------- */
+
+.inspection-cell {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    min-width: 0;
+}
+
+.inspection-cell__label {
+    font-size: 0.8125rem;
+    font-weight: 600;
+    line-height: 1.3;
+    color: var(--ins-text);
+}
+
+.inspection-required {
+    color: var(--ins-fail);
+    margin-left: 0.125rem;
+}
+
+.inspection-cell__hint {
+    font-size: 0.75rem;
+    line-height: 1.4;
+    color: var(--ins-text-muted);
+    white-space: pre-wrap;
+}
+
+.inspection-cell__control {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    min-width: 0;
+    width: 100%;
+}
+
+.inspection-cell__control > .fleetbase-model-select,
+.inspection-cell__control > .ember-basic-dropdown {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+.inspection-unit {
+    flex-shrink: 0;
+    font-family: var(--ins-mono);
+    font-size: 0.75rem;
+    color: var(--ins-text-muted);
+}
+
+.inspection-note {
+    font-size: 0.75rem;
+    color: var(--ins-text-faint);
+}
+
+/* A required answer that is still missing says so on its own edge. */
+.inspection-input--outstanding.form-input,
+.inspection-input--outstanding .ember-power-select-trigger {
+    border-color: var(--ins-warn);
+}
+
+/* --- the pass / fail / n-a and severity segmented controls -------------- */
+
+.inspection-choice {
+    display: flex;
+    align-items: stretch;
+    min-height: 2.25rem;
+    border: 1px solid var(--ins-border);
+    border-radius: 0.375rem;
+    overflow: hidden;
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+/* On a promoted band the control is pushed to the right at its natural size. */
+.inspection-choice--auto {
+    flex: 0 0 auto;
+    margin-left: auto;
+}
+
+.inspection-choice__option {
+    appearance: none;
+    border: 0;
+    background: transparent;
+    flex: 1 1 0;
+    min-width: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.375rem 0.5rem;
+    font-size: 0.8125rem;
+    font-weight: 500;
+    line-height: 1;
+    color: var(--ins-text-muted);
+    cursor: pointer;
+    white-space: nowrap;
+    transition:
+        background-color 0.12s ease,
+        color 0.12s ease;
+}
+
+.inspection-choice--auto .inspection-choice__option {
+    flex: 0 0 auto;
+    padding: 0 0.75rem;
+}
+
+.inspection-choice__option + .inspection-choice__option {
+    border-left: 1px solid var(--ins-border);
+}
+
+.inspection-choice__option:hover:not(:disabled) {
+    color: var(--ins-text);
+}
+
+.inspection-choice__option:focus-visible {
+    outline: 2px solid #2563eb;
+    outline-offset: -2px;
+}
+
+.inspection-choice__option:disabled {
+    cursor: not-allowed;
+    opacity: 0.55;
+}
+
+.inspection-choice__option[aria-pressed='true'] {
+    font-weight: 600;
+    color: #fff;
+    background-color: var(--ins-na);
+}
+
+.inspection-choice__option[aria-pressed='true'][data-answer='pass'] {
+    background-color: var(--ins-pass);
+}
+
+.inspection-choice__option[aria-pressed='true'][data-answer='fail'],
+.inspection-choice__option[aria-pressed='true'][data-answer='severity'] {
+    background-color: var(--ins-fail);
+}
+
+/* --- a promoted band ---------------------------------------------------- */
+
+.inspection-band {
+    border: 1px solid var(--ins-border);
+    border-radius: 0.375rem;
+    overflow: hidden;
+}
+
+.inspection-band__head {
+    display: flex;
+    align-items: center;
+    gap: 0.625rem;
+    padding: 0.6875rem 0.75rem;
+}
+
+.inspection-band__label {
+    font-size: 0.8125rem;
+    font-weight: 600;
+    line-height: 1.3;
+    color: var(--ins-text);
+    min-width: 0;
+}
+
+.inspection-band__aside {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: 0.5625rem;
+    flex-shrink: 0;
+}
+
+.inspection-band__body {
+    padding: 0.75rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.625rem;
+}
+
+.inspection-band--stacked .inspection-band__body {
+    padding-top: 0;
+}
+
+/* A failure keeps the same band, in red, with its own detail below. */
+.inspection-band--defect {
+    border-color: var(--ins-fail);
+    background-color: var(--ins-fail-fill);
+}
+
+.inspection-band--defect .inspection-band__head {
+    border-bottom: 1px solid var(--ins-fail-edge);
+    padding-right: 0.75rem;
+}
+
+.inspection-chip {
+    flex-shrink: 0;
+    font-family: var(--ins-mono);
+    font-size: 0.625rem;
+    font-weight: 700;
+    line-height: 1;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--ins-fail-text);
+    border: 1px solid var(--ins-fail-edge);
+    border-radius: 0.1875rem;
+    padding: 0.25rem 0.3125rem;
+}
+
+.inspection-band--defect .form-input {
+    border-color: var(--ins-fail-edge);
+    background-color: transparent;
+}
+
+.inspection-band--defect .form-input:focus {
+    border-color: var(--ins-fail);
+}
+
+.inspection-band--defect .inspection-choice,
+.inspection-band--defect .inspection-slot {
+    border-color: var(--ins-fail-edge);
+}
+
+.inspection-defect__row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 0.625rem;
+    align-items: center;
+}
+
+@container (width <= 560px) {
+    .inspection-defect__row {
+        grid-template-columns: minmax(0, 1fr);
+    }
+}
+
+/* The unsafe switch is a pill, not a bare toggle: it is the gravest thing here. */
+.inspection-unsafe {
+    display: flex;
+    align-items: center;
+    gap: 0.4375rem;
+    min-height: 2.25rem;
+    padding: 0 0.625rem;
+    border: 1px solid var(--ins-fail);
+    border-radius: 0.375rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--ins-fail-text);
+    white-space: nowrap;
+}
+
+.inspection-unsafe[data-on='true'] {
+    background-color: var(--ins-fail-fill-strong);
+}
+
+/* --- photo slots -------------------------------------------------------- */
+
+.inspection-slots {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.inspection-slot {
+    display: block;
+    position: relative;
+    width: 60px;
+    height: 44px;
+    border-radius: 0.3125rem;
+    border: 1px solid var(--ins-border);
+    overflow: hidden;
+    flex-shrink: 0;
+    background: repeating-linear-gradient(45deg, var(--ins-hatch-a) 0 6px, var(--ins-hatch-b) 6px 12px);
+}
+
+.inspection-slot img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.inspection-slot__icon {
+    display: flex;
+    width: 100%;
+    height: 100%;
+    align-items: center;
+    justify-content: center;
+    color: var(--ins-text-faint);
+}
+
+.inspection-slot__remove {
+    position: absolute;
+    top: 0;
+    right: 0;
+}
+
+/* The empty slot invites the next photo rather than sitting as a button. */
+.inspection-slot--add {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px dashed var(--ins-border-strong);
+    background: none;
+    cursor: pointer;
+    font-size: 1.125rem;
+    line-height: 1;
+    color: var(--ins-text-faint);
+    padding: 0;
+    text-decoration: none;
+}
+
+.inspection-slot--add:hover {
+    color: var(--ins-text);
+    border-color: var(--ins-text-faint);
+}
+
+.inspection-slots__note {
+    margin-left: auto;
+    text-align: right;
+    font-family: var(--ins-mono);
+    font-size: 0.6875rem;
+    line-height: 1.4;
+    text-transform: uppercase;
+    color: var(--ins-text-faint);
+}
+
+/* --- the foot ----------------------------------------------------------- */
+
+.inspection-foot {
+    border-top: 1px solid var(--ins-border);
+    background-color: var(--ins-bg-sunken);
+    padding: 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.625rem;
+}
+
+.inspection-tallies {
+    display: flex;
+    align-items: stretch;
+    gap: 0.5rem;
+}
+
+.inspection-tally {
+    flex: 1 1 0;
+    min-width: 0;
+    background-color: var(--ins-bg);
+    border: 1px solid var(--ins-border);
+    border-left: 3px solid var(--ins-na);
+    border-radius: 0.375rem;
+    padding: 0.625rem 0.75rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.3125rem;
+}
+
+.inspection-tally[data-kind='passed'] {
+    border-left-color: var(--ins-pass);
+}
+
+.inspection-tally[data-kind='failed'] {
+    border-left-color: var(--ins-fail);
+}
+
+.inspection-tally[data-kind='outstanding'] {
+    border-left-color: var(--ins-warn);
+}
+
+.inspection-tally[data-kind='outstanding'][data-any='true'] {
+    border-color: var(--ins-warn);
+    border-left-color: var(--ins-warn);
+}
+
+.inspection-tally__value {
+    font-size: 1.25rem;
+    font-weight: 700;
+    line-height: 1;
+    font-variant-numeric: tabular-nums;
+    color: var(--ins-text);
+}
+
+.inspection-tally[data-kind='outstanding'][data-any='true'] .inspection-tally__value {
+    color: var(--ins-warn-text);
+}
+
+.inspection-tally__label {
+    font-size: 0.6875rem;
+    font-weight: 500;
+    line-height: 1;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--ins-text-muted);
+}
+
+/*
+ * On a phone, four tallies in a row leave "Outstanding" no room: two by two.
+ * A grid rather than wrapping flex items at half width, which only pairs up
+ * under border-box sizing; with padding added to the basis they stack one high.
+ */
+@container (width <= 420px) {
+    .inspection-tallies {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+.inspection-tally[data-kind='outstanding'][data-any='true'] .inspection-tally__label {
+    color: var(--ins-warn-strong);
+}
+
+.inspection-banner {
+    display: flex;
+    align-items: center;
+    gap: 0.625rem;
+    padding: 0.6875rem 0.75rem;
+    border: 1px solid var(--ins-warn);
+    border-radius: 0.375rem;
+    background-color: var(--ins-bg);
+    font-size: 0.75rem;
+    line-height: 1.4;
+    color: var(--ins-warn-text);
+}
+
+.inspection-banner--unsafe {
+    border-color: var(--ins-fail);
+    background-color: var(--ins-fail-fill);
+    color: var(--ins-fail-text);
+}
+
+body[data-theme='dark'] .inspection-banner--unsafe {
+    background-color: #3f1d1d;
+}
+
+.inspection-banner__chip {
+    flex-shrink: 0;
+    font-family: var(--ins-mono);
+    font-size: 0.6875rem;
+    font-weight: 700;
+    line-height: 1;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: #fff;
+    background-color: var(--ins-fail);
+    border-radius: 0.25rem;
+    padding: 0.3125rem 0.4375rem;
+}
+
+.inspection-banner__jump {
+    appearance: none;
+    border: 0;
+    background: none;
+    margin-left: auto;
+    flex-shrink: 0;
+    padding: 0;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: inherit;
+    cursor: pointer;
+    white-space: nowrap;
+}
+
+.inspection-banner__jump:hover {
+    text-decoration: underline;
+}
+
+/* A jumped-to field is held for a moment so the eye can find it. */
+.inspection-cell--targeted,
+.inspection-band--targeted {
+    animation: inspection-target 1.6s ease-out;
+}
+
+@keyframes inspection-target {
+    0%,
+    60% {
+        box-shadow: 0 0 0 2px var(--ins-warn);
+    }
+
+    100% {
+        box-shadow: 0 0 0 2px transparent;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .inspection-cell--targeted,
+    .inspection-band--targeted {
+        animation: none;
+        box-shadow: 0 0 0 2px var(--ins-warn);
+    }
+}
+
+/*
+ * The sheet sits inside an overlay panel that has its own edge. Without an
+ * inset its borders land on that edge and read as a double rule.
+ */
+.inspection-sheet-inset {
+    padding: 0.75rem;
+}
+
+/* ==========================================================================
+   Inspection links
+   --------------------------------------------------------------------------
+   A generated link used to exist only as a toast. These are the rows that
+   replaced it: one per link, with the link itself, who and what it was for,
+   and whether it still works.
+   ========================================================================== */
+
+.inspection-link-list {
+    --inspection-border: #e5e7eb;
+    --inspection-surface: #fff;
+    --inspection-surface-sunken: #f9fafb;
+    --inspection-text: #111827;
+    --inspection-text-muted: #6b7280;
+}
+
+body[data-theme='dark'] .inspection-link-list {
+    --inspection-border: #374151;
+    --inspection-surface: #1f2937;
+    --inspection-surface-sunken: #1f2937;
+    --inspection-text: #f9fafb;
+    --inspection-text-muted: #9ca3af;
+}
+
+.inspection-link-list__empty {
+    padding: 0.75rem;
+    font-size: 0.75rem;
+    color: var(--inspection-text-muted);
+}
+
+/* The modal shows the list inside its own bordered block. */
+.inspection-link-panel {
+    border: 1px solid var(--inspection-border, #e5e7eb);
+    border-radius: 0.5rem;
+    overflow: hidden;
+}
+
+body[data-theme='dark'] .inspection-link-panel {
+    border-color: #374151;
+}
+
+.inspection-link-panel__header {
+    padding: 0.5rem 0.625rem;
+    border-bottom: 1px solid var(--inspection-border, #e5e7eb);
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: #374151;
+}
+
+body[data-theme='dark'] .inspection-link-panel__header {
+    border-bottom-color: #374151;
+    color: #e5e7eb;
+}
+
+.inspection-link {
+    display: flex;
+    flex-direction: column;
+    gap: 0.375rem;
+    padding: 0.5rem 0.625rem;
+}
+
+.inspection-link + .inspection-link {
+    border-top: 1px solid var(--inspection-border);
+}
+
+/* A link that can no longer be used recedes rather than disappearing. */
+.inspection-link:not([data-state='active']) {
+    opacity: 0.6;
+}
+
+.inspection-link__head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.inspection-link__state {
+    flex-shrink: 0;
+    border-radius: 9999px;
+    padding: 0.125rem 0.5rem;
+    font-size: 0.625rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    background-color: #e5e7eb;
+    color: #374151;
+}
+
+.inspection-link__state[data-state='active'] {
+    background-color: #16a34a;
+    color: #fff;
+}
+
+.inspection-link__state[data-state='expired'],
+.inspection-link__state[data-state='revoked'] {
+    background-color: #dc2626;
+    color: #fff;
+}
+
+.inspection-link__state[data-state='used'] {
+    background-color: #2563eb;
+    color: #fff;
+}
+
+/* Locked after too many wrong PINs: stopped, but by a guesser, not by anyone here. */
+.inspection-link__state[data-state='locked'] {
+    background-color: #d97706;
+    color: #fff;
+}
+
+.inspection-link__for {
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: var(--inspection-text);
+    min-width: 0;
+}
+
+.inspection-link__when {
+    margin-left: auto;
+    flex-shrink: 0;
+    font-size: 0.6875rem;
+    color: var(--inspection-text-muted);
+}
+
+.inspection-link__url {
+    display: flex;
+    align-items: center;
+    gap: 0.375rem;
+    border: 1px solid var(--inspection-border);
+    border-radius: 0.375rem;
+    background-color: var(--inspection-surface);
+    box-shadow: inset 0 1px 2px rgb(0 0 0 / 6%);
+    padding: 0.25rem 0.375rem;
+}
+
+body[data-theme='dark'] .inspection-link__url {
+    box-shadow: inset 0 1px 2px rgb(0 0 0 / 25%);
+}
+
+.inspection-link__code {
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow-x: auto;
+    white-space: nowrap;
+    font-size: 0.6875rem;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    color: var(--inspection-text-muted);
+}
+
+.inspection-link__note {
+    font-size: 0.6875rem;
+    font-style: italic;
+    color: var(--inspection-text-muted);
+}
+
+.inspection-link__foot {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.375rem;
+    font-size: 0.6875rem;
+    color: var(--inspection-text-muted);
+}
+
+.inspection-link__sep {
+    padding: 0 0.125rem;
+    color: var(--inspection-text-muted);
+}
+
+.inspection-link__warn {
+    color: #b45309;
+}
+
+body[data-theme='dark'] .inspection-link__warn {
+    color: #fbbf24;
+}
+
+/* The PIN that goes with a link, with ways to copy it or send it again. */
+.inspection-link__pin {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.375rem;
+    font-size: 0.6875rem;
+    color: var(--inspection-text-muted);
+}
+
+.inspection-link__pin-label {
+    font-size: 0.625rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+}
+
+.inspection-link__pin-code {
+    margin-right: 0.25rem;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    font-size: 0.875rem;
+    font-weight: 700;
+    letter-spacing: 0.2em;
+    color: var(--inspection-text, #111827);
+}
+
+body[data-theme='dark'] .inspection-link__pin-code {
+    color: #f9fafb;
+}
+
+/* The PIN asked for before a public link shows its form: large, spaced, easy to type on a phone. */
+.public-inspection-pin input.public-inspection-pin__input.form-input {
+    height: auto;
+    padding: 0.625rem 0.75rem;
+    text-align: center;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    font-size: 1.5rem;
+    letter-spacing: 0.5em;
+    text-indent: 0.5em;
+}
+
+/* On a phone the submit button spans the page, where a thumb can reach it. */
+@media (width <= 639px) {
+    .public-inspection-submit__button,
+    .public-inspection-submit__button > button {
+        width: 100%;
+        justify-content: center;
+    }
+}
+
+/*
+ * A select option: photo, name, and a line of detail. Colours are inherited
+ * rather than set, so an option reads correctly on the dropdown's highlighted
+ * row and in dark mode without rules of its own for either.
+ */
+.select-option {
+    display: flex;
+    align-items: center;
+    gap: 0.625rem;
+    min-width: 0;
+    padding: 0.125rem 0;
+}
+
+.select-option__photo {
+    flex-shrink: 0;
+    width: 2rem;
+    height: 2rem;
+    object-fit: cover;
+    border-radius: 9999px;
+    background-color: rgb(156 163 175 / 20%);
+}
+
+.select-option__photo[data-shape='square'] {
+    border-radius: 0.375rem;
+}
+
+.select-option__text {
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
+    gap: 0.125rem;
+    min-width: 0;
+}
+
+.select-option__title,
+.select-option__details {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.select-option__title {
+    font-size: 0.8125rem;
+    font-weight: 600;
+    line-height: 1.2;
+}
+
+.select-option__details {
+    font-size: 0.6875rem;
+    line-height: 1.2;
+    opacity: 0.7;
+}
+
+/* In a closed select there is room for one line: a small photo, the name, then the detail. */
+.select-option--compact {
+    gap: 0.5rem;
+    padding: 0;
+}
+
+.select-option--compact .select-option__photo {
+    width: 1.25rem;
+    height: 1.25rem;
+}
+
+.select-option--compact .select-option__text {
+    flex-direction: row;
+    align-items: baseline;
+    gap: 0.375rem;
+}
+
+.select-option--compact .select-option__title {
+    flex-shrink: 0;
+    max-width: 60%;
+    font-weight: 500;
+}
+
+/* A link just generated, shown above the form until the modal closes. */
+.inspection-link-generated {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    border: 1px solid #bbf7d0;
+    border-radius: 0.5rem;
+    background-color: #f0fdf4;
+    padding: 0.625rem;
+}
+
+body[data-theme='dark'] .inspection-link-generated {
+    border-color: #166534;
+    background-color: rgb(22 101 52 / 20%);
+}
+
+.inspection-link-generated__title {
+    display: flex;
+    align-items: center;
+    gap: 0.375rem;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: #14532d;
+}
+
+body[data-theme='dark'] .inspection-link-generated__title {
+    color: #bbf7d0;
+}
+
+.inspection-link-generated__help {
+    margin: 0;
+    font-size: 0.6875rem;
+    color: #166534;
+}
+
+body[data-theme='dark'] .inspection-link-generated__help {
+    color: #86efac;
+}
+
+.inspection-link-generated .inspection-link__url {
+    background-color: #fff;
+}
+
+body[data-theme='dark'] .inspection-link-generated .inspection-link__url {
+    background-color: #1f2937;
+    border-color: #374151;
+}
+
+/* A stored answer, read back: the same row, with the value where the control was. */
+.inspection-row__answer {
+    font-size: 0.8125rem;
+    color: var(--inspection-text);
+}
+
+/* A stored answer, read back: the value sits where the control was. */
+.inspection-answer {
+    margin: 0;
+    font-size: 0.8125rem;
+    line-height: 1.5;
+    color: var(--ins-text-soft);
+    white-space: pre-wrap;
+    min-width: 0;
+}
+
+/* ==========================================================================
+   Defect flyout
+   --------------------------------------------------------------------------
+   A failed check keeps its cell. Its severity, unsafe flag, comment and
+   photos open in a panel anchored to that cell, so failing a check can never
+   change the layout of the sheet. Closing it leaves a chip in the cell, and
+   the defects tray at the foot keeps the record.
+   ========================================================================== */
+
+/* The open field is ringed with an outline, which takes no space: opening a
+   flyout must not move anything either. */
+.inspection-cell--flyout-open {
+    outline: 2px solid var(--ins-fail);
+    outline-offset: 6px;
+    border-radius: 0.375rem;
+}
+
+/* --- the chip a closed failure leaves in its cell ----------------------- */
+
+.inspection-defect-chip {
+    appearance: none;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.375rem 0.5rem;
+    width: 100%;
+    padding: 0.4375rem 0.625rem;
+    border: 1px solid var(--ins-fail-edge);
+    border-left: 3px solid var(--ins-fail);
+    border-radius: 0.375rem;
+    background-color: var(--ins-fail-fill);
+    color: var(--ins-fail-text);
+    font-size: 0.75rem;
+    line-height: 1.3;
+    text-align: left;
+    cursor: pointer;
+}
+
+.inspection-defect-chip:hover:not(:disabled) {
+    border-color: var(--ins-fail);
+}
+
+.inspection-defect-chip:focus-visible {
+    outline: 2px solid #2563eb;
+    outline-offset: 2px;
+}
+
+.inspection-defect-chip:disabled {
+    cursor: default;
+}
+
+.inspection-defect-chip.is-incomplete {
+    border-left-color: var(--ins-warn);
+}
+
+.inspection-defect-chip__severity {
+    font-size: 0.6875rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+}
+
+.inspection-defect-chip__unsafe {
+    font-family: var(--ins-mono);
+    font-size: 0.625rem;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: #fff;
+    background-color: var(--ins-fail);
+    border-radius: 0.1875rem;
+    padding: 0.1875rem 0.3125rem;
+}
+
+.inspection-defect-chip__meta {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    color: var(--ins-text-muted);
+}
+
+.inspection-defect-chip__status {
+    font-weight: 600;
+    color: var(--ins-warn-strong);
+}
+
+.inspection-defect-chip__edit {
+    margin-left: auto;
+    color: var(--ins-text-muted);
+}
+
+/* --- the flyout -------------------------------------------------------- */
+
+.inspection-flyout {
+    display: flex;
+    flex-direction: column;
+    background-color: var(--ins-fail-fill);
+    color: var(--ins-text);
+    border: 1px solid var(--ins-fail);
+    border-radius: 0.5rem;
+    box-shadow:
+        0 12px 32px rgb(0 0 0 / 18%),
+        0 2px 6px rgb(0 0 0 / 8%);
+    outline: none;
+}
+
+body[data-theme='dark'] .inspection-flyout {
+    box-shadow:
+        0 16px 40px rgb(0 0 0 / 55%),
+        0 2px 6px rgb(0 0 0 / 30%);
+}
+
+.inspection-flyout--floating {
+    position: absolute;
+    z-index: 40;
+    width: min(30rem, calc(100% - 1rem));
+    animation: inspection-flyout-in 0.14s ease-out;
+}
+
+.inspection-flyout--floating[data-placement='top'] {
+    animation-name: inspection-flyout-in-above;
+}
+
+/*
+ * Room for the reveal's margin at the very end of the page. An absolutely
+ * placed box extends the scroll area, but its margin does not, so without this
+ * a flyout opened below the last field could only ever sit flush against the
+ * bottom edge of the panel.
+ */
+.inspection-flyout--floating::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: -0.5rem;
+    height: 0.5rem;
+    pointer-events: none;
+}
+
+/* A caret points at the Fail button of the field it belongs to. */
+.inspection-flyout__caret {
+    position: absolute;
+    left: var(--flyout-caret-x, 1.5rem);
+    width: 12px;
+    height: 12px;
+    background-color: var(--ins-fail-fill);
+    border: 1px solid var(--ins-fail);
+    transform: translateX(-50%) rotate(45deg);
+    pointer-events: none;
+}
+
+.inspection-flyout[data-placement='bottom'] .inspection-flyout__caret {
+    top: -7px;
+    border-right: 0;
+    border-bottom: 0;
+}
+
+.inspection-flyout[data-placement='top'] .inspection-flyout__caret {
+    bottom: -7px;
+    border-top: 0;
+    border-left: 0;
+}
+
+.inspection-flyout__head {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.625rem 0.75rem;
+    border-bottom: 1px solid var(--ins-fail-edge);
+}
+
+.inspection-flyout__title {
+    min-width: 0;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    line-height: 1.3;
+}
+
+.inspection-flyout__close {
+    appearance: none;
+    border: 0;
+    background: none;
+    margin-left: auto;
+    padding: 0.25rem 0.375rem;
+    border-radius: 0.25rem;
+    color: var(--ins-text-muted);
+    cursor: pointer;
+}
+
+.inspection-flyout__close:hover {
+    color: var(--ins-text);
+}
+
+.inspection-flyout__close:focus-visible {
+    outline: 2px solid #2563eb;
+}
+
+.inspection-flyout__body {
+    display: flex;
+    flex-direction: column;
+    gap: 0.625rem;
+    padding: 0.75rem;
+    overflow-y: auto;
+}
+
+.inspection-flyout__foot {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 0.75rem;
+    padding: 0.625rem 0.75rem;
+    border-top: 1px solid var(--ins-fail-edge);
+}
+
+.inspection-flyout__note {
+    margin-right: auto;
+    font-family: var(--ins-mono);
+    font-size: 0.6875rem;
+    line-height: 1.4;
+    text-transform: uppercase;
+    color: var(--ins-warn-strong);
+}
+
+/* Inside a failure, every control takes the failure's colours. */
+.inspection-flyout .inspection-choice {
+    border-color: var(--ins-fail-edge);
+}
+
+.inspection-flyout .inspection-choice__option + .inspection-choice__option {
+    border-left-color: var(--ins-fail-edge);
+}
+
+.inspection-flyout .inspection-choice__option:hover:not(:disabled) {
+    background-color: var(--ins-fail-fill-strong);
+}
+
+/*
+ * The comment box belongs to the failure. ember-ui styles every console
+ * input with `body[data-theme='dark'] .fleetbase-console .form-input`, which
+ * outranks a plain `.inspection-flyout .form-input` — so an earlier attempt
+ * at this left a grey box inside a red panel. This selector is deliberately
+ * heavier than that rule, and takes its colours from the theme tokens.
+ */
+html body .inspection-flyout textarea.inspection-defect-comment.form-input {
+    background-color: var(--ins-fail-field);
+    border-color: var(--ins-fail-edge);
+    color: var(--ins-text);
+    box-shadow: none;
+}
+
+html body .inspection-flyout textarea.inspection-defect-comment.form-input::placeholder {
+    color: var(--ins-fail-placeholder);
+}
+
+html body .inspection-flyout textarea.inspection-defect-comment.form-input:focus {
+    border-color: var(--ins-fail);
+    box-shadow: 0 0 0 3px var(--ins-fail-ring);
+    outline: none;
+}
+
+/* Photos sit in the failure too: red hatching, a red-edged slot for the next. */
+.inspection-flyout .inspection-slot:not(.inspection-slot--add) {
+    border-color: var(--ins-fail-edge);
+    background: repeating-linear-gradient(45deg, var(--ins-fail-hatch-a) 0 6px, var(--ins-fail-hatch-b) 6px 12px);
+}
+
+.inspection-flyout .inspection-slot--add {
+    border-color: var(--ins-fail-edge);
+    color: var(--ins-fail-text);
+}
+
+.inspection-flyout .inspection-slot--add:hover {
+    border-color: var(--ins-fail);
+    color: var(--ins-fail);
+}
+
+/* --- on a phone, the same content as a bottom sheet --------------------- */
+
+.inspection-flyout--sheet {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 1100;
+    max-height: 85vh;
+    border-bottom: 0;
+    border-radius: 0.875rem 0.875rem 0 0;
+    padding-bottom: env(safe-area-inset-bottom);
+    animation: inspection-sheet-in 0.2s ease-out;
+}
+
+/* A grab handle, so it reads as something that came up and will go down. */
+.inspection-flyout--sheet::before {
+    content: '';
+    display: block;
+    width: 2.5rem;
+    height: 0.25rem;
+    margin: 0.5rem auto 0;
+    border-radius: 9999px;
+    background-color: var(--ins-border-strong);
+}
+
+.inspection-flyout-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 1099;
+    background-color: rgb(0 0 0 / 40%);
+    animation: inspection-fade-in 0.2s ease-out;
+}
+
+@keyframes inspection-flyout-in {
+    from {
+        opacity: 0;
+        transform: translateY(-4px);
+    }
+
+    to {
+        opacity: 1;
+        transform: none;
+    }
+}
+
+@keyframes inspection-flyout-in-above {
+    from {
+        opacity: 0;
+        transform: translateY(4px);
+    }
+
+    to {
+        opacity: 1;
+        transform: none;
+    }
+}
+
+@keyframes inspection-sheet-in {
+    from {
+        transform: translateY(100%);
+    }
+
+    to {
+        transform: none;
+    }
+}
+
+@keyframes inspection-fade-in {
+    from {
+        opacity: 0;
+    }
+
+    to {
+        opacity: 1;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .inspection-flyout,
+    .inspection-flyout-backdrop {
+        animation: none;
+    }
+}
+
+/* --- the defects tray -------------------------------------------------- */
+
+.inspection-tray {
+    border: 1px solid var(--ins-border);
+    border-radius: 0.375rem;
+    background-color: var(--ins-bg);
+    overflow: hidden;
+}
+
+.inspection-tray__head {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 0.75rem;
+    border-bottom: 1px solid var(--ins-border);
+    font-size: 0.6875rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--ins-text-soft);
+}
+
+.inspection-tray__count {
+    min-width: 1.25rem;
+    padding: 0.125rem 0.375rem;
+    border-radius: 9999px;
+    background-color: var(--ins-fail);
+    color: #fff;
+    font-size: 0.625rem;
+    text-align: center;
+    letter-spacing: 0;
+}
+
+.inspection-tray__row {
+    appearance: none;
+    border: 0;
+    background: none;
+    width: 100%;
+    display: flex;
+    align-items: center;
+    gap: 0.625rem;
+    padding: 0.625rem 0.75rem;
+    text-align: left;
+    cursor: pointer;
+    color: var(--ins-text);
+    font-size: 0.8125rem;
+}
+
+.inspection-tray__row + .inspection-tray__row {
+    border-top: 1px solid var(--ins-border);
+}
+
+.inspection-tray__row:hover {
+    background-color: rgb(127 127 127 / 8%);
+}
+
+.inspection-tray__row:focus-visible {
+    outline: 2px solid #2563eb;
+    outline-offset: -2px;
+}
+
+.inspection-tray__severity {
+    flex-shrink: 0;
+    min-width: 4.25rem;
+    padding: 0.25rem 0.375rem;
+    border: 1px solid var(--ins-fail-edge);
+    border-radius: 0.25rem;
+    font-size: 0.625rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-align: center;
+    text-transform: uppercase;
+    color: var(--ins-fail-text);
+}
+
+.inspection-tray__severity[data-severity='high'],
+.inspection-tray__severity[data-severity='critical'] {
+    border-color: var(--ins-fail);
+    background-color: var(--ins-fail);
+    color: #fff;
+}
+
+.inspection-tray__label {
+    flex: 1 1 auto;
+    min-width: 0;
+    font-weight: 600;
+}
+
+.inspection-tray__evidence {
+    flex-shrink: 0;
+    font-size: 0.75rem;
+    color: var(--ins-text-muted);
+}
+
+.inspection-tray__evidence[data-incomplete='true'] {
+    font-weight: 600;
+    color: var(--ins-warn-strong);
+}
+
+.inspection-tray__action {
+    flex-shrink: 0;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--ins-fail-text);
+}
+
+@container (width <= 480px) {
+    .inspection-tray__row {
+        flex-wrap: wrap;
+    }
+
+    .inspection-tray__evidence {
+        flex-basis: 100%;
+        order: 5;
+    }
+}

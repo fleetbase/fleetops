@@ -2,9 +2,9 @@
 
 namespace Fleetbase\FleetOps\Http\Controllers\Api\v1;
 
+use Fleetbase\FleetOps\Models\Driver;
 use Fleetbase\FleetOps\Models\GeofenceEventLog;
 use Fleetbase\FleetOps\Support\Utils;
-use Fleetbase\FleetOps\Models\Driver;
 use Fleetbase\Http\Controllers\Controller;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;

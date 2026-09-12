@@ -86,6 +86,8 @@ menu:
     maintenance: Maintenance
     schedules: Schedules
     work-orders: Work Orders
+    inspection-forms: 'Inspection Forms'
+    inspections: 'Inspections'
     equipment: Equipment
     parts: Parts
     maintenance-history: Maintenance History
@@ -2746,3 +2748,266 @@ orchestrator:
     stop-type-dropoff: Dropoff
     pod-required: POD
     no-pod: No POD
+
+inspection:
+    form:
+        overview: Overview
+        details: Form Details
+        name: Name
+        name-placeholder: Daily vehicle inspection
+        type: Type
+        status: Status
+        description: Description
+        description-placeholder: What this inspection covers
+        builder: Form Builder
+        fields: Fields
+        published: Published
+        structure: Form Structure
+        loading-structure: Loading form structure...
+        no-structure: This form has no field groups yet.
+        settings: Settings
+        type-placeholder: Select the kind of inspection this form is
+        status-placeholder: Select a status
+        setting-create-issue: Open a defect record when an item fails
+        setting-create-issue-help: A failed inspection files an issue against the vehicle, so the failure has somewhere to live.
+        setting-create-work-order: Open a work order when an item fails
+        setting-create-work-order-help: The failed items become a work order checklist for the workshop. Needs workshops enabled.
+        setting-require-signature: Require the driver to sign
+        setting-require-signature-help: The driver app will not submit without a signature. Add a signature field to the form instead if you want it in a particular place.
+        legacy-checklist: Legacy Checklist
+        legacy-checklist-help: The first cut's checklist, kept read-only. It is migrated into a "Checklist" group of pass/fail fields.
+        create: Create inspection form
+        created: Inspection form created.
+        updated: Inspection form updated.
+    builder:
+        help: Group the things a driver checks, then add a field for each one.
+        loading: Loading form builder...
+        new-group: New field group
+        new-field: New field
+        edit-field: 'Edit field: {label}'
+        save-field: Save field
+        untitled-group: Untitled group
+        untitled-field: Untitled field
+        group-name: Group name
+        group-name-placeholder: Exterior
+        group-description: Group description
+        group-description-placeholder: What this group covers
+        grid-size: Columns
+        move-up: Move up
+        move-down: Move down
+        no-fields: No fields in this group yet.
+        empty-title: No field groups
+        empty-description: Add your first field group to start building this form.
+        delete: Delete
+        delete-group-title: Delete this field group?
+        delete-group-body: Deleting this group deletes every field inside it. This cannot be undone once the form is saved.
+        delete-field-title: Delete this field?
+        delete-field-body: Deleting this field also deletes every answer already filed against it. This cannot be undone once the form is saved.
+    field:
+        label: Field label
+        label-placeholder: Brake lights
+        name: Field name
+        name-help: The machine name a submission refers to this field by. It follows the label until you set it yourself.
+        name-placeholder: brake-lights
+        type: Field type
+        description: Field description
+        description-placeholder: What to check, and what a pass looks like
+        help-text: Field help text
+        help-text-placeholder: Shown beside the field while it is answered
+        required: Field is required
+        editable: Field is editable
+        options: Field options
+        no-options: No options yet.
+        option-placeholder: Add an option
+        add-option: Add
+        unit: Unit
+        unit-help: Shown beside the number, for example km or hours.
+        unit-placeholder: km
+        odometer-role: This is the odometer reading
+        odometer-role-help: The answer is copied to the inspection's own odometer column.
+        on-fail: On fail
+        on-fail-help: What a failed answer means, and what the inspector must supply before it is accepted.
+        default-severity: Default severity
+        require-photo-on-fail: Require a photo on fail
+        require-comment-on-fail: Require a comment on fail
+        unsafe-on-fail: Mark the vehicle unsafe on fail
+        unsafe-on-fail-help: A failed answer defaults to unsafe, which is what an out-of-service defect is.
+        instructions: Instructions
+        instructions-placeholder: How to check this, shown to the driver
+        column-span: Column span
+    field-type:
+        pass-fail: Pass / Fail
+        input: Text
+        textarea: Long text
+        number: Number
+        select: Select
+        radio-button: Radio buttons
+        boolean: Yes / No
+        date-picker: Date
+        date-time-input: Date and time
+        file-upload: Photo or file
+        signature: Signature
+    severity:
+        low: Low
+        medium: Medium
+        high: High
+        critical: Critical
+    answer:
+        pass: Pass
+        fail: Fail
+        not-applicable: N/A
+        unanswered: Unanswered
+        severity: Severity
+        unsafe: Unsafe to operate
+        comments: Comments
+        comments-placeholder: What is wrong, and what it needs
+        photos: Photos
+        add-photo: Add photo
+        upload-photo: Upload photo
+        no-photo: No photo attached.
+        upload-signature: Upload signature
+        no-signature: No signature captured.
+        select-placeholder: Choose an answer
+        note-placeholder: Add a note
+        text-placeholder: Type an answer
+        no-options: This field has no answers to choose from.
+        uploads-unavailable: Can be added from the console or the driver app.
+        comments-required: Say what is wrong, and what it needs
+        comment-required: Comment mandatory on fail
+        photo-required: Photo mandatory on fail
+        comment-and-photo-required: Comment + photo mandatory on fail
+    record:
+        overview: Overview
+        inspection: Inspection
+        details: Inspection Details
+        form: Form
+        select-form: Select inspection form
+        status: Status
+        result: Result
+        vehicle: Vehicle
+        select-vehicle: Select vehicle
+        driver: Driver
+        select-driver: Select driver
+        odometer: Odometer
+        odometer-placeholder: Current odometer
+        engine-hours: Engine Hours
+        engine-hours-placeholder: Current engine hours
+        answers: Answers
+        loading-form: Loading inspection form...
+        loading-answers: Loading answers...
+        form-has-no-fields: This form has no fields yet. Build it on the inspection form screen before filling it in.
+        summary: Summary
+        failed-of: '{failed} failed of {total} pass/fail checks'
+        metadata: Metadata
+        submitted: Submitted
+        submitted-by: Submitted By
+        via-link: Through a public link
+        via-link-pin: Through a public link, PIN verified
+        signed-as: 'Signed as "{name}"'
+        name-unverified: Name as typed, not a signed-in account
+        resolved: Resolved
+        item-results: Item Results
+        no-item-results: No item results recorded.
+        follow-up: Follow Up
+        linked-issue: Linked Issue
+        linked-work-order: Linked Work Order
+        photos: Photos
+        loading-photos: Loading photos...
+        audit: Audit
+        create: Create inspection
+        saved: Inspection saved.
+        updated: Inspection updated.
+        form-help: The published form this inspection is filled in from.
+        choose-a-form: Choose an inspection form to begin.
+        group-has-no-fields: This section has no checks.
+        outstanding: still to answer
+        section-outstanding: "{count, plural, one {# outstanding} other {# outstanding}}"
+        outstanding-field: "{label} is required before submitting"
+        review: "Review →"
+        jump-to: "Jump to →"
+    link:
+        public-links: Public Links
+        existing: Generated Links
+        modal-help: "Generate a single-use link for {form}. Whoever opens it enters its PIN, then fills in this published form without signing in."
+        loading: Loading links...
+        none: No links have been generated for this form yet.
+        load-failed: These links could not be loaded.
+        copy: Copy
+        copied: Inspection link copied.
+        revoke: Revoke
+        revoked: Inspection link revoked.
+        generated: Generated
+        generated-toast: Inspection link generated.
+        publish-first: Publish this inspection form before generating a public link.
+        expires: Expires
+        no-expiry: No expiry
+        used: Used
+        viewed: Last opened
+        never-opened: Never opened
+        unassigned: Anyone with the link and its PIN
+        url-not-kept: This link was generated before links were kept, so its URL cannot be shown again.
+        state-active: Active
+        state-expired: Expired
+        state-used: Used
+        state-revoked: Revoked
+        state-locked: Locked
+        expires-at: Expires at
+        expires-help: Links expire 72 hours after they are generated unless you choose a different time.
+        assign-to: Assign to
+        assign-to-help: Optional. Anyone in your organisation can complete an inspection; the submission is credited to them.
+        select-assignee: Select a user
+        pin: PIN
+        pin-delivery: Send the link and PIN
+        pin-delivery-none: Do not send it, I will share it myself
+        pin-delivery-email: By email
+        pin-delivery-sms: By text message
+        pin-delivery-help: "Sent to {name}, with the link to open and the PIN to enter."
+        pin-delivery-no-recipient: Assign the link to someone, or pick a driver, to send it to them. Otherwise share the link and PIN yourself; both are shown once it is generated.
+        generated-title: Link generated
+        generated-help: The link is copied to your clipboard. Whoever opens it needs the PIN too.
+        copied-pin: PIN copied.
+        email-pin: Email link
+        text-pin: Text link
+        pin-sent-email: "Link and PIN emailed to {to}."
+        pin-sent-sms: "Link and PIN texted to {to}."
+        pin-not-sent: "The link and PIN were not sent: {reason}"
+        pin-sent-by: "{via, select, email {Emailed} sms {Texted} other {Sent}}"
+        wrong-pins: "{count, plural, one {# wrong PIN} other {# wrong PINs}}"
+        no-pin: No PIN. This link was generated before links had PINs.
+    public:
+        submitted-title: Inspection submitted
+        submitted-body: Thank you. This inspection has been filed and the link is now closed.
+        unavailable-title: This inspection is not available
+        sign-off: Sign off
+        your-name: Your name
+        your-name-help: Recorded against this inspection as who filled it in.
+        your-name-placeholder: Full name
+        for: For
+        pin-title: Enter your PIN
+        pin-help: Enter the 6-digit PIN you were given for this inspection.
+        pin-label: PIN
+        pin-continue: Continue
+        pin-wrong: "That PIN is not right. {count, plural, one {# attempt} other {# attempts}} left before this link locks."
+        submit: Submit inspection
+        blocked-required: "{count, plural, one {# required answer is missing} other {# required answers are missing}}"
+        blocked-defects: "{count, plural, one {# failure still needs a comment or a photo} other {# failures still need a comment or a photo}}"
+    flyout:
+        title: "Defect: {label}"
+        done: Done
+        close: Close
+    defect:
+        edit: Edit defect
+        photos: "{count, plural, one {# photo} other {# photos}}"
+        comment: Comment
+        needs-comment: Needs a comment
+        needs-photo: Needs a photo
+        needs-both: Needs a comment and a photo
+        no-evidence: No comment or photo yet
+    tray:
+        title: Defects
+        review: Review
+select-option:
+    vehicle:
+        vin: VIN
+        serial_number: S/N
+        call_sign: Call sign

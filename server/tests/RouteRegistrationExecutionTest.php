@@ -1,6 +1,35 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Str;
+
+/**
+ * One recorded route, handed back so the route file can chain onto it as it
+ * would onto a real one. `middleware()` is recorded against the route; any
+ * other chained call (`name()`, `where()`) is accepted and ignored, so a chain
+ * the recorder does not model cannot break the whole file.
+ */
+class FleetOpsRecordedRoute
+{
+    public function __construct(private FleetOpsRouteRecorder $recorder, private int $index)
+    {
+    }
+
+    public function middleware(array|string $middleware): self
+    {
+        $this->recorder->routes[$this->index]['middleware'] = array_merge(
+            $this->recorder->routes[$this->index]['middleware'] ?? [],
+            (array) $middleware,
+        );
+
+        return $this;
+    }
+
+    public function __call(string $method, array $arguments): self
+    {
+        return $this;
+    }
+}
 
 class FleetOpsRouteRecorder
 {
@@ -49,47 +78,69 @@ class FleetOpsRouteRecorder
         return $this;
     }
 
-    public function get(string $uri, string|array $action): void
+    public function get(string $uri, string|array $action): FleetOpsRecordedRoute
     {
-        $this->record('GET', $uri, $action);
+        return $this->record('GET', $uri, $action);
     }
 
-    public function post(string $uri, string|array $action): void
+    public function post(string $uri, string|array $action): FleetOpsRecordedRoute
     {
-        $this->record('POST', $uri, $action);
+        return $this->record('POST', $uri, $action);
     }
 
-    public function put(string $uri, string|array $action): void
+    public function put(string $uri, string|array $action): FleetOpsRecordedRoute
     {
-        $this->record('PUT', $uri, $action);
+        return $this->record('PUT', $uri, $action);
     }
 
-    public function patch(string $uri, string|array $action): void
+    public function patch(string $uri, string|array $action): FleetOpsRecordedRoute
     {
-        $this->record('PATCH', $uri, $action);
+        return $this->record('PATCH', $uri, $action);
     }
 
-    public function delete(string $uri, string|array $action): void
+    public function delete(string $uri, string|array $action): FleetOpsRecordedRoute
     {
-        $this->record('DELETE', $uri, $action);
+        return $this->record('DELETE', $uri, $action);
     }
 
-    public function any(string $uri, string|array $action): void
+    public function any(string $uri, string|array $action): FleetOpsRecordedRoute
     {
-        $this->record('ANY', $uri, $action);
+        return $this->record('ANY', $uri, $action);
     }
 
-    public function match(array $methods, string $uri, string|array $action): void
+    public function match(array $methods, string $uri, string|array $action): FleetOpsRecordedRoute
     {
-        $this->record(implode('|', array_map('strtoupper', $methods)), $uri, $action);
+        return $this->record(implode('|', array_map('strtoupper', $methods)), $uri, $action);
     }
 
-    public function fleetbaseRoutes(string $resource): void
+    /**
+     * The platform's resource routes, and the extra routes a resource declares
+     * in its callback. The callback is run inside a group prefixed with the
+     * resource, as the platform's macro does, and handed a `$controller` that
+     * names the action the way the macro would, so those routes are recorded
+     * rather than silently skipped.
+     */
+    public function fleetbaseRoutes(string $resource, ?callable $callback = null): FleetOpsRecordedRoute
     {
-        $this->record('FLEETBASE', $resource, 'fleetbaseRoutes');
+        $route = $this->record('FLEETBASE', $resource, 'fleetbaseRoutes');
+
+        if ($callback) {
+            $controllerName = Str::studly(Str::singular($resource)) . 'Controller';
+            $this->group(['prefix' => $resource], function ($router) use ($callback, $controllerName) {
+                $callback($router, fn (string $method) => $controllerName . '@' . $method);
+            });
+        }
+
+        return $route;
     }
 
-    private function record(string $method, string $uri, string|array $action): void
+    /** Router methods the recorder does not model are accepted and ignored. */
+    public function __call(string $method, array $arguments): self
+    {
+        return $this;
+    }
+
+    private function record(string $method, string $uri, string|array $action): FleetOpsRecordedRoute
     {
         $prefixes = array_values(array_filter(array_map(
             fn (array $group) => $group['prefix'] ?? null,
@@ -102,6 +153,8 @@ class FleetOpsRouteRecorder
             'action' => $action,
             'groups' => $this->stack,
         ];
+
+        return new FleetOpsRecordedRoute($this, array_key_last($this->routes));
     }
 }
 
@@ -139,7 +192,37 @@ test('fleetops route file registers public internal analytics metrics and hub ro
         ->toContain('v1/fuel-transactions/{id}/match-vehicle')
         ->toContain('int/v1/fleet-ops/analytics/operations-pulse')
         ->toContain('int/v1/fleet-ops/metrics/{slug}')
-        ->toContain('int/v1/fleet-ops/hubs/resources');
+        ->toContain('int/v1/fleet-ops/hubs/resources')
+        ->toContain('public/inspections/forms/{id}')
+        ->toContain('public/inspections/forms/{id}/submit')
+        ->toContain('public/inspections/forms/{id}/files');
+
+    // A link's PIN can be sent again from the console.
+    $sendPin = array_values(array_filter($recorder->routes, fn (array $route) => str_ends_with($route['uri'], 'inspection-forms/{id}/links/{linkId}/send-pin')));
+    expect($sendPin)->toHaveCount(1)
+        ->and($sendPin[0]['method'])->toBe('POST')
+        ->and($sendPin[0]['action'])->toBe('InspectionFormController@sendPin');
+
+    // Every inspection route answers in JSON, so a refused request is a 422
+    // rather than a redirect: the driver API, the vehicle history and the
+    // console's form and submission routes.
+    $json    = Fleetbase\FleetOps\Http\Middleware\ForceJsonResponse::class;
+    $inGroup = fn (array $route) => in_array($json, array_merge(...array_map(fn ($group) => (array) ($group['middleware'] ?? []), $route['groups'])), true)
+        || in_array($json, (array) ($route['middleware'] ?? []), true);
+    foreach (['InspectionController@findForm', 'InspectionController@submit', 'InspectionController@forVehicle'] as $action) {
+        $route = collect($recorder->routes)->first(fn (array $route) => $route['action'] === $action);
+        expect($route)->not->toBeNull()
+            ->and($inGroup($route))->toBeTrue();
+    }
+    $console = array_filter($recorder->routes, fn (array $route) => str_contains($route['uri'], 'inspection-forms/{id}/generate-link') || str_contains($route['uri'], 'inspection-submissions/{id}/submit'));
+    expect($console)->toHaveCount(2);
+    foreach ($console as $route) {
+        expect($inGroup($route))->toBeTrue();
+    }
+
+    // Uploads through a link have a tighter limit of their own, on top of the group's.
+    $upload = collect($recorder->routes)->firstWhere('uri', 'public/inspections/forms/{id}/files');
+    expect($upload['middleware'] ?? [])->toBe(['throttle:20,1,inspection-upload']);
 });
 
 test('fleetops route file wires route groups with expected middleware and namespaces', function () {
@@ -154,6 +237,14 @@ test('fleetops route file wires route groups with expected middleware and namesp
         'prefix'     => 'v1',
         'middleware' => ['fleetbase.api', Fleetbase\FleetOps\Http\Middleware\TransformLocationMiddleware::class],
         'namespace'  => 'Api\v1',
+    ]);
+
+    // The public inspection routes answer in JSON whatever the client asks
+    // for, and are rate limited per address.
+    expect($recorder->groups)->toContainEqual([
+        'prefix'     => 'public',
+        'namespace'  => 'Public',
+        'middleware' => [Fleetbase\FleetOps\Http\Middleware\ForceJsonResponse::class, 'throttle:60,1,inspection-public'],
     ]);
 
     expect($recorder->groups)->toContainEqual([
