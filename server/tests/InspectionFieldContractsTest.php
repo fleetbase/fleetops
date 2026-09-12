@@ -101,6 +101,21 @@ function fleetOpsInspectionFieldRequest(bool $internal): Request
 function fleetOpsInspectionFieldDatabase(): SQLiteConnection
 {
     $pdo        = new PDO('sqlite::memory:');
+
+    // A failed inspection raises an issue, and `issues.location` is spatial:
+    // MySQL answers with a 4-byte SRID followed by the geometry's WKB, which is
+    // what the spatial trait parses when the row is read back.
+    $asStoredPoint = function ($wkt, $srid = 0, $axisOrder = null) {
+        if (!preg_match('/POINT\s*\(\s*(-?[\d.]+)\s+(-?[\d.]+)\s*\)/i', (string) $wkt, $pair)) {
+            return $wkt;
+        }
+
+        // WKB: little-endian marker, geometry type 1 (point), then x (lng) and y (lat).
+        return pack('V', (int) $srid) . pack('C', 1) . pack('V', 1) . pack('d', (float) $pair[1]) . pack('d', (float) $pair[2]);
+    };
+    $pdo->sqliteCreateFunction('ST_PointFromText', $asStoredPoint);
+    $pdo->sqliteCreateFunction('ST_GeomFromText', $asStoredPoint);
+
     $connection = new SQLiteConnection($pdo);
     $resolver   = new ConnectionResolver(['default' => $connection, 'mysql' => $connection]);
     $resolver->setDefaultConnection('mysql');
