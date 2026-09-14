@@ -1,23 +1,27 @@
 {{!
     One stored answer, read-only.
 
-    The same two shapes as `inspection-field/input` — a compact cell in the
-    group's grid, or a full-width band for a failure, a note, an upload or a
-    signature — so a submitted inspection reads exactly like the sheet it was
-    filled in on.
+    Every answer keeps the column the form gave it: a pass or a fail is a
+    coloured card in its cell, and only a note, an upload or a signature —
+    which need the room — spans the grid.
 }}
-{{#if this.isDefect}}
-    <div class="inspection-band inspection-band--defect {{if this.isTargeted 'inspection-band--targeted'}}" id="inspection-field-{{this.field.uuid}}" data-answer="fail" ...attributes>
-        <div class="inspection-band__head">
-            <span class="inspection-chip">{{t "inspection.answer.fail"}}</span>
-            <span class="inspection-band__label">{{this.label}}</span>
-            <span class="inspection-band__aside">
-                {{#if this.severityLabel}}<Badge @status={{if (eq this.answer.severity "critical") "critical" "info"}}>{{t this.severityLabel}}</Badge>{{/if}}
-                {{#if this.answer.unsafe}}<Badge @status="unsafe">{{t "inspection.answer.unsafe"}}</Badge>{{/if}}
-            </span>
+{{#if this.isResult}}
+    {{! Pass, fail and N/A share one card, coloured by the answer, sitting in
+        the column the form gave it. A fail carries its severity, its unsafe
+        flag, the comment and the photos beneath the head. }}
+    <div class="inspection-cell inspection-cell--readonly inspection-cell--result {{if this.isTargeted 'inspection-cell--targeted'}}" id="inspection-field-{{this.field.uuid}}" data-answer={{this.answerState}} ...attributes>
+        <div class="inspection-cell__head">
+            <span class="inspection-chip">{{t this.resultLabel}}</span>
+            <span class="inspection-cell__label">{{this.label}}</span>
         </div>
-        {{#if this.hasDefectDetail}}
-            <div class="inspection-band__body">
+        {{#if this.hasResultDetail}}
+            <div class="inspection-cell__body">
+                {{#if this.hasResultMeta}}
+                    <div class="inspection-cell__meta">
+                        {{#if this.severityLabel}}<Badge @status={{if (eq this.answer.severity "critical") "critical" "info"}}>{{t this.severityLabel}}</Badge>{{/if}}
+                        {{#if this.answer.unsafe}}<Badge @status="unsafe">{{t "inspection.answer.unsafe"}}</Badge>{{/if}}
+                    </div>
+                {{/if}}
                 {{#if this.answer.comments}}
                     <p class="inspection-answer">{{this.answer.comments}}</p>
                 {{/if}}
@@ -71,9 +75,7 @@
     <div class="inspection-cell inspection-cell--readonly {{if this.isTargeted 'inspection-cell--targeted'}}" id="inspection-field-{{this.field.uuid}}" data-answer={{this.answerState}} ...attributes>
         <span class="inspection-cell__label">{{this.label}}</span>
         <div class="inspection-cell__control">
-            {{#if this.isPassFail}}
-                <Badge @status={{this.resultStatus}}>{{t this.resultLabel}}</Badge>
-            {{else if this.isBoolean}}
+            {{#if this.isBoolean}}
                 <Badge @status={{if this.booleanValue "success" "default"}}>{{if this.booleanValue (t "common.yes") (t "common.no")}}</Badge>
             {{else}}
                 {{#if this.isAnswered}}

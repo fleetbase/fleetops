@@ -32,6 +32,20 @@ export default class InspectionFieldValueComponent extends Component {
         return answerState(this.field, this.args.value);
     }
 
+    /** Pass, fail and N/A all read as the same card. */
+    get isResult() {
+        return this.isPassFail;
+    }
+
+    /** A fail shows what it was marked with; a pass has nothing to add. */
+    get hasResultMeta() {
+        return this.answerState === 'fail' && Boolean(this.severityLabel || this.answer.unsafe);
+    }
+
+    get hasResultDetail() {
+        return this.hasResultMeta || Boolean(this.answer.comments) || this.photos.length > 0;
+    }
+
     get isDefect() {
         return this.isPassFail && this.answerState === 'fail';
     }

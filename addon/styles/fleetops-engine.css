@@ -8947,6 +8947,9 @@ body[data-theme='dark'] .filter-multi-model > .clear-button {
     --ins-text-muted: #6b7280;
     --ins-text-faint: #9ca3af;
     --ins-pass: #16a34a;
+    --ins-pass-text: #15803d;
+    --ins-pass-edge: #bbf7d0;
+    --ins-pass-fill: #f0fdf4;
     --ins-fail: #dc2626;
     --ins-fail-text: #b91c1c;
     --ins-fail-edge: #fecaca;
@@ -8991,6 +8994,9 @@ body[data-theme='dark'] .inspection-flyout {
     --ins-text-muted: #9ca3af;
     --ins-text-faint: #6b7280;
     --ins-pass: #16a34a;
+    --ins-pass-text: #86efac;
+    --ins-pass-edge: #1f3d2b;
+    --ins-pass-fill: #17231c;
     --ins-fail: #dc2626;
     --ins-fail-text: #fca5a5;
     --ins-fail-edge: #4c2326;
@@ -10048,6 +10054,74 @@ body[data-theme='dark'] .inspection-link-generated .inspection-link__url {
     padding: 0.625rem 0.75rem;
 }
 
+/*
+ * A pass and a fail are the same card, coloured by the answer. The fail used
+ * to be a band, and a band spans the grid — so one answer ran the full width
+ * while its neighbours sat in columns. It keeps its detail; it just keeps it
+ * in the column the form gave it.
+ */
+.inspection-cell--result {
+    gap: 0;
+    padding: 0;
+    overflow: hidden;
+}
+
+.inspection-cell--result .inspection-cell__head {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    min-width: 0;
+    padding: 0.5rem 0.625rem;
+}
+
+.inspection-cell--result .inspection-cell__label {
+    min-width: 0;
+    overflow-wrap: anywhere;
+}
+
+.inspection-cell--result .inspection-cell__body {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    padding: 0 0.625rem 0.5rem;
+}
+
+.inspection-cell--result .inspection-cell__meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.375rem;
+}
+
+.inspection-cell--readonly[data-answer='pass'] {
+    border-color: var(--ins-pass-edge);
+    background-color: var(--ins-pass-fill);
+}
+
+.inspection-cell--readonly[data-answer='pass'] .inspection-cell__head {
+    border-bottom: 0;
+}
+
+.inspection-cell--readonly[data-answer='fail'] {
+    border-color: var(--ins-fail);
+    background-color: var(--ins-fail-fill);
+}
+
+.inspection-cell--readonly[data-answer='fail'] .inspection-cell__body {
+    border-top: 1px solid var(--ins-fail-edge);
+    padding-top: 0.5rem;
+}
+
+/* The chip takes the answer's colour: red is not the only state. */
+.inspection-cell--readonly[data-answer='pass'] .inspection-chip {
+    color: var(--ins-pass-text);
+    border-color: var(--ins-pass-edge);
+}
+
+.inspection-cell--readonly[data-answer='na'] .inspection-chip {
+    color: var(--ins-text-muted);
+    border-color: var(--ins-border);
+}
+
 .inspection-cell--readonly .inspection-cell__label {
     font-size: 0.75rem;
     font-weight: 500;
@@ -10060,12 +10134,6 @@ body[data-theme='dark'] .inspection-link-generated .inspection-link__url {
     font-size: 0.875rem;
     font-weight: 600;
     color: var(--ins-text);
-}
-
-/* A failed check still carries the band's red, so it stands out among them. */
-.inspection-cell--readonly[data-answer='fail'] {
-    border-color: var(--ins-fail);
-    background-color: var(--ins-fail-fill);
 }
 
 /* ==========================================================================
