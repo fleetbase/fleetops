@@ -19,6 +19,8 @@ export default class InspectionSubmissionDetailsComponent extends Component {
     @service inspectionSubmissionActions;
     @service intl;
     @service hostRouter;
+    @service vehicleActions;
+    @service driverActions;
 
     @tracked groups = [];
     @tracked values = {};
@@ -71,6 +73,29 @@ export default class InspectionSubmissionDetailsComponent extends Component {
     /** Follow-ups open where they live, the way the rest of the console navigates. */
     @action openForm() {
         return this.hostRouter.transitionTo('console.fleet-ops.maintenance.inspection-forms.index.details', this.args.resource.form);
+    }
+
+    /**
+     * A linked record opens beside what you were reading, which is what the
+     * console does everywhere else; the route transition is the fallback for
+     * a resource whose panel is not registered.
+     */
+    @action viewVehicle() {
+        const vehicle = this.args.resource?.vehicle;
+        if (!vehicle) {
+            return;
+        }
+
+        return this.vehicleActions.panel?.view ? this.vehicleActions.panel.view(vehicle) : this.vehicleActions.transition.view(vehicle);
+    }
+
+    @action viewDriver() {
+        const driver = this.args.resource?.driver;
+        if (!driver) {
+            return;
+        }
+
+        return this.driverActions.panel?.view ? this.driverActions.panel.view(driver) : this.driverActions.transition.view(driver);
     }
 
     @action openIssue() {
