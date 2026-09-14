@@ -2920,6 +2920,7 @@ inspection:
         follow-up: Follow Up
         open-form: Open this inspection form
         failed: Failed
+        failed-count: "{count, plural, one {# failed} other {# failed}}"
         linked-issue: Linked Issue
         linked-work-order: Linked Work Order
         photos: Photos

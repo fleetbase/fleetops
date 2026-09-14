@@ -1,0 +1,10 @@
+<Resource::DetailLink
+    @record={{this.driver}}
+    @title={{this.title}}
+    @subtitle={{this.subtitle}}
+    @photo={{resource-image this.driver.photo_url "driver"}}
+    @fallbackPhoto={{(placeholder-image "driver")}}
+    @fallbackText={{@fallbackText}}
+    @onClick={{this.open}}
+    ...attributes
+/>

@@ -8713,6 +8713,196 @@ body[data-theme='dark'] .inspection-followup__title {
     color: #f9fafb;
 }
 
+/* ── A linked resource, shown as its identity ──
+   Details panels named their related records in dead text. This is the shared
+   look for every `{resource}/detail-link`: photo, name, one identifying line,
+   and the affordance that it opens something. */
+.resource-detail-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    max-width: 100%;
+    color: #3b82f6;
+    background: none;
+    border: 0;
+    padding: 0;
+    text-align: left;
+    cursor: pointer;
+}
+
+.resource-detail-link:hover .resource-detail-link__title {
+    text-decoration: underline;
+}
+
+.resource-detail-link__photo {
+    width: 1.75rem;
+    height: 1.75rem;
+    flex-shrink: 0;
+    object-fit: cover;
+    border-radius: 9999px;
+}
+
+.resource-detail-link__photo[data-shape='square'] {
+    border-radius: 0.375rem;
+}
+
+.resource-detail-link__text {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+}
+
+.resource-detail-link__title {
+    font-size: 0.8125rem;
+    font-weight: 500;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.resource-detail-link__subtitle {
+    font-size: 0.6875rem;
+    color: #6b7280;
+}
+
+.resource-detail-link__icon {
+    flex-shrink: 0;
+    opacity: 0.7;
+}
+
+.resource-detail-link--empty {
+    color: #9ca3af;
+    cursor: default;
+}
+
+body[data-theme='dark'] .resource-detail-link {
+    color: #60a5fa;
+}
+
+body[data-theme='dark'] .resource-detail-link__subtitle {
+    color: #9ca3af;
+}
+
+/* ── A link out of a details panel to the record it names ──
+   The form name was a bare button with no styling and a full-size icon
+   sitting apart from it; it did not read as a link at all. */
+.inspection-record__link {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    color: #3b82f6;
+    cursor: pointer;
+    text-align: left;
+    background: none;
+    border: 0;
+    padding: 0;
+}
+
+.inspection-record__link:hover {
+    text-decoration: underline;
+}
+
+.inspection-record__link-icon {
+    flex-shrink: 0;
+    opacity: 0.75;
+}
+
+body[data-theme='dark'] .inspection-record__link {
+    color: #60a5fa;
+}
+
+/* ── A vehicle's inspection history ──
+   A table could not survive the overlay's width: six columns squeezed into
+   a 580px panel wrapped the form name onto three lines and pushed the date
+   off the edge behind a scrollbar. One block per inspection instead. */
+.inspection-history {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.inspection-history__card {
+    display: flex;
+    flex-direction: column;
+    gap: 0.375rem;
+    width: 100%;
+    border: 1px solid #e5e7eb;
+    border-radius: 0.5rem;
+    background-color: #f9fafb;
+    padding: 0.75rem;
+    text-align: left;
+    cursor: pointer;
+}
+
+.inspection-history__card:hover {
+    border-color: #9ca3af;
+}
+
+.inspection-history__head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.375rem;
+}
+
+.inspection-history__form {
+    flex: 1 1 auto;
+    min-width: 0;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: #111827;
+}
+
+.inspection-history__meta {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.75rem;
+    font-size: 0.6875rem;
+    color: #6b7280;
+}
+
+.inspection-history__meta > span {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+}
+
+.inspection-history__meta-icon {
+    opacity: 0.7;
+}
+
+.inspection-history__failed {
+    color: #b91c1c;
+    font-weight: 500;
+}
+
+.inspection-history__id {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    font-size: 0.625rem;
+    color: #9ca3af;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+body[data-theme='dark'] .inspection-history__card {
+    border-color: #374151;
+    background-color: #1f2937;
+}
+
+body[data-theme='dark'] .inspection-history__card:hover {
+    border-color: #6b7280;
+}
+
+body[data-theme='dark'] .inspection-history__form {
+    color: #f9fafb;
+}
+
+body[data-theme='dark'] .inspection-history__failed {
+    color: #fca5a5;
+}
+
 /* ── Inspection result, status and defect badges ──
    ember-ui's badge palette has no entries for these values, so a result of
    "passed", a "submitted" or "needs review" inspection, or an unsafe defect

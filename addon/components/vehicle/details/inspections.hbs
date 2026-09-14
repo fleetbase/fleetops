@@ -4,35 +4,40 @@
             <Spinner />
         </div>
     {{else if this.inspections.length}}
-        <div class="overflow-x-auto">
-            <table class="min-w-full text-xs">
-                <thead>
-                    <tr class="border-b border-gray-200 dark:border-gray-700">
-                        <th class="text-left py-2 pr-4 font-semibold text-gray-500 uppercase tracking-wide">{{t "inspection.record.inspection"}}</th>
-                        <th class="text-left py-2 pr-4 font-semibold text-gray-500 uppercase tracking-wide">{{t "inspection.record.form"}}</th>
-                        <th class="text-left py-2 pr-4 font-semibold text-gray-500 uppercase tracking-wide">{{t "inspection.record.result"}}</th>
-                        <th class="text-left py-2 pr-4 font-semibold text-gray-500 uppercase tracking-wide">{{t "common.status"}}</th>
-                        <th class="text-left py-2 pr-4 font-semibold text-gray-500 uppercase tracking-wide">{{t "inspection.record.failed"}}</th>
-                        <th class="text-left py-2 pr-4 font-semibold text-gray-500 uppercase tracking-wide">{{t "inspection.record.submitted"}}</th>
-                        <th class="py-2"></th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {{#each this.inspections as |inspection|}}
-                        <tr class="border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800">
-                            <td class="py-2 pr-4 font-mono uppercase">{{inspection.public_id}}</td>
-                            <td class="py-2 pr-4 font-medium">{{n-a (or inspection.form.name inspection.form_name)}}</td>
-                            <td class="py-2 pr-4"><Badge @status={{if (eq inspection.result "failed") "failed" "passed"}}>{{smart-humanize inspection.result}}</Badge></td>
-                            <td class="py-2 pr-4"><Badge @status={{inspection.status}}>{{smart-humanize inspection.status}}</Badge></td>
-                            <td class="py-2 pr-4 text-gray-500">{{n-a inspection.failed_items}}</td>
-                            <td class="py-2 pr-4 text-gray-500">{{n-a inspection.submittedAt}}</td>
-                            <td class="py-2 text-right">
-                                <Button @icon="eye" @size="xs" @helpText={{t "common.view"}} @onClick={{fn this.inspectionSubmissionActions.transition.view inspection}} @permission="fleet-ops view inspection-submission" />
-                            </td>
-                        </tr>
-                    {{/each}}
-                </tbody>
-            </table>
+        <div class="inspection-history">
+            {{#each this.inspections as |inspection|}}
+                <button type="button" class="inspection-history__card" {{on "click" (fn this.inspectionSubmissionActions.transition.view inspection)}}>
+                    <div class="inspection-history__head">
+                        <span class="inspection-history__form">{{n-a (or inspection.form.name inspection.form_name)}}</span>
+                        {{! A draft has no result yet; an empty badge was just a coloured dot. }}
+                        {{#if inspection.result}}
+                            <Badge @status={{if (eq inspection.result "failed") "failed" "passed"}}>{{smart-humanize inspection.result}}</Badge>
+                        {{/if}}
+                        <Badge @status={{inspection.status}}>{{smart-humanize inspection.status}}</Badge>
+                    </div>
+
+                    <div class="inspection-history__meta">
+                        <span class="inspection-history__when">
+                            <FaIcon @icon="clock" @size="xs" class="inspection-history__meta-icon" />
+                            {{n-a inspection.submittedAt}}
+                        </span>
+                        {{#if inspection.failed_items}}
+                            <span class="inspection-history__failed">
+                                <FaIcon @icon="triangle-exclamation" @size="xs" class="inspection-history__meta-icon" />
+                                {{t "inspection.record.failed-count" count=inspection.failed_items}}
+                            </span>
+                        {{/if}}
+                        {{#if inspection.odometer}}
+                            <span class="inspection-history__odometer">
+                                <FaIcon @icon="gauge" @size="xs" class="inspection-history__meta-icon" />
+                                {{format-number inspection.odometer}}
+                            </span>
+                        {{/if}}
+                    </div>
+
+                    <div class="inspection-history__id">{{inspection.public_id}}</div>
+                </button>
+            {{/each}}
         </div>
     {{else}}
         <div class="flex flex-col items-center justify-center py-10 text-gray-400 dark:text-gray-600">
