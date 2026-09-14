@@ -68,7 +68,14 @@ export default class MaintenanceInspectionSubmissionsIndexController extends Con
                 actions: [
                     { label: 'View inspection', fn: this.inspectionSubmissionActions.transition.view, permission: 'fleet-ops view inspection-submission' },
                     { label: 'Edit inspection', fn: this.inspectionSubmissionActions.transition.edit, permission: 'fleet-ops update inspection-submission' },
-                    { separator: true },
+                    {
+                        separator: true,
+                        // Everything below this rule is conditional. On a row
+                        // with none of it — a resolved inspection that already
+                        // raised what it had to — the rule still drew, landing
+                        // next to the one above Delete as a double line.
+                        isVisible: (row) => row?.status === 'draft' || row?.status !== 'resolved' || Boolean(row?.has_failures && (!row?.issue_uuid || !row?.work_order_uuid)),
+                    },
                     {
                         label: 'Submit',
                         fn: this.inspectionSubmissionActions.submit,

@@ -90,6 +90,7 @@ export default buildRoutes(function () {
                     this.route('schedules');
                     this.route('work-orders');
                     this.route('maintenance-history');
+                    this.route('inspections');
                     this.route('virtual', { path: '/:slug' });
                 });
                 this.route('edit', { path: '/edit/:public_id' });

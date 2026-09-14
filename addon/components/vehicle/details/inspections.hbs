@@ -1,0 +1,44 @@
+<div class="vehicle-details-inspections p-4">
+    {{#if this.loadInspections.isRunning}}
+        <div class="flex items-center justify-center py-10">
+            <Spinner />
+        </div>
+    {{else if this.inspections.length}}
+        <div class="overflow-x-auto">
+            <table class="min-w-full text-xs">
+                <thead>
+                    <tr class="border-b border-gray-200 dark:border-gray-700">
+                        <th class="text-left py-2 pr-4 font-semibold text-gray-500 uppercase tracking-wide">{{t "inspection.record.inspection"}}</th>
+                        <th class="text-left py-2 pr-4 font-semibold text-gray-500 uppercase tracking-wide">{{t "inspection.record.form"}}</th>
+                        <th class="text-left py-2 pr-4 font-semibold text-gray-500 uppercase tracking-wide">{{t "inspection.record.result"}}</th>
+                        <th class="text-left py-2 pr-4 font-semibold text-gray-500 uppercase tracking-wide">{{t "common.status"}}</th>
+                        <th class="text-left py-2 pr-4 font-semibold text-gray-500 uppercase tracking-wide">{{t "inspection.record.failed"}}</th>
+                        <th class="text-left py-2 pr-4 font-semibold text-gray-500 uppercase tracking-wide">{{t "inspection.record.submitted"}}</th>
+                        <th class="py-2"></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {{#each this.inspections as |inspection|}}
+                        <tr class="border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800">
+                            <td class="py-2 pr-4 font-mono uppercase">{{inspection.public_id}}</td>
+                            <td class="py-2 pr-4 font-medium">{{n-a (or inspection.form.name inspection.form_name)}}</td>
+                            <td class="py-2 pr-4"><Badge @status={{if (eq inspection.result "failed") "failed" "passed"}}>{{smart-humanize inspection.result}}</Badge></td>
+                            <td class="py-2 pr-4"><Badge @status={{inspection.status}}>{{smart-humanize inspection.status}}</Badge></td>
+                            <td class="py-2 pr-4 text-gray-500">{{n-a inspection.failed_items}}</td>
+                            <td class="py-2 pr-4 text-gray-500">{{n-a inspection.submittedAt}}</td>
+                            <td class="py-2 text-right">
+                                <Button @icon="eye" @size="xs" @helpText={{t "common.view"}} @onClick={{fn this.inspectionSubmissionActions.transition.view inspection}} @permission="fleet-ops view inspection-submission" />
+                            </td>
+                        </tr>
+                    {{/each}}
+                </tbody>
+            </table>
+        </div>
+    {{else}}
+        <div class="flex flex-col items-center justify-center py-10 text-gray-400 dark:text-gray-600">
+            <FaIcon @icon="clipboard-check" @size="2x" class="mb-3" />
+            <p class="text-sm font-semibold text-gray-600 dark:text-gray-300">{{t "vehicle.empty.inspections"}}</p>
+            <p class="text-xs">{{t "vehicle.empty.inspections-description"}}</p>
+        </div>
+    {{/if}}
+</div>

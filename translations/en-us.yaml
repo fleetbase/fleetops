@@ -511,6 +511,8 @@ resource:
     fleets: Fleets
     fuel-report: Fuel Report
     fuel-reports: Fuel Reports
+    inspection: Inspection
+    inspections: Inspections
     integrated-vendor: Integrated Vendor
     integrated-vendors: Integrated Vendors
     issue: Issue
@@ -1446,6 +1448,8 @@ vehicle:
         trailers-description: Attach a detached trailer to this vehicle to start a towing connection.
         equipment: No equipment attached
         equipment-description: Attach equipment such as liftgates, tools, or safety gear to this vehicle.
+        inspections: No inspections filed
+        inspections-description: Inspections a driver files against this vehicle will appear here.
     trailers:
         description: Trailers currently coupled to this vehicle.
     equipment:
@@ -2915,6 +2919,7 @@ inspection:
         no-item-results: No item results recorded.
         follow-up: Follow Up
         open-form: Open this inspection form
+        failed: Failed
         linked-issue: Linked Issue
         linked-work-order: Linked Work Order
         photos: Photos
