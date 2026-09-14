@@ -82,7 +82,7 @@
                             <div class="font-semibold">{{n-a item.label}}</div>
                             <div class="text-gray-500">{{n-a item.category}}</div>
                         </div>
-                        <Badge @status={{if (eq item.severity "critical") "danger" "info"}}>{{get-fleet-ops-option-label "inspectionSeverities" item.severity}}</Badge>
+                        <Badge @status={{if (eq item.severity "critical") "critical" "info"}}>{{get-fleet-ops-option-label "inspectionSeverities" item.severity}}</Badge>
                     </div>
                 {{/each}}
             </div>

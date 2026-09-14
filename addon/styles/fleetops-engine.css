@@ -8573,6 +8573,41 @@ body[data-theme='dark'] .fleetbase-ai-create-order-preview__cancelled {
     color: #fca5a5;
 }
 
+/* ── Inspection result, status and defect badges ──
+   ember-ui's badge palette has no entries for these values, so a result of
+   "passed", a "submitted" inspection or an unsafe defect would render as an
+   unstyled chip. Colors follow the ember-ui badge.css convention
+   (800 background / 700 border / 100 text). */
+.status-badge.passed-status-badge > span {
+    background-color: #166534;
+    border-color: #15803d;
+    color: #dcfce7;
+}
+
+.status-badge.passed-status-badge > span svg {
+    color: #86efac;
+}
+
+.status-badge.submitted-status-badge > span {
+    background-color: #1e40af;
+    border-color: #1d4ed8;
+    color: #dbeafe;
+}
+
+.status-badge.submitted-status-badge > span svg {
+    color: #93c5fd;
+}
+
+.status-badge.unsafe-status-badge > span {
+    background-color: #991b1b;
+    border-color: #b91c1c;
+    color: #fee2e2;
+}
+
+.status-badge.unsafe-status-badge > span svg {
+    color: #fca5a5;
+}
+
 /* ── Attachment lists (devices, equipment, trailers, towing history) ── */
 .fleetops-attachment-list {
     display: flex;
@@ -9993,6 +10028,44 @@ body[data-theme='dark'] .inspection-link-generated .inspection-link__url {
     color: var(--ins-text-soft);
     white-space: pre-wrap;
     min-width: 0;
+}
+
+/*
+ * A read-back answer keeps the shape of the field it was given in. A cell had
+ * no container at all — a bare label with a value loose beneath it — while a
+ * note or an upload drew a bordered card, so one row read as a card and the
+ * next as stray text. Cells take the same card, quieter than a defect's.
+ */
+.inspection-cell--readonly {
+    gap: 0.375rem;
+
+    /* Each card is as tall as its own answer: stretched to the row's tallest,
+       a lone chip sat in half a card of empty space. */
+    align-self: start;
+    border: 1px solid var(--ins-border);
+    border-radius: 0.375rem;
+    background-color: var(--ins-bg-sunken);
+    padding: 0.625rem 0.75rem;
+}
+
+.inspection-cell--readonly .inspection-cell__label {
+    font-size: 0.75rem;
+    font-weight: 500;
+    letter-spacing: 0.02em;
+    color: var(--ins-text-muted);
+}
+
+/* The answer itself is what the eye should land on. */
+.inspection-cell--readonly .inspection-answer {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--ins-text);
+}
+
+/* A failed check still carries the band's red, so it stands out among them. */
+.inspection-cell--readonly[data-answer='fail'] {
+    border-color: var(--ins-fail);
+    background-color: var(--ins-fail-fill);
 }
 
 /* ==========================================================================

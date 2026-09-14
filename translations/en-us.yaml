@@ -2901,6 +2901,10 @@ inspection:
         metadata: Metadata
         submitted: Submitted
         submitted-by: Submitted By
+        submission-title: "{form} Submission"
+        create-issue: Create Issue
+        create-work-order: Create Work Order
+        resolve: Resolve
         via-link: Through a public link
         via-link-pin: Through a public link, PIN verified
         signed-as: 'Signed as "{name}"'

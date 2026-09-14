@@ -1,7 +1,7 @@
 <Layout::Resource::Panel
     @resource={{@model}}
     @controller={{this}}
-    @headerTitle={{or @model.public_id (t "inspection.record.inspection")}}
+    @headerTitle={{if (or @model.form.name @model.form_name) (t "inspection.record.submission-title" form=(or @model.form.name @model.form_name)) (or @model.public_id (t "inspection.record.inspection"))}}
     @actionButtons={{this.actionButtons}}
     @onPressCancel={{transition-to "maintenance.inspection-submissions.index"}}
     @onOverlayReady={{fn (mut this.overlay)}}

@@ -17,13 +17,31 @@ export default class MaintenanceInspectionSubmissionsIndexDetailsController exte
         ];
     }
 
+    /**
+     * Editing is the one action worth a button of its own; the rest sit behind
+     * the ellipsis, which is what the vehicle panel does. Five buttons
+     * overflowed the overlay header and pushed the title out of sight.
+     */
     get actionButtons() {
         return [
-            { icon: 'triangle-exclamation', fn: this.createIssue, text: 'Create Issue', permission: 'fleet-ops create-issue inspection-submission' },
-            { icon: 'clipboard-list', fn: this.createWorkOrder, text: 'Create Work Order', permission: 'fleet-ops create-work-order inspection-submission' },
-            { icon: 'check', fn: this.resolve, text: 'Resolve', permission: 'fleet-ops resolve inspection-submission' },
             { icon: 'edit', fn: this.edit, permission: 'fleet-ops update inspection-submission' },
-            { icon: 'trash', fn: this.delete, type: 'danger', permission: 'fleet-ops delete inspection-submission' },
+            {
+                icon: 'ellipsis-h',
+                iconPrefix: 'fas',
+                renderInPlace: true,
+                items: [
+                    { text: this.intl.t('inspection.record.create-issue'), icon: 'triangle-exclamation', fn: this.createIssue, permission: 'fleet-ops create-issue inspection-submission' },
+                    {
+                        text: this.intl.t('inspection.record.create-work-order'),
+                        icon: 'clipboard-list',
+                        fn: this.createWorkOrder,
+                        permission: 'fleet-ops create-work-order inspection-submission',
+                    },
+                    { text: this.intl.t('inspection.record.resolve'), icon: 'check', fn: this.resolve, permission: 'fleet-ops resolve inspection-submission' },
+                    { separator: true },
+                    { text: this.intl.t('common.delete'), icon: 'trash', class: 'text-red-500', fn: this.delete, permission: 'fleet-ops delete inspection-submission' },
+                ],
+            },
         ];
     }
 

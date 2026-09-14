@@ -36,6 +36,13 @@ export default class InspectionFieldValueComponent extends Component {
         return this.isPassFail && this.answerState === 'fail';
     }
 
+    /** Whether anything was actually answered, so an empty one can say so. */
+    get isAnswered() {
+        const value = this.args.value;
+
+        return value !== null && value !== undefined && String(value).trim() !== '';
+    }
+
     get isRoomy() {
         return ROOMY_FIELD_TYPES.includes(this.field.type);
     }
@@ -101,7 +108,7 @@ export default class InspectionFieldValueComponent extends Component {
             return 'info';
         }
 
-        return answer.passed === false ? 'danger' : 'success';
+        return answer.passed === false ? 'failed' : 'passed';
     }
 
     /** The severity's own label, or the raw value when it is not one of ours. */
