@@ -22,7 +22,7 @@
                             <td class="py-2 pr-4 font-mono uppercase">{{workOrder.code}}</td>
                             <td class="py-2 pr-4 font-medium">{{workOrder.subject}}</td>
                             <td class="py-2 pr-4 text-gray-500">{{humanize workOrder.priority}}</td>
-                            <td class="py-2 pr-4"><StatusBadge @status={{workOrder.status}} /></td>
+                            <td class="py-2 pr-4"><Badge @status={{workOrder.status}}>{{smart-humanize workOrder.status}}</Badge></td>
                             <td class="py-2 pr-4 text-gray-500">{{n-a (format-date-fns workOrder.due_at "dd MMM yyyy")}}</td>
                             <td class="py-2">
                                 <Button @icon="eye" @size="xs" @onClick={{fn this.workOrderActions.transition.view workOrder}} />

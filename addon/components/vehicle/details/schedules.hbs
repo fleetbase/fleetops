@@ -1,5 +1,5 @@
 <div class="vehicle-details-schedules p-4">
-    {{#if this.schedules.isRunning}}
+    {{#if this.loadSchedules.isRunning}}
         <div class="flex items-center justify-center py-10">
             <Spinner />
         </div>
@@ -21,7 +21,7 @@
                             <td class="py-2 pr-4 font-medium">{{schedule.name}}</td>
                             <td class="py-2 pr-4 text-gray-500">{{schedule.interval_value}} {{schedule.interval_unit}}</td>
                             <td class="py-2 pr-4 text-gray-500">{{n-a (format-date-fns schedule.next_due_date "dd MMM yyyy")}}</td>
-                            <td class="py-2 pr-4"><StatusBadge @status={{schedule.status}} /></td>
+                            <td class="py-2 pr-4"><Badge @status={{schedule.status}}>{{smart-humanize schedule.status}}</Badge></td>
                             <td class="py-2">
                                 <Button @icon="eye" @size="xs" @onClick={{fn this.maintenanceScheduleActions.transition.view schedule}} />
                             </td>
