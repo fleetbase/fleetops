@@ -8715,8 +8715,10 @@ body[data-theme='dark'] .inspection-followup__title {
 
 /* ── Inspection result, status and defect badges ──
    ember-ui's badge palette has no entries for these values, so a result of
-   "passed", a "submitted" inspection or an unsafe defect would render as an
-   unstyled chip. Colors follow the ember-ui badge.css convention
+   "passed", a "submitted" or "needs review" inspection, or an unsafe defect
+   would render as an unstyled chip. `needs_review` is selectable from the
+   status field and counted by the hub, so it is reachable, not theoretical.
+   Colors follow the ember-ui badge.css convention
    (800 background / 700 border / 100 text). */
 .status-badge.passed-status-badge > span {
     background-color: #166534;
@@ -8736,6 +8738,17 @@ body[data-theme='dark'] .inspection-followup__title {
 
 .status-badge.submitted-status-badge > span svg {
     color: #93c5fd;
+}
+
+/* Waiting on a supervisor: the warning family, like ember-ui's "pending". */
+.status-badge.needs-review-status-badge > span {
+    background-color: #92400e;
+    border-color: #b45309;
+    color: #fef3c7;
+}
+
+.status-badge.needs-review-status-badge > span svg {
+    color: #fcd34d;
 }
 
 .status-badge.unsafe-status-badge > span {
