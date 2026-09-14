@@ -1,0 +1,103 @@
+<div class="inspection-field-form space-y-3" ...attributes>
+    <InputGroup @name={{t "inspection.field.label"}}>
+        <input type="text" value={{this.field.label}} class="w-full form-input" placeholder={{t "inspection.field.label-placeholder"}} disabled={{this.isDisabled}} {{on "input" this.setLabel}} />
+    </InputGroup>
+
+    <InputGroup @name={{t "inspection.field.name"}} @helpText={{t "inspection.field.name-help"}}>
+        <input type="text" value={{this.field.name}} class="w-full form-input font-mono" placeholder={{t "inspection.field.name-placeholder"}} disabled={{this.isDisabled}} {{on "input" this.setName}} />
+    </InputGroup>
+
+    <InputGroup @name={{t "inspection.field.type"}}>
+        <select class="form-select w-full" disabled={{this.isDisabled}} {{on "change" this.setType}}>
+            {{#each this.fieldTypes as |fieldType|}}
+                <option value={{fieldType}} selected={{eq this.field.type fieldType}}>
+                    {{t (concat "inspection.field-type." fieldType)}}
+                </option>
+            {{/each}}
+        </select>
+    </InputGroup>
+
+    <InputGroup @name={{t "inspection.field.description"}}>
+        <textarea class="w-full form-input" rows="2" placeholder={{t "inspection.field.description-placeholder"}} disabled={{this.isDisabled}} {{on "input" this.setDescription}}>{{this.field.description}}</textarea>
+    </InputGroup>
+
+    <InputGroup @name={{t "inspection.field.help-text"}}>
+        <input type="text" value={{this.field.help_text}} class="w-full form-input" placeholder={{t "inspection.field.help-text-placeholder"}} disabled={{this.isDisabled}} {{on "input" this.setHelpText}} />
+    </InputGroup>
+
+    <div class="flex flex-col space-y-3">
+        <Toggle @isToggled={{this.field.required}} @onToggle={{this.setRequired}} @label={{t "inspection.field.required"}} @disabled={{this.isDisabled}} />
+        <Toggle @isToggled={{this.field.editable}} @onToggle={{this.setEditable}} @label={{t "inspection.field.editable"}} @disabled={{this.isDisabled}} />
+    </div>
+
+    {{#if this.hasOptions}}
+        <InputGroup @name={{t "inspection.field.options"}}>
+            <div class="space-y-2">
+                {{#each this.options as |option index|}}
+                    <div class="flex flex-row items-center space-x-2">
+                        <input type="text" value={{option}} class="w-full form-input" disabled={{this.isDisabled}} {{on "input" (fn this.updateOption index)}} />
+                        <Button @type="danger" @icon="trash" @size="xs" @disabled={{this.isDisabled}} @onClick={{fn this.removeOption index}} />
+                    </div>
+                {{else}}
+                    <div class="text-xs text-gray-500">{{t "inspection.field.no-options"}}</div>
+                {{/each}}
+                <div class="flex flex-row items-center space-x-2">
+                    <input type="text" value={{this.newOption}} class="w-full form-input" placeholder={{t "inspection.field.option-placeholder"}} disabled={{this.isDisabled}} {{on "input" this.setNewOption}} />
+                    <Button @icon="plus" @size="xs" @text={{t "inspection.field.add-option"}} @disabled={{this.isDisabled}} @onClick={{this.addOption}} />
+                </div>
+            </div>
+        </InputGroup>
+    {{/if}}
+
+    {{#if this.isNumber}}
+        <InputGroup @name={{t "inspection.field.unit"}} @helpText={{t "inspection.field.unit-help"}}>
+            <input type="text" value={{this.meta.unit}} class="w-full form-input" placeholder={{t "inspection.field.unit-placeholder"}} disabled={{this.isDisabled}} {{on "input" this.setUnit}} />
+        </InputGroup>
+        <Toggle @isToggled={{this.isOdometer}} @onToggle={{this.toggleOdometerRole}} @label={{t "inspection.field.odometer-role"}} @helpText={{t "inspection.field.odometer-role-help"}} @disabled={{this.isDisabled}} />
+    {{/if}}
+
+    {{#if this.isPassFail}}
+        <div class="rounded-lg border border-gray-200 dark:border-gray-700 p-3 space-y-3">
+            <div class="text-xs font-semibold uppercase tracking-wide text-gray-500">{{t "inspection.field.on-fail"}}</div>
+            <div class="text-xs text-gray-500">{{t "inspection.field.on-fail-help"}}</div>
+
+            <InputGroup @name={{t "inspection.field.default-severity"}}>
+                <div class="fleetbase-model-select fleetbase-power-select ember-model-select">
+                    <PowerSelect
+                        @options={{this.severityOptions}}
+                        @selected={{this.meta.severity}}
+                        @onChange={{this.setSeverity}}
+                        @triggerClass="form-select form-input"
+                        @renderInPlace={{true}}
+                        @disabled={{this.isDisabled}}
+                        as |severity|
+                    >
+                        {{t (concat "inspection.severity." severity)}}
+                    </PowerSelect>
+                </div>
+            </InputGroup>
+
+            <Toggle @isToggled={{this.meta.require_photo_on_fail}} @onToggle={{this.setRequirePhotoOnFail}} @label={{t "inspection.field.require-photo-on-fail"}} @disabled={{this.isDisabled}} />
+            <Toggle @isToggled={{this.meta.require_comment_on_fail}} @onToggle={{this.setRequireCommentOnFail}} @label={{t "inspection.field.require-comment-on-fail"}} @disabled={{this.isDisabled}} />
+            <Toggle @isToggled={{this.meta.unsafe_on_fail}} @onToggle={{this.setUnsafeOnFail}} @label={{t "inspection.field.unsafe-on-fail"}} @helpText={{t "inspection.field.unsafe-on-fail-help"}} @disabled={{this.isDisabled}} />
+
+            <InputGroup @name={{t "inspection.field.instructions"}}>
+                <textarea class="w-full form-input" rows="3" placeholder={{t "inspection.field.instructions-placeholder"}} disabled={{this.isDisabled}} {{on "input" this.setInstructions}}>{{this.meta.instructions}}</textarea>
+            </InputGroup>
+        </div>
+    {{/if}}
+
+    <InputGroup @name={{t "inspection.field.column-span"}}>
+        <div class="flex flex-row items-center space-x-2">
+            {{#each this.colSpanOptions as |size|}}
+                <Button
+                    @type={{if (eq this.meta.colSpan size) "primary" "default"}}
+                    @size="xs"
+                    @text={{size}}
+                    @disabled={{this.isDisabled}}
+                    @onClick={{fn this.setColSpan size}}
+                />
+            {{/each}}
+        </div>
+    </InputGroup>
+</div>

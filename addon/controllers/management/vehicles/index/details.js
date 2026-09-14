@@ -53,6 +53,11 @@ export default class ManagementVehiclesIndexDetailsController extends Controller
                 route: 'management.vehicles.index.details.maintenance-history',
                 label: 'Maintenance',
             },
+            {
+                id: 'inspections',
+                route: 'management.vehicles.index.details.inspections',
+                label: this.intl.t('resource.inspections'),
+            },
             ...(isArray(registeredTabs) ? registeredTabs : []),
         ];
     }

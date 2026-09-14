@@ -1,0 +1,154 @@
+<div class="next-content-panel-wrapper" ...attributes>
+    <ContentPanel @title={{t "inspection.record.overview"}} @open={{true}} @wrapperClass="bordered-top">
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-2 text-xs dark:text-gray-100">
+            <div class="field-info-container">
+                <div class="field-name">{{t "inspection.record.inspection"}}</div>
+                <ClickToCopy @value={{@resource.public_id}} class="field-value font-mono">{{n-a @resource.public_id}}</ClickToCopy>
+            </div>
+            <div class="field-info-container">
+                <div class="field-name">{{t "inspection.record.result"}}</div>
+                <div class="field-value"><Badge @status={{if (eq @resource.result "failed") "failed" "passed"}}>{{smart-humanize @resource.result}}</Badge></div>
+            </div>
+            <div class="field-info-container">
+                <div class="field-name">{{t "inspection.record.form"}}</div>
+                {{#if @resource.form.public_id}}
+                    <button type="button" class="field-value inspection-record__link" {{on "click" this.openForm}}>
+                        <span>{{n-a (or @resource.form.name @resource.form_name)}}</span>
+                        <FaIcon @icon="arrow-up-right-from-square" @size="xs" class="inspection-record__link-icon" />
+                    </button>
+                {{else}}
+                    <div class="field-value">{{n-a (or @resource.form.name @resource.form_name)}}</div>
+                {{/if}}
+            </div>
+            <div class="field-info-container">
+                <div class="field-name">{{t "inspection.record.status"}}</div>
+                <div class="field-value"><Badge @status={{@resource.status}}>{{smart-humanize @resource.status}}</Badge></div>
+            </div>
+            <div class="field-info-container">
+                <div class="field-name">{{t "inspection.record.vehicle"}}</div>
+                <div class="field-value"><Vehicle::Pill @vehicle={{@resource.vehicle}} @titleFallback={{n-a @resource.vehicle_name "No vehicle"}} @onClick={{this.viewVehicle}} /></div>
+            </div>
+            <div class="field-info-container">
+                <div class="field-name">{{t "inspection.record.driver"}}</div>
+                <div class="field-value"><Driver::Pill @driver={{@resource.driver}} @titleFallback={{n-a @resource.driver_name "No driver"}} @onClick={{this.viewDriver}} /></div>
+            </div>
+            <div class="field-info-container">
+                <div class="field-name">{{t "inspection.record.submitted-by"}}</div>
+                <div class="field-value">
+                    {{n-a this.submitter}}
+                    {{#if this.submitterNote}}
+                        <div class="mt-0.5 text-gray-500 dark:text-gray-400">{{this.submitterNote}}</div>
+                    {{/if}}
+                </div>
+            </div>
+            <div class="field-info-container">
+                <div class="field-name">{{t "inspection.record.odometer"}}</div>
+                <div class="field-value">{{n-a @resource.odometer}}</div>
+            </div>
+            <div class="field-info-container">
+                <div class="field-name">{{t "inspection.record.engine-hours"}}</div>
+                <div class="field-value">{{n-a @resource.engine_hours}}</div>
+            </div>
+            <div class="field-info-container">
+                <div class="field-name">{{t "inspection.record.submitted"}}</div>
+                <div class="field-value">{{n-a (format-date-fns @resource.submitted_at "dd MMM yyyy, HH:mm")}}</div>
+            </div>
+            <div class="field-info-container">
+                <div class="field-name">{{t "inspection.record.resolved"}}</div>
+                <div class="field-value">{{n-a (format-date-fns @resource.resolved_at "dd MMM yyyy, HH:mm")}}</div>
+            </div>
+        </div>
+    </ContentPanel>
+
+    {{#if this.load.isRunning}}
+        <ContentPanel @title={{t "inspection.record.answers"}} @open={{true}} @wrapperClass="bordered-top">
+            <div class="p-6 flex items-center justify-center">
+                <Spinner @loadingMessage={{t "inspection.record.loading-answers"}} class="text-sm dark:text-gray-100 flex items-center space-x-2" />
+            </div>
+        </ContentPanel>
+    {{else if this.hasAnswers}}
+        <div class="inspection-sheet-inset">
+            <InspectionSheet @groups={{this.groups}} @values={{this.values}} @readonly={{true}} />
+        </div>
+    {{/if}}
+
+    {{! Derived from the pass/fail answers above, so it is shown only for a
+        submission filed before typed fields, which has nothing else to read. }}
+    {{#unless this.hasAnswers}}
+    <ContentPanel @title={{t "inspection.record.item-results"}} @open={{true}} @wrapperClass="bordered-top">
+        <div class="space-y-2 text-xs">
+            {{#each @resource.item_results as |item|}}
+                <div class="rounded border border-gray-200 dark:border-gray-700 p-3">
+                    <div class="flex items-start justify-between gap-3">
+                        <div>
+                            <div class="font-semibold">{{n-a item.label}}</div>
+                            <div class="text-gray-500">{{n-a item.category}}</div>
+                            {{#if item.comments}}
+                                <div class="mt-2 whitespace-pre-wrap">{{item.comments}}</div>
+                            {{/if}}
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <Badge @status={{if item.passed "passed" "failed"}}>{{if item.passed (t "inspection.answer.pass") (t "inspection.answer.fail")}}</Badge>
+                            {{#if item.severity}}
+                                <Badge @status={{if (eq item.severity "critical") "critical" "info"}}>{{smart-humanize item.severity}}</Badge>
+                            {{/if}}
+                        </div>
+                    </div>
+                </div>
+            {{else}}
+                <div class="text-gray-500">{{t "inspection.record.no-item-results"}}</div>
+            {{/each}}
+        </div>
+    </ContentPanel>
+    {{/unless}}
+
+    <ContentPanel @title={{t "inspection.record.follow-up"}} @open={{true}} @wrapperClass="bordered-top">
+        {{! A bare id was a dead end: each follow-up says what it is and opens it. }}
+        <div class="space-y-2">
+            {{#if @resource.issue}}
+                <button type="button" class="inspection-followup" {{on "click" this.openIssue}}>
+                    <div class="inspection-followup__head">
+                        <span class="inspection-followup__kind">{{t "inspection.record.linked-issue"}}</span>
+                        <span class="inspection-followup__id">{{@resource.issue.public_id}}</span>
+                        <FaIcon @icon="arrow-up-right-from-square" class="inspection-followup__open" />
+                    </div>
+                    <div class="inspection-followup__title">{{n-a @resource.issue.title}}</div>
+                    <div class="inspection-followup__meta">
+                        {{#if @resource.issue.status}}<Badge @status={{@resource.issue.status}}>{{smart-humanize @resource.issue.status}}</Badge>{{/if}}
+                        {{#if @resource.issue.priority}}<Badge @status={{if (eq @resource.issue.priority "critical") "critical" "info"}}>{{smart-humanize @resource.issue.priority}}</Badge>{{/if}}
+                        {{#if @resource.issue.type}}<span class="inspection-followup__type">{{smart-humanize @resource.issue.type}}</span>{{/if}}
+                    </div>
+                </button>
+            {{else}}
+                <div class="field-info-container">
+                    <div class="field-name">{{t "inspection.record.linked-issue"}}</div>
+                    <div class="field-value">{{n-a @resource.issue_uuid}}</div>
+                </div>
+            {{/if}}
+
+            {{#if @resource.work_order}}
+                <button type="button" class="inspection-followup" {{on "click" this.openWorkOrder}}>
+                    <div class="inspection-followup__head">
+                        <span class="inspection-followup__kind">{{t "inspection.record.linked-work-order"}}</span>
+                        <span class="inspection-followup__id">{{or @resource.work_order.code @resource.work_order.public_id}}</span>
+                        <FaIcon @icon="arrow-up-right-from-square" class="inspection-followup__open" />
+                    </div>
+                    <div class="inspection-followup__title">{{n-a @resource.work_order.subject}}</div>
+                    <div class="inspection-followup__meta">
+                        {{#if @resource.work_order.status}}<Badge @status={{@resource.work_order.status}}>{{smart-humanize @resource.work_order.status}}</Badge>{{/if}}
+                        {{#if @resource.work_order.priority}}<Badge @status={{if (eq @resource.work_order.priority "critical") "critical" "info"}}>{{smart-humanize @resource.work_order.priority}}</Badge>{{/if}}
+                        {{#if @resource.work_order.due_at}}<span class="inspection-followup__type">{{t "inspection.record.due"}} {{format-date-fns @resource.work_order.due_at "dd MMM yyyy"}}</span>{{/if}}
+                    </div>
+                </button>
+            {{else}}
+                <div class="field-info-container">
+                    <div class="field-name">{{t "inspection.record.linked-work-order"}}</div>
+                    <div class="field-value">{{n-a @resource.work_order_uuid}}</div>
+                </div>
+            {{/if}}
+        </div>
+    </ContentPanel>
+
+    <CustomField::Yield @subject={{@resource}} @viewMode={{true}} @wrapperClass="bordered-top" />
+    <Spacer @height="200px" />
+</div>

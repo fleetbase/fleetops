@@ -1,0 +1,49 @@
+<div class="inspection-form-details-submissions p-4">
+    {{#if this.loadSubmissions.isRunning}}
+        <div class="flex items-center justify-center py-10">
+            <Spinner />
+        </div>
+    {{else if this.submissions.length}}
+        <div class="inspection-history">
+            {{#each this.submissions as |submission|}}
+                <button type="button" class="inspection-history__card" {{on "click" (fn this.inspectionSubmissionActions.transition.view submission)}}>
+                    <div class="inspection-history__head">
+                        <span class="inspection-history__form">{{n-a (or submission.vehicle.displayName submission.vehicle_name) (t "inspection.form.no-vehicle")}}</span>
+                        {{! A draft has no result yet; an empty badge is just a coloured dot. }}
+                        {{#if submission.result}}
+                            <Badge @status={{if (eq submission.result "failed") "failed" "passed"}}>{{smart-humanize submission.result}}</Badge>
+                        {{/if}}
+                        <Badge @status={{submission.status}}>{{smart-humanize submission.status}}</Badge>
+                    </div>
+
+                    <div class="inspection-history__meta">
+                        {{#if (or submission.driver.name submission.driver_name)}}
+                            <span class="inspection-history__driver">
+                                <FaIcon @icon="user" @size="xs" class="inspection-history__meta-icon" />
+                                {{or submission.driver.name submission.driver_name}}
+                            </span>
+                        {{/if}}
+                        <span class="inspection-history__when">
+                            <FaIcon @icon="clock" @size="xs" class="inspection-history__meta-icon" />
+                            {{n-a submission.submittedAt}}
+                        </span>
+                        {{#if submission.failed_items}}
+                            <span class="inspection-history__failed">
+                                <FaIcon @icon="triangle-exclamation" @size="xs" class="inspection-history__meta-icon" />
+                                {{t "inspection.record.failed-count" count=submission.failed_items}}
+                            </span>
+                        {{/if}}
+                    </div>
+
+                    <div class="inspection-history__id">{{submission.public_id}}</div>
+                </button>
+            {{/each}}
+        </div>
+    {{else}}
+        <div class="flex flex-col items-center justify-center py-10 text-gray-400 dark:text-gray-600">
+            <FaIcon @icon="clipboard-check" @size="2x" class="mb-3" />
+            <p class="text-sm font-semibold text-gray-600 dark:text-gray-300">{{t "inspection.form.no-submissions"}}</p>
+            <p class="text-xs">{{t "inspection.form.no-submissions-description"}}</p>
+        </div>
+    {{/if}}
+</div>
