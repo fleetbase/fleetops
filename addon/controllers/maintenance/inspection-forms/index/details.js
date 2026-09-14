@@ -6,7 +6,15 @@ import { action } from '@ember/object';
 export default class MaintenanceInspectionFormsIndexDetailsController extends Controller {
     @service inspectionFormActions;
     @service hostRouter;
+    @service intl;
     @tracked overlay;
+
+    get tabs() {
+        return [
+            { id: 'index', route: 'maintenance.inspection-forms.index.details.index', label: this.intl.t('inspection.form.overview') },
+            { id: 'submissions', route: 'maintenance.inspection-forms.index.details.submissions', label: this.intl.t('inspection.form.submissions') },
+        ];
+    }
 
     /**
      * Publish disappears once the form is published — leaving it there invites

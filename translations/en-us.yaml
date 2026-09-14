@@ -2756,6 +2756,10 @@ orchestrator:
 inspection:
     form:
         overview: Overview
+        submissions: Submissions
+        no-vehicle: No vehicle
+        no-submissions: Nothing filed yet
+        no-submissions-description: Inspections filed against this form will appear here.
         details: Form Details
         name: Name
         name-placeholder: Daily vehicle inspection
