@@ -29,20 +29,51 @@ export default class MaintenanceInspectionSubmissionsIndexDetailsController exte
                 icon: 'ellipsis-h',
                 iconPrefix: 'fas',
                 renderInPlace: true,
-                items: [
-                    { text: this.intl.t('inspection.record.create-issue'), icon: 'triangle-exclamation', fn: this.createIssue, permission: 'fleet-ops create-issue inspection-submission' },
-                    {
-                        text: this.intl.t('inspection.record.create-work-order'),
-                        icon: 'clipboard-list',
-                        fn: this.createWorkOrder,
-                        permission: 'fleet-ops create-work-order inspection-submission',
-                    },
-                    { text: this.intl.t('inspection.record.resolve'), icon: 'check', fn: this.resolve, permission: 'fleet-ops resolve inspection-submission' },
-                    { separator: true },
-                    { text: this.intl.t('common.delete'), icon: 'trash', class: 'text-red-500', fn: this.delete, permission: 'fleet-ops delete inspection-submission' },
-                ],
+                items: this.followUpItems,
             },
         ];
+    }
+
+    /**
+     * A submission raises one issue and one work order, and the server enforces
+     * that — `createIssueFromFailures()` hands back what already exists. The
+     * console kept offering both anyway, so the same click reported success
+     * over and over while creating nothing. What is already raised is linked
+     * from the Follow Up panel instead of offered again here.
+     */
+    get followUpItems() {
+        const record = this.model;
+        const items = [];
+
+        if (record?.has_failures && !record?.issue_uuid) {
+            items.push({
+                text: this.intl.t('inspection.record.create-issue'),
+                icon: 'triangle-exclamation',
+                fn: this.createIssue,
+                permission: 'fleet-ops create-issue inspection-submission',
+            });
+        }
+
+        if (record?.has_failures && !record?.work_order_uuid) {
+            items.push({
+                text: this.intl.t('inspection.record.create-work-order'),
+                icon: 'clipboard-list',
+                fn: this.createWorkOrder,
+                permission: 'fleet-ops create-work-order inspection-submission',
+            });
+        }
+
+        if (record?.status !== 'resolved') {
+            items.push({ text: this.intl.t('inspection.record.resolve'), icon: 'check', fn: this.resolve, permission: 'fleet-ops resolve inspection-submission' });
+        }
+
+        if (items.length) {
+            items.push({ separator: true });
+        }
+
+        items.push({ text: this.intl.t('common.delete'), icon: 'trash', class: 'text-red-500', fn: this.delete, permission: 'fleet-ops delete inspection-submission' });
+
+        return items;
     }
 
     @action createIssue() {

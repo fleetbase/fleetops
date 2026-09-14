@@ -2914,6 +2914,7 @@ inspection:
         item-results: Item Results
         no-item-results: No item results recorded.
         follow-up: Follow Up
+        open-form: Open this inspection form
         linked-issue: Linked Issue
         linked-work-order: Linked Work Order
         photos: Photos
@@ -2944,6 +2945,9 @@ inspection:
         unsafe-note: "{count, plural, one {# check is marked unsafe to operate} other {# checks are marked unsafe to operate}}"
         due-note: "Due {due}, from the highest severity among them."
         nothing-failed: Nothing failed on this inspection, so there is nothing to raise.
+        submit-title: Submit this inspection?
+        submit-summary: This files the inspection, stamps the time it was submitted and recounts its pass and fail totals. It cannot be unsubmitted.
+        submit-accept: Submit inspection
         cancel: Cancel
     link:
         public-links: Public Links

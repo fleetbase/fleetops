@@ -69,10 +69,28 @@ export default class MaintenanceInspectionSubmissionsIndexController extends Con
                     { label: 'View inspection', fn: this.inspectionSubmissionActions.transition.view, permission: 'fleet-ops view inspection-submission' },
                     { label: 'Edit inspection', fn: this.inspectionSubmissionActions.transition.edit, permission: 'fleet-ops update inspection-submission' },
                     { separator: true },
-                    { label: 'Submit', fn: this.inspectionSubmissionActions.submit, permission: 'fleet-ops submit inspection-submission' },
-                    { label: 'Create issue', fn: this.inspectionSubmissionActions.createIssue, permission: 'fleet-ops create-issue inspection-submission' },
-                    { label: 'Create work order', fn: this.inspectionSubmissionActions.createWorkOrder, permission: 'fleet-ops create-work-order inspection-submission' },
-                    { label: 'Resolve', fn: this.inspectionSubmissionActions.resolve, permission: 'fleet-ops resolve inspection-submission' },
+                    {
+                        label: 'Submit',
+                        fn: this.inspectionSubmissionActions.submit,
+                        permission: 'fleet-ops submit inspection-submission',
+                        // Submitting files a draft. On anything already filed it
+                        // did nothing and still reported success, so it is only
+                        // offered where it has something to do.
+                        isVisible: (row) => row?.status === 'draft',
+                    },
+                    {
+                        label: 'Create issue',
+                        fn: this.inspectionSubmissionActions.createIssue,
+                        permission: 'fleet-ops create-issue inspection-submission',
+                        isVisible: (row) => row?.has_failures && !row?.issue_uuid,
+                    },
+                    {
+                        label: 'Create work order',
+                        fn: this.inspectionSubmissionActions.createWorkOrder,
+                        permission: 'fleet-ops create-work-order inspection-submission',
+                        isVisible: (row) => row?.has_failures && !row?.work_order_uuid,
+                    },
+                    { label: 'Resolve', fn: this.inspectionSubmissionActions.resolve, permission: 'fleet-ops resolve inspection-submission', isVisible: (row) => row?.status !== 'resolved' },
                     { separator: true },
                     { label: 'Delete inspection', fn: this.inspectionSubmissionActions.delete, class: 'text-red-500', permission: 'fleet-ops delete inspection-submission' },
                 ],

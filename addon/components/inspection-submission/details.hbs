@@ -11,7 +11,14 @@
             </div>
             <div class="field-info-container">
                 <div class="field-name">{{t "inspection.record.form"}}</div>
-                <div class="field-value">{{n-a (or @resource.form.name @resource.form_name)}}</div>
+                {{#if @resource.form.public_id}}
+                    <button type="button" class="field-value inspection-record__link" {{on "click" this.openForm}}>
+                        {{n-a (or @resource.form.name @resource.form_name)}}
+                        <FaIcon @icon="arrow-up-right-from-square" class="inspection-record__link-icon" />
+                    </button>
+                {{else}}
+                    <div class="field-value">{{n-a (or @resource.form.name @resource.form_name)}}</div>
+                {{/if}}
             </div>
             <div class="field-info-container">
                 <div class="field-name">{{t "inspection.record.status"}}</div>

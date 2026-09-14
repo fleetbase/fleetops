@@ -75,8 +75,25 @@ export default class InspectionSubmissionActionsService extends ResourceActionSe
         });
     }
 
-    @action async submit(submission) {
-        return this.postAction(submission, 'submit', 'Inspection submitted.');
+    @action submit(submission) {
+        return this.modalsManager.confirm({
+            title: this.intl.t('inspection.follow-up.submit-title'),
+            body: this.intl.t('inspection.follow-up.submit-summary'),
+            acceptButtonText: this.intl.t('inspection.follow-up.submit-accept'),
+            acceptButtonIcon: 'paper-plane',
+            declineButtonText: this.intl.t('inspection.follow-up.cancel'),
+            confirm: async (modal) => {
+                modal.startLoading();
+
+                try {
+                    await this.postAction(submission, 'submit', 'Inspection submitted.');
+                    modal.done();
+                } catch (error) {
+                    this.notifications.serverError(error);
+                    modal.stopLoading();
+                }
+            },
+        });
     }
 
     /**

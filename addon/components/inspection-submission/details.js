@@ -69,6 +69,10 @@ export default class InspectionSubmissionDetailsComponent extends Component {
     }
 
     /** Follow-ups open where they live, the way the rest of the console navigates. */
+    @action openForm() {
+        return this.hostRouter.transitionTo('console.fleet-ops.maintenance.inspection-forms.index.details', this.args.resource.form);
+    }
+
     @action openIssue() {
         return this.hostRouter.transitionTo('console.fleet-ops.management.issues.index.details', this.args.resource.issue);
     }
