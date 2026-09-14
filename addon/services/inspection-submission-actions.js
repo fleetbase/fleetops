@@ -5,6 +5,8 @@ import { inject as service } from '@ember/service';
 export default class InspectionSubmissionActionsService extends ResourceActionService {
     @service fetch;
     @service notifications;
+    @service modalsManager;
+    @service intl;
 
     constructor() {
         super(...arguments);
@@ -77,25 +79,96 @@ export default class InspectionSubmissionActionsService extends ResourceActionSe
         return this.postAction(submission, 'submit', 'Inspection submitted.');
     }
 
-    @action async createIssue(submission) {
-        return this.postAction(submission, 'create-issue', 'Issue created from failed inspection items.');
+    /**
+     * Each of these used to fire on click: the first anyone knew of a new
+     * issue was a toast and an id. They ask first, and say what they are about
+     * to make and from which failed checks.
+     */
+    @action createIssue(submission) {
+        return this.confirmFollowUp(submission, {
+            kind: 'issue',
+            title: this.intl.t('inspection.follow-up.create-issue-title'),
+            summary: this.intl.t('inspection.follow-up.create-issue-summary'),
+            acceptButtonText: this.intl.t('inspection.follow-up.create-issue-accept'),
+            acceptButtonIcon: 'triangle-exclamation',
+            endpoint: 'create-issue',
+            message: 'Issue created from failed inspection items.',
+        });
     }
 
-    @action async createWorkOrder(submission) {
-        return this.postAction(submission, 'create-work-order', 'Work order created from failed inspection items.');
+    @action createWorkOrder(submission) {
+        return this.confirmFollowUp(submission, {
+            kind: 'work-order',
+            title: this.intl.t('inspection.follow-up.create-work-order-title'),
+            summary: this.intl.t('inspection.follow-up.create-work-order-summary'),
+            acceptButtonText: this.intl.t('inspection.follow-up.create-work-order-accept'),
+            acceptButtonIcon: 'clipboard-list',
+            dueNote: this.dueNoteFor(submission),
+            endpoint: 'create-work-order',
+            message: 'Work order created from failed inspection items.',
+        });
     }
 
-    @action async resolve(submission) {
-        return this.postAction(submission, 'resolve', 'Inspection resolved.');
+    @action resolve(submission) {
+        return this.confirmFollowUp(submission, {
+            kind: 'resolve',
+            title: this.intl.t('inspection.follow-up.resolve-title'),
+            summary: this.intl.t('inspection.follow-up.resolve-summary'),
+            acceptButtonText: this.intl.t('inspection.follow-up.resolve-accept'),
+            acceptButtonIcon: 'check',
+            endpoint: 'resolve',
+            message: 'Inspection resolved.',
+        });
+    }
+
+    /** When the work order falls due, which the server takes from the worst failure. */
+    dueNoteFor(submission) {
+        const failures = (submission?.item_results ?? []).filter((item) => item.passed === false);
+        const critical = failures.some((item) => item.severity === 'critical');
+        const due = new Date();
+        due.setDate(due.getDate() + (critical ? 1 : 7));
+
+        return this.intl.t('inspection.follow-up.due-note', { due: due.toLocaleDateString() });
+    }
+
+    confirmFollowUp(submission, { kind, title, summary, acceptButtonText, acceptButtonIcon, dueNote, endpoint, message }) {
+        const failures = (submission?.item_results ?? []).filter((item) => item.passed === false);
+        const nothingToDo = kind !== 'resolve' && failures.length === 0;
+
+        return this.modalsManager.show('modals/inspection-follow-up', {
+            title,
+            summary,
+            submission,
+            kind,
+            dueNote,
+            acceptButtonText,
+            acceptButtonIcon,
+            // Nothing failed: the server would only say so once the request was
+            // already made, which is a strange moment to find out.
+            acceptButtonDisabled: nothingToDo,
+            declineButtonText: this.intl.t('inspection.follow-up.cancel'),
+            confirm: async (modal) => {
+                modal.startLoading();
+
+                try {
+                    await this.postAction(submission, endpoint, message);
+                    modal.done();
+                } catch (error) {
+                    this.notifications.serverError(error);
+                    modal.stopLoading();
+                }
+            },
+        });
     }
 
     async postAction(submission, actionName, message) {
-        try {
-            await this.fetch.post(`inspection-submissions/${submission.id}/${actionName}`);
-            this.notifications.success(message);
-            await this.refresh();
-        } catch (error) {
-            this.notifications.serverError(error);
-        }
+        const response = await this.fetch.post(`inspection-submissions/${submission.id}/${actionName}`);
+
+        // The endpoints answer with what they did, and say so when a submission
+        // had nothing to raise.
+        this.notifications.success(response?.message ?? message);
+        await this.refresh();
+
+        return response;
     }
 }

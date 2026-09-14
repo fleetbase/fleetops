@@ -1,6 +1,7 @@
 import Component from '@glimmer/component';
 import { tracked } from '@glimmer/tracking';
 import { inject as service } from '@ember/service';
+import { action } from '@ember/object';
 import { debug } from '@ember/debug';
 import { next } from '@ember/runloop';
 import { task } from 'ember-concurrency';
@@ -17,6 +18,7 @@ export default class InspectionSubmissionDetailsComponent extends Component {
     @service inspectionFormActions;
     @service inspectionSubmissionActions;
     @service intl;
+    @service hostRouter;
 
     @tracked groups = [];
     @tracked values = {};
@@ -64,6 +66,15 @@ export default class InspectionSubmissionDetailsComponent extends Component {
         }
 
         return notes.join(' · ');
+    }
+
+    /** Follow-ups open where they live, the way the rest of the console navigates. */
+    @action openIssue() {
+        return this.hostRouter.transitionTo('console.fleet-ops.management.issues.index.details', this.args.resource.issue);
+    }
+
+    @action openWorkOrder() {
+        return this.hostRouter.transitionTo('console.fleet-ops.maintenance.work-orders.index.details', this.args.resource.work_order);
     }
 
     get hasAnswers() {

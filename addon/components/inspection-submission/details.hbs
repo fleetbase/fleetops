@@ -96,15 +96,49 @@
     {{/unless}}
 
     <ContentPanel @title={{t "inspection.record.follow-up"}} @open={{true}} @wrapperClass="bordered-top">
-        <div class="grid grid-cols-1 lg:grid-cols-2 gap-2 text-xs dark:text-gray-100">
-            <div class="field-info-container">
-                <div class="field-name">{{t "inspection.record.linked-issue"}}</div>
-                <div class="field-value">{{n-a (or @resource.issue.public_id @resource.issue_uuid)}}</div>
-            </div>
-            <div class="field-info-container">
-                <div class="field-name">{{t "inspection.record.linked-work-order"}}</div>
-                <div class="field-value">{{n-a (or @resource.work_order.public_id @resource.work_order_uuid)}}</div>
-            </div>
+        {{! A bare id was a dead end: each follow-up says what it is and opens it. }}
+        <div class="space-y-2">
+            {{#if @resource.issue}}
+                <button type="button" class="inspection-followup" {{on "click" this.openIssue}}>
+                    <div class="inspection-followup__head">
+                        <span class="inspection-followup__kind">{{t "inspection.record.linked-issue"}}</span>
+                        <span class="inspection-followup__id">{{@resource.issue.public_id}}</span>
+                        <FaIcon @icon="arrow-up-right-from-square" class="inspection-followup__open" />
+                    </div>
+                    <div class="inspection-followup__title">{{n-a @resource.issue.title}}</div>
+                    <div class="inspection-followup__meta">
+                        {{#if @resource.issue.status}}<Badge @status={{@resource.issue.status}}>{{smart-humanize @resource.issue.status}}</Badge>{{/if}}
+                        {{#if @resource.issue.priority}}<Badge @status={{if (eq @resource.issue.priority "critical") "critical" "info"}}>{{smart-humanize @resource.issue.priority}}</Badge>{{/if}}
+                        {{#if @resource.issue.type}}<span class="inspection-followup__type">{{smart-humanize @resource.issue.type}}</span>{{/if}}
+                    </div>
+                </button>
+            {{else}}
+                <div class="field-info-container">
+                    <div class="field-name">{{t "inspection.record.linked-issue"}}</div>
+                    <div class="field-value">{{n-a @resource.issue_uuid}}</div>
+                </div>
+            {{/if}}
+
+            {{#if @resource.work_order}}
+                <button type="button" class="inspection-followup" {{on "click" this.openWorkOrder}}>
+                    <div class="inspection-followup__head">
+                        <span class="inspection-followup__kind">{{t "inspection.record.linked-work-order"}}</span>
+                        <span class="inspection-followup__id">{{or @resource.work_order.code @resource.work_order.public_id}}</span>
+                        <FaIcon @icon="arrow-up-right-from-square" class="inspection-followup__open" />
+                    </div>
+                    <div class="inspection-followup__title">{{n-a @resource.work_order.subject}}</div>
+                    <div class="inspection-followup__meta">
+                        {{#if @resource.work_order.status}}<Badge @status={{@resource.work_order.status}}>{{smart-humanize @resource.work_order.status}}</Badge>{{/if}}
+                        {{#if @resource.work_order.priority}}<Badge @status={{if (eq @resource.work_order.priority "critical") "critical" "info"}}>{{smart-humanize @resource.work_order.priority}}</Badge>{{/if}}
+                        {{#if @resource.work_order.due_at}}<span class="inspection-followup__type">{{t "inspection.record.due"}} {{format-date-fns @resource.work_order.due_at "dd MMM yyyy"}}</span>{{/if}}
+                    </div>
+                </button>
+            {{else}}
+                <div class="field-info-container">
+                    <div class="field-name">{{t "inspection.record.linked-work-order"}}</div>
+                    <div class="field-value">{{n-a @resource.work_order_uuid}}</div>
+                </div>
+            {{/if}}
         </div>
     </ContentPanel>
 

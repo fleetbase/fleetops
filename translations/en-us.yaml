@@ -2902,6 +2902,7 @@ inspection:
         submitted: Submitted
         submitted-by: Submitted By
         submission-title: "{form} Submission"
+        due: Due
         create-issue: Create Issue
         create-work-order: Create Work Order
         resolve: Resolve
@@ -2929,6 +2930,21 @@ inspection:
         outstanding-field: "{label} is required before submitting"
         review: "Review →"
         jump-to: "Jump to →"
+    follow-up:
+        create-issue-title: Create an issue from this inspection?
+        create-issue-summary: An issue is raised against the vehicle and driver, naming the failed checks and taking the highest severity among them. The inspection links to it.
+        create-issue-accept: Create Issue
+        create-work-order-title: Open a work order from this inspection?
+        create-work-order-summary: A work order is opened against the vehicle with a checklist of the failed checks. It raises the issue first if this inspection has none.
+        create-work-order-accept: Create Work Order
+        resolve-title: Resolve this inspection?
+        resolve-summary: The inspection is marked resolved and stamped with the time. Any issue or work order it raised stays open.
+        resolve-accept: Resolve Inspection
+        from-these: "{count, plural, one {From this failed check} other {From these # failed checks}}"
+        unsafe-note: "{count, plural, one {# check is marked unsafe to operate} other {# checks are marked unsafe to operate}}"
+        due-note: "Due {due}, from the highest severity among them."
+        nothing-failed: Nothing failed on this inspection, so there is nothing to raise.
+        cancel: Cancel
     link:
         public-links: Public Links
         existing: Generated Links

@@ -1,0 +1,31 @@
+<Modal::Default @modalIsOpened={{@modalIsOpened}} @options={{@options}} @confirm={{@onConfirm}} @decline={{@onDecline}}>
+    <div class="modal-body-container space-y-3 text-sm dark:text-gray-100">
+        <p class="text-gray-600 dark:text-gray-300">{{@options.summary}}</p>
+
+        {{#if this.hasNothingToDo}}
+            <div class="inspection-follow-up__empty">{{t "inspection.follow-up.nothing-failed"}}</div>
+        {{else if this.failures.length}}
+            <div>
+                <div class="inspection-follow-up__heading">{{t "inspection.follow-up.from-these" count=this.failures.length}}</div>
+                <ul class="inspection-follow-up__list">
+                    {{#each this.failures as |item|}}
+                        <li class="inspection-follow-up__item">
+                            <span class="inspection-follow-up__label">{{n-a item.label}}</span>
+                            {{#if item.severity}}
+                                <Badge @status={{if (eq item.severity "critical") "critical" "info"}}>{{smart-humanize item.severity}}</Badge>
+                            {{/if}}
+                        </li>
+                    {{/each}}
+                </ul>
+            </div>
+
+            {{#if this.unsafeCount}}
+                <div class="inspection-follow-up__note">{{t "inspection.follow-up.unsafe-note" count=this.unsafeCount}}</div>
+            {{/if}}
+
+            {{#if @options.dueNote}}
+                <div class="inspection-follow-up__note">{{@options.dueNote}}</div>
+            {{/if}}
+        {{/if}}
+    </div>
+</Modal::Default>
