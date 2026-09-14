@@ -431,8 +431,12 @@ test('the form resource answers grouped_fields for the driver and identifiers fo
         ->and($public['grouped_fields'][0]['meta'])->toBe(['grid_size' => 2])
         ->and($public['grouped_fields'][0])->not->toHaveKey('company_uuid');
 
-    $field = $public['grouped_fields'][0]['fields'][1];
-    expect($field['id'])->toBe($field['uuid'])
+    $field  = $public['grouped_fields'][0]['fields'][1];
+    $brakes = CustomField::query()->where('name', 'brakes')->first();
+    // The id a driver sees is the id a submit names the field by, and the id
+    // the submission's answers come back with; the uuid stays on the console.
+    expect($field['id'])->toBe($brakes->public_id ?? $brakes->uuid)
+        ->and($field)->not->toHaveKey('uuid')
         ->and($field['name'])->toBe('brakes')
         ->and($field['label'])->toBe('Brakes')
         ->and($field['type'])->toBe('pass-fail')

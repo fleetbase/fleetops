@@ -84,14 +84,17 @@ class InspectionForm extends FleetbaseResource
     }
 
     /**
-     * A field as the API answers it. A custom field has no public id, so the
-     * uuid is the id on both sides; it is what a submit names the field by.
+     * A field as the API answers it.
+     *
+     * The id a consumer sees here is the id a submit names the field by, and
+     * the id that comes back on the submission's answers — the three have to
+     * agree, so this follows the groups above: the public id outside, the uuid
+     * on the console's own namespace.
      */
     public static function fieldToArray(CustomField $field, bool $internal): array
     {
         $data = [
-            'id'          => $field->uuid,
-            'uuid'        => $field->uuid,
+            'id'          => $internal ? $field->uuid : ($field->public_id ?? $field->uuid),
             'name'        => $field->name,
             'label'       => $field->label,
             'description' => $field->description,
@@ -108,6 +111,7 @@ class InspectionForm extends FleetbaseResource
         ];
 
         if ($internal) {
+            $data['uuid']             = $field->uuid;
             $data['company_uuid']     = $field->company_uuid;
             $data['category_uuid']    = $field->category_uuid;
             $data['subject_uuid']     = $field->subject_uuid;
