@@ -2,6 +2,7 @@
 
 namespace Fleetbase\FleetOps\Http\Resources\v1;
 
+use Fleetbase\FleetOps\Support\InspectionFileStore;
 use Fleetbase\FleetOps\Support\Utils;
 use Fleetbase\Http\Resources\FleetbaseResource;
 use Fleetbase\Support\Http;
@@ -31,7 +32,7 @@ class InspectionItemResult extends FleetbaseResource
             'severity'                   => $this->severity,
             'passed'                     => $this->passed,
             'comments'                   => $this->comments,
-            'photos'                     => data_get($this, 'photos', []),
+            'photos'                     => $this->projectPhotos(),
             'meta'                       => $this->projectMeta(),
             'submission_id'              => $this->submission_id,
             'updated_at'                 => $this->updated_at,
@@ -44,6 +45,22 @@ class InspectionItemResult extends FleetbaseResource
      * the console's business. Outside, `item_key` already names the field, so
      * the uuid is not something a consumer should have to see.
      */
+    /**
+     * A result's photos are stored as `file:<uuid>` references, the same as the
+     * answer they mirror — and the answer hands back something fetchable, so
+     * this does too rather than leaking the uuid. A flat `item_results` submit
+     * stores no file, and `project()` hands those values straight back.
+     */
+    protected function projectPhotos(): array
+    {
+        $photos = data_get($this, 'photos', []);
+        if (!is_array($photos) || empty($photos)) {
+            return [];
+        }
+
+        return array_values(array_map(fn ($photo) => InspectionFileStore::project($photo), $photos));
+    }
+
     protected function projectMeta(): mixed
     {
         $meta = data_get($this, 'meta');
