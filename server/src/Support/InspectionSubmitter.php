@@ -138,10 +138,12 @@ class InspectionSubmitter
      *
      * @param array       $rows         [{custom_field|custom_field_uuid, value, value_type}]
      * @param string|null $uploaderUuid the user a stored photo or signature is credited to
+     * @param string      $under        the body key the rows arrived under, which the
+     *                                  422 paths are reported against
      *
      * @throws ValidationException
      */
-    public static function applyCustomFieldValues(InspectionSubmission $submission, array $rows, ?string $uploaderUuid = null, string $under = 'answers'): array
+    public static function applyCustomFieldValues(InspectionSubmission $submission, array $rows, ?string $uploaderUuid = null, string $under = 'custom_field_values'): array
     {
         $fields  = CustomField::query()->where('subject_uuid', $submission->inspection_form_uuid)->where('for', InspectionForm::FIELD_FOR)->get();
         $payload = [];

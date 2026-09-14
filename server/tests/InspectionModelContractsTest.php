@@ -638,8 +638,11 @@ test('inspection submitter records a submission and the follow-up the form asks 
     Carbon::setTestNow('2026-09-09 07:00:00');
 
     $rules = InspectionSubmitter::rules();
-    expect($rules['item_results'])->toBe('required_without:custom_field_values|array')
-        ->and($rules['custom_field_values'])->toBe('required_without:item_results|array')
+    // Any one of the three bodies satisfies the requirement: the answers, the
+    // spelling they used to go by, or the first cut's flat results.
+    expect($rules['item_results'])->toBe('required_without_all:custom_field_values,answers|array')
+        ->and($rules['custom_field_values'])->toBe('required_without_all:item_results,answers|array')
+        ->and($rules['answers'])->toBe('required_without_all:item_results,custom_field_values|array')
         ->and($rules['item_results.*.passed'])->toBe('required|boolean')
         ->and($rules['item_results.*.photos.*'][1])->toBeInstanceOf(Base64OrUrl::class);
 
