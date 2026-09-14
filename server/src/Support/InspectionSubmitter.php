@@ -43,12 +43,17 @@ class InspectionSubmitter
             // other keys are dropped: without these, `value` never reached the
             // submitter, so every answer arrived empty and a failed check
             // carrying its photo was refused for having none.
-            'custom_field_values'                     => 'required_without:item_results|array',
+            'answers'                                 => 'required_without_all:item_results,custom_field_values|array',
+            'answers.*.field'                         => 'required_without:answers.*.custom_field|string|max:191',
+            'answers.*.custom_field'                  => 'nullable|string|max:191',
+            'answers.*.value'                         => 'nullable',
+            'answers.*.value_type'                    => 'nullable|string|max:50',
+            'custom_field_values'                     => 'required_without_all:item_results,answers|array',
             'custom_field_values.*.custom_field'      => 'required_without:custom_field_values.*.custom_field_uuid|string|max:191',
             'custom_field_values.*.custom_field_uuid' => 'nullable|string|max:191',
             'custom_field_values.*.value'             => 'nullable',
             'custom_field_values.*.value_type'        => 'nullable|string|max:50',
-            'item_results'                            => 'required_without:custom_field_values|array',
+            'item_results'                            => 'required_without_all:custom_field_values,answers|array',
             'item_results.*.item_key'                 => 'nullable|string|max:191',
             'item_results.*.label'                    => 'required|string|max:255',
             'item_results.*.category'                 => 'nullable|string|max:191',
@@ -85,9 +90,12 @@ class InspectionSubmitter
             'attachments'          => data_get($validated, 'attachments'),
         ], $attributes));
 
-        $values = data_get($validated, 'custom_field_values');
+        // `answers` is what the API documents; `custom_field_values` is what
+        // the first cut shipped and the console still sends.
+        $values = data_get($validated, 'answers') ?: data_get($validated, 'custom_field_values');
+        $under  = data_get($validated, 'answers') ? 'answers' : 'custom_field_values';
         if (is_array($values) && !empty($values)) {
-            static::applyCustomFieldValues($submission, $values, $submission->submitted_by_uuid);
+            static::applyCustomFieldValues($submission, $values, $submission->submitted_by_uuid, $under);
         } else {
             foreach ((array) data_get($validated, 'item_results', []) as $item) {
                 InspectionItemResult::create([
@@ -133,23 +141,23 @@ class InspectionSubmitter
      *
      * @throws ValidationException
      */
-    public static function applyCustomFieldValues(InspectionSubmission $submission, array $rows, ?string $uploaderUuid = null): array
+    public static function applyCustomFieldValues(InspectionSubmission $submission, array $rows, ?string $uploaderUuid = null, string $under = 'answers'): array
     {
         $fields  = CustomField::query()->where('subject_uuid', $submission->inspection_form_uuid)->where('for', InspectionForm::FIELD_FOR)->get();
         $payload = [];
         $errors  = [];
 
         foreach (array_values($rows) as $index => $row) {
-            $key   = Arr::get($row, 'custom_field', Arr::get($row, 'custom_field_uuid'));
+            $key   = Arr::get($row, 'field', Arr::get($row, 'custom_field', Arr::get($row, 'custom_field_uuid')));
             $field = static::findField($fields, $key);
             if (!$field) {
-                $errors["custom_field_values.{$index}.custom_field"] = ['The field "' . (is_scalar($key) ? $key : '?') . '" does not belong to this inspection form.'];
+                $errors["{$under}.{$index}." . ($under === 'answers' ? 'field' : 'custom_field')] = ['The field "' . (is_scalar($key) ? $key : '?') . '" does not belong to this inspection form.'];
                 continue;
             }
 
             [$value, $valueType, $fieldErrors] = static::normalizeValue($field, Arr::get($row, 'value'), Arr::get($row, 'value_type'), $submission, $uploaderUuid);
             foreach ($fieldErrors as $message) {
-                $errors["custom_field_values.{$index}.value"][] = $message;
+                $errors["{$under}.{$index}.value"][] = $message;
             }
 
             $payload[] = [
@@ -180,6 +188,7 @@ class InspectionSubmitter
         }
 
         return $fields->first(fn (CustomField $field) => $field->uuid === $key)
+            ?? $fields->first(fn (CustomField $field) => $field->public_id === $key)
             ?? $fields->first(fn (CustomField $field) => $field->name === $key);
     }
 

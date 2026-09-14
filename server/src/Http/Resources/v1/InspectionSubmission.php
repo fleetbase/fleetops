@@ -66,8 +66,17 @@ class InspectionSubmission extends FleetbaseResource
         // under `custom_field_values` for the console. What both consoles and
         // the app want is the field's identity beside its answer, with file
         // references resolved, so that projection replaces it.
-        $data['custom_field_values'] = $this->projectCustomFieldValues();
-        $data['files']               = $this->projectFiles();
+        //
+        // A form has `fields`; a submission has `answers` to them. The stored
+        // shape is the platform's custom-field values, but that is how it is
+        // built rather than what it is, and an integrator reading a DVIR
+        // should not have to know the difference.
+        $answers = $this->projectCustomFieldValues();
+        if (Http::isInternalRequest()) {
+            $data['custom_field_values'] = $answers;
+        }
+        $data['answers'] = $answers;
+        $data['files']   = $this->projectFiles();
 
         return $data;
     }
@@ -86,15 +95,19 @@ class InspectionSubmission extends FleetbaseResource
         return collect($this->resource?->customFieldValues)->map(function (CustomFieldValue $value) use ($internal) {
             $field = $value->customField;
             $row   = [
-                'custom_field' => $value->custom_field_uuid,
-                'name'         => $field?->name,
-                'label'        => $field?->label ?? $value->custom_field_label,
-                'type'         => $field?->type ?? $value->value_type,
-                'value_type'   => $value->value_type,
-                'value'        => static::projectValue($value),
+                // The field's public id, as the form hands it out. `value_type`
+                // describes how the answer is stored, which is the platform's
+                // business and not an integrator's, so it stays internal.
+                'field'      => $internal ? $value->custom_field_uuid : ($field?->public_id ?? $value->custom_field_uuid),
+                'name'       => $field?->name,
+                'label'      => $field?->label ?? $value->custom_field_label,
+                'type'       => $field?->type ?? $value->value_type,
+                'value'      => static::projectValue($value),
             ];
 
             if ($internal) {
+                $row['custom_field'] = $value->custom_field_uuid;
+                $row['value_type']   = $value->value_type;
                 $row['uuid']          = $value->uuid;
                 $row['category_uuid'] = $field?->category_uuid;
                 $row['order']         = $field?->order === null ? null : (int) $field->order;

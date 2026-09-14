@@ -682,9 +682,12 @@ test('the submission resource answers the answers, with the files resolved', fun
     $loaded = $submission->fresh(['itemResults', 'customFieldValues.customField', 'files']);
     $public = (new InspectionSubmissionResource($loaded))->toArray(fleetOpsInspectionFieldRequest(false));
 
-    $values = collect($public['custom_field_values'])->keyBy('name');
-    expect($public['custom_field_values'])->toHaveCount(5)
-        ->and($values['brakes']['custom_field'])->toBe($fields['brakes']->uuid)
+    $values = collect($public['answers'])->keyBy('name');
+    expect($public['answers'])->toHaveCount(5)
+        // A form has `fields`; a submission has `answers` to them. The field is
+        // named by its public id — or, as here, by the uuid it falls back to
+        // until core-api#254 gives custom fields a public id.
+        ->and($values['brakes']['field'])->toBe($fields['brakes']->uuid)
         ->and($values['brakes']['label'])->toBe('Brakes')
         ->and($values['brakes']['type'])->toBe('pass-fail')
         ->and($values['brakes']['value']['passed'])->toBeFalse()
@@ -696,7 +699,12 @@ test('the submission resource answers the answers, with the files resolved', fun
         // the boolean the app wrote.
         ->and($values['odometer']['value'])->toBe(112480)
         ->and($values['trailer']['value'])->toBeTrue()
-        ->and($values['brakes'])->not->toHaveKey('uuid');
+        ->and($values['brakes'])->not->toHaveKey('uuid')
+        // `value_type` says how the answer is stored, which is the platform's
+        // business; the old spelling is gone from the public body entirely.
+        ->and($values['brakes'])->not->toHaveKey('value_type')
+        ->and($values['brakes'])->not->toHaveKey('custom_field')
+        ->and($public)->not->toHaveKey('custom_field_values');
 
     expect($public['files'])->toHaveCount(2)
         ->and($public['files'][0])->toHaveKeys(['id', 'uuid', 'url', 'original_filename', 'content_type', 'type'])
@@ -704,6 +712,9 @@ test('the submission resource answers the answers, with the files resolved', fun
 
     $internal = (new InspectionSubmissionResource($loaded))->toArray(fleetOpsInspectionFieldRequest(true));
     $brakes   = collect($internal['custom_field_values'])->firstWhere('name', 'brakes');
+    expect($internal['answers'])->toHaveCount(5)
+        ->and($brakes['custom_field'])->toBe($fields['brakes']->uuid)
+        ->and($brakes['value_type'])->not->toBeNull();
     expect($brakes['uuid'])->not->toBeNull()
         ->and($brakes['category_uuid'])->toBe($fields['brakes']->category_uuid)
         ->and($brakes['order'])->toBe(2)
@@ -711,7 +722,7 @@ test('the submission resource answers the answers, with the files resolved', fun
 
     // A submission whose answers were never loaded says nothing about them.
     $bare = (new InspectionSubmissionResource(new InspectionSubmission()))->toArray(fleetOpsInspectionFieldRequest(false));
-    expect($bare['custom_field_values'])->toBe([])
+    expect($bare['answers'])->toBe([])
         ->and($bare['files'])->toBe([]);
 });
 
