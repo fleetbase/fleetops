@@ -1,33 +1,24 @@
-<Pill
-    @resource={{this.resource}}
-    @imageSrc={{resource-image this.resource.photo_url "vehicle"}}
-    @imageFallback={{(placeholder-image "vehicle")}}
-    @showOnlineIndicator={{if this.resource true false}}
-    @noTooltip={{not this.resource}}
+<Resource::Pill
+    @resource={{(or @vehicle @resource)}}
+    @resourceType="vehicle"
+    @title={{@title}}
+    @titleFallback={{@titleFallback}}
+    @subtitle={{@subtitle}}
+    @showOnlineIndicator={{@showOnlineIndicator}}
+    @noPopover={{@noPopover}}
+    @popoverPlacement={{@popoverPlacement}}
+    @static={{@static}}
     @onClick={{@onClick}}
+    @onView={{@onView}}
     @anchorClass={{@anchorClass}}
     @imageClass={{@imageClass}}
     @imageWrapperClass={{@imageWrapperClass}}
     @contentWrapperClass={{@contentWrapperClass}}
     @titleClass={{@titleClass}}
     @subtitleClass={{@subtitleClass}}
+    @useBlock={{(has-block)}}
     ...attributes
+    as |resource|
 >
-    <:default>
-        <div class="text-sm">{{or this.resource.name this.resource.yearMakeModel @titleFallback "No vehicle"}}</div>
-        <div class="text-xs text-gray-400 dark:text-gray-500">{{or this.resource.plate_number this.resource.vin this.resource.serial_number this.resource.call_sign "-"}}</div>
-    </:default>
-    <:tooltip>
-        <div>
-            <div class="text-xs font-semibold">{{or this.resource.name this.resource.yearMakeModel}}</div>
-            <div class="text-xs">{{t "resource.driver"}}: {{n-a this.resource.driver_name}}</div>
-            <div class="text-xs">
-                <span>{{t "common.status"}}:</span>
-                <span class="{{if this.resource.online 'text-green-500' 'text-red-400'}}">
-                    {{if this.resource.online (t "common.online") (t "common.offline")}}
-                </span>
-            </div>
-            <div class="text-xs truncate">Pos: {{point-coordinates this.resource.location}}</div>
-        </div>
-    </:tooltip>
-</Pill>
+    {{yield resource}}
+</Resource::Pill>
