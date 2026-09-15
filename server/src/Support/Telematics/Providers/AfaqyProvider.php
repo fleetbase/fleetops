@@ -3,9 +3,12 @@
 namespace Fleetbase\FleetOps\Support\Telematics\Providers;
 
 use Fleetbase\FleetOps\Exceptions\TelematicProviderException;
+use Fleetbase\FleetOps\Exceptions\TelematicRateLimitExceededException;
+use Fleetbase\FleetOps\Support\Telematics\Afaqy\Payload;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Client\Response;
-use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
@@ -27,7 +30,7 @@ class AfaqyProvider extends AbstractProvider
     protected function prepareAuthentication(): void
     {
         $this->baseUrl = rtrim($this->credentials['base_url'] ?? $this->baseUrl, '/');
-        $token         = $this->canRefreshToken() ? $this->authenticate() : ($this->credentials['token'] ?? null);
+        $token         = $this->canRefreshToken() ? $this->cachedToken() : ($this->credentials['token'] ?? null);
 
         if (!$token) {
             throw new \InvalidArgumentException('AFAQY username/password or token is required.');
@@ -44,7 +47,8 @@ class AfaqyProvider extends AbstractProvider
 
             $response = $this->afaqyPost('/units/lists', [
                 'data' => [
-                    'projection' => ['_id', 'name', 'imei', 'last_update'],
+                    'offset'     => 0, 'limit' => 1, 'simplify' => 0,
+                    'projection' => ['basic', 'last_update'],
                     'filters'    => new \stdClass(),
                 ],
             ], true, $this->connectionTestTimeout, $this->connectionTestConnectTimeout);
@@ -68,7 +72,7 @@ class AfaqyProvider extends AbstractProvider
 
     public function fetchDevices(array $options = []): array
     {
-        $limit   = max(1, min((int) ($options['limit'] ?? 500), 500));
+        $limit   = max(1, min((int) ($options['limit'] ?? 1000), 1000));
         $offset  = (int) ($options['cursor'] ?? 0);
         $filters = $options['filters'] ?? new \stdClass();
 
@@ -82,30 +86,36 @@ class AfaqyProvider extends AbstractProvider
                 'filters'    => $filters,
                 'limit'      => $limit,
                 'offset'     => $offset,
-                'projection' => $options['projection'] ?? [
-                    '_id',
-                    'name',
-                    'imei',
-                    'sim_number',
-                    'device_serial',
-                    'active',
-                    'driver_id',
-                    'last_update',
-                    'counters',
-                    'profile',
-                    'sensors_last_val',
-                ],
+                'simplify'   => 0,
+                'projection' => $options['projection'] ?? ['basic', 'last_update'],
             ],
-        ], true);
+        ], true, $options['timeout'] ?? null, $options['connect_timeout'] ?? null);
 
-        $devices     = $response['data'] ?? [];
+        if (!isset($response['data']) || !is_array($response['data']) || !array_is_list($response['data'])) {
+            throw new TelematicProviderException('AFAQY returned an invalid units envelope.');
+        }
+        $devices = array_map(function ($unit) {
+            if (!is_array($unit)) {
+                throw new TelematicProviderException('AFAQY returned an invalid unit.');
+            }
+
+            return Payload::unit($unit);
+        }, $response['data']);
         $pagination  = $response['pagination'] ?? [];
         $pageOffset  = (int) ($pagination['offset'] ?? $offset);
         $pageLimit   = (int) ($pagination['limit'] ?? $limit);
         $resultCount = (int) ($pagination['resultCount'] ?? count($devices));
-        $total       = (int) ($pagination['filtersCount'] ?? $pagination['allCount'] ?? count($devices));
-        $advanceBy   = $resultCount > 0 ? $resultCount : max($pageLimit, count($devices), 1);
-        $nextCursor  = ($pageOffset + $advanceBy) < $total ? $pageOffset + $advanceBy : null;
+        $total       = $pagination['filtersCount'] ?? $pagination['allCount'] ?? null;
+        if ($resultCount !== count($devices) || $pageLimit < 1 || ($total !== null && (int) $total < 0)) {
+            throw new TelematicProviderException('AFAQY returned inconsistent pagination; sweep incomplete.');
+        }
+        $advanceBy = count($devices);
+        if ($pageOffset !== $offset || ($devices === [] && $total !== null && $offset < (int) $total)) {
+            throw new TelematicProviderException('AFAQY pagination did not advance; sweep incomplete.');
+        }
+        $nextCursor = $total !== null
+            ? (($pageOffset + $advanceBy) < (int) $total ? $pageOffset + $advanceBy : null)
+            : (count($devices) >= max(1, $pageLimit) ? $pageOffset + count($devices) : null);
 
         Log::info('AFAQY units page fetched', [
             'telematic_uuid'        => $this->telematic?->uuid,
@@ -146,21 +156,22 @@ class AfaqyProvider extends AbstractProvider
 
     public function normalizeDevice(array $payload): array
     {
+        $payload    = Payload::unit($payload);
         $lastUpdate = $payload['last_update'] ?? [];
         $profile    = $payload['profile'] ?? [];
 
         return [
             'device_id'    => $payload['_id'] ?? $payload['id'] ?? null,
             'external_id'  => $payload['_id'] ?? $payload['id'] ?? null,
-            'name'         => $payload['name'] ?? data_get($payload, 'profile.plate_number') ?? 'Unknown Unit',
+            'name'         => $payload['name'] ?? data_get($payload, 'profile.plate_number') ?? null,
             'provider'     => 'afaqy',
             'model'        => data_get($payload, 'profile.model') ?? $payload['device'] ?? null,
             'imei'         => $payload['imei'] ?? null,
             'phone'        => $payload['sim_number'] ?? null,
             'vin'          => data_get($payload, 'profile.vin'),
-            'status'       => ($payload['active'] ?? false) ? 'active' : 'inactive',
-            'online'       => $payload['active'] ?? null,
-            'last_seen_at' => $this->parseTimestamp($lastUpdate['dtt'] ?? $lastUpdate['dts'] ?? null),
+            'status'       => array_key_exists('active', $payload) ? ($payload['active'] ? 'active' : 'inactive') : null,
+            'online'       => null,
+            'last_seen_at' => $this->parseTimestamp($lastUpdate['dts'] ?? $lastUpdate['dtt'] ?? null),
             'location'     => [
                 'lat' => $lastUpdate['lat'] ?? null,
                 'lng' => $lastUpdate['lng'] ?? null,
@@ -174,18 +185,19 @@ class AfaqyProvider extends AbstractProvider
                 'sim_number'       => $payload['sim_number'] ?? null,
                 'driver_id'        => $payload['driver_id'] ?? null,
                 'last_update'      => $this->compactLastUpdate($lastUpdate),
-                'capabilities'     => [
-                    'tracking'       => isset($lastUpdate['lat'], $lastUpdate['lng']),
-                    'odometer'       => data_get($payload, 'counters.odometer') !== null,
-                    'fuel_level'     => $this->extractFuelLevel($payload) !== null,
-                    'ignition_state' => $this->extractIgnition($payload) !== null,
-                ],
+                'capabilities'     => array_filter([
+                    'tracking'       => isset($lastUpdate['lat'], $lastUpdate['lng']) ? true : null,
+                    'odometer'       => data_get($payload, 'counters.odometer') !== null ? true : null,
+                    'fuel_level'     => $this->extractFuelLevel($payload) !== null ? true : null,
+                    'ignition_state' => $this->extractIgnition($payload) !== null ? true : null,
+                ], fn ($value) => $value !== null),
             ],
         ];
     }
 
     public function normalizeEvent(array $payload): array
     {
+        $payload    = Payload::unit($payload);
         $lastUpdate = $payload['last_update'] ?? $payload;
 
         return [
@@ -193,19 +205,23 @@ class AfaqyProvider extends AbstractProvider
             'device_id'   => $payload['_id'] ?? $payload['id'] ?? null,
             'event_type'  => $payload['event'] ?? $payload['event_type'] ?? 'telemetry_update',
             'message'     => $payload['message'] ?? $payload['event'] ?? null,
-            'occurred_at' => $this->parseTimestamp($lastUpdate['dtt'] ?? $lastUpdate['dts'] ?? null),
-            'online'      => $payload['active'] ?? null,
+            'occurred_at' => $this->parseTimestamp($lastUpdate['dtt'] ?? null),
+            'online'      => null,
             'location'    => [
                 'lat' => $lastUpdate['lat'] ?? data_get($lastUpdate, 'loc.coordinates.1'),
                 'lng' => $lastUpdate['lng'] ?? data_get($lastUpdate, 'loc.coordinates.0'),
             ],
-            'speed'      => $lastUpdate['speed'] ?? $lastUpdate['spd'] ?? null,
-            'heading'    => $lastUpdate['angle'] ?? $lastUpdate['ang'] ?? null,
-            'altitude'   => $lastUpdate['alt'] ?? null,
-            'odometer'   => data_get($payload, 'counters.odometer'),
-            'ignition'   => $this->extractIgnition($payload),
-            'fuel_level' => $this->extractFuelLevel($payload),
-            'meta'       => $payload,
+            'speed'        => $lastUpdate['speed'] ?? $lastUpdate['spd'] ?? null,
+            'heading'      => $lastUpdate['angle'] ?? $lastUpdate['ang'] ?? null,
+            'altitude'     => $lastUpdate['alt'] ?? null,
+            'odometer'     => data_get($payload, 'counters.odometer'),
+            'ignition'     => $this->extractIgnition($payload),
+            'fuel_level'   => $this->extractFuelLevel($payload),
+            'last_seen_at' => $this->parseTimestamp($lastUpdate['dts'] ?? $lastUpdate['dtt'] ?? null),
+            'meta'         => array_merge($payload, ['afaqy' => [
+                'position_at' => $this->parseTimestamp($lastUpdate['dtt'] ?? null),
+                'provider_at' => $this->parseTimestamp($lastUpdate['dts'] ?? null),
+            ]]),
         ];
     }
 
@@ -291,6 +307,7 @@ class AfaqyProvider extends AbstractProvider
             throw new \InvalidArgumentException('AFAQY username/password or token is required.');
         }
 
+        $this->reserveRequest();
         $response = Http::asJson()
             ->acceptJson()
             ->timeout(30)
@@ -298,10 +315,10 @@ class AfaqyProvider extends AbstractProvider
                 'data' => [
                     'username' => $this->credentials['username'],
                     'password' => $this->credentials['password'],
-                    'expire'   => $this->credentials['expire'] ?? 1,
                 ],
             ]);
 
+        $this->checkThrottle($response);
         if ($response->failed()) {
             throw new TelematicProviderException('AFAQY authentication failed with status ' . $response->status(), $this->providerErrorContext('/auth/login', $response, false));
         }
@@ -328,6 +345,7 @@ class AfaqyProvider extends AbstractProvider
         $timeout ??= $this->dataTimeout;
         $connectTimeout ??= $this->connectTimeout;
 
+        $this->reserveRequest();
         try {
             $response = Http::withHeaders($this->headers)
                 ->timeout($timeout)
@@ -337,6 +355,7 @@ class AfaqyProvider extends AbstractProvider
             throw new TelematicProviderException('AFAQY API request timed out while waiting for provider response.', $this->transportErrorContext($endpoint, $payload, $e, !$allowRetry, $startedAt, $timeout, $connectTimeout), previous: $e);
         }
 
+        $this->checkThrottle($response);
         if ($this->isTokenRejected($response)) {
             if (!$allowRetry || !$this->canRefreshToken()) {
                 $message = $this->canRefreshToken()
@@ -357,7 +376,12 @@ class AfaqyProvider extends AbstractProvider
             throw new TelematicProviderException('AFAQY API request failed with status ' . $response->status(), $this->providerErrorContext($endpoint, $response, !$allowRetry));
         }
 
-        return $response->json() ?? [];
+        $json = $response->json();
+        if (!is_array($json) || (isset($json['status_code']) && (int) $json['status_code'] >= 400)) {
+            throw new TelematicProviderException('AFAQY returned an invalid or unsuccessful response.');
+        }
+
+        return $json;
     }
 
     protected function buildAuthenticatedRequest(string $endpoint, array $payload = [], bool $tokenInQuery = false): array
@@ -384,9 +408,68 @@ class AfaqyProvider extends AbstractProvider
 
     protected function refreshToken(): void
     {
-        unset($this->credentials['token']);
+        $rejected = $this->credentials['token'] ?? null;
+        $this->setToken($this->cachedToken($rejected));
+    }
 
-        $this->setToken($this->authenticate());
+    public function supportsWebhooks(): bool
+    {
+        return true;
+    }
+
+    public function processWebhook(array $payload, array $headers = []): array
+    {
+        $units = Payload::units($payload);
+
+        return ['devices' => array_map([$this, 'normalizeDevice'], $units), 'events' => array_map([$this, 'normalizeEvent'], $units), 'sensors' => []];
+    }
+
+    protected function accountKey(): string
+    {
+        return hash('sha256', $this->baseUrl . '|' . ($this->credentials['username'] ?? $this->credentials['token'] ?? ''));
+    }
+
+    protected function cachedToken(?string $rejected = null): string
+    {
+        $key = 'afaqy:token:' . $this->accountKey() . ':' . hash('sha256', $this->credentials['password'] ?? '');
+
+        return Cache::lock($key . ':lock', 40)->block(5, function () use ($key, $rejected) {
+            $stored = Cache::get($key);
+            $token  = $stored ? Crypt::decryptString($stored) : null;
+            if (!$token || $token === $rejected) {
+                $token = $this->authenticate();
+                Cache::put($key, Crypt::encryptString($token), 29 * 86400);
+            }
+
+            return $token;
+        });
+    }
+
+    protected function reserveRequest(): void
+    {
+        $key = 'afaqy:rate:' . $this->accountKey();
+        Cache::lock($key . ':lock', 5)->block(2, function () use ($key) {
+            $now      = microtime(true);
+            $until    = (float) Cache::get($key . ':blocked', 0);
+            $requests = array_values(array_filter(Cache::get($key, []), fn ($at) => $at > $now - 60));
+            if ($until > $now || count($requests) >= 60) {
+                throw new TelematicRateLimitExceededException('AFAQY request budget exhausted.', ['retry_after' => max(1, (int) ceil(max($until, ($requests[0] ?? $now) + 60) - $now))]);
+            }
+            $requests[] = $now;
+            Cache::put($key, $requests, 61);
+        });
+    }
+
+    protected function checkThrottle(Response $response): void
+    {
+        if ($response->status() !== 429) {
+            return;
+        }
+        $header = $response->header('Retry-After');
+        $delay  = is_numeric($header) ? (int) $header : max(1, (strtotime($header ?: '') ?: time() + 60) - time());
+        $delay  = max(1, min($delay, 3600));
+        Cache::put('afaqy:rate:' . $this->accountKey() . ':blocked', microtime(true) + $delay, $delay);
+        throw new TelematicRateLimitExceededException('AFAQY rate limited the request.', ['retry_after' => $delay]);
     }
 
     protected function canRefreshToken(): bool
@@ -421,7 +504,17 @@ class AfaqyProvider extends AbstractProvider
             ?? data_get($json, 'error_description')
             ?? data_get($json, 'error');
 
-        return is_scalar($message) ? (string) $message : null;
+        if (!is_scalar($message)) {
+            return null;
+        }
+        $message = (string) $message;
+        foreach (['token', 'password'] as $secret) {
+            if (!empty($this->credentials[$secret])) {
+                $message = str_replace($this->credentials[$secret], '[redacted]', $message);
+            }
+        }
+
+        return preg_replace('/(token|password|key)=([^&\s]+)/i', '$1=[redacted]', $message);
     }
 
     protected function transportErrorContext(string $endpoint, array $payload, ConnectionException $e, bool $retryAttempted, float $startedAt, int $timeout, int $connectTimeout): array
@@ -454,7 +547,8 @@ class AfaqyProvider extends AbstractProvider
         $params = $lastUpdate['params'] ?? $lastUpdate['prms'] ?? [];
 
         return array_filter([
-            'occurred_at' => $this->parseTimestamp($lastUpdate['dtt'] ?? $lastUpdate['dts'] ?? null),
+            'occurred_at' => $this->parseTimestamp($lastUpdate['dtt'] ?? null),
+            'provider_at' => $this->parseTimestamp($lastUpdate['dts'] ?? null),
             'lat'         => $lastUpdate['lat'] ?? null,
             'lng'         => $lastUpdate['lng'] ?? null,
             'speed'       => $lastUpdate['speed'] ?? $lastUpdate['spd'] ?? null,
@@ -467,24 +561,13 @@ class AfaqyProvider extends AbstractProvider
 
     protected function parseTimestamp($value): ?string
     {
-        if (!$value) {
-            return null;
-        }
-
-        if (is_numeric($value)) {
-            $timestamp = (float) $value;
-            $seconds   = $timestamp > 9999999999 ? $timestamp / 1000 : $timestamp;
-
-            return Carbon::createFromTimestamp($seconds)->toDateTimeString();
-        }
-
-        return Carbon::parse($value)->toDateTimeString();
+        return Payload::timestamp($value);
     }
 
     protected function extractIgnition(array $payload): ?bool
     {
         $params = data_get($payload, 'last_update.params', []);
-        $value  = data_get($params, 'acc') ?? data_get($params, 'di1') ?? data_get($payload, 'counters.last_acc');
+        $value  = data_get($payload, 'last_update.acc') ?? data_get($params, 'acc') ?? data_get($params, 'di1') ?? data_get($payload, 'counters.last_acc');
 
         if ($value === null) {
             return null;

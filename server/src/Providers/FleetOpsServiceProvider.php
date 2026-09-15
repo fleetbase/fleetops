@@ -76,6 +76,7 @@ class FleetOpsServiceProvider extends CoreServiceProvider
         \Fleetbase\FleetOps\Console\Commands\SendMaintenanceReminders::class,
         \Fleetbase\FleetOps\Console\Commands\ProcessOperationalAlerts::class,
         \Fleetbase\FleetOps\Console\Commands\SyncTelematics::class,
+        \Fleetbase\FleetOps\Console\Commands\DrainAfaqyInbox::class,
     ];
 
     /**
@@ -149,6 +150,7 @@ class FleetOpsServiceProvider extends CoreServiceProvider
             $schedule->command('fleetops:send-maintenance-reminders')->daily()->withoutOverlapping()->storeOutputInDb();
             $schedule->command('fleetops:process-operational-alerts')->everyMinute()->withoutOverlapping()->storeOutputInDb();
             $schedule->command('fleetops:sync-telematics')->everyMinute()->withoutOverlapping()->storeOutputInDb();
+            $schedule->command('fleetops:drain-afaqy-inbox')->everyMinute()->withoutOverlapping();
         });
         $this->registerNotifications();
         $this->registerAiCapabilities();
@@ -193,6 +195,7 @@ class FleetOpsServiceProvider extends CoreServiceProvider
         $this->loadViewsFrom(__DIR__ . '/../../resources/views', 'fleetops');
         $this->mergeConfigFrom(__DIR__ . '/../../config/fleetops.php', 'fleetops');
         $this->mergeConfigFrom(__DIR__ . '/../../config/telematics.php', 'telematics');
+        $this->mergeConfigFrom(__DIR__ . '/../../config/afaqy.php', 'telematics.afaqy');
         $this->mergeConfigFrom(__DIR__ . '/../../config/fuel-providers.php', 'fuel-providers');
         $this->mergeConfigFrom(__DIR__ . '/../../config/api.php', 'api');
         $this->mergeConfigFrom(__DIR__ . '/../../config/cache.stores.php', 'cache.stores');

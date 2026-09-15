@@ -19,6 +19,7 @@ export default class TelematicSettingsComponent extends Component {
     }
 
     get webhookUrl() {
+        if (this.provider?.key === 'afaqy') return null;
         const url = this.provider.webhook_url;
         const id = this.args.resource?.public_id;
 

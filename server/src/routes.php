@@ -658,6 +658,9 @@ Route::prefix(config('fleetops.api.routing.prefix'))->namespace('Fleetbase\Fleet
                             $router->get('{id}/devices', $controller('devices'));
                             $router->post('{id}/link-device', $controller('linkDevice'));
                             $router->post('{id}/discover', $controller('discover'));
+                            $router->get('{id}/afaqy-diagnostics', $controller('afaqyDiagnostics'));
+                            $router->post('{id}/afaqy-webhook', $controller('afaqyWebhook'));
+                            $router->post('{id}/afaqy-deliveries/{delivery}/replay', $controller('replayAfaqyDelivery'));
                             $router->post('{id}/test-connection', $controller('testConnection'));
                             $router->post('{key}/test-credentials', $controller('testCredentials'));
                         });

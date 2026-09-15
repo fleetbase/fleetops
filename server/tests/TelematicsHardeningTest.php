@@ -300,7 +300,8 @@ test('telematics service requires provider identity and stores idempotent event 
         ->toContain('$event->createPosition($positionData)')
         ->toContain('updateVehicleTelemetry')
         ->toContain('$vehicle->odometer = $eventData[\'odometer\'];')
-        ->toContain('broadcast(new VehicleLocationChanged')
+        ->toContain('new VehicleLocationChanged')
+        ->toContain('broadcastTelemetry')
         ->toContain("'heading'   => \$eventData['heading'] ?? null")
         ->toContain("'bearing'   => \$eventData['heading'] ?? null")
         ->toContain("'speed'     => \$eventData['speed'] ?? null")
@@ -1412,20 +1413,19 @@ test('afaqy sync stores compact device diagnostics and paginates complete units 
         ->toContain("'provider_code'")
         ->toContain("'provider_message'")
         ->toContain("'retry_attempted'")
-        ->toContain('?? 500), 500')
+        ->toContain('?? 1000), 1000')
         ->toContain('if (is_array($filters) && empty($filters))')
         ->toContain('$filters = new \stdClass();')
         ->toContain("'limit'      => \$limit")
         ->toContain("'offset'     => \$offset")
         ->not->toContain("\n            'limit'  => \$limit,\n            'offset' => \$offset,")
         ->toContain("\$this->afaqyPost('/units/lists', [")
-        ->toContain('], true);')
+        ->toContain("'simplify'   => 0")
         ->toContain("http_build_query(['token' => \$this->credentials['token']])")
         ->toContain("\$body = \$tokenInQuery ? \$payload : array_merge(['token' => \$this->credentials['token']], \$payload)")
         ->toContain('$pageOffset  = (int) ($pagination[\'offset\'] ?? $offset);')
         ->toContain('$pageLimit   = (int) ($pagination[\'limit\'] ?? $limit);')
-        ->toContain('$advanceBy   = $resultCount > 0 ? $resultCount : max($pageLimit, count($devices), 1);')
-        ->toContain('$nextCursor  = ($pageOffset + $advanceBy) < $total ? $pageOffset + $advanceBy : null;')
+        ->toContain('AFAQY returned inconsistent pagination; sweep incomplete.')
         ->toContain("'requested_limit'")
         ->toContain("'provider_limit'")
         ->toContain("'provider_result_count'")
@@ -1433,8 +1433,8 @@ test('afaqy sync stores compact device diagnostics and paginates complete units 
         ->toContain("'allCount'")
         ->toContain("'filtersCount'")
         ->toContain("'resultCount'")
-        ->toContain("'online'      => \$payload['active'] ?? null")
-        ->toContain("'altitude'   => \$lastUpdate['alt'] ?? null");
+        ->toContain("'online'      => null")
+        ->toContain('normalizeEvent');
 });
 
 test('afaqy sensors normalize stable parent scoped identities and latest values', function () {
@@ -1471,7 +1471,7 @@ test('afaqy sensors normalize stable parent scoped identities and latest values'
         'value'       => 'Open',
         'status'      => 'active',
     ]);
-    expect($open['recorded_at'])->toBe('2026-06-23 09:00:00');
+    expect($open['recorded_at'])->toBe('2026-06-23T09:00:00.000000Z');
     expect(data_get($open, 'meta.provider'))->toBe('afaqy');
     expect(data_get($open, 'meta.unit_id'))->toBe('unit-123');
     expect($closed['internal_id'])->toBe($open['internal_id']);
@@ -1494,7 +1494,7 @@ test('afaqy sensors reject event shaped payloads without scalar sensor values', 
 });
 
 test('afaqy provider helpers build authenticated requests and sanitized diagnostics', function () {
-    Carbon::setTestNow(Carbon::parse('2026-06-23 10:00:00'));
+    Carbon::setTestNow(Carbon::parse('2026-06-23T10:00:00.000000Z'));
 
     try {
         $provider = new FleetOpsAfaqyProviderProbe();
@@ -1522,8 +1522,8 @@ test('afaqy provider helpers build authenticated requests and sanitized diagnost
             ->and($provider->providerErrorMessageForTest(['error_description' => 'Description failure']))->toBe('Description failure')
             ->and($provider->providerErrorMessageForTest(['error' => ['not_scalar' => true]]))->toBeNull()
             ->and($provider->parseTimestampForTest(null))->toBeNull()
-            ->and($provider->parseTimestampForTest(1719136800000))->toBe('2024-06-23 10:00:00')
-            ->and($provider->parseTimestampForTest('2026-06-23T09:00:00Z'))->toBe('2026-06-23 09:00:00')
+            ->and($provider->parseTimestampForTest(1719136800000))->toBe('2024-06-23T10:00:00.000000Z')
+            ->and($provider->parseTimestampForTest('2026-06-23T09:00:00Z'))->toBe('2026-06-23T09:00:00.000000Z')
             ->and($provider->compactLastUpdateForTest([
                 'dtt'    => '2026-06-23T09:00:00Z',
                 'lat'    => 25.2,
@@ -1533,7 +1533,7 @@ test('afaqy provider helpers build authenticated requests and sanitized diagnost
                 'alt'    => 12,
                 'params' => ['sat' => 8, 'protocol' => 'wialon'],
             ]))->toMatchArray([
-                'occurred_at' => '2026-06-23 09:00:00',
+                'occurred_at' => '2026-06-23T09:00:00.000000Z',
                 'lat'         => 25.2,
                 'lng'         => 55.2,
                 'speed'       => 64,
@@ -1609,8 +1609,8 @@ test('afaqy normalization covers device event and sensor type variants', functio
         'phone'        => 'sim-123',
         'vin'          => 'vin-123',
         'status'       => 'active',
-        'online'       => true,
-        'last_seen_at' => '2026-06-23 09:00:00',
+        'online'       => null,
+        'last_seen_at' => '2026-06-23T09:00:00.000000Z',
         'location'     => ['lat' => 25.2, 'lng' => 55.2],
     ])
         ->and(data_get($device, 'meta.capabilities'))->toBe([
@@ -1624,8 +1624,8 @@ test('afaqy normalization covers device event and sensor type variants', functio
             'device_id'   => 'unit-123',
             'event_type'  => 'ignition_on',
             'message'     => 'Ignition on',
-            'occurred_at' => '2026-06-23 09:00:00',
-            'online'      => true,
+            'occurred_at' => '2026-06-23T09:00:00.000000Z',
+            'online'      => null,
             'location'    => ['lat' => 25.2, 'lng' => 55.2],
             'speed'       => 64,
             'heading'     => 180,
@@ -1658,7 +1658,7 @@ test('afaqy normalization covers device event and sensor type variants', functio
         'name'        => 'Temperature 1',
         'type'        => 'temperature',
         'value'       => 4.5,
-        'recorded_at' => '2026-06-23 09:10:00',
+        'recorded_at' => '2026-06-23T09:10:00.000000Z',
     ]);
 });
 

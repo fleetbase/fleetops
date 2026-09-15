@@ -194,6 +194,9 @@ class TelematicService
 
     public function ingestDeviceSnapshot(Telematic $telematic, TelematicProviderInterface $provider, array $payload): array
     {
+        if ($provider instanceof Providers\AfaqyProvider) {
+            return app(Afaqy\Ingestor::class)->ingest($telematic, $provider, $payload, $this);
+        }
         $device = $this->linkDevice($telematic, $provider->normalizeDevice($payload));
 
         $event  = null;
@@ -296,9 +299,13 @@ class TelematicService
             'internal_id'    => $sensorIdentity ?? $this->makeSensorIdentity($sensorData, $device),
         ]);
 
+        if ($telematic->provider === 'afaqy' && $sensor->exists && $sensor->last_reading_at
+            && (!$sensorData['recorded_at'] || Carbon::parse($sensorData['recorded_at'])->lte(Carbon::parse($sensor->last_reading_at)))) {
+            return $sensor;
+        }
         $sensor->company_uuid     = $telematic->company_uuid;
         $sensor->name             = $sensorData['name'] ?? $sensorData['sensor_type'] ?? $sensor->type ?? 'Sensor';
-        $sensor->unit             = $sensorData['unit'] ?? null;
+        $sensor->unit             = $sensorData['unit'] ?? ($telematic->provider === 'afaqy' ? $sensor->unit : null);
         $sensor->last_value       = isset($sensorData['value']) ? (string) $sensorData['value'] : $sensor->last_value;
         $sensor->last_reading_at  = $sensorData['recorded_at'] ?? $sensorData['last_reading_at'] ?? $sensor->last_reading_at ?? now();
         $sensor->status           = $sensorData['status'] ?? 'active';
@@ -535,7 +542,8 @@ class TelematicService
             $device->status = $connectionStatus;
         }
 
-        $device->meta = array_merge($device->meta ?? [], [
+        $mergeMeta    = $telematic?->provider === 'afaqy' ? 'array_replace_recursive' : 'array_merge';
+        $device->meta = $mergeMeta($device->meta ?? [], [
             'external_id'       => $externalId,
             'provider_status'   => array_filter([
                 'status'    => $payload['status'] ?? null,
@@ -636,6 +644,10 @@ class TelematicService
     protected function applyDeviceEventTelemetry(DeviceEvent $event, array $eventData, ?Device $device = null, bool $wasRecentlyCreated = true, ?Telematic $telematic = null): void
     {
         $location = $this->normalizeLocation($eventData['location'] ?? null);
+        if (($eventData['_history_only'] ?? false) && $event->provider === 'afaqy') {
+            // DeviceEvent retains source-time history; Position would timestamp this old fix as current.
+            return;
+        }
 
         $device ??= $event->device;
         if ($device) {
@@ -654,6 +666,13 @@ class TelematicService
         }
 
         $attachable = $device?->attachable;
+        if ($event->provider === 'afaqy' && $attachable) {
+            $attachable = $attachable->newQuery()->where('uuid', $attachable->uuid)->lockForUpdate()->first();
+            $currentAt  = data_get($attachable?->telematics, 'last_event_at');
+            if ($currentAt && $event->occurred_at && $event->occurred_at->lte(Carbon::parse($currentAt))) {
+                return;
+            }
+        }
         if ($attachable instanceof Vehicle) {
             $this->updateVehicleTelemetry($attachable, $location, $eventData, $event);
         } elseif ($attachable instanceof Trailer) {
@@ -689,7 +708,8 @@ class TelematicService
         ]);
         $trailer->save();
 
-        broadcast(new TrailerLocationChanged($trailer, ['source' => 'telematics', 'device_event_uuid' => $event->uuid, 'provider' => $event->provider]));
+        $broadcast = new TrailerLocationChanged($trailer, ['source' => 'telematics', 'device_event_uuid' => $event->uuid, 'provider' => $event->provider, 'position_at' => $event->occurred_at?->toISOString()]);
+        $this->broadcastTelemetry($broadcast, $event->provider);
     }
 
     protected function updateVehicleTelemetry(Vehicle $vehicle, array $location, array $eventData, DeviceEvent $event): void
@@ -717,7 +737,7 @@ class TelematicService
             'last_event_uuid'     => $event->uuid,
             'last_event_id'       => $event->public_id,
             'last_event_type'     => $event->event_type,
-            'last_event_at'       => optional($event->occurred_at)->toDateTimeString() ?? now()->toDateTimeString(),
+            'last_event_at'       => $event->provider === 'afaqy' ? $event->occurred_at?->toISOString() : (optional($event->occurred_at)->toDateTimeString() ?? now()->toDateTimeString()),
             'last_device_uuid'    => $event->device_uuid,
             'last_provider'       => $event->provider,
             'last_telemetry_data' => array_filter([
@@ -731,11 +751,22 @@ class TelematicService
         ]);
         $vehicle->save();
 
-        broadcast(new VehicleLocationChanged($vehicle, [
+        $broadcast = new VehicleLocationChanged($vehicle, [
             'source'            => 'telematics',
             'device_event_uuid' => $event->uuid,
             'provider'          => $event->provider,
-        ]));
+            'position_at'       => $event->occurred_at?->toISOString(),
+        ]);
+        $this->broadcastTelemetry($broadcast, $event->provider);
+    }
+
+    protected function broadcastTelemetry(object $event, ?string $provider): void
+    {
+        if ($provider === 'afaqy') {
+            \Illuminate\Support\Facades\DB::afterCommit(fn () => broadcast($event));
+        } else {
+            broadcast($event);
+        }
     }
 
     protected function makePositionData(array $location, array $eventData): array

@@ -153,7 +153,7 @@ return [
                     'validation'  => 'required_without:username|string',
                 ],
             ],
-            'supports_webhooks'  => false,
+            'supports_webhooks'  => true,
             'supports_discovery' => true,
             'metadata'           => [
                 'rate_limit'   => 60,

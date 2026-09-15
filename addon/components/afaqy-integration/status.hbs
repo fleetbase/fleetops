@@ -1,0 +1,35 @@
+<section class="space-y-3 rounded-md border border-gray-200 p-3 dark:border-gray-700" data-test-afaqy-status {{did-update this.resourceChanged @resource.id}}>
+    <h3 class="text-sm font-bold">AFAQY live telemetry</h3>
+    {{#if this.error}}<p class="text-sm text-red-600" role="alert">{{this.error}}</p>{{/if}}
+    {{#if this.diagnostics}}
+        <dl class="grid grid-cols-2 gap-2 text-xs">
+            <dt>Polling</dt><dd>{{if this.diagnostics.polling_enabled "Enabled" "Disabled"}}</dd>
+            <dt>Position webhooks</dt><dd>{{if this.diagnostics.webhooks_enabled "Enabled" "Disabled"}} · {{smart-humanize this.diagnostics.webhook_state}}</dd>
+            <dt>Last polling sweep</dt><dd>{{n-a this.diagnostics.last_poll.status}} · {{n-a this.diagnostics.last_poll.updated_at}}</dd>
+            <dt>Units / pages / applied / failed</dt><dd>{{n-a this.diagnostics.last_poll.units}}
+                /
+                {{n-a this.diagnostics.last_poll.pages}}
+                /
+                {{n-a this.diagnostics.last_poll.applied}}
+                /
+                {{n-a this.diagnostics.last_poll.failed}}</dd>
+            <dt>Last webhook received</dt><dd>{{n-a this.diagnostics.last_webhook.received_at}}</dd>
+            <dt>Oldest pending delivery</dt><dd>{{n-a this.diagnostics.oldest_pending_at}}</dd>
+            <dt>Latest queue / source delay (seconds)</dt><dd>{{n-a this.diagnostics.last_ingestion.queue_delay_seconds}} / {{n-a this.diagnostics.last_ingestion.source_delay_seconds}}</dd>
+            <dt>Last polling error</dt><dd>{{n-a this.diagnostics.last_poll.error}}</dd>
+        </dl>
+    {{/if}}
+    <p class="text-xs">Provide the secure URL to AFAQY to register Device Signals / Positions. The payload adapter is provisional until a real delivery has been verified. Polling continues
+        after registration.</p>
+    <button type="button" class="btn btn-default btn-sm" disabled={{this.configure.isRunning}} {{on "click" this.reveal}}>Show registration URL</button>
+    {{#if this.webhookUrl}}
+        <ClickToCopy @value={{this.webhookUrl}}><Input @value={{this.webhookUrl}} class="form-input w-full" readonly aria-label="AFAQY secure webhook URL" /></ClickToCopy>
+        <p class="text-xs">This URL contains a secret. Rotating it immediately invalidates the previous URL and requires registration with AFAQY again.</p>
+        <button type="button" class="btn btn-default btn-sm" disabled={{this.configure.isRunning}} {{on "click" this.rotate}}>Rotate secret and invalidate old URL</button>
+    {{/if}}
+    {{#each this.diagnostics.recent_failures as |delivery|}}
+        <div class="text-xs"><span>{{delivery.received_at}} · {{delivery.error}}</span>
+            {{#if (eq delivery.status "quarantined")}}<button type="button" class="btn btn-default btn-sm" {{on "click" (fn this.replay delivery.uuid)}}>Replay delivery</button>{{/if}}
+        </div>
+    {{/each}}
+</section>
