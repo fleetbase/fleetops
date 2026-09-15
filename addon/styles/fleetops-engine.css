@@ -8713,31 +8713,6 @@ body[data-theme='dark'] .inspection-followup__title {
     color: #f9fafb;
 }
 
-/* ── Pills ──
-   The identity pill is how the console shows a linked record, but it gave no
-   sign it could be clicked: the cursor stayed default and nothing responded.
-   Only pills that were given something to do react. */
-.fleetbase-pill > a[href] {
-    border-radius: 0.375rem;
-    padding: 0.125rem;
-    margin: -0.125rem;
-    transition:
-        background-color 120ms ease,
-        opacity 120ms ease;
-}
-
-.fleetbase-pill > a[href]:hover {
-    background-color: rgb(0 0 0 / 4%);
-}
-
-.fleetbase-pill > a[href]:hover .text-sm {
-    text-decoration: underline;
-}
-
-body[data-theme='dark'] .fleetbase-pill > a[href]:hover {
-    background-color: rgb(255 255 255 / 6%);
-}
-
 /* ── A link out of a details panel to the record it names ──
    The form name was a bare button with no styling and a full-size icon
    sitting apart from it; it did not read as a link at all. */
@@ -9161,23 +9136,6 @@ body[data-theme='dark'] .fleetops-card-meta {
 
 body[data-theme='dark'] .fleetops-card-meta-link {
     color: #60a5fa;
-}
-
-/* ── Multi-model table filter (mirrors ember-ui's .filter-multi-input clear button) ── */
-.filter-multi-model {
-    position: relative;
-}
-
-.filter-multi-model > .clear-button {
-    position: absolute;
-    top: 0;
-    right: 0;
-    padding: 0.5rem 0.75rem 0 0;
-    color: #374151;
-}
-
-.filter-multi-model > .clear-button:hover {
-    opacity: 0.5;
 }
 
 .filter-multi-model > .clear-button:disabled {
@@ -10201,82 +10159,6 @@ body[data-theme='dark'] .inspection-link__pin-code {
         width: 100%;
         justify-content: center;
     }
-}
-
-/*
- * A select option: photo, name, and a line of detail. Colours are inherited
- * rather than set, so an option reads correctly on the dropdown's highlighted
- * row and in dark mode without rules of its own for either.
- */
-.select-option {
-    display: flex;
-    align-items: center;
-    gap: 0.625rem;
-    min-width: 0;
-    padding: 0.125rem 0;
-}
-
-.select-option__photo {
-    flex-shrink: 0;
-    width: 2rem;
-    height: 2rem;
-    object-fit: cover;
-    border-radius: 9999px;
-    background-color: rgb(156 163 175 / 20%);
-}
-
-.select-option__photo[data-shape='square'] {
-    border-radius: 0.375rem;
-}
-
-.select-option__text {
-    display: flex;
-    flex: 1 1 auto;
-    flex-direction: column;
-    gap: 0.125rem;
-    min-width: 0;
-}
-
-.select-option__title,
-.select-option__details {
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-}
-
-.select-option__title {
-    font-size: 0.8125rem;
-    font-weight: 600;
-    line-height: 1.2;
-}
-
-.select-option__details {
-    font-size: 0.6875rem;
-    line-height: 1.2;
-    opacity: 0.7;
-}
-
-/* In a closed select there is room for one line: a small photo, the name, then the detail. */
-.select-option--compact {
-    gap: 0.5rem;
-    padding: 0;
-}
-
-.select-option--compact .select-option__photo {
-    width: 1.25rem;
-    height: 1.25rem;
-}
-
-.select-option--compact .select-option__text {
-    flex-direction: row;
-    align-items: baseline;
-    gap: 0.375rem;
-}
-
-.select-option--compact .select-option__title {
-    flex-shrink: 0;
-    max-width: 60%;
-    font-weight: 500;
 }
 
 /* A link just generated, shown above the form until the modal closes. */
