@@ -15,16 +15,14 @@
                     <PowerSelect
                         @options={{this.orderConfigActions.allOrderConfigs}}
                         @selected={{@resource.order_config}}
+                        @selectedItemComponent={{component "select-option/order-config" compact=true}}
                         @onChange={{this.selectOrderConfig}}
                         @placeholder={{t "service-rate.fields.select-order-type"}}
                         @triggerClass="form-select form-input"
                         @disabled={{cannot-write @resource}}
                         as |orderConfig|
                     >
-                        <div class="text-sm">
-                            <div class="font-semibold normalize-in-trigger">{{orderConfig.name}}</div>
-                            <div class="hide-from-trigger">{{n-a orderConfig.description}}</div>
-                        </div>
+                        <SelectOption::OrderConfig @option={{orderConfig}} />
                     </PowerSelect>
                 </div>
             </InputGroup>
@@ -265,13 +263,14 @@
                                                 <PowerSelect
                                                     @options={{this.zones}}
                                                     @selected={{rateFee.zone}}
+                                                    @selectedItemComponent={{component "select-option/zone" compact=true}}
                                                     @onChange={{fn this.selectRuleZone rateFee}}
                                                     @placeholder="Select zone"
                                                     @triggerClass="form-select form-input"
                                                     @disabled={{cannot-write @resource}}
                                                     as |zone|
                                                 >
-                                                    {{zone.name}}
+                                                    <SelectOption::Zone @option={{zone}} />
                                                 </PowerSelect>
                                             </div>
                                         {{else if (eq rateFee.geography_type "fallback")}}
@@ -281,13 +280,14 @@
                                                 <PowerSelect
                                                     @options={{this.serviceAreas}}
                                                     @selected={{rateFee.service_area}}
+                                                    @selectedItemComponent={{component "select-option/service-area" compact=true}}
                                                     @onChange={{fn this.selectRuleServiceArea rateFee}}
                                                     @placeholder="Select service area"
                                                     @triggerClass="form-select form-input"
                                                     @disabled={{cannot-write @resource}}
                                                     as |serviceArea|
                                                 >
-                                                    {{serviceArea.name}}
+                                                    <SelectOption::ServiceArea @option={{serviceArea}} />
                                                 </PowerSelect>
                                             </div>
                                         {{/if}}
@@ -637,6 +637,7 @@
         <InputGroup @name={{t "service-rate.fields.service-area-label"}} @helpText={{t "service-rate.fields.service-area-help-text"}}>
             <ModelSelect
                 @modelName="service-area"
+                @selectedItemComponent={{component "select-option/service-area" compact=true}}
                 @selectedModel={{@resource.serviceArea}}
                 @placeholder={{t "service-rate.fields.service-area-placeholder"}}
                 @triggerClass="form-select form-input"
@@ -648,7 +649,7 @@
                 @allowClear={{true}}
                 as |model|
             >
-                {{model.name}}
+                <SelectOption::ServiceArea @option={{model}} />
             </ModelSelect>
         </InputGroup>
 
@@ -656,6 +657,7 @@
             <InputGroup @name={{t "service-rate.fields.zone-label"}} @helpText={{t "service-rate.fields.zone-help-text"}} @wrapperClass="mt-2">
                 <ModelSelect
                     @modelName="zone"
+                    @selectedItemComponent={{component "select-option/zone" compact=true}}
                     @selectedModel={{@resource.zone}}
                     @query={{hash service_area_uuid=@resource.serviceArea.id}}
                     @placeholder={{t "service-rate.fields.zone-placeholder"}}
@@ -668,7 +670,7 @@
                     @allowClear={{true}}
                     as |model|
                 >
-                    {{model.name}}
+                    <SelectOption::Zone @option={{model}} />
                 </ModelSelect>
             </InputGroup>
         {{/if}}

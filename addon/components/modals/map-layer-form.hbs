@@ -16,6 +16,7 @@
                     <InputGroup @name={{t "modals.map-layer-form.service-area"}} @helpText={{t "modals.map-layer-form.service-area-text"}}>
                         <ModelSelect
                             @modelName="service-area"
+                            @selectedItemComponent={{component "select-option/service-area" compact=true}}
                             @selectedModel={{@options.layerOptions.service_area}}
                             @placeholder={{t "modals.map-layer-form.select-service-area"}}
                             @triggerClass="form-select form-input"
@@ -24,7 +25,7 @@
                             @onChange={{fn (mut @options.layerOptions.service_area)}}
                             as |model|
                         >
-                            {{model.name}}
+                            <SelectOption::ServiceArea @option={{model}} />
                         </ModelSelect>
                     </InputGroup>
                 {{/if}}

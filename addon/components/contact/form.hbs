@@ -59,6 +59,7 @@
                 </div>
                 <ModelSelect
                     @modelName="place"
+                    @selectedItemComponent={{component "select-option/place" compact=true}}
                     @selectedModel={{@resource.place}}
                     @placeholder={{t "common.select-address"}}
                     @triggerClass="form-select form-input"
@@ -68,10 +69,7 @@
                     @disabled={{cannot-write @resource}}
                     as |model|
                 >
-                    <div class="flex items-center flex-row justify-between">
-                        <div class="truncate flex-1">{{n-a model.address}}</div>
-                        <Badge @hideStatusDot={{true}} @status="info">{{model.public_id}}</Badge>
-                    </div>
+                    <SelectOption::Place @option={{model}} />
                 </ModelSelect>
             </InputGroup>
 

@@ -8,26 +8,12 @@
                     @onChange={{this.onResourceSelected}}
                     @searchEnabled={{true}}
                     @searchField="trackableSearchText"
+                    @selectedItemComponent={{component "select-option/trackable" compact=true}}
                     @placeholder={{t "common.select-field" field="trackable"}}
                     @triggerClass="form-select form-input form-input-sm w-48"
                     as |option|
                 >
-                    <div class="flex flex-row items-start space-x-2">
-                        <div class="inline-block">
-                            {{#if (eq option.modelName "driver")}}
-                                <Image src={{option.resource.photo_url}} @fallbackSrc={{config "defaultValues.driverAvatar"}} class="w-4 h-4" />
-                            {{else}}
-                                <Image src={{option.resource.avatar_url}} @fallbackSrc={{config "defaultValues.vehicleAvatar"}} class="w-4 h-4" />
-                            {{/if}}
-                        </div>
-                        <div class="inline-block text-sm truncate">
-                            <div class="font-semibold text-sm normalize-in-trigger">{{option.primaryLabel}}</div>
-                            <div class="hide-from-trigger text-xs">{{option.secondaryLabel}}</div>
-                            {{#if option.deviceLabel}}
-                                <div class="hide-from-trigger text-xs text-gray-500 dark:text-gray-400 truncate">{{option.deviceLabel}}</div>
-                            {{/if}}
-                        </div>
-                    </div>
+                    <SelectOption::Trackable @option={{option}} />
                 </PowerSelect>
             </div>
         </div>

@@ -3,6 +3,7 @@
         <InputGroup @name={{t "common.select-field" field=(t "resource.driver")}} @helpText={{t "fleet-ops.operations.orders.index.bulk-assign-driver-helptext"}}>
             <ModelSelect
                 @modelName="driver"
+                @selectedItemComponent={{component "select-option/driver" compact=true}}
                 @selectedModel={{options.driverAssigned}}
                 @query={{options.driversQuery}}
                 @placeholder={{t "order.fields.assign-driver-placeholder"}}
@@ -14,15 +15,7 @@
                 @onChange={{options.selectDriver}}
                 as |model|
             >
-                <div class="flex items-center">
-                    <div class="w-7 flex-grow-0 flex-shrink-0">
-                        <FaIcon @icon="id-card-alt" />
-                    </div>
-                    <div class="flex-1 flex flex-row truncate">
-                        <span class="uppercase mr-2">{{model.name}}</span>
-                        <span class="uppercase">{{model.phone}}</span>
-                    </div>
-                </div>
+                <SelectOption::Driver @option={{model}} />
             </ModelSelect>
         </InputGroup>
         <InputGroup>

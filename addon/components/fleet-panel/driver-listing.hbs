@@ -14,6 +14,7 @@
             <div class="w-56">
                 <ModelSelect
                     @modelName="driver"
+                    @selectedItemComponent={{component "select-option/driver" compact=true}}
                     @selectedModel={{this.selectedDriver}}
                     @placeholder={{t "fleet-panel.driver-listing.add-driver"}}
                     @triggerClass="form-select form-input form-select-sm form-input-sm"
@@ -22,7 +23,7 @@
                     @onChange={{this.onAddDriver}}
                     as |model|
                 >
-                    {{model.name}}
+                    <SelectOption::Driver @option={{model}} />
                 </ModelSelect>
             </div>
         </div>

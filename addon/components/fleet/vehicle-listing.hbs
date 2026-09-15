@@ -14,6 +14,7 @@
             <div class="w-56">
                 <ModelSelect
                     @modelName="vehicle"
+                    @selectedItemComponent={{component "select-option/vehicle" compact=true}}
                     @selectedModel={{this.selectedVehicle}}
                     @placeholder={{t "fleet.vehicle-listing.add-vehicle"}}
                     @triggerClass="form-select form-input form-select-sm form-input-sm"
@@ -22,7 +23,7 @@
                     @onChange={{this.onAddVehicle}}
                     as |model|
                 >
-                    {{model.displayName}}
+                    <SelectOption::Vehicle @option={{model}} />
                 </ModelSelect>
             </div>
         </div>

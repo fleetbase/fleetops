@@ -70,6 +70,7 @@
                 <InputGroup @name="Asset">
                     <ModelSelect
                         @modelName={{this.subjectModelName}}
+                        @selectedItemComponent={{if (resource-component "select-option" this.subjectModelName) (component (resource-component "select-option" this.subjectModelName) compact=true)}}
                         @selectedModel={{@resource.subject}}
                         @placeholder="Select Asset"
                         @triggerClass="form-select form-input"
@@ -79,7 +80,13 @@
                         @disabled={{cannot-write @resource}}
                         as |model|
                     >
-                        {{or model.displayName model.name model.public_id}}
+                        {{#let (resource-component "select-option" this.subjectModelName) as |selectOption|}}
+                            {{#if selectOption}}
+                                {{component selectOption option=model}}
+                            {{else}}
+                                {{or model.displayName model.name model.public_id}}
+                            {{/if}}
+                        {{/let}}
                     </ModelSelect>
                 </InputGroup>
             {{/if}}
@@ -220,6 +227,7 @@
                 <InputGroup @name="Default Assignee" @wrapperClass="col-span-2">
                     <ModelSelect
                         @modelName={{this.assigneeModelName}}
+                        @selectedItemComponent={{if (resource-component "select-option" this.assigneeModelName) (component (resource-component "select-option" this.assigneeModelName) compact=true)}}
                         @selectedModel={{@resource.default_assignee}}
                         @placeholder="Select Default Assignee"
                         @triggerClass="form-select form-input"
@@ -229,7 +237,13 @@
                         @disabled={{cannot-write @resource}}
                         as |model|
                     >
-                        {{or model.displayName model.name model.public_id}}
+                        {{#let (resource-component "select-option" this.assigneeModelName) as |selectOption|}}
+                            {{#if selectOption}}
+                                {{component selectOption option=model}}
+                            {{else}}
+                                {{or model.displayName model.name model.public_id}}
+                            {{/if}}
+                        {{/let}}
                     </ModelSelect>
                 </InputGroup>
             {{/if}}

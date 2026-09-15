@@ -7,6 +7,7 @@
             <InputGroup @name={{t "modals.fleet-form.assign"}} @value={{@options.fleet.service_area}}>
                 <ModelSelect
                     @modelName="service-area"
+                    @selectedItemComponent={{component "select-option/service-area" compact=true}}
                     @selectedModel={{@options.fleet.service_area}}
                     @placeholder={{t "modals.fleet-form.assign-text"}}
                     @triggerClass="form-select form-input"
@@ -15,13 +16,14 @@
                     @onChange={{fn (mut @options.fleet.service_area)}}
                     as |model|
                 >
-                    {{model.name}}
+                    <SelectOption::ServiceArea @option={{model}} />
                 </ModelSelect>
             </InputGroup>
             {{#if @options.fleet.service_area}}
                 <InputGroup @name={{t "modals.fleet-form.zone"}} @value={{@options.fleet.zone}}>
                     <ModelSelect
                         @modelName="zone"
+                        @selectedItemComponent={{component "select-option/zone" compact=true}}
                         @selectedModel={{@options.fleet.zone}}
                         @query={{hash service_area_uuid=@options.fleet.service_area.id}}
                         @placeholder={{t "modals.fleet-form.zone-text"}}
@@ -31,7 +33,7 @@
                         @onChange={{fn (mut @options.fleet.zone)}}
                         as |model|
                     >
-                        {{model.name}}
+                        <SelectOption::Zone @option={{model}} />
                     </ModelSelect>
                 </InputGroup>
             {{/if}}

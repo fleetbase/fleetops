@@ -11,6 +11,7 @@
         <InputGroup @name={{t "trailer.fields.vehicle"}} @helpText={{t "trailer.help.attach-vehicle"}}>
             <ModelSelect
                 @modelName="vehicle"
+                @selectedItemComponent={{component "select-option/vehicle" compact=true}}
                 @selectedModel={{@options.selectedVehicle}}
                 @placeholder={{t "trailer.placeholders.vehicle"}}
                 @triggerClass="form-select form-input"
@@ -19,7 +20,7 @@
                 @onChange={{fn (mut @options.selectedVehicle)}}
                 as |vehicle|
             >
-                <Vehicle::Pill @vehicle={{vehicle}} />
+                <SelectOption::Vehicle @option={{vehicle}} />
             </ModelSelect>
         </InputGroup>
 
