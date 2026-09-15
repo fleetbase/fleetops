@@ -2925,6 +2925,7 @@ inspection:
         open-form: Open this inspection form
         failed: Failed
         failed-count: "{count, plural, one {# failed} other {# failed}}"
+        linked-inspections: "{count, plural, one {Linked Inspection} other {Linked Inspections}}"
         linked-issue: Linked Issue
         linked-work-order: Linked Work Order
         photos: Photos

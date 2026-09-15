@@ -138,6 +138,18 @@
                 </div>
             </section>
 
+            {{! Only when there is one: most issues were never raised from an inspection. }}
+            {{#if this.inspections.length}}
+                <section class="issue-detail-side-card">
+                    <div class="issue-detail-section-title">{{t "inspection.record.linked-inspections" count=this.inspections.length}}</div>
+                    <div class="issue-detail-resource-stack">
+                        {{#each this.inspections as |inspection|}}
+                            <InspectionSubmission::Pill @submission={{inspection}} @onClick={{this.viewInspection}} />
+                        {{/each}}
+                    </div>
+                </section>
+            {{/if}}
+
             <section class="issue-detail-side-card">
                 <div class="issue-detail-section-title">{{t "order.card.linked-order"}}</div>
                 {{#if this.order}}
