@@ -111,7 +111,10 @@ export function panelOpener(owner, serviceName, { mode = 'panel' } = {}) {
             return false;
         }
 
-        const view = (mode === 'panel' ? (service.panel?.view ?? service.transition?.view) : null) ?? (mode === 'transition' ? service.transition?.view : null) ?? (mode === 'modal' ? service.modal?.view : null);
+        const view =
+            (mode === 'panel' ? (service.panel?.view ?? service.transition?.view) : null) ??
+            (mode === 'transition' ? service.transition?.view : null) ??
+            (mode === 'modal' ? service.modal?.view : null);
 
         if (typeof view !== 'function') {
             return false;

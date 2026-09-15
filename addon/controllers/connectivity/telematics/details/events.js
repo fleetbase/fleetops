@@ -147,7 +147,9 @@ export default class ConnectivityTelematicsDetailsEventsController extends Contr
                 valuePath: 'device_name',
                 cellComponent: 'cell/device-identity',
                 permission: 'fleet-ops view device',
-                resourcePath: (event) => relationValue(event, 'device') ?? buildIdentityStub(event, { type: 'device', load: () => (event.device_uuid ? this.store.findRecord('device', event.device_uuid) : null) }),
+                resourcePath: (event) =>
+                    relationValue(event, 'device') ??
+                    buildIdentityStub(event, { type: 'device', load: () => (event.device_uuid ? this.store.findRecord('device', event.device_uuid) : null) }),
                 resizable: true,
                 sortable: true,
                 filterable: true,

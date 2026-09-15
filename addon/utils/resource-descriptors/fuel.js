@@ -20,7 +20,12 @@ export default function buildFuelDescriptors(owner) {
             badges: (report) => {
                 const vehicle = relation(owner, report, 'vehicle');
 
-                return badges(badge('vehicle', 'truck', first(vehicle, 'displayName', 'display_name', 'name') ?? first(report, 'vehicle_name'), { relatedType: 'vehicle', relatedId: vehicle?.id ?? get(report, 'vehicle_uuid') }));
+                return badges(
+                    badge('vehicle', 'truck', first(vehicle, 'displayName', 'display_name', 'name') ?? first(report, 'vehicle_name'), {
+                        relatedType: 'vehicle',
+                        relatedId: vehicle?.id ?? get(report, 'vehicle_uuid'),
+                    })
+                );
             },
             selectDetails: (report) => [first(report, 'vehicle_name'), join([get(report, 'volume'), first(report, 'metric_unit')])],
             facts: (report) => [

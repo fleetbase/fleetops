@@ -1,5 +1,5 @@
 import { get } from '@ember/object';
-import { first, present, relation, photo, icon, badge, badges, fact, relatedFact, join, panelOpener } from './helpers';
+import { first, present, relation, photo, badge, badges, fact, relatedFact, join, panelOpener } from './helpers';
 
 /**
  * Drivers, vendors, contacts, customers and fleets.
@@ -14,7 +14,16 @@ export default function buildPeopleDescriptors(owner) {
             aliases: ['attachable-driver', 'facilitator-driver', 'fleet-driver'],
             polymorphicTypes: ['fleet-ops:driver', 'Fleetbase\\FleetOps\\Models\\Driver'],
             permission: 'fleet-ops view driver',
-            statusTones: { available: 'text-green-500', active: 'text-green-500', on_duty: 'text-green-500', busy: 'text-yellow-500', assigned: 'text-yellow-500', unavailable: 'text-gray-400', offline: 'text-gray-400', suspended: 'text-red-500' },
+            statusTones: {
+                available: 'text-green-500',
+                active: 'text-green-500',
+                on_duty: 'text-green-500',
+                busy: 'text-yellow-500',
+                assigned: 'text-yellow-500',
+                unavailable: 'text-gray-400',
+                offline: 'text-gray-400',
+                suspended: 'text-red-500',
+            },
             title: (driver) => first(driver, 'name', 'displayName', 'display_name', 'public_id'),
             identifier: (driver) => first(driver, 'phone', 'email'),
             image: (driver) => photo(driver, 'driver'),
@@ -35,7 +44,13 @@ export default function buildPeopleDescriptors(owner) {
                 fact('phone', first(driver, 'phone')),
                 fact('email', first(driver, 'email')),
                 relatedFact('vehicle', relation(owner, driver, 'vehicle'), 'vehicle', first(driver, 'vehicle_name')),
-                fact('licence', join([first(driver, 'drivers_license_number'), present(get(driver, 'license_expiry')) ? `expires ${new Date(get(driver, 'license_expiry')).toLocaleDateString()}` : null], ' · ')),
+                fact(
+                    'licence',
+                    join(
+                        [first(driver, 'drivers_license_number'), present(get(driver, 'license_expiry')) ? `expires ${new Date(get(driver, 'license_expiry')).toLocaleDateString()}` : null],
+                        ' · '
+                    )
+                ),
                 relatedFact('vendor', relation(owner, driver, 'vendor'), 'vendor', first(driver, 'vendor_name')),
                 fact('status', first(driver, 'status'), { format: 'humanize' }),
             ],

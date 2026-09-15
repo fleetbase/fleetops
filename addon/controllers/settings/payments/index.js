@@ -34,7 +34,9 @@ export default class SettingsPaymentsIndexController extends Controller {
             label: 'Order',
             valuePath: 'order_id',
             cellComponent: 'cell/order-identity',
-            resourcePath: (payment) => relationValue(payment, 'order') ?? buildIdentityStub(payment, { type: 'order', nameKey: 'order_id', load: () => (payment.order_uuid ? this.store.findRecord('order', payment.order_uuid) : null) }),
+            resourcePath: (payment) =>
+                relationValue(payment, 'order') ??
+                buildIdentityStub(payment, { type: 'order', nameKey: 'order_id', load: () => (payment.order_uuid ? this.store.findRecord('order', payment.order_uuid) : null) }),
         },
         {
             label: 'Customer',

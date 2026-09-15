@@ -15,7 +15,9 @@ export default function buildSubRecordDescriptors(owner) {
             icon: 'link',
             modelNames: ['asset-connection'],
             polymorphicTypes: ['fleet-ops:asset-connection', 'Fleetbase\\FleetOps\\Models\\AssetConnection'],
-            title: (connection) => join([first(connection, 'vehicle.displayName', 'vehicle.display_name'), first(connection, 'trailer.displayName', 'trailer.display_name')], ' ⇄ ') ?? first(connection, 'relationship_type', 'public_id'),
+            title: (connection) =>
+                join([first(connection, 'vehicle.displayName', 'vehicle.display_name'), first(connection, 'trailer.displayName', 'trailer.display_name')], ' ⇄ ') ??
+                first(connection, 'relationship_type', 'public_id'),
             identifier: (connection) => first(connection, 'relationship_type', 'source'),
             image: () => icon('link'),
             status: (connection) => (typeof get(connection, 'active') === 'boolean' ? (get(connection, 'active') ? 'active' : 'inactive') : undefined),
@@ -36,7 +38,11 @@ export default function buildSubRecordDescriptors(owner) {
             title: (row) => first(row, 'driver.name', 'driver_name', 'fleet.name'),
             identifier: (row) => first(row, 'fleet.name', 'fleet_name'),
             image: () => icon('id-card'),
-            facts: (row) => [relatedFact('driver', relation(owner, row, 'driver'), 'driver', null), relatedFact('fleet', relation(owner, row, 'fleet'), 'fleet', null), fact('created', get(row, 'created_at'), { format: 'date' })],
+            facts: (row) => [
+                relatedFact('driver', relation(owner, row, 'driver'), 'driver', null),
+                relatedFact('fleet', relation(owner, row, 'fleet'), 'fleet', null),
+                fact('created', get(row, 'created_at'), { format: 'date' }),
+            ],
             open: parentOpener(owner, 'driver', 'driver'),
         },
         {
@@ -49,7 +55,12 @@ export default function buildSubRecordDescriptors(owner) {
             identifier: (result) => first(result, 'category'),
             image: () => icon('square-check'),
             status: (result) => (typeof get(result, 'passed') === 'boolean' ? (get(result, 'passed') ? 'passed' : 'failed') : first(result, 'status')),
-            facts: (result) => [fact('category', first(result, 'category'), { format: 'humanize' }), fact('status', first(result, 'status'), { format: 'humanize' }), fact('severity', first(result, 'severity'), { format: 'humanize' }), fact('comments', first(result, 'comments'))],
+            facts: (result) => [
+                fact('category', first(result, 'category'), { format: 'humanize' }),
+                fact('status', first(result, 'status'), { format: 'humanize' }),
+                fact('severity', first(result, 'severity'), { format: 'humanize' }),
+                fact('comments', first(result, 'comments')),
+            ],
             open: parentOpener(owner, 'submission', 'inspection-submission'),
         },
         {
@@ -62,7 +73,13 @@ export default function buildSubRecordDescriptors(owner) {
             identifier: (stop) => first(stop, 'statusLabel', 'status'),
             image: () => icon('map-pin'),
             status: (stop) => first(stop, 'status'),
-            facts: (stop) => [relatedFact('order', relation(owner, stop, 'order'), 'order', null), relatedFact('place', relation(owner, stop, 'place'), 'place', null), fact('sequence', get(stop, 'sequence')), fact('eta', get(stop, 'estimated_arrival'), { format: 'date' }), fact('arrived', get(stop, 'actual_arrival'), { format: 'date' })],
+            facts: (stop) => [
+                relatedFact('order', relation(owner, stop, 'order'), 'order', null),
+                relatedFact('place', relation(owner, stop, 'place'), 'place', null),
+                fact('sequence', get(stop, 'sequence')),
+                fact('eta', get(stop, 'estimated_arrival'), { format: 'date' }),
+                fact('arrived', get(stop, 'actual_arrival'), { format: 'date' }),
+            ],
             open: parentOpener(owner, 'order', 'order'),
         },
         {
@@ -73,17 +90,29 @@ export default function buildSubRecordDescriptors(owner) {
             title: (payload) => first(payload, 'public_id'),
             identifier: (payload) => (present(get(payload, 'entities_count')) ? `${get(payload, 'entities_count')} entities` : null),
             image: () => icon('boxes-stacked'),
-            facts: (payload) => [relatedFact('pickup', relation(owner, payload, 'pickup'), 'place', null), relatedFact('dropoff', relation(owner, payload, 'dropoff'), 'place', null), fact('entities', get(payload, 'entities_count')), fact('waypoints', get(payload, 'waypoints_count')), fact('cod', money(get(payload, 'cod_amount'), get(payload, 'cod_currency')))],
+            facts: (payload) => [
+                relatedFact('pickup', relation(owner, payload, 'pickup'), 'place', null),
+                relatedFact('dropoff', relation(owner, payload, 'dropoff'), 'place', null),
+                fact('entities', get(payload, 'entities_count')),
+                fact('waypoints', get(payload, 'waypoints_count')),
+                fact('cod', money(get(payload, 'cod_amount'), get(payload, 'cod_currency'))),
+            ],
         },
         {
             key: 'position',
             labelKey: 'resource.position',
             icon: 'location-crosshairs',
             modelNames: ['position'],
-            title: (position) => first(position, 'positionString') ?? (present(get(position, 'latitude')) ? `${get(position, 'latitude')}, ${get(position, 'longitude')}` : first(position, 'public_id')),
+            title: (position) =>
+                first(position, 'positionString') ?? (present(get(position, 'latitude')) ? `${get(position, 'latitude')}, ${get(position, 'longitude')}` : first(position, 'public_id')),
             identifier: (position) => (get(position, 'created_at') ? new Date(get(position, 'created_at')).toLocaleString() : null),
             image: () => icon('location-crosshairs'),
-            facts: (position) => [fact('speed', get(position, 'speed')), fact('heading', get(position, 'heading')), fact('altitude', get(position, 'altitude')), fact('recorded', get(position, 'created_at'), { format: 'date' })],
+            facts: (position) => [
+                fact('speed', get(position, 'speed')),
+                fact('heading', get(position, 'heading')),
+                fact('altitude', get(position, 'altitude')),
+                fact('recorded', get(position, 'created_at'), { format: 'date' }),
+            ],
         },
         {
             key: 'purchase-rate',
@@ -94,7 +123,11 @@ export default function buildSubRecordDescriptors(owner) {
             identifier: (rate) => first(rate, 'status'),
             image: () => icon('receipt'),
             status: (rate) => first(rate, 'status'),
-            facts: (rate) => [relatedFact('service-quote', relation(owner, rate, 'service_quote'), 'service-quote', null), fact('status', first(rate, 'status'), { format: 'humanize' }), fact('created', get(rate, 'created_at'), { format: 'date' })],
+            facts: (rate) => [
+                relatedFact('service-quote', relation(owner, rate, 'service_quote'), 'service-quote', null),
+                fact('status', first(rate, 'status'), { format: 'humanize' }),
+                fact('created', get(rate, 'created_at'), { format: 'date' }),
+            ],
         },
         {
             key: 'route',
@@ -105,7 +138,11 @@ export default function buildSubRecordDescriptors(owner) {
             identifier: (route) => first(route, 'order_status'),
             image: () => icon('route'),
             status: (route) => first(route, 'order_status'),
-            facts: (route) => [fact('order', first(route, 'order_public_id')), fact('status', first(route, 'order_status'), { format: 'humanize' }), fact('created', get(route, 'created_at'), { format: 'date' })],
+            facts: (route) => [
+                fact('order', first(route, 'order_public_id')),
+                fact('status', first(route, 'order_status'), { format: 'humanize' }),
+                fact('created', get(route, 'created_at'), { format: 'date' }),
+            ],
             open: async (route, context) => {
                 const registry = owner.lookup('service:resource-registry');
                 const store = owner.lookup('service:store');
@@ -128,7 +165,12 @@ export default function buildSubRecordDescriptors(owner) {
             title: (quote) => first(quote, 'service_rate_name', 'public_id'),
             identifier: (quote) => money(get(quote, 'amount'), get(quote, 'currency')),
             image: () => icon('file-invoice'),
-            facts: (quote) => [fact('service-rate', first(quote, 'service_rate_name')), fact('amount', money(get(quote, 'amount'), get(quote, 'currency'))), fact('request', first(quote, 'request_id')), fact('expires', get(quote, 'expired_at'), { format: 'date' })],
+            facts: (quote) => [
+                fact('service-rate', first(quote, 'service_rate_name')),
+                fact('amount', money(get(quote, 'amount'), get(quote, 'currency'))),
+                fact('request', first(quote, 'request_id')),
+                fact('expires', get(quote, 'expired_at'), { format: 'date' }),
+            ],
         },
         {
             key: 'service-quote-item',
@@ -148,7 +190,13 @@ export default function buildSubRecordDescriptors(owner) {
             title: (fee) => first(fee, 'label', 'geography_type') ?? join([get(fee, 'distance'), first(fee, 'distance_unit')]),
             identifier: (fee) => money(get(fee, 'fee'), get(fee, 'currency')),
             image: () => icon('coins'),
-            facts: (fee) => [fact('fee', money(get(fee, 'fee'), get(fee, 'currency'))), fact('distance', join([get(fee, 'distance'), first(fee, 'distance_unit')])), relatedFact('service-area', relation(owner, fee, 'service_area'), 'service-area', null), relatedFact('zone', relation(owner, fee, 'zone'), 'zone', null), fact('fallback', typeof get(fee, 'is_fallback') === 'boolean' ? get(fee, 'is_fallback') : null)],
+            facts: (fee) => [
+                fact('fee', money(get(fee, 'fee'), get(fee, 'currency'))),
+                fact('distance', join([get(fee, 'distance'), first(fee, 'distance_unit')])),
+                relatedFact('service-area', relation(owner, fee, 'service_area'), 'service-area', null),
+                relatedFact('zone', relation(owner, fee, 'zone'), 'zone', null),
+                fact('fallback', typeof get(fee, 'is_fallback') === 'boolean' ? get(fee, 'is_fallback') : null),
+            ],
         },
         {
             key: 'service-rate-parcel-fee',
@@ -158,7 +206,11 @@ export default function buildSubRecordDescriptors(owner) {
             title: (fee) => first(fee, 'size') ?? join([get(fee, 'length'), get(fee, 'width'), get(fee, 'height')], ' × '),
             identifier: (fee) => money(get(fee, 'fee'), get(fee, 'currency')),
             image: () => icon('box'),
-            facts: (fee) => [fact('fee', money(get(fee, 'fee'), get(fee, 'currency'))), fact('dimensions', join([join([get(fee, 'length'), get(fee, 'width'), get(fee, 'height')], ' × '), first(fee, 'dimensions_unit')])), fact('weight', join([get(fee, 'weight'), first(fee, 'weight_unit')]))],
+            facts: (fee) => [
+                fact('fee', money(get(fee, 'fee'), get(fee, 'currency'))),
+                fact('dimensions', join([join([get(fee, 'length'), get(fee, 'width'), get(fee, 'height')], ' × '), first(fee, 'dimensions_unit')])),
+                fact('weight', join([get(fee, 'weight'), first(fee, 'weight_unit')])),
+            ],
         },
         {
             key: 'tracking-number',
@@ -182,7 +234,12 @@ export default function buildSubRecordDescriptors(owner) {
                 return icon('barcode');
             },
             status: (tracking) => first(tracking, 'last_status'),
-            facts: (tracking) => [fact('tracking', first(tracking, 'tracking_number')), fact('last-status', first(tracking, 'last_status'), { format: 'humanize' }), fact('region', first(tracking, 'region')), fact('type', first(tracking, 'type'), { format: 'humanize' })],
+            facts: (tracking) => [
+                fact('tracking', first(tracking, 'tracking_number')),
+                fact('last-status', first(tracking, 'last_status'), { format: 'humanize' }),
+                fact('region', first(tracking, 'region')),
+                fact('type', first(tracking, 'type'), { format: 'humanize' }),
+            ],
         },
         {
             key: 'tracking-status',
@@ -193,7 +250,11 @@ export default function buildSubRecordDescriptors(owner) {
             identifier: (status) => first(status, 'code'),
             image: () => icon('clock-rotate-left'),
             status: (status) => first(status, 'status'),
-            facts: (status) => [fact('details', first(status, 'details')), fact('location', join([first(status, 'city'), first(status, 'province'), first(status, 'country')], ', ')), fact('recorded', get(status, 'created_at'), { format: 'date' })],
+            facts: (status) => [
+                fact('details', first(status, 'details')),
+                fact('location', join([first(status, 'city'), first(status, 'province'), first(status, 'country')], ', ')),
+                fact('recorded', get(status, 'created_at'), { format: 'date' }),
+            ],
         },
         {
             key: 'vehicle-device',
@@ -206,7 +267,12 @@ export default function buildSubRecordDescriptors(owner) {
             image: () => icon('microchip'),
             online: (device) => (typeof get(device, 'online') === 'boolean' ? get(device, 'online') : undefined),
             status: (device) => first(device, 'status'),
-            facts: (device) => [fact('type', join([first(device, 'device_type'), first(device, 'device_model')], ' · '), { format: 'humanize' }), fact('provider', first(device, 'device_provider')), fact('serial', first(device, 'serial_number')), fact('installed', get(device, 'installation_date'), { format: 'date' })],
+            facts: (device) => [
+                fact('type', join([first(device, 'device_type'), first(device, 'device_model')], ' · '), { format: 'humanize' }),
+                fact('provider', first(device, 'device_provider')),
+                fact('serial', first(device, 'serial_number')),
+                fact('installed', get(device, 'installation_date'), { format: 'date' }),
+            ],
         },
         {
             key: 'waypoint',
@@ -219,7 +285,13 @@ export default function buildSubRecordDescriptors(owner) {
             image: () => icon('flag'),
             status: (waypoint) => (get(waypoint, 'complete') ? 'completed' : first(waypoint, 'status')),
             badges: (waypoint) => badges(badge('order', 'list-ol', present(get(waypoint, 'order')) ? `#${get(waypoint, 'order')}` : null)),
-            facts: (waypoint) => [fact('address', first(waypoint, 'address', 'street1')), relatedFact('customer', relation(owner, waypoint, 'customer'), first(waypoint, 'customer_type'), first(waypoint, 'customer.name')), fact('status', first(waypoint, 'status'), { format: 'humanize' }), fact('tracking', first(waypoint, 'tracking')), fact('window', join([get(waypoint, 'time_window_start'), get(waypoint, 'time_window_end')], ' – '))],
+            facts: (waypoint) => [
+                fact('address', first(waypoint, 'address', 'street1')),
+                relatedFact('customer', relation(owner, waypoint, 'customer'), first(waypoint, 'customer_type'), first(waypoint, 'customer.name')),
+                fact('status', first(waypoint, 'status'), { format: 'humanize' }),
+                fact('tracking', first(waypoint, 'tracking')),
+                fact('window', join([get(waypoint, 'time_window_start'), get(waypoint, 'time_window_end')], ' – ')),
+            ],
             open: parentOpener(owner, 'place', 'place'),
         },
     ];

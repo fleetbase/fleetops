@@ -37,10 +37,7 @@ export default class DevicePanelHeaderComponent extends Component {
 
     get attachedVehicle() {
         return (
-            get(this.resource, 'attached_to_name') ??
-            get(this.resource, 'attachable.displayName') ??
-            get(this.resource, 'attachable.display_name') ??
-            get(this.resource, 'attachable.name')
+            get(this.resource, 'attached_to_name') ?? get(this.resource, 'attachable.displayName') ?? get(this.resource, 'attachable.display_name') ?? get(this.resource, 'attachable.name')
         );
     }
 

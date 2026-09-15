@@ -22,7 +22,16 @@ export default function buildConnectivityDescriptors(owner) {
             modelNames: ['device'],
             polymorphicTypes: ['fleet-ops:device', 'Fleetbase\\FleetOps\\Models\\Device'],
             permission: 'fleet-ops view device',
-            statusTones: { online: 'text-green-500', active: 'text-green-500', recently_offline: 'text-yellow-500', offline: 'text-gray-400', long_offline: 'text-gray-400', never_connected: 'text-gray-400', inactive: 'text-gray-400', error: 'text-red-500' },
+            statusTones: {
+                online: 'text-green-500',
+                active: 'text-green-500',
+                recently_offline: 'text-yellow-500',
+                offline: 'text-gray-400',
+                long_offline: 'text-gray-400',
+                never_connected: 'text-gray-400',
+                inactive: 'text-gray-400',
+                error: 'text-red-500',
+            },
             title: (device) => first(device, 'displayName', 'display_name', 'name', 'device_id', 'imei', 'serial_number', 'public_id'),
             identifier: (device) => first(device, 'device_id', 'imei', 'serial_number'),
             image: (device) => (present(get(device, 'photo_url')) ? { url: get(device, 'photo_url'), shape: 'square' } : icon('microchip')),
@@ -35,7 +44,11 @@ export default function buildConnectivityDescriptors(owner) {
             badges: (device) => {
                 const attachable = relation(owner, device, 'attachable');
 
-                return badges(badge('attached-to', 'link', first(attachable, 'displayName', 'display_name', 'name') ?? first(device, 'attached_to_name'), { relatedId: attachable?.id ?? get(device, 'attachable_uuid') }));
+                return badges(
+                    badge('attached-to', 'link', first(attachable, 'displayName', 'display_name', 'name') ?? first(device, 'attached_to_name'), {
+                        relatedId: attachable?.id ?? get(device, 'attachable_uuid'),
+                    })
+                );
             },
             selectDetails: (device) => [first(device, 'type', 'model'), first(device, 'imei', 'serial_number', 'device_id')],
             facts: (device) => [
@@ -64,13 +77,21 @@ export default function buildConnectivityDescriptors(owner) {
             badges: (sensor) => {
                 const device = relation(owner, sensor, 'device');
 
-                return badges(badge('device', 'microchip', first(device, 'displayName', 'display_name', 'name') ?? first(sensor, 'device_name'), { relatedType: 'device', relatedId: device?.id ?? get(sensor, 'device_uuid') }));
+                return badges(
+                    badge('device', 'microchip', first(device, 'displayName', 'display_name', 'name') ?? first(sensor, 'device_name'), {
+                        relatedType: 'device',
+                        relatedId: device?.id ?? get(sensor, 'device_uuid'),
+                    })
+                );
             },
             selectDetails: (sensor) => [first(sensor, 'type'), first(sensor, 'serial_number', 'internal_id')],
             facts: (sensor) => [
                 fact('type', first(sensor, 'type'), { format: 'humanize' }),
                 fact('last-value', join([get(sensor, 'last_value'), first(sensor, 'unit')])),
-                fact('threshold', present(get(sensor, 'min_threshold')) || present(get(sensor, 'max_threshold')) ? `${get(sensor, 'min_threshold') ?? '–'} to ${get(sensor, 'max_threshold') ?? '–'}` : null),
+                fact(
+                    'threshold',
+                    present(get(sensor, 'min_threshold')) || present(get(sensor, 'max_threshold')) ? `${get(sensor, 'min_threshold') ?? '–'} to ${get(sensor, 'max_threshold') ?? '–'}` : null
+                ),
                 relatedFact('device', relation(owner, sensor, 'device'), 'device', first(sensor, 'device_name')),
                 relatedFact('telematic', relation(owner, sensor, 'telematic'), 'telematic', first(sensor, 'telematic_name')),
                 fact('last-reading', get(sensor, 'last_reading_at'), { format: 'date' }),
@@ -108,16 +129,30 @@ export default function buildConnectivityDescriptors(owner) {
             modelNames: ['device-event'],
             polymorphicTypes: ['fleet-ops:device-event', 'Fleetbase\\FleetOps\\Models\\DeviceEvent'],
             permission: 'fleet-ops view device-event',
-            statusTones: { info: 'text-gray-400', low: 'text-gray-400', notice: 'text-yellow-500', warning: 'text-yellow-500', medium: 'text-yellow-500', high: 'text-red-500', critical: 'text-red-500', error: 'text-red-500' },
+            statusTones: {
+                info: 'text-gray-400',
+                low: 'text-gray-400',
+                notice: 'text-yellow-500',
+                warning: 'text-yellow-500',
+                medium: 'text-yellow-500',
+                high: 'text-red-500',
+                critical: 'text-red-500',
+                error: 'text-red-500',
+            },
             title: (event) => {
                 const type = first(event, 'event_type', 'code');
 
-                return type ? String(type).replace(/[_.-]+/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase()) : first(event, 'public_id');
+                return type
+                    ? String(type)
+                          .replace(/[_.-]+/g, ' ')
+                          .replace(/\b\w/g, (c) => c.toUpperCase())
+                    : first(event, 'public_id');
             },
             identifier: (event) => first(event, 'ident', 'public_id'),
             image: (event) => (present(get(event, 'device_photo_url')) ? { url: get(event, 'device_photo_url'), shape: 'square' } : icon('bolt')),
             status: (event) => first(event, 'severity'),
-            badges: (event) => badges(badge('device', 'microchip', first(event, 'device_name', 'device.displayName', 'device_id'), { relatedType: 'device', relatedId: get(event, 'device_uuid') })),
+            badges: (event) =>
+                badges(badge('device', 'microchip', first(event, 'device_name', 'device.displayName', 'device_id'), { relatedType: 'device', relatedId: get(event, 'device_uuid') })),
             selectDetails: (event) => [first(event, 'device_name'), first(event, 'severity')],
             facts: (event) => [
                 fact('event-type', first(event, 'event_type', 'code'), { format: 'humanize' }),

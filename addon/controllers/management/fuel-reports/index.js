@@ -1,5 +1,4 @@
 import Controller from '@ember/controller';
-import { get } from '@ember/object';
 import { buildIdentityStub } from '../../../utils/identity-cell-resource';
 import relationValue from '../../../utils/relation-value';
 import { inject as service } from '@ember/service';
@@ -106,7 +105,8 @@ export default class ManagementFuelReportsIndexController extends Controller {
                 label: this.intl.t('column.reporter'),
                 valuePath: 'reporter_name',
                 cellComponent: 'table/cell/user-identity',
-                resourcePath: (fuelReport) => relationValue(fuelReport, 'reporter') ?? buildIdentityStub(fuelReport, { type: 'user', nameKey: 'reporter_name', load: () => fuelReport.get('reporter') }),
+                resourcePath: (fuelReport) =>
+                    relationValue(fuelReport, 'reporter') ?? buildIdentityStub(fuelReport, { type: 'user', nameKey: 'reporter_name', load: () => fuelReport.get('reporter') }),
                 resizable: true,
                 sortable: true,
                 filterable: true,

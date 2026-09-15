@@ -92,7 +92,8 @@ export default class ManagementFleetsIndexController extends Controller {
                 label: this.intl.t('column.service-area'),
                 cellComponent: 'cell/service-area-identity',
                 permission: 'fleet-ops view service-area',
-                resourcePath: (fleet) => relationValue(fleet, 'service_area') ?? buildIdentityStub(fleet, { type: 'service-area', name: get(fleet, 'service_area.name'), load: () => fleet.get('service_area') }),
+                resourcePath: (fleet) =>
+                    relationValue(fleet, 'service_area') ?? buildIdentityStub(fleet, { type: 'service-area', name: get(fleet, 'service_area.name'), load: () => fleet.get('service_area') }),
                 valuePath: 'service_area.name',
                 resizable: true,
                 filterable: true,

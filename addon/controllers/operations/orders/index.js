@@ -248,7 +248,11 @@ export default class OperationsOrdersIndexController extends Controller {
                 action: this.vehicleActions.panel.view,
                 resourcePath: (order) =>
                     relationValue(order, 'vehicle_assigned') ??
-                    buildIdentityStub(order, { type: 'vehicle', name: get(order, 'vehicle_assigned.display_name'), load: () => (order.vehicle_assigned_uuid ? this.store.findRecord('vehicle', order.vehicle_assigned_uuid) : null) }),
+                    buildIdentityStub(order, {
+                        type: 'vehicle',
+                        name: get(order, 'vehicle_assigned.display_name'),
+                        load: () => (order.vehicle_assigned_uuid ? this.store.findRecord('vehicle', order.vehicle_assigned_uuid) : null),
+                    }),
                 hidden: true,
                 resizable: true,
                 sortable: true,

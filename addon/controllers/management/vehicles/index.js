@@ -1,5 +1,5 @@
 import Controller from '@ember/controller';
-import { action, get } from '@ember/object';
+import { action } from '@ember/object';
 import { buildIdentityStub } from '../../../utils/identity-cell-resource';
 import relationValue from '../../../utils/relation-value';
 import { inject as service } from '@ember/service';
@@ -295,7 +295,9 @@ export default class ManagementVehiclesIndexController extends Controller {
                 permission: 'fleet-ops view vendor',
                 action: this.vendorActions.panel.view,
                 valuePath: 'vendor_name',
-                resourcePath: (vehicle) => relationValue(vehicle, 'vendor') ?? buildIdentityStub(vehicle, { type: 'vendor', load: () => (vehicle.vendor_uuid ? this.store.findRecord('vendor', vehicle.vendor_uuid) : null) }),
+                resourcePath: (vehicle) =>
+                    relationValue(vehicle, 'vendor') ??
+                    buildIdentityStub(vehicle, { type: 'vendor', load: () => (vehicle.vendor_uuid ? this.store.findRecord('vendor', vehicle.vendor_uuid) : null) }),
                 hidden: true,
                 resizable: true,
                 filterable: true,

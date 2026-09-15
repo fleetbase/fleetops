@@ -189,7 +189,8 @@ export default class MaintenanceSchedulesIndexController extends Controller {
                 label: this.intl.t('column.subject'),
                 valuePath: 'subject.name',
                 cellComponent: 'cell/maintenance-subject-identity',
-                resourcePath: (schedule) => relationValue(schedule, 'subject') ?? buildIdentityStub(schedule, { type: schedule.subject_type ?? 'maintenance-subject', nameKey: 'subject_name' }),
+                resourcePath: (schedule) =>
+                    relationValue(schedule, 'subject') ?? buildIdentityStub(schedule, { type: schedule.subject_type ?? 'maintenance-subject', nameKey: 'subject_name' }),
                 resizable: true,
                 sortable: false,
             },
@@ -197,7 +198,8 @@ export default class MaintenanceSchedulesIndexController extends Controller {
                 label: this.intl.t('column.assignee'),
                 valuePath: 'default_assignee_name',
                 cellComponent: 'cell/facilitator-identity',
-                resourcePath: (schedule) => relationValue(schedule, 'default_assignee') ?? buildIdentityStub(schedule, { type: schedule.default_assignee_type ?? 'facilitator', nameKey: 'default_assignee_name' }),
+                resourcePath: (schedule) =>
+                    relationValue(schedule, 'default_assignee') ?? buildIdentityStub(schedule, { type: schedule.default_assignee_type ?? 'facilitator', nameKey: 'default_assignee_name' }),
                 resizable: true,
                 sortable: false,
                 hidden: true,

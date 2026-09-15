@@ -14,8 +14,17 @@ export default function buildAssetDescriptors(owner) {
             aliases: ['attachable-vehicle', 'maintenance-subject-vehicle'],
             polymorphicTypes: ['fleet-ops:vehicle', 'Fleetbase\\FleetOps\\Models\\Vehicle'],
             permission: 'fleet-ops view vehicle',
-            statusTones: { available: 'text-green-500', active: 'text-green-500', in_service: 'text-green-500', maintenance: 'text-yellow-500', unavailable: 'text-gray-400', inactive: 'text-gray-400', out_of_service: 'text-red-500' },
-            title: (vehicle) => first(vehicle, 'displayName', 'display_name', 'name', 'yearMakeModel', 'public_id') ?? join([get(vehicle, 'year'), get(vehicle, 'make'), get(vehicle, 'model')]),
+            statusTones: {
+                available: 'text-green-500',
+                active: 'text-green-500',
+                in_service: 'text-green-500',
+                maintenance: 'text-yellow-500',
+                unavailable: 'text-gray-400',
+                inactive: 'text-gray-400',
+                out_of_service: 'text-red-500',
+            },
+            title: (vehicle) =>
+                first(vehicle, 'displayName', 'display_name', 'name', 'yearMakeModel', 'public_id') ?? join([get(vehicle, 'year'), get(vehicle, 'make'), get(vehicle, 'model')]),
             identifier: (vehicle) => first(vehicle, 'plate_number', 'call_sign', 'vin', 'serial_number'),
             image: (vehicle) => photo(vehicle, 'vehicle'),
             online: (vehicle) => {
@@ -29,7 +38,10 @@ export default function buildAssetDescriptors(owner) {
 
                 return badges(
                     badge('plate', 'id-card', first(vehicle, 'plate_number', 'call_sign', 'vehicle_number')),
-                    badge('driver', 'user', first(driver, 'name', 'displayName') ?? first(vehicle, 'driver_name'), { relatedType: 'driver', relatedId: driver?.id ?? get(vehicle, 'driver_uuid') })
+                    badge('driver', 'user', first(driver, 'name', 'displayName') ?? first(vehicle, 'driver_name'), {
+                        relatedType: 'driver',
+                        relatedId: driver?.id ?? get(vehicle, 'driver_uuid'),
+                    })
                 );
             },
             selectDetails: (vehicle) => [first(vehicle, 'plate_number', 'vin', 'serial_number', 'call_sign'), first(vehicle, 'driver_name')],
@@ -74,7 +86,10 @@ export default function buildAssetDescriptors(owner) {
 
                 return badges(
                     badge('plate', 'id-card', first(trailer, 'plate_number', 'code')),
-                    badge('vehicle', 'truck', first(vehicle, 'displayName', 'display_name', 'name') ?? first(trailer, 'current_vehicle_name'), { relatedType: 'vehicle', relatedId: vehicle?.id ?? get(trailer, 'current_vehicle_id') })
+                    badge('vehicle', 'truck', first(vehicle, 'displayName', 'display_name', 'name') ?? first(trailer, 'current_vehicle_name'), {
+                        relatedType: 'vehicle',
+                        relatedId: vehicle?.id ?? get(trailer, 'current_vehicle_id'),
+                    })
                 );
             },
             selectDetails: (trailer) => [first(trailer, 'type'), first(trailer, 'plate_number', 'vin', 'code')],
@@ -101,7 +116,15 @@ export default function buildAssetDescriptors(owner) {
             aliases: ['maintenance-subject-equipment'],
             polymorphicTypes: ['fleet-ops:equipment', 'Fleetbase\\FleetOps\\Models\\Equipment'],
             permission: 'fleet-ops view equipment',
-            statusTones: { active: 'text-green-500', equipped: 'text-green-500', available: 'text-green-500', maintenance: 'text-yellow-500', unequipped: 'text-gray-400', inactive: 'text-gray-400', retired: 'text-red-500' },
+            statusTones: {
+                active: 'text-green-500',
+                equipped: 'text-green-500',
+                available: 'text-green-500',
+                maintenance: 'text-yellow-500',
+                unequipped: 'text-gray-400',
+                inactive: 'text-gray-400',
+                retired: 'text-red-500',
+            },
             title: (equipment) => first(equipment, 'name', 'code', 'public_id'),
             identifier: (equipment) => first(equipment, 'serial_number', 'code'),
             image: (equipment) => (present(get(equipment, 'photo_url')) ? { url: get(equipment, 'photo_url'), shape: 'square' } : icon('toolbox')),
@@ -130,7 +153,8 @@ export default function buildAssetDescriptors(owner) {
             title: (part) => first(part, 'name', 'sku', 'public_id'),
             identifier: (part) => first(part, 'sku', 'serial_number'),
             image: (part) => (present(get(part, 'photo_url')) ? { url: get(part, 'photo_url'), shape: 'square' } : icon('gears')),
-            status: (part) => (get(part, 'is_low_stock') ? 'low_stock' : get(part, 'is_in_stock') ? 'in_stock' : get(part, 'quantity_on_hand') === undefined ? first(part, 'status') : 'out_of_stock'),
+            status: (part) =>
+                get(part, 'is_low_stock') ? 'low_stock' : get(part, 'is_in_stock') ? 'in_stock' : get(part, 'quantity_on_hand') === undefined ? first(part, 'status') : 'out_of_stock',
             badges: (part) => badges(badge('quantity', 'boxes-stacked', present(get(part, 'quantity_on_hand')) ? `${get(part, 'quantity_on_hand')} on hand` : null)),
             selectDetails: (part) => [first(part, 'sku'), first(part, 'manufacturer')],
             facts: (part) => [

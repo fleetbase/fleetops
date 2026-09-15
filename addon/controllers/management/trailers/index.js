@@ -218,7 +218,11 @@ export default class ManagementTrailersIndexController extends Controller {
                 action: this.vehicleActions.panel.view,
                 resourcePath: (trailer) =>
                     relationValue(trailer, 'current_vehicle') ??
-                    buildIdentityStub(trailer, { type: 'vehicle', nameKey: 'current_vehicle_name', load: () => (trailer.current_vehicle_id ? this.store.findRecord('vehicle', trailer.current_vehicle_id) : null) }),
+                    buildIdentityStub(trailer, {
+                        type: 'vehicle',
+                        nameKey: 'current_vehicle_name',
+                        load: () => (trailer.current_vehicle_id ? this.store.findRecord('vehicle', trailer.current_vehicle_id) : null),
+                    }),
                 emptyText: '-',
                 resizable: true,
                 filterable: true,
@@ -385,7 +389,9 @@ export default class ManagementTrailersIndexController extends Controller {
                 cellComponent: 'cell/vendor-identity',
                 permission: 'fleet-ops view vendor',
                 action: this.vendorActions.panel.view,
-                resourcePath: (trailer) => relationValue(trailer, 'vendor') ?? buildIdentityStub(trailer, { type: 'vendor', load: () => (trailer.vendor_uuid ? this.store.findRecord('vendor', trailer.vendor_uuid) : null) }),
+                resourcePath: (trailer) =>
+                    relationValue(trailer, 'vendor') ??
+                    buildIdentityStub(trailer, { type: 'vendor', load: () => (trailer.vendor_uuid ? this.store.findRecord('vendor', trailer.vendor_uuid) : null) }),
                 hidden: true,
                 resizable: true,
                 filterable: true,

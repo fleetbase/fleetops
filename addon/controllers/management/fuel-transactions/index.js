@@ -160,7 +160,9 @@ export default class ManagementFuelTransactionsIndexController extends Controlle
                 label: 'Fuel Report',
                 valuePath: 'fuel_report_id',
                 cellComponent: 'cell/fuel-report-identity',
-                resourcePath: (transaction) => relationValue(transaction, 'fuel_report') ?? buildIdentityStub(transaction, { type: 'fuel-report', nameKey: 'fuel_report_id', load: () => transaction.get('fuel_report') }),
+                resourcePath: (transaction) =>
+                    relationValue(transaction, 'fuel_report') ??
+                    buildIdentityStub(transaction, { type: 'fuel-report', nameKey: 'fuel_report_id', load: () => transaction.get('fuel_report') }),
                 resizable: true,
             },
             {

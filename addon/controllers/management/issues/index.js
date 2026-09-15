@@ -1,5 +1,4 @@
 import Controller from '@ember/controller';
-import { get } from '@ember/object';
 import { buildIdentityStub } from '../../../utils/identity-cell-resource';
 import relationValue from '../../../utils/relation-value';
 import { inject as service } from '@ember/service';

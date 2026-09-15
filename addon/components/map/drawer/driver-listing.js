@@ -52,7 +52,8 @@ export default class MapDrawerDriverListingComponent extends Component {
                 valuePath: 'current_job_id',
                 width: '80px',
                 cellComponent: 'cell/order-identity',
-                resourcePath: (driver) => relationValue(driver, 'current_job') ?? buildIdentityStub(driver, { type: 'order', nameKey: 'current_job_id', load: () => driver.get('current_job') }),
+                resourcePath: (driver) =>
+                    relationValue(driver, 'current_job') ?? buildIdentityStub(driver, { type: 'order', nameKey: 'current_job_id', load: () => driver.get('current_job') }),
                 onClick: this.job,
             },
             {

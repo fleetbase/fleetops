@@ -191,7 +191,8 @@ export default class ManagementDriversIndexController extends Controller {
                 },
                 valuePath: 'vehicle.display_name',
                 emptyText: '-',
-                resourcePath: (driver) => get(driver, 'vehicle_assigned') ?? relationValue(driver, 'vehicle') ?? buildIdentityStub(driver, { type: 'vehicle', load: () => driver.loadVehicle?.() }),
+                resourcePath: (driver) =>
+                    get(driver, 'vehicle_assigned') ?? relationValue(driver, 'vehicle') ?? buildIdentityStub(driver, { type: 'vehicle', load: () => driver.loadVehicle?.() }),
                 modelNamePath: 'display_name',
                 resizable: true,
                 filterable: true,
