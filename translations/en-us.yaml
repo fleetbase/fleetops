@@ -3047,3 +3047,149 @@ select-option:
         vin: VIN
         serial_number: S/N
         call_sign: Call sign
+resource-summary:
+    facts:
+        address: Address
+        altitude: Altitude
+        amount: Amount
+        arrived: Arrived
+        assignee: Assignee
+        attached-to: Attached to
+        attachment: Attachment
+        axles: Axles
+        base-fee: Base fee
+        body-coupling: Body / coupling
+        calculation: Calculation
+        category: Category
+        cod: COD
+        code: Code
+        comments: Comments
+        completion: Completion
+        connected: Connected
+        coordinates: Coordinates
+        core-service: Core service
+        countries: Countries
+        country: Country
+        coverage: Coverage
+        created: Created
+        customer: Customer
+        declared-value: Declared value
+        description: Description
+        destination: Destination
+        details: Details
+        device: Device
+        dimensions: Dimensions
+        disconnected: Disconnected
+        distance: Distance
+        driver: Driver
+        drivers: Drivers
+        dropoff: Dropoff
+        due: Due
+        dwell: Dwell
+        email: Email
+        entities: Entities
+        environment: Environment
+        equipped-to: Equipped to
+        eta: ETA
+        event-type: Event type
+        expires: Expires
+        failed-items: Failed items
+        fallback: Fallback
+        fee: Fee
+        fees: Fees
+        firmware: Firmware
+        fitted-to: Fitted to
+        fleet: Fleet
+        form: Form
+        fuel-report: Fuel report
+        heading: Heading
+        host: Host
+        imei: IMEI
+        installed: Installed
+        interval: Interval
+        items: Items
+        key: Key
+        last-error: Last error
+        last-online: Last online
+        last-reading: Last reading
+        last-seen: Last seen
+        last-status: Last status
+        last-synced: Last synced
+        last-value: Last value
+        licence: Licence
+        location: Location
+        maintainable: Maintainable
+        make-model: Make / model
+        model: Model
+        namespace: Namespace
+        next-due: Next due
+        next-occurrence: Next occurrence
+        occurred: Occurred
+        odometer: Odometer
+        order: Order
+        order-config: Order config
+        performed-by: Performed by
+        period: Period
+        phone: Phone
+        pickup: Pickup
+        place: Place
+        plate: Plate / VIN
+        policy: Policy
+        priority: Priority
+        progress: Progress
+        provider: Provider
+        published: Published
+        purchase-price: Purchase price
+        quantity: Quantity
+        reason: Reason
+        recorded: Recorded
+        region: Region
+        relationship: Relationship
+        reporter: Reporter
+        request: Request
+        route: Route
+        sandbox: Sandbox
+        schedule: Schedule
+        scheduled: Scheduled
+        sequence: Sequence
+        serial: Serial
+        service-area: Service area
+        service-quote: Service quote
+        service-rate: Service rate
+        service-types: Service types
+        severity: Severity
+        sku: SKU
+        speed: Speed
+        speed-limit: Speed limit
+        station: Station
+        status: Status
+        subject: Subject
+        submitted: Submitted
+        submitted-by: Submitted by
+        target: Target
+        task: Task
+        telematic: Telematic
+        threshold: Threshold
+        timezone: Timezone
+        title: Title
+        total-cost: Total cost
+        tracking: Tracking
+        trailer: Trailer
+        transaction-at: Transaction at
+        triggers: Triggers
+        type: Type
+        unit-cost: Unit cost
+        user: User
+        vehicle: Vehicle
+        vehicles: Vehicles
+        vendor: Vendor
+        version: Version
+        volume: Volume
+        warranty: Warranty
+        waypoints: Waypoints
+        website: Website
+        weight: Weight
+        window: Window
+        work-order: Work order
+        zone: Zone
+        zones: Zones
