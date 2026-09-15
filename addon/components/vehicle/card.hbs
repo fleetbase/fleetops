@@ -44,11 +44,8 @@
                 <FaIcon @icon="id-card" @prefix="fas" />
                 <span class="fleetops-card-meta-value">
                     {{#if this.driverName}}
-                        {{#if @resource.driver}}
-                            <a href="javascript:;" class="fleetops-card-meta-link" {{on "click" this.viewDriver}}>{{this.driverName}}</a>
-                        {{else}}
-                            {{this.driverName}}
-                        {{/if}}
+                        {{! The card itself is the click target, so the driver is a compact option row, not a pill. }}
+                        <SelectOption::Driver @option={{@resource.driver}} @title={{this.driverName}} @compact={{true}} />
                     {{else}}
                         {{t "common.no-driver-assigned"}}
                     {{/if}}
@@ -57,9 +54,8 @@
             <div class="fleetops-card-meta">
                 <FaIcon @icon="trailer" @prefix="fas" />
                 <span class="fleetops-card-meta-value">
-                    {{#each @resource.trailers as |trailer index|}}
-                        {{#if index}}, {{/if}}
-                        <a href="javascript:;" class="fleetops-card-meta-link" {{on "click" (fn this.viewTrailer trailer)}}>{{trailer.displayName}}</a>
+                    {{#each @resource.trailers as |trailer|}}
+                        <SelectOption::Trailer @option={{trailer}} @compact={{true}} />
                     {{else}}
                         {{t "vehicle.empty.trailers"}}
                     {{/each}}

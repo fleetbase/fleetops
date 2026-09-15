@@ -40,9 +40,8 @@
                         </span>
                     {{/if}}
                     {{#if this.attachedVehicle}}
-                        <span class="inline-flex max-w-[12rem] items-center gap-1 truncate rounded-md bg-gray-100 px-1.5 py-0.5 text-[11px] font-medium leading-4 text-gray-600 dark:bg-gray-700 dark:text-gray-200">
-                            <FaIcon @icon="car" class="text-gray-400 dark:text-gray-300" />
-                            <span class="truncate">{{this.attachedVehicle}}</span>
+                        <span class="inline-flex max-w-[14rem] items-center gap-1 truncate rounded-md bg-gray-100 px-1.5 py-0.5 text-[11px] font-medium leading-4 text-gray-600 dark:bg-gray-700 dark:text-gray-200">
+                            <Attachable::Pill @attachable={{resource-relation this.resource "attachable"}} @titleFallback={{this.attachedVehicle}} @imageSize="16" @imageClass="w-4 h-4" @titleClass="text-[11px] font-medium leading-4" @subtitle={{null}} />
                         </span>
                     {{/if}}
                     <span class="inline-flex max-w-[13rem] items-center gap-1 truncate rounded-md bg-gray-100 px-1.5 py-0.5 text-[11px] font-medium leading-4 text-gray-600 dark:bg-gray-700 dark:text-gray-200">

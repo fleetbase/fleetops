@@ -26,9 +26,9 @@
                     <div class="rounded-md border border-gray-200 p-3 dark:border-gray-700"><div class="text-xs text-gray-500">Vehicle/Card</div><div class="mt-1 font-semibold text-gray-900 dark:text-gray-100">{{n-a @model.vehicle_card_id}}</div></div>
                     <div class="rounded-md border border-gray-200 p-3 dark:border-gray-700"><div class="text-xs text-gray-500">Liters</div><div class="mt-1 font-semibold text-gray-900 dark:text-gray-100">{{n-a @model.volume}}</div></div>
                     <div class="rounded-md border border-gray-200 p-3 dark:border-gray-700"><div class="text-xs text-gray-500">Amount</div><div class="mt-1 font-semibold text-gray-900 dark:text-gray-100">{{n-a @model.amount}} {{@model.currency}}</div></div>
-                    <div class="rounded-md border border-gray-200 p-3 dark:border-gray-700"><div class="text-xs text-gray-500">Vehicle</div><div class="mt-1 font-semibold text-gray-900 dark:text-gray-100">{{n-a @model.vehicle_name}}</div></div>
+                    <div class="rounded-md border border-gray-200 p-3 dark:border-gray-700"><div class="text-xs text-gray-500">Vehicle</div><div class="mt-1 font-semibold text-gray-900 dark:text-gray-100"><Vehicle::Pill @vehicle={{resource-relation @model "vehicle"}} @titleFallback={{n-a @model.vehicle_name}} /></div></div>
                     <div class="rounded-md border border-gray-200 p-3 dark:border-gray-700"><div class="text-xs text-gray-500">Trip</div><div class="mt-1 font-semibold text-gray-900 dark:text-gray-100">{{n-a @model.trip_number}}</div></div>
-                    <div class="rounded-md border border-gray-200 p-3 dark:border-gray-700"><div class="text-xs text-gray-500">Fuel Report</div><div class="mt-1 font-semibold text-gray-900 dark:text-gray-100">{{n-a @model.fuel_report_id}}</div></div>
+                    <div class="rounded-md border border-gray-200 p-3 dark:border-gray-700"><div class="text-xs text-gray-500">Fuel Report</div><div class="mt-1 font-semibold text-gray-900 dark:text-gray-100"><FuelReport::Pill @fuelReport={{resource-relation @model "fuel_report"}} @titleFallback={{n-a @model.fuel_report_id}} /></div></div>
                 </div>
 
                 <div class="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-2">

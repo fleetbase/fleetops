@@ -8,7 +8,7 @@
             {{#each this.submissions as |submission|}}
                 <button type="button" class="inspection-history__card" {{on "click" (fn this.inspectionSubmissionActions.transition.view submission)}}>
                     <div class="inspection-history__head">
-                        <span class="inspection-history__form">{{n-a (or submission.vehicle.displayName submission.vehicle_name) (t "inspection.form.no-vehicle")}}</span>
+                        <span class="inspection-history__form"><SelectOption::Vehicle @option={{submission.vehicle}} @title={{n-a (or submission.vehicle.displayName submission.vehicle_name) (t "inspection.form.no-vehicle")}} @compact={{true}} /></span>
                         {{! A draft has no result yet; an empty badge is just a coloured dot. }}
                         {{#if submission.result}}
                             <Badge @status={{if (eq submission.result "failed") "failed" "passed"}}>{{smart-humanize submission.result}}</Badge>
@@ -19,8 +19,7 @@
                     <div class="inspection-history__meta">
                         {{#if (or submission.driver.name submission.driver_name)}}
                             <span class="inspection-history__driver">
-                                <FaIcon @icon="user" @size="xs" class="inspection-history__meta-icon" />
-                                {{or submission.driver.name submission.driver_name}}
+                                <SelectOption::Driver @option={{submission.driver}} @title={{or submission.driver.name submission.driver_name}} @compact={{true}} />
                             </span>
                         {{/if}}
                         <span class="inspection-history__when">
