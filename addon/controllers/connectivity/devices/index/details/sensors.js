@@ -98,6 +98,8 @@ export default class ConnectivityDevicesIndexDetailsSensorsController extends Co
                 filterParam: 'sensors_type',
                 filterComponent: 'filter/multi-option',
                 filterOptions: fleetOpsOptions('sensorTypes'),
+                filterOptionLabel: 'label',
+                filterOptionValue: 'value',
             },
             {
                 label: 'Value',
@@ -128,6 +130,8 @@ export default class ConnectivityDevicesIndexDetailsSensorsController extends Co
                 filterParam: 'sensors_status',
                 filterComponent: 'filter/multi-option',
                 filterOptions: fleetOpsOptions('sensorStatuses'),
+                filterOptionLabel: 'label',
+                filterOptionValue: 'value',
             },
             {
                 label: 'Last Reading',
