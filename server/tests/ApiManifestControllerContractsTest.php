@@ -84,8 +84,8 @@ use Illuminate\Http\Request;
 /** A stop that records what was done to it instead of touching a database. */
 class FleetOpsManifestStopFake extends ManifestStop
 {
-    public array $marks   = [];
-    public array $updates = [];
+    public array $marks          = [];
+    public array $updates        = [];
     public ?object $placeForTest = null;
 
     public function markArrived(): ManifestStop
@@ -148,7 +148,7 @@ class FleetOpsManifestStopFake extends ManifestStop
 /** A manifest whose stops and appended counts are supplied, not queried. */
 class FleetOpsManifestFakeRecord extends Manifest
 {
-    public $stopsForTest = null;
+    public $stopsForTest;
 
     public function getCompletedStopsAttribute(): int
     {
@@ -263,7 +263,7 @@ class FleetOpsManifestQueryFake
         return $this;
     }
 
-    public function get(): \Illuminate\Support\Collection
+    public function get(): Illuminate\Support\Collection
     {
         return collect($this->results);
     }
@@ -451,7 +451,7 @@ test('manifest controller re-sequences pending stops nearest first, leaving fini
 
     $manifest               = new FleetOpsManifestFakeRecord();
     $manifest->setRawAttributes(['uuid' => 'm-uuid', 'public_id' => 'manifest_a'], true);
-    $manifest->stopsForTest = collect([$done, $far, $near, $mid]);
+    $manifest->stopsForTest                    = collect([$done, $far, $near, $mid]);
     FleetOpsManifestControllerProbe::$manifest = $manifest;
 
     FleetOpsManifestControllerProbe::$distances = [
@@ -482,8 +482,8 @@ test('manifest controller starts from the first pending stop when given no posit
 
     $manifest               = new FleetOpsManifestFakeRecord();
     $manifest->setRawAttributes(['uuid' => 'm-uuid', 'public_id' => 'manifest_a'], true);
-    $manifest->stopsForTest = collect([$a, $b, $c]);
-    FleetOpsManifestControllerProbe::$manifest = $manifest;
+    $manifest->stopsForTest                     = collect([$a, $b, $c]);
+    FleetOpsManifestControllerProbe::$manifest  = $manifest;
     FleetOpsManifestControllerProbe::$distances = [
         '1.3,103.8->1.3,103.8'   => 0.0,
         '1.3,103.8->1.31,103.81' => 1500.0,
@@ -506,7 +506,7 @@ test('manifest controller skips a stop with no place rather than failing the who
 
     $manifest               = new FleetOpsManifestFakeRecord();
     $manifest->setRawAttributes(['uuid' => 'm-uuid', 'public_id' => 'manifest_a'], true);
-    $manifest->stopsForTest = collect([$a, $b, $c]);
+    $manifest->stopsForTest                    = collect([$a, $b, $c]);
     FleetOpsManifestControllerProbe::$manifest = $manifest;
 
     $controller = new FleetOpsManifestControllerProbe();
@@ -585,7 +585,7 @@ test('manifest controller lookups go to the database', function () {
     $reached = function (callable $lookup): bool {
         try {
             $lookup();
-        } catch (\Throwable $e) {
+        } catch (Throwable $e) {
             return true;
         }
 

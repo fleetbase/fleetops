@@ -1,0 +1,20 @@
+<div class="next-content-panel-wrapper" ...attributes>
+    <ContentPanel @title={{t "inspection.record.photos"}} @open={{true}} @wrapperClass="bordered-top">
+        {{#if this.load.isRunning}}
+            <div class="p-6 flex items-center justify-center">
+                <Spinner @loadingMessage={{t "inspection.record.loading-photos"}} class="text-sm dark:text-gray-100 flex items-center space-x-2" />
+            </div>
+        {{else}}
+            <ModelMultiFileUpload
+                @type={{this.photoType}}
+                @subject={{@resource}}
+                @files={{this.files}}
+                @path={{concat "uploads/inspections/" @resource.id}}
+                @uploadParams={{hash subject_type="fleet-ops:inspection-submission"}}
+                @acceptedFileTypes="image/jpeg,image/png,image/gif,image/webp"
+                @onUploaded={{this.addFile}}
+            />
+        {{/if}}
+    </ContentPanel>
+    <Spacer @height="200px" />
+</div>

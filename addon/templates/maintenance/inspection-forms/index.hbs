@@ -1,0 +1,28 @@
+<Layout::Resource::Tabular
+    @resource="inspection-form"
+    @title="Inspection Forms"
+    @searchQuery={{this.query}}
+    @onSearch={{perform this.inspectionFormActions.controllerSearchTask this}}
+    @data={{@model}}
+    @columns={{this.columns}}
+    @page={{this.page}}
+    @onPageChange={{fn (mut this.page)}}
+    @actionButtons={{this.actionButtons}}
+    @bulkActions={{this.bulkActions}}
+    @controller={{this}}
+    @emptyStateComponent={{component
+        "table/empty-state"
+        icon="clipboard-check"
+        title="Create your first inspection form"
+        description="Build DVIR and safety checklists drivers can submit before defects become downtime."
+        filteredTitle="No inspection forms match your filters"
+        filteredDescription="Adjust search or filters to find another form."
+        primaryText="New form"
+        primaryIcon="plus"
+        primaryAction=this.inspectionFormActions.transition.create
+        docsSlug="fleet-ops/maintenance/inspections/overview"
+        docsTitle="Inspections guide"
+        docsText="Inspections guide"
+    }}
+/>
+{{outlet}}

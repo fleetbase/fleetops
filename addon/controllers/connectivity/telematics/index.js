@@ -89,6 +89,8 @@ export default class ConnectivityTelematicsIndexController extends Controller {
             filterable: true,
             filterComponent: 'filter/multi-option',
             filterOptions: fleetOpsOptions('telematicStatuses'),
+            filterOptionLabel: 'label',
+            filterOptionValue: 'value',
         },
         {
             label: this.intl.t('column.created-at'),

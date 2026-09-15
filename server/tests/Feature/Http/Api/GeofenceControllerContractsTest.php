@@ -184,10 +184,10 @@ class FleetOpsGeofenceControllerFake extends GeofenceController
     public ?FleetOpsGeofenceQueryFake $nextEventQuery = null;
     public array $serializedEvents                    = [];
 
-    public ?Fleetbase\FleetOps\Models\Driver $historyDriver = null;
+    public ?Driver $historyDriver                           = null;
     public array $historyDriverLookups                      = [];
 
-    protected function findDriverForHistory(string $driverId): ?Fleetbase\FleetOps\Models\Driver
+    protected function findDriverForHistory(string $driverId): ?Driver
     {
         $this->historyDriverLookups[] = $driverId;
 
@@ -364,7 +364,7 @@ test('api geofence driver history applies driver filter and caps pagination', fu
 
     // The endpoint is addressed by public_id and resolves the driver itself; the query
     // still filters on the driver's uuid.
-    $historyDriver = new Fleetbase\FleetOps\Models\Driver();
+    $historyDriver = new Driver();
     $historyDriver->setRawAttributes(['uuid' => 'driver-9', 'public_id' => 'driver_public9'], true);
     $controller->historyDriver = $historyDriver;
 
@@ -384,7 +384,7 @@ test('api geofence driver history applies driver filter and caps pagination', fu
 test('driver history answers 404 when the driver does not resolve', function () {
     // The endpoint's own not-found branch: findDriverForHistory returns null and the
     // request must not proceed to a query keyed on nothing.
-    $controller = new FleetOpsGeofenceControllerFake();
+    $controller                = new FleetOpsGeofenceControllerFake();
     $controller->historyDriver = null;
 
     $response = $controller->driverHistory(Request::create('/geofences/driver/driver_missing/history', 'GET'), 'driver_missing');

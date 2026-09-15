@@ -1,3 +1,6 @@
+{{#if (eq @resource.provider_descriptor.key "afaqy")}}
+    {{#if @resource.public_id}}<AfaqyIntegration::Status @resource={{@resource}} />{{/if}}
+{{/if}}
 <div class="flex flex-col gap-4 p-4 md:p-6" ...attributes>
     <section class="grid grid-cols-1 gap-3 lg:grid-cols-3">
         {{#each this.healthCards as |card|}}
@@ -77,7 +80,9 @@
                     <div class="text-gray-400 dark:text-gray-500">Integration ID</div>
                     <div class="mt-1 font-mono font-bold text-gray-900 dark:text-gray-100">{{n-a @resource.public_id}}</div>
                 </div>
-                {{#if @resource.provider_descriptor.supports_webhooks}}
+                {{#if (eq @resource.provider_descriptor.key "afaqy")}}
+                    <p class="text-xs">Use the AFAQY live telemetry section to obtain the secure registration URL.</p>
+                {{else if @resource.provider_descriptor.supports_webhooks}}
                     <div class="rounded-md border border-gray-200 p-3 dark:border-gray-700 md:col-span-2">
                         <div class="mb-2 text-gray-400 dark:text-gray-500">Webhook URL</div>
                         {{#if this.hasWebhookUrl}}

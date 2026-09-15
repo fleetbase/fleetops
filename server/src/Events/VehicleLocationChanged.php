@@ -22,6 +22,8 @@ class VehicleLocationChanged implements ShouldBroadcast
      * @var string
      */
     public $eventId;
+    public ?string $companyUuid;
+    public ?string $apiCredentialUuid;
 
     /**
      * The datetime instance the broadcast ws triggered.
@@ -100,6 +102,8 @@ class VehicleLocationChanged implements ShouldBroadcast
      */
     public function __construct(Vehicle $vehicle, array $additionalData = [])
     {
+        $this->companyUuid        = $vehicle->company_uuid;
+        $this->apiCredentialUuid  = session('api_credential');
         $this->eventId            = uniqid('event_');
         $this->sentAt             = Carbon::now()->toDateTimeString();
         $this->additionalData     = $additionalData;
@@ -120,12 +124,12 @@ class VehicleLocationChanged implements ShouldBroadcast
      */
     public function broadcastOn()
     {
-        return [
-            new Channel('company.' . session('company')),
-            new Channel('api.' . session('api_credential')),
+        return array_values(array_filter([
+            $this->companyUuid ? new Channel('company.' . $this->companyUuid) : null,
+            $this->apiCredentialUuid ? new Channel('api.' . $this->apiCredentialUuid) : null,
             new Channel('vehicle.' . $this->vehicleId),
             new Channel('vehicle.' . $this->vehicleUuid),
-        ];
+        ]));
     }
 
     /**

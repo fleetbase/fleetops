@@ -1,5 +1,13 @@
 <?php
 
+require_once __DIR__ . '/../../../../Support/AfaqyTestCrypto.php';
+
+beforeEach(function () {
+    app()->instance('encrypter', afaqyTestCrypto());
+    Illuminate\Support\Facades\Crypt::clearResolvedInstance('encrypter');
+    Illuminate\Support\Facades\Cache::flush();
+});
+
 use Fleetbase\FleetOps\Exceptions\TelematicProviderException;
 use Fleetbase\FleetOps\Support\Telematics\Providers\AfaqyProvider;
 use Illuminate\Support\Facades\Http;

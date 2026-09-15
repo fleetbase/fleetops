@@ -1,0 +1,11 @@
+<div class="select-option {{if @compact 'select-option--compact'}}" ...attributes>
+    {{#if this.photo}}
+        <Image src={{this.photo}} @fallbackSrc={{@fallbackPhoto}} alt="" class="select-option__photo" data-shape={{or @shape "round"}} />
+    {{/if}}
+    <div class="select-option__text">
+        <span class="select-option__title">{{@title}}</span>
+        {{#if this.details}}
+            <span class="select-option__details">{{this.details}}</span>
+        {{/if}}
+    </div>
+</div>

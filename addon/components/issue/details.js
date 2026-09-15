@@ -1,11 +1,43 @@
 import Component from '@glimmer/component';
+import { tracked } from '@glimmer/tracking';
 import { inject as service } from '@ember/service';
 import { action } from '@ember/object';
+import { debug } from '@ember/debug';
+import { task } from 'ember-concurrency';
 import { formatDistanceStrict, isValid } from 'date-fns';
 
 export default class IssueDetailsComponent extends Component {
     @service hostRouter;
     @service issueActions;
+    @service store;
+    @service inspectionSubmissionActions;
+    @tracked inspections = [];
+
+    constructor() {
+        super(...arguments);
+        this.loadInspections.perform();
+    }
+
+    /**
+     * An inspection that failed raises an issue and names it; the issue never
+     * looked back, so what caused it was invisible from the issue. Looked up
+     * rather than read from meta, so an inspection attached by hand shows too.
+     */
+    @task *loadInspections() {
+        const id = this.args.resource?.uuid ?? this.args.resource?.id;
+        if (!id) {
+            return;
+        }
+
+        try {
+            const inspections = yield this.store.query('inspection-submission', { issue_uuid: id, sort: '-created_at' });
+            this.inspections = Array.from(inspections ?? []);
+        } catch (error) {
+            // Supplementary to the issue: a failed lookup should not put an error
+            // in front of someone who opened the issue to read it.
+            debug(`Could not load the inspections linked to issue ${id}: ${error.message}`);
+        }
+    }
 
     get resource() {
         return this.args.resource;
@@ -145,5 +177,9 @@ export default class IssueDetailsComponent extends Component {
 
     @action viewDriver() {
         return this.issueActions.viewDriver(this.resource);
+    }
+
+    @action viewInspection(submission) {
+        return this.inspectionSubmissionActions.transition.view(submission);
     }
 }

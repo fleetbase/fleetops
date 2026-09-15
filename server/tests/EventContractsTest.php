@@ -477,13 +477,14 @@ test('driver simulated location changed broadcasts simulated telemetry payload',
 
 test('vehicle location changed broadcasts vehicle telemetry payload', function () {
     session([
-        'company'        => 'company-1',
+        'company'        => 'wrong-session-company',
         'api_credential' => 'api-1',
     ]);
 
     $vehicle = new Vehicle();
     $vehicle->setRawAttributes([
         'uuid'         => 'vehicle-uuid',
+        'company_uuid' => 'company-1',
         'public_id'    => 'vehicle_public',
         'plate_number' => 'ABC-123',
         'name'         => 'Truck 12',

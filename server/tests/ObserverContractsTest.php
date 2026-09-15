@@ -744,7 +744,7 @@ test('work order observer creates maintenance resets schedule and dispatches com
             'maintainable_type' => 'fleet-ops:vehicle',
             'maintainable_uuid' => 'vehicle-uuid',
             'type'              => 'scheduled',
-            'status'            => 'done',
+            'status'            => 'completed',
             'priority'          => 'high',
             'performed_by_type' => 'fleet-ops:contact',
             'performed_by_uuid' => 'assignee-uuid',

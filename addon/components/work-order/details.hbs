@@ -68,6 +68,16 @@
                     <div class="field-value">{{n-a @resource.schedule.name}}</div>
                 </div>
             {{/if}}
+            {{#if this.inspections.length}}
+                <div class="field-info-container">
+                    <div class="field-name">{{t "inspection.record.linked-inspections" count=this.inspections.length}}</div>
+                    <div class="field-value space-y-1.5">
+                        {{#each this.inspections as |inspection|}}
+                            <InspectionSubmission::Pill @submission={{inspection}} @onClick={{this.viewInspection}} />
+                        {{/each}}
+                    </div>
+                </div>
+            {{/if}}
 
             {{! — Scheduling — }}
             <div class="col-span-2 text-[11px] uppercase tracking-wide text-gray-500 font-semibold mt-3">

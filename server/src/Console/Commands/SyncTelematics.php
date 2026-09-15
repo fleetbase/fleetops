@@ -40,6 +40,23 @@ class SyncTelematics extends Command
                 return self::SUCCESS;
             }
 
+            if (in_array('afaqy', $providerKeys, true) && config('telematics.afaqy.polling_enabled', false)) {
+                Telematic::withoutGlobalScopes()->where('provider', 'afaqy')->whereIn('status', ['active', 'connected', 'error', 'synchronizing'])
+                    ->whereNotNull('company_uuid')->orderBy('id')->chunkById(100, function ($connections) {
+                        foreach ($connections as $connection) {
+                            if (\Fleetbase\FleetOps\Support\Telematics\Afaqy\Inbox::enabled($connection)) {
+                                try {
+                                    \Fleetbase\FleetOps\Support\Telematics\Afaqy\Queue::dispatch((new \Fleetbase\FleetOps\Jobs\PollAfaqyTelemetry($connection->uuid))
+                                        ->onQueue(config('telematics.afaqy.poll_queue', 'default'))
+                                        ->delay(now()->addSeconds(abs(crc32($connection->uuid)) % 10)));
+                                } catch (\Throwable) {
+                                    \Illuminate\Support\Facades\Log::warning('AFAQY polling dispatch failed; next tick will retry.', ['telematic_uuid' => $connection->uuid]);
+                                }
+                            }
+                        }
+                    });
+                $providerKeys = array_values(array_diff($providerKeys, ['afaqy']));
+            }
             $query = Telematic::withoutGlobalScopes()
                 ->whereIn('provider', $providerKeys)
                 ->whereIn('status', ['active', 'connected'])
@@ -80,7 +97,7 @@ class SyncTelematics extends Command
                     return false;
                 }
 
-                return !$excludeWebhookProviders || !$descriptor->supportsWebhooks;
+                return $descriptor->key === 'afaqy' || !$excludeWebhookProviders || !$descriptor->supportsWebhooks;
             })
             ->keys()
             ->values()

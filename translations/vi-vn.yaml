@@ -2,6 +2,8 @@ menu:
   fuel-providers: Tích hợp Nhiên liệu
   fuel-transactions: Giao dịch nhiên liệu
   trailers: Rơ-moóc
+  inspection-forms: 'Biểu mẫu kiểm tra'
+  inspections: 'Kiểm tra'
 
 resource:
   trailer: Rơ-moóc

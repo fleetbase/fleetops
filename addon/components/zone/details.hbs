@@ -22,7 +22,7 @@
             @zoomControl={{false}}
             as |layers|
         >
-            <layers.tile @url={{leaflet-tile-url}} />
+            <layers.tile @url={{(leaflet-tile-url)}} />
             <layers.polygon
                 @id={{@resource.id}}
                 @record={{@resource}}

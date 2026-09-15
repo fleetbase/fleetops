@@ -18,6 +18,7 @@ import { inject as service } from '@ember/service';
 import { getOwner } from '@ember/application';
 import { task, timeout } from 'ember-concurrency';
 import { debug } from '@ember/debug';
+import { registerDestructor } from '@ember/destroyable';
 import getModelName from '@fleetbase/ember-core/utils/get-model-name';
 import LeafletTrackingMarkerComponent from '../components/leaflet-tracking-marker';
 
@@ -30,12 +31,15 @@ export class EventBuffer {
 
     /** @type {import('./map-manager').default|null} */
     mapManager = null;
+    latestAfaqyPosition = null;
 
     constructor(model, { callback = null, waitTime = 1000 * 3, mapManager = null }) {
         this.model = model;
         this.callback = callback;
         this.waitTime = waitTime;
         this.mapManager = mapManager;
+        const initialPosition = model?.telematics?.last_provider === 'afaqy' ? Date.parse(model.telematics.last_event_at) : NaN;
+        this.latestAfaqyPosition = Number.isFinite(initialPosition) ? initialPosition : null;
     }
 
     /**
@@ -105,6 +109,12 @@ export class EventBuffer {
 
         for (const output of eventsToProcess) {
             const { event, data } = output;
+            if (data?.additionalData?.provider === 'afaqy') {
+                const observedAt = Date.parse(data.additionalData.position_at);
+                if (!Number.isFinite(observedAt) || (this.latestAfaqyPosition !== null && observedAt < this.latestAfaqyPosition)) continue;
+                this.latestAfaqyPosition = observedAt;
+                this.model?.setProperties?.({ location: data.location, speed: data.speed, heading: data.heading });
+            }
 
             // Resolve marker via adapter (provider-agnostic) or Leaflet fallback
             const markerId = this.#getMarkerId();
@@ -176,10 +186,15 @@ export default class MovementTrackerService extends Service {
 
     @tracked channels = [];
     @tracked buffers = new Map();
+    reconnectConsumer;
 
     constructor() {
         super(...arguments);
         this.registerTrackingMarker();
+        registerDestructor(this, () => {
+            this.reconnectConsumer?.close();
+            this.buffers.forEach((buffer) => buffer.stop());
+        });
     }
 
     #getOwner(owner = null) {
@@ -213,9 +228,14 @@ export default class MovementTrackerService extends Service {
     }
 
     closeChannels() {
+        this.watchReconnect.cancelAll();
+        this.reconnectConsumer?.close();
+        this.buffers.forEach((buffer) => buffer.stop());
+        this.buffers.clear();
         this.channels.forEach((channel) => {
             channel.close();
         });
+        this.channels = [];
     }
 
     watch(models = []) {
@@ -224,9 +244,39 @@ export default class MovementTrackerService extends Service {
         });
     }
 
+    @task *watchReconnect() {
+        this.reconnectConsumer = this.socket.instance().listener('connect').createConsumer();
+        while (true) {
+            const { done } = yield this.reconnectConsumer.next();
+            if (done) break;
+            // Refresh only the visible AFAQY assets, with bounded request concurrency.
+            const buffers = [...this.buffers.values()].filter((buffer) => buffer.model?.telematics?.last_provider === 'afaqy');
+            for (let i = 0; i < buffers.length; i += 5) {
+                yield Promise.allSettled(
+                    buffers.slice(i, i + 5).map(async (buffer) => {
+                        const model = await buffer.model.reload();
+                        buffer.clear();
+                        buffer.add({
+                            event: `${getModelName(model)}.location_changed`,
+                            created_at: new Date().toISOString(),
+                            data: {
+                                id: model.id,
+                                location: model.location,
+                                speed: model.speed,
+                                heading: model.heading,
+                                additionalData: { provider: 'afaqy', position_at: model.telematics?.last_event_at },
+                            },
+                        });
+                    })
+                );
+            }
+        }
+    }
+
     async track(model, options = {}) {
         // Create socket instance
         const socket = this.socket.instance();
+        if (this.watchReconnect.isIdle) this.watchReconnect.perform();
 
         // Get model type and identifier
         const type = getModelName(model);
@@ -246,7 +296,7 @@ export default class MovementTrackerService extends Service {
         this.channels = [...this.channels, channel];
 
         // Listen to the channel for events
-        await channel.listener('subscribe').once();
+        if (channel.state !== 'subscribed') await channel.listener('subscribe').once();
 
         // Create event buffer for tracking model
         const eventBuffer = this.#getBuffer(channelId, model, options);
