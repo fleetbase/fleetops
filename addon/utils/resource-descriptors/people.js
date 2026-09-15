@@ -24,9 +24,9 @@ export default function buildPeopleDescriptors(owner) {
                 return typeof online === 'boolean' ? online : undefined;
             },
             status: (driver) => first(driver, 'status'),
-            badges: (driver, context = {}) => {
+            badges: (driver) => {
                 const vehicle = relation(owner, driver, 'vehicle');
-                const label = context.assignedVehicleLabel ?? first(vehicle, 'displayName', 'display_name', 'name') ?? first(driver, 'vehicle_assigned.display_name', 'vehicle_name');
+                const label = first(vehicle, 'displayName', 'display_name', 'name') ?? first(driver, 'vehicle_assigned.display_name', 'vehicle_name');
 
                 return badges(badge('vehicle', 'car', label, { relatedType: 'vehicle', relatedId: vehicle?.id ?? get(driver, 'vehicle_uuid') }));
             },
