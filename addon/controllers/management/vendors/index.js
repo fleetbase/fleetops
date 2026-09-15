@@ -2,6 +2,8 @@ import Controller from '@ember/controller';
 import { inject as service } from '@ember/service';
 import { tracked } from '@glimmer/tracking';
 import { action } from '@ember/object';
+import { buildIdentityStub } from '../../../utils/identity-cell-resource';
+import relationValue from '../../../utils/relation-value';
 import fleetOpsOptions from '../../../utils/fleet-ops-options';
 
 export default class ManagementVendorsIndexController extends Controller {
@@ -178,8 +180,9 @@ export default class ManagementVendorsIndexController extends Controller {
             {
                 label: this.intl.t('column.address'),
                 valuePath: 'address',
-                cellComponent: 'table/cell/anchor',
-                action: this.vendorActions.viewPlace,
+                cellComponent: 'cell/place-identity',
+                permission: 'fleet-ops view place',
+                resourcePath: (vendor) => relationValue(vendor, 'place') ?? buildIdentityStub(vendor, { type: 'place', nameKey: 'address', load: () => vendor.get('place') }),
                 resizable: true,
                 sortable: true,
                 filterable: true,

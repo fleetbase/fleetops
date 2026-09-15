@@ -2,6 +2,8 @@ import Controller from '@ember/controller';
 import { inject as service } from '@ember/service';
 import { tracked } from '@glimmer/tracking';
 import { action } from '@ember/object';
+import { buildIdentityStub } from '../../../utils/identity-cell-resource';
+import relationValue from '../../../utils/relation-value';
 import { task } from 'ember-concurrency';
 
 export default class ManagementFuelTransactionsIndexController extends Controller {
@@ -114,6 +116,9 @@ export default class ManagementFuelTransactionsIndexController extends Controlle
             {
                 label: 'Vehicle',
                 valuePath: 'vehicle_name',
+                cellComponent: 'cell/vehicle-identity',
+                permission: 'fleet-ops view vehicle',
+                resourcePath: (transaction) => relationValue(transaction, 'vehicle') ?? buildIdentityStub(transaction, { type: 'vehicle', load: () => transaction.get('vehicle') }),
                 resizable: true,
                 sortable: false,
                 filterable: true,
@@ -154,8 +159,8 @@ export default class ManagementFuelTransactionsIndexController extends Controlle
             {
                 label: 'Fuel Report',
                 valuePath: 'fuel_report_id',
-                cellComponent: 'table/cell/anchor',
-                action: this.openFuelReport,
+                cellComponent: 'cell/fuel-report-identity',
+                resourcePath: (transaction) => relationValue(transaction, 'fuel_report') ?? buildIdentityStub(transaction, { type: 'fuel-report', nameKey: 'fuel_report_id', load: () => transaction.get('fuel_report') }),
                 resizable: true,
             },
             {

@@ -1,5 +1,7 @@
 import Controller from '@ember/controller';
 import { action } from '@ember/object';
+import { buildIdentityStub } from '../../../../utils/identity-cell-resource';
+import relationValue from '../../../../utils/relation-value';
 import { inject as service } from '@ember/service';
 import { tracked } from '@glimmer/tracking';
 import { task } from 'ember-concurrency';
@@ -13,6 +15,7 @@ const severityOptions = [
 ];
 
 export default class ConnectivityTelematicsDetailsEventsController extends Controller {
+    @service store;
     @service deviceEventActions;
     @service hostRouter;
     @service intl;
@@ -142,6 +145,9 @@ export default class ConnectivityTelematicsDetailsEventsController extends Contr
             {
                 label: 'Device',
                 valuePath: 'device_name',
+                cellComponent: 'cell/device-identity',
+                permission: 'fleet-ops view device',
+                resourcePath: (event) => relationValue(event, 'device') ?? buildIdentityStub(event, { type: 'device', load: () => (event.device_uuid ? this.store.findRecord('device', event.device_uuid) : null) }),
                 resizable: true,
                 sortable: true,
                 filterable: true,

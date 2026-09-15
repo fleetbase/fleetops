@@ -1,8 +1,11 @@
 import Controller from '@ember/controller';
 import { inject as service } from '@ember/service';
+import { buildIdentityStub } from '../../../utils/identity-cell-resource';
+import relationValue from '../../../utils/relation-value';
 import { tracked } from '@glimmer/tracking';
 
 export default class MaintenanceInspectionSubmissionsIndexController extends Controller {
+    @service store;
     @service inspectionSubmissionActions;
     @service intl;
 
@@ -42,9 +45,33 @@ export default class MaintenanceInspectionSubmissionsIndexController extends Con
                 filterParam: 'public_id',
                 filterComponent: 'filter/string',
             },
-            { label: 'Form', valuePath: 'form_name', resizable: true, sortable: false },
-            { label: 'Vehicle', valuePath: 'vehicle_name', resizable: true, sortable: false },
-            { label: 'Driver', valuePath: 'driver_name', resizable: true, sortable: false },
+            {
+                label: 'Form',
+                valuePath: 'form_name',
+                cellComponent: 'cell/inspection-form-identity',
+                permission: 'fleet-ops view inspection-form',
+                resourcePath: (submission) => relationValue(submission, 'form') ?? buildIdentityStub(submission, { type: 'inspection-form', nameKey: 'form_name' }),
+                resizable: true,
+                sortable: false,
+            },
+            {
+                label: 'Vehicle',
+                valuePath: 'vehicle_name',
+                cellComponent: 'cell/vehicle-identity',
+                permission: 'fleet-ops view vehicle',
+                resourcePath: (submission) => relationValue(submission, 'vehicle') ?? buildIdentityStub(submission, { type: 'vehicle', load: () => (submission.vehicle_uuid ? this.store.findRecord('vehicle', submission.vehicle_uuid) : null) }),
+                resizable: true,
+                sortable: false,
+            },
+            {
+                label: 'Driver',
+                valuePath: 'driver_name',
+                cellComponent: 'cell/driver-identity',
+                permission: 'fleet-ops view driver',
+                resourcePath: (submission) => relationValue(submission, 'driver') ?? buildIdentityStub(submission, { type: 'driver', load: () => (submission.driver_uuid ? this.store.findRecord('driver', submission.driver_uuid) : null) }),
+                resizable: true,
+                sortable: false,
+            },
             {
                 label: 'Result',
                 valuePath: 'result',

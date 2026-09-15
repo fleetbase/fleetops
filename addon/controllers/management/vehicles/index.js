@@ -1,5 +1,7 @@
 import Controller from '@ember/controller';
 import { action, get } from '@ember/object';
+import { buildIdentityStub } from '../../../utils/identity-cell-resource';
+import relationValue from '../../../utils/relation-value';
 import { inject as service } from '@ember/service';
 import { tracked } from '@glimmer/tracking';
 
@@ -148,7 +150,6 @@ export default class ManagementVehiclesIndexController extends Controller {
                 valuePath: 'displayName',
                 photoPath: 'avatar_url',
                 cellComponent: 'cell/vehicle-identity',
-                compact: true,
                 permission: 'fleet-ops view vehicle',
                 action: this.vehicleActions.transition.view,
                 resizable: true,
@@ -156,8 +157,6 @@ export default class ManagementVehiclesIndexController extends Controller {
                 filterable: true,
                 filterComponent: 'filter/string',
                 filterParam: 'name',
-                showOnlineIndicator: true,
-                showStatus: false,
             },
             {
                 label: this.intl.t('column.plate-number'),
@@ -185,41 +184,14 @@ export default class ManagementVehiclesIndexController extends Controller {
             {
                 label: this.intl.t('column.driver-assigned'),
                 cellComponent: 'cell/driver-identity',
-                compact: true,
-                assignedVehicleLabel: (_driver, vehicle) => get(vehicle, 'displayName') ?? get(vehicle, 'display_name') ?? get(vehicle, 'name'),
                 permission: 'fleet-ops view driver',
-                action: async (driver) => {
-                    const resolvedDriver = get(driver, 'id') ? driver : await driver?.loadResource?.();
-
-                    if (resolvedDriver) {
-                        return this.driverActions.panel.view(resolvedDriver);
-                    }
-                },
+                action: this.driverActions.panel.view,
                 valuePath: 'driver_name',
                 emptyText: '-',
-                resourcePath: (vehicle) => {
-                    const driver = get(vehicle, 'driver');
-
-                    if (driver) {
-                        return driver;
-                    }
-
-                    const driverName = get(vehicle, 'driver_name');
-
-                    if (driverName) {
-                        return {
-                            name: driverName,
-                            display_name: driverName,
-                            status: 'assigned',
-                            loadResource: () => vehicle.loadDriver?.(),
-                        };
-                    }
-
-                    return null;
-                },
+                resourcePath: (vehicle) => relationValue(vehicle, 'driver') ?? buildIdentityStub(vehicle, { type: 'driver', load: () => vehicle.loadDriver?.() }),
                 resizable: true,
                 filterable: true,
-                filterComponent: 'filter/multi-model',
+                filterComponent: 'filter/model-multiple',
                 filterComponentPlaceholder: this.intl.t('common.select-resource-filter-by', { resource: this.intl.t('resource.driver') }),
                 filterParam: 'driver',
                 model: 'driver',
@@ -229,7 +201,7 @@ export default class ManagementVehiclesIndexController extends Controller {
                 valuePath: 'trailers',
                 hidden: true,
                 filterable: true,
-                filterComponent: 'filter/multi-model',
+                filterComponent: 'filter/model-multiple',
                 filterComponentPlaceholder: this.intl.t('common.select-resource-filter-by', { resource: this.intl.t('resource.trailer') }),
                 filterParam: 'trailer',
                 model: 'trailer',
@@ -240,7 +212,7 @@ export default class ManagementVehiclesIndexController extends Controller {
                 valuePath: 'devices',
                 hidden: true,
                 filterable: true,
-                filterComponent: 'filter/multi-model',
+                filterComponent: 'filter/model-multiple',
                 filterComponentPlaceholder: this.intl.t('common.select-resource-filter-by', { resource: this.intl.t('resource.device') }),
                 filterParam: 'device',
                 model: 'device',
@@ -319,14 +291,11 @@ export default class ManagementVehiclesIndexController extends Controller {
             },
             {
                 label: this.intl.t('column.vendor'),
-                cellComponent: 'table/cell/anchor',
+                cellComponent: 'cell/vendor-identity',
                 permission: 'fleet-ops view vendor',
-                action: async ({ vendor_uuid }) => {
-                    const vendor = await this.store.findRecord('vendor', vendor_uuid);
-
-                    this.vendorActions.viewVendor(vendor);
-                },
+                action: this.vendorActions.panel.view,
                 valuePath: 'vendor_name',
+                resourcePath: (vehicle) => relationValue(vehicle, 'vendor') ?? buildIdentityStub(vehicle, { type: 'vendor', load: () => (vehicle.vendor_uuid ? this.store.findRecord('vendor', vehicle.vendor_uuid) : null) }),
                 hidden: true,
                 resizable: true,
                 filterable: true,

@@ -3,6 +3,8 @@ import { isArray } from '@ember/array';
 import { inject as service } from '@ember/service';
 import { tracked } from '@glimmer/tracking';
 import { action } from '@ember/object';
+import { buildIdentityStub } from '../../../utils/identity-cell-resource';
+import relationValue from '../../../utils/relation-value';
 
 const CACHE_KEY = 'fleetops:maintenance-schedules:layout';
 
@@ -186,8 +188,19 @@ export default class MaintenanceSchedulesIndexController extends Controller {
             {
                 label: this.intl.t('column.subject'),
                 valuePath: 'subject.name',
+                cellComponent: 'cell/maintenance-subject-identity',
+                resourcePath: (schedule) => relationValue(schedule, 'subject') ?? buildIdentityStub(schedule, { type: schedule.subject_type ?? 'maintenance-subject', nameKey: 'subject_name' }),
                 resizable: true,
                 sortable: false,
+            },
+            {
+                label: this.intl.t('column.assignee'),
+                valuePath: 'default_assignee_name',
+                cellComponent: 'cell/facilitator-identity',
+                resourcePath: (schedule) => relationValue(schedule, 'default_assignee') ?? buildIdentityStub(schedule, { type: schedule.default_assignee_type ?? 'facilitator', nameKey: 'default_assignee_name' }),
+                resizable: true,
+                sortable: false,
+                hidden: true,
             },
             {
                 label: this.intl.t('column.type'),

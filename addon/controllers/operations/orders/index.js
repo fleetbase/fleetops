@@ -1,10 +1,15 @@
 import Controller from '@ember/controller';
 import { inject as service } from '@ember/service';
 import { tracked } from '@glimmer/tracking';
-import { action } from '@ember/object';
+import { action, get } from '@ember/object';
+import { buildIdentityStub } from '../../../utils/identity-cell-resource';
+import relationValue from '../../../utils/relation-value';
 
 export default class OperationsOrdersIndexController extends Controller {
     @service orderActions;
+    @service driverActions;
+    @service vehicleActions;
+    @service store;
     @service orderSocketEvents;
     @service leafletMapManager;
     @service mapDrawer;
@@ -164,7 +169,8 @@ export default class OperationsOrdersIndexController extends Controller {
             {
                 label: this.intl.t('column.payload'),
                 valuePath: 'payload.public_id',
-                cellComponent: 'click-to-copy',
+                cellComponent: 'cell/payload-identity',
+                resourcePath: (order) => relationValue(order, 'payload'),
                 resizable: true,
                 hidden: true,
                 filterable: true,
@@ -174,9 +180,13 @@ export default class OperationsOrdersIndexController extends Controller {
             },
             {
                 label: this.intl.t('column.driver-assigned'),
-                cellComponent: 'cell/driver-name',
+                cellComponent: 'cell/driver-identity',
                 valuePath: 'driver_assigned',
-                modelPath: 'driver_assigned',
+                permission: 'fleet-ops view driver',
+                action: this.driverActions.panel.view,
+                resourcePath: (order) =>
+                    relationValue(order, 'driver_assigned') ??
+                    buildIdentityStub(order, { type: 'driver', load: () => (order.driver_assigned_uuid ? this.store.findRecord('driver', order.driver_assigned_uuid) : null) }),
                 resizable: true,
                 sortable: true,
                 filterable: true,
@@ -188,7 +198,9 @@ export default class OperationsOrdersIndexController extends Controller {
             {
                 label: this.intl.t('column.pickup'),
                 valuePath: 'pickupName',
-                cellComponent: 'table/cell/base',
+                cellComponent: 'cell/place-identity',
+                permission: 'fleet-ops view place',
+                resourcePath: (order) => relationValue(relationValue(order, 'payload'), 'pickup') ?? buildIdentityStub(order, { type: 'place', nameKey: 'pickupName' }),
                 resizable: true,
                 sortable: true,
                 filterable: true,
@@ -202,7 +214,9 @@ export default class OperationsOrdersIndexController extends Controller {
             {
                 label: this.intl.t('column.dropoff'),
                 valuePath: 'dropoffName',
-                cellComponent: 'table/cell/base',
+                cellComponent: 'cell/place-identity',
+                permission: 'fleet-ops view place',
+                resourcePath: (order) => relationValue(relationValue(order, 'payload'), 'dropoff') ?? buildIdentityStub(order, { type: 'place', nameKey: 'dropoffName' }),
                 resizable: true,
                 sortable: true,
                 filterable: true,
@@ -215,7 +229,8 @@ export default class OperationsOrdersIndexController extends Controller {
             {
                 label: this.intl.t('column.customer'),
                 valuePath: 'customer.name',
-                cellComponent: 'table/cell/base',
+                cellComponent: 'cell/customer-identity',
+                resourcePath: (order) => relationValue(order, 'customer') ?? buildIdentityStub(order, { type: order.customer_type ?? 'customer', nameKey: 'customer_name' }),
                 resizable: true,
                 sortable: true,
                 hidden: false,
@@ -227,10 +242,13 @@ export default class OperationsOrdersIndexController extends Controller {
             },
             {
                 label: this.intl.t('column.vehicle-assigned'),
-                cellComponent: 'cell/vehicle-name',
+                cellComponent: 'cell/vehicle-identity',
                 valuePath: 'vehicle_assigned.display_name',
-                modelPath: 'vehicle_assigned',
-                showOnlineIndicator: true,
+                permission: 'fleet-ops view vehicle',
+                action: this.vehicleActions.panel.view,
+                resourcePath: (order) =>
+                    relationValue(order, 'vehicle_assigned') ??
+                    buildIdentityStub(order, { type: 'vehicle', name: get(order, 'vehicle_assigned.display_name'), load: () => (order.vehicle_assigned_uuid ? this.store.findRecord('vehicle', order.vehicle_assigned_uuid) : null) }),
                 hidden: true,
                 resizable: true,
                 sortable: true,
@@ -244,7 +262,8 @@ export default class OperationsOrdersIndexController extends Controller {
             {
                 label: this.intl.t('column.facilitator'),
                 valuePath: 'facilitator.name',
-                cellComponent: 'table/cell/base',
+                cellComponent: 'cell/facilitator-identity',
+                resourcePath: (order) => relationValue(order, 'facilitator') ?? buildIdentityStub(order, { type: order.facilitator_type ?? 'facilitator', nameKey: 'facilitator_name' }),
                 resizable: true,
                 hidden: true,
                 sortable: true,
@@ -333,6 +352,8 @@ export default class OperationsOrdersIndexController extends Controller {
             {
                 label: this.intl.t('column.created-by'),
                 valuePath: 'created_by_name',
+                cellComponent: 'table/cell/user-identity',
+                resourcePath: (order) => buildIdentityStub(order, { type: 'user', nameKey: 'created_by_name' }),
                 resizable: true,
                 hidden: true,
                 filterable: true,
@@ -344,6 +365,8 @@ export default class OperationsOrdersIndexController extends Controller {
             {
                 label: this.intl.t('column.updated-by'),
                 valuePath: 'updated_by_name',
+                cellComponent: 'table/cell/user-identity',
+                resourcePath: (order) => buildIdentityStub(order, { type: 'user', nameKey: 'updated_by_name' }),
                 resizable: true,
                 hidden: true,
                 filterable: true,

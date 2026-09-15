@@ -2,6 +2,8 @@ import Controller from '@ember/controller';
 import { inject as service } from '@ember/service';
 import { tracked } from '@glimmer/tracking';
 import { action } from '@ember/object';
+import { buildIdentityStub } from '../../../utils/identity-cell-resource';
+import relationValue from '../../../utils/relation-value';
 
 export default class ManagementContactsIndexController extends Controller {
     @service contactActions;
@@ -154,8 +156,9 @@ export default class ManagementContactsIndexController extends Controller {
             {
                 label: this.intl.t('column.address'),
                 valuePath: 'address',
-                cellComponent: 'table/cell/anchor',
-                action: this.contactActions.viewPlace,
+                cellComponent: 'cell/place-identity',
+                permission: 'fleet-ops view place',
+                resourcePath: (contact) => relationValue(contact, 'place') ?? buildIdentityStub(contact, { type: 'place', nameKey: 'address', load: () => contact.get('place') }),
                 resizable: true,
                 sortable: true,
                 filterable: true,

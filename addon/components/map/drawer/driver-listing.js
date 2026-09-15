@@ -2,6 +2,8 @@ import Component from '@glimmer/component';
 import { tracked } from '@glimmer/tracking';
 import { inject as service } from '@ember/service';
 import { action } from '@ember/object';
+import { buildIdentityStub } from '../../../utils/identity-cell-resource';
+import relationValue from '../../../utils/relation-value';
 import calculateMapDrawerDropdownPosition from '../../../utils/map-drawer-dropdown-position';
 
 export default class MapDrawerDriverListingComponent extends Component {
@@ -35,7 +37,7 @@ export default class MapDrawerDriverListingComponent extends Component {
                 valuePath: 'name',
                 photoPath: 'photo_url',
                 width: '100px',
-                cellComponent: 'cell/driver-name',
+                cellComponent: 'cell/driver-identity',
                 onClick: this.view,
             },
             {
@@ -49,7 +51,8 @@ export default class MapDrawerDriverListingComponent extends Component {
                 label: this.intl.t('column.current-job'),
                 valuePath: 'current_job_id',
                 width: '80px',
-                cellComponent: 'table/cell/anchor',
+                cellComponent: 'cell/order-identity',
+                resourcePath: (driver) => relationValue(driver, 'current_job') ?? buildIdentityStub(driver, { type: 'order', nameKey: 'current_job_id', load: () => driver.get('current_job') }),
                 onClick: this.job,
             },
             {
