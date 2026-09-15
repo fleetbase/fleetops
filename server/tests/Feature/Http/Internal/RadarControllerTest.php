@@ -190,6 +190,36 @@ class FleetOpsRadarControllerProbe extends RadarController
         return $this->fixtures['notices'] ?? [];
     }
 
+    public array $history   = [];
+    public array $orders    = [];
+    public ?object $shift   = null;
+    public bool $shiftSaved = false;
+
+    protected function loadOrdersForHandovers(?string $company, array $items): array
+    {
+        return $this->orders;
+    }
+
+    protected function findShift(?string $company, string $id): ?Fleetbase\Models\ScheduleItem
+    {
+        return $id === 'shift_1' ? $this->shift : null;
+    }
+
+    protected function saveShift(Fleetbase\Models\ScheduleItem $shift): void
+    {
+        $this->shiftSaved = true;
+    }
+
+    protected function scoreHistory(?string $company): array
+    {
+        return $this->history;
+    }
+
+    protected function rememberScore(?string $company, array $history): void
+    {
+        $this->history = $history;
+    }
+
     protected function createNotice(array $attributes): Alert
     {
         $this->lastNotice            = new FleetOpsRadarAlertSpy(['uuid' => 'alert-notice', 'public_id' => 'alert_notice'] + $attributes);
@@ -328,6 +358,12 @@ test('items narrows by pills, query, fleet and page, and serves the snoozed and 
 
     $fleet = $controller->items(fleetOpsRadarRequest('items', 'GET', ['fleet' => 'fleet-north']))->getData(true);
     expect($fleet['items'])->toBe([]);
+
+    // "My assignments" keeps only the items whose owner is the caller.
+    $controller->store['issue_open:issue_1'] = new FleetOpsRadarAlertSpy(['uuid' => 'a', 'public_id' => 'alert_a', 'type' => 'issue_open', 'status' => 'open', 'assigned_to_uuid' => 'user-1', 'context' => ['key' => 'issue_open:issue_1']]);
+    $controller->store['issue_open:issue_1']->setRelation('assignedTo', fleetOpsRadarUser('user-1', 'Ada Ops'));
+    $mine = $controller->items(fleetOpsRadarRequest('items', 'GET', ['assigned' => 'me']))->getData(true);
+    expect(array_column($mine['items'], 'key'))->toBe(['issue_open:issue_1']);
 });
 
 test('a failing source is reported without blanking the list, and reconciliation is skipped', function () {
@@ -338,6 +374,81 @@ test('a failing source is reported without blanking the list, and reconciliation
         ->and($payload['items'])->toHaveCount(4)
         ->and($payload['sources'])->toBe(['issues' => 'issues table is unavailable'])
         ->and($controller->reconciled)->toBe([]);
+});
+
+test('briefing scores the morning, remembers the score and counts what closed since yesterday', function () {
+    $controller = new FleetOpsRadarControllerProbe(fleetOpsRadarFixtures(), [
+        'issue_open:issue_1' => ['status' => 'open', 'triggered_at' => '2026-09-13T08:00:00+00:00'],
+    ]);
+    $controller->history  = [['date' => '2026-09-14', 'score' => 90]];
+    $controller->resolved = [['key' => 'issue_open:issue_9', 'rule' => 'issue_open', 'severity' => 'warning', 'title' => 'Old issue', 'due_bucket' => 'none', 'pills' => [], 'subject' => null, 'state' => ['status' => 'resolved']]];
+
+    $payload = $controller->briefing(fleetOpsRadarRequest('briefing'))->getData(true);
+
+    expect($payload)->toHaveKeys(['score', 'categories', 'brief', 'decisions', 'open', 'yesterday', 'generated_at', 'sources'])
+        ->and($payload['score']['value'])->toBeLessThan(100)
+        ->and($payload['score']['delta'])->toBe($payload['score']['value'] - 90)
+        ->and($payload['categories'][0]['key'])->toBe('maintenance')
+        ->and($payload['yesterday'])->toBe(['closed' => 1, 'rolled_over' => 1])
+        ->and($controller->history)->toHaveCount(2)
+        ->and($controller->history[1])->toBe(['date' => '2026-09-15', 'score' => $payload['score']['value']])
+        ->and(array_column($payload['decisions'], 'key'))->toBe(['open_work_order:schedule_oil'])
+        ->and($controller->reconciled)->toBe([]);
+
+    $byCategory = $controller->items(fleetOpsRadarRequest('items', 'GET', ['category' => 'parts']))->getData(true);
+    expect(array_column($byCategory['items'], 'key'))->toBe(['part_low_stock:part_pads']);
+});
+
+test('agenda lays the items out on the window, with the roster and handover cards', function () {
+    $fixtures           = fleetOpsRadarFixtures();
+    $ortega             = ['type' => 'driver', 'class' => 'Fleetbase\FleetOps\Models\Driver', 'uuid' => 'driver-ortega', 'public_id' => 'driver_ortega', 'label' => 'Luis Ortega', 'photo_url' => null, 'phone' => null];
+    $alves              = ['type' => 'driver', 'class' => 'Fleetbase\FleetOps\Models\Driver', 'uuid' => 'driver-alves', 'public_id' => 'driver_alves', 'label' => 'Tomas Alves', 'photo_url' => null, 'phone' => null];
+    $fixtures['shifts'] = [
+        ['uuid' => 'sh1', 'public_id' => 'shift_1', 'start_at' => '2026-09-15 01:15:00', 'end_at' => '2026-09-15 09:15:00', 'status' => 'in_progress', 'driver' => $ortega, 'driver_online' => true, 'driver_vehicle_uuid' => 'v', 'active_orders' => 2],
+        ['uuid' => 'sh2', 'public_id' => 'shift_2', 'start_at' => '2026-09-15 06:00:00', 'end_at' => '2026-09-15 21:00:00', 'status' => 'in_progress', 'driver' => $alves, 'driver_online' => true, 'driver_vehicle_uuid' => 'v2', 'active_orders' => 1],
+    ];
+    $fixtures['drivers'] = [
+        ['uuid' => 'driver-ortega', 'public_id' => 'driver_ortega', 'name' => 'Luis Ortega', 'online' => true, 'vehicle_uuid' => 'v', 'active_orders' => 2, 'location' => ['lat' => 40.7, 'lng' => -74.0]],
+        ['uuid' => 'driver-alves', 'public_id' => 'driver_alves', 'name' => 'Tomas Alves', 'online' => true, 'vehicle_uuid' => 'v2', 'active_orders' => 1, 'location' => ['lat' => 40.71, 'lng' => -74.0]],
+    ];
+    $controller         = new FleetOpsRadarControllerProbe($fixtures);
+    $controller->orders = ['driver-ortega' => [['uuid' => 'o1', 'public_id' => 'order_1', 'status' => 'dispatched', 'destination' => 'Bay Ridge', 'ends_at' => '2026-09-15T09:40:00+00:00']]];
+
+    $payload = $controller->agenda(fleetOpsRadarRequest('agenda', 'GET', ['window' => '24h']))->getData(true);
+
+    expect($payload['window']['key'])->toBe('24h')
+        ->and(array_column($payload['overdue'], 'key'))->toBe(['maintenance_overdue:schedule_oil'])
+        ->and(array_column($payload['lanes']['maintenance'], 'key'))->toBe([])
+        ->and(array_column($payload['later'], 'key'))->toBe(['maintenance_due_soon:schedule_tires', 'notice:alert_yard'])
+        ->and(array_column($payload['anytime'], 'key'))->toBe(['issue_open:issue_1', 'part_low_stock:part_pads'])
+        ->and(collect($payload['lanes']['shifts'])->where('kind', 'shift')->count())->toBe(2)
+        ->and($payload['handovers'][0]['key'])->toBe('shift_handover:driver_ortega')
+        ->and($payload['handovers'][0]['orders'][0]['destination'])->toBe('Bay Ridge')
+        ->and($payload['handovers'][0]['suggested']['driver']['label'])->toBe('Tomas Alves')
+        ->and($payload['summary']['open'])->toBe(6);
+
+    $card = $controller->handoverSuggest(fleetOpsRadarRequest('handovers/shift_handover:driver_ortega'), 'shift_handover:driver_ortega')->getData(true);
+    expect($card['handover']['suggested']['capacity_label'])->toBe('1 of 6 orders');
+    expect($controller->handoverSuggest(fleetOpsRadarRequest('handovers/x'), 'shift_handover:driver_nobody')->getStatusCode())->toBe(404);
+});
+
+test('extend shift pushes the end out and validates the minutes', function () {
+    $controller = new FleetOpsRadarControllerProbe(fleetOpsRadarFixtures());
+    $shift      = new class extends Fleetbase\Models\ScheduleItem {
+        public function getDateFormat(): string
+        {
+            return 'Y-m-d H:i:s';
+        }
+    };
+    $shift->setRawAttributes(['uuid' => 'sh1', 'public_id' => 'shift_1', 'start_at' => '2026-09-15 01:15:00', 'end_at' => '2026-09-15 09:15:00', 'status' => 'in_progress'], true);
+    $controller->shift = $shift;
+
+    expect($controller->extendShift(fleetOpsRadarRequest('shifts/shift_1/extend', 'POST', ['minutes' => 0]), 'shift_1')->getStatusCode())->toBe(422)
+        ->and($controller->extendShift(fleetOpsRadarRequest('shifts/shift_9/extend', 'POST', ['minutes' => 60]), 'shift_9')->getStatusCode())->toBe(404);
+
+    $payload = $controller->extendShift(fleetOpsRadarRequest('shifts/shift_1/extend', 'POST', ['minutes' => 60]), 'shift_1')->getData(true);
+    expect($payload['shift']['end_at'])->toBe('2026-09-15T10:15:00+00:00')
+        ->and($controller->shiftSaved)->toBeTrue();
 });
 
 test('summary answers with counts only', function () {

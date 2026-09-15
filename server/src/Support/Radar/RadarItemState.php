@@ -244,6 +244,7 @@ class RadarItemState
             'resolved_at'          => $alert->resolved_at?->toIso8601String(),
             'resolved_by_name'     => $alert->resolved_by_name,
             'resolution'           => $alert->meta['resolution'] ?? null,
+            'triggered_at'         => $alert->triggered_at?->toIso8601String(),
         ];
     }
 

@@ -432,6 +432,8 @@ test('build merges state, sorts overdue first, counts pills over open items and 
         ->and(RadarRules::forPills($open, ['issues', 'overdue']))->toBe([])
         ->and(RadarRules::forPills($open, ['not-a-pill']))->toHaveCount(4)
         ->and(array_column(RadarRules::search($open, 'trk-311'), 'key'))->toBe(['issue_open:issue_1'])
+        ->and(RadarRules::forAssignee($open, null))->toBe([])
+        ->and(array_column(RadarRules::forAssignee(array_map(fn ($item) => $item['key'] === 'issue_open:issue_2' ? array_merge($item, ['state' => ['status' => 'open', 'assigned_to' => ['uuid' => 'user-1']]]) : $item, $open), 'user-1'), 'key'))->toBe(['issue_open:issue_2'])
         ->and(array_column(RadarRules::search($open, 'brake'), 'key'))->toBe(['part_low_stock:part_pads'])
         ->and(array_column(RadarRules::group($open), 'key'))->toBe(['overdue', 'none'])
         ->and(RadarRules::group($open)[1]['count'])->toBe(3)

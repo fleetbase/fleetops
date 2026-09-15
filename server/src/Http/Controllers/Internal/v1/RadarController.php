@@ -9,17 +9,21 @@ use Fleetbase\FleetOps\Models\InspectionLink;
 use Fleetbase\FleetOps\Models\InspectionSubmission;
 use Fleetbase\FleetOps\Models\Issue;
 use Fleetbase\FleetOps\Models\MaintenanceSchedule;
+use Fleetbase\FleetOps\Models\Order;
 use Fleetbase\FleetOps\Models\Part;
 use Fleetbase\FleetOps\Models\Trailer;
 use Fleetbase\FleetOps\Models\Vehicle;
 use Fleetbase\FleetOps\Models\WorkOrder;
 use Fleetbase\FleetOps\Support\LiveOrderQuery;
+use Fleetbase\FleetOps\Support\Radar\RadarAgenda;
+use Fleetbase\FleetOps\Support\Radar\RadarBriefing;
 use Fleetbase\FleetOps\Support\Radar\RadarItemState;
 use Fleetbase\FleetOps\Support\Radar\RadarRules;
 use Fleetbase\Http\Controllers\Controller;
 use Fleetbase\Models\Alert;
 use Fleetbase\Models\CompanyUser;
 use Fleetbase\Models\ScheduleItem;
+use Fleetbase\Models\Setting;
 use Fleetbase\Models\User;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
@@ -61,8 +65,12 @@ class RadarController extends Controller
         }
 
         $items = RadarRules::forPills($items, $pills);
+        $items = RadarRules::forCategory($items, $request->input('category'));
         $items = RadarRules::forFleet($items, $request->input('fleet'));
         $items = RadarRules::search($items, $request->input('query'));
+        if ($request->input('assigned') === 'me') {
+            $items = RadarRules::forAssignee($items, $this->actor($request)?->uuid);
+        }
         $page  = RadarRules::paginate($items, (int) $request->input('page', 1), (int) $request->input('limit', 50));
 
         return response()->json([
@@ -90,6 +98,114 @@ class RadarController extends Controller
             'summary'      => $built['summary'],
             'counts'       => $built['counts'],
             'generated_at' => $now->toIso8601String(),
+        ]);
+    }
+
+    /**
+     * The morning brief: score, category rows, a few sentences and the
+     * decisions that can be made in one click.
+     */
+    public function briefing(Request $request): JsonResponse
+    {
+        $company = $this->companyUuid($request);
+        $now     = $this->now();
+        $built   = $this->buildItems($company, $now, false);
+        $history = $this->scoreHistory($company);
+        $brief   = RadarBriefing::build($built['items'], $now, $history);
+
+        $this->rememberScore($company, RadarBriefing::pushHistory($history, $brief['score']['value'], $now));
+
+        $since    = $now->copy()->subDay();
+        $resolved = $this->resolvedSince($company, $since, $now);
+        $rolled   = array_filter($built['items'], function ($item) use ($since, $now) {
+            $triggered = RadarRules::carbon($item['state']['triggered_at'] ?? null);
+
+            return RadarRules::isOpen($item, $now) && $triggered && $triggered->lt($since);
+        });
+
+        return response()->json($brief + [
+            'yesterday'    => ['closed' => count($resolved), 'rolled_over' => count($rolled)],
+            'generated_at' => $now->toIso8601String(),
+            'sources'      => $built['errors'],
+        ]);
+    }
+
+    /**
+     * The Agenda view: items on a time scale, with the roster's shifts and
+     * the handover cards.
+     */
+    public function agenda(Request $request): JsonResponse
+    {
+        $company = $this->companyUuid($request);
+        $now     = $this->now();
+        $window  = (string) $request->input('window', '24h');
+        $built   = $this->buildItems($company, $now, false);
+        $items   = RadarRules::forFleet($built['items'], $request->input('fleet'));
+        $shifts  = $built['sources']['shifts'] ?? [];
+        $drivers = $built['sources']['drivers'] ?? [];
+        $orders  = $this->loadOrdersForHandovers($company, $items);
+
+        return response()->json(RadarAgenda::build($items, $shifts, $window, $now, $drivers, $orders) + [
+            'summary'      => $built['summary'],
+            'generated_at' => $now->toIso8601String(),
+            'sources'      => $built['errors'],
+        ]);
+    }
+
+    /**
+     * One handover card, for the list view's Cover / Reassign actions.
+     */
+    public function handoverSuggest(Request $request, string $key): JsonResponse
+    {
+        $company = $this->companyUuid($request);
+        $now     = $this->now();
+        $built   = $this->buildItems($company, $now, false);
+        $orders  = $this->loadOrdersForHandovers($company, $built['items']);
+        $cards   = RadarAgenda::handovers(
+            array_values(array_filter($built['items'], fn ($item) => $item['key'] === $key && RadarRules::isOpen($item, $now))),
+            $built['sources']['shifts'] ?? [],
+            $built['sources']['drivers'] ?? [],
+            $orders,
+            $now,
+            ['shift_handover', 'shift_late_start']
+        );
+
+        if (!$cards) {
+            return response()->json(['error' => 'No handover is open for that item.'], 404);
+        }
+
+        return response()->json(['handover' => $cards[0], 'generated_at' => $now->toIso8601String()]);
+    }
+
+    /**
+     * Push a shift's end out by some minutes, for "Extend shift 1h".
+     */
+    public function extendShift(Request $request, string $id): JsonResponse
+    {
+        $minutes = (int) $request->input('minutes', 60);
+        if ($minutes < 1 || $minutes > 24 * 60) {
+            return response()->json(['error' => 'minutes must be between 1 and 1440.'], 422);
+        }
+
+        $company = $this->companyUuid($request);
+        $shift   = $this->findShift($company, $id);
+        if (!$shift) {
+            return response()->json(['error' => 'Shift not found.'], 404);
+        }
+
+        $end           = RadarRules::carbon($shift->end_at) ?? $this->now();
+        $shift->end_at = $end->copy()->addMinutes($minutes);
+        $this->saveShift($shift);
+
+        return response()->json([
+            'shift' => [
+                'uuid'      => $shift->uuid,
+                'public_id' => $shift->public_id,
+                'start_at'  => RadarRules::carbon($shift->start_at)?->toIso8601String(),
+                'end_at'    => RadarRules::carbon($shift->end_at)?->toIso8601String(),
+                'status'    => $shift->status,
+            ],
+            'generated_at' => $this->now()->toIso8601String(),
         ]);
     }
 
@@ -322,7 +438,8 @@ class RadarController extends Controller
             $errors['states']  = $e->getMessage();
         }
 
-        $built = RadarRules::build($sources, $now);
+        $built            = RadarRules::build($sources, $now);
+        $built['sources'] = $sources;
 
         if ($reconcile && empty($errors)) {
             try {
@@ -754,6 +871,75 @@ class RadarController extends Controller
         return $isMember ? $user : null;
     }
 
+    /**
+     * Active orders for the drivers with a handover open, keyed by driver
+     * uuid: what the cover driver would take over.
+     *
+     * @return array<string, array>
+     */
+    protected function loadOrdersForHandovers(?string $company, array $items): array
+    {
+        $driverUuids = [];
+        foreach ($items as $item) {
+            if (in_array($item['rule'] ?? null, ['shift_handover', 'shift_late_start'], true) && !empty($item['subject']['uuid'])) {
+                $driverUuids[] = $item['subject']['uuid'];
+            }
+        }
+        if (!$driverUuids) {
+            return [];
+        }
+
+        try {
+            $orders = $this->scoped(Order::query(), $company)
+                ->whereIn('driver_assigned_uuid', array_unique($driverUuids))
+                ->whereNotIn('status', LiveOrderQuery::$baseExcludedStatuses)
+                ->with(['payload.dropoff'])
+                ->orderBy('scheduled_at')
+                ->get();
+        } catch (\Throwable $e) {
+            if (function_exists('report')) {
+                report($e);
+            }
+
+            return [];
+        }
+
+        $byDriver = [];
+        foreach ($orders as $order) {
+            $dropoff                                  = $order->payload?->dropoff;
+            $byDriver[$order->driver_assigned_uuid][] = [
+                'uuid'        => $order->uuid,
+                'public_id'   => $order->public_id,
+                'status'      => $order->status,
+                'destination' => $dropoff?->name ?: ($dropoff?->street1 ?: null),
+                'ends_at'     => RadarRules::carbon($order->time_window_end ?? $order->scheduled_at)?->toIso8601String(),
+            ];
+        }
+
+        return $byDriver;
+    }
+
+    protected function findShift(?string $company, string $id): ?ScheduleItem
+    {
+        $driverUuids = $this->scoped(Driver::query(), $company)->pluck('uuid')->all();
+        if (!$driverUuids) {
+            return null;
+        }
+
+        return ScheduleItem::query()
+            ->whereIn('assignee_type', ['fleet-ops:driver', Driver::class])
+            ->whereIn('assignee_uuid', $driverUuids)
+            ->where(function ($query) use ($id) {
+                $query->where('uuid', $id)->orWhere('public_id', $id);
+            })
+            ->first();
+    }
+
+    protected function saveShift(ScheduleItem $shift): void
+    {
+        $shift->save();
+    }
+
     // ------------------------------------------------------------------
     // State (thin wrappers so a test can stand in for the alerts table)
     // ------------------------------------------------------------------
@@ -791,6 +977,39 @@ class RadarController extends Controller
     protected function notices(?string $company): array
     {
         return RadarItemState::notices($company);
+    }
+
+    /**
+     * Past days' scores, kept per company so the brief can say "vs yesterday".
+     *
+     * @return array<int, array{date: string, score: int}>
+     */
+    protected function scoreHistory(?string $company): array
+    {
+        if (!$company) {
+            return [];
+        }
+
+        try {
+            $history = Setting::lookup('company.' . $company . '.fleet-ops.radar.score_history', []);
+        } catch (\Throwable) {
+            return [];
+        }
+
+        return is_array($history) ? array_values($history) : [];
+    }
+
+    protected function rememberScore(?string $company, array $history): void
+    {
+        if (!$company) {
+            return;
+        }
+
+        try {
+            Setting::configure('company.' . $company . '.fleet-ops.radar.score_history', $history);
+        } catch (\Throwable) {
+            // The brief still renders without a delta.
+        }
     }
 
     protected function createNotice(array $attributes): Alert
@@ -875,6 +1094,7 @@ class RadarController extends Controller
             'public_id' => $model->public_id ?? null,
             'label'     => $label ?: ($model->public_id ?? $type),
             'photo_url' => $model->photo_url ?? null,
+            'phone'     => $type === 'driver' ? ($model->phone ?? null) : null,
         ];
     }
 

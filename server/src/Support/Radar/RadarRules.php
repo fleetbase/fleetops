@@ -831,6 +831,7 @@ class RadarRules
             'resolved_at'          => $state['resolved_at'] ?? null,
             'resolved_by_name'     => $state['resolved_by_name'] ?? null,
             'resolution'           => $state['resolution'] ?? null,
+            'triggered_at'         => $state['triggered_at'] ?? null,
         ];
     }
 
@@ -916,6 +917,31 @@ class RadarRules
         }
 
         return array_values(array_filter($items, fn ($item) => in_array($fleet, $item['subject']['fleets'] ?? [], true)));
+    }
+
+    /**
+     * Keep the items of one category.
+     */
+    public static function forCategory(array $items, ?string $category): array
+    {
+        $category = trim((string) $category);
+        if ($category === '') {
+            return array_values($items);
+        }
+
+        return array_values(array_filter($items, fn ($item) => ($item['category'] ?? null) === $category));
+    }
+
+    /**
+     * Keep the items assigned to a user.
+     */
+    public static function forAssignee(array $items, ?string $userUuid): array
+    {
+        if (!$userUuid) {
+            return [];
+        }
+
+        return array_values(array_filter($items, fn ($item) => ($item['state']['assigned_to']['uuid'] ?? null) === $userUuid));
     }
 
     /**
@@ -1266,6 +1292,7 @@ class RadarRules
             'public_id' => $subject['public_id'] ?? null,
             'label'     => $subject['label'] ?? ($subject['public_id'] ?? ''),
             'photo_url' => $subject['photo_url'] ?? null,
+            'phone'     => $subject['phone'] ?? null,
             'fleets'    => array_values($subject['fleets'] ?? []),
         ];
     }
@@ -1279,6 +1306,7 @@ class RadarRules
             'public_id' => $driver['public_id'] ?? null,
             'label'     => $driver['name'] ?? ($driver['label'] ?? ($driver['public_id'] ?? 'Driver')),
             'photo_url' => $driver['photo_url'] ?? null,
+            'phone'     => $driver['phone'] ?? null,
             'fleets'    => $driver['fleets'] ?? [],
         ];
     }

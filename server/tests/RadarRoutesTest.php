@@ -7,6 +7,10 @@ test('radar routes are registered beside the hubs', function () {
         ->toContain("['prefix' => 'radar']")
         ->toContain("\$router->get('items', 'RadarController@items');")
         ->toContain("\$router->get('summary', 'RadarController@summary');")
+        ->toContain("\$router->get('briefing', 'RadarController@briefing');")
+        ->toContain("\$router->get('agenda', 'RadarController@agenda');")
+        ->toContain("\$router->get('handovers/{key}', 'RadarController@handoverSuggest');")
+        ->toContain("\$router->post('shifts/{id}/extend', 'RadarController@extendShift');")
         ->toContain("\$router->post('items/bulk', 'RadarController@bulk');")
         ->toContain("\$router->post('items/{key}/acknowledge', 'RadarController@acknowledge');")
         ->toContain("\$router->post('items/{key}/snooze', 'RadarController@snooze');")
@@ -25,7 +29,7 @@ test('radar routes are registered beside the hubs', function () {
 test('radar controller exposes every routed action', function () {
     $controller = new ReflectionClass(Fleetbase\FleetOps\Http\Controllers\Internal\v1\RadarController::class);
 
-    foreach (['items', 'summary', 'bulk', 'acknowledge', 'snooze', 'wake', 'assign', 'plan', 'resolve', 'storeNotice', 'destroyNotice'] as $method) {
+    foreach (['items', 'summary', 'briefing', 'agenda', 'handoverSuggest', 'extendShift', 'bulk', 'acknowledge', 'snooze', 'wake', 'assign', 'plan', 'resolve', 'storeNotice', 'destroyNotice'] as $method) {
         expect($controller->hasMethod($method))->toBeTrue("RadarController@{$method} is routed but missing");
     }
 });
