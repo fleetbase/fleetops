@@ -1,0 +1,33 @@
+<div class="fleet-ops-radar-agenda-lane is-{{@lane.key}} {{if this.isOver 'is-drop-target'}}" data-test-radar-agenda-lane={{@lane.key}}>
+    <div class="fleet-ops-radar-agenda-lane-label">
+        <span>{{@lane.label}}</span>
+        <span class="fleet-ops-radar-row-meta">{{@lane.entries.length}}</span>
+    </div>
+    <div class="fleet-ops-radar-agenda-track" {{on "dragover" this.dragOver}} {{on "dragleave" this.dragLeave}} {{on "drop" this.drop}} data-test-radar-agenda-track>
+        {{#each this.rows as |row|}}
+            <div class="fleet-ops-radar-agenda-row">
+                {{#each row as |entry|}}
+                    {{#if (eq entry.kind "shift")}}
+                        <button
+                            type="button"
+                            class="fleet-ops-radar-agenda-shift is-{{entry.state}} {{if entry.severity (concat 'has-' entry.severity)}} {{if entry.handover_key 'has-handover'}}"
+                            style={{this.barStyle entry}}
+                            title={{entry.driver.label}}
+                            {{on "click" (fn this.openShift entry)}}
+                            data-test-radar-agenda-shift={{entry.key}}
+                        >
+                            <span class="fleet-ops-radar-avatar is-user">{{initials entry.driver.label}}</span>
+                            <span class="fleet-ops-radar-agenda-shift-label">{{entry.driver.label}}</span>
+                            <span class="fleet-ops-radar-agenda-shift-meta">{{entry.label}} · {{t (concat "radar.agenda.shift-states." entry.state)}}{{#if entry.active_orders}} · {{entry.active_orders}} orders{{/if}}</span>
+                            {{#if entry.handover_key}}<FaIcon @icon="right-left" class="ml-1" />{{/if}}
+                        </button>
+                    {{else}}
+                        <Radar::Agenda::Entry @entry={{entry}} @positioned={{true}} @onOpen={{@onOpen}} @onHandover={{@onHandover}} />
+                    {{/if}}
+                {{/each}}
+            </div>
+        {{else}}
+            <div class="fleet-ops-radar-agenda-empty-lane">{{t "radar.agenda.no-events"}}</div>
+        {{/each}}
+    </div>
+</div>

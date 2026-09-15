@@ -3,7 +3,14 @@ import { setupTest } from 'dummy/tests/helpers';
 import Service from '@ember/service';
 
 class FetchStubService extends Service {
-    get() {
+    get(url) {
+        if (url.startsWith('fleet-ops/radar/items')) {
+            return Promise.resolve({ items: [], groups: [], counts: {}, summary: {}, meta: { total: 0, page: 1, pages: 1 }, snooze_schedule: [], sources: {} });
+        }
+        if (url.startsWith('fleet-ops/radar/summary')) {
+            return Promise.resolve({ summary: {}, counts: {} });
+        }
+
         return Promise.resolve({ actions: [] });
     }
 }
@@ -21,8 +28,8 @@ module('Unit | Route | fleet-ops hub index routes', function (hooks) {
     });
 
     test('it registers the FleetOps hub route templates', function (assert) {
-        assert.ok(this.owner.resolveRegistration('template:management/index'), 'resources hub template is registered');
-        assert.ok(this.owner.resolveRegistration('controller:management/index'), 'resources hub controller is registered');
+        assert.ok(this.owner.resolveRegistration('template:management/index'), 'radar template is registered');
+        assert.ok(this.owner.resolveRegistration('controller:management/index'), 'radar controller is registered');
         assert.ok(this.owner.resolveRegistration('route:maintenance/index'), 'maintenance hub route is registered');
         assert.ok(this.owner.resolveRegistration('controller:maintenance/index'), 'maintenance hub controller is registered');
         assert.ok(this.owner.resolveRegistration('template:maintenance/index'), 'maintenance hub template is registered');
@@ -47,17 +54,9 @@ module('Unit | Route | fleet-ops hub index routes', function (hooks) {
         assert.deepEqual(workOrdersRoute.queryParams.priority, { refreshModel: true }, 'work orders route refreshes priority filters');
     });
 
-    test('hub controllers normalize action query values for LinkTo', function (assert) {
-        const managementController = this.owner.lookup('controller:management/index');
+    test('the maintenance hub controller normalizes action query values for LinkTo', function (assert) {
         const maintenanceController = this.owner.lookup('controller:maintenance/index');
 
-        managementController.hub = {
-            actions: [
-                { key: 'missing-query', route: 'management.drivers' },
-                { key: 'array-query', route: 'management.vehicles', query: [] },
-                { key: 'object-query', route: 'management.issues', query: { status: 'open' } },
-            ],
-        };
         maintenanceController.hub = {
             actions: [
                 { key: 'null-query', route: 'maintenance.schedules', query: null },
@@ -65,9 +64,6 @@ module('Unit | Route | fleet-ops hub index routes', function (hooks) {
             ],
         };
 
-        assert.deepEqual(managementController.actions[0].query, {}, 'missing resource action query becomes an object');
-        assert.deepEqual(managementController.actions[1].query, {}, 'array resource action query becomes an object');
-        assert.deepEqual(managementController.actions[2].query, { status: 'open' }, 'object resource action query is preserved');
         assert.deepEqual(maintenanceController.actions[0].query, {}, 'null maintenance action query becomes an object');
         assert.deepEqual(maintenanceController.actions[1].query, { status: 'open' }, 'object maintenance action query is preserved');
     });

@@ -1,0 +1,28 @@
+<section class="fleet-ops-control-hub-header" data-test-radar-header>
+    <div class="fleet-ops-radar-header-row">
+        <div class="fleet-ops-control-hub-header-copy">
+            <div class="fleet-ops-control-hub-eyebrow">{{t "radar.eyebrow"}}</div>
+            <h1 class="fleet-ops-control-hub-title">{{t "radar.title"}}</h1>
+        </div>
+        <div class="fleet-ops-radar-header-summary" data-test-radar-summary>
+            {{t "radar.summary" open=(or @stats.open 0) snoozed=(or @stats.snoozed 0) time=this.lastSync}}
+        </div>
+        <div class="fleet-ops-radar-header-actions">
+            <div class="fleet-ops-radar-search">
+                <FaIcon @icon="magnifying-glass" />
+                <Input @type="search" @value={{this.query}} placeholder={{t "radar.search-placeholder"}} class="form-input form-input-sm w-full" {{on "input" this.onInput}} data-test-radar-search />
+                <kbd>/</kbd>
+            </div>
+            <div class="fleet-ops-radar-view-toggle" role="group" data-test-radar-view-toggle>
+                <button type="button" class="fleet-ops-radar-view-toggle-button {{if (eq @view 'list') 'is-active'}}" {{on "click" (fn @onChangeView "list")}} data-test-radar-view="list">
+                    <FaIcon @icon="list" />{{t "radar.views.list"}}
+                </button>
+                <button type="button" class="fleet-ops-radar-view-toggle-button {{if (eq @view 'agenda') 'is-active'}}" {{on "click" (fn @onChangeView "agenda")}} data-test-radar-view="agenda">
+                    <FaIcon @icon="timeline" />{{t "radar.views.agenda"}}
+                </button>
+            </div>
+            <Button @icon="refresh" @size="sm" @helpText={{t "radar.reload"}} @isLoading={{@isLoading}} @onClick={{@onReload}} data-test-radar-reload />
+            <Button @type="primary" @icon="plus" @size="sm" @text={{t "radar.new-notice"}} @onClick={{@onNewNotice}} data-test-radar-new-notice />
+        </div>
+    </div>
+</section>
