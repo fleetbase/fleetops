@@ -170,6 +170,8 @@ export default function buildDeviceTableColumns(controller, options = {}) {
             filterParam: 'type',
             filterComponent: 'filter/multi-option',
             filterOptions: controller.deviceTypeOptions,
+            filterOptionLabel: 'label',
+            filterOptionValue: 'value',
         },
         {
             label: 'Serial Number',
@@ -192,6 +194,8 @@ export default function buildDeviceTableColumns(controller, options = {}) {
             filterParam: 'status',
             filterComponent: 'filter/multi-option',
             filterOptions: controller.deviceStatusOptions,
+            filterOptionLabel: 'label',
+            filterOptionValue: 'value',
         },
         {
             label: 'Attachment',
