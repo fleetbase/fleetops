@@ -15,10 +15,33 @@ export default class WorkOrderDetailsComponent extends Component {
     @service store;
     @service inspectionSubmissionActions;
     @tracked inspections = [];
+    @tracked schedule = null;
 
     constructor() {
         super(...arguments);
         this.loadInspections.perform();
+        this.loadSchedule.perform();
+    }
+
+    /**
+     * A work order only carries the schedule's uuid; there is no relation on
+     * the model, so the "Linked Schedule" field never rendered. Peek the
+     * store first, then fetch.
+     */
+    @task *loadSchedule() {
+        const id = this.args.resource?.schedule_uuid;
+
+        if (!id) {
+            this.schedule = null;
+            return;
+        }
+
+        try {
+            this.schedule = this.store.peekRecord('maintenance-schedule', id) ?? (yield this.store.findRecord('maintenance-schedule', id));
+        } catch (error) {
+            debug(`Could not load the schedule linked to work order ${id}: ${error.message}`);
+            this.schedule = null;
+        }
     }
 
     @task *loadInspections() {
