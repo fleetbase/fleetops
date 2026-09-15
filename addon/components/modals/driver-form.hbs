@@ -57,6 +57,7 @@
                         </label>
                         <ModelSelect
                             @modelName="vendor"
+                            @selectedItemComponent={{component "select-option/vendor" compact=true}}
                             @selectedModel={{@options.driver.vendor}}
                             @placeholder={{t "modals.driver-form.select-vendor"}}
                             @triggerClass="form-select form-input"
@@ -65,7 +66,7 @@
                             @onChange={{fn (mut @options.driver.vendor)}}
                             as |model|
                         >
-                            {{model.name}}
+                            <SelectOption::Vendor @option={{model}} />
                         </ModelSelect>
                     </div>
 
@@ -75,6 +76,7 @@
                         </label>
                         <ModelSelect
                             @modelName="vehicle"
+                            @selectedItemComponent={{component "select-option/vehicle" compact=true}}
                             @selectedModel={{@options.driver.vehicle}}
                             @placeholder={{t "modals.driver-form.select-vehicle"}}
                             @triggerClass="form-select form-input"
@@ -83,7 +85,7 @@
                             @onChange={{fn (mut @options.driver.vehicle)}}
                             as |model|
                         >
-                            {{model.display_name}}
+                            <SelectOption::Vehicle @option={{model}} />
                         </ModelSelect>
                     </div>
 

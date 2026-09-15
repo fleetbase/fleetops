@@ -5,6 +5,7 @@
                 <ModelSelect
                     class="listbox-lg"
                     @modelName="order"
+                    @selectedItemComponent={{component "select-option/order" compact=true}}
                     @selectedModel={{@options.selectedOrder}}
                     @placeholder={{t "modals.driver-assign-order.assign-order"}}
                     @triggerClass="form-select form-input"
@@ -14,12 +15,7 @@
                     @onChange={{@options.selectOrder}}
                     as |order|
                 >
-                    <Order::Card
-                        @order={{order}}
-                        @variant="selection"
-                        @showMeta={{true}}
-                        @interactive={{false}}
-                    />
+                    <SelectOption::Order @option={{order}} />
                 </ModelSelect>
             </InputGroup>
         </div>

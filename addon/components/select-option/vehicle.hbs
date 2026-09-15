@@ -1,9 +1,12 @@
-<SelectOption
-    @photo={{this.photo}}
-    @fallbackPhoto={{this.fallbackPhoto}}
-    @shape="square"
-    @title={{this.title}}
-    @details={{this.details}}
+<Resource::SelectOption
+    @option={{or @option @model @vehicle}}
+    @resourceType="vehicle"
     @compact={{@compact}}
+    @title={{@title}}
+    @details={{@details}}
+    @photo={{@photo}}
+    @fallbackPhoto={{@fallbackPhoto}}
+    @icon={{@icon}}
+    @shape={{@shape}}
     ...attributes
 />

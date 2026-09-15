@@ -1,3 +1,6 @@
+import { buildIdentityStub } from './identity-cell-resource';
+import relationValue from './relation-value';
+
 const connectionStatusOptions = [
     { label: 'Online', value: 'online' },
     { label: 'Recently Offline', value: 'recently_offline' },
@@ -31,14 +34,13 @@ export default function buildDeviceTableColumns(controller, options = {}) {
             valuePath: 'displayName',
             cellComponent: 'cell/device-identity',
             action: viewDevice,
-            compact: true,
             permission: 'fleet-ops view device',
             resizable: true,
             sortable: true,
             filterable: true,
             filterParam: 'query',
             filterComponent: 'filter/string',
-            showStatus: showDeviceStatus,
+            showStatusDot: showDeviceStatus,
         },
         {
             label: 'Connection',
@@ -66,21 +68,8 @@ export default function buildDeviceTableColumns(controller, options = {}) {
     const vehicleColumn = {
         label: controller.intl?.t('device.attachment.asset') ?? 'Attached asset',
         valuePath: 'attached_to_name',
-        cellComponent: 'cell/vehicle-identity',
-        action: async (vehicle) => {
-            const resolvedVehicle = vehicle?.loadResource ? ((await vehicle.loadResource()) ?? vehicle) : vehicle;
-
-            const type = `${vehicle?.attachable_type ?? resolvedVehicle?.constructor?.modelName ?? ''}`.toLowerCase();
-            if (type.includes('trailer') && resolvedVehicle?.id && controller.trailerActions?.transition?.view) {
-                return controller.trailerActions.transition.view(resolvedVehicle);
-            }
-            if (resolvedVehicle?.id && controller.vehicleActions?.panel?.view) {
-                return controller.vehicleActions.panel.view(resolvedVehicle);
-            }
-        },
-        compact: true,
+        cellComponent: 'cell/attachable-identity',
         permission: 'fleet-ops view vehicle',
-        showStatusBadge: true,
         emptyText: '-',
         resourcePath: (device) => {
             const attachableType = `${device?.attachable_type ?? ''}`.toLowerCase();
@@ -90,15 +79,13 @@ export default function buildDeviceTableColumns(controller, options = {}) {
             }
 
             return (
-                device.attachable ?? {
-                    id: device.attachable_uuid,
-                    displayName: device.attached_to_name,
-                    display_name: device.attached_to_name,
-                    name: device.attached_to_name,
-                    public_id: device.attachable_uuid,
-                    vehicle_number: device.plate_number ?? device.call_sign ?? device.vehicle_number ?? device.attachable_uuid,
-                    loadResource: () => controller.resolveAttachedVehicle?.(device),
-                }
+                relationValue(device, 'attachable') ??
+                buildIdentityStub(device, {
+                    type: attachableType.includes('trailer') ? 'trailer' : 'vehicle',
+                    nameKey: 'attached_to_name',
+                    load: () => controller.resolveAttachedVehicle?.(device),
+                    extra: { plate_number: device.plate_number ?? device.call_sign ?? null },
+                })
             );
         },
         resizable: true,
@@ -115,8 +102,7 @@ export default function buildDeviceTableColumns(controller, options = {}) {
         columns.push({
             label: 'Telematic Provider',
             valuePath: 'telematic_name',
-            cellComponent: 'cell/telematic-provider',
-            compact: true,
+            cellComponent: 'cell/telematic-identity',
             action: controller.openTelematic,
             permission: 'fleet-ops view telematic',
             resizable: true,

@@ -8,7 +8,9 @@
 
             <div class="field-info-container">
                 <div class="field-name">{{t "service-rate.fields.service-order-label"}}</div>
-                <div class="field-value">{{n-a @resource.order_config.name}}</div>
+                <div class="field-value">
+                    <OrderConfig::Pill @orderConfig={{resource-relation @resource "order_config"}} @titleFallback={{n-a @resource.order_config.name}} />
+                </div>
             </div>
 
             <div class="field-info-container">
@@ -142,11 +144,11 @@
                                 <td>{{smart-humanize rateFee.geography_type}}</td>
                                 <td>
                                     {{#if (eq rateFee.geography_type "zone")}}
-                                        {{n-a rateFee.zone.name}}
+                                        <Zone::Pill @zone={{resource-relation rateFee "zone"}} @titleFallback={{n-a rateFee.zone.name}} @imageSize="20" @imageClass="w-5 h-5" @subtitle={{null}} />
                                     {{else if (eq rateFee.geography_type "fallback")}}
                                         Unmatched route distance
                                     {{else}}
-                                        {{n-a rateFee.service_area.name}}
+                                        <ServiceArea::Pill @serviceArea={{resource-relation rateFee "service_area"}} @titleFallback={{n-a rateFee.service_area.name}} @imageSize="20" @imageClass="w-5 h-5" @subtitle={{null}} />
                                     {{/if}}
                                 </td>
                                 <td>{{n-a rateFee.priority}}</td>
@@ -303,13 +305,17 @@
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-2">
             <div class="field-info-container">
                 <div class="field-name">{{t "service-rate.fields.service-area-label"}}</div>
-                <div class="field-value">{{n-a @resource.serviceArea.name}}</div>
+                <div class="field-value">
+                    <ServiceArea::Pill @serviceArea={{resource-relation @resource "service_area"}} @titleFallback={{n-a @resource.service_area_name @resource.service_area.name}} />
+                </div>
             </div>
 
-            {{#if @resource.serviceArea}}
+            {{#if (or @resource.service_area_uuid @resource.zone_uuid)}}
                 <div class="field-info-container">
                     <div class="field-name">{{t "service-rate.fields.zone-label"}}</div>
-                    <div class="field-value">{{n-a @resource.zone.name}}</div>
+                    <div class="field-value">
+                        <Zone::Pill @zone={{resource-relation @resource "zone"}} @titleFallback={{n-a @resource.zone_name @resource.zone.name}} />
+                    </div>
                 </div>
             {{/if}}
         </div>

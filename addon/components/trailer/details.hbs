@@ -43,7 +43,9 @@
 
             <div class="field-info-container">
                 <div class="field-name">{{t "trailer.fields.category"}}</div>
-                <div class="field-value">{{n-a (or @resource.category.name @resource.category_name)}}</div>
+                <div class="field-value">
+                    <Category::Pill @category={{resource-relation @resource "category"}} @titleFallback={{n-a @resource.category_name}} />
+                </div>
             </div>
 
             <div class="field-info-container col-span-2">
@@ -101,7 +103,7 @@
                 <div class="field-name">{{t "trailer.fields.vehicle"}}</div>
                 <div class="field-value">
                     {{#if this.isAttached}}
-                        <a href="javascript:;" class="text-blue-600 dark:text-blue-400 hover:opacity-50" {{on "click" this.viewVehicle}}>{{n-a this.currentVehicleName}}</a>
+                        <Vehicle::Pill @vehicle={{resource-relation @resource "current_vehicle"}} @titleFallback={{n-a this.currentVehicleName}} @onClick={{this.viewVehicle}} />
                     {{else}}
                         <span class="text-gray-400 dark:text-gray-500">{{t "trailer.attachment.no-vehicle"}}</span>
                     {{/if}}
@@ -331,12 +333,16 @@
 
             <div class="field-info-container">
                 <div class="field-name">{{t "trailer.fields.vendor"}}</div>
-                <div class="field-value">{{n-a (or @resource.vendor.name @resource.vendor_name)}}</div>
+                <div class="field-value">
+                    <Vendor::Pill @vendor={{resource-relation @resource "vendor"}} @titleFallback={{n-a @resource.vendor_name}} />
+                </div>
             </div>
 
             <div class="field-info-container">
                 <div class="field-name">{{t "trailer.fields.warranty"}}</div>
-                <div class="field-value">{{n-a (or @resource.warranty.name @resource.warranty_name)}}</div>
+                <div class="field-value">
+                    <Warranty::Pill @warranty={{resource-relation @resource "warranty"}} @titleFallback={{n-a @resource.warranty_name}} />
+                </div>
             </div>
 
             <div class="field-info-container">

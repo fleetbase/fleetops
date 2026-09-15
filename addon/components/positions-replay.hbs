@@ -100,6 +100,7 @@
                 </label>
                 <ModelSelect
                     @modelName="order"
+                    @selectedItemComponent={{component "select-option/order" compact=true}}
                     @selectedModel={{this.selectedOrder}}
                     @query={{this.orderFilters}}
                     @placeholder="Filter by order"
@@ -109,10 +110,7 @@
                     @onChange={{this.onOrderSelected}}
                     as |order|
                 >
-                    <div class="flex items-center justify-between">
-                        <span>{{order.tracking}}</span>
-                        <span class="text-xs text-gray-500">{{order.createdAt}}</span>
-                    </div>
+                    <SelectOption::Order @option={{order}} />
                 </ModelSelect>
             </div>
 

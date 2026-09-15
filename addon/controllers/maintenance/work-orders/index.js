@@ -1,5 +1,7 @@
 import Controller from '@ember/controller';
 import { inject as service } from '@ember/service';
+import { buildIdentityStub } from '../../../utils/identity-cell-resource';
+import relationValue from '../../../utils/relation-value';
 import { tracked } from '@glimmer/tracking';
 import fleetOpsOptions from '../../../utils/fleet-ops-options';
 
@@ -81,7 +83,23 @@ export default class MaintenanceWorkOrdersIndexController extends Controller {
                 filterParam: 'priority',
                 filterComponent: 'filter/string',
             },
-            { label: this.intl.t('column.assignee'), valuePath: 'assignee_name', resizable: true, sortable: false },
+            {
+                label: this.intl.t('column.target'),
+                valuePath: 'target_name',
+                cellComponent: 'cell/maintenance-subject-identity',
+                resourcePath: (workOrder) => relationValue(workOrder, 'target') ?? buildIdentityStub(workOrder, { type: 'maintenance-subject', nameKey: 'target_name' }),
+                resizable: true,
+                sortable: false,
+                hidden: true,
+            },
+            {
+                label: this.intl.t('column.assignee'),
+                valuePath: 'assignee_name',
+                cellComponent: 'cell/facilitator-identity',
+                resourcePath: (workOrder) => relationValue(workOrder, 'assignee') ?? buildIdentityStub(workOrder, { type: 'facilitator', nameKey: 'assignee_name' }),
+                resizable: true,
+                sortable: false,
+            },
             { label: this.intl.t('column.due-at'), valuePath: 'dueAt', sortParam: 'due_at', resizable: true, sortable: true, filterable: true, filterComponent: 'filter/date' },
             { label: this.intl.t('column.created-at'), valuePath: 'createdAt', sortParam: 'created_at', resizable: true, sortable: true, filterable: true, filterComponent: 'filter/date' },
             {

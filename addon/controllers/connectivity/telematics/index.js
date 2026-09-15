@@ -69,7 +69,7 @@ export default class ConnectivityTelematicsIndexController extends Controller {
             sticky: true,
             label: 'Provider',
             valuePath: 'name',
-            cellComponent: 'cell/telematic-provider',
+            cellComponent: 'cell/telematic-identity',
             action: this.telematicActions.transition.view,
             permission: 'fleet-ops view telematic',
             width: 460,

@@ -52,6 +52,7 @@
         <div class="fleetops-route-editor-section__body">
             <ModelSelect
                 @modelName="place"
+                @selectedItemComponent={{component "select-option/place" compact=true}}
                 @selectedModel={{@resource.payload.pickup}}
                 @placeholder={{t "modals.order-route-form.select-pickup"}}
                 @triggerClass="form-select form-input"
@@ -61,7 +62,7 @@
                 @onChange={{fn this.setPayloadPlace "pickup"}}
                 as |place|
             >
-                <Place::Address @place={{place}} />
+                <SelectOption::Place @option={{place}} />
             </ModelSelect>
 
             {{#if @resource.payload.pickup.hasInvalidCoordinates}}
@@ -104,6 +105,7 @@
                                 {{#let (or waypoint.place waypoint) as |waypointPlace|}}
                                     <ModelSelect
                                         @modelName="place"
+                                        @selectedItemComponent={{component "select-option/place" compact=true}}
                                         @selectedModel={{waypointPlace}}
                                         @placeholder={{concat (t "order.fields.select-waypoint") " " (add index 1)}}
                                         @triggerClass="form-select form-input truncate"
@@ -113,7 +115,7 @@
                                         @onChange={{fn this.setWaypointPlace index}}
                                         as |place|
                                     >
-                                        <Place::Address @place={{place}} />
+                                        <SelectOption::Place @option={{place}} />
                                     </ModelSelect>
 
                                     {{#if waypointPlace.hasInvalidCoordinates}}
@@ -166,6 +168,7 @@
         <div class="fleetops-route-editor-section__body">
             <ModelSelect
                 @modelName="place"
+                @selectedItemComponent={{component "select-option/place" compact=true}}
                 @selectedModel={{@resource.payload.dropoff}}
                 @placeholder={{t "modals.order-route-form.select-dropoff"}}
                 @triggerClass="form-select form-input"
@@ -175,7 +178,7 @@
                 @onChange={{fn this.setPayloadPlace "dropoff"}}
                 as |place|
             >
-                <Place::Address @place={{place}} />
+                <SelectOption::Place @option={{place}} />
             </ModelSelect>
 
             {{#if @resource.payload.dropoff.hasInvalidCoordinates}}
@@ -208,6 +211,7 @@
         <div class="fleetops-route-editor-section__body">
             <ModelSelect
                 @modelName="place"
+                @selectedItemComponent={{component "select-option/place" compact=true}}
                 @selectedModel={{@resource.payload.return}}
                 @placeholder={{t "modals.order-route-form.select-return"}}
                 @triggerClass="form-select form-input"
@@ -217,7 +221,7 @@
                 @onChange={{fn this.setPayloadPlace "return"}}
                 as |place|
             >
-                <Place::Address @place={{place}} />
+                <SelectOption::Place @option={{place}} />
             </ModelSelect>
 
             {{#if @resource.payload.return.hasInvalidCoordinates}}

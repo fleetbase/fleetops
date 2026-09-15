@@ -1,0 +1,8 @@
+{{! A position-listing trackable wraps a driver or vehicle record as { modelName, resource }. }}
+{{#let (resource-component "select-option" @option.modelName) as |selectOption|}}
+    {{#if selectOption}}
+        {{component selectOption option=@option.resource compact=@compact}}
+    {{else}}
+        <span class="text-sm">{{@option.primaryLabel}}</span>
+    {{/if}}
+{{/let}}

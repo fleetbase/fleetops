@@ -3,6 +3,7 @@
         <InputGroup @name={{t "common.select-field" field=(t "resource.driver")}} @value={{@options.selectedDriver}}>
             <ModelSelect
                 @modelName="driver"
+                @selectedItemComponent={{component "select-option/driver" compact=true}}
                 @selectedModel={{@options.selectedDriver}}
                 @placeholder={{t "common.select-field" field=(t "resource.driver")}}
                 @triggerClass="form-select form-input"
@@ -11,7 +12,7 @@
                 @onChange={{fn (mut @options.selectedDriver)}}
                 as |driver|
             >
-                <Driver::Pill @driver={{driver}} />
+                <SelectOption::Driver @option={{driver}} />
             </ModelSelect>
         </InputGroup>
     </div>

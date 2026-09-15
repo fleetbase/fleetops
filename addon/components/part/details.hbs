@@ -90,7 +90,15 @@
             {{#if @resource.asset_name}}
                 <div class="field-info-container">
                     <div class="field-name">Fitted To</div>
-                    <div class="field-value">{{n-a @resource.asset_name}}</div>
+                    <div class="field-value">
+                        {{#let (resource-component "pill" this.fittedTo) as |pill|}}
+                            {{#if pill}}
+                                {{component pill resource=this.fittedTo}}
+                            {{else}}
+                                {{n-a @resource.asset_name}}
+                            {{/if}}
+                        {{/let}}
+                    </div>
                 </div>
             {{/if}}
         </div>
@@ -125,13 +133,17 @@
                 {{#if @resource.vendor_name}}
                     <div class="field-info-container">
                         <div class="field-name">Supplier / Vendor</div>
-                        <div class="field-value">{{n-a @resource.vendor_name}}</div>
+                        <div class="field-value">
+                            <Vendor::Pill @vendor={{resource-relation @resource "vendor"}} @titleFallback={{n-a @resource.vendor_name}} />
+                        </div>
                     </div>
                 {{/if}}
                 {{#if @resource.warranty_name}}
                     <div class="field-info-container">
                         <div class="field-name">Warranty</div>
-                        <div class="field-value">{{n-a @resource.warranty_name}}</div>
+                        <div class="field-value">
+                            <Warranty::Pill @warranty={{resource-relation @resource "warranty"}} @titleFallback={{n-a @resource.warranty_name}} />
+                        </div>
                     </div>
                 {{/if}}
             </div>

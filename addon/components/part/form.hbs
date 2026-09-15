@@ -161,6 +161,7 @@
                 <InputGroup @name="Asset">
                     <ModelSelect
                         @modelName={{this.assetModelName}}
+                        @selectedItemComponent={{if (resource-component "select-option" this.assetModelName) (component (resource-component "select-option" this.assetModelName) compact=true)}}
                         @selectedModel={{@resource.asset}}
                         @placeholder="Select compatible asset"
                         @triggerClass="form-select form-input"
@@ -170,7 +171,13 @@
                         @disabled={{cannot-write @resource}}
                         as |model|
                     >
-                        {{or model.name model.public_id}}
+                        {{#let (resource-component "select-option" this.assetModelName) as |selectOption|}}
+                            {{#if selectOption}}
+                                {{component selectOption option=model}}
+                            {{else}}
+                                {{or model.displayName model.name model.public_id}}
+                            {{/if}}
+                        {{/let}}
                     </ModelSelect>
                 </InputGroup>
             {{/if}}
@@ -186,6 +193,7 @@
             <InputGroup @name="Vendor" @wrapperClass="col-span-2">
                 <ModelSelect
                     @modelName="vendor"
+                    @selectedItemComponent={{component "select-option/vendor" compact=true}}
                     @selectedModel={{@resource.vendor}}
                     @placeholder="Select Vendor"
                     @triggerClass="form-select form-input"
@@ -196,7 +204,7 @@
                     @disabled={{cannot-write @resource}}
                     as |model|
                 >
-                    {{model.name}}
+                    <SelectOption::Vendor @option={{model}} />
                 </ModelSelect>
             </InputGroup>
 
@@ -206,6 +214,7 @@
             <InputGroup @name="Warranty" @wrapperClass="col-span-2">
                 <ModelSelect
                     @modelName="warranty"
+                    @selectedItemComponent={{component "select-option/warranty" compact=true}}
                     @selectedModel={{@resource.warranty}}
                     @placeholder="Select Warranty (optional)"
                     @triggerClass="form-select form-input"
@@ -216,9 +225,7 @@
                     @disabled={{cannot-write @resource}}
                     as |model|
                 >
-                    {{model.policy_number}}
-                    -
-                    {{model.provider}}
+                    <SelectOption::Warranty @option={{model}} />
                 </ModelSelect>
             </InputGroup>
         </div>

@@ -1,5 +1,6 @@
 import Controller from '@ember/controller';
-import { get } from '@ember/object';
+import { buildIdentityStub } from '../../../utils/identity-cell-resource';
+import relationValue from '../../../utils/relation-value';
 import { inject as service } from '@ember/service';
 import { tracked } from '@glimmer/tracking';
 import fleetOpsOptions from '../../../utils/fleet-ops-options';
@@ -137,6 +138,8 @@ export default class ManagementIssuesIndexController extends Controller {
             {
                 label: this.intl.t('column.reporter'),
                 valuePath: 'reporter_name',
+                cellComponent: 'table/cell/user-identity',
+                resourcePath: (issue) => relationValue(issue, 'reporter') ?? buildIdentityStub(issue, { type: 'user', nameKey: 'reporter_name' }),
                 permission: 'iam view user',
                 resizable: true,
                 sortable: true,
@@ -150,6 +153,8 @@ export default class ManagementIssuesIndexController extends Controller {
             {
                 label: this.intl.t('column.assignee'),
                 valuePath: 'assignee_name',
+                cellComponent: 'table/cell/user-identity',
+                resourcePath: (issue) => relationValue(issue, 'assignee') ?? buildIdentityStub(issue, { type: 'user', nameKey: 'assignee_name' }),
                 permission: 'iam view user',
                 hidden: true,
                 resizable: true,
@@ -165,35 +170,9 @@ export default class ManagementIssuesIndexController extends Controller {
                 valuePath: 'driver_name',
                 cellComponent: 'cell/driver-identity',
                 permission: 'fleet-ops view driver',
-                action: async (driver) => {
-                    const resolvedDriver = driver?.loadResource ? await driver.loadResource() : driver;
-
-                    if (resolvedDriver) {
-                        this.issueActions.driverActions.panel.view(resolvedDriver);
-                    }
-                },
+                action: this.issueActions.driverActions.panel.view,
                 emptyText: '-',
-                showStatusBadge: true,
-                resourcePath: (issue) => {
-                    const driver = get(issue, 'driver');
-
-                    if (driver) {
-                        return driver;
-                    }
-
-                    const driverName = get(issue, 'driver_name');
-
-                    if (driverName) {
-                        return {
-                            id: get(issue, 'driver_uuid'),
-                            name: driverName,
-                            display_name: driverName,
-                            loadResource: () => issue.loadDriver?.(),
-                        };
-                    }
-
-                    return null;
-                },
+                resourcePath: (issue) => relationValue(issue, 'driver') ?? buildIdentityStub(issue, { type: 'driver', load: () => issue.loadDriver?.() }),
                 resizable: true,
                 sortable: true,
                 filterable: true,
@@ -207,37 +186,9 @@ export default class ManagementIssuesIndexController extends Controller {
                 valuePath: 'vehicle_name',
                 cellComponent: 'cell/vehicle-identity',
                 permission: 'fleet-ops view vehicle',
-                action: async (vehicle) => {
-                    const resolvedVehicle = vehicle?.loadResource ? await vehicle.loadResource() : vehicle;
-
-                    if (resolvedVehicle) {
-                        this.issueActions.vehicleActions.panel.view(resolvedVehicle);
-                    }
-                },
+                action: this.issueActions.vehicleActions.panel.view,
                 emptyText: '-',
-                showStatusBadge: true,
-                resourcePath: (issue) => {
-                    const vehicle = get(issue, 'vehicle');
-
-                    if (vehicle) {
-                        return vehicle;
-                    }
-
-                    const vehicleName = get(issue, 'vehicle_name');
-
-                    if (vehicleName) {
-                        return {
-                            id: get(issue, 'vehicle_uuid'),
-                            displayName: vehicleName,
-                            display_name: vehicleName,
-                            name: vehicleName,
-                            vehicle_number: get(issue, 'vehicle_uuid'),
-                            loadResource: () => issue.loadVehicle?.(),
-                        };
-                    }
-
-                    return null;
-                },
+                resourcePath: (issue) => relationValue(issue, 'vehicle') ?? buildIdentityStub(issue, { type: 'vehicle', load: () => issue.loadVehicle?.() }),
                 resizable: true,
                 sortable: true,
                 filterable: true,

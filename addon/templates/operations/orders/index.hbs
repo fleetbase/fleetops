@@ -82,6 +82,7 @@
                 <div class="fleetbase-model-select fleetbase-power-select ember-model-select">
                     <ModelSelect
                         @modelName="order-config"
+                        @selectedItemComponent={{component "select-option/order-config" compact=true}}
                         @selectedModel={{or this.orderConfig this.type}}
                         @placeholder={{t "order.fields.order-type-placeholder"}}
                         @triggerClass="form-select form-input order-board-type-filter"
@@ -92,10 +93,7 @@
                         @onChangeId={{fn (mut this.type)}}
                         as |orderConfig|
                     >
-                        <div class="text-sm">
-                            <div class="font-semibold normalize-in-trigger">{{orderConfig.name}}</div>
-                            <div class="hide-from-trigger">{{n-a orderConfig.description}}</div>
-                        </div>
+                        <SelectOption::OrderConfig @option={{orderConfig}} />
                     </ModelSelect>
                 </div>
             </div>

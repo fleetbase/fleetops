@@ -1,5 +1,6 @@
 import Controller from '@ember/controller';
 import { action } from '@ember/object';
+import relationValue from '../../../../utils/relation-value';
 import { inject as service } from '@ember/service';
 import { tracked } from '@glimmer/tracking';
 import { task } from 'ember-concurrency';
@@ -177,8 +178,8 @@ export default class ConnectivityTelematicsDetailsSensorsController extends Cont
             {
                 label: 'Device',
                 valuePath: 'device.displayName',
-                cellComponent: 'table/cell/anchor',
-                action: this.deviceActions.transition.view,
+                cellComponent: 'cell/device-identity',
+                resourcePath: (sensor) => relationValue(sensor, 'device'),
                 permission: 'fleet-ops view device',
                 resizable: true,
                 sortable: true,

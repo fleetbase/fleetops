@@ -12,6 +12,7 @@
             <InputGroup @name="Vendor">
                 <ModelSelect
                     @modelName="vendor"
+                    @selectedItemComponent={{component "select-option/vendor" compact=true}}
                     @selectedModel={{@resource.vendor}}
                     @placeholder="Select Vendor"
                     @triggerClass="form-select form-input"
@@ -22,7 +23,7 @@
                     @disabled={{cannot-write @resource}}
                     as |model|
                 >
-                    {{model.name}}
+                    <SelectOption::Vendor @option={{model}} />
                 </ModelSelect>
             </InputGroup>
 

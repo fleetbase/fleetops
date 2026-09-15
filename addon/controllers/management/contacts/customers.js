@@ -1,5 +1,7 @@
 import ManagementContactsIndexController from './index';
 import { inject as service } from '@ember/service';
+import { buildIdentityStub } from '../../../utils/identity-cell-resource';
+import relationValue from '../../../utils/relation-value';
 
 export default class ManagementContactsCustomersController extends ManagementContactsIndexController {
     @service('customerActions') contactActions;
@@ -82,9 +84,9 @@ export default class ManagementContactsCustomersController extends ManagementCon
             {
                 label: this.intl.t('column.address'),
                 valuePath: 'address',
-                cellComponent: 'table/cell/anchor',
-                action: this.customerActions.viewPlace,
-
+                cellComponent: 'cell/place-identity',
+                permission: 'fleet-ops view place',
+                resourcePath: (customer) => relationValue(customer, 'place') ?? buildIdentityStub(customer, { type: 'place', nameKey: 'address', load: () => customer.get('place') }),
                 resizable: true,
                 sortable: true,
                 filterable: true,

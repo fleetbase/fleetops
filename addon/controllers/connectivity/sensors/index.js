@@ -136,9 +136,8 @@ export default class ConnectivitySensorsIndexController extends Controller {
         {
             label: 'Telematic',
             valuePath: 'telematic.provider',
-            cellComponent: 'cell/telematic-provider',
+            cellComponent: 'cell/telematic-identity',
             resourcePath: sensorTelematic,
-            compact: true,
             action: this.openTelematic,
             permission: 'fleet-ops view telematic',
             resizable: true,
@@ -154,7 +153,6 @@ export default class ConnectivitySensorsIndexController extends Controller {
             valuePath: 'device.displayName',
             cellComponent: 'cell/device-identity',
             resourcePath: sensorDevice,
-            showStatus: false,
             action: this.openDevice,
             permission: 'fleet-ops view device',
             resizable: true,

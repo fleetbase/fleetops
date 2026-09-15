@@ -15,6 +15,7 @@
                     <div class="flex items-start justify-between">
                         <ModelSelect
                             @modelName="user"
+                            @selectedItemComponent={{component "select-option/user" compact=true}}
                             @selectedModel={{@options.lastSelectedUser}}
                             @placeholder={{t "modals.group-form.select-user"}}
                             @triggerClass="form-select form-input"
@@ -23,7 +24,7 @@
                             @onChange={{@options.addUser}}
                             as |model|
                         >
-                            {{model.name}}
+                            <SelectOption::User @option={{model}} />
                         </ModelSelect>
                     </div>
                 </div>

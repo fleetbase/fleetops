@@ -1,1 +1,12 @@
-<SelectOption @photo={{this.driver.photo_url}} @fallbackPhoto={{this.fallbackPhoto}} @title={{this.title}} @details={{this.details}} @compact={{@compact}} ...attributes />
+<Resource::SelectOption
+    @option={{or @option @model @driver}}
+    @resourceType="driver"
+    @compact={{@compact}}
+    @title={{@title}}
+    @details={{@details}}
+    @photo={{@photo}}
+    @fallbackPhoto={{@fallbackPhoto}}
+    @icon={{@icon}}
+    @shape={{@shape}}
+    ...attributes
+/>
