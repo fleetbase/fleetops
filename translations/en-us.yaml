@@ -145,14 +145,14 @@ trailer:
         status: Status
         category: Category
         vin: VIN
-        plate-number: Plate number
-        serial-number: Serial number
+        plate-number: Plate Number
+        serial-number: Serial Number
         make: Make
         model: Model
         year: Year
         vendor: Vendor
         warranty: Warranty
-        vehicle: Towing vehicle
+        vehicle: Towing Vehicle
         attachment-state: Attachment state
         attached-at: Attached since
         position: Towing position
@@ -161,7 +161,7 @@ trailer:
         disconnected-at: Disconnected at
         duration: Duration
         connectivity: Connectivity
-        last-online: Last online
+        last-online: Last Online
         last-provider: Telemetry provider
         last-event-at: Last telemetry event
         coordinates: Coordinates
@@ -352,17 +352,17 @@ trailer:
         id: ID
         code: Code
         type: Type
-        plate-number: Plate number
+        plate-number: Plate Number
         status: Status
-        vehicle: Towing vehicle
+        vehicle: Towing Vehicle
         attachment-state: Attachment
         connectivity: Connectivity
-        last-online: Last online
+        last-online: Last Online
         location: Location
         devices: Devices
         equipment: Equipment
         vin: VIN
-        serial-number: Serial number
+        serial-number: Serial Number
         make: Make
         model: Model
         year: Year
@@ -370,11 +370,11 @@ trailer:
         ownership: Ownership
         axles: Axles
         gvwr: GVWR
-        payload-capacity: Payload capacity
+        payload-capacity: Payload Capacity
         length: Length
         refrigerated: Refrigerated
-        created-at: Created at
-        updated-at: Updated at
+        created-at: Created At
+        updated-at: Updated At
     filters:
         created-between: Created between
         updated-between: Updated between
@@ -841,7 +841,7 @@ device:
         title: Attached asset
         description: Fleet context for telemetry from this device.
         open: Open asset
-        asset: Attached asset
+        asset: Attached Asset
         synced-device: Synced device
         asset-type: Asset type
         select-asset-type: Select an asset type
@@ -1411,9 +1411,9 @@ vehicle:
     placeholders:
         filter-internal-id: Type or scan internal IDs
     filters:
-        has-trailer: Trailer attached
-        has-driver: Driver assigned
-        has-device: Device attached
+        has-trailer: Trailer Attached
+        has-driver: Driver Assigned
+        has-device: Device Attached
         any: Any
         attached: Attached
         not-attached: Not attached
@@ -3110,7 +3110,7 @@ resource-summary:
         items: Items
         key: Key
         last-error: Last error
-        last-online: Last online
+        last-online: Last Online
         last-reading: Last reading
         last-seen: Last seen
         last-status: Last status
