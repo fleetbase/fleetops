@@ -1,5 +1,5 @@
 import { get } from '@ember/object';
-import { first, present, relation, icon, badge, badges, fact, relatedFact, join, panelOpener } from './helpers';
+import { first, present, relation, icon, fact, relatedFact, join, panelOpener } from './helpers';
 
 const DEFAULT_PROVIDER_ICON = '/engines-dist/images/telematics/providers/default.webp';
 
@@ -41,15 +41,6 @@ export default function buildConnectivityDescriptors(owner) {
                 return typeof online === 'boolean' ? online : undefined;
             },
             status: (device) => first(device, 'connection_status', 'status'),
-            badges: (device) => {
-                const attachable = relation(owner, device, 'attachable');
-
-                return badges(
-                    badge('attached-to', 'link', first(attachable, 'displayName', 'display_name', 'name') ?? first(device, 'attached_to_name'), {
-                        relatedId: attachable?.id ?? get(device, 'attachable_uuid'),
-                    })
-                );
-            },
             selectDetails: (device) => [first(device, 'type', 'model'), first(device, 'imei', 'serial_number', 'device_id')],
             facts: (device) => [
                 fact('type', join([first(device, 'type'), first(device, 'model')], ' · '), { format: 'humanize' }),
@@ -74,16 +65,6 @@ export default function buildConnectivityDescriptors(owner) {
             identifier: (sensor) => first(sensor, 'serial_number', 'internal_id', 'imei'),
             image: (sensor) => (present(get(sensor, 'photo_url')) ? { url: get(sensor, 'photo_url'), shape: 'square' } : icon('gauge')),
             status: (sensor) => first(sensor, 'threshold_status', 'status'),
-            badges: (sensor) => {
-                const device = relation(owner, sensor, 'device');
-
-                return badges(
-                    badge('device', 'microchip', first(device, 'displayName', 'display_name', 'name') ?? first(sensor, 'device_name'), {
-                        relatedType: 'device',
-                        relatedId: device?.id ?? get(sensor, 'device_uuid'),
-                    })
-                );
-            },
             selectDetails: (sensor) => [first(sensor, 'type'), first(sensor, 'serial_number', 'internal_id')],
             facts: (sensor) => [
                 fact('type', first(sensor, 'type'), { format: 'humanize' }),
@@ -109,7 +90,6 @@ export default function buildConnectivityDescriptors(owner) {
             identifier: (telematic) => first(telematic, 'provider_descriptor.label', 'provider', 'serial_number'),
             image: providerImage,
             status: (telematic) => first(telematic, 'status'),
-            badges: (telematic) => badges(badge('provider', 'satellite-dish', first(telematic, 'provider_descriptor.label', 'provider'))),
             selectDetails: (telematic) => [first(telematic, 'provider_descriptor.label', 'provider'), first(telematic, 'serial_number', 'imei')],
             facts: (telematic) => [
                 fact('provider', first(telematic, 'provider_descriptor.label', 'provider')),
@@ -151,8 +131,6 @@ export default function buildConnectivityDescriptors(owner) {
             identifier: (event) => first(event, 'ident', 'public_id'),
             image: (event) => (present(get(event, 'device_photo_url')) ? { url: get(event, 'device_photo_url'), shape: 'square' } : icon('bolt')),
             status: (event) => first(event, 'severity'),
-            badges: (event) =>
-                badges(badge('device', 'microchip', first(event, 'device_name', 'device.displayName', 'device_id'), { relatedType: 'device', relatedId: get(event, 'device_uuid') })),
             selectDetails: (event) => [first(event, 'device_name'), first(event, 'severity')],
             facts: (event) => [
                 fact('event-type', first(event, 'event_type', 'code'), { format: 'humanize' }),

@@ -1,5 +1,5 @@
 import { get } from '@ember/object';
-import { first, present, relation, icon, badge, badges, fact, relatedFact, money, join, panelOpener, polymorphicType } from './helpers';
+import { first, present, relation, icon, fact, relatedFact, money, join, panelOpener, polymorphicType } from './helpers';
 
 /**
  * Issues, maintenance, schedules, work orders and inspections.
@@ -28,7 +28,6 @@ export default function buildMaintenanceDescriptors(owner) {
             identifier: (issue) => first(issue, 'issue_id', 'public_id'),
             image: () => icon('triangle-exclamation'),
             status: (issue) => first(issue, 'priority', 'status'),
-            badges: (issue) => badges(badge('priority', 'flag', first(issue, 'priority'))),
             selectDetails: (issue) => [first(issue, 'type', 'category'), first(issue, 'status')],
             facts: (issue) => [
                 fact('type', join([first(issue, 'type'), first(issue, 'category')], ' · '), { format: 'humanize' }),
@@ -51,7 +50,6 @@ export default function buildMaintenanceDescriptors(owner) {
             identifier: (maintenance) => first(maintenance, 'public_id'),
             image: () => icon('screwdriver-wrench'),
             status: (maintenance) => (get(maintenance, 'is_overdue') ? 'overdue' : first(maintenance, 'status')),
-            badges: (maintenance) => badges(badge('maintainable', 'truck', first(maintenance, 'maintainable_name', 'maintainable.displayName', 'maintainable.name'))),
             selectDetails: (maintenance) => [first(maintenance, 'type'), first(maintenance, 'maintainable_name')],
             facts: (maintenance) => [
                 fact('type', first(maintenance, 'type'), { format: 'humanize' }),
@@ -75,7 +73,6 @@ export default function buildMaintenanceDescriptors(owner) {
             identifier: (schedule) => first(schedule, 'code') ?? join([get(schedule, 'interval_value'), first(schedule, 'interval_unit')]),
             image: () => icon('calendar-check'),
             status: (schedule) => first(schedule, 'status'),
-            badges: (schedule) => badges(badge('subject', 'truck', first(schedule, 'subject_name', 'subject.displayName', 'subject.name'))),
             selectDetails: (schedule) => [first(schedule, 'subject_name'), join([get(schedule, 'interval_value'), first(schedule, 'interval_unit')])],
             facts: (schedule) => [
                 relatedFact('subject', relation(owner, schedule, 'subject'), polymorphicType(schedule, 'subject', 'subject_type'), first(schedule, 'subject_name')),
@@ -102,7 +99,6 @@ export default function buildMaintenanceDescriptors(owner) {
             identifier: (workOrder) => first(workOrder, 'code'),
             image: () => icon('clipboard-list'),
             status: (workOrder) => (get(workOrder, 'is_overdue') ? 'overdue' : first(workOrder, 'status')),
-            badges: (workOrder) => badges(badge('priority', 'flag', first(workOrder, 'priority'))),
             selectDetails: (workOrder) => [first(workOrder, 'code'), first(workOrder, 'status')],
             facts: (workOrder) => [
                 relatedFact('target', relation(owner, workOrder, 'target'), polymorphicType(workOrder, 'target'), first(workOrder, 'target_name')),
@@ -142,7 +138,6 @@ export default function buildMaintenanceDescriptors(owner) {
             identifier: (form) => join([first(form, 'type'), present(get(form, 'item_count')) ? `${get(form, 'item_count')} items` : null], ' · '),
             image: () => icon('list-check'),
             status: (form) => (get(form, 'is_published') ? 'published' : first(form, 'status')),
-            badges: (form) => badges(badge('items', 'list-check', present(get(form, 'item_count')) ? `${get(form, 'item_count')} items` : null)),
             selectDetails: (form) => [first(form, 'type'), first(form, 'status')],
             facts: (form) => [
                 fact('type', first(form, 'type'), { format: 'humanize' }),
@@ -165,7 +160,6 @@ export default function buildMaintenanceDescriptors(owner) {
             identifier: (submission) => first(submission, 'submittedAt', 'submitted_at'),
             image: () => icon('clipboard-check'),
             status: (submission) => first(submission, 'result', 'status'),
-            badges: (submission) => badges(badge('result', first(submission, 'result') === 'failed' ? 'circle-xmark' : 'circle-check', first(submission, 'result'))),
             selectDetails: (submission) => [first(submission, 'vehicle_name', 'driver_name'), first(submission, 'result', 'status')],
             facts: (submission) => [
                 relatedFact('form', relation(owner, submission, 'form'), 'inspection-form', first(submission, 'form_name')),

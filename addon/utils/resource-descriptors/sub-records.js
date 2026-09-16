@@ -1,5 +1,5 @@
 import { get } from '@ember/object';
-import { first, present, relation, icon, badge, badges, fact, relatedFact, money, join, parentOpener } from './helpers';
+import { first, present, relation, icon, fact, relatedFact, money, join, parentOpener, dateLabel } from './helpers';
 
 /**
  * Records that only make sense through a parent: connections, join rows,
@@ -105,7 +105,7 @@ export default function buildSubRecordDescriptors(owner) {
             modelNames: ['position'],
             title: (position) =>
                 first(position, 'positionString') ?? (present(get(position, 'latitude')) ? `${get(position, 'latitude')}, ${get(position, 'longitude')}` : first(position, 'public_id')),
-            identifier: (position) => (get(position, 'created_at') ? new Date(get(position, 'created_at')).toLocaleString() : null),
+            identifier: (position) => dateLabel(get(position, 'created_at')),
             image: () => icon('location-crosshairs'),
             facts: (position) => [
                 fact('speed', get(position, 'speed')),
@@ -284,7 +284,6 @@ export default function buildSubRecordDescriptors(owner) {
             identifier: (waypoint) => first(waypoint, 'tracking') ?? join([first(waypoint, 'city'), first(waypoint, 'country')], ', '),
             image: () => icon('flag'),
             status: (waypoint) => (get(waypoint, 'complete') ? 'completed' : first(waypoint, 'status')),
-            badges: (waypoint) => badges(badge('order', 'list-ol', present(get(waypoint, 'order')) ? `#${get(waypoint, 'order')}` : null)),
             facts: (waypoint) => [
                 fact('address', first(waypoint, 'address', 'street1')),
                 relatedFact('customer', relation(owner, waypoint, 'customer'), first(waypoint, 'customer_type'), first(waypoint, 'customer.name')),

@@ -1,5 +1,5 @@
 import { get } from '@ember/object';
-import { first, present, relation, icon, badge, badges, fact, relatedFact, money, join, panelOpener, routeOpener } from './helpers';
+import { first, present, relation, icon, fact, relatedFact, money, join, panelOpener, routeOpener } from './helpers';
 
 /**
  * Fuel reports, fuel provider connections and their transactions.
@@ -17,16 +17,6 @@ export default function buildFuelDescriptors(owner) {
             identifier: (report) => join([get(report, 'volume'), first(report, 'metric_unit')]) ?? money(get(report, 'amount'), get(report, 'currency')),
             image: () => icon('gas-pump'),
             status: (report) => first(report, 'status'),
-            badges: (report) => {
-                const vehicle = relation(owner, report, 'vehicle');
-
-                return badges(
-                    badge('vehicle', 'truck', first(vehicle, 'displayName', 'display_name', 'name') ?? first(report, 'vehicle_name'), {
-                        relatedType: 'vehicle',
-                        relatedId: vehicle?.id ?? get(report, 'vehicle_uuid'),
-                    })
-                );
-            },
             selectDetails: (report) => [first(report, 'vehicle_name'), join([get(report, 'volume'), first(report, 'metric_unit')])],
             facts: (report) => [
                 relatedFact('vehicle', relation(owner, report, 'vehicle'), 'vehicle', first(report, 'vehicle_name')),
@@ -49,7 +39,6 @@ export default function buildFuelDescriptors(owner) {
             identifier: (connection) => first(connection, 'provider'),
             image: () => icon('plug'),
             status: (connection) => (present(get(connection, 'last_error')) ? 'error' : first(connection, 'status')),
-            badges: (connection) => badges(badge('environment', 'server', first(connection, 'environment'))),
             selectDetails: (connection) => [first(connection, 'provider'), first(connection, 'environment')],
             facts: (connection) => [
                 fact('provider', first(connection, 'provider')),
@@ -71,7 +60,6 @@ export default function buildFuelDescriptors(owner) {
             identifier: (transaction) => first(transaction, 'station_name'),
             image: () => icon('receipt'),
             status: (transaction) => first(transaction, 'sync_status'),
-            badges: (transaction) => badges(badge('plate', 'id-card', first(transaction, 'plate_number'))),
             selectDetails: (transaction) => [first(transaction, 'station_name'), join([get(transaction, 'volume'), first(transaction, 'metric_unit')])],
             facts: (transaction) => [
                 fact('transaction-at', get(transaction, 'transaction_at'), { format: 'date' }),

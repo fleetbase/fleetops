@@ -1,3 +1,4 @@
+import formatDate from '@fleetbase/ember-ui/utils/format-date';
 import { get } from '@ember/object';
 import { getPlaceholderImage, resolveResourceImage } from '../placeholder-images';
 
@@ -76,6 +77,20 @@ export function fact(label, value, extra = {}) {
 /** A fact that renders as the related record's pill when the record is loaded. */
 export function relatedFact(label, related, relatedType, fallbackValue) {
     return { labelKey: `resource-summary.facts.${label}`, related: related ?? null, relatedType, value: fallbackValue ?? null };
+}
+
+/**
+ * A date the way the console writes one everywhere else (date-fns, not the
+ * browser locale), or null for anything that is not a date.
+ */
+export function dateLabel(value, pattern = 'dd MMM yyyy, HH:mm') {
+    if (!present(value)) {
+        return null;
+    }
+
+    const date = value instanceof Date ? value : new Date(value);
+
+    return Number.isNaN(date.getTime()) ? null : formatDate(date, pattern);
 }
 
 export function money(amount, currency) {

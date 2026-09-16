@@ -1,5 +1,5 @@
 import { get } from '@ember/object';
-import { first, present, relation, photo, badge, badges, fact, relatedFact, join, panelOpener } from './helpers';
+import { first, present, relation, photo, badge, badges, fact, relatedFact, join, panelOpener, dateLabel } from './helpers';
 
 /**
  * Drivers, vendors, contacts, customers and fleets.
@@ -47,7 +47,10 @@ export default function buildPeopleDescriptors(owner) {
                 fact(
                     'licence',
                     join(
-                        [first(driver, 'drivers_license_number'), present(get(driver, 'license_expiry')) ? `expires ${new Date(get(driver, 'license_expiry')).toLocaleDateString()}` : null],
+                        [
+                            first(driver, 'drivers_license_number'),
+                            dateLabel(get(driver, 'license_expiry'), 'dd MMM yyyy') ? `expires ${dateLabel(get(driver, 'license_expiry'), 'dd MMM yyyy')}` : null,
+                        ],
                         ' · '
                     )
                 ),
@@ -69,7 +72,6 @@ export default function buildPeopleDescriptors(owner) {
             identifier: (vendor) => first(vendor, 'prettyType', 'internal_id', 'business_id'),
             image: (vendor) => photo(vendor, 'vendor', 'logo_url'),
             status: (vendor) => first(vendor, 'status'),
-            badges: (vendor) => badges(badge('type', 'tag', first(vendor, 'prettyType', 'type'))),
             selectDetails: (vendor) => [first(vendor, 'email'), first(vendor, 'phone')],
             facts: (vendor) => [
                 fact('type', first(vendor, 'prettyType', 'type'), { format: 'humanize' }),
@@ -92,7 +94,6 @@ export default function buildPeopleDescriptors(owner) {
             identifier: (vendor) => first(vendor, 'provider'),
             image: (vendor) => photo(vendor, 'vendor', 'logo_url'),
             status: (vendor) => first(vendor, 'status'),
-            badges: (vendor) => badges(badge('provider', 'plug', first(vendor, 'provider')), get(vendor, 'sandbox') ? badge('sandbox', 'flask', 'sandbox') : null),
             selectDetails: (vendor) => [first(vendor, 'provider'), get(vendor, 'sandbox') ? 'sandbox' : null],
             facts: (vendor) => [
                 fact('provider', first(vendor, 'provider')),
@@ -115,7 +116,6 @@ export default function buildPeopleDescriptors(owner) {
             title: (contact) => first(contact, 'name', 'public_id'),
             identifier: (contact) => first(contact, 'title', 'type'),
             image: (contact) => photo(contact, 'contact'),
-            badges: (contact) => badges(badge('type', 'tag', first(contact, 'type'))),
             selectDetails: (contact) => [first(contact, 'email'), first(contact, 'phone')],
             facts: (contact) => [
                 fact('title', first(contact, 'title')),
@@ -137,7 +137,6 @@ export default function buildPeopleDescriptors(owner) {
             title: (customer) => first(customer, 'name', 'public_id'),
             identifier: (customer) => first(customer, 'customer_type', 'type'),
             image: (customer) => photo(customer, 'customer'),
-            badges: (customer) => badges(badge('type', 'tag', first(customer, 'customer_type', 'type'))),
             selectDetails: (customer) => [first(customer, 'email'), first(customer, 'phone')],
             facts: (customer) => [
                 fact('type', first(customer, 'customer_type', 'type'), { format: 'humanize' }),
@@ -159,12 +158,6 @@ export default function buildPeopleDescriptors(owner) {
             identifier: (fleet) => first(fleet, 'task', 'public_id'),
             image: (fleet) => photo(fleet, 'fleet'),
             status: (fleet) => first(fleet, 'status'),
-            badges: (fleet) => {
-                const online = get(fleet, 'drivers_online_count');
-                const total = get(fleet, 'drivers_count');
-
-                return badges(badge('drivers', 'id-card', present(total) ? `${online ?? 0}/${total} online` : null));
-            },
             selectDetails: (fleet) => [first(fleet, 'task'), present(get(fleet, 'drivers_count')) ? `${get(fleet, 'drivers_count')} drivers` : null],
             facts: (fleet) => [
                 fact('task', first(fleet, 'task')),

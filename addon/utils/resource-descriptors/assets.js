@@ -129,7 +129,6 @@ export default function buildAssetDescriptors(owner) {
             identifier: (equipment) => first(equipment, 'serial_number', 'code'),
             image: (equipment) => (present(get(equipment, 'photo_url')) ? { url: get(equipment, 'photo_url'), shape: 'square' } : icon('toolbox')),
             status: (equipment) => (get(equipment, 'is_equipped') ? 'equipped' : first(equipment, 'status')),
-            badges: (equipment) => badges(badge('equipped-to', 'link', first(equipment, 'equipped_to_name', 'equipable.name', 'equipable.displayName'))),
             selectDetails: (equipment) => [first(equipment, 'type'), first(equipment, 'serial_number', 'code')],
             facts: (equipment) => [
                 fact('type', first(equipment, 'type'), { format: 'humanize' }),
@@ -155,7 +154,6 @@ export default function buildAssetDescriptors(owner) {
             image: (part) => (present(get(part, 'photo_url')) ? { url: get(part, 'photo_url'), shape: 'square' } : icon('gears')),
             status: (part) =>
                 get(part, 'is_low_stock') ? 'low_stock' : get(part, 'is_in_stock') ? 'in_stock' : get(part, 'quantity_on_hand') === undefined ? first(part, 'status') : 'out_of_stock',
-            badges: (part) => badges(badge('quantity', 'boxes-stacked', present(get(part, 'quantity_on_hand')) ? `${get(part, 'quantity_on_hand')} on hand` : null)),
             selectDetails: (part) => [first(part, 'sku'), first(part, 'manufacturer')],
             facts: (part) => [
                 fact('sku', first(part, 'sku')),
@@ -203,7 +201,6 @@ export default function buildAssetDescriptors(owner) {
                 return typeof online === 'boolean' ? online : undefined;
             },
             status: (asset) => first(asset, 'status'),
-            badges: (asset) => badges(badge('category', 'folder', first(asset, 'category_name', 'category.name'))),
             selectDetails: (asset) => [first(asset, 'type'), first(asset, 'plate_number', 'vin', 'serial_number')],
             facts: (asset) => [
                 fact('type', first(asset, 'type', 'usage_type'), { format: 'humanize' }),
@@ -235,7 +232,6 @@ export default function buildAssetDescriptors(owner) {
             identifier: (warranty) => first(warranty, 'policy_number'),
             image: () => icon('shield-halved'),
             status: (warranty) => (get(warranty, 'is_expired') ? 'expired' : get(warranty, 'is_active') ? 'active' : first(warranty, 'status')),
-            badges: (warranty) => badges(badge('days-remaining', 'hourglass-half', present(get(warranty, 'days_remaining')) ? `${get(warranty, 'days_remaining')} days` : null)),
             selectDetails: (warranty) => [first(warranty, 'provider'), first(warranty, 'policy_number')],
             facts: (warranty) => [
                 fact('provider', first(warranty, 'provider')),

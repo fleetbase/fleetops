@@ -1,5 +1,5 @@
 import { get } from '@ember/object';
-import { first, present, relation, icon, colourTile, badge, badges, fact, relatedFact, money, join, panelOpener, routeOpener, polymorphicType } from './helpers';
+import { first, present, relation, icon, colourTile, fact, relatedFact, money, join, panelOpener, routeOpener, polymorphicType, dateLabel } from './helpers';
 
 /**
  * Places, orders, order configs, service rates, service areas, zones,
@@ -17,7 +17,6 @@ export default function buildOperationsDescriptors(owner) {
             title: (place) => first(place, 'displayName', 'name', 'address', 'street1', 'public_id'),
             identifier: (place) => join([first(place, 'city'), first(place, 'country')], ', ') ?? first(place, 'public_id'),
             image: () => icon('location-dot'),
-            badges: (place) => badges(badge('city', 'city', join([first(place, 'city'), first(place, 'country')], ', '))),
             selectDetails: (place) => [first(place, 'address', 'street1'), join([first(place, 'city'), first(place, 'country')], ', ')],
             facts: (place) => [
                 fact('address', first(place, 'address', 'street1')),
@@ -52,7 +51,6 @@ export default function buildOperationsDescriptors(owner) {
             identifier: (order) => first(order, 'tracking', 'internal_id'),
             image: () => icon('box'),
             status: (order) => first(order, 'status'),
-            badges: (order) => badges(badge('order-config', 'diagram-project', first(order, 'order_config.name', 'type'))),
             selectDetails: (order) => [first(order, 'tracking'), first(order, 'status')],
             facts: (order) => [
                 fact('status', first(order, 'status'), { format: 'humanize' }),
@@ -74,7 +72,6 @@ export default function buildOperationsDescriptors(owner) {
             identifier: (config) => first(config, 'key', 'namespace'),
             image: () => icon('diagram-project'),
             status: (config) => first(config, 'status'),
-            badges: (config) => badges(badge('version', 'code-branch', present(get(config, 'version')) ? `v${get(config, 'version')}` : null)),
             selectDetails: (config) => [first(config, 'key', 'namespace'), first(config, 'description')],
             facts: (config) => [
                 fact('key', first(config, 'key')),
@@ -96,7 +93,6 @@ export default function buildOperationsDescriptors(owner) {
             title: (rate) => first(rate, 'service_name', 'public_id'),
             identifier: (rate) => first(rate, 'service_type', 'rate_calculation_method'),
             image: () => icon('file-invoice-dollar'),
-            badges: (rate) => badges(badge('service-type', 'tag', first(rate, 'service_type'))),
             selectDetails: (rate) => [first(rate, 'service_type'), first(rate, 'rate_calculation_method')],
             facts: (rate) => [
                 fact('calculation', first(rate, 'rate_calculation_method'), { format: 'humanize' }),
@@ -118,7 +114,6 @@ export default function buildOperationsDescriptors(owner) {
             identifier: (area) => first(area, 'country', 'type'),
             image: (area) => colourTile(area, 'map'),
             status: (area) => first(area, 'status'),
-            badges: (area) => badges(badge('country', 'globe', first(area, 'country'))),
             selectDetails: (area) => [first(area, 'type'), first(area, 'country')],
             facts: (area) => [
                 fact('type', first(area, 'type'), { format: 'humanize' }),
@@ -139,7 +134,6 @@ export default function buildOperationsDescriptors(owner) {
             identifier: (zone) => first(zone, 'service_area.name', 'service_area_name'),
             image: (zone) => colourTile(zone, 'draw-polygon'),
             status: (zone) => first(zone, 'status'),
-            badges: (zone) => badges(badge('service-area', 'map', first(zone, 'service_area.name', 'service_area_name'))),
             selectDetails: (zone) => [first(zone, 'service_area.name', 'service_area_name'), first(zone, 'description')],
             facts: (zone) => [
                 relatedFact('service-area', relation(owner, zone, 'service_area'), 'service-area', first(zone, 'service_area_name')),
@@ -159,7 +153,6 @@ export default function buildOperationsDescriptors(owner) {
             title: (entity) => first(entity, 'name', 'sku', 'public_id'),
             identifier: (entity) => first(entity, 'tracking', 'sku'),
             image: (entity) => (present(get(entity, 'photo_url')) ? { url: get(entity, 'photo_url'), shape: 'square' } : icon('box-open')),
-            badges: (entity) => badges(badge('type', 'tag', first(entity, 'type'))),
             selectDetails: (entity) => [first(entity, 'tracking', 'sku'), first(entity, 'type')],
             facts: (entity) => [
                 fact('type', first(entity, 'type'), { format: 'humanize' }),
@@ -181,8 +174,6 @@ export default function buildOperationsDescriptors(owner) {
             identifier: (manifest) => first(manifest, 'scheduledDateFormatted', 'scheduled_date'),
             image: () => icon('list-ol'),
             status: (manifest) => first(manifest, 'status'),
-            badges: (manifest) =>
-                badges(badge('stops', 'list-ol', present(get(manifest, 'stop_count')) ? `${get(manifest, 'completed_stops') ?? 0}/${get(manifest, 'stop_count')} stops` : null)),
             selectDetails: (manifest) => [first(manifest, 'driver_name'), first(manifest, 'status')],
             facts: (manifest) => [
                 relatedFact('driver', relation(owner, manifest, 'driver'), 'driver', first(manifest, 'driver_name')),
@@ -201,7 +192,7 @@ export default function buildOperationsDescriptors(owner) {
             polymorphicTypes: ['fleet-ops:recurring-order-schedule', 'Fleetbase\\FleetOps\\Models\\RecurringOrderSchedule'],
             statusTones: { active: 'text-green-500', paused: 'text-yellow-500', canceled: 'text-red-500' },
             title: (schedule) => first(schedule, 'name', 'public_id'),
-            identifier: (schedule) => (get(schedule, 'next_occurrence_at') ? new Date(get(schedule, 'next_occurrence_at')).toLocaleString() : null),
+            identifier: (schedule) => dateLabel(get(schedule, 'next_occurrence_at')),
             image: () => icon('repeat'),
             status: (schedule) => first(schedule, 'status'),
             selectDetails: (schedule) => [first(schedule, 'status'), first(schedule, 'timezone')],
