@@ -9,6 +9,7 @@ use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
+use Illuminate\Queue\Middleware\WithoutOverlapping;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Carbon;
 
@@ -21,6 +22,11 @@ class SyncFuelProviderTransactionsJob implements ShouldQueue
 
     public function __construct(public string $connectionUuid, public ?string $from = null, public ?string $to = null, public array $options = [], public ?string $syncRunUuid = null)
     {
+    }
+
+    public function middleware(): array
+    {
+        return [(new WithoutOverlapping('fuel-provider:' . $this->connectionUuid))->releaseAfter(30)->expireAfter(1800)];
     }
 
     public function handle(FuelProviderService $fuelProviderService): void
@@ -45,14 +51,25 @@ class SyncFuelProviderTransactionsJob implements ShouldQueue
             $connection->update([
                 'status'          => 'error',
                 'last_error'      => $e->getMessage(),
-                'last_sync_state' => [
-                    'failed_at' => now()->toIso8601String(),
-                    'message'   => $e->getMessage(),
-                ],
             ]);
 
             throw $e;
         }
+    }
+
+    public function failed(\Throwable $error): void
+    {
+        // Laravel calls this for terminal failures, including worker timeouts
+        // that never reach the catch block in handle().
+        $this->findSyncRun()?->update([
+            'status'      => 'error',
+            'finished_at' => now(),
+            'error'       => 'The background import stopped before completing. Retry this date range.',
+        ]);
+        FuelProviderConnection::where('uuid', $this->connectionUuid)->update([
+            'status'     => 'error',
+            'last_error' => 'The background import stopped before completing. Retry this date range.',
+        ]);
     }
 
     protected function findConnection(): FuelProviderConnection

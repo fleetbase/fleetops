@@ -7,11 +7,15 @@
             </div>
             <div class="field-info-container">
                 <div class="field-name">{{t "common.service-area"}}</div>
-                <div class="field-value">{{n-a @fleet.service_area.name}}</div>
+                <div class="field-value">
+                    <ServiceArea::Pill @serviceArea={{resource-relation @fleet "service_area"}} @titleFallback={{n-a @fleet.service_area.name}} />
+                </div>
             </div>
             <div class="field-info-container">
                 <div class="field-name">{{t "common.zone"}}</div>
-                <div class="field-value">{{n-a @fleet.zone.name}}</div>
+                <div class="field-value">
+                    <Zone::Pill @zone={{resource-relation @fleet "zone"}} @titleFallback={{n-a @fleet.zone.name}} />
+                </div>
             </div>
             <div class="field-info-container">
                 <div class="field-name">{{t "common.task"}}</div>

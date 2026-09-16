@@ -324,6 +324,7 @@ test('telematic service updates attached vehicle telemetry from device events', 
             'source'            => 'telematics',
             'device_event_uuid' => 'event-uuid',
             'provider'          => 'flespi',
+            'position_at'       => '2026-07-23T11:59:00.000000Z',
         ]);
 
     Carbon::setTestNow();

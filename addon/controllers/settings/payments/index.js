@@ -5,8 +5,11 @@ import { isEmpty } from '@ember/utils';
 import { task } from 'ember-concurrency';
 import config from 'ember-get-config';
 import { action } from '@ember/object';
+import { buildIdentityStub } from '../../../utils/identity-cell-resource';
+import relationValue from '../../../utils/relation-value';
 
 export default class SettingsPaymentsIndexController extends Controller {
+    @service store;
     @service fetch;
     @tracked hasStripeConnectAccount = true;
     @tracked table;
@@ -24,16 +27,22 @@ export default class SettingsPaymentsIndexController extends Controller {
         {
             label: 'Service Quote',
             valuePath: 'service_quote_id',
-            cellComponent: 'click-to-copy',
+            cellComponent: 'cell/service-quote-identity',
+            resourcePath: (payment) => relationValue(payment, 'service_quote') ?? buildIdentityStub(payment, { type: 'service-quote', nameKey: 'service_quote_id' }),
         },
         {
             label: 'Order',
             valuePath: 'order_id',
-            cellComponent: 'click-to-copy',
+            cellComponent: 'cell/order-identity',
+            resourcePath: (payment) =>
+                relationValue(payment, 'order') ??
+                buildIdentityStub(payment, { type: 'order', nameKey: 'order_id', load: () => (payment.order_uuid ? this.store.findRecord('order', payment.order_uuid) : null) }),
         },
         {
             label: 'Customer',
             valuePath: 'customer.name',
+            cellComponent: 'cell/customer-identity',
+            resourcePath: (payment) => relationValue(payment, 'customer') ?? buildIdentityStub(payment, { type: payment.customer_type ?? 'customer', nameKey: 'customer_name' }),
         },
         {
             label: 'Amount',

@@ -47,11 +47,8 @@
                 <FaIcon @icon="car" @prefix="fas" />
                 <span class="fleetops-card-meta-value">
                     {{#if @resource.isAttached}}
-                        {{#if @resource.current_vehicle}}
-                            <a href="javascript:;" class="fleetops-card-meta-link" {{on "click" this.viewVehicle}}>{{n-a @resource.current_vehicle_name}}</a>
-                        {{else}}
-                            {{n-a @resource.current_vehicle_name}}
-                        {{/if}}
+                        {{! The card itself is the click target, so the vehicle is a compact option row, not a pill. }}
+                        <SelectOption::Vehicle @option={{@resource.current_vehicle}} @title={{n-a @resource.current_vehicle_name}} @compact={{true}} />
                     {{else}}
                         {{t "trailer.attachment.no-vehicle"}}
                     {{/if}}

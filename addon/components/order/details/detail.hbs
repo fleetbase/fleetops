@@ -41,44 +41,14 @@
                 {{else}}
                     <div class="field-name">{{t "order.fields.customer"}}</div>
                     <div class="field-value">
-                        <div class="flex flex-row space-x-2">
-                            <div>
-                                <Image
-                                    src={{resource-image @resource.customer.photo_url "customer"}}
-                                    @fallbackSrc={{(placeholder-image "customer")}}
-                                    width="28"
-                                    height="28"
-                                    class="w-7 h-7 rounded-full ring-2 ring-gray-800 dark:ring-gray-700 shadow transition-shadow hover:shadow-md focus:shadow-md"
-                                    alt={{@resource.customer.name}}
-                                />
-                            </div>
-                            <div>
-                                <div class="text-sm {{unless @resource.customer 'text-gray-300'}}">{{n-a @resource.customer.name "No customer"}}</div>
-                                <div class="text-xs text-gray-400 dark:text-gray-500">{{n-a @resource.customer.phone "No phone"}}</div>
-                            </div>
-                        </div>
+                        <Customer::Pill @customer={{@resource.customer}} @titleFallback={{n-a @resource.customer_name "No customer"}} @titleClass={{unless @resource.customer "text-gray-300"}} />
                     </div>
                 {{/if}}
             </div>
             <div class="field-info-container">
                 <div class="field-name">{{t "order.fields.facilitator"}}</div>
                 <div class="field-value">
-                    <div class="flex flex-row space-x-2">
-                        <div>
-                            <Image
-                                src={{resource-image @resource.facilitator.photo_url "vendor"}}
-                                @fallbackSrc={{(placeholder-image "vendor")}}
-                                width="28"
-                                height="28"
-                                class="w-7 h-7 rounded-full ring-2 ring-gray-800 dark:ring-gray-700 shadow transition-shadow hover:shadow-md focus:shadow-md"
-                                alt={{@resource.facilitator.name}}
-                            />
-                        </div>
-                        <div>
-                            <div class="text-sm {{unless @resource.facilitator 'text-gray-300'}}">{{n-a @resource.facilitator.name "No facilitator"}}</div>
-                            <div class="text-xs text-gray-400 dark:text-gray-500">{{n-a @resource.facilitator.phone "No phone"}}</div>
-                        </div>
-                    </div>
+                    <Facilitator::Pill @facilitator={{@resource.facilitator}} @titleFallback={{n-a @resource.facilitator_name "No facilitator"}} @titleClass={{unless @resource.facilitator "text-gray-300"}} />
                 </div>
             </div>
         </div>

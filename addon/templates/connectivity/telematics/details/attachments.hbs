@@ -34,6 +34,7 @@
                         <div class="min-w-0">
                             <ModelSelect
                                 @modelName="vehicle"
+                                @selectedItemComponent={{component "select-option/vehicle" compact=true}}
                                 @query={{hash telematic_uuid=this.telematic.id}}
                                 @selectedModel={{this.selectedVehicle}}
                                 @placeholder="Any vehicle"
@@ -44,7 +45,7 @@
                                 @onChange={{this.updateSelectedVehicle}}
                                 as |vehicle|
                             >
-                                {{vehicle.displayName}}
+                                <SelectOption::Vehicle @option={{vehicle}} />
                             </ModelSelect>
                         </div>
                     </div>

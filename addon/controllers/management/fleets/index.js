@@ -1,5 +1,8 @@
 import Controller from '@ember/controller';
 import { inject as service } from '@ember/service';
+import { get } from '@ember/object';
+import { buildIdentityStub } from '../../../utils/identity-cell-resource';
+import relationValue from '../../../utils/relation-value';
 import { tracked } from '@glimmer/tracking';
 import fleetOpsOptions from '../../../utils/fleet-ops-options';
 
@@ -87,12 +90,10 @@ export default class ManagementFleetsIndexController extends Controller {
             },
             {
                 label: this.intl.t('column.service-area'),
-                cellComponent: 'table/cell/anchor',
-                action: async (fleet) => {
-                    const serviceArea = await fleet.get('service_area');
-                    this.serviceAreaActions.modal.view(serviceArea);
-                },
+                cellComponent: 'cell/service-area-identity',
                 permission: 'fleet-ops view service-area',
+                resourcePath: (fleet) =>
+                    relationValue(fleet, 'service_area') ?? buildIdentityStub(fleet, { type: 'service-area', name: get(fleet, 'service_area.name'), load: () => fleet.get('service_area') }),
                 valuePath: 'service_area.name',
                 resizable: true,
                 filterable: true,
@@ -103,12 +104,9 @@ export default class ManagementFleetsIndexController extends Controller {
             },
             {
                 label: this.intl.t('column.parent-fleet'),
-                cellComponent: 'table/cell/anchor',
+                cellComponent: 'cell/fleet-identity',
                 permission: 'fleet-ops view fleet',
-                action: async (fleet) => {
-                    const parentFleet = await fleet.get('parent_fleet');
-                    this.fleetActions.modal.view(parentFleet);
-                },
+                resourcePath: (fleet) => relationValue(fleet, 'parent_fleet'),
                 valuePath: 'parent_fleet.name',
                 resizable: true,
                 filterable: true,
@@ -119,12 +117,9 @@ export default class ManagementFleetsIndexController extends Controller {
             },
             {
                 label: this.intl.t('column.vendor'),
-                cellComponent: 'table/cell/anchor',
+                cellComponent: 'cell/vendor-identity',
                 permission: 'fleet-ops view vendor',
-                action: async (fleet) => {
-                    const vendor = await fleet.get('vendor');
-                    this.vendorActions.modal.view(vendor);
-                },
+                resourcePath: (fleet) => relationValue(fleet, 'vendor') ?? buildIdentityStub(fleet, { type: 'vendor', name: get(fleet, 'vendor.name'), load: () => fleet.get('vendor') }),
                 valuePath: 'vendor.name',
                 resizable: true,
                 hidden: true,
@@ -136,12 +131,9 @@ export default class ManagementFleetsIndexController extends Controller {
             },
             {
                 label: this.intl.t('column.zone'),
-                cellComponent: 'table/cell/anchor',
+                cellComponent: 'cell/zone-identity',
                 permission: 'fleet-ops view zone',
-                action: async (fleet) => {
-                    const zone = await fleet.get('zone');
-                    this.zoneActions.modal.view(zone);
-                },
+                resourcePath: (fleet) => relationValue(fleet, 'zone') ?? buildIdentityStub(fleet, { type: 'zone', name: get(fleet, 'zone.name'), load: () => fleet.get('zone') }),
                 valuePath: 'zone.name',
                 resizable: true,
                 filterable: true,

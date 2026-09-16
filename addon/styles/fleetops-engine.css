@@ -280,18 +280,6 @@ body[data-theme='dark'] .fleetops-connectivity-kpi-accent-rose .fleetops-connect
     right: 0.65rem;
 }
 
-.status-badge.long-offline-status-badge > span,
-.status-badge.long_offline-status-badge > span {
-    background-color: #854d0e;
-    border-color: #a16207;
-    color: #fef9c3;
-}
-
-.status-badge.long-offline-status-badge > span svg,
-.status-badge.long_offline-status-badge > span svg {
-    color: #fde047;
-}
-
 .fleetops-device-status-badge.status-badge > span {
     padding: 0 0.25rem !important;
     border-radius: 0.125rem !important;
@@ -4780,7 +4768,9 @@ body[data-theme='dark'] .order-pool-card.selected,
     background: #263040 !important;
 }
 
-/* ── Driver card ── */
+/* ── Driver card ──
+   The hover colours were written for the dark orchestrator workbench; the
+   drivers index card shares the class, so light mode gets its own pair. */
 .driver-card {
     cursor: pointer;
     transition:
@@ -4789,6 +4779,12 @@ body[data-theme='dark'] .order-pool-card.selected,
 }
 
 .driver-card:hover {
+    background: #f3f4f6; /* gray-100 */
+    border-color: #d1d5db; /* gray-300 */
+}
+
+body[data-theme='dark'] .driver-card:hover,
+.dark .driver-card:hover {
     background: #263040;
     border-color: #4b5563;
 }
@@ -8535,44 +8531,6 @@ body[data-theme='dark'] .fleetbase-ai-create-order-preview__cancelled {
     }
 }
 
-/* ── Trailer lifecycle, attachment & towing badges ──
-   ember-ui's badge palette has no entries for these values, so they would
-   otherwise render as unstyled `x-status-badge` elements. Colors follow the
-   ember-ui badge.css convention (800 background / 700 border / 100 text). */
-.status-badge.attached-status-badge > span,
-.status-badge.in-use-status-badge > span {
-    background-color: #1e40af;
-    border-color: #1d4ed8;
-    color: #dbeafe;
-}
-
-.status-badge.attached-status-badge > span svg,
-.status-badge.in-use-status-badge > span svg {
-    color: #93c5fd;
-}
-
-.status-badge.detached-status-badge > span,
-.status-badge.retired-status-badge > span {
-    background-color: #1f2937;
-    border-color: #374151;
-    color: #f3f4f6;
-}
-
-.status-badge.detached-status-badge > span svg,
-.status-badge.retired-status-badge > span svg {
-    color: #d1d5db;
-}
-
-.status-badge.out-of-service-status-badge > span {
-    background-color: #991b1b;
-    border-color: #b91c1c;
-    color: #fee2e2;
-}
-
-.status-badge.out-of-service-status-badge > span svg {
-    color: #fca5a5;
-}
-
 /* ── The follow-up an inspection raises ──
    What an action will do, previewed before it happens, and what it made,
    shown afterwards as something you can open rather than a bare id. */
@@ -8713,31 +8671,6 @@ body[data-theme='dark'] .inspection-followup__title {
     color: #f9fafb;
 }
 
-/* ── Pills ──
-   The identity pill is how the console shows a linked record, but it gave no
-   sign it could be clicked: the cursor stayed default and nothing responded.
-   Only pills that were given something to do react. */
-.fleetbase-pill > a[href] {
-    border-radius: 0.375rem;
-    padding: 0.125rem;
-    margin: -0.125rem;
-    transition:
-        background-color 120ms ease,
-        opacity 120ms ease;
-}
-
-.fleetbase-pill > a[href]:hover {
-    background-color: rgb(0 0 0 / 4%);
-}
-
-.fleetbase-pill > a[href]:hover .text-sm {
-    text-decoration: underline;
-}
-
-body[data-theme='dark'] .fleetbase-pill > a[href]:hover {
-    background-color: rgb(255 255 255 / 6%);
-}
-
 /* ── A link out of a details panel to the record it names ──
    The form name was a bare button with no styling and a full-size icon
    sitting apart from it; it did not read as a link at all. */
@@ -8864,54 +8797,6 @@ body[data-theme='dark'] .inspection-history__form {
 }
 
 body[data-theme='dark'] .inspection-history__failed {
-    color: #fca5a5;
-}
-
-/* ── Inspection result, status and defect badges ──
-   ember-ui's badge palette has no entries for these values, so a result of
-   "passed", a "submitted" or "needs review" inspection, or an unsafe defect
-   would render as an unstyled chip. `needs_review` is selectable from the
-   status field and counted by the hub, so it is reachable, not theoretical.
-   Colors follow the ember-ui badge.css convention
-   (800 background / 700 border / 100 text). */
-.status-badge.passed-status-badge > span {
-    background-color: #166534;
-    border-color: #15803d;
-    color: #dcfce7;
-}
-
-.status-badge.passed-status-badge > span svg {
-    color: #86efac;
-}
-
-.status-badge.submitted-status-badge > span {
-    background-color: #1e40af;
-    border-color: #1d4ed8;
-    color: #dbeafe;
-}
-
-.status-badge.submitted-status-badge > span svg {
-    color: #93c5fd;
-}
-
-/* Waiting on a supervisor: the warning family, like ember-ui's "pending". */
-.status-badge.needs-review-status-badge > span {
-    background-color: #92400e;
-    border-color: #b45309;
-    color: #fef3c7;
-}
-
-.status-badge.needs-review-status-badge > span svg {
-    color: #fcd34d;
-}
-
-.status-badge.unsafe-status-badge > span {
-    background-color: #991b1b;
-    border-color: #b91c1c;
-    color: #fee2e2;
-}
-
-.status-badge.unsafe-status-badge > span svg {
     color: #fca5a5;
 }
 
@@ -9161,69 +9046,6 @@ body[data-theme='dark'] .fleetops-card-meta {
 
 body[data-theme='dark'] .fleetops-card-meta-link {
     color: #60a5fa;
-}
-
-/* ── Multi-model table filter (mirrors ember-ui's .filter-multi-input clear button) ── */
-.filter-multi-model {
-    position: relative;
-}
-
-.filter-multi-model > .clear-button {
-    position: absolute;
-    top: 0;
-    right: 0;
-    padding: 0.5rem 0.75rem 0 0;
-    color: #374151;
-}
-
-.filter-multi-model > .clear-button:hover {
-    opacity: 0.5;
-}
-
-.filter-multi-model > .clear-button:disabled {
-    opacity: 0.3;
-    cursor: default;
-}
-
-body[data-theme='dark'] .filter-multi-model > .clear-button {
-    color: #6b7280;
-}
-
-.filter-multi-model > .fleetbase-model-select,
-.filter-multi-model > .fleetbase-model-select > .ember-basic-dropdown,
-.filter-multi-model .ember-power-select-multiple-trigger {
-    flex: 1 1 auto;
-    width: 100%;
-    min-width: 0;
-}
-
-/* The small form-input height clips the multiple trigger and turns it into a scroller
-   before anything is selected; let it start at the input height and grow with chips. */
-.filter-multi-model .ember-power-select-multiple-trigger {
-    display: flex;
-    align-items: center;
-    height: auto !important;
-    min-height: 2.125rem;
-    max-height: none !important;
-    overflow: visible !important;
-    padding-top: 0.125rem;
-    padding-bottom: 0.125rem;
-    padding-right: 2.5rem;
-}
-
-.filter-multi-model .ember-power-select-multiple-options {
-    flex: 1 1 auto;
-    min-width: 0;
-    gap: 0.125rem;
-}
-
-.filter-multi-model .ember-power-select-multiple-option {
-    margin: 0.125rem 0.125rem 0.125rem 0;
-}
-
-.filter-multi-model .ember-power-select-trigger-multiple-input {
-    height: 1.625rem;
-    min-width: 4rem;
 }
 
 /* ==========================================================================
@@ -10201,82 +10023,6 @@ body[data-theme='dark'] .inspection-link__pin-code {
         width: 100%;
         justify-content: center;
     }
-}
-
-/*
- * A select option: photo, name, and a line of detail. Colours are inherited
- * rather than set, so an option reads correctly on the dropdown's highlighted
- * row and in dark mode without rules of its own for either.
- */
-.select-option {
-    display: flex;
-    align-items: center;
-    gap: 0.625rem;
-    min-width: 0;
-    padding: 0.125rem 0;
-}
-
-.select-option__photo {
-    flex-shrink: 0;
-    width: 2rem;
-    height: 2rem;
-    object-fit: cover;
-    border-radius: 9999px;
-    background-color: rgb(156 163 175 / 20%);
-}
-
-.select-option__photo[data-shape='square'] {
-    border-radius: 0.375rem;
-}
-
-.select-option__text {
-    display: flex;
-    flex: 1 1 auto;
-    flex-direction: column;
-    gap: 0.125rem;
-    min-width: 0;
-}
-
-.select-option__title,
-.select-option__details {
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-}
-
-.select-option__title {
-    font-size: 0.8125rem;
-    font-weight: 600;
-    line-height: 1.2;
-}
-
-.select-option__details {
-    font-size: 0.6875rem;
-    line-height: 1.2;
-    opacity: 0.7;
-}
-
-/* In a closed select there is room for one line: a small photo, the name, then the detail. */
-.select-option--compact {
-    gap: 0.5rem;
-    padding: 0;
-}
-
-.select-option--compact .select-option__photo {
-    width: 1.25rem;
-    height: 1.25rem;
-}
-
-.select-option--compact .select-option__text {
-    flex-direction: row;
-    align-items: baseline;
-    gap: 0.375rem;
-}
-
-.select-option--compact .select-option__title {
-    flex-shrink: 0;
-    max-width: 60%;
-    font-weight: 500;
 }
 
 /* A link just generated, shown above the form until the modal closes. */
@@ -12515,4 +12261,51 @@ body[data-theme='dark'] .fleet-ops-radar-sources-warning {
     background: rgba(217, 119, 6, 0.15);
     border-color: rgba(217, 119, 6, 0.4);
     color: #fcd34d;
+}
+
+/* ── Resource list cell ──
+   A has-many column (trailers, devices) shows one pill per record, drawn at
+   the identity cell's size: a 1.25rem circle, the name centred beside it,
+   and a hover box that stays inside the cell instead of touching its border. */
+.resource-list-pill > a[href],
+.resource-list-pill > .fleetbase-pill-body {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    padding: 0.125rem 0.375rem;
+    margin: 0;
+    border-radius: 0.375rem;
+}
+
+.resource-list-pill .fleetbase-pill-body > * + * {
+    margin-left: 0;
+}
+
+.resource-list-pill .fleetbase-pill-body > .relative {
+    width: 1.25rem;
+    height: 1.25rem;
+}
+
+.resource-list-pill .fleetbase-pill-body img.flb--img,
+.resource-list-pill .fleetbase-pill-body .resource-pill-icon {
+    width: 1.25rem;
+    height: 1.25rem;
+    box-shadow: none;
+    border: 1px solid #e5e7eb;
+}
+
+body[data-theme='dark'] .resource-list-pill .fleetbase-pill-body img.flb--img,
+body[data-theme='dark'] .resource-list-pill .fleetbase-pill-body .resource-pill-icon {
+    border-color: #374151;
+}
+
+.resource-list-pill .fleetbase-pill-body .resource-pill-online-dot {
+    width: 0.375rem;
+    height: 0.375rem;
+    margin: -0.125rem 0 0 -0.125rem;
+}
+
+.resource-list-pill .fleetbase-pill-body .text-sm {
+    font-size: 0.875rem;
+    line-height: 1rem;
 }

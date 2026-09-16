@@ -15,6 +15,7 @@
 
     <FuelIntegration::Form
         @resource={{@model}}
+        @isEditing={{true}}
         @saveLabel="Save Changes"
         @footerHelp="Changes affect credential tests, transaction sync, matching, and Fuel Report creation."
         @isSaving={{this.save.isRunning}}

@@ -83,6 +83,7 @@
             <InputGroup @name={{t "vehicle.fields.driver-assigned"}}>
                 <ModelSelect
                     @modelName="driver"
+                    @selectedItemComponent={{component "select-option/driver" compact=true}}
                     @selectedModel={{@resource.driver}}
                     @placeholder={{t "vehicle.fields.select-driver"}}
                     @triggerClass="form-select form-input"
@@ -92,7 +93,7 @@
                     @permission="fleet-ops assign-driver-for vehicle"
                     as |model|
                 >
-                    {{model.name}}
+                    <SelectOption::Driver @option={{model}} />
                 </ModelSelect>
             </InputGroup>
 

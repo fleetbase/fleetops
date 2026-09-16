@@ -14,6 +14,7 @@
             <div class="w-56">
                 <ModelSelect
                     @modelName="vehicle"
+                    @selectedItemComponent={{component "select-option/vehicle" compact=true}}
                     @selectedModel={{this.selectedVehicle}}
                     @placeholder={{t "fleet.vehicle-listing.add-vehicle"}}
                     @triggerClass="form-select form-input form-select-sm form-input-sm"
@@ -22,7 +23,7 @@
                     @onChange={{this.onAddVehicle}}
                     as |model|
                 >
-                    {{model.displayName}}
+                    <SelectOption::Vehicle @option={{model}} />
                 </ModelSelect>
             </div>
         </div>
@@ -56,17 +57,7 @@
                                 </div>
                             {{/if}}
                             <div class="flex items-center">
-                                <div class="flex flex-row items-start">
-                                    <div class="mr-2">
-                                        <div class="relative">
-                                            <Image src={{resource-image vehicle.photo_url "vehicle"}} alt={{vehicle.name}} class="w-5 h-5 rounded-md" @fallbackSrc={{(placeholder-image "vehicle")}} />
-                                            <FaIcon @icon="circle" class="absolute right-0 top-0 -mr-1 -mt-1 {{if vehicle.online 'text-green-500' 'text-yellow-200'}}" />
-                                        </div>
-                                    </div>
-                                    <div>
-                                        <div class="font-semibold">{{vehicle.displayName}}</div>
-                                    </div>
-                                </div>
+                                <SelectOption::Vehicle @option={{vehicle}} @compact={{true}} />
                             </div>
                         </div>
                         <div class="flex items-center justify-end">

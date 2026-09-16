@@ -19,6 +19,7 @@ export default class TelematicSettingsComponent extends Component {
     }
 
     get webhookUrl() {
+        if (this.provider?.metadata?.telemetry?.secure_webhooks) return null;
         const url = this.provider.webhook_url;
         const id = this.args.resource?.public_id;
 

@@ -1,0 +1,10 @@
+{{! A column whose value is a list of related records: one compact pill per record. }}
+{{#if this.items.length}}
+    <div class="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1" data-test-resource-list ...attributes>
+        {{#each this.items as |item|}}
+            <Resource::Pill @resource={{item}} @resourceType={{@column.resourceType}} @subtitle="" @imageSize="20" @contentWrapperClass="min-w-0" class="resource-list-pill" />
+        {{/each}}
+    </div>
+{{else}}
+    <div class="py-1 text-xs text-gray-500 dark:text-gray-400" data-test-resource-list-empty ...attributes>{{or @column.emptyText "-"}}</div>
+{{/if}}

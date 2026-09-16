@@ -6,7 +6,7 @@
             <FuelIntegration::MatchingPriority @order={{@model.sync_settings.matching_order}} />
         </div>
         <div class="mt-4 flex flex-wrap items-center gap-2">
-            <Button @icon="receipt" @text="Review Unmatched Transactions" @size="sm" @onClick={{transition-to "management.fuel-transactions.index" (query-params sync_status="unmatched" connection=@model.uuid)}} />
+            <Button @icon="receipt" @text="Review Unmatched Transactions" @size="sm" @onClick={{this.reviewUnmatchedTransactions}} />
             <Button @icon="cog" @text="Edit Matching Rules" @size="sm" @onClick={{transition-to "connectivity.fuel-providers.edit" @model}} />
         </div>
     </section>

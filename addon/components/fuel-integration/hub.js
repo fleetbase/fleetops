@@ -3,6 +3,8 @@ import { tracked } from '@glimmer/tracking';
 import { inject as service } from '@ember/service';
 import { action } from '@ember/object';
 
+import { fuelDate, fuelNumber, fuelMoney } from '../../utils/fuel-integration-format';
+
 const WARNING_STATUSES = ['error', 'disabled'];
 
 export default class FuelIntegrationHubComponent extends Component {
@@ -62,13 +64,12 @@ export default class FuelIntegrationHubComponent extends Component {
     }
 
     get lastSyncLabel() {
-        const syncedAt = this.connections
+        const dates = this.connections
             .map((connection) => connection.last_synced_at)
             .filter(Boolean)
-            .sort()
-            .pop();
-
-        return syncedAt ? new Date(syncedAt).toLocaleString() : 'Not synced';
+            .map((value) => new Date(value).getTime())
+            .filter(Number.isFinite);
+        return dates.length ? fuelDate(Math.max(...dates)) : 'Not synced';
     }
 
     get kpiWidgets() {
@@ -93,7 +94,7 @@ export default class FuelIntegrationHubComponent extends Component {
             },
             {
                 icon: 'triangle-exclamation',
-                label: 'Unmatched transactions',
+                label: 'Unmatched in latest runs',
                 value: this.unmatchedTransactionsCount,
                 help: this.unmatchedTransactionsCount > 0 ? 'Need vehicle or trip matching' : 'No unmatched count',
                 action: 'Review matches',
@@ -102,7 +103,7 @@ export default class FuelIntegrationHubComponent extends Component {
             },
             {
                 icon: 'receipt',
-                label: 'Imported spend',
+                label: 'Latest import spend',
                 value: this.formatSpend,
                 help: `${this.formatLiters} imported`,
                 action: 'Open ledger',
@@ -113,21 +114,16 @@ export default class FuelIntegrationHubComponent extends Component {
     }
 
     get formatSpend() {
-        const currency = this.currentUser?.company?.currency || this.currentUser?.currency || 'USD';
-
-        if (!this.totalSpend) {
-            return `${currency} 0`;
+        const currencies = new Map();
+        for (const connection of this.connections) {
+            const currency = connection.last_sync_state?.summary?.currency || (connection.provider === 'petroapp' ? 'SAR' : null);
+            if (currency) currencies.set(currency, (currencies.get(currency) || 0) + Number(connection.last_sync_state?.summary?.amount || 0));
         }
-
-        return `${currency} ${(this.totalSpend / 100).toLocaleString(undefined, { maximumFractionDigits: 2 })}`;
+        return [...currencies].map(([currency, amount]) => fuelMoney(amount, currency)).join(' · ') || 'No spend recorded';
     }
 
     get formatLiters() {
-        if (!this.totalLiters) {
-            return '0 L';
-        }
-
-        return `${Number(this.totalLiters).toLocaleString(undefined, { maximumFractionDigits: 1 })} L`;
+        return `${fuelNumber(this.totalLiters)} L`;
     }
 
     @action openProvider(provider) {
@@ -153,7 +149,7 @@ export default class FuelIntegrationHubComponent extends Component {
 
         const connection = this.connections[0];
         if (connection) {
-            return this.fuelIntegrationActions.transition.view(connection);
+            return this.fuelIntegrationActions.transitionTo('connectivity.fuel-providers.details.sync', connection);
         }
 
         return this.fuelIntegrationActions.transition.create();

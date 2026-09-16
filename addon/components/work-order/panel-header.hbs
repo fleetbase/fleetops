@@ -10,8 +10,11 @@
                 {{#if @resource.priority}}
                     <div class="text-xs text-gray-400 dark:text-gray-500">{{t "column.priority"}}: {{smart-humanize @resource.priority}}</div>
                 {{/if}}
-                {{#if @resource.assignee_name}}
-                    <div class="text-xs text-gray-400 dark:text-gray-500">{{t "column.assignee"}}: {{@resource.assignee_name}}</div>
+                {{#if (or @resource.assignee @resource.assignee_name)}}
+                    <div class="flex flex-row items-center text-xs text-gray-400 dark:text-gray-500">
+                        <span class="mr-1">{{t "column.assignee"}}:</span>
+                        <span>{{or @resource.assignee_name @resource.assignee.name}}</span>
+                    </div>
                 {{/if}}
             </div>
         </div>

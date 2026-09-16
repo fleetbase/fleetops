@@ -26,7 +26,9 @@
 
             <div class="field-info-container">
                 <div class="field-name">Vendor</div>
-                <div class="field-value">{{n-a @resource.vendor_name}}</div>
+                <div class="field-value">
+                    <Vendor::Pill @vendor={{resource-relation @resource "vendor"}} @titleFallback={{n-a @resource.vendor_name}} />
+                </div>
             </div>
 
             <div class="field-info-container">

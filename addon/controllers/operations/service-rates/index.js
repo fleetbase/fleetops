@@ -1,5 +1,8 @@
 import Controller from '@ember/controller';
 import { inject as service } from '@ember/service';
+import { get } from '@ember/object';
+import { buildIdentityStub } from '../../../utils/identity-cell-resource';
+import relationValue from '../../../utils/relation-value';
 import { tracked } from '@glimmer/tracking';
 
 export default class OperationsServiceRatesIndexController extends Controller {
@@ -74,7 +77,10 @@ export default class OperationsServiceRatesIndexController extends Controller {
             {
                 label: this.intl.t('column.service-area'),
                 valuePath: 'service_area.name',
-                cellComponent: 'table/cell/base',
+                cellComponent: 'cell/service-area-identity',
+                resourcePath: (rate) =>
+                    relationValue(rate, 'service_area') ??
+                    buildIdentityStub(rate, { type: 'service-area', name: rate.service_area_name ?? get(rate, 'service_area.name'), load: () => rate.get('service_area') }),
                 resizable: true,
                 sortable: true,
                 filterable: true,
@@ -86,7 +92,9 @@ export default class OperationsServiceRatesIndexController extends Controller {
             {
                 label: this.intl.t('column.zone'),
                 valuePath: 'zone.name',
-                cellComponent: 'table/cell/base',
+                cellComponent: 'cell/zone-identity',
+                resourcePath: (rate) =>
+                    relationValue(rate, 'zone') ?? buildIdentityStub(rate, { type: 'zone', name: rate.zone_name ?? get(rate, 'zone.name'), load: () => rate.get('zone') }),
                 resizable: true,
                 sortable: true,
                 filterable: true,

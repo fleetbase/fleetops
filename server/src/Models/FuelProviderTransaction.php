@@ -17,6 +17,7 @@ class FuelProviderTransaction extends Model
     use HasPublicId;
     use HasApiModelBehavior;
     use Searchable;
+    public bool $createdFuelReport = false;
 
     protected $table             = 'fuel_provider_transactions';
     protected $publicIdType      = 'fuel_provider_transaction';

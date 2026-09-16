@@ -104,6 +104,7 @@
             <InputGroup @name={{t "trailer.fields.category"}} @helpText={{t "trailer.help.category"}}>
                 <ModelSelect
                     @modelName="category"
+                    @selectedItemComponent={{component "select-option/category" compact=true}}
                     @selectedModel={{@resource.category}}
                     @query={{hash for="trailer"}}
                     @placeholder={{t "trailer.placeholders.category"}}
@@ -115,7 +116,7 @@
                     @disabled={{cannot-write @resource}}
                     as |model|
                 >
-                    {{model.name}}
+                    <SelectOption::Category @option={{model}} />
                 </ModelSelect>
             </InputGroup>
 
@@ -353,6 +354,7 @@
             <InputGroup @name={{t "trailer.fields.vendor"}} @helpText={{t "trailer.help.vendor"}}>
                 <ModelSelect
                     @modelName="vendor"
+                    @selectedItemComponent={{component "select-option/vendor" compact=true}}
                     @selectedModel={{@resource.vendor}}
                     @placeholder={{t "trailer.placeholders.vendor"}}
                     @triggerClass="form-select form-input"
@@ -363,13 +365,14 @@
                     @disabled={{cannot-write @resource}}
                     as |model|
                 >
-                    {{model.name}}
+                    <SelectOption::Vendor @option={{model}} />
                 </ModelSelect>
             </InputGroup>
 
             <InputGroup @name={{t "trailer.fields.warranty"}} @helpText={{t "trailer.help.warranty"}}>
                 <ModelSelect
                     @modelName="warranty"
+                    @selectedItemComponent={{component "select-option/warranty" compact=true}}
                     @selectedModel={{@resource.warranty}}
                     @placeholder={{t "trailer.placeholders.warranty"}}
                     @triggerClass="form-select form-input"
@@ -380,7 +383,7 @@
                     @disabled={{cannot-write @resource}}
                     as |model|
                 >
-                    {{or model.name (concat model.policy_number " - " model.provider)}}
+                    <SelectOption::Warranty @option={{model}} />
                 </ModelSelect>
             </InputGroup>
 

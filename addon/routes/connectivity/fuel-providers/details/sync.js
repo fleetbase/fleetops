@@ -1,18 +1,11 @@
 import Route from '@ember/routing/route';
-import { inject as service } from '@ember/service';
 
-export default class ConnectivityFuelProvidersIndexDetailsSyncRoute extends Route {
-    @service store;
-
+export default class FuelIntegrationSyncRoute extends Route {
+    setupController(controller, model) {
+        super.setupController(controller, model);
+        controller.resetDates();
+    }
     model() {
-        const connection = this.modelFor('connectivity.fuel-providers.details');
-
-        return {
-            connection,
-            syncRuns: this.store.query('fuel-provider-sync-run', {
-                connection: connection.uuid,
-                sort: '-created_at',
-            }),
-        };
+        return this.modelFor('connectivity.fuel-providers.details');
     }
 }

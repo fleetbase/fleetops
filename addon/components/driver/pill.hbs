@@ -1,16 +1,24 @@
-<Pill
-    @resource={{this.resource}}
-    @imageSrc={{resource-image this.resource.photo_url "driver"}}
-    @titleFallback={{or @titleFallback "No driver"}}
-    @subtitle={{n-a this.resource.phone (if this.resource "No phone" "-")}}
-    @imageFallback={{(placeholder-image "driver")}}
-    @showOnlineIndicator={{if this.resource true false}}
+<Resource::Pill
+    @resource={{(or @driver @resource)}}
+    @resourceType="driver"
+    @title={{@title}}
+    @titleFallback={{@titleFallback}}
+    @subtitle={{@subtitle}}
+    @showOnlineIndicator={{@showOnlineIndicator}}
+    @noPopover={{@noPopover}}
+    @popoverPlacement={{@popoverPlacement}}
+    @static={{@static}}
     @onClick={{@onClick}}
+    @onView={{@onView}}
     @anchorClass={{@anchorClass}}
     @imageClass={{@imageClass}}
     @imageWrapperClass={{@imageWrapperClass}}
     @contentWrapperClass={{@contentWrapperClass}}
     @titleClass={{@titleClass}}
     @subtitleClass={{@subtitleClass}}
+    @useBlock={{(has-block)}}
     ...attributes
-/>
+    as |resource|
+>
+    {{yield resource}}
+</Resource::Pill>

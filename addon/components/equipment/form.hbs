@@ -116,6 +116,7 @@
                 <InputGroup @name="Asset">
                     <ModelSelect
                         @modelName={{this.equipableModelName}}
+                        @selectedItemComponent={{if (resource-component "select-option" this.equipableModelName) (component (resource-component "select-option" this.equipableModelName) compact=true)}}
                         @selectedModel={{@resource.equipable}}
                         @placeholder="Select asset to equip on"
                         @triggerClass="form-select form-input"
@@ -125,7 +126,13 @@
                         @disabled={{cannot-write @resource}}
                         as |model|
                     >
-                        {{or model.name model.public_id}}
+                        {{#let (resource-component "select-option" this.equipableModelName) as |selectOption|}}
+                            {{#if selectOption}}
+                                {{component selectOption option=model}}
+                            {{else}}
+                                {{or model.displayName model.name model.public_id}}
+                            {{/if}}
+                        {{/let}}
                     </ModelSelect>
                 </InputGroup>
             {{/if}}
@@ -165,6 +172,7 @@
             <InputGroup @name="Warranty" @wrapperClass="col-span-2">
                 <ModelSelect
                     @modelName="warranty"
+                    @selectedItemComponent={{component "select-option/warranty" compact=true}}
                     @selectedModel={{@resource.warranty}}
                     @placeholder="Select Warranty (optional)"
                     @triggerClass="form-select form-input"
@@ -175,9 +183,7 @@
                     @disabled={{cannot-write @resource}}
                     as |model|
                 >
-                    {{model.policy_number}}
-                    -
-                    {{model.provider}}
+                    <SelectOption::Warranty @option={{model}} />
                 </ModelSelect>
             </InputGroup>
         </div>

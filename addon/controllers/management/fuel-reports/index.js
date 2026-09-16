@@ -1,5 +1,6 @@
 import Controller from '@ember/controller';
-import { get } from '@ember/object';
+import { buildIdentityStub } from '../../../utils/identity-cell-resource';
+import relationValue from '../../../utils/relation-value';
 import { inject as service } from '@ember/service';
 import { tracked } from '@glimmer/tracking';
 
@@ -103,6 +104,9 @@ export default class ManagementFuelReportsIndexController extends Controller {
             {
                 label: this.intl.t('column.reporter'),
                 valuePath: 'reporter_name',
+                cellComponent: 'table/cell/user-identity',
+                resourcePath: (fuelReport) =>
+                    relationValue(fuelReport, 'reporter') ?? buildIdentityStub(fuelReport, { type: 'user', nameKey: 'reporter_name', load: () => fuelReport.get('reporter') }),
                 resizable: true,
                 sortable: true,
                 filterable: true,
@@ -116,35 +120,9 @@ export default class ManagementFuelReportsIndexController extends Controller {
                 valuePath: 'driver_name',
                 cellComponent: 'cell/driver-identity',
                 permission: 'fleet-ops view driver',
-                action: async (driver) => {
-                    const resolvedDriver = driver?.loadResource ? await driver.loadResource() : driver;
-
-                    if (resolvedDriver) {
-                        this.fuelReportActions.driverActions.panel.view(resolvedDriver);
-                    }
-                },
+                action: this.fuelReportActions.driverActions.panel.view,
                 emptyText: '-',
-                showStatusBadge: true,
-                resourcePath: (fuelReport) => {
-                    const driver = get(fuelReport, 'driver');
-
-                    if (driver) {
-                        return driver;
-                    }
-
-                    const driverName = get(fuelReport, 'driver_name');
-
-                    if (driverName) {
-                        return {
-                            id: get(fuelReport, 'driver_uuid'),
-                            name: driverName,
-                            display_name: driverName,
-                            loadResource: () => fuelReport.loadDriver?.(),
-                        };
-                    }
-
-                    return null;
-                },
+                resourcePath: (fuelReport) => relationValue(fuelReport, 'driver') ?? buildIdentityStub(fuelReport, { type: 'driver', load: () => fuelReport.loadDriver?.() }),
                 resizable: true,
                 sortable: true,
                 filterable: true,
@@ -158,37 +136,9 @@ export default class ManagementFuelReportsIndexController extends Controller {
                 valuePath: 'vehicle_name',
                 cellComponent: 'cell/vehicle-identity',
                 permission: 'fleet-ops view vehicle',
-                action: async (vehicle) => {
-                    const resolvedVehicle = vehicle?.loadResource ? await vehicle.loadResource() : vehicle;
-
-                    if (resolvedVehicle) {
-                        this.fuelReportActions.vehicleActions.panel.view(resolvedVehicle);
-                    }
-                },
+                action: this.fuelReportActions.vehicleActions.panel.view,
                 emptyText: '-',
-                showStatusBadge: true,
-                resourcePath: (fuelReport) => {
-                    const vehicle = get(fuelReport, 'vehicle');
-
-                    if (vehicle) {
-                        return vehicle;
-                    }
-
-                    const vehicleName = get(fuelReport, 'vehicle_name');
-
-                    if (vehicleName) {
-                        return {
-                            id: get(fuelReport, 'vehicle_uuid'),
-                            displayName: vehicleName,
-                            display_name: vehicleName,
-                            name: vehicleName,
-                            vehicle_number: get(fuelReport, 'vehicle_uuid'),
-                            loadResource: () => fuelReport.loadVehicle?.(),
-                        };
-                    }
-
-                    return null;
-                },
+                resourcePath: (fuelReport) => relationValue(fuelReport, 'vehicle') ?? buildIdentityStub(fuelReport, { type: 'vehicle', load: () => fuelReport.loadVehicle?.() }),
                 resizable: true,
                 sortable: true,
                 filterable: true,

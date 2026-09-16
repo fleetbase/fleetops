@@ -33,12 +33,16 @@
             </div>
             <div class="field-info-container">
                 <div class="field-name">Asset</div>
-                <div class="field-value">{{n-a (or @resource.subject.displayName @resource.subject.name @resource.subject_name)}}</div>
+                <div class="field-value">
+                    <MaintenanceSubject::Pill @maintenanceSubject={{resource-relation @resource "subject"}} @titleFallback={{n-a @resource.subject_name}} />
+                </div>
             </div>
-            {{#if (or @resource.default_assignee.displayName @resource.default_assignee.name)}}
+            {{#if (or @resource.default_assignee @resource.default_assignee_name)}}
                 <div class="field-info-container">
                     <div class="field-name">Default Assignee</div>
-                    <div class="field-value">{{n-a (or @resource.default_assignee.displayName @resource.default_assignee.name)}}</div>
+                    <div class="field-value">
+                        <Facilitator::Pill @facilitator={{resource-relation @resource "default_assignee"}} @titleFallback={{n-a @resource.default_assignee_name}} />
+                    </div>
                 </div>
             {{/if}}
             <div class="field-info-container">

@@ -1,5 +1,13 @@
 <?php
 
+require_once __DIR__ . '/../../../../Support/AfaqyTestCrypto.php';
+
+beforeEach(function () {
+    app()->instance('encrypter', afaqyTestCrypto());
+    Illuminate\Support\Facades\Crypt::clearResolvedInstance('encrypter');
+    Illuminate\Support\Facades\Cache::flush();
+});
+
 use Fleetbase\FleetOps\Support\Telematics\Providers\AfaqyProvider;
 
 class FleetOpsAfaqyProviderUnitProbe extends AfaqyProvider
@@ -175,7 +183,7 @@ test('afaqy provider fetches paginated devices details and credential schema', f
     ])
         ->and($details)->toBe(['_id' => 'unit-1', 'name' => 'Unit 1'])
         ->and($provider->postCalls[0][0])->toBe('/units/lists')
-        ->and($provider->postCalls[0][1]['data']['limit'])->toBe(500)
+        ->and($provider->postCalls[0][1]['data']['limit'])->toBe(1000)
         ->and($provider->postCalls[0][1]['data']['offset'])->toBe(10)
         ->and($provider->postCalls[0][1]['data']['filters'])->toBeInstanceOf(stdClass::class)
         ->and($provider->postCalls[0][1]['data']['address'])->toBeTrue()

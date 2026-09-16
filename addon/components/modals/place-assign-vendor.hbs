@@ -4,15 +4,16 @@
             <InputGroup @name={{t "modals.place-assign-vendor.select-vendor"}} @value={{@options.place.vendor_uuid}}>
                 <ModelSelect
                     @modelName="vendor"
+                    @selectedItemComponent={{component "select-option/vendor" compact=true}}
                     @selectedModel={{@options.place.vendor_uuid}}
                     @placeholder={{t "modals.place-assign-vendor.select-vendor"}}
                     @triggerClass="form-select form-input"
                     @infiniteScroll={{false}}
                     @renderInPlace={{true}}
-                    @onChange={{fn (mut @options.place.vendor_uuid)}}
+                    @onChangeId={{fn (mut @options.place.vendor_uuid)}}
                     as |model|
                 >
-                    {{model.name}}
+                    <SelectOption::Vendor @option={{model}} />
                 </ModelSelect>
             </InputGroup>
         </div>
