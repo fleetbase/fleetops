@@ -65,5 +65,5 @@
             />
         </div>
     </div>
-    {{#if (eq @resource.provider "afaqy")}}<Device::Telemetry @resource={{@resource}} />{{/if}}
+    {{#if @resource.meta.telemetry}}<Device::Telemetry @resource={{@resource}} />{{/if}}
 </div>

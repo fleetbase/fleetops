@@ -144,7 +144,7 @@ export default class TelematicFormComponent extends Component {
     }
 
     get webhookUrl() {
-        if (this.selectedProvider?.key === 'afaqy') return null;
+        if (this.selectedProvider?.metadata?.telemetry?.secure_webhooks) return null;
         const url = this.selectedProvider?.webhook_url;
         const id = this.args.resource?.public_id;
 

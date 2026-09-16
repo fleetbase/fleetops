@@ -1,6 +1,6 @@
 <?php
 
-namespace Fleetbase\FleetOps\Support\Telematics\Afaqy;
+namespace Fleetbase\FleetOps\Support\Telematics\Telemetry;
 
 use Illuminate\Bus\UniqueLock;
 use Illuminate\Contracts\Bus\Dispatcher;

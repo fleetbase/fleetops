@@ -5,7 +5,7 @@ import { task } from 'ember-concurrency';
 import { registerDestructor } from '@ember/destroyable';
 import { action } from '@ember/object';
 
-export default class AfaqyIntegrationStatusComponent extends Component {
+export default class TelematicTelemetryStatusComponent extends Component {
     @service fetch;
     @tracked diagnostics;
     @tracked webhookUrl;
@@ -14,15 +14,38 @@ export default class AfaqyIntegrationStatusComponent extends Component {
 
     constructor() {
         super(...arguments);
-        this.monitor.perform();
+        if (this.supported) this.monitor.perform();
         registerDestructor(this, () => clearTimeout(this.timer));
     }
 
     @action resourceChanged() {
         this.monitor.cancelAll();
+        this.configure.cancelAll();
         clearTimeout(this.timer);
         this.webhookUrl = null;
-        this.monitor.perform();
+        this.diagnostics = null;
+        this.error = null;
+        if (this.supported) this.monitor.perform();
+    }
+
+    get provider() {
+        return this.args.provider ?? this.args.resource?.provider_descriptor;
+    }
+
+    get supported() {
+        return Boolean(this.id && this.provider?.metadata?.telemetry?.durable_ingestion);
+    }
+
+    get supportsSecureWebhooks() {
+        return this.provider?.metadata?.telemetry?.secure_webhooks === true;
+    }
+
+    get registrationInstructions() {
+        return this.provider?.metadata?.telemetry?.registration_instructions;
+    }
+
+    get provisional() {
+        return this.provider?.metadata?.telemetry?.contract_status === 'provisional';
     }
 
     get id() {
@@ -32,10 +55,10 @@ export default class AfaqyIntegrationStatusComponent extends Component {
     @task *monitor() {
         while (true) {
             try {
-                this.diagnostics = yield this.fetch.get(`telematics/${this.id}/afaqy-diagnostics`);
+                this.diagnostics = yield this.fetch.get(`telematics/${this.id}/telemetry-diagnostics`);
                 this.error = null;
             } catch {
-                this.error = 'Unable to load AFAQY diagnostics. Check that the telemetry migration is installed.';
+                this.error = 'Unable to load telemetry diagnostics. Check that the telemetry migration is installed.';
             }
             yield new Promise((resolve) => {
                 this.timer = setTimeout(resolve, 15000);
@@ -45,7 +68,7 @@ export default class AfaqyIntegrationStatusComponent extends Component {
 
     @task *configure(rotate = false) {
         try {
-            const result = yield this.fetch.post(`telematics/${this.id}/afaqy-webhook`, { rotate });
+            const result = yield this.fetch.post(`telematics/${this.id}/telemetry-webhook`, { rotate });
             this.webhookUrl = result.url;
             this.error = null;
         } catch {
@@ -63,8 +86,8 @@ export default class AfaqyIntegrationStatusComponent extends Component {
 
     @action async replay(id) {
         try {
-            await this.fetch.post(`telematics/${this.id}/afaqy-deliveries/${id}/replay`);
-            this.diagnostics = await this.fetch.get(`telematics/${this.id}/afaqy-diagnostics`);
+            await this.fetch.post(`telematics/${this.id}/telemetry-deliveries/${id}/replay`);
+            this.diagnostics = await this.fetch.get(`telematics/${this.id}/telemetry-diagnostics`);
         } catch {
             this.error = 'Unable to queue this delivery for replay.';
         }

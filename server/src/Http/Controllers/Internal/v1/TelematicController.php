@@ -199,21 +199,23 @@ class TelematicController extends FleetOpsController
         ], 201);
     }
 
-    public function afaqyWebhook(Request $request, string $id): JsonResponse
+    public function telemetryWebhook(Request $request, string $id): JsonResponse
     {
         $telematic = $this->findTelematic($id);
-        abort_unless($telematic->provider === 'afaqy', 422);
-        $url = \Fleetbase\Support\Utils::apiUrl('webhooks/telematics/afaqy');
+        $provider  = $this->registry->resolve($telematic->provider);
+        abort_unless($provider instanceof \Fleetbase\FleetOps\Contracts\TelemetryProviderInterface, 422);
+        abort_unless($provider->supportsWebhooks(), 422);
+        $url = \Fleetbase\Support\Utils::apiUrl('webhooks/telematics/' . $telematic->provider);
         abort_unless(str_starts_with($url, 'https://'), 422, 'Configure the public API URL with HTTPS before registering the webhook.');
         $token = \Illuminate\Support\Facades\DB::transaction(function () use ($telematic, $request) {
             // Serialize first-time provisioning as well as rotation.
             Telematic::where('uuid', $telematic->uuid)->lockForUpdate()->firstOrFail();
-            $stored = \Illuminate\Support\Facades\DB::table('afaqy_webhook_tokens')->where('telematic_uuid', $telematic->uuid)->first();
+            $stored = \Illuminate\Support\Facades\DB::table('telematic_webhook_credentials')->where('telematic_uuid', $telematic->uuid)->first();
             if ($stored && !$request->boolean('rotate')) {
                 return \Illuminate\Support\Facades\Crypt::decryptString($stored->token);
             }
             $token = bin2hex(random_bytes(32));
-            \Illuminate\Support\Facades\DB::table('afaqy_webhook_tokens')->updateOrInsert(['telematic_uuid' => $telematic->uuid], [
+            \Illuminate\Support\Facades\DB::table('telematic_webhook_credentials')->updateOrInsert(['telematic_uuid' => $telematic->uuid], [
                 'token' => \Illuminate\Support\Facades\Crypt::encryptString($token), 'created_at' => now(), 'updated_at' => now(),
             ]);
 
@@ -223,20 +225,22 @@ class TelematicController extends FleetOpsController
         return response()->json(['url' => $url . '?' . http_build_query(['telematic' => $telematic->public_id, 'key' => $token])]);
     }
 
-    public function afaqyDiagnostics(string $id): JsonResponse
+    public function telemetryDiagnostics(string $id): JsonResponse
     {
         $telematic = $this->findTelematic($id);
-        abort_unless($telematic->provider === 'afaqy', 422);
-        $query       = \Illuminate\Support\Facades\DB::table('afaqy_deliveries')->where('telematic_uuid', $telematic->uuid);
+        $provider  = $this->registry->resolve($telematic->provider);
+        abort_unless($provider instanceof \Fleetbase\FleetOps\Contracts\TelemetryProviderInterface, 422);
+        $options     = \Fleetbase\FleetOps\Support\Telematics\Telemetry\Configuration::options($provider);
+        $query       = \Illuminate\Support\Facades\DB::table('telematic_deliveries')->where('telematic_uuid', $telematic->uuid);
         $last        = (clone $query)->where('source', 'webhook')->orderByDesc('received_at')->first(['uuid', 'status', 'received_at', 'processed_at', 'error']);
-        $provisioned = \Illuminate\Support\Facades\DB::table('afaqy_webhook_tokens')->where('telematic_uuid', $telematic->uuid)->exists();
+        $provisioned = \Illuminate\Support\Facades\DB::table('telematic_webhook_credentials')->where('telematic_uuid', $telematic->uuid)->exists();
         $state       = !$provisioned ? 'not_configured' : (!$last ? 'awaiting_first_delivery' : ($last->status === 'quarantined' || \Illuminate\Support\Carbon::parse($last->received_at)->lt(now()->subMinutes(10)) ? 'degraded' : 'receiving'));
 
         return response()->json([
-            'polling_enabled'   => config('telematics.afaqy.polling_enabled', false),
-            'webhooks_enabled'  => config('telematics.afaqy.webhooks_enabled', false),
+            'polling_enabled'   => $options['polling_enabled'] ?? false,
+            'webhooks_enabled'  => $options['webhooks_enabled'] ?? false,
             'webhook_state'     => $state, 'last_webhook' => $last,
-            'last_poll'         => \Illuminate\Support\Facades\DB::table('afaqy_sync_runs')->where('telematic_uuid', $telematic->uuid)->orderByDesc('created_at')->first(),
+            'last_poll'         => \Illuminate\Support\Facades\DB::table('telematic_sync_runs')->where('telematic_uuid', $telematic->uuid)->orderByDesc('created_at')->first(),
             'last_ingestion'    => (clone $query)->whereNotNull('processed_at')->orderByDesc('received_at')->first(['queue_delay_seconds', 'source_delay_seconds', 'processed_at']),
             'delivery_counts'   => (clone $query)->whereIn('status', ['pending', 'retry', 'processing'])->selectRaw('status, count(*) as total')->groupBy('status')->pluck('total', 'status'),
             'oldest_pending_at' => (clone $query)->whereIn('status', ['pending', 'retry', 'processing'])->min('received_at'),
@@ -244,15 +248,17 @@ class TelematicController extends FleetOpsController
         ]);
     }
 
-    public function replayAfaqyDelivery(string $id, string $delivery): JsonResponse
+    public function replayTelemetryDelivery(string $id, string $delivery): JsonResponse
     {
         $telematic = $this->findTelematic($id);
-        abort_unless($telematic->provider === 'afaqy', 422);
-        $updated = \Illuminate\Support\Facades\DB::table('afaqy_deliveries')->where('telematic_uuid', $telematic->uuid)->where('uuid', $delivery)->where('status', 'quarantined')
+        $provider  = $this->registry->resolve($telematic->provider);
+        abort_unless($provider instanceof \Fleetbase\FleetOps\Contracts\TelemetryProviderInterface, 422);
+        $options = \Fleetbase\FleetOps\Support\Telematics\Telemetry\Configuration::options($provider);
+        $updated = \Illuminate\Support\Facades\DB::table('telematic_deliveries')->where('telematic_uuid', $telematic->uuid)->where('uuid', $delivery)->where('status', 'quarantined')
             ->update(['status' => 'pending', 'attempts' => 0, 'retry_payload' => null, 'invalid_count' => 0, 'failed' => 0, 'applied' => 0, 'error' => null, 'available_at' => now(), 'processed_at' => null, 'updated_at' => now()]);
         abort_unless($updated, 404);
         try {
-            \Fleetbase\FleetOps\Support\Telematics\Afaqy\Queue::dispatch((new \Fleetbase\FleetOps\Jobs\ProcessAfaqyDelivery($delivery))->onQueue(config('telematics.afaqy.ingestion_queue', 'default')));
+            \Fleetbase\FleetOps\Support\Telematics\Telemetry\Queue::dispatch((new \Fleetbase\FleetOps\Jobs\ProcessTelematicDelivery($delivery))->onQueue($options['ingestion_queue'] ?? 'default'));
         } catch (\Throwable) {
             // The durable replay is recovered by the scheduled inbox drain.
         }

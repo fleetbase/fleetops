@@ -17,7 +17,7 @@ class DeviceTelemetryUpdated implements ShouldBroadcast
     {
         $this->companyUuid = $device->company_uuid;
         $this->deviceUuid  = $device->uuid;
-        $this->data        = ['id' => $device->uuid, 'device_id' => $device->public_id, 'telemetry' => data_get($device->meta, 'afaqy', [])];
+        $this->data        = ['id' => $device->uuid, 'device_id' => $device->public_id, 'telemetry' => data_get($device->meta, 'telemetry', [])];
     }
 
     public function broadcastOn(): array

@@ -1,17 +1,18 @@
 <?php
 
 require_once __DIR__ . '/../../Support/AfaqyTestCrypto.php';
+require_once __DIR__ . '/../../Support/ExampleTelemetryProvider.php';
 
-use Fleetbase\FleetOps\Http\Controllers\AfaqyWebhookController;
-use Fleetbase\FleetOps\Jobs\ProcessAfaqyDelivery;
+use Fleetbase\FleetOps\Http\Controllers\TelematicPositionWebhookController;
+use Fleetbase\FleetOps\Jobs\ProcessTelematicDelivery;
 use Fleetbase\FleetOps\Models\Device;
 use Fleetbase\FleetOps\Models\DeviceEvent;
 use Fleetbase\FleetOps\Models\Telematic;
-use Fleetbase\FleetOps\Support\Telematics\Afaqy\Inbox;
-use Fleetbase\FleetOps\Support\Telematics\Afaqy\Ingestor;
 use Fleetbase\FleetOps\Support\Telematics\Providers\AfaqyProvider;
 use Fleetbase\FleetOps\Support\Telematics\TelematicProviderRegistry;
 use Fleetbase\FleetOps\Support\Telematics\TelematicService;
+use Fleetbase\FleetOps\Support\Telematics\Telemetry\Inbox;
+use Fleetbase\FleetOps\Support\Telematics\Telemetry\Ingestor;
 use Illuminate\Database\ConnectionResolver;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\SQLiteConnection;
@@ -22,8 +23,8 @@ use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
-if (!function_exists('Fleetbase\\FleetOps\\Support\\Telematics\\Afaqy\\broadcast')) {
-    eval('namespace Fleetbase\\FleetOps\\Support\\Telematics\\Afaqy; function broadcast($event) { $GLOBALS["afaqy_broadcasts"][] = $event; }');
+if (!function_exists('Fleetbase\\FleetOps\\Support\\Telematics\\Telemetry\\broadcast')) {
+    eval('namespace Fleetbase\\FleetOps\\Support\\Telematics\\Telemetry; function broadcast($event) { $GLOBALS["afaqy_broadcasts"][] = $event; }');
 }
 if (!function_exists('Fleetbase\\FleetOps\\Support\\Telematics\\broadcast')) {
     eval('namespace Fleetbase\\FleetOps\\Support\\Telematics; function broadcast($event) { $GLOBALS["afaqy_broadcasts"][] = $event; }');
@@ -69,6 +70,8 @@ function afaqyDbFixture(): Telematic
     Cache::flush();
     Carbon::setTestNow('2026-09-15 12:00:00 UTC');
     config(['telematics.afaqy.webhooks_enabled' => true, 'telematics.afaqy.polling_enabled' => true]);
+    config(['telematics.providers' => (require __DIR__ . '/../../../config/telematics.php')['providers']]);
+    app()->instance(TelematicProviderRegistry::class, new TelematicProviderRegistry());
     $GLOBALS['afaqy_broadcasts'] = [];
     foreach ([
         'telematics'    => ['uuid', 'public_id', 'company_uuid', 'provider', 'status', 'meta', 'credentials'],
@@ -88,7 +91,7 @@ function afaqyDbFixture(): Telematic
             $schema->index('uuid');
         });
     }
-    (require __DIR__ . '/../../../migrations/2026_09_15_000001_create_afaqy_telemetry_inbox.php')->up();
+    (require __DIR__ . '/../../../migrations/2026_09_15_000001_create_telematic_telemetry_tables.php')->up();
     Schema::table('device_events', fn ($table) => $table->index('_key'));
     DB::table('telematics')->insert(['uuid' => 'integration-1', 'public_id' => 'telematic_1', 'company_uuid' => 'company-1', 'provider' => 'afaqy', 'status' => 'active', 'meta' => '{}']);
     DB::table('devices')->insert(['uuid' => 'device-1', 'public_id' => 'device_1', 'telematic_uuid' => 'integration-1', 'company_uuid' => 'company-1', 'device_id' => 'unit-1', 'name' => 'Original name', 'status' => 'offline', 'meta' => '{"preserved":"yes"}']);
@@ -113,7 +116,7 @@ test('database ingestion deduplicates poll and push and never regresses device s
     expect($again['duplicate'])->toBeTrue();
     $ingestor->ingest($telematic, $provider, afaqyDbUnit('2026-09-15 11:50:00', 10), $service);
     $device = Device::withoutGlobalScopes()->first();
-    expect(data_get($device->meta, 'afaqy.position_at'))->toBe('2026-09-15T11:59:00.000000Z');
+    expect(data_get($device->meta, 'telemetry.position_at'))->toBe('2026-09-15T11:59:00.000000Z');
     expect($device->name)->toBe('Original name');
     expect(data_get($device->meta, 'preserved'))->toBe('yes');
     expect(DeviceEvent::withoutGlobalScopes()->count())->toBe(2);
@@ -123,18 +126,18 @@ test('database ingestion deduplicates poll and push and never regresses device s
 
 test('webhook authenticates before durable acceptance and worker quarantines unknown shapes', function () {
     $telematic = afaqyDbFixture();
-    DB::table('afaqy_webhook_tokens')->insert(['telematic_uuid' => $telematic->uuid, 'token' => Crypt::encryptString('secret')]);
-    $controller = new AfaqyWebhookController();
+    DB::table('telematic_webhook_credentials')->insert(['telematic_uuid' => $telematic->uuid, 'token' => Crypt::encryptString('secret')]);
+    $controller = new TelematicPositionWebhookController();
     $inbox      = new Inbox();
     $request    = fn ($token, $body) => Request::create('/?telematic=telematic_1&key=' . $token, 'POST', [], [], [], ['CONTENT_TYPE' => 'application/json'], json_encode($body));
-    expect($controller->handle($request('wrong', afaqyDbUnit()), $inbox)->getStatusCode())->toBe(403);
-    expect(DB::table('afaqy_deliveries')->count())->toBe(0);
-    $response = $controller->handle($request('secret', ['unexpected' => 'event']), $inbox);
+    expect($controller->handle($request('wrong', afaqyDbUnit()), $inbox, 'afaqy')->getStatusCode())->toBe(403);
+    expect(DB::table('telematic_deliveries')->count())->toBe(0);
+    $response = $controller->handle($request('secret', ['unexpected' => 'event']), $inbox, 'afaqy');
     expect($response->getStatusCode())->toBe(200);
     $id = $response->getData(true)['delivery_id'];
-    expect(DB::table('afaqy_deliveries')->value('payload'))->not->toContain('unexpected');
-    (new ProcessAfaqyDelivery($id))->handle(new Ingestor(), new TelematicService(new TelematicProviderRegistry()));
-    expect(DB::table('afaqy_deliveries')->value('status'))->toBe('quarantined');
+    expect(DB::table('telematic_deliveries')->value('payload'))->not->toContain('unexpected');
+    (new ProcessTelematicDelivery($id))->handle(new Ingestor(), new TelematicService(new TelematicProviderRegistry()));
+    expect(DB::table('telematic_deliveries')->value('status'))->toBe('quarantined');
     expect(DeviceEvent::withoutGlobalScopes()->count())->toBe(0);
 });
 
@@ -142,10 +145,10 @@ test('durable pending delivery survives broker failure and duplicate worker exec
     $telematic = afaqyDbFixture();
     $id        = (new Inbox())->accept($telematic, [afaqyDbUnit()], 'webhook');
     $service   = new TelematicService(new TelematicProviderRegistry());
-    $job       = new ProcessAfaqyDelivery($id);
+    $job       = new ProcessTelematicDelivery($id);
     $job->handle(new Ingestor(), $service);
     $job->handle(new Ingestor(), $service);
-    expect(DB::table('afaqy_deliveries')->where('uuid', $id)->value('status'))->toBe('processed');
+    expect(DB::table('telematic_deliveries')->where('uuid', $id)->value('status'))->toBe('processed');
     expect(DeviceEvent::withoutGlobalScopes()->count())->toBe(1);
 });
 
@@ -194,16 +197,16 @@ test('poll sweep recovers error connections and coalesces while ingestion is pen
     DB::table('telematics')->update(['status' => 'error']);
     $provider            = new AfaqyPollingFixtureProvider();
     $provider->responses = [['devices' => [afaqyDbUnit()], 'has_more' => false, 'next_cursor' => null]];
-    $job                 = new Fleetbase\FleetOps\Jobs\PollAfaqyTelemetry($telematic->uuid);
+    $job                 = new Fleetbase\FleetOps\Jobs\PollTelematicTelemetry($telematic->uuid);
     $registry            = new AfaqyPollingFixtureRegistry($provider);
     $job->handle($registry, new Inbox());
     $job->handle($registry, new Inbox());
-    expect(DB::table('afaqy_sync_runs')->count())->toBe(1);
-    expect(DB::table('afaqy_sync_runs')->value('status'))->toBe('ingesting');
-    $delivery = DB::table('afaqy_deliveries')->value('uuid');
-    (new ProcessAfaqyDelivery($delivery))->handle(new Ingestor(), new TelematicService(new TelematicProviderRegistry()));
-    expect(DB::table('afaqy_sync_runs')->value('status'))->toBe('completed');
-    expect(DB::table('afaqy_sync_runs')->value('applied'))->toBe(1);
+    expect(DB::table('telematic_sync_runs')->count())->toBe(1);
+    expect(DB::table('telematic_sync_runs')->value('status'))->toBe('ingesting');
+    $delivery = DB::table('telematic_deliveries')->value('uuid');
+    (new ProcessTelematicDelivery($delivery))->handle(new Ingestor(), new TelematicService(new TelematicProviderRegistry()));
+    expect(DB::table('telematic_sync_runs')->value('status'))->toBe('completed');
+    expect(DB::table('telematic_sync_runs')->value('applied'))->toBe(1);
 });
 
 test('repeated pages are explicitly incomplete and disabled connections are not polled', function () {
@@ -213,12 +216,12 @@ test('repeated pages are explicitly incomplete and disabled connections are not 
         ['devices' => [afaqyDbUnit()], 'has_more' => true, 'next_cursor' => 1],
         ['devices' => [afaqyDbUnit()], 'has_more' => false, 'next_cursor' => null],
     ];
-    $job = new Fleetbase\FleetOps\Jobs\PollAfaqyTelemetry($telematic->uuid);
+    $job = new Fleetbase\FleetOps\Jobs\PollTelematicTelemetry($telematic->uuid);
     expect(fn () => $job->handle(new AfaqyPollingFixtureRegistry($provider), new Inbox()))->toThrow(RuntimeException::class, 'Repeated');
-    expect(DB::table('afaqy_sync_runs')->value('status'))->toBe('incomplete');
+    expect(DB::table('telematic_sync_runs')->value('status'))->toBe('incomplete');
     DB::table('telematics')->update(['status' => 'disabled']);
     $job->handle(new AfaqyPollingFixtureRegistry($provider), new Inbox());
-    expect(DB::table('afaqy_sync_runs')->count())->toBe(1);
+    expect(DB::table('telematic_sync_runs')->count())->toBe(1);
 });
 
 test('invalid coordinates do not overwrite a stored position and cross-tenant identity is isolated', function () {
@@ -284,13 +287,18 @@ test('inbox maintenance retains replayable payloads and cleans expired rows duri
     $pending     = $inbox->accept($telematic, afaqyDbUnit(), 'poll');
     $processed   = $inbox->accept($telematic, afaqyDbUnit(), 'webhook');
     $quarantined = $inbox->accept($telematic, ['event' => 'unknown'], 'webhook');
-    DB::table('afaqy_deliveries')->where('uuid', $processed)->update(['status' => 'processed', 'updated_at' => now()->subHours(25)]);
-    DB::table('afaqy_deliveries')->where('uuid', $quarantined)->update(['status' => 'quarantined', 'updated_at' => now()->subDays(2)]);
+    DB::table('telematic_deliveries')->where('uuid', $processed)->update(['status' => 'processed', 'updated_at' => now()->subHours(25)]);
+    DB::table('telematic_deliveries')->where('uuid', $quarantined)->update(['status' => 'quarantined', 'updated_at' => now()->subDays(2)]);
     config(['telematics.afaqy.webhooks_enabled' => false]);
-    expect((new Fleetbase\FleetOps\Console\Commands\DrainAfaqyInbox())->handle())->toBe(0);
-    expect(DB::table('afaqy_deliveries')->where('uuid', $processed)->exists())->toBeFalse();
-    expect(DB::table('afaqy_deliveries')->where('uuid', $quarantined)->exists())->toBeTrue();
-    expect(DB::table('afaqy_deliveries')->where('uuid', $pending)->value('status'))->toBe('pending');
+    // A broken third-party registration must not block other inboxes or retention.
+    app(TelematicProviderRegistry::class)->register(new Fleetbase\FleetOps\Contracts\TelematicProviderDescriptor([
+        'key'      => 'unavailable', 'label' => 'Unavailable', 'driver_class' => 'MissingTelemetryDriver',
+        'metadata' => ['telemetry' => ['durable_ingestion' => true]],
+    ]));
+    expect((new Fleetbase\FleetOps\Console\Commands\DrainTelematicInbox())->handle())->toBe(0);
+    expect(DB::table('telematic_deliveries')->where('uuid', $processed)->exists())->toBeFalse();
+    expect(DB::table('telematic_deliveries')->where('uuid', $quarantined)->exists())->toBeTrue();
+    expect(DB::table('telematic_deliveries')->where('uuid', $pending)->value('status'))->toBe('pending');
 });
 
 test('sensor values use source time and preserve units through partial and older snapshots', function () {
@@ -308,4 +316,65 @@ test('sensor values use source time and preserve units through partial and older
     $ingestor->ingest($telematic, new AfaqyProvider(), $unit, $service);
     expect(DB::table('sensors')->count())->toBe(1);
     expect(DB::table('sensors')->where('uuid', 'sensor-1')->value('last_value'))->toBe('40');
+});
+
+test('a second registered adapter uses shared polling inbox ingestion and tenant scoped webhooks', function () {
+    $connection           = afaqyDbFixture();
+    $connection->provider = 'example';
+    $connection->save();
+    $registry = app(TelematicProviderRegistry::class);
+    $registry->register(new Fleetbase\FleetOps\Contracts\TelematicProviderDescriptor([
+        'key'               => 'example', 'label' => 'Example', 'driver_class' => ExampleTelemetryProvider::class,
+        'supports_webhooks' => true, 'supports_discovery' => true,
+        'metadata'          => ['telemetry' => ['durable_ingestion' => true, 'secure_webhooks' => true, 'reconciliation' => true]],
+    ]));
+    $signal                                = ['tracker' => 'unit-1', 'measured' => '2026-09-15T11:59:00Z', 'received' => '2026-09-15T11:59:10Z', 'point' => [12.0, 50.0]];
+    ExampleTelemetryProvider::$connections = 0;
+    ExampleTelemetryProvider::$pages       = [['devices' => [$signal], 'has_more' => false, 'next_cursor' => null]];
+    (new Fleetbase\FleetOps\Jobs\PollTelematicTelemetry($connection->uuid))->handle($registry, new Inbox());
+    $id = DB::table('telematic_deliveries')->value('uuid');
+    expect($id)->not->toBeNull();
+    $service = new TelematicService($registry);
+    (new ProcessTelematicDelivery($id))->handle(new Ingestor(), $service);
+    expect(ExampleTelemetryProvider::$connections)->toBe(1);
+    expect(DB::table('telematic_sync_runs')->value('status'))->toBe('completed');
+    $device = Device::withoutGlobalScopes()->first();
+    expect($device->last_position->getLat())->toBe(50.0);
+    expect(data_get($device->meta, 'telemetry.stale_after_seconds'))->toBe(90);
+    expect(data_get($device->meta, 'telemetry.provider_at'))->toBe('2026-09-15T11:59:10.000000Z');
+    DB::table('telematic_webhook_credentials')->insert(['telematic_uuid' => $connection->uuid, 'token' => Crypt::encryptString('example-secret')]);
+    $request    = Request::create('/?telematic=telematic_1&key=example-secret', 'POST', [], [], [], ['CONTENT_TYPE' => 'application/json'], json_encode(['signals' => [$signal]]));
+    $controller = new TelematicPositionWebhookController();
+    expect($controller->handle($request, new Inbox(), 'afaqy')->getStatusCode())->toBe(403);
+    $response = $controller->handle($request, new Inbox(), 'example');
+    expect($response->getStatusCode())->toBe(200);
+    (new ProcessTelematicDelivery($response->getData(true)['delivery_id']))->handle(new Ingestor(), $service);
+    expect(DeviceEvent::withoutGlobalScopes()->count())->toBe(1);
+    expect(count($GLOBALS['afaqy_broadcasts']))->toBe(1);
+    expect(ExampleTelemetryProvider::$connections)->toBe(1);
+    expect(Schema::hasTable('afaqy_deliveries'))->toBeFalse();
+});
+
+test('shared polling accepts opaque cursors from another provider and schema rollback preserves core tables', function () {
+    $connection           = afaqyDbFixture();
+    $connection->provider = 'example';
+    $connection->save();
+    $registry = app(TelematicProviderRegistry::class);
+    $registry->register(new Fleetbase\FleetOps\Contracts\TelematicProviderDescriptor(['key' => 'example', 'label' => 'Example', 'driver_class' => ExampleTelemetryProvider::class]));
+    $signal                          = ['tracker' => 'unit-1', 'measured' => '2026-09-15T11:59:00Z', 'received' => '2026-09-15T11:59:10Z', 'point' => [12, 50]];
+    ExampleTelemetryProvider::$pages = [
+        ['devices' => [$signal], 'has_more' => true, 'next_cursor' => 'cursor-z'],
+        ['devices' => [array_replace($signal, ['tracker' => 'unit-2'])], 'has_more' => false, 'next_cursor' => null],
+    ];
+    (new Fleetbase\FleetOps\Jobs\PollTelematicTelemetry($connection->uuid))->handle($registry, new Inbox());
+    expect(DB::table('telematic_sync_runs')->value('pages'))->toBe(2);
+    expect(DB::table('telematic_sync_runs')->value('units'))->toBe(2);
+    expect(DB::table('telematic_deliveries')->count())->toBe(2);
+    $migration = require __DIR__ . '/../../../migrations/2026_09_15_000001_create_telematic_telemetry_tables.php';
+    $migration->down();
+    expect(Schema::hasTable('telematic_deliveries'))->toBeFalse();
+    expect(DB::table('devices')->count())->toBe(1);
+    $migration->up();
+    expect(Schema::hasTable('telematic_webhook_credentials'))->toBeTrue();
+    expect(Schema::hasTable('afaqy_webhook_tokens'))->toBeFalse();
 });

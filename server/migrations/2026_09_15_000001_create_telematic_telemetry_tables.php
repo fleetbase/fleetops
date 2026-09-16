@@ -7,8 +7,8 @@ use Illuminate\Support\Facades\Schema;
 return new class extends Migration {
     public function up(): void
     {
-        Schema::table('devices', fn (Blueprint $table) => $table->index(['company_uuid', 'telematic_uuid', 'device_id'], 'devices_afaqy_lookup'));
-        Schema::create('afaqy_sync_runs', function (Blueprint $table) {
+        Schema::table('devices', fn (Blueprint $table) => $table->index(['company_uuid', 'telematic_uuid', 'device_id'], 'devices_telematic_lookup'));
+        Schema::create('telematic_sync_runs', function (Blueprint $table) {
             $table->uuid('uuid')->primary();
             $table->uuid('telematic_uuid')->index();
             $table->string('status')->default('fetching')->index();
@@ -19,7 +19,7 @@ return new class extends Migration {
             $table->text('error')->nullable();
             $table->timestamps();
         });
-        Schema::create('afaqy_deliveries', function (Blueprint $table) {
+        Schema::create('telematic_deliveries', function (Blueprint $table) {
             $table->uuid('uuid')->primary();
             $table->uuid('telematic_uuid')->index();
             $table->uuid('run_uuid')->nullable()->index();
@@ -45,7 +45,7 @@ return new class extends Migration {
             $table->index(['telematic_uuid', 'received_at']);
             $table->index(['telematic_uuid', 'source', 'received_at']);
         });
-        Schema::create('afaqy_webhook_tokens', function (Blueprint $table) {
+        Schema::create('telematic_webhook_credentials', function (Blueprint $table) {
             $table->uuid('telematic_uuid')->primary();
             $table->text('token');
             $table->timestamps();
@@ -54,9 +54,9 @@ return new class extends Migration {
 
     public function down(): void
     {
-        Schema::table('devices', fn (Blueprint $table) => $table->dropIndex('devices_afaqy_lookup'));
-        Schema::dropIfExists('afaqy_webhook_tokens');
-        Schema::dropIfExists('afaqy_deliveries');
-        Schema::dropIfExists('afaqy_sync_runs');
+        Schema::table('devices', fn (Blueprint $table) => $table->dropIndex('devices_telematic_lookup'));
+        Schema::dropIfExists('telematic_webhook_credentials');
+        Schema::dropIfExists('telematic_deliveries');
+        Schema::dropIfExists('telematic_sync_runs');
     }
 };

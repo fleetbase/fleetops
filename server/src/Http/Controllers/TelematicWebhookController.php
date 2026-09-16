@@ -38,8 +38,8 @@ class TelematicWebhookController extends Controller
      */
     public function handle(Request $request, string $providerKey): JsonResponse
     {
-        if ($providerKey === 'afaqy') {
-            return app(AfaqyWebhookController::class)->handle($request, app(\Fleetbase\FleetOps\Support\Telematics\Afaqy\Inbox::class));
+        if ($this->registry->resolve($providerKey) instanceof \Fleetbase\FleetOps\Contracts\TelemetryProviderInterface) {
+            return app(TelematicPositionWebhookController::class)->handle($request, app(\Fleetbase\FleetOps\Support\Telematics\Telemetry\Inbox::class), $providerKey);
         }
         $correlationId = Str::uuid()->toString();
 

@@ -1,8 +1,8 @@
 <?php
 
-namespace Fleetbase\FleetOps\Support\Telematics\Afaqy;
+namespace Fleetbase\FleetOps\Support\Telematics\Telemetry;
 
-use Fleetbase\FleetOps\Jobs\ProcessAfaqyDelivery;
+use Fleetbase\FleetOps\Jobs\ProcessTelematicDelivery;
 use Fleetbase\FleetOps\Models\Telematic;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\DB;
@@ -14,7 +14,7 @@ class Inbox
     {
         $json = json_encode($payload, JSON_THROW_ON_ERROR);
         $id   = (string) Str::uuid();
-        DB::table('afaqy_deliveries')->insert([
+        DB::table('telematic_deliveries')->insert([
             'uuid'         => $id, 'telematic_uuid' => $telematic->uuid, 'run_uuid' => $run,
             'source'       => $source, 'status' => 'pending', 'payload_hash' => hash('sha256', $json),
             'payload'      => Crypt::encryptString($json), 'received_at' => $receivedAt ?? now()->utc()->toDateTimeString(),
@@ -22,7 +22,7 @@ class Inbox
         ]);
         // The scheduled drain also dispatches pending records if the broker is unavailable.
         try {
-            Queue::dispatch((new ProcessAfaqyDelivery($id))->onQueue(config('telematics.afaqy.ingestion_queue', 'default')));
+            Queue::dispatch((new ProcessTelematicDelivery($id))->onQueue(Configuration::forConnection($telematic)['ingestion_queue'] ?? 'default'));
         } catch (\Throwable) {
             // Durable acceptance succeeded. The payload must not be logged here.
         }
@@ -32,9 +32,9 @@ class Inbox
 
     public static function enabled(Telematic $telematic): bool
     {
-        return $telematic->provider === 'afaqy' && $telematic->company_uuid
+        return (bool) $telematic->company_uuid
             && in_array($telematic->status, ['active', 'connected', 'error', 'synchronizing'], true)
-            && data_get($telematic->meta, 'afaqy_sync_enabled', true) !== false;
+            && data_get($telematic->meta, 'telemetry_sync_enabled', true) !== false;
     }
 
     public static function finishRun(?string $id): void
@@ -43,16 +43,16 @@ class Inbox
             return;
         }
         DB::transaction(function () use ($id) {
-            $run = DB::table('afaqy_sync_runs')->where('uuid', $id)->lockForUpdate()->first();
+            $run = DB::table('telematic_sync_runs')->where('uuid', $id)->lockForUpdate()->first();
             if (!$run || $run->status === 'fetching') {
                 return;
             }
-            $items = DB::table('afaqy_deliveries')->where('run_uuid', $id);
+            $items = DB::table('telematic_deliveries')->where('run_uuid', $id);
             if ((clone $items)->whereIn('status', ['pending', 'processing', 'retry'])->exists()) {
                 return;
             }
             $failed = (clone $items)->sum('failed');
-            DB::table('afaqy_sync_runs')->where('uuid', $id)->update([
+            DB::table('telematic_sync_runs')->where('uuid', $id)->update([
                 'status'  => $run->status === 'incomplete' ? 'incomplete' : ($failed ? 'partial' : 'completed'),
                 'applied' => (clone $items)->sum('applied'), 'failed' => $failed, 'updated_at' => now(),
             ]);

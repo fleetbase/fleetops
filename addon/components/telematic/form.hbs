@@ -1,6 +1,4 @@
-{{#if (eq this.selectedProvider.key "afaqy")}}
-    {{#if @resource.public_id}}<AfaqyIntegration::Status @resource={{@resource}} />{{/if}}
-{{/if}}
+<Telematic::TelemetryStatus @resource={{@resource}} @provider={{this.selectedProvider}} />
 <div class="flex min-h-0 flex-1 flex-col" ...attributes>
     <div class="min-h-0 flex-1 overflow-y-auto px-4 py-4 md:px-6">
         <div class="mx-auto flex w-full max-w-6xl flex-col gap-4">
@@ -254,9 +252,9 @@
             <div class="grid grid-cols-1 gap-2 lg:grid-cols-2 no-input-group-padding text-xs">
                 <InputGroup @value={{@resource.name}} @name="Integration Name" />
 
-                {{#if (eq this.selectedProvider.key "afaqy")}}
+                {{#if this.selectedProvider.metadata.telemetry.secure_webhooks}}
 
-                    <p class="text-xs">Use the AFAQY live telemetry section to obtain the secure registration URL.</p>
+                    <p class="text-xs">Use the live telemetry section to obtain the secure registration URL.</p>
 
                 {{else if this.selectedProvider.supports_webhooks}}
                     <InputGroup @name="Webhook URL" @wrapperClass="lg:col-span-2">

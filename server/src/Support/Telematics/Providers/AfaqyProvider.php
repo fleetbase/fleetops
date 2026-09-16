@@ -18,7 +18,7 @@ use Illuminate\Support\Facades\Log;
  * AFAQY uses token-based REST endpoints for authentication, unit discovery,
  * latest unit telemetry, historical signals, and track generation.
  */
-class AfaqyProvider extends AbstractProvider
+class AfaqyProvider extends AbstractProvider implements \Fleetbase\FleetOps\Contracts\TelemetryProviderInterface
 {
     protected string $baseUrl                   = 'https://api.afaqy.sa';
     protected int $requestsPerMinute            = 60;
@@ -218,11 +218,46 @@ class AfaqyProvider extends AbstractProvider
             'ignition'     => $this->extractIgnition($payload),
             'fuel_level'   => $this->extractFuelLevel($payload),
             'last_seen_at' => $this->parseTimestamp($lastUpdate['dts'] ?? $lastUpdate['dtt'] ?? null),
-            'meta'         => array_merge($payload, ['afaqy' => [
+            'meta'         => array_merge($payload, ['telemetry' => [
                 'position_at' => $this->parseTimestamp($lastUpdate['dtt'] ?? null),
                 'provider_at' => $this->parseTimestamp($lastUpdate['dts'] ?? null),
             ]]),
         ];
+    }
+
+    public function telemetryOptions(): array
+    {
+        return config('telematics.afaqy', []);
+    }
+
+    public function telemetryUnits(array $payload): array
+    {
+        return Payload::units($payload);
+    }
+
+    public function normalizeTelemetrySnapshot(array $payload): array
+    {
+        $payload    = Payload::unit($payload);
+        $device     = $this->normalizeDevice($payload);
+        $event      = $this->normalizeEvent($payload);
+        $sensors    = [];
+        $rawSensors = $payload['sensors'] ?? $payload['sensors_last_val'] ?? [];
+        // sensors_chDate is not a documented collection of latest sensor values.
+        foreach (is_array($rawSensors) ? $rawSensors : [] as $name => $sensor) {
+            if (!is_array($sensor)) {
+                $sensor = ['sensor_key' => (string) $name, 'name' => (string) $name, 'value' => $sensor];
+            }
+            try {
+                $sensors[] = $this->normalizeSensor(array_merge([
+                    'device_id'  => $device['device_id'], 'sensor_key' => is_string($name) ? $name : null,
+                    'updated_at' => $event['occurred_at'],
+                ], $sensor));
+            } catch (\InvalidArgumentException) {
+                // Protocol descriptors without scalar values are not sensor readings.
+            }
+        }
+
+        return compact('device', 'event', 'sensors');
     }
 
     public function normalizeSensor(array $payload): array

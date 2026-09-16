@@ -6,6 +6,7 @@ use Fleetbase\FleetOps\Exceptions\TelematicProviderException;
 use Fleetbase\FleetOps\Exceptions\TelematicRateLimitExceededException;
 use Fleetbase\FleetOps\Support\Telematics\Afaqy\Payload;
 use Fleetbase\FleetOps\Support\Telematics\Providers\AfaqyProvider;
+use Fleetbase\FleetOps\Support\Telematics\Telemetry\Sample;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Crypt;
@@ -48,7 +49,7 @@ test('provisional webhook accepts flat nested single and batch units without aut
     foreach ([$nested, $flat, [$nested, $flat], ['data' => [$nested]], ['data' => $flat]] as $body) {
         $result = $provider->processWebhook($body);
         expect($result['events'][0])->toMatchArray(['device_id' => 'unit-1', 'occurred_at' => '2026-09-15T11:59:00.000000Z', 'last_seen_at' => '2026-09-15T11:59:10.000000Z', 'ignition' => true, 'online' => null]);
-        expect(Payload::validPosition($result['events'][0]))->toBeTrue();
+        expect(Sample::validPosition($result['events'][0]))->toBeTrue();
     }
     Http::assertNothingSent();
     foreach ([[], ['event_type' => 'overspeed'], ['data' => [['name' => 'No identity']]]] as $body) {
@@ -64,9 +65,9 @@ test('timestamps are explicit UTC and malformed or future positions cannot look 
         expect(Payload::timestamp(1757937600000))->toBe(Payload::timestamp(1757937600));
         expect(Payload::timestamp('nonsense'))->toBeNull();
         $event = (new AfaqyProvider())->normalizeEvent(afaqyRealtimeUnit());
-        expect(Payload::validPosition($event))->toBeTrue();
+        expect(Sample::validPosition($event))->toBeTrue();
         foreach ([['location' => ['lat' => 91, 'lng' => 0]], ['location' => ['lat' => 'bad', 'lng' => 0]], ['occurred_at' => null], ['occurred_at' => '2026-09-16T00:00:00Z']] as $invalid) {
-            expect(Payload::validPosition(array_replace($event, $invalid)))->toBeFalse();
+            expect(Sample::validPosition(array_replace($event, $invalid)))->toBeFalse();
         }
     } finally {
         date_default_timezone_set($timezone);
@@ -79,9 +80,9 @@ test('poll and webhook signal identities ignore envelope and receipt differences
     $b                        = $provider->normalizeEvent(Payload::unit(afaqyRealtimeUnit()));
     $b['meta']['received_at'] = 'other';
     $b['speed']               = '15';
-    expect(Payload::signalKey($a))->toBe(Payload::signalKey($b));
+    expect(Sample::signalKey($a))->toBe(Sample::signalKey($b));
     $b['location']['lat'] = 1;
-    expect(Payload::signalKey($a))->not->toBe(Payload::signalKey($b));
+    expect(Sample::signalKey($a))->not->toBe(Sample::signalKey($b));
 });
 
 test('units requests use documented groups and traverse a five thousand unit fleet', function () {

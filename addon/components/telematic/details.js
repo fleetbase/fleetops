@@ -2,7 +2,7 @@ import Component from '@glimmer/component';
 
 export default class TelematicDetailsComponent extends Component {
     get webhookUrl() {
-        if (this.args.resource?.provider_descriptor?.key === 'afaqy') return null;
+        if (this.args.resource?.provider_descriptor?.metadata?.telemetry?.secure_webhooks) return null;
         const url = this.args.resource?.provider_descriptor?.webhook_url;
         const id = this.args.resource?.public_id;
 

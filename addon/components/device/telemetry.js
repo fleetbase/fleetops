@@ -39,7 +39,7 @@ export default class DeviceTelemetryComponent extends Component {
     }
 
     get telemetry() {
-        return this.args.resource ? (get(this.args.resource, 'meta.afaqy') ?? {}) : {};
+        return this.args.resource ? (get(this.args.resource, 'meta.telemetry') ?? {}) : {};
     }
 
     get ageSeconds() {

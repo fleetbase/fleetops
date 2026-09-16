@@ -156,6 +156,13 @@ return [
             'supports_webhooks'  => true,
             'supports_discovery' => true,
             'metadata'           => [
+                'telemetry' => [
+                    'durable_ingestion'         => true,
+                    'secure_webhooks'           => true,
+                    'reconciliation'            => true,
+                    'registration_instructions' => 'Provide the secure URL to AFAQY to register Device Signals / Positions. Polling continues after registration.',
+                    'contract_status'           => 'provisional',
+                ],
                 'rate_limit'   => 60,
                 'pagination'   => 'offset',
                 'capabilities' => ['tracking', 'speed', 'heading', 'odometer', 'fuel_level', 'ignition'],

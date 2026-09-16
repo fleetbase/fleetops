@@ -3,11 +3,10 @@
 namespace Fleetbase\FleetOps\Jobs;
 
 use Fleetbase\FleetOps\Models\Telematic;
-use Fleetbase\FleetOps\Support\Telematics\Afaqy\Inbox;
-use Fleetbase\FleetOps\Support\Telematics\Afaqy\Ingestor;
-use Fleetbase\FleetOps\Support\Telematics\Afaqy\Payload;
-use Fleetbase\FleetOps\Support\Telematics\Providers\AfaqyProvider;
 use Fleetbase\FleetOps\Support\Telematics\TelematicService;
+use Fleetbase\FleetOps\Support\Telematics\Telemetry\Configuration;
+use Fleetbase\FleetOps\Support\Telematics\Telemetry\Inbox;
+use Fleetbase\FleetOps\Support\Telematics\Telemetry\Ingestor;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldBeUnique;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -17,7 +16,7 @@ use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\DB;
 
-class ProcessAfaqyDelivery implements ShouldQueue, ShouldBeUnique
+class ProcessTelematicDelivery implements ShouldQueue, ShouldBeUnique
 {
     use Dispatchable;
     use InteractsWithQueue;
@@ -39,12 +38,12 @@ class ProcessAfaqyDelivery implements ShouldQueue, ShouldBeUnique
 
     public function handle(Ingestor $ingestor, TelematicService $service): void
     {
-        $lock = Cache::lock('afaqy:delivery:' . $this->deliveryUuid, 90);
+        $lock = Cache::lock('telemetry:delivery:' . $this->deliveryUuid, 90);
         if (!$lock->get()) {
             return;
         }
         try {
-            $row = DB::table('afaqy_deliveries')->where('uuid', $this->deliveryUuid)->first();
+            $row = DB::table('telematic_deliveries')->where('uuid', $this->deliveryUuid)->first();
             if (!$row || !in_array($row->status, ['pending', 'retry', 'processing'], true) || ($row->available_at && now()->lt($row->available_at))) {
                 return;
             }
@@ -61,26 +60,30 @@ class ProcessAfaqyDelivery implements ShouldQueue, ShouldBeUnique
 
                 return;
             }
-            if ($row->source === 'webhook' && !config('telematics.afaqy.webhooks_enabled', false)) {
+            $provider = Configuration::provider($telematic);
+            $options  = Configuration::options($provider);
+            if ($row->source === 'webhook' && !($options['webhooks_enabled'] ?? false)) {
                 return;
             }
             $this->update(['status' => 'processing', 'attempts' => $row->attempts + 1, 'available_at' => now()->addSeconds(120)]);
             try {
-                $units = Payload::units(json_decode(Crypt::decryptString($row->retry_payload ?? $row->payload), true, 512, JSON_THROW_ON_ERROR));
+                $units = $provider->telemetryUnits(json_decode(Crypt::decryptString($row->retry_payload ?? $row->payload), true, 512, JSON_THROW_ON_ERROR));
             } catch (\Throwable) {
                 $this->update(['status' => 'quarantined', 'failed' => 1, 'error' => 'Unsupported or unreadable position payload; inspect and replay after adapter correction.']);
                 Inbox::finishRun($row->run_uuid);
 
                 return;
             }
-            $provider     = new AfaqyProvider(); // Normalization must never authenticate or contact AFAQY.
             $failed       = [];
             $failureTypes = [];
             $applied      = 0;
             $invalid      = (int) $row->invalid_count;
+            $sourceDelay  = null;
+            $queueDelay   = max(0, now()->timestamp - \Illuminate\Support\Carbon::parse($row->received_at, 'UTC')->timestamp);
             foreach ($units as $unit) {
                 try {
-                    $result = $ingestor->ingest($telematic, $provider, $unit, $service, $row->received_at, $row->source);
+                    $result      = $ingestor->ingest($telematic, $provider, $unit, $service, $row->received_at, $row->source);
+                    $sourceDelay = max($sourceDelay ?? 0, data_get($result['device']->meta, 'telemetry.source_delay_seconds', 0));
                     if ($result['invalid_position']) {
                         $invalid++;
                     } else {
@@ -91,6 +94,7 @@ class ProcessAfaqyDelivery implements ShouldQueue, ShouldBeUnique
                     $failureTypes[] = class_basename($e);
                 }
             }
+            $this->update(['queue_delay_seconds' => $queueDelay, 'source_delay_seconds' => $sourceDelay]);
             if ($failed && $row->attempts < 4) {
                 $this->update([
                     'status'  => 'retry', 'retry_payload' => Crypt::encryptString(json_encode($failed, JSON_THROW_ON_ERROR)),
@@ -113,6 +117,6 @@ class ProcessAfaqyDelivery implements ShouldQueue, ShouldBeUnique
 
     private function update(array $attributes): void
     {
-        DB::table('afaqy_deliveries')->where('uuid', $this->deliveryUuid)->update(array_merge($attributes, ['updated_at' => now()]));
+        DB::table('telematic_deliveries')->where('uuid', $this->deliveryUuid)->update(array_merge($attributes, ['updated_at' => now()]));
     }
 }

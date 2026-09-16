@@ -19,6 +19,7 @@ import { getOwner } from '@ember/application';
 import { task, timeout } from 'ember-concurrency';
 import { debug } from '@ember/debug';
 import { registerDestructor } from '@ember/destroyable';
+import telemetryTimestamp from '../utils/telemetry-timestamp';
 import getModelName from '@fleetbase/ember-core/utils/get-model-name';
 import LeafletTrackingMarkerComponent from '../components/leaflet-tracking-marker';
 
@@ -31,15 +32,15 @@ export class EventBuffer {
 
     /** @type {import('./map-manager').default|null} */
     mapManager = null;
-    latestAfaqyPosition = null;
+    latestPositionAt = null;
 
     constructor(model, { callback = null, waitTime = 1000 * 3, mapManager = null }) {
         this.model = model;
         this.callback = callback;
         this.waitTime = waitTime;
         this.mapManager = mapManager;
-        const initialPosition = model?.telematics?.last_provider === 'afaqy' ? Date.parse(model.telematics.last_event_at) : NaN;
-        this.latestAfaqyPosition = Number.isFinite(initialPosition) ? initialPosition : null;
+        const initialPosition = telemetryTimestamp(model?.telematics?.last_event_at);
+        this.latestPositionAt = Number.isFinite(initialPosition) ? initialPosition : null;
     }
 
     /**
@@ -109,10 +110,10 @@ export class EventBuffer {
 
         for (const output of eventsToProcess) {
             const { event, data } = output;
-            if (data?.additionalData?.provider === 'afaqy') {
-                const observedAt = Date.parse(data.additionalData.position_at);
-                if (!Number.isFinite(observedAt) || (this.latestAfaqyPosition !== null && observedAt < this.latestAfaqyPosition)) continue;
-                this.latestAfaqyPosition = observedAt;
+            if (data?.additionalData?.position_at) {
+                const observedAt = telemetryTimestamp(data.additionalData.position_at);
+                if (!Number.isFinite(observedAt) || (this.latestPositionAt !== null && observedAt < this.latestPositionAt)) continue;
+                this.latestPositionAt = observedAt;
                 this.model?.setProperties?.({ location: data.location, speed: data.speed, heading: data.heading });
             }
 
@@ -249,8 +250,8 @@ export default class MovementTrackerService extends Service {
         while (true) {
             const { done } = yield this.reconnectConsumer.next();
             if (done) break;
-            // Refresh only the visible AFAQY assets, with bounded request concurrency.
-            const buffers = [...this.buffers.values()].filter((buffer) => buffer.model?.telematics?.last_provider === 'afaqy');
+            // Refresh only the visible telemetry assets, with bounded request concurrency.
+            const buffers = [...this.buffers.values()].filter((buffer) => buffer.model?.telematics?.last_event_at && typeof buffer.model?.reload === 'function');
             for (let i = 0; i < buffers.length; i += 5) {
                 yield Promise.allSettled(
                     buffers.slice(i, i + 5).map(async (buffer) => {
@@ -264,7 +265,7 @@ export default class MovementTrackerService extends Service {
                                 location: model.location,
                                 speed: model.speed,
                                 heading: model.heading,
-                                additionalData: { provider: 'afaqy', position_at: model.telematics?.last_event_at },
+                                additionalData: { position_at: model.telematics?.last_event_at },
                             },
                         });
                     })
