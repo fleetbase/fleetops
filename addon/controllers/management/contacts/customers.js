@@ -22,7 +22,7 @@ export default class ManagementContactsCustomersController extends ManagementCon
                 label: this.intl.t('column.name'),
                 valuePath: 'name',
 
-                cellComponent: 'table/cell/media-name',
+                cellComponent: 'cell/customer-identity',
                 action: this.customerActions.transition.view,
                 permission: 'fleet-ops view contact',
                 resizable: true,

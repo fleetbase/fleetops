@@ -120,7 +120,7 @@ export default class ManagementVendorsIndexController extends Controller {
                 sticky: true,
                 label: this.intl.t('column.name'),
                 valuePath: 'name',
-                cellComponent: 'table/cell/media-name',
+                cellComponent: 'cell/vendor-identity',
                 mediaPath: 'logo_url',
                 action: this.vendorActions.transition.view,
                 permission: 'fleet-ops view vendor',

@@ -99,7 +99,7 @@ export default class ManagementContactsIndexController extends Controller {
                 sticky: true,
                 label: this.intl.t('column.name'),
                 valuePath: 'name',
-                cellComponent: 'table/cell/media-name',
+                cellComponent: 'cell/contact-identity',
                 action: this.contactActions.transition.view,
                 permission: 'fleet-ops view contact',
                 resizable: true,
