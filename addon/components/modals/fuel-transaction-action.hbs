@@ -23,6 +23,7 @@
                 <InputGroup @name={{this.selectionLabel}}>
                     <ModelSelect
                         @modelName={{this.mode}}
+                        @selectedItemComponent={{if (resource-component "select-option" this.mode) (component (resource-component "select-option" this.mode) compact=true)}}
                         @selectedModel={{this.selected}}
                         @placeholder={{if this.isVehicle "Search vehicles" "Search orders"}}
                         @triggerClass="form-select form-input"
@@ -30,7 +31,13 @@
                         @allowClear={{true}}
                         as |record|
                     >
-                        {{if this.isVehicle record.displayName record.public_id}}
+                        {{#let (resource-component "select-option" this.mode) as |selectOption|}}
+                            {{#if selectOption}}
+                                {{component selectOption option=record}}
+                            {{else}}
+                                {{if this.isVehicle record.displayName record.public_id}}
+                            {{/if}}
+                        {{/let}}
                     </ModelSelect>
                 </InputGroup>
             </div>
