@@ -4,7 +4,7 @@ import config from 'ember-get-config';
 import { action } from '@ember/object';
 import { isArray } from '@ember/array';
 import { dasherize } from '@ember/string';
-import { PANEL_DEFAULTS } from '../utils/context-panel';
+import { PANEL_DEFAULTS, closePanelsThen } from '../utils/context-panel';
 
 /**
  * Trailer resource actions.
@@ -129,6 +129,7 @@ export default class TrailerActionsService extends ResourceActionService {
         },
         view: async (trailer, options = {}) => {
             trailer = await this.resolveTrailerResource(trailer);
+            const service = this;
 
             return this.resourceContextPanel.open({
                 trailer,
@@ -136,9 +137,15 @@ export default class TrailerActionsService extends ResourceActionService {
                 actionButtons: [
                     {
                         icon: 'pencil',
-                        fn: async () => {
-                            await this.resourceContextPanel.closeAll();
-                            this.panel.edit(trailer);
+                        permission: 'fleet-ops update trailer',
+                        fn: () => closePanelsThen(this.resourceContextPanel, () => this.panel.edit(trailer)),
+                    },
+                    {
+                        icon: 'ellipsis-h',
+                        iconPrefix: 'fas',
+                        renderInPlace: true,
+                        get items() {
+                            return service.detailsMenuItems(trailer, { onDeleted: () => service.resourceContextPanel.closeAll() });
                         },
                     },
                 ],
@@ -402,5 +409,39 @@ export default class TrailerActionsService extends ResourceActionService {
         trailer = await this.resolveTrailerResource(trailer);
 
         return this.maintenanceActions.modal.create({ maintainable: trailer }, options, saveOptions);
+    }
+
+    /**
+     * The actions menu of a trailer's header, shared by the details route and
+     * the context panel. Attach or detach follows the trailer's state.
+     */
+    detailsMenuItems(trailer, { onDeleted } = {}) {
+        const isAttached = trailer?.isAttached ?? trailer?.attachment_state === 'attached';
+
+        return [
+            { text: this.intl.t('trailer.actions.locate'), icon: 'location-dot', fn: () => this.locate(trailer), permission: 'fleet-ops view trailer' },
+            isAttached
+                ? { text: this.intl.t('trailer.actions.detach-vehicle'), icon: 'unlink', fn: () => this.detachVehicle(trailer), permission: 'fleet-ops detach-vehicle-for trailer' }
+                : { text: this.intl.t('trailer.actions.attach-vehicle'), icon: 'link', fn: () => this.attachVehicle(trailer), permission: 'fleet-ops attach-vehicle-for trailer' },
+            { text: this.intl.t('trailer.actions.attach-device'), icon: 'microchip', fn: () => this.attachDevice(trailer), permission: 'fleet-ops attach-device-for trailer' },
+            { text: this.intl.t('trailer.actions.attach-equipment'), icon: 'toolbox', fn: () => this.attachEquipment(trailer), permission: 'fleet-ops attach-equipment-for trailer' },
+            { separator: true },
+            {
+                text: this.intl.t('trailer.actions.schedule-maintenance'),
+                icon: 'calendar-check',
+                fn: () => this.scheduleMaintenance(trailer),
+                permission: 'fleet-ops create maintenance-schedule',
+            },
+            { text: this.intl.t('trailer.actions.create-work-order'), icon: 'clipboard-list', fn: () => this.createWorkOrder(trailer), permission: 'fleet-ops create work-order' },
+            { text: this.intl.t('trailer.actions.log-maintenance'), icon: 'wrench', fn: () => this.logMaintenance(trailer), permission: 'fleet-ops create maintenance' },
+            { separator: true },
+            {
+                text: this.intl.t('common.delete-resource', { resource: this.intl.t('resource.trailer') }),
+                icon: 'trash',
+                fn: () => this.delete(trailer, { onConfirm: onDeleted }),
+                permission: 'fleet-ops delete trailer',
+                class: 'text-red-500 hover:text-red-600',
+            },
+        ];
     }
 }

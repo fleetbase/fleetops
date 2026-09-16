@@ -1,6 +1,7 @@
 import ResourceActionService from '@fleetbase/ember-core/services/resource-action';
 import { inject as service } from '@ember/service';
 import { action, get } from '@ember/object';
+import { PANEL_DEFAULTS, closePanelsThen, registeredPanelTabs } from '../utils/context-panel';
 
 const INTERNAL_NAMESPACE = 'int/v1';
 
@@ -9,6 +10,7 @@ export default class ContactActionsService extends ResourceActionService {
     @service placeActions;
     @service notifications;
     @service hostRouter;
+    @service('universe/menu-service') menuService;
     @service('universe/extension-manager') extensionManager;
 
     constructor() {
@@ -48,12 +50,14 @@ export default class ContactActionsService extends ResourceActionService {
         view: (contact, options = {}) => {
             return this.resourceContextPanel.open({
                 contact,
+                title: contact?.name,
+                header: 'contact/panel-header',
+                actionButtons: this.panelActionButtons(contact),
                 tabs: [
-                    {
-                        label: this.intl.t('common.overview'),
-                        component: 'contact/details',
-                    },
+                    { key: 'overview', label: this.intl.t('common.overview'), component: 'contact/details' },
+                    ...registeredPanelTabs(this.menuService, 'fleet-ops:component:contact:details'),
                 ],
+                ...PANEL_DEFAULTS,
                 ...options,
             });
         },
@@ -135,6 +139,20 @@ export default class ContactActionsService extends ResourceActionService {
 
     isCustomerPortalInstalled() {
         return this.extensionManager.isInstalled('@fleetbase/customer-portal-engine');
+    }
+
+    /**
+     * The header buttons of a contact or customer panel, as on the details
+     * route: edit, then the portal account menu when a login is linked.
+     */
+    panelActionButtons(contact) {
+        const buttons = [{ icon: 'pencil', fn: () => closePanelsThen(this.resourceContextPanel, () => this.panel.edit(contact)) }];
+        const accountActionButton = this.accountActionButton(contact);
+        if (accountActionButton) {
+            buttons.push(accountActionButton);
+        }
+
+        return buttons;
     }
 
     accountActionButton(contact, options = {}) {

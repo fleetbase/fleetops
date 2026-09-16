@@ -1289,6 +1289,8 @@ place:
         locate-place: Locate Place on Map
 
 service-area:
+    actions:
+        edit-boundary: Edit boundary on map
     fields:
         details: Service Area Details
         area-color: Fill Color
@@ -1510,6 +1512,8 @@ integrated-vendor:
         namespace-help-text: Optionally provide a custom namespace or api version that should be used for the integration.
 
 zone:
+    actions:
+        edit-boundary: Edit boundary on map
     fields:
         details: Zone Details
         border-color: Border Color

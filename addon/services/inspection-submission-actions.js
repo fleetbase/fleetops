@@ -48,7 +48,7 @@ export default class InspectionSubmissionActionsService extends ResourceActionSe
                 tabs: [
                     { key: 'overview', label: this.intl.t('inspection.record.overview'), component: 'inspection-submission/details' },
                     { key: 'photos', label: this.intl.t('inspection.record.photos'), component: 'inspection-submission/photos' },
-                    { key: 'audit', label: this.intl.t('inspection.record.audit'), component: 'inspection-submission/audit' },
+                    { key: 'audit', label: this.intl.t('inspection.record.audit'), component: 'resource-activity' },
                 ],
                 ...PANEL_DEFAULTS,
                 ...options,

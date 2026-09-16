@@ -74,6 +74,7 @@
                         @selected={{this.selectedMaintainableType}}
                         @onChange={{this.onMaintainableTypeChange}}
                         @placeholder="Select asset type (Vehicle, Equipment…)"
+                        @allowClear={{true}}
                         @triggerClass="form-select form-input"
                         @disabled={{cannot-write @resource}}
                         as |option|
@@ -89,6 +90,7 @@
                         @selectedItemComponent={{if (resource-component "select-option" this.maintainableModelName) (component (resource-component "select-option" this.maintainableModelName) compact=true)}}
                         @selectedModel={{@resource.maintainable}}
                         @placeholder="Select asset"
+                        @allowClear={{true}}
                         @triggerClass="form-select form-input"
                         @infiniteScroll={{false}}
                         @renderInPlace={{true}}
@@ -117,6 +119,7 @@
                         @selected={{this.selectedPerformedByType}}
                         @onChange={{this.onPerformedByTypeChange}}
                         @placeholder="Select performer type (Vendor, Driver, User…)"
+                        @allowClear={{true}}
                         @triggerClass="form-select form-input"
                         @disabled={{cannot-write @resource}}
                         as |option|
@@ -132,6 +135,7 @@
                         @selectedItemComponent={{if (resource-component "select-option" this.performedByModelName) (component (resource-component "select-option" this.performedByModelName) compact=true)}}
                         @selectedModel={{@resource.performed_by}}
                         @placeholder="Select performer"
+                        @allowClear={{true}}
                         @triggerClass="form-select form-input"
                         @infiniteScroll={{false}}
                         @renderInPlace={{true}}

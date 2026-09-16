@@ -361,14 +361,32 @@ module('Unit | Controller | management/index (radar)', function (hooks) {
         assert.deepEqual(this.notifications.messages.at(-1), ['error', 'nope']);
     });
 
-    test('open record transitions through the host router with the engine prefix', function (assert) {
+    test('open record loads the record by public id and opens its resource panel', async function (assert) {
         const hostRouter = this.owner.lookup('service:host-router');
+        const store = this.owner.lookup('service:store');
+        const issue = { id: 'uuid-a', public_id: 'issue_a' };
+        const queries = [];
+        const opened = [];
+        store.queryRecord = async (modelName, query) => {
+            queries.push([modelName, query]);
+            return issue;
+        };
+        this.owner.lookup('service:issue-actions').panel = { view: (record) => opened.push(record) };
 
-        this.controller.openRecord(item('issue_open:a', { record: { route: 'management.issues.index.details', model: 'issue_a' } }));
-        assert.deepEqual(hostRouter.transitions, [['console.fleet-ops.management.issues.index.details', 'issue_a']]);
+        await this.controller.openRecord(item('issue_open:a', { record: { route: 'management.issues.index.details', model: 'issue_a' } }));
 
-        this.controller.openRecord(item('notice:n', { record: null }));
-        assert.strictEqual(hostRouter.transitions.length, 1, 'an item without a record goes nowhere');
+        assert.deepEqual(
+            queries,
+            [['issue', { public_id: 'issue_a', single: true, with: ['driver', 'vehicle', 'assignee', 'reporter', 'order', 'files'] }]],
+            'queried by public id, like the details route'
+        );
+        assert.deepEqual(opened, [issue], 'the issue panel opened with the loaded record');
+
+        await this.controller.openRecord(item('notice:n', { record: null }));
+        assert.strictEqual(opened.length, 1, 'an item without a record opens nothing');
+
+        await this.controller.openRecord(item('x:y', { record: { route: 'operations.orders.index.details', model: 'order_1' } }));
+        assert.deepEqual(hostRouter.transitions, [['console.fleet-ops.operations.orders.index.details', 'order_1']], 'a record with no panel is navigated to');
     });
 
     test('the keyboard handlers cover move, select, acknowledge, snooze, assign, open and close', function (assert) {

@@ -2,9 +2,11 @@ import ResourceActionService from '@fleetbase/ember-core/services/resource-actio
 import leafletIcon from '@fleetbase/ember-core/utils/leaflet-icon';
 import { inject as service } from '@ember/service';
 import { action } from '@ember/object';
+import { PANEL_DEFAULTS, closePanelsThen, registeredPanelTabs } from '../utils/context-panel';
 
 export default class PlaceActionsService extends ResourceActionService {
     @service vendorActions;
+    @service('universe/menu-service') menuService;
 
     constructor() {
         super(...arguments);
@@ -44,19 +46,18 @@ export default class PlaceActionsService extends ResourceActionService {
                 place,
             });
         },
-        view: async (place) => {
+        view: async (place, options = {}) => {
             if (place?.meta?._index_resource) {
                 await place.reload();
             }
 
             return this.resourceContextPanel.open({
                 place,
-                tabs: [
-                    {
-                        label: this.intl.t('common.overview'),
-                        component: 'place/details',
-                    },
-                ],
+                title: place?.name ?? place?.street1,
+                actionButtons: [{ icon: 'pencil', permission: 'fleet-ops update place', fn: () => closePanelsThen(this.resourceContextPanel, () => this.panel.edit(place)) }],
+                tabs: [{ key: 'overview', label: this.intl.t('common.overview'), component: 'place/details' }, ...registeredPanelTabs(this.menuService, 'fleet-ops:component:place:details')],
+                ...PANEL_DEFAULTS,
+                ...options,
             });
         },
     };

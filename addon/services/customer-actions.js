@@ -1,4 +1,5 @@
 import ContactActionsService from './contact-actions';
+import { PANEL_DEFAULTS, registeredPanelTabs } from '../utils/context-panel';
 
 export default class CustomerActionsService extends ContactActionsService {
     constructor() {
@@ -38,12 +39,14 @@ export default class CustomerActionsService extends ContactActionsService {
         view: (customer, options = {}) => {
             return this.resourceContextPanel.open({
                 customer,
+                title: customer?.name,
+                header: 'contact/panel-header',
+                actionButtons: this.panelActionButtons(customer),
                 tabs: [
-                    {
-                        label: this.intl.t('common.overview'),
-                        component: 'customer/details',
-                    },
+                    { key: 'overview', label: this.intl.t('common.overview'), component: 'customer/details' },
+                    ...registeredPanelTabs(this.menuService, 'fleet-ops:component:customer:details'),
                 ],
+                ...PANEL_DEFAULTS,
                 ...options,
             });
         },
