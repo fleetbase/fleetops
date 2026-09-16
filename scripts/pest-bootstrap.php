@@ -328,7 +328,7 @@ if (!class_exists('Fleetbase\TestSupport\PendingDispatch')) {
 }
 
 if (!class_exists('Fleetbase\TestSupport\DispatchRecorder')) {
-    eval('namespace Fleetbase\TestSupport; class DispatchRecorder { public static array $dispatched = []; public static function record(string $job, array $arguments): void { self::$dispatched[] = [\'job\' => $job, \'arguments\' => $arguments]; } }');
+    eval('namespace Fleetbase\TestSupport; class DispatchRecorder { public static array $dispatched = []; public static ?\Throwable $failure = null; public static function record(string $job, array $arguments): void { if (self::$failure) { throw self::$failure; } self::$dispatched[] = [\'job\' => $job, \'arguments\' => $arguments]; } }');
 }
 
 if (!trait_exists('Illuminate\Foundation\Bus\Dispatchable')) {

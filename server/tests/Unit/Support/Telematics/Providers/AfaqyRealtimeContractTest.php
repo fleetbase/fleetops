@@ -52,7 +52,7 @@ test('provisional webhook accepts flat nested single and batch units without aut
         expect(Sample::validPosition($result['events'][0]))->toBeTrue();
     }
     Http::assertNothingSent();
-    foreach ([[], ['event_type' => 'overspeed'], ['data' => [['name' => 'No identity']]]] as $body) {
+    foreach ([[], [42], ['event_type' => 'overspeed'], ['data' => [['name' => 'No identity']]]] as $body) {
         expect(fn () => Payload::units($body))->toThrow(InvalidArgumentException::class);
     }
 });
@@ -147,4 +147,27 @@ test('request limit is shared across provider instances and Retry-After blocks r
     }
     expect(fn () => $b->call('reserveRequest'))->toThrow(TelematicRateLimitExceededException::class);
     Http::assertSentCount(1);
+});
+
+test('successful HTTP responses still reject malformed JSON and provider error envelopes', function () {
+    Http::fakeSequence()->push('not JSON', 200)->push(['status_code' => 500, 'message' => 'Provider unavailable'], 200);
+    $provider = new AfaqyRealtimeProbe();
+    $provider->credentials(['token' => 'contract-token']);
+    foreach (range(1, 2) as $attempt) {
+        expect(fn () => $provider->call('afaqyPost', '/units/lists'))->toThrow(TelematicProviderException::class, 'invalid or unsuccessful response');
+    }
+    Http::assertSentCount(2);
+});
+
+test('telemetry snapshots retain scalar readings and skip protocol descriptors without values', function () {
+    $unit = afaqyRealtimeUnit();
+    $unit['data']['sensors_last_val'] = [
+        'fuel' => 40,
+        'temperature' => ['name' => 'Temperature', 'value' => 18, 'unit' => 'C'],
+        'descriptor' => ['name' => 'Protocol descriptor', 'value' => ['expression' => 'ADC1']],
+    ];
+    $snapshot = (new AfaqyProvider())->normalizeTelemetrySnapshot($unit);
+    expect($snapshot['sensors'])->toHaveCount(2);
+    expect(array_column($snapshot['sensors'], 'value'))->toBe([40, 18]);
+    expect($snapshot['sensors'][0]['recorded_at'])->toBe('2026-09-15T11:59:00.000000Z');
 });
