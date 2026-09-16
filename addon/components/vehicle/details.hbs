@@ -75,7 +75,7 @@
             <div class="field-info-container">
                 <div class="field-name">{{t "vehicle.fields.driver-assigned"}}</div>
                 <div class="field-value">
-                    <Driver::Pill @driver={{@resource.driver}} @titleFallback={{n-a @resource.driver_name (t "common.no-driver-assigned")}} />
+                    <Driver::Pill @driver={{resource-relation @resource "driver"}} @titleFallback={{n-a @resource.driver_name (t "common.no-driver-assigned")}} />
                 </div>
             </div>
 

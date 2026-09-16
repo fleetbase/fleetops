@@ -1,5 +1,5 @@
 import { get } from '@ember/object';
-import { first, present, relation, photo, badge, badges, fact, relatedFact, join, panelOpener, dateLabel } from './helpers';
+import { first, present, relation, photo, badge, badges, fact, relatedFact, join, panelOpener, dateLabel, typeLabel } from './helpers';
 
 /**
  * Drivers, vendors, contacts, customers and fleets.
@@ -114,7 +114,7 @@ export default function buildPeopleDescriptors(owner) {
             polymorphicTypes: ['fleet-ops:contact', 'Fleetbase\\FleetOps\\Models\\Contact'],
             permission: 'fleet-ops view contact',
             title: (contact) => first(contact, 'name', 'public_id'),
-            identifier: (contact) => first(contact, 'title', 'type'),
+            identifier: (contact) => first(contact, 'title') ?? typeLabel(first(contact, 'type')),
             image: (contact) => photo(contact, 'contact'),
             selectDetails: (contact) => [first(contact, 'email'), first(contact, 'phone')],
             facts: (contact) => [
@@ -135,11 +135,11 @@ export default function buildPeopleDescriptors(owner) {
             polymorphicTypes: ['fleet-ops:customer', 'Fleetbase\\FleetOps\\Models\\Customer'],
             permission: 'fleet-ops view contact',
             title: (customer) => first(customer, 'name', 'public_id'),
-            identifier: (customer) => first(customer, 'customer_type', 'type'),
+            identifier: (customer) => typeLabel(first(customer, 'customer_type', 'type')) ?? 'Customer',
             image: (customer) => photo(customer, 'customer'),
             selectDetails: (customer) => [first(customer, 'email'), first(customer, 'phone')],
             facts: (customer) => [
-                fact('type', first(customer, 'customer_type', 'type'), { format: 'humanize' }),
+                fact('type', typeLabel(first(customer, 'customer_type', 'type'))),
                 fact('email', first(customer, 'email')),
                 fact('phone', first(customer, 'phone')),
                 fact('address', first(customer, 'address', 'address_street')),

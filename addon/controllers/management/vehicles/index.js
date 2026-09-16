@@ -201,6 +201,8 @@ export default class ManagementVehiclesIndexController extends Controller {
             {
                 label: this.intl.t('resource.trailers'),
                 valuePath: 'trailers',
+                cellComponent: 'cell/resource-list',
+                resourceType: 'trailer',
                 hidden: true,
                 filterable: true,
                 filterComponent: 'filter/model-multiple',
@@ -212,6 +214,8 @@ export default class ManagementVehiclesIndexController extends Controller {
             {
                 label: this.intl.t('resource.devices'),
                 valuePath: 'devices',
+                cellComponent: 'cell/resource-list',
+                resourceType: 'device',
                 hidden: true,
                 filterable: true,
                 filterComponent: 'filter/model-multiple',

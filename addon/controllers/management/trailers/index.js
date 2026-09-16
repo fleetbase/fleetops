@@ -564,6 +564,8 @@ export default class ManagementTrailersIndexController extends Controller {
             {
                 label: this.intl.t('resource.devices'),
                 valuePath: 'devices',
+                cellComponent: 'cell/resource-list',
+                resourceType: 'device',
                 hidden: true,
                 filterable: true,
                 filterComponent: 'filter/model-multiple',

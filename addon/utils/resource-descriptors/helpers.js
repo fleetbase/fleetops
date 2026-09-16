@@ -93,6 +93,24 @@ export function dateLabel(value, pattern = 'dd MMM yyyy, HH:mm') {
     return Number.isNaN(date.getTime()) ? null : formatDate(date, pattern);
 }
 
+/**
+ * A contact's type the way a person reads it: "customer-fleet-ops:contact"
+ * and "customer" both become "Customer"; anything unreadable becomes null.
+ */
+export function typeLabel(value) {
+    if (!present(value)) {
+        return null;
+    }
+
+    const head = String(value)
+        .split(':')[0]
+        .replace(/-fleet-ops$/, '')
+        .replace(/[-_]+/g, ' ')
+        .trim();
+
+    return head ? head.charAt(0).toUpperCase() + head.slice(1) : null;
+}
+
 export function money(amount, currency) {
     if (!present(amount)) {
         return null;
