@@ -13,8 +13,8 @@
         </div>
     </header>
     <div class="min-h-0 flex-1 overflow-y-auto p-4">
-        <div class="grid grid-cols-1 items-start gap-4 xl:grid-cols-3">
-            <div class="space-y-3 xl:col-span-2">
+        <div class="grid grid-cols-1 items-start gap-4 md:grid-cols-5">
+            <div class="min-w-0 space-y-3 md:col-span-4">
                 {{#each this.purchaseGroups as |group|}}
                     <section class="overflow-hidden rounded-md border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800">
                         <h2 class="border-b border-gray-200 px-3 py-2 text-sm font-semibold text-gray-900 dark:border-gray-700 dark:text-gray-100">{{group.title}}</h2>
@@ -28,10 +28,10 @@
                     </section>
                 {{/each}}
             </div>
-            <section class="overflow-hidden rounded-md border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800">
+            <section class="min-w-0 overflow-hidden rounded-md border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800 md:col-span-1">
                 <h2 class="border-b border-gray-200 px-3 py-2 text-sm font-semibold text-gray-900 dark:border-gray-700 dark:text-gray-100">Matching & review</h2>
                 <div class="space-y-3 p-3">
-                    <div class="flex items-center justify-between gap-2">
+                    <div class="flex flex-wrap items-center justify-between gap-2">
                         <div class="min-w-0"><div class="text-xs text-gray-500 dark:text-gray-400">Vehicle</div><div class="break-words text-sm text-gray-900 dark:text-gray-100">
                                 {{#if this.vehicleResource}}
                                     <Vehicle::Pill @vehicle={{this.vehicleResource}} />
@@ -41,7 +41,7 @@
                             </div></div>
                         <Button @text={{if @model.vehicle_uuid "Change" "Match"}} @size="xs" @onClick={{fn this.confirmAction "vehicle"}} />
                     </div>
-                    <div class="flex items-center justify-between gap-2">
+                    <div class="flex flex-wrap items-center justify-between gap-2">
                         <div class="min-w-0"><div class="text-xs text-gray-500 dark:text-gray-400">Order / Trip</div><div class="break-words text-sm text-gray-900 dark:text-gray-100">
                                 {{#if this.orderResource}}
                                     <Order::Pill @order={{this.orderResource}} />
@@ -51,7 +51,7 @@
                             </div></div>
                         <Button @text={{if @model.order_uuid "Change" "Match"}} @size="xs" @onClick={{fn this.confirmAction "order"}} />
                     </div>
-                    <div class="flex items-center justify-between gap-2">
+                    <div class="flex flex-wrap items-center justify-between gap-2">
                         <div class="min-w-0"><div class="text-xs text-gray-500 dark:text-gray-400">Fuel Report</div><div class="break-words text-sm text-gray-900 dark:text-gray-100">
                                 {{#if this.fuelReportResource}}
                                     <FuelReport::Pill @fuelReport={{this.fuelReportResource}} />
@@ -64,8 +64,8 @@
                     <div class="border-t border-gray-200 pt-3 dark:border-gray-700">
                         <p class="mb-2 text-xs text-gray-500 dark:text-gray-400">Review this purchase or exclude it from automatic matching.</p>
                         <div class="flex flex-wrap gap-2">
-                            <Button @icon="check" @text="Mark Reviewed" @size="xs" @disabled={{eq @model.sync_status "reviewed"}} @onClick={{fn this.confirmAction "reviewed"}} />
-                            <Button @icon="ban" @text="Ignore" @size="xs" @disabled={{eq @model.sync_status "ignored"}} @onClick={{fn this.confirmAction "ignored"}} />
+                            <Button @icon="check" @text="Mark Reviewed" @type="success" @size="xs" @disabled={{eq @model.sync_status "reviewed"}} @onClick={{fn this.confirmAction "reviewed"}} />
+                            <Button @icon="ban" @text="Ignore" @type="danger" @size="xs" @disabled={{eq @model.sync_status "ignored"}} @onClick={{fn this.confirmAction "ignored"}} />
                         </div>
                     </div>
                 </div>

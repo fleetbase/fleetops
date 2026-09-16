@@ -155,7 +155,7 @@
             <div class="field-info-container">
                 <div class="field-name">{{t "trailer.fields.coordinates"}}</div>
                 <div class="field-value">
-                    {{#if @resource.hasValidCoordinates}}
+                    {{#if this.hasValidCoordinates}}
                         {{point-coordinates @resource.location}}
                         <Button @icon="location-dot" @size="xs" @helpText={{t "trailer.actions.locate"}} @onClick={{this.locate}} class="ml-2" />
                     {{else}}

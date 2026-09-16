@@ -17,14 +17,13 @@
             <div class="flex flex-col">
                 <h1 class="text-gray-900 dark:text-white font-semibold text-2xl">{{@resource.name}}</h1>
                 <div class="-mt-1">
-                    {{#if (resource-relation @resource "vehicle")}}
+                    {{#if this.vehicleName}}
                         <div class="flex flex-row items-center">
-                            <Vehicle::Pill @vehicle={{resource-relation @resource "vehicle"}} @imageSize="20" @imageClass="w-5 h-5" @titleClass="text-sm dark:text-blue-400 text-blue-600" @subtitle={{null}} />
+                            <span class="text-sm dark:text-gray-400 text-gray-700">{{this.vehicleName}}</span>
                         </div>
                     {{else}}
                         <div class="flex flex-row items-center">
                             <span class="text-sm dark:text-gray-500 text-gray-700 mr-3">{{t "driver.fields.no-vehicle-assigned"}}</span>
-                            {{!-- <Button @icon="plus" @size="xs" @helpText={{t "driver.actions.assign-vehicle"}} /> --}}
                         </div>
                     {{/if}}
                 </div>

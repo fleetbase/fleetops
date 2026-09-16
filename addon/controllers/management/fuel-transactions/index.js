@@ -96,7 +96,7 @@ export default class ManagementFuelTransactionsIndexController extends Controlle
                 sticky: true,
                 label: 'Transaction',
                 valuePath: 'provider_transaction_id',
-                cellComponent: 'table/cell/anchor',
+                cellComponent: 'cell/fuel-provider-transaction-identity',
                 action: this.openDetails,
                 resizable: true,
                 sortable: true,

@@ -60,11 +60,20 @@ export default class TrailerActionsService extends ResourceActionService {
 
     async resolveTrailerResource(trailer) {
         if (typeof trailer?.then === 'function') {
-            return await trailer;
+            trailer = await trailer;
         }
 
         if (typeof trailer?.loadResource === 'function') {
-            return (await trailer.loadResource()) ?? trailer;
+            trailer = (await trailer.loadResource()) ?? trailer;
+        }
+
+        // Embedded vehicle rows contain a summary, so hydrate it before opening the trailer.
+        if (trailer?.public_id && !trailer.created_at && !trailer.isNew) {
+            return this.store.queryRecord('trailer', {
+                public_id: trailer.public_id,
+                single: true,
+                with: ['currentConnection.vehicle', 'category', 'vendor', 'warranty'],
+            });
         }
 
         return trailer;
@@ -350,12 +359,13 @@ export default class TrailerActionsService extends ResourceActionService {
     }
 
     @action locate(trailer, options = {}) {
-        const { latitude, longitude, location } = trailer;
         const trailerName = this.trailerName(trailer);
 
-        if (!trailer.hasValidCoordinates) {
+        if (!trailer?.location || !trailer.hasValidCoordinates) {
             return this.notifications.warning(this.intl.t('trailer.prompts.no-location-warning', { trailerName }));
         }
+
+        const { latitude, longitude, location } = trailer;
 
         this.modalsManager.show('modals/point-map', {
             title: this.intl.t('common.resource-location', { resource: trailerName }),
