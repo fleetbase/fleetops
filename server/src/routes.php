@@ -477,6 +477,7 @@ Route::prefix(config('fleetops.api.routing.prefix'))->namespace('Fleetbase\Fleet
                             function ($router, $controller) {
                                 $router->get('providers', $controller('providers'));
                                 $router->post('providers/{provider}/test-credentials', $controller('testCredentials'));
+                                $router->get('{id}/activity', $controller('activity'));
                                 $router->post('{id}/test-connection', $controller('testConnection'));
                                 $router->post('{id}/sync', $controller('sync'));
                             }

@@ -195,7 +195,7 @@ class FleetOpsFuelProviderServiceHarness extends FuelProviderService
             return $this->ingestTransactionResult;
         }
 
-        return new FleetOpsFuelProviderTransactionHarness(array_merge([
+        $transaction = new FleetOpsFuelProviderTransactionHarness(array_merge([
             'company_uuid'            => $connection->company_uuid,
             'provider'                => $connection->provider,
             'provider_transaction_id' => $payload['provider_transaction_id'] ?? 'txn-harness',
@@ -204,6 +204,10 @@ class FleetOpsFuelProviderServiceHarness extends FuelProviderService
             'sync_status'             => $payload['sync_status'] ?? 'unmatched',
             'fuel_report_uuid'        => $payload['fuel_report_uuid'] ?? null,
         ], $payload));
+        $transaction->wasRecentlyCreated = true;
+        $transaction->createdFuelReport = (bool) $transaction->fuel_report_uuid;
+
+        return $transaction;
     }
 
     public function createSyncRun(FuelProviderConnection $connection, ?Carbon $from = null, ?Carbon $to = null, string $status = 'queued'): FuelProviderSyncRun
@@ -392,7 +396,7 @@ test('petroapp provider resolves base urls auth headers and normalized bills', f
 
     expect($provider->key())->toBe('petroapp')
         ->and($provider->name())->toBe('PetroApp')
-        ->and($provider->exposedBaseUrl($defaultConnection))->toBe('https://app-public.staging.petroapp.app/webservice')
+        ->and($provider->exposedBaseUrl($defaultConnection))->toBe('https://app.petroapp.com.sa/webservice')
         ->and($provider->exposedBaseUrl($customConnection))->toBe('https://petroapp.example.test/root')
         ->and($provider->exposedHeaders($defaultConnection))->toBe([
             'WS-Version'    => 'v2.0',
@@ -572,6 +576,8 @@ test('fuel provider service summarizes successful sync transactions', function (
     $summary = $service->syncTransactions($connection, Carbon::parse('2026-07-01'), Carbon::parse('2026-07-02'), ['page_size' => 50]);
 
     expect($summary)->toBe([
+        'received'             => 2,
+        'updated'              => 0,
         'imported'             => 2,
         'matched'              => 1,
         'unmatched'            => 1,
@@ -627,6 +633,8 @@ test('fuel provider service records sync errors before rethrowing', function () 
         'status'  => 'error',
         'error'   => 'provider offline',
         'summary' => [
+            'received'             => 0,
+            'updated'              => 0,
             'imported'             => 0,
             'matched'              => 0,
             'unmatched'            => 0,

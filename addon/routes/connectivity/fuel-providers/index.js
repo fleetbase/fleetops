@@ -1,4 +1,5 @@
 import Route from '@ember/routing/route';
+import { action } from '@ember/object';
 import { inject as service } from '@ember/service';
 
 export default class ConnectivityFuelProvidersIndexRoute extends Route {
@@ -13,6 +14,10 @@ export default class ConnectivityFuelProvidersIndexRoute extends Route {
         status: { refreshModel: true },
         environment: { refreshModel: true },
     };
+
+    @action refreshFuelConnections() {
+        this.refresh();
+    }
 
     model(params) {
         return this.store.query('fuel-provider-connection', { sort: '-updated_at', ...params });

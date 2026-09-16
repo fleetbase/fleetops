@@ -1,48 +1,59 @@
-<div class="mx-auto grid w-full max-w-7xl grid-cols-1 gap-4 px-4 py-4 lg:grid-cols-3 md:px-6">
-    <section class="rounded-md border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-800 lg:col-span-2">
-        <div class="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+<div class="space-y-4 p-4">
+    <section class="rounded-md border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-800">
+        <h2 class="text-sm font-bold text-gray-900 dark:text-gray-100">Import transactions</h2>
+        <p class="mt-1 text-xs leading-5 text-gray-500 dark:text-gray-400">Choose the purchase dates to import. Existing transactions are updated without creating duplicate fuel reports.</p>
+        <div class="mt-4 flex flex-wrap items-end gap-4">
+            <InputGroup @name="Start date" @wrapperClass="mb-0">
+                <input type="date" aria-label="Start date" class="form-input" value={{this.from}} {{on "change" (fn this.setDate "from")}} />
+            </InputGroup>
+            <InputGroup @name="End date" @wrapperClass="mb-0">
+                <input type="date" aria-label="End date" class="form-input" value={{this.to}} {{on "change" (fn this.setDate "to")}} />
+            </InputGroup>
+            <Button
+                @icon="rotate"
+                @text="Sync Transactions"
+                @type="primary"
+                @size="sm"
+                @wrapperClass="flex-shrink-0"
+                @textClass="whitespace-nowrap"
+                @disabled={{this.syncDisabled}}
+                @isLoading={{this.details.syncTransactions.isRunning}}
+                @onClick={{this.sync}}
+            />
+        </div>
+        {{#if this.dateError}}<p class="mt-3 text-xs text-red-600 dark:text-red-300" role="alert">{{this.dateError}}</p>{{/if}}
+        {{#if this.details.hasPendingSync}}<p class="mt-3 text-xs text-blue-600 dark:text-blue-300" role="status">A sync is in progress. Results update automatically.</p>{{/if}}
+    </section>
+    <section class="overflow-hidden rounded-md border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-800">
+        <div class="flex items-center justify-between gap-3 border-b border-gray-200 p-4 dark:border-gray-700">
             <div>
-                <h2 class="text-sm font-bold text-gray-900 dark:text-gray-100">Manual Sync</h2>
-                <p class="mt-1 text-xs leading-5 text-gray-500 dark:text-gray-300">Queue a provider import for the configured sync window. Imported records appear in Management > Fuel Transactions.</p>
+                <h2 class="text-sm font-bold text-gray-900 dark:text-gray-100">Sync history</h2>
+                <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Latest 20 runs · Times shown in your local timezone</p>
             </div>
-            <Button @icon="rotate" @text="Sync Transactions" @type="primary" @size="sm" @isLoading={{this.syncTransactions.isRunning}} @onClick={{perform this.syncTransactions}} />
+            <Button @icon="refresh" @text="Refresh" @size="xs" @onClick={{this.details.refreshActivity}} />
         </div>
-        <div class="mt-4 rounded-md border border-gray-200 p-3 text-xs leading-5 dark:border-gray-700">
-            <div class="font-semibold text-gray-900 dark:text-gray-100">Configured window</div>
-            <div class="mt-1 text-gray-500 dark:text-gray-300">{{n-a @model.connection.sync_settings.window_days}} days</div>
-        </div>
-        <div class="mt-4 overflow-hidden rounded-md border border-gray-200 dark:border-gray-700">
-            <table class="min-w-full divide-y divide-gray-200 text-xs dark:divide-gray-700">
-                <thead class="bg-gray-50 dark:bg-gray-900">
-                    <tr>
-                        <th class="px-3 py-2 text-left font-semibold text-gray-500">Status</th>
-                        <th class="px-3 py-2 text-left font-semibold text-gray-500">Window</th>
-                        <th class="px-3 py-2 text-left font-semibold text-gray-500">Imported</th>
-                        <th class="px-3 py-2 text-left font-semibold text-gray-500">Matched</th>
-                        <th class="px-3 py-2 text-left font-semibold text-gray-500">Finished</th>
-                    </tr>
-                </thead>
-                <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
-                    {{#each this.syncRuns as |run|}}
-                        <tr>
-                            <td class="px-3 py-2"><Badge @status={{run.status}}>{{run.status}}</Badge></td>
-                            <td class="px-3 py-2 text-gray-600 dark:text-gray-300">{{n-a (format-date-fns run.from "dd MMM")}} - {{n-a (format-date-fns run.to "dd MMM")}}</td>
-                            <td class="px-3 py-2 text-gray-600 dark:text-gray-300">{{run.imported}}</td>
-                            <td class="px-3 py-2 text-gray-600 dark:text-gray-300">{{run.matched}}</td>
-                            <td class="px-3 py-2 text-gray-600 dark:text-gray-300">{{n-a (format-date-fns run.finished_at "dd MMM HH:mm")}}</td>
-                        </tr>
-                    {{else}}
-                        <tr>
-                            <td colspan="5" class="px-3 py-6 text-center text-gray-500 dark:text-gray-300">No sync runs have been recorded yet.</td>
-                        </tr>
-                    {{/each}}
-                </tbody>
-            </table>
+        <div class="divide-y divide-gray-200 dark:divide-gray-700">
+            {{#each this.details.runs as |run|}}
+                <article class="p-4" data-test-sync-run={{run.uuid}}>
+                    <div class="flex flex-wrap items-center justify-between gap-3">
+                        <div class="flex flex-wrap items-center gap-3">
+                            <Badge @status={{run.tone}}>{{run.label}}</Badge>
+                            <span class="text-sm font-medium text-gray-900 dark:text-gray-100" dir="ltr">{{run.window}}</span>
+                        </div>
+                        <time class="text-xs text-gray-500 dark:text-gray-400" dir="ltr">{{run.date}}</time>
+                    </div>
+                    <p class="mt-3 text-sm text-gray-700 dark:text-gray-300" role="status">{{run.result}}</p>
+                    {{#if run.received}}
+                        <div class="mt-3 flex flex-wrap gap-x-6 gap-y-2 text-xs text-gray-500 dark:text-gray-400">
+                            <span>Read: {{run.received}}</span><span>Vehicle matched: {{run.matched}}</span><span>Fuel reports created: {{run.fuel_reports_created}}</span>
+                        </div>
+                    {{/if}}
+                </article>
+            {{else}}
+                <div class="p-8 text-center"><FaIcon @icon="history" class="text-gray-400" /><h3 class="mt-3 text-sm font-semibold text-gray-900 dark:text-gray-100">No sync history yet</h3><p
+                        class="mt-1 text-xs text-gray-500 dark:text-gray-400"
+                    >Choose a date range above to start an import.</p></div>
+            {{/each}}
         </div>
     </section>
-
-    <aside class="rounded-md border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-800">
-        <h2 class="text-sm font-bold text-gray-900 dark:text-gray-100">Last Sync State</h2>
-        <pre class="mt-3 max-h-80 overflow-auto rounded-md bg-gray-900 p-3 text-[11px] leading-5 text-gray-100">{{this.lastSyncStateJson}}</pre>
-    </aside>
 </div>
