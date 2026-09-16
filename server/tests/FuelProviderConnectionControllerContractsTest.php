@@ -165,9 +165,10 @@ test('fuel provider connection controller preserves active status while normaliz
 
     $connection = new FleetOpsFuelProviderConnectionFake();
     $connection->setRawAttributes([
-        'provider'    => 'petroapp',
-        'status'      => 'active',
-        'credentials' => ['api_token' => 'existing-token'],
+        'provider'      => 'petroapp',
+        'status'        => 'active',
+        'credentials'   => ['api_token' => 'existing-token'],
+        'sync_settings' => ['window_days' => 30, 'auto_create_fuel_reports' => false, 'matching_order' => []],
     ]);
 
     $input = [
@@ -300,4 +301,57 @@ test('fuel provider sync queues async runs and finds real connections', function
     $reflection->setAccessible(true);
     $found = $reflection->invoke(fleetopsFuelProviderConnectionController(new FleetOpsFuelProviderConnectionServiceFake()), 'fuel_provider_connection_real1');
     expect($found->uuid)->toBe('fpc-real-1');
+});
+
+test('fuel provider connection updates preserve sandbox and reject unknown environments', function () {
+    session(['company' => 'company-uuid']);
+    $controller = fleetopsFuelProviderConnectionController(new FleetOpsFuelProviderConnectionServiceFake());
+    $connection = new FleetOpsFuelProviderConnectionFake();
+    $connection->setRawAttributes([
+        'provider'      => 'petroapp',
+        'status'        => 'active',
+        'environment'   => 'sandbox',
+        'credentials'   => ['api_token' => 'existing-token'],
+        'sync_settings' => ['window_days' => 30, 'auto_create_fuel_reports' => false, 'matching_order' => []],
+    ]);
+    $input = ['name' => 'Updated sandbox'];
+    $controller->onBeforeUpdate(new Request(), $connection, $input);
+    expect($input['environment'])->toBe('sandbox');
+    expect($input['sync_settings'])->toMatchArray(['window_days' => 30, 'auto_create_fuel_reports' => false, 'matching_order' => []]);
+
+    $invalid = ['environment' => 'unknown'];
+    expect(fn () => $controller->onBeforeUpdate(new Request(), $connection, $invalid))->toThrow(ValidationException::class);
+});
+
+test('serialized fuel connection credentials survive create validation and settings updates', function () {
+    if (!Request::hasMacro('or')) {
+        Request::macro('or', (new Fleetbase\Expansions\Request())->or());
+    }
+    session(['company' => 'company-uuid']);
+    $controller = fleetopsFuelProviderConnectionController(new FleetOpsFuelProviderConnectionServiceFake());
+    $model      = new FuelProviderConnection();
+    $request    = new Request(['fuelProviderConnection' => [
+        'provider'    => 'petroapp',
+        'name'        => 'PetroApp Sandbox',
+        'environment' => 'sandbox',
+        'credentials' => ['api_token' => 'test-token', 'auth_type' => 'ws_sk_header'],
+    ]]);
+    $input = $model->getApiPayloadFromRequest($request);
+    $controller->onBeforeCreate($request, $input);
+    expect($input['credentials'])->toBe(['api_token' => 'test-token', 'auth_type' => 'ws_sk_header']);
+    expect($input['environment'])->toBe('sandbox');
+
+    $connection = new FuelProviderConnection($input);
+    $update     = ['name' => 'Renamed sandbox'];
+    $controller->onBeforeUpdate(new Request(), $connection, $update);
+    expect($update)->not->toHaveKey('credentials');
+    expect(data_get($connection->credentials, 'api_token'))->toBe('test-token');
+});
+
+test('disabled fuel connections cannot queue imports', function () {
+    $service                = new FleetOpsFuelProviderConnectionServiceFake();
+    $controller             = fleetopsFuelProviderConnectionController($service);
+    $controller->connection = new FleetOpsFuelProviderConnectionFake(['status' => 'disabled']);
+    expect(fn () => $controller->sync(new Request(), 'disabled-connection'))->toThrow(ValidationException::class);
+    expect($service->syncRuns)->toBeEmpty();
 });

@@ -64,15 +64,28 @@ class FuelProviderConnectionController extends FleetOpsController
 
     public function sync(Request $request, string $id): JsonResponse
     {
+        $request->validate([
+            'from'    => 'nullable|date',
+            'to'      => 'nullable|date|after_or_equal:from',
+            'options' => 'nullable|array',
+        ]);
         $connection = $this->findConnection($id);
-        $async      = $request->boolean('async', true);
-        $from       = $request->input('from') ? Carbon::parse($request->input('from')) : null;
-        $to         = $request->input('to') ? Carbon::parse($request->input('to')) : null;
-        $options    = $request->array('options', []);
-        $syncRun    = $this->fuelProviderService->createSyncRun($connection, $from, $to, $async ? 'queued' : 'running');
+        if ($connection->status === 'disabled') {
+            throw ValidationException::withMessages(['connection' => 'Enable this integration before syncing.']);
+        }
+        $async   = $request->boolean('async', true);
+        $from    = $request->input('from') ? Carbon::parse($request->input('from'))->startOfDay() : null;
+        $to      = $request->input('to') ? Carbon::parse($request->input('to'))->endOfDay() : null;
+        $options = $request->array('options', []);
+        $syncRun = $this->fuelProviderService->createSyncRun($connection, $from, $to, $async ? 'queued' : 'running');
 
         if ($async) {
-            SyncFuelProviderTransactionsJob::dispatch($connection->uuid, $from?->toIso8601String(), $to?->toIso8601String(), $options, $syncRun->uuid);
+            try {
+                SyncFuelProviderTransactionsJob::dispatch($connection->uuid, $syncRun->from?->toIso8601String(), $syncRun->to?->toIso8601String(), $options, $syncRun->uuid);
+            } catch (\Throwable $error) {
+                $syncRun->update(['status' => 'error', 'finished_at' => now(), 'error' => 'Unable to queue sync. Please retry.']);
+                throw $error;
+            }
 
             return response()->json(['status' => 'ok', 'message' => 'Fuel provider sync queued.', 'sync_run' => $syncRun], 202);
         }
@@ -82,9 +95,28 @@ class FuelProviderConnectionController extends FleetOpsController
         return response()->json(['status' => 'ok', 'summary' => $summary, 'sync_run' => $syncRun->fresh()]);
     }
 
+    public function activity(Request $request, string $id): JsonResponse
+    {
+        $connection   = $this->findConnection($id);
+        $transactions = $connection->transactions();
+        $totals       = (clone $transactions)->selectRaw('COUNT(*) as transactions, SUM(volume) as liters, COUNT(fuel_report_uuid) as fuel_reports')->first();
+        $unmatched    = (clone $transactions)->where('sync_status', 'unmatched')->count();
+        $spend        = (clone $transactions)->selectRaw('currency, SUM(amount) as amount')->groupBy('currency')->get()->map(fn ($row) => ['currency' => $row->currency, 'amount' => (int) $row->amount]);
+        $runs         = $connection->syncRuns()->latest()->limit(20)->get();
+
+        return response()->json([
+            'connection' => $connection->only(['status', 'last_synced_at', 'last_tested_at', 'last_error', 'last_sync_state']),
+            'totals'     => ['transactions' => (int) $totals->transactions, 'liters' => (float) $totals->liters, 'fuel_reports' => (int) $totals->fuel_reports, 'unmatched' => $unmatched, 'spend' => $spend],
+            'runs'       => $runs->map(fn ($run) => $run->only(['uuid', 'status', 'from', 'to', 'imported', 'matched', 'unmatched', 'fuel_reports_created', 'liters', 'amount', 'started_at', 'finished_at', 'created_at', 'error', 'summary'])),
+        ]);
+    }
+
     protected function validateConnectionInput(array $input, ?FuelProviderConnection $connection = null): void
     {
         $provider = data_get($input, 'provider');
+        if (isset($input['environment']) && !in_array($input['environment'], ['production', 'sandbox'], true)) {
+            throw ValidationException::withMessages(['environment' => 'Choose Production or Sandbox.']);
+        }
         if (!$provider) {
             throw ValidationException::withMessages(['provider' => 'Fuel integration provider is required.']);
         }
@@ -104,13 +136,13 @@ class FuelProviderConnectionController extends FleetOpsController
     protected function normalizeConnectionInput(array &$input, ?FuelProviderConnection $connection = null): void
     {
         $input['company_uuid'] ??= session('company');
-        $input['environment'] ??= 'production';
+        $input['environment'] ??= $connection?->environment ?? 'production';
         $input['status']        = $connection?->status && $connection->status !== 'draft' ? $connection->status : ($input['status'] ?? 'configured');
         $input['sync_settings'] = array_merge([
             'window_days'              => 7,
             'matching_order'           => ['plate_number', 'internal_id', 'vin', 'serial_number', 'call_sign', 'fuel_card_number', 'trip_number'],
             'auto_create_fuel_reports' => true,
-        ], (array) data_get($input, 'sync_settings', []));
+        ], (array) $connection?->sync_settings, (array) data_get($input, 'sync_settings', []));
     }
 
     protected function findConnection(string $id): FuelProviderConnection

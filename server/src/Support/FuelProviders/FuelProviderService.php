@@ -87,14 +87,14 @@ class FuelProviderService
 
     public function syncTransactions(FuelProviderConnection $connection, ?Carbon $from = null, ?Carbon $to = null, array $options = [], ?FuelProviderSyncRun $syncRun = null): array
     {
-        $settings = (array) $connection->sync_settings;
-        $from ??= Carbon::parse(data_get($settings, 'from', $connection->last_synced_at?->copy()->subDay() ?? now()->subDays((int) data_get($settings, 'window_days', 7))));
-        $to ??= Carbon::parse(data_get($settings, 'to', now()));
+        [$from, $to] = $this->syncWindow($connection, $from ?? $syncRun?->from, $to ?? $syncRun?->to);
 
         $syncRun ??= $this->createSyncRun($connection, $from, $to, 'running');
-        $syncRun->update(['status' => 'running', 'started_at' => now(), 'error' => null]);
+        $syncRun->update(['status' => 'running', 'from' => $from, 'to' => $to, 'started_at' => now(), 'error' => null]);
 
         $summary = [
+            'received'             => 0,
+            'updated'              => 0,
             'imported'             => 0,
             'matched'              => 0,
             'unmatched'            => 0,
@@ -109,22 +109,23 @@ class FuelProviderService
 
             foreach ($payloads as $payload) {
                 $transaction = $this->ingestTransaction($connection, $payload);
-                $summary['imported']++;
+                $summary['received']++;
+                $summary[$transaction->wasRecentlyCreated ? 'imported' : 'updated']++;
                 $summary['liters'] += (float) $transaction->volume;
                 $summary['amount'] += (int) $transaction->amount;
 
                 if ($transaction->sync_status === 'matched') {
                     $summary['matched']++;
-                } else {
+                } elseif ($transaction->sync_status === 'unmatched') {
                     $summary['unmatched']++;
                 }
 
-                if ($transaction->fuel_report_uuid) {
+                if ($transaction->fuel_report_uuid && $transaction->createdFuelReport) {
                     $summary['fuel_reports_created']++;
                 }
             }
         } catch (\Throwable $e) {
-            $syncRun->update(['status' => 'error', 'finished_at' => now(), 'error' => $e->getMessage(), 'summary' => $summary]);
+            $syncRun->update(array_merge(collect($summary)->only(['imported', 'matched', 'unmatched', 'fuel_reports_created', 'liters', 'amount'])->all(), ['status' => 'error', 'finished_at' => now(), 'error' => $e->getMessage(), 'summary' => $summary]));
             $connection->update(['status' => 'error', 'last_error' => $e->getMessage()]);
             throw $e;
         }
@@ -158,6 +159,8 @@ class FuelProviderService
 
     public function createSyncRun(FuelProviderConnection $connection, ?Carbon $from = null, ?Carbon $to = null, string $status = 'queued'): FuelProviderSyncRun
     {
+        [$from, $to] = $this->syncWindow($connection, $from, $to);
+
         return FuelProviderSyncRun::create([
             'company_uuid'                   => $connection->company_uuid,
             'fuel_provider_connection_uuid'  => $connection->uuid,
@@ -168,29 +171,42 @@ class FuelProviderService
         ]);
     }
 
+    public function syncWindow(FuelProviderConnection $connection, ?Carbon $from = null, ?Carbon $to = null): array
+    {
+        $settings = (array) $connection->sync_settings;
+        $from ??= Carbon::parse(data_get($settings, 'from') ?: now()->subDays(max(1, (int) data_get($settings, 'window_days', 7))))->startOfDay();
+        $to ??= Carbon::parse(data_get($settings, 'to') ?: now())->endOfDay();
+        if ($from->gt($to)) {
+            throw new \InvalidArgumentException('The sync start date must be on or before the end date.');
+        }
+
+        return [$from, $to];
+    }
+
     public function ingestTransaction(FuelProviderConnection $connection, array $payload): FuelProviderTransaction
     {
         return DB::transaction(function () use ($connection, $payload) {
             $provider              = $payload['provider'] ?? $connection->provider;
             $providerTransactionId = $payload['provider_transaction_id'];
-            // The match must include company_uuid. Provider transaction ids are only
-            // unique within the account they were issued for, so keying on
-            // (provider, provider_transaction_id) alone let one company's sync find
-            // and overwrite another company's transaction — reassigning its
-            // company_uuid. Mirrors fuel_provider_txn_company_provider_unique.
+            // Provider IDs are scoped to the connected account/environment.
             $transaction           = FuelProviderTransaction::updateOrCreate(
                 [
-                    'company_uuid'            => $connection->company_uuid,
-                    'provider'                => $provider,
-                    'provider_transaction_id' => $providerTransactionId,
+                    'company_uuid'                  => $connection->company_uuid,
+                    'fuel_provider_connection_uuid' => $connection->uuid,
+                    'provider'                      => $provider,
+                    'provider_transaction_id'       => $providerTransactionId,
                 ],
                 array_merge($payload, [
                     'company_uuid'                  => $connection->company_uuid,
                     'fuel_provider_connection_uuid' => $connection->uuid,
-                    'sync_status'                   => 'imported',
                 ])
             );
 
+            $created   = $transaction->wasRecentlyCreated;
+            $hadReport = (bool) $transaction->fuel_report_uuid;
+            if (!$created && in_array($transaction->sync_status, ['reviewed', 'ignored'], true)) {
+                return $transaction;
+            }
             event(new FuelProviderTransactionImported($transaction));
 
             $this->matchTransaction($transaction, $connection);
@@ -211,7 +227,11 @@ class FuelProviderService
                 event(new FuelProviderTransactionUnmatched($transaction));
             }
 
-            return $transaction->fresh(['vehicle', 'driver', 'fuelReport']);
+            $result                     = $transaction->fresh(['vehicle', 'driver', 'fuelReport']);
+            $result->wasRecentlyCreated = $created;
+            $result->createdFuelReport  = !$hadReport && (bool) $result->fuel_report_uuid;
+
+            return $result;
         });
     }
 
@@ -228,7 +248,9 @@ class FuelProviderService
         $transaction->sync_status  = 'matched';
         $transaction->matched_at ??= now();
         $transaction->save();
-        $this->ensureFuelReport($transaction);
+        if (!$transaction->connection || $this->shouldCreateFuelReport($transaction->connection)) {
+            $this->ensureFuelReport($transaction);
+        }
 
         event(new FuelProviderTransactionMatched($transaction));
 
@@ -257,7 +279,9 @@ class FuelProviderService
 
         $this->matchTransaction($transaction, $transaction->connection);
         if ($transaction->vehicle_uuid) {
-            $this->ensureFuelReport($transaction);
+            if (!$transaction->connection || $this->shouldCreateFuelReport($transaction->connection)) {
+                $this->ensureFuelReport($transaction);
+            }
             $transaction->sync_status = 'matched';
             $transaction->matched_at ??= now();
             event(new FuelProviderTransactionMatched($transaction));
@@ -313,7 +337,11 @@ class FuelProviderService
 
     protected function matchingOrder(?FuelProviderConnection $connection = null): Collection
     {
-        $configuredFields = collect(data_get((array) $connection?->sync_settings, 'matching_order', []))->filter()->values();
+        $settings = (array) $connection?->sync_settings;
+        if (array_key_exists('matching_order', $settings) && $settings['matching_order'] === []) {
+            return collect();
+        }
+        $configuredFields = collect(data_get($settings, 'matching_order', []))->filter()->values();
 
         if ($configuredFields->all() === self::LEGACY_DEFAULT_MATCHING_ORDER) {
             return collect(self::DEFAULT_MATCHING_ORDER);
@@ -334,14 +362,16 @@ class FuelProviderService
 
     protected function resolveOrder(FuelProviderTransaction $transaction): ?Order
     {
-        return Order::where('company_uuid', $transaction->company_uuid)
+        $matches = Order::where('company_uuid', $transaction->company_uuid)
             ->where(function ($query) use ($transaction) {
                 $query->where('public_id', $transaction->trip_number)
                     ->orWhere('internal_id', $transaction->trip_number)
                     ->orWhereHas('trackingNumber', function ($trackingNumberQuery) use ($transaction) {
                         $trackingNumberQuery->where('tracking_number', $transaction->trip_number);
                     });
-            })->first();
+            })->limit(2)->get();
+
+        return $matches->count() === 1 ? $matches->first() : null;
     }
 
     protected function resolveVehicle(FuelProviderTransaction $transaction, string $field): ?Vehicle
@@ -373,14 +403,16 @@ class FuelProviderService
 
         $normalized = $this->normalizeIdentifier($identifier);
 
-        return Vehicle::where('company_uuid', $transaction->company_uuid)
+        $matches = Vehicle::where('company_uuid', $transaction->company_uuid)
             ->where(function ($query) use ($identifier, $normalized, $vehicleFields) {
                 foreach ($vehicleFields as $vehicleField) {
                     $query->orWhere($vehicleField, $identifier)
                         ->orWhereRaw("REPLACE(REPLACE(UPPER({$vehicleField}), ' ', ''), '-', '') = ?", [$normalized]);
                 }
             })
-            ->first();
+            ->limit(2)->get();
+
+        return $matches->count() === 1 ? $matches->first() : null;
     }
 
     protected function resolveVehicleByProviderId(FuelProviderTransaction $transaction): ?Vehicle
@@ -389,12 +421,14 @@ class FuelProviderService
             return null;
         }
 
-        return Vehicle::where('company_uuid', $transaction->company_uuid)
+        $matches = Vehicle::where('company_uuid', $transaction->company_uuid)
             ->where(function ($query) use ($transaction) {
                 $query->where('meta->fuel_provider_vehicle_id', $transaction->provider_vehicle_id)
                     ->orWhere("meta->fuel_provider_ids->{$transaction->provider}", $transaction->provider_vehicle_id);
             })
-            ->first();
+            ->limit(2)->get();
+
+        return $matches->count() === 1 ? $matches->first() : null;
     }
 
     protected function normalizeMatchingField(string $field): string
@@ -433,12 +467,15 @@ class FuelProviderService
                 'source'                         => 'fuel_provider',
                 'provider'                       => $transaction->provider,
                 'fuel_provider_transaction_uuid' => $transaction->uuid,
+                'fuel_provider_connection_uuid'  => $transaction->fuel_provider_connection_uuid,
+                'transaction_at'                 => $transaction->transaction_at?->toIso8601String(),
                 'station_name'                   => $transaction->station_name,
                 'trip_number'                    => $transaction->trip_number,
             ],
         ]);
 
         $transaction->fuel_report_uuid = $fuelReport->uuid;
+        $transaction->save();
         event(new FuelReportCreatedFromProvider($transaction, $fuelReport));
 
         return $fuelReport;

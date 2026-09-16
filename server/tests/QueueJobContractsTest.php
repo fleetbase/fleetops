@@ -713,11 +713,10 @@ test('sync fuel provider transactions job passes parsed dates and records failur
         ->and($connection->updates[0])->toMatchArray([
             'status'          => 'error',
             'last_error'      => 'provider failed',
-            'last_sync_state' => [
-                'failed_at' => '2026-05-01T12:00:00+00:00',
-                'message'   => 'provider failed',
-            ],
         ]);
+
+    expect($connection->updates[0])->not->toHaveKey('last_sync_state');
+    expect($job->middleware()[0])->toBeInstanceOf(Illuminate\Queue\Middleware\WithoutOverlapping::class);
 
     Carbon::setTestNow();
 });

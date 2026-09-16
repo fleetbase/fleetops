@@ -477,6 +477,7 @@ Route::prefix(config('fleetops.api.routing.prefix'))->namespace('Fleetbase\Fleet
                             function ($router, $controller) {
                                 $router->get('providers', $controller('providers'));
                                 $router->post('providers/{provider}/test-credentials', $controller('testCredentials'));
+                                $router->get('{id}/activity', $controller('activity'));
                                 $router->post('{id}/test-connection', $controller('testConnection'));
                                 $router->post('{id}/sync', $controller('sync'));
                             }
@@ -658,6 +659,9 @@ Route::prefix(config('fleetops.api.routing.prefix'))->namespace('Fleetbase\Fleet
                             $router->get('{id}/devices', $controller('devices'));
                             $router->post('{id}/link-device', $controller('linkDevice'));
                             $router->post('{id}/discover', $controller('discover'));
+                            $router->get('{id}/telemetry-diagnostics', $controller('telemetryDiagnostics'));
+                            $router->post('{id}/telemetry-webhook', $controller('telemetryWebhook'));
+                            $router->post('{id}/telemetry-deliveries/{delivery}/replay', $controller('replayTelemetryDelivery'));
                             $router->post('{id}/test-connection', $controller('testConnection'));
                             $router->post('{key}/test-credentials', $controller('testCredentials'));
                         });

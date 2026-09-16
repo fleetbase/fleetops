@@ -4,11 +4,11 @@ import { tracked } from '@glimmer/tracking';
 import { action } from '@ember/object';
 import { buildIdentityStub } from '../../../utils/identity-cell-resource';
 import relationValue from '../../../utils/relation-value';
-import { task } from 'ember-concurrency';
+import { openTransactionAction } from '../../../utils/fuel-transaction';
 
 export default class ManagementFuelTransactionsIndexController extends Controller {
     @service tableContext;
-    @service fetch;
+    @service modalsManager;
     @service notifications;
     @service hostRouter;
 
@@ -23,6 +23,14 @@ export default class ManagementFuelTransactionsIndexController extends Controlle
     @tracked connection;
     @tracked transaction_at;
     @tracked table;
+
+    get viewingDetails() {
+        return this.hostRouter.currentRouteName?.endsWith('management.fuel-transactions.index.details');
+    }
+
+    get hasFilters() {
+        return Boolean(this.query || this.provider || this.sync_status || this.vehicle || this.transaction_at);
+    }
 
     get hasRecords() {
         return Array.from(this.model ?? []).length > 0;
@@ -68,7 +76,7 @@ export default class ManagementFuelTransactionsIndexController extends Controlle
     }
 
     @action refresh() {
-        this.target.send('refresh');
+        this.target.send('refreshTransactions');
     }
 
     get bulkActions() {
@@ -77,7 +85,7 @@ export default class ManagementFuelTransactionsIndexController extends Controlle
         return [
             {
                 label: `Reprocess ${selected.length} selected`,
-                fn: () => selected.forEach((transaction) => this.reprocessTransaction.perform(transaction)),
+                fn: () => this.confirmAction('reprocess', selected),
             },
         ];
     }
@@ -88,7 +96,8 @@ export default class ManagementFuelTransactionsIndexController extends Controlle
                 sticky: true,
                 label: 'Transaction',
                 valuePath: 'provider_transaction_id',
-                cellComponent: 'click-to-copy',
+                cellComponent: 'table/cell/anchor',
+                action: this.openDetails,
                 resizable: true,
                 sortable: true,
                 filterable: true,
@@ -106,7 +115,7 @@ export default class ManagementFuelTransactionsIndexController extends Controlle
             {
                 label: 'Status',
                 valuePath: 'sync_status',
-                cellComponent: 'table/cell/status',
+                cellComponent: 'fuel-transaction-status',
                 resizable: true,
                 sortable: true,
                 filterable: true,
@@ -188,13 +197,13 @@ export default class ManagementFuelTransactionsIndexController extends Controlle
                 width: 60,
                 actions: [
                     { label: 'Review Details', fn: this.openDetails },
-                    { label: 'Open Fuel Report', fn: this.openFuelReport },
+                    { label: 'Open Fuel Report', fn: this.openFuelReport, isVisible: (transaction) => Boolean(transaction.fuel_report_id) },
                     { separator: true },
                     { label: 'Match to Vehicle', fn: this.matchVehicle },
                     { label: 'Match to Order', fn: this.matchOrder },
-                    { label: 'Reprocess / Rematch', fn: (transaction) => this.reprocessTransaction.perform(transaction) },
-                    { label: 'Ignore Transaction', fn: (transaction) => this.markReviewed.perform(transaction, 'ignored') },
-                    { label: 'Mark Reviewed', fn: (transaction) => this.markReviewed.perform(transaction, 'reviewed') },
+                    { label: 'Reprocess / Rematch', fn: (transaction) => this.confirmAction('reprocess', transaction) },
+                    { label: 'Ignore Transaction', fn: (transaction) => this.confirmAction('ignored', transaction) },
+                    { label: 'Mark Reviewed', fn: (transaction) => this.confirmAction('reviewed', transaction) },
                 ],
                 sortable: false,
                 filterable: false,
@@ -218,30 +227,14 @@ export default class ManagementFuelTransactionsIndexController extends Controlle
     }
 
     @action matchVehicle(transaction) {
-        return this.hostRouter.transitionTo('console.fleet-ops.management.fuel-transactions.index.details', transaction);
+        return this.confirmAction('vehicle', transaction);
     }
 
     @action matchOrder(transaction) {
-        return this.hostRouter.transitionTo('console.fleet-ops.management.fuel-transactions.index.details', transaction);
+        return this.confirmAction('order', transaction);
     }
 
-    @task *reprocessTransaction(transaction) {
-        try {
-            yield this.fetch.post(`fuel-provider-transactions/${transaction.id}/reprocess`);
-            this.notifications.success('Fuel transaction reprocessed.');
-            this.target.send('refresh');
-        } catch (error) {
-            this.notifications.serverError(error);
-        }
-    }
-
-    @task *markReviewed(transaction, status) {
-        try {
-            yield this.fetch.post(`fuel-provider-transactions/${transaction.id}/review`, { status });
-            this.notifications.success(status === 'ignored' ? 'Fuel transaction ignored.' : 'Fuel transaction marked reviewed.');
-            this.target.send('refresh');
-        } catch (error) {
-            this.notifications.serverError(error);
-        }
+    @action confirmAction(mode, transactions) {
+        return openTransactionAction(this.modalsManager, mode, transactions, this.refresh);
     }
 }

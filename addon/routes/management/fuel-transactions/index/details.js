@@ -13,6 +13,7 @@ export default class ManagementFuelTransactionsIndexDetailsRoute extends Route {
     }
 
     model({ public_id }) {
-        return this.store.findRecord('fuel-provider-transaction', public_id);
+        // URLs use public IDs; the store's primary key is the API UUID.
+        return this.store.queryRecord('fuel-provider-transaction', { public_id, single: true });
     }
 }

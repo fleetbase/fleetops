@@ -1,33 +1,13 @@
-import Controller from '@ember/controller';
-import { inject as service } from '@ember/service';
+import FuelTransactionsController from '../../../management/fuel-transactions/index';
 import { action } from '@ember/object';
-import { buildIdentityStub } from '../../../../utils/identity-cell-resource';
-import relationValue from '../../../../utils/relation-value';
 
-export default class ConnectivityFuelProvidersIndexDetailsTransactionsController extends Controller {
-    @service hostRouter;
-
+export default class FuelIntegrationTransactionsController extends FuelTransactionsController {
+    queryParams = ['page', 'limit', 'sort', 'query', 'sync_status', 'vehicle', 'transaction_at'];
     get columns() {
-        return [
-            { sticky: true, label: 'Transaction', valuePath: 'provider_transaction_id', cellComponent: 'click-to-copy', resizable: true },
-            { label: 'Status', valuePath: 'sync_status', cellComponent: 'table/cell/status', resizable: true },
-            {
-                label: 'Vehicle',
-                valuePath: 'vehicle_name',
-                cellComponent: 'cell/vehicle-identity',
-                permission: 'fleet-ops view vehicle',
-                resourcePath: (transaction) => relationValue(transaction, 'vehicle') ?? buildIdentityStub(transaction, { type: 'vehicle', load: () => transaction.get?.('vehicle') }),
-                resizable: true,
-            },
-            { label: 'Station', valuePath: 'station_name', resizable: true },
-            { label: 'Liters', valuePath: 'volume', resizable: true },
-            { label: 'Amount', valuePath: 'amount', cellComponent: 'table/cell/currency', resizable: true },
-            { label: 'Fuel Report', valuePath: 'fuel_report_id', cellComponent: 'click-to-copy', resizable: true },
-            { label: 'Date', valuePath: 'transaction_at', resizable: true },
-        ];
+        return super.columns.filter((column) => column.valuePath !== 'provider');
     }
 
     @action refresh() {
-        return this.hostRouter.refresh();
+        this.target.send('refreshFuelTransactions');
     }
 }

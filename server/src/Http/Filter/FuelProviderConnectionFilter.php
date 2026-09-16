@@ -23,7 +23,7 @@ class FuelProviderConnectionFilter extends Filter
 
     public function status(?string $status)
     {
-        $this->builder->where('status', $status);
+        $this->builder->whereIn('status', explode(',', $status ?? ''));
     }
 
     public function environment(?string $environment)
