@@ -4,6 +4,7 @@
             <InputGroup @name={{t "modals.issue-form.reported"}}>
                 <ModelSelect
                     @modelName="user"
+                    @selectedItemComponent={{component "select-option/user" compact=true}}
                     @selectedModel={{this.issue.reporter}}
                     @placeholder={{t "modals.issue-form.select-reporter"}}
                     @triggerClass="form-select form-input"
@@ -12,13 +13,14 @@
                     @onChange={{fn (mut this.issue.reporter)}}
                     as |model|
                 >
-                    {{model.name}}
+                    <SelectOption::User @option={{model}} />
                 </ModelSelect>
             </InputGroup>
 
             <InputGroup @name={{t "modals.issue-form.assigned"}}>
                 <ModelSelect
                     @modelName="user"
+                    @selectedItemComponent={{component "select-option/user" compact=true}}
                     @selectedModel={{this.issue.assignee}}
                     @placeholder={{t "modals.issue-form.select-assignee"}}
                     @triggerClass="form-select form-input"
@@ -27,13 +29,14 @@
                     @onChange={{fn (mut this.issue.assignee)}}
                     as |model|
                 >
-                    {{model.name}}
+                    <SelectOption::User @option={{model}} />
                 </ModelSelect>
             </InputGroup>
 
             <InputGroup @name={{t "common.driver"}}>
                 <ModelSelect
                     @modelName="driver"
+                    @selectedItemComponent={{component "select-option/driver" compact=true}}
                     @selectedModel={{this.issue.driver}}
                     @placeholder={{t "modals.issue-form.select-driver"}}
                     @triggerClass="form-select form-input"
@@ -42,13 +45,14 @@
                     @onChange={{fn (mut this.issue.driver)}}
                     as |model|
                 >
-                    {{model.name}}
+                    <SelectOption::Driver @option={{model}} />
                 </ModelSelect>
             </InputGroup>
 
             <InputGroup @name={{t "common.vehicle"}}>
                 <ModelSelect
                     @modelName="vehicle"
+                    @selectedItemComponent={{component "select-option/vehicle" compact=true}}
                     @selectedModel={{this.issue.vehicle}}
                     @placeholder={{t "modals.issue-form.select-vehicle"}}
                     @triggerClass="form-select form-input"
@@ -57,7 +61,7 @@
                     @onChange={{fn (mut this.issue.vehicle)}}
                     as |model|
                 >
-                    {{model.displayName}}
+                    <SelectOption::Vehicle @option={{model}} />
                 </ModelSelect>
             </InputGroup>
 

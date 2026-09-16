@@ -92,18 +92,9 @@
                 <div class="field-info-container">
                     <div class="field-name">Device</div>
                     <div class="field-value">
-                        {{#if this.deviceRouteModel}}
-                            <button
-                                type="button"
-                                class="text-blue-600 hover:text-blue-700 hover:underline dark:text-blue-300 dark:hover:text-blue-200"
-                                data-test-device-event-device-link
-                                {{on "click" this.openDevice}}
-                            >
-                                {{n-a this.deviceName}}
-                            </button>
-                        {{else}}
-                            {{n-a this.deviceName}}
-                        {{/if}}
+                        {{#let (resource-relation this.resource "device") as |device|}}
+                            <Device::Pill @device={{device}} @titleFallback={{n-a this.deviceName}} @onClick={{unless device (if this.deviceRouteModel this.openDevice)}} data-test-device-event-device-link />
+                        {{/let}}
                     </div>
                 </div>
                 <div class="field-info-container">
@@ -129,18 +120,9 @@
                 <div class="field-info-container">
                     <div class="field-name">Provider</div>
                     <div class="field-value">
-                        {{#if this.telematicRouteModel}}
-                            <button
-                                type="button"
-                                class="text-blue-600 hover:text-blue-700 hover:underline dark:text-blue-300 dark:hover:text-blue-200"
-                                data-test-device-event-telematic-link
-                                {{on "click" this.openTelematic}}
-                            >
-                                {{n-a this.providerLabel}}
-                            </button>
-                        {{else}}
-                            {{n-a this.providerLabel}}
-                        {{/if}}
+                        {{#let (resource-relation this.resource "telematic") as |telematic|}}
+                            <Telematic::Pill @telematic={{telematic}} @titleFallback={{n-a this.providerLabel}} @onClick={{unless telematic (if this.telematicRouteModel this.openTelematic)}} data-test-device-event-telematic-link />
+                        {{/let}}
                     </div>
                 </div>
                 <div class="field-info-container">

@@ -4,6 +4,7 @@
             <InputGroup @name={{t "device.fields.telematic"}}>
                 <ModelSelect
                     @modelName="telematic"
+                    @selectedItemComponent={{component "select-option/telematic" compact=true}}
                     @selectedModel={{@resource.telematic}}
                     @placeholder={{t "device.fields.telematic-placeholder"}}
                     @triggerClass="form-select form-input"
@@ -13,16 +14,7 @@
                     @disabled={{or (cannot-write @resource) this.isTelematicLocked}}
                     as |model|
                 >
-                    <div class="space-x-2 text-sm">
-                        <div class="inline-block align-top">
-                            <div class="hide-from-trigger h-1.5 w-full"></div>
-                            <Image src={{model.provider_descriptor.icon}} class="w-5 h-5" />
-                        </div>
-                        <div class="inline-block">
-                            <div class="font-semibold normalize-in-trigger">{{or model.name model.public_id}}</div>
-                            <div class="hide-from-trigger">{{n-a model.provider_descriptor.label (titleize model.provider)}}</div>
-                        </div>
-                    </div>
+                    <SelectOption::Telematic @option={{model}} />
                 </ModelSelect>
             </InputGroup>
 
@@ -189,6 +181,7 @@
             <InputGroup @name={{t "device.fields.warranty"}}>
                 <ModelSelect
                     @modelName="warranty"
+                    @selectedItemComponent={{component "select-option/warranty" compact=true}}
                     @selectedModel={{@resource.warranty}}
                     @placeholder={{t "device.fields.warranty-placeholder"}}
                     @triggerClass="form-select form-input"
@@ -199,9 +192,7 @@
                     @disabled={{cannot-write @resource}}
                     as |model|
                 >
-                    {{model.policy_number}}
-                    -
-                    {{model.provider}}
+                    <SelectOption::Warranty @option={{model}} />
                 </ModelSelect>
             </InputGroup>
         </div>

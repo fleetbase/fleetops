@@ -999,7 +999,7 @@ vehicle:
     filter-internal-id: Escriba o escanee IDs internos
   filters:
     has-trailer: Remolque acoplado
-    has-driver: Conductor asignado
+    has-driver: Tiene conductor asignado
     has-device: Dispositivo vinculado
     any: Cualquiera
     attached: Acoplado

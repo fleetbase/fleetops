@@ -12,6 +12,7 @@
             <InputGroup @name={{t "inspection.record.form"}}>
                 <ModelSelect
                     @modelName="inspection-form"
+                    @selectedItemComponent={{component "select-option/inspection-form" compact=true}}
                     @selectedModel={{@resource.form}}
                     @query={{hash status="published"}}
                     @placeholder={{t "inspection.record.select-form"}}
@@ -22,7 +23,7 @@
                     @disabled={{cannot-write @resource}}
                     as |form|
                 >
-                    {{form.name}}
+                    <SelectOption::InspectionForm @option={{form}} />
                 </ModelSelect>
             </InputGroup>
             <InputGroup @name={{t "inspection.record.status"}}>
@@ -45,6 +46,7 @@
             <InputGroup @name={{t "inspection.record.vehicle"}}>
                 <ModelSelect
                     @modelName="vehicle"
+                    @selectedItemComponent={{component "select-option/vehicle" compact=true}}
                     @selectedModel={{@resource.vehicle}}
                     @placeholder={{t "inspection.record.select-vehicle"}}
                     @triggerClass="form-select form-input"
@@ -54,12 +56,13 @@
                     @disabled={{cannot-write @resource}}
                     as |vehicle|
                 >
-                    {{or vehicle.displayName vehicle.name vehicle.public_id}}
+                    <SelectOption::Vehicle @option={{vehicle}} />
                 </ModelSelect>
             </InputGroup>
             <InputGroup @name={{t "inspection.record.driver"}}>
                 <ModelSelect
                     @modelName="driver"
+                    @selectedItemComponent={{component "select-option/driver" compact=true}}
                     @selectedModel={{@resource.driver}}
                     @placeholder={{t "inspection.record.select-driver"}}
                     @triggerClass="form-select form-input"
@@ -69,7 +72,7 @@
                     @disabled={{cannot-write @resource}}
                     as |driver|
                 >
-                    {{or driver.name driver.public_id}}
+                    <SelectOption::Driver @option={{driver}} />
                 </ModelSelect>
             </InputGroup>
             <InputGroup @name={{t "inspection.record.odometer"}}>

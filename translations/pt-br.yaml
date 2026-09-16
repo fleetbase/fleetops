@@ -1049,7 +1049,7 @@ vehicle:
     filter-internal-id: Digite ou escaneie IDs internos
   filters:
     has-trailer: Reboque acoplado
-    has-driver: Motorista atribuído
+    has-driver: Tem motorista atribuído
     has-device: Dispositivo vinculado
     any: Qualquer
     attached: Acoplado

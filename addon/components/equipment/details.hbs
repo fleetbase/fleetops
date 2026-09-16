@@ -83,7 +83,9 @@
             {{#if @resource.is_equipped}}
                 <div class="field-info-container">
                     <div class="field-name">Equipped To</div>
-                    <div class="field-value">{{n-a @resource.equipped_to_name}}</div>
+                    <div class="field-value">
+                        <Attachable::Pill @attachable={{resource-relation @resource "equipable"}} @titleFallback={{n-a @resource.equipped_to_name}} />
+                    </div>
                 </div>
             {{/if}}
         </div>
@@ -121,7 +123,9 @@
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-2 text-xs dark:text-gray-100">
                 <div class="field-info-container">
                     <div class="field-name">Warranty</div>
-                    <div class="field-value">{{n-a @resource.warranty_name}}</div>
+                    <div class="field-value">
+                        <Warranty::Pill @warranty={{resource-relation @resource "warranty"}} @titleFallback={{n-a @resource.warranty_name}} />
+                    </div>
                 </div>
             </div>
         </ContentPanel>

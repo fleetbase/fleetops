@@ -1054,7 +1054,7 @@ vehicle:
     filter-internal-id: Въведете или сканирайте вътрешни ID
   filters:
     has-trailer: Прикачено ремарке
-    has-driver: Назначен шофьор
+    has-driver: Има назначен шофьор
     has-device: Прикачено устройство
     any: Всички
     attached: Прикачено

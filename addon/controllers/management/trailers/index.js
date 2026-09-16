@@ -1,5 +1,7 @@
 import Controller from '@ember/controller';
 import { action } from '@ember/object';
+import { buildIdentityStub } from '../../../utils/identity-cell-resource';
+import relationValue from '../../../utils/relation-value';
 import { inject as service } from '@ember/service';
 import { tracked } from '@glimmer/tracking';
 import { TRAILER_TYPES, TRAILER_STATUSES, TRAILER_OWNERSHIP_TYPES } from '../../../components/trailer/form';
@@ -163,8 +165,7 @@ export default class ManagementTrailersIndexController extends Controller {
                 label: this.intl.t('trailer.columns.name'),
                 valuePath: 'displayName',
                 photoPath: 'photo_url',
-                cellComponent: 'cell/vehicle-identity',
-                compact: true,
+                cellComponent: 'cell/trailer-identity',
                 permission: 'fleet-ops view trailer',
                 action: this.trailerActions.transition.view,
                 resizable: true,
@@ -172,8 +173,6 @@ export default class ManagementTrailersIndexController extends Controller {
                 filterable: true,
                 filterComponent: 'filter/string',
                 filterParam: 'name',
-                showOnlineIndicator: true,
-                showStatus: false,
             },
             {
                 label: this.intl.t('trailer.columns.type'),
@@ -214,15 +213,16 @@ export default class ManagementTrailersIndexController extends Controller {
             {
                 label: this.intl.t('trailer.columns.vehicle'),
                 valuePath: 'current_vehicle_name',
-                cellComponent: 'table/cell/anchor',
+                cellComponent: 'cell/vehicle-identity',
                 permission: 'fleet-ops view vehicle',
-                action: async (trailer) => {
-                    const vehicle = trailer.current_vehicle ?? (trailer.current_vehicle_id ? await this.store.findRecord('vehicle', trailer.current_vehicle_id) : null);
-
-                    if (vehicle) {
-                        return this.vehicleActions.panel.view(vehicle);
-                    }
-                },
+                action: this.vehicleActions.panel.view,
+                resourcePath: (trailer) =>
+                    relationValue(trailer, 'current_vehicle') ??
+                    buildIdentityStub(trailer, {
+                        type: 'vehicle',
+                        nameKey: 'current_vehicle_name',
+                        load: () => (trailer.current_vehicle_id ? this.store.findRecord('vehicle', trailer.current_vehicle_id) : null),
+                    }),
                 emptyText: '-',
                 resizable: true,
                 filterable: true,
@@ -386,16 +386,12 @@ export default class ManagementTrailersIndexController extends Controller {
             {
                 label: this.intl.t('trailer.columns.vendor'),
                 valuePath: 'vendor_name',
-                cellComponent: 'table/cell/anchor',
+                cellComponent: 'cell/vendor-identity',
                 permission: 'fleet-ops view vendor',
-                action: async ({ vendor_uuid }) => {
-                    if (!vendor_uuid) {
-                        return;
-                    }
-
-                    const vendor = await this.store.findRecord('vendor', vendor_uuid);
-                    this.vendorActions.viewVendor(vendor);
-                },
+                action: this.vendorActions.panel.view,
+                resourcePath: (trailer) =>
+                    relationValue(trailer, 'vendor') ??
+                    buildIdentityStub(trailer, { type: 'vendor', load: () => (trailer.vendor_uuid ? this.store.findRecord('vendor', trailer.vendor_uuid) : null) }),
                 hidden: true,
                 resizable: true,
                 filterable: true,
@@ -568,9 +564,11 @@ export default class ManagementTrailersIndexController extends Controller {
             {
                 label: this.intl.t('resource.devices'),
                 valuePath: 'devices',
+                cellComponent: 'cell/resource-list',
+                resourceType: 'device',
                 hidden: true,
                 filterable: true,
-                filterComponent: 'filter/multi-model',
+                filterComponent: 'filter/model-multiple',
                 filterComponentPlaceholder: this.intl.t('common.select-resource-filter-by', { resource: this.intl.t('resource.device') }),
                 filterParam: 'device',
                 model: 'device',

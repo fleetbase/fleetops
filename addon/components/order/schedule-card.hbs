@@ -71,6 +71,7 @@
                 {{#if this.isAssigningDriver}}
                     <ModelSelect
                         @modelName="driver"
+                        @selectedItemComponent={{component "select-option/driver" compact=true}}
                         @selectedModel={{@order.driver_assigned}}
                         @placeholder={{t "order.schedule-card.select-driver"}}
                         @triggerClass="form-select form-input form-input-sm w-full"
@@ -82,7 +83,7 @@
                         @permission="fleet-ops assign-driver-for order"
                         as |model|
                     >
-                        <span class="truncate uppercase text-xs">{{model.name}}</span>
+                        <SelectOption::Driver @option={{model}} />
                     </ModelSelect>
                 {{else}}
                     <a

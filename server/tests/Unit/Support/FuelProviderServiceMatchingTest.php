@@ -387,3 +387,21 @@ test('terminal worker failures mark a sync failed without destroying its last su
         ->and($db->table('fuel_provider_sync_runs')->value('finished_at'))->not->toBeNull()
         ->and(FuelProviderConnection::where('uuid', 'conn-1')->first()->last_sync_state)->toBe(['summary' => ['imported' => 1]]);
 });
+
+test('ingestion persists the report returned by a custom report resolution strategy', function () {
+    $db = fleetopsFuelServiceMatchingBoot();
+    $connection = fleetopsFuelServiceMatchingConnection($db);
+    $db->table('vehicles')->insert(['uuid' => 'vehicle-1', 'company_uuid' => 'company-1', 'plate_number' => 'SGX-1234']);
+    $db->table('fuel_reports')->insert(['uuid' => 'existing-report', 'company_uuid' => 'company-1', 'vehicle_uuid' => 'vehicle-1']);
+    $service = new class(new FuelProviderRegistry()) extends FleetOpsFuelServiceMatchingProbe {
+        protected function ensureFuelReport(FuelProviderTransaction $transaction): ?Fleetbase\FleetOps\Models\FuelReport
+        {
+            return Fleetbase\FleetOps\Models\FuelReport::where('company_uuid', $transaction->company_uuid)->where('vehicle_uuid', $transaction->vehicle_uuid)->firstOrFail();
+        }
+    };
+    $transaction = $service->ingestTransaction($connection, ['provider_transaction_id' => 'existing-report-transaction', 'plate_number' => 'SGX-1234']);
+    expect($transaction->sync_status)->toBe('matched');
+    expect($transaction->fuel_report_uuid)->toBe('existing-report');
+    expect($db->table('fuel_provider_transactions')->value('fuel_report_uuid'))->toBe('existing-report');
+    expect($db->table('fuel_reports')->count())->toBe(1);
+});

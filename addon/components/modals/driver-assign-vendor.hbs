@@ -4,6 +4,7 @@
             <InputGroup @name={{t "modals.driver-assign-vendor.vendor"}} @value={{@options.driver.vendor_uuid}}>
                 <ModelSelect
                     @modelName="vendor"
+                    @selectedItemComponent={{component "select-option/vendor" compact=true}}
                     @selectedModel={{@options.driver.vendor_uuid}}
                     @placeholder={{t "modals.driver-assign-vendor.vendor"}}
                     @triggerClass="form-select form-input"
@@ -13,7 +14,7 @@
                     @onChangeId={{fn (mut @options.driver.vendor_uuid)}}
                     as |model|
                 >
-                    {{model.name}}
+                    <SelectOption::Vendor @option={{model}} />
                 </ModelSelect>
             </InputGroup>
         </div>

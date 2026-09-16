@@ -48,6 +48,30 @@ export default class DriverActionsService extends ResourceActionService {
         this.initialize('driver');
     }
 
+    /**
+     * Accepts a driver record, a promise (or proxy) of one, or an identity
+     * stub with loadResource(), and returns the record.
+     */
+    async resolveDriverResource(driver) {
+        if (typeof driver?.then === 'function') {
+            return await driver;
+        }
+
+        if (typeof driver?.loadResource === 'function') {
+            return (await driver.loadResource()) ?? driver;
+        }
+
+        return driver;
+    }
+
+    async reloadIndexResource(driver) {
+        if (driver?.meta?._index_resource) {
+            await driver.reload();
+        }
+
+        return driver;
+    }
+
     transition = {
         view: (driver) => this.transitionTo('management.drivers.index.details', driver),
         edit: (driver) => this.transitionTo('management.drivers.index.edit', driver),
@@ -69,9 +93,7 @@ export default class DriverActionsService extends ResourceActionService {
             });
         },
         edit: async (driver, options = {}) => {
-            if (driver?.meta?._index_resource) {
-                await driver.reload();
-            }
+            driver = await this.reloadIndexResource(await this.resolveDriverResource(driver));
 
             return this.resourceContextPanel.open({
                 content: 'driver/form',
@@ -91,9 +113,7 @@ export default class DriverActionsService extends ResourceActionService {
             });
         },
         view: async (driver, options = {}) => {
-            if (driver?.meta?._index_resource) {
-                await driver.reload();
-            }
+            driver = await this.reloadIndexResource(await this.resolveDriverResource(driver));
 
             return this.resourceContextPanel.open({
                 driver,
@@ -126,9 +146,7 @@ export default class DriverActionsService extends ResourceActionService {
             });
         },
         edit: async (driver, options = {}, saveOptions = {}) => {
-            if (driver?.meta?._index_resource) {
-                await driver.reload();
-            }
+            driver = await this.reloadIndexResource(await this.resolveDriverResource(driver));
 
             return this.modalsManager.show('modals/resource', {
                 resource: driver,
@@ -141,9 +159,7 @@ export default class DriverActionsService extends ResourceActionService {
             });
         },
         view: async (driver, options = {}) => {
-            if (driver?.meta?._index_resource) {
-                await driver.reload();
-            }
+            driver = await this.reloadIndexResource(await this.resolveDriverResource(driver));
 
             return this.modalsManager.show('modals/resource', {
                 resource: driver,

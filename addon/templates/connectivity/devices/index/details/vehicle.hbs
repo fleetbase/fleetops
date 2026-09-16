@@ -52,7 +52,7 @@
                         </div>
                         <div>
                             <div class="font-semibold uppercase text-gray-400 dark:text-gray-500">Driver</div>
-                            <div class="truncate text-gray-800 dark:text-gray-100">{{n-a this.vehicleDriverName}}</div>
+                            <div class="truncate text-gray-800 dark:text-gray-100"><Driver::Pill @driver={{resource-relation this.vehicle "driver"}} @titleFallback={{n-a this.vehicleDriverName}} @imageSize="20" @imageClass="w-5 h-5" @titleClass="text-xs" @subtitle={{null}} /></div>
                         </div>
                     </div>
 
@@ -63,7 +63,7 @@
                         </div>
                         <div>
                             <div class="font-semibold uppercase text-gray-400 dark:text-gray-500">{{t "device.attachment.attached-device"}}</div>
-                            <div class="truncate text-gray-800 dark:text-gray-100">{{n-a this.device.displayName}}</div>
+                            <div class="truncate text-gray-800 dark:text-gray-100"><Device::Pill @device={{this.device}} @imageSize="20" @imageClass="w-5 h-5" @titleClass="text-xs" @subtitle={{null}} /></div>
                         </div>
                         <div>
                             <div class="font-semibold uppercase text-gray-400 dark:text-gray-500">{{t "device.attachment.last-seen"}}</div>

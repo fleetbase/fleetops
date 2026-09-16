@@ -1,26 +1,24 @@
-{{#let (or @submission @resource) as |resource|}}
-    <Pill
-        @resource={{resource}}
-        @onClick={{@onClick}}
-        @anchorClass={{@anchorClass}}
-        @imageWrapperClass={{@imageWrapperClass}}
-        @contentWrapperClass={{@contentWrapperClass}}
-        ...attributes
-    >
-        <:image>
-            <div class="flex h-7 w-7 items-center justify-center rounded-md bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400">
-                <FaIcon @icon="clipboard-check" @size="sm" />
-            </div>
-        </:image>
-        <:default>
-            <div class="text-sm">{{n-a (or resource.form.name resource.form_name) resource.public_id}}</div>
-            <div class="flex flex-row items-center gap-1.5">
-                {{! A draft has no result yet; an empty badge is just a coloured dot. }}
-                {{#if resource.result}}
-                    <Badge @status={{if (eq resource.result "failed") "failed" "passed"}}>{{smart-humanize resource.result}}</Badge>
-                {{/if}}
-                <span class="text-xs text-gray-400 dark:text-gray-500">{{n-a resource.submittedAt}}</span>
-            </div>
-        </:default>
-    </Pill>
-{{/let}}
+<Resource::Pill
+    @resource={{(or @inspectionSubmission @submission @resource)}}
+    @resourceType="inspection-submission"
+    @title={{@title}}
+    @titleFallback={{@titleFallback}}
+    @subtitle={{@subtitle}}
+    @showOnlineIndicator={{@showOnlineIndicator}}
+    @noPopover={{@noPopover}}
+    @popoverPlacement={{@popoverPlacement}}
+    @static={{@static}}
+    @onClick={{@onClick}}
+    @onView={{@onView}}
+    @anchorClass={{@anchorClass}}
+    @imageClass={{@imageClass}}
+    @imageWrapperClass={{@imageWrapperClass}}
+    @contentWrapperClass={{@contentWrapperClass}}
+    @titleClass={{@titleClass}}
+    @subtitleClass={{@subtitleClass}}
+    @useBlock={{(has-block)}}
+    ...attributes
+    as |resource|
+>
+    {{yield resource}}
+</Resource::Pill>

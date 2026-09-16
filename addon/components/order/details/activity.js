@@ -7,6 +7,7 @@ export default class OrderDetailsActivityComponent extends Component {
     @service orderActions;
     @service appCache;
     @service intl;
+    @service notifications;
     @tracked layout = this.appCache.get('fleetops:order:activity:layout', 'timeline');
 
     get parentOrderActivity() {
@@ -22,6 +23,10 @@ export default class OrderDetailsActivityComponent extends Component {
 
     /* eslint-disable ember/no-side-effects */
     get actionButtons() {
+        if (!this.args.resource) {
+            return [];
+        }
+
         return [
             {
                 items: [
@@ -60,6 +65,10 @@ export default class OrderDetailsActivityComponent extends Component {
     }
 
     @task *loadActivity() {
+        if (!this.args.resource) {
+            return;
+        }
+
         try {
             yield this.args.resource.loadTrackingActivity();
         } catch (err) {

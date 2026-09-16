@@ -35,9 +35,8 @@ export default class MapDrawerVehicleListingComponent extends Component {
                 valuePath: 'display_name',
                 photoPath: 'photo_url',
                 width: '100px',
-                cellComponent: 'table/cell/vehicle-name',
+                cellComponent: 'cell/vehicle-identity',
                 onClick: this.view,
-                showOnlineIndicator: true,
             },
             {
                 label: this.intl.t('column.location'),

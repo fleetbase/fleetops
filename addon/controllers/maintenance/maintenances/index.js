@@ -1,5 +1,7 @@
 import Controller from '@ember/controller';
 import { inject as service } from '@ember/service';
+import { buildIdentityStub } from '../../../utils/identity-cell-resource';
+import relationValue from '../../../utils/relation-value';
 import { tracked } from '@glimmer/tracking';
 
 export default class MaintenanceMaintenancesIndexController extends Controller {
@@ -76,14 +78,16 @@ export default class MaintenanceMaintenancesIndexController extends Controller {
             {
                 label: this.intl.t('column.asset'),
                 valuePath: 'maintainable.name',
-                cellComponent: 'table/cell/base',
+                cellComponent: 'cell/maintenance-subject-identity',
+                resourcePath: (maintenance) => relationValue(maintenance, 'maintainable') ?? buildIdentityStub(maintenance, { type: 'maintenance-subject', nameKey: 'maintainable_name' }),
                 resizable: true,
                 sortable: true,
             },
             {
                 label: this.intl.t('column.performed-by'),
                 valuePath: 'performed_by.name',
-                cellComponent: 'table/cell/base',
+                cellComponent: 'cell/facilitator-identity',
+                resourcePath: (maintenance) => relationValue(maintenance, 'performed_by') ?? buildIdentityStub(maintenance, { type: 'facilitator', nameKey: 'performed_by_name' }),
                 resizable: true,
                 sortable: true,
             },

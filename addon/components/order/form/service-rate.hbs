@@ -61,14 +61,13 @@
                                     @onChange={{perform this.getServiceQuotes}}
                                     @searchEnabled={{true}}
                                     @searchField="service_name"
+                                    @selectedItemComponent={{component "select-option/service-rate" compact=true}}
                                     @placeholder={{t "order.fields.select-service-rate"}}
                                     @triggerClass="form-select form-input"
                                     @disabled={{cannot-write @resource}}
                                     as |serviceRate|
                                 >
-                                    <div class="text-sm">
-                                        <div class="font-semibold normalize-in-trigger">{{serviceRate.service_name}}</div>
-                                    </div>
+                                    <SelectOption::ServiceRate @option={{serviceRate}} />
                                 </PowerSelect>
                             </div>
                         </InputGroup>

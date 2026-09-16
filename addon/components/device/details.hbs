@@ -111,7 +111,9 @@
                 </div>
                 <div class="field-info-container">
                     <div class="field-name">{{t "device.fields.warranty"}}</div>
-                    <div class="field-value">{{n-a (or @resource.warranty.name @resource.warranty_name)}}</div>
+                    <div class="field-value">
+                        <Warranty::Pill @warranty={{resource-relation @resource "warranty"}} @titleFallback={{n-a @resource.warranty_name}} />
+                    </div>
                 </div>
                 <div class="field-info-container sm:col-span-2">
                     <div class="field-name">{{t "device.fields.notes"}}</div>

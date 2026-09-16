@@ -8,7 +8,7 @@
             {{#each this.inspections as |inspection|}}
                 <button type="button" class="inspection-history__card" {{on "click" (fn this.inspectionSubmissionActions.transition.view inspection)}}>
                     <div class="inspection-history__head">
-                        <span class="inspection-history__form">{{n-a (or inspection.form.name inspection.form_name)}}</span>
+                        <span class="inspection-history__form"><SelectOption::InspectionForm @option={{inspection.form}} @title={{n-a (or inspection.form.name inspection.form_name)}} @compact={{true}} /></span>
                         {{! A draft has no result yet; an empty badge was just a coloured dot. }}
                         {{#if inspection.result}}
                             <Badge @status={{if (eq inspection.result "failed") "failed" "passed"}}>{{smart-humanize inspection.result}}</Badge>

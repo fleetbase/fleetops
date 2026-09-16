@@ -99,6 +99,14 @@ class FleetOpsFuelProviderConnectionFake extends FuelProviderConnection
 class FleetOpsFuelProviderSyncRunFake extends FuelProviderSyncRun
 {
     public bool $freshForTest = false;
+    public array $updatesForTest = [];
+
+    public function update(array $attributes = [], array $options = [])
+    {
+        $this->updatesForTest[] = $attributes;
+
+        return true;
+    }
 
     public function fresh($with = [])
     {
@@ -354,4 +362,22 @@ test('disabled fuel connections cannot queue imports', function () {
     $controller->connection = new FleetOpsFuelProviderConnectionFake(['status' => 'disabled']);
     expect(fn () => $controller->sync(new Request(), 'disabled-connection'))->toThrow(ValidationException::class);
     expect($service->syncRuns)->toBeEmpty();
+});
+
+test('failed fuel sync dispatch marks the run as failed and propagates the broker error', function () {
+    $service = new FleetOpsFuelProviderConnectionServiceFake();
+    $controller = fleetopsFuelProviderConnectionController($service);
+    $controller->connection = new FleetOpsFuelProviderConnectionFake(['uuid' => 'connection-uuid', 'status' => 'active']);
+    $error = new RuntimeException('Queue broker unavailable');
+    Fleetbase\TestSupport\DispatchRecorder::$failure = $error;
+    try {
+        expect(fn () => $controller->sync(new Request(['async' => true]), 'connection-uuid'))->toThrow(RuntimeException::class, 'Queue broker unavailable');
+        $updates = $service->syncRuns[0][4]->updatesForTest;
+        expect($updates)->toHaveCount(1);
+        expect($updates[0])->toMatchArray(['status' => 'error', 'error' => 'Unable to queue sync. Please retry.']);
+        expect($updates[0]['finished_at'])->toBeInstanceOf(Carbon::class);
+        expect($service->syncs)->toBeEmpty();
+    } finally {
+        Fleetbase\TestSupport\DispatchRecorder::$failure = null;
+    }
 });

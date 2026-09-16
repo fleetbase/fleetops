@@ -1,14 +1,67 @@
 import Controller from '@ember/controller';
 import { inject as service } from '@ember/service';
 import { action } from '@ember/object';
-import { openTransactionAction, purchaseGroups } from '../../../../utils/fuel-transaction';
+import { loadTransactionOrder, openTransactionAction, purchaseGroups } from '../../../../utils/fuel-transaction';
+import { buildIdentityStub } from '../../../../utils/identity-cell-resource';
+import relationValue from '../../../../utils/relation-value';
 
 export default class ManagementFuelTransactionsIndexDetailsController extends Controller {
     @service modalsManager;
     @service hostRouter;
+    @service store;
 
     get purchaseGroups() {
         return purchaseGroups(this.model);
+    }
+
+    /**
+     * The linked records as the pills want them: the loaded relation when the
+     * store has it, otherwise a stub that carries the name the transaction
+     * knows and loads the record on hover or click.
+     */
+    get vehicleResource() {
+        const transaction = this.model;
+
+        if (!transaction?.vehicle_uuid && !transaction?.vehicle_name) {
+            return null;
+        }
+
+        return (
+            relationValue(transaction, 'vehicle') ??
+            buildIdentityStub(transaction, { type: 'vehicle', name: transaction.vehicle_name ?? 'Linked vehicle', load: () => transaction.get('vehicle') })
+        );
+    }
+
+    get orderResource() {
+        const transaction = this.model;
+
+        if (!transaction?.order_uuid) {
+            return null;
+        }
+
+        const order = relationValue(transaction, 'order');
+
+        return (
+            (order?.id === transaction.order_uuid ? order : null) ??
+            this.store.peekRecord('order', transaction.order_uuid) ??
+            buildIdentityStub(transaction, {
+                type: 'order',
+                name: transaction.trip_number ?? 'Linked order',
+                load: () => loadTransactionOrder(this.store, transaction),
+            })
+        );
+    }
+
+    get fuelReportResource() {
+        const transaction = this.model;
+
+        if (!transaction?.fuel_report_id) {
+            return null;
+        }
+
+        return (
+            relationValue(transaction, 'fuel_report') ?? buildIdentityStub(transaction, { type: 'fuel-report', name: transaction.fuel_report_id, load: () => transaction.get('fuel_report') })
+        );
     }
 
     @action confirmAction(mode) {

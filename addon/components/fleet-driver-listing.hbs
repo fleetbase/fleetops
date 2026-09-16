@@ -15,6 +15,7 @@
             {{#if @onAddDriver}}
                 <ModelSelect
                     @modelName="driver"
+                    @selectedItemComponent={{component "select-option/driver" compact=true}}
                     @selectedModel={{@options.selectedDriver}}
                     @placeholder={{t "fleet-driver-listing.add-driver"}}
                     @triggerClass="form-select form-input form-select-sm form-input-sm"
@@ -23,7 +24,7 @@
                     @onChange={{this.onAdd}}
                     as |model|
                 >
-                    {{model.name}}
+                    <SelectOption::Driver @option={{model}} />
                 </ModelSelect>
             {{/if}}
         </div>

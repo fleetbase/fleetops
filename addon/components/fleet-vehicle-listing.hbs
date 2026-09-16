@@ -14,6 +14,7 @@
             {{#if @onAddVehicle}}
                 <ModelSelect
                     @modelName="vehicle"
+                    @selectedItemComponent={{component "select-option/vehicle" compact=true}}
                     @query={{hash assignedFleet=false}}
                     @selectedModel={{@options.selectedVehicle}}
                     @placeholder={{t "fleet-vehicle-listing.add-vehicle"}}
@@ -23,7 +24,7 @@
                     @onChange={{this.onAdd}}
                     as |model|
                 >
-                    {{model.display_name}}
+                    <SelectOption::Vehicle @option={{model}} />
                 </ModelSelect>
             {{/if}}
         </div>
