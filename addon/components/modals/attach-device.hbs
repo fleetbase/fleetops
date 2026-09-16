@@ -3,6 +3,7 @@
         <InputGroup @name={{t "common.select-field" field=(t "resource.device")}} @value={{@options.selectedDevice}}>
             <ModelSelect
                 @modelName="device"
+                @selectedItemComponent={{component "select-option/device" compact=true}}
                 @selectedModel={{@options.selectedDevice}}
                 @query={{hash attachment_state="unattached"}}
                 @placeholder={{t "common.select-field" field=(t "resource.device")}}
@@ -12,7 +13,7 @@
                 @onChange={{fn (mut @options.selectedDevice)}}
                 as |model|
             >
-                <Device::Pill @device={{model}} />
+                <SelectOption::Device @option={{model}} />
             </ModelSelect>
         </InputGroup>
     </div>

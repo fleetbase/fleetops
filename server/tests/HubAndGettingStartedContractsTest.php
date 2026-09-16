@@ -90,15 +90,38 @@ test('hub controller maintenance actions summarize service priorities', function
 
     $actions = $controller->callHelper('maintenanceActions', 1, 2, 0, 3, 4, 5, 0);
 
+    // No published inspection form is the first thing a new maintenance setup is
+    // told about: without one, drivers have nothing to file a DVIR against.
     expect(array_column($actions, 'key'))->toBe([
+        'create_inspection_forms',
         'overdue_schedules',
         'overdue_work_orders',
         'high_priority_maintenance',
         'upcoming_service',
-        'no_open_work_orders',
     ])
-        ->and($actions[0]['description'])->toContain('1 recurring service schedule is overdue')
-        ->and($actions[1]['description'])->toContain('3 work orders are past due');
+        ->and($actions[0])->toMatchArray(['tone' => 'info', 'route' => 'maintenance.inspection-forms'])
+        ->and($actions[1]['description'])->toContain('1 recurring service schedule is overdue')
+        ->and($actions[2]['description'])->toContain('3 work orders are past due');
+});
+
+test('hub controller maintenance actions surface failed and unresolved inspections', function () {
+    $controller = new FleetOpsHubControllerProbe();
+
+    // A failed inspection awaiting review outranks everything else, and while one
+    // is waiting the unresolved count is not repeated as a second action.
+    $failed = $controller->callHelper('maintenanceActions', 0, 0, 1, 0, 0, 0, 1, 1, 4, 2);
+    expect(array_column($failed, 'key'))->toBe(['failed_inspections'])
+        ->and($failed[0]['description'])->toBe('1 failed inspection needs issue or work order follow-up.')
+        ->and((array) $failed[0]['query'])->toBe(['result' => 'failed']);
+
+    // Reviewed but not yet resolved: the follow-up prompt, after the service ones.
+    $unresolved = $controller->callHelper('maintenanceActions', 0, 0, 1, 0, 0, 0, 1, 0, 2, 1);
+    expect(array_column($unresolved, 'key'))->toBe(['unresolved_inspections'])
+        ->and($unresolved[0]['description'])->toBe('2 failed inspections remain unresolved.');
+
+    // Forms published and nothing failed: no inspection action at all.
+    $quiet = $controller->callHelper('maintenanceActions', 0, 0, 1, 0, 0, 0, 1, 0, 0, 3);
+    expect(array_column($quiet, 'key'))->toBe([]);
 });
 
 test('hub controller small helpers build dashboard payload fragments', function () {

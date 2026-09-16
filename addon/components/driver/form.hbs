@@ -4,6 +4,7 @@
             <InputGroup @name={{t "driver.fields.user-account"}} @helpText={{t "driver.fields.user-account-help-text"}}>
                 <ModelSelect
                     @modelName="user"
+                    @selectedItemComponent={{component "select-option/user" compact=true}}
                     @selectedModel={{@resource.user}}
                     @placeholder={{t "driver.fields.select-user"}}
                     @query={{hash doesnt_have_driver=true can_be_driver=true}}
@@ -14,22 +15,7 @@
                     @permission="fleet-ops update-user-for driver"
                     as |model|
                 >
-                    <div class="flex flex-row">
-                        <div class="mr-2 w-6">
-                            <Image src={{resource-image model.avatar_url "contact"}} @fallbackSrc={{(placeholder-image "contact")}} alt={{model.name}} class="w-6 h-6 rounded-md" />
-                        </div>
-                        <div class="flex flex-col">
-                            <div class="font-semibold">{{model.name}}</div>
-                            <div class="text-xs flex flex-row items-center leading-4">
-                                <FaIcon @icon="envelope" @size="sm" class="mr-1 opacity-75" />
-                                <span>{{n-a model.email}}</span>
-                            </div>
-                            <div class="text-xs flex flex-row items-center leading-4">
-                                <FaIcon @icon="phone" @size="sm" class="mr-1 opacity-75" />
-                                <span>{{n-a model.phone}}</span>
-                            </div>
-                        </div>
-                    </div>
+                    <SelectOption::User @option={{model}} />
                 </ModelSelect>
             </InputGroup>
             {{#if @resource.user}}
@@ -106,6 +92,7 @@
             <InputGroup @name={{t "driver.fields.vendor"}}>
                 <ModelSelect
                     @modelName="vendor"
+                    @selectedItemComponent={{component "select-option/vendor" compact=true}}
                     @selectedModel={{@resource.vendor}}
                     @placeholder={{t "driver.fields.select-vendor"}}
                     @triggerClass="form-select form-input"
@@ -115,13 +102,14 @@
                     @disabled={{cannot-write @resource}}
                     as |model|
                 >
-                    {{model.name}}
+                    <SelectOption::Vendor @option={{model}} />
                 </ModelSelect>
             </InputGroup>
 
             <InputGroup @name={{t "resource.vehicle"}}>
                 <ModelSelect
                     @modelName="vehicle"
+                    @selectedItemComponent={{component "select-option/vehicle" compact=true}}
                     @selectedModel={{@resource.vehicle}}
                     @placeholder={{t "driver.fields.select-vehicle"}}
                     @triggerClass="form-select form-input"
@@ -132,7 +120,7 @@
                     @disabled={{cannot-write @resource}}
                     as |model|
                 >
-                    {{model.display_name}}
+                    <SelectOption::Vehicle @option={{model}} />
                 </ModelSelect>
             </InputGroup>
 

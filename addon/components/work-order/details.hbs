@@ -56,16 +56,32 @@
             </div>
             <div class="field-info-container">
                 <div class="field-name">Target Asset</div>
-                <div class="field-value">{{n-a (or @resource.target.displayName @resource.target.name @resource.target_name)}}</div>
+                <div class="field-value">
+                    <MaintenanceSubject::Pill @maintenanceSubject={{resource-relation @resource "target"}} @titleFallback={{n-a @resource.target_name}} />
+                </div>
             </div>
             <div class="field-info-container">
                 <div class="field-name">Assigned Vendor</div>
-                <div class="field-value">{{n-a (or @resource.assignee.displayName @resource.assignee.name @resource.assignee_name)}}</div>
+                <div class="field-value">
+                    <Facilitator::Pill @facilitator={{resource-relation @resource "assignee"}} @titleFallback={{n-a @resource.assignee_name}} />
+                </div>
             </div>
-            {{#if @resource.schedule}}
+            {{#if (or this.schedule @resource.schedule_uuid)}}
                 <div class="field-info-container">
                     <div class="field-name">Linked Schedule</div>
-                    <div class="field-value">{{n-a @resource.schedule.name}}</div>
+                    <div class="field-value">
+                        <MaintenanceSchedule::Pill @maintenanceSchedule={{this.schedule}} @titleFallback={{if this.loadSchedule.isRunning "…" (n-a null)}} />
+                    </div>
+                </div>
+            {{/if}}
+            {{#if this.inspections.length}}
+                <div class="field-info-container">
+                    <div class="field-name">{{t "inspection.record.linked-inspections" count=this.inspections.length}}</div>
+                    <div class="field-value space-y-1.5">
+                        {{#each this.inspections as |inspection|}}
+                            <InspectionSubmission::Pill @submission={{inspection}} @onClick={{this.viewInspection}} />
+                        {{/each}}
+                    </div>
                 </div>
             {{/if}}
 

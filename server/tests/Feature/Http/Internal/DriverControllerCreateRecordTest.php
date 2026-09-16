@@ -109,7 +109,7 @@ function fleetopsInternalDriverCreateBoot(): SQLiteConnection
         'companies'       => ['uuid', 'public_id', 'name', 'owner_uuid', 'timezone', 'options'],
         'company_users'   => ['uuid', 'company_uuid', 'user_uuid', 'status'],
         'vehicles'        => ['uuid', 'public_id', 'company_uuid', 'driver_uuid'],
-        'custom_fields'   => ['uuid', 'company_uuid', 'subject_uuid', 'subject_type', 'name', 'label'],
+        'custom_fields'   => ['uuid', 'public_id', 'company_uuid', 'subject_uuid', 'subject_type', 'name', 'label'],
         'roles'           => ['name', 'guard_name', 'company_uuid'],
         'model_has_roles' => ['role_id', 'model_type', 'model_uuid'],
     ];

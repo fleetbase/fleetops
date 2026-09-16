@@ -1,0 +1,41 @@
+<div class="fleet-ops-radar-bulk-bar" data-test-radar-bulk-bar>
+    <button type="button" class="fleet-ops-radar-row-check" {{on "click" @onClear}} data-test-radar-bulk-clear aria-label={{t "radar.bulk.clear"}}>
+        <FaIcon @icon="square-check" />
+    </button>
+    <div class="fleet-ops-radar-bulk-copy">
+        <strong data-test-radar-bulk-count>{{t "radar.bulk.selected" count=@items.length}}</strong>
+        {{#if this.breakdown}}<span class="fleet-ops-radar-row-meta">{{this.breakdown}}</span>{{/if}}
+    </div>
+    <div class="fleet-ops-radar-bulk-actions">
+        <Button @size="xs" @icon="check" @text={{t "radar.actions.acknowledge"}} @isLoading={{@isBusy}} @onClick={{fn @onAct "acknowledge"}} data-test-radar-bulk-action="acknowledge">
+            <kbd class="ml-1">E</kbd>
+        </Button>
+        <DropdownButton @icon="clock" @text={{t "radar.actions.snooze"}} @size="xs" @renderInPlace={{true}} @disabled={{@isBusy}} as |dd|>
+            <div class="next-dd-menu mt-1 mx-0">
+                <div class="px-1">
+                    {{#each @snoozePresets as |preset|}}
+                        <a href="javascript:;" class="next-dd-item" {{on "click" (dropdown-fn dd this.snooze preset)}} data-test-radar-bulk-snooze={{preset}}>
+                            <div class="flex flex-row items-center"><div class="mr-2"><FaIcon @icon="clock" /></div><div class="text-sm">{{t (concat "radar.snooze." preset)}}</div></div>
+                        </a>
+                    {{/each}}
+                </div>
+            </div>
+        </DropdownButton>
+        <Button @size="xs" @icon="user-plus" @text={{t "radar.actions.assign"}} @disabled={{@isBusy}} @onClick={{fn @onAct "assign"}} data-test-radar-bulk-action="assign" />
+        {{#if this.revocableCount}}
+            <Button
+                @size="xs"
+                @icon="link-slash"
+                @type="danger"
+                @text={{t "radar.actions.revoke-links" count=this.revocableCount}}
+                @disabled={{@isBusy}}
+                @onClick={{fn @onAct "revoke_link"}}
+                data-test-radar-bulk-action="revoke_link"
+            />
+        {{/if}}
+        {{#if this.hasSnoozed}}
+            <Button @size="xs" @icon="bell" @text={{t "radar.actions.wake"}} @disabled={{@isBusy}} @onClick={{fn @onAct "wake"}} data-test-radar-bulk-action="wake" />
+        {{/if}}
+        <Button @size="xs" @text={{t "radar.bulk.clear"}} @disabled={{@isBusy}} @onClick={{@onClear}} data-test-radar-bulk-action="clear" />
+    </div>
+</div>

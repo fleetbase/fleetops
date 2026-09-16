@@ -5,6 +5,7 @@
             <InputGroup @name={{t "issue.fields.reported-by"}}>
                 <ModelSelect
                     @modelName="user"
+                    @selectedItemComponent={{component "select-option/user" compact=true}}
                     @selectedModel={{@resource.reporter}}
                     @placeholder={{t "issue.fields.select-reporter"}}
                     @triggerClass="form-select form-input"
@@ -15,13 +16,14 @@
                     @disabled={{cannot-write @resource}}
                     as |model|
                 >
-                    {{model.name}}
+                    <SelectOption::User @option={{model}} />
                 </ModelSelect>
             </InputGroup>
 
             <InputGroup @name={{t "issue.fields.assigned-to"}}>
                 <ModelSelect
                     @modelName="user"
+                    @selectedItemComponent={{component "select-option/user" compact=true}}
                     @selectedModel={{@resource.assignee}}
                     @placeholder={{t "issue.fields.select-assign"}}
                     @triggerClass="form-select form-input"
@@ -33,13 +35,14 @@
                     @disabled={{cannot-write @resource}}
                     as |model|
                 >
-                    {{model.name}}
+                    <SelectOption::User @option={{model}} />
                 </ModelSelect>
             </InputGroup>
 
             <InputGroup @name={{t "resource.driver"}}>
                 <ModelSelect
                     @modelName="driver"
+                    @selectedItemComponent={{component "select-option/driver" compact=true}}
                     @selectedModel={{@resource.driver}}
                     @placeholder={{t "common.select-field" field=(t "resource.driver")}}
                     @triggerClass="form-select form-input"
@@ -50,13 +53,14 @@
                     @disabled={{cannot-write @resource}}
                     as |model|
                 >
-                    {{model.name}}
+                    <SelectOption::Driver @option={{model}} />
                 </ModelSelect>
             </InputGroup>
 
             <InputGroup @name={{t "resource.vehicle"}}>
                 <ModelSelect
                     @modelName="vehicle"
+                    @selectedItemComponent={{component "select-option/vehicle" compact=true}}
                     @selectedModel={{@resource.vehicle}}
                     @placeholder={{t "common.select-field" field=(t "resource.vehicle")}}
                     @triggerClass="form-select form-input"
@@ -67,13 +71,14 @@
                     @disabled={{cannot-write @resource}}
                     as |model|
                 >
-                    {{model.displayName}}
+                    <SelectOption::Vehicle @option={{model}} />
                 </ModelSelect>
             </InputGroup>
 
             <InputGroup @name={{t "resource.order"}}>
                 <ModelSelect
                     @modelName="order"
+                    @selectedItemComponent={{component "select-option/order" compact=true}}
                     @selectedModel={{@resource.order}}
                     @placeholder={{t "common.select-field" field=(t "resource.order")}}
                     @triggerClass="form-select form-input"
@@ -84,7 +89,7 @@
                     @disabled={{cannot-write @resource}}
                     as |model|
                 >
-                    {{or model.tracking model.public_id}}
+                    <SelectOption::Order @option={{model}} />
                 </ModelSelect>
             </InputGroup>
 

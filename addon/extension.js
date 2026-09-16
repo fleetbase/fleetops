@@ -14,6 +14,12 @@ export default {
             description: 'Dispatch, fleet management, driver tracking, and logistics operations.',
             shortcuts: [
                 {
+                    title: 'Radar',
+                    description: 'Everything across resources, maintenance and staffing that needs a decision today.',
+                    icon: 'satellite-dish',
+                    route: 'console.fleet-ops.management.index',
+                },
+                {
                     title: 'Orders',
                     description: 'Create, dispatch, and track delivery orders in real time.',
                     icon: 'boxes-stacked',
@@ -118,6 +124,21 @@ export default {
             })
         );
 
+        menuService.registerMenuItem(
+            'auth:login',
+            new MenuItem({
+                title: 'Inspection',
+                route: 'virtual',
+                slug: 'inspection',
+                type: 'link',
+                wrapperClass: 'hidden',
+                component: new ExtensionComponent('@fleetbase/fleetops-engine', 'public-inspection'),
+                onClick: (menuItem) => {
+                    universe.transitionMenuItem('virtual', menuItem);
+                },
+            })
+        );
+
         // Register widgets
         this.registerWidgets(widgetService);
 
@@ -201,6 +222,16 @@ export default {
                 description: 'Live count of drivers currently active on a job.',
                 icon: 'id-card',
                 component: new ExtensionComponent('@fleetbase/fleetops-engine', 'widget/kpi-drivers-online'),
+                grid_options: { w: 3, h: 4, minW: 3, minH: 4 },
+                category: 'KPI Tiles',
+                default: true,
+            }),
+            new Widget({
+                id: 'fleet-ops-radar-widget',
+                name: 'Radar',
+                description: 'What needs a decision across the fleet right now: open, overdue and snoozed items, linking to Radar.',
+                icon: 'satellite-dish',
+                component: new ExtensionComponent('@fleetbase/fleetops-engine', 'widget/radar'),
                 grid_options: { w: 3, h: 4, minW: 3, minH: 4 },
                 category: 'KPI Tiles',
                 default: true,
@@ -394,6 +425,11 @@ export default {
             'fleet-ops:component:maintenance:form',
             'fleet-ops:component:maintenance:form:details',
             'fleet-ops:component:maintenance:details',
+            'fleet-ops:component:inspection-form:form',
+            'fleet-ops:component:inspection-form:details',
+            'fleet-ops:component:inspection-submission:form',
+            'fleet-ops:component:inspection-submission:details',
+            'fleet-ops:component:public-inspection',
             'fleet-ops:component:work-order:form',
             'fleet-ops:component:work-order:form:details',
             'fleet-ops:component:work-order:details',

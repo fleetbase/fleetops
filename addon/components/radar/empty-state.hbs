@@ -1,0 +1,30 @@
+<div class="fleet-ops-radar-empty" data-test-radar-empty={{this.kind}}>
+    <div class="fleet-ops-radar-empty-icon {{unless this.isAllClear 'is-neutral'}}">
+        <FaIcon @icon={{this.icon}} />
+    </div>
+    <div class="fleet-ops-radar-empty-title">{{t this.titleKey}}</div>
+    <div class="fleet-ops-radar-empty-hint">
+        {{#if this.isAllClear}}
+            {{#if @snoozeSchedule.length}}
+                {{t "radar.empty.snoozed-hint" count=@snoozeSchedule.length}}
+            {{else}}
+                {{t "radar.empty.nothing-snoozed"}}
+            {{/if}}
+        {{else}}
+            {{t this.hintKey}}
+        {{/if}}
+    </div>
+    {{#if @isFiltered}}
+        <div class="mt-3"><Button @size="xs" @icon="rotate-left" @text={{t "radar.bulk.clear"}} @onClick={{@onClear}} /></div>
+    {{/if}}
+    {{#if (and this.isAllClear @snoozeSchedule.length)}}
+        <div class="fleet-ops-radar-empty-schedule" data-test-radar-snooze-schedule>
+            {{#each @snoozeSchedule as |entry|}}
+                <div>
+                    <span>{{entry.title}}</span>
+                    <time>{{t "radar.empty.wakes" time=(format-date-fns entry.snoozed_until "EEE d MMM HH:mm")}}</time>
+                </div>
+            {{/each}}
+        </div>
+    {{/if}}
+</div>

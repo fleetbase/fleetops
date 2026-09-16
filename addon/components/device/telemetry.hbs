@@ -1,0 +1,17 @@
+<div class="mt-2 space-y-1 text-xs" data-test-device-telemetry {{did-update this.resourceChanged @resource.id}}>
+    <p><strong>{{if this.stale "Position stale" "Position current"}}</strong> · {{this.ageLabel}}</p>
+    <p title={{@resource.meta.telemetry.position_at}}>Device position: {{this.positionTime}}</p>
+    <p title={{@resource.meta.telemetry.provider_at}}>Provider transmission: {{this.providerTime}}</p>
+    <details><summary>Telemetry timing (UTC)</summary>
+        <p>Device: {{n-a @resource.meta.telemetry.position_at}}</p>
+        <p>Provider: {{n-a @resource.meta.telemetry.provider_at}}</p>
+        <p>Received: {{n-a @resource.meta.telemetry.received_at}}</p>
+        <p>Processed: {{n-a @resource.meta.telemetry.processed_at}}</p>
+        <p>Source:
+            {{n-a @resource.meta.telemetry.source}}
+            · Queue delay:
+            {{n-a @resource.meta.telemetry.queue_delay_seconds}}s · Source delay:
+            {{n-a @resource.meta.telemetry.source_delay_seconds}}s</p>
+    </details>
+    {{#if this.connectionError}}<p role="status">Live updates interrupted. Displaying the last received position.</p>{{/if}}
+</div>

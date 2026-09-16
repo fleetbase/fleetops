@@ -3,6 +3,7 @@
         <InputGroup @name={{t "common.select-field" field=(t "resource.equipment")}} @helpText={{t "trailer.help.select-equipment"}}>
             <ModelSelect
                 @modelName="equipment"
+                @selectedItemComponent={{component "select-option/equipment" compact=true}}
                 @selectedModel={{@options.selectedEquipment}}
                 @query={{hash attachment_state="detached"}}
                 @placeholder={{t "trailer.placeholders.equipment"}}
@@ -12,10 +13,7 @@
                 @onChange={{fn (mut @options.selectedEquipment)}}
                 as |equipment|
             >
-                <div class="flex flex-col">
-                    <span class="text-sm font-semibold">{{or equipment.name equipment.public_id}}</span>
-                    <span class="text-xs text-gray-500 dark:text-gray-400">{{n-a (or equipment.type equipment.serial_number equipment.code)}}</span>
-                </div>
+                <SelectOption::Equipment @option={{equipment}} />
             </ModelSelect>
         </InputGroup>
     </div>

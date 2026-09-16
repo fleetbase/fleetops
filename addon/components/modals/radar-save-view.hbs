@@ -1,0 +1,7 @@
+<Modal::Default @modalIsOpened={{@modalIsOpened}} @options={{@options}} @confirm={{@onConfirm}} @decline={{@onDecline}}>
+    <div class="modal-body-container">
+        <InputGroup @name={{t "radar.saved-views.name-prompt"}}>
+            <Input @type="text" @value={{@options.name}} placeholder={{t "radar.saved-views.name-placeholder"}} class="w-full form-input" data-test-radar-view-name />
+        </InputGroup>
+    </div>
+</Modal::Default>

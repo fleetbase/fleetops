@@ -64,7 +64,7 @@ class FleetOpsManifestFake extends Manifest
 }
 
 test('manifest resource publishes what a driver needs to run a route', function () {
-    $request                             = Request::create('/v1/manifests/manifest_public', 'GET');
+    $request                              = Request::create('/v1/manifests/manifest_public', 'GET');
     FleetOpsSupportRequestState::$request = $request;
 
     $manifest = new FleetOpsManifestFake();
@@ -94,7 +94,7 @@ test('manifest resource publishes what a driver needs to run a route', function 
 test('manifest resource omits stops when they were not loaded, so a list stays a list', function () {
     // A driver's manifest list on a busy fleet must not drag every stop of
     // every route along with it.
-    $request                             = Request::create('/v1/drivers/driver_public/manifests', 'GET');
+    $request                              = Request::create('/v1/drivers/driver_public/manifests', 'GET');
     FleetOpsSupportRequestState::$request = $request;
 
     $manifest = new FleetOpsManifestFake();
@@ -106,7 +106,7 @@ test('manifest resource omits stops when they were not loaded, so a list stays a
 });
 
 test('manifest stop resource carries the sequence a re-sequence rewrites', function () {
-    $request                             = Request::create('/v1/manifest-stops/stop_public', 'GET');
+    $request                              = Request::create('/v1/manifest-stops/stop_public', 'GET');
     FleetOpsSupportRequestState::$request = $request;
 
     $stop = new ManifestStop();

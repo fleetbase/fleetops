@@ -4,6 +4,7 @@
             <InputGroup @name={{t "common.driver"}}>
                 <ModelSelect
                     @modelName="driver"
+                    @selectedItemComponent={{component "select-option/driver" compact=true}}
                     @selectedModel={{@options.fuelReport.driver}}
                     @placeholder={{t "modals.fuel-report-form.select-driver"}}
                     @triggerClass="form-select form-input"
@@ -13,12 +14,13 @@
                     @onChangeId={{fn (mut @options.fuelReport.driver_uuid)}}
                     as |model|
                 >
-                    {{model.name}}
+                    <SelectOption::Driver @option={{model}} />
                 </ModelSelect>
             </InputGroup>
             <InputGroup @name={{t "common.vehicle"}}>
                 <ModelSelect
                     @modelName="vehicle"
+                    @selectedItemComponent={{component "select-option/vehicle" compact=true}}
                     @selectedModel={{@options.fuelReport.vehicle}}
                     @placeholder={{t "modals.fuel-report-form.select-vehicle"}}
                     @triggerClass="form-select form-input"
@@ -28,7 +30,7 @@
                     @onChangeId={{fn (mut @options.fuelReport.vehicle_uuid)}}
                     as |model|
                 >
-                    {{model.display_name}}
+                    <SelectOption::Vehicle @option={{model}} />
                 </ModelSelect>
             </InputGroup>
             <InputGroup @name={{t "common.odometer"}} @type="number" @value={{@options.fuelReport.odometer}} />

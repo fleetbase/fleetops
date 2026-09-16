@@ -24,10 +24,6 @@ export default class ManagementTrailersIndexDetailsController extends Controller
         ];
     }
 
-    get isAttached() {
-        return this.model?.isAttached ?? this.model?.attachment_state === 'attached';
-    }
-
     get actionButtons() {
         return [
             {
@@ -36,83 +32,13 @@ export default class ManagementTrailersIndexDetailsController extends Controller
                 permission: 'fleet-ops update trailer',
             },
             {
-                // Actions dropdown — mirrors the row-level actions from the trailers index table
+                // Actions dropdown — shared with the trailer context panel
                 icon: 'ellipsis-h',
                 iconPrefix: 'fas',
                 renderInPlace: true,
-                items: [
-                    {
-                        text: this.intl.t('trailer.actions.locate'),
-                        icon: 'location-dot',
-                        fn: () => this.trailerActions.locate(this.model),
-                        permission: 'fleet-ops view trailer',
-                    },
-                    ...(this.isAttached
-                        ? [
-                              {
-                                  text: this.intl.t('trailer.actions.detach-vehicle'),
-                                  icon: 'unlink',
-                                  fn: () => this.trailerActions.detachVehicle(this.model),
-                                  permission: 'fleet-ops detach-vehicle-for trailer',
-                              },
-                          ]
-                        : [
-                              {
-                                  text: this.intl.t('trailer.actions.attach-vehicle'),
-                                  icon: 'link',
-                                  fn: () => this.trailerActions.attachVehicle(this.model),
-                                  permission: 'fleet-ops attach-vehicle-for trailer',
-                              },
-                          ]),
-                    {
-                        text: this.intl.t('trailer.actions.attach-device'),
-                        icon: 'microchip',
-                        fn: () => this.trailerActions.attachDevice(this.model),
-                        permission: 'fleet-ops attach-device-for trailer',
-                    },
-                    {
-                        text: this.intl.t('trailer.actions.attach-equipment'),
-                        icon: 'toolbox',
-                        fn: () => this.trailerActions.attachEquipment(this.model),
-                        permission: 'fleet-ops attach-equipment-for trailer',
-                    },
-                    {
-                        separator: true,
-                    },
-                    {
-                        text: this.intl.t('trailer.actions.schedule-maintenance'),
-                        icon: 'calendar-check',
-                        fn: () => this.trailerActions.scheduleMaintenance(this.model),
-                        permission: 'fleet-ops create maintenance-schedule',
-                    },
-                    {
-                        text: this.intl.t('trailer.actions.create-work-order'),
-                        icon: 'clipboard-list',
-                        fn: () => this.trailerActions.createWorkOrder(this.model),
-                        permission: 'fleet-ops create work-order',
-                    },
-                    {
-                        text: this.intl.t('trailer.actions.log-maintenance'),
-                        icon: 'wrench',
-                        fn: () => this.trailerActions.logMaintenance(this.model),
-                        permission: 'fleet-ops create maintenance',
-                    },
-                    {
-                        separator: true,
-                    },
-                    {
-                        text: this.intl.t('common.delete-resource', { resource: this.intl.t('resource.trailer') }),
-                        icon: 'trash',
-                        fn: () =>
-                            this.trailerActions.delete(this.model, {
-                                onConfirm: () => {
-                                    this.hostRouter.transitionTo('console.fleet-ops.management.trailers.index');
-                                },
-                            }),
-                        permission: 'fleet-ops delete trailer',
-                        class: 'text-red-500 hover:text-red-600',
-                    },
-                ],
+                items: this.trailerActions.detailsMenuItems(this.model, {
+                    onDeleted: () => this.hostRouter.transitionTo('console.fleet-ops.management.trailers.index'),
+                }),
             },
         ];
     }

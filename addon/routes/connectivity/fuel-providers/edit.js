@@ -13,6 +13,7 @@ export default class ConnectivityFuelProvidersIndexEditRoute extends Route {
     }
 
     model({ public_id }) {
-        return this.store.findRecord('fuel-provider-connection', public_id);
+        // URLs use public IDs; the store's primary key is the API UUID.
+        return this.store.queryRecord('fuel-provider-connection', { public_id, single: true });
     }
 }

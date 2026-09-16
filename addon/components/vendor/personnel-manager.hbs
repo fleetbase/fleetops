@@ -33,6 +33,7 @@
                         <InputGroup @name="Contact" @wrapperClass="mb-0i">
                             <ModelSelect
                                 @modelName="contact"
+                                @selectedItemComponent={{component "select-option/contact" compact=true}}
                                 @selectedModel={{this.selectedContact}}
                                 @placeholder="Select existing customer contact"
                                 @query={{hash type="customer"}}
@@ -42,15 +43,7 @@
                                 @onChange={{this.selectContact}}
                                 as |model|
                             >
-                                <div class="flex flex-row items-center">
-                                    <div class="mr-2 w-6">
-                                        <Image src={{resource-image model.photo_url "contact"}} @fallbackSrc={{(placeholder-image "contact")}} alt={{model.name}} class="h-6 w-6 rounded-md" />
-                                    </div>
-                                    <div class="min-w-0">
-                                        <div class="truncate font-semibold">{{model.name}}</div>
-                                        <div class="truncate text-xs text-gray-500">{{n-a model.email}}</div>
-                                    </div>
-                                </div>
+                                <SelectOption::Contact @option={{model}} />
                             </ModelSelect>
                         </InputGroup>
 

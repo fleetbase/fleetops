@@ -238,7 +238,7 @@ function fleetOpsTrailerControllerDatabase(): SQLiteConnection
     });
     $schema->create('custom_fields', function ($table) {
         $table->increments('id');
-        foreach (['uuid', 'company_uuid', 'label', 'name', 'type'] as $column) {
+        foreach (['uuid', 'public_id', 'company_uuid', 'label', 'name', 'type'] as $column) {
             $table->string($column)->nullable();
         }
         $table->timestamps();

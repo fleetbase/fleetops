@@ -1,8 +1,10 @@
 import ResourceActionService, { inject as service } from '@fleetbase/ember-core/services/resource-action';
 import { action } from '@ember/object';
+import { PANEL_DEFAULTS, closePanelsThen, registeredPanelTabs } from '../utils/context-panel';
 
 export default class FleetActionsService extends ResourceActionService {
     @service fetch;
+    @service('universe/menu-service') menuService;
 
     constructor() {
         super(...arguments);
@@ -41,12 +43,18 @@ export default class FleetActionsService extends ResourceActionService {
         view: (fleet, options = {}) => {
             return this.resourceContextPanel.open({
                 fleet,
-                tabs: [
-                    {
-                        label: this.intl.t('common.overview'),
-                        component: 'fleet/details',
-                    },
+                title: fleet?.name,
+                actionButtons: [
+                    { icon: 'pencil', permission: 'fleet-ops update fleet', fn: () => closePanelsThen(this.resourceContextPanel, () => this.panel.edit(fleet)) },
+                    { icon: 'ellipsis-h', iconPrefix: 'fas', renderInPlace: true, items: this.detailsMenuItems(fleet) },
                 ],
+                tabs: [
+                    { key: 'overview', label: this.intl.t('common.overview'), component: 'fleet/details' },
+                    { key: 'vehicles', label: this.intl.t('menu.vehicles'), component: 'fleet/vehicle-listing' },
+                    { key: 'drivers', label: this.intl.t('menu.drivers'), component: 'fleet/driver-listing' },
+                    ...registeredPanelTabs(this.menuService, 'fleet-ops:component:fleet:details'),
+                ],
+                ...PANEL_DEFAULTS,
                 ...options,
             });
         },
@@ -145,5 +153,13 @@ export default class FleetActionsService extends ResourceActionService {
             },
             ...options,
         });
+    }
+
+    /** The actions menu of a fleet's header, shared by the details route and the context panel. */
+    detailsMenuItems(fleet) {
+        return [
+            { text: this.intl.t('fleet.actions.assign-driver'), icon: 'user-plus', fn: () => this.assignDriver(fleet), permission: 'fleet-ops assign-driver-for fleet' },
+            { text: this.intl.t('fleet.actions.assign-vehicle'), icon: 'car', fn: () => this.assignVehicle(fleet), permission: 'fleet-ops assign-vehicle-for fleet' },
+        ];
     }
 }

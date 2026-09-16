@@ -220,7 +220,7 @@ function fleetopsDriverAdoptionBoot(array $validatorErrors): SQLiteConnection
         'companies'             => ['uuid', 'public_id', 'name', 'owner_uuid', 'timezone', 'options', 'status', '_key'],
         'company_users'         => ['uuid', 'public_id', 'company_uuid', 'user_uuid', 'status', '_key'],
         'vehicles'              => ['uuid', 'public_id', 'company_uuid', 'driver_uuid'],
-        'custom_fields'         => ['uuid', 'company_uuid', 'subject_uuid', 'subject_type', 'name', 'label'],
+        'custom_fields'         => ['uuid', 'public_id', 'company_uuid', 'subject_uuid', 'subject_type', 'name', 'label'],
         'custom_field_values'   => ['uuid', 'public_id', 'company_uuid', 'custom_field_uuid', 'subject_uuid', 'subject_type', 'value', 'value_type', '_key'],
         'settings'              => ['key', 'value'],
         'permissions'           => ['name', 'guard_name', 'service', 'description'],

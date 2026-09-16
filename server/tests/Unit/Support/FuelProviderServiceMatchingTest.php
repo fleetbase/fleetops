@@ -38,6 +38,8 @@ class FleetOpsFuelServiceMatchingProbe extends FuelProviderService
 
 function fleetopsFuelServiceMatchingBoot(): SQLiteConnection
 {
+    EloquentModel::setEventDispatcher(new Illuminate\Events\Dispatcher(app()));
+    EloquentModel::clearBootedModels();
     $pdo = new PDO('sqlite::memory:');
     // SQLite lacks the MySQL spatial functions used by the fuel report
     // location cast; a passthrough keeps the WKT string intact.
@@ -89,6 +91,13 @@ function fleetopsFuelServiceMatchingBoot(): SQLiteConnection
             $blueprint->timestamps();
             $blueprint->timestamp('deleted_at')->nullable();
         });
+    }
+
+    // Exercise real UUID assignment without unrelated HTTP-cache observers.
+    foreach ([FuelProviderTransaction::class, Fleetbase\FleetOps\Models\FuelReport::class, Fleetbase\FleetOps\Models\FuelProviderSyncRun::class] as $modelClass) {
+        new $modelClass();
+        $modelClass::flushEventListeners();
+        $modelClass::bootHasUuid();
     }
 
     session(['company' => 'company-1']);
@@ -177,7 +186,11 @@ test('match vehicle and match order resolve string identifiers', function () {
     $matched = $service->matchVehicle($transaction, 'vehicle_test');
     expect($matched->vehicle_uuid)->toBe('vehicle-1')
         ->and($matched->sync_status)->toBe('matched')
+        ->and($matched->fuel_report_uuid)->not->toBeNull()
         ->and($connection->table('fuel_reports')->count())->toBe(1);
+
+    $service->matchVehicle($matched, 'vehicle_test');
+    expect($connection->table('fuel_reports')->count())->toBe(1);
 
     $withOrder = $service->matchOrder($matched, 'order_test');
     expect($withOrder->order_uuid)->toBe('order-1');
@@ -277,4 +290,118 @@ test('ensure fuel report reuses existing reports and skips vehicleless transacti
     $report = $probe->callProtected('ensureFuelReport', $located);
     expect($report)->not->toBeNull()
         ->and($connection->table('fuel_reports')->where('uuid', $report->uuid)->value('location'))->toBe('POINT(103.85 1.29)');
+});
+
+test('reimport updates a transaction without duplicating its report and preserves ignored review', function () {
+    $db         = fleetopsFuelServiceMatchingBoot();
+    $connection = fleetopsFuelServiceMatchingConnection($db);
+    $db->table('vehicles')->insert(['uuid' => 'vehicle-1', 'company_uuid' => 'company-1', 'plate_number' => 'SGX-1234']);
+    $service = fleetopsFuelServiceMatchingService();
+    $payload = ['provider_transaction_id' => 'repeat-1', 'plate_number' => 'SGX-1234', 'amount' => 1250, 'currency' => 'SAR', 'volume' => 5];
+    $first   = $service->ingestTransaction($connection, $payload);
+    $second  = $service->ingestTransaction($connection, $payload);
+    expect($first->wasRecentlyCreated)->toBeTrue()
+        ->and($second->wasRecentlyCreated)->toBeFalse()
+        ->and($db->table('fuel_provider_transactions')->count())->toBe(1)
+        ->and($db->table('fuel_reports')->count())->toBe(1)
+        ->and($second->fuel_report_uuid)->toBe($first->fuel_report_uuid);
+    $service->reviewTransaction($second, 'ignored');
+    expect($service->ingestTransaction($connection, $payload)->sync_status)->toBe('ignored');
+});
+
+test('sandbox and production connections cannot overwrite one another’s provider transactions', function () {
+    $db           = fleetopsFuelServiceMatchingBoot();
+    $first        = fleetopsFuelServiceMatchingConnection($db);
+    $second       = clone $first;
+    $second->uuid = 'production-connection';
+    $service      = fleetopsFuelServiceMatchingService();
+    $payload      = ['provider_transaction_id' => 'shared-bill-id', 'amount' => 1000, 'currency' => 'SAR'];
+    $sandbox      = $service->ingestTransaction($first, $payload);
+    $production   = $service->ingestTransaction($second, $payload);
+    expect($sandbox->uuid)->not->toBe($production->uuid)
+        ->and($db->table('fuel_provider_transactions')->count())->toBe(2)
+        ->and($sandbox->fuel_provider_connection_uuid)->toBe($first->uuid)
+        ->and($production->fuel_provider_connection_uuid)->toBe($second->uuid);
+});
+
+test('empty matching rules disable automatic matching', function () {
+    $db                        = fleetopsFuelServiceMatchingBoot();
+    $connection                = fleetopsFuelServiceMatchingConnection($db);
+    $connection->sync_settings = ['matching_order' => []];
+    $db->table('vehicles')->insert(['uuid' => 'vehicle-1', 'company_uuid' => 'company-1', 'plate_number' => 'SGX-1234']);
+    $transaction = fleetopsFuelServiceMatchingService()->ingestTransaction($connection, ['provider_transaction_id' => 'manual-only', 'plate_number' => 'SGX-1234']);
+    expect($transaction->sync_status)->toBe('unmatched')->and($transaction->vehicle_uuid)->toBeNull();
+});
+
+test('sync windows retain the configured lookback after empty runs and reject reversed dates', function () {
+    $db                         = fleetopsFuelServiceMatchingBoot();
+    $connection                 = fleetopsFuelServiceMatchingConnection($db);
+    $connection->sync_settings  = ['window_days' => 7];
+    $connection->last_synced_at = now();
+    $service                    = fleetopsFuelServiceMatchingService();
+    [$from, $to]                = $service->syncWindow($connection);
+    expect($from->toDateString())->toBe(now()->subDays(7)->toDateString())->and($to->toDateString())->toBe(now()->toDateString());
+    expect(fn () => $service->syncWindow($connection, now(), now()->subDay()))->toThrow(InvalidArgumentException::class);
+});
+
+test('ambiguous vehicle identifiers require manual matching', function () {
+    $db         = fleetopsFuelServiceMatchingBoot();
+    $connection = fleetopsFuelServiceMatchingConnection($db, ['sync_settings' => json_encode(['matching_order' => ['plate_number']])]);
+    $db->table('vehicles')->insert([
+        ['uuid' => 'vehicle-1', 'company_uuid' => 'company-1', 'plate_number' => 'ABC 1234'],
+        ['uuid' => 'vehicle-2', 'company_uuid' => 'company-1', 'plate_number' => 'ABC-1234'],
+    ]);
+    $transaction = fleetopsFuelServiceMatchingService()->ingestTransaction($connection, ['provider_transaction_id' => 'ambiguous', 'plate_number' => 'ABC 1234']);
+    expect($transaction->sync_status)->toBe('unmatched')
+        ->and($transaction->vehicle_uuid)->toBeNull()
+        ->and($db->table('fuel_reports')->count())->toBe(0);
+});
+
+test('activity reports persisted totals and isolates the company and connection', function () {
+    $db         = fleetopsFuelServiceMatchingBoot();
+    $connection = fleetopsFuelServiceMatchingConnection($db);
+    foreach ([['conn-1', 'company-1', 300], ['conn-2', 'company-1', 900], ['conn-3', 'company-2', 500]] as [$id, $company, $amount]) {
+        $db->table('fuel_provider_transactions')->insert(['uuid' => 'txn-' . $id, 'fuel_provider_connection_uuid' => $id, 'company_uuid' => $company, 'sync_status' => 'unmatched', 'amount' => $amount, 'currency' => 'SAR', 'volume' => 4]);
+    }
+    $controller = new Fleetbase\FleetOps\Http\Controllers\Internal\v1\FuelProviderConnectionController(fleetopsFuelServiceMatchingService());
+    $activity   = $controller->activity(new Illuminate\Http\Request(), 'conn-1')->getData(true);
+    expect($activity['totals'])->toMatchArray(['transactions' => 1, 'unmatched' => 1, 'liters' => 4, 'fuel_reports' => 0])
+        ->and($activity['totals']['spend'])->toBe([['currency' => 'SAR', 'amount' => 300]])
+        ->and($activity['connection'])->not->toHaveKey('credentials');
+    session(['company' => 'company-2']);
+    expect(fn () => $controller->activity(new Illuminate\Http\Request(), 'conn-1'))->toThrow(Illuminate\Database\Eloquent\ModelNotFoundException::class);
+});
+
+test('terminal worker failures mark a sync failed without destroying its last successful summary', function () {
+    $db = fleetopsFuelServiceMatchingBoot();
+    $db->getSchemaBuilder()->table('fuel_provider_connections', function ($table) {
+        $table->text('last_error')->nullable();
+        $table->text('last_sync_state')->nullable();
+    });
+    $db->getSchemaBuilder()->table('fuel_provider_sync_runs', function ($table) { $table->timestamp('finished_at')->nullable(); });
+    fleetopsFuelServiceMatchingConnection($db, ['last_sync_state' => json_encode(['summary' => ['imported' => 1]])]);
+    $db->table('fuel_provider_sync_runs')->insert(['uuid' => 'run-1', 'fuel_provider_connection_uuid' => 'conn-1', 'status' => 'running']);
+    $job = new Fleetbase\FleetOps\Jobs\SyncFuelProviderTransactionsJob('conn-1', syncRunUuid: 'run-1');
+    $job->failed(new RuntimeException('worker stopped'));
+    expect($db->table('fuel_provider_sync_runs')->value('status'))->toBe('error')
+        ->and($db->table('fuel_provider_sync_runs')->value('finished_at'))->not->toBeNull()
+        ->and(FuelProviderConnection::where('uuid', 'conn-1')->first()->last_sync_state)->toBe(['summary' => ['imported' => 1]]);
+});
+
+test('ingestion persists the report returned by a custom report resolution strategy', function () {
+    $db = fleetopsFuelServiceMatchingBoot();
+    $connection = fleetopsFuelServiceMatchingConnection($db);
+    $db->table('vehicles')->insert(['uuid' => 'vehicle-1', 'company_uuid' => 'company-1', 'plate_number' => 'SGX-1234']);
+    $db->table('fuel_reports')->insert(['uuid' => 'existing-report', 'company_uuid' => 'company-1', 'vehicle_uuid' => 'vehicle-1']);
+    $service = new class(new FuelProviderRegistry()) extends FleetOpsFuelServiceMatchingProbe {
+        protected function ensureFuelReport(FuelProviderTransaction $transaction): ?Fleetbase\FleetOps\Models\FuelReport
+        {
+            return Fleetbase\FleetOps\Models\FuelReport::where('company_uuid', $transaction->company_uuid)->where('vehicle_uuid', $transaction->vehicle_uuid)->firstOrFail();
+        }
+    };
+    $transaction = $service->ingestTransaction($connection, ['provider_transaction_id' => 'existing-report-transaction', 'plate_number' => 'SGX-1234']);
+    expect($transaction->sync_status)->toBe('matched');
+    expect($transaction->fuel_report_uuid)->toBe('existing-report');
+    expect($db->table('fuel_provider_transactions')->value('fuel_report_uuid'))->toBe('existing-report');
+    expect($db->table('fuel_reports')->count())->toBe(1);
 });

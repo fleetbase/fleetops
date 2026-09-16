@@ -1,0 +1,92 @@
+{{#if @item}}
+    <Overlay @isOpen={{true}} @position="right" @width="26rem" @fullHeight={{true}} @onLoad={{this.setOverlay}} class="fleet-ops-radar-drawer" data-test-radar-drawer>
+        <Overlay::Header @title={{t (concat "radar.rules." @item.rule)}} @status={{@item.severity}} @hideStatusDot={{false}} @onPressCancel={{@onClose}} />
+        <Overlay::Body class="no-padding">
+            <div class="fleet-ops-radar-drawer-section">
+                <div class="fleet-ops-radar-drawer-title">{{@item.title}}</div>
+                {{#if @item.meta_line}}<div class="fleet-ops-radar-row-meta mt-1">{{@item.meta_line}}</div>{{/if}}
+                <div class="mt-2 flex items-center gap-2 flex-wrap">
+                    <Radar::Subject @subject={{@item.subject}} />
+                    {{#if @item.due_label}}<span class="fleet-ops-radar-row-due is-{{@item.due_bucket}}">{{@item.due_label}}</span>{{/if}}
+                </div>
+            </div>
+
+            {{#unless this.isResolved}}
+                <div class="fleet-ops-radar-drawer-section">
+                    <div class="fleet-ops-radar-drawer-label">{{t "radar.drawer.details"}}</div>
+                    <div class="fleet-ops-radar-drawer-actions" data-test-radar-drawer-actions>
+                        {{#each this.recordActions as |recordAction|}}
+                            <Button @type={{if (eq recordAction.key this.primaryAction.key) "primary" "default"}} @size="xs" @icon={{recordAction.icon}} @text={{t recordAction.label}} @onClick={{fn @onAct @item recordAction.key}} data-test-radar-drawer-action={{recordAction.key}} />
+                        {{/each}}
+                        {{#unless this.isAcknowledged}}
+                            <Button @size="xs" @icon="check" @text={{t "radar.actions.acknowledge"}} @onClick={{fn @onAct @item "acknowledge"}} data-test-radar-drawer-action="acknowledge" />
+                        {{/unless}}
+                        {{#if this.isSnoozed}}
+                            <Button @size="xs" @icon="bell" @text={{t "radar.actions.wake"}} @onClick={{fn @onAct @item "wake"}} data-test-radar-drawer-action="wake" />
+                        {{else}}
+                            {{#each @snoozePresets as |preset|}}
+                                <Button @size="xs" @icon="clock" @text={{t (concat "radar.snooze." preset)}} @onClick={{fn this.snooze preset}} data-test-radar-drawer-snooze={{preset}} />
+                            {{/each}}
+                        {{/if}}
+                        <Button @size="xs" @icon="user-plus" @text={{t "radar.actions.assign"}} @onClick={{fn @onAct @item "assign"}} data-test-radar-drawer-action="assign" />
+                        {{#if @item.state.assigned_to}}
+                            <Button @size="xs" @icon="user-minus" @text={{t "radar.actions.unassign"}} @onClick={{fn @onAct @item "unassign"}} data-test-radar-drawer-action="unassign" />
+                        {{/if}}
+                        {{#if (eq @item.rule "notice")}}
+                            <Button @type="danger" @size="xs" @icon="trash" @text={{t "radar.notice.delete"}} @onClick={{fn @onAct @item "delete_notice"}} data-test-radar-drawer-action="delete_notice" />
+                        {{/if}}
+                        {{#if @item.record}}
+                            <Button @size="xs" @icon="arrow-up-right-from-square" @text={{t "radar.actions.open-record"}} @onClick={{fn @onOpenRecord @item}} data-test-radar-drawer-action="open_record" />
+                        {{/if}}
+                    </div>
+                </div>
+            {{/unless}}
+
+            {{#if @item.details.failed_items.length}}
+                <div class="fleet-ops-radar-drawer-section">
+                    <div class="fleet-ops-radar-drawer-label">{{t "radar.drawer.failed-items"}}</div>
+                    <div class="fleet-ops-radar-drawer-list" data-test-radar-drawer-failed-items>
+                        {{#each @item.details.failed_items as |failure|}}
+                            <div>
+                                <span>{{failure.label}}</span>
+                                <Badge @status={{if (eq failure.severity "critical") "error" (if (eq failure.severity "high") "error" "warning")}} @text={{failure.severity}} @hideStatusDot={{true}} />
+                            </div>
+                        {{/each}}
+                    </div>
+                </div>
+            {{/if}}
+
+            {{#if @item.window}}
+                <div class="fleet-ops-radar-drawer-section">
+                    <div class="fleet-ops-radar-drawer-label">{{t "radar.drawer.window"}}</div>
+                    <div class="fleet-ops-radar-drawer-list">
+                        <div><span>{{format-date-fns @item.window.start_at "EEE d MMM HH:mm"}}</span><span>→</span><span>{{format-date-fns @item.window.end_at "HH:mm"}}</span></div>
+                    </div>
+                </div>
+            {{/if}}
+
+            <div class="fleet-ops-radar-drawer-section">
+                <div class="fleet-ops-radar-drawer-label">{{t "radar.drawer.state"}}</div>
+                <div class="fleet-ops-radar-drawer-state" data-test-radar-drawer-state>
+                    {{#if @item.state.acknowledged_at}}
+                        <span><FaIcon @icon="check" class="mr-1" />{{t "radar.state.acknowledged-by" name=(or @item.state.acknowledged_by_name "—") time=(format-date-fns @item.state.acknowledged_at "d MMM HH:mm")}}</span>
+                    {{/if}}
+                    {{#if @item.state.snoozed_until}}
+                        <span><FaIcon @icon="clock" class="mr-1" />{{t "radar.state.snoozed-until" time=(format-date-fns @item.state.snoozed_until "d MMM HH:mm")}}</span>
+                    {{/if}}
+                    {{#if @item.state.assigned_to}}
+                        <span><FaIcon @icon="user" class="mr-1" />{{t "radar.state.assigned-to" name=@item.state.assigned_to.name}}</span>
+                    {{else}}
+                        <span><FaIcon @icon="user" class="mr-1" />{{t "radar.state.unassigned"}}</span>
+                    {{/if}}
+                    {{#if @item.state.planned_at}}
+                        <span><FaIcon @icon="calendar-check" class="mr-1" />{{t "radar.state.planned-for" time=(format-date-fns @item.state.planned_at "d MMM HH:mm")}}</span>
+                    {{/if}}
+                    {{#if @item.state.resolved_at}}
+                        <span><FaIcon @icon="circle-check" class="mr-1" />{{if (eq @item.state.resolution "auto") (t "radar.state.resolved-auto") (t "radar.state.resolved-by" name=(or @item.state.resolved_by_name "—") time=(format-date-fns @item.state.resolved_at "d MMM HH:mm"))}}</span>
+                    {{/if}}
+                </div>
+            </div>
+        </Overlay::Body>
+    </Overlay>
+{{/if}}

@@ -141,25 +141,25 @@ export default class MaintenanceScheduleFormComponent extends Component {
     }
 
     @action onSubjectTypeChange(option) {
-        this.selectedSubjectType = option;
+        this.selectedSubjectType = option ?? null;
         // Clear the subject relationship — user must re-select the asset
         this.args.resource.subject = null;
-        this.subjectModelName = TYPE_TO_MODEL[option.value] ?? null;
+        this.subjectModelName = TYPE_TO_MODEL[option?.value] ?? null;
     }
 
     @action assignSubject(model) {
-        this.args.resource.subject = model;
+        this.args.resource.subject = model ?? null;
     }
 
     @action onAssigneeTypeChange(option) {
-        this.selectedAssigneeType = option;
+        this.selectedAssigneeType = option ?? null;
         // Clear the default_assignee relationship — user must re-select
         this.args.resource.default_assignee = null;
-        this.assigneeModelName = TYPE_TO_MODEL[option.value] ?? null;
+        this.assigneeModelName = TYPE_TO_MODEL[option?.value] ?? null;
     }
 
     @action assignDefaultAssignee(model) {
-        this.args.resource.default_assignee = model;
+        this.args.resource.default_assignee = model ?? null;
     }
 
     @action addReminderOffset(value) {

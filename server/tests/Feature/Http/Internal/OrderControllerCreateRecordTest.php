@@ -201,7 +201,7 @@ function fleetopsInternalOrderCreateBoot(array $validatorErrors = []): SQLiteCon
         'tracking_statuses'   => ['uuid', 'public_id', 'company_uuid', 'tracking_number_uuid', 'code', 'status', 'details', 'location', 'city', 'province', 'country', '_key'],
         'contacts'            => ['uuid', 'public_id', 'company_uuid', 'name'],
         'vendors'             => ['uuid', 'public_id', 'company_uuid', 'name'],
-        'custom_fields'       => ['uuid', 'company_uuid', 'subject_uuid', 'subject_type', 'name', 'label'],
+        'custom_fields'       => ['uuid', 'public_id', 'company_uuid', 'subject_uuid', 'subject_type', 'name', 'label'],
         'custom_field_values' => ['uuid', 'company_uuid', 'custom_field_uuid', 'subject_uuid', 'subject_type', 'value'],
         'companies'           => ['uuid', 'public_id', 'name', 'options'],
     ];

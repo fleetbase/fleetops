@@ -212,6 +212,7 @@
 
                         <ModelSelect
                             @modelName="place"
+                            @selectedItemComponent={{component "select-option/place" compact=true}}
                             @selectedModel={{@options.vendor.place}}
                             @placeholder={{t "modals.vendor-form.select-address"}}
                             @triggerClass="form-select form-input"
@@ -220,9 +221,7 @@
                             @onChange={{@options.selectAddress}}
                             as |model|
                         >
-                            {{model.name}}
-                            -
-                            {{model.street1}}
+                            <SelectOption::Place @option={{model}} />
                         </ModelSelect>
                     </InputGroup>
 

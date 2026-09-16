@@ -122,7 +122,7 @@ export default class MaintenanceFormComponent extends Component {
      * maintainable relationship so a stale association is not persisted.
      */
     @action onMaintainableTypeChange(option) {
-        this.selectedMaintainableType = option;
+        this.selectedMaintainableType = option ?? null;
         // Clear the maintainable relationship — user must re-select the asset
         this.args.resource.maintainable = null;
         this.maintainableModelName = TYPE_TO_MODEL[option?.value] ?? null;
@@ -130,7 +130,7 @@ export default class MaintenanceFormComponent extends Component {
 
     /** Assigns the selected maintainable model to the resource. */
     @action assignMaintainable(model) {
-        this.args.resource.maintainable = model;
+        this.args.resource.maintainable = model ?? null;
     }
 
     /**
@@ -138,7 +138,7 @@ export default class MaintenanceFormComponent extends Component {
      * performed-by relationship so a stale association is not persisted.
      */
     @action onPerformedByTypeChange(option) {
-        this.selectedPerformedByType = option;
+        this.selectedPerformedByType = option ?? null;
         // Clear the performed_by relationship — user must re-select
         this.args.resource.performed_by = null;
         this.performedByModelName = TYPE_TO_MODEL[option?.value] ?? null;
@@ -146,6 +146,6 @@ export default class MaintenanceFormComponent extends Component {
 
     /** Assigns the selected performer model to the resource. */
     @action assignPerformedBy(model) {
-        this.args.resource.performed_by = model;
+        this.args.resource.performed_by = model ?? null;
     }
 }

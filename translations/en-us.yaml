@@ -68,6 +68,7 @@ common:
 menu:
     operations: Operations
     dashboard: Dashboard
+    radar: Radar
     orders: Orders
     service-rates: Service Rates
     scheduler: Scheduler
@@ -86,6 +87,8 @@ menu:
     maintenance: Maintenance
     schedules: Schedules
     work-orders: Work Orders
+    inspection-forms: 'Inspection Forms'
+    inspections: 'Inspections'
     equipment: Equipment
     parts: Parts
     maintenance-history: Maintenance History
@@ -143,14 +146,14 @@ trailer:
         status: Status
         category: Category
         vin: VIN
-        plate-number: Plate number
-        serial-number: Serial number
+        plate-number: Plate Number
+        serial-number: Serial Number
         make: Make
         model: Model
         year: Year
         vendor: Vendor
         warranty: Warranty
-        vehicle: Towing vehicle
+        vehicle: Towing Vehicle
         attachment-state: Attachment state
         attached-at: Attached since
         position: Towing position
@@ -159,7 +162,7 @@ trailer:
         disconnected-at: Disconnected at
         duration: Duration
         connectivity: Connectivity
-        last-online: Last online
+        last-online: Last Online
         last-provider: Telemetry provider
         last-event-at: Last telemetry event
         coordinates: Coordinates
@@ -350,17 +353,17 @@ trailer:
         id: ID
         code: Code
         type: Type
-        plate-number: Plate number
+        plate-number: Plate Number
         status: Status
-        vehicle: Towing vehicle
+        vehicle: Towing Vehicle
         attachment-state: Attachment
         connectivity: Connectivity
-        last-online: Last online
+        last-online: Last Online
         location: Location
         devices: Devices
         equipment: Equipment
         vin: VIN
-        serial-number: Serial number
+        serial-number: Serial Number
         make: Make
         model: Model
         year: Year
@@ -368,11 +371,11 @@ trailer:
         ownership: Ownership
         axles: Axles
         gvwr: GVWR
-        payload-capacity: Payload capacity
+        payload-capacity: Payload Capacity
         length: Length
         refrigerated: Refrigerated
-        created-at: Created at
-        updated-at: Updated at
+        created-at: Created At
+        updated-at: Updated At
     filters:
         created-between: Created between
         updated-between: Updated between
@@ -509,6 +512,8 @@ resource:
     fleets: Fleets
     fuel-report: Fuel Report
     fuel-reports: Fuel Reports
+    inspection: Inspection
+    inspections: Inspections
     integrated-vendor: Integrated Vendor
     integrated-vendors: Integrated Vendors
     issue: Issue
@@ -575,6 +580,7 @@ order-status:
     canceled: Canceled
 
 column:
+    target: Target
     address: Address
     country: Country
     created-at: Created At
@@ -836,7 +842,7 @@ device:
         title: Attached asset
         description: Fleet context for telemetry from this device.
         open: Open asset
-        asset: Attached asset
+        asset: Attached Asset
         synced-device: Synced device
         asset-type: Asset type
         select-asset-type: Select an asset type
@@ -1283,6 +1289,8 @@ place:
         locate-place: Locate Place on Map
 
 service-area:
+    actions:
+        edit-boundary: Edit boundary on map
     fields:
         details: Service Area Details
         area-color: Fill Color
@@ -1406,9 +1414,9 @@ vehicle:
     placeholders:
         filter-internal-id: Type or scan internal IDs
     filters:
-        has-trailer: Trailer attached
-        has-driver: Driver assigned
-        has-device: Device attached
+        has-trailer: Has Trailer Attached
+        has-driver: Has Driver Assigned
+        has-device: Has Device Attached
         any: Any
         attached: Attached
         not-attached: Not attached
@@ -1444,6 +1452,8 @@ vehicle:
         trailers-description: Attach a detached trailer to this vehicle to start a towing connection.
         equipment: No equipment attached
         equipment-description: Attach equipment such as liftgates, tools, or safety gear to this vehicle.
+        inspections: No inspections filed
+        inspections-description: Inspections a driver files against this vehicle will appear here.
     trailers:
         description: Trailers currently coupled to this vehicle.
     equipment:
@@ -1502,6 +1512,8 @@ integrated-vendor:
         namespace-help-text: Optionally provide a custom namespace or api version that should be used for the integration.
 
 zone:
+    actions:
+        edit-boundary: Edit boundary on map
     fields:
         details: Zone Details
         border-color: Border Color
@@ -2165,8 +2177,279 @@ modals:
         optionally: Optionally give the zone a description.
         description-zone: Description of Zone
 
+radar:
+    title: Radar
+    eyebrow: Resources
+    subtitle: Everything across resources, maintenance, inspections and staffing that needs a decision, one row per record.
+    summary: "{open} open · {snoozed} snoozed · last sync {time}"
+    search-placeholder: Filter items
+    reload: Reload
+    new-notice: New notice
+    showing: "Showing {count} of {total} · grouped by due"
+    sources-warning: "Some sources could not be loaded: {sources}"
+    briefing:
+        title: Morning brief
+        score: Fleet health score
+        of-100: "/ 100"
+        vs-yesterday: "{delta} vs yesterday"
+        no-history: first reading
+        generated: "Generated {time} · sources linked"
+        yesterday: "Yesterday: {closed} gaps closed, {rolled} rolled over"
+        decisions: Decisions waiting on you
+        decisions-count: "{shown} of {total}"
+        nothing-to-decide: Nothing to decide.
+        confirm: Confirm
+        not-now: Not now
+        undo: Undo
+        wake-now: Wake now
+        confirmed: "Confirmed {time}"
+        snoozed-until: "Snoozed to {time}"
+        filter: Filter
+        collapse: Collapse brief
+        expand: Show brief
+        open-record: Open record
+        working: Working…
+    views:
+        list: List
+        agenda: Agenda
+    agenda:
+        window-24h: Next 24h
+        window-7d: 7 days
+        overdue: Overdue
+        later: Later
+        anytime: Anytime
+        anytime-count: "{count} undated"
+        no-events: No events in this window.
+        drag-hint: Drag an item onto a lane to give it a time.
+        print: Print handover sheet
+        see-all: "See all {count} →"
+        planned: Planned
+        now: now
+        lanes:
+            shifts: Shifts
+            maintenance: Maintenance
+            expiries: Expiries
+            notices: Notices
+        shift-states:
+            on_shift: on shift
+            not_online: not online
+            upcoming: upcoming
+            ended: ended
+        summary: "{shifts} shifts in window · {overdue} overdue · {anytime} undated"
+    handover:
+        title: Shift ends
+        ends-in: "in {minutes}"
+        orders-on-driver: "{count} active orders still on {name}"
+        finishes-after: finishes after the shift
+        suggested: Suggested handoff
+        on-shift-till: "on shift till {time}"
+        away: "{distance} km away"
+        reassign: "Reassign {count} orders to {name}"
+        extend: Extend shift 1h
+        snooze: Snooze 1h
+        no-cover: Nobody on shift long enough to cover; extend the shift or reassign by hand.
+        reassigned: "Orders moved to {name}."
+        extended: Shift extended by an hour.
+        loading: Finding cover…
+    tabs:
+        open: Open
+        snoozed: Snoozed
+        resolved: Resolved
+    pills:
+        overdue: Overdue
+        due_week: Due this week
+        unassigned: Unassigned
+        issues: Open issues
+        inspections: Inspections
+        shifts: Shift changes
+        expiring: Expiring 30d
+        low_stock: Low stock
+        fuel: Unmatched fuel
+        notices: Notices
+    groups:
+        overdue: Overdue
+        today: Today
+        week: This week
+        later: Later
+        none: No date
+    rules:
+        maintenance_overdue: Maint
+        maintenance_due_soon: Maint
+        inspection_due: Inspection
+        inspection_failed: Inspection
+        inspection_unresolved: Inspection
+        inspection_draft: Inspection
+        inspection_link_pending: Inspection
+        vehicle_inspection_failed: Inspection
+        work_order_overdue: Work order
+        work_order_blocked: Work order
+        issue_open: Issue
+        shift_late_start: Shift
+        shift_no_vehicle: Shift
+        shift_handover: Handover
+        driver_without_vehicle: Unassigned
+        vehicle_without_driver: Idle
+        vehicle_without_device: Device
+        device_unattached: Device
+        license_expiring: Licence
+        lease_expiring: Lease
+        fuel_unmatched: Fuel
+        part_low_stock: Parts
+        notice: Notice
+    actions:
+        acknowledge: Acknowledge
+        snooze: Snooze
+        wake: Wake now
+        assign: Assign
+        unassign: Clear owner
+        plan: Give it a time
+        unplan: Clear time
+        resolve: Resolve
+        open-record: Open record
+        assign-vehicle: Assign vehicle
+        assign-driver: Assign driver
+        create-work-order: Create work order
+        create-issue: Create issue
+        mark-resolved: Mark resolved
+        send-pin: Send PIN
+        revoke-link: Revoke link
+        revoke-links: "Revoke {count, plural, one {# link} other {# links}}"
+        match-vehicle: Match vehicle
+        ignore: Ignore
+        attach: Attach to vehicle
+        call: Call
+        cover-shift: Cover shift
+        reassign: Reassign orders
+        extend-shift: Extend shift 1h
+        select: Select
+        deselect: Deselect
+        more: More
+    snooze:
+        1h: 1 hour
+        4h: 4 hours
+        tomorrow: Tomorrow morning
+        next-week: Next week
+        pick: Pick a date…
+        pick-title: Snooze until
+        pick-label: Wake on
+    state:
+        acknowledged-by: "Acknowledged by {name} {time}"
+        acknowledged: Acknowledged
+        snoozed-until: "Snoozed until {time}"
+        assigned-to: "Assigned to {name}"
+        unassigned: Unassigned
+        planned-for: "Planned for {time}"
+        resolved-by: "Resolved by {name} {time}"
+        resolved-auto: Closed on the record
+    bulk:
+        selected: "{count} selected"
+        clear: Clear
+        summary: "{count} items"
+    keys:
+        move: move
+        select: select
+        acknowledge: acknowledge
+        snooze: snooze
+        assign: assign
+        open: open record
+        close: close
+    empty:
+        title: Nothing needs a decision.
+        snoozed-hint: "{count} snoozed items wake this week."
+        nothing-snoozed: Nothing is snoozed.
+        wakes: "wakes {time}"
+        filtered-title: Nothing matches these filters.
+        filtered-hint: Clear a pill or the search to see more.
+        snoozed-title: Nothing is snoozed.
+        snoozed-tab-hint: Snoozed items come back to the list when their wake time passes.
+        resolved-title: Nothing resolved in the last 7 days.
+        resolved-hint: Items close here when the record they describe changes, or when a notice is resolved.
+    saved-views:
+        title: Views
+        save-current: Save current
+        name-prompt: Name this view
+        name-placeholder: e.g. Due this week
+        saved: View saved.
+        delete: Delete view
+        deleted: View removed.
+        defaults:
+            my-assignments: My assignments
+            shift-changes: Shift changes
+            due-this-week: Due this week
+            unmatched-fuel: Unmatched fuel
+    notice:
+        title: New notice
+        message: Message
+        message-placeholder: Yard closed Saturday for repaving — move trailers by Fri 18:00
+        severity: Severity
+        due: Deadline
+        scope: Applies to
+        scope-placeholder: Yard 3 · whole fleet
+        create: Post notice
+        created: Notice posted.
+        delete: Delete notice
+        deleted: Notice deleted.
+        severities:
+            info: Info
+            warning: Warning
+            critical: Critical
+    drawer:
+        failed-items: Failed items
+        state: State
+        subject: Record
+        due: Due
+        window: Shift
+        details: Details
+    prompts:
+        select-vehicle: Select a vehicle
+        select-user: Select a person
+        assign-vehicle-title: "Assign a vehicle to {name}"
+        assign-driver-title: "Assign a driver to {name}"
+        match-vehicle-title: Match this transaction to a vehicle
+        create-work-order-title: Create a work order from this schedule?
+        create-work-order-body: A work order opens with the schedule's defaults and due date.
+        ignore-title: Ignore this transaction?
+        ignore-body: It leaves the unmatched queue and is not linked to a vehicle.
+        attach-device-title: Attach this device to a vehicle
+        revoke-link-title: Revoke this inspection link?
+        send-pin-title: Send the inspection PIN
+        send-pin-to: "How should {name} receive the link and PIN?"
+        send-pin-body: How should the link and PIN be sent?
+        send-pin-unavailable: The link's recipient has no email address or phone number to send the PIN to.
+        revoke-link-body: The link stops working immediately.
+        bulk-revoke-link-title: "Revoke {count, plural, one {# inspection link} other {# inspection links}}?"
+        bulk-revoke-link-body: The links stop working immediately. Other selected items stay as they are.
+        assign-user-title: "Who owns this?"
+        assign-user-help: The owner shows on the row and in the My assignments view.
+        no-selection: Pick one first.
+    toasts:
+        acknowledged: Acknowledged.
+        snoozed: "Snoozed until {time}."
+        woken: Back on the list.
+        assigned: "Assigned to {name}."
+        unassigned: Owner cleared.
+        planned: Time set.
+        resolved: Resolved.
+        work-order-created: Work order created.
+        vehicle-assigned: Vehicle assigned.
+        driver-assigned: Driver assigned.
+        matched: Transaction matched.
+        ignored: Transaction ignored.
+        device-attached: Device attached.
+        pin-sent: PIN sent.
+        link-revoked: Link revoked.
+        links-revoked: "{count, plural, one {# link revoked} other {# links revoked}}."
+        links-revoke-failed: "{count, plural, one {# link could not be revoked} other {# links could not be revoked}}."
+        bulk-done: "{count} items updated."
 widget:
     refresh: Refresh
+    radar:
+        title: Radar
+        description: What needs a decision across the fleet right now.
+        open: open
+        overdue: overdue
+        snoozed: snoozed
+        open-radar: Open Radar
     kpi-earnings:
         title: Earnings
     kpi-distance:
@@ -2746,3 +3029,443 @@ orchestrator:
     stop-type-dropoff: Dropoff
     pod-required: POD
     no-pod: No POD
+
+inspection:
+    form:
+        overview: Overview
+        submissions: Submissions
+        no-vehicle: No vehicle
+        no-submissions: Nothing filed yet
+        no-submissions-description: Inspections filed against this form will appear here.
+        details: Form Details
+        name: Name
+        name-placeholder: Daily vehicle inspection
+        type: Type
+        status: Status
+        description: Description
+        description-placeholder: What this inspection covers
+        builder: Form Builder
+        fields: Fields
+        published: Published
+        structure: Form Structure
+        loading-structure: Loading form structure...
+        no-structure: This form has no field groups yet.
+        settings: Settings
+        type-placeholder: Select the kind of inspection this form is
+        status-placeholder: Select a status
+        setting-create-issue: Open a defect record when an item fails
+        setting-create-issue-help: A failed inspection files an issue against the vehicle, so the failure has somewhere to live.
+        setting-create-work-order: Open a work order when an item fails
+        setting-create-work-order-help: The failed items become a work order checklist for the workshop. Needs workshops enabled.
+        setting-require-signature: Require the driver to sign
+        setting-require-signature-help: The driver app will not submit without a signature. Add a signature field to the form instead if you want it in a particular place.
+        legacy-checklist: Legacy Checklist
+        legacy-checklist-help: The first cut's checklist, kept read-only. It is migrated into a "Checklist" group of pass/fail fields.
+        create: Create inspection form
+        created: Inspection form created.
+        updated: Inspection form updated.
+    builder:
+        help: Group the things a driver checks, then add a field for each one.
+        loading: Loading form builder...
+        new-group: New field group
+        new-field: New field
+        edit-field: 'Edit field: {label}'
+        save-field: Save field
+        untitled-group: Untitled group
+        untitled-field: Untitled field
+        group-name: Group name
+        group-name-placeholder: Exterior
+        group-description: Group description
+        group-description-placeholder: What this group covers
+        grid-size: Columns
+        move-up: Move up
+        move-down: Move down
+        no-fields: No fields in this group yet.
+        empty-title: No field groups
+        empty-description: Add your first field group to start building this form.
+        delete: Delete
+        delete-group-title: Delete this field group?
+        delete-group-body: Deleting this group deletes every field inside it. This cannot be undone once the form is saved.
+        delete-field-title: Delete this field?
+        delete-field-body: Deleting this field also deletes every answer already filed against it. This cannot be undone once the form is saved.
+    field:
+        label: Field label
+        label-placeholder: Brake lights
+        name: Field name
+        name-help: The machine name a submission refers to this field by. It follows the label until you set it yourself.
+        name-placeholder: brake-lights
+        type: Field type
+        description: Field description
+        description-placeholder: What to check, and what a pass looks like
+        help-text: Field help text
+        help-text-placeholder: Shown beside the field while it is answered
+        required: Field is required
+        editable: Field is editable
+        options: Field options
+        no-options: No options yet.
+        option-placeholder: Add an option
+        add-option: Add
+        unit: Unit
+        unit-help: Shown beside the number, for example km or hours.
+        unit-placeholder: km
+        odometer-role: This is the odometer reading
+        odometer-role-help: The answer is copied to the inspection's own odometer column.
+        on-fail: On fail
+        on-fail-help: What a failed answer means, and what the inspector must supply before it is accepted.
+        default-severity: Default severity
+        require-photo-on-fail: Require a photo on fail
+        require-comment-on-fail: Require a comment on fail
+        unsafe-on-fail: Mark the vehicle unsafe on fail
+        unsafe-on-fail-help: A failed answer defaults to unsafe, which is what an out-of-service defect is.
+        instructions: Instructions
+        instructions-placeholder: How to check this, shown to the driver
+        column-span: Column span
+    field-type:
+        pass-fail: Pass / Fail
+        input: Text
+        textarea: Long text
+        number: Number
+        select: Select
+        radio-button: Radio buttons
+        boolean: Yes / No
+        date-picker: Date
+        date-time-input: Date and time
+        file-upload: Photo or file
+        signature: Signature
+    severity:
+        low: Low
+        medium: Medium
+        high: High
+        critical: Critical
+    answer:
+        pass: Pass
+        fail: Fail
+        not-applicable: N/A
+        unanswered: Unanswered
+        severity: Severity
+        unsafe: Unsafe to operate
+        comments: Comments
+        comments-placeholder: What is wrong, and what it needs
+        photos: Photos
+        add-photo: Add photo
+        upload-photo: Upload photo
+        no-photo: No photo attached.
+        upload-signature: Upload signature
+        no-signature: No signature captured.
+        select-placeholder: Choose an answer
+        note-placeholder: Add a note
+        text-placeholder: Type an answer
+        no-options: This field has no answers to choose from.
+        uploads-unavailable: Can be added from the console or the driver app.
+        comments-required: Say what is wrong, and what it needs
+        comment-required: Comment mandatory on fail
+        photo-required: Photo mandatory on fail
+        comment-and-photo-required: Comment + photo mandatory on fail
+    record:
+        overview: Overview
+        inspection: Inspection
+        details: Inspection Details
+        form: Form
+        select-form: Select inspection form
+        status: Status
+        result: Result
+        vehicle: Vehicle
+        select-vehicle: Select vehicle
+        driver: Driver
+        select-driver: Select driver
+        odometer: Odometer
+        odometer-placeholder: Current odometer
+        engine-hours: Engine Hours
+        engine-hours-placeholder: Current engine hours
+        answers: Answers
+        loading-form: Loading inspection form...
+        loading-answers: Loading answers...
+        form-has-no-fields: This form has no fields yet. Build it on the inspection form screen before filling it in.
+        summary: Summary
+        failed-of: '{failed} failed of {total} pass/fail checks'
+        metadata: Metadata
+        submitted: Submitted
+        submitted-by: Submitted By
+        submission-title: "{form} Submission"
+        due: Due
+        create-issue: Create Issue
+        create-work-order: Create Work Order
+        resolve: Resolve
+        via-link: Through a public link
+        via-link-pin: Through a public link, PIN verified
+        signed-as: 'Signed as "{name}"'
+        name-unverified: Name as typed, not a signed-in account
+        resolved: Resolved
+        item-results: Item Results
+        no-item-results: No item results recorded.
+        follow-up: Follow Up
+        open-form: Open this inspection form
+        failed: Failed
+        failed-count: "{count, plural, one {# failed} other {# failed}}"
+        linked-inspections: "{count, plural, one {Linked Inspection} other {Linked Inspections}}"
+        linked-issue: Linked Issue
+        linked-work-order: Linked Work Order
+        photos: Photos
+        loading-photos: Loading photos...
+        audit: Audit
+        create: Create inspection
+        saved: Inspection saved.
+        updated: Inspection updated.
+        form-help: The published form this inspection is filled in from.
+        choose-a-form: Choose an inspection form to begin.
+        group-has-no-fields: This section has no checks.
+        outstanding: still to answer
+        section-outstanding: "{count, plural, one {# outstanding} other {# outstanding}}"
+        outstanding-field: "{label} is required before submitting"
+        review: "Review →"
+        jump-to: "Jump to →"
+    follow-up:
+        create-issue-title: Create an issue from this inspection?
+        create-issue-summary: An issue is raised against the vehicle and driver, naming the failed checks and taking the highest severity among them. The inspection links to it.
+        create-issue-accept: Create Issue
+        create-work-order-title: Open a work order from this inspection?
+        create-work-order-summary: A work order is opened against the vehicle with a checklist of the failed checks. It raises the issue first if this inspection has none.
+        create-work-order-accept: Create Work Order
+        resolve-title: Resolve this inspection?
+        resolve-summary: The inspection is marked resolved and stamped with the time. Any issue or work order it raised stays open.
+        resolve-accept: Resolve Inspection
+        from-these: "{count, plural, one {From this failed check} other {From these # failed checks}}"
+        unsafe-note: "{count, plural, one {# check is marked unsafe to operate} other {# checks are marked unsafe to operate}}"
+        due-note: "Due {due}, from the highest severity among them."
+        nothing-failed: Nothing failed on this inspection, so there is nothing to raise.
+        submit-title: Submit this inspection?
+        submit-summary: This files the inspection, stamps the time it was submitted and recounts its pass and fail totals. It cannot be unsubmitted.
+        submit-accept: Submit inspection
+        cancel: Cancel
+    link:
+        public-links: Public Links
+        existing: Generated Links
+        modal-help: "Generate a single-use link for {form}. Whoever opens it enters its PIN, then fills in this published form without signing in."
+        loading: Loading links...
+        none: No links have been generated for this form yet.
+        load-failed: These links could not be loaded.
+        copy: Copy
+        copied: Inspection link copied.
+        revoke: Revoke
+        revoked: Inspection link revoked.
+        generated: Generated
+        generated-toast: Inspection link generated.
+        publish-first: Publish this inspection form before generating a public link.
+        expires: Expires
+        no-expiry: No expiry
+        used: Used
+        viewed: Last opened
+        never-opened: Never opened
+        unassigned: Anyone with the link and its PIN
+        url-not-kept: This link was generated before links were kept, so its URL cannot be shown again.
+        state-active: Active
+        state-expired: Expired
+        state-used: Used
+        state-revoked: Revoked
+        state-locked: Locked
+        expires-at: Expires at
+        expires-help: Links expire 72 hours after they are generated unless you choose a different time.
+        assign-to: Assign to
+        assign-to-help: Optional. Anyone in your organisation can complete an inspection; the submission is credited to them.
+        select-assignee: Select a user
+        pin: PIN
+        pin-delivery: Send the link and PIN
+        pin-delivery-none: Do not send it, I will share it myself
+        pin-delivery-email: By email
+        pin-delivery-sms: By text message
+        pin-delivery-help: "Sent to {name}, with the link to open and the PIN to enter."
+        pin-delivery-no-recipient: Assign the link to someone, or pick a driver, to send it to them. Otherwise share the link and PIN yourself; both are shown once it is generated.
+        generated-title: Link generated
+        generated-help: The link is copied to your clipboard. Whoever opens it needs the PIN too.
+        copied-pin: PIN copied.
+        email-pin: Email link
+        text-pin: Text link
+        pin-sent-email: "Link and PIN emailed to {to}."
+        pin-sent-sms: "Link and PIN texted to {to}."
+        pin-not-sent: "The link and PIN were not sent: {reason}"
+        pin-sent-by: "{via, select, email {Emailed} sms {Texted} other {Sent}}"
+        wrong-pins: "{count, plural, one {# wrong PIN} other {# wrong PINs}}"
+        no-pin: No PIN. This link was generated before links had PINs.
+    public:
+        submitted-title: Inspection submitted
+        submitted-body: Thank you. This inspection has been filed and the link is now closed.
+        unavailable-title: This inspection is not available
+        sign-off: Sign off
+        your-name: Your name
+        your-name-help: Recorded against this inspection as who filled it in.
+        your-name-placeholder: Full name
+        for: For
+        pin-title: Enter your PIN
+        pin-help: Enter the 6-digit PIN you were given for this inspection.
+        pin-label: PIN
+        pin-continue: Continue
+        pin-wrong: "That PIN is not right. {count, plural, one {# attempt} other {# attempts}} left before this link locks."
+        submit: Submit inspection
+        blocked-required: "{count, plural, one {# required answer is missing} other {# required answers are missing}}"
+        blocked-defects: "{count, plural, one {# failure still needs a comment or a photo} other {# failures still need a comment or a photo}}"
+    flyout:
+        title: "Defect: {label}"
+        done: Done
+        close: Close
+    defect:
+        edit: Edit defect
+        photos: "{count, plural, one {# photo} other {# photos}}"
+        comment: Comment
+        needs-comment: Needs a comment
+        needs-photo: Needs a photo
+        needs-both: Needs a comment and a photo
+        no-evidence: No comment or photo yet
+    tray:
+        title: Defects
+        review: Review
+select-option:
+    vehicle:
+        vin: VIN
+        serial_number: S/N
+        call_sign: Call sign
+resource-summary:
+    facts:
+        address: Address
+        altitude: Altitude
+        amount: Amount
+        arrived: Arrived
+        assignee: Assignee
+        attached-to: Attached to
+        attachment: Attachment
+        axles: Axles
+        base-fee: Base fee
+        body-coupling: Body / coupling
+        calculation: Calculation
+        category: Category
+        cod: COD
+        code: Code
+        comments: Comments
+        completion: Completion
+        connected: Connected
+        coordinates: Coordinates
+        core-service: Core service
+        countries: Countries
+        country: Country
+        coverage: Coverage
+        created: Created
+        customer: Customer
+        declared-value: Declared value
+        description: Description
+        destination: Destination
+        details: Details
+        device: Device
+        dimensions: Dimensions
+        disconnected: Disconnected
+        distance: Distance
+        driver: Driver
+        drivers: Drivers
+        dropoff: Dropoff
+        due: Due
+        dwell: Dwell
+        email: Email
+        entities: Entities
+        environment: Environment
+        equipped-to: Equipped to
+        eta: ETA
+        event-type: Event type
+        expires: Expires
+        failed-items: Failed items
+        fallback: Fallback
+        fee: Fee
+        fees: Fees
+        firmware: Firmware
+        fitted-to: Fitted to
+        fleet: Fleet
+        form: Form
+        fuel-report: Fuel report
+        heading: Heading
+        host: Host
+        imei: IMEI
+        installed: Installed
+        interval: Interval
+        items: Items
+        key: Key
+        last-error: Last error
+        last-online: Last Online
+        last-reading: Last reading
+        last-seen: Last seen
+        last-status: Last status
+        last-synced: Last synced
+        last-value: Last value
+        licence: Licence
+        location: Location
+        maintainable: Maintainable
+        make-model: Make / model
+        model: Model
+        namespace: Namespace
+        next-due: Next due
+        next-occurrence: Next occurrence
+        occurred: Occurred
+        odometer: Odometer
+        order: Order
+        order-config: Order config
+        performed-by: Performed by
+        period: Period
+        phone: Phone
+        pickup: Pickup
+        place: Place
+        plate: Plate / VIN
+        policy: Policy
+        priority: Priority
+        progress: Progress
+        provider: Provider
+        published: Published
+        purchase-price: Purchase price
+        quantity: Quantity
+        reason: Reason
+        recorded: Recorded
+        region: Region
+        relationship: Relationship
+        reporter: Reporter
+        request: Request
+        route: Route
+        sandbox: Sandbox
+        schedule: Schedule
+        scheduled: Scheduled
+        sequence: Sequence
+        serial: Serial
+        service-area: Service area
+        service-quote: Service quote
+        service-rate: Service rate
+        service-types: Service types
+        severity: Severity
+        sku: SKU
+        speed: Speed
+        speed-limit: Speed limit
+        station: Station
+        status: Status
+        subject: Subject
+        submitted: Submitted
+        submitted-by: Submitted by
+        target: Target
+        task: Task
+        telematic: Telematic
+        threshold: Threshold
+        timezone: Timezone
+        title: Title
+        total-cost: Total cost
+        tracking: Tracking
+        trailer: Trailer
+        transaction-at: Transaction at
+        triggers: Triggers
+        type: Type
+        unit-cost: Unit cost
+        user: User
+        vehicle: Vehicle
+        vehicles: Vehicles
+        vendor: Vendor
+        version: Version
+        volume: Volume
+        warranty: Warranty
+        waypoints: Waypoints
+        website: Website
+        weight: Weight
+        window: Window
+        work-order: Work order
+        zone: Zone
+        zones: Zones

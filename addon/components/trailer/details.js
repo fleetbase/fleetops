@@ -11,6 +11,10 @@ export default class TrailerDetailsComponent extends Component {
         return this.args.resource;
     }
 
+    get hasValidCoordinates() {
+        return Boolean(this.trailer?.location && this.trailer.hasValidCoordinates);
+    }
+
     get isAttached() {
         return this.trailer?.isAttached ?? this.trailer?.attachment_state === 'attached';
     }

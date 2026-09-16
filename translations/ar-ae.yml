@@ -2,6 +2,8 @@ menu:
   fuel-providers: تكاملات الوقود
   fuel-transactions: معاملات الوقود
   trailers: المقطورات
+  inspection-forms: 'نماذج الفحص'
+  inspections: 'الفحوصات'
 
 trailer:
   navigation-description: إدارة الأصول المقطورة ووصلات القطر والمعدات والتتبع عن بُعد.
@@ -1995,7 +1997,7 @@ vehicle:
     filter-internal-id: اكتب أو امسح المعرفات الداخلية
   filters:
     has-trailer: مقطورة متصلة
-    has-driver: سائق معيّن
+    has-driver: لديه سائق معيّن
     has-device: جهاز متصل
     any: الكل
     attached: متصل

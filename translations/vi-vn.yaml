@@ -2,6 +2,8 @@ menu:
   fuel-providers: Tích hợp Nhiên liệu
   fuel-transactions: Giao dịch nhiên liệu
   trailers: Rơ-moóc
+  inspection-forms: 'Biểu mẫu kiểm tra'
+  inspections: 'Kiểm tra'
 
 resource:
   trailer: Rơ-moóc
@@ -1729,7 +1731,7 @@ vehicle:
     filter-internal-id: Nhập hoặc quét mã ID nội bộ
   filters:
     has-trailer: Đã gắn rơ-moóc
-    has-driver: Đã gán tài xế
+    has-driver: Có tài xế được gán
     has-device: Đã gắn thiết bị
     any: Bất kỳ
     attached: Đã gắn

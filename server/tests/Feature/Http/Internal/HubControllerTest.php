@@ -163,6 +163,9 @@ test('internal hub maintenance builds kpis sections docs and service actions', f
         5, // overdue work orders
         6, // open maintenance
         7, // high priority maintenance
+        1, // published inspection forms
+        2, // failed inspections awaiting review
+        3, // unresolved failed inspections
         8, // low stock parts
         9, // equipment
     ], 'company-maintenance');
@@ -175,32 +178,55 @@ test('internal hub maintenance builds kpis sections docs and service actions', f
             'value' => 2,
             'tone'  => 'rose',
         ])
+        // Failed inspections take the third tile: a failed DVIR is a truck that
+        // should not be on the road, which outranks the parts shelf.
         ->and($payload['kpis'][2])->toMatchArray([
+            'key'   => 'failed_inspections',
+            'value' => 2,
+            'tone'  => 'rose',
+            'route' => 'maintenance.inspection-submissions',
+        ])
+        ->and($payload['kpis'][3])->toMatchArray([
             'key'   => 'open_work_orders',
             'value' => 4,
             'tone'  => 'amber',
         ])
         ->and(array_column($payload['actions'], 'key'))->toBe([
+            'failed_inspections',
             'overdue_schedules',
             'overdue_work_orders',
             'high_priority_maintenance',
             'upcoming_service',
-            'low_stock_parts',
+        ])
+        ->and($payload['actions'][0])->toMatchArray([
+            'description' => '2 failed inspections need issue or work order follow-up.',
+            'tone'        => 'warning',
+            'route'       => 'maintenance.inspection-submissions',
         ])
         ->and(array_column($payload['sections'], 'key'))->toBe([
+            'inspections',
             'planning',
             'records',
         ])
         ->and($payload['sections'][0]['links'][0])->toMatchArray([
+            'label' => 'Inspection Forms',
+            'count' => 1,
+        ])
+        ->and($payload['sections'][0]['links'][1])->toMatchArray([
+            'label' => 'Inspections',
+            'count' => 3,
+        ])
+        ->and($payload['sections'][1]['links'][0])->toMatchArray([
             'label' => 'Schedules',
             'count' => 5,
         ])
         ->and(array_column($payload['docs'], 'label'))->toBe([
             'Schedules',
+            'Inspections',
             'Work Orders',
             'Equipment',
             'Parts',
         ])
-        ->and($controller->countCalls)->toHaveCount(8)
+        ->and($controller->countCalls)->toHaveCount(11)
         ->and(array_unique($controller->countCalls))->toBe(['company-maintenance']);
 });

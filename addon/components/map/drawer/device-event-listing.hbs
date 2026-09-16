@@ -3,6 +3,7 @@
         <div>
             <ModelSelect
                 @modelName="telematic"
+                @selectedItemComponent={{component "select-option/telematic" compact=true}}
                 @selectedModel={{this.telematic}}
                 @placeholder="Filter by Telematic"
                 @triggerClass="form-select form-input form-input-sm w-48"
@@ -11,22 +12,14 @@
                 @onChange={{this.onTelematicSelected}}
                 as |model|
             >
-                <div class="space-x-2 text-sm">
-                    <div class="inline-block align-top">
-                        <div class="hide-from-trigger h-1.5 w-full"></div>
-                        <Image src={{model.provider_descriptor.icon}} class="w-5 h-5" />
-                    </div>
-                    <div class="inline-block">
-                        <div class="font-semibold normalize-in-trigger">{{or model.name model.public_id}}</div>
-                        <div class="hide-from-trigger">{{n-a model.provider_descriptor.label (titleize model.provider)}}</div>
-                    </div>
-                </div>
+                <SelectOption::Telematic @option={{model}} />
             </ModelSelect>
         </div>
 
         <div>
             <ModelSelect
                 @modelName="device"
+                @selectedItemComponent={{component "select-option/device" compact=true}}
                 @selectedModel={{this.device}}
                 @placeholder="Filter by Device"
                 @triggerClass="form-select form-input form-input-sm w-48"
@@ -35,10 +28,7 @@
                 @onChange={{this.onDeviceSelected}}
                 as |model|
             >
-                <div class="text-sm">
-                    <div class="font-semibold normalize-in-trigger">{{model.name}}</div>
-                    <div class="hide-from-trigger">{{n-a model.serial_number}}</div>
-                </div>
+                <SelectOption::Device @option={{model}} />
             </ModelSelect>
         </div>
 

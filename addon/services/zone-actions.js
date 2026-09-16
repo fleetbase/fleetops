@@ -1,4 +1,5 @@
 import ResourceActionService from '@fleetbase/ember-core/services/resource-action';
+import { PANEL_DEFAULTS, closePanelsThen } from '../utils/context-panel';
 
 export default class ZoneActionsService extends ResourceActionService {
     constructor() {
@@ -33,15 +34,37 @@ export default class ZoneActionsService extends ResourceActionService {
                 zone,
             });
         },
-        view: (zone) => {
+        view: (zone, options = {}) => {
             return this.resourceContextPanel.open({
                 zone,
-                tabs: [
+                title: zone?.name,
+                actionButtons: [
+                    { icon: 'pencil', permission: 'fleet-ops update zone', fn: () => closePanelsThen(this.resourceContextPanel, () => this.panel.edit(zone)) },
                     {
-                        label: this.intl.t('common.overview'),
-                        component: 'zone/details',
+                        icon: 'ellipsis-h',
+                        iconPrefix: 'fas',
+                        renderInPlace: true,
+                        items: [
+                            {
+                                text: this.intl.t('zone.actions.edit-boundary'),
+                                icon: 'draw-polygon',
+                                permission: 'fleet-ops update zone',
+                                fn: () => closePanelsThen(this.resourceContextPanel, () => this.transition.edit(zone)),
+                            },
+                            { separator: true },
+                            {
+                                text: this.intl.t('common.delete'),
+                                icon: 'trash',
+                                class: 'text-red-500',
+                                permission: 'fleet-ops delete zone',
+                                fn: () => this.delete(zone, { onConfirm: () => this.resourceContextPanel.closeAll() }),
+                            },
+                        ],
                     },
                 ],
+                tabs: [{ key: 'overview', label: this.intl.t('common.overview'), component: 'zone/details' }],
+                ...PANEL_DEFAULTS,
+                ...options,
             });
         },
     };

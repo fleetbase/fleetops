@@ -70,6 +70,7 @@
                             </label>
                             <ModelSelect
                                 @modelName="driver"
+                                @selectedItemComponent={{component "select-option/driver" compact=true}}
                                 @selectedModel={{@options.vehicle.driver}}
                                 @placeholder="Select Driver"
                                 @triggerClass="form-select form-input"
@@ -78,7 +79,7 @@
                                 @onChange={{fn (mut @options.vehicle.driver)}}
                                 as |model|
                             >
-                                {{model.name}}
+                                <SelectOption::Driver @option={{model}} />
                             </ModelSelect>
                         </div>
                     </div>

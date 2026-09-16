@@ -73,6 +73,8 @@ menu:
   issues: Асуудлууд
   maintenance: Үйлчилгээ
   work-orders: Ажлын захиалгууд
+  inspection-forms: 'Үзлэгийн маягтууд'
+  inspections: 'Үзлэгүүд'
   equipment: Тоног төхөөрөмж
   parts: Сэлбэгүүд
   connectivity: Холболт
@@ -1039,7 +1041,7 @@ vehicle:
     filter-internal-id: Дотоод ID бичих эсвэл скан хийх
   filters:
     has-trailer: Чиргүүл холбогдсон
-    has-driver: Жолооч томилогдсон
+    has-driver: Томилогдсон жолоочтой эсэх
     has-device: Төхөөрөмж холбогдсон
     any: Бүгд
     attached: Холбогдсон

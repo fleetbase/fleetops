@@ -73,6 +73,8 @@ menu:
   issues: Problemas
   maintenance: Manutenção
   work-orders: Ordens de Serviço
+  inspection-forms: 'Formulários de inspeção'
+  inspections: 'Inspeções'
   equipment: Equipamentos
   parts: Peças
   connectivity: Conectividade
@@ -1047,7 +1049,7 @@ vehicle:
     filter-internal-id: Digite ou escaneie IDs internos
   filters:
     has-trailer: Reboque acoplado
-    has-driver: Motorista atribuído
+    has-driver: Tem motorista atribuído
     has-device: Dispositivo vinculado
     any: Qualquer
     attached: Acoplado

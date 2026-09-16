@@ -1,0 +1,24 @@
+<Resource::Pill
+    @resource={{(or @maintenance @resource)}}
+    @resourceType="maintenance"
+    @title={{@title}}
+    @titleFallback={{@titleFallback}}
+    @subtitle={{@subtitle}}
+    @showOnlineIndicator={{@showOnlineIndicator}}
+    @noPopover={{@noPopover}}
+    @popoverPlacement={{@popoverPlacement}}
+    @static={{@static}}
+    @onClick={{@onClick}}
+    @onView={{@onView}}
+    @anchorClass={{@anchorClass}}
+    @imageClass={{@imageClass}}
+    @imageWrapperClass={{@imageWrapperClass}}
+    @contentWrapperClass={{@contentWrapperClass}}
+    @titleClass={{@titleClass}}
+    @subtitleClass={{@subtitleClass}}
+    @useBlock={{(has-block)}}
+    ...attributes
+    as |resource|
+>
+    {{yield resource}}
+</Resource::Pill>

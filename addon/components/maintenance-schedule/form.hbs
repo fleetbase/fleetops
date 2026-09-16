@@ -57,6 +57,7 @@
                         @selected={{this.selectedSubjectType}}
                         @onChange={{this.onSubjectTypeChange}}
                         @placeholder="Select Asset Type"
+                        @allowClear={{true}}
                         @triggerClass="form-select form-input"
                         @disabled={{cannot-write @resource}}
                         as |option|
@@ -70,8 +71,10 @@
                 <InputGroup @name="Asset">
                     <ModelSelect
                         @modelName={{this.subjectModelName}}
+                        @selectedItemComponent={{if (resource-component "select-option" this.subjectModelName) (component (resource-component "select-option" this.subjectModelName) compact=true)}}
                         @selectedModel={{@resource.subject}}
                         @placeholder="Select Asset"
+                        @allowClear={{true}}
                         @triggerClass="form-select form-input"
                         @infiniteScroll={{false}}
                         @renderInPlace={{true}}
@@ -79,7 +82,13 @@
                         @disabled={{cannot-write @resource}}
                         as |model|
                     >
-                        {{or model.displayName model.name model.public_id}}
+                        {{#let (resource-component "select-option" this.subjectModelName) as |selectOption|}}
+                            {{#if selectOption}}
+                                {{component selectOption option=model}}
+                            {{else}}
+                                {{or model.displayName model.name model.public_id}}
+                            {{/if}}
+                        {{/let}}
                     </ModelSelect>
                 </InputGroup>
             {{/if}}
@@ -207,6 +216,7 @@
                         @selected={{this.selectedAssigneeType}}
                         @onChange={{this.onAssigneeTypeChange}}
                         @placeholder="Select Assignee Type"
+                        @allowClear={{true}}
                         @triggerClass="form-select form-input"
                         @disabled={{cannot-write @resource}}
                         as |option|
@@ -220,8 +230,10 @@
                 <InputGroup @name="Default Assignee" @wrapperClass="col-span-2">
                     <ModelSelect
                         @modelName={{this.assigneeModelName}}
+                        @selectedItemComponent={{if (resource-component "select-option" this.assigneeModelName) (component (resource-component "select-option" this.assigneeModelName) compact=true)}}
                         @selectedModel={{@resource.default_assignee}}
                         @placeholder="Select Default Assignee"
+                        @allowClear={{true}}
                         @triggerClass="form-select form-input"
                         @infiniteScroll={{false}}
                         @renderInPlace={{true}}
@@ -229,7 +241,13 @@
                         @disabled={{cannot-write @resource}}
                         as |model|
                     >
-                        {{or model.displayName model.name model.public_id}}
+                        {{#let (resource-component "select-option" this.assigneeModelName) as |selectOption|}}
+                            {{#if selectOption}}
+                                {{component selectOption option=model}}
+                            {{else}}
+                                {{or model.displayName model.name model.public_id}}
+                            {{/if}}
+                        {{/let}}
                     </ModelSelect>
                 </InputGroup>
             {{/if}}

@@ -2,6 +2,7 @@ import Component from '@glimmer/component';
 import { tracked } from '@glimmer/tracking';
 import { inject as service } from '@ember/service';
 import { action } from '@ember/object';
+import relationValue from '../../../utils/relation-value';
 import { task } from 'ember-concurrency';
 import { isArray } from '@ember/array';
 import { startOfWeek, endOfWeek, format } from 'date-fns';
@@ -38,7 +39,8 @@ export default class MapDrawerDeviceEventListingComponent extends Component {
             {
                 label: 'Device',
                 valuePath: 'device.displayName',
-                cellComponent: 'table/cell/anchor',
+                cellComponent: 'cell/device-identity',
+                resourcePath: (event) => relationValue(event, 'device'),
                 action: this.deviceActions.panel.view,
                 permission: 'fleet-ops view device',
                 resizable: true,

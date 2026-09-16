@@ -135,10 +135,13 @@ export default class LayoutFleetOpsSidebarComponent extends Component {
 
     get resourcesItems() {
         return this.withRegistryItems('management', [
-            this.createHubItem('Resources Hub', 'layer-group', 'management.index', 'fleet-ops list driver', 'fleet-ops see driver', [
+            this.createHubItem(this.intl.t('menu.radar'), 'satellite-dish', 'management.index', 'fleet-ops list driver', 'fleet-ops see driver', [
+                'radar',
+                'needs attention',
                 'resources hub',
-                'resource dashboard',
-                'resource readiness',
+                'triage',
+                'handover',
+                'shift changes',
             ]),
             this.createItem('menu.drivers', 'id-card', 'management.drivers', 'fleet-ops list driver', 'fleet-ops see driver', ['driver', 'online drivers']),
             this.createItem('menu.vehicles', 'truck', 'management.vehicles', 'fleet-ops list vehicle', 'fleet-ops see vehicle', ['vehicle', 'track vehicles', 'online vehicles']),
@@ -159,6 +162,14 @@ export default class LayoutFleetOpsSidebarComponent extends Component {
                 'maintenance hub',
                 'service readiness',
                 'maintenance control panel',
+            ]),
+            this.createItem('menu.inspection-forms', 'clipboard-check', 'maintenance.inspection-forms', 'fleet-ops list inspection-form', 'fleet-ops see inspection-form', [
+                'dvir',
+                'checklist',
+            ]),
+            this.createItem('menu.inspections', 'list-check', 'maintenance.inspection-submissions', 'fleet-ops list inspection-submission', 'fleet-ops see inspection-submission', [
+                'dvir',
+                'defects',
             ]),
             this.createItem('menu.schedules', 'calendar-alt', 'maintenance.schedules', 'fleet-ops list maintenance-schedule', 'fleet-ops see maintenance-schedule'),
             this.createItem('menu.work-orders', 'clipboard-list', 'maintenance.work-orders', 'fleet-ops list work-order', 'fleet-ops see work-order'),

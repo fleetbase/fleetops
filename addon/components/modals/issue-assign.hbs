@@ -3,6 +3,7 @@
         <InputGroup @name="Assignee" @helpText="Choose the operator responsible for following up on this issue.">
             <ModelSelect
                 @modelName="user"
+                @selectedItemComponent={{component "select-option/user" compact=true}}
                 @selectedModel={{this.selectedAssignee}}
                 @placeholder="Select assignee"
                 @triggerClass="form-select form-input"
@@ -13,7 +14,7 @@
                 @onChange={{fn (mut this.selectedAssignee)}}
                 as |model|
             >
-                {{model.name}}
+                <SelectOption::User @option={{model}} />
             </ModelSelect>
         </InputGroup>
     </div>

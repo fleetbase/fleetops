@@ -1,0 +1,49 @@
+<div class="vehicle-details-inspections p-4">
+    {{#if this.loadInspections.isRunning}}
+        <div class="flex items-center justify-center py-10">
+            <Spinner />
+        </div>
+    {{else if this.inspections.length}}
+        <div class="inspection-history">
+            {{#each this.inspections as |inspection|}}
+                <button type="button" class="inspection-history__card" {{on "click" (fn this.inspectionSubmissionActions.transition.view inspection)}}>
+                    <div class="inspection-history__head">
+                        <span class="inspection-history__form"><SelectOption::InspectionForm @option={{inspection.form}} @title={{n-a (or inspection.form.name inspection.form_name)}} @compact={{true}} /></span>
+                        {{! A draft has no result yet; an empty badge was just a coloured dot. }}
+                        {{#if inspection.result}}
+                            <Badge @status={{if (eq inspection.result "failed") "failed" "passed"}}>{{smart-humanize inspection.result}}</Badge>
+                        {{/if}}
+                        <Badge @status={{inspection.status}}>{{smart-humanize inspection.status}}</Badge>
+                    </div>
+
+                    <div class="inspection-history__meta">
+                        <span class="inspection-history__when">
+                            <FaIcon @icon="clock" @size="xs" class="inspection-history__meta-icon" />
+                            {{n-a inspection.submittedAt}}
+                        </span>
+                        {{#if inspection.failed_items}}
+                            <span class="inspection-history__failed">
+                                <FaIcon @icon="triangle-exclamation" @size="xs" class="inspection-history__meta-icon" />
+                                {{t "inspection.record.failed-count" count=inspection.failed_items}}
+                            </span>
+                        {{/if}}
+                        {{#if inspection.odometer}}
+                            <span class="inspection-history__odometer">
+                                <FaIcon @icon="gauge" @size="xs" class="inspection-history__meta-icon" />
+                                {{format-number inspection.odometer}}
+                            </span>
+                        {{/if}}
+                    </div>
+
+                    <div class="inspection-history__id">{{inspection.public_id}}</div>
+                </button>
+            {{/each}}
+        </div>
+    {{else}}
+        <div class="flex flex-col items-center justify-center py-10 text-gray-400 dark:text-gray-600">
+            <FaIcon @icon="clipboard-check" @size="2x" class="mb-3" />
+            <p class="text-sm font-semibold text-gray-600 dark:text-gray-300">{{t "vehicle.empty.inspections"}}</p>
+            <p class="text-xs">{{t "vehicle.empty.inspections-description"}}</p>
+        </div>
+    {{/if}}
+</div>

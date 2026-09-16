@@ -138,33 +138,33 @@ export default class WorkOrderFormComponent extends Component {
     }
 
     /**
-     * Handles a change to the target type selector. Resets the target
-     * relationship so a stale association is not persisted.
+     * Handles a change to the target type selector, including clearing it.
+     * Resets the target relationship so a stale association is not persisted.
      */
     @action onTargetTypeChange(option) {
-        this.selectedTargetType = option;
+        this.selectedTargetType = option ?? null;
         this.args.resource.target = null;
-        this.targetModelName = TYPE_TO_MODEL[option.value] ?? null;
+        this.targetModelName = option ? (TYPE_TO_MODEL[option.value] ?? null) : null;
     }
 
     /** Assigns the selected target model to the resource. */
     @action assignTarget(model) {
-        this.args.resource.target = model;
+        this.args.resource.target = model ?? null;
     }
 
     /**
-     * Handles a change to the assignee type selector. Resets the assignee
-     * relationship so a stale association is not persisted.
+     * Handles a change to the assignee type selector, including clearing it.
+     * Resets the assignee relationship so a stale association is not persisted.
      */
     @action onAssigneeTypeChange(option) {
-        this.selectedAssigneeType = option;
+        this.selectedAssigneeType = option ?? null;
         this.args.resource.assignee = null;
-        this.assigneeModelName = TYPE_TO_MODEL[option.value] ?? null;
+        this.assigneeModelName = option ? (TYPE_TO_MODEL[option.value] ?? null) : null;
     }
 
     /** Assigns the selected assignee model to the resource. */
     @action assignAssignee(model) {
-        this.args.resource.assignee = model;
+        this.args.resource.assignee = model ?? null;
     }
 
     /**

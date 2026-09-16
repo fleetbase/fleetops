@@ -2,6 +2,8 @@ import Controller from '@ember/controller';
 import { inject as service } from '@ember/service';
 import { tracked } from '@glimmer/tracking';
 import { action, get } from '@ember/object';
+import { buildIdentityStub } from '../../../utils/identity-cell-resource';
+import relationValue from '../../../utils/relation-value';
 
 export default class ManagementDriversIndexController extends Controller {
     @service driverActions;
@@ -139,7 +141,6 @@ export default class ManagementDriversIndexController extends Controller {
                 label: this.intl.t('column.name'),
                 valuePath: 'name',
                 cellComponent: 'cell/driver-identity',
-                compact: true,
                 permission: 'fleet-ops view driver',
                 action: this.driverActions.transition.view,
                 resizable: true,
@@ -179,7 +180,6 @@ export default class ManagementDriversIndexController extends Controller {
             {
                 label: this.intl.t('column.vehicle'),
                 cellComponent: 'cell/vehicle-identity',
-                compact: true,
                 permission: 'fleet-ops view vehicle',
                 action: async (vehicle) => {
                     try {
@@ -191,27 +191,8 @@ export default class ManagementDriversIndexController extends Controller {
                 },
                 valuePath: 'vehicle.display_name',
                 emptyText: '-',
-                showStatusBadge: true,
-                resourcePath: (driver) => {
-                    const vehicle = get(driver, 'vehicle_assigned') ?? get(driver, 'vehicle');
-
-                    if (vehicle) {
-                        return vehicle;
-                    }
-
-                    const vehicleName = get(driver, 'vehicle_name');
-
-                    if (vehicleName) {
-                        return {
-                            display_name: vehicleName,
-                            name: vehicleName,
-                            status: 'assigned',
-                            loadResource: () => driver.loadVehicle?.(),
-                        };
-                    }
-
-                    return null;
-                },
+                resourcePath: (driver) =>
+                    get(driver, 'vehicle_assigned') ?? relationValue(driver, 'vehicle') ?? buildIdentityStub(driver, { type: 'vehicle', load: () => driver.loadVehicle?.() }),
                 modelNamePath: 'display_name',
                 resizable: true,
                 filterable: true,
@@ -231,20 +212,14 @@ export default class ManagementDriversIndexController extends Controller {
             },
             {
                 label: this.intl.t('column.vendor'),
-                cellComponent: 'table/cell/anchor',
+                cellComponent: 'cell/vendor-identity',
                 permission: 'fleet-ops view vendor',
-                onClick: async (driver) => {
-                    try {
-                        const vendor = await driver.loadVendor();
-                        if (vendor) this.vendorActions.panel.view(vendor);
-                    } catch (err) {
-                        this.notifications.serverError(err);
-                    }
-                },
+                action: this.vendorActions.panel.view,
                 // Driver list responses already include the vendor_name accessor,
-                // while the vendor relationship itself is not eager loaded. Use
-                // the scalar so assigned vendors do not render as blank cells.
+                // while the vendor relationship itself is not eager loaded, so a
+                // stub carries the name until the vendor is loaded on demand.
                 valuePath: 'vendor_name',
+                resourcePath: (driver) => relationValue(driver, 'vendor') ?? buildIdentityStub(driver, { type: 'vendor', load: () => driver.loadVendor?.() }),
                 modelNamePath: 'name',
                 resizable: true,
                 filterable: true,

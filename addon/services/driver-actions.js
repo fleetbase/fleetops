@@ -4,10 +4,12 @@ import config from 'ember-get-config';
 import { action } from '@ember/object';
 import { isArray } from '@ember/array';
 import { dasherize } from '@ember/string';
+import { PANEL_DEFAULTS, closePanelsThen } from '../utils/context-panel';
 
 export default class DriverActionsService extends ResourceActionService {
     @service('universe/menu-service') menuService;
     @service fetch;
+    @service issueActions;
 
     get registeredTabs() {
         const registeredTabs = this.menuService.getMenuItems('fleet-ops:component:driver:details');
@@ -31,13 +33,18 @@ export default class DriverActionsService extends ResourceActionService {
             },
             {
                 key: 'positions',
-                label: 'Positions',
+                label: this.intl.t('common.positions'),
                 component: 'positions-replay',
             },
             {
                 key: 'schedule',
                 label: this.intl.t('common.schedule'),
                 component: 'driver/schedule',
+            },
+            {
+                key: 'activity',
+                label: this.intl.t('common.activity'),
+                component: 'resource-activity',
             },
             ...this.registeredTabs,
         ];
@@ -46,6 +53,30 @@ export default class DriverActionsService extends ResourceActionService {
     constructor() {
         super(...arguments);
         this.initialize('driver');
+    }
+
+    /**
+     * Accepts a driver record, a promise (or proxy) of one, or an identity
+     * stub with loadResource(), and returns the record.
+     */
+    async resolveDriverResource(driver) {
+        if (typeof driver?.then === 'function') {
+            return await driver;
+        }
+
+        if (typeof driver?.loadResource === 'function') {
+            return (await driver.loadResource()) ?? driver;
+        }
+
+        return driver;
+    }
+
+    async reloadIndexResource(driver) {
+        if (driver?.meta?._index_resource) {
+            await driver.reload();
+        }
+
+        return driver;
     }
 
     transition = {
@@ -69,9 +100,7 @@ export default class DriverActionsService extends ResourceActionService {
             });
         },
         edit: async (driver, options = {}) => {
-            if (driver?.meta?._index_resource) {
-                await driver.reload();
-            }
+            driver = await this.reloadIndexResource(await this.resolveDriverResource(driver));
 
             return this.resourceContextPanel.open({
                 content: 'driver/form',
@@ -91,9 +120,8 @@ export default class DriverActionsService extends ResourceActionService {
             });
         },
         view: async (driver, options = {}) => {
-            if (driver?.meta?._index_resource) {
-                await driver.reload();
-            }
+            driver = await this.reloadIndexResource(await this.resolveDriverResource(driver));
+            const service = this;
 
             return this.resourceContextPanel.open({
                 driver,
@@ -101,13 +129,20 @@ export default class DriverActionsService extends ResourceActionService {
                 actionButtons: [
                     {
                         icon: 'pencil',
-                        fn: async () => {
-                            await this.resourceContextPanel.closeAll();
-                            this.panel.edit(driver);
+                        permission: 'fleet-ops update driver',
+                        fn: () => closePanelsThen(this.resourceContextPanel, () => this.panel.edit(driver)),
+                    },
+                    {
+                        icon: 'ellipsis-h',
+                        iconPrefix: 'fas',
+                        renderInPlace: true,
+                        get items() {
+                            return service.detailsMenuItems(driver, { onDeleted: () => service.resourceContextPanel.closeAll() });
                         },
                     },
                 ],
                 tabs: this.panelTabs,
+                ...PANEL_DEFAULTS,
                 ...options,
             });
         },
@@ -126,9 +161,7 @@ export default class DriverActionsService extends ResourceActionService {
             });
         },
         edit: async (driver, options = {}, saveOptions = {}) => {
-            if (driver?.meta?._index_resource) {
-                await driver.reload();
-            }
+            driver = await this.reloadIndexResource(await this.resolveDriverResource(driver));
 
             return this.modalsManager.show('modals/resource', {
                 resource: driver,
@@ -141,9 +174,7 @@ export default class DriverActionsService extends ResourceActionService {
             });
         },
         view: async (driver, options = {}) => {
-            if (driver?.meta?._index_resource) {
-                await driver.reload();
-            }
+            driver = await this.reloadIndexResource(await this.resolveDriverResource(driver));
 
             return this.modalsManager.show('modals/resource', {
                 resource: driver,
@@ -367,6 +398,38 @@ export default class DriverActionsService extends ResourceActionService {
                     resolve(false);
                 },
             });
+        });
+    }
+
+    /**
+     * The actions menu of a driver's header, shared by the details route and
+     * the context panel. Unassign items only show when there is something to
+     * unassign.
+     */
+    detailsMenuItems(driver) {
+        const hasVehicle = Boolean(driver?.vehicle_uuid || driver?.vehicle?.id || driver?.vehicle?.uuid || driver?.vehicle_name);
+
+        return [
+            { text: this.intl.t('driver.actions.assign-order'), icon: 'clipboard-list', fn: () => this.assignOrder(driver), permission: 'fleet-ops assign-order-for driver' },
+            ...(Number(driver?.assigned_orders_count) > 0
+                ? [{ text: this.intl.t('driver.actions.unassign-orders'), icon: 'user-minus', fn: () => this.unassignOrders(driver), permission: 'fleet-ops assign-order-for driver' }]
+                : []),
+            { separator: true },
+            { text: this.intl.t('driver.actions.assign-vehicle'), icon: 'car', fn: () => this.assignVehicle(driver), permission: 'fleet-ops assign-vehicle-for driver' },
+            ...(hasVehicle
+                ? [{ text: this.intl.t('driver.actions.unassign-vehicle'), icon: 'link-slash', fn: () => this.unassignVehicle(driver), permission: 'fleet-ops assign-vehicle-for driver' }]
+                : []),
+            { separator: true },
+            { text: this.intl.t('driver.actions.locate-driver'), icon: 'location-dot', fn: () => this.locate(driver), permission: 'fleet-ops view driver' },
+            { text: this.intl.t('driver.actions.create-issue'), icon: 'triangle-exclamation', fn: () => this.createIssue(driver), permission: 'fleet-ops create issue' },
+        ];
+    }
+
+    @action createIssue(driver) {
+        return this.issueActions.modal.create({
+            driver,
+            driver_uuid: driver.id,
+            title: this.intl.t('driver.prompts.issue-title', { driverName: driver.name }),
         });
     }
 }

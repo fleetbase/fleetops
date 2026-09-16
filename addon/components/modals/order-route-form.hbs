@@ -32,6 +32,7 @@
                         <div class="flex-1 px-4">
                             <ModelSelect
                                 @modelName="place"
+                                @selectedItemComponent={{component "select-option/place" compact=true}}
                                 @selectedModel={{waypoint.place}}
                                 @placeholder={{concat (t "modals.order-route-form.select-waypoint") (add index 1)}}
                                 @triggerClass="form-select form-input truncate"
@@ -43,7 +44,7 @@
                                 @onChange={{fn @options.setWaypointPlace index}}
                                 as |model|
                             >
-                                {{model.address}}
+                                <SelectOption::Place @option={{model}} />
                             </ModelSelect>
 
                             {{#if waypoint.place.hasInvalidCoordinates}}
@@ -76,6 +77,7 @@
 
                     <ModelSelect
                         @modelName="place"
+                        @selectedItemComponent={{component "select-option/place" compact=true}}
                         @selectedModel={{@options.order.payload.pickup}}
                         @placeholder={{t "modals.order-route-form.select-pickup"}}
                         @triggerClass="form-select form-input"
@@ -86,7 +88,7 @@
                         @onChange={{fn @options.setPayloadPlace "pickup"}}
                         as |model|
                     >
-                        {{model.address}}
+                        <SelectOption::Place @option={{model}} />
                     </ModelSelect>
 
                     {{#if @options.order.payload.pickup.hasInvalidCoordinates}}
@@ -108,6 +110,7 @@
 
                     <ModelSelect
                         @modelName="place"
+                        @selectedItemComponent={{component "select-option/place" compact=true}}
                         @selectedModel={{@options.order.payload.dropoff}}
                         @placeholder={{t "modals.order-route-form.select-dropoff"}}
                         @triggerClass="form-select form-input"
@@ -118,7 +121,7 @@
                         @onChange={{fn @options.setPayloadPlace "dropoff"}}
                         as |model|
                     >
-                        {{model.address}}
+                        <SelectOption::Place @option={{model}} />
                     </ModelSelect>
 
                     {{#if @options.order.payload.dropoff.hasInvalidCoordinates}}
@@ -140,6 +143,7 @@
 
                     <ModelSelect
                         @modelName="place"
+                        @selectedItemComponent={{component "select-option/place" compact=true}}
                         @selectedModel={{@options.order.payload.return}}
                         @placeholder={{t "modals.order-route-form.select-return"}}
                         @triggerClass="form-select form-input"
@@ -150,7 +154,7 @@
                         @onChange={{fn @options.setPayloadPlace "return"}}
                         as |model|
                     >
-                        {{model.address}}
+                        <SelectOption::Place @option={{model}} />
                     </ModelSelect>
 
                     {{#if @options.order.payload.return.hasInvalidCoordinates}}

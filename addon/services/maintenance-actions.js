@@ -1,6 +1,9 @@
-import ResourceActionService from '@fleetbase/ember-core/services/resource-action';
+import ResourceActionService, { inject as service } from '@fleetbase/ember-core/services/resource-action';
+import { PANEL_DEFAULTS, closePanelsThen, registeredPanelTabs } from '../utils/context-panel';
 
 export default class MaintenanceActionsService extends ResourceActionService {
+    @service('universe/menu-service') menuService;
+
     get defaultCurrency() {
         return this.currentUser?.company?.currency || this.currentUser.currency || 'USD';
     }
@@ -39,10 +42,26 @@ export default class MaintenanceActionsService extends ResourceActionService {
                 maintenance,
             });
         },
-        view: (maintenance) => {
+        view: (maintenance, options = {}) => {
             return this.resourceContextPanel.open({
                 maintenance,
-                tabs: [{ label: this.intl.t('common.overview'), component: 'maintenance/details' }],
+                title: maintenance?.summary,
+                header: 'maintenance/panel-header',
+                actionButtons: [
+                    { icon: 'edit', permission: 'fleet-ops update maintenance', fn: () => closePanelsThen(this.resourceContextPanel, () => this.panel.edit(maintenance)) },
+                    {
+                        icon: 'trash',
+                        type: 'danger',
+                        permission: 'fleet-ops delete maintenance',
+                        fn: () => this.delete(maintenance, { onConfirm: () => this.resourceContextPanel.closeAll() }),
+                    },
+                ],
+                tabs: [
+                    { key: 'overview', label: this.intl.t('common.overview'), component: 'maintenance/details' },
+                    ...registeredPanelTabs(this.menuService, 'fleet-ops:component:maintenance:details'),
+                ],
+                ...PANEL_DEFAULTS,
+                ...options,
             });
         },
     };

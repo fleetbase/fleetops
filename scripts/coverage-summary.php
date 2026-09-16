@@ -84,6 +84,13 @@ foreach ($project->xpath('.//file') ?: [] as $file) {
         continue;
     }
 
+    $uncoveredLines = [];
+    foreach ($file->line as $line) {
+        if ((string) $line['type'] === 'stmt' && (int) $line['count'] === 0) {
+            $uncoveredLines[] = (int) $line['num'];
+        }
+    }
+
     $files[] = [
         'path'            => $path,
         'covered'         => $coveredFileLines,
@@ -91,6 +98,7 @@ foreach ($project->xpath('.//file') ?: [] as $file) {
         'methods'         => $fileMethods,
         'covered_methods' => $coveredFileMethod,
         'percent'         => coveragePercent($coveredFileLines, $fileStatements),
+        'uncovered_lines' => $uncoveredLines,
     ];
 
     $relativePath = preg_replace('#^' . preg_quote(getcwd(), '#') . '/?#', '', $path);
@@ -141,6 +149,9 @@ echo "\nLowest covered files:\n";
 foreach (array_slice($files, 0, 20) as $file) {
     $relativePath = preg_replace('#^' . preg_quote(getcwd(), '#') . '/?#', '', $file['path']);
     printf("  %6.2f%%  %5d/%-5d  %s\n", $file['percent'], $file['covered'], $file['statements'], $relativePath ?: $file['path']);
+    if ($file['uncovered_lines']) {
+        printf("            Uncovered lines: %s\n", implode(', ', $file['uncovered_lines']));
+    }
 }
 
 if ($failUnder !== null && coveragePercent($coveredStatements, $statements) < $failUnder) {

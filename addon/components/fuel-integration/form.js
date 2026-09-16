@@ -13,24 +13,40 @@ export default class FuelIntegrationFormComponent extends Component {
     @tracked activeStep = 0;
     @tracked connectionTestResult;
     @tracked showDiagnostics = false;
+    @tracked selectedAt = new Date().toISOString();
+    @tracked testedAt;
 
     constructor() {
         super(...arguments);
         this.loadProviders.perform();
     }
 
+    get isEditing() {
+        return this.args.isEditing === true || this.args.resource?.isNew === false;
+    }
+
     get setupSteps() {
         return [
-            { icon: 'gas-pump', label: 'Provider', complete: Boolean(this.selectedProvider) },
-            { icon: 'key', label: 'Credentials', complete: this.hasRequiredCredentials },
-            { icon: 'plug', label: 'Test', complete: this.connectionTestResult?.success === true },
-            { icon: 'clock-rotate-left', label: 'Sync', complete: Boolean(this.syncSettings.window_days) },
-            { icon: 'route', label: 'Matching', complete: this.matchingOrder.length > 0 },
-        ].map((step, index) => ({
-            ...step,
-            active: this.activeStep === index,
-            complete: index < this.activeStep && step.complete,
-        }));
+            { key: 'provider', icon: 'gas-pump', label: 'Provider', complete: Boolean(this.selectedProvider) },
+            { key: 'credentials', icon: 'key', label: 'Credentials', complete: this.hasRequiredCredentials },
+            { key: 'test', icon: 'plug', label: 'Test', complete: this.connectionTestResult?.success === true },
+            { key: 'sync', icon: 'clock-rotate-left', label: 'Sync', complete: Boolean(this.syncSettings.window_days) },
+            { key: 'matching', icon: 'route', label: 'Matching', complete: this.matchingOrder.length > 0 },
+        ]
+            .filter((step) => !this.isEditing || step.key !== 'provider')
+            .map((step, index) => ({
+                ...step,
+                active: this.activeStep === index,
+                complete: index < this.activeStep && step.complete,
+            }));
+    }
+
+    get activeStepKey() {
+        return this.setupSteps[this.activeStep]?.key;
+    }
+
+    get isLastStep() {
+        return this.activeStep === this.setupSteps.length - 1;
     }
 
     get selectedProvider() {
@@ -47,6 +63,24 @@ export default class FuelIntegrationFormComponent extends Component {
 
     get credentials() {
         return this.args.resource?.credentials ?? {};
+    }
+
+    get environment() {
+        return this.args.resource?.environment ?? 'production';
+    }
+
+    get baseUrl() {
+        return this.credentials.base_url?.trim() || this.selectedProvider?.metadata?.base_urls?.[this.environment];
+    }
+
+    get credentialFields() {
+        return (this.selectedProvider?.required_fields ?? []).map((field) => ({
+            ...field,
+            options: field.options?.map((option) => ({
+                ...option,
+                selected: option.value === (this.credentials[field.name] ?? (field.name === 'auth_type' ? 'bearer_token' : field.default)),
+            })),
+        }));
     }
 
     get syncSettings() {
@@ -113,7 +147,7 @@ export default class FuelIntegrationFormComponent extends Component {
     get diagnosticEntries() {
         const entries = [
             {
-                time: new Date().toLocaleTimeString(),
+                time: this.selectedAt,
                 tone: 'info',
                 text: this.selectedProvider ? `Provider selected: ${this.selectedProvider.label}` : 'No provider selected',
             },
@@ -121,7 +155,7 @@ export default class FuelIntegrationFormComponent extends Component {
 
         if (this.connectionTestResult) {
             entries.push({
-                time: new Date().toLocaleTimeString(),
+                time: this.testedAt,
                 tone: this.connectionTestResult.success ? 'success' : 'danger',
                 text: this.connectionTestResult.message ?? 'Connection test returned without a message',
             });
@@ -139,7 +173,7 @@ export default class FuelIntegrationFormComponent extends Component {
             const providers = yield this.fetch.get('fuel-provider-connections/providers');
             this.providers = providers;
 
-            if (!this.args.resource?.provider) {
+            if (!this.isEditing && !this.args.resource?.provider) {
                 const initialProvider = this.args.initialProviderKey ? providers.find((provider) => provider.key === this.args.initialProviderKey) : providers[0];
                 if (initialProvider) {
                     this.selectProvider(initialProvider);
@@ -161,34 +195,55 @@ export default class FuelIntegrationFormComponent extends Component {
             return;
         }
 
+        this.connectionTestResult = null;
         try {
-            this.connectionTestResult = yield this.fetch.post(`fuel-provider-connections/providers/${this.selectedProvider.key}/test-credentials`, {
-                credentials: this.credentials,
-                connection_id: this.args.resource?.id,
-            });
+            this.connectionTestResult = yield this.fetch.post(
+                `fuel-provider-connections/providers/${this.selectedProvider.key}/test-credentials`,
+                {
+                    credentials: this.credentials,
+                    connection_id: this.args.resource?.id,
+                    environment: this.environment,
+                },
+                { rawError: true }
+            );
         } catch (error) {
             this.connectionTestResult = {
                 success: false,
                 message: error.message ?? 'Connection test failed.',
-                metadata: {},
+                metadata: error.metadata ?? {},
             };
             this.notifications.serverError(error);
+        } finally {
+            this.testedAt = new Date().toISOString();
         }
     }
 
     @action selectProvider(provider) {
+        if (this.isEditing) {
+            return;
+        }
+
+        this.testConnection.cancelAll();
         this.args.resource?.setProperties?.({
             provider: provider.key,
             name: this.args.resource?.name || provider.label,
             credentials: (provider.required_fields ?? []).reduce((credentials, field) => {
-                credentials[field.name] = this.credentials[field.name] ?? field.default ?? null;
+                credentials[field.name] = this.credentials[field.name] ?? (field.name === 'auth_type' && this.args.resource?.provider ? 'bearer_token' : field.default) ?? null;
                 return credentials;
             }, {}),
         });
+        this.selectedAt = new Date().toISOString();
+        this.connectionTestResult = null;
+    }
+
+    @action setEnvironment(event) {
+        this.testConnection.cancelAll();
+        this.args.resource?.set('environment', event.target.value);
         this.connectionTestResult = null;
     }
 
     @action setCredential(field, event) {
+        this.testConnection.cancelAll();
         this.args.resource?.set('credentials', {
             ...this.credentials,
             [field.name]: event.target.value,

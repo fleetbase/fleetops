@@ -8,6 +8,7 @@
                     <label>{{t "resource.driver"}}</label>
                     <ModelSelect
                         @modelName="driver"
+                        @selectedItemComponent={{component "select-option/driver" compact=true}}
                         @selectedModel={{this.selectedDriver}}
                         @placeholder={{t "scheduler.select-driver"}}
                         @triggerClass="form-select form-input"
@@ -16,7 +17,7 @@
                         @onChange={{this.selectDriver}}
                         as |driver|
                     >
-                        {{driver.name}}
+                        <SelectOption::Driver @option={{driver}} />
                     </ModelSelect>
                 </div>
             {{/if}}

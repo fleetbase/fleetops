@@ -1,0 +1,20 @@
+<Modal::Default @modalIsOpened={{@modalIsOpened}} @options={{@options}} @confirm={{@onConfirm}} @decline={{@onDecline}}>
+    <div class="modal-body-container">
+        <p class="text-sm text-gray-600 dark:text-gray-300 mb-3">
+            {{#if @options.recipient}}
+                {{t "radar.prompts.send-pin-to" name=@options.recipient}}
+            {{else}}
+                {{t "radar.prompts.send-pin-body"}}
+            {{/if}}
+        </p>
+        <div class="space-y-2" role="radiogroup" data-test-radar-send-pin-channels>
+            {{#each @options.channels as |via|}}
+                <label class="flex items-center gap-3 rounded-lg border border-gray-200 bg-gray-50 px-4 py-2 text-sm font-semibold text-gray-800 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100">
+                    <input type="radio" name="radar-send-pin-via" value={{via}} checked={{eq @options.via via}} class="form-radio text-sky-500" {{on "change" (fn this.choose via)}} data-test-radar-send-pin-via={{via}} />
+                    <FaIcon @icon={{if (eq via "email") "envelope" "comment-sms"}} class="text-gray-400" />
+                    <span>{{if (eq via "email") (t "inspection.link.email-pin") (t "inspection.link.text-pin")}}</span>
+                </label>
+            {{/each}}
+        </div>
+    </div>
+</Modal::Default>

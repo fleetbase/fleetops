@@ -4,6 +4,7 @@
             <InputGroup @name={{t "device.fields.telematic"}}>
                 <ModelSelect
                     @modelName="telematic"
+                    @selectedItemComponent={{component "select-option/telematic" compact=true}}
                     @selectedModel={{@resource.telematic}}
                     @placeholder="Select Telematic"
                     @triggerClass="form-select form-input"
@@ -13,22 +14,14 @@
                     @disabled={{cannot-write @resource}}
                     as |model|
                 >
-                    <div class="space-x-2 text-sm">
-                        <div class="inline-block align-top">
-                            <div class="hide-from-trigger h-1.5 w-full"></div>
-                            <Image src={{model.provider_descriptor.icon}} class="w-5 h-5" />
-                        </div>
-                        <div class="inline-block">
-                            <div class="font-semibold normalize-in-trigger">{{or model.name model.public_id}}</div>
-                            <div class="hide-from-trigger">{{n-a model.provider_descriptor.label (titleize model.provider)}}</div>
-                        </div>
-                    </div>
+                    <SelectOption::Telematic @option={{model}} />
                 </ModelSelect>
             </InputGroup>
 
             <InputGroup @name="Device">
                 <ModelSelect
                     @modelName="device"
+                    @selectedItemComponent={{component "select-option/device" compact=true}}
                     @selectedModel={{@resource.device}}
                     @placeholder="Select Device"
                     @triggerClass="form-select form-input"
@@ -39,10 +32,7 @@
                     @disabled={{cannot-write @resource}}
                     as |model|
                 >
-                    <div class="text-sm">
-                        <div class="font-semibold normalize-in-trigger">{{model.name}}</div>
-                        <div class="hide-from-trigger">{{n-a model.serial_number}}</div>
-                    </div>
+                    <SelectOption::Device @option={{model}} />
                 </ModelSelect>
             </InputGroup>
 
@@ -139,6 +129,7 @@
             <InputGroup @name="Warranty">
                 <ModelSelect
                     @modelName="warranty"
+                    @selectedItemComponent={{component "select-option/warranty" compact=true}}
                     @selectedModel={{@resource.warranty}}
                     @placeholder="Select Warranty"
                     @triggerClass="form-select form-input"
@@ -149,9 +140,7 @@
                     @disabled={{cannot-write @resource}}
                     as |model|
                 >
-                    {{model.policy_number}}
-                    -
-                    {{model.provider}}
+                    <SelectOption::Warranty @option={{model}} />
                 </ModelSelect>
             </InputGroup>
         </div>

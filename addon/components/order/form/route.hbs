@@ -54,6 +54,7 @@
                             <div class="mb-2">
                                 <ModelSelect
                                     @modelName="place"
+                                    @selectedItemComponent={{component "select-option/place" compact=true}}
                                     @selectedModel={{waypoint.place}}
                                     @placeholder={{concat (t "order.fields.select-waypoint") " " (add index 1)}}
                                     @triggerClass="form-select form-input truncate max-w-300px"
@@ -65,7 +66,7 @@
                                     @permission={{cannot-write @resource}}
                                     as |place|
                                 >
-                                    <Place::Address @place={{place}} />
+                                    <SelectOption::Place @option={{place}} />
                                 </ModelSelect>
                                 {{#if (and @resource.facilitator.isIntegratedVendor (is-not-facilitator-supported-place @resource.facilitator waypoint.place))}}
                                     <InfoBlock
@@ -84,6 +85,7 @@
                             <div>
                                 <ModelSelect
                                     @modelName="customer"
+                                    @selectedItemComponent={{component "select-option/customer" compact=true}}
                                     @selectedModel={{waypoint.customer}}
                                     @placeholder={{t "order.fields.customer-placeholder"}}
                                     @triggerClass="form-select form-input truncate max-w-300px"
@@ -94,14 +96,7 @@
                                     @permission={{cannot-write @resource}}
                                     as |model|
                                 >
-                                    <div class="flex items-center">
-                                        <div class="w-7">
-                                            <FaIcon @icon={{if model.isVendor "warehouse" "user"}} />
-                                        </div>
-                                        <span class="uppercase">
-                                            {{model.name}}
-                                        </span>
-                                    </div>
+                                    <SelectOption::Customer @option={{model}} />
                                 </ModelSelect>
                             </div>
                             <div>
@@ -166,6 +161,7 @@
 
                 <ModelSelect
                     @modelName="place"
+                    @selectedItemComponent={{component "select-option/place" compact=true}}
                     @selectedModel={{@resource.payload.pickup}}
                     @placeholder={{t "order.fields.select-pickup"}}
                     @triggerClass="form-select form-input"
@@ -177,7 +173,7 @@
                     @permission={{cannot-write @resource}}
                     as |place|
                 >
-                    <Place::Address @place={{place}} />
+                    <SelectOption::Place @option={{place}} />
                 </ModelSelect>
 
                 {{#if (and @resource.facilitator.isIntegratedVendor (is-not-facilitator-supported-place @resource.facilitator @resource.payload.pickup))}}
@@ -208,6 +204,7 @@
 
                 <ModelSelect
                     @modelName="place"
+                    @selectedItemComponent={{component "select-option/place" compact=true}}
                     @selectedModel={{@resource.payload.dropoff}}
                     @placeholder={{t "order.fields.select-dropoff"}}
                     @triggerClass="form-select form-input"
@@ -219,7 +216,7 @@
                     @permission={{cannot-write @resource}}
                     as |place|
                 >
-                    <Place::Address @place={{place}} />
+                    <SelectOption::Place @option={{place}} />
                 </ModelSelect>
 
                 {{#if (and @resource.facilitator.isIntegratedVendor (is-not-facilitator-supported-place @resource.facilitator @resource.payload.dropoff))}}
@@ -245,6 +242,7 @@
 
                 <ModelSelect
                     @modelName="place"
+                    @selectedItemComponent={{component "select-option/place" compact=true}}
                     @selectedModel={{@resource.payload.return}}
                     @placeholder={{t "order.fields.select-return"}}
                     @triggerClass="form-select form-input"
@@ -256,7 +254,7 @@
                     @permission={{cannot-write @resource}}
                     as |place|
                 >
-                    <Place::Address @place={{place}} />
+                    <SelectOption::Place @option={{place}} />
                 </ModelSelect>
 
                 {{#if (and @resource.facilitator.isIntegratedVendor (is-not-facilitator-supported-place @resource.facilitator @resource.payload.return))}}

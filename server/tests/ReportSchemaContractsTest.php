@@ -219,6 +219,9 @@ test('fleetops report schema registers every table with columns computed columns
         'contacts',
         'vendors',
         'fuel_reports',
+        'work_orders',
+        'maintenances',
+        'inspection_submissions',
     ]);
 
     $orders = $tables['orders'];
@@ -248,7 +251,18 @@ test('fleetops report schema registers every table with columns computed columns
         ->and(fleetOpsReportTableMeta($tables['places'], 'category'))->toBe('Geography')
         ->and(fleetOpsReportTableMeta($tables['contacts'], 'category'))->toBe('CRM')
         ->and(fleetOpsReportTableMeta($tables['vendors'], 'category'))->toBe('CRM')
-        ->and(fleetOpsReportTableMeta($tables['fuel_reports'], 'category'))->toBe('Operations');
+        ->and(fleetOpsReportTableMeta($tables['fuel_reports'], 'category'))->toBe('Operations')
+        ->and(fleetOpsReportTableMeta($tables['work_orders'], 'category'))->toBe('Maintenance')
+        ->and(fleetOpsReportTableName(fleetOpsReportRelationship($tables['work_orders'], 'vehicle_target')))->toBe('vehicles')
+        ->and(fleetOpsReportColumnAggregate(fleetOpsReportColumn($tables['work_orders'], 'total_actual_cost')))->toBe('sum')
+        ->and(fleetOpsReportTableMeta($tables['maintenances'], 'label'))->toBe('Maintenance History')
+        ->and(fleetOpsReportTableName(fleetOpsReportRelationship($tables['maintenances'], 'work_order')))->toBe('work_orders')
+        ->and(fleetOpsReportTableMeta($tables['inspection_submissions'], 'label'))->toBe('Inspections')
+        ->and(fleetOpsReportTableMeta($tables['inspection_submissions'], 'category'))->toBe('Maintenance')
+        ->and(fleetOpsReportColumnFlag(fleetOpsReportColumn($tables['inspection_submissions'], 'result'), 'aggregatable'))->toBeTrue()
+        ->and(fleetOpsReportColumnAggregate(fleetOpsReportColumn($tables['inspection_submissions'], 'total_failed_items')))->toBe('sum')
+        ->and(fleetOpsReportTableName(fleetOpsReportRelationship($tables['inspection_submissions'], 'inspection_form')))->toBe('inspection_forms')
+        ->and(fleetOpsReportTableName(fleetOpsReportRelationship($tables['inspection_submissions'], 'work_order')))->toBe('work_orders');
 });
 
 test('fleetops report schema transformers normalize labels booleans distances and money', function () {

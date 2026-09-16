@@ -69,7 +69,7 @@ export default class ConnectivityTelematicsIndexController extends Controller {
             sticky: true,
             label: 'Provider',
             valuePath: 'name',
-            cellComponent: 'cell/telematic-provider',
+            cellComponent: 'cell/telematic-identity',
             action: this.telematicActions.transition.view,
             permission: 'fleet-ops view telematic',
             width: 460,
@@ -89,6 +89,8 @@ export default class ConnectivityTelematicsIndexController extends Controller {
             filterable: true,
             filterComponent: 'filter/multi-option',
             filterOptions: fleetOpsOptions('telematicStatuses'),
+            filterOptionLabel: 'label',
+            filterOptionValue: 'value',
         },
         {
             label: this.intl.t('column.created-at'),

@@ -1,0 +1,90 @@
+{{!
+    One stored answer, read-only.
+
+    Every answer keeps the column the form gave it: a pass or a fail is a
+    coloured card in its cell, and only a note, an upload or a signature —
+    which need the room — spans the grid.
+}}
+{{#if this.isResult}}
+    {{! Pass, fail and N/A share one card, coloured by the answer, sitting in
+        the column the form gave it. A fail carries its severity, its unsafe
+        flag, the comment and the photos beneath the head. }}
+    <div class="inspection-cell inspection-cell--readonly inspection-cell--result {{if this.isTargeted 'inspection-cell--targeted'}}" id="inspection-field-{{this.field.uuid}}" data-answer={{this.answerState}} ...attributes>
+        <div class="inspection-cell__head">
+            <span class="inspection-chip">{{t this.resultLabel}}</span>
+            <span class="inspection-cell__label">{{this.label}}</span>
+        </div>
+        {{#if this.hasResultDetail}}
+            <div class="inspection-cell__body">
+                {{#if this.hasResultMeta}}
+                    <div class="inspection-cell__meta">
+                        {{#if this.severityLabel}}<Badge @status={{if (eq this.answer.severity "critical") "critical" "info"}}>{{t this.severityLabel}}</Badge>{{/if}}
+                        {{#if this.answer.unsafe}}<Badge @status="unsafe">{{t "inspection.answer.unsafe"}}</Badge>{{/if}}
+                    </div>
+                {{/if}}
+                {{#if this.answer.comments}}
+                    <p class="inspection-answer">{{this.answer.comments}}</p>
+                {{/if}}
+                {{#if this.photos.length}}
+                    <div class="inspection-slots">
+                        {{#each this.photos key="reference" as |photo|}}
+                            {{#if photo.url}}
+                                <a href={{photo.url}} target="_blank" rel="noopener noreferrer" class="inspection-slot">
+                                    <Image src={{photo.url}} alt={{or photo.filename this.label}} />
+                                </a>
+                            {{else}}
+                                <span class="inspection-slot"><span class="inspection-slot__icon"><FaIcon @icon="image" /></span></span>
+                            {{/if}}
+                        {{/each}}
+                    </div>
+                {{/if}}
+            </div>
+        {{/if}}
+    </div>
+
+{{else if this.isRoomy}}
+    <div class="inspection-band {{if this.isStackedBand 'inspection-band--stacked'}} {{if this.isTargeted 'inspection-band--targeted'}}" id="inspection-field-{{this.field.uuid}}" ...attributes>
+        <div class="inspection-band__head">
+            <span class="inspection-band__label">{{this.label}}</span>
+            {{#unless this.isStackedBand}}
+                <span class="inspection-band__aside">
+                    {{#if this.file.url}}
+                        <a href={{this.file.url}} target="_blank" rel="noopener noreferrer" class="inspection-slot">
+                            <Image src={{this.file.url}} alt={{or this.file.filename this.label}} />
+                        </a>
+                    {{else if this.file.reference}}
+                        <span class="inspection-slot"><span class="inspection-slot__icon"><FaIcon @icon="image" /></span></span>
+                    {{else}}
+                        <span class="inspection-note">{{t "inspection.answer.unanswered"}}</span>
+                    {{/if}}
+                </span>
+            {{/unless}}
+        </div>
+        {{#if this.isStackedBand}}
+            <div class="inspection-band__body">
+                {{#if this.isAnswered}}
+                    <p class="inspection-answer">{{@value}}</p>
+                {{else}}
+                    <span class="inspection-note">{{t "inspection.answer.unanswered"}}</span>
+                {{/if}}
+            </div>
+        {{/if}}
+    </div>
+
+{{else}}
+    <div class="inspection-cell inspection-cell--readonly {{if this.isTargeted 'inspection-cell--targeted'}}" id="inspection-field-{{this.field.uuid}}" data-answer={{this.answerState}} ...attributes>
+        <span class="inspection-cell__label">{{this.label}}</span>
+        <div class="inspection-cell__control">
+            {{#if this.isBoolean}}
+                <Badge @status={{if this.booleanValue "success" "default"}}>{{if this.booleanValue (t "common.yes") (t "common.no")}}</Badge>
+            {{else}}
+                {{#if this.isAnswered}}
+                    <span class="inspection-answer">{{@value}}</span>
+                    {{#if this.meta.unit}}<span class="inspection-unit">{{this.meta.unit}}</span>{{/if}}
+                {{else}}
+                    <span class="inspection-note">{{t "inspection.answer.unanswered"}}</span>
+                {{/if}}
+            {{/if}}
+        </div>
+    </div>
+{{/if}}

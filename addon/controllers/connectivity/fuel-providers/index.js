@@ -10,6 +10,7 @@ export default class ConnectivityFuelProvidersIndexController extends Controller
     @service tableContext;
     @service fuelIntegrationActions;
     @service intl;
+    @service modalsManager;
 
     @tracked queryParams = ['page', 'limit', 'sort', 'query', 'provider', 'status', 'environment'];
     @tracked page = 1;
@@ -59,8 +60,10 @@ export default class ConnectivityFuelProvidersIndexController extends Controller
             {
                 sticky: true,
                 label: 'Integration',
-                valuePath: 'name',
-                cellComponent: 'click-to-copy',
+                valuePath: 'displayName',
+                sortParam: 'name',
+                cellComponent: 'table/cell/anchor',
+                action: this.openConnection,
                 resizable: true,
                 sortable: true,
                 filterable: true,
@@ -87,19 +90,20 @@ export default class ConnectivityFuelProvidersIndexController extends Controller
             },
             {
                 label: 'Last Sync',
-                valuePath: 'last_synced_at',
+                valuePath: 'lastSyncedAt',
+                sortParam: 'last_synced_at',
                 resizable: true,
                 sortable: true,
             },
             {
-                label: 'Imported',
-                valuePath: 'last_sync_state.summary.imported',
+                label: 'New in last sync',
+                valuePath: 'lastImported',
                 resizable: true,
                 sortable: false,
             },
             {
-                label: 'Unmatched',
-                valuePath: 'last_sync_state.summary.unmatched',
+                label: 'Unmatched in last sync',
+                valuePath: 'lastUnmatched',
                 resizable: true,
                 sortable: false,
             },
@@ -144,7 +148,7 @@ export default class ConnectivityFuelProvidersIndexController extends Controller
     }
 
     @action refresh() {
-        this.target.send('refresh');
+        this.target.send('refreshFuelConnections');
     }
 
     @action openConnection(connection) {
@@ -155,21 +159,22 @@ export default class ConnectivityFuelProvidersIndexController extends Controller
         return this.fuelIntegrationActions.transition.edit(connection);
     }
 
-    @action async testConnection(connection) {
-        try {
-            await this.fetch.post(`fuel-provider-connections/${connection.id}/test-connection`);
-            this.notifications.success('Fuel integration connection tested.');
-            this.refresh();
-        } catch (error) {
-            this.notifications.serverError(error);
-        }
+    @action testConnection(connection) {
+        return this.modalsManager.show('modals/fuel-connection-diagnostics', {
+            title: 'Test Fuel Connection',
+            acceptButtonText: 'Run Test',
+            acceptButtonIcon: 'plug',
+            declineButtonText: 'Close',
+            connection,
+            onTested: () => connection.reload(),
+        });
     }
 
     @action async syncConnection(connection) {
         try {
             await this.fetch.post(`fuel-provider-connections/${connection.id}/sync`, { async: true });
             this.notifications.success('Fuel transaction sync queued.');
-            this.refresh();
+            await connection.reload();
         } catch (error) {
             this.notifications.serverError(error);
         }

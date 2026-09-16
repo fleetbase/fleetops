@@ -741,7 +741,7 @@ test('fuel provider and work order filters record company search and status scop
         ['where', ['company_uuid', 'company-uuid']],
         ['search', 'fuelx'],
         ['where', ['provider', 'petro-app']],
-        ['where', ['status', 'active']],
+        ['whereIn', 'status', ['active']],
         ['where', ['environment', 'sandbox']],
     ]);
 

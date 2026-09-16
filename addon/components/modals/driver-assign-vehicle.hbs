@@ -4,24 +4,16 @@
             <InputGroup @name={{t "modals.driver-assign-vehicle.vehicle"}} @value={{@options.driver.vehicle_uuid}}>
                 <ModelSelect
                     @modelName="vehicle"
-                    @selectedModel={{@options.driver.vehicle_uuid}}
+                    @selectedItemComponent={{component "select-option/vehicle" compact=true}}
+                    @selectedModel={{this.selectedVehicle}}
                     @placeholder={{t "modals.driver-assign-vehicle.assign-vehicle"}}
                     @triggerClass="form-select form-input"
                     @infiniteScroll={{false}}
                     @renderInPlace={{true}}
-                    @onChange={{fn (mut @options.driver.vehicle)}}
-                    @onChangeId={{fn (mut @options.driver.vehicle_uuid)}}
+                    @onChange={{this.selectVehicle}}
                     as |model|
                 >
-                    <Vehicle::Pill
-                        @vehicle={{model}}
-                        @anchorClass="w-full"
-                        @imageWrapperClass="w-8 h-8"
-                        @imageClass="w-8 h-8"
-                        @contentWrapperClass="min-w-0"
-                        @titleClass="truncate"
-                        @subtitleClass="truncate"
-                    />
+                    <SelectOption::Vehicle @option={{model}} />
                 </ModelSelect>
             </InputGroup>
         </div>

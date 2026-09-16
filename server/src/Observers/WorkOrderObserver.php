@@ -61,7 +61,7 @@ class WorkOrderObserver
             'maintainable_type'  => $workOrder->target_type,
             'maintainable_uuid'  => $workOrder->target_uuid,
             'type'               => 'scheduled',
-            'status'             => 'done',
+            'status'             => 'completed',
             'priority'           => $workOrder->priority,
             'scheduled_at'       => $workOrder->opened_at,
             'completed_at'       => $workOrder->closed_at ?? now(),

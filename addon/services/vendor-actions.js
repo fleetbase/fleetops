@@ -2,6 +2,7 @@ import ResourceActionService from '@fleetbase/ember-core/services/resource-actio
 import { inject as service } from '@ember/service';
 import { action } from '@ember/object';
 import { normalizeProvider, buildIntegrationPayload } from '../utils/vendor-integration';
+import { PANEL_DEFAULTS, closePanelsThen } from '../utils/context-panel';
 
 export default class VendorActionsService extends ResourceActionService {
     @service placeActions;
@@ -40,18 +41,18 @@ export default class VendorActionsService extends ResourceActionService {
                 vendor,
             });
         },
-        view: (vendor) => {
+        view: (vendor, options = {}) => {
             return this.resourceContextPanel.open({
                 vendor,
+                title: vendor?.name,
                 header: 'vendor/panel-header',
+                actionButtons: [{ icon: 'pencil', permission: 'fleet-ops update vendor', fn: () => closePanelsThen(this.resourceContextPanel, () => this.panel.edit(vendor)) }],
                 tabs: [
-                    {
-                        key: 'overview',
-                        id: 'overview',
-                        label: this.intl.t('common.overview'),
-                        component: 'vendor/details',
-                    },
+                    { key: 'overview', id: 'overview', label: this.intl.t('common.overview'), component: 'vendor/details' },
+                    { key: 'personnel', id: 'personnel', label: 'Personnel', component: 'vendor/personnel-tab' },
                 ],
+                ...PANEL_DEFAULTS,
+                ...options,
             });
         },
     };

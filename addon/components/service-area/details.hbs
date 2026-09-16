@@ -19,25 +19,6 @@
     </ContentPanel>
 
     <ContentPanel @title={{t "common.map"}} @open={{true}} @wrapperClass="bordered-top">
-        <LeafletMap
-            class="w-full h-48 rounded-md shadow-md border border-gray-200 dark:border-gray-700"
-            @lat={{@resource.firstCoordinatePairLatitude}}
-            @lng={{@resource.firstCoordinatePairLongitude}}
-            @zoom={{12}}
-            @zoomControl={{false}}
-            as |layers|
-        >
-            <layers.tile @url={{leaflet-tile-url}} />
-            <layers.polygon
-                @id={{@resource.id}}
-                @record={{@resource}}
-                @locations={{unwrap-coordinates @resource.leafletCoordinates}}
-                @fillColor={{@resource.color}}
-                @color={{@resource.stroke_color}}
-                as |polygon|
-            >
-                <polygon.tooltip @permanent={{true}} @sticky={{true}}>{{@resource.name}} {{t "resource.service-area"}}</polygon.tooltip>
-            </layers.polygon>
-        </LeafletMap>
+        <GeofenceMap @resource={{@resource}} @label={{concat @resource.name " " (t "resource.service-area")}} />
     </ContentPanel>
 </div>

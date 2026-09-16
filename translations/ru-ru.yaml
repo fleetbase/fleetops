@@ -73,6 +73,8 @@ menu:
   issues: Проблемы
   maintenance: Обслуживание
   work-orders: Рабочие заказы
+  inspection-forms: 'Формы осмотра'
+  inspections: 'Осмотры'
   equipment: Оборудование
   parts: Запчасти
   connectivity: Подключение
@@ -1042,7 +1044,7 @@ vehicle:
     filter-internal-id: Введите или отсканируйте внутренние ID
   filters:
     has-trailer: Прицеп подключён
-    has-driver: Водитель назначен
+    has-driver: Есть назначенный водитель
     has-device: Устройство подключено
     any: Любой
     attached: Подключён

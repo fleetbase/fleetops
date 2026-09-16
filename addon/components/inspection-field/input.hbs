@@ -1,0 +1,270 @@
+{{!
+    One field of an inspection, being answered.
+
+    A note, an upload or a signature is a full-width band, because the form
+    decides its size. Everything else is a cell in its group's grid, label
+    above control, and stays that size whatever is answered.
+
+    A failed check keeps its cell. Its detail — severity, unsafe, comment,
+    photos — opens in a flyout anchored to the cell, and a chip left in the
+    cell summarises it once the flyout is closed. Answering a field can
+    therefore never change the layout of the sheet.
+}}
+{{#if this.isRoomy}}
+    <div
+        class="inspection-band {{if this.isStackedBand 'inspection-band--stacked'}} {{if this.isTargeted 'inspection-band--targeted'}}"
+        id="inspection-field-{{this.field.uuid}}"
+        data-field-type={{this.field.type}}
+        ...attributes
+    >
+        <div class="inspection-band__head">
+            <span class="inspection-band__label">
+                {{this.label}}
+                {{#if this.field.required}}<span class="inspection-required" aria-hidden="true">*</span>{{/if}}
+            </span>
+
+            {{#unless this.isStackedBand}}
+                <div class="inspection-band__aside">
+                    {{#if this.file.url}}
+                        <span class="inspection-slot"><Image src={{this.file.url}} alt={{or this.file.filename this.label}} /></span>
+                    {{else if this.file.reference}}
+                        <span class="inspection-slot"><span class="inspection-slot__icon"><FaIcon @icon={{this.fileIcon}} /></span></span>
+                    {{else}}
+                        <span class="inspection-note">{{this.emptyFileNote}}</span>
+                    {{/if}}
+
+                    {{#if this.canUpload}}
+                        <FileUpload @name={{concat this.field.uuid "-file"}} @for={{concat this.field.uuid "-file"}} @accept="image/*" @multiple={{false}} @onFileAdded={{this.setFile}}>
+                            <a tabindex={{0}} class="btn btn-default btn-xs cursor-pointer">
+                                <FaIcon @icon={{this.fileIcon}} @size="sm" class="mr-2" />{{this.uploadLabel}}
+                            </a>
+                        </FileUpload>
+                        {{#if this.file.reference}}
+                            <Button @type="danger" @icon="trash" @size="xs" @onClick={{this.clearFile}} />
+                        {{/if}}
+                    {{else if this.uploadsBlocked}}
+                        <span class="inspection-note">{{t "inspection.answer.uploads-unavailable"}}</span>
+                    {{/if}}
+
+                    {{#if this.uploadProgress}}
+                        <span class="inspection-unit">{{round this.uploadProgress.progress}}%</span>
+                    {{/if}}
+                </div>
+            {{/unless}}
+        </div>
+
+        {{#if this.isStackedBand}}
+            <div class="inspection-band__body">
+                {{#if this.field.description}}
+                    <span class="inspection-cell__hint">{{this.field.description}}</span>
+                {{/if}}
+                <textarea
+                    class="w-full form-input"
+                    rows="3"
+                    aria-label={{this.label}}
+                    placeholder={{this.placeholder}}
+                    disabled={{@disabled}}
+                    {{sync-value @value}}
+                    {{on "input" this.setText}}
+                ></textarea>
+            </div>
+        {{/if}}
+    </div>
+
+{{else}}
+    <div
+        class="inspection-cell {{if this.isTargeted 'inspection-cell--targeted'}} {{if this.isFlyoutOpen 'inspection-cell--flyout-open'}}"
+        id="inspection-field-{{this.field.uuid}}"
+        data-field-type={{this.field.type}}
+        data-answer={{this.answerState}}
+        ...attributes
+    >
+        <span class="inspection-cell__label">
+            {{this.label}}
+            {{#if this.field.required}}<span class="inspection-required" aria-hidden="true">*</span>{{/if}}
+        </span>
+
+        {{#if this.field.description}}
+            <span class="inspection-cell__hint">{{this.field.description}}</span>
+        {{/if}}
+        {{#if this.instructions}}
+            <span class="inspection-cell__hint">{{this.instructions}}</span>
+        {{/if}}
+
+        <div class="inspection-cell__control">
+            {{#if (eq this.field.type "pass-fail")}}
+                <div class="inspection-choice" role="group" aria-label={{this.label}}>
+                    {{#each this.passFailOptions key="value" as |option|}}
+                        <button
+                            type="button"
+                            class="inspection-choice__option"
+                            data-answer={{option.value}}
+                            aria-pressed={{if (eq this.answerState option.value) "true" "false"}}
+                            disabled={{@disabled}}
+                            {{on "click" (fn this.setPassFail option.value)}}
+                        >
+                            {{option.label}}
+                        </button>
+                    {{/each}}
+                </div>
+
+            {{else if (eq this.field.type "boolean")}}
+                <Toggle @isToggled={{this.booleanValue}} @onToggle={{this.setBoolean}} @disabled={{@disabled}} />
+
+            {{else if (eq this.field.type "number")}}
+                <input
+                    type="number"
+                    inputmode="decimal"
+                    class="w-full form-input {{if this.isOutstanding 'inspection-input--outstanding'}}"
+                    aria-label={{this.label}}
+                    placeholder={{this.placeholder}}
+                    disabled={{@disabled}}
+                    {{sync-value @value}}
+                    {{on "input" this.setNumber}}
+                />
+                {{#if this.unit}}<span class="inspection-unit">{{this.unit}}</span>{{/if}}
+
+            {{else if (eq this.field.type "select")}}
+                <div class="fleetbase-model-select fleetbase-power-select ember-model-select {{if this.isOutstanding 'inspection-input--outstanding'}}">
+                    <PowerSelect
+                        @options={{this.choiceOptions}}
+                        @selected={{@value}}
+                        @placeholder={{this.placeholder}}
+                        @allowClear={{true}}
+                        @onChange={{this.setChoice}}
+                        @triggerClass="form-select form-input"
+                        @renderInPlace={{true}}
+                        @disabled={{@disabled}}
+                        as |option|
+                    >
+                        {{option}}
+                    </PowerSelect>
+                </div>
+
+            {{else if (eq this.field.type "radio-button")}}
+                {{#if this.choiceOptions}}
+                    <div class="inspection-choice" role="group" aria-label={{this.label}}>
+                        {{#each this.choiceOptions key="@index" as |option|}}
+                            <button
+                                type="button"
+                                class="inspection-choice__option"
+                                aria-pressed={{if (eq @value option) "true" "false"}}
+                                disabled={{@disabled}}
+                                {{on "click" (fn this.setChoice option)}}
+                            >
+                                {{option}}
+                            </button>
+                        {{/each}}
+                    </div>
+                {{else}}
+                    <span class="inspection-note">{{t "inspection.answer.no-options"}}</span>
+                {{/if}}
+
+            {{else}}
+                <input
+                    type={{this.inputType}}
+                    class="w-full form-input {{if this.isOutstanding 'inspection-input--outstanding'}}"
+                    aria-label={{this.label}}
+                    placeholder={{this.placeholder}}
+                    disabled={{@disabled}}
+                    {{sync-value @value}}
+                    {{on "input" this.setText}}
+                />
+            {{/if}}
+        </div>
+
+        {{#if this.isDefect}}
+            <button
+                type="button"
+                class="inspection-defect-chip {{if this.defect.incomplete 'is-incomplete'}}"
+                aria-haspopup="dialog"
+                aria-expanded={{if this.isFlyoutOpen "true" "false"}}
+                aria-label={{t "inspection.defect.edit"}}
+                disabled={{@disabled}}
+                {{on "click" this.openFlyout}}
+            >
+                {{#if this.severityLabel}}
+                    <span class="inspection-defect-chip__severity" data-severity={{this.defect.severity}}>{{this.severityLabel}}</span>
+                {{/if}}
+                {{#if this.defect.unsafe}}
+                    <span class="inspection-defect-chip__unsafe">{{t "inspection.answer.unsafe"}}</span>
+                {{/if}}
+                {{#if this.defect.photoCount}}
+                    <span class="inspection-defect-chip__meta"><FaIcon @icon="camera" @size="xs" />{{this.defect.photoCount}}</span>
+                {{/if}}
+                {{#if this.defect.hasComment}}
+                    <span class="inspection-defect-chip__meta"><FaIcon @icon="comment" @size="xs" /></span>
+                {{/if}}
+                {{#if this.defectStatus}}
+                    <span class="inspection-defect-chip__status">{{this.defectStatus}}</span>
+                {{/if}}
+                <span class="inspection-defect-chip__edit"><FaIcon @icon="pen" @size="xs" /></span>
+            </button>
+
+            {{#if this.isFlyoutOpen}}
+                <InspectionFlyout @fieldId={{this.field.uuid}} @title={{this.flyoutTitle}} @note={{this.defectRequirement}} @onClose={{this.closeFlyout}}>
+                    <div class="inspection-defect__row">
+                        <div class="inspection-choice" role="group" aria-label={{t "inspection.answer.severity"}}>
+                            {{#each this.severityOptions key="value" as |option|}}
+                                <button
+                                    type="button"
+                                    class="inspection-choice__option"
+                                    data-answer="severity"
+                                    aria-pressed={{if (eq this.severity option.value) "true" "false"}}
+                                    disabled={{@disabled}}
+                                    {{on "click" (fn this.setSeverity option.value)}}
+                                >
+                                    {{option.label}}
+                                </button>
+                            {{/each}}
+                        </div>
+                        <span class="inspection-unsafe" data-on={{if this.isUnsafe "true" "false"}}>
+                            <Toggle @isToggled={{this.isUnsafe}} @onToggle={{this.setUnsafe}} @disabled={{@disabled}} @activeColor="red" />
+                            {{t "inspection.answer.unsafe"}}
+                        </span>
+                    </div>
+
+                    <textarea
+                        data-flyout-focus
+                        class="w-full form-input inspection-defect-comment"
+                        rows="2"
+                        aria-label={{t "inspection.answer.comments"}}
+                        placeholder={{if this.requiresComment (t "inspection.answer.comments-required") (t "inspection.answer.comments-placeholder")}}
+                        disabled={{@disabled}}
+                        {{sync-value this.comments}}
+                        {{on "input" this.setComments}}
+                    ></textarea>
+
+                    <div class="inspection-slots">
+                        {{#each this.answerPhotos key="reference" as |photo index|}}
+                            <div class="inspection-slot">
+                                {{#if photo.url}}
+                                    <Image src={{photo.url}} alt={{or photo.filename this.label}} />
+                                {{else}}
+                                    <span class="inspection-slot__icon"><FaIcon @icon="image" /></span>
+                                {{/if}}
+                                {{#unless @disabled}}
+                                    <Button @type="danger" @icon="times" @size="xs" @wrapperClass="inspection-slot__remove" @onClick={{fn this.removePhoto index}} />
+                                {{/unless}}
+                            </div>
+                        {{/each}}
+
+                        {{#if this.canUpload}}
+                            <FileUpload @name={{concat this.field.uuid "-photos"}} @for={{concat this.field.uuid "-photos"}} @accept="image/*" @multiple={{true}} @onFileAdded={{this.addPhoto}}>
+                                <a tabindex={{0}} class="inspection-slot inspection-slot--add" title={{t "inspection.answer.add-photo"}} aria-label={{t "inspection.answer.add-photo"}}>+</a>
+                            </FileUpload>
+                        {{/if}}
+
+                        {{#if this.uploadProgress}}
+                            <span class="inspection-unit">{{round this.uploadProgress.progress}}%</span>
+                        {{/if}}
+
+                        {{#if this.uploadsBlocked}}
+                            <span class="inspection-slots__note">{{t "inspection.answer.uploads-unavailable"}}</span>
+                        {{/if}}
+                    </div>
+                </InspectionFlyout>
+            {{/if}}
+        {{/if}}
+    </div>
+{{/if}}

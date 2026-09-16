@@ -14,6 +14,7 @@
         <InputGroup @name={{t "common.select-field" field=@options.selectedAssetType.label}} @value={{@options.selectedAsset}}>
             <ModelSelect
                 @modelName={{@options.selectedAssetType.model}}
+                @selectedItemComponent={{if (resource-component "select-option" @options.selectedAssetType.model) (component (resource-component "select-option" @options.selectedAssetType.model) compact=true)}}
                 @selectedModel={{@options.selectedAsset}}
                 @placeholder={{t "common.select-field" field=@options.selectedAssetType.label}}
                 @triggerClass="form-select form-input"
@@ -22,7 +23,13 @@
                 @onChange={{fn (mut @options.selectedAsset)}}
                 as |asset|
             >
-                {{or asset.displayName asset.display_name asset.name asset.public_id}}
+                {{#let (resource-component "select-option" @options.selectedAssetType.model) as |selectOption|}}
+                    {{#if selectOption}}
+                        {{component selectOption option=asset}}
+                    {{else}}
+                        {{or asset.displayName asset.name asset.public_id}}
+                    {{/if}}
+                {{/let}}
             </ModelSelect>
         </InputGroup>
         {{/if}}

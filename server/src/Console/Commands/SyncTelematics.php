@@ -40,7 +40,37 @@ class SyncTelematics extends Command
                 return self::SUCCESS;
             }
 
-            $query = Telematic::withoutGlobalScopes()
+            $telemetryProviders = [];
+            foreach ($providerKeys as $key) {
+                if (!data_get($registry->findByKey($key)?->metadata, 'telemetry.durable_ingestion', false)) {
+                    continue;
+                }
+                $provider = $registry->resolve($key);
+                if (!$provider instanceof \Fleetbase\FleetOps\Contracts\TelemetryProviderInterface) {
+                    continue;
+                }
+                $options = \Fleetbase\FleetOps\Support\Telematics\Telemetry\Configuration::options($provider);
+                if (!($options['polling_enabled'] ?? false)) {
+                    continue;
+                }
+                $telemetryProviders[] = $key;
+                Telematic::withoutGlobalScopes()->where('provider', $key)->whereIn('status', ['active', 'connected', 'error', 'synchronizing'])
+                    ->whereNotNull('company_uuid')->orderBy('id')->chunkById(100, function ($connections) use ($options) {
+                        foreach ($connections as $connection) {
+                            if (\Fleetbase\FleetOps\Support\Telematics\Telemetry\Inbox::enabled($connection)) {
+                                try {
+                                    \Fleetbase\FleetOps\Support\Telematics\Telemetry\Queue::dispatch((new \Fleetbase\FleetOps\Jobs\PollTelematicTelemetry($connection->uuid))
+                                        ->onQueue($options['poll_queue'] ?? 'default')
+                                        ->delay(now()->addSeconds(abs(crc32($connection->uuid)) % 10)));
+                                } catch (\Throwable) {
+                                    \Illuminate\Support\Facades\Log::warning('Telemetry polling dispatch failed; next tick will retry.', ['telematic_uuid' => $connection->uuid]);
+                                }
+                            }
+                        }
+                    });
+            }
+            $providerKeys = array_values(array_diff($providerKeys, $telemetryProviders));
+            $query        = Telematic::withoutGlobalScopes()
                 ->whereIn('provider', $providerKeys)
                 ->whereIn('status', ['active', 'connected'])
                 ->whereNotNull('company_uuid');
@@ -80,7 +110,7 @@ class SyncTelematics extends Command
                     return false;
                 }
 
-                return !$excludeWebhookProviders || !$descriptor->supportsWebhooks;
+                return data_get($descriptor->metadata, 'telemetry.reconciliation', false) || !$excludeWebhookProviders || !$descriptor->supportsWebhooks;
             })
             ->keys()
             ->values()
