@@ -1,0 +1,69 @@
+<div class="fleet-ops-radar-agenda" data-test-radar-agenda>
+    <div class="fleet-ops-radar-agenda-toolbar">
+        <div class="fleet-ops-radar-view-toggle" role="group">
+            <button type="button" class="fleet-ops-radar-view-toggle-button {{if (eq @window '24h') 'is-active'}}" {{on "click" (fn @onChangeWindow "24h")}} data-test-radar-agenda-window="24h">{{t "radar.agenda.window-24h"}}</button>
+            <button type="button" class="fleet-ops-radar-view-toggle-button {{if (eq @window '7d') 'is-active'}}" {{on "click" (fn @onChangeWindow "7d")}} data-test-radar-agenda-window="7d">{{t "radar.agenda.window-7d"}}</button>
+        </div>
+        {{#if @agenda}}
+            <span class="fleet-ops-radar-row-meta" data-test-radar-agenda-summary>{{t "radar.agenda.summary" shifts=@agenda.counts.shifts overdue=@agenda.counts.overdue anytime=@agenda.counts.anytime}}</span>
+        {{/if}}
+        <span class="fleet-ops-radar-row-meta">{{t "radar.agenda.drag-hint"}}</span>
+        <div class="ml-auto"><Button @size="xs" @icon="print" @text={{t "radar.agenda.print"}} @onClick={{this.print}} data-test-radar-agenda-print /></div>
+    </div>
+
+    {{#if @agenda}}
+        <div class="fleet-ops-radar-agenda-grid">
+            <div class="fleet-ops-radar-agenda-band" data-test-radar-agenda-overdue>
+                <div class="fleet-ops-radar-agenda-band-title is-overdue">{{t "radar.agenda.overdue"}} <span>{{@agenda.overdue.length}}</span></div>
+                {{#each @agenda.overdue as |entry|}}
+                    <Radar::Agenda::Entry @entry={{entry}} @compact={{true}} @onOpen={{@onOpen}} />
+                {{else}}
+                    <div class="fleet-ops-radar-row-meta">—</div>
+                {{/each}}
+            </div>
+
+            <div class="fleet-ops-radar-agenda-scale">
+                <div class="fleet-ops-radar-agenda-ruler">
+                    <div class="fleet-ops-radar-agenda-lane-label"></div>
+                    <div class="fleet-ops-radar-agenda-track">
+                        {{#each @agenda.window.ticks as |tick|}}
+                            <span class="fleet-ops-radar-agenda-tick" style={{this.leftStyle tick.pct}}>{{tick.label}}</span>
+                        {{/each}}
+                        <span class="fleet-ops-radar-agenda-now" style={{this.leftStyle @agenda.window.now_pct}}><em>{{format-date-fns @agenda.now "HH:mm"}}</em></span>
+                    </div>
+                </div>
+                {{#each this.lanes as |lane|}}
+                    <Radar::Agenda::Lane @lane={{lane}} @window={{@agenda.window}} @onOpen={{@onOpen}} @onDrop={{@onPlan}} @onHandover={{@onHandover}} />
+                {{/each}}
+            </div>
+
+            <div class="fleet-ops-radar-agenda-band" data-test-radar-agenda-later>
+                <div class="fleet-ops-radar-agenda-band-title">{{t "radar.agenda.later"}} <span>{{@agenda.later.length}}</span></div>
+                {{#each @agenda.later as |entry|}}
+                    <Radar::Agenda::Entry @entry={{entry}} @compact={{true}} @onOpen={{@onOpen}} />
+                {{else}}
+                    <div class="fleet-ops-radar-row-meta">—</div>
+                {{/each}}
+            </div>
+        </div>
+
+        <div class="fleet-ops-radar-agenda-tray" data-test-radar-agenda-tray>
+            <div class="fleet-ops-radar-agenda-band-title">
+                <FaIcon @icon="thumbtack" />
+                {{t "radar.agenda.anytime"}} <span>{{t "radar.agenda.anytime-count" count=@agenda.anytime.length}}</span>
+                {{#if @agenda.anytime.length}}
+                    <button type="button" class="fleet-ops-radar-briefing-link ml-auto" {{on "click" @onSeeAll}} data-test-radar-agenda-see-all>{{t "radar.agenda.see-all" count=@agenda.anytime.length}}</button>
+                {{/if}}
+            </div>
+            <div class="fleet-ops-radar-agenda-tray-items">
+                {{#each this.trayItems as |entry|}}
+                    <Radar::Agenda::Entry @entry={{entry}} @draggable={{true}} @onOpen={{@onOpen}} />
+                {{else}}
+                    <div class="fleet-ops-radar-row-meta">{{t "radar.agenda.no-events"}}</div>
+                {{/each}}
+            </div>
+        </div>
+    {{else if @isLoading}}
+        <div class="fleet-ops-radar-empty"><Spinner @size="lg" /></div>
+    {{/if}}
+</div>

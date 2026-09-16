@@ -1,0 +1,28 @@
+<div class="fleet-ops-radar-decision is-{{@decision.severity}}" data-test-radar-decision={{@decision.key}}>
+    <div class="fleet-ops-radar-decision-head">
+        <Badge @status={{this.severityStatus}} @text={{concat @decision.severity " · " @decision.category}} @hideStatusDot={{true}} @disableHumanize={{true}} />
+        <span class="fleet-ops-radar-decision-title">{{@decision.title}}</span>
+        {{#if @decision.subtitle}}<span class="fleet-ops-radar-row-meta">{{@decision.subtitle}}</span>{{/if}}
+    </div>
+    {{#if @decision.reasoning.length}}
+        <p class="fleet-ops-radar-decision-reasoning" data-test-radar-decision-reasoning>
+            {{#each @decision.reasoning as |segment|}}
+                {{#if segment.route}}
+                    <button type="button" class="fleet-ops-radar-briefing-link" {{on "click" (fn @onOpenRecord segment)}}>{{segment.text}}</button>
+                {{else}}
+                    {{segment.text}}
+                {{/if}}
+            {{/each}}
+        </p>
+    {{/if}}
+    <div class="fleet-ops-radar-decision-actions">
+        <Button @type="primary" @size="xs" @text={{@decision.confirm.label}} @isLoading={{@isBusy}} @onClick={{fn @onConfirm @decision @decision.confirm}} data-test-radar-decision-confirm />
+        {{#each @decision.alternatives as |alternative|}}
+            <Button @size="xs" @text={{alternative.label}} @disabled={{@isBusy}} @onClick={{fn @onAlternative @decision alternative}} data-test-radar-decision-alternative={{alternative.action}} />
+        {{/each}}
+        <button type="button" class="fleet-ops-radar-briefing-link" disabled={{@isBusy}} {{on "click" (fn @onDismiss @decision)}} data-test-radar-decision-dismiss>{{t "radar.briefing.not-now"}}</button>
+        {{#if @decision.record}}
+            <button type="button" class="fleet-ops-radar-briefing-link ml-auto" {{on "click" (fn @onOpenRecord @decision.record)}} data-test-radar-decision-open>{{t "radar.briefing.open-record"}} <FaIcon @icon="arrow-up-right-from-square" /></button>
+        {{/if}}
+    </div>
+</div>

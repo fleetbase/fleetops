@@ -135,10 +135,13 @@ export default class LayoutFleetOpsSidebarComponent extends Component {
 
     get resourcesItems() {
         return this.withRegistryItems('management', [
-            this.createHubItem('Resources Hub', 'layer-group', 'management.index', 'fleet-ops list driver', 'fleet-ops see driver', [
+            this.createHubItem(this.intl.t('menu.radar'), 'crosshairs', 'management.index', 'fleet-ops list driver', 'fleet-ops see driver', [
+                'radar',
+                'needs attention',
                 'resources hub',
-                'resource dashboard',
-                'resource readiness',
+                'triage',
+                'handover',
+                'shift changes',
             ]),
             this.createItem('menu.drivers', 'id-card', 'management.drivers', 'fleet-ops list driver', 'fleet-ops see driver', ['driver', 'online drivers']),
             this.createItem('menu.vehicles', 'truck', 'management.vehicles', 'fleet-ops list vehicle', 'fleet-ops see vehicle', ['vehicle', 'track vehicles', 'online vehicles']),

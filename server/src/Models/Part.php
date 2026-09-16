@@ -5,6 +5,7 @@ namespace Fleetbase\FleetOps\Models;
 use Fleetbase\Casts\Json;
 use Fleetbase\Casts\Money;
 use Fleetbase\Casts\PolymorphicType;
+use Fleetbase\FleetOps\Support\Radar\RadarRules;
 use Fleetbase\FleetOps\Support\Utils;
 use Fleetbase\FleetOps\Traits\Maintainable;
 use Fleetbase\Models\Alert;
@@ -88,6 +89,8 @@ class Part extends Model
         'barcode',
         'description',
         'quantity_on_hand',
+        'reorder_point',
+        'reorder_quantity',
         'unit_cost',
         'msrp',
         'currency',
@@ -252,8 +255,12 @@ class Part extends Model
      */
     public function getIsLowStockAttribute(): bool
     {
-        $specs             = $this->specs ?? [];
-        $lowStockThreshold = $specs['low_stock_threshold'] ?? 5;
+        // One definition of "low", shared with the Radar low-stock rule: the
+        // reorder point when set, else the spec's threshold, else 5.
+        $lowStockThreshold = RadarRules::lowStockThreshold([
+            'reorder_point' => $this->reorder_point,
+            'specs'         => $this->specs,
+        ]);
 
         return $this->quantity_on_hand <= $lowStockThreshold;
     }

@@ -1,0 +1,27 @@
+<div class="fleet-ops-radar-view-bar" data-test-radar-view-bar>
+    <div class="fleet-ops-radar-tabs" role="tablist">
+        {{#each this.tabs as |tab|}}
+            <button type="button" role="tab" class="fleet-ops-radar-tab {{if (eq @status tab.key) 'is-active'}}" aria-selected={{if (eq @status tab.key) "true" "false"}} {{on "click" (fn @onSetStatus tab.key)}} data-test-radar-tab={{tab.key}}>
+                <span>{{tab.label}}</span>
+                {{#if tab.hasCount}}<span class="fleet-ops-radar-tab-count">{{tab.count}}</span>{{/if}}
+            </button>
+        {{/each}}
+    </div>
+    <div class="fleet-ops-radar-view-bar-right">
+        <span class="fleet-ops-radar-view-bar-label">{{t "radar.saved-views.title"}}</span>
+        {{#each @views as |savedView|}}
+            <span class="fleet-ops-radar-saved-view {{if (eq @activeView.id savedView.id) 'is-active'}}" data-test-radar-view-item={{savedView.id}}>
+                <button type="button" class="fleet-ops-radar-saved-view-apply" {{on "click" (fn @onApplyView savedView)}} data-test-radar-view-apply={{savedView.id}}>{{savedView.label}}</button>
+                {{#unless savedView.isDefault}}
+                    <button type="button" class="fleet-ops-radar-saved-view-delete" title={{t "radar.saved-views.delete"}} aria-label={{t "radar.saved-views.delete"}} {{on "click" (fn @onDeleteView savedView)}} data-test-radar-view-delete={{savedView.id}}>
+                        <FaIcon @icon="xmark" />
+                    </button>
+                {{/unless}}
+            </span>
+        {{/each}}
+        <button type="button" class="fleet-ops-radar-saved-view fleet-ops-radar-saved-view-apply" {{on "click" @onSaveView}} data-test-radar-view-save>
+            <FaIcon @icon="plus" class="fleet-ops-radar-pill-clear" />
+            <span>{{t "radar.saved-views.save-current"}}</span>
+        </button>
+    </div>
+</div>

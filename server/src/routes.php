@@ -840,6 +840,30 @@ Route::prefix(config('fleetops.api.routing.prefix'))->namespace('Fleetbase\Fleet
                                         $router->get('maintenance', 'HubController@maintenance');
                                     }
                                 );
+
+                                // radar — the per-record gaps a fleet manager triages each
+                                // morning, computed live, with acknowledge / snooze / assign
+                                // state kept on the core alerts table.
+                                $router->group(
+                                    ['prefix' => 'radar'],
+                                    function ($router) {
+                                        $router->get('items', 'RadarController@items');
+                                        $router->get('summary', 'RadarController@summary');
+                                        $router->get('briefing', 'RadarController@briefing');
+                                        $router->get('agenda', 'RadarController@agenda');
+                                        $router->get('handovers/{key}', 'RadarController@handoverSuggest');
+                                        $router->post('shifts/{id}/extend', 'RadarController@extendShift');
+                                        $router->post('items/bulk', 'RadarController@bulk');
+                                        $router->post('items/{key}/acknowledge', 'RadarController@acknowledge');
+                                        $router->post('items/{key}/snooze', 'RadarController@snooze');
+                                        $router->post('items/{key}/wake', 'RadarController@wake');
+                                        $router->post('items/{key}/assign', 'RadarController@assign');
+                                        $router->post('items/{key}/plan', 'RadarController@plan');
+                                        $router->post('items/{key}/resolve', 'RadarController@resolve');
+                                        $router->post('notices', 'RadarController@storeNotice');
+                                        $router->delete('notices/{id}', 'RadarController@destroyNotice');
+                                    }
+                                );
                                 $router->group(
                                     ['prefix' => 'getting-started'],
                                     function ($router) {

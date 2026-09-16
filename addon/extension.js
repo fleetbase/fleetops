@@ -14,6 +14,12 @@ export default {
             description: 'Dispatch, fleet management, driver tracking, and logistics operations.',
             shortcuts: [
                 {
+                    title: 'Radar',
+                    description: 'Everything across resources, maintenance and staffing that needs a decision today.',
+                    icon: 'crosshairs',
+                    route: 'console.fleet-ops.management.index',
+                },
+                {
                     title: 'Orders',
                     description: 'Create, dispatch, and track delivery orders in real time.',
                     icon: 'boxes-stacked',
@@ -216,6 +222,16 @@ export default {
                 description: 'Live count of drivers currently active on a job.',
                 icon: 'id-card',
                 component: new ExtensionComponent('@fleetbase/fleetops-engine', 'widget/kpi-drivers-online'),
+                grid_options: { w: 3, h: 4, minW: 3, minH: 4 },
+                category: 'KPI Tiles',
+                default: true,
+            }),
+            new Widget({
+                id: 'fleet-ops-radar-widget',
+                name: 'Radar',
+                description: 'What needs a decision across the fleet right now: open, overdue and snoozed items, linking to Radar.',
+                icon: 'crosshairs',
+                component: new ExtensionComponent('@fleetbase/fleetops-engine', 'widget/radar'),
                 grid_options: { w: 3, h: 4, minW: 3, minH: 4 },
                 category: 'KPI Tiles',
                 default: true,

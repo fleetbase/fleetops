@@ -10920,3 +10920,1599 @@ html body .inspection-flyout textarea.inspection-defect-comment.form-input:focus
         order: 5;
     }
 }
+
+/* ==========================================================================
+   Radar — the triage list that replaced the Resources Hub. Sits on the
+   control-hub shell (header band, body width) and adds the pills, tabs,
+   rows and drawer. Light rules first, dark overrides at the end.
+   ========================================================================== */
+
+.fleet-ops-radar-body {
+    max-width: 88rem;
+    gap: 0.625rem;
+}
+
+.fleet-ops-radar-header-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    gap: 0.75rem 1rem;
+}
+
+.fleet-ops-radar-header-summary {
+    font-size: 0.75rem;
+    color: #6b7280;
+    padding-bottom: 0.2rem;
+}
+
+.fleet-ops-radar-header-actions {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.fleet-ops-radar-search {
+    position: relative;
+    width: 12rem;
+}
+
+.fleet-ops-radar-search svg {
+    position: absolute;
+    left: 0.6rem;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 0.7rem;
+    color: #9ca3af;
+    pointer-events: none;
+}
+
+.fleet-ops-radar-search input {
+    padding-left: 1.75rem;
+    padding-right: 1.75rem;
+}
+
+.fleet-ops-radar-search kbd {
+    position: absolute;
+    right: 0.45rem;
+    top: 50%;
+    transform: translateY(-50%);
+}
+
+.fleet-ops-radar-view-toggle {
+    display: inline-flex;
+    border: 1px solid #e5e7eb;
+    border-radius: 0.375rem;
+    background: #fff;
+    padding: 2px;
+    gap: 2px;
+}
+
+.fleet-ops-radar-view-toggle-button {
+    border: 0;
+    background: transparent;
+    border-radius: 0.25rem;
+    padding: 0.25rem 0.6rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: #6b7280;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    cursor: pointer;
+}
+
+.fleet-ops-radar-view-toggle-button.is-active {
+    background: #3485e2;
+    color: #fff;
+}
+
+.fleet-ops-radar-sources-warning {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    border: 1px solid #fde68a;
+    background: #fffbeb;
+    color: #b45309;
+    border-radius: 0.375rem;
+    padding: 0.5rem 0.75rem;
+    font-size: 0.75rem;
+}
+
+/* Morning brief: score, category rows, prose, decision cards. */
+.fleet-ops-radar-briefing {
+    background: #fff;
+    border: 1px solid #e5e7eb;
+    border-radius: 0.5rem;
+    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.05);
+    padding: 0.75rem 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.fleet-ops-radar-briefing-bar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.fleet-ops-radar-briefing-toggle {
+    margin-left: auto;
+    border: 0;
+    background: transparent;
+    color: #6b7280;
+    font-size: 0.72rem;
+    font-weight: 600;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+}
+
+.fleet-ops-radar-briefing-loading {
+    display: flex;
+    justify-content: center;
+    padding: 1rem;
+}
+
+.fleet-ops-radar-briefing-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 1rem;
+}
+
+@media (width >= 1024px) {
+    .fleet-ops-radar-briefing-grid {
+        grid-template-columns: 11rem minmax(0, 1fr);
+        grid-template-areas:
+            'score categories'
+            'prose prose'
+            'decisions decisions';
+    }
+
+    .fleet-ops-radar-briefing-score {
+        grid-area: score;
+    }
+
+    .fleet-ops-radar-briefing-categories {
+        grid-area: categories;
+    }
+
+    .fleet-ops-radar-briefing-prose {
+        grid-area: prose;
+    }
+
+    .fleet-ops-radar-briefing-decisions {
+        grid-area: decisions;
+    }
+}
+
+@media (width >= 1280px) {
+    .fleet-ops-radar-briefing-grid {
+        grid-template-columns: 11rem minmax(0, 1fr) minmax(20rem, 26rem);
+        grid-template-areas:
+            'score categories decisions'
+            'prose prose decisions';
+    }
+}
+
+.fleet-ops-radar-briefing-score-value {
+    display: flex;
+    align-items: baseline;
+    gap: 0.25rem;
+}
+
+.fleet-ops-radar-briefing-score-number {
+    font-size: 2.25rem;
+    font-weight: 900;
+    line-height: 1;
+    color: #111827;
+}
+
+.fleet-ops-radar-briefing-score-of {
+    font-size: 0.8rem;
+    color: #6b7280;
+}
+
+.fleet-ops-radar-briefing-score-delta {
+    margin-top: 0.4rem;
+}
+
+.fleet-ops-radar-briefing-categories {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(11rem, 1fr));
+    gap: 0.5rem 0.9rem;
+}
+
+.fleet-ops-radar-briefing-category {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    font-size: 0.72rem;
+}
+
+.fleet-ops-radar-briefing-category-head {
+    display: flex;
+    justify-content: space-between;
+    font-weight: 700;
+    color: #111827;
+}
+
+.fleet-ops-radar-briefing-category-score {
+    font-weight: 900;
+}
+
+.fleet-ops-radar-briefing-category-bar {
+    height: 6px;
+    border-radius: 3px;
+    background: #f3f4f6;
+    overflow: hidden;
+}
+
+.fleet-ops-radar-briefing-category-bar > span {
+    display: block;
+    height: 100%;
+    border-radius: 3px;
+    background: #059669;
+    transition: width 0.3s ease;
+}
+
+.fleet-ops-radar-briefing-category-bar > span.is-warn {
+    background: #d97706;
+}
+
+.fleet-ops-radar-briefing-category-bar > span.is-bad {
+    background: #e11d48;
+}
+
+.fleet-ops-radar-briefing-category-gaps {
+    display: flex;
+    justify-content: space-between;
+    gap: 0.5rem;
+    color: #6b7280;
+}
+
+.fleet-ops-radar-briefing-link {
+    border: 0;
+    background: transparent;
+    padding: 0;
+    font: inherit;
+    font-weight: 600;
+    color: #1c6cc7;
+    cursor: pointer;
+    display: inline;
+}
+
+.fleet-ops-radar-briefing-link:hover {
+    text-decoration: underline;
+}
+
+.fleet-ops-radar-briefing-link:disabled {
+    opacity: 0.5;
+    cursor: default;
+}
+
+.fleet-ops-radar-briefing-prose p {
+    margin: 0;
+    font-size: 0.8125rem;
+    line-height: 1.65;
+    color: #374151;
+    text-wrap: pretty;
+}
+
+.fleet-ops-radar-briefing-decisions {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.fleet-ops-radar-briefing-decisions-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.fleet-ops-radar-decision {
+    border: 1px solid #e5e7eb;
+    border-left-width: 3px;
+    border-radius: 0.375rem;
+    padding: 0.6rem 0.75rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+    background: #fff;
+}
+
+.fleet-ops-radar-decision.is-critical {
+    border-left-color: #e11d48;
+}
+
+.fleet-ops-radar-decision.is-warning {
+    border-left-color: #d97706;
+}
+
+.fleet-ops-radar-decision.is-info {
+    border-left-color: #3485e2;
+}
+
+.fleet-ops-radar-decision-head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.4rem;
+}
+
+.fleet-ops-radar-decision-title {
+    font-size: 0.8125rem;
+    font-weight: 700;
+    color: #111827;
+}
+
+.fleet-ops-radar-decision-reasoning {
+    margin: 0;
+    font-size: 0.75rem;
+    line-height: 1.55;
+    color: #4b5563;
+}
+
+.fleet-ops-radar-decision-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.4rem;
+    font-size: 0.72rem;
+}
+
+.fleet-ops-radar-briefing-strip {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem;
+    border: 1px solid #e5e7eb;
+    border-radius: 0.375rem;
+    padding: 0.4rem 0.75rem;
+    font-size: 0.72rem;
+    color: #374151;
+    background: #f9fafb;
+}
+
+.fleet-ops-radar-briefing-strip.is-confirmed svg {
+    color: #059669;
+}
+
+.fleet-ops-radar-briefing-strip.is-snoozed svg {
+    color: #d97706;
+}
+
+.fleet-ops-radar-briefing-strip-label {
+    font-weight: 700;
+}
+
+.fleet-ops-radar-briefing-strip-title {
+    color: #6b7280;
+    flex: 1 1 auto;
+}
+
+body[data-theme='dark'] .fleet-ops-radar-briefing,
+body[data-theme='dark'] .fleet-ops-radar-decision {
+    background: #1f2937;
+    border-color: #374151;
+}
+
+body[data-theme='dark'] .fleet-ops-radar-briefing-strip {
+    background: #111827;
+    border-color: #374151;
+    color: #d1d5db;
+}
+
+body[data-theme='dark'] .fleet-ops-radar-briefing-score-number,
+body[data-theme='dark'] .fleet-ops-radar-briefing-category-head,
+body[data-theme='dark'] .fleet-ops-radar-decision-title {
+    color: #f9fafb;
+}
+
+body[data-theme='dark'] .fleet-ops-radar-briefing-score-of,
+body[data-theme='dark'] .fleet-ops-radar-briefing-category-gaps,
+body[data-theme='dark'] .fleet-ops-radar-briefing-toggle,
+body[data-theme='dark'] .fleet-ops-radar-briefing-strip-title {
+    color: #9ca3af;
+}
+
+body[data-theme='dark'] .fleet-ops-radar-briefing-prose p,
+body[data-theme='dark'] .fleet-ops-radar-decision-reasoning {
+    color: #d1d5db;
+}
+
+body[data-theme='dark'] .fleet-ops-radar-briefing-category-bar {
+    background: #374151;
+}
+
+body[data-theme='dark'] .fleet-ops-radar-briefing-link {
+    color: #93c5fd;
+}
+
+/* Count pills: the only filter UI. */
+.fleet-ops-radar-pills {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+}
+
+.fleet-ops-radar-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    border: 1px solid #e5e7eb;
+    background: #fff;
+    color: #374151;
+    border-radius: 999px;
+    padding: 0.3rem 0.7rem;
+    font-size: 0.75rem;
+    line-height: 1;
+    cursor: pointer;
+    transition:
+        border-color 0.12s ease,
+        background-color 0.12s ease;
+}
+
+.fleet-ops-radar-pill:hover {
+    border-color: #bfdbfe;
+}
+
+.fleet-ops-radar-pill.is-active {
+    background: #3485e2;
+    border-color: #3485e2;
+    color: #fff;
+}
+
+.fleet-ops-radar-pill.is-empty:not(.is-active) {
+    color: #9ca3af;
+}
+
+.fleet-ops-radar-pill-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 3px;
+    background: #e11d48;
+}
+
+.fleet-ops-radar-pill.is-active .fleet-ops-radar-pill-dot {
+    background: #fecdd3;
+}
+
+.fleet-ops-radar-pill-count {
+    font-weight: 800;
+}
+
+.fleet-ops-radar-pill-clear {
+    font-size: 0.7rem;
+    opacity: 0.7;
+}
+
+/* Status tabs and saved views. */
+.fleet-ops-radar-view-bar {
+    display: flex;
+    align-items: flex-end;
+    gap: 1rem;
+    border-bottom: 1px solid #e5e7eb;
+}
+
+.fleet-ops-radar-tabs {
+    display: flex;
+    gap: 1rem;
+}
+
+.fleet-ops-radar-tab {
+    border: 0;
+    background: transparent;
+    padding: 0 1px 0.55rem;
+    border-bottom: 2px solid transparent;
+    font-size: 0.8125rem;
+    color: #6b7280;
+    cursor: pointer;
+    display: inline-flex;
+    gap: 0.35rem;
+}
+
+.fleet-ops-radar-tab.is-active {
+    color: #111827;
+    font-weight: 700;
+    border-bottom-color: #3485e2;
+}
+
+.fleet-ops-radar-tab-count {
+    color: #6b7280;
+    font-weight: 600;
+}
+
+.fleet-ops-radar-view-bar-right {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding-bottom: 0.4rem;
+    font-size: 0.75rem;
+    color: #6b7280;
+}
+
+.fleet-ops-radar-view-bar-label {
+    font-size: 0.65rem;
+    font-weight: 800;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+}
+
+.fleet-ops-radar-saved-view {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    border: 1px solid #e5e7eb;
+    background: #fff;
+    border-radius: 0.375rem;
+    padding: 0.25rem 0.55rem;
+    font-size: 0.75rem;
+    color: #374151;
+    cursor: pointer;
+}
+
+.fleet-ops-radar-saved-view.is-active {
+    border-color: #3485e2;
+    color: #1c6cc7;
+    background: #eff6ff;
+}
+
+.fleet-ops-radar-saved-view-apply,
+.fleet-ops-radar-saved-view-delete {
+    border: 0;
+    background: transparent;
+    padding: 0;
+    color: inherit;
+    font: inherit;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+}
+
+.fleet-ops-radar-saved-view-delete {
+    opacity: 0.6;
+    font-size: 0.7rem;
+}
+
+.fleet-ops-radar-saved-view-delete:hover {
+    opacity: 1;
+}
+
+/* The bulk bar: appears above the list while something is selected. */
+.fleet-ops-radar-bulk-bar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.6rem;
+    border: 1px solid #bfdbfe;
+    background: #eff6ff;
+    border-radius: 0.5rem;
+    padding: 0.5rem 0.75rem;
+    font-size: 0.78rem;
+    color: #1e3a8a;
+}
+
+.fleet-ops-radar-bulk-bar .fleet-ops-radar-row-check {
+    color: #3485e2;
+}
+
+.fleet-ops-radar-bulk-copy {
+    display: flex;
+    flex-direction: column;
+    line-height: 1.2;
+}
+
+.fleet-ops-radar-bulk-actions {
+    margin-left: auto;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.35rem;
+}
+
+body[data-theme='dark'] .fleet-ops-radar-bulk-bar {
+    background: rgba(28, 108, 199, 0.18);
+    border-color: #1c6cc7;
+    color: #bfdbfe;
+}
+
+/* The list card, its group headers and rows. */
+.fleet-ops-radar-list {
+    background: #fff;
+    border: 1px solid #e5e7eb;
+    border-radius: 0.5rem;
+    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.05);
+    overflow: hidden;
+}
+
+.fleet-ops-radar-group-header {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.45rem 0.75rem;
+    border-bottom: 1px solid #e5e7eb;
+    background: #f9fafb;
+    font-size: 0.65rem;
+    font-weight: 800;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: #6b7280;
+}
+
+.fleet-ops-radar-group-header.is-overdue {
+    background: #fff1f2;
+    border-bottom-color: #fecdd3;
+    color: #be123c;
+}
+
+.fleet-ops-radar-group-header.is-today {
+    background: #fffbeb;
+    border-bottom-color: #fde68a;
+    color: #b45309;
+}
+
+.fleet-ops-radar-group-count {
+    font-weight: 800;
+}
+
+.fleet-ops-radar-row {
+    display: grid;
+    grid-template-columns: 1.25rem 5.25rem 8px minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 0.6rem;
+    padding: 0.55rem 0.75rem;
+    border-bottom: 1px solid #f3f4f6;
+    position: relative;
+    outline: none;
+    transition: background-color 0.12s ease;
+}
+
+.fleet-ops-radar-row:last-child {
+    border-bottom: 0;
+}
+
+.fleet-ops-radar-row:hover,
+.fleet-ops-radar-row.is-focused {
+    background: #f9fafb;
+}
+
+.fleet-ops-radar-row.is-focused {
+    box-shadow: inset 3px 0 0 #3485e2;
+}
+
+.fleet-ops-radar-row.is-selected {
+    background: #eff6ff;
+}
+
+.fleet-ops-radar-row-check {
+    border: 0;
+    background: transparent;
+    padding: 0;
+    color: #9ca3af;
+    cursor: pointer;
+    font-size: 0.85rem;
+    line-height: 1;
+}
+
+.fleet-ops-radar-row.is-selected .fleet-ops-radar-row-check {
+    color: #3485e2;
+}
+
+.fleet-ops-radar-row-chip .status-badge > span {
+    width: 100%;
+    justify-content: center;
+    font-size: 0.6rem;
+    font-weight: 800;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    padding: 2px 5px;
+}
+
+.fleet-ops-radar-severity {
+    width: 8px;
+    height: 8px;
+    border-radius: 4px;
+    background: #3485e2;
+}
+
+.fleet-ops-radar-severity.is-critical {
+    background: #e11d48;
+}
+
+.fleet-ops-radar-severity.is-warning {
+    background: #d97706;
+}
+
+.fleet-ops-radar-row.is-acknowledged .fleet-ops-radar-severity {
+    opacity: 0.35;
+}
+
+.fleet-ops-radar-row-main {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.35rem 0.6rem;
+    min-width: 0;
+}
+
+.fleet-ops-radar-row-title {
+    border: 0;
+    background: transparent;
+    padding: 0;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: #111827;
+    text-align: left;
+    cursor: pointer;
+}
+
+.fleet-ops-radar-row-title:hover {
+    color: #1c6cc7;
+}
+
+.fleet-ops-radar-row.is-acknowledged .fleet-ops-radar-row-title {
+    font-weight: 500;
+    color: #4b5563;
+}
+
+.fleet-ops-radar-subject {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    background: #f3f4f6;
+    border-radius: 999px;
+    padding: 2px 8px 2px 3px;
+    font-size: 0.72rem;
+    color: #374151;
+    max-width: 18rem;
+}
+
+.fleet-ops-radar-subject-label {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.fleet-ops-radar-avatar {
+    width: 18px;
+    height: 18px;
+    border-radius: 9px;
+    background: #d1d5db;
+    color: #111827;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.55rem;
+    font-weight: 800;
+    overflow: hidden;
+    flex: 0 0 auto;
+}
+
+.fleet-ops-radar-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.fleet-ops-radar-avatar.is-user {
+    background: #dbeafe;
+    color: #1d4ed8;
+}
+
+.fleet-ops-radar-row-meta {
+    font-size: 0.72rem;
+    color: #6b7280;
+}
+
+.fleet-ops-radar-row-state {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    font-size: 0.72rem;
+    color: #6b7280;
+}
+
+.fleet-ops-radar-row-state svg {
+    font-size: 0.65rem;
+}
+
+.fleet-ops-radar-row-side {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    justify-content: flex-end;
+}
+
+.fleet-ops-radar-row-due {
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: #374151;
+    white-space: nowrap;
+}
+
+.fleet-ops-radar-row-due.is-overdue {
+    color: #dc2626;
+}
+
+.fleet-ops-radar-row-due.is-none {
+    color: #9ca3af;
+    font-weight: 500;
+}
+
+.fleet-ops-radar-row-assignee {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    font-size: 0.72rem;
+    color: #374151;
+    min-width: 6.5rem;
+}
+
+.fleet-ops-radar-row-assignee.is-empty {
+    color: #9ca3af;
+}
+
+/* The quick-action rail: fixed width so the row never reflows on hover. */
+.fleet-ops-radar-row-rail {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+    opacity: 0;
+    transition: opacity 0.12s ease;
+}
+
+.fleet-ops-radar-row:hover .fleet-ops-radar-row-rail,
+.fleet-ops-radar-row.is-focused .fleet-ops-radar-row-rail,
+.fleet-ops-radar-row-rail:focus-within {
+    opacity: 1;
+}
+
+.fleet-ops-radar-row-open {
+    border: 0;
+    background: transparent;
+    color: #9ca3af;
+    cursor: pointer;
+    padding: 0.2rem;
+}
+
+.fleet-ops-radar-row-open:hover {
+    color: #1c6cc7;
+}
+
+@media (width <= 1023px) {
+    .fleet-ops-radar-row {
+        grid-template-columns: 1.25rem minmax(0, 1fr);
+    }
+
+    .fleet-ops-radar-row-chip,
+    .fleet-ops-radar-severity {
+        display: none;
+    }
+
+    .fleet-ops-radar-row-side {
+        grid-column: 2;
+        justify-content: flex-start;
+    }
+
+    .fleet-ops-radar-row-rail {
+        opacity: 1;
+    }
+}
+
+/* Footer: keys and paging. */
+.fleet-ops-radar-footer {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.75rem 1.25rem;
+    font-size: 0.72rem;
+    color: #6b7280;
+    padding: 0.25rem 0.25rem 1rem;
+}
+
+.fleet-ops-radar-keys {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+}
+
+.fleet-ops-radar-keys span {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+}
+
+.fleet-ops-radar kbd {
+    border: 1px solid #d1d5db;
+    border-bottom-width: 2px;
+    border-radius: 4px;
+    background: #f9fafb;
+    padding: 0 5px;
+    font-family: inherit;
+    font-size: 0.65rem;
+    font-weight: 700;
+    color: #374151;
+    line-height: 1.3;
+}
+
+.fleet-ops-radar-paging {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+}
+
+/* Empty states. */
+.fleet-ops-radar-empty {
+    padding: 2.5rem 1.5rem;
+    text-align: center;
+}
+
+.fleet-ops-radar-empty-icon {
+    width: 2.75rem;
+    height: 2.75rem;
+    border-radius: 0.5rem;
+    background: #ecfdf5;
+    color: #047857;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.1rem;
+    margin-bottom: 0.75rem;
+}
+
+.fleet-ops-radar-empty-icon.is-neutral {
+    background: #f3f4f6;
+    color: #6b7280;
+}
+
+.fleet-ops-radar-empty-title {
+    font-size: 0.9375rem;
+    font-weight: 700;
+    color: #111827;
+}
+
+.fleet-ops-radar-empty-hint {
+    font-size: 0.8125rem;
+    color: #6b7280;
+    margin-top: 0.25rem;
+}
+
+.fleet-ops-radar-empty-schedule {
+    margin: 1rem auto 0;
+    max-width: 28rem;
+    text-align: left;
+    border: 1px solid #e5e7eb;
+    border-radius: 0.375rem;
+    font-size: 0.75rem;
+}
+
+.fleet-ops-radar-empty-schedule > div {
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 0.45rem 0.75rem;
+    border-bottom: 1px solid #f3f4f6;
+    color: #374151;
+}
+
+.fleet-ops-radar-empty-schedule > div:last-child {
+    border-bottom: 0;
+}
+
+.fleet-ops-radar-empty-schedule time {
+    color: #6b7280;
+    white-space: nowrap;
+}
+
+/* Drawer. */
+.fleet-ops-radar-drawer-section {
+    padding: 0.875rem 1rem;
+    border-bottom: 1px solid #e5e7eb;
+}
+
+.fleet-ops-radar-drawer-label {
+    font-size: 0.65rem;
+    font-weight: 800;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: #6b7280;
+    margin-bottom: 0.4rem;
+}
+
+.fleet-ops-radar-drawer-title {
+    font-size: 0.9375rem;
+    font-weight: 700;
+    color: #111827;
+    line-height: 1.35;
+}
+
+.fleet-ops-radar-drawer-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+}
+
+.fleet-ops-radar-drawer-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+    font-size: 0.78rem;
+    color: #374151;
+}
+
+.fleet-ops-radar-drawer-list > div {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+}
+
+.fleet-ops-radar-drawer-state {
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+    font-size: 0.78rem;
+    color: #374151;
+}
+
+/* Agenda: overdue band, four lanes on a time scale, later rail, tray. */
+.fleet-ops-radar-agenda {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.fleet-ops-radar-agenda-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.fleet-ops-radar-agenda-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 0.75rem;
+}
+
+@media (width >= 1024px) {
+    .fleet-ops-radar-agenda-grid {
+        grid-template-columns: 11rem minmax(0, 1fr) 10rem;
+    }
+}
+
+.fleet-ops-radar-agenda-band,
+.fleet-ops-radar-agenda-scale,
+.fleet-ops-radar-agenda-tray {
+    background: #fff;
+    border: 1px solid #e5e7eb;
+    border-radius: 0.5rem;
+    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.05);
+    padding: 0.6rem 0.75rem;
+}
+
+.fleet-ops-radar-agenda-band {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+    min-height: 12rem;
+}
+
+.fleet-ops-radar-agenda-band-title {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    font-size: 0.65rem;
+    font-weight: 800;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: #6b7280;
+}
+
+.fleet-ops-radar-agenda-band-title.is-overdue {
+    color: #be123c;
+}
+
+.fleet-ops-radar-agenda-scale {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+    overflow-x: auto;
+}
+
+.fleet-ops-radar-agenda-ruler,
+.fleet-ops-radar-agenda-lane {
+    display: grid;
+    grid-template-columns: 7rem minmax(0, 1fr);
+    gap: 0.5rem;
+    align-items: stretch;
+}
+
+.fleet-ops-radar-agenda-lane-label {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: #374151;
+    padding: 0.35rem 0;
+}
+
+.fleet-ops-radar-agenda-track {
+    position: relative;
+    min-height: 2.6rem;
+    border-radius: 0.375rem;
+    background: repeating-linear-gradient(to right, #f3f4f6 0, #f3f4f6 1px, transparent 1px, transparent 8.333%);
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    padding: 0.3rem 0;
+}
+
+.fleet-ops-radar-agenda-ruler .fleet-ops-radar-agenda-track {
+    min-height: 1.4rem;
+    background: transparent;
+    border-bottom: 1px solid #e5e7eb;
+    border-radius: 0;
+}
+
+.fleet-ops-radar-agenda-tick {
+    position: absolute;
+    top: 0;
+    transform: translateX(-50%);
+    font-size: 0.65rem;
+    color: #9ca3af;
+}
+
+.fleet-ops-radar-agenda-now {
+    position: absolute;
+    top: 0;
+    bottom: -100vh;
+    width: 2px;
+    background: #3485e2;
+    z-index: 2;
+    pointer-events: none;
+}
+
+.fleet-ops-radar-agenda-now em {
+    position: absolute;
+    top: 0;
+    left: 4px;
+    font-style: normal;
+    font-size: 0.6rem;
+    font-weight: 800;
+    color: #3485e2;
+    background: #fff;
+    padding: 0 3px;
+    border-radius: 3px;
+}
+
+.fleet-ops-radar-agenda-lane.is-drop-target .fleet-ops-radar-agenda-track {
+    outline: 2px dashed #3485e2;
+    outline-offset: -2px;
+}
+
+.fleet-ops-radar-agenda-row {
+    position: relative;
+    height: 1.9rem;
+}
+
+.fleet-ops-radar-agenda-empty-lane {
+    font-size: 0.72rem;
+    color: #9ca3af;
+    padding: 0.5rem 0.75rem;
+}
+
+.fleet-ops-radar-agenda-shift {
+    position: absolute;
+    top: 0;
+    height: 1.8rem;
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0 0.5rem 0 0.25rem;
+    border: 1px solid #c7d2fe;
+    background: #e0e7ff;
+    color: #3730a3;
+    border-radius: 0.375rem;
+    font-size: 0.7rem;
+    white-space: nowrap;
+    overflow: hidden;
+    cursor: pointer;
+}
+
+.fleet-ops-radar-agenda-shift.is-not_online {
+    border-color: #fecdd3;
+    background: #fff1f2;
+    color: #9f1239;
+}
+
+.fleet-ops-radar-agenda-shift.has-handover {
+    border-color: #fde68a;
+    background: #fffbeb;
+    color: #92400e;
+}
+
+.fleet-ops-radar-agenda-shift.is-upcoming {
+    opacity: 0.75;
+}
+
+.fleet-ops-radar-agenda-shift.is-ended {
+    opacity: 0.45;
+}
+
+.fleet-ops-radar-agenda-shift-label {
+    font-weight: 700;
+}
+
+.fleet-ops-radar-agenda-shift-meta {
+    opacity: 0.8;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.fleet-ops-radar-agenda-entry {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    max-width: 100%;
+    border: 1px solid #e5e7eb;
+    background: #fff;
+    border-radius: 0.375rem;
+    padding: 0.25rem 0.5rem;
+    font-size: 0.7rem;
+    color: #374151;
+    text-align: left;
+    cursor: pointer;
+    white-space: nowrap;
+}
+
+.fleet-ops-radar-agenda-entry.is-positioned {
+    position: absolute;
+    top: 0;
+    height: 1.8rem;
+    max-width: 22rem;
+}
+
+.fleet-ops-radar-agenda-entry.is-compact {
+    white-space: normal;
+}
+
+.fleet-ops-radar-agenda-entry.is-planned {
+    border-style: dashed;
+}
+
+.fleet-ops-radar-agenda-entry:hover {
+    border-color: #bfdbfe;
+}
+
+.fleet-ops-radar-agenda-entry strong {
+    color: #111827;
+}
+
+.fleet-ops-radar-agenda-entry-title {
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.fleet-ops-radar-agenda-entry-time {
+    color: #6b7280;
+    font-weight: 700;
+}
+
+.fleet-ops-radar-agenda-grip {
+    color: #9ca3af;
+    cursor: grab;
+}
+
+.fleet-ops-radar-agenda-tray-items {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+    margin-top: 0.5rem;
+}
+
+/* Handover card: floats above the page bottom-right. */
+.fleet-ops-radar-handover {
+    position: fixed;
+    right: 1.25rem;
+    bottom: 1.25rem;
+    width: min(26rem, calc(100vw - 2.5rem));
+    z-index: 60;
+    background: #fff;
+    border: 1px solid #fde68a;
+    border-radius: 0.5rem;
+    box-shadow: 0 12px 32px rgba(15, 23, 42, 0.18);
+    padding: 0.75rem 0.9rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+    font-size: 0.78rem;
+}
+
+.fleet-ops-radar-handover-head {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.fleet-ops-radar-handover-title {
+    font-weight: 700;
+    color: #111827;
+}
+
+.fleet-ops-radar-handover-orders {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.fleet-ops-radar-handover-order {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+    align-items: center;
+    padding: 0.3rem 0.5rem;
+    border: 1px solid #e5e7eb;
+    border-radius: 0.375rem;
+    color: #374151;
+}
+
+.fleet-ops-radar-handover-order.is-late {
+    border-color: #fde68a;
+    background: #fffbeb;
+}
+
+.fleet-ops-radar-handover-late {
+    color: #b45309;
+    font-weight: 700;
+    font-size: 0.68rem;
+}
+
+.fleet-ops-radar-handover-cover {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+@media print {
+    .fleet-ops-control-hub-header,
+    .fleet-ops-radar-agenda-toolbar,
+    .fleet-ops-radar-briefing,
+    .fleet-ops-radar-footer,
+    .fleet-ops-radar-handover,
+    .next-content-overlay {
+        display: none !important;
+    }
+
+    .fleet-ops-radar-agenda-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .fleet-ops-radar-agenda-scale {
+        overflow: visible;
+    }
+}
+
+body[data-theme='dark'] .fleet-ops-radar-agenda-band,
+body[data-theme='dark'] .fleet-ops-radar-agenda-scale,
+body[data-theme='dark'] .fleet-ops-radar-agenda-tray,
+body[data-theme='dark'] .fleet-ops-radar-agenda-entry,
+body[data-theme='dark'] .fleet-ops-radar-handover,
+body[data-theme='dark'] .fleet-ops-radar-handover-order {
+    background: #1f2937;
+    border-color: #374151;
+    color: #d1d5db;
+}
+
+body[data-theme='dark'] .fleet-ops-radar-agenda-lane-label,
+body[data-theme='dark'] .fleet-ops-radar-agenda-entry strong,
+body[data-theme='dark'] .fleet-ops-radar-handover-title {
+    color: #f9fafb;
+}
+
+body[data-theme='dark'] .fleet-ops-radar-agenda-track {
+    background: repeating-linear-gradient(to right, #374151 0, #374151 1px, transparent 1px, transparent 8.333%);
+}
+
+body[data-theme='dark'] .fleet-ops-radar-agenda-ruler .fleet-ops-radar-agenda-track {
+    background: transparent;
+    border-bottom-color: #374151;
+}
+
+body[data-theme='dark'] .fleet-ops-radar-agenda-now em {
+    background: #1f2937;
+}
+
+body[data-theme='dark'] .fleet-ops-radar-agenda-shift {
+    background: rgba(99, 102, 241, 0.25);
+    border-color: #4f46e5;
+    color: #c7d2fe;
+}
+
+body[data-theme='dark'] .fleet-ops-radar-agenda-shift.is-not_online {
+    background: rgba(225, 29, 72, 0.18);
+    border-color: rgba(225, 29, 72, 0.5);
+    color: #fda4af;
+}
+
+body[data-theme='dark'] .fleet-ops-radar-agenda-shift.has-handover,
+body[data-theme='dark'] .fleet-ops-radar-handover-order.is-late {
+    background: rgba(217, 119, 6, 0.18);
+    border-color: rgba(217, 119, 6, 0.5);
+    color: #fcd34d;
+}
+
+/* Modals used from Radar. */
+.fleet-ops-radar-modal-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 0.75rem;
+}
+
+@media (width >= 640px) {
+    .fleet-ops-radar-modal-grid.has-two {
+        grid-template-columns: 1fr 1fr;
+    }
+}
+
+/* Dark mode. */
+body[data-theme='dark'] .fleet-ops-radar-header-summary,
+body[data-theme='dark'] .fleet-ops-radar-tab,
+body[data-theme='dark'] .fleet-ops-radar-tab-count,
+body[data-theme='dark'] .fleet-ops-radar-view-bar-right,
+body[data-theme='dark'] .fleet-ops-radar-row-meta,
+body[data-theme='dark'] .fleet-ops-radar-row-state,
+body[data-theme='dark'] .fleet-ops-radar-footer,
+body[data-theme='dark'] .fleet-ops-radar-empty-hint,
+body[data-theme='dark'] .fleet-ops-radar-drawer-label,
+body[data-theme='dark'] .fleet-ops-radar-empty-schedule time {
+    color: #9ca3af;
+}
+
+body[data-theme='dark'] .fleet-ops-radar-view-toggle,
+body[data-theme='dark'] .fleet-ops-radar-pill,
+body[data-theme='dark'] .fleet-ops-radar-saved-view,
+body[data-theme='dark'] .fleet-ops-radar-list,
+body[data-theme='dark'] .fleet-ops-radar-empty-schedule {
+    background: #1f2937;
+    border-color: #374151;
+}
+
+body[data-theme='dark'] .fleet-ops-radar-view-toggle-button,
+body[data-theme='dark'] .fleet-ops-radar-pill,
+body[data-theme='dark'] .fleet-ops-radar-saved-view,
+body[data-theme='dark'] .fleet-ops-radar-row-due,
+body[data-theme='dark'] .fleet-ops-radar-row-assignee,
+body[data-theme='dark'] .fleet-ops-radar-drawer-list,
+body[data-theme='dark'] .fleet-ops-radar-drawer-state,
+body[data-theme='dark'] .fleet-ops-radar-empty-schedule > div {
+    color: #d1d5db;
+}
+
+body[data-theme='dark'] .fleet-ops-radar-view-toggle-button.is-active {
+    background: #1c6cc7;
+    color: #fff;
+}
+
+body[data-theme='dark'] .fleet-ops-radar-pill:hover {
+    border-color: #1c6cc7;
+}
+
+body[data-theme='dark'] .fleet-ops-radar-pill.is-active {
+    background: #1c6cc7;
+    border-color: #1c6cc7;
+    color: #fff;
+}
+
+body[data-theme='dark'] .fleet-ops-radar-pill.is-empty:not(.is-active) {
+    color: #6b7280;
+}
+
+body[data-theme='dark'] .fleet-ops-radar-saved-view.is-active {
+    background: rgba(28, 108, 199, 0.2);
+    border-color: #1c6cc7;
+    color: #93c5fd;
+}
+
+body[data-theme='dark'] .fleet-ops-radar-view-bar,
+body[data-theme='dark'] .fleet-ops-radar-group-header,
+body[data-theme='dark'] .fleet-ops-radar-row,
+body[data-theme='dark'] .fleet-ops-radar-drawer-section,
+body[data-theme='dark'] .fleet-ops-radar-empty-schedule > div {
+    border-color: #374151;
+}
+
+body[data-theme='dark'] .fleet-ops-radar-tab.is-active,
+body[data-theme='dark'] .fleet-ops-radar-row-title,
+body[data-theme='dark'] .fleet-ops-radar-empty-title,
+body[data-theme='dark'] .fleet-ops-radar-drawer-title {
+    color: #f9fafb;
+}
+
+body[data-theme='dark'] .fleet-ops-radar-tab.is-active {
+    border-bottom-color: #60a5fa;
+}
+
+body[data-theme='dark'] .fleet-ops-radar-group-header {
+    background: #111827;
+    color: #9ca3af;
+}
+
+body[data-theme='dark'] .fleet-ops-radar-group-header.is-overdue {
+    background: rgba(225, 29, 72, 0.15);
+    border-bottom-color: rgba(225, 29, 72, 0.35);
+    color: #fda4af;
+}
+
+body[data-theme='dark'] .fleet-ops-radar-group-header.is-today {
+    background: rgba(217, 119, 6, 0.15);
+    border-bottom-color: rgba(217, 119, 6, 0.35);
+    color: #fcd34d;
+}
+
+body[data-theme='dark'] .fleet-ops-radar-row:hover,
+body[data-theme='dark'] .fleet-ops-radar-row.is-focused {
+    background: #111827;
+}
+
+body[data-theme='dark'] .fleet-ops-radar-row.is-selected {
+    background: rgba(28, 108, 199, 0.18);
+}
+
+body[data-theme='dark'] .fleet-ops-radar-row.is-acknowledged .fleet-ops-radar-row-title {
+    color: #9ca3af;
+}
+
+body[data-theme='dark'] .fleet-ops-radar-row-title:hover {
+    color: #93c5fd;
+}
+
+body[data-theme='dark'] .fleet-ops-radar-row-due.is-overdue {
+    color: #fb7185;
+}
+
+body[data-theme='dark'] .fleet-ops-radar-subject {
+    background: #374151;
+    color: #e5e7eb;
+}
+
+body[data-theme='dark'] .fleet-ops-radar-avatar {
+    background: #4b5563;
+    color: #f9fafb;
+}
+
+body[data-theme='dark'] .fleet-ops-radar-avatar.is-user {
+    background: rgba(29, 78, 216, 0.35);
+    color: #bfdbfe;
+}
+
+body[data-theme='dark'] .fleet-ops-radar kbd {
+    background: #111827;
+    border-color: #4b5563;
+    color: #d1d5db;
+}
+
+body[data-theme='dark'] .fleet-ops-radar-empty-icon {
+    background: rgba(5, 150, 105, 0.2);
+    color: #6ee7b7;
+}
+
+body[data-theme='dark'] .fleet-ops-radar-empty-icon.is-neutral {
+    background: #374151;
+    color: #9ca3af;
+}
+
+body[data-theme='dark'] .fleet-ops-radar-sources-warning {
+    background: rgba(217, 119, 6, 0.15);
+    border-color: rgba(217, 119, 6, 0.4);
+    color: #fcd34d;
+}

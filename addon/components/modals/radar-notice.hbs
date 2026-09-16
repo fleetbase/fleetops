@@ -1,0 +1,24 @@
+<Modal::Default @modalIsOpened={{@modalIsOpened}} @options={{@options}} @confirm={{@onConfirm}} @decline={{@onDecline}}>
+    <div class="modal-body-container">
+        <div class="fleet-ops-radar-modal-grid">
+            <InputGroup @name={{t "radar.notice.message"}}>
+                <Textarea @value={{@options.notice.message}} placeholder={{t "radar.notice.message-placeholder"}} class="w-full form-input" rows="3" data-test-radar-notice-message />
+            </InputGroup>
+            <div class="fleet-ops-radar-modal-grid has-two">
+                <InputGroup @name={{t "radar.notice.severity"}}>
+                    <select class="w-full form-select form-input" {{on "change" this.setSeverity}} data-test-radar-notice-severity>
+                        {{#each (array "info" "warning" "critical") as |severity|}}
+                            <option value={{severity}} selected={{eq @options.notice.severity severity}}>{{t (concat "radar.notice.severities." severity)}}</option>
+                        {{/each}}
+                    </select>
+                </InputGroup>
+                <InputGroup @name={{t "radar.notice.due"}}>
+                    <Input @type="datetime-local" @value={{@options.notice.due_at}} class="w-full form-input" data-test-radar-notice-due />
+                </InputGroup>
+            </div>
+            <InputGroup @name={{t "radar.notice.scope"}}>
+                <Input @type="text" @value={{@options.notice.scope}} placeholder={{t "radar.notice.scope-placeholder"}} class="w-full form-input" data-test-radar-notice-scope />
+            </InputGroup>
+        </div>
+    </div>
+</Modal::Default>

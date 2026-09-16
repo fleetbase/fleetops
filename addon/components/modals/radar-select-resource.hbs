@@ -1,0 +1,24 @@
+<Modal::Default @modalIsOpened={{@modalIsOpened}} @options={{@options}} @confirm={{@onConfirm}} @decline={{@onDecline}}>
+    <div class="modal-body-container">
+        {{#if @options.body}}
+            <p class="text-sm text-gray-600 dark:text-gray-300 mb-3">{{@options.body}}</p>
+        {{/if}}
+        <InputGroup @name={{@options.inputLabel}} @helpText={{@options.helpText}}>
+            <ModelSelect
+                @modelName={{@options.modelName}}
+                @selectedModel={{@options.selected}}
+                @placeholder={{@options.placeholder}}
+                @triggerClass="form-select form-input"
+                @infiniteScroll={{false}}
+                @renderInPlace={{true}}
+                @query={{@options.query}}
+                @allowClear={{@options.allowClear}}
+                @onChange={{fn (mut @options.selected)}}
+                as |model|
+            >
+                <span class="uppercase">{{if model.display_name model.display_name model.name}}</span>
+                {{#if model.phone}}<span class="ml-2 text-gray-500">{{model.phone}}</span>{{/if}}
+            </ModelSelect>
+        </InputGroup>
+    </div>
+</Modal::Default>
