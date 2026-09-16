@@ -9,6 +9,8 @@ export default class ManagementVehiclesIndexController extends Controller {
     @service vehicleActions;
     @service issueActions;
     @service driverActions;
+    @service vendorActions;
+    @service store;
     @service tableContext;
     @service intl;
     @service appCache;
