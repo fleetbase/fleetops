@@ -135,7 +135,7 @@ export default class LayoutFleetOpsSidebarComponent extends Component {
 
     get resourcesItems() {
         return this.withRegistryItems('management', [
-            this.createHubItem(this.intl.t('menu.radar'), 'crosshairs', 'management.index', 'fleet-ops list driver', 'fleet-ops see driver', [
+            this.createHubItem(this.intl.t('menu.radar'), 'satellite-dish', 'management.index', 'fleet-ops list driver', 'fleet-ops see driver', [
                 'radar',
                 'needs attention',
                 'resources hub',

@@ -16,7 +16,7 @@ export default {
                 {
                     title: 'Radar',
                     description: 'Everything across resources, maintenance and staffing that needs a decision today.',
-                    icon: 'crosshairs',
+                    icon: 'satellite-dish',
                     route: 'console.fleet-ops.management.index',
                 },
                 {
@@ -230,7 +230,7 @@ export default {
                 id: 'fleet-ops-radar-widget',
                 name: 'Radar',
                 description: 'What needs a decision across the fleet right now: open, overdue and snoozed items, linking to Radar.',
-                icon: 'crosshairs',
+                icon: 'satellite-dish',
                 component: new ExtensionComponent('@fleetbase/fleetops-engine', 'widget/radar'),
                 grid_options: { w: 3, h: 4, minW: 3, minH: 4 },
                 category: 'KPI Tiles',

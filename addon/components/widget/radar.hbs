@@ -1,7 +1,7 @@
 <div class="fleet-ops-widget fleet-ops-kpi-tile fleet-ops-kpi-tile-pop {{this.accentClass}} relative flex flex-col h-full rounded-md border shadow-sm overflow-hidden" data-test-radar-widget ...attributes>
     <div class="flex items-center justify-between px-2.5 pt-2 relative z-10">
         <span class="text-[10px] uppercase tracking-wider text-gray-500 dark:text-gray-400 font-bold truncate">{{t "widget.radar.title"}}</span>
-        <FaIcon @icon="crosshairs" class="kpi-tile-icon text-gray-400 dark:text-gray-500 text-[11px]" />
+        <FaIcon @icon="satellite-dish" class="kpi-tile-icon text-gray-400 dark:text-gray-500 text-[11px]" />
     </div>
     <div class="flex-1 flex flex-col px-2.5 pt-1 pb-2 min-h-0 relative z-10">
         {{#if this.load.isRunning}}
