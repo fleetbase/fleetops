@@ -32,7 +32,7 @@
                 <h2 class="border-b border-gray-200 px-3 py-2 text-sm font-semibold text-gray-900 dark:border-gray-700 dark:text-gray-100">Matching & review</h2>
                 <div class="space-y-3 p-3">
                     <div class="flex flex-wrap items-center justify-between gap-2">
-                        <div class="min-w-0"><div class="text-xs text-gray-500 dark:text-gray-400">Vehicle</div><div class="break-words text-sm text-gray-900 dark:text-gray-100">
+                        <div class="min-w-0"><div class="text-xs text-gray-500 dark:text-gray-400">Vehicle</div><div class="mt-1 break-words text-sm text-gray-900 dark:text-gray-100">
                                 {{#if this.vehicleResource}}
                                     <Vehicle::Pill @vehicle={{this.vehicleResource}} />
                                 {{else}}
@@ -42,7 +42,7 @@
                         <Button @text={{if @model.vehicle_uuid "Change" "Match"}} @size="xs" @onClick={{fn this.confirmAction "vehicle"}} />
                     </div>
                     <div class="flex flex-wrap items-center justify-between gap-2">
-                        <div class="min-w-0"><div class="text-xs text-gray-500 dark:text-gray-400">Order / Trip</div><div class="break-words text-sm text-gray-900 dark:text-gray-100">
+                        <div class="min-w-0"><div class="text-xs text-gray-500 dark:text-gray-400">Order / Trip</div><div class="mt-1 break-words text-sm text-gray-900 dark:text-gray-100">
                                 {{#if this.orderResource}}
                                     <Order::Pill @order={{this.orderResource}} />
                                 {{else}}
@@ -52,7 +52,7 @@
                         <Button @text={{if @model.order_uuid "Change" "Match"}} @size="xs" @onClick={{fn this.confirmAction "order"}} />
                     </div>
                     <div class="flex flex-wrap items-center justify-between gap-2">
-                        <div class="min-w-0"><div class="text-xs text-gray-500 dark:text-gray-400">Fuel Report</div><div class="break-words text-sm text-gray-900 dark:text-gray-100">
+                        <div class="min-w-0"><div class="text-xs text-gray-500 dark:text-gray-400">Fuel Report</div><div class="mt-1 break-words text-sm text-gray-900 dark:text-gray-100">
                                 {{#if this.fuelReportResource}}
                                     <FuelReport::Pill @fuelReport={{this.fuelReportResource}} />
                                 {{else}}

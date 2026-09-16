@@ -2,7 +2,7 @@
     <div class="min-h-0 flex-1 overflow-y-auto px-4 py-4 md:px-6">
         <div class="mx-auto flex w-full max-w-6xl flex-col gap-4">
             <section class="rounded-md border border-gray-200 bg-white p-3 shadow-sm dark:border-gray-700 dark:bg-gray-800">
-                <div class="grid grid-cols-1 gap-2 md:grid-cols-5">
+                <div class="grid grid-cols-1 gap-2 {{if this.isEditing 'md:grid-cols-4' 'md:grid-cols-5'}}">
                     {{#each this.setupSteps as |step index|}}
                         <button
                             type="button"
@@ -39,7 +39,7 @@
                 </div>
             </section>
 
-            {{#if (eq this.activeStep 0)}}
+            {{#if (eq this.activeStepKey "provider")}}
                 <section class="rounded-md border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-800">
                     <div class="mb-3">
                         <h2 class="text-sm font-bold text-gray-900 dark:text-gray-100">Choose Fuel Integration</h2>
@@ -87,7 +87,7 @@
                         </div>
                     {{/if}}
                 </section>
-            {{else if (eq this.activeStep 1)}}
+            {{else if (eq this.activeStepKey "credentials")}}
                 <section class="grid grid-cols-1 gap-4 lg:grid-cols-3">
                     <div class="rounded-md border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-800 lg:col-span-2">
                         <div class="mb-3">
@@ -153,7 +153,7 @@
                         </aside>
                     {{/if}}
                 </section>
-            {{else if (eq this.activeStep 2)}}
+            {{else if (eq this.activeStepKey "test")}}
                 <section class="rounded-md border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-800">
                     <div class="mb-3">
                         <h2 class="text-sm font-bold text-gray-900 dark:text-gray-100">Test Connection</h2>
@@ -246,7 +246,7 @@
                         </div>
                     </div>
                 </section>
-            {{else if (eq this.activeStep 3)}}
+            {{else if (eq this.activeStepKey "sync")}}
                 <section class="rounded-md border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-800">
                     <div class="mb-3">
                         <h2 class="text-sm font-bold text-gray-900 dark:text-gray-100">Sync Settings</h2>
@@ -289,7 +289,7 @@
         <div class="text-xs text-gray-500 dark:text-gray-300">{{@footerHelp}}</div>
         <div class="flex items-center gap-2">
             <Button @icon="arrow-left" @text="Back" @size="sm" @disabled={{eq this.activeStep 0}} @onClick={{this.previousStep}} />
-            {{#if (eq this.activeStep 4)}}
+            {{#if this.isLastStep}}
                 <Button @icon="save" @text={{@saveLabel}} @type="primary" @size="sm" @isLoading={{@isSaving}} @disabled={{@isSaving}} @onClick={{@onSave}} />
             {{else}}
                 <Button @icon="arrow-right" @text="Next" @type="primary" @size="sm" @onClick={{this.nextStep}} />

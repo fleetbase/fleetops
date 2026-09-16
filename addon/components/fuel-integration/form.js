@@ -21,18 +21,32 @@ export default class FuelIntegrationFormComponent extends Component {
         this.loadProviders.perform();
     }
 
+    get isEditing() {
+        return this.args.isEditing === true || this.args.resource?.isNew === false;
+    }
+
     get setupSteps() {
         return [
-            { icon: 'gas-pump', label: 'Provider', complete: Boolean(this.selectedProvider) },
-            { icon: 'key', label: 'Credentials', complete: this.hasRequiredCredentials },
-            { icon: 'plug', label: 'Test', complete: this.connectionTestResult?.success === true },
-            { icon: 'clock-rotate-left', label: 'Sync', complete: Boolean(this.syncSettings.window_days) },
-            { icon: 'route', label: 'Matching', complete: this.matchingOrder.length > 0 },
-        ].map((step, index) => ({
-            ...step,
-            active: this.activeStep === index,
-            complete: index < this.activeStep && step.complete,
-        }));
+            { key: 'provider', icon: 'gas-pump', label: 'Provider', complete: Boolean(this.selectedProvider) },
+            { key: 'credentials', icon: 'key', label: 'Credentials', complete: this.hasRequiredCredentials },
+            { key: 'test', icon: 'plug', label: 'Test', complete: this.connectionTestResult?.success === true },
+            { key: 'sync', icon: 'clock-rotate-left', label: 'Sync', complete: Boolean(this.syncSettings.window_days) },
+            { key: 'matching', icon: 'route', label: 'Matching', complete: this.matchingOrder.length > 0 },
+        ]
+            .filter((step) => !this.isEditing || step.key !== 'provider')
+            .map((step, index) => ({
+                ...step,
+                active: this.activeStep === index,
+                complete: index < this.activeStep && step.complete,
+            }));
+    }
+
+    get activeStepKey() {
+        return this.setupSteps[this.activeStep]?.key;
+    }
+
+    get isLastStep() {
+        return this.activeStep === this.setupSteps.length - 1;
     }
 
     get selectedProvider() {
@@ -159,7 +173,7 @@ export default class FuelIntegrationFormComponent extends Component {
             const providers = yield this.fetch.get('fuel-provider-connections/providers');
             this.providers = providers;
 
-            if (!this.args.resource?.provider) {
+            if (!this.isEditing && !this.args.resource?.provider) {
                 const initialProvider = this.args.initialProviderKey ? providers.find((provider) => provider.key === this.args.initialProviderKey) : providers[0];
                 if (initialProvider) {
                     this.selectProvider(initialProvider);
@@ -205,6 +219,10 @@ export default class FuelIntegrationFormComponent extends Component {
     }
 
     @action selectProvider(provider) {
+        if (this.isEditing) {
+            return;
+        }
+
         this.testConnection.cancelAll();
         this.args.resource?.setProperties?.({
             provider: provider.key,
