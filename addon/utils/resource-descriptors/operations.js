@@ -47,11 +47,11 @@ export default function buildOperationsDescriptors(owner) {
                 cancelled: 'text-red-500',
                 failed: 'text-red-500',
             },
-            title: (order) => first(order, 'public_id', 'tracking'),
-            identifier: (order) => first(order, 'tracking', 'internal_id'),
+            title: (order) => first(order, 'tracking', 'tracking_number.tracking_number', 'public_id'),
+            identifier: (order) => first(order, 'public_id', 'internal_id'),
             image: () => icon('box'),
             status: (order) => first(order, 'status'),
-            selectDetails: (order) => [first(order, 'tracking'), first(order, 'status')],
+            selectDetails: (order) => [first(order, 'public_id'), first(order, 'status')],
             facts: (order) => [
                 fact('status', first(order, 'status'), { format: 'humanize' }),
                 relatedFact('customer', relation(owner, order, 'customer'), polymorphicType(order, 'customer', 'customer_type'), first(order, 'customer_name')),
@@ -60,7 +60,13 @@ export default function buildOperationsDescriptors(owner) {
                 fact('scheduled', get(order, 'scheduled_at'), { format: 'date' }),
                 fact('order-config', first(order, 'order_config.name', 'type')),
             ],
-            open: panelOpener(owner, 'order-actions'),
+            open: (order) => {
+                if (!order || order.isIdentityStub || !first(order, 'id', 'uuid')) {
+                    return false;
+                }
+
+                return panelOpener(owner, 'order-actions')(order);
+            },
         },
         {
             key: 'order-config',

@@ -47,6 +47,24 @@ export function openTransactionAction(modalsManager, mode, transactions, onSaved
     });
 }
 
+export async function loadTransactionOrder(store, transaction) {
+    const orderId = transaction?.order_uuid;
+
+    if (!orderId) {
+        return null;
+    }
+
+    // The transaction response carries the foreign key without an order relationship.
+    const order = await store.findRecord('order', orderId, { reload: true });
+
+    if (transaction.order_uuid !== orderId) {
+        return null;
+    }
+
+    transaction.set('order', order);
+    return order;
+}
+
 const present = (value) => ['string', 'number'].includes(typeof value) && String(value).trim() !== '';
 const text = (value) => (present(value) ? String(value).trim() : null);
 

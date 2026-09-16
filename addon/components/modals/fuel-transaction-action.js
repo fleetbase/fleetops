@@ -3,12 +3,13 @@ import { tracked } from '@glimmer/tracking';
 import { inject as service } from '@ember/service';
 import { action } from '@ember/object';
 import { task } from 'ember-concurrency';
-import { transactionActions } from '../../utils/fuel-transaction';
+import { loadTransactionOrder, transactionActions } from '../../utils/fuel-transaction';
 import { fuelDate, fuelMoney } from '../../utils/fuel-integration-format';
 
 export default class FuelTransactionActionComponent extends Component {
     @service fetch;
     @service notifications;
+    @service store;
     @tracked selected;
     @tracked error;
     @tracked completed = [];
@@ -37,6 +38,10 @@ export default class FuelTransactionActionComponent extends Component {
         return this.isVehicle ? 'Vehicle' : 'Order / Trip';
     }
     get selectedName() {
+        if (this.mode === 'order') {
+            return this.selected?.tracking || this.selected?.public_id || this.selected?.internal_id;
+        }
+
         return this.selected?.displayName || this.selected?.public_id || this.selected?.internal_id;
     }
     get preview() {
@@ -77,6 +82,7 @@ export default class FuelTransactionActionComponent extends Component {
             this.completed = [...this.completed, transaction.id];
             try {
                 yield transaction.reload();
+                yield loadTransactionOrder(this.store, transaction);
             } catch {
                 this.notifications.warning('The change was saved, but the displayed transaction could not be refreshed. Refresh the ledger to see its latest state.');
             }

@@ -1,13 +1,14 @@
 import Controller from '@ember/controller';
 import { inject as service } from '@ember/service';
 import { action } from '@ember/object';
-import { openTransactionAction, purchaseGroups } from '../../../../utils/fuel-transaction';
+import { loadTransactionOrder, openTransactionAction, purchaseGroups } from '../../../../utils/fuel-transaction';
 import { buildIdentityStub } from '../../../../utils/identity-cell-resource';
 import relationValue from '../../../../utils/relation-value';
 
 export default class ManagementFuelTransactionsIndexDetailsController extends Controller {
     @service modalsManager;
     @service hostRouter;
+    @service store;
 
     get purchaseGroups() {
         return purchaseGroups(this.model);
@@ -38,8 +39,16 @@ export default class ManagementFuelTransactionsIndexDetailsController extends Co
             return null;
         }
 
+        const order = relationValue(transaction, 'order');
+
         return (
-            relationValue(transaction, 'order') ?? buildIdentityStub(transaction, { type: 'order', name: transaction.trip_number ?? 'Linked order', load: () => transaction.get('order') })
+            (order?.id === transaction.order_uuid ? order : null) ??
+            this.store.peekRecord('order', transaction.order_uuid) ??
+            buildIdentityStub(transaction, {
+                type: 'order',
+                name: transaction.trip_number ?? 'Linked order',
+                load: () => loadTransactionOrder(this.store, transaction),
+            })
         );
     }
 
