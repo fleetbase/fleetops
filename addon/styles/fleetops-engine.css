@@ -4780,7 +4780,9 @@ body[data-theme='dark'] .order-pool-card.selected,
     background: #263040 !important;
 }
 
-/* ── Driver card ── */
+/* ── Driver card ──
+   The hover colours were written for the dark orchestrator workbench; the
+   drivers index card shares the class, so light mode gets its own pair. */
 .driver-card {
     cursor: pointer;
     transition:
@@ -4789,6 +4791,12 @@ body[data-theme='dark'] .order-pool-card.selected,
 }
 
 .driver-card:hover {
+    background: #f3f4f6; /* gray-100 */
+    border-color: #d1d5db; /* gray-300 */
+}
+
+body[data-theme='dark'] .driver-card:hover,
+.dark .driver-card:hover {
     background: #263040;
     border-color: #4b5563;
 }
