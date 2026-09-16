@@ -103,6 +103,7 @@ export default function buildDeviceTableColumns(controller, options = {}) {
             label: 'Telematic Provider',
             valuePath: 'telematic_name',
             cellComponent: 'cell/telematic-identity',
+            resourcePath: (device) => relationValue(device, 'telematic') ?? buildIdentityStub(device, { type: 'telematic', load: () => device.get('telematic') }),
             action: controller.openTelematic,
             permission: 'fleet-ops view telematic',
             resizable: true,
