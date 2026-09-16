@@ -171,3 +171,18 @@ test('telemetry snapshots retain scalar readings and skip protocol descriptors w
     expect(array_column($snapshot['sensors'], 'value'))->toBe([40, 18]);
     expect($snapshot['sensors'][0]['recorded_at'])->toBe('2026-09-15T11:59:00.000000Z');
 });
+
+test('unit discovery rejects invalid records and contradictory pagination', function (array $response, string $message) {
+    Http::fakeSequence()->push($response);
+    $provider = new AfaqyRealtimeProbe();
+    $provider->credentials(['token' => 'contract-token']);
+    expect(fn () => $provider->fetchDevices())->toThrow(TelematicProviderException::class, $message);
+    Http::assertSentCount(1);
+})->with([
+    'scalar unit' => [['data' => [42]], 'invalid unit'],
+    'incorrect result count' => [['data' => [['_id' => 'unit-1']], 'pagination' => ['resultCount' => 0]], 'inconsistent pagination'],
+    'zero page size' => [['data' => [], 'pagination' => ['limit' => 0]], 'inconsistent pagination'],
+    'negative total' => [['data' => [], 'pagination' => ['allCount' => -1]], 'inconsistent pagination'],
+    'wrong offset' => [['data' => [['_id' => 'unit-1']], 'pagination' => ['offset' => 10]], 'did not advance'],
+    'empty page before total' => [['data' => [], 'pagination' => ['allCount' => 10]], 'did not advance'],
+]);

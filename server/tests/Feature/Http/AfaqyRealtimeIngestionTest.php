@@ -582,7 +582,12 @@ test('new GPS fixes keep a later contact watermark and null dated sensors are sk
 
 test('inbox completion waits for pending deliveries and aggregates quarantined failures', function () {
     $connection = afaqyDbFixture();
-    DB::table('telematic_sync_runs')->insert(['uuid' => 'run-pending', 'telematic_uuid' => $connection->uuid, 'status' => 'ingesting', 'created_at' => now(), 'updated_at' => now()]);
+    Inbox::finishRun('missing-run');
+    expect(DB::table('telematic_sync_runs')->count())->toBe(0);
+    DB::table('telematic_sync_runs')->insert(['uuid' => 'run-pending', 'telematic_uuid' => $connection->uuid, 'status' => 'fetching', 'created_at' => now(), 'updated_at' => now()]);
+    Inbox::finishRun('run-pending');
+    expect(DB::table('telematic_sync_runs')->value('status'))->toBe('fetching');
+    DB::table('telematic_sync_runs')->update(['status' => 'ingesting']);
     $id = (new Inbox())->accept($connection, afaqyDbUnit(), 'poll', 'run-pending');
     Inbox::finishRun('run-pending');
     expect(DB::table('telematic_sync_runs')->value('status'))->toBe('ingesting');
