@@ -4,9 +4,9 @@
     data-test-radar-row={{@item.key}}
     {{on "mouseenter" (fn @onFocus @item)}}
 >
-    <button type="button" class="fleet-ops-radar-row-check" aria-label={{if @isSelected (t "radar.actions.deselect") (t "radar.actions.select")}} {{on "click" (fn @onSelect @item)}} data-test-radar-select>
-        <FaIcon @icon={{if @isSelected "square-check" "square"}} @prefix={{if @isSelected "fas" "far"}} />
-    </button>
+    <div class="fleet-ops-radar-row-check" data-test-radar-select>
+        <Checkbox @id={{concat "radar-select-" @item.key}} @value={{@isSelected}} @onToggle={{this.toggleSelect}} @alignItems="center" />
+    </div>
 
     <div class="fleet-ops-radar-row-chip">
         <Badge @status={{this.chipStatus}} @text={{t (concat "radar.rules." @item.rule)}} @hideStatusDot={{true}} @disableHumanize={{true}} />

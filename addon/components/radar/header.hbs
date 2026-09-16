@@ -5,7 +5,7 @@
             <h1 class="fleet-ops-control-hub-title">{{t "radar.title"}}</h1>
         </div>
         <div class="fleet-ops-radar-header-summary" data-test-radar-summary>
-            {{t "radar.summary" open=(or @stats.open 0) snoozed=(or @stats.snoozed 0) time=this.lastSync}}
+            {{t "radar.summary" open=(or @stats.open 0) snoozed=(or @stats.snoozed 0) time=(if @lastLoadedAt (format-date-fns @lastLoadedAt "HH:mm") "—")}}
         </div>
         <div class="fleet-ops-radar-header-actions">
             <div class="fleet-ops-radar-search">

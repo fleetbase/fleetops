@@ -23,6 +23,10 @@ export default class RadarItemRowComponent extends Component {
         return this.args.item?.state?.status === 'resolved';
     }
 
+    @action toggleSelect() {
+        return this.args.onSelect?.(this.args.item);
+    }
+
     @action snooze(preset) {
         return this.args.onAct?.(this.args.item, 'snooze', { preset, ...snoozePayloadFor(preset) });
     }

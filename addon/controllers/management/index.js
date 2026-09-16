@@ -2,8 +2,10 @@ import Controller from '@ember/controller';
 import { tracked } from '@glimmer/tracking';
 import { inject as service } from '@ember/service';
 import { action } from '@ember/object';
+import { getOwner } from '@ember/application';
 import { task, timeout } from 'ember-concurrency';
-import { RADAR_PILLS, RADAR_DEFAULT_VIEWS, SNOOZE_PRESETS, snoozePayloadFor, patchPayload } from '../../utils/radar';
+import { format } from 'date-fns';
+import { RADAR_PILLS, RADAR_DEFAULT_VIEWS, SNOOZE_PRESETS, snoozePayloadFor, patchPayload, recordPanelFor, recordOf } from '../../utils/radar';
 
 const VIEWS_CACHE_KEY = 'fleetops:radar:views';
 const VIEW_MODE_CACHE_KEY = 'fleetops:radar:view';
@@ -28,6 +30,7 @@ export default class ManagementIndexController extends Controller {
     @service modalsManager;
     @service currentUser;
     @service inspectionSubmissionActions;
+    @service resourceContextPanel;
 
     queryParams = ['view', 'status', 'filters', 'category', 'fleet', 'q', 'saved', 'assigned', 'window'];
 
@@ -1029,13 +1032,47 @@ export default class ManagementIndexController extends Controller {
         window.open(`tel:${phone}`, '_self');
     }
 
-    @action openRecord(item) {
-        const record = item?.record;
+    /**
+     * Open the record behind a row, a decision card, a handover or a brief
+     * link in a context panel, so Radar stays on screen. Resources with an
+     * action service use its `panel.view`; the rest open their details
+     * component in a plain panel. Only a record Radar has no panel for falls
+     * back to navigating to it.
+     */
+    @action openRecord(target) {
+        const record = recordOf(target);
         if (!record?.route) {
             return;
         }
 
-        return this.hostRouter.transitionTo(`console.fleet-ops.${record.route}`, record.model);
+        return this.openRecordPanel.perform(record);
+    }
+
+    @task *openRecordPanel(record) {
+        const panel = recordPanelFor(record.route);
+        if (!panel) {
+            return this.hostRouter.transitionTo(`console.fleet-ops.${record.route}`, record.model);
+        }
+
+        const resource = yield this.findRecord(panel.modelName, record.model);
+        if (!resource) {
+            return;
+        }
+
+        const actions = panel.service ? getOwner(this).lookup(`service:${panel.service}`) : null;
+        if (typeof actions?.panel?.view === 'function') {
+            return yield actions.panel.view(resource);
+        }
+
+        return this.resourceContextPanel.open({
+            resource,
+            tabs: [
+                {
+                    label: this.intl.t('common.overview'),
+                    component: panel.component,
+                },
+            ],
+        });
     }
 
     // ------------------------------------------------------------------
@@ -1256,6 +1293,6 @@ export default class ManagementIndexController extends Controller {
             return '';
         }
 
-        return date.toLocaleString(undefined, { weekday: 'short', hour: '2-digit', minute: '2-digit' });
+        return format(date, 'EEE d MMM HH:mm');
     }
 }

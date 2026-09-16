@@ -10681,26 +10681,45 @@ html body .inspection-flyout textarea.inspection-defect-comment.form-input:focus
 .fleet-ops-radar-header-row {
     display: flex;
     flex-wrap: wrap;
-    align-items: flex-end;
+    align-items: center;
     gap: 0.75rem 1rem;
+    width: 100%;
+    min-width: 0;
 }
 
 .fleet-ops-radar-header-summary {
     font-size: 0.75rem;
     color: #6b7280;
+    align-self: flex-end;
     padding-bottom: 0.2rem;
 }
 
 .fleet-ops-radar-header-actions {
     margin-left: auto;
     display: flex;
+    flex-wrap: wrap;
     align-items: center;
+    justify-content: flex-end;
     gap: 0.5rem;
+}
+
+/* Every control in the header shares one height. */
+.fleet-ops-radar-header-actions .btn-wrapper,
+.fleet-ops-radar-header-actions .btn-wrapper > .btn {
+    height: 2rem;
+}
+
+.fleet-ops-radar-header-actions .btn-wrapper > .btn {
+    display: inline-flex;
+    align-items: center;
+    padding-top: 0;
+    padding-bottom: 0;
 }
 
 .fleet-ops-radar-search {
     position: relative;
     width: 12rem;
+    height: 2rem;
 }
 
 .fleet-ops-radar-search svg {
@@ -10713,9 +10732,11 @@ html body .inspection-flyout textarea.inspection-defect-comment.form-input:focus
     pointer-events: none;
 }
 
-.fleet-ops-radar-search input {
-    padding-left: 1.75rem;
-    padding-right: 1.75rem;
+/* Beats ember-ui's `input.form-input.form-input-sm` padding so the text clears the icon. */
+.fleet-ops-radar-search input.form-input.form-input-sm {
+    height: 2rem;
+    padding-left: 1.85rem;
+    padding-right: 1.85rem;
 }
 
 .fleet-ops-radar-search kbd {
@@ -10727,6 +10748,9 @@ html body .inspection-flyout textarea.inspection-defect-comment.form-input:focus
 
 .fleet-ops-radar-view-toggle {
     display: inline-flex;
+    align-items: stretch;
+    box-sizing: border-box;
+    height: 2rem;
     border: 1px solid #e5e7eb;
     border-radius: 0.375rem;
     background: #fff;
@@ -10738,7 +10762,7 @@ html body .inspection-flyout textarea.inspection-defect-comment.form-input:focus
     border: 0;
     background: transparent;
     border-radius: 0.25rem;
-    padding: 0.25rem 0.6rem;
+    padding: 0 0.6rem;
     font-size: 0.75rem;
     font-weight: 600;
     color: #6b7280;
@@ -11193,11 +11217,14 @@ body[data-theme='dark'] .fleet-ops-radar-briefing-link {
 .fleet-ops-radar-saved-view {
     display: inline-flex;
     align-items: center;
+    box-sizing: border-box;
+    height: 1.625rem;
     gap: 0.35rem;
     border: 1px solid #e5e7eb;
     background: #fff;
     border-radius: 0.375rem;
-    padding: 0.25rem 0.55rem;
+    padding: 0 0.55rem;
+    line-height: 1;
     font-size: 0.75rem;
     color: #374151;
     cursor: pointer;
@@ -11229,6 +11256,11 @@ body[data-theme='dark'] .fleet-ops-radar-briefing-link {
 
 .fleet-ops-radar-saved-view-delete:hover {
     opacity: 1;
+}
+
+.fleet-ops-radar-saved-view-save {
+    font: inherit;
+    font-size: 0.75rem;
 }
 
 /* The bulk bar: appears above the list while something is selected. */
@@ -11338,6 +11370,9 @@ body[data-theme='dark'] .fleet-ops-radar-bulk-bar {
 }
 
 .fleet-ops-radar-row-check {
+    display: flex;
+    align-items: center;
+    justify-content: center;
     border: 0;
     background: transparent;
     padding: 0;
@@ -11349,6 +11384,10 @@ body[data-theme='dark'] .fleet-ops-radar-bulk-bar {
 
 .fleet-ops-radar-row.is-selected .fleet-ops-radar-row-check {
     color: #3485e2;
+}
+
+.fleet-ops-radar-row-check > div {
+    align-items: center;
 }
 
 .fleet-ops-radar-row-chip .status-badge > span {
@@ -11520,12 +11559,46 @@ body[data-theme='dark'] .fleet-ops-radar-bulk-bar {
     opacity: 1;
 }
 
+/* The snooze DropdownButton wraps its button in a trigger; flatten it so it lines up. */
+.fleet-ops-radar-row-rail .ember-basic-dropdown,
+.fleet-ops-radar-row-rail .ember-basic-dropdown-trigger,
+.fleet-ops-radar-bulk-actions .ember-basic-dropdown,
+.fleet-ops-radar-bulk-actions .ember-basic-dropdown-trigger {
+    display: inline-flex;
+    align-items: center;
+}
+
+.fleet-ops-radar-row-rail .btn-wrapper,
+.fleet-ops-radar-row-rail .btn-wrapper > .btn,
+.fleet-ops-radar-bulk-actions .btn-wrapper,
+.fleet-ops-radar-bulk-actions .btn-wrapper > .btn {
+    height: 1.75rem;
+}
+
+.fleet-ops-radar-row-rail .btn-wrapper > .btn,
+.fleet-ops-radar-bulk-actions .btn-wrapper > .btn {
+    display: inline-flex;
+    align-items: center;
+    padding-top: 0;
+    padding-bottom: 0;
+}
+
 .fleet-ops-radar-row-open {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
     border: 0;
     background: transparent;
     color: #9ca3af;
     cursor: pointer;
-    padding: 0.2rem;
+    padding: 0.15rem;
+    font-size: 0.7rem;
+    line-height: 1;
+}
+
+.fleet-ops-radar-row-open svg {
+    width: 0.7rem;
+    height: 0.7rem;
 }
 
 .fleet-ops-radar-row-open:hover {
@@ -11552,15 +11625,50 @@ body[data-theme='dark'] .fleet-ops-radar-bulk-bar {
     }
 }
 
-/* Footer: keys and paging. */
+/* Footer: keys and paging, pinned to the bottom of the viewport while the list scrolls. */
 .fleet-ops-radar-footer {
+    position: sticky;
+    bottom: 0.75rem;
+    z-index: 20;
     display: flex;
     flex-wrap: wrap;
     align-items: center;
-    gap: 0.75rem 1.25rem;
+    gap: 0.5rem 1.25rem;
+    margin-top: 0.25rem;
+    padding: 0.5rem 0.875rem;
+    background: #fff;
+    border: 1px solid #e5e7eb;
+    border-radius: 0.5rem;
+    box-shadow: 0 8px 24px rgba(15, 23, 42, 0.1);
     font-size: 0.72rem;
     color: #6b7280;
-    padding: 0.25rem 0.25rem 1rem;
+}
+
+.fleet-ops-radar-footer-meta {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.fleet-ops-radar-footer-meta .fleet-ops-radar-paging {
+    margin-left: 0;
+}
+
+.fleet-ops-radar-footer .btn-wrapper,
+.fleet-ops-radar-footer .btn-wrapper > .btn {
+    height: 1.5rem;
+}
+
+.fleet-ops-radar-footer .btn-wrapper > .btn {
+    display: inline-flex;
+    align-items: center;
+    padding-top: 0;
+    padding-bottom: 0;
+}
+
+.fleet-ops-radar-body {
+    padding-bottom: 1.25rem;
 }
 
 .fleet-ops-radar-keys {
@@ -12124,6 +12232,7 @@ body[data-theme='dark'] .fleet-ops-radar-empty-schedule time {
     color: #9ca3af;
 }
 
+body[data-theme='dark'] .fleet-ops-radar-footer,
 body[data-theme='dark'] .fleet-ops-radar-view-toggle,
 body[data-theme='dark'] .fleet-ops-radar-pill,
 body[data-theme='dark'] .fleet-ops-radar-saved-view,

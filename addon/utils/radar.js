@@ -154,3 +154,57 @@ export function patchPayload(payload, key, updater) {
 
     return { ...payload, items, groups };
 }
+
+/**
+ * How to show a record Radar links to without leaving the page: the Ember
+ * Data model to load, the action service whose `panel.view` renders it, or
+ * the details component to open in a plain context panel when the resource
+ * has no panel of its own. Keyed by the record route's prefix; the longest
+ * matching prefix wins, so `management.vehicles.index.details.devices`
+ * resolves to the vehicle panel.
+ */
+export const RECORD_PANELS = {
+    'management.drivers': { modelName: 'driver', service: 'driver-actions' },
+    'management.vehicles': { modelName: 'vehicle', service: 'vehicle-actions' },
+    'management.trailers': { modelName: 'trailer', service: 'trailer-actions' },
+    'management.issues': { modelName: 'issue', service: 'issue-actions' },
+    'management.fuel-transactions': { modelName: 'fuel-provider-transaction', component: 'fuel-provider-transaction/summary' },
+    'maintenance.schedules': { modelName: 'maintenance-schedule', service: 'maintenance-schedule-actions' },
+    'maintenance.work-orders': { modelName: 'work-order', service: 'work-order-actions' },
+    'maintenance.parts': { modelName: 'part', service: 'part-actions' },
+    'maintenance.inspection-submissions': { modelName: 'inspection-submission', component: 'inspection-submission/details' },
+    'maintenance.inspection-forms': { modelName: 'inspection-form', component: 'inspection-form/details' },
+    'connectivity.devices': { modelName: 'device', service: 'device-actions' },
+};
+
+/** The panel definition for a record route, or null when Radar has none for it. */
+export function recordPanelFor(route) {
+    if (!route) {
+        return null;
+    }
+
+    const prefix = Object.keys(RECORD_PANELS)
+        .filter((key) => route === key || route.startsWith(`${key}.`))
+        .sort((a, b) => b.length - a.length)[0];
+
+    return prefix ? RECORD_PANELS[prefix] : null;
+}
+
+/**
+ * The `{ route, model }` a Radar link points at, whichever shape it arrived
+ * in: an item (`item.record`), a decision or handover record, or a brief
+ * sentence segment carrying `route` and `model` itself.
+ */
+export function recordOf(target) {
+    if (!target) {
+        return null;
+    }
+    if (target.record?.route) {
+        return target.record;
+    }
+    if (target.route && target.model) {
+        return { route: target.route, model: target.model };
+    }
+
+    return null;
+}

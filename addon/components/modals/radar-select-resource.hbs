@@ -16,8 +16,19 @@
                 @onChange={{fn (mut @options.selected)}}
                 as |model|
             >
-                <span class="uppercase">{{if model.display_name model.display_name model.name}}</span>
-                {{#if model.phone}}<span class="ml-2 text-gray-500">{{model.phone}}</span>{{/if}}
+                {{#if (eq @options.modelName "user")}}
+                    <SelectOption::User @option={{model}} />
+                {{else if (eq @options.modelName "driver")}}
+                    <SelectOption::Driver @option={{model}} />
+                {{else if (eq @options.modelName "vehicle")}}
+                    <SelectOption::Vehicle @option={{model}} />
+                {{else if (eq @options.modelName "device")}}
+                    <SelectOption::Device @option={{model}} />
+                {{else if (eq @options.modelName "trailer")}}
+                    <SelectOption::Trailer @option={{model}} />
+                {{else}}
+                    <span>{{or model.display_name model.name model.public_id}}</span>
+                {{/if}}
             </ModelSelect>
         </InputGroup>
     </div>

@@ -19,7 +19,7 @@
                 {{/unless}}
             </span>
         {{/each}}
-        <button type="button" class="fleet-ops-radar-saved-view fleet-ops-radar-saved-view-apply" {{on "click" @onSaveView}} data-test-radar-view-save>
+        <button type="button" class="fleet-ops-radar-saved-view fleet-ops-radar-saved-view-save" {{on "click" @onSaveView}} data-test-radar-view-save>
             <FaIcon @icon="plus" class="fleet-ops-radar-pill-clear" />
             <span>{{t "radar.saved-views.save-current"}}</span>
         </button>
