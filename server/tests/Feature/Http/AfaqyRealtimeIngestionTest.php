@@ -517,7 +517,7 @@ test('delivery worker retries only failed units and quarantines invalid position
     expect($row->status)->toBe('retry');
     expect($row->applied)->toBe(1);
     expect($row->invalid_count)->toBe(1);
-    expect(json_decode(Crypt::decryptString($row->retry_payload), true))->toBe([$failing]);
+    expect(json_decode(Crypt::decryptString($row->retry_payload), true))->toEqual([$failing]);
     expect(Carbon::parse($row->available_at)->timestamp)->toBe(now()->addSeconds(15)->timestamp);
     DB::table('telematic_deliveries')->where('uuid', $id)->update(['attempts' => 4, 'available_at' => now()]);
     $job->handle($ingestor, $service);
@@ -622,7 +622,7 @@ test('delivery replay resets failures within the current integration and survive
         'status' => 'quarantined', 'attempts' => 5, 'retry_payload' => 'old-retry', 'failed' => 2, 'applied' => 3,
         'invalid_count' => 1, 'error' => 'Old error', 'processed_at' => now(),
     ]);
-    Cache::flush();
+    (new Illuminate\Bus\UniqueLock(Cache::store()))->release(new ProcessTelematicDelivery($id));
     $dispatcher->unavailable = true;
     expect($controller->replayTelemetryDelivery($connection->uuid, $id)->getStatusCode())->toBe(202);
     $row = DB::table('telematic_deliveries')->where('uuid', $id)->first();
@@ -667,7 +667,7 @@ test('scheduled telemetry sync dispatches durable polls and retries broker failu
     expect($job->uniqueId())->toBe($connection->uuid);
     expect($job->backoff())->toBe([15, 60, 180, 300]);
     expect($job->delay->betweenIncluded(now(), now()->addSeconds(9)))->toBeTrue();
-    Cache::flush();
+    (new Illuminate\Bus\UniqueLock(Cache::store()))->release($job);
     $dispatcher->unavailable = true;
     expect($command->handle($registry))->toBe(0);
     $dispatcher->unavailable = false;
@@ -676,6 +676,8 @@ test('scheduled telemetry sync dispatches durable polls and retries broker failu
     config(['telematics.afaqy.polling_enabled' => false]);
     expect($command->handle($registry))->toBe(0);
     expect($dispatcher->jobs)->toHaveCount(2);
+    (new Fleetbase\FleetOps\Jobs\PollTelematicTelemetry($connection->uuid))->handle($registry, new Inbox());
+    expect(DB::table('telematic_sync_runs')->count())->toBe(0);
 });
 
 test('polling honors connection locks and rejects stalled pagination and page exhaustion', function () {
