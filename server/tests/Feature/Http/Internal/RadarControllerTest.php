@@ -8,9 +8,9 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 
 /**
- * An alert row that never reaches a database: every mutation the controller
- * asks for is recorded and applied to the in-memory attributes, and the
- * relations toState() reads are pre-set so no query runs.
+ * An alert row that never reaches a database: RadarItemState writes its
+ * columns onto it as usual, and saving or deleting is recorded instead of
+ * run, so a test reads back exactly what the controller wrote.
  */
 class FleetOpsRadarAlertSpy extends Alert
 {
@@ -26,9 +26,6 @@ class FleetOpsRadarAlertSpy extends Alert
         }
         $this->setRawAttributes($attributes, true);
         $this->exists = false;
-        foreach (['acknowledgedBy', 'assignedTo', 'snoozedBy', 'resolvedBy'] as $relation) {
-            $this->setRelation($relation, null);
-        }
     }
 
     // Date casts ask the connection for its format; there is no connection.
@@ -41,62 +38,6 @@ class FleetOpsRadarAlertSpy extends Alert
     {
         $this->calls[] = ['save'];
         $this->syncOriginal();
-
-        return true;
-    }
-
-    public function update(array $attributes = [], array $options = []): bool
-    {
-        $this->calls[] = ['update', $attributes];
-        $this->forceFill($attributes);
-
-        return true;
-    }
-
-    public function acknowledge(?User $user = null): bool
-    {
-        $this->calls[] = ['acknowledge', $user?->uuid];
-        $this->forceFill(['acknowledged_at' => now(), 'acknowledged_by_uuid' => $user?->uuid, 'status' => 'acknowledged']);
-        $this->setRelation('acknowledgedBy', $user);
-
-        return true;
-    }
-
-    public function snooze(int $minutes, ?string $reason = null, ?User $user = null): bool
-    {
-        $this->calls[] = ['snooze', $minutes, $reason, $user?->uuid];
-        $this->forceFill(['snoozed_until' => now()->addMinutes($minutes), 'snoozed_by_uuid' => $user?->uuid]);
-        $this->setRelation('snoozedBy', $user);
-
-        return true;
-    }
-
-    public function unsnooze(): bool
-    {
-        $this->calls[] = ['unsnooze'];
-        if (!$this->snoozed_until) {
-            return false;
-        }
-        $this->forceFill(['snoozed_until' => null, 'snoozed_by_uuid' => null]);
-        $this->setRelation('snoozedBy', null);
-
-        return true;
-    }
-
-    public function assignTo(?User $user): bool
-    {
-        $this->calls[] = ['assignTo', $user?->uuid];
-        $this->forceFill(['assigned_to_uuid' => $user?->uuid]);
-        $this->setRelation('assignedTo', $user);
-
-        return true;
-    }
-
-    public function resolve(?User $user = null, ?string $resolution = null): bool
-    {
-        $this->calls[] = ['resolve', $user?->uuid, $resolution];
-        $this->forceFill(['status' => 'resolved', 'resolved_at' => now(), 'resolved_by_uuid' => $user?->uuid, 'meta' => array_merge($this->meta ?? [], ['resolution' => $resolution])]);
-        $this->setRelation('resolvedBy', $user);
 
         return true;
     }
@@ -146,10 +87,19 @@ class FleetOpsRadarControllerProbe extends RadarController
     {
         $states = [];
         foreach ($this->store as $key => $spy) {
-            $states[$key] = RadarItemState::toState($spy);
+            $states[$key] = RadarItemState::toState($spy, $this->usersFor([$spy]));
         }
 
         return $states + $this->seededStates;
+    }
+
+    /** The company's users, as the uuid lookup would find them. */
+    protected function usersFor(array $rows): array
+    {
+        return [
+            'user-1' => ['uuid' => 'user-1', 'public_id' => 'user_1', 'name' => 'Ada Ops'],
+            'user-2' => ['uuid' => 'user-2', 'public_id' => 'user_2', 'name' => 'Bo Tran'],
+        ];
     }
 
     protected function rowFor(?string $company, array $item): ?Alert
@@ -168,8 +118,14 @@ class FleetOpsRadarControllerProbe extends RadarController
         return $this->store[$key] ?? null;
     }
 
+    public bool $failReconcile = false;
+
     protected function reconcile(?string $company, array $liveKeys): int
     {
+        if ($this->failReconcile) {
+            throw new RuntimeException('alerts are read-only');
+        }
+
         $this->reconciled = $liveKeys;
 
         return 0;
@@ -361,8 +317,7 @@ test('items narrows by pills, query, fleet and page, and serves the snoozed and 
 
     // "My assignments" keeps only the items whose owner is the caller.
     $controller->store['issue_open:issue_1'] = new FleetOpsRadarAlertSpy(['uuid' => 'a', 'public_id' => 'alert_a', 'type' => 'issue_open', 'status' => 'open', 'assigned_to_uuid' => 'user-1', 'context' => ['key' => 'issue_open:issue_1']]);
-    $controller->store['issue_open:issue_1']->setRelation('assignedTo', fleetOpsRadarUser('user-1', 'Ada Ops'));
-    $mine = $controller->items(fleetOpsRadarRequest('items', 'GET', ['assigned' => 'me']))->getData(true);
+    $mine                                    = $controller->items(fleetOpsRadarRequest('items', 'GET', ['assigned' => 'me']))->getData(true);
     expect(array_column($mine['items'], 'key'))->toBe(['issue_open:issue_1']);
 });
 
@@ -451,6 +406,29 @@ test('extend shift pushes the end out and validates the minutes', function () {
         ->and($controller->shiftSaved)->toBeTrue();
 });
 
+test('a failed reconcile is reported with the sources and the list still answers', function () {
+    $controller                = new FleetOpsRadarControllerProbe(fleetOpsRadarFixtures());
+    $controller->failReconcile = true;
+
+    $payload = $controller->items(fleetOpsRadarRequest('items'))->getData(true);
+
+    expect($payload['sources'])->toBe(['reconcile' => 'alerts are read-only'])
+        ->and($payload['items'])->not->toBe([]);
+});
+
+test('wake reaches a row whose item has since closed, and bulk acknowledge marks every key', function () {
+    Carbon::setTestNow(Carbon::parse('2026-09-15 08:35:00', 'UTC'));
+    $controller = new FleetOpsRadarControllerProbe(fleetOpsRadarFixtures());
+
+    $controller->store['issue_open:issue_gone'] = new FleetOpsRadarAlertSpy(['uuid' => 'g', 'public_id' => 'alert_gone', 'type' => 'issue_open', 'status' => 'open', 'snoozed_until' => '2026-09-15 10:00:00', 'context' => ['key' => 'issue_open:issue_gone']]);
+    $woken                                      = $controller->wake(fleetOpsRadarRequest('items/issue_open:issue_gone/wake', 'POST'), 'issue_open:issue_gone')->getData(true);
+    expect($woken['item'])->toBeNull()
+        ->and($woken['state']['snoozed_until'])->toBeNull();
+
+    $bulk = $controller->bulk(fleetOpsRadarRequest('items/bulk', 'POST', ['keys' => ['issue_open:issue_1', 'part_low_stock:part_pads'], 'action' => 'acknowledge']))->getData(true);
+    expect(array_column(array_column($bulk['results'], 'state'), 'status'))->toBe(['acknowledged', 'acknowledged']);
+});
+
 test('summary answers with counts only', function () {
     $controller = new FleetOpsRadarControllerProbe(fleetOpsRadarFixtures());
     $payload    = $controller->summary(fleetOpsRadarRequest('summary'))->getData(true);
@@ -472,7 +450,12 @@ test('acknowledge creates the row from the live item and answers with the new st
         ->and($payload['state']['status'])->toBe('acknowledged')
         ->and($payload['state']['acknowledged_by_name'])->toBe('Ada Ops')
         ->and($payload['state']['alert_id'])->toBe('alert_1')
-        ->and($controller->store['issue_open:issue_1']->calls[0])->toBe(['acknowledge', 'user-1']);
+        ->and($controller->store['issue_open:issue_1']->getAttribute('acknowledged_by_uuid'))->toBe('user-1')
+        ->and($controller->store['issue_open:issue_1']->calls)->toBe([['save']]);
+
+    // Acknowledging twice keeps the first acknowledgement and writes nothing.
+    $controller->acknowledge(fleetOpsRadarRequest('items/issue_open:issue_1/acknowledge', 'POST'), 'issue_open:issue_1');
+    expect($controller->store['issue_open:issue_1']->calls)->toBe([['save']]);
 
     // The row is reused on the next action instead of created again.
     $controller->acknowledge(fleetOpsRadarRequest('items/issue_open:issue_1/acknowledge', 'POST'), 'issue_open:issue_1');
@@ -502,11 +485,11 @@ test('snooze takes minutes or an until date, and wake ends it', function () {
     expect($snoozed['state']['status'])->toBe('snoozed')
         ->and($snoozed['state']['snoozed_until'])->toBe('2026-09-15T10:05:00+00:00')
         ->and($snoozed['state']['snoozed_by_name'])->toBe('Ada Ops')
-        ->and($controller->store[$key]->calls[0])->toBe(['snooze', 90, 'Order placed', 'user-1']);
+        ->and($controller->store[$key]->getAttribute('snoozed_by_uuid'))->toBe('user-1')
+        ->and($controller->store[$key]->meta['snooze_reason'])->toBe('Order placed');
 
     $untilTomorrow = $controller->snooze(fleetOpsRadarRequest("items/{$key}/snooze", 'POST', ['until' => '2026-09-16 08:35:00']), $key)->getData(true);
-    expect($controller->store[$key]->calls[1][1])->toBe(1440)
-        ->and($untilTomorrow['state']['snoozed_until'])->toBe('2026-09-16T08:35:00+00:00');
+    expect($untilTomorrow['state']['snoozed_until'])->toBe('2026-09-16T08:35:00+00:00');
 
     $woken = $controller->wake(fleetOpsRadarRequest("items/{$key}/wake", 'POST'), $key)->getData(true);
     expect($woken['state']['status'])->toBe('open')
@@ -525,7 +508,7 @@ test('assign takes a company user or clears the owner, and plan takes a date or 
 
     $cleared = $controller->assign(fleetOpsRadarRequest("items/{$key}/assign", 'POST'), $key)->getData(true);
     expect($cleared['state']['assigned_to'])->toBeNull()
-        ->and($controller->store[$key]->calls[1])->toBe(['assignTo', null]);
+        ->and($controller->store[$key]->getAttribute('assigned_to_uuid'))->toBeNull();
 
     expect($controller->plan(fleetOpsRadarRequest("items/{$key}/plan", 'POST', ['planned_at' => 'garbage']), $key)->getStatusCode())->toBe(422);
 
@@ -551,7 +534,8 @@ test('only notices resolve by hand', function () {
 
     expect($resolved['state']['status'])->toBe('resolved')
         ->and($resolved['state']['resolution'])->toBe('Trailers moved')
-        ->and($controller->store['notice:alert_yard']->calls[0])->toBe(['resolve', 'user-1', 'Trailers moved']);
+        ->and($resolved['state']['resolved_by_name'])->toBe('Ada Ops')
+        ->and($controller->store['notice:alert_yard']->getAttribute('resolved_by_uuid'))->toBe('user-1');
 });
 
 test('bulk applies one state action to many keys and reports the ones it could not find', function () {

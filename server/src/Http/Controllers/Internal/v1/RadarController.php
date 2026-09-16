@@ -211,8 +211,8 @@ class RadarController extends Controller
 
     public function acknowledge(Request $request, string $key): JsonResponse
     {
-        return $this->act($request, $key, function (Alert $row, array $item) use ($request) {
-            $row->acknowledge($this->actor($request));
+        return $this->act($request, $key, function (Alert $row) use ($request) {
+            RadarItemState::acknowledge($row, $this->actor($request));
         });
     }
 
@@ -224,14 +224,14 @@ class RadarController extends Controller
         }
 
         return $this->act($request, $key, function (Alert $row) use ($request, $minutes) {
-            $row->snooze($minutes, $request->input('reason'), $this->actor($request));
+            RadarItemState::snooze($row, $this->now()->copy()->addMinutes($minutes), $request->input('reason'), $this->actor($request));
         });
     }
 
     public function wake(Request $request, string $key): JsonResponse
     {
         return $this->act($request, $key, function (Alert $row) {
-            $row->unsnooze();
+            RadarItemState::wake($row);
         }, false);
     }
 
@@ -248,7 +248,7 @@ class RadarController extends Controller
         }
 
         return $this->act($request, $key, function (Alert $row) use ($assignee) {
-            $row->assignTo($assignee);
+            RadarItemState::assign($row, $assignee);
         });
     }
 
@@ -263,7 +263,7 @@ class RadarController extends Controller
         }
 
         return $this->act($request, $key, function (Alert $row) use ($plannedAt) {
-            $row->update(['planned_at' => $plannedAt]);
+            RadarItemState::plan($row, $plannedAt);
         });
     }
 
@@ -279,7 +279,7 @@ class RadarController extends Controller
         }
 
         return $this->act($request, $key, function (Alert $row) use ($request) {
-            $row->resolve($this->actor($request), $request->input('resolution'));
+            RadarItemState::resolve($row, $this->actor($request), $request->input('resolution'));
         }, false);
     }
 
@@ -331,11 +331,11 @@ class RadarController extends Controller
             }
 
             match ($action) {
-                'acknowledge' => $row->acknowledge($actor),
-                'snooze'      => $row->snooze($minutes, $request->input('reason'), $actor),
-                'wake'        => $row->unsnooze(),
-                'assign'      => $row->assignTo($assignee),
-                'plan'        => $row->update(['planned_at' => $planned]),
+                'acknowledge' => RadarItemState::acknowledge($row, $actor),
+                'snooze'      => RadarItemState::snooze($row, $now->copy()->addMinutes((int) $minutes), $request->input('reason'), $actor),
+                'wake'        => RadarItemState::wake($row),
+                'assign'      => RadarItemState::assign($row, $assignee),
+                'plan'        => RadarItemState::plan($row, $planned),
             };
 
             $results[] = ['key' => $key, 'ok' => true, 'state' => $this->stateOf($row, $now)];
@@ -1033,9 +1033,17 @@ class RadarController extends Controller
      */
     protected function stateOf(Alert $row, Carbon $now): array
     {
-        $fresh = $row->exists ? $row->fresh(['acknowledgedBy', 'assignedTo', 'snoozedBy']) : null;
+        $fresh = RadarItemState::refresh($row);
 
-        return RadarRules::normalizeState(RadarItemState::toState($fresh ?? $row), $now);
+        return RadarRules::normalizeState(RadarItemState::toState($fresh, $this->usersFor([$fresh])), $now);
+    }
+
+    /**
+     * The users a set of rows point at, keyed by uuid.
+     */
+    protected function usersFor(array $rows): array
+    {
+        return RadarItemState::usersFor($rows);
     }
 
     // ------------------------------------------------------------------

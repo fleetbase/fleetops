@@ -181,3 +181,34 @@ test('decisions are one click each, most urgent first, and say what the click ca
         ->and($fuel['confirm']['body'])->toBe(['vehicle' => 'vehicle-trk207'])
         ->and($fuel['alternatives'][0]['body'])->toBe(['status' => 'ignored']);
 });
+
+test('the brief and decisions cope with thin mornings', function () {
+    $now = fleetOpsBriefNow();
+
+    expect(RadarBriefing::score([]))->toBe(100);
+
+    $overdue = [];
+    foreach (['A', 'B', 'C'] as $letter) {
+        $overdue[] = ['uuid' => 's' . $letter, 'public_id' => 'schedule_' . $letter, 'name' => 'Service', 'type' => 'oil_change', 'status' => 'active', 'next_due_date' => '2026-09-12 08:00:00', 'has_open_work_order' => true, 'subject' => fleetOpsBriefVehicle('TRK-' . $letter)];
+    }
+    $items = RadarRules::build([
+        'schedules'             => $overdue,
+        // A failed inspection that already has both follow-ups offers no decision.
+        'inspectionSubmissions' => [['uuid' => 'x', 'public_id' => 'inspection_submission_x', 'status' => 'submitted', 'result' => 'failed', 'failed_items' => 1, 'issue_uuid' => null, 'work_order_uuid' => null, 'resolved_at' => null, 'form_name' => 'DVIR', 'highest_severity' => 'low', 'vehicle' => null, 'driver' => null]],
+        // Two drivers need a vehicle but only one is idle.
+        'shifts'   => [
+            ['uuid' => 'sh1', 'public_id' => 'shift_1', 'start_at' => '2026-09-15 06:00:00', 'end_at' => '2026-09-15 14:00:00', 'status' => 'in_progress', 'driver' => fleetOpsBriefDriver('One Driver'), 'driver_online' => true, 'driver_vehicle_uuid' => null, 'active_orders' => 0],
+            ['uuid' => 'sh2', 'public_id' => 'shift_2', 'start_at' => '2026-09-15 06:00:00', 'end_at' => '2026-09-15 14:00:00', 'status' => 'in_progress', 'driver' => fleetOpsBriefDriver('Two Driver'), 'driver_online' => true, 'driver_vehicle_uuid' => null, 'active_orders' => 0],
+        ],
+        'vehicles' => [['uuid' => 'vehicle-idle', 'public_id' => 'vehicle_idle', 'label' => 'IDLE-1', 'status' => 'available', 'driver_uuid' => null, 'device_count' => 1]],
+    ], $now)['items'];
+
+    $items = array_map(fn ($item) => $item['rule'] === 'inspection_failed' ? array_merge($item, ['actions' => ['acknowledge']]) : $item, $items);
+
+    $brief     = RadarBriefing::build($items, $now);
+    $sentences = array_map(fn ($sentence) => implode('', array_column($sentence, 'text')), $brief['brief']);
+
+    expect($sentences[0])->toBe('3 jobs are past due: TRK-A (3d overdue) and TRK-B (3d overdue) and 1 more. 1 failed inspection has no follow-up yet: a vehicle 1 failed · no issue · no work order.')
+        ->and($sentences)->toHaveCount(3, 'no housekeeping sentence when nothing expires, fuel is matched and stock is fine')
+        ->and(array_column($brief['decisions'], 'key'))->toBe(['assign_vehicle:driver_onedriver']);
+});

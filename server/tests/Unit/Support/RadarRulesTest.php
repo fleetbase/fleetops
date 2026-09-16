@@ -475,3 +475,49 @@ test('normalizeState turns an ended snooze back into open or acknowledged', func
         ->and(RadarRules::normalizeState(['status' => 'open', 'snoozed_until' => '2026-09-15T09:00:00+00:00'], $now)['status'])->toBe('snoozed')
         ->and(RadarRules::normalizeState(['status' => 'resolved'], $now)['status'])->toBe('resolved');
 });
+
+test('rules handle the less common shapes their sources arrive in', function () {
+    $now = fleetOpsRadarNow();
+
+    // An issue an inspection raised, known only by uuid.
+    $issue = RadarRules::issueItems([
+        ['uuid' => 'i9', 'public_id' => 'issue_9', 'title' => 'Wipers', 'priority' => '', 'status' => 'pending', 'vehicle' => null, 'driver' => null, 'meta' => ['inspection_submission_uuid' => 'sub-1']],
+    ], $now);
+    expect($issue[0]['meta_line'])->toBe('raised by an inspection');
+
+    // A fuel transaction matched by plate, bought minutes and hours ago, and one with no amount.
+    $fuel = RadarRules::fuelItems([
+        ['uuid' => 'f1', 'public_id' => 'fuel_1', 'amount' => '10.5', 'currency' => null, 'station_name' => 'Shell', 'plate_number' => 'ABC-1', 'transaction_at' => '2026-09-15 08:20:00', 'sync_status' => 'unmatched'],
+        ['uuid' => 'f2', 'public_id' => 'fuel_2', 'amount' => null, 'station_name' => null, 'provider' => 'wex', 'transaction_at' => '2026-09-15 05:35:00', 'sync_status' => 'unmatched'],
+    ], $now);
+    expect($fuel[0]['title'])->toBe('10.50 at Shell — no vehicle matched')
+        ->and($fuel[0]['meta_line'])->toBe('plate ABC-1 · 15m ago')
+        ->and($fuel[1]['title'])->toBe('Fuel purchase at wex — no vehicle matched')
+        ->and($fuel[1]['meta_line'])->toBe('3h ago');
+
+    // A lease already over, and a schedule with no public id has no record to open.
+    $vehicles = RadarRules::vehicleItems([
+        ['uuid' => 'v1', 'public_id' => 'vehicle_1', 'label' => 'VAN-1', 'status' => 'retired', 'driver_uuid' => 'd', 'device_count' => 1, 'lease_expires_at' => '2026-09-01'],
+    ], [], $now);
+    expect($vehicles[0]['title'])->toBe('VAN-1 lease ended 1 Sep')
+        ->and($vehicles[0]['severity'])->toBe('critical')
+        ->and(RadarRules::record('maintenance.schedules.index.details', null))->toBeNull();
+
+    // A part with nothing to search checklists for, and a checklist stored as JSON.
+    $parts = RadarRules::partItems([
+        ['uuid' => 'p1', 'public_id' => 'part_1', 'name' => null, 'sku' => null, 'quantity_on_hand' => 0],
+        ['uuid' => 'p2', 'public_id' => 'part_2', 'name' => 'Filter', 'sku' => 'F-1', 'quantity_on_hand' => 0],
+    ], [
+        ['code' => 'WO-7', 'status' => 'open', 'subject' => 'service', 'checklist' => json_encode([['title' => 'Replace filter']])],
+    ], $now);
+    expect($parts[0]['meta_line'])->toBe('reorder point 5')
+        ->and($parts[1]['meta_line'])->toBe('reorder point 5 · blocks WO-7')
+        ->and($parts[1]['severity'])->toBe('critical');
+
+    // The resolved tab keeps only resolved items.
+    $resolved = RadarRules::forTab([
+        ['key' => 'a', 'state' => ['status' => 'resolved']],
+        ['key' => 'b', 'state' => ['status' => 'open']],
+    ], 'resolved', $now);
+    expect(array_column($resolved, 'key'))->toBe(['a']);
+});

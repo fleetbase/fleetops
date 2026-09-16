@@ -2,6 +2,7 @@
 
 use Fleetbase\FleetOps\Support\Radar\RadarItemState;
 use Fleetbase\Models\Alert;
+use Fleetbase\Models\User;
 use Illuminate\Config\Repository;
 use Illuminate\Database\ConnectionResolver;
 use Illuminate\Database\Eloquent\Model as EloquentModel;
@@ -135,7 +136,7 @@ test('rowFor creates one open row per item key and reuses it', function () {
         ->and(Alert::query()->count())->toBe(1);
 
     // A resolved row is history: the next action opens a fresh one.
-    $row->update(['status' => 'resolved', 'resolved_at' => now()]);
+    RadarItemState::resolve($row, null, 'done');
     $fresh = RadarItemState::rowFor('company-radar', fleetOpsRadarStateItem());
     expect($fresh->uuid)->not->toBe($row->uuid)
         ->and(Alert::query()->count())->toBe(2);
@@ -146,7 +147,18 @@ test('statesFor and findRow read live rows by key, including notices by public i
     Carbon::setTestNow(Carbon::parse('2026-09-15 08:35:00', 'UTC'));
 
     $issue = RadarItemState::rowFor('company-radar', fleetOpsRadarStateItem());
-    $issue->update(['acknowledged_at' => now(), 'acknowledged_by_uuid' => 'user-ada', 'status' => 'acknowledged', 'assigned_to_uuid' => 'user-bo', 'snoozed_until' => now()->addHour(), 'snoozed_by_uuid' => 'user-bo', 'planned_at' => now()->addHours(3)]);
+    $ada   = User::query()->where('uuid', 'user-ada')->first();
+    $bo    = User::query()->where('uuid', 'user-bo')->first();
+    RadarItemState::acknowledge($issue, $ada);
+    RadarItemState::assign($issue, $bo);
+    RadarItemState::snooze($issue, now()->addHour(), 'Waiting on parts', $bo);
+    RadarItemState::plan($issue, now()->addHours(3));
+
+    // A second acknowledgement keeps the first one.
+    RadarItemState::acknowledge($issue, $bo);
+    expect(RadarItemState::refresh($issue)->getAttribute('acknowledged_by_uuid'))->toBe('user-ada')
+        ->and(RadarItemState::refresh($issue)->meta['snooze_reason'])->toBe('Waiting on parts')
+        ->and(RadarItemState::refresh(new Alert())->exists)->toBeFalse();
 
     $notice = Alert::create(['company_uuid' => 'company-radar', 'type' => 'radar_notice', 'severity' => 'info', 'status' => 'open', 'message' => 'Yard closed']);
     $notice->forceFill(['public_id' => 'alert_yard'])->save();
@@ -189,6 +201,11 @@ test('reconcile resolves rows whose gap is gone and leaves the live ones', funct
     $gone   = RadarItemState::rowFor('company-radar', fleetOpsRadarStateItem('part_low_stock:part_pads', ['category' => 'parts', 'chip' => 'Parts', 'title' => 'Brake pads — 2 left']));
     $notice = Alert::create(['company_uuid' => 'company-radar', 'type' => 'radar_notice', 'severity' => 'info', 'status' => 'open', 'message' => 'Yard closed', 'context' => ['key' => 'notice:alert_yard']]);
 
+    // A row written by something other than Radar carries no item key and is left alone.
+    Alert::create(['company_uuid' => 'company-radar', 'type' => 'issue_open', 'severity' => 'info', 'status' => 'open', 'message' => 'Raised elsewhere']);
+    expect(RadarItemState::statesFor('company-radar'))->not->toHaveKey('')
+        ->and(RadarItemState::findRow('company-radar', 'issue_open:elsewhere'))->toBeNull();
+
     expect(RadarItemState::reconcile('company-radar', ['issue_open:issue_1', 'notice:alert_yard']))->toBe(1)
         ->and($live->fresh()->status)->toBe('open')
         ->and($notice->fresh()->status)->toBe('open')
@@ -218,10 +235,15 @@ test('snoozeSchedule lists the snoozes waking within a week, soonest first', fun
     $far   = RadarItemState::rowFor('company-radar', fleetOpsRadarStateItem('issue_open:issue_3', ['title' => 'Far']));
     $past  = RadarItemState::rowFor('company-radar', fleetOpsRadarStateItem('issue_open:issue_4', ['title' => 'Past']));
 
-    $later->update(['snoozed_until' => now()->addDays(3)]);
-    $soon->update(['snoozed_until' => now()->addHours(2)]);
-    $far->update(['snoozed_until' => now()->addDays(20)]);
-    $past->update(['snoozed_until' => now()->subHour()]);
+    RadarItemState::snooze($later, now()->addDays(3), null, null);
+    RadarItemState::snooze($soon, now()->addHours(2), null, null);
+    RadarItemState::snooze($far, now()->addDays(20), null, null);
+    RadarItemState::snooze($past, now()->subHour(), null, null);
+
+    // Woken early, a row leaves the schedule.
+    $woken = RadarItemState::rowFor('company-radar', fleetOpsRadarStateItem('issue_open:issue_5', ['title' => 'Woken']));
+    RadarItemState::snooze($woken, now()->addHours(1), null, null);
+    RadarItemState::wake($woken);
 
     $schedule = RadarItemState::snoozeSchedule('company-radar', now());
 

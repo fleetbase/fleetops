@@ -163,3 +163,38 @@ test('a handover card lists the orders and suggests the nearest on-shift driver 
     expect(RadarAgenda::distanceKm(['lat' => 0, 'lng' => 0], ['lat' => 0, 'lng' => 1]))->toBe(111.2)
         ->and(RadarAgenda::distanceKm(null, ['lat' => 0, 'lng' => 1]))->toBeNull();
 });
+
+test('cover suggestions prefer online drivers, then the nearest, then the least busy', function () {
+    $now      = fleetOpsAgendaNow();
+    $shiftEnd = Carbon::parse('2026-09-15 09:15:00', 'UTC');
+    $shift    = fn (string $name, bool $online) => ['uuid' => 'sh-' . $name, 'start_at' => '2026-09-15 06:00:00', 'end_at' => '2026-09-15 21:00:00', 'status' => 'in_progress', 'driver' => fleetOpsAgendaDriver($name), 'driver_online' => $online];
+
+    $offlineFirst = RadarAgenda::suggestCover('driver-leaving', null, $shiftEnd, [$shift('Offline Olga', false), $shift('Online Omar', true)], [], $now);
+    expect($offlineFirst['driver']['label'])->toBe('Online Omar');
+
+    // With no locations to compare, the driver carrying fewer orders wins.
+    $rows = [
+        'driver-busybea'  => ['uuid' => 'driver-busybea', 'active_orders' => 4],
+        'driver-freefred' => ['uuid' => 'driver-freefred', 'active_orders' => 1],
+    ];
+    $leastBusy = RadarAgenda::suggestCover('driver-leaving', null, $shiftEnd, [$shift('Busy Bea', true), $shift('Free Fred', true)], $rows, $now);
+    expect($leastBusy['driver']['label'])->toBe('Free Fred');
+});
+
+test('a driver with several gaps shows the worst one on their shift bar', function () {
+    $now    = fleetOpsAgendaNow();
+    $driver = fleetOpsAgendaDriver('Amara Diallo');
+    $window = ['start_at' => '2026-09-15T08:00:00+00:00', 'end_at' => '2026-09-15T09:30:00+00:00'];
+    $items  = [
+        fleetOpsAgendaItem('shift_handover:driver_amaradiallo', ['category' => 'staffing', 'lane' => 'shifts', 'severity' => 'warning', 'subject' => $driver, 'window' => $window]),
+        fleetOpsAgendaItem('shift_late_start:driver_amaradiallo', ['category' => 'staffing', 'lane' => 'shifts', 'severity' => 'critical', 'subject' => $driver, 'window' => $window]),
+        fleetOpsAgendaItem('driver_without_vehicle:driver_amaradiallo', ['category' => 'staffing', 'lane' => 'anytime', 'severity' => 'info', 'subject' => $driver]),
+    ];
+    $shifts = [['uuid' => 'sh', 'public_id' => 'shift_a', 'start_at' => '2026-09-15 08:00:00', 'end_at' => '2026-09-15 09:30:00', 'status' => 'scheduled', 'driver' => $driver, 'driver_online' => false]];
+
+    $bar = collect(RadarAgenda::build($items, $shifts, '24h', $now)['lanes']['shifts'])->firstWhere('kind', 'shift');
+
+    expect($bar['severity'])->toBe('critical')
+        ->and($bar['handover_key'])->toBe('shift_handover:driver_amaradiallo')
+        ->and($bar['gap_keys'])->toHaveCount(3);
+});

@@ -3,6 +3,7 @@
 namespace Fleetbase\FleetOps\Support\Radar;
 
 use Fleetbase\Models\Alert;
+use Fleetbase\Models\User;
 use Illuminate\Support\Carbon;
 
 /**
@@ -13,9 +14,18 @@ use Illuminate\Support\Carbon;
  * once somebody acted on an item. The row is found by the item key it was
  * created for (`context.key`), so a rule can change how it describes a record
  * without losing the record's state.
+ *
+ * State is written column by column and user names are looked up by uuid,
+ * rather than through `Alert::snooze()`, `assignTo()` or the `assignedTo`
+ * and `snoozedBy` relations. Those arrived in a later core-api than the one
+ * FleetOps is locked to, so leaning on them would break Radar wherever the
+ * older core is installed; the columns themselves come from core's migration.
  */
 class RadarItemState
 {
+    /** The alert columns that point at a user, whose names a state row shows. */
+    public const USER_COLUMNS = ['acknowledged_by_uuid', 'resolved_by_uuid', 'snoozed_by_uuid', 'assigned_to_uuid'];
+
     /**
      * Every live state row for the company, keyed by item key.
      *
@@ -23,12 +33,14 @@ class RadarItemState
      */
     public static function statesFor(?string $companyUuid): array
     {
+        $rows   = self::rows($companyUuid)->get();
+        $users  = self::usersFor($rows);
         $states = [];
 
-        foreach (self::rows($companyUuid)->get() as $alert) {
+        foreach ($rows as $alert) {
             $key = self::keyOf($alert);
             if ($key) {
-                $states[$key] = self::toState($alert);
+                $states[$key] = self::toState($alert, $users);
             }
         }
 
@@ -102,6 +114,77 @@ class RadarItemState
         return null;
     }
 
+    // ------------------------------------------------------------------
+    // Writing state
+    // ------------------------------------------------------------------
+
+    /**
+     * Mark a row acknowledged by a user. An already acknowledged row keeps
+     * who acknowledged it first.
+     */
+    public static function acknowledge(Alert $alert, ?User $user): Alert
+    {
+        if (RadarRules::carbon($alert->getAttribute('acknowledged_at'))) {
+            return $alert;
+        }
+
+        $attributes = ['acknowledged_at' => now(), 'acknowledged_by_uuid' => $user?->uuid];
+        if (($alert->status ?? 'open') === 'open') {
+            $attributes['status'] = 'acknowledged';
+        }
+
+        return self::write($alert, $attributes);
+    }
+
+    /**
+     * Snooze a row until a moment, noting who did it and why.
+     */
+    public static function snooze(Alert $alert, Carbon $until, ?string $reason, ?User $user): Alert
+    {
+        return self::write($alert, [
+            'snoozed_until'   => $until,
+            'snoozed_by_uuid' => $user?->uuid,
+            'meta'            => array_merge($alert->meta ?? [], ['snooze_reason' => $reason]),
+        ]);
+    }
+
+    /**
+     * End a snooze early.
+     */
+    public static function wake(Alert $alert): Alert
+    {
+        return self::write($alert, ['snoozed_until' => null, 'snoozed_by_uuid' => null]);
+    }
+
+    /**
+     * Give a row an owner, or clear it with null.
+     */
+    public static function assign(Alert $alert, ?User $user): Alert
+    {
+        return self::write($alert, ['assigned_to_uuid' => $user?->uuid]);
+    }
+
+    /**
+     * Set the time the owner plans to deal with a row, or clear it.
+     */
+    public static function plan(Alert $alert, ?Carbon $at): Alert
+    {
+        return self::write($alert, ['planned_at' => $at]);
+    }
+
+    /**
+     * Resolve a row, recording who resolved it and how.
+     */
+    public static function resolve(Alert $alert, ?User $user, ?string $resolution): Alert
+    {
+        return self::write($alert, [
+            'status'           => 'resolved',
+            'resolved_at'      => now(),
+            'resolved_by_uuid' => $user?->uuid,
+            'meta'             => array_merge($alert->meta ?? [], ['resolution' => $resolution]),
+        ]);
+    }
+
     /**
      * Resolve the rows whose item no longer exists — the gap closed on the
      * record itself. Returns how many rows were closed.
@@ -117,16 +200,16 @@ class RadarItemState
                 continue;
             }
 
-            $alert->update([
-                'status'      => 'resolved',
-                'resolved_at' => now(),
-                'meta'        => array_merge($alert->meta ?? [], ['resolution' => 'auto']),
-            ]);
+            self::resolve($alert, null, 'auto');
             $closed++;
         }
 
         return $closed;
     }
+
+    // ------------------------------------------------------------------
+    // Reading state
+    // ------------------------------------------------------------------
 
     /**
      * Items resolved since a moment, newest first, shaped like live items so
@@ -141,16 +224,16 @@ class RadarItemState
             ->whereIn('type', array_merge(RadarRules::stateTypes(), [RadarRules::NOTICE_TYPE]))
             ->where('status', 'resolved')
             ->where('resolved_at', '>=', $since)
-            ->with(['resolvedBy', 'acknowledgedBy', 'assignedTo'])
             ->orderByDesc('resolved_at')
             ->get();
+        $users = self::usersFor($rows);
 
         foreach ($rows as $alert) {
             $context         = $alert->context ?? [];
             $rule            = $alert->type === RadarRules::NOTICE_TYPE ? 'notice' : $alert->type;
             $meta            = RadarRules::RULES[$rule] ?? ['category' => 'notices', 'lane' => 'anytime', 'chip' => 'Notice'];
             $due             = RadarRules::carbon($context['due_at'] ?? null);
-            $state           = self::toState($alert);
+            $state           = self::toState($alert, $users);
             $state['status'] = 'resolved';
 
             $items[] = [
@@ -162,7 +245,7 @@ class RadarItemState
                 'severity'   => $alert->severity ?? 'info',
                 'title'      => $alert->message ?? '',
                 'subject'    => $context['subject'] ?? null,
-                'meta_line'  => ($alert->meta['resolution'] ?? null) === 'auto' ? 'closed on the record' : ('resolved by ' . ($alert->resolved_by_name ?? 'you')),
+                'meta_line'  => $state['resolution'] === 'auto' ? 'closed on the record' : ('resolved by ' . ($state['resolved_by_name'] ?? 'you')),
                 'due_at'     => $due?->toIso8601String(),
                 'due_bucket' => 'none',
                 'due_label'  => null,
@@ -194,7 +277,7 @@ class RadarItemState
             ->map(fn (Alert $alert) => [
                 'key'           => self::keyOf($alert),
                 'title'         => $alert->message,
-                'snoozed_until' => $alert->snoozed_until?->toIso8601String(),
+                'snoozed_until' => self::iso($alert, 'snoozed_until'),
             ])
             ->values()
             ->all();
@@ -205,10 +288,11 @@ class RadarItemState
      */
     public static function notices(?string $companyUuid): array
     {
-        return self::rows($companyUuid, [RadarRules::NOTICE_TYPE])
-            ->orderByDesc('created_at')
-            ->get()
-            ->map(function (Alert $alert) {
+        $rows  = self::rows($companyUuid, [RadarRules::NOTICE_TYPE])->orderByDesc('created_at')->get();
+        $users = self::usersFor($rows);
+
+        return $rows
+            ->map(function (Alert $alert) use ($users) {
                 $context = $alert->context ?? [];
 
                 return [
@@ -219,32 +303,65 @@ class RadarItemState
                     'status'    => $alert->status,
                     'meta'      => $alert->meta ?? [],
                     'subject'   => $context['subject'] ?? null,
-                    'state'     => self::toState($alert),
+                    'state'     => self::toState($alert, $users),
                 ];
             })
             ->all();
     }
 
     /**
-     * A row as the console reads it.
+     * The users the given rows point at, keyed by uuid.
+     *
+     * @param iterable<Alert> $alerts
+     *
+     * @return array<string, array{uuid: string, public_id: ?string, name: ?string}>
      */
-    public static function toState(Alert $alert): array
+    public static function usersFor(iterable $alerts): array
     {
-        $assignee = $alert->assignedTo;
+        $uuids = [];
+        foreach ($alerts as $alert) {
+            foreach (self::USER_COLUMNS as $column) {
+                $uuid = $alert->getAttribute($column);
+                if (is_string($uuid) && $uuid !== '') {
+                    $uuids[$uuid] = true;
+                }
+            }
+        }
+
+        if (!$uuids) {
+            return [];
+        }
+
+        return User::query()
+            ->whereIn('uuid', array_keys($uuids))
+            ->get(['uuid', 'public_id', 'name'])
+            ->mapWithKeys(fn (User $user) => [$user->uuid => ['uuid' => $user->uuid, 'public_id' => $user->public_id, 'name' => $user->name]])
+            ->all();
+    }
+
+    /**
+     * A row as the console reads it.
+     *
+     * @param array<string, array> $users the users the row points at, from usersFor()
+     */
+    public static function toState(Alert $alert, array $users = []): array
+    {
+        $assignee = $users[$alert->getAttribute('assigned_to_uuid')] ?? null;
+        $name     = fn (string $column) => $users[$alert->getAttribute($column)]['name'] ?? null;
 
         return [
             'status'               => $alert->status ?? 'open',
             'alert_id'             => $alert->public_id ?? $alert->uuid,
-            'acknowledged_at'      => $alert->acknowledged_at?->toIso8601String(),
-            'acknowledged_by_name' => $alert->acknowledged_by_name,
-            'snoozed_until'        => $alert->snoozed_until?->toIso8601String(),
-            'snoozed_by_name'      => $alert->snoozedBy?->name,
-            'assigned_to'          => $assignee ? ['uuid' => $assignee->uuid, 'public_id' => $assignee->public_id ?? null, 'name' => $assignee->name, 'initials' => self::initials($assignee->name)] : null,
-            'planned_at'           => $alert->planned_at?->toIso8601String(),
-            'resolved_at'          => $alert->resolved_at?->toIso8601String(),
-            'resolved_by_name'     => $alert->resolved_by_name,
+            'acknowledged_at'      => self::iso($alert, 'acknowledged_at'),
+            'acknowledged_by_name' => $name('acknowledged_by_uuid'),
+            'snoozed_until'        => self::iso($alert, 'snoozed_until'),
+            'snoozed_by_name'      => $name('snoozed_by_uuid'),
+            'assigned_to'          => $assignee ? $assignee + ['initials' => self::initials($assignee['name'])] : null,
+            'planned_at'           => self::iso($alert, 'planned_at'),
+            'resolved_at'          => self::iso($alert, 'resolved_at'),
+            'resolved_by_name'     => $name('resolved_by_uuid'),
             'resolution'           => $alert->meta['resolution'] ?? null,
-            'triggered_at'         => $alert->triggered_at?->toIso8601String(),
+            'triggered_at'         => self::iso($alert, 'triggered_at'),
         ];
     }
 
@@ -279,6 +396,14 @@ class RadarItemState
     }
 
     /**
+     * A row after a write, as the database now has it.
+     */
+    public static function refresh(Alert $alert): Alert
+    {
+        return ($alert->exists ? $alert->fresh() : null) ?? $alert;
+    }
+
+    /**
      * Live rows for the company: every Radar type, not resolved.
      */
     protected static function rows(?string $companyUuid, ?array $types = null)
@@ -286,7 +411,25 @@ class RadarItemState
         return Alert::query()
             ->where('company_uuid', $companyUuid)
             ->whereIn('type', $types ?? array_merge(RadarRules::stateTypes(), [RadarRules::NOTICE_TYPE]))
-            ->where('status', '!=', 'resolved')
-            ->with(['acknowledgedBy', 'assignedTo', 'snoozedBy']);
+            ->where('status', '!=', 'resolved');
+    }
+
+    /**
+     * Write columns straight onto the row: some of them are not fillable on
+     * every core-api the model may come from.
+     */
+    protected static function write(Alert $alert, array $attributes): Alert
+    {
+        $alert->forceFill($attributes)->save();
+
+        return $alert;
+    }
+
+    /**
+     * A timestamp column as ISO 8601, whether or not the model casts it.
+     */
+    protected static function iso(Alert $alert, string $column): ?string
+    {
+        return RadarRules::carbon($alert->getAttribute($column))?->toIso8601String();
     }
 }
