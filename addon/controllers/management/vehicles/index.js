@@ -315,8 +315,9 @@ export default class ManagementVehiclesIndexController extends Controller {
                 filterable: true,
                 filterComponent: 'filter/date',
             },
+            // Filter-only entries omit a column label so the visible-column picker excludes them.
             {
-                label: this.intl.t('vehicle.filters.has-trailer'),
+                filterLabel: this.intl.t('vehicle.filters.has-trailer'),
                 valuePath: 'has_trailer',
                 hidden: true,
                 filterable: true,
@@ -326,7 +327,7 @@ export default class ManagementVehiclesIndexController extends Controller {
                 filterParam: 'has_trailer',
             },
             {
-                label: this.intl.t('vehicle.filters.has-driver'),
+                filterLabel: this.intl.t('vehicle.filters.has-driver'),
                 valuePath: 'has_driver',
                 hidden: true,
                 filterable: true,
@@ -336,7 +337,7 @@ export default class ManagementVehiclesIndexController extends Controller {
                 filterParam: 'has_driver',
             },
             {
-                label: this.intl.t('vehicle.filters.has-device'),
+                filterLabel: this.intl.t('vehicle.filters.has-device'),
                 valuePath: 'has_device',
                 hidden: true,
                 filterable: true,
