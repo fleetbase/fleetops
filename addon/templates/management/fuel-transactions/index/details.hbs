@@ -33,8 +33,8 @@
                 <div class="space-y-3 p-3">
                     <div class="flex items-center justify-between gap-2">
                         <div class="min-w-0"><div class="text-xs text-gray-500 dark:text-gray-400">Vehicle</div><div class="break-words text-sm text-gray-900 dark:text-gray-100">
-                                {{#if (or @model.vehicle_uuid @model.vehicle_name)}}
-                                    <Vehicle::Pill @vehicle={{resource-relation @model "vehicle"}} @titleFallback={{or @model.vehicle_name "Linked vehicle"}} />
+                                {{#if this.vehicleResource}}
+                                    <Vehicle::Pill @vehicle={{this.vehicleResource}} />
                                 {{else}}
                                     Not matched
                                 {{/if}}
@@ -43,8 +43,8 @@
                     </div>
                     <div class="flex items-center justify-between gap-2">
                         <div class="min-w-0"><div class="text-xs text-gray-500 dark:text-gray-400">Order / Trip</div><div class="break-words text-sm text-gray-900 dark:text-gray-100">
-                                {{#if @model.order_uuid}}
-                                    <Order::Pill @order={{resource-relation @model "order"}} @titleFallback={{or @model.trip_number "Linked order"}} />
+                                {{#if this.orderResource}}
+                                    <Order::Pill @order={{this.orderResource}} />
                                 {{else}}
                                     Not matched
                                 {{/if}}
@@ -53,8 +53,8 @@
                     </div>
                     <div class="flex items-center justify-between gap-2">
                         <div class="min-w-0"><div class="text-xs text-gray-500 dark:text-gray-400">Fuel Report</div><div class="break-words text-sm text-gray-900 dark:text-gray-100">
-                                {{#if @model.fuel_report_id}}
-                                    <FuelReport::Pill @fuelReport={{resource-relation @model "fuel_report"}} @titleFallback={{@model.fuel_report_id}} />
+                                {{#if this.fuelReportResource}}
+                                    <FuelReport::Pill @fuelReport={{this.fuelReportResource}} />
                                 {{else}}
                                     Not created
                                 {{/if}}
