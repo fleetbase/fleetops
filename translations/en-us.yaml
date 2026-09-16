@@ -2309,6 +2309,7 @@ radar:
         mark-resolved: Mark resolved
         send-pin: Send PIN
         revoke-link: Revoke link
+        revoke-links: "Revoke {count, plural, one {# link} other {# links}}"
         match-vehicle: Match vehicle
         ignore: Ignore
         attach: Attach to vehicle
@@ -2405,7 +2406,6 @@ radar:
         create-work-order-body: A work order opens with the schedule's defaults and due date.
         ignore-title: Ignore this transaction?
         ignore-body: It leaves the unmatched queue and is not linked to a vehicle.
-        resolve-issue-title: Mark this issue resolved?
         attach-device-title: Attach this device to a vehicle
         revoke-link-title: Revoke this inspection link?
         send-pin-title: Send the inspection PIN
@@ -2413,6 +2413,8 @@ radar:
         send-pin-body: How should the link and PIN be sent?
         send-pin-unavailable: The link's recipient has no email address or phone number to send the PIN to.
         revoke-link-body: The link stops working immediately.
+        bulk-revoke-link-title: "Revoke {count, plural, one {# inspection link} other {# inspection links}}?"
+        bulk-revoke-link-body: The links stop working immediately. Other selected items stay as they are.
         assign-user-title: "Who owns this?"
         assign-user-help: The owner shows on the row and in the My assignments view.
         no-selection: Pick one first.
@@ -2429,10 +2431,11 @@ radar:
         driver-assigned: Driver assigned.
         matched: Transaction matched.
         ignored: Transaction ignored.
-        issue-resolved: Issue resolved.
         device-attached: Device attached.
         pin-sent: PIN sent.
         link-revoked: Link revoked.
+        links-revoked: "{count, plural, one {# link revoked} other {# links revoked}}."
+        links-revoke-failed: "{count, plural, one {# link could not be revoked} other {# links could not be revoked}}."
         bulk-done: "{count} items updated."
 widget:
     refresh: Refresh

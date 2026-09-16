@@ -22,6 +22,17 @@
             </div>
         </DropdownButton>
         <Button @size="xs" @icon="user-plus" @text={{t "radar.actions.assign"}} @disabled={{@isBusy}} @onClick={{fn @onAct "assign"}} data-test-radar-bulk-action="assign" />
+        {{#if this.revocableCount}}
+            <Button
+                @size="xs"
+                @icon="link-slash"
+                @type="danger"
+                @text={{t "radar.actions.revoke-links" count=this.revocableCount}}
+                @disabled={{@isBusy}}
+                @onClick={{fn @onAct "revoke_link"}}
+                data-test-radar-bulk-action="revoke_link"
+            />
+        {{/if}}
         {{#if this.hasSnoozed}}
             <Button @size="xs" @icon="bell" @text={{t "radar.actions.wake"}} @disabled={{@isBusy}} @onClick={{fn @onAct "wake"}} data-test-radar-bulk-action="wake" />
         {{/if}}

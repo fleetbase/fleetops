@@ -4,6 +4,7 @@ import { tracked } from '@glimmer/tracking';
 import { inject as service } from '@ember/service';
 import copyToClipboard from '@fleetbase/ember-core/utils/copy-to-clipboard';
 import { normalizeFieldGroups, serializeFieldGroups } from '../utils/inspection-form-structure';
+import { PANEL_DEFAULTS, closePanelsThen } from '../utils/context-panel';
 
 /** A link's life when nobody chooses; the server applies the same when left blank. */
 const DEFAULT_LINK_TTL_HOURS = 72;
@@ -52,6 +53,45 @@ export default class InspectionFormActionsService extends ResourceActionService 
         edit: (form) => this.transitionTo('maintenance.inspection-forms.index.edit', form),
         create: () => this.transitionTo('maintenance.inspection-forms.index.new'),
     };
+
+    panel = {
+        view: (form, options = {}) => {
+            const service = this;
+
+            return this.resourceContextPanel.open({
+                form,
+                title: form?.name,
+                get actionButtons() {
+                    return service.headerActionButtons(form, {
+                        onEdit: () => closePanelsThen(service.resourceContextPanel, () => service.transition.edit(form)),
+                        onDeleted: () => service.resourceContextPanel.closeAll(),
+                    });
+                },
+                tabs: [
+                    { key: 'overview', label: this.intl.t('inspection.form.overview'), component: 'inspection-form/details' },
+                    { key: 'submissions', label: this.intl.t('inspection.form.submissions'), component: 'inspection-form/details/submissions' },
+                ],
+                ...PANEL_DEFAULTS,
+                ...options,
+            });
+        },
+    };
+
+    /**
+     * The header buttons of a form, shared by the details route and the
+     * context panel: publish a draft or generate a link for a published
+     * form, then edit and delete.
+     */
+    headerActionButtons(form, { onEdit, onDeleted } = {}) {
+        const isPublished = form?.is_published === true || form?.status === 'published';
+
+        return [
+            ...(isPublished ? [] : [{ icon: 'check', fn: () => this.publish(form), text: 'Publish', type: 'success', permission: 'fleet-ops publish inspection-form' }]),
+            ...(isPublished ? [{ icon: 'link', fn: () => this.generateLink(form), text: 'Generate Link', permission: 'fleet-ops view inspection-form' }] : []),
+            { icon: 'edit', fn: () => (onEdit ? onEdit(form) : this.transition.edit(form)), permission: 'fleet-ops update inspection-form' },
+            { icon: 'trash', fn: () => this.delete(form, { onConfirm: onDeleted }), type: 'danger', permission: 'fleet-ops delete inspection-form' },
+        ];
+    }
 
     /**
      * A form's structure — its field groups and their fields.

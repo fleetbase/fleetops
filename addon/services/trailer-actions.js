@@ -4,6 +4,7 @@ import config from 'ember-get-config';
 import { action } from '@ember/object';
 import { isArray } from '@ember/array';
 import { dasherize } from '@ember/string';
+import { PANEL_DEFAULTS } from '../utils/context-panel';
 
 /**
  * Trailer resource actions.
@@ -142,6 +143,7 @@ export default class TrailerActionsService extends ResourceActionService {
                     },
                 ],
                 tabs: this.panelTabs,
+                ...PANEL_DEFAULTS,
                 ...options,
             });
         },

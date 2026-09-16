@@ -1,6 +1,7 @@
 import ResourceActionService, { inject as service } from '@fleetbase/ember-core/services/resource-action';
 import { action } from '@ember/object';
 import { isArray } from '@ember/array';
+import { PANEL_DEFAULTS, closePanelsThen } from '../utils/context-panel';
 
 export default class DeviceActionsService extends ResourceActionService {
     @service fetch;
@@ -44,10 +45,24 @@ export default class DeviceActionsService extends ResourceActionService {
             }
 
             const registeredTabs = this.menuService?.getMenuItems?.('fleet-ops:component:device:details');
+            const service = this;
 
             return this.resourceContextPanel.open({
                 device,
                 header: 'device/panel-header',
+                title: device.name ?? device.serial_number,
+                actionButtons: [
+                    { icon: 'pencil', permission: 'fleet-ops update device', fn: () => closePanelsThen(this.resourceContextPanel, () => this.panel.edit(device)) },
+                    {
+                        icon: 'ellipsis-h',
+                        iconPrefix: 'fas',
+                        renderInPlace: true,
+                        get items() {
+                            return service.attachmentItems(device);
+                        },
+                    },
+                ],
+                ...PANEL_DEFAULTS,
                 tabs: [
                     {
                         key: 'overview',
@@ -180,5 +195,18 @@ export default class DeviceActionsService extends ResourceActionService {
 
     @action detachFromVehicle(device, options = {}) {
         return this.detachFromAsset(device, options);
+    }
+
+    /**
+     * The attach and detach menu of a device's header, shared by the details
+     * route and the context panel. Detach only shows while it is attached.
+     */
+    attachmentItems(device) {
+        const attached = Boolean(device?.attachable_uuid || device?.attached_to_name || device?.attachable);
+
+        return [
+            { text: this.intl.t('device.actions.attach-to-asset'), icon: 'link', fn: () => this.attachToVehicle(device), permission: 'fleet-ops update device' },
+            ...(attached ? [{ text: this.intl.t('device.attachment.detach'), icon: 'unlink', fn: () => this.detachFromVehicle(device), permission: 'fleet-ops update device' }] : []),
+        ];
     }
 }

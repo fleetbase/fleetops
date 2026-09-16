@@ -5,12 +5,16 @@ import { action } from '@ember/object';
 import { getOwner } from '@ember/application';
 import { task, timeout } from 'ember-concurrency';
 import { format } from 'date-fns';
+import { PANEL_DEFAULTS } from '../../utils/context-panel';
 import { RADAR_PILLS, RADAR_DEFAULT_VIEWS, SNOOZE_PRESETS, snoozePayloadFor, patchPayload, recordPanelFor, recordOf } from '../../utils/radar';
 
 const VIEWS_CACHE_KEY = 'fleetops:radar:views';
 const VIEW_MODE_CACHE_KEY = 'fleetops:radar:view';
 const BRIEFING_CACHE_KEY = 'fleetops:radar:briefing-collapsed';
 const PAGE_SIZE = 50;
+
+/** A record key Radar holds as a uuid rather than a public id. */
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 /**
  * Radar: the triage list that replaced the Resources Hub.
@@ -31,6 +35,7 @@ export default class ManagementIndexController extends Controller {
     @service currentUser;
     @service inspectionSubmissionActions;
     @service inspectionFormActions;
+    @service issueActions;
     @service resourceContextPanel;
 
     queryParams = ['view', 'status', 'filters', 'category', 'fleet', 'q', 'saved', 'assigned', 'window'];
@@ -673,6 +678,10 @@ export default class ManagementIndexController extends Controller {
             return yield this.bulkAssign(keys);
         }
 
+        if (actionName === 'revoke_link') {
+            return yield this.bulkRevokeLinks(this.selectedItems.filter((item) => item.actions?.includes('revoke_link')));
+        }
+
         const body = { keys, action: actionName };
         if (actionName === 'snooze') {
             Object.assign(body, payload.minutes || payload.until ? { minutes: payload.minutes, until: payload.until } : snoozePayloadFor(payload.preset ?? '1h'));
@@ -701,6 +710,49 @@ export default class ManagementIndexController extends Controller {
                 if (ok) {
                     modal.done();
                 }
+            },
+        });
+    }
+
+    /**
+     * Revoke every selected inspection link at once. Each link is its own
+     * delete, so one failure does not stop the rest; the toast counts both.
+     */
+    async bulkRevokeLinks(items) {
+        if (!items.length) {
+            return;
+        }
+
+        return this.modalsManager.confirm({
+            title: this.intl.t('radar.prompts.bulk-revoke-link-title', { count: items.length }),
+            body: this.intl.t('radar.prompts.bulk-revoke-link-body'),
+            acceptButtonText: this.intl.t('radar.actions.revoke-links', { count: items.length }),
+            acceptButtonIcon: 'link-slash',
+            acceptButtonType: 'danger',
+            confirm: async (modal) => {
+                modal.startLoading();
+
+                const results = await Promise.allSettled(
+                    items.map((item) => {
+                        const formId = item.source?.form_uuid ?? item.source?.form_public_id;
+                        const linkId = item.source?.uuid ?? item.source?.public_id;
+
+                        return this.fetch.delete(`inspection-forms/${formId}/links/${linkId}`);
+                    })
+                );
+                const revoked = results.filter((result) => result.status === 'fulfilled').length;
+                const failed = results.length - revoked;
+
+                if (revoked) {
+                    this.notifications.success(this.intl.t('radar.toasts.links-revoked', { count: revoked }));
+                }
+                if (failed) {
+                    this.notifications.error(this.intl.t('radar.toasts.links-revoke-failed', { count: failed }));
+                }
+
+                this.selection = [];
+                modal.done();
+                this.reload.perform();
             },
         });
     }
@@ -899,32 +951,17 @@ export default class ManagementIndexController extends Controller {
         this.reload.perform();
     }
 
+    /**
+     * Close an issue the way its details panel does: the close-issue modal,
+     * which asks for the resolution note and records who closed it.
+     */
     async resolveIssue(item) {
-        const issueId = item.source?.public_id ?? item.source?.uuid;
+        const issue = await this.findRecord('issue', item.source?.public_id ?? item.source?.uuid, recordPanelFor('management.issues')?.include);
+        if (!issue) {
+            return;
+        }
 
-        return this.modalsManager.confirm({
-            title: this.intl.t('radar.prompts.resolve-issue-title'),
-            icon: 'check',
-            iconClass: 'text-green-500',
-            acceptButtonText: this.intl.t('radar.actions.mark-resolved'),
-            acceptButtonScheme: 'success',
-            confirm: async (modal) => {
-                modal.startLoading();
-                try {
-                    const issue = await this.findRecord('issue', issueId);
-                    if (issue) {
-                        issue.status = 'resolved';
-                        await issue.save();
-                    }
-                    this.notifications.success(this.intl.t('radar.toasts.issue-resolved'));
-                    modal.done();
-                    this.reload.perform();
-                } catch (err) {
-                    this.notifications.serverError(err);
-                    modal.stopLoading();
-                }
-            },
-        });
+        return this.issueActions.openCloseIssueModal(issue, { onSaved: () => this.reload.perform() });
     }
 
     async matchVehicle(item) {
@@ -1116,7 +1153,7 @@ export default class ManagementIndexController extends Controller {
             return this.hostRouter.transitionTo(`console.fleet-ops.${record.route}`, record.model);
         }
 
-        const resource = yield this.findRecord(panel.modelName, record.model);
+        const resource = yield this.findRecord(panel.modelName, record.model, panel.include);
         if (!resource) {
             return;
         }
@@ -1128,12 +1165,8 @@ export default class ManagementIndexController extends Controller {
 
         return this.resourceContextPanel.open({
             resource,
-            tabs: [
-                {
-                    label: this.intl.t('common.overview'),
-                    component: panel.component,
-                },
-            ],
+            tabs: [{ key: 'overview', label: this.intl.t('common.overview'), component: panel.component }],
+            ...PANEL_DEFAULTS,
         });
     }
 
@@ -1335,13 +1368,26 @@ export default class ManagementIndexController extends Controller {
     // Plumbing
     // ------------------------------------------------------------------
 
-    async findRecord(modelName, id) {
+    /**
+     * Load a record Radar points at by its public id (or uuid), the way the
+     * details routes do. `store.findRecord` with a public id registers the
+     * record under an identifier its payload then contradicts, which Ember
+     * Data rejects with "You should not change the <type> of a
+     * RecordIdentifier" once the record is already in the store.
+     */
+    async findRecord(modelName, id, include = []) {
         if (!id) {
             return null;
         }
 
+        const field = UUID_PATTERN.test(id) ? 'uuid' : 'public_id';
+        const query = { [field]: id, single: true };
+        if (include?.length) {
+            query.with = include;
+        }
+
         try {
-            return await this.store.findRecord(modelName, id);
+            return await this.store.queryRecord(modelName, query);
         } catch (err) {
             this.notifications.serverError(err);
 

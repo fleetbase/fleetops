@@ -13,39 +13,7 @@ export default class ManagementIssuesIndexDetailsController extends Controller {
         },
     ];
 
-    get isClosed() {
-        return ['closed', 'resolved', 'completed'].includes(this.model?.status);
-    }
-
     get actionButtons() {
-        const workflowItems = [
-            {
-                label: 'Change Status',
-                icon: 'arrows-rotate',
-                fn: () => this.issueActions.openStatusModal(this.model, { onSaved: () => this.refreshIssue() }),
-            },
-            {
-                label: 'Assign Issue',
-                icon: 'user-check',
-                fn: () => this.issueActions.openAssignModal(this.model, { onSaved: () => this.refreshIssue() }),
-            },
-        ];
-
-        if (this.isClosed) {
-            workflowItems.push({
-                label: 'Re-open Issue',
-                icon: 'rotate-left',
-                fn: () => this.issueActions.confirmReopenIssue(this.model, { onSaved: () => this.refreshIssue() }),
-            });
-        } else {
-            workflowItems.push({
-                label: 'Close Issue',
-                icon: 'circle-check',
-                class: 'text-green-600 dark:text-green-400',
-                fn: () => this.issueActions.openCloseIssueModal(this.model, { onSaved: () => this.refreshIssue() }),
-            });
-        }
-
         return [
             {
                 icon: 'pencil',
@@ -54,7 +22,7 @@ export default class ManagementIssuesIndexDetailsController extends Controller {
             {
                 icon: 'ellipsis',
                 type: 'default',
-                items: workflowItems,
+                items: this.issueActions.workflowItems(this.model, () => this.refreshIssue()),
             },
         ];
     }

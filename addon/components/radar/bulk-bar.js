@@ -17,6 +17,11 @@ export default class RadarBulkBarComponent extends Component {
         return [...counts.entries()].map(([label, count]) => `${count} ${label}`).join(' · ');
     }
 
+    /** Selected inspection links that can still be revoked. */
+    get revocableCount() {
+        return (this.args.items ?? []).filter((item) => item.actions?.includes('revoke_link')).length;
+    }
+
     get hasSnoozed() {
         return (this.args.items ?? []).some((item) => item.state?.status === 'snoozed');
     }

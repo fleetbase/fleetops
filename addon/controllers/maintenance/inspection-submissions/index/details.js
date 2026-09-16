@@ -42,59 +42,12 @@ export default class MaintenanceInspectionSubmissionsIndexDetailsController exte
      * from the Follow Up panel instead of offered again here.
      */
     get followUpItems() {
-        const record = this.model;
-        const items = [];
-
-        if (record?.has_failures && !record?.issue_uuid) {
-            items.push({
-                text: this.intl.t('inspection.record.create-issue'),
-                icon: 'triangle-exclamation',
-                fn: this.createIssue,
-                permission: 'fleet-ops create-issue inspection-submission',
-            });
-        }
-
-        if (record?.has_failures && !record?.work_order_uuid) {
-            items.push({
-                text: this.intl.t('inspection.record.create-work-order'),
-                icon: 'clipboard-list',
-                fn: this.createWorkOrder,
-                permission: 'fleet-ops create-work-order inspection-submission',
-            });
-        }
-
-        if (record?.status !== 'resolved') {
-            items.push({ text: this.intl.t('inspection.record.resolve'), icon: 'check', fn: this.resolve, permission: 'fleet-ops resolve inspection-submission' });
-        }
-
-        if (items.length) {
-            items.push({ separator: true });
-        }
-
-        items.push({ text: this.intl.t('common.delete'), icon: 'trash', class: 'text-red-500', fn: this.delete, permission: 'fleet-ops delete inspection-submission' });
-
-        return items;
-    }
-
-    @action createIssue() {
-        return this.inspectionSubmissionActions.createIssue(this.model);
-    }
-
-    @action createWorkOrder() {
-        return this.inspectionSubmissionActions.createWorkOrder(this.model);
-    }
-
-    @action resolve() {
-        return this.inspectionSubmissionActions.resolve(this.model);
+        return this.inspectionSubmissionActions.followUpItems(this.model, {
+            onDeleted: () => this.hostRouter.transitionTo('console.fleet-ops.maintenance.inspection-submissions.index'),
+        });
     }
 
     @action edit() {
         return this.hostRouter.transitionTo('console.fleet-ops.maintenance.inspection-submissions.index.edit', this.model);
-    }
-
-    @action delete() {
-        return this.inspectionSubmissionActions.delete(this.model, {
-            onConfirm: () => this.hostRouter.transitionTo('console.fleet-ops.maintenance.inspection-submissions.index'),
-        });
     }
 }

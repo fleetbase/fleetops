@@ -167,13 +167,15 @@ export const RECORD_PANELS = {
     'management.drivers': { modelName: 'driver', service: 'driver-actions' },
     'management.vehicles': { modelName: 'vehicle', service: 'vehicle-actions' },
     'management.trailers': { modelName: 'trailer', service: 'trailer-actions' },
-    'management.issues': { modelName: 'issue', service: 'issue-actions' },
+    'management.issues': { modelName: 'issue', service: 'issue-actions', include: ['driver', 'vehicle', 'assignee', 'reporter', 'order', 'files'] },
     'management.fuel-transactions': { modelName: 'fuel-provider-transaction', component: 'fuel-provider-transaction/summary' },
+    'maintenance.maintenances': { modelName: 'maintenance', service: 'maintenance-actions' },
+    'maintenance.equipment': { modelName: 'equipment', service: 'equipment-actions' },
     'maintenance.schedules': { modelName: 'maintenance-schedule', service: 'maintenance-schedule-actions' },
     'maintenance.work-orders': { modelName: 'work-order', service: 'work-order-actions' },
     'maintenance.parts': { modelName: 'part', service: 'part-actions' },
-    'maintenance.inspection-submissions': { modelName: 'inspection-submission', component: 'inspection-submission/details' },
-    'maintenance.inspection-forms': { modelName: 'inspection-form', component: 'inspection-form/details' },
+    'maintenance.inspection-submissions': { modelName: 'inspection-submission', service: 'inspection-submission-actions' },
+    'maintenance.inspection-forms': { modelName: 'inspection-form', service: 'inspection-form-actions' },
     'connectivity.devices': { modelName: 'device', service: 'device-actions' },
 };
 

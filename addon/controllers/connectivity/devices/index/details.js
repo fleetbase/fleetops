@@ -42,24 +42,7 @@ export default class ConnectivityDevicesIndexDetailsController extends Controlle
                 icon: 'ellipsis-h',
                 iconPrefix: 'fas',
                 renderInPlace: true,
-                items: [
-                    {
-                        text: this.intl.t('device.actions.attach-to-asset'),
-                        icon: 'link',
-                        fn: () => this.deviceActions.attachToVehicle(this.model),
-                        permission: 'fleet-ops update device',
-                    },
-                    ...(this.model.attachable_uuid || this.model.attached_to_name || this.model.attachable
-                        ? [
-                              {
-                                  text: this.intl.t('device.attachment.detach'),
-                                  icon: 'unlink',
-                                  fn: () => this.deviceActions.detachFromVehicle(this.model),
-                                  permission: 'fleet-ops update device',
-                              },
-                          ]
-                        : []),
-                ],
+                items: this.deviceActions.attachmentItems(this.model),
             },
         ];
     }
