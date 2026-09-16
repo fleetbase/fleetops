@@ -58,6 +58,30 @@ function delegate(owner, typeAttrs, field, fallback) {
     };
 }
 
+/**
+ * The concrete record behind a polymorphic base record: an index payload
+ * normalizes a facilitator as a bare `facilitator` model, which the concrete
+ * resource's panel cannot use. A record that already is the concrete model or
+ * one of its subtypes is returned as it is.
+ */
+export async function loadConcreteRecord(owner, descriptor, record) {
+    const modelName = record?.constructor?.modelName;
+    const known = [...(descriptor.modelNames ?? []), ...(descriptor.aliases ?? [])];
+    const id = record ? (get(record, 'id') ?? get(record, 'uuid')) : null;
+    const canonical = descriptor.modelNames?.[0];
+    const store = owner.lookup('service:store');
+
+    if (!modelName || known.includes(modelName) || !id || !canonical || !store) {
+        return record;
+    }
+
+    try {
+        return store.peekRecord(canonical, id) ?? (await store.findRecord(canonical, id)) ?? record;
+    } catch {
+        return record;
+    }
+}
+
 export function resolveConcreteResourceKey(owner, record, typeAttrs = ['attachable_type', 'facilitator_type', 'subject_type', 'customer_type', 'maintainable_type', 'type']) {
     return concreteKey(owner, record, typeAttrs);
 }
@@ -81,8 +105,18 @@ export default function buildPolymorphicDescriptors(owner) {
         open: async (record, context) => {
             const registry = owner.lookup('service:resource-registry');
             const key = concreteKey(owner, record, base.typeAttrs);
+            const descriptor = key ? registry.getDescriptor(key) : null;
 
-            return key ? registry.open(record, { ...context, resourceType: key }) : false;
+            if (typeof descriptor?.open !== 'function') {
+                return false;
+            }
+
+            // Open through the concrete descriptor directly. Handing the base
+            // record back to `registry.open` resolves it to this descriptor
+            // again, and the promise loop froze the page with no error.
+            const concrete = await loadConcreteRecord(owner, descriptor, record);
+
+            return descriptor.open(concrete, { ...context, resourceType: key });
         },
         components: { identity: `cell/${base.key}-identity` },
     }));

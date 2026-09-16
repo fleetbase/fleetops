@@ -57,6 +57,12 @@ class Driver extends Model
     use LogsActivity;
     use CausesActivity;
     use HasCustomFields;
+    /**
+     * Schedule item statuses in which a driver is expected on shift. The
+     * `schedule_items.status` enum has no `active`; a shift a driver is
+     * working is `in_progress`.
+     */
+    public const LIVE_SHIFT_STATUSES = ['pending', 'scheduled', 'confirmed', 'in_progress'];
 
     /**
      * The database table used by the model.
@@ -375,7 +381,7 @@ class Driver extends Model
     public function currentShift(): MorphOne
     {
         return $this->morphOne(ScheduleItem::class, 'assignee', 'assignee_type', 'assignee_uuid')
-            ->whereIn('status', ['scheduled', 'active'])
+            ->whereIn('status', static::LIVE_SHIFT_STATUSES)
             ->where('start_at', '<=', now())
             ->where('end_at', '>=', now())
             ->latest('start_at');
@@ -391,7 +397,7 @@ class Driver extends Model
 
         return $this->scheduleItems()
             ->whereDate('start_at', $date)
-            ->whereIn('status', ['pending', 'active'])
+            ->whereIn('status', static::LIVE_SHIFT_STATUSES)
             ->orderBy('start_at')
             ->first();
     }

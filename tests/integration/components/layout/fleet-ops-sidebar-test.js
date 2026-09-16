@@ -2,6 +2,7 @@ import { module, test } from 'qunit';
 import { setupRenderingTest } from 'dummy/tests/helpers';
 import { click, fillIn, render, settled, waitFor } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
+import { setupIntl } from 'ember-intl/test-support';
 import Service from '@ember/service';
 import window from 'ember-window-mock';
 import { getOwner } from '@ember/application';
@@ -62,6 +63,7 @@ class AbilitiesStub extends Service {
 
 module('Integration | Component | layout/fleet-ops-sidebar', function (hooks) {
     setupRenderingTest(hooks);
+    setupIntl(hooks, 'en-us');
 
     hooks.beforeEach(function () {
         this.owner.register('service:router', RouterStubService);
@@ -290,14 +292,17 @@ module('Integration | Component | layout/fleet-ops-sidebar', function (hooks) {
         assert.dom('.next-sidebar-navigator').doesNotIncludeText('Parts');
     });
 
-    test('it hides Resources when the Resources Hub is the only visible child', async function (assert) {
+    test('it hides Resources when Radar is the only visible child', async function (assert) {
         const abilities = this.owner.lookup('service:abilities');
+        // Every real child of Resources, so only the hub item would remain.
         abilities.denied.add('fleet-ops see driver');
         abilities.denied.add('fleet-ops see vehicle');
+        abilities.denied.add('fleet-ops see trailer');
         abilities.denied.add('fleet-ops see fleet');
         abilities.denied.add('fleet-ops see vendor');
         abilities.denied.add('fleet-ops see contact');
         abilities.denied.add('fleet-ops see place');
+        abilities.denied.add('fleet-ops see fuel-report');
         abilities.denied.add('fleet-ops see fuel-report');
         abilities.denied.add('fleet-ops see issue');
 
@@ -305,9 +310,9 @@ module('Integration | Component | layout/fleet-ops-sidebar', function (hooks) {
 
         assert.dom('.next-sidebar-navigator-view-in').doesNotIncludeText('Resources');
 
-        await fillIn('.next-sidebar-navigator-search input', 'resources hub');
+        await fillIn('.next-sidebar-navigator-search input', 'radar');
 
-        assert.dom('.next-sidebar-navigator-search-result').doesNotExist('Resources Hub is not searchable when Resources has no real visible children');
+        assert.dom('.next-sidebar-navigator-search-result').doesNotExist('Radar is not searchable when Resources has no real visible children');
     });
 
     test('it hides Connectivity when Telematics is the only visible child', async function (assert) {
@@ -375,8 +380,8 @@ module('Integration | Component | layout/fleet-ops-sidebar', function (hooks) {
         await render(hbs`<Layout::FleetOpsSidebar />`);
 
         await click('.next-sidebar-navigator-view-in .next-sidebar-navigator-item:nth-of-type(2)');
-        assert.dom('.next-sidebar-navigator-view-in .next-sidebar-navigator-item:first-of-type').includesText('Resources Hub');
-        assert.dom('.next-sidebar-navigator-view-in .next-sidebar-navigator-item:first-of-type svg[data-icon="layer-group"]').exists();
+        assert.dom('.next-sidebar-navigator-view-in .next-sidebar-navigator-item:first-of-type').includesText('Radar');
+        assert.dom('.next-sidebar-navigator-view-in .next-sidebar-navigator-item:first-of-type svg[data-icon="crosshairs"]').exists();
 
         await click('.next-sidebar-navigator-back');
         await click('.next-sidebar-navigator-view-in .next-sidebar-navigator-item:nth-of-type(3)');
@@ -463,7 +468,7 @@ module('Integration | Component | layout/fleet-ops-sidebar', function (hooks) {
 
         const labels = [...this.element.querySelectorAll('.next-sidebar-navigator-view-in .next-sidebar-navigator-item-label')].map((element) => element.textContent.trim());
 
-        assert.deepEqual(labels.slice(0, 5), ['Resources Hub', 'Contracts', 'Drivers', 'Permits', 'Vehicles'], 'hub items stay first while registered section items sort by priority');
+        assert.deepEqual(labels.slice(0, 5), ['Radar', 'Contracts', 'Drivers', 'Permits', 'Vehicles'], 'hub items stay first while registered section items sort by priority');
 
         await click('.next-sidebar-navigator-view-in .next-sidebar-navigator-item:nth-of-type(2)');
 

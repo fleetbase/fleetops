@@ -1,0 +1,17 @@
+<button
+    type="button"
+    class="fleet-ops-radar-agenda-entry is-{{@entry.severity}} {{if @compact 'is-compact'}} {{if @entry.planned 'is-planned'}} {{if @positioned 'is-positioned'}}"
+    style={{if @positioned this.leftStyle}}
+    draggable={{if @draggable "true" "false"}}
+    title={{@entry.title}}
+    {{on "click" this.open}}
+    {{on "dragstart" this.dragStart}}
+    data-test-radar-agenda-entry={{@entry.key}}
+>
+    <span class="fleet-ops-radar-severity is-{{@entry.severity}}"></span>
+    {{#if @entry.subject}}<strong>{{@entry.subject.label}}</strong>{{/if}}
+    <span class="fleet-ops-radar-agenda-entry-title">{{@entry.title}}</span>
+    {{#if @entry.label}}<span class="fleet-ops-radar-agenda-entry-time">{{@entry.label}}</span>{{/if}}
+    {{#if @entry.planned}}<FaIcon @icon="calendar-check" class="ml-1" />{{/if}}
+    {{#if @draggable}}<FaIcon @icon="grip-vertical" class="fleet-ops-radar-agenda-grip" />{{/if}}
+</button>

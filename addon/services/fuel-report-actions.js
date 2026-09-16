@@ -1,6 +1,7 @@
 import ResourceActionService from '@fleetbase/ember-core/services/resource-action';
 import { inject as service } from '@ember/service';
 import { action } from '@ember/object';
+import { PANEL_DEFAULTS, closePanelsThen } from '../utils/context-panel';
 
 export default class FuelReportActionsService extends ResourceActionService {
     @service driverActions;
@@ -40,15 +41,14 @@ export default class FuelReportActionsService extends ResourceActionService {
                 fuelReport,
             });
         },
-        view: (fuelReport) => {
+        view: (fuelReport, options = {}) => {
             return this.resourceContextPanel.open({
                 fuelReport,
-                tabs: [
-                    {
-                        label: this.intl.t('common.overview'),
-                        component: 'fuel-report/details',
-                    },
-                ],
+                title: fuelReport?.name ?? `Fuel reported on ${fuelReport?.createdAt ?? ''}`.trim(),
+                actionButtons: [{ icon: 'pencil', permission: 'fleet-ops update fuel-report', fn: () => closePanelsThen(this.resourceContextPanel, () => this.panel.edit(fuelReport)) }],
+                tabs: [{ key: 'overview', label: this.intl.t('common.overview'), component: 'fuel-report/details' }],
+                ...PANEL_DEFAULTS,
+                ...options,
             });
         },
     };

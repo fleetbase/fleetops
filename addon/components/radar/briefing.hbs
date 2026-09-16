@@ -1,0 +1,108 @@
+<section class="fleet-ops-radar-briefing {{if @collapsed 'is-collapsed'}}" data-test-radar-briefing>
+    <div class="fleet-ops-radar-briefing-bar">
+        <span class="fleet-ops-control-hub-eyebrow">{{t "radar.briefing.title"}}</span>
+        {{#if @briefing}}
+            <span class="fleet-ops-radar-row-meta">{{t "radar.briefing.generated" time=(format-date-fns @briefing.generated_at "HH:mm")}}</span>
+            <span class="fleet-ops-radar-row-meta" data-test-radar-briefing-yesterday>{{t "radar.briefing.yesterday" closed=(or @briefing.yesterday.closed 0) rolled=(or @briefing.yesterday.rolled_over 0)}}</span>
+        {{/if}}
+        <button type="button" class="fleet-ops-radar-briefing-toggle" {{on "click" @onToggle}} data-test-radar-briefing-toggle>
+            <FaIcon @icon={{if @collapsed "chevron-down" "chevron-up"}} />
+            {{if @collapsed (t "radar.briefing.expand") (t "radar.briefing.collapse")}}
+        </button>
+    </div>
+
+    {{#unless @collapsed}}
+        {{#if @briefing}}
+            <div class="fleet-ops-radar-briefing-grid">
+                <div class="fleet-ops-radar-briefing-score" data-test-radar-briefing-score>
+                    <div class="fleet-ops-radar-drawer-label">{{t "radar.briefing.score"}}</div>
+                    <div class="fleet-ops-radar-briefing-score-value">
+                        <span class="fleet-ops-radar-briefing-score-number">{{@briefing.score.value}}</span>
+                        <span class="fleet-ops-radar-briefing-score-of">{{t "radar.briefing.of-100"}}</span>
+                    </div>
+                    <div class="fleet-ops-radar-briefing-score-delta">
+                        {{#if this.hasDelta}}
+                            <Badge @status={{this.deltaStatus}} @text={{t "radar.briefing.vs-yesterday" delta=this.deltaText}} @hideStatusDot={{true}} @disableHumanize={{true}} />
+                        {{else}}
+                            <span class="fleet-ops-radar-row-meta">{{t "radar.briefing.no-history"}}</span>
+                        {{/if}}
+                    </div>
+                    <div class="fleet-ops-radar-row-meta mt-2">{{@briefing.score.summary}}</div>
+                </div>
+
+                <div class="fleet-ops-radar-briefing-categories" data-test-radar-briefing-categories>
+                    {{#each @briefing.categories as |category|}}
+                        <div class="fleet-ops-radar-briefing-category {{if category.critical 'has-critical'}}" data-test-radar-briefing-category={{category.key}}>
+                            <div class="fleet-ops-radar-briefing-category-head">
+                                <span class="fleet-ops-radar-briefing-category-label">{{category.label}}</span>
+                                <span class="fleet-ops-radar-briefing-category-score">{{category.score}}</span>
+                            </div>
+                            <div class="fleet-ops-radar-briefing-category-bar"><span style={{this.barStyle category.score}} class="is-{{this.barTone category.score}}"></span></div>
+                            <div class="fleet-ops-radar-briefing-category-gaps">
+                                {{#if category.gaps.length}}
+                                    <span>{{this.gapText category}}</span>
+                                    <button type="button" class="fleet-ops-radar-briefing-link" {{on "click" (fn @onFilterCategory category.key)}} data-test-radar-briefing-filter={{category.key}}>{{t "radar.briefing.filter"}}</button>
+                                {{else}}
+                                    <span class="fleet-ops-radar-row-meta">—</span>
+                                {{/if}}
+                            </div>
+                        </div>
+                    {{/each}}
+                </div>
+
+                <div class="fleet-ops-radar-briefing-prose" data-test-radar-briefing-prose>
+                    <p>
+                        {{#each @briefing.brief as |sentence|}}
+                            {{#each sentence as |segment|}}
+                                {{#if segment.route}}
+                                    <button type="button" class="fleet-ops-radar-briefing-link" {{on "click" (fn @onOpenRecord segment)}}>{{segment.text}}</button>
+                                {{else}}
+                                    {{segment.text}}
+                                {{/if}}
+                            {{/each}}
+                            {{" "}}
+                        {{/each}}
+                    </p>
+                </div>
+
+                <div class="fleet-ops-radar-briefing-decisions" data-test-radar-briefing-decisions>
+                    <div class="fleet-ops-radar-briefing-decisions-head">
+                        <span class="fleet-ops-radar-drawer-label">{{t "radar.briefing.decisions"}}</span>
+                        {{#if @briefing.decisions.length}}
+                            <span class="fleet-ops-radar-row-meta">{{t "radar.briefing.decisions-count" shown=this.visibleDecisions.length total=@briefing.decisions.length}}</span>
+                        {{/if}}
+                    </div>
+                    {{#if this.visibleDecisions.length}}
+                        {{#each this.visibleDecisions as |decision|}}
+                            <Radar::DecisionCard @decision={{decision}} @isBusy={{eq @busyKey decision.key}} @onConfirm={{@onConfirm}} @onAlternative={{@onAlternative}} @onDismiss={{@onDismiss}} @onOpenRecord={{@onOpenRecord}} />
+                        {{/each}}
+                    {{else}}
+                        <div class="fleet-ops-radar-row-meta" data-test-radar-briefing-nothing>{{t "radar.briefing.nothing-to-decide"}}</div>
+                    {{/if}}
+                    {{#each @strips as |strip|}}
+                        <div class="fleet-ops-radar-briefing-strip is-{{strip.kind}}" data-test-radar-briefing-strip={{strip.kind}}>
+                            <FaIcon @icon={{if (eq strip.kind "confirmed") "circle-check" "clock"}} />
+                            <span class="fleet-ops-radar-briefing-strip-label">
+                                {{#if (eq strip.kind "confirmed")}}
+                                    {{t "radar.briefing.confirmed" time=(format-date-fns strip.at "HH:mm")}}
+                                {{else}}
+                                    {{t "radar.briefing.snoozed-until" time=(format-date-fns strip.until "d MMM HH:mm")}}
+                                {{/if}}
+                            </span>
+                            <span class="fleet-ops-radar-briefing-strip-title">{{strip.title}}</span>
+                            {{#if (eq strip.kind "confirmed")}}
+                                {{#if strip.undo}}
+                                    <button type="button" class="fleet-ops-radar-briefing-link" {{on "click" (fn @onUndo strip)}} data-test-radar-briefing-undo>{{t "radar.briefing.undo"}}</button>
+                                {{/if}}
+                            {{else}}
+                                <button type="button" class="fleet-ops-radar-briefing-link" {{on "click" (fn @onWake strip)}} data-test-radar-briefing-wake>{{t "radar.briefing.wake-now"}}</button>
+                            {{/if}}
+                        </div>
+                    {{/each}}
+                </div>
+            </div>
+        {{else if @isLoading}}
+            <div class="fleet-ops-radar-briefing-loading"><Spinner @size="sm" /></div>
+        {{/if}}
+    {{/unless}}
+</section>

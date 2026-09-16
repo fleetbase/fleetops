@@ -1,0 +1,20 @@
+{{#each @groups as |group|}}
+    <div class="fleet-ops-radar-group-header is-{{group.key}}" data-test-radar-group={{group.key}}>
+        {{#if (eq group.key "overdue")}}<FaIcon @icon="circle-exclamation" />{{/if}}
+        <span>{{t (concat "radar.groups." group.key)}}</span>
+        <span class="fleet-ops-radar-group-count">{{group.count}}</span>
+    </div>
+    {{#each group.items as |item|}}
+        <Radar::ItemRow
+            @item={{item}}
+            @isSelected={{in-array item.key @selection}}
+            @isFocused={{eq @focusedKey item.key}}
+            @snoozePresets={{@snoozePresets}}
+            @onSelect={{@onSelect}}
+            @onFocus={{@onFocus}}
+            @onOpen={{@onOpen}}
+            @onAct={{@onAct}}
+            @onOpenRecord={{@onOpenRecord}}
+        />
+    {{/each}}
+{{/each}}

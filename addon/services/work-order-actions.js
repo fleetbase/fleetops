@@ -1,10 +1,12 @@
 import ResourceActionService from '@fleetbase/ember-core/services/resource-action';
 import { action } from '@ember/object';
 import { inject as service } from '@ember/service';
+import { PANEL_DEFAULTS, closePanelsThen, registeredPanelTabs } from '../utils/context-panel';
 
 export default class WorkOrderActionsService extends ResourceActionService {
     @service fetch;
     @service notifications;
+    @service('universe/menu-service') menuService;
     constructor() {
         super(...arguments);
         this.initialize('work-order');
@@ -37,15 +39,22 @@ export default class WorkOrderActionsService extends ResourceActionService {
                 workOrder,
             });
         },
-        view: (workOrder) => {
+        view: (workOrder, options = {}) => {
             return this.resourceContextPanel.open({
                 workOrder,
-                tabs: [
-                    {
-                        label: this.intl.t('common.overview'),
-                        component: 'work-order/details',
-                    },
+                title: workOrder?.code ?? workOrder?.subject,
+                header: 'work-order/panel-header',
+                actionButtons: [
+                    { icon: 'paper-plane', text: 'Send to Vendor', permission: 'fleet-ops update work-order', fn: () => this.sendEmail(workOrder) },
+                    { icon: 'edit', permission: 'fleet-ops update work-order', fn: () => closePanelsThen(this.resourceContextPanel, () => this.panel.edit(workOrder)) },
+                    { icon: 'trash', type: 'danger', permission: 'fleet-ops delete work-order', fn: () => this.delete(workOrder, { onConfirm: () => this.resourceContextPanel.closeAll() }) },
                 ],
+                tabs: [
+                    { key: 'overview', label: this.intl.t('common.overview'), component: 'work-order/details' },
+                    ...registeredPanelTabs(this.menuService, 'fleet-ops:component:work-order:details'),
+                ],
+                ...PANEL_DEFAULTS,
+                ...options,
             });
         },
     };

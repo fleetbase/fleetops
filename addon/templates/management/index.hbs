@@ -1,113 +1,121 @@
-<div class="fleet-ops-control-hub" data-test-fleet-ops-resources-hub>
-    <section class="fleet-ops-control-hub-header">
-        <div class="fleet-ops-control-hub-header-copy">
-            <div class="fleet-ops-control-hub-eyebrow">Resources</div>
-            <h1 class="fleet-ops-control-hub-title">Resources Hub</h1>
-            <p class="fleet-ops-control-hub-subtitle">Manage the people, vehicles, places, partners, and operating records that keep dispatch grounded.</p>
-        </div>
-        <div class="fleet-ops-control-hub-header-actions">
-            <Button @icon="refresh" @size="sm" @helpText={{t "common.reload"}} @onClick={{perform this.loadHub}} />
-        </div>
-    </section>
+<div class="fleet-ops-control-hub fleet-ops-radar" data-test-fleet-ops-radar {{radar-keyboard this.keyboardHandlers enabled=(eq this.view "list")}}>
+    <Radar::Header
+        @stats={{this.stats}}
+        @lastLoadedAt={{this.lastLoadedAt}}
+        @query={{this.q}}
+        @view={{this.view}}
+        @isLoading={{this.reload.isRunning}}
+        @onSearch={{this.search}}
+        @onReload={{perform this.reload}}
+        @onNewNotice={{this.newNotice}}
+        @onChangeView={{this.setView}}
+    />
 
-    <div class="fleet-ops-control-hub-body">
-        <section class="fleet-ops-control-hub-kpis">
-            {{#each this.kpis as |kpi|}}
-                <LinkTo @route={{kpi.route}} class="fleet-ops-control-hub-kpi fleet-ops-control-hub-tone-{{kpi.tone}}" data-test-fleet-ops-resources-kpi={{kpi.key}}>
-                    <div class="fleet-ops-control-hub-kpi-copy">
-                        <div class="fleet-ops-control-hub-kpi-label">{{kpi.label}}</div>
-                        <div class="fleet-ops-control-hub-kpi-value">{{kpi.value}}</div>
-                        <div class="fleet-ops-control-hub-kpi-caption">{{kpi.caption}}</div>
-                        <div class="fleet-ops-control-hub-kpi-action">
-                            <span>{{kpi.actionLabel}}</span>
-                            <FaIcon @icon="arrow-right" />
-                        </div>
-                    </div>
-                    <div class="fleet-ops-control-hub-kpi-icon"><FaIcon @icon={{kpi.icon}} /></div>
-                </LinkTo>
-            {{/each}}
-        </section>
+    <div class="fleet-ops-control-hub-body fleet-ops-radar-body">
+        {{#if this.sourceErrors.length}}
+            <div class="fleet-ops-radar-sources-warning" data-test-radar-sources-warning>
+                <FaIcon @icon="triangle-exclamation" />
+                <span>{{t "radar.sources-warning" sources=this.sourceErrorsText}}</span>
+            </div>
+        {{/if}}
 
-        <section class="fleet-ops-control-hub-grid">
-            <div class="fleet-ops-control-hub-main">
-                {{#each this.sections as |section|}}
-                    <div class="fleet-ops-control-hub-panel" data-test-fleet-ops-resources-section={{section.key}}>
-                        <div class="fleet-ops-control-hub-panel-header">
-                            <div>
-                                <h2>{{section.title}}</h2>
-                                <p>{{section.description}}</p>
-                            </div>
-                        </div>
+        <Radar::Briefing
+            @briefing={{this.briefing}}
+            @strips={{this.strips}}
+            @isLoading={{this.loadBriefing.isRunning}}
+            @collapsed={{this.briefingCollapsed}}
+            @busyKey={{this.busyDecisionKey}}
+            @onToggle={{this.toggleBriefing}}
+            @onFilterCategory={{this.filterCategory}}
+            @onConfirm={{perform this.confirmDecision}}
+            @onAlternative={{perform this.decisionAlternative}}
+            @onDismiss={{perform this.dismissDecision}}
+            @onUndo={{perform this.undoStrip}}
+            @onWake={{perform this.wakeStrip}}
+            @onOpenRecord={{this.openRecord}}
+        />
 
-                        <div class="fleet-ops-control-hub-link-grid">
-                            {{#each section.links as |link|}}
-                                <LinkTo @route={{link.route}} class="fleet-ops-control-hub-link" data-test-fleet-ops-hub-card={{link.label}}>
-                                    <span class="fleet-ops-control-hub-link-icon"><FaIcon @icon={{link.icon}} /></span>
-                                    <span class="fleet-ops-control-hub-link-copy">
-                                        <span class="fleet-ops-control-hub-link-title">{{link.label}}</span>
-                                        <span class="fleet-ops-control-hub-link-description">{{link.description}}</span>
-                                    </span>
-                                    <span class="fleet-ops-control-hub-link-count">{{link.count}}</span>
-                                </LinkTo>
-                            {{/each}}
-                        </div>
-                    </div>
-                {{/each}}
+        {{#if (eq this.view "agenda")}}
+            <Radar::Agenda
+                @agenda={{this.agenda}}
+                @window={{this.window}}
+                @isLoading={{this.loadAgenda.isRunning}}
+                @onChangeWindow={{this.setWindow}}
+                @onOpen={{this.openAgendaEntry}}
+                @onPlan={{perform this.planItem}}
+                @onHandover={{perform this.openHandover}}
+                @onSeeAll={{this.showAnytimeInList}}
+            />
+        {{else}}
+            <Radar::FilterPills @pills={{this.pills}} @isFiltered={{this.isFiltered}} @onToggle={{this.togglePill}} @onClear={{this.clearFilters}} />
+
+            <Radar::ViewBar
+                @status={{this.status}}
+                @stats={{this.stats}}
+                @views={{this.allViews}}
+                @activeView={{this.activeView}}
+                @onSetStatus={{this.setStatus}}
+                @onApplyView={{this.applyView}}
+                @onSaveView={{this.saveCurrentView}}
+                @onDeleteView={{this.deleteView}}
+            />
+
+            {{#if this.hasSelection}}
+                <Radar::BulkBar @items={{this.selectedItems}} @snoozePresets={{this.snoozePresets}} @isBusy={{this.bulkAct.isRunning}} @onAct={{perform this.bulkAct}} @onClear={{this.clearSelection}} />
+            {{/if}}
+
+            <div class="fleet-ops-radar-list" data-test-radar-list>
+                {{#if this.isLoading}}
+                    <div class="fleet-ops-radar-empty"><Spinner @size="lg" /></div>
+                {{else if this.isEmpty}}
+                    <Radar::EmptyState @status={{this.status}} @isFiltered={{this.isFiltered}} @snoozeSchedule={{this.snoozeSchedule}} @onClear={{this.clearFilters}} />
+                {{else}}
+                    <Radar::ItemList
+                        @groups={{this.groups}}
+                        @selection={{this.selection}}
+                        @focusedKey={{this.focusedKey}}
+                        @snoozePresets={{this.snoozePresets}}
+                        @onSelect={{this.toggleSelect}}
+                        @onFocus={{this.focusItem}}
+                        @onOpen={{this.openDrawer}}
+                        @onAct={{perform this.act}}
+                        @onOpenRecord={{this.openRecord}}
+                    />
+                {{/if}}
             </div>
 
-            <aside class="fleet-ops-control-hub-side">
-                <div class="fleet-ops-control-hub-panel">
-                    <div class="fleet-ops-control-hub-panel-header">
-                        <div>
-                            <h2>Action Queue</h2>
-                            <p>Prioritized from current resource readiness.</p>
-                        </div>
-                    </div>
-
-                    <div class="fleet-ops-control-hub-action-list">
-                        {{#each this.actions as |action|}}
-                            {{#if action.route}}
-                                <LinkTo @route={{action.route}} @query={{action.query}} class="fleet-ops-control-hub-action fleet-ops-control-hub-tone-{{action.tone}}">
-                                    <FaIcon @icon={{action.icon}} />
-                                    <span>
-                                        <strong>{{action.label}}</strong>
-                                        <small>{{action.description}}</small>
-                                    </span>
-                                </LinkTo>
-                            {{else}}
-                                <div class="fleet-ops-control-hub-action fleet-ops-control-hub-tone-{{action.tone}}">
-                                    <FaIcon @icon={{action.icon}} />
-                                    <span>
-                                        <strong>{{action.label}}</strong>
-                                        <small>{{action.description}}</small>
-                                    </span>
-                                </div>
-                            {{/if}}
-                        {{/each}}
-                    </div>
-                </div>
-
-                <div class="fleet-ops-control-hub-doc-note">
-                    <div class="fleet-ops-control-hub-doc-note-heading">
-                        <FaIcon @icon="lightbulb" />
-                        <span>Guides</span>
-                    </div>
-                    <p class="fleet-ops-control-hub-doc-note-copy">Read the guide before changing resource setup.</p>
-                    <div class="fleet-ops-control-hub-doc-grid">
-                        {{#each this.docs as |doc|}}
-                            <button type="button" class="fleet-ops-control-hub-doc-link" {{on "click" (fn this.openDocs doc)}}>
-                                <FaIcon @icon={{doc.icon}} />
-                                <span class="fleet-ops-control-hub-doc-copy">
-                                    <strong>Read the guide on {{doc.label}}</strong>
-                                    <small>{{doc.description}}</small>
-                                </span>
-                            </button>
-                        {{/each}}
-                    </div>
-                </div>
-            </aside>
-        </section>
+        {{/if}}
     </div>
+
+    {{#unless (eq this.view "agenda")}}
+        <div class="fleet-ops-radar-footer" data-test-radar-footer>
+            <Radar::KeyboardHints />
+            <div class="fleet-ops-radar-footer-meta">
+                {{#if this.items.length}}
+                    <span data-test-radar-showing>{{t "radar.showing" count=this.items.length total=this.meta.total}}</span>
+                {{/if}}
+                {{#if (gt this.meta.pages 1)}}
+                    <div class="fleet-ops-radar-paging">
+                        <Button @size="xs" @icon="chevron-left" @disabled={{eq this.meta.page 1}} @onClick={{fn this.setPage this.previousPage}} />
+                        <span>{{this.meta.page}} / {{this.meta.pages}}</span>
+                        <Button @size="xs" @icon="chevron-right" @disabled={{eq this.meta.page this.meta.pages}} @onClick={{fn this.setPage this.nextPage}} />
+                    </div>
+                {{/if}}
+            </div>
+        </div>
+    {{/unless}}
+
+    <Radar::ItemDrawer @item={{this.drawerItem}} @snoozePresets={{this.snoozePresets}} @onClose={{this.closeDrawer}} @onAct={{perform this.act}} @onOpenRecord={{this.openRecord}} />
+    <Radar::HandoverCard
+        @handover={{this.handover}}
+        @isLoading={{this.openHandover.isRunning}}
+        @isBusy={{this.reassignOrders.isRunning}}
+        @onClose={{this.closeHandover}}
+        @onReassign={{perform this.reassignOrders}}
+        @onExtend={{perform this.extendShift}}
+        @onSnooze={{perform this.snoozeHandover}}
+        @onOpenRecord={{this.openRecord}}
+    />
 </div>
 
 {{outlet}}

@@ -9,7 +9,7 @@ export default class ManagementFleetsIndexDetailsController extends Controller {
     @service intl;
 
     get tabs() {
-        const registeredTabs = this.menuService.getMenuItems('fleet-ops:component:place:details');
+        const registeredTabs = this.menuService.getMenuItems('fleet-ops:component:fleet:details');
         return [
             {
                 route: 'management.fleets.index.details.index',
@@ -38,20 +38,7 @@ export default class ManagementFleetsIndexDetailsController extends Controller {
                 icon: 'ellipsis-h',
                 iconPrefix: 'fas',
                 renderInPlace: true,
-                items: [
-                    {
-                        text: this.intl.t('fleet.actions.assign-driver'),
-                        icon: 'user-plus',
-                        fn: () => this.fleetActions.assignDriver(this.model),
-                        permission: 'fleet-ops assign-driver-for fleet',
-                    },
-                    {
-                        text: this.intl.t('fleet.actions.assign-vehicle'),
-                        icon: 'car',
-                        fn: () => this.fleetActions.assignVehicle(this.model),
-                        permission: 'fleet-ops assign-vehicle-for fleet',
-                    },
-                ],
+                items: this.fleetActions.detailsMenuItems(this.model),
             },
         ];
     }

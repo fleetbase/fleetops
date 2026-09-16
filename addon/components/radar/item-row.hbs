@@ -1,0 +1,90 @@
+<div
+    class="fleet-ops-radar-row {{if @isSelected 'is-selected'}} {{if @isFocused 'is-focused'}} {{if this.isAcknowledged 'is-acknowledged'}} {{if this.isSnoozed 'is-snoozed'}}"
+    data-radar-key={{@item.key}}
+    data-test-radar-row={{@item.key}}
+    {{on "mouseenter" (fn @onFocus @item)}}
+>
+    <div class="fleet-ops-radar-row-check" {{on "click" this.noteShift}} data-test-radar-select>
+        <Checkbox @id={{concat "radar-select-" @item.key}} @value={{@isSelected}} @onToggle={{this.toggleSelect}} @alignItems="center" />
+    </div>
+
+    <div class="fleet-ops-radar-row-chip">
+        <Badge @status={{this.chipStatus}} @text={{t (concat "radar.rules." @item.rule)}} @hideStatusDot={{true}} @disableHumanize={{true}} />
+    </div>
+
+    <span class="fleet-ops-radar-severity is-{{@item.severity}}" title={{@item.severity}}></span>
+
+    <div class="fleet-ops-radar-row-main">
+        <button type="button" class="fleet-ops-radar-row-title" {{on "click" (fn @onOpen @item)}} data-test-radar-title>{{@item.title}}</button>
+        <Radar::Subject @subject={{@item.subject}} />
+        {{#if @item.meta_line}}
+            <span class="fleet-ops-radar-row-meta">{{@item.meta_line}}</span>
+        {{/if}}
+        {{#if this.isAcknowledged}}
+            <span class="fleet-ops-radar-row-state" data-test-radar-state="acknowledged">
+                <FaIcon @icon="check" />
+                {{t "radar.state.acknowledged-by" name=(or @item.state.acknowledged_by_name "—") time=(format-date-fns @item.state.acknowledged_at "HH:mm")}}
+            </span>
+        {{/if}}
+        {{#if this.isSnoozed}}
+            <span class="fleet-ops-radar-row-state" data-test-radar-state="snoozed">
+                <FaIcon @icon="clock" />
+                {{t "radar.state.snoozed-until" time=(format-date-fns @item.state.snoozed_until "d MMM HH:mm")}}
+            </span>
+        {{/if}}
+        {{#if @item.state.planned_at}}
+            <span class="fleet-ops-radar-row-state" data-test-radar-state="planned">
+                <FaIcon @icon="calendar-check" />
+                {{t "radar.state.planned-for" time=(format-date-fns @item.state.planned_at "d MMM HH:mm")}}
+            </span>
+        {{/if}}
+    </div>
+
+    <div class="fleet-ops-radar-row-side">
+        <div class="fleet-ops-radar-row-rail" data-test-radar-rail>
+            {{#unless this.isResolved}}
+                {{#if this.primaryAction}}
+                    <Button @type="primary" @size="xs" @icon={{this.primaryAction.icon}} @text={{t this.primaryAction.label}} @onClick={{fn @onAct @item this.primaryAction.key}} data-test-radar-action={{this.primaryAction.key}} />
+                {{/if}}
+                {{#unless this.isAcknowledged}}
+                    <Button @size="xs" @icon="check" @helpText={{t "radar.actions.acknowledge"}} @onClick={{fn @onAct @item "acknowledge"}} data-test-radar-action="acknowledge" />
+                {{/unless}}
+                {{#if this.isSnoozed}}
+                    <Button @size="xs" @icon="bell" @helpText={{t "radar.actions.wake"}} @onClick={{fn @onAct @item "wake"}} data-test-radar-action="wake" />
+                {{else}}
+                    <DropdownButton @icon="clock" @size="xs" @helpText={{t "radar.actions.snooze"}} @renderInPlace={{true}} @buttonClass="btn-xs" as |dd|>
+                        <div class="next-dd-menu mt-1 mx-0">
+                            <div class="px-1">
+                                {{#each @snoozePresets as |preset|}}
+                                    <a href="javascript:;" class="next-dd-item" {{on "click" (dropdown-fn dd this.snooze preset)}} data-test-radar-snooze={{preset}}>
+                                        <div class="flex flex-row items-center"><div class="mr-2"><FaIcon @icon="clock" /></div><div class="text-sm">{{t (concat "radar.snooze." preset)}}</div></div>
+                                    </a>
+                                {{/each}}
+                            </div>
+                        </div>
+                    </DropdownButton>
+                {{/if}}
+                <Button @size="xs" @icon="user-plus" @helpText={{t "radar.actions.assign"}} @onClick={{fn @onAct @item "assign"}} data-test-radar-action="assign" />
+            {{/unless}}
+        </div>
+
+        <span class="fleet-ops-radar-row-due is-{{@item.due_bucket}}" data-test-radar-due>
+            {{#if @item.due_label}}{{@item.due_label}}{{else}}—{{/if}}
+        </span>
+
+        <span class="fleet-ops-radar-row-assignee {{unless @item.state.assigned_to 'is-empty'}}" data-test-radar-assignee>
+            {{#if @item.state.assigned_to}}
+                <span class="fleet-ops-radar-avatar is-user">{{@item.state.assigned_to.initials}}</span>
+                <span>{{@item.state.assigned_to.name}}</span>
+            {{else}}
+                <span>{{t "radar.state.unassigned"}}</span>
+            {{/if}}
+        </span>
+
+        {{#if @item.record}}
+            <button type="button" class="fleet-ops-radar-row-open" title={{t "radar.actions.open-record"}} {{on "click" (fn @onOpenRecord @item)}} data-test-radar-open-record>
+                <FaIcon @icon="arrow-up-right-from-square" />
+            </button>
+        {{/if}}
+    </div>
+</div>

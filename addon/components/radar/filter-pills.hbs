@@ -1,0 +1,22 @@
+<div class="fleet-ops-radar-pills" data-test-radar-pills>
+    {{#each @pills as |pill|}}
+        <button
+            type="button"
+            class="fleet-ops-radar-pill {{if pill.active 'is-active'}} {{if (eq pill.count 0) 'is-empty'}}"
+            aria-pressed={{if pill.active "true" "false"}}
+            {{on "click" (fn @onToggle pill.key)}}
+            data-test-radar-pill={{pill.key}}
+        >
+            {{#if pill.dot}}<span class="fleet-ops-radar-pill-dot"></span>{{/if}}
+            <span>{{pill.label}}</span>
+            <span class="fleet-ops-radar-pill-count">{{pill.count}}</span>
+            {{#if pill.active}}<FaIcon @icon="xmark" class="fleet-ops-radar-pill-clear" />{{/if}}
+        </button>
+    {{/each}}
+    {{#if @isFiltered}}
+        <button type="button" class="fleet-ops-radar-pill" {{on "click" @onClear}} data-test-radar-pills-clear>
+            <FaIcon @icon="rotate-left" class="fleet-ops-radar-pill-clear" />
+            <span>{{t "radar.bulk.clear"}}</span>
+        </button>
+    {{/if}}
+</div>

@@ -1,4 +1,5 @@
 import ResourceActionService from '@fleetbase/ember-core/services/resource-action';
+import { PANEL_DEFAULTS, closePanelsThen } from '../utils/context-panel';
 import { tracked } from '@glimmer/tracking';
 import { debug } from '@ember/debug';
 import { task } from 'ember-concurrency';
@@ -38,15 +39,37 @@ export default class ServiceAreaActionsService extends ResourceActionService {
                 serviceArea,
             });
         },
-        view: (serviceArea) => {
+        view: (serviceArea, options = {}) => {
             return this.resourceContextPanel.open({
                 serviceArea,
-                tabs: [
+                title: serviceArea?.name,
+                actionButtons: [
+                    { icon: 'pencil', permission: 'fleet-ops update service-area', fn: () => closePanelsThen(this.resourceContextPanel, () => this.panel.edit(serviceArea)) },
                     {
-                        label: this.intl.t('common.overview'),
-                        component: 'service-area/details',
+                        icon: 'ellipsis-h',
+                        iconPrefix: 'fas',
+                        renderInPlace: true,
+                        items: [
+                            {
+                                text: this.intl.t('service-area.actions.edit-boundary'),
+                                icon: 'draw-polygon',
+                                permission: 'fleet-ops update service-area',
+                                fn: () => closePanelsThen(this.resourceContextPanel, () => this.transition.edit(serviceArea)),
+                            },
+                            { separator: true },
+                            {
+                                text: this.intl.t('common.delete'),
+                                icon: 'trash',
+                                class: 'text-red-500',
+                                permission: 'fleet-ops delete service-area',
+                                fn: () => this.delete(serviceArea, { onConfirm: () => this.resourceContextPanel.closeAll() }),
+                            },
+                        ],
                     },
                 ],
+                tabs: [{ key: 'overview', label: this.intl.t('common.overview'), component: 'service-area/details' }],
+                ...PANEL_DEFAULTS,
+                ...options,
             });
         },
     };

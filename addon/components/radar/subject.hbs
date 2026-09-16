@@ -1,0 +1,14 @@
+{{#if @subject}}
+    <span class="fleet-ops-radar-subject" title={{@subject.label}} data-test-radar-subject={{@subject.type}} ...attributes>
+        <span class="fleet-ops-radar-avatar {{if (eq @subject.type 'driver') 'is-user'}}">
+            {{#if @subject.photo_url}}
+                <img src={{@subject.photo_url}} alt="" />
+            {{else if (eq @subject.type "driver")}}
+                {{this.initials}}
+            {{else}}
+                <FaIcon @icon={{this.icon}} />
+            {{/if}}
+        </span>
+        <span class="fleet-ops-radar-subject-label">{{@subject.label}}</span>
+    </span>
+{{/if}}

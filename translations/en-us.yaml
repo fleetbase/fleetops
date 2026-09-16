@@ -68,6 +68,7 @@ common:
 menu:
     operations: Operations
     dashboard: Dashboard
+    radar: Radar
     orders: Orders
     service-rates: Service Rates
     scheduler: Scheduler
@@ -1288,6 +1289,8 @@ place:
         locate-place: Locate Place on Map
 
 service-area:
+    actions:
+        edit-boundary: Edit boundary on map
     fields:
         details: Service Area Details
         area-color: Fill Color
@@ -1509,6 +1512,8 @@ integrated-vendor:
         namespace-help-text: Optionally provide a custom namespace or api version that should be used for the integration.
 
 zone:
+    actions:
+        edit-boundary: Edit boundary on map
     fields:
         details: Zone Details
         border-color: Border Color
@@ -2172,8 +2177,279 @@ modals:
         optionally: Optionally give the zone a description.
         description-zone: Description of Zone
 
+radar:
+    title: Radar
+    eyebrow: Resources
+    subtitle: Everything across resources, maintenance, inspections and staffing that needs a decision, one row per record.
+    summary: "{open} open · {snoozed} snoozed · last sync {time}"
+    search-placeholder: Filter items
+    reload: Reload
+    new-notice: New notice
+    showing: "Showing {count} of {total} · grouped by due"
+    sources-warning: "Some sources could not be loaded: {sources}"
+    briefing:
+        title: Morning brief
+        score: Fleet health score
+        of-100: "/ 100"
+        vs-yesterday: "{delta} vs yesterday"
+        no-history: first reading
+        generated: "Generated {time} · sources linked"
+        yesterday: "Yesterday: {closed} gaps closed, {rolled} rolled over"
+        decisions: Decisions waiting on you
+        decisions-count: "{shown} of {total}"
+        nothing-to-decide: Nothing to decide.
+        confirm: Confirm
+        not-now: Not now
+        undo: Undo
+        wake-now: Wake now
+        confirmed: "Confirmed {time}"
+        snoozed-until: "Snoozed to {time}"
+        filter: Filter
+        collapse: Collapse brief
+        expand: Show brief
+        open-record: Open record
+        working: Working…
+    views:
+        list: List
+        agenda: Agenda
+    agenda:
+        window-24h: Next 24h
+        window-7d: 7 days
+        overdue: Overdue
+        later: Later
+        anytime: Anytime
+        anytime-count: "{count} undated"
+        no-events: No events in this window.
+        drag-hint: Drag an item onto a lane to give it a time.
+        print: Print handover sheet
+        see-all: "See all {count} →"
+        planned: Planned
+        now: now
+        lanes:
+            shifts: Shifts
+            maintenance: Maintenance
+            expiries: Expiries
+            notices: Notices
+        shift-states:
+            on_shift: on shift
+            not_online: not online
+            upcoming: upcoming
+            ended: ended
+        summary: "{shifts} shifts in window · {overdue} overdue · {anytime} undated"
+    handover:
+        title: Shift ends
+        ends-in: "in {minutes}"
+        orders-on-driver: "{count} active orders still on {name}"
+        finishes-after: finishes after the shift
+        suggested: Suggested handoff
+        on-shift-till: "on shift till {time}"
+        away: "{distance} km away"
+        reassign: "Reassign {count} orders to {name}"
+        extend: Extend shift 1h
+        snooze: Snooze 1h
+        no-cover: Nobody on shift long enough to cover; extend the shift or reassign by hand.
+        reassigned: "Orders moved to {name}."
+        extended: Shift extended by an hour.
+        loading: Finding cover…
+    tabs:
+        open: Open
+        snoozed: Snoozed
+        resolved: Resolved
+    pills:
+        overdue: Overdue
+        due_week: Due this week
+        unassigned: Unassigned
+        issues: Open issues
+        inspections: Inspections
+        shifts: Shift changes
+        expiring: Expiring 30d
+        low_stock: Low stock
+        fuel: Unmatched fuel
+        notices: Notices
+    groups:
+        overdue: Overdue
+        today: Today
+        week: This week
+        later: Later
+        none: No date
+    rules:
+        maintenance_overdue: Maint
+        maintenance_due_soon: Maint
+        inspection_due: Inspection
+        inspection_failed: Inspection
+        inspection_unresolved: Inspection
+        inspection_draft: Inspection
+        inspection_link_pending: Inspection
+        vehicle_inspection_failed: Inspection
+        work_order_overdue: Work order
+        work_order_blocked: Work order
+        issue_open: Issue
+        shift_late_start: Shift
+        shift_no_vehicle: Shift
+        shift_handover: Handover
+        driver_without_vehicle: Unassigned
+        vehicle_without_driver: Idle
+        vehicle_without_device: Device
+        device_unattached: Device
+        license_expiring: Licence
+        lease_expiring: Lease
+        fuel_unmatched: Fuel
+        part_low_stock: Parts
+        notice: Notice
+    actions:
+        acknowledge: Acknowledge
+        snooze: Snooze
+        wake: Wake now
+        assign: Assign
+        unassign: Clear owner
+        plan: Give it a time
+        unplan: Clear time
+        resolve: Resolve
+        open-record: Open record
+        assign-vehicle: Assign vehicle
+        assign-driver: Assign driver
+        create-work-order: Create work order
+        create-issue: Create issue
+        mark-resolved: Mark resolved
+        send-pin: Send PIN
+        revoke-link: Revoke link
+        revoke-links: "Revoke {count, plural, one {# link} other {# links}}"
+        match-vehicle: Match vehicle
+        ignore: Ignore
+        attach: Attach to vehicle
+        call: Call
+        cover-shift: Cover shift
+        reassign: Reassign orders
+        extend-shift: Extend shift 1h
+        select: Select
+        deselect: Deselect
+        more: More
+    snooze:
+        1h: 1 hour
+        4h: 4 hours
+        tomorrow: Tomorrow morning
+        next-week: Next week
+        pick: Pick a date…
+        pick-title: Snooze until
+        pick-label: Wake on
+    state:
+        acknowledged-by: "Acknowledged by {name} {time}"
+        acknowledged: Acknowledged
+        snoozed-until: "Snoozed until {time}"
+        assigned-to: "Assigned to {name}"
+        unassigned: Unassigned
+        planned-for: "Planned for {time}"
+        resolved-by: "Resolved by {name} {time}"
+        resolved-auto: Closed on the record
+    bulk:
+        selected: "{count} selected"
+        clear: Clear
+        summary: "{count} items"
+    keys:
+        move: move
+        select: select
+        acknowledge: acknowledge
+        snooze: snooze
+        assign: assign
+        open: open record
+        close: close
+    empty:
+        title: Nothing needs a decision.
+        snoozed-hint: "{count} snoozed items wake this week."
+        nothing-snoozed: Nothing is snoozed.
+        wakes: "wakes {time}"
+        filtered-title: Nothing matches these filters.
+        filtered-hint: Clear a pill or the search to see more.
+        snoozed-title: Nothing is snoozed.
+        snoozed-tab-hint: Snoozed items come back to the list when their wake time passes.
+        resolved-title: Nothing resolved in the last 7 days.
+        resolved-hint: Items close here when the record they describe changes, or when a notice is resolved.
+    saved-views:
+        title: Views
+        save-current: Save current
+        name-prompt: Name this view
+        name-placeholder: e.g. Due this week
+        saved: View saved.
+        delete: Delete view
+        deleted: View removed.
+        defaults:
+            my-assignments: My assignments
+            shift-changes: Shift changes
+            due-this-week: Due this week
+            unmatched-fuel: Unmatched fuel
+    notice:
+        title: New notice
+        message: Message
+        message-placeholder: Yard closed Saturday for repaving — move trailers by Fri 18:00
+        severity: Severity
+        due: Deadline
+        scope: Applies to
+        scope-placeholder: Yard 3 · whole fleet
+        create: Post notice
+        created: Notice posted.
+        delete: Delete notice
+        deleted: Notice deleted.
+        severities:
+            info: Info
+            warning: Warning
+            critical: Critical
+    drawer:
+        failed-items: Failed items
+        state: State
+        subject: Record
+        due: Due
+        window: Shift
+        details: Details
+    prompts:
+        select-vehicle: Select a vehicle
+        select-user: Select a person
+        assign-vehicle-title: "Assign a vehicle to {name}"
+        assign-driver-title: "Assign a driver to {name}"
+        match-vehicle-title: Match this transaction to a vehicle
+        create-work-order-title: Create a work order from this schedule?
+        create-work-order-body: A work order opens with the schedule's defaults and due date.
+        ignore-title: Ignore this transaction?
+        ignore-body: It leaves the unmatched queue and is not linked to a vehicle.
+        attach-device-title: Attach this device to a vehicle
+        revoke-link-title: Revoke this inspection link?
+        send-pin-title: Send the inspection PIN
+        send-pin-to: "How should {name} receive the link and PIN?"
+        send-pin-body: How should the link and PIN be sent?
+        send-pin-unavailable: The link's recipient has no email address or phone number to send the PIN to.
+        revoke-link-body: The link stops working immediately.
+        bulk-revoke-link-title: "Revoke {count, plural, one {# inspection link} other {# inspection links}}?"
+        bulk-revoke-link-body: The links stop working immediately. Other selected items stay as they are.
+        assign-user-title: "Who owns this?"
+        assign-user-help: The owner shows on the row and in the My assignments view.
+        no-selection: Pick one first.
+    toasts:
+        acknowledged: Acknowledged.
+        snoozed: "Snoozed until {time}."
+        woken: Back on the list.
+        assigned: "Assigned to {name}."
+        unassigned: Owner cleared.
+        planned: Time set.
+        resolved: Resolved.
+        work-order-created: Work order created.
+        vehicle-assigned: Vehicle assigned.
+        driver-assigned: Driver assigned.
+        matched: Transaction matched.
+        ignored: Transaction ignored.
+        device-attached: Device attached.
+        pin-sent: PIN sent.
+        link-revoked: Link revoked.
+        links-revoked: "{count, plural, one {# link revoked} other {# links revoked}}."
+        links-revoke-failed: "{count, plural, one {# link could not be revoked} other {# links could not be revoked}}."
+        bulk-done: "{count} items updated."
 widget:
     refresh: Refresh
+    radar:
+        title: Radar
+        description: What needs a decision across the fleet right now.
+        open: open
+        overdue: overdue
+        snoozed: snoozed
+        open-radar: Open Radar
     kpi-earnings:
         title: Earnings
     kpi-distance:

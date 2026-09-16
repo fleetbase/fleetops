@@ -1,0 +1,62 @@
+{{#if (or @handover @isLoading)}}
+    <div class="fleet-ops-radar-handover" data-test-radar-handover>
+        <div class="fleet-ops-radar-handover-head">
+            <span class="fleet-ops-radar-avatar is-user">{{initials @handover.driver.label}}</span>
+            <div class="flex-1 min-w-0">
+                <div class="fleet-ops-radar-handover-title">{{@handover.driver.label}}</div>
+                {{#if @handover.shift.end_at}}
+                    <div class="fleet-ops-radar-row-meta">{{t "radar.handover.title"}} {{format-date-fns @handover.shift.end_at "HH:mm"}} · {{t "radar.handover.ends-in" minutes=this.minutesLeft}}</div>
+                {{/if}}
+            </div>
+            <button type="button" class="fleet-ops-radar-row-open" {{on "click" @onClose}} aria-label={{t "radar.keys.close"}} data-test-radar-handover-close><FaIcon @icon="xmark" /></button>
+        </div>
+
+        {{#if @isLoading}}
+            <div class="fleet-ops-radar-row-meta"><Spinner @size="xs" class="mr-1" /> {{t "radar.handover.loading"}}</div>
+        {{else}}
+            <div class="fleet-ops-radar-handover-orders">
+                <div class="fleet-ops-radar-row-meta">{{t "radar.handover.orders-on-driver" count=@handover.orders.length name=@handover.driver.label}}</div>
+                {{#each @handover.orders as |order|}}
+                    <div class="fleet-ops-radar-handover-order {{if order.finishes_after_shift 'is-late'}}" data-test-radar-handover-order={{order.public_id}}>
+                        <strong>{{order.public_id}}</strong>
+                        {{#if order.destination}}<span>{{order.destination}}</span>{{/if}}
+                        {{#if order.ends_at}}<span class="fleet-ops-radar-row-meta">ETA {{format-date-fns order.ends_at "HH:mm"}}</span>{{/if}}
+                        {{#if order.finishes_after_shift}}<span class="fleet-ops-radar-handover-late">{{t "radar.handover.finishes-after"}}</span>{{/if}}
+                    </div>
+                {{/each}}
+            </div>
+
+            <div class="fleet-ops-radar-handover-suggested" data-test-radar-handover-suggested>
+                <div class="fleet-ops-radar-drawer-label">{{t "radar.handover.suggested"}}</div>
+                {{#if @handover.suggested}}
+                    <div class="fleet-ops-radar-handover-cover">
+                        <span class="fleet-ops-radar-avatar is-user">{{initials @handover.suggested.driver.label}}</span>
+                        <div>
+                            <div class="fleet-ops-radar-handover-title">{{@handover.suggested.driver.label}}</div>
+                            <div class="fleet-ops-radar-row-meta">
+                                {{t "radar.handover.on-shift-till" time=(format-date-fns @handover.suggested.on_shift_until "HH:mm")}}
+                                {{#if @handover.suggested.distance_km}} · {{t "radar.handover.away" distance=@handover.suggested.distance_km}}{{/if}}
+                                · {{@handover.suggested.capacity_label}}
+                            </div>
+                        </div>
+                    </div>
+                {{else}}
+                    <div class="fleet-ops-radar-row-meta">{{t "radar.handover.no-cover"}}</div>
+                {{/if}}
+            </div>
+
+            <div class="fleet-ops-radar-drawer-actions">
+                {{#if (and @handover.suggested @handover.orders.length)}}
+                    <Button @type="primary" @size="xs" @icon="right-left" @text={{t "radar.handover.reassign" count=@handover.orders.length name=@handover.suggested.driver.label}} @isLoading={{@isBusy}} @onClick={{fn @onReassign @handover}} data-test-radar-handover-reassign />
+                {{/if}}
+                {{#if @handover.shift.uuid}}
+                    <Button @size="xs" @icon="clock" @text={{t "radar.handover.extend"}} @disabled={{@isBusy}} @onClick={{fn @onExtend @handover}} data-test-radar-handover-extend />
+                {{/if}}
+                <Button @size="xs" @icon="moon" @text={{t "radar.handover.snooze"}} @disabled={{@isBusy}} @onClick={{fn @onSnooze @handover}} data-test-radar-handover-snooze />
+                {{#if @handover.record}}
+                    <button type="button" class="fleet-ops-radar-briefing-link ml-auto" {{on "click" (fn @onOpenRecord @handover.record)}}>{{t "radar.actions.open-record"}}</button>
+                {{/if}}
+            </div>
+        {{/if}}
+    </div>
+{{/if}}

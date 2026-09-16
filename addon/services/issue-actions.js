@@ -3,6 +3,7 @@ import { inject as service } from '@ember/service';
 import { action } from '@ember/object';
 import { format } from 'date-fns';
 import { issueStatuses } from '../utils/fleet-ops-options';
+import { PANEL_DEFAULTS } from '../utils/context-panel';
 
 export default class IssueActionsService extends ResourceActionService {
     @service driverActions;
@@ -47,15 +48,15 @@ export default class IssueActionsService extends ResourceActionService {
                 issue,
             });
         },
-        view: (issue) => {
+        view: (issue, options = {}) => {
             return this.resourceContextPanel.open({
                 issue,
-                tabs: [
-                    {
-                        label: this.intl.t('common.overview'),
-                        component: 'issue/details',
-                    },
-                ],
+                header: 'issue/panel-header',
+                width: '800px',
+                actionButtons: this.panelActionButtons(issue),
+                tabs: [{ key: 'overview', label: this.intl.t('common.overview'), component: 'issue/details' }],
+                ...PANEL_DEFAULTS,
+                ...options,
             });
         },
     };
@@ -92,6 +93,56 @@ export default class IssueActionsService extends ResourceActionService {
             });
         },
     };
+
+    /**
+     * The header buttons of an issue panel, the same as the issue details
+     * route: edit, then the workflow menu. The menu is read when it renders,
+     * so closing or re-opening the issue swaps the last item.
+     */
+    panelActionButtons(issue) {
+        const service = this;
+        const refresh = () => issue?.reload?.();
+
+        return [
+            {
+                icon: 'pencil',
+                permission: 'fleet-ops update issue',
+                fn: async () => {
+                    await this.resourceContextPanel.closeAll();
+                    this.panel.edit(issue);
+                },
+            },
+            {
+                icon: 'ellipsis',
+                type: 'default',
+                renderInPlace: true,
+                get items() {
+                    return service.workflowItems(issue, refresh);
+                },
+            },
+        ];
+    }
+
+    workflowItems(issue, onSaved) {
+        const items = [
+            { label: 'Change Status', text: 'Change Status', icon: 'arrows-rotate', fn: () => this.openStatusModal(issue, { onSaved }) },
+            { label: 'Assign Issue', text: 'Assign Issue', icon: 'user-check', fn: () => this.openAssignModal(issue, { onSaved }) },
+        ];
+
+        if (this.closedStatuses.includes(issue?.status)) {
+            items.push({ label: 'Re-open Issue', text: 'Re-open Issue', icon: 'rotate-left', fn: () => this.confirmReopenIssue(issue, { onSaved }) });
+        } else {
+            items.push({
+                label: 'Close Issue',
+                text: 'Close Issue',
+                icon: 'circle-check',
+                class: 'text-green-600 dark:text-green-400',
+                fn: () => this.openCloseIssueModal(issue, { onSaved }),
+            });
+        }
+
+        return items;
+    }
 
     get closedStatuses() {
         return ['closed', 'resolved', 'completed'];

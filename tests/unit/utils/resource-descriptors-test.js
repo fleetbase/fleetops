@@ -2,6 +2,7 @@ import { module, test } from 'qunit';
 import { setupTest } from 'dummy/tests/helpers';
 import { registerResourceDescriptors, resolveResourceKey, getResourceDescriptor, getResourceDescriptors, readDescriptor } from '@fleetbase/ember-ui/utils/resource-registry';
 import { buildFleetOpsResourceDescriptors } from '@fleetbase/fleetops-engine/utils/resource-descriptors';
+import { loadConcreteRecord } from '@fleetbase/fleetops-engine/utils/resource-descriptors/polymorphic';
 
 /** Every model file in fleetops-data/addon/models. */
 const MODEL_NAMES = [
@@ -211,5 +212,48 @@ module('Unit | Utility | resource-descriptors', function (hooks) {
         assert.strictEqual(facilitator.identifier(record), '+1', 'the driver identifier');
         assert.true(facilitator.canOpen(record));
         assert.false(facilitator.canOpen({ name: 'nobody' }), 'nothing to delegate to');
+    });
+
+    test('opening a polymorphic base calls the concrete descriptor once instead of looping through the registry', async function (assert) {
+        const facilitator = getResourceDescriptor(this.owner, 'facilitator');
+        const vendor = getResourceDescriptor(this.owner, 'vendor');
+        const original = vendor.open;
+        const calls = [];
+        vendor.open = (record, context) => {
+            calls.push([record, context.resourceType]);
+            return true;
+        };
+
+        try {
+            const record = { facilitator_type: 'fleet-ops:vendor', name: 'Pacific Steel' };
+            const result = await facilitator.open(record, {});
+
+            assert.true(result);
+            assert.deepEqual(calls, [[record, 'vendor']], 'the vendor opener ran exactly once with the record');
+            assert.false(await facilitator.open({ name: 'nobody' }, {}), 'nothing to delegate to');
+        } finally {
+            vendor.open = original;
+        }
+    });
+
+    test('a bare polymorphic base record is swapped for its concrete record before opening', async function (assert) {
+        const vendorRecord = { id: 'vendor_1', name: 'Pacific Steel' };
+        const store = {
+            peekRecord: (modelName, id) => (modelName === 'vendor' && id === 'vendor_1' ? vendorRecord : null),
+            findRecord: async () => {
+                throw new Error('unreachable for a peeked record');
+            },
+        };
+        const owner = { lookup: (name) => (name === 'service:store' ? store : null) };
+        const descriptor = { modelNames: ['vendor'], aliases: ['facilitator-vendor'] };
+        const base = { constructor: { modelName: 'facilitator' }, id: 'vendor_1' };
+
+        assert.strictEqual(await loadConcreteRecord(owner, descriptor, base), vendorRecord, 'the peeked vendor stands in for the base record');
+
+        const subtype = { constructor: { modelName: 'facilitator-vendor' }, id: 'vendor_1' };
+        assert.strictEqual(await loadConcreteRecord(owner, descriptor, subtype), subtype, 'a subtype the descriptor knows is kept');
+
+        const failing = { lookup: () => ({ peekRecord: () => null, findRecord: async () => Promise.reject(new Error('404')) }) };
+        assert.strictEqual(await loadConcreteRecord(failing, descriptor, base), base, 'a failed load falls back to the record');
     });
 });

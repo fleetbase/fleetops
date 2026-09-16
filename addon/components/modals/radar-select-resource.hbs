@@ -1,0 +1,35 @@
+<Modal::Default @modalIsOpened={{@modalIsOpened}} @options={{@options}} @confirm={{@onConfirm}} @decline={{@onDecline}}>
+    <div class="modal-body-container">
+        {{#if @options.body}}
+            <p class="text-sm text-gray-600 dark:text-gray-300 mb-3">{{@options.body}}</p>
+        {{/if}}
+        <InputGroup @name={{@options.inputLabel}} @helpText={{@options.helpText}}>
+            <ModelSelect
+                @modelName={{@options.modelName}}
+                @selectedModel={{@options.selected}}
+                @placeholder={{@options.placeholder}}
+                @triggerClass="form-select form-input"
+                @infiniteScroll={{false}}
+                @renderInPlace={{true}}
+                @query={{@options.query}}
+                @allowClear={{@options.allowClear}}
+                @onChange={{fn (mut @options.selected)}}
+                as |model|
+            >
+                {{#if (eq @options.modelName "user")}}
+                    <SelectOption::User @option={{model}} />
+                {{else if (eq @options.modelName "driver")}}
+                    <SelectOption::Driver @option={{model}} />
+                {{else if (eq @options.modelName "vehicle")}}
+                    <SelectOption::Vehicle @option={{model}} />
+                {{else if (eq @options.modelName "device")}}
+                    <SelectOption::Device @option={{model}} />
+                {{else if (eq @options.modelName "trailer")}}
+                    <SelectOption::Trailer @option={{model}} />
+                {{else}}
+                    <span>{{or model.display_name model.name model.public_id}}</span>
+                {{/if}}
+            </ModelSelect>
+        </InputGroup>
+    </div>
+</Modal::Default>

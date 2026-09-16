@@ -1,0 +1,19 @@
+<LeafletMap
+    class="h-80 w-full rounded-md border border-gray-200 shadow-md dark:border-gray-700"
+    @lat={{get this.center "0"}}
+    @lng={{get this.center "1"}}
+    @zoom={{12}}
+    @zoomControl={{true}}
+    @onLoad={{this.didLoadMap}}
+    ...attributes
+    as |layers|
+>
+    <layers.tile @url={{(leaflet-tile-url)}} />
+    {{#each this.polygons as |locations index|}}
+        <layers.polygon @id={{concat @resource.id "-" index}} @record={{@resource}} @locations={{locations}} @fillColor={{@resource.color}} @color={{@resource.stroke_color}} as |polygon|>
+            {{#if (eq index 0)}}
+                <polygon.tooltip @permanent={{true}} @sticky={{true}}>{{@label}}</polygon.tooltip>
+            {{/if}}
+        </layers.polygon>
+    {{/each}}
+</LeafletMap>

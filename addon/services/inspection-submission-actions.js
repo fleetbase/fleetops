@@ -1,6 +1,7 @@
 import ResourceActionService from '@fleetbase/ember-core/services/resource-action';
 import { action } from '@ember/object';
 import { inject as service } from '@ember/service';
+import { PANEL_DEFAULTS, closePanelsThen } from '../utils/context-panel';
 
 export default class InspectionSubmissionActionsService extends ResourceActionService {
     @service fetch;
@@ -25,6 +26,87 @@ export default class InspectionSubmissionActionsService extends ResourceActionSe
         edit: (submission) => this.transitionTo('maintenance.inspection-submissions.index.edit', submission),
         create: () => this.transitionTo('maintenance.inspection-submissions.index.new'),
     };
+
+    panel = {
+        view: (submission, options = {}) => {
+            const service = this;
+
+            return this.resourceContextPanel.open({
+                submission,
+                title: this.panelTitle(submission),
+                actionButtons: [
+                    { icon: 'edit', permission: 'fleet-ops update inspection-submission', fn: () => closePanelsThen(this.resourceContextPanel, () => this.transition.edit(submission)) },
+                    {
+                        icon: 'ellipsis-h',
+                        iconPrefix: 'fas',
+                        renderInPlace: true,
+                        get items() {
+                            return service.followUpItems(submission, { onDeleted: () => service.resourceContextPanel.closeAll() });
+                        },
+                    },
+                ],
+                tabs: [
+                    { key: 'overview', label: this.intl.t('inspection.record.overview'), component: 'inspection-submission/details' },
+                    { key: 'photos', label: this.intl.t('inspection.record.photos'), component: 'inspection-submission/photos' },
+                    { key: 'audit', label: this.intl.t('inspection.record.audit'), component: 'resource-activity' },
+                ],
+                ...PANEL_DEFAULTS,
+                ...options,
+            });
+        },
+    };
+
+    /** "DVIR inspection" — the heading a submission's details show. */
+    panelTitle(submission) {
+        const formName = submission?.form?.get?.('name') ?? submission?.form?.name ?? submission?.form_name;
+
+        return formName ? this.intl.t('inspection.record.submission-title', { form: formName }) : (submission?.public_id ?? this.intl.t('inspection.record.inspection'));
+    }
+
+    /**
+     * The follow-up menu of a submission, shared by the details route and the
+     * context panel: raise an issue or a work order for failures that have
+     * none, resolve, and delete.
+     */
+    followUpItems(submission, { onDeleted } = {}) {
+        const items = [];
+
+        if (submission?.has_failures && !submission?.issue_uuid) {
+            items.push({
+                text: this.intl.t('inspection.record.create-issue'),
+                icon: 'triangle-exclamation',
+                fn: () => this.createIssue(submission),
+                permission: 'fleet-ops create-issue inspection-submission',
+            });
+        }
+
+        if (submission?.has_failures && !submission?.work_order_uuid) {
+            items.push({
+                text: this.intl.t('inspection.record.create-work-order'),
+                icon: 'clipboard-list',
+                fn: () => this.createWorkOrder(submission),
+                permission: 'fleet-ops create-work-order inspection-submission',
+            });
+        }
+
+        if (submission?.status !== 'resolved') {
+            items.push({ text: this.intl.t('inspection.record.resolve'), icon: 'check', fn: () => this.resolve(submission), permission: 'fleet-ops resolve inspection-submission' });
+        }
+
+        if (items.length) {
+            items.push({ separator: true });
+        }
+
+        items.push({
+            text: this.intl.t('common.delete'),
+            icon: 'trash',
+            class: 'text-red-500',
+            fn: () => this.delete(submission, { onConfirm: onDeleted }),
+            permission: 'fleet-ops delete inspection-submission',
+        });
+
+        return items;
+    }
 
     /**
      * The answers filed against a submission, as the resource projects them:

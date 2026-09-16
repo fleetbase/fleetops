@@ -85,6 +85,7 @@
                         @selected={{this.selectedTargetType}}
                         @onChange={{this.onTargetTypeChange}}
                         @placeholder="Select target type"
+                        @allowClear={{true}}
                         @triggerClass="form-select form-input"
                         @disabled={{cannot-write @resource}}
                         as |option|
@@ -100,6 +101,7 @@
                         @selectedItemComponent={{if (resource-component "select-option" this.targetModelName) (component (resource-component "select-option" this.targetModelName) compact=true)}}
                         @selectedModel={{@resource.target}}
                         @placeholder="Select target asset"
+                        @allowClear={{true}}
                         @triggerClass="form-select form-input"
                         @infiniteScroll={{false}}
                         @renderInPlace={{true}}
@@ -128,6 +130,7 @@
                         @selected={{this.selectedAssigneeType}}
                         @onChange={{this.onAssigneeTypeChange}}
                         @placeholder="Select assignee type"
+                        @allowClear={{true}}
                         @triggerClass="form-select form-input"
                         @disabled={{cannot-write @resource}}
                         as |option|
@@ -143,6 +146,7 @@
                         @selectedItemComponent={{if (resource-component "select-option" this.assigneeModelName) (component (resource-component "select-option" this.assigneeModelName) compact=true)}}
                         @selectedModel={{@resource.assignee}}
                         @placeholder="Select assignee"
+                        @allowClear={{true}}
                         @triggerClass="form-select form-input"
                         @infiniteScroll={{false}}
                         @renderInPlace={{true}}

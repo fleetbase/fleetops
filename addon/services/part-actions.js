@@ -1,6 +1,9 @@
-import ResourceActionService from '@fleetbase/ember-core/services/resource-action';
+import ResourceActionService, { inject as service } from '@fleetbase/ember-core/services/resource-action';
+import { PANEL_DEFAULTS, closePanelsThen, registeredPanelTabs } from '../utils/context-panel';
 
 export default class PartActionsService extends ResourceActionService {
+    @service('universe/menu-service') menuService;
+
     get defaultCurrency() {
         return this.currentUser?.company?.currency || this.currentUser.currency || 'USD';
     }
@@ -41,15 +44,18 @@ export default class PartActionsService extends ResourceActionService {
                 part,
             });
         },
-        view: (part) => {
+        view: (part, options = {}) => {
             return this.resourceContextPanel.open({
                 part,
-                tabs: [
-                    {
-                        label: this.intl.t('common.overview'),
-                        component: 'part/details',
-                    },
+                title: part?.name,
+                header: 'part/panel-header',
+                actionButtons: [
+                    { icon: 'edit', permission: 'fleet-ops update part', fn: () => closePanelsThen(this.resourceContextPanel, () => this.panel.edit(part)) },
+                    { icon: 'trash', type: 'danger', permission: 'fleet-ops delete part', fn: () => this.delete(part, { onConfirm: () => this.resourceContextPanel.closeAll() }) },
                 ],
+                tabs: [{ key: 'overview', label: this.intl.t('common.overview'), component: 'part/details' }, ...registeredPanelTabs(this.menuService, 'fleet-ops:component:part:details')],
+                ...PANEL_DEFAULTS,
+                ...options,
             });
         },
     };

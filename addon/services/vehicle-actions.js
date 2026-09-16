@@ -4,6 +4,7 @@ import config from 'ember-get-config';
 import { action } from '@ember/object';
 import { isArray } from '@ember/array';
 import { dasherize } from '@ember/string';
+import { PANEL_DEFAULTS, closePanelsThen } from '../utils/context-panel';
 
 export default class VehicleActionsService extends ResourceActionService {
     @service('universe/menu-service') menuService;
@@ -11,6 +12,7 @@ export default class VehicleActionsService extends ResourceActionService {
     @service maintenanceScheduleActions;
     @service workOrderActions;
     @service maintenanceActions;
+    @service issueActions;
 
     get registeredTabs() {
         const registeredTabs = this.menuService.getMenuItems('fleet-ops:component:vehicle:details');
@@ -66,6 +68,11 @@ export default class VehicleActionsService extends ResourceActionService {
                 key: 'maintenance-history',
                 label: 'Maintenance',
                 component: 'vehicle/details/maintenance-history',
+            },
+            {
+                key: 'inspections',
+                label: this.intl.t('resource.inspections'),
+                component: 'vehicle/details/inspections',
             },
             ...this.registeredTabs,
         ];
@@ -138,6 +145,7 @@ export default class VehicleActionsService extends ResourceActionService {
         },
         view: async (vehicle, options = {}) => {
             vehicle = await this.reloadIndexResource(await this.resolveVehicleResource(vehicle));
+            const service = this;
 
             return this.resourceContextPanel.open({
                 vehicle,
@@ -145,13 +153,20 @@ export default class VehicleActionsService extends ResourceActionService {
                 actionButtons: [
                     {
                         icon: 'pencil',
-                        fn: async () => {
-                            await this.resourceContextPanel.closeAll();
-                            this.panel.edit(vehicle);
+                        permission: 'fleet-ops update vehicle',
+                        fn: () => closePanelsThen(this.resourceContextPanel, () => this.panel.edit(vehicle)),
+                    },
+                    {
+                        icon: 'ellipsis-h',
+                        iconPrefix: 'fas',
+                        renderInPlace: true,
+                        get items() {
+                            return service.detailsMenuItems(vehicle, { onDeleted: () => service.resourceContextPanel.closeAll() });
                         },
                     },
                 ],
                 tabs: this.panelTabs,
+                ...PANEL_DEFAULTS,
                 ...options,
             });
         },
@@ -451,6 +466,46 @@ export default class VehicleActionsService extends ResourceActionService {
                     resolve(false);
                 },
             });
+        });
+    }
+
+    /**
+     * The actions menu of a vehicle's header, shared by the details route and
+     * the context panel so both offer the same actions.
+     */
+    detailsMenuItems(vehicle, { onDeleted } = {}) {
+        return [
+            { text: this.intl.t('vehicle.actions.locate-vehicle'), icon: 'location-dot', fn: () => this.locate(vehicle), permission: 'fleet-ops view vehicle' },
+            { text: this.intl.t('vehicle.actions.attach-device'), icon: 'link', fn: () => this.attachDevice(vehicle), permission: 'fleet-ops update vehicle' },
+            ...(Number(vehicle?.assigned_orders_count) > 0
+                ? [{ text: this.intl.t('vehicle.actions.unassign-orders'), icon: 'truck-ramp-box', fn: () => this.unassignOrders(vehicle), permission: 'fleet-ops update vehicle' }]
+                : []),
+            { separator: true },
+            {
+                text: this.intl.t('vehicle.actions.schedule-maintenance'),
+                icon: 'calendar-check',
+                fn: () => this.scheduleMaintenance(vehicle),
+                permission: 'fleet-ops create maintenance-schedule',
+            },
+            { text: this.intl.t('vehicle.actions.create-work-order'), icon: 'clipboard-list', fn: () => this.createWorkOrder(vehicle), permission: 'fleet-ops create work-order' },
+            { text: this.intl.t('vehicle.actions.log-maintenance'), icon: 'wrench', fn: () => this.logMaintenance(vehicle), permission: 'fleet-ops create maintenance' },
+            { text: this.intl.t('vehicle.actions.create-issue'), icon: 'triangle-exclamation', fn: () => this.createIssue(vehicle), permission: 'fleet-ops create issue' },
+            { separator: true },
+            {
+                text: this.intl.t('common.delete-resource', { resource: this.intl.t('resource.vehicle') }),
+                icon: 'trash',
+                fn: () => this.delete(vehicle, { onConfirm: onDeleted }),
+                permission: 'fleet-ops delete vehicle',
+                class: 'text-red-500 hover:text-red-600',
+            },
+        ];
+    }
+
+    @action createIssue(vehicle) {
+        return this.issueActions.modal.create({
+            vehicle,
+            vehicle_uuid: vehicle.id,
+            title: this.intl.t('vehicle.prompts.issue-title', { vehicleName: vehicle.displayName ?? vehicle.name }),
         });
     }
 }
