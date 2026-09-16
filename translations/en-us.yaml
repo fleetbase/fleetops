@@ -1411,9 +1411,9 @@ vehicle:
     placeholders:
         filter-internal-id: Type or scan internal IDs
     filters:
-        has-trailer: Trailer Attached
-        has-driver: Has assigned driver
-        has-device: Device Attached
+        has-trailer: Has Trailer Attached
+        has-driver: Has Driver Assigned
+        has-device: Has Device Attached
         any: Any
         attached: Attached
         not-attached: Not attached
