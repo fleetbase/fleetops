@@ -1412,7 +1412,7 @@ vehicle:
         filter-internal-id: Type or scan internal IDs
     filters:
         has-trailer: Trailer Attached
-        has-driver: Driver Assigned
+        has-driver: Has assigned driver
         has-device: Device Attached
         any: Any
         attached: Attached

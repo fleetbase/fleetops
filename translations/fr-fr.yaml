@@ -1071,7 +1071,7 @@ vehicle:
     filter-internal-id: Saisissez ou scannez des ID internes
   filters:
     has-trailer: Remorque attelée
-    has-driver: Chauffeur assigné
+    has-driver: A un chauffeur assigné
     has-device: Appareil associé
     any: Tous
     attached: Attelée

@@ -1044,7 +1044,7 @@ vehicle:
     filter-internal-id: Введите или отсканируйте внутренние ID
   filters:
     has-trailer: Прицеп подключён
-    has-driver: Водитель назначен
+    has-driver: Есть назначенный водитель
     has-device: Устройство подключено
     any: Любой
     attached: Подключён
