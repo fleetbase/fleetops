@@ -30,6 +30,7 @@ export default class ManagementIndexController extends Controller {
     @service modalsManager;
     @service currentUser;
     @service inspectionSubmissionActions;
+    @service inspectionFormActions;
     @service resourceContextPanel;
 
     queryParams = ['view', 'status', 'filters', 'category', 'fleet', 'q', 'saved', 'assigned', 'window'];
@@ -54,6 +55,7 @@ export default class ManagementIndexController extends Controller {
     @tracked briefingCollapsed = false;
     @tracked busyDecisionKey = null;
     @tracked selection = [];
+    @tracked selectionAnchor = null;
     @tracked focusedKey = null;
     @tracked drawerItem = null;
     @tracked savedViews = [];
@@ -470,9 +472,33 @@ export default class ManagementIndexController extends Controller {
     // Selection and focus
     // ------------------------------------------------------------------
 
-    @action toggleSelect(item) {
+    /**
+     * Toggle one row, or with Shift held set every row between the last row
+     * toggled and this one to this row's new state, the way a mail inbox does.
+     */
+    @action toggleSelect(item, { range = false } = {}) {
         const key = item.key;
-        this.selection = this.selection.includes(key) ? this.selection.filter((selected) => selected !== key) : [...this.selection, key];
+        const select = !this.selection.includes(key);
+        const keys = this.items.map((row) => row.key);
+        const from = keys.indexOf(this.selectionAnchor);
+        const to = keys.indexOf(key);
+
+        let affected = [key];
+        if (range && from !== -1 && to !== -1) {
+            affected = keys.slice(Math.min(from, to), Math.max(from, to) + 1);
+        }
+
+        const selection = new Set(this.selection);
+        for (const affectedKey of affected) {
+            if (select) {
+                selection.add(affectedKey);
+            } else {
+                selection.delete(affectedKey);
+            }
+        }
+
+        this.selection = keys.filter((rowKey) => selection.has(rowKey));
+        this.selectionAnchor = key;
     }
 
     @action selectAll() {
@@ -480,6 +506,7 @@ export default class ManagementIndexController extends Controller {
     }
 
     @action clearSelection() {
+        this.selectionAnchor = null;
         this.selection = [];
     }
 
@@ -988,16 +1015,51 @@ export default class ManagementIndexController extends Controller {
         });
     }
 
+    /**
+     * Send an inspection link's PIN, asking how first: by email or by text,
+     * offering only the channels the link's recipient can receive, the same
+     * choice the inspection form's link list gives.
+     */
     async sendPin(item) {
         const formId = item.source?.form_uuid ?? item.source?.form_public_id;
         const linkId = item.source?.uuid ?? item.source?.public_id;
 
+        let link;
         try {
-            await this.fetch.post(`inspection-forms/${formId}/links/${linkId}/send-pin`);
-            this.notifications.success(this.intl.t('radar.toasts.pin-sent'));
+            const response = await this.fetch.get(`inspection-forms/${formId}/links`);
+            link = (response?.links ?? []).find((candidate) => [candidate.id, candidate.uuid, candidate.public_id].includes(linkId));
         } catch (err) {
-            this.notifications.serverError(err);
+            return this.notifications.serverError(err);
         }
+
+        if (!link?.has_pin) {
+            return this.notifications.warning(this.intl.t('inspection.link.no-pin'));
+        }
+
+        const channels = ['email', 'sms'].filter((via) => link.can_send_pin?.[via]);
+        if (!channels.length) {
+            return this.notifications.warning(this.intl.t('radar.prompts.send-pin-unavailable'));
+        }
+
+        return this.modalsManager.show('modals/radar-send-pin', {
+            title: this.intl.t('radar.prompts.send-pin-title'),
+            recipient: link.recipient?.name ?? null,
+            channels,
+            via: channels[0],
+            acceptButtonText: this.intl.t('radar.actions.send-pin'),
+            acceptButtonIcon: 'paper-plane',
+            confirm: async (modal) => {
+                modal.startLoading();
+                try {
+                    const response = await this.fetch.post(`inspection-forms/${formId}/links/${link.id ?? linkId}/send-pin`, { via: modal.getOption('via') });
+                    this.inspectionFormActions.notifyPinDelivery(response?.pin_delivery);
+                    modal.done();
+                } catch (err) {
+                    this.notifications.serverError(err);
+                    modal.stopLoading();
+                }
+            },
+        });
     }
 
     async revokeLink(item) {

@@ -197,6 +197,27 @@ module('Unit | Controller | management/index (radar)', function (hooks) {
         assert.deepEqual(this.controller.selection, ['issue_open:a'], 'keys that left the list are dropped');
     });
 
+    test('shift-clicking a checkbox selects or clears every row between it and the last one toggled', async function (assert) {
+        this.fetch.itemsResponse = { ...this.fetch.itemsResponse, items: ['a', 'b', 'c', 'd', 'e'].map((letter) => item(`issue_open:${letter}`)) };
+        await this.controller.loadItems.perform();
+        const [a, b, , d, e] = this.controller.items;
+
+        this.controller.toggleSelect(b);
+        this.controller.toggleSelect(e, { range: true });
+        assert.deepEqual(this.controller.selection, ['issue_open:b', 'issue_open:c', 'issue_open:d', 'issue_open:e'], 'the range from b to e is selected');
+
+        this.controller.toggleSelect(a, { range: true });
+        assert.deepEqual(this.controller.selection, ['issue_open:a', 'issue_open:b', 'issue_open:c', 'issue_open:d', 'issue_open:e'], 'shift-clicking a selects back up to e');
+
+        this.controller.toggleSelect(d);
+        this.controller.toggleSelect(b, { range: true });
+        assert.deepEqual(this.controller.selection, ['issue_open:a', 'issue_open:e'], 'unselecting d then shift-clicking the selected b clears b through d');
+
+        this.controller.clearSelection();
+        this.controller.toggleSelect(d, { range: true });
+        assert.deepEqual(this.controller.selection, ['issue_open:d'], 'with no earlier row, shift-click selects just that row');
+    });
+
     test('acknowledge patches the row in place and snooze takes it off the open tab', async function (assert) {
         const rows = [item('issue_open:a'), item('issue_open:b')];
         this.fetch.itemsResponse = { ...this.fetch.itemsResponse, items: rows, groups: [{ key: 'none', count: 2, items: rows }] };

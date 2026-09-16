@@ -4,7 +4,7 @@
     data-test-radar-row={{@item.key}}
     {{on "mouseenter" (fn @onFocus @item)}}
 >
-    <div class="fleet-ops-radar-row-check" data-test-radar-select>
+    <div class="fleet-ops-radar-row-check" {{on "click" this.noteShift}} data-test-radar-select>
         <Checkbox @id={{concat "radar-select-" @item.key}} @value={{@isSelected}} @onToggle={{this.toggleSelect}} @alignItems="center" />
     </div>
 

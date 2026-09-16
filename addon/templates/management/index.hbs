@@ -84,23 +84,26 @@
                 {{/if}}
             </div>
 
-            <div class="fleet-ops-radar-footer" data-test-radar-footer>
-                <Radar::KeyboardHints />
-                <div class="fleet-ops-radar-footer-meta">
-                    {{#if this.items.length}}
-                        <span data-test-radar-showing>{{t "radar.showing" count=this.items.length total=this.meta.total}}</span>
-                    {{/if}}
-                    {{#if (gt this.meta.pages 1)}}
-                        <div class="fleet-ops-radar-paging">
-                            <Button @size="xs" @icon="chevron-left" @disabled={{eq this.meta.page 1}} @onClick={{fn this.setPage this.previousPage}} />
-                            <span>{{this.meta.page}} / {{this.meta.pages}}</span>
-                            <Button @size="xs" @icon="chevron-right" @disabled={{eq this.meta.page this.meta.pages}} @onClick={{fn this.setPage this.nextPage}} />
-                        </div>
-                    {{/if}}
-                </div>
-            </div>
         {{/if}}
     </div>
+
+    {{#unless (eq this.view "agenda")}}
+        <div class="fleet-ops-radar-footer" data-test-radar-footer>
+            <Radar::KeyboardHints />
+            <div class="fleet-ops-radar-footer-meta">
+                {{#if this.items.length}}
+                    <span data-test-radar-showing>{{t "radar.showing" count=this.items.length total=this.meta.total}}</span>
+                {{/if}}
+                {{#if (gt this.meta.pages 1)}}
+                    <div class="fleet-ops-radar-paging">
+                        <Button @size="xs" @icon="chevron-left" @disabled={{eq this.meta.page 1}} @onClick={{fn this.setPage this.previousPage}} />
+                        <span>{{this.meta.page}} / {{this.meta.pages}}</span>
+                        <Button @size="xs" @icon="chevron-right" @disabled={{eq this.meta.page this.meta.pages}} @onClick={{fn this.setPage this.nextPage}} />
+                    </div>
+                {{/if}}
+            </div>
+        </div>
+    {{/unless}}
 
     <Radar::ItemDrawer @item={{this.drawerItem}} @snoozePresets={{this.snoozePresets}} @onClose={{this.closeDrawer}} @onAct={{perform this.act}} @onOpenRecord={{this.openRecord}} />
     <Radar::HandoverCard

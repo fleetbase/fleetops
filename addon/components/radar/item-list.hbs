@@ -7,7 +7,7 @@
     {{#each group.items as |item|}}
         <Radar::ItemRow
             @item={{item}}
-            @isSelected={{in-array @selection item.key}}
+            @isSelected={{in-array item.key @selection}}
             @isFocused={{eq @focusedKey item.key}}
             @snoozePresets={{@snoozePresets}}
             @onSelect={{@onSelect}}

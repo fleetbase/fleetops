@@ -5,13 +5,12 @@
                 <ModelSelect
                     @modelName="vehicle"
                     @selectedItemComponent={{component "select-option/vehicle" compact=true}}
-                    @selectedModel={{@options.driver.vehicle_uuid}}
+                    @selectedModel={{this.selectedVehicle}}
                     @placeholder={{t "modals.driver-assign-vehicle.assign-vehicle"}}
                     @triggerClass="form-select form-input"
                     @infiniteScroll={{false}}
                     @renderInPlace={{true}}
-                    @onChange={{fn (mut @options.driver.vehicle)}}
-                    @onChangeId={{fn (mut @options.driver.vehicle_uuid)}}
+                    @onChange={{this.selectVehicle}}
                     as |model|
                 >
                     <SelectOption::Vehicle @option={{model}} />

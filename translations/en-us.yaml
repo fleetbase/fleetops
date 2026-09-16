@@ -2408,6 +2408,10 @@ radar:
         resolve-issue-title: Mark this issue resolved?
         attach-device-title: Attach this device to a vehicle
         revoke-link-title: Revoke this inspection link?
+        send-pin-title: Send the inspection PIN
+        send-pin-to: "How should {name} receive the link and PIN?"
+        send-pin-body: How should the link and PIN be sent?
+        send-pin-unavailable: The link's recipient has no email address or phone number to send the PIN to.
         revoke-link-body: The link stops working immediately.
         assign-user-title: "Who owns this?"
         assign-user-help: The owner shows on the row and in the My assignments view.

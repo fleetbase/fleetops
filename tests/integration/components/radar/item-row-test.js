@@ -70,7 +70,7 @@ module('Integration | Component | radar/item-row', function (hooks) {
         await click('[data-test-radar-title]');
         assert.deepEqual(this.opened, ['inspection_failed:inspection_submission_a']);
 
-        await click('[data-test-radar-select]');
+        await click('[data-test-radar-select] input');
         assert.deepEqual(this.selected, ['inspection_failed:inspection_submission_a']);
 
         await click('[data-test-radar-open-record]');
