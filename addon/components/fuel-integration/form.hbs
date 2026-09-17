@@ -99,8 +99,8 @@
                             <div class="grid grid-cols-1 gap-2 lg:grid-cols-2 no-input-group-padding text-xs">
                                 <InputGroup @name="Environment">
                                     <select class="form-select w-full" data-test-fuel-environment {{on "change" this.setEnvironment}}>
-                                        <option value="sandbox" selected={{eq this.environment "sandbox"}}>Sandbox (PetroApp staging)</option>
-                                        <option value="production" selected={{eq this.environment "production"}}>Production</option>
+                                        <option value="sandbox" selected={{eq this.environment "sandbox"}}>{{this.sandboxLabel}}</option>
+                                        <option value="production" selected={{eq this.environment "production"}}>{{this.productionLabel}}</option>
                                     </select>
                                 </InputGroup>
                                 {{#each this.credentialFields as |field|}}
