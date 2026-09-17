@@ -40,6 +40,7 @@ class SyncTelematicDevicesJob implements ShouldQueue
         $this->telematic = $telematic;
         $this->options   = $options;
         $this->jobId     = $jobId ?? \Illuminate\Support\Str::uuid()->toString();
+        $this->onQueue(\Fleetbase\FleetOps\Support\Telematics\Telemetry\Configuration::pollQueue());
     }
 
     /**
@@ -54,7 +55,13 @@ class SyncTelematicDevicesJob implements ShouldQueue
             && (\Fleetbase\FleetOps\Support\Telematics\Telemetry\Configuration::options($provider)['manual_batch_sync'] ?? false)) {
             $this->telematic->refresh();
             if (\Fleetbase\FleetOps\Support\Telematics\Telemetry\Inbox::enabled($this->telematic)) {
-                $service->queueTelemetrySync($this->telematic, $this->options, $this->jobId);
+                try {
+                    $service->queueTelemetrySync($this->telematic, $this->options, $this->jobId);
+                } catch (\Illuminate\Validation\ValidationException) {
+                    // Paused or already queued/running. Failing here would mark the connection
+                    // as errored and detach the active request's progress tracking.
+                    Log::info('Skipped legacy telematics sync redirect.', ['telematic_uuid' => $this->telematic->uuid]);
+                }
             }
 
             return;

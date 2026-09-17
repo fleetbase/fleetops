@@ -51,7 +51,11 @@ class SyncTelematics extends Command
                     continue;
                 }
                 $options = \Fleetbase\FleetOps\Support\Telematics\Telemetry\Configuration::options($provider);
+                // Batch-only providers have no legacy fallback: pausing polling pauses their sync.
                 if (!($options['polling_enabled'] ?? false)) {
+                    if ($options['manual_batch_sync'] ?? false) {
+                        $telemetryProviders[] = $key;
+                    }
                     continue;
                 }
                 $telemetryProviders[] = $key;

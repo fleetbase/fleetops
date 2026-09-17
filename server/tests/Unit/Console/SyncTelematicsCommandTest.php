@@ -239,3 +239,38 @@ test('sync telematics reports successful durable and legacy dispatches without c
         }
     }
 });
+
+class PausedBatchTelemetryProvider extends ExampleTelemetryProvider
+{
+    public function telemetryOptions(): array
+    {
+        return ['polling_enabled' => false, 'manual_batch_sync' => true];
+    }
+}
+
+class PausedReconciledTelemetryProvider extends ExampleTelemetryProvider
+{
+    public function telemetryOptions(): array
+    {
+        return ['polling_enabled' => false];
+    }
+}
+
+test('sync telematics pauses batch-only providers instead of queueing legacy syncs that would fail', function () {
+    $connection = fleetopsSyncTelematicsBoot();
+    $connection->table('telematics')->insert([
+        ['uuid' => 'batch-connection', 'company_uuid' => 'company-1', 'provider' => 'batch', 'status' => 'error'],
+        ['uuid' => 'reconciled-connection', 'company_uuid' => 'company-1', 'provider' => 'reconciled', 'status' => 'active'],
+    ]);
+    $registry = fleetopsSyncTelematicsRegistry([
+        ['key' => 'batch', 'label' => 'Batch', 'supports_discovery' => true, 'driver_class' => PausedBatchTelemetryProvider::class, 'metadata' => ['telemetry' => ['durable_ingestion' => true]]],
+        ['key' => 'reconciled', 'label' => 'Reconciled', 'supports_discovery' => true, 'driver_class' => PausedReconciledTelemetryProvider::class, 'metadata' => ['telemetry' => ['durable_ingestion' => true]]],
+    ]);
+    $command = new FleetOpsSyncTelematicsProbe();
+
+    // Providers without batch sync keep their existing legacy reconciliation while polling is paused.
+    expect($command->handle($registry))->toBe(0)
+        ->and(DispatchRecorder::$dispatched)->toHaveCount(1)
+        ->and(DispatchRecorder::$dispatched[0]['arguments'][0]->uuid)->toBe('reconciled-connection')
+        ->and($command->messages)->toContain(['info', 'Queued 1 telematics sync job(s).']);
+});

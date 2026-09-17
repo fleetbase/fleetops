@@ -25,6 +25,8 @@ class TrailerLocationChanged implements ShouldBroadcast
     public mixed $heading;
     public mixed $speed;
     public array $additionalData;
+    // Optional queue for telematics-originated broadcasts. Null keeps Laravel's default.
+    public ?string $broadcastQueue = null;
 
     public function __construct(Trailer $trailer, array $additionalData = [])
     {

@@ -494,7 +494,7 @@ test('delivery worker leaves leased and paused work untouched and quarantines ex
     expect(DeviceEvent::withoutGlobalScopes()->count())->toBe(0);
 });
 
-test('delivery worker retries only failed units and quarantines invalid positions after retries', function () {
+test('delivery worker retries only failed units and quarantines them after retries while counting invalid positions', function () {
     $connection = afaqyDbFixture();
     $service    = new TelematicService(new TelematicProviderRegistry());
     $good       = afaqyDbUnit();
@@ -523,7 +523,9 @@ test('delivery worker retries only failed units and quarantines invalid position
     $job->handle($ingestor, $service);
     $row = DB::table('telematic_deliveries')->where('uuid', $id)->first();
     expect($row->status)->toBe('quarantined');
-    expect($row->failed)->toBe(2);
+    // Only the exhausted unit is a failure; the polled invalid position remains counted separately.
+    expect($row->failed)->toBe(1);
+    expect($row->invalid_count)->toBe(1);
     expect($row->applied)->toBe(1);
     expect($row->processed_at)->not->toBeNull();
 });
@@ -670,7 +672,8 @@ test('scheduled telemetry sync dispatches durable polls and retries broker failu
     $job = $dispatcher->jobs[0];
     expect($job)->toBeInstanceOf(Fleetbase\FleetOps\Jobs\PollTelematicTelemetry::class);
     expect($job->uniqueId())->toBe($connection->uuid);
-    expect($job->backoff())->toBe([15, 60, 180, 300]);
+    expect($job->backoff())->toBe([15, 30, 60, 60])
+        ->and((new Fleetbase\FleetOps\Jobs\PollTelematicTelemetry($connection->uuid, 'manual-job'))->backoff())->toBe([15, 60, 180, 300]);
     expect($job->delay->betweenIncluded(now(), now()->addSeconds(9)))->toBeTrue();
     (new Illuminate\Bus\UniqueLock(Cache::store()))->release($job);
     $dispatcher->unavailable = true;

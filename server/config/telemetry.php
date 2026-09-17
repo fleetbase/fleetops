@@ -5,6 +5,8 @@ return [
     'webhooks_enabled'          => false,
     'poll_queue'                => env('TELEMATICS_POLL_QUEUE', 'default'),
     'ingestion_queue'           => env('TELEMATICS_INGESTION_QUEUE', 'default'),
+    // Null keeps telemetry broadcasts on the connection's default queue.
+    'broadcast_queue'           => env('TELEMATICS_BROADCAST_QUEUE'),
     'page_size'                 => 1000,
     'max_pages'                 => 100,
     'request_timeout_seconds'   => env('TELEMATICS_REQUEST_TIMEOUT_SECONDS', 45),

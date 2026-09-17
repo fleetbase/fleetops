@@ -213,6 +213,17 @@ test('old queued discovery jobs delegate without entering their legacy lock or H
     }
 });
 
+test('old queued discovery jobs finish quietly when a scheduled poll already holds the request', function () {
+    [$connection, $provider, $registry, $service] = manualTelemetrySetup();
+    expect(Fleetbase\FleetOps\Support\Telematics\Telemetry\Queue::dispatch(new PollTelematicTelemetry($connection->uuid)))->toBeTrue();
+    (new SyncTelematicDevicesJob($connection, [], 'old-job'))->handle($registry, $service);
+    $fresh = $connection->fresh();
+    // A thrown ValidationException would fail the tries=1 job and mark this connection as errored.
+    expect(count($GLOBALS['manual_telemetry_jobs']))->toBe(1)
+        ->and($fresh->status)->toBe('active')
+        ->and(data_get($fresh->meta, 'last_sync_job_id'))->toBeNull();
+});
+
 test('broker failure leaves the request unqueued and permits a later manual retry', function () {
     [$connection, $provider, $registry, $service] = manualTelemetrySetup();
     $GLOBALS['manual_telemetry_fail_dispatch']    = true;

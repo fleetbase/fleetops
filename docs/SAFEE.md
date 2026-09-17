@@ -31,7 +31,9 @@ Safee opts into the existing provider-neutral telemetry pipeline. No Safee table
 UI branches, dedicated queues, or additional workers are introduced.
 
 1. The minute scheduler coalesces queued/running polling and pending ingestion.
-   Enabled connections remain eligible after transient errors.
+   Enabled connections remain eligible after transient errors. When
+   `SAFEE_POLLING_ENABLED=false`, Safee is paused; it does not fall back to the
+   legacy monolithic discovery job.
 2. Inventory is cached briefly. Manual discovery refreshes it. Pagination uses
    stable inventory slices; `list-info` itself is not treated as a paginated API.
 3. Each slice retrieves current states in one batch of at most 1,000 IDs. Missing
@@ -41,7 +43,10 @@ UI branches, dedicated queues, or additional workers are introduced.
    jobs apply them transactionally with per-device serialization, deduplication,
    and source-time ordering. Older samples cannot move current device or attached
    asset positions backwards.
-5. Partial messages preserve attachment identity and existing metadata, counters,
+5. Units without a valid fix (for example source date `0`) keep their device link
+   and are counted in `invalid_count`, but a polled delivery is not quarantined
+   and its run is not marked partial for them. Pushed deliveries keep quarantine.
+6. Partial messages preserve attachment identity and existing metadata, counters,
    and sensors. A zero source date is treated as missing data. Source timestamps
    are converted to UTC; receipt time is never substituted for a missing GPS time.
 
@@ -52,7 +57,11 @@ not guarantees about provider latency or application throughput.
 Authentication is cached using credential-sensitive keys and encrypted tokens.
 Expiry is honored, a rejected token may be refreshed once, and authentication,
 manual syncs, and retries share the per-user request budget. HTTP429 respects
-`Retry-After`; connection/server failures use bounded queue retry delays.
+`Retry-After`; connection/server failures use bounded queue retry delays. Scheduled
+poll retries wait at most 60 seconds (15, 30, 60, 60) so a transient login or TLS
+timeout cannot suppress minute polling for several minutes; manual requests keep
+15, 60, 180, 300 seconds. Previously queued legacy discovery jobs exit quietly when
+polling is paused or already queued instead of marking the connection as errored.
 
 ## Configuration and rollout
 
@@ -66,6 +75,8 @@ Webhooks remain unsupported.
   budget. Authentication and data requests share that budget.
 - Existing `TELEMATICS_POLL_QUEUE` and `TELEMATICS_INGESTION_QUEUE` default to
   `default`. One existing queue worker can process both types of jobs.
+  To run telematics on dedicated workers for one instance, see
+  [Dedicated telematics queue workers](TELEMATICS_QUEUES.md).
 - Poll attempts use an80-second hard timeout and a60-second cooperative sweep
   budget, below the baseline Redis `retry_after=90` seconds.
 
@@ -97,3 +108,18 @@ Contract and database tests use controlled fixtures; they do not prove productio
 throughput. Production freshness remains bounded by Safee/device reporting,
 provider response time, the minute polling interval, and available capacity of
 the shared worker. Monitor queue growth with the rest of the application's jobs.
+
+### Local default-worker run (2026-09-17, 06:40-06:46 UTC)
+
+After restarting the single existing `queue:work` worker on the local stack, five
+scheduled sweeps of the 93-unit DSCO connection made 7 Safee requests in total:
+1 token, 1 `list-info`, and 5 `last-state`. Every run completed with 93 units,
+91 applied, 2 counted as invalid, one processed delivery, no Safee failed jobs, and
+9-15 seconds from run creation to processed delivery. The legacy design would have
+made about 281 data requests per sweep.
+
+Only 42 of the 91 positioned units had a source fix under five minutes old (median
+age 386 seconds). This reflects when devices last reported; faster polling cannot
+improve it. AFAQY polling on the same worker hit 44-second `units/lists` timeouts
+during this window, and those jobs share that worker's capacity. This run is local
+evidence, not production acceptance.

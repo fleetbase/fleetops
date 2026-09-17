@@ -124,10 +124,11 @@ test('polling applies valid positions on both sides of a unit without a GPS fix'
     $payload  = [mixedFleetPosition('first-unit', 24.1), $middle, mixedFleetPosition('last-unit', 24.3)];
     $delivery = processMixedFleetDelivery($payload);
 
-    expect($delivery->status)->toBe('quarantined')
+    // A polled unit without a fix is inventory state, not a failed delivery to quarantine and replay.
+    expect($delivery->status)->toBe('processed')
         ->and((int) $delivery->applied)->toBe(2)
         ->and((int) $delivery->invalid_count)->toBe(1)
-        ->and((int) $delivery->failed)->toBe(1)
+        ->and((int) $delivery->failed)->toBe(0)
         ->and((int) $delivery->attempts)->toBe(1);
     expect(DeviceEvent::withoutGlobalScopes()->count())->toBe(2);
     foreach (['first-unit' => 24.1, 'last-unit' => 24.3] as $id => $latitude) {
@@ -140,7 +141,7 @@ test('polling applies valid positions on both sides of a unit without a GPS fix'
     expect($inactive->last_online_at)->toBeNull()
         ->and(data_get($inactive->meta, 'telemetry.position_at'))->toBeNull();
     $run = DB::table('telematic_sync_runs')->where('uuid', 'run-1')->first();
-    expect($run->status)->toBe('partial')->and((int) $run->applied)->toBe(2)->and((int) $run->failed)->toBe(1);
+    expect($run->status)->toBe('completed')->and((int) $run->applied)->toBe(2)->and((int) $run->failed)->toBe(0);
     expect(json_decode(Crypt::decryptString($delivery->payload), true))->toBe($payload);
 })->with(['missing last_update' => [[]], 'null last_update' => [['last_update' => null]]]);
 

@@ -126,8 +126,8 @@ test('slow deliveries continue beyond five reservations without replaying applie
     expect((int) checkpointDeliveryRow()->failed)->toBe(0);
 })->with(['poll', 'webhook']);
 
-test('yield preserves failed items and invalid counts while reaching the untouched tail', function () {
-    [$job, $ingestor, $service] = checkpointDeliverySetup(8);
+test('yield preserves failed items and invalid counts while reaching the untouched tail', function (string $source, int $invalidFailures, string $finalStatus) {
+    [$job, $ingestor, $service] = checkpointDeliverySetup(8, $source);
     $ingestor->fail = ['unit-1'];
     $ingestor->invalid = ['unit-2'];
     for ($pass = 0; $pass < 8; $pass++) {
@@ -136,7 +136,7 @@ test('yield preserves failed items and invalid counts while reaching the untouch
     }
     $row = checkpointDeliveryRow();
     expect($row->status)->toBe('retry')->and((int) $row->attempts)->toBe(1)
-        ->and((int) $row->applied)->toBe(6)->and((int) $row->invalid_count)->toBe(1)->and((int) $row->failed)->toBe(2);
+        ->and((int) $row->applied)->toBe(6)->and((int) $row->invalid_count)->toBe(1)->and((int) $row->failed)->toBe(1 + $invalidFailures);
     expect(array_column(json_decode(Crypt::decryptString($row->retry_payload), true), 'tracker'))->toBe(['unit-1']);
     expect($ingestor->calls)->toBe(array_map(fn ($i) => 'unit-' . $i, range(1, 8)));
     $ingestor->fail = [];
@@ -144,10 +144,14 @@ test('yield preserves failed items and invalid counts while reaching the untouch
     $GLOBALS['telemetry_test_clock'] = [1000.0, 1001.0];
     $job->handle($ingestor, $service);
     $row = checkpointDeliveryRow();
-    expect($row->status)->toBe('quarantined')->and((int) $row->applied)->toBe(7)
-        ->and((int) $row->invalid_count)->toBe(1)->and((int) $row->failed)->toBe(1)->and((int) $row->attempts)->toBe(2);
+    expect($row->status)->toBe($finalStatus)->and((int) $row->applied)->toBe(7)
+        ->and((int) $row->invalid_count)->toBe(1)->and((int) $row->failed)->toBe($invalidFailures)->and((int) $row->attempts)->toBe(2);
     expect(end($ingestor->calls))->toBe('unit-1');
-});
+})->with([
+    // Polled units without a fix are counted but only pushed invalid samples are replayable failures.
+    'poll'    => ['poll', 0, 'processed'],
+    'webhook' => ['webhook', 1, 'quarantined'],
+]);
 
 test('worker restart resumes the committed checkpoint and accounts only the remaining units', function () {
     [$job, $ingestor, $service, $connection] = checkpointDeliverySetup();

@@ -188,3 +188,21 @@ test('safee matching unit IDs remain isolated by integration and company', funct
         ->and($devices[1]->last_position->getLat())->toBe(25.0)
         ->and(DeviceEvent::withoutGlobalScopes()->count())->toBe(2);
 });
+
+test('telematics broadcasts use the configured broadcast queue without changing unconfigured instances', function (?string $queue) {
+    $connection = safeeDbFixture();
+    config(['telematics.telemetry.broadcast_queue' => $queue]);
+    DB::table('vehicles')->insert(['uuid' => 'vehicle-1', 'public_id' => 'vehicle_1', 'company_uuid' => 'company-1', 'name' => 'Existing vehicle', 'telematics' => '{}']);
+    DB::table('devices')->where('uuid', 'device-1')->update(['attachable_uuid' => 'vehicle-1', 'attachable_type' => Vehicle::class]);
+    try {
+        (new Ingestor())->ingest($connection, new SafeeProvider(), safeeDbSample(), new TelematicService(new TelematicProviderRegistry()));
+        $classes = array_map('get_class', $GLOBALS['afaqy_broadcasts']);
+        expect($classes)->toContain(Fleetbase\FleetOps\Events\DeviceTelemetryUpdated::class)
+            ->and($classes)->toContain(Fleetbase\FleetOps\Events\VehicleLocationChanged::class);
+        foreach ($GLOBALS['afaqy_broadcasts'] as $event) {
+            expect($event->broadcastQueue)->toBe($queue);
+        }
+    } finally {
+        config(['telematics.telemetry.broadcast_queue' => null]);
+    }
+})->with(['unconfigured' => [null], 'dedicated queue' => ['telematics-broadcasts']]);

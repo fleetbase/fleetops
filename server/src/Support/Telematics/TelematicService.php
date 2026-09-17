@@ -551,7 +551,8 @@ class TelematicService
         $this->setDeviceAttributeIfPresent($device, 'model', $payload['model'] ?? $payload['device_model'] ?? null);
         $this->setDeviceAttributeIfPresent($device, 'provider', $payload['provider'] ?? $payload['device_provider'] ?? $telematic?->provider);
         $this->setDeviceAttributeIfPresent($device, 'type', $payload['type'] ?? null);
-        $this->setDeviceAttributeIfPresent($device, 'internal_id', $payload['internal_id'] ?? $externalId);
+        // Partial messages must not replace an existing identity with the external ID fallback.
+        $this->setDeviceAttributeIfPresent($device, 'internal_id', $payload['internal_id'] ?? (filled($device->internal_id) ? null : $externalId));
         $this->setDeviceAttributeIfPresent($device, 'imei', $payload['imei'] ?? null);
         $this->setDeviceAttributeIfPresent($device, 'imsi', $payload['imsi'] ?? null);
         $this->setDeviceAttributeIfPresent($device, 'serial_number', $payload['serial_number'] ?? null);
@@ -802,6 +803,7 @@ class TelematicService
 
     protected function broadcastTelemetry(object $event, bool $afterCommit): void
     {
+        $event = Telemetry\Configuration::withBroadcastQueue($event);
         if ($afterCommit) {
             \Illuminate\Support\Facades\DB::afterCommit(fn () => broadcast($event));
         } else {

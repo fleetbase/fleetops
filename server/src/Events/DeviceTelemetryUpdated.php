@@ -8,7 +8,8 @@ use Illuminate\Contracts\Broadcasting\ShouldBroadcast;
 
 class DeviceTelemetryUpdated implements ShouldBroadcast
 {
-    public bool $afterCommit = true;
+    public bool $afterCommit       = true;
+    public ?string $broadcastQueue = null;
     public string $companyUuid;
     public string $deviceUuid;
     public array $data;

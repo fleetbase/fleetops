@@ -47,7 +47,9 @@ class PollTelematicTelemetry implements ShouldQueue, ShouldBeUnique
 
     public function backoff(): array
     {
-        return [15, 60, 180, 300];
+        // A scheduled retry holds the uniqueness lease that suppresses minute ticks,
+        // so it must not wait longer than the polling interval after a transient failure.
+        return $this->manualJobId ? [15, 60, 180, 300] : [15, 30, 60, 60];
     }
 
     public function retryUntil(): \Illuminate\Support\Carbon

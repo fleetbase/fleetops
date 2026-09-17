@@ -102,6 +102,9 @@ class ProcessTelematicDelivery implements ShouldQueue, ShouldBeUnique
             }
             $applied      = 0;
             $invalid      = (int) $row->invalid_count;
+            // Polled inventory legitimately includes units without a valid fix (for example,
+            // never reported). They stay counted, but only pushed samples are failures to replay.
+            $pushed       = $row->source !== 'poll';
             $sourceDelay  = $row->source_delay_seconds;
             $queueDelay   = max(0, now()->timestamp - \Illuminate\Support\Carbon::parse($row->received_at, 'UTC')->timestamp);
             $checkpointAt = $started;
@@ -129,7 +132,7 @@ class ProcessTelematicDelivery implements ShouldQueue, ShouldBeUnique
                             'checkpoint_version' => 1, 'remaining' => array_slice($units, $index + 1),
                             'failed'             => $failed, 'failure_types' => array_values(array_unique($failureTypes)),
                         ], JSON_THROW_ON_ERROR)),
-                        'applied'             => $row->applied + $applied, 'failed' => count($failed) + $invalid, 'invalid_count' => $invalid,
+                        'applied'             => $row->applied + $applied, 'failed' => count($failed) + ($pushed ? $invalid : 0), 'invalid_count' => $invalid,
                         'queue_delay_seconds' => $queueDelay, 'source_delay_seconds' => $sourceDelay,
                         'status'              => $yield ? 'retry' : 'processing',
                         // Cooperative continuation is not a failed attempt. Actual
@@ -149,14 +152,14 @@ class ProcessTelematicDelivery implements ShouldQueue, ShouldBeUnique
             if ($failed && $row->attempts < 4) {
                 $this->update([
                     'status'  => 'retry', 'retry_payload' => Crypt::encryptString(json_encode($failed, JSON_THROW_ON_ERROR)),
-                    'applied' => $row->applied + $applied, 'failed' => count($failed) + $invalid, 'invalid_count' => $invalid,
+                    'applied' => $row->applied + $applied, 'failed' => count($failed) + ($pushed ? $invalid : 0), 'invalid_count' => $invalid,
                     'error'   => 'Some units failed ingestion; retry scheduled. ' . implode(', ', array_unique($failureTypes)), 'available_at' => now()->addSeconds(15 * (2 ** $row->attempts)),
                 ]);
             } else {
                 $this->update([
-                    'status'       => ($failed || $invalid) ? 'quarantined' : 'processed',
-                    'applied'      => $row->applied + $applied, 'failed' => count($failed) + $invalid, 'invalid_count' => $invalid,
-                    'error'        => ($failed || $invalid) ? 'Invalid positions or exhausted ingestion retries; inspect and replay.' : null,
+                    'status'       => ($failed || ($pushed ? $invalid : 0)) ? 'quarantined' : 'processed',
+                    'applied'      => $row->applied + $applied, 'failed' => count($failed) + ($pushed ? $invalid : 0), 'invalid_count' => $invalid,
+                    'error'        => ($failed || ($pushed ? $invalid : 0)) ? 'Invalid positions or exhausted ingestion retries; inspect and replay.' : null,
                     'processed_at' => now(),
                 ]);
             }
