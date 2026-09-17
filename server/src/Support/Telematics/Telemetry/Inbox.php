@@ -10,6 +10,9 @@ use Illuminate\Support\Str;
 
 class Inbox
 {
+    /** Manual request states that a sweep may still finalize. */
+    public const PENDING_REQUEST_RESULTS = ['queued', 'running', 'retrying'];
+
     public function accept(Telematic $telematic, array $payload, string $source, ?string $run = null, ?string $receivedAt = null): string
     {
         $json = json_encode($payload, JSON_THROW_ON_ERROR);
@@ -64,17 +67,12 @@ class Inbox
             if ($status === 'incomplete') {
                 return;
             }
-            // A previous sweep may finish after another manual request was queued.
-            // Only the run explicitly associated with that request may finalize it.
             $connection = Telematic::withoutGlobalScopes()->where('uuid', $run->telematic_uuid)->lockForUpdate()->first();
-            if (!$connection || !self::enabled($connection)
-                || data_get($connection->meta, 'last_sync_run_uuid') !== $id
-                || !data_get($connection->meta, 'last_sync_run_job_id')
-                || data_get($connection->meta, 'last_sync_run_job_id') !== data_get($connection->meta, 'last_sync_job_id')) {
+            if (!$connection || !self::enabled($connection)) {
                 return;
             }
-            $connection->status = $status === 'completed' ? 'active' : 'error';
-            $connection->meta   = array_merge($connection->meta ?? [], [
+            $meta   = $connection->meta ?? [];
+            $result = [
                 'last_sync_result'                                                         => $status === 'completed' ? 'success' : $status,
                 'last_sync_phase'                                                          => $status, 'last_sync_progress_at' => now()->toDateTimeString(),
                 'last_sync_fetched_total'                                                  => (int) $run->units, 'last_sync_page_count' => (int) $run->pages,
@@ -82,8 +80,28 @@ class Inbox
                 'last_sync_failed_total'                                                   => (int) $failed,
                 'last_sync_error'                                                          => $status === 'completed' ? null : ($run->error ?? 'Some units could not be applied; inspect telemetry diagnostics.'),
                 $status === 'completed' ? 'last_sync_completed_at' : 'last_sync_failed_at' => now()->toDateTimeString(),
+            ];
+            // A previous sweep may finish after another manual request was queued.
+            // Only the run explicitly associated with that request may finalize it.
+            if (data_get($meta, 'last_sync_run_uuid') === $id && data_get($meta, 'last_sync_run_job_id')
+                && data_get($meta, 'last_sync_run_job_id') === data_get($meta, 'last_sync_job_id')) {
+                $connection->status = $status === 'completed' ? 'active' : 'error';
+                $connection->meta   = array_merge($meta, $result);
+                $connection->save();
+
+                return;
+            }
+            // A completed scheduled sweep proves the connection is healthy, so it replaces a
+            // stale failure. It never finalizes or overrides a manual request still in flight,
+            // and a partial sweep leaves the last reported state alone.
+            if ($status !== 'completed' || in_array(data_get($meta, 'last_sync_result'), self::PENDING_REQUEST_RESULTS, true)) {
+                return;
+            }
+            // Written without model events: sweeps run every minute and the model logs every save.
+            DB::table('telematics')->where('uuid', $connection->uuid)->update([
+                'status' => in_array($connection->status, ['error', 'synchronizing'], true) ? 'active' : $connection->status,
+                'meta'   => json_encode(array_merge($meta, $result), JSON_THROW_ON_ERROR),
             ]);
-            $connection->save();
         });
     }
 }
