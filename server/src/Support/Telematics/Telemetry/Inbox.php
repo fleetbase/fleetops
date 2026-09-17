@@ -51,11 +51,39 @@ class Inbox
             if ((clone $items)->whereIn('status', ['pending', 'processing', 'retry'])->exists()) {
                 return;
             }
-            $failed = (clone $items)->sum('failed');
+            $failed  = (clone $items)->sum('failed');
+            $applied = (clone $items)->sum('applied');
+            $status  = $run->status === 'incomplete' ? 'incomplete' : ($failed ? 'partial' : 'completed');
             DB::table('telematic_sync_runs')->where('uuid', $id)->update([
-                'status'  => $run->status === 'incomplete' ? 'incomplete' : ($failed ? 'partial' : 'completed'),
-                'applied' => (clone $items)->sum('applied'), 'failed' => $failed, 'updated_at' => now(),
+                'status'  => $status,
+                'applied' => $applied, 'failed' => $failed, 'updated_at' => now(),
             ]);
+            // An incomplete fetch can still have accepted batches, but the poll
+            // job owns its retry/failure lifecycle. Draining them must not end the
+            // manual request while its next fetch attempt is still queued.
+            if ($status === 'incomplete') {
+                return;
+            }
+            // A previous sweep may finish after another manual request was queued.
+            // Only the run explicitly associated with that request may finalize it.
+            $connection = Telematic::withoutGlobalScopes()->where('uuid', $run->telematic_uuid)->lockForUpdate()->first();
+            if (!$connection || !self::enabled($connection)
+                || data_get($connection->meta, 'last_sync_run_uuid') !== $id
+                || !data_get($connection->meta, 'last_sync_run_job_id')
+                || data_get($connection->meta, 'last_sync_run_job_id') !== data_get($connection->meta, 'last_sync_job_id')) {
+                return;
+            }
+            $connection->status = $status === 'completed' ? 'active' : 'error';
+            $connection->meta   = array_merge($connection->meta ?? [], [
+                'last_sync_result'                                                         => $status === 'completed' ? 'success' : $status,
+                'last_sync_phase'                                                          => $status, 'last_sync_progress_at' => now()->toDateTimeString(),
+                'last_sync_fetched_total'                                                  => (int) $run->units, 'last_sync_page_count' => (int) $run->pages,
+                'last_sync_total'                                                          => (int) $applied, 'last_sync_linked_total' => (int) $applied,
+                'last_sync_failed_total'                                                   => (int) $failed,
+                'last_sync_error'                                                          => $status === 'completed' ? null : ($run->error ?? 'Some units could not be applied; inspect telemetry diagnostics.'),
+                $status === 'completed' ? 'last_sync_completed_at' : 'last_sync_failed_at' => now()->toDateTimeString(),
+            ]);
+            $connection->save();
         });
     }
 }

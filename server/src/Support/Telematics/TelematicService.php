@@ -152,6 +152,11 @@ class TelematicService
      */
     public function discoverDevices(Telematic $telematic, array $options = []): string
     {
+        $provider = $this->registry->resolve($telematic->provider);
+        if ($provider instanceof \Fleetbase\FleetOps\Contracts\TelemetryProviderInterface
+            && (Telemetry\Configuration::options($provider)['manual_batch_sync'] ?? false)) {
+            return $this->queueTelemetrySync($telematic, $options);
+        }
         $jobId = (string) Str::uuid();
         dispatch(new SyncTelematicDevicesJob($telematic, $options, $jobId));
 
@@ -165,6 +170,41 @@ class TelematicService
         $telematic->save();
 
         return $jobId;
+    }
+
+    /** Queue current telemetry through bounded, durable batches for opted-in providers. */
+    public function queueTelemetrySync(Telematic $telematic, array $options = [], ?string $jobId = null): string
+    {
+        $settings = Telemetry\Configuration::options($this->registry->resolve($telematic->provider));
+        if (!Telemetry\Inbox::enabled($telematic) || !($settings['polling_enabled'] ?? false)) {
+            throw ValidationException::withMessages(['telematic' => ['Telemetry synchronization is disabled for this connection.']]);
+        }
+        $jobId ??= (string) Str::uuid();
+
+        return \Illuminate\Support\Facades\DB::transaction(function () use ($telematic, $options, $settings, $jobId) {
+            $connection = Telematic::withoutGlobalScopes()->where('uuid', $telematic->uuid)->lockForUpdate()->firstOrFail();
+            if (!Telemetry\Inbox::enabled($connection)) {
+                throw ValidationException::withMessages(['telematic' => ['Telemetry synchronization is disabled for this connection.']]);
+            }
+            $job = (new \Fleetbase\FleetOps\Jobs\PollTelematicTelemetry($connection->uuid, $jobId, $options))
+                ->onQueue($settings['poll_queue'] ?? 'default');
+            if (!Telemetry\Queue::dispatch($job)) {
+                $existing = data_get($connection->meta, 'last_sync_job_id');
+                if ($existing && in_array(data_get($connection->meta, 'last_sync_result'), ['queued', 'running', 'retrying'], true)) {
+                    return $existing;
+                }
+                throw ValidationException::withMessages(['telematic' => ['Telemetry synchronization is already queued or running.']]);
+            }
+            $connection->status = 'synchronizing';
+            $connection->meta   = array_merge($connection->meta ?? [], [
+                'last_sync_job_id'     => $jobId, 'last_sync_run_uuid' => null, 'last_sync_run_job_id' => null,
+                'last_sync_started_at' => now()->toDateTimeString(), 'last_sync_result' => 'queued',
+                'last_sync_phase'      => 'queued', 'last_sync_error' => null, 'last_sync_failed_reason' => null,
+            ]);
+            $connection->save();
+
+            return $jobId;
+        });
     }
 
     /**
@@ -511,7 +551,8 @@ class TelematicService
         $this->setDeviceAttributeIfPresent($device, 'model', $payload['model'] ?? $payload['device_model'] ?? null);
         $this->setDeviceAttributeIfPresent($device, 'provider', $payload['provider'] ?? $payload['device_provider'] ?? $telematic?->provider);
         $this->setDeviceAttributeIfPresent($device, 'type', $payload['type'] ?? null);
-        $this->setDeviceAttributeIfPresent($device, 'internal_id', $payload['internal_id'] ?? $externalId);
+        // Partial messages must not replace an existing identity with the external ID fallback.
+        $this->setDeviceAttributeIfPresent($device, 'internal_id', $payload['internal_id'] ?? (filled($device->internal_id) ? null : $externalId));
         $this->setDeviceAttributeIfPresent($device, 'imei', $payload['imei'] ?? null);
         $this->setDeviceAttributeIfPresent($device, 'imsi', $payload['imsi'] ?? null);
         $this->setDeviceAttributeIfPresent($device, 'serial_number', $payload['serial_number'] ?? null);
@@ -762,6 +803,7 @@ class TelematicService
 
     protected function broadcastTelemetry(object $event, bool $afterCommit): void
     {
+        $event = Telemetry\Configuration::withBroadcastQueue($event);
         if ($afterCommit) {
             \Illuminate\Support\Facades\DB::afterCommit(fn () => broadcast($event));
         } else {

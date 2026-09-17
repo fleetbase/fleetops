@@ -1,5 +1,5 @@
-<Telematic::TelemetryStatus @resource={{@resource}} @provider={{@resource.provider_descriptor}} />
 <div class="flex flex-col gap-4 p-4 md:p-6" ...attributes>
+    <Telematic::TelemetryStatus @resource={{@resource}} @provider={{@resource.provider_descriptor}} />
     <section class="grid grid-cols-1 gap-3 lg:grid-cols-3">
         {{#each this.healthCards as |card|}}
             <div class="fleet-ops-widget fleet-ops-kpi-tile fleetops-connectivity-kpi-tile {{card.accentClass}} relative min-h-[118px] overflow-hidden rounded-md border bg-white shadow-sm transition hover:-translate-y-px hover:shadow-lg dark:bg-gray-800">

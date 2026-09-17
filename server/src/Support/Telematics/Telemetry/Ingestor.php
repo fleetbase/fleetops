@@ -103,7 +103,7 @@ class Ingestor
             }
             if ($newer || $contactChanged) {
                 $snapshot = $device->fresh() ?? $device;
-                DB::afterCommit(fn () => broadcast(new DeviceTelemetryUpdated($snapshot)));
+                DB::afterCommit(fn () => broadcast(Configuration::withBroadcastQueue(new DeviceTelemetryUpdated($snapshot))));
             }
 
             return ['device' => $device, 'event' => $stored, 'events' => $stored ? [$stored] : [], 'sensors' => $sensors, 'duplicate' => $duplicate, 'invalid_position' => !$valid];

@@ -26,6 +26,11 @@ class VehicleLocationChanged implements ShouldBroadcast
     public ?string $apiCredentialUuid;
 
     /**
+     * Optional queue for telematics-originated broadcasts. Null keeps Laravel's default.
+     */
+    public ?string $broadcastQueue = null;
+
+    /**
      * The datetime instance the broadcast ws triggered.
      *
      * @var string

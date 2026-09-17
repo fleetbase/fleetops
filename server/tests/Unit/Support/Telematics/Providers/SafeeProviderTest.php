@@ -1,6 +1,7 @@
 <?php
 
 use Fleetbase\FleetOps\Models\Telematic;
+use Fleetbase\FleetOps\Exceptions\TelematicProviderException;
 use Fleetbase\FleetOps\Support\Telematics\Providers\SafeeProvider;
 use Illuminate\Http\Client\Factory as HttpFactory;
 use Illuminate\Support\Carbon;
@@ -43,7 +44,7 @@ class FleetOpsSafeeProviderUnitProbe extends SafeeProvider
 
     public function queuePostResponse(array|Throwable $response): void
     {
-        $this->responses[] = $response;
+        $this->responses[] = is_array($response) ? array_replace(['code' => 0], $response) : $response;
     }
 
     protected function safeePost(string $endpoint, array|stdClass $payload = [], bool $dataEndpoint = false): array
@@ -136,10 +137,8 @@ test('safee provider authenticates through oidc and masks connection failures', 
         'password'      => 'secret',
     ]))->toBe([
         'success'  => false,
-        'message'  => 'not ready',
+        'message'  => 'Safee returned an invalid or unsuccessful response.',
         'metadata' => [
-            'status'    => null,
-            'time'      => null,
             'auth_host' => 'https://safee.example.test',
             'auth_path' => '/auth/realms/fleetbase/protocol/openid-connect/token',
             'realm_id'  => 'fleetbase',
@@ -178,13 +177,11 @@ test('safee provider authenticates through oidc and masks connection failures', 
     ]);
 });
 
-test('safee provider fetches devices with identity diagnostics and last state fallbacks', function () {
+test('safee provider fetches bounded live state batches with identity diagnostics', function () {
     $provider = fleetopsSafeeProvider();
     $provider->queuePostResponse([
         'result' => [
             ['id' => 101, 'plateNo' => 'TRK-101'],
-            ['id'     => 101, 'plateNo' => 'TRK-101-DUP'],
-            ['uuid'   => 'missing-id'],
             ['_safee' => ['vehicle_id' => 202], 'plateNo' => 'TRK-202'],
         ],
     ]);
@@ -192,41 +189,34 @@ test('safee provider fetches devices with identity diagnostics and last state fa
         'result' => [
             ['vehicleId' => 101, 'status' => 'active', 'speed' => 44],
             ['vehicle' => ['id' => 202], 'status' => 'offline'],
-            'ignored-state',
         ],
     ]);
 
     $result = $provider->fetchDevices([
-        'filter'     => (object) ['plateNo' => 'TRK'],
-        'page_size'  => 50,
-        'page_index' => 2,
+        'limit' => 50,
+        'refresh_inventory' => true,
     ]);
 
-    expect($provider->postCalls[0])->toBe([
-        '/api/v2/vehicle/list-info',
-        ['plateNo' => 'TRK', 'pageSize' => 50, 'pageIndex' => 2],
-        true,
-    ])
+    expect($provider->postCalls[0][0])->toBe('/api/v2/vehicle/list-info')
+        ->and($provider->postCalls[0][1])->toBeInstanceOf(stdClass::class)
         ->and($provider->postCalls[1])->toBe([
             '/api/v2/vehicle/last-state',
             [
                 'live'      => true,
-                'startDate' => null,
                 'endDate'   => null,
                 'vehicles'  => [101, 202],
             ],
             true,
         ])
-        ->and($result['devices'])->toHaveCount(4)
+        ->and($result['devices'])->toHaveCount(2)
         ->and($result['devices'][0]['_safee']['current_state']['speed'])->toBe(44)
-        ->and($result['devices'][3]['_safee']['current_state']['status'])->toBe('offline')
+        ->and($result['devices'][1]['_safee']['current_state']['status'])->toBe('offline')
         ->and($result['sync_meta']['safee_last_endpoint_counts'])->toMatchArray([
-            'vehicles_listed'                 => 4,
+            'vehicles_listed'                 => 2,
             'unique_vehicle_ids'              => 2,
-            'missing_vehicle_ids'             => 1,
-            'duplicate_vehicle_ids'           => ['101' => 2],
-            'list_info_page_size'             => 50,
-            'list_info_requested_unpaginated' => false,
+            'missing_vehicle_ids'             => 0,
+            'duplicate_vehicle_ids'           => [],
+            'list_info_requested_unpaginated' => true,
             'last_state_fetched'              => 2,
         ]);
 });
@@ -475,13 +465,13 @@ test('safee transport helpers fetch details guard credentials and surface failur
     };
     Http::clearResolvedInstances();
     app()->forgetInstance(HttpFactory::class);
-    Http::fake(['*' => Http::response(['result' => ['id' => 42, 'name' => 'Vehicle 42']], 200)]);
+    Http::fake(['*' => Http::response(['code' => 0, 'result' => ['id' => 42, 'name' => 'Vehicle 42']], 200)]);
     expect($raw->fetchDeviceDetails('42'))->toBe(['id' => 42, 'name' => 'Vehicle 42']);
 
     // Failed responses surface as runtime exceptions from both verbs
     Http::clearResolvedInstances();
     app()->forgetInstance(HttpFactory::class);
     Http::fake(['*' => Http::response(['error' => 'nope'], 500)]);
-    expect(fn () => $rawInvoke('safeeGet', '/api/v2/broken'))->toThrow(RuntimeException::class)
-        ->and(fn () => $rawInvoke('safeePost', '/api/v2/broken', ['x' => 1]))->toThrow(RuntimeException::class);
+    expect(fn () => $rawInvoke('safeeGet', '/api/v2/broken'))->toThrow(TelematicProviderException::class)
+        ->and(fn () => $rawInvoke('safeePost', '/api/v2/broken', ['x' => 1]))->toThrow(TelematicProviderException::class);
 });

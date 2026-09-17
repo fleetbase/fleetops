@@ -22,9 +22,10 @@ use Illuminate\Validation\ValidationException;
 
 class FleetOpsSyncTelematicJobFake extends Telematic
 {
-    public bool $refreshed  = false;
-    public bool $saved      = false;
-    public int $saveCount   = 0;
+    public bool $refreshed    = false;
+    public bool $saved        = false;
+    public int $saveCount     = 0;
+    public array $savedStates = [];
 
     public function refresh()
     {
@@ -37,6 +38,7 @@ class FleetOpsSyncTelematicJobFake extends Telematic
     {
         $this->saved = true;
         $this->saveCount++;
+        $this->savedStates[] = ['status' => $this->status, 'meta' => $this->meta];
 
         return true;
     }
@@ -191,7 +193,8 @@ class FleetOpsTelematicSyncRegistryFake extends TelematicProviderRegistry
 
 class FleetOpsTelematicSyncServiceFake extends TelematicService
 {
-    public array $ingested = [];
+    public array $ingested        = [];
+    public ?Closure $beforeIngest = null;
 
     public function __construct(public array $results = [], public array $failFor = [])
     {
@@ -200,6 +203,9 @@ class FleetOpsTelematicSyncServiceFake extends TelematicService
     public function ingestDeviceSnapshot(Telematic $telematic, Fleetbase\FleetOps\Contracts\TelematicProviderInterface $provider, array $payload): array
     {
         $this->ingested[] = $payload;
+        if ($this->beforeIngest) {
+            ($this->beforeIngest)($telematic, $payload, count($this->ingested));
+        }
 
         if (in_array($payload['_id'] ?? $payload['id'] ?? null, $this->failFor, true)) {
             throw ValidationException::withMessages(['device_id' => ['missing provider identity']]);
@@ -610,7 +616,6 @@ test('sync telematic devices job handles paginated inventory enrichment skips an
             ->and($service->ingested)->toHaveCount(6)
             ->and($lock->releaseCount)->toBe(1)
             ->and($telematic->saved)->toBeTrue()
-            ->and($telematic->saveCount)->toBe(2)
             ->and($telematic->status)->toBe('active')
             ->and($telematic->meta)->toMatchArray([
                 'existing'                              => 'kept',
@@ -671,6 +676,98 @@ test('sync telematic devices job handles paginated inventory enrichment skips an
                 'last_sync_error_type'          => 'RuntimeException',
                 'last_sync_failed_at'           => '2026-07-25 12:00:00',
             ]);
+    } finally {
+        Cache::swap($originalCache);
+        Carbon::setTestNow();
+    }
+});
+
+test('manual sync persists fetched pages before ingestion and bounded applied checkpoints', function () {
+    Carbon::setTestNow('2026-07-25 12:00:00 UTC');
+    $originalCache = Cache::getFacadeRoot();
+
+    try {
+        $telematic = new FleetOpsSyncTelematicJobFake();
+        $telematic->setRawAttributes(['uuid' => 'progress-connection', 'provider' => 'safee', 'status' => 'synchronizing', 'meta' => ['last_sync_result' => 'queued', 'unrelated' => 'preserved']], true);
+        $devices  = array_map(fn ($number) => ['_id' => 'unit-' . $number, 'device_id' => 'unit-' . $number], range(1, 52));
+        $provider = new FleetOpsTelematicSyncProviderFake([
+            ['devices' => $devices, 'pagination' => ['allCount' => 52, 'filtersCount' => 52], 'has_more' => false],
+        ]);
+        $service               = new FleetOpsTelematicSyncServiceFake();
+        $observed              = [];
+        $service->beforeIngest = function ($connection, $payload, $number) use (&$observed) {
+            if (in_array($number, [1, 26, 51], true)) {
+                $observed[$number] = end($connection->savedStates);
+            }
+        };
+        $lock = new FleetOpsTelematicSyncLockFake(true);
+        Cache::swap(new FleetOpsTelematicSyncCacheFake($lock));
+
+        (new SyncTelematicDevicesJob($telematic, [], 'progress-job'))->handle(new FleetOpsTelematicSyncRegistryFake($provider), $service);
+
+        expect($observed[1]['status'])->toBe('synchronizing');
+        expect($observed[1]['meta'])->toMatchArray([
+            'last_sync_job_id'        => 'progress-job', 'last_sync_result' => 'running', 'last_sync_phase' => 'ingesting_inventory',
+            'last_sync_fetched_total' => 52, 'last_sync_inventory_total' => 52, 'last_sync_provider_total' => 52,
+            'last_sync_page_count'    => 1, 'last_sync_linked_total' => 0, 'last_sync_progress_at' => '2026-07-25 12:00:00',
+        ]);
+        expect($observed[26]['meta']['last_sync_linked_total'])->toBe(25)
+            ->and($observed[51]['meta']['last_sync_linked_total'])->toBe(50);
+        expect($telematic->meta)->toMatchArray(['last_sync_result' => 'success', 'last_sync_phase' => 'completed', 'last_sync_linked_total' => 52, 'unrelated' => 'preserved']);
+        expect($telematic->saveCount)->toBeLessThan(20);
+        expect($lock->releaseCount)->toBe(1);
+    } finally {
+        Cache::swap($originalCache);
+        Carbon::setTestNow();
+    }
+});
+
+test('manual sync checkpoints elapsed progress and retains partial counters when an item throws a PHP error', function () {
+    Carbon::setTestNow('2026-07-25 12:00:00 UTC');
+    $originalCache = Cache::getFacadeRoot();
+
+    try {
+        $telematic = new FleetOpsSyncTelematicJobFake();
+        $telematic->setRawAttributes(['uuid' => 'partial-connection', 'provider' => 'safee', 'status' => 'synchronizing', 'meta' => ['last_sync_result' => 'queued']], true);
+        $devices  = array_map(fn ($number) => ['_id' => 'unit-' . $number, 'device_id' => 'unit-' . $number], range(1, 3));
+        $provider = new FleetOpsTelematicSyncProviderFake([
+            ['devices' => $devices, 'pagination' => ['allCount' => 3], 'has_more' => false],
+        ]);
+        $service                 = new FleetOpsTelematicSyncServiceFake();
+        $checkpointBeforeFailure = null;
+        $service->beforeIngest   = function ($connection, $payload, $number) use (&$checkpointBeforeFailure) {
+            if ($number === 1) {
+                Carbon::setTestNow('2026-07-25 12:00:06 UTC');
+
+                return;
+            }
+            $checkpointBeforeFailure = end($connection->savedStates)['meta'];
+            throw new TypeError('Invalid normalized unit field');
+        };
+        $lock = new FleetOpsTelematicSyncLockFake(true);
+        Cache::swap(new FleetOpsTelematicSyncCacheFake($lock));
+        $job = new SyncTelematicDevicesJob($telematic, [], 'partial-job');
+
+        expect(fn () => $job->handle(new FleetOpsTelematicSyncRegistryFake($provider), $service))->toThrow(TypeError::class, 'Invalid normalized unit field');
+        expect($checkpointBeforeFailure)->toMatchArray([
+            'last_sync_result'        => 'running', 'last_sync_phase' => 'ingesting_inventory',
+            'last_sync_fetched_total' => 3, 'last_sync_linked_total' => 1, 'last_sync_inventory_linked_total' => 1,
+            'last_sync_page_count'    => 1, 'last_sync_progress_at' => '2026-07-25 12:00:06',
+        ]);
+        expect(end($telematic->savedStates)['meta'])->toMatchArray([
+            'last_sync_result'        => 'failed', 'last_sync_error_type' => 'TypeError',
+            'last_sync_fetched_total' => 3, 'last_sync_inventory_total' => 3,
+            'last_sync_linked_total'  => 1, 'last_sync_inventory_linked_total' => 1,
+            'last_sync_page_count'    => 1, 'last_sync_error' => 'Invalid normalized unit field',
+        ]);
+        expect($telematic->status)->toBe('error')->and($lock->releaseCount)->toBe(1);
+
+        // Queue failure callbacks receive persisted checkpoints, not the handler's local counters.
+        $job->failed(new TimeoutExceededException('Queue timeout'));
+        expect($telematic->meta)->toMatchArray([
+            'last_sync_result'        => 'failed', 'last_sync_failed_reason' => 'job_timeout',
+            'last_sync_fetched_total' => 3, 'last_sync_linked_total' => 1, 'last_sync_page_count' => 1,
+        ]);
     } finally {
         Cache::swap($originalCache);
         Carbon::setTestNow();

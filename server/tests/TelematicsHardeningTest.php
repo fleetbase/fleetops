@@ -1065,9 +1065,9 @@ test('safee endpoint helpers account for identities enrichment and failures', fu
         ]);
 
     $provider->queuePostResponse('/api/v2/vehicle/last-state', [
+        'code'   => 0,
         'result' => [
             ['vehicle' => ['id' => 105], 'status' => 'online'],
-            'ignored',
             ['id' => 106, 'status' => 'offline'],
         ],
     ]);
@@ -1078,15 +1078,13 @@ test('safee endpoint helpers account for identities enrichment and failures', fu
     expect($lastStates['105']['status'])->toBe('online')
         ->and($lastStates['106']['status'])->toBe('offline');
 
+    // Live polling must not report malformed, unrequested or failed batches as an empty fleet.
+    $provider->queuePostResponse('/api/v2/vehicle/last-state', ['code' => 0, 'result' => [['id' => 105], 'ignored']]);
+    expect(fn () => $provider->fetchLastStatesByVehicleForTest([105], $stats))->toThrow(Fleetbase\FleetOps\Exceptions\TelematicProviderException::class, 'invalid list record');
+    $provider->queuePostResponse('/api/v2/vehicle/last-state', ['code' => 0, 'result' => [['id' => 999]]]);
+    expect(fn () => $provider->fetchLastStatesByVehicleForTest([105], $stats))->toThrow(Fleetbase\FleetOps\Exceptions\TelematicProviderException::class, 'unrequested');
     $provider->queuePostException('/api/v2/vehicle/last-state', new RuntimeException('token=abc123 password=secret failed'));
-    $failedStats = ['failures' => []];
-
-    expect($provider->fetchLastStatesByVehicleForTest([107], $failedStats))->toBe([])
-        ->and($failedStats['failures'][0])->toMatchArray([
-            'endpoint'   => '/api/v2/vehicle/last-state',
-            'vehicle_id' => null,
-            'message'    => 'token=[redacted] password=[redacted] failed',
-        ]);
+    expect(fn () => $provider->fetchLastStatesByVehicleForTest([107], $stats))->toThrow(RuntimeException::class);
 
     $provider->queuePostResponse('/api/v2/vehicle/positions', [
         'result' => [
@@ -1152,16 +1150,23 @@ test('safee endpoint helpers account for identities enrichment and failures', fu
 test('safee normalization helpers cover status position sensor and timestamp variants', function () {
     $provider = new FleetOpsSafeeProviderProbe();
 
+    // Enrichment only fills gaps unless its source timestamp is strictly newer than the live state.
     expect($provider->currentTelemetryPayloadForTest([
         '_safee' => [
             'current_state' => ['status' => 'offline', 'speed' => 10],
             'current_info'  => ['speed' => 12, 'odometer' => 500],
         ],
     ]))->toBe([
-        'status'   => 'offline',
-        'speed'    => 12,
+        'speed'    => 10,
         'odometer' => 500,
+        'status'   => 'offline',
     ])
+        ->and($provider->currentTelemetryPayloadForTest([
+            '_safee' => [
+                'current_state' => ['date' => 1782206100, 'speed' => 10],
+                'current_info'  => ['date' => 1782206140, 'speed' => 12],
+            ],
+        ]))->toBe(['date' => 1782206140, 'speed' => 12])
         ->and($provider->currentTelemetryPayloadForTest(['_safee' => ['current_info' => ['speed' => 7]]]))->toBe(['speed' => 7])
         ->and($provider->currentTelemetryPayloadForTest(['_safee' => ['current_state' => ['speed' => 6]]]))->toBe(['speed' => 6])
         ->and($provider->currentTelemetryPayloadForTest(['_safee' => []]))->toBeNull()
@@ -1172,7 +1177,7 @@ test('safee normalization helpers cover status position sensor and timestamp var
         ->and($provider->resolveVehicleNameForTest([], [], 108))->toBe('Safee Vehicle 108')
         ->and($provider->resolveVehicleNameForTest([], [], null))->toBe('Unknown Safee Vehicle')
         ->and($provider->sanitizeProviderMessageForTest('access_token=abc&password=secret client_secret=top'))->toBe('access_token=[redacted]&password=[redacted] client_secret=[redacted]')
-        ->and($provider->extractPositionForTest(['loc' => ['coordinates' => [55.2, 25.2]]]))->toBe(['lat' => 25.2, 'lng' => 55.2])
+        ->and($provider->extractPositionForTest(['loc' => ['coordinates' => [55.2, 25.2]]]))->toBe(['lat' => 25.2, 'lng' => 55.2, 'alt' => null])
         ->and($provider->parseTimestampForTest(null))->toBeNull()
         ->and($provider->parseTimestampForTest(1782206140500))->toBe(Carbon::createFromTimestamp(1782206140.5)->toDateTimeString())
         ->and($provider->parseTimestampForTest('2026-06-23T09:15:40Z'))->toBe('2026-06-23 09:15:40')
@@ -1396,7 +1401,7 @@ test('afaqy sync stores compact device diagnostics and paginates complete units 
         ->toContain('= 15;')
         ->toContain('protected int $connectionTestTimeout')
         ->toContain('= 30;')
-        ->toContain('protected int $connectionTestConnectTimeout = 10')
+        ->toContain('protected int $connectionTestConnectTimeout  = 10')
         ->toContain('->timeout($timeout)')
         ->toContain('->connectTimeout($connectTimeout)')
         ->toContain('ConnectionException')

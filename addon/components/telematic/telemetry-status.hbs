@@ -1,43 +1,102 @@
-<div {{did-update this.resourceChanged @resource.id @resource.public_id this.provider.key this.supported}}>
+<div class="contents" {{did-update this.resourceChanged @resource.id @resource.public_id this.provider.key this.supported}}>
     {{#if this.supported}}
-        <section class="space-y-3 rounded-md border border-gray-200 p-3 dark:border-gray-700" data-test-telemetry-status>
-            <h3 class="text-sm font-bold">Live telemetry</h3>
-            {{#if this.error}}<p class="text-sm text-red-600" role="alert">{{this.error}}</p>{{/if}}
+        <section class="min-w-0 space-y-3 rounded-md border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800" data-test-telemetry-status>
+            <h3 class="text-sm font-bold text-gray-900 dark:text-gray-100">Live telemetry</h3>
+            {{#if this.error}}<p class="break-words text-xs text-red-600 dark:text-red-400" role="alert">{{this.error}}</p>{{/if}}
             {{#if this.diagnostics}}
-                <dl class="grid grid-cols-2 gap-2 text-xs">
-                    <dt>Polling</dt><dd>{{if this.diagnostics.polling_enabled "Enabled" "Disabled"}}</dd>
-                    <dt>Position webhooks</dt><dd>{{if this.diagnostics.webhooks_enabled "Enabled" "Disabled"}} · {{smart-humanize this.diagnostics.webhook_state}}</dd>
-                    <dt>Last polling sweep</dt><dd>{{n-a this.diagnostics.last_poll.status}} · {{n-a this.diagnostics.last_poll.updated_at}}</dd>
-                    <dt>Units / pages / applied / failed</dt><dd>{{n-a this.diagnostics.last_poll.units}}
-                        /
-                        {{n-a this.diagnostics.last_poll.pages}}
-                        /
-                        {{n-a this.diagnostics.last_poll.applied}}
-                        /
-                        {{n-a this.diagnostics.last_poll.failed}}</dd>
-                    <dt>Last webhook received</dt><dd>{{n-a this.diagnostics.last_webhook.received_at}}</dd>
-                    <dt>Oldest pending delivery</dt><dd>{{n-a this.diagnostics.oldest_pending_at}}</dd>
-                    <dt>Latest queue / source delay (seconds)</dt><dd>{{n-a this.diagnostics.last_ingestion.queue_delay_seconds}}
-                        /
-                        {{n-a this.diagnostics.last_ingestion.source_delay_seconds}}</dd>
-                    <dt>Last polling error</dt><dd>{{n-a this.diagnostics.last_poll.error}}</dd>
+                <dl class="grid grid-cols-1 gap-x-4 gap-y-3 text-xs sm:grid-cols-2 lg:grid-cols-4">
+                    <div class="min-w-0">
+                        <dt class="text-gray-500 dark:text-gray-400">Polling</dt>
+                        <dd class="mt-1 break-words font-semibold text-gray-900 dark:text-gray-100">{{if this.diagnostics.polling_enabled "Enabled" "Disabled"}}</dd>
+                    </div>
+                    <div class="min-w-0">
+                        <dt class="text-gray-500 dark:text-gray-400">Position webhooks</dt>
+                        <dd class="mt-1 break-words font-semibold text-gray-900 dark:text-gray-100">{{if this.diagnostics.webhooks_enabled "Enabled" "Disabled"}}
+                            ·
+                            {{smart-humanize this.diagnostics.webhook_state}}</dd>
+                    </div>
+                    <div class="min-w-0">
+                        <dt class="text-gray-500 dark:text-gray-400">Last polling sweep</dt>
+                        <dd class="mt-1 break-words font-semibold text-gray-900 dark:text-gray-100">{{n-a (smart-humanize this.diagnostics.last_poll.status)}}</dd>
+                    </div>
+                    <div class="min-w-0">
+                        <dt class="text-gray-500 dark:text-gray-400">Sweep updated (UTC)</dt>
+                        <dd class="mt-1 break-words font-semibold text-gray-900 dark:text-gray-100">{{n-a this.diagnostics.last_poll.updated_at}}</dd>
+                    </div>
+                    <div class="min-w-0">
+                        <dt class="text-gray-500 dark:text-gray-400">Units fetched</dt>
+                        <dd class="mt-1 break-words font-semibold text-gray-900 dark:text-gray-100">{{n-a this.diagnostics.last_poll.units}}</dd>
+                    </div>
+                    <div class="min-w-0">
+                        <dt class="text-gray-500 dark:text-gray-400">Pages</dt>
+                        <dd class="mt-1 break-words font-semibold text-gray-900 dark:text-gray-100">{{n-a this.diagnostics.last_poll.pages}}</dd>
+                    </div>
+                    <div class="min-w-0">
+                        <dt class="text-gray-500 dark:text-gray-400">Applied</dt>
+                        <dd class="mt-1 break-words font-semibold text-gray-900 dark:text-gray-100">{{n-a this.diagnostics.last_poll.applied}}</dd>
+                    </div>
+                    <div class="min-w-0">
+                        <dt class="text-gray-500 dark:text-gray-400">Failed</dt>
+                        <dd class="mt-1 break-words font-semibold {{if this.diagnostics.last_poll.failed 'text-red-600 dark:text-red-400' 'text-gray-900 dark:text-gray-100'}}">{{n-a
+                                this.diagnostics.last_poll.failed
+                            }}</dd>
+                    </div>
+                    <div class="min-w-0">
+                        <dt class="text-gray-500 dark:text-gray-400">Last webhook (UTC)</dt>
+                        <dd class="mt-1 break-words font-semibold text-gray-900 dark:text-gray-100">{{n-a this.diagnostics.last_webhook.received_at}}</dd>
+                    </div>
+                    <div class="min-w-0">
+                        <dt class="text-gray-500 dark:text-gray-400">Oldest pending (UTC)</dt>
+                        <dd class="mt-1 break-words font-semibold text-gray-900 dark:text-gray-100">{{n-a this.diagnostics.oldest_pending_at}}</dd>
+                    </div>
+                    <div class="min-w-0">
+                        <dt class="text-gray-500 dark:text-gray-400">Queue delay (seconds)</dt>
+                        <dd class="mt-1 break-words font-semibold text-gray-900 dark:text-gray-100">{{n-a this.diagnostics.last_ingestion.queue_delay_seconds}}</dd>
+                    </div>
+                    <div class="min-w-0">
+                        <dt class="text-gray-500 dark:text-gray-400">Source delay (seconds)</dt>
+                        <dd class="mt-1 break-words font-semibold text-gray-900 dark:text-gray-100">{{n-a this.diagnostics.last_ingestion.source_delay_seconds}}</dd>
+                    </div>
                 </dl>
-            {{/if}}
-            {{#if this.supportsSecureWebhooks}}
-                {{#if this.registrationInstructions}}<p class="text-xs">{{this.registrationInstructions}}</p>{{/if}}
-                {{#if this.provisional}}<p class="text-xs">The payload adapter is provisional until a real delivery has been verified.</p>{{/if}}
-                <button type="button" class="btn btn-default btn-sm" disabled={{this.configure.isRunning}} {{on "click" this.reveal}}>Show registration URL</button>
-                {{#if this.webhookUrl}}
-                    <ClickToCopy @value={{this.webhookUrl}}><Input @value={{this.webhookUrl}} class="form-input w-full" readonly aria-label="Secure telemetry webhook URL" /></ClickToCopy>
-                    <p class="text-xs">This URL contains a secret. Rotating it immediately invalidates the previous URL and requires registration with the provider again.</p>
-                    <button type="button" class="btn btn-default btn-sm" disabled={{this.configure.isRunning}} {{on "click" this.rotate}}>Rotate secret and invalidate old URL</button>
+                {{#if this.diagnostics.last_poll.error}}
+                    <p class="break-words text-xs text-red-600 dark:text-red-400"><span class="font-semibold">Last polling error:</span> {{this.diagnostics.last_poll.error}}</p>
                 {{/if}}
             {{/if}}
-            {{#each this.diagnostics.recent_failures as |delivery|}}
-                <div class="text-xs"><span>{{delivery.received_at}} · {{delivery.error}}</span>
-                    {{#if (eq delivery.status "quarantined")}}<button type="button" class="btn btn-default btn-sm" {{on "click" (fn this.replay delivery.uuid)}}>Replay delivery</button>{{/if}}
-                </div>
-            {{/each}}
+            {{#if this.supportsSecureWebhooks}}
+                <details class="border-t border-gray-200 pt-3 text-xs dark:border-gray-700">
+                    <summary class="cursor-pointer font-semibold text-gray-700 dark:text-gray-300">Webhook setup</summary>
+                    <div class="mt-3 space-y-2 text-gray-500 dark:text-gray-400">
+                        {{#if this.registrationInstructions}}<p>{{this.registrationInstructions}}</p>{{/if}}
+                        {{#if this.provisional}}<p>Position webhooks are awaiting verification with a real delivery.</p>{{/if}}
+                        <Button @size="xs" @text="Show registration URL" @disabled={{this.configure.isRunning}} @onClick={{this.reveal}} />
+                        {{#if this.webhookUrl}}
+                            <ClickToCopy @value={{this.webhookUrl}}>
+                                <Input @value={{this.webhookUrl}} class="form-input w-full text-xs" readonly aria-label="Secure telemetry webhook URL" />
+                            </ClickToCopy>
+                            <p>This URL contains a secret. Rotating it immediately invalidates the previous URL and requires registration with the provider again.</p>
+                            <Button @size="xs" @text="Rotate secret" @disabled={{this.configure.isRunning}} @onClick={{this.rotate}} />
+                        {{/if}}
+                    </div>
+                </details>
+            {{/if}}
+            {{#if this.diagnostics.recent_failures.length}}
+                <details class="border-t border-gray-200 pt-3 text-xs dark:border-gray-700">
+                    <summary class="cursor-pointer font-semibold text-red-600 dark:text-red-400">Recent delivery failures ({{this.diagnostics.recent_failures.length}})</summary>
+                    <ul class="mt-3 max-h-48 space-y-3 overflow-y-auto">
+                        {{#each this.diagnostics.recent_failures as |delivery|}}
+                            <li class="flex flex-wrap items-start justify-between gap-2">
+                                <div class="min-w-0 flex-1 break-words">
+                                    <p class="text-gray-500 dark:text-gray-400">{{delivery.received_at}} UTC</p>
+                                    <p class="mt-1 text-gray-700 dark:text-gray-300">{{delivery.error}}</p>
+                                </div>
+                                {{#if (eq delivery.status "quarantined")}}
+                                    <Button @size="xs" @text="Replay delivery" @onClick={{fn this.replay delivery.uuid}} />
+                                {{/if}}
+                            </li>
+                        {{/each}}
+                    </ul>
+                </details>
+            {{/if}}
         </section>
     {{/if}}
 </div>

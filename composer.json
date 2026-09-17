@@ -1,6 +1,6 @@
 {
     "name": "fleetbase/fleetops-api",
-    "version": "0.6.66",
+    "version": "0.6.67",
     "description": "Fleet & Transport Management Extension for Fleetbase",
     "keywords": [
         "fleetbase-extension",
@@ -39,6 +39,7 @@
         "spatie/icalendar-generator": "^2.8"
     },
     "require-dev": {
+        "illuminate/encryption": "^9.0|^10.0",
         "friendsofphp/php-cs-fixer": "^3.34.1",
         "nunomaduro/collision": "^7.0",
         "pestphp/pest": "^2.33.2",

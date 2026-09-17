@@ -37,6 +37,7 @@ class TestTelematicConnectionJob implements ShouldQueue
     {
         $this->telematic = $telematic;
         $this->jobId     = $jobId ?? Str::uuid()->toString();
+        $this->onQueue(\Fleetbase\FleetOps\Support\Telematics\Telemetry\Configuration::pollQueue());
     }
 
     /**

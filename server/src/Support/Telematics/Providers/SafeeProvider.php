@@ -2,8 +2,12 @@
 
 namespace Fleetbase\FleetOps\Support\Telematics\Providers;
 
+use Fleetbase\FleetOps\Contracts\TelemetryProviderInterface;
+use Fleetbase\FleetOps\Exceptions\TelematicProviderException;
+use Fleetbase\FleetOps\Support\Telematics\Safee\Transport;
+use Fleetbase\FleetOps\Support\Telematics\Telemetry\Sample;
 use Illuminate\Support\Carbon;
-use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Cache;
 
 /**
  * Safee Tracking REST provider implementation.
@@ -11,19 +15,25 @@ use Illuminate\Support\Facades\Http;
  * Safee authenticates through an OpenID Connect token endpoint and exposes
  * vehicle discovery plus latest state/position endpoints under api/v2.
  */
-class SafeeProvider extends AbstractProvider
+class SafeeProvider extends AbstractProvider implements TelemetryProviderInterface
 {
-    protected string $baseUrl        = 'https://api.safee.com';
-    protected int $requestsPerMinute = 3000;
-    protected ?string $accessToken   = null;
-    protected array $authContext     = [];
-    protected int $dataTimeout       = 120;
-    protected int $connectTimeout    = 15;
+    protected string $baseUrl         = 'https://api.safee.com';
+    protected int $requestsPerMinute  = 3000;
+    protected ?string $accessToken    = null;
+    protected array $authContext      = [];
+    protected int $dataTimeout        = 45;
+    protected int $connectTimeout     = 5;
+    protected ?float $requestDeadline = null;
+    protected ?Transport $transport   = null;
+    protected ?array $inventory       = null;
 
     protected function prepareAuthentication(): void
     {
         $this->baseUrl     = $this->resolveBaseUrl();
-        $this->accessToken = $this->credentials['access_token'] ?? $this->authenticate();
+        // Authentication is lazy so it shares the caller's fetch deadline.
+        $this->accessToken = $this->credentials['access_token'] ?? null;
+        $this->transport   = null;
+        $this->inventory   = null;
         $scheme            = $this->credentials['authorization_scheme'] ?? 'Bearer';
 
         $this->headers = [
@@ -62,57 +72,156 @@ class SafeeProvider extends AbstractProvider
 
     public function fetchDevices(array $options = []): array
     {
-        $listInfoBody  = $this->resolveListInfoPayload($options);
-        $response      = $this->safeePost('/api/v2/vehicle/list-info', $listInfoBody, true);
-        $vehicles      = $response['result'] ?? [];
-        $vehicleIds    = $this->resolveListedVehicleIds($vehicles);
-        $identityStats = $this->summarizeVehicleIdentities($vehicles, $vehicleIds);
-        $endpointStats = [
-            'vehicles_listed'                 => count($vehicles),
-            'unique_vehicle_ids'              => $identityStats['unique_vehicle_ids'],
-            'missing_vehicle_ids'             => $identityStats['missing_vehicle_ids'],
-            'duplicate_vehicle_ids'           => $identityStats['duplicate_vehicle_ids'],
-            'list_info_page_size'             => $listInfoBody['pageSize'] ?? null,
-            'list_info_requested_unpaginated' => ($listInfoBody['pageSize'] ?? null) === 0,
-            'last_state_fetched'              => 0,
-            'last_info_fetched'               => 0,
-            'positions_fetched'               => 0,
-            'events_fetched'                  => 0,
-            'devices_returned_for_ingestion'  => count($vehicles),
-            'failures'                        => [],
-        ];
-        $statesById                          = $this->fetchLastStatesByVehicle($vehicleIds, $endpointStats);
-        $endpointStats['last_state_fetched'] = count($statesById);
+        $previousDeadline       = $this->requestDeadline;
+        $previousTimeout        = $this->dataTimeout;
+        $previousConnectTimeout = $this->connectTimeout;
+        $this->dataTimeout      = max(1, (int) ($options['timeout'] ?? $this->dataTimeout));
+        $this->connectTimeout   = max(1, min((int) ($options['connect_timeout'] ?? 5), $this->dataTimeout));
+        $this->requestDeadline  = $this->requestTime() + $this->dataTimeout;
+        try {
+            $cursor = $options['cursor'] ?? 0;
+            if ((!is_int($cursor) && !ctype_digit((string) $cursor)) || (int) $cursor < 0) {
+                throw new TelematicProviderException('Safee inventory cursor is invalid.');
+            }
+            $offset  = (int) $cursor;
+            $limit   = max(1, min(1000, (int) ($options['limit'] ?? $options['page_size'] ?? $this->telemetryOptions()['page_size'])));
+            $filters = (array) ($options['filters'] ?? $options['filter'] ?? []);
+            if ($filters !== []) {
+                throw new TelematicProviderException('Safee list-info does not support filters; use an explicit historical or search request.');
+            }
+            $transport = $this->transport();
+            $cacheKey  = 'safee:inventory:' . $transport->fingerprint();
+            $refresh   = $offset === 0 && ($options['refresh_inventory'] ?? $options['force_inventory_refresh'] ?? false);
+            if ($offset === 0) {
+                $this->inventory = $refresh ? null : Cache::get($cacheKey);
+            }
+            if ($this->inventory === null) {
+                // list-info is documented as an unpaginated {} request. Pagination
+                // here slices this stable inventory; only live states are batched.
+                $response        = $this->safeePost('/api/v2/vehicle/list-info', new \stdClass(), true);
+                $this->inventory = $this->validatedList($response, '/api/v2/vehicle/list-info');
+                $identities      = [];
+                foreach ($this->inventory as $vehicle) {
+                    $id = $this->resolveListedVehicleId($vehicle);
+                    if (!is_scalar($id) || (string) $id === '' || isset($identities[(string) $id])) {
+                        $this->inventory = null;
+                        throw new TelematicProviderException('Safee inventory contains a missing or duplicate vehicle identity.');
+                    }
+                    $identities[(string) $id] = true;
+                }
+                Cache::put($cacheKey, $this->inventory, max(1, min(300, (int) ($this->telemetryOptions()['inventory_cache_seconds'] ?? 60))));
+            }
+            $total = count($this->inventory);
+            if ($offset > $total) {
+                throw new TelematicProviderException('Safee inventory cursor exceeds the inventory size.');
+            }
+            $vehicles   = array_slice($this->inventory, $offset, $limit);
+            $vehicleIds = $this->resolveListedVehicleIds($vehicles);
+            $states     = $this->fetchLastStatesByVehicle($vehicleIds);
+            $devices    = array_map(function (array $vehicle) use ($states) {
+                $id    = $this->resolveListedVehicleId($vehicle);
+                $state = $states[(string) $id] ?? null;
 
-        $devices = array_map(function (array $vehicle) use ($statesById, &$endpointStats) {
-            $vehicleId    = $this->resolveListedVehicleId($vehicle);
-            $currentState = $statesById[(string) $vehicleId] ?? null;
+                return array_merge($vehicle, ['_safee' => [
+                    'vehicle_id'   => $id, 'identity' => $vehicle, 'current_state' => $state,
+                    'current_info' => null, 'positions' => [], 'events' => [], 'sync_window' => null,
+                ], 'sensors' => $this->extractTelemetrySensors($state ? array_merge($state, ['vehicleId' => $id]) : [])]);
+            }, $vehicles);
+            $next = $offset + count($vehicles) < $total ? $offset + count($vehicles) : null;
 
-            return array_merge($vehicle, [
-                '_safee' => [
-                    'vehicle_id'     => $vehicleId,
-                    'identity'       => $vehicle,
-                    'current_info'   => null,
-                    'current_state'  => $currentState,
-                    'positions'      => [],
-                    'events'         => [],
-                    'sync_window'    => null,
-                    'diagnostics'    => $endpointStats,
-                ],
-                'sensors' => [],
-            ]);
-        }, $vehicles);
+            return [
+                'devices'    => $devices, 'next_cursor' => $next, 'has_more' => $next !== null,
+                'pagination' => ['allCount' => $total, 'filtersCount' => $total, 'offset' => $offset, 'limit' => $limit, 'resultCount' => count($devices)],
+                'sync_meta'  => ['safee_last_endpoint_counts' => [
+                    'vehicles_listed'                 => $total, 'unique_vehicle_ids' => $total,
+                    'missing_vehicle_ids'             => 0, 'duplicate_vehicle_ids' => [],
+                    'list_info_requested_unpaginated' => true, 'last_state_fetched' => count($states),
+                    'missing_states'                  => count($vehicles) - count($states),
+                    'last_info_fetched'               => 0, 'positions_fetched' => 0, 'events_fetched' => 0,
+                    'devices_returned_for_ingestion'  => count($devices), 'failures' => [],
+                ]],
+            ];
+        } finally {
+            $this->requestDeadline = $previousDeadline;
+            $this->dataTimeout     = $previousTimeout;
+            $this->connectTimeout  = $previousConnectTimeout;
+        }
+    }
 
-        return [
-            'devices'     => $devices,
-            'next_cursor' => null,
-            'has_more'    => false,
-            'sync_meta'   => [
-                'safee_last_endpoint_counts'     => array_merge($endpointStats, [
-                    'failures' => array_slice($endpointStats['failures'], 0, 25),
-                ]),
-            ],
-        ];
+    public function telemetryOptions(): array
+    {
+        $options                     = array_replace(['polling_enabled' => true, 'manual_batch_sync' => true, 'page_size' => 1000, 'inventory_cache_seconds' => 60], config('telematics.safee', []));
+        $options['page_size']        = max(1, min(1000, (int) $options['page_size']));
+        $options['webhooks_enabled'] = false;
+
+        return $options;
+    }
+
+    public function telemetryUnits(array $payload): array
+    {
+        throw new \InvalidArgumentException('Safee does not support position webhooks.');
+    }
+
+    public function normalizeTelemetrySnapshot(array $payload): array
+    {
+        if (!isset($payload['_safee'])) {
+            $id                = $this->resolveVehicleId($payload);
+            $payload['_safee'] = ['vehicle_id' => $id, 'identity' => array_replace($payload, ['id' => $id]), 'current_state' => $payload];
+        }
+        $identity               = $this->identityPayload($payload);
+        $current                = $this->currentTelemetryPayload($payload) ?? (isset($payload['_safee']) ? [] : $payload);
+        $device                 = $this->normalizeDevice($payload);
+        $device['name']         = $identity['plateNo'] ?? $identity['plateNumber'] ?? $identity['name'] ?? $current['plateNo'] ?? null;
+        $device['internal_id']  = $identity['uuid'] ?? null;
+        $device['status']       = null;
+        $device['online']       = null;
+        $event                  = $this->normalizeSafeeTelemetryEvent($current, 'current', $identity);
+        $event['device_id']     = $device['device_id'];
+        $event['occurred_at']   = $this->sourceTimestamp($current['date'] ?? $current['deviceTime'] ?? $current['time'] ?? null);
+        $event['last_seen_at']  = $event['occurred_at'];
+        $event['online']        = null;
+        $event['meta']          = ['telemetry' => ['position_at' => $event['occurred_at']]];
+        $device['last_seen_at'] = $event['occurred_at'];
+        $device['meta']         = $this->withoutMissingValues([
+            'plate_number' => $identity['plateNo'] ?? $identity['plateNumber'] ?? $current['plateNo'] ?? null,
+            'driver'       => $current['driver'] ?? $identity['driver'] ?? null,
+            'last_update'  => $event,
+        ]);
+        $sensors = [];
+        foreach ($this->extractTelemetrySensors(array_merge($current, ['vehicleId' => $device['device_id']])) as $sensor) {
+            if (is_scalar($sensor['value'] ?? null)) {
+                $sensor                = $this->normalizeSensor($sensor);
+                $sensor['recorded_at'] = $event['occurred_at'];
+                $sensors[]             = $sensor;
+            }
+        }
+
+        return ['device' => array_filter($device, fn ($value) => $value !== null), 'event' => $event, 'sensors' => $sensors];
+    }
+
+    protected function withoutMissingValues(array $values): array
+    {
+        foreach ($values as $key => $value) {
+            if (is_array($value)) {
+                $values[$key] = $this->withoutMissingValues($value);
+            }
+        }
+
+        return array_filter($values, fn ($value) => $value !== null && $value !== []);
+    }
+
+    protected function validatedList(array $response, string $endpoint): array
+    {
+        if (!array_key_exists('code', $response) || !is_numeric($response['code']) || (float) $response['code'] !== 0.0 || !isset($response['result']) || !is_array($response['result']) || !array_is_list($response['result'])) {
+            throw new TelematicProviderException('Safee returned an invalid list response.', ['endpoint' => $endpoint]);
+        }
+        foreach ($response['result'] as $row) {
+            if (!is_array($row)) {
+                throw new TelematicProviderException('Safee returned an invalid list record.', ['endpoint' => $endpoint]);
+            }
+        }
+
+        return $response['result'];
     }
 
     public function fetchDeviceTelemetrySnapshots(array $inventoryPayloads, array $options = []): array
@@ -140,7 +249,7 @@ class SafeeProvider extends AbstractProvider
         return [
             'devices'   => $devices,
             'sync_meta' => [
-                'safee_last_telemetry_synced_at' => $window['endDate'],
+                ...($endpointStats['failures'] === [] ? ['safee_last_telemetry_synced_at' => $window['endDate']] : []),
                 'safee_last_sync_window'         => $window,
                 'safee_last_endpoint_counts'     => array_merge($endpointStats, [
                     'failures' => array_slice($endpointStats['failures'], 0, 25),
@@ -396,28 +505,7 @@ class SafeeProvider extends AbstractProvider
         $tokenUrl          = $this->baseUrl . '/auth/realms/' . $this->credentials['realm_id'] . '/protocol/openid-connect/token';
         $this->authContext = $this->buildAuthContext($tokenUrl);
 
-        $response = Http::asForm()
-            ->acceptJson()
-            ->timeout(30)
-            ->post($tokenUrl, [
-                'grant_type'    => 'password',
-                'client_secret' => $this->credentials['client_secret'],
-                'client_id'     => $this->credentials['client_id'],
-                'username'      => $this->credentials['username'],
-                'password'      => $this->credentials['password'],
-            ]);
-
-        if ($response->failed()) {
-            throw new \RuntimeException('Safee authentication failed with status ' . $response->status());
-        }
-
-        $token = $response->json('access_token');
-
-        if (!$token) {
-            throw new \RuntimeException('Safee authentication did not return an access token.');
-        }
-
-        return $token;
+        return $this->transport()->authenticate($this->requestDeadline ?? $this->requestTime() + 30, min(30, $this->dataTimeout), $this->connectTimeout);
     }
 
     protected function resolveBaseUrl(): string
@@ -563,34 +651,16 @@ class SafeeProvider extends AbstractProvider
 
         $states = [];
         foreach (array_chunk($vehicleIds, 1000) as $chunk) {
-            try {
-                $response = $this->safeePost('/api/v2/vehicle/last-state', [
-                    'live'      => true,
-                    'startDate' => null,
-                    'endDate'   => null,
-                    'vehicles'  => array_values($chunk),
-                ], true);
-            } catch (\Throwable $e) {
-                if (is_array($endpointStats)) {
-                    $endpointStats['failures'][] = [
-                        'endpoint'   => '/api/v2/vehicle/last-state',
-                        'vehicle_id' => null,
-                        'message'    => $this->sanitizeProviderMessage($e->getMessage()),
-                    ];
-                }
-
-                continue;
-            }
-
-            foreach ($response['result'] ?? [] as $state) {
-                if (!is_array($state)) {
-                    continue;
-                }
-
+            $response = $this->safeePost('/api/v2/vehicle/last-state', [
+                'live' => true, 'endDate' => null, 'vehicles' => array_values($chunk),
+            ], true);
+            $requested = array_fill_keys(array_map('strval', $chunk), true);
+            foreach ($this->validatedList($response, '/api/v2/vehicle/last-state') as $state) {
                 $vehicleId = $this->resolveVehicleId($state);
-                if ($vehicleId !== null) {
-                    $states[(string) $vehicleId] = $state;
+                if (!is_scalar($vehicleId) || !isset($requested[(string) $vehicleId]) || isset($states[(string) $vehicleId])) {
+                    throw new TelematicProviderException('Safee returned an unidentified, duplicate or unrequested vehicle state.');
                 }
+                $states[(string) $vehicleId] = $state;
             }
         }
 
@@ -619,13 +689,13 @@ class SafeeProvider extends AbstractProvider
         return array_merge($vehicle, [
             '_safee' => [
                 'vehicle_id'     => $vehicleId,
-                'identity'       => $vehicle,
+                'identity'       => $this->identityPayload($vehicle),
                 'current_info'   => $lastInfo,
                 'current_state'  => $currentState,
                 'positions'      => is_array($positions) ? $positions : [],
                 'events'         => is_array($events) ? $events : [],
                 'sync_window'    => $window,
-                'diagnostics'    => $endpointStats,
+                'diagnostics'    => array_merge($endpointStats, ['failures' => array_slice($endpointStats['failures'], 0, 25)]),
             ],
             'sensors' => $this->extractTelemetrySensors($lastInfo ?? []),
         ]);
@@ -676,7 +746,15 @@ class SafeeProvider extends AbstractProvider
         $currentState = data_get($payload, '_safee.current_state');
 
         if (is_array($currentState) && !empty($currentState) && is_array($currentInfo) && !empty($currentInfo)) {
-            return array_replace_recursive($currentState, $currentInfo);
+            $stateAt = $this->sourceTimestamp($currentState['date'] ?? $currentState['deviceTime'] ?? $currentState['time'] ?? null);
+            $infoAt  = $this->sourceTimestamp($currentInfo['date'] ?? $currentInfo['deviceTime'] ?? $currentInfo['time'] ?? null);
+            // Only supplement absent fields with older observations. Never replace
+            // the latest position/time with the result of a slower enrichment call.
+            $infoIsNewer = $infoAt && (!$stateAt || strcmp($infoAt, $stateAt) > 0);
+
+            return $infoIsNewer
+                ? array_replace_recursive($this->withoutMissingValues($currentState), $this->withoutMissingValues($currentInfo))
+                : array_replace_recursive($this->withoutMissingValues($currentInfo), $this->withoutMissingValues($currentState));
         }
 
         if (is_array($currentInfo) && !empty($currentInfo)) {
@@ -717,31 +795,29 @@ class SafeeProvider extends AbstractProvider
 
     protected function safeeGet(string $endpoint): array
     {
-        $response = Http::withHeaders($this->headers)
-            ->timeout(30)
-            ->get($this->baseUrl . $endpoint);
-
-        if ($response->failed()) {
-            throw new \RuntimeException('Safee API request failed with status ' . $response->status());
-        }
-
-        return $response->json() ?? [];
+        return $this->transport()->request('GET', $endpoint, [], $this->requestDeadline ?? $this->requestTime() + 30, 30, $this->connectTimeout);
     }
 
     protected function safeePost(string $endpoint, array|\stdClass $payload = [], bool $dataEndpoint = false): array
     {
-        $timeout        = $dataEndpoint ? $this->dataTimeout : 30;
-        $connectTimeout = $dataEndpoint ? $this->connectTimeout : 10;
-        $response       = Http::withHeaders($this->headers)
-            ->timeout($timeout)
-            ->connectTimeout($connectTimeout)
-            ->post($this->baseUrl . $endpoint, $payload);
+        $timeout = $dataEndpoint ? $this->dataTimeout : 30;
 
-        if ($response->failed()) {
-            throw new \RuntimeException('Safee API request failed with status ' . $response->status());
+        return $this->transport()->request('POST', $endpoint, $payload, $this->requestDeadline ?? $this->requestTime() + $timeout, $timeout, $this->connectTimeout);
+    }
+
+    protected function transport(): Transport
+    {
+        $this->baseUrl = $this->resolveBaseUrl();
+        if (!empty($this->credentials['realm_id'])) {
+            $this->authContext = $this->buildAuthContext($this->baseUrl . '/auth/realms/' . rawurlencode($this->credentials['realm_id']) . '/protocol/openid-connect/token');
         }
 
-        return $response->json() ?? [];
+        return $this->transport ??= new Transport($this->baseUrl, $this->credentials);
+    }
+
+    protected function requestTime(): float
+    {
+        return hrtime(true) / 1_000_000_000;
     }
 
     protected function sanitizeProviderMessage(string $message): string
@@ -756,23 +832,21 @@ class SafeeProvider extends AbstractProvider
         return [
             'lat' => $position['lat'] ?? $position['latitude'] ?? data_get($position, 'loc.coordinates.1'),
             'lng' => $position['lon'] ?? $position['lng'] ?? $position['longitude'] ?? data_get($position, 'loc.coordinates.0'),
+            'alt' => $position['alt'] ?? $position['altitude'] ?? null,
         ];
     }
 
     protected function parseTimestamp($value): ?string
     {
-        if (!$value) {
-            return null;
-        }
+        $timestamp = $this->sourceTimestamp($value);
 
-        if (is_numeric($value)) {
-            $timestamp = (float) $value;
-            $seconds   = $timestamp > 9999999999 ? $timestamp / 1000 : $timestamp;
+        return $timestamp ? Carbon::parse($timestamp)->utc()->toDateTimeString() : null;
+    }
 
-            return Carbon::createFromTimestamp($seconds)->toDateTimeString();
-        }
-
-        return Carbon::parse($value)->toDateTimeString();
+    protected function sourceTimestamp(mixed $value): ?string
+    {
+        // Safee uses zero for vehicles which have never reported a position.
+        return is_numeric($value) && (float) $value <= 0 ? null : Sample::timestamp($value);
     }
 
     protected function normalizeVehicleStatus(?string $status): string

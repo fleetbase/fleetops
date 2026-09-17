@@ -24,7 +24,7 @@ class SyncTelematics extends Command
         $lock    = null;
 
         if ($useLock) {
-            $lock = Cache::lock('fleetops:sync-telematics', 600);
+            $lock = Cache::lock('fleetops:sync-telematics', 120);
             if (!$lock->get()) {
                 $this->warn('Another telematics sync run appears to be in progress.');
 
@@ -40,6 +40,7 @@ class SyncTelematics extends Command
                 return self::SUCCESS;
             }
 
+            $queued             = 0;
             $telemetryProviders = [];
             foreach ($providerKeys as $key) {
                 if (!data_get($registry->findByKey($key)?->metadata, 'telemetry.durable_ingestion', false)) {
@@ -50,18 +51,24 @@ class SyncTelematics extends Command
                     continue;
                 }
                 $options = \Fleetbase\FleetOps\Support\Telematics\Telemetry\Configuration::options($provider);
+                // Batch-only providers have no legacy fallback: pausing polling pauses their sync.
                 if (!($options['polling_enabled'] ?? false)) {
+                    if ($options['manual_batch_sync'] ?? false) {
+                        $telemetryProviders[] = $key;
+                    }
                     continue;
                 }
                 $telemetryProviders[] = $key;
                 Telematic::withoutGlobalScopes()->where('provider', $key)->whereIn('status', ['active', 'connected', 'error', 'synchronizing'])
-                    ->whereNotNull('company_uuid')->orderBy('id')->chunkById(100, function ($connections) use ($options) {
+                    ->whereNotNull('company_uuid')->orderBy('id')->chunkById(100, function ($connections) use ($options, &$queued) {
                         foreach ($connections as $connection) {
                             if (\Fleetbase\FleetOps\Support\Telematics\Telemetry\Inbox::enabled($connection)) {
                                 try {
-                                    \Fleetbase\FleetOps\Support\Telematics\Telemetry\Queue::dispatch((new \Fleetbase\FleetOps\Jobs\PollTelematicTelemetry($connection->uuid))
+                                    if (\Fleetbase\FleetOps\Support\Telematics\Telemetry\Queue::dispatch((new \Fleetbase\FleetOps\Jobs\PollTelematicTelemetry($connection->uuid))
                                         ->onQueue($options['poll_queue'] ?? 'default')
-                                        ->delay(now()->addSeconds(abs(crc32($connection->uuid)) % 10)));
+                                        ->delay(now()->addSeconds(abs(crc32($connection->uuid)) % 10)))) {
+                                        $queued++;
+                                    }
                                 } catch (\Throwable) {
                                     \Illuminate\Support\Facades\Log::warning('Telemetry polling dispatch failed; next tick will retry.', ['telematic_uuid' => $connection->uuid]);
                                 }
@@ -75,7 +82,6 @@ class SyncTelematics extends Command
                 ->whereIn('status', ['active', 'connected'])
                 ->whereNotNull('company_uuid');
 
-            $queued = 0;
             $query->orderBy('id')->chunkById(100, function ($telematics) use (&$queued) {
                 foreach ($telematics as $telematic) {
                     SyncTelematicDevicesJob::dispatch($telematic, [
