@@ -51,28 +51,56 @@ no worker wait indefinitely.
 
 ### 1. Add telematics workers
 
-Add worker services with the same image, environment, and volumes as the existing
-`queue` service. Change only the command and healthcheck. Docker Compose example:
+Each telematics worker must be an exact copy of the existing `queue` worker: the
+same image and tag, the same `env_file`, `environment`, volumes and `depends_on`,
+including every Compose override file that changes `queue`. Change only the command.
+Workers running a different build, or missing `APP_KEY`, fail every telematics job.
+
+Docker Compose example, assuming `queue` is defined in `docker-compose.yml` and any
+image or environment overrides for it live in `docker-compose.override.yml`:
 
 ```yaml
+# docker-compose.yml: copy the full `queue` service definition, then change the command.
 services:
   telematics-queue:
-    image: fleetbase/fleetbase-api:latest
+    # image, env_file, environment, volumes, depends_on: identical to `queue`
     command: ["php", "artisan", "queue:work", "--queue=telematics", "--sleep=1", "--max-time=3600"]
     restart: unless-stopped
     deploy:
       replicas: 2
-    # environment, volumes and depends_on: copy from the existing `queue` service
 
   telematics-broadcast-queue:
-    image: fleetbase/fleetbase-api:latest
+    # image, env_file, environment, volumes, depends_on: identical to `queue`
     command: ["php", "artisan", "queue:work", "--queue=telematics-broadcasts", "--sleep=1", "--max-time=3600"]
     restart: unless-stopped
-    # environment, volumes and depends_on: copy from the existing `queue` service
+```
+
+```yaml
+# docker-compose.override.yml: repeat every override that applies to `queue`.
+services:
+  telematics-queue:
+    image: "fleetbase-api:latest"   # the same image as `queue`
+  telematics-broadcast-queue:
+    image: "fleetbase-api:latest"
 ```
 
 Notes:
 
+- **Use the same image as `queue`, not a separate `fleetbase/fleetbase-api:latest`.**
+  Docker does not download a newer `latest` when a copy already exists locally, so a
+  new service can start from an old cached image. If you do use a registry image,
+  pin a version tag and pull it for every API container together.
+- **Every API container needs the same `APP_KEY`**: application, scheduler, the
+  default worker and the telematics workers. Provider credentials, token caches and
+  telematics deliveries are encrypted with it. If only the application service
+  receives it (for example through a mounted `.env` or an override), put it in a
+  shared `env_file` instead. Never generate a new key for a worker.
+- **Check the merged configuration, including when using `extends`.** Run
+  `docker compose config` and compare the resolved `image`, `env_file` and
+  `environment` of `queue` and each telematics service before deploying.
+- The `--queue` names must match the variables in step 2 exactly. A worker listening
+  on `telematics-broadcast` while broadcasts go to `telematics-broadcasts` receives
+  nothing.
 - Leave the existing `queue` service unchanged. `queue:work` without `--queue`
   processes the connection's default queue (`REDIS_QUEUE`, normally `default`).
 - Leave `--timeout` at its default (60 seconds) or set any value below the Redis
@@ -83,8 +111,6 @@ Notes:
   memory. `restart: unless-stopped` starts them again.
 - On Kubernetes, ECS, or another platform, create equivalent deployments with the
   same image, environment, and commands.
-- Every worker container needs the same `APP_KEY`, database, Redis, and broadcasting
-  settings as the application. Deliveries are encrypted with `APP_KEY`.
 
 ### 2. Set the queue variables for this instance only
 
@@ -154,6 +180,19 @@ of 50 requests per second per account across all workers.
 
 ## Verification
 
+First confirm every API container runs the same build and application key. Each line
+must show the same key fingerprint (a hash, never the key) and Fleet-Ops version:
+
+```bash
+for c in $(docker ps --format '{{.Names}}' | grep -E 'application|scheduler|queue'); do echo "== $c $(docker inspect --format '{{.Config.Image}}' $c)"; docker exec $c php artisan tinker --execute="echo config('app.key') ? substr(hash('sha256', config('app.key')), 0, 12) : 'MISSING', ' ', json_decode(file_get_contents('vendor/fleetbase/fleetops-api/composer.json'))->version, PHP_EOL;"; done
+```
+
+Confirm Laravel loaded the queue names in the application and a telematics worker:
+
+```bash
+php artisan config:show telematics.telemetry
+```
+
 Queue depth should stay close to zero between minute ticks:
 
 ```bash
@@ -168,6 +207,18 @@ Also verify:
   on the telematics workers, and broadcast jobs only on the broadcast worker.
 - Other jobs on `default`, such as notifications and order events, start promptly
   again.
+- The connection's status and "Last sync" update after each completed scheduled
+  sweep. Clicking "Sync Devices" while a sweep is queued or running records the
+  request, and the next sweep completes it.
+
+## Troubleshooting
+
+| Symptom | Cause |
+| --- | --- |
+| Telematics worker logs show `MissingAppKeyException` | The worker has no `APP_KEY`. Give every API container the same key and recreate the workers. |
+| A worker reports a different Fleet-Ops version | The worker uses a different or stale cached image. Use the `queue` service's image. |
+| Broadcast jobs are never processed | The broadcast worker's `--queue` name does not match `TELEMATICS_BROADCAST_QUEUE`. |
+| Scheduled sync commands report `Queued 0 telematics sync job(s)` for an enabled connection | A poll job failed on a worker that could not load it, leaving its one-hour uniqueness lock. It expires on its own; after fixing the workers you can release it with `Cache::lock('laravel_unique_job:Fleetbase\\FleetOps\\Jobs\\PollTelematicTelemetry' . $telematicUuid)->forceRelease()`. |
 
 ## Rollback
 

@@ -188,18 +188,20 @@ class TelematicService
             }
             $job = (new \Fleetbase\FleetOps\Jobs\PollTelematicTelemetry($connection->uuid, $jobId, $options))
                 ->onQueue($settings['poll_queue'] ?? 'default');
-            if (!Telemetry\Queue::dispatch($job)) {
+            $queued = Telemetry\Queue::dispatch($job);
+            if (!$queued) {
                 $existing = data_get($connection->meta, 'last_sync_job_id');
-                if ($existing && in_array(data_get($connection->meta, 'last_sync_result'), ['queued', 'running', 'retrying'], true)) {
+                if ($existing && in_array(data_get($connection->meta, 'last_sync_result'), Telemetry\Inbox::PENDING_REQUEST_RESULTS, true)) {
                     return $existing;
                 }
-                throw ValidationException::withMessages(['telematic' => ['Telemetry synchronization is already queued or running.']]);
+                // A scheduled sweep holds this connection's poll lease. Record the request so
+                // the next sweep adopts and completes it, rather than rejecting the user.
             }
             $connection->status = 'synchronizing';
             $connection->meta   = array_merge($connection->meta ?? [], [
                 'last_sync_job_id'     => $jobId, 'last_sync_run_uuid' => null, 'last_sync_run_job_id' => null,
                 'last_sync_started_at' => now()->toDateTimeString(), 'last_sync_result' => 'queued',
-                'last_sync_phase'      => 'queued', 'last_sync_error' => null, 'last_sync_failed_reason' => null,
+                'last_sync_phase'      => $queued ? 'queued' : 'waiting_for_sweep', 'last_sync_error' => null, 'last_sync_failed_reason' => null,
             ]);
             $connection->save();
 

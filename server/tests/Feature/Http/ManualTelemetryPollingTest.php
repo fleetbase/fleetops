@@ -104,10 +104,11 @@ class ManualTelemetryProvider extends ExampleTelemetryProvider
     public array $requests = [];
     public bool $fail      = false;
     public ?int $failOnCall = null;
+    public bool $polling    = true;
 
     public function telemetryOptions(): array
     {
-        return array_merge(parent::telemetryOptions(), ['manual_batch_sync' => true, 'batch_size' => 1, 'webhooks_enabled' => false]);
+        return array_merge(parent::telemetryOptions(), ['manual_batch_sync' => true, 'batch_size' => 1, 'webhooks_enabled' => false, 'polling_enabled' => $this->polling]);
     }
 
     public function fetchDevices(array $options = []): array
@@ -213,13 +214,37 @@ test('old queued discovery jobs delegate without entering their legacy lock or H
     }
 });
 
-test('old queued discovery jobs finish quietly when a scheduled poll already holds the request', function () {
+test('manual requests made while a scheduled sweep holds the poll lease are completed by the next sweep', function () {
     [$connection, $provider, $registry, $service] = manualTelemetrySetup();
-    expect(Fleetbase\FleetOps\Support\Telematics\Telemetry\Queue::dispatch(new PollTelematicTelemetry($connection->uuid)))->toBeTrue();
+    $scheduled                                    = new PollTelematicTelemetry($connection->uuid);
+    expect(Fleetbase\FleetOps\Support\Telematics\Telemetry\Queue::dispatch($scheduled))->toBeTrue();
+    $id = $service->discoverDevices($connection);
+    // Old queued discovery jobs join the same pending request instead of failing.
+    (new SyncTelematicDevicesJob($connection->fresh(), [], 'old-job'))->handle($registry, $service);
+    $waiting = $connection->fresh();
+    expect(count($GLOBALS['manual_telemetry_jobs']))->toBe(1)
+        ->and($waiting->status)->toBe('synchronizing')
+        ->and(data_get($waiting->meta, 'last_sync_job_id'))->toBe($id)
+        ->and(data_get($waiting->meta, 'last_sync_phase'))->toBe('waiting_for_sweep');
+    ExampleTelemetryProvider::$pages = [['devices' => [manualTelemetrySample()], 'has_more' => false, 'next_cursor' => null]];
+    $scheduled->handle($registry, new Inbox());
+    expect(data_get($connection->fresh()->meta, 'last_sync_result'))->toBe('running');
+    manualTelemetryProcessPending($service);
+    $fresh = $connection->fresh();
+    expect($fresh->status)->toBe('active')
+        ->and(data_get($fresh->meta, 'last_sync_job_id'))->toBe($id)
+        ->and(data_get($fresh->meta, 'last_sync_result'))->toBe('success')
+        ->and(data_get($fresh->meta, 'last_sync_completed_at'))->toBe('2026-09-15 12:00:00')
+        ->and(data_get($fresh->meta, 'last_sync_total'))->toBe(1);
+});
+
+test('old queued discovery jobs finish quietly when polling was paused after they were queued', function () {
+    [$connection, $provider, $registry, $service] = manualTelemetrySetup();
+    $provider->polling = false;
     (new SyncTelematicDevicesJob($connection, [], 'old-job'))->handle($registry, $service);
     $fresh = $connection->fresh();
     // A thrown ValidationException would fail the tries=1 job and mark this connection as errored.
-    expect(count($GLOBALS['manual_telemetry_jobs']))->toBe(1)
+    expect(count($GLOBALS['manual_telemetry_jobs']))->toBe(0)
         ->and($fresh->status)->toBe('active')
         ->and(data_get($fresh->meta, 'last_sync_job_id'))->toBeNull();
 });
@@ -459,3 +484,62 @@ test('manual sync re-checks the locked connection before queueing', function () 
     expect(count($GLOBALS['manual_telemetry_jobs']))->toBe(0)
         ->and(DB::table('telematics')->value('status'))->toBe('disabled');
 });
+
+
+function manualTelemetryConnectionState(Telematic $connection, string $status, array $meta): void
+{
+    DB::table('telematics')->where('uuid', $connection->uuid)->update(['status' => $status, 'meta' => json_encode($meta)]);
+}
+
+test('completed scheduled sweeps replace a stale sync failure without saving through the model', function () {
+    [$connection, $provider, $registry, $service] = manualTelemetrySetup();
+    manualTelemetryConnectionState($connection, 'error', [
+        'last_sync_job_id' => 'lost-request', 'last_sync_result' => 'failed', 'last_sync_error' => 'Polling retries exhausted. MaxAttemptsExceededException',
+        'last_sync_completed_at' => '2026-06-24 07:32:18', 'preserved' => 'yes',
+    ]);
+    ExampleTelemetryProvider::$pages = [['devices' => [manualTelemetrySample()], 'has_more' => false, 'next_cursor' => null]];
+    (new PollTelematicTelemetry($connection->uuid))->handle($registry, new Inbox());
+    manualTelemetryProcessPending($service);
+    $fresh = $connection->fresh();
+    expect($fresh->status)->toBe('active')
+        ->and(data_get($fresh->meta, 'last_sync_result'))->toBe('success')
+        ->and(data_get($fresh->meta, 'last_sync_error'))->toBeNull()
+        ->and(data_get($fresh->meta, 'last_sync_completed_at'))->toBe('2026-09-15 12:00:00')
+        ->and(data_get($fresh->meta, 'last_sync_fetched_total'))->toBe(1)
+        ->and(data_get($fresh->meta, 'last_sync_job_id'))->toBe('lost-request')
+        ->and(data_get($fresh->meta, 'preserved'))->toBe('yes')
+        ->and($fresh->updated_at)->toBeNull();
+});
+
+test('partial scheduled sweeps leave the last reported sync state unchanged', function () {
+    [$connection, $provider, $registry, $service] = manualTelemetrySetup();
+    manualTelemetryConnectionState($connection, 'error', ['last_sync_result' => 'failed', 'last_sync_error' => 'Earlier failure']);
+    ExampleTelemetryProvider::$pages = [['devices' => [manualTelemetrySample()], 'has_more' => false, 'next_cursor' => null]];
+    (new PollTelematicTelemetry($connection->uuid))->handle($registry, new Inbox());
+    $run = DB::table('telematic_sync_runs')->value('uuid');
+    DB::table('telematic_deliveries')->update(['status' => 'quarantined', 'failed' => 1]);
+    Inbox::finishRun($run);
+    $fresh = $connection->fresh();
+    expect(DB::table('telematic_sync_runs')->value('status'))->toBe('partial')
+        ->and($fresh->status)->toBe('error')
+        ->and(data_get($fresh->meta, 'last_sync_error'))->toBe('Earlier failure');
+});
+
+test('scheduled sweeps adopt abandoned requests but never one bound to a sweep in progress', function (string $boundStatus, bool $adopted) {
+    [$connection, $provider, $registry, $service] = manualTelemetrySetup();
+    DB::table('telematic_sync_runs')->insert(['uuid' => 'bound-run', 'telematic_uuid' => $connection->uuid, 'status' => $boundStatus, 'created_at' => now(), 'updated_at' => now()]);
+    manualTelemetryConnectionState($connection, 'synchronizing', [
+        'last_sync_job_id' => 'abandoned-request', 'last_sync_result' => 'retrying',
+        'last_sync_run_uuid' => 'bound-run', 'last_sync_run_job_id' => 'abandoned-request',
+    ]);
+    ExampleTelemetryProvider::$pages = [['devices' => [manualTelemetrySample()], 'has_more' => false, 'next_cursor' => null]];
+    (new PollTelematicTelemetry($connection->uuid))->handle($registry, new Inbox());
+    manualTelemetryProcessPending($service);
+    $fresh = $connection->fresh();
+    expect($fresh->status)->toBe($adopted ? 'active' : 'synchronizing')
+        ->and(data_get($fresh->meta, 'last_sync_result'))->toBe($adopted ? 'success' : 'retrying')
+        ->and(data_get($fresh->meta, 'last_sync_run_uuid'))->toBe($adopted ? DB::table('telematic_sync_runs')->where('uuid', '!=', 'bound-run')->value('uuid') : 'bound-run');
+})->with([
+    'interrupted run' => ['incomplete', true],
+    'run still ingesting' => ['ingesting', false],
+]);
