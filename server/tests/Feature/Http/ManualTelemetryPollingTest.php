@@ -409,3 +409,53 @@ test('incomplete sweep deliveries do not finish a manual request awaiting provid
     expect($service->discoverDevices($connection->fresh()))->toBe($id);
     expect(DB::table('telematic_sync_runs')->value('status'))->toBe('incomplete');
 });
+
+test('expired scheduled polls stop without provider work when no queue job is attached', function () {
+    [$connection, $provider, $registry] = manualTelemetrySetup();
+    $job = new PollTelematicTelemetry($connection->uuid);
+    Carbon::setTestNow(now()->addMinutes(16));
+    $job->handle($registry, new Inbox());
+    // Scheduled polls have no manual request to fail; the next tick schedules a fresh attempt.
+    expect(ExampleTelemetryProvider::$connections)->toBe(0)
+        ->and(DB::table('telematic_sync_runs')->count())->toBe(0)
+        ->and($connection->fresh()->status)->toBe('active');
+});
+
+test('manual polls release instead of dropping the request while another sweep holds the poll lock', function () {
+    [$connection, $provider, $registry, $service] = manualTelemetrySetup();
+    $service->discoverDevices($connection);
+    $job      = $GLOBALS['manual_telemetry_jobs'][0];
+    $queueJob = manualPollingQueuePayload($job);
+    $lock     = Cache::lock('telemetry:poll:' . $connection->uuid, 85);
+    expect($lock->get())->toBeTrue();
+    try {
+        $job->handle($registry, new Inbox());
+    } finally {
+        $lock->release();
+    }
+    expect($queueJob->releases)->toBe(1)->and(ExampleTelemetryProvider::$connections)->toBe(0)
+        ->and(DB::table('telematic_sync_runs')->count())->toBe(0);
+});
+
+test('superseded manual polls neither report progress nor fail the newer request', function () {
+    [$connection, $provider, $registry, $service] = manualTelemetrySetup();
+    $current = $service->discoverDevices($connection);
+    $stale = new PollTelematicTelemetry($connection->uuid, 'superseded-job');
+    ExampleTelemetryProvider::$pages = [['devices' => [manualTelemetrySample()], 'has_more' => false, 'next_cursor' => null]];
+    $stale->handle($registry, new Inbox());
+    $stale->failed(new RuntimeException('Provider unavailable'));
+    $fresh = $connection->fresh();
+    expect(data_get($fresh->meta, 'last_sync_job_id'))->toBe($current)
+        ->and(data_get($fresh->meta, 'last_sync_result'))->toBe('queued')
+        ->and(data_get($fresh->meta, 'last_sync_run_uuid'))->toBeNull()
+        ->and($fresh->status)->toBe('synchronizing');
+});
+
+test('manual sync re-checks the locked connection before queueing', function () {
+    [$connection, $provider, $registry, $service] = manualTelemetrySetup();
+    // The caller's model is stale: the connection was disabled after it was loaded.
+    DB::table('telematics')->update(['status' => 'disabled']);
+    expect(fn () => $service->queueTelemetrySync($connection))->toThrow(ValidationException::class);
+    expect(count($GLOBALS['manual_telemetry_jobs']))->toBe(0)
+        ->and(DB::table('telematics')->value('status'))->toBe('disabled');
+});

@@ -37,7 +37,8 @@ class Transport
 
     public function request(string $method, string $endpoint, array|\stdClass $payload, float $deadline, int $timeout, int $connectTimeout): array
     {
-        for ($attempt = 0; $attempt < 2; $attempt++) {
+        $refreshed = false;
+        while (true) {
             if (!$this->token || ($this->expiresAt !== null && $this->expiresAt <= $this->wallTime() + 5)) {
                 $this->token = $this->cachedToken($deadline, $timeout, $connectTimeout);
             }
@@ -54,7 +55,9 @@ class Transport
                 throw new TelematicProviderException('Safee request timed out or could not connect.', ['endpoint' => $endpoint], previous: $e);
             }
             $this->checkThrottle($response);
-            if ($response->status() === 401 && $attempt === 0 && $this->canAuthenticate()) {
+            // A rejected token is refreshed once; a second rejection fails as an unsuccessful response.
+            if ($response->status() === 401 && !$refreshed && $this->canAuthenticate()) {
+                $refreshed   = true;
                 $this->token = $this->cachedToken($deadline, $timeout, $connectTimeout, $this->token);
                 continue;
             }
@@ -68,8 +71,6 @@ class Transport
 
             return $json;
         }
-
-        throw new TelematicProviderException('Safee rejected the refreshed access token.');
     }
 
     public function authenticate(float $deadline, int $timeout = 30, int $connectTimeout = 5): string

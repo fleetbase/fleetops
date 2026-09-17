@@ -300,3 +300,36 @@ test('safee historical failures do not advance the global history checkpoint', f
     expect($result['sync_meta'])->not->toHaveKey('safee_last_telemetry_synced_at');
     expect($result['sync_meta']['safee_last_enrichment_failures'])->toHaveCount(1);
 });
+
+test('safee rejects invalid inventory cursors and unsupported list filters before paging', function () {
+    Http::fake([
+        '*/list-info'  => Http::response(['code' => 0, 'result' => [['id' => 1], ['id' => 2]]]),
+        '*/last-state' => Http::response(['code' => 0, 'result' => []]),
+    ]);
+    $provider = safeeLiveProvider();
+    expect(fn () => $provider->fetchDevices(['cursor' => 'next']))->toThrow(TelematicProviderException::class, 'cursor is invalid')
+        ->and(fn () => $provider->fetchDevices(['cursor' => -1]))->toThrow(TelematicProviderException::class, 'cursor is invalid')
+        ->and(fn () => $provider->fetchDevices(['filters' => ['status' => 'ACTIVE']]))->toThrow(TelematicProviderException::class, 'does not support filters')
+        ->and(fn () => $provider->fetchDevices(['cursor' => 3]))->toThrow(TelematicProviderException::class, 'exceeds the inventory size');
+    // Only the out-of-range cursor needed the inventory; invalid input fails before any request.
+    Http::assertSentCount(1);
+});
+
+test('safee reports data and authentication connection failures without leaking transport details', function (bool $authenticate) {
+    Http::fake(fn ($request) => throw new GuzzleHttp\Exception\ConnectException('SSL connection timeout', new GuzzleHttp\Psr7\Request('POST', (string) $request->url())));
+    $provider = safeeLiveProvider($authenticate ? safeeLiveCredentials() : []);
+    $message  = $authenticate ? 'Safee authentication timed out or could not connect.' : 'Safee request timed out or could not connect.';
+    expect(fn () => $provider->fetchDevices())->toThrow(TelematicProviderException::class, $message);
+})->with(['data request' => [false], 'token request' => [true]]);
+
+test('safee does not refresh a rejected static token without password grant credentials', function () {
+    Http::fake(['*' => Http::response([], 401)]);
+    expect(fn () => safeeLiveProvider()->fetchDevices())->toThrow(TelematicProviderException::class, '401');
+    Http::assertSentCount(1);
+});
+
+test('safee requires realm client and user credentials when no access token is available', function () {
+    Http::fake();
+    expect(fn () => safeeLiveProvider(['access_token' => null])->fetchDevices())->toThrow(InvalidArgumentException::class, 'credentials are required');
+    Http::assertNothingSent();
+});

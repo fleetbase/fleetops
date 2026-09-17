@@ -187,3 +187,12 @@ test('slow single-unit checkpoints limit replay before a ten-unit boundary', fun
     expect(fn () => $job->handle($ingestor, $service))->toThrow(RuntimeException::class, 'first checkpoint');
     expect((int) checkpointDeliveryRow()->applied)->toBe(1)->and($ingestor->calls)->toBe(['unit-1']);
 });
+
+test('malformed delivery checkpoints are quarantined instead of partially replayed', function () {
+    [$job, $ingestor, $service] = checkpointDeliverySetup(3);
+    DB::table('telematic_deliveries')->where('uuid', 'delivery-checkpoint')->update(['retry_payload' => Crypt::encryptString(json_encode([
+        'checkpoint_version' => 1, 'remaining' => ['tracker' => 'unit-1'], 'failed' => [], 'failure_types' => [],
+    ]))]);
+    $job->handle($ingestor, $service);
+    expect(checkpointDeliveryRow()->status)->toBe('quarantined')->and($ingestor->calls)->toBe([]);
+});
