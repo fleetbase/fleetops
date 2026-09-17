@@ -47,6 +47,18 @@ class SyncTelematicDevicesJob implements ShouldQueue
      */
     public function handle(TelematicProviderRegistry $registry, TelematicService $service): void
     {
+        // Jobs queued before a provider opts into batching must use the same bounded
+        // path as new manual requests, without acquiring the legacy hour-long lock.
+        $provider = $registry->resolve($this->telematic->provider);
+        if ($provider instanceof \Fleetbase\FleetOps\Contracts\TelemetryProviderInterface
+            && (\Fleetbase\FleetOps\Support\Telematics\Telemetry\Configuration::options($provider)['manual_batch_sync'] ?? false)) {
+            $this->telematic->refresh();
+            if (\Fleetbase\FleetOps\Support\Telematics\Telemetry\Inbox::enabled($this->telematic)) {
+                $service->queueTelemetrySync($this->telematic, $this->options, $this->jobId);
+            }
+
+            return;
+        }
         $correlationId = \Illuminate\Support\Str::uuid()->toString();
         $lockKey       = 'fleetops:sync-telematic-devices:' . $this->telematic->uuid;
         $lock          = Cache::lock($lockKey, $this->timeout + 60);
@@ -96,12 +108,54 @@ class SyncTelematicDevicesJob implements ShouldQueue
             $totalEnrichment            = 0;
             $totalEnrichmentCompleted   = 0;
             $totalEnrichmentFailures    = 0;
+            $itemsSinceCheckpoint       = 0;
+            $lastCheckpointAt           = now();
+
+            $checkpoint = function (string $phase, bool $force = false) use (
+                &$itemsSinceCheckpoint, &$lastCheckpointAt, &$providerSyncMeta, &$totalFetched,
+                &$totalLinked, &$totalLinkAttempts, &$totalEvents, &$totalSensors, &$totalSkipped,
+                &$pageCount, &$lastProviderAllCount, &$lastProviderFiltersCount,
+                &$inventoryFetched, &$inventoryLinked, &$inventorySkipped,
+                &$totalEnrichment, &$totalEnrichmentCompleted, &$totalEnrichmentFailures
+            ): void {
+                if (!$force && $itemsSinceCheckpoint < 25 && $lastCheckpointAt->diffInSeconds(now(), true) < 5) {
+                    return;
+                }
+                $this->telematic->status = 'synchronizing';
+                $this->telematic->meta   = array_merge($this->telematic->meta ?? [], $providerSyncMeta, [
+                    'last_sync_job_id'                  => $this->jobId,
+                    'last_sync_result'                  => 'running',
+                    'last_sync_phase'                   => $phase,
+                    'last_sync_progress_at'             => now()->toDateTimeString(),
+                    'last_sync_fetched_total'           => $totalFetched,
+                    'last_sync_linked_total'            => $totalLinked,
+                    'last_sync_link_attempts_total'     => $totalLinkAttempts,
+                    'last_sync_events_total'            => $totalEvents,
+                    'last_sync_sensors_total'           => $totalSensors,
+                    'last_sync_skipped_total'           => $totalSkipped,
+                    'last_sync_page_count'              => $pageCount,
+                    'last_sync_provider_total'          => $lastProviderFiltersCount ?? $lastProviderAllCount,
+                    'last_sync_provider_all_count'      => $lastProviderAllCount,
+                    'last_sync_provider_filters_count'  => $lastProviderFiltersCount,
+                    'last_sync_inventory_total'         => $inventoryFetched,
+                    'last_sync_inventory_linked_total'  => $inventoryLinked,
+                    'last_sync_inventory_skipped_total' => $inventorySkipped,
+                    'last_sync_enrichment_total'        => $totalEnrichment,
+                    'last_sync_enrichment_completed'    => $totalEnrichmentCompleted,
+                    'last_sync_enrichment_failures'     => $totalEnrichmentFailures,
+                ]);
+                $this->telematic->save();
+                $itemsSinceCheckpoint = 0;
+                $lastCheckpointAt     = now();
+            };
 
             try {
+                $checkpoint('connecting', true);
                 $provider = $registry->resolve($this->telematic->provider);
                 $provider->connect($this->telematic);
 
                 do {
+                    $checkpoint('fetching_inventory', true);
                     $response = $provider->fetchDevices([
                         'limit'   => $this->options['limit'] ?? null,
                         'cursor'  => $cursor,
@@ -137,6 +191,9 @@ class SyncTelematicDevicesJob implements ShouldQueue
                         'has_more'       => $response['has_more'] ?? false,
                     ]);
 
+                    // Persist retrieval before any potentially slow per-device database work.
+                    $inventoryFetched = $totalFetched;
+                    $checkpoint('ingesting_inventory', true);
                     foreach ($devices as $devicePayload) {
                         $normalizedDevice = $provider->normalizeDevice($devicePayload);
                         try {
@@ -162,7 +219,12 @@ class SyncTelematicDevicesJob implements ShouldQueue
                                 'imei'             => $devicePayload['imei'] ?? null,
                             ]);
                         }
+                        $inventoryLinked  = $totalLinked;
+                        $inventorySkipped = $totalSkipped;
+                        $itemsSinceCheckpoint++;
+                        $checkpoint('ingesting_inventory');
                     }
+                    $checkpoint('ingesting_inventory', true);
 
                     $cursor = $response['next_cursor'] ?? null;
 
@@ -221,6 +283,7 @@ class SyncTelematicDevicesJob implements ShouldQueue
                         'device_count'   => count($inventoryPayloads),
                     ]);
 
+                    $checkpoint('fetching_enrichment', true);
                     $enrichmentResponse = $provider->fetchDeviceTelemetrySnapshots($inventoryPayloads, [
                         'limit'   => $this->options['limit'] ?? null,
                         'filters' => $this->options['filters'] ?? [],
@@ -229,6 +292,7 @@ class SyncTelematicDevicesJob implements ShouldQueue
                     $enrichedDevices  = $enrichmentResponse['devices'] ?? [];
                     $totalEnrichment += count($enrichedDevices);
 
+                    $checkpoint('ingesting_enrichment', true);
                     foreach ($enrichedDevices as $devicePayload) {
                         $normalizedDevice = $provider->normalizeDevice($devicePayload);
                         try {
@@ -256,7 +320,10 @@ class SyncTelematicDevicesJob implements ShouldQueue
                                 'imei'             => $devicePayload['imei'] ?? null,
                             ]);
                         }
+                        $itemsSinceCheckpoint++;
+                        $checkpoint('ingesting_enrichment');
                     }
+                    $checkpoint('ingesting_enrichment', true);
 
                     Log::info($this->telematic->provider === 'safee' ? 'Safee telemetry enrichment completed' : 'Telematics telemetry enrichment completed', [
                         'correlation_id' => $correlationId,
@@ -289,6 +356,8 @@ class SyncTelematicDevicesJob implements ShouldQueue
                     'last_sync_job_id'                  => $this->jobId,
                     'last_sync_completed_at'            => now()->toDateTimeString(),
                     'last_sync_result'                  => 'success',
+                    'last_sync_phase'                   => 'completed',
+                    'last_sync_progress_at'             => now()->toDateTimeString(),
                     'last_sync_total'                   => $totalLinked,
                     'last_sync_fetched_total'           => $totalFetched,
                     'last_sync_linked_total'            => $totalLinked,
@@ -310,7 +379,7 @@ class SyncTelematicDevicesJob implements ShouldQueue
                     'last_sync_error_context'           => null,
                 ]);
                 $this->telematic->save();
-            } catch (\Exception $e) {
+            } catch (\Throwable $e) {
                 $failureContext = method_exists($e, 'context') ? $e->context() : [];
                 $failureMessage = $this->safeSyncErrorMessage($e);
 

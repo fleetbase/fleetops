@@ -39,6 +39,7 @@
         "spatie/icalendar-generator": "^2.8"
     },
     "require-dev": {
+        "illuminate/encryption": "^9.0|^10.0",
         "friendsofphp/php-cs-fixer": "^3.34.1",
         "nunomaduro/collision": "^7.0",
         "pestphp/pest": "^2.33.2",

@@ -1,5 +1,7 @@
 <?php
 
+require_once __DIR__ . '/../../Support/ExampleTelemetryProvider.php';
+
 use Fleetbase\FleetOps\Console\Commands\SyncTelematics;
 use Fleetbase\FleetOps\Contracts\TelematicProviderDescriptor;
 use Fleetbase\FleetOps\Support\Telematics\TelematicProviderRegistry;
@@ -133,4 +135,107 @@ test('sync telematics filters providers by request and webhook flags', function 
     // pollable but not requested — nothing remains.
     expect($command->handle($registry))->toBe(0)
         ->and($command->messages)->toContain(['info', 'No pollable telematics providers found.']);
+});
+
+test('sync telematics command releases its bounded lock and recovers an interrupted lease', function () {
+    fleetopsSyncTelematicsBoot();
+    $originalCache = Illuminate\Support\Facades\Cache::getFacadeRoot();
+    Illuminate\Support\Carbon::setTestNow('2026-09-17 12:00:00 UTC');
+
+    try {
+        $store = new class extends Illuminate\Cache\ArrayStore {
+            public array $requestedLocks = [];
+
+            public function lock($name, $seconds = 0, $owner = null)
+            {
+                $this->requestedLocks[] = [$name, $seconds];
+
+                return parent::lock($name, $seconds, $owner);
+            }
+        };
+        Illuminate\Support\Facades\Cache::swap(new Illuminate\Cache\Repository($store));
+        $command                     = new FleetOpsSyncTelematicsProbe();
+        $command->options['no-lock'] = false;
+        $registry                    = fleetopsSyncTelematicsRegistry([]);
+        expect($command->handle($registry))->toBe(0);
+        expect($store->requestedLocks[0])->toBe(['fleetops:sync-telematics', 120]);
+        expect($store->locks)->toBe([]);
+
+        // Leave a lease behind as if the previous command process had stopped.
+        [$key, $ttl] = $store->requestedLocks[0];
+        expect($store->lock($key, $ttl)->get())->toBeTrue();
+        $command->messages = [];
+        Illuminate\Support\Carbon::setTestNow('2026-09-17 12:01:59 UTC');
+        expect($command->handle($registry))->toBe(0)
+            ->and($command->messages)->toContain(['warn', 'Another telematics sync run appears to be in progress.']);
+
+        $command->messages = [];
+        Illuminate\Support\Carbon::setTestNow('2026-09-17 12:02:01 UTC');
+        expect($command->handle($registry))->toBe(0)
+            ->and($command->messages)->toContain(['info', 'No pollable telematics providers found.']);
+        expect($store->locks)->toBe([]);
+    } finally {
+        Illuminate\Support\Facades\Cache::swap($originalCache);
+        Illuminate\Support\Carbon::setTestNow();
+    }
+});
+
+test('sync telematics reports successful durable and legacy dispatches without counting coalesced polls', function () {
+    $connection = fleetopsSyncTelematicsBoot();
+    $connection->table('telematics')->insert([
+        ['uuid' => 'durable-connection', 'company_uuid' => 'company-1', 'provider' => 'example', 'status' => 'active'],
+        ['uuid' => 'legacy-connection', 'company_uuid' => 'company-1', 'provider' => 'traccar', 'status' => 'active'],
+    ]);
+    $registry = fleetopsSyncTelematicsRegistry([
+        ['key' => 'example', 'label' => 'Example', 'supports_discovery' => true, 'driver_class' => ExampleTelemetryProvider::class, 'metadata' => ['telemetry' => ['durable_ingestion' => true]]],
+        ['key' => 'traccar', 'label' => 'Traccar', 'supports_discovery' => true],
+    ]);
+    $originalCache       = Illuminate\Support\Facades\Cache::getFacadeRoot();
+    $originalCacheConfig = config('cache', []);
+    $dispatcherContract  = Illuminate\Contracts\Bus\Dispatcher::class;
+    $originalDispatcher  = app()->bound($dispatcherContract) ? app($dispatcherContract) : null;
+
+    try {
+        config(['cache.default' => 'array', 'cache.stores.array' => ['driver' => 'array']]);
+        Illuminate\Support\Facades\Cache::swap(new Illuminate\Cache\CacheManager(app()));
+        $dispatcher = new class(app()) extends Illuminate\Bus\Dispatcher {
+            public array $jobs = [];
+
+            public function dispatch($command)
+            {
+                $this->jobs[] = $command;
+
+                return $command;
+            }
+        };
+        app()->instance($dispatcherContract, $dispatcher);
+        $command = new FleetOpsSyncTelematicsProbe();
+
+        expect($command->handle($registry))->toBe(0)
+            ->and($command->messages)->toContain(['info', 'Queued 2 telematics sync job(s).']);
+        expect($dispatcher->jobs)->toHaveCount(1)
+            ->and($dispatcher->jobs[0])->toBeInstanceOf(Fleetbase\FleetOps\Jobs\PollTelematicTelemetry::class)
+            ->and(DispatchRecorder::$dispatched)->toHaveCount(1);
+
+        // The real unique lock suppresses a second durable poll; legacy dispatch remains eligible.
+        $command->messages = [];
+        expect($command->handle($registry))->toBe(0)
+            ->and($command->messages)->toContain(['info', 'Queued 1 telematics sync job(s).']);
+        expect($dispatcher->jobs)->toHaveCount(1)
+            ->and(DispatchRecorder::$dispatched)->toHaveCount(2);
+
+        $command->messages            = [];
+        $command->options['provider'] = ['example'];
+        expect($command->handle($registry))->toBe(0)
+            ->and($command->messages)->toContain(['info', 'Queued 0 telematics sync job(s).']);
+        expect($dispatcher->jobs)->toHaveCount(1);
+    } finally {
+        Illuminate\Support\Facades\Cache::swap($originalCache);
+        config(['cache' => $originalCacheConfig]);
+        if ($originalDispatcher) {
+            app()->instance($dispatcherContract, $originalDispatcher);
+        } else {
+            app()->offsetUnset($dispatcherContract);
+        }
+    }
 });

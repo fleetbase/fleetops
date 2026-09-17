@@ -176,6 +176,7 @@ return [
             'driver_class'    => Fleetbase\FleetOps\Support\Telematics\Providers\SafeeProvider::class,
             'icon'            => '/engines-dist/images/telematics/providers/safee.webp',
             'description'     => 'Safee Tracking REST integration for vehicle discovery, last state, live positions, odometer, fuel, and sensor data.',
+            'docs_url'        => 'https://www.safee.com/_docs_/Safee_Tracking_REST_Service.pdf',
             'required_fields' => [
                 [
                     'name'          => 'server_uri',
@@ -229,7 +230,13 @@ return [
             'supports_discovery' => true,
             'metadata'           => [
                 'rate_limit'   => 3000,
-                'pagination'   => 'none',
+                'rate_limit_per_second' => 50,
+                'pagination'   => 'inventory_cursor',
+                'telemetry'    => [
+                    'durable_ingestion' => true,
+                    'secure_webhooks'   => false,
+                    'reconciliation'    => true,
+                ],
                 'capabilities' => ['tracking', 'speed', 'heading', 'odometer', 'fuel_level', 'ignition'],
             ],
         ],

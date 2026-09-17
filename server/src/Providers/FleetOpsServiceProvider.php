@@ -149,8 +149,10 @@ class FleetOpsServiceProvider extends CoreServiceProvider
             $schedule->command('fleetops:process-maintenance-triggers')->daily()->withoutOverlapping()->storeOutputInDb();
             $schedule->command('fleetops:send-maintenance-reminders')->daily()->withoutOverlapping()->storeOutputInDb();
             $schedule->command('fleetops:process-operational-alerts')->everyMinute()->withoutOverlapping()->storeOutputInDb();
-            $schedule->command('fleetops:sync-telematics')->everyMinute()->withoutOverlapping()->storeOutputInDb();
-            $schedule->command('fleetops:drain-telematic-inbox')->everyMinute()->withoutOverlapping();
+            // These commands dispatch bounded jobs. A scheduler restart must not
+            // leave the default 24-hour overlap lease blocking telemetry recovery.
+            $schedule->command('fleetops:sync-telematics')->everyMinute()->withoutOverlapping(2)->storeOutputInDb();
+            $schedule->command('fleetops:drain-telematic-inbox')->everyMinute()->withoutOverlapping(2);
         });
         $this->registerNotifications();
         $this->registerAiCapabilities();
@@ -196,6 +198,7 @@ class FleetOpsServiceProvider extends CoreServiceProvider
         $this->mergeConfigFrom(__DIR__ . '/../../config/fleetops.php', 'fleetops');
         $this->mergeConfigFrom(__DIR__ . '/../../config/telematics.php', 'telematics');
         $this->mergeConfigFrom(__DIR__ . '/../../config/afaqy.php', 'telematics.afaqy');
+        $this->mergeConfigFrom(__DIR__ . '/../../config/safee.php', 'telematics.safee');
         $this->mergeConfigFrom(__DIR__ . '/../../config/telemetry.php', 'telematics.telemetry');
         $this->mergeConfigFrom(__DIR__ . '/../../config/fuel-providers.php', 'fuel-providers');
         $this->mergeConfigFrom(__DIR__ . '/../../config/api.php', 'api');

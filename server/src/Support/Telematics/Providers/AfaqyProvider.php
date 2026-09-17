@@ -5,6 +5,7 @@ namespace Fleetbase\FleetOps\Support\Telematics\Providers;
 use Fleetbase\FleetOps\Exceptions\TelematicProviderException;
 use Fleetbase\FleetOps\Exceptions\TelematicRateLimitExceededException;
 use Fleetbase\FleetOps\Support\Telematics\Afaqy\Payload;
+use Illuminate\Contracts\Encryption\DecryptException;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Client\Response;
 use Illuminate\Support\Facades\Cache;
@@ -20,12 +21,13 @@ use Illuminate\Support\Facades\Log;
  */
 class AfaqyProvider extends AbstractProvider implements \Fleetbase\FleetOps\Contracts\TelemetryProviderInterface
 {
-    protected string $baseUrl                   = 'https://api.afaqy.sa';
-    protected int $requestsPerMinute            = 60;
-    protected int $dataTimeout                  = 120;
-    protected int $connectTimeout               = 15;
-    protected int $connectionTestTimeout        = 30;
-    protected int $connectionTestConnectTimeout = 10;
+    protected string $baseUrl                    = 'https://api.afaqy.sa';
+    protected int $requestsPerMinute             = 60;
+    protected int $dataTimeout                   = 120;
+    protected int $connectTimeout                = 15;
+    protected int $connectionTestTimeout         = 30;
+    protected int $connectionTestConnectTimeout  = 10;
+    protected ?float $requestDeadline            = null;
 
     protected function prepareAuthentication(): void
     {
@@ -343,9 +345,11 @@ class AfaqyProvider extends AbstractProvider implements \Fleetbase\FleetOps\Cont
         }
 
         $this->reserveRequest();
+        $timeout  = $this->remainingRequestTimeout(30);
         $response = Http::asJson()
             ->acceptJson()
-            ->timeout(30)
+            ->timeout($timeout)
+            ->connectTimeout(min($this->connectTimeout, $timeout))
             ->post($this->baseUrl . '/auth/login', [
                 'data' => [
                     'username' => $this->credentials['username'],
@@ -374,6 +378,20 @@ class AfaqyProvider extends AbstractProvider implements \Fleetbase\FleetOps\Cont
 
     protected function authenticatedPost(string $endpoint, array $payload = [], bool $tokenInQuery = false, bool $allowRetry = true, ?int $timeout = null, ?int $connectTimeout = null): array
     {
+        $previousDeadline = $this->requestDeadline;
+        $this->requestDeadline ??= $this->requestTime() + max(1, $timeout ?? $this->dataTimeout);
+
+        try {
+            return $this->postWithinDeadline($endpoint, $payload, $tokenInQuery, $allowRetry, $timeout, $connectTimeout);
+        } finally {
+            // Providers may be reused. A completed or failed request must not
+            // leave its deadline on the next independent request.
+            $this->requestDeadline = $previousDeadline;
+        }
+    }
+
+    protected function postWithinDeadline(string $endpoint, array $payload, bool $tokenInQuery, bool $allowRetry, ?int $timeout, ?int $connectTimeout): array
+    {
         [$url, $body] = $this->buildAuthenticatedRequest($endpoint, $payload, $tokenInQuery);
 
         $startedAt = microtime(true);
@@ -381,6 +399,8 @@ class AfaqyProvider extends AbstractProvider implements \Fleetbase\FleetOps\Cont
         $connectTimeout ??= $this->connectTimeout;
 
         $this->reserveRequest();
+        $timeout        = $this->remainingRequestTimeout($timeout);
+        $connectTimeout = min(max(1, $connectTimeout), $timeout);
         try {
             $response = Http::withHeaders($this->headers)
                 ->timeout($timeout)
@@ -468,9 +488,22 @@ class AfaqyProvider extends AbstractProvider implements \Fleetbase\FleetOps\Cont
     {
         $key = 'afaqy:token:' . $this->accountKey() . ':' . hash('sha256', $this->credentials['password'] ?? '');
 
-        return Cache::lock($key . ':lock', 40)->block(5, function () use ($key, $rejected) {
+        return Cache::lock($key . ':lock', 40)->block($this->remainingRequestTimeout(5), function () use ($key, $rejected) {
             $stored = Cache::get($key);
-            $token  = $stored ? Crypt::decryptString($stored) : null;
+            $token  = null;
+            if ($stored) {
+                try {
+                    $token = Crypt::decryptString($stored);
+                } catch (DecryptException) {
+                    // A cached token is disposable. Evict only this entry while holding
+                    // the existing account lock, then authenticate with resolved credentials.
+                    Cache::forget($key);
+                    Log::warning('AFAQY cached token could not be decrypted; re-authenticating.', [
+                        'telematic_uuid' => $this->telematic?->uuid,
+                        'reason'         => 'cached_token_decryption_failed',
+                    ]);
+                }
+            }
             if (!$token || $token === $rejected) {
                 $token = $this->authenticate();
                 Cache::put($key, Crypt::encryptString($token), 29 * 86400);
@@ -483,7 +516,8 @@ class AfaqyProvider extends AbstractProvider implements \Fleetbase\FleetOps\Cont
     protected function reserveRequest(): void
     {
         $key = 'afaqy:rate:' . $this->accountKey();
-        Cache::lock($key . ':lock', 5)->block(2, function () use ($key) {
+        Cache::lock($key . ':lock', 5)->block($this->remainingRequestTimeout(2), function () use ($key) {
+            $this->remainingRequestTimeout(1);
             $now      = microtime(true);
             $until    = (float) Cache::get($key . ':blocked', 0);
             $requests = array_values(array_filter(Cache::get($key, []), fn ($at) => $at > $now - 60));
@@ -493,6 +527,27 @@ class AfaqyProvider extends AbstractProvider implements \Fleetbase\FleetOps\Cont
             $requests[] = $now;
             Cache::put($key, $requests, 61);
         });
+    }
+
+    /** Monotonic time keeps the request budget independent of wall-clock corrections. */
+    protected function requestTime(): float
+    {
+        return hrtime(true) / 1_000_000_000;
+    }
+
+    protected function remainingRequestTimeout(int $maximum): int
+    {
+        $maximum = max(1, $maximum);
+        if ($this->requestDeadline === null) {
+            return $maximum;
+        }
+
+        $remaining = (int) floor($this->requestDeadline - $this->requestTime());
+        if ($remaining < 1) {
+            throw new TelematicProviderException('AFAQY request time budget exhausted before another operation could start.');
+        }
+
+        return min($maximum, $remaining);
     }
 
     protected function checkThrottle(Response $response): void

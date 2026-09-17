@@ -95,6 +95,7 @@ class FleetOpsProviderContractsAppFake
 class FleetOpsProviderContractsScheduledEventFake
 {
     public array $methods = [];
+    public int $expiresAt = 1440;
 
     public function __construct(public string $command)
     {
@@ -121,8 +122,9 @@ class FleetOpsProviderContractsScheduledEventFake
         return $this;
     }
 
-    public function withoutOverlapping(): self
+    public function withoutOverlapping($expiresAt = 1440): self
     {
+        $this->expiresAt = $expiresAt;
         $this->methods[] = ['withoutOverlapping'];
 
         return $this;
@@ -274,9 +276,12 @@ test('fleetops service provider executes package registration and boot wiring', 
                 'fleetops:send-maintenance-reminders',
                 'fleetops:process-operational-alerts',
                 'fleetops:sync-telematics',
+                'fleetops:drain-telematic-inbox',
             ])
             ->and($provider->schedule?->commands['fleetops:dispatch-orders']->methods)->toContain(['everyMinute'], ['withoutOverlapping'], ['storeOutputInDb'])
             ->and($provider->schedule?->commands['fleetops:update-estimations']->methods)->toContain(['everyTenMinutes'], ['withoutOverlapping'])
+            ->and($provider->schedule?->commands['fleetops:sync-telematics']->expiresAt)->toBe(2)
+            ->and($provider->schedule?->commands['fleetops:drain-telematic-inbox']->expiresAt)->toBe(2)
             ->and($orchestrationRegistry->has('vroom'))->toBeTrue()
             ->and($orchestrationRegistry->has('greedy'))->toBeTrue()
             ->and($orchestrationRegistry->has('capacity'))->toBeTrue()
@@ -406,4 +411,48 @@ test('event service provider maps order geofence and schedule listeners', functi
         SendResourceLifecycleWebhook::class,
         NotifyOrderEvent::class
     );
+});
+
+test('telemetry scheduler overlap leases expire after interruption without clearing unrelated locks', function () {
+    $originalNotifications = NotificationRegistry::$notifications;
+    $originalNotifiables   = NotificationRegistry::$notifiables;
+    Illuminate\Support\Carbon::setTestNow('2026-09-17 12:00:00 UTC');
+
+    try {
+        $provider = new FleetOpsProviderContractsProviderProbe(new FleetOpsProviderContractsAppFake());
+        $provider->boot();
+        $cache   = new Illuminate\Cache\Repository(new Illuminate\Cache\ArrayStore());
+        $factory = new class($cache) implements Illuminate\Contracts\Cache\Factory {
+            public function __construct(private $cache)
+            {
+            }
+
+            public function store($name = null)
+            {
+                return $this->cache;
+            }
+        };
+        $mutex  = new Illuminate\Console\Scheduling\CacheEventMutex($factory);
+        $events = [];
+        foreach (['fleetops:sync-telematics', 'fleetops:drain-telematic-inbox', 'fleetops:dispatch-orders'] as $command) {
+            $registered = $provider->schedule->commands[$command];
+            $event      = new Illuminate\Console\Scheduling\Event($mutex, $command);
+            $event->withoutOverlapping($registered->expiresAt);
+            expect($mutex->create($event))->toBeTrue();
+            $events[$command] = $event;
+        }
+
+        // Simulate process loss: do not invoke the normal scheduler finish/cleanup.
+        Illuminate\Support\Carbon::setTestNow('2026-09-17 12:01:59 UTC');
+        expect($mutex->exists($events['fleetops:sync-telematics']))->toBeTrue()
+            ->and($mutex->exists($events['fleetops:drain-telematic-inbox']))->toBeTrue();
+        Illuminate\Support\Carbon::setTestNow('2026-09-17 12:02:01 UTC');
+        expect($mutex->create($events['fleetops:sync-telematics']))->toBeTrue()
+            ->and($mutex->create($events['fleetops:drain-telematic-inbox']))->toBeTrue()
+            ->and($mutex->exists($events['fleetops:dispatch-orders']))->toBeTrue();
+    } finally {
+        NotificationRegistry::$notifications = $originalNotifications;
+        NotificationRegistry::$notifiables   = $originalNotifiables;
+        Illuminate\Support\Carbon::setTestNow();
+    }
 });

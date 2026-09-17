@@ -1,7 +1,9 @@
 import Component from '@glimmer/component';
 import { tracked } from '@glimmer/tracking';
 import { inject as service } from '@ember/service';
+import { getOwner } from '@ember/application';
 import { task } from 'ember-concurrency';
+import config from '../../config/environment';
 
 /**
  * "Radar · 3 overdue": the dashboard tile that links to the page.
@@ -19,6 +21,11 @@ export default class WidgetRadarComponent extends Component {
 
     get stats() {
         return this.summary?.summary ?? { open: 0, overdue: 0, snoozed: 0, critical: 0 };
+    }
+
+    get radarRoute() {
+        // Dashboard widgets render under the host owner, outside the engine's routing context.
+        return getOwner(this).mountPoint ? 'management.index' : `${config.mountedEngineRoutePrefix}.management.index`;
     }
 
     get accentClass() {

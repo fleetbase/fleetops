@@ -38,7 +38,8 @@ class ProcessTelematicDelivery implements ShouldQueue, ShouldBeUnique
 
     public function handle(Ingestor $ingestor, TelematicService $service): void
     {
-        $lock = Cache::lock('telemetry:delivery:' . $this->deliveryUuid, 90);
+        $started = microtime(true);
+        $lock    = Cache::lock('telemetry:delivery:' . $this->deliveryUuid, 90);
         if (!$lock->get()) {
             return;
         }
@@ -66,21 +67,45 @@ class ProcessTelematicDelivery implements ShouldQueue, ShouldBeUnique
                 return;
             }
             $this->update(['status' => 'processing', 'attempts' => $row->attempts + 1, 'available_at' => now()->addSeconds(120)]);
+            $failed       = [];
+            $failureTypes = [];
             try {
-                $units = $provider->telemetryUnits(json_decode(Crypt::decryptString($row->retry_payload ?? $row->payload), true, 512, JSON_THROW_ON_ERROR));
+                $payload = json_decode(Crypt::decryptString($row->retry_payload ?? $row->payload), true, 512, JSON_THROW_ON_ERROR);
+                if ($row->retry_payload && ($payload['checkpoint_version'] ?? null) === 1) {
+                    // This envelope is internal and encrypted; the original webhook
+                    // contract was already validated before creating the checkpoint.
+                    $units        = $payload['remaining'] ?? null;
+                    $failed       = $payload['failed'] ?? null;
+                    $failureTypes = $payload['failure_types'] ?? null;
+                    foreach ([$units, $failed, $failureTypes] as $items) {
+                        if (!is_array($items) || !array_is_list($items)) {
+                            throw new \InvalidArgumentException('Invalid delivery checkpoint.');
+                        }
+                    }
+                } elseif ($row->source === 'poll') {
+                    // Polling persists the provider's inventory records, including units
+                    // that have never reported a position. Validate this internal envelope
+                    // here and let ingestion report invalid positions per unit below.
+                    if (!is_array($payload) || !array_is_list($payload) || $payload === []) {
+                        throw new \InvalidArgumentException('Expected a non-empty polling unit list.');
+                    }
+                    $units = $payload;
+                } else {
+                    // External deliveries must still pass the provider's position contract.
+                    $units = $provider->telemetryUnits($payload);
+                }
             } catch (\Throwable) {
                 $this->update(['status' => 'quarantined', 'failed' => 1, 'error' => 'Unsupported or unreadable position payload; inspect and replay after adapter correction.']);
                 Inbox::finishRun($row->run_uuid);
 
                 return;
             }
-            $failed       = [];
-            $failureTypes = [];
             $applied      = 0;
             $invalid      = (int) $row->invalid_count;
-            $sourceDelay  = null;
+            $sourceDelay  = $row->source_delay_seconds;
             $queueDelay   = max(0, now()->timestamp - \Illuminate\Support\Carbon::parse($row->received_at, 'UTC')->timestamp);
-            foreach ($units as $unit) {
+            $checkpointAt = $started;
+            foreach ($units as $index => $unit) {
                 try {
                     $result      = $ingestor->ingest($telematic, $provider, $unit, $service, $row->received_at, $row->source);
                     $sourceDelay = max($sourceDelay ?? 0, data_get($result['device']->meta, 'telemetry.source_delay_seconds', 0));
@@ -92,6 +117,32 @@ class ProcessTelematicDelivery implements ShouldQueue, ShouldBeUnique
                 } catch (\Throwable $e) {
                     $failed[]       = $unit;
                     $failureTypes[] = class_basename($e);
+                }
+                $elapsed = microtime(true);
+                $yield   = $elapsed - $started >= 40 && $index + 1 < count($units);
+                if ($yield || ($index + 1) % 10 === 0 || $elapsed - $checkpointAt >= 2) {
+                    // Persist progress independently of the worker reservation. A
+                    // restart resumes the remaining tail rather than replaying a
+                    // growing prefix until the delivery exhausts its retry budget.
+                    $this->update([
+                        'retry_payload' => Crypt::encryptString(json_encode([
+                            'checkpoint_version' => 1, 'remaining' => array_slice($units, $index + 1),
+                            'failed'             => $failed, 'failure_types' => array_values(array_unique($failureTypes)),
+                        ], JSON_THROW_ON_ERROR)),
+                        'applied'             => $row->applied + $applied, 'failed' => count($failed) + $invalid, 'invalid_count' => $invalid,
+                        'queue_delay_seconds' => $queueDelay, 'source_delay_seconds' => $sourceDelay,
+                        'status'              => $yield ? 'retry' : 'processing',
+                        // Cooperative continuation is not a failed attempt. Actual
+                        // crashes keep the increment persisted at the start above.
+                        'attempts'     => $yield ? $row->attempts : $row->attempts + 1,
+                        'available_at' => $yield ? now() : now()->addSeconds(120),
+                    ]);
+                    $checkpointAt = $elapsed;
+                }
+                if ($yield) {
+                    // The normal inbox drain queues the continuation after this
+                    // job releases its uniqueness lease; it uses the same queue.
+                    return;
                 }
             }
             $this->update(['queue_delay_seconds' => $queueDelay, 'source_delay_seconds' => $sourceDelay]);

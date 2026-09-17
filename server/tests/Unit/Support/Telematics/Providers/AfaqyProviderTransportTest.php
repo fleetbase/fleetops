@@ -22,6 +22,13 @@ use Illuminate\Support\Facades\Http;
  */
 class FleetOpsAfaqyTransportProbe extends AfaqyProvider
 {
+    public ?float $clock = null;
+
+    protected function requestTime(): float
+    {
+        return $this->clock ?? parent::requestTime();
+    }
+
     public function setCredentialsForTest(array $credentials): void
     {
         $this->credentials = $credentials;
@@ -143,4 +150,129 @@ test('transport errors and helper extractors resolve metadata', function () {
 
     expect($probe->callHelper('resolveSensorName', ['param' => 'fuel'], 'fallback'))->toBe('fuel')
         ->and($probe->callHelper('resolveSensorName', [], 'fallback'))->toBe('fallback');
+});
+
+test('unreadable cached tokens are evicted even when reauthentication fails', function () {
+    fleetopsAfaqyTransportBoot();
+    $key = 'afaqy:token:' . hash('sha256', 'https://api.afaqy.sa|user') . ':' . hash('sha256', 'secret');
+    Illuminate\Support\Facades\Cache::put($key, 'not-an-encrypted-payload', 3600);
+    Http::preventStrayRequests();
+    Http::fake(['*/auth/login' => Http::response(['message' => 'denied'], 401)]);
+    $connection              = new Fleetbase\FleetOps\Models\Telematic();
+    $connection->credentials = ['username' => 'user', 'password' => 'secret'];
+    expect(fn () => (new AfaqyProvider())->connect($connection))->toThrow(TelematicProviderException::class, 'authentication failed with status 401');
+    expect(Illuminate\Support\Facades\Cache::has($key))->toBeFalse();
+    expect(Illuminate\Support\Facades\Cache::get('afaqy:rate:' . hash('sha256', 'https://api.afaqy.sa|user')))->toHaveCount(1);
+    Http::assertSentCount(1);
+});
+
+test('rejected token refresh and retry share the original HTTP time budget', function () {
+    fleetopsAfaqyTransportBoot();
+    $probe        = fleetopsAfaqyTransportProbe(['token' => 'stale-token', 'username' => 'user', 'password' => 'secret']);
+    $probe->clock = 100;
+    $timeouts     = [];
+    Http::fake(function ($request, $options) use ($probe, &$timeouts) {
+        $timeouts[] = [$options['timeout'], $options['connect_timeout']];
+        if (count($timeouts) === 1) {
+            $probe->clock += 20;
+
+            return Http::response(['message' => 'expired'], 401);
+        }
+        if (str_ends_with($request->url(), '/auth/login')) {
+            $probe->clock += 10;
+
+            return Http::response(['data' => ['token' => 'refreshed-token']], 200);
+        }
+
+        return Http::response(['data' => ['ok' => true]], 200);
+    });
+
+    expect($probe->callHelper('afaqyPost', '/units/list', [], false, 45, 5))->toBe(['data' => ['ok' => true]])
+        ->and($timeouts)->toBe([[45, 5], [25, 15], [15, 5]]);
+    Http::assertSentCount(3);
+});
+
+test('exhausted refresh budget prevents a retry and is reset for the next request', function () {
+    fleetopsAfaqyTransportBoot();
+    $probe        = fleetopsAfaqyTransportProbe(['token' => 'stale-token', 'username' => 'user', 'password' => 'secret']);
+    $probe->clock = 100;
+    $timeouts     = [];
+    Http::fake(function ($request, $options) use ($probe, &$timeouts) {
+        $timeouts[] = $options['timeout'];
+        if (count($timeouts) === 1) {
+            $probe->clock += 20;
+
+            return Http::response(['message' => 'expired'], 401);
+        }
+        if (str_ends_with($request->url(), '/auth/login')) {
+            $probe->clock += 24.5;
+
+            return Http::response(['data' => ['token' => 'refreshed-token']], 200);
+        }
+
+        return Http::response(['data' => []], 200);
+    });
+
+    expect(fn () => $probe->callHelper('afaqyPost', '/units/list', [], false, 45, 5))
+        ->toThrow(TelematicProviderException::class, 'time budget exhausted');
+    Http::assertSentCount(2);
+    expect($timeouts)->toBe([45, 25]);
+
+    $probe->clock += 60;
+    expect($probe->callHelper('afaqyPost', '/units/list', [], false, 45, 5))->toBe(['data' => []]);
+    expect($timeouts)->toBe([45, 25, 45]);
+    Http::assertSentCount(3);
+});
+
+test('token lock wait consumes the refresh budget before authentication starts', function () {
+    fleetopsAfaqyTransportBoot();
+    $probe         = fleetopsAfaqyTransportProbe(['token' => 'stale-token', 'username' => 'user', 'password' => 'secret']);
+    $probe->clock  = 100;
+    $originalCache = Illuminate\Support\Facades\Cache::getFacadeRoot();
+    $cache         = new class($originalCache, $probe) {
+        public array $waits = [];
+
+        public function __construct(public $repository, public FleetOpsAfaqyTransportProbe $probe)
+        {
+        }
+
+        public function lock(string $key, int $seconds)
+        {
+            return new class($this, $key) {
+                public function __construct(public $cache, public string $key)
+                {
+                }
+
+                public function block($seconds, $callback)
+                {
+                    $this->cache->waits[] = $seconds;
+                    if (str_starts_with($this->key, 'afaqy:token:')) {
+                        $this->cache->probe->clock += 1.2;
+                    }
+
+                    return $callback();
+                }
+            };
+        }
+
+        public function __call($method, $arguments)
+        {
+            return $this->repository->{$method}(...$arguments);
+        }
+    };
+    Illuminate\Support\Facades\Cache::swap($cache);
+    try {
+        Http::fake(function () use ($probe) {
+            $probe->clock += 43;
+
+            return Http::response(['message' => 'expired'], 401);
+        });
+
+        expect(fn () => $probe->callHelper('afaqyPost', '/units/list', [], false, 45, 5))
+            ->toThrow(TelematicProviderException::class, 'time budget exhausted');
+        expect($cache->waits)->toBe([2, 2]);
+        Http::assertSentCount(1);
+    } finally {
+        Illuminate\Support\Facades\Cache::swap($originalCache);
+    }
 });
