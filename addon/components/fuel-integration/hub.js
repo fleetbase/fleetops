@@ -116,7 +116,7 @@ export default class FuelIntegrationHubComponent extends Component {
     get formatSpend() {
         const currencies = new Map();
         for (const connection of this.connections) {
-            const currency = connection.last_sync_state?.summary?.currency || (connection.provider === 'petroapp' ? 'SAR' : null);
+            const currency = connection.last_sync_state?.summary?.currency || (['petroapp', 'sasco'].includes(connection.provider) ? 'SAR' : null);
             if (currency) currencies.set(currency, (currencies.get(currency) || 0) + Number(connection.last_sync_state?.summary?.amount || 0));
         }
         return [...currencies].map(([currency, amount]) => fuelMoney(amount, currency)).join(' · ') || 'No spend recorded';

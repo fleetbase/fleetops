@@ -32,6 +32,12 @@ module('Unit | fuel integration | transaction presentation', function () {
         assert.false(JSON.stringify(groups).includes('nested'));
         const other = purchaseGroups({ provider: 'other', raw_payload: { fuel_type: 'Petrol', vat_percent: 15, token: 'secret' } });
         assert.deepEqual(other[0].rows, [{ label: 'Fuel type', value: 'Petrol' }], 'unknown provider units are not guessed');
+        const sasco = purchaseGroups({ provider: 'sasco', station_name: 'Station', normalized_payload: { driver_name: 'Missy Champerlen', driver_phone: '517444245' } });
+        assert.deepEqual(sasco[0].rows, [
+            { label: 'Station', value: 'Station' },
+            { label: 'Driver', value: 'Missy Champerlen' },
+            { label: 'Driver phone', value: '517444245' },
+        ]);
         assert.deepEqual(purchaseGroups({}), []);
     });
     test('all supported states have a semantic badge style', function (assert) {

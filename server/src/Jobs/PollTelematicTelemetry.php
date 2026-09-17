@@ -109,6 +109,7 @@ class PollTelematicTelemetry implements ShouldQueue, ShouldBeUnique
         try {
             $started = microtime(true);
             DB::table('telematic_sync_runs')->insert(['uuid' => $run, 'telematic_uuid' => $telematic->uuid, 'status' => 'fetching', 'created_at' => now(), 'updated_at' => now()]);
+            $this->adoptPendingRequest($run);
             $this->manualProgress([
                 'last_sync_run_uuid'      => $run, 'last_sync_run_job_id' => $this->manualJobId,
                 'last_sync_result'        => 'running', 'last_sync_phase' => 'fetching_inventory',
@@ -184,6 +185,41 @@ class PollTelematicTelemetry implements ShouldQueue, ShouldBeUnique
         }
 
         return $remaining;
+    }
+
+    /**
+     * Bind a manual request that has no active run to this scheduled sweep.
+     *
+     * Every poll job for a connection shares one unique lease, so while a scheduled sweep
+     * runs, the request's own job is either not queued (the request was recorded while
+     * the lease was held) or no longer exists (lost before or after an interrupted run).
+     */
+    private function adoptPendingRequest(string $run): void
+    {
+        if ($this->manualJobId) {
+            return;
+        }
+        DB::transaction(function () use ($run) {
+            $connection = Telematic::withoutGlobalScopes()->where('uuid', $this->telematicUuid)->lockForUpdate()->first();
+            $meta       = $connection?->meta ?? [];
+            $request    = data_get($meta, 'last_sync_job_id');
+            if (!$request || !in_array(data_get($meta, 'last_sync_result'), Inbox::PENDING_REQUEST_RESULTS, true)) {
+                return;
+            }
+            $bound = data_get($meta, 'last_sync_run_uuid');
+            if ($bound && DB::table('telematic_sync_runs')->where('uuid', $bound)->whereIn('status', ['fetching', 'ingesting'])->exists()) {
+                return;
+            }
+            $connection->status = 'synchronizing';
+            $connection->meta   = array_merge($meta, [
+                'last_sync_run_uuid'      => $run, 'last_sync_run_job_id' => $request,
+                'last_sync_result'        => 'running', 'last_sync_phase' => 'fetching_inventory',
+                'last_sync_fetched_total' => 0, 'last_sync_page_count' => 0,
+                'last_sync_linked_total'  => 0, 'last_sync_failed_total' => 0, 'last_sync_error' => null,
+                'last_sync_progress_at'   => now()->toDateTimeString(),
+            ]);
+            $connection->save();
+        });
     }
 
     private function manualProgress(array $attributes): void

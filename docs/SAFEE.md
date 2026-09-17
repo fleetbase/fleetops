@@ -86,6 +86,11 @@ cached configuration as part of the application's normal deployment process.
 Do not retry an old failed monolithic job to recover a connection; start a new
 manual sync or let scheduled polling recover it.
 
+A completed scheduled sweep updates the connection's status and last sync time, so
+a recovered connection no longer shows an old failure. Clicking "Sync Devices" while
+a sweep is queued or running records the request for the next sweep instead of
+returning an error. A partial sweep leaves the last reported state unchanged.
+
 Inspect the shared telemetry diagnostics for fetched/applied/failed counts,
 incomplete sweeps, pending deliveries, queue delay, and source age. Manual sync
 completion is tied to its ingestion run; queueing or fetching alone is not

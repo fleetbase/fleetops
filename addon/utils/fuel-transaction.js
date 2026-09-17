@@ -99,6 +99,8 @@ export function purchaseGroups(transaction) {
             ['Account branch', value('branch_name')],
             ['Representative', value('delegate_name')],
             ['Representative phone', petroapp ? value('delegate_mobile') : null],
+            ['Driver', value('driver_name')],
+            ['Driver phone', value('driver_phone')],
         ]),
         group('Vehicle & trip references', [
             ['Plate number', transaction.plate_number],
