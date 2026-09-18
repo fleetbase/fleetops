@@ -298,7 +298,7 @@ class FleetOpsInternalOrderLifecycleControllerProbe extends OrderController
         return $this->order;
     }
 
-    protected function findOrderById(string $id, array $with = []): ?Order
+    protected function findOrderById(mixed $id, array $with = []): ?Order
     {
         $this->order?->setAttribute('lookup_id', $id);
         $this->order?->setAttribute('lookup_with', $with);
@@ -990,10 +990,15 @@ test('internal order controller bulk dispatch only dispatches created uncanceled
 });
 
 test('internal order controller bulk assign driver deduplicates orders and queues notifications', function () {
-    $controller = fleetopsInternalOrderLifecycleController();
     $driverUuid = '11111111-1111-4111-8111-111111111111';
     $orderA     = '22222222-2222-4222-8222-222222222222';
     $orderB     = '33333333-3333-4333-8333-333333333333';
+    // The ids are resolved through the company-scoped `ordersByUuid()` lookup, so
+    // only orders it returns are assigned, counted and notified.
+    $controller = fleetopsInternalOrderLifecycleController([
+        fleetopsInternalOrderLifecycleOrder($orderA),
+        fleetopsInternalOrderLifecycleOrder($orderB),
+    ]);
 
     $response = $controller->bulkAssignDriver(fleetopsBulkActionRequest([
         'ids'    => [$orderA, $orderA, $orderB],
@@ -1011,7 +1016,9 @@ test('internal order controller bulk assign driver deduplicates orders and queue
         ->and($controller->assignedDriverUuid)->toBe($driverUuid)
         ->and($controller->bulkNotification)->toBe([[$orderA, $orderB], $driverUuid]);
 
-    $controller = fleetopsInternalOrderLifecycleController();
+    $controller = fleetopsInternalOrderLifecycleController([
+        fleetopsInternalOrderLifecycleOrder($orderA),
+    ]);
     $controller->bulkAssignDriver(fleetopsBulkActionRequest([
         'ids'    => [$orderA],
         'driver' => $driverUuid,
