@@ -28,7 +28,7 @@ class AssetStatusCapability extends AbstractFleetOpsAICapability
 
     public function permissions(): array
     {
-        return ['fleet-ops see vehicle', 'fleet-ops see device', 'fleet-ops see sensor', 'fleet-ops see telematic'];
+        return ['fleet-ops see driver', 'fleet-ops see vehicle', 'fleet-ops see device', 'fleet-ops see sensor', 'fleet-ops see telematic'];
     }
 
     public function resolve(AiTask $task): array
@@ -92,27 +92,46 @@ class AssetStatusCapability extends AbstractFleetOpsAICapability
 
     protected function totalForModel(string $modelClass): int
     {
-        return $modelClass::where('company_uuid', session('company'))->count();
+        return $this->scopedQuery($modelClass)->count();
     }
 
     protected function onlineCountForModel(string $modelClass): int
     {
-        return $modelClass::where('company_uuid', session('company'))->where('online', true)->count();
+        return $this->scopedQuery($modelClass)->where('online', true)->count();
     }
 
     protected function offlineCountForModel(string $modelClass): int
     {
-        return $modelClass::where('company_uuid', session('company'))->where(function ($query) {
+        return $this->scopedQuery($modelClass)->where(function ($query) {
             $query->where('online', false)->orWhereNull('online');
         })->count();
     }
 
     protected function countsByStatusForModel(string $modelClass): array
     {
-        return $modelClass::where('company_uuid', session('company'))
+        return $this->scopedQuery($modelClass)
             ->selectRaw('status, count(*) as aggregate')
             ->groupBy('status')
             ->pluck('aggregate', 'status')
             ->all();
+    }
+
+    /**
+     * Company-scoped query with the user's IAM directives for listing the resource applied.
+     */
+    protected function scopedQuery(string $modelClass)
+    {
+        $permission = match ($modelClass) {
+            Driver::class    => 'fleet-ops list driver',
+            Vehicle::class   => 'fleet-ops list vehicle',
+            Device::class    => 'fleet-ops list device',
+            Sensor::class    => 'fleet-ops list sensor',
+            Telematic::class => 'fleet-ops list telematic',
+            default          => null,
+        };
+
+        $query = $modelClass::where('company_uuid', session('company'));
+
+        return $permission ? $this->scopeToPermission($query, $permission) : $query;
     }
 }

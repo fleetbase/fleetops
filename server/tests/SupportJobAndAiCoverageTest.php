@@ -889,8 +889,8 @@ test('search resources capability metadata prompts terms and denied branches are
         ->and($capability->shouldResolve($task))->toBeTrue()
         ->and($capability->promptMatches('tell me about sensor SENSOR-1'))->toBeTrue()
         ->and($capability->promptMatches('compose a friendly email'))->toBeFalse()
-        ->and($capability->termsFor('Find order ORDER-123 for driver driver_456'))->toBe(['ORDER-123', 'for', 'driver_456'])
-        ->and($capability->termsFor('show order'))->toBe(['show order'])
+        ->and($capability->termsFor('Find order ORDER-123 for driver driver_456'))->toBe(['ORDER-123', 'driver_456'])
+        ->and($capability->termsFor('show order'))->toBe([])
         ->and($capability->genericWhenDenied())->toBe([])
         ->and($capability->allResourceBranchesWhenDenied(['needle']))->toBe([
             'orders'       => [],
@@ -903,7 +903,7 @@ test('search resources capability metadata prompts terms and denied branches are
             'telematics'   => [],
         ])
         ->and($capability->resolve($task))->toBe([
-            'query_terms' => ['DRV-123', 'and', 'TRUCK_9'],
+            'query_terms' => ['DRV-123', 'TRUCK_9'],
             'results'     => [],
         ]);
 });

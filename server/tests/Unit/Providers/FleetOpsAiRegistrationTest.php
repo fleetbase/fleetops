@@ -4,6 +4,10 @@ if (!class_exists('Fleetbase\Ai\Support\AiCapabilityRegistry', false)) {
     eval('namespace Fleetbase\Ai\Support; class AiCapabilityRegistry { public array $registered = []; public function register($capability) { $this->registered[] = $capability; return $this; } }');
 }
 
+if (!class_exists('Fleetbase\Ai\Support\Commands\AiCommandRegistry', false)) {
+    eval('namespace Fleetbase\Ai\Support\Commands; class AiCommandRegistry { public array $registered = []; public function registerMany(array $commands) { $this->registered = array_merge($this->registered, $commands); return $this; } }');
+}
+
 if (!class_exists('Fleetbase\Ai\Support\AiQueryRegistry', false)) {
     eval('namespace Fleetbase\Ai\Support; class AiQueryRegistry { public array $registered = []; public function register($resource = null) { $this->registered[] = $resource; return $this; } }');
 }
@@ -44,9 +48,16 @@ test('ai capability registration wires query resources and capabilities', functi
     $capabilityRegistry = app(Fleetbase\Ai\Support\AiCapabilityRegistry::class);
 
     fwrite(STDERR, "\nDBG ai: " . json_encode([is_object($queryRegistry) ? get_class($queryRegistry) : gettype($queryRegistry), is_object($capabilityRegistry) ? get_class($capabilityRegistry) : gettype($capabilityRegistry), is_object($capabilityRegistry) ? count($capabilityRegistry->registered) : null]) . "\n");
-    expect($capabilityRegistry->registered)->toHaveCount(9)
+    expect($capabilityRegistry->registered)->toHaveCount(11)
         ->and(collect($capabilityRegistry->registered)->map(fn ($capability) => get_class($capability)))
-        ->toContain(Fleetbase\FleetOps\Support\Ai\Capabilities\SearchResourcesCapability::class);
+        ->toContain(
+            Fleetbase\FleetOps\Support\Ai\Capabilities\SearchResourcesCapability::class,
+            Fleetbase\FleetOps\Support\Ai\Tools\SearchResourcesTool::class,
+            Fleetbase\FleetOps\Support\Ai\Tools\CreateOrderTool::class,
+        );
+
+    $commandRegistry = app(Fleetbase\Ai\Support\Commands\AiCommandRegistry::class);
+    expect(collect($commandRegistry->registered)->pluck('id'))->toContain('fleet-ops.orders.create', 'fleet-ops.settings.map.open');
 
     // The query resources helper registers the fleet-ops queryables directly
     $freshQueryRegistry = new Fleetbase\Ai\Support\AiQueryRegistry();

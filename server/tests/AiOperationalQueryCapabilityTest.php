@@ -406,6 +406,7 @@ test('asset status capability exposes metadata and denied branches', function ()
         ->and($capability->label())->toBe('Fleet-Ops asset status')
         ->and($capability->description())->toContain('vehicle, device, sensor')
         ->and($capability->permissions())->toBe([
+            'fleet-ops see driver',
             'fleet-ops see vehicle',
             'fleet-ops see device',
             'fleet-ops see sensor',
