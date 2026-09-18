@@ -69,6 +69,14 @@ export default class FuelIntegrationFormComponent extends Component {
         return this.args.resource?.environment ?? 'production';
     }
 
+    get sandboxLabel() {
+        return this.selectedProvider?.metadata?.environment_labels?.sandbox ?? 'Sandbox';
+    }
+
+    get productionLabel() {
+        return this.selectedProvider?.metadata?.environment_labels?.production ?? 'Production';
+    }
+
     get baseUrl() {
         return this.credentials.base_url?.trim() || this.selectedProvider?.metadata?.base_urls?.[this.environment];
     }

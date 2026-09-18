@@ -58,8 +58,8 @@ class SyncTelematicDevicesJob implements ShouldQueue
                 try {
                     $service->queueTelemetrySync($this->telematic, $this->options, $this->jobId);
                 } catch (\Illuminate\Validation\ValidationException) {
-                    // Paused or already queued/running. Failing here would mark the connection
-                    // as errored and detach the active request's progress tracking.
+                    // Polling was paused after this job was queued. Failing here would mark the
+                    // connection as errored and detach any active request's progress tracking.
                     Log::info('Skipped legacy telematics sync redirect.', ['telematic_uuid' => $this->telematic->uuid]);
                 }
             }
