@@ -34,17 +34,20 @@ class OrderInsightsCapability extends AbstractFleetOpsAICapability
             return ['authorized' => false, 'message' => 'Current user cannot access Fleet-Ops orders.'];
         }
 
-        $prompt = $this->prompt($task);
-        $window = $this->dateWindow($prompt);
-        $amount = $this->amountThreshold($prompt);
-        $query  = $this->orderQuery(session('company'));
+        $prompt   = $this->prompt($task);
+        $window   = $this->dateWindow($prompt);
+        $amount   = $this->amountThreshold($prompt);
+        $currency = $this->currency();
+        $minor    = $amount !== null ? $this->toMinorUnits($amount, $currency) : null;
+        $query    = $this->orderQuery(session('company'));
 
         if ($window) {
             $query->whereBetween('created_at', [$window['start'], $window['end']]);
         }
 
-        if ($amount !== null) {
-            $query->whereHas('transaction', fn ($transaction) => $transaction->where('amount', '>', $amount));
+        if ($minor !== null) {
+            // Transaction amounts are stored in the currency's minor unit (e.g. cents).
+            $query->whereHas('transaction', fn ($transaction) => $transaction->where('amount', '>', $minor));
         }
 
         $total = (clone $query)->count();
@@ -59,6 +62,7 @@ class OrderInsightsCapability extends AbstractFleetOpsAICapability
                 'end'      => $window['end']->toIso8601String(),
             ] : null,
             'amount_threshold'  => $amount,
+            'amount_currency'   => $amount !== null ? $currency : null,
             'count'             => $total,
             'counts_by_status'  => (clone $query)
                 ->selectRaw('status, count(*) as aggregate')
@@ -83,6 +87,35 @@ class OrderInsightsCapability extends AbstractFleetOpsAICapability
         return null;
     }
 
+    /**
+     * Converts a major-unit amount (e.g. 500.00) to the minor units transactions are stored in,
+     * honoring the currency's ISO-4217 exponent (JPY has none, BHD has three).
+     */
+    protected function toMinorUnits(float $amount, string $currency): int
+    {
+        $exponent = 2;
+
+        try {
+            if (class_exists(\Money\Currencies\ISOCurrencies::class)) {
+                $exponent = (new \Money\Currencies\ISOCurrencies())->subunitFor(new \Money\Currency(strtoupper($currency)));
+            }
+        } catch (\Throwable) {
+            $exponent = 2;
+        }
+
+        return (int) round($amount * (10 ** $exponent));
+    }
+
+    /**
+     * @codeCoverageIgnore
+     */
+    protected function currency(): string
+    {
+        $company = function_exists('session') ? \Fleetbase\Models\Company::where('uuid', session('company'))->first(['uuid', 'currency']) : null;
+
+        return strtoupper((string) ($company?->currency ?: 'USD'));
+    }
+
     protected function dateWindow(string $prompt): ?array
     {
         return $this->relativeDateResolver()->resolveWindow($prompt);
@@ -90,7 +123,7 @@ class OrderInsightsCapability extends AbstractFleetOpsAICapability
 
     protected function orderQuery(?string $companyUuid): mixed
     {
-        return Order::where('company_uuid', $companyUuid);
+        return $this->scopeToPermission(Order::where('company_uuid', $companyUuid), 'fleet-ops list order');
     }
 
     protected function relativeDateResolver(): AiRelativeDateResolver

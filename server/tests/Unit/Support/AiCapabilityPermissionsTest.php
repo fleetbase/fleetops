@@ -96,7 +96,7 @@ test('permission checks for non admin users delegate to the gate', function () {
         ->and(fn () => fleetopsAiPermissionsHelper('canAll')->invoke($capability, ['fleet-ops list order']))->toThrow(TypeError::class);
 });
 
-test('search terms extract identifiers and fall back to the raw prompt', function () {
+test('search terms extract identifiers and never fall back to the raw prompt', function () {
     fleetopsAiPermissionsBoot();
     $capability  = new OperationalQueryCapability();
     $searchTerms = fleetopsAiPermissionsHelper('searchTerms');
@@ -105,8 +105,8 @@ test('search terms extract identifiers and fall back to the raw prompt', functio
     expect($terms)->toContain('TRK-12345', 'atlas99')
         ->and($terms)->not->toContain('find', 'order');
 
-    // Stop-word-only prompts fall back to the trimmed prompt
-    expect($searchTerms->invoke($capability, 'find order'))->toBe(['find order']);
+    // Prompts without a record reference produce no search terms, so nothing is searched
+    expect($searchTerms->invoke($capability, 'find order'))->toBe([]);
 });
 
 test('where like any matches across columns and terms', function () {

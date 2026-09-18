@@ -67,6 +67,17 @@ class FleetOpsSearchResourcesCapabilityProbe extends SearchResourcesCapability
     public array $queries            = [];
     public array $appliedLikes       = [];
 
+    public array $failing = [];
+
+    public function exposeSearchTerms(string $prompt): array
+    {
+        return $this->searchTerms($prompt);
+    }
+
+    protected function reportSearchFailure(string $resource, Throwable $e): void
+    {
+    }
+
     public function exposePromptMatches(string $prompt): bool
     {
         return $this->matchesPrompt($prompt);
@@ -103,6 +114,10 @@ class FleetOpsSearchResourcesCapabilityProbe extends SearchResourcesCapability
 
     protected function genericSearchQuery(string $modelClass)
     {
+        if ($modelClass === Sensor::class && in_array('sensors', $this->failing, true)) {
+            throw new RuntimeException("SQLSTATE[42S22]: Column not found: 1054 Unknown column 'sensor_type'");
+        }
+
         return match ($modelClass) {
             WorkOrder::class   => $this->queries['work_orders'],
             Maintenance::class => $this->queries['maintenances'],
@@ -197,7 +212,7 @@ test('search resources resolve returns authorized resource summaries across all 
     $result = $capability->resolve(new AiTask(['prompt' => 'Find order ORDER-1 vehicle VEH-1 driver DRV-1 device DEV-1 sensor SNS-1 telematic TEL-1']));
 
     expect($capability->exposePromptMatches('look up work order WO-1'))->toBeTrue()
-        ->and($result['query_terms'])->toBe(['ORDER-1', 'VEH-1', 'DRV-1', 'device', 'DEV-1', 'sensor'])
+        ->and($result['query_terms'])->toBe(['ORDER-1', 'VEH-1', 'DRV-1', 'DEV-1', 'SNS-1', 'TEL-1'])
         ->and($result['results'])->toHaveKeys(['orders', 'vehicles', 'drivers', 'work_orders', 'maintenances', 'devices', 'sensors', 'telematics'])
         ->and($result['results']['orders'][0])->toMatchArray([
             'id'                   => 'order_public',
@@ -234,4 +249,73 @@ test('search resources resolve returns authorized resource summaries across all 
         ->and($result['results']['telematics'][0]['route'])->toBe('console.fleet-ops.connectivity.telematics.details')
         ->and($capability->queries['orders']->calls)->toContain(['limit', 5], ['get'])
         ->and($capability->appliedLikes)->not->toBeEmpty();
+});
+
+function fleetopsSearchResourcesEmptyQueries(): array
+{
+    return collect(['orders', 'vehicles', 'drivers', 'work_orders', 'maintenances', 'devices', 'sensors', 'telematics'])
+        ->mapWithKeys(fn ($key) => [$key => new FleetOpsSearchResourcesQueryFake()])
+        ->all();
+}
+
+test('search terms ignore ordinary words from real production prompts', function () {
+    $capability = new FleetOpsSearchResourcesCapabilityProbe();
+
+    expect($capability->exposeSearchTerms('i want turn this into a platform where i add cisterns and on a different page BUSINESS leave they orders'))->toBe([])
+        ->and($capability->exposeSearchTerms('Create a few dummy orders so we can test with it'))->toBe([])
+        ->and($capability->exposeSearchTerms('download order import template'))->toBe([])
+        ->and($capability->exposeSearchTerms('config driver app ยังไง'))->toBe([])
+        ->and($capability->exposeSearchTerms('como activar un conductor'))->toBe([]);
+});
+
+test('search terms keep record references such as public ids, plates, emails, quoted and capitalized names', function () {
+    $capability = new FleetOpsSearchResourcesCapabilityProbe();
+
+    expect($capability->exposeSearchTerms('status of order order_yhkejdnzgz'))->toBe(['order_yhkejdnzgz'])
+        ->and($capability->exposeSearchTerms('vehicle plate SBA1234Z'))->toBe(['SBA1234Z'])
+        ->and($capability->exposeSearchTerms('driver with email ada@example.com'))->toBe(['ada@example.com'])
+        ->and($capability->exposeSearchTerms('where is driver Jane Doe right now'))->toBe(['Jane', 'Doe'])
+        ->and($capability->exposeSearchTerms('find "north depot" vehicles'))->toBe(['north depot']);
+});
+
+test('search resources skips querying when the prompt has no record reference', function () {
+    $capability                     = new FleetOpsSearchResourcesCapabilityProbe();
+    $capability->allowedPermissions = $capability->permissions();
+    $capability->queries            = fleetopsSearchResourcesEmptyQueries();
+
+    $result = $capability->resolve(new AiTask(['prompt' => 'how do I create a new order']));
+
+    expect($result['query_terms'])->toBe([])
+        ->and($result['results'])->toBe([])
+        ->and($capability->appliedLikes)->toBe([]);
+});
+
+test('search resources never searches the dropped sensor_type column or status/uuid columns', function () {
+    $capability                     = new FleetOpsSearchResourcesCapabilityProbe();
+    $capability->allowedPermissions = $capability->permissions();
+    $capability->queries            = fleetopsSearchResourcesEmptyQueries();
+
+    $capability->resolve(new AiTask(['prompt' => 'find SNS-1']));
+
+    $columns = collect($capability->appliedLikes)->flatMap(fn ($like) => $like[0])->unique()->all();
+
+    expect($columns)->not->toContain('sensor_type')
+        ->and($columns)->not->toContain('status')
+        ->and($columns)->not->toContain('uuid')
+        ->and($columns)->not->toContain('type');
+});
+
+test('a failing resource search does not discard the other results or leak the error', function () {
+    $vehicle = fleetopsSearchResourcesModel(Vehicle::class, ['public_id' => 'vehicle_public', 'uuid' => 'vehicle-uuid', 'name' => 'Van 12']);
+
+    $capability                     = new FleetOpsSearchResourcesCapabilityProbe();
+    $capability->allowedPermissions = $capability->permissions();
+    $capability->failing            = ['sensors'];
+    $capability->queries            = array_merge(fleetopsSearchResourcesEmptyQueries(), ['vehicles' => new FleetOpsSearchResourcesQueryFake([$vehicle])]);
+
+    $result = $capability->resolve(new AiTask(['prompt' => 'find VEH-12']));
+
+    expect($result['results'])->toHaveKey('vehicles')
+        ->and($result['unavailable_search'])->toBe(['sensors'])
+        ->and(json_encode($result))->not->toContain('SQLSTATE');
 });
