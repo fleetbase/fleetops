@@ -38,12 +38,15 @@ test('typed geometries are stashed on the model and wrapped for binding', functi
     expect($returned)->toBeInstanceOf(SpatialExpression::class)
         ->and($model->geometries['border'])->toBe($multi);
 
-    // The polygon cast stashes the geometry but hands the value back directly
+    // The polygon cast wraps the geometry like every other spatial cast —
+    // returning the bare object lets class-cast re-serialisation overwrite the
+    // SpatialExpression that SpatialTrait::performInsert() prepared, so the
+    // raw geometry gets bound and MySQL rejects it with error 1416
     $polygonModel = new FleetOpsSpatialCastModel();
     $polygon      = fleetopsSpatialCastSquare();
     $polygonCast  = (new Fleetbase\FleetOps\Casts\Polygon())->set($polygonModel, 'border', $polygon, []);
 
-    expect($polygonCast)->toBe($polygon)
+    expect($polygonCast)->toBeInstanceOf(SpatialExpression::class)
         ->and($polygonModel->geometries['border'])->toBe($polygon);
 
     // Expressions are already bind-ready, so the point cast returns them
