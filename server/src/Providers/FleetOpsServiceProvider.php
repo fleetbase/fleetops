@@ -296,6 +296,8 @@ class FleetOpsServiceProvider extends CoreServiceProvider
             if (interface_exists(\Fleetbase\Ai\Contracts\AIToolCapabilityInterface::class)) {
                 $registry->register(new \Fleetbase\FleetOps\Support\Ai\Tools\SearchResourcesTool());
                 $registry->register(new \Fleetbase\FleetOps\Support\Ai\Tools\CreateOrderTool());
+                $registry->register(new \Fleetbase\FleetOps\Support\Ai\Tools\OptimizeOrderRouteTool());
+                $registry->register(new \Fleetbase\FleetOps\Support\Ai\Tools\ImportOrdersTool());
             }
         });
     }

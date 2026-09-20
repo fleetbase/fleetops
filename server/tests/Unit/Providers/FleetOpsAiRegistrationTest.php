@@ -48,12 +48,14 @@ test('ai capability registration wires query resources and capabilities', functi
     $capabilityRegistry = app(Fleetbase\Ai\Support\AiCapabilityRegistry::class);
 
     fwrite(STDERR, "\nDBG ai: " . json_encode([is_object($queryRegistry) ? get_class($queryRegistry) : gettype($queryRegistry), is_object($capabilityRegistry) ? get_class($capabilityRegistry) : gettype($capabilityRegistry), is_object($capabilityRegistry) ? count($capabilityRegistry->registered) : null]) . "\n");
-    expect($capabilityRegistry->registered)->toHaveCount(11)
+    expect($capabilityRegistry->registered)->toHaveCount(13)
         ->and(collect($capabilityRegistry->registered)->map(fn ($capability) => get_class($capability)))
         ->toContain(
             Fleetbase\FleetOps\Support\Ai\Capabilities\SearchResourcesCapability::class,
             Fleetbase\FleetOps\Support\Ai\Tools\SearchResourcesTool::class,
             Fleetbase\FleetOps\Support\Ai\Tools\CreateOrderTool::class,
+            Fleetbase\FleetOps\Support\Ai\Tools\OptimizeOrderRouteTool::class,
+            Fleetbase\FleetOps\Support\Ai\Tools\ImportOrdersTool::class,
         );
 
     $commandRegistry = app(Fleetbase\Ai\Support\Commands\AiCommandRegistry::class);

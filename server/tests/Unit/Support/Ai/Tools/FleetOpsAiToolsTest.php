@@ -159,3 +159,88 @@ test('search tool narrows the real search to the requested types', function () {
     expect($tool->called)->toBe(['orders'])
         ->and($result['results'])->toBe(['orders' => [['id' => 'order_1']]]);
 });
+
+class FleetOpsOptimizeOrderRouteToolProbe extends Fleetbase\FleetOps\Support\Ai\Tools\OptimizeOrderRouteTool
+{
+    public array $previewedPrompts = [];
+
+    public function preview(AiTask $task, array $input = []): array
+    {
+        $this->previewedPrompts[] = $task->prompt;
+
+        return [
+            'action'         => $this->key(),
+            'ready'          => true,
+            'message'        => 'Fleetbase AI prepared an optimized waypoint sequence. Review it before applying.',
+            'missing_fields' => [],
+            'fields'         => [['label' => 'Order', 'value' => 'order_abc']],
+        ];
+    }
+}
+
+test('optimize route tool proposes a reviewable preview for the order the model named', function () {
+    $tool    = new FleetOpsOptimizeOrderRouteToolProbe();
+    $task    = new AiTask(['prompt' => 'can you optimise the route please', 'metadata' => []]);
+    $context = new AiToolContext($task, new AiAudience(false, ['fleet-ops optimize order', 'fleet-ops update-route-for order']));
+
+    $result = $tool->invoke($task, ['order' => 'order_abc'], $context);
+
+    expect($result['preview_id'])->toBe('preview-1')
+        ->and($result['ready'])->toBeTrue()
+        ->and($result['status'])->toBe('proposal_shown_to_user')
+        ->and($result['fields'])->toBe([['label' => 'Order', 'value' => 'order_abc']])
+        ->and($result['missing_fields'])->toBe([])
+        // The capability finds the order in the prompt text, so the tool hands it the id the model gave.
+        ->and($tool->previewedPrompts)->toBe(['order_abc'])
+        ->and($task->prompt)->toBe('can you optimise the route please')
+        ->and($context->actionPreviews)->toHaveCount(1)
+        ->and($tool->toolName())->toBe('propose_optimize_order_route')
+        ->and($tool->key())->toBe('fleet-ops.optimize_order_route')
+        ->and($tool->toolDescription())->toContain('NOT changed by this tool')
+        ->and($tool->toolParameters()['required'])->toBe(['order'])
+        ->and($tool->availableFor($context))->toBeTrue()
+        ->and($tool->availableFor(new AiToolContext($task, new AiAudience(false, ['fleet-ops optimize order']))))->toBeFalse();
+});
+
+test('optimize route tool refuses to build a preview without an order', function () {
+    $tool    = new FleetOpsOptimizeOrderRouteToolProbe();
+    $task    = new AiTask(['prompt' => 'optimise a route', 'metadata' => []]);
+    $context = new AiToolContext($task, new AiAudience(false, ['fleet-ops optimize order', 'fleet-ops update-route-for order']));
+
+    expect($tool->invoke($task, ['order' => '   '], $context))->toBe([
+        'error'   => 'invalid_arguments',
+        'message' => 'An order id is required to optimize a route.',
+    ])
+        ->and($tool->invoke($task, [], $context)['error'])->toBe('invalid_arguments')
+        ->and($context->actionPreviews)->toBe([])
+        ->and($tool->previewedPrompts)->toBe([]);
+});
+
+class FleetOpsImportOrdersToolProbe extends Fleetbase\FleetOps\Support\Ai\Tools\ImportOrdersTool
+{
+    protected function can(string $permission): bool
+    {
+        return true;
+    }
+}
+
+test('import tool reports what an import needs and never claims to have imported anything', function () {
+    $tool    = new FleetOpsImportOrdersToolProbe();
+    $task    = new AiTask(['prompt' => 'can I import orders from a spreadsheet', 'metadata' => []]);
+    $context = new AiToolContext($task, new AiAudience(false, ['fleet-ops import order']));
+
+    $result = $tool->invoke($task, [], $context);
+
+    expect($result['accepted_sources'])->toBe(['xlsx', 'csv'])
+        ->and($result['minimum_columns'])->toContain('pickup address or pickup place')
+        ->and($result['can_import_here'])->toBeFalse()
+        ->and($result['message'])->toContain('will not process uploaded spreadsheets')
+        ->and($context->actionPreviews)->toBe([])
+        ->and($tool->toolName())->toBe('fleetops_import_requirements')
+        ->and($tool->key())->toBe('fleet-ops.import_orders_preview')
+        ->and($tool->toolDescription())->toContain('does NOT import anything')
+        ->and($tool->toolParameters()['properties'])->toBeInstanceOf(stdClass::class)
+        ->and(json_encode($tool->toolParameters()['properties']))->toBe('{}')
+        ->and($tool->availableFor($context))->toBeTrue()
+        ->and($tool->availableFor(new AiToolContext($task, new AiAudience(false, []))))->toBeFalse();
+});
