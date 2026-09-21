@@ -538,3 +538,64 @@ test('create record reports database and request validation failures', function 
 
     expect($validationFailure->getData(true))->toBe(['error' => ['password' => ['The password is too weak.']]]);
 });
+
+test('auth can resolves real permissions for requests and ping guards', function () {
+    $connection = fleetopsDriverAdoptionBoot([]);
+    $connection->table('users')->insert(['uuid' => '77777777-7777-4777-8777-777777777701', 'public_id' => 'user_authcan1', 'company_uuid' => 'company-1', 'name' => 'Permitted User', 'type' => 'user']);
+    $connection->table('company_users')->insert(['uuid' => '77777777-7777-4777-8777-777777777702', 'company_uuid' => 'company-1', 'user_uuid' => '77777777-7777-4777-8777-777777777701', 'status' => 'active']);
+    $connection->table('permissions')->insert([
+        ['name' => 'fleet-ops update driver', 'guard_name' => 'sanctum'],
+        ['name' => 'fleet-ops update order', 'guard_name' => 'sanctum'],
+        ['name' => 'fleet-ops create driver', 'guard_name' => 'sanctum'],
+    ]);
+    $companyUserMorph = (new Fleetbase\Models\CompanyUser())->getMorphClass();
+    $permissionIds    = $connection->table('permissions')->pluck('id', 'name');
+    $connection->table('model_has_permissions')->insert([
+        ['permission_id' => $permissionIds['fleet-ops update driver'], 'model_type' => $companyUserMorph, 'model_uuid' => '77777777-7777-4777-8777-777777777702'],
+        ['permission_id' => $permissionIds['fleet-ops update order'], 'model_type' => $companyUserMorph, 'model_uuid' => '77777777-7777-4777-8777-777777777702'],
+        ['permission_id' => $permissionIds['fleet-ops create driver'], 'model_type' => $companyUserMorph, 'model_uuid' => '77777777-7777-4777-8777-777777777702'],
+    ]);
+    session(['company' => 'company-1', 'user' => '77777777-7777-4777-8777-777777777701']);
+
+    // Granted permissions authorize, missing permissions deny
+    expect(Fleetbase\Support\Auth::can('fleet-ops update driver'))->toBeTrue()
+        ->and(Fleetbase\Support\Auth::can('fleet-ops delete driver'))->toBeFalse();
+
+    // The update driver form request authorizes through the same gate
+    $updateRequest = new Fleetbase\FleetOps\Http\Requests\Internal\UpdateDriverRequest();
+    expect($updateRequest->authorize())->toBeTrue();
+
+    // Create-driver is granted, create-order-config was never granted, so the
+    // two internal create requests resolve opposite ways through one gate
+    expect((new Fleetbase\FleetOps\Http\Requests\Internal\CreateDriverRequest())->authorize())->toBeTrue()
+        ->and((new Fleetbase\FleetOps\Http\Requests\Internal\CreateOrderConfigRequest())->authorize())->toBeFalse();
+
+    // Fleet action requests resolve their permission through the same gate
+    $fleetRequest = Fleetbase\FleetOps\Http\Requests\Internal\FleetActionRequest::create('/int/v1/fleets/assign-vehicle', 'POST');
+    $canMethod    = new ReflectionMethod(Fleetbase\FleetOps\Http\Requests\Internal\FleetActionRequest::class, 'can');
+    $canMethod->setAccessible(true);
+    expect($canMethod->invoke($fleetRequest, 'fleet-ops update driver'))->toBeTrue()
+        ->and($canMethod->invoke($fleetRequest, 'fleet-ops assign-vehicle-for fleet'))->toBeFalse();
+
+    // Driver ping authorization resolves through the order permission
+    $orderController = new Fleetbase\FleetOps\Http\Controllers\Internal\v1\OrderController();
+    $canPing         = new ReflectionMethod($orderController, 'canPingDriver');
+    $canPing->setAccessible(true);
+    expect($canPing->invoke($orderController))->toBeTrue();
+
+    // Creating an order is gated on its own permission, which was never granted
+    expect((new Fleetbase\FleetOps\Http\Requests\Internal\CreateOrderRequest())->authorize())->toBeFalse();
+
+    // Global search consults the same gate per result type. This user is not an
+    // admin and holds no `see` permissions, so every requested type is skipped
+    // and nothing is searched rather than leaking unpermitted records
+    $searchController = new Fleetbase\FleetOps\Http\Controllers\Internal\v1\SearchController();
+    $searchResponse   = $searchController->search(Request::create('/int/v1/search', 'GET', [
+        'query' => 'anything',
+        'types' => 'orders,drivers',
+    ]));
+
+    expect($searchResponse->getData(true))->toBe(['results' => []]);
+
+    session(['user' => null]);
+});
