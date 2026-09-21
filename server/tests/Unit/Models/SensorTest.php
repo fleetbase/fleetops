@@ -116,7 +116,7 @@ test('sensor model exposes relation builders and logging options', function () {
 
     $sensor = new Sensor();
 
-    expect($sensor->getSlugOptions()->generateSlugFrom)->toBe(['name', 'sensor_type'])
+    expect($sensor->getSlugOptions()->generateSlugFrom)->toBe(['name', 'type'])
         ->and($sensor->getSlugOptions()->slugField)->toBe('slug')
         ->and($sensor->getActivitylogOptions()->logOnlyDirty)->toBeTrue()
         ->and($sensor->telematic())->toBeInstanceOf(BelongsTo::class)
@@ -222,7 +222,7 @@ test('sensor scopes write expected query constraints', function () {
             ->and($sensor->scopeActive($query))->toBe($query)
             ->and($sensor->scopeWithRecentReadings($query, 30))->toBe($query)
             ->and($sensor->scopeOutOfThreshold($query))->toBe($query)
-            ->and($query->calls[0])->toBe(['where', ['sensor_type', 'temperature']])
+            ->and($query->calls[0])->toBe(['where', ['type', 'temperature']])
             ->and($query->calls[1])->toBe(['where', ['status', 'active']])
             ->and($query->calls[2][0])->toBe('where')
             ->and($query->calls[2][1][0])->toBe('last_reading_at')

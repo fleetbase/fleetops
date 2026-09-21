@@ -382,6 +382,18 @@ if (!interface_exists('Fleetbase\Ai\Contracts\AIActionCapabilityInterface')) {
     eval('namespace Fleetbase\Ai\Contracts; interface AIActionCapabilityInterface {}');
 }
 
+if (!interface_exists('Fleetbase\Ai\Contracts\AIToolCapabilityInterface')) {
+    eval('namespace Fleetbase\Ai\Contracts; interface AIToolCapabilityInterface {}');
+}
+
+if (!class_exists('Fleetbase\Ai\Support\AiAudience')) {
+    eval('namespace Fleetbase\Ai\Support; class AiAudience { public function __construct(public bool $isSystemAdmin = false, public array $granted = []) {} public function can(string $permission): bool { return $this->isSystemAdmin || in_array($permission, $this->granted, true); } public function canAll(array $permissions): bool { foreach ($permissions as $permission) { if (!$this->can($permission)) { return false; } } return true; } }');
+}
+
+if (!class_exists('Fleetbase\Ai\Support\AiToolContext')) {
+    eval('namespace Fleetbase\Ai\Support; class AiToolContext { public array $actionPreviews = []; public array $uiActions = []; public function __construct(public $task, public $audience) {} public function addActionPreview($capability, array $preview): array { $preview = array_merge(["preview_id" => "preview-" . (count($this->actionPreviews) + 1), "key" => $capability->key()], $preview); $this->actionPreviews[] = $preview; return $preview; } }');
+}
+
 if (!class_exists('Fleetbase\Ai\Models\AiTask')) {
     eval('namespace Fleetbase\Ai\Models; class AiTask { public function __construct(array $attributes = []) { foreach ($attributes as $key => $value) { $this->{$key} = $value; } } }');
 }

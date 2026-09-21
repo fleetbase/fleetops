@@ -274,6 +274,12 @@ class FleetOpsServiceProvider extends CoreServiceProvider
             });
         }
 
+        if (Utils::classExists(\Fleetbase\Ai\Support\Commands\AiCommandRegistry::class)) {
+            $this->callAfterResolving(\Fleetbase\Ai\Support\Commands\AiCommandRegistry::class, function ($commands) {
+                $commands->registerMany(\Fleetbase\FleetOps\Support\Ai\FleetOpsAiConsoleCommands::all());
+            });
+        }
+
         $this->callAfterResolving(\Fleetbase\Ai\Support\AiCapabilityRegistry::class, function (\Fleetbase\Ai\Support\AiCapabilityRegistry $registry) {
             $registry->register(new \Fleetbase\FleetOps\Support\Ai\Capabilities\SearchResourcesCapability());
             $registry->register(new \Fleetbase\FleetOps\Support\Ai\Capabilities\OperationalQueryCapability());
@@ -284,6 +290,15 @@ class FleetOpsServiceProvider extends CoreServiceProvider
             $registry->register(new \Fleetbase\FleetOps\Support\Ai\Capabilities\CreateOrderPreviewCapability());
             $registry->register(new \Fleetbase\FleetOps\Support\Ai\Capabilities\OptimizeOrderRouteCapability());
             $registry->register(new \Fleetbase\FleetOps\Support\Ai\Capabilities\ImportOrdersPreviewCapability());
+
+            // Tool-calling versions share their capability keys, so they replace the keyword-driven ones when
+            // the installed AI extension supports tools and leave older AI extensions unaffected.
+            if (interface_exists(\Fleetbase\Ai\Contracts\AIToolCapabilityInterface::class)) {
+                $registry->register(new \Fleetbase\FleetOps\Support\Ai\Tools\SearchResourcesTool());
+                $registry->register(new \Fleetbase\FleetOps\Support\Ai\Tools\CreateOrderTool());
+                $registry->register(new \Fleetbase\FleetOps\Support\Ai\Tools\OptimizeOrderRouteTool());
+                $registry->register(new \Fleetbase\FleetOps\Support\Ai\Tools\ImportOrdersTool());
+            }
         });
     }
 }

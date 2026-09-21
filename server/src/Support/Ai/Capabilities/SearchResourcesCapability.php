@@ -48,19 +48,69 @@ class SearchResourcesCapability extends AbstractFleetOpsAICapability
         $prompt = (string) $task->prompt;
         $terms  = $this->searchTerms($prompt);
 
-        return [
-            'query_terms' => $terms,
-            'results'     => array_filter([
-                'orders'       => $this->orders($terms),
-                'vehicles'     => $this->vehicles($terms),
-                'drivers'      => $this->drivers($terms),
-                'work_orders'  => $this->workOrders($terms),
-                'maintenances' => $this->maintenances($terms),
-                'devices'      => $this->devices($terms),
-                'sensors'      => $this->sensors($terms),
-                'telematics'   => $this->telematics($terms),
-            ]),
+        if (empty($terms)) {
+            return [
+                'query_terms' => [],
+                'results'     => [],
+                'message'     => 'The prompt did not reference a specific Fleet-Ops record, so no records were searched.',
+            ];
+        }
+
+        return $this->searchAll($terms);
+    }
+
+    /**
+     * Search the given resource types (all when null) for the terms. A failing search is reported
+     * without discarding the others.
+     */
+    protected function searchAll(array $terms, ?array $types = null): array
+    {
+        $results  = [];
+        $failed   = [];
+        $searches = [
+            'orders'       => fn () => $this->orders($terms),
+            'vehicles'     => fn () => $this->vehicles($terms),
+            'drivers'      => fn () => $this->drivers($terms),
+            'work_orders'  => fn () => $this->workOrders($terms),
+            'maintenances' => fn () => $this->maintenances($terms),
+            'devices'      => fn () => $this->devices($terms),
+            'sensors'      => fn () => $this->sensors($terms),
+            'telematics'   => fn () => $this->telematics($terms),
         ];
+
+        if ($types !== null) {
+            $searches = array_intersect_key($searches, array_flip($types));
+        }
+
+        foreach ($searches as $resource => $search) {
+            try {
+                $results[$resource] = $search();
+            } catch (\Throwable $e) {
+                $failed[] = $resource;
+                $this->reportSearchFailure($resource, $e);
+            }
+        }
+
+        $payload = [
+            'query_terms' => $terms,
+            'results'     => array_filter($results),
+        ];
+
+        if (!empty($failed)) {
+            $payload['unavailable_search'] = $failed;
+        }
+
+        return $payload;
+    }
+
+    /**
+     * @codeCoverageIgnore
+     */
+    protected function reportSearchFailure(string $resource, \Throwable $e): void
+    {
+        if (function_exists('report')) {
+            report($e);
+        }
     }
 
     protected function matchesPrompt(string $prompt): bool
@@ -76,7 +126,7 @@ class SearchResourcesCapability extends AbstractFleetOpsAICapability
 
         return $this->orderSearchQuery()
             ->where(function ($query) use ($terms) {
-                $this->whereLikeAny($query, ['public_id', 'internal_id', 'uuid', 'status', 'type'], $terms);
+                $this->whereLikeAny($query, ['public_id', 'internal_id'], $terms);
                 $query->orWhereHas('trackingNumber', fn ($tracking) => $this->whereLikeAny($tracking, ['tracking_number', 'barcode'], $terms));
             })
             ->limit(5)
@@ -127,7 +177,7 @@ class SearchResourcesCapability extends AbstractFleetOpsAICapability
 
         return $this->driverSearchQuery()
             ->where(function ($query) use ($terms) {
-                $this->whereLikeAny($query, ['public_id', 'uuid', 'drivers_license_number', 'status'], $terms);
+                $this->whereLikeAny($query, ['public_id', 'internal_id', 'drivers_license_number'], $terms);
                 $query->orWhereHas('user', fn ($user) => $this->whereLikeAny($user, ['name', 'email', 'phone'], $terms));
             })
             ->limit(5)
@@ -146,27 +196,27 @@ class SearchResourcesCapability extends AbstractFleetOpsAICapability
 
     protected function workOrders(array $terms): array
     {
-        return $this->generic(WorkOrder::class, 'fleet-ops see work-order', ['public_id', 'uuid', 'code', 'subject', 'status', 'priority'], 'console.fleet-ops.maintenance.work-orders.index.details', $terms);
+        return $this->generic(WorkOrder::class, 'fleet-ops see work-order', ['public_id', 'code', 'subject'], 'console.fleet-ops.maintenance.work-orders.index.details', $terms);
     }
 
     protected function maintenances(array $terms): array
     {
-        return $this->generic(Maintenance::class, 'fleet-ops see maintenance', ['public_id', 'uuid', 'status', 'type', 'summary', 'notes'], 'console.fleet-ops.maintenance.maintenances.index.details', $terms);
+        return $this->generic(Maintenance::class, 'fleet-ops see maintenance', ['public_id', 'summary', 'notes'], 'console.fleet-ops.maintenance.maintenances.index.details', $terms);
     }
 
     protected function devices(array $terms): array
     {
-        return $this->generic(Device::class, 'fleet-ops see device', ['public_id', 'uuid', 'name', 'device_id', 'imei', 'serial_number', 'status'], 'console.fleet-ops.connectivity.devices.index.details', $terms);
+        return $this->generic(Device::class, 'fleet-ops see device', ['public_id', 'name', 'device_id', 'imei', 'serial_number'], 'console.fleet-ops.connectivity.devices.index.details', $terms);
     }
 
     protected function sensors(array $terms): array
     {
-        return $this->generic(Sensor::class, 'fleet-ops see sensor', ['public_id', 'uuid', 'name', 'internal_id', 'serial_number', 'imei', 'type', 'sensor_type', 'status'], 'console.fleet-ops.connectivity.sensors.index.details', $terms);
+        return $this->generic(Sensor::class, 'fleet-ops see sensor', ['public_id', 'name', 'internal_id', 'serial_number', 'imei'], 'console.fleet-ops.connectivity.sensors.index.details', $terms);
     }
 
     protected function telematics(array $terms): array
     {
-        return $this->generic(Telematic::class, 'fleet-ops see telematic', ['public_id', 'uuid', 'name', 'provider', 'status'], 'console.fleet-ops.connectivity.telematics.details', $terms);
+        return $this->generic(Telematic::class, 'fleet-ops see telematic', ['public_id', 'name'], 'console.fleet-ops.connectivity.telematics.details', $terms);
     }
 
     protected function generic(string $modelClass, string $permission, array $columns, string $route, array $terms): array
@@ -193,23 +243,35 @@ class SearchResourcesCapability extends AbstractFleetOpsAICapability
 
     protected function orderSearchQuery()
     {
-        return Order::with(['transaction', 'trackingNumber'])
-            ->where('company_uuid', session('company'));
+        return $this->scopeToPermission(
+            Order::with(['transaction', 'trackingNumber'])->where('company_uuid', session('company')),
+            'fleet-ops list order'
+        );
     }
 
     protected function vehicleSearchQuery()
     {
-        return Vehicle::where('company_uuid', session('company'));
+        return $this->scopeToPermission(Vehicle::where('company_uuid', session('company')), 'fleet-ops list vehicle');
     }
 
     protected function driverSearchQuery()
     {
-        return Driver::with('user')
-            ->where('company_uuid', session('company'));
+        return $this->scopeToPermission(Driver::with('user')->where('company_uuid', session('company')), 'fleet-ops list driver');
     }
 
     protected function genericSearchQuery(string $modelClass)
     {
-        return $modelClass::where('company_uuid', session('company'));
+        $permission = match ($modelClass) {
+            WorkOrder::class   => 'fleet-ops list work-order',
+            Maintenance::class => 'fleet-ops list maintenance',
+            Device::class      => 'fleet-ops list device',
+            Sensor::class      => 'fleet-ops list sensor',
+            Telematic::class   => 'fleet-ops list telematic',
+            default            => null,
+        };
+
+        $query = $modelClass::where('company_uuid', session('company'));
+
+        return $permission ? $this->scopeToPermission($query, $permission) : $query;
     }
 }
