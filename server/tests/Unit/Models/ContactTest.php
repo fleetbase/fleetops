@@ -71,9 +71,18 @@ class FleetOpsContactUnitUserFake extends User
         return true;
     }
 
+    public function save(array $options = []): bool
+    {
+        $this->updates[] = $this->getDirty();
+        $this->syncOriginal();
+
+        return true;
+    }
+
     public function delete()
     {
         $this->deleted = true;
+        $this->setAttribute('deleted_at', '2026-01-01 00:00:00');
 
         return true;
     }
@@ -178,6 +187,16 @@ class FleetOpsContactUnitAssignableFake extends FleetOpsContactUnitFake
 
         return static::$query;
     }
+}
+
+function fleetopsContactUnitUseProfileTables(): SQLiteConnection
+{
+    $connection = fleetopsContactUnitUseInMemoryConnection();
+    $connection->statement('create table drivers (uuid varchar(64), user_uuid varchar(64) null, company_uuid varchar(64) null, deleted_at datetime null)');
+    $connection->statement('create table contacts (uuid varchar(64), user_uuid varchar(64) null, company_uuid varchar(64) null, deleted_at datetime null)');
+    $connection->statement('create table company_users (uuid varchar(64), user_uuid varchar(64) null, company_uuid varchar(64) null, created_at datetime null, updated_at datetime null, deleted_at datetime null)');
+
+    return $connection;
 }
 
 function fleetopsContactUnitUseInMemoryConnection(): SQLiteConnection
@@ -496,6 +515,8 @@ test('contact user conflict helpers guard staff users and allow customers', func
 });
 
 test('contact sync delete and user presence helpers use loaded user relations', function () {
+    fleetopsContactUnitUseProfileTables();
+
     $user = new FleetOpsContactUnitUserFake();
     $user->setRawAttributes([
         'uuid' => 'user-uuid',
@@ -521,6 +542,7 @@ test('contact sync delete and user presence helpers use loaded user relations', 
     ]);
     $contact->setRelation('user', $user);
     $contact->fakeUser = $user;
+    $contact->exists   = true;
 
     expect($contact->syncWithUser())->toBeTrue()
         ->and($user->updates)->toBe([[
@@ -543,18 +565,38 @@ test('contact sync delete and user presence helpers use loaded user relations', 
         ->and($unlinked->doesntHaveUser())->toBeTrue();
 });
 
-test('contact delete user ignores mismatched relation types', function () {
+test('contact delete user leaves team member accounts alone', function () {
     $user = new FleetOpsContactUnitUserFake();
     $user->setRawAttributes([
         'uuid' => 'user-uuid',
-        'type' => 'customer',
+        'type' => 'user',
     ], true);
 
-    $contact = new FleetOpsContactUnitFake(['type' => 'contact']);
-    $contact->setRelation('user', $user);
+    $contact           = new FleetOpsContactUnitFake(['type' => 'customer']);
+    $contact->fakeUser = $user;
 
     expect($contact->deleteUser())->toBeFalse()
         ->and($user->deleted)->toBeFalse();
+});
+
+test('contact delete user keeps a managed account still used by another organization', function () {
+    $connection = fleetopsContactUnitUseProfileTables();
+    $connection->table('drivers')->insert(['uuid' => 'driver-elsewhere', 'user_uuid' => 'user-uuid', 'company_uuid' => 'other-company']);
+    $connection->table('company_users')->insert([
+        ['uuid' => 'cu-1', 'user_uuid' => 'user-uuid', 'company_uuid' => 'company-uuid'],
+        ['uuid' => 'cu-2', 'user_uuid' => 'user-uuid', 'company_uuid' => 'other-company'],
+    ]);
+
+    $user = new FleetOpsContactUnitUserFake();
+    $user->setRawAttributes(['uuid' => 'user-uuid', 'type' => 'driver'], true);
+
+    $contact           = new FleetOpsContactUnitFake(['type' => 'contact', 'company_uuid' => 'company-uuid']);
+    $contact->fakeUser = $user;
+
+    // The account only leaves this organization
+    expect($contact->deleteUser())->toBeFalse()
+        ->and($user->deleted)->toBeFalse()
+        ->and($connection->table('company_users')->whereNull('deleted_at')->pluck('company_uuid')->all())->toBe(['other-company']);
 });
 
 test('contact real user helpers return loaded relations without database lookup', function () {

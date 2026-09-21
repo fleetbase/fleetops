@@ -230,6 +230,42 @@ test('password login rejects bad credentials and issues driver tokens', function
         ->and($connection->table('personal_access_tokens')->value('name'))->toBe('driver-1');
 });
 
+test('deactivated driver logins are refused on every sign-in path', function () {
+    $connection = fleetopsDriverAuthBoot();
+    $controller = new DriverController();
+    $connection->table('users')->where('uuid', 'user-1')->update(['status' => 'inactive']);
+    app('hash')->checks = true;
+
+    // An unknown identity fails authentication rather than erroring on a null user
+    $unknown = $controller->login(Request::create('/x', 'POST', ['identity' => 'ghost@example.test', 'password' => 'secret']));
+    expect($unknown->getStatusCode())->toBe(401);
+
+    $password = $controller->login(Request::create('/x', 'POST', ['identity' => 'driver@example.test', 'password' => 'secret']));
+
+    app()->instance('request', Request::create('/x', 'POST', ['phone' => '6591234567']));
+    $phone = $controller->loginWithPhone();
+
+    $connection->table('verification_codes')->insert(['uuid' => 'vc-1', 'subject_uuid' => 'user-1', 'code' => '424242', 'for' => 'driver_login']);
+    $code = $controller->verifyCode(Request::create('/x', 'POST', ['identity' => '6591234567', 'code' => '424242']));
+
+    foreach ([$password, $phone, $code] as $response) {
+        expect($response->getStatusCode())->toBe(403)
+            ->and($response->getData(true)['error'])->toBe(DriverController::DEACTIVATED_LOGIN_MESSAGE);
+    }
+
+    // Password recovery answers as if the identity were unknown
+    $forgot = $controller->forgotPassword(Request::create('/x', 'POST', ['identity' => 'driver@example.test']));
+    $reset  = $controller->resetPassword(Request::create('/x', 'POST', ['identity' => 'driver@example.test', 'code' => '424242', 'password' => 'new-secret-123']));
+
+    expect($forgot->getData(true))->toBe(['status' => 'ok'])
+        ->and($reset->getStatusCode())->toBe(422)
+        ->and($reset->getData(true)['error'])->toBe('Invalid or expired reset code.');
+
+    expect(DriverController::isLoginDeactivated(User::where('uuid', 'user-1')->first()))->toBeTrue()
+        ->and($connection->table('personal_access_tokens')->count())->toBe(0)
+        ->and($connection->table('verification_codes')->count())->toBe(1);
+});
+
 test('phone login falls back to email verification and errors without channels', function () {
     $connection = fleetopsDriverAuthBoot();
     $controller = new DriverController();

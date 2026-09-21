@@ -128,4 +128,57 @@ module('Unit | Service | driver-actions', function (hooks) {
 
         await service.unassignOrders({ id: 'driver-1', name: 'Alex Driver' });
     });
+
+    test('account actions are hidden without a managed login', function (assert) {
+        const service = this.owner.lookup('service:driver-actions');
+        service.intl = { t: (key) => key };
+
+        assert.deepEqual(service.accountMenuItems({ id: 'driver-1', user_uuid: null }), [], 'no login account');
+        assert.deepEqual(service.accountMenuItems({ id: 'driver-1', user_uuid: 'user-1', is_staff_linked: true }), [], 'staff-linked login is managed from IAM');
+    });
+
+    test('account actions toggle deactivate/reactivate by login status', function (assert) {
+        const service = this.owner.lookup('service:driver-actions');
+        service.intl = { t: (key) => key };
+
+        const active = service.accountMenuItems({ id: 'driver-1', user_uuid: 'user-1', login_status: 'active' }).map((item) => item.text);
+        assert.deepEqual(active, [undefined, 'profile-account.actions.reset-password', 'profile-account.actions.send-credentials', 'profile-account.actions.deactivate-login']);
+
+        const inactive = service.accountMenuItems({ id: 'driver-1', user_uuid: 'user-1', login_status: 'inactive' }).map((item) => item.text);
+        assert.true(inactive.includes('profile-account.actions.reactivate-login'));
+        assert.false(inactive.includes('profile-account.actions.deactivate-login'));
+    });
+
+    test('deactivateLogin posts to the driver endpoint and applies the response', async function (assert) {
+        const service = this.owner.lookup('service:driver-actions');
+        const driver = {
+            id: 'driver-1',
+            name: 'Alex Driver',
+            user_uuid: 'user-1',
+            login_status: 'active',
+            setProperties(values) {
+                Object.assign(this, values);
+            },
+        };
+        let confirmOptions;
+
+        service.intl = { t: (key) => key };
+        service.notifications = { success: () => assert.step('success'), serverError: () => assert.ok(false, 'unexpected call') };
+        service.fetch = {
+            post: async (url, payload, options) => {
+                assert.strictEqual(url, 'drivers/driver-1/deactivate-login');
+                assert.deepEqual(payload, {});
+                assert.deepEqual(options, { namespace: 'int/v1' });
+
+                return { status: 'ok', driver: { id: 'driver-1', user_uuid: 'user-1', is_staff_linked: false, login_status: 'inactive' } };
+            },
+        };
+        service.modalsManager = { confirm: (options) => (confirmOptions = options) };
+
+        service.deactivateLogin(driver);
+        await confirmOptions.confirm({ startLoading() {}, stopLoading() {}, done: () => assert.step('done') });
+
+        assert.strictEqual(driver.login_status, 'inactive');
+        assert.verifySteps(['success', 'done']);
+    });
 });

@@ -1,0 +1,13 @@
+<div class="profile-identity-hint text-xs" {{did-insert this.lookupIdentity}} {{did-update this.lookupIdentity @email @phone}} ...attributes>
+    {{#if this.conflict}}
+        <div class="flex items-center space-x-1 text-yellow-600 dark:text-yellow-400" data-test-profile-identity-conflict>
+            <FaIcon @icon="triangle-exclamation" @size="xs" />
+            <span>{{this.conflict}}</span>
+        </div>
+    {{else if this.staff}}
+        <div class="flex items-center space-x-1 text-blue-600 dark:text-blue-400" data-test-profile-identity-staff>
+            <FaIcon @icon="circle-info" @size="xs" />
+            <span>{{t "profile-account.will-link-to-staff" name=(or this.staff.name this.staff.email this.staff.phone)}}</span>
+        </div>
+    {{/if}}
+</div>

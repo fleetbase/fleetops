@@ -30,11 +30,22 @@
                 <Input @value={{@resource.title}} @type="text" class="w-full form-input" placeholder={{t "common.title"}} disabled={{cannot-write @resource}} />
             </InputGroup>
             <InputGroup @name={{t "common.email"}}>
-                <Input @value={{@resource.email}} @type="text" class="w-full form-input" placeholder={{t "common.email"}} disabled={{cannot-write @resource}} />
+                <Input
+                    @value={{@resource.email}}
+                    @type="text"
+                    class="w-full form-input"
+                    placeholder={{t "common.email"}}
+                    disabled={{or (cannot-write @resource) @resource.is_staff_linked}}
+                />
             </InputGroup>
             <InputGroup @name={{t "common.phone"}}>
-                <PhoneInput @value={{@resource.phone}} @onInput={{fn (mut @resource.phone)}} class="form-input w-full" disabled={{cannot-write @resource}} />
+                <PhoneInput @value={{@resource.phone}} @onInput={{fn (mut @resource.phone)}} class="form-input w-full" disabled={{or (cannot-write @resource) @resource.is_staff_linked}} />
             </InputGroup>
+            {{#if @resource.is_staff_linked}}
+                <div class="lg:col-span-2 -mt-1 mb-2 text-xs text-gray-500 dark:text-gray-400" data-test-staff-linked-helper>{{t "profile-account.staff-linked-helper"}}</div>
+            {{else if @resource.isNew}}
+                <ProfileIdentityHint @email={{@resource.email}} @phone={{@resource.phone}} @type="contact" class="lg:col-span-2" />
+            {{/if}}
             <InputGroup @name={{t "common.internal-id"}}>
                 <Input @value={{@resource.internal_id}} @type="text" class="w-full form-input" placeholder={{t "common.internal-id"}} disabled={{cannot-write @resource}} />
             </InputGroup>

@@ -125,7 +125,9 @@ function fleetopsCustomerCredentialsBoot(): SQLiteConnection
         'contacts'  => ['uuid', 'public_id', 'company_uuid', 'user_uuid', 'name', 'email', 'phone', 'type', 'title', 'meta', 'photo_uuid', 'place_uuid', 'slug', '_key'],
         'users'     => ['uuid', 'public_id', 'company_uuid', 'name', 'email', 'phone', 'password', 'type', 'status', 'timezone', 'slug', 'username', 'avatar_uuid', 'meta', '_key'],
         'companies' => ['uuid', 'public_id', 'name', 'country'],
-        'files'     => ['uuid', 'public_id', 'company_uuid', 'subject_uuid', 'subject_type', 'name', 'path', 'disk', 'type', '_key'],
+        // session_status reads the user's membership of the session company
+        'company_users' => ['uuid', 'company_uuid', 'user_uuid', 'status'],
+        'files'         => ['uuid', 'public_id', 'company_uuid', 'subject_uuid', 'subject_type', 'name', 'path', 'disk', 'type', '_key'],
     ];
     foreach ($tables as $table => $columns) {
         $schema->create($table, function ($blueprint) use ($columns) {
@@ -192,5 +194,7 @@ test('customer resolution and payload helpers expose user details', function () 
 
     $payload = $probe->callHelper('customerPayload', $customer);
     expect($payload['uuid'])->toBe('55555555-5555-4555-8555-555555555555')
-        ->and($payload)->toHaveKey('user');
+        ->and($payload['user']['uuid'])->toBe('user-1')
+        ->and($payload['is_staff_linked'])->toBeFalse()
+        ->and($payload['login_status'])->toBe('active');
 });

@@ -41,9 +41,13 @@ class CreateDriverRequest extends FleetbaseRequest
              * value later. Both are still validated and still unique when they
              * are supplied; a driver created without them simply cannot sign in
              * to Navigator until credentials are added.
+             *
+             * On create, availability is decided by ProfileAccountManager: a team
+             * member of the company with the email or phone is linked to the new
+             * driver instead of being rejected as a duplicate.
              */
-            'email'    => ['nullable', Rule::when($this->filled('email'), ['email']), $this->uniqueAmongUsers()],
-            'phone'    => ['nullable', 'string', $this->uniqueAmongUsers()],
+            'email'    => ['nullable', Rule::when($this->filled('email'), ['email']), Rule::when(!$isCreating, [$this->uniqueAmongUsers()])],
+            'phone'    => ['nullable', 'string', Rule::when(!$isCreating, [$this->uniqueAmongUsers()])],
             'password' => 'nullable|string',
             'timezone' => 'nullable|string|max:64',
 

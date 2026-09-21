@@ -254,7 +254,6 @@ class FleetOpsZoneControllerProbe extends ZoneController
 class FleetOpsInternalContactControllerProbe extends InternalContactController
 {
     public array $installedPackages = [];
-    public array $resolvedUsers     = [];
     public array $sentCredentials   = [];
     public array $savedMetas        = [];
     public ?User $contactUser       = null;
@@ -267,13 +266,6 @@ class FleetOpsInternalContactControllerProbe extends InternalContactController
         $reflection->setAccessible(true);
 
         return $reflection->invoke($this, ...$arguments);
-    }
-
-    protected function resolveUserUuid(string $user): string
-    {
-        $this->resolvedUsers[] = $user;
-
-        return 'resolved-' . $user;
     }
 
     protected function installedFleetbaseExtensions(): array
@@ -1607,7 +1599,7 @@ test('internal contact controller create update and after save hooks protect cus
             ],
         ],
     ]);
-    $input      = ['type' => 'contact', 'user' => ['id' => 'user_public']];
+    $input      = ['type' => 'contact', 'user' => ['id' => 'user_public'], 'user_uuid' => 'user-uuid'];
 
     $controller->onBeforeCreate($request, $input);
 
@@ -1623,8 +1615,8 @@ test('internal contact controller create update and after save hooks protect cus
 
     $controller->afterSave($request, $contact);
 
-    expect($input)->toBe(['type' => 'contact', 'user_uuid' => 'resolved-user_public'])
-        ->and($controller->resolvedUsers)->toBe(['user_public'])
+    // The login account is managed by the profile, so a user can't be picked from the console
+    expect($input)->toBe(['type' => 'contact'])
         ->and($contact->normalized)->toBeTrue()
         ->and($contact->syncedCustomFields)->toBe([
             ['key' => 'tier', 'value' => 'gold'],

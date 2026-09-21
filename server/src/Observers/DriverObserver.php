@@ -5,6 +5,7 @@ namespace Fleetbase\FleetOps\Observers;
 use Fleetbase\FleetOps\Models\Driver;
 use Fleetbase\FleetOps\Models\Order;
 use Fleetbase\FleetOps\Support\LiveCacheService;
+use Fleetbase\FleetOps\Support\ProfileAccountManager;
 use Fleetbase\LaravelMysqlSpatial\Types\Point;
 use Fleetbase\Models\User;
 
@@ -64,11 +65,9 @@ class DriverObserver
         // Unassign them from any order they are assigned to
         $this->unassignOrders($driver);
 
-        // If the driver had a user account with the role driver and type user delete it
-        $user = $this->findDriverUser($driver);
-        if ($user && $user->hasRole('Driver')) {
-            $user->delete();
-        }
+        // Delete the driver's managed login account, which frees its email and
+        // phone. A team member's account linked to the driver is left alone.
+        ProfileAccountManager::releaseForProfile($this->findDriverUser($driver), $driver->company_uuid);
 
         $this->invalidateLiveCache();
     }
@@ -85,6 +84,6 @@ class DriverObserver
 
     protected function findDriverUser(Driver $driver): ?User
     {
-        return User::where(['uuid' => $driver->user_uuid, 'type' => 'user'])->first();
+        return $driver->user_uuid ? User::where('uuid', $driver->user_uuid)->first() : null;
     }
 }

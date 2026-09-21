@@ -801,11 +801,9 @@ driver:
     fields:
         avatar: Avatar
         driver-details: Driver Details
-        select-user: Select User
         select-vehicle: Select Vehicle
         upload-new-photo: Upload new photo
         user-account: User Account
-        user-account-help-text: Each driver profile needs to be connected to a specific user account. This association is essential for handling the authentication process, ensuring that each driver can securely access and manage their profile.
         vendor: Vendor
         select-vendor: Select Vendor
         driver-license: Drivers License
@@ -837,6 +835,40 @@ driver:
         unassign-vehicle-body: This removes {driverName} from {vehicleName}. Order assignments are not changed.
         unassign-vehicle-success: Unassigned {vehicleName} from {driverName}.
         issue-title: Issue reported for {driverName}
+
+profile-account:
+    staff-linked-helper: Linked to a team member account — manage email and phone from IAM.
+    will-link-to-staff: Will be linked to existing team member {name}.
+    actions:
+        reset-password: Reset Password
+        send-credentials: Send Credentials
+        deactivate-login: Deactivate Login
+        reactivate-login: Reactivate Login
+        convert-to-vendor: Convert to Vendor
+    prompts:
+        send-credentials-title: Send Login Credentials
+        send-credentials-body: Generate a new temporary password and send {name} their login credentials.
+        send-credentials-success: Login credentials sent to {name}.
+        deactivate-login-body: Deactivate the login for {name}. Their profile and history will be preserved.
+        deactivate-login-success: Login deactivated for {name}.
+        reactivate-login-body: Reactivate the login for {name}.
+        reactivate-login-success: Login reactivated for {name}.
+        send-portal-credentials-title: Send Portal Credentials
+        send-portal-credentials-body: Generate a new temporary password and email this contact their portal credentials.
+        send-portal-credentials-success: Portal credentials sent.
+        deactivate-portal-login-body: Deactivate portal access for this contact. Their profile and history will be preserved.
+        deactivate-portal-login-success: Portal login deactivated.
+        reactivate-portal-login-body: Reactivate portal access for this contact.
+        reactivate-portal-login-success: Portal login reactivated.
+        reset-password-title: Reset Login Credentials
+        reset-password-heading: You are about to reset the password for {name}
+        reset-password-body: Please enter the new password and confirm it below. You can optionally send the new credentials by selecting the checkbox.
+        reset-password-accept: Reset Credentials
+        reset-password-success: Password reset.
+        new-password: New Password
+        confirm-new-password: Confirm New Password
+        send-new-credentials: Send the new credentials to this account
+
 device:
     attachment:
         title: Attached asset

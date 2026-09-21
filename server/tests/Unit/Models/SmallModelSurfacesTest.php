@@ -176,45 +176,51 @@ test('customer creation forces the customer type and scopes orders', function ()
     expect($customer->orders())->toBeInstanceOf(HasMany::class);
 });
 
-test('contact observer availability checks and deletion resolve against users', function () {
+test('contact observer deletion releases the managed account and leaves team members alone', function () {
     $connection = fleetopsSmallModelBoot();
-    $connection->table('users')->insert(['uuid' => 'user-2', 'company_uuid' => 'company-1', 'email' => 'taken@example.test', 'phone' => '+6512345678']);
+    config(['activitylog.enabled' => false]);
+    app()->bind(Illuminate\Contracts\Config\Repository::class, fn () => config());
+    $connection->getSchemaBuilder()->create('drivers', function ($blueprint) {
+        $blueprint->increments('id');
+        $blueprint->string('uuid')->nullable();
+        $blueprint->string('company_uuid')->nullable();
+        $blueprint->string('user_uuid')->nullable();
+        $blueprint->timestamp('deleted_at')->nullable();
+    });
+    $connection->table('users')->insert([
+        ['uuid' => '11111111-1111-4111-8111-111111111111', 'company_uuid' => 'company-1', 'type' => 'contact'],
+        ['uuid' => '22222222-2222-4222-8222-222222222222', 'company_uuid' => 'company-1', 'type' => 'user'],
+    ]);
 
-    $observer   = new ContactObserver();
-    $reflection = new ReflectionClass($observer);
+    $observer = new ContactObserver();
 
     $contact = new Fleetbase\FleetOps\Models\Contact();
-    $contact->setRawAttributes(['uuid' => 'contact-1', 'company_uuid' => 'company-1', 'user_uuid' => 'user-1', 'email' => 'taken@example.test', 'phone' => '+6512345678', 'type' => 'contact'], true);
+    $contact->setRawAttributes(['uuid' => 'contact-1', 'company_uuid' => 'company-1', 'user_uuid' => '11111111-1111-4111-8111-111111111111', 'type' => 'contact'], true);
     $contact->exists = true;
 
-    $emailCheck = $reflection->getMethod('isEmailUnavailable');
-    $emailCheck->setAccessible(true);
-    expect($emailCheck->invoke($observer, $contact))->toBeTrue();
+    $staffContact = new Fleetbase\FleetOps\Models\Contact();
+    $staffContact->setRawAttributes(['uuid' => 'contact-2', 'company_uuid' => 'company-1', 'user_uuid' => '22222222-2222-4222-8222-222222222222', 'type' => 'contact'], true);
+    $staffContact->exists = true;
 
-    $phoneCheck = $reflection->getMethod('isPhoneUnavailable');
-    $phoneCheck->setAccessible(true);
-    expect($phoneCheck->invoke($observer, $contact))->toBeTrue();
-
-    $contact->email = 'free@example.test';
-    $contact->phone = '+6599999999';
-    expect($emailCheck->invoke($observer, $contact))->toBeFalse()
-        ->and($phoneCheck->invoke($observer, $contact))->toBeFalse();
-
-    // Deletion removes the associated user account
     $observer->deleted($contact);
-    expect(true)->toBeTrue();
+    $observer->deleted($staffContact);
+
+    // The managed account had no other profile, so it is deleted
+    expect($connection->table('users')->where('uuid', '11111111-1111-4111-8111-111111111111')->value('deleted_at'))->not->toBeNull()
+        ->and($connection->table('users')->where('uuid', '22222222-2222-4222-8222-222222222222')->value('deleted_at'))->toBeNull();
 });
 
 test('contact observer rejects saves whose email or phone belongs to another account', function () {
     $connection = fleetopsSmallModelBoot();
-    $connection->table('users')->insert(['uuid' => '22222222-2222-4222-8222-222222222222', 'company_uuid' => 'company-1', 'email' => 'taken@example.test', 'phone' => '+6512345678']);
+    $connection->table('users')->insert([
+        ['uuid' => '11111111-1111-4111-8111-111111111111', 'company_uuid' => 'company-1', 'type' => 'contact', 'email' => 'free@example.test', 'phone' => '+6599999999'],
+        ['uuid' => '22222222-2222-4222-8222-222222222222', 'company_uuid' => 'company-1', 'type' => 'user', 'email' => 'taken@example.test', 'phone' => '+6512345678'],
+    ]);
 
     $observer = new ContactObserver();
 
-    // The availability checks are private, so the guards can only be reached
-    // through saving() with a contact that genuinely collides on a real table.
     // hasUser() keys off a well-formed uuid, so a real one keeps saving() from
-    // detouring into account provisioning before it reaches the guards.
+    // detouring into account provisioning before it reaches the sync.
     $contact = new Fleetbase\FleetOps\Models\Contact();
     $contact->setRawAttributes([
         'uuid'         => 'contact-collide',
@@ -226,23 +232,16 @@ test('contact observer rejects saves whose email or phone belongs to another acc
     ], true);
     $contact->exists = true;
 
-    // wasChanged() reads the post-save change set, which setRawAttributes does
-    // not populate — syncChanges promotes the pending edit into it.
     $contact->email = 'taken@example.test';
-    $contact->syncChanges();
 
     expect(fn () => $observer->saving($contact))
-        ->toThrow(Exception::class, 'Email attempting to update for contact is not available.');
+        ->toThrow(Fleetbase\FleetOps\Exceptions\ProfileIdentityConflictException::class, 'This email is already in use by another account.');
 
-    // The phone guard sits behind the email one, so it only surfaces once the
-    // email is back to an available value
-    $contact->syncOriginal();
     $contact->email = 'free@example.test';
     $contact->phone = '+6512345678';
-    $contact->syncChanges();
 
     expect(fn () => $observer->saving($contact))
-        ->toThrow(Exception::class, 'Phone attempting to update for contact is not available.');
+        ->toThrow(Fleetbase\FleetOps\Exceptions\ProfileIdentityConflictException::class, 'This phone number is already in use by another account.');
 });
 
 test('tracking status request authorizes by session and rejects duplicates', function () {

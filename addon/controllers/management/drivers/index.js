@@ -358,6 +358,10 @@ export default class ManagementDriversIndexController extends Controller {
                     {
                         separator: true,
                     },
+                    ...this.driverActions.accountRowActionItems(),
+                    {
+                        separator: true,
+                    },
                     {
                         label: this.intl.t('common.delete-resource', { resource: this.intl.t('resource.driver') }),
                         icon: 'trash',
