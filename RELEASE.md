@@ -1,21 +1,18 @@
-> v0.6.68 ~ "Telematics sync status and SASCO fuel"
+> v0.6.69 ~ "Fleet-Ops tools for Fleetbase AI"
 
 ---
 ## What's New
-- **SASCO is a native fuel provider.** Connect a SASCO B2B account alongside PetroApp to import fuel transactions, with sandbox and production environments, amounts in SAR, driver name and phone, and receipt images. Transactions are matched to vehicles by plate.
-- **"Sync Devices" works while telematics polling is running.** A manual sync requested while a scheduled sweep is queued or running is recorded and completed by the next sweep, instead of failing with "already queued or running".
-- **Telematics connection status stays current.** Each completed scheduled sweep updates the connection status and last sync time, so a connection that has recovered no longer shows "Needs attention" or an old last sync date.
+- **Fleet-Ops works with Fleetbase AI tool calling.** Creating orders from the AI prompt works again with the tool-calling assistant, and the assistant can also propose an optimized waypoint sequence for an order and explain what an order or resource import needs. Every change is a preview card the user confirms.
+- **Fleet-Ops console actions.** The assistant can offer to open Fleet-Ops pages and dialogs, such as **Operations › Orders** and **New Order**, as confirmation cards.
+- **Resource search for the assistant.** A `fleetops_search` tool finds orders, vehicles, drivers, work orders, maintenances, devices, sensors and telematics records by id, name, plate, VIN, email or phone.
 
 ---
 ## Fixes
-- Manual telematics sync requests can no longer stay queued or failed indefinitely after their job is lost; the next scheduled sweep completes them.
-- Fuel provider environment labels and sync run details no longer refer to PetroApp for other providers.
+- AI resource search no longer fails on every call with `Unknown column 'sensor_type'`, and database errors are no longer passed to the model.
 
 ---
 ## Testing
-- Backend tests cover manual syncs during scheduled sweeps, stale failure recovery, partial sweeps, and adoption of abandoned requests.
-- SASCO provider tests cover login, token caching, re-login after a 401, connection tests, pagination limits, error handling and transaction normalization.
-- `docs/TELEMATICS_QUEUES.md` now documents that dedicated telematics workers must share the queue worker's image and `APP_KEY`, with verification commands and troubleshooting.
+- Unit tests cover the new AI tools and console commands, and the AI capability registration.
 
 ---
 ## Need help?
