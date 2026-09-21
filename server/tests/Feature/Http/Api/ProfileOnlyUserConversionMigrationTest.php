@@ -4,7 +4,6 @@ use Illuminate\Database\ConnectionResolver;
 use Illuminate\Database\Eloquent\Model as EloquentModel;
 use Illuminate\Database\SQLiteConnection;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
 
 /**
@@ -45,20 +44,6 @@ function fleetopsProfileConversionBoot(bool $withPolicies = true): SQLiteConnect
     app()->instance('db.schema', $connection->getSchemaBuilder());
     DB::clearResolvedInstance('db');
     Schema::clearResolvedInstance('db.schema');
-
-    $GLOBALS['fleetopsProfileConversionLogs'] = [];
-    app()->instance('log', new class {
-        public function info($message, array $context = []): void
-        {
-            $GLOBALS['fleetopsProfileConversionLogs'][] = [$message, $context];
-        }
-
-        public function __call($method, $arguments)
-        {
-            return null;
-        }
-    });
-    Log::clearResolvedInstance('log');
 
     $schema = $connection->getSchemaBuilder();
     $tables = [
@@ -169,10 +154,7 @@ test('up converts profile-only accounts and leaves anything that looks like a te
     ])
         // The previous type is recorded next to any existing meta
         ->and(json_decode($connection->table('users')->where('uuid', 'a-driver')->value('meta'), true))->toBe(['source' => 'console', 'previous_type' => 'user'])
-        ->and(json_decode($connection->table('users')->where('uuid', 'm-bad-meta')->value('meta'), true))->toBe(['previous_type' => 'user'])
-        ->and($GLOBALS['fleetopsProfileConversionLogs'])->toBe([
-            ['[fleetops] Converted profile-only user accounts to managed accounts.', ['driver' => 2, 'customer' => 1]],
-        ]);
+        ->and(json_decode($connection->table('users')->where('uuid', 'm-bad-meta')->value('meta'), true))->toBe(['previous_type' => 'user']);
 });
 
 test('down reverts only the accounts up converted', function () {
@@ -207,8 +189,7 @@ test('up and down do nothing when the tables they read are missing', function ()
     $migration = fleetopsProfileConversionMigration();
     $migration->up();
 
-    expect(fleetopsProfileConversionTypes($connection))->toBe(['a-driver' => 'user'])
-        ->and($GLOBALS['fleetopsProfileConversionLogs'])->toBe([]);
+    expect(fleetopsProfileConversionTypes($connection))->toBe(['a-driver' => 'user']);
 
     $connection->table('users')->where('uuid', 'a-driver')->update(['type' => 'driver', 'meta' => json_encode(['previous_type' => 'user'])]);
     $connection->getSchemaBuilder()->drop('users');

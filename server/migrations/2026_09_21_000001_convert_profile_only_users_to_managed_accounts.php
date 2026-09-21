@@ -2,7 +2,6 @@
 
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
 
 /*
@@ -31,8 +30,6 @@ return new class extends Migration {
             return;
         }
 
-        $converted = ['driver' => 0, 'customer' => 0];
-
         DB::table('users')
             ->select(['uuid', 'meta'])
             ->where('type', 'user')
@@ -48,7 +45,7 @@ return new class extends Migration {
                 $query->selectRaw(1)->from('companies')->whereColumn('companies.owner_uuid', 'users.uuid');
             })
             ->orderBy('uuid')
-            ->chunk(500, function ($users) use (&$converted) {
+            ->chunk(500, function ($users) {
                 foreach ($users as $user) {
                     $type = $this->managedTypeFor($user->uuid);
                     if (!$type) {
@@ -60,11 +57,8 @@ return new class extends Migration {
                     $meta['previous_type'] = 'user';
 
                     DB::table('users')->where('uuid', $user->uuid)->update(['type' => $type, 'meta' => json_encode($meta)]);
-                    $converted[$type]++;
                 }
             });
-
-        Log::info('[fleetops] Converted profile-only user accounts to managed accounts.', $converted);
     }
 
     public function down(): void
