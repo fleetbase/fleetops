@@ -39,6 +39,7 @@ use Fleetbase\Models\File;
 use Fleetbase\Models\Type;
 use Fleetbase\Support\Auth;
 use Fleetbase\Support\TemplateString;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\Request;
@@ -341,7 +342,8 @@ class OrderController extends FleetOpsController
         $info    = Utils::lookupIp();
         $disk    = $request->input('disk', config('filesystems.default'));
         $files   = $request->input('files');
-        $files   = File::whereIn('uuid', $files)->get();
+        /** @var \Illuminate\Database\Eloquent\Collection<int, File> $files */
+        $files   = $this->scopedToCompany(File::whereIn('uuid', $files))->get();
         $country = $request->input('country', Utils::or($info, ['country_name', 'region'], 'Singapore'));
 
         $validFileTypes = ['csv', 'tsv', 'xls', 'xlsx'];
@@ -513,7 +515,13 @@ class OrderController extends FleetOpsController
         }
 
         // Prepare Order UUID Collection
-        $orderUuids = collect($data['ids'])->unique()->values();
+        //
+        // Resolved through the company-scoped lookup so ids naming another
+        // organization's orders are dropped here rather than being assigned,
+        // counted in the response and queued for notification.
+        $orderUuids = $this->ordersByUuid(collect($data['ids'])->unique()->values()->all())
+            ->pluck('uuid')
+            ->values();
 
         // Bulk Update Inside A Transaction
         $this->runTransaction(function () use ($orderUuids, $driver): void {
@@ -545,8 +553,14 @@ class OrderController extends FleetOpsController
      */
     public function cancel(CancelOrderRequest $request)
     {
-        /** @var Order */
+        /** @var Order|null */
         $order = $this->findOrderByUuid($request->input('order'));
+        if (!$order) {
+            // `exists:orders,uuid` on the form request is a global existence
+            // check, so a known uuid belonging to another organization reaches
+            // here and must be rejected rather than dereferenced.
+            return $this->errorResponse('No order found to cancel.');
+        }
 
         $order->cancel();
 
@@ -599,9 +613,39 @@ class OrderController extends FleetOpsController
         );
     }
 
+    /**
+     * Constrain a tenant-owned lookup to the company the caller is acting for.
+     *
+     * The order-lifecycle actions on this controller receive their target as a
+     * caller-supplied identifier in the request body or query string rather than
+     * as a bound route parameter, so nothing upstream narrows these queries to
+     * the caller's tenant: `fleetbase.protected` only checks that the caller
+     * holds the named RBAC capability, never which company the record belongs to.
+     *
+     * A missing company session fails the query closed instead of letting it run
+     * unbounded across every tenant.
+     */
+    protected function scopedToCompany(Builder $query): Builder
+    {
+        $companyUuid = $this->sessionCompany();
+        if (!$companyUuid) {
+            $query->whereRaw('1 = 0');
+
+            return $query;
+        }
+
+        return $query->where($query->getModel()->qualifyColumn('company_uuid'), $companyUuid);
+    }
+
+    /**
+     * @return \Illuminate\Database\Eloquent\Collection<int, Order>
+     */
     protected function ordersByUuid(array $ids)
     {
-        return Order::whereIn('uuid', $ids)->get();
+        /** @var \Illuminate\Database\Eloquent\Collection<int, Order> $orders */
+        $orders = $this->scopedToCompany(Order::whereIn('uuid', $ids))->get();
+
+        return $orders;
     }
 
     protected function trackingStatusExists(?string $trackingNumberUuid, string $code): bool
@@ -611,7 +655,10 @@ class OrderController extends FleetOpsController
 
     protected function findDriverByUuid(string $uuid): ?Driver
     {
-        return Driver::whereUuid($uuid)->first();
+        /** @var Driver|null $driver */
+        $driver = $this->scopedToCompany(Driver::whereUuid($uuid))->first();
+
+        return $driver;
     }
 
     protected function driverDisplayName(Driver $driver): string
@@ -630,17 +677,47 @@ class OrderController extends FleetOpsController
 
     protected function findOrderByUuid(string $uuid): ?Order
     {
-        return Order::where('uuid', $uuid)->first();
+        /** @var Order|null $order */
+        $order = $this->scopedToCompany(Order::where('uuid', $uuid))->first();
+
+        return $order;
     }
 
-    protected function findOrderById(string $id, array $with = []): ?Order
+    /**
+     * Resolve an order by uuid or public_id, constrained to the caller's company.
+     *
+     * The identifier match is grouped so the company constraint applies to both
+     * arms — ungrouped it would read as `uuid = ? OR (public_id = ? AND
+     * company_uuid = ?)` and still resolve another organization's orders.
+     *
+     * The identifier is whatever the caller put in the request, so anything
+     * that is not a non-empty string resolves to no order rather than raising.
+     *
+     * @param array<int, string> $with
+     */
+    protected function findOrderById(mixed $id, array $with = []): ?Order
     {
-        return Order::findById($id, $with);
+        if (!is_string($id) || $id === '') {
+            return null;
+        }
+
+        /** @var Order|null $order */
+        $order = $this->scopedToCompany(Order::query())
+            ->where(function (Builder $query) use ($id) {
+                $query->where('uuid', $id)->orWhere('public_id', $id);
+            })
+            ->with($with)
+            ->first();
+
+        return $order;
     }
 
     protected function findOrderRouteForEdit(string $uuid): ?Order
     {
-        return Order::where('uuid', $uuid)->with(['payload'])->first();
+        /** @var Order|null $order */
+        $order = $this->scopedToCompany(Order::where('uuid', $uuid))->with(['payload'])->first();
+
+        return $order;
     }
 
     protected function orderResponse(Order $order): array
@@ -650,7 +727,7 @@ class OrderController extends FleetOpsController
 
     protected function assignDriverToOrders($orderUuids, Driver $driver): void
     {
-        Order::whereIn('uuid', $orderUuids)->update([
+        $this->scopedToCompany(Order::whereIn('uuid', $orderUuids))->update([
             'driver_assigned_uuid' => $driver->uuid,
             'updated_at'           => now(),
         ]);
@@ -739,17 +816,28 @@ class OrderController extends FleetOpsController
 
     protected function findOrderForStart(?string $uuid): ?Order
     {
-        return Order::where('uuid', $uuid)->withoutGlobalScopes()->first();
+        /** @var Order|null $order */
+        $order = $this->scopedToCompany(Order::where('uuid', $uuid)->withoutGlobalScopes())->first();
+
+        return $order;
     }
 
     protected function findDriverForStart(?string $uuid): ?Driver
     {
-        return Driver::where('uuid', $uuid)->withoutGlobalScopes()->first();
+        /** @var Driver|null $driver */
+        $driver = $this->scopedToCompany(Driver::where('uuid', $uuid)->withoutGlobalScopes())->first();
+
+        return $driver;
     }
 
     protected function findPayloadForStart(?string $uuid): ?Payload
     {
-        return Payload::where('uuid', $uuid)->withoutGlobalScopes()->with(['waypoints', 'waypointMarkers', 'entities'])->first();
+        /** @var Payload|null $payload */
+        $payload = $this->scopedToCompany(Payload::where('uuid', $uuid)->withoutGlobalScopes())
+            ->with(['waypoints', 'waypointMarkers', 'entities'])
+            ->first();
+
+        return $payload;
     }
 
     protected function dispatchDomainEvent(object $event): object
@@ -771,7 +859,7 @@ class OrderController extends FleetOpsController
      */
     public function updateActivity(string $id, Request $request)
     {
-        $order = Order::findById($id, [
+        $order = $this->findOrderById($id, [
             'driverAssigned',
             'payload.entities',
             'payload.pickup',
@@ -882,9 +970,8 @@ class OrderController extends FleetOpsController
      */
     public function nextActivity(string $id, Request $request)
     {
-        try {
-            $order = Order::findByIdOrFail($id);
-        } catch (ModelNotFoundException $e) {
+        $order = $this->findOrderById($id);
+        if (!$order) {
             return response()->error('No order found.');
         }
 
@@ -935,7 +1022,7 @@ class OrderController extends FleetOpsController
      */
     public function setDestination(string $id, string $placeId)
     {
-        $order = Order::findById($id, [
+        $order = $this->findOrderById($id, [
             'payload.pickup',
             'payload.dropoff',
             'payload.return',
@@ -1013,7 +1100,7 @@ class OrderController extends FleetOpsController
             return response()->error($errorMessage, 422);
         }
 
-        $order = Order::findById($id, ['payload.pickup', 'payload.dropoff', 'payload.return', 'payload.waypoints', 'payload.waypointMarkers.place']);
+        $order = $this->findOrderById($id, ['payload.pickup', 'payload.dropoff', 'payload.return', 'payload.waypoints', 'payload.waypointMarkers.place']);
         if (!$order) {
             return response()->error('No order found.');
         }
@@ -1214,7 +1301,14 @@ class OrderController extends FleetOpsController
         }
 
         if (is_string($proof)) {
-            return Proof::where('public_id', $proof)->orWhere('uuid', $proof)->first();
+            /** @var Proof|null $resolved */
+            $resolved = $this->scopedToCompany(Proof::query())
+                ->where(function (Builder $query) use ($proof) {
+                    $query->where('public_id', $proof)->orWhere('uuid', $proof);
+                })
+                ->first();
+
+            return $resolved;
         }
 
         return null;
@@ -1419,7 +1513,12 @@ class OrderController extends FleetOpsController
 
     protected function findOrderForDriverPing(string $id): Order
     {
-        return Order::findByIdOrFail($id, ['driverAssigned']);
+        $order = $this->findOrderById($id, ['driverAssigned']);
+        if (!$order) {
+            throw new ModelNotFoundException();
+        }
+
+        return $order;
     }
 
     protected function sendDriverPing(Driver $driver, Order $order): void
@@ -1692,7 +1791,10 @@ class OrderController extends FleetOpsController
 
     protected function findOrderForProofs(string $id): ?Order
     {
-        return Order::where('uuid', $id)->first();
+        /** @var Order|null $order */
+        $order = $this->scopedToCompany(Order::where('uuid', $id))->first();
+
+        return $order;
     }
 
     protected function findWaypointProofSubject(Order $order, string $subjectId): ?Waypoint
@@ -1708,7 +1810,10 @@ class OrderController extends FleetOpsController
 
     protected function findEntityProofSubject(string $subjectId): ?Entity
     {
-        return Entity::where('uuid', $subjectId)->withoutGlobalScopes()->first();
+        /** @var Entity|null $entity */
+        $entity = $this->scopedToCompany(Entity::where('uuid', $subjectId)->withoutGlobalScopes())->first();
+
+        return $entity;
     }
 
     protected function proofsForSubject(Order $order, Order|Waypoint|Entity $subject)
@@ -1774,12 +1879,17 @@ class OrderController extends FleetOpsController
 
     protected function findOrderByTrackingNumber(string $trackingNumber): ?Order
     {
-        return Order::whereHas(
-            'trackingNumber',
-            function ($query) use ($trackingNumber) {
-                $query->where('tracking_number', $trackingNumber);
-            }
+        /** @var Order|null $order */
+        $order = $this->scopedToCompany(
+            Order::whereHas(
+                'trackingNumber',
+                function ($query) use ($trackingNumber) {
+                    $query->where('tracking_number', $trackingNumber);
+                }
+            )
         )->first();
+
+        return $order;
     }
 
     /**
@@ -1824,13 +1934,25 @@ class OrderController extends FleetOpsController
 
     protected function findOrderForSchedule(?string $id): ?Order
     {
-        return Order::findById($id);
+        return $this->findOrderById($id);
     }
 
+    /**
+     * Resolve a driver by uuid or public_id, constrained to the caller's company.
+     *
+     * The identifier match is grouped so the company constraint applies to both
+     * arms — ungrouped it would read as `uuid = ? OR (public_id = ? AND
+     * company_uuid = ?)` and still resolve another organization's drivers.
+     */
     protected function findDriverForSchedule(string $id): ?Driver
     {
-        return Driver::where('uuid', $id)
-            ->orWhere('public_id', $id)
+        /** @var Driver|null $driver */
+        $driver = $this->scopedToCompany(Driver::query())
+            ->where(function (Builder $query) use ($id) {
+                $query->where('uuid', $id)->orWhere('public_id', $id);
+            })
             ->first();
+
+        return $driver;
     }
 }
