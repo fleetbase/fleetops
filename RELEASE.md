@@ -13,6 +13,7 @@
 ---
 ## Dependencies
 - `@fleetbase/fleetops-data` upgraded to `^0.2.2`, which adds the read-only login state (`is_staff_linked`, `login_status`) to the driver and contact models.
+- `@fleetbase/ember-ui` upgraded to `^0.4.3`, which provides the `btn-auth` style the Track Order button on the login page uses.
 
 ---
 ## Testing
