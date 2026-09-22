@@ -534,10 +534,13 @@ namespace {
         $request     = new InternalCreateDriverRequest();
         $updateProbe = new FleetOpsInternalUpdateDriverRequestProbe();
 
+        // Email/phone availability is decided by ProfileAccountManager (a team
+        // member of the company is linked), so they're optional and not unique here.
         expect(ruleStrings($createRules['name']))->toContain('required', 'nullable', 'string', 'max:255')
-            ->and(ruleStrings($createRules['email']))->toContain('required')
-            ->and(ruleStrings($createRules['phone']))->toContain('required')
-            ->and(ruleStrings($userRules['name']))->not->toContain('required')
+            ->and(ruleStrings($createRules['email']))->toBe(['nullable'])
+            ->and(ruleStrings($createRules['phone']))->toBe(['nullable', 'string'])
+            ->and(ruleStrings($userRules['name']))->toContain('required')
+            ->and(ruleStrings(InternalCreateDriverRequest::create('/fleetops-test', 'POST', ['email' => 'driver@example.test'])->rules()['email']))->toBe(['nullable', 'email'])
             ->and(ruleStrings($patchRules['name']))->not->toContain('required')
             ->and($updateProbe->authorize())->toBeFalse();
 
@@ -556,9 +559,10 @@ namespace {
             ])
             ->and($request->messages())->toMatchArray([
                 'name.required'  => 'Driver name is required.',
-                'email.required' => 'Email address is required.',
+                'email.email'    => 'Please provide a valid email address.',
                 'password.min'   => 'Password must be at least 8 characters.',
-            ]);
+            ])
+            ->and($request->messages())->not->toHaveKeys(['email.required', 'email.unique', 'phone.required', 'phone.unique']);
     });
 
     test('public create order request validates payload alternatives and pod methods', function () {
@@ -929,12 +933,16 @@ namespace {
         expect($request->authorize())->toBeTrue()
             ->and(ruleStrings($createRules['name']))->toContain('required')
             ->and(ruleStrings($patchRules['name']))->not->toContain('required')
-            // Contact details are optional but still validated and still unique:
-            // an operational driver record may legitimately have neither.
-            ->and(ruleStrings($createRules['email']))->toContain('nullable', 'email', 'unique:users')
-            ->and(ruleStrings($createRules['email']))->not->toContain('required')
-            ->and(ruleStrings($createRules['phone']))->toContain('nullable', 'unique:users')
-            ->and(ruleStrings($createRules['phone']))->not->toContain('required')
+            // Contact details are optional but still validated: an operational
+            // driver record may legitimately have neither. On create, availability
+            // is decided by ProfileAccountManager (a team member is linked); on
+            // update they must stay unique among users.
+            ->and(ruleStrings($createRules['email']))->toContain('nullable', 'email')
+            ->and(ruleStrings($createRules['email']))->not->toContain('required', 'unique:users')
+            ->and(ruleStrings($createRules['phone']))->toContain('nullable')
+            ->and(ruleStrings($createRules['phone']))->not->toContain('required', 'unique:users')
+            ->and(ruleStrings($patchRules['email']))->toContain('nullable', 'unique:users')
+            ->and(ruleStrings($patchRules['phone']))->toContain('nullable', 'string', 'unique:users')
             ->and($createRules['password'])->toBe('nullable|string')
             ->and($createRules['country'])->toBe('nullable|size:2')
             ->and(ruleStrings($createRules['vehicle']))->toContain('nullable', 'string', 'starts_with:vehicle_', 'exists:vehicles,public_id')

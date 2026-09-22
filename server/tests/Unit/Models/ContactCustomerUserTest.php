@@ -9,7 +9,7 @@ if (!Illuminate\Support\Str::hasMacro('humanize')) {
 }
 
 use Fleetbase\FleetOps\Exceptions\CustomerUserConflictException;
-use Fleetbase\FleetOps\Exceptions\UserAlreadyExistsException;
+use Fleetbase\FleetOps\Exceptions\ProfileIdentityConflictException;
 use Fleetbase\FleetOps\Models\Contact;
 use Fleetbase\Models\User;
 use Illuminate\Database\ConnectionResolver;
@@ -75,9 +75,38 @@ function fleetopsContactCustomerUserBoot(): SQLiteConnection
     });
     Illuminate\Support\Facades\DB::clearResolvedInstance('db');
 
+    app()->instance('hash', new class implements Illuminate\Contracts\Hashing\Hasher {
+        public function info($hashedValue): array
+        {
+            return [];
+        }
+
+        public function make($value, array $options = []): string
+        {
+            return md5((string) $value);
+        }
+
+        public function check($value, $hashedValue, array $options = []): bool
+        {
+            return md5((string) $value) === $hashedValue;
+        }
+
+        public function needsRehash($hashedValue, array $options = []): bool
+        {
+            return false;
+        }
+
+        public function verifyConfiguration($value): bool
+        {
+            return true;
+        }
+    });
+    Illuminate\Support\Facades\Hash::clearResolvedInstance('hash');
+
     $schema = $connection->getSchemaBuilder();
     $tables = [
         'contacts'              => ['uuid', 'public_id', 'company_uuid', 'user_uuid', 'name', 'email', 'phone', 'type', 'title'],
+        'drivers'               => ['uuid', 'public_id', 'company_uuid', 'user_uuid'],
         'users'                 => ['uuid', 'public_id', 'company_uuid', 'name', 'email', 'phone', 'username', 'password', 'timezone', 'status', 'type', 'slug', 'avatar_uuid', 'last_login'],
         'companies'             => ['uuid', 'public_id', 'name', 'timezone', 'owner_uuid'],
         'company_users'         => ['uuid', 'company_uuid', 'user_uuid', 'status'],
@@ -188,24 +217,45 @@ test('create user from contact adopts an existing matching user', function () {
         ->and($connection->table('users')->count())->toBe(1);
 });
 
-test('create user from contact rejects users already linked to another contact', function () {
+test('create user from contact rejects an account that already holds a contact in the company', function () {
     $connection = fleetopsContactCustomerUserBoot();
-    // The contact user() relation constrains users.type against the querying
-    // contact type, which is null in the static whereHas context — a null-typed
-    // user keeps the linked-contact subquery matchable.
-    $connection->table('users')->insert(['uuid' => 'user-9', 'company_uuid' => 'company-1', 'email' => 'taken@example.com', 'type' => null]);
+    $connection->table('users')->insert(['uuid' => 'user-9', 'company_uuid' => 'company-1', 'email' => 'taken@example.com', 'type' => 'contact']);
     $connection->table('contacts')->insert(['uuid' => 'contact-owner', 'company_uuid' => 'company-1', 'user_uuid' => 'user-9', 'name' => 'Owner', 'type' => 'contact']);
     $contact = fleetopsContactCustomerUserContact(['uuid' => 'contact-2', 'email' => 'taken@example.com']);
 
-    expect(fn () => Contact::createUserFromContact($contact))->toThrow(UserAlreadyExistsException::class);
+    expect(fn () => Contact::createUserFromContact($contact))
+        ->toThrow(ProfileIdentityConflictException::class, 'A contact with this email already exists.');
 });
 
-test('create user from contact rejects staff users for customer contacts', function () {
+test('create user from contact rejects staff users of another organization for customer contacts', function () {
     $connection = fleetopsContactCustomerUserBoot();
-    $connection->table('users')->insert(['uuid' => 'user-9', 'company_uuid' => 'company-1', 'email' => 'staff@example.com', 'type' => 'staff']);
+    $connection->table('users')->insert(['uuid' => 'user-9', 'company_uuid' => 'company-other', 'email' => 'staff@example.com', 'type' => 'user']);
     $contact = fleetopsContactCustomerUserContact(['type' => 'customer', 'email' => 'staff@example.com']);
 
-    expect(fn () => Contact::createUserFromContact($contact))->toThrow(CustomerUserConflictException::class);
+    expect(fn () => Contact::createUserFromContact($contact))
+        ->toThrow(ProfileIdentityConflictException::class, 'This email is already in use by another account.');
+});
+
+test('create user from contact links a staff member of the organization without changing their role', function () {
+    $connection = fleetopsContactCustomerUserBoot();
+    $connection->table('users')->insert(['uuid' => 'user-9', 'company_uuid' => 'company-1', 'email' => 'staff@example.com', 'type' => 'user']);
+    $contact = fleetopsContactCustomerUserContact(['type' => 'customer', 'email' => 'Staff@Example.com']);
+
+    $user = Contact::createUserFromContact($contact);
+
+    expect($user->uuid)->toBe('user-9')
+        ->and($user->type)->toBe('user')
+        ->and($contact->user_uuid)->toBe('user-9')
+        ->and($connection->table('model_has_roles')->count())->toBe(0);
+});
+
+test('create user from contact rejects a managed account of another type', function () {
+    $connection = fleetopsContactCustomerUserBoot();
+    $connection->table('users')->insert(['uuid' => 'user-9', 'company_uuid' => 'company-1', 'phone' => '+6591112222', 'type' => 'driver']);
+    $contact = fleetopsContactCustomerUserContact(['type' => 'customer', 'phone' => '+65 9111-2222']);
+
+    expect(fn () => Contact::createUserFromContact($contact))
+        ->toThrow(ProfileIdentityConflictException::class, 'This phone number is already used by a driver.');
 });
 
 test('create user from contact assigns the customer role and persists the link', function () {
@@ -305,17 +355,27 @@ test('identity lookup helpers resolve users by email phone and uuid', function (
 
 test('assert customer identity is available detects staff conflicts', function () {
     $connection = fleetopsContactCustomerUserBoot();
-    $connection->table('users')->insert(['uuid' => 'user-1', 'company_uuid' => 'company-1', 'email' => 'staff@example.com', 'type' => 'staff']);
+    $connection->table('users')->insert([
+        ['uuid' => 'user-1', 'company_uuid' => 'company-1', 'email' => 'staff@example.com', 'type' => 'staff'],
+        ['uuid' => 'user-2', 'company_uuid' => 'company-1', 'email' => 'driver@example.com', 'type' => 'driver'],
+    ]);
 
     $nonCustomer = fleetopsContactCustomerUserContact();
     $nonCustomer->assertCustomerIdentityIsAvailable();
 
-    $conflicted = fleetopsContactCustomerUserContact(['type' => 'customer', 'email' => 'staff@example.com']);
-    expect(fn () => $conflicted->assertCustomerIdentityIsAvailable())->toThrow(CustomerUserConflictException::class);
+    // A staff member of the organization can hold a customer profile
+    $staffMember = fleetopsContactCustomerUserContact(['type' => 'customer', 'email' => 'staff@example.com']);
+    $staffMember->assertCustomerIdentityIsAvailable();
+
+    // A driver's managed account cannot
+    $conflicted = fleetopsContactCustomerUserContact(['type' => 'customer', 'email' => 'driver@example.com']);
+    expect(fn () => $conflicted->assertCustomerIdentityIsAvailable())
+        ->toThrow(CustomerUserConflictException::class, 'This email is already used by a driver and cannot be used for a customer account.');
 
     // An already-assigned user is checked ahead of the identity lookup, so a
     // contact whose email matches nothing still trips on its own assignment
-    $connection->table('users')->insert(['uuid' => '33333333-3333-4333-8333-333333333333', 'company_uuid' => 'company-1', 'email' => 'assigned@example.com', 'type' => 'staff']);
+    // (a staff account of another organization)
+    $connection->table('users')->insert(['uuid' => '33333333-3333-4333-8333-333333333333', 'company_uuid' => 'company-other', 'email' => 'assigned@example.com', 'type' => 'staff']);
     $assigned = fleetopsContactCustomerUserContact([
         'type'      => 'customer',
         'email'     => 'unmatched@example.com',
@@ -367,4 +427,20 @@ test('normalize customer user creates company membership and assigns the custome
 
     expect($connection->table('company_users')->where('user_uuid', 'user-n1')->count())->toBe(1)
         ->and($connection->table('model_has_roles')->count())->toBeGreaterThanOrEqual(1);
+});
+
+test('normalize customer user keeps a staff member of the organization untouched', function () {
+    $connection = fleetopsContactCustomerUserBoot();
+    $connection->table('companies')->insert(['uuid' => 'company-1', 'name' => 'Acme']);
+    $connection->table('users')->insert(['uuid' => 'user-s1', 'company_uuid' => 'company-1', 'name' => 'Staff', 'email' => 'staff@example.com', 'type' => 'user', 'status' => 'active']);
+
+    $contact = fleetopsContactCustomerUserContact(['type' => 'customer', 'user_uuid' => 'user-s1']);
+    $user    = User::where('uuid', 'user-s1')->first();
+
+    expect($contact->normalizeCustomerUser($user))->toBe($user)
+        ->and($contact->getRelation('user'))->toBe($user)
+        // A team member's account keeps its own organization membership and role
+        ->and($connection->table('company_users')->count())->toBe(0)
+        ->and($connection->table('model_has_roles')->count())->toBe(0)
+        ->and($connection->table('users')->where('uuid', 'user-s1')->value('type'))->toBe('user');
 });

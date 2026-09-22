@@ -49,14 +49,24 @@ module('Integration | Component | customer/form', function (hooks) {
         this.owner.register('component:model-select', setComponentTemplate(hbs`<div data-test-model-select={{@modelName}}></div>`, ModelSelectStub));
     });
 
-    test('the user account selector only offers customer users without a contact', async function (assert) {
-        this.set('customer', makeResource({ isNew: true }));
+    test('it does not offer a user account selector', async function (assert) {
+        this.set('customer', makeResource({ isNew: false }));
 
         await render(hbs`<Customer::Form @resource={{this.customer}} />`);
 
-        const userSelect = modelSelectQueries.find((entry) => entry.modelName === 'user');
+        assert.notOk(
+            modelSelectQueries.find((entry) => entry.modelName === 'user'),
+            'login accounts are managed by the server'
+        );
+    });
 
-        assert.deepEqual(userSelect.query, { doesnt_have_contact: true, is_customer: true });
+    test('email and phone are read-only for a staff-linked customer', async function (assert) {
+        this.set('customer', makeResource({ isNew: false, is_staff_linked: true, email: 'staff@example.com' }));
+
+        await render(hbs`<Customer::Form @resource={{this.customer}} />`);
+
+        assert.dom('input[placeholder="Email"]').isDisabled();
+        assert.dom('[data-test-staff-linked-helper]').exists();
     });
 
     test('the welcome email option is offered when creating a customer with the portal installed', async function (assert) {

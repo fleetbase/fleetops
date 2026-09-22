@@ -30,6 +30,8 @@ class FleetOpsApiDriverControllerProbe extends DriverController
     public array $deviceCreates             = [];
     public array $companyCalls              = [];
     public array $createdUsers              = [];
+    public array $resolvedAccounts          = [];
+    public ?Throwable $accountConflict      = null;
     public array $uuidLookups               = [];
     public array $relationLookups           = [];
     public array $relationCompanyScopes     = [];
@@ -65,11 +67,17 @@ class FleetOpsApiDriverControllerProbe extends DriverController
         return $userDetails;
     }
 
-    protected function createUser(array $userDetails): User
+    protected function resolveDriverAccount(string $companyUuid, array $userDetails): User
     {
-        $this->createdUsers[] = $userDetails;
+        $this->resolvedAccounts[] = $companyUuid;
+        $this->createdUsers[]     = $userDetails;
+
+        if ($this->accountConflict) {
+            throw $this->accountConflict;
+        }
+
         $this->user ??= new FleetOpsApiDriverUserFake();
-        $this->user->setRawAttributes(array_merge(['uuid' => 'user-uuid'], $userDetails), true);
+        $this->user->setRawAttributes(array_merge(['uuid' => 'user-uuid', 'type' => 'driver'], $userDetails), true);
 
         return $this->user;
     }
@@ -282,7 +290,17 @@ class FleetOpsApiDriverUserFake extends User
         return true;
     }
 
-    public function assignCompany(Company $company, string $role = 'Administrator'): User
+    public function save(array $options = []): bool
+    {
+        $this->updates[] = $this->getDirty();
+        $this->syncOriginal();
+
+        return true;
+    }
+
+    // Matches core-api 1.6.63+, where no role is granted unless one is given (a nullable
+    // role is also compatible with older core-api, whose parameter was a plain string).
+    public function assignCompany(Company $company, ?string $role = null): User
     {
         $this->assignedCompanies[] = $company->uuid;
 
@@ -315,6 +333,27 @@ class FleetOpsApiDriverUserFake extends User
     {
         $this->attributes['password'] = $password;
     }
+}
+
+/**
+ * ProfileAccountManager checks a changed email/phone against the users table.
+ */
+function fleetopsApiDriverContractsUsersTable(array $rows = []): void
+{
+    $connection = new Illuminate\Database\SQLiteConnection(new PDO('sqlite::memory:'));
+    $connection->getSchemaBuilder()->create('users', function ($table) {
+        $table->string('uuid')->nullable();
+        $table->string('type')->nullable();
+        $table->string('email')->nullable();
+        $table->string('phone')->nullable();
+        $table->timestamp('deleted_at')->nullable();
+    });
+    if ($rows) {
+        $connection->table('users')->insert($rows);
+    }
+    $resolver = new Illuminate\Database\ConnectionResolver(['default' => $connection, 'mysql' => $connection]);
+    $resolver->setDefaultConnection('mysql');
+    Illuminate\Database\Eloquent\Model::setConnectionResolver($resolver);
 }
 
 class FleetOpsApiDriverVehicleFake extends Vehicle
@@ -363,16 +402,15 @@ test('api driver controller creates drivers with user company assignment and rel
 
     expect($response)->toBe(['resource' => 'driver', 'driver' => $controller->driver])
         ->and($controller->companyCalls)->toBe([['request', 'company_public']])
+        // The login account is resolved by ProfileAccountManager in the driver's company
+        ->and($controller->resolvedAccounts)->toBe(['company-uuid'])
         ->and($controller->createdUsers[0])->toMatchArray([
-            'name'         => 'Driver One',
-            'email'        => 'driver@example.test',
-            'phone'        => '+15551234567',
-            'company_uuid' => 'company-uuid',
-            'applied'      => true,
+            'name'     => 'Driver One',
+            'email'    => 'driver@example.test',
+            'phone'    => '+15551234567',
+            'password' => 'secret-password',
+            'applied'  => true,
         ])
-        ->and($controller->user->assignedCompanies)->toBe(['company-uuid'])
-        ->and($controller->user->assignedTypes)->toBe(['driver'])
-        ->and($controller->user->assignedRoles)->toBe(['Driver'])
         ->and($controller->createdDrivers[0])->toMatchArray([
             'status'           => 'available',
             'vehicle_uuid'     => 'vehicle-uuid',
@@ -407,8 +445,10 @@ test('api driver controller reports missing company before creating drivers', fu
 });
 
 test('api driver controller updates drivers user details assignments location and photo', function () {
+    fleetopsApiDriverContractsUsersTable();
+
     $user = new FleetOpsApiDriverUserFake();
-    $user->setRawAttributes(['uuid' => 'user-uuid'], true);
+    $user->setRawAttributes(['uuid' => 'user-uuid', 'type' => 'driver'], true);
 
     $driver = new FleetOpsApiDriverFake();
     $driver->setRawAttributes([
@@ -645,7 +685,7 @@ test('api driver controller refuses to set a password through a general update',
      * and now has its own endpoint that demands the current password.
      */
     $user = new FleetOpsApiDriverUserFake();
-    $user->setRawAttributes(['uuid' => 'user-uuid'], true);
+    $user->setRawAttributes(['uuid' => 'user-uuid', 'type' => 'driver'], true);
     $driver = new FleetOpsApiDriverFake();
     $driver->setRawAttributes([
         'uuid'      => 'driver-uuid',
@@ -759,11 +799,9 @@ test('api driver controller creates an operational driver with no email or phone
             'company_uuid' => 'company-uuid',
             'status'       => 'available',
         ])
-        // The Driver-to-User relationship, organization membership, user type
-        // and role are all preserved for a credential-less driver.
-        ->and($controller->user->assignedCompanies)->toBe(['company-uuid'])
-        ->and($controller->user->assignedTypes)->toBe(['driver'])
-        ->and($controller->user->assignedRoles)->toBe(['Driver']);
+        // The Driver-to-User relationship and organization membership are
+        // preserved for a credential-less driver.
+        ->and($controller->resolvedAccounts)->toBe(['company-uuid']);
 });
 
 test('api driver controller creates a driver with only one contact method', function () {
@@ -873,7 +911,7 @@ test('api driver controller copies timezone through to the linked user account',
     ]));
 
     $user = new FleetOpsApiDriverUserFake();
-    $user->setRawAttributes(['uuid' => 'user-uuid'], true);
+    $user->setRawAttributes(['uuid' => 'user-uuid', 'type' => 'driver'], true);
 
     $driver = new FleetOpsApiDriverFake();
     $driver->setRawAttributes(['uuid' => 'driver-uuid', 'public_id' => 'driver_public', 'user_uuid' => 'user-uuid'], true);
@@ -904,4 +942,48 @@ test('api driver controller only expands relationships the public contract allow
     // would retype a released field, so neither is expandable at all; an unknown
     // name is dropped rather than reaching Eloquent, where it would be a 500.
     expect($request->input('with'))->toBe(['vehicle', 'currentJob']);
+});
+
+test('api driver controller answers 422 when the email or phone belongs to another account', function () {
+    $create                  = new FleetOpsApiDriverControllerProbe();
+    $create->accountConflict = new Fleetbase\FleetOps\Exceptions\ProfileIdentityConflictException('This email is already in use by another account.');
+
+    expect($create->create(new CreateDriverRequest(['name' => 'Driver One', 'email' => 'taken@example.test'])))->toBe([
+        'json'   => ['error' => 'This email is already in use by another account.'],
+        'status' => 422,
+    ])
+        ->and($create->createdDrivers)->toBe([]);
+
+    fleetopsApiDriverContractsUsersTable([['uuid' => 'other-user', 'type' => 'user', 'phone' => '+15550009999']]);
+
+    $user = new FleetOpsApiDriverUserFake();
+    $user->setRawAttributes(['uuid' => 'user-uuid', 'type' => 'driver', 'phone' => '+15550001111'], true);
+    $driver = new FleetOpsApiDriverFake();
+    $driver->setRawAttributes(['uuid' => 'driver-uuid', 'public_id' => 'driver_public', 'user_uuid' => 'user-uuid'], true);
+    $driver->userForTest = $user;
+
+    $update         = new FleetOpsApiDriverControllerProbe();
+    $update->driver = $driver;
+
+    expect($update->update('driver_public', new UpdateDriverRequest(['phone' => '+1 555 000 9999'])))->toBe([
+        'json'   => ['error' => 'This phone number is already in use by another account.'],
+        'status' => 422,
+    ])
+        ->and($user->updates)->toBe([])
+        ->and($driver->updates)->toBe([]);
+});
+
+test('api driver controller only renames a team member account linked to a driver', function () {
+    $staff = new FleetOpsApiDriverUserFake();
+    $staff->setRawAttributes(['uuid' => 'staff-uuid', 'type' => 'user', 'name' => 'Staff', 'email' => 'staff@example.test'], true);
+    $driver = new FleetOpsApiDriverFake();
+    $driver->setRawAttributes(['uuid' => 'driver-uuid', 'public_id' => 'driver_public', 'user_uuid' => 'staff-uuid'], true);
+    $driver->userForTest = $staff;
+
+    $update         = new FleetOpsApiDriverControllerProbe();
+    $update->driver = $driver;
+    $update->update('driver_public', new UpdateDriverRequest(['name' => 'Staff Driver', 'email' => 'changed@example.test']));
+
+    expect($staff->updates)->toBe([['name' => 'Staff Driver']])
+        ->and($staff->email)->toBe('staff@example.test');
 });

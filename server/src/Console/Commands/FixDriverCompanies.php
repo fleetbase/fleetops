@@ -49,7 +49,7 @@ class FixDriverCompanies extends Command
                     $this->line('Found driver ' . $user->name . ' (' . $user->email . ') which doesnt have correct company assignment.');
                     $company = $this->companyByUuid($driver->company_uuid);
                     if ($company) {
-                        $user->assignCompany($company);
+                        $user->assignCompany($company, 'Driver');
                         $this->line('Driver ' . $user->email . ' was assigned to company: ' . $company->name);
                     }
                 }

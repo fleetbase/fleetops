@@ -75,7 +75,6 @@ class Sensor extends Model
      */
     protected $filterParams = [
         'type',
-        'sensor_type',
         'status',
         'device_uuid',
         'serial_number',
@@ -214,7 +213,7 @@ class Sensor extends Model
     public function getSlugOptions(): SlugOptions
     {
         return SlugOptions::create()
-            ->generateSlugsFrom(['name', 'sensor_type'])
+            ->generateSlugsFrom(['name', 'type'])
             ->saveSlugsTo('slug')
             ->doNotGenerateSlugsOnUpdate();
     }
@@ -232,7 +231,6 @@ class Sensor extends Model
                 'sensorable_uuid',
                 'sensorable_type',
                 'type',
-                'sensor_type',
                 'internal_id',
                 'name',
                 'unit',
@@ -396,7 +394,7 @@ class Sensor extends Model
      */
     public function scopeByType($query, string $type)
     {
-        return $query->where('sensor_type', $type);
+        return $query->where('type', $type);
     }
 
     /**
@@ -493,7 +491,7 @@ class Sensor extends Model
                     'message'      => $this->generateThresholdAlertMessage($value, $thresholdStatus),
                     'context'      => [
                         'sensor_name'      => $this->name,
-                        'sensor_type'      => $this->sensor_type,
+                        'sensor_type'      => $this->type,
                         'value'            => $value,
                         'unit'             => $this->unit,
                         'threshold_status' => $thresholdStatus,

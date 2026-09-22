@@ -177,3 +177,21 @@ test('invalid file types and unreadable spreadsheets return errors', function ()
     ]));
     expect($unreadable->getStatusCode())->toBeGreaterThanOrEqual(400);
 });
+
+test('import ignores files uploaded by another company', function () {
+    $connection = fleetopsOrderImportFilesBoot();
+    $connection->table('files')->insert(['uuid' => '33333333-3333-4333-8333-333333333333', 'public_id' => 'file_ordimport4', 'company_uuid' => 'company-2', 'path' => 'uploads/orders.xlsx', 'disk' => 'local']);
+    fleetopsOrderImportFilesExcelFake([[
+        ['name' => 'Victim Stop', 'street1' => 'Victim Rd 1', 'city' => 'Singapore'],
+    ]]);
+
+    // The file uuid is caller-supplied and nothing upstream checks who owns it,
+    // so an unscoped lookup here would read a rival company's spreadsheet.
+    $response = (new OrderController())->importFromFiles(fleetopsOrderImportFilesRequest([
+        'files' => ['33333333-3333-4333-8333-333333333333'],
+    ]));
+
+    $data = $response->getData(true);
+    expect($data['places'])->toHaveCount(0)
+        ->and($data['entities'])->toHaveCount(0);
+});

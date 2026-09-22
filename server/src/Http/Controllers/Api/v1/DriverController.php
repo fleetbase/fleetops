@@ -6,6 +6,7 @@ use Fleetbase\FleetOps\Events\DriverLocationChanged;
 use Fleetbase\FleetOps\Events\GeofenceEntered;
 use Fleetbase\FleetOps\Events\GeofenceExited;
 use Fleetbase\FleetOps\Events\VehicleLocationChanged;
+use Fleetbase\FleetOps\Exceptions\ProfileIdentityConflictException;
 use Fleetbase\FleetOps\Exceptions\PublicRelationNotFoundException;
 use Fleetbase\FleetOps\Http\Controllers\Api\v1\Concerns\ResolvesFleetOpsApiResources;
 use Fleetbase\FleetOps\Http\Controllers\Api\v1\Concerns\ResolvesPublicExpansions;
@@ -22,6 +23,7 @@ use Fleetbase\FleetOps\Models\Vehicle;
 use Fleetbase\FleetOps\Models\Vendor;
 use Fleetbase\FleetOps\Support\GeofenceIntersectionService;
 use Fleetbase\FleetOps\Support\OSRM;
+use Fleetbase\FleetOps\Support\ProfileAccountManager;
 use Fleetbase\FleetOps\Support\Utils;
 use Fleetbase\Http\Controllers\Controller;
 use Fleetbase\Http\Requests\SwitchOrganizationRequest;
@@ -46,6 +48,11 @@ class DriverController extends Controller
     use \Fleetbase\FleetOps\Http\Controllers\Concerns\ResolvesReviewAccountBypass;
     use ResolvesFleetOpsApiResources;
     use ResolvesPublicExpansions;
+
+    /**
+     * Returned when a driver whose login was deactivated from the console tries to sign in.
+     */
+    public const DEACTIVATED_LOGIN_MESSAGE = 'This driver login has been deactivated.';
 
     /**
      * Public expansion name => Eloquent relation name.
@@ -97,20 +104,14 @@ class DriverController extends Controller
         // Apply user infos
         $userDetails = $this->applyUserInfoFromRequest($request, $userDetails);
 
-        // Set company_uuid before creating user
-        $userDetails['company_uuid'] = $company->uuid;
-
-        // create user account for driver
-        $user = $this->createUser($userDetails);
-
-        // Assign company — the early return above guarantees $company is set
-        $user->assignCompany($company);
-
-        // Set user type
-        $user->setUserType('driver');
-
-        // assign driver role
-        $user->assignSingleRole('Driver');
+        // Resolve the driver's login account: a team member of the company with
+        // the email/phone is linked, otherwise a driver account is created and
+        // added to the company without an organization invite.
+        try {
+            $user = $this->resolveDriverAccount($company->uuid, $userDetails);
+        } catch (ProfileIdentityConflictException $exception) {
+            return $this->jsonResponse(['error' => $exception->getMessage()], 422);
+        }
 
         // set user id
         $input['user_uuid']    = $user->uuid;
@@ -193,10 +194,11 @@ class DriverController extends Controller
         // it. The driver's own record has no timezone column; the user's does.
         $userDetails = $request->only(['name', 'email', 'phone', 'timezone']);
 
-        // update driver user details
-        $driverUser = $driver->getUser();
-        if ($driverUser) {
-            $driverUser->update($userDetails);
+        // update the driver's login account through its proxy fields
+        try {
+            ProfileAccountManager::syncProxyFields($driver->getUser(), $userDetails);
+        } catch (ProfileIdentityConflictException $exception) {
+            return $this->jsonResponse(['error' => $exception->getMessage()], 422);
         }
 
         // latitude / longitude
@@ -519,8 +521,12 @@ class DriverController extends Controller
         )->whereHas('driver')->first();
 
         // Check password to authenticate driver
-        if (!Hash::check($password, $user->password)) {
+        if (!$user || !is_string($user->password) || !Hash::check((string) $password, $user->password)) {
             return response()->apiError('Authentication failed using password provided.', 401);
+        }
+
+        if (static::isLoginDeactivated($user)) {
+            return response()->apiError(static::DEACTIVATED_LOGIN_MESSAGE, 403);
         }
 
         // Get the user's company for this driver profile
@@ -559,6 +565,10 @@ class DriverController extends Controller
         $user = User::where('phone', $phone)->whereHas('driver')->whereNull('deleted_at')->first();
         if (!$user) {
             return response()->apiError('No driver with this phone # found.');
+        }
+
+        if (static::isLoginDeactivated($user)) {
+            return response()->apiError(static::DEACTIVATED_LOGIN_MESSAGE, 403);
         }
 
         // Get the user's company for this driver profile
@@ -625,6 +635,10 @@ class DriverController extends Controller
 
         if (!$user) {
             return response()->apiError('Unable to verify code.');
+        }
+
+        if (static::isLoginDeactivated($user)) {
+            return response()->apiError(static::DEACTIVATED_LOGIN_MESSAGE, 403);
         }
 
         // find and verify code
@@ -975,26 +989,29 @@ class DriverController extends Controller
         return User::applyUserInfoFromRequest($request, $userDetails);
     }
 
-    protected function createUser(array $userDetails): User
+    /**
+     * Resolve the login account for a driver created through the API.
+     *
+     * @throws ProfileIdentityConflictException
+     */
+    protected function resolveDriverAccount(string $companyUuid, array $userDetails): User
     {
-        /*
-         * `password` is guarded on User, so mass assignment drops it without a
-         * word. The create endpoint has always accepted and validated one, so a
-         * driver created through the API could never sign in with the password
-         * their operator chose for them. Set it after the fact, where the
-         * model's mutator hashes it.
-         */
-        $password = $userDetails['password'] ?? null;
-        unset($userDetails['password']);
+        return ProfileAccountManager::resolveForProfile(
+            $companyUuid,
+            'driver',
+            $userDetails['name'] ?? null,
+            $userDetails['email'] ?? null,
+            $userDetails['phone'] ?? null,
+            array_merge(Arr::except($userDetails, ['name', 'email', 'phone']), ['status' => 'active'])
+        );
+    }
 
-        $user = User::create($userDetails);
-
-        if (is_string($password) && strlen($password)) {
-            $user->password = $password;
-            $user->save();
-        }
-
-        return $user;
+    /**
+     * Whether the driver's login was deactivated from the console.
+     */
+    public static function isLoginDeactivated(User $user): bool
+    {
+        return $user->status === 'inactive';
     }
 
     protected function getUuid(array|string $table, array $where, array $options = []): mixed
@@ -1313,7 +1330,7 @@ class DriverController extends Controller
         }
 
         $user = static::findDriverUserByIdentity($identity);
-        if (!$user) {
+        if (!$user || static::isLoginDeactivated($user)) {
             return response()->json(['status' => 'ok']);
         }
 
@@ -1344,7 +1361,7 @@ class DriverController extends Controller
         }
 
         $user = static::findDriverUserByIdentity($identity);
-        if (!$user) {
+        if (!$user || static::isLoginDeactivated($user)) {
             return response()->apiError('Invalid or expired reset code.', 422);
         }
 

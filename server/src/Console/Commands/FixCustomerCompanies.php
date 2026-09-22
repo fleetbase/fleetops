@@ -68,7 +68,7 @@ class FixCustomerCompanies extends Command
                     $this->line('Found user ' . $user->name . ' (' . $user->email . ') which doesnt have correct company assignment.');
                     $company = $this->companyByUuid($customer->company_uuid);
                     if ($company) {
-                        $user->assignCompany($company);
+                        $user->assignCompany($company, 'Fleet-Ops Customer');
                         $this->line('User ' . $user->email . ' was assigned to company: ' . $company->name);
                     }
                 }

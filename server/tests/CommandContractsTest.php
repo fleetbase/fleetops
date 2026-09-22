@@ -884,7 +884,7 @@ class FleetOpsUserCommandFake
         return true;
     }
 
-    public function assignCompany(Company $company, string $role = 'Administrator'): self
+    public function assignCompany(Company $company, ?string $role = null): self
     {
         $this->assigned[] = [$company->uuid, $role];
 
@@ -2208,8 +2208,8 @@ test('fix customer companies command creates or links users and assigns missing 
             ['email', FleetOpsCustomerCommandFake::class],
             ['phone', FleetOpsCustomerCommandFake::class],
         ])
-        ->and($createdUser->assigned)->toBe([['company-created', 'Administrator']])
-        ->and($existingUser->assigned)->toBe([['company-existing', 'Administrator']]);
+        ->and($createdUser->assigned)->toBe([['company-created', 'Fleet-Ops Customer']])
+        ->and($existingUser->assigned)->toBe([['company-existing', 'Fleet-Ops Customer']]);
 });
 
 test('fix driver companies command syncs assigned users and missing company assignments', function () {
@@ -2236,7 +2236,7 @@ test('fix driver companies command syncs assigned users and missing company assi
             ['email', Driver::class],
             ['phone', Driver::class],
         ])
-        ->and($user->assigned)->toBe([['driver-company', 'Administrator']])
+        ->and($user->assigned)->toBe([['driver-company', 'Driver']])
         ->and($command->messages)->toContain(['line', 'Found driver Driver User (driver@example.test) which doesnt have correct company assignment.'])
         ->and($command->messages)->toContain(['line', 'Driver driver@example.test was assigned to company: Driver Company']);
 });

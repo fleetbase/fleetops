@@ -106,7 +106,7 @@ function fleetopsDriverSessionHelpersBoot(): SQLiteConnection
     $schema = $connection->getSchemaBuilder();
     app()->instance('db.schema', $schema);
     $tables = [
-        'users'        => ['uuid', 'public_id', 'company_uuid', 'name', 'email', 'phone', 'status', 'type', 'username', 'password'],
+        'users'        => ['uuid', 'public_id', 'company_uuid', 'name', 'email', 'phone', 'status', 'type', 'username', 'password', 'timezone', 'slug', 'meta'],
         'drivers'      => ['uuid', 'public_id', 'internal_id', 'company_uuid', 'user_uuid', 'vehicle_uuid', 'vendor_uuid', 'status', 'online', 'location', 'meta'],
         'companies'    => ['uuid', 'public_id', 'name', 'status', 'owner_uuid'],
         'user_devices' => ['uuid', 'public_id', 'user_uuid', 'token', 'platform', 'status'],
@@ -189,21 +189,34 @@ test('user and driver persistence helpers write records', function () {
     $userDetails = $probe->callHelper('applyUserInfoFromRequest', Request::create('/x', 'POST', []), ['name' => 'Applicant']);
     expect($userDetails['name'])->toBe('Applicant');
 
-    $user = $probe->callHelper('createUser', ['name' => 'New User']);
+    // A company that isn't in the table skips the organization membership seam,
+    // which needs spatie roles; the managed account itself is still created.
+    $missingCompany = '33333333-3333-4333-8333-333333333333';
+
+    $user = $probe->callHelper('resolveDriverAccount', $missingCompany, ['name' => 'New User']);
     expect($user)->toBeInstanceOf(User::class)
-        ->and($connection->table('users')->where('name', 'New User')->count())->toBe(1);
+        ->and($connection->table('users')->where('name', 'New User')->count())->toBe(1)
+        ->and($connection->table('users')->where('name', 'New User')->value('type'))->toBe('driver')
+        ->and($connection->table('users')->where('name', 'New User')->value('status'))->toBe('active');
 
     /*
      * `password` is guarded on User, so mass assignment drops it without a
      * word. The create endpoint has always documented and validated one, so
-     * unless the helper sets it explicitly a driver created through the API
-     * can never sign in with the password chosen for them.
+     * unless it is set explicitly a driver created through the API can never
+     * sign in with the password chosen for them.
      */
-    $withPassword = $probe->callHelper('createUser', ['name' => 'Password User', 'password' => 'seeded-password']);
+    $withPassword = $probe->callHelper('resolveDriverAccount', $missingCompany, ['name' => 'Password User', 'password' => 'seeded-password']);
     $stored       = $connection->table('users')->where('name', 'Password User')->value('password');
     expect(Hash::check('seeded-password', $withPassword->password))->toBeTrue()
         ->and($stored)->not->toBeNull()
         ->and($stored)->not->toBe('seeded-password');
+
+    // A team member of the company with the email is linked instead of duplicated
+    $connection->table('users')->insert(['uuid' => 'staff-1', 'company_uuid' => '22222222-2222-4222-8222-222222222222', 'name' => 'Staff', 'email' => 'staff@example.test', 'type' => 'user']);
+    $linked = $probe->callHelper('resolveDriverAccount', '22222222-2222-4222-8222-222222222222', ['name' => 'Staff Driver', 'email' => 'STAFF@example.test']);
+    expect($linked->uuid)->toBe('staff-1')
+        ->and($connection->table('users')->where('email', 'staff@example.test')->count())->toBe(1)
+        ->and($connection->table('users')->where('uuid', 'staff-1')->value('type'))->toBe('user');
 
     $driver = $probe->callHelper('createDriver', ['company_uuid' => '22222222-2222-4222-8222-222222222222', 'user_uuid' => 'user-1']);
     expect($driver)->toBeInstanceOf(Driver::class);

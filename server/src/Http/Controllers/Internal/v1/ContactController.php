@@ -265,25 +265,13 @@ class ContactController extends FleetOpsController
             ->get();
     }
 
+    /**
+     * The login account is managed by the contact profile, so a user can't be
+     * picked or swapped from the console.
+     */
     private function resolveUserInput(Request $request, array &$input): void
     {
-        $user = data_get($input, 'user_uuid') ?? data_get($input, 'user') ?? $request->input('contact.user_uuid') ?? $request->input('contact.user');
-
-        if (is_array($user)) {
-            $user = data_get($user, 'uuid') ?? data_get($user, 'id');
-        }
-
-        if (!$user) {
-            return;
-        }
-
-        $input['user_uuid'] = $this->resolveUserUuid($user);
-        unset($input['user']);
-    }
-
-    protected function resolveUserUuid(string $user): string
-    {
-        return User::where('uuid', $user)->orWhere('public_id', $user)->value('uuid') ?? $user;
+        unset($input['user_uuid'], $input['user']);
     }
 
     protected function assertCustomerPortalCanSendWelcomeEmail(array $input): void

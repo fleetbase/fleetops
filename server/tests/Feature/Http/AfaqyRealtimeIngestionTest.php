@@ -596,6 +596,11 @@ test('inbox completion waits for pending deliveries and aggregates quarantined f
     DB::table('telematic_deliveries')->where('uuid', $id)->update(['status' => 'quarantined', 'applied' => 2, 'failed' => 1]);
     Inbox::finishRun('run-pending');
     expect((array) DB::table('telematic_sync_runs')->first())->toMatchArray(['status' => 'partial', 'applied' => 2, 'failed' => 1]);
+
+    // A finished run whose connection was removed completes without touching connection meta
+    DB::table('telematic_sync_runs')->insert(['uuid' => 'run-orphan', 'telematic_uuid' => 'missing-connection', 'status' => 'ingesting', 'created_at' => now(), 'updated_at' => now()]);
+    Inbox::finishRun('run-orphan');
+    expect(DB::table('telematic_sync_runs')->where('uuid', 'run-orphan')->value('status'))->not->toBe('ingesting');
 });
 
 test('telemetry diagnostics report setup receipt backlog and degraded delivery states', function () {

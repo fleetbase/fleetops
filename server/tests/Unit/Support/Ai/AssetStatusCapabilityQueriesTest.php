@@ -117,4 +117,46 @@ test('search capability queries scope companies with eager relations', function 
         ->and($helper('vehicleSearchQuery')->count())->toBe(0)
         ->and($helper('driverSearchQuery')->count())->toBe(3)
         ->and($helper('genericSearchQuery', Fleetbase\FleetOps\Models\Contact::class)->count())->toBe(0);
+
+    foreach ([Fleetbase\FleetOps\Models\WorkOrder::class, Fleetbase\FleetOps\Models\Maintenance::class, Fleetbase\FleetOps\Models\Device::class, Fleetbase\FleetOps\Models\Sensor::class, Fleetbase\FleetOps\Models\Telematic::class] as $modelClass) {
+        expect($helper('genericSearchQuery', $modelClass))->toBeInstanceOf(Illuminate\Database\Eloquent\Builder::class);
+    }
+});
+
+test('asset status scoped queries resolve a list permission for every supported model', function () {
+    fleetopsAssetStatusCapabilityBoot();
+
+    $capability = (new ReflectionClass(AssetStatusCapability::class))->newInstanceWithoutConstructor();
+    $scoped     = new ReflectionMethod(AssetStatusCapability::class, 'scopedQuery');
+    $scoped->setAccessible(true);
+
+    foreach ([Fleetbase\FleetOps\Models\Vehicle::class, Fleetbase\FleetOps\Models\Device::class, Fleetbase\FleetOps\Models\Sensor::class, Fleetbase\FleetOps\Models\Telematic::class, Fleetbase\FleetOps\Models\Contact::class] as $modelClass) {
+        expect($scoped->invoke($capability, $modelClass))->toBeInstanceOf(Illuminate\Database\Eloquent\Builder::class);
+    }
+});
+
+test('capability queries apply IAM directives for the list permission when the directive macro is available', function () {
+    fleetopsAssetStatusCapabilityBoot();
+
+    if (!Illuminate\Database\Eloquent\Builder::hasGlobalMacro('applyDirectivesForPermissions')) {
+        Illuminate\Database\Eloquent\Builder::macro('applyDirectivesForPermissions', function (string|array $names = []) {
+            $GLOBALS['fleetopsAppliedDirectivePermissions'][] = $names;
+
+            return $this;
+        });
+    }
+
+    $GLOBALS['fleetopsAppliedDirectivePermissions'] = [];
+
+    $capability = (new ReflectionClass(AssetStatusCapability::class))->newInstanceWithoutConstructor();
+    $scope      = new ReflectionMethod(AssetStatusCapability::class, 'scopeToPermission');
+    $scope->setAccessible(true);
+    $plain = new stdClass();
+
+    expect($scope->invoke($capability, $plain, 'fleet-ops list driver'))->toBe($plain);
+
+    $builder = Fleetbase\FleetOps\Models\Driver::query();
+
+    expect($scope->invoke($capability, $builder, 'fleet-ops list driver'))->toBe($builder)
+        ->and($GLOBALS['fleetopsAppliedDirectivePermissions'])->toContain('fleet-ops list driver');
 });

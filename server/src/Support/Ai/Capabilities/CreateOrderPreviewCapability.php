@@ -222,8 +222,12 @@ class CreateOrderPreviewCapability extends AbstractFleetOpsAICapability implemen
 
     protected function buildDraft(AiTask $task, array $input = []): array
     {
-        $existing = (array) data_get($task->metadata, 'action_previews.0.draft', []);
-        $draft    = array_replace_recursive($this->draftFromPrompt((string) $task->prompt), $existing, (array) data_get($input, 'draft', $input));
+        // A tool call supplies structured fields, so the prompt is not re-parsed. A refresh edits the
+        // preview it was opened from, which the AI service passes as existing_draft.
+        $fromTool = data_get($input, 'source') === 'tool';
+        $existing = (array) (data_get($input, 'existing_draft') ?? ($fromTool ? [] : data_get($task->metadata, 'action_previews.0.draft', [])));
+        $changes  = (array) data_get($input, 'draft', Arr::except($input, ['source', 'existing_draft']));
+        $draft    = array_replace_recursive($this->draftFromPrompt($fromTool ? '' : (string) $task->prompt), $existing, $changes);
 
         $draft['dispatched'] = filter_var(data_get($draft, 'dispatched', false), FILTER_VALIDATE_BOOLEAN);
         $draft['payload']    = (array) data_get($draft, 'payload', []);
