@@ -25,7 +25,8 @@ class FleetOpsContactUnitCompanyFake extends Company
     public array $addUserCalls                              = [];
     public ?FleetOpsContactUnitCompanyUserFake $companyUser = null;
 
-    public function addUser(User $user, string $role = 'Administrator', string $status = 'active'): CompanyUser
+    // Matches core-api 1.6.63+, where no role is granted unless one is given.
+    public function addUser(User $user, ?string $role = null, string $status = 'active'): CompanyUser
     {
         $this->addUserCalls[] = [$user, $role, $status];
 

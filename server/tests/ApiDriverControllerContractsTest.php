@@ -298,7 +298,9 @@ class FleetOpsApiDriverUserFake extends User
         return true;
     }
 
-    public function assignCompany(Company $company, string $role = 'Administrator'): User
+    // Matches core-api 1.6.63+, where no role is granted unless one is given (a nullable
+    // role is also compatible with older core-api, whose parameter was a plain string).
+    public function assignCompany(Company $company, ?string $role = null): User
     {
         $this->assignedCompanies[] = $company->uuid;
 
